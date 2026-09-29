@@ -30,6 +30,8 @@ export function DeviceImportDialog({
       hint={t('devices.importHint')}
       previewUrl="/api/v1/devices/import/preview"
       commitUrl="/api/v1/devices/import/commit"
+      errorsUrl="/api/v1/devices/import/errors"
+      errorsFileName="dong-loi-thiet-bi.xlsx"
       csrfToken={csrfToken}
       mapRow={(row) => ({
         group: t('devices.title'),

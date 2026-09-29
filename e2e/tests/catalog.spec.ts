@@ -13,6 +13,7 @@ import {
   rowAction,
   rowActionNames,
   uniqueStamp,
+  writeHeaders,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -25,7 +26,7 @@ test.beforeEach(() => {
  * Chạy trên stack docker thật, không mock API (DoD).
  */
 test.describe('Danh mục', () => {
-  test('đường hạnh phúc: thêm site → thêm tủ trong site đó → vô hiệu → bật lại', async ({
+  test('đường hạnh phúc: thêm site → thêm tủ trong site đó → ngừng dùng → dùng lại', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -63,12 +64,12 @@ test.describe('Danh mục', () => {
     // exact: mã sinh theo timestamp có thể CHỨA chuỗi "42", không exact thì bắt trúng 3 ô.
     await expect(cabinetRow.getByRole('cell', { name: '42', exact: true })).toBeVisible();
 
-    // Vô hiệu rồi bật lại — mục vẫn còn, chỉ đổi trạng thái.
-    await rowAction(page, new RegExp(cabinetCode), 'Vô hiệu hóa');
+    // Ngừng dùng rồi dùng lại — mục vẫn còn, chỉ đổi trạng thái.
+    await rowAction(page, new RegExp(cabinetCode), 'Ngừng dùng');
     await confirmAction(page);
-    await expect(cabinetRow.getByText('Đã vô hiệu hóa')).toBeVisible();
+    await expect(cabinetRow.getByText('Đã ngừng dùng')).toBeVisible();
 
-    await rowAction(page, new RegExp(cabinetCode), 'Bật lại');
+    await rowAction(page, new RegExp(cabinetCode), 'Dùng lại');
     await confirmAction(page);
     await expect(cabinetRow.getByText('Đang dùng')).toBeVisible();
 
@@ -84,7 +85,7 @@ test.describe('Danh mục', () => {
     await expect(createdSite).toHaveCount(0);
   });
 
-  test('đường hỏng: xóa site đang có tủ bên trong bị chặn, kèm gợi ý vô hiệu hóa', async ({
+  test('đường hỏng: site đang có tủ hiện "1 tủ mạng", Xóa bị khóa kèm lý do; API vẫn chặn 409', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -110,12 +111,31 @@ test.describe('Danh mục', () => {
     await expect(page.getByRole('row', { name: new RegExp(cabinetCode) })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Site' }).click();
-    await rowAction(page, siteCode, 'Xóa');
-    await confirmAction(page);
+    const siteRow = page.getByRole('row', { name: new RegExp(siteCode) });
+    // Q-15: biết trước mục đang được dùng ở đâu, thay vì bấm Xóa rồi mới nhận lỗi.
+    await expect(siteRow.getByRole('link', { name: '1 tủ mạng' })).toBeVisible();
+    await page.getByRole('button', { name: `Thao tác với ${siteCode}` }).click();
+    await expect(page.getByRole('menuitem', { name: 'Xóa' })).toBeDisabled();
+    await expect(page.getByText('Đang dùng ở 1 tủ mạng — hãy Ngừng dùng')).toBeVisible();
+    await page.keyboard.press('Escape');
 
-    await expect(page.getByText(/không xóa được/i)).toBeVisible();
-    // Vẫn còn nguyên trong bảng — chặn thật, không phải chỉ báo lỗi rồi vẫn xóa.
-    await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
+    // Nút bị khóa chỉ là lời báo trước; hàng rào thật vẫn là khóa ngoại ở API.
+    const list = await page.request.get(
+      `/api/v1/catalog/site?search=${encodeURIComponent(siteCode)}`,
+    );
+    const found = ((await list.json()) as { items: { id: string; code: string }[] }).items.find(
+      (item) => item.code === siteCode,
+    );
+    const remove = await page.request.delete(`/api/v1/catalog/site/${found!.id}`, {
+      headers: await writeHeaders(page),
+    });
+    expect(remove.status()).toBe(409);
+    await expect(siteRow).toBeVisible();
+
+    // Bấm con số → danh sách tủ đã lọc sẵn theo site đó.
+    await siteRow.getByRole('link', { name: '1 tủ mạng' }).click();
+    await expect(page.getByRole('tab', { name: 'Tủ mạng' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('row', { name: new RegExp(cabinetCode) })).toBeVisible();
   });
 
   test('tải file mẫu rồi nhập lại chính nó: đối chiếu ra "không đổi", không tạo bản sao', async ({
@@ -163,8 +183,8 @@ test.describe('Danh mục', () => {
     await expect(page.getByRole('button', { name: 'Xác nhận ghi' })).toBeDisabled();
   });
 
-  // Q-12: member TẠO và SỬA được mọi danh mục; vô hiệu hoá, xoá, nhập Excel vẫn chỉ SA/Admin.
-  test('Member thêm và sửa được site trên màn, không có Vô hiệu hóa / Xóa / Nhập Excel', async ({
+  // Q-12: member TẠO và SỬA được mọi danh mục; ngừng dùng, xóa, nhập Excel vẫn chỉ SA/Admin.
+  test('Member thêm và sửa được site trên màn, không có Ngừng dùng / Xóa / Nhập Excel', async ({
     page,
   }) => {
     await firstLogin(page, E2E_MEMBER);
@@ -180,14 +200,14 @@ test.describe('Danh mục', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
-    // "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Vô hiệu hóa, Xóa) thì không.
+    // "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Ngừng dùng, Xóa) thì không.
     expect(await rowActionNames(page, siteCode)).toEqual([
       'Sửa',
       'Lịch sử',
       'Xem thiết bị dùng mục này',
     ]);
     await expect(
-      page.getByText('Vô hiệu hóa, xóa và nhập Excel do Quản trị thực hiện.'),
+      page.getByText('Ngừng dùng, xóa và nhập Excel do Quản trị thực hiện.'),
     ).toBeVisible();
     await rowAction(page, siteCode, 'Sửa');
     await page.getByRole('dialog').getByLabel('Tên').fill('Site member đã sửa');
@@ -197,7 +217,7 @@ test.describe('Danh mục', () => {
     );
   });
 
-  test('Member gọi thẳng API: tạo/sửa được, vô hiệu hóa / xóa / nhập Excel bị chặn', async ({
+  test('Member gọi thẳng API: tạo/sửa được, ngừng dùng / xóa / nhập Excel bị chặn', async ({
     page,
   }) => {
     await firstLogin(page, E2E_MEMBER);

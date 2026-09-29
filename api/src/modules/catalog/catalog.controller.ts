@@ -43,6 +43,7 @@ import { CATALOG_EXPORT_NAME, catalogExportColumns } from './catalog-export';
 import { CATALOG_SORT_DEFAULT, CATALOG_SORT_KEYS, CatalogService } from './catalog.service';
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { CatalogUsageRegistry } from '../../common/catalog-usage.registry';
 
 class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
@@ -110,6 +111,7 @@ export class CatalogController {
     private readonly catalog: CatalogService,
     private readonly imports: CatalogImportService,
     private readonly excel: ExcelExportService,
+    private readonly usage: CatalogUsageRegistry,
   ) {}
 
   /** Bốn danh sách gọn để đổ ô chọn — dùng ở form thiết bị, không phân trang. */
@@ -126,9 +128,13 @@ export class CatalogController {
     sendXlsx(res, buffer, 'mau-danh-muc.xlsx');
   }
 
+  /**
+   * Mỗi dòng kèm `usage` — "đang dùng ở N thiết bị/hồ sơ" (Q-15) — để người quản trị biết
+   * trước khi Xóa hay Vô hiệu hóa, thay vì bấm rồi mới nhận 409.
+   */
   @Roles('sa', 'admin', 'member')
   @Get(':entity')
-  list(
+  async list(
     @Param() params: EntityParamDto,
     @Query()
     query: {
@@ -150,10 +156,21 @@ export class CatalogController {
     if (query.siteId && !isUUID(query.siteId)) {
       throw new BadRequestException({ code: 'BAD_SITE_ID', message: 'Mã site không hợp lệ.' });
     }
-    return this.catalog.list(params.entity, parsePageQuery(query), query.search, sort, {
+    const page = await this.catalog.list(params.entity, parsePageQuery(query), query.search, sort, {
       active: query.active === 'true' ? true : query.active === 'false' ? false : undefined,
       siteId: params.entity === 'cabinet' ? query.siteId || undefined : undefined,
     });
+    const usage = await this.usage.usageOf(
+      params.entity,
+      page.items.map((item) => ({
+        id: item.id,
+        name: 'name' in item ? item.name : item.code,
+      })),
+    );
+    return {
+      ...page,
+      items: page.items.map((item) => ({ ...item, usage: usage.get(item.id) ?? [] })),
+    };
   }
 
   /**
@@ -246,6 +263,17 @@ export class CatalogController {
   @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
   preview(@UploadedFile() file: Express.Multer.File | undefined) {
     return this.imports.preview(requireXlsx(file));
+  }
+
+  /**
+   * Danh sách dòng lỗi của lượt đối chiếu ra Excel (ADM-005) — đọc lại chính file vừa gửi, không
+   * ghi gì và không lộ dữ liệu nào ngoài file đó, nên không `@Audited` như file xuất danh mục.
+   */
+  @Roles('sa', 'admin')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-danh-muc.xlsx');
   }
 
   @Roles('sa', 'admin')

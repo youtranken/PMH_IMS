@@ -19,10 +19,13 @@ import {
   type BreakGlassRow,
 } from "@/ui/break-glass";
 import { DataTable } from "@/ui/data-table";
+import { DatePicker } from "@/ui/date-picker";
 import { ExportXlsxButton } from "@/ui/export-xlsx-button";
+import { FilterBar } from "@/ui/filter-bar";
 import { EmptyState, LoadError, Loading } from "@/ui/load-state";
 import { PageHeader } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
+import { Select } from "@/ui/select";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useMediaQuery } from "@/ui/use-media-query";
@@ -46,6 +49,40 @@ interface ApprovalPage {
   items: ApprovalRow[];
   total: number;
 }
+
+/** Bộ lọc tab Nhật ký — tên khoá theo `LogQueryDto` bên API. */
+export interface LogFilters {
+  state: string;
+  requester: string;
+  from: string;
+  to: string;
+}
+
+const EMPTY_LOG_FILTERS: LogFilters = { state: "", requester: "", from: "", to: "" };
+
+/** Trạng thái lọc được — API đọc theo đồng hồ, "Đã duyệt" là còn hiệu lực. */
+const LOG_STATES = ["pending", "approved", "expired", "revoked", "denied", "cancelled"] as const;
+const LOG_STATE_KEY: Record<(typeof LOG_STATES)[number], string> = {
+  pending: "approvals.statePending",
+  approved: "approvals.stateApproved",
+  expired: "approvals.stateExpired",
+  revoked: "approvals.stateRevoked",
+  denied: "approvals.stateDenied",
+  cancelled: "approvals.stateCancelled",
+};
+
+/** Tham số bộ lọc gửi API — chung cho danh sách và file xuất, để file khớp đúng thứ đang xem. */
+export function logFilterQuery(filters: LogFilters): string {
+  const params = new URLSearchParams();
+  if (filters.state) params.set("state", filters.state);
+  if (filters.requester.trim()) params.set("requester", filters.requester.trim());
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  return params.toString();
+}
+
+/** Ô người xin gửi đi sau khi ngừng gõ — mỗi phím một lượt quét sổ là phí. */
+const REQUESTER_DEBOUNCE_MS = 300;
 
 /** "Thời hạn xin": không biết thì nói không biết — "— giờ" là chỗ trống đội lốt câu trả lời. */
 function askedText(
@@ -106,6 +143,21 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   const focusId = searchParams.get("id");
   const focusRef = useRef<HTMLElement | null>(null);
   const [logPage, setLogPage] = useState(1);
+  const [logFilters, setLogFilters] = useState<LogFilters>(EMPTY_LOG_FILTERS);
+  const [requesterInput, setRequesterInput] = useState("");
+  const setLogFilter = useCallback((key: keyof LogFilters, value: string) => {
+    setLogFilters((current) => (current[key] === value ? current : { ...current, [key]: value }));
+    setLogPage(1);
+  }, []);
+  useEffect(() => {
+    const handle = setTimeout(
+      () => setLogFilter("requester", requesterInput.trim()),
+      REQUESTER_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(handle);
+  }, [requesterInput, setLogFilter]);
+  const logQuery = logFilterQuery(logFilters);
+  const logFiltered = logQuery !== "";
   const [minePage, setMinePage] = useState(1);
   const actions = useBreakGlassActions(me.csrfToken);
   const myEmail = me.email.toLowerCase();
@@ -119,11 +171,19 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   });
 
   const log = useQuery({
-    queryKey: [...BREAK_GLASS_KEY, "log", logPage],
+    queryKey: [...BREAK_GLASS_KEY, "log", logPage, logQuery],
     queryFn: () =>
       apiFetch<ApprovalPage>(
-        `/api/v1/vault/break-glass/log?page=${logPage}&limit=${PAGE_LIMIT}`,
+        `/api/v1/vault/break-glass/log?page=${logPage}&limit=${PAGE_LIMIT}${logQuery ? `&${logQuery}` : ""}`,
       ),
+    enabled: canDecide && tab === "log",
+  });
+
+  /* Quyền đang chạy ghim đầu tab Nhật ký (VLT-020): nhật ký chia trang theo lúc gửi, quyền
+     cần thu hồi có thể đã trôi sang trang sau. */
+  const activeGrants = useQuery({
+    queryKey: [...BREAK_GLASS_KEY, "active"],
+    queryFn: () => apiFetch<ApprovalRow[]>("/api/v1/vault/break-glass/active"),
     enabled: canDecide && tab === "log",
   });
 
@@ -226,14 +286,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   ];
 
   /*
-    Nút Xuất CHỈ ở tab Nhật ký, vì file luôn là toàn bộ lịch sử — để ở tab khác là người đang
-    xem "Chờ duyệt" im lặng nhận cả kho. File không có cột nào chứa secret (FR-026).
+    Nút Xuất CHỈ ở tab Nhật ký, và file theo đúng bộ lọc đang xem — để ở tab khác là người
+    đang xem "Chờ duyệt" im lặng nhận cả kho. File không có cột nào chứa mật khẩu (FR-026).
   */
   const exportButton =
     canDecide && tab === "log" ? (
       <ExportXlsxButton
-        url="/api/v1/vault/break-glass/export.xlsx"
-        fileName="nhat-ky-break-glass.xlsx"
+        url={`/api/v1/vault/break-glass/export.xlsx${logQuery ? `?${logQuery}` : ""}`}
+        fileName="nhat-ky-mo-ket.xlsx"
       />
     ) : null;
 
@@ -259,7 +319,64 @@ export function ApprovalsScreen({ me }: { me: Me }) {
       ) : null}
 
       <TabPanel tabKey={tab}>
+        {tab === "log" ? (
+          <FilterBar
+            search={requesterInput}
+            onSearchChange={setRequesterInput}
+            searchPlaceholder={t("approvals.filterRequester")}
+            activeCount={
+              [logFilters.state, logFilters.requester, logFilters.from, logFilters.to].filter(Boolean)
+                .length
+            }
+            onClear={() => {
+              setRequesterInput("");
+              setLogFilters(EMPTY_LOG_FILTERS);
+              setLogPage(1);
+            }}
+          >
+            <Select
+              value={logFilters.state}
+              ariaLabel={t("approvals.filterState")}
+              placeholder={t("approvals.filterStateAll")}
+              options={[
+                { value: "", label: t("approvals.filterStateAll") },
+                ...LOG_STATES.map((state) => ({ value: state, label: t(LOG_STATE_KEY[state]) })),
+              ]}
+              onChange={(value) => setLogFilter("state", value)}
+            />
+            <div className="filter-range" role="group" aria-label={t("approvals.filterDates")}>
+              <DatePicker
+                value={logFilters.from}
+                ariaLabel={t("approvals.filterFrom")}
+                placeholder={t("approvals.filterFrom")}
+                max={logFilters.to || undefined}
+                onChange={(value) => setLogFilter("from", value)}
+              />
+              <DatePicker
+                value={logFilters.to}
+                ariaLabel={t("approvals.filterTo")}
+                placeholder={t("approvals.filterTo")}
+                min={logFilters.from || undefined}
+                onChange={(value) => setLogFilter("to", value)}
+              />
+            </div>
+          </FilterBar>
+        ) : null}
         {focusGone ? <p className="muted">{t("approvals.focusGone")}</p> : null}
+        {tab === "log" && activeGrants.data && activeGrants.data.length > 0 ? (
+          <section
+            className="approval-active"
+            aria-label={t("approvals.activeGroup", { count: activeGrants.data.length })}
+          >
+            <h2>{t("approvals.activeGroup", { count: activeGrants.data.length })}</h2>
+            <LogTable
+              rows={activeGrants.data}
+              busyId={busyId}
+              onRevoke={(row) => setDeciding({ row, approve: false, revoke: true })}
+              onGoPending={() => setTab("pending")}
+            />
+          </section>
+        ) : null}
         {active.isLoading ? (
           <Loading />
         ) : active.isError ? (
@@ -274,7 +391,9 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                 tab === "pending"
                   ? "approvals.emptyPending"
                   : tab === "log"
-                    ? "approvals.emptyLog"
+                    ? logFiltered
+                      ? "approvals.emptyLogFiltered"
+                      : "approvals.emptyLog"
                     : "approvals.emptyMine",
               )}
               hint={
@@ -310,7 +429,11 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                 <section
                   key={row.id}
                   ref={isFocused ? focusRef : undefined}
-                  className="card device-panel"
+                  className={
+                    tab === "pending" && row.overdue
+                      ? "card device-panel is-overdue"
+                      : "card device-panel"
+                  }
                   aria-label={t("approvals.cardLabel", {
                     member: row.requester,
                   })}
@@ -325,6 +448,10 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       <span className="badge warn">
                         {t("approvals.fromMail")}
                       </span>
+                    ) : null}
+                    {/* Chờ quá mốc thư nhắc: chữ + viền, không chỉ màu (VLT-017). */}
+                    {tab === "pending" && row.overdue ? (
+                      <span className="badge warn">{t("approvals.waitingLong")}</span>
                     ) : null}
                     {/* Ở tab của mình thì người xin luôn là mình — đối tượng mới là tiêu đề thẻ. */}
                     {tab === "mine" ? null : (

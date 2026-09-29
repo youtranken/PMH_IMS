@@ -109,6 +109,20 @@ export class SystemSettingsService {
         message: 'Số ngày "khẩn" phải nhỏ hơn số ngày "sắp hết hạn".',
       });
     }
+    /*
+     * Thư nhắc người duyệt phải đi TRƯỚC lúc yêu cầu mở két tự hết hạn (Q-15). Đảo lại thì
+     * yêu cầu hết hạn khi chưa ai được nhắc, người xin chờ vô ích. Nhắc = 0 là tắt nhắc.
+     */
+    const reminder = Number(valueOf(CONFIG_KEYS.approvalReminderHours.key));
+    const pendingExpire = Number(valueOf(CONFIG_KEYS.breakGlassPendingExpireHours.key));
+    if (reminder > 0 && reminder >= pendingExpire) {
+      throw new BadRequestException({
+        code: 'SETTING_OUT_OF_RANGE',
+        message:
+          'Giờ nhắc người duyệt phải nhỏ hơn giờ tự hết hạn của yêu cầu mở két — không thì ' +
+          'yêu cầu hết hạn trước khi thư nhắc kịp đi.',
+      });
+    }
 
     await this.db.transaction(async (tx) => {
       for (const p of planned) {

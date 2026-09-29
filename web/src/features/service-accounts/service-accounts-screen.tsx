@@ -15,6 +15,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
+import { SecretDue } from '@/ui/secret-due';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
@@ -42,9 +43,11 @@ interface Filters extends Record<string, string> {
   search: string;
   kind: '' | ServiceAccountKind;
   status: '' | ServiceAccountStatus;
+  /** '1' = chỉ VPN mở cho mọi IP nguồn — lọc ở API vì danh sách phân trang. */
+  anyIp: '' | '1';
 }
 
-const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '' };
+const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '', anyIp: '' };
 
 /**
  * Tài khoản dịch vụ (0032): tài khoản DÙNG CHUNG và tài khoản VPN.
@@ -97,6 +100,24 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       ),
   });
   useClampPage(url, accounts.data?.total);
+
+  /*
+   * Hạn đổi mật khẩu trong két theo từng tài khoản (Q-15). Hỏi `vault` từ MÀN HÌNH, không từ
+   * module `service-accounts`: `vault` đã phụ thuộc `service-accounts`, gọi ngược là vòng (AD-2).
+   * Chỉ SA/Admin — bản đồ két không mở cho Member.
+   */
+  const due = useQuery({
+    queryKey: ['vault', 'owners', 'due', 'service_account'],
+    enabled: canEdit,
+    queryFn: () =>
+      apiFetch<{ ownerId: string; valueChangedAt: string; dueInDays: number }[]>(
+        '/api/v1/vault/owners/due?ownerType=service_account',
+      ),
+  });
+  const dueByOwner = useMemo(
+    () => new Map((due.data ?? []).map((item) => [item.ownerId, item])),
+    [due.data],
+  );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
 
@@ -160,6 +181,18 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       ...(canEdit
         ? [
             {
+              id: 'secretDue',
+              header: t('vault.changedCol'),
+              cell: ({ row }) => {
+                const item = dueByOwner.get(row.original.id);
+                return <SecretDue changedAt={item?.valueChangedAt} dueInDays={item?.dueInDays} />;
+              },
+            } satisfies ColumnDef<ServiceAccountRow, unknown>,
+          ]
+        : []),
+      ...(canEdit
+        ? [
+            {
               id: 'actions',
               header: t('common.actions'),
               meta: { className: 'col-center' },
@@ -199,7 +232,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           ]
         : []),
     ],
-    [t, canEdit],
+    [t, canEdit, dueByOwner],
   );
 
   return (
@@ -263,6 +296,18 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           ]}
           onChange={(value) => url.setSorting({ key: value, desc: false })}
         />
+        {/* VPN mở cho mọi IP là câu kiểm toán hỏi đầu tiên — một chip bật/tắt, cùng kiểu chip
+            "Chỉ cổng nhạy cảm" của sổ NAT. */}
+        <div className="segmented" role="group" aria-label={t('serviceAccounts.anyIpFilter')}>
+          <button
+            type="button"
+            className={filters.anyIp ? 'on' : undefined}
+            aria-pressed={filters.anyIp === '1'}
+            onClick={() => setFilter('anyIp', filters.anyIp ? '' : '1')}
+          >
+            {t('serviceAccounts.anyIpOnly')}
+          </button>
+        </div>
       </FilterBar>
 
       {accounts.isLoading ? (
@@ -295,6 +340,12 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               subtitle: (row) => row.name,
               meta: (row) =>
                 [row.login, t(KIND_SHORT_KEY[row.kind]), row.department].filter(Boolean).join(' · '),
+              aside: (row) => {
+                const item = canEdit ? dueByOwner.get(row.id) : undefined;
+                return item ? (
+                  <SecretDue changedAt={item.valueChangedAt} dueInDays={item.dueInDays} />
+                ) : null;
+              },
             }}
             manualSorting
             sorting={sorting}
@@ -373,5 +424,6 @@ function buildFilterQuery(filters: Filters, sorting: SortingState): string {
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
   if (filters.status) params.set('status', filters.status);
+  if (filters.anyIp) params.set('anyIp', 'true');
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }

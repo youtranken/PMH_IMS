@@ -12,6 +12,7 @@ import type { SweepService } from '../src/modules/queue/sweep.service';
 import type { VaultOwnersService } from '../src/modules/vault/vault-owners.service';
 import type { VaultService } from '../src/modules/vault/vault.service';
 import type { UsersApiService } from '../src/modules/users/users.api';
+import type { AuthApiService } from '../src/modules/auth/auth.api';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -40,7 +41,9 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
       getNumber: (key: string) =>
         key === 'breakGlassMaxGrantHours'
           ? Promise.resolve(MAX_GRANT_HOURS)
-          : Promise.reject(new Error(`khoá không ngờ tới: ${key}`)),
+          : key === 'breakGlassPendingExpireHours'
+            ? Promise.resolve(8)
+            : Promise.reject(new Error(`khoá không ngờ tới: ${key}`)),
     } as unknown as SystemConfigService;
     breakGlass = new BreakGlassService(
       scratch.db,
@@ -52,6 +55,11 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
       {} as VaultOwnersService,
       {} as VaultService,
       {} as UsersApiService,
+      {
+        isSessionAlive: () => Promise.resolve(true),
+        aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
+      } as unknown as AuthApiService,
+      { register: () => undefined } as unknown as SweepService,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);

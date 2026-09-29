@@ -29,7 +29,7 @@ describe('catalogExportColumns', () => {
       description: null,
       active: false,
     } as never;
-    expect(port.map((c) => c.value(row))).toEqual(['Camera', 'TCP + UDP', '50000-52000', '', 'Đã vô hiệu hóa']);
+    expect(port.map((c) => c.value(row))).toEqual(['Camera', 'TCP + UDP', '50000-52000', '', 'Đã ngừng dùng']);
     const type = catalogExportColumns('device_type');
     const t = { id: 'y', name: 'Switch', hasPortMap: true, isRouter: false, description: '', active: true } as never;
     expect(type.map((c) => c.value(t))).toEqual(['Switch', 'Có', 'Không', '', 'Đang dùng']);

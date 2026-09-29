@@ -152,7 +152,7 @@ describe('VaultPanel — hộp Xin quyền xem khóa lại khi đang gửi', () 
     mockApi(NEEDS_APPROVAL, [SECRET]);
     renderPanel({ ...ME, role: 'member' });
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     await userEvent.type(
       screen.getByLabelText(/Lý do/),
       'switch tầng 3 mất kết nối',
@@ -291,7 +291,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
   }
 
   async function send(hours: string) {
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog');
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
     const hoursBox = within(dialog).getByLabelText(/Xin trong bao lâu/);
@@ -321,10 +321,15 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
         ...NEEDS_APPROVAL,
         canRequest: false,
         pending: { id: 'p1', createdAt: '2026-09-20T01:30:00.000Z' },
+        pendingExpireHours: 8,
       },
       4,
     );
     renderPanel({ ...ME, role: 'member' });
+    // Q-15: yêu cầu chờ không gắn phiên — người xin được bảo cứ đóng trang, chờ thư.
+    expect(await screen.findByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
+    expect(screen.getByText(/trong 8 giờ thì yêu cầu tự hết hạn/)).toBeInTheDocument();
+    expect(screen.queryByText(/Giữ trang này mở/)).not.toBeInTheDocument();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rút yêu cầu' }));
     // Chưa xác nhận thì CHƯA gọi API.
@@ -342,7 +347,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     mockApi(NEEDS_APPROVAL, [SECRET, { ...SECRET, id: 's2', label: 'SSH root' }]);
     renderPanel({ ...ME, role: 'member' });
     expect(await screen.findAllByText('Cần duyệt')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Xin quyền xem' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Xin mở két' })).toHaveLength(1);
     expect(screen.getByText(/cần được duyệt trước khi xem \(2 ngăn\)/)).toBeInTheDocument();
   });
 
@@ -362,8 +367,8 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
   it('nấc giờ trong trần server đưa; chạm "2 giờ" là gửi 2', async () => {
     const calls = mockFlow({ ...NEEDS_APPROVAL, maxGrantHours: 6 }, 2);
     renderPanel({ ...ME, role: 'member' });
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
-    const dialog = screen.getByRole('dialog', { name: 'Xin xem két (1 ngăn)' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
+    const dialog = screen.getByRole('dialog', { name: 'Xin mở két (1 ngăn)' });
     const group = within(dialog).getByRole('group', { name: 'Chọn nhanh số giờ' });
     expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
       '1 giờ',
@@ -400,25 +405,309 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     expect(within(dialog).queryByTestId('secret-strength-warning')).not.toBeInTheDocument();
   });
 
-  it('dòng phụ nói giá trị đổi bao lâu rồi, ai đổi; quá ngưỡng thì gắn "Lâu chưa đổi"', async () => {
+  it('cột "Đổi lần cuối": ngày đổi + đếm ngược, quá hạn thì "Quá N ngày — cần đổi"; ai đổi', async () => {
     mockApi(WHITELIST, [
-      { ...SECRET, valueAgeDays: 400, valueChangedBy: 'it01@pmh.com.vn', valueStale: true },
+      {
+        ...SECRET,
+        valueChangedAt: '2025-08-15T03:00:00.000Z',
+        valueChangedBy: 'it01@pmh.com.vn',
+        valueAgeDays: 400,
+        valueStale: true,
+        dueInDays: -220,
+      },
+      { ...SECRET, id: 's2', label: 'SSH root', valueChangedAt: '2026-09-01T03:00:00.000Z', dueInDays: 152 },
     ]);
     renderPanel();
-    expect(await screen.findByText(/Đổi giá trị 400 ngày trước · it01@pmh\.com\.vn/)).toBeInTheDocument();
-    expect(screen.getByText('Lâu chưa đổi')).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: 'Đổi lần cuối' })).toBeInTheDocument();
+    expect(screen.getByText('Quá 220 ngày — cần đổi')).toHaveClass('badge', 'warn');
+    expect(screen.getByText('15/08/2025')).toBeInTheDocument();
+    expect(screen.getByText('còn 152 ngày')).toBeInTheDocument();
+    expect(screen.getByText('Người đổi: it01@pmh.com.vn')).toBeInTheDocument();
+  });
+
+  it('hộp Đổi giá trị luôn nhắc: IMS không nối tới máy chủ/thiết bị — đổi trên hệ thống thật trước', async () => {
+    mockApi(WHITELIST, [{ ...SECRET, kind: 'license_key' }]);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/IMS KHÔNG nối tới máy chủ hay thiết bị/)).toBeInTheDocument();
+    // Chỉ cảnh báo — không có ô tick nào phải bấm trước khi lưu.
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('Xoá vĩnh viễn: nút xác nhận chỉ bật khi gõ lại ĐÚNG tên ngăn; chưa gõ thì không gọi API', async () => {
     const fetchMock = mockApi(WHITELIST, [SECRET]);
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Xoá vĩnh viễn' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Xóa vĩnh viễn' }));
     const confirm = await screen.findByRole('dialog');
-    const button = within(confirm).getByRole('button', { name: 'Xoá vĩnh viễn' });
+    const button = within(confirm).getByRole('button', { name: 'Xóa vĩnh viễn' });
     expect(button).toBeDisabled();
     await userEvent.type(within(confirm).getByRole('textbox'), 'admin web');
     expect(button).toBeEnabled();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+  });
+});
+
+/**
+ * Q-15 — quyền mở két gắn với phiên đăng nhập đã xin; người xin tự trả quyền sớm (VLT-055).
+ *
+ * Người xin phải ĐỌC được rằng đăng xuất là mất quyền (không thì đăng nhập lại và tưởng hệ
+ * thống hỏng), và đóng được két khi xong việc mà không phải nhờ người duyệt thu hồi.
+ */
+describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
+  const GRANTED: AccessVerdict = {
+    ...NEEDS_APPROVAL,
+    canReveal: true,
+    canRequest: false,
+    grant: { id: 'g1', expiresAt: '2026-09-20T05:30:00.000Z' },
+    grantSecondsLeft: 3600,
+  };
+
+  function mockRelease(verdict: AccessVerdict) {
+    const calls: { url: string; method: string }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+        calls.push({ url, method });
+        if (method === 'GET' && url.includes('/vault/secrets/verdict')) {
+          return Promise.resolve(jsonResponse(200, verdict));
+        }
+        if (method === 'GET' && url.includes('/vault/secrets')) {
+          return Promise.resolve(jsonResponse(200, [SECRET]));
+        }
+        if (method === 'POST' && url.includes('/release')) {
+          return Promise.resolve(jsonResponse(201, { id: 'g1', state: 'revoked' }));
+        }
+        return new Promise<Response>(() => {});
+      }),
+    );
+    return calls;
+  }
+
+  it('đang có quyền: thấy đếm lùi, câu "hết khi đăng xuất" và nút Trả quyền', async () => {
+    mockRelease(GRANTED);
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/Bạn được xem tới/)).toBeInTheDocument();
+    expect(screen.getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trả quyền' })).toBeInTheDocument();
+  });
+
+  it('Trả quyền đi qua hộp xác nhận, rồi gọi đúng phiếu', async () => {
+    const calls = mockRelease(GRANTED);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Trả quyền' }));
+    // Chưa xác nhận thì CHƯA gọi API.
+    expect(calls.some((c) => c.url.includes('/release'))).toBe(false);
+    const confirm = await screen.findByRole('dialog');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Trả quyền' }));
+
+    expect(await screen.findByText(/Đã trả quyền/)).toBeInTheDocument();
+    expect(
+      calls.some((c) => c.method === 'POST' && c.url.includes('/vault/break-glass/g1/release')),
+    ).toBe(true);
+  });
+
+  it('bấm Hủy ở hộp xác nhận thì không trả gì', async () => {
+    const calls = mockRelease(GRANTED);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Trả quyền' }));
+    const confirm = await screen.findByRole('dialog');
+    // Nút ✕ và nút cuối hộp cùng tên "Hủy" — bấm nút cuối hộp.
+    const buttons = within(confirm).getAllByRole('button', { name: 'Hủy' });
+    await userEvent.click(buttons[buttons.length - 1]);
+    expect(await screen.findByRole('button', { name: 'Trả quyền' })).toBeEnabled();
+    expect(calls.some((c) => c.url.includes('/release'))).toBe(false);
+  });
+
+  it('không có quyền đang chạy thì không có nút Trả quyền', async () => {
+    mockRelease(NEEDS_APPROVAL);
+    renderPanel({ ...ME, role: 'member' });
+    await screen.findByRole('button', { name: 'Xin mở két' });
+    expect(screen.queryByRole('button', { name: 'Trả quyền' })).not.toBeInTheDocument();
+  });
+
+  it('quyền đã gắn ở phiên khác: nói rõ vì sao phải xin lại', async () => {
+    mockRelease({ ...NEEDS_APPROVAL, otherSessionHeld: true });
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/đã gắn với một phiên đăng nhập khác/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xin mở két' })).toBeInTheDocument();
+  });
+
+  it('đã duyệt, chưa xem lần nào: chỉ đường "bấm Xem, nhập mã 6 số", có nút Xem ở ngăn', async () => {
+    mockRelease({
+      ...NEEDS_APPROVAL,
+      canReveal: true,
+      canRequest: false,
+      claimable: { id: 'g1', expiresAt: '2026-09-20T05:30:00.000Z' },
+      grantSecondsLeft: 3600,
+    });
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/Đã được duyệt — bấm "Xem"/)).toBeInTheDocument();
+    expect(screen.getByText(/tính từ lúc duyệt/)).toBeInTheDocument();
+    expect(screen.getByText(/Lần xem đầu tiên gắn quyền vào phiên/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Xin mở két' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trả quyền' })).toBeInTheDocument();
+  });
+
+  it('hộp xin nói trước: lần xem đầu gắn quyền vào phiên, đăng xuất hay hết phiên là hết', async () => {
+    mockRelease(NEEDS_APPROVAL);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/lần bấm "Xem" đầu tiên/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * VLT-062 — khung két nằm TRONG một hộp (popup trang Két tổng): bước gõ mã và bước hiện giá
+ * trị chạy ngay trong hộp đó. Chồng thêm hai hộp là ba lớp trên điện thoại.
+ */
+describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)', () => {
+  function mockReveal() {
+    const calls: { url: string; method: string }[] = [];
+    let steppedUp = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+        calls.push({ url, method });
+        if (method === 'GET' && url.includes('/vault/secrets/verdict')) {
+          return Promise.resolve(jsonResponse(200, WHITELIST));
+        }
+        if (method === 'GET' && url.includes('/vault/secrets')) {
+          return Promise.resolve(jsonResponse(200, [SECRET]));
+        }
+        if (method === 'POST' && url.includes('/auth/step-up')) {
+          steppedUp = true;
+          return Promise.resolve(jsonResponse(200, { graceMinutes: 10 }));
+        }
+        if (method === 'POST' && url.includes('/reveal')) {
+          return Promise.resolve(
+            steppedUp
+              ? jsonResponse(200, { value: 'Sup3r#Secret', revealSeconds: 60, stepUpSecondsLeft: 600 })
+              : jsonResponse(403, { code: 'STEPUP_REQUIRED', message: 'Cần xác nhận' }),
+          );
+        }
+        return new Promise<Response>(() => {});
+      }),
+    );
+    return calls;
+  }
+
+  function renderInline() {
+    return renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <ConfirmProvider>
+            <VaultPanel ownerType="device" ownerId="d1" me={ME} stepsInline />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('Xem → bước mã → bước giá trị, KHÔNG mở hộp nào; Ẩn ngay thì về danh sách', async () => {
+    const calls = mockReveal();
+    renderInline();
+    await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+
+    const step = await screen.findByRole('region', { name: 'Xác nhận danh tính' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // Danh sách ngăn nhường chỗ cho bước — không còn nút Xem nào sau lưng.
+    expect(screen.queryByRole('button', { name: 'Xem' })).not.toBeInTheDocument();
+
+    await userEvent.type(within(step).getByLabelText('Mã xác thực'), '123456');
+    expect(await screen.findByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'POST' && c.url.includes('/auth/step-up'))).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ẩn ngay' }));
+    expect(screen.queryByTestId('secret-value')).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+  });
+
+  it('bước mã có nút Quay lại về danh sách, không gửi gì', async () => {
+    const calls = mockReveal();
+    renderInline();
+    await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Quay lại danh sách ngăn/ }));
+    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes('/auth/step-up'))).toBe(false);
+  });
+
+  it('không có hộp bao ngoài (trang hồ sơ): vẫn là hộp riêng như cũ', async () => {
+    mockReveal();
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+});
+
+describe('VaultPanel — ngoài danh sách (VLT-056)', () => {
+  it('không có quyền: nói rõ và chỉ đường liên hệ người gán quyền', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/vault/secrets/verdict')) {
+        return Promise.resolve(
+          jsonResponse(200, { ...NEEDS_APPROVAL, tier: 'denied', canRequest: false }),
+        );
+      }
+      if (url.includes('/auth/support-contact')) {
+        return Promise.resolve(jsonResponse(200, { contact: 'Anh Tùng IT — 0909 000 111' }));
+      }
+      return new Promise<Response>(() => {});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText('Bạn chưa có quyền xem két này')).toBeInTheDocument();
+    expect(await screen.findByText(/Anh Tùng IT — 0909 000 111/)).toBeInTheDocument();
+  });
+});
+
+describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-035 · DEV-057 · DEV-079)', () => {
+  function renderWith(props: { canEdit?: boolean; locked?: boolean }) {
+    mockApi(WHITELIST, []);
+    return renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <ConfirmProvider>
+            <VaultPanel
+              ownerType="device"
+              ownerId="d1"
+              me={ME}
+              ownerLabel="SW-CORE-01"
+              canEdit={props.canEdit}
+              locked={props.locked}
+            />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('tiêu đề khu + số ngăn + nút cất cùng một thanh; hộp cất nêu tên máy', async () => {
+    renderWith({});
+    expect(await screen.findByRole('heading', { name: 'Ngăn két' })).toBeInTheDocument();
+    expect(await screen.findByText('Két chưa có ngăn nào')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cất mật khẩu/khóa' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Cất mật khẩu/khóa — SW-CORE-01' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hồ sơ đã khóa: không nút cất, câu rỗng nói đã khóa thay vì mời "cất vào đây"', async () => {
+    renderWith({ canEdit: false, locked: true });
+    expect(await screen.findByText('Két chưa có ngăn nào')).toBeInTheDocument();
+    expect(screen.getByText(/Hồ sơ đã khóa/)).toBeInTheDocument();
+    expect(screen.queryByText(/cất vào đây/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();
   });
 });

@@ -109,9 +109,16 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(dialog.getByText('Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.')).toBeVisible();
     await dialog.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Phòng IT E2E');
-    await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
-    await expect(dialog).toHaveCount(0);
-    await expect(page.getByText(`Đã cấp 172.18.${octet}.2.`)).toBeVisible();
+
+    // NET-007: lối "kế tiếp" cho đổi sang chỗ trống khác ngay trong hộp (gateway không có).
+    await dialog.getByRole('button', { name: 'Địa chỉ' }).click();
+    await expect(page.getByRole('option', { name: `172.18.${octet}.1` })).toHaveCount(0);
+    await page.getByRole('option', { name: `172.18.${octet}.3` }).click();
+    const moved = page.getByRole('dialog', { name: `Cấp IP — 172.18.${octet}.3` });
+    await expect(moved).toBeVisible();
+    await moved.getByRole('button', { name: 'Cấp IP', exact: true }).click();
+    await expect(moved).toHaveCount(0);
+    await expect(page.getByText(`Đã cấp 172.18.${octet}.3.`)).toBeVisible();
   });
 
   /**
@@ -447,11 +454,11 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     ).toBe(200);
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await rowAction(page, cidr, 'Vô hiệu hóa');
+    await rowAction(page, cidr, 'Ngừng dùng');
     const off = page.getByRole('dialog');
     await off.getByRole('textbox', { name: 'Lý do' }).fill('gộp sang VLAN mới');
-    await off.getByRole('button', { name: 'Vô hiệu hóa' }).click();
-    await expect(page.getByText('Đã vô hiệu hóa dải.')).toBeVisible();
+    await off.getByRole('button', { name: 'Ngừng dùng' }).click();
+    await expect(page.getByText('Đã ngừng dùng dải.')).toBeVisible();
 
     /*
      * Thẻ dải VẪN ĐỨNG ĐÓ, mang huy hiệu và nói rõ vì sao — không biến mất.
@@ -462,20 +469,20 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     // `'\\.'` chứ không phải `'\.'`: trong chuỗi JS thì `\.` rơi mất dấu chéo và phép thay thế
     // này thành RỖNG — regex đi ra vẫn còn dấu chấm khớp-mọi-ký-tự (cổng lint e2e bắt, 08/09).
     const card = page.getByRole('link', { name: new RegExp(cidr.replace(/\./g, '\\.')) });
-    await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toBeVisible();
+    await expect(card.getByText('Đã ngừng dùng', { exact: true })).toBeVisible();
     await expect(card.getByText(/gộp sang VLAN mới/)).toBeVisible();
 
     // Bảng IP vẫn hiện hồ sơ cũ — địa chỉ KHÔNG được vẽ thành ô trống sẵn sàng cấp lại.
     await expect(page.getByText('Máy chủ file')).toBeVisible();
     // Không một ô nào của dải đã tắt được mời cấp — kể cả những địa chỉ chưa ai dùng.
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(0);
-    await expect(page.getByText(/Dải này đã vô hiệu hóa/)).toBeVisible();
+    await expect(page.getByText(/Dải này đã ngừng dùng/)).toBeVisible();
 
     // Bật lại: dải sống lại, và ĐÚNG hồ sơ đã tắt cùng nó cũng vậy.
-    await rowAction(page, cidr, 'Bật lại');
-    await page.getByRole('dialog').getByRole('button', { name: 'Bật lại' }).click();
-    await expect(page.getByText('Đã bật lại dải.')).toBeVisible();
-    await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toHaveCount(0);
+    await rowAction(page, cidr, 'Dùng lại');
+    await page.getByRole('dialog').getByRole('button', { name: 'Dùng lại' }).click();
+    await expect(page.getByText('Đã dùng lại dải.')).toBeVisible();
+    await expect(card.getByText('Đã ngừng dùng', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Máy chủ file')).toBeVisible();
 
     /*
@@ -543,7 +550,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const body = (await blocked.json()) as Record<string, unknown>;
     expect(body).toMatchObject({ code: 'SUBNET_HAS_ADDRESSES', addresses: 1 });
     // Câu báo phải chỉ sang đường còn lại, không để người dùng đứng đó không biết làm gì.
-    expect(String(body.message)).toContain('Vô hiệu hóa');
+    expect(String(body.message)).toContain('Ngừng dùng');
   });
 
   /**
@@ -681,19 +688,28 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     const ipId = ((await created.json()) as { id: string }).id;
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await rowAction(page, `172.16.${octet}.2`, 'Ẩn hồ sơ');
-    const form = page.getByRole('dialog');
+    await rowAction(page, `172.16.${octet}.2`, 'Xóa');
+    const form = page.getByRole('dialog', { name: `Xóa hồ sơ IP nhập nhầm — 172.16.${octet}.2` });
     await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');
-    await form.getByRole('button', { name: 'Ẩn hồ sơ' }).click();
+    await form.getByRole('button', { name: 'Xóa', exact: true }).click();
 
-    await expect(page.getByText('Đã ẩn hồ sơ IP.')).toBeVisible();
+    await expect(page.getByText('Đã xóa hồ sơ IP — nhập lại được ngay.')).toBeVisible();
     // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.
+    const row = page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) });
+    await expect(row.getByRole('button', { name: 'Cấp IP', exact: true })).toBeVisible();
+    // Q-15: không có đường khôi phục trên giao diện — không chip hồ sơ đã xóa, không nút.
     await expect(
-      page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) })
-        .getByRole('button', { name: 'Cấp IP', exact: true }),
-    ).toBeVisible();
+      page.getByRole('group', { name: 'Trạng thái' }).getByRole('button', { name: /^Đã ẩn|^Đã ngừng dùng/ }),
+    ).toHaveCount(0);
 
-    // Lịch sử của hồ sơ đã ẩn VẪN đọc được — đó mới là lúc người ta cần đọc nó.
+    // Xóa là để NHẬP LẠI: khai lại đúng địa chỉ đó được ngay.
+    const again = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.2`, usedBy: 'nhập lại đúng E2E' },
+    });
+    expect(again.status()).toBe(201);
+
+    // Lịch sử của hồ sơ đã xóa VẪN đọc được qua API — vết không mất.
     const history = await page.request.get(`/api/v1/ipam/addresses/${ipId}/history`);
     expect(history.status()).toBe(200);
   });

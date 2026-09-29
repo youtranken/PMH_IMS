@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -41,6 +41,8 @@ export interface AttachmentRecord {
   kind: 'image' | 'document';
   sizeBytes: number;
   createdAt: string;
+  /** Họ tên người tải — API tra qua `users.api`; vắng thì dòng phụ không hiện. */
+  uploadedByName?: string | null;
 }
 
 /**
@@ -78,6 +80,13 @@ export function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) 
  * Câu gợi ý "giấy tờ gì" theo LOẠI hồ sơ — "hóa đơn, phiếu bảo hành" là của thiết bị, đặt dưới
  * một hợp đồng nhà mạng thì người ta không biết nên đính gì. Loại không có câu riêng dùng câu chung.
  */
+/** Một file trong lô đang tải — dòng có nút Hủy riêng (DEV-081). */
+interface UploadQueueItem {
+  key: string;
+  name: string;
+  state: 'waiting' | 'uploading' | 'done' | 'failed' | 'cancelled';
+}
+
 const HINT_BY_OWNER: Partial<Record<AttachmentOwnerType, string>> = {
   isp: 'attachments.hint_isp',
   service_account: 'attachments.hint_service_account',
@@ -116,6 +125,11 @@ export function AttachmentPanel({
   const canDelete = canEdit && (me?.role === 'sa' || me?.role === 'admin');
   /** Tiến độ lô đang tải: `done`/`total`. `null` = không tải gì. */
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [queue, setQueue] = useState<UploadQueueItem[]>([]);
+  const cancelledRef = useRef(new Set<string>());
+  const controllersRef = useRef(new Map<string, AbortController>());
+  const markQueue = (key: string, state: UploadQueueItem['state']) =>
+    setQueue((items) => items.map((item) => (item.key === key ? { ...item, state } : item)));
   const busy = progress !== null;
 
   const queryKey = attachmentsKey(ownerType, ownerId);
@@ -135,22 +149,54 @@ export function AttachmentPanel({
    */
   const uploadAll = async (picked: File[]) => {
     setProgress({ done: 0, total: picked.length });
+    const batch = picked.map((file, index) => ({ key: `${Date.now()}-${index}`, file }));
+    setQueue(batch.map(({ key, file }) => ({ key, name: file.name, state: 'waiting' })));
     let ok = 0;
-    for (const [index, file] of picked.entries()) {
-      try {
-        await uploadFile('/api/v1/files', file, csrfToken, { ownerType, ownerId });
-        ok += 1;
-      } catch (error) {
-        toast({
-          message: t('attachments.draftFailedLive', { name: file.name, reason: errorMessage(error) }),
-          tone: 'error',
-        });
+    for (const [index, { key, file }] of batch.entries()) {
+      if (!cancelledRef.current.has(key)) {
+        const controller = new AbortController();
+        controllersRef.current.set(key, controller);
+        markQueue(key, 'uploading');
+        try {
+          await uploadFile(
+            '/api/v1/files',
+            file,
+            csrfToken,
+            { ownerType, ownerId },
+            'file',
+            controller.signal,
+          );
+          ok += 1;
+          markQueue(key, 'done');
+        } catch (error) {
+          // Người dùng tự hủy thì không phải lỗi — không báo đỏ.
+          if (!cancelledRef.current.has(key)) {
+            markQueue(key, 'failed');
+            toast({
+              message: t('attachments.draftFailedLive', { name: file.name, reason: errorMessage(error) }),
+              tone: 'error',
+            });
+          }
+        } finally {
+          controllersRef.current.delete(key);
+        }
       }
       setProgress({ done: index + 1, total: picked.length });
     }
     if (ok > 0) toast({ message: t('attachments.uploadedCount', { count: ok }) });
     setProgress(null);
+    setQueue([]);
+    cancelledRef.current.clear();
+    // Làm mới cả khi có file bị hủy: hủy lúc server đã nhận đủ thì file vẫn lên — danh sách
+    // phải nói đúng sự thật, người dùng xóa nó ở đó.
     await refresh();
+  };
+
+  /** Hủy MỘT file của lô: file đang chờ thì bỏ qua, file đang tải thì ngắt yêu cầu (DEV-081). */
+  const cancelOne = (key: string) => {
+    cancelledRef.current.add(key);
+    controllersRef.current.get(key)?.abort();
+    markQueue(key, 'cancelled');
   };
 
   const rows = files.data ?? [];
@@ -174,6 +220,26 @@ export function AttachmentPanel({
             <p className="muted" role="status">
               {t('attachments.uploadingOf', { done: progress.done, total: progress.total })}
             </p>
+          ) : null}
+          {queue.length > 0 ? (
+            <ul className="upload-queue">
+              {queue.map((item) => (
+                <li key={item.key}>
+                  <span className="upload-queue-name">{item.name}</span>
+                  <span className="muted">{t(`attachments.queue_${item.state}`)}</span>
+                  {item.state === 'waiting' || item.state === 'uploading' ? (
+                    <button
+                      type="button"
+                      className="btn sm ghost"
+                      aria-label={t('attachments.cancelUpload', { name: item.name })}
+                      onClick={() => cancelOne(item.key)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           ) : null}
           {/* Luật "chỉ tải về, không mở inline" nói ngay chỗ đính kèm — không phải câu rỗng. */}
           <p className="muted small">{t('attachments.noPreview')}</p>
@@ -205,7 +271,14 @@ export function AttachmentPanel({
                 <tr key={row.id}>
                   <td data-label={t('attachments.name')}>{row.originalName}</td>
                   <td data-label={t('attachments.size')}>{formatSize(row.sizeBytes)}</td>
-                  <td data-label={t('attachments.uploadedAt')}>{formatDateTime(row.createdAt)}</td>
+                  <td data-label={t('attachments.uploadedAt')}>
+                    {formatDateTime(row.createdAt)}
+                    {row.uploadedByName ? (
+                      <span className="cell-sub">
+                        {t('attachments.uploadedBy', { name: row.uploadedByName })}
+                      </span>
+                    ) : null}
+                  </td>
                   <td data-label={t('common.actions')}>
                     {/* "Tải về" là việc dùng nhiều nhất: nút ghost luôn hiện. "Xóa" (việc phá) nằm
                         trong menu ⋯ chữ đỏ — nút đỏ đặc sát "Tải về" là mời bấm nhầm. */}

@@ -1,13 +1,14 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExpirySourceRegistry } from '../../common/expiry/expiry-registry';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
-import { addDays, daysBetween, isoDateInTz } from '../../common/today';
+import { addDays, daysBetween, isoDateInTz, startOfDayInTz } from '../../common/today';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import type { ExpiryItem } from '../../common/expiry/expiry-source';
+import type { ExpiryItem, RenewTerms } from '../../common/expiry/expiry-source';
+import type { ExpiryKindInfo } from '../../common/expiry/expiry-registry';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { renewalHistoryTable } from './expiry.schema';
 
@@ -15,13 +16,24 @@ import { renewalHistoryTable } from './expiry.schema';
 export interface ExpiryRow extends ExpiryItem {
   daysLeft: number;
   canRenew: boolean;
+  /** Hộp Gia hạn hiện ô "Số hợp đồng" + "Chi phí" chỉ khi nguồn này có sổ gia hạn (Q-15). */
+  canRenewTerms: boolean;
 }
 
 export interface ExpirySummary {
   expired: number;
   critical: number;
   warning: number;
+  /** Mục phần mềm đã Hết hạn đang chờ tự Thanh lý (Q-13) — có `autoRetireOn`. */
+  autoRetire: number;
 }
+
+/** Cột sắp được ở màn "Sắp hết hạn" — sắp ở máy chủ, trước khi cắt trang. */
+export const EXPIRY_SORTS = ['end', 'kind', 'label'] as const;
+export type ExpirySort = (typeof EXPIRY_SORTS)[number];
+
+/** Bộ lọc ô số: ba nhóm hạn, cộng nhóm "chờ tự thanh lý" (không phải một mức hạn). */
+export type ExpiryFilterState = ExpiryLevel | 'autoRetire';
 
 /**
  * Hai ngưỡng "sắp hết hạn", đọc từ `system_config` (AD-11, 0041).
@@ -72,8 +84,13 @@ export interface ExpiryQuery {
    * *"Màn này KHÔNG phân trang — API trả về hết — nên lọc ở đây là lọc đúng toàn bộ tập kết
    * quả."* Câu ấy ngừng đúng ngay khi phân trang, nên phép lọc phải đi xuống cùng chuyến —
    * nếu không, bấm "Gấp" chỉ lọc trong 50 dòng đang xem trong khi nút ngay trên đầu đề số 87.
+   *
+   * `autoRetire` = mục phần mềm đang chờ tự Thanh lý (EX-005).
    */
-  state?: ExpiryLevel | '';
+  state?: ExpiryFilterState | '';
+  /** Cột sắp (EX-011) — mặc định ngày hết hạn tăng dần. Sắp TRƯỚC khi cắt trang. */
+  sort?: ExpirySort;
+  dir?: 'asc' | 'desc';
 }
 
 /**
@@ -101,7 +118,7 @@ export class ExpiryService {
   }
 
   /** Các loại nguồn đang có — màn Expiry dựng bộ lọc từ đây, không viết cứng danh sách. */
-  kinds(): { kind: string; label: string; canRenew: boolean }[] {
+  kinds(): ExpiryKindInfo[] {
     return this.registry.list();
   }
 
@@ -139,17 +156,13 @@ export class ExpiryService {
     const to = addDays(today, withinDays);
 
     const { items, failed } = await this.registry.collect(from, to, query.kinds);
-    const renewable = new Set(
-      this.registry
-        .list()
-        .filter((source) => source.canRenew)
-        .map((source) => source.kind),
-    );
+    const sources = new Map(this.registry.list().map((source) => [source.kind, source]));
 
     const rows = items.map((item) => ({
       ...item,
       daysLeft: daysBetween(today, item.end),
-      canRenew: renewable.has(item.kind),
+      canRenew: sources.get(item.kind)?.canRenew ?? false,
+      canRenewTerms: sources.get(item.kind)?.canRenewTerms ?? false,
     }));
 
     /*
@@ -171,7 +184,12 @@ export class ExpiryService {
      * bấm "Gấp" xong thấy "Gấp 8" tụt xuống "Gấp 8 / Quá hạn 0 / Sắp tới 0". Đảo hai bước sau
      * thì phép lọc chỉ chạy trong trang đang xem.
      */
-    const picked = query.state ? rows.filter((row) => levelOf(row.daysLeft, thresholds) === query.state) : rows;
+    const state = query.state;
+    const picked = sortExpiryRows(
+      state ? rows.filter((row) => inState(row, state, thresholds)) : rows,
+      query.sort,
+      query.dir,
+    );
     return {
       items: pageOf(picked, query),
       total: picked.length,
@@ -185,7 +203,13 @@ export class ExpiryService {
    * Gia hạn: gọi API của MODULE CHỦ rồi ghi lịch sử (AC 3.4).
    * Engine không tự UPDATE bảng của ai — nó còn không biết bảng đó tên gì.
    */
-  async renew(actor: string, kind: string, id: string, newEnd: string): Promise<void> {
+  async renew(
+    actor: string,
+    kind: string,
+    id: string,
+    newEnd: string,
+    terms: RenewTerms = {},
+  ): Promise<void> {
     const source = this.registry.find(kind);
     if (!source) {
       throw new NotFoundException({
@@ -216,7 +240,14 @@ export class ExpiryService {
      * Nay phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
      * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ còn kiểm tra rồi gọi.
      */
-    await source.renew(actor, id, newEnd);
+    const hasTerms = !!terms.contract?.trim() || (terms.cost !== undefined && terms.cost !== null);
+    if (hasTerms && !source.renewTerms) {
+      throw new BadRequestException({
+        code: 'EXPIRY_TERMS_UNSUPPORTED',
+        message: `Loại "${source.sourceLabel}" không có sổ gia hạn để ghi số hợp đồng và chi phí — bỏ trống hai ô đó.`,
+      });
+    }
+    await source.renew(actor, id, newEnd, hasTerms ? terms : undefined);
   }
 
   /**
@@ -238,15 +269,23 @@ export class ExpiryService {
       oldEnd: string | null;
       newEnd: string;
       actor: string;
+      /** Hợp đồng + chi phí của riêng lượt này (Q-15). Bỏ trống = chưa khai. */
+      contract?: string | null;
+      cost?: number | null;
+      /** Website của kỳ này (SSL/tên miền). Null = loại hồ sơ không có khái niệm website. */
+      websites?: string[] | null;
     },
   ): Promise<void> {
-    await tx.insert(renewalHistoryTable).values(entry);
+    const contract = entry.contract?.trim() || null;
+    const cost = entry.cost ?? null;
+    const websites = entry.websites ?? null;
+    await tx.insert(renewalHistoryTable).values({ ...entry, contract, cost, websites });
     await this.audit.appendWithin(tx, {
       actor: entry.actor,
       action: 'expiry.renewed',
       objectType: entry.objectKind,
       objectId: entry.objectId,
-      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd },
+      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd, contract, cost, websites },
     });
   }
 
@@ -262,16 +301,38 @@ export class ExpiryService {
       .limit(HISTORY_PAGE_LIMIT);
   }
 
-  /** Toàn bộ lượt gia hạn gần đây — dashboard sếp (Epic 7) và báo cáo năm. */
-  async recentRenewals(limit = 50) {
+  /**
+   * Lượt gia hạn gần đây, lọc được theo khoảng ngày (tab "Đã gia hạn"). `from`/`to` là ngày
+   * YYYY-MM-DD, cả hai BAO GỒM, cắt theo `app.timezone` — cùng múi với giờ in trên màn.
+   * Không lọc thì 50 lượt mới nhất; có lọc thì trần rộng hơn vì người hỏi "tháng này gia hạn
+   * những gì" cần đủ cả tháng.
+   */
+  async recentRenewals(range: { from?: string; to?: string } = {}) {
+    const where: SQL[] = [];
+    if (range.from || range.to) {
+      const timeZone = await this.config.getString('appTimezone');
+      if (range.from) {
+        where.push(gte(renewalHistoryTable.createdAt, startOfDayInTz(range.from, timeZone)));
+      }
+      if (range.to) {
+        where.push(
+          lt(renewalHistoryTable.createdAt, startOfDayInTz(addDays(range.to, 1), timeZone)),
+        );
+      }
+    }
     return this.db
       .select()
       .from(renewalHistoryTable)
-      .orderBy(desc(renewalHistoryTable.createdAt))
-      .limit(limit);
+      .where(where.length > 0 ? and(...where) : undefined)
+      .orderBy(desc(renewalHistoryTable.createdAt), desc(renewalHistoryTable.id))
+      .limit(where.length > 0 ? RENEWALS_RANGE_CAP : RENEWALS_RECENT);
   }
 
 }
+
+/** Tab "Đã gia hạn": số lượt khi không lọc, và trần kỹ thuật khi lọc theo khoảng ngày. */
+const RENEWALS_RECENT = 50;
+const RENEWALS_RANGE_CAP = 1000;
 
 /**
  * Ba chip đếm — DÙNG ĐÚNG hai ngưỡng mà huy hiệu trên hàng dùng.
@@ -306,12 +367,43 @@ export function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryL
 }
 
 function summarize(rows: ExpiryRow[], thresholds: ExpiryThresholds): ExpirySummary {
-  const summary: ExpirySummary = { expired: 0, critical: 0, warning: 0 };
+  const summary: ExpirySummary = { expired: 0, critical: 0, warning: 0, autoRetire: 0 };
   for (const row of rows) {
     const level = levelOf(row.daysLeft, thresholds);
     if (level) summary[level] += 1;
+    if (row.autoRetireOn) summary.autoRetire += 1;
   }
   return summary;
+}
+
+function inState(row: ExpiryRow, state: ExpiryFilterState, thresholds: ExpiryThresholds): boolean {
+  return state === 'autoRetire'
+    ? Boolean(row.autoRetireOn)
+    : levelOf(row.daysLeft, thresholds) === state;
+}
+
+const labelCollator = new Intl.Collator('vi');
+
+/**
+ * Sắp TRƯỚC khi cắt trang — sắp sau là chỉ đảo chỗ trang đang xem. Mặc định giữ đúng thứ tự
+ * "gấp nhất lên đầu" (hết hạn tăng dần). Khoá phụ luôn là ngày hết hạn tăng dần, rồi `id`, để
+ * hai lượt hỏi liền nhau cắt trang ra cùng một kết quả.
+ */
+export function sortExpiryRows<T extends Pick<ExpiryRow, 'id' | 'end' | 'kind' | 'label'>>(
+  rows: T[],
+  sort: ExpirySort | undefined,
+  dir: 'asc' | 'desc' | undefined,
+): T[] {
+  const sign = dir === 'desc' ? -1 : 1;
+  const primary = (a: T, b: T): number =>
+    sort === 'kind'
+      ? a.kind.localeCompare(b.kind)
+      : sort === 'label'
+        ? labelCollator.compare(a.label, b.label)
+        : a.end.localeCompare(b.end);
+  return [...rows].sort(
+    (a, b) => sign * primary(a, b) || a.end.localeCompare(b.end) || a.id.localeCompare(b.id),
+  );
 }
 
 /**

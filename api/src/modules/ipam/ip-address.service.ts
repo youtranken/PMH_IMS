@@ -43,11 +43,11 @@ export type { IpStatus };
 
 /** Câu cảnh báo theo đúng việc người dùng vừa bấm — xem `assertNoLiveNatWithin`. */
 const PURPOSE_WARNING = {
-  reclaim: 'Thu hồi mà để nguyên rule thì port vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
-  assign: 'Cấp cho máy khác mà để nguyên rule là giao thẳng port đang mở cho máy mới.',
-  void: 'Ẩn hồ sơ thì địa chỉ này biến khỏi mọi màn, còn rule NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
+  reclaim: 'Thu hồi mà để nguyên luật NAT thì cổng vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
+  assign: 'Cấp cho máy khác mà để nguyên luật NAT là giao thẳng cổng đang mở cho máy mới.',
+  void: 'Xóa hồ sơ thì địa chỉ này biến khỏi mọi màn, còn luật NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
   readdress:
-    'Dời hồ sơ sang địa chỉ khác mà để nguyên rule thì rule vẫn trỏ vào địa chỉ CŨ — sổ NAT và sổ IP nói khác nhau về cùng một cái máy.',
+    'Dời hồ sơ sang địa chỉ khác mà để nguyên luật NAT thì luật vẫn trỏ vào địa chỉ CŨ — sổ NAT và sổ IP nói khác nhau về cùng một cái máy.',
 } as const;
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
@@ -112,7 +112,14 @@ export interface TransitionOptions {
 
 /** Một dòng trên màn "toàn bộ dải": hoặc là hồ sơ thật, hoặc là một ô trống. */
 export type SubnetSlot =
-  | ({ kind: 'record' } & IpAddressRecord)
+  | ({
+      kind: 'record';
+      /**
+       * Chỉ hồ sơ đang Trống: chủ của lượt THU HỒI gần nhất (mã máy, không có thì người/bộ
+       * phận). Hồ sơ đã gỡ chủ lúc thu hồi, nên "IP này vừa của ai" chỉ còn ở lịch sử.
+       */
+      previousOwner?: string | null;
+    } & IpAddressRecord)
   | { kind: 'free'; address: string };
 
 /**
@@ -148,24 +155,28 @@ export class IpAddressService {
    */
   async listBySubnet(subnetId: string, includeVoided = false): Promise<SubnetSlot[]> {
     /*
-     * Dải ĐÃ VÔ HIỆU HÓA thì hiện luôn cả những hồ sơ IP đã tắt theo nó.
+     * Dải ĐÃ NGỪNG DÙNG thì hiện luôn những hồ sơ IP đã tắt CÙNG nó.
      *
      * Bỏ chúng đi thì 254 địa chỉ hiện ra là 254 ô TRỐNG — và "trống" ở màn này có nghĩa rất
      * cụ thể: cấp cho máy khác được. Trong khi sự thật là mấy chục cái máy vẫn đang cắm đúng
      * những địa chỉ đó dưới dạng IP tĩnh; không cái nào tự nhả ra chỉ vì cuốn sổ đã cất dải đi.
-     * Đây chính là lý do người dùng mở phiếu: vô hiệu hóa mà nhìn như đã xóa sạch.
      *
-     * Dải đang dùng thì ngược lại — hồ sơ bị xóa lẻ ("gõ nhầm địa chỉ") PHẢI biến thành ô
-     * trống, vì đó là toàn bộ ý nghĩa của việc xóa nó.
+     * "Cùng nó" = `voided_at` trùng mốc của dải (`SubnetService.voidSubnet` đóng dải và mọi IP
+     * bên trong bằng MỘT mốc). Hồ sơ bị XÓA lẻ trước đó (nhập nhầm, Q-15) không hiện ở đâu cả —
+     * xóa là để nhập lại, vết của nó nằm trong nhật ký hệ thống chứ không trên màn dải.
      *
-     * `includeVoided` là cửa XIN thêm, do người dùng bật ("Hiện hồ sơ đã ẩn"). Nó phải tồn
-     * tại vì cửa `restore()` cần một đường tới: ẩn nhầm một hồ sơ mà không màn nào hiện nó ra
-     * nữa thì bật lại chỉ là một endpoint không ai gọi được (rà soát 07/09, mục 6).
+     * `includeVoided` là cửa XIN thêm ở tầng API (SA tra hồ sơ đã xóa qua `restore()`); giao
+     * diện không gọi nó.
      */
     const frame = await this.subnets.frameOf(subnetId);
-    const records = await this.listRecords(subnetId, {
+    const all = await this.listRecords(subnetId, {
       includeVoided: includeVoided || frame.voidedAt !== null,
     });
+    const stamp = frame.voidedAt?.getTime() ?? null;
+    const records =
+      includeVoided || stamp === null
+        ? all
+        : all.filter((row) => row.voidedAt === null || row.voidedAt.getTime() === stamp);
     /*
      * `keepPreferredByAddress`, KHÔNG phải `new Map(records.map(...))` (F-10, vá 21/09).
      *
@@ -174,11 +185,55 @@ export class IpAddressService {
      * Xem luật và hậu quả ở chính hàm ấy.
      */
     const byAddress = keepPreferredByAddress(records);
+    const previous = await this.previousOwnersOf(
+      [...byAddress.values()]
+        .filter((record) => record.status === 'free' && !record.voidedAt)
+        .map((record) => record.id),
+    );
 
     return enumerateHosts(frame.cidr).map<SubnetSlot>((address) => {
       const record = byAddress.get(address);
-      return record ? { kind: 'record', ...record } : { kind: 'free', address };
+      if (!record) return { kind: 'free', address };
+      const owner = previous.get(record.id);
+      return owner
+        ? { kind: 'record', ...record, previousOwner: owner }
+        : { kind: 'record', ...record };
     });
+  }
+
+  /**
+   * Chủ của lượt thu hồi GẦN NHẤT cho từng hồ sơ — một câu `DISTINCT ON` cho cả dải, và một
+   * lượt `devices.api` cho mọi mã máy (AD-2, không join bảng `device`).
+   */
+  private async previousOwnersOf(ids: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (ids.length === 0) return result;
+    const rows = await this.db
+      .selectDistinctOn([ipHistoryTable.ipAddressId], {
+        id: ipHistoryTable.ipAddressId,
+        deviceId: sql<string | null>`${ipHistoryTable.changes}->>'previousDeviceId'`,
+        usedBy: sql<string | null>`${ipHistoryTable.changes}->>'previousUsedBy'`,
+      })
+      .from(ipHistoryTable)
+      .where(
+        and(
+          inArray(ipHistoryTable.ipAddressId, ids),
+          eq(ipHistoryTable.toStatus, 'free'),
+          or(
+            sql`${ipHistoryTable.changes}->>'previousDeviceId' IS NOT NULL`,
+            sql`${ipHistoryTable.changes}->>'previousUsedBy' IS NOT NULL`,
+          ),
+        ),
+      )
+      .orderBy(ipHistoryTable.ipAddressId, desc(ipHistoryTable.createdAt));
+    const deviceIds = [...new Set(rows.map((row) => row.deviceId).filter(Boolean))] as string[];
+    const devices = await this.devices.getByIds(deviceIds);
+    for (const row of rows) {
+      const code = row.deviceId ? devices.get(row.deviceId)?.code : null;
+      const owner = code ?? row.usedBy;
+      if (owner) result.set(row.id, owner);
+    }
+    return result;
   }
 
   /** Chỉ những IP CÓ hồ sơ, sắp theo thứ tự số học (nhờ kiểu `inet` của Postgres). */
@@ -257,6 +312,34 @@ export class IpAddressService {
         ),
       );
     return rows.map((row) => row.deviceId).filter((value): value is string => value !== null);
+  }
+
+  /**
+   * Địa chỉ đang GIỮ của nhiều máy một lượt — cột IP của danh sách thiết bị hỏi cho cả trang
+   * (không N+1). Cùng luật "đang giữ" với `listForDeviceWithin`: hồ sơ ẩn hay đã trả về pool
+   * không còn là IP của máy đó. Sắp theo kiểu `inet` nên ".3" đứng trước ".20".
+   */
+  async heldAddressesOf(deviceIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (deviceIds.length === 0) return result;
+    const rows = await this.db
+      .select({ deviceId: ipAddressTable.deviceId, address: ipAddressTable.address })
+      .from(ipAddressTable)
+      .where(
+        and(
+          inArray(ipAddressTable.deviceId, deviceIds),
+          isNull(ipAddressTable.voidedAt),
+          inArray(ipAddressTable.status, OCCUPYING_STATUSES),
+        ),
+      )
+      .orderBy(asc(ipAddressTable.address));
+    for (const row of rows) {
+      if (!row.deviceId) continue;
+      const list = result.get(row.deviceId) ?? [];
+      list.push(hostOf(row.address));
+      result.set(row.deviceId, list);
+    }
+    return result;
   }
 
   /** IP của một thiết bị — panel IP trên trang thiết bị (story 5.4) hỏi cái này. */
@@ -721,7 +804,8 @@ export class IpAddressService {
   }
 
   /**
-   * "Xóa" = ẩn, có lý do (quyết định 2026-08-23).
+   * "Xóa" hồ sơ IP NHẬP NHẦM (Q-15): đặt `voided_at`, có lý do — hàng ở lại giữ lịch sử (AD-13)
+   * nhưng biến khỏi mọi màn và nhả địa chỉ để nhập lại ngay. Giao diện không có đường khôi phục.
    *
    * Chỉ dành cho hồ sơ NHẬP NHẦM. IP hết dùng thì đi đường vòng đời (thu hồi, story 5.2) —
    * ẩn một IP đang dùng là làm mất luôn cái lịch sử mà AC 5.2 đòi giữ vĩnh viễn.
@@ -732,7 +816,7 @@ export class IpAddressService {
     if (!text) {
       throw new BadRequestException({
         code: 'VOID_REASON_REQUIRED',
-        message: 'Nói rõ vì sao ẩn hồ sơ này (vd "gõ nhầm địa chỉ").',
+        message: 'Nói rõ vì sao xóa hồ sơ này (vd "gõ nhầm địa chỉ").',
       });
     }
     await this.db.transaction(async (tx) => {
@@ -767,21 +851,9 @@ export class IpAddressService {
   }
 
   /**
-   * BẬT LẠI một hồ sơ IP đã ẩn — cửa đối ứng của `voidAddress`.
-   *
-   * ===== VÌ SAO PHẢI CÓ =====
-   *
-   * `voidAddress` tự nhận là "chỉ dành cho hồ sơ NHẬP NHẦM". Nhưng bấm nhầm ở đây là chuyện
-   * cùng loại với gõ nhầm: ẩn `.5` (Phòng Kế toán, thật) trong khi định ẩn `.6`. Và cho tới
-   * 09/09 đó là đường MỘT CHIỀU — `SubnetService.restore()` bật lại được cả một dải, còn một
-   * hồ sơ IP lẻ thì không có cửa nào. Hồ sơ đã ẩn biến khỏi mọi màn (`listBySubnet` chỉ hiện
-   * hàng đã ẩn khi chính DẢI bị ẩn), `findOne` trả 404, nên nó cũng không mở ra xem được lý
-   * do vì sao mình vừa ẩn nó. Nhãn `'ip.restored'` có sẵn trong `ip-history-entries.ts` mà
-   * không đường nào tới được cho hồ sơ lẻ.
-   *
-   * Hậu quả cụ thể: ô `.5` hiện ra là TRỐNG, người khác cấp nó cho máy khác, và lịch sử
-   * "IP này từng là máy in kế toán" — thứ AC 5.2 bắt giữ vĩnh viễn — nằm mồ côi dưới một hàng
-   * không ai nhìn thấy.
+   * KHÔI PHỤC một hồ sơ IP đã xóa — chỉ SA, chỉ qua API, giao diện không có nút (Q-15: xóa là để
+   * nhập lại; bấm nhầm thì khai lại). Giữ cửa này vì hàng rào dưới đây đã có test và vì SA đôi
+   * khi cần nối lại lịch sử cho đúng hồ sơ cũ thay vì một hồ sơ mới.
    *
    * ===== HAI HÀNG RÀO =====
    *
@@ -805,7 +877,7 @@ export class IpAddressService {
     if (before.voidedAt === null) {
       throw new ConflictException({
         code: 'IP_NOT_VOIDED',
-        message: 'Hồ sơ này đang hiển thị, không có gì để bật lại.',
+        message: 'Hồ sơ này chưa bị xóa, không có gì để khôi phục.',
       });
     }
     const frame = await this.subnets.frameOf(before.subnetId);
@@ -813,8 +885,8 @@ export class IpAddressService {
       throw new ConflictException({
         code: 'SUBNET_VOIDED',
         message:
-          `Dải ${frame.cidr} đang bị ẩn nên bật lẻ hồ sơ này cũng không hiện ra ở đâu. ` +
-          'Bật lại cả dải trước.',
+          `Dải ${frame.cidr} đang ngừng dùng nên khôi phục lẻ hồ sơ này cũng không hiện ra ở đâu. ` +
+          'Dùng lại cả dải trước.',
       });
     }
 
@@ -834,7 +906,7 @@ export class IpAddressService {
           .returning();
         requireCas(rows, {
           code: 'IP_NOT_VOIDED',
-          message: 'Hồ sơ này vừa được người khác bật lại. Tải lại để xem trạng thái mới.',
+          message: 'Hồ sơ này vừa được người khác khôi phục. Tải lại để xem trạng thái mới.',
         });
         await this.audit.appendWithin(tx, {
           actor,
@@ -863,15 +935,15 @@ export class IpAddressService {
         throw new ConflictException({
           code: 'IP_OUT_OF_SUBNET',
           message:
-            `Dải đã đổi thành ${frame.cidr} từ khi hồ sơ này bị ẩn, nên ${before.address} ` +
+            `Dải đã đổi thành ${frame.cidr} từ khi hồ sơ này bị xóa, nên ${before.address} ` +
             'không còn nằm trong dải. Khai một hồ sơ mới với địa chỉ thuộc dải hiện tại.',
         });
       }
       throw conflictOnUnique(error, {
         code: 'IP_TAKEN',
         message:
-          `Địa chỉ ${before.address} đã có hồ sơ khác dùng sau khi hồ sơ này bị ẩn. ` +
-          'Bật lại sẽ có hai hồ sơ cho cùng một địa chỉ — xử lý hồ sơ kia trước.',
+          `Địa chỉ ${before.address} đã có hồ sơ khác dùng sau khi hồ sơ này bị xóa. ` +
+          'Khôi phục sẽ có hai hồ sơ cho cùng một địa chỉ — xử lý hồ sơ kia trước.',
       });
     }
   }
@@ -951,9 +1023,9 @@ export class IpAddressService {
     throw new ConflictException({
       code: 'IP_HAS_LIVE_NAT',
       message:
-        `Địa chỉ ${hostOf(address)} còn ${rules.length} rule NAT đang mở (${list}). ` +
+        `Địa chỉ ${hostOf(address)} còn ${rules.length} luật NAT đang mở (${list}). ` +
         PURPOSE_WARNING[purpose] +
-        ' Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi làm lại.',
+        ' Vào sổ NAT gỡ hoặc trỏ lại luật trước, rồi làm lại.',
     });
   }
 

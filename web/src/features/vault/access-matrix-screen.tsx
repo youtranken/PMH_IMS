@@ -137,6 +137,8 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const [checking, setChecking] = useState(false);
   /** Lọc CỘT của lưới theo họ nhóm đối tượng — '' là xem hết. */
   const [family, setFamily] = useState<'' | ScopeType>('');
+  /** Chỉ bày cột CHƯA AI được gán — chỗ hổng của ma trận (bấm số ở dòng tổng là bật). */
+  const [onlyEmpty, setOnlyEmpty] = useState(false);
   const [grantingScope, setGrantingScope] = useState<ScopeOption | null>(null);
   const [addingFor, setAddingFor] = useState<AccountRow | null>(null);
   /** Người NHẬN của "Sao chép quyền từ…" — chọn đồng nghiệp nằm trong hộp. */
@@ -231,7 +233,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
 
   /** Cột của lưới, gom theo họ và giữ thứ tự `SCOPE_ORDER`. */
   const columnGroups = useMemo(() => {
-    const wanted = (scopes.data ?? []).filter((scope) => !family || scope.scopeType === family);
+    const assigned = new Set((rules.data ?? []).map(scopeKey));
+    const wanted = (scopes.data ?? []).filter(
+      (scope) =>
+        (!family || scope.scopeType === family) && (!onlyEmpty || !assigned.has(scopeKey(scope))),
+    );
     return SCOPE_ORDER.map((type) => ({
       type,
       label: t(`access.scope_${type}`),
@@ -239,7 +245,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         .filter((scope) => scope.scopeType === type)
         .sort((a, b) => a.label.localeCompare(b.label, 'vi')),
     })).filter((group) => group.scopes.length > 0);
-  }, [scopes.data, family, t]);
+  }, [scopes.data, rules.data, family, onlyEmpty, t]);
 
   const columns = columnGroups.flatMap((group) => group.scopes);
 
@@ -467,6 +473,16 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
               ]}
             />
           ) : null}
+          {view === 'matrix' ? (
+            <label className="row filter-check">
+              <input
+                type="checkbox"
+                checked={onlyEmpty}
+                onChange={(event) => setOnlyEmpty(event.target.checked)}
+              />
+              <span>{t('access.onlyEmpty')}</span>
+            </label>
+          ) : null}
           <label className="row filter-check">
             <input
               type="checkbox"
@@ -484,12 +500,29 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           <p>{t('access.defaultDenied')}</p>
           {!loading && !failed ? (
             <p>
-              {t('access.summary', {
+              {t('access.summaryMain', {
                 people: members.length,
                 rules: totalRules,
                 scopes: allScopes.length,
-                empty: emptyScopes,
-              })}
+              })}{' '}
+              {/* Số nhóm chưa gán là một LỐI LỌC: bấm là sang lưới, chỉ còn đúng các cột trống.
+                  Điện thoại không có lưới nên giữ chữ thường. */}
+              {emptyScopes > 0 && !narrow ? (
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  aria-pressed={view === 'matrix' && onlyEmpty}
+                  onClick={() => {
+                    setOnlyEmpty(true);
+                    setFamily('');
+                    setParam('view', 'matrix');
+                  }}
+                >
+                  {t('access.summaryEmpty', { count: emptyScopes })}
+                </button>
+              ) : (
+                t('access.summaryEmpty', { count: emptyScopes })
+              )}
             </p>
           ) : null}
         </div>
@@ -555,6 +588,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         <CheckAccessDialog
           members={members}
           rulesOf={rulesOf}
+          scopes={allScopes}
           onClose={() => setChecking(false)}
         />
       ) : null}
@@ -1531,13 +1565,22 @@ const OWNER_SCOPES: Record<SecretOwnerType, ScopeType[]> = {
  * (`GET /vault/access/tier`), không tự suy ở web: web đoán sai một lần là SA tin nhầm một lỗ hổng
  * đã được bịt. Kèm các dòng quyền của người đó thuộc họ nhóm liên quan để người đọc tự đối chiếu.
  */
+/** `GET /vault/access/tier` — tầng, nhóm của hồ sơ, và dòng quyền đã khớp (dòng quyết định đầu). */
+interface TierExplain {
+  tier: Tier | 'denied';
+  groups?: { scopeType: ScopeType; scopeRef: string }[];
+  matched?: { scopeType: ScopeType; scopeRef: string; tier: Tier }[];
+}
+
 function CheckAccessDialog({
   members,
   rulesOf,
+  scopes,
   onClose,
 }: {
   members: AccountRow[];
   rulesOf: Map<string, AccessRule[]>;
+  scopes: ScopeOption[];
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -1546,7 +1589,9 @@ function CheckAccessDialog({
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ tier: Tier | 'denied'; label: string } | null>(null);
+  const [result, setResult] = useState<(TierExplain & { label: string }) | null>(null);
+  const scopeLabel = (scope: { scopeType: string; scopeRef: string }) =>
+    scopes.find((item) => scopeKey(item) === scopeKey(scope))?.label ?? scope.scopeRef;
   const member = members.find((item) => item.id === memberId) ?? null;
   const related = member
     ? (rulesOf.get(member.email.toLowerCase()) ?? []).filter((rule) =>
@@ -1572,10 +1617,10 @@ function CheckAccessDialog({
         setError(t('access.checkNotFound', { code: code.trim() }));
         return;
       }
-      const answer = await apiFetch<{ tier: Tier | 'denied' }>(
+      const answer = await apiFetch<TierExplain>(
         `/api/v1/vault/access/tier?ownerType=${ownerType}&ownerId=${found.id}&memberEmail=${encodeURIComponent(member.email)}`,
       );
-      setResult({ tier: answer.tier, label: [found.code, found.name].filter(Boolean).join(' — ') });
+      setResult({ ...answer, label: [found.code, found.name].filter(Boolean).join(' — ') });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -1650,6 +1695,27 @@ function CheckAccessDialog({
                 tier: t(`access.tier_${result.tier === 'denied' ? 'denied' : result.tier}`),
               })}
             </p>
+            {result.groups && result.groups.length > 0 ? (
+              <p>
+                {t('access.checkGroups', {
+                  groups: result.groups.map(scopeLabel).join(' · '),
+                })}
+              </p>
+            ) : null}
+            {/* Dòng quyết định tầng — chỉ đúng chỗ phải gỡ nếu muốn siết. */}
+            {result.matched && result.matched.length > 0 ? (
+              <p>
+                <strong>
+                  {t('access.checkBecause', {
+                    scope: scopeLabel(result.matched[0]),
+                    tier: t(`access.tier_${result.matched[0].tier}`),
+                  })}
+                </strong>
+                {result.matched.length > 1
+                  ? ` ${t('access.checkAlsoMatched', { count: result.matched.length - 1 })}`
+                  : null}
+              </p>
+            ) : null}
             {related.length > 0 ? (
               <>
                 <p>{t('access.checkRelated')}</p>

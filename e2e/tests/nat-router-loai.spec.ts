@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  catalogTab,
   E2E_SA,
   firstLogin,
   resetCatalog,
@@ -38,8 +39,8 @@ async function makeDevice(page: Page, code: string, deviceTypeId: string): Promi
 
 async function openRouterPicker(page: Page) {
   await page.goto('/nat');
-  await page.getByRole('button', { name: 'Thêm rule' }).click();
-  const form = page.getByRole('dialog', { name: 'Thêm rule' });
+  await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+  const form = page.getByRole('dialog', { name: 'Thêm luật NAT' });
   return { form, picker: form.getByRole('combobox', { name: 'Router', exact: true }) };
 }
 
@@ -71,7 +72,7 @@ test.describe('Ô Router chỉ liệt kê Router/Firewall (NET-041)', () => {
     const typeName = `Draytek E2E ${stamp}`;
 
     await page.goto('/admin/catalog');
-    await page.getByRole('tab', { name: 'Loại thiết bị', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Loại thiết bị') }).click();
     await page.getByRole('button', { name: 'Thêm loại thiết bị', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Thêm loại thiết bị' });
     await dialog.getByRole('textbox', { name: 'Tên', exact: true }).fill(typeName);

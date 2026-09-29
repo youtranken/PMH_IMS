@@ -205,6 +205,19 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
 .form-grid .span-2 {
   grid-column: 1 / -1;
 }
+/* Hai ô ngắn đi đôi (Bắt đầu | Hết hạn): ở khổ rộng hai ô là ô lưới thường (`contents`), ở
+   điện thoại vẫn đứng cạnh nhau thay vì xếp dọc làm form dài thêm một nấc (SW-032). */
+.form-grid .field-pair {
+  display: contents;
+}
+@media (max-width: 560px) {
+  .form-grid .field-pair {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6) var(--space-5);
+  }
+}
 /* Ở lưới 3 cột, `span={2}` phải là ĐÚNG hai cột — trải hết hàng thì nó không khác `span={3}`
    và ô Ghi chú/Tên hồ sơ mất hẳn ý nghĩa "rộng hơn nhưng chưa hết hàng". */
 .form-grid[data-columns='3'] .span-2 {
@@ -365,6 +378,20 @@ input[list]::-webkit-calendar-picker-indicator {
   font: inherit;
   color: var(--ink);
 }
+/* Tiêu đề nhóm trong menu (vd site của tủ): chữ nhỏ mờ, không bấm được, để mắt thấy ngay
+   đây là nhãn chứ không phải một lựa chọn. */
+.fsel-group {
+  padding: var(--space-2) var(--space-4) var(--space-1);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: default;
+}
+.fsel-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 /* Dòng báo "không có lựa chọn" khi options rỗng (review D3) — không bấm được. */
 .fsel-none {
   padding: var(--space-3) var(--space-4);
@@ -436,6 +463,51 @@ textarea.mono {
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+/* `.chip-row` làm danh sách (`<ul>`): chip người nhận đọc lại từ ô tự do (luật gửi báo cáo). */
+ul.chip-row {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+/*
+ * Công tắc bật/tắt (`<input type="checkbox" role="switch" className="switch">`): vẫn là ô tick
+ * thật (bàn phím, form, trình đọc màn hình) nhưng vẽ thành rãnh + núm. Dùng cho trạng thái
+ * Chạy / Tạm ngưng của cả một cấu hình, không cho lựa chọn trong danh sách.
+ */
+input.switch {
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 1.4rem;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--ink-3);
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+input.switch::before {
+  content: '';
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--ease);
+}
+input.switch:checked {
+  background: var(--primary);
+}
+input.switch:checked::before {
+  transform: translateX(1.1rem);
+}
+input.switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 .filter-bar .fsel-trigger[data-filled] {
   border-color: var(--primary);
@@ -518,6 +590,10 @@ textarea.mono {
 .combo.open .combo-caret {
   transform: translateY(-50%) rotate(180deg);
   color: var(--primary);
+}
+/* Biểu tượng danh sách không có chiều "lên/xuống" — lật nó là vẽ ngược ba gạch. */
+.combo.open .combo-caret[data-caret='suggest'] {
+  transform: translateY(-50%);
 }
 .combo-menu {
   /* Vị trí do Floating UI (useAnchoredMenu) set inline; đây chỉ giữ z-index + hình. */

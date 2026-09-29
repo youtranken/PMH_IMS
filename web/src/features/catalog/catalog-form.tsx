@@ -21,6 +21,7 @@ import {
   type ServiceProtocol,
 } from '@/lib/catalog-types';
 import { suggestCabinetCode } from './cabinet-code';
+import { deviceUsage } from './catalog-usage';
 
 type FormState = {
   code: string;
@@ -174,7 +175,13 @@ export function CatalogForm({
     if (entity === 'device_type' && row && typeRow?.hasPortMap && !form.hasPortMap) {
       const ok = await askConfirm({
         title: t('common.titleOf', { action: t('catalog.edit'), subject: catalogLabel(entity, row) }),
-        message: t('catalog.confirmHidePortMap', { name: catalogLabel(entity, row) }),
+        message:
+          deviceUsage(row) > 0
+            ? t('catalog.confirmHidePortMapCount', {
+                name: catalogLabel(entity, row),
+                count: deviceUsage(row),
+              })
+            : t('catalog.confirmHidePortMap', { name: catalogLabel(entity, row) }),
         confirmLabel: t('common.save'),
       });
       if (!ok) return;

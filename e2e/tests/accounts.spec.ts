@@ -4,6 +4,8 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  loginWithTotp,
+  NEW_PASSWORD,
   resetUsers,
   rowAction,
   rowActionNames,
@@ -26,8 +28,8 @@ test.describe('Quản trị tài khoản', () => {
   test('SA tạo tài khoản mới và nhận mật khẩu tạm', async ({ page }) => {
     await firstLogin(page, E2E_SA);
 
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Tài khoản', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
     const unique = `e2e-tao-moi-${Date.now()}@pmh.com.vn`;
@@ -73,7 +75,7 @@ test.describe('Quản trị tài khoản', () => {
   test('member không thấy mục Tài khoản và bị chặn khi gõ thẳng URL', async ({ page }) => {
     await firstLogin(page, { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' });
 
-    await expect(page.getByRole('link', { name: 'Tài khoản', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Người dùng IMS', exact: true })).toHaveCount(0);
 
     const response = await page.request.get('/api/v1/accounts');
     expect(response.status()).toBe(403);
@@ -81,7 +83,7 @@ test.describe('Quản trị tài khoản', () => {
 
   test('SA xem và đá được phiên đang mở', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
     await expect(page.getByRole('dialog')).toContainText('Phiên đang mở');
@@ -90,7 +92,7 @@ test.describe('Quản trị tài khoản', () => {
 
   test('khóa rồi mở lại tài khoản (hồi quy: body chỉ được chứa field của DTO)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
     await rowAction(page, 'E2E Thành viên', 'Khóa');
@@ -125,7 +127,7 @@ test.describe('Quản trị tài khoản', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
     await expect(row.getByText('Đang hoạt động')).toBeVisible();
@@ -165,7 +167,7 @@ test.describe('Quản trị tài khoản', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     await page.getByRole('searchbox').fill('E2E Thành viên');
     // Bám đúng ô HỌ TÊN: nút ba chấm mang nhãn trợ năng "Thao tác với {tên}" nên ô Thao tác
@@ -200,7 +202,7 @@ test.describe('Quản trị tài khoản', () => {
       expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
 
       await firstLogin(page, E2E_SA);
-      await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+      await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       const row = page.getByRole('row', { name: /E2E Thành viên/ });
       await rowAction(page, 'E2E Thành viên', 'Khóa');
       await page.getByRole('dialog').getByRole('textbox', { name: /Lý do/ }).fill('E2E khóa thử');
@@ -235,7 +237,7 @@ test.describe('Quản trị tài khoản', () => {
       expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
 
       await firstLogin(page, E2E_SA);
-      await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+      await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
 
       // Lọc theo nội dung: lát nữa hộp xác nhận mở chồng lên, `getByRole('dialog')` trơ
@@ -252,6 +254,46 @@ test.describe('Quản trị tài khoản', () => {
       await expect(memberPage).toHaveURL(/login/);
     } finally {
       await memberCtx.close();
+    }
+  });
+
+  test('ADM-049: "Đóng tất cả phiên" đẩy người đó khỏi mọi máy; SA tự đóng thì giữ phiên đang dùng', async ({
+    page,
+    browser,
+  }) => {
+    const memberCtx = await browser.newContext(SECOND_BROWSER);
+    const memberPage = await memberCtx.newPage();
+    const saCtx = await browser.newContext(SECOND_BROWSER);
+    const saOther = await saCtx.newPage();
+    try {
+      await firstLogin(memberPage, E2E_MEMBER);
+      // Cùng một SA ở hai máy: máy thứ hai đăng nhập lại bằng mật khẩu mới + TOTP đã cài.
+      const saSecret = await firstLogin(saOther, E2E_SA);
+      await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saSecret);
+      await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
+
+      await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
+      const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
+      await dialog.getByRole('button', { name: 'Đóng tất cả phiên' }).click();
+      await confirmAction(page);
+      await expect(page.getByText(/Đã đóng \d+ phiên\./)).toBeVisible();
+      await expect
+        .poll(async () => (await memberPage.request.get('/api/v1/auth/me')).status())
+        .toBe(401);
+      await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
+
+      // Đường hỏng cần tránh: SA đóng phiên của chính mình mà không tick thì KHÔNG được tự văng.
+      await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
+      await dialog.getByRole('button', { name: 'Đóng tất cả phiên' }).click();
+      await expect(page.getByRole('checkbox', { name: /Đóng cả phiên bạn đang dùng/ })).not.toBeChecked();
+      await confirmAction(page);
+      await expect
+        .poll(async () => (await saOther.request.get('/api/v1/auth/me')).status())
+        .toBe(401);
+      expect((await page.request.get('/api/v1/auth/me')).status()).toBe(200);
+    } finally {
+      await memberCtx.close();
+      await saCtx.close();
     }
   });
 
@@ -282,7 +324,7 @@ test.describe('Quản trị tài khoản', () => {
     }
 
     await page.goto('/');
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     // Tìm bằng RIÊNG dấu thời gian: họ tên là "E2E Sort Zulu 123456" nên chuỗi
     // "E2E Sort 123456" KHÔNG nằm trong đó — dấu thời gian thì có mặt ở cả tên lẫn email.
     await page.getByRole('searchbox').fill(stamp);
@@ -317,7 +359,7 @@ test.describe('Quản trị tài khoản', () => {
  */
 test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ được, reload giữ nguyên', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+  await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/accounts$/);
 
   await timVaChoLoc(page, 'e2e-thanh-vien');

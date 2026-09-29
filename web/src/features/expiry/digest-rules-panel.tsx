@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { parseRecipients, recipientSuggestions } from './digest-recipients';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
@@ -18,8 +19,6 @@ import { useFormErrors } from '@/ui/use-form-errors';
 /** Khoảng hợp lệ của "Trong vòng (ngày)" — cùng mốc xa nhất của bộ lọc màn Sắp hết hạn. */
 const WITHIN_MIN = 1;
 const WITHIN_MAX = 365;
-/** Kiểm dạng email thô cho người gõ — server vẫn là chốt chặn cuối. */
-const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
 interface DigestRule {
   id: string;
@@ -44,7 +43,6 @@ interface DigestPreview {
   recipients: string[];
   items: { label: string; kind: string; end: string; link: string; daysLeft: number }[];
 }
-
 
 /**
  * Luật gửi báo cáo "sắp hết hạn" (story 3.5, FR-013).
@@ -312,6 +310,8 @@ export function DigestRulesPanel({
           rule={editing.rule}
           kinds={kinds}
           csrfToken={me.csrfToken}
+          meEmail={me.email}
+          otherRules={(rules.data ?? []).filter((item) => item.id !== editing.rule?.id)}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -328,12 +328,17 @@ function RuleForm({
   rule,
   kinds,
   csrfToken,
+  meEmail,
+  otherRules,
   onClose,
   onSaved,
 }: {
   rule: DigestRule | null;
   kinds: ExpiryKind[];
   csrfToken: string;
+  meEmail: string;
+  /** Luật khác — nguồn gợi ý người nhận (hộp thư chung đã dùng ở đâu đó). */
+  otherRules: { recipients: string[] }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -356,12 +361,13 @@ function RuleForm({
     { method: rule ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
 
-  const emails = recipients
-    .split(/[,;\n]/)
-    .map((email) => email.trim())
-    .filter(Boolean);
+  const parsed = parseRecipients(recipients);
+  const emails = parsed.map((item) => item.email);
   // Báo email sai ngay tại ô, đừng để server từ chối (hoặc tệ hơn: thư không tới ai).
-  const badEmails = emails.filter((email) => !EMAIL.test(email));
+  const badEmails = parsed.filter((item) => !item.valid).map((item) => item.email);
+  const suggestions = recipientSuggestions(otherRules, meEmail, recipients);
+  const addRecipient = (email: string) =>
+    setRecipients((current) => (current.trim() ? `${current.trim().replace(/[,;]$/, '')}, ${email}` : email));
   const within = /^\d+$/.test(withinDays.trim()) ? Number(withinDays.trim()) : NaN;
   const check = useFormErrors({
     name: !name.trim() && t('digest.nameRequired'),
@@ -493,6 +499,33 @@ function RuleForm({
             onChange={(e) => setRecipients(e.target.value)}
           />
         </Field>
+        {/* Đọc lại ô tự do thành từng chip: email sai đỏ ngay chip của nó, không phải dò trong
+            một dòng dài. Gợi ý là hộp thư đã dùng ở luật khác — bấm là thêm vào ô. */}
+        {parsed.length > 0 ? (
+          <ul className="chip-row recipient-chips" aria-label={t('digest.recipientsParsed')}>
+            {parsed.map((item, index) => (
+              <li key={`${item.email}-${index}`} className={`badge ${item.valid ? 'muted' : 'danger'}`}>
+                {item.email}
+                {item.valid ? null : <span className="sr-only"> — {t('digest.recipientBad')}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {suggestions.length > 0 ? (
+          <div className="chip-row" role="group" aria-label={t('digest.recipientsSuggest')}>
+            {suggestions.map((email) => (
+              <button
+                key={email}
+                type="button"
+                className="btn sm"
+                aria-label={t('digest.recipientAdd', { email })}
+                onClick={() => addRecipient(email)}
+              >
+                + {email}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <Field label={t('digest.schedule')}>
           {/* AD-15: luật gửi định kỳ dùng chung SchedulePicker, không tự dựng ô chọn lịch. */}
@@ -500,14 +533,23 @@ function RuleForm({
         </Field>
 
         <Field label={t('digest.active')}>
+          {/* Công tắc chứ không phải ô tick: đây là trạng thái Chạy / Tạm ngưng của cả luật,
+              và chữ bên cạnh đổi theo để không phải đoán "tick là đang chạy hay đang dừng". */}
           <label className="row" style={{ gap: 'var(--space-3)' }}>
             <input
               type="checkbox"
+              role="switch"
+              className="switch"
+              aria-label={t('digest.active')}
+              aria-describedby="rule-active-hint"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
             />
-            <span className="muted">{t('digest.activeHint')}</span>
+            <span>{t(active ? 'digest.active' : 'digest.paused')}</span>
           </label>
+          <span id="rule-active-hint" className="muted">
+            {t('digest.activeHint')}
+          </span>
         </Field>
 
         {error ? (

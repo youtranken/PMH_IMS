@@ -376,8 +376,8 @@ test.describe('DEV-047 · VLT-040 · két trong trang thiết bị', () => {
     const row = page.getByRole('row', { name: new RegExp(label) });
     await expect(row).toBeVisible();
     await expectInsideWidth(page, row.getByRole('button', { name: 'Xem' }), 'nút Xem');
-    // Loại, ghi chú, mốc đổi giá trị gần nhất (VLT-054) là dòng phụ — vẫn đọc được.
-    await expect(row).toContainText(/Đổi giá trị \d+ ngày trước/);
+    // Mốc đổi giá trị + đếm ngược tới hạn đổi (Q-15) đọc được ngay trên dòng.
+    await expect(row).toContainText(/còn \d+ ngày/);
 
     // Neo đầu: ô Thao tác cũng mang tên ngăn ("Thao tác với …") nên khớp giữa chuỗi là ra hai ô.
     const labelCell = row.getByRole('cell', { name: new RegExp(`^${label}`) });

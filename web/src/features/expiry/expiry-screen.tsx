@@ -1,17 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, formatDateTime, orDash, todayIso } from '@/lib/format';
+import { daysBetweenIso, periodRange } from '@/lib/period-range';
 import type { Me } from '@/lib/me';
 import { renewPreset } from '@/lib/renew-dates';
 import { PATHS } from '@/lib/routes';
 import { useApiMutation } from '@/lib/api';
-import { DataTable } from '@/ui/data-table';
+import { DataTable, type TableGroupBy } from '@/ui/data-table';
+import { DatePicker } from '@/ui/date-picker';
 import { Pagination } from '@/ui/pagination';
 import { ChipToggleGroup } from '@/ui/chip-toggle-group';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -45,6 +47,8 @@ interface ExpiryRow {
   link: string;
   daysLeft: number;
   canRenew: boolean;
+  /** Nguồn có sổ gia hạn: hộp Gia hạn hiện ô hợp đồng + chi phí (Q-15). */
+  canRenewTerms?: boolean;
 }
 
 /** Một lượt gia hạn đã ghi (`renewal_history`) — tab "Đã gia hạn". */
@@ -56,7 +60,17 @@ interface RenewalRow {
   oldEnd: string | null;
   newEnd: string;
   actor: string;
+  /** Họ tên người gia hạn — API tra; vắng thì hiện email. */
+  actorName?: string | null;
   createdAt: string;
+}
+
+/** Tham số khoảng ngày của tab "Đã gia hạn" — tên khoá theo `RenewalsQueryDto` bên API. */
+export function renewalsQuery(range: { from: string; to: string }): string {
+  const params = new URLSearchParams();
+  if (range.from) params.set('from', range.from);
+  if (range.to) params.set('to', range.to);
+  return params.toString();
 }
 
 interface ExpiryResponse {
@@ -64,7 +78,8 @@ interface ExpiryResponse {
   items: ExpiryRow[];
   /** Tổng số mục khớp bộ lọc — CẢ KHO, để `Pagination` biết có bao nhiêu trang. */
   total: number;
-  summary: { expired: number; critical: number; warning: number };
+  /** `autoRetire`: mục phần mềm đã Hết hạn đang chờ tự Thanh lý (Q-13). */
+  summary: { expired: number; critical: number; warning: number; autoRetire?: number };
   /*
    * `expiry.service.ts:129` trả KÈM ngưỡng đã dùng để đếm `summary`. Trước 18/09 khai báo này
    * bỏ sót nó, nên trường ấy bị vứt đi và màn phải hỏi lại `/expiry/thresholds` — một truy vấn
@@ -85,6 +100,21 @@ interface ExpiryResponse {
 
 /** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
 const WINDOWS = [7, 30, 60, 90, 180, 365];
+
+/**
+ * Cửa sổ theo LỊCH ("tới hết tháng này / quý này / tới ngày…") cho câu hỏi ngân sách: "tháng
+ * này có gì hết hạn". Quy về `withinDays` của API (1–365), vẫn luôn kèm mục đã quá hạn.
+ */
+const PERIOD_WINDOWS = ['month', 'quarter', 'custom'] as const;
+type PeriodWindow = (typeof PERIOD_WINDOWS)[number];
+
+/** Cột bấm sắp được — tên khớp `EXPIRY_SORTS` bên API. */
+const SORTABLE = ['label', 'kind', 'end'] as const;
+
+/** Số ngày từ hôm nay tới `end` (tính cả hai đầu), kẹp vào 1–365 như API. */
+function windowUntil(end: string, today: string): number {
+  return Math.min(365, Math.max(1, daysBetweenIso(today, end)));
+}
 
 /**
  * Màn Expiry tổng hợp (story 3.4, FR-012).
@@ -119,22 +149,55 @@ export function ExpiryScreen({ me }: { me: Me }) {
    * một link ai đó sửa tay (`?withinDays=abc`) phải rơi về mặc định chứ không thành `NaN` đi
    * thẳng vào `queryKey`.
    */
-  const url = useListUrlState<{ withinDays: string; kinds: string; state: string }>({
-    emptyFilters: { withinDays: '', kinds: '', state: '' },
+  const url = useListUrlState<{
+    withinDays: string;
+    kinds: string;
+    state: string;
+    period: string;
+    until: string;
+  }>({
+    emptyFilters: { withinDays: '', kinds: '', state: '', period: '', until: '' },
+    defaultSort: { key: 'end', desc: false },
   });
-  const withinDays = WINDOWS.includes(Number(url.filters.withinDays))
-    ? Number(url.filters.withinDays)
-    : 30;
+  const today = todayIso();
+  const period = (PERIOD_WINDOWS as readonly string[]).includes(url.filters.period)
+    ? (url.filters.period as PeriodWindow)
+    : '';
+  const until =
+    period === 'custom'
+      ? url.filters.until || ''
+      : period
+        ? periodRange(period, today).to
+        : '';
+  const withinDays = until
+    ? windowUntil(until, today)
+    : WINDOWS.includes(Number(url.filters.withinDays))
+      ? Number(url.filters.withinDays)
+      : 30;
+  const sortKey = (SORTABLE as readonly string[]).includes(url.sorting.key) ? url.sorting.key : 'end';
+  const sorting: SortingState = [{ id: sortKey, desc: url.sorting.desc }];
+  const sortParams = `&sort=${sortKey}&dir=${url.sorting.desc ? 'desc' : 'asc'}`;
   const kind = url.filters.kinds;
   /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở SERVER — xem chú thích dưới. */
-  const state = (['expired', 'critical', 'warning'] as const).includes(
+  const state = (['expired', 'critical', 'warning', 'autoRetire'] as const).includes(
     url.filters.state as 'expired',
   )
-    ? (url.filters.state as 'expired' | 'critical' | 'warning')
+    ? (url.filters.state as 'expired' | 'critical' | 'warning' | 'autoRetire')
     : '';
-  const setWithinDays = (value: number) => url.setFilter('withinDays', String(value));
+  /* Ô "Khoảng thời gian" nhận cả số ngày lẫn mốc lịch; chọn một bên thì gỡ bên kia. */
+  const setWindow = (value: string) => {
+    if ((PERIOD_WINDOWS as readonly string[]).includes(value)) {
+      url.setFilter('withinDays', '');
+      url.setFilter('period', value);
+      if (value !== 'custom') url.setFilter('until', '');
+    } else {
+      url.setFilter('period', '');
+      url.setFilter('until', '');
+      url.setFilter('withinDays', value);
+    }
+  };
   const setKind = (value: string) => url.setFilter('kinds', value);
-  const setState = (value: '' | 'expired' | 'critical' | 'warning') =>
+  const setState = (value: '' | 'expired' | 'critical' | 'warning' | 'autoRetire') =>
     url.setFilter('state', value);
 
   /*
@@ -163,14 +226,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
    * sinh ra do chính bản vá này chứ không phải lỗi cũ.
    */
   const expiry = useQuery({
-    queryKey: ['expiry', withinDays, kind, state, url.page, url.limit],
+    queryKey: ['expiry', withinDays, kind, state, sortParams, url.page, url.limit],
     // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
     // mất dòng đang bung và bảng nháy trắng sau mỗi lần gõ tìm.
     placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<ExpiryResponse>(
         `/api/v1/expiry?withinDays=${withinDays}&page=${url.page}&limit=${url.limit}` +
-          `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}`,
+          `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}${sortParams}`,
       ),
   });
   useClampPage(url, expiry.data?.total);
@@ -203,12 +266,17 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const nguong = expiry.data?.thresholds ?? thresholds;
   const rows = expiry.data?.items ?? [];
 
+  const byMonth: TableGroupBy<ExpiryRow> = {
+    key: (row) => row.end.slice(0, 7),
+    label: (month) =>
+      t('expiry.monthGroup', { month: `${month.slice(5, 7)}/${month.slice(0, 4)}` }),
+  };
+
   const columns = useMemo<ColumnDef<ExpiryRow, unknown>[]>(
     () => [
       {
+        // Sắp ở MÁY CHỦ (`?sort=label`) — xem `manualSorting` ở <DataTable>.
         accessorKey: 'label',
-        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
-        enableSorting: false,
         header: t('expiry.item'),
         cell: ({ row }) => (
           <>
@@ -231,15 +299,11 @@ export function ExpiryScreen({ me }: { me: Me }) {
       },
       {
         accessorKey: 'kind',
-        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
-        enableSorting: false,
         header: t('expiry.kind'),
         cell: ({ row }) => kindLabel(row.original.kind),
       },
       {
         accessorKey: 'end',
-        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
-        enableSorting: false,
         header: t('expiry.end'),
         cell: ({ row }) => (
           <>
@@ -256,7 +320,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
         // Sắp theo "còn bao nhiêu ngày" chứ không theo chữ trên badge: xếp theo chữ thì
         // "Quá hạn 40 ngày" và "Quá hạn 2 ngày" đứng cạnh nhau vô nghĩa.
         accessorKey: 'daysLeft',
-        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
+        // Cùng thứ tự với cột Hết hạn — sắp ở cột đó, không nhân đôi một nút sắp.
         enableSorting: false,
         header: t('expiry.state'),
         // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
@@ -323,7 +387,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
             <ExportXlsxButton
               url={
                 `/api/v1/expiry/export.xlsx?withinDays=${withinDays}` +
-                `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}`
+                `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}${sortParams}`
               }
               fileName={state ? `sap-het-han-${EXPORT_SUFFIX[state]}.xlsx` : 'sap-het-han.xlsx'}
             />
@@ -380,6 +444,17 @@ export function ExpiryScreen({ me }: { me: Me }) {
             incomplete={incomplete}
             onClick={() => setState(state === 'warning' ? '' : 'warning')}
           />
+          {/* Q-13: phần mềm quá ân hạn sẽ TỰ thanh lý và gỡ ghế — ô riêng để còn kịp cứu. */}
+          {summary.autoRetire !== undefined ? (
+            <KpiTile
+              value={summary.autoRetire}
+              label={t('expiry.kpiAutoRetire')}
+              tone="danger"
+              active={state === 'autoRetire'}
+              incomplete={incomplete}
+              onClick={() => setState(state === 'autoRetire' ? '' : 'autoRetire')}
+            />
+          ) : null}
         </KpiStrip>
       ) : null}
 
@@ -421,14 +496,30 @@ export function ExpiryScreen({ me }: { me: Me }) {
         <TabPanel tabKey="list">
       <FilterBar>
         <Select
-          value={String(withinDays)}
+          value={period || String(withinDays)}
           ariaLabel={t('expiry.window')}
-          options={WINDOWS.map((days) => ({
-            value: String(days),
-            label: t('expiry.windowDays', { days }),
-          }))}
-          onChange={(value) => setWithinDays(Number(value))}
+          /* Chín mốc cố định, đọc lướt là thấy — ô gõ lọc chỉ thêm một bước. */
+          searchable={false}
+          options={[
+            ...WINDOWS.map((days) => ({
+              value: String(days),
+              label: t('expiry.windowDays', { days }),
+            })),
+            { value: 'month', label: t('expiry.windowMonth') },
+            { value: 'quarter', label: t('expiry.windowQuarter') },
+            { value: 'custom', label: t('expiry.windowCustom') },
+          ]}
+          onChange={setWindow}
         />
+        {period === 'custom' ? (
+          <DatePicker
+            value={url.filters.until}
+            ariaLabel={t('expiry.windowUntil')}
+            placeholder={t('expiry.windowUntil')}
+            min={today}
+            onChange={(value) => url.setFilter('until', value)}
+          />
+        ) : null}
         {/* Chọn NHIỀU loại một lượt (người lo web xem SSL + tên miền cùng lúc) — API vốn nhận
             `?kinds=a,b`, trước đây chỉ ô chọn một mới là giới hạn. */}
         <ChipToggleGroup
@@ -474,17 +565,21 @@ export function ExpiryScreen({ me }: { me: Me }) {
               ) : null,
           }}
           /*
-           * KHÔNG `initialSort` nữa, và các cột KHÔNG cho bấm sắp (N-01, vá 21/09).
-           *
-           * Chú thích cũ ở đây nói sắp-ở-client là đúng "vì màn này không phân trang". Câu ấy
-           * ngừng đúng ngay khi phân trang: sắp client chỉ đảo chỗ 50 dòng đang xem, nên bấm
-           * cột "Hồ sơ" cho ra một thứ tự chỉ đúng trong trang — đúng lớp lỗi mà chính câu chú
-           * thích ấy cảnh báo.
-           *
-           * Server đã sắp theo ngày hết hạn tăng dần, tức GẤP NHẤT LÊN ĐẦU — đó là lý do màn
-           * này tồn tại, nên giữ nguyên thứ tự ấy là câu trả lời đúng chứ không phải một hạn
-           * chế. Muốn sắp theo cột khác thì phải có `?sort=` ở server; ghi vào mục 8.9.
+           * Sắp ở MÁY CHỦ (`?sort=&dir=`, EX-011): sắp ở client chỉ đảo chỗ 50 dòng đang xem.
+           * Mặc định ngày hết hạn tăng dần — GẤP NHẤT LÊN ĐẦU, lý do màn này tồn tại.
            */
+          manualSorting
+          sorting={sorting}
+          onSortingChange={(updater) => {
+            const next = typeof updater === 'function' ? updater(sorting) : updater;
+            const first = next[0];
+            url.setSorting(
+              first ? { key: String(first.id), desc: !!first.desc } : { key: 'end', desc: false },
+            );
+          }}
+          /* Đang sắp theo ngày thì gom theo THÁNG hết hạn ("Tháng 10/2026") — câu hỏi ngân
+             sách là theo tháng. Sắp theo cột khác thì nhóm tháng vô nghĩa nên bỏ. */
+          groupBy={sortKey === 'end' ? byMonth : undefined}
           rowClassName={(row) => (row.daysLeft < 0 ? 'row-danger' : '')}
           /* Chọn nhiều dòng để gia hạn một lượt (cuối năm cả chục license/SSL cùng một hợp
              đồng). Dòng không gia hạn được ở đây thì bỏ qua lúc chạy, và nói ra con số đó. */
@@ -539,6 +634,13 @@ export function ExpiryScreen({ me }: { me: Me }) {
           row={{ ...renewing, code: renewing.code }}
           kindLabel={kindLabel(renewing.kind)}
           csrfToken={me.csrfToken}
+          withTerms={renewing.canRenewTerms}
+          /* Dòng vừa gia hạn rời danh sách — nút của CHÍNH toast "Đã gia hạn …" chỉ đường tới chỗ
+             nó đã sang, để kiểm lại được. Một toast, không phải hai. */
+          toastAction={{
+            label: t('expiry.renewedSeeTabAction'),
+            onClick: () => setTab('renewals'),
+          }}
           onClose={() => setRenewing(null)}
           onDone={() => {
             setRenewing(null);
@@ -551,7 +653,12 @@ export function ExpiryScreen({ me }: { me: Me }) {
 }
 
 /** Hậu tố tên file xuất theo ô số đang bật — khớp `EXPORT_SUFFIX` phía API. */
-const EXPORT_SUFFIX = { expired: 'qua-han', critical: 'gap', warning: 'sap-toi' } as const;
+const EXPORT_SUFFIX = {
+  expired: 'qua-han',
+  critical: 'gap',
+  warning: 'sap-toi',
+  autoRetire: 'cho-tu-thanh-ly',
+} as const;
 
 /** Số mục gia hạn một lượt theo lô: đủ cho "cuối năm", không đủ để lỡ tay gia hạn cả kho. */
 const BULK_MONTHS = 12;
@@ -658,9 +765,12 @@ function BulkRenewBar({
 /** Tab "Đã gia hạn": các lượt gia hạn gần nhất (`GET /expiry/renewals`) — ai, lúc nào, cũ → mới. */
 function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
   const { t } = useTranslation();
+  const [range, setRange] = useState({ from: '', to: '' });
+  const query = renewalsQuery(range);
   const renewals = useQuery({
-    queryKey: ['expiry', 'renewals'],
-    queryFn: () => apiFetch<RenewalRow[]>('/api/v1/expiry/renewals'),
+    queryKey: ['expiry', 'renewals', query],
+    queryFn: () => apiFetch<RenewalRow[]>(`/api/v1/expiry/renewals${query ? `?${query}` : ''}`),
+    placeholderData: keepPreviousData,
   });
   const columns = useMemo<ColumnDef<RenewalRow, unknown>[]>(
     () => [
@@ -696,9 +806,40 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         accessorKey: 'actor',
         enableSorting: false,
         header: t('expiry.renewedBy'),
+        cell: ({ row }) =>
+          row.original.actorName ? (
+            <span title={row.original.actor}>{row.original.actorName}</span>
+          ) : (
+            row.original.actor
+          ),
       },
     ],
     [t, kindLabel],
+  );
+
+  const filtered = query !== '';
+  const filterBar = (
+    <FilterBar
+      activeCount={[range.from, range.to].filter(Boolean).length}
+      onClear={() => setRange({ from: '', to: '' })}
+    >
+      <div className="filter-range" role="group" aria-label={t('expiry.renewalsRange')}>
+        <DatePicker
+          value={range.from}
+          ariaLabel={t('expiry.renewalsFrom')}
+          placeholder={t('expiry.renewalsFrom')}
+          max={range.to || undefined}
+          onChange={(from) => setRange((current) => ({ ...current, from }))}
+        />
+        <DatePicker
+          value={range.to}
+          ariaLabel={t('expiry.renewalsTo')}
+          placeholder={t('expiry.renewalsTo')}
+          min={range.from || undefined}
+          onChange={(to) => setRange((current) => ({ ...current, to }))}
+        />
+      </div>
+    </FilterBar>
   );
 
   if (renewals.isLoading) return <Loading />;
@@ -707,21 +848,32 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
   }
   const rows = renewals.data ?? [];
   if (rows.length === 0) {
-    return <EmptyState title={t('expiry.renewalsEmpty')} hint={t('expiry.renewalsEmptyHint')} />;
+    return (
+      <>
+        {filterBar}
+        <EmptyState
+          title={t(filtered ? 'expiry.renewalsEmptyFiltered' : 'expiry.renewalsEmpty')}
+          hint={filtered ? undefined : t('expiry.renewalsEmptyHint')}
+        />
+      </>
+    );
   }
   return (
-    <DataTable
-      data={rows}
-      columns={columns}
-      emptyText={t('expiry.renewalsEmpty')}
-      stackOnMobile
-      mobileCard={{
-        title: (row) => row.label,
-        href: (row) => PATHS.softwareItem(row.objectId),
-        meta: (row) =>
-          `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actor}`,
-        aside: (row) => formatDate(row.createdAt),
-      }}
-    />
+    <>
+      {filterBar}
+      <DataTable
+        data={rows}
+        columns={columns}
+        emptyText={t('expiry.renewalsEmpty')}
+        stackOnMobile
+        mobileCard={{
+          title: (row) => row.label,
+          href: (row) => PATHS.softwareItem(row.objectId),
+          meta: (row) =>
+            `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actorName ?? row.actor}`,
+          aside: (row) => formatDate(row.createdAt),
+        }}
+      />
+    </>
   );
 }

@@ -475,6 +475,16 @@ export class UsersService {
     return (rows[0]?.role as UserRole | undefined) ?? null;
   }
 
+  /** `id → họ tên` cho một mẻ id — người tải giấy tờ lên (cột `file.uploaded_by` là id). */
+  async namesByIds(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: usersTable.id, fullName: usersTable.fullName })
+      .from(usersTable)
+      .where(inArray(usersTable.id, ids));
+    return new Map(rows.map((row) => [row.id, row.fullName]));
+  }
+
   /** `id → email` cho một mẻ id — nhãn đối tượng `user`/`session` trên màn Nhật ký. */
   async emailsByIds(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();

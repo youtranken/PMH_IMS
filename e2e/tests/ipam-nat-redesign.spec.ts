@@ -167,7 +167,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
 
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
@@ -185,7 +185,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await expect(form.getByText(/Bấm Lưu sẽ ghi 3 dòng/)).toBeVisible();
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.5');
-    await form.getByRole('textbox', { name: 'Port trong' }).fill('3389');
+    await form.getByRole('textbox', { name: 'Cổng trong' }).fill('3389');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kế toán');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Máy chấm công ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
@@ -207,7 +207,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -217,16 +217,16 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
       await portInput.fill(value);
       await portInput.press('Enter');
     }
-    await form.getByRole('button', { name: 'Bỏ port 9002' }).click();
+    await form.getByRole('button', { name: 'Bỏ cổng 9002' }).click();
     await expect(form.getByText('9002', { exact: true })).toHaveCount(0);
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.9');
-    await form.getByRole('textbox', { name: 'Port trong' }).fill('80');
+    await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Web nội bộ ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
-    await expect(page.getByText('Đã lưu rule NAT.')).toBeVisible();
+    await expect(page.getByText('Đã lưu luật NAT.')).toBeVisible();
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`Web nội bộ ${stamp}`);
     await expect(page.getByText('TCP 9001', { exact: true })).toBeVisible();
     await expect(page.getByText('TCP 9002', { exact: true })).toHaveCount(0);
@@ -239,7 +239,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
 
     const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
@@ -261,11 +261,11 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.4');
-    await form.getByRole('textbox', { name: 'Port trong' }).fill('443');
+    await form.getByRole('textbox', { name: 'Cổng trong' }).fill('443');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Thiếu port ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
-    await expect(form.getByText('Thêm ít nhất một port ngoài.')).toBeVisible();
+    await expect(form.getByText('Thêm ít nhất một cổng ngoài.')).toBeVisible();
   });
 
   test('sửa một rule thì chỉ giữ đúng một khoảng port', async ({ page }) => {
@@ -300,15 +300,15 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     // Khoảng đang có mở ra thành chip; ô thêm biến mất kèm lời giải thích.
     await expect(form.getByText('7001', { exact: true })).toBeVisible();
     await expect(form.getByPlaceholder('8080 hoặc 8000-8010')).toHaveCount(0);
-    await expect(form.getByText(/chỉ giữ một khoảng port/)).toBeVisible();
+    await expect(form.getByText(/chỉ giữ một khoảng cổng/)).toBeVisible();
 
-    await form.getByRole('button', { name: 'Bỏ port 7001' }).click();
+    await form.getByRole('button', { name: 'Bỏ cổng 7001' }).click();
     const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
     await portInput.fill('7002');
     await portInput.press('Enter');
     await form.getByRole('button', { name: 'Lưu' }).click();
 
-    await expect(page.getByText('Đã lưu rule NAT.')).toBeVisible();
+    await expect(page.getByText('Đã lưu luật NAT.')).toBeVisible();
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`SSH tạm ${stamp}`);
     await expect(page.getByText('TCP 7002', { exact: true })).toBeVisible();
   });
@@ -350,7 +350,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -361,15 +361,15 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
       await portInput.press('Enter');
     }
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.8');
-    await form.getByRole('textbox', { name: 'Port trong' }).fill('80');
+    await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Hỏng một phần ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
     // 7200 ghi được, 7100 đụng → hộp CÒN MỞ, báo lỗi tại chỗ, và 7200 đã biến khỏi chip.
     await expect(form.getByRole('alert')).toBeVisible();
-    await expect(form.getByRole('button', { name: 'Bỏ port 7100' })).toBeVisible();
-    await expect(form.getByRole('button', { name: 'Bỏ port 7200' })).toHaveCount(0);
+    await expect(form.getByRole('button', { name: 'Bỏ cổng 7100' })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Bỏ cổng 7200' })).toHaveCount(0);
     // Mọi thứ đã gõ vẫn nguyên — không phải gõ lại từ đầu.
     await expect(form.getByRole('textbox', { name: 'IP trong' })).toHaveValue('172.16.10.8');
     await expect(form.getByRole('textbox', { name: 'Lý do mở' })).toHaveValue(
@@ -423,7 +423,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
 
     // MỘT ô chọn router — ô "Loại thiết bị" cũ đã bỏ, vì nó bắt thao tác hai dropdown cho
@@ -435,7 +435,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
     await portInput.fill('5001');
     await portInput.press('Enter');
-    await form.getByRole('textbox', { name: 'Port trong' }).fill('5001');
+    await form.getByRole('textbox', { name: 'Cổng trong' }).fill('5001');
 
     // Chưa chọn máy đích: IP là ô gõ tay.
     await expect(form.getByRole('textbox', { name: 'IP trong' })).toBeVisible();
@@ -452,7 +452,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`NAS cho đối tác ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
-    await expect(page.getByText('Đã lưu rule NAT.')).toBeVisible();
+    await expect(page.getByText('Đã lưu luật NAT.')).toBeVisible();
 
     // Trong sổ: dòng nói luôn MÁY nào, bấm sang được hồ sơ máy đó.
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`NAS cho đối tác ${stamp}`);
@@ -491,7 +491,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -501,7 +501,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
 
     // Vẫn là ô gõ tay — nhưng kèm câu cảnh báo, không phải im lặng.
     await expect(form.getByRole('textbox', { name: 'IP trong' })).toBeVisible();
-    await expect(form.getByText(/KHÔNG gắn rule về máy vừa chọn/)).toBeVisible();
+    await expect(form.getByText(/KHÔNG gắn luật về máy vừa chọn/)).toBeVisible();
   });
 });
 
@@ -587,7 +587,7 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
     const form = page.getByRole('dialog');
     await expect(form.getByText(/mở cho ai: Camera tầng 2 → Đầu ghi NVR/)).toBeVisible();
     // Dòng "Mở rule" cũng phải còn đó — lịch sử là cả quãng đời, không chỉ lần sửa gần nhất.
-    await expect(form.getByText('Mở rule')).toBeVisible();
+    await expect(form.getByText('Mở luật NAT')).toBeVisible();
     await form.getByRole('button', { name: 'Hủy' }).click();
 
     // Gỡ rule: lý do phải nằm trong LỊCH SỬ, không chỉ trong audit_log.

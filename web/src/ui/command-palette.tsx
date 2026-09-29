@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import { disposalStatusKey } from '@/lib/disposal-kinds';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
@@ -44,6 +45,12 @@ interface Hit {
   navKey: string;
   /** `more` = "Xem tất cả N…", `action` = "Tìm trong …"/"Đi tới" — chữ thường, không phải mã mono. */
   kind?: 'more' | 'action';
+  /**
+   * Trạng thái của hồ sơ theo module chủ. Chỉ trạng thái CUỐI (thanh lý / ngừng dùng) mới vẽ
+   * chip — tên do `disposalStatusKey` gọi, cùng chữ với Kho thanh lý. Trạng thái giữa đường
+   * (Hỏng, Tạm ngưng…) mỗi module gọi một kiểu, nên không vẽ để khỏi nói sai.
+   */
+  status?: string;
 }
 
 /** Hồ sơ vừa mở gần đây — chỉ đường dẫn, mã và tên; không bao giờ có bí mật. */
@@ -253,7 +260,9 @@ export function CommandPalette({ me }: { me: Me }) {
   const devices = useQuery({
     queryKey: ['palette', 'devices', q],
     queryFn: () =>
-      apiFetch<Page<{ id: string; code: string; name: string; siteCode: string | null }>>(
+      apiFetch<
+        Page<{ id: string; code: string; name: string; siteCode: string | null; status?: string }>
+      >(
         `/api/v1/devices?page=1&limit=5&search=${encodeURIComponent(q)}`,
       ),
     enabled,
@@ -261,7 +270,7 @@ export function CommandPalette({ me }: { me: Me }) {
   const software = useQuery({
     queryKey: ['palette', 'software', q],
     queryFn: () =>
-      apiFetch<Page<{ id: string; code: string; name: string }>>(
+      apiFetch<Page<{ id: string; code: string; name: string; status?: string }>>(
         `/api/v1/software?page=1&limit=4&search=${encodeURIComponent(q)}`,
       ),
     enabled,
@@ -269,7 +278,7 @@ export function CommandPalette({ me }: { me: Me }) {
   const isp = useQuery({
     queryKey: ['palette', 'isp', q],
     queryFn: () =>
-      apiFetch<Page<{ id: string; code: string; provider: string }>>(
+      apiFetch<Page<{ id: string; code: string; provider: string; status?: string }>>(
         `/api/v1/isp-lines?page=1&limit=3&search=${encodeURIComponent(q)}`,
       ),
     enabled,
@@ -277,7 +286,9 @@ export function CommandPalette({ me }: { me: Me }) {
   const accounts = useQuery({
     queryKey: ['palette', 'service-accounts', q],
     queryFn: () =>
-      apiFetch<Page<{ id: string; code: string; name: string; login: string | null }>>(
+      apiFetch<
+        Page<{ id: string; code: string; name: string; login: string | null; status?: string }>
+      >(
         `/api/v1/service-accounts?page=1&limit=3&search=${encodeURIComponent(q)}`,
       ),
     enabled,
@@ -414,6 +425,7 @@ export function CommandPalette({ me }: { me: Me }) {
         sub: [row.name, row.siteCode].filter(Boolean).join(' · '),
         to: PATHS.device(row.id),
         navKey: 'nav.devices',
+        status: row.status,
       })),
       ...more(t('nav.devices'), devices.data?.total, deviceRows.length, PATHS.devices, 'nav.devices'),
       ...softwareRows.map((row) => ({
@@ -422,6 +434,7 @@ export function CommandPalette({ me }: { me: Me }) {
         sub: row.name,
         to: PATHS.softwareItem(row.id),
         navKey: 'nav.software',
+        status: row.status,
       })),
       ...more(t('nav.software'), software.data?.total, softwareRows.length, PATHS.software, 'nav.software'),
       ...ispRows.map((row) => ({
@@ -430,6 +443,7 @@ export function CommandPalette({ me }: { me: Me }) {
         sub: row.provider,
         to: PATHS.ispLine(row.id),
         navKey: 'nav.isp',
+        status: row.status,
       })),
       ...more(t('nav.isp'), isp.data?.total, ispRows.length, PATHS.ispLines, 'nav.isp'),
       ...accountRows.map((row) => ({
@@ -438,6 +452,7 @@ export function CommandPalette({ me }: { me: Me }) {
         sub: [row.name, row.login].filter(Boolean).join(' · '),
         to: PATHS.serviceAccount(row.id),
         navKey: 'nav.serviceAccounts',
+        status: row.status,
       })),
       ...more(
         t('nav.serviceAccounts'),
@@ -842,6 +857,11 @@ export function CommandPalette({ me }: { me: Me }) {
                         </span>
                       ) : null}
                     </span>
+                    {hit.status && disposalStatusKey(hit.status) ? (
+                      <span className="badge muted it-status">
+                        {t(disposalStatusKey(hit.status) ?? '')}
+                      </span>
+                    ) : null}
                     <span className="it-arrow">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="m10 6 6 6-6 6" />

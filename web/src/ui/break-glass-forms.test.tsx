@@ -71,7 +71,7 @@ function sentBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> 
 describe('DecisionDialog', () => {
   it('Duyệt: tiêu đề ngắn, thân hộp nêu người xin · đối tượng · lý do', () => {
     renderDecision(true);
-    const dialog = screen.getByRole('dialog', { name: 'Duyệt yêu cầu' });
+    const dialog = screen.getByRole('dialog', { name: 'Duyệt mở két' });
     expect(within(dialog).getByText('Trần Thị B')).toBeInTheDocument();
     expect(within(dialog).getByText(/e2e-member@pmh\.com\.vn/)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: ROW.subjectLabel! })).toBeInTheDocument();
@@ -115,6 +115,49 @@ describe('DecisionDialog', () => {
     await userEvent.type(screen.getByLabelText(/Lý do từ chối/), 'Lý do chưa đủ cụ thể');
     await userEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
     expect(await screen.findByText(/vừa được người khác xử lý/)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('Duyệt cần mã 6 số: hộp hỏi mã nói đang DUYỆT cho ai, không phải câu chung "để xem" (VLT-047)', async () => {
+    renderDecision(true, {
+      respond: () =>
+        Promise.resolve(jsonResponse(403, { code: 'STEPUP_REQUIRED', message: 'Cần xác nhận.' })),
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
+    expect(
+      await screen.findByText('Nhập mã 6 số để duyệt mở két cho Trần Thị B.'),
+    ).toBeInTheDocument();
+  });
+
+  it('Duyệt một phiếu vừa bị rút (tài khoản người xin bị vô hiệu hóa) → báo rõ, đóng hộp', async () => {
+    const { onClose, onDone } = renderDecision(true, {
+      respond: () =>
+        Promise.resolve(
+          jsonResponse(409, {
+            code: 'BREAK_GLASS_WITHDRAWN',
+            message: 'Yêu cầu này đã được rút: tài khoản của người xin đã bị vô hiệu hóa.',
+          }),
+        ),
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
+    expect(await screen.findByText(/đã được rút/)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('Duyệt một phiếu vừa hết hạn chờ (Q-15) → báo rõ, đóng hộp', async () => {
+    const { onClose, onDone } = renderDecision(true, {
+      respond: () =>
+        Promise.resolve(
+          jsonResponse(409, {
+            code: 'BREAK_GLASS_PENDING_EXPIRED',
+            message: 'Yêu cầu này đã quá 8 giờ không ai duyệt nên tự hết hạn.',
+          }),
+        ),
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
+    expect(await screen.findByText(/không ai duyệt/)).toBeInTheDocument();
     expect(onClose).toHaveBeenCalled();
     expect(onDone).not.toHaveBeenCalled();
   });
@@ -271,7 +314,7 @@ describe('Hộp xin quyền xem (vault-panel)', () => {
       </MemoryRouter>,
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     await userEvent.type(screen.getByLabelText(/Lý do/), 'gấp');
     const hours = screen.getByLabelText(/Xin trong bao lâu/);
     await userEvent.clear(hours);

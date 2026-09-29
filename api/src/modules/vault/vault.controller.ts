@@ -51,7 +51,7 @@ class CreateSecretDto {
   @IsUUID(undefined, { message: 'Mã chủ thể không hợp lệ.' })
   ownerId!: string;
 
-  @IsIn([...SECRET_KINDS], { message: 'Loại secret không hợp lệ.' })
+  @IsIn([...SECRET_KINDS], { message: 'Loại ngăn két không hợp lệ.' })
   kind!: SecretKind;
 
   @IsString() @Length(1, 120) label!: string;
@@ -73,7 +73,7 @@ class RotateSecretDto {
 }
 
 class IdParamDto {
-  @IsUUID(undefined, { message: 'Mã secret không hợp lệ.' })
+  @IsUUID(undefined, { message: 'Mã ngăn két không hợp lệ.' })
   id!: string;
 }
 
@@ -136,7 +136,7 @@ export class VaultController {
     const now = new Date();
     return rows.map((row) => {
       const age = valueAge(row.valueChangedAt, staleDays, now);
-      return { ...row, valueAgeDays: age.days, valueStale: age.stale };
+      return { ...row, valueAgeDays: age.days, valueStale: age.stale, dueInDays: age.dueInDays };
     });
   }
 
@@ -148,7 +148,11 @@ export class VaultController {
   @NoIdleTouch()
   @Get('verdict')
   verdict(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
-    return this.breakGlass.verdictFor(actor(req), query.ownerType, query.ownerId);
+    return this.breakGlass.verdictFor(
+      { email: actor(req), sessionId: req.user!.sessionId },
+      query.ownerType,
+      query.ownerId,
+    );
   }
 
   @Roles('sa', 'admin')
@@ -253,7 +257,13 @@ export class VaultController {
     let grantId: string | null = null;
     /* Mặc định ĐÓNG (AD-9) — xem chú thích cùng luật ở `list()` bên trên. */
     if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
-      ({ grantId } = await this.breakGlass.assertCanReveal(who, meta.ownerType, meta.ownerId));
+      ({ grantId } = await this.breakGlass.assertCanReveal(
+        // Grant chỉ dùng được từ phiên đã xem nó lần đầu, và phiên đó còn sống; lượt xem đầu
+        // (đã qua step-up ở route này) gắn grant vào phiên đang gọi (Q-15).
+        { email: who, sessionId: req.user!.sessionId },
+        meta.ownerType,
+        meta.ownerId,
+      ));
     }
 
     const [opened, revealSeconds, graceMinutes] = await Promise.all([

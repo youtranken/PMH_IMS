@@ -1102,3 +1102,11 @@ export function uniqueStamp(): string {
   const worker = Number(process.env.TEST_WORKER_INDEX ?? 0) % 10;
   return `${worker}${lastStampSecond.toString().padStart(5, '0')}`;
 }
+
+/**
+ * Tên tab của màn Danh mục: nhãn có số mục nối sau ("Site 3"), nhóm rỗng thì không có số.
+ * Khớp cả hai dạng mà không vớ nhầm tab khác có cùng tiền tố.
+ */
+export function catalogTab(name: string): RegExp {
+  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}(?: \\d+)?$`);
+}

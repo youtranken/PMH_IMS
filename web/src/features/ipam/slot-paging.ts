@@ -17,16 +17,15 @@ export type SlotFilter = 'all' | SlotBucket;
 export const SLOT_FILTERS: SlotFilter[] = ['all', 'assigned', 'free'];
 
 /**
- * Chip "Đã ẩn" chỉ xuất hiện khi người dùng đã bật ô tick "Hiện cả hồ sơ đã ẩn" (B-04).
+ * Chip "Đã ngừng dùng" — chỉ bày ở dải ĐÃ NGỪNG DÙNG, nơi API trả kèm hồ sơ tắt cùng dải.
  *
- * Tách khỏi `SLOT_FILTERS` vì hồ sơ đã ẩn chỉ được API trả về khi `?includeVoided=true`: bày
- * một chip "Đã ẩn 0" thường trực là mời người dùng bấm vào một rổ luôn rỗng, rồi tự kết luận
- * rằng dải này không có hồ sơ nào bị ẩn — đúng cái kết luận sai mà B-04 đang sửa.
+ * Tách khỏi `SLOT_FILTERS` vì dải đang dùng không bao giờ có hồ sơ tắt trên màn (hồ sơ nhập
+ * nhầm bị xóa hẳn khỏi màn, Q-15): bày chip thường trực là mời bấm vào một rổ luôn rỗng.
  */
 export const VOIDED_FILTER: SlotFilter = 'voided';
 
 /**
- * Nhãn của từng rổ — `STATUS_KEY` cộng thêm rổ "đã ẩn".
+ * Nhãn của từng rổ — `STATUS_KEY` cộng thêm rổ "đã ngừng dùng".
  *
  * Dùng LẠI `ipam.voidedBadge`, chính khoá mà huy hiệu trên hàng đang đọc: chip lọc và huy hiệu
  * nói về cùng một thứ, nên hai chữ khác nhau cho nó là đúng lỗi mà `term-consistency.test.ts`
@@ -156,6 +155,19 @@ export function nextFreeSlot(
     return { address: slot.address, record: slot.kind === 'record' ? slot : null };
   }
   return null;
+}
+
+/**
+ * Mọi chỗ trống cấp được (cùng luật `nextFreeSlot`: bỏ gateway, bỏ hồ sơ đã ẩn) — ô đổi địa
+ * chỉ trong hộp Cấp IP. Hồ sơ Trống đi kèm bản ghi để cấp lại đúng hồ sơ đó.
+ */
+export function freeChoices(
+  slots: SubnetSlot[],
+  gateway: string | null,
+): { address: string; record: IpRow | null }[] {
+  return slots
+    .filter((slot) => slotStatus(slot) === 'free' && slot.address !== gateway)
+    .map((slot) => ({ address: slot.address, record: slot.kind === 'record' ? slot : null }));
 }
 
 /** Trang (tính từ 1) chứa địa chỉ này trong danh sách đang hiện; không có thì `null`. */

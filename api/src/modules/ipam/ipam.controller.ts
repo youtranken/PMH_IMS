@@ -47,6 +47,13 @@ import { sensitivePortsOf } from './nat-sensitive';
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+class DeviceIdsQueryDto {
+  /** Mã máy ngăn bởi dấu phẩy — một trang danh sách (tối đa 100 dòng) vừa trong 4000 ký tự. */
+  @IsOptional() @IsString() @Length(0, 4000) deviceIds?: string;
+}
+
 class SubnetBodyDto {
   @IsOptional() @IsString() @Length(1, 120) name?: string;
   @IsOptional() @IsString() @Length(1, 43) cidr?: string;
@@ -106,7 +113,7 @@ class TransitionDto {
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
 }
 
-/** Ẩn bản ghi nhập nhầm — LUÔN phải có lý do (quyết định 2026-08-23). */
+/** Xóa hồ sơ IP nhập nhầm — LUÔN phải có lý do, vì vết duy nhất còn lại nằm trong nhật ký. */
 class VoidDto {
   @IsString() @Length(3, 500) reason!: string;
 }
@@ -283,6 +290,22 @@ export class IpamController {
    * chính máy đó — hết cảnh gõ tay một địa chỉ không thuộc máy nào (thứ mà `validateNatRule`
    * đang phải chặn ở tầng sau).
    */
+  /**
+   * IP đang giữ của nhiều máy một lượt — cột IP của danh sách thiết bị (một trang, không N+1).
+   * Khai TRƯỚC `devices/:deviceId/addresses`: hai route khác số khúc nên không nuốt nhau, nhưng
+   * đặt cạnh nhau để ai thêm `devices/:x` sau này thấy ngay. Mã máy sai dạng bị bỏ lặng lẽ —
+   * cột IP là thông tin phụ, không đáng làm hỏng cả danh sách.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('devices/addresses')
+  async heldAddresses(@Query() query: DeviceIdsQueryDto) {
+    const ids = (query.deviceIds ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => UUID_RE.test(id));
+    return Object.fromEntries(await this.addresses.heldAddressesOf(ids));
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get('devices/:deviceId/addresses')
   listForDevice(@Param('deviceId', new ParseUUIDPipe()) deviceId: string) {
@@ -506,8 +529,8 @@ export class IpamController {
   }
 
   /**
-   * Ẩn hồ sơ NHẬP NHẦM. IP hết dùng thì đi đường vòng đời (thu hồi, story 5.2) — ẩn một IP
-   * đang dùng là làm mất luôn lịch sử mà AC 5.2 đòi giữ vĩnh viễn.
+   * Xóa hồ sơ NHẬP NHẦM để nhập lại (Q-15). IP hết dùng thì đi đường vòng đời (thu hồi) —
+   * xóa một IP đang dùng là làm mất khỏi màn lịch sử mà AC 5.2 đòi giữ.
    */
   @Roles('sa', 'admin')
   @Delete('addresses/:id')
@@ -522,12 +545,11 @@ export class IpamController {
   }
 
   /**
-   * BẬT LẠI hồ sơ đã ẩn — cửa đối ứng của `DELETE`.
-   *
-   * Thiếu nó thì ẩn là đường MỘT CHIỀU: `SubnetService.restore()` bật lại được cả một dải,
-   * còn một hồ sơ IP lẻ bấm nhầm thì không có đường quay lại. Cùng quyền với ẩn (`sa`/`admin`).
+   * KHÔI PHỤC hồ sơ đã xóa — chỉ SA, không có nút trên giao diện (Q-15: xóa là để nhập lại).
+   * Hẹp hơn quyền Xóa để việc đảo ngược một lượt xóa luôn qua người giữ quyền cao nhất và
+   * để vết `ip.restored` trong nhật ký.
    */
-  @Roles('sa', 'admin')
+  @Roles('sa')
   @Post('addresses/:id/restore')
   @Audited('ip.restored', 'ip_address', { writtenByService: true })
   restoreAddress(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
@@ -560,13 +582,13 @@ export class IpamController {
         { header: 'Router', width: 22, value: (r) => r.deviceCode ?? '' },
         { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },
         { header: 'Giao thức', width: 12, value: (r) => r.protocol.toUpperCase() },
-        { header: 'Port ngoài', width: 14, value: (r) => r.externalPorts },
+        { header: 'Cổng ngoài', width: 14, value: (r) => r.externalPorts },
         { header: 'IP trong', width: 16, value: (r) => r.internalIp },
-        { header: 'Port trong', width: 12, value: (r) => r.internalPort },
+        { header: 'Cổng trong', width: 12, value: (r) => r.internalPort },
         { header: 'Máy trong', width: 22, value: (r) => r.internalOwner ?? '' },
         { header: 'Mở cho ai', width: 24, value: (r) => r.usedBy },
         { header: 'Lý do', width: 40, value: (r) => r.reason },
-        { header: 'Đang bật', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
+        { header: 'Đang dùng', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
         // Ba cột chỉ có giá trị khi xuất kèm rule đã gỡ; để trống là rule còn trong sổ.
         { header: 'Gỡ lúc', width: 18, value: (r) => r.voidedAt },
         { header: 'Người gỡ', width: 24, value: (r) => r.voidedBy ?? '' },
@@ -591,8 +613,10 @@ export class IpamController {
    */
   @Roles('sa', 'admin', 'member')
   @Get('nat/:id/history')
-  natHistory(@Param() params: IdParamDto) {
-    return this.nat.history(params.id);
+  async natHistory(@Param() params: IdParamDto) {
+    return withActorNames(await this.nat.history(params.id), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   @Roles('sa', 'admin', 'member')
@@ -672,7 +696,7 @@ function requireDeviceId(value: string | undefined): string {
   if (id) return id;
   throw new BadRequestException({
     code: 'FIELD_REQUIRED',
-    message: 'Chọn thiết bị (router) cho rule NAT này.',
+    message: 'Chọn thiết bị (router) cho luật NAT này.',
   });
 }
 
@@ -694,9 +718,9 @@ function requirePorts(value: string | undefined): { from: number; to: number } {
 }
 
 const PORT_MESSAGE: Record<string, string> = {
-  format: 'Port ngoài viết dạng "8080" hoặc "8000-8010".',
-  range: 'Port phải từ 1 đến 65535.',
-  reversed: 'Khoảng port viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).',
+  format: 'Cổng ngoài viết dạng "8080" hoặc "8000-8010".',
+  range: 'Cổng phải từ 1 đến 65535.',
+  reversed: 'Khoảng cổng viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).',
 };
 
 const IP_STATUS_LABEL: Record<string, string> = {

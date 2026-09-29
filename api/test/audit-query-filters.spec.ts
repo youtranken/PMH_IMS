@@ -4,6 +4,7 @@ import { SystemConfigService } from '../src/modules/config-sys/system-config.ser
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { AuditQueryService } from '../src/modules/audit/audit-query.service';
+import { SECURITY_AUDIT_ACTIONS } from '../src/modules/audit/security-actions';
 import { AuditObjectLabelRegistry } from '../src/common/audit-object-labels.registry';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -120,6 +121,33 @@ describe('Bộ lọc nhật ký an ninh', () => {
       });
       expect(d10.total).toBe(1);
       expect(d11.total).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'chỉ sự kiện an ninh: lấy đúng tập mã an ninh, bỏ mọi dòng thường',
+    async () => {
+      await pool.query(
+        `INSERT INTO audit_log (actor, action, object_type, object_id) VALUES
+           ('sec@qa.test', 'auth.login.failed', 'user', 'sec-1'),
+           ('sec@qa.test', 'vault.secret.reveal_denied', 'secret', 'sec-2'),
+           ('sec@qa.test', 'device.updated', 'device', 'sec-3')`,
+      );
+      const page = await makeService().listAudit({
+        actor: 'sec@qa.test',
+        security: true,
+        page: 1,
+        pageSize: 50,
+      });
+      expect(page.items.map((r) => r.action).sort()).toEqual([
+        'auth.login.failed',
+        'vault.secret.reveal_denied',
+      ]);
+      expect(page.total).toBe(2);
+      for (const action of page.items.map((r) => r.action)) {
+        expect(SECURITY_AUDIT_ACTIONS).toContain(action);
+      }
     },
     TEST_TIMEOUT,
   );

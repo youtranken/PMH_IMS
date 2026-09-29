@@ -53,7 +53,7 @@ export interface IpRow {
   note: string | null;
   createdAt: string;
   updatedAt: string;
-  /** Hồ sơ đã ẨN hay chưa — `null` là đang hiển thị. Chỉ về khi màn xin `?includeVoided=true`. */
+  /** Hồ sơ đã tắt hay chưa — `null` là đang dùng. Màn dải chỉ nhận hồ sơ tắt CÙNG dải đã ngừng dùng. */
   voidedAt: string | null;
   voidedBy: string | null;
   voidReason: string | null;
@@ -67,7 +67,10 @@ export interface IpSearchHit extends IpRow {
 }
 
 /** Một dòng trên màn dải: hoặc hồ sơ thật, hoặc một ô còn trống (không có hàng trong DB). */
-export type SubnetSlot = ({ kind: 'record' } & IpRow) | { kind: 'free'; address: string };
+export type SubnetSlot =
+  /** `previousOwner`: chỉ hồ sơ Trống — chủ của lượt thu hồi gần nhất (API đọc từ lịch sử). */
+  | ({ kind: 'record'; previousOwner?: string | null } & IpRow)
+  | { kind: 'free'; address: string };
 
 export const STATUS_KEY: Record<IpStatus, string> = {
   free: 'ipam.statusFree',

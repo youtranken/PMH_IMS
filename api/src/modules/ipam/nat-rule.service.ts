@@ -290,11 +290,11 @@ export class NatRuleService {
       ),
       externalFrom: this.requireField(
         effective<number | null>('externalFrom', before.externalFrom),
-        'port ngoài',
+        'cổng ngoài',
       ),
       externalTo: this.requireField(
         effective<number | null>('externalTo', before.externalTo),
-        'port ngoài',
+        'cổng ngoài',
       ),
       internalIp: this.requireField(
         effective<string | null>('internalIp', hostOf(before.internalIp)),
@@ -302,7 +302,7 @@ export class NatRuleService {
       ).trim(),
       internalPort: this.requireField(
         effective<number | null>('internalPort', before.internalPort),
-        'port nội bộ',
+        'cổng trong',
       ),
       usedBy: this.requireField(effective<string | null>('usedBy', before.usedBy), 'người dùng'),
       reason: this.requireField(effective<string | null>('reason', before.reason), 'lý do'),
@@ -361,7 +361,7 @@ export class NatRuleService {
         if (rows.length === 0) {
           throw new ConflictException({
             code: 'NAT_ALREADY_REMOVED',
-            message: 'Rule này vừa bị người khác gỡ. Tải lại danh sách rồi thao tác lại.',
+            message: 'Luật NAT này vừa bị người khác gỡ. Tải lại danh sách rồi thao tác lại.',
           });
         }
         await this.audit.appendWithin(tx, {
@@ -420,7 +420,7 @@ export class NatRuleService {
     if (!text) {
       throw new BadRequestException({
         code: 'VOID_REASON_REQUIRED',
-        message: 'Nói rõ vì sao gỡ rule này (vd "dịch vụ đã ngừng").',
+        message: 'Nói rõ vì sao gỡ luật NAT này (vd "dịch vụ đã ngừng").',
       });
     }
     {
@@ -445,7 +445,7 @@ export class NatRuleService {
         .returning({ id: natRuleTable.id });
       requireCas(voided, {
         code: 'NAT_ALREADY_VOIDED',
-        message: 'Rule này vừa được người khác gỡ. Tải lại sổ NAT để xem trạng thái mới.',
+        message: 'Luật NAT này vừa được người khác gỡ. Tải lại sổ NAT để xem trạng thái mới.',
       });
       await this.audit.appendWithin(tx, {
         actor,
@@ -608,10 +608,10 @@ export class NatRuleService {
     throw new ConflictException({
       code: 'NAT_PORT_OVERLAP',
       message:
-        `Port ngoài ${describePortRange(input.externalFrom, input.externalTo)} ` +
-        `(${input.protocol.toUpperCase()}) đụng rule đang có: ` +
+        `Cổng ngoài ${describePortRange(input.externalFrom, input.externalTo)} ` +
+        `(${input.protocol.toUpperCase()}) đụng luật NAT đang có: ` +
         `${clash.protocol.toUpperCase()} ${describePortRange(clash.externalFrom, clash.externalTo)}. ` +
-        'Sổ NAT chỉ được có MỘT câu trả lời cho mỗi port — sửa rule cũ hoặc gỡ nó trước.',
+        'Sổ NAT chỉ được có MỘT câu trả lời cho mỗi cổng — sửa luật cũ hoặc gỡ nó trước.',
     });
   }
 
@@ -722,7 +722,7 @@ export class NatRuleService {
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'NAT_NOT_FOUND',
-        message: 'Không tìm thấy rule NAT này.',
+        message: 'Không tìm thấy luật NAT này.',
       });
     }
     return rows[0];
@@ -744,7 +744,7 @@ export class NatRuleService {
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'NAT_NOT_FOUND',
-        message: 'Không tìm thấy rule NAT này (có thể đã gỡ).',
+        message: 'Không tìm thấy luật NAT này (có thể đã gỡ).',
       });
     }
     return rows[0];
@@ -808,16 +808,16 @@ export class NatRuleService {
     if (pgErrorCode(error) === PG_CHECK_VIOLATION) {
       return new BadRequestException({
         code: 'NAT_INVALID',
-        message: `Port ngoài ${describePortRange(input.externalFrom, input.externalTo)} không hợp lệ (phải từ 1 đến 65535, số đầu nhỏ hơn số cuối).`,
+        message: `Cổng ngoài ${describePortRange(input.externalFrom, input.externalTo)} không hợp lệ (phải từ 1 đến 65535, số đầu nhỏ hơn số cuối).`,
       });
     }
     if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION) {
       return new ConflictException({
         code: 'NAT_PORT_OVERLAP',
         message:
-          `Port ngoài ${describePortRange(input.externalFrom, input.externalTo)} (${input.protocol.toUpperCase()}) ` +
-          'đã có rule khác trên router này. Sổ NAT chỉ được có MỘT câu trả lời cho mỗi port — ' +
-          'sửa rule cũ hoặc gỡ nó trước.',
+          `Cổng ngoài ${describePortRange(input.externalFrom, input.externalTo)} (${input.protocol.toUpperCase()}) ` +
+          'đã có luật NAT khác trên router này. Sổ NAT chỉ được có MỘT câu trả lời cho mỗi cổng — ' +
+          'sửa luật cũ hoặc gỡ nó trước.',
       });
     }
     return error;

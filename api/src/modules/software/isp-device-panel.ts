@@ -8,7 +8,8 @@ import { UI_PATHS } from '../../common/ui-paths';
  * Khu "Đường truyền ISP" trên trang thiết bị biên (AC 3.3: trang Draytek hiển thị các đường
  * ISP gắn với nó). Dùng đúng cơ chế khu mở rộng của story 2.5 — `devices` không biết ISP là gì.
  *
- * Hotline và số hợp đồng đưa lên ĐẦU: mở trang con Draytek lúc 2 giờ sáng là để gọi nhà mạng.
+ * Hotline và số hợp đồng nằm ngay trên dòng của đường: mở trang con Draytek lúc 2 giờ sáng là
+ * để gọi nhà mạng.
  */
 @Injectable()
 export class IspDevicePanel implements DevicePanelProvider, OnModuleInit {
@@ -28,12 +29,20 @@ export class IspDevicePanel implements DevicePanelProvider, OnModuleInit {
     // Máy không cắm đường nào thì không hiện khu này (trang chi tiết đã dài).
     if (lines.length === 0) return null;
 
-    const items = lines.flatMap((line) => [
-      { label: line.code, value: line.provider, link: UI_PATHS.ispLine(line.id) },
-      ...(line.hotline ? [{ label: 'Hotline', value: line.hotline }] : []),
-      ...(line.contractNo ? [{ label: 'Số hợp đồng', value: line.contractNo }] : []),
-      ...(line.wanIp ? [{ label: 'IP WAN', value: line.wanIp }] : []),
-    ]);
+    /* MỘT đường = MỘT dòng. Bản đồ quan hệ và hộp Thanh lý đếm/liệt kê theo dòng: trải một
+       đường thành bốn dòng nhãn–giá trị thì màn nói "4 đường truyền" và "sẽ gỡ: Hotline…". */
+    const items = lines.map((line) => ({
+      label: line.code,
+      value: [
+        line.provider,
+        line.hotline ? `Hotline ${line.hotline}` : null,
+        line.contractNo ? `HĐ ${line.contractNo}` : null,
+        line.wanIp ? `WAN ${line.wanIp}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      link: UI_PATHS.ispLine(line.id),
+    }));
     return { key: this.panelKey, title: 'Đường truyền ISP', items };
   }
 }

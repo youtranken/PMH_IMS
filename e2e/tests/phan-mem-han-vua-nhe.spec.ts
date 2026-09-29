@@ -136,7 +136,10 @@ test.describe('Danh sách phần mềm', () => {
 
     await page.goto('/software');
     await timVaChoLoc(page, `LT-E2E-TIMMAY-${stamp}`);
-    await expect(page.getByRole('row', { name: new RegExp(`LIC-E2E-TIMMAY-A-${stamp}`) })).toBeVisible();
+    const dong = page.getByRole('row', { name: new RegExp(`LIC-E2E-TIMMAY-A-${stamp}`) });
+    await expect(dong).toBeVisible();
+    // Nói VÌ SAO hồ sơ hiện ra: nó không có chữ đó trong mã/tên, mà ở máy đang giữ ghế.
+    await expect(dong.getByText(`khớp máy LT-E2E-TIMMAY-${stamp}`)).toBeVisible();
 
     await timVaChoLoc(page, `LT-E2E-KHONGCO-${stamp}`);
     await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc.')).toBeVisible();
@@ -343,7 +346,7 @@ test.describe('Kho thanh lý', () => {
     // Đường hỏng: tìm không ra thì có nút xoá bộ lọc, bấm là thấy lại.
     await page.goto('/disposal?kind=software');
     await timVaChoLoc(page, `KHONG-CO-E2E-${uniqueStamp()}`);
-    await page.getByRole('button', { name: 'Xoá bộ lọc' }).click();
+    await page.getByRole('button', { name: 'Xóa bộ lọc' }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   });
 });

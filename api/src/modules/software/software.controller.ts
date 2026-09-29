@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -48,6 +50,10 @@ import {
 } from './software.service';
 import type { SoftwareFilter } from './software.types';
 import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
+import { withActorNames } from '../../common/history';
+import { UsersApiService } from '../users/users.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { assignmentExportSheet } from './license-assignments-export';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -85,6 +91,10 @@ export class SoftwareBodyDto {
   @IsOptional()
   @IsIn([...SOFTWARE_STATUSES], { message: 'Trạng thái hồ sơ không hợp lệ.' })
   status?: SoftwareStatus;
+
+  /** Website dùng chứng chỉ SSL / tên miền này (Q-15). Service chuẩn hóa + kiểm từng dòng. */
+  @IsOptional() @IsArray() @ArrayMaxSize(500) @IsString({ each: true }) @Length(0, 300, { each: true })
+  websites?: string[];
 }
 
 class RenewDto {
@@ -93,6 +103,17 @@ class RenewDto {
 
   /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
   @IsOptional() @IsBoolean() seats?: boolean;
+
+  /** Hợp đồng của RIÊNG lượt gia hạn này — ghi vào sổ gia hạn, không vào hồ sơ (Q-15). */
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+
+  /** Tiền đồng, số nguyên; `null`/bỏ trống = chưa khai. Service kiểm trần 2^53. */
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(0) @IsInt()
+  cost?: number | null;
+
+  /** SSL/tên miền: danh sách website của kỳ mới; bỏ trống = giữ danh sách đang có (Q-15). */
+  @IsOptional() @IsArray() @ArrayMaxSize(500) @IsString({ each: true }) @Length(0, 300, { each: true })
+  websites?: string[];
 }
 
 /**
@@ -162,23 +183,32 @@ export class SoftwareController {
     private readonly software: SoftwareService,
     private readonly assignments: LicenseAssignmentService,
     private readonly excel: ExcelExportService,
+    private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /**
    * Bộ lọc CHUNG của danh sách và file xuất (FR-028) — hai chỗ dựng riêng thì file tải về lệch
    * cái đang nhìn. Giá trị lạ trên URL bị bỏ qua thay vì lọt xuống câu truy vấn.
    */
-  private async filterOf(query: {
-    search?: string;
-    kind?: SoftwareKind;
-    licenseModel?: LicenseModel;
-    status?: SoftwareStatus | 'live';
-    vendorId?: string;
-  }): Promise<SoftwareFilter> {
+  private async filterOf(
+    query: {
+      search?: string;
+      kind?: SoftwareKind;
+      licenseModel?: LicenseModel;
+      status?: SoftwareStatus | 'live';
+      vendorId?: string;
+    },
+    deviceMatches?: Map<string, string[]>,
+  ): Promise<SoftwareFilter> {
     const search = query.search?.trim();
     return {
       search,
-      alsoIds: search ? await this.assignments.softwareIdsOnDevices(search) : undefined,
+      alsoIds: search
+        ? deviceMatches
+          ? [...deviceMatches.keys()]
+          : await this.assignments.softwareIdsOnDevices(search)
+        : undefined,
       kind: query.kind,
       licenseModel: LICENSE_MODELS.includes(query.licenseModel as LicenseModel)
         ? query.licenseModel
@@ -207,12 +237,21 @@ export class SoftwareController {
       dir?: string;
     },
   ) {
+    const search = query.search?.trim();
+    const matches = search
+      ? await this.assignments.devicesHoldingSeats(search)
+      : new Map<string, string[]>();
     const page = await this.software.list(
       parsePageQuery(query),
-      await this.filterOf(query),
+      await this.filterOf(query, matches),
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
-    return { ...page, items: await this.software.present(page.items) };
+    const items = await this.software.present(page.items);
+    return {
+      ...page,
+      // SW-010: hồ sơ hiện ra vì MÁY đang giữ ghế khớp ô tìm → mã máy cho chip "khớp máy X".
+      items: items.map((item) => ({ ...item, matchedDevices: matches.get(item.id) ?? [] })),
+    };
   }
 
   /**
@@ -262,6 +301,8 @@ export class SoftwareController {
         { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
         { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
+        // SW-043: SSL/tên miền phủ những website nào — cùng danh sách với hồ sơ.
+        { header: 'Website', width: 36, value: (r) => (r.websites ?? []).join(', ') },
         { header: 'Ghi chú', width: 40, value: (r) => r.note ?? '' },
       ],
       rows,
@@ -305,7 +346,10 @@ export class SoftwareController {
   @Get(':id/history')
   async history(@Param() params: IdParamDto) {
     const rows = await this.software.history(params.id);
-    return withDeviceCodes(rows, await this.assignments.deviceCodes(deviceIdsInHistory(rows)));
+    return withActorNames(
+      withDeviceCodes(rows, await this.assignments.deviceCodes(deviceIdsInHistory(rows))),
+      (emails) => this.users.namesByEmails(emails),
+    );
   }
 
   @Roles('sa', 'admin', 'member')
@@ -339,10 +383,35 @@ export class SoftwareController {
       body.seats
         ? (tx) => this.assignments.renewSeatsWithin(tx, who, params.id, body.endDate)
         : undefined,
+      { contract: body.contract, cost: body.cost, websites: body.websites },
     );
   }
 
+  /** Sổ gia hạn của hồ sơ: từng lượt với hạn cũ → mới, hợp đồng, chi phí (Q-15). */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/renewals')
+  renewals(@Param() params: IdParamDto) {
+    return this.software.renewals(params.id);
+  }
+
   // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────
+
+  /**
+   * Máy ĐANG dùng license này ra Excel, kèm dòng tổng chi phí — file nộp kiểm toán (SW-057).
+   * Khai trước `:id/assignments` cho dễ đọc; hai route khác số đoạn nên không nuốt nhau.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('software.assignments.exported', 'software')
+  @Get(':id/assignments/export.xlsx')
+  async exportAssignments(@Param() params: IdParamDto, @Res() res: Response) {
+    const item = await this.software.detail(params.id);
+    const sheet = assignmentExportSheet(
+      await this.assignments.listFor(params.id, false),
+      await this.config.getString('appTimezone'),
+    );
+    const buffer = await this.excel.build({ sheetName: 'May dang dung', ...sheet });
+    sendXlsx(res, buffer, `may-dang-dung-${item.code}.xlsx`);
+  }
 
   /** `includeReleased=true` mở cả dòng đã gỡ — "key này từng nhập máy nào" là câu kiểm toán. */
   @Roles('sa', 'admin', 'member')

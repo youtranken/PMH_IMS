@@ -8,9 +8,15 @@ import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
+import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
+import { SuggestInput } from '@/ui/suggest-input';
+import { useDepartments } from '@/ui/use-departments';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types';
+
+/** Trần của một lượt chọn nhanh — đúng trần `limit` của API danh sách thiết bị. */
+const QUICK_PICK_LIMIT = 200;
 
 /**
  * Hộp gán license vào máy — VÀ hộp sửa kỳ hạn/chi phí của một ghế đã gán (0027).
@@ -65,6 +71,56 @@ export function AssignDialog({
       software.seatTotal !== null &&
       software.seatUsed + devices.length > software.seatTotal);
   const [error, setError] = useState<string | null>(null);
+  /* Chọn nhanh cả lô theo phòng ban / người sử dụng: mua 10 ghế cho phòng Kế toán thì chọn
+     "Kế toán" một lần, rồi bỏ bớt máy không cần. Đóng sẵn — hộp mở ra vẫn chỉ có MỘT ô tìm. */
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickBy, setQuickBy] = useState<'department' | 'assignedTo'>('department');
+  const [quickValue, setQuickValue] = useState('');
+  const [quickNote, setQuickNote] = useState<string | null>(null);
+  const [quickLoading, setQuickLoading] = useState(false);
+  const departments = useDepartments();
+
+  async function quickAdd() {
+    const who = quickValue.trim();
+    if (!who) {
+      setQuickNote(t('license.quickPickNeedValue'));
+      return;
+    }
+    setQuickLoading(true);
+    setQuickNote(null);
+    try {
+      /* Chỉ máy ĐANG DÙNG (không lấy máy dự phòng/hỏng nằm kho của phòng), và bỏ máy đã có
+         license này — gán lại máy đó thì API từ chối và cả lô dừng giữa chừng. */
+      const [found, seats] = await Promise.all([
+        apiFetch<{ items: DeviceRow[]; total: number }>(
+          `/api/v1/devices?limit=${QUICK_PICK_LIMIT}&usable=true&status=in_use&${quickBy}=${encodeURIComponent(who)}`,
+        ),
+        apiFetch<LicenseSeat[]>(`/api/v1/software/${software.id}/assignments`),
+      ]);
+      const holding = new Set(seats.map((item) => item.deviceId));
+      const fresh = found.items.filter(
+        (item) => !holding.has(item.id) && !devices.some((picked) => picked.id === item.id),
+      );
+      const held = found.items.filter((item) => holding.has(item.id)).length;
+      setDevices((current) => [...current, ...fresh.map((item) => ({ id: item.id, code: item.code }))]);
+      const notes: string[] = [];
+      if (found.items.length === 0) notes.push(t('license.quickPickNone', { who }));
+      else if (fresh.length === 0 && held === found.items.length) {
+        notes.push(t('license.quickPickAllHeld', { who }));
+      } else {
+        notes.push(t('license.quickPickAdded', { count: fresh.length, who }));
+        if (held > 0) notes.push(t('license.quickPickHeld', { count: held }));
+      }
+      if (found.total > found.items.length) {
+        notes.push(t('license.quickPickTruncated', { count: found.items.length }));
+      }
+      setQuickNote(notes.join(' '));
+    } catch (err) {
+      setQuickNote(errorMessage(err));
+    } finally {
+      setQuickLoading(false);
+    }
+  }
 
   // License mua đứt thì chỗ ngồi của nó cũng không có ngày kết thúc — ô đó không được hiện
   // ra để rồi API trả về lỗi. Luật nằm ở API (`validateAssignmentTerms`), đây chỉ là hệ quả.
@@ -256,6 +312,73 @@ export function AssignDialog({
             />
           </Field>
         )}
+        {!editing ? (
+          <div className="span-2">
+            {!quickOpen ? (
+              <button
+                type="button"
+                className="btn sm"
+                aria-expanded={false}
+                onClick={() => setQuickOpen(true)}
+              >
+                {t('license.quickPickOpen')}
+              </button>
+            ) : (
+              <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+                <div className="segmented" role="group" aria-label={t('license.quickPickBy')}>
+                  {(['department', 'assignedTo'] as const).map((by) => (
+                    <button
+                      key={by}
+                      type="button"
+                      aria-pressed={quickBy === by}
+                      onClick={() => {
+                        setQuickBy(by);
+                        setQuickValue('');
+                        setQuickNote(null);
+                      }}
+                    >
+                      {t(by === 'department' ? 'license.quickPickDepartment' : 'license.quickPickPerson')}
+                    </button>
+                  ))}
+                </div>
+                <div className="row" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <SuggestInput
+                      value={quickValue}
+                      onChange={setQuickValue}
+                      options={quickBy === 'department' ? departments.names : []}
+                      failed={quickBy === 'department' && departments.failed}
+                      placeholder={t(
+                        quickBy === 'department'
+                          ? 'license.quickPickDepartmentLabel'
+                          : 'license.quickPickPersonLabel',
+                      )}
+                      ariaLabel={t(
+                        quickBy === 'department'
+                          ? 'license.quickPickDepartmentLabel'
+                          : 'license.quickPickPersonLabel',
+                      )}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={quickLoading || running}
+                    onClick={() => void quickAdd()}
+                  >
+                    {quickLoading ? t('common.loading') : t('license.quickPickAdd')}
+                  </button>
+                </div>
+                <p className="muted">{t('license.quickPickHint')}</p>
+                {quickNote ? (
+                  <p className="muted" role="status">
+                    {quickNote}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : null}
         {!editing && devices.length > 0 ? (
           <div className="chip-row span-2" role="list" aria-label={t('license.pickedDevices')}>
             {devices.map((item) => (
@@ -300,20 +423,7 @@ export function AssignDialog({
           htmlFor="assign-cost"
           error={check.error('cost')}
         >
-          {/* Ô chữ, không `type="number"`: phải nhận "5.600.000" hay "5,6tr" như chép từ hoá
-              đơn. Rời ô thì tự viết lại có dấu chấm hàng nghìn để soát được bằng mắt. */}
-          <input
-            id="assign-cost"
-            className="inp"
-            inputMode="decimal"
-            value={cost}
-            onChange={(e) => setCost(e.target.value)}
-            onBlur={() => {
-              if (money.reason === null && money.value !== null) {
-                setCost(formatMoneyInput(money.value));
-              }
-            }}
-          />
+          <MoneyInput value={cost} onChange={setCost} />
         </Field>
         <Field label={t('license.contract')} hint={t('license.contractHint')} htmlFor="assign-contract">
           <input

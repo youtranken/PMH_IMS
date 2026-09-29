@@ -52,5 +52,17 @@ export interface ExpirySource {
    * bảo hành do nhà cung cấp quyết, sửa tay trong hồ sơ thiết bị chứ không "gia hạn").
    * Engine chỉ gọi hàm này, không bao giờ tự UPDATE bảng của module khác.
    */
-  renew?(actor: string, id: string, newEnd: string): Promise<void>;
+  renew?(actor: string, id: string, newEnd: string, terms?: RenewTerms): Promise<void>;
+
+  /**
+   * Nguồn này ghi được số hợp đồng + chi phí của lượt gia hạn vào sổ gia hạn (Q-15). Không
+   * bật thì engine từ chối hai trường đó thay vì nuốt im — người nhập tưởng đã lưu mà sổ trống.
+   */
+  readonly renewTerms?: boolean;
+}
+
+/** Hợp đồng + chi phí của RIÊNG một lượt gia hạn (Q-15). Bỏ trống = chưa khai. */
+export interface RenewTerms {
+  contract?: string | null;
+  cost?: number | null;
 }

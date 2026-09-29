@@ -67,6 +67,7 @@ export function toHistoryEntries(rows: DeviceHistoryRow[], t: TFunction): Histor
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     action: actionText(row, t),
     detail: detailText(row, t),
   }));

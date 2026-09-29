@@ -81,8 +81,12 @@ test.describe('Két sắt', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
 
+    // Thanh công cụ của tab: tiêu đề khu + số ngăn + nút cất cùng hàng (DEV-079).
+    await expect(page.getByRole('heading', { name: 'Ngăn két' })).toBeVisible();
     await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
-    const form = page.getByRole('dialog');
+    // Tiêu đề hộp nói cất vào MÁY NÀO (DEV-035).
+    const form = page.getByRole('dialog', { name: `Cất mật khẩu/khóa — ${code}` });
+    await expect(form).toBeVisible();
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');
     await form.getByRole('textbox', { name: 'Giá trị', exact: true }).fill(secretValue);
@@ -108,12 +112,12 @@ test.describe('Két sắt', () => {
 
     // Thu hồi = xóa mềm: biến khỏi danh sách.
     // Không hoàn tác được nên phải gõ lại đúng tên ngăn thì nút xác nhận mới bật.
-    await rowAction(page, label, 'Xoá vĩnh viễn');
+    await rowAction(page, label, 'Xóa vĩnh viễn');
     await expect(
-      page.getByTestId('dialog-footer').last().getByRole('button', { name: 'Xoá vĩnh viễn' }),
+      page.getByTestId('dialog-footer').last().getByRole('button', { name: 'Xóa vĩnh viễn' }),
     ).toBeDisabled();
     await page.getByRole('dialog').last().getByRole('textbox').fill(label);
-    await confirmAction(page, 'Xoá vĩnh viễn');
+    await confirmAction(page, 'Xóa vĩnh viễn');
     await expect(page.getByRole('row', { name: new RegExp(label) })).toHaveCount(0);
   });
 

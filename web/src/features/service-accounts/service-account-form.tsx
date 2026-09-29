@@ -17,6 +17,7 @@ import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
   allowsAnyIp,
+  previewCodeFromLogin,
   invalidAllowedIps,
   supportsVpnFields,
   type ServiceAccountKind,
@@ -309,7 +310,10 @@ export function ServiceAccountForm({
                 ? form.code.trim() !== row.code
                   ? t('serviceAccounts.codeChangeWarn', { code: row.code })
                   : undefined
-                : t('serviceAccounts.codeAutoHint')
+                : /* Mã sẽ sinh ra hiện NGAY khi gõ tên đăng nhập — không phải lưu xong mới biết. */
+                  !form.code.trim() && form.login.trim()
+                  ? t('serviceAccounts.codePreview', { code: previewCodeFromLogin(form.login) })
+                  : t('serviceAccounts.codeAutoHint')
             }
             htmlFor="sa-code"
           >

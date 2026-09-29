@@ -83,8 +83,19 @@ describe('ExpirySourceRegistry — engine không biết bảng nào tồn tại 
     registry.register(source('license', [], { canRenew: true }));
     registry.register(source('warranty', []));
     expect(registry.list()).toEqual([
-      { kind: 'license', label: 'Nguồn license', canRenew: true },
-      { kind: 'warranty', label: 'Nguồn warranty', canRenew: false },
+      { kind: 'license', label: 'Nguồn license', canRenew: true, canRenewTerms: false },
+      { kind: 'warranty', label: 'Nguồn warranty', canRenew: false, canRenewTerms: false },
+    ]);
+  });
+
+  /** Q-15: ô hợp đồng + chi phí chỉ hiện cho nguồn có sổ gia hạn — và chỉ khi gia hạn được. */
+  it('canRenewTerms chỉ bật khi nguồn vừa gia hạn được vừa khai renewTerms', () => {
+    const registry = new ExpirySourceRegistry();
+    registry.register({ ...source('license', [], { canRenew: true }), renewTerms: true });
+    registry.register({ ...source('warranty', []), renewTerms: true });
+    expect(registry.list().map((k) => [k.kind, k.canRenewTerms])).toEqual([
+      ['license', true],
+      ['warranty', false],
     ]);
   });
 });

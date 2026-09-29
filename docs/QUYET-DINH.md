@@ -165,6 +165,59 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   nhắc, và đi cùng vòng đời Q-03/Q-13 (Hết hạn → tự Đã thanh lý sau ân hạn). Lý do: trước đây nó
   bị lượt quét "xử" mà không hề được nhắc.
 
+### Q-15 · Chốt sau đợt giao diện vừa + nhẹ (29/09/2026, chủ dự án chốt)
+
+- **Tên gọi break-glass:** trên giao diện và email gọi là **"Xin mở két"** (người xin) và
+  **"Duyệt mở két"** (người duyệt). Bỏ các tên "Break-glass", "Duyệt yêu cầu", "Xin quyền xem tạm
+  thời", "Đập tủ kính" khỏi chữ người dùng đọc (mã, bảng, route giữ nguyên). Chữ "secret" trên giao
+  diện, nhật ký và Excel đổi theo tên đang dùng ở màn két cho đồng bộ.
+- **Quyền mở két gắn với PHIÊN đang dùng nó** (sửa lại 29/09/2026, chủ dự án chốt): yêu cầu
+  **đang chờ** KHÔNG gắn phiên — người xin đăng xuất/hết phiên thì yêu cầu vẫn chờ, người duyệt
+  vẫn duyệt được (trước đây lượt quét tự rút nó sau 30 phút ngồi chờ, mâu thuẫn với thư nhắc người
+  duyệt sau `approval.reminder_hours` giờ). Khi được duyệt, người xin **không có bước nhận quyền
+  riêng**: mở lại đúng thứ đã xin, bấm "Xem" và nhập mã 6 số như bình thường — **lần xem đầu tiên**
+  gắn quyền với phiên đang xem. Từ lúc đó đăng xuất, hết phiên hay bị đóng phiên thì quyền hết,
+  không chuyển sang phiên khác, muốn xem tiếp phải xin lại. Giờ được cấp tính từ lúc duyệt.
+  Người xin tự "Trả quyền" sớm được. Yêu cầu chờ **quá 8 giờ** không ai quyết thì tự hết hạn
+  (`breakglass.pending_expire_hours`, mặc định 8; thư nhắc người duyệt phải đến trước mốc này).
+  Lý do: quyền xem mật khẩu không sống lâu hơn người đang ngồi trước máy, việc CHỜ duyệt không
+  bắt người xin ngồi canh trang, và một yêu cầu treo lâu không được thành vé mở két lúc nào cũng
+  dùng được.
+- **Vô hiệu hóa tài khoản** tự rút mọi yêu cầu mở két đang chờ của người đó (cùng transaction,
+  ghi nhật ký). Quyền két theo nhóm giữ nguyên để bật lại là như cũ.
+- **Hồ sơ IP nhập nhầm:** nút là **"Xóa"** — xóa để nhập lại (không khôi phục trên giao diện; vết
+  vẫn nằm trong nhật ký hệ thống).
+- **Danh mục** dùng **"Ngừng dùng / Dùng lại"** như dải IP, tài khoản dịch vụ, luật NAT. Tài
+  khoản người dùng IMS giữ "Vô hiệu hóa / Bật lại".
+- **Gia hạn từ màn Sắp hết hạn** cũng ghi được số hợp đồng và chi phí vào sổ gia hạn. Không có
+  nút Hoàn tác (sai ngày thì Sửa hồ sơ). Màn Sắp hết hạn không cần mốc "Tháng sau / Quý sau".
+- **Lưu giá trị mới vào két:** không bắt tick "Tôi đã đổi trên thiết bị" — chỉ cảnh báo.
+- **Thuật ngữ:** **"Ngừng dùng / Dùng lại"** cho dải IP, tài khoản dịch vụ, luật NAT; NAT dùng
+  **"luật NAT"**, **"cổng ngoài"**, **"cổng trong"** thay cho rule/port. Mục menu Hệ thống
+  "Tài khoản" đổi thành **"Người dùng IMS"**. Chữ tiếng Việt viết thống nhất kiểu **"khóa",
+  "hóa"** (dấu trên chữ cái chính, đang chiếm đa số trong giao diện).
+- **Mở lại thiết bị đã thanh lý:** về **"Đang dùng"** (như cũ). Đổi trạng thái thiết bị **không**
+  bắt ghi lý do.
+- **Gia hạn phần mềm:** số hợp đồng và chi phí của MỖI lần gia hạn ghi vào sổ lịch sử gia hạn
+  (`renewal_history`), không thêm cột vào hồ sơ phần mềm.
+- **Gán license:** có lối chọn nhanh máy theo phòng ban / người sử dụng.
+- **Danh mục:** hiện số "đang dùng ở N thiết bị/hồ sơ" cho từng mục. KHÔNG tách ô "Email / người
+  liên hệ" của nhà cung cấp.
+- **Bảng điều khiển:** không tự làm mới định kỳ (mỗi lần đăng nhập đã tải mới).
+- **"Bộ giao diện" (`/dev/components`) không có ở bản production** — chỉ bật trong stack dev/E2E.
+- **Hạn đổi mật khẩu trong két: 180 ngày** (`dashboard.secret_stale_days`, giữ 180). Danh sách
+  ngăn két và danh sách tài khoản dịch vụ có cột **"Đổi lần cuối"** (ngày) kèm đếm ngược "còn N
+  ngày"; quá hạn thì "Quá N ngày — cần đổi". Đổi giá trị xong thì đếm lại từ đầu. Khi đổi giá trị
+  luôn nhắc: IMS KHÔNG nối tới máy chủ/thiết bị — phải đổi trên hệ thống thật trước (ảnh hưởng
+  prod), rồi mới lưu vào két.
+- **Xem giá trị trong két:** gộp popup két, bước nhập mã 6 số và bước hiện giá trị thành MỘT hộp
+  chạy theo bước (không chồng 3 lớp hộp, VLT-062).
+- **SSL / tên miền (SW-043):** không thêm bộ trường SSL riêng. Chỉ cần ghi lại **website nào dùng
+  chứng chỉ SSL nào, theo từng năm** — danh sách website trên hồ sơ SSL, và mỗi lần gia hạn lưu
+  lại danh sách website của kỳ đó trong sổ lịch sử gia hạn.
+- **Luật NAT không có hạn "rà lại"** (chủ dự án chốt, 29/09/2026).
+- Chưa làm: lưới mặt trước switch (cần trường "số cổng" theo model).
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

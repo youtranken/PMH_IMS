@@ -324,7 +324,7 @@ export class SubnetService {
        * Bản trước đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
        * một IP được cấp trong khoảnh khắc giữa hai câu lệnh: câu UPDATE ẩn luôn hàng mới đó
        * (nó khớp `subnet_id` + `voided_at IS NULL`), nhưng vòng ghi `ip_history` chạy trên
-       * ảnh chụp cũ nên KHÔNG sinh dòng `ip.voided` cho nó — vi phạm đúng điều chú thích
+       * ảnh chụp cũ nên KHÔNG sinh dòng `ip.subnet_voided` cho nó — vi phạm đúng điều chú thích
        * ngay trên đây tự hứa ("mỗi hàng vẫn để lại một dòng lịch sử… chứ không biến mất im
        * lặng") và đúng điều AC 5.2 bắt giữ vĩnh viễn. Tệ hơn: `restore()` khớp theo
        * `voidedAt = stamp` sẽ hồi sinh hàng đó và ghi `ip.restored`, nên lịch sử có "bật lại"
@@ -340,11 +340,13 @@ export class SubnetService {
         await tx.insert(ipHistoryTable).values(
           voided.map((child) => ({
             ipAddressId: child.id,
-            action: 'ip.voided',
+            // Mã riêng, không phải `ip.voided`: `ip.voided` là "Xóa hồ sơ nhập nhầm" (Q-15), còn
+            // đây là hồ sơ tắt theo dải và sống lại khi dải được dùng lại.
+            action: 'ip.subnet_voided',
             actor,
             fromStatus: child.status,
             toStatus: child.status,
-            changes: { reason: `ẩn theo dải: ${text}` },
+            changes: { reason: text },
           })),
         );
       }
@@ -379,7 +381,7 @@ export class SubnetService {
     if (row.voidedAt === null) {
       throw new ConflictException({
         code: 'SUBNET_NOT_VOIDED',
-        message: 'Dải này đang dùng, không có gì để bật lại.',
+        message: 'Dải này đang dùng, không có gì để dùng lại.',
       });
     }
     const stamp = row.voidedAt;
@@ -410,7 +412,7 @@ export class SubnetService {
             actor,
             fromStatus: child.status,
             toStatus: child.status,
-            changes: { reason: 'bật lại theo dải' },
+            changes: { reason: 'dùng lại theo dải' },
           })),
         );
       }
@@ -466,7 +468,7 @@ export class SubnetService {
         code: 'SUBNET_HAS_ADDRESSES',
         message:
           `Dải này đã có ${addresses} hồ sơ IP nên không xóa hẳn được — xóa là mất luôn lịch sử ` +
-          '"IP nào từng của máy nào". Dùng Vô hiệu hóa để cất dải đi mà vẫn tra cứu được.',
+          '"IP nào từng của máy nào". Dùng "Ngừng dùng" để cất dải đi mà vẫn tra cứu được.',
         addresses,
       });
     }
@@ -656,14 +658,14 @@ export class SubnetService {
           `${r.address} (${r.protocol.toUpperCase()} ${describePortRange(r.externalFrom, r.externalTo)})`,
       )
       .join(', ');
-    const rest = rules.length > 5 ? ` và ${rules.length - 5} rule nữa` : '';
+    const rest = rules.length > 5 ? ` và ${rules.length - 5} luật nữa` : '';
     throw new ConflictException({
       code: 'IP_HAS_LIVE_NAT',
       message:
-        `Trong dải này còn ${rules.length} rule NAT đang mở: ${shown}${rest}. ` +
-        'Ẩn dải thì những địa chỉ đó biến khỏi mọi màn, còn rule vẫn chuyển gói tới chúng — ' +
+        `Trong dải này còn ${rules.length} luật NAT đang mở: ${shown}${rest}. ` +
+        'Ngừng dùng dải thì những địa chỉ đó biến khỏi mọi màn, còn luật vẫn chuyển gói tới chúng — ' +
         'lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó. ' +
-        'Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi ẩn dải.',
+        'Vào sổ NAT gỡ hoặc trỏ lại luật trước, rồi ngừng dùng dải.',
     });
   }
 

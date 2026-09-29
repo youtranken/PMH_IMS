@@ -54,8 +54,11 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
           quietInDigest: row.status === 'expired_ok',
         }));
       },
-      renew: async (actor, id, newEnd) => {
-        await this.software.renew(actor, id, newEnd);
+      // Mọi loại phần mềm ghi sổ gia hạn trong `SoftwareService.renew`, nên nhận luôn hợp đồng +
+      // chi phí của lượt này — cùng luật kiểm với nút Gia hạn trong hồ sơ (Q-15).
+      renewTerms: true,
+      renew: async (actor, id, newEnd, terms) => {
+        await this.software.renew(actor, id, newEnd, undefined, terms ?? {});
       },
     };
   }

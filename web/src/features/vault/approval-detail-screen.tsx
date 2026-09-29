@@ -103,7 +103,12 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       return;
     }
     void run(
-      () => actions.approve(row.id, { hours: granted, note: note.trim() }),
+      () =>
+        actions.approve(
+          row.id,
+          { hours: granted, note: note.trim() },
+          t('approvals.stepUpApprove', { name: row.requesterName }),
+        ),
       'approvals.approved',
     );
   };
@@ -127,7 +132,10 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
   const finalText =
     row.state === 'approved' && row.active
       ? t('approvals.grantedTo', { member: row.requesterName, until: formatDateTime(row.expiresAt) })
-      : row.state === 'approved' || row.state === 'expired'
+      : row.state === 'expired' && row.expiresAt === null
+        ? /* Grant đã duyệt luôn có hạn; hết hạn mà không có hạn = hết hạn CHỜ, chưa từng được cấp. */
+          t('approvals.finalPendingExpired')
+        : row.state === 'approved' || row.state === 'expired'
         ? t('approvals.finalExpired')
         : row.state === 'denied'
           ? t('approvals.finalDenied', { who, at })
@@ -246,6 +254,22 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
               {row.decisionNote}
             </>
           ) : null}
+        </p>
+      ) : null}
+
+      {/* Phía người xin (Q-15): chờ thì không phải canh trang; được duyệt thì không có nút riêng —
+          mở lại đối tượng và bấm "Xem", lần xem đầu gắn quyền vào phiên đó. */}
+      {own && pending ? (
+        <p className="muted" role="status">
+          {t('vault.pendingCanLeave')}
+        </p>
+      ) : own && row.state === 'approved' && row.active ? (
+        <p className="muted" role="status">
+          {row.claimedAt
+            ? t('vault.sessionBound')
+            : t('approvals.readyToView', {
+                subject: row.subjectLabel ?? t('approvals.subjectGone'),
+              })}
         </p>
       ) : null}
 

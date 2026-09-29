@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { cidrContains, cidrOverlaps, parseIpv4, previewCidr } from '@/lib/ipv4';
 import { Dialog } from '@/ui/dialog';
@@ -288,6 +290,13 @@ export function HideDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const check = useFormErrors({ reason: textRule(t, reason, 3) });
+  /* Luật NAT còn trỏ vào IP trong dải. Sổ NAT của một văn phòng chỉ vài chục dòng, lọc theo
+     CIDR ngay ở đây. Hỏng thì im — API vẫn là nơi chặn. */
+  const nat = useQuery({
+    queryKey: ['ipam', 'nat', 'all-live'],
+    queryFn: () => apiFetch<{ internalIp: string }[]>('/api/v1/ipam/nat'),
+  });
+  const natInSubnet = nat.data?.filter((rule) => cidrContains(subnet.cidr, rule.internalIp)).length;
 
   /*
    * `PATCH :id/void`, KHÔNG phải `DELETE` (2026-08-27).
@@ -344,6 +353,13 @@ export function HideDialog({
         }}
       >
         <p className="muted">{t('ipam.hideHint')}</p>
+        {/* API chặn ngừng dùng khi còn luật NAT sống trỏ vào dải: nói TRƯỚC khi người dùng gõ
+            lý do và bấm, thay vì để họ nhận lỗi sau. */}
+        {natInSubnet ? (
+          <p className="alert warn" role="note">
+            {t('ipam.hideImpactNat', { count: natInSubnet })}
+          </p>
+        ) : null}
         {/* Con số ảnh hưởng, không phải văn xuôi: người bấm phải biết bao nhiêu máy đang cắm
             IP tĩnh của dải này trước khi cất nó đi. */}
         <ul className="muted">

@@ -60,25 +60,30 @@ describe('Một khái niệm — một tên', () => {
   });
 
   /**
-   * Câu thông báo phải nói ĐÚNG việc vừa làm. Hồ sơ IP không bị xoá — nó bị ẩn đi và bật lại
-   * được (`ipam.voidedBadge` = 'Đã ẩn', và có hẳn đường bật lại). Người dùng đọc "Đã xóa" rồi
-   * đi khai lại từ đầu là mất công thật, không phải chuyện chữ nghĩa.
+   * Q-15: hồ sơ IP nhập nhầm thì "Xóa" — xóa để nhập lại, không khôi phục trên giao diện. Nút,
+   * toast, dòng lịch sử và nhật ký nói cùng một việc; không còn chữ "ẩn" hay "bật lại" nào của
+   * luồng này (người dùng đọc "ẩn" rồi đi tìm chỗ hiện lại — chỗ đó không còn).
    */
-  it('gỡ hồ sơ IP: nút, toast và badge nói cùng một việc', () => {
-    for (const key of ['ipam.voidAddress', 'ipam.addressVoided', 'ipam.voidedBadge']) {
-      expect(lookup(key).toLowerCase(), key).toContain('ẩn');
-      expect(lookup(key).toLowerCase(), key).not.toMatch(/xóa|xoá/);
+  it('xóa hồ sơ IP nhập nhầm: nút, toast, lịch sử và nhật ký nói cùng một việc', () => {
+    expect(lookup('ipam.voidAddress')).toBe('Xóa');
+    expect(lookup('ipam.addressVoided').toLowerCase()).toContain('đã xóa');
+    expect(lookup('history.ip.actVoided')).toBe('Xóa hồ sơ IP nhập nhầm');
+    expect(lookup('audit.actions.ipVoided')).toBe(lookup('history.ip.actVoided'));
+    expect(lookup('ipam.voidAddressTitle')).toBe(lookup('history.ip.actVoided'));
+    for (const key of ['ipam.voidAddress', 'ipam.addressVoided', 'ipam.voidAddressHint']) {
+      expect(lookup(key).toLowerCase(), key).not.toMatch(/(^|[\s("])ẩn([\s.,)"]|$)|bật lại/u);
     }
-
-    /*
-     * Và "Xóa" phải còn nguyên nghĩa của nó ở chỗ xoá THẬT — dải chưa từng có hồ sơ IP nào thì
-     * biến mất hẳn, không hoàn tác được. Dùng chung một chữ cho hai việc là chỗ người dùng trả
-     * giá, nên ô này khoá cả chiều ngược lại.
-     */
-    expect(lookup('ipam.subnetDeleted').toLowerCase()).toMatch(/xóa|xoá/);
-
+    // Không còn đường khôi phục trên giao diện: khoá chữ của nó phải biến mất cùng nút.
+    for (const key of ['restoreAddress', 'restoreAddressHint', 'addressRestored', 'voidReasonWas']) {
+      expect((vi as Dict).ipam, key).not.toHaveProperty(key);
+    }
     const screen = readFileSync(join(SRC, 'features/ipam/subnet-detail.tsx'), 'utf8');
-    expect(screen).not.toContain('t("common.delete")');
+    expect(screen).not.toContain('/restore`');
+    expect(screen).not.toContain('includeVoided');
+
+    // Hồ sơ tắt THEO DẢI là việc khác (dùng lại dải là sống lại) — đọc như dải.
+    expect(lookup('ipam.voidedBadge')).toBe(lookup('ipam.disabledBadge'));
+    expect(lookup('history.ip.actSubnetVoided')).toBe('Ngừng dùng theo dải');
   });
 
   /**
@@ -90,9 +95,6 @@ describe('Một khái niệm — một tên', () => {
     expect(lookup('accounts.confirmKillSession')).toContain(lookup('accounts.killSession'));
   });
 
-  it('vô hiệu hoá: danh mục và tài khoản dịch vụ dùng cùng một động từ', () => {
-    expect(lookup('catalog.deactivate')).toBe(lookup('serviceAccounts.disable'));
-  });
 
   /** Cột bảng nói "Seat", câu ngay DƯỚI cột nói "ghế" — cùng một màn `/software`. */
   it('ghế license: tên cột và câu chú dùng cùng một từ', () => {
@@ -118,15 +120,10 @@ describe('Một khái niệm — một tên', () => {
     expect(lookup('devices.retire')).toBe('Thanh lý');
   });
 
-  /**
-   * Ba khoá cho MỘT trạng thái, ba cách viết ('Vô hiệu hóa' · 'Đã vô hiệu' · 'Đã vô hiệu hóa').
-   * §4.2 của sổ chỉ nêu cặp `accounts`; hai cái kia lộ ra lúc sửa, 23/09. Ghi thành ô riêng để
-   * lượt sau không phải đếm lại.
-   */
-  it('trạng thái đã vô hiệu: bốn màn dùng cùng một chữ', () => {
-    expect(lookup('accounts.statusDisabled')).toBe(lookup('disposal.statusDisabled'));
-    expect(lookup('serviceAccounts.statusDisabled')).toBe(lookup('disposal.statusDisabled'));
-    expect(lookup('catalog.inactive')).toBe(lookup('disposal.statusDisabled'));
+
+  /** Kho thanh lý bày tài khoản dịch vụ đã ngừng: phải đọc đúng chữ của màn gốc. */
+  it('kho thanh lý: tài khoản dịch vụ đã ngừng đọc giống màn gốc', () => {
+    expect(lookup('disposal.statusDisabled')).toBe(lookup('serviceAccounts.statusDisabled'));
   });
 });
 
@@ -240,5 +237,119 @@ describe('Không tiếng Anh lẫn trong câu tiếng Việt', () => {
     const sentence = lookup(key).replace(/Super Admin/g, '');
     expect(sentence).not.toMatch(/\bMember\b/);
     expect(sentence).not.toMatch(/\bAdmin\b/);
+  });
+});
+
+/**
+ * Mọi chuỗi trong cây `vi`, kèm đường khoá — chú thích trong `vi.ts` không nằm ở đây. Bỏ chỗ
+ * giữ `{{secrets}}`, `{{rules}}`: đó là tên biến, người dùng không đọc thấy.
+ */
+function allValues(node: unknown = vi, path = ''): Array<[string, string]> {
+  if (typeof node === 'string') return [[path, node.replace(/\{\{\w+\}\}/g, '')]];
+  if (node && typeof node === 'object') {
+    return Object.entries(node as Dict).flatMap(([k, v]) => allValues(v, path ? `${path}.${k}` : k));
+  }
+  return [];
+}
+
+/**
+ * Q-15: chủ dự án chốt bộ thuật ngữ. Mỗi ô khoá một luật để chữ cũ không quay lại qua một khoá
+ * mới viết theo thói quen.
+ */
+describe('Q-15: thuật ngữ đã chốt', () => {
+  const VALUES = allValues();
+
+  /**
+   * "Break-glass", "Duyệt yêu cầu", "Xin quyền xem" và "secret" là tên kỹ thuật hoặc tên cũ của
+   * cùng một việc. Người dùng chỉ gặp "Xin mở két" / "Duyệt mở két", và mật khẩu trong két gọi
+   * là "ngăn" như ở màn két.
+   */
+  it('không còn tên cũ của việc mở két', () => {
+    const bad = VALUES.filter(([, v]) =>
+      /break.?glass|\bsecrets?\b|duyệt yêu cầu|xin quyền xem|tủ kính|xem tạm thời|mở két khẩn/i.test(v),
+    );
+    expect(bad).toEqual([]);
+  });
+
+  it('người xin gặp "Xin mở két", người duyệt gặp "Duyệt mở két"', () => {
+    expect(lookup('vault.request')).toBe('Xin mở két');
+    expect(lookup('nav.approvalsMine')).toBe(lookup('vault.request'));
+    expect(lookup('approvals.titleMine')).toBe(lookup('vault.request'));
+    expect(lookup('nav.approvals')).toBe('Duyệt mở két');
+    expect(lookup('approvals.title')).toBe(lookup('nav.approvals'));
+    expect(lookup('approvals.approveTitle')).toBe(lookup('nav.approvals'));
+  });
+
+  /**
+   * Dải IP, tài khoản dịch vụ và luật NAT nằm cạnh nhau trong khu Mạng. Cùng một việc (cất đi,
+   * giữ lịch sử, lấy lại được) phải cùng một cặp động từ, và badge khác nút.
+   */
+  it('dải IP · tài khoản dịch vụ · luật NAT: "Ngừng dùng / Dùng lại"', () => {
+    for (const key of ['ipam.hide', 'serviceAccounts.disable', 'nat.disableRule']) {
+      expect(lookup(key), key).toBe('Ngừng dùng');
+    }
+    for (const key of ['ipam.restore', 'serviceAccounts.enable', 'nat.enableRule']) {
+      expect(lookup(key), key).toBe('Dùng lại');
+    }
+    for (const key of [
+      'ipam.disabledBadge',
+      'serviceAccounts.statusDisabled',
+      'nat.disabled',
+      'history.nat.stEnabledOff',
+    ]) {
+      expect(lookup(key), key).toBe('Đã ngừng dùng');
+    }
+  });
+
+  /**
+   * Danh mục cất một mục đi mà vẫn giữ cho hồ sơ cũ đọc — cùng việc với dải IP, nên cùng cặp
+   * động từ. Tài khoản người dùng IMS thì KHÁC việc (khóa người, đóng phiên), nên giữ "Vô hiệu
+   * hóa / Bật lại"; hai bên không được trôi về một chữ.
+   */
+  it('danh mục: "Ngừng dùng / Dùng lại"; tài khoản IMS giữ "Vô hiệu hóa / Bật lại"', () => {
+    expect(lookup('catalog.deactivate')).toBe(lookup('ipam.hide'));
+    expect(lookup('catalog.activate')).toBe(lookup('ipam.restore'));
+    expect(lookup('catalog.inactive')).toBe(lookup('ipam.disabledBadge'));
+    expect(lookup('history.catalog.actDeactivated')).toBe(lookup('catalog.deactivate'));
+    expect(lookup('history.catalog.actActivated')).toBe(lookup('catalog.activate'));
+    expect(lookup('audit.verb.deactivated')).toBe(lookup('catalog.deactivate'));
+    expect(lookup('audit.verb.activated')).toBe(lookup('catalog.activate'));
+    expect(lookup('formErrors.retiredOption')).toBe('(ngừng dùng)');
+
+    expect(lookup('accounts.disable')).toBe('Vô hiệu hóa');
+    expect(lookup('accounts.reactivate')).toBe('Bật lại');
+    expect(lookup('accounts.statusDisabled')).toBe('Đã vô hiệu hóa');
+
+    const catalogKeys = VALUES.filter(([k]) => /^(catalog|history\.catalog)\./.test(k));
+    expect(catalogKeys.length).toBeGreaterThan(50);
+    expect(catalogKeys.filter(([, v]) => /vô hiệu|bật lại/i.test(v))).toEqual([]);
+  });
+
+  /** NAT viết thuần Việt như các màn khác: "luật NAT", "cổng ngoài", "cổng trong". */
+  it('không còn "rule" ở đâu, không còn "port" trong sổ NAT', () => {
+    expect(VALUES.filter(([, v]) => /\brules?\b/i.test(v))).toEqual([]);
+    const natKeys = VALUES.filter(([k]) => /^(nat|history\.nat|audit\.actions\.nat)/.test(k));
+    expect(natKeys.length).toBeGreaterThan(50);
+    expect(natKeys.filter(([, v]) => /\bports?\b|port-forward/i.test(v))).toEqual([]);
+    expect(lookup('nat.external')).toBe('Cổng ngoài');
+    expect(lookup('nat.internalPort')).toBe('Cổng trong');
+    expect(lookup('nat.add')).toBe('Thêm luật NAT');
+  });
+
+  /** Menu Hệ thống có "Tài khoản dịch vụ" (Nghiệp vụ) ngay trên — hai chữ đầu giống nhau là bấm nhầm. */
+  it('màn tài khoản đăng nhập IMS tên là "Người dùng IMS"', () => {
+    expect(lookup('nav.accounts')).toBe('Người dùng IMS');
+    expect(lookup('accounts.title')).toBe(lookup('nav.accounts'));
+    expect(lookup('audit.objectType.user')).toBe(lookup('nav.accounts'));
+    expect(lookup('audit.family.account')).toBe(lookup('nav.accounts'));
+  });
+
+  /**
+   * Chỉ âm tiết MỞ có hai cách đặt dấu (khoá/khóa, hoá/hóa, tuỳ/tùy). Chốt kiểu dấu trên chữ cái
+   * chính. "Quý" không tính: "qu" là phụ âm, dấu vốn nằm trên "y".
+   */
+  it('dấu đặt trên chữ cái chính: "khóa", "hóa", "tùy"', () => {
+    const OLD = /(?:o[áàảãạ]|o[éèẻẽẹ]|(?<![qQ])u[ýỳỷỹỵ])(?!\p{L})/iu;
+    expect(VALUES.filter(([, v]) => OLD.test(v))).toEqual([]);
   });
 });

@@ -2,6 +2,14 @@ import { Global, Injectable, Logger, Module } from '@nestjs/common';
 import type { ExpiryItem, ExpirySource } from './expiry-source';
 import { redactMessage } from '../log-redact';
 
+/** Một nguồn hạn như màn Expiry thấy: gia hạn được không, và có ghi hợp đồng/chi phí không. */
+export interface ExpiryKindInfo {
+  kind: string;
+  label: string;
+  canRenew: boolean;
+  canRenewTerms: boolean;
+}
+
 /**
  * Sổ đăng ký nguồn hạn (AD-7).
  *
@@ -23,12 +31,16 @@ export class ExpirySourceRegistry {
   }
 
   /** Danh sách nguồn để màn Expiry dựng bộ lọc theo loại. */
-  list(): { kind: string; label: string; canRenew: boolean }[] {
-    return this.sources.map((source) => ({
-      kind: source.sourceKind,
-      label: source.sourceLabel,
-      canRenew: typeof source.renew === 'function',
-    }));
+  list(): ExpiryKindInfo[] {
+    return this.sources.map((source) => {
+      const canRenew = typeof source.renew === 'function';
+      return {
+        kind: source.sourceKind,
+        label: source.sourceLabel,
+        canRenew,
+        canRenewTerms: canRenew && source.renewTerms === true,
+      };
+    });
   }
 
   find(kind: string): ExpirySource | undefined {

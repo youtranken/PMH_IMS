@@ -45,6 +45,8 @@ export interface BreakGlassRow {
   createdAt: string;
   /** Server tính bằng đồng hồ (AD-6) — client không tự so giờ. */
   active: boolean;
+  /** Chỉ hàng chờ của người duyệt: đã chờ quá `approval.reminder_hours` (server so giờ). */
+  overdue?: boolean;
   /**
    * Chỉ trang chi tiết, chỉ người duyệt: vai người xin và số lần họ đã xin trong
    * `recentWindowDays` ngày (tính cả phiếu này). Người xin tự đọc thì `null`.
@@ -56,6 +58,8 @@ export interface BreakGlassRow {
   timeline?: { state: string; actor: string; at: string; note: string | null }[] | null;
   /** Lần đổi trạng thái cuối — với phiếu đã thu hồi thì là lúc quyền bị cắt. */
   updatedAt?: string;
+  /** Lúc người xin xem lần đầu và quyền gắn vào phiên đó (Q-15); `null` = chưa xem. */
+  claimedAt?: string | null;
 }
 
 export const BREAK_GLASS_KEY = ['break-glass'] as const;
@@ -156,12 +160,14 @@ export function useBreakGlassActions(csrfToken: string) {
     });
 
   return {
-    approve: (id: string, input: { hours: number; note?: string }) =>
-      stepUp.run(() => post(id, 'approve', input)),
+    approve: (id: string, input: { hours: number; note?: string }, purpose?: string) =>
+      stepUp.run(() => post(id, 'approve', input), purpose),
     deny: (id: string, note: string) => post(id, 'deny', { note }),
-    revoke: (id: string, note?: string) =>
-      stepUp.run(() => post(id, 'revoke', note ? { note } : {})),
+    revoke: (id: string, note?: string, purpose?: string) =>
+      stepUp.run(() => post(id, 'revoke', note ? { note } : {}), purpose),
     cancel: (id: string) => post(id, 'cancel'),
+    /** Người xin tự trả quyền đang chạy (VLT-055) — không đòi mã: bỏ bớt quyền không mở gì thêm. */
+    release: (id: string) => post(id, 'release'),
     refresh: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: BREAK_GLASS_KEY }),
@@ -177,8 +183,16 @@ const DENY_QUICK = ['approvals.denyQuickVague', 'approvals.denyQuickHours', 'app
 /** Người xin đọc ghi chú này trong thư — một chữ "không" không cho họ biết phải sửa gì. */
 const NOTE_MIN_LEN = 5;
 
-/** Phiếu đã có người khác xử lý trong lúc hộp đang mở — không phải lỗi của người đang bấm. */
-const RACE_CODES = new Set(['APPROVAL_ALREADY_DECIDED', 'APPROVAL_TRANSITION_INVALID']);
+/**
+ * Phiếu đã có người khác xử lý, đã bị rút (người xin tự rút / tài khoản bị vô hiệu hóa), hoặc
+ * đã quá hạn chờ, trong lúc hộp đang mở — không phải lỗi của người đang bấm.
+ */
+const RACE_CODES = new Set([
+  'APPROVAL_ALREADY_DECIDED',
+  'APPROVAL_TRANSITION_INVALID',
+  'BREAK_GLASS_WITHDRAWN',
+  'BREAK_GLASS_PENDING_EXPIRED',
+]);
 
 /**
  * Hộp Duyệt / Từ chối / Thu hồi sớm.
@@ -244,8 +258,14 @@ export function DecisionDialog({
     setBusy(true);
     try {
       if (mode === 'approve') {
-        await actions.approve(row.id, { hours: hoursCheck.value ?? 0, note: trimmed });
-      } else if (mode === 'revoke') await actions.revoke(row.id, trimmed);
+        await actions.approve(
+          row.id,
+          { hours: hoursCheck.value ?? 0, note: trimmed },
+          t('approvals.stepUpApprove', { name: row.requesterName }),
+        );
+      } else if (mode === 'revoke') {
+        await actions.revoke(row.id, trimmed, t('approvals.stepUpRevoke', { name: row.requesterName }));
+      }
       else await actions.deny(row.id, trimmed);
       void actions.refresh();
       onDone();

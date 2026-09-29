@@ -18,7 +18,7 @@ async function main(): Promise<void> {
     console.log('Đã tạo SA. Mật khẩu tạm (chỉ hiện MỘT lần):\n');
     for (const c of created) console.log(`  ${c.email}   ${c.password}`);
     console.log('\nĐăng nhập lần đầu sẽ buộc đổi mật khẩu và cài xác thực 2 lớp.');
-    if (created.length < 2) console.log('Lưu ý: nên có ít nhất 2 SA (duyệt bốn mắt, không khoá SA cuối).');
+    if (created.length < 2) console.log('Lưu ý: nên có ít nhất 2 SA (duyệt bốn mắt, không khóa SA cuối).');
   } finally {
     await pool.end();
   }

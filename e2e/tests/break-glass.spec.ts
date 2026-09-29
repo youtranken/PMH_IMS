@@ -88,47 +88,47 @@ test.describe('Break-glass', () => {
   /**
    * Kịch bản đầy đủ của AC: Member cần-duyệt → xin → SA duyệt → xem được → nhật ký ghi đủ.
    */
-  test('đường hạnh phúc: xin → duyệt → xem được trong hạn, nhật ký ghi đủ', async ({ page }) => {
+  test('đường hạnh phúc: xin → duyệt → xem được trong hạn, nhật ký ghi đủ', async ({
+    page,
+    browser,
+  }) => {
     /**
-     * Bài này đi qua BỐN luồng đăng nhập đầy đủ (SA enroll → Member enroll → SA lại → Member
-     * lại), mỗi luồng có một lần chờ mã TOTP mới để tránh chống-replay. Chạy một mình mất ~50
-     * giây — sát trần 60 giây mặc định, nên nó đỏ ngẫu nhiên khi cả bộ chạy cùng lúc.
+     * Người xin ở một ngữ cảnh trình duyệt riêng. Phiếu chờ không gắn phiên (Q-15); lần xem
+     * đầu sau khi được duyệt gắn quyền vào phiên đang xem — `break-glass-phien.spec.ts` dựng
+     * lại các đòn quanh việc gắn phiên.
      *
-     * Nới trần thay vì cắt bớt bước: chính chuỗi bốn lượt đổi người NÀY là thứ story 6.3 phải
-     * chứng minh — xin ở một phiên, duyệt ở phiên khác, rồi quay lại xem được.
+     * Trần 150 giây: hai lượt cài 2 lớp + một lượt chờ mã TOTP mới cho hộp xác nhận danh tính.
      */
     test.setTimeout(150_000);
-    const saTotp = await firstLogin(page, E2E_SA);
+    await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const { deviceId, secretId, secretValue } = await setUpAs(page, stamp, 'needs_approval');
-    await logout(page);
 
     // --- Member: chưa duyệt thì KHÔNG xem được, nhưng THẤY được tên gọi để biết xin cái gì.
-    const totpSecret = await firstLogin(page, E2E_MEMBER);
-    const memberHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const member = await memberCtx.newPage();
+    const totpSecret = await firstLogin(member, E2E_MEMBER);
+    const memberHeaders = { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN };
 
-    const blocked = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
+    const blocked = await member.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
       headers: memberHeaders,
     });
     expect(blocked.status()).toBe(403);
     expect(await blocked.json()).toMatchObject({ code: 'BREAK_GLASS_REQUIRED' });
 
-    await page.goto(`/devices/${deviceId}`);
-    await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText(`admin web E2E ${stamp}`)).toBeVisible();
-    await expect(page.getByText(/cần được duyệt trước khi xem/i)).toBeVisible();
+    await member.goto(`/devices/${deviceId}`);
+    await member.getByRole('tab', { name: 'Két sắt' }).click();
+    await expect(member.getByText(`admin web E2E ${stamp}`)).toBeVisible();
+    await expect(member.getByText(/cần được duyệt trước khi xem/i)).toBeVisible();
 
-    await page.getByRole('button', { name: 'Xin quyền xem' }).click();
-    const form = page.getByRole('dialog');
+    await member.getByRole('button', { name: 'Xin mở két' }).click();
+    const form = member.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('switch tầng 3 mất kết nối');
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
-    await expect(page.getByText('Đang chờ duyệt')).toBeVisible();
+    await expect(member.getByText('Đang chờ duyệt')).toBeVisible();
 
-    // --- SA duyệt.
-    await logout(page);
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-
+    // --- SA duyệt, ở phiên của mình.
     // DOM-06: nút trong thư mở `/approvals?id=<yêu cầu>` — yêu cầu đó lên đầu và được đánh dấu.
     const pending = (await (await page.request.get('/api/v1/vault/break-glass/pending')).json()) as {
       id: string;
@@ -146,32 +146,21 @@ test.describe('Break-glass', () => {
     await decide.getByRole('button', { name: 'Duyệt 2 giờ', exact: true }).click();
     await expect(page.getByText('Đã duyệt')).toBeVisible();
 
-    // --- Member giờ xem được, và mỗi lần xem vẫn phải gõ TOTP (cơ chế 4.2 không đổi).
-    await logout(page);
-    await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, totpSecret);
+    // --- Member, CÙNG phiên đã xin: giờ xem được, và mỗi lần xem vẫn phải gõ TOTP (4.2).
     expireStepUp(E2E_MEMBER.email);
+    await member.goto(`/devices/${deviceId}`);
+    await member.getByRole('tab', { name: 'Két sắt' }).click();
+    // Q-15: không có nút riêng — khung chỉ đường "bấm Xem, nhập mã 6 số".
+    await expect(member.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
 
-    await page.goto(`/devices/${deviceId}`);
-    await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText(/Bạn được xem tới/)).toBeVisible();
+    await member.getByRole('button', { name: 'Xem' }).click();
+    await expect(member.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
+    await member.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await expect(member.getByTestId('secret-value')).toHaveText(secretValue);
+    // Lần xem đầu vừa gắn quyền vào phiên này: khung chuyển sang quyền đang chạy.
+    await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
+    await memberCtx.close();
 
-    await page.getByRole('button', { name: 'Xem' }).click();
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await expect(page.getByTestId('secret-value')).toHaveText(secretValue);
-
-    /*
-     * VẾT PHẢI NÓI XEM ĐƯỢC NHỜ PHIẾU NÀO (FR-025, thêm 18/09/2026).
-     *
-     * `VaultService.reveal` ghi `grantId` vào `detail` kèm chú thích "thiếu trường này thì
-     * nhật ký break-glass chỉ nói 'có người xem' mà không nói được là xem hợp lệ theo grant
-     * nào". `lastAudit` cũng được viết ra ĐÚNG để bắt việc mất trường đó — docblock của nó
-     * nói y như vậy — nhưng tới 18/09 cả ba nơi gọi đều chỉ đọc `.actor`, nên gỡ `grantId`
-     * khỏi service không làm bài nào đỏ.
-     *
-     * Đây là tờ giấy nộp cho auditor: "ai xem" mà không có "bằng quyền gì" thì trả lời được
-     * một nửa câu hỏi, và nửa còn lại mới là nửa chứng minh quy trình duyệt có thật.
-     */
     const vet = lastAudit('vault.secret.revealed', secretId);
     expect(vet?.actor, 'vết phải mang tên người vừa xem').toBe(E2E_MEMBER.email);
     const chiTiet = JSON.parse(vet?.detail ?? '{}') as { grantId?: string | null };
@@ -201,39 +190,44 @@ test.describe('Break-glass', () => {
    * status". Đẩy `expires_at` về quá khứ mà KHÔNG đụng `state` (state vẫn là 'approved', y
    * như khi sweep chưa kịp chạy) — quyền phải chết ngay.
    */
-  test('grant hết hạn thì cắt NGAY, kể cả khi sweep chưa đổi status', async ({ page }) => {
+  test('grant hết hạn thì cắt NGAY, kể cả khi sweep chưa đổi status', async ({
+    page,
+    browser,
+  }) => {
     /*
-     * Cùng lý do với bài ở trên: bài này cũng đổi người BỐN lượt (SA dựng → Member xin → SA
-     * duyệt → Member xem lại), và `freshTotpCode` phải chờ sang chu kỳ 30 giây kế tiếp mỗi khi
-     * mã đã bị dùng.
-     *
-     * Chạy riêng mất ~38 giây, dưới trần mặc định 60 giây. Nhưng chạy theo lô thì các bài
-     * trước đã tiêu mã của chu kỳ hiện tại, nên chỉ một lần chờ là vượt trần — và nó đỏ ở
-     * `locator.fill` của form đăng nhập, tức một chỗ chẳng liên quan gì tới điều đang kiểm.
-     * Đã gặp thật ngày 08/09 khi chạy chung với sáu file khác.
+     * Người xin giữ phiên của mình (ngữ cảnh riêng) suốt bài: lượt xem đối chứng gắn quyền vào
+     * phiên này (Q-15), nên đăng nhập lại để thử sẽ bị chặn vì LÝ DO KHÁC và bài xanh mà không
+     * kiểm gì.
      */
     test.setTimeout(150_000);
-    const saTotp = await firstLogin(page, E2E_SA);
+    await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const { secretId, deviceId } = await setUpAs(page, stamp, 'needs_approval');
-    await logout(page);
 
-    const memberTotp = await firstLogin(page, E2E_MEMBER);
-    const memberHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
-    const asked = await page.request.post('/api/v1/vault/break-glass', {
+    const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const member = await memberCtx.newPage();
+    await firstLogin(member, E2E_MEMBER);
+    const memberHeaders = { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN };
+    const asked = await member.request.post('/api/v1/vault/break-glass', {
       headers: memberHeaders,
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng', hours: 4 },
     });
     expect(asked.status()).toBe(201);
     const approvalId = ((await asked.json()) as { id: string }).id;
 
-    await logout(page);
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     const saHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     await page.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
       headers: saHeaders,
       data: { hours: 4 },
     });
+
+    // Vế đối chứng: còn hạn thì quyền MỞ — không có nó thì 403 bên dưới không chứng minh gì.
+    const before = await member.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
+      headers: memberHeaders,
+    });
+    expect(((await before.json()) as { code?: string }).code ?? 'OK').not.toBe(
+      'BREAK_GLASS_REQUIRED',
+    );
 
     // Đẩy hạn về quá khứ, KHÔNG đụng `state`.
     const { execSync } = await import('node:child_process');
@@ -250,13 +244,12 @@ test.describe('Break-glass', () => {
       'approved',
     );
 
-    await logout(page);
-    await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
-    const denied = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+    const denied = await member.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
+      headers: memberHeaders,
     });
     expect(denied.status()).toBe(403);
     expect(await denied.json()).toMatchObject({ code: 'BREAK_GLASS_REQUIRED' });
+    await memberCtx.close();
   });
 
   /** Whitelist: xem thẳng, không phải xin — nhưng vẫn phải gõ mã mỗi lần (cơ chế 4.2). */
@@ -336,7 +329,7 @@ test.describe('Break-glass', () => {
    * Bất kỳ ai biết id (nhìn qua vai, ảnh chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu
    * của người khác — người xin ngồi chờ tiếp lúc 2 giờ sáng, còn lịch sử ghi sai tên người hủy.
    */
-  test('không hủy được yêu cầu của người khác', async ({ page }) => {
+  test('không hủy được yêu cầu của người khác', async ({ page, browser }) => {
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
@@ -348,19 +341,23 @@ test.describe('Break-glass', () => {
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
     });
     const id = ((await asked.json()) as { id: string }).id;
-    await logout(page);
 
+    /* SA ở ngữ cảnh riêng, người xin giữ phiên của mình. Phiếu chờ không gắn phiên (Q-15),
+       nên cách dựng này không bắt buộc — chỉ tránh đăng nhập lại hai lần. */
+    const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const sa = await saCtx.newPage();
+    await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
     // SA cũng KHÔNG hủy hộ được — muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc.
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    const stolen = await page.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+    const stolen = await sa.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
+      headers: { 'X-CSRF-Token': await csrfOf(sa), Origin: APP_ORIGIN },
     });
     expect(stolen.status()).toBe(403);
     expect(await stolen.json()).toMatchObject({ code: 'NOT_YOUR_REQUEST' });
 
     // Yêu cầu vẫn còn nguyên, vẫn chờ duyệt.
-    const pending = await page.request.get('/api/v1/vault/break-glass/pending');
+    const pending = await sa.request.get('/api/v1/vault/break-glass/pending');
     expect(((await pending.json()) as { id: string }[]).some((r) => r.id === id)).toBe(true);
+    await saCtx.close();
   });
 
   /**

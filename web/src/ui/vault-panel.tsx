@@ -9,14 +9,15 @@ import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { useSupportContact } from '@/ui/use-support-contact';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
-import { RevealDialog } from '@/ui/reveal-dialog';
+import { RevealDialog, RevealStep } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
-import { StepUpDialog } from '@/ui/step-up-dialog';
+import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
 import { hourSteps } from '@/ui/grant-hours';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -26,6 +27,7 @@ import { Link } from 'react-router-dom';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
+import { SecretDue } from '@/ui/secret-due';
 
 /*
  * Danh sách loại chủ thể đã dọn về `lib/secret-owner-kinds.ts` (12/09) — ở đó nó đứng cạnh
@@ -42,14 +44,23 @@ export interface AccessVerdict {
   canRequest: boolean;
   grant: { id: string; expiresAt: string | null } | null;
   pending: { id: string; createdAt?: string } | null;
+  /**
+   * Đã duyệt nhưng chưa xem lần nào (Q-15): lần bấm Xem đầu tiên (qua mã 6 số) gắn quyền vào
+   * phiên đang xem. `canReveal` đã là `true` trong trường hợp này.
+   */
+  claimable?: { id: string; expiresAt: string | null } | null;
   /** Số người duyệt được đã nhận thư báo phiếu đang treo — chỉ con số. */
   notifiedApprovers?: number | null;
-  /** Giây còn lại của quyền đang chạy, server tính (AD-6). */
+  /** Giây còn lại của quyền (đang chạy hoặc chờ xem lần đầu), tính từ lúc duyệt — server tính (AD-6). */
   grantSecondsLeft?: number | null;
+  /** `breakglass.pending_expire_hours` — phiếu treo quá chừng này thì tự hết hạn. */
+  pendingExpireHours?: number | null;
   /** Trần giờ cấp (`breakglass.max_grant_hours`) — hộp Xin chọn nấc trong trần này. */
   maxGrantHours?: number | null;
   /** Phiếu mới nhất của chính người xem trên hồ sơ này bị từ chối — lúc nào, ghi chú gì. */
   lastDenied?: { at: string | null; note: string | null } | null;
+  /** Quyền của chính người xem đang gắn ở một phiên đăng nhập khác — phải xin lại (Q-15). */
+  otherSessionHeld?: boolean;
 }
 
 /**
@@ -75,6 +86,8 @@ export interface SecretMeta {
   /** Tuổi giá trị và đã quá ngưỡng `dashboard.secret_stale_days` chưa — server tính. */
   valueAgeDays?: number;
   valueStale?: boolean;
+  /** Còn bao nhiêu ngày tới hạn đổi (âm = đã quá) — server tính theo cùng ngưỡng (Q-15). */
+  dueInDays?: number;
 }
 
 export function secretsKey(ownerType: SecretOwnerType, ownerId: string) {
@@ -143,11 +156,26 @@ export function VaultPanel({
   ownerId,
   me,
   canEdit = true,
+  stepsInline = false,
+  ownerLabel,
+  locked = false,
 }: {
   ownerType: SecretOwnerType;
   ownerId: string;
   me: Me;
   canEdit?: boolean;
+  /** Mã hồ sơ chủ — tiêu đề hộp "Cất mật khẩu/khóa — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
+  ownerLabel?: string;
+  /**
+   * Hồ sơ đã khóa (thanh lý): két chỉ còn để đọc, câu rỗng không mời "cất vào đây" nữa (DEV-057).
+   */
+  locked?: boolean;
+  /**
+   * Khung này đang nằm TRONG một hộp (vd popup của trang Két tổng): bước gõ mã 6 số và bước
+   * hiện giá trị thay chỗ danh sách ngăn ngay trong hộp đó, không mở hộp chồng lên (VLT-062).
+   * Trên trang hồ sơ (không có hộp bao ngoài) thì để mặc định — mỗi lúc chỉ có một hộp.
+   */
+  stepsInline?: boolean;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -203,6 +231,28 @@ export function VaultPanel({
   const writeStepUp = useStepUpRetry(me.csrfToken);
   const breakGlass = useBreakGlassActions(me.csrfToken);
   const [cancelling, setCancelling] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+
+  /** Trả quyền sớm (VLT-055): qua hộp xác nhận, vì trả rồi muốn xem lại là phải chờ duyệt lại. */
+  const releaseGrant = async (grantId: string) => {
+    const ok = await askConfirm({
+      title: t('common.titleOf', { action: t('vault.release'), subject: t('vault.tab') }),
+      message: t('vault.releaseConfirm'),
+      danger: true,
+      confirmLabel: t('vault.release'),
+    });
+    if (!ok) return;
+    setReleasing(true);
+    try {
+      await breakGlass.release(grantId);
+      toast({ message: t('vault.released') });
+      void breakGlass.refresh();
+    } catch (error) {
+      toast({ message: errorMessage(error), tone: 'error' });
+    } finally {
+      setReleasing(false);
+    }
+  };
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
@@ -235,19 +285,32 @@ export function VaultPanel({
           seconds: opened.revealSeconds,
           stepUpSecondsLeft: opened.stepUpSecondsLeft,
         });
+        /* Lần xem đầu sau khi được duyệt vừa gắn quyền vào phiên này (Q-15): hỏi lại verdict để
+           khung "Đã được duyệt" chuyển sang khung quyền đang chạy. */
+        if (!isAdmin) void refetchVerdict();
       } catch (error) {
-        if (!afterStepUp && errorCode(error) === 'STEPUP_REQUIRED') {
+        const code = errorCode(error);
+        if (!afterStepUp && code === 'STEPUP_REQUIRED') {
           setPendingStepUp(secret);
           return;
         }
         toast({ message: errorMessage(error), tone: 'error' });
+        // Quyền vừa bị phiên khác giữ / vừa hết: khung phải nói đúng trạng thái mới.
+        if (code === 'BREAK_GLASS_OTHER_SESSION' || code === 'BREAK_GLASS_REQUIRED') {
+          void refetchVerdict();
+        }
       } finally {
         openingRef.current = null;
         setOpening(null);
       }
     },
-    [me.csrfToken, toast],
+    [me.csrfToken, toast, isAdmin, refetchVerdict],
   );
+
+  // Ngoài danh sách: chỉ đường tới người gán quyền được (VLT-056). Gọi TRƯỚC các nhánh thoát
+  // bên dưới — hook không được nằm sau một `return`.
+  const noAccess = !isAdmin && verdict.data !== undefined && !allowed;
+  const contact = useSupportContact(noAccess);
 
   /*
    * BA CHỐT NÀY CHỈ ÁP CHO NGƯỜI CẦN `verdict` (F-07, vá 21/09).
@@ -271,11 +334,64 @@ export function VaultPanel({
     if (verdict.isError)
       return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
     if (!allowed) {
-      return <EmptyState title={t('vault.noPermissionTitle')} hint={t('vault.noPermission')} />;
+      return (
+        <EmptyState
+          title={t('vault.noPermissionTitle')}
+          hint={t('vault.noPermission')}
+          action={
+            contact.data?.contact ? (
+              <span>
+                <strong>{t('auth.supportContactLabel')}:</strong> {contact.data.contact}
+              </span>
+            ) : undefined
+          }
+        />
+      );
     }
   }
 
   const rows = secrets.data ?? [];
+
+  const stepUpPurpose = pendingStepUp
+    ? t('vault.stepUpPurpose', { label: pendingStepUp.label })
+    : undefined;
+  const afterStepUp = () => {
+    const secret = pendingStepUp;
+    setPendingStepUp(null);
+    // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
+    // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.
+    if (secret) void openSecret(secret, true);
+  };
+  /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
+     lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
+  const onRevealExpire = () => toast({ message: t('vault.autoHidden') });
+
+  if (stepsInline && (pendingStepUp || revealed)) {
+    return (
+      <div className="attachment-panel">
+        {revealed ? (
+          <RevealStep
+            label={revealed.label}
+            username={revealed.username}
+            value={revealed.value}
+            seconds={revealed.seconds}
+            stepUpSecondsLeft={revealed.stepUpSecondsLeft}
+            onClose={() => setRevealed(null)}
+            onExpire={onRevealExpire}
+          />
+        ) : pendingStepUp ? (
+          <StepUpStep
+            csrfToken={me.csrfToken}
+            purpose={stepUpPurpose}
+            graceMinutes={me.config?.stepUpGraceMinutes}
+            backLabel={t('vault.stepBack')}
+            onBack={() => setPendingStepUp(null)}
+            onDone={afterStepUp}
+          />
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="attachment-panel">
@@ -291,6 +407,14 @@ export function VaultPanel({
         <div className="alert warn" role="status">
           <p>
             {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
+          </p>
+          {/* Yêu cầu chờ không gắn phiên (Q-15): người xin được đi làm việc khác, chờ thư. Phiếu
+              chờ có hạn — nói trước để họ không chờ một phiếu đã tự hết hạn. */}
+          <p className="muted">
+            {t('vault.pendingCanLeave')}
+            {typeof verdict.data.pendingExpireHours === 'number'
+              ? ` ${t('vault.pendingExpiresIn', { hours: verdict.data.pendingExpireHours })}`
+              : null}
           </p>
           {/* Người xin ngồi chờ lúc 2 giờ sáng cần biết có ai được báo không — chỉ con số. */}
           {typeof verdict.data.notifiedApprovers === 'number' ? (
@@ -337,6 +461,36 @@ export function VaultPanel({
             </button>
           </div>
         </div>
+      ) : !isAdmin && verdict.data?.claimable ? (
+        /* Đã duyệt, chưa xem lần nào (Q-15): không có nút riêng — bấm "Xem" ở ngăn như thường,
+           lần xem đầu (qua mã 6 số) gắn quyền vào phiên này. Giờ đếm từ lúc duyệt. */
+        <div className="alert ok" role="status">
+          <p>
+            <strong>{t('vault.approvedReady')}</strong>
+          </p>
+          {verdict.data.claimable.expiresAt && grantLeft !== null ? (
+            <p>
+              {t('vault.approvedReadyLeft', {
+                left: leftText(grantLeft, t),
+                until: formatDateTime(verdict.data.claimable.expiresAt),
+              })}
+            </p>
+          ) : null}
+          <p className="muted">{t('vault.approvedReadyNote')}</p>
+          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn sm danger-ghost"
+              disabled={releasing}
+              onClick={() => {
+                const grantId = verdict.data?.claimable?.id;
+                if (grantId) void releaseGrant(grantId);
+              }}
+            >
+              {t('vault.release')}
+            </button>
+          </div>
+        </div>
       ) : !isAdmin && verdict.data?.canRequest ? (
         /* MỘT lối xin cho cả két: quyền cấp theo HỒ SƠ, không theo ngăn — nút ở từng dòng làm
            người ta tưởng phải xin từng ngăn, hoặc xin ngăn A thì chỉ xem được A. */
@@ -352,57 +506,79 @@ export function VaultPanel({
               ) : null}
             </p>
           ) : null}
+          {verdict.data.otherSessionHeld ? <p>{t('vault.otherSessionHeld')}</p> : null}
           <p>{t('vault.requestBlock', { count: rows.length })}</p>
           <button type="button" className="btn primary" onClick={() => setRequesting(true)}>
             {t('vault.request')}
           </button>
         </div>
-      ) : !isAdmin && verdict.data ? (
-        <p className={verdict.data.canReveal ? 'alert ok' : 'alert warn'}>
-          {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch, và câu thành "Bạn được xem
-              tới —. Hết giờ là tự cắt." — một câu tự mâu thuẫn. Quyền không hạn thì nói là
-              không hạn. */}
-          {verdict.data.grant
-            ? verdict.data.grant.expiresAt
+      ) : !isAdmin && verdict.data?.grant ? (
+        /* Quyền đang chạy: đếm lùi + câu "hết khi đăng xuất" (Q-15) + lối tự trả quyền. */
+        <div className="alert ok" role="status">
+          <p>
+            {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch và câu thành "được xem tới —"
+                — tự mâu thuẫn. Quyền không hạn thì nói là không hạn. */}
+            {verdict.data.grant.expiresAt
               ? grantLeft !== null
                 ? t('vault.grantUntilLeft', {
                     until: formatDateTime(verdict.data.grant.expiresAt),
                     left: leftText(grantLeft, t),
                   })
-                : t('vault.grantUntil', {
-                    until: formatDateTime(verdict.data.grant.expiresAt),
-                  })
-              : t('vault.grantNoLimit')
-            : t(`vault.tierNote_${verdict.data.tier}`)}
+                : t('vault.grantUntil', { until: formatDateTime(verdict.data.grant.expiresAt) })
+              : t('vault.grantNoLimit')}
+          </p>
+          <p className="muted">{t('vault.sessionBound')}</p>
+          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn sm danger-ghost"
+              disabled={releasing}
+              onClick={() => {
+                const grantId = verdict.data?.grant?.id;
+                if (grantId) void releaseGrant(grantId);
+              }}
+            >
+              {t('vault.release')}
+            </button>
+          </div>
+        </div>
+      ) : !isAdmin && verdict.data ? (
+        <p className={verdict.data.canReveal ? 'alert ok' : 'alert warn'}>
+          {t(`vault.tierNote_${verdict.data.tier}`)}
         </p>
       ) : null}
 
-      {canEdit ? (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => setEditing({ secret: null })}
-          >
+      {/* Thanh công cụ của tab như Sơ đồ cổng: tiêu đề + số ngăn bên trái, nút cất bên phải,
+          cùng hàng (DEV-079). Nút thường: nút chính của màn là ở đầu trang (SW-015). */}
+      <div className="section-bar">
+        <h3 className="form-section-title">{t('vault.sectionTitle')}</h3>
+        {secrets.data ? <span className="section-count">{rows.length}</span> : null}
+        {canEdit ? (
+          <button type="button" className="btn" onClick={() => setEditing({ secret: null })}>
             {t('vault.add')}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {secrets.isLoading ? (
         <Loading />
       ) : secrets.isError ? (
         <LoadError error={secrets.error} onRetry={() => void secrets.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
+        <EmptyState
+          title={t('vault.empty')}
+          hint={
+            canEdit ? t('vault.emptyHint') : locked ? t('vault.emptyLockedHint') : undefined
+          }
+        />
       ) : (
         <>
           {busyReason.hint}
           {/*
-            BA CỘT, cột thao tác DÍNH PHẢI. Sáu cột ở cột nội dung ~640px đẩy nút "Xem" — lý do
+            BỐN CỘT, cột thao tác DÍNH PHẢI. Sáu cột ở cột nội dung ~640px đẩy nút "Xem" — lý do
             duy nhất người ta mở tab này — ra ngoài khung; Member vừa được duyệt mở ra không
-            thấy nút. Loại, ghi chú và ngày cập nhật là dòng phụ: đọc để nhận ra ngăn nào, không
-            phải để so theo cột.
+            thấy nút. Loại và ghi chú là dòng phụ. "Đổi lần cuối" là cột riêng (Q-15): người đi
+            xoay mật khẩu dò theo cột đó để biết ngăn nào tới hạn.
           */}
           <TableWrap>
           <table className="table table-stack vault-table">
@@ -410,6 +586,7 @@ export function VaultPanel({
               <tr>
                 <th>{t('vault.label')}</th>
                 <th>{t('vault.username')}</th>
+                <th>{t('vault.changedCol')}</th>
                 <th className="col-center col-sticky-end">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -425,21 +602,13 @@ export function VaultPanel({
                   </td>
                   <td data-label={t('vault.username')}>
                     <span className="mono">{orDash(secret.username)}</span>
-                    {/* Tuổi GIÁ TRỊ, không phải lần sửa ghi chú gần nhất: "đổi 400 ngày trước"
-                        là câu người đi xoay mật khẩu cần. Server tính cả ngưỡng cũ. */}
+                  </td>
+                  {/* Mốc đổi GIÁ TRỊ, không phải lần sửa ghi chú gần nhất — cùng hạn với khối
+                      "két lâu chưa đổi" của bảng điều khiển, số ngày do server tính. */}
+                  <td data-label={t('vault.changedCol')}>
+                    <SecretDue changedAt={secret.valueChangedAt} dueInDays={secret.dueInDays} />
                     <span className="cell-sub">
-                      {secret.valueAgeDays === undefined
-                        ? t('vault.updatedAtShort', { date: formatDateTime(secret.updatedAt) })
-                        : t('vault.valueAge', {
-                            count: secret.valueAgeDays,
-                            who: secret.valueChangedBy ?? secret.createdBy,
-                          })}
-                      {secret.valueStale ? (
-                        <>
-                          {' '}
-                          <span className="badge warn">{t('vault.valueStale')}</span>
-                        </>
-                      ) : null}
+                      {t('vault.changedBy', { who: secret.valueChangedBy ?? secret.createdBy })}
                     </span>
                   </td>
                   <td data-label={t('common.actions')} className="col-sticky-end">
@@ -524,8 +693,9 @@ export function VaultPanel({
                                   try {
                                     // Thu hồi nay đòi step-up (C2): gặp `STEPUP_REQUIRED` thì
                                     // hỏi mã rồi làm lại chính việc này.
-                                    await writeStepUp.run(() =>
-                                      revoke.mutateAsync({ id: secret.id }),
+                                    await writeStepUp.run(
+                                      () => revoke.mutateAsync({ id: secret.id }),
+                                      t('vault.stepUpRevoke', { label: secret.label }),
                                     );
                                     toast({ message: t('vault.revoked') });
                                     void refresh();
@@ -553,6 +723,7 @@ export function VaultPanel({
       {editing ? (
         <SecretForm
           secret={editing.secret}
+          ownerLabel={ownerLabel}
           ownerType={ownerType}
           ownerId={ownerId}
           csrfToken={me.csrfToken}
@@ -567,23 +738,17 @@ export function VaultPanel({
 
       {writeStepUp.dialog}
 
-      {pendingStepUp ? (
+      {pendingStepUp && !stepsInline ? (
         <StepUpDialog
           csrfToken={me.csrfToken}
-          purpose={t('vault.stepUpPurpose', { label: pendingStepUp.label })}
+          purpose={stepUpPurpose}
           graceMinutes={me.config?.stepUpGraceMinutes}
           onClose={() => setPendingStepUp(null)}
-          onDone={() => {
-            const secret = pendingStepUp;
-            setPendingStepUp(null);
-            // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
-            // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.
-            void openSecret(secret, true);
-          }}
+          onDone={afterStepUp}
         />
       ) : null}
 
-      {revealed ? (
+      {revealed && !stepsInline ? (
         <RevealDialog
           label={revealed.label}
           username={revealed.username}
@@ -591,9 +756,7 @@ export function VaultPanel({
           seconds={revealed.seconds}
           stepUpSecondsLeft={revealed.stepUpSecondsLeft}
           onClose={() => setRevealed(null)}
-          /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
-             lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
-          onExpire={() => toast({ message: t('vault.autoHidden') })}
+          onExpire={onRevealExpire}
         />
       ) : null}
 
@@ -645,6 +808,7 @@ const KINDS: SecretKind[] = ['password', 'license_key', 'other'];
  */
 function SecretForm({
   secret,
+  ownerLabel,
   ownerType,
   ownerId,
   csrfToken,
@@ -652,6 +816,7 @@ function SecretForm({
   onSaved,
 }: {
   secret: SecretMeta | null;
+  ownerLabel?: string;
   ownerType: SecretOwnerType;
   ownerId: string;
   csrfToken: string;
@@ -688,7 +853,14 @@ function SecretForm({
          người dùng tin là đã hủy trong khi secret đã vào két. */
       dismissible={!save.isPending}
       maxWidth={560}
-      title={isEdit ? t('vault.edit') : t('vault.add')}
+      /* Một mẫu tiêu đề cho mọi hộp: "{Việc} — {chủ thể}" (DEV-035). */
+      title={
+        isEdit
+          ? t('common.titleOf', { action: t('vault.edit'), subject: secret.label })
+          : ownerLabel
+            ? t('common.titleOf', { action: t('vault.add'), subject: ownerLabel })
+            : t('vault.add')
+      }
       footer={
         <>
           <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
@@ -726,6 +898,7 @@ function SecretForm({
                         value,
                       },
                 ),
+                t(isEdit ? 'vault.stepUpEdit' : 'vault.stepUpSave', { label: label.trim() }),
               );
               setValue('');
               onSaved();
@@ -848,7 +1021,7 @@ function RotateForm({
          cấu hình thiết bị vừa hết hiệu lực. */
       dismissible={!rotate.isPending}
       maxWidth={480}
-      title={t('vault.rotateTitle', { label: secret.label })}
+      title={t('common.titleOf', { action: t('vault.rotate'), subject: secret.label })}
       footer={
         <>
           <button type="button" className="btn" disabled={rotate.isPending} onClick={onClose}>
@@ -872,7 +1045,10 @@ function RotateForm({
           if (!check.check()) return;
           void (async () => {
             try {
-              await stepUp.run(() => rotate.mutateAsync({ value }));
+              await stepUp.run(
+                () => rotate.mutateAsync({ value }),
+                t('vault.stepUpRotate'),
+              );
               setValue('');
               onSaved();
             } catch (err) {
@@ -883,9 +1059,11 @@ function RotateForm({
         }}
       >
         <p className="muted">{t('vault.rotateHint')}</p>
-        {/* Thứ tự an toàn: đổi trên thiết bị và đăng nhập thử TRƯỚC, rồi mới lưu ở đây — lưu
-            trước mà đổi trên máy hỏng là mất cả giá trị cũ lẫn đường vào thiết bị. */}
-        {secret.kind === 'password' ? <p className="alert warn">{t('vault.rotateOrder')}</p> : null}
+        {/* Thứ tự an toàn: đổi trên hệ thống thật và đăng nhập thử TRƯỚC, rồi mới lưu ở đây —
+            lưu trước mà đổi trên máy hỏng là mất cả giá trị cũ lẫn đường vào thiết bị. Nhắc
+            với MỌI loại ngăn (Q-15): IMS không nối tới đâu, license key cũng phải đổi ở nơi
+            cấp trước. Chỉ cảnh báo, không bắt tick. */}
+        <p className="alert warn">{t('vault.rotateOrder')}</p>
         <Field
           label={t('vault.newValue')}
           required
@@ -1015,6 +1193,7 @@ function BreakGlassDialog({
         }}
       >
         <p className="muted">{t('vault.requestHint')}</p>
+        <p className="muted">{t('vault.requestSessionNote')}</p>
 
         <Field
           label={t('vault.requestReason')}

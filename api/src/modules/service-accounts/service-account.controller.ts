@@ -24,7 +24,7 @@ import { sendXlsx } from '../../common/excel/xlsx-http';
 
 /** Chữ trong file xuất — cùng chữ với màn danh sách (`serviceAccounts.kind*Short`). */
 const KIND_LABEL: Record<string, string> = { shared: 'Dùng chung', vpn: 'VPN' };
-const STATUS_LABEL: Record<string, string> = { active: 'Đang dùng', disabled: 'Đã vô hiệu hóa' };
+const STATUS_LABEL: Record<string, string> = { active: 'Đang dùng', disabled: 'Đã ngừng dùng' };
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã tài khoản dịch vụ không hợp lệ.' })
@@ -76,14 +76,29 @@ class ServiceAccountBodyDto {
 
 class DisableDto {
   @IsString()
-  @Length(3, 500, { message: 'Lý do vô hiệu hóa từ 3 ký tự.' })
+  @Length(3, 500, { message: 'Lý do ngừng dùng từ 3 ký tự.' })
   reason!: string;
 }
 
 class EnableDto {
   @IsString()
-  @Length(3, 500, { message: 'Lý do bật lại từ 3 ký tự.' })
+  @Length(3, 500, { message: 'Lý do dùng lại từ 3 ký tự.' })
   reason!: string;
+}
+
+/** Bộ lọc dùng CHUNG cho danh sách và file xuất — hai chỗ không được lọc khác nhau (FR-028). */
+function filterOf(query: {
+  search?: string;
+  kind?: ServiceAccountKind;
+  status?: ServiceAccountStatus;
+  anyIp?: string;
+}) {
+  return {
+    search: query.search,
+    kind: query.kind,
+    status: query.status,
+    anyIp: query.anyIp === 'true',
+  };
 }
 
 /**
@@ -114,13 +129,14 @@ export class ServiceAccountController {
       search?: string;
       kind?: ServiceAccountKind;
       status?: ServiceAccountStatus;
+      anyIp?: string;
       sort?: string;
       dir?: string;
     },
   ) {
     return this.accounts.list(
       parsePageQuery(query),
-      { search: query.search, kind: query.kind, status: query.status },
+      filterOf(query),
       parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
     );
   }
@@ -141,13 +157,14 @@ export class ServiceAccountController {
       search?: string;
       kind?: ServiceAccountKind;
       status?: ServiceAccountStatus;
+      anyIp?: string;
       sort?: string;
       dir?: string;
     },
     @Res() res: Response,
   ) {
     const rows = await this.accounts.listAll(
-      { search: query.search, kind: query.kind, status: query.status },
+      filterOf(query),
       parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({

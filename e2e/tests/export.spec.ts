@@ -195,7 +195,13 @@ test.describe('Xuất Excel', () => {
     });
     await page.request.post('/api/v1/software', {
       headers,
-      data: { code: `DOM-E2E-F2-${stamp}`, name: 'Tên miền lọc B', kind: 'domain', endDate: '2027-02-28' },
+      data: {
+        code: `DOM-E2E-F2-${stamp}`,
+        name: 'Tên miền lọc B',
+        kind: 'domain',
+        endDate: '2027-02-28',
+        websites: [`e2e-loc-${stamp}.pmh.vn`],
+      },
     });
 
     /**
@@ -214,6 +220,9 @@ test.describe('Xuất Excel', () => {
     );
 
     expect(filtered).toContain('Tên miền lọc B');
+    // SW-043: website của SSL/tên miền có cột riêng trong file.
+    expect(filtered).toContain('Website');
+    expect(filtered).toContain(`e2e-loc-${stamp}.pmh.vn`);
     expect(filtered).not.toContain('License lọc A');
     expect(all).toContain('Tên miền lọc B');
     expect(all).toContain('License lọc A');

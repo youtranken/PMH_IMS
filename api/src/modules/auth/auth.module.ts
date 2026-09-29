@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import { MasterKeyRing } from '../../common/crypto/master-key-ring';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { AuditModule } from '../audit/audit.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { UsersModule } from '../users/users.module';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
+import { AuthApiService } from './auth.api';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { KnownDeviceService } from './known-device.service';
@@ -22,13 +24,15 @@ import { TotpService } from './totp.service';
  * ngay lúc dựng module — thiếu secret là api chết lúc boot, không chạy nửa vời (AD-11).
  */
 @Module({
-  imports: [UsersModule, AuditModule, OutboxModule],
+  // ApprovalsModule: vô hiệu hóa tài khoản rút yêu cầu mở két đang chờ qua `approvals.api` (Q-15).
+  imports: [UsersModule, AuditModule, OutboxModule, ApprovalsModule],
   controllers: [AuthController, AccountsController],
   providers: [
     ExcelExportService,
     LoginRateGuard,
     LoginFailureService,
     AuthService,
+    AuthApiService,
     AccountsService,
     SessionService,
     SessionAuditLabeler,
@@ -48,6 +52,6 @@ import { TotpService } from './totp.service';
       inject: [MasterKeyRing],
     },
   ],
-  exports: [SessionService, TotpService, EnvelopeCryptoService, PasswordService],
+  exports: [AuthApiService, SessionService, TotpService, EnvelopeCryptoService, PasswordService],
 })
 export class AuthModule {}

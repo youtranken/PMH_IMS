@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
@@ -28,12 +28,14 @@ import { useToast } from '@/ui/toast';
 import { CatalogForm } from './catalog-form';
 import { CatalogImportDialog } from './catalog-import-dialog';
 import { toCatalogHistory, type CatalogHistoryRow } from './catalog-history-entries';
+import { devicesFilterOf, usageLinks, usageTotal } from './catalog-usage';
 import {
   catalogLabel,
   portRangeLabel,
   IMPORTABLE_ENTITIES,
   type CabinetRow,
   type CatalogEntity,
+  type CatalogLists,
   type CatalogRow,
   type DepartmentRow,
   type DeviceTypeRow,
@@ -358,17 +360,41 @@ function mobileTitle(entity: CatalogEntity, row: CatalogRow): string {
   return catalogLabel(entity, row);
 }
 
-/** Bộ lọc thiết bị ứng với một mục danh mục — `null` khi màn Thiết bị không lọc theo loại này. */
-function devicesFilterOf(entity: CatalogEntity, row: CatalogRow): string | null {
-  if (entity === 'site') return `siteId=${row.id}`;
-  if (entity === 'cabinet') return `siteId=${(row as CabinetRow).siteId}&cabinetId=${row.id}`;
-  if (entity === 'device_type') return `deviceTypeId=${row.id}`;
-  return null;
+/** Chữ "12 thiết bị" cho một con số dùng — dùng chung cho ô bảng, thẻ gọn và câu hỏi lại. */
+function usageText(kind: string, count: number, t: TFunction): string {
+  return t(`catalog.usage_${kind}`, { count, defaultValue: t('catalog.usage_other', { count }) });
+}
+
+/** "Đang dùng ở 12 thiết bị · 1 dải IP" — số nào màn đích lọc được thì bấm sang danh sách lọc sẵn. */
+function UsageCell({ entity, row }: { entity: CatalogEntity; row: CatalogRow }) {
+  const { t } = useTranslation();
+  const links = usageLinks(entity, row);
+  if (links.length === 0) return <span className="muted">{t('catalog.usageNone')}</span>;
+  return (
+    <span>
+      {links.map((item, index) => (
+        <span key={item.kind}>
+          {index > 0 ? ' · ' : null}
+          {item.href ? (
+            <Link to={item.href}>{usageText(item.kind, item.count, t)}</Link>
+          ) : (
+            <span>{usageText(item.kind, item.count, t)}</span>
+          )}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function usageSummary(entity: CatalogEntity, row: CatalogRow, t: TFunction): string {
+  return usageLinks(entity, row)
+    .map((item) => usageText(item.kind, item.count, t))
+    .join(' · ');
 }
 
 /**
  * Quản trị danh mục (story 2.1, FR-004).
- * Q-12: mọi vai thêm và sửa được; vô hiệu hóa, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
+ * Q-12: mọi vai thêm và sửa được; ngừng dùng, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
  * nằm ở `@Roles` phía API, đây chỉ là ẩn cho đỡ rối (AD-9).
  */
 export function CatalogScreen({ me }: { me: Me }) {
@@ -399,8 +425,10 @@ export function CatalogScreen({ me }: { me: Me }) {
   const csrfToken = me.csrfToken;
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
-  // Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng.
-  const lists = useCatalogLists({ enabled: entity === 'cabinet' });
+  /* Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng, và số mục trên nhãn từng tab
+     (ADM-031): người mới nhìn thanh tab là biết bảy nhóm nào đã khai, nhóm nào còn trống. Cùng
+     một truy vấn danh mục nền mà mọi form đã dùng — không thêm lượt hỏi riêng. */
+  const lists = useCatalogLists();
   const siteNames = useMemo(
     () => new Map((lists.data?.sites ?? []).map((site) => [site.id, site.name])),
     [lists.data],
@@ -441,7 +469,7 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const switchTab = (key: string) => {
     // Sang tab khác: bỏ từ khoá, site, trang và cột sắp của tab trước (cột đó có thể không tồn
-    // tại ở tab mới); GIỮ bộ lọc trạng thái — "chỉ xem đã vô hiệu" để dọn là việc xuyên tab.
+    // tại ở tab mới); GIỮ bộ lọc trạng thái — "chỉ xem đã ngừng dùng" để dọn là việc xuyên tab.
     const status = filters.status;
     url.clearFilters();
     url.setFilter('tab', key === 'site' ? '' : key);
@@ -511,18 +539,27 @@ export function CatalogScreen({ me }: { me: Me }) {
         </div>
       ),
     };
-    return [...entityColumns, statusColumn, actionsColumn];
+    const usageColumn: ColumnDef<CatalogRow, unknown> = {
+      id: 'usage',
+      header: t('catalog.usageColumn'),
+      enableSorting: false,
+      cell: ({ row }) => <UsageCell entity={entity} row={row.original} />,
+    };
+    return entity === 'service_port'
+      ? [...entityColumns, statusColumn, actionsColumn]
+      : [...entityColumns, usageColumn, statusColumn, actionsColumn];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, t, canManage, siteNames]);
 
   const mobileCard: MobileCard<CatalogRow> = {
     title: (row) => mobileTitle(entity, row),
-    // Trạng thái chỉ hiện khi mục đã vô hiệu — "Đang dùng" gần như dòng nào cũng giống nhau.
+    // Trạng thái chỉ hiện khi mục đã ngừng dùng — "Đang dùng" gần như dòng nào cũng giống nhau.
     badge: (row) =>
       row.active ? null : <span className="badge muted">{t('catalog.inactive')}</span>,
     subtitle: (row) =>
       entity === 'cabinet' ? siteNames.get((row as CabinetRow).siteId) ?? null : null,
-    meta: (row) => mobileMeta(entity, row, t) || null,
+    meta: (row) =>
+      [mobileMeta(entity, row, t), usageSummary(entity, row, t)].filter(Boolean).join(' · ') || null,
     actions: (row) => (
       <RowActions
         label={t('common.actionsOf', { subject: catalogLabel(entity, row) })}
@@ -532,13 +569,13 @@ export function CatalogScreen({ me }: { me: Me }) {
     ),
   };
 
-  /** Vô hiệu hoá / Xoá — chỉ SA/Admin (Q-12). */
+  /** Ngừng dùng / Xóa — chỉ SA/Admin (Q-12). */
   function manageItems(catalogRow: CatalogRow, name: string): RowAction[] {
     return [
       {
         key: 'active',
         label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
-        /* Vô hiệu hóa là lấy đi nhưng ĐẢO LẠI ĐƯỢC (`warn`, nhóm riêng); Xóa thì không (`danger`).
+        /* Ngừng dùng là lấy đi nhưng ĐẢO LẠI ĐƯỢC (`warn`, nhóm riêng); Xóa thì không (`danger`).
            Cùng màu đỏ đứng sát nhau thì hai việc khác hẳn hệ quả trông như một. */
         warn: catalogRow.active,
         onSelect: () => {
@@ -548,10 +585,14 @@ export function CatalogScreen({ me }: { me: Me }) {
                 action: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
                 subject: name,
               }),
-              message: t(
-                catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate',
-                { name },
-              ),
+              message:
+                t(catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate', {
+                  name,
+                }) +
+                (catalogRow.active && usageTotal(catalogRow) > 0
+                  ? ' ' +
+                    t('catalog.deactivateInUse', { usage: usageSummary(entity, catalogRow, t) })
+                  : ''),
               danger: catalogRow.active,
               confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
             });
@@ -577,6 +618,13 @@ export function CatalogScreen({ me }: { me: Me }) {
         key: 'delete',
         label: t('catalog.delete'),
         danger: true,
+        /* Khóa ngoại chắc chắn chặn — nói trước thay vì để người dùng xác nhận rồi mới nhận 409.
+           Sổ đếm hỏng thì `usage` rỗng và nút vẫn bấm được; khóa ngoại vẫn là hàng rào thật. */
+        disabled: usageTotal(catalogRow) > 0,
+        hint:
+          usageTotal(catalogRow) > 0
+            ? t('catalog.deleteInUse', { usage: usageSummary(entity, catalogRow, t) })
+            : undefined,
         onSelect: () => {
           void (async () => {
             const ok = await askConfirm({
@@ -593,8 +641,8 @@ export function CatalogScreen({ me }: { me: Me }) {
                   toast({ message: t('catalog.deleted') });
                   void refresh();
                 },
-                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý "hãy vô hiệu
-                // hóa"; hiện nguyên văn cho người dùng.
+                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý "hãy ngừng
+                // dùng"; hiện nguyên văn cho người dùng.
                 onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
               },
             );
@@ -625,9 +673,11 @@ export function CatalogScreen({ me }: { me: Me }) {
                 {t('catalog.importExcel')}
               </button>
             ) : null}
+            {/* Bề ngang tối thiểu cố định (`.catalog-add`): nhãn đổi theo tab ("Thêm site" →
+                "Thêm nhà cung cấp") mà nút co giãn theo chữ thì cả cụm nút giật mỗi lần đổi tab. */}
             <button
               type="button"
-              className="btn primary"
+              className="btn primary catalog-add"
               onClick={() => setEditing({ row: null })}
             >
               {t(`catalog.add${TAB_SUFFIX[entity]}`)}
@@ -637,7 +687,11 @@ export function CatalogScreen({ me }: { me: Me }) {
       />
 
       <Tabs
-        items={TAB_KEYS.map((tab) => ({ key: tab.key, label: t(tab.labelKey) }))}
+        items={TAB_KEYS.map((tab) => ({
+          key: tab.key,
+          label: t(tab.labelKey),
+          count: lists.data?.[LIST_OF[tab.key]]?.length,
+        }))}
         value={entity}
         onChange={switchTab}
         ariaLabel={t('catalog.title')}
@@ -812,6 +866,17 @@ function CatalogHistoryDialog({
     </Dialog>
   );
 }
+
+/** Tab → mảng tương ứng trong `CatalogLists` (số mục trên nhãn tab). */
+const LIST_OF: Record<CatalogEntity, keyof CatalogLists> = {
+  site: 'sites',
+  cabinet: 'cabinets',
+  device_type: 'deviceTypes',
+  vendor: 'vendors',
+  department: 'departments',
+  isp_provider: 'ispProviders',
+  service_port: 'servicePorts',
+};
 
 const TAB_SUFFIX: Record<CatalogEntity, string> = {
   site: 'Site',

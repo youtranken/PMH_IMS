@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -115,6 +115,42 @@ export class LoginFailureService implements OnModuleInit {
   }
 
   /**
+   * Các nơi (IP) đang chặn hoặc đang đếm sai của một người — màn Người dùng IMS đọc (SA).
+   *
+   * Mốc chặn đã qua thì trả `null`: hàng đó chỉ còn là bộ đếm chờ dọn, gọi nó "đang chặn" là
+   * nói sai với SA đang nghe điện thoại người dùng. Hàng về 0 lần sai và hết chặn thì bỏ hẳn.
+   * Đang chặn đứng trước, mốc xa nhất trước — đó là nơi đáng hỏi nhất.
+   */
+  async listForUser(userId: string): Promise<
+    { ip: string; failedAttempts: number; lockedUntil: Date | null; updatedAt: Date }[]
+  > {
+    const lockedNow = sql<boolean>`${loginFailureTable.lockedUntil} > now()`;
+    const rows = await this.db
+      .select({
+        ip: loginFailureTable.ip,
+        failedAttempts: loginFailureTable.failedAttempts,
+        lockedUntil: sql<Date | null>`CASE WHEN ${lockedNow} THEN ${loginFailureTable.lockedUntil} END`,
+        updatedAt: loginFailureTable.updatedAt,
+      })
+      .from(loginFailureTable)
+      .where(
+        and(
+          eq(loginFailureTable.userId, userId),
+          or(gt(loginFailureTable.failedAttempts, 0), lockedNow),
+        ),
+      )
+      .orderBy(
+        sql`${loginFailureTable.lockedUntil} > now() DESC NULLS LAST`,
+        desc(loginFailureTable.lockedUntil),
+        desc(loginFailureTable.updatedAt),
+      );
+    return rows.map((row) => ({
+      ...row,
+      lockedUntil: row.lockedUntil === null ? null : new Date(row.lockedUntil),
+    }));
+  }
+
+  /**
    * SA mở khoá / kích hoạt lại → xoá MỌI nơi của người này.
    *
    * Khác `clearFor`: đây là quyết định có chủ ý của người quản trị ("cho vào lại"), không phải
@@ -173,7 +209,7 @@ export class LoginFailureService implements OnModuleInit {
       )
       .returning({ ip: loginFailureTable.ip });
     if (deleted.length > 0) {
-      this.logger.debug(`login-failure-prune: xoá ${deleted.length} hàng đã nguội`);
+      this.logger.debug(`login-failure-prune: xóa ${deleted.length} hàng đã nguội`);
     }
   }
 }

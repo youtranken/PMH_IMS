@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
@@ -15,6 +16,9 @@ import {
 } from '../../common/approvals/approvals-registry';
 import { UI_PATHS } from '../../common/ui-paths';
 import { UsersApiService } from '../users/users.api';
+import { AuthApiService } from '../auth/auth.api';
+import { SweepService } from '../queue/sweep.service';
+import { redactMessage } from '../../common/log-redact';
 import {
   ApprovalsApiService,
   type ApprovalRecord,
@@ -23,6 +27,8 @@ import {
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { conflictOnUnique } from '../../common/sql';
+import { addDays, startOfDayInTz } from '../../common/today';
+import { overdueSince } from '../../common/approvals/approval-flow';
 import { OutboxService } from '../outbox/outbox.service';
 import { AccessListService } from './access-list.service';
 import { tierLabel, type AccessTier } from './access-tier';
@@ -42,7 +48,7 @@ export const BREAK_GLASS_FLOW = {
   kind: BREAK_GLASS_KIND,
   initial: 'pending',
   transitions: {
-    pending: ['approved', 'denied', 'cancelled'],
+    pending: ['approved', 'denied', 'cancelled', 'expired'],
     approved: ['expired', 'revoked'],
     denied: [],
     cancelled: [],
@@ -53,10 +59,34 @@ export const BREAK_GLASS_FLOW = {
     'pending->approved': 'Duyệt',
     'pending->denied': 'Từ chối',
     'pending->cancelled': 'Người xin tự hủy',
+    'pending->expired': 'Hết hạn chờ duyệt',
     'approved->expired': 'Hết hạn',
     'approved->revoked': 'Thu hồi sớm',
   },
+  // Tài khoản người xin bị vô hiệu hóa: phiếu đang chờ bị rút như người xin tự rút (Q-15).
+  withdrawOnRequesterDisabled: 'cancelled',
 };
+
+/** Tên lượt quét đóng quyền của phiên đã kết thúc — `SweepService` gọi mỗi vòng. */
+export const SESSION_ENDED_SWEEP = 'break-glass-session-ended';
+
+/** Tên lượt quét cho hết hạn yêu cầu chờ quá `breakglass.pending_expire_hours` (Q-15). */
+export const PENDING_EXPIRE_SWEEP = 'break-glass-pending-expire';
+
+const SESSION_ENDED_NOTE = 'Phiên đăng nhập của người xin đã kết thúc.';
+
+const pendingTimeoutNote = (hours: number) => `Quá ${hours} giờ không ai duyệt.`;
+
+/**
+ * Người đang gọi: email + phiên đăng nhập của CHÍNH request này (Q-15).
+ *
+ * `sessionId` phải lấy từ `req.user.sessionId` mà `SessionGuard` vừa xác thực, không bao giờ
+ * từ body/query — nhận từ client là để người dùng tự chọn phiên nào mang quyền.
+ */
+export interface BreakGlassViewer {
+  email: string;
+  sessionId: string;
+}
 
 export interface BreakGlassRequestInput {
   ownerType: SecretOwnerType;
@@ -72,6 +102,14 @@ export interface BreakGlassRequestInput {
  * Người duyệt lúc 2 giờ sáng phải biết "switch truy cập tầng 1 hay firewall biên" để đánh giá
  * rủi ro. Chỉ có mã, tên, site và SỐ ngăn két — không bao giờ có tên ngăn (FR-026).
  */
+/** Bộ lọc nhật ký mở két; `state` đọc theo đồng hồ, `from`/`to` là ngày YYYY-MM-DD. */
+export interface BreakGlassLogFilters {
+  state?: string;
+  requester?: string;
+  from?: string;
+  to?: string;
+}
+
 export interface BreakGlassView extends ApprovalRecord {
   /** `mã · tên · site`; `null` khi hồ sơ chủ đã bị xoá. */
   subjectLabel: string | null;
@@ -128,10 +166,17 @@ export interface AccessVerdict {
    */
   notifiedApprovers: number | null;
   /**
-   * Quyền đang chạy còn bao nhiêu giây — server tính bằng đồng hồ của nó (AD-6), client chỉ
-   * đếm lùi từ con số này chứ không tự trừ theo đồng hồ máy. `null` khi không có hạn/không có quyền.
+   * Đã được duyệt nhưng CHƯA xem lần nào — chưa gắn phiên (Q-15). Lần bấm Xem đầu tiên (qua mã
+   * 6 số) gắn grant này vào phiên đang xem. `null` khi không có.
+   */
+  claimable: ApprovalRecord | null;
+  /**
+   * Quyền đang chạy (hoặc đã duyệt chờ xem) còn bao nhiêu giây, tính từ lúc duyệt — server tính
+   * bằng đồng hồ của nó (AD-6), client chỉ đếm lùi từ con số này. `null` khi không có quyền.
    */
   grantSecondsLeft: number | null;
+  /** `breakglass.pending_expire_hours` — chỉ khi có phiếu treo, để UI nói phiếu chờ tới bao giờ. */
+  pendingExpireHours: number | null;
   /** Trần giờ cấp (`breakglass.max_grant_hours`) — người xin chọn nấc giờ trong trần. */
   maxGrantHours: number | null;
   /**
@@ -139,6 +184,11 @@ export interface AccessVerdict {
    * người duyệt, để họ không gửi lại y nguyên lý do vừa bị chê. Chỉ phiếu của chính họ.
    */
   lastDenied: { at: Date | null; note: string | null } | null;
+  /**
+   * Người này đang có quyền trên đối tượng này nhưng quyền đã gắn vào MỘT PHIÊN KHÁC (phiên đã
+   * xem lần đầu) — phiên này không dùng được, phải xin lại (Q-15). UI nói rõ vì sao.
+   */
+  otherSessionHeld: boolean;
 }
 
 /**
@@ -159,10 +209,22 @@ export class BreakGlassService implements OnModuleInit {
     private readonly owners: VaultOwnersService,
     private readonly vault: VaultService,
     private readonly users: UsersApiService,
+    private readonly auth: AuthApiService,
+    private readonly sweep: SweepService,
   ) {}
+
+  private readonly logger = new Logger(BreakGlassService.name);
 
   onModuleInit(): void {
     this.kinds.register(BREAK_GLASS_FLOW);
+    this.sweep.register({
+      name: SESSION_ENDED_SWEEP,
+      run: () => this.closeEndedSessions().then(() => undefined),
+    });
+    this.sweep.register({
+      name: PENDING_EXPIRE_SWEEP,
+      run: () => this.expireStalePending().then(() => undefined),
+    });
     // `mail` là tầng nền, không import được `vault` (AD-2) — nên dạy sổ cách gọi tên đối tượng.
     this.kinds.registerDescriber(BREAK_GLASS_KIND, (type, id) =>
       this.describeSubject(type as SecretOwnerType, id),
@@ -255,10 +317,13 @@ export class BreakGlassService implements OnModuleInit {
       ),
       this.approvals.history(id),
     ]);
+    const claimed = (step: (typeof history)[number]) =>
+      (step.detail as { event?: string } | null)?.event === 'claimed';
     const timeline = history
-      .filter((step) => step.toState !== null && step.toState !== 'pending')
+      // Lần xem đầu không đổi state nhưng là mốc người duyệt cần: quyền bắt đầu gắn phiên nào.
+      .filter((step) => claimed(step) || (step.toState !== null && step.toState !== 'pending'))
       .map((step) => ({
-        state: step.toState as string,
+        state: claimed(step) ? 'claimed' : (step.toState as string),
         actor: step.actor,
         at: step.createdAt,
         note: ((step.detail as { note?: string | null } | null)?.note ?? null) || null,
@@ -290,10 +355,11 @@ export class BreakGlassService implements OnModuleInit {
 
   /** UI hỏi "tôi làm được gì với chủ thể này" — một lần gọi, đủ để dựng đúng nút. */
   async verdictFor(
-    memberEmail: string,
+    viewer: BreakGlassViewer,
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<AccessVerdict> {
+    const memberEmail = viewer.email;
     const tier = await this.access.tierFor(memberEmail, ownerType, ownerId);
 
     if (tier === 'denied') {
@@ -305,9 +371,12 @@ export class BreakGlassService implements OnModuleInit {
         grant: null,
         pending: null,
         notifiedApprovers: null,
+        claimable: null,
         grantSecondsLeft: null,
+        pendingExpireHours: null,
         maxGrantHours: null,
         lastDenied: null,
+        otherSessionHeld: false,
       };
     }
     if (tier === 'whitelist') {
@@ -319,13 +388,18 @@ export class BreakGlassService implements OnModuleInit {
         grant: null,
         pending: null,
         notifiedApprovers: null,
+        claimable: null,
         grantSecondsLeft: null,
+        pendingExpireHours: null,
         maxGrantHours: null,
         lastDenied: null,
+        otherSessionHeld: false,
       };
     }
 
-    const [grant, pending, latest, maxGrantHours] = await Promise.all([
+    const [grant, claimable, anyGrant, pending, latest, maxGrantHours] = await Promise.all([
+      this.grantOf(viewer, ownerType, ownerId),
+      this.claimableOf(viewer, ownerType, ownerId),
       this.approvals.activeGrantFor({
         kind: BREAK_GLASS_KIND,
         requester: memberEmail,
@@ -345,24 +419,68 @@ export class BreakGlassService implements OnModuleInit {
       this.maxGrantHours(),
     ]);
     const last = latest.items[0];
+    const live = grant ?? claimable;
 
     return {
       tier,
       tierLabel: tierLabel(tier),
-      canReveal: grant !== null,
-      // Đang có grant còn hạn hoặc đang có yêu cầu treo thì KHÔNG xin thêm — hai yêu cầu
+      // Chưa xem lần nào cũng là "xem được": lần bấm Xem đầu tiên gắn quyền vào phiên này.
+      canReveal: live !== null,
+      // Đang có quyền dùng được hoặc đang có yêu cầu treo thì KHÔNG xin thêm — hai yêu cầu
       // cùng nội dung chỉ làm người duyệt phải quyết hai lần cho một việc.
-      canRequest: grant === null && pending === null,
+      canRequest: live === null && pending === null,
       grant,
       pending,
+      claimable,
       notifiedApprovers: pending ? await this.approverCountExcept(memberEmail) : null,
-      grantSecondsLeft: grant?.expiresAt
-        ? Math.max(0, Math.floor((grant.expiresAt.getTime() - Date.now()) / 1000))
+      grantSecondsLeft: live?.expiresAt
+        ? Math.max(0, Math.floor((live.expiresAt.getTime() - Date.now()) / 1000))
         : null,
+      pendingExpireHours: pending ? await this.pendingExpireHours() : null,
       maxGrantHours,
       lastDenied:
         last?.state === 'denied' ? { at: last.decidedAt, note: last.decisionNote } : null,
+      otherSessionHeld: live === null && anyGrant !== null,
     };
+  }
+
+  /**
+   * Grant còn hạn đã gắn vào ĐÚNG phiên đang gọi, và phiên đó còn sống (Q-15).
+   *
+   * `SessionGuard` đã chặn mọi request từ phiên chết, nên hỏi lại sống/chết ở đây là lớp thứ
+   * hai: đường gọi nào lỡ đi vòng guard (job, test, controller mới quên guard) cũng không mở
+   * được két bằng quyền của một phiên đã đăng xuất.
+   */
+  private async grantOf(
+    viewer: BreakGlassViewer,
+    ownerType: SecretOwnerType,
+    ownerId: string,
+  ): Promise<ApprovalRecord | null> {
+    if (!viewer.sessionId) return null;
+    const grant = await this.approvals.activeGrantFor({
+      kind: BREAK_GLASS_KIND,
+      requester: viewer.email,
+      subjectType: ownerType,
+      subjectId: ownerId,
+      holderSessionId: viewer.sessionId,
+    });
+    if (!grant) return null;
+    return (await this.auth.isSessionAlive(viewer.sessionId)) ? grant : null;
+  }
+
+  /** Grant còn hạn của người này mà CHƯA gắn phiên nào — lần xem đầu sẽ gắn nó. */
+  private async claimableOf(
+    viewer: BreakGlassViewer,
+    ownerType: SecretOwnerType,
+    ownerId: string,
+  ): Promise<ApprovalRecord | null> {
+    return this.approvals.activeGrantFor({
+      kind: BREAK_GLASS_KIND,
+      requester: viewer.email,
+      subjectType: ownerType,
+      subjectId: ownerId,
+      holderSessionId: null,
+    });
   }
 
   /**
@@ -393,11 +511,11 @@ export class BreakGlassService implements OnModuleInit {
    * nó thì nhật ký break-glass đứt đúng ở khúc quan trọng nhất: "xem bằng quyền nào".
    */
   async assertCanReveal(
-    memberEmail: string,
+    viewer: BreakGlassViewer,
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<{ tier: AccessTier; grantId: string | null }> {
-    const tier = await this.access.tierFor(memberEmail, ownerType, ownerId);
+    const tier = await this.access.tierFor(viewer.email, ownerType, ownerId);
 
     if (tier === 'whitelist') return { tier, grantId: null };
 
@@ -408,19 +526,66 @@ export class BreakGlassService implements OnModuleInit {
       });
     }
 
-    const grant = await this.approvals.activeGrantFor({
-      kind: BREAK_GLASS_KIND,
-      requester: memberEmail,
-      subjectType: ownerType,
-      subjectId: ownerId,
-    });
-    if (!grant) {
-      throw new ForbiddenException({
+    const grant = await this.grantOf(viewer, ownerType, ownerId);
+    if (grant) return { tier, grantId: grant.id };
+
+    const bound = await this.claimOnFirstUse(viewer, ownerType, ownerId);
+    return { tier, grantId: bound.id };
+  }
+
+  /**
+   * Lần xem ĐẦU TIÊN sau khi được duyệt: gắn grant vào phiên đang xem (Q-15).
+   *
+   * Chỉ chạy sau khi lượt xem đã qua step-up (route reveal đòi `@RequiresStepUp`), nên phiên
+   * nhận quyền là phiên vừa chứng minh có người thật với mã 6 số. Gắn là nguyên tử trong DB: hai
+   * phiên cùng xem lần đầu thì đúng một phiên thắng, phiên kia nhận 403 nói rõ.
+   */
+  private async claimOnFirstUse(
+    viewer: BreakGlassViewer,
+    ownerType: SecretOwnerType,
+    ownerId: string,
+  ): Promise<ApprovalRecord> {
+    const required = () =>
+      new ForbiddenException({
         code: 'BREAK_GLASS_REQUIRED',
-        message: 'Cần được duyệt trước khi xem. Gửi yêu cầu kèm lý do và thời hạn.',
+        message:
+          'Cần được duyệt trước khi xem. Quyền đã cấp chỉ dùng được trong phiên đăng nhập đã ' +
+          'xem lần đầu — phiên đó kết thúc thì gửi yêu cầu mới.',
       });
+    const otherSession = () =>
+      new ForbiddenException({
+        code: 'BREAK_GLASS_OTHER_SESSION',
+        message:
+          'Quyền mở két này đã gắn với một phiên đăng nhập khác của bạn (phiên đã xem lần ' +
+          'đầu) — quyền không chuyển sang phiên này. Muốn xem ở đây thì gửi yêu cầu mới.',
+      });
+
+    if (!viewer.sessionId || !(await this.auth.isSessionAlive(viewer.sessionId))) {
+      throw required();
     }
-    return { tier, grantId: grant.id };
+    const claimable = await this.claimableOf(viewer, ownerType, ownerId);
+    if (!claimable) {
+      const held = await this.approvals.activeGrantFor({
+        kind: BREAK_GLASS_KIND,
+        requester: viewer.email,
+        subjectType: ownerType,
+        subjectId: ownerId,
+      });
+      throw held ? otherSession() : required();
+    }
+    const bound = await this.db.transaction((tx) =>
+      this.approvals.claimWithin(tx, claimable.id, {
+        actor: viewer.email,
+        sessionId: viewer.sessionId,
+      }),
+    );
+    if (bound) return bound;
+    /*
+     * Thua cuộc đua: phiên khác vừa gắn trước. Grant vừa hết giờ đúng lúc này thì cũng rơi vào
+     * đây — hỏi lại để nói đúng lý do, không nói "phiên khác" cho một quyền đã hết.
+     */
+    const still = await this.approvals.findOne(claimable.id);
+    throw still.active && still.claimedAt ? otherSession() : required();
   }
 
   /**
@@ -430,7 +595,8 @@ export class BreakGlassService implements OnModuleInit {
    * đi — người xin ngồi chờ một người duyệt không hề biết có việc. Lúc 2 giờ sáng thì cửa sổ
    * đó là cả đêm.
    */
-  async request(memberEmail: string, input: BreakGlassRequestInput): Promise<ApprovalRecord> {
+  async request(viewer: BreakGlassViewer, input: BreakGlassRequestInput): Promise<ApprovalRecord> {
+    const memberEmail = viewer.email;
     const tier = await this.access.tierFor(memberEmail, input.ownerType, input.ownerId);
     if (tier === 'denied') {
       throw new ForbiddenException({
@@ -453,11 +619,20 @@ export class BreakGlassService implements OnModuleInit {
      * commit. Client không thể xử lý tử tế một API đổi mã theo nhịp gõ phím, và test thì đỏ
      * ngẫu nhiên — đúng cách bộ E2E đầy đủ phát hiện ra chuyện này.
      */
-    const existing = await this.pendingOf(memberEmail, input.ownerType, input.ownerId);
+    const [existing, claimable] = await Promise.all([
+      this.pendingOf(memberEmail, input.ownerType, input.ownerId),
+      this.claimableOf(viewer, input.ownerType, input.ownerId),
+    ]);
     if (existing) {
       throw new ConflictException({
         code: 'BREAK_GLASS_PENDING',
         message: 'Bạn đã có một yêu cầu đang chờ duyệt cho đối tượng này.',
+      });
+    }
+    if (claimable) {
+      throw new ConflictException({
+        code: 'BREAK_GLASS_APPROVED',
+        message: 'Yêu cầu của bạn đã được duyệt — bấm Xem ở ngăn két và nhập mã 6 số để mở.',
       });
     }
 
@@ -472,6 +647,7 @@ export class BreakGlassService implements OnModuleInit {
           subjectId: input.ownerId,
           reason: input.reason,
           payload: { hours },
+          requesterSessionId: viewer.sessionId,
         });
         // Outbox chỉ mang id tham chiếu, KHÔNG PII (AD-11/NFR-04).
         await this.outbox.enqueueWithin(tx, 'approval.requested', { approvalId: created.id });
@@ -510,6 +686,15 @@ export class BreakGlassService implements OnModuleInit {
     options: { hours?: number; note?: string | null } = {},
   ): Promise<ApprovalRecord> {
     const request = await this.requireBreakGlass(id);
+    await this.assertNotWithdrawn(request);
+    /*
+     * Hết hạn chờ đọc theo ĐỒNG HỒ (AD-6), không chờ lượt quét: lượt quét lỡ nhịp thì một phiếu
+     * đã quá hạn vẫn không được cấp quyền cho người xin có khi đã thôi cần từ lâu.
+     */
+    const expireHours = await this.pendingExpireHours();
+    if (request.state === 'pending' && overdueSince(request.createdAt, expireHours)) {
+      throw pendingExpired(expireHours);
+    }
     /*
      * BỐN MẮT (FR-023) — người xin không tự duyệt cho chính mình.
      *
@@ -540,7 +725,7 @@ export class BreakGlassService implements OnModuleInit {
     const typed = options.hours ?? asked;
     const hours = await this.clampHours(asked > 0 ? Math.min(typed, asked) : typed);
 
-    return this.decide(id, {
+    return this.decideOrWithdrawn(id, {
       to: 'approved',
       actor: approver,
       note: options.note,
@@ -550,8 +735,52 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   async deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
-    await this.requireBreakGlass(id);
-    return this.decide(id, { to: 'denied', actor: approver, note });
+    await this.assertNotWithdrawn(await this.requireBreakGlass(id));
+    return this.decideOrWithdrawn(id, { to: 'denied', actor: approver, note });
+  }
+
+  /**
+   * Phiếu đã bị rút (người xin tự rút, hoặc tài khoản người xin bị vô hiệu hóa) hay đã hết hạn
+   * chờ → 409 nói đúng thế.
+   *
+   * Không có bước này người duyệt đang mở đúng phiếu nhận câu chung "yêu cầu đã kết thúc" và
+   * không biết là do đâu — có thể bấm lại hoặc đi hỏi.
+   */
+  private async assertNotWithdrawn(request: ApprovalRecord): Promise<void> {
+    if (request.state !== 'cancelled' && request.state !== 'expired') return;
+    const history = await this.approvals.history(request.id);
+    const by = (state: string) =>
+      history
+        .filter((step) => step.toState === state)
+        .map((step) => (step.detail as { by?: string } | null)?.by)[0];
+    if (request.state === 'expired') {
+      // Grant đã duyệt rồi hết giờ thì để `decide` báo như cũ — ở đây chỉ phiếu hết hạn CHỜ.
+      if (by('expired') !== 'pending-timeout') return;
+      throw pendingExpired(await this.pendingExpireHours());
+    }
+    throw new ConflictException({
+      code: 'BREAK_GLASS_WITHDRAWN',
+      message:
+        by('cancelled') === 'account-disabled'
+          ? 'Yêu cầu này đã được rút: tài khoản của người xin đã bị vô hiệu hóa. Không cần duyệt nữa.'
+          : 'Người xin đã rút yêu cầu này. Không cần duyệt nữa.',
+    });
+  }
+
+  /**
+   * `decide`, nhưng thua cuộc đua với lượt rút / lượt quét hết hạn chờ thì vẫn trả 409 nói đúng
+   * lý do, không phải câu chung "vừa được người khác xử lý" (không có người nào khác cả).
+   */
+  private async decideOrWithdrawn(id: string, input: TransitionInput): Promise<ApprovalRecord> {
+    try {
+      return await this.decide(id, input);
+    } catch (error) {
+      const code = (error as { response?: { code?: string } }).response?.code;
+      if (code === 'APPROVAL_ALREADY_DECIDED' || code === 'APPROVAL_TRANSITION_INVALID') {
+        await this.assertNotWithdrawn(await this.requireBreakGlass(id));
+      }
+      throw error;
+    }
   }
 
   /** Thu hồi sớm — người xin không còn trực nữa thì không phải chờ hết giờ. */
@@ -599,6 +828,89 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
+   * Người xin tự trả quyền sớm (VLT-055) — việc đã xong thì két đóng ngay, không chờ hết giờ.
+   *
+   * Chỉ trả được grant CỦA CHÍNH MÌNH: cùng lý do với `cancel()` — biết id mà cắt được quyền
+   * của người khác là phá được người đang xử sự cố. Không đòi đúng phiên: bỏ bớt quyền thì
+   * phiên nào của chính người đó làm cũng an toàn.
+   */
+  async release(requester: string, id: string): Promise<ApprovalRecord> {
+    const request = await this.requireBreakGlass(id);
+    if (request.requester.toLowerCase() !== requester.toLowerCase()) {
+      throw new ForbiddenException({
+        code: 'NOT_YOUR_REQUEST',
+        message: 'Chỉ người xin mới trả được quyền này.',
+      });
+    }
+    return this.approvals.transition(id, {
+      to: 'revoked',
+      actor: requester,
+      note: 'Người xin tự trả quyền.',
+    });
+  }
+
+  /**
+   * Lượt quét grant đã gắn phiên mà phiên đó đã kết thúc → `expired`, có dòng lịch sử + audit
+   * (Q-15). Chỉ là VỆ SINH cho nhật ký: quyền đã hết từ lúc phiên chết vì `grantOf` so phiên ở
+   * mỗi lần mở.
+   *
+   * KHÔNG đụng phiếu đang chờ, cũng không đụng grant chưa xem lần nào: cả hai chưa gắn phiên,
+   * người xin đăng nhập lại là dùng tiếp được. Phiên chết thì không sống lại, nên đọc-rồi-đóng
+   * không có tranh chấp.
+   */
+  async closeEndedSessions(): Promise<number> {
+    const held = await this.approvals.claimedGrants(BREAK_GLASS_KIND);
+    const alive = await this.auth.aliveSessionIds(held.map((r) => r.claimedSessionId));
+    let closed = 0;
+    for (const row of held) {
+      if (alive.has(row.claimedSessionId)) continue;
+      try {
+        await this.approvals.transition(row.id, {
+          to: 'expired',
+          actor: 'system',
+          note: SESSION_ENDED_NOTE,
+          detail: { by: 'session-ended' },
+        });
+        closed += 1;
+      } catch (error) {
+        // Một phiếu vừa được người khác xử lý không được làm câm cả vòng quét.
+        this.logger.warn(`đóng phiếu ${row.id} lỗi: ${redactMessage(error)}`);
+      }
+    }
+    return closed;
+  }
+
+  /**
+   * Yêu cầu chờ quá `breakglass.pending_expire_hours` mà không ai quyết → `expired` (Q-15), có
+   * lịch sử + audit + thư báo người xin TRONG CÙNG transaction (AD-5): người xin đã đóng trang
+   * chờ thư, hết hạn mà im lặng thì họ chờ mãi.
+   */
+  async expireStalePending(): Promise<number> {
+    const hours = await this.pendingExpireHours();
+    const rows = await this.approvals.list({
+      kind: BREAK_GLASS_KIND,
+      state: 'pending',
+      until: new Date(Date.now() - hours * 3_600_000),
+    });
+    let expired = 0;
+    for (const row of rows) {
+      try {
+        await this.decide(row.id, {
+          to: 'expired',
+          actor: 'system',
+          note: pendingTimeoutNote(hours),
+          detail: { by: 'pending-timeout' },
+        });
+        expired += 1;
+      } catch (error) {
+        // Người duyệt vừa quyết đúng phiếu này — bỏ qua, đừng làm câm cả vòng quét.
+        this.logger.warn(`hết hạn phiếu chờ ${row.id} lỗi: ${redactMessage(error)}`);
+      }
+    }
+    return expired;
+  }
+
+  /**
    * Đúng LOẠI break-glass, không phải một yêu cầu của module khác.
    *
    * Bảng `approval` dùng chung cho mọi luồng duyệt (AD-6). Không kiểm `kind` thì khi Epic 8/9
@@ -611,14 +923,40 @@ export class BreakGlassService implements OnModuleInit {
     if (request.kind !== BREAK_GLASS_KIND) {
       throw new NotFoundException({
         code: 'APPROVAL_NOT_FOUND',
-        message: 'Không tìm thấy yêu cầu break-glass này.',
+        message: 'Không tìm thấy yêu cầu mở két này.',
       });
     }
     return request;
   }
 
-  async pendingForApprovers(): Promise<BreakGlassView[]> {
-    return this.views(await this.approvals.pending(BREAK_GLASS_KIND), true);
+  /**
+   * Hàng chờ của người duyệt. `overdue`: phiếu đã chờ quá `approval.reminder_hours` (đúng mốc
+   * thư nhắc đi) — màn tô viền cảnh báo để người trực thấy phiếu nào đang để người xin đợi lâu
+   * (VLT-017). Server so bằng đồng hồ của nó; ngưỡng 0 = tắt nhắc = không tô.
+   */
+  async pendingForApprovers(): Promise<(BreakGlassView & { overdue: boolean })[]> {
+    const [rows, hours] = await Promise.all([
+      this.approvals.pending(BREAK_GLASS_KIND),
+      this.config.getNumber('approvalReminderHours'),
+    ]);
+    const cutoff = hours > 0 ? Date.now() - hours * 3_600_000 : null;
+    return (await this.views(rows, true)).map((view) => ({
+      ...view,
+      overdue: cutoff !== null && view.createdAt.getTime() < cutoff,
+    }));
+  }
+
+  /**
+   * Quyền ĐANG có hiệu lực (đã duyệt, còn giờ theo đồng hồ server) — nhóm ghim ở đầu tab Nhật
+   * ký (VLT-020). Nhật ký chia trang theo lúc gửi, nên một quyền 24 giờ gửi từ sáng có thể đã
+   * trôi sang trang 2 đúng lúc người trực cần tìm nó để thu hồi.
+   */
+  async activeGrants(): Promise<BreakGlassView[]> {
+    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, state: 'approved' });
+    return this.views(
+      rows.filter((row) => row.active),
+      true,
+    );
   }
 
   async mine(memberEmail: string, paging: PageQuery): Promise<Page<BreakGlassView>> {
@@ -630,19 +968,35 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /** FR-025: nhật ký break-glass, từng trang cho màn hình. */
-  async log(paging: PageQuery): Promise<Page<BreakGlassView>> {
+  async log(paging: PageQuery, filters: BreakGlassLogFilters = {}): Promise<Page<BreakGlassView>> {
     const page = await this.approvals.page(
-      { kind: BREAK_GLASS_KIND },
+      { kind: BREAK_GLASS_KIND, ...(await this.logFilters(filters)) },
       { limit: paging.limit, offset: pageOffset(paging) },
     );
     return { ...page, items: await this.views(page.items, true) };
   }
 
-  /** Trọn nhật ký — chỉ cho file xuất nộp auditor, nơi thiếu dòng là sai. */
-  logAll(): Promise<ApprovalRecord[]> {
-    return this.approvals.list({ kind: BREAK_GLASS_KIND });
+  /** Trọn nhật ký theo bộ lọc — cho file xuất nộp auditor, nơi thiếu dòng là sai. */
+  async logAll(filters: BreakGlassLogFilters = {}): Promise<ApprovalRecord[]> {
+    return this.approvals.list({ kind: BREAK_GLASS_KIND, ...(await this.logFilters(filters)) });
   }
 
+  /**
+   * Khoảng ngày cắt theo `app.timezone` (AD-11) — cùng múi với giờ in trên màn; `to` bao gồm
+   * cả ngày đó nên mốc trên là 00:00 của ngày HÔM SAU.
+   */
+  private async logFilters(filters: BreakGlassLogFilters) {
+    const timeZone =
+      filters.from || filters.to ? await this.config.getString('appTimezone') : 'UTC';
+    return {
+      effectiveState: filters.state || undefined,
+      requesterContains: filters.requester?.trim() || undefined,
+      since: filters.from ? startOfDayInTz(filters.from, timeZone) : undefined,
+      until: filters.to ? startOfDayInTz(addDays(filters.to, 1), timeZone) : undefined,
+    };
+  }
+
+  /** Phiếu treo của người này — không gắn phiên nào (Q-15). */
   private async pendingOf(
     memberEmail: string,
     ownerType: SecretOwnerType,
@@ -656,6 +1010,11 @@ export class BreakGlassService implements OnModuleInit {
       subjectId: ownerId,
     });
     return rows[0] ?? null;
+  }
+
+  /** Sàn 1 giờ: 0 sẽ làm mọi yêu cầu hết hạn ngay lúc gửi. */
+  private async pendingExpireHours(): Promise<number> {
+    return Math.max(1, await this.config.getNumber('breakGlassPendingExpireHours'));
   }
 
   /**
@@ -683,4 +1042,13 @@ export class BreakGlassService implements OnModuleInit {
      */
     return Math.max(1, configured);
   }
+}
+
+function pendingExpired(hours: number): ConflictException {
+  return new ConflictException({
+    code: 'BREAK_GLASS_PENDING_EXPIRED',
+    message:
+      `Yêu cầu này đã quá ${hours} giờ không ai duyệt nên tự hết hạn. ` +
+      'Người xin gửi yêu cầu mới nếu vẫn còn cần.',
+  });
 }

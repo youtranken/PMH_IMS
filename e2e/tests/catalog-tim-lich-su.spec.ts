@@ -35,12 +35,12 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     // Câu "chưa khai mục nào" là câu cho tab RỖNG — ở đây danh mục đâu có rỗng.
     await expect(page.getByText(/Chưa khai mục nào/)).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Xoá từ khoá' }).click();
+    await page.getByRole('button', { name: 'Xóa từ khóa' }).click();
     await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('');
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   });
 
-  test('menu dòng có "Lịch sử": ghi đủ tạo → sửa → vô hiệu, kèm người làm', async ({ page }) => {
+  test('menu dòng có "Lịch sử": ghi đủ tạo → sửa → ngừng dùng, kèm người làm', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const code = `E2E-LS-${uniqueStamp()}`;
     const id = await catalogItem(page, 'site', { code, name: 'Site E2E lịch sử' });
@@ -61,7 +61,7 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     const dialog = page.getByRole('dialog', { name: new RegExp(`Lịch sử của .*${code}`) });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('Tạo mục')).toBeVisible();
-    await expect(dialog.getByText('Vô hiệu hóa')).toBeVisible();
+    await expect(dialog.getByText('Ngừng dùng')).toBeVisible();
     await expect(dialog.getByText('địa chỉ: (trống) → Tầng 3', { exact: true })).toBeVisible();
     await expect(dialog.getByText(new RegExp(E2E_SA.email)).first()).toBeVisible();
   });

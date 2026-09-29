@@ -66,6 +66,7 @@ export const ACTION_LABEL: Record<string, string> = {
   'ip.updated': 'history.ip.actUpdated',
   'ip.assigned': 'history.ip.actAssigned',
   'ip.voided': 'history.ip.actVoided',
+  'ip.subnet_voided': 'history.ip.actSubnetVoided',
   'ip.restored': 'history.ip.actRestored',
   'ip.status_merged': 'history.ip.actStatusMerged',
 };
@@ -75,10 +76,21 @@ export function actionLabel(action: string, t: TFunction): string {
   return key ? t(key) : action;
 }
 
+/**
+ * Dòng tắt-theo-dải ghi trước khi có mã `ip.subnet_voided` mang mã `ip.voided`. Không sửa được
+ * dữ liệu cũ (AD-13), nên nhận ra nó ở đây — đọc nó thành "Xóa hồ sơ nhập nhầm" là nói sai về
+ * một hồ sơ sống lại khi dải được dùng lại. Dấu hiệu là HÌNH DẠNG dòng, không phải câu chữ: lượt
+ * tắt theo dải ghi cả `fromStatus` lẫn `toStatus`, lượt xóa lẻ chỉ ghi `fromStatus`.
+ */
+function effectiveAction(row: IpHistoryRow): string {
+  if (row.action === 'ip.voided' && row.toStatus) return 'ip.subnet_voided';
+  return row.action;
+}
+
 export function toIpHistoryEntries(rows: IpHistoryRow[], t: TFunction): HistoryEntry[] {
   return rows.map((row) => ({
     id: row.id,
-    action: actionLabel(row.action, t),
+    action: actionLabel(effectiveAction(row), t),
     detail: describe(row, t),
     actor: row.actor,
     actorName: row.actorName ?? undefined,

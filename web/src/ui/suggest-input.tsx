@@ -53,6 +53,7 @@ export function SuggestInput({
       onQuery={onChange}
       options={filtered}
       failed={failed}
+      caret="suggest"
       getKey={(option) => option}
       renderOption={(option) => <span>{option}</span>}
       onSelect={onChange}

@@ -57,7 +57,7 @@ export async function seedSuperAdmins(
     );
     if (existing.rows[0].n > 0) {
       throw new SeedRefusedError(
-        'Hệ thống đã có SA. Tạo thêm tài khoản bằng màn Tài khoản, không dùng script này.',
+        'Hệ thống đã có SA. Tạo thêm tài khoản bằng màn Người dùng IMS, không dùng script này.',
       );
     }
     for (const a of prepared) {

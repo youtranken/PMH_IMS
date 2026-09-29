@@ -68,6 +68,29 @@ export class ApprovalsApiService {
     return this.approvals.activeGrantFor(params);
   }
 
+  /** Gắn grant vào phiên dùng nó lần đầu (Q-15); `null` = không gắn được (đã gắn / hết giờ). */
+  claimWithin(
+    tx: Tx,
+    id: string,
+    input: Parameters<ApprovalsService['claimWithin']>[2],
+  ): Promise<ApprovalRecord | null> {
+    return this.approvals.claimWithin(tx, id, input);
+  }
+
+  /** Grant đã gắn phiên — lượt quét đóng quyền của phiên đã kết thúc (Q-15). */
+  claimedGrants(kind: string): ReturnType<ApprovalsService['claimedGrants']> {
+    return this.approvals.claimedGrants(kind);
+  }
+
+  /** Tài khoản bị vô hiệu hóa: rút phiếu đang chờ của người đó trong `tx` của nơi gọi (Q-15). */
+  withdrawPendingOfWithin(
+    tx: Tx,
+    requester: string,
+    input: Parameters<ApprovalsService['withdrawPendingOfWithin']>[2],
+  ): Promise<number> {
+    return this.approvals.withdrawPendingOfWithin(tx, requester, input);
+  }
+
   pending(kind?: string): Promise<ApprovalRecord[]> {
     return this.approvals.pending(kind);
   }

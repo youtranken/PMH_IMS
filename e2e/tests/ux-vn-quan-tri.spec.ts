@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   catalogItem,
+  catalogTab,
   confirmAction,
   E2E_MEMBER,
   E2E_SA,
@@ -53,11 +54,11 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
     await catalogItem(page, 'site', { code, name: 'Site E2E url' });
 
     await page.goto('/admin/catalog?tab=cabinet');
-    await expect(page.getByRole('tab', { name: 'Tủ mạng', exact: true })).toHaveAttribute(
+    await expect(page.getByRole('tab', { name: catalogTab('Tủ mạng') })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    await page.getByRole('tab', { name: 'Site', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('button', { name: 'Lọc theo trạng thái' }).click();
     await page.getByRole('option', { name: 'Đang dùng' }).click();
     await expect(page).toHaveURL(/status=active/);
@@ -90,7 +91,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
     await confirmAction(page, 'Bỏ và đóng');
   });
 
-  test('file mẫu nằm trong hộp nhập; menu dòng tách Vô hiệu hóa (cảnh báo) khỏi Xóa', async ({
+  test('file mẫu nằm trong hộp nhập; menu dòng tách Ngừng dùng (cảnh báo) khỏi Xóa', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);

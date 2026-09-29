@@ -2,10 +2,12 @@ import { addDays } from '../../common/today';
 import {
   autoRetireOn,
   effectiveSoftwareStatus,
+  normalizeWebsites,
   requiresEndDate,
   seatConflicts,
   STATUS_LABEL,
   supportsSeats,
+  supportsWebsites,
   validateAssignmentTerms,
   validateSoftware,
   type AssignmentTerms,
@@ -305,6 +307,37 @@ describe('autoRetireOn — ngày hệ thống sẽ tự thanh lý', () => {
     const sweepRetires = (today: string) => end < addDays(today, -30);
     expect(sweepRetires(addDays(on, -1))).toBe(false);
     expect(sweepRetires(on)).toBe(true);
+  });
+});
+
+describe('normalizeWebsites — website dùng chứng chỉ SSL / tên miền (Q-15, SW-043)', () => {
+  it.each([
+    ['bỏ dòng trống, cắt khoảng trắng', [' shop.pmh.vn ', '', '   '], ['shop.pmh.vn']],
+    ['bỏ giao thức và dấu / cuối — người ta dán URL', ['https://Shop.PMH.vn/', 'http://mail.pmh.vn//'], ['shop.pmh.vn', 'mail.pmh.vn']],
+    ['trùng (không phân biệt hoa thường) chỉ giữ một, theo thứ tự nhập', ['b.pmh.vn', 'a.pmh.vn', 'B.PMH.VN'], ['b.pmh.vn', 'a.pmh.vn']],
+    ['giữ đường dẫn sau tên máy', ['pmh.vn/shop'], ['pmh.vn/shop']],
+    ['wildcard hợp lệ', ['*.pmh.vn'], ['*.pmh.vn']],
+  ])('%s', (_label, input, expected) => {
+    expect(normalizeWebsites(input)).toEqual({ value: expected, errors: [] });
+  });
+
+  it('khoảng trắng giữa chừng = hai website dán chung một dòng → lỗi nêu đúng dòng', () => {
+    const { errors } = normalizeWebsites(['shop.pmh.vn mail.pmh.vn']);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('shop.pmh.vn mail.pmh.vn');
+  });
+
+  it('quá dài / quá nhiều dòng → lỗi, không lặng lẽ cắt', () => {
+    expect(normalizeWebsites([`${'a'.repeat(254)}.vn`]).errors).toHaveLength(1);
+    const many = Array.from({ length: 201 }, (_v, i) => `w${i}.pmh.vn`);
+    expect(normalizeWebsites(many).errors).toHaveLength(1);
+  });
+
+  it('chỉ SSL và tên miền có danh sách website', () => {
+    expect(supportsWebsites('ssl')).toBe(true);
+    expect(supportsWebsites('domain')).toBe(true);
+    expect(supportsWebsites('license')).toBe(false);
+    expect(supportsWebsites('maintenance')).toBe(false);
   });
 });
 

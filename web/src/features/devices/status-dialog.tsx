@@ -12,7 +12,7 @@ const TARGETS: DeviceStatus[] = ['in_use', 'spare', 'broken'];
  * Đổi trạng thái nhanh (Đang dùng · Dự phòng · Hỏng) — và mở lại hồ sơ đã thanh lý.
  *
  * Việc hay gặp nhất (máy hỏng, đem máy về kho) không được bắt mở form Sửa 15 ô. Mở lại hồ sơ
- * thì mặc định về "Dự phòng": máy vừa gỡ khỏi thanh lý thường về kho chứ chưa giao cho ai.
+ * thì mặc định về "Đang dùng" (Q-15) — vẫn chọn được Dự phòng/Hỏng trước khi xác nhận.
  */
 export function StatusDialog({
   code,
@@ -34,7 +34,7 @@ export function StatusDialog({
 }) {
   const { t } = useTranslation();
   const [target, setTarget] = useState<DeviceStatus>(
-    reopen ? 'spare' : current === 'in_use' ? 'spare' : 'in_use',
+    reopen ? 'in_use' : current === 'in_use' ? 'spare' : 'in_use',
   );
   const action = reopen ? t('devices.reopen') : t('devices.changeStatus');
   return (

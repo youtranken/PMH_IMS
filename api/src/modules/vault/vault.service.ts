@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { and, asc, count, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, max, min } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
@@ -132,6 +132,24 @@ export class VaultService {
     }));
   }
 
+  /**
+   * Mốc đổi giá trị CŨ NHẤT của từng hồ sơ thuộc một loại — cột "Đổi lần cuối" của danh sách
+   * tài khoản dịch vụ (Q-15). Ngăn cũ nhất là ngăn kéo hồ sơ về hạn đổi. Chỉ id hồ sơ + mốc:
+   * không nhãn, không loại ngăn (FR-026).
+   */
+  async oldestValueChangeByOwner(
+    ownerType: SecretOwnerType,
+  ): Promise<{ ownerId: string; valueChangedAt: Date }[]> {
+    const rows = await this.db
+      .select({ ownerId: secretTable.ownerId, valueChangedAt: min(secretTable.valueChangedAt) })
+      .from(secretTable)
+      .where(and(eq(secretTable.ownerType, ownerType), isNull(secretTable.revokedAt)))
+      .groupBy(secretTable.ownerId);
+    return rows
+      .filter((row) => row.valueChangedAt !== null)
+      .map((row) => ({ ownerId: row.ownerId, valueChangedAt: row.valueChangedAt as Date }));
+  }
+
   async findMeta(id: string): Promise<SecretMeta> {
     return toMeta(await this.requireAlive(id));
   }
@@ -155,7 +173,7 @@ export class VaultService {
     if (!label) {
       throw new BadRequestException({
         code: 'FIELD_REQUIRED',
-        message: 'Đặt nhãn cho secret này (vd "admin web", "SSH root").',
+        message: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
       });
     }
 
@@ -384,7 +402,7 @@ export class VaultService {
   private translate(error: unknown, label: string): unknown {
     return conflictOnUnique(error, {
       code: 'SECRET_LABEL_TAKEN',
-      message: `Chủ thể này đã có secret nhãn "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
+      message: `Két này đã có ngăn tên "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
     });
   }
 }
@@ -406,7 +424,7 @@ function requireAliveRow<T>(rows: readonly T[]): T {
   if (rows.length === 0) {
     throw new NotFoundException({
       code: 'SECRET_NOT_FOUND',
-      message: 'Không tìm thấy secret này (có thể đã thu hồi).',
+      message: 'Không tìm thấy ngăn két này (có thể đã xóa vĩnh viễn).',
     });
   }
   return rows[0];

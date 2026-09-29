@@ -63,6 +63,21 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
     expect(entry.detail).toBe('mã đường: ISP-E2E-01; hotline: 1800 1166');
   });
 
+  it('đổi site / thiết bị hiện MÃ (API đã tra), không phải "đã đổi"', () => {
+    const [entry] = toIspHistory(
+      [
+        row({
+          changes: {
+            site: { before: 'HCM', after: 'HN' },
+            device: { before: null, after: 'RT-E2E-01' },
+          },
+        }),
+      ],
+      t,
+    );
+    expect(entry.detail).toBe('site: HCM → HN; thiết bị biên: (trống) → RT-E2E-01');
+  });
+
   it('người làm hiện bằng họ tên khi API tra được', () => {
     const [entry] = toIspHistory([row({ actorName: 'Lê Minh' })], t);
     expect(entry.actorName).toBe('Lê Minh');

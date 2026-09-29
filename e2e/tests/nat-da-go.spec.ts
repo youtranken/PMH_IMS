@@ -102,14 +102,14 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     const row = page.getByRole('row', { name: new RegExp(f.ports) });
     await expect(row, 'mặc định sổ chỉ bày rule còn trong sổ').toHaveCount(0);
 
-    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái rule' });
+    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
     await chips.getByRole('button', { name: /^Đã gỡ/ }).click();
     await expect(row).toBeVisible();
     await expect(row.getByText(/Đã gỡ \d{2}\/\d{2}\/\d{4} · bởi .* · dịch vụ đã ngừng E2E/)).toBeVisible();
     expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử']);
 
     await rowAction(page, f.ports, 'Lịch sử');
-    const history = page.getByRole('dialog', { name: new RegExp(`Lịch sử rule ${f.ports}`) });
+    const history = page.getByRole('dialog', { name: new RegExp(`Lịch sử luật NAT ${f.ports}`) });
     await expect(history.getByText(/dịch vụ đã ngừng E2E/)).toBeVisible();
   });
 
@@ -119,9 +119,9 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     await page.goto('/nat');
-    expect(await rowActionNames(page, f.ports)).toEqual(['Sửa', 'Lịch sử', 'Tắt rule', 'Gỡ']);
+    expect(await rowActionNames(page, f.ports)).toEqual(['Sửa', 'Lịch sử', 'Ngừng dùng', 'Gỡ']);
 
-    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái rule' });
+    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
     await chips.getByRole('button', { name: /^Đang mở/ }).click();
     await expect(page.getByRole('row', { name: new RegExp(f.ports) })).toHaveCount(0);
   });
@@ -134,19 +134,19 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
 
     // Đường hỏng: hỏi lại rồi bấm Hủy thì KHÔNG đổi gì.
-    await rowAction(page, f.ports, 'Tắt rule');
+    await rowAction(page, f.ports, 'Ngừng dùng');
     // Nút ✕ của hộp hỏi lại cũng mang tên "Hủy" — bấm nút ở chân hộp.
     await page.getByRole('dialog').getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
     await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
 
-    await rowAction(page, f.ports, 'Tắt rule');
-    await page.getByRole('dialog').getByRole('button', { name: 'Tắt rule' }).click();
-    await expect(page.getByText('Đã đổi trạng thái rule.')).toBeVisible();
+    await rowAction(page, f.ports, 'Ngừng dùng');
+    await page.getByRole('dialog').getByRole('button', { name: 'Ngừng dùng' }).click();
+    await expect(page.getByText('Đã đổi trạng thái luật.')).toBeVisible();
     // "Đã tắt" là huy hiệu ở cột Trạng thái riêng, dòng KHÔNG bị làm mờ cả.
-    await expect(row.getByText('Đã tắt', { exact: true })).toBeVisible();
+    await expect(row.getByText('Đã ngừng dùng', { exact: true })).toBeVisible();
 
-    await rowAction(page, f.ports, 'Bật rule');
-    await page.getByRole('dialog').getByRole('button', { name: 'Bật rule' }).click();
+    await rowAction(page, f.ports, 'Dùng lại');
+    await page.getByRole('dialog').getByRole('button', { name: 'Dùng lại' }).click();
     await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
   });
 
@@ -156,8 +156,8 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await firstLogin(page, E2E_SA);
     await setUp(page);
     await page.goto('/nat?q=khong-co-rule-nao-E2E');
-    await expect(page.getByText('Không có rule nào khớp bộ lọc.')).toBeVisible();
-    await expect(page.getByText('Chưa có rule NAT nào')).toHaveCount(0);
+    await expect(page.getByText('Không có luật nào khớp bộ lọc.')).toBeVisible();
+    await expect(page.getByText('Chưa có luật NAT nào')).toHaveCount(0);
     await expect(page.getByRole('searchbox')).toHaveValue('khong-co-rule-nao-E2E');
   });
 });
@@ -171,7 +171,7 @@ test.describe('390px', () => {
     await voidRule(page, f);
     await page.goto('/nat');
     await page
-      .getByRole('group', { name: 'Lọc theo trạng thái rule' })
+      .getByRole('group', { name: 'Lọc theo trạng thái luật' })
       .getByRole('button', { name: /^Đã gỡ/ })
       .click();
     await expect(page.getByText(/dịch vụ đã ngừng E2E/).first()).toBeVisible();

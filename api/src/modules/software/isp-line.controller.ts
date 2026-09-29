@@ -28,6 +28,9 @@ import {
 import { NoStepUp } from '../auth/step-up.decorator';
 import { UsersApiService } from '../users/users.api';
 import { withActorNames } from '../../common/history';
+import { CatalogApiService } from '../catalog/catalog.api';
+import { DevicesApiService } from '../devices/devices.api';
+import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -76,6 +79,8 @@ export class IspLineController {
     private readonly isp: IspLineService,
     private readonly excel: ExcelExportService,
     private readonly users: UsersApiService,
+    private readonly devices: DevicesApiService,
+    private readonly catalog: CatalogApiService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -165,9 +170,29 @@ export class IspLineController {
   @Roles('sa', 'admin', 'member')
   @Get(':id/history')
   async history(@Param() params: IdParamDto) {
-    return withActorNames(await this.isp.history(params.id), (emails) =>
-      this.users.namesByEmails(emails),
+    const rows = await this.isp.history(params.id);
+    // Đổi site / thiết bị: sổ lưu id (mã có thể đổi), lúc đọc mới tra ra MÃ để dòng lịch sử
+    // nói "HCM → HN" thay vì "đã đổi" (NET-067). Site gồm cả mục đã ngừng dùng.
+    const deviceIds = deviceIdsInHistory(rows);
+    const deviceCodes = new Map<string, string>();
+    if (deviceIds.length > 0) {
+      for (const [id, device] of await this.devices.getByIds(deviceIds)) {
+        deviceCodes.set(id, device.code);
+      }
+    }
+    const siteCodes = new Map<string, string>();
+    if (deviceIdsInHistory(rows, 'siteId').length > 0) {
+      for (const site of (await this.catalog.lists({ includeInactive: true })).sites) {
+        siteCodes.set(site.id, site.code);
+      }
+    }
+    const labelled = withDeviceCodes(
+      withDeviceCodes(rows, deviceCodes),
+      siteCodes,
+      'siteId',
+      'site',
     );
+    return withActorNames(labelled, (emails) => this.users.namesByEmails(emails));
   }
 
   @Roles('sa', 'admin', 'member')

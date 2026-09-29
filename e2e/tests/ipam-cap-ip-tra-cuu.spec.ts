@@ -143,7 +143,7 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
     await page.goto(`/ip-addresses/${f.subnetId}`);
     const row = ipRow(page, address);
     await expect(row.getByText('Trống', { exact: true })).toBeVisible();
-    expect(await rowActionNames(page, address)).toEqual(['Lịch sử', 'Ẩn hồ sơ']);
+    expect(await rowActionNames(page, address)).toEqual(['Lịch sử', 'Xóa']);
 
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: `Cấp IP — ${address}` });

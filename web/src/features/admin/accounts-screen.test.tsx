@@ -148,4 +148,38 @@ describe('Màn Tài khoản', () => {
     expect(screen.getByRole('textbox', { name: /Lý do/ })).toHaveValue('Nghỉ việc');
     await waitFor(() => expect(dialog).toBeInTheDocument());
   });
+
+  it('Đóng tất cả phiên của chính mình: hỏi có đóng cả phiên đang dùng không, mặc định giữ', async () => {
+    const calls: { url: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+        if (url.endsWith('/sessions')) {
+          return Promise.resolve(
+            jsonResponse(200, [
+              { id: 's1', ip: '10.0.0.1', userAgent: 'x', createdAt: IN_AN_HOUR, lastSeenAt: IN_AN_HOUR, current: true },
+              { id: 's2', ip: '10.0.0.2', userAgent: 'x', createdAt: IN_AN_HOUR, lastSeenAt: IN_AN_HOUR, current: false },
+            ]),
+          );
+        }
+        if (url.endsWith('/kill-all')) return Promise.resolve(jsonResponse(200, { killed: 1 }));
+        return Promise.resolve(jsonResponse(200, { items: ROWS, total: 2 }));
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Super Admin');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Super Admin' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Phiên đang mở' }));
+    await user.click(await screen.findByRole('button', { name: 'Đóng tất cả phiên' }));
+    const box = await screen.findByRole('checkbox', { name: /Đóng cả phiên bạn đang dùng/ });
+    expect(box).not.toBeChecked();
+    const buttons = screen.getAllByRole('button', { name: 'Đóng tất cả phiên' });
+    await user.click(buttons[buttons.length - 1]);
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith('/u-sa/sessions/kill-all'))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith('/kill-all'))!.body).toEqual({ includeCurrent: false });
+    expect(await screen.findByText('Đã đóng 1 phiên.')).toBeInTheDocument();
+  });
 });

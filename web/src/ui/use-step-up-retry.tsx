@@ -29,13 +29,18 @@ import { StepUpDialog } from '@/ui/step-up-dialog';
  *   {stepUp.dialog}
  */
 export function useStepUpRetry(csrfToken: string): {
-  /** Chạy việc, tự hỏi mã và chạy lại MỘT lần nếu server đòi step-up. */
-  run: <T>(action: () => Promise<T>) => Promise<T>;
+  /**
+   * Chạy việc, tự hỏi mã và chạy lại MỘT lần nếu server đòi step-up. `purpose` là câu trên hộp
+   * hỏi mã ("Nhập mã 6 số để duyệt mở két cho …") — không có thì hộp nói câu chung về "xem",
+   * sai với việc đang làm là duyệt / thu hồi / cất (VLT-047).
+   */
+  run: <T>(action: () => Promise<T>, purpose?: string) => Promise<T>;
   /** Đặt vào cây JSX của màn — hộp hỏi mã chỉ hiện khi cần. */
   dialog: ReactNode;
 } {
   type Pending = {
     action: () => Promise<unknown>;
+    purpose?: string;
     resolve: (value: unknown) => void;
     reject: (reason: unknown) => void;
   };
@@ -63,7 +68,7 @@ export function useStepUpRetry(csrfToken: string): {
   useEffect(() => () => settle(null), [settle]);
 
   const run = useCallback(
-    async <T,>(action: () => Promise<T>): Promise<T> => {
+    async <T,>(action: () => Promise<T>, purpose?: string): Promise<T> => {
       try {
         return await action();
       } catch (error) {
@@ -76,6 +81,7 @@ export function useStepUpRetry(csrfToken: string): {
         return new Promise<T>((resolve, reject) => {
           settle({
             action: action as () => Promise<unknown>,
+            purpose,
             resolve: resolve as (value: unknown) => void,
             reject,
           });
@@ -88,6 +94,7 @@ export function useStepUpRetry(csrfToken: string): {
   const dialog = pending ? (
     <StepUpDialog
       csrfToken={csrfToken}
+      purpose={pending.purpose}
       onClose={() => {
         // Đóng hộp = HỦY việc. `settle(null)` lo phần `reject` — xem chú thích ở trên.
         settle(null);

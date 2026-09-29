@@ -30,6 +30,10 @@ export interface SoftwareRow {
   updatedAt: string;
   /** Ngày hệ thống sẽ tự Thanh lý hồ sơ Hết hạn (Q-13); server tính từ số ngày ân hạn. */
   autoRetireOn: string | null;
+  /** Website dùng chứng chỉ SSL / tên miền này (Q-15). Tùy chọn: bản ghi dựng tay ở test không cần. */
+  websites?: string[];
+  /** Mã máy đang giữ ghế khớp ô tìm — chỉ danh sách có ô tìm trả về (SW-010). */
+  matchedDevices?: string[];
 }
 
 /** Trang chi tiết: thêm hồ sơ Thanh lý lúc nào, do ai (`by = 'system'` khi tự động). */
@@ -80,6 +84,8 @@ export interface SoftwareHistoryRow {
   id: string;
   action: string;
   actor: string;
+  /** Họ tên người làm — API tra (`withActorNames`); vắng thì panel hiện email. */
+  actorName?: string | null;
   changes: Record<string, { before: unknown; after: unknown }> | null;
   createdAt: string;
 }
@@ -110,8 +116,31 @@ export const STATUS_TONE: Record<SoftwareStatus, string> = {
 };
 
 /** Chỉ license mới nói tới seat — khớp `supportsSeats` phía API. */
+/**
+ * Chữ của chip "khớp máy …" (SW-010): tối đa ba mã rồi "+N" — tìm theo chữ chung ("LT-") có
+ * thể khớp hàng chục máy, và chip dài hơn cả dòng thì che mất chính hồ sơ.
+ */
+export function matchedDevicesText(codes: string[] | undefined): string | null {
+  if (!codes || codes.length === 0) return null;
+  const shown = codes.slice(0, 3).join(', ');
+  return codes.length > 3 ? `${shown} +${codes.length - 3}` : shown;
+}
+
 export function supportsSeats(kind: SoftwareKind): boolean {
   return kind === 'license';
+}
+
+/** Chỉ SSL và tên miền có danh sách website — khớp `supportsWebsites` phía API. */
+export function supportsWebsites(kind: SoftwareKind): boolean {
+  return kind === 'ssl' || kind === 'domain';
+}
+
+/** Ô "mỗi dòng một website" → mảng; API tự chuẩn hóa phần còn lại. */
+export function websiteLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 /**

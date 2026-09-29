@@ -95,7 +95,7 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('option', { name: 'PC', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     await typeFilter.click();
-    await page.getByRole('option', { name: 'Tất cả loại' }).click();
+    await page.getByRole('option', { name: 'Mọi loại' }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 
     // Mở chi tiết, sửa hạn bảo hành, lịch sử phải ghi lại đúng cái vừa đổi.
@@ -169,12 +169,12 @@ test.describe('Kho thiết bị', () => {
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.
     await expect(page.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
 
-    // Mở lại hỏi trạng thái đích, mặc định "Dự phòng" (máy vừa mở lại thường về kho).
+    // Mở lại hỏi trạng thái đích, mặc định "Đang dùng" (Q-15); chọn khác vẫn được.
     await page.getByRole('button', { name: 'Đưa lại vào dùng' }).click();
-    await expect(page.getByRole('button', { name: 'Trạng thái mới' })).toHaveText(/Dự phòng/);
+    await expect(page.getByRole('button', { name: 'Trạng thái mới' })).toHaveText(/Đang dùng/);
     await confirmAction(page, 'Đưa lại vào dùng');
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeEnabled();
-    await expect(page.getByText('Dự phòng').first()).toBeVisible();
+    await expect(page.getByText('Đang dùng').first()).toBeVisible();
   });
 
   test('ngày hết bảo hành trước ngày bắt đầu bị từ chối (hàng rào ở SERVER)', async ({ page }) => {

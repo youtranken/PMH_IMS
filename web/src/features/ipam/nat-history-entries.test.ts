@@ -29,9 +29,9 @@ function row(over: Partial<NatHistoryRow> = {}): NatHistoryRow {
  */
 describe('toNatHistory — dịch lịch sử rule NAT thành câu người đọc được', () => {
   const actions: { action: string; label: string }[] = [
-    { action: 'created', label: 'Mở rule' },
-    { action: 'updated', label: 'Sửa rule' },
-    { action: 'voided', label: 'Gỡ rule' },
+    { action: 'created', label: 'Mở luật NAT' },
+    { action: 'updated', label: 'Sửa luật NAT' },
+    { action: 'voided', label: 'Gỡ luật NAT' },
   ];
 
   for (const { action, label } of actions) {
@@ -52,13 +52,13 @@ describe('toNatHistory — dịch lịch sử rule NAT thành câu người đ�
     {
       name: 'nới dải port',
       changes: { ports: { before: '8080', after: '8080-8090' } },
-      expected: 'port ngoài: 8080 → 8080-8090',
+      expected: 'cổng ngoài: 8080 → 8080-8090',
     },
     {
       // `true/false` không phải tiếng Việt — dòng lịch sử phải đọc được bằng mắt thường.
       name: 'tắt rule dịch sang tiếng Việt',
       changes: { enabled: { before: true, after: false } },
-      expected: 'trạng thái: Đang bật → Đã tắt',
+      expected: 'trạng thái: Đang dùng → Đã ngừng dùng',
     },
     {
       name: 'ô rỗng đọc ra (trống)',
@@ -83,7 +83,7 @@ describe('toNatHistory — dịch lịch sử rule NAT thành câu người đ�
         ports: { before: '8080', after: '8080' },
         reason: { before: null, after: 'dịch vụ đã ngừng' },
       },
-      expected: 'port ngoài 8080; lý do: (trống) → dịch vụ đã ngừng',
+      expected: 'cổng ngoài 8080; lý do: (trống) → dịch vụ đã ngừng',
     },
   ];
 
@@ -92,4 +92,10 @@ describe('toNatHistory — dịch lịch sử rule NAT thành câu người đ�
       expect(toNatHistory([row({ changes })], t)[0].detail).toBe(expected);
     });
   }
+});
+
+describe('toNatHistory — người làm', () => {
+  it('hiện họ tên khi API tra được', () => {
+    expect(toNatHistory([row({ actorName: 'Lê Minh' })], t)[0].actorName).toBe('Lê Minh');
+  });
 });

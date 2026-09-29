@@ -99,7 +99,7 @@ export class MailConsumer {
         );
       } else {
         this.logger.debug(
-          `Topic ${topic}: không còn gì để gửi (hồ sơ tham chiếu đã xoá, phiếu đã quyết, ` +
+          `Topic ${topic}: không còn gì để gửi (hồ sơ tham chiếu đã xóa, phiếu đã quyết, ` +
             'hoặc không còn người nhận) — bỏ qua, đây là chuyện bình thường.',
         );
       }
@@ -153,7 +153,7 @@ export class MailConsumer {
     const ask = `${who} xin mở két${subject ? ` ${subject.code}` : ''}${hours ? ` (${hours} giờ)` : ''}`;
     const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
     const { html, text } = renderMail({
-      title: isReminder ? 'Yêu cầu duyệt còn đang chờ' : 'Có yêu cầu cần duyệt',
+      title: isReminder ? 'Yêu cầu xin mở két còn đang chờ duyệt' : 'Có yêu cầu xin mở két cần duyệt',
       intro: isReminder
         ? `Yêu cầu dưới đây đã chờ ${waited} phút mà chưa ai xử lý.`
         : `${who} vừa gửi một yêu cầu mở két cần người duyệt.`,
@@ -192,7 +192,14 @@ export class MailConsumer {
     state: string | undefined,
     at: (date: Date) => string,
   ) {
-    if (state !== 'approved' && state !== 'denied' && state !== 'revoked') return null;
+    if (
+      state !== 'approved' &&
+      state !== 'denied' &&
+      state !== 'revoked' &&
+      state !== 'expired'
+    ) {
+      return null;
+    }
     const request = await this.findApproval(approvalId);
     if (!request) return null;
 
@@ -217,7 +224,9 @@ export class MailConsumer {
           : null;
       const { html, text } = renderMail({
         title: 'Yêu cầu mở két đã được duyệt',
-        intro: `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. Hết giờ là quyền tự cắt.`,
+        intro:
+          `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. ` +
+          'Đăng nhập IMS, mở lại két của đối tượng này và bấm "Xem", nhập mã 6 số.',
         rows: [
           subjectRow,
           { label: 'Được cấp', value: granted ? `${granted} giờ` : '—' },
@@ -228,11 +237,34 @@ export class MailConsumer {
         ctaLabel: `Mở két${code}`,
         ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
         ctaWide: true,
-        footnote: 'Mỗi lần xem vẫn phải gõ mã 6 số. Xong việc sớm thì báo người duyệt thu hồi.',
+        footnote:
+          'Giờ được cấp tính từ lúc duyệt. Quyền gắn với phiên đăng nhập bạn xem lần đầu: ' +
+          'đăng xuất hay hết phiên là quyền hết, muốn xem tiếp phải xin lại. Xong việc sớm thì ' +
+          'bấm "Trả quyền" trên màn két.',
       });
       return {
         to: [request.requester],
         subject: `[IMS] Đã duyệt: mở két${code}${granted ? ` (${granted} giờ)` : ''}`,
+        html,
+        text,
+      };
+    }
+
+    if (state === 'expired') {
+      // Chỉ lượt quét hết hạn CHỜ đẩy thư này; grant hết giờ thì người xin đã biết hạn từ trước.
+      const { html, text } = renderMail({
+        title: 'Yêu cầu mở két đã hết hạn chờ duyệt',
+        intro:
+          'Yêu cầu của bạn quá thời hạn chờ mà không ai duyệt nên đã tự hết hạn. ' +
+          'Nếu vẫn còn cần, hãy gửi yêu cầu mới.',
+        rows: [subjectRow, { label: 'Gửi lúc', value: at(request.createdAt) }],
+        ctaLabel: `Mở két${code}`,
+        ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
+        ctaWide: true,
+      });
+      return {
+        to: [request.requester],
+        subject: `[IMS] Hết hạn chờ duyệt: mở két${code}`,
         html,
         text,
       };
@@ -363,7 +395,7 @@ export class MailConsumer {
           ctaLabel: 'Xem nhật ký của tài khoản (SA/Quản trị)',
           ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(user.email)}`,
           footnote:
-            'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Tài khoản — khóa tay chặn mọi nơi và chỉ SA mở được.',
+            'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Người dùng IMS — khóa tay chặn mọi nơi và chỉ SA mở được.',
         });
         // Chủ tài khoản cũng nhận: họ là người đầu tiên biết lượt sai đó có phải của mình không.
         const to = [...new Set([user.email, ...sa.map((r) => r.email)])];

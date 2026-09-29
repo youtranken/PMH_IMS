@@ -12,6 +12,7 @@ import { conflictOnUnique, pgConstraint } from "../../common/sql";
 import { generateTemporaryPassword } from "../../common/temporary-password";
 import type { SortQuery } from "../../common/sorting";
 import type { Tx } from "../../common/tx";
+import { ApprovalsApiService } from "../approvals/approvals.api";
 import { AuditWriterService } from "../audit/audit-writer.service";
 import { OutboxService } from "../outbox/outbox.service";
 import {
@@ -45,6 +46,7 @@ export class AccountsService {
     private readonly audit: AuditWriterService,
     private readonly outbox: OutboxService,
     private readonly loginFailures: LoginFailureService,
+    private readonly approvals: ApprovalsApiService,
   ) {}
 
   list(
@@ -281,6 +283,18 @@ export class AccountsService {
               userId,
               `status:${status}`,
             );
+      /*
+       * Vô hiệu hóa = người này thôi làm việc với hệ thống: yêu cầu mở két đang chờ của họ bị
+       * rút cùng transaction (Q-15), để người duyệt không cấp quyền cho một tài khoản đã tắt.
+       * Chỉ KHÓA thì giữ — khóa là tạm, mở lại thì việc đang chờ vẫn còn nguyên.
+       */
+      const withdrawn =
+        status === "disabled"
+          ? await this.approvals.withdrawPendingOfWithin(tx, user.email, {
+              actor: actor.email,
+              note: "Tài khoản của người xin đã bị vô hiệu hóa.",
+            })
+          : 0;
       await this.audit.appendWithin(tx, {
         actor: actor.email,
         action: `account.${status === "active" ? "unlocked" : status}`,
@@ -288,6 +302,7 @@ export class AccountsService {
         objectId: userId,
         detail: {
           revokedSessions: killed,
+          ...(status === "disabled" ? { withdrawnRequests: withdrawn } : {}),
           ...(reason?.trim() ? { reason: reason.trim() } : {}),
         },
       });
@@ -397,6 +412,11 @@ export class AccountsService {
     return this.sessions.listActive(userId);
   }
 
+  /** Nơi (IP) đang tạm chặn / đang đếm sai của người này — SA đọc khi người dùng báo không vào được. */
+  listLockouts(userId: string) {
+    return this.loginFailures.listForUser(userId);
+  }
+
   /** SA đá một phiên cụ thể (NFR-01). */
   async killSession(actor: ActorRef, sessionId: string): Promise<void> {
     const session = await this.sessions.find(sessionId);
@@ -427,6 +447,38 @@ export class AccountsService {
         objectId: sessionId,
         detail: { userId: session.userId },
       });
+    });
+  }
+
+  /**
+   * SA đóng mọi phiên của một người (nghi bị chiếm, người đó báo mất máy).
+   *
+   * Phiên SA đang dùng được giữ lại trừ khi chọn rõ `includeCurrent`: SA đóng phiên của chính
+   * mình để "đuổi" một máy lạ mà lại tự văng ra giữa lúc xử lý sự cố là phản tác dụng.
+   * Một transaction cho thu hồi + nhật ký (AD-5).
+   */
+  async killAllSessions(
+    actor: ActorRef,
+    userId: string,
+    opts: { currentSessionId: string | undefined; includeCurrent: boolean },
+  ): Promise<number> {
+    await this.requireUser(userId);
+    const keep = opts.includeCurrent ? undefined : opts.currentSessionId;
+    return this.db.transaction(async (tx) => {
+      const killed = await this.sessions.revokeAllForUserWithin(
+        tx,
+        userId,
+        `killed-by:${actor.email}`,
+        keep,
+      );
+      await this.audit.appendWithin(tx, {
+        actor: actor.email,
+        action: "session.killed_all",
+        objectType: "user",
+        objectId: userId,
+        detail: { revokedSessions: killed, includeCurrent: opts.includeCurrent },
+      });
+      return killed;
     });
   }
 

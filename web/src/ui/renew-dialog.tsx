@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, todayIso } from '@/lib/format';
+import { parseMoneyInput } from '@/lib/money-input';
 import { renewMinDate, renewPreset } from '@/lib/renew-dates';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import type { AttachmentOwnerType } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
+import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -41,7 +43,10 @@ export function RenewDialog({
   csrfToken,
   url,
   seatEnds,
+  withTerms,
+  websites,
   attachTo,
+  toastAction,
   onClose,
   onDone,
 }: {
@@ -55,8 +60,28 @@ export function RenewDialog({
    * `seats: true` lên endpoint của module chủ (`url`).
    */
   seatEnds?: string[];
+  /**
+   * Hiện hai ô tùy chọn "Số hợp đồng" + "Chi phí kỳ mới" và gửi `contract`/`cost` — vào sổ gia
+   * hạn của RIÊNG lượt này (Q-15). Cả endpoint của module chủ (`url`) lẫn `POST /expiry/renew`
+   * đều nhận; ở màn Sắp hết hạn và trang chủ, bật theo `canRenewTerms` của dòng (nguồn không có
+   * sổ gia hạn thì API từ chối hai trường này).
+   */
+  withTerms?: boolean;
+  /**
+   * Website đang dùng chứng chỉ / tên miền (chỉ SSL, tên miền; cần `url`). Có thì hộp hiện ô
+   * "Website của kỳ mới" điền sẵn, sửa được, và gửi `websites` — API chụp danh sách này vào sổ
+   * gia hạn của RIÊNG kỳ đó (Q-15, SW-043).
+   */
+  websites?: string[];
   /** Hồ sơ nhận hoá đơn/hợp đồng gia hạn đính kèm — tải lên sau khi gia hạn xong. */
   attachTo?: { ownerType: AttachmentOwnerType; ownerId: string };
+  /**
+   * Nút đi kèm toast "Đã gia hạn …" — hộp chỉ báo MỘT toast, nơi gọi chọn nút: "Mở hồ sơ" để
+   * soát lại ngày vừa ghi (chọn nhầm năm thì sửa ở đó), hay "Xem trong Đã gia hạn" khi dòng vừa
+   * gia hạn rời danh sách đang xem. Nơi gọi đừng báo toast thứ hai. Không có nút Hoàn tác: gia
+   * hạn là một dòng trong sổ lịch sử gia hạn, lùi hạn là việc sửa hồ sơ có ghi vết.
+   */
+  toastAction?: { label: string; onClick: () => void };
   onClose: () => void;
   onDone: (newEnd: string) => void;
 }) {
@@ -67,6 +92,14 @@ export function RenewDialog({
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [withSeats, setWithSeats] = useState(true);
+  const showTerms = !!withTerms;
+  const [contract, setContract] = useState('');
+  // Chi phí giữ dạng CHUỖI lúc gõ: ô trống (chưa khai) phải khác được với 0 ₫.
+  const [cost, setCost] = useState('');
+  const money = parseMoneyInput(cost);
+  const showWebsites = !!url && websites !== undefined;
+  // Mỗi dòng một website; API chuẩn hóa (bỏ giao thức, trùng, dòng trống).
+  const [siteText, setSiteText] = useState(() => (websites ?? []).join('\n'));
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /* Ghế nào sẽ bị bỏ lại: hạn riêng TRƯỚC hạn mới (chưa chọn hạn mới thì trước hạn hiện tại
@@ -78,6 +111,7 @@ export function RenewDialog({
     endDate: !endDate
       ? t('expiry.pickDate')
       : endDate < min && t('expiry.renewTooEarly', { date: formatDate(min) }),
+    cost: showTerms && money.reason === 'invalid' && t('license.costInvalid'),
   });
   const renew = useApiMutation<Record<string, unknown>, { seatsRenewed?: number } | undefined>(
     url ?? '/api/v1/expiry/renew',
@@ -124,9 +158,23 @@ export function RenewDialog({
           setError(null);
           if (!check.check()) return;
           const seats = staleSeats > 0 && withSeats;
+          const terms = showTerms
+            ? {
+                ...(contract.trim() ? { contract: contract.trim() } : {}),
+                ...(money.value !== null ? { cost: money.value } : {}),
+              }
+            : {};
+          const sites = showWebsites
+            ? {
+                websites: siteText
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean),
+              }
+            : {};
           const body = url
-            ? { endDate, ...(seats ? { seats: true } : {}) }
-            : { kind: row.kind, id: row.id, endDate };
+            ? { endDate, ...(seats ? { seats: true } : {}), ...terms, ...sites }
+            : { kind: row.kind, id: row.id, endDate, ...terms };
           renew.mutate(body, {
             onSuccess: async (result) => {
               const renewedSeats = result?.seatsRenewed ?? 0;
@@ -139,6 +187,7 @@ export function RenewDialog({
                         count: renewedSeats,
                       })
                     : t('expiry.renewedTo', { subject, date: formatDate(endDate) }),
+                action: toastAction,
               });
               /* Gia hạn đã ghi xuống DB: file hỏng thì báo riêng từng file, không biến lượt
                  gia hạn thành "thất bại". */
@@ -213,6 +262,48 @@ export function RenewDialog({
             />
             <span>{t('expiry.renewSeats', { count: staleSeats })}</span>
           </label>
+        ) : null}
+
+        {showTerms ? (
+          <>
+            <Field
+              label={t('expiry.renewContract')}
+              hint={t('expiry.renewContractHint')}
+              htmlFor="renew-contract"
+            >
+              <input
+                id="renew-contract"
+                className="inp"
+                maxLength={200}
+                value={contract}
+                onChange={(e) => setContract(e.target.value)}
+              />
+            </Field>
+            <Field
+              label={t('expiry.renewCost')}
+              hint={t('license.costHint')}
+              htmlFor="renew-cost"
+              error={check.error('cost')}
+            >
+              <MoneyInput value={cost} onChange={setCost} />
+            </Field>
+          </>
+        ) : null}
+
+        {showWebsites ? (
+          <Field
+            label={t('expiry.renewWebsites')}
+            hint={t('expiry.renewWebsitesHint')}
+            htmlFor="renew-websites"
+          >
+            <textarea
+              id="renew-websites"
+              className="inp"
+              rows={3}
+              value={siteText}
+              onChange={(e) => setSiteText(e.target.value)}
+            />
+          </Field>
         ) : null}
 
         {attachTo ? <AttachmentDraftSection draft={draft} disabled={renew.isPending || uploading} /> : null}

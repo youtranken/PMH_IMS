@@ -89,7 +89,9 @@ async function seedDevice(page: Page, stamp: string): Promise<{ deviceId: string
 
 /**
  * SA dựng máy → Member xin qua API → SA đăng nhập lại. Trả id phiếu + TOTP của cả hai.
- * Bốn lượt đổi người là cái giá của "xin ở phiên này, duyệt ở phiên khác".
+ *
+ * Người xin ở ngữ cảnh trình duyệt riêng. Phiếu chờ không gắn phiên (Q-15) nên người xin đăng
+ * xuất hay không cũng không đổi gì ở phía người duyệt; ngữ cảnh riêng chỉ để `page` là của SA.
  */
 async function pendingRequest(page: Page, hours = 4) {
   const stamp = Date.now().toString().slice(-6);
@@ -97,9 +99,11 @@ async function pendingRequest(page: Page, hours = 4) {
   const { deviceId, code } = await seedDevice(page, stamp);
   await logout(page);
 
-  const memberTotp = await firstLogin(page, E2E_MEMBER);
-  const asked = await page.request.post('/api/v1/vault/break-glass', {
-    headers: await headersOf(page),
+  const memberCtx = await page.context().browser()!.newContext({ ignoreHTTPSErrors: true });
+  const member = await memberCtx.newPage();
+  const memberTotp = await firstLogin(member, E2E_MEMBER);
+  const asked = await member.request.post('/api/v1/vault/break-glass', {
+    headers: await headersOf(member),
     data: {
       ownerType: 'device',
       ownerId: deviceId,
@@ -109,7 +113,6 @@ async function pendingRequest(page: Page, hours = 4) {
   });
   expect(asked.status()).toBe(201);
   const approvalId = ((await asked.json()) as { id: string }).id;
-  await logout(page);
   return { stamp, saTotp, memberTotp, deviceId, code, approvalId };
 }
 
@@ -216,7 +219,7 @@ test.describe('Phía người xin, 390px', () => {
 
     await firstLogin(page, E2E_MEMBER);
     await page.goto(`/devices/${deviceId}?tab=vault`);
-    await page.getByRole('button', { name: 'Xin quyền xem' }).click();
+    await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: cần đổi VLAN`);
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
@@ -239,7 +242,7 @@ test.describe('Phía người xin, 390px', () => {
     await confirmAction(page, 'Rút yêu cầu');
     await expect(page.getByText('Đã rút yêu cầu.')).toBeVisible();
     // Rút xong thì xin lại được ngay — một-phiếu-treo không còn chặn.
-    await expect(page.getByRole('button', { name: 'Xin quyền xem' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
   });
 });
 
@@ -254,10 +257,10 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
 
-    const dialog = page.getByRole('dialog', { name: 'Duyệt yêu cầu', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
     await expect(dialog).toBeVisible();
     // Tiêu đề một dòng ở 390px — không còn "Duyệt yêu cầu của <email dài>" gãy hai dòng.
-    const heading = await dialog.getByRole('heading', { name: 'Duyệt yêu cầu', exact: true }).boundingBox();
+    const heading = await dialog.getByRole('heading', { name: 'Duyệt mở két', exact: true }).boundingBox();
     expect(heading!.height, 'tiêu đề hộp Duyệt phải nằm trên một dòng').toBeLessThan(40);
     await expect(dialog.getByText(E2E_MEMBER.email)).toBeVisible();
     await expect(dialog.getByRole('link', { name: new RegExp(`^${code}`) })).toBeVisible();
@@ -278,7 +281,7 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Duyệt yêu cầu', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
     await dialog.getByLabel('Cấp trong bao lâu (giờ)').fill('hai');
     await dialog.getByRole('button', { name: 'Duyệt', exact: true }).click();
     await expect(dialog.getByText('Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4')).toBeVisible();
@@ -320,28 +323,60 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await expect(page.getByText(/^Lần xin/)).toHaveCount(0);
   });
 
-  test('người xin: khung chờ nói đã báo bao nhiêu người duyệt; được duyệt thì đếm lùi thời gian còn xem', async ({
+  /**
+   * Phiếu chờ không gắn phiên (Q-15): khung chờ nói cứ đóng trang, chờ thư. Người duyệt ở ngữ
+   * cảnh riêng. Được duyệt thì khung két chỉ đường "bấm Xem, nhập mã 6 số", đếm lùi TỪ LÚC
+   * DUYỆT, nói lần xem đầu gắn quyền vào phiên, và có nút Trả quyền — tất cả ở 390px, vì người
+   * trực xin và trả ngay trên điện thoại.
+   */
+  test('người xin: khung chờ nói đã báo bao nhiêu người duyệt; được duyệt thì đếm lùi, trả quyền được', async ({
     page,
+    browser,
   }) => {
-    const { saTotp, memberTotp, deviceId, approvalId } = await pendingRequest(page);
+    const stamp = Date.now().toString().slice(-6);
+    const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const sa = await saCtx.newPage();
+    await firstLogin(sa, E2E_SA);
+    const { deviceId } = await seedDevice(sa, stamp);
 
-    await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
+    await firstLogin(page, E2E_MEMBER);
     await page.goto(`/devices/${deviceId}?tab=vault`);
+    await page.getByRole('button', { name: 'Xin mở két' }).click();
+    const form = page.getByRole('dialog');
+    await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
+    await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: switch tầng 3 mất kết nối`);
+    await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
     await expect(page.getByText(/^Đã báo \d+ người duyệt qua email\.$/)).toBeVisible();
+    await expect(page.getByText(/Bạn có thể đóng trang/)).toBeVisible();
+    await expect(page.getByText(/Giữ trang này mở/)).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await logout(page);
 
     // SA vừa đăng nhập bằng mã 2 lớp = vừa step-up, duyệt qua API được ngay.
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    const approved = await page.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
-      headers: await headersOf(page),
+    const pending = (await (await sa.request.get('/api/v1/vault/break-glass/pending')).json()) as {
+      id: string;
+      subjectId: string;
+    }[];
+    const approvalId = pending.find((r) => r.subjectId === deviceId)!.id;
+    const approved = await sa.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
+      headers: await headersOf(sa),
       data: { hours: 4 },
     });
     expect(approved.status()).toBe(201);
-    await logout(page);
+    await saCtx.close();
 
-    await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
-    await page.goto(`/devices/${deviceId}?tab=vault`);
-    await expect(page.getByText(/Bạn được xem tới .* \(còn 3 giờ 5\d phút\)/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
+    await expect(page.getByText(/Quyền còn 3 giờ 5\d phút \(tới .*\), tính từ lúc duyệt/)).toBeVisible();
+    await expect(page.getByText(/Lần xem đầu tiên gắn quyền vào phiên/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Nhận quyền/ })).toHaveCount(0);
+    const release = page.getByRole('button', { name: 'Trả quyền' });
+    await expect(release).toBeInViewport();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+    await release.click();
+    await confirmAction(page, 'Trả quyền');
+    await expect(page.getByText(/Đã trả quyền/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
   });
 });

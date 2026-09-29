@@ -7,6 +7,7 @@ import type { Me } from "@/lib/me";
 import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
+import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -52,13 +53,14 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
   const [editing, setEditing] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [params] = useSearchParams();
+  /* Fallback PHẢI là "vault": khu Hồ sơ không còn là tab (NET-075), để mặc định 'profile'
+     thì thanh tab không sáng ô nào và thân tab rơi vào nhánh Lịch sử chưa tải. */
   const [tab, setTab] = useState(() =>
-    initialTab(params.get("tab"), [
-      "profile",
+    initialTab(
+      params.get("tab"),
+      ["vault", "attachments", "history"],
       "vault",
-      "attachments",
-      "history",
-    ]),
+    ),
   );
 
   /* Trước mọi nhánh `return` sớm bên dưới: đây là hook, đặt sau `if (isLoading) return` thì
@@ -231,9 +233,26 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         }
       >
 
+      {/* Hồ sơ đứng NGAY đầu cột chính, không sau một tab: nó chỉ còn ghi chú + dòng "Chưa
+          khai", mọi thứ khác đã ở dòng định danh và thẻ bên phải. Để thành tab riêng thì trang
+          mở ra là một khoảng trống lớn, còn két — thứ người ta mở trang này để tìm — nằm sau
+          một cú bấm. */}
+      <DetailSection title={t("detail.profileSection")} compact>
+        <dl className="data-grid">
+          <DataItemIfSet label={t("serviceAccounts.note")} value={item.note} />
+        </dl>
+        <BlankFields
+          labels={[
+            item.login ? null : t("serviceAccounts.login"),
+            item.ownerName ? null : t("serviceAccounts.ownerName"),
+            item.department ? null : t("serviceAccounts.department"),
+            item.note ? null : t("serviceAccounts.note"),
+          ].filter((label): label is string => label !== null)}
+        />
+      </DetailSection>
+
       <Tabs
         items={[
-          { key: "profile", label: t("serviceAccounts.tabProfile") },
           { key: "vault", label: t("vault.tab"), count: counts.secrets },
           {
             key: "attachments",
@@ -248,32 +267,11 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       />
 
       <TabPanel tabKey={tab}>
-        {tab === "profile" ? (
-          <>
-            {/* Loại · tên đăng nhập ĐÃ nằm ở dòng định danh dưới tiêu đề; trạng thái · người
-                phụ trách · bộ phận · nhóm VPN · dải IP ĐÃ nằm ở thẻ định danh bên phải. Lưới
-                này chỉ còn thứ chưa nói ở đâu cả, và ô trống thì KHÔNG vẽ. */}
-            {/* Khu "Hồ sơ" có thẻ + tiêu đề như mọi khu khác — xem chú thích dài ở
-                `ui/detail-layout.tsx`, chỗ khai `DetailSection`. KHÔNG `compact`: khu này đứng
-                một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
-            <DetailSection title={t("detail.profileSection")}>
-              <dl className="data-grid">
-                <DataItemIfSet label={t("serviceAccounts.note")} value={item.note} />
-              </dl>
-              <BlankFields
-                labels={[
-                  item.login ? null : t("serviceAccounts.login"),
-                  item.ownerName ? null : t("serviceAccounts.ownerName"),
-                  item.department ? null : t("serviceAccounts.department"),
-                  item.note ? null : t("serviceAccounts.note"),
-                ].filter((label): label is string => label !== null)}
-              />
-            </DetailSection>
-          </>
-        ) : tab === "vault" ? (
+        {tab === "vault" ? (
           <VaultPanel
             ownerType="service_account"
             ownerId={item.id}
+            ownerLabel={item.code}
             me={me}
             canEdit={canVaultWrite}
           />
@@ -288,7 +286,10 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toServiceAccountHistory(history.data ?? [], t)} />
+          <>
+            <AuditLogLink role={me.role} objectType="service_account" objectId={item.id} />
+            <HistoryPanel entries={toServiceAccountHistory(history.data ?? [], t)} />
+          </>
         )}
       </TabPanel>
       </DetailLayout>

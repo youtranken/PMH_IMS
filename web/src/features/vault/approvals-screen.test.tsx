@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
-import { ApprovalsScreen } from './approvals-screen';
+import { ApprovalsScreen, logFilterQuery } from './approvals-screen';
 
 function row(id: string, requester: string) {
   return {
@@ -82,6 +82,18 @@ describe('Thẻ phiếu chờ duyệt', () => {
     );
   });
 
+  it('phiếu chờ quá mốc nhắc (server báo `overdue`) có chữ "Chờ lâu"; phiếu mới thì không', async () => {
+    const rows = [
+      { ...row('a1', 'an@pmh.com.vn'), overdue: true },
+      { ...row('b2', 'binh@pmh.com.vn'), overdue: false },
+    ];
+    renderAt('/approvals', rows);
+    const old = await screen.findByRole('region', { name: /an@pmh\.com\.vn/ });
+    expect(within(old).getByText(/Chờ lâu/)).toBeInTheDocument();
+    const fresh = screen.getByRole('region', { name: /binh@pmh\.com\.vn/ });
+    expect(within(fresh).queryByText(/Chờ lâu/)).toBeNull();
+  });
+
   it('phiếu của chính mình: "Cần người khác duyệt", không có Duyệt/Từ chối', async () => {
     renderAt('/approvals', [row('a1', 'sa@pmh.com.vn')]);
     expect(await screen.findByText('Cần người khác duyệt')).toBeInTheDocument();
@@ -135,6 +147,25 @@ describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
     expect(screen.queryByRole('button', { name: 'Từ chối' })).not.toBeInTheDocument();
   });
 
+  it('Nhật ký: quyền đang chạy ghim thành nhóm "Đang có hiệu lực" ở đầu, có Thu hồi sớm', async () => {
+    const live = {
+      ...row('a1', 'an@pmh.com.vn'),
+      state: 'approved',
+      active: true,
+      decidedBy: 'sa2@pmh.com.vn',
+      decidedAt: '2026-09-20T02:00:00.000Z',
+      expiresAt: '2026-09-20T06:00:00.000Z',
+    };
+    renderRouted(ME, {
+      '/api/v1/vault/break-glass/pending': [],
+      '/api/v1/vault/break-glass/active': [live],
+      '/api/v1/vault/break-glass/log': { items: [], total: 0 },
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Nhật ký' }));
+    const group = await screen.findByRole('region', { name: 'Đang có hiệu lực (1)' });
+    expect(within(group).getAllByRole('button', { name: 'Thu hồi sớm' }).length).toBeGreaterThan(0);
+  });
+
   it('Nhật ký: phiếu đã thu hồi nói lúc bị cắt, không in hạn gốc như thể quyền còn chạy', async () => {
     const revoked = {
       ...row('a1', 'an@pmh.com.vn'),
@@ -163,12 +194,47 @@ describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
     };
     renderRouted(member, { '/api/v1/vault/break-glass/mine': { items: [approved], total: 1 } });
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Yêu cầu xem két' }),
+      await screen.findByRole('heading', { level: 1, name: 'Xin mở két' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Mở két' })).toHaveAttribute(
       'href',
       '/devices/a1-0000-4000-8000-000000000001?tab=vault',
+    );
+  });
+});
+
+describe('VLT-019 · bộ lọc nhật ký mở két', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    [{ state: '', requester: '', from: '', to: '' }, ''],
+    [
+      { state: 'expired', requester: ' an@ ', from: '2026-09-01', to: '2026-09-30' },
+      'state=expired&requester=an%40&from=2026-09-01&to=2026-09-30',
+    ],
+  ])('logFilterQuery(%j) → %s', (filters, expected) => {
+    expect(logFilterQuery(filters)).toBe(expected);
+  });
+
+  it('gõ người xin → lượt gọi nhật ký mang ?requester=', async () => {
+    renderRouted(ME, {
+      '/api/v1/vault/break-glass/pending': [],
+      '/api/v1/vault/break-glass/log': { items: [row('a1', 'an@pmh.com.vn')], total: 1 },
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Nhật ký' }));
+    await userEvent.type(
+      await screen.findByRole('searchbox', { name: 'Tìm theo email người xin' }),
+      'an@',
+    );
+    const fetchMock = vi.mocked(fetch);
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url]) =>
+            String(url).includes('/break-glass/log?') && String(url).includes('requester=an%40'),
+        ),
+      ).toBe(true),
     );
   });
 });

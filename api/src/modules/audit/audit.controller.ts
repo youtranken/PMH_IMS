@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import type { Response } from 'express';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -42,6 +42,11 @@ export class AuditQueryDto {
   @MaxLength(255)
   objectId?: string;
 
+  /** `1` = chỉ sự kiện an ninh; tập mã do API giữ (`security-actions.ts`), web không gửi danh sách. */
+  @IsOptional()
+  @IsIn(['1'])
+  security?: string;
+
   @IsOptional()
   @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' })
   from?: string;
@@ -68,6 +73,11 @@ export class AuditQueryDto {
   @Min(1)
   @Max(100)
   pageSize = 20;
+
+  /** '1' = gom sự kiện lặp liền nhau thành một dòng ×N (ADM-065). File xuất luôn từng dòng. */
+  @IsOptional()
+  @IsIn(['0', '1'])
+  group?: string;
 }
 
 /** Viewer audit log (6.2, FR-43) — SA + Admin (delegation 10.1). Chỉ đọc (AD-10). */
@@ -97,10 +107,12 @@ export class AuditController {
       action: q.action,
       objectType: q.objectType,
       objectId: q.objectId,
+      security: q.security === '1',
       from: q.from,
       to: q.to,
       page: q.page,
       pageSize: q.pageSize,
+      group: q.group === '1',
     });
   }
 
@@ -123,6 +135,7 @@ export class AuditController {
       action: q.action,
       objectType: q.objectType,
       objectId: q.objectId,
+      security: q.security === '1',
       from: q.from,
       to: q.to,
       page: 1,
