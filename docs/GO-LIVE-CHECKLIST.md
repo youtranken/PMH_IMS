@@ -367,8 +367,10 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   không có trong bảng lệnh, và mã trang không vào bundle. Kiểm: `npm --prefix web run build` rồi
   `grep -c -- --warm web/dist/static/index-*.js` ra 0 (chữ chỉ có trong trang dev); build với
   `VITE_DEV_KIT=1` ra 1. Lazy-load từng route còn lại chưa làm — chưa cần ở cỡ bundle hiện tại.
-- [ ] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
+- [x] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
   - **Rà 29/09:** còn nguyên (`lib/api-client.ts:105`).
+  - **Đã sửa:** `shouldRetryQuery` — thử lại một lần chỉ với lỗi mạng và 5xx; 4xx báo ngay. Kiểm ở
+    `lib/api-client.test.ts`.
 - [x] **FE-11 · Script inline đặt theme** (`index.html:9-18`) cần một hash trong CSP. Làm cùng OPS-04.
   - **Rà 29/09:** xong theo cách khác (1e53e7f): script chuyển ra `web/public/theme-init.js`, nên CSP
     `script-src 'self'` (`web/security-headers.conf:10`) không cần hash. Chưa có E2E kiểm header CSP.

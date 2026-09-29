@@ -97,12 +97,23 @@ export async function readResponse<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
+/**
+ * Thử lại đúng MỘT lần, và chỉ khi lỗi có thể tự hết: mạng chập chờn (không có `ApiError`)
+ * hoặc 5xx. 4xx là câu trả lời dứt khoát của server (không quyền, không tồn tại, sai dữ
+ * liệu) — hỏi lại chỉ làm màn lỗi hiện chậm hơn và nhân đôi tải lên API.
+ */
+export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 1) return false;
+  if (error instanceof ApiError) return error.status >= 500;
+  return true;
+}
+
 /** Factory để app và test dùng client riêng (test tắt retry cho lỗi hiện ngay). */
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 1,
+        retry: shouldRetryQuery,
         staleTime: 10_000,
         refetchOnWindowFocus: false,
       },
