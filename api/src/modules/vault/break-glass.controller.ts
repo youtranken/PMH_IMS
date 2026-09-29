@@ -101,7 +101,7 @@ export class BreakGlassController {
     const rows = await this.breakGlass.logAll();
     const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
-      sheetName: 'Nhat ky break-glass',
+      sheetName: 'Nhat ky mo ket',
       columns: [
         { header: 'Người xin', width: 28, value: (r) => r.requester },
         { header: 'Loại đối tượng', width: 16, value: (r) => r.subjectType },
@@ -136,7 +136,7 @@ export class BreakGlassController {
       ],
       rows,
     });
-    sendXlsx(res, buffer, 'nhat-ky-break-glass.xlsx');
+    sendXlsx(res, buffer, 'nhat-ky-mo-ket.xlsx');
   }
 
   @Roles('sa', 'admin', 'member')

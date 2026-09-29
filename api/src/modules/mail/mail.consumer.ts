@@ -99,7 +99,7 @@ export class MailConsumer {
         );
       } else {
         this.logger.debug(
-          `Topic ${topic}: không còn gì để gửi (hồ sơ tham chiếu đã xoá, phiếu đã quyết, ` +
+          `Topic ${topic}: không còn gì để gửi (hồ sơ tham chiếu đã xóa, phiếu đã quyết, ` +
             'hoặc không còn người nhận) — bỏ qua, đây là chuyện bình thường.',
         );
       }
@@ -153,7 +153,7 @@ export class MailConsumer {
     const ask = `${who} xin mở két${subject ? ` ${subject.code}` : ''}${hours ? ` (${hours} giờ)` : ''}`;
     const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
     const { html, text } = renderMail({
-      title: isReminder ? 'Yêu cầu duyệt còn đang chờ' : 'Có yêu cầu cần duyệt',
+      title: isReminder ? 'Yêu cầu xin mở két còn đang chờ duyệt' : 'Có yêu cầu xin mở két cần duyệt',
       intro: isReminder
         ? `Yêu cầu dưới đây đã chờ ${waited} phút mà chưa ai xử lý.`
         : `${who} vừa gửi một yêu cầu mở két cần người duyệt.`,
@@ -365,7 +365,7 @@ export class MailConsumer {
           ctaLabel: 'Xem nhật ký của tài khoản (SA/Quản trị)',
           ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(user.email)}`,
           footnote:
-            'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Tài khoản — khóa tay chặn mọi nơi và chỉ SA mở được.',
+            'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Người dùng IMS — khóa tay chặn mọi nơi và chỉ SA mở được.',
         });
         // Chủ tài khoản cũng nhận: họ là người đầu tiên biết lượt sai đó có phải của mình không.
         const to = [...new Set([user.email, ...sa.map((r) => r.email)])];

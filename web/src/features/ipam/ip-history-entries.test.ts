@@ -174,7 +174,7 @@ describe('actionLabel — tên việc bằng tiếng Việt', () => {
     ['ip.created', 'Tạo hồ sơ'],
     ['ip.updated', 'Sửa hồ sơ'],
     ['ip.assigned', 'Gán chủ'],
-    ['ip.voided', 'Xóa hồ sơ'],
+    ['ip.voided', 'Ẩn bản ghi nhập nhầm'],
     ['ip.restored', 'Bật lại'],
     ['ip.status_merged', 'Gộp trạng thái'],
   ])('%s → %s', (action, expected) => {

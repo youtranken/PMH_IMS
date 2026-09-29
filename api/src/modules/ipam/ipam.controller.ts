@@ -560,13 +560,13 @@ export class IpamController {
         { header: 'Router', width: 22, value: (r) => r.deviceCode ?? '' },
         { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },
         { header: 'Giao thức', width: 12, value: (r) => r.protocol.toUpperCase() },
-        { header: 'Port ngoài', width: 14, value: (r) => r.externalPorts },
+        { header: 'Cổng ngoài', width: 14, value: (r) => r.externalPorts },
         { header: 'IP trong', width: 16, value: (r) => r.internalIp },
-        { header: 'Port trong', width: 12, value: (r) => r.internalPort },
+        { header: 'Cổng trong', width: 12, value: (r) => r.internalPort },
         { header: 'Máy trong', width: 22, value: (r) => r.internalOwner ?? '' },
         { header: 'Mở cho ai', width: 24, value: (r) => r.usedBy },
         { header: 'Lý do', width: 40, value: (r) => r.reason },
-        { header: 'Đang bật', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
+        { header: 'Đang dùng', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
         // Ba cột chỉ có giá trị khi xuất kèm rule đã gỡ; để trống là rule còn trong sổ.
         { header: 'Gỡ lúc', width: 18, value: (r) => r.voidedAt },
         { header: 'Người gỡ', width: 24, value: (r) => r.voidedBy ?? '' },
@@ -672,7 +672,7 @@ function requireDeviceId(value: string | undefined): string {
   if (id) return id;
   throw new BadRequestException({
     code: 'FIELD_REQUIRED',
-    message: 'Chọn thiết bị (router) cho rule NAT này.',
+    message: 'Chọn thiết bị (router) cho luật NAT này.',
   });
 }
 
@@ -694,9 +694,9 @@ function requirePorts(value: string | undefined): { from: number; to: number } {
 }
 
 const PORT_MESSAGE: Record<string, string> = {
-  format: 'Port ngoài viết dạng "8080" hoặc "8000-8010".',
-  range: 'Port phải từ 1 đến 65535.',
-  reversed: 'Khoảng port viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).',
+  format: 'Cổng ngoài viết dạng "8080" hoặc "8000-8010".',
+  range: 'Cổng phải từ 1 đến 65535.',
+  reversed: 'Khoảng cổng viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).',
 };
 
 const IP_STATUS_LABEL: Record<string, string> = {

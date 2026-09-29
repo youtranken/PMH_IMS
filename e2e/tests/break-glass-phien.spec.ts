@@ -135,7 +135,7 @@ test.describe('Xin mở két — quyền gắn với phiên đăng nhập (Q-15)
     expect(await revealCode(pageB, kit.secretId)).toBe('BREAK_GLASS_REQUIRED');
     await pageB.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(pageB.getByText(/thuộc một phiên đăng nhập khác/)).toBeVisible();
-    await expect(pageB.getByRole('button', { name: 'Xin quyền xem' })).toBeVisible();
+    await expect(pageB.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
     await ctxB.close();
 
     // Phiên A đăng xuất → đăng nhập lại ngay trên chính máy đó: quyền cũ KHÔNG theo sang.
@@ -168,7 +168,7 @@ test.describe('Xin mở két — quyền gắn với phiên đăng nhập (Q-15)
 
     // Hộp xin nói TRƯỚC rằng quyền hết khi đăng xuất.
     await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
-    await memberPage.getByRole('button', { name: 'Xin quyền xem' }).click();
+    await memberPage.getByRole('button', { name: 'Xin mở két' }).click();
     const form = memberPage.getByRole('dialog');
     await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill('E2E đổi cấu hình VLAN');
@@ -187,7 +187,7 @@ test.describe('Xin mở két — quyền gắn với phiên đăng nhập (Q-15)
     const confirm = memberPage.getByRole('dialog');
     await confirm.getByRole('button', { name: 'Trả quyền' }).click();
     await expect(memberPage.getByText(/Đã trả quyền/)).toBeVisible();
-    await expect(memberPage.getByRole('button', { name: 'Xin quyền xem' })).toBeVisible();
+    await expect(memberPage.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
 
     expect(stateOf(id)).toBe('revoked');
     expect(await revealCode(memberPage, kit.secretId)).toBe('BREAK_GLASS_REQUIRED');

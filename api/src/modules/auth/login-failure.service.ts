@@ -173,7 +173,7 @@ export class LoginFailureService implements OnModuleInit {
       )
       .returning({ ip: loginFailureTable.ip });
     if (deleted.length > 0) {
-      this.logger.debug(`login-failure-prune: xoá ${deleted.length} hàng đã nguội`);
+      this.logger.debug(`login-failure-prune: xóa ${deleted.length} hàng đã nguội`);
     }
   }
 }

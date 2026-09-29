@@ -121,7 +121,7 @@ test.describe('Break-glass', () => {
     await expect(member.getByText(`admin web E2E ${stamp}`)).toBeVisible();
     await expect(member.getByText(/cần được duyệt trước khi xem/i)).toBeVisible();
 
-    await member.getByRole('button', { name: 'Xin quyền xem' }).click();
+    await member.getByRole('button', { name: 'Xin mở két' }).click();
     const form = member.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('switch tầng 3 mất kết nối');
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');

@@ -133,19 +133,19 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
     });
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
     // Ba chip port = ba lượt POST nối tiếp.
-    const ports = form.getByRole('textbox', { name: 'Port ngoài' });
+    const ports = form.getByRole('textbox', { name: 'Cổng ngoài' });
     for (const port of ['18081', '18082', '18083']) {
       await ports.fill(port);
       await ports.press('Enter');
     }
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
-    await form.getByRole('textbox', { name: 'Port trong' }).fill('80');
+    await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('kiem tra Esc giua luot ghi');
 

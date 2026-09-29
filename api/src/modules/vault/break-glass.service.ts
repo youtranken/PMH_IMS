@@ -746,7 +746,7 @@ export class BreakGlassService implements OnModuleInit {
     if (request.kind !== BREAK_GLASS_KIND) {
       throw new NotFoundException({
         code: 'APPROVAL_NOT_FOUND',
-        message: 'Không tìm thấy yêu cầu break-glass này.',
+        message: 'Không tìm thấy yêu cầu mở két này.',
       });
     }
     return request;

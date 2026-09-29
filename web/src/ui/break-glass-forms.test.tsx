@@ -71,7 +71,7 @@ function sentBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> 
 describe('DecisionDialog', () => {
   it('Duyệt: tiêu đề ngắn, thân hộp nêu người xin · đối tượng · lý do', () => {
     renderDecision(true);
-    const dialog = screen.getByRole('dialog', { name: 'Duyệt yêu cầu' });
+    const dialog = screen.getByRole('dialog', { name: 'Duyệt mở két' });
     expect(within(dialog).getByText('Trần Thị B')).toBeInTheDocument();
     expect(within(dialog).getByText(/e2e-member@pmh\.com\.vn/)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: ROW.subjectLabel! })).toBeInTheDocument();
@@ -271,7 +271,7 @@ describe('Hộp xin quyền xem (vault-panel)', () => {
       </MemoryRouter>,
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     await userEvent.type(screen.getByLabelText(/Lý do/), 'gấp');
     const hours = screen.getByLabelText(/Xin trong bao lâu/);
     await userEvent.clear(hours);

@@ -216,7 +216,7 @@ test.describe('Phía người xin, 390px', () => {
 
     await firstLogin(page, E2E_MEMBER);
     await page.goto(`/devices/${deviceId}?tab=vault`);
-    await page.getByRole('button', { name: 'Xin quyền xem' }).click();
+    await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: cần đổi VLAN`);
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
@@ -239,7 +239,7 @@ test.describe('Phía người xin, 390px', () => {
     await confirmAction(page, 'Rút yêu cầu');
     await expect(page.getByText('Đã rút yêu cầu.')).toBeVisible();
     // Rút xong thì xin lại được ngay — một-phiếu-treo không còn chặn.
-    await expect(page.getByRole('button', { name: 'Xin quyền xem' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
   });
 });
 
@@ -254,10 +254,10 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
 
-    const dialog = page.getByRole('dialog', { name: 'Duyệt yêu cầu', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
     await expect(dialog).toBeVisible();
     // Tiêu đề một dòng ở 390px — không còn "Duyệt yêu cầu của <email dài>" gãy hai dòng.
-    const heading = await dialog.getByRole('heading', { name: 'Duyệt yêu cầu', exact: true }).boundingBox();
+    const heading = await dialog.getByRole('heading', { name: 'Duyệt mở két', exact: true }).boundingBox();
     expect(heading!.height, 'tiêu đề hộp Duyệt phải nằm trên một dòng').toBeLessThan(40);
     await expect(dialog.getByText(E2E_MEMBER.email)).toBeVisible();
     await expect(dialog.getByRole('link', { name: new RegExp(`^${code}`) })).toBeVisible();
@@ -278,7 +278,7 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Duyệt yêu cầu', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
     await dialog.getByLabel('Cấp trong bao lâu (giờ)').fill('hai');
     await dialog.getByRole('button', { name: 'Duyệt', exact: true }).click();
     await expect(dialog.getByText('Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4')).toBeVisible();
@@ -337,7 +337,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
 
     await firstLogin(page, E2E_MEMBER);
     await page.goto(`/devices/${deviceId}?tab=vault`);
-    await page.getByRole('button', { name: 'Xin quyền xem' }).click();
+    await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
     await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: switch tầng 3 mất kết nối`);
@@ -369,6 +369,6 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await release.click();
     await confirmAction(page, 'Trả quyền');
     await expect(page.getByText(/Đã trả quyền/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Xin quyền xem' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
   });
 });
