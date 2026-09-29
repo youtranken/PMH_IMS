@@ -7,8 +7,8 @@ import type { SoftwareListItem } from './software.types';
 
 /**
  * AD-2: public api DUY NHẤT của module `software`.
- * Epic sau dùng: cỗ máy expiry (3.4) hỏi "sắp hết hạn gì", két sắt (Epic 4) gắn secret vào
- * hồ sơ phần mềm, dashboard (Epic 7) đếm số sắp hết hạn.
+ * Dùng bởi: cỗ máy expiry hỏi "sắp hết hạn gì", két sắt gắn secret vào hồ sơ phần mềm,
+ * dashboard đếm số sắp hết hạn.
  */
 @Injectable()
 export class SoftwareApiService {

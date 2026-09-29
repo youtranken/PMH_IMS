@@ -21,7 +21,7 @@ export interface SoftwareRecord {
 /** Bản ghi kèm thứ màn hình cần mà không phải gọi thêm API. */
 export interface SoftwareListItem extends SoftwareRecord {
   vendorName: string | null;
-  /** Đã gán bao nhiêu seat (story 3.2). Loại không có seat thì luôn 0. */
+  /** Đã gán bao nhiêu seat (FR-011). Loại không có seat thì luôn 0. */
   seatUsed: number;
 }
 

@@ -6,7 +6,8 @@ import { UI_PATHS } from '../../common/ui-paths';
 
 /**
  * Khu "Đường truyền ISP" trên trang thiết bị biên (AC 3.3: trang Draytek hiển thị các đường
- * ISP gắn với nó). Dùng đúng cơ chế khu mở rộng của story 2.5 — `devices` không biết ISP là gì.
+ * ISP gắn với nó). Dùng cơ chế khu mở rộng (`common/device-panels`) — `devices` không biết ISP
+ * là gì.
  *
  * Hotline và số hợp đồng nằm ngay trên dòng của đường: mở trang con Draytek lúc 2 giờ sáng là
  * để gọi nhà mạng.
