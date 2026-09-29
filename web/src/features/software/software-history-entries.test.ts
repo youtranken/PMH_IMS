@@ -49,6 +49,16 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     expect(entry.detail).not.toContain('HD-27 →');
   });
 
+  it('đổi danh sách website của SSL đọc ra nhãn tiếng Việt, không phải tên trường thô', () => {
+    const [entry] = toSoftwareHistory([
+      row({
+        action: 'updated',
+        changes: { websites: { before: 'a.pmh.vn', after: 'a.pmh.vn, b.pmh.vn' } },
+      }),
+    ], t);
+    expect(entry.detail).toBe('website: a.pmh.vn → a.pmh.vn, b.pmh.vn');
+  });
+
   it('loại và trạng thái hiện nhãn tiếng Việt, không phải mã máy', () => {
     const [entry] = toSoftwareHistory([
       row({ changes: { kind: { before: 'license', after: 'ssl' }, status: { before: 'active', after: 'retired' } } }),

@@ -7,6 +7,7 @@ import {
   resetSoftware,
   resetUsers,
   sql,
+  timVaChoLoc,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -238,5 +239,84 @@ test.describe('SW-053 · Gán license chọn nhanh theo phòng ban / người s�
     await dialog.getByRole('button', { name: 'Thêm các máy' }).click();
     await expect(dialog.getByRole('status')).toHaveText(`Không có máy đang dùng nào của ${who}.`);
     await expect(dialog.getByRole('list', { name: 'Máy sẽ gán' })).toHaveCount(0);
+  });
+});
+
+test.describe('SW-043 · Website dùng chứng chỉ SSL, theo từng kỳ gia hạn', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('hồ sơ SSL hiện website, tìm được từ danh sách; gia hạn chụp danh sách của kỳ mới vào sổ', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `SSL-E2E-WEB-${stamp}`;
+    const shop = `shop-e2e-${stamp}.pmh.vn`;
+    const mail = `mail-e2e-${stamp}.pmh.vn`;
+    const portal = `portal-e2e-${stamp}.pmh.vn`;
+    const id = await createSoftware(page, {
+      code,
+      name: 'Chứng chỉ E2E',
+      kind: 'ssl',
+      endDate: isoInDays(40),
+      websites: [`https://${shop}/`, mail],
+    });
+
+    // Ô tìm của danh sách phần mềm ra hồ sơ theo website.
+    await page.goto('/software');
+    await timVaChoLoc(page, `mail-e2e-${stamp}`);
+    await expect(page.getByRole('link', { name: code })).toBeVisible();
+
+    await page.goto(`/software/${id}`);
+    const sites = page.getByRole('region', { name: 'Website dùng chứng chỉ này' });
+    await expect(sites.getByText(shop, { exact: true })).toBeVisible();
+    await expect(sites.getByText(mail, { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
+    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const box = dialog.getByRole('textbox', { name: 'Website của kỳ mới', exact: true });
+    await expect(box).toHaveValue(`${shop}\n${mail}`);
+    // Năm nay bỏ mail, thêm portal.
+    await box.fill(`${shop}\n${portal}`);
+    await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
+    const renewed = page.waitForResponse((r) => r.url().endsWith('/renew'));
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
+    expect((await renewed).status()).toBeLessThan(300);
+
+    expect(
+      sql(`SELECT array_to_string(websites, ',') FROM renewal_history WHERE object_id = '${id}'`),
+    ).toBe(`${shop},${portal}`);
+    expect(sql(`SELECT array_to_string(websites, ',') FROM software WHERE id = '${id}'`)).toBe(
+      `${shop},${portal}`,
+    );
+
+    await page.getByRole('tab', { name: /^Lịch sử/ }).click();
+    await page.getByRole('button', { name: 'Hạn', exact: true }).click();
+    const ledger = page.getByRole('region', { name: 'Sổ gia hạn' });
+    await expect(ledger.getByRole('cell', { name: `${shop}, ${portal}` })).toBeVisible();
+  });
+
+  test('dán hai website chung một dòng → báo lỗi, không gia hạn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `SSL-E2E-WEBSAI-${stamp}`;
+    const id = await createSoftware(page, {
+      code,
+      name: 'Chứng chỉ E2E sai',
+      kind: 'ssl',
+      endDate: isoInDays(40),
+    });
+
+    await page.goto(`/software/${id}`);
+    await expect(page.getByText('Chưa ghi website nào.')).toBeVisible();
+    await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
+    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    await dialog
+      .getByRole('textbox', { name: 'Website của kỳ mới', exact: true })
+      .fill('a-e2e.pmh.vn b-e2e.pmh.vn');
+    await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
+    await expect(dialog.getByRole('alert')).toContainText('có khoảng trắng');
+    expect(sql(`SELECT count(*) FROM renewal_history WHERE object_id = '${id}'`)).toBe('0');
   });
 });

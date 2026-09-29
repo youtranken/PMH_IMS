@@ -43,6 +43,7 @@ export function RenewDialog({
   url,
   seatEnds,
   withTerms,
+  websites,
   attachTo,
   onClose,
   onDone,
@@ -58,11 +59,17 @@ export function RenewDialog({
    */
   seatEnds?: string[];
   /**
-   * Hiện hai ô tuỳ chọn "Số hợp đồng" + "Chi phí kỳ mới" và gửi `contract`/`cost` lên endpoint
+   * Hiện hai ô tùy chọn "Số hợp đồng" + "Chi phí kỳ mới" và gửi `contract`/`cost` lên endpoint
    * của module chủ (`url`) — nó ghi vào sổ gia hạn của RIÊNG lượt này (Q-15). Chỉ bật cho cửa
    * có `url` nhận hai trường đó; `POST /expiry/renew` không nhận.
    */
   withTerms?: boolean;
+  /**
+   * Website đang dùng chứng chỉ / tên miền (chỉ SSL, tên miền; cần `url`). Có thì hộp hiện ô
+   * "Website của kỳ mới" điền sẵn, sửa được, và gửi `websites` — API chụp danh sách này vào sổ
+   * gia hạn của RIÊNG kỳ đó (Q-15, SW-043).
+   */
+  websites?: string[];
   /** Hồ sơ nhận hoá đơn/hợp đồng gia hạn đính kèm — tải lên sau khi gia hạn xong. */
   attachTo?: { ownerType: AttachmentOwnerType; ownerId: string };
   onClose: () => void;
@@ -80,6 +87,9 @@ export function RenewDialog({
   // Chi phí giữ dạng CHUỖI lúc gõ: ô trống (chưa khai) phải khác được với 0 ₫.
   const [cost, setCost] = useState('');
   const money = parseMoneyInput(cost);
+  const showWebsites = !!url && websites !== undefined;
+  // Mỗi dòng một website; API chuẩn hóa (bỏ giao thức, trùng, dòng trống).
+  const [siteText, setSiteText] = useState(() => (websites ?? []).join('\n'));
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /* Ghế nào sẽ bị bỏ lại: hạn riêng TRƯỚC hạn mới (chưa chọn hạn mới thì trước hạn hiện tại
@@ -144,8 +154,16 @@ export function RenewDialog({
                 ...(money.value !== null ? { cost: money.value } : {}),
               }
             : {};
+          const sites = showWebsites
+            ? {
+                websites: siteText
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean),
+              }
+            : {};
           const body = url
-            ? { endDate, ...(seats ? { seats: true } : {}), ...terms }
+            ? { endDate, ...(seats ? { seats: true } : {}), ...terms, ...sites }
             : { kind: row.kind, id: row.id, endDate };
           renew.mutate(body, {
             onSuccess: async (result) => {
@@ -257,7 +275,7 @@ export function RenewDialog({
               error={check.error('cost')}
             >
               {/* Ô chữ, không `type="number"`: phải nhận "5.600.000" hay "5,6tr" như chép từ
-                  hoá đơn (`lib/money-input`). */}
+                  hóa đơn (`lib/money-input`). */}
               <input
                 id="renew-cost"
                 className="inp"
@@ -272,6 +290,22 @@ export function RenewDialog({
               />
             </Field>
           </>
+        ) : null}
+
+        {showWebsites ? (
+          <Field
+            label={t('expiry.renewWebsites')}
+            hint={t('expiry.renewWebsitesHint')}
+            htmlFor="renew-websites"
+          >
+            <textarea
+              id="renew-websites"
+              className="inp"
+              rows={3}
+              value={siteText}
+              onChange={(e) => setSiteText(e.target.value)}
+            />
+          </Field>
         ) : null}
 
         {attachTo ? <AttachmentDraftSection draft={draft} disabled={renew.isPending || uploading} /> : null}

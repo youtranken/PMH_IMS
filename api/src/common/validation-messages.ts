@@ -126,6 +126,7 @@ export const FIELD_LABEL: Record<string, string> = {
   vlan: 'VLAN',
   warrantyEnd: 'Hết bảo hành',
   warrantyStart: 'Bắt đầu bảo hành',
+  websites: 'Danh sách website',
   weekday: 'Thứ trong tuần',
   width: 'Độ rộng',
   withinDays: 'Trong vòng (ngày)',

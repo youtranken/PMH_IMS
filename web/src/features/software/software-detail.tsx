@@ -37,6 +37,7 @@ import {
   STATUS_KEY,
   STATUS_TONE,
   supportsSeats,
+  supportsWebsites,
   type SoftwareDetailRow,
   type SoftwareHistoryRow,
   type SoftwareKind,
@@ -279,6 +280,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
       <DetailLayout
         rail={
+          <>
           <RailCard title={t("detail.identityCard")}>
             {/* Không kèm ngày dưới trạng thái: ngày bắt đầu đọc thành "Hết hạn từ ngày…" —
                 sai nghĩa. Ngày bắt đầu đã là mốc đầu của thanh thời hạn ngay dưới. */}
@@ -320,6 +322,26 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
             <RailRowIfSet label={t("software.vendor")} value={item.vendorName} />
           </RailCard>
+          {/* Website nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
+              này đang phủ website nào" là câu người trực sự cố hỏi đầu tiên (Q-15, SW-043). */}
+          {supportsWebsites(item.kind) ? (
+            <RailCard
+              title={t(item.kind === "ssl" ? "software.websitesSsl" : "software.websitesDomain")}
+            >
+              {(item.websites ?? []).length > 0 ? (
+                <ul className="chip-row">
+                  {(item.websites ?? []).map((site) => (
+                    <li key={site} className="chip mono">
+                      {site}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">{t("software.websitesEmpty")}</p>
+              )}
+            </RailCard>
+          ) : null}
+          </>
         }
       >
         <Tabs
@@ -403,7 +425,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 </button>
               ))}
             </div>
-            {historyGroup === "renew" ? <SoftwareRenewals softwareId={item.id} /> : null}
+            {historyGroup === "renew" ? (
+              <SoftwareRenewals softwareId={item.id} withWebsites={supportsWebsites(item.kind)} />
+            ) : null}
             <HistoryPanel
               entries={toSoftwareHistory(
                 (history.data ?? []).filter(
@@ -454,6 +478,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
           url={`/api/v1/software/${item.id}/renew`}
           withTerms
           seatEnds={seatEnds}
+          websites={supportsWebsites(item.kind) ? (item.websites ?? []) : undefined}
           attachTo={{ ownerType: "software", ownerId: item.id }}
           csrfToken={me.csrfToken}
           onClose={() => setRenewing(false)}

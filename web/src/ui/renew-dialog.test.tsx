@@ -105,3 +105,51 @@ describe('RenewDialog — hợp đồng + chi phí của lượt gia hạn (Q-15
     expect(screen.queryByLabelText('Chi phí kỳ mới')).toBeNull();
   });
 });
+
+describe('RenewDialog — website của kỳ mới (SSL/tên miền, SW-043)', () => {
+  function renderSsl(websites?: string[]) {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(jsonResponse(201, {})),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const onDone = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <RenewDialog
+          row={{ ...ROW, kind: 'ssl' }}
+          kindLabel="SSL"
+          csrfToken="t"
+          url="/api/v1/software/sw1/renew"
+          websites={websites}
+          onClose={vi.fn()}
+          onDone={onDone}
+        />
+      </ToastProvider>,
+    );
+    return { fetchMock, onDone };
+  }
+
+  it('điền sẵn danh sách hiện tại, sửa được, gửi danh sách của kỳ mới', async () => {
+    const { fetchMock, onDone } = renderSsl(['a.pmh.vn', 'b.pmh.vn']);
+    const box = screen.getByRole('textbox', { name: 'Website của kỳ mới' });
+    expect(box).toHaveValue('a.pmh.vn\nb.pmh.vn');
+    await userEvent.clear(box);
+    await userEvent.type(box, 'a.pmh.vn{enter}c.pmh.vn{enter}');
+    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sentBody(fetchMock)).toEqual({
+      endDate: '2100-12-31',
+      websites: ['a.pmh.vn', 'c.pmh.vn'],
+    });
+  });
+
+  it('không truyền websites (license) → không có ô, không gửi', async () => {
+    const { fetchMock, onDone } = renderSsl(undefined);
+    expect(screen.queryByRole('textbox', { name: 'Website của kỳ mới' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sentBody(fetchMock)).toEqual({ endDate: '2100-12-31' });
+  });
+});

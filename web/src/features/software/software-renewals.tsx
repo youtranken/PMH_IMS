@@ -15,6 +15,8 @@ export interface RenewalRow {
   contract: string | null;
   /** Tiền đồng; null = chưa khai (khác 0 ₫). */
   cost: number | null;
+  /** Website của RIÊNG kỳ này (SSL/tên miền); null = loại hồ sơ không có website. */
+  websites: string[] | null;
   actor: string;
   createdAt: string;
 }
@@ -24,7 +26,14 @@ export interface RenewalRow {
  * Tab Lịch sử chỉ nói "gia hạn tới X"; câu quyết toán "năm nay gia hạn theo hợp đồng nào, hết
  * bao nhiêu" đọc ở bảng này.
  */
-export function SoftwareRenewals({ softwareId }: { softwareId: string }) {
+export function SoftwareRenewals({
+  softwareId,
+  withWebsites = false,
+}: {
+  softwareId: string;
+  /** SSL / tên miền: thêm cột website của từng kỳ — "năm 2025 cert này phủ website nào". */
+  withWebsites?: boolean;
+}) {
   const { t } = useTranslation();
   const renewals = useQuery({
     queryKey: ['software', softwareId, 'renewals'],
@@ -64,6 +73,15 @@ export function SoftwareRenewals({ softwareId }: { softwareId: string }) {
           formatMoney(row.original.cost)
         ),
     },
+    ...(withWebsites
+      ? [
+          {
+            id: 'websites',
+            header: t('software.renewalWebsites'),
+            cell: ({ row }) => sitesOf(row.original) || <span className="muted">{blank}</span>,
+          } satisfies ColumnDef<RenewalRow, unknown>,
+        ]
+      : []),
     { id: 'actor', header: t('software.renewalActor'), cell: ({ row }) => row.original.actor },
   ];
 
@@ -87,10 +105,17 @@ export function SoftwareRenewals({ softwareId }: { softwareId: string }) {
               ]
                 .filter(Boolean)
                 .join(' · '),
-            meta: (row) => `${formatDateTime(row.createdAt)} · ${row.actor}`,
+            meta: (row) =>
+              [withWebsites ? sitesOf(row) : null, formatDateTime(row.createdAt), row.actor]
+                .filter(Boolean)
+                .join(' · '),
           }}
         />
       )}
     </DetailSection>
   );
+}
+
+function sitesOf(row: RenewalRow): string {
+  return (row.websites ?? []).join(', ');
 }

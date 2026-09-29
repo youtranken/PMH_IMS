@@ -34,6 +34,8 @@ export const softwareTable = pgTable('software', {
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Website dùng chứng chỉ SSL / tên miền này — danh sách hiện tại (0181, Q-15). */
+  websites: text('websites').array().notNull().default([]),
 });
 
 /** AD-13: append-only (trigger `history_append_only` chặn UPDATE/DELETE ở tầng DB). */
