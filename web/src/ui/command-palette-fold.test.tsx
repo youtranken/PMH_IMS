@@ -6,21 +6,21 @@ import { renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-
 import type { Me } from '@/lib/me';
 
 /**
- * B-01 Ở TẦNG TRÌNH DUYỆT — NHÓM "MÀN HÌNH" CỦA BẢNG LỆNH PHẢI GẤP DẤU.
+ * TÌM KHÔNG DẤU Ở TẦNG TRÌNH DUYỆT — NHÓM "MÀN HÌNH" CỦA BẢNG LỆNH PHẢI GẤP DẤU.
  *
  * ===== VÌ SAO Ô NÀY NẰM Ở TẦNG VITEST, KHÔNG CHỈ Ở E2E =====
  *
  * Bốn nhóm kết quả của bảng lệnh đi hỏi API — chúng được `ims_norm()` bên Postgres lo. Nhóm
  * thứ năm, "Màn hình", lọc HOÀN TOÀN trong trình duyệt trên nhãn đã dịch (`t(item.key)`), nên
- * nó là đường mã DUY NHẤT của B-01 không chạm CSDL.
+ * nó là đường tìm-không-dấu DUY NHẤT không chạm CSDL.
  *
  * Bài E2E cũng phủ đường này, nhưng nó phải dựng cả stack rồi build lại ảnh web mới hỏi được
- * một câu — mà chính vì thế, lúc đem đột biến ra thử (25/09) nó đỏ ở dòng MỞ HỘP chứ không
+ * một câu — mà chính vì thế, lúc đem đột biến ra thử nó đỏ ở dòng MỞ HỘP chứ không
  * đỏ ở dòng gấp dấu: một bài đỏ vì lý do khác thì không chứng minh được gì cả. Ở tầng này,
  * đổi `foldSearch(q)` thành `q.toLowerCase()` là đỏ đúng dòng, trong hai giây.
  *
  * Đo hai chiều, vì bản vá sai có hai kiểu: gấp một vế thôi (gõ không dấu thì ra, gõ có dấu
- * thì mất) hoặc không gấp vế nào (nguyên trạng trước 25/09).
+ * thì mất) hoặc không gấp vế nào.
  */
 
 const me = {

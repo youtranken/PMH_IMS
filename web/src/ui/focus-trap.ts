@@ -3,7 +3,7 @@ import { useEffect, useRef, type RefObject } from 'react';
 /**
  * Giữ tiêu điểm bàn phím BÊN TRONG một lớp phủ, rồi trả nó về chỗ cũ khi lớp phủ đóng.
  *
- * ===== LỖ ĐANG VÁ (F-06, vế drawer 390px) =====
+ * ===== LỖ CẦN CHẶN (drawer 390px) =====
  *
  * Drawer điều hướng ở màn hẹp mở ra mà không quản lý tiêu điểm chút nào. Ba chuyện cùng lúc,
  * và chuyện đầu là chuyện nặng nhất:

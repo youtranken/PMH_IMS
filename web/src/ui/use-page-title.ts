@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { titleKeyOf } from '@/lib/routes';
 
 /**
- * Đặt tên tab trình duyệt theo màn đang mở (B-03).
+ * Đặt tên tab trình duyệt theo màn đang mở.
  *
  * ===== GỌI MỘT LẦN, Ở `AppRoutes` =====
  *

@@ -30,7 +30,7 @@ export function ExpiryBadge({
   now?: Date;
   showDate?: boolean;
   /**
-   * Hồ sơ đã ở trạng thái cuối đời, tức KHÔNG còn được tính hạn (B-05).
+   * Hồ sơ đã ở trạng thái cuối đời, tức KHÔNG còn được tính hạn.
    *
    * Các nguồn hạn bên API đều loại trạng thái ấy ra khỏi phép tính (`device`/`software` là
    * `retired`), nên màn danh sách vẽ huy hiệu vô điều kiện sẽ cãi nhau với chúng — cùng một hồ
@@ -45,16 +45,16 @@ export function ExpiryBadge({
    */
   notCounted?: boolean;
   /**
-   * Ngưỡng ĐI KÈM lượt trả về, cho màn nào có nó (19/09/2026).
+   * Ngưỡng ĐI KÈM lượt trả về, cho màn nào có nó.
    *
    * Màn `/expiry` nhận `thresholds` ngay trong phản hồi và dùng nó để LỌC bảng + ghi nhãn ô số.
    * Nếu huy hiệu ở cột Trạng thái vẫn tự hỏi `useExpiryThresholds()` thì một màn có HAI nguồn
    * ngưỡng: hook có `staleTime` 10 phút và `retry: false`, nên sau khi admin đổi
    * `expiry.critical_days` thành 14, bảng lọc theo 14 còn huy hiệu còn tô theo 7 (hoặc lùi về
    * mặc định khi `/expiry/thresholds` hỏng một lượt). Cùng một dòng, cùng một màn, hai câu trả
-   * lời — đúng cái bẫy mà bản vá 18/09 sinh ra để dẹp, chỉ là nó dời từ ô số sang cột huy hiệu.
+   * lời.
    *
-   * Không truyền thì giữ nguyên hành vi cũ: hỏi hook. Mọi màn khác không có ngưỡng đi kèm.
+   * Không truyền thì hỏi hook. Mọi màn khác không có ngưỡng đi kèm.
    */
   thresholds?: ExpiryThresholds;
 }) {

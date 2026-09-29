@@ -5,13 +5,13 @@ import { renderWithI18n, screen } from '@/test/test-utils';
 /**
  * TAB KHÔNG ĐƯỢC ĐEO SỐ 0.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
  * `item.count !== undefined` cho số `0` lọt qua, nên một hồ sơ chưa có giấy tờ nào hiện ra
- * "Giấy tờ 0" — đo trên trình duyệt thật ngày 18/09/2026, tab của một thiết bị trống trả về
+ * "Giấy tờ 0" — trên trình duyệt thật, tab của một thiết bị trống trả về
  * `["Tổng quan", "Giấy tờ 0", "Két sắt 0", "Lịch sử"]`. Con số ấy không nói thêm gì so với
  * việc mở tab ra và thấy khu rỗng, mà lại làm tab trông như đang hỏng. `_SPEC.md:61` xếp đây
- * là lỗi số 7 của đợt, `_SPEC.md:529` là gạch nghiệm thu.
+ * là lỗi, `_SPEC.md:529` là gạch nghiệm thu.
  *
  * Bốn màn chi tiết đều truyền số thô (`counts.files`, `counts.secrets`, `seatUsed`,
  * `portRowCount`), nên sửa ở `ui/tabs.tsx` là sửa cho cả bốn — thay vì bắt mỗi màn tự nhớ

@@ -6,25 +6,25 @@ import { Select } from '@/ui/select';
 import { Combobox } from '@/ui/combobox';
 
 /**
- * `Field` NỐI NHÃN, GỢI Ý VÀ LỖI VÀO CHÍNH Ô NHẬP (F-06).
+ * `Field` NỐI NHÃN, GỢI Ý VÀ LỖI VÀO CHÍNH Ô NHẬP.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
  * `<label htmlFor>` có sẵn, nhưng `{children}` là ANH EM của `<label>` chứ không nằm trong nó,
- * nên phép nối chỉ thành khi nơi gọi tự khai `htmlFor` VÀ tự đặt cùng `id` lên ô. Đo 19/09:
- * **56 trên 145** chỗ gọi `<Field>` không truyền `htmlFor`, trong đó **8 chỗ** ô con cũng
- * không có tên trợ năng nào — hoàn toàn câm. Và `aria-describedby` = **0 lần trong cả
- * `web/src`**: `hint`/`error` là chữ nằm cạnh ô, không thuộc về ô nào.
+ * nên phép nối chỉ thành khi nơi gọi tự khai `htmlFor` VÀ tự đặt cùng `id` lên ô. Để nơi gọi
+ * tự lo thì hơn một phần ba chỗ gọi `<Field>` không truyền `htmlFor`, vài chỗ ô con cũng không
+ * có tên trợ năng nào — hoàn toàn câm. Và thiếu `aria-describedby` thì `hint`/`error` là chữ
+ * nằm cạnh ô, không thuộc về ô nào.
  *
  * ===== VÌ SAO BÀI NÀY DỰNG THẬT TỪNG LOẠI ĐIỀU KHIỂN =====
  *
  * `Field` nối bằng cách gắn `id`/`aria-describedby` vào đứa con của nó. Đứa con nào KHÔNG
  * nhận hai prop ấy thì phép gắn **lặng lẽ không làm gì** — không lỗi biên dịch, không cảnh
- * báo, form vẫn dựng ra bình thường. Đó đúng là hình dạng lỗi mà cả đợt rà soát này đi dọn.
+ * báo, form vẫn dựng ra bình thường.
  *
  * Nên mỗi loại điều khiển được dựng THẬT rồi ĐO lại trên DOM. `Combobox` có ô riêng vì nó là
- * gốc rễ §6.4 gọi tên: trước 23/09 nó không nhận `id`, nên `htmlFor` về nguyên tắc không dùng
- * được với nó dù nơi gọi có khai đúng.
+ * trường hợp dễ hỏng nhất: nó phải tự nhận `id` và chuyển xuống `<input>`, không thì
+ * `htmlFor` không dùng được với nó dù nơi gọi có khai đúng.
  */
 
 function labelOf(name: string) {
@@ -119,7 +119,7 @@ describe('Field — nối gợi ý và lỗi vào ô', () => {
 
   it('lỗi VÀ gợi ý cùng lúc thì nối CẢ HAI, lỗi trước', () => {
     /*
-     * Luật 12/09 của chính `Field`: lỗi và gợi ý không loại trừ nhau, vì gợi ý thường chính là
+     * Luật của chính `Field`: lỗi và gợi ý không loại trừ nhau, vì gợi ý thường chính là
      * thứ nói cho người dùng biết viết thế nào cho đúng. Nối thiếu một vế là giấu đi đúng nửa
      * mà người ta cần — và trình đọc màn hình không có cách nào biết nửa kia tồn tại.
      */

@@ -129,7 +129,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       {/*
-        CÂU LỖI PHẢI ĐƯỢC ĐỌC NGAY (12/09) — và vai `alert` nằm trên TỪNG DÒNG, không phải
+        CÂU LỖI PHẢI ĐƯỢC ĐỌC NGAY — và vai `alert` nằm trên TỪNG DÒNG, không phải
         trên vùng chứa.
 
         Vấn đề: cả chồng toast nằm trong một `aria-live="polite"`, nghĩa là "chờ người dùng

@@ -57,17 +57,17 @@ interface ComboboxProps<T> {
    * Ô BẮT BUỘC. Khác `Select`, `Combobox` render ra một `<input>` THẬT, nên đây là `required`
    * của TRÌNH DUYỆT — chặn submit thật, không chỉ là một thuộc tính `aria`.
    *
-   * Đó chính là điều mục #24 bản rà soát nói: dấu `*` của `Field` có HAI hành vi tuỳ điều
-   * khiển bên dưới, và người viết form không có cách nào biết mình đang được vế nào. Nay
+   * Dấu `*` của `Field` có HAI hành vi tuỳ điều khiển bên dưới, và người viết form không có
+   * cách nào biết mình đang được vế nào. Nên
    * `Combobox` có vế đầy đủ, `Select` có vế `aria` (nó là `<button>`, không có gì hơn để cho).
    */
   required?: boolean;
   /**
-   * `id` của chính `<input>` — thêm 23/09 (F-06).
+   * `id` của chính `<input>`.
    *
-   * Đây là GỐC RỄ mà §6.4 chỉ đích danh: `Field` nhả `htmlFor` vào đứa con của nó, nhưng
-   * `Combobox` không nhận `id` nên về nguyên tắc `htmlFor` **không dùng được** với nó — bấm vào
-   * nhãn không đưa tiêu điểm vào ô, và `getByLabel` của bài kiểm không tìm ra nó.
+   * `Field` nhả `htmlFor` vào đứa con của nó; `Combobox` không nhận `id` thì `htmlFor`
+   * **không dùng được** với nó — bấm vào nhãn không đưa tiêu điểm vào ô, và `getByLabel` của
+   * bài kiểm không tìm ra nó.
    *
    * Nhận qua props chứ không tự sinh bằng `useId`: `Field` là bên biết cả nhãn lẫn ô, nên nó
    * phải là bên đặt tên. Tự sinh ở đây thì hai bên sinh hai id và chẳng bên nào nối được với ai.
@@ -89,7 +89,7 @@ interface ComboboxProps<T> {
  * Menu chỉ hiện khi có kết quả — parent tự fetch theo query (debounce ở parent).
  * Điều hướng: ↑/↓ chọn dòng, Enter chốt, Esc đóng menu.
  * Menu PORTAL ra body + position:fixed neo theo ô input → KHÔNG bị overflow của .sheet-body /
- * bảng cắt (trước đây gợi ý mở gần đáy popup Chuyển/Sửa bị che). Tự lật lên khi dưới thiếu chỗ.
+ * bảng cắt (gợi ý mở gần đáy popup Chuyển/Sửa không bị che). Tự lật lên khi dưới thiếu chỗ.
  */
 export function Combobox<T>({
   placeholder,
@@ -141,10 +141,10 @@ export function Combobox<T>({
   const optionId = (index: number) => `${listId}-o${index}`;
 
   /*
-   * ===== "OPTIONS ĐỔI" PHẢI ĐO BẰNG NỘI DUNG, KHÔNG PHẢI BẰNG IDENTITY (10/09) =====
+   * ===== "OPTIONS ĐỔI" PHẢI ĐO BẰNG NỘI DUNG, KHÔNG PHẢI BẰNG IDENTITY =====
    *
-   * Bản cũ nghe `[options]` và làm hai việc: `setActive(0)` + `setClosed(false)`. Cả hai đều
-   * sai nhịp, vì `options` gần như KHÔNG BAO GIỜ ổn định về identity ở nơi gọi thật:
+   * Đừng nghe `[options]` để làm `setActive(0)` + `setClosed(false)`. Cả hai đều sẽ sai nhịp,
+   * vì `options` gần như KHÔNG BAO GIỜ ổn định về identity ở nơi gọi thật:
    * `SuggestInput` dựng `filtered` bằng `useMemo([options, term])`, `use-departments.ts` trả
    * `.filter().map()` — mảng MỚI sau mỗi lần cha render, kể cả khi nội dung y hệt.
    *
@@ -157,7 +157,7 @@ export function Combobox<T>({
    *
    * HAI VIỆC TÁCH LÀM HAI:
    *   - Về đầu danh sách: chỉ khi DANH SÁCH thật sự khác — so bằng khóa, không bằng ô nhớ.
-   *     (Trước đây bấm ↓ ba lần rồi cha render một cái là dòng đang sáng nhảy về đầu.)
+   *     (So bằng ô nhớ thì bấm ↓ ba lần rồi cha render một cái là dòng đang sáng nhảy về đầu.)
    *   - Mở lại menu: chuyển hẳn về các handler của NGƯỜI DÙNG — gõ (`onChange`), chạm vào ô
    *     (`onFocus`), bấm mũi tên (`toggle`). Cha render lại không phải một hành vi của người
    *     dùng, nên nó không được mở gì cả.
@@ -171,11 +171,10 @@ export function Combobox<T>({
    * `failed` cũng mở menu: người dùng phải THẤY câu "không tải được" ở đúng chỗ họ đang
    * nhìn, chứ không phải suy ra từ việc gõ mãi không thấy gì.
    *
-   * `empty` cũng vậy (20/09/2026) — và đây là chỗ dễ quên nhất khi thêm một trạng thái mới:
-   * viết xong phần RENDER mà không mở menu thì câu ấy không bao giờ hiện ra, và bài kiểm
-   * duy nhất bắt được là bài đi qua đúng đường người dùng đi. Tôi đã quên đúng chỗ này ở
-   * lượt đầu, và bài kiểm bắt được — nó báo "không tìm thấy listbox" chứ không phải "không
-   * tìm thấy chữ", tức nó chỉ thẳng ra menu chưa từng mở.
+   * `empty` cũng vậy — và đây là chỗ dễ quên nhất khi thêm một trạng thái mới: viết xong
+   * phần RENDER mà không mở menu thì câu ấy không bao giờ hiện ra, và bài kiểm duy nhất bắt
+   * được là bài đi qua đúng đường người dùng đi (nó báo "không tìm thấy listbox" chứ không
+   * phải "không tìm thấy chữ", tức menu chưa từng mở).
    */
   const open =
     touched &&
@@ -270,9 +269,9 @@ export function Combobox<T>({
             setActive((i) => Math.max(i - 1, 0));
           } else if (e.key === 'Enter') {
             /*
-             * CHỈ NUỐT `Enter` KHI CÓ GÌ ĐÓ ĐỂ CHỌN (§18 #16, vá 22/09).
+             * CHỈ NUỐT `Enter` KHI CÓ GÌ ĐÓ ĐỂ CHỌN.
              *
-             * Bản trước gọi `preventDefault()` vô điều kiện. Lọc ra 0 dòng thì
+             * Gọi `preventDefault()` vô điều kiện là sai: lọc ra 0 dòng thì
              * `options[active]` là `undefined` — không có gì để chọn, nhưng phím vẫn bị nuốt.
              * Người dùng gõ xong, bấm Enter để lưu phiếu, và KHÔNG CÓ GÌ XẢY RA: form không
              * submit, menu không nói gì. Họ bấm lại, vẫn không gì, rồi kết luận hệ thống treo.
@@ -373,8 +372,8 @@ export function Combobox<T>({
                 form đang mở gợi ý, gõ Tab đưa tiêu điểm xuống giữa danh sách, ĐỨNG SAU cả nút
                 Lưu và Hủy.
 
-                `aria-selected={false}`: "đang sáng" KHÔNG phải "đã chọn". Bản cũ đặt
-                `i === active`, nên mỗi lần bấm ↓ trình đọc màn hình đọc "đã chọn" cho một dòng
+                `aria-selected={false}`: "đang sáng" KHÔNG phải "đã chọn". Đặt `i === active`
+                thì mỗi lần bấm ↓ trình đọc màn hình đọc "đã chọn" cho một dòng
                 người dùng mới chỉ lướt qua, trong khi ô gõ chưa nhận giá trị nào. Việc đang
                 sáng đã do `aria-activedescendant` nói ra rồi. `Select` có `value` nên nó so
                 với `value` thật; `Combobox` là ô gõ tự do, danh sách gợi ý không mang lựa chọn.

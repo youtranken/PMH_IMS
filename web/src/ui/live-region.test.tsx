@@ -5,7 +5,7 @@ import { useAnnounce, LiveRegion } from '@/ui/live-region';
 /**
  * Vùng sống phải CÓ MẶT TRƯỚC khi nội dung đổi, và phải sống LÂU HƠN thứ nó nói về.
  *
- * Hai luật ấy là cả nội dung của F-06 vế `Loading`. Bài này kiểm được chúng mà không cần trình
+ * Hai luật ấy là cả nội dung của vùng sống cho `Loading`. Bài này kiểm được chúng mà không cần trình
  * đọc màn hình: luật một = node tồn tại khi chưa ai loan báo gì; luật hai = gỡ MỘT người loan
  * báo trong khi người khác còn sống thì chữ không được biến mất.
  */
@@ -22,7 +22,7 @@ function vung() {
 describe('LiveRegion', () => {
   it('node có mặt ngay cả khi chưa ai loan báo gì', () => {
     /*
-     * Ô quan trọng nhất của cả bài, và là ô mà bản cũ trượt: `role="status"` gắn trên chính
+     * Ô quan trọng nhất của cả bài: `role="status"` gắn trên chính
      * node "đang tải" thì node ấy chỉ ra đời CÙNG nội dung, và trình đọc màn hình bỏ qua.
      */
     render(<LiveRegion />);

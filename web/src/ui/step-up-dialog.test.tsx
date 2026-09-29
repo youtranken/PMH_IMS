@@ -3,17 +3,15 @@ import { StepUpDialog } from '@/ui/step-up-dialog';
 import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 /**
- * CỬA KÉT PHẢI NÓI "CÒN MẤY LẦN NỮA" (§18 #3).
+ * CỬA KÉT PHẢI NÓI "CÒN MẤY LẦN NỮA".
  *
- * ===== VÌ SAO BÀI NÀY RA ĐỜI MUỘN =====
+ * ===== VÌ SAO CẦN BÀI RIÊNG =====
  *
  * `errorMessage(err, fallback, nearLimit)` — tham số thứ ba ghép thêm câu cảnh báo "còn N lần
- * nữa là phiên bị thu hồi" khi server trả `attemptsLeft` nhỏ. Nó được đấu vào cửa này, và cửa
- * này KHÔNG có bài kiểm nào.
+ * nữa là phiên bị thu hồi" khi server trả `attemptsLeft` nhỏ. Nó được đấu vào cửa này.
  *
- * Đã đo, không đoán: gỡ hẳn tham số thứ ba ở `step-up-dialog.tsx` rồi chạy trọn bộ web —
- * **396 bài, xanh hết**. Một hàng rào mà không đột biến nào làm đỏ được thì chưa phải hàng
- * rào; nó là một lời hứa.
+ * Không có bài này thì gỡ hẳn tham số thứ ba ở `step-up-dialog.tsx` mà cả bộ web vẫn xanh.
+ * Một hàng rào mà không đột biến nào làm đỏ được thì chưa phải hàng rào; nó là một lời hứa.
  *
  * ===== VÌ SAO NÓ ĐÁNG CÓ BÀI CANH =====
  *

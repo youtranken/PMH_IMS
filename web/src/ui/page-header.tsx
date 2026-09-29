@@ -36,8 +36,8 @@ export function FormSection({
 }: {
   /**
    * Tiêu đề khu. BỎ TRỐNG khi khu chỉ có một ô mà nhãn ô đã nói đúng điều đó — form tài khoản
-   * dịch vụ từng in "Ghi chú" hai lần chồng nhau, cách nhau 8px, vì tiêu đề khu và nhãn ô là
-   * cùng một chữ (rà UI/UX 12/09, mục #35).
+   * dịch vụ mà để cả hai thì in "Ghi chú" hai lần chồng nhau, cách nhau 8px, vì tiêu đề khu và
+   * nhãn ô là cùng một chữ.
    *
    * Không bỏ trống chỉ để cho gọn: khu có từ hai ô trở lên thì tiêu đề là thứ nói cho người
    * đọc biết mấy ô ấy thuộc về nhau.
@@ -59,19 +59,18 @@ export function FormSection({
 /**
  * Đứa con của `Field` có phải thứ ĐEO ĐƯỢC `id` của nhãn hay không.
  *
- * ===== HỒI QUY ĐÃ DÍNH, 24/09 — VÀ CHỈ E2E BẮT ĐƯỢC =====
+ * ===== VÌ SAO KHÔNG GẮN `id` VÀO BẤT KỲ PHẦN TỬ CON NÀO =====
  *
- * Bản đầu gắn `id` vào BẤT KỲ phần tử con nào. Ở `catalog-form.tsx:246` con của `Field` là một
+ * Ở `catalog-form.tsx` con của `Field` là một
  * `<label className="row">` BỌC NGOÀI cái checkbox thật, và checkbox ấy đã tự khai
- * `id="catalog-portmap"` — đúng cái id mà `Field` đang dùng. Kết quả: HAI phần tử mang cùng một
+ * `id="catalog-portmap"` — đúng cái id mà `Field` đang dùng. Gắn bừa thì HAI phần tử mang cùng một
  * `id`, `htmlFor` phân giải vào phần tử ĐẦU TIÊN (cái `<label>` bọc, không phải điều khiển),
  * nên nhãn của `Field` thôi nối vào checkbox và tên trợ năng của nó rơi về câu gợi ý dài bên
  * trong. Tên đổi từ "Có port map" thành "Loại này sẽ hiện bảng port map ở trang chi tiết…".
  *
- * Vitest 519/519 xanh suốt vì không bài nào dựng đúng hình dạng "Field bọc một label bọc một
- * input". Bài E2E `di-khap-giao-dien` — vốn đếm TÊN TRỢ NĂNG của từng điều khiển trong hộp —
- * là thứ duy nhất bắt được. Chú thích cũ của tôi ghi "đứa con không nhận `id` thì phép gắn
- * lặng lẽ không làm gì"; sai — nó làm SAI, chứ không phải không làm.
+ * Bài đơn vị không dựng hình dạng "Field bọc một label bọc một input" thì xanh; bài E2E
+ * `di-khap-giao-dien` — vốn đếm TÊN TRỢ NĂNG của từng điều khiển trong hộp — là thứ bắt được.
+ * Gắn nhầm chỗ không phải "lặng lẽ không làm gì" — nó làm SAI.
  *
  * ===== LUẬT =====
  *
@@ -104,10 +103,9 @@ export function Field({
    *
    * ===== DẤU `*` CHỈ CÓ NGHĨA KHI NÓ PHÂN BIỆT ĐƯỢC CÁI GÌ =====
    *
-   * Rà UI/UX 12/09 (mục #24) liệt kê "4 màn `auth/` không có dấu nào" như một chỗ thiếu. Tôi
-   * đã đi thêm dấu vào đó, rồi nhận ra đó là bản vá SAI — và nhận ra theo cách đắt nhất: bốn
-   * nhãn ấy làm `getByLabel('Mật khẩu', { exact: true })` trong `helpers.ts` không khớp nữa
-   * (Playwright khớp theo TEXT của thẻ nhãn, kể cả phần `aria-hidden`), nên MỌI bài E2E đỏ.
+   * Bốn màn `auth/` KHÔNG có dấu nào, và đó là cố ý. (Thêm dấu ở đó còn làm
+   * `getByLabel('Mật khẩu', { exact: true })` trong `helpers.ts` không khớp nữa — Playwright
+   * khớp theo TEXT của thẻ nhãn, kể cả phần `aria-hidden` — nên MỌI bài E2E đỏ.)
    *
    * Nhưng lý do bỏ dấu không phải vì bài kiểm đỏ. Màn đăng nhập có hai ô, cả hai bắt buộc;
    * màn đổi mật khẩu có ba ô, cả ba bắt buộc. Đánh dấu MỌI ô là nói không được điều gì —
@@ -124,24 +122,24 @@ export function Field({
   children: ReactNode;
 }) {
   /*
-   * ===== `Field` TỰ NỐI NHÃN, GỢI Ý VÀ LỖI VÀO Ô NHẬP (F-06, 23/09) =====
+   * ===== `Field` TỰ NỐI NHÃN, GỢI Ý VÀ LỖI VÀO Ô NHẬP =====
    *
-   * Trước đây `htmlFor` là việc của NƠI GỌI, và 56 trên 145 chỗ gọi không truyền — nhãn không
+   * Để `htmlFor` là việc của NƠI GỌI thì hơn một phần ba chỗ gọi không truyền — nhãn không
    * nối được vào ô, bấm vào nhãn không xảy ra gì, và `getByLabel` của bài kiểm không tìm ra.
-   * Tám trong số đó thì ô con cũng không có tên trợ năng nào, tức hoàn toàn câm.
+   * Vài chỗ thì ô con cũng không có tên trợ năng nào, tức hoàn toàn câm.
    *
-   * Và `aria-describedby` thì **0 lần trong cả `web/src`**: `hint`/`error` chỉ là chữ nằm
+   * Và thiếu `aria-describedby` thì `hint`/`error` chỉ là chữ nằm
    * cạnh ô, trình đọc màn hình không biết chúng thuộc về ô nào — người dùng nghe "Mật khẩu,
    * ô nhập" rồi tự đoán, trong khi dòng gợi ý ngay dưới đang nói "tối thiểu 12 ký tự".
    *
-   * Cách sửa hiển nhiên là đi sửa 56 nơi gọi. Nhưng nơi gọi thứ 146 sẽ quên, và quên thì
+   * Bắt từng nơi gọi tự truyền thì nơi gọi mới sẽ quên, và quên thì
    * KHÔNG gì đỏ — form vẫn dựng ra bình thường. Nên `Field` tự làm: nó sinh một `id` khi nơi
    * gọi không cho, rồi GẮN id ấy cùng `aria-describedby` vào chính đứa con của nó.
    *
    * Không đè lên thứ nơi gọi đã tự khai: một ô đã có `id` riêng (để `Select` và `<input>` thay
    * nhau ở cùng một chỗ, hoặc để bài kiểm bám vào) thì giữ nguyên id ấy.
    *
-   * Đứa con không nhận `id`/`aria-describedby` thì phép gắn này lặng lẽ không làm gì — đó là
+   * Đứa con không nhận `id`/`aria-describedby` thì phép gắn này không có tác dụng — đó là
    * lý do `page-header.test.tsx` dựng thật từng loại điều khiển trong `Field` rồi ĐO lại, thay
    * vì tin rằng đã gắn.
    */
@@ -172,11 +170,11 @@ export function Field({
             đúng nhãn ("Email"), không thành "Email *". Chặn thật nằm ở `useFormErrors` của
             form (form đặt `noValidate`); `required` trên ô để trình đọc màn hình đọc "bắt buộc". */}
         {/*
-          `field-req`, KHÔNG phải `req` (sửa 12/09).
+          `field-req`, KHÔNG phải `req`.
 
-          `form-layout.css:211` khai `.field-req { color: var(--danger) }`, nhưng chỗ này viết
-          `className="req"` — một lớp không tồn tại. Nên dấu `*` vẫn hiện, chỉ là cùng màu với
-          nhãn: đúng cái bẫy `CLAUDE.md` cảnh báo cho `.dark` — một khối CSS hợp lệ mà không
+          `form-layout.css` khai `.field-req { color: var(--danger) }`; `className="req"` là một
+          lớp không tồn tại. Viết sai thì dấu `*` vẫn hiện, chỉ là cùng màu với nhãn: đúng cái
+          bẫy `CLAUDE.md` cảnh báo cho `.dark` — một khối CSS hợp lệ mà không
           bao giờ chạy, và không có gì đỏ vì trang vẫn dựng ra bình thường.
         */}
         {required ? (
@@ -187,9 +185,9 @@ export function Field({
       </label>
       {control}
       {/*
-        LỖI VÀ GỢI Ý KHÔNG LOẠI TRỪ NHAU (12/09).
+        LỖI VÀ GỢI Ý KHÔNG LOẠI TRỪ NHAU.
 
-        Bản cũ dùng `error ? … : hint ? …`, nên đúng lúc ô vừa báo sai thì dòng gợi ý biến
+        Viết `error ? … : hint ? …` thì đúng lúc ô vừa báo sai, dòng gợi ý biến
         mất — trong khi gợi ý thường chính là thứ nói cho người dùng biết viết thế nào cho
         đúng ("Tối thiểu 12 ký tự, có ít nhất 3 trong 4 nhóm…"). Giấu nó đi ở đúng khoảnh
         khắc người ta cần là biến một lần gõ sai thành một vòng thử-và-đoán.

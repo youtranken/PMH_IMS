@@ -14,7 +14,7 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
  * đọc "không có lựa chọn" rồi đi mở màn Danh mục để khai một loại thiết bị ĐÃ CÓ SẴN, hoặc
  * kết luận hệ thống chưa cài xong. Cả hai đều là hậu quả của việc component nói dối.
  *
- * Sửa ở `Combobox` mà quên `Select` chính là mẫu N1 đã lặp bốn lần trong repo — nên bài này
+ * Sửa ở `Combobox` mà quên `Select` là lỗi dễ lặp — nên bài này
  * tồn tại để hai cửa không thể lệch nhau.
  */
 describe('Select — phân biệt "không có lựa chọn" với "không tải được"', () => {
@@ -64,11 +64,11 @@ describe('Select — phân biệt "không có lựa chọn" với "không tải 
 });
 
 /**
- * DẤU `*` PHẢI CÓ NGHĨA VỚI CẢ NGƯỜI KHÔNG NHÌN THẤY NÓ (rà UI/UX #24).
+ * DẤU `*` PHẢI CÓ NGHĨA VỚI CẢ NGƯỜI KHÔNG NHÌN THẤY NÓ.
  *
  * `Field required` chỉ VẼ dấu `*` (`page-header.tsx`), còn chặn thật thì tuỳ điều khiển bên
  * dưới: `<input>` có `required` của trình duyệt, `Select` render ra `<button>` nên KHÔNG có
- * gì. Hậu quả tới 12/09: năm ô đội dấu `*` mà trình đọc màn hình không nghe thấy chữ "bắt
+ * gì. Thiếu `aria-required` thì ô đội dấu `*` mà trình đọc màn hình không nghe thấy chữ "bắt
  * buộc" nào — dấu ấy là thứ chỉ người sáng mắt đọc được.
  *
  * Vế đối chứng ở dưới cũng cần: `aria-required` trên MỌI ô chọn thì thuộc tính đó hết nghĩa.
@@ -91,7 +91,7 @@ describe('Select — ô bắt buộc', () => {
 });
 
 /**
- * F-05 — DÒNG ĐANG SÁNG KHÔNG ĐƯỢC NHẢY VỀ CHỖ CŨ KHI CHA RENDER LẠI.
+ * DÒNG ĐANG SÁNG KHÔNG ĐƯỢC NHẢY VỀ CHỖ CŨ KHI CHA RENDER LẠI.
  *
  * ===== LỖ ĐANG VÁ =====
  *
@@ -105,11 +105,10 @@ describe('Select — ô bắt buộc', () => {
  * cùng form đổi giá trị, một query trả về), và dòng sáng nhảy ngược. Bấm Enter thì chọn
  * nhầm — một thao tác bàn phím bình thường cho ra kết quả sai, im lặng.
  *
- * `Combobox` đã gặp đúng cơ chế này và vá ngày 10/09 (`combobox.tsx:129` — so bằng NỘI DUNG,
- * không bằng ô nhớ). `Select` bị sót. Đây đúng là mẫu N1 đã lặp bốn lần trong repo: vá một
- * cửa, quên cửa song song — và chính docblock ở đầu file này viết ra để chặn.
+ * `Combobox` gặp đúng cơ chế này (`combobox.tsx` — so bằng NỘI DUNG, không bằng ô nhớ).
+ * Vá một cửa mà quên cửa song song là lỗi dễ lặp, nên `Select` có bài riêng.
  *
- * ===== CÁCH VÁ, VÀ VÌ SAO KHÔNG COPY `JSON.stringify` CỦA COMBOBOX =====
+ * ===== CÁCH LÀM, VÀ VÌ SAO KHÔNG COPY `JSON.stringify` CỦA COMBOBOX =====
  *
  * Combobox chỉ cần biết "danh sách có đổi không" nên băm khóa là đủ. Select cần một thứ hẹp
  * hơn và rẻ hơn: **chỉ mục của option đang chọn**. Đó là một SỐ — ổn định theo giá trị, nên

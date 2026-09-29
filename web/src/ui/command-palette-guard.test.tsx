@@ -13,7 +13,7 @@ import type { Me } from '@/lib/me';
  *
  * Hộp Radix đặt `pointer-events: none` lên `body` và chỉ mở lại cho vùng bên trong `Content`.
  * `CommandPalette` gắn ở shell, tức NGOÀI vùng ấy. Mở nó chồng lên một hộp thoại thì ra một
- * lớp phủ CHẾT, và cả bốn triệu chứng đều đo được trên trình duyệt thật ngày 18/09/2026:
+ * lớp phủ CHẾT, và cả bốn triệu chứng đều đo được trên trình duyệt thật:
  *
  *   · `--z-palette` (85) cao hơn `--z-modal` (60) → nó che kín màn hình;
  *   · `pointer-events` kế thừa `none` → không bấm được vào đâu;
@@ -39,13 +39,13 @@ describe('⌘K và hộp thoại không giẫm lên nhau', () => {
   const oTim = () => screen.queryByRole('dialog', { name: /tìm nhanh/i });
 
   /*
-   * HỎI DOM, KHÔNG HỎI CÂY TRỢ NĂNG — CHỈ Ở BÀI THỨ HAI (19/09/2026).
+   * HỎI DOM, KHÔNG HỎI CÂY TRỢ NĂNG — CHỈ Ở BÀI THỨ HAI.
    *
    * Khi một hộp Radix đang mở, nó đặt `aria-hidden="true"` lên MỌI nhánh anh em ngoài
    * `Content`. `CommandPalette` gắn ở shell, tức nằm trong một nhánh như thế — nên
-   * `queryByRole` trả `null` DÙ palette đã render và đang phủ kín màn hình. Bài thứ hai vì vậy
-   * từng xanh vì lý do sai: đợt rà 19/09 vô hiệu hoá đúng dòng bản vá
-   * (`if (!open && isAnyDialogOpen()) return;`) và bài vẫn 2/2 XANH, trong khi dump DOM cho
+   * `queryByRole` trả `null` DÙ palette đã render và đang phủ kín màn hình. Hỏi bằng
+   * `queryByRole` thì bài xanh vì lý do sai: vô hiệu hoá đúng dòng chặn
+   * (`if (!open && isAnyDialogOpen()) return;`) mà bài vẫn 2/2 XANH, trong khi dump DOM cho
    * thấy `.cp-wrap` + `role="dialog"` có mặt đầy đủ — đúng lớp phủ chết mà cả khối chú thích
    * trên đây mô tả (`--z-palette` 85 > `--z-modal` 60).
    *

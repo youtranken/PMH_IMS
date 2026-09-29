@@ -11,14 +11,14 @@ import { describe, expect, it } from 'vitest';
  *
  * ===== LỖ =====
  *
- * `useConfirm` để `title` là tùy chọn và rơi về `app.confirmTitle` = "Xác nhận". Đo 12/09:
- * 19 trên 24 chỗ gọi không truyền `title`. Nặng nhất là nút "Đá phiên" ở màn Tài khoản —
- * bảng có nhiều dòng phiên, hộp mở ra đội chữ "Xác nhận" và hỏi "Đá phiên đăng nhập này?",
+ * `useConfirm` để `title` là tùy chọn và rơi về `app.confirmTitle` = "Xác nhận". Không có cửa
+ * canh thì phần lớn chỗ gọi quên truyền `title`. Nặng nhất là nút đóng phiên ở màn Tài khoản —
+ * bảng có nhiều dòng phiên, hộp mở ra đội chữ "Xác nhận" và hỏi "… phiên đăng nhập này?",
  * trong khi chính nó vừa che mất cái bảng chứa chữ "này".
  *
  * ===== VÌ SAO LÀ MỘT BÀI KIỂM, KHÔNG PHẢI MỘT LẦN SỬA =====
  *
- * Sửa 19 chỗ hôm nay không ngăn được chỗ thứ 25. `title` vẫn là tùy chọn (và phải vậy — có
+ * Sửa các chỗ hôm nay không ngăn được chỗ viết mai. `title` vẫn là tùy chọn (và phải vậy — có
  * những hộp thật sự không có chủ thể nào để nêu), nên thứ giữ luật phải là một cửa canh đọc
  * mã nguồn. Cùng lối với `features/history-action-rollcall.test.ts`.
  *
@@ -87,7 +87,7 @@ describe('Tiêu đề của hộp hỏi lại', () => {
   /*
    * SÀN CHỐNG REGEX HỤT. Đổi cách gọi (`askConfirm(opts)` với biến, xuống dòng sau dấu ngoặc)
    * làm vòng lặp trên không tìm thấy gì, và một bài "mọi chỗ tìm được đều có tiêu đề" sẽ xanh
-   * trong khi nó chẳng kiểm gì. 22 là số đếm được ngày 12/09 (sau khi đã bỏ chú thích).
+   * trong khi nó chẳng kiểm gì. 22 là mức sàn dưới số chỗ gọi thật (đếm sau khi bỏ chú thích).
    */
   it('đọc được các chỗ gọi askConfirm (nếu không thì cả bài này vô nghĩa)', () => {
     expect(tong).toBeGreaterThanOrEqual(22);

@@ -8,7 +8,7 @@ import type { Me } from '@/lib/me';
 /**
  * ⌘K KHÔNG ĐƯỢC ĐỔI DÒNG ĐANG CHỌN DƯỚI TAY NGƯỜI DÙNG.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
  * `hits` ghép theo thứ tự cố định (thiết bị → phần mềm → ISP → tài khoản) từ bốn truy vấn giải
  * quyết ĐỘC LẬP, còn con trỏ là một CHỈ SỐ vào mảng ấy. Nhóm Phần mềm về trước, người dùng bấm
@@ -16,11 +16,10 @@ import type { Me } from '@/lib/me';
  * một hồ sơ hoàn toàn khác. Enter mở đúng hồ sơ sai đó, và `aria-activedescendant` cũng đọc
  * vống ra cái tên mới cho trình đọc màn hình.
  *
- * Bản vá 18/09 dựng đúng ý tưởng (neo theo ĐÍCH ĐẾN thay vì theo chỗ ngồi) nhưng đấu dây sai:
- * effect ghi neo khai TRƯỚC effect khôi phục, nên nó đè neo bằng phần tử ở chỗ ngồi cũ rồi mới
- * đi tìm chính giá trị vừa đè — một no-op hoàn chỉnh. Đợt rà 19/09/2026 dựng lại được cảnh
- * hỏng nguyên vẹn bằng hai bài độc lập. Bản vá ấy chưa từng có bài kiểm nào canh; đây là bài
- * đó.
+ * Neo theo ĐÍCH ĐẾN thay vì theo chỗ ngồi là đúng ý tưởng, nhưng dễ đấu dây sai: effect ghi
+ * neo khai TRƯỚC effect khôi phục thì nó đè neo bằng phần tử ở chỗ ngồi cũ rồi mới đi tìm chính
+ * giá trị vừa đè — một no-op hoàn chỉnh, và cảnh hỏng xảy ra nguyên vẹn. Bài này canh đúng
+ * chuyện đó.
  *
  * ===== BÀI NÀY HỎI GÌ =====
  *

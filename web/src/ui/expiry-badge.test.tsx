@@ -12,7 +12,7 @@ import { ExpiryBadge } from '@/ui/expiry-badge';
 import { quetNguon } from '@/test/quet-nguon';
 
 /**
- * HỒ SƠ ĐÃ NGỪNG DÙNG THÌ THÔI ĐEO NHÃN HẠN (B-05).
+ * HỒ SƠ ĐÃ NGỪNG DÙNG THÌ THÔI ĐEO NHÃN HẠN.
  *
  * ===== LỖ ĐANG VÁ =====
  *

@@ -9,14 +9,9 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
  *
  * ===== VÌ SAO BÀI NÀY TỒN TẠI =====
  *
- * `useListUrlState` là 185 dòng, SÁU màn danh sách đứng trên nó, và tới 18/09/2026 nó không
- * có một bài kiểm đơn vị nào — mọi lời hứa của nó chỉ được canh gián tiếp qua E2E, tức qua
- * một lượt chạy 35 phút cần cả stack docker.
- *
- * Nặng hơn: chính docblock của hook TỰ KHAI một lỗi đã lọt ra bản dùng nội bộ ("đúng lỗi đã
- * lọt vào `devices-screen.tsx` ngày 17/09, ô tìm gõ được mà bảng đứng yên"). Lỗi đó được sửa
- * bằng tay và KHÔNG có bài kiểm nào ra đời cùng nó — nên màn thứ bảy quên `searchKey` sẽ lặp
- * lại y hệt.
+ * SÁU màn danh sách đứng trên `useListUrlState`. Chỉ canh nó gián tiếp qua E2E tức là qua một
+ * lượt chạy 35 phút cần cả stack docker — và một màn quên `searchKey` (ô tìm gõ được mà bảng
+ * đứng yên) sẽ không bài nhanh nào bắt được.
  *
  * Toàn bộ thứ dưới đây là logic THUẦN: đọc/kẹp tham số, quyết cái gì được ghi lên URL. Kiểm
  * được bằng bảng dữ liệu, không cần trình duyệt, không cần server.
@@ -141,7 +136,7 @@ describe('useListUrlState — hai lượt ghi liền nhau không đè nhau', () 
  *
  * Khai nó thì `filters` trả về đã có sẵn từ khóa, nên hàm dựng query của màn không phải đổi
  * một chữ. KHÔNG khai thì `filters.search` luôn rỗng và tham số `search=` lặng lẽ không được
- * gửi lên API — ô tìm gõ được mà bảng đứng yên, đúng lỗi đã lọt ngày 17/09.
+ * gửi lên API — ô tìm gõ được mà bảng đứng yên.
  */
 describe('useListUrlState — searchKey', () => {
   it('khai searchKey thì giá trị ô tìm chảy vào filters', () => {
@@ -166,8 +161,8 @@ describe('useListUrlState — searchKey', () => {
 /**
  * DEBOUNCE 250ms + ĐỒNG BỘ NGƯỢC — hai lời hứa ghép vào nhau từng thành một chốt chết.
  *
- * Đợt rà 19/09/2026 chỉ ra 18 ca bên trên KHÔNG ca nào gọi `setSearchInput`, tức không ca nào
- * chạm hai lời hứa vừa vá ngày 18/09. Gỡ phép so đã-trim ra khỏi hook thì cả 18 vẫn xanh.
+ * Các ca bên trên KHÔNG ca nào gọi `setSearchInput`, tức không ca nào chạm hai lời hứa này.
+ * Gỡ phép so đã-trim ra khỏi hook thì các ca ấy vẫn xanh.
  *
  * Hai ca dưới đây khoá đúng hai lời hứa ấy, và ca thứ hai khoá hậu quả mà chúng gây ra khi
  * ghép: dấu cách thừa làm chốt `searchInput === search` không bao giờ đúng, effect debounce
@@ -228,18 +223,13 @@ describe('useListUrlState — ô tìm: debounce và dấu cách', () => {
   /**
    * ===== `isFiltered` — câu hỏi mà bốn màn đang trả lời SAI =====
    *
-   * Bốn màn danh sách (`devices` · `software` · `isp` · `serviceAccounts`) dùng MỘT câu rỗng
-   * cho HAI cảnh khác hẳn nhau, nên một hệ thống mới tinh chưa ai lọc gì vẫn báo "Chưa có
+   * Bốn màn danh sách (`devices` · `software` · `isp` · `serviceAccounts`) mà dùng MỘT câu rỗng
+   * cho HAI cảnh khác hẳn nhau thì một hệ thống mới tinh chưa ai lọc gì vẫn báo "Chưa có
    * thiết bị nào **khớp bộ lọc**". Người dùng mới đọc câu đó sẽ đi tìm cái bộ lọc không tồn tại.
    *
    * Câu trả lời nằm sẵn trong hook: nó giữ cả `filters` lẫn `search`. Đặt ở đây chứ không để
    * mỗi màn tự tính `Object.values(...).some(...)` — sáu bản chép tay là sáu cơ hội quên một
    * khoá (AD-15).
-   *
-   * ĐÂY LÀ LẦN THỨ HAI thứ này được thêm vào hook. Bản đầu tên `dirty`, bị GỠ ngày 18/09 vì
-   * **không một màn nào gọi** — nó được viết sẵn cho một cái nút "Xóa lọc" chưa bao giờ làm,
-   * và chú thích chỗ gỡ nói đúng: mã chưa từng chạy chỉ làm người đọc sau tưởng việc đã xong.
-   * Lần này khác ở đúng một chỗ đáng kể: nó ra đời CÙNG bốn nơi gọi, trong cùng một commit.
    */
   describe('isFiltered — "đang lọc" khác "chưa có gì"', () => {
     const BANG: ReadonlyArray<readonly [string, string, boolean]> = [

@@ -7,22 +7,16 @@ export interface TabItem {
   /** Số nhỏ bên phải nhãn (vd số dòng trong tab). */
   count?: number;
   /*
-   * ===== ĐÃ GỠ `dot` (19/09/2026) =====
+   * ===== KHÔNG CÓ PROP `dot` (chấm cảnh báo) =====
    *
-   * Prop chấm cảnh báo được viết đủ bộ — kiểu, CSS `.tab-dot`, chữ ẩn `.sr-only` cho trình
-   * đọc màn hình (WCAG 1.4.1) — nhưng KHÔNG một màn nào truyền nó, từ lúc ra đời tới lúc gỡ.
-   *
-   * Lý do gỡ chứ không đấu dây: hệ thống chưa có TÍN HIỆU nào để quyết khi nào chấm sáng.
+   * Hệ thống chưa có TÍN HIỆU nào để quyết khi nào chấm sáng.
    * Mockup `thiet-bi.html:510` có vẽ một chấm ở tab Két sắt nhưng không nói chấm ấy nghĩa là
    * gì — "secret quá hạn xoay" là suy đoán, và chưa chỗ nào tính được con số đó. Đấu bừa vào
-   * một tín hiệu tự nghĩ ra là thêm một lời hứa không ai kiểm được.
+   * một tín hiệu tự nghĩ ra là thêm một lời hứa không ai kiểm được — và mã không ai gọi chỉ
+   * làm người đọc sau tưởng việc đã xong.
    *
-   * Đây cũng đúng thứ đợt rà soát 18/09 gặp lặp đi lặp lại: token màu khai xong không dùng,
-   * luật CSS nằm chờ cả tháng, `.skip-link` có đủ kiểu dáng mà không ai đặt lên trang. Mỗi
-   * cái đều làm người đọc sau tưởng việc đã xong.
-   *
-   * Ngày nào chốt được chấm ấy BÁO ĐIỀU GÌ thì lấy lại trong lịch sử git — nó ở commit ngay
-   * trước commit này, kèm cả luật CSS.
+   * Ngày nào chốt được chấm ấy BÁO ĐIỀU GÌ thì bản cũ (kèm luật CSS `.tab-dot`) còn trong lịch
+   * sử git.
    */
 }
 
@@ -48,8 +42,8 @@ export function tabScrollLeft({
 }
 
 /**
- * Thanh tab dùng chung (AD-15) — màn Danh mục (2.1), trang chi tiết thiết bị (2.5),
- * hồ sơ phần mềm (Epic 3) đều dùng bản này. Dùng lại CSS `.tabs/.tab` sẵn có.
+ * Thanh tab dùng chung (AD-15) — màn Danh mục, các trang chi tiết (thiết bị, phần mềm…) đều
+ * dùng bản này. Dùng lại CSS `.tabs/.tab` sẵn có.
  *
  * Bàn phím theo chuẩn tablist: ←/→ chuyển tab, Home/End nhảy đầu/cuối. Không có cái này
  * thì tab chỉ bấm được bằng chuột — màn Danh mục là màn nhập liệu, người dùng đi bằng Tab.
@@ -131,16 +125,16 @@ export function Tabs({
           id={`tab-${item.key}`}
           aria-selected={item.key === value}
           /*
-           * `aria-controls` CHỈ trên tab đang chọn (19/09/2026).
+           * `aria-controls` CHỈ trên tab đang chọn.
            *
-           * Bản trước đặt nó lên MỌI tab, trỏ tới `tabpanel-<khoá>` của từng tab. Nhưng cả bốn
+           * Đặt nó lên MỌI tab, trỏ tới `tabpanel-<khoá>` của từng tab, là sai: cả bốn
            * trang chi tiết (và `catalog`, `expiry`, `approvals`) đều render đúng MỘT `TabPanel`
            * — cái của tab đang chọn. Nên với mọi tab còn lại, `aria-controls` trỏ vào một id
            * không tồn tại: axe báo `aria-valid-attr-value`, và người dùng JAWS đứng ở tab "Cổng"
            * chưa bấm rồi ra lệnh "nhảy tới khu được điều khiển" thì không có gì để nhảy tới.
            *
-           * Hai đường sửa: render đủ mọi panel rồi ẩn bằng `hidden` (đúng cách đợt này vừa làm
-           * cho `#rmap-cut-sum`), hoặc chỉ khai quan hệ khi nó CÓ THẬT. Chọn cách sau vì render
+           * Hai đường: render đủ mọi panel rồi ẩn bằng `hidden` (như `#rmap-cut-sum`), hoặc chỉ
+           * khai quan hệ khi nó CÓ THẬT. Chọn cách sau vì render
            * đủ panel nghĩa là mọi tab đều chạy truy vấn của nó ngay khi mở trang — đắt hơn hẳn,
            * và `TabPanel` hiện được dùng ở 8 chỗ gọi trên 7 màn (`expiry-screen` gọi hai lần).
            */
@@ -173,11 +167,11 @@ export function Tabs({
             selector theo tên tab cũng phải viết dính vào nhau mới khớp.
           */}
           {/*
-            SỐ 0 THÌ KHÔNG VẼ SỐ (18/09/2026).
+            SỐ 0 THÌ KHÔNG VẼ SỐ.
             `!== undefined` để số 0 lọt, nên tab hiện ra "Giấy tờ 0" — đo trên trình duyệt
             thật thì tab Giấy tờ và Két sắt của một hồ sơ trống đều mang đuôi "0". Con số đó
             không nói thêm gì so với việc mở tab ra và thấy khu rỗng, mà lại làm tab trông như
-            đang hỏng. `_SPEC.md:61` xếp đây là lỗi số 7 của đợt.
+            đang hỏng. `_SPEC.md:61` xếp đây là lỗi.
             Dùng phép thử truthy CHỦ Ý: nó gộp `0` với `undefined` ("chưa biết" — xem hợp đồng
             của `useTabCounts`) vào cùng một nhánh không-vẽ, đúng thứ ta muốn ở cả hai.
           */}

@@ -22,9 +22,8 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
  *
  * ===== VÌ SAO MỘT FILE CHO CẢ HAI =====
  *
- * Sửa `Combobox` mà quên `Select` là mẫu N1 đã lặp bốn lần trong repo (`failed`, `optionsLoad
- * Error`, hàng rào NAT, và chính hai ô này). Đặt chung một bài để hai cửa không lệch nhau
- * được nữa.
+ * Sửa `Combobox` mà quên `Select` là lỗi dễ lặp (`failed`, `optionsLoadError`, hàng rào NAT
+ * đều từng như thế). Đặt chung một bài để hai cửa không lệch nhau được.
  */
 
 const OPTIONS = [

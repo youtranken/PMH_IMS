@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useFocusTrap } from '@/ui/focus-trap';
 
 /**
- * BẪY TIÊU ĐIỂM CHO DRAWER 390px (F-06, vế 4).
+ * BẪY TIÊU ĐIỂM CHO DRAWER 390px.
  *
  * ===== VÌ SAO KIỂM ĐƯỢC BẰNG jsdom =====
  *

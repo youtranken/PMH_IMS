@@ -10,8 +10,8 @@ import type { Me } from '@/lib/me';
  *
  * ===== LỖ ĐANG VÁ =====
  *
- * Hộp tìm nhanh khai `role="dialog" aria-modal="true"` nhưng chưa bao giờ giữ tiêu điểm lại.
- * Đo ngày 19/09/2026: mở ⌘K rồi gõ Tab một lần là `activeElement` về `<body>`, gõ tiếp thì đi
+ * Hộp tìm nhanh khai `role="dialog" aria-modal="true"` thì phải giữ tiêu điểm lại. Không giữ
+ * thì mở ⌘K rồi gõ Tab một lần là `activeElement` về `<body>`, gõ tiếp thì đi
  * vào nút bên ngoài. Mà `aria-modal="true"` chính là lời dặn trình đọc màn hình CẤT phần ngoài
  * hộp khỏi bộ đệm ảo — nên người dùng bàn phím đang Tab vào những phần tử mà họ không nghe
  * thấy gì, và không có dấu hiệu nào cho biết mình đã rời hộp.

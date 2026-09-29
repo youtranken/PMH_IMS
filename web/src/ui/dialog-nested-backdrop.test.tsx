@@ -7,10 +7,10 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 /**
  * HỘP LỒNG KHÔNG ĐƯỢC CHỒNG HAI LỚP NỀN MỜ — KỂ CẢ KHI HỘP CON Ở GỐC APP.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
- * Bản sửa 18/09/2026 cho hộp lồng đo độ sâu bằng `DialogDepthContext`, tức bằng VỊ TRÍ TRONG
- * CÂY REACT. Cách đó đúng cho đường của Két sắt (hộp con dựng bên trong `sheet-body` của hộp
+ * Đo độ sâu hộp lồng chỉ bằng `DialogDepthContext`, tức bằng VỊ TRÍ TRONG CÂY REACT, thì
+ * đúng cho đường của Két sắt (hộp con dựng bên trong `sheet-body` của hộp
  * cha), nhưng mù với đường phổ biến hơn hẳn:
  *
  *   `ConfirmProvider` dựng `ConfirmDialog` ở GỐC app, là anh em của `children` chứ không nằm
@@ -18,7 +18,7 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
  *
  * Mà `guardUnsaved` của chính `ui/dialog.tsx` gọi `askConfirm`: mọi hộp có canh dữ liệu chưa
  * lưu, khi bấm Esc, đều đẻ ra một lớp nền mờ THỨ HAI đè lên lớp của chính nó. Đo trên trình
- * duyệt thật ngày 18/09/2026: hai lớp `rgba(20, 26, 20, .44)` chồng nhau, không lớp nào `bare`.
+ * duyệt thật: hai lớp `rgba(20, 26, 20, .44)` chồng nhau, không lớp nào `bare`.
  *
  * ===== BÀI NÀY HỎI GÌ =====
  *

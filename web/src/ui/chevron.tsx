@@ -1,13 +1,12 @@
 /**
  * MỘT mũi tên duy nhất cho cả app (AD-15).
  *
- * Trước đây có hai loại đứng cạnh nhau và trông không giống nhau chút nào:
- *  - `Select` / `Combobox` / `DatePicker` vẽ SVG chevron 1rem, nét 2.4 — rõ, bấm trúng.
- *  - Caret bung dòng và nút phân trang lại dùng KÝ TỰ `›` `‹` theo cỡ chữ — mảnh như dấu
- *    ngoặc, ở 14px gần như không thấy, và trên màn hình có scale nó lệch hẳn khỏi ô bấm.
+ * Không dùng KÝ TỰ `›` `‹` theo cỡ chữ cho caret bung dòng hay nút phân trang: mảnh như dấu
+ * ngoặc, ở 14px gần như không thấy, trên màn hình có scale nó lệch hẳn khỏi ô bấm, và đứng
+ * cạnh SVG chevron của `Select` / `Combobox` / `DatePicker` thì trông không giống nhau chút nào.
  *
- * Ba bản copy của cùng một `<path>` cũng đã nằm sẵn trong `select`/`combobox`/`date-picker` —
- * sửa nét mũi tên phải sờ ba chỗ và chắc chắn sẽ có chỗ bị quên. Giờ một chỗ.
+ * Mỗi component tự chép `<path>` thì sửa nét mũi tên phải sờ nhiều chỗ và chắc chắn sẽ có chỗ
+ * bị quên. Nên một chỗ.
  *
  * Kích thước theo `1em` để nó lớn/nhỏ theo `font-size` của nút bọc ngoài; nơi nào cần to hơn
  * thì đặt `font-size` cho nút, không sửa ở đây.
