@@ -61,6 +61,13 @@ describe('RenewDialog — ghế có kỳ hạn riêng', () => {
     expect(sentBody(fetchMock)).toEqual({ endDate: '2100-12-31' });
   });
 
+  it('ghế hết TRƯỚC hạn hiện tại (kỳ hạn chủ ý đặt ngắn) không bị đếm, cùng luật với API', async () => {
+    renderDialog(['2099-03-31', '2099-12-31']);
+    expect(screen.getByRole('checkbox', { name: /Cập nhật luôn 1 ghế/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '+2 năm' }));
+    expect(screen.getByRole('checkbox', { name: /Cập nhật luôn 1 ghế/ })).toBeInTheDocument();
+  });
+
   it('không truyền seatEnds → không có ô ghế', () => {
     renderDialog(undefined);
     expect(screen.queryByRole('checkbox', { name: /ghế/ })).toBeNull();

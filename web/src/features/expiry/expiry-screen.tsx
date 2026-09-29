@@ -336,10 +336,10 @@ export function ExpiryScreen({ me }: { me: Me }) {
         cell: ({ row }) =>
           row.original.canRenew ? (
             /*
-             * Nút THƯỜNG, không phải nút chính (hạ cấp 17/09/2026).
+             * Nút THƯỜNG, không phải nút chính.
              *
-             * Bảng này hay dài ba chục dòng, và trước đây MỖI dòng mang một nút nền gradient
-             * thương hiệu. Ba chục nút cùng hét lên thì không nút nào còn to tiếng: mắt mất
+             * Bảng này hay dài ba chục dòng; MỖI dòng mang một nút nền gradient thương hiệu
+             * thì ba chục nút cùng hét lên và không nút nào còn to tiếng: mắt mất
              * luôn chỗ bấu víu, và cái thật sự quan trọng trên màn — dòng nào ĐỎ vì đã quá
              * hạn — bị chính hàng nút xanh át đi. Màu chính để dành cho việc chính của trang.
              */
@@ -520,8 +520,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
             onChange={(value) => url.setFilter('until', value)}
           />
         ) : null}
-        {/* Chọn NHIỀU loại một lượt (người lo web xem SSL + tên miền cùng lúc) — API vốn nhận
-            `?kinds=a,b`, trước đây chỉ ô chọn một mới là giới hạn. */}
+        {/* Chọn NHIỀU loại một lượt (người lo web xem SSL + tên miền cùng lúc) — API nhận
+            `?kinds=a,b`. */}
         <ChipToggleGroup
           label={t('expiry.kind')}
           allLabel={t('expiry.allKinds')}

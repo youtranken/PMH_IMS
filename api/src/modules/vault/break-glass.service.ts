@@ -63,8 +63,9 @@ export const BREAK_GLASS_FLOW = {
     'approved->expired': 'Hết hạn',
     'approved->revoked': 'Thu hồi sớm',
   },
-  // Tài khoản người xin bị vô hiệu hóa: phiếu đang chờ bị rút như người xin tự rút (Q-15).
-  withdrawOnRequesterDisabled: 'cancelled',
+  // Tài khoản người xin bị vô hiệu hóa (Q-15): phiếu chờ bị rút như người xin tự rút, quyền đã
+  // duyệt bị thu hồi.
+  withdrawOnRequesterDisabled: { pending: 'cancelled', approved: 'revoked' },
 };
 
 /** Tên lượt quét đóng quyền của phiên đã kết thúc — `SweepService` gọi mỗi vòng. */
@@ -950,9 +951,13 @@ export class BreakGlassService implements OnModuleInit {
    * Quyền ĐANG có hiệu lực (đã duyệt, còn giờ theo đồng hồ server) — nhóm ghim ở đầu tab Nhật
    * ký (VLT-020). Nhật ký chia trang theo lúc gửi, nên một quyền 24 giờ gửi từ sáng có thể đã
    * trôi sang trang 2 đúng lúc người trực cần tìm nó để thu hồi.
+   *
+   * Lọc giờ trong SQL: sweep chạy trễ thì quyền đã hết nằm lại `approved` hàng loạt, kéo về
+   * rồi mới bỏ là phí `views()` cho từng dòng. `row.active` vẫn giữ để loại quyền không có hạn
+   * (dữ liệu hỏng — AD-6 không coi là vô hạn).
    */
   async activeGrants(): Promise<BreakGlassView[]> {
-    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, state: 'approved' });
+    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, effectiveState: 'approved' });
     return this.views(
       rows.filter((row) => row.active),
       true,

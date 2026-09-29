@@ -17,6 +17,7 @@ import { parsePageQuery } from '../../common/pagination';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
+import { dateTimeInTz } from '../../common/today';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { BreakGlassService } from './break-glass.service';
@@ -170,8 +171,8 @@ export class BreakGlassController {
          * sẽ hiện là 19 giờ HÔM TRƯỚC trong file — lệch 7 tiếng, có khi lệch cả ngày, so
          * với chính màn hình vừa bấm xuất (code review Epic 7).
          */
-        { header: 'Gửi lúc', width: 20, value: (r) => atLocal(r.createdAt, tz) },
-        { header: 'Hết hạn', width: 20, value: (r) => atLocal(r.expiresAt, tz) },
+        { header: 'Gửi lúc', width: 20, value: (r) => dateTimeInTz(r.createdAt, tz) },
+        { header: 'Hết hạn', width: 20, value: (r) => dateTimeInTz(r.expiresAt, tz) },
       ],
       rows,
     });
@@ -267,18 +268,3 @@ const BG_STATE_LABEL: Record<string, string> = {
   expired: 'Hết hạn',
   revoked: 'Đã thu hồi',
 };
-
-/** `Date` → chuỗi đọc được theo múi giờ ứng dụng (AD-11), hoặc rỗng nếu không có. */
-function atLocal(at: Date | null, timeZone: string): string {
-  if (!at) return '';
-  try {
-    return new Intl.DateTimeFormat('vi-VN', {
-      timeZone,
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(at);
-  } catch {
-    // Múi giờ cấu hình sai lùi về ISO chứ không ném — cùng nếp với `isoDateInTz` (Epic 3).
-    return at.toISOString().replace('T', ' ').slice(0, 16);
-  }
-}

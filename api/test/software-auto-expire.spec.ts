@@ -94,4 +94,15 @@ describe('DOM-03 · phần mềm tự chuyển trạng thái theo hạn', () => 
       ['SW-HOM-NAY', 'active'],
     ]);
   });
+
+  it('lọc theo loại ngay trong câu truy vấn — mỗi nguồn hạn chỉ lấy loại của nó', async () => {
+    await scratch.pool.query(
+      `INSERT INTO software (code, name, kind, license_model, end_date, status)
+       VALUES ('SW-TEN-MIEN', 'Tên miền', 'domain', 'subscription', '2026-11-01', 'active')`,
+    );
+    const domains = await software.findExpiringBetween('2020-01-01', '2026-12-31', 'domain');
+    expect(domains.map((s) => s.code)).toEqual(['SW-TEN-MIEN']);
+    const ssl = await software.findExpiringBetween('2020-01-01', '2026-12-31', 'ssl');
+    expect(ssl.map((s) => s.code)).toEqual(['SW-QUA-HAN', 'SW-HOM-NAY']);
+  });
 });

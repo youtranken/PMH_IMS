@@ -102,10 +102,13 @@ export function RenewDialog({
   const [siteText, setSiteText] = useState(() => (websites ?? []).join('\n'));
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
-  /* Ghế nào sẽ bị bỏ lại: hạn riêng TRƯỚC hạn mới (chưa chọn hạn mới thì trước hạn hiện tại
-     cũng tính — đó là ghế sẽ hiện "Quá hạn" cùng lúc với hồ sơ). Cùng luật với API. */
+  /* Ghế nào sẽ bị bỏ lại: hạn riêng trong [hạn hiện tại, hạn mới) (chưa chọn hạn mới thì đúng
+     hạn hiện tại — ghế sẽ hiện "Quá hạn" cùng lúc với hồ sơ). Ghế hết trước hạn hiện tại là kỳ
+     hạn chủ ý đặt ngắn, không kéo. Cùng luật với API. */
   const staleSeats = url
-    ? (seatEnds ?? []).filter((end) => (endDate ? end < endDate : end <= row.end)).length
+    ? (seatEnds ?? []).filter(
+        (end) => (!row.end || end >= row.end) && (endDate ? end < endDate : end <= row.end),
+      ).length
     : 0;
   const check = useFormErrors({
     endDate: !endDate

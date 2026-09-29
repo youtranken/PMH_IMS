@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, desc, eq, gte, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -455,33 +455,41 @@ export class ApprovalsService {
   }
 
   /**
-   * Rút mọi phiếu đang chờ của một người, TRONG transaction của nơi gọi — khi tài khoản bị vô
-   * hiệu hóa (Q-15). Chỉ loại nào khai `withdrawOnRequesterDisabled`; mỗi phiếu đi qua
-   * `transitionWithin` nên có đủ lịch sử + audit như một lần rút bình thường.
+   * Rút mọi phiếu còn sống của một người, TRONG transaction của nơi gọi — khi tài khoản bị vô
+   * hiệu hóa (Q-15). Chỉ các (loại, state) khai trong `withdrawOnRequesterDisabled`; lọc ngay
+   * trong SQL vì câu này chạy khi đang giữ khóa hàng của lượt vô hiệu hóa, và người lâu năm có
+   * hàng trăm phiếu cũ đã đóng. Mỗi phiếu đi qua `transitionWithin` nên có đủ lịch sử + audit.
    */
   async withdrawPendingOfWithin(
     tx: Tx,
     requester: string,
     input: { actor: string; note: string },
   ): Promise<number> {
+    const targets = new Map<string, Record<string, string>>();
+    const scopes: SQL[] = [];
+    for (const kind of this.kinds.kinds()) {
+      const target = this.kinds.find(kind)?.withdrawOnRequesterDisabled ?? {};
+      const states = Object.keys(target);
+      if (states.length === 0) continue;
+      targets.set(kind, target);
+      scopes.push(sql`(${approvalTable.kind} = ${kind} AND ${inArray(approvalTable.state, states)})`);
+    }
+    if (scopes.length === 0) return 0;
     const rows = await tx
-      .select()
+      .select({ id: approvalTable.id, kind: approvalTable.kind, state: approvalTable.state })
       .from(approvalTable)
-      .where(sql`lower(${approvalTable.requester}) = lower(${requester})`);
-    let withdrawn = 0;
+      .where(
+        and(sql`lower(${approvalTable.requester}) = lower(${requester})`, or(...scopes)),
+      );
     for (const row of rows) {
-      const flow = this.kinds.find(row.kind);
-      const to = flow?.withdrawOnRequesterDisabled;
-      if (!flow || !to || row.state !== flow.initial) continue;
       await this.transitionWithin(tx, row.id, {
-        to,
+        to: targets.get(row.kind)?.[row.state] ?? row.state,
         actor: input.actor,
         note: input.note,
         detail: { by: 'account-disabled' },
       });
-      withdrawn += 1;
     }
-    return withdrawn;
+    return rows.length;
   }
 
   /** Yêu cầu đang treo — sweep nhắc và màn "cần duyệt" đều dùng. */

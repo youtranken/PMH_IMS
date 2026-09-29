@@ -1,4 +1,4 @@
-import { addDays, daysBetween, isoDateInTz, startOfDayInTz, viDate } from './today';
+import { addDays, dateTimeInTz, daysBetween, isoDateInTz, startOfDayInTz, viDate } from './today';
 
 describe('isoDateInTz — "hôm nay" theo múi giờ ứng dụng, không theo UTC', () => {
   /**
@@ -73,5 +73,21 @@ describe('viDate — ngày trong câu người dùng đọc theo dd/mm/yyyy', ()
   it('không phải YYYY-MM-DD thì trả nguyên, không bịa ra ngày', () => {
     expect(viDate('không rõ')).toBe('không rõ');
     expect(viDate('')).toBe('');
+  });
+});
+
+describe('dateTimeInTz — ô giờ của file Excel xuất: dd/mm/yyyy HH:mm theo múi ứng dụng', () => {
+  it.each([
+    ['2026-09-29T11:44:00Z', 'Asia/Ho_Chi_Minh', '29/09/2026 18:44'],
+    // 00:05 giờ VN: không in "24:05", và ngày là ngày VN chứ không phải ngày UTC.
+    ['2026-09-28T17:05:00Z', 'Asia/Ho_Chi_Minh', '29/09/2026 00:05'],
+    ['2026-01-02T03:04:00Z', 'UTC', '02/01/2026 03:04'],
+    ['2026-01-02T03:04:00Z', 'Khong/Co', '2026-01-02 03:04'],
+  ])('%s @ %s → %s', (iso, tz, expected) => {
+    expect(dateTimeInTz(new Date(iso), tz)).toBe(expected);
+  });
+
+  it('không có mốc → rỗng', () => {
+    expect(dateTimeInTz(null, 'Asia/Ho_Chi_Minh')).toBe('');
   });
 });

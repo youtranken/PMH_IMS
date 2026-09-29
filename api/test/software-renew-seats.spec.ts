@@ -101,8 +101,8 @@ describe('SW-049 · gia hạn hồ sơ kèm ghế có kỳ hạn riêng', () => 
     'kéo đúng ghế còn hiệu lực có ngày riêng trước hạn mới; ghi lịch sử từng ghế kèm mã máy',
     async () => {
       const id = await license();
-      const result = await software.renew(ACTOR, id, '2027-12-31', (tx) =>
-        seats.renewSeatsWithin(tx, ACTOR, id, '2027-12-31'),
+      const result = await software.renew(ACTOR, id, '2027-12-31', (tx, oldEnd) =>
+        seats.renewSeatsWithin(tx, ACTOR, id, oldEnd, '2027-12-31'),
       );
       expect(result.seatsRenewed).toBe(1);
       expect(await seatEnds(id)).toEqual(['2027-12-31', null, '2030-01-01', '2026-12-31']);
@@ -123,6 +123,24 @@ describe('SW-049 · gia hạn hồ sơ kèm ghế có kỳ hạn riêng', () => 
   );
 
   it(
+    'ghế có kỳ hạn riêng NGẮN hơn hạn cũ của license (chủ ý, hoặc đã hết từ lâu) thì giữ nguyên',
+    async () => {
+      const id = await license();
+      await scratch.pool.query(
+        `UPDATE license_assignment SET end_date = '2026-03-31'
+         WHERE software_id = $1 AND device_id = $2`,
+        [id, deviceIds[1]],
+      );
+      const result = await software.renew(ACTOR, id, '2027-12-31', (tx, oldEnd) =>
+        seats.renewSeatsWithin(tx, ACTOR, id, oldEnd, '2027-12-31'),
+      );
+      expect(result.seatsRenewed).toBe(1);
+      expect(await seatEnds(id)).toEqual(['2027-12-31', '2026-03-31', '2030-01-01', '2026-12-31']);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'không chọn cập nhật ghế thì ghế giữ nguyên',
     async () => {
       const id = await license();
@@ -138,8 +156,8 @@ describe('SW-049 · gia hạn hồ sơ kèm ghế có kỳ hạn riêng', () => 
     async () => {
       const id = await license();
       await expect(
-        software.renew(ACTOR, id, '2026-06-30', (tx) =>
-          seats.renewSeatsWithin(tx, ACTOR, id, '2026-06-30'),
+        software.renew(ACTOR, id, '2026-06-30', (tx, oldEnd) =>
+          seats.renewSeatsWithin(tx, ACTOR, id, oldEnd, '2026-06-30'),
         ),
       ).rejects.toMatchObject({ response: { code: 'RENEW_NOT_FORWARD' } });
       expect(await seatEnds(id)).toEqual(['2026-12-31', null, '2030-01-01', '2026-12-31']);

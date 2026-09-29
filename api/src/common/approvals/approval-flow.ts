@@ -19,10 +19,12 @@ export interface ApprovalFlowSpec {
   /** Nhãn tiếng Việt cho từng bước, khóa `'from->to'`. Dùng cho nút bấm VÀ dòng lịch sử. */
   labels: Record<string, string>;
   /**
-   * Tài khoản người xin bị vô hiệu hóa thì phiếu `initial` của loại này chuyển sang state này
-   * (Q-15). Không khai = loại đó không bị rút theo tài khoản — vd phiếu vẫn cần người khác xử.
+   * Tài khoản người xin bị vô hiệu hóa thì phiếu đang ở state khóa chuyển sang state giá trị
+   * (Q-15). Phải khai cả quyền ĐÃ duyệt, không chỉ phiếu chờ: quyền chưa gắn phiên sống qua lần
+   * đá phiên, bật lại tài khoản là dùng được mà không ai duyệt lại. Không khai = loại đó không bị
+   * rút theo tài khoản — vd phiếu vẫn cần người khác xử.
    */
-  withdrawOnRequesterDisabled?: string;
+  withdrawOnRequesterDisabled?: Record<string, string>;
 }
 
 export class ApprovalFlow {
@@ -36,8 +38,8 @@ export class ApprovalFlow {
     return this.spec.initial;
   }
 
-  get withdrawOnRequesterDisabled(): string | null {
-    return this.spec.withdrawOnRequesterDisabled ?? null;
+  get withdrawOnRequesterDisabled(): Record<string, string> {
+    return this.spec.withdrawOnRequesterDisabled ?? {};
   }
 
   /**

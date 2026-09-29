@@ -828,3 +828,81 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
    dõi vùng sống đã có mặt TRƯỚC khi nội dung đổi. Khu "cắt gì" của bản đồ quan hệ là mẫu
    DISCLOSURE, không phải thông báo — đúng vai là `aria-expanded` trên nút + khu thường trực
    mang `hidden`, và bỏ hẳn `role="status"`.
+
+---
+
+## Đợt UX v1.3 → v1.4.2 — góp gì (tag `v1.3.1..v1.4.2`, 29/09/2026)
+
+Không epic mới, không bảng mới. Đợt soát UX (cao · vừa · nhẹ · trau chuốt), các quyết định
+Q-15 trong `docs/QUYET-DINH.md`, và đợt soát chữ toàn hệ thống (364 chuỗi). Code review `high`
+của cả khoảng tag ra 10 finding, đã sửa hết trên nhánh `fix/review-v142`.
+
+### Cột / tham số mới và chủ sở hữu (AD-3)
+
+| Migration | Thay đổi | Chủ |
+| --- | --- | --- |
+| 0100, 0101 | Index sắp theo hạn bảo hành (`CREATE INDEX CONCURRENTLY`, `-- ims:no-transaction`) | `devices` |
+| 0140 | `system_config` `nat.sensitive_ports` | `config-sys` (sổ NAT đọc) |
+| 0150 | `secret.value_changed_at`, `value_changed_by` — cột "Đổi lần cuối" | `vault` |
+| 0170 | `approval.requester_session_id` — chỉ để tra vết | `approvals` |
+| 0180 | `renewal_history.contract`, `cost` — hợp đồng + chi phí của TỪNG lượt gia hạn | `expiry` |
+| 0181 | `software.websites`, `renewal_history.websites` — website của SSL/tên miền theo kỳ | `software` / `expiry` |
+| 0240 | `approval.claimed_session_id`, `claimed_at` — quyền mở két gắn phiên ở lần Xem đầu | `approvals` |
+| 0241 | `system_config` `breakglass.pending_expire_hours` (8) | `config-sys` (vault đọc) |
+
+### Tài sản dùng chung mới (AD-15)
+
+Đã khai hết trong `docs/SHARED-REGISTRY.md`. Đáng nhớ nhất cho epic sau:
+`RenewDialog` (một hộp Gia hạn cho mọi cửa, kèm hợp đồng/chi phí/website), `ChipToggleGroup`,
+`SecretDue`, `MoneyInput`/`parseMoneyInput`, `DeviceTimelineRegistry`, `withActorNames` +
+`latestStatusEvents`, `dateTimeInTz` (giờ trong file xuất), `formatDateTime` (giờ trên màn),
+và bộ break-glass dùng chung ở `ui/break-glass*`.
+
+### Hợp đồng cho epic sau
+
+- **Quyền mở két gắn PHIÊN, không gắn người** (Q-15). Grant chưa xem lần nào thì chưa gắn phiên;
+  lần Xem đầu tiên gắn nó vào phiên đó (`claimWithin`, `UPDATE … WHERE claimed_session_id IS
+  NULL`). Phiên chết là quyền chết, lượt quét chỉ dọn nhật ký.
+- **Vô hiệu hóa tài khoản rút MỌI phiếu còn sống** của người đó trong cùng transaction.
+  `ApprovalFlowSpec.withdrawOnRequesterDisabled` là bảng state → state; loại duyệt mới phải
+  khai cả state "đã duyệt", không chỉ state chờ (xem finding 1 bên dưới). Chỉ KHÓA thì giữ.
+- **`UsersApiService.namesByEmails` trả map tra không phân biệt hoa-thường.** Nơi gọi tra
+  thẳng bằng email thô, đừng tự `toLowerCase()` rồi quên ở chỗ khác.
+- **Giờ trong file Excel: `dateTimeInTz`, giờ trên màn: `formatDateTime`.** Cả hai ghép từ
+  `formatToParts`; `Intl` `vi-VN` in giờ TRƯỚC ngày.
+- **Nguồn hạn (`ExpirySource`) lọc loại trong SQL.** Đăng ký một nguồn mỗi loại thì mỗi nguồn
+  phải tự thu hẹp truy vấn, không kéo mọi loại rồi lọc JS.
+
+### Code review đóng đợt — 10 finding, đã sửa hết
+
+| # | Mức | Ở đâu | Sửa |
+| --- | --- | --- | --- |
+| 1 | Bảo mật | `accounts.service` / `approvals.service` | Vô hiệu hóa chỉ rút phiếu chờ; quyền ĐÃ duyệt chưa gắn phiên sống qua lần đá phiên, bật lại tài khoản là mở két không cần duyệt lại → thu hồi luôn |
+| 2 | Đúng | `license-assignment.service` | Gia hạn license kéo cả ghế có hạn riêng NGẮN hơn hạn cũ → chỉ kéo ghế hết trong [hạn cũ, hạn mới); hộp Gia hạn đếm cùng luật |
+| 3 | Đúng | `users.service` | Tra tên theo email hụt với tài khoản gõ hoa → map tự hạ chữ thường |
+| 4 | Đúng | `ip-address.service` | Ô IP hiện chủ của chu kỳ cũ khi lần thả gần nhất không có chủ |
+| 5 | Đúng | `common/today.ts` | File xuất in `HH:mm dd/mm/yyyy`; file mở két dùng định dạng thứ ba |
+| 6 | Hiệu năng | `audit-query.service` | Chế độ gom chạy trọn CTE hai lần mỗi trang → một câu |
+| 7 | Hiệu năng | `approvals.service` | Rút phiếu kéo mọi phiếu cũ về lọc JS lúc đang giữ khóa → lọc SQL |
+| 8 | Hiệu năng | `software-expiry-sources` | 5 nguồn × trọn câu + decorate → lọc loại trong SQL |
+| 9 | Hiệu năng | `break-glass.service` | Nhóm "Đang có hiệu lực" kéo cả quyền đã hết → `effectiveState` |
+| 10 | Luật | nhiều file | Chú thích "trước đây…" → viết lại thành lý do |
+
+### Bẫy đã gặp
+
+1. **Build trong Docker khác build trên máy.** `tsbuildinfo` còn trên máy làm `tsc -b` bỏ qua
+   file đã đổi, nên build máy xanh mà image vẫn đỏ (hoặc ngược lại). Kiểm kiểu của web là
+   `npm run build` trong đúng môi trường sẽ đóng image, và tầng giữa phải `--build`.
+2. **E2E đo ngay sau cú bấm thì đỏ chập chờn.** Khẳng định chạy trước khi lượt nạp lại đổ về
+   (debounce, invalidate query) sẽ xanh nhờ may. Chờ đúng giá trị (`waitForResponse`, chờ `q=`
+   mang đúng giá trị), không chờ "có phần tử".
+3. **Hai nhánh cùng làm một prop.** Hai worktree song song cùng thêm một prop vào cùng một
+   component dùng chung, mỗi bên một nghĩa; merge xong không xung đột dòng nào nhưng một bên
+   hỏng. Chia việc theo component dùng chung, không theo màn.
+4. **Worktree của agent tạo từ `master`, không từ nhánh đang đứng.** Agent làm trên nền cũ và
+   "sửa" lại thứ nhánh hiện tại đã sửa. Giao việc cho agent trong worktree thì nói rõ nhánh gốc
+   và kiểm `git log -1` của worktree trước khi nhận kết quả.
+5. **Lọc bỏ hàng "không có dữ liệu" để lấy "hàng gần nhất" là lấy nhầm chu kỳ cũ** (finding 4).
+   "Gần nhất" phải chọn trên đúng loại sự kiện, rồi mới hỏi sự kiện đó có dữ liệu không.
+6. **Rút quyền theo "state ban đầu" bỏ sót state đã duyệt** (finding 1). Mỗi lần thêm một
+   đường kết thúc tài khoản, liệt kê mọi state còn mang quyền, không chỉ state đang chờ.

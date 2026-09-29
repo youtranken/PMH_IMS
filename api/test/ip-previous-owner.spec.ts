@@ -94,4 +94,31 @@ describe('Chủ cũ của hồ sơ IP đã thu hồi', () => {
     // Đang dùng thì chủ là chủ hiện tại — không kèm "trước".
     expect(at('172.20.40.4').previousOwner ?? null).toBeNull();
   });
+
+  it('lượt về Trống gần nhất KHÔNG có chủ (giữ chỗ rồi thả) → không mang chủ của chu kỳ trước', async () => {
+    await seed('172.20.40.5', 'free', [
+      { changes: { previousDeviceId: DEVICE_ID, previousUsedBy: null }, at: '2026-01-01' },
+      { changes: { previousDeviceId: null, previousUsedBy: null }, at: '2026-03-01' },
+    ]);
+    const slots = await addresses.listBySubnet(subnetId);
+    const slot = slots.find((s) => s.address === '172.20.40.5') as { previousOwner?: string };
+    expect(slot.previousOwner ?? null).toBeNull();
+  });
+
+  it('dòng lịch sử không phải chuyển trạng thái (sửa ghi chú, khôi phục) không che chủ cũ', async () => {
+    await seed('172.20.40.6', 'free', [
+      { changes: { previousDeviceId: DEVICE_ID, previousUsedBy: null }, at: '2026-01-01' },
+    ]);
+    const { rows } = await scratch.pool.query<{ id: string }>(
+      `SELECT id FROM ip_address WHERE address = '172.20.40.6'`,
+    );
+    await scratch.pool.query(
+      `INSERT INTO ip_history (ip_address_id, action, actor, from_status, to_status, changes, created_at)
+       VALUES ($1, 'ip.updated', $2, 'free', 'free', '{"note":{"before":null,"after":"x"}}', '2026-04-01')`,
+      [rows[0].id, ACTOR],
+    );
+    const slots = await addresses.listBySubnet(subnetId);
+    const slot = slots.find((s) => s.address === '172.20.40.6') as { previousOwner?: string };
+    expect(slot.previousOwner).toBe('PR-E2E-01');
+  });
 });

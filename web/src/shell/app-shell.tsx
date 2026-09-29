@@ -105,7 +105,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             </span>
             <span>{t('app.brand')}</span>
             {narrow ? (
-              /* Nút đóng NGAY TRONG drawer: trước đây phải đoán là chạm vào dải mờ bên phải.
+              /* Nút đóng NGAY TRONG drawer: không thì người dùng phải đoán là chạm vào dải mờ.
                  Tên "Đóng", không trùng "Đóng menu" của nút ở topbar. */
               <button
                 type="button"
