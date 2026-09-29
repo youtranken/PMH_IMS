@@ -5,7 +5,8 @@ import { lint, printConfig, withProbe } from '../test/lint-probe';
  *
  * `ad2-boundary.spec.ts` kiểm BIỂU THỨC. File này kiểm CỔNG: biểu thức đúng vẫn có thể không
  * chặn được gì, nếu khối `files:` gắn nhầm chỗ hoặc một khối `'off'` phía dưới tắt mất nó.
- * Đó chính là hai finding của rà soát 07/09 mục #9, và cả hai đều vô hình với bài kiểm regex.
+ * Có hai lỗi thuộc loại đó — (a) import viết kiểu "dài" đi vòng qua biểu thức, (b) ở dưới —
+ * và cả hai đều vô hình với bài kiểm regex.
  *
  * ===== FINDING (b): `'off'` TẮT CẢ AD-2, KHÔNG CHỈ LUẬT THƯ VIỆN =====
  *
@@ -18,7 +19,7 @@ import { lint, printConfig, withProbe } from '../test/lint-probe';
  * nơi AD-2 có hiệu lực. Kết quả: `password.service.ts` (lõi bảo mật) và `mail-transport.
  * service.ts` được phép import thẳng ruột của mọi module khác, vĩnh viễn, không ai thấy.
  *
- * Đây đúng là hình dạng đã sửa ở đợt B cho luật `appendBestEffort`: ngoại lệ phải khai lại
+ * Cùng khuôn với luật `appendBestEffort`: ngoại lệ phải khai lại
  * luật mà BỚT đúng một mục, không được `'off'` cả cụm.
  */
 
@@ -118,8 +119,8 @@ export type Probe = VaultApiService;
     });
 
     /**
-     * Vế đối chứng: ngoại lệ phải HẸP tới từng file, không mở cho cả thư mục. Rà soát 07/09
-     * đã bắt đúng kiểu ngoại lệ quá rộng này một lần rồi.
+     * Vế đối chứng: ngoại lệ phải HẸP tới từng file, không mở cho cả thư mục — ngoại lệ quá
+     * rộng kiểu này đã từng lọt một lần.
      */
     it('file khác trong chính thư mục mail KHÔNG được import nodemailer', () => {
       const source = `import { createTransport } from 'nodemailer';
