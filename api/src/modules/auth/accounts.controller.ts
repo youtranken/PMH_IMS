@@ -151,7 +151,7 @@ class KillAllSessionsDto {
 }
 
 /**
- * Quản trị tài khoản — CHỈ SA (story 1.4). Mọi route ghi có @Audited (AD-9).
+ * Quản trị tài khoản — CHỈ SA. Mọi route ghi có @Audited (AD-9).
  * Không có endpoint xóa user: nghiệp vụ chỉ khóa/vô hiệu hóa (convention "Xóa").
  */
 @NoStepUp()

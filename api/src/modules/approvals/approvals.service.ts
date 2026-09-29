@@ -106,7 +106,7 @@ export interface TransitionInput {
 }
 
 /**
- * Bộ máy xin–duyệt dùng chung (story 6.1, AD-6).
+ * Bộ máy xin–duyệt dùng chung (AD-6).
  *
  * Module này KHÔNG biết break-glass là gì, cũng không biết phiếu ISO là gì. Nó biết cách chạy
  * một máy trạng thái mà loại yêu cầu mang tới, ghi lịch sử, và trả lời câu "cái grant này còn
@@ -220,7 +220,6 @@ export class ApprovalsService {
        * Hai Admin cùng mở một yêu cầu: A bấm Duyệt, B bấm Từ chối. Không có điều kiện này thì
        * cả hai cùng "thành công", lịch sử có hai dòng mâu thuẫn, và state cuối là của người
        * bấm sau — người bấm trước không hề biết quyết định của mình đã bị ghi đè.
-       * (Đúng họ với finding 8 của code review Epic 5.)
        */
       .where(and(eq(approvalTable.id, id), eq(approvalTable.state, before.state)))
       .returning();
@@ -519,7 +518,7 @@ export class ApprovalsService {
    *
    * `UPDATE … WHERE payload->>'remindedAt' IS NULL RETURNING` — ai chốt được thì người đó gửi.
    * Đọc-rồi-ghi thì hai worker cùng thấy "chưa nhắc" và người duyệt lãnh hai email giống hệt
-   * nhau (đúng finding 3 của code review Epic 3, cùng một hình dạng lỗi).
+   * nhau.
    */
   async claimReminderWithin(tx: Tx, id: string, now: Date): Promise<boolean> {
     const rows = await tx

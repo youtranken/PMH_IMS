@@ -23,10 +23,10 @@ import { filesTable } from './files.schema';
 /**
  * Chủ thể được phép có file đính kèm. Whitelist chứ không nhận chuỗi tự do: người dùng
  * gửi `ownerType` bịa ra thì file thành mồ côi, không màn nào hiển thị và không ai dọn.
- * Thêm loại mới (phiếu ISO ở Epic 8, sự cố ở Epic 9) thì thêm vào đây.
+ * Thêm loại mới (phiếu ISO, sự cố) thì thêm vào đây.
  */
 /*
- * `subnet` và `nat_rule` thêm 28/08/2026 (rà soát liên kết): sơ đồ mạng của một dải, biên bản
+ * `subnet` và `nat_rule` có mặt vì: sơ đồ mạng của một dải, biên bản
  * bàn giao dải IP tĩnh từ nhà mạng, ảnh chụp cấu hình Draytek kèm rule NAT — cả ba đều là
  * giấy tờ thật và cả ba đang nằm trong thư mục chia sẻ của phòng IT chứ không trong IMS.
  */
@@ -119,11 +119,11 @@ export class FilesService {
 
     try {
       /*
-       * Hàng file + dòng audit đi CHUNG một transaction (AD-5, rà soát 07/09 #4).
+       * Hàng file + dòng audit đi CHUNG một transaction (AD-5).
        *
-       * Bản trước INSERT commit ngay rồi mới ghi audit bằng hàm nuốt lỗi: file lên kho mà
-       * không có vết ai đưa lên. Nay audit hỏng thì hàng file rollback theo, và `catch` bên
-       * dưới dọn luôn blob vừa ghi ra đĩa — không còn file mồ côi.
+       * INSERT commit ngay rồi mới ghi audit bằng hàm nuốt lỗi thì file lên kho mà không có
+       * vết ai đưa lên. Chung transaction thì audit hỏng kéo hàng file rollback theo, và
+       * `catch` bên dưới dọn luôn blob vừa ghi ra đĩa — không còn file mồ côi.
        */
       return await this.db.transaction(async (tx) => {
         const rows = await tx
@@ -221,7 +221,7 @@ export class FilesService {
   }
 
   /**
-   * Chủ thể của một file — để nơi gọi hỏi quyền TRƯỚC khi mở luồng tải (rà soát 07/09, C1).
+   * Chủ thể của một file — để nơi gọi hỏi quyền TRƯỚC khi mở luồng tải.
    *
    * Tách riêng chứ không nhét kiểm quyền vào `openForDownload`: quyết định "ai được xem gì"
    * thuộc về ma trận của `vault`, và module `files` không được biết tới nó (AD-2). Controller

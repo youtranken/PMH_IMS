@@ -28,13 +28,13 @@ import { groupSubnets, type SubnetGroupKey } from './subnet-groups';
 const RAIL_FILTER_FROM = 6;
 
 /**
- * Địa chỉ IP (story 5.1, FR-018/FR-020) — MỘT trang hai cột, đúng mockup `body-Ipam.html`:
+ * Địa chỉ IP (FR-018/FR-020) — MỘT trang hai cột, đúng mockup `body-Ipam.html`:
  * dải mạng ở cột trái, IP của dải đang chọn ở cột phải.
  *
- * Bản dựng đầu tách thành hai trang (`/ip-addresses` là bảng dải, `/ip-addresses/:id` là bảng IP),
- * và đường đi giữa chúng là mã CIDR gạch chân trong ô đầu bảng. Không ai nhận ra đó là đường
- * vào, nên cả màn trông như "khai được dải mà không khai được IP nào". Hai cột thì chỗ trống
- * và nút "Cấp IP này" nằm ngay cạnh danh sách dải, không phải bấm mò mới thấy.
+ * Không tách thành hai trang (bảng dải / bảng IP): khi đó đường đi giữa chúng chỉ là mã CIDR
+ * gạch chân trong ô đầu bảng, không ai nhận ra đó là đường vào, và cả màn trông như "khai
+ * được dải mà không khai được IP nào". Hai cột thì chỗ trống và nút "Cấp IP này" nằm ngay
+ * cạnh danh sách dải, không phải bấm mò mới thấy.
  *
  * Cả hai đường dẫn đều vào đây: `/ip-addresses` chọn sẵn dải đầu tiên, `/ip-addresses/:id` chọn
  * đúng dải đó — link cũ vẫn mở được, và mỗi dải vẫn có một địa chỉ riêng để gửi cho nhau.
@@ -51,10 +51,10 @@ export function IpamScreen({ me }: { me: Me }) {
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
   /*
-   * `includeVoided=true` — CHỈ màn này (28/08/2026).
+   * `includeVoided=true` — CHỈ màn này.
    *
-   * Vô hiệu hóa một dải trước đây làm nó biến mất khỏi danh sách, và người dùng đọc đúng cái
-   * đó là "đã xóa hẳn" — họ không sai, vì không còn chỗ nào trên giao diện nói nó tồn tại.
+   * Nếu vô hiệu hóa làm dải biến mất khỏi danh sách, người dùng đọc đúng cái đó là "đã xóa
+   * hẳn" — họ không sai, vì không còn chỗ nào trên giao diện nói nó tồn tại.
    * Nhưng dải ấy vẫn giữ mấy chục hồ sơ IP tĩnh, và mấy cái máy ngoài kia không tự nhả địa
    * chỉ ra chỉ vì cuốn sổ đã cất dải đi. Giữ nó lại, gạch ngang, rồi mới cho xóa.
    *
@@ -124,7 +124,7 @@ export function IpamScreen({ me }: { me: Me }) {
   /**
    * Dải đã vô hiệu hóa XUỐNG CUỐI cột trái, giữ nguyên thứ tự CIDR trong từng nhóm.
    *
-   * Chúng phải ở lại (đó là cả điểm của thay đổi 28/08/2026), nhưng xen kẽ theo thứ tự địa
+   * Chúng phải ở lại (xem `includeVoided` ở trên), nhưng xen kẽ theo thứ tự địa
    * chỉ thì sau một năm cột trái là một danh sách lẫn lộn cái còn dùng với cái đã bỏ, và người
    * ta phải đọc huy hiệu từng thẻ mới biết cái nào là cái nào. `sort` trên bản SAO — mảng của
    * TanStack Query là dữ liệu cache dùng chung, sắp tại chỗ là sửa cache của mọi nơi khác.
@@ -379,8 +379,8 @@ export function SubnetCard({
          * Dải CHƯA TỪNG có hồ sơ IP → **Xóa** hẳn ngay. Khai nhầm một dải ba giây trước rồi
          * phải sống chung với nó mãi là phiền vô lý; nó chưa mang thông tin gì cả.
          *
-         * Dải ĐÃ TỪNG dùng → **Vô hiệu hóa** kèm lý do, và từ 28/08/2026 thì nó Ở LẠI danh
-         * sách chứ không biến mất.
+         * Dải ĐÃ TỪNG dùng → **Vô hiệu hóa** kèm lý do, và nó Ở LẠI danh sách chứ không
+         * biến mất.
          */
         canDelete
           ? { key: 'delete', label: t('common.delete'), onSelect: onDelete, danger: true }

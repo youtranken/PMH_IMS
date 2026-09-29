@@ -119,13 +119,13 @@ class VoidDto {
 class NatBodyDto {
   /*
    * `@ValidateIf` cho chuỗi RỖNG đi qua cửa DTO — giống hệt `IpBodyDto` và `TransitionDto`
-   * ngay trên, và vì đúng một lý do (test tay 12/09).
+   * ngay trên, và vì đúng một lý do.
    *
    * Màn Sổ NAT khởi tạo ô router bằng `useState('')` rồi gửi nguyên biến đó, nên "chưa chọn"
    * tới đây là `deviceId: ''`, không phải khoá vắng mặt. `@IsOptional()` chỉ bỏ qua
-   * `undefined`/`null`, nên bản trước chặn `''` ngay tại đây với câu "Mã thiết bị không hợp
-   * lệ." — và `requireDeviceId()` bên dưới, cùng câu tiếng Việt nói rõ người dùng quên gì,
-   * không bao giờ chạy tới trên đường giao diện thật đi.
+   * `undefined`/`null`, nên thiếu `@ValidateIf` thì `''` bị chặn ngay tại đây với câu "Mã
+   * thiết bị không hợp lệ." — và `requireDeviceId()` bên dưới, cùng câu tiếng Việt nói rõ
+   * người dùng quên gì, không bao giờ chạy tới trên đường giao diện thật đi.
    *
    * Nới ở đây KHÔNG làm mất lớp chặn: giá trị rỗng rơi xuống `requireDeviceId()` ở `POST`
    * (400 `FIELD_REQUIRED`), còn `PATCH` vẫn được phép không gửi khoá này. Chuỗi rác không
@@ -152,7 +152,7 @@ class NatBodyDto {
    *
    * Không có nó thì một IP dán từ Excel kèm dấu cách ("172.16.10.5 ") dài 16 ký tự và bị
    * `@Length(1, 15)` từ chối thẳng bằng một câu vô nghĩa với người dùng — họ nhìn ô thấy IP
-   * đúng y như mình gõ mà hệ thống bảo sai (code review Epic 5, finding 5).
+   * đúng y như mình gõ mà hệ thống bảo sai.
    */
   @IsOptional()
   @Transform(trimText)
@@ -170,8 +170,7 @@ class NatBodyDto {
  * Bộ lọc sổ NAT.
  *
  * Có DTO chứ không nhận object trần: `deviceId`/`siteId` đi thẳng vào `eq(...)`, nên
- * `?deviceId=abc` xuống tới Postgres thành lỗi `22P02` và bung 500 thay vì 400
- * (code review Epic 5, finding 7).
+ * `?deviceId=abc` xuống tới Postgres thành lỗi `22P02` và bung 500 thay vì 400.
  */
 class NatQueryDto {
   @IsOptional() @ValidateIf((_o, v) => v !== '') @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
@@ -213,7 +212,7 @@ class IdParamDto {
 }
 
 /**
- * Dải mạng và hồ sơ IP (story 5.1, FR-018/FR-019/FR-020).
+ * Dải mạng và hồ sơ IP (FR-018/FR-019/FR-020).
  *
  * Quyền: khai/sửa/ẩn DẢI là việc của Admin — dải khai sai kéo theo mọi IP bên trong sai.
  * Còn hồ sơ IP thì cả team IT làm được: người cắm máy chính là người biết IP nào vừa cấp,
@@ -261,7 +260,7 @@ export class IpamController {
   // --- Dải mạng ---------------------------------------------------------------
 
   /**
-   * `?includeVoided=true` — CHỈ màn dải mạng dùng cờ này (28/08/2026).
+   * `?includeVoided=true` — CHỈ màn dải mạng dùng cờ này.
    *
    * Mặc định vẫn là "chỉ dải đang dùng", nên mọi thứ đọc dải qua `IpamApiService` không đổi
    * hành vi: bảng điều khiển "Dải mạng sắp đầy" không được lôi một dải đã tắt lên nhắc sếp.
@@ -391,9 +390,9 @@ export class IpamController {
   /**
    * Vô hiệu hóa kèm lý do — dùng cho dải ĐÃ TỪNG có hồ sơ IP. Bản ghi ở lại, tra cứu được.
    *
-   * Chuyển từ `DELETE` sang `PATCH :id/void` (2026-08-27) để `DELETE` mang đúng nghĩa của nó:
-   * xóa hẳn. Hai việc khác nhau thì hai cửa khác nhau — trước đây `DELETE` mà thực ra là ẩn
-   * là một cái bẫy cho bất cứ ai đọc route mà không đọc service.
+   * Là `PATCH :id/void` chứ không phải `DELETE`, để `DELETE` mang đúng nghĩa của nó: xóa hẳn.
+   * Hai việc khác nhau thì hai cửa khác nhau — một `DELETE` mà thực ra là ẩn là cái bẫy cho
+   * bất cứ ai đọc route mà không đọc service.
    */
   @Roles('sa', 'admin')
   @Patch('subnets/:id/void')
@@ -408,7 +407,7 @@ export class IpamController {
   }
 
   /**
-   * BẬT LẠI một dải đã vô hiệu hóa (28/08/2026).
+   * BẬT LẠI một dải đã vô hiệu hóa.
    *
    * Đối xứng với `:id/void`. Không có nó thì vô hiệu hóa là một cánh cửa một chiều, và ai lỡ
    * tay bấm nhầm chỉ còn cách khai lại dải rồi gõ tay từng hồ sơ IP — với một /24 dùng nửa
@@ -427,7 +426,7 @@ export class IpamController {
   }
 
   /**
-   * XÓA HẲN — chỉ dải CHƯA TỪNG có hồ sơ IP nào (quyết định 2026-08-27).
+   * XÓA HẲN — chỉ dải CHƯA TỪNG có hồ sơ IP nào (quyết định của chủ dự án).
    *
    * Khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý: dải chưa dùng thì chưa
    * mang thông tin gì, xóa đi khai lại. Dải đã từng dùng thì service từ chối kèm số hồ sơ IP
@@ -514,7 +513,7 @@ export class IpamController {
   }
 
   /**
-   * Chuyển trạng thái vòng đời (story 5.2) — đường DUY NHẤT đổi được `status`.
+   * Chuyển trạng thái vòng đời (FR-019) — đường DUY NHẤT đổi được `status`.
    *
    * Cả team IT làm được, giống như tạo hồ sơ IP: người phát hiện máy chết chính là người
    * trực, và bắt họ chờ Admin thì trạng thái sẽ không bao giờ được cập nhật.
@@ -563,7 +562,7 @@ export class IpamController {
   restoreAddress(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     return this.addresses.restore(actor(req), params.id);
   }
-  // --- Sổ NAT (story 5.3, FR-017) ---------------------------------------------
+  // --- Sổ NAT (FR-017) --------------------------------------------------------
 
   /**
    * Cả team IT ĐỌC được: "port nào mở" là câu hỏi lúc xử lý sự cố, không phải câu hỏi
@@ -693,8 +692,8 @@ function actor(req: AuthedRequest): string {
  * Rule NAT phải có router — và thiếu nó phải là 400, không phải 500.
  *
  * `NatBodyDto` để `deviceId` là tuỳ chọn vì cùng một DTO phục vụ cả `POST` lẫn `PATCH`, mà
- * `PATCH` thì được phép không gửi. Bản trước lấp chỗ trống bằng `body.deviceId ?? ''`, và
- * chuỗi rỗng đi thẳng xuống `eq(deviceTable.id, '')`: Postgres từ chối ép '' sang uuid
+ * `PATCH` thì được phép không gửi. Lấp chỗ trống bằng `body.deviceId ?? ''` là để chuỗi
+ * rỗng đi thẳng xuống `eq(deviceTable.id, '')`: Postgres từ chối ép '' sang uuid
  * (`22P02`), lỗi bung ra ngoài thành 500 kèm một câu tiếng Anh về kiểu dữ liệu. Người trực
  * quên chọn router thì đáng nhận một câu tiếng Việt nói họ quên gì, không phải một sự cố máy
  * chủ.
@@ -711,10 +710,6 @@ function requireDeviceId(value: string | undefined): string {
 /**
  * Đổi ô "8080" / "8000-8010" thành cặp số. Lỗi nói ĐÚNG chỗ sai (viết ngược đầu ≠ sai định
  * dạng) — người gõ biết mình muốn gì, chỉ cần được chỉ đúng chỗ.
- *
- * Khối này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `requireDeviceId`, nên
- * người đọc gán nó cho hàm đó và tin rằng `requireDeviceId` làm việc phân tích chuỗi port.
- * Hàm nó thật sự tả — chính hàm này — thì không có docstring nào.
  */
 function requirePorts(value: string | undefined): { from: number; to: number } {
   const parsed = parsePortRange(value ?? '');

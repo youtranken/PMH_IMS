@@ -8,8 +8,8 @@ import { Pool } from 'pg';
  * Bản vá D-01 gồm hai nửa: một migration phát quyền, và một thay đổi TRIỂN KHAI (đổi
  * `DATABASE_URL` sang role `ims_app`). Nửa thứ hai không nằm trong git của ai cả — nó nằm
  * trong file `.env` của từng nơi cài. Migration chạy xong mà `.env` chưa đổi thì mọi thứ
- * vẫn xanh, vẫn chạy, và NFR-03 vẫn sai y như trước — đúng kiểu hỏng im lặng mà rà soát
- * 19/09 gọi là "sẽ không tự rơi vào epic nào".
+ * vẫn xanh, vẫn chạy, và NFR-03 vẫn sai y như trước — đúng kiểu hỏng im lặng không tự rơi
+ * vào epic nào.
  *
  * Nên chính ứng dụng tự hỏi câu đó mỗi lần khởi động.
  *
@@ -22,7 +22,7 @@ import { Pool } from 'pg';
  * Bỏ sót câu thứ hai thì "đã tách role" trở thành một câu nói đúng về giấy tờ mà sai về
  * thực tế: `ims_app` không phải superuser, nhưng nếu nó sở hữu bảng thì chẳng có gì đổi.
  *
- * ===== CÂU THỨ BA: THỪA KẾ VAI (§18 #5, vá 21/09) =====
+ * ===== CÂU THỨ BA: THỪA KẾ VAI =====
  *
  * Hai câu trên đều hỏi về CHÍNH role đang kết nối. Postgres còn một đường thứ ba tới đúng
  * quyền ấy, và nó chỉ dài một dòng:
@@ -133,7 +133,7 @@ export async function readAppRoleFacts(pool: Pool): Promise<AppRoleFacts> {
  * Idempotent — chạy lại mỗi lần boot, và đó là tính năng: đổi mật khẩu trong `.env` rồi khởi
  * động lại là đủ, không cần nhớ một câu `psql` nào.
  *
- * ===== NHƯNG CHỈ ĐẶT LẠI KHI NÓ THẬT SỰ ĐỔI (§18 #12, vá 21/09) =====
+ * ===== NHƯNG CHỈ ĐẶT LẠI KHI NÓ THẬT SỰ ĐỔI =====
  *
  * `ALTER ROLE … PASSWORD` không bind tham số được, nên mật khẩu nằm trong VĂN BẢN câu lệnh.
  * Với `log_statement = ddl` — một cấu hình rất thường gặp ở nơi cài cẩn thận — câu ấy vào log
@@ -230,8 +230,8 @@ async function canLogIn(appUrl: string, roleName: string, password: string): Pro
 /**
  * Nơi cài được phép chạy bằng role rộng — DANH SÁCH CHO PHÉP, không phải danh sách CẤM.
  *
- * Bản đầu (20/09) viết `if (NODE_ENV === 'production') throw`, tức một danh sách cấm gồm
- * đúng một phần tử. Mọi tên khác — `staging`, `preprod`, `uat`, hay không đặt gì — rơi vào
+ * Viết `if (NODE_ENV === 'production') throw` là một danh sách cấm gồm đúng một phần tử.
+ * Mọi tên khác — `staging`, `preprod`, `uat`, hay không đặt gì — rơi vào
  * nhánh "chỉ cảnh báo", nghĩa là chạy bằng superuser mà không ai bị chặn, ở đúng những nơi
  * giống production nhất và cũng hay bị quên `.env` nhất.
  *
@@ -247,9 +247,9 @@ const ENVS_ALLOWED_TO_RUN_WIDE = new Set(['development', 'test']);
  *
  * ===== VÌ SAO HÀM NÀY NẰM Ở ĐÂY CHỨ KHÔNG Ở `main.ts` =====
  *
- * Nó ở `main.ts` tới 21/09, và vì thế KHÔNG bài kiểm nào chạy vào được: `main.ts` gọi
- * `bootstrap()` ngay khi nạp module, nên import nó vào một bài kiểm là dựng cả ứng dụng.
- * Đo được hậu quả: gỡ hẳn câu `throw` thì mọi cổng vẫn xanh — vì mọi lượt chạy đều ở cấu
+ * Ở `main.ts` thì KHÔNG bài kiểm nào chạy vào được: `main.ts` gọi `bootstrap()` ngay khi
+ * nạp module, nên import nó vào một bài kiểm là dựng cả ứng dụng. Đo được hậu quả khi nó
+ * còn ở đó: gỡ hẳn câu `throw` thì mọi cổng vẫn xanh — vì mọi lượt chạy đều ở cấu
  * hình ĐÚNG, nơi hàm thoát ngay dòng đầu. Một hàng rào không đột biến nào làm đỏ được thì
  * chưa phải hàng rào.
  *

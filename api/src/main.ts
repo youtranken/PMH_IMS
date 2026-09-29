@@ -14,7 +14,7 @@ import { assertKeyringCovers } from './ops/rewrap';
 const REQUIRED_ENV = ['DATABASE_URL', 'APP_BASE_URL', 'MASTER_KEY_FILE', 'PASSWORD_PEPPER_FILE'];
 
 /*
- * `assertNarrowRole` ĐÃ CHUYỂN sang `database/app-role.ts` (21/09).
+ * `assertNarrowRole` nằm ở `database/app-role.ts`, KHÔNG đặt ở đây.
  *
  * Nó ở đây thì không bài kiểm nào chạm tới được — `main.ts` gọi `bootstrap()` ngay lúc nạp
  * module. Và một cổng không bài nào chạm tới là một cổng có thể bị gỡ mà không gì đỏ: đã đo,

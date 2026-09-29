@@ -1,13 +1,12 @@
 /**
  * ĐƯỜNG DẪN GIAO DIỆN mà API sinh ra — bản đối chiếu của `web/src/lib/routes.ts`.
  *
- * ===== VÌ SAO FILE NÀY PHẢI TỒN TẠI (B-07, 22/09) =====
+ * ===== VÌ SAO FILE NÀY PHẢI TỒN TẠI (B-07) =====
  *
  * API sinh link UI ở bảy chỗ: khối "sắp hết hạn", ba panel khu mở rộng của trang thiết bị, và
- * nút CTA trong email duyệt yêu cầu. Cả bảy đều tự gõ chuỗi, và cả bảy đều gõ theo lối
- * TIẾNG VIỆT BẢN CŨ — `/thiet-bi/`, `/phan-mem/`, `/duong-truyen/`, `/dia-chi-ip/`,
- * `/duyet-yeu-cau` — trong khi quyết định 26/08 đã đổi URL sang tiếng Anh và
- * `web/src/lib/routes.ts` tự khai mình là "NGUỒN DUY NHẤT".
+ * nút CTA trong email duyệt yêu cầu. Tự gõ chuỗi ở từng chỗ thì chúng trôi theo lối TIẾNG
+ * VIỆT CŨ — `/thiet-bi/`, `/phan-mem/`, `/duong-truyen/`, `/dia-chi-ip/`, `/duyet-yeu-cau` —
+ * trong khi URL của web là tiếng Anh và `web/src/lib/routes.ts` là "NGUỒN DUY NHẤT".
  *
  * Nghĩa là bảy cái link chết. Không lỗi nào báo: React Router trả màn 404 rất bình thản, và
  * chẳng ai bấm thử link trong một email test.
@@ -23,8 +22,7 @@
  *
  * Nên chép — NHƯNG chép có người canh: `ui-paths.spec.ts` đọc THẲNG `web/src/lib/routes.ts`
  * và so từng đường. Hai bản lệch nhau là bài kiểm đỏ, kèm tên đường nào lệch. Bản sao có cổng
- * khác hẳn bản sao trôi tự do — và F-09 trong cùng lượt rà soát này là ví dụ sống của bản sao
- * không có cổng: năm bản chép của một hàm, và chúng ĐÃ lệch.
+ * khác hẳn bản sao trôi tự do: năm bản chép không cổng của một hàm là năm bản ĐÃ lệch.
  */
 
 /** Đường dẫn tương đối, KHÔNG kèm host — nơi gọi tự ghép `APP_BASE_URL` nếu cần link tuyệt đối. */

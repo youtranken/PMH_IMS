@@ -30,7 +30,7 @@ describe('DeviceRetirementRegistry — thiếu người dọn thì nổ lúc kh�
   });
 
   /**
-   * ĐÂY LÀ TRẠNG THÁI THẬT CỦA `master` TỚI 10/09 — hai người dọn, hai chủ nợ không ai nhận.
+   * TRẠNG THÁI THIẾU HAI NGƯỜI DỌN — hai chủ nợ không ai nhận.
    *
    * `device_port.connected_device_id` (0013) và `isp_line.device_id` (0016) đều trỏ tới
    * `device`, đều `ON DELETE RESTRICT`, và đều không nằm trong sổ. Thanh lý con switch thì

@@ -35,10 +35,8 @@ export interface SubnetRecord {
   /**
    * Dải đã VÔ HIỆU HÓA hay chưa — `null` là đang dùng.
    *
-   * Ba cột này có từ migration 0020; cái MỚI (28/08/2026) là chúng ra khỏi service.
-   *
-   * Trước 28/08/2026 ba trường này không bao giờ ra khỏi service: `list()` lọc thẳng
-   * `voidedAt IS NULL`, nên một dải vừa vô hiệu hóa là BIẾN MẤT khỏi màn hình. Người dùng đọc
+   * Ba cột này (migration 0020) PHẢI ra khỏi service. Giấu chúng đi và để `list()` lọc thẳng
+   * `voidedAt IS NULL` thì một dải vừa vô hiệu hóa là BIẾN MẤT khỏi màn hình. Người dùng đọc
    * đúng cái đó là "đã xóa", và họ không sai — không còn chỗ nào trên giao diện nói nó tồn
    * tại, trong khi mấy chục máy vẫn đang cắm IP tĩnh thuộc dải ấy.
    */
@@ -69,10 +67,10 @@ export interface SubnetInput {
 }
 
 /**
- * Dải mạng (story 5.1, FR-018). Chủ sở hữu bảng `subnet` (AD-3).
+ * Dải mạng (FR-018). Chủ sở hữu bảng `subnet` (AD-3).
  *
- * Ẩn (nhập nhầm) chứ không xóa — quyết định của anh Thuận 2026-08-23. Áp cho mọi bảng
- * nghiệp vụ từ Epic 5 trở đi.
+ * Ẩn (nhập nhầm) chứ không xóa — quyết định của chủ dự án, áp cho mọi bảng nghiệp vụ của
+ * IPAM trở đi.
  */
 @Injectable()
 export class SubnetService {
@@ -259,8 +257,8 @@ export class SubnetService {
           /*
            * KHÓA HÀNG SUBNET RỒI MỚI ĐẾM — trong cùng transaction với lượt ghi (AD-5, mẫu M2).
            *
-           * Bản trước đếm bằng `this.db` (ngoài tx) rồi mới mở transaction để UPDATE. Giữa hai
-           * câu lệnh đó, một lượt khai IP hoàn toàn bình thường lọt qua: trigger
+           * Đếm bằng `this.db` (ngoài tx) rồi mới mở transaction để UPDATE là để hở: giữa hai
+           * câu lệnh đó, một lượt khai IP hoàn toàn bình thường lọt qua — trigger
            * `ip_address_within_subnet()` đọc dải CŨ, thấy hợp lệ, commit. Rồi câu UPDATE ở đây
            * đổi dải — và để lại đúng thứ chú thích ngay trên tự hứa sẽ không bao giờ có: một
            * hồ sơ IP nằm ngoài dải của chính nó, không lỗi, không cảnh báo, trigger không bao
@@ -305,7 +303,7 @@ export class SubnetService {
   }
 
   /**
-   * "Xóa" = ẩn, có lý do (quyết định 2026-08-23). Bản ghi ở lại, tra cứu được, còn vết ai ẩn.
+   * "Xóa" = ẩn, có lý do (quyết định của chủ dự án). Bản ghi ở lại, tra cứu được, còn vết ai ẩn.
    *
    * Còn IP bên trong thì KHÔNG cho ẩn: ẩn dải mà để lại IP trỏ vào nó thì màn IP hiện một
    * đống hàng thuộc về một dải không còn tồn tại trên màn hình nào.
@@ -322,9 +320,9 @@ export class SubnetService {
     /*
      * Vô hiệu hóa dải thì ẨN LUÔN mọi hồ sơ IP bên trong — CÙNG một lý do, cùng một lượt.
      *
-     * Bản trước từ chối thẳng ("Ẩn hết IP trong dải trước đã") và bắt người dùng đi ẩn tay
-     * từng địa chỉ. Với một dải /24 đã dùng một nửa thì đó là hơn trăm lượt bấm cho một quyết
-     * định họ đã ra rồi — và không ai làm, nên dải hỏng cứ nằm đó.
+     * Từ chối thẳng ("Ẩn hết IP trong dải trước đã") là bắt người dùng đi ẩn tay từng địa
+     * chỉ. Với một dải /24 đã dùng một nửa thì đó là hơn trăm lượt bấm cho một quyết định họ
+     * đã ra rồi — và không ai làm, nên dải hỏng cứ nằm đó.
      *
      * Ẩn chứ KHÔNG xóa: `ip_history` vẫn trỏ vào những hàng này, và câu "IP này từng của máy
      * nào" mà AC 5.2 bắt giữ vĩnh viễn nằm ở đó. Mỗi hàng vẫn để lại một dòng lịch sử nói rõ
@@ -337,7 +335,7 @@ export class SubnetService {
        * Danh sách hàng bị ẩn lấy TỪ CHÍNH câu UPDATE (`returning`), không phải từ một câu
        * SELECT chạy trước đó ngoài transaction.
        *
-       * Bản trước đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
+       * Đừng đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
        * một IP được cấp trong khoảnh khắc giữa hai câu lệnh: câu UPDATE ẩn luôn hàng mới đó
        * (nó khớp `subnet_id` + `voided_at IS NULL`), nhưng vòng ghi `ip_history` chạy trên
        * ảnh chụp cũ nên KHÔNG sinh dòng `ip.subnet_voided` cho nó — vi phạm đúng điều chú thích
@@ -461,7 +459,7 @@ export class SubnetService {
   /**
    * XÓA CỨNG một dải — chỉ khi nó CHƯA TỪNG được dùng.
    *
-   * Quyết định 2026-08-27: khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý.
+   * Quyết định của chủ dự án: khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý.
    * Dải chưa có hồ sơ IP nào thì nó chưa mang thông tin gì cả — xóa hẳn, cần thì khai lại.
    *
    * Nhưng "chưa từng dùng" tính theo TỔNG số hàng `ip_address`, kể cả hàng đã thu hồi hoặc đã
@@ -470,9 +468,8 @@ export class SubnetService {
    * bản ghi ở lại, tra cứu được, còn vết ai ẩn và vì sao.
    */
   async remove(actor: string, id: string): Promise<void> {
-    // `requireAny`, không phải `requireAlive`: từ 28/08/2026 thứ tự người dùng đi là
-    // vô hiệu hóa TRƯỚC rồi mới xóa. Chặn dải đã tắt ở đây thì đúng cái đường đi vừa dựng lại
-    // kết thúc bằng 404 ở bước cuối.
+    // `requireAny`, không phải `requireAlive`: thứ tự người dùng đi là vô hiệu hóa TRƯỚC rồi
+    // mới xóa. Chặn dải đã tắt ở đây thì đường đi ấy kết thúc bằng 404 ở bước cuối.
     const row = await this.requireAny(id);
     const [existing] = await this.db
       .select({ all: count() })
@@ -631,7 +628,7 @@ export class SubnetService {
   }
 
   /**
-   * Chặn nếu trong dải còn hồ sơ IP nào đang bị một rule NAT SỐNG trỏ vào (rà soát 10/09).
+   * Chặn nếu trong dải còn hồ sơ IP nào đang bị một rule NAT SỐNG trỏ vào.
    *
    * ===== VÌ SAO CỬA NÀY MỚI LÀ CỬA NGUY HIỂM =====
    *

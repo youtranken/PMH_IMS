@@ -10,7 +10,7 @@ import {
   rowActionNames,
   catalogTab,
   sql,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
 } from './helpers';
 
@@ -52,7 +52,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * Dấu `*` của `Field` bị bỏ đi: nó mang `aria-hidden`, là chỉ dấu thị giác cho "bắt buộc"
    * chứ không thuộc tên gọi của ô. Cái bắt buộc THẬT nằm ở thuộc tính `required` của input.
    */
-  async function tenTayNam(controls: Locator): Promise<string[]> {
+  async function handleNames(controls: Locator): Promise<string[]> {
     const names = await controls.evaluateAll((nodes) =>
       nodes.map((node) => {
         const el = node as HTMLElement;
@@ -67,7 +67,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   }
 
   /** So tập hợp thì hai vế phải sắp cùng một kiểu — dùng chung đúng bộ so sánh mặc định. */
-  const sapXep = (names: readonly string[]): string[] => [...names].sort();
+  const sortOrder = (names: readonly string[]): string[] => [...names].sort();
 
   /**
    * Nhãn của một ô nhập dựng bởi `Field`, viết dưới dạng regex neo hai đầu.
@@ -90,11 +90,11 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * Vì vậy: neo hai đầu, nuốt khoảng trắng ở cả hai phía, dấu sao là tùy chọn. Vẫn chốt đúng
    * MỘT ô — "Mã" không vớ nhầm "Mã nhân viên" — mà không phải nhớ ô nào bắt buộc.
    */
-  const nhan = (label: string): RegExp =>
+  const fieldLabel = (label: string): RegExp =>
     new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*\\*?\\s*$`);
 
   /** Bảy ngăn của phòng Danh mục, đúng thứ tự `TAB_KEYS` trong `catalog-screen.tsx`. */
-  const TEN_TAB = [
+  const TAB_NAMES = [
     'Site',
     'Tủ mạng',
     'Loại thiết bị',
@@ -105,63 +105,63 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   ] as const;
 
   /** Một ngăn: nhãn nút "Thêm …" và bộ cột của bảng bên trong. */
-  interface NganDanhMuc {
+  interface CatalogSection {
     tab: string;
     /** Nhãn nút mở hộp thêm mới — `catalog.add*` trong `vi.ts`, ĐỔI theo tab. */
-    nutThem: string;
+    addButton: string;
     /** Toàn bộ `columnheader` của bảng tab đó, đúng thứ tự trái→phải. */
-    cot: string[];
+    columns: string[];
     /** Bốn danh mục gốc có sheet trong file mẫu mới được nhập từ Excel. */
-    nhapDuocExcel: boolean;
+    excelImport: boolean;
   }
 
-  const BAY_NGAN: NganDanhMuc[] = [
+  const SEVEN_SECTIONS: CatalogSection[] = [
     {
       tab: 'Site',
-      nutThem: 'Thêm site',
-      cot: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: true,
+      addButton: 'Thêm site',
+      columns: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: true,
     },
     {
       tab: 'Tủ mạng',
-      nutThem: 'Thêm tủ mạng',
-      cot: ['Mã', 'Thuộc site', 'Mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: true,
+      addButton: 'Thêm tủ mạng',
+      columns: ['Mã', 'Thuộc site', 'Mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: true,
     },
     {
       tab: 'Loại thiết bị',
-      nutThem: 'Thêm loại thiết bị',
-      cot: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: true,
+      addButton: 'Thêm loại thiết bị',
+      columns: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: true,
     },
     {
       tab: 'Nhà cung cấp',
-      nutThem: 'Thêm nhà cung cấp',
-      cot: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: true,
+      addButton: 'Thêm nhà cung cấp',
+      columns: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: true,
     },
     {
       tab: 'Bộ phận',
-      nutThem: 'Thêm bộ phận',
-      cot: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: false,
+      addButton: 'Thêm bộ phận',
+      columns: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: false,
     },
     {
       tab: 'Nhà mạng',
-      nutThem: 'Thêm nhà mạng',
-      cot: ['Tên', 'Hotline', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: false,
+      addButton: 'Thêm nhà mạng',
+      columns: ['Tên', 'Hotline', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: false,
     },
     {
       tab: 'Dịch vụ / Port',
-      nutThem: 'Thêm dịch vụ',
-      cot: ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái', 'Thao tác'],
-      nhapDuocExcel: false,
+      addButton: 'Thêm dịch vụ',
+      columns: ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái', 'Thao tác'],
+      excelImport: false,
     },
   ];
 
   /** Đi từ màn nào cũng được về phòng Danh mục bằng đúng cái link người dùng bấm. */
-  async function moPhongDanhMuc(page: Page): Promise<void> {
+  async function mockCatalog(page: Page): Promise<void> {
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await expect(page.getByRole('heading', { name: 'Danh mục', exact: true })).toBeVisible();
   }
@@ -193,23 +193,23 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     // Một luồng đăng nhập lần đầu + bảy lượt đổi tab, mỗi lượt một lượt gọi API.
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
-    await moPhongDanhMuc(page);
+    await mockCatalog(page);
 
     /*
      * `aria-label` của thanh tab là TIÊU ĐỀ MÀN ("Danh mục") — người dùng trình đọc màn hình
      * nghe "Danh mục, thanh tab" chứ không phải "thanh tab" trống không.
      */
-    const thanhTab = page.getByRole('tablist', { name: 'Danh mục' });
+    const tabBar = page.getByRole('tablist', { name: 'Danh mục' });
     await expect(
-      thanhTab.getByRole('tab'),
+      tabBar.getByRole('tab'),
       'phòng Danh mục phải có ĐÚNG bảy ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
-    ).toHaveText(TEN_TAB.map(catalogTab));
+    ).toHaveText(TAB_NAMES.map(catalogTab));
 
-    for (const ngan of BAY_NGAN) {
-      await thanhTab.getByRole('tab', { name: catalogTab(ngan.tab) }).click();
+    for (const section of SEVEN_SECTIONS) {
+      await tabBar.getByRole('tab', { name: catalogTab(section.tab) }).click();
       await expect(
         page.getByRole('tabpanel'),
-        `bấm ngăn ${ngan.tab} phải mở ra một vùng nội dung`,
+        `bấm ngăn ${section.tab} phải mở ra một vùng nội dung`,
       ).toBeVisible();
 
       /*
@@ -219,18 +219,18 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
        */
       await expect(
         page.getByRole('button', { name: /^Thêm/ }),
-        `ngăn ${ngan.tab} phải có đúng một nút thêm và nó phải ghi "${ngan.nutThem}" — nút không đổi theo tab nghĩa là hộp thoại mở ra sẽ ghi vào nhầm danh mục`,
-      ).toHaveText([ngan.nutThem]);
+        `ngăn ${section.tab} phải có đúng một nút thêm và nó phải ghi "${section.addButton}" — nút không đổi theo tab nghĩa là hộp thoại mở ra sẽ ghi vào nhầm danh mục`,
+      ).toHaveText([section.addButton]);
 
-      const cot = page.getByRole('table').getByRole('columnheader');
+      const columns = page.getByRole('table').getByRole('columnheader');
       await expect(
-        cot,
-        `bảng của ngăn ${ngan.tab} phải có đúng ${ngan.cot.length} cột`,
-      ).toHaveCount(ngan.cot.length);
+        columns,
+        `bảng của ngăn ${section.tab} phải có đúng ${section.columns.length} cột`,
+      ).toHaveCount(section.columns.length);
       await expect(
-        cot,
-        `bộ cột của ngăn ${ngan.tab} sai — tab đang bày dữ liệu của một danh mục khác`,
-      ).toHaveText(ngan.cot);
+        columns,
+        `bộ cột của ngăn ${section.tab} sai — tab đang bày dữ liệu của một danh mục khác`,
+      ).toHaveText(section.columns);
     }
   });
 
@@ -262,112 +262,112 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     test.setTimeout(150_000);
 
     /** Bộ tay nắm của một hộp, đọc thẳng từ các nhánh `entity === …` của `catalog-form.tsx`. */
-    interface HopThem {
+    interface AddDialogSpec {
       tab: string;
-      tieuDe: string;
+      title: string;
       /** `<input class="inp">` — vai `textbox`. */
-      oGo: string[];
+      textFields: string[];
       /** `Select` dùng chung: tay nắm là BUTTON, không phải `<select>` gốc. */
-      oChon: string[];
+      selectField: string[];
       /** Công tắc bật/tắt — vai `checkbox`. */
-      congTac: string[];
+      toggles: string[];
     }
 
-    const HOP: HopThem[] = [
+    const ADD_DIALOGS: AddDialogSpec[] = [
       {
         tab: 'Site',
-        tieuDe: 'Thêm site',
-        oGo: ['Mã', 'Tên', 'Địa chỉ / ghi chú'],
-        oChon: [],
-        congTac: [],
+        title: 'Thêm site',
+        textFields: ['Mã', 'Tên', 'Địa chỉ / ghi chú'],
+        selectField: [],
+        toggles: [],
       },
       {
         tab: 'Tủ mạng',
-        tieuDe: 'Thêm tủ mạng',
+        title: 'Thêm tủ mạng',
         // "Số U" là ô SỐ (1–60) — vai `spinbutton`, không nằm trong bộ ô gõ chữ.
-        oGo: ['Mã', 'Mô tả'],
-        oChon: ['Thuộc site'],
-        congTac: [],
+        textFields: ['Mã', 'Mô tả'],
+        selectField: ['Thuộc site'],
+        toggles: [],
       },
       {
         tab: 'Loại thiết bị',
-        tieuDe: 'Thêm loại thiết bị',
-        oGo: ['Tên', 'Mô tả'],
-        oChon: [],
-        congTac: ['Có port map', 'Router/Firewall'],
+        title: 'Thêm loại thiết bị',
+        textFields: ['Tên', 'Mô tả'],
+        selectField: [],
+        toggles: ['Có port map', 'Router/Firewall'],
       },
       {
         tab: 'Nhà cung cấp',
-        tieuDe: 'Thêm nhà cung cấp',
-        oGo: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ'],
-        oChon: [],
-        congTac: [],
+        title: 'Thêm nhà cung cấp',
+        textFields: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ'],
+        selectField: [],
+        toggles: [],
       },
       {
         tab: 'Bộ phận',
-        tieuDe: 'Thêm bộ phận',
-        oGo: ['Tên', 'Mô tả'],
-        oChon: [],
-        congTac: [],
+        title: 'Thêm bộ phận',
+        textFields: ['Tên', 'Mô tả'],
+        selectField: [],
+        toggles: [],
       },
       {
         tab: 'Nhà mạng',
-        tieuDe: 'Thêm nhà mạng',
-        oGo: ['Tên', 'Hotline', 'Email / người liên hệ'],
-        oChon: [],
-        congTac: [],
+        title: 'Thêm nhà mạng',
+        textFields: ['Tên', 'Hotline', 'Email / người liên hệ'],
+        selectField: [],
+        toggles: [],
       },
       {
         tab: 'Dịch vụ / Port',
-        tieuDe: 'Thêm dịch vụ',
+        title: 'Thêm dịch vụ',
         // `catalog.portFrom` = "Từ port", `catalog.portTo` = "Đến port (tuỳ chọn)" — hai ô, một dải.
-        oGo: ['Tên', 'Từ port', 'Đến port (tùy chọn)', 'Mô tả'],
-        oChon: ['Giao thức'],
-        congTac: [],
+        textFields: ['Tên', 'Từ port', 'Đến port (tùy chọn)', 'Mô tả'],
+        selectField: ['Giao thức'],
+        toggles: [],
       },
     ];
 
     await firstLogin(page, E2E_SA);
-    await moPhongDanhMuc(page);
+    await mockCatalog(page);
 
-    for (const [index, hop] of HOP.entries()) {
-      await page.getByRole('tab', { name: catalogTab(hop.tab) }).click();
-      await page.getByRole('button', { name: hop.tieuDe, exact: true }).click();
+    for (const [index, dialog] of ADD_DIALOGS.entries()) {
+      await page.getByRole('tab', { name: catalogTab(dialog.tab) }).click();
+      await page.getByRole('button', { name: dialog.title, exact: true }).click();
 
-      const hopThoai = page.getByRole('dialog', { name: hop.tieuDe, exact: true });
+      const dialogBox = page.getByRole('dialog', { name: dialog.title, exact: true });
       await expect(
-        hopThoai,
-        `hộp thêm của ${hop.tab} phải mang đúng tiêu đề "${hop.tieuDe}" — tiêu đề là thứ duy nhất nói cho người dùng biết họ đang khai vào danh mục nào`,
+        dialogBox,
+        `hộp thêm của ${dialog.tab} phải mang đúng tiêu đề "${dialog.title}" — tiêu đề là thứ duy nhất nói cho người dùng biết họ đang khai vào danh mục nào`,
       ).toBeVisible();
 
       expect(
-        await tenTayNam(hopThoai.getByRole('textbox')),
-        `bộ ô GÕ của hộp ${hop.tieuDe} sai — một nhánh "entity === …" trong catalog-form.tsx thừa hoặc thiếu`,
-      ).toEqual(sapXep(hop.oGo));
+        await handleNames(dialogBox.getByRole('textbox')),
+        `bộ ô GÕ của hộp ${dialog.title} sai — một nhánh "entity === …" trong catalog-form.tsx thừa hoặc thiếu`,
+      ).toEqual(sortOrder(dialog.textFields));
 
       /*
        * Nút trong hộp = chân hộp (Hủy · Lưu) + ✕ + tay nắm của mỗi ô chọn. So cả mảng để bắt
        * được nút THỪA — vd một nút "Xóa" lọt vào hộp THÊM MỚI.
        */
       expect(
-        await tenTayNam(hopThoai.getByRole('button')),
-        `bộ NÚT của hộp ${hop.tieuDe} sai — ô chọn phải là button (Select dùng chung), và chân hộp chỉ được có Hủy + Lưu`,
-      ).toEqual(sapXep(['Đóng hộp thoại', 'Hủy', 'Lưu', ...hop.oChon]));
+        await handleNames(dialogBox.getByRole('button')),
+        `bộ NÚT của hộp ${dialog.title} sai — ô chọn phải là button (Select dùng chung), và chân hộp chỉ được có Hủy + Lưu`,
+      ).toEqual(sortOrder(['Đóng hộp thoại', 'Hủy', 'Lưu', ...dialog.selectField]));
 
       expect(
-        await tenTayNam(hopThoai.getByRole('checkbox')),
-        `bộ CÔNG TẮC của hộp ${hop.tieuDe} sai — chỉ Loại thiết bị mới có công tắc "có port map"`,
-      ).toEqual(sapXep(hop.congTac));
+        await handleNames(dialogBox.getByRole('checkbox')),
+        `bộ CÔNG TẮC của hộp ${dialog.title} sai — chỉ Loại thiết bị mới có công tắc "có port map"`,
+      ).toEqual(sortOrder(dialog.toggles));
 
       // Hai đường đóng đều phải chạy thật: một cái hỏng là người dùng kẹt trong hộp.
       if (index % 2 === 0) {
-        await hopThoai.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+        await dialogBox.getByRole('button', { name: 'Đóng hộp thoại' }).click();
       } else {
         await page.keyboard.press('Escape');
       }
       await expect(
         page.getByRole('dialog'),
-        `hộp ${hop.tieuDe} phải đóng được bằng ${index % 2 === 0 ? 'nút ✕' : 'phím Esc'}`,
+        `hộp ${dialog.title} phải đóng được bằng ${index % 2 === 0 ? 'nút ✕' : 'phím Esc'}`,
       ).toHaveCount(0);
     }
   });
@@ -398,50 +398,50 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await firstLogin(page, E2E_SA);
     // Ô "Thuộc site" cần ít nhất một site; máy chủ mới dựng thì danh mục còn trắng.
     await catalogItem(page, 'site', { code: `S-E2E-TU-${uniqueStamp()}`, name: 'Site E2E hộp tủ' });
-    await moPhongDanhMuc(page);
+    await mockCatalog(page);
 
     await page.getByRole('tab', { name: catalogTab('Tủ mạng') }).click();
     await page.getByRole('button', { name: 'Thêm tủ mạng', exact: true }).click();
 
-    const hop = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
-    await expect(hop).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
+    await expect(dialog).toBeVisible();
 
     /*
      * Mã phải có thật: không điền thì form báo thiếu Mã cùng lúc, và bài này thành ra kiểm hai
      * lỗi thay vì một. KHÔNG bao giờ bấm Lưu thành công nên bản ghi này không rơi vào DB.
      */
-    await hop.getByLabel(nhan('Mã')).fill('E2E-KHONG-LUU');
-    await hop.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByLabel(fieldLabel('Mã')).fill('E2E-KHONG-LUU');
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
 
     await expect(
-      hop.getByRole('alert'),
+      dialog.getByRole('alert'),
       'quên chọn site mà hộp im lặng thì người dùng bấm Lưu mãi không hiểu vì sao không xong',
     ).toHaveText('Chọn site cho tủ này.');
     await expect(
-      hop,
+      dialog,
       'hộp phải Ở LẠI cùng những gì vừa gõ — đóng đi là bắt gõ lại từ đầu',
     ).toBeVisible();
 
     // Chọn site thật rồi mới tới lời từ chối thứ hai. Option của `Select` được vẽ ra NGOÀI
     // locator của hộp thoại nên phải tìm từ `page`.
-    await hop.getByRole('button', { name: 'Thuộc site' }).click();
-    const luaChonSite = page.getByRole('option');
+    await dialog.getByRole('button', { name: 'Thuộc site' }).click();
+    const siteOptions = page.getByRole('option');
     await expect(
-      luaChonSite.first(),
+      siteOptions.first(),
       'ô "Thuộc site" phải có ít nhất một lựa chọn — rỗng thì không ai khai được tủ mạng nào',
     ).toBeVisible();
-    await luaChonSite.first().click();
+    await siteOptions.first().click();
 
-    await hop.getByLabel(nhan('Số U')).fill('99');
-    await hop.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByLabel(fieldLabel('Số U')).fill('99');
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(
-      hop.getByRole('alert'),
+      dialog.getByRole('alert'),
       'số U ngoài khoảng phải bị chặn TẠI FORM — để nó bay lên API là đổi một câu tiếng Việt rõ ràng lấy một lỗi 400',
     ).toHaveText('Số U phải là số nguyên từ 1 đến 60.');
-    await expect(hop).toBeVisible();
+    await expect(dialog).toBeVisible();
 
-    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
-       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
+    /* Form đã gõ dở, nên lối đóng TÌNH CỜ phải hỏi lại trước (`Dialog guardUnsaved`) — trả
+       lời xong mới đóng. */
     await page.keyboard.press('Escape');
     await confirmAction(page, 'Bỏ và đóng');
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -472,90 +472,90 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
-    await moPhongDanhMuc(page);
+    await mockCatalog(page);
 
     /*
      * Mã sinh theo thời gian và BẮT ĐẦU BẰNG `E2E-`: đó là mẫu `resetCatalog()` dùng để dọn.
      * Mã cố định sẽ đụng bản ghi của lần chạy trước; mã sai mẫu thì ở lại DB vĩnh viễn.
      */
     const stamp = uniqueStamp();
-    const maSite = `E2E-${stamp}`;
-    const tenSite = `Site soi phòng ${stamp}`;
-    const diaChi = `Tầng ${stamp}, tòa E2E`;
+    const siteCode = `E2E-${stamp}`;
+    const siteName = `Site soi phòng ${stamp}`;
+    const address = `Tầng ${stamp}, tòa E2E`;
 
     await page.getByRole('button', { name: 'Thêm site', exact: true }).click();
-    const hopThem = page.getByRole('dialog', { name: 'Thêm site', exact: true });
-    await hopThem.getByLabel(nhan('Mã')).fill(maSite);
-    await hopThem.getByLabel(nhan('Tên')).fill(tenSite);
-    await hopThem.getByLabel(nhan('Địa chỉ / ghi chú')).fill(diaChi);
-    await hopThem.getByRole('button', { name: 'Lưu' }).click();
+    const addDialog = page.getByRole('dialog', { name: 'Thêm site', exact: true });
+    await addDialog.getByLabel(fieldLabel('Mã')).fill(siteCode);
+    await addDialog.getByLabel(fieldLabel('Tên')).fill(siteName);
+    await addDialog.getByLabel(fieldLabel('Địa chỉ / ghi chú')).fill(address);
+    await addDialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // Lọc trước rồi mới tìm dòng: bảng phân trang 20 dòng, site mới không chắc nằm ở trang 1.
-    await page.getByRole('searchbox').fill(maSite);
-    const dongSite = page.getByRole('row', { name: new RegExp(maSite) });
-    await expect(dongSite, 'site vừa khai phải hiện ra trong bảng').toBeVisible();
-    await expect(dongSite.getByText('Đang dùng')).toBeVisible();
+    await page.getByRole('searchbox').fill(siteCode);
+    const siteRow = page.getByRole('row', { name: new RegExp(siteCode) });
+    await expect(siteRow, 'site vừa khai phải hiện ra trong bảng').toBeVisible();
+    await expect(siteRow.getByText('Đang dùng')).toBeVisible();
 
     /*
      * `RowActions` xếp việc NGUY HIỂM xuống cuối, luôn luôn — đó là một lời hứa có ghi trong
      * `row-actions.tsx`, nên khẳng định cả THỨ TỰ chứ không chỉ tập hợp.
      */
     expect(
-      await rowActionNames(page, maSite),
+      await rowActionNames(page, siteCode),
       'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Ngừng dùng (cảnh báo) rồi Xóa xếp cuối',
     ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Ngừng dùng', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
-    await rowAction(page, maSite, 'Sửa');
-    const hopSua = page.getByRole('dialog', { name: /^Sửa — / });
-    await expect(hopSua).toBeVisible();
+    await rowAction(page, siteCode, 'Sửa');
+    const editDialog = page.getByRole('dialog', { name: /^Sửa — / });
+    await expect(editDialog).toBeVisible();
     // Mã là khoá tra cứu: ở hộp Sửa nó khoá sẵn, phải bấm "Đổi mã…" mới gõ được.
-    await expect(hopSua.getByText(maSite, { exact: true })).toBeVisible();
-    await hopSua.getByRole('button', { name: 'Đổi mã…' }).click();
+    await expect(editDialog.getByText(siteCode, { exact: true })).toBeVisible();
+    await editDialog.getByRole('button', { name: 'Đổi mã…' }).click();
     await expect(
-      hopSua.getByLabel(nhan('Mã')),
+      editDialog.getByLabel(fieldLabel('Mã')),
       'ô Mã trong hộp Sửa mở ra trống là ghi đè sạch dữ liệu ngay khi bấm Lưu',
-    ).toHaveValue(maSite);
-    await expect(hopSua.getByLabel(nhan('Tên'))).toHaveValue(tenSite);
-    await expect(hopSua.getByLabel(nhan('Địa chỉ / ghi chú'))).toHaveValue(diaChi);
-    await hopSua.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    ).toHaveValue(siteCode);
+    await expect(editDialog.getByLabel(fieldLabel('Tên'))).toHaveValue(siteName);
+    await expect(editDialog.getByLabel(fieldLabel('Địa chỉ / ghi chú'))).toHaveValue(address);
+    await editDialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // --- Site vừa khai phải có mặt trong ô chọn của hộp Tủ mạng, không cần tải lại trang.
     await page.getByRole('tab', { name: catalogTab('Tủ mạng') }).click();
     await page.getByRole('button', { name: 'Thêm tủ mạng', exact: true }).click();
-    const hopTu = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
-    await hopTu.getByRole('button', { name: 'Thuộc site' }).click();
+    const rackDialog = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
+    await rackDialog.getByRole('button', { name: 'Thuộc site' }).click();
     await expect(
-      page.getByRole('option', { name: new RegExp(maSite) }),
+      page.getByRole('option', { name: new RegExp(siteCode) }),
       'site vừa khai chưa tới được ô chọn — hai màn ăn chung queryKey mà thiếu một lượt làm mới',
     ).toBeVisible();
     await page.keyboard.press('Escape'); // đóng danh sách lựa chọn
-    await hopTu.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await rackDialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // --- Ngừng dùng rồi mở lại menu: mục giữa phải ĐỔI CHỮ.
     await page.getByRole('tab', { name: catalogTab('Site') }).click();
-    await page.getByRole('searchbox').fill(maSite);
-    await expect(dongSite).toBeVisible();
+    await page.getByRole('searchbox').fill(siteCode);
+    await expect(siteRow).toBeVisible();
 
-    await rowAction(page, maSite, 'Ngừng dùng');
+    await rowAction(page, siteCode, 'Ngừng dùng');
     await confirmAction(page, 'Ngừng dùng');
     await expect(
-      dongSite.getByText('Đã ngừng dùng'),
+      siteRow.getByText('Đã ngừng dùng'),
       'ngừng dùng xong bảng phải nói ra điều đó — không thì SA bấm lại lần nữa',
     ).toBeVisible();
 
     expect(
-      await rowActionNames(page, maSite),
+      await rowActionNames(page, siteCode),
       'hồ sơ ĐÃ NGỪNG DÙNG mà menu vẫn ghi "Ngừng dùng" thì không còn đường nào dùng lại nó',
     ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Dùng lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
-    await rowAction(page, maSite, 'Xóa');
+    await rowAction(page, siteCode, 'Xóa');
     await confirmAction(page, 'Xóa');
-    await expect(dongSite, 'site kiểm thử phải biến khỏi bảng sau khi xóa').toHaveCount(0);
+    await expect(siteRow, 'site kiểm thử phải biến khỏi bảng sau khi xóa').toHaveCount(0);
   });
 
   /*
@@ -583,64 +583,64 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    await moPhongDanhMuc(page);
+    await mockCatalog(page);
 
-    for (const ngan of BAY_NGAN) {
-      await page.getByRole('tab', { name: catalogTab(ngan.tab) }).click();
-      const soNut = ngan.nhapDuocExcel ? 1 : 0;
+    for (const section of SEVEN_SECTIONS) {
+      await page.getByRole('tab', { name: catalogTab(section.tab) }).click();
+      const buttonCount = section.excelImport ? 1 : 0;
       // File mẫu nằm TRONG hộp nhập, không bao giờ ở đầu trang.
       await expect(
         page.getByRole('button', { name: /Tải file mẫu/ }),
-        `ngăn ${ngan.tab}: đầu trang KHÔNG có nút tải file mẫu — nó nằm trong hộp nhập`,
+        `ngăn ${section.tab}: đầu trang KHÔNG có nút tải file mẫu — nó nằm trong hộp nhập`,
       ).toHaveCount(0);
       await expect(
         page.getByRole('button', { name: 'Nhập từ Excel' }),
-        `ngăn ${ngan.tab} ${ngan.nhapDuocExcel ? 'phải có' : 'KHÔNG được có'} nút nhập từ Excel`,
-      ).toHaveCount(soNut);
+        `ngăn ${section.tab} ${section.excelImport ? 'phải có' : 'KHÔNG được có'} nút nhập từ Excel`,
+      ).toHaveCount(buttonCount);
     }
 
     // --- Bên trong hộp nhập, ở bước MỘT (chưa chọn file).
     await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
-    const hop = page.getByRole('dialog', {
+    const dialog = page.getByRole('dialog', {
       name: 'Nhập danh mục từ Excel',
       exact: true,
     });
-    await expect(hop).toBeVisible();
+    await expect(dialog).toBeVisible();
     await expect(
-      hop.getByRole('button', { name: /Tải file mẫu/ }),
+      dialog.getByRole('button', { name: /Tải file mẫu/ }),
       'file mẫu phải nằm ngay trong hộp nhập — bước con của việc nhập',
     ).toBeVisible();
     await expect(
-      hop.getByText('Chọn file .xlsx', { exact: true }),
+      dialog.getByText('Chọn file .xlsx', { exact: true }),
       'hộp nhập phải có chỗ chọn file — không thì ba cái nút ở chân chẳng để làm gì',
     ).toBeVisible();
     await expect(
-      hop.getByText(/File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
+      dialog.getByText(/File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
       'lời dặn dùng đúng file mẫu phải đứng ngay cạnh ô chọn file, chỗ người ta đang nhìn',
     ).toBeVisible();
 
-    const chanHop = page.getByTestId('dialog-footer');
+    const dialogFooter = page.getByTestId('dialog-footer');
     await expect(
-      chanHop.getByRole('button'),
+      dialogFooter.getByRole('button'),
       'chân hộp nhập phải đúng ba nút theo đúng thứ tự Hủy → Đối chiếu → Xác nhận ghi',
     ).toHaveText(['Hủy', 'Đối chiếu', 'Xác nhận ghi']);
 
     await expect(
-      chanHop.getByRole('button', { name: 'Đối chiếu' }),
+      dialogFooter.getByRole('button', { name: 'Đối chiếu' }),
       'chưa chọn file mà đối chiếu được là gửi một request rỗng lên server',
     ).toBeDisabled();
     await expect(
-      chanHop.getByRole('button', { name: 'Xác nhận ghi' }),
+      dialogFooter.getByRole('button', { name: 'Xác nhận ghi' }),
       'chưa đối chiếu mà ghi được là bỏ qua đúng bước sinh ra để người dùng nhìn trước khi ghi',
     ).toBeDisabled();
     await expect(
-      chanHop.getByRole('button', { name: 'Hủy' }),
+      dialogFooter.getByRole('button', { name: 'Hủy' }),
       'nút Hủy phải luôn bấm được — đó là đường thoát',
     ).toBeEnabled();
 
-    await hop.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await dialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
@@ -655,7 +655,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * và người phát hiện là một SA đang cần dùng nó gấp.
    *
    * Hộp "Phiên đang mở" thì có một cái bẫy riêng, đã ghi trong `accounts-screen.tsx`: nhánh
-   * hỏng của nó từng nói "Chưa có dữ liệu" khi API 500. Bài này chốt rằng bên trong hộp có
+   * hỏng của nó dễ nói "Chưa có dữ liệu" khi API 500. Bài này chốt rằng bên trong hộp có
    * BẢNG THẬT với đủ bốn cột và có nút đá phiên — tức là nó đã hỏi được và đã trả lời.
    *
    * ĐỎ KHI: mất nút "Thêm tài khoản", bảng thừa/thiếu/đổi tên một cột (nhất là cột Vai trò —
@@ -680,9 +680,9 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'màn Tài khoản phải có đúng một nút thêm và nó ghi "Thêm tài khoản"',
     ).toHaveText(['Thêm tài khoản']);
 
-    const cot = page.getByRole('table').getByRole('columnheader');
+    const columns = page.getByRole('table').getByRole('columnheader');
     await expect(
-      cot,
+      columns,
       'bộ cột của bảng Tài khoản sai — mất cột Vai trò là SA thao tác trong khi không biết mình đang đụng vào ai',
     ).toHaveText([
       'Họ tên',
@@ -693,42 +693,41 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Thao tác',
     ]);
 
-    const hoTenSa = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
-    expect(hoTenSa.length, 'tài khoản SA hạt giống phải có họ tên để bám vào').toBeGreaterThan(0);
+    const saFullName = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
+    expect(saFullName.length, 'tài khoản SA hạt giống phải có họ tên để bám vào').toBeGreaterThan(0);
 
     /*
      * Lọc trước: bảng phân trang 20 dòng, SA không chắc nằm ở trang đang xem.
      *
-     * PHẢI CHỜ BỘ LỌC ÁP XONG, KHÔNG CHỈ CHỜ HÀNG HIỆN RA (25/09/2026).
+     * PHẢI CHỜ BỘ LỌC ÁP XONG, KHÔNG CHỈ CHỜ HÀNG HIỆN RA.
      *
-     * Bản trước gọi thẳng `fill()` rồi khẳng định nút ba chấm của SA đã hiện — nhưng hàng SA
-     * VỐN ĐÃ nằm ở trang 1 của danh sách CHƯA lọc, nên câu khẳng định ấy xanh ngay lập tức,
+     * Gọi thẳng `fill()` rồi khẳng định nút ba chấm của SA đã hiện là không đủ: hàng SA VỐN ĐÃ
+     * nằm ở trang 1 của danh sách CHƯA lọc, nên câu khẳng định ấy xanh ngay lập tức,
      * trước khi nhịp lắng 300ms của ô tìm kịp bắn. Bài đi tiếp, mở menu ba chấm, rồi lượt nạp
      * lại đổ xuống giữa chừng: bảng từ 7 dòng còn 1 dòng, hàng được dựng lại, và mục menu đang
      * mở bị giật khỏi DOM. Playwright báo "element is not stable" rồi "detached", đợi đủ 150
      * giây mới chịu thua — một thông báo chẳng liên quan gì tới thứ bài này đang kiểm.
      *
-     * Cuộc đua ấy nằm sẵn ở đây từ lâu và trước nay vẫn thắng nhờ MAY: quãng `rowActionNames`
-     * (mở menu · đọc chữ · Esc) tình cờ dài hơn 300ms. Đo được ngày 25/09 khi một thay đổi
-     * khác làm lệch nhịp vài chục mili-giây và mặt sấp luôn ngửa lên.
+     * Cuộc đua ấy thường thắng nhờ MAY: quãng `rowActionNames` (mở menu · đọc chữ · Esc) tình
+     * cờ dài hơn 300ms. Một thay đổi khác làm lệch nhịp vài chục mili-giây là mặt sấp ngửa lên.
      *
-     * `timVaChoLoc` chờ đúng GIÁ TRỊ `q=` trên thanh địa chỉ — tức nhịp lắng đã bắn thật.
+     * `searchAndWaitForFilter` chờ đúng GIÁ TRỊ `q=` trên thanh địa chỉ — tức nhịp lắng đã bắn thật.
      * Kèm thêm câu chốt "bảng còn đúng một dòng" để chắc rằng dữ liệu ĐÃ LỌC cũng đã về, chứ
      * không chỉ cái URL đổi.
      */
-    await timVaChoLoc(page, E2E_SA.email);
+    await searchAndWaitForFilter(page, E2E_SA.email);
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
-    await expect(page.getByRole('button', { name: `Thao tác với ${hoTenSa}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Thao tác với ${saFullName}` })).toBeVisible();
 
     /*
      * So TẬP HỢP (đã sắp) chứ không so thứ tự: thứ tự trong menu do `RowActions` tự xếp lại
      * theo cờ `danger`, còn điều bài này bảo vệ là "còn đủ năm việc hay không".
      */
     expect(
-      sapXep(await rowActionNames(page, hoTenSa)),
+      sortOrder(await rowActionNames(page, saFullName)),
       'menu dòng CỦA CHÍNH SA đang đăng nhập: không có Khóa / Vô hiệu / Đặt lại 2 lớp / Đổi vai (API chặn tự làm với mình)',
     ).toEqual(
-      sapXep([
+      sortOrder([
         // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
         'Xem chi tiết',
         'Sửa',
@@ -741,28 +740,28 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     );
 
     // --- Bên trong hộp "Phiên đang mở". SA đang ngồi đây, nên chắc chắn có ít nhất một phiên.
-    await rowAction(page, hoTenSa, 'Phiên đang mở');
-    const hopPhien = page.getByRole('dialog', { name: `Phiên đang mở: ${hoTenSa}` });
+    await rowAction(page, saFullName, 'Phiên đang mở');
+    const sessionDialog = page.getByRole('dialog', { name: `Phiên đang mở: ${saFullName}` });
     await expect(
-      hopPhien,
+      sessionDialog,
       'tiêu đề hộp phải kèm TÊN người — mở nhầm hộp của người khác rồi đá phiên là một tai nạn không hoàn tác được',
     ).toBeVisible();
 
     await expect(
-      hopPhien.getByRole('columnheader'),
+      sessionDialog.getByRole('columnheader'),
       'bảng phiên phải đủ ba cột có chữ + một cột chứa nút; thiếu IP hay "hoạt động gần nhất" thì SA không phân biệt nổi phiên của mình với phiên của kẻ khác',
     ).toHaveText(['IP', 'Trình duyệt', 'Đăng nhập lúc', 'Hoạt động gần nhất', '']);
     await expect(
-      hopPhien.getByText('Phiên này'),
+      sessionDialog.getByText('Phiên này'),
       'phiên của chính SA đang xem phải được đánh dấu — nhìn là biết dòng nào là máy mình',
     ).toBeVisible();
 
     await expect(
-      hopPhien.getByRole('button', { name: 'Đóng phiên' }).first(),
+      sessionDialog.getByRole('button', { name: 'Đóng phiên' }).first(),
       'phiên của chính SA đang mở phải hiện ra kèm nút đá — bảng rỗng ở đây nghĩa là hộp không hỏi được server',
     ).toBeVisible();
 
-    await hopPhien.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await sessionDialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
@@ -798,58 +797,58 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      */
     const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
-    const hoTen = `E2E Tạo Mới ${stamp}`;
-    const soDienThoai = '0912 345 678';
-    const maNhanVien = `NV-${stamp}`;
+    const fullName = `E2E Tạo Mới ${stamp}`;
+    const phoneNumber = '0912 345 678';
+    const employeeCode = `NV-${stamp}`;
 
     // ===== CHẾ ĐỘ TẠO =====
     await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
-    const hopTao = page.getByRole('dialog', { name: 'Thêm tài khoản', exact: true });
-    await expect(hopTao).toBeVisible();
+    const createDialog = page.getByRole('dialog', { name: 'Thêm tài khoản', exact: true });
+    await expect(createDialog).toBeVisible();
 
     expect(
-      await tenTayNam(hopTao.getByRole('textbox')),
+      await handleNames(createDialog.getByRole('textbox')),
       'bộ ô GÕ của chế độ tạo sai — thiếu Email thì không tạo được ai, thừa một ô thì có một trường gõ vào mà không được gửi lên',
-    ).toEqual(sapXep(['Họ tên', 'Email', 'Số điện thoại', 'Mã nhân viên']));
+    ).toEqual(sortOrder(['Họ tên', 'Email', 'Số điện thoại', 'Mã nhân viên']));
 
     /*
      * Ngày sinh KHÔNG phải ô gõ: `DatePicker` dùng chung có tay nắm là một BUTTON mở lịch.
      * Nhầm vai ở đây nghĩa là người dùng bàn phím thao tác khác hẳn điều ta tưởng.
      */
     await expect(
-      hopTao.getByRole('button', { name: 'Ngày sinh' }),
+      createDialog.getByRole('button', { name: 'Ngày sinh' }),
       'ô Ngày sinh phải là nút mở lịch (DatePicker dùng chung), không phải một ô gõ tự do',
     ).toBeVisible();
 
-    const oVaiTro = hopTao.getByRole('group', { name: 'Vai trò' });
+    const roleField = createDialog.getByRole('group', { name: 'Vai trò' });
     await expect(
-      oVaiTro,
+      roleField,
       'nhóm Vai trò chỉ có ở chế độ TẠO — vai trò của người đang có thì đổi bằng "Đổi vai trò…"',
     ).toBeVisible();
     await expect(
-      oVaiTro.getByRole('radio'),
+      roleField.getByRole('radio'),
       'Vai trò phải đủ BA lựa chọn — rụng "Quản trị" là SA không tạo nổi một Quản trị viên nào nữa',
     ).toHaveCount(3);
-    for (const vai of ['Thành viên', 'Quản trị', 'Super Admin']) {
-      await expect(oVaiTro.getByRole('radio', { name: new RegExp(`^${vai}`) })).toBeVisible();
+    for (const role of ['Thành viên', 'Quản trị', 'Super Admin']) {
+      await expect(roleField.getByRole('radio', { name: new RegExp(`^${role}`) })).toBeVisible();
     }
     await expect(
-      oVaiTro.getByRole('radio', { name: /^Thành viên/ }),
+      roleField.getByRole('radio', { name: /^Thành viên/ }),
       'mặc định là vai thấp nhất',
     ).toBeChecked();
 
-    const congTac = hopTao.getByRole('checkbox');
-    await expect(congTac, 'chế độ tạo có đúng một công tắc: bắt buộc 2 lớp').toHaveCount(1);
+    const toggles = createDialog.getByRole('checkbox');
+    await expect(toggles, 'chế độ tạo có đúng một công tắc: bắt buộc 2 lớp').toHaveCount(1);
     await expect(
-      congTac,
+      toggles,
       'công tắc "bắt buộc 2 lớp" phải BẬT sẵn — mặc định an toàn, ai muốn tắt thì phải chủ động tắt',
     ).toBeChecked();
 
-    await hopTao.getByLabel(nhan('Họ tên')).fill(hoTen);
-    await hopTao.getByLabel(nhan('Email')).fill(email);
-    await hopTao.getByLabel(nhan('Số điện thoại')).fill(soDienThoai);
-    await hopTao.getByLabel(nhan('Mã nhân viên')).fill(maNhanVien);
-    await hopTao.getByRole('button', { name: 'Lưu' }).click();
+    await createDialog.getByLabel(fieldLabel('Họ tên')).fill(fullName);
+    await createDialog.getByLabel(fieldLabel('Email')).fill(email);
+    await createDialog.getByLabel(fieldLabel('Số điện thoại')).fill(phoneNumber);
+    await createDialog.getByLabel(fieldLabel('Mã nhân viên')).fill(employeeCode);
+    await createDialog.getByRole('button', { name: 'Lưu' }).click();
 
     // Mật khẩu tạm chỉ hiện MỘT LẦN — nó là dấu hiệu tài khoản đã thật sự vào sổ.
     await expect(page.getByRole('dialog', { name: 'Mật khẩu tạm' })).toBeVisible();
@@ -858,7 +857,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'tạo xong mà không có mật khẩu tạm thì SA không có gì để đọc cho người dùng',
     ).toBeGreaterThanOrEqual(12);
     // Nhãn nút là LỜI XÁC NHẬN, không phải "Đóng": hộp chặn Esc và click-nền nên đây là
-    // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại (rà UI/UX 12/09).
+    // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại.
     await page
       .getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true })
       .click();
@@ -867,41 +866,41 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     // ===== CHẾ ĐỘ SỬA =====
     // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
     // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
-    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
-    // "Phòng Tài khoản" (25/09/2026).
-    await timVaChoLoc(page, email);
+    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: chú thích ở bài
+    // "Phòng Tài khoản" trong chính file này.
+    await searchAndWaitForFilter(page, email);
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
-    await expect(page.getByRole('button', { name: `Thao tác với ${hoTen}` })).toBeVisible();
-    await rowAction(page, hoTen, 'Sửa');
+    await expect(page.getByRole('button', { name: `Thao tác với ${fullName}` })).toBeVisible();
+    await rowAction(page, fullName, 'Sửa');
 
-    const hopSua = page.getByRole('dialog', { name: `Sửa hồ sơ: ${hoTen}` });
-    await expect(hopSua).toBeVisible();
+    const editDialog = page.getByRole('dialog', { name: `Sửa hồ sơ: ${fullName}` });
+    await expect(editDialog).toBeVisible();
 
     expect(
-      await tenTayNam(hopSua.getByRole('textbox')),
+      await handleNames(editDialog.getByRole('textbox')),
       'chế độ SỬA còn ô Email nhập được nghĩa là email — danh tính đăng nhập, thứ mọi dòng nhật ký trỏ tới — sửa được',
-    ).toEqual(sapXep(['Họ tên', 'Số điện thoại', 'Mã nhân viên']));
+    ).toEqual(sortOrder(['Họ tên', 'Số điện thoại', 'Mã nhân viên']));
 
     await expect(
-      hopSua.getByTestId('account-email'),
+      editDialog.getByTestId('account-email'),
       'ở chế độ sửa email phải hiện thành CHỮ; ô khóa thì người dùng còn ngồi bấm thử và tự hỏi vì sao không gõ được',
     ).toHaveText(email);
 
     await expect(
-      hopSua.getByRole('radio'),
+      editDialog.getByRole('radio'),
       'chế độ sửa KHÔNG được có ô Vai trò (đổi vai là việc riêng, có step-up)',
     ).toHaveCount(0);
     await expect(
-      hopSua.getByRole('checkbox'),
+      editDialog.getByRole('checkbox'),
       'chế độ sửa KHÔNG được có công tắc "bắt buộc 2 lớp"',
     ).toHaveCount(0);
 
     await expect(
-      hopSua.getByLabel(nhan('Họ tên')),
+      editDialog.getByLabel(fieldLabel('Họ tên')),
       'hộp Sửa mở ra trống là bấm Lưu một phát xóa sạch hồ sơ của người ta',
-    ).toHaveValue(hoTen);
-    await expect(hopSua.getByLabel(nhan('Số điện thoại'))).toHaveValue(soDienThoai);
-    await expect(hopSua.getByLabel(nhan('Mã nhân viên'))).toHaveValue(maNhanVien);
+    ).toHaveValue(fullName);
+    await expect(editDialog.getByLabel(fieldLabel('Số điện thoại'))).toHaveValue(phoneNumber);
+    await expect(editDialog.getByLabel(fieldLabel('Mã nhân viên'))).toHaveValue(employeeCode);
 
     // Đóng bằng Esc — không lưu gì cả.
     await page.keyboard.press('Escape');
@@ -913,7 +912,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    *
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * `/dev/components` là bản kê SỐNG của tài sản dùng chung (AD-15, story 1.5). Nó có hai
+   * `/dev/components` là bản kê SỐNG của tài sản dùng chung (AD-15). Nó có hai
    * công dụng, và bài kiểm này giữ cả hai:
    *
    *   1. Nó là nơi người viết story sau mở ra xem "đã có sẵn chưa" trước khi viết component

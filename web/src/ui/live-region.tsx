@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * VÙNG SỐNG THƯỜNG TRỰC — một node duy nhất, gắn một lần ở shell (F-06).
+ * VÙNG SỐNG THƯỜNG TRỰC — một node duy nhất, gắn một lần ở shell.
  *
  * ===== LỖ ĐANG VÁ =====
  *

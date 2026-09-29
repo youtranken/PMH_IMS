@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, timVaChoLoc, uniqueStamp } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, searchAndWaitForFilter, uniqueStamp } from './helpers';
 
 /**
  * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh (migration 0031).
@@ -29,8 +29,8 @@ test.describe('Hồ sơ tài khoản', () => {
     // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
     // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
     // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien-09-catalog-accounts-kit.spec.ts`, bài
-    // "Phòng Tài khoản" (25/09/2026).
-    await timVaChoLoc(page, E2E_SA.email);
+    // "Phòng Tài khoản".
+    await searchAndWaitForFilter(page, E2E_SA.email);
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
     await rowAction(page, 'E2E Super Admin', 'Sửa');
 

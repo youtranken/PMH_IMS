@@ -7,9 +7,9 @@ import type { SoftwareHistoryRow } from './software-types';
  * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
  * phải một stub trả lại chính cái khóa.
  *
- * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * Đó là chỗ bài kiểm này đáng giá: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
  * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
- * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ * đúng lớp lỗi i18next rơi về chính cái khóa mà không ai thấy.
  */
 const t = i18n.t;
 
@@ -63,8 +63,8 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     const [entry] = toSoftwareHistory([
       row({ changes: { kind: { before: 'license', after: 'ssl' }, status: { before: 'active', after: 'retired' } } }),
     ], t);
-    // 'Đã thanh lý' từ 23/09 — trước đó riêng `/software` gọi trạng thái này là 'Đã bỏ',
-    // trong khi cùng hồ sơ ấy sang màn Kho thanh lý lại đọc 'Đã thanh lý'.
+    // 'Đã thanh lý', không phải 'Đã bỏ': cùng hồ sơ ấy sang màn Kho thanh lý cũng đọc
+    // 'Đã thanh lý', hai màn phải gọi cùng một tên.
     expect(entry.detail).toBe(
       'loại: License phần mềm → Chứng chỉ SSL; trạng thái: Đang dùng → Đã thanh lý',
     );

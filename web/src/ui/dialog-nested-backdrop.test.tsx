@@ -7,10 +7,10 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 /**
  * HỘP LỒNG KHÔNG ĐƯỢC CHỒNG HAI LỚP NỀN MỜ — KỂ CẢ KHI HỘP CON Ở GỐC APP.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
- * Bản sửa 18/09/2026 cho hộp lồng đo độ sâu bằng `DialogDepthContext`, tức bằng VỊ TRÍ TRONG
- * CÂY REACT. Cách đó đúng cho đường của Két sắt (hộp con dựng bên trong `sheet-body` của hộp
+ * Đo độ sâu hộp lồng chỉ bằng `DialogDepthContext`, tức bằng VỊ TRÍ TRONG CÂY REACT, thì
+ * đúng cho đường của Két sắt (hộp con dựng bên trong `sheet-body` của hộp
  * cha), nhưng mù với đường phổ biến hơn hẳn:
  *
  *   `ConfirmProvider` dựng `ConfirmDialog` ở GỐC app, là anh em của `children` chứ không nằm
@@ -18,7 +18,7 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
  *
  * Mà `guardUnsaved` của chính `ui/dialog.tsx` gọi `askConfirm`: mọi hộp có canh dữ liệu chưa
  * lưu, khi bấm Esc, đều đẻ ra một lớp nền mờ THỨ HAI đè lên lớp của chính nó. Đo trên trình
- * duyệt thật ngày 18/09/2026: hai lớp `rgba(20, 26, 20, .44)` chồng nhau, không lớp nào `bare`.
+ * duyệt thật: hai lớp `rgba(20, 26, 20, .44)` chồng nhau, không lớp nào `bare`.
  *
  * ===== BÀI NÀY HỎI GÌ =====
  *
@@ -30,7 +30,7 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
  */
 describe('Nền mờ không chồng lên nhau', () => {
   /** Form có canh dữ liệu chưa lưu — bấm Esc là nó hỏi lại qua `ConfirmProvider`. */
-  function FormCoCanh() {
+  function GuardedForm() {
     const [open, setOpen] = useState(true);
     return (
       <Dialog open={open} onOpenChange={setOpen} guardUnsaved title="Sửa hồ sơ">
@@ -42,11 +42,11 @@ describe('Nền mờ không chồng lên nhau', () => {
     );
   }
 
-  const demNenMo = () => {
-    const tatCa = Array.from(document.querySelectorAll('.modal-backdrop'));
+  const countOpenBackdrops = () => {
+    const all = Array.from(document.querySelectorAll('.modal-backdrop'));
     return {
-      tong: tatCa.length,
-      dac: tatCa.filter((el) => !el.classList.contains('bare')).length,
+      total: all.length,
+      dac: all.filter((el) => !el.classList.contains('bare')).length,
     };
   };
 
@@ -54,25 +54,25 @@ describe('Nền mờ không chồng lên nhau', () => {
     const user = userEvent.setup();
     renderWithI18n(
       <ConfirmProvider>
-        <FormCoCanh />
+        <GuardedForm />
       </ConfirmProvider>,
     );
 
-    expect(demNenMo()).toEqual({ tong: 1, dac: 1 });
+    expect(countOpenBackdrops()).toEqual({ total: 1, dac: 1 });
 
     // Gõ dở rồi bấm Esc → `guardUnsaved` mở hộp "bỏ hay ở lại" ở GỐC app.
     await user.type(screen.getByLabelText('Tên máy'), 'SW-CORE-01');
     await user.keyboard('{Escape}');
 
     await screen.findByText('Bỏ những gì vừa nhập?');
-    const sau = demNenMo();
-    expect(sau.tong).toBe(2);
+    const after = countOpenBackdrops();
+    expect(after.total).toBe(2);
     // Đây là cả bài kiểm: hai hộp, nhưng chỉ MỘT lớp làm tối trang.
-    expect(sau.dac).toBe(1);
+    expect(after.dac).toBe(1);
   });
 
   it('hai hộp ANH EM cùng mở: lớp thứ hai trong suốt', async () => {
-    function HaiHopAnhEm() {
+    function TwoSiblingDialogs() {
       // Đúng hình dạng `{a && <Dialog/>}{b && <Dialog/>}` — cả hai đều `depth = 0`, nên chỉ
       // sổ hộp-đang-mở mới phân biệt được chúng.
       return (
@@ -88,11 +88,11 @@ describe('Nền mờ không chồng lên nhau', () => {
     }
     renderWithI18n(
       <ConfirmProvider>
-        <HaiHopAnhEm />
+        <TwoSiblingDialogs />
       </ConfirmProvider>,
     );
 
     await screen.findByText('hai');
-    expect(demNenMo()).toEqual({ tong: 2, dac: 1 });
+    expect(countOpenBackdrops()).toEqual({ total: 2, dac: 1 });
   });
 });

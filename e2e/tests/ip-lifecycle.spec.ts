@@ -43,7 +43,7 @@ async function setUp(
   return { subnetId, ipId: ((await ip.json()) as { id: string }).id, address, headers };
 }
 
-/** Story 5.2 — FR-019, Q-02: vòng đời IP hai trạng thái, lịch sử append-only giữ vĩnh viễn. */
+/** FR-019, Q-02: vòng đời IP hai trạng thái, lịch sử append-only giữ vĩnh viễn. */
 test.describe('Vòng đời IP', () => {
   /**
    * Kịch bản của chính AC: máy in kế toán chết → thu hồi → cấp cho máy khác, và sáu tháng
@@ -164,7 +164,7 @@ test.describe('Vòng đời IP', () => {
     ]) {
       // Soi `stderr` chứ không chỉ "có ném hay không": `catch` rỗng nuốt cả docker chưa chạy,
       // sai tên container, gõ sai tên bảng — và bài kiểm hàng rào AD-13 sẽ xanh trong khi
-      // không có hàng rào nào được chạm tới. Cùng lý do với `audit-log.spec.ts` (rà soát 07/09).
+      // không có hàng rào nào được chạm tới. Cùng lý do với `audit-log.spec.ts`.
       let stderr: string | null = null;
       try {
         execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -v ON_ERROR_STOP=1 -c "${sql}"`, {

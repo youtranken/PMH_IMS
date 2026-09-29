@@ -82,11 +82,8 @@ export class AuditQueryDto {
 /** Viewer audit log (6.2, FR-43) — SA + Admin (delegation 10.1). Chỉ đọc (AD-10). */
 /*
  * Tiền tố `api/v1` là BẮT BUỘC: nginx chỉ chuyển tiếp `/api/`, `= /api` và `= /health` sang
- * backend; mọi đường khác rơi vào `location /` tức SPA fallback. Bản trước khai
- * `@Controller('admin/audit')` — controller DUY NHẤT trong 17 cái thiếu tiền tố — nên endpoint
+ * backend; mọi đường khác rơi vào `location /` tức SPA fallback. Thiếu tiền tố thì endpoint
  * này không tiếp cận được từ trình duyệt, trả về HTML của SPA chứ không phải dữ liệu.
- * Cộng với lỗi `u.sub` ở audit-query.service.ts, màn Nhật ký hỏng ở hai tầng cùng lúc.
- * Không gì phát hiện được vì màn web còn `planned: true` và endpoint có 0 test (F-QA-01).
  */
 @NoStepUp()
 @Controller('api/v1/admin/audit')

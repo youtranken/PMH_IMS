@@ -149,26 +149,26 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    *
    * KHÔNG dùng `getByRole('button', { pressed: false })` — ĐÃ ĐO và nó sai ở đây: Playwright
    * coi một nút KHÔNG có thuộc tính `aria-pressed` là "đang không được nhấn", nên bộ lọc đó
-   * vớ luôn cả nút "Mở két" của từng dòng bảng. Lượt chạy đầu đỏ đúng vì thế:
+   * vớ luôn cả nút "Mở két" của từng dòng bảng, cho ra:
    * `["Thiết bị","Phần mềm","Tài khoản dịch vụ","Mở két","Mở két"]`.
    *
    * Đọc thẳng thuộc tính thì lưới khoanh đúng họ nút bật/tắt và KHÔNG nở ra theo số dòng dữ
    * liệu — nghĩa là nó vẫn bắt được nút lọc thứ tư mọc thêm, đúng điều nó sinh ra để làm.
    */
-  async function toggleButtons(scope: Locator): Promise<{ ten: string; bat: boolean }[]> {
+  async function toggleButtons(scope: Locator): Promise<{ toggleName: string; enabled: boolean }[]> {
     return scope.getByRole('button').evaluateAll((nodes) =>
       nodes
         .filter((node) => node.hasAttribute('aria-pressed'))
         .map((node) => ({
-          /* Cắt SỐ ĐẾM ở đuôi nhãn ("Thiết bị 3" → "Thiết bị"), thêm 17/09/2026 khi trang tổng
-             Két sắt gắn số vào nút lọc như Kho thanh lý và Dải mạng. Bài này hỏi "có đúng bốn
+          /* Cắt SỐ ĐẾM ở đuôi nhãn ("Thiết bị 3" → "Thiết bị"): trang tổng Két sắt gắn số vào
+             nút lọc như Kho thanh lý và Dải mạng. Bài này hỏi "có đúng bốn
              loại không", không hỏi "mỗi loại có mấy cái" — con số đổi theo dữ liệu gieo nên
              chốt cứng nó vào đây là tự tạo một bài kiểm đỏ ngẫu nhiên. */
-          ten: (node.textContent ?? '')
+          toggleName: (node.textContent ?? '')
             .replace(/\s+/g, ' ')
             .trim()
             .replace(/\s+\d+$/, ''),
-          bat: node.getAttribute('aria-pressed') === 'true',
+          enabled: node.getAttribute('aria-pressed') === 'true',
         })),
     );
   }
@@ -228,10 +228,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * Chỉ nút lọc mang thuộc tính đó (`vault-home-screen.tsx`), nên lưới này khoanh trúng cả
      * họ mà không phải liệt kê tên trước — nút lọc mọc thêm cũng rơi vào và làm đỏ.
      *
-     * VÀ NÓ ĐÃ LÀM ĐÚNG VIỆC ĐÓ, 12/09: bản vá mục #2 thêm nút "Đường truyền" và bài này đỏ
-     * ngay. Trước bản vá, dãy nút gõ tay ba loại trong khi API có bốn — nên bật bất kỳ nút
-     * nào cũng làm mọi dòng đường truyền biến mất im lặng. Danh sách dưới đây nay sinh ra từ
-     * `SECRET_OWNER_TYPES`, tức thứ tự này là thứ tự khai bên API.
+     * Dãy nút gõ tay mà thiếu một loại API có thì bật bất kỳ nút nào cũng làm mọi dòng của
+     * loại đó biến mất im lặng. Danh sách dưới đây sinh ra từ `SECRET_OWNER_TYPES`, tức thứ tự
+     * này là thứ tự khai bên API.
      */
     const table = main.getByRole('table');
     await expect(table, 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
@@ -240,10 +239,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'trang tổng phải có ĐÚNG bốn nút lọc loại — một cho mỗi loại chủ thể cất được secret — ' +
         'và lúc mới vào cả bốn đều đang TẮT',
     ).toEqual([
-      { ten: 'Thiết bị', bat: false },
-      { ten: 'Phần mềm', bat: false },
-      { ten: 'Tài khoản dịch vụ', bat: false },
-      { ten: 'Đường truyền', bat: false },
+      { toggleName: 'Thiết bị', enabled: false },
+      { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tài khoản dịch vụ', enabled: false },
+      { toggleName: 'Đường truyền', enabled: false },
     ]);
 
     const deviceRow = table.getByRole('row', { name: new RegExp(deviceCode) });
@@ -270,10 +269,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       () => toggleButtons(main),
       { message: 'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt' },
     ).toEqual([
-      { ten: 'Thiết bị', bat: true },
-      { ten: 'Phần mềm', bat: false },
-      { ten: 'Tài khoản dịch vụ', bat: false },
-      { ten: 'Đường truyền', bat: false },
+      { toggleName: 'Thiết bị', enabled: true },
+      { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tài khoản dịch vụ', enabled: false },
+      { toggleName: 'Đường truyền', enabled: false },
     ]);
 
     const rowsAfter = await table.getByRole('row').count();
@@ -304,7 +303,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * chính file này. Popup hiện ra TRƯỚC khi bảng bên trong có dữ liệu: nó còn phải hỏi
      * `/vault/:ownerType/:ownerId` rồi mới vẽ. Đọc một phát bằng `await` là đọc trúng khoảnh
      * khắc đó và KHÔNG có lần đọc thứ hai — mảng rỗng, bài đỏ, ảnh chụp thì thấy đủ cột
-     * nằm sờ sờ. Lượt chạy 17/09/2026 đỏ đúng kiểu ấy.
+     * nằm sờ sờ.
      */
     await expect
       .poll(() => popup.getByRole('columnheader').allTextContents(), {
@@ -344,15 +343,15 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       await page.getByRole('main').getByRole('listitem').allTextContents(),
       '"Luật của két" phải đủ BỐN gạch: cất · gõ mã · tự ẩn · ghi nhật ký',
     /*
-     * BA CÂU ĐỔI NGÀY 17/09/2026, và đúng như chú thích trên đòi hỏi: có ý thức.
+     * Vì sao từng câu nói đúng như thế:
      *
-     * · gạch 1 — bản cũ chỉ người dùng đi vòng qua trang thiết bị để làm đúng cái việc mà
-     *   popup "Mở két" ngay trên màn này đã làm được;
-     * · gạch 2 — bản cũ nói "mỗi phiên", trong khi luật thật là một khoảng ÂN HẠN
+     * · gạch 1 — chỉ thẳng popup "Mở két" ngay trên màn này, không bắt người dùng đi vòng qua
+     *   trang thiết bị;
+     * · gạch 2 — không nói "mỗi phiên": luật thật là một khoảng ÂN HẠN
      *   (`secret.stepup_grace_minutes`) và chính hộp mở két có đồng hồ đếm ngược nói điều đó.
      *   Chữ ở chân trang nói ngược cái đồng hồ thì người dùng bị hỏi mã giữa chừng và tưởng
      *   hệ thống hỏng;
-     * · gạch 3 — "vài chục giây" là ước lượng, trong khi màn hình có đồng hồ thật.
+     * · gạch 3 — không ước lượng "vài chục giây", vì màn hình có đồng hồ thật.
      */
     ).toEqual([
       'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
@@ -834,7 +833,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toEqual(['Mật khẩu', 'License key', 'Khác']);
     /*
      * Đổi ý thì bấm Esc — đúng thứ người dùng làm, và nó phải đóng MENU chứ không đóng cả hộp
-     * (lỗi 10/09, đã vá ở `ui/dialog.tsx`; bài cuối khối này canh cho nó không tái phát).
+     * (`ui/dialog.tsx`; bài cuối khối này canh cho nó không tái phát).
      */
     await page.keyboard.press('Escape');
     await expect(
@@ -872,14 +871,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     const label = `admin web E2E ${stamp}`;
     await form.getByLabel('Tên gọi').fill(label);
-    const oGiaTri = form.getByLabel(/^\s*Giá trị\s*\*?\s*$/);
-    await oGiaTri.fill('');
+    const valueField = form.getByLabel(/^\s*Giá trị\s*\*?\s*$/);
+    await valueField.fill('');
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(
-      oGiaTri,
+      valueField,
       'ô Giá trị trống: câu tiếng Việt dưới ô (trước đây là bong bóng tiếng Anh, câu này chưa từng hiện)',
     ).toHaveAccessibleDescription(/Chưa nhập giá trị cần cất\./);
-    await expect(oGiaTri).toHaveAttribute('aria-invalid', 'true');
+    await expect(valueField).toHaveAttribute('aria-invalid', 'true');
     await expect(
       form.getByRole('textbox', { name: 'Tên gọi' }),
       'ô Tên gọi đã sửa xong thì lỗi của nó phải tự tắt',
@@ -1232,7 +1231,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'chỉ gán được hai tầng. "Không có quyền" là mặc định và là kết quả của việc GỠ, ' +
         'không phải một lựa chọn để gán',
     ).toEqual(['Cần duyệt', 'Xem thẳng']);
-    // Esc đóng MENU, không đóng hộp gán (lỗi 10/09, đã vá ở `ui/dialog.tsx`).
+    // Esc đóng MENU, không đóng hộp gán (`ui/dialog.tsx`).
     await page.keyboard.press('Escape');
     await expect(
       page.getByRole('option'),
@@ -1257,27 +1256,26 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * ================================================================== */
 
   /*
-   * ===== `Escape` LÚC MENU Ô CHỌN ĐANG MỞ TỪNG THỔI BAY CẢ HỘP THOẠI =====
+   * ===== `Escape` LÚC MENU Ô CHỌN ĐANG MỞ KHÔNG ĐƯỢC THỔI BAY CẢ HỘP THOẠI =====
    *
-   * PHÁT HIỆN THẾ NÀO: lượt E2E 10/09, hai bài của khối này đỏ vì hết 150 giây chờ nút "Lưu".
-   * Ảnh chụp lúc đỏ nói rõ nút đó không mất — CẢ CÁI HỘP CHỨA NÓ đã biến mất, chỉ còn lớp
-   * dưới. Việc duy nhất xảy ra ngay trước đó là một cú `Escape` để đóng menu ô chọn.
+   * TRIỆU CHỨNG KHI HỎNG: bài chờ nút "Lưu" tới hết giờ; ảnh chụp cho thấy nút không mất — CẢ
+   * CÁI HỘP CHỨA NÓ đã biến mất, chỉ còn lớp dưới, ngay sau một cú `Escape` để đóng menu ô chọn.
    *
-   * NGUYÊN NHÂN: `ui/select.tsx` có sẵn nhánh
+   * CƠ CHẾ: `ui/select.tsx` có nhánh
    * `else if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); }` — ý định
-   * "Escape chỉ đóng MENU" đã được viết ra thành mã. Nó không đạt được, vì
+   * "Escape chỉ đóng MENU" được viết ra thành mã. Một mình nó không đạt được, vì
    * `react-dismissable-layer` của Radix nghe `keydown` ở tầng `document` với `capture: true`:
    * tầng bắt chạy XONG trước khi sự kiện kịp bò tới handler React của ô chọn. Không handler
    * nào của con chặn nổi một listener đăng ký ở tài liệu, pha bắt — đó là lý do một dòng
    * `stopPropagation` trông rất hợp lý lại vô hiệu.
    *
-   * ĐÃ VÁ (10/09) ở `ui/dialog.tsx`, tại `onEscapeKeyDown` — chỗ DUY NHẤT Radix hỏi ý trước
+   * CHỐT Ở `ui/dialog.tsx`, tại `onEscapeKeyDown` — chỗ DUY NHẤT Radix hỏi ý trước
    * khi đóng. `preventDefault()` làm Radix bỏ lượt đóng, còn sự kiện vẫn bò tiếp nên ô chọn
    * vẫn tự đóng menu của nó: mỗi bên đóng đúng phần của mình. Biết "đang có popover mở" bằng
    * `portalEl.childElementCount > 0` — cả sáu thứ có thể mở đè lên hộp đều portal vào đúng
    * điểm neo ấy, nên không có sổ đăng ký nào để mà quên cập nhật.
    *
-   * VÌ SAO BÀI NÀY PHẢI SỐNG TIẾP SAU KHI ĐÃ VÁ: bản vá nằm ở bộ dùng chung (AD-15), nên nó
+   * VÌ SAO BÀI NÀY PHẢI CÓ: chốt chặn nằm ở bộ dùng chung (AD-15), nên nó
    * đúng hoặc sai cho MỌI form trong repo cùng một lúc — mọi ô chọn đều dựng từ
    * `ui/select.tsx`, mọi hộp đều dựng từ `ui/dialog.tsx`. Và nó rất dễ bị gỡ mất trong một
    * lượt dọn dẹp tưởng vô hại: `onEscapeKeyDown` đọc như một handler thừa nếu không đọc chú

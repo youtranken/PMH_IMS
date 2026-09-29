@@ -37,7 +37,7 @@ const USER_INPUT_401_CODES = new Set([
   // dòng này thì bấm Xem một secret sau 10 phút là bị đá thẳng về màn đăng nhập (FR-022).
   'STEPUP_REQUIRED',
   /*
-   * Cùng hình dạng với `STEPUP_REQUIRED`, và cùng cái bẫy (A-02, 20/09): phiên VẪN SỐNG, chỉ
+   * Cùng hình dạng với `STEPUP_REQUIRED`, và cùng cái bẫy (A-02): phiên VẪN SỐNG, chỉ
    * là cửa cài 2 lớp muốn thấy mật khẩu trước. Thiếu dòng này thì `totp-enroll.tsx` không bao
    * giờ dựng được ô mật khẩu — người dùng bị đá thẳng về màn đăng nhập, đăng nhập lại, và rơi
    * vào đúng màn vừa đá họ ra. Một vòng kín, không lối thoát, không lời giải thích.

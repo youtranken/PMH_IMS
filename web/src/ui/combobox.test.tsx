@@ -93,14 +93,12 @@ describe('Combobox — phân biệt "không có" với "không tải được"',
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
   /*
-   * ===== LỌC KHÔNG RA THÌ PHẢI NÓI RA (20/09/2026) =====
+   * ===== LỌC KHÔNG RA THÌ PHẢI NÓI RA =====
    *
-   * `Combobox` không có trạng thái rỗng nào: lọc không ra thì menu chỉ còn mỗi dòng `action`
-   * (hoặc trống hẳn). Người dùng gõ một từ, nhìn vào khoảng trống, và phải tự đoán — chưa
-   * khai? gõ sai? hay hệ thống đang nghĩ? Ở màn NAT, câu trả lời đúng đã nằm sẵn trong
-   * `vi.ts` (`nat.serviceEmpty`) và luật CSS `.combo-empty` cũng đã có sẵn trong
-   * `form-layout.css` — chỉ thiếu mẩu nối giữa hai đầu. Cả hai vì thế bị cổng canh khoá/CSS
-   * chết báo là rác.
+   * Không có trạng thái rỗng thì lọc không ra, menu chỉ còn mỗi dòng `action` (hoặc trống
+   * hẳn). Người dùng gõ một từ, nhìn vào khoảng trống, và phải tự đoán — chưa khai? gõ sai?
+   * hay hệ thống đang nghĩ? Câu trả lời (vd `nat.serviceEmpty` ở màn NAT) đi qua prop `empty`
+   * và được vẽ bằng `.combo-empty` trong `form-layout.css`.
    *
    * Ba bài dưới đây khoá cả hình dạng lẫn VAI TRÒ của dòng ấy.
    */
@@ -244,10 +242,10 @@ describe('Combobox — Esc đóng menu, cha render lại không được bung l�
 });
 
 /**
- * HAI LỖ CÒN LẠI CỦA CÙNG Ô CHỌN NÀY (§18 #7 và #16).
+ * HAI LỖ KHÁC CỦA CÙNG Ô CHỌN NÀY.
  *
  * Cả hai cùng một gốc với docblock ở đầu file: component im lặng ở đúng chỗ người dùng cần
- * một câu trả lời. Lần trước là "không tải được"; lần này là "đang tải" và "phím Enter".
+ * một câu trả lời. Ở trên là "không tải được"; ở đây là "đang tải" và "phím Enter".
  */
 describe('Combobox — đang tải, và phím Enter khi lọc ra 0 dòng', () => {
   const OPTIONS = ['HTTP 80', 'HTTPS 443'];
@@ -275,7 +273,7 @@ describe('Combobox — đang tải, và phím Enter khi lọc ra 0 dòng', () =>
   }
 
   /**
-   * §18 #16 — `Enter` gọi `e.preventDefault()` VÔ ĐIỀU KIỆN.
+   * `Enter` KHÔNG được gọi `e.preventDefault()` VÔ ĐIỀU KIỆN.
    *
    * Lọc ra 0 dòng thì `options[active]` là `undefined`, không có gì để chọn — nhưng phím vẫn
    * bị nuốt. Người dùng gõ xong, bấm Enter để lưu phiếu, và KHÔNG CÓ GÌ XẢY RA: form không
@@ -304,13 +302,13 @@ describe('Combobox — đang tải, và phím Enter khi lọc ra 0 dòng', () =>
   });
 
   /**
-   * §18 #7 — "đang tải" và "không có gì khớp" đọc y hệt nhau.
+   * "Đang tải" và "không có gì khớp" không được đọc y hệt nhau.
    *
    * Trong lúc danh mục dịch vụ còn bay, `options` là `[]` và menu nói "Không có dịch vụ nào
    * khớp" kèm dòng "＋ Khai dịch vụ mới". Người dùng được MỜI đi khai trùng một dịch vụ đã
    * có — và cái khai trùng ấy vào DB, không tự sửa được.
    *
-   * Cùng họ với `failed` đã vá 20/09: `failed` phân biệt "hỏng" với "rỗng"; `pending` phân
+   * Cùng họ với `failed`: `failed` phân biệt "hỏng" với "rỗng"; `pending` phân
    * biệt "chưa biết" với "rỗng". Ba trạng thái, ba câu.
    */
   it('đang tải: KHÔNG nói "không có gì khớp", và KHÔNG mời khai mới', async () => {

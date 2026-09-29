@@ -31,7 +31,7 @@ class AccessRuleDto {
   @IsOptional() @IsString() @Length(0, 500) note?: string;
 }
 
-/** Hỏi "người này có tầng gì trên đối tượng kia" — màn ma trận và story 6.3 đều cần. */
+/** Hỏi "người này có tầng gì trên đối tượng kia" — màn ma trận và break-glass đều cần. */
 class TierQueryDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại chủ thể không hợp lệ.' })
   ownerType!: SecretOwnerType;
@@ -48,7 +48,7 @@ class IdParamDto {
 }
 
 /**
- * Ma trận quyền xem secret (story 6.2, FR-023).
+ * Ma trận quyền xem secret (FR-023).
  *
  * Đường riêng chứ không nằm dưới `/vault/secrets`: đây là CẤU HÌNH quyền, không phải một
  * secret. Nhét chung thì `/vault/secrets/access` phải tranh chỗ với `/vault/secrets/:id`, và

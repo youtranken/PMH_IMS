@@ -169,10 +169,10 @@ class IdParamDto {
 }
 
 /**
- * Hồ sơ phần mềm (story 3.1, FR-008/FR-009).
+ * Hồ sơ phần mềm (FR-008/FR-009).
  *
  * Quyền: giống kho thiết bị — cả team IT đọc và ghi được, vì đây là việc hằng ngày.
- * Thứ cần siết là KÉT SẮT (Epic 4): key/mật khẩu KHÔNG nằm trong module này.
+ * Thứ cần siết là KÉT SẮT: key/mật khẩu KHÔNG nằm trong module này.
  */
 @NoStepUp()
 @Controller('api/v1/software')
@@ -258,7 +258,7 @@ export class SoftwareController {
    * Khai báo TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự, để sau thì `export.xlsx` bị
    * `:id` nuốt mất và trả về 400 vì không phải uuid.
    *
-   * Cột KHÔNG có chỗ nào cho key/mật khẩu: hồ sơ phần mềm không giữ chúng (Epic 3), và két
+   * Cột KHÔNG có chỗ nào cho key/mật khẩu: hồ sơ phần mềm không giữ chúng, và két
    * sắt thì tuyệt đối không có đường xuất (FR-026).
    */
   @Roles('sa', 'admin', 'member')
@@ -282,7 +282,7 @@ export class SoftwareController {
      *
      * Cắt ở 5000 dòng thì người dùng nhận một file TRÔNG NHƯ đầy đủ mà thiếu phần đuôi, và
      * không có gì báo. `SoftwareService.listAll` đã có sẵn và ghi rõ trong doc là "chỉ dùng
-     * cho export xlsx (FR-028)" — tôi đã không đọc trước khi viết (code review Epic 7).
+     * cho export xlsx (FR-028)".
      */
     const rows = await this.software.listAll(
       await this.filterOf(query),
@@ -393,7 +393,7 @@ export class SoftwareController {
     return this.software.renewals(params.id);
   }
 
-  // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────
+  // ───────────── Gán license vào máy (FR-011) ─────────────
 
   /**
    * Máy ĐANG dùng license này ra Excel, kèm dòng tổng chi phí — file nộp kiểm toán (SW-057).

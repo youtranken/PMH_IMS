@@ -122,7 +122,7 @@ export interface IspFilter {
 }
 
 /**
- * Đường truyền ISP (story 3.3, FR-010).
+ * Đường truyền ISP (FR-010).
  *
  * Mục tiêu của story viết rất rõ: "đứt cáp lúc 2h sáng có hotline + số hợp đồng trong
  * 30 giây". Nên hotline và số hợp đồng là thứ hiện ngay trên danh sách, không giấu trong
@@ -305,10 +305,10 @@ export class IspLineService {
     const sites = new Map(lists.sites.map((site) => [site.id, site]));
 
     /*
-     * MỘT lượt hỏi cho cả trang. Bản trước gọi `getById` cho từng dòng, mà hàm đó tốn 8 truy
-     * vấn — danh sách 30 đường truyền là 240 câu cho một lần mở.
+     * MỘT lượt hỏi cho cả trang. Gọi `getById` cho từng dòng thì mỗi dòng tốn 8 truy vấn —
+     * danh sách 30 đường truyền là 240 câu cho một lần mở.
      *
-     * Hành vi với thiết bị hỏng dữ liệu KHÔNG đổi: vắng mặt trong map thì vẫn hiện
+     * Thiết bị hỏng dữ liệu: vắng mặt trong map thì hiện
      * "(thiết bị không còn)". Đây là màn người ta mở lúc đang mất mạng, nên một hàng hỏng
      * không được làm sập cả bảng.
      */
@@ -414,20 +414,20 @@ export class IspLineService {
    *
    * ===== CHỈ KIỂM KHI LIÊN KẾT THẬT SỰ ĐỔI =====
    *
-   * Bản đầu của bản sửa 08/09 viết `values.deviceId ?? current?.deviceId`, tức kiểm cả liên
-   * kết CŨ. Hậu quả: một đường truyền đã nối vào máy X, sau đó X bị thanh lý — từ lúc đó
-   * KHÔNG SỬA ĐƯỢC GÌ trên đường truyền đó nữa, kể cả sửa hotline, kể cả để gỡ chính liên
-   * kết hỏng ấy ra. Hàng rào tự nhốt người dùng vào trong (rà soát 08/09, #1).
+   * Đừng viết `values.deviceId ?? current?.deviceId`: nó kiểm cả liên kết CŨ. Hậu quả: một
+   * đường truyền đã nối vào máy X, sau đó X bị thanh lý — từ lúc đó KHÔNG SỬA ĐƯỢC GÌ trên
+   * đường truyền đó nữa, kể cả sửa hotline, kể cả để gỡ chính liên kết hỏng ấy ra. Hàng rào
+   * tự nhốt người dùng vào trong.
    *
    * Máy đã thanh lý mà vẫn còn đường truyền cắm vào là chuyện CÓ THẬT với dữ liệu cũ, và lối
-   * thoát duy nhất là sửa được hồ sơ đó. Từ 11/09 dữ liệu MỚI không sinh ra tình trạng đó nữa
+   * thoát duy nhất là sửa được hồ sơ đó. Dữ liệu MỚI không sinh ra tình trạng đó
    * (`IspDeviceRetirement` gỡ liên kết ngay trong lượt thanh lý), nhưng dữ liệu cũ vẫn còn nên
    * lối thoát phải giữ.
    *
-   * ===== VÌ SAO CHUYỂN VÀO TRONG TRANSACTION =====
+   * ===== VÌ SAO KIỂM TRONG TRANSACTION =====
    *
-   * Trước đây câu kiểm nằm trong `prepare`, chạy trên pool trước khi transaction mở. Giữa lúc
-   * nó trả lời "máy còn dùng được" và lúc câu `INSERT` chạy có một khoảng, đủ để một lượt
+   * Kiểm trong `prepare`, trên pool trước khi transaction mở, là để hở: giữa lúc nó trả lời
+   * "máy còn dùng được" và lúc câu `INSERT` chạy có một khoảng, đủ để một lượt
    * thanh lý lọt vào giữa — và đường truyền mới nối vào một máy vừa ra khỏi công ty, không
    * bên nào gặp lỗi. Xem `DevicesApiService.assertUsableWithin`.
    */

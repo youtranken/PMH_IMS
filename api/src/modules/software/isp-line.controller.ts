@@ -67,7 +67,7 @@ class IdParamDto {
 }
 
 /**
- * Đường truyền ISP (story 3.3, FR-010).
+ * Đường truyền ISP (FR-010).
  * Quyền: cả team IT — đứt cáp lúc 2 giờ sáng thì ai trực cũng phải tra được hotline.
  */
 @NoStepUp()

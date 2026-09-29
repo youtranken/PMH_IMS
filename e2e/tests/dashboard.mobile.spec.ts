@@ -65,7 +65,7 @@ test.describe('Bảng điều khiển ở 390px', () => {
     await expect(page.getByRole('heading', { name: 'Hạn cần xử lý' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Sự cố tuần qua' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).toBeVisible();
-    // Ba khối thêm 28/08/2026 — màn ĐỌC nên phải chạy ở 390px như mọi khối khác (UX-DR2).
+    // Ba khối này cũng thuộc màn ĐỌC nên phải chạy ở 390px như mọi khối khác (UX-DR2).
     await expect(page.getByRole('heading', { name: /^Dải mạng ≥ \d+%$/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Vừa vào kho thanh lý' })).toBeVisible();

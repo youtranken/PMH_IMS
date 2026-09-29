@@ -37,15 +37,15 @@ describe('requireCas (AD-15 — chốt compare-and-swap)', () => {
     expect(() => requireCas([{ id: 'a' }, { id: 'b' }], conflict)).not.toThrow(ConflictException);
   });
 
-  const cases: { ten: string; rows: unknown[]; nem: boolean }[] = [
-    { ten: 'mảng rỗng', rows: [], nem: true },
-    { ten: 'một hàng', rows: [{ id: 1 }], nem: false },
-    { ten: 'hai hàng', rows: [{ id: 1 }, { id: 2 }], nem: true },
-    { ten: 'ba hàng', rows: [{ id: 1 }, { id: 2 }, { id: 3 }], nem: true },
+  const cases: { name: string; rows: unknown[]; throws: boolean }[] = [
+    { name: 'mảng rỗng', rows: [], throws: true },
+    { name: 'một hàng', rows: [{ id: 1 }], throws: false },
+    { name: 'hai hàng', rows: [{ id: 1 }, { id: 2 }], throws: true },
+    { name: 'ba hàng', rows: [{ id: 1 }, { id: 2 }, { id: 3 }], throws: true },
   ];
-  it.each(cases)('bảng dữ liệu: $ten → ném = $nem', ({ rows, nem }) => {
+  it.each(cases)('bảng dữ liệu: $name → ném = $throws', ({ rows, throws }) => {
     const run = () => requireCas(rows, conflict);
-    if (nem) expect(run).toThrow();
+    if (throws) expect(run).toThrow();
     else expect(run()).toEqual(rows[0]);
   });
 });
@@ -54,14 +54,14 @@ describe('requireUnchangedSince (BE-02 — hàng đã khóa còn là hàng đã 
   const conflict = { code: 'X_ALREADY_CHANGED', message: 'Hồ sơ vừa được người khác sửa.' };
   const at = (iso: string) => ({ updatedAt: new Date(iso) });
 
-  const cases: { ten: string; seen: string; locked: string; nem: boolean }[] = [
-    { ten: 'cùng thời điểm', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-27T01:02:03.456Z', nem: false },
-    { ten: 'lệch 1 ms', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-27T01:02:03.457Z', nem: true },
-    { ten: 'hàng khóa CŨ hơn ảnh chụp', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-26T01:02:03.456Z', nem: true },
+  const cases: { name: string; seen: string; locked: string; throws: boolean }[] = [
+    { name: 'cùng thời điểm', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-27T01:02:03.456Z', throws: false },
+    { name: 'lệch 1 ms', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-27T01:02:03.457Z', throws: true },
+    { name: 'hàng khóa CŨ hơn ảnh chụp', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-26T01:02:03.456Z', throws: true },
   ];
-  it.each(cases)('bảng dữ liệu: $ten → ném = $nem', ({ seen, locked, nem }) => {
+  it.each(cases)('bảng dữ liệu: $name → ném = $throws', ({ seen, locked, throws }) => {
     const run = () => requireUnchangedSince(at(seen), at(locked), conflict);
-    if (nem) expect(run).toThrow(ConflictException);
+    if (throws) expect(run).toThrow(ConflictException);
     else expect(run).not.toThrow();
   });
 

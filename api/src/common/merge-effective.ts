@@ -20,31 +20,27 @@
  *     chối bởi một giá trị không còn tồn tại, và người dùng không có đường nào thoát ra.
  *
  * Câu cần hỏi là "yêu cầu này có NÓI GÌ về ô đó không?", và `hasOwnProperty` là cách hỏi
- * đúng — khối ngay dưới đây giải thích vì sao `field in values`, bản đầu tiên, thì không.
- * (Dòng này trước 26/09 viết ngược: nó giới thiệu `field in values` như cách làm hiện hành,
- * trong khi chính khối kế tiếp nói đã bỏ nó, và code ở dưới dùng `hasOwnProperty`.)
+ * đúng — khối ngay dưới đây giải thích vì sao `field in values` thì không.
  *
- * Bản đầu tiên của idiom này nằm trong `device-import.ts` từ 08/09 (rà soát 07/09 bắt được
- * đúng lớp lỗi trên cặp ngày bảo hành và cặp site/tủ của đường Excel). Ba service HTTP viết
- * sau đó không dùng nó — A-03 của rà soát 19/09. Gom về một chỗ để lần sau chỉ có MỘT bản
- * của luật này, thay vì một bản đúng và ba bản sai.
+ * Cùng lớp lỗi này có ở cả đường Excel (`device-import.ts`, cặp ngày bảo hành và cặp site/tủ)
+ * lẫn các service HTTP. Gom về một chỗ để chỉ có MỘT bản của luật này, thay vì một bản đúng
+ * và ba bản sai.
  */
 /**
- * ===== VÌ SAO KHÔNG PHẢI `field in values` (sửa 21/09/2026) =====
+ * ===== VÌ SAO KHÔNG PHẢI `field in values` =====
  *
- * Bản đầu viết `field in values`, và nó hỏng theo HAI chiều — cả hai đều lộ ra ở lượt rà
- * soát chéo đợt A+B, không chiều nào lộ ra ở cổng nào:
+ * `field in values` hỏng theo HAI chiều, và không chiều nào lộ ra ở cổng nào:
  *
  *  1. `in` ĐI LÊN CHUỖI PROTOTYPE. `'toString' in {}` là `true`, nên một túi values rỗng
  *     vẫn "có" `toString`, `constructor`, `valueOf`… và hàm trả về HÀM của prototype thay vì
- *     giá trị dự phòng. Trường ghép hôm nay luôn là tên cột thật nên chưa nổ — nhưng đây là
+ *     giá trị dự phòng. Trường ghép hiện luôn là tên cột thật nên chưa nổ — nhưng đây là
  *     một hàm dùng chung, và "chưa ai truyền tên lạ vào" không phải một hàng rào.
  *
  *  2. KHOÁ CÓ MẶT MANG `undefined` bị coi là "người dùng đã gửi". `nat-rule.service` truyền
  *     thẳng object mà controller dựng — đủ mười khoá, khoá không gửi thì `undefined` — nên
- *     mọi ô đều "có mặt" và mọi bản sửa biến thành xoá sạch. Ba nơi đợt B sửa thoát nạn chỉ
- *     vì `values` ở đó do `put()` dựng, mà `put()` bỏ qua `undefined`: hàm này đang sống
- *     nhờ một hợp đồng NGẦM mà nơi gọi phải nhớ. Nơi gọi thứ tư không nhớ.
+ *     mọi ô đều "có mặt" và mọi bản sửa biến thành xoá sạch. Nơi gọi dựng `values` bằng
+ *     `put()` thoát nạn chỉ vì `put()` bỏ qua `undefined` — một hợp đồng NGẦM mà nơi gọi
+ *     phải nhớ, và nơi gọi nào đó sẽ không nhớ.
  *
  * JSON không có `undefined`: "khoá vắng mặt" và "khoá mang `undefined`" là cùng một ý định.
  * Chỉ `null` mới là ý định XOÁ — và đó chính là phân biệt mà cả hàm này sinh ra để giữ.

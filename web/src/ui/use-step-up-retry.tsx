@@ -7,13 +7,12 @@ import { StepUpDialog } from '@/ui/step-up-dialog';
  *
  * ===== VÌ SAO CÓ HOOK NÀY =====
  *
- * Cơ chế bắt-lỗi-rồi-thử-lại từng chỉ tồn tại ở MỘT chỗ: `vault-panel.tsx`, cho đường ĐỌC bí
- * mật. Rà soát 07/09 (C2) chỉ ra các đường GHI của két — cất, sửa, xoay, thu hồi — không đòi
- * step-up, tức cửa trước khóa kỹ còn cửa sau để mở. Khi API được siết lại cho khớp, bốn chỗ
- * gọi bên web phải biết hỏi mã; nếu không thì người dùng nhận 403 mà không có đường đi tiếp.
+ * Không chỉ đường ĐỌC bí mật mà cả các đường GHI của két — cất, sửa, xoay, thu hồi — đều đòi
+ * step-up (cửa trước khóa kỹ thì cửa sau cũng phải khóa). Nên mọi chỗ gọi bên web phải biết
+ * hỏi mã; nếu không thì người dùng nhận 403 mà không có đường đi tiếp.
  *
- * Chép đoạn đó ra bốn bản là đúng thứ AD-15 cấm — và là đúng cách các bản sao trong repo này
- * đã trôi khỏi nhau (xem mẫu M5). Nên gom vào đây.
+ * Chép cơ chế bắt-lỗi-rồi-thử-lại ra từng chỗ là đúng thứ AD-15 cấm — các bản sao sẽ trôi
+ * khỏi nhau. Nên gom vào đây.
  *
  * ===== NGUYÊN TẮC: KHÔNG TỰ ĐOÁN "CÒN TRONG GRACE HAY CHƯA" =====
  *
@@ -54,7 +53,7 @@ export function useStepUpRetry(csrfToken: string): {
    *
    * Không có nó thì lời hứa cũ KHÔNG BAO GIỜ settle: nơi gọi `await` mãi, `finally
    * { setBusy(false) }` không chạy, nút Lưu kẹt ở "Đang xử lý…" tới khi tải lại trang —
-   * đúng chế độ hỏng mà hook này sinh ra để chặn (rà soát 08/09, #6).
+   * đúng chế độ hỏng mà hook này có mặt để chặn.
    */
   const pendingRef = useRef<Pending | null>(null);
 

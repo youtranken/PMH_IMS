@@ -5,9 +5,9 @@ import i18n from '@/lib/i18n';
  * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
  * phải một stub trả lại chính cái khóa.
  *
- * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * Đó là chỗ bài kiểm này đáng giá: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
  * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
- * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ * đúng lớp lỗi i18next rơi về chính cái khóa mà không ai thấy.
  */
 const t = i18n.t;
 import {
@@ -39,7 +39,7 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
   });
 
   /**
-   * Đây là câu mà cả story 5.2 sinh ra để trả lời: "IP này từng là máy in kế toán".
+   * Đây là câu mà lịch sử IP tồn tại để trả lời: "IP này từng là máy in kế toán".
    * Sau khi thu hồi thì hồ sơ IP không còn giữ chủ cũ nữa — chỉ dòng lịch sử này giữ.
    */
   it('dòng THU HỒI nói ra chủ cũ, vì hồ sơ đã không còn giữ', () => {
@@ -166,8 +166,9 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
 });
 
 /**
- * Bảng lịch sử trước 28/08/2026 xen kẽ hai thứ tiếng: bước chuyển mang tên tiếng Việt do API
- * đặt ("Thu hồi"), còn bốn hành động còn lại rơi ra nguyên khóa máy ("ip.voided").
+ * Mọi hành động phải có tên tiếng Việt: thiếu nhãn thì bảng lịch sử xen kẽ hai thứ tiếng —
+ * bước chuyển mang tên do API đặt ("Thu hồi"), còn hành động khác rơi ra nguyên khóa máy
+ * ("ip.voided").
  */
 describe('actionLabel — tên việc bằng tiếng Việt', () => {
   it.each([

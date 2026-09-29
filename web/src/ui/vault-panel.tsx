@@ -30,7 +30,7 @@ import { useNow } from '@/ui/use-now';
 import { SecretDue } from '@/ui/secret-due';
 
 /*
- * Danh sách loại chủ thể đã dọn về `lib/secret-owner-kinds.ts` (12/09) — ở đó nó đứng cạnh
+ * Danh sách loại chủ thể nằm ở `lib/secret-owner-kinds.ts` — ở đó nó đứng cạnh
  * bảng nhãn và có bài điểm danh đối chiếu thẳng mã nguồn API. Re-export để mọi nơi đang
  * `import type { SecretOwnerType } from '@/ui/vault-panel'` vẫn đúng, mà chỉ còn MỘT khai báo.
  */
@@ -111,9 +111,9 @@ export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me:
   const isAdmin = me.role === 'sa' || me.role === 'admin';
 
   /**
-   * "Tôi làm được gì với chủ thể này" (story 6.3) — MỘT lần gọi, server phán.
+   * "Tôi làm được gì với chủ thể này" — MỘT lần gọi, server phán.
    *
-   * Client không tự suy từ vai: quyền của Member đến từ ma trận 6.2 cộng với grant còn
+   * Client không tự suy từ vai: quyền của Member đến từ ma trận truy cập cộng với grant còn
    * hạn, và cả hai đổi được bất cứ lúc nào mà trình duyệt không hay biết.
    */
   const verdict = useQuery({
@@ -141,7 +141,7 @@ export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me:
 }
 
 /**
- * Két sắt dùng chung (story 4.1, FR-021/FR-026, AD-15).
+ * Két sắt dùng chung (FR-021/FR-026, AD-15).
  *
  * Gắn vào chủ thể qua `ownerType`/`ownerId` — thiết bị và phần mềm dùng CHUNG panel này.
  * Hai màn tự viết hai bản là hai lần phải nhớ "đừng bao giờ hiện giá trị ở bảng", và sẽ có
@@ -227,7 +227,7 @@ export function VaultPanel({
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
   );
 
-  /** Ghi vào két nay đòi step-up (C2) — hook lo phần hỏi mã rồi làm lại. */
+  /** Ghi vào két đòi step-up — hook lo phần hỏi mã rồi làm lại. */
   const writeStepUp = useStepUpRetry(me.csrfToken);
   const breakGlass = useBreakGlassActions(me.csrfToken);
   const [cancelling, setCancelling] = useState(false);
@@ -313,14 +313,12 @@ export function VaultPanel({
   const contact = useSupportContact(noAccess);
 
   /*
-   * BA CHỐT NÀY CHỈ ÁP CHO NGƯỜI CẦN `verdict` (F-07, vá 21/09).
+   * BA CHỐT NÀY CHỈ ÁP CHO NGƯỜI CẦN `verdict`.
    *
-   * `useOwnerSecrets` tính `allowed = isAdmin || …` và chú thích ở đó tuyên bố thẳng:
-   * "SA/Admin không chờ `verdict`". Nhưng bản trước đặt ba chốt này lên trước mọi thứ, nên
-   * `/vault/secrets/verdict` trả 500 là SA/Admin MẤT SẠCH panel Két sắt — dù quyền của họ
-   * không hề phụ thuộc vào câu trả lời ấy, và `secrets` (`enabled: allowed`) đã tải xong.
-   *
-   * Chú thích mô tả đúng ý định, mã làm một việc khác. Nay cái chốt đi theo đúng câu chú thích.
+   * `useOwnerSecrets` tính `allowed = isAdmin || …`: SA/Admin không chờ `verdict`. Đặt ba chốt
+   * này lên trước mọi thứ thì `/vault/secrets/verdict` trả 500 là SA/Admin MẤT SẠCH panel Két
+   * sắt — dù quyền của họ không hề phụ thuộc vào câu trả lời ấy, và `secrets`
+   * (`enabled: allowed`) đã tải xong.
    */
   if (!isAdmin) {
     if (verdict.isLoading) return <Loading />;
@@ -630,9 +628,9 @@ export function VaultPanel({
                         <span className="badge warn">{t('vault.needsApproval')}</span>
                       ) : verdict.data?.pending ? (
                         /*
-                         * ĐỌC `pending`, KHÔNG SUY BẰNG PHÉP LOẠI TRỪ (F-07, vá 21/09).
+                         * ĐỌC `pending`, KHÔNG SUY BẰNG PHÉP LOẠI TRỪ.
                          *
-                         * Bản trước để "Đang chờ duyệt" làm nhánh `else` cuối. Hôm nay nó
+                         * Để "Đang chờ duyệt" làm nhánh `else` cuối thì hôm nay vẫn
                          * đúng, vì server tính `canRequest = grant === null && pending === null`
                          * nên phần còn lại vừa khít "có phiếu treo". Nhưng đó là một sự TRÙNG
                          * KHỚP giữa hai module, không phải một hợp đồng: ngày nào
@@ -691,7 +689,7 @@ export function VaultPanel({
                                   });
                                   if (!ok) return;
                                   try {
-                                    // Thu hồi nay đòi step-up (C2): gặp `STEPUP_REQUIRED` thì
+                                    // Thu hồi đòi step-up: gặp `STEPUP_REQUIRED` thì
                                     // hỏi mã rồi làm lại chính việc này.
                                     await writeStepUp.run(
                                       () => revoke.mutateAsync({ id: secret.id }),
@@ -841,7 +839,7 @@ function SecretForm({
     isEdit ? `/api/v1/vault/secrets/${secret.id}` : '/api/v1/vault/secrets',
     { method: isEdit ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
-  /** Cất/sửa bí mật nay đòi step-up (C2). */
+  /** Cất/sửa bí mật đòi step-up. */
   const stepUp = useStepUpRetry(csrfToken);
 
   return (
@@ -983,7 +981,7 @@ function SecretForm({
           </p>
         ) : null}
       </form>
-      {/* Hộp hỏi mã 6 số khi server đòi step-up (C2) — chỉ hiện khi cần. */}
+      {/* Hộp hỏi mã 6 số khi server đòi step-up — chỉ hiện khi cần. */}
       {stepUp.dialog}
     </Dialog>
   );
@@ -1009,7 +1007,7 @@ function RotateForm({
     `/api/v1/vault/secrets/${secret.id}/rotate`,
     { csrfToken, refreshMe: false },
   );
-  /** Xoay bí mật nay đòi step-up (C2). */
+  /** Xoay bí mật đòi step-up. */
   const stepUp = useStepUpRetry(csrfToken);
 
   return (
@@ -1091,7 +1089,7 @@ function RotateForm({
           </p>
         ) : null}
       </form>
-      {/* Hộp hỏi mã 6 số khi server đòi step-up (C2) — chỉ hiện khi cần. */}
+      {/* Hộp hỏi mã 6 số khi server đòi step-up — chỉ hiện khi cần. */}
       {stepUp.dialog}
     </Dialog>
   );
@@ -1106,7 +1104,7 @@ function leftText(seconds: number, t: (key: string, options?: Record<string, unk
 }
 
 /**
- * Xin quyền xem tạm thời (story 6.3, FR-023).
+ * Xin quyền xem tạm thời (FR-023).
  *
  * Hai ô, và cả hai đều bắt buộc vì cả hai đều là thứ người duyệt cần để quyết: LÝ DO (xin để
  * làm gì) và THỜI HẠN (bao lâu là đủ). Trần thật nằm ở `breakglass.max_grant_hours` và server

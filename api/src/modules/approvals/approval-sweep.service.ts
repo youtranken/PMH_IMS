@@ -10,7 +10,7 @@ import { redactMessage } from '../../common/log-redact';
 const REMINDED_KEY = 'remindedAt';
 
 /**
- * Sweep của module duyệt (story 6.1, AD-6): dọn grant hết hạn + nhắc yêu cầu treo lâu.
+ * Sweep của module duyệt (AD-6): dọn grant hết hạn + nhắc yêu cầu treo lâu.
  *
  * Hai việc, và chỉ MỘT trong hai là quan trọng về mặt an ninh:
  *  - Dọn grant hết hạn chỉ là VỆ SINH. Quyền đã bị cắt từ khoảnh khắc `expires_at` trôi qua vì
@@ -45,7 +45,7 @@ export class ApprovalSweepService implements OnModuleInit {
    *
    * Sweep chạy mỗi phút; không có cờ thì một yêu cầu bị bỏ quên đẻ ra một email mỗi phút — và
    * cách nhanh nhất để người duyệt lọc hết thư của hệ thống vào thùng rác là gửi cho họ 60
-   * email một giờ về cùng một việc (bài học finding 1 của Epic 3).
+   * email một giờ về cùng một việc.
    */
   private async remindOverdue(): Promise<void> {
     const hours = await this.config.getNumber('approvalReminderHours');
@@ -56,8 +56,7 @@ export class ApprovalSweepService implements OnModuleInit {
     const now = new Date();
 
     for (const request of pending) {
-      // Từng yêu cầu một try/catch: một cái hỏng không được làm câm mọi cái xếp sau
-      // (finding 2 của code review Epic 3).
+      // Từng yêu cầu một try/catch: một cái hỏng không được làm câm mọi cái xếp sau.
       try {
         if (!overdueSince(request.createdAt, hours, now)) continue;
         if (request.payload?.[REMINDED_KEY]) continue;

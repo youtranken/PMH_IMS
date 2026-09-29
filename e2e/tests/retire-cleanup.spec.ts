@@ -16,9 +16,9 @@ import {
 /**
  * Thanh lý máy là một CHỐT, không phải một phép gán.
  *
- * Trước 08/09 `setStatus` chỉ lật một chữ trong cột `status`. Máy đã ra khỏi công ty, đã ký
- * biên bản, nhưng IP của nó vẫn `assigned` và vẫn trỏ về chính nó, rule NAT vào IP đó vẫn
- * sống, ghế license vẫn bị chiếm.
+ * Nếu `setStatus` chỉ lật một chữ trong cột `status` thì máy đã ra khỏi công ty, đã ký biên
+ * bản, nhưng IP của nó vẫn `assigned` và vẫn trỏ về chính nó, rule NAT vào IP đó vẫn sống,
+ * ghế license vẫn bị chiếm.
  *
  * Hậu quả nặng nhất KHÔNG nằm ở IPAM: thanh lý 10 máy cũ thì máy mới đầu tiên đã đụng trần
  * seat, và cửa đó BẮT người trực khai một `overSeatReason` — tức bắt họ viết ra một lý do
@@ -334,27 +334,26 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
 });
 
 /**
- * HAI CHỦ NỢ KHÔNG AI NHẬN — nợ cũ trên `master`, đóng ngày 11/09.
+ * HAI CHỦ NỢ PHẢI CÓ NGƯỜI NHẬN.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
- * Sáu bảng mang khóa ngoại trỏ tới `device`, tất cả đều `ON DELETE RESTRICT`. Tới 11/09
- * `DeviceRetirementRegistry` chỉ có HAI người đăng ký — `ipam` (IP + rule NAT) và `software`
- * (ghế license). Hai bảng còn lại không ai nhận:
+ * Sáu bảng mang khóa ngoại trỏ tới `device`, tất cả đều `ON DELETE RESTRICT`. Nếu
+ * `DeviceRetirementRegistry` chỉ có `ipam` (IP + rule NAT) và `software` (ghế license) đăng
+ * ký, thì hai bảng sau không ai nhận:
  *
  *   · `device_port.connected_device_id` (0013) — cổng đấu chéo. `0013` ghi rõ một sợi dây chỉ
  *     tạo MỘT bản ghi, không có bản đối xứng, nên bản ghi trỏ tới máy bị thanh lý nằm trên
  *     hồ sơ của MÁY KHÁC — một máy vẫn đang chạy.
  *   · `isp_line.device_id` (0016) — đường truyền cắm vào thiết bị biên.
  *
- * Nên thanh lý con router: IP được thu, rule NAT được gỡ, ghế license được trả — còn sơ đồ
+ * Khi đó thanh lý con router: IP được thu, rule NAT được gỡ, ghế license được trả — còn sơ đồ
  * đấu nối của con switch bên cạnh vẫn trỏ vào một máy đã ra khỏi công ty, và hồ sơ đường
  * truyền vẫn ghi nó đang cắm vào đó.
  *
- * Hậu quả không phải lý thuyết: chú thích trong `IspLineService.prepare` kể lại rằng "máy đã
- * thanh lý mà vẫn còn đường truyền cắm vào là chuyện CÓ THẬT với dữ liệu cũ", và hàng rào
- * `assertUsable` từng nhốt người dùng lại, không cho sửa chính cái liên kết hỏng đó. Bản vá
- * 08/09 nới hàng rào để đi tiếp được — tức vá phần ngọn. Đây là phần gốc.
+ * Hậu quả không phải lý thuyết: máy đã thanh lý mà vẫn còn đường truyền cắm vào là chuyện CÓ
+ * THẬT với dữ liệu cũ (xem `IspLineService.prepare`). Nới hàng rào `assertUsable` ở đó chỉ vá
+ * phần ngọn; dọn liên kết lúc thanh lý là phần gốc.
  */
 test.describe('Thanh lý router — cổng đấu chéo và đường truyền', () => {
   interface RouterKit {

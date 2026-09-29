@@ -3,12 +3,12 @@ import type { TFunction } from 'i18next';
 export type FieldChanges = Record<string, { before: unknown; after: unknown }> | null;
 
 /**
- * MÔ TẢ MỘT LƯỢT SỬA CHO PANEL LỊCH SỬ — MỘT bản cho cả sáu màn (AD-15, F-09).
+ * MÔ TẢ MỘT LƯỢT SỬA CHO PANEL LỊCH SỬ — MỘT bản cho cả sáu màn (AD-15).
  *
  * ===== VÌ SAO NÓ RA ĐỜI MUỘN, VÀ CÁI GIÁ ĐÃ TRẢ =====
  *
  * Hàm này từng được CHÉP sáu lần: `device` · `ip` · `isp` · `nat` · `service-account` ·
- * `software`. Sáu bản bắt đầu giống nhau, rồi trôi: đếm 22/09 thì BA bản có nhánh
+ * `software`. Sáu bản bắt đầu giống nhau, rồi trôi: BA bản có nhánh
  *
  *     if (field.endsWith('Id')) return t('history.changedOnly', { field: label });
  *

@@ -44,7 +44,7 @@ describe('pageWindow — dãy số trang có lược "…"', () => {
     ['khoảng lược một trang ở đầu', 4, 20, [1, 2, 3, 4, 5, 'gap', 20]],
     ['khoảng lược một trang ở cuối', 17, 20, [1, 'gap', 16, 17, 18, 19, 20]],
     ['trang vượt khoảng thì kẹp về cuối', 99, 6, [1, 'gap', 5, 6]],
-  ])('%s', (_ten, page, last, expected) => {
+  ])('%s', (_name, page, last, expected) => {
     expect(pageWindow(page, last)).toEqual(expected);
   });
 });

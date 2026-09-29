@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
  *
  *   · 09/09 — `subnet`/`software`: 27 dải và 11 hồ sơ phần mềm tích lại vì hai spec đặt tên
  *     thiếu chữ "E2E"; 8 bài đỏ trông y như một hồi quy của API.
- *   · 11/09 — `users`: `leo-thang-quyen.spec.ts` tạo tài khoản tên `sau-ma-…`, `nan-nhan-…`,
+ *   · 11/09 — `users`: `privilege-escalation.spec.ts` tạo tài khoản tên `sau-ma-…`, `nan-nhan-…`,
  *     `tam-…`. Hai ngày sau bảng có 31 hàng, và bài "SA tạo tài khoản mới" đỏ vì hàng vừa tạo
  *     bị đẩy khỏi TRANG 1 (danh sách sắp theo tên, `limit=20`). Lỗi báo "không thấy email" —
  *     không một chữ nào về phân trang, và tuyệt nhiên không nhắc tới file spec gây ra.

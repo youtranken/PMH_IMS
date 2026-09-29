@@ -6,8 +6,8 @@ import { ipSearchPattern } from './ip-rules';
 /**
  * AD-2: public api DUY NHẤT của module `ipam`.
  *
- * Dùng bởi: panel IP trên trang thiết bị (5.4), sổ NAT trỏ tới IP trong (5.3), bảng điều khiển
- * (7.1), và về sau là phiếu bàn giao (Epic 8). Các module đó KHÔNG được query bảng
+ * Dùng bởi: panel IP trên trang thiết bị, sổ NAT trỏ tới IP trong, bảng điều khiển, và về sau
+ * là phiếu bàn giao. Các module đó KHÔNG được query bảng
  * `subnet`/`ip_address`.
  */
 @Injectable()

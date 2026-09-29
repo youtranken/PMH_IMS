@@ -274,7 +274,7 @@ export class DevicesService {
    *
    * ===== THANH LÝ LÀ MỘT CHỐT, KHÔNG PHẢI MỘT PHÉP GÁN =====
    *
-   * Bản trước chỉ lật một chữ trong cột `status`. Máy đã ra khỏi công ty, đã ký biên bản,
+   * Chỉ lật một chữ trong cột `status` là chưa đủ: máy đã ra khỏi công ty, đã ký biên bản,
    * nhưng IP của nó vẫn `assigned` và vẫn trỏ về chính nó, rule NAT vào IP đó vẫn sống, ghế
    * license vẫn bị chiếm. Hậu quả nặng nhất không nằm ở IPAM: thanh lý 10 máy cũ thì máy mới
    * đầu tiên đã đụng trần seat và cửa đó BẮT người trực khai một lý do vượt seat sai sự thật
@@ -297,8 +297,8 @@ export class DevicesService {
       /*
        * KHOÁ HÀNG THIẾT BỊ TRƯỚC KHI ĐỌC BẤT CỨ THỨ GÌ KHÁC.
        *
-       * Bản trước đọc `requireRow` và đếm `holdings` NGOÀI transaction rồi mới mở transaction
-       * để ghi — đúng mẫu "M2" mà `common/cas.ts` mô tả, và ở đây nó hỏng theo hai đường:
+       * Đọc `requireRow` và đếm `holdings` NGOÀI transaction rồi mới mở transaction để ghi là
+       * đúng mẫu "M2" mà `common/cas.ts` mô tả, và ở đây nó hỏng theo hai đường:
        *
        *   1. HAI LƯỢT THANH LÝ SONG SONG. Cả hai đọc `status = 'active'`, cả hai thấy không
        *      giữ gì, cả hai chạy `releaseAllWithin`, cả hai ghi. Một lần thanh lý ra HAI dòng
@@ -376,7 +376,7 @@ export class DevicesService {
     });
   }
 
-  /** Dùng chung cho import hàng loạt (story 2.6) — đã có transaction bao ngoài. */
+  /** Dùng chung cho import hàng loạt — đã có transaction bao ngoài. */
   async insertWithin(tx: Tx, values: Record<string, unknown>): Promise<DeviceRecord> {
     try {
       const rows = await tx.insert(deviceTable).values(values as never).returning();
@@ -398,13 +398,13 @@ export class DevicesService {
         .where(eq(deviceTable.id, id))
         .returning();
       /*
-       * Trúng 0 dòng là CHUYỆN CÓ THẬT, không phải trường hợp không xảy ra (rà soát 07/09 #10).
+       * Trúng 0 dòng là CHUYỆN CÓ THẬT, không phải trường hợp không xảy ra.
        *
        * Hồ sơ bị xóa xen giữa lúc đối chiếu và lúc ghi thì câu này khớp 0 dòng và Postgres
-       * KHÔNG báo lỗi. Bản trước `toRecord(rows[0])` đọc `.status` của `undefined` → TypeError,
+       * KHÔNG báo lỗi. `toRecord(rows[0])` khi đó đọc `.status` của `undefined` → TypeError,
        * tức người dùng nhận 500 với câu "Cannot read properties of undefined" thay vì một câu
-       * nói đúng chuyện gì đã xảy ra. Bản catalog còn tệ hơn: nó `as unknown as` nên trả về
-       * `undefined` trong IM LẶNG và bộ đếm import vẫn +1.
+       * nói đúng chuyện gì đã xảy ra. Ép `as unknown as` còn tệ hơn: trả về `undefined` trong
+       * IM LẶNG và bộ đếm import vẫn +1.
        */
       requireCas(rows, {
         code: 'DEVICE_ALREADY_CHANGED',
@@ -487,8 +487,8 @@ export class DevicesService {
     // và ghép bằng `effectiveOf`, không bằng `??`: ô bị XOÁ (`null` có mặt trong `values`)
     // không phải ô không đụng tới. Với `??`, xoá ngày bắt đầu bảo hành rồi đặt ngày kết
     // thúc sớm hơn ngày bắt đầu CŨ bị từ chối bởi một giá trị vừa bị xoá, và xoá một site
-    // đã bị gỡ khỏi danh mục thì không bao giờ xoá được. Đường Excel dùng đúng phép ghép
-    // này từ 08/09; ba service HTTP thì không (A-03, rà soát 19/09).
+    // đã bị gỡ khỏi danh mục thì không bao giờ xoá được. Đường Excel và các service HTTP
+    // phải dùng cùng phép ghép này (A-03).
     const current = id ? await this.requireRow(id) : null;
     const effective = effectiveOf(values);
     const start = effective<string | null>('warrantyStart', current?.warrantyStart ?? null);
@@ -539,9 +539,9 @@ export class DevicesService {
    * "Máy này còn nhận thêm được không" — MỘT câu trả lời cho cả hệ thống.
    *
    * `DevicesApiService.assertUsable` (cửa cho module khác) và ba đường ghi NỘI BỘ của chính
-   * module này (sửa hồ sơ · nối cổng · import) đều đi qua đây. Trước 08/09 chỉ có cửa ngoài,
-   * nên bốn module khác bị chặn còn ba đường trong nhà thì không — đúng mẫu N1: dựng hàng rào
-   * ở mấy cửa mình buộc phải bước qua, quên mấy cửa mở sẵn bên trong.
+   * module này (sửa hồ sơ · nối cổng · import) đều đi qua đây. Chỉ canh cửa ngoài thì module
+   * khác bị chặn còn ba đường trong nhà thì không — đúng mẫu N1: dựng hàng rào ở mấy cửa mình
+   * buộc phải bước qua, quên mấy cửa mở sẵn bên trong.
    *
    * `broken` (hỏng, chờ sửa) VẪN qua: máy đó còn trong công ty, còn giữ license và IP của nó.
    * Chỉ `retired` mới là "đã ra khỏi sổ".
@@ -555,11 +555,11 @@ export class DevicesService {
   }
 
   /**
-   * THANH LÝ PHẢI ĐI QUA `setStatus`, KHÔNG ĐI QUA ĐƯỜNG SỬA HỒ SƠ (A-01, vá 20/09/2026).
+   * THANH LÝ PHẢI ĐI QUA `setStatus`, KHÔNG ĐI QUA ĐƯỜNG SỬA HỒ SƠ (A-01).
    *
-   * ===== LỖ ĐANG BỊT =====
+   * ===== LỖ MÀ HÀM NÀY BỊT =====
    *
-   * `UpdateDto` nhận `status`, và `DEVICE_STATUSES` có `'retired'`. Nên
+   * `UpdateDto` nhận `status`, và `DEVICE_STATUSES` có `'retired'`. Không có hàm này thì
    * `PATCH /api/v1/devices/:id` với body `{"status":"retired"}` ghi thẳng chữ "đã thanh lý"
    * vào bảng — **vai `member` là đủ**, và nó đi vòng qua TRỌN VẸN chốt thanh lý của
    * `setStatus`:
@@ -632,10 +632,10 @@ export class DevicesService {
   /**
    * Hồ sơ hiện tại, đọc TRONG transaction — import cần "trước khi sửa" là trạng thái THẬT.
    *
-   * Bản trước import lấy `before` từ ảnh chụp dựng lúc đối chiếu (`context()`), và khi tra
-   * không thấy thì rơi về `before ?? {}`. Hệ quả: `diffDevice` so hồ sơ mới với một object
-   * RỖNG, nên `device_history` ghi "mọi trường đổi từ trống" — một dòng lịch sử BỊA, trong
-   * một bảng chỉ-thêm mà FR-007 dựng ra để trả lời "ai đổi gì" (rà soát 07/09 #10).
+   * Lấy `before` từ ảnh chụp dựng lúc đối chiếu (`context()`) thì khi tra không thấy nó rơi về
+   * `before ?? {}`. Hệ quả: `diffDevice` so hồ sơ mới với một object RỖNG, nên
+   * `device_history` ghi "mọi trường đổi từ trống" — một dòng lịch sử BỊA, trong một bảng
+   * chỉ-thêm mà FR-007 dựng ra để trả lời "ai đổi gì".
    */
   async requireRowWithin(
     tx: Pick<Database, 'select'>,

@@ -1,12 +1,12 @@
 /**
- * GẤP DẤU TIẾNG VIỆT — bản dùng cho mọi chỗ LỌC TẠI CHỖ trên trình duyệt (B-01, 25/09/2026).
+ * GẤP DẤU TIẾNG VIỆT — bản dùng cho mọi chỗ LỌC TẠI CHỖ trên trình duyệt.
  *
  * ===== DÙNG Ở ĐÂU =====
  *
  * Sáu màn lọc mảng đã tải sẵn, không gọi API: bảng lệnh (`command-palette`), Kho thanh lý,
- * chọn dịch vụ/cổng, Ma trận truy cập, Trang chủ Kho mật khẩu, và `suggest-input`. Trước
- * 25/09 tất cả viết `x.toLowerCase().includes(term)` — nên gõ `thiet` không ra `Thiết bị`,
- * đúng cái lỗi mà B-01 mô tả, chỉ là ở tầng trình duyệt thay vì tầng SQL.
+ * chọn dịch vụ/cổng, Ma trận truy cập, Trang chủ Kho mật khẩu, và `suggest-input`. Viết
+ * `x.toLowerCase().includes(term)` thì gõ `thiet` không ra `Thiết bị` — cùng lỗi tìm không dấu
+ * mà tầng SQL đã chặn bằng `searchNormLike`, chỉ là ở tầng trình duyệt.
  *
  * Mọi chỗ lọc mảng tại chỗ phải đi qua `foldSearch` ở CẢ HAI VẾ — vế dữ liệu và vế từ khóa.
  * Gấp một vế thôi thì gõ `Thiết` lại không ra `Thiết bị`, tức chữa xong bệnh này thì mắc

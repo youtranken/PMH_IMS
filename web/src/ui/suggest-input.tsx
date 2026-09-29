@@ -32,7 +32,7 @@ export function SuggestInput({
   placeholder: string;
   ariaLabel: string;
 }) {
-  // Gấp dấu cả hai vế (B-01): danh sách gợi ý là tên phòng ban, nhà cung cấp… toàn tiếng
+  // Gấp dấu cả hai vế: danh sách gợi ý là tên phòng ban, nhà cung cấp… toàn tiếng
   // Việt có dấu, nên gõ `ke toan` phải ra `Kế toán`.
   const term = foldSearch(value.trim());
   const filtered = useMemo(

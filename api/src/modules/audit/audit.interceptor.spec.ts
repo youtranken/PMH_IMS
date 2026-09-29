@@ -74,9 +74,9 @@ describe('AuditInterceptor', () => {
   });
 
   /**
-   * Hồi quy: trước đây route vừa có `@Audited` vừa để service ghi audit trong transaction,
-   * nên MỖI thao tác đẻ ra hai dòng — một dòng chi tiết và một dòng chung chung, đôi khi
-   * còn khác tên hành động. Màn nhật ký (Epic 6) đọc vào sẽ thấy mọi việc lặp đôi.
+   * Hồi quy: route vừa có `@Audited` vừa để service ghi audit trong transaction thì MỖI thao
+   * tác đẻ ra hai dòng — một dòng chi tiết và một dòng chung chung, đôi khi còn khác tên hành
+   * động. Màn nhật ký đọc vào sẽ thấy mọi việc lặp đôi.
    */
   it('route khai writtenByService → interceptor ĐỨNG NGOÀI, không ghi dòng thứ hai', async () => {
     const calls = await run({

@@ -30,8 +30,8 @@ export type SecretKind = (typeof SECRET_KINDS)[number];
 /**
  * Thông tin secret KHÔNG kèm giá trị bí mật.
  *
- * Đây là thứ DUY NHẤT rời khỏi module vault ở story 4.1: tên, loại, ai cất, lúc nào.
- * Việc mở két (xem plaintext) là story 4.2 và có đường riêng, cần TOTP step-up.
+ * Đây là thứ DUY NHẤT rời khỏi module vault khi liệt kê: tên, loại, ai cất, lúc nào.
+ * Việc mở két (xem plaintext) có đường riêng, cần TOTP step-up (FR-022).
  */
 export interface SecretMeta {
   id: string;
@@ -63,11 +63,11 @@ export interface SecretInput {
 const AAD_TABLE = 'secret';
 
 /**
- * Két sắt (story 4.1, FR-021, AD-4).
+ * Két sắt (FR-021, AD-4).
  *
  * Luật sống còn của module này:
  *  - Plaintext CHỈ tồn tại trong tham số hàm và trong bộ nhớ đúng lúc mã/giải. Không log,
- *    không audit detail, không trả về ở bất kỳ hàm nào ngoài đường "mở két" của story 4.2.
+ *    không audit detail, không trả về ở bất kỳ hàm nào ngoài đường "mở két" (FR-022).
  *  - KHÔNG có hàm nào trả về nhiều plaintext một lúc. FR-026 cấm tuyệt đối đường xuất
  *    toàn bộ két ở MỌI quyền — nên ở đây không tồn tại thứ để mà lỡ gọi.
  */
@@ -193,12 +193,11 @@ export class VaultService {
     try {
       return await this.db.transaction(async (tx) => {
         /*
-         * HỒ SƠ ĐÃ NGỪNG DÙNG THÌ KÉT ĐÓNG BĂNG (thêm 17/09/2026).
+         * HỒ SƠ ĐÃ NGỪNG DÙNG THÌ KÉT ĐÓNG BĂNG.
          *
-         * Trang chi tiết thiết bị đã dạy người dùng luật này từ lâu (`canEdit={… && !retired}`)
-         * nhưng nó chỉ sống ở MỘT màn: `/vault` không xét trạng thái hồ sơ và API không chặn,
-         * nên đi đường đó là cất được mật khẩu mới vào một cái máy đã thanh lý. Giờ luật ở
-         * tầng ghi, tức đúng ở mọi cửa.
+         * Trang chi tiết thiết bị có luật này (`canEdit={… && !retired}`) nhưng nó chỉ sống ở
+         * MỘT màn: nếu API không chặn thì đi đường `/vault` là cất được mật khẩu mới vào một
+         * cái máy đã thanh lý. Luật ở tầng ghi thì đúng ở mọi cửa.
          *
          * Nằm TRONG transaction và giữ khoá: hỏi ngoài rồi ghi trong là chừa một khoảng hở cho
          * lượt thanh lý chen vào giữa — cùng lý do mà port map, IP và license đều gọi bản
@@ -357,8 +356,7 @@ export class VaultService {
   }
 
   /**
-   * Mở két — trả về PLAINTEXT. Story 4.2 gắn TOTP step-up trước khi gọi được hàm này;
-   * ở 4.1 chưa có endpoint nào dẫn tới đây.
+   * Mở két — trả về PLAINTEXT. Endpoint dẫn tới đây đòi TOTP step-up (FR-022).
    *
    * Mỗi lần gọi ghi MỘT dòng audit (NFR-03). Ghi TRƯỚC khi trả giá trị: giải mã được mà
    * mất vết thì đúng thứ két sắt sinh ra để chống.
@@ -366,7 +364,7 @@ export class VaultService {
   async reveal(
     actor: string,
     id: string,
-    /** Grant break-glass đã dùng (story 6.3). `null` = quyền đến từ vai hoặc whitelist. */
+    /** Grant break-glass đã dùng. `null` = quyền đến từ vai hoặc whitelist. */
     grantId: string | null = null,
   ): Promise<{ meta: SecretMeta; value: string }> {
     const row = await this.requireAlive(id);

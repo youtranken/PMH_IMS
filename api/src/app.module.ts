@@ -51,10 +51,9 @@ import { VaultModule } from './modules/vault/vault.module';
  *   3. Csrf       — cần request.user.sessionId của bước 1
  *   4. Roles      — quyền mặc định ĐÓNG (AD-9)
  *
- * Throttler từng đứng đầu để "chặn dò mật khẩu trước khi đụng DB". Nhưng `UserThrottlerGuard`
+ * Đừng đưa Throttler lên đầu để "chặn dò mật khẩu trước khi đụng DB". `UserThrottlerGuard`
  * đếm theo `req.user.email`, mà lúc đó `req.user` CHƯA tồn tại — nên nó lặng lẽ lùi về đếm
- * theo IP, và sau nginx thì cả văn phòng dùng chung một bucket. Đúng thứ thay đổi này định
- * sửa từ epic review 2 lại không có tác dụng, mà không có gì đỏ để báo (code review Epic 4).
+ * theo IP, và sau nginx thì cả văn phòng dùng chung một bucket, mà không có gì đỏ để báo.
  *
  * Đổi thứ tự KHÔNG làm hở đường dò mật khẩu: `SessionGuard` trả `true` ngay cho route
  * `@Public()` (login) mà không chạm DB, và login có `LoginRateGuard` riêng đọc ngưỡng từ
@@ -114,7 +113,7 @@ import { VaultModule } from './modules/vault/vault.module';
     { provide: APP_GUARD, useClass: RolesGuard },
     /*
      * StepUpGuard chạy SAU RolesGuard và là guard cuối: nó chỉ có nghĩa khi đã biết route này
-     * ai được vào. Từ 10/09 nó MẶC ĐỊNH ĐÓNG — route không khai `@RequiresStepUp()` hoặc
+     * ai được vào. Nó MẶC ĐỊNH ĐÓNG — route không khai `@RequiresStepUp()` hoặc
      * `@NoStepUp()` thì 403 `STEP_UP_NOT_DECLARED`. Xem khối chú thích ở `step-up.guard.ts`
      * để biết chuỗi leo thang quyền mà cách gắn tay từng route đã để lọt.
      */

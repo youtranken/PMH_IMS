@@ -5,9 +5,9 @@ import { ApiError } from '@/lib/api-client';
  *
  * ===== CÂU CHUNG CHUNG LÀ MỘT CÂU TRẢ LỜI SAI =====
  *
- * Tới 12/09, `LoadError` không nhận `error` gì cả: 38 chỗ gọi trên toàn bộ web đều in ra đúng
- * "Không tải được dữ liệu." kèm nút "Thử lại". Nghĩa là bốn tình huống KHÁC HẲN nhau — và cần
- * bốn hành động khác hẳn nhau — đọc ra y như một:
+ * Một `LoadError` không nhận `error` thì mọi chỗ gọi đều in ra đúng "Không tải được dữ liệu."
+ * kèm nút "Thử lại". Nghĩa là bốn tình huống KHÁC HẲN nhau — và cần bốn hành động khác hẳn
+ * nhau — đọc ra y như một:
  *
  *   · 403 — không có quyền. Bấm "Thử lại" cả ngày cũng vậy; việc cần làm là đi hỏi Quản trị.
  *   · 404 — hồ sơ đã bị xóa, hoặc link đã cũ. Việc cần làm là quay lại danh sách.
@@ -15,7 +15,7 @@ import { ApiError } from '@/lib/api-client';
  *   · 500 — máy chủ sập. Việc cần làm là báo IT.
  *
  * Trong khi đó API đã gửi sẵn một câu TIẾNG VIỆT cho gần như mọi lỗi (convention Error của
- * spine, và `errorMessage()` ở `lib/api.ts` đã đọc nó từ lâu cho toast). `LoadError` vứt đi.
+ * spine, và `errorMessage()` ở `lib/api.ts` đọc nó cho toast). Đừng vứt câu ấy đi.
  *
  * ===== VÌ SAO TÁCH RA HÀM THUẦN =====
  *

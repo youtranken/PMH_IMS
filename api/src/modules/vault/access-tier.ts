@@ -1,5 +1,5 @@
 /**
- * Ba tầng quyền xem secret (story 6.2, FR-023) — hàm THUẦN, không chạm DB.
+ * Ba tầng quyền xem secret (FR-023) — hàm THUẦN, không chạm DB.
  *
  * AC nói rõ: "đối tượng không thuộc tầng nào với member đó = tầng CẤM mặc định (không xin
  * được)". Đây là AD-9 (quyền mặc định ĐÓNG) áp vào dữ liệu thay vì vào route.
@@ -19,9 +19,9 @@ export type AccessTier = (typeof ACCESS_TIERS)[number];
  * trong quyền đã gán, không phải gán lại. Đó là lý do ma trận này dùng được với vài trăm thiết
  * bị mà không biến thành một bảng vài trăm dòng.
  *
- * `service_account_kind` và `isp_provider` thêm 28/08/2026. Trước đó hai loại chủ thể này cất
- * được mật khẩu vào két nhưng KHÔNG nhóm nào phủ, nên Member vĩnh viễn bị từ chối và SA không
- * có ô nào để cấp quyền — một tính năng chết chứ không phải một quyết định.
+ * Mọi loại chủ thể cất được mật khẩu vào két đều phải có nhóm phủ (như `service_account_kind`
+ * và `isp_provider`). Thiếu nhóm thì Member vĩnh viễn bị từ chối và SA không có ô nào để cấp
+ * quyền — một tính năng chết chứ không phải một quyết định.
  */
 export const SCOPE_TYPES = [
   'device_site',

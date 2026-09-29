@@ -5,13 +5,13 @@ import { stripComments } from './test/source-text';
 /**
  * AD-2 CÒN MỘT CỬA KHÔNG AI CANH: SQL THÔ.
  *
- * ===== VÌ SAO BÀI NÀY RA ĐỜI (A-07, rà soát 19/09) =====
+ * ===== VÌ SAO CẦN BÀI NÀY =====
  *
- * `audit-query.service.ts` viết `LEFT JOIN users u ON u.email = a.actor` — đọc thẳng bảng
- * của module khác, thứ AD-2 cấm tường minh, và `users.api.ts:15-17` còn viết đúng câu bị vi
- * phạm ("module khác inject class này, KHÔNG query bảng `users`").
+ * Một câu `LEFT JOIN users u ON u.email = a.actor` trong `audit-query.service.ts` là đọc
+ * thẳng bảng của module khác, thứ AD-2 cấm tường minh — mà `users.api.ts` còn viết đúng câu
+ * luật ("module khác inject class này, KHÔNG query bảng `users`").
  *
- * Nó sống được suốt chín epic vì CẢ HAI cổng đang canh AD-2 đều nhìn nhầm chỗ:
+ * Câu như thế sống được lâu vì CẢ HAI cổng đang canh AD-2 đều nhìn nhầm chỗ:
  *
  *   · eslint `no-restricted-imports` khớp CHUỖI IMPORT. Ở đây không có import nào.
  *   · `dependency-cruiser` khớp ĐƯỜNG DẪN ĐÃ RESOLVE. Một câu SQL không resolve thành gì cả.
@@ -22,9 +22,8 @@ import { stripComments } from './test/source-text';
  *
  * ===== ĐÂY KHÔNG PHẢI RỦI RO LÝ THUYẾT =====
  *
- * Chú thích ngay trên chính câu SQL ấy ghi lại HAI sự cố production do nó sinh ra: `u.sub`
- * không tồn tại nên endpoint 500 ở mọi lần gọi suốt chín epic, và `created_at` mơ hồ làm vỡ
- * mỗi lượt lọc theo ngày. Cả hai đều là hệ quả trực tiếp của việc một module tự suy đoán về
+ * Câu JOIN kiểu ấy đã sinh HAI sự cố thật: `u.sub` không tồn tại nên endpoint 500 ở mọi lần
+ * gọi, và `created_at` mơ hồ làm vỡ mỗi lượt lọc theo ngày. Cả hai đều là hệ quả trực tiếp của việc một module tự suy đoán về
  * lược đồ của module khác — đúng thứ AD-2 sinh ra để không bao giờ phải suy đoán.
  *
  * ===== CÁCH HỎI =====
@@ -33,8 +32,8 @@ import { stripComments } from './test/source-text';
  * phải từ một danh sách chép tay — danh sách chép tay sẽ lệch khỏi lược đồ ở lần thêm bảng
  * thứ nhất.
  *
- * Lột chú thích TRƯỚC khi quét: A-09 của chính đợt rà soát này là một bài kiểm đọc mã nguồn
- * mà không lột chú thích, và nó xanh vì một dòng chú thích. Ở đây chiều lỗi ngược lại — không
+ * Lột chú thích TRƯỚC khi quét: một bài kiểm đọc mã nguồn mà không lột chú thích có thể xanh
+ * vì một dòng chú thích (xem `test/source-text.ts`). Ở đây chiều lỗi ngược lại — không
  * lột thì một cái tên bảng nằm trong chú thích thành vi phạm giả — nhưng bài học là một:
  * `indexOf` không phân biệt mã với lời bàn.
  */

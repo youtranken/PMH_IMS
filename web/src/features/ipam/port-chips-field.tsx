@@ -112,10 +112,9 @@ export function PortChipsField({
               /**
                * Phần CHƯA nhận được — mẩu hỏng và MỌI mẩu đứng sau nó.
                *
-               * Bản trước chỉ giữ lại đúng mẩu hỏng rồi `setDraft(stuck || tail)`, nên dán
-               * "80, rác, 443" là `80` thành chip, `rác` ở lại kèm lỗi, còn `443` biến mất
-               * không dấu vết — đúng thứ mà chú thích ngay trên khẳng định là không xảy ra.
-               * Cùng lỗi ở chế độ sửa: dán "80,443,8080" thì `8080` bốc hơi.
+               * Chỉ giữ lại đúng mẩu hỏng (`setDraft(stuck || tail)`) thì dán "80, rác, 443"
+               * là `80` thành chip, `rác` ở lại kèm lỗi, còn `443` biến mất không dấu vết.
+               * Ở chế độ sửa cũng vậy: dán "80,443,8080" thì `8080` bốc hơi.
                */
               const leftover: string[] = [];
               for (const part of parts) {

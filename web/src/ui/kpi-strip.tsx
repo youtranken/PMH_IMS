@@ -5,9 +5,9 @@ import { Chevron } from '@/ui/chevron';
 /**
  * Hàng số ở đầu màn — MỘT CON SỐ TO, ĐỌC ĐƯỢC TỪ XA, VÀ BẤM ĐƯỢC.
  *
- * VÌ SAO LÀ TÀI SẢN DÙNG CHUNG (AD-15). Ra đời ở Bảng điều khiển 17/09/2026, rồi màn "Sắp hết
- * hạn" cần đúng hình dạng ấy: ba con số tổng kết vốn nằm trong ba cái pill 11px cạnh nhau, đọc
- * được thì phải dí mắt vào. Hai màn = tài sản dùng chung, không copy DOM lần thứ hai.
+ * VÌ SAO LÀ TÀI SẢN DÙNG CHUNG (AD-15). Bảng điều khiển và màn "Sắp hết hạn" cần đúng hình
+ * dạng ấy (ba con số tổng kết nằm trong ba cái pill 11px cạnh nhau thì phải dí mắt vào mới đọc
+ * được). Hai màn = tài sản dùng chung, không copy DOM lần thứ hai.
  *
  * HAI KIỂU Ô, cùng một hình:
  *   · `to` — ô là một LINK, bấm là sang màn đầy đủ (Bảng điều khiển dùng kiểu này);

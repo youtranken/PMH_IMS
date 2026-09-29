@@ -132,10 +132,9 @@
   font-weight: 500;
 }
 /*
- * Hai dòng, không phải một (17/09/2026).
+ * Hai dòng, không phải một.
  *
- * File này viết trước component cả tháng và chỉ định nghĩa `.it-name`, không định nghĩa hai
- * thẻ con — nên khi `ui/command-palette.tsx` ra đời, mã và tên dính liền thành
+ * Thiếu luật cho hai thẻ con thì mã và tên dính liền thành
  * "E2E-SW-1LQ-01Microsoft 365 Business Standard". Mã là thứ người ta gõ để tìm nên nó đứng
  * riêng một dòng, dạng mono; tên là dòng phụ.
  */
@@ -198,10 +197,10 @@
 /* --- trạng thái rỗng --- */
 /* Dải cảnh báo "danh sách còn thiếu" — một trong bốn nhóm vừa hỏng. Dùng tông cảnh báo của
    hệ màu, không phải tông lỗi: kết quả bên dưới vẫn dùng được, chỉ là chưa đủ. */
-/* Con TRỰC TIẾP của `.cp` từ 19/09, không còn nằm trong `.cp-list`: `.cp-list` có
-   `overflow-y: auto` nên dải này từng cuộn mất khi bấm ↓ vài lần, và padding ngang của khung
-   cuộn làm nó thụt vào hai bên, đọc ra như một dòng chữ lạc thay vì một dải. `.cp` không có
-   padding ngang nên giờ nó chạm đúng hai mép hộp. */
+/* Con TRỰC TIẾP của `.cp`, không nằm trong `.cp-list`: `.cp-list` có `overflow-y: auto` nên
+   dải này sẽ cuộn mất khi bấm ↓ vài lần, và padding ngang của khung cuộn làm nó thụt vào hai
+   bên, đọc ra như một dòng chữ lạc thay vì một dải. `.cp` không có padding ngang nên nó chạm
+   đúng hai mép hộp. */
 .cp-warn {
   margin: 0;
   padding: var(--space-5) var(--space-8);

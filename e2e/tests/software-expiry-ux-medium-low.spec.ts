@@ -10,7 +10,7 @@ import {
   resetUsers,
   rowAction,
   rowActionNames,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -100,7 +100,7 @@ test.describe('Danh sách phần mềm', () => {
     });
 
     await page.goto('/software');
-    await timVaChoLoc(page, prefix);
+    await searchAndWaitForFilter(page, prefix);
     await expect(page.getByRole('row', { name: new RegExp(`${prefix}-SONG`) })).toBeVisible();
     await expect(
       page.getByRole('row', { name: new RegExp(`${prefix}-BO`) }),
@@ -135,13 +135,13 @@ test.describe('Danh sách phần mềm', () => {
     await assign(page, onA, deviceA);
 
     await page.goto('/software');
-    await timVaChoLoc(page, `LT-E2E-TIMMAY-${stamp}`);
-    const dong = page.getByRole('row', { name: new RegExp(`LIC-E2E-TIMMAY-A-${stamp}`) });
-    await expect(dong).toBeVisible();
+    await searchAndWaitForFilter(page, `LT-E2E-TIMMAY-${stamp}`);
+    const licenseRow = page.getByRole('row', { name: new RegExp(`LIC-E2E-TIMMAY-A-${stamp}`) });
+    await expect(licenseRow).toBeVisible();
     // Nói VÌ SAO hồ sơ hiện ra: nó không có chữ đó trong mã/tên, mà ở máy đang giữ ghế.
-    await expect(dong.getByText(`khớp máy LT-E2E-TIMMAY-${stamp}`)).toBeVisible();
+    await expect(licenseRow.getByText(`khớp máy LT-E2E-TIMMAY-${stamp}`)).toBeVisible();
 
-    await timVaChoLoc(page, `LT-E2E-KHONGCO-${stamp}`);
+    await searchAndWaitForFilter(page, `LT-E2E-KHONGCO-${stamp}`);
     await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc.')).toBeVisible();
   });
 
@@ -153,7 +153,7 @@ test.describe('Danh sách phần mềm', () => {
     await createSoftware(page, { code, name: 'SSL gia hạn nhanh', kind: 'ssl', endDate: isoInDays(20) });
 
     await page.goto('/software');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await rowAction(page, code, 'Gia hạn');
     const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
     await expect(dialog).toBeVisible();
@@ -191,7 +191,7 @@ test.describe('Hộp gán license', () => {
     await createDevice(page, deviceB);
 
     await page.goto('/software');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await rowAction(page, code, 'Gán vào máy');
     const dialog = page.getByRole('dialog', { name: `Gán license vào máy — ${code}` });
     await expect(dialog.getByText(/Đã dùng 1\/1 ghế — gán thêm sẽ vượt số ghế/)).toBeVisible();
@@ -345,7 +345,7 @@ test.describe('Kho thanh lý', () => {
 
     // Đường hỏng: tìm không ra thì có nút xoá bộ lọc, bấm là thấy lại.
     await page.goto('/disposal?kind=software');
-    await timVaChoLoc(page, `KHONG-CO-E2E-${uniqueStamp()}`);
+    await searchAndWaitForFilter(page, `KHONG-CO-E2E-${uniqueStamp()}`);
     await page.getByRole('button', { name: 'Xóa bộ lọc' }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   });

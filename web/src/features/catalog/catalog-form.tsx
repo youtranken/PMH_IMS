@@ -80,7 +80,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
 }
 
 /**
- * Form thêm/sửa một mục danh mục (story 2.1). Một form cho cả bốn loại: các loại chỉ khác
+ * Form thêm/sửa một mục danh mục. Một form cho cả bốn loại: các loại chỉ khác
  * nhau vài trường, tách thành bốn file thì mỗi lần đổi luật lại phải sửa bốn chỗ (AD-15).
  */
 export function CatalogForm({
@@ -621,7 +621,7 @@ const bad = (field: BodyField, key: string): Built => ({ body: null, field, key 
 /**
  * Gom body gửi lên API, hoặc chỉ ra ô sai (không gọi API).
  * Chỉ gửi đúng trường của loại đang sửa: API bật `forbidNonWhitelisted`, thừa field là 400
- * (bài học story 1.4 — nút Khóa/Mở khóa từng luôn 400 vì lọt `id` vào body).
+ * (lọt `id` vào body là đủ để cả nút Khóa/Mở khóa luôn trả 400).
  */
 function buildBody(entity: CatalogEntity, form: FormState): Built {
   switch (entity) {

@@ -81,9 +81,9 @@ table.table td.mono[data-empty] {
   font-size: inherit;
   letter-spacing: normal;
 }
-/* Chỉ tô sáng hàng khi hàng THẬT SỰ bấm được. Trước đây luật này không điều kiện, nên rê
-   chuột vào ô trống của bất kỳ bảng nào cũng sáng cả hàng như mời bấm — bấm thì không có gì
-   xảy ra (chỉ ô Mã và nút trong cột Thao tác mới ăn). Hứa hão ở 15/15 bảng. */
+/* Chỉ tô sáng hàng khi hàng THẬT SỰ bấm được. Tô không điều kiện thì rê chuột vào ô trống của
+   bất kỳ bảng nào cũng sáng cả hàng như mời bấm — bấm thì không có gì xảy ra (chỉ ô Mã và
+   nút trong cột Thao tác mới ăn). */
 table.table tbody tr.clickable:hover td {
   background: var(--primary-soft);
 }
@@ -230,9 +230,9 @@ table.table tbody tr.row-suspended td:first-child {
 
 /* Bảng gom nhóm license (/phan-mem): cột số căn phải + hàng click sang chi tiết. */
 /*
- * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp (16/09/2026).
+ * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp.
  *
- * Từ khi trang chi tiết chia hai cột, bảng 7 cột (license, port map, két sắt) nằm trong cột
+ * Trang chi tiết chia hai cột, nên bảng 7 cột (license, port map, két sắt) nằm trong cột
  * chính ~800px và mỗi ô bị ép xuống ba dòng — "3.150.000 đ" còn gãy chữ "đ" xuống dòng dưới,
  * tức một con số đọc ra hai lần. Đặt SÀN bề ngang rồi để `.table-wrap` cuộn ngang TRONG thẻ:
  * cuộn một bảng dễ chịu hơn đọc một bảng đã nát.
@@ -259,11 +259,9 @@ table.table tbody tr.row-suspended td:first-child {
   text-align: right;
 }
 /*
- * `col-center` trên THEAD: rà 17/09/2026 thì **12/12 chỗ dùng đều là cột "Thao tác"**, và nút
- * trong ô thì bám mép PHẢI qua `.action-cell`. Căn giữa tiêu đề trong khi nội dung bám phải là
- * lệch nhau đúng nửa cột — nhìn thấy ngay ở mọi bảng có menu ⋯. Chú thích ở `.action-cell` còn
- * viết "thẳng header ACTION (cũng căn phải qua .num)"; lời hứa đó chưa từng đúng.
- * Sửa ở đây thay vì đi đổi 12 chỗ gọi.
+ * `col-center` trên THEAD: mọi chỗ dùng đều là cột "Thao tác", và nút trong ô thì bám mép PHẢI
+ * qua `.action-cell`. Căn giữa tiêu đề trong khi nội dung bám phải là lệch nhau đúng nửa cột —
+ * nhìn thấy ngay ở mọi bảng có menu ⋯. Sửa ở đây thay vì đi đổi từng chỗ gọi.
  */
 .table th.col-center {
   text-align: right;
@@ -287,8 +285,7 @@ table.table tbody tr.row-suspended td:first-child {
 }
 
 /* --- Menu thao tác hàng "⋯" (ui/row-actions.tsx) --------------------------
- * Chép sang từ QLTS (AD-12) cùng đợt nền tảng, nhưng tới 28/08/2026 mới có component dùng
- * tới — trước đó cột thao tác vẫn là dãy nút phẳng, và nó phình tới ba–năm nút một dòng.
+ * Chép sang từ QLTS (AD-12). Thay cho dãy nút phẳng, vốn phình tới ba–năm nút một dòng.
  * ---------------------------------------------------------------------------- */
 .row-actions {
   position: relative;

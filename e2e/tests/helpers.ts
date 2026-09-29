@@ -6,11 +6,9 @@ import { APP_TIMEZONE } from '../app-timezone';
 /**
  * Origin của ứng dụng — NGUỒN DUY NHẤT cho mọi request thủ công trong bộ E2E.
  *
- * `CsrfGuard` so `Origin` của request với `APP_BASE_URL` của server. Trước 28/08, 137 chỗ
- * trong `tests/` gõ cứng `https://ims.pmh.com.vn` trong khi CI dựng stack với
- * `APP_BASE_URL=https://localhost` — nghĩa là job `e2e` KHÔNG THỂ xanh: mọi request ghi
- * trả 403 ORIGIN_MISMATCH. Đó là lý do CI chưa từng chạy được, và mọi con số "xanh
- * 235/235" đều là tự khai trên máy dev. Xem `docs/CODE-REVIEW-2026-08-28.md` (F-QA-01).
+ * `CsrfGuard` so `Origin` của request với `APP_BASE_URL` của server. Gõ cứng
+ * `https://ims.pmh.com.vn` ở từng chỗ trong `tests/` thì stack dựng với
+ * `APP_BASE_URL=https://localhost` KHÔNG THỂ xanh: mọi request ghi trả 403 ORIGIN_MISMATCH.
  *
  * Đặt `IMS_BASE_URL` là đổi cả baseURL của Playwright lẫn Origin gửi lên — hai thứ đó
  * BẮT BUỘC phải khớp nhau, nên chúng phải đọc từ cùng một biến.
@@ -32,7 +30,7 @@ export const E2E_LOGIN_RATE_LIMIT = 500;
  *
  * ===== TRIỆU CHỨNG (ĐÃ QUAN SÁT) =====
  *
- * Trong ba lượt E2E đầy đủ ngày 09/09, `docker compose exec` hỏng giữa chừng — quanh bài thứ
+ * Trong các lượt E2E đầy đủ, `docker compose exec` từng hỏng giữa chừng — quanh bài thứ
  * ~61, sau ~6 phút. `execSync` ném với **stderr RỖNG**, chỉ còn dòng "Command failed". Ngay
  * sau đó chạy TAY đúng lệnh ấy thì xong trong dưới 1 giây, api `healthy`, 0 lần khởi động
  * lại, không một dòng lỗi trong log.
@@ -42,19 +40,17 @@ export const E2E_LOGIN_RATE_LIMIT = 500;
  *
  * ===== NGUYÊN NHÂN: CHƯA BIẾT. ĐÃ LOẠI ĐƯỢC "HẾT BỘ NHỚ" =====
  *
- * Giả thuyết đầu tiên là máy hết bộ nhớ nên không dựng nổi tiến trình con. ĐÃ ĐO VÀ BÁC BỎ
- * (09/09), bằng cách lấy mẫu `\Memory\Available MBytes` mỗi 3 giây TRONG LÚC bộ E2E chạy:
+ * Giả thuyết "máy hết bộ nhớ nên không dựng nổi tiến trình con" ĐÃ ĐO VÀ BÁC BỎ, bằng cách lấy mẫu `\Memory\Available MBytes` mỗi 3 giây TRONG LÚC bộ E2E chạy:
  *
  *     thấp nhất 4 716 MB · trung bình 6 057 MB · trên tổng 24 GB
  *     máy ảo Docker: 7,76 GiB, toàn bộ container dùng ~700 MB
  *
- * Còn dư rất nhiều ở cả hai phía. Con số từng dùng để kết luận (`FreePhysicalMemory` = 4,3 GB)
- * là số ĐO SAI CÁCH: chỉ tiêu đó của Windows bỏ qua standby cache nên luôn thấp hơn thực tế,
- * và nó được đo SAU lượt hỏng chứ không phải trong lúc hỏng.
+ * Còn dư rất nhiều ở cả hai phía. Đừng dùng `FreePhysicalMemory` để kết luận: chỉ tiêu đó của
+ * Windows bỏ qua standby cache nên luôn thấp hơn thực tế, và phải đo TRONG lúc hỏng chứ không
+ * phải sau.
  *
  * Còn lại chưa loại được: Docker Desktop chỉ được cấp 2 nhân trên 8 luồng của máy — tranh CPU
- * là ứng viên hợp lý hơn. Nhưng đó CŨNG chỉ là giả thuyết, và bài học của lần trước là đừng
- * viết giả thuyết ra như kết luận.
+ * là ứng viên hợp lý hơn. Nhưng đó CŨNG chỉ là giả thuyết, đừng viết nó ra như kết luận.
  *
  * Vì vậy khối `catch` dưới đây GHI LẠI `code`/`status`/`signal`. Lần hỏng tới sẽ tự nói ra
  * nguyên nhân thay vì để người đọc đoán tiếp — đó mới là việc cần làm ở đây.
@@ -154,7 +150,7 @@ export function configNumber(key: string): number {
  *
  * ===== VÌ SAO PHẢI `flushResets()` TRƯỚC =====
  *
- * `resetUsers()` không dọn ngay — từ 07/09 (`b3d488f`) nó chỉ XẾP HÀNG, và `flushResets()`
+ * `resetUsers()` không dọn ngay — nó chỉ XẾP HÀNG, và `flushResets()`
  * mới thật sự chạy `reset-e2e.mjs`, do fixture gọi NGAY TRƯỚC thân bài kiểm. Mà trong domain
  * `users` của script đó có đúng một dòng:
  *
@@ -166,10 +162,9 @@ export function configNumber(key: string): number {
  *     setLoginRateLimit(3);    // DB = 3
  *                              // …fixture flush: DB = 500  ← đè mất
  *
- * — cho ra trần 500 lúc bài chạy. Đó chính là chuyện đã xảy ra với
- * `login-rate-limit.spec.ts` KỂ TỪ 07/09: bài canh hàng rào chống dò mật khẩu chạy với trần
- * 500 nên không bao giờ chạm 429, và nó im lặng cho tới lượt `--e2e` đầy đủ ngày 09/09 —
- * lượt đầy đủ đầu tiên kể từ hôm đó. Một tối ưu tốc độ đã tắt một bài kiểm bảo mật.
+ * — cho ra trần 500 lúc bài chạy. Khi đó bài canh hàng rào chống dò mật khẩu
+ * (`login-rate-limit.spec.ts`) chạy với trần 500 nên không bao giờ chạm 429, và vẫn xanh:
+ * một tối ưu tốc độ lặng lẽ tắt một bài kiểm bảo mật.
  *
  * Sửa ở ĐÂY chứ không ở spec: nơi nào GHI cấu hình cũng phải tự làm cạn hàng đợi có thể ghi
  * đè nó. Vá trong một spec thì spec thứ hai — viết sau, bởi người khác — lại dính y hệt.
@@ -191,9 +186,9 @@ export function setLoginRateLimit(value: number): void {
  */
 export function expireStepUp(email: string): void {
   /*
-   * KHOANH VÀO ĐÚNG MỘT NGƯỜI (09/09).
+   * KHOANH VÀO ĐÚNG MỘT NGƯỜI.
    *
-   * Bản trước không có `WHERE user_id`: nó đẩy `stepped_up_at` lùi một giờ cho MỌI phiên còn
+   * Thiếu `WHERE user_id` thì câu này đẩy `stepped_up_at` lùi một giờ cho MỌI phiên còn
    * sống trong DB. Playwright chạy nhiều worker song song, nên một bài kiểm đang ở giữa luồng
    * "gõ mã xong rồi xem tiếp" bị bài khác cắt mất quyền — đỏ ngẫu nhiên, đỏ ở một file không
    * hề gọi hàm này, và mỗi lần chạy lại một chỗ khác. Đúng loại đỏ giả làm người ta ngừng tin
@@ -230,9 +225,9 @@ export function agePendingSession(email: string): void {
 /**
  * ĐỌC NỘI DUNG dòng audit mới nhất, không chỉ đếm.
  *
- * `countAudit` trả lời "có mấy dòng" — và cho tới 17/09/2026 đó là TẤT CẢ những gì bộ kiểm hỏi
- * về nhật ký mở két. Nghĩa là đổi `actor` thành hằng `'system'`, hay bỏ mất `grantId` (thứ nói
- * "mở được là nhờ phiếu break-glass nào"), đều không làm bài nào đỏ — trong khi tờ giấy nộp
+ * `countAudit` chỉ trả lời "có mấy dòng". Nếu bộ kiểm chỉ đếm thì đổi `actor` thành hằng
+ * `'system'`, hay bỏ mất `grantId` (thứ nói "mở được là nhờ phiếu break-glass nào"), đều không
+ * làm bài nào đỏ — trong khi tờ giấy nộp
  * auditor sẽ nói "có người xem" mà không nói được ai, hoặc không nói được bằng quyền gì.
  *
  * Trả `actor` và `detail` thô (JSON dạng chuỗi) để nơi gọi tự khẳng định.
@@ -260,9 +255,7 @@ export function lastAudit(
 
 /**
  * Đếm số dòng audit của một hành động trên một đối tượng — dùng để kiểm "mỗi lần mở = một dòng".
- *
- * Docstring này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `lastAudit`, nên người
- * đọc gán nó cho hàm đó và tin rằng `lastAudit` đếm. `lastAudit` thì ĐỌC NỘI DUNG, không đếm.
+ * Khác `lastAudit` ở trên: hàm đó ĐỌC NỘI DUNG, không đếm.
  */
 export function countAudit(action: string, objectId: string): number {
   const out = dockerExec(
@@ -281,8 +274,8 @@ export function countAudit(action: string, objectId: string): number {
  * `security.probe.alerted` có `object_id = NULL` (nó nói về một PHIÊN dò dẫm, không về một
  * ngăn cụ thể), nên `countAudit` không hỏi được.
  *
- * Nhưng lý do thật sự quan trọng hơn: câu "đủ ngưỡng thì CHỈ một lá thư" trước đây được hỏi
- * bằng `expect((await waitForMail(...)).length).toBe(1)`, và đó là một CUỘC ĐUA chứ không
+ * Nhưng lý do thật sự quan trọng hơn: hỏi câu "đủ ngưỡng thì CHỈ một lá thư" bằng
+ * `expect((await waitForMail(...)).length).toBe(1)` là một CUỘC ĐUA chứ không
  * phải một khẳng định. `waitForMail` trả về NGAY ở lượt poll đầu tiên thấy ≥1 thư khớp — nó
  * không chờ hộp thư lắng. Xoá trọn khối thời-gian-nghỉ trong `SecurityProbeService` thì lượt
  * 3,4,5,6 mỗi lượt đẩy một job, nhưng bốn lá ấy đi qua outbox → BullMQ → SMTP BẤT ĐỒNG BỘ;
@@ -297,7 +290,7 @@ export function countAudit(action: string, objectId: string): number {
 export function countAuditByActor(action: string, actor: string): number {
   const out = dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
-      `"SELECT count(*) FROM audit_log WHERE action = '${chuoiSql(action)}' AND actor = '${chuoiSql(actor)}'"`,
+      `"SELECT count(*) FROM audit_log WHERE action = '${sqlString(action)}' AND actor = '${sqlString(actor)}'"`,
     'Đếm dòng audit theo người',
   );
   return Number(out.trim());
@@ -312,7 +305,7 @@ export function countAuditByActor(action: string, actor: string): number {
  * `tx.insert` gõ tay, và lý do DUY NHẤT là cột `ip`: chỉ đường kia mới chạy `toRow()`, nơi `ip`
  * lấy từ `currentRequestIp()`. Bài `api/test/security-probe-race.spec.ts` dựng service bằng tay
  * NGOÀI ngữ cảnh request nên `ip` là NULL ở cả hai đường — không phân biệt được, đã gieo đột
- * biến ngày 19/09 và xác nhận. Chỉ ở đây, nơi lượt gọi đi qua controller thật trong một request
+ * biến và xác nhận. Chỉ ở đây, nơi lượt gọi đi qua controller thật trong một request
  * thật, câu hỏi "dòng an ninh có ghi lại dò từ máy nào không" mới trả lời được.
  */
 export function auditIpOf(action: string, actor: string): string {
@@ -320,8 +313,8 @@ export function auditIpOf(action: string, actor: string): string {
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
       /* `ip` là cột **text**, không phải `inet` — `host()` chỉ nhận `inet` và ném
          "function host(text) does not exist". Đã đo: `information_schema` báo `ip|text`. */
-      `"SELECT coalesce(ip, '') FROM audit_log WHERE action = '${chuoiSql(action)}' ` +
-      `AND actor = '${chuoiSql(actor)}' ORDER BY created_at DESC LIMIT 1"`,
+      `"SELECT coalesce(ip, '') FROM audit_log WHERE action = '${sqlString(action)}' ` +
+      `AND actor = '${sqlString(actor)}' ORDER BY created_at DESC LIMIT 1"`,
     'Đọc IP của dòng audit',
   ).trim();
 }
@@ -335,7 +328,7 @@ export function auditIpOf(action: string, actor: string): string {
  * phải một hàng rào. Nhân đôi nháy đơn là phép thoát của chính SQL, và chặn luôn ký tự lạ để
  * hỏng SỚM với câu nói đúng bệnh.
  */
-function chuoiSql(v: string): string {
+function sqlString(v: string): string {
   if (!/^[\w.@+\- :]*$/.test(v)) {
     throw new Error(`Tham số SQL có ký tự lạ, từ chối ghép vào câu lệnh: ${JSON.stringify(v)}`);
   }
@@ -345,23 +338,20 @@ function chuoiSql(v: string): string {
 /**
  * ===== GOM MỌI LỆNH DỌN VÀO MỘT LƯỢT `docker compose exec` =====
  *
- * Bản trước có 11 hàm reset, mỗi hàm tự `execSync` một lệnh riêng, và mỗi `beforeEach` gọi
- * 2-5 hàm. Đo trên máy này: **một lần `docker compose exec` tốn 0,46 giây**. Nhân với ~900
- * lượt gọi trong một lượt chạy đầy đủ là **~7 phút thuần overhead** — nhiều hơn cả thời gian
- * trình duyệt thật sự làm việc ở phần lớn các bài.
+ * Mỗi `beforeEach` gọi 2-5 hàm reset. Đo trên máy này: **một lần `docker compose exec` tốn
+ * 0,46 giây**; để mỗi hàm tự `execSync` thì ~900 lượt gọi trong một lượt chạy đầy đủ là **~7
+ * phút thuần overhead** — nhiều hơn cả thời gian trình duyệt thật sự làm việc ở phần lớn các bài.
  *
- * Nay các hàm `resetX()` chỉ GHI TÊN VÙNG vào một hàng đợi; lượt `exec` DUY NHẤT xảy ra ở
- * `flushResets()`, do fixture `test.beforeEach` trong `tests/fixtures.ts` gọi. Nhờ vậy call
- * site trong 47 spec không phải sửa một dòng nào, mà số lần `exec` giảm từ ~900 xuống ~264.
+ * Nên các hàm `resetX()` chỉ GHI TÊN VÙNG vào một hàng đợi; lượt `exec` DUY NHẤT xảy ra ở
+ * `flushResets()`, do fixture `test.beforeEach` trong `tests/fixtures.ts` gọi (~264 lượt).
  *
  * Thứ tự dọn KHÔNG phụ thuộc thứ tự gọi: `reset-e2e.mjs` tự xếp lại theo THỨ TỰ KHAI của
  * `DOMAINS` bên trong chính nó. Mảng dưới đây vì thế chỉ còn quyết định VÙNG NÀO được gọi tới,
  * không quyết định thứ tự — thứ tự của nó là thứ chết, giữ lại chỉ để bài
  * `reset-domains-rollcall.spec.ts` đối chiếu TẬP HỢP hai bên.
  *
- * Bản trước nói script "tự xếp theo phụ thuộc khóa ngoại (devices phải sau software)" — SAI ở
- * cả hai vế (sửa 19/09/2026). Trong `DOMAINS`, `devices` đứng thứ 2 còn `software` thứ 3, tức
- * devices chạy TRƯỚC; và không có ràng buộc khoá ngoại nào bắt thứ tự đó, vì mỗi vùng tự dọn
+ * Script KHÔNG xếp theo phụ thuộc khóa ngoại: trong `DOMAINS`, `devices` đứng thứ 2 còn
+ * `software` thứ 3, tức devices chạy TRƯỚC; và không có ràng buộc khoá ngoại nào bắt thứ tự đó, vì mỗi vùng tự dọn
  * `license_assignment` của mình trước khi xoá hồ sơ cha. Bất biến THẬT chỉ có một: `catalog`
  * phải ở CUỐI, và đó mới là thứ bài rollcall canh.
  */
@@ -523,7 +513,7 @@ export async function freshTotpCode(secret: string): Promise<string> {
 
 export async function fillLogin(page: Page, email: string, password: string): Promise<void> {
   /*
-   * NUỐT ĐÚNG MỘT LỖI, VÀ CHỈ KHI ĐÍCH ĐẾN TRÙNG (09/09).
+   * NUỐT ĐÚNG MỘT LỖI, VÀ CHỈ KHI ĐÍCH ĐẾN TRÙNG.
    *
    * Sau `logout()`, trang tự đi tới `/login` HAI lượt cách nhau 2ms: `navigate()` trong
    * `onSuccess`, rồi NẠP LẠI CỨNG do `apiFetch` gặp 401 ở lượt `me` kế tiếp. Lượt `goto`
@@ -588,9 +578,8 @@ export async function loginWithTotp(
 /**
  * Mailpit — hộp thư của môi trường dev/test. SMTP thật chỉ bật ở prod.
  *
- * Ba hàm dưới đây TỪNG nằm riêng trong `expiry-digest.spec.ts`. Epic 6 cũng gửi thư (báo
- * người duyệt khi có yêu cầu treo, nhắc yêu cầu quá hạn) nên chúng chuyển ra đây thay vì bị
- * chép sang file thứ hai — AD-15 cấm bản sao.
+ * Ba hàm dưới đây dùng chung cho mọi bài đọc thư (nhắc hạn, báo người duyệt khi có yêu cầu
+ * treo, nhắc yêu cầu quá hạn…) — AD-15 cấm chép sang từng file.
  */
 export const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 
@@ -699,11 +688,9 @@ export async function csrfOf(page: Page): Promise<string> {
 /**
  * Header đủ để gọi API ghi từ trong test (CSRF + Origin hợp lệ).
  *
- * Dùng `APP_ORIGIN`, KHÔNG gõ cứng. Đợt 28/08 gom 137 chỗ hardcode `Origin` về hằng chung
- * nhưng bỏ sót đúng cái helper dùng chung này — nó vẫn ghi thẳng `https://ims.pmh.com.vn`.
- * Ở máy dev thì trùng nên không ai thấy; chạy với `IMS_BASE_URL=https://localhost` (đúng cấu
- * hình CI) là mọi lệnh ghi qua helper này trả 403 ORIGIN_MISMATCH. Lỗi cũ, chỉ lộ ở đúng môi
- * trường mà bản sửa kia sinh ra để phục vụ.
+ * Dùng `APP_ORIGIN`, KHÔNG gõ cứng `https://ims.pmh.com.vn`: ở máy dev thì trùng nên không ai
+ * thấy, nhưng chạy với `IMS_BASE_URL=https://localhost` (đúng cấu hình CI) là mọi lệnh ghi qua
+ * helper này trả 403 ORIGIN_MISMATCH.
  */
 export async function writeHeaders(page: Page): Promise<Record<string, string>> {
   return { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -786,12 +773,12 @@ export async function confirmAction(page: Page, label?: string): Promise<void> {
 /**
  * Đăng xuất qua giao diện, dùng được ở CẢ desktop lẫn 390px.
  *
- * Nút "Đăng xuất" nằm ở chân sidebar — mà ở màn hẹp sidebar là drawer đang đóng. Bản chép
- * trong từng spec chỉ bấm thẳng nút nên treo 60 giây ở 390px; gom về đây theo AD-15.
+ * Nút "Đăng xuất" nằm ở chân sidebar — mà ở màn hẹp sidebar là drawer đang đóng. Bấm thẳng
+ * nút thì treo 60 giây ở 390px; một bản dùng chung theo AD-15.
  *
- * ===== VÌ SAO PHẢI CHỜ PHẢN HỒI, KHÔNG CHỈ BẤM (09/09) =====
+ * ===== VÌ SAO PHẢI CHỜ PHẢN HỒI, KHÔNG CHỈ BẤM =====
  *
- * Bản trước trả về NGAY sau `.click()`. Nhưng nút chỉ `logout.mutate(...)` rồi mới
+ * Không được trả về NGAY sau `.click()`: nút chỉ `logout.mutate(...)` rồi mới
  * `navigate('/login')` trong `onSuccess` — nghĩa là lúc hàm này trả về, `POST /auth/logout`
  * mới đang bay. Bài kiểm gọi tiếp `fillLogin`, mà việc đầu tiên của nó là `page.goto('/login')`
  * — và điều hướng thì HỦY mọi request đang bay. Lượt đăng xuất chết giữa đường
@@ -874,12 +861,8 @@ export async function openNavDrawer(page: Page): Promise<void> {
 /**
  * Số pixel trang bị tràn ngang. 0 (hoặc 1 do làm tròn) = không tràn.
  *
- * TỪNG có NĂM bản chép của hàm này, mỗi file `*.mobile.spec.ts` một bản — và chúng ĐÃ TRÔI:
- * bốn bản trả về số pixel, riêng bản trong `shared-kit.mobile.spec.ts` trả về boolean với
- * ngưỡng `+1` nằm bên trong. Cùng một cái tên, hai ý nghĩa khác nhau, không có gì báo.
- * Đúng lý do AD-15 cấm bản sao: bản sao không sai lúc chép, nó sai dần về sau.
- *
- * Docstring này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `confirmAction`.
+ * Một bản dùng chung cho mọi `*.mobile.spec.ts` (AD-15): bản chép trong từng file sẽ trôi —
+ * cùng một cái tên mà bản trả số pixel, bản trả boolean với ngưỡng `+1` nằm bên trong.
  */
 export function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(
@@ -890,16 +873,16 @@ export function horizontalOverflow(page: Page): Promise<number> {
 /**
  * Gõ vào ô tìm rồi CHỜ BỘ LỌC ĂN — dùng trước mọi thao tác lên dòng kết quả.
  *
- * ===== LỖ ĐANG VÁ (M-7 của rà soát 18/09/2026) =====
+ * ===== VÌ SAO PHẢI CHỜ =====
  *
- * Từ khi trạng thái danh sách chuyển lên thanh địa chỉ (`ui/use-list-url-state.ts`), ô tìm có
+ * Màn giữ trạng thái danh sách trên thanh địa chỉ (`ui/use-list-url-state.ts`) có ô tìm
  * DEBOUNCE 250ms. Dòng cần tìm thường đã nằm sẵn trong bảng từ trước khi lọc, nên
  * `expect(row).toBeVisible()` xanh SỚM, và thao tác ngay sau đó rơi vào đúng khoảnh khắc
  * trước lượt vẽ lại: menu ba chấm vừa mở thì bảng vẽ lại và menu đóng sập, hoặc khu vừa bung
  * biến mất, còn bài kiểm đứng chờ một thứ không bao giờ tới.
  *
- * Lượt E2E đầy đủ 18/09 đỏ đúng một bài vì chuyện này (`license-assignment.spec.ts`), và bài
- * đó chạy riêng thì 3/3 xanh — tức đây là loại đỏ ngẫu nhiên, mỗi lần một chỗ khác nhau.
+ * Đây là loại đỏ ngẫu nhiên: lượt đầy đủ đỏ một bài, chạy riêng bài đó thì xanh, mỗi lần một
+ * chỗ khác nhau.
  *
  * ===== CHỜ BẰNG URL, KHÔNG BẰNG SỐ DÒNG =====
  *
@@ -911,7 +894,7 @@ export function horizontalOverflow(page: Page): Promise<number> {
  * Màn chưa dùng hook thì không có `q=` — gọi hàm này ở đó sẽ chờ vô ích rồi hết giờ, nên đừng
  * gọi. Đó cũng là một cách để biết màn nào còn đứng ngoài luật.
  *
- * ===== MÀN NÀO DÙNG ĐƯỢC (rà 18/09/2026) =====
+ * ===== MÀN NÀO DÙNG ĐƯỢC =====
  *
  *   DÙNG ĐƯỢC : /devices · /software · /isp-lines · /service-accounts · /vault
  *   CHƯA      : /approvals · /nat · /disposal · /admin/accounts
@@ -921,18 +904,17 @@ export function horizontalOverflow(page: Page): Promise<number> {
  * `useListUrlState` nên ô tìm của chúng KHÔNG có debounce, tức cũng không có cuộc đua nào để
  * mà chờ. Ngày nào chúng lên URL thì đổi luôn các chỗ gọi tương ứng.
  *
- * `/expiry` là ca THỨ BA, sửa 19/09/2026: nó ĐÃ dùng `useListUrlState` (ba bộ lọc lên URL
- * ngày 18/09) nhưng khai hook KHÔNG kèm `searchKey`, và `DataTable` ở đó không nhận
- * `searchPlaceholder` — mà `ui/data-table.tsx` chỉ vẽ `SearchBox` khi prop ấy khác
- * `undefined`. Tức màn không có ô tìm nào. Bản trước xếp nó vào "DÙNG ĐƯỢC": ai tin danh sách
- * ấy sẽ ăn timeout ở `getByRole('searchbox')` với thông báo chẳng liên quan gì tới thứ họ
+ * `/expiry` là ca THỨ BA: nó ĐÃ dùng `useListUrlState` (ba bộ lọc lên URL) nhưng khai hook
+ * KHÔNG kèm `searchKey`, và `DataTable` ở đó không nhận `searchPlaceholder` — mà
+ * `ui/data-table.tsx` chỉ vẽ `SearchBox` khi prop ấy khác `undefined`. Tức màn không có ô tìm
+ * nào. Xếp nó vào "DÙNG ĐƯỢC" thì người gọi sẽ ăn timeout ở `getByRole('searchbox')` với thông báo chẳng liên quan gì tới thứ họ
  * đang kiểm.
  *
  * Và không phải chỗ nào trên màn "DÙNG ĐƯỢC" cũng cần hàm này: chỗ đã tự chờ bằng
  * `expect(page.getByRole('row')).toHaveCount(2)` là đã hỏi đúng câu "đã lọc xong chưa" rồi,
  * đổi sang đây chỉ là thay một phép chờ đúng bằng một phép chờ đúng khác.
  *
- * ===== CÁI BẪY NGƯỢC LẠI: `fill()` TRẦN RỒI CHỜ CHÍNH HÀNG MÌNH TÌM (25/09/2026) =====
+ * ===== CÁI BẪY NGƯỢC LẠI: `fill()` TRẦN RỒI CHỜ CHÍNH HÀNG MÌNH TÌM =====
  *
  * Đây mới là hình dạng nguy hiểm, và nó trông vô hại:
  *
@@ -945,22 +927,22 @@ export function horizontalOverflow(page: Page): Promise<number> {
  * bắn — lượt nạp lại dựng lại bảng và GIẬT mục menu đang mở khỏi DOM. Playwright báo
  * "element is not stable" rồi "detached", và đợi hết giờ mới chịu thua.
  *
- * Cuộc đua đó nằm sẵn ở bốn bài suốt nhiều tháng và luôn THẮNG nhờ may: quãng mở menu · đọc
- * chữ · Esc tình cờ dài hơn 300ms. Ngày 25/09 một thay đổi chẳng liên quan làm lệch nhịp vài
- * chục mili-giây và cả bốn lật mặt. Triệu chứng không hề chỉ về ô tìm, nên nó ngốn nửa buổi.
+ * Cuộc đua đó thường THẮNG nhờ may: quãng mở menu · đọc chữ · Esc tình cờ dài hơn 300ms. Một
+ * thay đổi chẳng liên quan làm lệch nhịp vài chục mili-giây là bài lật mặt, và triệu chứng
+ * không hề chỉ về ô tìm.
  *
  * Luật: trên màn CÓ nhịp lắng, đừng bao giờ `fill()` trần. Dùng hàm này — nó chờ `q=` lên
  * thanh địa chỉ, tức nhịp lắng đã bắn thật — rồi chốt thêm số dòng của bảng nếu bước sau có
  * đụng vào menu của một hàng.
  */
-export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
-  await page.getByRole('searchbox', { name: /Tìm/ }).fill(tuKhoa);
+export async function searchAndWaitForFilter(page: Page, keyword: string): Promise<void> {
+  await page.getByRole('searchbox', { name: /Tìm/ }).fill(keyword);
   /*
-   * CHỜ ĐÚNG GIÁ TRỊ, KHÔNG CHỜ "CÓ `q=` LÀ ĐƯỢC" (19/09/2026).
+   * CHỜ ĐÚNG GIÁ TRỊ, KHÔNG CHỜ "CÓ `q=` LÀ ĐƯỢC".
    *
-   * Bản trước chờ `/[?&]q=/` bất kể giá trị, nên lượt gọi THỨ HAI trong cùng một bài trả về
-   * NGAY: `q=` của lượt trước vẫn còn trên thanh địa chỉ, khớp regex, hàm trả về trước khi
-   * nhịp debounce của từ khoá mới kịp bắn. Hôm nay chưa nổ vì không màn nào bật
+   * Chờ `/[?&]q=/` bất kể giá trị thì lượt gọi THỨ HAI trong cùng một bài trả về NGAY: `q=`
+   * của lượt trước vẫn còn trên thanh địa chỉ, khớp regex, hàm trả về trước khi nhịp debounce
+   * của từ khoá mới kịp bắn. Kiểu chờ lỏng ấy chỉ thoát được vì không màn nào bật
    * `placeholderData: keepPreviousData` (đã grep: 0 kết quả) nên bảng về trạng thái tải và
    * Playwright tự chờ tiếp — nhưng đó là may, không phải thiết kế: bật tối ưu rất-thường-gặp
    * ấy lên là cuộc đua quay lại y nguyên, và helper này sẽ nói dối là đã chờ.
@@ -968,19 +950,19 @@ export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
   /* Mã hoá bằng CHÍNH `URLSearchParams` — thứ `useListUrlState` dùng để ghi. Không dùng
      `encodeURIComponent`: nó cho dấu cách thành `%20`, còn `URLSearchParams` cho `+`, nên một
      từ khoá có dấu cách sẽ không bao giờ khớp. */
-  const mong = new URLSearchParams({ q: tuKhoa }).toString();
-  const ma = mong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const expectedQuery = new URLSearchParams({ q: keyword }).toString();
+  const escaped = expectedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   /* `(&|#|$)`: skip-link đặt `#noi-dung` lên thanh địa chỉ, nên `q=` không phải lúc nào cũng ở
      CUỐI chuỗi. Thiếu `#` là helper chờ tới hết giờ với thông báo chẳng liên quan tới thứ đang
      kiểm — đúng loại lỗi khó lần nhất trong một bộ E2E 34 phút. */
-  await expect(page).toHaveURL(new RegExp(`[?&]${ma}(&|#|$)`));
+  await expect(page).toHaveURL(new RegExp(`[?&]${escaped}(&|#|$)`));
 }
 
 /**
- * Mở menu ba chấm của một dòng rồi chọn một việc trong đó (28/08/2026).
+ * Mở menu ba chấm của một dòng rồi chọn một việc trong đó.
  *
- * Cột "Thao tác" của mọi bảng danh sách đã đổi từ dãy nút phẳng sang menu ba chấm
- * (`ui/row-actions.tsx`), nên `getByRole('button', { name: 'Sửa' })` không còn tìm thấy gì:
+ * Cột "Thao tác" của mọi bảng danh sách là menu ba chấm (`ui/row-actions.tsx`), nên
+ * `getByRole('button', { name: 'Sửa' })` không tìm thấy gì:
  * mục menu chỉ tồn tại trong DOM khi menu đang mở, và nó mang vai `menuitem` chứ không phải
  * `button`. Để ở đây thay vì chép hai dòng vào hai chục chỗ — AD-15.
  *
@@ -1043,8 +1025,8 @@ export async function rowActionNames(page: Page, subject: string): Promise<strin
  * (`parseDateOnly` có hẳn chú thích "nếu không ngày sẽ lệch 1 ở múi giờ +07"). Hai bên khi ấy
  * dùng hai đồng hồ khác nhau: fixture nói "còn 10 ngày", huy hiệu đọc "còn 9 ngày".
  *
- * Đã xảy ra thật, 24/09: `expiry-thresholds-live.test.tsx` đỏ đúng cửa sổ 7 tiếng ấy, ở MỌI
- * commit — xanh suốt buổi chiều rồi đỏ ngay sau nửa đêm.
+ * Đã xảy ra thật: `expiry-thresholds-live.test.tsx` đỏ đúng cửa sổ 7 tiếng ấy, ở MỌI commit —
+ * xanh suốt buổi chiều rồi đỏ ngay sau nửa đêm.
  *
  * ===== VÌ SAO GHIM MÚI GIỜ TƯỜNG MINH, KHÔNG LẤY GIỜ MÁY =====
  *
@@ -1055,8 +1037,8 @@ export async function rowActionNames(page: Page, subject: string): Promise<strin
  *
  * `'sv'` cho ra đúng dạng `YYYY-MM-DD` — tiếng Thụy Điển viết ngày theo chuẩn ISO.
  *
- * Hôm nay các fixture dùng offset 3 · 5 · 10 · 20, lệch một ngày không vượt ngưỡng 7/30 nên
- * chưa ai thấy. Nhưng đó là may, không phải thiết kế: ngày ai đó viết một bài với offset
+ * Fixture dùng offset 3 · 5 · 10 · 20 thì lệch một ngày không vượt ngưỡng 7/30 nên không ai
+ * thấy. Nhưng đó là may, không phải thiết kế: ngày ai đó viết một bài với offset
  * **7 hoặc 30** — đúng hai con số ngưỡng của hệ thống — bài đó sẽ đỏ 7 tiếng và xanh 17 tiếng
  * mỗi ngày. Gom về đây để không có bản chép tay thứ tám.
  */

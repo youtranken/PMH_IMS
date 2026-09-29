@@ -24,7 +24,7 @@ export interface AccountProfile {
 }
 
 /**
- * Form tài khoản (story 1.4 + SĐT/mã nhân viên 0031).
+ * Form tài khoản (kèm SĐT/mã nhân viên, migration 0031).
  *
  * Một hộp cho cả TẠO lẫn SỬA vì các ô là một bộ; hai hộp thì lần sau thêm một ô sẽ chỉ nhớ
  * thêm vào một bên. Khác nhau đúng ba chỗ: tạo thì có Email + Vai trò + "bắt 2 lớp" và trả

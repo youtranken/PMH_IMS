@@ -70,8 +70,8 @@ function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) {
 /**
  * Panel giấy tờ đính kèm dùng chung (AD-15, FR-002).
  *
- * Gắn vào BẤT KỲ chủ thể nào qua cặp `ownerType`/`ownerId` — thiết bị (2.3), phiếu ISO
- * (Epic 8), sự cố (Epic 9). Ba màn đó mà mỗi màn tự viết một panel upload thì ba lần
+ * Gắn vào BẤT KỲ chủ thể nào qua cặp `ownerType`/`ownerId` — thiết bị, phiếu ISO, sự cố.
+ * Mỗi màn tự viết một panel upload thì mỗi lần
  * phải nhớ "tải về chứ không mở inline", và sẽ có màn quên.
  */
 /**
@@ -109,7 +109,7 @@ export function AttachmentPanel({
   const queryClient = useQueryClient();
 
   /*
-   * XÓA đính kèm siết về SA/Admin từ 08/09 (C1) — nên nút Xóa cũng phải biến mất với Member,
+   * XÓA đính kèm chỉ dành cho SA/Admin — nên nút Xóa cũng phải biến mất với Member,
    * không phải bày ra để bấm rồi nhận 403.
    *
    * Đọc `me` qua `useMe()` chứ không thêm prop: bảy chỗ gọi panel này đều đang dùng `canEdit`

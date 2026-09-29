@@ -36,7 +36,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showSidebar = !narrow || drawerOpen;
   /*
-   * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở (F-06, vế 4).
+   * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở.
    *
    * Desktop thì sidebar là một phần của trang, không phải lớp phủ — khoá tiêu điểm vào đó là
    * dựng một cái bẫy cho người không hề yêu cầu mở gì.
@@ -65,9 +65,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     <div className="ims shell-root">
       {/*
         BỎ QUA NAV → NỘI DUNG (WCAG 2.4.1).
-        `css/base.css` có sẵn luật `.skip-link` từ lâu — ẩn off-screen, hiện ra khi Tab tới —
-        nhưng tới 18/09/2026 KHÔNG component nào render nó, nên luật ấy là CSS chết và người
-        dùng bàn phím phải Tab qua trọn sidebar (7 nhóm điều hướng) ở MỖI lần đổi trang.
+        Luật `.skip-link` ở `css/base.css` — ẩn off-screen, hiện ra khi Tab tới. Không có nó
+        thì người dùng bàn phím phải Tab qua trọn sidebar (7 nhóm điều hướng) ở MỖI lần đổi
+        trang.
         Phải là phần tử ĐẦU TIÊN trong cây để nó là điểm dừng Tab đầu tiên.
       */}
       <a className="skip-link" href="#noi-dung">
@@ -87,9 +87,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           />
         ) : null}
         {/*
-          `<nav>` chứ không phải `<aside>` (09/09). Khối này KHÔNG phải nội dung phụ trợ — nó
+          `<nav>` chứ không phải `<aside>`. Khối này KHÔNG phải nội dung phụ trợ — nó
           là điều hướng chính của cả ứng dụng, nên `role="navigation"` mới đúng, và trình đọc
-          màn hình mới nhảy thẳng tới được bằng phím tắt landmark. Kèm theo, bộ E2E hết phải
+          màn hình mới nhảy thẳng tới được bằng phím tắt landmark. Kèm theo, bộ E2E không phải
           bám vào selector CSS `aside.sidebar` (CLAUDE.md cấm) — `getByRole('navigation')` là
           tên trợ năng THẬT, đổi class không làm hỏng bài kiểm.
         */}
@@ -297,7 +297,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             </span>
           ) : null}
           {/*
-            `inert` khi drawer đang mở ở màn hẹp (F-06, vế 4) — nội dung trang thôi nhận chuột,
+            `inert` khi drawer đang mở ở màn hẹp — nội dung trang thôi nhận chuột,
             tiêu điểm và trình đọc màn hình.
 
             Chỉ `<main>`, KHÔNG phải cả `.content`: nút đóng drawer nằm trong topbar, và topbar
@@ -333,25 +333,25 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
 }
 
 /**
- * Lớp bọc biến sidebar thành một HỘP THOẠI ở màn hẹp — và chỉ ở màn hẹp (F-06, vế 4).
+ * Lớp bọc biến sidebar thành một HỘP THOẠI ở màn hẹp — và chỉ ở màn hẹp.
  *
  * ===== VÌ SAO BỌC NGOÀI, KHÔNG ĐẶT `role="dialog"` LÊN CHÍNH `<nav>` =====
  *
  * Đặt lên `<nav>` là XOÁ landmark điều hướng: `role` ghi đè vai mặc định, nên trình đọc màn
- * hình mất đường nhảy thẳng tới menu bằng phím tắt landmark — đúng thứ quyết định 09/09 dựng
- * ra khi đổi `<aside>` thành `<nav>`. Và `getByRole('navigation', { name: 'Điều hướng chính' })`
+ * hình mất đường nhảy thẳng tới menu bằng phím tắt landmark — đúng lý do menu là `<nav>` chứ
+ * không phải `<aside>`. Và `getByRole('navigation', { name: 'Điều hướng chính' })`
  * của bộ E2E sẽ không còn khớp ở màn hẹp, tức một bản vá trợ năng làm hỏng bài kiểm trợ năng.
  *
  * Bọc ngoài thì cả hai cùng đúng: AT thấy một hộp thoại chứa MỘT landmark điều hướng.
  *
- * ===== LỚP BỌC PHẢI CÓ KÍCH THƯỚC THẬT (sửa 24/09) =====
+ * ===== LỚP BỌC PHẢI CÓ KÍCH THƯỚC THẬT =====
  *
- * Bản đầu để `<div>` trần và giữ `position:fixed` ở `.sidebar.is-drawer`. Con ra khỏi luồng,
+ * Để `<div>` trần và giữ `position:fixed` ở `.sidebar.is-drawer` thì con ra khỏi luồng,
  * nên lớp bọc thành một flex-item RỘNG 0 — tức chính cái hộp thoại không có kích thước.
  * Playwright đọc ra `hidden` và bài đỏ; đáng lo hơn bài đỏ là chuyện một phần tử không kích
  * thước thì mọi phép đo "có nhìn thấy không" đều có quyền bỏ qua nó.
  *
- * Nay `.drawer-dialog` giữ phần ĐỊNH VỊ, `.sidebar.is-drawer` giữ phần HÌNH THỨC. Cái đeo
+ * Nên `.drawer-dialog` giữ phần ĐỊNH VỊ, `.sidebar.is-drawer` giữ phần HÌNH THỨC. Cái đeo
  * `role="dialog"` là cái có kích thước thật.
  *
  * KHÔNG dùng `display:contents` để "cho lớp bọc biến mất": một số trình duyệt từng gỡ luôn

@@ -54,7 +54,7 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
 
   await page.goto(`/devices/${deviceId}`);
   await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
-  // Story 2.5 thêm dải tóm tắt nên người dùng hiện ở HAI chỗ (tóm tắt + bảng hồ sơ).
+  // Có dải tóm tắt nên người dùng hiện ở HAI chỗ (tóm tắt + bảng hồ sơ).
   await expect(page.getByText('chị Lan').first()).toBeVisible();
   // DEV-091: đứng trước tủ, nút chính là Két sắt; Sửa/Thanh lý vào menu ⋯.
   await expect(page.getByRole('button', { name: 'Két sắt', exact: true })).toBeVisible();
@@ -71,8 +71,8 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
 });
 
 /**
- * G-08 — Story 2.4 AC-2 ghi rõ "bảng pass 390px ở chế độ xem", nhưng bài mobile ở trên chỉ
- * mở tab Lịch sử. Port map mới là bảng rộng nhất của trang thiết bị (cổng · đầu kia · ghi
+ * G-08 — AC ghi rõ "bảng pass 390px ở chế độ xem", nhưng bài mobile ở trên chỉ mở tab
+ * Lịch sử. Port map mới là bảng rộng nhất của trang thiết bị (cổng · đầu kia · ghi
  * chú), và cũng là thứ người ta tra khi đang đứng cạnh tủ.
  */
 test('bảng port map, cả chiều ngược, đọc được ở 390px', async ({ page }) => {

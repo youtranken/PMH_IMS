@@ -10,9 +10,9 @@ import { ToastProvider } from '@/ui/toast';
 import { TotpEnroll } from './totp-enroll';
 
 /**
- * A-02 phía trình duyệt: MÀN CÀI 2 LỚP PHẢI DỰNG ĐƯỢC Ô MẬT KHẨU KHI SERVER ĐÒI.
+ * Phía trình duyệt: MÀN CÀI 2 LỚP PHẢI DỰNG ĐƯỢC Ô MẬT KHẨU KHI SERVER ĐÒI.
  *
- * ===== LỖ MÀ BÀI NÀY BẮT ĐƯỢC TRONG LÚC VIẾT =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
  * `apiFetch` coi MỌI 401 là "phiên chết" trừ một danh sách loại trừ
  * (`USER_INPUT_401_CODES`), và loại trừ là cố ý: quên khai một mã mới thì người dùng bị đưa
@@ -20,9 +20,9 @@ import { TotpEnroll } from './totp-enroll';
  *
  * Chỉ có điều `REAUTH_REQUIRED` KHÔNG tự thoát được. Phiên vẫn sống, nên đăng nhập lại đưa
  * người dùng về đúng màn vừa đá họ ra, màn đó lại gọi `enroll`, lại 401, lại bị đá. Một vòng
- * kín, không lời giải thích. Bản vá phía API xanh hết mọi cổng và vẫn để lại cái vòng đó —
- * vì cả 449 bài E2E không bài nào đi qua đường "phiên đã đăng nhập thường đi cài 2 lớp":
- * E2E luôn cài 2 lớp ngay trong luồng đăng nhập bắt buộc, tức đường ĐƯỢC MIỄN.
+ * kín, không lời giải thích. Phía API xanh hết mọi cổng mà vòng đó vẫn lọt được — vì E2E
+ * không bài nào đi qua đường "phiên đã đăng nhập thường đi cài 2 lớp": E2E luôn cài 2 lớp
+ * ngay trong luồng đăng nhập bắt buộc, tức đường ĐƯỢC MIỄN.
  *
  * ===== VÌ SAO BÀI NÀY Ở TẦNG VITEST =====
  *
@@ -52,7 +52,7 @@ const SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
 
 /**
  * Tầng mạng giả: lượt gọi ĐẦU bị từ chối vì chưa có mật khẩu, lượt gọi có mật khẩu thì qua.
- * Đúng hợp đồng của `startTotpEnrollment` sau bản vá A-02.
+ * Đúng hợp đồng của `startTotpEnrollment`.
  */
 function stubEnrollApi(attemptsLeft = 4): { calls: () => number } {
   let calls = 0;
@@ -114,7 +114,7 @@ function watchNavigation(): { to: () => string | null } {
   let target: string | null = null;
   vi.stubGlobal('location', {
     /*
-     * KHAI TỪNG THUỘC TÍNH, KHÔNG `{...window.location}` (§18 #15, sửa 22/09).
+     * KHAI TỪNG THUỘC TÍNH, KHÔNG `{...window.location}`.
      *
      * Trong jsdom, các thuộc tính của `Location` là ACCESSOR nằm trên prototype, nên phép
      * spread — vốn chỉ chép thuộc tính RIÊNG, khả liệt kê — cho ra một object gần như rỗng.

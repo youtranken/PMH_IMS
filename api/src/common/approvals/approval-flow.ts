@@ -1,11 +1,11 @@
 /**
- * Khung xin–duyệt dùng chung (story 6.1, AD-6) — hàm THUẦN, không chạm DB.
+ * Khung xin–duyệt dùng chung (AD-6) — hàm THUẦN, không chạm DB.
  *
  * AD-6: "mọi luồng xin–duyệt dùng bảng `approval` chung + từ vựng state ĐĂNG KÝ THEO LOẠI;
  * state đổi qua `transition()` khai báo, cấm UPDATE status tự do."
  *
  * Nghĩa là loại yêu cầu tự mang máy trạng thái của mình tới, còn module `approvals` chỉ biết
- * cách chạy một máy trạng thái bất kỳ. Break-glass (Epic 6) và phiếu ISO (Epic 8) sẽ có từ
+ * cách chạy một máy trạng thái bất kỳ. Break-glass và phiếu ISO có từ
  * vựng khác hẳn nhau — nhét cả hai vào một enum cứng là bắt đầu con đường quen thuộc:
  * `status text` với mười giá trị mà nửa số đó chỉ dùng cho một loại.
  */
@@ -98,10 +98,10 @@ export function isGrantActive(
 }
 
 /**
- * Yêu cầu treo quá lâu chưa ai xử → nhắc (story 6.1).
+ * Yêu cầu treo quá lâu chưa ai xử → nhắc.
  *
  * `>=` chứ không `>`: sweep có thể lỡ nhịp, và với `>` thì lỡ đúng khoảnh khắc là mất luôn
- * lần nhắc — cùng bài học của `shouldSendNow` ở Epic 3.
+ * lần nhắc — cùng lý do với `shouldSendNow`.
  *
  * Ngưỡng 0 nghĩa là TẮT nhắc. Không có nhánh này thì `0` biến thành "mọi thứ đều quá hạn" và
  * người duyệt lãnh một email mỗi phút — cách nhanh nhất để họ lọc hết vào thùng rác.

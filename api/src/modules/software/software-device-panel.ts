@@ -6,11 +6,10 @@ import { SoftwareService } from './software.service';
 import { UI_PATHS } from '../../common/ui-paths';
 
 /**
- * Khu "License đang cài" trên trang chi tiết thiết bị (story 3.2 + cơ chế 2.5).
+ * Khu "License đang cài" trên trang chi tiết thiết bị (FR-011, cơ chế khu mở rộng).
  *
  * `software` TỰ ĐĂNG KÝ vào sổ của `devices`; module `devices` không hề biết license là gì
- * (AD-2). Đây là lần đầu cơ chế khu mở rộng của story 2.5 được dùng thật — Epic 4 (két sắt)
- * và Epic 5 (IP) cắm thêm y hệt, không phải sửa một dòng nào trong `devices`.
+ * (AD-2). Két sắt và IP cắm vào y hệt, không phải sửa một dòng nào trong `devices`.
  */
 @Injectable()
 export class SoftwareDevicePanel implements DevicePanelProvider, OnModuleInit {

@@ -7,7 +7,7 @@ import {
   resetSoftware,
   resetUsers,
   rowAction,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -161,8 +161,7 @@ test.describe('Hồ sơ phần mềm', () => {
   });
 
   /**
-   * Epic 3 để chỗ này là một khối chữ "key nằm ở Két sắt (Epic 4)". Story 4.1 mở két thật,
-   * nên bài kiểm đổi theo: hồ sơ phần mềm VẪN không chứa key — key sống ở tab Két sắt.
+   * Hồ sơ phần mềm KHÔNG chứa key — key sống ở tab Két sắt (FR-021).
    */
   test('key không nằm trong hồ sơ phần mềm mà ở tab Két sắt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -243,8 +242,8 @@ test.describe('Hồ sơ phần mềm', () => {
   /**
    * License MUA ĐỨT: chỉ cần ngày bắt đầu.
    *
-   * Trước đây luật bắt MỌI license phải có ngày hết hạn, nên license mua đứt không khai vào
-   * hệ thống được — người dùng buộc phải bịa một ngày, rồi tới ngày đó cỗ máy nhắc hạn đi
+   * Bắt MỌI license phải có ngày hết hạn thì license mua đứt không khai vào hệ thống được —
+   * người dùng buộc phải bịa một ngày, rồi tới ngày đó cỗ máy nhắc hạn đi
    * giục gia hạn một thứ không cần gia hạn. Nhắc sai vài lần là người ta bỏ qua mọi lời nhắc.
    */
   test('license vĩnh viễn: không cần ngày hết hạn, và không bị nhắc gia hạn', async ({ page }) => {
@@ -294,7 +293,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
     // Trên danh sách: cột hạn nói "Vĩnh viễn", không phải badge ngày.
     await page.goto('/software');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toContainText('Vĩnh viễn');
 
@@ -331,8 +330,8 @@ test.describe('Hồ sơ phần mềm', () => {
     // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
     // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
     // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien-09-catalog-accounts-kit.spec.ts`, bài
-    // "Phòng Tài khoản" (25/09/2026).
-    await timVaChoLoc(page, code);
+    // "Phòng Tài khoản".
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
 

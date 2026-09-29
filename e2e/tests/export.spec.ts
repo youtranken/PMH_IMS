@@ -33,7 +33,7 @@ async function csrfOf(page: Page): Promise<string> {
 
 const XLSX_MIME = 'spreadsheetml';
 
-/** Story 7.2 — FR-028: xuất được ở mọi bảng; FR-026 vẫn nguyên: không export nào chứa secret. */
+/** FR-028: xuất được ở mọi bảng; FR-026 vẫn nguyên: không export nào chứa secret. */
 test.describe('Xuất Excel', () => {
   test('mọi màn danh sách đều xuất được file thật', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -87,7 +87,7 @@ test.describe('Xuất Excel', () => {
   });
 
   /**
-   * FR-026 giữ nguyên hiệu lực ở Epic 7.
+   * FR-026 giữ nguyên hiệu lực với mọi đường xuất.
    *
    * Cất một secret có giá trị RẤT dễ nhận ra, rồi tải MỌI file xuất về và tìm chuỗi đó trong
    * bytes thô. File xlsx là zip nên chuỗi không nằm dạng phẳng — nhưng nếu có đường xuất nào
@@ -170,9 +170,8 @@ test.describe('Xuất Excel', () => {
      *
      * Handler dùng `@Res()` không passthrough và `res.end()` NGAY trong thân hàm, còn
      * `AuditInterceptor` ghi ở `concatMap` SAU khi handler emit — tức là sau khi response đã
-     * bay đi. `await page.request.get()` trả về trước khi INSERT kịp commit. Hôm nay test xanh
-     * chỉ vì khởi động `psql` còn chậm hơn cái INSERT — đó là may, không phải đúng
-     * (code review Epic 7).
+     * bay đi. `await page.request.get()` trả về trước khi INSERT kịp commit. Đọc một phát mà xanh
+     * thì chỉ vì khởi động `psql` còn chậm hơn cái INSERT — đó là may, không phải đúng.
      */
     await expect
       .poll(() => count('software.exported'), { timeout: 10_000 })
@@ -207,10 +206,10 @@ test.describe('Xuất Excel', () => {
     /**
      * ĐỌC SỐ DÒNG thật trong sheet, không so kích thước file.
      *
-     * Bản đầu so `filtered.length < all.length` trên bytes của file zip — mà deflate không
+     * Không so `filtered.length < all.length` trên bytes của file zip: deflate không
      * đơn điệu theo kích thước đầu vào: một sheet 1 dòng và một sheet 2 dòng có thể nén ra
-     * bằng nhau hoặc ngược nhau tuỳ bảng chuỗi dùng chung. Nó cũng xanh vì những lý do chẳng
-     * liên quan gì tới việc lọc (code review Epic 7).
+     * bằng nhau hoặc ngược nhau tuỳ bảng chuỗi dùng chung. Phép so đó còn xanh vì những lý do chẳng
+     * liên quan gì tới việc lọc.
      */
     const filtered = await rowsOf(
       await (await page.request.get('/api/v1/software/export.xlsx?kind=domain')).body(),

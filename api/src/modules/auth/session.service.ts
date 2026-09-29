@@ -56,12 +56,11 @@ export class SessionService implements OnModuleInit {
   ) {}
 
   /**
-   * CẮM LƯỢT DỌN VÀO SWEEP (D-02, vá 21/09).
+   * CẮM LƯỢT DỌN VÀO SWEEP.
    *
-   * `purgeOld()` có từ lâu và chú thích của nó ghi hẳn "Gọi từ sweep (worker)" — nhưng không
-   * ai gọi. Một hàm dọn không ai gọi trông y hệt một hàm dọn đang chạy: mã đọc vào thì yên
-   * tâm, bảng thì lớn mãi. Đúng lớp lỗi mà cả đợt rà soát này gặp đi gặp lại — một cơ chế
-   * đứng đó đủ hình hài nhưng không có ai bật công tắc.
+   * `purgeOld()` chỉ có tác dụng khi có người gọi. Một hàm dọn không ai gọi trông y hệt một
+   * hàm dọn đang chạy: mã đọc vào thì yên tâm, bảng thì lớn mãi — một cơ chế đứng đó đủ hình
+   * hài nhưng không có ai bật công tắc. Đừng gỡ lượt đăng ký này.
    */
   onModuleInit(): void {
     this.sweep.register({ name: 'session-purge', run: () => this.purgeOld().then(() => undefined) });
@@ -136,13 +135,13 @@ export class SessionService implements OnModuleInit {
   /**
    * Qua TOTP đăng nhập: bỏ cờ chờ + đóng dấu step-up trong CÙNG transaction (AD-5).
    *
-   * ===== VÌ SAO VẪN ĐÓNG DẤU `steppedUpAt` — ĐÃ THỬ BỎ VÀ HOÀN LẠI (09/09) =====
+   * ===== VÌ SAO VẪN ĐÓNG DẤU `steppedUpAt` =====
    *
-   * Rà soát 07/09 (mục 6, "Bảo mật") đề nghị bỏ, với lập luận đúng: yếu tố thứ hai nên được
-   * hỏi TẠI THỜI ĐIỂM mở bí mật, không thừa hưởng từ thao tác đăng nhập vừa xong.
+   * Lập luận để bỏ nghe hợp lý: yếu tố thứ hai nên được hỏi TẠI THỜI ĐIỂM mở bí mật, không
+   * thừa hưởng từ thao tác đăng nhập vừa xong.
    *
-   * Tôi đã bỏ thử, và nó va vào một ràng buộc mà đề nghị đó không tính tới: **chống replay
-   * TOTP**. Người dùng vừa dùng mã 6 số để đăng nhập; hệ thống từ chối chính mã đó lần thứ
+   * Nhưng bỏ đi thì va vào một ràng buộc: **chống replay TOTP**. Người dùng vừa dùng mã 6 số
+   * để đăng nhập; hệ thống từ chối chính mã đó lần thứ
    * hai (NFR-01). Nên nếu mở két đòi step-up ngay sau khi đăng nhập, họ KHÔNG có mã hợp lệ
    * nào để gõ — phải chờ hết chu kỳ 30 giây rồi mới mở được két. Mỗi lần. Sau mỗi lần đăng
    * nhập.
@@ -166,9 +165,9 @@ export class SessionService implements OnModuleInit {
   /**
    * FR-022: đóng dấu vừa gõ TOTP — grace tính từ mốc này. Gõ đúng xóa sạch bộ đếm sai.
    *
-   * LUÔN trong transaction đang chạy (AD-5), không có bản chạy-trên-pool. Bản trước commit
-   * NGAY, rồi `stepUp()` mới ghi mốc chống-replay bằng một lượt ghi thứ hai: quyền mở két đã
-   * cấp xong trong khi mã 6 số vừa dùng vẫn còn hiệu lực. Xem `setTotpLastTimestepWithin`.
+   * LUÔN trong transaction đang chạy (AD-5), không có bản chạy-trên-pool. Commit ngay ở đây
+   * rồi mới ghi mốc chống-replay bằng một lượt ghi thứ hai thì quyền mở két đã cấp xong trong
+   * khi mã 6 số vừa dùng vẫn còn hiệu lực. Xem `setTotpLastTimestepWithin`.
    */
   async markSteppedUpWithin(tx: Tx, id: string): Promise<void> {
     await tx
@@ -184,7 +183,7 @@ export class SessionService implements OnModuleInit {
    * gõ đúng MẬT KHẨU ở cửa cài 2 lớp sẽ mở luôn cửa KÉT — mà cửa két được dựng để đòi đúng
    * một thứ khác: mã 6 số trên điện thoại. Ba cửa chia nhau BỘ ĐẾM, không chia nhau QUYỀN.
    *
-   * Vì sao phải có nó (thiếu tới 21/09): cửa enroll chỉ biết CỘNG. Người gõ nhầm bốn lần rồi
+   * Vì sao phải có nó: thiếu hàm này thì cửa enroll chỉ biết CỘNG. Người gõ nhầm bốn lần rồi
    * gõ đúng vẫn mang `stepup_failures = 4` suốt đời phiên, và lần gõ hụt mã đầu tiên sau đó
    * thu hồi phiên kèm câu "Gõ sai mã 5 lần" — sai sự thật với người vừa sai một lần. Docblock
    * ngay dưới đây hứa "LIÊN TIẾP"; không có hàm này thì nó là tích luỹ vĩnh viễn.
@@ -215,15 +214,11 @@ export class SessionService implements OnModuleInit {
   /**
    * Thu hồi phiên — LUÔN trong transaction đang chạy (AD-5). Không có bản chạy-trên-pool.
    *
-   * Từng có một `revoke(id, reason)` chạy thẳng trên pool, và chính chú thích của nó cảnh báo
-   * rằng nó commit kể cả khi transaction ngoài rollback. Rà soát 07/09 tìm thấy đúng ba nơi
-   * dùng nó — `killSession`, `stepUp` brute-force, `logout` — và cả ba đều là mẫu N3: phiên
-   * chết trước, dòng audit ghi sau ở một transaction khác, transaction đó hỏng thì phiên đã
-   * mất mà không còn gì nói ai đá và đá lúc nào (`audit_log` chỉ-thêm, không có đường bù).
+   * Một bản chạy thẳng trên pool sẽ commit kể cả khi transaction ngoài rollback: phiên chết
+   * trước, dòng audit ghi sau ở một transaction khác, transaction đó hỏng thì phiên đã mất mà
+   * không còn gì nói ai đá và đá lúc nào (`audit_log` chỉ-thêm, không có đường bù).
    *
-   * Sửa xong ba nơi thì hàm kia còn 0 chỗ gọi. Giữ lại một hàm mồ côi mà tài liệu của nó nói
-   * "đừng dùng" chỉ là để dành sẵn cái bẫy cho người viết đường thu hồi thứ tư. Nên xóa hẳn:
-   * bây giờ muốn thu hồi phiên thì buộc phải có `tx` trong tay (rà soát 08/09, #2).
+   * Nên ĐỪNG thêm bản chạy-trên-pool: muốn thu hồi phiên thì buộc phải có `tx` trong tay.
    */
   async revokeWithin(tx: Tx, id: string, reason: string): Promise<void> {
     await tx
@@ -256,7 +251,7 @@ export class SessionService implements OnModuleInit {
     return rows.length;
   }
 
-  /** Danh sách phiên đang mở của một user — màn SA quản trị phiên (story 1.4). */
+  /** Danh sách phiên đang mở của một user — màn SA quản trị phiên. */
   async listActive(userId: string): Promise<SessionSummary[]> {
     return this.db
       .select({

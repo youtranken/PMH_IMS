@@ -2,10 +2,10 @@
 /**
  * Canh gác cho hàng rào AD-2.
  *
- * Vì sao bài này tồn tại: luật `no-restricted-imports` bản trước dùng glob
- * `'**\/modules\/*\/[!(index|*.api)]*'` và khớp đúng SỐ KHÔNG chuỗi import trong repo —
- * không import nào chứa đoạn `modules/`, và `[!(...)]` là lớp ký tự phủ định chứ không phải
- * extglob. Luật xanh, CI xanh, ranh giới module không được canh bởi bất cứ thứ gì suốt 9 epic.
+ * Vì sao bài này tồn tại: một glob như `'**\/modules\/*\/[!(index|*.api)]*'` cho
+ * `no-restricted-imports` khớp đúng SỐ KHÔNG chuỗi import trong repo — không import nào chứa
+ * đoạn `modules/`, và `[!(...)]` là lớp ký tự phủ định chứ không phải extglob. Luật xanh, CI
+ * xanh, mà ranh giới module không được canh bởi bất cứ thứ gì.
  *
  * Một luật lint chết trông y hệt một luật lint không có gì để bắt. Bài này phân biệt hai thứ đó.
  */
@@ -22,7 +22,7 @@ const ad2FromAuth = new RegExp(ad2PatternSource(AUTH_USERS_EXCEPTION));
 describe('AD-2 — luật chặn import xuyên ruột module', () => {
   describe('PHẢI bắt (import chạm file nội bộ của module khác)', () => {
     it.each([
-      // Đúng bốn vi phạm đang sống lúc rà soát 28/08 — bài này giữ cho chúng không quay lại.
+      // Bốn vi phạm đã từng có thật — bài này giữ cho chúng không quay lại.
       ['../approvals/approvals.service', 'dashboard lấy ApprovalRecord qua cửa sau'],
       ['../users/users.service', 'accounts.controller lấy whitelist sắp xếp'],
       ['../users/users.schema', 'auth chạm thẳng bảng của users'],
@@ -88,10 +88,9 @@ describe('AD-2 — luật chặn import xuyên ruột module', () => {
   /**
    * ĐƯỜNG VÒNG: cùng một file, viết dài ra thì lọt.
    *
-   * Bản trước neo `^\.\./[^./]` — nghĩa là luật chỉ nhìn thấy đúng MỘT cách viết. Ký tự
-   * `[^./]` được thêm để `../../common/...` không bị bắt oan, và chú thích trong
-   * `ad2-boundary.js` giải thích rằng "đi lên hai tầng là ra khỏi src/modules". Lập luận đó
-   * đúng với `common/`, và SAI với `modules/`: đi lên hai tầng rồi quay vào `modules/` thì
+   * Neo `^\.\./[^./]` thì luật chỉ nhìn thấy đúng MỘT cách viết. `[^./]` có vẻ hợp lý để
+   * `../../common/...` không bị bắt oan, theo lập luận "đi lên hai tầng là ra khỏi
+   * src/modules". Lập luận đó đúng với `common/`, và SAI với `modules/`: đi lên hai tầng rồi quay vào `modules/` thì
    * vẫn là đúng cái file đó.
    *
    *     import { IpAddressService } from '../ipam/ip-address.service';      // bị chặn

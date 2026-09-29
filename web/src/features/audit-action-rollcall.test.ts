@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
 import vi from '@/locales/vi';
-import { quetNguon } from '@/test/quet-nguon';
+import { scanSource } from '@/test/scan-source';
 import {
   ACTION_KEY,
   DANGER_ACTIONS,
@@ -45,7 +45,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const API_SRC = join(HERE, '..', '..', '..', 'api', 'src');
 
 function apiSources(): { rel: string; text: string }[] {
-  return quetNguon(API_SRC, /\.ts$/)
+  return scanSource(API_SRC, /\.ts$/)
     .filter((f) => !f.endsWith('.spec.ts'))
     .map((f) => ({
       rel: f.slice(API_SRC.length + 1).replace(/\\/g, '/'),
@@ -84,11 +84,11 @@ function scan() {
 
 const t = i18n.t;
 
-function traKhoa(khoa: string): unknown {
-  return khoa
+function lookupKey(key: string): unknown {
+  return key
     .split('.')
     .reduce<unknown>(
-      (nut, phan) => (nut && typeof nut === 'object' ? (nut as Record<string, unknown>)[phan] : undefined),
+      (button, part) => (button && typeof button === 'object' ? (button as Record<string, unknown>)[part] : undefined),
       vi,
     );
 }
@@ -108,18 +108,18 @@ describe('Nhãn hành động trên màn Nhật ký', () => {
   });
 
   it('mọi mã viết thẳng trong API đều có nhãn tiếng Việt', () => {
-    const thieu = [...literal.entries()]
+    const missing = [...literal.entries()]
       .filter(([code]) => auditActionLabel(code, t) === code)
       .map(([code, file]) => `${code}  (ghi ở ${file})`);
-    expect(thieu).toEqual([]);
+    expect(missing).toEqual([]);
   });
 
   it('mọi mẫu mã ghép trong API đều đã khai (mẫu mới = họ mới cần nhãn)', () => {
     const known = new Set<string>(TEMPLATE_PATTERNS);
-    const la = [...templates.entries()]
+    const unexpected = [...templates.entries()]
       .filter(([pattern]) => !known.has(pattern))
       .map(([pattern, file]) => `${pattern}  (ở ${file})`);
-    expect(la).toEqual([]);
+    expect(unexpected).toEqual([]);
   });
 
   it('mã ghép từ động từ sổ lịch sử đều ra nhãn (device/software/isp/service_account/catalog)', () => {
@@ -130,16 +130,16 @@ describe('Nhãn hành động trên màn Nhật ký', () => {
       [['service_account'], SERVICE_ACCOUNT_ACTIONS],
       [Object.keys(FAMILY_KEY).filter((f) => f.startsWith('catalog.')), CATALOG_ACTIONS],
     ];
-    const thieu: string[] = [];
+    const missing: string[] = [];
     for (const [prefixes, table] of families) {
       for (const prefix of prefixes) {
         for (const verb of Object.keys(table)) {
           const code = `${prefix}.${verb}`;
-          if (auditActionLabel(code, t) === code) thieu.push(code);
+          if (auditActionLabel(code, t) === code) missing.push(code);
         }
       }
     }
-    expect(thieu).toEqual([]);
+    expect(missing).toEqual([]);
   });
 
   it('tập tô đỏ trên màn Nhật ký trùng đúng tập lọc "Chỉ sự kiện an ninh" của API', () => {
@@ -151,10 +151,10 @@ describe('Nhãn hành động trên màn Nhật ký', () => {
   });
 
   it('mọi khoá trong bốn bảng tra đều có thật trong vi.ts', () => {
-    const hong = [ACTION_KEY, FAMILY_KEY, VERB_KEY, OBJECT_TYPE_KEY]
-      .flatMap((bang) => Object.entries(bang))
-      .filter(([, khoa]) => typeof traKhoa(khoa) !== 'string')
-      .map(([ma, khoa]) => `${ma} → ${khoa}`);
-    expect(hong).toEqual([]);
+    const broken = [ACTION_KEY, FAMILY_KEY, VERB_KEY, OBJECT_TYPE_KEY]
+      .flatMap((labelTable) => Object.entries(labelTable))
+      .filter(([, key]) => typeof lookupKey(key) !== 'string')
+      .map(([actionCode, key]) => `${actionCode} → ${key}`);
+    expect(broken).toEqual([]);
   });
 });

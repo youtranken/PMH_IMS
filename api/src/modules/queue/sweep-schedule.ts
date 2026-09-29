@@ -11,7 +11,7 @@ export const SWEEP_SCHEDULER_ID = 'sweep-tick';
  * chính chu kỳ, nên đổi chu kỳ là Redis giữ cả hai lịch và quét chạy hai nhịp song song.
  *
  * Mọi lịch KHÁC trong hàng đợi này bị gỡ: hàng đợi quét chỉ có một việc, nên lịch lạ chỉ có thể
- * là lịch kiểu cũ của bản trước để lại (khoá băm), và để nó sống là quay lại đúng lỗi trên.
+ * là lịch kiểu cũ (khoá băm) còn sót trong Redis, và để nó sống là quay lại đúng lỗi trên.
  */
 export async function scheduleSweep(
   queue: Pick<Queue, 'upsertJobScheduler' | 'getJobSchedulers' | 'removeJobScheduler'>,

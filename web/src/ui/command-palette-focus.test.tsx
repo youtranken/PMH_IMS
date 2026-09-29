@@ -10,8 +10,8 @@ import type { Me } from '@/lib/me';
  *
  * ===== LỖ ĐANG VÁ =====
  *
- * Hộp tìm nhanh khai `role="dialog" aria-modal="true"` nhưng chưa bao giờ giữ tiêu điểm lại.
- * Đo ngày 19/09/2026: mở ⌘K rồi gõ Tab một lần là `activeElement` về `<body>`, gõ tiếp thì đi
+ * Hộp tìm nhanh khai `role="dialog" aria-modal="true"` thì phải giữ tiêu điểm lại. Không giữ
+ * thì mở ⌘K rồi gõ Tab một lần là `activeElement` về `<body>`, gõ tiếp thì đi
  * vào nút bên ngoài. Mà `aria-modal="true"` chính là lời dặn trình đọc màn hình CẤT phần ngoài
  * hộp khỏi bộ đệm ảo — nên người dùng bàn phím đang Tab vào những phần tử mà họ không nghe
  * thấy gì, và không có dấu hiệu nào cho biết mình đã rời hộp.
@@ -25,19 +25,19 @@ import type { Me } from '@/lib/me';
  */
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
-const trang = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 3 });
+const pageNo = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 3 });
 
-function dung() {
+function mount() {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/devices')) {
         return Promise.resolve(
-          jsonResponse(200, trang([{ id: 'd1', code: 'TB-E2E-01', name: 'Switch', siteCode: 'HN' }])),
+          jsonResponse(200, pageNo([{ id: 'd1', code: 'TB-E2E-01', name: 'Switch', siteCode: 'HN' }])),
         );
       }
-      return Promise.resolve(jsonResponse(200, trang([])));
+      return Promise.resolve(jsonResponse(200, pageNo([])));
     }),
   );
   renderWithI18n(
@@ -56,19 +56,19 @@ describe('⌘K giữ tiêu điểm trong hộp', () => {
 
   it('Tab KHÔNG rời khỏi hộp, dù trang có nút bấm được ở ngoài', async () => {
     const user = userEvent.setup();
-    dung();
+    mount();
     await user.keyboard('{Control>}k{/Control}');
 
-    const oTim = screen.getByRole('combobox', { name: /tìm nhanh/i });
+    const searchBox = screen.getByRole('combobox', { name: /tìm nhanh/i });
     /* CHỜ, đừng khẳng định ngay: hộp lấy tiêu điểm trong `requestAnimationFrame`, nên dưới tải
        của lượt chạy đầy đủ nó chưa chắc xong ở nhịp này. Bản đầu của bài kiểm này khẳng định
        thẳng và đỏ ngẫu nhiên đúng một lượt — tự nó thành thứ nó sinh ra để chặn. */
-    await waitFor(() => expect(document.activeElement).toBe(oTim));
+    await waitFor(() => expect(document.activeElement).toBe(searchBox));
 
     await user.tab();
-    expect(document.activeElement).toBe(oTim);
+    expect(document.activeElement).toBe(searchBox);
     await user.tab({ shift: true });
-    expect(document.activeElement).toBe(oTim);
+    expect(document.activeElement).toBe(searchBox);
 
     // Nói thẳng điều đang canh: tiêu điểm KHÔNG được ở nút ngoài hộp.
     expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'nút ngoài hộp' }));
@@ -76,11 +76,11 @@ describe('⌘K giữ tiêu điểm trong hộp', () => {
 
   it('dòng kết quả không phải chỗ dừng Tab — chúng do ↑/↓ điều khiển', async () => {
     const user = userEvent.setup();
-    dung();
+    mount();
     await user.keyboard('{Control>}k{/Control}');
     await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), 'qxz');
 
-    const dong = await screen.findByRole('option', { name: /TB-E2E-01/ });
-    expect(dong.getAttribute('tabindex')).toBe('-1');
+    const row = await screen.findByRole('option', { name: /TB-E2E-01/ });
+    expect(row.getAttribute('tabindex')).toBe('-1');
   });
 });

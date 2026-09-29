@@ -5,17 +5,15 @@ import { clampWindow } from './expiry.service';
  *
  * ===== ĐÂY LÀ BÀI GHI LẠI HÀNH VI, KHÔNG PHẢI BẰNG CHỨNG CỦA MỘT BẢN VÁ =====
  *
- * Nói thẳng để không ai đọc nhầm: `clampWindow` KHÔNG hỏng. Nó đúng từ đầu, và bản vá A-08
- * nằm ở `dashboard.service.ts` chứ không ở đây.
+ * Nói thẳng để không ai đọc nhầm: `clampWindow` KHÔNG hỏng. Chỗ sửa của A-08 nằm ở
+ * `dashboard.service.ts` chứ không ở đây.
  *
- * Nhưng lúc vá A-08 mới lộ ra rằng lời hứa "mặc định là `expiry.warning_days`, không phải 30
- * viết cứng" — viết ngay trên đầu hàm này — chưa từng có bài kiểm nào. Cả hai đầu của lời hứa
- * đều không ai canh: dashboard ghi đè cấu hình suốt từ Epic 7 mà không gì đỏ, và nếu ngày mai
- * ai đó đổi `fallback` thành một hằng số thì cũng chẳng gì đỏ.
+ * Bài này canh lời hứa "mặc định là `expiry.warning_days`, không phải 30 viết cứng" — viết
+ * ngay trên đầu hàm này. Không có nó thì cả hai đầu của lời hứa đều không ai canh: nơi gọi
+ * ghi đè cấu hình mà không gì đỏ, và ai đó đổi `fallback` thành một hằng số cũng chẳng gì đỏ.
  *
  * Một lời hứa viết trong chú thích mà không có bài kiểm thì nó là một ý định, không phải một
- * bảo đảm — và chú thích "cùng con số với màn Expiry để hai chỗ khớp nhau" bên dashboard vừa
- * chứng minh loại ý định ấy sống sót được bao lâu.
+ * bảo đảm — A-08 chính là một chú thích "cùng con số với màn Expiry" bị code bỏ quên.
  *
  * CLAUDE.md: logic thuần phải có bài kiểm bảng dữ liệu, không kiểm qua HTTP.
  */

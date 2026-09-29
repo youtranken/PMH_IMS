@@ -7,11 +7,10 @@ import { CONFIG_THROTTLE, THROTTLE_LIMITS, type ThrottleLimitSource } from './co
 const CONFIG_WINDOW_MS = 60_000;
 
 /**
- * Rate-limit theo USER (sub) thay vì IP (epic review 2) — sau nginx mọi request
+ * Rate-limit theo USER (sub) thay vì IP — sau nginx mọi request
  * cùng IP proxy, throttle theo IP sẽ gộp cả văn phòng vào một bucket.
  * PHẢI đăng ký SAU `SessionGuard` ở AppModule, nếu không `req.user` chưa tồn tại và guard
  * này lặng lẽ lùi về đếm theo IP — đúng thứ nó sinh ra để tránh, mà không có gì báo lỗi.
- * Thứ tự đó từng bị sai và code review Epic 4 mới phát hiện.
  *
  * Route khai `@ConfigThrottle` thì trần đọc từ `system_config` (AD-11); route khác giữ trần chung
  * của `ThrottlerModule.forRoot`.

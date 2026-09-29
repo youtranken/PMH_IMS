@@ -18,7 +18,7 @@ import { IpamController } from './ipam.controller';
 import { SubnetService } from './subnet.service';
 import { IpamCatalogUsage } from './ipam-catalog-usage';
 
-/** Quản lý IP & NAT (Epic 5) — chủ sở hữu bảng `subnet`, `ip_address`, `ip_history` (AD-3). */
+/** Quản lý IP & NAT — chủ sở hữu bảng `subnet`, `ip_address`, `ip_history` (AD-3). */
 @Module({
   imports: [AuditModule, CatalogModule, DevicesModule, UsersModule],
   controllers: [IpamController],

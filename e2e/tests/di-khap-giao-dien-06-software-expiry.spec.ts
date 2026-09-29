@@ -10,7 +10,7 @@ import {
   rowAction,
   mailpitMessages,
   rowActionNames,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -94,7 +94,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
   /**
    * Tên các cột, đọc từ NỘI DUNG VĂN BẢN chứ không phải chữ đã qua CSS.
    *
-   * ĐÃ ĐO (lượt chạy 10/09): `allInnerTexts()` trả về chữ SAU khi trình duyệt áp
+   * ĐÃ ĐO: `allInnerTexts()` trả về chữ SAU khi trình duyệt áp
    * `text-transform: uppercase` của `th`, nên nó ra "MÃ HỒ SƠ" trong khi chuỗi thật trong
    * `vi.ts` là "Mã hồ sơ". So với `vi.ts` mà lấy `innerText` là so hai thứ khác nhau: đổi
    * một dòng CSS sẽ làm đỏ một bài kiểm nội dung, còn đổi chữ trong `vi.ts` thì… cũng đỏ,
@@ -458,8 +458,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBeVisible();
 
     // ===== HAI ĐƯỜNG ĐÓNG HỘP =====
-    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
-       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
+    /* Form đã gõ dở, nên lối đóng TÌNH CỜ phải hỏi lại trước (`Dialog guardUnsaved`) — trả
+       lời xong mới đóng. */
     await add.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await confirmAction(page, 'Bỏ và đóng');
     await expect(add, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
@@ -475,7 +475,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Form sửa mở ra trống là kiểu hỏng tệ nhất của màn nhập: bấm Lưu một phát là ghi đè sạch
      * mọi thứ, và trên màn hình không có gì báo rằng dữ liệu vừa bị xóa.
      */
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
     await rowAction(page, code, 'Sửa');
 
@@ -568,7 +568,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== CHẾ ĐỘ GÁN MỚI, mở thẳng từ menu ba chấm của danh sách =====
     await page.goto('/software');
-    await timVaChoLoc(page, licenseCode);
+    await searchAndWaitForFilter(page, licenseCode);
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     await rowAction(page, licenseCode, 'Gán vào máy');
 
@@ -649,17 +649,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     /*
      * BẤM VÀO TAB, KHÔNG GÕ `?tab=devices`.
      *
-     * ĐÃ ĐO (lượt chạy 10/09): mở thẳng `/software/<id>?tab=devices` rơi xuống tab "Hồ sơ".
-     * `useVisibleTab` chạy ngay từ lượt render ĐẦU, lúc `software.data` chưa về nên danh sách
-     * tab chưa có "devices" (tab đó chỉ mọc ra khi biết hồ sơ là license) — nó kẹp về
-     * "profile" và không bao giờ quay lại. Đó là một lỗi THẬT, được ghi thành bài riêng
-     * `test.fixme` ở cuối khối này. Ở đây thì đi đường của người dùng: bấm tab.
+     * Link sâu `?tab=devices` vào tab mọc-theo-dữ-liệu có bài riêng ở cuối khối này (BÀI 7).
+     * Ở đây thì đi đường của người dùng: bấm tab.
      */
     await page.goto(`/software/${licenseId}`);
     await page.getByRole('tab', { name: /^Máy đang dùng/ }).click();
     const seatRow = page.getByRole('row', { name: new RegExp(deviceCode) });
     await expect(seatRow, 'Ghế vừa gán phải hiện trong tab Máy đang dùng').toBeVisible();
-    /* "Sửa" và "Gỡ" nay ở trong menu ba chấm, không còn hai nút sát nhau (rà UI/UX #21). */
+    /* "Sửa" và "Gỡ" ở trong menu ba chấm, không phải hai nút sát nhau. */
     await seatRow.getByRole('button', { name: /^Thao tác với / }).click();
     await page.getByRole('menuitem', { name: 'Sửa', exact: true }).click();
 
@@ -798,18 +795,17 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('tab', { name: 'Hồ sơ', exact: true }).click();
     const profile = page.getByRole('tabpanel');
     /*
-     * HẠN NẰM Ở THẺ ĐỊNH DANH, KHÔNG CÒN Ở TAB HỒ SƠ (đợt dựng lại 16-17/09/2026).
+     * HẠN NẰM Ở THẺ ĐỊNH DANH, KHÔNG Ở TAB HỒ SƠ.
      *
-     * Bản trước của bài này đòi một `<h2>Hết hạn</h2>` bên trong tab. Đúng với bố cục cũ, và
-     * chính bố cục cũ là thứ đem sửa: nó vẽ một thẻ "Hết hạn" chiếm trọn bề ngang ở cột chính,
-     * rồi dải chỉ số vẽ LẠI y hệt cách đó hai dòng. Giờ hạn chỉ còn một chỗ — cột phải.
+     * Một thẻ "Hết hạn" chiếm trọn bề ngang ở cột chính sẽ bị dải chỉ số vẽ LẠI y hệt cách đó
+     * hai dòng, nên hạn chỉ có một chỗ — cột phải.
      *
-     * Bài kiểm vì thế đổi CHỖ HỎI chứ không hạ yêu cầu: vẫn phải có thanh thời hạn đầy đủ
+     * Yêu cầu không hạ: vẫn phải có thanh thời hạn đầy đủ
      * (thanh tiến trình + hai mốc ngày), và cột chính KHÔNG được vẽ lại lần nữa.
      */
-    const theDinhDanh = page.getByRole('region', { name: 'Thẻ định danh' });
+    const identityCard = page.getByRole('region', { name: 'Thẻ định danh' });
     await expect(
-      theDinhDanh.getByRole('progressbar'),
+      identityCard.getByRole('progressbar'),
       'Hồ sơ có hạn thì thẻ định danh phải vẽ thanh thời hạn đầy đủ',
     ).toHaveCount(1);
     await expect(
@@ -834,7 +830,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     /*
      * CHỜ DÒNG GHẾ TRƯỚC, ĐỌC CỘT SAU.
      *
-     * ĐÃ ĐO (lượt chạy 10/09): đọc cột ngay sau khi bấm tab thì nhận về MẢNG RỖNG — lúc đó
+     * ĐÃ ĐO: đọc cột ngay sau khi bấm tab thì nhận về MẢNG RỖNG — lúc đó
      * panel còn đang hỏi danh sách ghế và chưa vẽ bảng nào. `allTextContents()` là một lượt
      * đọc MỘT LẦN, không chờ lại như `expect`, nên nó chụp đúng khoảnh khắc trống ấy. Một
      * khẳng định biết chờ phải đứng trước nó.
@@ -960,9 +956,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     /*
      * ===== BA CON SỐ NGƯỜI TA NHÌN ĐẦU TIÊN MỖI SÁNG =====
      *
-     * Dựng lại 17/09/2026: ba cái pill 11px "Đã quá hạn: 4" thành ba Ô SỐ — số to đứng trước,
-     * nhãn nhỏ bên dưới — và mỗi ô là một NÚT LỌC. Bài kiểm đổi theo, nhưng giữ đúng câu hỏi
-     * cũ ("ba con số ấy có mặt không") và siết thêm một vế: chúng phải bấm được, và phải khai
+     * Ba Ô SỐ — số to đứng trước, nhãn nhỏ bên dưới — và mỗi ô là một NÚT LỌC. Bài kiểm hỏi
+     * "ba con số ấy có mặt không" và thêm một vế: chúng phải bấm được, và phải khai
      * `aria-pressed` để trình đọc màn hình biết đây là nút bật/tắt chứ không phải nút lệnh.
      */
     for (const label of ['Đã quá hạn', 'Gấp \\(≤7 ngày\\)', 'Sắp tới \\(≤30 ngày\\)']) {
@@ -1182,7 +1177,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toEqual(['Sửa luật', 'Tạm ngưng', 'Xem trước thư', 'Gửi thử cho tôi', 'Gửi thử', 'Xóa']);
 
     /*
-     * "GỬI THỬ" PHẢI HỎI LẠI, VÀ CÂU HỎI PHẢI NÊU ĐÍCH DANH NGƯỜI NHẬN (rà UI/UX #19).
+     * "GỬI THỬ" PHẢI HỎI LẠI, VÀ CÂU HỎI PHẢI NÊU ĐÍCH DANH NGƯỜI NHẬN.
      *
      * Chữ "thử" đọc ra như gửi vào đâu đó an toàn. Nó không: lượt này bắn email THẬT tới đúng
      * danh sách người nhận của luật — ở đây là `sep@pmh.com.vn` — và thư đã đi thì không thu
@@ -1191,7 +1186,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Vế chốt là HỘP THƯ: bấm Hủy xong mà Mailpit vẫn nhận thêm thư thì câu hỏi lại chỉ là
      * trang trí — hộp hiện lên trong khi lượt gửi đã chạy ở phía sau.
      */
-    const thuTruoc = (await mailpitMessages()).length;
+    const mailCountBefore = (await mailpitMessages()).length;
     // Khớp nguyên văn: menu còn có "Gửi thử cho tôi" (EX-021), đây là bản gửi cả danh sách.
     await rowAction(page, ruleName, /^Gửi thử$/);
     await expect(
@@ -1204,7 +1199,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     expect(
       (await mailpitMessages()).length,
       'bấm Hủy mà hộp thư vẫn nhận thêm thư nghĩa là câu hỏi lại chỉ để trang trí',
-    ).toBe(thuTruoc);
+    ).toBe(mailCountBefore);
 
     // ===== BÊN TRONG HỘP "THÊM LUẬT" =====
     await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
@@ -1279,18 +1274,18 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * người nhận (EX-020): số lượng tùy hộp thư đã dùng ở luật khác, nhưng hộp thư của chính
      * người đang đăng nhập thì luôn có — chờ nó hiện rồi mới đếm.
      */
-    const goiY = add.getByRole('group', { name: 'Gợi ý người nhận' }).getByRole('button');
+    const suggestions = add.getByRole('group', { name: 'Gợi ý người nhận' }).getByRole('button');
     await expect(
-      goiY.filter({ hasText: E2E_SA.email }),
+      suggestions.filter({ hasText: E2E_SA.email }),
       'Gợi ý người nhận luôn có hộp thư của chính mình',
     ).toHaveCount(1);
-    await expect(goiY, 'mỗi gợi ý là một nút "Thêm <email>"').toHaveText(
-      Array(await goiY.count()).fill(/^\+ \S+@\S+$/),
+    await expect(suggestions, 'mỗi gợi ý là một nút "Thêm <email>"').toHaveText(
+      Array(await suggestions.count()).fill(/^\+ \S+@\S+$/),
     );
     await expect(
       add.getByRole('button'),
       'Hộp thêm luật (hằng tháng) có đúng 6 nút ngoài gợi ý: ✕ · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
-    ).toHaveCount(6 + (await goiY.count()));
+    ).toHaveCount(6 + (await suggestions.count()));
     for (const name of ['Đóng hộp thoại', 'Tần suất', 'Ngày trong tháng', 'Lúc', 'Hủy', 'Lưu']) {
       await expect(add.getByRole('button', { name, exact: true })).toHaveCount(1);
     }
@@ -1316,8 +1311,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(add, 'Lưu hỏng thì hộp phải ở lại').toBeVisible();
 
     /*
-     * Form đã gõ hai ô, nên từ 12/09 Esc HỎI LẠI thay vì đóng thẳng (`Dialog guardUnsaved`,
-     * rà UI/UX #10). Phải trả lời xong mới đóng — bỏ bước này thì hộp hỏi lại đứng chắn giữa
+     * Form đã gõ hai ô, nên Esc HỎI LẠI thay vì đóng thẳng (`Dialog guardUnsaved`). Phải trả
+     * lời xong mới đóng — bỏ bước này thì hộp hỏi lại đứng chắn giữa
      * màn và mọi cú bấm sau đó trong bài đều treo.
      */
     await page.keyboard.press('Escape');
@@ -1360,38 +1355,28 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
   /*
    * ===================================================================================
-   * BÀI 7 — LỖI THẬT VỪA TÌM ĐƯỢC, GHI LẠI Ở DẠNG `fixme` CHỨ KHÔNG SỬA BÀI ĐỂ NÉ.
+   * BÀI 7 — LINK SÂU `?tab=` VÀO MỘT TAB MỌC-THEO-DỮ-LIỆU.
    * ===================================================================================
    *
-   * TRIỆU CHỨNG ĐÃ ĐO (lượt chạy 10/09, ảnh chụp trạng thái của bài "hộp Gán vào máy"):
-   * mở thẳng `/software/<id>?tab=devices` của một license CÓ ghế thì trang dừng ở tab "Hồ
-   * sơ". Thanh tab vẫn hiện đủ "Máy đang dùng 1", nhưng tab được chọn là "Hồ sơ".
+   * TRIỆU CHỨNG KHI HỎNG: mở thẳng `/software/<id>?tab=devices` của một license CÓ ghế thì
+   * trang dừng ở tab "Hồ sơ". Thanh tab vẫn hiện đủ "Máy đang dùng 1", nhưng tab được chọn là
+   * "Hồ sơ".
    *
-   * NGUYÊN NHÂN (đọc `web/src/ui/tabs.tsx` + `software-detail.tsx` sau khi thấy ảnh chụp):
-   * `initialTab` đọc `?tab=devices` đúng, nhưng `useVisibleTab` chạy ngay từ lượt render ĐẦU
-   * — lúc `software.data` còn `undefined`. Tab "Máy đang dùng" chỉ được ghép vào `tabItems`
-   * khi đã biết hồ sơ là license, nên ở lượt đó danh sách hợp lệ chỉ có bốn khóa và
-   * `useVisibleTab` kẹp về `profile`, gọi `setTab('profile')`. Dữ liệu về sau đó không kéo
-   * lại được: `tab` đã bị ghi đè.
+   * CƠ CHẾ (`web/src/ui/tabs.tsx` + `software-detail.tsx`): `initialTab` đọc `?tab=devices`
+   * đúng, nhưng `useVisibleTab` chạy ngay từ lượt render ĐẦU — lúc `software.data` còn
+   * `undefined`. Tab "Máy đang dùng" chỉ được ghép vào `tabItems` khi đã biết hồ sơ là
+   * license; nếu ở lượt đó danh sách hợp lệ thiếu khóa này thì `useVisibleTab` kẹp về
+   * `profile`, gọi `setTab('profile')`, và dữ liệu về sau không kéo lại được.
    *
-   * VÌ SAO ĐÁNG VÁ CHỨ KHÔNG ĐÁNG LÀM NGƠ: đây là đường dẫn người ta DÁN CHO NHAU ("ghế
+   * VÌ SAO QUAN TRỌNG: đây là đường dẫn người ta DÁN CHO NHAU ("ghế
    * license nằm ở đây") và tự trang này sinh ra khi bấm tab. Nó im lặng đưa người nhận tới
    * một tab khác — không báo lỗi, không có dấu hiệu nào. Cùng một cơ chế sẽ đánh trượt
    * `?tab=ports` của hồ sơ thiết bị, vì tab đó cũng chỉ mọc theo dữ liệu.
    *
-   * HƯỚNG VÁ (gợi ý, không phải phần việc của bài kiểm): `useVisibleTab` chỉ được kẹp khi
-   * danh sách tab đã CHỐT — truyền thêm cờ "đã tải xong" và bỏ qua hiệu ứng lúc còn đang tải.
-   *
-   * ĐÃ VÁ 19/09/2026, `fixme` GỠ CÙNG NGÀY. Bản vá đi theo hướng trên nhưng gọn hơn: thay vì
-   * thêm cờ, giữ luôn tab mọc-theo-dữ-liệu trong danh sách KHI TRUY VẤN CÒN ĐANG TẢI —
-   * `software-detail.tsx` (`software.isPending || …`) và `device-detail.tsx`
+   * CÁCH CODE TRÁNH NÓ: giữ luôn tab mọc-theo-dữ-liệu trong danh sách KHI TRUY VẤN CÒN ĐANG
+   * TẢI — `software-detail.tsx` (`software.isPending || …`) và `device-detail.tsx`
    * (`… || ports.isPending`). Danh sách khi ấy không bao giờ thiếu khóa ở lượt render đầu, nên
-   * `useVisibleTab` không có gì để kẹp.
-   *
-   * BÀI NÀY TỪNG LÀ BÀI DUY NHẤT BỊ BỎ QUA trong cả 440 bài của bộ E2E — và nó cũng là bài duy
-   * nhất chứng minh bản vá kia chạy. Suốt năm lượt chạy đầy đủ, dòng tổng kết "439 passed,
-   * 1 skipped" ĐÃ nói ra chuyện đó; chỉ là không ai hỏi "bài nào?". Một bài `fixme` mà không ai
-   * đọc tên thì không khác gì một bài không tồn tại.
+   * `useVisibleTab` không có gì để kẹp. Bài này là bài duy nhất chứng minh điều đó.
    */
   test(
     'Link sâu ?tab=devices phải mở đúng tab "Máy đang dùng", không rơi về tab Hồ sơ',

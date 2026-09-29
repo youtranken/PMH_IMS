@@ -7,11 +7,11 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   /*
-   * KHÔNG ĐƯỢC ĐẨY CẢ TRANG TRÔI NGANG (nâng lên luật chung 17/09/2026).
+   * KHÔNG ĐƯỢC ĐẨY CẢ TRANG TRÔI NGANG — luật chung, không vá riêng từng màn.
    *
-   * Bốn năm nút trạng thái kèm số đếm không đời nào vừa 390px. Màn Dải mạng đã phải vá đúng
-   * chỗ này, nhưng vá riêng trong `.subnet-pane` — nên Kho thanh lý (4 nút, có cả "Tài khoản
-   * dịch vụ N") vẫn tràn, và chưa bài kiểm nào canh nó. Cuộn NGANG TRONG CHÍNH NÓ là hành vi
+   * Bốn năm nút trạng thái kèm số đếm không đời nào vừa 390px. Vá riêng trong một màn (vd
+   * `.subnet-pane`) thì màn khác (Kho thanh lý, 4 nút, có cả "Tài khoản dịch vụ N") vẫn
+   * tràn. Cuộn NGANG TRONG CHÍNH NÓ là hành vi
    * đúng cho một dải nút: cuộn cả trang thì tiêu đề và bảng trôi theo.
    */
   max-width: 100%;
@@ -143,9 +143,9 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
 
 /* ─── `data-columns` PHẢI có tác dụng ────────────────────────────────────────────────────
    `FormSection columns={n}` và mọi `<div class="form-grid" data-columns={1}>` viết ra thuộc
-   tính này, nhưng trước đây KHÔNG có luật nào đọc nó — mọi form đều rơi về `auto-fill` ở
-   trên, tức số cột do BỀ RỘNG hộp thoại quyết định chứ không phải do người viết chọn. Hậu
-   quả nhìn thấy được: hộp 480px khai `columns={1}` vẫn xé thành 2 cột, hộp 860px khai
+   tính này. Không có luật đọc nó thì mọi form đều rơi về `auto-fill` ở trên, tức số cột do
+   BỀ RỘNG hộp thoại quyết định chứ không phải do người viết chọn: hộp 480px khai
+   `columns={1}` vẫn xé thành 2 cột, hộp 860px khai
    `columns={3}` thành 4 cột, và ô nhập rơi vào những chỗ không ai định đặt.
    Lỗi kiểu này không ném exception nào và không test nào bắt được. */
 .form-grid[data-columns='1'] {
@@ -281,7 +281,7 @@ input[list]::-webkit-calendar-picker-indicator {
   color: var(--ink-3);
 }
 /* Chevron SVG THỐNG NHẤT với DatePicker (.dp-trigger .chev): chỉ xuống khi đóng, lật
-   180° khi mở. Trước đây là ký tự › xoay — không khớp mũi tên lịch. */
+   180° khi mở. Không dùng ký tự › xoay — không khớp mũi tên lịch. */
 .fsel-caret {
   position: absolute;
   right: var(--space-4);
@@ -552,8 +552,8 @@ input.switch:focus-visible {
 /* ─── Một dòng dịch vụ trong menu chọn port (sổ NAT) ──────────────────────────────────────
    Ba mẩu trên MỘT hàng: tên · giao thức · port. Một dòng chỉ có tên thì phải bung ra từng
    cái mới nhớ nó là port mấy — đúng việc mà danh mục này sinh ra để khỏi phải làm.
-   (Trước đây khối này là một bảng luôn mở dưới ô nhập; hai ô port thành hai bảng chiếm quá
-   nửa hộp thoại, nên nó thu về dropdown — xem `service-port-picker.tsx`.) */
+   (Là dropdown, không phải một bảng luôn mở dưới ô nhập: hai ô port thành hai bảng thì
+   chiếm quá nửa hộp thoại — xem `service-port-picker.tsx`.) */
 .svc-opt {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 74px;

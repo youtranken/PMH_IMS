@@ -383,11 +383,11 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * vào trong hộp, Esc không đóng, hoặc đóng xong tiêu điểm rơi mất.
    */
   /**
-   * ĐIỂM DỪNG TAB ĐẦU TIÊN LÀ "BỎ QUA MENU" (WCAG 2.4.1, thêm 18/09/2026).
+   * ĐIỂM DỪNG TAB ĐẦU TIÊN LÀ "BỎ QUA MENU" (WCAG 2.4.1).
    *
-   * `css/base.css` có sẵn luật `.skip-link` từ lâu — ẩn off-screen, hiện ra khi Tab tới —
-   * nhưng tới 18/09 KHÔNG component nào render nó, nên luật ấy là CSS chết và người đi bàn
-   * phím phải Tab qua trọn sidebar ở MỖI lần đổi trang. Bài "Bàn phím một mình cũng đi được"
+   * `css/base.css` có luật `.skip-link` — ẩn off-screen, hiện ra khi Tab tới. Không component
+   * nào render nó thì luật ấy là CSS chết và người đi bàn phím phải Tab qua trọn sidebar ở MỖI
+   * lần đổi trang. Bài "Bàn phím một mình cũng đi được"
    * ngay dưới đây đếm tới 80 lượt Tab để tới được nút đầu trang — đó chính là quãng đường ấy.
    *
    * Phải là một bài RIÊNG, ngay sau một lượt nạp trang: sau khi bấm chuột vào link điều hướng

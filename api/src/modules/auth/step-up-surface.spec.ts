@@ -1,11 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 /*
- * `allControllers` và `classDecoratorsOf` chuyển sang `src/test/source-text.ts` ngày
- * 20/09/2026: `roles-surface.spec.ts` cần đúng hai hàm ấy, và chép sang là dựng bản thứ hai
- * của cùng một bộ quét (AD-15). Bản dùng chung cũng vá một lỗi mà bản ở đây có:
- * `classDecoratorsOf` cũ chỉ đi LÊN từ `@Controller(...)`, nên nó đọc hụt decorator đặt ở
- * dòng NGAY DƯỚI — như `@Roles` của `audit.controller.ts`.
+ * `allControllers` và `classDecoratorsOf` nằm ở `src/test/source-text.ts`: `roles-surface.spec.ts`
+ * cần đúng hai hàm ấy, và chép sang là dựng bản thứ hai của cùng một bộ quét (AD-15).
  */
 import { allControllers, classDecoratorsOf } from '../../test/source-text';
 
@@ -16,11 +13,10 @@ const CONTROLLERS = allControllers(SRC);
 /**
  * CỔNG CANH CỔNG — `StepUpGuard` mặc định đóng chỉ có tác dụng nếu nó thật sự được cắm.
  *
- * ===== LỖ ĐANG ĐÓNG =====
+ * ===== LỖ MÀ BÀI NÀY ĐÓNG =====
  *
- * `@RequiresStepUp()` là opt-in, và tới 10/09 nó xuất hiện đúng 5 lần trong cả repo — tất cả ở
- * `vault.controller.ts`. Toàn bộ `/api/v1/accounts/*` đứng ngoài hàng rào suốt chín epic, và
- * không có gì đỏ để báo. Hậu quả không phải lý thuyết: một phiên SA bị chiếm (đúng mô hình đe
+ * Nếu `@RequiresStepUp()` là opt-in thì một route quên khai đứng ngoài hàng rào mà không có
+ * gì đỏ để báo. Hậu quả không phải lý thuyết: một phiên SA bị chiếm (đúng mô hình đe
  * doạ mà cửa két tự nêu — "cookie trộm, máy bỏ ngỏ, chưa từng gõ mã") đi trọn được đường
  * `POST /accounts` (trả `temporaryPassword`) → đăng nhập → `POST /auth/totp/enroll` (trả secret
  * base32) → step-up → `POST /vault/secrets/:id/reveal`. Yếu tố thứ hai của NẠN NHÂN không bao
@@ -119,9 +115,9 @@ describe('Step-up mặc định đóng (FR-022)', () => {
       why: 'đường DUY NHẤT plaintext rời khỏi hệ thống',
     },
     /*
-     * BỐN CỬA GHI CỦA KÉT — thêm 17/09/2026.
+     * BỐN CỬA GHI CỦA KÉT.
      *
-     * Bản trước chỉ khoá đường ĐỌC. Nhưng lớp mang `@NoStepUp()`, nên `@RequiresStepUp()` ở
+     * Không chỉ khoá đường ĐỌC: lớp mang `@NoStepUp()`, nên `@RequiresStepUp()` ở
      * từng route là thứ DUY NHẤT bắt gõ mã ở bốn cửa này; gỡ một dòng đi là cửa đó lặng lẽ rơi
      * về "không cần gõ". Và không bài kiểm nào bắt được: mọi bài E2E đều cất/sửa secret ngay
      * sau `firstLogin`, tức còn trong thời gian ân hạn, nên hàng rào chưa bao giờ bị chạm tới.

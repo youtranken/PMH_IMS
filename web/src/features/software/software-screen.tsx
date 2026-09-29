@@ -66,16 +66,16 @@ const EMPTY_FILTERS: Filters = {
   licenseModel: '',
 };
 
-/** Danh sách phần mềm (story 3.1, FR-008/FR-009) — lọc theo loại, cột tình trạng hạn. */
+/** Danh sách phần mềm (FR-008/FR-009) — lọc theo loại, cột tình trạng hạn. */
 export function SoftwareScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
   /*
-   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
-   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "license sắp hết hạn" cho đồng
-   * nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì một danh sách trắng.
-   * Ô tìm cũng có debounce 250ms — trước đây mỗi phím là một lượt gọi API.
+   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState`. Nhờ
+   * vậy: F5 giữ nguyên bộ lọc, gửi được link "license sắp hết hạn" cho đồng nghiệp, và bấm
+   * Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì một danh sách trắng. Ô tìm có debounce
+   * 250ms để mỗi phím không thành một lượt gọi API.
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,

@@ -65,9 +65,9 @@ test.describe('Địa chỉ IP ở 390px', () => {
   });
 
   /**
-   * G-11 — Story 5.4 AC-2 nói thẳng "panel pass 390px", mà chưa có bài nào.
+   * G-11 — AC nói thẳng "panel pass 390px".
    *
-   * Đây là cảnh dùng thật của cả Epic 5: đứng trước tủ mạng, mở trang con switch trên điện
+   * Đây là cảnh dùng thật của cả mảng IP: đứng trước tủ mạng, mở trang con switch trên điện
    * thoại, cần biết ngay nó đang giữ IP nào.
    */
   test('panel IP trên trang thiết bị đọc được ở 390px', async ({ page }) => {
@@ -106,9 +106,9 @@ test.describe('Địa chỉ IP ở 390px', () => {
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
     // Hỏi trong KHU "Địa chỉ IP" — ở 390px bản đồ quan hệ ẩn đi, nhưng bản danh sách thay thế
     // của nó vẫn nằm trong DOM và vẫn mang đúng chuỗi này.
-    const khuIp = page.getByRole('region', { name: 'Địa chỉ IP' });
-    await expect(khuIp.getByText(`172.17.${octet}.1`)).toBeVisible();
-    await expect(khuIp.getByText('cổng quản trị switch tầng 3')).toBeVisible();
+    const ipSection = page.getByRole('region', { name: 'Địa chỉ IP' });
+    await expect(ipSection.getByText(`172.17.${octet}.1`)).toBeVisible();
+    await expect(ipSection.getByText('cổng quản trị switch tầng 3')).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 });

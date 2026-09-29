@@ -58,7 +58,7 @@ export interface AssignResult {
 }
 
 /**
- * Gán license vào thiết bị (story 3.2, FR-011).
+ * Gán license vào thiết bị (FR-011).
  *
  * Thuộc module `software` vì bảng nói về license. Thông tin thiết bị lấy qua
  * `DevicesApiService` — KHÔNG join sang bảng `device` (AD-2).
@@ -180,7 +180,7 @@ export class LicenseAssignmentService {
     return this.decorate(rows);
   }
 
-  /** License đang nằm ở một thiết bị — panel trên trang thiết bị (story 3.2 + khu mở rộng 2.5). */
+  /** License đang nằm ở một thiết bị — panel trên trang thiết bị (khu mở rộng). */
   async listForDevice(deviceId: string): Promise<AssignmentRow[]> {
     const rows = await this.db
       .select()
@@ -287,7 +287,7 @@ export class LicenseAssignmentService {
 
     const { id, warnings } = await this.db.transaction(async (tx) => {
       /*
-       * Máy đã thanh lý không được ăn thêm một ghế license nào (rà soát 07/09).
+       * Máy đã thanh lý không được ăn thêm một ghế license nào.
        *
        * KHOÁ THIẾT BỊ TRƯỚC, LICENSE SAU — thứ tự này là bắt buộc và phải giống nhau ở mọi
        * đường ghi, nếu không hai lượt khoá chéo nhau sẽ chết cứng (deadlock). Đường thanh lý
@@ -298,7 +298,7 @@ export class LicenseAssignmentService {
       /*
        * ĐẾM SEAT TRONG TRANSACTION, sau khi đã khóa hàng license.
        *
-       * Bản trước đếm bằng `this.usageFor([softwareId])` — chạy trên pool, NGOÀI transaction
+       * Đừng đếm bằng `this.usageFor([softwareId])` — nó chạy trên pool, NGOÀI transaction
        * bên dưới — rồi chèn vô điều kiện. License 10 ghế đang dùng 9, hai người gán cùng
        * lúc: cả hai đọc `used = 9`, `9 >= 10` là sai nên cả hai qua cửa, cả hai chèn.
        * Thành 11/10 và KHÔNG AI phải khai `overSeatReason` — đúng thứ AC 3.2 dựng ra để
@@ -314,12 +314,12 @@ export class LicenseAssignmentService {
        *
        * ĐỌC LẠI `seat_total` TRONG CHÍNH CÂU KHÓA NÀY, không dùng lại `software.seatTotal`.
        *
-       * Bản trước chỉ `select({ id })`: hàng được KHÓA mà không được ĐỌC. Phép so bên dưới vẫn
-       * lấy con số từ `findOne()` ở đầu hàm — chạy trên pool, trước khi có bất kỳ khóa nào.
+       * Chỉ `select({ id })` thì hàng được KHÓA mà không được ĐỌC: phép so bên dưới sẽ lấy
+       * con số từ `findOne()` ở đầu hàm — chạy trên pool, trước khi có bất kỳ khóa nào.
        * Giữa hai chỗ đó, một lượt hạ trần (`PATCH /software/:id`, hoặc import sửa hồ sơ) chen
        * vào được: lượt gán đứng chờ khóa, rồi đếm `used` rất đúng và đem so với một cái trần
        * ĐÃ KHÔNG CÒN. Ghế vượt seat lọt vào mà không ai phải khai `overSeatReason` — đúng thứ
-       * AC 3.2 dựng ra để chặn (A-05, rà soát 21/09).
+       * AC 3.2 dựng ra để chặn (A-05).
        *
        * Khóa đúng chỗ nhưng đọc sai nguồn thì cái khóa chỉ còn là nghi lễ.
        */
@@ -584,8 +584,8 @@ export class LicenseAssignmentService {
        * `released_at IS NULL` đi cùng câu UPDATE — câu SELECT ở trên chạy ngoài transaction
        * này, nên một mình nó không chốt được gì.
        *
-       * Gỡ hai lần cùng lúc (bấm đúp, hoặc hai người cùng mở màn): bản trước ghi đè
-       * `released_at` lần thứ hai và ghi THÊM một dòng `software_history` "license-released"
+       * Gỡ hai lần cùng lúc (bấm đúp, hoặc hai người cùng mở màn): thiếu vị từ này thì lượt
+       * thứ hai ghi đè `released_at` và ghi THÊM một dòng `software_history` "license-released"
        * nữa. Sổ lịch sử thành ra có hai lần gỡ cho một lần ngồi ghế — và bảng lịch sử là
        * chỉ-thêm (AD-13), không sửa lại được.
        */

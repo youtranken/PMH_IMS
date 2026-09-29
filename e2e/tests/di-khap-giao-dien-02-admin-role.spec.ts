@@ -54,7 +54,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * LÀM ĐƯỢC GÌ, nên khúc dựng người được rút ngắn — mỗi bài đã phải trả giá hai lượt đăng
    * nhập đầy đủ kèm hai lần chờ mã TOTP mới rồi.
    */
-  async function taoTaiKhoanAdmin(page: Page): Promise<string> {
+  async function createAdminAccount(page: Page): Promise<string> {
     const created = await page.request.post('/api/v1/accounts', {
       headers: await writeHeaders(page),
       data: {
@@ -77,7 +77,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
   }
 
   /** Lấy id loại thiết bị "Switch" từ danh mục — mọi vai đều đọc được danh mục. */
-  async function loaiSwitch(page: Page): Promise<string> {
+  async function switchType(page: Page): Promise<string> {
     const res = await page.request.get('/api/v1/catalog');
     expect(res.status(), 'danh mục phải đọc được thì mới tạo được thiết bị').toBe(200);
     const catalog = (await res.json()) as { deviceTypes: { id: string; name: string }[] };
@@ -87,7 +87,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
   }
 
   /** Tạo một thiết bị (mã luôn chứa "E2E" để `resetDevices()` dọn được). */
-  async function taoThietBi(page: Page, code: string, typeId: string): Promise<string> {
+  async function createDevice(page: Page, code: string, typeId: string): Promise<string> {
     const created = await page.request.post('/api/v1/devices', {
       headers: await writeHeaders(page),
       data: { code, name: `Switch ${code}`, deviceTypeId: typeId, serial: `FOC-${code}` },
@@ -135,23 +135,23 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     // Mật khẩu tạm hiện ĐÚNG MỘT LẦN — đọc trượt là bài này không đi tiếp được.
     await expect(page.getByText('Mật khẩu tạm')).toBeVisible();
-    const matKhauTam = (await page.getByTestId('temp-password').innerText()).trim();
+    const tempPassword = (await page.getByTestId('temp-password').innerText()).trim();
     expect(
-      matKhauTam.length,
+      tempPassword.length,
       'mật khẩu tạm phải đủ dài — đây là thứ duy nhất mở được tài khoản mới',
     ).toBeGreaterThanOrEqual(12);
 
     /*
-     * Nhãn nút là một LỜI XÁC NHẬN chứ không phải "Đóng" (rà UI/UX 12/09): hộp này chặn Esc
+     * Nhãn nút là một LỜI XÁC NHẬN chứ không phải "Đóng": hộp này chặn Esc
      * và chặn click-nền, nên bấm nút là đường ra DUY NHẤT — và người bấm phải tự khẳng định
      * đã ghi lại mật khẩu, vì không có lần hiện thứ hai.
      */
     await page.getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true }).click();
 
-    const dong = page.getByRole('row', { name: new RegExp(ADMIN_NAME) });
-    await expect(dong).toBeVisible();
+    const row = page.getByRole('row', { name: new RegExp(ADMIN_NAME) });
+    await expect(row).toBeVisible();
     await expect(
-      dong.getByText('Quản trị', { exact: true }),
+      row.getByText('Quản trị', { exact: true }),
       'dòng vừa tạo phải mang huy hiệu vai Quản trị, không phải Thành viên mặc định',
     ).toBeVisible();
 
@@ -160,7 +160,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await logout(page);
 
     // ===== Người mới vào làm việc =====
-    await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
+    await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
 
     const menu = page.getByRole('navigation', { name: 'Điều hướng chính' });
 
@@ -220,26 +220,22 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * Một cánh cửa bị khoá phải NÓI ra là nó khoá. Bài này gõ thẳng bốn URL của SA bằng phiên
    * admin và khẳng định ĐIỀU THẬT SỰ XẢY RA — không phải điều dễ nghe.
    *
-   * ĐÃ ĐỌC `web/src/App.tsx` (bản 09/09) trước khi viết, và ba route ứng xử KHÁC NHAU:
+   * Các route ứng xử KHÁC NHAU (đọc `web/src/App.tsx`):
    *
-   *   • `/dev/components` — route chỉ được ĐĂNG KÝ khi `me.role === 'sa'` (App.tsx, khối
-   *     `{me.role === 'sa' ? <Route …/> : null}`). Admin gõ URL rơi xuống `*` → 404. Gác thật
-   *     ở web.
+   *   • `/dev/components` và `/admin/accounts` — gác theo bảng `ROUTE_ROLES`
+   *     (`lib/routes`): vai không đủ thì nhận trang 403 "Bạn không có quyền xem trang này".
    *   • `/documents` — CHƯA có route nào cả (mục menu còn `planned`), nên mọi vai đều nhận
    *     404, kể cả SA.
-   *   • `/admin/accounts` — **KHÔNG gác vai ở web**. `<Route path={PATHS.adminAccounts}
-   *     element={<AccountsScreen me={me} />} />` nằm ngoài mọi điều kiện vai; `app-nav.ts` chỉ
-   *     ẩn MỤC MENU (`roles: ['sa']`). Admin gõ thẳng URL thì màn VẪN dựng ra.
    *
    * Hàng rào thật của `/admin/accounts` nằm ở API: `AccountsController` mang `@Roles('sa')`
    * trên MỌI endpoint (AD-9), nên `GET /api/v1/accounts` trả 403 cho admin. Bài này vì thế
    * khẳng định hai thứ, và cả hai đều đáng giá:
    *   1. API là nơi chặn — 403, không phải 200 với danh sách rỗng.
-   *   2. Màn PHẢI NÓI RA là nó không tải được (`LoadError`), tuyệt đối không được biến 403
-   *      thành "Chưa có dữ liệu". Đây là kiểu hỏng nguy hiểm nhất của màn này: một Quản trị
-   *      viên đọc "công ty không có tài khoản nào" và tin là mình vừa kiểm tra xong.
+   *   2. Router cũng gác: admin gõ thẳng URL nhận trang 403, không bao giờ thấy "Chưa có dữ
+   *      liệu" — một Quản trị viên đọc "công ty không có tài khoản nào" sẽ tin là mình vừa
+   *      kiểm tra xong.
    *
-   * ĐỎ KHI: một trong hai route 404 bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
+   * ĐỎ KHI: một route bị gác bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
    * thành bảng rỗng; hoặc API nới `@Roles` cho admin mà không ai bàn.
    */
   test('Quản trị viên gõ thẳng URL của SA thì hệ thống nói KHÔNG, chứ không im lặng', async ({
@@ -248,10 +244,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     test.setTimeout(150_000);
 
     await firstLogin(page, E2E_SA);
-    const matKhauTam = await taoTaiKhoanAdmin(page);
+    const tempPassword = await createAdminAccount(page);
     await logout(page);
 
-    await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
+    await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
 
     // --- Trang có thật nhưng không dành cho vai này → 403 nói rõ thiếu quyền (MISC-001);
     //     trang chưa có route → 404.
@@ -266,22 +262,19 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       'admin gõ /documents phải nhận trang 404 tử tế, không phải màn trắng hay redirect câm',
     ).toBeVisible();
 
-    // --- `/admin/accounts`: màn MỞ (web không gác), API mới là nơi chặn.
-    const truoc = await page.request.get('/api/v1/accounts');
+    // --- `/admin/accounts`: API là hàng rào thật, router gác thêm một lớp.
+    const before = await page.request.get('/api/v1/accounts');
     expect(
-      truoc.status(),
+      before.status(),
       'hàng rào thật nằm ở API: @Roles(\'sa\') phải trả 403 cho vai admin',
     ).toBe(403);
 
     await page.goto('/admin/accounts');
     /*
-     * `/admin/accounts` — HAI HÀNG RÀO, và bài này chốt cả hai (B-09, sửa 22/09).
+     * `/admin/accounts` — HAI HÀNG RÀO, và bài này chốt cả hai (B-09): router gác bằng bảng
+     * `ROUTE_ROLES` trong `App.tsx`, và API gác bằng `@Roles('sa')`.
      *
-     * Bản trước chốt rằng màn VẪN dựng ra cho admin, kèm câu "ĐÂY LÀ SỰ THẬT, không phải điều
-     * mong muốn … ai muốn 404 thì phải sửa App.tsx, sửa xong hãy sửa bài này". Đã sửa
-     * `App.tsx` (bảng `ROUTE_ROLES`), nên sửa bài này theo — đúng lời dặn của chính nó.
-     *
-     * Vế API ngay trên giữ NGUYÊN: router gác là tiện cho người dùng, `@Roles('sa')` mới là
+     * Vế API ngay trên phải giữ: router gác là tiện cho người dùng, `@Roles('sa')` mới là
      * hàng rào. Bỏ vế ấy thì một lượt "dọn dẹp" App.tsx sau này gỡ mất lớp router mà không gì
      * kêu lên rằng cửa sau đang mở.
      */
@@ -291,15 +284,14 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toBeVisible();
 
     /*
-     * KHỐI "403 phải nói ra là lỗi QUYỀN" ĐÃ RỜI KHỎI ĐÂY (B-09, 22/09).
+     * VẾ "403 phải nói ra là lỗi QUYỀN" Ở TẦNG MÀN KHÔNG NẰM Ở ĐÂY (B-09).
      *
-     * Vế cũ chốt một điều thật sự đáng giá: 403 phải hiện thành khối lỗi nói rõ "Bạn không có
-     * quyền", KHÔNG được hoá thành "Chưa có dữ liệu" — câu đọc lên nghe như "công ty chưa có
-     * tài khoản nào", một lời nói dối với người vừa bị từ chối.
+     * Điều đó vẫn đáng giá: 403 phải hiện thành khối lỗi nói rõ "Bạn không có quyền", KHÔNG
+     * được hoá thành "Chưa có dữ liệu" — câu đọc lên nghe như "công ty chưa có tài khoản nào",
+     * một lời nói dối với người vừa bị từ chối.
      *
-     * Route đã 404 thì admin không còn tới được nhánh ấy qua cửa này, nên vế đó không còn chỗ
-     * đứng Ở ĐÂY. Nó KHÔNG mất: `web/src/ui/load-state.test.tsx` canh đúng hành vi đó ở tầng
-     * component — "in đúng câu API gửi về" và "403 không có câu kèm → nói là thiếu quyền,
+     * Router đã gác thì admin không tới được nhánh ấy qua cửa này. Vế đó được canh ở
+     * `web/src/ui/load-state.test.tsx`, tầng component — "in đúng câu API gửi về" và "403 không có câu kèm → nói là thiếu quyền,
      * không nói là lỗi tải". Đó mới là chỗ đúng của một component dùng chung: nó áp cho MỌI
      * màn, không chỉ cho hai màn quản trị.
      */
@@ -309,8 +301,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * ===== BÀI 3 =====
    *
    * Vai admin ĐƯỢC làm trọn việc két sắt: cất · xem · xoay. `vault-panel.tsx` dựng nút theo
-   * `isAdmin = role === 'sa' || role === 'admin'`, nhưng cho tới nay chỉ nhánh `sa` từng chạy
-   * trong E2E — nhánh `admin` là code chưa ai bấm thử.
+   * `isAdmin = role === 'sa' || role === 'admin'`; các bài khác chỉ chạy nhánh `sa`, nên bài này
+   * bấm thử nhánh `admin`.
    *
    * ĐỎ KHI: admin không thấy nút "Cất mật khẩu/khóa" hoặc menu Sửa/Xoay/Thu hồi; API chặn nhầm vai
    * admin ở đường ghi két; bước xác thực (step-up) không bật lên khi grace đã hết; hoặc — tệ
@@ -324,19 +316,19 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     test.setTimeout(150_000);
 
     await firstLogin(page, E2E_SA);
-    const matKhauTam = await taoTaiKhoanAdmin(page);
+    const tempPassword = await createAdminAccount(page);
     await logout(page);
 
-    const adminTotp = await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
+    const adminTotp = await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
 
     const stamp = uniqueStamp();
     const code = `SW-E2E-ADMIN-${stamp}`;
     // Chính việc tạo được thiết bị đã là một khẳng định: vai admin có quyền GHI hồ sơ.
-    const deviceId = await taoThietBi(page, code, await loaiSwitch(page));
+    const deviceId = await createDevice(page, code, await switchType(page));
 
     const label = `admin web E2E ${stamp}`;
-    const giaTriGoc = `Adm1n#Goc#${stamp}`;
-    const giaTriMoi = `Adm1n#Moi#${stamp}`;
+    const originalValue = `Adm1n#Goc#${stamp}`;
+    const newValue = `Adm1n#Moi#${stamp}`;
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
@@ -351,14 +343,14 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');
-    await form.getByRole('textbox', { name: 'Giá trị', exact: true }).fill(giaTriGoc);
+    await form.getByRole('textbox', { name: 'Giá trị', exact: true }).fill(originalValue);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
-    const dong = page.getByRole('row', { name: new RegExp(label) });
-    await expect(dong).toBeVisible();
+    const row = page.getByRole('row', { name: new RegExp(label) });
+    await expect(row).toBeVisible();
     // Bảng CHỈ có metadata (FR-021/FR-026): giá trị không được nằm ở đâu trên trang.
     await expect(
-      page.getByText(giaTriGoc),
+      page.getByText(originalValue),
       'giá trị bí mật không được lộ trên bảng, kể cả trong DOM ẩn',
     ).toHaveCount(0);
 
@@ -376,14 +368,14 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await expect(
       page.getByTestId('secret-value'),
       'sau khi xác thực, admin phải đọc được đúng giá trị đã cất',
-    ).toHaveText(giaTriGoc);
+    ).toHaveText(originalValue);
     await page.getByRole('button', { name: 'Ẩn ngay' }).click();
 
     // --- XOAY.
     await rowAction(page, label, 'Đổi giá trị');
-    const hopXoay = page.getByRole('dialog');
-    await hopXoay.getByRole('textbox', { name: 'Giá trị mới' }).fill(giaTriMoi);
-    await hopXoay.getByRole('button', { name: 'Đổi giá trị' }).click();
+    const rotateDialog = page.getByRole('dialog');
+    await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(newValue);
+    await rotateDialog.getByRole('button', { name: 'Đổi giá trị' }).click();
     await expect(page.getByText('Đã đổi giá trị.')).toBeVisible();
 
     // --- XEM LẠI: grace còn hiệu lực nên không bị hỏi mã nữa, và giá trị phải là bản MỚI.
@@ -391,7 +383,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await expect(
       page.getByTestId('secret-value'),
       'xoay xong mà lượt xem vẫn trả giá trị cũ thì việc xoay chỉ là hình thức',
-    ).toHaveText(giaTriMoi);
+    ).toHaveText(newValue);
   });
 
   /**
@@ -414,16 +406,16 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     test.setTimeout(150_000);
 
     const stamp = uniqueStamp();
-    const lyDoA = `E2E xin xem switch A ${stamp}`;
-    const lyDoB = `E2E xin xem switch B ${stamp}`;
+    const reasonA = `E2E xin xem switch A ${stamp}`;
+    const reasonB = `E2E xin xem switch B ${stamp}`;
 
     // ===== SA: dựng người, dựng máy, mở tầng "cần duyệt" cho Member =====
     await firstLogin(page, E2E_SA);
-    const matKhauTam = await taoTaiKhoanAdmin(page);
+    const tempPassword = await createAdminAccount(page);
 
-    const typeId = await loaiSwitch(page);
-    const deviceA = await taoThietBi(page, `SW-E2E-DUYET-A-${stamp}`, typeId);
-    const deviceB = await taoThietBi(page, `SW-E2E-DUYET-B-${stamp}`, typeId);
+    const typeId = await switchType(page);
+    const deviceA = await createDevice(page, `SW-E2E-DUYET-A-${stamp}`, typeId);
+    const deviceB = await createDevice(page, `SW-E2E-DUYET-B-${stamp}`, typeId);
 
     const saHeaders = await writeHeaders(page);
     const granted = await page.request.post('/api/v1/vault/access', {
@@ -446,8 +438,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await firstLogin(memberPage, E2E_MEMBER);
     const memberHeaders = await writeHeaders(memberPage);
     for (const [ownerId, reason] of [
-      [deviceA, lyDoA],
-      [deviceB, lyDoB],
+      [deviceA, reasonA],
+      [deviceB, reasonB],
     ] as const) {
       const sent = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: memberHeaders,
@@ -458,7 +450,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await memberCtx.close();
 
     // ===== Quản trị viên: xử phiếu bằng tay =====
-    await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
+    await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
     await page.goto('/approvals');
 
     // Ba tab của người duyệt — Member chỉ có một, nên đây cũng là một khẳng định về vai.
@@ -466,19 +458,19 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await expect(page.getByRole('tab', { name: 'Nhật ký' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Yêu cầu của tôi' })).toBeVisible();
 
-    await expect(page.getByText(lyDoA)).toBeVisible();
-    await expect(page.getByText(lyDoB)).toBeVisible();
+    await expect(page.getByText(reasonA)).toBeVisible();
+    await expect(page.getByText(reasonB)).toBeVisible();
 
     // --- TỪ CHỐI một phiếu. Không đoán thứ tự hai thẻ: bấm cái đầu tiên rồi ĐỌC hộp thoại để
     //     biết mình vừa từ chối phiếu nào.
     await page.getByRole('button', { name: 'Từ chối', exact: true }).first().click();
-    const hopTuChoi = page.getByRole('dialog');
-    const lyDoBiTuChoi = (
-      await hopTuChoi.getByText(/E2E xin xem switch [AB] /).innerText()
+    const rejectDialog = page.getByRole('dialog');
+    const rejectedReason = (
+      await rejectDialog.getByText(/E2E xin xem switch [AB] /).innerText()
     ).trim();
-    const lyDoDuocDuyet = lyDoBiTuChoi === lyDoA ? lyDoB : lyDoA;
-    await hopTuChoi.getByRole('textbox', { name: 'Lý do từ chối' }).fill('E2E: chưa cần');
-    await hopTuChoi.getByRole('button', { name: 'Từ chối', exact: true }).click();
+    const approvedReason = rejectedReason === reasonA ? reasonB : reasonA;
+    await rejectDialog.getByRole('textbox', { name: 'Lý do từ chối' }).fill('E2E: chưa cần');
+    await rejectDialog.getByRole('button', { name: 'Từ chối', exact: true }).click();
     await expect(page.getByText('Đã từ chối.')).toBeVisible();
     /*
      * CHỜ hàng chờ thật sự rụng mất phiếu vừa từ chối, ĐỪNG bấm tiếp ngay sau toast.
@@ -488,13 +480,13 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      * `getByRole(...).click()` gặp hai phần tử là ném strict-mode violation NGAY — không
      * chờ lại. Đây là kiểu đỏ chập chờn tệ nhất: nó thắng cuộc đua trên máy nhanh.
      */
-    await expect(page.getByText(lyDoBiTuChoi)).toHaveCount(0);
+    await expect(page.getByText(rejectedReason)).toHaveCount(0);
 
     // --- DUYỆT phiếu còn lại (giờ chỉ còn một, không cần `.first()`), cấp 1 giờ.
     await page.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    const hopDuyet = page.getByRole('dialog');
-    await hopDuyet.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('1');
-    await hopDuyet.getByRole('button', { name: 'Duyệt 1 giờ', exact: true }).click();
+    const approveDialog = page.getByRole('dialog');
+    await approveDialog.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('1');
+    await approveDialog.getByRole('button', { name: 'Duyệt 1 giờ', exact: true }).click();
     await expect(page.getByText('Đã duyệt.')).toBeVisible();
 
     // Hàng chờ phải sạch — cả hai phiếu đã có người quyết.
@@ -504,32 +496,32 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     //     (phiếu bị từ chối thì không có). Quyền đang chạy nay được ghim thành nhóm "Đang có hiệu lực" ở đầu tab (VLT-020) nên
     //     nó hiện hai lần (nhóm + dòng nhật ký) — bấm ở nhóm ghim, chỗ người trực tìm tới.
     await page.getByRole('tab', { name: 'Nhật ký' }).click();
-    const nhomHieuLuc = page.getByRole('region', { name: /^Đang có hiệu lực/ });
-    await expect(nhomHieuLuc.getByText(lyDoDuocDuyet)).toBeVisible();
-    await nhomHieuLuc.getByRole('button', { name: 'Thu hồi sớm' }).click();
+    const activeGroup = page.getByRole('region', { name: /^Đang có hiệu lực/ });
+    await expect(activeGroup.getByText(approvedReason)).toBeVisible();
+    await activeGroup.getByRole('button', { name: 'Thu hồi sớm' }).click();
 
     /*
-     * TỪ 12/09 NÚT NÀY PHẢI HỎI LẠI (rà UI/UX #4).
+     * NÚT NÀY PHẢI HỎI LẠI.
      *
      * Nó cắt một quyền ĐANG CHẠY của người khác — có thể họ đang mở két giữa lúc xử sự cố —
      * mà lại nằm ngay dưới cặp Duyệt/Từ chối trên cùng một thẻ phiếu, nên trượt tay là cắt
-     * nhầm. Hai chỗ anh em trong cụm Két sắt (gỡ quyền ở ma trận, thu hồi ngăn ở panel) đều
-     * đã qua `askConfirm({ danger: true })`; riêng chỗ này đi thẳng vào `mutate`.
+     * nhầm. Hai chỗ anh em trong cụm Két sắt (gỡ quyền ở ma trận, thu hồi ngăn ở panel) cũng
+     * qua `askConfirm({ danger: true })`.
      *
      * Vế "chưa xác nhận thì CHƯA thu hồi" mới là vế có giá trị: một bản vá dựng hộp lên rồi
      * vẫn gọi API ngay cũng làm câu `toBeVisible` phía dưới xanh.
      */
-    const hopThuHoi = page.getByRole('dialog');
+    const revokeDialog = page.getByRole('dialog');
     await expect(
-      hopThuHoi.getByText(/Quyền này đang có hiệu lực/),
+      revokeDialog.getByText(/Quyền này đang có hiệu lực/),
       'câu hỏi lại phải nói rõ đang cắt thứ đang chạy, không phải một câu "chắc chưa?"',
     ).toBeVisible();
     expect(
-      sql(`SELECT state FROM approval WHERE reason = '${lyDoDuocDuyet}'`),
+      sql(`SELECT state FROM approval WHERE reason = '${approvedReason}'`),
       'mới mở hộp hỏi lại thì TUYỆT ĐỐI chưa được đụng vào sổ',
     ).toBe('approved');
 
-    await hopThuHoi.getByRole('textbox', { name: 'Lý do thu hồi' }).fill('E2E: xong việc, cắt sớm');
+    await revokeDialog.getByRole('textbox', { name: 'Lý do thu hồi' }).fill('E2E: xong việc, cắt sớm');
     await confirmAction(page, 'Thu hồi sớm');
     await expect(page.getByText('Đã thu hồi quyền.')).toBeVisible();
     await expect(
@@ -546,15 +538,15 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      * break-glass còn sống trong khi mọi người tin là đã cắt.
      */
     expect(
-      sql(`SELECT state FROM approval WHERE reason = '${lyDoBiTuChoi}'`),
+      sql(`SELECT state FROM approval WHERE reason = '${rejectedReason}'`),
       'phiếu bị bấm Từ chối phải nằm ở state denied',
     ).toBe('denied');
     expect(
-      sql(`SELECT state FROM approval WHERE reason = '${lyDoDuocDuyet}'`),
+      sql(`SELECT state FROM approval WHERE reason = '${approvedReason}'`),
       'phiếu đã duyệt rồi thu hồi sớm phải nằm ở state revoked, không phải approved',
     ).toBe('revoked');
     expect(
-      sql(`SELECT decided_by FROM approval WHERE reason = '${lyDoBiTuChoi}'`),
+      sql(`SELECT decided_by FROM approval WHERE reason = '${rejectedReason}'`),
       'người quyết phải là chính Quản trị viên vừa bấm — nhật ký phải chỉ đúng người',
     ).toBe(ADMIN_EMAIL);
   });

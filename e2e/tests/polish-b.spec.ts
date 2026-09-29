@@ -15,7 +15,7 @@ import {
   resetSoftware,
   resetUsers,
   sql,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -33,7 +33,7 @@ test.beforeEach(() => {
   resetDigestRules();
 });
 
-async function taoThanhVien(page: Page): Promise<{ id: string; email: string; fullName: string }> {
+async function createMember(page: Page): Promise<{ id: string; email: string; fullName: string }> {
   const stamp = uniqueStamp();
   const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
   const fullName = `E2E Chặn IP ${stamp}`;
@@ -71,10 +71,10 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/admin/audit-log');
-    const hom = page.getByRole('radio', { name: 'Hôm nay', exact: true });
-    await hom.click();
+    const todayOption = page.getByRole('radio', { name: 'Hôm nay', exact: true });
+    await todayOption.click();
     await expect(page).toHaveURL(/from=/);
-    await hom.click();
+    await todayOption.click();
     await expect(page).not.toHaveURL(/from=/);
     await expect(page).not.toHaveURL(/to=/);
   });
@@ -85,26 +85,26 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const nguoi = await taoThanhVien(page);
+    const user = await createMember(page);
     sql(
       `INSERT INTO login_failure (user_id, ip, failed_attempts, locked_until)
-       VALUES ('${nguoi.id}', '203.0.113.77', 6, now() + interval '1 hour')`,
+       VALUES ('${user.id}', '203.0.113.77', 6, now() + interval '1 hour')`,
     );
 
     await page.goto('/admin/accounts');
     await page.getByRole('button', { name: /Chưa cài 2 lớp/ }).click();
     await expect(page).toHaveURL(/totp=none/);
 
-    await timVaChoLoc(page, nguoi.fullName);
+    await searchAndWaitForFilter(page, user.fullName);
     // Ô họ tên kèm email ở dòng phụ, nên bấm vào Ô (không phải đúng chữ họ tên).
-    await page.getByRole('cell', { name: new RegExp(`^${nguoi.fullName} `) }).click();
-    const hop = page.getByRole('dialog', { name: nguoi.fullName });
-    await expect(hop.getByRole('cell', { name: '203.0.113.77' })).toBeVisible();
-    await expect(hop.getByRole('button', { name: 'Gỡ tạm chặn' })).toBeVisible();
-    await expect(hop.getByRole('link', { name: /dòng quyền két sắt/ })).toBeVisible();
-    await expect(hop.getByRole('link', { name: 'Việc người này đã làm' })).toHaveAttribute(
+    await page.getByRole('cell', { name: new RegExp(`^${user.fullName} `) }).click();
+    const dialog = page.getByRole('dialog', { name: user.fullName });
+    await expect(dialog.getByRole('cell', { name: '203.0.113.77' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Gỡ tạm chặn' })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /dòng quyền két sắt/ })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Việc người này đã làm' })).toHaveAttribute(
       'href',
-      new RegExp(`q=${encodeURIComponent(nguoi.email)}`),
+      new RegExp(`q=${encodeURIComponent(user.email)}`),
     );
   });
 

@@ -12,7 +12,7 @@ import {
 } from './helpers';
 
 /**
- * A-03 (rà soát 19/09): XOÁ một ô ngày không giống BỎ TRỐNG nó khi gửi lên.
+ * A-03: XOÁ một ô ngày không giống BỎ TRỐNG nó khi gửi lên.
  *
  * `prepare()` của cả ba service ghép bản sửa với hồ sơ đang có bằng `??`:
  *
@@ -39,7 +39,7 @@ import {
 test.beforeEach(() => {
   resetUsers();
   resetSoftware();
-  // Thêm 21/09: khối "Sổ NAT" ở cuối file dựng router + dải + IP.
+  // Khối "Sổ NAT" ở cuối file dựng router + dải + IP.
   resetIpam();
   resetDevices();
   resetCatalog();
@@ -109,13 +109,11 @@ test.describe('Xoá ô ngày — luật phải soi giá trị MỚI, không ph�
 });
 
 /**
- * ===== SỔ NAT — CÙNG PHÉP GHÉP, CÙNG LỖ, SÓT LẠI TỚI 21/09 =====
+ * ===== SỔ NAT — CÙNG PHÉP GHÉP, CÙNG LỖ =====
  *
- * Đợt B quét `?? current?.` và tìm ra ba file. Mẫu quét đó BỎ LỌT `nat-rule.service.ts`, nơi
- * biến cũ tên là `before` chứ không phải `current` — mười dòng ghép liền nhau ở `:244-253`,
- * và `merged` vừa dùng để KIỂM vừa dùng để GHI. Không phải lỗi mới: nó chưa từng được sửa,
- * chỉ là lượt quét không nhìn thấy nó. Ghi ra đây vì đó là bài học về CÁCH QUÉT, không phải
- * về một dòng mã: một mẫu grep hẹp cho ra cảm giác đã soi hết.
+ * Quét `?? current?.` thì BỎ LỌT `nat-rule.service.ts`, nơi biến cũ tên là `before` chứ không
+ * phải `current`, và `merged` vừa dùng để KIỂM vừa dùng để GHI. Một mẫu grep hẹp cho ra cảm
+ * giác đã soi hết, nên sổ NAT có bài riêng.
  *
  * Hai vế dưới đây là hai chiều khác nhau của cùng một phép ghép hỏng.
  */

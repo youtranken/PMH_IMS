@@ -194,7 +194,7 @@ function filterQuery(filters: AccountFilters): string[] {
   ].filter(Boolean);
 }
 
-/** Story 1.4 — SA quản trị tài khoản và phiên. */
+/** SA quản trị tài khoản và phiên. */
 export function AccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();

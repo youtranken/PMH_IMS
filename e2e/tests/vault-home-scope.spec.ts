@@ -17,11 +17,11 @@ import {
 } from './helpers';
 
 /**
- * Đợt 3 UI, phần két sắt:
+ * Giao diện két sắt:
  *  - `/vault` là CỬA VÀO (tìm hồ sơ → mở thẳng tab Két sắt), KHÔNG phải danh sách secret —
  *    FR-026 cấm mọi đường lấy secret qua nhiều chủ thể.
- *  - Ma trận quyền có chiều nhìn thứ hai: theo NHÓM ĐỐI TƯỢNG, để trả lời được "nhóm này ai
- *    đang xem được".
+ *  - Ma trận quyền nhìn được theo NHÓM ĐỐI TƯỢNG (cột của lưới), để trả lời được "nhóm này
+ *    ai đang xem được".
  */
 test.beforeEach(() => {
   resetUsers();
@@ -79,7 +79,7 @@ test.describe('Trang tổng Két sắt', () => {
     const deviceId = await createDevice(page, code);
     await stash(page, 'device', deviceId, `admin-${stamp}`);
 
-    // Trước đây mục này hiện MỜ (planned) nên bấm không đi đâu — người dùng tưởng chưa làm.
+    // Mục này phải bấm được, không hiện MỜ (planned) — mờ thì người dùng tưởng chưa làm.
     // `exact` vì sidebar còn một mục "Quyền két sắt" — khớp lỏng là trúng cả hai.
     await page.getByRole('link', { name: 'Két sắt', exact: true }).click();
     await expect(page).toHaveURL(/\/vault$/);
@@ -137,10 +137,10 @@ test.describe('Trang tổng Két sắt', () => {
   });
 
   /**
-   * LOẠI THỨ TƯ: đường truyền. Ba hỏng cùng một gốc (rà UI/UX 12/09, mục #2).
+   * LOẠI THỨ TƯ: đường truyền. Ba hỏng cùng một gốc.
    *
    * `SECRET_OWNER_TYPES` bên API có bốn loại, và `isp-detail.tsx` render hẳn
-   * `<VaultPanel ownerType="isp">` — nhưng trang tổng khai một union RIÊNG chỉ có ba. Không
+   * `<VaultPanel ownerType="isp">`. Nếu trang tổng khai một union RIÊNG chỉ có ba thì không
    * có gì đỏ, vì cả ba chỗ dùng nó đều kết bằng một nhánh vét:
    *
    *   (a) cột "Loại" tra `OWNER_LABEL['isp']` → `undefined` → ô TRỐNG;
@@ -274,7 +274,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
   /**
    * Gán hàng loạt: người GÁN HỎNG phải được nói ra, kể cả khi có người khác gán được.
    *
-   * Bản trước chỉ hiện lỗi khi KHÔNG ai gán được — có một người lọt là hộp đóng, toast báo
+   * Chỉ hiện lỗi khi KHÔNG ai gán được là sai: có một người lọt là hộp đóng, toast báo
    * "đã gán cho N người", và mọi lỗi biến mất. SA tin là cả nhóm đã có quyền.
    *
    * Dựng cảnh hỏng bằng cách xoá một tài khoản SAU khi hộp đã mở: API từ chối email lạ, còn
@@ -296,7 +296,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     const first = ((await scopeList.json()) as { label: string }[])[0];
 
     /*
-     * Lưới (28/08/2026): không còn hai chiều nhìn để bấm qua lại. Gán hàng loạt mở từ chính
+     * Ma trận là lưới, không có hai chiều nhìn để bấm qua lại. Gán hàng loạt mở từ chính
      * TIÊU ĐỀ CỘT của nhóm đó — nhãn trợ năng là câu đầy đủ, còn chữ hiện ra đã cắt tiền tố.
      */
     await page.goto('/admin/vault-access?view=matrix');

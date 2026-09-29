@@ -9,7 +9,7 @@ import {
   resetUsers,
   rowAction,
   rowActionNames,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   SECOND_BROWSER,
   writeHeaders,
   uniqueStamp,
@@ -17,11 +17,11 @@ import {
 
 test.beforeEach(() => resetUsers());
 
-/** Story 1.4 — SA quản trị tài khoản và phiên. */
+/** SA quản trị tài khoản và phiên. */
 /*
  * `exact: true` ở MỌI chỗ bám mục "Tài khoản" trên sidebar.
  *
- * Từ 0032 menu có thêm mục "Tài khoản dịch vụ" (tài khoản dùng chung + VPN, thứ khác hẳn với
+ * Menu có cả mục "Tài khoản dịch vụ" (tài khoản dùng chung + VPN, thứ khác hẳn với
  * tài khoản đăng nhập IMS). Khớp lỏng là trúng cả hai và Playwright từ chối ở chế độ strict.
  */
 test.describe('Quản trị tài khoản', () => {
@@ -40,7 +40,7 @@ test.describe('Quản trị tài khoản', () => {
     await page.getByRole('button', { name: 'Lưu' }).click();
 
     /*
-     * Mật khẩu tạm chỉ hiện MỘT LẦN — và tiêu đề phải nói nó của AI (rà UI/UX 12/09).
+     * Mật khẩu tạm chỉ hiện MỘT LẦN — và tiêu đề phải nói nó của AI.
      * Mở hộp này từ dòng thứ sáu trong bảng thì tiêu đề trần "Mật khẩu tạm" không đủ để
      * người đọc biết đang đặt lại cho ai.
      */
@@ -113,13 +113,12 @@ test.describe('Quản trị tài khoản', () => {
   });
 
   /*
-   * VÔ HIỆU HÓA LÀ VIỆC KHÁC KHÓA — và menu phải gọi đúng tên việc (rà UI/UX 12/09, mục #16).
+   * VÔ HIỆU HÓA LÀ VIỆC KHÁC KHÓA — và menu phải gọi đúng tên việc.
    *
    * `users.status` có BA giá trị, `auth.service.ts` cố ý trả hai mã lỗi khác nhau cho hai
-   * trong số đó (khóa là tạm, vô hiệu hóa là cho người đã nghỉ hẳn), nhưng màn quản trị chỉ
-   * hỏi `status === 'active'` rồi chia đôi. Hậu quả: một tài khoản ĐANG VÔ HIỆU HÓA được mời
-   * bấm "Mở khóa" — trong khi nó có bị khóa đâu. Và vì giao diện không có đường nào đặt
-   * `disabled`, trạng thái thứ ba chỉ tới được bằng `curl`, nên chẳng ai nhìn thấy câu sai đó.
+   * trong số đó (khóa là tạm, vô hiệu hóa là cho người đã nghỉ hẳn). Màn quản trị mà chỉ
+   * hỏi `status === 'active'` rồi chia đôi thì một tài khoản ĐANG VÔ HIỆU HÓA được mời bấm
+   * "Mở khóa" — trong khi nó có bị khóa đâu.
    *
    * Bài này đi cả vòng qua giao diện, và vế chốt là `not.toContain('Mở khóa')`.
    */
@@ -179,16 +178,15 @@ test.describe('Quản trị tài khoản', () => {
 
     /*
      * Từ khóa không khớp ai: phải nói rõ là LỌC KHÔNG RA, không để bảng trắng — và cũng
-     * không nói "Chưa có dữ liệu" như trước 23/09. Câu đó (`common.empty`, dùng chung cho
-     * mọi màn) tuyên bố hệ thống chưa có tài khoản nào — trên chính màn quản trị tài khoản,
-     * nơi nó đọc như một sự cố. Khoá `common.empty` nay đã gỡ hẳn.
+     * không nói "Chưa có dữ liệu": câu đó tuyên bố hệ thống chưa có tài khoản nào — trên chính
+     * màn quản trị tài khoản, nơi nó đọc như một sự cố.
      */
     await page.getByRole('searchbox').fill('khong-ton-tai-zzz');
     await expect(page.getByText('Không có tài khoản nào khớp ô tìm.')).toBeVisible();
   });
 
   /**
-   * G-04 — Story 1.4 AC-2: khóa tài khoản thì MỌI phiên của người đó chết ngay.
+   * G-04: khóa tài khoản thì MỌI phiên của người đó chết ngay.
    *
    * Bài "khóa rồi mở lại" ở trên chỉ khẳng định huy hiệu đổi thành "Đang khóa" — tức là
    * khẳng định CÁI NHÃN, không khẳng định hệ quả. Nhân viên nghỉ việc mà phiên còn sống là
@@ -224,9 +222,9 @@ test.describe('Quản trị tài khoản', () => {
   });
 
   /**
-   * G-05 — Story 1.4 AC-3: nút "Đóng phiên" thật sự cắt phiên.
+   * G-05: nút "Đóng phiên" thật sự cắt phiên.
    *
-   * Bài cũ dừng ở `toBeVisible()` trên chính nút đó. Một nút hiện ra và một nút làm được
+   * Dừng ở `toBeVisible()` trên chính nút đó là chưa đủ: một nút hiện ra và một nút làm được
    * việc là hai chuyện khác nhau.
    */
   test('SA bấm đóng phiên thì trình duyệt kia bị đẩy về đăng nhập', async ({ page, browser }) => {
@@ -362,15 +360,15 @@ test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ đư�
   await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/accounts$/);
 
-  await timVaChoLoc(page, 'e2e-thanh-vien');
+  await searchAndWaitForFilter(page, 'e2e-thanh-vien');
   // Đếm khi bảng đã vẽ xong; đếm sớm ra 0 rồi so với bảng sau reload là đỏ chập chờn.
   await expect(page.getByRole('row').first()).toBeVisible();
-  const soDong = await page.getByRole('row').count();
+  const rowCount = await page.getByRole('row').count();
 
   // 1. Reload giữ nguyên kết quả — tức link chia sẻ được.
   await page.reload();
   await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('e2e-thanh-vien');
-  await expect(page.getByRole('row')).toHaveCount(soDong);
+  await expect(page.getByRole('row')).toHaveCount(rowCount);
 
   // 2. Sắp xếp cũng đi vào URL.
   await page.getByRole('button', { name: 'Họ tên' }).click();
@@ -379,13 +377,10 @@ test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ đư�
   /*
    * 3. Nút Back RỜI MÀN — và ĐÓ LÀ THIẾT KẾ, không phải lỗi.
    *
-   * **Đính chính 24/09.** Bản đầu của bài này khẳng định ngược lại, vì nó chép theo vế thứ hai
-   * của finding B-02 trong sổ: *"nút Back của trình duyệt rời trang thay vì gỡ bộ lọc"*. Vế ấy
-   * SAI. `useListUrlState` ghi bằng `replace` CÓ CHỦ Ý, kèm lý do viết ngay tại chỗ — *"người
+   * Đừng coi *"nút Back của trình duyệt rời trang thay vì gỡ bộ lọc"* là lỗi.
+   * `useListUrlState` ghi bằng `replace` CÓ CHỦ Ý, kèm lý do viết ngay tại chỗ — *"người
    * dùng bấm Back là muốn rời khỏi màn, không phải đi lùi qua mười hai lần chỉnh bộ lọc"*. Sáu
    * màn kia cũng vậy, nên đây là hành vi ĐỒNG NHẤT chứ không phải chỗ `/admin/accounts` lệch đi.
-   *
-   * Chỉ E2E phát hiện được: bài đỏ, đọc lại hook, và thứ sai hóa ra là câu trong sổ.
    *
    * Khoá lại hành vi THẬT ở đây, vì nó là một quyết định đáng giữ: Back phải rời màn.
    */

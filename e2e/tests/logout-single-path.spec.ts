@@ -15,9 +15,9 @@ import { fileURLToPath } from 'node:url';
  * `AppRoutes` đá màn đăng nhập về `/`, và bài kiểm chờ ô Email trên màn đã đăng nhập tới hết
  * 60 giây rồi đỏ ở `locator.fill`: một chỗ không liên quan gì tới điều nó đang kiểm.
  *
- * Ngày 09/09 có SÁU spec bấm thẳng nút đó và HAI spec giữ bản chép riêng của `logout()` —
- * nghĩa là tám chỗ cùng mang một cuộc đua, và chỉ một chỗ tình cờ thua đủ thường xuyên để bị
- * chú ý. Sửa một chỗ thì bảy chỗ kia vẫn ngồi đó chờ tới lượt.
+ * Mỗi spec bấm thẳng nút đó, hoặc giữ bản chép riêng của `logout()`, là thêm một chỗ mang
+ * cùng cuộc đua — và chỉ chỗ nào tình cờ thua đủ thường xuyên mới bị chú ý. Sửa một chỗ thì
+ * mọi chỗ kia vẫn ngồi đó chờ tới lượt.
  *
  * Cổng này khoá lại đúng điều đó: sửa `helpers.logout()` là sửa cho tất cả, và không ai mở
  * được cửa thứ hai mà không đọc dòng chữ này trước.
@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 test.describe('Đăng xuất đi qua một cửa duy nhất', () => {
   // `__dirname` KHÔNG tồn tại — gói này là ESM (`"type": "module"`). Xem đầu `tsconfig.json`.
   const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
-  const SELF = 'logout-qua-mot-cua.spec.ts';
+  const SELF = 'logout-single-path.spec.ts';
   // Ghép từ mảnh để chính file này không tự khớp vào luật của mình.
   const BUTTON = ['getByRole(', "'button'"].join('');
   const LABEL = 'Đăng' + ' xuất';

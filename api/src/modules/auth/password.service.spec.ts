@@ -4,8 +4,8 @@ import { PasswordService } from './password.service';
  * Argon2id + pepper (NFR-01, AD-8).
  *
  * CLAUDE.md ghi thẳng: "Lõi bảo mật (Argon2, TOTP chống replay, envelope AES-GCM + xoay
- * key_version, CSRF, lockout) — không có test thì không được merge." Bốn thứ kia đều có test
- * tốt; Argon2 và pepper thì KHÔNG có một dòng nào cho tới 28/08.
+ * key_version, CSRF, lockout) — không có test thì không được merge." File này là phần của
+ * Argon2 và pepper.
  *
  * Bài quan trọng nhất ở đây là "pepper sai thì mật khẩu ĐÚNG phải trượt" — đó là toàn bộ lý do
  * pepper tồn tại (dump DB rơi ra ngoài mà không kèm pepper thì hash vô dụng). Nếu ai đó sửa
@@ -35,11 +35,11 @@ describe('PasswordService', () => {
   it('PEPPER SAI thì mật khẩu ĐÚNG cũng phải trượt — đây là lý do pepper tồn tại', async () => {
     const hashed = await svc.hash('Mat#Khau2026!ok');
 
-    const kePhamCoDump = new PasswordService(OTHER_PEPPER);
-    expect(await kePhamCoDump.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
+    const attackerWithDump = new PasswordService(OTHER_PEPPER);
+    expect(await attackerWithDump.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
 
-    const khongCoPepper = new PasswordService('');
-    expect(await khongCoPepper.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
+    const withoutPepper = new PasswordService('');
+    expect(await withoutPepper.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
   });
 
   it('hai lần băm cùng một mật khẩu ra hai hash khác nhau (salt ngẫu nhiên)', async () => {

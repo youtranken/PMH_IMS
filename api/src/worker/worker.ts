@@ -29,7 +29,7 @@ const HEARTBEAT_FILE = process.env.WORKER_HEARTBEAT_FILE ?? '/tmp/worker-heartbe
  *     email, họ tên — NFR-04/AD-4);
  *   · `redactPii` che địa chỉ email, vì lỗi SMTP hay nhúng nguyên địa chỉ người nhận.
  *
- * Trước 11/09 chỗ này chỉ có lớp thứ hai, nên một job hỏng vì lỗi DB vẫn in trọn `params`.
+ * Chỉ có lớp thứ hai thì một job hỏng vì lỗi DB vẫn in trọn `params`.
  */
 function jobFailure(error: unknown): string {
   return redactPii(redactMessage(error));

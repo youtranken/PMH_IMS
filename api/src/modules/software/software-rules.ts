@@ -96,8 +96,8 @@ export type LicenseModel = (typeof LICENSE_MODELS)[number];
 /**
  * Loại nào BẮT BUỘC có ngày hết hạn.
  *
- * License / SSL / tên miền mà không có hạn thì cỗ máy cảnh báo (story 3.4) không nhắc được —
- * mà tránh "hết hạn bất ngờ" chính là lý do Epic 3 tồn tại. Hợp đồng bảo trì và "khác" thì
+ * License / SSL / tên miền mà không có hạn thì cỗ máy cảnh báo (FR-012) không nhắc được —
+ * mà tránh "hết hạn bất ngờ" chính là lý do module này tồn tại. Hợp đồng bảo trì và "khác" thì
  * thả lỏng: có thứ ký vô thời hạn thật.
  *
  * NGOẠI LỆ: license mua đứt không có ngày hết hạn để mà nhắc. Bắt nhập là ép người dùng bịa

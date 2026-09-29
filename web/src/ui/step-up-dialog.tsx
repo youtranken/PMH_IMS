@@ -109,7 +109,7 @@ function ConfirmButton({ formId, form }: { formId: string; form: ReturnType<type
 }
 
 /**
- * Gõ TOTP để mở quyền xem bí mật (FR-022, story 4.2) — dùng chung (AD-15).
+ * Gõ TOTP để mở quyền xem bí mật (FR-022) — dùng chung (AD-15).
  *
  * Không nhận `graceMinutes` từ nơi gọi: API trả về nó sau khi step-up thành công, và API mới
  * là nơi biết `secret.stepup_grace_minutes` đang đặt bao nhiêu (AD-11). Nơi gọi tự đoán 10

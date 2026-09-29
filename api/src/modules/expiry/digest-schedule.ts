@@ -131,7 +131,7 @@ const WEEKDAY_LABEL: Record<number, string> = {
  * ra gửi cả bảy ngày mà không có lấy một dòng lỗi. Tính từ ngày thì không có đường sai lặng lẽ.
  *
  * Múi giờ cấu hình sai lùi về UTC chứ không ném: `isoDateInTz` đã theo nếp đó, hàm này mà
- * ném thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi (code review Epic 3).
+ * ném thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi.
  */
 export function localNowIn(timeZone: string, now: Date = new Date()): LocalNow {
   const date = safeIsoDate(timeZone, now);

@@ -20,7 +20,7 @@ describe('LoadError', () => {
 
   /*
    * Vế quan trọng nhất: API đã gửi một câu tiếng Việt nói rõ chuyện gì, và khối này phải in
-   * ĐÚNG câu đó. Bản trước vứt nó đi — 38 chỗ gọi, bốn nguyên nhân, một câu chữ.
+   * ĐÚNG câu đó, không vứt đi rồi in một câu chung cho bốn nguyên nhân.
    */
   it('in đúng câu API gửi về, không phải câu chung', () => {
     const error = new ApiError(409, { message: 'Dải mạng đã hết IP trống.' });

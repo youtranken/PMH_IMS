@@ -20,15 +20,14 @@ export class StepUpGuard implements CanActivate {
   ) {}
 
   /**
-   * ===== MẶC ĐỊNH ĐÓNG (rà soát 10/09) =====
+   * ===== MẶC ĐỊNH ĐÓNG =====
    *
-   * Bản trước: `if (!required) return true` — route không khai gì thì ĐI THẲNG. `@RequiresStepUp()`
-   * là opt-in, và nó xuất hiện đúng 5 lần trong cả repo, tất cả ở `vault.controller.ts`. Nghĩa
-   * là mọi route nhạy cảm viết sau này bắt đầu ở trạng thái không được bảo vệ.
+   * Mở mặc định (`if (!required) return true`) nghĩa là route không khai gì thì ĐI THẲNG, và
+   * mọi route nhạy cảm viết sau này bắt đầu ở trạng thái không được bảo vệ.
    *
-   * Cái quên đó đã có hậu quả đo được. Toàn bộ `/api/v1/accounts/*` không có step-up, nên một
-   * phiên SA bị chiếm — đúng mô hình đe dọa mà chính cửa két nêu ra: "cookie trộm, máy bỏ ngỏ,
-   * chưa từng gõ mã" — đi được TRỌN đường mà không cần yếu tố thứ hai của nạn nhân:
+   * Cái quên đó có hậu quả đo được. Khi `/api/v1/accounts/*` không có step-up, một phiên SA bị
+   * chiếm — đúng mô hình đe dọa mà chính cửa két nêu ra: "cookie trộm, máy bỏ ngỏ, chưa từng
+   * gõ mã" — đi được TRỌN đường mà không cần yếu tố thứ hai của nạn nhân:
    *
    *   1. `GET /auth/me` lấy CSRF token (GET nên CsrfGuard bỏ qua).
    *   2. `POST /accounts` tạo một tài khoản SA mới; response trả thẳng `temporaryPassword`.
@@ -41,10 +40,10 @@ export class StepUpGuard implements CanActivate {
    *
    * ===== HAI BƯỚC TRONG CHUỖI ĐÓ NAY ĐÃ BỊT (đừng đọc nó như mô tả hiện trạng) =====
    *
-   * Bước 2 đóng ngay bằng chính guard này (10/09): `/accounts/*` từ đó đòi step-up, nên phiên
-   * SA bị chiếm không tạo nổi tài khoản mới để lấy mật khẩu tạm.
+   * Bước 2 đóng bằng chính guard này: `/accounts/*` đòi step-up, nên phiên SA bị chiếm không
+   * tạo nổi tài khoản mới để lấy mật khẩu tạm.
    *
-   * Bước 4 đóng ngày 20/09 (A-02, rà soát 19/09): `POST /auth/totp/enroll` nay đòi mật khẩu
+   * Bước 4 đóng ở A-02: `POST /auth/totp/enroll` đòi mật khẩu
    * hiện tại, trừ phiên đang ở GIỮA luồng đăng nhập bắt buộc cài 2 lớp và còn trẻ hơn
    * `totp.enroll_reauth_minutes`. Sai đủ ngưỡng thì phiên bị thu hồi. Xem
    * `AuthService.startTotpEnrollment` và `canEnrollWithoutPassword` ở `session-policy.ts`.
@@ -89,7 +88,7 @@ export class StepUpGuard implements CanActivate {
      * Nhưng mã trả về phải là SESSION_MISSING chứ KHÔNG phải STEPUP_REQUIRED: client coi
      * STEPUP_REQUIRED là "phiên vẫn sống, chỉ cần gõ mã" và sẽ mở hộp nhập mã. Không có phiên
      * thì gõ mã nào cũng vô nghĩa — người dùng kẹt trong một hộp thoại không bao giờ thoát
-     * được, thay vì được đưa về màn đăng nhập (code review Epic 4, finding 4).
+     * được, thay vì được đưa về màn đăng nhập.
      */
     if (!user) {
       throw new UnauthorizedException({

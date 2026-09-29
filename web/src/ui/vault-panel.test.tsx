@@ -16,9 +16,8 @@ import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/
  * `onSaved()` không bao giờ chạy: không toast, không refresh danh sách. Người vận hành tin là
  * mình vừa hủy, và giá trị cũ — thứ họ đang dán vào cấu hình thiết bị — đã không còn đúng nữa.
  *
- * Đây đúng là lớp lỗi mà `dismissible={!busy}` sinh ra để chặn, và đợt này đã gắn nó cho 17
- * hộp khác. Ba hộp của két sắt bị bỏ sót — đúng ba hộp vừa được chuyển sang `mutateAsync` +
- * `stepUp.run`, tức đúng ba hộp có cửa sổ "đang bay" dài nhất.
+ * Đây đúng là lớp lỗi mà `dismissible={!busy}` có mặt để chặn. Ba hộp của két sắt dùng
+ * `mutateAsync` + `stepUp.run`, tức đúng ba hộp có cửa sổ "đang bay" dài nhất.
  */
 
 const ME: Me = {
@@ -168,26 +167,22 @@ describe('VaultPanel — hộp Xin quyền xem khóa lại khi đang gửi', () 
 });
 
 /**
- * F-07 — HAI VẾ, VÀ CHỈ MỘT VẾ LÀ LỖI THẬT.
+ * HAI VẾ CỦA CÙNG MỘT PANEL.
  *
- * ===== VẾ (a): ADMIN BỊ CHẶN BỞI MỘT TRUY VẤN HỌ KHÔNG CẦN — LỖI THẬT =====
+ * ===== VẾ (a): ADMIN KHÔNG ĐƯỢC BỊ CHẶN BỞI MỘT TRUY VẤN HỌ KHÔNG CẦN =====
  *
- * `useOwnerSecrets` tính `allowed = isAdmin || …`, và chú thích ở đó tuyên bố thẳng: "SA/Admin
- * không chờ `verdict`: `isAdmin` đã đủ". Nhưng phần render đặt `if (verdict.isLoading)` và
- * `if (verdict.isError)` LÊN TRƯỚC mọi thứ, nên `/vault/secrets/verdict` trả 500 là SA/Admin
- * mất sạch panel Két sắt dù quyền của họ không hề phụ thuộc vào câu trả lời ấy.
+ * `useOwnerSecrets` tính `allowed = isAdmin || …`: SA/Admin không chờ `verdict`. Nếu phần
+ * render đặt `if (verdict.isLoading)` và `if (verdict.isError)` LÊN TRƯỚC mọi thứ thì
+ * `/vault/secrets/verdict` trả 500 là SA/Admin mất sạch panel Két sắt dù quyền của họ không
+ * hề phụ thuộc vào câu trả lời ấy.
  *
- * Lại đúng hình dạng đã gặp ba lần trong đợt rà soát này: chú thích mô tả đúng ý định, và mã
- * làm một việc khác.
+ * ===== VẾ (b): "ĐANG CHỜ DUYỆT" KHÔNG ĐƯỢC LÀ NHÁNH `else` =====
  *
- * ===== VẾ (b): "ĐANG CHỜ DUYỆT" LÀ NHÁNH `else` — CHƯA PHẢI LỖI, NHƯNG LÀ MÌN =====
+ * Ca "Member bị `denied` và chưa gửi phiếu nào vẫn đọc 'Đang chờ duyệt'" KHÔNG tới được:
+ * `denied` làm `allowed` sai, và panel dừng ở `vault.noPermission` trước khi chạm tới badge.
  *
- * Nói thẳng, vì sổ rà soát ghi mạnh hơn sự thật: finding viết *"Member bị `denied` và chưa gửi
- * phiếu nào vẫn đọc 'Đang chờ duyệt'"*. Ca đó KHÔNG tới được. `denied` làm `allowed` sai, và
- * panel dừng ở `vault.noPermission` trước khi chạm tới badge.
- *
- * Nhưng cái mà finding nhìn thấy vẫn có thật: badge suy ra bằng phép LOẠI TRỪ, trong khi
- * server gửi hẳn `pending` sang. Hôm nay hai thứ trùng nhau vì
+ * Nhưng suy badge bằng phép LOẠI TRỪ là mìn, trong khi server gửi hẳn `pending` sang. Hôm
+ * nay hai thứ trùng nhau vì
  * `canRequest = grant === null && pending === null` — tức nhánh `else` đúng bằng "có phiếu
  * treo". Ngày nào `break-glass.service.ts` thêm một lý do thứ ba làm `canRequest` sai (trần
  * số phiếu, chủ thể bị đóng băng, người dùng bị khóa), badge sẽ nói dối, im lặng, và không

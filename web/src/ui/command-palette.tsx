@@ -150,9 +150,9 @@ interface Page<T> {
  *
  * ===== VÌ SAO LÀ SỰ KIỆN, KHÔNG PHẢI KÉO STATE LÊN SHELL =====
  *
- * Tới 18/09/2026 hộp này chỉ mở được bằng ⌘K/Ctrl+K. Trên điện thoại — nơi UX-DR2 bắt màn ĐỌC
- * phải dùng được ở 390px — không có phím tắt, nên tính năng KHÔNG TỒN TẠI; với người dùng
- * chuột thì nó tồn tại nhưng không ai biết, vì không có gì trên màn hình nói ra.
+ * Hộp này phải mở được bằng một NÚT, không chỉ ⌘K/Ctrl+K. Trên điện thoại — nơi UX-DR2 bắt màn
+ * ĐỌC phải dùng được ở 390px — không có phím tắt, nên thiếu nút là tính năng KHÔNG TỒN TẠI; với
+ * người dùng chuột thì nó tồn tại nhưng không ai biết, vì không có gì trên màn hình nói ra.
  *
  * Kéo `open` lên `AppShell` thì shell phải giữ state của một thứ nó không sở hữu, và mọi màn
  * render lại theo. Một sự kiện trên `window` giữ nguyên ranh giới: nút chỉ biết "tôi xin mở",
@@ -194,14 +194,14 @@ export function CommandPalette({ me }: { me: Me }) {
     const onKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         /*
-         * ĐANG CÓ HỘP THOẠI THÌ KHÔNG MỞ (18/09/2026).
+         * ĐANG CÓ HỘP THOẠI THÌ KHÔNG MỞ.
          *
          * Hộp Radix đặt `pointer-events: none` lên `body` và chỉ mở lại cho vùng bên trong
          * `Content`. Palette gắn ở shell, tức NGOÀI vùng ấy — nên khi mở chồng lên một hộp
          * thoại nó thành một lớp phủ chết: `--z-palette` (85) cao hơn `--z-modal` (60) nên
          * nó che kín màn hình, mà `pointer-events` kế thừa `none` nên không bấm được, tiêu
          * điểm vẫn nằm trong hộp thoại nên gõ không vào ô tìm, và Esc rơi xuống đóng nhầm
-         * hộp bên dưới. Đo ngày 18/09/2026: gõ "abc" xong giá trị ô tìm vẫn là chuỗi rỗng.
+         * hộp bên dưới. Đo được: gõ "abc" xong giá trị ô tìm vẫn là chuỗi rỗng.
          *
          * Kể cả nếu bấm được thì `go()` gọi thẳng `navigate()`, đi vòng qua `guardUnsaved`
          * của hộp đang mở — mất trắng dữ liệu đang gõ mà không một câu hỏi lại.
@@ -376,7 +376,7 @@ export function CommandPalette({ me }: { me: Me }) {
   /** Màn hình cũng tìm được — gõ "nat" là nhảy thẳng sang Sổ NAT, khỏi rê chuột xuống sidebar. */
   const navHits = useMemo<Hit[]>(() => {
     if (q.length < 2) return [];
-    // Gấp dấu cả hai vế (B-01): nhãn màn hình là tiếng Việt có dấu ("Thiết bị", "Sổ NAT"),
+    // Gấp dấu cả hai vế: nhãn màn hình là tiếng Việt có dấu ("Thiết bị", "Sổ NAT"),
     // nên gõ `thiet` phải nhảy được sang màn Thiết bị.
     const needle = foldSearch(q);
     return visibleGroups(me)
@@ -545,7 +545,7 @@ export function CommandPalette({ me }: { me: Me }) {
   }, [q]);
 
   /*
-   * GIỮ LỰA CHỌN THEO ĐÍCH ĐẾN, KHÔNG THEO CHỖ NGỒI (18/09/2026).
+   * GIỮ LỰA CHỌN THEO ĐÍCH ĐẾN, KHÔNG THEO CHỖ NGỒI.
    *
    * `at` là một CHỈ SỐ vào `hits`, mà `hits` ghép theo thứ tự cố định (thiết bị → phần mềm →
    * ISP → tài khoản → điều hướng) từ bốn truy vấn giải quyết ĐỘC LẬP. `setAt(0)` chỉ chạy lại
@@ -559,19 +559,17 @@ export function CommandPalette({ me }: { me: Me }) {
    * con trỏ bám theo nó, dòng cũ mất thì về đầu danh sách.
    *
    * ───────────────────────────────────────────────────────────────────────────────────────
-   * GHI NEO Ở NƠI NGƯỜI DÙNG ĐỔI LỰA CHỌN, KHÔNG GHI TRONG EFFECT (19/09/2026).
+   * GHI NEO Ở NƠI NGƯỜI DÙNG ĐỔI LỰA CHỌN, KHÔNG GHI TRONG EFFECT.
    *
-   * Bản 18/09 dựng đúng ý tưởng trên nhưng đấu dây sai, thành một no-op hoàn chỉnh: neo được
-   * ghi trong một `useEffect([at, hits])` khai TRƯỚC effect khôi phục. React chạy effect theo
-   * thứ tự khai trong cùng một commit, nên khi `hits` đổi thì effect ghi chạy trước — với
-   * `hits` MỚI và `at` CŨ — và đè neo thành phần tử ở đúng CHỖ NGỒI cũ. Effect khôi phục sau đó
-   * đi tìm chính giá trị vừa bị đè, thấy nó ở đúng chỉ số cũ, rồi `setAt` một con số không
-   * đổi. Cảnh hỏng mô tả bên trên vì thế vẫn xảy ra nguyên vẹn; đợt rà 19/09 dựng lại được nó
-   * bằng hai bài độc lập (`SW-3` → `DEV-3` sau khi nhóm Thiết bị về muộn). Nó còn kéo theo một
-   * hệ quả thứ hai: `setAt(0)` khi đổi từ khoá cũng bị kéo ngược, nên gõ từ mới mà con trỏ
-   * đứng nguyên ở dòng 8.
+   * Ghi neo trong một `useEffect([at, hits])` khai TRƯỚC effect khôi phục là một no-op hoàn
+   * chỉnh. React chạy effect theo thứ tự khai trong cùng một commit, nên khi `hits` đổi thì
+   * effect ghi chạy trước — với `hits` MỚI và `at` CŨ — và đè neo thành phần tử ở đúng CHỖ
+   * NGỒI cũ. Effect khôi phục sau đó đi tìm chính giá trị vừa bị đè, thấy nó ở đúng chỉ số cũ,
+   * rồi `setAt` một con số không đổi: cảnh hỏng mô tả bên trên xảy ra nguyên vẹn (`SW-3` →
+   * `DEV-3` sau khi nhóm Thiết bị về muộn). Nó còn kéo theo một hệ quả thứ hai: `setAt(0)` khi
+   * đổi từ khoá cũng bị kéo ngược, nên gõ từ mới mà con trỏ đứng nguyên ở dòng 8.
    *
-   * Cách chữa là bỏ hẳn effect ghi. `at` chỉ đổi ở BA chỗ do người dùng (mũi tên, rê chuột, và
+   * Nên KHÔNG có effect ghi. `at` chỉ đổi ở BA chỗ do người dùng (mũi tên, rê chuột, và
    * lượt đặt lại về 0), nên ghi neo ngay tại đó là ghi đúng ý định — không lượt render nào chen
    * vào giữa được nữa.
    */
@@ -591,8 +589,8 @@ export function CommandPalette({ me }: { me: Me }) {
     setAt(target);
     // Chỉ chạy khi DANH SÁCH đổi; `at` đổi là do chính người dùng, đừng kéo ngược lại.
     // (Không cần `eslint-disable`: `anchoredTo` là ref và `setAt` bền tham chiếu, nên
-    //  `exhaustive-deps` không đòi gì thêm. Chỉ thị disable cũ đã thừa và bị gỡ 20/09/2026 —
-    //  một disable thừa sẽ nuốt im một cảnh báo THẬT về sau.)
+    //  `exhaustive-deps` không đòi gì thêm — và một disable thừa sẽ nuốt im một cảnh báo THẬT
+    //  về sau.)
   }, [hits]);
 
   if (!open) return null;
@@ -621,11 +619,10 @@ export function CommandPalette({ me }: { me: Me }) {
   };
 
   /*
-   * BỐN NHÓM, KHÔNG PHẢI HAI (18/09/2026).
+   * BỐN NHÓM, KHÔNG PHẢI HAI.
    *
-   * `loading` trước đây chỉ đọc `devices` và `software`, bỏ sót `isp` và `accounts` — nên chỉ
-   * cần một nhóm về chậm hơn hai nhóm kia là hộp nháy "Không có hồ sơ nào khớp" rồi mới đổ
-   * kết quả ra.
+   * `loading` phải đọc đủ `devices`, `software`, `isp` và `accounts` — sót một nhóm thì chỉ
+   * cần nhóm đó về chậm hơn là hộp nháy "Không có hồ sơ nào khớp" rồi mới đổ kết quả ra.
    *
    * Nặng hơn là nhánh LỖI: cả bốn nhóm đều `?? []`, nên một lượt 500 hoá thành danh sách rỗng
    * và hộp khẳng định thẳng là không có gì khớp. Đo bằng cách ép `/isp-lines` trả 500: gõ
@@ -669,11 +666,11 @@ export function CommandPalette({ me }: { me: Me }) {
       }}
     >
       {/*
-        `aria-modal="true"` Ở LẠI, CÓ CHỦ Ý (19/09/2026).
+        `aria-modal="true"` Ở LẠI, CÓ CHỦ Ý.
 
-        Đợt rà soát đề xuất hai đường: dựng lại hộp bằng `ui/dialog.tsx`, hoặc BỎ `aria-modal`
-        rồi tự vòng Tab. Thứ thật sự hỏng là cái thứ hai trong cặp — hộp khai mình chặn mà
-        không chặn. Bỏ lời khai đi thì khai đúng, nhưng đổi lại trình đọc màn hình lại được
+        Hai đường khác: dựng lại hộp bằng `ui/dialog.tsx`, hoặc BỎ `aria-modal` rồi tự vòng
+        Tab. Điều không được phép là hộp khai mình chặn mà không chặn. Bỏ lời khai đi thì khai
+        đúng, nhưng đổi lại trình đọc màn hình lại được
         phép dạo qua nội dung phía sau bằng con trỏ ảo, trong khi màn hình đang bị hộp này phủ
         kín (`--z-palette` 85 > `--z-modal` 60) và bàn phím thì đã bị giữ lại. Ba giác quan nói
         ba chuyện khác nhau.
@@ -688,10 +685,10 @@ export function CommandPalette({ me }: { me: Me }) {
         aria-modal="true"
         aria-label={t('palette.title')}
         /*
-         * BẪY TAB ĐẶT Ở PHẦN TỬ BỌC, KHÔNG PHẢI Ở Ô NHẬP (19/09/2026).
+         * BẪY TAB ĐẶT Ở PHẦN TỬ BỌC, KHÔNG PHẢI Ở Ô NHẬP.
          *
-         * Bản vài giờ trước xử `Tab` trong `onKeyDown` của `<input>`, nên nó chỉ giữ được khi
-         * tiêu điểm ĐANG ở ô nhập. Các dòng kết quả mang `tabIndex={-1}` — không nhận Tab, nhưng
+         * Xử `Tab` trong `onKeyDown` của `<input>` thì chỉ giữ được khi tiêu điểm ĐANG ở ô
+         * nhập. Các dòng kết quả mang `tabIndex={-1}` — không nhận Tab, nhưng
          * VẪN nhận tiêu điểm khi bấm CHUỘT (Safari/Firefox focus nút được click). Từ đó gõ Tab
          * là thoát ra ngoài hộp, đúng cảnh mà `aria-modal="true"` đang hứa là không thể. Bài
          * `command-palette-focus.test.tsx` không bắt được vì nó chỉ thử Tab ngay sau khi mở.
@@ -713,12 +710,12 @@ export function CommandPalette({ me }: { me: Me }) {
             </svg>
           </span>
           {/*
-            MẪU COMBOBOX CHUẨN (18/09/2026).
+            MẪU COMBOBOX CHUẨN.
 
-            Bản trước chỉ có `aria-label`. Mũi tên ↑/↓ đổi dòng đang chọn nhưng tiêu điểm KHÔNG
-            rời ô nhập, nên với trình đọc màn hình không có gì thay đổi cả: người dùng nghe
-            được ô tìm rồi... hết. Danh sách kết quả cũng chỉ là một đống `<button>` rời, không
-            phải một listbox, nên không ai đọc được "dòng 3 trên 12".
+            Chỉ có `aria-label` là không đủ: mũi tên ↑/↓ đổi dòng đang chọn nhưng tiêu điểm
+            KHÔNG rời ô nhập, nên với trình đọc màn hình không có gì thay đổi cả: người dùng
+            nghe được ô tìm rồi... hết. Danh sách kết quả là một đống `<button>` rời thay vì một
+            listbox thì không ai đọc được "dòng 3 trên 12".
 
             `aria-activedescendant` là cách chuẩn để nói "tiêu điểm ở ô nhập, nhưng mục ĐANG
             CHỌN là cái kia" — đúng cơ chế mà bàn phím ở đây đang dùng.
@@ -749,10 +746,10 @@ export function CommandPalette({ me }: { me: Me }) {
         </div>
 
         {/*
-          DẢI CẢNH BÁO Ở NGOÀI KHUNG CUỘN VÀ NGOÀI LISTBOX (19/09/2026).
+          DẢI CẢNH BÁO Ở NGOÀI KHUNG CUỘN VÀ NGOÀI LISTBOX.
 
-          Trước đó nó là con ĐẦU TIÊN của `.cp-list` — mà `.cp-list` vừa là `role="listbox"`
-          vừa có `overflow-y: auto`. Hai hỏng cùng lúc: (1) ARIA chỉ cho `listbox` chứa
+          Đặt nó làm con của `.cp-list` — vừa là `role="listbox"` vừa có `overflow-y: auto` —
+          thì hỏng hai thứ cùng lúc: (1) ARIA chỉ cho `listbox` chứa
           `option`/`group`, nên NVDA/JAWS có quyền lược bỏ đoạn này — người dùng trình đọc màn
           hình nghe đủ kết quả nhưng KHÔNG nghe câu "danh sách còn thiếu", rồi đi khai trùng
           đúng thứ họ vừa tìm không ra; (2) nó cuộn theo danh sách, nên bấm ↓ vài lần là câu
@@ -763,16 +760,15 @@ export function CommandPalette({ me }: { me: Me }) {
           thật (xem `.cp-warn` trong `css/command-palette.css`).
         */}
         {/*
-          VÙNG SỐNG PHẢI CÓ MẶT TRƯỚC KHI NỘI DUNG ĐỔI (19/09/2026).
+          VÙNG SỐNG PHẢI CÓ MẶT TRƯỚC KHI NỘI DUNG ĐỔI.
 
-          Bản vài giờ trước chỉ render `<p role="status">` KHI có nhóm hỏng — tức node và chữ
-          sinh ra cùng một lượt. Trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC
-          đó, nên một node mới chèn vào kèm sẵn chữ thường không được đọc lên: người dùng NVDA
-          nghe đủ kết quả mà KHÔNG nghe câu "danh sách còn thiếu", rồi đi khai trùng đúng thứ họ
-          vừa tìm không ra. Đúng lỗi mà cùng đợt này vừa gỡ ở `#rmap-cut-sum` — và tôi dựng lại
-          nó ở đây trong chính lượt sửa ấy.
+          Chỉ render `<p role="status">` KHI có nhóm hỏng thì node và chữ sinh ra cùng một lượt.
+          Trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC đó, nên một node mới
+          chèn vào kèm sẵn chữ thường không được đọc lên: người dùng NVDA nghe đủ kết quả mà
+          KHÔNG nghe câu "danh sách còn thiếu", rồi đi khai trùng đúng thứ họ vừa tìm không ra
+          (cùng lý do với `#rmap-cut-sum`).
 
-          Nay `<p>` thường trực, `hidden` khi rỗng: DOM không vẽ gì, nhưng vùng sống đã được
+          Nên `<p>` thường trực, `hidden` khi rỗng: DOM không vẽ gì, nhưng vùng sống đã được
           đăng ký từ lượt mở hộp nên lời cảnh báo tới sau sẽ được đọc.
         */}
         <p className="cp-warn" role="status" hidden={!(failedGroups.length > 0 && found.length > 0)}>
@@ -812,15 +808,14 @@ export function CommandPalette({ me }: { me: Me }) {
           ) : null}
 
           {/*
-            LISTBOX CHỈ CHỨA `option` VÀ `group` (19/09/2026).
+            LISTBOX CHỈ CHỨA `option` VÀ `group`.
 
-            Bản trước để dải cảnh báo, hai khối rỗng và các `<p>` tên nhóm nằm thẳng trong
-            `role="listbox"`, còn mỗi `option` thì bị bọc trong một `<div>` trơn — tức option
-            KHÔNG phải con của listbox. Quan hệ sở hữu listbox→option đứt thì trình đọc màn
-            hình không nói được "mục 3 trên 8", và vài bộ bỏ qua hẳn option không được listbox
-            sở hữu. Đúng thứ mẫu combobox dựng ngày 18/09 sinh ra để cung cấp.
+            Để dải cảnh báo, khối rỗng hay `<p>` tên nhóm nằm thẳng trong `role="listbox"`, hoặc
+            bọc `option` trong một `<div>` trơn, là làm option KHÔNG còn là con của listbox. Quan
+            hệ sở hữu listbox→option đứt thì trình đọc màn hình không nói được "mục 3 trên 8", và
+            vài bộ bỏ qua hẳn option không được listbox sở hữu.
 
-            `role="group"` ĐƯỢC phép đứng giữa listbox và option, nên tên nhóm nay là
+            `role="group"` ĐƯỢC phép đứng giữa listbox và option, nên tên nhóm là
             `aria-label` của group (và `<p>` chỉ còn là phần nhìn, `aria-hidden` để khỏi đọc
             hai lần). Listbox LUÔN có mặt kể cả khi rỗng — `aria-controls="cp-ket-qua"` trên ô
             nhập phải luôn có đích, nếu không lại là một IDREF chết.

@@ -6,7 +6,7 @@ import { HANDLED_MAIL_TOPICS } from './mail.consumer';
 /**
  * "KHÔNG CÓ MẪU THƯ" VÀ "KHÔNG CÒN GÌ ĐỂ GỬI" LÀ HAI CHUYỆN (B-06).
  *
- * `build()` trả `null` cho cả hai, và bản trước ghi CÙNG MỘT dòng `warn`:
+ * `build()` trả `null` cho cả hai, nên rất dễ ghi CÙNG MỘT dòng `warn`:
  *
  *   1. Không có mẫu thư cho topic này — ai đó đẩy một topic consumer chưa từng biết. Đây là
  *      LỖI: một sự kiện nghiệp vụ vừa xảy ra và sẽ không ai được báo, vĩnh viễn.
@@ -19,7 +19,7 @@ import { HANDLED_MAIL_TOPICS } from './mail.consumer';
  * ===== BÀI NÀY CANH CÁI DANH SÁCH, VÌ DANH SÁCH LÀ CHỖ SẼ LỆCH =====
  *
  * `HANDLED_MAIL_TOPICS` gõ tay, còn sự thật nằm ở các `case` trong `build()`. Hai nơi thì sẽ
- * trôi — đúng mẫu mà F-09 vừa chứng minh. Nên bài đối chiếu cả hai chiều, và còn hỏi thêm một
+ * trôi. Nên bài đối chiếu cả hai chiều, và còn hỏi thêm một
  * câu thứ ba mà không nơi nào khác hỏi: **mọi topic được ĐẨY vào outbox có mẫu thư chưa?**
  */
 

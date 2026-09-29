@@ -758,7 +758,7 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
 | Tài sản | Đường dẫn | Thay cho |
 | --- | --- | --- |
 | `DetailSection` | `web/src/ui/detail-layout.tsx` | Vỏ khu "Hồ sơ" chép nguyên văn vào 4 file `features/` |
-| `quetNguon` | `web/src/test/quet-nguon.ts` | Ba bản `walk()` chép tay trong ba bài điểm danh |
+| `scanSource` | `web/src/test/scan-source.ts` | Ba bản `walk()` chép tay trong ba bài điểm danh |
 | `ops/gate-hex.sh` | (script) | Hai bản luật cấm hex: một `perl` ở `ci-local.sh`, một `grep` thô ở `ci.yml` |
 
 `levelFromDays`, `openCommandPalette`/`OPEN_PALETTE_EVENT` sinh ra ở đợt trước nhưng chưa khai —
@@ -782,7 +782,7 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
 - **Ở mẫu combobox, `role="listbox"` chỉ được chứa `option` và `group`.** Dải cảnh báo, khối
   rỗng, tên nhóm đều phải nằm ngoài hoặc bọc bằng `role="group"`. Và listbox phải LUÔN có mặt
   kể cả khi rỗng, vì `aria-controls` trên ô nhập cần một đích thật.
-- **`timVaChoLoc` chờ đúng GIÁ TRỊ của `q=`, không chờ "có `q=`".** Màn `/expiry` KHÔNG dùng
+- **`searchAndWaitForFilter` chờ đúng GIÁ TRỊ của `q=`, không chờ "có `q=`".** Màn `/expiry` KHÔNG dùng
   được helper này: nó có `useListUrlState` nhưng không khai `searchKey` nên không có ô tìm nào.
 
 ### Bẫy đã gặp
@@ -816,7 +816,7 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
    `ENOENT: open 'web/src/__lint-probe__ImooEl/probe.tsx'` — `lint-rules.test.ts` tạo/xoá thư
    mục dò ngay trong `src`, Vitest chạy song song, bài nào quét cây có thể đọc trúng thư mục
    vừa biến mất. `dead-keys-rollcall` đã được vá 18/09; hai bản `walk()` còn lại thì không.
-   **Vá bản thứ hai rồi chờ bản thứ ba là sai AD-15** — nay một `quetNguon`, ba nơi gọi (bản
+   **Vá bản thứ hai rồi chờ bản thứ ba là sai AD-15** — nay một `scanSource`, ba nơi gọi (bản
    đầu chỉ đấu được HAI: `dead-keys-rollcall` — chính file lấy làm dẫn chứng — vẫn giữ bản sao
    riêng, lượt rà soát cùng ngày đếm ra). Bỏ qua
    theo TÊN chứ không `try/catch`: nuốt ENOENT là nuốt mọi lỗi đọc thật.

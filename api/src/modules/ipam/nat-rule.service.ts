@@ -65,8 +65,8 @@ export interface NatRuleRecord {
    * MÁY ĐÍCH — thiết bị đang được NAT, suy từ hồ sơ IP của `internalIp`.
    *
    * Khác hẳn `deviceId` ở trên: cái kia là con router THỰC HIỆN NAT (Draytek), cái này là
-   * con máy ĐƯỢC NAT (camera, NAS, máy chủ). Trước đây bảng chỉ có IP trần nên câu "port
-   * này dẫn tới máy nào trong kho" phải tự tra bằng mắt qua màn IP.
+   * con máy ĐƯỢC NAT (camera, NAS, máy chủ). Chỉ có IP trần thì câu "port này dẫn tới máy
+   * nào trong kho" phải tự tra bằng mắt qua màn IP.
    *
    * Không thêm cột: IPAM đã là nguồn sự thật của map IP → thiết bị, chép thêm một cột nữa
    * là có hai chỗ cùng trả lời một câu và chúng sẽ lệch nhau.
@@ -102,7 +102,7 @@ export interface NatRuleInput {
 }
 
 /**
- * Sổ NAT / port-forward (story 5.3, FR-017).
+ * Sổ NAT / port-forward (FR-017).
  *
  * Bảng này tồn tại để trả lời đúng ba câu của auditor: **port nào mở, vì sao, cho ai**.
  * Mọi quyết định thiết kế ở đây quy về việc giữ ba câu đó luôn có câu trả lời DUY NHẤT —
@@ -132,17 +132,16 @@ export class NatRuleService {
     if (filters.search?.trim()) {
       const text = filters.search.trim();
       // Người dùng · lý do · IP nội bộ, cả ba trong cột sinh `nat_rule.search_norm` (0052) và
-      // đã gấp dấu. Ba vế `ILIKE` trước đây không gấp dấu — B-01. Cột sinh giữ nguyên
+      // đã gấp dấu (B-01). Cột sinh giữ nguyên
       // `host(internal_ip)` chứ không `internal_ip::text`, để gõ "10.0.0.5" vẫn khớp mà
       // không bị mặt nạ mạng chen vào.
       const conditions: SQL[] = [searchNormLike(natRuleTable, text)];
       /**
        * Gõ một SỐ thì tìm theo port, và tìm cả BÊN TRONG khoảng.
        *
-       * Bản trước chỉ so `external_from::text` — nên rule `8000-8010` không tìm thấy khi gõ
-       * `8005` hay `8010`, và người tra kết luận là port đang trống (code review Epic 5,
-       * finding 6). Người tạo rule mới còn được lỗi 409 cứu; auditor chỉ đọc thì nhận thẳng
-       * một câu trả lời sai.
+       * Chỉ so `external_from::text` thì rule `8000-8010` không tìm thấy khi gõ `8005` hay
+       * `8010`, và người tra kết luận là port đang trống. Người tạo rule mới còn được lỗi 409
+       * cứu; auditor chỉ đọc thì nhận thẳng một câu trả lời sai.
        */
       const port = Number(text);
       if (Number.isInteger(port) && port >= 1 && port <= 65535) {
@@ -173,10 +172,9 @@ export class NatRuleService {
     /**
      * Site không tra ra được (đã xóa, hoặc bookmark cũ mang id lạ) → trả RỖNG.
      *
-     * Bản trước để `site = null` rồi lọc `siteCode === null`, nên nó trả về đúng những rule
-     * của router KHÔNG gắn site — một tập khác hẳn, không rỗng, và auditor đọc thành "đây là
-     * các rule của site X" (code review Epic 5, finding 3). Export dùng chung đường này nên
-     * con số sai đi thẳng vào file nộp.
+     * Đừng để `site = null` rồi lọc `siteCode === null`: nó trả về đúng những rule của router
+     * KHÔNG gắn site — một tập khác hẳn, không rỗng, và auditor đọc thành "đây là các rule của
+     * site X". Export dùng chung đường này nên con số sai đi thẳng vào file nộp.
      */
     if (site === null) return [];
     return decorated.filter((rule) => rule.siteCode === site);
@@ -192,7 +190,7 @@ export class NatRuleService {
 
   async create(actor: string, input: NatRuleInput): Promise<NatRuleRecord> {
     // Chuẩn hóa IP TRƯỚC mọi thứ: `linkIp` so chuỗi thô với `host(address)`, nên một dấu cách
-    // thừa là không nối được vào hồ sơ IP dù hồ sơ đó có thật (code review Epic 5, finding 5).
+    // thừa là không nối được vào hồ sơ IP dù hồ sơ đó có thật.
     const clean: NatRuleInput = { ...input, internalIp: input.internalIp.trim() };
     const warnings = await this.requireValid(clean);
     await this.requireNoProtocolOverlap(clean, null);
@@ -256,7 +254,7 @@ export class NatRuleService {
    * `useState('')`), với lập luận rằng `requireDeviceId()` ở `POST` sẽ bắt nó. Lập luận đó
    * đúng với `POST` và KHÔNG đúng với `PATCH` — đường sửa không có ai bắt, nên `''` chạy
    * thẳng tới `SET device_id = ''` và Postgres ném `22P02`, tức một **500** cho một lỗi
-   * nhập liệu. Đo ngày 21/09 trên stack thật trước khi vá.
+   * nhập liệu (đã đo trên stack thật).
    */
   private requireField<T>(value: T | null | undefined, label: string): T {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) {
@@ -269,11 +267,10 @@ export class NatRuleService {
     const before = await this.requireAlive(id);
 
     /**
-     * GHÉP BẰNG `effectiveOf`, KHÔNG BẰNG `??` — A-03, rà soát 19/09.
+     * GHÉP BẰNG `effectiveOf`, KHÔNG BẰNG `??` — A-03.
      *
-     * Đợt B quét mẫu `?? current?.` và sửa ba file. Mẫu đó bỏ lọt chính chỗ này, nơi biến cũ
-     * tên là `before`. Sót tới 21/09, tìm ra ở lượt rà soát chéo — và bài học nằm ở CÁCH
-     * QUÉT chứ không ở mười dòng dưới đây: một mẫu grep hẹp cho cảm giác đã soi hết.
+     * Ở đây biến cũ tên là `before`, không phải `current`, nên một lượt grep `?? current?.`
+     * không thấy chỗ này: mẫu grep hẹp cho cảm giác đã soi hết.
      *
      * `??` bóp hai ý định khác nhau thành một: "không gửi khoá này" (giữ nguyên) và "gửi
      * `null`" (xoá đi). Với `note` — ô DUY NHẤT xoá được — đó là mất dữ liệu im lặng: người
@@ -316,7 +313,7 @@ export class NatRuleService {
      * Kiểm trên giá trị ĐÃ TRỘN với bản ghi cũ, không phải trên mỗi phần gửi lên.
      *
      * Sửa mỗi `externalTo` mà kiểm riêng nó thì "8010 hợp lệ" — trong khi hàng sau khi sửa
-     * lại là 8020-8010, ngược đầu. Đúng bài học của import thiết bị ở Epic 2.
+     * lại là 8020-8010, ngược đầu. Import thiết bị cũng ghép trước rồi mới kiểm, vì cùng lý do.
      */
     const warnings = await this.requireValid(merged);
     await this.requireNoProtocolOverlap(merged, id);
@@ -355,8 +352,8 @@ export class NatRuleService {
            *
            * Hai người cùng lúc: A gỡ rule, B bấm Lưu — không có điều kiện này thì bản sửa của
            * B ghi đè lên một hàng ĐÃ gỡ, đẻ ra một dòng audit `nat.updated` cho rule không còn
-           * trong sổ, và bản sửa biến mất vĩnh viễn mà không ai biết (code review Epic 5,
-           * finding 8). Có điều kiện thì người thua thấy lỗi ngay.
+           * trong sổ, và bản sửa biến mất vĩnh viễn mà không ai biết. Có điều kiện thì người
+           * thua thấy lỗi ngay.
            */
           .where(and(eq(natRuleTable.id, id), isNull(natRuleTable.voidedAt)))
           .returning();
@@ -405,7 +402,7 @@ export class NatRuleService {
   }
 
   /**
-   * "Xóa" = ẩn kèm lý do (quyết định 2026-08-23), và ở bảng này lý do còn quan trọng hơn:
+   * "Xóa" = ẩn kèm lý do (quyết định của chủ dự án), và ở bảng này lý do còn quan trọng hơn:
    * "port 8080 đóng ngày nào, ai đóng, vì sao" là câu hỏi sẽ có người hỏi.
    */
   async voidRule(actor: string, id: string, reason: string): Promise<void> {
@@ -429,9 +426,9 @@ export class NatRuleService {
       /*
        * VỊ TỪ `voided_at IS NULL` ĐI CÙNG CÂU GHI (mẫu CAS — `common/cas.ts`).
        *
-       * `requireAliveWithin` ở đầu hàm đọc rồi quyết định, nhưng câu UPDATE bên dưới trước đây
-       * ghi VÔ ĐIỀU KIỆN. Mức cô lập là READ COMMITTED, nên hai lượt gỡ cùng một rule chen
-       * nhau vừa khít: cả hai đọc thấy rule còn sống, cả hai ghi đè `voided_at`/`voided_by`/
+       * `requireAliveWithin` ở đầu hàm đọc rồi quyết định. Nếu câu UPDATE bên dưới ghi VÔ ĐIỀU
+       * KIỆN thì, ở mức cô lập READ COMMITTED, hai lượt gỡ cùng một rule chen nhau vừa khít:
+       * cả hai đọc thấy rule còn sống, cả hai ghi đè `voided_at`/`voided_by`/
        * `void_reason`, và lượt sau đè lên lượt trước.
        *
        * Thứ mất đi không phải trạng thái — rule vẫn bị gỡ, đó là thứ người dùng muốn. Thứ mất
@@ -530,7 +527,7 @@ export class NatRuleService {
   /**
    * Chỉ LỖI mới chặn. Cảnh báo (vd mở dải rộng hơn `nat.wide_port_range` cổng) được trả về để nơi gọi hiện cho
    * người dùng — chặn nó là mâu thuẫn với chính thông điệp "nếu đúng ý thì cứ lưu", và làm
-   * dải port camera không bao giờ vào nổi sổ (code review Epic 5, finding 1).
+   * dải port camera không bao giờ vào nổi sổ.
    */
   private async requireValid(input: NatRuleInput): Promise<string[]> {
     const { errors, warnings } = validateNatRule(
@@ -570,14 +567,14 @@ export class NatRuleService {
   }
 
   /**
-   * Câu lỗi TỬ TẾ cho chuyện chồng port — KHÔNG còn là trọng tài (A-04, vá 21/09).
+   * Câu lỗi TỬ TẾ cho chuyện chồng port — KHÔNG phải trọng tài (A-04).
    *
-   * ===== NÓ TỪNG LÀ TRỌNG TÀI DUY NHẤT, VÀ ĐÓ LÀ LỖ =====
+   * ===== VÌ SAO NÓ KHÔNG ĐƯỢC LÀ TRỌNG TÀI =====
    *
-   * `EXCLUDE` của 0022 so `protocol WITH =` nên không thấy `both` va `tcp`, và migration ấy
-   * nhường hẳn việc cho hàm này. Nhưng hàm này chạy trên `this.db` — ngoài mọi transaction,
-   * trước khi `db.transaction` mở ra — nên nó là một phép đọc-rồi-quyết không khóa gì: hai
-   * lượt ghi song song cùng đọc thấy sổ trống, cả hai qua cửa, cả hai ghi.
+   * `EXCLUDE` của 0022 so `protocol WITH =` nên không thấy `both` va `tcp`. Hàm này chạy trên
+   * `this.db` — ngoài mọi transaction, trước khi `db.transaction` mở ra — nên nó là một phép
+   * đọc-rồi-quyết không khóa gì: nếu chỉ trông vào nó, hai lượt ghi song song cùng đọc thấy
+   * sổ trống, cả hai qua cửa, cả hai ghi.
    *
    * Migration `0050` chuyển trọng tài xuống DB bằng cách ánh xạ giao thức thành KHOẢNG
    * (`tcp → [1,1]`, `udp → [2,2]`, `both → [1,2]`) rồi hỏi `&&` thay cho `=`. Không khóa nào,
@@ -627,7 +624,7 @@ export class NatRuleService {
    */
   private async requireDraytekWithin(tx: Tx, deviceId: string): Promise<void> {
     // Router ĐÃ THÁO thì rule trỏ vào hư không — mở port trên một hộp không còn cắm điện chỉ
-    // làm sổ NAT nói dối về việc "port nào đang mở" (rà soát 07/09).
+    // làm sổ NAT nói dối về việc "port nào đang mở".
     //
     // Bản `Within` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng hở
     // để lượt thanh lý router chen vào giữa (xem `DevicesApiService.assertUsableWithin`).
@@ -659,7 +656,7 @@ export class NatRuleService {
   /**
    * Rule trỏ vào một địa chỉ mà sổ IP nói là KHÔNG CÓ CHỦ — cảnh báo, không chặn.
    *
-   * Vế đối xứng của hàng rào ở `IpAddressService.assertNoLiveNatWithin` (rà soát 07/09, #6).
+   * Vế đối xứng của hàng rào ở `IpAddressService.assertNoLiveNatWithin`.
    * Bên kia chặn cứng vì ở đó quyền sở hữu đang đổi chủ và port sẽ trỏ nhầm máy. Bên này chỉ
    * nói, vì người trực hay khai rule TRƯỚC khi dựng xong máy và cập nhật sổ IP sau — chặn ở
    * đây là chặn một việc hợp lệ, và một hàng rào chặn việc hợp lệ là hàng rào sẽ bị tìm cách
@@ -761,10 +758,9 @@ export class NatRuleService {
     /*
      * HAI lượt hỏi cho cả trang, không phải hai lượt mỗi dòng.
      *
-     * Bản trước là N+1 LỒNG, và đây là chỗ tệ nhất trong cả repo: mỗi rule tra thiết bị
-     * (`getById` = 8 truy vấn), rồi tra hồ sơ IP, mà `IpAddressService.findOne` LẠI tra thiết
-     * bị của hồ sơ đó thêm một lượt 8 câu nữa. Sổ NAT của một router có 40 rule tốn hơn 600
-     * câu cho một lần mở.
+     * Đừng tra từng dòng: đó là N+1 LỒNG — mỗi rule tra thiết bị (`getById` = 8 truy vấn),
+     * rồi tra hồ sơ IP, mà `IpAddressService.findOne` LẠI tra thiết bị của hồ sơ đó thêm một
+     * lượt 8 câu nữa. Sổ NAT của một router có 40 rule sẽ tốn hơn 600 câu cho một lần mở.
      */
     const deviceIds = [...new Set(rows.map((row) => row.deviceId))];
     const devices = await this.devices.getByIds(deviceIds);
@@ -808,7 +804,7 @@ export class NatRuleService {
     /**
      * Ràng buộc `nat_external_range_check` của DB — hàng rào cuối. Không map thì mọi đường
      * vào KHÔNG qua DTO HTTP (import Excel về sau, seed, module khác gọi lại) bung 500 thay
-     * vì một câu tiếng Việt (code review Epic 5, finding 2).
+     * vì một câu tiếng Việt.
      */
     if (pgErrorCode(error) === PG_CHECK_VIOLATION) {
       return new BadRequestException({

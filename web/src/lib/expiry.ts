@@ -3,7 +3,7 @@
  * Bảo hành thiết bị, license, SSL, domain, hợp đồng ISP, phiếu… đều gọi hàm này —
  * không màn nào tự so ngày rồi tự chọn màu.
  *
- * Ngưỡng mặc định khớp luật digest (system_config, Epic 3): 30 ngày là "sắp", 7 ngày là "gấp".
+ * Ngưỡng mặc định khớp luật digest (system_config): 30 ngày là "sắp", 7 ngày là "gấp".
  */
 import i18n from '@/lib/i18n';
 
@@ -20,9 +20,8 @@ export interface ExpiryThresholds {
  * Giá trị dùng TRONG LÚC CHỜ, không phải bản sao của luật.
  *
  * Luật thật nằm ở `system_config` (`expiry.critical_days` / `expiry.warning_days`, migration
- * 0041) và web đọc nó qua `useExpiryThresholds()`. Trước 09/09 hai con số này là một bản sao
- * độc lập ở tầng web, và chú thích ở đây lẫn ở `expiry.service.ts` đều tự nhận là "khớp
- * nhau" — bằng lời hứa chứ không bằng cơ chế.
+ * 0041) và web đọc nó qua `useExpiryThresholds()`. Hai con số dưới đây KHÔNG phải một bản
+ * sao độc lập của luật — một bản sao chỉ "khớp nhau" bằng lời hứa chứ không bằng cơ chế.
  *
  * Giữ lại vì hai lý do, cả hai đều KHÔNG phải "để tiện": (1) vẽ huy hiệu xám cho cả màn trong
  * 200ms đầu rồi đổi màu tệ hơn nhiều so với vẽ đúng ngay; (2) hàm thuần dưới đây có bảng test
@@ -47,10 +46,10 @@ export function daysUntil(end: string | Date, now: Date = new Date()): number {
 /**
  * THANG PHÂN LOẠI, nhận thẳng SỐ NGÀY còn lại.
  *
- * Tách khỏi `expiryLevel` ngày 18/09/2026 vì có nơi đã có sẵn `daysLeft` do server tính —
- * màn Sắp hết hạn nhận `daysLeft` trong từng dòng — và nó đã viết lại đúng ba nhánh này ở
- * tầng màn hình. Đó là bản thứ HAI của thứ mà `docs/SHARED-REGISTRY.md` gọi là "luật 'sắp hết
- * hạn' DUY NHẤT của hệ thống"; hai bản thì sẽ có ngày chúng trả lời khác nhau.
+ * Tách khỏi `expiryLevel` vì có nơi đã có sẵn `daysLeft` do server tính — màn Sắp hết hạn
+ * nhận `daysLeft` trong từng dòng. Nơi ấy gọi hàm này, không viết lại ba nhánh ở tầng màn
+ * hình: `docs/SHARED-REGISTRY.md` gọi đây là "luật 'sắp hết hạn' DUY NHẤT của hệ thống"; hai
+ * bản thì sẽ có ngày chúng trả lời khác nhau.
  *
  * Không trả `'none'`: ở đây đã có một con số, tức đã có hạn. Vế "không có hạn" là việc của
  * `expiryLevel`, nơi `end` có thể `null`.

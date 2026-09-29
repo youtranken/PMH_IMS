@@ -58,7 +58,7 @@ export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
      * THỨ TỰ Ở ĐÂY LÀ BẮT BUỘC: gỡ rule NAT TRƯỚC, thu hồi IP SAU.
      *
      * Làm ngược lại thì chính hàng rào của mình chặn mình: `transitionWithin` gọi
-     * `assertNoLiveNatWithin` và ném `IP_HAS_LIVE_NAT` (rà soát 07/09 #6), rồi cả lượt thanh
+     * `assertNoLiveNatWithin` và ném `IP_HAS_LIVE_NAT`, rồi cả lượt thanh
      * lý rollback — người trực bấm Thanh lý và nhận một lỗi nói về NAT mà họ không hề đụng tới.
      *
      * Đây không phải chi tiết vặt: nó là lý do `DeviceReleaser` để mỗi module TỰ lo thứ tự bên

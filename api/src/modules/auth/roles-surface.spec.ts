@@ -8,7 +8,7 @@ const CONTROLLERS = allControllers(SRC);
 /**
  * CỔNG CANH CỔNG — `RolesGuard` mặc định đóng chỉ có tác dụng nếu nó thật sự được cắm.
  *
- * ===== LỖ ĐANG ĐÓNG (A-10, rà soát 19-20/09/2026) =====
+ * ===== LỖ MÀ BÀI NÀY ĐÓNG =====
  *
  * `RolesGuard` ném `ROLES_NOT_DECLARED` cho route quên khai `@Roles` — nhưng đó là hàng rào
  * ở RUNTIME: lỗi chỉ hiện khi có người gọi đúng route ấy, và người đó có thể là người dùng
@@ -34,7 +34,7 @@ describe('Quyền mặc định đóng (AD-9) — mọi route phải khai vai', 
       (sum, file) => sum + routesOf(readFileSync(file, 'utf8')).length,
       0,
     );
-    // Rà soát 19/09 đếm 93 route trên 18 controller. Chốt sàn rộng rãi để bài không đỏ vì
+    // Repo có khoảng 90 route trên 18 controller. Chốt sàn rộng rãi để bài không đỏ vì
     // một lượt thêm/bớt route bình thường, nhưng vẫn đỏ nếu bộ quét hỏng và trả về gần rỗng.
     expect(total).toBeGreaterThan(50);
   });

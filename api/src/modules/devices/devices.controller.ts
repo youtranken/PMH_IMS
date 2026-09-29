@@ -122,7 +122,7 @@ class PortParamDto extends IdParamDto {
 }
 
 /**
- * Kho thiết bị (story 2.2, FR-001/FR-007).
+ * Kho thiết bị (FR-001/FR-007).
  *
  * Quyền: mọi vai đã đăng nhập đều ĐỌC và GHI được hồ sơ thiết bị — đây là việc hàng ngày
  * của cả team IT (story viết "As a Member"). Thứ chỉ Admin/SA đụng là DANH MỤC.
@@ -180,7 +180,7 @@ export class DevicesController {
   }
 
   /**
-   * File mẫu + export + import (story 2.6). ĐẶT TRƯỚC `@Get(':id')`: Nest khớp route theo
+   * File mẫu + export + import. ĐẶT TRƯỚC `@Get(':id')`: Nest khớp route theo
    * thứ tự khai báo, để sau thì `/devices/template` bị `:id` nuốt và trả 400 "id không hợp lệ".
    */
   @Roles('sa', 'admin', 'member')
@@ -259,8 +259,8 @@ export class DevicesController {
   }
 
   /**
-   * Khu mở rộng (story 2.5): IP, license, secret, phiếu… Đợt 1 trả mảng RỖNG vì chưa module
-   * nào đăng ký — UI ẩn gọn. Epic sau chỉ thêm provider, không sửa gì ở đây (AD-2).
+   * Khu mở rộng: IP, license, secret, phiếu… Không module nào đăng ký thì trả mảng RỖNG — UI
+   * ẩn gọn. Module mới chỉ thêm provider, không sửa gì ở đây (AD-2).
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id/panels')
@@ -327,7 +327,7 @@ export class DevicesController {
     });
     return { status: body.status };
   }
-  // ───────────── Port map (story 2.4, AD-14) ─────────────
+  // ───────────── Port map (AD-14) ─────────────
 
   /**
    * Trả CẢ HAI CHIỀU: `ports` là cổng của chính thiết bị này, `incoming` là cổng ở nơi khác

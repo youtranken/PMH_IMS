@@ -6,23 +6,22 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
 } from './helpers';
 
 /**
- * B-01 — NGƯỜI VIỆT GÕ KHÔNG DẤU VẪN PHẢI TÌM RA.
+ * NGƯỜI VIỆT GÕ KHÔNG DẤU VẪN PHẢI TÌM RA.
  *
  * ===== LỖI ĐANG CANH =====
  *
  * `ILIKE` của Postgres không gấp dấu, còn `toLowerCase().includes()` bên trình duyệt cũng
- * không. Đo trên 30.000 thiết bị thật trước khi sửa (§13.3 sổ rà soát): gõ `Máy trạm` ra
- * 2.500 dòng, gõ `may tram` ra **0 dòng** — và màn hình trả lời "Không có thiết bị nào khớp
- * bộ lọc", tức khẳng định một điều sai. Một phần tư đội máy vô hình.
+ * không. Không gấp dấu thì gõ `Máy trạm` ra hàng nghìn dòng, gõ `may tram` ra **0 dòng** — và
+ * màn hình trả lời "Không có thiết bị nào khớp bộ lọc", tức khẳng định một điều sai.
  *
  * ===== VÌ SAO PHẢI LÀ E2E, KHÔNG PHẢI BÀI ĐƠN VỊ =====
  *
- * B-01 chỉ đúng khi BA bản gấp dấu cùng nói một thứ: `ims_norm()` trong Postgres, `foldSearch`
+ * Tìm không dấu chỉ đúng khi BA bản gấp dấu cùng nói một thứ: `ims_norm()` trong Postgres, `foldSearch`
  * bên api, `foldSearch` bên web. Ba bản ấy sống ở ba dự án không import được nhau. Bài đơn vị
  * canh từng bản so với `ops/search-fold-cases.json`; chỉ lượt E2E này mới hỏi được câu cuối
  * cùng — người gõ vào ô tìm thật thì có thấy hàng thật không.
@@ -40,7 +39,7 @@ test.beforeEach(() => {
 });
 
 /** Tạo một thiết bị mang tên TIẾNG VIỆT CÓ DẤU. Trả về mã đã dùng. */
-async function taoThietBiCoDau(page: Page, stamp: string): Promise<string> {
+async function createDeviceWithDiacritics(page: Page, stamp: string): Promise<string> {
   const code = `PC-E2E-VN-${stamp}`;
   await page.goto('/devices');
   await devicesPageButton(page, 'Thêm thiết bị').click();
@@ -61,24 +60,24 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
-    const code = await taoThietBiCoDau(page, stamp);
+    const code = await createDeviceWithDiacritics(page, stamp);
     const row = page.getByRole('row', { name: new RegExp(code) });
 
-    // Đây là câu hỏi trung tâm của B-01. Trước 25/09 dòng này trả về 0 hàng.
-    await timVaChoLoc(page, 'may tram');
+    // Đây là câu hỏi trung tâm của cả file: không gấp dấu thì dòng này trả về 0 hàng.
+    await searchAndWaitForFilter(page, 'may tram');
     await expect(row).toBeVisible();
 
     // `đ` không phải ký tự tổ hợp nên `NFD` không tách được — nó phải được thay riêng, ở cả
     // ba bản gấp dấu. Ô này là chỗ duy nhất bắt được nếu một bản quên.
-    await timVaChoLoc(page, 'duong moi');
+    await searchAndWaitForFilter(page, 'duong moi');
     await expect(row).toBeVisible();
 
     // Chữa bệnh này KHÔNG được làm mắc bệnh ngược lại: gõ đủ dấu vẫn phải ra.
-    await timVaChoLoc(page, 'Máy trạm');
+    await searchAndWaitForFilter(page, 'Máy trạm');
     await expect(row).toBeVisible();
 
     // Và mã vẫn tìm được như cũ — cột sinh gộp bốn cột, không thay thế cột nào.
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await expect(row).toBeVisible();
   });
 
@@ -87,12 +86,12 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
-    const code = await taoThietBiCoDau(page, stamp);
+    const code = await createDeviceWithDiacritics(page, stamp);
 
-    await timVaChoLoc(page, 'may chu ao hoa');
+    await searchAndWaitForFilter(page, 'may chu ao hoa');
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     /*
-     * Hai câu trả lời KHÁC NHAU và bản trước gộp làm một: "kho trống" dẫn người đọc tới kết
+     * Hai câu trả lời KHÁC NHAU, không được gộp làm một: "kho trống" dẫn người đọc tới kết
      * luận chưa ai khai thiết bị nào, còn "không khớp bộ lọc" dẫn tới việc nới ô tìm. Ở đây
      * kho KHÔNG trống, nên câu đúng là câu thứ hai.
      */
@@ -137,8 +136,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
      *
      * `page.goto` trả về khi tài liệu tải xong, còn Ctrl+K thì do một listener React gắn lên
      * `document` sau khi hydrate. Gõ vào khoảng giữa là phím rơi vào hư không, và bài đỏ ở
-     * dòng "mở hộp" với một thông báo chẳng liên quan gì tới gấp dấu — đúng cảnh xảy ra ngày
-     * 25/09 lúc đem đột biến ra thử.
+     * dòng "mở hộp" với một thông báo chẳng liên quan gì tới gấp dấu.
      */
     await expect(page.getByRole('navigation', { name: /Điều hướng/ })).toBeVisible();
 
@@ -154,13 +152,13 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     // Soi TRONG nhóm "Màn hình", không soi cả hộp: bốn nhóm kia là kết quả API và chúng cũng
     // có thể chứa chữ "Thiết bị". Khoanh vào đúng nhóm là cách duy nhất để ô này chỉ xanh
     // được vì phép gấp dấu ở trình duyệt, chứ không xanh nhờ một hồ sơ trùng chữ.
-    const manHinh = palette.getByRole('group', { name: 'Màn hình' });
+    const screen = palette.getByRole('group', { name: 'Màn hình' });
 
     await palette.getByRole('combobox').fill('thiet bi');
-    await expect(manHinh.getByRole('option', { name: /^Thiết bị/ })).toBeVisible();
+    await expect(screen.getByRole('option', { name: /^Thiết bị/ })).toBeVisible();
 
     // Và vẫn tìm được khi gõ đủ dấu — chữa bệnh này không được làm mắc bệnh ngược lại.
     await palette.getByRole('combobox').fill('Sổ NAT');
-    await expect(manHinh.getByRole('option', { name: /^Sổ NAT/ })).toBeVisible();
+    await expect(screen.getByRole('option', { name: /^Sổ NAT/ })).toBeVisible();
   });
 });

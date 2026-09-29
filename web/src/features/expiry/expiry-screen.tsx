@@ -74,16 +74,16 @@ export function renewalsQuery(range: { from: string; to: string }): string {
 }
 
 interface ExpiryResponse {
-  /** MỘT TRANG kể từ 21/09 (N-01) — không còn là trọn bộ cửa sổ. */
+  /** MỘT TRANG — không phải trọn bộ cửa sổ. */
   items: ExpiryRow[];
   /** Tổng số mục khớp bộ lọc — CẢ KHO, để `Pagination` biết có bao nhiêu trang. */
   total: number;
   /** `autoRetire`: mục phần mềm đã Hết hạn đang chờ tự Thanh lý (Q-13). */
   summary: { expired: number; critical: number; warning: number; autoRetire?: number };
   /*
-   * `expiry.service.ts:129` trả KÈM ngưỡng đã dùng để đếm `summary`. Trước 18/09 khai báo này
-   * bỏ sót nó, nên trường ấy bị vứt đi và màn phải hỏi lại `/expiry/thresholds` — một truy vấn
-   * THỨ HAI, có `retry: false`, và khi nó hỏng thì lùi về 7/30 cứng.
+   * `expiry.service.ts:129` trả KÈM ngưỡng đã dùng để đếm `summary`. Bỏ sót trường này thì màn
+   * phải hỏi lại `/expiry/thresholds` — một truy vấn THỨ HAI, có `retry: false`, và khi nó hỏng
+   * thì lùi về 7/30 cứng.
    *
    * Hậu quả: ô số đếm bằng ngưỡng của server, bảng lọc bằng ngưỡng của truy vấn kia. Admin đặt
    * `expiry.critical_days = 14` rồi `/expiry/thresholds` lỗi một lượt → ô "Gấp" ghi 6, bấm vào
@@ -117,7 +117,7 @@ function windowUntil(end: string, today: string): number {
 }
 
 /**
- * Màn Expiry tổng hợp (story 3.4, FR-012).
+ * Màn Expiry tổng hợp (FR-012).
  *
  * Mọi thứ có ngày hết hạn của cả hệ thống về một chỗ: bảo hành thiết bị, license, SSL,
  * tên miền, hợp đồng bảo trì, hợp đồng đường truyền. Danh sách LOẠI lấy từ API — module
@@ -134,16 +134,11 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const canEditRules = me.role === 'sa' || me.role === 'admin';
 
   /*
-   * BA BỘ LỌC SỐNG TRÊN THANH ĐỊA CHỈ, KHÔNG TRONG `useState` (18/09/2026).
+   * BA BỘ LỌC SỐNG TRÊN THANH ĐỊA CHỈ, KHÔNG TRONG `useState`.
    *
    * `docs/SHARED-REGISTRY.md` viết thẳng về `useListUrlState`: "Cấm quay lại `useState` cho
    * bốn thứ đó — mất bộ lọc khi F5, không gửi được link, và bấm Back từ trang chi tiết rơi về
-   * một danh sách trắng". Màn này vẫn `useState` cả ba, và ô số `state` thì MỚI SINH RA trong
-   * chính nhánh này — tức luật vừa viết đã có ngoại lệ ngay lập tức.
-   *
-   * Lý do kỹ thuật "màn này không phân trang" không còn đứng được:
-   * `features/vault/vault-home-screen.tsx` đã chứng minh hook dùng được cho màn không phân
-   * trang — khai `emptyFilters`, bỏ `defaultLimit`/`defaultSort`, xong.
+   * một danh sách trắng".
    *
    * `withinDays` để dạng chuỗi trong URL rồi mới `Number()`: hook giữ mọi bộ lọc là chuỗi, và
    * một link ai đó sửa tay (`?withinDays=abc`) phải rơi về mặc định chứ không thành `NaN` đi
@@ -201,13 +196,13 @@ export function ExpiryScreen({ me }: { me: Me }) {
     url.setFilter('state', value);
 
   /*
-   * `useExpiryThresholds()` chỉ còn là NGUỒN DỰ PHÒNG của màn này (sửa 19/09/2026).
+   * `useExpiryThresholds()` chỉ là NGUỒN DỰ PHÒNG của màn này.
    *
-   * Mọi thứ trên màn — phép lọc bảng, nhãn ô số, VÀ huy hiệu ở cột Trạng thái — nay đọc `nguong`
+   * Mọi thứ trên màn — phép lọc bảng, nhãn ô số, VÀ huy hiệu ở cột Trạng thái — đọc `nguong`
    * bên dưới, tức ngưỡng đi KÈM chính lượt trả về, vì đó mới đúng là bộ ngưỡng mà `summary` đã
-   * dùng để đếm. Bản 18/09 chỉ chuyển phép lọc và nhãn, để huy hiệu tự hỏi hook — nên màn có hai
-   * nguồn: hook giữ cache 10 phút, admin đổi `expiry.critical_days` thành 14 là bảng lọc theo 14
-   * còn huy hiệu tô theo 7. Lượt rà soát 19/09 tìm ra; bản vá dời lỗi chứ chưa diệt lỗi.
+   * dùng để đếm. Để một thứ (ví dụ huy hiệu) tự hỏi hook là màn có hai nguồn: hook giữ cache
+   * 10 phút, admin đổi `expiry.critical_days` thành 14 là bảng lọc theo 14 còn huy hiệu tô
+   * theo 7.
    */
   const thresholds = useExpiryThresholds();
 
@@ -215,15 +210,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const kinds = useExpiryKinds();
 
   /*
-   * PHÂN TRANG VÀ LỌC NHÓM Ở MÁY CHỦ (N-01, vá 21/09).
+   * PHÂN TRANG VÀ LỌC NHÓM Ở MÁY CHỦ.
    *
-   * Tới 20/09 màn này kéo TRỌN cửa sổ về rồi lọc/sắp/bày tại chỗ — 7.662 dòng ở 30k hồ sơ, và
-   * ở 200k thì không dùng được. Nó còn làm bẩn cả phiên: mở `/expiry` một lần thì màn kế tiếp
-   * cũng chậm theo (9.730ms so với 582ms khi đo một mình), vì trình duyệt còn đang dọn 841k node.
+   * Kéo TRỌN cửa sổ về rồi lọc/sắp/bày tại chỗ là 7.662 dòng ở 30k hồ sơ, và ở 200k thì không
+   * dùng được. Nó còn làm bẩn cả phiên: mở `/expiry` một lần thì màn kế tiếp cũng chậm theo
+   * (9.730ms so với 582ms khi đo một mình), vì trình duyệt còn đang dọn 841k node.
    *
-   * `state` đi CÙNG lên server, không lọc ở client nữa. Giữ lại ở client thì bấm "Gấp" chỉ lọc
-   * trong 50 dòng đang xem trong khi nút ngay trên đầu đề số 87 — một màn tự mâu thuẫn, và nó
-   * sinh ra do chính bản vá này chứ không phải lỗi cũ.
+   * `state` đi CÙNG lên server, không lọc ở client. Lọc ở client thì bấm "Gấp" chỉ lọc trong
+   * 50 dòng đang xem trong khi nút ngay trên đầu đề số 87 — một màn tự mâu thuẫn.
    */
   const expiry = useQuery({
     queryKey: ['expiry', withinDays, kind, state, sortParams, url.page, url.limit],
@@ -261,7 +255,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
    * Ngưỡng ĐI KÈM lượt trả về, không phải từ `useExpiryThresholds()` — chỉ bộ này mới chắc chắn
    * là bộ mà `summary` đã dùng để đếm. Chưa về thì lùi về hook (nó có bản dự phòng riêng).
    *
-   * Phép LỌC theo nhóm đã chuyển xuống server 21/09 (N-01); ở đây `nguong` chỉ còn để TÔ MÀU.
+   * Phép LỌC theo nhóm nằm ở server; ở đây `nguong` chỉ để TÔ MÀU.
    */
   const nguong = expiry.data?.thresholds ?? thresholds;
   const rows = expiry.data?.items ?? [];
@@ -356,7 +350,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
       },
     ],
     /*
-     * `nguong` PHẢI có mặt ở đây (sửa 20/09/2026, lỗi F-01).
+     * `nguong` PHẢI có mặt ở đây.
      *
      * Thiếu nó thì `cell` của cột Tình trạng đóng băng bộ ngưỡng của lượt render ĐẦU —
      * lúc `expiry.data` còn `undefined` nên `nguong` là `DEFAULT_EXPIRY_THRESHOLDS` (7/30).

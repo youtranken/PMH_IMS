@@ -30,7 +30,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const body = this.toBody(exception);
     if (body.statusCode >= 500) {
       /*
-       * QUA `redactForLog`, KHÔNG in thẳng `.stack` (rà soát 07/09, mục 6 "Bảo mật").
+       * QUA `redactForLog`, KHÔNG in thẳng `.stack`.
        *
        * `DrizzleQueryError` nhét cả mảng THAM SỐ ĐÃ BIND vào message của nó, và `.stack` chứa
        * message nguyên văn ở dòng đầu. Nên một câu INSERT vào `users` mà hỏng sẽ in hash
@@ -44,7 +44,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // ERR_HTTP_HEADERS_SENT thứ cấp nuốt mất lỗi gốc.
     if (response.headersSent) {
       /*
-       * NGOẠI LỆ CÓ KIỂM CỦA LUẬT `NO_RAW_ERROR_MESSAGE_IN_LOG` (11/09).
+       * NGOẠI LỆ CÓ KIỂM CỦA LUẬT `NO_RAW_ERROR_MESSAGE_IN_LOG`.
        *
        * Luật đó bắt `.message` trong dòng log vì `DrizzleQueryError.message` chở tham số đã
        * bind. Ở đây `body` KHÔNG phải lỗi gốc — nó là body đã đi qua `toBody`, mà hàm đó trả
@@ -101,7 +101,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     /*
      * Lỗi không đoán trước: không lộ chi tiết nội bộ ra body.
      *
-     * Dịch sang tiếng Việt 12/09 và GIỮ NGUYÊN tính chung chung — đó mới là điểm của câu này.
+     * Tiếng Việt nhưng GIỮ NGUYÊN tính chung chung — đó mới là điểm của câu này.
      * Người dùng đọc được thứ mình cần làm; kẻ dò thì vẫn không biết gì hơn về phía trong.
      * ĐỪNG nhân tiện thêm tên bảng, tên hàm hay mã lỗi kỹ thuật vào đây: chi tiết thật nằm ở
      * log phía máy chủ (`logException` bên trên), nơi chỉ người vận hành đọc được.

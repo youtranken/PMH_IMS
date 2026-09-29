@@ -38,7 +38,7 @@ export interface DisposeOptions {
 /**
  * Bản HOOK của cùng việc đó — dành cho chỗ không vẽ được một cái nút.
  *
- * Sinh ra khi cột thao tác đổi sang menu ba chấm (28/08/2026): mục trong menu là một dòng dữ
+ * Cột thao tác là menu ba chấm: mục trong menu là một dòng dữ
  * liệu `{ label, onSelect }`, không phải một component. Tách hook ra thay vì chép logic hỏi
  * lại + gọi API sang màn phần mềm — AD-15 cấm bản thứ hai, và hai bản sẽ trôi khác nhau đúng
  * lúc câu hỏi xác nhận đổi.
@@ -96,10 +96,10 @@ export function DisposeButton({
   return (
     <button
       type="button"
-      /* Đỏ (28/08/2026): đưa vào kho thanh lý là dừng tính hạn, cắt khỏi email nhắc gia hạn
+      /* Đỏ: đưa vào kho thanh lý là dừng tính hạn, cắt khỏi email nhắc gia hạn
          và khóa hồ sơ lại. Nó đứng cạnh "Sửa" và "Gia hạn" — cùng một sắc xám thì ba việc
          trông ngang nhau, trong khi chỉ một cái lấy đi thứ gì đó. */
-      /* `danger-ghost` chứ không phải `danger` nền đặc (16/09/2026): cùng một luật với nút
+      /* `danger-ghost` chứ không phải `danger` nền đặc: cùng một luật với nút
          "Thanh lý" ở trang chi tiết thiết bị. Nền đỏ đặc để dành cho nút xác nhận TRONG hộp
          thoại — chỗ người dùng đã đọc câu hỏi rồi. */
       className="btn sm danger-ghost"

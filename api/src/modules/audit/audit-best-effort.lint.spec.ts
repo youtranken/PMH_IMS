@@ -3,8 +3,8 @@ import { lint, withProbe } from '../../../test/lint-probe';
 /**
  * Bài kiểm cho CHÍNH CÁI CỔNG, không phải cho code.
  *
- * Luật `appendBestEffort` gác đúng thứ đã hỏng ở finding #4: một hàm nuốt lỗi ghi audit mà
- * mọi nơi với tới được. Nếu selector của nó gõ sai một ký tự thì hàng rào biến mất, code vẫn
+ * Luật `appendBestEffort` gác một hàm nuốt lỗi ghi audit khỏi tay mọi nơi. Nếu selector của
+ * nó gõ sai một ký tự thì hàng rào biến mất, code vẫn
  * xanh, và lần sau ai đó gọi `appendBestEffort` trong service là NFR-03 thủng lại — im lặng.
  *
  * Cơ chế chạy eslint thật (và hai cái bẫy của nó) nằm ở `api/test/lint-probe.ts` — dùng chung
@@ -47,9 +47,8 @@ export async function probe(audit: AuditWriterService, tx: Database): Promise<vo
   });
 
   /**
-   * Ngoại lệ chỉ mở cho ĐÚNG file interceptor, không mở cho cả `src/modules/audit/`. Rà soát
-   * 07/09 (#9) đã chỉ ra một ngoại lệ quá rộng ở `.dependency-cruiser.cjs` biến hàng rào
-   * thành cửa mở; đừng lặp lại kiểu đó ở đây.
+   * Ngoại lệ chỉ mở cho ĐÚNG file interceptor, không mở cho cả `src/modules/audit/`: một
+   * ngoại lệ quá rộng biến hàng rào thành cửa mở.
    */
   it('file khác trong chính thư mục audit KHÔNG được miễn', () => {
     withProbe('src/modules/audit/probe-best-effort.ts', CALLS_BEST_EFFORT.replace('../audit/', './'), () => {

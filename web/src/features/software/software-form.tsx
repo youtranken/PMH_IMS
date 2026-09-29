@@ -59,7 +59,7 @@ function initialState(row: SoftwareRow | null): FormState {
   };
 }
 
-/** Form hồ sơ phần mềm (story 3.1, FR-008). Màn nhập — desktop-first. */
+/** Form hồ sơ phần mềm (FR-008). Màn nhập — desktop-first. */
 export function SoftwareForm({
   row,
   csrfToken,

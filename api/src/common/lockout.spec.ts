@@ -70,33 +70,33 @@ describe('lockout — NFR-01: sai 5 lần khóa 15 phút, tự mở', () => {
    * `justLocked` = VỪA CHUYỂN sang khóa, KHÔNG phải "đang khóa" — nơi gọi dùng nó để gửi email
    * báo SA, nên trả sai là spam hộp thư của SA.
    *
-   * Bản trước trả `true` cho mọi lượt sai từ ngưỡng trở đi. Lỗi đó bị CHE bởi một lỗi khác:
-   * bộ đếm ở `login()` là đọc-rồi-ghi-đè nên các lượt song song đều ghi về 1, không lượt nào
-   * chạm ngưỡng hai lần. Sửa lỗi đua (08/09) thì nó lộ ra — 6 lượt sai đồng thời đẻ hai dòng
-   * `auth.account.locked` và hai thư. Đây là bài canh cho chuyện đó không quay lại.
+   * Trả `true` cho mọi lượt sai từ ngưỡng trở đi là lỗi dễ bị CHE: khi bộ đếm ở `login()` còn
+   * đọc-rồi-ghi-đè thì các lượt song song đều ghi về 1, không lượt nào chạm ngưỡng hai lần.
+   * Bộ đếm nguyên tử thì nó lộ ra — 6 lượt sai đồng thời đẻ hai dòng `auth.account.locked` và
+   * hai thư. Đây là bài canh cho chuyện đó không quay lại.
    */
   it.each([
     {
-      ten: 'lượt CHẠM ngưỡng: phải báo',
+      name: 'lượt CHẠM ngưỡng: phải báo',
       state: { failedAttempts: 4, lockedUntil: null },
       justLocked: true,
     },
     {
-      ten: 'lượt sai TIẾP khi đang khóa: KHÔNG báo lần nữa',
+      name: 'lượt sai TIẾP khi đang khóa: KHÔNG báo lần nữa',
       state: { failedAttempts: 5, lockedUntil: new Date('2026-08-22T10:10:00Z') },
       justLocked: false,
     },
     {
-      ten: 'lượt sai thứ ba khi đang khóa: vẫn KHÔNG báo',
+      name: 'lượt sai thứ ba khi đang khóa: vẫn KHÔNG báo',
       state: { failedAttempts: 9, lockedUntil: new Date('2026-08-22T10:10:00Z') },
       justLocked: false,
     },
     {
-      ten: 'khóa cũ ĐÃ hết hạn: đếm lại từ 1, chưa chạm ngưỡng nên không báo',
+      name: 'khóa cũ ĐÃ hết hạn: đếm lại từ 1, chưa chạm ngưỡng nên không báo',
       state: { failedAttempts: 9, lockedUntil: new Date('2026-08-22T09:00:00Z') },
       justLocked: false,
     },
-  ])('$ten', ({ state, justLocked }) => {
+  ])('$name', ({ state, justLocked }) => {
     expect(registerFailure(state, POLICY, NOW).justLocked).toBe(justLocked);
   });
 

@@ -4,11 +4,11 @@ import type { UserRole } from '@/lib/me';
 /**
  * Đường dẫn của IMS — NGUỒN DUY NHẤT (AD-15).
  *
- * Trước đây chuỗi đường dẫn nằm rải trong `App.tsx`, `app-nav.ts` và ~40 chỗ `<Link to>`.
- * Đổi một đường phải đi tìm bằng grep và sót một chỗ là một cái link chết mà không lỗi nào
- * báo. Từ giờ màn nào cần đường dẫn thì đọc ở đây.
+ * Chuỗi đường dẫn rải trong `App.tsx`, `app-nav.ts` và hàng chục chỗ `<Link to>` thì đổi một
+ * đường phải đi tìm bằng grep, và sót một chỗ là một cái link chết mà không lỗi nào báo. Màn
+ * nào cần đường dẫn thì đọc ở đây.
  *
- * URL bằng tiếng Anh (quyết định của chủ dự án, 26/08/2026) còn GIAO DIỆN vẫn tiếng Việt:
+ * URL bằng tiếng Anh (quyết định của chủ dự án) còn GIAO DIỆN vẫn tiếng Việt:
  * đường dẫn là thứ lập trình viên, log và tài liệu kỹ thuật đọc; nhãn trên màn hình là thứ
  * người dùng đọc. Hai đối tượng khác nhau nên không phải cùng một ngôn ngữ.
  */
@@ -62,7 +62,7 @@ export const PATHS = {
  * Loại chủ thể → đường tới hồ sơ của nó.
  *
  * Khóa là `SecretOwnerType` — cùng danh sách với `SECRET_OWNER_TYPES` bên API, và trùng khít
- * bốn loại của kho thanh lý. Trước 12/09 union này gõ tay lần thứ hai ngay tại đây.
+ * bốn loại của kho thanh lý. Không gõ tay union thứ hai ở đây.
  *
  * Có mặt vì ba màn TỔNG — kho thanh lý, khối "vừa thanh lý" và khối "két lâu không đổi" trên
  * bảng điều khiển — đều nhận một cặp `(ownerType, id)` rồi phải tự dựng link. Ba bản chép tay
@@ -113,13 +113,12 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
 ];
 
 /**
- * VAI NÀO ĐƯỢC VÀO ĐƯỜNG NÀO — mặc-định-ĐÓNG cho mọi màn quản trị (B-09, 22/09).
+ * VAI NÀO ĐƯỢC VÀO ĐƯỜNG NÀO — mặc-định-ĐÓNG cho mọi màn quản trị.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BẢNG NÀY BỊT =====
  *
- * `/vault` và `/dev/components` gác ngay ở `<Route>`: gõ thẳng URL cũng chỉ nhận 404.
- * `/admin/accounts` và `/admin/vault-access` thì KHÔNG — Member gõ URL vào là màn dựng đủ
- * `h1`, phụ đề, và một nút "Thêm tài khoản" BẤM ĐƯỢC, rồi mới báo không có quyền.
+ * Màn nào không gác ở `<Route>` thì Member gõ thẳng URL vào là màn dựng đủ `h1`, phụ đề, và
+ * một nút "Thêm tài khoản" BẤM ĐƯỢC, rồi mới báo không có quyền.
  *
  * Dữ liệu không rò (API trả 403 sạch), nên đây không phải lỗ bảo mật. Nhưng nó dạy sai: một
  * màn dựng ra đủ hình hài rồi mới từ chối trông như một lỗi hệ thống, không như một ranh giới
@@ -128,8 +127,8 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
  *
  * ===== VÌ SAO LÀ MỘT BẢNG, KHÔNG PHẢI MẤY CÂU `? :` TRONG JSX =====
  *
- * Gác bằng biểu thức rải trong `App.tsx` thì màn thứ năm viết sau sẽ quên — đúng như hai màn
- * này đã quên. Bảng ở đây cho phép hỏi một câu mà JSX không trả lời được: "có đường `/admin`
+ * Gác bằng biểu thức rải trong `App.tsx` thì màn viết sau sẽ quên. Bảng ở đây cho phép hỏi
+ * một câu mà JSX không trả lời được: "có đường `/admin`
  * nào CHƯA khai vai không?" Bài kiểm hỏi đúng câu đó, nên thêm màn quản trị mà quên khai vai
  * là ĐỎ ngay, không phải chờ ai đó gõ URL bằng tay.
  *
@@ -158,7 +157,7 @@ export function canSeeRoute(path: string, role: UserRole): boolean {
 }
 
 /**
- * Đường dẫn → khoá i18n làm TÊN TAB TRÌNH DUYỆT (B-03).
+ * Đường dẫn → khoá i18n làm TÊN TAB TRÌNH DUYỆT.
  *
  * Dùng LẠI khoá `nav.*` chứ không đẻ bộ khoá thứ hai: tab trình duyệt và mục sidebar trỏ vào
  * cùng một màn, nên hai cái tên khác nhau cho nó là đúng thứ `term-consistency.test.ts` vừa

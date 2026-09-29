@@ -17,7 +17,7 @@ const inet = customType<{ data: string }>({ dataType: () => 'inet' });
 /**
  * Bảng `software` + `software_history` — migration 0014. Chủ sở hữu: module `software` (AD-3).
  *
- * KHÔNG có cột key/mật khẩu: chìa khóa nằm ở két sắt (Epic 4), bảng này chỉ giữ hồ sơ
+ * KHÔNG có cột key/mật khẩu: chìa khóa nằm ở két sắt, bảng này chỉ giữ hồ sơ
  * hành chính. Ngày dùng kiểu `date` thuần vì "hết hạn 30/08/2026" là một NGÀY LỊCH.
  */
 export const softwareTable = pgTable('software', {

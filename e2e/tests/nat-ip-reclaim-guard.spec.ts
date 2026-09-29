@@ -11,23 +11,23 @@ import {
 } from './helpers';
 
 /**
- * Finding #6 của rà soát 07/09 — cửa duy nhất trong cả đợt C mở một cổng ra ngoài vào MÁY SAI.
+ * Thu hồi IP còn rule NAT sống là mở một cổng ra ngoài vào MÁY SAI.
  *
  * ===== KỊCH BẢN THẬT =====
  *
  * Rule `TCP 8080 → 172.16.10.5`, lý do "camera tầng 2". Camera chết. IT thu hồi `.5` — không
  * một lời cảnh báo. Tuần sau `.5` được cấp cho laptop kế toán. **Port 8080 vẫn mở, và giờ nó
- * trỏ vào laptop kế toán.** Không ai làm gì sai theo từng bước; cái sai nằm ở chỗ hai cuốn sổ
- * không nói chuyện với nhau (`ip-address.service.ts` ↔ `nat-rule`: 0 dòng nối).
+ * trỏ vào laptop kế toán.** Không ai làm gì sai theo từng bước; cái sai là khi hai cuốn sổ
+ * (`ip-address.service.ts` ↔ `nat-rule`) không nói chuyện với nhau.
  *
  * FK `ip_address_id` là `ON DELETE SET NULL`, nên nghe thì tưởng có hàng rào. Không có: thu
  * hồi và ẩn đều là XÓA MỀM, nên FK không bao giờ bắn.
  *
  * ===== VÌ SAO BÀI NÀY LÀ E2E =====
  *
- * Thứ cần chứng minh là một câu truy vấn chạy ĐÚNG TRONG transaction đổi trạng thái. `CLAUDE.md`
- * cấm mock drizzle và tầng integration chạm DB thật thì chưa có (`api/test/` rỗng), nên đây là
- * tầng duy nhất chứng minh được — cùng lý do đã ghi ở `m2-concurrency.spec.ts`.
+ * Thứ cần chứng minh là một câu truy vấn chạy ĐÚNG TRONG transaction đổi trạng thái, đi qua
+ * đúng đường controller thật. `CLAUDE.md` cấm mock drizzle — cùng lý do đã ghi ở
+ * `m2-concurrency.spec.ts`.
  */
 
 test.beforeEach(() => {

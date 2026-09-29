@@ -145,7 +145,7 @@ input.tp-time:focus {
   height: 100%;
   overflow-y: scroll;
   /* mandatory: trình duyệt tự hít đúng nấc khi cuộn dừng → không cần JS scrollTo can thiệp
-     (bản cũ JS drag + glide giằng với native gây "nhảy loạn xạ"). Native lo cuộn + hít mượt. */
+     (JS drag + glide sẽ giằng với native gây "nhảy loạn xạ"). Native lo cuộn + hít mượt. */
   scroll-snap-type: y mandatory;
   overscroll-behavior: contain;
   contain: paint;

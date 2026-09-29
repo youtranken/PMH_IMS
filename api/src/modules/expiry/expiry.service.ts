@@ -94,7 +94,7 @@ export interface ExpiryQuery {
 }
 
 /**
- * Cỗ máy Expiry (story 3.4, FR-012).
+ * Cỗ máy Expiry (FR-012).
  *
  * Engine KHÔNG biết bảng nào tồn tại: nó chỉ gọi provider đã đăng ký (AD-7). Thêm một loại
  * có hạn ở epic sau (chứng chỉ, hợp đồng thuê máy) chỉ là thêm một provider, không sửa
@@ -228,20 +228,21 @@ export class ExpiryService {
     }
 
     /*
-     * CHỈ ĐIỀU PHỐI — không tự ghi sổ nữa (rà soát 07/09, #7).
+     * CHỈ ĐIỀU PHỐI — không tự ghi sổ.
      *
-     * Bản trước gọi `source.renew()` (commit), rồi mở transaction THỨ HAI để ghi
-     * `renewal_history`. Hai lỗi cộng dồn:
+     * Đừng gọi `source.renew()` (commit) rồi mở transaction THỨ HAI để ghi `renewal_history`.
+     * Hai lỗi cộng dồn:
      *
-     * 1. HAI CỬA, MỘT SỔ. Web có hai nút Gia hạn: màn "Sắp hết hạn" đi qua đây và ghi sổ; nút
-     *    trong chính trang hồ sơ gọi thẳng `SoftwareService.renew` và KHÔNG ghi gì. `end_date`
-     *    đổi, toast xanh, lịch sử hồ sơ có dòng — nhưng báo cáo cuối năm và khối "gia hạn gần
-     *    đây" trên dashboard đọc `renewal_history` nên trả rỗng. Bảng chỉ-thêm: không vá ngược.
+     * 1. HAI CỬA, MỘT SỔ. Web có hai nút Gia hạn: màn "Sắp hết hạn" đi qua đây; nút trong
+     *    chính trang hồ sơ gọi thẳng `SoftwareService.renew`. Ghi sổ ở đây thì nút kia không
+     *    ghi gì: `end_date` đổi, toast xanh, lịch sử hồ sơ có dòng — nhưng báo cáo cuối năm và
+     *    khối "gia hạn gần đây" trên dashboard đọc `renewal_history` nên trả rỗng. Bảng
+     *    chỉ-thêm: không vá ngược.
      * 2. MẤT SỔ (mẫu N3). `end_date` đã commit mà transaction thứ hai hỏng thì hồ sơ đã gia
      *    hạn nhưng sổ không có dòng nào, và không có đường bù.
      *
-     * Nay phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
-     * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ còn kiểm tra rồi gọi.
+     * Phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
+     * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ kiểm tra rồi gọi.
      */
     const hasTerms = !!terms.contract?.trim() || (terms.cost !== undefined && terms.cost !== null);
     if (hasTerms && !source.renewTerms) {
@@ -340,11 +341,11 @@ const RENEWALS_RANGE_CAP = 1000;
 /**
  * Ba chip đếm — DÙNG ĐÚNG hai ngưỡng mà huy hiệu trên hàng dùng.
  *
- * ===== BẪY ĐÃ VÁ 09/09 =====
+ * ===== BẪY: `warning` PHẢI CÓ TRẦN =====
  *
- * Bản trước không có TRẦN cho `warning`: mọi thứ còn hơn 7 ngày đều được đếm là "sắp hết hạn".
- * Với cửa sổ mặc định 30 ngày thì trùng khớp ngẫu nhiên với `expiryLevel()` bên web, nên không
- * ai thấy. Nhưng người dùng đổi cửa sổ thành 90 ngày là hai bên nói khác nhau ngay:
+ * Không có TRẦN cho `warning` thì mọi thứ còn hơn 7 ngày đều được đếm là "sắp hết hạn". Với
+ * cửa sổ mặc định 30 ngày thì trùng khớp ngẫu nhiên với `expiryLevel()` bên web, nên không ai
+ * thấy. Nhưng người dùng đổi cửa sổ thành 90 ngày là hai bên nói khác nhau ngay:
  *
  *     chip:  "40 sắp hết hạn"      (mọi thứ > 7 ngày)
  *     hàng:  40 huy hiệu XÁM 'ok'  (`expiryLevel` gọi > 30 ngày là 'ok')
@@ -358,9 +359,9 @@ export type ExpiryLevel = 'expired' | 'critical' | 'warning';
 /**
  * Một mục thuộc nhóm nào — MỘT bản luật, dùng cho cả phép đếm lẫn phép lọc.
  *
- * Tách ra khỏi `summarize` vì từ 21/09 có hai nơi hỏi cùng câu ấy. Hai bản chép tay của ba
- * nhánh `<0 / <=critical / <=warning` sẽ trôi khỏi nhau ở lần ai đó sửa một bản — đúng thứ
- * F-09 vừa chứng minh là có thật (5 bản sao panel Lịch sử, và chúng ĐÃ lệch).
+ * Tách ra khỏi `summarize` vì có hai nơi hỏi cùng câu ấy (đếm và lọc). Hai bản chép tay của
+ * ba nhánh `<0 / <=critical / <=warning` sẽ trôi khỏi nhau ở lần ai đó sửa một bản — như F-09
+ * (các bản sao panel Lịch sử đã lệch nhau).
  */
 function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryLevel | null {
   if (daysLeft < 0) return 'expired';

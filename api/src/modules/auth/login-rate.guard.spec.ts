@@ -77,7 +77,7 @@ describe('LoginRateGuard — ngưỡng LẤY TỪ system_config (AD-11)', () => 
 
   /**
    * Đây là điểm mấu chốt của AD-11: đổi số trong `system_config` là hành vi ĐỔI THEO.
-   * Trước đây con số 20 nằm cứng trong `@Throttle` nên khóa cấu hình chỉ để trưng bày.
+   * Con số nằm cứng trong `@Throttle` thì khóa cấu hình chỉ để trưng bày.
    */
   it('nới ngưỡng trong cấu hình thì hệ thống nới theo ngay', async () => {
     const guard = new LoginRateGuard(configWithLimit(50));

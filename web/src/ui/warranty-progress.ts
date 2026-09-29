@@ -10,8 +10,8 @@ import {
 /**
  * Quãng đường của một thời hạn — hàm THUẦN, có bảng test.
  *
- * Trước đây "bảo hành" trên trang chi tiết chỉ là một cái nhãn chữ ("Còn 157 ngày"). Nó trả
- * lời đúng MỘT câu và giấu mất ba câu còn lại: mua từ bao giờ, hạn chạy từ mốc nào, và đã đi
+ * Một cái nhãn chữ ("Còn 157 ngày") cho "bảo hành" trên trang chi tiết chỉ trả lời đúng MỘT
+ * câu và giấu mất ba câu còn lại: mua từ bao giờ, hạn chạy từ mốc nào, và đã đi
  * hết bao nhiêu phần đường. Thanh timeline trả lời cả bốn.
  *
  * Mức độ (`level`) KHÔNG tự tính ở đây mà đọc từ `expiryLevel()` dùng chung (AD-15) — nên

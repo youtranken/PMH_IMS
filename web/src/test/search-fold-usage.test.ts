@@ -3,17 +3,17 @@ import { dirname, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * CỔNG CHẶN CẢ LỚP LỖI B-01 Ở TẦNG TRÌNH DUYỆT, KHÔNG CHỈ SÁU CHỖ CỦA HÔM NAY.
+ * CỔNG CHẶN CẢ LỚP LỖI TÌM-KHÔNG-GẤP-DẤU Ở TẦNG TRÌNH DUYỆT.
  *
  * ===== VÌ SAO CẦN MỘT CỔNG QUÉT MÃ NGUỒN =====
  *
- * B-01 ở tầng SQL đã có hàng rào cứng: cột sinh + `searchNormLike`, sai là đỏ ngay. Tầng
+ * Tìm không dấu ở tầng SQL đã có hàng rào cứng: cột sinh + `searchNormLike`, sai là đỏ ngay. Tầng
  * trình duyệt thì không — ở đây lọc là `x.toLowerCase().includes(term)`, một câu ai cũng viết
  * được trong ba giây, và nó SAI IM LẶNG: màn hình vẫn chạy, vẫn hiện "Chưa có dữ liệu", chỉ
  * là không tìm ra `Thiết bị` khi người ta gõ `thiet`.
  *
- * Sáu chỗ ngày 25/09 đã sửa. Cái cần canh là chỗ thứ BẢY — màn ai đó viết tháng sau, chép
- * đúng nếp cũ từ một màn cũ. Sửa sáu chỗ mà không dựng cổng là chữa triệu chứng.
+ * Cái cần canh là chỗ MỚI — màn ai đó viết tháng sau, chép đúng nếp cũ từ một màn cũ. Sửa
+ * từng chỗ mà không dựng cổng là chữa triệu chứng.
  *
  * ===== VÌ SAO CẤM ĐÚNG CHUỖI NÀY =====
  *

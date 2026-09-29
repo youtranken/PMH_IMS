@@ -83,7 +83,7 @@ async function setUpAs(page: Page, stamp: string, tier: 'whitelist' | 'needs_app
   return { deviceId, secretId, secretValue, typeId } satisfies Fixture;
 }
 
-/** Story 6.3 — FR-023: ba tầng, xin–duyệt, và hiệu lực tính bằng đồng hồ (AD-6). */
+/** FR-023: ba tầng, xin–duyệt, và hiệu lực tính bằng đồng hồ (AD-6). */
 test.describe('Break-glass', () => {
   /**
    * Kịch bản đầy đủ của AC: Member cần-duyệt → xin → SA duyệt → xem được → nhật ký ghi đủ.
@@ -94,7 +94,7 @@ test.describe('Break-glass', () => {
   }) => {
     /**
      * Người xin ở một ngữ cảnh trình duyệt riêng. Phiếu chờ không gắn phiên (Q-15); lần xem
-     * đầu sau khi được duyệt gắn quyền vào phiên đang xem — `break-glass-phien.spec.ts` dựng
+     * đầu sau khi được duyệt gắn quyền vào phiên đang xem — `break-glass-session.spec.ts` dựng
      * lại các đòn quanh việc gắn phiên.
      *
      * Trần 150 giây: hai lượt cài 2 lớp + một lượt chờ mã TOTP mới cho hộp xác nhận danh tính.
@@ -161,19 +161,19 @@ test.describe('Break-glass', () => {
     await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
     await memberCtx.close();
 
-    const vet = lastAudit('vault.secret.revealed', secretId);
-    expect(vet?.actor, 'vết phải mang tên người vừa xem').toBe(E2E_MEMBER.email);
-    const chiTiet = JSON.parse(vet?.detail ?? '{}') as { grantId?: string | null };
+    const trace = lastAudit('vault.secret.revealed', secretId);
+    expect(trace?.actor, 'vết phải mang tên người vừa xem').toBe(E2E_MEMBER.email);
+    const detail = JSON.parse(trace?.detail ?? '{}') as { grantId?: string | null };
     expect(
-      chiTiet.grantId,
+      detail.grantId,
       'xem qua đường break-glass thì vết PHẢI trỏ tới phiếu đã duyệt, không được null',
     ).toEqual(expect.any(String));
 
     /* Và phải đúng phiếu của chính lượt xin này, không phải một phiếu cũ nào đó.
-       LỌC CẢ NGƯỜI XIN (19/09/2026): lý do là một chuỗi cố định, nên một phiếu demo hay phiếu
+       LỌC CẢ NGƯỜI XIN: lý do là một chuỗi cố định, nên một phiếu demo hay phiếu
        thật trùng lý do — `du-lieu-demo` có gieo — sẽ bị `ORDER BY created_at DESC LIMIT 1` bốc
        nhầm và làm bài đỏ oan ở dòng khẳng định ngay dưới. */
-    const phieu = execSync(
+    const ticketId = execSync(
       `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
         `"SELECT id FROM approval WHERE reason = 'switch tầng 3 mất kết nối' ` +
         `AND requester = '${E2E_MEMBER.email}' ` +
@@ -182,7 +182,7 @@ test.describe('Break-glass', () => {
     )
       .toString()
       .trim();
-    expect(chiTiet.grantId, 'phải là ĐÚNG phiếu vừa được duyệt').toBe(phieu);
+    expect(detail.grantId, 'phải là ĐÚNG phiếu vừa được duyệt').toBe(ticketId);
   });
 
   /**
@@ -325,8 +325,7 @@ test.describe('Break-glass', () => {
   });
 
   /**
-   * Code review Epic 6, finding 1: `cancel()` không kiểm người gọi có phải người xin không.
-   * Bất kỳ ai biết id (nhìn qua vai, ảnh chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu
+   * `cancel()` phải kiểm người gọi có phải người xin không. Thiếu nó thì bất kỳ ai biết id (nhìn qua vai, ảnh chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu
    * của người khác — người xin ngồi chờ tiếp lúc 2 giờ sáng, còn lịch sử ghi sai tên người hủy.
    */
   test('không hủy được yêu cầu của người khác', async ({ page, browser }) => {
@@ -361,8 +360,8 @@ test.describe('Break-glass', () => {
   });
 
   /**
-   * Code review Epic 6, finding 6: luật "một yêu cầu treo cho mỗi chủ thể" trước đây chỉ có
-   * một câu SELECT ngoài transaction canh — hai cú bấm cùng lúc là lọt cả hai.
+   * Luật "một yêu cầu treo cho mỗi chủ thể": một câu SELECT ngoài transaction canh thì hai cú
+   * bấm cùng lúc là lọt cả hai.
    */
   test('bắn hai yêu cầu cùng lúc thì chỉ một cái lọt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -386,8 +385,8 @@ test.describe('Break-glass', () => {
     /**
      * Luôn là 201 + 409, dù cái thứ hai bị chặn bởi câu kiểm sớm hay bởi ràng buộc DB.
      *
-     * Bản đầu ném 400 ở câu kiểm sớm và 409 ở DB — cùng một sai lầm mà hai mã, tùy nhịp. Bộ
-     * E2E đầy đủ bắt được đúng chuyện đó (chạy riêng thì luôn trúng một nhánh).
+     * Ném 400 ở câu kiểm sớm và 409 ở DB là cùng một sai lầm mà hai mã, tùy nhịp — chạy riêng
+     * thì luôn trúng một nhánh, chỉ bộ đầy đủ mới lộ ra.
      */
     expect([a.status(), b.status()].sort()).toEqual([201, 409]);
     const failed = a.status() === 409 ? a : b;
@@ -399,8 +398,7 @@ test.describe('Break-glass', () => {
   });
 
   /**
-   * Code review Epic 6, finding 3: Member mở được tab Két sắt từ story 6.3, nên UI phải thôi
-   * bày ra nút GHI — bấm vào chỉ nhận 403.
+   * Member mở được tab Két sắt, nên UI không được bày ra nút GHI — bấm vào chỉ nhận 403.
    */
   test('Member được cấp quyền xem vẫn KHÔNG thấy nút ghi vào két', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -416,14 +414,14 @@ test.describe('Break-glass', () => {
     // "Cất mật khẩu/khóa" vẫn là nút phẳng trên đầu panel.
     await expect(page.getByRole('button', { name: 'Cất mật khẩu/khóa' })).toHaveCount(0);
     /*
-     * Sửa · Xoay · Thu hồi nằm trong menu ba chấm từ 28/08/2026, nên bám theo chữ trên nút
+     * Sửa · Xoay · Thu hồi nằm trong menu ba chấm, nên bám theo chữ trên nút
      * đã thành một khẳng định luôn xanh: mục menu không có trong DOM khi menu đóng, kể cả
      * với người CÓ quyền. Bám đúng cái nút mở menu — nó chỉ được vẽ khi `canEdit`.
      */
     await expect(page.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);
   });
 
-  /** Code review Epic 6, finding 2: Member mở màn duyệt phải thấy NGAY yêu cầu của mình. */
+  /** Member mở màn duyệt phải thấy NGAY yêu cầu của mình. */
   test('Member mở màn duyệt thấy ngay yêu cầu của mình, không phải bấm lại tab', async ({
     page,
   }) => {

@@ -19,9 +19,8 @@ export function setupApp(app: INestApplication): void {
    * Ngữ cảnh request — phải đứng NGAY SAU `trust proxy` (nếu không `req.ip` còn là IP của
    * nginx) và TRƯỚC mọi thứ khác, để mọi handler phía sau đều nằm trong phạm vi.
    *
-   * Đây là đường duy nhất đưa IP client xuống tới `audit_log.ip`. Trước 08/09 cột đó NULL trên
-   * 100% số dòng suốt 9 epic (rà soát 07/09, #3): `AuditWriterService` không có cách nào biết
-   * IP, còn luồn tham số qua ~15 chữ ký thì chỗ gọi thứ 63 sẽ quên trong im lặng. Xem
+   * Đây là đường duy nhất đưa IP client xuống tới `audit_log.ip`. Thiếu nó thì cột đó NULL trên
+   * 100% số dòng: `AuditWriterService` không có cách nào khác để biết IP, còn luồn tham số qua ~15 chữ ký thì chỗ gọi thứ 63 sẽ quên trong im lặng. Xem
    * `common/request-context.ts` để biết vì sao chọn ngữ cảnh ẩn cho ĐÚNG thứ này.
    *
    * `setupApp` được cả `main.ts` lẫn test e2e gọi (AD-15), nên không có đường nào bỏ sót nó.
@@ -58,11 +57,11 @@ export function setupApp(app: INestApplication): void {
       transform: true,
       stopAtFirstError: true,
       /*
-       * MẶC ĐỊNH ĐÓNG cho câu chữ (12/09).
+       * MẶC ĐỊNH ĐÓNG cho câu chữ.
        *
-       * Trước đây chú thích ở đây ghi "Message tiếng Việt do DTO khai" — đúng ý định, sai
-       * thực tế: đo ra 434 validator mà chỉ 80 cái khai `message`, nên ~354 cái còn lại nhả
-       * nguyên câu tiếng Anh của class-validator ra màn hình người dùng.
+       * Không thể trông vào việc "DTO tự khai message": đo ra 434 validator mà chỉ 80 cái khai
+       * `message`, nên thiếu dòng này thì ~354 cái còn lại nhả nguyên câu tiếng Anh của
+       * class-validator ra màn hình người dùng.
        *
        * Đi qua `messagesOf` thì mọi validator — kể cả cái viết năm sau, kể cả cái người viết
        * quên `message` — đều ra tiếng Việt. DTO nào có câu riêng thì câu đó vẫn THẮNG.

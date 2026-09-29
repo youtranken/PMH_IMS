@@ -55,10 +55,9 @@ export class FixedWindowCounter {
 /**
  * Chặn dò mật khẩu theo IP (NFR-01).
  *
- * Ngưỡng đọc từ `system_config` khóa `login.rate_limit_per_ip` (AD-11) — TRƯỚC ĐÂY con số 20
- * bị viết cứng trong `@Throttle` của route login, tức là khóa cấu hình có mà không ai đọc:
- * Admin sửa cấu hình thì hệ thống vẫn chạy theo số cũ. Bộ E2E của Epic 2 đâm vào trần này
- * mới lộ ra.
+ * Ngưỡng đọc từ `system_config` khóa `login.rate_limit_per_ip` (AD-11) — viết cứng con số
+ * trong `@Throttle` của route login thì khóa cấu hình có mà không ai đọc: Admin sửa cấu hình
+ * thì hệ thống vẫn chạy theo số cũ.
  *
  * Bộ đếm nằm TRONG BỘ NHỚ tiến trình, giống ThrottlerGuard mặc định — API cố ý không mở
  * kết nối Redis (xem QueueModule). Chạy nhiều instance api thì mỗi instance có trần riêng;

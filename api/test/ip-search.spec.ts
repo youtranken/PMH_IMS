@@ -71,8 +71,8 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
       );
       return rows[0].id;
     };
-    const cam = await subnet('10.77.30.0/28', 'Camera tim');
-    const lan = await subnet('10.77.1.0/24', 'LAN tim');
+    const forbiddenLabel = await subnet('10.77.30.0/28', 'Camera tim');
+    const lanSubnet = await subnet('10.77.1.0/24', 'LAN tim');
     const old = await subnet('10.88.0.0/24', 'Dai cu', true);
 
     const ip = async (
@@ -96,10 +96,10 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
         ],
       );
     };
-    await ip(cam, '10.77.30.5', { device: 'CAM-TIM-01' });
-    await ip(lan, '10.77.1.53', { usedBy: 'Chị Bình — Kế toán' });
-    await ip(lan, '10.77.1.54', { device: 'CAM-TIM-01', usedBy: 'Cổng phụ' });
-    await ip(lan, '10.77.1.60', { usedBy: 'gõ nhầm', voided: true });
+    await ip(forbiddenLabel, '10.77.30.5', { device: 'CAM-TIM-01' });
+    await ip(lanSubnet, '10.77.1.53', { usedBy: 'Chị Bình — Kế toán' });
+    await ip(lanSubnet, '10.77.1.54', { device: 'CAM-TIM-01', usedBy: 'Cổng phụ' });
+    await ip(lanSubnet, '10.77.1.60', { usedBy: 'gõ nhầm', voided: true });
     await ip(old, '10.88.0.9', { device: 'CAM-TIM-01' });
   }, TEST_TIMEOUT);
 

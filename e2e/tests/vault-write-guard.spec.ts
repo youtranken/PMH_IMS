@@ -14,8 +14,8 @@ import {
 } from './helpers';
 
 /**
- * Hai hàng rào của đợt A mà rà soát 07/09 xếp vào mẫu N1 — "hàng rào dựng ở một cửa, không áp
- * cho cửa tương đương ngay bên cạnh".
+ * Hai hàng rào chống mẫu lỗi "hàng rào dựng ở một cửa, không áp cho cửa tương đương ngay bên
+ * cạnh".
  *
  * C2: ĐỌC bí mật thì phải gõ mã 6 số (step-up), nhưng GHI ĐÈ thì không. Kẻ ngồi vào máy đang
  *     mở không đọc được mật khẩu switch cũ, nhưng xoay được nó thành chuỗi hắn tự chọn rồi
@@ -66,8 +66,8 @@ test.describe('C2 — ghi vào két cũng phải step-up', () => {
     expireStepUp(E2E_SA.email);
 
     /*
-     * ĐỌC bị chặn — hàng rào này đã có từ story 4.2, đây chỉ là mốc đối chiếu.
-     * Nếu dòng này đỏ thì hàng rào cũ hỏng, và hai khẳng định dưới mất ý nghĩa.
+     * ĐỌC bị chặn — hàng rào của FR-022, đây chỉ là mốc đối chiếu.
+     * Nếu dòng này đỏ thì hàng rào đọc hỏng, và hai khẳng định dưới mất ý nghĩa.
      */
     const reveal = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
       headers: await writeHeaders(page),
@@ -101,8 +101,7 @@ test.describe('C2 — ghi vào két cũng phải step-up', () => {
      * Cố ý KHÔNG khẳng định "giá trị cũ còn nguyên" ở đây: `listFor` chỉ trả metadata, nên nó
      * không thể phát hiện một lượt XOAY lọt qua. Việc chứng minh xoay bị chặn nằm ở khẳng định
      * `STEPUP_REQUIRED` phía trên, và luồng xoay thành công sau khi gõ mã được chứng minh ở
-     * `vault-write-stepup-ui.spec.ts`. Chú thích cũ hứa nhiều hơn thứ dòng dưới kiểm được
-     * (rà soát 08/09, #8).
+     * `vault-write-stepup-ui.spec.ts`. Đừng hứa ở đây nhiều hơn thứ dòng dưới kiểm được.
      */
     const stillThere = await page.request.get(
       `/api/v1/vault/secrets?ownerType=service_account&ownerId=${ownerId}`,
@@ -177,13 +176,12 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
   /**
    * HÀNG RÀO CHỈ ÁP CHO `service_account` VÀ `isp` — Member vẫn xem được giấy tờ THIẾT BỊ.
    *
-   * Bài này canh một hồi quy tôi ĐÃ gây ra rồi phải sửa (code review 08/09, #1): bản đầu gác
-   * cả bốn loại của `SECRET_OWNER_TYPES`. Ma trận quyền là opt-in và `resolveTier` mặc định
-   * `'denied'`, nên MỌI Member mất quyền xem MỌI hóa đơn, biên bản bàn giao thiết bị — đo
-   * được HTTP 403. Story 2.3 nói đó là thứ cả team IT xem hằng ngày, và điều đó vẫn đúng.
+   * Gác cả bốn loại của `SECRET_OWNER_TYPES` là hồi quy: ma trận quyền là opt-in và
+   * `resolveTier` mặc định `'denied'`, nên MỌI Member mất quyền xem MỌI hóa đơn, biên bản bàn
+   * giao thiết bị — HTTP 403. Giấy tờ thiết bị là thứ cả team IT xem hằng ngày.
    *
-   * Bộ test cũ không bắt được vì `attachments.spec.ts` chỉ đăng nhập bằng SA. Bài này là chỗ
-   * duy nhất chạy đường đó bằng Member.
+   * `attachments.spec.ts` chỉ đăng nhập bằng SA, nên bài này là chỗ duy nhất chạy đường đó
+   * bằng Member.
    */
   test('nhưng Member VẪN xem được giấy tờ thiết bị — hàng rào không được rộng quá', async ({
     page,

@@ -37,8 +37,8 @@ export interface RowAction {
  * hạn — co lại tới mức phải cuộn ngang mới đọc hết. Người ta mở một bảng danh sách để ĐỌC;
  * thao tác là việc thỉnh thoảng mới làm, và trả thêm một cú bấm cho nó là đổi đúng hướng.
  *
- * Ba chấm cũng làm được thứ dãy nút phẳng không làm nổi: nó CHỖ NÀO CŨNG BẰNG NHAU. Trước đây
- * một dòng có ba nút, dòng dưới có một — mắt phải quét lại từng dòng để tìm nút mình cần, và
+ * Ba chấm cũng làm được thứ dãy nút phẳng không làm nổi: nó CHỖ NÀO CŨNG BẰNG NHAU. Với dãy nút
+ * phẳng, một dòng có ba nút, dòng dưới có một — mắt phải quét lại từng dòng để tìm nút mình cần, và
  * ở chế độ gập dọc trên điện thoại thì dãy nút tự xuống dòng thành hai tầng lệch nhau.
  *
  * Bàn phím theo chuẩn menu button (WAI-ARIA): Enter/Space/↓ mở, ↑↓ đi trong menu, Home/End

@@ -1,6 +1,6 @@
 /**
- * Thanh mức sử dụng dùng chung (AD-15) — dải IP (FR-020, story 5.1), seat license, và về
- * sau là các ô trên bảng điều khiển (Epic 7).
+ * Thanh mức sử dụng dùng chung (AD-15) — dải IP (FR-020), seat license, và các ô trên bảng
+ * điều khiển.
  *
  * Tông màu đổi theo ngưỡng: đầy quá thì phải NHÌN LÀ THẤY, không phải đọc con số rồi tự so.
  * Mặc định 70/90 là quy ước ĐỌC (xanh/vàng/đỏ). Màn nào đã có ngưỡng nghiệp vụ trong

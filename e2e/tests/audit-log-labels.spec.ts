@@ -4,7 +4,7 @@ import { E2E_MEMBER, E2E_SA, firstLogin, resetUsers, uniqueStamp, writeHeaders }
 test.beforeEach(() => resetUsers());
 
 /** Mã kỹ thuật trần — thứ KHÔNG được hiện ra làm nhãn trên ô chọn hành động. */
-const MA_TRAN = /^[a-z_]+(\.[a-z0-9_-]+)+$/;
+const ACTION_CODE_PATTERN = /^[a-z_]+(\.[a-z0-9_-]+)+$/;
 
 test.describe('Nhật ký — nhãn hành động và đối tượng người đọc được', () => {
   test('ô "Mọi hành động" liệt kê nhãn tiếng Việt cho MỌI mã đang có trong nhật ký', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
      * Đây là cửa canh LÚC CHẠY cho bài điểm danh đọc mã nguồn: mã nào ghép ra mà không khớp
      * bảng nhãn (một họ mới, một động từ mới) sẽ hiện nguyên mã ở đây.
      */
-    expect(labels.filter((label) => MA_TRAN.test(label.trim()))).toEqual([]);
+    expect(labels.filter((label) => ACTION_CODE_PATTERN.test(label.trim()))).toEqual([]);
   });
 
   test('tạo tài khoản → dòng nhật ký nói "Tài khoản · <email>" và bấm vào mở đúng người', async ({

@@ -11,30 +11,30 @@ import {
 } from './helpers';
 
 /**
- * BỐN CỬA CÒN LẠI CỦA HAI HÀNG RÀO VỪA DỰNG — rà soát 10/09.
+ * BỐN CỬA RỘNG CỦA HAI HÀNG RÀO.
  *
  * ===== VÌ SAO CÓ FILE NÀY =====
  *
- * Đợt 07/09 đóng hai lỗ, và cả hai bản vá đều dừng lại ở cửa HẸP:
+ * Hai hàng rào dễ chỉ được dựng ở cửa HẸP:
  *
- * 1. Finding #6 (`nat-ip-reclaim-guard.spec.ts`) đặt `assertNoLiveNatWithin` vào
- *    `transitionWithin` và `voidAddress`. Nhưng ba đường ghi khác dẫn tới đúng cùng một hậu
- *    quả — một port đang mở trỏ sang máy khác, hoặc trỏ vào một địa chỉ không còn hồ sơ nào
- *    nhắc tới — và không đường nào hỏi sổ NAT một câu:
+ * 1. `nat-ip-reclaim-guard.spec.ts` canh `assertNoLiveNatWithin` ở `transitionWithin` và
+ *    `voidAddress`. Nhưng ba đường ghi khác dẫn tới đúng cùng một hậu quả — một port đang mở
+ *    trỏ sang máy khác, hoặc trỏ vào một địa chỉ không còn hồ sơ nào nhắc tới — và cũng phải
+ *    hỏi sổ NAT:
  *
  *      · `PATCH /ipam/addresses/:id` đổi `deviceId`. Cùng kết quả với "cấp cho máy khác",
  *        chỉ khác đường vào: sửa hồ sơ thay vì chuyển trạng thái.
  *      · `PATCH /ipam/addresses/:id` đổi `address`. `nat_rule.internal_ip` giữ nguyên địa chỉ
  *        CŨ, nên sổ NAT và sổ IP nói khác nhau về cùng một cái máy.
  *      · `PATCH /ipam/subnets/:id/void` ẩn CẢ DẢI. Ẩn một IP lẻ thì bị chặn; ẩn cả trăm hồ sơ
- *        bằng một cú bấm thì không ai hỏi gì. Hàng rào dựng ở cửa hẹp, bỏ ngỏ cửa rộng.
+ *        bằng một cú bấm mà không ai hỏi gì là dựng ở cửa hẹp, bỏ ngỏ cửa rộng.
  *
- * 2. `restore()` (code mới 09/09) mở đường bật lại một hồ sơ IP đã ẩn — nhưng trigger
+ * 2. `restore()` mở đường bật lại một hồ sơ IP đã ẩn — nhưng trigger
  *    `ip_address_within_subnet_upd` khai `BEFORE UPDATE **OF address, subnet_id**`, mà
  *    `restore` chỉ đụng `voided_at`. Danh sách cột đó là một BỘ LỌC, nên trigger không bao giờ
  *    chạy trên đường này. Ghép với hàng rào đổi dải (chỉ đếm IP đang sống), ba cú bấm bình
- *    thường để lại một hàng nằm ngoài dải của chính nó — đúng thứ `0040_subnet_cidr_lock.sql`
- *    tuyên bố đã xoá sổ, và lần này KHÔNG cần cuộc đua nào.
+ *    thường có thể để lại một hàng nằm ngoài dải của chính nó — đúng thứ
+ *    `0040_subnet_cidr_lock.sql` chặn, mà KHÔNG cần cuộc đua nào.
  *
  * ===== MỖI CỬA ĐI KÈM MỘT VẾ ĐỐI CHỨNG =====
  *
@@ -315,10 +315,10 @@ test.describe('Bật lại hồ sơ IP', () => {
 });
 
 /**
- * QUÊN CHỌN ROUTER PHẢI LÀ 400, KHÔNG PHẢI 500 — rà soát 11/09.
+ * QUÊN CHỌN ROUTER PHẢI LÀ 400, KHÔNG PHẢI 500.
  *
- * `NatBodyDto` để `deviceId` là tuỳ chọn vì cùng một DTO phục vụ cả `POST` lẫn `PATCH`. Bản
- * trước lấp chỗ trống ở controller bằng `body.deviceId ?? ''`, và chuỗi rỗng đi thẳng xuống
+ * `NatBodyDto` để `deviceId` là tuỳ chọn vì cùng một DTO phục vụ cả `POST` lẫn `PATCH`. Lấp
+ * chỗ trống ở controller bằng `body.deviceId ?? ''` là để chuỗi rỗng đi thẳng xuống
  * `eq(deviceTable.id, '')`: Postgres từ chối ép '' sang uuid (`22P02`), lỗi bung ra ngoài
  * thành 500 kèm một câu tiếng Anh về kiểu dữ liệu.
  *
@@ -328,19 +328,19 @@ test.describe('Bật lại hồ sơ IP', () => {
  */
 test.describe('Rule NAT thiếu router', () => {
   /**
-   * BÀI NÀY ĐI ĐÚNG ĐƯỜNG MÀ GIAO DIỆN ĐI — và đó là cả lý do nó tồn tại (test tay 12/09).
+   * BÀI NÀY ĐI ĐÚNG ĐƯỜNG MÀ GIAO DIỆN ĐI — và đó là cả lý do nó tồn tại.
    *
    * Bài ngay dưới gửi payload KHÔNG CÓ khoá `deviceId`. Màn Sổ NAT không bao giờ làm vậy:
    * `nat-screen.tsx` khởi tạo `useState('')` rồi gửi nguyên biến đó, nên chưa chọn router
    * nghĩa là `deviceId: ''` — một khoá CÓ MẶT, giá trị rỗng.
    *
    * Hai payload đó rẽ hai nhánh khác nhau ở class-validator: `@IsOptional()` bỏ qua
-   * `undefined`, nhưng KHÔNG bỏ qua chuỗi rỗng. Nên bản trước chặn `''` ngay ở cửa DTO với
-   * câu "Mã thiết bị không hợp lệ." — và `requireDeviceId()` cùng câu tiếng Việt tử tế của nó
-   * không bao giờ chạy tới trên đường người dùng thật đi.
+   * `undefined`, nhưng KHÔNG bỏ qua chuỗi rỗng. Chặn `''` ngay ở cửa DTO với câu "Mã thiết
+   * bị không hợp lệ." là để `requireDeviceId()` cùng câu tiếng Việt tử tế của nó không bao
+   * giờ chạy tới trên đường người dùng thật đi.
    *
-   * Bài cũ vẫn xanh suốt, vì nó hỏi một câu mà giao diện không hỏi. Đó là thứ đáng ghi lại
-   * hơn cả bản vá: một bài kiểm xanh chỉ chứng minh đúng cái đường mà NÓ đi.
+   * Bài ngay dưới vẫn xanh trong cảnh đó, vì nó hỏi một câu mà giao diện không hỏi: một bài
+   * kiểm xanh chỉ chứng minh đúng cái đường mà NÓ đi.
    */
   test('POST /ipam/nat với deviceId RỖNG (đúng payload của giao diện) → vẫn là câu nói thiếu router', async ({
     page,
@@ -378,7 +378,7 @@ test.describe('Rule NAT thiếu router', () => {
      * `@ValidateIf(() => false)` thì bài trên vẫn xanh, nhưng một mã thiết bị gõ sai sẽ trôi
      * xuống tận `eq(deviceTable.id, 'abc')` — đúng cái 500 mà cả describe này sinh ra để chặn.
      */
-    const rac = await page.request.post('/api/v1/ipam/nat', {
+    const junkResponse = await page.request.post('/api/v1/ipam/nat', {
       headers,
       data: {
         deviceId: 'khong-phai-uuid',
@@ -390,9 +390,9 @@ test.describe('Rule NAT thiếu router', () => {
         reason: 'Kiem router rac E2E',
       },
     });
-    expect(rac.status(), 'gõ rác vẫn là lỗi người dùng, không được thành 500').toBe(400);
+    expect(junkResponse.status(), 'gõ rác vẫn là lỗi người dùng, không được thành 500').toBe(400);
     expect(
-      ((await rac.json()) as { message?: string }).message,
+      ((await junkResponse.json()) as { message?: string }).message,
       'gõ sai định dạng thì nói sai định dạng — khác hẳn câu "bạn quên chọn"',
     ).toContain('không hợp lệ');
   });

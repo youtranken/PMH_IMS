@@ -10,7 +10,7 @@ import {
   resetSoftware,
   resetUsers,
   rowAction,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -114,7 +114,7 @@ test('1280px: 6 cột vừa khung, Ghế chỉ in phân số + "Hết ghế", T�
   const grace = configNumber('software.auto_retire_grace_days');
 
   await page.goto('/software');
-  await timVaChoLoc(page, prefix);
+  await searchAndWaitForFilter(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
 
   // Cột sắp được thì tên ô tiêu đề là tên nút sắp xếp bên trong nó.
@@ -165,7 +165,7 @@ test('Hết hạn đỏ, Đã thanh lý xám — ở cả sáng lẫn tối', as
 
   // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Mọi trạng thái" qua URL.
   await page.goto('/software?status=all');
-  await timVaChoLoc(page, prefix);
+  await searchAndWaitForFilter(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
 
   const expiredBadge = page
@@ -216,7 +216,7 @@ test('thanh lý từ danh sách: câu hỏi lại nói ghế sẽ BỊ GỠ và 
   await assign(page, id, await createDevice(page, `PC-E2E-GO-B-${stamp}`));
 
   await page.goto('/software');
-  await timVaChoLoc(page, code);
+  await searchAndWaitForFilter(page, code);
   await expect(page.getByRole('row')).toHaveCount(2);
   await rowAction(page, code, 'Đưa vào kho thanh lý');
 
