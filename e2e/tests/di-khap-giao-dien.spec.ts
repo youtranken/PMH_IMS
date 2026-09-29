@@ -2564,7 +2564,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('button', { name: 'Tháng sau' })).toHaveCount(0);
 
     /*
-     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Tất cả loại" —
+     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Mọi loại" —
      * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
@@ -2574,7 +2574,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       [...loaiTrongForm].sort(),
-      'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Tất cả loại" của thanh lọc',
+      'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
     ).toEqual([...LOAI_THIET_BI_GOC].sort());
 
     /*
@@ -3982,7 +3982,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký (cả "Khác" — Q-14), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
-        'Tất cả loại',
+        'Mọi loại',
         'License phần mềm',
         'Chứng chỉ SSL',
         'Tên miền',
@@ -3992,8 +3992,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       ].sort(),
     );
     await expect(
-      kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }),
-      'Chưa chọn loại nào thì nút "Tất cả loại" đang bật',
+      kindGroup.getByRole('button', { name: 'Mọi loại', exact: true }),
+      'Chưa chọn loại nào thì nút "Mọi loại" đang bật',
     ).toHaveAttribute('aria-pressed', 'true');
 
     // ===== BẢNG (chờ dòng có thật rồi mới đọc cột — đọc cột không biết chờ lại) =====

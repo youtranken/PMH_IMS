@@ -78,7 +78,7 @@ test.describe('Hồ sơ phần mềm', () => {
     await page.getByRole('option', { name: 'Chứng chỉ SSL', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     await kindFilter.click();
-    await page.getByRole('option', { name: 'Tất cả loại' }).click();
+    await page.getByRole('option', { name: 'Mọi loại' }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 
     // Gia hạn qua API rồi kiểm lịch sử trên UI (widget lịch không phải thứ story này kiểm).

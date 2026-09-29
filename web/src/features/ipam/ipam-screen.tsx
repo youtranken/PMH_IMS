@@ -326,7 +326,7 @@ export function IpamScreen({ me }: { me: Me }) {
  * bàn phím Tab tới được — ba thứ mất sạch nếu dùng div. Nút thao tác nằm NGOÀI link (không
  * lồng nút trong link) và chỉ hiện khi có quyền.
  */
-function SubnetCard({
+export function SubnetCard({
   subnet,
   active,
   canEdit,
@@ -438,12 +438,13 @@ function SubnetCard({
             {t('ipam.usageUsed', { used: subnet.used, total: subnet.total })}
           </span>
         </span>
-        {/* Vì sao dải này đang tắt, và từ bao giờ — câu đầu tiên người mở màn sẽ hỏi khi thấy
-            một dòng gạch ngang. Nói ngay trên thẻ, không bắt đi tra nhật ký. */}
+        {/* Vì sao dải này đang tắt, từ bao giờ, và ai tắt — câu đầu tiên người mở màn sẽ hỏi
+            khi thấy một dòng gạch ngang. Nói ngay trên thẻ, cùng câu với trang chi tiết. */}
         {disabled ? (
           <span className="sub subnet-void-note">
-            {t('ipam.disabledSince', {
+            {t('ipam.voidedBy', {
               date: formatDate(subnet.voidedAt),
+              by: subnet.voidedBy ?? '—',
               reason: subnet.voidReason ?? '—',
             })}
           </span>

@@ -768,7 +768,7 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Đã sửa:** `attachment-panel.tsx` đọc quyền xoá qua `useMe()` (vẽ lại khi `me` về sau);
     `RevealDialog` giữ `onClose`/`onExpire` trong ref nên interval dựng một lần, và hết giờ chỉ
     báo một lần. Kiểm ở `ui/attachment-panel.test.tsx`, `ui/reveal-dialog.test.tsx`.
-- [ ] **OLD-FE-07 · Câu chữ:**
+- [x] **OLD-FE-07 · Câu chữ:**
   - "Break-glass" còn để tiếng Anh ở KPI.
   - "Tất cả" lẫn với "Mọi".
   - Còn sót chữ "seat" (`vi.ts:606-607,1415,1420`).
@@ -778,6 +778,11 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** xong 4/6 — "Break-glass" ở KPI, chữ "seat", hai tiêu đề chồng, `incidentsNotYet`
     (a565557, fb6c981, 6a780e1, 8bfa5c3). Còn "Tất cả loại" lẫn "Mọi loại" (`vi.ts:886,1147` với
     `629,1230`) và thẻ dải đã tắt ở danh sách (`ipam-screen.tsx:443`) chưa có người tắt.
+  - **Đã sửa:** thống nhất theo dạng chiếm đa số ở thanh lọc ("Mọi site", "Mọi trạng thái"…): ba
+    chỗ "Tất cả loại" (phần mềm, theo dõi hạn, tài khoản dịch vụ) thành "Mọi loại"; sửa theo ở
+    E2E `software`, `expiry`, `di-khap-giao-dien`. Thẻ dải đã tắt dùng chung câu `ipam.voidedBy`
+    với trang chi tiết (ngày · người tắt · lý do); API danh sách vốn đã trả `voidedBy`. Kiểm ở
+    `features/ipam/subnet-card.test.tsx`.
 - [ ] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
   - `.segmented` dùng `aria-pressed` thay vì radiogroup.
   - Ma trận quyền thiếu `scope`.

@@ -883,7 +883,7 @@ export default {
     /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
-    allKinds: 'Tất cả loại',
+    allKinds: 'Mọi loại',
     allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* Mặc định của bộ lọc trạng thái: hai trạng thái còn trên máy. */
     liveStatuses: 'Đang dùng + Hết hạn',
@@ -1144,7 +1144,7 @@ export default {
     monthGroup: 'Tháng {{month}}',
     /* Q-13: phần mềm quá ân hạn tự vào kho thanh lý và gỡ ghế — ô số riêng để còn kịp gia hạn. */
     kpiAutoRetire: 'Chờ tự thanh lý',
-    allKinds: 'Tất cả loại',
+    allKinds: 'Mọi loại',
     expired: 'Đã quá hạn',
     /* Số ngày NỘI SUY, không gõ cứng: ngưỡng thật nằm ở `system_config` (AD-11) và ô số này
        giờ THẬT SỰ lọc bảng theo nó. Admin đổi `expiry.critical_days` thành 14 mà nhãn vẫn ghi
@@ -1613,7 +1613,6 @@ export default {
     /* Trạng thái vô hiệu hóa hiện NGAY trên thẻ dải (28/08/2026). Trước đó dải vừa vô hiệu
        hóa là biến mất khỏi danh sách, và người dùng đọc đúng cái đó là "đã bị xóa hẳn". */
     disabledBadge: 'Đã ngừng dùng',
-    disabledSince: 'Ngừng dùng {{date}} · {{reason}}',
     restore: 'Dùng lại',
     restoreTitle: 'Dùng lại dải {{cidr}}?',
     restoreConfirm: 'Dải {{cidr}} trở lại như cũ, {{count}} hồ sơ IP tắt cùng dải cũng dùng lại được.',
@@ -1901,7 +1900,7 @@ export default {
       'Mật khẩu trong két vẫn là mật khẩu cũ. Nếu đã ngừng vì lộ mật khẩu, hãy đổi ở tab Két sắt.',
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
-    allKinds: 'Tất cả loại',
+    allKinds: 'Mọi loại',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
