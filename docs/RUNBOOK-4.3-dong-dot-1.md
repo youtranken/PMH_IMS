@@ -368,7 +368,7 @@ Ghi `MIGRATION_DB_PASSWORD` mới vào bản in `.env` trong phong bì thứ ba 
 **Không bao giờ chạy trên máy prod:** `ops/ci-local.sh`, `ops/seed-demo.sql`,
 `ops/unseed-demo.sql`, `api/scripts/reset-e2e.mjs`, hay các file `docker-compose.override.*.yml`.
 
-### H1. Lưu trữ nhật ký năm cũ (`audit_log`)
+### H2. Lưu trữ nhật ký năm cũ (`audit_log`)
 
 `audit_log` chia ngăn theo năm (`audit_log_2026`, `audit_log_2027`… và `audit_log_default`).
 Worker tự tạo ngăn năm nay và năm sau ở mỗi lượt sweep, nên ngăn năm mới luôn có trước giao

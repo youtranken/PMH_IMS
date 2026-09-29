@@ -781,7 +781,7 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
     (`AuditPartitionSweep` → hàm `audit_log_ensure_partitions`, SECURITY DEFINER) tự tạo ngăn năm
     nay + năm sau và dời dòng lỡ rơi vào DEFAULT sang ngăn đúng năm. Lưu trữ bằng tay:
     `ops/audit-archive.sh` (ngưỡng `audit.archive_after_years`, mặc định 2, 0303), hướng dẫn ở
-    RUNBOOK mục H1. Kiểm: `api/test/audit-partition.spec.ts` (DB trắng, DB có 12.000 dòng cũ,
+    RUNBOOK mục H2. Kiểm: `api/test/audit-partition.spec.ts` (DB trắng, DB có 12.000 dòng cũ,
     "hôm nay" 31/12/2026, dòng 2028 trong DEFAULT, tách rồi gắn lại), `app-role-privileges`
     quét cả ngăn; `audit-index` đổi sang tên chỉ mục theo ngăn. `ops/audit-archive.sh` mới
     kiểm cú pháp (`bash -n`), chưa chạy trên compose thật.

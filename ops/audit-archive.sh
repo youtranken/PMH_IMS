@@ -7,7 +7,7 @@
 #
 # KHÔNG đặt cron. Nhật ký giữ vĩnh viễn theo NFR-03; đưa một năm nhật ký ra khỏi DB đang chạy là
 # việc người trực làm có chủ đích và ký nhận, không phải việc một lịch chạy lặng lẽ làm. Xem
-# docs/RUNBOOK-4.3-dong-dot-1.md mục H1.
+# docs/RUNBOOK-4.3-dong-dot-1.md mục H2.
 #
 # Ngưỡng: `audit.archive_after_years` trong system_config (mặc định 2). Một ngăn được lưu trữ
 # khi MỌI dòng của nó cũ hơn ngần ấy năm (cận trên của ngăn <= now() - N năm). Ngăn năm nay,
@@ -108,4 +108,4 @@ for part in $CANDIDATES; do
   fi
 done
 
-echo "✓ Xong. File lưu trữ nằm ở $DEST. Khôi phục một năm: xem RUNBOOK mục H1."
+echo "✓ Xong. File lưu trữ nằm ở $DEST. Khôi phục một năm: xem RUNBOOK mục H2."
