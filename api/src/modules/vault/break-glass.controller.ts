@@ -140,10 +140,10 @@ export class BreakGlassController {
     const rows = await this.breakGlass.logAll(logFilters(query));
     const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
-      sheetName: 'Nhat ky mo ket',
+      sheetName: 'Nhật ký mở két',
       columns: [
         { header: 'Người xin', width: 28, value: (r) => r.requester },
-        { header: 'Loại đối tượng', width: 16, value: (r) => r.subjectType },
+        { header: 'Loại đối tượng', width: 18, value: (r) => SUBJECT_TYPE_LABEL[r.subjectType] ?? r.subjectType },
         { header: 'Mã đối tượng', width: 38, value: (r) => r.subjectId },
         { header: 'Lý do', width: 48, value: (r) => r.reason },
         /**
@@ -158,7 +158,7 @@ export class BreakGlassController {
           width: 16,
           value: (r) =>
             r.state === 'approved' && !r.active
-              ? `${BG_STATE_LABEL.expired} (chờ dọn)`
+              ? 'Đã duyệt · hết hiệu lực'
               : (BG_STATE_LABEL[r.state] ?? r.state),
         },
         { header: 'Người quyết', width: 28, value: (r) => r.decidedBy ?? '' },
@@ -251,10 +251,18 @@ function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
+/** Tên loại hồ sơ như menu gọi — ô Excel không in mã `service_account`. */
+const SUBJECT_TYPE_LABEL: Record<string, string> = {
+  device: 'Thiết bị',
+  software: 'Phần mềm',
+  service_account: 'Tài khoản dịch vụ',
+  isp: 'Đường truyền',
+};
+
 const BG_STATE_LABEL: Record<string, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
-  denied: 'Từ chối',
+  denied: 'Đã từ chối',
   cancelled: 'Đã hủy',
   expired: 'Hết hạn',
   revoked: 'Đã thu hồi',

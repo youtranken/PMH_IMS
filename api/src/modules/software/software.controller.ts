@@ -291,7 +291,7 @@ export class SoftwareController {
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({
-      sheetName: 'Phan mem',
+      sheetName: 'Phần mềm',
       columns: [
         { header: 'Mã hồ sơ', width: 20, value: (r) => r.code },
         { header: 'Tên', width: 32, value: (r) => r.name },
@@ -409,7 +409,7 @@ export class SoftwareController {
       await this.assignments.listFor(params.id, false),
       await this.config.getString('appTimezone'),
     );
-    const buffer = await this.excel.build({ sheetName: 'May dang dung', ...sheet });
+    const buffer = await this.excel.build({ sheetName: 'Máy đang dùng', ...sheet });
     sendXlsx(res, buffer, `may-dang-dung-${item.code}.xlsx`);
   }
 

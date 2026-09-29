@@ -39,7 +39,7 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { CatalogImportService } from './catalog-import.service';
-import { CATALOG_EXPORT_NAME, catalogExportColumns } from './catalog-export';
+import { CATALOG_EXPORT_NAME, CATALOG_SHEET_NAME, catalogExportColumns } from './catalog-export';
 import { CATALOG_SORT_DEFAULT, CATALOG_SORT_KEYS, CatalogService } from './catalog.service';
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
 import { NoStepUp } from '../auth/step-up.decorator';
@@ -200,7 +200,7 @@ export class CatalogController {
       siteId: params.entity === 'cabinet' ? query.siteId || undefined : undefined,
     });
     const buffer = await this.excel.build({
-      sheetName: CATALOG_EXPORT_NAME[params.entity],
+      sheetName: CATALOG_SHEET_NAME[params.entity],
       columns: catalogExportColumns(params.entity),
       rows: page.items as never[],
     });

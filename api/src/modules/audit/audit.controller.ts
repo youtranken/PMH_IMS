@@ -149,7 +149,7 @@ export class AuditController {
       });
     }
     const buffer = await this.excel.build({
-      sheetName: 'Nhat ky',
+      sheetName: 'Nhật ký hệ thống',
       columns: [
         {
           header: 'Thời điểm',

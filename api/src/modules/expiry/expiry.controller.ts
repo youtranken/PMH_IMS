@@ -226,7 +226,7 @@ export class ExpiryController {
      */
     const kindLabel = new Map(this.expiry.kinds().map((k) => [k.kind, k.label]));
     const buffer = await this.excel.build({
-      sheetName: 'Sap het han',
+      sheetName: 'Sắp hết hạn',
       columns: [
         { header: 'Loại', width: 18, value: (r) => kindLabel.get(r.kind) ?? r.kind },
         { header: 'Tên', width: 36, value: (r) => r.label },

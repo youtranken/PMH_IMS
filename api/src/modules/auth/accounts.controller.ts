@@ -226,7 +226,7 @@ export class AccountsController {
     );
     const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
-      sheetName: 'Tai khoan',
+      sheetName: 'Người dùng IMS',
       columns: [
         { header: 'Họ tên', width: 28, value: (r) => r.fullName },
         { header: 'Email', width: 32, value: (r) => r.email },
