@@ -394,7 +394,7 @@ function usageSummary(entity: CatalogEntity, row: CatalogRow, t: TFunction): str
 
 /**
  * Quản trị danh mục (story 2.1, FR-004).
- * Q-12: mọi vai thêm và sửa được; vô hiệu hóa, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
+ * Q-12: mọi vai thêm và sửa được; ngừng dùng, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
  * nằm ở `@Roles` phía API, đây chỉ là ẩn cho đỡ rối (AD-9).
  */
 export function CatalogScreen({ me }: { me: Me }) {
@@ -469,7 +469,7 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const switchTab = (key: string) => {
     // Sang tab khác: bỏ từ khoá, site, trang và cột sắp của tab trước (cột đó có thể không tồn
-    // tại ở tab mới); GIỮ bộ lọc trạng thái — "chỉ xem đã vô hiệu" để dọn là việc xuyên tab.
+    // tại ở tab mới); GIỮ bộ lọc trạng thái — "chỉ xem đã ngừng dùng" để dọn là việc xuyên tab.
     const status = filters.status;
     url.clearFilters();
     url.setFilter('tab', key === 'site' ? '' : key);
@@ -553,7 +553,7 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const mobileCard: MobileCard<CatalogRow> = {
     title: (row) => mobileTitle(entity, row),
-    // Trạng thái chỉ hiện khi mục đã vô hiệu — "Đang dùng" gần như dòng nào cũng giống nhau.
+    // Trạng thái chỉ hiện khi mục đã ngừng dùng — "Đang dùng" gần như dòng nào cũng giống nhau.
     badge: (row) =>
       row.active ? null : <span className="badge muted">{t('catalog.inactive')}</span>,
     subtitle: (row) =>
@@ -569,13 +569,13 @@ export function CatalogScreen({ me }: { me: Me }) {
     ),
   };
 
-  /** Vô hiệu hoá / Xoá — chỉ SA/Admin (Q-12). */
+  /** Ngừng dùng / Xóa — chỉ SA/Admin (Q-12). */
   function manageItems(catalogRow: CatalogRow, name: string): RowAction[] {
     return [
       {
         key: 'active',
         label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
-        /* Vô hiệu hóa là lấy đi nhưng ĐẢO LẠI ĐƯỢC (`warn`, nhóm riêng); Xóa thì không (`danger`).
+        /* Ngừng dùng là lấy đi nhưng ĐẢO LẠI ĐƯỢC (`warn`, nhóm riêng); Xóa thì không (`danger`).
            Cùng màu đỏ đứng sát nhau thì hai việc khác hẳn hệ quả trông như một. */
         warn: catalogRow.active,
         onSelect: () => {
@@ -641,8 +641,8 @@ export function CatalogScreen({ me }: { me: Me }) {
                   toast({ message: t('catalog.deleted') });
                   void refresh();
                 },
-                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý "hãy vô hiệu
-                // hóa"; hiện nguyên văn cho người dùng.
+                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý "hãy ngừng
+                // dùng"; hiện nguyên văn cho người dùng.
                 onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
               },
             );

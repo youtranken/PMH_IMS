@@ -60,25 +60,30 @@ describe('Một khái niệm — một tên', () => {
   });
 
   /**
-   * Câu thông báo phải nói ĐÚNG việc vừa làm. Hồ sơ IP không bị xoá — nó bị ẩn đi và bật lại
-   * được (`ipam.voidedBadge` = 'Đã ẩn', và có hẳn đường bật lại). Người dùng đọc "Đã xóa" rồi
-   * đi khai lại từ đầu là mất công thật, không phải chuyện chữ nghĩa.
+   * Q-15: hồ sơ IP nhập nhầm thì "Xóa" — xóa để nhập lại, không khôi phục trên giao diện. Nút,
+   * toast, dòng lịch sử và nhật ký nói cùng một việc; không còn chữ "ẩn" hay "bật lại" nào của
+   * luồng này (người dùng đọc "ẩn" rồi đi tìm chỗ hiện lại — chỗ đó không còn).
    */
-  it('gỡ hồ sơ IP: nút, toast và badge nói cùng một việc', () => {
-    for (const key of ['ipam.voidAddress', 'ipam.addressVoided', 'ipam.voidedBadge']) {
-      expect(lookup(key).toLowerCase(), key).toContain('ẩn');
-      expect(lookup(key).toLowerCase(), key).not.toMatch(/xóa|xoá/);
+  it('xóa hồ sơ IP nhập nhầm: nút, toast, lịch sử và nhật ký nói cùng một việc', () => {
+    expect(lookup('ipam.voidAddress')).toBe('Xóa');
+    expect(lookup('ipam.addressVoided').toLowerCase()).toContain('đã xóa');
+    expect(lookup('history.ip.actVoided')).toBe('Xóa hồ sơ IP nhập nhầm');
+    expect(lookup('audit.actions.ipVoided')).toBe(lookup('history.ip.actVoided'));
+    expect(lookup('ipam.voidAddressTitle')).toBe(lookup('history.ip.actVoided'));
+    for (const key of ['ipam.voidAddress', 'ipam.addressVoided', 'ipam.voidAddressHint']) {
+      expect(lookup(key).toLowerCase(), key).not.toMatch(/(^|[\s("])ẩn([\s.,)"]|$)|bật lại/u);
     }
-
-    /*
-     * Và "Xóa" phải còn nguyên nghĩa của nó ở chỗ xoá THẬT — dải chưa từng có hồ sơ IP nào thì
-     * biến mất hẳn, không hoàn tác được. Dùng chung một chữ cho hai việc là chỗ người dùng trả
-     * giá, nên ô này khoá cả chiều ngược lại.
-     */
-    expect(lookup('ipam.subnetDeleted').toLowerCase()).toMatch(/xóa|xoá/);
-
+    // Không còn đường khôi phục trên giao diện: khoá chữ của nó phải biến mất cùng nút.
+    for (const key of ['restoreAddress', 'restoreAddressHint', 'addressRestored', 'voidReasonWas']) {
+      expect((vi as Dict).ipam, key).not.toHaveProperty(key);
+    }
     const screen = readFileSync(join(SRC, 'features/ipam/subnet-detail.tsx'), 'utf8');
-    expect(screen).not.toContain('t("common.delete")');
+    expect(screen).not.toContain('/restore`');
+    expect(screen).not.toContain('includeVoided');
+
+    // Hồ sơ tắt THEO DẢI là việc khác (dùng lại dải là sống lại) — đọc như dải.
+    expect(lookup('ipam.voidedBadge')).toBe(lookup('ipam.disabledBadge'));
+    expect(lookup('history.ip.actSubnetVoided')).toBe('Ngừng dùng theo dải');
   });
 
   /**
@@ -90,9 +95,6 @@ describe('Một khái niệm — một tên', () => {
     expect(lookup('accounts.confirmKillSession')).toContain(lookup('accounts.killSession'));
   });
 
-  it('vô hiệu hoá: danh mục và tài khoản IMS dùng cùng một động từ', () => {
-    expect(lookup('catalog.deactivate')).toBe(lookup('accounts.disable'));
-  });
 
   /** Cột bảng nói "Seat", câu ngay DƯỚI cột nói "ghế" — cùng một màn `/software`. */
   it('ghế license: tên cột và câu chú dùng cùng một từ', () => {
@@ -118,14 +120,6 @@ describe('Một khái niệm — một tên', () => {
     expect(lookup('devices.retire')).toBe('Thanh lý');
   });
 
-  /**
-   * Ba khoá cho MỘT trạng thái, ba cách viết ('Vô hiệu hóa' · 'Đã vô hiệu' · 'Đã vô hiệu hóa').
-   * §4.2 của sổ chỉ nêu cặp `accounts`; hai cái kia lộ ra lúc sửa, 23/09. Ghi thành ô riêng để
-   * lượt sau không phải đếm lại.
-   */
-  it('trạng thái đã vô hiệu: tài khoản IMS và danh mục dùng cùng một chữ', () => {
-    expect(lookup('catalog.inactive')).toBe(lookup('accounts.statusDisabled'));
-  });
 
   /** Kho thanh lý bày tài khoản dịch vụ đã ngừng: phải đọc đúng chữ của màn gốc. */
   it('kho thanh lý: tài khoản dịch vụ đã ngừng đọc giống màn gốc', () => {
@@ -305,6 +299,30 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     ]) {
       expect(lookup(key), key).toBe('Đã ngừng dùng');
     }
+  });
+
+  /**
+   * Danh mục cất một mục đi mà vẫn giữ cho hồ sơ cũ đọc — cùng việc với dải IP, nên cùng cặp
+   * động từ. Tài khoản người dùng IMS thì KHÁC việc (khóa người, đóng phiên), nên giữ "Vô hiệu
+   * hóa / Bật lại"; hai bên không được trôi về một chữ.
+   */
+  it('danh mục: "Ngừng dùng / Dùng lại"; tài khoản IMS giữ "Vô hiệu hóa / Bật lại"', () => {
+    expect(lookup('catalog.deactivate')).toBe(lookup('ipam.hide'));
+    expect(lookup('catalog.activate')).toBe(lookup('ipam.restore'));
+    expect(lookup('catalog.inactive')).toBe(lookup('ipam.disabledBadge'));
+    expect(lookup('history.catalog.actDeactivated')).toBe(lookup('catalog.deactivate'));
+    expect(lookup('history.catalog.actActivated')).toBe(lookup('catalog.activate'));
+    expect(lookup('audit.verb.deactivated')).toBe(lookup('catalog.deactivate'));
+    expect(lookup('audit.verb.activated')).toBe(lookup('catalog.activate'));
+    expect(lookup('formErrors.retiredOption')).toBe('(ngừng dùng)');
+
+    expect(lookup('accounts.disable')).toBe('Vô hiệu hóa');
+    expect(lookup('accounts.reactivate')).toBe('Bật lại');
+    expect(lookup('accounts.statusDisabled')).toBe('Đã vô hiệu hóa');
+
+    const catalogKeys = VALUES.filter(([k]) => /^(catalog|history\.catalog)\./.test(k));
+    expect(catalogKeys.length).toBeGreaterThan(50);
+    expect(catalogKeys.filter(([, v]) => /vô hiệu|bật lại/i.test(v))).toEqual([]);
   });
 
   /** NAT viết thuần Việt như các màn khác: "luật NAT", "cổng ngoài", "cổng trong". */

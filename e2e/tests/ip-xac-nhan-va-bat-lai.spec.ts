@@ -2,12 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { E2E_SA, firstLogin, resetIpam, resetUsers, writeHeaders } from './helpers';
 
 /**
- * Hồ sơ IP: thu hồi rồi cấp lại không hồi sinh chủ cũ, và ẩn hồ sơ không phải đường một chiều.
+ * Hồ sơ IP: thu hồi rồi cấp lại không hồi sinh chủ cũ; và cửa KHÔI PHỤC hồ sơ đã xóa ở API.
  *
- * ẨN HỒ SƠ PHẢI BẬT LẠI ĐƯỢC. Thiếu cửa đó thì một hồ sơ IP lẻ bấm nhầm biến khỏi mọi màn,
- * `findOne` trả 404 nên cũng không mở ra xem được lý do vừa ghi. Ô `.5` hiện ra là TRỐNG,
- * người khác cấp nó cho máy khác, và lịch sử "IP này từng là máy in kế toán" — thứ AC 5.2 bắt
- * giữ vĩnh viễn — nằm mồ côi dưới một hàng không ai nhìn thấy.
+ * Q-15: giao diện chỉ có "Xóa" (xóa để nhập lại), không có nút khôi phục. Cửa
+ * `POST /addresses/:id/restore` vẫn còn cho SA (nối lại lịch sử cho đúng hồ sơ cũ khi thật cần),
+ * nên các hàng rào của nó vẫn phải giữ: không khôi phục đè lên hồ sơ khác đang giữ địa chỉ.
  */
 
 test.beforeEach(() => {

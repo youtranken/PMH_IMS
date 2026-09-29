@@ -55,7 +55,7 @@ describe('toCatalogHistory — sổ danh mục có hình dạng riêng, không p
       ],
       t,
     );
-    expect(off.action).toBe('Vô hiệu hóa');
+    expect(off.action).toBe('Ngừng dùng');
     expect(flag.detail).toBe('có port map: Không → Có');
   });
 

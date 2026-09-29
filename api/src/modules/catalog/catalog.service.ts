@@ -350,7 +350,7 @@ export class CatalogService {
         throw new ConflictException({
           code: 'CATALOG_IN_USE',
           message:
-            'Mục này đang được dữ liệu khác tham chiếu nên không xóa được. Hãy VÔ HIỆU HÓA để nó biến khỏi ô chọn mà hồ sơ cũ vẫn đọc được.',
+            'Mục này đang được dữ liệu khác tham chiếu nên không xóa được. Hãy NGỪNG DÙNG để nó biến khỏi ô chọn mà hồ sơ cũ vẫn đọc được.',
         });
       }
       throw error;

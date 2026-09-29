@@ -34,10 +34,10 @@ export function useCatalogLists(options?: { enabled?: boolean }): UseQueryResult
 /**
  * Lựa chọn cho một ô chọn TRỎ TỚI danh mục trong FORM GHI (Q-14, AD-15).
  *
- * Chỉ mục còn hiệu lực, cộng thêm đúng mục mà hồ sơ đang trỏ tới nếu mục ấy đã vô hiệu — kèm
+ * Chỉ mục còn hiệu lực, cộng thêm đúng mục mà hồ sơ đang trỏ tới nếu mục ấy đã ngừng dùng — kèm
  * nhãn "(ngừng dùng)" mờ. Bỏ mục đó đi thì ô chọn hiện trống và người sửa tưởng hồ sơ chưa có
- * giá trị; để nguyên mọi mục thì hộp Vô hiệu hóa ("không form nào chọn được mục này nữa") nói
- * sai. API cũng từ chối lựa chọn MỚI trỏ vào mục đã vô hiệu, nên đây là lớp nói trước cho người
+ * giá trị; để nguyên mọi mục thì hộp Ngừng dùng ("không form nào chọn được mục này nữa") nói
+ * sai. API cũng từ chối lựa chọn MỚI trỏ vào mục đã ngừng dùng, nên đây là lớp nói trước cho người
  * dùng, không phải hàng rào duy nhất.
  *
  * KHÔNG dùng cho ô LỌC ở màn danh sách: ở đó người ta cần tra cả hồ sơ cũ theo mục đã ngừng.

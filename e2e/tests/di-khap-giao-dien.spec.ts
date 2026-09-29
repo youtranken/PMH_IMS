@@ -4617,7 +4617,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 3 nút lọc + chip "Đã ẩn" (NET-020), 6 nút "Cấp IP", 2 nút
+     * phần bảng là con số biết trước: 3 nút lọc (dải đang dùng không có chip hồ sơ tắt, Q-15), 6 nút "Cấp IP", 2 nút
      * lật trang, cặp "Danh sách | Bản đồ" (NET-006) — cộng nút "Tra" của ô tra IP/máy cấp trang,
      * và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp" (NET-007).
      */
@@ -4634,7 +4634,6 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Tất cả 6', 1],
         ['Đang dùng 0', 1],
         ['Trống 6', 1],
-        ['Đã ẩn', 1],
         ['Danh sách', 1],
         ['Bản đồ', 1],
         ['Cấp IP', 6],
@@ -4716,11 +4715,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    * lựa chọn ấy không, bảng có ĐÚNG SÁU cột ấy không, và dòng trống có đúng một nút.
    *
    * ĐỎ KHI: một trạng thái rơi khỏi `SLOT_FILTERS` (từ đó không lọc ra được nữa và cũng không
-   * ai đếm), một cột biến mất khỏi bảng, ô tick "Hiện cả hồ sơ đã ẩn" không còn gọi lại API
-   * kèm `includeVoided=true` (bật lên mà màn hình đứng im), hoặc dòng đã cấp lại mọc ra nút
+   * ai đếm), một cột biến mất khỏi bảng, chip hồ sơ đã xóa quay lại dải đang dùng (Q-15: xóa
+   * là để nhập lại, không có đường khôi phục trên giao diện), hoặc dòng đã cấp lại mọc ra nút
    * "Cấp IP này" thứ hai.
    */
-  test('Pane phải màn Địa chỉ IP: nhóm nút lọc, bảng địa chỉ, ô trống và ô tick hồ sơ đã ẩn', async ({
+  test('Pane phải màn Địa chỉ IP: nhóm nút lọc, bảng địa chỉ, ô trống, không chip hồ sơ đã xóa', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -4748,9 +4747,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       filters.getByRole('button'),
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
-      /* "Đã ẩn" đứng thường trực nhưng KHÔNG mang số khi chưa mở: API chỉ trả hồ sơ đã ẩn khi
-         được hỏi, nên một con số 0 ở đó là nói sai. */
-    ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5', 'Đã ẩn']);
+    ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
     /* ----- Bảng: đúng sáu cột ----- */
     const table = page.getByRole('table');
@@ -4794,22 +4791,6 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'hàng đã có chủ mà vẫn bày nút cấp là mời người ta ghi đè',
     ).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
-
-    /* ----- Chip hồ sơ đã ẩn: phải HỎI LẠI API, không chỉ lọc trong bộ nhớ ----- */
-    const showVoided = filters.getByRole('button', { name: /^Đã ẩn/ });
-    await expect(
-      showVoided,
-      'tắt mặc định — bật sẵn là bày ra thứ người ta vừa cố tình ẩn đi',
-    ).toHaveAttribute('aria-pressed', 'false');
-    const refetched = page.waitForResponse(
-      (res) => res.url().includes('/addresses') && res.url().includes('includeVoided=true'),
-    );
-    await showVoided.click();
-    await refetched;
-    await expect(showVoided).toHaveAttribute('aria-pressed', 'true');
-    // Không hồ sơ nào đã ẩn: bảng rỗng phải NÓI vì sao rỗng. Về lại "Tất cả" cho phần dưới.
-    await expect(page.getByText('Không có dòng nào để hiện.')).toBeVisible();
-    await filters.getByRole('button', { name: /^Tất cả/ }).click();
 
     /* ----- Phân trang: 50 dòng/trang, và nó nói rõ đang xem tới đâu ----- */
     const pager = page.getByRole('navigation', { name: 'Trang' });
@@ -4953,8 +4934,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(ipRow(page, address).getByText('Đang dùng')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Thu hồi (đỏ) xếp sau việc thường, Ẩn hồ sơ nhập nhầm (xám) xếp CUỐI',
-    ).toEqual(['Sửa', 'Lịch sử', 'Thu hồi IP', 'Ẩn bản ghi nhập nhầm']);
+      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Xóa của SA. Thu hồi (đỏ) xếp sau việc thường, Xóa hồ sơ nhập nhầm (xám) xếp CUỐI',
+    ).toEqual(['Sửa', 'Lịch sử', 'Thu hồi IP', 'Xóa']);
 
     /* ----- Hộp "Thu hồi": KHÔNG hỏi chủ mới — chủ cũ đi khỏi, không ai dọn vào ----- */
     await rowAction(page, address, 'Thu hồi IP');
@@ -4984,7 +4965,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     expect(
       await rowActionNames(page, address),
       'từ "Trống" KHÔNG còn "Thu hồi"; bước cấp là nút "Cấp IP" ngay trên dòng, và "Sửa" một hồ sơ trống chính là cấp nên không bày riêng',
-    ).toEqual(['Lịch sử', 'Ẩn bản ghi nhập nhầm']);
+    ).toEqual(['Lịch sử', 'Xóa']);
 
     /* ----- Hồ sơ Trống mở CÙNG hộp "Cấp IP" với ô trống: có ô Thiết bị, ô người dùng mở ra trống ----- */
     await ipRow(page, address).getByRole('button', { name: 'Cấp IP', exact: true }).click();
@@ -7306,9 +7287,9 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    *
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * Menu ba chấm của Danh mục ĐỔI theo trạng thái hồ sơ: đang dùng thì mục giữa là "Vô
-   * hiệu", đã vô hiệu thì là "Bật lại". Kiểm đúng MỘT trạng thái là để lọt nguyên một nửa:
-   * một hồ sơ đã vô hiệu mà menu vẫn ghi "Vô hiệu" thì không ai bật lại được nó nữa, và
+   * Menu ba chấm của Danh mục ĐỔI theo trạng thái hồ sơ: đang dùng thì mục giữa là "Ngừng
+   * dùng", đã ngừng dùng thì là "Dùng lại". Kiểm đúng MỘT trạng thái là để lọt nguyên một nửa:
+   * một hồ sơ đã ngừng dùng mà menu vẫn ghi "Ngừng dùng" thì không ai dùng lại được nó nữa, và
    * không có đường nào khác trong giao diện để làm việc đó.
    *
    * Bài này cũng chốt hai thứ mà `catalog.spec.ts` chưa chốt:
@@ -7357,8 +7338,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      */
     expect(
       await rowActionNames(page, maSite),
-      'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Vô hiệu (cảnh báo) rồi Xóa xếp cuối',
-    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Vô hiệu hóa', 'Xóa']);
+      'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Ngừng dùng (cảnh báo) rồi Xóa xếp cuối',
+    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Ngừng dùng', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, maSite, 'Sửa');
@@ -7389,22 +7370,22 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await hopTu.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
-    // --- Vô hiệu rồi mở lại menu: mục giữa phải ĐỔI CHỮ.
+    // --- Ngừng dùng rồi mở lại menu: mục giữa phải ĐỔI CHỮ.
     await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('searchbox').fill(maSite);
     await expect(dongSite).toBeVisible();
 
-    await rowAction(page, maSite, 'Vô hiệu hóa');
-    await confirmAction(page, 'Vô hiệu hóa');
+    await rowAction(page, maSite, 'Ngừng dùng');
+    await confirmAction(page, 'Ngừng dùng');
     await expect(
-      dongSite.getByText('Đã vô hiệu hóa'),
-      'vô hiệu xong bảng phải nói ra điều đó — không thì SA bấm lại lần nữa',
+      dongSite.getByText('Đã ngừng dùng'),
+      'ngừng dùng xong bảng phải nói ra điều đó — không thì SA bấm lại lần nữa',
     ).toBeVisible();
 
     expect(
       await rowActionNames(page, maSite),
-      'hồ sơ ĐÃ VÔ HIỆU mà menu vẫn ghi "Vô hiệu" thì không còn đường nào bật nó lại',
-    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Bật lại', 'Xóa']);
+      'hồ sơ ĐÃ NGỪNG DÙNG mà menu vẫn ghi "Ngừng dùng" thì không còn đường nào dùng lại nó',
+    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Dùng lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
     await rowAction(page, maSite, 'Xóa');

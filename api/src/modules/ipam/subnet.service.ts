@@ -324,7 +324,7 @@ export class SubnetService {
        * Bản trước đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
        * một IP được cấp trong khoảnh khắc giữa hai câu lệnh: câu UPDATE ẩn luôn hàng mới đó
        * (nó khớp `subnet_id` + `voided_at IS NULL`), nhưng vòng ghi `ip_history` chạy trên
-       * ảnh chụp cũ nên KHÔNG sinh dòng `ip.voided` cho nó — vi phạm đúng điều chú thích
+       * ảnh chụp cũ nên KHÔNG sinh dòng `ip.subnet_voided` cho nó — vi phạm đúng điều chú thích
        * ngay trên đây tự hứa ("mỗi hàng vẫn để lại một dòng lịch sử… chứ không biến mất im
        * lặng") và đúng điều AC 5.2 bắt giữ vĩnh viễn. Tệ hơn: `restore()` khớp theo
        * `voidedAt = stamp` sẽ hồi sinh hàng đó và ghi `ip.restored`, nên lịch sử có "bật lại"
@@ -340,11 +340,13 @@ export class SubnetService {
         await tx.insert(ipHistoryTable).values(
           voided.map((child) => ({
             ipAddressId: child.id,
-            action: 'ip.voided',
+            // Mã riêng, không phải `ip.voided`: `ip.voided` là "Xóa hồ sơ nhập nhầm" (Q-15), còn
+            // đây là hồ sơ tắt theo dải và sống lại khi dải được dùng lại.
+            action: 'ip.subnet_voided',
             actor,
             fromStatus: child.status,
             toStatus: child.status,
-            changes: { reason: `ẩn theo dải: ${text}` },
+            changes: { reason: text },
           })),
         );
       }

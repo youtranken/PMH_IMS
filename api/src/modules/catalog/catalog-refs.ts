@@ -4,10 +4,10 @@
  * sẽ trôi khỏi nhau, và người dùng gặp năm cách nói cho cùng một luật.
  *
  * Câu nêu TÊN mục (người sửa cần biết vướng cái nào) và cả hai đường ra: chọn mục khác, hoặc
- * bật lại mục đó trong Danh mục.
+ * dùng lại mục đó trong Danh mục.
  */
 export function inactiveRefMessage(kind: string, label: string): string {
-  return `${kind} "${label}" đã ngừng dùng — chọn mục khác, hoặc bật lại trong Danh mục.`;
+  return `${kind} "${label}" đã ngừng dùng — chọn mục khác, hoặc dùng lại trong Danh mục.`;
 }
 
 /** Mã lỗi đi kèm câu trên — web và bài kiểm bám vào mã, không bám vào chữ. */

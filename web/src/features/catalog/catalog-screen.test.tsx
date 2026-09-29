@@ -92,7 +92,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
       expect(screen.getByLabelText('địa chỉ')).toHaveTextContent('tab=cabinet'),
     );
     await user.click(screen.getByRole('button', { name: 'Lọc theo trạng thái' }));
-    await user.click(screen.getByRole('option', { name: 'Đã vô hiệu hóa' }));
+    await user.click(screen.getByRole('option', { name: 'Đã ngừng dùng' }));
     await waitFor(() =>
       expect(listCalls(fetchMock, 'cabinet').some((url) => url.searchParams.get('active') === 'false')).toBe(true),
     );
@@ -113,17 +113,17 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     await screen.findByText('E2E-HCM');
     expect(screen.queryByRole('button', { name: 'Nhập từ Excel' })).not.toBeInTheDocument();
     expect(
-      screen.getByText('Vô hiệu hóa, xóa và nhập Excel do Quản trị thực hiện.'),
+      screen.getByText('Ngừng dùng, xóa và nhập Excel do Quản trị thực hiện.'),
     ).toBeInTheDocument();
   });
 
-  it('menu dòng: "Vô hiệu hóa" là việc cảnh báo, tách vạch khỏi "Xóa"', async () => {
+  it('menu dòng: "Ngừng dùng" là việc cảnh báo, tách vạch khỏi "Xóa"', async () => {
     stubFetch();
     const user = userEvent.setup();
     renderAt('/admin/catalog');
     await screen.findByText('E2E-HCM');
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-HCM/ }));
-    expect(screen.getByRole('menuitem', { name: 'Vô hiệu hóa' })).toHaveClass('warn');
+    expect(screen.getByRole('menuitem', { name: 'Ngừng dùng' })).toHaveClass('warn');
     expect(screen.getByRole('menuitem', { name: 'Xóa' })).toHaveClass('danger');
     expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(2);
   });
@@ -178,7 +178,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-HCM/ }));
     const blocked = screen.getByRole('menuitem', { name: 'Xóa' });
     expect(blocked).toBeDisabled();
-    expect(screen.getByText('Đang dùng ở 3 thiết bị — hãy Vô hiệu hóa')).toBeInTheDocument();
+    expect(screen.getByText('Đang dùng ở 3 thiết bị — hãy Ngừng dùng')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-DN/ }));
     expect(screen.getByRole('menuitem', { name: 'Xóa' })).toBeEnabled();

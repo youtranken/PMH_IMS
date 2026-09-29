@@ -91,7 +91,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
     await confirmAction(page, 'Bỏ và đóng');
   });
 
-  test('file mẫu nằm trong hộp nhập; menu dòng tách Vô hiệu hóa (cảnh báo) khỏi Xóa', async ({
+  test('file mẫu nằm trong hộp nhập; menu dòng tách Ngừng dùng (cảnh báo) khỏi Xóa', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
