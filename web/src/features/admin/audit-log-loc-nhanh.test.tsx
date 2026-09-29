@@ -81,8 +81,8 @@ describe('Nhật ký — lọc nhanh theo ngày, nhóm theo ngày, chọn hành 
   it('bảng có tiêu đề theo ngày và dòng "Đang xem …" phủ đúng khoảng của trang', async () => {
     stubFetch();
     renderAt('/admin/audit-log');
-    expect(await screen.findByRole('columnheader', { name: '21/09/2026' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: '20/09/2026' })).toBeInTheDocument();
+    expect(await screen.findByRole('rowheader', { name: '21/09/2026' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: '20/09/2026' })).toBeInTheDocument();
     expect(screen.getByText('Đang xem 20/09/2026 08:30 → 21/09/2026 09:00')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tới ngày…' })).toBeInTheDocument();
   });

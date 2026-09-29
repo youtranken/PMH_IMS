@@ -1085,6 +1085,13 @@ export default {
     window: 'Khoảng thời gian',
     /* Cửa sổ LUÔN kèm mục đã quá hạn — nhãn phải nói thật điều đó. */
     windowDays: 'Quá hạn + {{days}} ngày tới',
+    windowMonth: 'Quá hạn + tới hết tháng này',
+    windowQuarter: 'Quá hạn + tới hết quý này',
+    windowCustom: 'Quá hạn + tới ngày…',
+    windowUntil: 'Tới ngày',
+    monthGroup: 'Tháng {{month}}',
+    /* Q-13: phần mềm quá ân hạn tự vào kho thanh lý và gỡ ghế — ô số riêng để còn kịp gia hạn. */
+    kpiAutoRetire: 'Chờ tự thanh lý',
     allKinds: 'Tất cả loại',
     expired: 'Đã quá hạn',
     /* Số ngày NỘI SUY, không gõ cứng: ngưỡng thật nằm ở `system_config` (AD-11) và ô số này
@@ -1110,6 +1117,7 @@ export default {
     presetYears: '+{{count}} năm',
     /* Dòng không gia hạn tại đây được (bảo hành): lối sang hồ sơ để sửa ngày ở đó. */
     openRecord: 'Mở hồ sơ →',
+    openRecordShort: 'Mở hồ sơ',
     startedOn: 'từ {{date}}',
     autoRetireOn: 'Tự thanh lý sau {{count}} ngày ({{date}}) · gỡ mọi ghế',
     /* Gia hạn theo lô (chọn nhiều dòng). */

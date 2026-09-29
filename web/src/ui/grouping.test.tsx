@@ -44,11 +44,14 @@ describe('groupStarts', () => {
 });
 
 describe('DataTable `groupBy` — một dòng tiêu đề mỗi nhóm', () => {
-  it('bảng: tiêu đề nhóm là ô `colgroup` đứng trước dòng đầu nhóm', () => {
+  it('bảng: tiêu đề nhóm là ô `rowgroup` đứng trước dòng đầu nhóm — không lẫn vào tiêu đề cột', () => {
     viewport(1280);
     renderWithI18n(<DataTable data={EVENTS} columns={COLUMNS} emptyText="—" groupBy={GROUP} />);
-    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent);
-    expect(headers).toEqual(['Việc', 'Ngày 2026-09-29', 'Ngày 2026-09-28']);
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Việc']);
+    expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
+      'Ngày 2026-09-29',
+      'Ngày 2026-09-28',
+    ]);
     const rows = screen.getAllByRole('row').map((row) => row.textContent);
     expect(rows).toEqual([
       'Việc',

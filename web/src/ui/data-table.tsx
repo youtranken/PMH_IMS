@@ -406,7 +406,7 @@ export function DataTable<T>({
                   <Fragment key={row.id}>
                     {groupBy && starts?.[rowIndex] ? (
                       <tr className="row-group">
-                        <th scope="colgroup" colSpan={columnCount}>
+                        <th scope="rowgroup" colSpan={columnCount}>
                           {groupBy.label(groupBy.key(row.original), row.original)}
                         </th>
                       </tr>

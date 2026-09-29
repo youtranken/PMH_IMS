@@ -3938,7 +3938,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('button', { name: 'Khoảng thời gian', exact: true }).click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
-      'Sáu mốc cửa sổ ngày — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
+      'Sáu mốc cửa sổ ngày + ba mốc theo lịch (EX-003) — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
     ).toEqual([
       'Quá hạn + 7 ngày tới',
       'Quá hạn + 30 ngày tới',
@@ -3946,6 +3946,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Quá hạn + 90 ngày tới',
       'Quá hạn + 180 ngày tới',
       'Quá hạn + 365 ngày tới',
+      'Quá hạn + tới hết tháng này',
+      'Quá hạn + tới hết quý này',
+      'Quá hạn + tới ngày…',
     ]);
     await page.getByRole('option', { name: 'Quá hạn + 30 ngày tới', exact: true }).click();
 

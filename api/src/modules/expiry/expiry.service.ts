@@ -21,7 +21,16 @@ export interface ExpirySummary {
   expired: number;
   critical: number;
   warning: number;
+  /** Mục phần mềm đã Hết hạn đang chờ tự Thanh lý (Q-13) — có `autoRetireOn`. */
+  autoRetire: number;
 }
+
+/** Cột sắp được ở màn "Sắp hết hạn" — sắp ở máy chủ, trước khi cắt trang. */
+export const EXPIRY_SORTS = ['end', 'kind', 'label'] as const;
+export type ExpirySort = (typeof EXPIRY_SORTS)[number];
+
+/** Bộ lọc ô số: ba nhóm hạn, cộng nhóm "chờ tự thanh lý" (không phải một mức hạn). */
+export type ExpiryFilterState = ExpiryLevel | 'autoRetire';
 
 /**
  * Hai ngưỡng "sắp hết hạn", đọc từ `system_config` (AD-11, 0041).
@@ -72,8 +81,13 @@ export interface ExpiryQuery {
    * *"Màn này KHÔNG phân trang — API trả về hết — nên lọc ở đây là lọc đúng toàn bộ tập kết
    * quả."* Câu ấy ngừng đúng ngay khi phân trang, nên phép lọc phải đi xuống cùng chuyến —
    * nếu không, bấm "Gấp" chỉ lọc trong 50 dòng đang xem trong khi nút ngay trên đầu đề số 87.
+   *
+   * `autoRetire` = mục phần mềm đang chờ tự Thanh lý (EX-005).
    */
-  state?: ExpiryLevel | '';
+  state?: ExpiryFilterState | '';
+  /** Cột sắp (EX-011) — mặc định ngày hết hạn tăng dần. Sắp TRƯỚC khi cắt trang. */
+  sort?: ExpirySort;
+  dir?: 'asc' | 'desc';
 }
 
 /**
@@ -171,7 +185,12 @@ export class ExpiryService {
      * bấm "Gấp" xong thấy "Gấp 8" tụt xuống "Gấp 8 / Quá hạn 0 / Sắp tới 0". Đảo hai bước sau
      * thì phép lọc chỉ chạy trong trang đang xem.
      */
-    const picked = query.state ? rows.filter((row) => levelOf(row.daysLeft, thresholds) === query.state) : rows;
+    const state = query.state;
+    const picked = sortExpiryRows(
+      state ? rows.filter((row) => inState(row, state, thresholds)) : rows,
+      query.sort,
+      query.dir,
+    );
     return {
       items: pageOf(picked, query),
       total: picked.length,
@@ -306,12 +325,43 @@ export function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryL
 }
 
 function summarize(rows: ExpiryRow[], thresholds: ExpiryThresholds): ExpirySummary {
-  const summary: ExpirySummary = { expired: 0, critical: 0, warning: 0 };
+  const summary: ExpirySummary = { expired: 0, critical: 0, warning: 0, autoRetire: 0 };
   for (const row of rows) {
     const level = levelOf(row.daysLeft, thresholds);
     if (level) summary[level] += 1;
+    if (row.autoRetireOn) summary.autoRetire += 1;
   }
   return summary;
+}
+
+function inState(row: ExpiryRow, state: ExpiryFilterState, thresholds: ExpiryThresholds): boolean {
+  return state === 'autoRetire'
+    ? Boolean(row.autoRetireOn)
+    : levelOf(row.daysLeft, thresholds) === state;
+}
+
+const labelCollator = new Intl.Collator('vi');
+
+/**
+ * Sắp TRƯỚC khi cắt trang — sắp sau là chỉ đảo chỗ trang đang xem. Mặc định giữ đúng thứ tự
+ * "gấp nhất lên đầu" (hết hạn tăng dần). Khoá phụ luôn là ngày hết hạn tăng dần, rồi `id`, để
+ * hai lượt hỏi liền nhau cắt trang ra cùng một kết quả.
+ */
+export function sortExpiryRows<T extends Pick<ExpiryRow, 'id' | 'end' | 'kind' | 'label'>>(
+  rows: T[],
+  sort: ExpirySort | undefined,
+  dir: 'asc' | 'desc' | undefined,
+): T[] {
+  const sign = dir === 'desc' ? -1 : 1;
+  const primary = (a: T, b: T): number =>
+    sort === 'kind'
+      ? a.kind.localeCompare(b.kind)
+      : sort === 'label'
+        ? labelCollator.compare(a.label, b.label)
+        : a.end.localeCompare(b.end);
+  return [...rows].sort(
+    (a, b) => sign * primary(a, b) || a.end.localeCompare(b.end) || a.id.localeCompare(b.id),
+  );
 }
 
 /**
