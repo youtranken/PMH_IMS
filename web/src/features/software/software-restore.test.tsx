@@ -160,7 +160,7 @@ describe('Hộp Khôi phục', () => {
     await user.click(screen.getByRole('checkbox', { name: /PC-02/ }));
     await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
 
-    expect(await screen.findByText(/Hồ sơ có 1 ghế/)).toBeInTheDocument();
+    expect(await screen.findByText(/Hồ sơ chỉ có 1 ghế/)).toBeInTheDocument();
     expect(calls.filter((call) => call.method !== 'GET')).toEqual([]);
     expect(onDone).not.toHaveBeenCalled();
   });

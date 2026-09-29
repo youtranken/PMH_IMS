@@ -71,7 +71,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
     await expect(hop.getByText(code, { exact: true })).toBeVisible();
     await expect(hop.getByRole('textbox', { name: 'Mã' })).toHaveCount(0);
     await hop.getByRole('button', { name: 'Đổi mã…' }).click();
-    await expect(hop.getByText(/dùng để tra cứu và nhập Excel/)).toBeVisible();
+    await expect(hop.getByText(/File Excel cũ và thói quen tìm theo mã cũ sẽ lệch/)).toBeVisible();
     await hop.getByRole('button', { name: 'Đóng hộp thoại' }).click();
   });
 
@@ -102,7 +102,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
     await expect(
       page
-        .getByRole('dialog', { name: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel' })
+        .getByRole('dialog', { name: 'Nhập danh mục từ Excel' })
         .getByRole('button', { name: /Tải file mẫu/ }),
     ).toBeVisible();
     await page.keyboard.press('Escape');
@@ -208,7 +208,7 @@ test.describe('Quyền két sắt — người đã nghỉ, kiểm tra quyền',
     const list = page.getByRole('navigation', { name: 'Danh sách thành viên' });
     await expect(list).toBeVisible();
     await expect(list.getByText(nguoi.fullName)).toHaveCount(0);
-    await page.getByRole('checkbox', { name: /Hiện cả người đã nghỉ/ }).check();
+    await page.getByRole('checkbox', { name: /Hiện cả tài khoản đã vô hiệu hóa/ }).check();
     await expect(list.getByText(nguoi.fullName)).toBeVisible();
   });
 

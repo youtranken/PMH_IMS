@@ -350,7 +350,7 @@ export class CatalogService {
         throw new ConflictException({
           code: 'CATALOG_IN_USE',
           message:
-            'Mục này đang được dữ liệu khác tham chiếu nên không xóa được. Hãy NGỪNG DÙNG để nó biến khỏi ô chọn mà hồ sơ cũ vẫn đọc được.',
+            'Mục này đang được dùng nên không xóa được. Bấm "Ngừng dùng" để ẩn khỏi ô chọn; hồ sơ cũ giữ nguyên.',
         });
       }
       throw error;
@@ -497,7 +497,7 @@ export class CatalogService {
       return new ConflictException({
         code: 'CABINET_HAS_DEVICES',
         message:
-          'Tủ này còn thiết bị (kể cả máy đã thanh lý) nên không dời sang site khác được — thiết bị sẽ bị kẹt ở site cũ. Chuyển các thiết bị ra khỏi tủ trước, hoặc tạo tủ mới ở site kia.',
+          'Tủ này còn thiết bị (kể cả máy đã thanh lý) nên không dời sang site khác được. Chuyển thiết bị ra khỏi tủ trước, hoặc tạo tủ mới ở site kia.',
       });
     }
     return conflictOnUnique(error, {

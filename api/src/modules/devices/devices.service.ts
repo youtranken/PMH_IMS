@@ -335,8 +335,7 @@ export class DevicesService {
             code: 'DEVICE_HAS_HOLDINGS',
             message:
               `Thiết bị ${before.code} còn đang giữ: ${holdings.join(', ')}. ` +
-              'Gỡ những thứ này trước, hoặc tick "Dọn hết thứ liên quan" để hệ thống trả lại ' +
-              'trong cùng lượt thanh lý.',
+              'Gỡ những thứ này trước, hoặc chọn "Gỡ hết rồi thanh lý".',
             holdings,
           });
         }
@@ -550,7 +549,7 @@ export class DevicesService {
     if (row.status !== 'retired') return;
     throw new BadRequestException({
       code: 'DEVICE_RETIRED',
-      message: `Thiết bị ${row.code} đã thanh lý nên không nhận thêm được nữa. Chọn thiết bị khác, hoặc mở lại hồ sơ trong Kho thanh lý nếu thanh lý nhầm.`,
+      message: `Thiết bị ${row.code} đã thanh lý. Chọn thiết bị khác, hoặc bấm "Đưa lại vào dùng" trên hồ sơ máy nếu thanh lý nhầm.`,
     });
   }
 
@@ -592,8 +591,8 @@ export class DevicesService {
     throw new BadRequestException({
       code: 'RETIRE_VIA_UPDATE',
       message:
-        `Không thanh lý được bằng đường sửa hồ sơ: thanh lý ${before.code} phải đi qua nút ` +
-        '"Thanh lý" để hệ thống còn hỏi thiết bị có đang giữ IP, luật NAT hay ghế license nào không.',
+        `Không thanh lý ${before.code} bằng Sửa hồ sơ được. Dùng nút "Thanh lý" để hệ thống ` +
+        'kiểm IP, luật NAT và ghế license máy đang giữ.',
     });
   }
 
@@ -676,8 +675,8 @@ export class DevicesService {
       {
         code: 'PORT_PEER_TAKEN',
         message:
-          'Không mở lại được: port map của máy này ghi đấu vào một cổng mà nay đã có thiết bị ' +
-          'khác chiếm. Sửa hoặc gỡ dòng port map ở máy đang chiếm cổng đó trước rồi mở lại.',
+          'Không đưa lại vào dùng được: port map của máy này đấu vào một cổng nay đã có máy khác chiếm. ' +
+          'Sửa hoặc gỡ dòng port map ở máy kia trước.',
       },
       'device_port_peer_port_key',
     );

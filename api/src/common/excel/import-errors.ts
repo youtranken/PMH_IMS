@@ -32,7 +32,7 @@ export function buildImportErrorsXlsx(
   rows: ImportErrorLine[],
 ): Promise<Buffer> {
   return excel.build<ImportErrorLine>({
-    sheetName: 'Dong loi',
+    sheetName: 'Dòng lỗi',
     columns: [
       { header: 'Sheet', width: 16, value: (row) => row.sheet },
       { header: 'Dòng', width: 8, value: (row) => row.rowNumber },

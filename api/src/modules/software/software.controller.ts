@@ -291,13 +291,13 @@ export class SoftwareController {
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({
-      sheetName: 'Phan mem',
+      sheetName: 'Phần mềm',
       columns: [
         { header: 'Mã hồ sơ', width: 20, value: (r) => r.code },
         { header: 'Tên', width: 32, value: (r) => r.name },
         { header: 'Loại', width: 16, value: (r) => KIND_LABEL[r.kind] },
         { header: 'Nhà cung cấp', width: 22, value: (r) => r.vendorName ?? '' },
-        { header: 'Seat dùng/tổng', width: 14, value: (r) => seatText(r) },
+        { header: 'Ghế dùng/tổng', width: 14, value: (r) => seatText(r) },
         { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
         { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
@@ -409,7 +409,7 @@ export class SoftwareController {
       await this.assignments.listFor(params.id, false),
       await this.config.getString('appTimezone'),
     );
-    const buffer = await this.excel.build({ sheetName: 'May dang dung', ...sheet });
+    const buffer = await this.excel.build({ sheetName: 'Máy đang dùng', ...sheet });
     sendXlsx(res, buffer, `may-dang-dung-${item.code}.xlsx`);
   }
 

@@ -44,7 +44,7 @@ export function requireXlsx(file: Express.Multer.File | undefined): Buffer {
   if (!name.endsWith('.xlsx')) {
     throw new BadRequestException({
       code: 'UNSUPPORTED_FILE',
-      message: 'Chỉ nhận file .xlsx. File .xls đời cũ hãy mở bằng Excel rồi "Lưu thành" .xlsx.',
+      message: 'Chỉ nhận file .xlsx. File .xls thì mở bằng Excel rồi "Lưu thành" .xlsx.',
     });
   }
   /* Đúng đuôi mà không phải zip: file hỏng hoặc bị đổi đuôi. Cùng mã với lỗi đọc workbook

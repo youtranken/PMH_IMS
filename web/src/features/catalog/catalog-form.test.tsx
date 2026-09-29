@@ -63,7 +63,7 @@ describe('CatalogForm — gợi ý và cảnh báo', () => {
     expect(screen.queryByRole('textbox', { name: /^Mã/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Đổi mã…' }));
     expect(screen.getByRole('textbox', { name: /^Mã/ })).toHaveValue('E2E-HCM');
-    expect(screen.getByText(/dùng để tra cứu và nhập Excel/)).toBeInTheDocument();
+    expect(screen.getByText(/File Excel cũ và thói quen tìm theo mã cũ sẽ lệch/)).toBeInTheDocument();
   });
 
   it('sửa site: chỉ bấm "Đổi mã…" mà chưa gõ gì thì Esc đóng thẳng, không hỏi "bỏ dữ liệu"', async () => {

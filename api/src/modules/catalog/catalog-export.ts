@@ -81,7 +81,21 @@ export function catalogExportColumns(entity: CatalogEntity): ExportColumn<Row>[]
   }
 }
 
-/** Tên sheet/tên file theo danh mục — không dấu, an toàn cho Excel (≤31 ký tự) và cho URL tải. */
+/**
+ * Tên sheet người dùng đọc — đúng tên tab trên màn Danh mục. Excel cấm các ký tự `/ ? * [ ] :`
+ * trong tên sheet (ExcelJS ném lỗi), nên tab "Dịch vụ / Port" thành "Dịch vụ - Port".
+ */
+export const CATALOG_SHEET_NAME: Record<CatalogEntity, string> = {
+  site: 'Site',
+  cabinet: 'Tủ mạng',
+  device_type: 'Loại thiết bị',
+  vendor: 'Nhà cung cấp',
+  department: 'Bộ phận',
+  isp_provider: 'Nhà mạng',
+  service_port: 'Dịch vụ - Port',
+};
+
+/** Tên file tải về theo danh mục — không dấu, an toàn cho URL tải. */
 export const CATALOG_EXPORT_NAME: Record<CatalogEntity, string> = {
   site: 'site',
   cabinet: 'tu-mang',

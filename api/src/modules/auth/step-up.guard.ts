@@ -74,8 +74,8 @@ export class StepUpGuard implements CanActivate {
       throw new ForbiddenException({
         code: 'STEP_UP_NOT_DECLARED',
         message:
-          'Route chưa khai @RequiresStepUp() hoặc @NoStepUp() — bị chặn theo mặc định đóng ' +
-          '(FR-022). Đây là lỗi lập trình.',
+          'Chức năng này chưa khai có cần nhập mã 6 số hay không nên bị chặn. ' +
+          'Đây là lỗi phần mềm, hãy báo SA.',
       });
     }
     if (required === false) return true;

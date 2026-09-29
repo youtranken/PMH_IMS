@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
 import { SettingsScreen } from './settings-screen';
@@ -69,7 +69,7 @@ describe('Màn Tham số hệ thống', () => {
     const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
     await userEvent.clear(input);
     await userEvent.type(input, '150');
-    expect(screen.getByText(/hàng rào này bị nới rất rộng/)).toBeInTheDocument();
+    expect(screen.getByText(/là nới rất rộng/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Lưu nhóm này' }));
     const dialog = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
     expect(dialog).toHaveTextContent('20 lần/phút → 150 lần/phút');
@@ -85,11 +85,42 @@ describe('Màn Tham số hệ thống', () => {
     expect(screen.getByRole('button', { name: 'Lưu nhóm này' })).toBeDisabled();
   });
 
+  it('API từ chối SETTING_OUT_OF_RANGE → lỗi gọi tham số bằng nhãn tiếng Việt, không bằng khóa thô', async () => {
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === 'PATCH'
+          ? jsonResponse(400, {
+              code: 'SETTING_OUT_OF_RANGE',
+              message: 'login.rate_limit_per_ip: Phải từ 5 đến 1000.',
+            })
+          : jsonResponse(200, ROWS),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/admin/settings']}>
+        <ToastProvider>
+          <SettingsScreen me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await userEvent.clear(input);
+    await userEvent.type(input, '150');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nhóm này' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(
+      await screen.findByText('Số lượt đăng nhập tối đa mỗi IP: Phải từ 5 đến 1000.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/login\.rate_limit_per_ip/)).not.toBeInTheDocument();
+  });
+
   it('?group=software mở đúng nhóm; 0 = tắt có cảnh báo', async () => {
     renderAt('/admin/settings?group=software');
-    const input = await screen.findByLabelText('Ân hạn trước khi tự Thanh lý phần mềm hết hạn');
+    const input = await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm');
     await userEvent.clear(input);
     await userEvent.type(input, '0');
-    expect(screen.getByText('Đặt 0 là TẮT hẳn chức năng này.')).toBeInTheDocument();
+    expect(screen.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeInTheDocument();
   });
 });

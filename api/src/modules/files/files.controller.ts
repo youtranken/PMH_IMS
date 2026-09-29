@@ -162,7 +162,7 @@ export class FilesController {
         res.status(500).json({
           statusCode: 500,
           code: 'FILE_MISSING',
-          message: 'File không còn trên ổ lưu trữ — báo quản trị hệ thống.',
+          message: 'File không còn trên ổ lưu trữ. Hãy báo SA.',
         });
       } else {
         res.destroy();

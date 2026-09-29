@@ -57,7 +57,7 @@ test.beforeEach(() => {
  * Từ 12/09 `LoadError` không còn một câu cho mọi nguyên nhân nữa.
  */
 const LOAD_ERROR =
-  'Máy chủ IMS đang gặp sự cố. Thử lại sau ít phút; nếu vẫn lỗi, gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
+  'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
 const PICKER_ERROR = 'Không tải được danh sách. Thử lại sau.';
 
 /** Bắt một đường API trả 500. Trả về hàm gỡ, để phần sau của bài chạy trên API thật. */

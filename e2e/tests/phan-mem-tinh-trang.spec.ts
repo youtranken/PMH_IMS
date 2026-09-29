@@ -303,7 +303,7 @@ test('Khôi phục: tick nhiều máy hơn số ghế thì bị chặn trong h�
   await dialog.getByRole('checkbox', { name: new RegExp(deviceB) }).check();
   await dialog.getByRole('button', { name: 'Khôi phục', exact: true }).click();
 
-  await expect(dialog.getByText(/Hồ sơ có 1 ghế/)).toBeVisible();
+  await expect(dialog.getByText(/Hồ sơ chỉ có 1 ghế/)).toBeVisible();
   const after = await page.request.get(`/api/v1/software/${id}`);
   expect(((await after.json()) as { status: string }).status).toBe('retired');
 });
@@ -373,7 +373,7 @@ test('license 2/3: HẠ tổng xuống dưới số đang dùng thì vẫn bị 
   await form.getByRole('textbox', { name: 'Số ghế' }).fill('1');
   await form.getByRole('button', { name: 'Lưu' }).click();
 
-  await expect(form.getByText(/Đang có 2 máy dùng, giảm xuống 1/)).toBeVisible();
+  await expect(form.getByText(/Đang có 2 máy dùng — gỡ bớt máy trước khi giảm xuống 1 ghế/)).toBeVisible();
   const after = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as {
     seatTotal: number;
   };

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage } from '@/lib/api';
+import { errorCode, errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
@@ -156,7 +156,14 @@ export function SettingsScreen({ me }: { me: Me }) {
       setReviewing(false);
     } catch (err) {
       if (!(err instanceof Error && err.message === 'STEPUP_CANCELLED')) {
-        setSaveError(errorMessage(err));
+        /* API báo lỗi khoảng dạng "<khóa>: <lý do>"; người đọc chỉ thấy nhãn tiếng Việt của ô,
+           không thấy khóa thô. */
+        const message = errorMessage(err);
+        const hit =
+          errorCode(err) === 'SETTING_OUT_OF_RANGE'
+            ? (list.data ?? []).find((row) => message.startsWith(`${row.key}: `))
+            : undefined;
+        setSaveError(hit ? `${labelOf(hit)}: ${message.slice(hit.key.length + 2)}` : message);
       }
     } finally {
       setSaving(false);

@@ -94,7 +94,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
 
     await rowAction(page, f.ports, 'Gỡ');
     const remove = page.getByRole('dialog');
-    await expect(remove.getByText(/Bật chip "Đã gỡ"/)).toBeVisible();
+    await expect(remove.getByText(/Luật chuyển sang nhóm "Đã gỡ"/)).toBeVisible();
     await remove.getByRole('textbox', { name: 'Lý do gỡ' }).fill('dịch vụ đã ngừng E2E');
     await remove.getByRole('button', { name: 'Gỡ', exact: true }).click();
     await expect(remove).toHaveCount(0);

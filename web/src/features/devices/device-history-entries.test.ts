@@ -117,7 +117,7 @@ describe('toHistoryEntries — câu tự nhiên, không phải khoá thô', () =
         },
       }),
     ], t);
-    expect(entry.detail).toBe('trạng thái: Đang dùng → Đã thanh lý; đã gỡ IP, NAT và license của máy');
+    expect(entry.detail).toBe('trạng thái: Đang dùng → Đã thanh lý; đã gỡ IP, NAT, license và đường truyền của máy');
   });
 });
 

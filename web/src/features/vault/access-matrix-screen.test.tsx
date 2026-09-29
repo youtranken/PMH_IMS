@@ -110,7 +110,7 @@ describe('Quyền xem két sắt — theo người', () => {
     );
     const list = await screen.findByRole('navigation', { name: 'Danh sách thành viên' });
     expect(list).not.toHaveTextContent('Lý Đã Nghỉ');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Hiện cả người đã nghỉ (1)' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Hiện cả tài khoản đã vô hiệu hóa (1)' }));
     expect(list).toHaveTextContent('Lý Đã Nghỉ');
     expect(list).toHaveTextContent('Đã vô hiệu hóa');
   });

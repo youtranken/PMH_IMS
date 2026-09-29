@@ -87,7 +87,7 @@ class StatusDto {
   status!: DeviceStatus;
 
   /**
-   * Ô tick "Dọn hết thứ liên quan" trên hộp thanh lý — chỉ có nghĩa khi `status = 'retired'`.
+   * Lựa chọn "Gỡ hết rồi thanh lý" trên hộp thanh lý — chỉ có nghĩa khi `status = 'retired'`.
    *
    * Mặc định `false` là có chủ ý: dọn tự động thu hồi IP, gỡ rule NAT và trả ghế license trong
    * một cú bấm, nên nó phải là lựa chọn NGƯỜI DÙNG NÓI RA, không phải mặc định êm ái.

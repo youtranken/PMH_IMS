@@ -172,7 +172,7 @@ describe('DecisionDialog', () => {
     };
     const { fetchMock } = renderDecision(false, { revoke: true, row: approved });
     const dialog = screen.getByRole('dialog', { name: 'Thu hồi sớm' });
-    expect(within(dialog).getByText(/Quyền này ĐANG chạy/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Quyền này đang có hiệu lực/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Thu hồi sớm' }));
     expect(screen.getByText(/Ghi lý do thu hồi/)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -189,7 +189,7 @@ describe('DecisionDialog', () => {
     await userEvent.clear(hours);
     await userEvent.type(hours, '2 tiếng');
     await userEvent.click(screen.getByRole('button', { name: 'Duyệt' }));
-    expect(screen.getByText('Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4')).toBeInTheDocument();
+    expect(screen.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeInTheDocument();
     expect(hours).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(hours.closest('form')).toHaveAttribute('novalidate');
@@ -322,7 +322,7 @@ describe('Hộp xin quyền xem (vault-panel)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu' }));
 
     expect(screen.getByText('Ghi rõ lý do — người duyệt cần biết để quyết.')).toBeInTheDocument();
-    expect(screen.getByText('Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4')).toBeInTheDocument();
+    expect(screen.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 });

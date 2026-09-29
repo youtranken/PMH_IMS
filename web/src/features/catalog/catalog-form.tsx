@@ -171,7 +171,8 @@ export function CatalogForm({
     setServerField(null);
     if (!check.check() || !built.body) return;
     const typeRow = row as DeviceTypeRow | null;
-    /* Tắt "Có port map" của một loại đang bật là ẩn khu port map ở MỌI thiết bị loại đó. */
+    /* Tắt "Có port map" là bỏ tab Sơ đồ cổng ở mọi máy loại đó CHƯA khai cổng nào; máy đã khai
+       cổng vẫn giữ tab (device-detail: hasPortMap || portRowCount > 0). */
     if (entity === 'device_type' && row && typeRow?.hasPortMap && !form.hasPortMap) {
       const ok = await askConfirm({
         title: t('common.titleOf', { action: t('catalog.edit'), subject: catalogLabel(entity, row) }),

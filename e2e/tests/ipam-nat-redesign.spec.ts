@@ -501,7 +501,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
 
     // Vẫn là ô gõ tay — nhưng kèm câu cảnh báo, không phải im lặng.
     await expect(form.getByRole('textbox', { name: 'IP trong' })).toBeVisible();
-    await expect(form.getByText(/KHÔNG gắn luật về máy vừa chọn/)).toBeVisible();
+    await expect(form.getByText(/luật sẽ không gắn về máy này/)).toBeVisible();
   });
 });
 

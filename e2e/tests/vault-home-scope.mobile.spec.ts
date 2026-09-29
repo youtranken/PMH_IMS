@@ -167,7 +167,7 @@ test('popup két ở 390px: bước mã có Quay lại — về danh sách, khô
   await page.getByRole('listitem').filter({ hasText: code }).getByRole('button', { name: code }).click();
   const popup = page.getByRole('dialog');
   await popup.getByRole('button', { name: 'Xem' }).click();
-  await popup.getByRole('button', { name: /Quay lại danh sách ngăn/ }).click();
+  await popup.getByRole('button', { name: '‹ Quay lại', exact: true }).click();
   await expect(popup.getByText(label)).toBeVisible();
   await expect(popup.getByRole('button', { name: 'Xem' })).toBeVisible();
   await expect(page.getByTestId('secret-value')).toHaveCount(0);

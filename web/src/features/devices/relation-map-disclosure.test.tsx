@@ -23,7 +23,7 @@ describe('Bản đồ quan hệ — lưới cố định', () => {
         <RelationMap hubCode="TB-E2E-01" nodes={[]} missing={[]} />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/chưa giữ gì của ai/i)).toBeTruthy();
+    expect(screen.getByText(/không giữ IP, luật NAT/i)).toBeTruthy();
     expect(screen.queryByText('TB-E2E-01')).toBeNull();
   });
 
@@ -85,7 +85,7 @@ describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', 
     dungVoi({ isUnknown: true });
     expect(screen.getByText(/Chưa đọc được máy này đang giữ những gì/)).toBeTruthy();
     // Hai lời khẳng định sai ở đúng chiều nguy hiểm — cả hai phải im.
-    expect(screen.queryByText(/chưa giữ gì của ai/i)).toBeNull();
+    expect(screen.queryByText(/không giữ IP, luật NAT/i)).toBeNull();
     expect(screen.queryByText(/Chưa gắn:/)).toBeNull();
   });
 

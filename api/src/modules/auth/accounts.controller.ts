@@ -105,7 +105,7 @@ class CreateUserDto extends ContactDto {
   @Length(2, 120, { message: 'Họ tên từ 2 đến 120 ký tự.' })
   fullName!: string;
 
-  @IsIn(['sa', 'admin', 'member'], { message: 'Vai trò phải là sa, admin hoặc member.' })
+  @IsIn(['sa', 'admin', 'member'], { message: 'Vai trò phải là Super Admin, Quản trị hoặc Thành viên.' })
   role!: UserRole;
 
   @IsBoolean()
@@ -130,7 +130,7 @@ class StatusDto {
 }
 
 class RoleDto {
-  @IsIn(['sa', 'admin', 'member'], { message: 'Vai trò phải là sa, admin hoặc member.' })
+  @IsIn(['sa', 'admin', 'member'], { message: 'Vai trò phải là Super Admin, Quản trị hoặc Thành viên.' })
   role!: UserRole;
 }
 
@@ -226,7 +226,7 @@ export class AccountsController {
     );
     const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
-      sheetName: 'Tai khoan',
+      sheetName: 'Người dùng IMS',
       columns: [
         { header: 'Họ tên', width: 28, value: (r) => r.fullName },
         { header: 'Email', width: 32, value: (r) => r.email },

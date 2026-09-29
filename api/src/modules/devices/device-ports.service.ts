@@ -281,7 +281,7 @@ export class DevicePortsService {
         code: 'PORT_PEER_TAKEN',
         message:
           `Cổng ${peerPort ? `"${peerPort}" ` : ''}của thiết bị đầu kia đã có một dòng port map ` +
-          'khác ghi đấu vào. Một sợi dây chỉ ghi một lần — sửa dòng đang có thay vì thêm dòng mới.',
+          'khác ghi đấu vào. Sửa dòng đang có thay vì thêm dòng mới.',
       },
       'device_port_peer_port_key',
     );

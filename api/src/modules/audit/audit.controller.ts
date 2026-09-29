@@ -48,11 +48,11 @@ export class AuditQueryDto {
   security?: string;
 
   @IsOptional()
-  @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' })
+  @Matches(DATE_RE, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(DATE_RE, { message: 'to phải dạng YYYY-MM-DD' })
+  @Matches(DATE_RE, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
   to?: string;
 
   /*
@@ -149,7 +149,7 @@ export class AuditController {
       });
     }
     const buffer = await this.excel.build({
-      sheetName: 'Nhat ky',
+      sheetName: 'Nhật ký hệ thống',
       columns: [
         {
           header: 'Thời điểm',
@@ -186,6 +186,6 @@ function assertRange(q: AuditQueryDto): void {
   if (q.from) assertValidDate(q.from);
   if (q.to) assertValidDate(q.to);
   if (q.from && q.to && q.to < q.from) {
-    throw new BadRequestException('to phải ≥ from');
+    throw new BadRequestException('"Đến ngày" không được trước "Từ ngày".');
   }
 }

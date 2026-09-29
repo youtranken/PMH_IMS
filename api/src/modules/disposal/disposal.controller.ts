@@ -87,7 +87,7 @@ export class DisposalController {
   async export(@Query() query: RawQuery, @Res() res: Response) {
     const { items, timeZone } = await this.disposal.exportRows(filterOf(query));
     const buffer = await this.excel.build({
-      sheetName: 'Kho thanh ly',
+      sheetName: 'Kho thanh lý',
       columns: [
         { header: 'Loại', width: 18, value: (r) => KIND_LABEL[r.kind] },
         { header: 'Mã', width: 20, value: (r) => r.code },

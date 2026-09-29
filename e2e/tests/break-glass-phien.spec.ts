@@ -132,7 +132,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await pageA.goto(`/devices/${kit.deviceId}?tab=vault`);
     await pageA.getByRole('button', { name: 'Xin mở két' }).click();
     const form = pageA.getByRole('dialog');
-    await expect(form.getByText(/lần bấm "Xem" đầu tiên/)).toBeVisible();
+    await expect(form.getByText(/bấm "Xem" lần đầu/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill('E2E switch tầng 3 mất kết nối');
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
@@ -199,7 +199,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await loginWithTotp(pageC, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
     expect(await revealCode(pageC, kit.secretId)).toBe('BREAK_GLASS_OTHER_SESSION');
     await pageC.goto(`/devices/${kit.deviceId}?tab=vault`);
-    await expect(pageC.getByText(/đã gắn với một phiên đăng nhập khác/)).toBeVisible();
+    await expect(pageC.getByText(/đang gắn với một phiên đăng nhập khác/)).toBeVisible();
     await expect(pageC.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
     await ctxC.close();
 

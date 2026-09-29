@@ -149,7 +149,7 @@ test.describe('Hộp thoại trên điện thoại', () => {
     await rowAction(page, `PC-E2E-TICK-${stamp}`, 'Thanh lý');
 
     const dialog = page.getByRole('dialog');
-    const hint = dialog.getByText(/Thu hồi IP, gỡ luật NAT và trả ghế license/);
+    const hint = dialog.getByText(/Thu hồi IP, gỡ luật NAT, trả ghế license/);
     await expect(hint).toBeVisible();
     const [hintBox, dialogBox] = await Promise.all([hint.boundingBox(), dialog.boundingBox()]);
     expect(hintBox!.x + hintBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width + 1);

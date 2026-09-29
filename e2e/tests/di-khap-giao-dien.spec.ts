@@ -1297,7 +1297,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      */
     const hopThuHoi = page.getByRole('dialog');
     await expect(
-      hopThuHoi.getByText(/Quyền này ĐANG chạy/),
+      hopThuHoi.getByText(/Quyền này đang có hiệu lực/),
       'câu hỏi lại phải nói rõ đang cắt thứ đang chạy, không phải một câu "chắc chưa?"',
     ).toBeVisible();
     expect(
@@ -1892,7 +1892,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       await expect(
         victimPage.getByRole('alert'),
         'SA đã bấm Khóa thì người đó phải bị chặn NGAY ở cửa đăng nhập, và được nói rõ vì sao',
-      ).toContainText('Tài khoản đã bị quản trị viên tạm ngưng. Liên hệ Super Admin để mở lại.');
+      ).toContainText('Tài khoản đang bị khóa. Liên hệ Super Admin để mở khóa.');
       await expect(
         victimPage.getByRole('heading', { name: 'Cài xác thực 2 lớp' }),
         'không được đi tiếp một bước nào trong luồng đăng nhập',
@@ -2789,8 +2789,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeDisabled();
     await expect(
       hopNhap.getByText(
-        'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
-        'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
+        'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
+        'khai trong Danh mục trước — hệ thống không tự tạo.',
       ),
       'Hộp nhập phải tự nói ra điều kiện tiên quyết, không để người dùng đoán',
     ).toBeVisible();
@@ -2947,7 +2947,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(panel.getByText('Chưa có giấy tờ nào.')).toBeVisible();
     await expect(
       panel.getByText(
-        'File luôn được TẢI VỀ, không mở trực tiếp trong trình duyệt (chống mã độc qua file).',
+        'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
       ),
       'Luật "chỉ tải về, không mở inline" phải nói ra ngay chỗ người dùng đính kèm',
     ).toBeVisible();
@@ -2956,7 +2956,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
       panel.getByText(
-        'Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.',
+        'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
       ),
       'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
     ).toBeVisible();
@@ -3418,7 +3418,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
     // Kỳ hạn đang là Thuê bao mà chưa có ngày hết hạn: báo ngay tại ô (SW-028), nên là BA ô.
     await expect(
-      add.getByText('Nhập ngày hết hạn — thiếu hạn thì hệ thống không nhắc gia hạn được.'),
+      add.getByText('Nhập ngày hết hạn để hệ thống nhắc gia hạn.'),
     ).toBeVisible();
     await expect(add.getByText('Còn 3 ô cần sửa trước khi lưu.')).toBeVisible();
     await expect(
@@ -3566,7 +3566,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveCount(6);
     for (const name of [
       'Đóng hộp thoại',
-      'Chọn cả lô theo phòng ban / người sử dụng',
+      'Chọn theo phòng ban / người sử dụng',
       'Bắt đầu',
       'Kết thúc',
       'Hủy',
@@ -4273,7 +4273,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       add.getByRole('textbox', { name: 'Tên luật', exact: true }),
       'Luật không tên thì sau này không ai biết nó là luật gì — báo đúng câu trong vi.ts',
-    ).toHaveAccessibleDescription('Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").');
+    ).toHaveAccessibleDescription('Đặt tên cho luật, vd "SSL sắp hết hạn → sếp".');
 
     await add.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`E2E luật hỏng ${stamp}`);
     await add.getByRole('textbox', { name: 'Người nhận', exact: true }).fill('   ');
@@ -4716,7 +4716,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveCount(0);
     // Khai MỚI thì chưa có id để gắn giấy tờ, nên khu đính kèm phải chưa hiện.
     await expect(
-      addForm.getByText('Thêm và xóa giấy tờ ở đây có hiệu lực NGAY', { exact: false }),
+      addForm.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
     ).toHaveCount(0);
 
     // Lựa chọn của `Select` PORTAL ra ngoài phần thân hộp — bắt ở cấp trang.
@@ -5077,7 +5077,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '',
     );
     await expect(
-      form.getByText('Thêm và xóa giấy tờ ở đây có hiệu lực NGAY', { exact: false }),
+      form.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
       'giấy tờ của dải ghi thẳng nên KHÔNG nằm trong hộp có nút Hủy — nó ở đầu cột phải',
     ).toHaveCount(0);
 
@@ -5090,7 +5090,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const hide = page.getByRole('dialog', { name: `Ngừng dùng dải ${cidr}` });
     await expect(hide).toBeVisible();
     await expect(
-      hide.getByText('Dải Ở LẠI danh sách', { exact: false }),
+      hide.getByText('Dải vẫn ở danh sách', { exact: false }),
       'phải nói rõ ngừng dùng KHÔNG phải xóa — người dùng đọc "biến mất" là "đã mất"',
     ).toBeVisible();
     await expectHandles(hide, 'textbox', ['Lý do'], 'Hộp "Ngừng dùng dải"');
@@ -5499,7 +5499,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT UDP 9000-9010' });
     await expect(remove).toBeVisible();
     await expect(
-      remove.getByText('Luật không bị xóa khỏi hệ thống', { exact: false }),
+      remove.getByText('vẫn xem lại được', { exact: false }),
     ).toBeVisible();
     await expectHandles(remove, 'textbox', ['Lý do gỡ'], 'Hộp "Gỡ luật NAT"');
     await expectHandles(remove, 'button', ['Đóng hộp thoại', 'Hủy', 'Gỡ'], 'Hộp "Gỡ luật NAT"');
@@ -6521,7 +6521,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thêm tài khoản',
         'Hồ sơ',
         'Thuộc về ai',
-        'Mật khẩu (cất vào két luôn)',
+        'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
            "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
         'Giấy tờ đính kèm',
@@ -6581,7 +6581,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Hồ sơ',
         'Thuộc về ai',
         'Cấu hình VPN',
-        'Mật khẩu (cất vào két luôn)',
+        'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
            "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
         'Giấy tờ đính kèm',
@@ -6652,7 +6652,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Hộp ngừng dùng có đúng ba nút: ✕, Hủy, Ngừng dùng',
     ).toEqual(sap(['Đóng hộp thoại', 'Hủy', 'Ngừng dùng']));
     await expect(
-      hopDong.getByText(/Tài khoản không bị xóa/),
+      hopDong.getByText(/Hồ sơ không bị xóa/),
       'Hộp phải nói rõ đóng ≠ xóa — người bấm đang quyết định một việc, không phải bấm cho xong',
     ).toBeVisible();
 
@@ -6867,7 +6867,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Mã', 'Loại', 'Chi tiết', 'Ngày thanh lý', 'Người thanh lý', 'Thao tác']);
 
     await expect(
-      main.getByText(/KHÔNG còn được tính hạn và không vào email nhắc gia hạn/),
+      main.getByText(/không còn tính hạn và không vào email nhắc gia hạn/),
       'Phải còn dòng giải thích: vì sao hồ sơ ở đây thôi làm phiền, và muốn dùng lại thì đi đâu',
     ).toBeVisible();
 
@@ -7488,7 +7488,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
     const hop = page.getByRole('dialog', {
-      name: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
+      name: 'Nhập danh mục từ Excel',
       exact: true,
     });
     await expect(hop).toBeVisible();
@@ -7501,7 +7501,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'hộp nhập phải có chỗ chọn file — không thì ba cái nút ở chân chẳng để làm gì',
     ).toBeVisible();
     await expect(
-      hop.getByText(/Hệ thống đọc cả 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
+      hop.getByText(/File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
       'lời dặn dùng đúng file mẫu phải đứng ngay cạnh ô chọn file, chỗ người ta đang nhìn',
     ).toBeVisible();
 
@@ -8186,9 +8186,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * · gạch 3 — "vài chục giây" là ước lượng, trong khi màn hình có đồng hồ thật.
      */
     ).toEqual([
-      'Cất bí mật: bấm "Mở két" ngay tại bảng trên, hoặc vào tab "Két sắt" của hồ sơ. Chỉ Quản trị và Super Admin ghi được.',
-      'Xem giá trị: phải gõ mã 6 số (TOTP). Gõ một lần rồi thì mở tiếp được trong ít phút, hết khoảng đó phải gõ lại.',
-      'Giá trị hiện ra rồi TỰ ẨN — có đồng hồ đếm ngược ngay trên hộp — và không có nút sao chép hàng loạt.',
+      'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
+      'Xem giá trị: phải nhập mã 6 số. Nhập một lần thì xem tiếp được trong ít phút, hết giờ phải nhập lại.',
+      'Giá trị hiện ra rồi tự ẩn (có đồng hồ đếm ngược). Không có nút sao chép hàng loạt.',
       'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xóa được.',
     ]);
   });
@@ -8729,7 +8729,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       form.getByTestId('secret-strength-warning'),
       'giá trị thiếu chữ HOA và ký tự đặc biệt thì phải bị chê',
     ).toHaveText(
-      'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
+      'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
     );
     await expect(
       form.getByRole('button', { name: 'Lưu' }),
@@ -8820,7 +8820,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(
       await stepUp.getByRole('button').allTextContents(),
       'bước mã phải có đúng cặp Quay lại / Xác nhận',
-    ).toEqual(['‹ Quay lại danh sách ngăn', 'Xác nhận']);
+    ).toEqual(['‹ Quay lại', 'Xác nhận']);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
@@ -8966,7 +8966,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toBeEditable();
     await expect(
       approve.getByText(
-        'Rút ngắn được, tối đa 6 giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.',
+        'Rút ngắn được, tối đa 6 giờ như người xin.',
       ),
       'và phải nói ra là sửa được (chỉ rút ngắn, không cấp quá số xin), không để người duyệt tự đoán',
     ).toBeVisible();

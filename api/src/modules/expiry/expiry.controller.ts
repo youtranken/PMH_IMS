@@ -45,11 +45,11 @@ import { UsersApiService } from '../users/users.api';
 /** Khoảng ngày của tab "Đã gia hạn" — ngày lịch YYYY-MM-DD, cả hai bao gồm. */
 class RenewalsQueryDto {
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from phải dạng YYYY-MM-DD' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to phải dạng YYYY-MM-DD' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
   to?: string;
 }
 
@@ -226,7 +226,7 @@ export class ExpiryController {
      */
     const kindLabel = new Map(this.expiry.kinds().map((k) => [k.kind, k.label]));
     const buffer = await this.excel.build({
-      sheetName: 'Sap het han',
+      sheetName: 'Sắp hết hạn',
       columns: [
         { header: 'Loại', width: 18, value: (r) => kindLabel.get(r.kind) ?? r.kind },
         { header: 'Tên', width: 36, value: (r) => r.label },
@@ -261,7 +261,7 @@ export class ExpiryController {
     if (query.from && query.to && query.to < query.from) {
       throw new BadRequestException({
         code: 'RANGE_INVALID',
-        message: '"Đến ngày" phải sau "Từ ngày".',
+        message: '"Đến ngày" không được trước "Từ ngày".',
       });
     }
     // Cột "Người" đọc họ tên (email vào tooltip) — tra một lượt qua users.api (AD-2).

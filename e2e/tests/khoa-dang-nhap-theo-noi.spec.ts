@@ -138,7 +138,7 @@ test.describe('Chặn đăng nhập theo nơi và theo tài khoản', () => {
       expect(await codeOf(again)).toBe('ACCOUNT_LOCKED');
 
       // Chủ tài khoản nhận thư, và thư nói đúng việc đã xảy ra.
-      const mails = await waitForMail('Đoán mật khẩu');
+      const mails = await waitForMail('Tạm chặn đăng nhập');
       expect(mails[0].To.map((t) => t.Address)).toContain(E2E_MEMBER.email);
     } finally {
       await api.dispose();
@@ -170,11 +170,11 @@ test.describe('Thư báo khi một tài khoản bị đoán mật khẩu', () =>
       await api.dispose();
     }
 
-    const mails = await waitForMail('Đoán mật khẩu');
+    const mails = await waitForMail('Tạm chặn đăng nhập');
     expect(mails.length).toBeGreaterThan(0);
     const body = await mailBody(mails[0].ID);
-    expect(body).toContain('TẠM CHẶN');
-    expect(body).toContain('KHÓA TAY');
+    expect(body).toContain('tạm chặn đăng nhập');
+    expect(body).toContain('khóa tay');
     // Câu của luật cũ (chỉ chặn theo nơi), nay sai, không được còn.
     expect(body).not.toContain('VẪN ĐĂNG NHẬP ĐƯỢC');
   });

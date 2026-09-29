@@ -1,4 +1,4 @@
-import { addDays, daysBetween, isoDateInTz, startOfDayInTz } from './today';
+import { addDays, daysBetween, isoDateInTz, startOfDayInTz, viDate } from './today';
 
 describe('isoDateInTz — "hôm nay" theo múi giờ ứng dụng, không theo UTC', () => {
   /**
@@ -59,5 +59,19 @@ describe('startOfDayInTz — 00:00 của một ngày lịch theo múi giờ ứn
 
   it('múi giờ cấu hình sai lùi về UTC chứ không ném', () => {
     expect(startOfDayInTz('2026-09-29', 'Khong/Co').toISOString()).toBe('2026-09-29T00:00:00.000Z');
+  });
+});
+
+describe('viDate — ngày trong câu người dùng đọc theo dd/mm/yyyy', () => {
+  it.each([
+    ['2026-08-30', '30/08/2026'],
+    ['2027-01-02', '02/01/2027'],
+  ])('%s → %s', (iso, shown) => {
+    expect(viDate(iso)).toBe(shown);
+  });
+
+  it('không phải YYYY-MM-DD thì trả nguyên, không bịa ra ngày', () => {
+    expect(viDate('không rõ')).toBe('không rõ');
+    expect(viDate('')).toBe('');
   });
 });
