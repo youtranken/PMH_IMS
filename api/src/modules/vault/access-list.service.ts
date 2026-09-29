@@ -49,7 +49,7 @@ export interface AccessRuleInput {
 }
 
 /**
- * Ma trận quyền xem secret (story 6.2, FR-023). Chủ sở hữu bảng `access_list` (AD-3).
+ * Ma trận quyền xem secret (FR-023). Chủ sở hữu bảng `access_list` (AD-3).
  *
  * Cấm là MẶC ĐỊNH, không phải một lời gán: bảng chỉ chứa `whitelist` và `needs_approval`.
  * Muốn cấm thì GỠ dòng đi. Cho phép gán 'denied' sẽ sinh ra câu hỏi "dòng cấm có thắng dòng
@@ -222,7 +222,7 @@ export class AccessListService {
   /**
    * Tầng quyền của một người trên một CHỦ THỂ cụ thể (thiết bị hoặc hồ sơ phần mềm).
    *
-   * Đây là hàm mà cả story 6.3 xoay quanh. Nó tra chủ thể qua public api của module chủ
+   * Đây là hàm mà cả break-glass xoay quanh. Nó tra chủ thể qua public api của module chủ
    * (`devices.api`, `software.api`) chứ KHÔNG join bảng của họ — `vault` không được biết bảng
    * `device` trông thế nào (AD-2/AD-3).
    */
@@ -271,8 +271,7 @@ export class AccessListService {
    * `list()` gọi `scopeLabels()` → `scopeOptions()` → `catalog.lists()` để dựng tên đọc được
    * cho màn ma trận. Nhưng `tierFor` nằm trên ĐƯỜNG NÓNG: nó chạy ở mỗi lần mở két, mỗi lần
    * đọc metadata, mỗi lần dựng verdict — và ném hết nhãn đi ngay sau đó. Kéo cả danh mục site
-   * + loại thiết bị + loại phần mềm về chỉ để vứt là cái giá trả mỗi lần xem một mật khẩu
-   * (code review Epic 6, finding 7).
+   * + loại thiết bị + loại phần mềm về chỉ để vứt là cái giá trả mỗi lần xem một mật khẩu.
    */
   private async rulesOf(memberEmail: string): Promise<AccessRule[]> {
     const rows = await this.db

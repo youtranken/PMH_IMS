@@ -45,7 +45,7 @@ export const secretTable = pgTable('secret', {
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
- * Bảng `access_list` — migration 0024 (story 6.2). Chủ sở hữu: `vault` (AD-3).
+ * Bảng `access_list` — migration 0024. Chủ sở hữu: `vault` (AD-3).
  *
  * Chỉ chứa `whitelist` và `needs_approval`. CẤM là mặc định (không có dòng), không phải một
  * lời gán — xem `access-tier.ts`.

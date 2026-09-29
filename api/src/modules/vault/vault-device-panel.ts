@@ -5,7 +5,7 @@ import { AccessListService } from './access-list.service';
 import { VaultService } from './vault.service';
 
 /**
- * Khu "Két sắt" trên trang chi tiết thiết bị (story 4.1, cơ chế 2.5).
+ * Khu "Két sắt" trên trang chi tiết thiết bị (cơ chế panel của `DevicePanelRegistry`).
  *
  * Chỉ hiện NHÃN và loại — không có giá trị, không có nút xem ở đây. Người dùng biết "máy này
  * có mật khẩu admin web đã cất" mà không lộ gì; muốn mở phải sang đường riêng của 4.2.
@@ -26,24 +26,24 @@ export class VaultDevicePanel implements DevicePanelProvider, OnModuleInit {
 
   async buildFor(deviceId: string, viewer: PanelViewer): Promise<DevicePanel | null> {
     /*
-     * MA TRẬN QUYỀN HỎI Ở ĐÂY, KHÔNG PHẢI Ở CONTROLLER (bịt lỗ rò 17/09/2026).
+     * MA TRẬN QUYỀN HỎI Ở ĐÂY, KHÔNG PHẢI Ở CONTROLLER.
      *
      * `GET /devices/:id/panels` mở cho cả `member` — hợp lý, vì hồ sơ máy là việc hàng ngày.
      * Nhưng khu này bày NHÃN NGĂN và TÊN ĐĂNG NHẬP, đúng thứ mà `GET /vault/secrets` trả 403
      * cho một Member ngoài ma trận (`vault.controller.ts` gọi `assertCanSeeMetadata`), và đúng
-     * "bản đồ công ty giữ bí mật ở đâu" mà `/vault/owners` khoá lại cho SA/Admin. Trước bản
-     * vá, lặp `GET /devices` rồi gọi panel từng máy là lấy được cả kho, không để lại dấu vết.
+     * "bản đồ công ty giữ bí mật ở đâu" mà `/vault/owners` khoá lại cho SA/Admin. Không hỏi ở
+     * đây thì lặp `GET /devices` rồi gọi panel từng máy là lấy được cả kho, không để lại dấu vết.
      *
      * Trả `null` chứ không ném: người không có quyền thì khu này KHÔNG TỒN TẠI với họ, y như
      * một máy chưa cất secret nào — không phải một ô báo lỗi mách rằng "ở đây có thứ gì đó".
      */
     /*
-     * HỎI "KHÔNG PHẢI SA/ADMIN", KHÔNG HỎI "CÓ PHẢI MEMBER" (18/09/2026).
+     * HỎI "KHÔNG PHẢI SA/ADMIN", KHÔNG HỎI "CÓ PHẢI MEMBER".
      *
      * Hai câu nghe giống nhau nhưng hỏng ngược nhau. `role === 'member'` là mẫu MỞ MẶC ĐỊNH:
      * mọi vai KHÁC đi thẳng, không qua ma trận quyền. AD-9 nói ngược lại — quyền mặc định đóng.
      *
-     * Hôm nay chưa chết vì `UserRole` chỉ có ba giá trị. Nhưng `PanelViewer.role` khai là
+     * `UserRole` hiện chỉ có ba giá trị. Nhưng `PanelViewer.role` khai là
      * `string` CÓ CHỦ Ý (để `common` không phải phụ thuộc `auth`, AD-2), nên trình biên dịch
      * KHÔNG bắt được ngày thêm vai thứ tư — và vai đó lập tức đọc được nhãn ngăn két cùng tên
      * đăng nhập của mọi máy, im lặng, không ai biết.

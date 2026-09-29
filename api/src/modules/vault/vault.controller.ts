@@ -78,7 +78,7 @@ class IdParamDto {
 }
 
 /**
- * Két sắt (story 4.1, FR-021/FR-026, AD-4).
+ * Két sắt (FR-021/FR-026, AD-4).
  *
  * Hai luật hình thành nên toàn bộ mặt tiền này:
  *
@@ -87,7 +87,7 @@ class IdParamDto {
  *    tồn tại đường nào trả về nhiều hơn một chủ thể, nên không có gì để mà lỡ gọi, lỡ mở
  *    quyền, hay lỡ thêm `?limit=99999`.
  * 2. Đường DUY NHẤT lấy được plaintext là `POST :id/reveal`, và nó đòi vừa gõ TOTP xong
- *    (story 4.2). Một secret một lần gọi — không có dạng nhận mảng id.
+ *    (FR-022). Một secret một lần gọi — không có dạng nhận mảng id.
  *
  * Quyền: SA + Admin. Member không có đường nào tới đây (AD-9, mặc định đóng).
  */
@@ -96,7 +96,7 @@ class IdParamDto {
  * sắt không cần gõ mã. Năm cửa cần thì ghi đè bằng `@RequiresStepUp()` ngay trên route — và
  * nhờ vậy mỗi dòng `@RequiresStepUp()` dưới đây đọc ra đúng một ý: "cửa NÀY khác các cửa kia".
  *
- * `@UseGuards(StepUpGuard)` trên từng route đã bỏ: từ 10/09 guard chạy toàn cục (`app.module`),
+ * Không gắn `@UseGuards(StepUpGuard)` trên từng route: guard chạy toàn cục (`app.module`),
  * nên gắn tay ở đây vừa thừa vừa gợi ý sai rằng route không gắn thì không được canh.
  */
 @NoStepUp()
@@ -114,7 +114,7 @@ export class VaultController {
 
 
   /**
-   * Member đọc được METADATA của chủ thể nằm trong quyền của mình (story 6.3).
+   * Member đọc được METADATA của chủ thể nằm trong quyền của mình.
    *
    * Metadata thôi thì không lộ gì — nhưng nó là thứ để họ biết "máy này có mật khẩu admin đã
    * cất" và bấm xin. Không cho đọc thì màn của Member trống trơn và họ không biết phải xin cái
@@ -141,7 +141,7 @@ export class VaultController {
   }
 
   /**
-   * "Tôi làm được gì với chủ thể này" — UI dựng đúng nút bằng MỘT lần gọi (story 6.3).
+   * "Tôi làm được gì với chủ thể này" — UI dựng đúng nút bằng MỘT lần gọi.
    * Panel két hỏi lại route này theo đồng hồ khi có phiếu treo, nên không gia hạn idle.
    */
   @Roles('sa', 'admin', 'member')
@@ -162,15 +162,13 @@ export class VaultController {
   }
 
   /*
-   * ===== GHI VÀO KÉT CŨNG PHẢI STEP-UP (rà soát 07/09, C2) =====
+   * ===== GHI VÀO KÉT CŨNG PHẢI STEP-UP =====
    *
-   * Trước đây ĐỌC thì phải gõ mã 6 số, còn GHI ĐÈ thì không. Một phiên Admin bị chiếm — cookie
-   * trộm, máy bỏ ngỏ, chưa từng step-up hoặc đã hết grace — vẫn xoay được mật khẩu switch lõi
+   * ĐỌC phải gõ mã 6 số mà GHI ĐÈ thì không là để cửa sau mở. Một phiên Admin bị chiếm — cookie
+   * trộm, máy bỏ ngỏ, chưa từng step-up hoặc đã hết grace — sẽ xoay được mật khẩu switch lõi
    * sang một giá trị kẻ tấn công tự chọn, hoặc thu hồi bí mật đang dùng. Hắn KHÔNG đọc được
    * giá trị cũ, nhưng ĐẶT được giá trị mới rồi dùng chính nó ở nơi khác; và thu hồi là một
    * đường phá hoại thẳng, không cần đọc được gì.
-   *
-   * Cửa trước khóa kỹ, cửa sau để mở — đúng mẫu N1 của rà soát 07/09.
    *
    * Chi phí cho người dùng thật: một lần gõ mã trong mỗi `secret.stepup_grace_minutes` (10
    * phút), đúng lúc họ đang chủ ý cất/xoay mật khẩu. Web bắt `STEPUP_REQUIRED` rồi mở hộp hỏi
@@ -206,7 +204,7 @@ export class VaultController {
   }
 
   /**
-   * Mở két (story 4.2, FR-022).
+   * Mở két (FR-022).
    *
    * POST chứ không GET, và id nằm ở path chứ giá trị KHÔNG bao giờ ở query: GET dễ bị
    * prefetch, lưu vào lịch sử trình duyệt, và lọt vào access log của reverse proxy.
@@ -218,7 +216,7 @@ export class VaultController {
    *
    * Trần `rate.secret_reveal_per_minute` (30/phút) THEO USER. Hình dạng route ("một id mỗi lần") một mình KHÔNG đủ để giữ
    * FR-026: phiên đã step-up cứ gọi liệt kê rồi mở lần lượt là rút được cả két trong vài phút,
-   * chỉ để lại N dòng audit mà chẳng ai ngồi đọc kịp (code review Epic 4, finding 2). Trần này
+   * chỉ để lại N dòng audit mà chẳng ai ngồi đọc kịp. Trần này
    * là hàng rào PHÒNG, còn audit là hàng rào PHÁT HIỆN — cần cả hai. 30 vẫn rộng hơn nhiều so
    * với nhịp người thật (mở một hai mật khẩu rồi đi làm việc khác).
    */
@@ -233,13 +231,13 @@ export class VaultController {
   async reveal(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     const who = actor(req);
     /*
-     * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU PHẢI ĐỂ LẠI VẾT (17/09/2026).
+     * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU PHẢI ĐỂ LẠI VẾT.
      *
-     * Trước bản này nhật ký chỉ có lượt THÀNH CÔNG: `findMeta` ném 404, hoặc `assertCanReveal`
-     * ném 403, đều xảy ra TRƯỚC khi `vault.reveal()` chạy — mà dòng audit lại nằm bên trong
-     * hàm đó, và `@Audited(..., writtenByService: true)` nghĩa là lớp chặn ngoài cũng không
-     * ghi hộ. Nên "ai đã mở" thì có, "ai đã thử mà bị chặn" thì không ở đâu cả — trong khi
-     * chính chú thích trên endpoint này gọi audit là hàng rào PHÁT HIỆN.
+     * Không có `watched` thì nhật ký chỉ có lượt THÀNH CÔNG: `findMeta` ném 404, hoặc
+     * `assertCanReveal` ném 403, đều xảy ra TRƯỚC khi `vault.reveal()` chạy — mà dòng audit lại
+     * nằm bên trong hàm đó, và `@Audited(..., writtenByService: true)` nghĩa là lớp chặn ngoài
+     * cũng không ghi hộ. Nên "ai đã mở" thì có, "ai đã thử mà bị chặn" thì không ở đâu cả —
+     * trong khi chính chú thích trên endpoint này gọi audit là hàng rào PHÁT HIỆN.
      *
      * Dòng vết KHÔNG mang nhãn ngăn: nhãn chính là thứ người này không được phép biết, viết
      * vào nhật ký là mở một đường rò thứ hai ngay trong hàng rào vừa dựng.
@@ -248,7 +246,7 @@ export class VaultController {
       const meta = await this.vault.findMeta(params.id);
 
     /**
-     * Ba tầng của story 6.2 gặp bộ máy duyệt của 6.1 ĐÚNG TẠI ĐÂY, và kiểm ở MỖI lần mở —
+     * Ba tầng quyền (FR-023) gặp bộ máy duyệt (AD-6) ĐÚNG TẠI ĐÂY, và kiểm ở MỖI lần mở —
      * không cache, không tin một cờ nào trong phiên (AD-6).
      *
      * SA/Admin đi thẳng: quyền của họ đến từ VAI, không từ ma trận. Bắt họ tự gán quyền cho
@@ -314,10 +312,10 @@ export class VaultController {
       return await run();
     } catch (error) {
       /*
-       * CHỈ ĐẾM LƯỢT BỊ TỪ CHỐI, KHÔNG ĐẾM LƯỢT HỎNG (18/09/2026).
+       * CHỈ ĐẾM LƯỢT BỊ TỪ CHỐI, KHÔNG ĐẾM LƯỢT HỎNG.
        *
-       * Bản trước bắt MỌI lỗi, nên ngoài 403/404 nó nuốt trọn cả lỗi giải mã (`crypto.openText`
-       * ném khi `key_version` không còn trong chùm chìa, hoặc tag lệch), lỗi DB chớp, lỗi
+       * Bắt MỌI lỗi thì ngoài 403/404 còn nuốt trọn cả lỗi giải mã (`crypto.openText` ném khi
+       * `key_version` không còn trong chùm chìa, hoặc tag lệch), lỗi DB chớp, lỗi
        * `config.getNumber`. Hai hậu quả cụ thể:
        *
        *   · Một SA mở ba lần một ngăn có ciphertext hỏng — đúng tình huống `secrets/README.md`
@@ -345,17 +343,15 @@ export class VaultController {
        * biến 403 đúng của người dùng thành 500 — và chính đường đang bị tấn công là đường dễ
        * nghẽn nhất. Nuốt lỗi ghi, giữ nguyên lỗi gốc.
        *
-       * NHƯNG NUỐT THÌ PHẢI KÊU (19/09/2026). Bản trước là `catch {}` rỗng, biện minh bằng câu
-       * "`AuditWriterService` đã tự log" — câu ấy SAI: `append()` chỉ có đúng một dòng
-       * `db.insert`, không try/catch, không một lời gọi logger nào; chỉ `appendBestEffort()`
-       * mới log. Hậu quả không dừng ở việc mất một dòng nhật ký: `SecurityProbeService` đếm
+       * NHƯNG NUỐT THÌ PHẢI KÊU. Đừng tin "`AuditWriterService` đã tự log": `append()` không
+       * try/catch, không một lời gọi logger nào; chỉ `appendBestEffort()` mới log. Hậu quả
+       * không dừng ở việc mất một dòng nhật ký: `SecurityProbeService` đếm
        * lượt dò bằng cách ĐỌC LẠI `audit_log`, nên dòng này mất là bộ đếm không bao giờ chạm
        * ngưỡng — không thư, không vết, không dấu hiệu, đúng lúc đang bị dò. Hàng rào PHÁT HIỆN
        * tắt lịm ở đúng nhịp nó sinh ra để canh.
        *
-       * Đây cũng chính là mẫu `catch {}` mà commit cùng đợt vừa gỡ khỏi `security-probe.service.ts`
-       * — nó tái sinh cách đó hai file. Ghi log là đường duy nhất còn lại để người trực biết
-       * hàng rào vừa thủng.
+       * Cùng luật với `catch` ở `security-probe.service.ts`. Ghi log là đường duy nhất còn lại
+       * để người trực biết hàng rào vừa thủng.
        */
       try {
         await this.audit.append({
