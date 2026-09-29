@@ -9,12 +9,15 @@ import {
   AuditObjectLabelRegistry,
   auditObjectKey,
 } from '../../common/audit-object-labels.registry';
+import { SECURITY_AUDIT_ACTIONS } from './security-actions';
 
 export interface AuditQuery {
   actor?: string;
   action?: string;
   objectType?: string;
   objectId?: string;
+  /** Chỉ lấy sự kiện an ninh (`SECURITY_AUDIT_ACTIONS`). */
+  security?: boolean;
   /** Ngày YYYY-MM-DD theo `app.timezone` (tùy chọn) — from inclusive, to inclusive (+1 ngày). */
   from?: string;
   to?: string;
@@ -98,6 +101,12 @@ export class AuditQueryService {
     const conds = [
       q.actor ? sql`a.actor ILIKE ${`%${escapeLike(q.actor)}%`}` : null,
       q.action ? sql`a.action = ${q.action}` : null,
+      q.security
+        ? sql`a.action IN (${sql.join(
+            SECURITY_AUDIT_ACTIONS.map((code) => sql`${code}`),
+            sql`, `,
+          )})`
+        : null,
       q.objectType ? sql`a.object_type = ${q.objectType}` : null,
       q.objectId ? sql`a.object_id ILIKE ${`%${escapeLike(q.objectId)}%`}` : null,
       /*

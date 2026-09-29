@@ -1994,6 +1994,7 @@ export default {
     dateRange: 'Khoảng ngày',
     clearFilters: 'Xóa bộ lọc',
     securityEvent: 'An ninh',
+    securityOnly: 'Chỉ sự kiện an ninh',
     openDetail: 'Xem chi tiết dòng nhật ký lúc {{time}}',
     timezoneNote: '(giờ Việt Nam)',
     field: 'Trường',

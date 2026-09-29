@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import type { Response } from 'express';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -41,6 +41,11 @@ export class AuditQueryDto {
   @IsString()
   @MaxLength(255)
   objectId?: string;
+
+  /** `1` = chỉ sự kiện an ninh; tập mã do API giữ (`security-actions.ts`), web không gửi danh sách. */
+  @IsOptional()
+  @IsIn(['1'])
+  security?: string;
 
   @IsOptional()
   @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' })
@@ -97,6 +102,7 @@ export class AuditController {
       action: q.action,
       objectType: q.objectType,
       objectId: q.objectId,
+      security: q.security === '1',
       from: q.from,
       to: q.to,
       page: q.page,
@@ -123,6 +129,7 @@ export class AuditController {
       action: q.action,
       objectType: q.objectType,
       objectId: q.objectId,
+      security: q.security === '1',
       from: q.from,
       to: q.to,
       page: 1,
