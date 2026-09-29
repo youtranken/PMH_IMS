@@ -3,6 +3,7 @@ import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditController } from './audit.controller';
 import { AuditInterceptor } from './audit.interceptor';
+import { AuditPartitionSweep } from './audit-partition-sweep';
 import { AuditApiService } from './audit.api';
 import { AuditQueryService } from './audit-query.service';
 import { AuditWriterService } from './audit-writer.service';
@@ -38,6 +39,7 @@ import { UsersModule } from '../users/users.module';
     AuditQueryService,
     SecurityProbeService,
     AuditApiService,
+    AuditPartitionSweep,
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
   exports: [AuditWriterService, AuditApiService],

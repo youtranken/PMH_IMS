@@ -322,6 +322,44 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 **Không bao giờ chạy trên máy prod:** `ops/ci-local.sh`, `ops/seed-demo.sql`,
 `ops/unseed-demo.sql`, `api/scripts/reset-e2e.mjs`, hay các file `docker-compose.override.*.yml`.
 
+### H1. Lưu trữ nhật ký năm cũ (`audit_log`)
+
+`audit_log` chia ngăn theo năm (`audit_log_2026`, `audit_log_2027`… và `audit_log_default`).
+Worker tự tạo ngăn năm nay và năm sau ở mỗi lượt sweep, nên ngăn năm mới luôn có trước giao
+thừa; không cần làm gì. Nếu worker tắt qua giao thừa, dòng mới rơi vào `audit_log_default` và
+lượt sweep đầu tiên sau đó tự dời chúng sang ngăn đúng năm (log worker có dòng `dời N dòng`).
+
+Lưu trữ thì **không** tự chạy: nhật ký giữ vĩnh viễn (NFR-03), đưa một năm ra khỏi DB là việc
+người trực làm có chủ đích. Ngưỡng `audit.archive_after_years` (system_config, mặc định 2): ngăn
+nào có mọi dòng cũ hơn ngần ấy năm thì mới được lưu trữ.
+
+```bash
+$ bash ops/audit-archive.sh /mnt/nas/ims-backup              # 1. xem ngăn nào sẽ bị tách, bao nhiêu dòng
+$ bash ops/backup-nightly.sh /mnt/nas/ims-backup             # 2. sao lưu đầy đủ trước
+$ bash ops/audit-archive.sh /mnt/nas/ims-backup --yes        # 3. tách + dump, bảng vẫn ở lại trong DB
+# 4. mở thử file dump (pg_restore --list), rồi mới xoá bảng đã tách:
+$ docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP TABLE audit_archive_2026;"'
+```
+
+Mỗi năm ra một file `audit_log_<năm>-<ngày>.dump` (pg_dump custom). Ngăn đã tách được đổi tên
+thành `audit_archive_<năm>`, không còn nằm trong `audit_log` nên màn Nhật ký không thấy nó nữa.
+`--yes --drop` làm cả bước 4 trong một lượt, chỉ dùng khi đã quen quy trình.
+
+**Khôi phục một năm** để tra cứu (ví dụ 2026):
+
+```bash
+$ docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' < audit_log_2026-<ngày>.dump
+$ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' <<'SQL'
+ALTER TABLE audit_archive_2026 RENAME TO audit_log_2026;
+ALTER TABLE audit_log ATTACH PARTITION audit_log_2026
+  FOR VALUES FROM ('2026-01-01 00:00:00+00') TO ('2027-01-01 00:00:00+00');
+SELECT audit_log_seal_partition('audit_log_2026'::regclass);   -- thu quyền ims_app, gắn trigger
+SQL
+```
+
+- [ ] Bước 1 chỉ liệt kê, không đổi gì
+- [ ] Sau bước 3: file `.dump` có trên NAS, `pg_restore --list` thấy `TABLE DATA public audit_archive_<năm>`
+
 ---
 
 ## Biên bản diễn tập khôi phục

@@ -705,9 +705,19 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   `REFERENCES` nào; xoá danh mục luôn thành công và để lại chuỗi mồ côi. Cần một story riêng, kèm
   quyết định sản phẩm ở mục 11.
 - [x] **OLD-DB-02 · `device_port` thiếu UNIQUE `(connected_device_id, connected_port)`**, trái AD-14.
-- [ ] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
+- [x] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
   thêm, không bao giờ xoá; phân vùng lúc còn nhỏ rẻ hơn nhiều so với lúc đã lớn.
   - **Rà 29/09:** còn nguyên, chưa có phân vùng lẫn đường lưu trữ.
+  - **Đã sửa (chia theo NĂM, chủ dự án chốt):** 0302 chép bảng cũ sang bảng chia ngăn
+    `RANGE (created_at)` (ngăn `audit_log_<năm>` theo UTC + `audit_log_default`), đủ 8 chỉ mục,
+    trigger chỉ-thêm và ACL cũ; mỗi ngăn thu hết quyền của `ims_app`. Lượt sweep của worker
+    (`AuditPartitionSweep` → hàm `audit_log_ensure_partitions`, SECURITY DEFINER) tự tạo ngăn năm
+    nay + năm sau và dời dòng lỡ rơi vào DEFAULT sang ngăn đúng năm. Lưu trữ bằng tay:
+    `ops/audit-archive.sh` (ngưỡng `audit.archive_after_years`, mặc định 2, 0303), hướng dẫn ở
+    RUNBOOK mục H1. Kiểm: `api/test/audit-partition.spec.ts` (DB trắng, DB có 12.000 dòng cũ,
+    "hôm nay" 31/12/2026, dòng 2028 trong DEFAULT, tách rồi gắn lại), `app-role-privileges`
+    quét cả ngăn; `audit-index` đổi sang tên chỉ mục theo ngăn. `ops/audit-archive.sh` mới
+    kiểm cú pháp (`bash -n`), chưa chạy trên compose thật.
 - [x] **OLD-BE-01 · Mail in giờ GỬI thay vì giờ sự kiện**; `toLocaleString` không ghim múi giờ
   (`mail.consumer.ts:227,281,323,352`).
 - [x] **OLD-BE-02 · Kho thanh lý cắt im lặng ở 500 dòng** (`devices.api.ts:106`, `software.api.ts:54`,

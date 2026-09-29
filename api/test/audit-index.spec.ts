@@ -40,6 +40,15 @@ describe('Chỉ mục của audit_log và nat_rule', () => {
     await scratch?.drop();
   }, TEST_TIMEOUT);
 
+  /**
+   * `audit_log` chia ngăn theo năm (0302): kế hoạch đi qua chỉ mục của TỪNG ngăn, mang tên
+   * `audit_log_<năm|default>_<hậu tố>`. Không ngăn nào được quét tuần tự.
+   */
+  function expectPartitionIndex(plan: string, suffix: string): void {
+    expect(plan).toMatch(new RegExp(`audit_log_(\\d{4}|default)_${suffix}`));
+    expect(plan).not.toMatch(/Seq Scan on audit_log/);
+  }
+
   /** `SET LOCAL` chỉ sống trong một transaction, nên mỗi lượt EXPLAIN cần transaction riêng. */
   async function explain(query: string): Promise<string> {
     const client = await scratch.pool.connect();
@@ -58,7 +67,7 @@ describe('Chỉ mục của audit_log và nat_rule', () => {
     'lọc theo người thực hiện (`actor ILIKE %x%`) đi qua chỉ mục trigram',
     async () => {
       const plan = await explain(`SELECT id FROM audit_log WHERE actor ILIKE '%nguyen%'`);
-      expect(plan).toContain('audit_log_actor_trgm');
+      expectPartitionIndex(plan, 'actor_trgm');
     },
     TEST_TIMEOUT,
   );
@@ -67,7 +76,7 @@ describe('Chỉ mục của audit_log và nat_rule', () => {
     'lọc theo mã đối tượng cũng vậy',
     async () => {
       const plan = await explain(`SELECT id FROM audit_log WHERE object_id ILIKE '%a1b2%'`);
-      expect(plan).toContain('audit_log_object_id_trgm');
+      expectPartitionIndex(plan, 'object_id_trgm');
     },
     TEST_TIMEOUT,
   );
@@ -89,7 +98,7 @@ describe('Chỉ mục của audit_log và nat_rule', () => {
         )
         SELECT action FROM walk WHERE action IS NOT NULL ORDER BY action
       `);
-      expect(plan).toContain('audit_log_action_idx');
+      expectPartitionIndex(plan, 'action_idx');
     },
     TEST_TIMEOUT,
   );
