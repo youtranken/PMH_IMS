@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { and, asc, count, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, max, min } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
@@ -130,6 +130,24 @@ export class VaultService {
       secretCount: Number(row.secretCount),
       lastChangeAt: row.lastChangeAt ?? new Date(0),
     }));
+  }
+
+  /**
+   * Mốc đổi giá trị CŨ NHẤT của từng hồ sơ thuộc một loại — cột "Đổi lần cuối" của danh sách
+   * tài khoản dịch vụ (Q-15). Ngăn cũ nhất là ngăn kéo hồ sơ về hạn đổi. Chỉ id hồ sơ + mốc:
+   * không nhãn, không loại ngăn (FR-026).
+   */
+  async oldestValueChangeByOwner(
+    ownerType: SecretOwnerType,
+  ): Promise<{ ownerId: string; valueChangedAt: Date }[]> {
+    const rows = await this.db
+      .select({ ownerId: secretTable.ownerId, valueChangedAt: min(secretTable.valueChangedAt) })
+      .from(secretTable)
+      .where(and(eq(secretTable.ownerType, ownerType), isNull(secretTable.revokedAt)))
+      .groupBy(secretTable.ownerId);
+    return rows
+      .filter((row) => row.valueChangedAt !== null)
+      .map((row) => ({ ownerId: row.ownerId, valueChangedAt: row.valueChangedAt as Date }));
   }
 
   async findMeta(id: string): Promise<SecretMeta> {

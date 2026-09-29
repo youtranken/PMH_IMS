@@ -1366,7 +1366,7 @@ export default {
     rotateTitle: 'Đổi giá trị: {{label}}',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     rotateOrder:
-      'Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu ở đây — lưu xong là giá trị cũ không xem lại được.',
+      'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
@@ -1375,8 +1375,13 @@ export default {
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
     requestBlock:
       'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin là cho cả két, có hạn giờ.',
-    valueAge: 'Đổi giá trị {{count}} ngày trước · {{who}}',
-    valueStale: 'Lâu chưa đổi',
+    /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
+       ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
+    changedCol: 'Đổi lần cuối',
+    changedBy: 'Người đổi: {{who}}',
+    dueLeft: 'còn {{count}} ngày',
+    dueToday: 'Đến hạn đổi hôm nay — cần đổi',
+    dueOver: 'Quá {{count}} ngày — cần đổi',
     valueShow: 'Hiện',
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
@@ -1409,7 +1414,6 @@ export default {
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
-    updatedAtShort: 'Cập nhật {{date}}',
     reveal: 'Xem',
     revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',

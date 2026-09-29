@@ -15,6 +15,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
+import { SecretDue } from '@/ui/secret-due';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
@@ -98,6 +99,24 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   });
   useClampPage(url, accounts.data?.total);
 
+  /*
+   * Hạn đổi mật khẩu trong két theo từng tài khoản (Q-15). Hỏi `vault` từ MÀN HÌNH, không từ
+   * module `service-accounts`: `vault` đã phụ thuộc `service-accounts`, gọi ngược là vòng (AD-2).
+   * Chỉ SA/Admin — bản đồ két không mở cho Member.
+   */
+  const due = useQuery({
+    queryKey: ['vault', 'owners', 'due', 'service_account'],
+    enabled: canEdit,
+    queryFn: () =>
+      apiFetch<{ ownerId: string; valueChangedAt: string; dueInDays: number }[]>(
+        '/api/v1/vault/owners/due?ownerType=service_account',
+      ),
+  });
+  const dueByOwner = useMemo(
+    () => new Map((due.data ?? []).map((item) => [item.ownerId, item])),
+    [due.data],
+  );
+
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
 
   // Mọi bộ lọc đều đưa về trang 1 (hook tự xoá `page`): giữ nguyên trang 5 khi đổi lọc thì
@@ -160,6 +179,18 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       ...(canEdit
         ? [
             {
+              id: 'secretDue',
+              header: t('vault.changedCol'),
+              cell: ({ row }) => {
+                const item = dueByOwner.get(row.original.id);
+                return <SecretDue changedAt={item?.valueChangedAt} dueInDays={item?.dueInDays} />;
+              },
+            } satisfies ColumnDef<ServiceAccountRow, unknown>,
+          ]
+        : []),
+      ...(canEdit
+        ? [
+            {
               id: 'actions',
               header: t('common.actions'),
               meta: { className: 'col-center' },
@@ -199,7 +230,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           ]
         : []),
     ],
-    [t, canEdit],
+    [t, canEdit, dueByOwner],
   );
 
   return (
@@ -295,6 +326,12 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               subtitle: (row) => row.name,
               meta: (row) =>
                 [row.login, t(KIND_SHORT_KEY[row.kind]), row.department].filter(Boolean).join(' · '),
+              aside: (row) => {
+                const item = canEdit ? dueByOwner.get(row.id) : undefined;
+                return item ? (
+                  <SecretDue changedAt={item.valueChangedAt} dueInDays={item.dueInDays} />
+                ) : null;
+              },
             }}
             manualSorting
             sorting={sorting}

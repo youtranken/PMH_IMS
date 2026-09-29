@@ -26,6 +26,7 @@ import { Link } from 'react-router-dom';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
+import { SecretDue } from '@/ui/secret-due';
 
 /*
  * Danh sách loại chủ thể đã dọn về `lib/secret-owner-kinds.ts` (12/09) — ở đó nó đứng cạnh
@@ -77,6 +78,8 @@ export interface SecretMeta {
   /** Tuổi giá trị và đã quá ngưỡng `dashboard.secret_stale_days` chưa — server tính. */
   valueAgeDays?: number;
   valueStale?: boolean;
+  /** Còn bao nhiêu ngày tới hạn đổi (âm = đã quá) — server tính theo cùng ngưỡng (Q-15). */
+  dueInDays?: number;
 }
 
 export function secretsKey(ownerType: SecretOwnerType, ownerId: string) {
@@ -488,10 +491,10 @@ export function VaultPanel({
         <>
           {busyReason.hint}
           {/*
-            BA CỘT, cột thao tác DÍNH PHẢI. Sáu cột ở cột nội dung ~640px đẩy nút "Xem" — lý do
+            BỐN CỘT, cột thao tác DÍNH PHẢI. Sáu cột ở cột nội dung ~640px đẩy nút "Xem" — lý do
             duy nhất người ta mở tab này — ra ngoài khung; Member vừa được duyệt mở ra không
-            thấy nút. Loại, ghi chú và ngày cập nhật là dòng phụ: đọc để nhận ra ngăn nào, không
-            phải để so theo cột.
+            thấy nút. Loại và ghi chú là dòng phụ. "Đổi lần cuối" là cột riêng (Q-15): người đi
+            xoay mật khẩu dò theo cột đó để biết ngăn nào tới hạn.
           */}
           <TableWrap>
           <table className="table table-stack vault-table">
@@ -499,6 +502,7 @@ export function VaultPanel({
               <tr>
                 <th>{t('vault.label')}</th>
                 <th>{t('vault.username')}</th>
+                <th>{t('vault.changedCol')}</th>
                 <th className="col-center col-sticky-end">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -514,21 +518,13 @@ export function VaultPanel({
                   </td>
                   <td data-label={t('vault.username')}>
                     <span className="mono">{orDash(secret.username)}</span>
-                    {/* Tuổi GIÁ TRỊ, không phải lần sửa ghi chú gần nhất: "đổi 400 ngày trước"
-                        là câu người đi xoay mật khẩu cần. Server tính cả ngưỡng cũ. */}
+                  </td>
+                  {/* Mốc đổi GIÁ TRỊ, không phải lần sửa ghi chú gần nhất — cùng hạn với khối
+                      "két lâu chưa đổi" của bảng điều khiển, số ngày do server tính. */}
+                  <td data-label={t('vault.changedCol')}>
+                    <SecretDue changedAt={secret.valueChangedAt} dueInDays={secret.dueInDays} />
                     <span className="cell-sub">
-                      {secret.valueAgeDays === undefined
-                        ? t('vault.updatedAtShort', { date: formatDateTime(secret.updatedAt) })
-                        : t('vault.valueAge', {
-                            count: secret.valueAgeDays,
-                            who: secret.valueChangedBy ?? secret.createdBy,
-                          })}
-                      {secret.valueStale ? (
-                        <>
-                          {' '}
-                          <span className="badge warn">{t('vault.valueStale')}</span>
-                        </>
-                      ) : null}
+                      {t('vault.changedBy', { who: secret.valueChangedBy ?? secret.createdBy })}
                     </span>
                   </td>
                   <td data-label={t('common.actions')} className="col-sticky-end">
@@ -964,9 +960,11 @@ function RotateForm({
         }}
       >
         <p className="muted">{t('vault.rotateHint')}</p>
-        {/* Thứ tự an toàn: đổi trên thiết bị và đăng nhập thử TRƯỚC, rồi mới lưu ở đây — lưu
-            trước mà đổi trên máy hỏng là mất cả giá trị cũ lẫn đường vào thiết bị. */}
-        {secret.kind === 'password' ? <p className="alert warn">{t('vault.rotateOrder')}</p> : null}
+        {/* Thứ tự an toàn: đổi trên hệ thống thật và đăng nhập thử TRƯỚC, rồi mới lưu ở đây —
+            lưu trước mà đổi trên máy hỏng là mất cả giá trị cũ lẫn đường vào thiết bị. Nhắc
+            với MỌI loại ngăn (Q-15): IMS không nối tới đâu, license key cũng phải đổi ở nơi
+            cấp trước. Chỉ cảnh báo, không bắt tick. */}
+        <p className="alert warn">{t('vault.rotateOrder')}</p>
         <Field
           label={t('vault.newValue')}
           required

@@ -136,7 +136,7 @@ export class VaultController {
     const now = new Date();
     return rows.map((row) => {
       const age = valueAge(row.valueChangedAt, staleDays, now);
-      return { ...row, valueAgeDays: age.days, valueStale: age.stale };
+      return { ...row, valueAgeDays: age.days, valueStale: age.stale, dueInDays: age.dueInDays };
     });
   }
 

@@ -65,6 +65,37 @@ describe('Két: mốc đổi giá trị (value_changed_at/by)', () => {
     );
   }
 
+  /*
+   * Q-15: danh sách tài khoản dịch vụ hiện "Đổi lần cuối" của từng hồ sơ. Một hồ sơ nhiều ngăn
+   * thì lấy ngăn CŨ NHẤT — đó là ngăn đang kéo hồ sơ về hạn đổi. Ngăn đã thu hồi không tính.
+   */
+  it('mốc đổi cũ nhất theo từng hồ sơ: lấy ngăn cũ nhất, bỏ ngăn đã thu hồi, đúng loại hồ sơ', async () => {
+    const a = randomUUID();
+    const b = randomUUID();
+    const make = (ownerType: 'service_account' | 'device', ownerId: string) =>
+      vault.create('a@qa.test', {
+        ownerType,
+        ownerId,
+        kind: 'password',
+        label: `E2E sa ${randomUUID().slice(0, 6)}`,
+        value: 'Svc#Acct2026!',
+      });
+    const oldA = await make('service_account', a);
+    await make('service_account', a);
+    await backdate(oldA.id);
+    await make('service_account', b);
+    const revokedB = await make('service_account', b);
+    await backdate(revokedB.id);
+    await vault.revoke('a@qa.test', revokedB.id);
+    const otherType = await make('device', a);
+    await backdate(otherType.id);
+
+    const rows = await vault.oldestValueChangeByOwner('service_account');
+    const byOwner = new Map(rows.map((r) => [r.ownerId, r.valueChangedAt]));
+    expect(Date.now() - byOwner.get(a)!.getTime()).toBeGreaterThan(399 * 86_400_000);
+    expect(Date.now() - byOwner.get(b)!.getTime()).toBeLessThan(60_000);
+  });
+
   it('cất mới: mốc đổi giá trị = lúc cất, người đổi = người cất', async () => {
     const meta = await create('a@qa.test');
     expect(meta.valueChangedBy).toBe('a@qa.test');

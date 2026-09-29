@@ -400,13 +400,35 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     expect(within(dialog).queryByTestId('secret-strength-warning')).not.toBeInTheDocument();
   });
 
-  it('dòng phụ nói giá trị đổi bao lâu rồi, ai đổi; quá ngưỡng thì gắn "Lâu chưa đổi"', async () => {
+  it('cột "Đổi lần cuối": ngày đổi + đếm ngược, quá hạn thì "Quá N ngày — cần đổi"; ai đổi', async () => {
     mockApi(WHITELIST, [
-      { ...SECRET, valueAgeDays: 400, valueChangedBy: 'it01@pmh.com.vn', valueStale: true },
+      {
+        ...SECRET,
+        valueChangedAt: '2025-08-15T03:00:00.000Z',
+        valueChangedBy: 'it01@pmh.com.vn',
+        valueAgeDays: 400,
+        valueStale: true,
+        dueInDays: -220,
+      },
+      { ...SECRET, id: 's2', label: 'SSH root', valueChangedAt: '2026-09-01T03:00:00.000Z', dueInDays: 152 },
     ]);
     renderPanel();
-    expect(await screen.findByText(/Đổi giá trị 400 ngày trước · it01@pmh\.com\.vn/)).toBeInTheDocument();
-    expect(screen.getByText('Lâu chưa đổi')).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: 'Đổi lần cuối' })).toBeInTheDocument();
+    expect(screen.getByText('Quá 220 ngày — cần đổi')).toHaveClass('badge', 'warn');
+    expect(screen.getByText('15/08/2025')).toBeInTheDocument();
+    expect(screen.getByText('còn 152 ngày')).toBeInTheDocument();
+    expect(screen.getByText('Người đổi: it01@pmh.com.vn')).toBeInTheDocument();
+  });
+
+  it('hộp Đổi giá trị luôn nhắc: IMS không nối tới máy chủ/thiết bị — đổi trên hệ thống thật trước', async () => {
+    mockApi(WHITELIST, [{ ...SECRET, kind: 'license_key' }]);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/IMS KHÔNG nối tới máy chủ hay thiết bị/)).toBeInTheDocument();
+    // Chỉ cảnh báo — không có ô tick nào phải bấm trước khi lưu.
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('Xoá vĩnh viễn: nút xác nhận chỉ bật khi gõ lại ĐÚNG tên ngăn; chưa gõ thì không gọi API', async () => {
