@@ -36,7 +36,7 @@ export interface PortRow {
   note: string | null;
 }
 
-export interface IncomingPortRow {
+interface IncomingPortRow {
   id: string;
   deviceId: string;
   deviceCode: string;

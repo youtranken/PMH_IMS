@@ -37,7 +37,7 @@ const MAX_ITEMS = 8;
 /** Số chỗ tối đa mục quá hạn được giữ trong khối "sắp hết hạn" khi còn mục sắp tới cần hiện. */
 const OVERDUE_SLOTS = 3;
 
-export interface DashboardBlock<T> {
+interface DashboardBlock<T> {
   /**
    * `available: false` = module chưa deploy (Epic 9 chưa có). UI hiện "chưa có dữ liệu" gọn
    * gàng chứ KHÔNG hiện khối rỗng trông như hỏng, và cũng không giấu khối đi — sếp cần biết
@@ -68,7 +68,7 @@ export interface BreakGlassEntry {
 }
 
 /** Dải mạng sắp đầy — FR-020 đã tính sẵn `percent`, đây chỉ chọn dòng nào đáng lên trang. */
-export interface SubnetLoadEntry {
+interface SubnetLoadEntry {
   id: string;
   name: string;
   cidr: string;
@@ -84,7 +84,7 @@ export interface SubnetLoadEntry {
  * `VaultOwnerSummary` giữ: nói "hồ sơ nào có két, mấy ngăn, đổi lần cuối bao giờ", không nói
  * trong đó cất gì.
  */
-export interface StaleSecretEntry {
+interface StaleSecretEntry {
   ownerType: string;
   ownerId: string;
   code: string;
@@ -95,7 +95,7 @@ export interface StaleSecretEntry {
 }
 
 /** Hồ sơ vừa vào kho thanh lý — cùng các loại với màn `/disposal`, không tự gộp lại lần nữa. */
-export interface DisposedEntry {
+interface DisposedEntry {
   kind: string;
   id: string;
   code: string;

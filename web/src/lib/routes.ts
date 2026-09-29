@@ -168,7 +168,7 @@ export function canSeeRoute(path: string, role: UserRole): boolean {
  * ra bình thường và không gì đỏ, nên màn thứ mười sáu sẽ quên. Ở đây thì `routes.test.ts` hỏi
  * được "có đường nào trong `PATHS` chưa có tên tab không".
  */
-export const ROUTE_TITLE_KEY: Record<string, string> = {
+const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.dashboard]: 'nav.dashboard',
   [PATHS.devices]: 'nav.devices',
   [PATHS.software]: 'nav.software',

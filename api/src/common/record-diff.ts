@@ -6,7 +6,7 @@
  * gì", không phải để đọc hai bãi JSON rồi tự dò khác nhau chỗ nào.
  */
 
-export interface FieldChange {
+interface FieldChange {
   before: string | number | boolean | null;
   after: string | number | boolean | null;
 }

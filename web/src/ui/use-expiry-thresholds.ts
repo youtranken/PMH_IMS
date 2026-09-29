@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { DEFAULT_EXPIRY_THRESHOLDS, type ExpiryThresholds } from '@/lib/expiry';
 
-export const EXPIRY_THRESHOLDS_KEY = ['expiry', 'thresholds'] as const;
+const EXPIRY_THRESHOLDS_KEY = ['expiry', 'thresholds'] as const;
 
 /**
  * Hai ngưỡng "sắp hết hạn" ĐANG HIỆU LỰC, đọc từ server (AD-11, migration 0041).

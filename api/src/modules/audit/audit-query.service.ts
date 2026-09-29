@@ -32,7 +32,7 @@ export interface AuditQuery {
 }
 
 /** Một sự kiện trong cụm đã gom — đủ để mở chi tiết từng lần. */
-export interface AuditEvent {
+interface AuditEvent {
   id: string;
   ip: string | null;
   detail: unknown;
@@ -69,7 +69,7 @@ export interface AuditRow {
 }
 
 /** Trần số sự kiện trả kèm một cụm — cụm dài hơn vẫn đếm đúng, chỉ không liệt kê hết. */
-export const GROUP_EVENTS_CAP = 100;
+const GROUP_EVENTS_CAP = 100;
 
 type RawAuditRow = {
   id: string;

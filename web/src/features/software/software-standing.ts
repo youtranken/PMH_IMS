@@ -11,7 +11,7 @@ import type { LicenseModel, SoftwareStatus } from './software-types';
  * Trả MỘT hình dạng (tsconfig web không bật `strict`). Ngày tính qua `daysUntil` — luật ngày
  * duy nhất của web (AD-15).
  */
-export type StandingKind = 'countdown' | 'perpetual' | 'noEnd' | 'expired' | 'retired';
+type StandingKind = 'countdown' | 'perpetual' | 'noEnd' | 'expired' | 'retired';
 
 export interface Standing {
   kind: StandingKind;

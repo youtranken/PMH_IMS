@@ -3,7 +3,7 @@ import * as ExcelJS from 'exceljs';
 import { EXCEL_UNREADABLE_MESSAGE } from './xlsx-http';
 
 /** Một dòng dữ liệu đã đọc: số dòng THẬT trong sheet + ô theo tên cột ở dòng tiêu đề. */
-export interface SheetRow {
+interface SheetRow {
   rowNumber: number;
   cells: Record<string, string>;
   /**

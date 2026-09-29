@@ -109,7 +109,7 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 }
 
 /** Factory để app và test dùng client riêng (test tắt retry cho lỗi hiện ngay). */
-export function makeQueryClient(): QueryClient {
+function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {

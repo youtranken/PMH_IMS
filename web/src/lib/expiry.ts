@@ -55,7 +55,7 @@ export function daysUntil(end: string | Date, now: Date = new Date()): number {
  * Không trả `'none'`: ở đây đã có một con số, tức đã có hạn. Vế "không có hạn" là việc của
  * `expiryLevel`, nơi `end` có thể `null`.
  */
-export function levelFromDays(
+function levelFromDays(
   days: number,
   thresholds: ExpiryThresholds = DEFAULT_EXPIRY_THRESHOLDS,
 ): Exclude<ExpiryLevel, 'none'> {

@@ -77,7 +77,7 @@ export function chipsFromValue(value: string): PortChip[] {
 }
 
 /** Cảnh báo mềm: dải quá rộng vẫn lưu được (API cũng chỉ cảnh báo), nhưng phải nói ra. */
-export const WIDE_RANGE_PORTS = 1000;
+const WIDE_RANGE_PORTS = 1000;
 
 export function isWideRange(chip: PortChip): boolean {
   return chip.to - chip.from + 1 > WIDE_RANGE_PORTS;

@@ -21,7 +21,7 @@ import type { SelectOption } from '@/ui/select';
  * chọn không có mục đó sẽ hiện ô trống thay vì tên phòng ban đã giải thể. Việc lọc `active`
  * là chuyện của nơi gọi (xem `useDepartments`), không phải của tầng lấy dữ liệu.
  */
-export const CATALOG_LISTS_KEY = ['catalog', 'lists'] as const;
+const CATALOG_LISTS_KEY = ['catalog', 'lists'] as const;
 
 export function useCatalogLists(options?: { enabled?: boolean }): UseQueryResult<CatalogLists> {
   return useQuery({

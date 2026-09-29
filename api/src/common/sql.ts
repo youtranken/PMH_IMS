@@ -100,7 +100,7 @@ export function pgConstraint(error: unknown): string | undefined {
 /** Vi phạm khóa ngoại — "đang có dữ liệu khác trỏ tới, không xóa được". */
 export const PG_FOREIGN_KEY_VIOLATION = '23503';
 /** Vi phạm ràng buộc duy nhất — trùng mã/tên. */
-export const PG_UNIQUE_VIOLATION = '23505';
+const PG_UNIQUE_VIOLATION = '23505';
 /** Vi phạm ràng buộc EXCLUDE — chồng port NAT, chồng dải IP. */
 export const PG_EXCLUSION_VIOLATION = '23P01';
 /**

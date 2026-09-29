@@ -20,7 +20,7 @@ export type SecretRuleKey = 'length' | 'lower' | 'upper' | 'digit' | 'symbol';
 /** Ngưỡng độ dài: 8 — mức người dùng yêu cầu, thấp hơn mật khẩu đăng nhập IMS (12) có chủ ý. */
 export const SECRET_MIN_LENGTH = 8;
 
-export interface SecretRule {
+interface SecretRule {
   key: SecretRuleKey;
   met: boolean;
 }

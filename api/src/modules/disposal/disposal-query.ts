@@ -4,7 +4,7 @@ import type { SortDir } from '../../common/sorting';
 import { DISPOSAL_KINDS, type DisposalItem, type DisposalKind } from './disposal.types';
 
 export const DISPOSAL_SORT_KEYS = ['disposedAt', 'code'] as const;
-export type DisposalSortKey = (typeof DISPOSAL_SORT_KEYS)[number];
+type DisposalSortKey = (typeof DISPOSAL_SORT_KEYS)[number];
 
 export interface DisposalQuery {
   kind?: DisposalKind;

@@ -563,13 +563,23 @@ Test **không** vào image production (api build loại `*.spec.ts`, image web c
   secret + 1 file đính kèm → backup → xoá sạch → restore → mở được secret và tải được file.
 - [ ] **QA-03 (P0) · UAT 3–5 ngày với 2–3 người dùng thật** trên staging, dữ liệu thật. Ghi lỗi vào
   một bảng; chỉ go-live khi không còn lỗi mức cao.
-- [ ] **QA-04 (P2) · Tách `e2e/tests/di-khap-giao-dien.spec.ts`** (458 KB, khoảng 8.000 dòng) theo
+- [x] **QA-04 (P2) · Tách `e2e/tests/di-khap-giao-dien.spec.ts`** (458 KB, khoảng 8.000 dòng) theo
   từng màn; đổi tên bài E2E bị trùng.
   - **Rà 29/09:** file đã lớn thêm, 487 KB, 9.184 dòng. Tên bài trùng: "sắp xếp theo cột chạy ở
     server…" ở `accounts.spec.ts`, `devices.spec.ts`, `software.spec.ts`.
-- [ ] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
+  - **Đã sửa:** tách thành 10 file `di-khap-giao-dien-NN-<phòng>.spec.ts` (mỗi khối
+    `test.describe` cấp đỉnh một file, thân giữ nguyên từng byte, chỉ dựng lại import; số thứ tự
+    giữ thứ tự chạy cũ vì `workers: 1`). `di-khap-giao-dien.spec.ts` còn bản kiểm kê + cổng tự
+    canh, nay đọc bài ở cả 10 file. Ba bài trùng tên thêm hậu tố "(tài khoản)", "(thiết bị)",
+    "(phần mềm)". Kiểm: `npx tsc --noEmit`, `npm run lint` xanh; `playwright test --list` 673 bài
+    trước và sau (117 → 127 file), describe + tên bài y hệt trừ ba bài đổi tên, không còn tên lá
+    trùng; logic cổng kiểm kê chạy lại ngoài Playwright: 60 mục ↔ 60 bài, không treo, không thiếu.
+    Chưa chạy E2E thật.
+- [x] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
   `ts-loader`, `tsconfig-paths`.
   - **Rà 29/09:** cả 5 gói vẫn còn và không chỗ nào dùng, gỡ được.
+  - **Đã sửa:** `npm uninstall` cả 5 gói (grep 0 chỗ dùng kể cả `jest.config.js`, `test/jest-db.cjs`,
+    `nest-cli.json`, tsconfig); `nest build` và 1.370 bài unit api xanh.
 
 ---
 
@@ -592,10 +602,21 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - **Không đụng file migration.**
   - **Rà 29/09:** mới dọn lẻ (1c00ba2, 2aefe44, b57775f, và chú thích "trước đây…" của đợt v1.4.2).
     Đếm thô còn khoảng 250 dòng (api 67, web 106, e2e 78).
-- [ ] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
+- [x] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
   - **Rà 29/09:** còn 5 file trong `.claude/skills/bmad-retrospective/scripts/**/__pycache__/`.
-- [ ] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
+  - **Đã sửa:** `git rm --cached` cả 5 file; `.gitignore` thêm `__pycache__/` và `*.pyc`
+    (`git check-ignore` xác nhận).
+- [x] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
   - **Rà 29/09:** chưa đếm lại — máy chưa cài knip.
+  - **Đã sửa:** knip đếm lại trước khi sửa: api 24 export + 16 type, web 24 export + 12 type. Mỗi
+    tên được grep cả `api/test`, `e2e/` và tài liệu trước khi gỡ. Sau: api còn 3, web còn 1, đều có
+    lý do — `SERVICE_ACCOUNT_STATUSES`, `SERVICE_ACCOUNT_OPTIONAL_FIELDS`, `CATALOG_ENTITIES` chỉ
+    dùng làm kiểu (eslint cấm hằng chỉ dùng làm kiểu mà không export), `parseAdminArgs` dùng ở
+    `seed-sa.main.ts` (knip không biết đó là điểm vào). Code chết gỡ hẳn: `StatGrid`/`Stat`/
+    `StatIfSet` (đã được `DetailLayout` thay, sửa cả `SHARED-REGISTRY.md`), `useRowActionLabel`,
+    `isAdminOrAbove`, `IP_STATUSES`, `SCOPE_LABEL`, vài kiểu không ai dùng, và file thử
+    `api/src/modules/devices/probe-ad16.ts` lỡ bị commit (bài `ad16-gate.lint.spec.ts` tự sinh rồi
+    tự xoá nó). Kiểm: api build + lint + 1.404 bài unit; web build + lint + 1.664 bài vitest.
 
 ---
 
@@ -739,9 +760,19 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   `REFERENCES` nào; xoá danh mục luôn thành công và để lại chuỗi mồ côi. Cần một story riêng, kèm
   quyết định sản phẩm ở mục 11.
 - [x] **OLD-DB-02 · `device_port` thiếu UNIQUE `(connected_device_id, connected_port)`**, trái AD-14.
-- [ ] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
+- [x] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
   thêm, không bao giờ xoá; phân vùng lúc còn nhỏ rẻ hơn nhiều so với lúc đã lớn.
   - **Rà 29/09:** còn nguyên, chưa có phân vùng lẫn đường lưu trữ.
+  - **Đã sửa (chia theo NĂM, chủ dự án chốt):** 0302 chép bảng cũ sang bảng chia ngăn
+    `RANGE (created_at)` (ngăn `audit_log_<năm>` theo UTC + `audit_log_default`), đủ 8 chỉ mục,
+    trigger chỉ-thêm và ACL cũ; mỗi ngăn thu hết quyền của `ims_app`. Lượt sweep của worker
+    (`AuditPartitionSweep` → hàm `audit_log_ensure_partitions`, SECURITY DEFINER) tự tạo ngăn năm
+    nay + năm sau và dời dòng lỡ rơi vào DEFAULT sang ngăn đúng năm. Lưu trữ bằng tay:
+    `ops/audit-archive.sh` (ngưỡng `audit.archive_after_years`, mặc định 2, 0303), hướng dẫn ở
+    RUNBOOK mục H1. Kiểm: `api/test/audit-partition.spec.ts` (DB trắng, DB có 12.000 dòng cũ,
+    "hôm nay" 31/12/2026, dòng 2028 trong DEFAULT, tách rồi gắn lại), `app-role-privileges`
+    quét cả ngăn; `audit-index` đổi sang tên chỉ mục theo ngăn. `ops/audit-archive.sh` mới
+    kiểm cú pháp (`bash -n`), chưa chạy trên compose thật.
 - [x] **OLD-BE-01 · Mail in giờ GỬI thay vì giờ sự kiện**; `toLocaleString` không ghim múi giờ
   (`mail.consumer.ts:227,281,323,352`).
 - [x] **OLD-BE-02 · Kho thanh lý cắt im lặng ở 500 dòng** (`devices.api.ts:106`, `software.api.ts:54`,
@@ -845,11 +876,25 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
     sửa/gỡ khoá dòng trong tx, `returning()` rỗng → 404, lịch sử ghi SAU khi xoá, lưu y nguyên thì
     không ghi. Kiểm: `accounts-audited.spec.ts`, `validation-messages.spec.ts`,
     `web/src/features/audit-action-rollcall.test.ts`, `api/test/device-ports-write-check.spec.ts`.
-- [ ] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
+- [x] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
   - Bỏ index `audit_log_actor_trgm` (11 MB, 0 lượt quét).
   - `isp_line.wan_ip` đang là `text`.
   - `device_port.vlan` là `text` trong khi `subnet.vlan` là `integer`.
   - **Rà 29/09:** còn nguyên cả ba ý.
+  - **Đã sửa:**
+    - Index `audit_log_actor_trgm`: **không bỏ**. Bộ lọc `?actor=` của màn Nhật ký vẫn lọc
+      `actor ILIKE '%x%'` (`audit-query.service.ts`), và `api/test/audit-index.spec.ts` khẳng định
+      bằng `EXPLAIN` là câu đó đi qua index này. "0 lượt quét" là số đo trên DB dev nhỏ, nơi planner
+      chọn seq scan vì rẻ hơn.
+    - `isp_line.wan_ip` thành `inet` (0300): kiểm dữ liệu trước, có dòng không phải IP thì dừng và
+      liệt kê mã đường truyền + giá trị; dựng lại `search_norm` bằng `abbrev(wan_ip)`. API kiểm
+      bằng `wanIpOf` (400 `WAN_IP_INVALID`), bỏ `/32` cho khớp cách Postgres in.
+    - `device_port.vlan` giữ `text` theo Q-16 (trống | `trunk` | số 1–4094): 0301 chuẩn hoá
+      khoảng trắng/hoa-thường, dòng không đọc được thì dừng và liệt kê thiết bị + cổng, rồi thêm
+      CHECK `device_port_vlan_check`. API kiểm bằng `portVlanOf` (400 `PORT_VLAN_INVALID`).
+    - Kiểm: `api/test/wan-ip-port-vlan-types.spec.ts` (DB trắng, DB có dữ liệu hợp lệ, DB có dữ
+      liệu sai), unit `wan-ip.spec.ts`, `port-vlan.spec.ts`; DB test isp*, search-norm, sort-index,
+      device-port*, audit-index, migrations xanh.
 - [x] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
   - **Đã sửa:** trong thời gian nghỉ, số lượt vượt `secret.probe_escalation_multiplier` (mặc định 3,
     migration 0250, sửa được ở màn Tham số, tối thiểu 2) × ngưỡng thì đi thêm đúng MỘT lá leo thang

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
 import { useDialogPortal } from '@/ui/dialog';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
@@ -252,16 +251,4 @@ export function RowActions({
         )}
     </div>
   );
-}
-
-/**
- * Tên khả truy cập chuẩn cho nút ba chấm.
- *
- * Mọi dòng cùng mang tên "Thao tác" thì `getByRole('button', { name: 'Thao tác' })` khớp cả
- * hai chục dòng, và trình đọc màn hình đọc hai chục nút giống hệt nhau. Kèm mã hồ sơ vào là
- * mỗi dòng có một cái tên riêng.
- */
-export function useRowActionLabel(): (subject: string) => string {
-  const { t } = useTranslation();
-  return (subject: string) => t('common.actionsOf', { subject });
 }

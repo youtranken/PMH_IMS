@@ -1,6 +1,9 @@
 import { jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-/** audit_log APPEND-ONLY (AD-10) — tạo bằng migration `0004_audit_log.sql`. */
+/**
+ * audit_log APPEND-ONLY (AD-10). Chia ngăn theo năm từ 0302, nên khoá chính thật trong DB là
+ * (id, created_at); drizzle không dựng schema nên khai `id` là khoá chính vẫn đúng cho việc đọc.
+ */
 export const auditLogTable = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   actor: text('actor').notNull(),

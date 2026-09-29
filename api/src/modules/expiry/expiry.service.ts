@@ -359,7 +359,7 @@ export type ExpiryLevel = 'expired' | 'critical' | 'warning';
  * nhánh `<0 / <=critical / <=warning` sẽ trôi khỏi nhau ở lần ai đó sửa một bản — đúng thứ
  * F-09 vừa chứng minh là có thật (5 bản sao panel Lịch sử, và chúng ĐÃ lệch).
  */
-export function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryLevel | null {
+function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryLevel | null {
   if (daysLeft < 0) return 'expired';
   if (daysLeft <= thresholds.criticalDays) return 'critical';
   if (daysLeft <= thresholds.warningDays) return 'warning';
@@ -389,7 +389,7 @@ const labelCollator = new Intl.Collator('vi');
  * "gấp nhất lên đầu" (hết hạn tăng dần). Khoá phụ luôn là ngày hết hạn tăng dần, rồi `id`, để
  * hai lượt hỏi liền nhau cắt trang ra cùng một kết quả.
  */
-export function sortExpiryRows<T extends Pick<ExpiryRow, 'id' | 'end' | 'kind' | 'label'>>(
+function sortExpiryRows<T extends Pick<ExpiryRow, 'id' | 'end' | 'kind' | 'label'>>(
   rows: T[],
   sort: ExpirySort | undefined,
   dir: 'asc' | 'desc' | undefined,
@@ -424,7 +424,7 @@ function pageOf(rows: ExpiryRow[], query: ExpiryQuery): ExpiryRow[] {
 }
 
 /** Nhìn lùi tối đa một năm — mặc định của MÀN HÌNH. */
-export const LOOK_BACK_DAYS = 365;
+const LOOK_BACK_DAYS = 365;
 
 /**
  * Nhìn lùi bao nhiêu ngày — hàm THUẦN, có bảng test.

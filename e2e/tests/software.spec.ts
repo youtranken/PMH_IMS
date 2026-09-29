@@ -187,7 +187,7 @@ test.describe('Hồ sơ phần mềm', () => {
    * trọng hơn: kiểm luôn cột KHÔNG được phép sắp (Nhà cung cấp) không có nút bấm — sắp theo
    * nó đòi join sang module danh mục, vi phạm AD-2.
    */
-  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
+  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút (phần mềm)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
 
@@ -330,7 +330,7 @@ test.describe('Hồ sơ phần mềm', () => {
     await page.goto('/software');
     // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
     // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
-    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
+    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien-09-catalog-accounts-kit.spec.ts`, bài
     // "Phòng Tài khoản" (25/09/2026).
     await timVaChoLoc(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });

@@ -6,12 +6,6 @@ import type { Database } from '../../database/database.module';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { SweepService } from '../queue/sweep.service';
 
-export interface OutboxEvent {
-  id: string;
-  topic: string;
-  payload: Record<string, unknown>;
-}
-
 /** Dữ liệu consumer cần để quyết baseline + gửi (5.1) — payload chỉ ref, tự đọc lại từ DB. */
 export interface OutboxConsumerRow {
   payload: Record<string, unknown>;

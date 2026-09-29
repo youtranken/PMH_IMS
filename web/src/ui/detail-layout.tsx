@@ -84,7 +84,7 @@ export function DetailLayout({
 }
 
 /** Mốc thu thẻ định danh — PHẢI khớp `@media (max-width: 680px)` của `.rail-card` ở detail-tabs.css. */
-export const RAIL_COLLAPSE_QUERY = '(max-width: 680px)';
+const RAIL_COLLAPSE_QUERY = '(max-width: 680px)';
 
 /**
  * Thẻ định danh. `title` mặc định để mọi trang gọi cùng một tên, khỏi mỗi nơi một kiểu.

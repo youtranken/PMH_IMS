@@ -9,7 +9,7 @@ import type { DeviceListItem, DeviceStatus } from './devices.types';
  * file xuất ra luôn nhập lại được, không phải sửa cột bằng tay.
  */
 
-export const DEVICE_EXAMPLE_MARK = 'VÍ DỤ';
+const DEVICE_EXAMPLE_MARK = 'VÍ DỤ';
 
 /** Nhãn trạng thái ghi ra file — bộ đọc nhận lại đúng các nhãn này. */
 const STATUS_LABEL: Record<DeviceStatus, string> = {

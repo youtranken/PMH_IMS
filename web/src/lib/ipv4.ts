@@ -59,7 +59,7 @@ function maskOfPrefix(prefix: number): string {
  * Dải rộng nhất API nhận — cùng `MIN_PREFIX` của `ip-rules.ts`. Cả dải phải về trong một lượt
  * gọi và vẽ được thành từng dòng; nói ngay khi gõ còn hơn để server từ chối lúc bấm Lưu.
  */
-export const MIN_SUBNET_PREFIX = 24;
+const MIN_SUBNET_PREFIX = 24;
 
 export interface CidrPreview {
   cidr: string;

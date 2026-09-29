@@ -13,6 +13,7 @@ import { conflictOnUnique } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { devicePortTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
+import { portVlanOf } from './port-vlan';
 
 export interface PortInput {
   portLabel?: string;
@@ -37,14 +38,15 @@ export interface PortRow {
   usedBy: string | null;
   /**
    * VLAN của cổng — `text`, không phải số: "trunk" là giá trị có thật và hay gặp nhất trên
-   * cổng uplink. Ép kiểu số là ép bỏ trống ô cho cổng quan trọng nhất của con switch.
+   * cổng uplink. Ép kiểu số là ép bỏ trống ô cho cổng quan trọng nhất của con switch. Chỉ
+   * nhận số 1–4094 hoặc "trunk" (`portVlanOf`, CHECK 0301).
    */
   vlan: string | null;
   note: string | null;
 }
 
 /** Chiều ngược: cổng của thiết bị KHÁC đang cắm vào thiết bị đang xem. */
-export interface IncomingPortRow {
+interface IncomingPortRow {
   id: string;
   /** Thiết bị đang giữ bản ghi (đầu kia của sợi dây). */
   deviceId: string;
@@ -288,7 +290,17 @@ export class DevicePortsService {
       }
       values.connectedDeviceId = peerId;
     }
-    for (const key of ['connectedLabel', 'connectedPort', 'usedBy', 'vlan', 'note'] as const) {
+    if (input.vlan !== undefined) {
+      const vlan = portVlanOf(input.vlan ?? '');
+      if (!vlan.valid) {
+        throw new BadRequestException({
+          code: 'PORT_VLAN_INVALID',
+          message: 'VLAN phải là số từ 1 đến 4094, hoặc "trunk".',
+        });
+      }
+      values.vlan = vlan.value;
+    }
+    for (const key of ['connectedLabel', 'connectedPort', 'usedBy', 'note'] as const) {
       if (input[key] !== undefined) {
         const text = input[key]?.trim();
         values[key] = text ? text : null;

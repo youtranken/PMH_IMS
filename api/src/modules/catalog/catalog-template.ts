@@ -19,7 +19,7 @@ import type {
  * (đánh dấu `VÍ DỤ` ở cột cuối — bước import tự bỏ qua, không cần xóa tay).
  */
 
-export const EXAMPLE_MARK = 'VÍ DỤ';
+const EXAMPLE_MARK = 'VÍ DỤ';
 
 export interface CatalogTemplateData {
   sites: SiteRecord[];

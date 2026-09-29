@@ -52,8 +52,8 @@ export const SLOT_PAGE_SIZE = 50;
  *   là lấy mất đúng thứ họ cần. Chuyện "12 dòng dữ liệu nằm rải trong sáu trang ô trống" chỉ
  *   thành vấn đề khi trong dải đã có một lượng hồ sơ thật sự.
  */
-export const BURIED_FREE = 32;
-export const WORTH_ISOLATING = 5;
+const BURIED_FREE = 32;
+const WORTH_ISOLATING = 5;
 
 /**
  * Luật quyết định, tách thành HÀM THUẦN để kiểm được bằng bảng dữ liệu.

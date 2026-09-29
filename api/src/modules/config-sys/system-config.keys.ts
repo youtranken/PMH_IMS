@@ -106,6 +106,12 @@ export const CONFIG_KEYS = {
    */
   sessionRetentionDays: { key: 'session.retention_days', fallback: 30 },
   outboxRetentionDays: { key: 'outbox.retention_days', fallback: 30 },
+  /*
+   * Ngăn năm của `audit_log` cũ hơn ngần này năm thì `ops/audit-archive.sh` tách ra và dump
+   * (0303, OLD-DB-03). Chỉ script vận hành đọc — không có gì tự chạy: lưu trữ sổ NFR-03 là
+   * việc người trực làm có chủ đích, không phải việc một cron lặng lẽ làm.
+   */
+  auditArchiveAfterYears: { key: 'audit.archive_after_years', fallback: 2 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

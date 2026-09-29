@@ -140,11 +140,3 @@ const TIER_LABEL: Record<string, string> = {
   needs_approval: 'Cần duyệt',
   denied: 'Không có quyền',
 };
-
-export const SCOPE_LABEL: Record<string, string> = {
-  device_site: 'Thiết bị tại site',
-  device_type: 'Thiết bị theo loại',
-  software_kind: 'Phần mềm theo loại',
-  service_account_kind: 'Tài khoản dịch vụ theo loại',
-  isp_provider: 'Đường truyền theo nhà mạng',
-};

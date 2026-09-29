@@ -399,7 +399,7 @@ test.describe('Kho thiết bị', () => {
    * trọng hơn: kiểm luôn cột KHÔNG được phép sắp (Loại, Vị trí) không có nút bấm — sắp theo
    * chúng đòi join sang module danh mục, vi phạm AD-2.
    */
-  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
+  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút (thiết bị)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const csrf = await page.evaluate(async () => {

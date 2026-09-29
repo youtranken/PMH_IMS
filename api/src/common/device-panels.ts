@@ -10,7 +10,7 @@
  * Kiểu đó phá đồ thị phụ thuộc và mỗi epic mới lại phải sửa vào devices.
  */
 
-export interface DevicePanelItem {
+interface DevicePanelItem {
   label: string;
   value: string;
   /** Đường dẫn UI để bấm sang hồ sơ gốc (vd `/dia-chi-ip/abc`). */
@@ -58,5 +58,3 @@ export interface DevicePanelProvider {
    */
   buildFor(deviceId: string, viewer: PanelViewer): Promise<DevicePanel | null>;
 }
-
-export const DEVICE_PANEL_PROVIDERS = 'DEVICE_PANEL_PROVIDERS';

@@ -24,7 +24,7 @@ import type { DeviceStatus } from './devices.types';
  */
 
 /** Ảnh chụp danh mục để tra id theo mã/tên người dùng gõ (đã chuẩn hóa khóa). */
-export interface DeviceImportCatalog {
+interface DeviceImportCatalog {
   sites: Map<string, { id: string; code: string }>;
   /** Khóa: `${siteKey} ${cabinetKey}` — mã tủ chỉ duy nhất trong một site. */
   cabinets: Map<string, { id: string; code: string; siteId: string; siteCode?: string }>;

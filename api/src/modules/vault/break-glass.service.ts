@@ -35,7 +35,7 @@ import { tierLabel, type AccessTier } from './access-tier';
 import { VaultOwnersService } from './vault-owners.service';
 import { VaultService, type SecretOwnerType } from './vault.service';
 
-export const BREAK_GLASS_KIND = 'break_glass';
+const BREAK_GLASS_KIND = 'break_glass';
 
 /**
  * Từ vựng state của break-glass (AD-6). `approvals` không biết những chữ này — nó chỉ biết
@@ -69,10 +69,10 @@ export const BREAK_GLASS_FLOW = {
 };
 
 /** Tên lượt quét đóng quyền của phiên đã kết thúc — `SweepService` gọi mỗi vòng. */
-export const SESSION_ENDED_SWEEP = 'break-glass-session-ended';
+const SESSION_ENDED_SWEEP = 'break-glass-session-ended';
 
 /** Tên lượt quét cho hết hạn yêu cầu chờ quá `breakglass.pending_expire_hours` (Q-15). */
-export const PENDING_EXPIRE_SWEEP = 'break-glass-pending-expire';
+const PENDING_EXPIRE_SWEEP = 'break-glass-pending-expire';
 
 const SESSION_ENDED_NOTE = 'Phiên đăng nhập của người xin đã kết thúc.';
 
@@ -136,7 +136,7 @@ export interface BreakGlassDetail extends BreakGlassView {
   timeline: BreakGlassStep[] | null;
 }
 
-export interface BreakGlassStep {
+interface BreakGlassStep {
   state: string;
   actor: string;
   at: Date;

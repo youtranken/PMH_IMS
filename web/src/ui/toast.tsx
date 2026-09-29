@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export type ToastTone = 'ok' | 'error' | 'warn';
+type ToastTone = 'ok' | 'error' | 'warn';
 
 export interface ToastOptions {
   message: string;

@@ -1209,7 +1209,7 @@ function decodeTicket(ticket: string): SealedValue {
 }
 
 /** Giữ /24 để đổi IP trong cùng dải LAN không bị coi là thiết bị mới. */
-export function maskIp(ip: string | null): string {
+function maskIp(ip: string | null): string {
   if (!ip) return 'unknown';
   const v4 = /^(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}$/.exec(ip);
   return v4 ? `${v4[1]}.0/24` : ip;

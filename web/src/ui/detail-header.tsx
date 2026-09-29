@@ -87,61 +87,6 @@ export function DetailHeader({
 }
 
 /**
- * Dải chỉ số đầu trang — bốn thứ cần biết trong hai giây khi đang đứng xử lý sự cố.
- *
- * Mỗi trang chọn bốn chỉ số RIÊNG của mình: thiết bị là trạng thái/bảo hành/vị trí/người dùng,
- * đường truyền là hotline/trạng thái/hợp đồng/cước, phần mềm là hạn/ghế/chi phí/phụ trách.
- *
- * Thứ đã nằm ở đây thì BỎ khỏi lưới thông tin bên dưới. Bản trước lặp cả hai chỗ: badge trạng
- * thái và badge hạn xuất hiện ở dải tóm tắt rồi lặp y hệt trong lưới cách đó 40px.
- */
-export function StatGrid({ children }: { children: ReactNode }) {
-  return <div className="stat-grid">{children}</div>;
-}
-
-export function Stat({
-  label,
-  children,
-  note,
-}: {
-  label: string;
-  children: ReactNode;
-  note?: ReactNode;
-}) {
-  return (
-    <div className="stat">
-      <span className="stat-k">{label}</span>
-      <span className="stat-v">{children}</span>
-      {note ? <span className="stat-note">{note}</span> : null}
-    </div>
-  );
-}
-
-/**
- * Chỉ vẽ thẻ khi CÓ nội dung — thẻ "NHÀ CUNG CẤP: — / —" là một ô chết chiếm đúng chỗ của
- * một chỉ số có ích, và dải chỉ số chỉ có bốn chỗ.
- *
- * Khác `orDash` ở lưới bên dưới: dưới đó một ô rỗng vẫn nói lên điều gì đó ("trường này tồn
- * tại, chưa ai khai"), còn trên dải chỉ số thì nó chỉ tốn chỗ.
- */
-export function StatIfSet({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string | null | undefined;
-  note?: ReactNode;
-}) {
-  if (!value) return null;
-  return (
-    <Stat label={label} note={note}>
-      {value}
-    </Stat>
-  );
-}
-
-/**
  * Một dòng gom mọi ô CHƯA KHAI, thay cho một dãy hộp chỉ chứa dấu gạch ngang.
  *
  * Hồ sơ khai sơ sài thì lưới cũ hiện 8/13 ô là dấu `—`, và cả trang trông như dữ liệu hỏng —
