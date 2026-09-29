@@ -94,6 +94,8 @@ test.describe('Trang chi tiết thiết bị', () => {
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
     await expect(page.getByText('Thêm cổng Gi1/0/1', { exact: true })).toBeVisible();
+    // DEV-085: người làm hiện HỌ TÊN, email lùi vào tooltip.
+    await expect(page.getByTitle('e2e-sa@pmh.com.vn').first()).toHaveText('E2E Super Admin');
 
     // ADM-068: từ tab Lịch sử sang Nhật ký hệ thống đã lọc sẵn đúng máy này.
     await page.getByRole('link', { name: 'Nhật ký thao tác' }).click();

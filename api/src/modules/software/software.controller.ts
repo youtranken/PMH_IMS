@@ -48,6 +48,8 @@ import {
 } from './software.service';
 import type { SoftwareFilter } from './software.types';
 import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
+import { withActorNames } from '../../common/history';
+import { UsersApiService } from '../users/users.api';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -162,6 +164,7 @@ export class SoftwareController {
     private readonly software: SoftwareService,
     private readonly assignments: LicenseAssignmentService,
     private readonly excel: ExcelExportService,
+    private readonly users: UsersApiService,
   ) {}
 
   /**
@@ -305,7 +308,10 @@ export class SoftwareController {
   @Get(':id/history')
   async history(@Param() params: IdParamDto) {
     const rows = await this.software.history(params.id);
-    return withDeviceCodes(rows, await this.assignments.deviceCodes(deviceIdsInHistory(rows)));
+    return withActorNames(
+      withDeviceCodes(rows, await this.assignments.deviceCodes(deviceIdsInHistory(rows))),
+      (emails) => this.users.namesByEmails(emails),
+    );
   }
 
   @Roles('sa', 'admin', 'member')
