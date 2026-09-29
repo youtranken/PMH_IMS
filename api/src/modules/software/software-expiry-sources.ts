@@ -38,7 +38,7 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
       sourceLabel: KIND_LABEL[kind],
       findExpiring: async (from, to): Promise<ExpiryItem[]> => {
         const rows = await this.software.present(
-          (await this.software.findExpiringBetween(from, to)).filter((row) => row.kind === kind),
+          await this.software.findExpiringBetween(from, to, kind),
         );
         return rows.map((row) => ({
           id: row.id,

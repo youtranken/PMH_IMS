@@ -208,8 +208,16 @@ export class SoftwareService {
     return this.expiry.historyFor(row.kind, id);
   }
 
-  /** Mọi hồ sơ có hạn nằm trong [from, to] — cỗ máy expiry (story 3.4) hỏi qua api. */
-  async findExpiringBetween(from: string, to: string): Promise<SoftwareListItem[]> {
+  /**
+   * Mọi hồ sơ có hạn nằm trong [from, to] — cỗ máy expiry (story 3.4) hỏi qua api. `kind` lọc
+   * trong SQL: mỗi loại là một nguồn hạn riêng, lọc bên JS là chạy lại cả câu + `decorate` cho
+   * từng loại ở mỗi lượt mở màn / mail tổng hợp.
+   */
+  async findExpiringBetween(
+    from: string,
+    to: string,
+    kind?: SoftwareKind,
+  ): Promise<SoftwareListItem[]> {
     const rows = await this.db
       .select()
       .from(softwareTable)
@@ -224,6 +232,7 @@ export class SoftwareService {
           // Thanh lý thì không ai định gia hạn. Hết hạn vẫn lấy để màn hình hiện mục quá hạn;
           // mail digest tự bỏ qua nó qua `quietInDigest` (DOM-03).
           sql`${softwareTable.status} <> 'retired'`,
+          kind ? eq(softwareTable.kind, kind) : undefined,
         ),
       )
       .orderBy(asc(softwareTable.endDate));
