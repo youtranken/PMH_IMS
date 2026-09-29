@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, request, test } from '@playwright/test';
 import {
   APP_ORIGIN,
   E2E_MEMBER,
@@ -124,5 +124,47 @@ test.describe('Hàng rào an ninh', () => {
     });
     expect(response.status()).toBe(403);
     expect(await response.json()).toMatchObject({ code: 'ORIGIN_MISMATCH' });
+  });
+
+  /*
+   * Login-CSRF (SEC-11): trang lạ tự POST form đăng nhập bằng tài khoản CỦA KẺ TẤN CÔNG, nạn nhân
+   * bị đăng nhập vào đó mà không biết. Trình duyệt cũ không gửi `Origin` cho form cùng-trang-khác-
+   * gốc, nên thiếu Origin không được là "cho qua". Email ở đây không tồn tại: nếu hàng rào hỏng thì
+   * API trả 401 (đã vào tới bước kiểm mật khẩu) thay vì 403.
+   */
+  test('đăng nhập từ trang lạ không có Origin bị chặn trước khi kiểm mật khẩu (SEC-11)', async () => {
+    const ghost = { email: 'e2e-login-csrf@pmh.com.vn', password: 'khong-quan-trong-#2026' };
+    const cases: { headers: Record<string, string>; code: string }[] = [
+      { headers: { 'Sec-Fetch-Site': 'cross-site' }, code: 'ORIGIN_MISMATCH' },
+      { headers: { Referer: 'https://ke-tan-cong.example/dang-nhap' }, code: 'ORIGIN_MISMATCH' },
+      { headers: {}, code: 'ORIGIN_MISSING' },
+    ];
+    for (const { headers, code } of cases) {
+      const api = await request.newContext({
+        baseURL: APP_ORIGIN,
+        ignoreHTTPSErrors: true,
+        extraHTTPHeaders: headers,
+      });
+      try {
+        const res = await api.post('/api/v1/auth/login', { data: ghost });
+        expect(res.status(), JSON.stringify(headers)).toBe(403);
+        expect(await res.json()).toMatchObject({ code });
+      } finally {
+        await api.dispose();
+      }
+    }
+
+    // Đối chứng: cùng request, cùng gốc thì đi tiếp tới bước kiểm mật khẩu.
+    const same = await request.newContext({
+      baseURL: APP_ORIGIN,
+      ignoreHTTPSErrors: true,
+      extraHTTPHeaders: { 'Sec-Fetch-Site': 'same-origin' },
+    });
+    try {
+      const res = await same.post('/api/v1/auth/login', { data: ghost });
+      expect(res.status()).toBe(401);
+    } finally {
+      await same.dispose();
+    }
   });
 });
