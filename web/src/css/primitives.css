@@ -9,8 +9,8 @@
   all: unset;
   cursor: pointer;
   color: var(--ink-2);
-  /* Ô bấm VUÔNG 28px, không phải một con chữ. Trước đây là ký tự › cỡ --fs-xs với padding
-     2px: vùng bấm chưa tới 12px, trượt tay là bấm trúng link mã thiết bị ngay bên cạnh. */
+  /* Ô bấm VUÔNG 28px, không phải một con chữ: ký tự › cỡ --fs-xs với padding 2px thì vùng
+     bấm chưa tới 12px, trượt tay là bấm trúng link mã thiết bị ngay bên cạnh. */
   display: inline-grid;
   place-items: center;
   width: 1.75rem;
@@ -149,7 +149,7 @@ table.table tbody tr.exp:hover td {
   font-size: var(--fs-xs);
 }
 /*
- * Dải ĐÃ VÔ HIỆU HÓA — gạch ngang + xám, nhưng VẪN ĐỨNG ĐÓ (28/08/2026).
+ * Dải ĐÃ VÔ HIỆU HÓA — gạch ngang + xám, nhưng VẪN ĐỨNG ĐÓ.
  *
  * Gạch ngang chỉ đặt lên MÃ DẢI và tên, không lên cả thẻ: gạch cả thẻ thì thanh mức sử dụng
  * và dòng lý do cũng bị gạch, mà đó lại đúng là hai thứ người ta mở ra để đọc trước khi quyết
@@ -453,7 +453,7 @@ table.table tbody tr.exp:hover td {
 /* Con số đi kèm nhãn lọc ("Trống 137"). Nhạt hơn và nhỏ hơn chữ nhãn: nó là số liệu bổ trợ,
    không phải tên nút — để cùng cỡ thì mắt đọc thành hai từ ngang hàng. */
 /*
- * NHẠT BẰNG CỠ CHỮ, KHÔNG BẰNG ĐỘ MỜ (18/09/2026).
+ * NHẠT BẰNG CỠ CHỮ, KHÔNG BẰNG ĐỘ MỜ.
  *
  * `opacity: 0.7` trên chữ 11,2px hoà `--ink-2` với nền thành `#888c85` — 3,02:1, dưới ngưỡng
  * AA (4,5:1) cho chữ nhỏ. Nút đang bật cũng không thoát: đo trên trình duyệt thật ra 3,89:1.
