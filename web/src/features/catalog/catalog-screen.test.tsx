@@ -76,7 +76,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     const fetchMock = stubFetch();
     renderAt('/admin/catalog?tab=cabinet');
     expect(await screen.findByText('TU-E2E-HCM-01')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Tủ mạng' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /^Tủ mạng/ })).toHaveAttribute('aria-selected', 'true');
     expect(listCalls(fetchMock, 'cabinet').length).toBeGreaterThan(0);
     // Cột "Thuộc site" có cả tên site, không chỉ mã.
     expect(screen.getByText('Hồ Chí Minh')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     const user = userEvent.setup();
     renderAt('/admin/catalog');
     await screen.findByText('E2E-HCM');
-    await user.click(screen.getByRole('tab', { name: 'Tủ mạng' }));
+    await user.click(screen.getByRole('tab', { name: /^Tủ mạng/ }));
     await waitFor(() =>
       expect(screen.getByLabelText('địa chỉ')).toHaveTextContent('tab=cabinet'),
     );

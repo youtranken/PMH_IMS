@@ -35,6 +35,7 @@ import {
   IMPORTABLE_ENTITIES,
   type CabinetRow,
   type CatalogEntity,
+  type CatalogLists,
   type CatalogRow,
   type DepartmentRow,
   type DeviceTypeRow,
@@ -424,8 +425,10 @@ export function CatalogScreen({ me }: { me: Me }) {
   const csrfToken = me.csrfToken;
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
-  // Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng.
-  const lists = useCatalogLists({ enabled: entity === 'cabinet' });
+  /* Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng, và số mục trên nhãn từng tab
+     (ADM-031): người mới nhìn thanh tab là biết bảy nhóm nào đã khai, nhóm nào còn trống. Cùng
+     một truy vấn danh mục nền mà mọi form đã dùng — không thêm lượt hỏi riêng. */
+  const lists = useCatalogLists();
   const siteNames = useMemo(
     () => new Map((lists.data?.sites ?? []).map((site) => [site.id, site.name])),
     [lists.data],
@@ -670,9 +673,11 @@ export function CatalogScreen({ me }: { me: Me }) {
                 {t('catalog.importExcel')}
               </button>
             ) : null}
+            {/* Bề ngang tối thiểu cố định (`.catalog-add`): nhãn đổi theo tab ("Thêm site" →
+                "Thêm nhà cung cấp") mà nút co giãn theo chữ thì cả cụm nút giật mỗi lần đổi tab. */}
             <button
               type="button"
-              className="btn primary"
+              className="btn primary catalog-add"
               onClick={() => setEditing({ row: null })}
             >
               {t(`catalog.add${TAB_SUFFIX[entity]}`)}
@@ -682,7 +687,11 @@ export function CatalogScreen({ me }: { me: Me }) {
       />
 
       <Tabs
-        items={TAB_KEYS.map((tab) => ({ key: tab.key, label: t(tab.labelKey) }))}
+        items={TAB_KEYS.map((tab) => ({
+          key: tab.key,
+          label: t(tab.labelKey),
+          count: lists.data?.[LIST_OF[tab.key]]?.length,
+        }))}
         value={entity}
         onChange={switchTab}
         ariaLabel={t('catalog.title')}
@@ -857,6 +866,17 @@ function CatalogHistoryDialog({
     </Dialog>
   );
 }
+
+/** Tab → mảng tương ứng trong `CatalogLists` (số mục trên nhãn tab). */
+const LIST_OF: Record<CatalogEntity, keyof CatalogLists> = {
+  site: 'sites',
+  cabinet: 'cabinets',
+  device_type: 'deviceTypes',
+  vendor: 'vendors',
+  department: 'departments',
+  isp_provider: 'ispProviders',
+  service_port: 'servicePorts',
+};
 
 const TAB_SUFFIX: Record<CatalogEntity, string> = {
   site: 'Site',

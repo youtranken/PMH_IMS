@@ -30,6 +30,7 @@ import {
   rowAction,
   mailpitMessages,
   rowActionNames,
+  catalogTab,
   sql,
   timVaChoLoc,
   writeHeaders,
@@ -7037,10 +7038,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(
       thanhTab.getByRole('tab'),
       'phòng Danh mục phải có ĐÚNG bảy ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
-    ).toHaveText([...TEN_TAB]);
+    ).toHaveText(TEN_TAB.map(catalogTab));
 
     for (const ngan of BAY_NGAN) {
-      await thanhTab.getByRole('tab', { name: ngan.tab, exact: true }).click();
+      await thanhTab.getByRole('tab', { name: catalogTab(ngan.tab) }).click();
       await expect(
         page.getByRole('tabpanel'),
         `bấm ngăn ${ngan.tab} phải mở ra một vùng nội dung`,
@@ -7165,7 +7166,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await moPhongDanhMuc(page);
 
     for (const [index, hop] of HOP.entries()) {
-      await page.getByRole('tab', { name: hop.tab, exact: true }).click();
+      await page.getByRole('tab', { name: catalogTab(hop.tab) }).click();
       await page.getByRole('button', { name: hop.tieuDe, exact: true }).click();
 
       const hopThoai = page.getByRole('dialog', { name: hop.tieuDe, exact: true });
@@ -7234,7 +7235,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await catalogItem(page, 'site', { code: `S-E2E-TU-${uniqueStamp()}`, name: 'Site E2E hộp tủ' });
     await moPhongDanhMuc(page);
 
-    await page.getByRole('tab', { name: 'Tủ mạng', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Tủ mạng') }).click();
     await page.getByRole('button', { name: 'Thêm tủ mạng', exact: true }).click();
 
     const hop = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
@@ -7357,7 +7358,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // --- Site vừa khai phải có mặt trong ô chọn của hộp Tủ mạng, không cần tải lại trang.
-    await page.getByRole('tab', { name: 'Tủ mạng', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Tủ mạng') }).click();
     await page.getByRole('button', { name: 'Thêm tủ mạng', exact: true }).click();
     const hopTu = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
     await hopTu.getByRole('button', { name: 'Thuộc site' }).click();
@@ -7370,7 +7371,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // --- Vô hiệu rồi mở lại menu: mục giữa phải ĐỔI CHỮ.
-    await page.getByRole('tab', { name: 'Site', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('searchbox').fill(maSite);
     await expect(dongSite).toBeVisible();
 
@@ -7420,7 +7421,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await moPhongDanhMuc(page);
 
     for (const ngan of BAY_NGAN) {
-      await page.getByRole('tab', { name: ngan.tab, exact: true }).click();
+      await page.getByRole('tab', { name: catalogTab(ngan.tab) }).click();
       const soNut = ngan.nhapDuocExcel ? 1 : 0;
       // File mẫu nằm TRONG hộp nhập, không bao giờ ở đầu trang.
       await expect(
@@ -7434,7 +7435,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     }
 
     // --- Bên trong hộp nhập, ở bước MỘT (chưa chọn file).
-    await page.getByRole('tab', { name: 'Site', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
     const hop = page.getByRole('dialog', {
