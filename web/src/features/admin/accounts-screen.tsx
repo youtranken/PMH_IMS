@@ -980,6 +980,7 @@ function SessionsDialog({
     if (hasCurrent) {
       const answer = await askConfirm({
         ...question,
+        title: question.title,
         checkbox: {
           label: t('accounts.killAllIncludeCurrent'),
           hint: t('accounts.killAllIncludeCurrentHint'),

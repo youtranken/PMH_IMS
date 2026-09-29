@@ -736,18 +736,18 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
       activeCount={[range.from, range.to].filter(Boolean).length}
       onClear={() => setRange({ from: '', to: '' })}
     >
-      <div className="filter-range" role="group" aria-label={t('expiry.renewedRange')}>
+      <div className="filter-range" role="group" aria-label={t('expiry.renewalsRange')}>
         <DatePicker
           value={range.from}
-          ariaLabel={t('expiry.renewedFrom')}
-          placeholder={t('expiry.renewedFrom')}
+          ariaLabel={t('expiry.renewalsFrom')}
+          placeholder={t('expiry.renewalsFrom')}
           max={range.to || undefined}
           onChange={(from) => setRange((current) => ({ ...current, from }))}
         />
         <DatePicker
           value={range.to}
-          ariaLabel={t('expiry.renewedTo')}
-          placeholder={t('expiry.renewedTo')}
+          ariaLabel={t('expiry.renewalsTo')}
+          placeholder={t('expiry.renewalsTo')}
           min={range.from || undefined}
           onChange={(to) => setRange((current) => ({ ...current, to }))}
         />

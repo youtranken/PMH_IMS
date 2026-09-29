@@ -174,16 +174,18 @@ export class IspLineController {
     // Đổi site / thiết bị: sổ lưu id (mã có thể đổi), lúc đọc mới tra ra MÃ để dòng lịch sử
     // nói "HCM → HN" thay vì "đã đổi" (NET-067). Site gồm cả mục đã ngừng dùng.
     const deviceIds = deviceIdsInHistory(rows);
-    const devices = deviceIds.length > 0 ? await this.devices.getByIds(deviceIds) : new Map();
-    const deviceCodes = new Map([...devices].map(([id, device]) => [id, device.code]));
-    const siteCodes = deviceIdsInHistory(rows, 'siteId').length
-      ? new Map(
-          (await this.catalog.lists({ includeInactive: true })).sites.map((site) => [
-            site.id,
-            site.code,
-          ]),
-        )
-      : new Map<string, string>();
+    const deviceCodes = new Map<string, string>();
+    if (deviceIds.length > 0) {
+      for (const [id, device] of await this.devices.getByIds(deviceIds)) {
+        deviceCodes.set(id, device.code);
+      }
+    }
+    const siteCodes = new Map<string, string>();
+    if (deviceIdsInHistory(rows, 'siteId').length > 0) {
+      for (const site of (await this.catalog.lists({ includeInactive: true })).sites) {
+        siteCodes.set(site.id, site.code);
+      }
+    }
     const labelled = withDeviceCodes(
       withDeviceCodes(rows, deviceCodes),
       siteCodes,
