@@ -201,8 +201,12 @@ export class IpAddressService {
   }
 
   /**
-   * Chủ của lượt thu hồi GẦN NHẤT cho từng hồ sơ — một câu `DISTINCT ON` cho cả dải, và một
+   * Chủ của lượt về Trống GẦN NHẤT cho từng hồ sơ — một câu `DISTINCT ON` cho cả dải, và một
    * lượt `devices.api` cho mọi mã máy (AD-2, không join bảng `device`).
+   *
+   * Chỉ dòng CHUYỂN trạng thái mới mang khóa `previousDeviceId` (kể cả khi null). Lượt thả gần
+   * nhất không có chủ thì trả không có chủ — lọc bỏ nó là lùi về chủ của một chu kỳ cũ hơn.
+   * Dòng sửa ghi chú / khôi phục cũng có `to_status = 'free'` nhưng không có khóa đó.
    */
   private async previousOwnersOf(ids: string[]): Promise<Map<string, string>> {
     const result = new Map<string, string>();
@@ -218,10 +222,7 @@ export class IpAddressService {
         and(
           inArray(ipHistoryTable.ipAddressId, ids),
           eq(ipHistoryTable.toStatus, 'free'),
-          or(
-            sql`${ipHistoryTable.changes}->>'previousDeviceId' IS NOT NULL`,
-            sql`${ipHistoryTable.changes}->>'previousUsedBy' IS NOT NULL`,
-          ),
+          sql`${ipHistoryTable.changes} ? 'previousDeviceId'`,
         ),
       )
       .orderBy(ipHistoryTable.ipAddressId, desc(ipHistoryTable.createdAt));
