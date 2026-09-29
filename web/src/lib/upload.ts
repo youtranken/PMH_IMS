@@ -1,4 +1,5 @@
 import { readResponse } from '@/lib/api-client';
+import { saveResponse } from '@/lib/download-file';
 
 /**
  * Gửi MỘT file lên endpoint multipart (AD-15) — import danh mục (2.1), import thiết bị (2.6),
@@ -14,17 +15,37 @@ export async function uploadFile<T>(
   fields: Record<string, string> = {},
   fieldName = 'file',
 ): Promise<T> {
+  // Cùng luật với `apiFetch`, kể cả 401-phiên-chết → về màn đăng nhập.
+  return readResponse<T>(await postFile(path, file, csrfToken, fields, fieldName));
+}
+
+/**
+ * Gửi một file lên và nhận một FILE về (lưu xuống máy) — "Tải danh sách dòng lỗi" của hộp nhập
+ * Excel: server đọc lại chính file vừa chọn rồi trả file lỗi, không giữ gì giữa hai lượt.
+ */
+export async function uploadForDownload(
+  path: string,
+  file: File,
+  csrfToken: string,
+  fallbackName: string,
+): Promise<void> {
+  await saveResponse(await postFile(path, file, csrfToken, {}, 'file'), fallbackName);
+}
+
+function postFile(
+  path: string,
+  file: File,
+  csrfToken: string,
+  fields: Record<string, string>,
+  fieldName: string,
+): Promise<Response> {
   const form = new FormData();
   form.append(fieldName, file);
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
-
-  const res = await fetch(path, {
+  return fetch(path, {
     method: 'POST',
     credentials: 'include',
     headers: { 'X-CSRF-Token': csrfToken },
     body: form,
   });
-
-  // Cùng luật với `apiFetch`, kể cả 401-phiên-chết → về màn đăng nhập.
-  return readResponse<T>(res);
 }

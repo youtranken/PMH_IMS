@@ -822,6 +822,7 @@ export default {
     confirm: 'Xác nhận ghi',
     nothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
     hasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
+    downloadErrors: 'Tải danh sách {{count}} dòng lỗi (.xlsx)',
     done: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',
   },
   software: {

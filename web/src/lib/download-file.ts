@@ -12,7 +12,14 @@ export async function downloadFile(
   url: string,
   fallbackName: string,
 ): Promise<void> {
-  const res = await fetch(url, { credentials: 'include' });
+  await saveResponse(await fetch(url, { credentials: 'include' }), fallbackName);
+}
+
+/**
+ * Lưu một response file xuống máy (tên server gửi, lùi về `fallbackName`) — phần chung của
+ * `downloadFile` (GET) và `uploadForDownload` (POST file, nhận file về).
+ */
+export async function saveResponse(res: Response, fallbackName: string): Promise<void> {
   // Lỗi đi qua luật chung: phiên hết hạn thì về màn đăng nhập, không phải một lỗi câm.
   if (!res.ok) await readResponse(res);
   const cd = res.headers.get('content-disposition') ?? '';
