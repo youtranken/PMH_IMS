@@ -30,6 +30,8 @@ export interface SoftwareRow {
   updatedAt: string;
   /** Ngày hệ thống sẽ tự Thanh lý hồ sơ Hết hạn (Q-13); server tính từ số ngày ân hạn. */
   autoRetireOn: string | null;
+  /** Website dùng chứng chỉ SSL / tên miền này (Q-15). Tùy chọn: bản ghi dựng tay ở test không cần. */
+  websites?: string[];
 }
 
 /** Trang chi tiết: thêm hồ sơ Thanh lý lúc nào, do ai (`by = 'system'` khi tự động). */
@@ -112,6 +114,19 @@ export const STATUS_TONE: Record<SoftwareStatus, string> = {
 /** Chỉ license mới nói tới seat — khớp `supportsSeats` phía API. */
 export function supportsSeats(kind: SoftwareKind): boolean {
   return kind === 'license';
+}
+
+/** Chỉ SSL và tên miền có danh sách website — khớp `supportsWebsites` phía API. */
+export function supportsWebsites(kind: SoftwareKind): boolean {
+  return kind === 'ssl' || kind === 'domain';
+}
+
+/** Ô "mỗi dòng một website" → mảng; API tự chuẩn hóa phần còn lại. */
+export function websiteLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 /**

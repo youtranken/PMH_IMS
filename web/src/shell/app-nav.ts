@@ -1,5 +1,6 @@
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 
 export interface NavItem {
   /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
@@ -28,7 +29,7 @@ export interface NavGroup {
  * mấy mục thì khó quét, nhất là trong drawer điện thoại. Tài khoản dịch vụ đứng trong "Tài sản"
  * cạnh thiết bị/phần mềm; két sắt và duyệt mở két đứng chung "Bảo mật".
  */
-export const navGroups: NavGroup[] = [
+const allNavGroups: NavGroup[] = [
   {
     labelKey: 'nav.groupOverview',
     items: [
@@ -92,6 +93,11 @@ export const navGroups: NavGroup[] = [
     items: [{ key: 'nav.components', to: PATHS.devComponents, roles: ['sa'] }],
   },
 ];
+
+/** Nhóm dev (Bộ giao diện) chỉ có khi build bật cờ — bản production không có (FE-09). */
+export const navGroups: NavGroup[] = allNavGroups.filter(
+  (group) => DEV_KIT_ENABLED || group.labelKey !== 'nav.groupDev',
+);
 
 export function visibleGroups(me: Me | null): NavGroup[] {
   if (!me) return [];

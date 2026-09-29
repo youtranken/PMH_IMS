@@ -277,8 +277,12 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 - [ ] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
   `form-layout.css:131`, `lightbox.css`, `shell.css`). Tạo token, có cặp dark. Sửa `ops/gate-hex.sh`
   bắt cả `rgb(`/`rgba(`.
-- [ ] **FE-09 · Lazy-load từng route** (`React.lazy`). Tách `ComponentsGallery` (`/dev/components`)
-  khỏi bundle chính, hoặc tắt nó ở prod.
+- [x] **FE-09 · "Bộ giao diện" (`/dev/components`) tắt ở prod** (Q-15). Cờ build `VITE_DEV_KIT`
+  (`web/src/lib/dev-kit.ts`): chỉ `docker-compose.override.e2e.yml` truyền `'1'` (image tag riêng
+  `ims-web:dev-kit`) và `vite` dev tự bật. Tắt thì không route (gõ URL ra 404), không mục menu,
+  không có trong bảng lệnh, và mã trang không vào bundle. Kiểm: `npm --prefix web run build` rồi
+  `grep -c -- --warm web/dist/static/index-*.js` ra 0 (chữ chỉ có trong trang dev); build với
+  `VITE_DEV_KIT=1` ra 1. Lazy-load từng route còn lại chưa làm — chưa cần ở cỡ bundle hiện tại.
 - [ ] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
 - [ ] **FE-11 · Script inline đặt theme** (`index.html:9-18`) cần một hash trong CSP. Làm cùng OPS-04.
 - [x] **FE-12 · Xoá 4 file UI chết:** `date-time-picker`, `time-picker`, `time-field`,

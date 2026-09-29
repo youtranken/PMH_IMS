@@ -6,6 +6,7 @@ import { CatalogApiService } from './catalog.api';
 import { CatalogController } from './catalog.controller';
 import { CatalogImportService } from './catalog-import.service';
 import { CatalogService } from './catalog.service';
+import { CatalogOwnUsage } from './catalog-usage';
 
 /**
  * Chủ sở hữu `site`, `cabinet`, `device_type`, `vendor`, `catalog_history` (AD-3).
@@ -18,6 +19,7 @@ import { CatalogService } from './catalog.service';
     CatalogService,
     CatalogApiService,
     CatalogImportService,
+    CatalogOwnUsage,
     ExcelExportService,
     ExcelImportService,
   ],

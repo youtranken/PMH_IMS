@@ -7,6 +7,7 @@ import { ServiceAccountService } from './service-account.service';
 import { ServiceAccountOwnerResolver } from './service-account-owner-resolver';
 import { ServiceAccountAuditLabeler } from './service-account-audit-labeler';
 import { ServiceAccountsApiService } from './service-accounts.api';
+import { ServiceAccountCatalogUsage } from './service-account-catalog-usage';
 
 /**
  * Chủ sở hữu `service_account` + `service_account_history` (AD-3).
@@ -20,6 +21,7 @@ import { ServiceAccountsApiService } from './service-accounts.api';
     ServiceAccountsApiService,
     ServiceAccountOwnerResolver,
     ServiceAccountAuditLabeler,
+    ServiceAccountCatalogUsage,
     ExcelExportService,
   ],
   exports: [ServiceAccountsApiService],
