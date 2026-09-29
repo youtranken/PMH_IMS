@@ -906,3 +906,35 @@ và bộ break-glass dùng chung ở `ui/break-glass*`.
    "Gần nhất" phải chọn trên đúng loại sự kiện, rồi mới hỏi sự kiện đó có dữ liệu không.
 6. **Rút quyền theo "state ban đầu" bỏ sót state đã duyệt** (finding 1). Mỗi lần thêm một
    đường kết thúc tài khoản, liệt kê mọi state còn mang quyền, không chỉ state đang chờ.
+
+---
+
+## Đợt dọn checklist go-live (v1.4.4, 30/09/2026)
+
+Mọi ô của `docs/GO-LIVE-CHECKLIST.md` đã xong hoặc đã chốt không làm (Q-16), trừ QA-02/QA-03 (diễn
+tập và UAT, thuộc ngày go-live). Bảy nhánh song song gộp qua `golive/cl-ra-soat`.
+
+### Hợp đồng cho epic sau
+
+- **Migration chạy bằng `ims_owner`, không phải superuser (DB-03).** Bản cài có từ trước phải chạy
+  `ops/db-owner-bootstrap.sh` một lần (RUNBOOK H1). Đừng `REVOKE … FROM current_user` trên bảng có
+  khoá ngoại: phép kiểm khoá ngoại chạy bằng quyền chủ bảng con và cần UPDATE (0304).
+- **`audit_log` chia ngăn theo năm** (0302). Worker tự tạo ngăn năm nay + năm sau; lưu trữ năm cũ
+  bằng tay (RUNBOOK H2). Công cụ nào liệt kê bảng phải xét ngăn qua bảng mẹ (`pg_inherits`).
+- **Tham số nghiệp vụ mới** (BE-20): trần dải IP, ngưỡng dải cổng NAT, cửa sổ nhìn lùi, số dòng
+  bảng điều khiển, giới hạn tần suất (`@ConfigThrottle`), trần relay outbox — đọc từ `system_config`.
+- **Chọn-một dùng `SegmentedRadio`**, bật/tắt độc lập mới dùng `aria-pressed`.
+
+### Bẫy đã gặp
+
+1. **Đổi chủ bảng sang role không superuser làm lộ các `REVOKE` từng vô hại.** 0039 thu quyền của
+   chính role migrate; với superuser không có tác dụng, với `ims_owner` thì mọi lệnh xoá bảng cha
+   chết. Chỉ lộ ra ở E2E (478 bài đỏ), vì app không xoá cứng bảng cha.
+2. **Script dọn E2E cần superuser**, không phải chủ bảng: `ims_owner` không có DELETE trên bảng
+   chỉ-thêm. Phép kiểm trong `reset-e2e.mjs` nhận cả hai.
+3. **Nhánh song song va nhau không ở chỗ xung đột dòng:** một nhánh gỡ export (knip), nhánh kia
+   viết test gọi đúng hàm đó; một nhánh đổi hàm thành async, nhánh kia gọi kiểu đồng bộ. Gộp xong
+   phải chạy lại toàn bộ cổng, không tin "merge sạch".
+4. **`git add -A` khi test đang chạy nền** vơ file dò tạm của bài lint vào commit (lên cả tag
+   v1.4.3). Chỉ add đúng file mình sửa.
+5. **Chú thích `--` trong câu SQL gửi qua `psql -c`** nuốt phần còn lại khi câu bị gộp một dòng.
