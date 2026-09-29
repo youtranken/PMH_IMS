@@ -7,6 +7,7 @@ import { UsersApiService } from '../users/users.api';
 import { renderMail } from './mail-layout';
 import { MailTransportService } from './mail-transport.service';
 import { UI_PATHS } from '../../common/ui-paths';
+import { viDate } from '../../common/today';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
@@ -587,8 +588,8 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
     label: `${item.label} · ${KIND_LABEL[item.kind] ?? item.kind}`,
     value:
       item.daysLeft < 0
-        ? `${item.end} — ĐÃ QUÁ HẠN ${Math.abs(item.daysLeft)} ngày`
-        : `${item.end} — còn ${item.daysLeft} ngày`,
+        ? `${viDate(item.end)} — ĐÃ QUÁ HẠN ${Math.abs(item.daysLeft)} ngày`
+        : `${viDate(item.end)} — còn ${item.daysLeft} ngày`,
   }));
 
   const headline =

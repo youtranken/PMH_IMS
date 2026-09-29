@@ -13,6 +13,7 @@ import {
   type ParsedSheets,
 } from '../../common/import-plan';
 import { effectiveOf } from '../../common/merge-effective';
+import { viDate } from '../../common/today';
 import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
 
@@ -418,7 +419,7 @@ function planRow(
       ...base,
       action: 'error',
       label,
-      message: `Bảo hành đến (${end}) sớm hơn Bảo hành từ (${start}) — kiểm lại hai cột ngày.`,
+      message: `Bảo hành đến (${viDate(end)}) sớm hơn Bảo hành từ (${viDate(start)}). Kiểm lại hai cột ngày.`,
     };
   }
 
@@ -472,7 +473,7 @@ function planRow(
       ...base,
       action: 'error',
       label,
-      message: `Thiết bị ${existing.code} đã thanh lý — hồ sơ khóa lại, import không sửa được. Mở lại hồ sơ trong Kho thanh lý trước nếu thanh lý nhầm.`,
+      message: `Thiết bị ${existing.code} đã thanh lý nên nhập Excel không sửa được. Thanh lý nhầm thì bấm "Đưa lại vào dùng" trên hồ sơ máy trước.`,
     };
   }
   if (values.status === 'retired') {
@@ -480,7 +481,7 @@ function planRow(
       ...base,
       action: 'error',
       label,
-      message: `Không thanh lý được bằng Excel: thanh lý phải đi qua nút "Thanh lý" để hệ thống còn hỏi thiết bị ${existing.code} có đang giữ IP, luật NAT hay ghế license nào không.`,
+      message: `Không thanh lý ${existing.code} bằng Excel được. Dùng nút "Thanh lý" trên hồ sơ máy.`,
     };
   }
 

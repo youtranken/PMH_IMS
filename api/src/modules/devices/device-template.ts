@@ -72,7 +72,7 @@ const GUIDE_ROWS: DeviceRowValues[] = [
     values: [
       'Loại',
       'Bắt buộc',
-      'Ghi đúng tên loại trong Danh mục: Switch, Firewall, Server, NAS, UPS, Access Point, PC, Laptop, Printer, Camera, Điện thoại IP, Thiết bị khác.',
+      'Ghi đúng tên loại như ở màn Danh mục (vd Switch, Firewall, PC, Laptop).',
     ],
   },
   {
@@ -100,7 +100,7 @@ const GUIDE_ROWS: DeviceRowValues[] = [
     values: [
       'Ghi chú',
       'Không',
-      'TUYỆT ĐỐI không ghi mật khẩu ở đây (FR-035). Mật khẩu thiết bị vào Két sắt.',
+      'TUYỆT ĐỐI không ghi mật khẩu ở đây. Mật khẩu thiết bị cất vào Két sắt.',
     ],
   },
   {
