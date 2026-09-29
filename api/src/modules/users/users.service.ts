@@ -450,11 +450,10 @@ export class UsersService {
    * MỘT câu hỏi cho cả trang, không phải một câu mỗi dòng: viewer audit hiện 50 dòng/trang và
    * phần lớn do vài người thao tác, nên mẻ thật thường chỉ vài email.
    *
-   * KHÓA CỦA MAP LÀ EMAIL ĐÃ HẠ CHỮ THƯỜNG, và đó không phải chuyện làm đẹp. Cột `email` là
-   * `citext` nên `WHERE email IN (...)` khớp không phân biệt hoa-thường ở tầng DB — nhưng
-   * `Map.get()` bên JS thì phân biệt. Trả về map khóa theo đúng chữ DB đang lưu thì một dòng
-   * audit ghi `Sep@pmh.com.vn` sẽ tra hụt một hàng `sep@pmh.com.vn` tìm thấy được, và hiện ra
-   * như "không có tên" — sai lặng lẽ, đúng kiểu sai mà không gì đỏ.
+   * Map trả về tra KHÔNG phân biệt hoa-thường (khóa lưu chữ thường). Cột `email` là `citext`
+   * nên `WHERE email IN (...)` khớp không phân biệt hoa-thường ở tầng DB — nhưng `Map.get()`
+   * bên JS thì phân biệt, còn email ở bảng khác lưu đúng như lúc gõ. Bắt từng nơi gọi nhớ
+   * `toLowerCase()` thì chỗ quên hiện email thô thay cho tên — sai lặng lẽ, không gì đỏ.
    */
   async namesByEmails(emails: string[]): Promise<Map<string, string>> {
     if (emails.length === 0) return new Map();
@@ -462,7 +461,7 @@ export class UsersService {
       .select({ email: usersTable.email, fullName: usersTable.fullName })
       .from(usersTable)
       .where(inArray(usersTable.email, emails));
-    return new Map(rows.map((row) => [row.email.toLowerCase(), row.fullName]));
+    return new EmailKeyedMap(rows.map((row) => [row.email, row.fullName]));
   }
 
   /** Vai hiện tại theo email (cột citext nên không phân biệt hoa thường); `null` nếu không có. */
@@ -610,4 +609,19 @@ function strip(user: UserCredentials): UserRecord {
     delete rest[key];
   }
   return rest as unknown as UserRecord;
+}
+
+/** Map `email → họ tên` tra không phân biệt hoa-thường — xem `namesByEmails`. */
+class EmailKeyedMap extends Map<string, string> {
+  override get(email: string): string | undefined {
+    return super.get(email.toLowerCase());
+  }
+
+  override has(email: string): boolean {
+    return super.has(email.toLowerCase());
+  }
+
+  override set(email: string, name: string): this {
+    return super.set(email.toLowerCase(), name);
+  }
 }

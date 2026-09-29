@@ -222,7 +222,11 @@ describe('UsersService — tầng DB', () => {
       await make('member', { email: 'Sep@QA.test' });
       const map = await users.namesByEmails(['sep@qa.test', 'khong-co@qa.test']);
       expect([...map.keys()]).toEqual(['sep@qa.test']);
-      expect(await users.namesByEmails([])).toEqual(new Map());
+      // Nơi gọi tra bằng email thô như đang lưu ở bảng khác (approval.requester, …).
+      expect(map.get('Sep@QA.test')).toBe(map.get('sep@qa.test'));
+      expect(map.get('SEP@qa.TEST')).toBeDefined();
+      expect(map.has('Sep@QA.test')).toBe(true);
+      expect((await users.namesByEmails([])).size).toBe(0);
     });
 
     it('listRecipients chỉ lấy đúng vai được hỏi', async () => {
