@@ -284,7 +284,7 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
     const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
     await dialog.getByLabel('Cấp trong bao lâu (giờ)').fill('hai');
     await dialog.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    await expect(dialog.getByText('Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4')).toBeVisible();
+    await expect(dialog.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeVisible();
     await expect(dialog.getByLabel('Cấp trong bao lâu (giờ)')).toBeFocused();
     const still = await page.request.get(`/api/v1/vault/break-glass/${approvalId}`);
     expect(((await still.json()) as { state: string }).state).toBe('pending');

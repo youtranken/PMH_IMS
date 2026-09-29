@@ -254,8 +254,8 @@ function actor(req: AuthedRequest): string {
 const BG_STATE_LABEL: Record<string, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
-  denied: 'Từ chối',
-  cancelled: 'Đã hủy',
+  denied: 'Đã từ chối',
+  cancelled: 'Đã rút',
   expired: 'Hết hạn',
   revoked: 'Đã thu hồi',
 };

@@ -1297,7 +1297,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      */
     const hopThuHoi = page.getByRole('dialog');
     await expect(
-      hopThuHoi.getByText(/Quyền này ĐANG chạy/),
+      hopThuHoi.getByText(/Quyền này đang có hiệu lực/),
       'câu hỏi lại phải nói rõ đang cắt thứ đang chạy, không phải một câu "chắc chưa?"',
     ).toBeVisible();
     expect(
@@ -6521,7 +6521,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thêm tài khoản',
         'Hồ sơ',
         'Thuộc về ai',
-        'Mật khẩu (cất vào két luôn)',
+        'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
            "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
         'Giấy tờ đính kèm',
@@ -6581,7 +6581,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Hồ sơ',
         'Thuộc về ai',
         'Cấu hình VPN',
-        'Mật khẩu (cất vào két luôn)',
+        'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
            "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
         'Giấy tờ đính kèm',
@@ -6867,7 +6867,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Mã', 'Loại', 'Chi tiết', 'Ngày thanh lý', 'Người thanh lý', 'Thao tác']);
 
     await expect(
-      main.getByText(/KHÔNG còn được tính hạn và không vào email nhắc gia hạn/),
+      main.getByText(/không còn tính hạn và không vào email nhắc gia hạn/),
       'Phải còn dòng giải thích: vì sao hồ sơ ở đây thôi làm phiền, và muốn dùng lại thì đi đâu',
     ).toBeVisible();
 
@@ -8186,9 +8186,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * · gạch 3 — "vài chục giây" là ước lượng, trong khi màn hình có đồng hồ thật.
      */
     ).toEqual([
-      'Cất bí mật: bấm "Mở két" ngay tại bảng trên, hoặc vào tab "Két sắt" của hồ sơ. Chỉ Quản trị và Super Admin ghi được.',
-      'Xem giá trị: phải gõ mã 6 số (TOTP). Gõ một lần rồi thì mở tiếp được trong ít phút, hết khoảng đó phải gõ lại.',
-      'Giá trị hiện ra rồi TỰ ẨN — có đồng hồ đếm ngược ngay trên hộp — và không có nút sao chép hàng loạt.',
+      'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
+      'Xem giá trị: phải nhập mã 6 số. Nhập một lần thì xem tiếp được trong ít phút, hết giờ phải nhập lại.',
+      'Giá trị hiện ra rồi tự ẩn (có đồng hồ đếm ngược). Không có nút sao chép hàng loạt.',
       'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xóa được.',
     ]);
   });
@@ -8966,7 +8966,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toBeEditable();
     await expect(
       approve.getByText(
-        'Rút ngắn được, tối đa 6 giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.',
+        'Rút ngắn được, tối đa 6 giờ như người xin.',
       ),
       'và phải nói ra là sửa được (chỉ rút ngắn, không cấp quá số xin), không để người duyệt tự đoán',
     ).toBeVisible();
