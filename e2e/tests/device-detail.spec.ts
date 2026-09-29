@@ -86,6 +86,10 @@ test.describe('Trang chi tiết thiết bị', () => {
     writeFileSync(pdf, '%PDF-1.4\ntrailer<<>>\n');
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
     await expect(page.getByRole('row', { name: new RegExp(`giay-to-${stamp}`) })).toBeVisible();
+    // DEV-082: dòng giấy tờ nói ai tải lên (họ tên, không phải id).
+    await expect(
+      page.getByRole('row', { name: new RegExp(`giay-to-${stamp}`) }).getByText(/^bởi .+/),
+    ).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Tạo hồ sơ')).toBeVisible();

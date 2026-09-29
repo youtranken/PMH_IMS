@@ -739,6 +739,7 @@ export default {
     name: 'Tên file',
     size: 'Dung lượng',
     uploadedAt: 'Tải lên lúc',
+    uploadedBy: 'bởi {{name}}',
     download: 'Tải về',
     remove: 'Xóa',
     confirmRemove: 'Xóa "{{name}}" khỏi hồ sơ? Thao tác này được ghi nhật ký.',
