@@ -529,9 +529,11 @@ Test **không** vào image production (api build loại `*.spec.ts`, image web c
   từng màn; đổi tên bài E2E bị trùng.
   - **Rà 29/09:** file đã lớn thêm, 487 KB, 9.184 dòng. Tên bài trùng: "sắp xếp theo cột chạy ở
     server…" ở `accounts.spec.ts`, `devices.spec.ts`, `software.spec.ts`.
-- [ ] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
+- [x] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
   `ts-loader`, `tsconfig-paths`.
   - **Rà 29/09:** cả 5 gói vẫn còn và không chỗ nào dùng, gỡ được.
+  - **Đã sửa:** `npm uninstall` cả 5 gói (grep 0 chỗ dùng kể cả `jest.config.js`, `test/jest-db.cjs`,
+    `nest-cli.json`, tsconfig); `nest build` và 1.370 bài unit api xanh.
 
 ---
 
