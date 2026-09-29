@@ -173,7 +173,7 @@ describe('actionLabel — tên việc bằng tiếng Việt', () => {
   it.each([
     ['ip.created', 'Tạo hồ sơ'],
     ['ip.updated', 'Sửa hồ sơ'],
-    ['ip.assigned', 'Gán chủ'],
+    ['ip.assigned', 'Cấp IP'],
     ['ip.voided', 'Xóa hồ sơ IP nhập nhầm'],
     ['ip.subnet_voided', 'Ngừng dùng theo dải'],
     ['ip.restored', 'Dùng lại'],

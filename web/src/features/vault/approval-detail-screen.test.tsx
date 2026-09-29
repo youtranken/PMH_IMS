@@ -266,7 +266,7 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
     });
     renderDetail(MEMBER);
     expect(
-      await screen.findByText(/Đã được duyệt — mở lại SW-CORE-01 · Switch lõi tầng 3 · HCM và bấm "Xem"/),
+      await screen.findByText(/Đã duyệt\. Mở lại SW-CORE-01 · Switch lõi tầng 3 · HCM, bấm "Xem"/),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mở két' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();
@@ -283,7 +283,7 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
     });
     renderDetail(MEMBER);
     expect(await screen.findByText(/gắn với phiên đăng nhập đang dùng/)).toBeInTheDocument();
-    expect(screen.queryByText(/Đã được duyệt — mở lại/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Đã duyệt\. Mở lại/)).not.toBeInTheDocument();
   });
 
   it('hết hạn chờ (chưa từng được duyệt): nói không ai duyệt, không nói "quyền đã tự cắt"', async () => {

@@ -261,7 +261,7 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     await card.getByRole('button', { name: 'Duyệt', exact: true }).click();
     const decide = page.getByRole('dialog');
     await expect(
-      decide.getByText('Rút ngắn được, tối đa 2 giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.'),
+      decide.getByText('Rút ngắn được, tối đa 2 giờ như người xin.'),
     ).toBeVisible();
     await decide.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('5');
     await decide.getByRole('button', { name: 'Duyệt', exact: true }).click();

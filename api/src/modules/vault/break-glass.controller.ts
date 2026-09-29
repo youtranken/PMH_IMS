@@ -263,7 +263,7 @@ const BG_STATE_LABEL: Record<string, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
   denied: 'Đã từ chối',
-  cancelled: 'Đã hủy',
+  cancelled: 'Đã rút',
   expired: 'Hết hạn',
   revoked: 'Đã thu hồi',
 };

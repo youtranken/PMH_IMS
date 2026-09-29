@@ -84,8 +84,8 @@ describe('Quyền két — "Sao chép quyền từ…" (ADM-040)', () => {
     expect(within(dialog).getByText('Bỏ qua 1 nhóm người này đã có:')).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gán quyền' }));
-    const confirm = await screen.findByRole('dialog', { name: 'Xác nhận cấp quyền' });
-    expect(confirm).toHaveTextContent('Cấp cho Nguyễn An 1 nhóm quyền két giống Trần Bình');
+    const confirm = await screen.findByRole('dialog', { name: 'Gán quyền két?' });
+    expect(confirm).toHaveTextContent('Gán cho Nguyễn An 1 nhóm quyền két giống Trần Bình');
     await userEvent.click(within(confirm).getByRole('button', { name: 'Gán quyền' }));
 
     await waitFor(() => expect(posts).toHaveLength(1));
