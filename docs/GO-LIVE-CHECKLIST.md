@@ -125,10 +125,11 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 
 ### P2
 
-- [ ] **SEC-10 · Dò được email có tồn tại hay không**, qua mã lỗi `ACCOUNT_DISABLED`/`LOCKED` và qua
+- [x] **SEC-10 · Dò được email có tồn tại hay không**, qua mã lỗi `ACCOUNT_DISABLED`/`LOCKED` và qua
   thời gian trả lời (email không có thì bỏ qua Argon2).
   - **Rà 29/09:** còn nguyên (`auth.service.ts:98-141`). Mã `ACCOUNT_LOCKED` được thêm có chủ ý để
     người dùng biết vì sao không vào được (32c3731), nên muốn đóng mục này phải chốt ở QUYET-DINH trước.
+  - **Không sửa** — Q-16: giữ mã lỗi riêng, rủi ro dò email chấp nhận.
 - [ ] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
   - **Rà 29/09:** còn nguyên (`csrf.guard.ts:66` vẫn `if (!origin) return;`).
 - [x] **SEC-12 · Member đính file được vào mọi đối tượng chỉ có quyền đọc**
