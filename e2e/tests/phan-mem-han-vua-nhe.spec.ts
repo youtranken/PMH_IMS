@@ -337,7 +337,7 @@ test.describe('Kho thanh lý', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText('License phần mềm', { exact: true })).toBeVisible();
     await expect(row.getByText('license', { exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^Phần mềm \d+$/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('radio', { name: /^Phần mềm \d+$/ })).toBeChecked();
 
     expect(await rowActionNames(page, code)).toEqual(['Mở hồ sơ', 'Khôi phục…']);
     await rowAction(page, code, 'Khôi phục…');

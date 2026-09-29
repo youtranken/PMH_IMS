@@ -332,18 +332,23 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         <table className="table access-grid">
           <thead>
             <tr>
-              <th className="access-row-head" rowSpan={2}>
+              <th className="access-row-head" rowSpan={2} scope="col">
                 {t('access.person')}
               </th>
               {columnGroups.map((group) => (
-                <th key={group.type} colSpan={group.scopes.length} className="access-family">
+                <th
+                  key={group.type}
+                  colSpan={group.scopes.length}
+                  scope="colgroup"
+                  className="access-family"
+                >
                   {group.label}
                 </th>
               ))}
             </tr>
             <tr>
               {columns.map((scope) => (
-                <th key={scopeKey(scope)} className="access-col">
+                <th key={scopeKey(scope)} scope="col" className="access-col">
                   {/* Bấm tiêu đề cột = gán nhóm này cho NHIỀU người một lượt. Nhãn trợ năng là câu
                       đầy đủ vì chữ hiện ra đã cắt tiền tố họ. */}
                   <button

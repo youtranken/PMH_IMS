@@ -45,7 +45,7 @@ select {
   appearance: none;
   padding-right: 1.9rem;
   /* Mũi tên chevron › (khớp caret nav/expand) — 1 loại mũi tên duy nhất toàn app. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  background-image: var(--icon-select-chevron);
   background-repeat: no-repeat;
   background-position: right 0.62rem center;
 }

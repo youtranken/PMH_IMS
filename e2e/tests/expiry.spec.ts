@@ -159,8 +159,8 @@ test.describe('Cỗ máy Expiry', () => {
     await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-F-${stamp}`) })).toBeVisible();
     await expect(page.getByRole('link', { name: new RegExp(`LIC-E2E-F-${stamp}`) })).toHaveCount(0);
 
-    // "Tất cả loại" gỡ mọi lựa chọn.
-    await kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }).click();
+    // "Mọi loại" gỡ mọi lựa chọn.
+    await kindGroup.getByRole('button', { name: 'Mọi loại', exact: true }).click();
     await expect(page.getByRole('link', { name: new RegExp(`LIC-E2E-F-${stamp}`) })).toBeVisible();
   });
 

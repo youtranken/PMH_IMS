@@ -28,6 +28,33 @@ const PORTS = {
   incoming: [],
 };
 
+/*
+ * Panel nằm ngay dưới h1 của trang thiết bị (tab không có tiêu đề riêng), nên hai khối của nó
+ * là h2 như các khu ở tab Tổng quan. h3 thì trình đọc màn hình thấy một bậc bị bỏ trống.
+ */
+describe('PortMapPanel — bậc tiêu đề', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('hai khối "cổng của máy" và "đang cắm vào" là h2', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, PORTS))));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <I18nextProvider i18n={i18n}>
+          <ToastProvider>
+            <ConfirmProvider>
+              <PortMapPanel device={DEVICE} csrfToken="t" canEdit />
+            </ConfirmProvider>
+          </ToastProvider>
+        </I18nextProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole('heading', { level: 2, name: 'Cổng của thiết bị này' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Đang cắm vào thiết bị này' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0);
+  });
+});
+
 describe('PortMapPanel — sửa cổng thì lịch sử máy phải đọc lại', () => {
   afterEach(() => vi.unstubAllGlobals());
 

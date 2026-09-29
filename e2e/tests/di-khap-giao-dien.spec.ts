@@ -2564,7 +2564,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('button', { name: 'Tháng sau' })).toHaveCount(0);
 
     /*
-     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Tất cả loại" —
+     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Mọi loại" —
      * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
@@ -2574,7 +2574,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       [...loaiTrongForm].sort(),
-      'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Tất cả loại" của thanh lọc',
+      'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
     ).toEqual([...LOAI_THIET_BI_GOC].sort());
 
     /*
@@ -2919,7 +2919,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * trị đã await)` thì không.
      */
     await expect
-      .poll(() => nhanCua(panel.getByRole('heading', { level: 3 })), {
+      .poll(() => nhanCua(panel.getByRole('heading', { level: 2 })), {
         message:
           'Port map luôn kể HAI chiều: cổng của máy này, và ai đang cắm vào nó (AD-14 — một sợi dây một bản ghi)',
       })
@@ -3982,7 +3982,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký (cả "Khác" — Q-14), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
-        'Tất cả loại',
+        'Mọi loại',
         'License phần mềm',
         'Chứng chỉ SSL',
         'Tên miền',
@@ -3992,8 +3992,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       ].sort(),
     );
     await expect(
-      kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }),
-      'Chưa chọn loại nào thì nút "Tất cả loại" đang bật',
+      kindGroup.getByRole('button', { name: 'Mọi loại', exact: true }),
+      'Chưa chọn loại nào thì nút "Mọi loại" đang bật',
     ).toHaveAttribute('aria-pressed', 'true');
 
     // ===== BẢNG (chờ dòng có thật rồi mới đọc cột — đọc cột không biết chờ lại) =====
@@ -4450,7 +4450,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    */
   async function expectHandles(
     scope: Locator,
-    role: 'textbox' | 'button' | 'combobox' | 'checkbox',
+    role: 'textbox' | 'button' | 'combobox' | 'checkbox' | 'radio',
     names: (string | RegExp)[],
     what: string,
   ): Promise<void> {
@@ -4647,9 +4647,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 3 nút lọc (dải đang dùng không có chip hồ sơ tắt, Q-15), 6 nút "Cấp IP", 2 nút
-     * lật trang, cặp "Danh sách | Bản đồ" (NET-006) — cộng nút "Tra" của ô tra IP/máy cấp trang,
-     * và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp" (NET-007).
+     * phần bảng là con số biết trước: 6 nút "Cấp IP", 2 nút lật trang — cộng nút "Tra" của ô tra
+     * IP/máy cấp trang, và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp"
+     * (NET-007). 3 lựa chọn lọc (dải đang dùng không có chip hồ sơ tắt, Q-15) và cặp "Danh sách
+     * | Bản đồ" (NET-006) là radio, đếm riêng ngay dưới.
      */
     await expectHandleCounts(
       page.getByRole('main'),
@@ -4661,15 +4662,17 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         [/^Thao tác với /, cards],
         ['Giấy tờ (0)', 1],
         ['Cấp IP trống kế tiếp', 1],
-        ['Tất cả 6', 1],
-        ['Đang dùng 0', 1],
-        ['Trống 6', 1],
-        ['Danh sách', 1],
-        ['Bản đồ', 1],
         ['Cấp IP', 6],
         ['Trang trước', 1],
         ['Trang sau', 1],
       ],
+      'Màn Địa chỉ IP, dải đang chọn còn trống hoàn toàn',
+    );
+    // Nút lọc trạng thái và cặp kiểu xem là chọn-một (radio), không phải nút lệnh.
+    await expectHandles(
+      page.getByRole('main'),
+      'radio',
+      ['Tất cả 6', 'Đang dùng 0', 'Trống 6', 'Danh sách', 'Bản đồ'],
       'Màn Địa chỉ IP, dải đang chọn còn trống hoàn toàn',
     );
 
@@ -4773,9 +4776,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ]);
 
     /* ----- Nhóm nút lọc: đúng ba lựa chọn (Q-02), kèm con số của CẢ dải ----- */
-    const filters = page.getByRole('group', { name: 'Trạng thái' });
+    const filters = page.getByRole('radiogroup', { name: 'Trạng thái' });
     await expect(
-      filters.getByRole('button'),
+      filters.getByRole('radio'),
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
     ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
@@ -4795,20 +4798,20 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(table.getByRole('row'), 'một hàng tiêu đề + 6 địa chỉ').toHaveCount(7);
 
     /* ----- Bấm một lựa chọn thì bảng đổi THẬT, không chỉ đổi màu cái nút ----- */
-    await filters.getByRole('button', { name: /^Trống/ }).click();
+    await filters.getByRole('radio', { name: /^Trống/ }).click();
     await expect(table.getByRole('row'), 'lọc "Trống" còn 5 dòng + tiêu đề').toHaveCount(6);
     await expect(
       page.getByText('Chị Lan — Kế toán'),
       'lọc "Trống" thì hàng đã cấp phải biến khỏi bảng',
     ).toHaveCount(0);
 
-    await filters.getByRole('button', { name: /^Đang dùng/ }).click();
+    await filters.getByRole('radio', { name: /^Đang dùng/ }).click();
     await expect(
       table.getByRole('row'),
       'lọc "Đang dùng" còn đúng một dòng + tiêu đề, chứ không phải bảng cũ đứng im',
     ).toHaveCount(2);
 
-    await filters.getByRole('button', { name: /^Tất cả/ }).click();
+    await filters.getByRole('radio', { name: /^Tất cả/ }).click();
     await expect(table.getByRole('row')).toHaveCount(7);
 
     /* ----- Ô trống có nút cấp ngay tại chỗ; ô đã cấp thì KHÔNG ----- */
@@ -5296,9 +5299,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       form,
       'button',
-      ['Đóng hộp thoại', 'Thêm', 'TCP', 'UDP', 'TCP + UDP', 'Hủy', 'Lưu'],
+      ['Đóng hộp thoại', 'Thêm', 'Hủy', 'Lưu'],
       'Hộp "Thêm luật NAT"',
     );
+    await expectHandles(form, 'radio', ['TCP', 'UDP', 'TCP + UDP'], 'Hộp "Thêm luật NAT"');
     /*
      * Ô tick "Đang dùng" mang tên là chính nhãn đứng cùng hàng (NET-047); câu "Bỏ tick nếu…"
      * là MÔ TẢ của nó, không phải tên.
@@ -5314,15 +5318,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(enabledBox).toHaveAccessibleDescription(/^Bỏ tick nếu luật đã tắt/);
 
     /* ----- Nhóm giao thức: đúng ba lựa chọn, TCP là mặc định ----- */
-    const protocols = form.getByRole('group', { name: 'Giao thức' });
+    const protocols = form.getByRole('radiogroup', { name: 'Giao thức' });
     await expect(
-      protocols.getByRole('button'),
+      protocols.getByRole('radio'),
       'mất "TCP + UDP" thì mọi rule VPN phải khai làm hai dòng',
     ).toHaveText(['TCP', 'UDP', 'TCP + UDP']);
-    await expect(protocols.getByRole('button', { name: 'TCP', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(protocols.getByRole('radio', { name: 'TCP', exact: true })).toBeChecked();
 
     /* ----- Ô cổng dạng CHIP: thêm, bỏ ra, và nhận cả một DẢI ----- */
     const portInput = form.getByRole('textbox', { name: 'Cổng ngoài', exact: true });
@@ -5477,10 +5478,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(form.getByRole('checkbox', { name: 'Đang dùng', exact: true })).toBeChecked();
     await expect(
       form
-        .getByRole('group', { name: 'Giao thức' })
-        .getByRole('button', { name: 'UDP', exact: true }),
+        .getByRole('radiogroup', { name: 'Giao thức' })
+        .getByRole('radio', { name: 'UDP', exact: true }),
       'giao thức cũ phải được giữ — nhảy về TCP là âm thầm đổi nghĩa cả rule',
-    ).toHaveAttribute('aria-pressed', 'true');
+    ).toBeChecked();
 
     /* ----- Chế độ sửa: đúng MỘT khoảng, nên ô nhập bị tháo hẳn ----- */
     await expect(
@@ -5581,7 +5582,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    */
   async function tenTheoVaiTro(
     scope: Locator,
-    role: 'button' | 'textbox' | 'combobox',
+    role: 'button' | 'textbox' | 'combobox' | 'radio',
   ): Promise<string[]> {
     const raw = await scope.getByRole(role).evaluateAll((els) =>
       els.map((el) => {
@@ -6776,19 +6777,33 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ===== KHẲNG ĐỊNH QUAN TRỌNG NHẤT =====
-     * Toàn bộ nút trong vùng nội dung = năm nút lọc theo loại + bộ nút CHỈ ĐỌC (khoảng ngày,
-     * sắp xếp, lật trang, Xuất Excel — DP-004). Không một nút nào ghi. Con số đếm cắt ra so
-     * riêng, vì nó thay đổi theo dữ liệu; phần CHỮ thì cố định.
+     * Toàn bộ điều khiển trong vùng nội dung = năm lựa chọn lọc theo loại + ba khoảng thanh lý
+     * (radio) + bộ nút CHỈ ĐỌC (từ–đến ngày, sắp xếp, lật trang, Xuất Excel — DP-004). Không
+     * một nút nào ghi. Con số đếm cắt ra so riêng, vì nó thay đổi theo dữ liệu; phần CHỮ thì
+     * cố định.
      */
     // Nút ⋯ của từng dòng (chỉ dẫn đường, không ghi gì) không tính vào bộ nút.
-    const nhomLoai = main.getByRole('group', { name: 'Lọc theo loại hồ sơ' });
-    const tenNut = (await tenTheoVaiTro(nhomLoai, 'button')).filter(
-      (ten) => !ten.startsWith('Thao tác với'),
-    );
+    const nhomLoai = main.getByRole('radiogroup', { name: 'Lọc theo loại hồ sơ' });
+    const tenNut = await tenTheoVaiTro(nhomLoai, 'radio');
     expect(
       tenNut.map((ten) => ten.replace(/\s+\d+$/, '')),
-      'Nhóm lọc theo loại có đúng năm nút',
+      'Nhóm lọc theo loại có đúng năm lựa chọn',
     ).toEqual(sap(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ', 'Đường truyền']));
+    expect(
+      sap((await tenTheoVaiTro(main, 'radio')).map((ten) => ten.replace(/\s+\d+$/, ''))),
+      'Lựa chọn lọc của kho: năm loại + ba khoảng thanh lý (DP-004)',
+    ).toEqual(
+      sap([
+        'Tất cả',
+        'Thiết bị',
+        'Phần mềm',
+        'Tài khoản dịch vụ',
+        'Đường truyền',
+        'Tháng này',
+        'Quý này',
+        'Năm nay',
+      ]),
+    );
     expect(
       sap(
         (await tenTheoVaiTro(main, 'button'))
@@ -6798,15 +6813,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Kho thanh lý CHỈ được có nút lọc/đọc — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
     ).toEqual(
       sap([
-        'Tất cả',
-        'Thiết bị',
-        'Phần mềm',
-        'Tài khoản dịch vụ',
-        'Đường truyền',
-        // DP-004: khoảng thanh lý, từ–đến ngày, sắp xếp, lật trang, xuất đúng cái đang xem.
-        'Tháng này',
-        'Quý này',
-        'Năm nay',
+        // DP-004: từ–đến ngày, sắp xếp, lật trang, xuất đúng cái đang xem.
         'Thanh lý từ ngày',
         'Thanh lý đến ngày',
         'Sắp xếp',
@@ -6856,7 +6863,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     );
 
     await expect(
-      main.getByRole('group', { name: 'Lọc theo loại hồ sơ' }),
+      main.getByRole('radiogroup', { name: 'Lọc theo loại hồ sơ' }),
       'Năm nút lọc phải nằm trong một nhóm có tên — rời rạc thì trình đọc màn hình không biết chúng là một bộ',
     ).toBeVisible();
 
@@ -6872,7 +6879,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toBeVisible();
 
     // Bộ lọc CHẠY THẬT: bấm "Thiết bị" thì tài khoản dịch vụ biến đi.
-    await main.getByRole('button', { name: /^Thiết bị \d+$/ }).click();
+    await main.getByRole('radio', { name: /^Thiết bị \d+$/ }).click();
     await expect(
       main.getByRole('row', { name: new RegExp(maMay) }),
       'Lọc theo Thiết bị thì thiết bị phải còn',

@@ -8,12 +8,14 @@ import { formatDate, orDash } from "@/lib/format";
 import { maskOfCidr } from "@/lib/ipv4";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel, useOwnerAttachments } from "@/ui/attachment-panel";
+import { CellNote } from "@/ui/cell-note";
 import { CopyButton } from "@/ui/copy-button";
 import { Dialog } from "@/ui/dialog";
 import { DatePicker } from "@/ui/date-picker";
 import { EmptyState, LoadError, Loading } from "@/ui/load-state";
 import { Field } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
+import { SegmentedRadio } from "@/ui/segmented-radio";
 import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
@@ -388,39 +390,36 @@ export function SubnetPane({
             Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
             lời. Chip "Đã ngừng dùng" chỉ có ở dải đã ngừng dùng — dải đang dùng không còn hồ sơ
             tắt nào hiện ra (hồ sơ nhập nhầm bị xóa hẳn khỏi màn, Q-15). */}
-        <div className="segmented" role="group" aria-label={t("ipam.status")}>
-          {(subnetDisabled ? [...SLOT_FILTERS, VOIDED_FILTER] : SLOT_FILTERS).map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={shown === key ? "on" : undefined}
-              aria-pressed={shown === key}
-              onClick={() => {
-                setStatus(key);
-                setPage(1);
-                setView("list");
-              }}
-            >
-              {t(key === "all" ? "ipam.filterAll" : BUCKET_KEY[key])}
-              {" "}
-              <span className="seg-count">{counts[key]}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedRadio
+          label={t("ipam.status")}
+          value={shown}
+          onChange={(key) => {
+            setStatus(key);
+            setPage(1);
+            setView("list");
+          }}
+          options={(subnetDisabled ? [...SLOT_FILTERS, VOIDED_FILTER] : SLOT_FILTERS).map(
+            (key) => ({
+              value: key,
+              label: (
+                <>
+                  {t(key === "all" ? "ipam.filterAll" : BUCKET_KEY[key])}{" "}
+                  <span className="seg-count">{counts[key]}</span>
+                </>
+              ),
+            }),
+          )}
+        />
         {!subnetDisabled ? (
-          <div className="segmented" role="group" aria-label={t("ipam.viewGroup")}>
-            {(["list", "map"] as const).map((key) => (
-              <button
-                key={key}
-                type="button"
-                className={view === key ? "on" : undefined}
-                aria-pressed={view === key}
-                onClick={() => setView(key)}
-              >
-                {t(key === "list" ? "ipam.viewList" : "ipam.viewMap")}
-              </button>
-            ))}
-          </div>
+          <SegmentedRadio<"list" | "map">
+            label={t("ipam.viewGroup")}
+            value={view}
+            onChange={setView}
+            options={(["list", "map"] as const).map((key) => ({
+              value: key,
+              label: t(key === "list" ? "ipam.viewList" : "ipam.viewMap"),
+            }))}
+          />
         ) : null}
       </div>
 
@@ -563,12 +562,8 @@ export function SubnetPane({
                       <td data-label={t("ipam.usedBy")}>
                         {slot.usedBy ? slot.usedBy : <Empty />}
                         {/* Ghi chú đọc được ngay trên bảng — cả với dải đã tắt, nơi hộp Sửa
-                            không còn mở được. Một dòng, đủ câu ở `title`. */}
-                        {slot.note ? (
-                          <span className="cell-sub cell-note" title={slot.note}>
-                            {slot.note}
-                          </span>
-                        ) : null}
+                            không còn mở được. Một dòng, bị cắt thì bấm để mở đủ câu. */}
+                        {slot.note ? <CellNote text={slot.note} className="cell-sub" /> : null}
                       </td>
                       <td data-label={t("ipam.assignedAt")} className="col-date">
                         {isFreeRecord(slot) || !slot.assignedAt ? (

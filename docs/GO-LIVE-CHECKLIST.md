@@ -383,20 +383,26 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P2
 
-- [ ] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
+- [x] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
   `form-layout.css:131`, `lightbox.css`, `shell.css`). Tạo token, có cặp dark. Sửa `ops/gate-hex.sh`
   bắt cả `rgb(`/`rgba(`.
   - **Rà 29/09:** còn 7 chỗ trong code: `datepicker.css:155,164,189`, `table.css:313,376,572`,
     `form-layout.css:162`. `base.css`, `lightbox.css`, `shell.css` đã sạch. Cổng vẫn chỉ bắt hex, và
     chú thích "20 chỗ đang nợ" ở `ops/gate-hex.sh:21` đã sai.
+  - **Đã sửa:** 7 chỗ thành token (`--shadow-float`, `--on-brand-veil[-soft]`, `--on-brand-press`,
+    `--shadow`, `--surface-2`), có cặp dark. `ops/gate-hex.sh` bắt thêm `rgb()/rgba()/hsl()/hsla()`
+    và hex mã hoá URL `%23…` (vẫn bỏ qua chú thích). Bài `token-usage.test.ts` mới: mọi token mang
+    màu phải có cặp `html[data-theme='dark']`.
 - [x] **FE-09 · "Bộ giao diện" (`/dev/components`) tắt ở prod** (Q-15). Cờ build `VITE_DEV_KIT`
   (`web/src/lib/dev-kit.ts`): chỉ `docker-compose.override.e2e.yml` truyền `'1'` (image tag riêng
   `ims-web:dev-kit`) và `vite` dev tự bật. Tắt thì không route (gõ URL ra 404), không mục menu,
   không có trong bảng lệnh, và mã trang không vào bundle. Kiểm: `npm --prefix web run build` rồi
   `grep -c -- --warm web/dist/static/index-*.js` ra 0 (chữ chỉ có trong trang dev); build với
   `VITE_DEV_KIT=1` ra 1. Lazy-load từng route còn lại chưa làm — chưa cần ở cỡ bundle hiện tại.
-- [ ] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
+- [x] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
   - **Rà 29/09:** còn nguyên (`lib/api-client.ts:105`).
+  - **Đã sửa:** `shouldRetryQuery` — thử lại một lần chỉ với lỗi mạng và 5xx; 4xx báo ngay. Kiểm ở
+    `lib/api-client.test.ts`.
 - [x] **FE-11 · Script inline đặt theme** (`index.html:9-18`) cần một hash trong CSP. Làm cùng OPS-04.
   - **Rà 29/09:** xong theo cách khác (1e53e7f): script chuyển ra `web/public/theme-init.js`, nên CSP
     `script-src 'self'` (`web/security-headers.conf:10`) không cần hash. Chưa có E2E kiểm header CSP.
@@ -759,19 +765,31 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
 
 ### P2
 
-- [ ] **OLD-FE-03 · Khoảng 550 dòng CSS chết:**
+- [x] **OLD-FE-03 · Khoảng 550 dòng CSS chết:**
   - `primitives.css:37`, `detail-tabs.css:519`, `form-layout.css:531`, `table.css:375-386`.
   - `filters.css` và `profile.css` vẫn được `@import`.
   - **Rà 29/09:** còn nguyên. `filters.css` (50 dòng) và `profile.css` (224 dòng) chết toàn bộ, vẫn
     `@import` ở `web/src/index.css:15,17`; số dòng cũ ở trên đã lệch.
-- [ ] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
+  - **Đã sửa:** xoá `filters.css` (và `@import`). `profile.css` KHÔNG chết toàn bộ: `.profile-page`,
+    `.profile-card`, `.profile-dl` đang dùng ở `profile-screen.tsx` nên giữ, còn `.stat-grid` 1 cột
+    ≤680px chuyển về `detail-tabs.css`; phần còn lại (~186 dòng) xoá. Xoá rule chết trong
+    `primitives.css`, `detail-tabs.css`, `form-layout.css`, `table.css` — mỗi lớp đã soát không
+    còn trong `web/src/**/*.ts(x)`, `web/index.html`, `e2e/tests` (kể cả lớp ghép động như
+    `is-${bucket}`, `span-${n}`: `is-assigned`/`is-voided`/`span-3` còn sống nên giữ). Tổng
+    ~780 dòng; `npm run build` và các bài Vitest đọc CSS xanh.
+- [x] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
   `shared-kit.css:916`).
   - **Rà 29/09:** còn nguyên, cả ba icon SVG vẫn `stroke='%238a908a'` (`base.css:48`,
     `detail-tabs.css:599`, `shared-kit.css:1592`), chưa có bản đè `html[data-theme='dark']`.
-- [ ] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
+  - **Đã sửa:** icon khay rỗng dùng `mask` + `background-color: var(--ink-3)`; chevron `<select>` và
+    kính lúp (không có `::before`) thành token `--icon-select-chevron`/`--icon-search` có bản dark.
+    Cổng `gate-hex.sh` giờ chặn `%23hex` ngoài `tokens.css`.
+- [x] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
   no-op trong trường hợp đó (`dialog.tsx:~400-437`).
   - **Rà 29/09:** còn nguyên (`dialog.tsx:422`).
-- [ ] **OLD-FE-06 · Còn thiếu:**
+  - **Đã sửa:** nhánh không title bọc `children` trong `<div ref={bodyRef} style="display:contents">`
+    + `DialogDepthContext.Provider`. Kiểm ở `ui/dialog.test.tsx` ("Dialog không có title").
+- [x] **OLD-FE-06 · Còn thiếu:**
   - `/nat` và `/disposal` chưa phân trang.
   - `/expiry` chưa sắp theo cột ở server.
   - `attachment-panel.tsx:103` dùng `getQueryData` thay vì `useMe()`.
@@ -779,7 +797,10 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** xong 3/5 — `/disposal` phân trang (3edeb07), `/nat` phân trang phía client (126ba90),
     `/expiry` sắp theo cột ở server (dc08311). Còn `attachment-panel.tsx:124` (`getQueryData`) và
     interval `RevealDialog` (`reveal-dialog.tsx:143`).
-- [ ] **OLD-FE-07 · Câu chữ:**
+  - **Đã sửa:** `attachment-panel.tsx` đọc quyền xoá qua `useMe()` (vẽ lại khi `me` về sau);
+    `RevealDialog` giữ `onClose`/`onExpire` trong ref nên interval dựng một lần, và hết giờ chỉ
+    báo một lần. Kiểm ở `ui/attachment-panel.test.tsx`, `ui/reveal-dialog.test.tsx`.
+- [x] **OLD-FE-07 · Câu chữ:**
   - "Break-glass" còn để tiếng Anh ở KPI.
   - "Tất cả" lẫn với "Mọi".
   - Còn sót chữ "seat" (`vi.ts:606-607,1415,1420`).
@@ -789,7 +810,12 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** xong 4/6 — "Break-glass" ở KPI, chữ "seat", hai tiêu đề chồng, `incidentsNotYet`
     (a565557, fb6c981, 6a780e1, 8bfa5c3). Còn "Tất cả loại" lẫn "Mọi loại" (`vi.ts:886,1147` với
     `629,1230`) và thẻ dải đã tắt ở danh sách (`ipam-screen.tsx:443`) chưa có người tắt.
-- [ ] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
+  - **Đã sửa:** thống nhất theo dạng chiếm đa số ở thanh lọc ("Mọi site", "Mọi trạng thái"…): ba
+    chỗ "Tất cả loại" (phần mềm, theo dõi hạn, tài khoản dịch vụ) thành "Mọi loại"; sửa theo ở
+    E2E `software`, `expiry`, `di-khap-giao-dien`. Thẻ dải đã tắt dùng chung câu `ipam.voidedBy`
+    với trang chi tiết (ngày · người tắt · lý do); API danh sách vốn đã trả `voidedBy`. Kiểm ở
+    `features/ipam/subnet-card.test.tsx`.
+- [x] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
   - `.segmented` dùng `aria-pressed` thay vì radiogroup.
   - Ma trận quyền thiếu `scope`.
   - Nhảy từ h1 xuống h3 (`port-map-panel.tsx`).
@@ -797,6 +823,15 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `.cell-note` chỉ đọc được nội dung đầy đủ qua `title`.
   - **Rà 29/09:** xong font `td::before` (af00c3a). Ma trận quyền mới có `scope="row"`, header cột còn
     thiếu `scope`. Ba ý còn lại còn nguyên.
+  - **Đã sửa:** component dùng chung `ui/segmented-radio.tsx` (radiogroup/radio, Tab dừng một lần,
+    mũi tên/Home/End), thay cho dải chọn-một ở Kho thanh lý (loại, khoảng), Nhật ký (mốc ngày),
+    màn dải IP (trạng thái, kiểu xem), form NAT (giao thức). Nút bật/tắt độc lập (chip an ninh,
+    ba chip trạng thái NAT, lọc Két) vẫn `aria-pressed` — đúng nghĩa. Ma trận quyền có
+    `scope="col"`/`"colgroup"`; `port-map-panel` h3→h2; `ui/cell-note.tsx` biến ô bị cắt thành nút
+    mở/thu (Danh mục, ghi chú IP, ghi chú NAT). Đã khai `SHARED-REGISTRY.md`. Vitest:
+    `segmented-radio`, `cell-note`, `access-matrix-screen`, `port-map-panel`, `audit-log-loc-nhanh`.
+    E2E sửa theo vai mới (chưa chạy): `di-khap-giao-dien`, `nat`, `ipam`, `ip-xoa-nhap-nham.mobile`,
+    `trau-chuot-a`, `trau-chuot-b`, `disposal`, `phan-mem-han-vua-nhe`.
 - [x] **OLD-BE-03 · Ghi nhật ký:**
   - `@Audited` khai sai tên (`accounts.controller.ts:167`, `catalog.controller.ts:146`).
   - `FIELD_LABEL` thiếu `token`/`currentPassword`/`newPassword` (`validation-messages.ts:37`).
@@ -824,8 +859,11 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   còn lại** (9 tên tệp, khoảng 175 định danh test).
   - **Rà 29/09:** xong vế luật lint (`NO_VIETNAMESE_TEXT`, 25bf181; kiểm ở `web/src/lint-rules.test.ts`).
     Vế đổi tên còn: `quetNguon`, `timVaChoLoc`, `moTimNhanh`… ở 27 file.
-- [ ] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
+- [x] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
   - **Rà 29/09:** còn nguyên.
+  - **Đã sửa:** `ui/reveal-dialog.test.tsx` "onExpire khi hết giờ": gọi đúng một lần cùng
+    `onClose` (bài này bắt được lỗi thật — trước đó bắn 3 lần khi nơi gọi chưa tháo hộp), không
+    gọi khi bấm "Ẩn ngay". Toast `vault.autoHidden` ở `vault-panel.tsx` đi qua đúng callback này.
 
 Chưa đối chiếu: 13 mục trong `_bmad-output/implementation-artifacts/deferred-work.md`. B-16 và B-19
 cần người mở trình duyệt thật để đo.

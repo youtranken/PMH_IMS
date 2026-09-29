@@ -182,6 +182,11 @@
   overflow: hidden;
   margin-bottom: var(--space-7);
 }
+@media (max-width: 680px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .stat {
   background: var(--surface);
   padding: var(--space-5) var(--space-6);
@@ -597,7 +602,7 @@
   min-width: 200px;
 }
 input.search {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238a908a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E");
+  background-image: var(--icon-search);
   background-repeat: no-repeat;
   background-position: left 0.65rem center;
   padding-left: 2rem;
@@ -762,16 +767,6 @@ input.search {
   }
 }
 
-/* 7.5 Borrow board */
-.board-table tr.row-overdue > td {
-  background: var(--danger-soft);
-}
-.board-table tr.row-overdue .mono {
-  color: var(--danger);
-}
-.text-danger {
-  color: var(--danger);
-}
 /* Dòng vừa thêm/vừa đổi sáng lên rồi nhạt dần: máy mới thường rơi vào giữa trang theo thứ tự
    mã, không có dấu này thì mắt không tìm ra nó. Dùng chung cho mọi `.table`. */
 .table tr.row-flash > td {
@@ -793,11 +788,6 @@ input.search {
 }
 
 /* Skeleton fallback khi chunk trang lazy đang tải (code-splitting) */
-.page-fallback {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-}
 .skeleton {
   border-radius: var(--r);
   background: linear-gradient(
@@ -808,13 +798,6 @@ input.search {
   );
   background-size: 400% 100%;
   animation: skeletonShimmer 1.4s ease infinite;
-}
-.skeleton-title {
-  width: 38%;
-  height: 28px;
-}
-.skeleton-block {
-  height: 320px;
 }
 @keyframes skeletonShimmer {
   0% {

@@ -164,7 +164,7 @@ export function PortMapPanel({
       {/* Thanh công cụ của tab: tiêu đề khu + số đếm bên trái, nút thêm bên phải, CÙNG hàng
           ngay dưới thanh tab — tab nào cũng một chỗ cho nút thêm. */}
       <div className="section-bar">
-        <h3 className="form-section-title">{t('ports.own')}</h3>
+        <h2 className="form-section-title">{t('ports.own')}</h2>
         {map.data ? <span className="section-count">{allPorts.length}</span> : null}
         {canEdit ? (
           <button type="button" className="btn primary" onClick={() => setEditing({ port: null })}>
@@ -326,7 +326,7 @@ export function PortMapPanel({
             </TableWrap>
           )}
 
-          <h3 className="form-section-title">{t('ports.incoming')}</h3>
+          <h2 className="form-section-title">{t('ports.incoming')}</h2>
           {incoming.length === 0 ? (
             /* Rỗng thì MỘT dòng — tiêu đề + đoạn giải thích + câu rỗng là ba khối cho một chữ "không". */
             <p className="muted">{t('ports.incomingEmpty')}</p>

@@ -107,8 +107,8 @@ test.describe('Xóa hồ sơ IP nhập nhầm ở 390px', () => {
     await expect(dialog).toHaveCount(0);
 
     // Không chip hồ sơ đã xóa, không mục khôi phục — Q-15.
-    const filters = page.getByRole('group', { name: 'Trạng thái' });
-    await expect(filters.getByRole('button')).toHaveText([/^Tất cả/, /^Đang dùng/, /^Trống/]);
+    const filters = page.getByRole('radiogroup', { name: 'Trạng thái' });
+    await expect(filters.getByRole('radio')).toHaveText([/^Tất cả/, /^Đang dùng/, /^Trống/]);
     await expect(page.getByText(OWNER)).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });

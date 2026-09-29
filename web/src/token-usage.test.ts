@@ -162,3 +162,41 @@ describe('Token dùng đúng KIỂU của nó, không chỉ đúng tên', () => 
     expect(offences).toEqual([]);
   });
 });
+
+/** Token khai trong một khối `selector { … }` đầu tiên khớp `opener` của `tokens.css`. */
+function tokensInBlock(opener: string): Map<string, string> {
+  const source = stripComments(readFileSync(TOKENS_FILE, 'utf8'));
+  const start = source.indexOf(opener);
+  if (start < 0) return new Map();
+  const end = source.indexOf('\n}', start);
+  const out = new Map<string, string>();
+  for (const m of source.slice(start, end).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    out.set(m[1], m[2].trim());
+  }
+  return out;
+}
+
+/** Giá trị có chứa màu viết thẳng: hex, hàm màu, hoặc hex mã hoá URL trong SVG nhúng. */
+const CARRIES_COLOUR = /#[0-9a-f]{3,8}\b|%23[0-9a-f]{3,8}\b|\b(rgba?|hsla?)\(/i;
+
+/**
+ * Token mang màu mà thiếu cặp `html[data-theme='dark']` thì ở theme tối nó giữ nguyên màu
+ * sáng — chính lỗi của icon SVG xám và bóng đổ đen nhạt biến mất trên nền tối.
+ */
+describe('Mọi token mang màu có cặp dark', () => {
+  const light = tokensInBlock(':root {');
+  const dark = tokensInBlock("html[data-theme='dark'] {");
+
+  it('đọc được cả hai khối', () => {
+    expect(light.size).toBeGreaterThan(50);
+    expect(dark.size).toBeGreaterThan(20);
+  });
+
+  it('không token mang màu nào chỉ có bản sáng', () => {
+    const missing = [...light]
+      .filter(([, value]) => CARRIES_COLOUR.test(value))
+      .map(([name]) => name)
+      .filter((name) => !dark.has(name));
+    expect(missing).toEqual([]);
+  });
+});

@@ -152,7 +152,7 @@
      nút mũi tên phải là mực tối trên nền SÁNG mờ — giữ nền tối cũ sẽ thành hai kiểu tương
      phản ngược nhau nằm cạnh nhau trong cùng một dải header. */
   color: var(--on-brand);
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--on-brand-veil);
   display: grid;
   place-items: center;
   line-height: 1;
@@ -161,7 +161,7 @@
 /* :not(:disabled) để THẮNG base `button:hover{background:surface-2}` — nếu không nút mũi tên
    bị nền sáng trên header gradient = "hover trắng" xấu. */
 .dp-nav:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--on-brand-press);
   transform: scale(1.08);
 }
 /* Nút prev khi ở tháng min (không lùi được): mờ hẳn để không trông như nút thường màu trắng. */
@@ -186,7 +186,7 @@
   border-radius: var(--r-sm);
 }
 .dp-title:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--on-brand-veil-soft);
 }
 .dp-body {
   padding: var(--space-4);

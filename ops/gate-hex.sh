@@ -17,10 +17,10 @@
 #
 # `perl -0777` nuốt trọn file rồi xoá mọi khối `/* … */` (kể cả nhiều dòng), sau đó mới soi.
 #
-# CÒN HỔNG, CÓ CHỦ Ý (rà soát 19/09): cổng này chỉ soi `#hex` trong `.css`. Nó KHÔNG bắt
-# `rgb()/rgba()/hsl()` (20 chỗ đang nợ), KHÔNG bắt hex mã hoá URL `%23` trong `url("data:…svg")`
-# (3 chỗ), và KHÔNG soi `.tsx`. Mở rộng biểu thức mà chưa dọn những chỗ ấy thì cổng đỏ ngay —
-# xem `docs/NO-KY-THUAT-LOW-2026-09-19.md`. Đừng nới luật trước khi dọn.
+# Luật bắt ba dạng màu viết thẳng: `#hex`, hàm màu `rgb()/rgba()/hsl()/hsla()`, và hex mã hoá
+# URL `%23…` trong `url("data:…svg")` (icon SVG nhúng giữ nguyên màu ở dark mode). Màu nào
+# cũng phải đi qua token có cặp `html[data-theme='dark']`; icon SVG thì dùng `mask-image` +
+# `background-color: var(--token)`. Cổng KHÔNG soi `.tsx`.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -48,7 +48,7 @@ while IFS= read -r f; do
     printf '\033[31m✗ perl hỏng khi đọc %s — không coi đây là XANH.\033[0m\n' "$f"
     exit 1
   }
-  if printf '%s' "$sach" | grep -qE "#[0-9a-fA-F]{3,8}\b"; then
+  if printf '%s' "$sach" | grep -qiE "#[0-9a-f]{3,8}\b|%23[0-9a-f]{3,8}\b|\b(rgba?|hsla?)\("; then
     rogue="${rogue}${f}"$'\n'
   fi
 done < <(find web/src -name "*.css" ! -path "*/css/tokens.css")
@@ -64,6 +64,6 @@ if [ "$soFile" -lt 10 ]; then
 fi
 
 if [ -n "$rogue" ]; then
-  printf '\033[31mCó hex màu trong LUẬT CSS ngoài tokens.css:\033[0m\n%s' "$rogue"
+  printf '\033[31mCó màu viết thẳng (hex / hex mã hoá URL / rgb / hsl) trong LUẬT CSS ngoài tokens.css:\033[0m\n%s' "$rogue"
   exit 1
 fi

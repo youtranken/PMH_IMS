@@ -67,14 +67,14 @@ describe('Nhật ký — lọc nhanh theo ngày, nhóm theo ngày, chọn hành 
   it('"7 ngày" điền đúng từ–đến lên URL và sáng nút; bấm lại là gỡ', async () => {
     stubFetch();
     renderAt('/admin/audit-log');
-    const preset = await screen.findByRole('button', { name: '7 ngày' });
+    const preset = await screen.findByRole('radio', { name: '7 ngày' });
     await userEvent.click(preset);
     const { from, to } = recentRange(7, todayIso());
     const address = screen.getByRole('status', { name: 'địa chỉ' });
     expect(address.textContent).toContain(`from=${from}`);
     expect(address.textContent).toContain(`to=${to}`);
-    expect(screen.getByRole('button', { name: '7 ngày' })).toHaveAttribute('aria-pressed', 'true');
-    await userEvent.click(screen.getByRole('button', { name: '7 ngày' }));
+    expect(screen.getByRole('radio', { name: '7 ngày' })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: '7 ngày' }));
     expect(address.textContent).not.toContain('from=');
   });
 
