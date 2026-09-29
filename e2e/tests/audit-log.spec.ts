@@ -400,7 +400,11 @@ test.describe('Nhật ký — gộp sự kiện lặp', () => {
         res.url().includes('/api/v1/admin/audit?') &&
         new URL(res.url()).searchParams.get('group') === null,
     );
-    await page.getByRole('checkbox', { name: 'Gộp sự kiện lặp' }).uncheck();
+    // Ô tick đọc trạng thái từ URL: lượt ghi URL đi qua react-router nên DOM đổi SAU cú bấm một
+    // nhịp — `uncheck()` đo ngay sau cú bấm nên đỏ chập chờn. Bấm rồi CHỜ trạng thái mới.
+    const gop = page.getByRole('checkbox', { name: 'Gộp sự kiện lặp' });
+    await gop.click();
+    await expect(gop).not.toBeChecked();
     expect((await each).status()).toBe(200);
     await expect(page).toHaveURL(/each=1/);
     expect(
