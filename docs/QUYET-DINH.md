@@ -224,6 +224,11 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   `ACCOUNT_DISABLED`), không gộp thành "sai email hoặc mật khẩu". Người dùng phải biết vì sao không
   vào được để gọi đúng người. Rủi ro chấp nhận: người ngoài dò được một email có tồn tại hay không
   (SEC-10 — không sửa).
+- **Tên hành động của danh mục trong nhật ký giữ theo từng loại** (`catalog.site.created`,
+  `catalog.vendor.created`…) dù API khai tên chung `catalog.created`: nhật ký phải nói rõ đã đụng
+  loại danh mục nào (OLD-BE-03 — giữ như cũ).
+- **VLAN của cổng thiết bị giữ kiểu chữ**: chỉ nhận để trống, `trunk`, hoặc số 1–4094. Không đổi sang
+  kiểu số vì sẽ mất giá trị `trunk` hay gặp trên cổng uplink (OLD-DB-04).
 
 ### Q-09 · Tài liệu
 
