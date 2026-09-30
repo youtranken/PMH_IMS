@@ -256,7 +256,9 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   dấu cách; lưu thì bỏ dấu cách.
 - **Giấy tờ đính kèm:** tối đa 25 MB mỗi file, tối đa 6 file mỗi lượt chọn (đưa vào
   `system_config`, AD-11). Nhận thêm Word/PowerPoint dạng mới (docx, pptx); loại có macro và file
-  chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi.
+  chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi. File đã xoá giữ nội dung
+  thêm `file.purge_after_days` ngày (mặc định 30) rồi mới gỡ khỏi ổ đĩa; tên file và nhật ký vẫn
+  giữ (30/09/2026: xoá mềm giữ blob mãi thì ổ đĩa chỉ lớn lên).
 - **Thuật ngữ:** "Phòng ban" thay cho "Bộ phận" trên toàn hệ thống; ô chọn trên hồ sơ thiết bị ghi
   "Phòng ban sử dụng". Import Excel vẫn nhận cột "Bộ phận" của file cũ.
 - **Thao tác trên dòng / trang chi tiết:** nút "Sửa" để ngoài; mọi thao tác khác vào menu ⋮ (ba
