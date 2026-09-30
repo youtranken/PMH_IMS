@@ -140,12 +140,13 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
                         key: "disable",
                         label: t("serviceAccounts.disableMenu"),
                         onSelect: () => setSwitching(true),
-                        danger: true,
+                        warn: true,
                       }
                     : {
                         key: "enable",
                         label: t("serviceAccounts.enableMenu"),
                         onSelect: () => setSwitching(true),
+                        ok: true,
                       },
                 ]}
               />

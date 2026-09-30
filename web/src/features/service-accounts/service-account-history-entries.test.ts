@@ -82,7 +82,7 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
           name: { before: 'A', after: 'B' },
           department: { before: 'Kế toán', after: 'Kỹ thuật' },
         },
-        expected: 'tên: A → B; bộ phận: Kế toán → Kỹ thuật',
+        expected: 'tên: A → B; phòng ban: Kế toán → Kỹ thuật',
       },
       // Trường không đổi đi kèm chỉ để làm bối cảnh — "A → A" bắt người đọc dừng lại tìm xem
       // đã đổi gì.

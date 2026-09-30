@@ -5,7 +5,7 @@ import { foldSearch } from '@/lib/search-fold';
 /**
  * Ô nhập chữ CÓ GỢI Ý từ một danh sách, nhưng vẫn gõ tự do được (AD-15).
  *
- * Dùng cho những ô mà danh mục chỉ nên HƯỚNG chứ không được ép: "Người / bộ phận dùng" của
+ * Dùng cho những ô mà danh mục chỉ nên HƯỚNG chứ không được ép: "Người / phòng ban dùng" của
  * một IP đôi khi là "P. Kế toán", đôi khi là "Chị Lan — Kế toán", đôi khi là hai phòng cùng
  * dùng chung một máy in. Ép thành khóa ngoại là ép người dùng khai sai cho vừa cái ô.
  *

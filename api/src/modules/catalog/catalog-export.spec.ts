@@ -1,5 +1,5 @@
 import { CATALOG_ENTITIES } from './catalog.types';
-import { catalogExportColumns } from './catalog-export';
+import { CATALOG_SHEET_NAME, catalogExportColumns } from './catalog-export';
 
 /** File xuất danh mục đọc giống bảng trên màn: đúng tiêu đề cột, giá trị người đọc được. */
 describe('catalogExportColumns', () => {
@@ -9,6 +9,11 @@ describe('catalogExportColumns', () => {
     ['service_port', ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái']],
   ] as const)('%s có đúng bộ cột của bảng', (entity, headers) => {
     expect(catalogExportColumns(entity).map((c) => c.header)).toEqual(headers);
+  });
+
+  // Q-18: sheet đọc đúng tên tab trên màn Danh mục — "Phòng ban", không còn "Bộ phận".
+  it('sheet danh mục phòng ban tên "Phòng ban"', () => {
+    expect(CATALOG_SHEET_NAME.department).toBe('Phòng ban');
   });
 
   it('mọi danh mục đều có bộ cột và cột cuối là Trạng thái', () => {

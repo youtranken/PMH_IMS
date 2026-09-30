@@ -87,7 +87,7 @@ test.describe('Vòng đời IP', () => {
     // Hồ sơ Trống cấp lại bằng CÙNG nút/hộp "Cấp IP" như một ô trống (NET-002).
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const assign = page.getByRole('dialog');
-    await assign.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Anh Hùng — Kho');
+    await assign.getByRole('combobox', { name: 'Người / phòng ban dùng' }).fill('Anh Hùng — Kho');
     await assign.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(row.getByText('Anh Hùng — Kho')).toBeVisible();
     await expect(page.getByText('Còn 5 IP trống')).toBeVisible();

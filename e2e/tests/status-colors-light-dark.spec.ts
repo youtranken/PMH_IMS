@@ -1,8 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   E2E_SA,
+  catalogItem,
   firstLogin,
   isoInDays,
+  resetCatalog,
   resetDevices,
   resetSoftware,
   resetUsers,
@@ -251,4 +253,45 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
     critPaint.color,
     'ở chế độ tối, "gấp" và "sắp" phải khác màu — nếu không màu đã hết nghĩa',
   ).not.toBe(warnPaint.color);
+});
+
+/*
+ * Q-18: "Đã ngừng dùng" là huy hiệu ĐỎ ở mọi màn Ngừng dùng / Dùng lại (danh mục, dải IP, luật
+ * NAT, tài khoản dịch vụ). Xám thì đọc như chữ phụ — người ta gán tiếp vào một mục đã
+ * ngừng mà không nhận ra. Đo ở màn Danh mục vì đó là màn chủ dự án chỉ ra.
+ */
+test('huy hiệu "Đã ngừng dùng" ở Danh mục đỏ, đọc được ở CẢ chế độ sáng lẫn tối', async ({
+  page,
+}) => {
+  resetCatalog();
+  await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const onCode = `E2E-MAU-ON-${stamp}`;
+  const offCode = `E2E-MAU-OFF-${stamp}`;
+  await catalogItem(page, 'site', { code: onCode, name: 'Site E2E đang dùng' });
+  const offId = await catalogItem(page, 'site', { code: offCode, name: 'Site E2E đã ngừng' });
+  const off = await page.request.patch(`/api/v1/catalog/site/${offId}/active`, {
+    headers: await writeHeaders(page),
+    data: { active: false },
+  });
+  expect(off.ok()).toBeTruthy();
+
+  await page.goto('/admin/catalog');
+  await page.getByRole('searchbox', { name: /Tìm/ }).fill(`E2E-MAU-`);
+  const inactive = page
+    .getByRole('row', { name: new RegExp(offCode) })
+    .getByText('Đã ngừng dùng', { exact: true });
+  const active = page
+    .getByRole('row', { name: new RegExp(onCode) })
+    .getByText('Đang dùng', { exact: true });
+
+  for (const theme of ['light', 'dark'] as const) {
+    await useTheme(page, theme);
+    await expectLegibleBadge(inactive, `[${theme}] huy hiệu "Đã ngừng dùng"`);
+    await expectLegibleBadge(active, `[${theme}] huy hiệu "Đang dùng"`);
+    const [offPaint, onPaint] = [await paintOf(inactive), await paintOf(active)];
+    expect(offPaint.color, `[${theme}] "Đã ngừng dùng" và "Đang dùng" phải khác màu`).not.toBe(
+      onPaint.color,
+    );
+  }
 });

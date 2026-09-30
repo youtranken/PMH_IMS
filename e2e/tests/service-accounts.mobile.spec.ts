@@ -18,7 +18,7 @@ test.beforeEach(() => {
  * UX-DR2 — danh sách và hồ sơ tài khoản dịch vụ là màn ĐỌC, nên phải dùng được ở 390px.
  *
  * Cảnh dùng thật: đang ở nhà khách hàng, cần biết tài khoản cổng VNPT thuộc về ai và mật khẩu
- * cất ở đâu. Bảng này rộng hơn danh sách thiết bị (mã · tên · loại · đăng nhập · bộ phận ·
+ * cất ở đâu. Bảng này rộng hơn danh sách thiết bị (mã · tên · loại · đăng nhập · phòng ban ·
  * người phụ trách · trạng thái) nên nó là chỗ dễ tràn ngang nhất trong đợt màn mới.
  */
 test('danh sách và hồ sơ tài khoản dịch vụ đọc được ở 390px', async ({ page }) => {

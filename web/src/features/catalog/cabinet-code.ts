@@ -8,11 +8,22 @@ export function suggestCabinetCode(siteCode: string, existingCodes: string[]): s
   const prefix = `TU-${siteCode.trim().toUpperCase()}-`;
   let max = 0;
   for (const code of existingCodes) {
-    const upper = code.trim().toUpperCase();
-    if (!upper.startsWith(prefix)) continue;
-    const tail = upper.slice(prefix.length);
-    if (!/^\d+$/.test(tail)) continue;
-    max = Math.max(max, Number(tail));
+    max = Math.max(max, cabinetNumber(code, siteCode) ?? 0);
   }
   return `${prefix}${String(max + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Số tủ trong site ("tủ 1, 2, 3") đọc từ đuôi mã `TU-<MÃ SITE>-NN`. Không có cột số tủ riêng:
+ * mã đã duy nhất trong site và đã mang số, một cột nữa là hai nơi phải giữ khớp nhau. Mã không
+ * theo quy ước thì không có số — trả `null`, form không bịa ra số.
+ */
+export function cabinetNumber(code: string, siteCode: string): number | null {
+  const site = siteCode.trim().toUpperCase();
+  if (!site) return null;
+  const prefix = `TU-${site}-`;
+  const upper = code.trim().toUpperCase();
+  if (!upper.startsWith(prefix)) return null;
+  const tail = upper.slice(prefix.length);
+  return /^\d+$/.test(tail) ? Number(tail) : null;
 }

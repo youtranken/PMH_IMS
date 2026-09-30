@@ -181,7 +181,7 @@ const ENTITY_COLUMNS: Record<
     },
     {
       accessorKey: 'description',
-      header: t('catalog.description'),
+      header: t('catalog.cabinetDescription'),
       cell: ({ row }) => note((row.original as CabinetRow).description),
     },
     {
@@ -516,7 +516,7 @@ export function CatalogScreen({ me }: { me: Me }) {
       accessorKey: 'active',
       header: t('catalog.status'),
       cell: ({ row }) => (
-        <span className={`badge ${row.original.active ? 'ok' : 'muted'}`}>
+        <span className={`badge ${row.original.active ? 'ok' : 'danger'}`}>
           {t(row.original.active ? 'catalog.active' : 'catalog.inactive')}
         </span>
       ),
@@ -551,7 +551,7 @@ export function CatalogScreen({ me }: { me: Me }) {
     title: (row) => mobileTitle(entity, row),
     // Trạng thái chỉ hiện khi mục đã ngừng dùng — "Đang dùng" gần như dòng nào cũng giống nhau.
     badge: (row) =>
-      row.active ? null : <span className="badge muted">{t('catalog.inactive')}</span>,
+      row.active ? null : <span className="badge danger">{t('catalog.inactive')}</span>,
     subtitle: (row) =>
       entity === 'cabinet' ? siteNames.get((row as CabinetRow).siteId) ?? null : null,
     meta: (row) =>
@@ -574,6 +574,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         /* Ngừng dùng là lấy đi nhưng ĐẢO LẠI ĐƯỢC (`warn`, nhóm riêng); Xóa thì không (`danger`).
            Cùng màu đỏ đứng sát nhau thì hai việc khác hẳn hệ quả trông như một. */
         warn: catalogRow.active,
+        ok: !catalogRow.active,
         onSelect: () => {
           void (async () => {
             const ok = await askConfirm({

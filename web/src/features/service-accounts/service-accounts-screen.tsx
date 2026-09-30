@@ -216,13 +216,14 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                             label: t('serviceAccounts.disable'),
                             onSelect: () =>
                               setSwitching({ row: row.original, next: 'disabled' }),
-                            danger: true,
+                            warn: true,
                           }
                         : {
                             key: 'enable',
                             label: t('serviceAccounts.enable'),
                             onSelect: () =>
                               setSwitching({ row: row.original, next: 'active' }),
+                            ok: true,
                           },
                     ]}
                   />

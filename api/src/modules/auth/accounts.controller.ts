@@ -19,11 +19,11 @@ import {
   IsOptional,
   IsString,
   Length,
-  Matches,
   Validate,
 } from 'class-validator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
+import { IsPhone } from '../../common/phone';
 import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -42,13 +42,9 @@ import { NoStepUp, RequiresStepUp } from './step-up.decorator';
  * Không bắt buộc vì hàng chục tài khoản đã tạo từ trước không có sẵn hai giá trị này; bắt
  * buộc ngay là khóa luôn màn Sửa cho tới khi có người đi điền đủ cho mọi người.
  */
-class ContactDto {
+export class ContactDto {
   @IsOptional()
-  @IsString()
-  @Length(0, 32, { message: 'Số điện thoại tối đa 32 ký tự.' })
-  // Chỉ số, dấu cách, +, -, chấm và ngoặc — đủ cho mọi cách viết ("0912 345 678",
-  // "+84 28 3822 1234", "(028) 3822-1234") mà vẫn chặn được người gõ nhầm cả một câu vào đây.
-  @Matches(/^[0-9+\-.() ]*$/, { message: 'Số điện thoại chỉ gồm số và các ký tự + - . ( ).' })
+  @IsPhone(32)
   phone?: string;
 
   @IsOptional()

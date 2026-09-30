@@ -91,7 +91,7 @@ test.describe('Thiết bị ↔ IP', () => {
 });
 
 test.describe('Sổ IP nối về máy', () => {
-  test('NET-017: hồ sơ đã thu hồi ghi chủ cũ — mã máy, hoặc người/bộ phận', async ({ page }) => {
+  test('NET-017: hồ sơ đã thu hồi ghi chủ cũ — mã máy, hoặc người/phòng ban', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     const code = `PR-E2E-CU-${f.stamp}`;

@@ -564,7 +564,7 @@ export class CatalogService {
         };
       case 'department':
         return {
-          ...(input.name !== undefined ? { name: requireText(input.name, 'Tên bộ phận') } : {}),
+          ...(input.name !== undefined ? { name: requireText(input.name, 'Tên phòng ban') } : {}),
           ...(input.description !== undefined ? { description: text(input.description) } : {}),
         };
       case 'isp_provider':

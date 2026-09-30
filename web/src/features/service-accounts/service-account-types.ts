@@ -103,7 +103,7 @@ export const STATUS_KEY: Record<ServiceAccountStatus, string> = {
 
 export const STATUS_TONE: Record<ServiceAccountStatus, string> = {
   active: 'ok',
-  disabled: 'muted',
+  disabled: 'danger',
 };
 
 /**

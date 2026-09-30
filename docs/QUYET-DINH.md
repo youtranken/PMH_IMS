@@ -47,6 +47,9 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 - Trạng thái: **Đang dùng / Tạm ngưng / Thanh lý**. Thanh lý ghi ngày và người thanh lý; lịch sử
   giữ nguyên.
 - Draytek là một **thiết bị**. Một Draytek gắn được nhiều line (dual-WAN, ví dụ FPT + Viettel).
+- **Làm rõ (30/09/2026, chủ dự án chốt):** "băng thông" là **tốc độ gói cước** của từng line —
+  giao diện và file Excel gọi là **"Tốc độ gói cước"**. Nó thuộc đường truyền, không thêm cột tốc
+  độ vào danh mục Nhà mạng (một nhà mạng bán nhiều gói khác tốc độ).
 
 ### Q-05 · Bộ máy xin – duyệt dùng chung; chữ ký
 

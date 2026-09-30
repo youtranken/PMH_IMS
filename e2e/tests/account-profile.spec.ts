@@ -52,7 +52,8 @@ test.describe('Hồ sơ tài khoản', () => {
     // Cả hai giá trị hiện NGAY trên danh sách — không phải mở lại hộp mới thấy.
     const row = page.getByRole('row', { name: new RegExp(E2E_SA.email) });
     await expect(row).toContainText(`NV-${stamp}`);
-    await expect(row).toContainText('0912 345 678');
+    // Q-18: gõ có dấu cách cho dễ soát, lưu thì bỏ dấu cách.
+    await expect(row).toContainText('0912345678');
   });
 
   test('tìm được theo số điện thoại và theo mã nhân viên, không chỉ theo tên', async ({

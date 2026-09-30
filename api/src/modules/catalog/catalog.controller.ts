@@ -44,8 +44,9 @@ import { CATALOG_SORT_DEFAULT, CATALOG_SORT_KEYS, CatalogService } from './catal
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
 import { NoStepUp } from '../auth/step-up.decorator';
 import { CatalogUsageRegistry } from '../../common/catalog-usage.registry';
+import { IsPhone } from '../../common/phone';
 
-class CatalogBodyDto {
+export class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
   @IsOptional() @IsString() @Length(1, 160) name?: string;
   @IsOptional() @IsString() @Length(0, 400) address?: string;
@@ -55,12 +56,12 @@ class CatalogBodyDto {
   @IsOptional() @IsBoolean() hasPortMap?: boolean;
   @IsOptional() @IsBoolean() isRouter?: boolean;
   @IsOptional() @IsString() @Length(0, 200) supplies?: string;
-  @IsOptional() @IsString() @Length(0, 40) phone?: string;
+  @IsOptional() @IsPhone(40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
 
   // Ba danh mục bộ phận / nhà mạng / dịch vụ. Một DTO chung cho mọi loại, đúng nếp sẵn có: `toRow` phía service
-  // mới là chỗ quyết định loại nào nhận trường nào — DTO chỉ chặn rác và giới hạn độ dài.
-  @IsOptional() @IsString() @Length(0, 40) hotline?: string;
+  // mới là chỗ quyết định loại nào nhận trường nào — DTO chỉ chặn rác, giới hạn độ dài và chuẩn hóa số điện thoại (Q-18).
+  @IsOptional() @IsPhone(40) hotline?: string;
 
   @IsOptional()
   @IsIn(['tcp', 'udp', 'both'], { message: 'Giao thức phải là TCP, UDP hoặc cả hai.' })

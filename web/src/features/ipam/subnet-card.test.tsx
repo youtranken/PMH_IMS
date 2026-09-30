@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { renderWithI18n, screen } from '@/test/test-utils';
+import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { SubnetCard } from './ipam-screen';
 import type { SubnetRow } from './ipam-types';
 
@@ -68,5 +68,42 @@ describe('SubnetCard — dải đã ngừng dùng', () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/Gộp vào VLAN 20/)).toHaveTextContent('bởi —');
+  });
+});
+
+/* Q-18: "Đã ngừng dùng" là huy hiệu đỏ; "Ngừng dùng" đảo lại được nên chỉ `warn`, "Dùng lại" xanh. */
+describe('SubnetCard — màu trạng thái và thao tác', () => {
+  function renderCard(subnet: SubnetRow) {
+    return renderWithI18n(
+      <MemoryRouter>
+        <SubnetCard
+          subnet={subnet}
+          active={false}
+          canEdit
+          fullPercent={80}
+          onEdit={noop}
+          onHide={noop}
+          onRestore={noop}
+          onDelete={noop}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  it('dải đã ngừng dùng: huy hiệu đỏ, "Dùng lại" màu xanh', async () => {
+    const user = userEvent.setup();
+    renderCard(base);
+    expect(screen.getByText('Đã ngừng dùng', { selector: '.badge' })).toHaveClass('danger');
+    await user.click(screen.getByRole('button', { name: /Thao tác với/ }));
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại' })).toHaveClass('ok');
+  });
+
+  it('dải đang dùng: "Ngừng dùng" là việc cảnh báo, không đỏ', async () => {
+    const user = userEvent.setup();
+    renderCard({ ...base, voidedAt: null, voidedBy: null, voidReason: null });
+    await user.click(screen.getByRole('button', { name: /Thao tác với/ }));
+    const item = screen.getByRole('menuitem', { name: 'Ngừng dùng' });
+    expect(item).toHaveClass('warn');
+    expect(item).not.toHaveClass('danger');
   });
 });

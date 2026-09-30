@@ -1140,7 +1140,7 @@ function requireOwner(
   if (deviceId || usedBy?.trim()) return;
   throw new BadRequestException({
     code: 'IP_OWNER_REQUIRED',
-    message: 'Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.',
+    message: 'Chọn thiết bị hoặc nhập người/phòng ban dùng IP này.',
   });
 }
 

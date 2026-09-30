@@ -109,7 +109,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: 'INTERNAL_ERROR',
-      message: 'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo bộ phận IT.',
+      message: 'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo phòng IT.',
     };
   }
 

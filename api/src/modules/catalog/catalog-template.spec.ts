@@ -108,7 +108,7 @@ describe('File mẫu danh mục — sinh ra rồi đọc lại được (story 2
           id: 'v1',
           name: 'Dell Partner VN',
           supplies: 'Máy chủ Dell',
-          phone: '0909 111 222',
+          phone: '0909111222',
           contact: null,
           active: true,
           createdAt: now,

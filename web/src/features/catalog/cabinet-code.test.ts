@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { suggestCabinetCode } from './cabinet-code';
+import { cabinetNumber, suggestCabinetCode } from './cabinet-code';
 
 describe('suggestCabinetCode — gợi ý mã tủ TU-<SITE>-NN', () => {
   it.each([
@@ -11,5 +11,20 @@ describe('suggestCabinetCode — gợi ý mã tủ TU-<SITE>-NN', () => {
     ['quá 99 thì cứ tăng tiếp', 'HO', ['TU-HO-99'], 'TU-HO-100'],
   ])('%s', (_case, site, codes, expected) => {
     expect(suggestCabinetCode(site, codes)).toBe(expected);
+  });
+});
+
+/* Số tủ ("tủ 1, 2, 3" của site) là đuôi mã theo quy ước — không có cột riêng. */
+describe('cabinetNumber — đọc số tủ từ mã TU-<SITE>-NN', () => {
+  it.each([
+    ['theo quy ước', 'TU-E2E-HCM-03', 'E2E-HCM', 3],
+    ['không phân biệt hoa thường', 'tu-ho-12', 'HO', 12],
+    ['số lớn hơn 99', 'TU-HO-100', 'HO', 100],
+    ['mã không theo quy ước', 'R01', 'HO', null],
+    ['đuôi không phải số', 'TU-HO-A', 'HO', null],
+    ['mã của site khác', 'TU-HO2-05', 'HO', null],
+    ['chưa chọn site', 'TU-HO-05', '', null],
+  ])('%s', (_case, code, site, expected) => {
+    expect(cabinetNumber(code, site)).toBe(expected);
   });
 });

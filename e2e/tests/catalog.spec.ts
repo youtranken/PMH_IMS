@@ -58,6 +58,10 @@ test.describe('Danh mục', () => {
     await cabinetForm.getByLabel('Mã').fill(cabinetCode);
     await cabinetForm.getByRole('button', { name: 'Thuộc site' }).click();
     await page.getByRole('option', { name: new RegExp(siteCode) }).click();
+    // Vị trí đặt tủ khai ở ô mô tả (không có cột riêng) — form phải nói ra điều đó.
+    await expect(cabinetForm.getByRole('textbox', { name: 'Vị trí / mô tả' })).toHaveAccessibleDescription(
+      /vd P\.server tầng 2/,
+    );
     await cabinetForm.getByLabel('Số U').fill('42');
     await cabinetForm.getByRole('button', { name: 'Lưu' }).click();
 
@@ -301,10 +305,10 @@ test.describe('Danh mục', () => {
     await expect(firstDataRow()).toContainText(`SORT-E2E-${stamp}-A`); // mặc định: theo mã tăng
 
     const head = page.locator('thead');
-    await head.getByRole('button', { name: 'Mô tả' }).click();
+    await head.getByRole('button', { name: 'Vị trí / mô tả' }).click();
     await expect(firstDataRow()).toContainText('Alpha tủ đầu bảng');
 
-    await head.getByRole('button', { name: 'Mô tả' }).click();
+    await head.getByRole('button', { name: 'Vị trí / mô tả' }).click();
     await expect(firstDataRow()).toContainText('Zulu tủ cuối bảng');
 
     // Cột dựa vào JOIN sang bảng site: hiện chữ, nhưng KHÔNG phải nút bấm được.
@@ -312,7 +316,7 @@ test.describe('Danh mục', () => {
   });
 
   /**
-   * Ba danh mục: Bộ phận, Nhà mạng, Dịch vụ/Port.
+   * Ba danh mục: Phòng ban, Nhà mạng, Dịch vụ/Port.
    *
    * Chúng ra đời vì cùng một lý do — ba ô đang gõ tay tự do, gõ mỗi nơi một kiểu ("P. Kế
    * toán" / "Phòng Kế toán" / "KT"), nên lọc ra thiếu và báo cáo cộng nhầm.
@@ -322,9 +326,9 @@ test.describe('Danh mục', () => {
     const stamp = uniqueStamp();
     await page.goto('/admin/catalog');
 
-    // ── Bộ phận ───────────────────────────────────────────────────────────
-    await page.getByRole('tab', { name: 'Bộ phận' }).click();
-    await page.getByRole('button', { name: 'Thêm bộ phận' }).click();
+    // ── Phòng ban ───────────────────────────────────────────────────────────
+    await page.getByRole('tab', { name: 'Phòng ban' }).click();
+    await page.getByRole('button', { name: 'Thêm phòng ban' }).click();
     let form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`P. E2E ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
@@ -340,7 +344,8 @@ test.describe('Danh mục', () => {
     const ispRow = page.getByRole('row', { name: new RegExp(`Mang E2E ${stamp}`) });
     await expect(ispRow).toBeVisible();
     // Hotline bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
-    await expect(ispRow.getByRole('link', { name: '1900 1234' })).toHaveAttribute(
+    // Q-18: gõ "1900 1234", lưu bỏ dấu cách.
+    await expect(ispRow.getByRole('link', { name: '19001234' })).toHaveAttribute(
       'href',
       'tel:19001234',
     );

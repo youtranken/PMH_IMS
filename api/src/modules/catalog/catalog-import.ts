@@ -13,6 +13,7 @@ import {
   type ParsedRow,
   type ParsedSheets,
 } from '../../common/import-plan';
+import { normalizePhone } from '../../common/phone';
 import {
   IMPORTABLE_ENTITIES,
   type CatalogSnapshot,
@@ -128,7 +129,7 @@ interface FieldSpec {
   aliases: string[];
   label: string;
   required?: boolean;
-  kind?: 'text' | 'boolean' | 'integer';
+  kind?: 'text' | 'boolean' | 'integer' | 'phone';
 }
 
 const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
@@ -179,7 +180,12 @@ const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
       required: true,
     },
     { key: 'supplies', label: 'Cung cấp gì', aliases: ['cung cấp gì', 'cung cấp', 'cung cap gi'] },
-    { key: 'phone', label: 'Điện thoại', aliases: ['điện thoại', 'dien thoai', 'sđt', 'phone'] },
+    {
+      key: 'phone',
+      label: 'Điện thoại',
+      aliases: ['điện thoại', 'dien thoai', 'sđt', 'phone'],
+      kind: 'phone',
+    },
     {
       key: 'contact',
       label: 'Người liên hệ',
@@ -286,6 +292,20 @@ function planRow(
     }
     if (field.kind === 'boolean') {
       values[field.key] = parseBoolean(text);
+      continue;
+    }
+    if (field.kind === 'phone') {
+      // Cùng luật với form (Q-18): file nhập không phải cửa sau để lọt số viết kiểu khác.
+      const phone = normalizePhone(text);
+      if (phone.error) {
+        return {
+          ...base,
+          action: 'error',
+          label: rawLabel(entity, row.cells),
+          message: `Cột "${field.label}": ${phone.error} (đang là "${text}").`,
+        };
+      }
+      values[field.key] = phone.value === '' ? null : phone.value;
       continue;
     }
     values[field.key] = text === '' ? null : text;

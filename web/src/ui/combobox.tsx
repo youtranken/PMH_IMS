@@ -149,7 +149,7 @@ export function Combobox<T>({
    * `.filter().map()` — mảng MỚI sau mỗi lần cha render, kể cả khi nội dung y hệt.
    *
    * Nên effect chạy sau MỌI lần cha render, và `setClosed(false)` bung lại đúng cái menu người
-   * dùng vừa bấm Esc để đóng: mở hộp Chuyển → bấm ô "Người/bộ phận dùng" → Esc → gõ tiếp vào
+   * dùng vừa bấm Esc để đóng: mở hộp Chuyển → bấm ô "Người/phòng ban dùng" → Esc → gõ tiếp vào
    * ô "Lý do" → menu bung lại, đè lên chính ô đang gõ. Esc không còn là một đường thoát.
    *
    * `choose()` đã gặp đúng cơ chế này và vá riêng cho đường CHỌN bằng `touched = false`; đây
