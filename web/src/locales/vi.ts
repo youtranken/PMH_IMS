@@ -699,6 +699,11 @@ export default {
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
+    // Bung dòng /devices (mẫu chuẩn Q-18): tên nút mũi tên + đầu khu bung.
+    expandInstalled: 'Mở rộng {{code}} — {{what}}',
+    collapseInstalled: 'Thu gọn {{code}} — {{what}}',
+    installedUnknown: 'xem phần mềm đang cài',
+    installedTitle: 'License đang cài',
     ipMore: '{{ip}} +{{count}}',
     created: 'Đã thêm {{code}}.',
     openProfile: 'Mở hồ sơ',

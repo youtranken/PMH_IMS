@@ -20,6 +20,7 @@ import { useToast } from '@/ui/toast';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
+import { ExpandHeader } from '@/ui/expand-header';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
 import { DeviceRowActions } from './device-actions';
@@ -472,17 +473,33 @@ export function DevicesScreen({ me }: { me: Me }) {
             canExpand={(item) =>
               installedCounts.isError || (installedCounts.data?.[item.id] ?? 0) > 0
             }
-            renderExpanded={(item) => <DeviceLicensesExpand deviceId={item.id} />}
+            /* Mẫu bung dòng chuẩn (Q-18, giống /software): đầu khu `ExpandHeader` mang số đếm,
+               bảng ghế bên dưới không tự vẽ tiêu đề thứ hai. Chưa đọc được số đếm thì bỏ số —
+               đừng in "0" cho một máy có thể đang cài. */
+            renderExpanded={(item) => (
+              <>
+                <ExpandHeader
+                  title={t('devices.installedTitle')}
+                  count={installedCounts.data?.[item.id]}
+                />
+                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
+              </>
+            )}
             manualSorting
             sorting={sorting}
             /* Bấm vào dòng là mở hồ sơ — nhắm trúng mã 12px là quá khó. Ô Mã vẫn là `<Link>`
                thật cho Ctrl+bấm / mở tab mới; `DataTable` bỏ qua lượt bấm rơi vào link/nút. */
             onRowClick={(item) => navigate(PATHS.device(item.id))}
-            expandText={(item) =>
-              installedCounts.data?.[item.id]
-                ? t('devices.licenseCount', { count: installedCounts.data[item.id] })
-                : t('devices.software')
-            }
+            expandLabel={(item, open) => {
+              const count = installedCounts.data?.[item.id];
+              const what = count
+                ? t('devices.licenseCount', { count })
+                : t('devices.installedUnknown');
+              return t(open ? 'devices.collapseInstalled' : 'devices.expandInstalled', {
+                code: item.code,
+                what,
+              });
+            }}
             onSortingChange={(updater) => {
               const next = typeof updater === 'function' ? updater(sorting) : updater;
               const first = next[0];
