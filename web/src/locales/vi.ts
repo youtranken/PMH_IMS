@@ -847,7 +847,7 @@ export default {
   software: {
     title: 'Phần mềm',
     subtitle: 'License, SSL, tên miền, hợp đồng bảo trì và ngày gia hạn',
-    add: 'Thêm hồ sơ',
+    add: 'Thêm phần mềm',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, tên, ghi chú hoặc mã máy',
     code: 'Mã hồ sơ',

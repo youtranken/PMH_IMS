@@ -180,9 +180,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 6 nút: Xuất Excel · Thêm hồ sơ · ô lọc Loại · Trạng thái · Nhà cung cấp · Kỳ hạn',
+      'Phòng Phần mềm lúc rỗng chỉ được có 6 nút: Xuất Excel · Thêm phần mềm · ô lọc Loại · Trạng thái · Nhà cung cấp · Kỳ hạn',
     ).toHaveCount(6);
-    for (const name of ['Xuất Excel', 'Thêm hồ sơ', 'Loại', 'Trạng thái', 'Nhà cung cấp', 'Kỳ hạn']) {
+    for (const name of ['Xuất Excel', 'Thêm phần mềm', 'Loại', 'Trạng thái', 'Nhà cung cấp', 'Kỳ hạn']) {
       await expect(
         main.getByRole('button', { name, exact: true }),
         `Đầu phòng Phần mềm phải có đúng một nút "${name}"`,
@@ -298,7 +298,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
    * hồ sơ vừa tạo đã ở trạng thái "đã thanh lý"); danh sách loại/kỳ hạn/nhà cung cấp lệch
    * khỏi danh mục thật; câu báo lỗi đổi mà không ai biết; hoặc form Sửa mở ra TRỐNG.
    */
-  test('Bên trong hộp "Thêm hồ sơ" và hộp "Sửa hồ sơ" — đủ ô, đúng vai, đúng lựa chọn', async ({
+  test('Bên trong hộp "Thêm phần mềm" và hộp "Sửa hồ sơ" — đủ ô, đúng vai, đúng lựa chọn', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -324,10 +324,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     );
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
 
-    const add = page.getByRole('dialog', { name: 'Thêm hồ sơ' });
-    await expect(add, 'Bấm "Thêm hồ sơ" phải mở đúng hộp mang tên đó').toBeVisible();
+    const add = page.getByRole('dialog', { name: 'Thêm phần mềm' });
+    await expect(add, 'Bấm "Thêm phần mềm" phải mở đúng hộp mang tên đó').toBeVisible();
 
     /*
      * ===== TIÊU ĐỀ HỘP + BA KHỐI CỦA FORM =====
@@ -339,7 +339,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     expect(
       (await add.getByRole('heading', { level: 2 }).allTextContents()).map((text) => text.trim()),
       'Hộp thêm hồ sơ (license): tiêu đề hộp, rồi các khối — hồ sơ, thời hạn, ghế, ghi chú, giấy tờ',
-    ).toEqual(['Thêm hồ sơ', 'Hồ sơ', 'Thời hạn', 'Ghế', 'Ghi chú', 'Giấy tờ đính kèm']);
+    ).toEqual(['Thêm phần mềm', 'Hồ sơ', 'Thời hạn', 'Ghế', 'Ghi chú', 'Giấy tờ đính kèm']);
 
     // ===== Ô GÕ CHỮ =====
     await expect(
@@ -464,7 +464,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await confirmAction(page, 'Bỏ và đóng');
     await expect(add, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
     await expect(add).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(add, 'Phím Esc cũng phải đóng được hộp (hộp không đang ghi)').toHaveCount(0);
