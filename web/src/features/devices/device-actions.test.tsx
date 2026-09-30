@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import type { DeviceRow, DeviceStatus } from '@/lib/device-types';
-import { DeviceRowActions } from './device-actions';
+import { DeviceRowActions, deviceMenuItems } from './device-actions';
 
 function device(status: DeviceStatus): DeviceRow {
   return {
@@ -77,5 +77,30 @@ describe('Cột Thao tác của danh sách thiết bị (Q-18)', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Đưa lại vào dùng' }));
     expect(handlers.onStatus).toHaveBeenCalledTimes(1);
     expect(handlers.onRetire).not.toHaveBeenCalled();
+  });
+});
+
+describe('deviceMenuItems — bộ việc dùng chung của trang chi tiết', () => {
+  const t = ((key: string) => key) as unknown as Parameters<typeof deviceMenuItems>[0];
+  const noop = () => {};
+
+  it('điện thoại (Sửa không đứng ngoài): Sửa đứng đầu menu', () => {
+    const keys = deviceMenuItems(t, false, {
+      onEdit: noop,
+      onStatus: noop,
+      onClone: noop,
+      onRetire: noop,
+    }).map((item) => item.key);
+    expect(keys).toEqual(['edit', 'status', 'clone', 'retire']);
+  });
+
+  it('máy đã thanh lý, nút "Đưa lại vào dùng" đã ở ngoài: menu chỉ còn Nhân bản', () => {
+    const keys = deviceMenuItems(t, true, {
+      onEdit: noop,
+      onStatus: noop,
+      onClone: noop,
+      onRetire: noop,
+    }).map((item) => item.key);
+    expect(keys).toEqual(['clone']);
   });
 });

@@ -7,6 +7,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
+  rowActionNames,
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
@@ -962,20 +963,19 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(main.getByRole('button')), {
         message:
-          'Đầu hồ sơ thiết bị: chép mã, sửa, đổi trạng thái, nhân bản, thanh lý; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
+          'Đầu hồ sơ thiết bị: "Sửa hồ sơ" + menu ⋮; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
       })
       // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
-      // Chép mã (DEV-059), Đổi trạng thái (DEV-053), Nhân bản (DEV-034) ở đầu trang; "Bổ sung n ô
+      // Q-18: "Sửa hồ sơ" đứng ngoài; Đổi trạng thái (DEV-053) · Nhân bản (DEV-034) · Thanh lý
+      // vào menu ⋮. Mã máy không còn nút chép (tiêu đề trang, bôi đen chép được). "Bổ sung n ô
       // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan.
       .toEqual([
-        'Chép mã thiết bị',
         'Sửa hồ sơ',
-        'Đổi trạng thái',
-        'Nhân bản',
-        'Thanh lý',
+        `Thao tác với ${code}`,
         'Bổ sung 6 ô còn thiếu',
         'Cấp IP',
       ]);
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*
      * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".

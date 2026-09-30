@@ -8,6 +8,7 @@ import {
   resetSecrets,
   resetSoftware,
   resetUsers,
+  rowAction,
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
@@ -307,14 +308,14 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('button', { name: /cắt gì/ })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, code, 'Thanh lý');
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText(new RegExp(address.replace(/\./g, '\\.'))).first()).toBeVisible();
     await expect(dialog.getByText('Hồ sơ máy và toàn bộ lịch sử')).toBeVisible();
     // Huỷ thì không có gì xảy ra.
     await dialog.getByRole('button', { name: 'Hủy' }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Thanh lý', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Thao tác với ${code}` })).toBeVisible();
   });
 
   test('đường hỏng: bị chặn 409 lần thứ hai thì hộp vẫn dựng lại, không giữ chữ đã gõ lượt trước', async ({
@@ -327,7 +328,7 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
     const address = await assignIp(page, deviceId, stamp);
 
     await page.goto(`/devices/${deviceId}`);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, code, 'Thanh lý');
     const dialog = page.getByRole('dialog');
     const typeCode = dialog.getByLabel(`Gõ lại mã máy ${code} để xác nhận`);
     const only = dialog.getByRole('radio', { name: /Chỉ thanh lý/ });

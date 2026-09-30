@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -7,6 +7,7 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
+import { Chevron } from "@/ui/chevron";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
@@ -32,6 +33,7 @@ import { DeviceIpAssign } from "@/features/ipam/device-ip-assign";
 import { RowActions } from "@/ui/row-actions";
 import { useIsNarrow } from "@/ui/use-narrow";
 import { heldSummary, warrantyNudgeEnd } from "./device-glance";
+import { deviceMenuItems } from "./device-actions";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
 import {
@@ -118,6 +120,15 @@ export function DeviceDetail({ me }: { me: Me }) {
   /** Đếm lượt bị chặn: mỗi lần 409 là một `key` mới, kể cả lần thứ hai liên tiếp. */
   const [retireRound, setRetireRound] = useState(0);
   const [retireError, setRetireError] = useState<string | null>(null);
+  /** Khu chi tiết (IP, NAT, đường truyền, license) người dùng đã thu gọn ở tab Tổng quan. */
+  const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleZone = (key: string) =>
+    setFolded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const device = useQuery({
     queryKey: ["devices", id],
@@ -311,6 +322,13 @@ export function DeviceDetail({ me }: { me: Me }) {
     });
   };
   const goSection = (key: string) => {
+    // Bấm từ bản đồ / chip là muốn XEM khu đó — đang thu gọn thì mở ra trước.
+    setFolded((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
     const el = document.getElementById(`sec-${key}`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -331,6 +349,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     icon: RelationNode["icon"],
     cut: boolean,
     onOpen: () => void,
+    preview = true,
   ): RelationNode | null => {
     const panel = panelOf(key);
     if (!panel || panel.items.length === 0) return null;
@@ -341,7 +360,7 @@ export function DeviceDetail({ me }: { me: Me }) {
       icon,
       cut,
       onOpen,
-      lines: panel.items.slice(0, 2).map((entry) => ({
+      lines: (preview ? panel.items.slice(0, 2) : []).map((entry) => ({
         text: `${entry.label} · ${entry.value}`,
         tone: entry.tone === "warn" || entry.tone === "danger" ? entry.tone : undefined,
       })),
@@ -389,7 +408,9 @@ export function DeviceDetail({ me }: { me: Me }) {
           ],
         }
       : null,
-    relationFromPanel("ipam", "ip", true, () => goSection("ipam")),
+    /* IP không xem trước trên nút: địa chỉ đầu đã ở "IP quản trị" của Thông tin nhanh, cả
+       danh sách ở khu Địa chỉ IP ngay dưới — in thêm lần thứ ba ở đây là nhiễu. */
+    relationFromPanel("ipam", "ip", true, () => goSection("ipam"), false),
     relationFromPanel("nat", "arrow", true, () => goSection("nat")),
     relationFromPanel("isp", "globe", true, () => goSection("isp")),
     relationFromPanel("software", "lic", true, () => goSection("software")),
@@ -519,8 +540,8 @@ export function DeviceDetail({ me }: { me: Me }) {
   };
 
   const nudgeEnd = warrantyNudgeEnd(item.status, item.warrantyEnd);
-  /* Hàng "Đang giữ": đếm từ đúng nguồn của bản đồ quan hệ, bấm là tới khu/tab đó. Bản đồ
-     trên điện thoại gập lại, nên đây là chỗ duy nhất thấy được cả bộ con số trong một dòng. */
+  /* Hàng "Đang giữ" (chỉ trên điện thoại, thay bản đồ quan hệ): đếm từ đúng nguồn của bản đồ,
+     bấm là tới khu/tab đó — cả bộ con số trong một dòng thay cho một danh sách nút cao. */
   const held = heldSummary<HeldKey>([
     { key: "ipam", count: panels.data ? (panelOf("ipam")?.items.length ?? 0) : undefined },
     { key: "ports", count: ports.data ? portRowCount : undefined },
@@ -566,20 +587,15 @@ export function DeviceDetail({ me }: { me: Me }) {
         code={item.code}
         name={item.name}
         /* Dòng định danh: không in lại loại (đã ở breadcrumb) hay model (ở Thông tin nhanh).
-           Mã (dán vào ticket) và serial (dán vào terminal) là hai thứ hay chép nhất — mỗi thứ
-           một nút chép ngay cạnh. */
+           Serial có nút chép (dán vào terminal/phiếu bảo hành). Mã thì KHÔNG: nó là tiêu đề
+           trang, bôi đen chép được, và `DetailHeader` đã bỏ nút chép mã ở mọi trang chi tiết. */
         subline={
-          <>
+          item.serial ? (
             <span className="subline-item">
-              <CopyButton value={item.code} label={t("devices.copyCode")} />
+              S/N <span className="mono">{item.serial}</span>
+              <CopyButton value={item.serial} label={t("devices.copySerial")} />
             </span>
-            {item.serial ? (
-              <span className="subline-item">
-                S/N <span className="mono">{item.serial}</span>
-                <CopyButton value={item.serial} label={t("devices.copySerial")} />
-              </span>
-            ) : null}
-          </>
+          ) : undefined
         }
         actions={
           narrow ? (
@@ -598,32 +614,20 @@ export function DeviceDetail({ me }: { me: Me }) {
               )}
               <RowActions
                 label={t("common.actionsOf", { subject: item.code })}
-                items={[
-                  ...(retired
-                    ? []
-                    : [
-                        { key: "edit", label: t("devices.edit"), onSelect: () => setEditing(true) },
-                        { key: "status", label: t("devices.changeStatus"), onSelect: openStatus },
-                      ]),
-                  { key: "clone", label: t("devices.clone"), onSelect: () => setCloning(true) },
-                  ...(retired
-                    ? []
-                    : [{ key: "retire", label: t("devices.retire"), onSelect: openRetire, danger: true }]),
-                ]}
+                subject={item.code}
+                items={deviceMenuItems(t, retired, {
+                  onEdit: () => setEditing(true),
+                  onStatus: openStatus,
+                  onClone: () => setCloning(true),
+                  onRetire: openRetire,
+                })}
               />
             </>
           ) : retired ? (
             /* Hồ sơ đã khoá: việc làm được DUY NHẤT là mở lại, nên nó là nút chính. Nút "Sửa hồ
                sơ" xám ở chỗ mắt tìm nút chính chỉ là một lời hứa không bấm được. */
             <>
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => {
-                  setStatusError(null);
-                  setStatusOpen(true);
-                }}
-              >
+              <button type="button" className="btn primary" onClick={openStatus}>
                 {t("devices.reopen")}
               </button>
               <button type="button" className="btn ghost" onClick={() => setCloning(true)}>
@@ -632,38 +636,20 @@ export function DeviceDetail({ me }: { me: Me }) {
             </>
           ) : (
             <>
-              {/* NÚT CHÍNH của màn phải NẶNG HƠN nút phá: việc làm mỗi ngày không được thì
-                  thầm trong khi việc một năm một lần và không lấy lại được thì hét lên. */}
+              {/* Q-18: "Sửa hồ sơ" là nút chính đứng ngoài; Đổi trạng thái · Nhân bản · Thanh lý
+                  vào ⋮ — cùng bộ việc với dòng máy ở danh sách (`deviceMenuItems`). */}
               <button type="button" className="btn primary" onClick={() => setEditing(true)}>
                 {t("devices.edit")}
               </button>
-              {/* Máy hỏng, đem về kho: việc hay gặp nhất không phải mở form 15 ô. */}
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  setStatusError(null);
-                  setStatusOpen(true);
-                }}
-              >
-                {t("devices.changeStatus")}
-              </button>
-              <button type="button" className="btn ghost" onClick={() => setCloning(true)}>
-                {t("devices.clone")}
-              </button>
-              {/* `danger-ghost`, không phải nền đỏ đặc: nền đỏ đặc để dành cho nút xác nhận
-                  TRONG hộp thoại — chỗ người ta đã đọc câu hỏi rồi. */}
-              <button
-                type="button"
-                className="btn danger-ghost"
-                onClick={() => {
-                  setRetireBlocked(null);
-                  setRetireError(null);
-                  setRetiring(true);
-                }}
-              >
-                {t("devices.retire")}
-              </button>
+              <RowActions
+                label={t("common.actionsOf", { subject: item.code })}
+                subject={item.code}
+                items={deviceMenuItems(t, retired, {
+                  onStatus: openStatus,
+                  onClone: () => setCloning(true),
+                  onRetire: openRetire,
+                })}
+              />
             </>
           )
         }
@@ -686,22 +672,12 @@ export function DeviceDetail({ me }: { me: Me }) {
         </div>
       ) : null}
 
-      {/* Máy Hỏng mà còn bảo hành: bước kế tiếp là gọi NCC, không phải tự sửa hay mua mới. */}
+      {/* Máy Hỏng mà còn bảo hành: bước kế tiếp là gọi NCC, không phải tự sửa hay mua mới.
+          Tên và số điện thoại NCC KHÔNG in lại ở đây — dòng "Nhà cung cấp" của thẻ định danh
+          ngay bên cạnh đã có cả hai, bấm gọi được. */}
       {nudgeEnd ? (
         <p className="alert info" role="note">
           {t("devices.warrantyNudge", { date: formatDate(nudgeEnd) })}
-          {item.vendorName ? (
-            <>
-              {" "}
-              <strong>{item.vendorName}</strong>
-              {vendor?.phone ? (
-                <>
-                  {" · "}
-                  <a href={`tel:${vendor.phone.replace(/[^\d+]/g, "")}`}>{vendor.phone}</a>
-                </>
-              ) : null}
-            </>
-          ) : null}
         </p>
       ) : null}
 
@@ -843,7 +819,10 @@ export function DeviceDetail({ me }: { me: Me }) {
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
               </dl>
-              {held.length > 0 ? (
+              {/* MỘT bản "máy đang giữ gì" cho mỗi khổ: máy tính có bản đồ quan hệ ngay dưới
+                  (đếm + xem trước từng khu), điện thoại thì hàng chip này thay cho bản đồ. Vẽ
+                  cả hai là cùng bộ con số hai lần cách nhau một khung. */}
+              {narrow && held.length > 0 ? (
                 <div className="chip-row" role="group" aria-label={t("devices.heldLabel")}>
                   <span className="muted small">{t("devices.heldLabel")}</span>
                   {held.map((entry) => (
@@ -877,6 +856,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               ) : null}
             </DetailSection>
 
+            {narrow ? null : (
             <RelationMap
               retired={retired}
               hubCode={item.code}
@@ -895,6 +875,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 !panels.isError && !ports.isError && (panels.isPending || ports.isPending)
               }
             />
+            )}
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách
@@ -905,16 +886,14 @@ export function DeviceDetail({ me }: { me: Me }) {
                 nên nó cũng là nơi quyết định khu ấy tên gì. Đặt tên riêng ở đây là để hai
                 chỗ trôi lệch nhau, và bài kiểm e2e đã bắt đúng lúc chúng bắt đầu lệch. */}
             {softwarePanel ? (
-              <section
-                className="card device-panel"
-                id="sec-software"
-                aria-labelledby="sec-software-title"
+              <ZoneSection
+                zoneKey="software"
+                title={`${softwarePanel.title} (${softwarePanel.items.length})`}
+                open={!folded.has("software")}
+                onToggle={() => toggleZone("software")}
               >
-                <h2 className="form-section-title" id="sec-software-title">
-                  {softwarePanel.title} ({softwarePanel.items.length})
-                </h2>
                 <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
-              </section>
+              </ZoneSection>
             ) : null}
 
             {/*
@@ -938,6 +917,8 @@ export function DeviceDetail({ me }: { me: Me }) {
                 panels={(panels.data ?? []).filter(
                   (panel) => panel.key !== "software" && panel.key !== "vault",
                 )}
+                folded={folded}
+                onToggle={toggleZone}
               />
             )}
           </>
@@ -1124,7 +1105,15 @@ export function DeviceDetail({ me }: { me: Me }) {
  * ba secret của một con switch, hai IP của một server — thì mắt phải nhảy qua nhảy lại để so.
  * Bảng xếp cùng loại vào một cột, và đó chính là việc người ta mở trang này ra để làm.
  */
-function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
+function ExtensionPanels({
+  panels,
+  folded,
+  onToggle,
+}: {
+  panels: DevicePanel[];
+  folded: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+}) {
   if (panels.length === 0) return null;
   return (
     <div className="device-panels">
@@ -1139,15 +1128,13 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
         vào `id` hay tên class.
       */}
       {panels.map((panel) => (
-        <section
+        <ZoneSection
           key={panel.key}
-          id={`sec-${panel.key}`}
-          className="card device-panel"
-          aria-labelledby={`sec-${panel.key}-title`}
+          zoneKey={panel.key}
+          title={panel.title}
+          open={!folded.has(panel.key)}
+          onToggle={panel.items.length > 0 ? () => onToggle(panel.key) : undefined}
         >
-          <h2 className="form-section-title" id={`sec-${panel.key}-title`}>
-            {panel.title}
-          </h2>
           {panel.items.length === 0 ? (
             <p className="muted">{panel.emptyText ?? "—"}</p>
           ) : (
@@ -1179,9 +1166,66 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
               </table>
             </div>
           )}
-        </section>
+        </ZoneSection>
       ))}
     </div>
+  );
+}
+
+/**
+ * Một khu chi tiết của tab Tổng quan, thu gọn được.
+ *
+ * Bản đồ quan hệ (hay hàng chip trên điện thoại) đã nói máy giữ bao nhiêu thứ mỗi loại; khu
+ * này là bảng đầy đủ. Người chỉ cần con số thì gập nó lại cho trang ngắn. Mặc định MỞ: gập sẵn
+ * thì người mở trang để xem IP phải bấm thêm một lần cho đúng thứ họ tìm.
+ *
+ * `aria-labelledby` trỏ vào `<h2>` nên khu vẫn là landmark mang đúng tên ("Địa chỉ IP"); nút
+ * gập đứng NGOÀI `<h2>` để tên tiêu đề không dính chữ "Thu gọn". Nội dung gập thì gỡ khỏi cây
+ * (không dùng `hidden`: vài lớp con đặt `display` đè luật `[hidden]` của trình duyệt).
+ */
+function ZoneSection({
+  zoneKey,
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  zoneKey: string;
+  title: string;
+  open: boolean;
+  /** Không truyền = khu không gập được (khu rỗng: chỉ một dòng chữ, gập lại chẳng được gì). */
+  onToggle?: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const titleId = `sec-${zoneKey}-title`;
+  const bodyId = `sec-${zoneKey}-body`;
+  const heading = (
+    <h2 className="form-section-title" id={titleId}>
+      {title}
+    </h2>
+  );
+  return (
+    <section id={`sec-${zoneKey}`} className="card device-panel" aria-labelledby={titleId}>
+      {onToggle ? (
+        <div className="form-section-head">
+          {heading}
+          <button
+            type="button"
+            className="btn sm ghost"
+            aria-expanded={open}
+            aria-controls={bodyId}
+            aria-label={t(open ? "devices.zoneCollapse" : "devices.zoneExpand", { title })}
+            onClick={onToggle}
+          >
+            <Chevron direction={open ? "up" : "down"} />
+          </button>
+        </div>
+      ) : (
+        heading
+      )}
+      {open || !onToggle ? <div id={bodyId}>{children}</div> : null}
+    </section>
   );
 }
 

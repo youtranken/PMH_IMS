@@ -160,8 +160,8 @@ test.describe('Kho thiết bị', () => {
     await fillDevice(page, { code, name: 'UPS phòng máy', type: 'UPS' });
     await page.getByRole('link', { name: code }).click();
 
-    // `exact`: hộp Thanh lý mở ra cũng có nút "Thanh lý" và lựa chọn "Chỉ thanh lý…".
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    // Q-18: Thanh lý nằm trong menu ⋮ ở đầu trang hồ sơ.
+    await rowAction(page, code, 'Thanh lý');
     await confirmAction(page);
     await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.')).toBeVisible();
     // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
