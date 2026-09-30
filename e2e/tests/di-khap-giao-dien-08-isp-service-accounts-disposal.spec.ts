@@ -493,7 +493,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Đầu trang hồ sơ đường truyền: Chép IP WAN · Sửa hồ sơ · menu ⋯ (đổi trạng thái) · Chép số hợp đồng (thẻ "Khi mất mạng")',
     ).toEqual(sortVi(['Chép IP WAN', 'Sửa hồ sơ', `Thao tác với ${itemCode}`, 'Chép số hợp đồng']));
     // Thẻ "Khi mất mạng": gọi hotline là MỘT cú chạm.
-    await expect(main.getByRole('link', { name: 'Gọi 18001166' })).toHaveAttribute(
+    await expect(main.getByRole('link', { name: 'Gọi 1800 1166' })).toHaveAttribute(
       'href',
       'tel:18001166',
     );

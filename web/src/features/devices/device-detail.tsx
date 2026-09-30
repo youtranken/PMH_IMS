@@ -1,3 +1,4 @@
+import { PhoneLink } from '@/ui/phone-link';
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -770,7 +771,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                       {vendor.contact ? <span>{vendor.contact}</span> : null}
                       {vendor.contact && vendor.phone ? " · " : null}
                       {vendor.phone ? (
-                        <a href={`tel:${vendor.phone.replace(/[^\d+]/g, "")}`}>{vendor.phone}</a>
+                        <PhoneLink className="" value={vendor.phone} />
                       ) : null}
                     </>
                   ) : undefined

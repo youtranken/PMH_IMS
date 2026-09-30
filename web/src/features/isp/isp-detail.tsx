@@ -1,3 +1,5 @@
+import { formatPhone } from '@/lib/phone-format';
+import { PhoneLink } from '@/ui/phone-link';
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -233,12 +235,9 @@ export function IspDetail({ me }: { me: Me }) {
             {terminated ? null : (
               <RailCard title={t("isp.incidentCard")}>
                 {item.hotline ? (
-                  <a
-                    className="btn primary isp-call"
-                    href={`tel:${item.hotline.replace(/\s/g, "")}`}
-                  >
-                    {t("isp.callHotline", { hotline: item.hotline })}
-                  </a>
+                  <PhoneLink className="btn primary isp-call" value={item.hotline}>
+                    {t("isp.callHotline", { hotline: formatPhone(item.hotline) })}
+                  </PhoneLink>
                 ) : (
                   <RailRow label={t("isp.hotline")}>—</RailRow>
                 )}

@@ -69,10 +69,10 @@ test.describe('Đường truyền ISP', () => {
     await expect(row).toBeVisible();
     // Mục tiêu của story: 2h sáng nhìn thấy ngay, không phải bấm vào trong.
     // Q-18: gửi "1900 6600", lưu bỏ dấu cách.
-    await expect(row.getByRole('link', { name: '19006600' })).toBeVisible();
+    await expect(row.getByRole('link', { name: '1900 6600' })).toBeVisible();
     await expect(row.getByText(`HD-${stamp}`)).toBeVisible();
     // Hotline bấm gọi được thẳng từ điện thoại.
-    await expect(row.getByRole('link', { name: '19006600' })).toHaveAttribute(
+    await expect(row.getByRole('link', { name: '1900 6600' })).toHaveAttribute(
       'href',
       'tel:19006600',
     );
@@ -100,7 +100,7 @@ test.describe('Đường truyền ISP', () => {
     await expect(page.getByRole('heading', { name: 'Đường truyền ISP' })).toBeVisible();
     // Hỏi trong KHU "Đường truyền ISP": bản đồ quan hệ ở đầu trang cũng in hotline ra một dòng.
     const ispSection = page.getByRole('region', { name: 'Đường truyền ISP' });
-    await expect(ispSection.getByText('18008098')).toBeVisible();
+    await expect(ispSection.getByText('1800 8098')).toBeVisible();
     await expect(ispSection.getByText(`HD-FW-${stamp}`)).toBeVisible();
   });
 
@@ -347,7 +347,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     });
     await page.goto(`/isp-lines/${String(created.body.id)}`);
 
-    const call = page.getByRole('link', { name: 'Gọi 18001166' });
+    const call = page.getByRole('link', { name: 'Gọi 1800 1166' });
     await expect(call).toHaveAttribute('href', 'tel:18001166');
     await expect(page.getByText(`HD-SC-${stamp}`).first()).toBeVisible();
 

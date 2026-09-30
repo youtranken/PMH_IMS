@@ -41,3 +41,36 @@ export function IsPhone(maxLength: number): PropertyDecorator {
     Matches(STORED_PHONE, { message: PHONE_MESSAGE }),
   );
 }
+
+/**
+ * Số điện thoại tách nhóm cho CHỮ server tự ghép (khu đường truyền trên trang thiết bị, …).
+ * Cùng luật với `web/src/lib/phone-format.ts` — lưu vẫn là số liền; dạng không nhận ra chắc
+ * chắn thì trả nguyên văn.
+ */
+function groupDigits(digits: string, sizes: number[]): string {
+  const out: string[] = [];
+  let at = 0;
+  for (const size of sizes) {
+    out.push(digits.slice(at, at + size));
+    at += size;
+  }
+  return out.join(' ');
+}
+
+function formatNational(digits: string): string | null {
+  if (/^1[89]00\d{4}$/.test(digits)) return groupDigits(digits, [4, 4]);
+  if (/^1[89]00\d{6}$/.test(digits)) return groupDigits(digits, [4, 4, 2]);
+  if (/^02\d{9}$/.test(digits)) return groupDigits(digits, [3, 4, 4]);
+  if (/^0\d{9}$/.test(digits)) return groupDigits(digits, [4, 3, 3]);
+  return null;
+}
+
+export function formatPhone(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const compact = raw.replace(/\s+/g, '');
+  if (compact.startsWith('+84')) {
+    const national = formatNational(`0${compact.slice(3)}`);
+    return national ? `+84 ${national.slice(1)}` : raw;
+  }
+  return formatNational(compact) ?? raw;
+}

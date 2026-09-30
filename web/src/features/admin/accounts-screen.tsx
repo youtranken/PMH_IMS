@@ -1,3 +1,4 @@
+import { formatPhone } from '@/lib/phone-format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -516,7 +517,7 @@ export function AccountsScreen({ me }: { me: Me }) {
       {account.employeeCode ? <span className="mono"> · {account.employeeCode}</span> : null}
       <span className="cell-sub">
         {account.email}
-        {account.phone ? ` · ${account.phone}` : ''}
+        {account.phone ? ` · ${formatPhone(account.phone)}` : ''}
       </span>
     </>
   );
@@ -648,7 +649,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         items={actionsFor(row)}
       />
     ),
-    subtitle: (row) => [row.email, row.phone].filter(Boolean).join(' · '),
+    subtitle: (row) => [row.email, formatPhone(row.phone)].filter(Boolean).join(' · '),
     meta: (row) => {
       const temp = tempLockOf(row, now);
       const flags = [
@@ -869,7 +870,7 @@ export function AccountsScreen({ me }: { me: Me }) {
           account={detailFor}
           facts={[
             { label: t('accounts.email'), value: detailFor.email },
-            ...(detailFor.phone ? [{ label: t('accounts.phone'), value: detailFor.phone }] : []),
+            ...(detailFor.phone ? [{ label: t('accounts.phone'), value: formatPhone(detailFor.phone) }] : []),
             ...(detailFor.employeeCode
               ? [{ label: t('accounts.employeeCode'), value: detailFor.employeeCode }]
               : []),

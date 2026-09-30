@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { IsOptional } from 'class-validator';
 import { validate } from 'class-validator';
-import { IsPhone, normalizePhone, PHONE_MESSAGE } from './phone';
+import { IsPhone, normalizePhone, PHONE_MESSAGE, formatPhone } from './phone';
 
 /**
  * Q-18: số điện thoại chỉ nhận chữ số, dấu `+` ở đầu và dấu cách; lưu thì bỏ dấu cách.
@@ -64,5 +64,18 @@ describe('@IsPhone — DTO bỏ dấu cách rồi mới kiểm', () => {
 
   it('không phải chuỗi thì bị từ chối, không ném', async () => {
     expect((await check(912345678)).messages.length).toBeGreaterThan(0);
+  });
+});
+
+describe('formatPhone — cùng luật tách nhóm với web (lib/phone-format.ts)', () => {
+  it.each([
+    ['0912345678', '0912 345 678'],
+    ['02838221234', '028 3822 1234'],
+    ['19006600', '1900 6600'],
+    ['1900545415', '1900 5454 15'],
+    ['+84912345678', '+84 912 345 678'],
+    ['113', '113'],
+  ])('%s → %s', (raw, expected) => {
+    expect(formatPhone(raw)).toBe(expected);
   });
 });

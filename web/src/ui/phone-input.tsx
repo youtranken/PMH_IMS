@@ -1,3 +1,5 @@
+import { formatPhone } from '@/lib/phone-format';
+
 /**
  * Bỏ khỏi chuỗi gõ/dán mọi ký tự không thuộc số điện thoại (Q-18): giữ chữ số, dấu cách, và
  * MỘT dấu `+` nếu nó đứng đầu. Dấu cách giữ lại để người gõ chia nhóm cho dễ soát; API bỏ
@@ -51,6 +53,8 @@ export function PhoneInput({
       aria-describedby={describedBy}
       aria-invalid={invalid}
       onChange={(e) => onChange(filterPhoneTyping(e.target.value))}
+      // Rời ô thì tách nhóm như chỗ hiển thị, để người gõ soát lại được; API bỏ dấu cách khi lưu.
+      onBlur={() => onChange(formatPhone(value))}
     />
   );
 }

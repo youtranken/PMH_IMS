@@ -1,3 +1,5 @@
+import { formatPhone } from '@/lib/phone-format';
+import { PhoneLink } from '@/ui/phone-link';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -103,12 +105,7 @@ function note(value: string | null | undefined) {
 
 /** Số điện thoại bấm gọi được — cùng cách với hotline nhà mạng, hai tab cùng một khái niệm. */
 function phoneLink(value: string | null | undefined) {
-  if (!value) return '—';
-  return (
-    <a className="mono" href={`tel:${value.replace(/[^\d+]/g, '')}`}>
-      {value}
-    </a>
-  );
+  return value ? <PhoneLink value={value} /> : '—';
 }
 
 const EMAIL_RE = /[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+/;
@@ -332,11 +329,11 @@ function mobileMeta(entity: CatalogEntity, row: CatalogRow, t: TFunction): strin
         ];
       }
       case 'vendor':
-        return [(row as VendorRow).supplies, (row as VendorRow).phone, (row as VendorRow).contact];
+        return [(row as VendorRow).supplies, formatPhone((row as VendorRow).phone), (row as VendorRow).contact];
       case 'department':
         return [(row as DepartmentRow).description];
       case 'isp_provider':
-        return [(row as IspProviderRow).hotline, (row as IspProviderRow).contact];
+        return [formatPhone((row as IspProviderRow).hotline), (row as IspProviderRow).contact];
       case 'service_port': {
         const port = row as ServicePortRow;
         return [

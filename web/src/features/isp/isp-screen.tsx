@@ -1,3 +1,4 @@
+import { PhoneLink } from '@/ui/phone-link';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -161,9 +162,7 @@ export function IspScreen({ me }: { me: Me }) {
         cell: ({ row }) =>
           row.original.hotline ? (
             // Bấm gọi thẳng từ điện thoại — màn này hay được mở ở 390px.
-            <a className="mono" href={`tel:${row.original.hotline.replace(/\s/g, '')}`}>
-              {row.original.hotline}
-            </a>
+            <PhoneLink value={row.original.hotline} />
           ) : (
             '—'
           ),

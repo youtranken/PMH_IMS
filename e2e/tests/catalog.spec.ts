@@ -345,7 +345,7 @@ test.describe('Danh mục', () => {
     await expect(ispRow).toBeVisible();
     // Hotline bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
     // Q-18: gõ "1900 1234", lưu bỏ dấu cách.
-    await expect(ispRow.getByRole('link', { name: '19001234' })).toHaveAttribute(
+    await expect(ispRow.getByRole('link', { name: '1900 1234' })).toHaveAttribute(
       'href',
       'tel:19001234',
     );
