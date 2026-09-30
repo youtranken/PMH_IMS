@@ -207,6 +207,8 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
     await page.goto('/devices');
     await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
+    // `boundingBox()` không chờ hiện: gọi lúc bảng còn đang vẽ lại là nhận `null`.
+    await expect(row).toBeVisible();
     await expectInsideWidth(page, row.getByRole('button', { name: `Sửa máy ${code}` }), 'nút Sửa');
   });
 });
