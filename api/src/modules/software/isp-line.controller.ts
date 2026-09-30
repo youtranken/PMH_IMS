@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Validate, ValidateIf } from 'class-validator';
+import { IsPhone } from '../../common/phone';
 import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -48,7 +49,7 @@ export class IspBodyDto {
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() siteId?: string;
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() deviceId?: string;
 
-  @IsOptional() @IsString() @Length(0, 60) hotline?: string;
+  @IsOptional() @IsPhone(60) hotline?: string;
   @IsOptional() @IsString() @Length(0, 80) contractNo?: string;
 
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu phải là ngày có thật, dạng YYYY-MM-DD.' })

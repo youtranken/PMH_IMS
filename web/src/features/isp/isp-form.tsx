@@ -19,6 +19,7 @@ import type { DeviceRow } from '@/lib/device-types';
 import { ACTION_KEY, ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
+import { PhoneInput } from '@/ui/phone-input';
 
 interface FormState {
   code: string;
@@ -393,14 +394,11 @@ export function IspForm({
             không có hạn, dùng tới khi thanh lý (Q-04). */}
         <FormSection title={t('isp.sectionContract')} columns={3}>
           <Field label={t('isp.hotline')} htmlFor="isp-hotline">
-            <input
+            <PhoneInput
               id="isp-hotline"
-              className="inp mono"
-              type="tel"
-              inputMode="tel"
               placeholder={t('isp.phHotline')}
               value={form.hotline}
-              onChange={(e) => set('hotline', e.target.value)}
+              onChange={(next) => set('hotline', next)}
             />
           </Field>
           <Field label={t('isp.contractNo')} htmlFor="isp-contract">

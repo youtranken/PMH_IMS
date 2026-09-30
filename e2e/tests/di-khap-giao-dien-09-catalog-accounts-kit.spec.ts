@@ -899,7 +899,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       editDialog.getByLabel(fieldLabel('Họ tên')),
       'hộp Sửa mở ra trống là bấm Lưu một phát xóa sạch hồ sơ của người ta',
     ).toHaveValue(fullName);
-    await expect(editDialog.getByLabel(fieldLabel('Số điện thoại'))).toHaveValue(phoneNumber);
+    // Q-18: lưu bỏ dấu cách, nên mở lại thấy số liền.
+    await expect(editDialog.getByLabel(fieldLabel('Số điện thoại'))).toHaveValue(
+      phoneNumber.replace(/ /g, ''),
+    );
     await expect(editDialog.getByLabel(fieldLabel('Mã nhân viên'))).toHaveValue(employeeCode);
 
     // Đóng bằng Esc — không lưu gì cả.

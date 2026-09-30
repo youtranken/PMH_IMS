@@ -37,7 +37,8 @@ test('danh sách đường truyền đọc được ở 390px và hotline bấm 
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   // Hotline phải là link `tel:` — trên điện thoại là chạm một cái để gọi, không phải chép tay.
-  const hotline = page.getByRole('link', { name: '1800 8119' });
+  // Gửi "1800 8119", lưu "18008119" (Q-18: số điện thoại lưu không dấu cách).
+  const hotline = page.getByRole('link', { name: '18008119' });
   await expect(hotline).toBeVisible();
   await expect(hotline).toHaveAttribute('href', 'tel:18008119');
 });

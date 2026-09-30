@@ -10,6 +10,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
+import { PhoneInput } from '@/ui/phone-input';
 import {
   catalogLabel,
   SERVICE_PROTOCOLS,
@@ -446,13 +447,11 @@ export function CatalogForm({
               />
             </Field>
             <Field label={t('catalog.phone')} htmlFor="catalog-phone">
-              <input
+              <PhoneInput
                 id="catalog-phone"
                 className="inp"
-                type="tel"
-                inputMode="tel"
                 value={form.phone}
-                onChange={(e) => set('phone', e.target.value)}
+                onChange={(next) => set('phone', next)}
               />
             </Field>
             <Field label={t('catalog.contact')} hint={t('catalog.contactHint')} htmlFor="catalog-contact">
@@ -484,13 +483,10 @@ export function CatalogForm({
               hint={t('catalog.hotlineHint')}
               htmlFor="catalog-hotline"
             >
-              <input
+              <PhoneInput
                 id="catalog-hotline"
-                className="inp mono"
-                type="tel"
-                inputMode="tel"
                 value={form.hotline}
-                onChange={(e) => set('hotline', e.target.value)}
+                onChange={(next) => set('hotline', next)}
               />
             </Field>
             <Field label={t('catalog.contact')} hint={t('catalog.contactHint')} htmlFor="catalog-contact">

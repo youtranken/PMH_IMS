@@ -334,7 +334,8 @@ test.describe('Danh mục', () => {
     const ispRow = page.getByRole('row', { name: new RegExp(`Mang E2E ${stamp}`) });
     await expect(ispRow).toBeVisible();
     // Hotline bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
-    await expect(ispRow.getByRole('link', { name: '1900 1234' })).toHaveAttribute(
+    // Q-18: gõ "1900 1234", lưu bỏ dấu cách.
+    await expect(ispRow.getByRole('link', { name: '19001234' })).toHaveAttribute(
       'href',
       'tel:19001234',
     );
