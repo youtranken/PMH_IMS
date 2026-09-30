@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { decodeQrFile } from '@/lib/qr-decode';
 import { FilePicker } from '@/ui/file-picker';
 import { generateSecret } from '@/ui/secret-generate';
 
@@ -45,6 +44,8 @@ export function SecretValueInput({
   const readQr = async (file: File | null) => {
     if (!file) return;
     setQrStatus(null);
+    // Nạp bộ giải QR khi cần: chỉ ngăn "Mã 2 lớp" dùng, không bắt mọi màn tải thêm nó.
+    const { decodeQrFile } = await import('@/lib/qr-decode');
     const result = await decodeQrFile(file);
     if (result.value) {
       onChange(result.value);
