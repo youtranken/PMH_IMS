@@ -1036,8 +1036,18 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
-      'Hộp thêm tài khoản có đúng năm nút: ô chọn Loại, ô chọn file, ✕, Hủy, Lưu',
-    ).toEqual(sortVi(['Đóng hộp thoại', 'Loại', 'Chọn file để đính kèm', 'Hủy', 'Lưu']));
+      'Hộp thêm tài khoản có đúng bảy nút: ô chọn Loại, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
+    ).toEqual(
+      sortVi([
+        'Đóng hộp thoại',
+        'Loại',
+        'Hiện',
+        'Tạo ngẫu nhiên',
+        'Chọn file để đính kèm',
+        'Hủy',
+        'Lưu',
+      ]),
+    );
 
     /*
      * Ô MẬT KHẨU: cây trợ năng KHÔNG phân biệt nó với một ô chữ thường.

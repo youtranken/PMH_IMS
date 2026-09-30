@@ -68,6 +68,15 @@ export interface OwnerResolver {
    * cho một lượt thanh lý chen vào giữa. Xem `DevicesService.assertUsableWithin`.
    */
   assertUsableWithin?(tx: Tx, ownerType: string, ownerId: string): Promise<void>;
+
+  /**
+   * Ghi chú DẠNG RÕ của chính hồ sơ chủ thể (không phải ghi chú của ngăn két).
+   *
+   * Két so giá trị đang cất với ghi chú này (FR-035): form thêm hồ sơ lưu ghi chú trước rồi mới
+   * cất mật khẩu, nên không request nào mang cả hai và chỉ két cầm được giá trị dạng rõ.
+   * KHÔNG BẮT BUỘC: loại chưa khai thì két không có gì để so.
+   */
+  noteOf?(ownerType: string, ownerId: string): Promise<string | null>;
 }
 
 @Injectable()
@@ -106,6 +115,12 @@ export class OwnerExistsRegistry {
   async assertUsableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
     const resolver = this.resolverFor(ownerType);
     await resolver.assertUsableWithin?.(tx, ownerType, ownerId);
+  }
+
+  /** Ghi chú của hồ sơ chủ thể, `null` khi loại đó chưa khai `noteOf` hoặc ghi chú trống. */
+  async ownerNote(ownerType: string, ownerId: string): Promise<string | null> {
+    const resolver = this.resolverFor(ownerType);
+    return (await resolver.noteOf?.(ownerType, ownerId)) ?? null;
   }
 
   /** Ném `400 OWNER_NOT_FOUND` nếu chủ thể không tồn tại. */

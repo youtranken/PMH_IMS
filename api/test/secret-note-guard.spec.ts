@@ -3,7 +3,9 @@ import { BadRequestException } from '@nestjs/common';
 import { runMigrations } from '../src/database/migration-runner';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { EnvelopeCryptoService } from '../src/common/crypto/envelope.service';
-import type { OwnerExistsRegistry } from '../src/common/owner-exists.registry';
+import { OwnerExistsRegistry } from '../src/common/owner-exists.registry';
+import { ServiceAccountOwnerResolver } from '../src/modules/service-accounts/service-account-owner-resolver';
+import { ServiceAccountService } from '../src/modules/service-accounts/service-account.service';
 import { VaultService } from '../src/modules/vault/vault.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -37,6 +39,7 @@ describe('Két: ghi chú không được chứa bí mật', () => {
     const owners = {
       assertExists: () => Promise.resolve(),
       assertUsableWithin: () => Promise.resolve(),
+      ownerNote: () => Promise.resolve(null),
     } as unknown as OwnerExistsRegistry;
     vault = new VaultService(scratch.db, crypto, audit, owners);
   }, TEST_TIMEOUT);
@@ -122,5 +125,102 @@ describe('Két: ghi chú không được chứa bí mật', () => {
     );
     const after = await vault.findMeta(meta.id);
     expect(after.valueChangedBy).toBe('a@qa.test');
+  });
+});
+
+/**
+ * Form thêm tài khoản dịch vụ lưu ghi chú của HỒ SƠ (cột rõ) rồi mới cất mật khẩu vào két, nên
+ * không request nào mang cả hai. Két là nơi duy nhất cầm giá trị dạng rõ: nó phải tự hỏi ghi chú
+ * của chủ thể qua `OwnerExistsRegistry` rồi so, không tin form đã chặn.
+ */
+describe('Két: ghi chú của HỒ SƠ chủ thể không được chứa giá trị đang cất', () => {
+  let scratch: ScratchDb;
+  let vault: VaultService;
+
+  beforeAll(async () => {
+    scratch = await createScratchDb('ims_secret_owner_note');
+    await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
+    const crypto = {
+      seal: () => ({
+        ciphertext: Buffer.from('ct'),
+        iv: Buffer.alloc(12, 1),
+        tag: Buffer.alloc(16, 1),
+        wrappedDek: Buffer.alloc(60, 1),
+        keyVersion: 1,
+      }),
+    } as unknown as EnvelopeCryptoService;
+    const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
+    const registry = new OwnerExistsRegistry();
+    new ServiceAccountOwnerResolver(
+      registry,
+      new ServiceAccountService(scratch.db, audit),
+    ).onModuleInit();
+    vault = new VaultService(scratch.db, crypto, audit, registry);
+  }, TEST_TIMEOUT);
+
+  afterAll(async () => {
+    await scratch?.drop();
+  }, TEST_TIMEOUT);
+
+  async function account(note: string | null): Promise<string> {
+    const code = `E2E-SA-${randomUUID().slice(0, 8)}`;
+    const rows = await scratch.pool.query<{ id: string }>(
+      `INSERT INTO service_account (code, kind, name, note, created_by)
+       VALUES ($1, 'shared', $2, $3, 'a@qa.test') RETURNING id`,
+      [code, code, note],
+    );
+    return rows.rows[0].id;
+  }
+
+  function input(ownerId: string, value = VALUE) {
+    return {
+      ownerType: 'service_account' as const,
+      ownerId,
+      kind: 'password' as const,
+      label: `E2E mk ${randomUUID().slice(0, 6)}`,
+      note: null,
+      value,
+    };
+  }
+
+  async function countByOwner(ownerId: string): Promise<number> {
+    const rows = await scratch.pool.query('SELECT 1 FROM secret WHERE owner_id = $1', [ownerId]);
+    return rows.rowCount ?? 0;
+  }
+
+  async function failure(run: () => Promise<unknown>): Promise<BadRequestException> {
+    const error = await run().then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(BadRequestException);
+    return error as BadRequestException;
+  }
+
+  it('cất mới: ghi chú hồ sơ chứa giá trị thì từ chối, thân lỗi không nhắc giá trị, không ghi hàng', async () => {
+    const ownerId = await account('mk đăng nhập: cisco # core2026!');
+    const body = (await failure(() => vault.create('a@qa.test', input(ownerId)))).getResponse();
+    expect(body).toMatchObject({ code: 'NOTE_CONTAINS_SECRET' });
+    expect(JSON.stringify(body).toLowerCase()).not.toContain(VALUE.toLowerCase());
+    expect(await countByOwner(ownerId)).toBe(0);
+  });
+
+  it('cất mới: ghi chú hồ sơ bình thường (hoặc trống) vẫn cất được', async () => {
+    const plain = await account('Tài khoản chung phòng kế toán');
+    await vault.create('a@qa.test', input(plain));
+    expect(await countByOwner(plain)).toBe(1);
+    const empty = await account(null);
+    await vault.create('a@qa.test', input(empty));
+    expect(await countByOwner(empty)).toBe(1);
+  });
+
+  it('đổi giá trị: giá trị mới nằm trong ghi chú hồ sơ thì từ chối, giá trị cũ giữ nguyên', async () => {
+    const ownerId = await account('mat khau moi la Kt@2026xyz');
+    const meta = await vault.create('a@qa.test', input(ownerId));
+    const body = (
+      await failure(() => vault.rotate('b@qa.test', meta.id, 'Kt@2026xyz'))
+    ).getResponse();
+    expect(body).toMatchObject({ code: 'NOTE_CONTAINS_SECRET' });
+    expect((await vault.findMeta(meta.id)).valueChangedBy).toBe('a@qa.test');
   });
 });

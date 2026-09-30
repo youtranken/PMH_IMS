@@ -191,6 +191,11 @@ export class VaultService {
      * mở nữa.
      */
     await this.owners.assertExists(input.ownerType, input.ownerId);
+    assertNoteHoldsNoValue(
+      await this.owners.ownerNote(input.ownerType, input.ownerId),
+      probe,
+      OWNER_NOTE_HOLDS_VALUE,
+    );
 
     const id = randomUUID();
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
@@ -269,6 +274,11 @@ export class VaultService {
       current.note,
       probe,
       'Giá trị mới đang nằm trong ghi chú của ngăn này. Sửa ghi chú trước rồi đổi giá trị.',
+    );
+    assertNoteHoldsNoValue(
+      await this.owners.ownerNote(current.ownerType, current.ownerId),
+      probe,
+      OWNER_NOTE_HOLDS_VALUE,
     );
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
     await this.db.transaction(async (tx) => {
@@ -461,6 +471,13 @@ function storedValue(
   }
   return { value: normalized.value, probe: { value: normalized.secret, strip: /-/g } };
 }
+
+/**
+ * Ghi chú của HỒ SƠ chủ thể (vd tài khoản dịch vụ) cũng là cột rõ: form thêm hồ sơ lưu nó trước
+ * rồi mới cất mật khẩu, nên chỉ két cầm được cả hai để so (FR-035).
+ */
+const OWNER_NOTE_HOLDS_VALUE =
+  'Ghi chú của hồ sơ đang chứa chính giá trị cần cất. Sửa ghi chú hồ sơ trước rồi cất lại.';
 
 /** Thứ cần tìm trong ghi chú, và ký tự bỏ khỏi ghi chú trước khi tìm. */
 interface NoteProbe {

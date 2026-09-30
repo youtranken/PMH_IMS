@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
+import { noteContainsSecret } from '@/lib/note-secret';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
+import { SecretValueInput } from '@/ui/secret-value-input';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
@@ -112,7 +114,12 @@ export function ServiceAccountForm({
   const vpn = supportsVpnFields(form.kind);
   // Mã suy từ tên đăng nhập — thiếu cả hai thì hồ sơ không có gì để gọi tên.
   const badIps = vpn ? invalidAllowedIps(form.allowedIps) : [];
+  // Ghi chú hồ sơ là cột rõ (FR-035): chứa mật khẩu đang cất là đi vòng qua két. Báo ngay khi
+  // gõ như hộp két; server vẫn chặn lần nữa lúc cất.
+  const noteLeak =
+    !row && noteContainsSecret(form.note, secretValue) && t('vault.noteContainsSecret');
   const check = useFormErrors({
+    note: noteLeak,
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
     allowedIps:
       badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
@@ -431,13 +438,12 @@ export function ServiceAccountForm({
               hint={t('serviceAccounts.secretHint')}
               htmlFor="sa-secret"
             >
-              <input
+              <SecretValueInput
                 id="sa-secret"
-                className="inp mono"
-                type="password"
-                autoComplete="new-password"
                 value={secretValue}
-                onChange={(e) => setSecretValue(e.target.value)}
+                onChange={setSecretValue}
+                allowGenerate
+                required={false}
               />
               <SecretStrengthMeter value={secretValue} />
             </Field>
@@ -447,7 +453,12 @@ export function ServiceAccountForm({
         {/* Khu chỉ có ĐÚNG một ô, nên tiêu đề khu và nhãn ô nói y hệt nhau, hai dòng chồng
             nhau cách nhau 8px. Bỏ tiêu đề khu — nhãn ô mới là thứ ô nhập cần. */}
         <FormSection columns={1}>
-          <Field label={t('serviceAccounts.note')} hint={t('serviceAccounts.noteHint')} htmlFor="sa-note">
+          <Field
+            label={t('serviceAccounts.note')}
+            hint={t('serviceAccounts.noteHint')}
+            htmlFor="sa-note"
+            error={noteLeak || null}
+          >
             <textarea
               id="sa-note"
               className="inp"
