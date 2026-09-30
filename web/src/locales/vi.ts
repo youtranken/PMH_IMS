@@ -243,6 +243,7 @@ export default {
     expandRow: 'Mở rộng dòng',
     collapseRow: 'Thu gọn dòng',
     infoTipOf: 'Giải thích: {{subject}}',
+    plusYears: '+{{count}} năm',
     loading: 'Đang tải…',
     /*
      * KHÔNG có `common.empty` ('Chưa có dữ liệu') dùng chung.
@@ -708,7 +709,6 @@ export default {
     retireViaButton: 'Thanh lý: dùng nút Thanh lý ở trang hồ sơ.',
     warrantyQuick: 'Đặt nhanh hạn bảo hành',
     warrantyQuickNeedBase: 'Chọn Ngày mua hoặc Bảo hành từ trước.',
-    plusYears: '+{{count}} năm',
     copyCode: 'Chép mã thiết bị',
     copyIp: 'Chép IP quản trị',
     assignIp: 'Cấp IP',
