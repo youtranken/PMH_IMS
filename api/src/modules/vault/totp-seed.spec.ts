@@ -1,22 +1,22 @@
 import { normalizeTotpSeed, totpRevealView } from './totp-seed';
 
 /**
- * Ngăn "Mã 2 lớp" (Q-18): chuỗi cất vào két luôn là MỘT dạng `otpauth://totp/…` đã chuẩn hoá,
- * dù người dùng dán khoá base32 trần hay nguyên URI đọc từ ảnh QR.
+ * Ngăn "Mã 2 lớp" (Q-18): chuỗi cất vào két luôn là MỘT dạng `otpauth://totp/…` đã chuẩn hóa,
+ * dù người dùng dán khóa base32 trần hay nguyên URI đọc từ ảnh QR.
  */
 
 const FALLBACK = { label: 'Fortinet admin', username: 'admin@pmh' };
-/** RFC 6238 phụ lục B — khoá ASCII "12345678901234567890". */
+/** RFC 6238 phụ lục B — khóa ASCII "12345678901234567890". */
 const RFC_SHA1 = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 const RFC_SHA256 = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA';
 const RFC_SHA512 =
   'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA';
 
-describe('normalizeTotpSeed — nhận khoá trần hoặc otpauth, cất một dạng', () => {
+describe('normalizeTotpSeed — nhận khóa trần hoặc otpauth, cất một dạng', () => {
   it.each([
-    ['khoá trần viết hoa', 'JBSWY3DPEHPK3PXP'],
-    ['khoá trần viết thường, có dấu cách nhóm 4', 'jbsw y3dp ehpk 3pxp'],
-    ['khoá trần có gạch nối và đệm =', 'JBSW-Y3DP-EHPK-3PXP=='],
+    ['khóa trần viết hoa', 'JBSWY3DPEHPK3PXP'],
+    ['khóa trần viết thường, có dấu cách nhóm 4', 'jbsw y3dp ehpk 3pxp'],
+    ['khóa trần có gạch nối và đệm =', 'JBSW-Y3DP-EHPK-3PXP=='],
   ])('%s → URI dựng từ tên ngăn + tên đăng nhập', (_name, raw) => {
     const out = normalizeTotpSeed(raw, FALLBACK);
     expect(out.reason).toBeNull();
@@ -27,7 +27,7 @@ describe('normalizeTotpSeed — nhận khoá trần hoặc otpauth, cất một 
     expect(out.secret).toBe('JBSWY3DPEHPK3PXP');
   });
 
-  it('khoá trần mà ngăn không có tên đăng nhập → tài khoản là tên ngăn', () => {
+  it('khóa trần mà ngăn không có tên đăng nhập → tài khoản là tên ngăn', () => {
     const out = normalizeTotpSeed('JBSWY3DPEHPK3PXP', { label: 'VPN', username: null });
     expect(out.value).toBe(
       'otpauth://totp/VPN:VPN?secret=JBSWY3DPEHPK3PXP&issuer=VPN&algorithm=SHA1&digits=6&period=30',
@@ -61,7 +61,7 @@ describe('normalizeTotpSeed — nhận khoá trần hoặc otpauth, cất một 
     );
   });
 
-  it('chuẩn hoá hai lần ra cùng một chuỗi (xoay giá trị đưa lại chính URI đã cất)', () => {
+  it('chuẩn hóa hai lần ra cùng một chuỗi (xoay giá trị đưa lại chính URI đã cất)', () => {
     const once = normalizeTotpSeed('jbsw y3dp ehpk 3pxp', FALLBACK).value!;
     expect(normalizeTotpSeed(once, { label: 'khác', username: null }).value).toBe(once);
   });
@@ -112,7 +112,7 @@ describe('totpRevealView — QR + mã hiện tại, server tính', () => {
     expect(later.codes[1]).not.toBe(later.codes[0]);
   });
 
-  it('trả khoá, issuer, tài khoản để hiện; QR là ảnh data URL PNG', async () => {
+  it('trả khóa, issuer, tài khoản để hiện; QR là ảnh data URL PNG', async () => {
     const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60);
     expect(view.secret).toBe(RFC_SHA1);
     expect(view.issuer).toBe('RFC');

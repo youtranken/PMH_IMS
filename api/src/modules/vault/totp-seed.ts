@@ -8,8 +8,8 @@ import * as QRCode from 'qrcode';
 
 /*
  * Ngăn "Mã 2 lớp" (Q-18, mở rộng FR-021). Giá trị cất vào két luôn là MỘT dạng `otpauth://`
- * chuẩn hoá: lúc mở két server sinh lại QR và mã 6 số từ đúng chuỗi này, nên hai cách nhập
- * (khoá base32 trần, nguyên URI đọc từ QR) phải ra cùng một chuỗi và cùng một mã.
+ * chuẩn hóa: lúc mở két server sinh lại QR và mã 6 số từ đúng chuỗi này, nên hai cách nhập
+ * (khóa base32 trần, nguyên URI đọc từ QR) phải ra cùng một chuỗi và cùng một mã.
  */
 
 export type TotpSeedReason =
@@ -24,11 +24,11 @@ export type TotpSeedReason =
 
 /** Không câu nào nhắc lại chuỗi người dùng gõ: thân lỗi đi qua log, toast và công cụ trình duyệt. */
 export const TOTP_SEED_MESSAGES: Record<TotpSeedReason, string> = {
-  EMPTY: 'Chưa nhập khoá mã 2 lớp.',
-  BAD_URI: 'Chuỗi otpauth:// không đọc được. Dán lại nguyên chuỗi từ mã QR, hoặc chỉ dán khoá bí mật.',
+  EMPTY: 'Chưa nhập khóa mã 2 lớp.',
+  BAD_URI: 'Chuỗi otpauth:// không đọc được. Dán lại nguyên chuỗi từ mã QR, hoặc chỉ dán khóa bí mật.',
   NOT_TOTP: 'Chỉ nhận mã 2 lớp theo thời gian (TOTP). Mã theo bộ đếm (HOTP) chưa hỗ trợ.',
-  BAD_SECRET: 'Khoá bí mật chỉ gồm chữ A–Z và số 2–7 (base32).',
-  SECRET_LENGTH: 'Khoá bí mật phải dài từ 16 tới 103 ký tự base32.',
+  BAD_SECRET: 'Khóa bí mật chỉ gồm chữ A–Z và số 2–7 (base32).',
+  SECRET_LENGTH: 'Khóa bí mật phải dài từ 16 tới 103 ký tự base32.',
   BAD_DIGITS: 'Mã 2 lớp chỉ nhận loại 6 hoặc 8 chữ số.',
   BAD_PERIOD: 'Mã 2 lớp chỉ nhận chu kỳ 30 giây.',
   BAD_ALGORITHM: 'Thuật toán chỉ nhận SHA1, SHA256 hoặc SHA512.',
@@ -41,9 +41,9 @@ type AlgorithmName = keyof typeof ALGORITHMS;
 const PERIOD = 30;
 
 /*
- * otplib mặc định đòi khoá >= 16 byte (khuyến nghị cho khoá MÌNH sinh). Két cất khoá do hệ
- * thống KHÁC cấp, và khoá 10 byte (16 ký tự base32) còn rất phổ biến — từ chối là đẩy người
- * dùng ghi khoá vào ô ghi chú dạng rõ.
+ * otplib mặc định đòi khóa >= 16 byte (khuyến nghị cho khóa MÌNH sinh). Két cất khóa do hệ
+ * thống KHÁC cấp, và khóa 10 byte (16 ký tự base32) còn rất phổ biến — từ chối là đẩy người
+ * dùng ghi khóa vào ô ghi chú dạng rõ.
  */
 const MIN_SECRET_BYTES = 10;
 const MAX_SECRET_BYTES = 64;
@@ -58,15 +58,15 @@ interface TotpParams {
 }
 
 export interface NormalizedTotpSeed {
-  /** `otpauth://totp/…` chuẩn hoá — `null` khi bị từ chối. */
+  /** `otpauth://totp/…` chuẩn hóa — `null` khi bị từ chối. */
   value: string | null;
-  /** Khoá base32 đã chuẩn hoá — để so với ghi chú (FR-035). */
+  /** Khóa base32 đã chuẩn hóa — để so với ghi chú (FR-035). */
   secret: string | null;
   reason: TotpSeedReason | null;
 }
 
 /**
- * Nhận khoá base32 trần hoặc URI `otpauth://totp/…`. Khoá trần thì issuer là tên ngăn, tài
+ * Nhận khóa base32 trần hoặc URI `otpauth://totp/…`. Khóa trần thì issuer là tên ngăn, tài
  * khoản là tên đăng nhập (không có thì tên ngăn): đó là chữ hiện trong ứng dụng xác thực khi
  * quét QR sinh lại, nên phải nhận ra được ngăn nào.
  */

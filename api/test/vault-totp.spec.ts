@@ -25,7 +25,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *
  * Canh ba điều mà bài hàm thuần không nói được:
  *   · CHECK ở tầng DB nhận `totp` (whitelist ba tầng, tầng DB là tầng hay bị quên);
- *   · khoá bí mật không lọt vào ciphertext dạng rõ, nhật ký hay thân lỗi;
+ *   · khóa bí mật không lọt vào ciphertext dạng rõ, nhật ký hay thân lỗi;
  *   · MỘT lần gõ mã 6 số đủ cho cả cất mật khẩu lẫn cất mã 2 lớp trong
  *     `secret.stepup_grace_minutes` — đọc từ `sessions` và `system_config` thật.
  */
@@ -124,7 +124,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   );
 
   it(
-    'cất khoá trần: lưu URI chuẩn hoá (đã mã hoá), nhật ký không mang khoá',
+    'cất khóa trần: lưu URI chuẩn hóa (đã mã hóa), nhật ký không mang khóa',
     async () => {
       const input = body('totp', 'jbsw y3dp ehpk 3pxp', { username: 'admin@pmh' });
       const meta = await controller.create(input, saReq());
@@ -153,7 +153,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   );
 
   it(
-    'khoá hỏng: 400 TOTP_SEED_INVALID, không ghi hàng nào, thân lỗi không nhắc lại khoá',
+    'khóa hỏng: 400 TOTP_SEED_INVALID, không ghi hàng nào, thân lỗi không nhắc lại khóa',
     async () => {
       const bad = 'JBSWY3DPEHPK3PX0';
       const input = body('totp', bad);
@@ -169,7 +169,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   );
 
   it(
-    'ghi chú chứa chính khoá (khác dạng viết) bị từ chối như mật khẩu',
+    'ghi chú chứa chính khóa (khác dạng viết) bị từ chối như mật khẩu',
     async () => {
       const input = body('totp', SEED, { note: 'khoa jbsw-y3dp-ehpk-3pxp' });
       const error = await errorOf(() => controller.create(input, saReq()));
@@ -180,7 +180,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   );
 
   it(
-    'mở két: trả QR + mã hiện tại, nhật ký "đã xem" không mang khoá hay ảnh',
+    'mở két: trả QR + mã hiện tại, nhật ký "đã xem" không mang khóa hay ảnh',
     async () => {
       const meta = await controller.create(body('totp', SEED), saReq());
       const opened = (await controller.reveal({ id: meta.id }, saReq())) as unknown as {
@@ -219,7 +219,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   );
 
   it(
-    'đổi giá trị ngăn mã 2 lớp: chuẩn hoá theo tên ngăn đang có; khoá hỏng bị từ chối',
+    'đổi giá trị ngăn mã 2 lớp: chuẩn hóa theo tên ngăn đang có; khóa hỏng bị từ chối',
     async () => {
       const meta = await controller.create(body('totp', SEED), saReq());
       const next = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
