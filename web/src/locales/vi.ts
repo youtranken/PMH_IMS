@@ -784,6 +784,7 @@ export default {
       'Không bắt buộc. File (jpg, png, webp, pdf, xlsx) được đính kèm ngay sau khi lưu hồ sơ.',
     liveWarning:
       'Thêm, xóa giấy tờ ở đây có hiệu lực ngay, không chờ Lưu — nút Hủy không hoàn tác được.',
+    liveTip: 'Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.',
     draftRemove: 'Bỏ ra',
     draftRemoveOf: 'Bỏ "{{name}}" khỏi danh sách sẽ đính kèm',
     draftUploaded: 'Đã đính kèm {{count}} giấy tờ.',
@@ -858,12 +859,16 @@ export default {
     seats: 'Ghế',
     seatTotal: 'Số ghế',
     licenseModel: 'Kỳ hạn',
-    /* Gợi ý dưới ô Kỳ hạn đổi theo lựa chọn đang bật. */
-    subscriptionHint: 'Có ngày hết hạn — hệ thống nhắc gia hạn trước khi hết.',
-    perpetualHint: 'Mua đứt: chỉ cần ngày bắt đầu, không nhắc gia hạn.',
+    /* Bong bóng (i) của ô Kỳ hạn: nói cả hai lựa chọn để đọc được TRƯỚC khi chọn. */
+    licenseModelTip:
+      'Thuê bao: có ngày hết hạn — hệ thống nhắc gia hạn trước khi hết. Vĩnh viễn: mua đứt, chỉ cần ngày bắt đầu, không nhắc gia hạn.',
     noEnd: 'Không hết hạn',
     endRequired: 'Nhập ngày hết hạn để hệ thống nhắc gia hạn.',
+    endQuick: 'Đặt nhanh ngày hết hạn',
+    endQuickNeedBase: 'Chọn ngày bắt đầu trước.',
     sectionTerm: 'Thời hạn',
+    sectionSeatsNote: 'Ghế và ghi chú',
+    sectionWebsitesNote: 'Website và ghi chú',
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',

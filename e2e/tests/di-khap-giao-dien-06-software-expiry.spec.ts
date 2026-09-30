@@ -330,16 +330,16 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(add, 'Bấm "Thêm phần mềm" phải mở đúng hộp mang tên đó').toBeVisible();
 
     /*
-     * ===== TIÊU ĐỀ HỘP + BA KHỐI CỦA FORM =====
+     * ===== TIÊU ĐỀ HỘP + CÁC KHỐI CỦA FORM =====
      *
-     * Bốn chứ không phải ba: Radix vẽ TIÊU ĐỀ HỘP THOẠI cũng bằng `<h2>`, nên nó đứng cùng
-     * hạng với ba tiêu đề khối bên dưới. Đọc `textContent` (không phải `innerText`) vì
+     * Radix vẽ TIÊU ĐỀ HỘP THOẠI cũng bằng `<h2>`, nên nó đứng cùng hạng với các tiêu đề khối
+     * bên dưới. Đọc `textContent` (không phải `innerText`) vì
      * `.form-section-title` viết hoa toàn bộ bằng CSS.
      */
     expect(
       (await add.getByRole('heading', { level: 2 }).allTextContents()).map((text) => text.trim()),
-      'Hộp thêm hồ sơ (license): tiêu đề hộp, rồi các khối — hồ sơ, thời hạn, ghế, ghi chú, giấy tờ',
-    ).toEqual(['Thêm phần mềm', 'Hồ sơ', 'Thời hạn', 'Ghế', 'Ghi chú', 'Giấy tờ đính kèm']);
+      'Hộp thêm hồ sơ (license): tiêu đề hộp, rồi các khối — hồ sơ, thời hạn, ghế + ghi chú, giấy tờ',
+    ).toEqual(['Thêm phần mềm', 'Hồ sơ', 'Thời hạn', 'Ghế và ghi chú', 'Giấy tờ đính kèm']);
 
     // ===== Ô GÕ CHỮ =====
     await expect(
@@ -354,20 +354,24 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * ===== NÚT: ô chọn, ô ngày, ô chọn file, và hai nút chân hộp =====
+     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, ô chọn file, và hai nút chân hộp =====
      *
      * `<input type="file">` được trình duyệt phơi ra như một NÚT mang tên của nhãn — nên nó
      * nằm trong phép đếm này chứ không nằm trong phép đếm ô gõ chữ ở trên.
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 7 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(7);
+      'Hộp thêm hồ sơ có đúng 11 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(11);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
+      'Giải thích: Kỳ hạn',
       'Bắt đầu',
       'Hết hạn',
+      '+1 năm',
+      '+2 năm',
+      '+3 năm',
       'Chọn file để đính kèm',
       'Hủy',
       'Lưu',
