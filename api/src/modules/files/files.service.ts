@@ -16,7 +16,8 @@ import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { UsersApiService } from '../users/users.api';
-import { detectFileType, SIZE_LIMITS } from './file-validation';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { detectFileType, sizeLimitBytes } from './file-validation';
 import type { FileKind } from './file-validation';
 import { filesTable } from './files.schema';
 
@@ -70,10 +71,11 @@ export class FilesService {
     private readonly audit: AuditWriterService,
     private readonly owners: OwnerExistsRegistry,
     private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /**
-   * Lưu file: whitelist magic-byte + trần theo loại; ghi đĩa TRƯỚC, row SAU — insert fail
+   * Lưu file: whitelist theo nội dung + trần `file.max_size_mb`; ghi đĩa TRƯỚC, row SAU — insert fail
    * thì xóa file mồ côi (đĩa có mà DB không = rác vô hại; DB có mà đĩa không = tải về 500).
    */
   async save(input: {
@@ -92,11 +94,11 @@ export class FilesService {
           'Định dạng không được hỗ trợ — chỉ nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
       });
     }
-    const limit = SIZE_LIMITS[detected.kind];
+    const limit = sizeLimitBytes(await this.config.getNumber('fileMaxSizeMb'));
     if (input.buffer.length > limit) {
       throw new BadRequestException({
         code: 'FILE_TOO_LARGE',
-        message: `File vượt trần ${Math.round(limit / 1024 / 1024)}MB.`,
+        message: `File vượt trần ${Math.round(limit / 1024 / 1024)} MB.`,
       });
     }
 

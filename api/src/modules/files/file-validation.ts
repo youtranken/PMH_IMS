@@ -4,14 +4,30 @@
  */
 export type FileKind = 'image' | 'document';
 
-/** Trần dung lượng theo loại (NFR-4: ảnh ≤5MB; biên bản ≤20MB). */
-export const SIZE_LIMITS: Record<FileKind, number> = {
-  image: 5 * 1024 * 1024,
-  document: 20 * 1024 * 1024,
-};
+const MIB = 1024 * 1024;
 
-/** Trần multer chung mọi endpoint upload = trần lớn nhất — một nguồn (epic review). */
-export const MULTER_LIMIT = { fileSize: SIZE_LIMITS.document };
+/**
+ * Trần CỨNG cho một file, tính bằng MB. `file.max_size_mb` (Q-18, AD-11) chỉ được đặt trong
+ * khoảng 1..trần này — màn Tham số khoá khoảng đó.
+ *
+ * Vẫn phải có trần cứng dù đã có cấu hình: multer đọc trọn file vào RAM TRƯỚC khi handler chạy,
+ * nên nó cần một con số lúc dựng interceptor, trước khi đọc được DB. Không có trần thì một
+ * request 2 GB được đệm hết vào RAM rồi mới bị từ chối. nginx (`web/nginx.conf`,
+ * `client_max_body_size`) giữ cùng con số đó ở cửa ngoài.
+ */
+export const FILE_HARD_CAP_MB = 25;
+
+/**
+ * multer chặn ở trần cứng + 1 MB: file vượt `file.max_size_mb` một chút vẫn tới được service và
+ * nhận câu báo có số MB, thay vì lỗi chung chung của multer. `files: 1` — mỗi request một file;
+ * trần "mỗi lượt chọn" (`file.max_files_per_batch`) do web giữ.
+ */
+export const MULTER_LIMIT = { fileSize: (FILE_HARD_CAP_MB + 1) * MIB, files: 1 };
+
+/** Trần byte cho một file theo cấu hình, không bao giờ vượt trần cứng. */
+export function sizeLimitBytes(maxSizeMb: number): number {
+  return Math.min(maxSizeMb, FILE_HARD_CAP_MB) * MIB;
+}
 
 interface DetectedType {
   mime: string;

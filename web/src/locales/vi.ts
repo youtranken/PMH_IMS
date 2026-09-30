@@ -2822,7 +2822,7 @@ export default {
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   settings: {
     title: 'Tham số hệ thống',
-    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển và mạng IP. Sửa phải xác thực lại.',
+    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển, mạng IP và giấy tờ đính kèm. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
     groupAuth: 'Đăng nhập & bảo mật',
     groupVault: 'Két sắt',
@@ -2831,6 +2831,7 @@ export default {
     groupDashboard: 'Bảng điều khiển',
     groupSoftware: 'Phần mềm',
     groupIpam: 'Mạng IP & NAT',
+    groupFiles: 'Giấy tờ đính kèm',
     defaultIs: 'Mặc định: {{value}}',
     resetDefault: 'Về mặc định',
     lastEdited: 'Sửa lần cuối bởi {{who}} lúc {{at}}',
@@ -2859,6 +2860,8 @@ export default {
     unitPerMinute: 'lần/phút',
     unitPorts: 'cổng',
     unitRows: 'dòng',
+    unitMb: 'MB',
+    unitFiles: 'file',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -2923,5 +2926,13 @@ export default {
       '24 nghĩa là /24 (254 máy). Chỉ siết được (số lớn hơn là dải hẹp hơn), không nới rộng hơn /24. Dải đã khai không bị ảnh hưởng.',
     natWidePortRangeLabel: 'Cảnh báo luật NAT mở dải cổng rộng hơn',
     natWidePortRangeDesc: 'Chỉ cảnh báo trước khi lưu, không chặn.',
+    fileMaxSizeMbLabel: 'Dung lượng tối đa mỗi file',
+    fileMaxSizeMbDesc:
+      'Áp cho mọi loại giấy tờ (ảnh, PDF, Word, Excel, PowerPoint). Không đặt quá 25 MB: máy chủ chặn cứng ở mức đó.',
+    fileMaxFilesPerBatchLabel: 'Số file tối đa mỗi lượt chọn',
+    fileMaxFilesPerBatchDesc: 'Chọn hoặc kéo thả nhiều hơn thì các file dư bị bỏ ra, kèm lời báo.',
+    filePurgeAfterDaysLabel: 'Gỡ nội dung file đã xoá sau',
+    filePurgeAfterDaysDesc:
+      'Qua mốc này nội dung file bị gỡ khỏi ổ đĩa, không khôi phục được nữa. Tên file và nhật ký vẫn giữ.',
   },
 } as const;

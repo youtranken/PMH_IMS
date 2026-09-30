@@ -1,4 +1,12 @@
-import { detectFileType, SIZE_LIMITS } from './file-validation';
+import { editableByKey } from '../config-sys/system-config.editable';
+import {
+  detectFileType,
+  FILE_HARD_CAP_MB,
+  MULTER_LIMIT,
+  sizeLimitBytes,
+} from './file-validation';
+
+const MB = 1024 * 1024;
 
 const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const png = Buffer.from([
@@ -63,9 +71,25 @@ describe('detectFileType (2.8, NFR-9) — magic-byte, KHÔNG tin đuôi/Content-
     expect(detectFileType(Buffer.from([0xff]), 'x.jpg')).toBeNull();
     expect(detectFileType(Buffer.alloc(0), 'x.png')).toBeNull();
   });
+});
 
-  it('trần dung lượng: ảnh 5MB, biên bản 20MB (NFR-4)', () => {
-    expect(SIZE_LIMITS.image).toBe(5 * 1024 * 1024);
-    expect(SIZE_LIMITS.document).toBe(20 * 1024 * 1024);
+describe('trần dung lượng (Q-18) — một trần cho mọi loại, lấy từ `file.max_size_mb`', () => {
+  it.each([
+    [25, 25 * MB],
+    [10, 10 * MB],
+    [1, 1 * MB],
+    // Cấu hình vượt trần cứng thì vẫn chỉ tới trần cứng: multer/nginx đã chặn ở đó từ trước.
+    [100, FILE_HARD_CAP_MB * MB],
+  ])('%i MB → %i byte', (mb, bytes) => {
+    expect(sizeLimitBytes(mb)).toBe(bytes);
+  });
+
+  it('trần cứng multer cao hơn trần cấu hình lớn nhất (để file quá cỡ nhận câu báo có số MB)', () => {
+    expect(MULTER_LIMIT.fileSize).toBeGreaterThan(FILE_HARD_CAP_MB * MB);
+    expect(MULTER_LIMIT.files).toBe(1);
+  });
+
+  it('màn Tham số không cho đặt `file.max_size_mb` quá trần cứng', () => {
+    expect(editableByKey('file.max_size_mb')?.max).toBe(FILE_HARD_CAP_MB);
   });
 });
