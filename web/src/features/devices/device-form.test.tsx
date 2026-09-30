@@ -106,4 +106,25 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     );
     expect(screen.getByRole('button', { name: 'Site' })).toHaveTextContent(/KHO-CU.*\(ngừng dùng\)/);
   });
+
+  it('sửa: "giấy tờ lưu ngay" nằm trong nút (i) cạnh tiêu đề khu, không phải băng cảnh báo', async () => {
+    mockFetch();
+    renderForm({ id: 'd1', code: 'PC-01', name: 'Máy', deviceTypeId: 't-on', status: 'in_use' } as DeviceRow);
+    const user = userEvent.setup();
+    expect(screen.queryByText(/có hiệu lực ngay/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }));
+    expect(
+      await screen.findByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
+    ).toBeInTheDocument();
+  });
+
+  it('Vị trí và Mua sắm & bảo hành xếp 4 cột; ghi chú 2 dòng', () => {
+    mockFetch();
+    renderForm(null);
+    for (const heading of ['Vị trí và người giữ', 'Mua sắm và bảo hành']) {
+      const section = screen.getByRole('heading', { name: heading }).closest('section');
+      expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    }
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
+  });
 });

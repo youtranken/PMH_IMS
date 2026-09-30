@@ -259,6 +259,22 @@
   margin: 0;
   font-size: var(--fs-sm);
 }
+/* Khu Giấy tờ ở CUỐI hộp thêm/sửa hồ sơ: nút chọn + gợi ý đứng một hàng thay vì khối ba tầng,
+   vì hộp đã dài và đây là việc phụ. Hộp Nhập Excel không nằm trong `.form-section` nên vẫn là
+   khối lớn — ở đó chọn file là việc chính. */
+.form-section .file-picker {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+}
+.form-section .file-picker-label {
+  align-self: center;
+}
+.form-section .file-picker-file {
+  flex-basis: 100%;
+}
 
 /* --- Ô nhập nhiều port dạng chip (features/ipam/port-chips-field.tsx) ----- */
 .port-chips {

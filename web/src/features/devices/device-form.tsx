@@ -229,7 +229,7 @@ export function DeviceForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
       guardUnsaved
-      maxWidth={860}
+      maxWidth={1080}
       title={
         device
           ? `${t('devices.edit')} — ${device.code}`
@@ -352,7 +352,7 @@ export function DeviceForm({
           {device ? serialField : null}
         </FormSection>
 
-        <FormSection title={t('devices.location')} columns={2}>
+        <FormSection title={t('devices.location')} columns={4}>
           <Field label={t('devices.site')}>
             <Select
               value={form.siteId}
@@ -404,8 +404,9 @@ export function DeviceForm({
         </FormSection>
 
         {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
-            bao giờ" là MỘT câu chuyện. Hai cột để "Bảo hành đến" không rơi xuống hàng lẻ. */}
-        <FormSection title={t('devices.purchase')} columns={2}>
+            bao giờ" là MỘT câu chuyện, nên bốn ô đứng chung một hàng; hộp 1080px đủ chỗ cho 4
+            cột mà không phải cuộn dọc qua hai hàng ngày tháng. */}
+        <FormSection title={t('devices.purchase')} columns={4}>
           <Field label={t('devices.vendor')}>
             <Select
               value={form.vendorId}
@@ -443,11 +444,11 @@ export function DeviceForm({
               needBaseHint={t('devices.warrantyQuickNeedBase')}
             />
           </Field>
-          <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={2}>
+          <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={3}>
             <textarea
               id="device-note"
               className="inp"
-              rows={3}
+              rows={2}
               value={form.note}
               onChange={(e) => set('note', e.target.value)}
             />
@@ -461,11 +462,14 @@ export function DeviceForm({
           khối khác nhau vì chúng trả lời hai câu khác nhau, không phải vì tiện tay.
         */}
         {device ? (
-          <FormSection title={t('attachments.title')} columns={1}>
-            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
-                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
-                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
-            <p className="alert">{t('attachments.liveWarning')}</p>
+          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
+             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
+             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
+          <FormSection
+            title={t('attachments.title')}
+            titleTip={t('attachments.liveTip')}
+            columns={1}
+          >
             <AttachmentPanel
               ownerType="device"
               ownerId={device.id}

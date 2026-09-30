@@ -336,7 +336,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveCount(0);
     // Khai MỚI thì chưa có id để gắn giấy tờ, nên khu đính kèm phải chưa hiện.
     await expect(
-      addForm.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
+      addForm.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }),
     ).toHaveCount(0);
 
     // Lựa chọn của `Select` PORTAL ra ngoài phần thân hộp — bắt ở cấp trang.
@@ -697,7 +697,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '',
     );
     await expect(
-      form.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
+      form.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }),
       'giấy tờ của dải ghi thẳng nên KHÔNG nằm trong hộp có nút Hủy — nó ở đầu cột phải',
     ).toHaveCount(0);
 
