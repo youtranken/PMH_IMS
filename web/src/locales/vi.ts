@@ -1040,7 +1040,7 @@ export default {
     provider: 'Nhà mạng',
     providerPlaceholder: '— Chọn nhà mạng —',
     providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "+ Thêm vào danh mục".',
-    bandwidth: 'Băng thông',
+    bandwidth: 'Tốc độ gói cước',
     wanIp: 'IP WAN',
     site: 'Site',
     device: 'Thiết bị biên',
@@ -2681,7 +2681,7 @@ export default {
     isp: {
       fCode: 'mã đường',
       fProvider: 'nhà mạng',
-      fBandwidth: 'băng thông',
+      fBandwidth: 'tốc độ gói cước',
       fWanIp: 'IP WAN',
       fDeviceId: 'thiết bị biên',
       fHotline: 'hotline',

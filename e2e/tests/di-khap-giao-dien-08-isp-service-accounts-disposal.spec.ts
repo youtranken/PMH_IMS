@@ -321,7 +321,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await nameByRole(dialog, 'textbox'),
       'Sáu ô gõ chữ của hộp thêm đường truyền — thiếu một ô là một trường không ai khai nữa',
-    ).toEqual(sortVi(['Mã đường', 'Băng thông', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
+    ).toEqual(sortVi(['Mã đường', 'Tốc độ gói cước', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
 
     /*
      * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị biên" tra ngược vào kho thiết bị.
@@ -591,7 +591,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     for (const [label, value] of [
       ['Mã đường', itemCode],
-      ['Băng thông', '100 Mbps'],
+      ['Tốc độ gói cước', '100 Mbps'],
       ['IP WAN', '203.113.99.9'],
       ['Hotline', '18001166'],
       ['Số hợp đồng', `HD-E2E-${stamp}`],

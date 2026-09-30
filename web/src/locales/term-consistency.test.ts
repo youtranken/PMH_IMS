@@ -369,3 +369,15 @@ describe('Q-18: "Phòng ban", không còn "Bộ phận"', () => {
     expect(lookup('ipam.usedBy')).toBe('Người / phòng ban dùng');
   });
 });
+
+/**
+ * Q-04 (làm rõ): tốc độ ghi trên đường truyền là tốc độ GÓI CƯỚC của line đó. Chữ "băng thông"
+ * đứng cạnh ô Nhà mạng khiến người ta đi tìm chỗ khai băng thông cho nhà mạng — chỗ đó không có.
+ */
+describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
+  it('form, lịch sử cùng một chữ; không còn "băng thông"', () => {
+    expect(lookup('isp.bandwidth')).toBe('Tốc độ gói cước');
+    expect(lookup('history.isp.fBandwidth')).toBe(lookup('isp.bandwidth').toLowerCase());
+    expect(allValues().filter(([, v]) => /băng thông/iu.test(v))).toEqual([]);
+  });
+});
