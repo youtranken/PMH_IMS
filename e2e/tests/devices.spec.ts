@@ -9,6 +9,8 @@ import {
   resetDevices,
   resetSoftware,
   resetUsers,
+  rowAction,
+  rowActionNames,
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
@@ -314,6 +316,52 @@ test.describe('Kho thiết bị', () => {
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByRole('row', { name: new RegExp(code) }).getByText('anh Tuấn')).toBeVisible();
+  });
+
+  /**
+   * Cột Thao tác theo Q-18: "Sửa" đứng ngoài, mọi việc khác trong ⋮. Thanh lý không làm tại
+   * danh sách — hộp thanh lý phải kể thứ máy đang giữ, nên nó sang trang chi tiết mở sẵn hộp.
+   */
+  test('menu ⋮ trên dòng thiết bị: đổi trạng thái tại chỗ, thanh lý mở ở trang chi tiết', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `PC-E2E-ROWMENU-${stamp}`;
+    const headers = await writeHeaders(page);
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
+    const created = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code, name: 'Máy menu dòng', deviceTypeId: pc.id },
+    });
+    expect(created.status()).toBe(201);
+
+    await page.goto('/devices');
+    await searchAndWaitForFilter(page, code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row.getByRole('button', { name: `Sửa máy ${code}` })).toBeVisible();
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
+
+    await rowAction(page, code, 'Đổi trạng thái');
+    await page.getByRole('button', { name: 'Trạng thái mới' }).click();
+    await page.getByRole('option', { name: 'Hỏng' }).click();
+    await confirmAction(page, 'Đổi trạng thái');
+    await expect(row.getByText('Hỏng')).toBeVisible();
+
+    // Đường hỏng: bấm Thanh lý ở danh sách KHÔNG thanh lý ngay — sang trang chi tiết, hộp mở
+    // sẵn; hủy thì máy vẫn nguyên trạng thái cũ.
+    await rowAction(page, code, 'Thanh lý');
+    const retire = page.getByRole('dialog', { name: `Thanh lý — ${code}` });
+    await expect(retire).toBeVisible();
+    await expect(page).toHaveURL(/\/devices\/[^/?]+/);
+    await retire.getByRole('button', { name: 'Hủy' }).click();
+    await expect(retire).toHaveCount(0);
+    await expect(page).not.toHaveURL(/action=retire/);
+    await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
   });
 
   /**

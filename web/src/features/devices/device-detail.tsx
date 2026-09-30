@@ -93,7 +93,7 @@ export function DeviceDetail({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const narrow = useIsNarrow();
   const { id = "" } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [tab, setTab] = useState(() =>
     initialTab(params.get("tab"), [
       "profile",
@@ -109,7 +109,10 @@ export function DeviceDetail({ me }: { me: Me }) {
   /** Hộp đổi trạng thái nhanh — cũng là hộp mở lại hồ sơ đã thanh lý. */
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
-  const [retiring, setRetiring] = useState(false);
+  /* `?action=retire` là lối từ menu ⋮ của danh sách: hộp thanh lý cần đọc các khu mà chỉ trang
+     này có, nên danh sách chuyển sang đây và hộp mở sẵn. Máy đã thanh lý thì bỏ qua (xem chỗ
+     vẽ hộp). */
+  const [retiring, setRetiring] = useState(() => params.get("action") === "retire");
   /** Danh sách API trả kèm 409 `DEVICE_HAS_HOLDINGS` — mở lại hộp với đúng những thứ vướng. */
   const [retireBlocked, setRetireBlocked] = useState<string[] | null>(null);
   /** Đếm lượt bị chặn: mỗi lần 409 là một `key` mới, kể cả lần thứ hai liên tiếp. */
@@ -495,6 +498,19 @@ export function DeviceDetail({ me }: { me: Me }) {
   const openStatus = () => {
     setStatusError(null);
     setStatusOpen(true);
+  };
+  /* Gỡ `?action=retire` khi đóng hộp: để lại thì F5 hay Back về trang này lại bật hộp thanh lý. */
+  const closeRetire = () => {
+    setRetiring(false);
+    if (params.has("action")) {
+      setParams(
+        (next) => {
+          next.delete("action");
+          return next;
+        },
+        { replace: true },
+      );
+    }
   };
   const openRetire = () => {
     setRetireBlocked(null);
@@ -1001,7 +1017,7 @@ export function DeviceDetail({ me }: { me: Me }) {
         </TabPanel>
       </DetailLayout>
 
-      {retiring ? (
+      {retiring && !retired ? (
         <RetireDialog
           /* Đổi `key` khi API trả danh sách vướng: hộp dựng lại từ đầu, lựa chọn cũ không
              còn đứng sẵn — người dùng đọc danh sách mới rồi chọn lại. Khoá theo LƯỢT chứ
@@ -1015,13 +1031,13 @@ export function DeviceDetail({ me }: { me: Me }) {
           blockedBy={retireBlocked}
           busy={setStatus.isPending}
           error={retireError}
-          onCancel={() => setRetiring(false)}
+          onCancel={closeRetire}
           onConfirm={(cleanup) =>
             setStatus.mutate(
               { status: "retired", cleanup },
               {
                 onSuccess: () => {
-                  setRetiring(false);
+                  closeRetire();
                   toast({ message: t("devices.statusChanged") });
                   void refresh();
                 },
