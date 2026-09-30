@@ -306,7 +306,7 @@ test.describe('Danh mục', () => {
   });
 
   /**
-   * Ba danh mục: Bộ phận, Nhà mạng, Dịch vụ/Port.
+   * Ba danh mục: Phòng ban, Nhà mạng, Dịch vụ/Port.
    *
    * Chúng ra đời vì cùng một lý do — ba ô đang gõ tay tự do, gõ mỗi nơi một kiểu ("P. Kế
    * toán" / "Phòng Kế toán" / "KT"), nên lọc ra thiếu và báo cáo cộng nhầm.
@@ -316,9 +316,9 @@ test.describe('Danh mục', () => {
     const stamp = uniqueStamp();
     await page.goto('/admin/catalog');
 
-    // ── Bộ phận ───────────────────────────────────────────────────────────
-    await page.getByRole('tab', { name: 'Bộ phận' }).click();
-    await page.getByRole('button', { name: 'Thêm bộ phận' }).click();
+    // ── Phòng ban ───────────────────────────────────────────────────────────
+    await page.getByRole('tab', { name: 'Phòng ban' }).click();
+    await page.getByRole('button', { name: 'Thêm phòng ban' }).click();
     let form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`P. E2E ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();

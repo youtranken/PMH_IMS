@@ -802,7 +802,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toBe(200);
 
     await page.goto('/service-accounts');
-    const searchBox = page.getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, bộ phận…' });
+    const searchBox = page.getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, phòng ban…' });
     await searchBox.fill(`TK-E2E-PHONG-${stamp}`);
     await expect(page.getByRole('row'), 'Lọc còn đúng hai tài khoản của lượt chạy này').toHaveCount(
       3,
@@ -931,7 +931,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await firstLogin(page, E2E_MEMBER);
     await page.goto('/service-accounts');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, bộ phận…' })
+      .getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, phòng ban…' })
       .fill(activeCode);
     await expect(page.getByRole('row')).toHaveCount(2);
 
@@ -1032,8 +1032,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sortVi(SHARED_FIELDS));
     expect(
       await nameByRole(dialog, 'combobox'),
-      'Bộ phận là ô GỢI Ý (gõ tự do được), không phải ô chọn cứng',
-    ).toEqual(['Bộ phận']);
+      'Phòng ban là ô GỢI Ý (gõ tự do được), không phải ô chọn cứng',
+    ).toEqual(['Phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
       'Hộp thêm tài khoản có đúng năm nút: ô chọn Loại, ô chọn file, ✕, Hủy, Lưu',
@@ -1131,7 +1131,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(created.status(), 'Dàn cảnh: tạo tài khoản để mở hộp Vô hiệu hóa').toBe(201);
 
     await page.goto('/service-accounts');
-    await page.getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, bộ phận…' }).fill(itemCode);
+    await page.getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, phòng ban…' }).fill(itemCode);
     await expect(page.getByRole('row')).toHaveCount(2);
     await rowAction(page, itemCode, 'Ngừng dùng');
 

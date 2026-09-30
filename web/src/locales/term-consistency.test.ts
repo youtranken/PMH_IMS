@@ -351,3 +351,21 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     expect(VALUES.filter(([, v]) => OLD.test(v))).toEqual([]);
   });
 });
+
+/**
+ * Q-18: "Phòng ban" thay cho "Bộ phận" ở mọi chữ người dùng đọc. Danh mục, ô chọn trên hồ sơ
+ * thiết bị và ô "ai đang dùng" của IP/NAT/TKDV cùng trỏ về MỘT danh mục — hai tên cho nó thì
+ * người ta đi tìm hai danh mục.
+ */
+describe('Q-18: "Phòng ban", không còn "Bộ phận"', () => {
+  it('không chuỗi nào còn chữ "bộ phận"', () => {
+    expect(allValues().filter(([, v]) => /bộ phận/iu.test(v))).toEqual([]);
+  });
+
+  it('tab danh mục, nút thêm, ô trên hồ sơ thiết bị và ô "ai đang dùng" của IP', () => {
+    expect(lookup('catalog.tabDepartment')).toBe('Phòng ban');
+    expect(lookup('catalog.addDepartment')).toBe('Thêm phòng ban');
+    expect(lookup('devices.department')).toBe('Phòng ban sử dụng');
+    expect(lookup('ipam.usedBy')).toBe('Người / phòng ban dùng');
+  });
+});

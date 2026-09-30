@@ -89,13 +89,13 @@ describe('CatalogForm — gợi ý và cảnh báo', () => {
     expect(onClose).toHaveBeenCalledWith(false);
   });
 
-  it('bộ phận: gõ tên gần trùng (bỏ dấu, hoa thường) thì nhắc tên đã có', async () => {
+  it('phòng ban: gõ tên gần trùng (bỏ dấu, hoa thường) thì nhắc tên đã có', async () => {
     stubFetch();
     const user = userEvent.setup();
     renderForm('department');
     await waitFor(() => expect(screen.getByRole('textbox', { name: /^Tên/ })).toBeInTheDocument());
     await user.type(screen.getByRole('textbox', { name: /^Tên/ }), 'phong it e2e');
-    expect(await screen.findByText('Đã có "Phòng IT E2E" — có phải cùng bộ phận?')).toBeInTheDocument();
+    expect(await screen.findByText('Đã có "Phòng IT E2E" — có phải cùng phòng ban?')).toBeInTheDocument();
   });
 
   it('dịch vụ: port + giao thức trùng dịch vụ đã có thì cảnh báo nhẹ', async () => {

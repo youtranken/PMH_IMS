@@ -44,7 +44,7 @@ describe('GlobalExceptionFilter — nhánh biên', () => {
       /* Câu 500 tiếng Việt — và vẫn CHUNG CHUNG, đó mới là điểm của nó.
          Bài này chốt đúng chuỗi ấy để không ai 'tiện tay' thêm chi tiết nội bộ vào. */
       message:
-        'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo bộ phận IT.',
+        'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo phòng IT.',
     });
   });
 });

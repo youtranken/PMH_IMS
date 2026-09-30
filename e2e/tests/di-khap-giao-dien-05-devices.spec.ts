@@ -534,7 +534,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
    * `devices.spec.ts` mở hộp "Thêm thiết bị" hàng chục lần, nhưng lần nào cũng chỉ chạm ba ô:
-   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người sử dụng, Bộ phận,
+   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người sử dụng, Phòng ban,
    * Nhà cung cấp, ba ô ngày, Ghi chú — chưa có bài nào biết chúng còn tồn tại hay không. Xóa
    * hẳn ô "Bảo hành đến" khỏi form thì cả bộ E2E vẫn xanh, và cái máy tiếp theo được khai sẽ
    * không có hạn bảo hành, mãi mãi.
@@ -542,7 +542,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * Bài này còn chốt hai quyết định thiết kế mà chỉ đọc chú thích trong code mới biết:
    *   - Ô "Trạng thái" KHÔNG hiện khi thêm mới (máy mới thì luôn "đang dùng"; bày một ô có
    *     đúng một câu trả lời hợp lý là mở đường cho hồ sơ vừa tạo đã "đã thanh lý").
-   *   - Từng ô phải đúng LOẠI tay nắm: Bộ phận là `combobox` (gõ tự do được, vì bộ phận mới
+   *   - Từng ô phải đúng LOẠI tay nắm: Phòng ban là `combobox` (gõ tự do được, vì phòng ban mới
    *     lập tuần này phải khai được ngay), Loại là `button` mở listbox, ngày là nút mở lịch.
    *     Nhầm vai nghĩa là người dùng bàn phím thao tác khác hẳn điều ta tưởng.
    *
@@ -606,13 +606,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     }
 
     /*
-     * ĐÚNG LOẠI TAY NẮM. Bộ phận là `combobox` chứ không phải `Select`: danh mục ở đây chỉ
+     * ĐÚNG LOẠI TAY NẮM. Phòng ban là `combobox` chứ không phải `Select`: danh mục ở đây chỉ
      * HƯỚNG chứ không được ép, nên nó phải gõ tự do được. Đổi nó thành `Select` là lặng lẽ
-     * cấm khai một bộ phận vừa lập.
+     * cấm khai một phòng ban vừa lập.
      */
     await expect(
-      dialog.getByRole('combobox', { name: 'Bộ phận' }),
-      'Ô Bộ phận phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
+      dialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      'Ô Phòng ban phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
     ).toHaveCount(1);
 
     /*
@@ -809,8 +809,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('combobox', { name: 'Bộ phận' }),
-      'Ô Bộ phận (combobox) cũng phải điền sẵn',
+      editDialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      'Ô Phòng ban (combobox) cũng phải điền sẵn',
     ).toHaveValue('Phòng CNTT');
     await expect(
       editDialog.getByRole('button', { name: 'Loại', exact: true }),
@@ -995,7 +995,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ).toHaveCount(0);
     }
     await expect(
-      panel.getByText('Chưa khai: Model, Serial, Nhà cung cấp, Bộ phận, Ngày mua, Ghi chú.'),
+      panel.getByText('Chưa khai: Model, Serial, Nhà cung cấp, Phòng ban sử dụng, Ngày mua, Ghi chú.'),
       'Ô chưa khai phải gom về MỘT dòng nói rõ còn thiếu gì, thay cho một dãy hộp toàn dấu gạch ngang',
     ).toBeVisible();
 

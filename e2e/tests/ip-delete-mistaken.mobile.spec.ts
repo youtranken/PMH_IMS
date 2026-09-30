@@ -72,7 +72,7 @@ test.describe('Xóa hồ sơ IP nhập nhầm ở 390px', () => {
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const assign = page.getByRole('dialog', { name: `Cấp IP — ${address}` });
     await expect(assign).toBeVisible();
-    await assign.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Chủ đúng E2E');
+    await assign.getByRole('combobox', { name: 'Người / phòng ban dùng' }).fill('Chủ đúng E2E');
     await assign.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(row).toContainText('Chủ đúng E2E');
   });

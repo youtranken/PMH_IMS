@@ -37,7 +37,7 @@ const HEADERS: HeaderSpec[] = [
   ['Tủ mạng', 14],
   ['Nhà cung cấp', 26],
   ['Người sử dụng', 20],
-  ['Bộ phận', 18],
+  ['Phòng ban sử dụng', 20],
   ['Ngày mua', 14],
   ['Bảo hành từ', 14],
   ['Bảo hành đến', 14],

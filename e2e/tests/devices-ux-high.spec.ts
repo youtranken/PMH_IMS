@@ -63,7 +63,7 @@ async function assignIp(page: Page, deviceId: string, stamp: string): Promise<st
   return address;
 }
 
-test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, bộ phận', () => {
+test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, phòng ban', () => {
   test('đường hạnh phúc: gõ IP hoặc tên người dùng ra đúng máy', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();

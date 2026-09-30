@@ -99,7 +99,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     'Tủ mạng',
     'Loại thiết bị',
     'Nhà cung cấp',
-    'Bộ phận',
+    'Phòng ban',
     'Nhà mạng',
     'Dịch vụ / Port',
   ] as const;
@@ -141,8 +141,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       excelImport: true,
     },
     {
-      tab: 'Bộ phận',
-      addButton: 'Thêm bộ phận',
+      tab: 'Phòng ban',
+      addButton: 'Thêm phòng ban',
       columns: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
@@ -304,8 +304,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         toggles: [],
       },
       {
-        tab: 'Bộ phận',
-        title: 'Thêm bộ phận',
+        tab: 'Phòng ban',
+        title: 'Thêm phòng ban',
         textFields: ['Tên', 'Mô tả'],
         selectField: [],
         toggles: [],
@@ -564,7 +564,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
    * File mẫu chỉ có sheet cho BỐN danh mục gốc. Nếu "Tải file mẫu" / "Nhập từ Excel" hiện ra
-   * ở ba danh mục sinh sau (Bộ phận · Nhà mạng · Dịch vụ) thì đó là một lời hứa hão: người
+   * ở ba danh mục sinh sau (Phòng ban · Nhà mạng · Dịch vụ) thì đó là một lời hứa hão: người
    * dùng tải mẫu về, không tìm thấy sheet của mình, và đi hỏi. Ngược lại, nút biến mất khỏi
    * bốn danh mục gốc thì đường nhập hàng loạt coi như không còn.
    *

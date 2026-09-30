@@ -28,7 +28,7 @@ describe('Xuất Excel tài khoản dịch vụ', () => {
     );
     const headers = captured.map((column) => column.header);
     expect(headers).toEqual(
-      expect.arrayContaining(['Mã', 'Loại', 'Tên đăng nhập', 'Bộ phận', 'Người phụ trách', 'Trạng thái']),
+      expect.arrayContaining(['Mã', 'Loại', 'Tên đăng nhập', 'Phòng ban', 'Người phụ trách', 'Trạng thái']),
     );
     expect(headers.some((header) => /mật khẩu|password|secret/i.test(header))).toBe(false);
     // Xuất đúng bộ lọc đang xem (FR-028).

@@ -4,6 +4,7 @@ import {
   type ExistingDevice,
 } from './device-import';
 import type { ParsedSheets } from '../../common/import-plan';
+import { deviceExportSheets } from './device-template';
 
 const TYPE_SWITCH = { id: 'type-switch', name: 'Switch' };
 const SITE_HO = { id: 'site-ho', code: 'PMH-HO' };
@@ -384,5 +385,22 @@ describe('planDeviceImport — ô Excel không đọc được giá trị (BE-12
       context(),
     );
     expect(plan.rows[0]).toMatchObject({ action: 'create' });
+  });
+});
+
+/*
+ * Q-18: file mẫu ghi cột "Phòng ban sử dụng" (cùng nhãn với ô trên hồ sơ thiết bị); file cũ
+ * còn cột "Bộ phận" vẫn phải nhập được.
+ */
+describe('planDeviceImport — cột phòng ban (Q-18)', () => {
+  it('file mẫu/export ghi cột "Phòng ban sử dụng"', () => {
+    const headers = deviceExportSheets([])[0].columns.map((c) => c.header);
+    expect(headers).toContain('Phòng ban sử dụng');
+    expect(headers.filter((h) => /bộ phận/i.test(h))).toEqual([]);
+  });
+
+  it.each(['Phòng ban sử dụng', 'Phòng ban', 'Bộ phận'])('cột "%s" nhập vào phòng ban', (column) => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, [column]: 'Kế toán' }]), context());
+    expect(plan.rows[0]).toMatchObject({ action: 'create', values: { department: 'Kế toán' } });
   });
 });

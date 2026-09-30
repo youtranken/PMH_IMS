@@ -148,8 +148,9 @@ const FIELDS: FieldSpec[] = [
   },
   {
     key: 'department',
-    label: 'Bộ phận',
-    aliases: ['bộ phận', 'bo phan', 'phòng ban'],
+    label: 'Phòng ban sử dụng',
+    // "Bộ phận" là tên cột của file mẫu cũ (trước Q-18) — file người dùng đang giữ vẫn nhập được.
+    aliases: ['phòng ban sử dụng', 'phong ban su dung', 'phòng ban', 'phong ban', 'bộ phận', 'bo phan'],
     kind: 'text',
   },
   {
