@@ -108,6 +108,27 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
   ];
 
   /**
+   * Tập loại mà ô chọn phải bày = đúng danh mục server trả, không phải hằng số 12: chủ dự án
+   * nhập thêm loại riêng qua màn Danh mục, và đó là dữ liệu thật chứ không phải rác E2E.
+   * Hai điều vẫn chốt: đủ 12 loại gieo sẵn, và không còn loại mang chữ E2E sót lại.
+   */
+  async function catalogDeviceTypes(page: Page, onlyActive: boolean): Promise<string[]> {
+    const res = await page.request.get('/api/v1/catalog');
+    expect(res.status(), 'đọc danh mục để biết tập loại thiết bị hiện có').toBe(200);
+    const rows = ((await res.json()) as { deviceTypes: { name: string; active: boolean }[] })
+      .deviceTypes;
+    const names = rows.filter((row) => !onlyActive || row.active).map((row) => row.name);
+    expect(names, 'thiếu một loại gieo sẵn nghĩa là seed đã đổi').toEqual(
+      expect.arrayContaining(BASE_DEVICE_TYPES),
+    );
+    expect(
+      names.filter((name) => /e2e/i.test(name)),
+      'loại thiết bị E2E sót lại — reset-e2e chưa dọn',
+    ).toEqual([]);
+    return names.sort();
+  }
+
+  /**
    * Tên TRỢ NĂNG của một tập điều khiển, đúng thứ tự chúng nằm trong DOM.
    *
    * Vì sao không dùng `allInnerTexts()`: một nửa số điều khiển của phòng này KHÔNG có chữ nào
@@ -309,8 +330,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
     expect(
       [...kind.slice(1)].sort(),
-      'Ô lọc Loại phải khớp ĐÚNG 12 loại do migration gieo sẵn — thừa một loại nghĩa là danh mục E2E chưa được dọn, thiếu một loại nghĩa là seed đã đổi',
-    ).toEqual([...BASE_DEVICE_TYPES].sort());
+      'Ô lọc Loại phải khớp ĐÚNG danh mục loại thiết bị (kể cả loại đã ngưng — lọc thì vẫn cần tìm máy cũ)',
+    ).toEqual(await catalogDeviceTypes(page, false));
 
     // Site và tủ là dữ liệu riêng của PMH (nhập qua màn Danh mục), nên chỉ chốt được mục đầu.
     expect(
@@ -670,8 +691,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       [...typeInForm].sort(),
-      'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
-    ).toEqual([...BASE_DEVICE_TYPES].sort());
+      'Ô "Loại" trong form phải bày đúng các loại đang dùng của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
+    ).toEqual(await catalogDeviceTypes(page, true));
 
     /*
      * ĐƯỜNG HỎNG — BẤM LƯU KHI CÒN THIẾU (DEV-025).
@@ -821,9 +842,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveText('Đang dùng');
 
     /*
-     * BỘ NÚT CỦA CHẾ ĐỘ SỬA — đúng bằng bộ của chế độ thêm mới CỘNG hai thứ, không hơn:
+     * BỘ NÚT CỦA CHẾ ĐỘ SỬA — đúng bằng bộ của chế độ thêm mới CỘNG hai thứ, BỚT một, không hơn:
      *   + "Trạng thái": máy đã tồn tại thì trạng thái mới là một quyết định thật.
-     *   + "Tải lên": hồ sơ đã có id nên giấy tờ đẩy lên được NGAY, không phải chờ lưu xong.
+     *   - "Ghi rồi thêm máy khác": đang sửa một máy thì không có "máy tiếp theo".
+     *   + (i) cạnh "Giấy tờ đính kèm": khu này GHI THẲNG, nút Hủy của hộp không gỡ được file đã tải —
+     *     nói ra ở nút giải thích thay cho băng cảnh báo (Q-18).
      */
     await expect
       .poll(() => controlName(editDialog.getByRole('button')), {
@@ -843,6 +866,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        'Giải thích: Giấy tờ đính kèm',
         'Chọn file để đính kèm',
         'Hủy',
         'Lưu',
