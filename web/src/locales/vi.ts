@@ -2233,6 +2233,7 @@ export default {
       fileUploaded: 'Tải tệp lên',
       fileDownloaded: 'Tải tệp xuống',
       fileDeleted: 'Xóa tệp',
+      filePurged: 'Dọn nội dung tệp đã xóa',
       ipCreated: 'Tạo hồ sơ IP',
       ipUpdated: 'Sửa hồ sơ IP',
       ipAssigned: 'Cấp IP',
@@ -2932,7 +2933,7 @@ export default {
       'Áp cho mọi loại giấy tờ (ảnh, PDF, Word, Excel, PowerPoint). Không đặt quá 25 MB: máy chủ chặn cứng ở mức đó.',
     fileMaxFilesPerBatchLabel: 'Số file tối đa mỗi lượt chọn',
     fileMaxFilesPerBatchDesc: 'Chọn hoặc kéo thả nhiều hơn thì các file dư bị bỏ ra, kèm lời báo.',
-    filePurgeAfterDaysLabel: 'Gỡ nội dung file đã xoá sau',
+    filePurgeAfterDaysLabel: 'Gỡ nội dung file đã xóa sau',
     filePurgeAfterDaysDesc:
       'Qua mốc này nội dung file bị gỡ khỏi ổ đĩa, không khôi phục được nữa. Tên file và nhật ký vẫn giữ.',
   },

@@ -129,7 +129,7 @@ describe('Màn Tham số hệ thống', () => {
     expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
     expect(screen.getByLabelText('Số file tối đa mỗi lượt chọn')).toHaveValue('6');
     expect(screen.getByText(/Mặc định: 6 file/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Gỡ nội dung file đã xoá sau')).toHaveValue('30');
+    expect(screen.getByLabelText('Gỡ nội dung file đã xóa sau')).toHaveValue('30');
   });
 
   it('nới quá ngưỡng → cảnh báo; Lưu mở hộp Trước → Sau, chưa gửi gì', async () => {

@@ -1,5 +1,5 @@
-import { useMe } from '@/lib/api';
-import type { Me } from '@/lib/me';
+import { useQuery } from '@tanstack/react-query';
+import { ME_KEY, type Me } from '@/lib/me';
 
 /**
  * Trần giấy tờ đính kèm phía web (Q-18) — MỘT chỗ cho panel đính kèm và khối chọn trước lúc lưu.
@@ -31,8 +31,13 @@ export function attachmentLimitsOf(me: Me | null | undefined): AttachmentLimits 
   };
 }
 
+/**
+ * Đọc `me` từ cache, KHÔNG tự gọi `/auth/me`: hook này nằm trong mọi form có khối giấy tờ (kể cả
+ * hộp gia hạn), và shell đã nạp `me` từ trước. Tự gọi thì mỗi lần mở form là thêm một lượt mạng
+ * khi cache đã cũ. `enabled: false` vẫn theo dõi cache nên `me` về sau thì số tự cập nhật.
+ */
 export function useAttachmentLimits(): AttachmentLimits {
-  const { data: me } = useMe();
+  const { data: me } = useQuery<Me | null>({ queryKey: ME_KEY, enabled: false });
   return attachmentLimitsOf(me);
 }
 

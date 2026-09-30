@@ -43,15 +43,6 @@ function pdf(name: string): File {
 function stubFetch(fail: string[] = []) {
   const calls: { path: string; body: FormData }[] = [];
   const fetchMock = vi.fn((path: string, init: RequestInit) => {
-    // Trần cỡ/số file đọc từ phiên (Q-18) — trả phiên có cấu hình mặc định, không tính là lượt gửi file.
-    if (path.includes('/auth/me')) {
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () =>
-          Promise.resolve({ role: 'admin', config: { fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 } }),
-      });
-    }
     const body = init.body as FormData;
     calls.push({ path, body });
     const name = (body.get('file') as File).name;
