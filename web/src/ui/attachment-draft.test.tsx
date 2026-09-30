@@ -43,6 +43,15 @@ function pdf(name: string): File {
 function stubFetch(fail: string[] = []) {
   const calls: { path: string; body: FormData }[] = [];
   const fetchMock = vi.fn((path: string, init: RequestInit) => {
+    // Trần cỡ/số file đọc từ phiên (Q-18) — trả phiên có cấu hình mặc định, không tính là lượt gửi file.
+    if (path.includes('/auth/me')) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({ role: 'admin', config: { fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 } }),
+      });
+    }
     const body = init.body as FormData;
     calls.push({ path, body });
     const name = (body.get('file') as File).name;
@@ -52,7 +61,7 @@ function stubFetch(fail: string[] = []) {
             ok: false,
             status: 400,
             json: () =>
-              Promise.resolve({ code: 'FILE_TOO_LARGE', message: 'File vượt trần 20MB.' }),
+              Promise.resolve({ code: 'FILE_TOO_LARGE', message: 'File vượt trần 25 MB.' }),
           }
         : { ok: true, status: 201, json: () => Promise.resolve({ id: 'file-1' }) },
     );
@@ -118,7 +127,45 @@ describe('AttachmentDraft — giấy tờ chọn trước lúc lưu hồ sơ', (
     expect(errors[0]).toHaveLength(1);
     // Câu lỗi phải NÓI TÊN file và nhắc chỗ đính kèm lại — hồ sơ đã lưu rồi, không thể quay lui.
     expect(errors[0][0]).toContain('qua-nang.pdf');
-    expect(errors[0][0]).toContain('File vượt trần 20MB.');
+    expect(errors[0][0]).toContain('File vượt trần 25 MB.');
     expect(errors[0][0]).toContain('tab Giấy tờ');
+  });
+
+  /*
+   * Q-18: file quá cỡ phải bị bắt NGAY lúc chọn. Để tới lúc Lưu thì hồ sơ đã ghi xuống DB rồi
+   * mới báo file hỏng — người dùng phải mở lại hồ sơ để đính kèm lần nữa.
+   */
+  it('file quá cỡ bị từ chối ngay lúc chọn, không vào danh sách, không bao giờ gửi', async () => {
+    const user = userEvent.setup();
+    const calls = stubFetch();
+    renderWithI18n(<Harness />);
+
+    const big = pdf('scan-to.pdf');
+    Object.defineProperty(big, 'size', { value: 26 * 1024 * 1024 });
+    await user.upload(screen.getByLabelText('Chọn file để đính kèm'), big);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Không đính kèm "scan-to.pdf": vượt 25 MB mỗi file.',
+    );
+    expect(screen.queryByRole('button', { name: /Bỏ "scan-to.pdf"/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Lưu giả lập' }));
+    expect(await screen.findByText('Đã đẩy xong')).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('giữ tối đa đủ số file mỗi lượt; file thứ 7 bị bỏ kèm lời báo', async () => {
+    const user = userEvent.setup();
+    stubFetch();
+    renderWithI18n(<Harness />);
+
+    await user.upload(
+      screen.getByLabelText('Chọn file để đính kèm'),
+      ['1', '2', '3', '4', '5', '6', '7'].map((n) => pdf(`${n}.pdf`)),
+    );
+    expect(screen.getByText('6.pdf')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Bỏ "7.pdf"/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Mỗi lần chỉ nhận 6 file — đã bỏ ra: "7.pdf".',
+    );
   });
 });

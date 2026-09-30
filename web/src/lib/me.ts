@@ -24,6 +24,9 @@ export interface Me {
   config: {
     stepUpGraceMinutes: number;
     secretRevealSeconds: number;
+    /** `file.max_size_mb` / `file.max_files_per_batch` (Q-18) — đọc qua `useAttachmentLimits`. */
+    fileMaxSizeMb: number;
+    fileMaxFilesPerBatch: number;
   };
 }
 

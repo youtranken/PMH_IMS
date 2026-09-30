@@ -24,7 +24,7 @@ const SA: Me = {
   totpEnrolled: true,
   steppedUpAt: null,
   csrfToken: 'csrf-1',
-  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 60 },
+  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 60, fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 },
 };
 
 const ROW = {

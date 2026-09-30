@@ -750,13 +750,15 @@ export default {
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
-    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận jpg, png, webp, pdf, xlsx.',
-    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận jpg, png, webp, pdf, xlsx.',
-    hint_service_account:
-      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận jpg, png, webp, pdf, xlsx.',
-    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận jpg, png, webp, pdf, xlsx.',
-    hint_nat_rule:
-      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận jpg, png, webp, pdf, xlsx.',
+    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành…',
+    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh…',
+    hint_service_account: 'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu.',
+    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP…',
+    hint_nat_rule: 'Ảnh chụp cấu hình router, email xác nhận mở port…',
+    // Trần lấy từ `file.max_size_mb` / `file.max_files_per_batch` (Q-18), không viết cứng số.
+    limits: 'Tối đa {{size}} MB/file, {{count}} file mỗi lần — PDF, Word, Excel, PowerPoint, ảnh.',
+    rejectedTooLarge: 'Không đính kèm {{names}}: vượt {{size}} MB mỗi file.',
+    rejectedOverCount: 'Mỗi lần chỉ nhận {{count}} file — đã bỏ ra: {{names}}.',
     pick: 'Chọn file để đính kèm',
     // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
     uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
@@ -780,8 +782,7 @@ export default {
     removed: 'Đã xóa giấy tờ.',
     noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
-    draftHint:
-      'Không bắt buộc. File (jpg, png, webp, pdf, xlsx) được đính kèm ngay sau khi lưu hồ sơ.',
+    draftHint: 'Không bắt buộc. File được đính kèm ngay sau khi lưu hồ sơ.',
     liveWarning:
       'Thêm, xóa giấy tờ ở đây có hiệu lực ngay, không chờ Lưu — nút Hủy không hoàn tác được.',
     draftRemove: 'Bỏ ra',
