@@ -10,6 +10,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -71,14 +72,37 @@ export function AssignDialog({
       software.seatTotal !== null &&
       software.seatUsed + devices.length > software.seatTotal);
   const [error, setError] = useState<string | null>(null);
-  /* Chọn nhanh cả lô theo phòng ban / người sử dụng: mua 10 ghế cho phòng Kế toán thì chọn
-     "Kế toán" một lần, rồi bỏ bớt máy không cần. Đóng sẵn — hộp mở ra vẫn chỉ có MỘT ô tìm. */
-  const [quickOpen, setQuickOpen] = useState(false);
-  const [quickBy, setQuickBy] = useState<'department' | 'assignedTo'>('department');
+  /* Ba cách chọn máy, mỗi lúc chỉ bày MỘT ô: tìm từng máy, hoặc cả lô theo phòng ban / người
+     sử dụng (mua 10 ghế cho phòng Kế toán thì chọn "Kế toán" một lần, rồi bỏ bớt máy không
+     cần). Kết quả luôn là chip MÁY: ghế license gắn vào máy (device_id NOT NULL), phòng ban
+     hay người chỉ là lối tắt để chọn máy. */
+  const [pickBy, setPickBy] = useState<'device' | 'department' | 'assignedTo'>('device');
   const [quickValue, setQuickValue] = useState('');
   const [quickNote, setQuickNote] = useState<string | null>(null);
   const [quickLoading, setQuickLoading] = useState(false);
   const departments = useDepartments();
+  const [personDebounced, setPersonDebounced] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setPersonDebounced(quickValue.trim()), 250);
+    return () => clearTimeout(id);
+  }, [quickValue]);
+  /* Không có danh mục người sử dụng: gợi ý lấy từ chính các máy đang dùng khớp chữ đang gõ,
+     để tên chọn ra là tên có máy thật — phép lọc `assignedTo` phía API khớp ĐÚNG, không "chứa". */
+  const people = useQuery({
+    queryKey: ['devices', 'assignees', personDebounced],
+    enabled: !editing && pickBy === 'assignedTo' && personDebounced.length >= 2,
+    queryFn: () =>
+      apiFetch<{ items: DeviceRow[] }>(
+        `/api/v1/devices?limit=50&usable=true&status=in_use&search=${encodeURIComponent(personDebounced)}`,
+      ),
+  });
+  const personOptions = [
+    ...new Set(
+      (people.data?.items ?? [])
+        .map((item) => item.assignedTo?.trim())
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ];
 
   async function quickAdd() {
     const who = quickValue.trim();
@@ -93,7 +117,7 @@ export function AssignDialog({
          license này — gán lại máy đó thì API từ chối và cả lô dừng giữa chừng. */
       const [found, seats] = await Promise.all([
         apiFetch<{ items: DeviceRow[]; total: number }>(
-          `/api/v1/devices?limit=${QUICK_PICK_LIMIT}&usable=true&status=in_use&${quickBy}=${encodeURIComponent(who)}`,
+          `/api/v1/devices?limit=${QUICK_PICK_LIMIT}&usable=true&status=in_use&${pickBy}=${encodeURIComponent(who)}`,
         ),
         apiFetch<LicenseSeat[]>(`/api/v1/software/${software.id}/assignments`),
       ]);
@@ -139,7 +163,7 @@ export function AssignDialog({
 
   const candidates = useQuery({
     queryKey: ['devices', 'picker', debounced],
-    enabled: !editing && debounced.trim().length >= 2,
+    enabled: !editing && pickBy === 'device' && debounced.trim().length >= 2,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[] }>(
         `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
@@ -282,79 +306,81 @@ export function AssignDialog({
             </p>
           </Field>
         ) : (
-          <Field
-            label={t('license.device')}
-            required
-            hint={t('license.deviceHint')}
-            span={2}
-            error={check.error('device')}
-          >
-            <Combobox
-              placeholder={t('license.deviceSearch')}
-              query={query}
-              onQuery={setQuery}
-              // Máy đã nằm trong lô thì không mời chọn lần nữa.
-              options={(candidates.data?.items ?? []).filter(
-                (item) => !devices.some((picked) => picked.id === item.id),
-              )}
-              failed={candidates.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
-                </>
-              )}
-              onSelect={(item) => {
-                setDevices((current) => [...current, { id: item.id, code: item.code }]);
-                // Xoá ô để gõ tìm máy kế tiếp — chọn xong một máy là chip nằm bên dưới.
-                setQuery('');
-              }}
-            />
-          </Field>
-        )}
-        {!editing ? (
-          <div className="span-2">
-            {!quickOpen ? (
-              <button
-                type="button"
-                className="btn sm"
-                aria-expanded={false}
-                onClick={() => setQuickOpen(true)}
+          <>
+            <div className="span-2">
+              <SegmentedRadio
+                label={t('license.quickPickBy')}
+                value={pickBy}
+                options={[
+                  { value: 'device', label: t('license.device') },
+                  { value: 'department', label: t('license.quickPickDepartment') },
+                  { value: 'assignedTo', label: t('license.quickPickPerson') },
+                ]}
+                onChange={(by) => {
+                  if (by === pickBy) return;
+                  setPickBy(by);
+                  setQuery('');
+                  setQuickValue('');
+                  setQuickNote(null);
+                }}
+              />
+            </div>
+            {pickBy === 'device' ? (
+              <Field
+                label={t('license.device')}
+                required
+                hint={t('license.deviceHint')}
+                span={2}
+                error={check.error('device')}
               >
-                {t('license.quickPickOpen')}
-              </button>
+                <Combobox
+                  placeholder={t('license.deviceSearch')}
+                  query={query}
+                  onQuery={setQuery}
+                  // Máy đã nằm trong lô thì không mời chọn lần nữa.
+                  options={(candidates.data?.items ?? []).filter(
+                    (item) => !devices.some((picked) => picked.id === item.id),
+                  )}
+                  failed={candidates.isError}
+                  getKey={(item) => item.id}
+                  renderOption={(item) => (
+                    <>
+                      <span className="mono">{item.code}</span> <small>{item.name}</small>
+                    </>
+                  )}
+                  onSelect={(item) => {
+                    setDevices((current) => [...current, { id: item.id, code: item.code }]);
+                    // Xoá ô để gõ tìm máy kế tiếp — chọn xong một máy là chip nằm bên dưới.
+                    setQuery('');
+                  }}
+                />
+              </Field>
             ) : (
-              <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
-                <div className="segmented" role="group" aria-label={t('license.quickPickBy')}>
-                  {(['department', 'assignedTo'] as const).map((by) => (
-                    <button
-                      key={by}
-                      type="button"
-                      aria-pressed={quickBy === by}
-                      onClick={() => {
-                        setQuickBy(by);
-                        setQuickValue('');
-                        setQuickNote(null);
-                      }}
-                    >
-                      {t(by === 'department' ? 'license.quickPickDepartment' : 'license.quickPickPerson')}
-                    </button>
-                  ))}
-                </div>
+              <Field
+                label={t(
+                  pickBy === 'department'
+                    ? 'license.quickPickDepartmentLabel'
+                    : 'license.quickPickPersonLabel',
+                )}
+                required
+                tip={t('license.quickPickHint')}
+                span={2}
+                error={check.error('device')}
+              >
                 <div className="row" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <SuggestInput
                       value={quickValue}
                       onChange={setQuickValue}
-                      options={quickBy === 'department' ? departments.names : []}
-                      failed={quickBy === 'department' && departments.failed}
+                      options={pickBy === 'department' ? departments.names : personOptions}
+                      failed={pickBy === 'department' ? departments.failed : people.isError}
                       placeholder={t(
-                        quickBy === 'department'
+                        pickBy === 'department'
                           ? 'license.quickPickDepartmentLabel'
                           : 'license.quickPickPersonLabel',
                       )}
                       ariaLabel={t(
-                        quickBy === 'department'
+                        pickBy === 'department'
                           ? 'license.quickPickDepartmentLabel'
                           : 'license.quickPickPersonLabel',
                       )}
@@ -369,16 +395,15 @@ export function AssignDialog({
                     {quickLoading ? t('common.loading') : t('license.quickPickAdd')}
                   </button>
                 </div>
-                <p className="muted">{t('license.quickPickHint')}</p>
-                {quickNote ? (
-                  <p className="muted" role="status">
-                    {quickNote}
-                  </p>
-                ) : null}
-              </div>
+              </Field>
             )}
-          </div>
-        ) : null}
+            {quickNote ? (
+              <p className="muted span-2" role="status">
+                {quickNote}
+              </p>
+            ) : null}
+          </>
+        )}
         {!editing && devices.length > 0 ? (
           <div className="chip-row span-2" role="list" aria-label={t('license.pickedDevices')}>
             {devices.map((item) => (

@@ -53,7 +53,7 @@ function writePng(name: string): string {
 const picker = (page: Page) => page.getByLabel('Chọn file để đính kèm');
 
 /**
- * Điền phần bắt buộc của form "Thêm hồ sơ" phần mềm.
+ * Điền phần bắt buộc của form "Thêm phần mềm".
  *
  * Chọn kỳ hạn VĨNH VIỄN để khỏi phải đi qua widget lịch: license thuê bao bắt buộc có ngày
  * hết hạn, mà cái lịch không phải thứ mấy bài này đi kiểm — chúng kiểm khối giấy tờ.
@@ -98,7 +98,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await expect(page.getByRole('row', { name: new RegExp(`anh-may-${stamp}`) })).toBeVisible();
   });
 
-  test('phần mềm: chọn hợp đồng trong form Thêm hồ sơ, lưu xong thấy ở tab Giấy tờ', async ({
+  test('phần mềm: chọn hợp đồng trong form Thêm phần mềm, lưu xong thấy ở tab Giấy tờ', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -106,7 +106,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const code = `LIC-E2E-ATT-${stamp}`;
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
 
     const form = await fillSoftwareBasics(page, code, 'Office 365 có hợp đồng');
     await picker(page).setInputFiles(writePdf(`hop-dong-${stamp}.pdf`));
@@ -160,7 +160,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const code = `LIC-E2E-BO-${stamp}`;
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
 
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ đổi ý');
     await picker(page).setInputFiles(writePdf(`nham-${stamp}.pdf`));
@@ -186,7 +186,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     writeFileSync(fake, '<html><script>alert(1)</script></html>');
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ kèm file lạ');
     await picker(page).setInputFiles(fake);
     await form.getByRole('button', { name: 'Lưu' }).click();

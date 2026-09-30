@@ -329,7 +329,10 @@ export function SoftwareScreen({ me }: { me: Me }) {
                nút "Gán vào máy" gần nhất. */
             canExpand={(item) => supportsSeats(item.kind) && item.status !== 'retired'}
             expandLabel={(item, open) =>
-              t(open ? 'license.collapseLabel' : 'license.expandLabel', { code: item.code })
+              t(open ? 'license.collapseLabel' : 'license.expandLabel', {
+                code: item.code,
+                count: item.seatUsed,
+              })
             }
             // Hồ sơ Thanh lý chỉ hiện khi người dùng chọn "Mọi trạng thái" — làm mờ cho khỏi lẫn.
             rowClassName={(item) => (item.status === 'retired' ? 'row-muted' : '')}

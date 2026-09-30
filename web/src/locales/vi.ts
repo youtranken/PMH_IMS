@@ -860,7 +860,7 @@ export default {
   software: {
     title: 'Phần mềm',
     subtitle: 'License, SSL, tên miền, hợp đồng bảo trì và ngày gia hạn',
-    add: 'Thêm hồ sơ',
+    add: 'Thêm phần mềm',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, tên, ghi chú hoặc mã máy',
     code: 'Mã hồ sơ',
@@ -871,12 +871,16 @@ export default {
     seats: 'Ghế',
     seatTotal: 'Số ghế',
     licenseModel: 'Kỳ hạn',
-    /* Gợi ý dưới ô Kỳ hạn đổi theo lựa chọn đang bật. */
-    subscriptionHint: 'Có ngày hết hạn — hệ thống nhắc gia hạn trước khi hết.',
-    perpetualHint: 'Mua đứt: chỉ cần ngày bắt đầu, không nhắc gia hạn.',
+    /* Bong bóng (i) của ô Kỳ hạn: nói cả hai lựa chọn để đọc được TRƯỚC khi chọn. */
+    licenseModelTip:
+      'Thuê bao: có ngày hết hạn — hệ thống nhắc gia hạn trước khi hết. Vĩnh viễn: mua đứt, chỉ cần ngày bắt đầu, không nhắc gia hạn.',
     noEnd: 'Không hết hạn',
     endRequired: 'Nhập ngày hết hạn để hệ thống nhắc gia hạn.',
+    endQuick: 'Đặt nhanh ngày hết hạn',
+    endQuickNeedBase: 'Chọn ngày bắt đầu trước.',
     sectionTerm: 'Thời hạn',
+    sectionSeatsNote: 'Ghế và ghi chú',
+    sectionWebsitesNote: 'Website và ghi chú',
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',
@@ -997,7 +1001,8 @@ export default {
     startDate: 'Bắt đầu',
     endDate: 'Kết thúc',
     endDateHint: 'Để trống thì ghế theo hạn của hồ sơ.',
-    seatsHeader: 'Đã gán {{seats}} ghế',
+    /* Đầu khu bung dòng license (`ExpandHeader`), số đếm đứng ngay sau. */
+    seatsInUse: 'Ghế đang dùng',
     editSeatTitle: 'Sửa ghế license',
     seatSaved: 'Đã lưu ghế của máy {{device}}.',
     emptySeats: 'Chưa gán license này vào máy nào.',
@@ -1023,12 +1028,10 @@ export default {
     filterState: 'Lọc ghế theo tình trạng',
     tabActive: 'Đang dùng',
     tabReleased: 'Đã gỡ',
-    seatsFullTag: 'hết ghế',
-    expandLabel: 'Mở rộng {{code}} — xem máy đang dùng',
+    expandLabel: 'Mở rộng {{code}} — {{count}} ghế đang dùng',
     collapseLabel: 'Thu gọn {{code}}',
     /* Chọn nhanh cả lô theo phòng ban / người sử dụng trong hộp Gán (Q-15). */
-    quickPickOpen: 'Chọn theo phòng ban / người sử dụng',
-    quickPickBy: 'Chọn nhanh theo',
+    quickPickBy: 'Chọn máy theo',
     quickPickDepartment: 'Phòng ban',
     quickPickPerson: 'Người sử dụng',
     quickPickDepartmentLabel: 'Tên phòng ban',

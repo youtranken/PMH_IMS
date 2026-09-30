@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
+import { ExpandHeader } from '@/ui/expand-header';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './assign-dialog';
 import { SeatTable, type SeatRow } from './seat-table';
@@ -41,16 +42,19 @@ export function LicenseSeatsExpand({
 
   return (
     <div className="exp-soft">
-      <div className="seat-head">
-        {/* Cùng con số với cột Ghế của bảng trên, lấy từ cùng một chỗ (`seatLabel`). */}
-        <span>{t('license.seatsHeader', { seats: seatLabel(software) })}</span>
-        {flag ? <span className="is-warn">· {t('license.seatsFullTag')}</span> : null}
-        {canAssign ? (
-          <button type="button" className="btn sm" onClick={() => setAssigning(true)}>
-            {t('license.assign')}
-          </button>
-        ) : null}
-      </div>
+      {/* Số đếm cùng con số với cột Ghế của bảng trên, lấy từ cùng một chỗ (`seatLabel`). */}
+      <ExpandHeader
+        title={t('license.seatsInUse')}
+        count={seatLabel(software)}
+        note={
+          flag
+            ? flag.over > 0
+              ? t('software.seatsOver', { count: flag.over })
+              : t('software.seatsFull')
+            : undefined
+        }
+        action={canAssign ? { label: t('license.assign'), onClick: () => setAssigning(true) } : undefined}
+      />
 
       {seats.isLoading ? (
         <p className="muted">{t('app.loading')}</p>
