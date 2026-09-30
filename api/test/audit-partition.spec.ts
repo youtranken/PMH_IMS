@@ -1,6 +1,3 @@
-import { copyFileSync, mkdtempSync, readdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { Pool } from 'pg';
 import { ensureAppRole } from '../src/database/app-role';
 import { runMigrations } from '../src/database/migration-runner';
@@ -17,27 +14,15 @@ import {
 /**
  * OLD-DB-03 — `audit_log` chia ngăn theo NĂM, ngăn mới tự có trước khi năm tới.
  *
- * Ba thứ phải đúng cùng lúc, và mỗi thứ hỏng theo một kiểu im lặng:
- *   1. Chuyển bảng đang có dòng sang bảng chia ngăn không được mất dòng nào.
- *   2. Ngăn mới sinh ra phải kín y như bảng cũ: `ims_app` chỉ thêm và đọc qua bảng cha,
- *      không đụng thẳng được vào ngăn nào (ACL mặc định của 0048 cấp UPDATE/DELETE cho mọi
- *      bảng mới — kể cả ngăn).
- *   3. Dòng lỡ rơi vào ngăn DEFAULT (worker tắt qua giao thừa) phải được dời sang ngăn đúng
+ * Hai thứ phải đúng cùng lúc, và mỗi thứ hỏng theo một kiểu im lặng:
+ *   1. Ngăn mới sinh ra phải kín y như bảng cha: `ims_app` chỉ thêm và đọc qua bảng cha,
+ *      không đụng thẳng được vào ngăn nào (quyền mặc định của `0001_app_role.sql` cấp
+ *      UPDATE/DELETE cho mọi bảng mới — kể cả ngăn).
+ *   2. Dòng lỡ rơi vào ngăn DEFAULT (worker tắt qua giao thừa) phải được dời sang ngăn đúng
  *      năm, vì Postgres không cho tạo ngăn năm đó khi DEFAULT còn giữ dòng thuộc khoảng ấy.
  */
 
 const TEST_TIMEOUT = 180_000;
-const MIGRATION = '0302_audit_log_partition_by_year.sql';
-
-function dirBefore(first: string): string {
-  const out = mkdtempSync(join(tmpdir(), 'ims-mig-before-0302-'));
-  for (const name of readdirSync(migrationsDir())) {
-    if (/^\d{4}_.+\.sql$/.test(name) && name < first) {
-      copyFileSync(join(migrationsDir(), name), join(out, name));
-    }
-  }
-  return out;
-}
 
 async function partitions(pool: Pool): Promise<Record<string, string>> {
   const { rows } = await pool.query<{ name: string; bound: string }>(
@@ -158,6 +143,29 @@ describe('OLD-DB-03 · DB trắng', () => {
       /năm/,
     );
   });
+
+  it('bảng cha có đủ chỉ mục của màn Nhật ký, và ims_app chỉ SELECT + INSERT trên nó', async () => {
+    const idx = await scratch.pool.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE tablename = 'audit_log' ORDER BY indexname`,
+    );
+    expect(idx.rows.map((r) => r.indexname)).toEqual([
+      'audit_log_action_idx',
+      'audit_log_actor_action_at_idx',
+      'audit_log_actor_idx',
+      'audit_log_actor_trgm',
+      'audit_log_created_idx',
+      'audit_log_object_id_trgm',
+      'audit_log_object_idx',
+      'audit_log_pkey',
+    ]);
+    const acl = await scratch.pool.query<{ sel: boolean; ins: boolean; upd: boolean; del: boolean }>(
+      `SELECT has_table_privilege('ims_app', 'audit_log', 'SELECT') AS sel,
+              has_table_privilege('ims_app', 'audit_log', 'INSERT') AS ins,
+              has_table_privilege('ims_app', 'audit_log', 'UPDATE') AS upd,
+              has_table_privilege('ims_app', 'audit_log', 'DELETE') AS del`,
+    );
+    expect(acl.rows).toEqual([{ sel: true, ins: true, upd: false, del: false }]);
+  });
 });
 
 describe('OLD-DB-03 · lượt sweep tạo ngăn năm mới và dời dòng khỏi DEFAULT', () => {
@@ -257,78 +265,5 @@ describe('OLD-DB-03 · lượt sweep tạo ngăn năm mới và dời dòng kh�
     await expect(scratch.pool.query(`DELETE FROM audit_log_2028`)).rejects.toMatchObject({
       code: 'P0001',
     });
-  });
-});
-
-describe('OLD-DB-03 · chuyển một audit_log đang có dòng', () => {
-  let scratch: ScratchDb;
-  let before: { id: string; actor: string; action: string; created_at: Date }[];
-
-  beforeAll(async () => {
-    scratch = await createScratchDb('ims_audit_legacy');
-    await ensureAppRole(scratch.pool, 'ims_app', appDbPassword());
-    await runMigrations(scratch.pool, dirBefore(MIGRATION), { log: () => undefined });
-    await scratch.pool.query(
-      `INSERT INTO audit_log (actor, action, object_type, object_id, ip, detail, created_at)
-       SELECT 'legacy' || g || '@test', 'probe.legacy', 'user', g::text, '10.0.0.' || (g % 250),
-              jsonb_build_object('n', g),
-              timestamptz '2025-06-01' + (g || ' hours')::interval
-         FROM generate_series(1, 12000) g`,
-    );
-    before = (
-      await scratch.pool.query(
-        `SELECT id, actor, action, created_at FROM audit_log ORDER BY id`,
-      )
-    ).rows;
-    await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-  }, TEST_TIMEOUT);
-
-  afterAll(async () => {
-    await scratch?.drop();
-  }, TEST_TIMEOUT);
-
-  it('không mất dòng nào, id và giờ giữ nguyên', async () => {
-    const after = await scratch.pool.query(
-      `SELECT id, actor, action, created_at FROM audit_log ORDER BY id`,
-    );
-    expect(after.rows).toEqual(before);
-  });
-
-  it('dòng cũ nằm trong ngăn đúng năm; bảng cũ không còn', async () => {
-    expect(await rowsIn(scratch.pool, 'audit_log_2025')).toBe(
-      before.filter((r) => r.created_at.getUTCFullYear() === 2025).length,
-    );
-    expect(await rowsIn(scratch.pool, 'audit_log_2026')).toBe(
-      before.filter((r) => r.created_at.getUTCFullYear() === 2026).length,
-    );
-    expect(await rowsIn(scratch.pool, 'audit_log_default')).toBe(0);
-    const leftovers = await scratch.pool.query(
-      `SELECT relname FROM pg_class WHERE relname LIKE 'audit_log%' AND relkind = 'r'
-          AND NOT relispartition`,
-    );
-    expect(leftovers.rows).toEqual([]);
-  });
-
-  it('bảng cha giữ đủ chỉ mục và quyền như bảng cũ', async () => {
-    const idx = await scratch.pool.query<{ indexname: string }>(
-      `SELECT indexname FROM pg_indexes WHERE tablename = 'audit_log' ORDER BY indexname`,
-    );
-    expect(idx.rows.map((r) => r.indexname)).toEqual([
-      'audit_log_action_idx',
-      'audit_log_actor_action_at_idx',
-      'audit_log_actor_idx',
-      'audit_log_actor_trgm',
-      'audit_log_created_idx',
-      'audit_log_object_id_trgm',
-      'audit_log_object_idx',
-      'audit_log_pkey',
-    ]);
-    const acl = await scratch.pool.query<{ sel: boolean; ins: boolean; upd: boolean; del: boolean }>(
-      `SELECT has_table_privilege('ims_app', 'audit_log', 'SELECT') AS sel,
-              has_table_privilege('ims_app', 'audit_log', 'INSERT') AS ins,
-              has_table_privilege('ims_app', 'audit_log', 'UPDATE') AS upd,
-              has_table_privilege('ims_app', 'audit_log', 'DELETE') AS del`,
-    );
-    expect(acl.rows).toEqual([{ sel: true, ins: true, upd: false, del: false }]);
   });
 });

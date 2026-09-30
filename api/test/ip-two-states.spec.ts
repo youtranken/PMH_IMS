@@ -1,6 +1,3 @@
-import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { runMigrations } from '../src/database/migration-runner';
 import type { Database } from '../src/database/database.module';
@@ -17,194 +14,13 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 /**
  * IP CHỈ CÒN HAI TRẠNG THÁI: 'free' (Trống) và 'assigned' (Đang dùng) — QUYET-DINH Q-02.
  *
- * Hai nửa, vì hai nửa hỏng theo hai kiểu khác nhau:
- *
- *   1. Migration 0063 đổi dữ liệu ĐÃ CÓ. Sai ở đây là mất chủ của một IP đang dùng, hoặc để
- *      lại một hàng "trống mà có chủ" — hàng lai đó khoá thiết bị khi thanh lý (A-06). Chỉ
- *      kiểm được bằng cách dựng DB ở trạng thái TRƯỚC 0063, gieo dữ liệu cũ, rồi chạy tiếp.
- *
- *   2. Đường "Thu hồi" giờ đi `assigned → free` và phải làm đúng những gì nó từng làm khi đích
- *      còn là `reclaimed`: xoá máy và người dùng, giữ phần còn lại, ghi chủ cũ vào lịch sử.
+ * DB từ chối mọi trạng thái khác. Đường "Thu hồi" đi `assigned → free` và phải xoá máy và
+ * người dùng, giữ phần còn lại, ghi chủ cũ vào lịch sử — không để lại hàng "trống mà có chủ",
+ * thứ khoá thiết bị khi thanh lý (A-06).
  */
 
 const TEST_TIMEOUT = 120_000;
 const ACTOR = 'nguoi.truc@pmh.com.vn';
-const TWO_STATES_MIGRATION = '0063_ip_two_states.sql';
-
-describe('Migration 0063 — gộp bốn trạng thái IP về hai', () => {
-  let scratch: ScratchDb;
-  let subnetId: string;
-  let deviceId: string;
-  const ids: Record<string, string> = {};
-
-  beforeAll(async () => {
-    scratch = await createScratchDb('ims_ip_two_states_mig');
-
-    const before = await mkdtemp(join(tmpdir(), 'ims-mig-before-0063-'));
-    const files = (await readdir(migrationsDir())).filter((f) => f.endsWith('.sql')).sort();
-    for (const f of files.filter((name) => name < TWO_STATES_MIGRATION)) {
-      await writeFile(join(before, f), await readFile(join(migrationsDir(), f)));
-    }
-    await runMigrations(scratch.pool, before, { log: () => undefined });
-
-    const type = await scratch.pool.query<{ id: string }>(
-      `INSERT INTO device_type (name) VALUES ('PC mig') RETURNING id`,
-    );
-    const device = await scratch.pool.query<{ id: string }>(
-      `INSERT INTO device (code, name, device_type_id, status)
-       VALUES ('PC-MIG-1', 'May ke toan', $1, 'in_use') RETURNING id`,
-      [type.rows[0].id],
-    );
-    deviceId = device.rows[0].id;
-    const subnet = await scratch.pool.query<{ id: string }>(
-      `INSERT INTO subnet (name, cidr, created_by) VALUES ('Dai mig', '172.30.0.0/24', $1)
-       RETURNING id`,
-      [ACTOR],
-    );
-    subnetId = subnet.rows[0].id;
-
-    const seed = async (
-      key: string,
-      host: number,
-      status: string,
-      owner: { device?: boolean; usedBy?: string; voided?: boolean } = {},
-    ): Promise<void> => {
-      const { rows } = await scratch.pool.query<{ id: string }>(
-        `INSERT INTO ip_address
-           (subnet_id, address, status, device_id, used_by, assigned_by, assigned_at, note,
-            voided_at, voided_by, void_reason)
-         VALUES ($1, $2, $3, $4, $5, $6, '2026-01-02', 'ghi chu giu nguyen',
-                 $7, $8, $9)
-         RETURNING id`,
-        [
-          subnetId,
-          `172.30.0.${host}`,
-          status,
-          owner.device ? deviceId : null,
-          owner.usedBy ?? null,
-          ACTOR,
-          owner.voided ? new Date() : null,
-          owner.voided ? ACTOR : null,
-          owner.voided ? 'nhap nham' : null,
-        ],
-      );
-      ids[key] = rows[0].id;
-    };
-
-    await seed('suspect', 10, 'suspect_dead', { device: true, usedBy: 'Phong Ke toan' });
-    await seed('reclaimed', 11, 'reclaimed');
-    await seed('reclaimedHybrid', 12, 'reclaimed', { device: true, usedBy: 'Chu cu' });
-    await seed('reclaimedVoided', 13, 'reclaimed', { voided: true });
-    await seed('assigned', 14, 'assigned', { device: true, usedBy: 'Chi Lan' });
-    await seed('free', 15, 'free');
-
-    // Dòng lịch sử CŨ mang tên trạng thái cũ — chỉ-thêm, migration không được đụng.
-    await scratch.pool.query(
-      `INSERT INTO ip_history (ip_address_id, action, actor, from_status, to_status)
-       VALUES ($1, 'Thu hồi', $2, 'assigned', 'reclaimed')`,
-      [ids.reclaimed, ACTOR],
-    );
-
-    await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-  }, TEST_TIMEOUT);
-
-  afterAll(async () => {
-    await scratch?.drop();
-  }, TEST_TIMEOUT);
-
-  async function row(key: string) {
-    const { rows } = await scratch.pool.query<{
-      status: string;
-      device_id: string | null;
-      used_by: string | null;
-      note: string | null;
-      assigned_at: string | null;
-    }>(
-      `SELECT status, device_id, used_by, note, assigned_at::text FROM ip_address WHERE id = $1`,
-      [ids[key]],
-    );
-    return rows[0];
-  }
-
-  it('"nghi chết" → đang dùng, GIỮ nguyên máy và người dùng', async () => {
-    expect(await row('suspect')).toMatchObject({
-      status: 'assigned',
-      device_id: deviceId,
-      used_by: 'Phong Ke toan',
-    });
-  });
-
-  it('"đã thu hồi" → trống, giữ ghi chú và ngày cấp', async () => {
-    expect(await row('reclaimed')).toMatchObject({
-      status: 'free',
-      device_id: null,
-      used_by: null,
-      note: 'ghi chu giu nguyen',
-      assigned_at: '2026-01-02',
-    });
-  });
-
-  it('"đã thu hồi" mà còn mang tên máy → trống và XOÁ chủ, không để lại hàng lai', async () => {
-    expect(await row('reclaimedHybrid')).toMatchObject({
-      status: 'free',
-      device_id: null,
-      used_by: null,
-    });
-  });
-
-  it('hàng đã ẩn cũng được đổi — "Bật lại" về sau phải ra trạng thái hợp lệ', async () => {
-    expect((await row('reclaimedVoided')).status).toBe('free');
-  });
-
-  it('hàng vốn đã là trống / đang dùng không bị đụng', async () => {
-    expect(await row('assigned')).toMatchObject({ status: 'assigned', used_by: 'Chi Lan' });
-    expect((await row('free')).status).toBe('free');
-  });
-
-  it('mỗi hàng bị đổi có ĐÚNG một dòng lịch sử, ghi chủ cũ', async () => {
-    const { rows } = await scratch.pool.query<{
-      ip_address_id: string;
-      from_status: string;
-      to_status: string;
-      changes: { previousUsedBy: string | null; usedBy: string | null };
-    }>(
-      `SELECT ip_address_id, from_status, to_status, changes FROM ip_history
-        WHERE action = 'ip.status_merged'`,
-    );
-    const byId = new Map(rows.map((r) => [r.ip_address_id, r]));
-    expect(rows).toHaveLength(4);
-    expect(byId.get(ids.suspect)).toMatchObject({
-      from_status: 'suspect_dead',
-      to_status: 'assigned',
-      changes: { previousUsedBy: 'Phong Ke toan', usedBy: 'Phong Ke toan' },
-    });
-    expect(byId.get(ids.reclaimedHybrid)).toMatchObject({
-      from_status: 'reclaimed',
-      to_status: 'free',
-      changes: { previousUsedBy: 'Chu cu', usedBy: null },
-    });
-    expect(byId.has(ids.assigned)).toBe(false);
-    expect(byId.has(ids.free)).toBe(false);
-  });
-
-  it('dòng lịch sử cũ giữ nguyên tên trạng thái cũ', async () => {
-    const { rows } = await scratch.pool.query<{ to_status: string }>(
-      `SELECT to_status FROM ip_history WHERE ip_address_id = $1 AND action = 'Thu hồi'`,
-      [ids.reclaimed],
-    );
-    expect(rows).toEqual([{ to_status: 'reclaimed' }]);
-  });
-
-  it.each(['suspect_dead', 'reclaimed'])('DB từ chối trạng thái đã bỏ: %s', async (status) => {
-    await expect(
-      scratch.pool.query(
-        `INSERT INTO ip_address (subnet_id, address, status, assigned_by)
-         VALUES ($1, '172.30.0.99', $2, $3)`,
-        [subnetId, status, ACTOR],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
-  });
-});
 
 describe('Vòng đời hai trạng thái trên DB thật', () => {
   let scratch: ScratchDb;
@@ -306,6 +122,13 @@ describe('Vòng đời hai trạng thái trên DB thật', () => {
     }>(`SELECT status, device_id, used_by, note FROM ip_address WHERE id = $1`, [id]);
     return rows[0];
   }
+
+  it.each(['suspect_dead', 'reclaimed', 'reserved'])(
+    'DB từ chối trạng thái ngoài hai trạng thái: %s',
+    async (status) => {
+      await expect(seedIp(status)).rejects.toMatchObject({ code: '23514' });
+    },
+  );
 
   describe('Thu hồi: đang dùng → trống', () => {
     it(

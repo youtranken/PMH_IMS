@@ -48,7 +48,7 @@ describe('Migration chạy trên DATABASE TRẮNG thật', () => {
       const onDisk = (await readdir(migrationsDir()))
         .filter((f) => f.endsWith('.sql'))
         .sort();
-      expect(onDisk.length).toBeGreaterThanOrEqual(40);
+      expect(onDisk.length).toBeGreaterThanOrEqual(30);
 
       const applied = await runMigrations(scratch.pool, migrationsDir(), {
         log: () => undefined,

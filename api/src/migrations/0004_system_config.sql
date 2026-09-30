@@ -1,0 +1,52 @@
+-- system_config — chủ: config-sys. Tham số vận hành sống trong DB, sửa ở màn Quản trị; không
+-- hardcode, không env (AD-11).
+CREATE TABLE system_config (
+    key text NOT NULL,
+    value jsonb NOT NULL,
+    description text,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_by text,
+    CONSTRAINT system_config_pkey PRIMARY KEY (key)
+);
+
+-- Giá trị mặc định của mọi tham số vận hành; màn Quản trị sửa được.
+INSERT INTO system_config (key, value, description) VALUES
+  ('session.idle_minutes', '30', 'Phiên chết sau bao nhiêu phút không hoạt động (NFR-01)'),
+  ('session.absolute_hours', '12', 'Trần tuyệt đối của một phiên, tính từ lúc đăng nhập (NFR-01)'),
+  ('login.max_failed_attempts', '5', 'Sai liên tiếp bao nhiêu lần thì khóa tài khoản (NFR-01)'),
+  ('login.lockout_minutes', '15', 'Khóa bao nhiêu phút rồi tự mở (NFR-01)'),
+  ('login.rate_limit_per_ip', '20', 'Số lần thử đăng nhập tối đa mỗi IP trong 1 phút (NFR-01)'),
+  ('secret.stepup_grace_minutes', '10', 'Gõ TOTP một lần dùng được bao lâu trước khi phải gõ lại (FR-022)'),
+  ('breakglass.max_grant_hours', '24', 'Trần thời hạn của một grant break-glass (FR-023)'),
+  ('mail.from_address', '"ims@pmh.com.vn"', 'Địa chỉ gửi của hệ thống'),
+  ('app.timezone', '"Asia/Ho_Chi_Minh"', 'Múi giờ hiển thị (spine: lưu UTC, hiện giờ VN)'),
+  ('secret.stepup_max_failures', '5', 'Gõ sai mã step-up bao nhiêu lần liên tiếp thì thu hồi phiên (buộc đăng nhập lại).'),
+  ('approval.reminder_hours', '4', 'Yêu cầu duyệt treo quá bao nhiêu giờ thì nhắc người duyệt. 0 = tắt nhắc.'),
+  ('secret.reveal_seconds', '60', 'Secret hiện bao nhiêu giây rồi tự ẩn (FR-022)'),
+  ('dashboard.subnet_full_percent', '80', 'Dải mạng dùng từ bao nhiêu phần trăm trở lên thì lên bảng điều khiển (FR-020)'),
+  ('dashboard.secret_stale_days', '180', 'Két lâu bao nhiêu ngày không đổi thì coi là cũ, lên bảng điều khiển'),
+  ('expiry.critical_days', '7', 'Còn bao nhiêu ngày trở xuống thì gọi là GẤP (đỏ) — FR-012'),
+  ('expiry.warning_days', '30', 'Còn bao nhiêu ngày trở xuống thì gọi là SẮP HẾT HẠN (vàng), và là cửa sổ mặc định của màn Sắp hết hạn — FR-012'),
+  ('expiry.digest_expired_days', '30', 'Email báo cáo nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn. Màn hình vẫn nhìn lùi 1 năm (FR-013)'),
+  ('secret.probe_alert_threshold', '3', 'Bao nhiêu lượt thất bại quanh két (bị từ chối quyền HOẶC gõ sai mã 6 số) thì gửi thư cảnh báo cho SA/Admin. 0 = tắt cảnh báo, vẫn ghi nhật ký'),
+  ('secret.probe_window_minutes', '15', 'Đếm số lượt thất bại trong bao nhiêu phút gần nhất, theo từng người'),
+  ('secret.probe_cooldown_minutes', '60', 'Sau một lá cảnh báo thì im bao nhiêu phút với cùng người đó — chống làm ngập hộp thư quản trị'),
+  ('totp.enroll_reauth_minutes', '15', 'Cài 2 lớp trong luồng đăng nhập bắt buộc thì được miễn gõ lại mật khẩu trong bao nhiêu phút kể từ lúc phiên được tạo. Quá hạn, hoặc cài từ một phiên đã đăng nhập thường, đều phải gõ mật khẩu hiện tại'),
+  ('session.retention_days', '30', 'Phiên đăng nhập đã chết (last_seen_at cũ hơn ngần này ngày) thì lượt sweep xoá hẳn. Không áp cho audit_log — sổ nhật ký giữ vĩnh viễn theo NFR-03'),
+  ('outbox.retention_days', '30', 'Dòng outbox ĐÃ XỬ LÝ XONG cũ hơn ngần này ngày thì lượt sweep xoá hẳn. Dòng CHƯA xử lý không bao giờ bị đụng tới, dù cũ tới đâu — chưa xử nghĩa là việc chưa xong'),
+  ('login.account_backoff_minutes', '"5,15,30,60"', 'Chặn theo tài khoản: cứ đủ login.max_failed_attempts lượt sai thì chờ lần lượt bao nhiêu phút; bậc cuối lặp lại'),
+  ('software.auto_retire_grace_days', '30', 'Phần mềm Hết hạn quá bao nhiêu ngày thì hệ thống tự Thanh lý và gỡ ghế license (0 = tắt)'),
+  ('auth.support_contact', '"Liên hệ Super Admin phòng IT (gặp trực tiếp hoặc gọi số nội bộ của phòng IT)."', 'Câu hướng dẫn liên hệ hiện ở màn đăng nhập khi quên mật khẩu hoặc mất mã 2 lớp (đọc được khi chưa đăng nhập)'),
+  ('breakglass.recent_window_days', '30', 'Cửa sổ ngày để đếm số lần một người đã xin break-glass, hiện cho người duyệt'),
+  ('nat.sensitive_ports', '"21,22,23,445,1433,3306,3389,5432,5900"', 'Cổng mở ra ngoài bị coi là nhạy cảm trên sổ NAT (danh sách số, ngăn bằng dấu phẩy)'),
+  ('breakglass.pending_expire_hours', '8', 'Số giờ một yêu cầu mở két được chờ duyệt; quá hạn thì tự hết hạn và báo người xin'),
+  ('secret.probe_escalation_multiplier', '3', 'Trong thời gian nghỉ sau một lá cảnh báo dò két, số lượt thất bại vượt hệ số này × ngưỡng thì gửi thêm MỘT lá leo thang. Tối thiểu 2'),
+  ('ipam.subnet_min_prefix', '24', 'Dải rộng nhất được khai (độ dài prefix). Chỉ siết, không nới dưới 24: màn dải liệt kê mọi host một lượt'),
+  ('nat.wide_port_range', '1000', 'Luật NAT mở dải cổng ngoài rộng hơn ngần này thì cảnh báo (không chặn)'),
+  ('expiry.look_back_days', '365', 'Màn Sắp hết hạn nhìn lùi bao nhiêu ngày để bắt mục đã quá hạn; cũng là trần của email nhắc'),
+  ('dashboard.max_items', '8', 'Số dòng tối đa mỗi khối của trang chủ'),
+  ('outbox.max_relay_attempts', '14', 'Số lần hỏng tối đa trước khi relay bỏ một sự kiện outbox (chỉ requeue tay mới hồi sinh)'),
+  ('rate.totp_per_minute', '10', 'Số lần gõ mã 2 lớp tối đa mỗi phút mỗi người (đăng nhập, cài lại 2 lớp, xác thực lại)'),
+  ('rate.secret_reveal_per_minute', '30', 'Số lần mở xem mật khẩu trong két tối đa mỗi phút mỗi người'),
+  ('rate.file_upload_per_minute', '20', 'Số lần tải tệp lên tối đa mỗi phút mỗi người'),
+  ('audit.archive_after_years', '2', 'Ngăn năm của nhật ký có mọi dòng cũ hơn ngần này năm thì ops/audit-archive.sh tách ra và dump vào thư mục sao lưu. Không tự chạy.');

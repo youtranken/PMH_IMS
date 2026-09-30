@@ -1,6 +1,3 @@
-import { copyFileSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { runMigrations } from '../src/database/migration-runner';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
@@ -12,27 +9,11 @@ import { IspLineService } from '../src/modules/software/isp-line.service';
 import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
 
 /**
- * OLD-DB-04 — `isp_line.wan_ip` thành `inet`, `device_port.vlan` có CHECK.
- *
- * Hai migration đổi dữ liệu ĐÃ CÓ, nên mỗi cái được kiểm theo cả ba đường: DB trắng, DB có
- * dữ liệu hợp lệ (phải giữ nguyên giá trị), và DB có dữ liệu sai (phải dừng và nói rõ dòng
- * nào sai, không để Postgres ném một câu ép kiểu vô dụng với người trực).
+ * OLD-DB-04 — `isp_line.wan_ip` là `inet` (Q-04), `device_port.vlan` chỉ nhận số 1–4094 hoặc
+ * "trunk" (Q-16): DB tự chặn, còn cửa ghi của service trả mã lỗi đọc được thay vì 500.
  */
 
 const TEST_TIMEOUT = 120_000;
-const WAN = '0300_isp_line_wan_ip_inet.sql';
-const VLAN = '0301_device_port_vlan_check.sql';
-
-/** Thư mục tạm chứa mọi migration đứng TRƯỚC `first` — dựng đúng DB như lúc chưa có nó. */
-function dirBefore(first: string): string {
-  const out = mkdtempSync(join(tmpdir(), 'ims-mig-before-0300-'));
-  for (const name of readdirSync(migrationsDir())) {
-    if (/^\d{4}_.+\.sql$/.test(name) && name < first) {
-      copyFileSync(join(migrationsDir(), name), join(out, name));
-    }
-  }
-  return out;
-}
 
 async function seedDevice(pool: ScratchDb['pool'], code: string): Promise<string> {
   const type = await pool.query<{ id: string }>(
@@ -128,7 +109,7 @@ describe('OLD-DB-04 · DB trắng', () => {
     expect(port.vlan).toBe('trunk');
   });
 
-  it('isp_line_search_norm_trgm vẫn còn sau khi dựng lại cột sinh', async () => {
+  it('isp_line_search_norm_trgm có mặt trên cột sinh', async () => {
     const { rows } = await scratch.pool.query(
       `SELECT 1 FROM pg_indexes WHERE indexname = 'isp_line_search_norm_trgm'`,
     );
@@ -152,114 +133,5 @@ describe('OLD-DB-04 · DB trắng', () => {
         constraint: 'device_port_vlan_check',
       });
     }
-  });
-});
-
-describe('OLD-DB-04 · DB đã có dữ liệu hợp lệ', () => {
-  let scratch: ScratchDb;
-
-  beforeAll(async () => {
-    scratch = await createScratchDb('ims_olddb04_legacy');
-    await runMigrations(scratch.pool, dirBefore(WAN), { log: () => undefined });
-    const p = await seedIspProviders(scratch.pool, ['VNPT OLD-DB-04']);
-    await scratch.pool.query(
-      `INSERT INTO isp_line (code, provider, provider_id, wan_ip) VALUES
-         ('MIG-HOST', 'VNPT OLD-DB-04', $1, '14.160.1.2'),
-         ('MIG-PAD', 'VNPT OLD-DB-04', $1, '  14.160.1.3 '),
-         ('MIG-BLOCK', 'VNPT OLD-DB-04', $1, '113.161.20.16/29'),
-         ('MIG-EMPTY', 'VNPT OLD-DB-04', $1, '   '),
-         ('MIG-NULL', 'VNPT OLD-DB-04', $1, NULL)`,
-      [p['VNPT OLD-DB-04']],
-    );
-    const dev = await seedDevice(scratch.pool, 'SW-MIG');
-    await scratch.pool.query(
-      `INSERT INTO device_port (device_id, port_label, vlan) VALUES
-         ($1, 'p1', '20'), ($1, 'p2', ' 30 '), ($1, 'p3', 'Trunk'), ($1, 'p4', ''), ($1, 'p5', NULL)`,
-      [dev],
-    );
-    await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-  }, TEST_TIMEOUT);
-
-  afterAll(async () => {
-    await scratch?.drop();
-  }, TEST_TIMEOUT);
-
-  it('IP WAN giữ nguyên giá trị, khoảng trắng thừa bị bỏ, ô trắng thành NULL', async () => {
-    const { rows } = await scratch.pool.query<{ code: string; wan_ip: string | null }>(
-      `SELECT code::text AS code, wan_ip FROM isp_line ORDER BY code`,
-    );
-    expect(rows).toEqual([
-      { code: 'MIG-BLOCK', wan_ip: '113.161.20.16/29' },
-      { code: 'MIG-EMPTY', wan_ip: null },
-      { code: 'MIG-HOST', wan_ip: '14.160.1.2' },
-      { code: 'MIG-NULL', wan_ip: null },
-      { code: 'MIG-PAD', wan_ip: '14.160.1.3' },
-    ]);
-  });
-
-  it('VLAN cổng được chuẩn hoá về dạng CHECK nhận', async () => {
-    const { rows } = await scratch.pool.query<{ port_label: string; vlan: string | null }>(
-      `SELECT port_label, vlan FROM device_port ORDER BY port_label`,
-    );
-    expect(rows).toEqual([
-      { port_label: 'p1', vlan: '20' },
-      { port_label: 'p2', vlan: '30' },
-      { port_label: 'p3', vlan: 'trunk' },
-      { port_label: 'p4', vlan: null },
-      { port_label: 'p5', vlan: null },
-    ]);
-  });
-});
-
-describe('OLD-DB-04 · DB có dữ liệu sai thì migration dừng và kể tên dòng sai', () => {
-  let scratch: ScratchDb;
-
-  beforeAll(async () => {
-    scratch = await createScratchDb('ims_olddb04_bad');
-    await runMigrations(scratch.pool, dirBefore(WAN), { log: () => undefined });
-  }, TEST_TIMEOUT);
-
-  afterAll(async () => {
-    await scratch?.drop();
-  }, TEST_TIMEOUT);
-
-  it('IP WAN không phải địa chỉ: báo mã đường truyền và giá trị, không đổi gì', async () => {
-    const p = await seedIspProviders(scratch.pool, ['Viettel OLD-DB-04']);
-    await scratch.pool.query(
-      `INSERT INTO isp_line (code, provider, provider_id, wan_ip) VALUES
-         ('BAD-DONG', 'Viettel OLD-DB-04', $1, 'động'),
-         ('BAD-RANGE', 'Viettel OLD-DB-04', $1, '1.2.3.4 - 1.2.3.9'),
-         ('GOOD', 'Viettel OLD-DB-04', $1, '1.2.3.4')`,
-      [p['Viettel OLD-DB-04']],
-    );
-    const sql = readFileSync(join(migrationsDir(), WAN), 'utf8');
-    const client = await scratch.pool.connect();
-    try {
-      await client.query('BEGIN');
-      await expect(client.query(sql)).rejects.toThrow(
-        /BAD-DONG: "động"[\s\S]*BAD-RANGE: "1\.2\.3\.4 - 1\.2\.3\.9"/,
-      );
-    } finally {
-      await client.query('ROLLBACK');
-      client.release();
-    }
-    const col = await scratch.pool.query<{ udt_name: string }>(
-      `SELECT udt_name FROM information_schema.columns
-        WHERE table_name = 'isp_line' AND column_name = 'wan_ip'`,
-    );
-    expect(col.rows[0].udt_name).toBe('text');
-  });
-
-  it('VLAN cổng không đọc được: báo thiết bị, cổng và giá trị', async () => {
-    const dev = await seedDevice(scratch.pool, 'SW-BAD');
-    await scratch.pool.query(
-      `INSERT INTO device_port (device_id, port_label, vlan) VALUES
-         ($1, 'Gi1/0/1', 'VLAN20'), ($1, 'Gi1/0/2', '5000'), ($1, 'Gi1/0/3', '20')`,
-      [dev],
-    );
-    const sql = readFileSync(join(migrationsDir(), VLAN), 'utf8');
-    await expect(scratch.pool.query(sql)).rejects.toThrow(
-      /SW-BAD cổng Gi1\/0\/1: "VLAN20"[\s\S]*SW-BAD cổng Gi1\/0\/2: "5000"/,
-    );
   });
 });
