@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
 import { IspForm } from './isp-form';
 import type { IspRow } from './isp-types';
 
@@ -129,15 +129,21 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     await waitFor(() => expect(picker).toHaveTextContent(/Nhà mạng cũ \(ngừng dùng\)/));
   });
 
-  it('đổi sang Đã thanh lý thì hỏi lại, nút xác nhận là HÀNH ĐỘNG "Thanh lý" (Q-14)', async () => {
-    mockFetch();
+  /*
+   * Đổi trạng thái chỉ đi menu ⋮ của trang chi tiết: ở đó hộp hỏi lại nhắc ngăn két và thiết bị
+   * biên. Ô Trạng thái trong form là lối tắt bỏ qua cả hai, và gửi lại trạng thái cũ lúc lưu thì
+   * đè mất lượt đổi trạng thái vừa làm ở tab khác.
+   */
+  it('form sửa KHÔNG có ô Trạng thái, lưu không gửi `status`', async () => {
+    const calls = mockFetch();
     renderForm(ROW_ON_INACTIVE);
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Trạng thái' }));
-    await user.click(await screen.findByRole('option', { name: 'Đã thanh lý' }));
+    expect(screen.queryByRole('button', { name: 'Trạng thái' })).toBeNull();
+    expect(screen.queryByText('Trạng thái', { exact: true })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
-    const ask = await screen.findByRole('dialog', { name: /^Thanh lý đường truyền ISP-CU/ });
-    expect(within(ask).getByRole('button', { name: 'Thanh lý' })).toBeInTheDocument();
-    expect(within(ask).queryByRole('button', { name: 'Đã thanh lý' })).toBeNull();
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/isp-lines/line-1')).toBe(true));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines/line-1')!.body;
+    expect(body).not.toHaveProperty('status');
+    expect(screen.queryByRole('dialog', { name: /^Thanh lý/ })).toBeNull();
   });
 });

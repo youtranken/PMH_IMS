@@ -287,8 +287,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * "Nhà mạng" và "Site" là `button` mở danh sách chọn, không phải ô gõ — nhầm vai nghĩa là
    * người dùng bàn phím thao tác khác hẳn điều ta tưởng.
    *
-   * ĐỎ KHI: một ô rơi mất hoặc mọc thêm; một ô đổi loại tay nắm; ô Trạng thái (chỉ dành cho
-   * lượt SỬA) lọt vào hộp thêm mới; lời báo lỗi đổi chữ; hoặc một trong hai đường đóng hộp
+   * ĐỎ KHI: một ô rơi mất hoặc mọc thêm; một ô đổi loại tay nắm; ô Trạng thái (đổi trạng thái
+   * chỉ đi menu ⋮ của trang chi tiết) lọt vào hộp; lời báo lỗi đổi chữ; hoặc một trong hai đường đóng hộp
    * (Esc và ✕) thôi hoạt động.
    */
   test('Hộp "Thêm đường truyền": đủ ô, đúng loại tay nắm, chặn thiếu nhà mạng, đóng được cả hai đường', async ({
@@ -362,9 +362,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     );
 
     /*
-     * Ô TRẠNG THÁI CHỈ CÓ Ở LƯỢT SỬA — nói thẳng ra, đừng để nó chìm trong tập hợp trên.
-     * Bày một ô chọn có đúng một câu trả lời hợp lý ở lượt thêm mới là mở đường cho một hồ sơ
-     * vừa tạo đã mang trạng thái "Thanh lý".
+     * KHÔNG CÓ Ô TRẠNG THÁI — nói thẳng ra, đừng để nó chìm trong tập hợp trên. Hồ sơ mới
+     * luôn "Đang dùng"; đổi trạng thái chỉ đi menu ⋮ của trang chi tiết.
      */
     await expect(
       dialog.getByRole('button', { name: 'Trạng thái', exact: true }),
@@ -616,23 +615,21 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toHaveCount(0);
 
     /*
-     * Ô Trạng thái CHỈ có ở lượt sửa, và nó có đúng ba lựa chọn.
-     * Các option `portal` ra khỏi locator của hộp, nên phải hỏi ở tầng `page`.
+     * Form Sửa KHÔNG có ô Trạng thái: đổi trạng thái chỉ đi menu ⋮ của trang chi tiết, nơi hộp
+     * hỏi lại nhắc ngăn két PPPoE/modem và thiết bị biên. Ô chọn ở đây là lối tắt bỏ qua cả hai.
      */
-    await editDialog.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    expect(
-      (await page.getByRole('option').allTextContents()).map(tidyLabel),
-      'Trạng thái đường truyền có đúng ba giá trị của `ISP_STATUSES`',
-    ).toEqual(['Đang dùng', 'Tạm ngưng', 'Đã thanh lý']);
+    await expect(
+      editDialog.getByRole('button', { name: 'Trạng thái', exact: true }),
+      'Form Sửa đường truyền không được có ô Trạng thái — Thanh lý phải đi menu ⋮ và hỏi lại',
+    ).toHaveCount(0);
 
     /*
      * ĐÓNG DANH SÁCH bằng cách bấm lại chính ô chọn, rồi đóng hộp bằng nút ✕.
-     *
-     * CỐ Ý KHÔNG dùng Esc ở đây, và đây là một PHÁT HIỆN chứ không phải một lối tránh: Esc lúc
-     * đang mở ô chọn đóng LUÔN cả hộp Sửa, ném đi cả form đang gõ dở. Bài `test.fixme` ngay
-     * dưới khối này giữ nguyên khẳng định đúng và nói rõ vì sao phần mềm chưa làm được.
+     * Các option `portal` ra khỏi locator của hộp, nên phải hỏi ở tầng `page`.
      */
-    await editDialog.getByRole('button', { name: 'Trạng thái', exact: true }).click();
+    await editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
+    await expect(page.getByRole('option').first(), 'Ô chọn Nhà mạng phải bung ra').toBeVisible();
+    await editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await expect(
       page.getByRole('option'),
       'Bấm lại vào ô chọn thì danh sách phải thu lại',
@@ -648,7 +645,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    *
    * VÌ SAO BÀI NÀY TỒN TẠI: hàng rào giữ cho một lỗi thật không quay lại.
    *
-   * TRIỆU CHỨNG KHI HỎNG: mở hồ sơ đường truyền → "Sửa hồ sơ" → bấm ô chọn Trạng thái → gõ Esc.
+   * TRIỆU CHỨNG KHI HỎNG: mở hồ sơ đường truyền → "Sửa hồ sơ" → bấm ô chọn Nhà mạng → gõ Esc.
    * Danh sách chọn không đóng một mình: CẢ HỘP Sửa biến mất, mang theo mọi ô vừa gõ. Người
    * dùng bàn phím gõ Esc để bỏ một menu vừa lỡ bung ra thì mất trắng lần nhập.
    *
@@ -686,8 +683,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // Gõ dở một ô, để chỗ mất mát nhìn thấy được chứ không chỉ là "hộp biến mất".
     await editDialog.getByRole('textbox', { name: 'Ghi chú', exact: true }).fill('đang gõ dở E2E');
 
-    await editDialog.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    await expect(page.getByRole('option'), 'Ô chọn phải bung ra danh sách').toHaveCount(3);
+    await editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
+    await expect(page.getByRole('option').first(), 'Ô chọn phải bung ra danh sách').toBeVisible();
 
     await page.keyboard.press('Escape');
 

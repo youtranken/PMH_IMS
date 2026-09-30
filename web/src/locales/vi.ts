@@ -1095,8 +1095,6 @@ export default {
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
     phHotline: 'vd 1800 1166',
     addProvider: '+ Thêm vào danh mục',
-    terminateTitle: 'Thanh lý đường truyền {{code}}?',
-    terminateMessage: 'Đường này rời khỏi danh sách mặc định. Nhớ xử lý mật khẩu PPPoE/modem trong két và gỡ đường khỏi thiết bị biên.',
     liquidatedUnknown: 'Đường truyền đã thanh lý, không rõ ngày.',
     incidentCard: 'Khi mất mạng',
     callHotline: 'Gọi {{hotline}}',
