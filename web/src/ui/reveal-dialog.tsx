@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/ui/dialog';
+import { CopyButton } from '@/ui/copy-button';
 import { countdownTone } from '@/ui/countdown-tone';
+import { useNow } from '@/ui/use-now';
 
 /**
  * Lớp của một ký tự để TÔ MÀU khi hiện giá trị: gõ tay "Cisco#Core2026!" sang console switch,
@@ -29,7 +31,8 @@ export function formatMinSec(seconds: number): string {
  *
  * Giá trị KHÔNG vào clipboard tự động và không có nút "sao chép": clipboard sống qua cả
  * phiên đăng nhập, dán nhầm vào ô chat là mất luôn. Thay vào đó giá trị tô màu theo lớp ký tự,
- * và có chế độ "từng ký tự" (ô đánh số) để gõ tay không nhầm.
+ * và có chế độ "từng ký tự" (ô đánh số) để gõ tay không nhầm. Ngoại lệ duy nhất là ngăn
+ * "Mã 2 lớp" — xem `TotpBody`.
  *
  * HAI đồng hồ, trả lời hai câu khác nhau, nên nằm ở hai dòng riêng:
  *   `42s` + thanh tiến trình — giá trị này còn hiện bao lâu nữa
@@ -79,11 +82,27 @@ export function RevealStep(props: RevealProps) {
   );
 }
 
+/** Khối `totp` trong phản hồi mở két của ngăn "Mã 2 lớp" — server tính hết (Q-18). */
+export interface TotpReveal {
+  secret: string;
+  issuer: string;
+  account: string;
+  digits: number;
+  period: number;
+  qrDataUrl: string;
+  /** `codes[0]` là mã lúc mở, mỗi phần tử sau là mã của chu kỳ kế tiếp. */
+  codes: string[];
+  /** Giây còn lại của chu kỳ đầu, theo đồng hồ server. */
+  secondsLeft: number;
+}
+
 interface RevealProps {
   label: string;
   /** Tên đăng nhập đi kèm — người ta cần CẶP user + mật khẩu, bảng phía sau đã bị hộp che. */
   username?: string | null;
   value: string;
+  /** Có thì ngăn là "Mã 2 lớp": hiện khóa + QR + mã hiện tại thay cho chuỗi thô. */
+  totp?: TotpReveal;
   seconds: number;
   /** Grace step-up còn lại lúc MỞ, do server tính. Không có thì chỉ hiện một đồng hồ. */
   stepUpSecondsLeft?: number;
@@ -96,8 +115,10 @@ interface RevealProps {
 }
 
 function RevealContent({
+  label,
   username,
   value,
+  totp,
   seconds,
   stepUpSecondsLeft,
   onClose,
@@ -160,7 +181,9 @@ function RevealContent({
           {t('vault.username')}: <span className="mono">{username}</span>
         </p>
       ) : null}
-      {perChar ? (
+      {totp ? (
+        <TotpBody label={label} totp={totp} />
+      ) : perChar ? (
         <ol className="secret-chars" aria-label={t('vault.perCharLabel')}>
           {chars.map((ch, index) => (
             <li key={index} className={`ch-${secretCharClass(ch)}`}>
@@ -178,16 +201,18 @@ function RevealContent({
           ))}
         </p>
       )}
-      <div>
-        <button
-          type="button"
-          className="btn sm"
-          aria-pressed={perChar}
+      {totp ? null : (
+        <div>
+          <button
+            type="button"
+            className="btn sm"
+            aria-pressed={perChar}
           onClick={() => setPerChar((current) => !current)}
         >
-          {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
-        </button>
-      </div>
+            {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
+          </button>
+        </div>
+      )}
       {/* `role="status"` để trình đọc màn hình đọc được mốc còn lại; `aria-live` mặc định
           của status là polite nên nó không cắt ngang mỗi giây. */}
       <p className="countdown" role="status" data-testid="reveal-countdown">
@@ -209,5 +234,104 @@ function RevealContent({
         <small>{t('vault.revealLogged')}</small>
       </p>
     </div>
+  );
+}
+
+/**
+ * Mã hiện tại theo thời gian đã trôi từ lúc mở, trên dãy mã server đưa sẵn.
+ *
+ * Đếm từ mốc lúc mở, không từ đồng hồ máy so với giờ server: máy lệch giờ vẫn ra đúng mã.
+ * `index` vượt dãy nghĩa là hộp đã mở lâu hơn thời gian server tính — không bịa mã.
+ */
+export function totpCodeAt(
+  totp: Pick<TotpReveal, 'codes' | 'secondsLeft' | 'period'>,
+  elapsedSeconds: number,
+): { code: string | null; left: number } {
+  const elapsed = Math.max(0, elapsedSeconds);
+  if (elapsed < totp.secondsLeft) {
+    return { code: totp.codes[0] ?? null, left: Math.ceil(totp.secondsLeft - elapsed) };
+  }
+  const after = elapsed - totp.secondsLeft;
+  const index = 1 + Math.floor(after / totp.period);
+  return { code: totp.codes[index] ?? null, left: Math.ceil(totp.period - (after % totp.period)) };
+}
+
+/**
+ * Nội dung ngăn "Mã 2 lớp" (Q-18).
+ *
+ * Có nút chép — ngoại lệ có chủ ý so với luật "két không có nút chép": mở két trên điện thoại
+ * thì không quét được QR trên chính màn hình đó, chép khóa rồi dán vào ứng dụng xác thực là
+ * cách cài duy nhất (cùng lý do với màn cài 2 lớp). Mã 6 số tự hết hạn sau một chu kỳ.
+ * Khóa vẫn che mặc định vì người đứng sau lưng không cần QR để chép tay 16 ký tự.
+ */
+function TotpBody({ label, totp }: { label: string; totp: TotpReveal }) {
+  const { t } = useTranslation();
+  const openedAt = useRef(Date.now());
+  const now = useNow(250);
+  const [shown, setShown] = useState(false);
+  const { code, left } = totpCodeAt(totp, (now - openedAt.current) / 1000);
+  const half = totp.digits / 2;
+  const groups = totp.secret.match(/.{1,4}/g) ?? [totp.secret];
+
+  return (
+    <>
+      <div className="totp-qr-frame">
+        <img
+          className="totp-qr"
+          src={totp.qrDataUrl}
+          alt={t('vault.totpQrAlt', { label })}
+          width={200}
+          height={200}
+        />
+      </div>
+      <p className="muted">{t('vault.totpAccount', { issuer: totp.issuer, account: totp.account })}</p>
+      <div>
+        <span className="totp-secret-label">{t('vault.totpCode')}</span>
+        <div className="totp-secret-box">
+          {code ? (
+            <code data-testid="totp-code">
+              {code.slice(0, half)} {code.slice(half)}
+            </code>
+          ) : (
+            <span className="muted">{t('vault.totpCodeOut')}</span>
+          )}
+          {code ? (
+            <span className="countdown">
+              <span className="countdown-note muted">{t('vault.totpCodeLeftNote')}</span>
+              <span
+                className={`countdown-num ${countdownTone(left, totp.period)}`}
+                data-testid="totp-code-left"
+              >
+                {t('vault.totpCodeLeft', { seconds: left })}
+              </span>
+            </span>
+          ) : null}
+          {code ? <CopyButton value={code} label={t('vault.totpCopyCode')} /> : null}
+        </div>
+      </div>
+      <div>
+        <span className="totp-secret-label">{t('vault.totpSecret')}</span>
+        <div className="totp-secret-box">
+          {shown ? (
+            <code data-testid="totp-secret">
+              {groups.map((group, index) => (
+                <span key={index}>{group}</span>
+              ))}
+            </code>
+          ) : (
+            <span className="muted">{t('vault.totpSecretMasked')}</span>
+          )}
+          <button
+            type="button"
+            className="btn sm"
+            aria-pressed={shown}
+            onClick={() => setShown((current) => !current)}
+          >
+            {t(shown ? 'vault.totpSecretHide' : 'vault.totpSecretShow')}
+          </button>
+          <CopyButton value={totp.secret} label={t('vault.totpCopySecret')} />
+        </div>
+      </div>
+    </>
   );
 }

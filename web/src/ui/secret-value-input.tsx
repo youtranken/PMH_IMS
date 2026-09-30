@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { decodeQrFile } from '@/lib/qr-decode';
+import { FilePicker } from '@/ui/file-picker';
 import { generateSecret } from '@/ui/secret-generate';
 
 /**
@@ -21,6 +23,7 @@ export function SecretValueInput({
   describedBy,
   initiallyShown = false,
   allowGenerate = false,
+  qrImport = false,
 }: {
   id: string;
   value: string;
@@ -29,46 +32,95 @@ export function SecretValueInput({
   describedBy?: string;
   initiallyShown?: boolean;
   allowGenerate?: boolean;
+  /**
+   * Ngăn "Mã 2 lớp" (Q-18): cho chọn/thả ảnh QR, đọc ngay trên trình duyệt rồi điền chuỗi vào ô.
+   * Ảnh không rời máy — ảnh QR chính là khóa dạng rõ.
+   */
+  qrImport?: boolean;
 }) {
   const { t } = useTranslation();
   const [shown, setShown] = useState(initiallyShown);
+  const [qrStatus, setQrStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const readQr = async (file: File | null) => {
+    if (!file) return;
+    setQrStatus(null);
+    const result = await decodeQrFile(file);
+    if (result.value) {
+      onChange(result.value);
+      setQrStatus({ ok: true, text: t('vault.qrReadDone') });
+      return;
+    }
+    setQrStatus({
+      ok: false,
+      text: t(
+        result.reason === 'NOT_IMAGE'
+          ? 'vault.qrNotImage'
+          : result.reason === 'READ_FAILED'
+            ? 'vault.qrReadFailed'
+            : 'vault.qrNoCode',
+      ),
+    });
+  };
+
   return (
-    <div className="secret-input">
-      <input
-        id={id}
-        className="inp mono"
-        type={shown ? 'text' : 'password'}
-        autoComplete="new-password"
-        spellCheck={false}
-        autoCapitalize="off"
-        required
-        aria-invalid={invalid ? true : undefined}
-        aria-describedby={describedBy}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <button
-        type="button"
-        className="btn sm"
-        aria-controls={id}
-        aria-pressed={shown}
-        onClick={() => setShown((current) => !current)}
-      >
-        {t(shown ? 'vault.valueHide' : 'vault.valueShow')}
-      </button>
-      {allowGenerate ? (
+    <>
+      <div className="secret-input">
+        <input
+          id={id}
+          className="inp mono"
+          type={shown ? 'text' : 'password'}
+          autoComplete="new-password"
+          spellCheck={false}
+          autoCapitalize="off"
+          required
+          aria-invalid={invalid ? true : undefined}
+          aria-describedby={describedBy}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
         <button
           type="button"
           className="btn sm"
-          onClick={() => {
-            onChange(generateSecret());
-            // Vừa sinh ra thì phải thấy được — người dùng còn phải chép nó sang thiết bị.
-            setShown(true);
-          }}
+          aria-controls={id}
+          aria-pressed={shown}
+          onClick={() => setShown((current) => !current)}
         >
-          {t('vault.generate')}
+          {t(shown ? 'vault.valueHide' : 'vault.valueShow')}
         </button>
+        {allowGenerate ? (
+          <button
+            type="button"
+            className="btn sm"
+            onClick={() => {
+              onChange(generateSecret());
+              // Vừa sinh ra thì phải thấy được — người dùng còn phải chép nó sang thiết bị.
+              setShown(true);
+            }}
+          >
+            {t('vault.generate')}
+          </button>
+        ) : null}
+      </div>
+      {qrImport ? (
+        <>
+          <FilePicker
+            accept="image/*"
+            label={t('vault.qrRead')}
+            hint={t('vault.qrReadHint')}
+            file={null}
+            onPick={(file) => void readQr(file)}
+          />
+          {qrStatus ? (
+            <p
+              className={qrStatus.ok ? 'muted' : 'alert error'}
+              role={qrStatus.ok ? 'status' : 'alert'}
+            >
+              {qrStatus.text}
+            </p>
+          ) : null}
+        </>
       ) : null}
-    </div>
+    </>
   );
 }

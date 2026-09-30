@@ -15,7 +15,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
-import { RevealDialog, RevealStep } from '@/ui/reveal-dialog';
+import { RevealDialog, RevealStep, type TotpReveal } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
@@ -37,7 +37,8 @@ import { Chevron } from '@/ui/chevron';
  * `import type { SecretOwnerType } from '@/ui/vault-panel'` vẫn đúng, mà chỉ còn MỘT khai báo.
  */
 export type { SecretOwnerType };
-type SecretKind = 'password' | 'license_key' | 'other';
+/* Bản sao của `SECRET_KINDS` (api) và `secret_kind_check` (DB) — thêm loại sửa đủ ba chỗ. */
+type SecretKind = 'password' | 'license_key' | 'totp' | 'other';
 
 export interface AccessVerdict {
   tier: 'whitelist' | 'needs_approval' | 'denied';
@@ -200,6 +201,7 @@ export function VaultPanel({
       label: string;
       username: string | null;
       value: string;
+      totp?: TotpReveal;
       seconds: number;
       stepUpSecondsLeft: number;
     } | null
@@ -276,6 +278,8 @@ export function VaultPanel({
       try {
         const opened = await apiFetch<{
           value: string;
+          /** Chỉ ngăn "Mã 2 lớp": QR + mã hiện tại, server sinh lại mỗi lần mở (Q-18). */
+          totp?: TotpReveal;
           revealSeconds: number;
           /** Grace step-up còn lại — server tính, client không tự đoán được (xem session-policy). */
           stepUpSecondsLeft: number;
@@ -287,6 +291,7 @@ export function VaultPanel({
           label: secret.label,
           username: secret.username,
           value: opened.value,
+          totp: opened.totp,
           seconds: opened.revealSeconds,
           stepUpSecondsLeft: opened.stepUpSecondsLeft,
         });
@@ -377,6 +382,7 @@ export function VaultPanel({
             label={revealed.label}
             username={revealed.username}
             value={revealed.value}
+            totp={revealed.totp}
             seconds={revealed.seconds}
             stepUpSecondsLeft={revealed.stepUpSecondsLeft}
             onClose={() => setRevealed(null)}
@@ -754,6 +760,7 @@ export function VaultPanel({
           label={revealed.label}
           username={revealed.username}
           value={revealed.value}
+          totp={revealed.totp}
           seconds={revealed.seconds}
           stepUpSecondsLeft={revealed.stepUpSecondsLeft}
           onClose={() => setRevealed(null)}
@@ -799,7 +806,7 @@ export function VaultPanel({
   );
 }
 
-const KINDS: SecretKind[] = ['password', 'license_key', 'other'];
+const KINDS: SecretKind[] = ['password', 'license_key', 'totp', 'other'];
 
 /**
  * Thêm mới mang theo plaintext; SỬA thì không.
@@ -953,7 +960,7 @@ function SecretForm({
           <Field
             label={t('vault.value')}
             required
-            hint={t('vault.valueHint')}
+            hint={t(kind === 'totp' ? 'vault.totpValueHint' : 'vault.valueHint')}
             htmlFor="secret-value"
             error={check.error('value')}
           >
@@ -970,6 +977,7 @@ function SecretForm({
               }
               initiallyShown={kind === 'license_key'}
               allowGenerate={kind === 'password'}
+              qrImport={kind === 'totp'}
             />
             {kind === 'password' ? <SecretStrengthMeter value={value} /> : null}
           </Field>
@@ -1135,6 +1143,7 @@ function RotateForm({
             describedBy={check.error('value') ? 'secret-new-value-error' : undefined}
             initiallyShown={secret.kind === 'license_key'}
             allowGenerate={secret.kind === 'password'}
+            qrImport={secret.kind === 'totp'}
           />
           {/* Đổi mật khẩu là lúc người ta ĐẶT một giá trị mới, không phải chép lại cái đang
               có — nên thanh đo ở đây còn đáng nói hơn ở ô cất lần đầu. */}
