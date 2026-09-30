@@ -562,6 +562,31 @@ table.table tbody tr.exp:hover td {
 .seat-head .is-warn {
   color: var(--warn);
 }
+/* Đầu khu bung dòng chuẩn (ui/expand-header.tsx): tiêu đề · số đếm · ghi chú, nút chính mép phải. */
+.exp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-5);
+  font-size: var(--fs-sm);
+}
+.exp-head-title {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.exp-head-count {
+  font-weight: var(--fw-semibold);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.exp-head-note {
+  color: var(--warn);
+  font-weight: 600;
+}
+.exp-head > .btn:last-child {
+  margin-left: auto;
+}
 /* Thanh trên tab Máy đang dùng: thanh ghế · lọc Đang dùng/Đã gỡ · nút gán. */
 .seat-toolbar {
   display: flex;

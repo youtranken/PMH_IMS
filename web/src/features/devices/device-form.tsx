@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { addYearsIso } from '@/lib/add-years';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
@@ -10,6 +9,7 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
+import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
 import {
@@ -436,22 +436,12 @@ export function DeviceForm({
               ariaLabel={t('devices.warrantyEnd')}
               onChange={(value) => set('warrantyEnd', value)}
             />
-            {/* Hạn bảo hành gần như luôn là "mốc + 1/2/3 năm": ba chạm thay cho ba chục lần lật
-                tháng trong lịch. Chưa có mốc thì tắt, kèm lý do ở title. */}
-            <span className="chip-row" role="group" aria-label={t('devices.warrantyQuick')}>
-              {[1, 2, 3].map((years) => (
-                <button
-                  key={years}
-                  type="button"
-                  className="btn sm ghost"
-                  disabled={!warrantyBase}
-                  title={warrantyBase ? undefined : t('devices.warrantyQuickNeedBase')}
-                  onClick={() => set('warrantyEnd', addYearsIso(warrantyBase, years))}
-                >
-                  {t('devices.plusYears', { count: years })}
-                </button>
-              ))}
-            </span>
+            <YearQuickPicks
+              base={warrantyBase}
+              onPick={(value) => set('warrantyEnd', value)}
+              label={t('devices.warrantyQuick')}
+              needBaseHint={t('devices.warrantyQuickNeedBase')}
+            />
           </Field>
           <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={2}>
             <textarea
