@@ -176,6 +176,7 @@ BEGIN
   PERFORM audit_log_create_year_partition(y + 1);
   RETURN moved;
 END $$;
+
 -- Hai hàm nội bộ dựng/khoá ngăn không được là cửa cho role ứng dụng; chỉ hàm của lượt sweep là
 -- cửa. PUBLIC có EXECUTE mặc định trên mọi hàm nên phải thu cả PUBLIC.
 REVOKE ALL ON FUNCTION audit_log_seal_partition(regclass) FROM PUBLIC, ims_app;
