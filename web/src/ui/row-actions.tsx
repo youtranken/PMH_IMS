@@ -15,6 +15,12 @@ export interface RowAction {
    * được lẫn việc không đảo được thì màu đỏ hết nghĩa là "không quay lại được".
    */
   warn?: boolean;
+  /**
+   * Việc đảo ngược theo chiều TỐT ("Dùng lại" một mục đã ngừng, "Mở khóa"): chữ xanh, đứng cùng
+   * nhóm việc thường. Nó là nghịch đảo của một việc `warn`; không tô thì trông y hệt việc
+   * thường và người ta không nhận ra đây là lối quay lại.
+   */
+  ok?: boolean;
   disabled?: boolean;
   /**
    * Việc ÍT KHI làm và dễ nhầm với một việc khác trong cùng menu (vd "Ẩn hồ sơ" nhập nhầm cạnh
@@ -29,7 +35,7 @@ export interface RowAction {
 }
 
 /**
- * Menu ba chấm cho cột "Thao tác" của MỌI bảng danh sách (AD-15).
+ * Menu ba chấm (dọc) cho cột "Thao tác" của MỌI bảng danh sách (AD-15).
  *
  * Vì sao thay dãy nút phẳng: cột thao tác đã phình tới ba–năm cái nút cạnh nhau ("Sửa" ·
  * "Đưa vào kho thanh lý" · "Gán vào máy"), và cái nào cũng phải đủ rộng để đọc được chữ. Kết
@@ -162,8 +168,9 @@ export function RowActions({
           }
         }}
       >
-        {/* Ba chấm là HÌNH, tên nút nằm ở `aria-label` — trình đọc màn hình không đọc "…". */}
-        <span aria-hidden="true">⋯</span>
+        {/* Ba chấm DỌC ở mọi màn (Q-18). Là HÌNH, tên nút nằm ở `aria-label` — trình đọc màn
+            hình không đọc ký tự, và bài E2E tìm nút theo tên nên đổi hình không đổi bài. */}
+        <span aria-hidden="true">⋮</span>
       </button>
 
       {open &&
@@ -226,7 +233,9 @@ export function RowActions({
                       ? 'ghost danger'
                       : item.warn
                         ? 'ghost warn'
-                        : 'ghost'
+                        : item.ok
+                          ? 'ghost ok'
+                          : 'ghost'
                 }
                 onClick={(event) => {
                   event.stopPropagation();
