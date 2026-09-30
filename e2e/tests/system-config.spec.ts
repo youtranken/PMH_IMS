@@ -9,6 +9,7 @@ import {
   setConfig,
   sql,
   writeHeaders,
+  openNavGroup,
 } from './helpers';
 
 /**
@@ -31,6 +32,7 @@ test.describe('Tham số hệ thống', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page
       .getByRole('navigation', { name: 'Điều hướng chính' })
       .getByRole('link', { name: 'Tham số hệ thống', exact: true })

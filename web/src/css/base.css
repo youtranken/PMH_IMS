@@ -295,13 +295,15 @@ a.linkbtn.sm {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--sidebar-label);
-  padding: var(--space-6) var(--space-4) var(--space-1);
+  /* Khoảng hở giữa nhóm và độ dày mục được siết để menu SA vừa màn laptop 768px không phải cuộn
+     (Q-18). */
+  padding: var(--space-4) var(--space-4) var(--space-1);
 }
 .nav-item {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--r-sm);
   color: var(--sidebar-ink);
   font-weight: var(--fw-semibold);

@@ -381,7 +381,7 @@ export function CommandPalette({ me }: { me: Me }) {
     const needle = foldSearch(q);
     return visibleGroups(me)
       .flatMap((group) => group.items)
-      .filter((item) => !item.planned && foldSearch(t(item.key)).includes(needle))
+      .filter((item) => foldSearch(t(item.key)).includes(needle))
       .slice(0, 4)
       .map((item) => ({
         group: t('palette.groupNav'),
@@ -509,7 +509,6 @@ export function CommandPalette({ me }: { me: Me }) {
         ...recent.map((hit) => ({ ...hit, group: recentGroup })),
         ...visibleGroups(me)
           .flatMap((group) => group.items)
-          .filter((item) => !item.planned)
           .map((item) => ({
             group: gotoGroup,
             title: t(item.key),

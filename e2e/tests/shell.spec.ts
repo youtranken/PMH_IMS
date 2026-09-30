@@ -61,3 +61,52 @@ test.describe('Khung ứng dụng', () => {
     await expect(page.getByRole('main')).toBeInViewport();
   });
 });
+
+/**
+ * Menu gọn (Q-18): menu SA từng cao ~950px nên màn laptop 768px phải cuộn sidebar mới thấy mục
+ * cuối. "Hệ thống" mặc định khép, tự mở khi đứng ở màn trong nhóm, và nhớ lựa chọn của người
+ * dùng qua lần nạp lại.
+ *
+ * `toBeInViewport` chứ không `toBeVisible`: mục nằm dưới đáy vùng cuộn vẫn "visible" dù người
+ * dùng không thấy — chỉ phép đo giao với khung nhìn bắt được chuyện phải cuộn.
+ */
+test.describe('Menu gọn', () => {
+  test('laptop 1366×768: SA thấy trọn menu (Hệ thống khép) không phải cuộn', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await firstLogin(page, E2E_SA);
+    await page.goto('/devices');
+
+    const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    await expect(nav.getByRole('button', { name: 'Hệ thống', exact: true })).toBeInViewport({ ratio: 1 });
+    // Mục cuối của menu trên bản dựng E2E (nhóm dev nằm SAU "Hệ thống").
+    await expect(nav.getByRole('link', { name: 'Bộ giao diện', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(nav.getByText('Tài liệu', { exact: true })).toHaveCount(0);
+  });
+
+  test('"Hệ thống" khép mặc định, mở bằng tiêu đề, nhớ qua nạp lại; vào màn trong nhóm thì tự mở', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    await page.goto('/devices');
+
+    const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    const toggle = nav.getByRole('button', { name: 'Hệ thống', exact: true });
+    const catalog = nav.getByRole('link', { name: 'Danh mục', exact: true });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(catalog).toBeHidden();
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(catalog).toBeVisible();
+
+    await page.reload();
+    await expect(toggle, 'lựa chọn mở của người dùng phải được nhớ').toHaveAttribute('aria-expanded', 'true');
+
+    // Đường hỏng: khép lại rồi gõ thẳng một màn trong nhóm — mục đang chọn không được nằm khuất.
+    await toggle.click();
+    await expect(catalog).toBeHidden();
+    await page.goto('/admin/catalog');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(catalog).toHaveAttribute('aria-current', 'page');
+  });
+});

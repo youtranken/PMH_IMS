@@ -14,6 +14,7 @@ import {
   rowActionNames,
   uniqueStamp,
   writeHeaders,
+  openNavGroup,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -30,6 +31,7 @@ test.describe('Danh mục', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible();
 
@@ -89,6 +91,7 @@ test.describe('Danh mục', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
 
     const stamp = Date.now().toString().slice(-5);
@@ -142,6 +145,7 @@ test.describe('Danh mục', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
 
     // File mẫu nằm TRONG hộp nhập (không còn ở đầu trang): mở hộp rồi mới tải.
@@ -169,6 +173,7 @@ test.describe('Danh mục', () => {
 
   test('import file sai mẫu bị từ chối trước khi ghi', async ({ page }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
@@ -188,6 +193,7 @@ test.describe('Danh mục', () => {
     page,
   }) => {
     await firstLogin(page, E2E_MEMBER);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Nhập từ Excel' })).toHaveCount(0);

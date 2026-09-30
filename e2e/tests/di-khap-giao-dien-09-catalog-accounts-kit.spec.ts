@@ -12,6 +12,7 @@ import {
   sql,
   searchAndWaitForFilter,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 /*
@@ -162,6 +163,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
   /** Đi từ màn nào cũng được về phòng Danh mục bằng đúng cái link người dùng bấm. */
   async function mockCatalog(page: Page): Promise<void> {
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await expect(page.getByRole('heading', { name: 'Danh mục', exact: true })).toBeVisible();
   }
@@ -672,6 +674,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await firstLogin(page, E2E_SA);
 
     // `exact`: menu có cả "Tài khoản" lẫn "Tài khoản dịch vụ".
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
@@ -788,6 +791,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
