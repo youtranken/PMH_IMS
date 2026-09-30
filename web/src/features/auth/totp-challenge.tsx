@@ -46,7 +46,7 @@ export function TotpChallenge() {
       title={t('auth.totpTitle')}
       subtitle={t('auth.totpSub')}
       signedInAs={me}
-      footer={<SupportHelp kind="totp" />}
+      footer={<SupportHelp />}
     >
       <form
         className="auth-form"

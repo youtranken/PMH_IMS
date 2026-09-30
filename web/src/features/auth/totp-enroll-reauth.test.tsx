@@ -223,3 +223,18 @@ describe('Màn cài 2 lớp — bước xác thực lại (A-02)', () => {
     expect(screen.getByRole('alert')).not.toHaveTextContent('Còn');
   });
 });
+
+describe('Màn cài 2 lớp — chữ không lặp lại', () => {
+  it('ô mã tên "Mã xác thực"; câu "Mã 6 số đang hiện trong ứng dụng" chỉ nói một lần; không có dòng "Mất điện thoại?"', async () => {
+    stubEnrollApi();
+    renderEnroll();
+    await userEvent.type(await screen.findByLabelText('Mật khẩu hiện tại'), 'dung-mat-khau');
+    await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    const code = await screen.findByLabelText('Mã xác thực');
+    expect(code).toHaveAccessibleDescription('Mã 6 số đang hiện trong ứng dụng. Nhập mã mới nhất.');
+    expect(screen.getAllByText(/Mã 6 số đang hiện trong ứng dụng/i)).toHaveLength(1);
+    expect(screen.queryByText(/30 giây/)).toBeNull();
+    expect(screen.queryByText(/Mất điện thoại/)).toBeNull();
+  });
+});

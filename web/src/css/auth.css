@@ -1,22 +1,50 @@
 /* --- Đăng nhập IMS -----------------------------------------------------------
    Nền grove tối (cố định, không theo theme app vì là màn ngoài shell) + card kính.
+   Màn rộng: mảng thương hiệu bên trái, card bên phải; ≤720px chỉ còn card.
    Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
+.auth {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(300px, 2fr) 3fr;
+  background: var(--auth-bg);
+}
+/* Chữ trên gradient thương hiệu dùng --on-brand: trắng trên lục/cam không đạt AA (tokens.css). */
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: clamp(32px, 8vh, 96px) clamp(24px, 5vw, 72px);
+  color: var(--on-brand);
+  background: var(--grad);
+}
+.auth-panel-org { font-size: var(--fs-3xl); font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+.auth-panel-system { font-size: var(--fs-lg); font-weight: 600; }
+.auth-panel-points {
+  margin: var(--space-4) 0 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  max-width: 36ch;
+}
 /* Card neo MÉP TRÊN, không căn giữa dọc: căn giữa thì hộp lỗi (hay QR) hiện ra làm cả card
    dịch lên nửa khoảng đó, đúng lúc người dùng định gõ lại vào ô vừa đổi chỗ. Trên điện thoại
    mép trên thấp còn giữ nút chính ở trên vùng bàn phím ảo. */
-.auth {
+.auth-main {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-width: 0;
   display: grid;
   justify-items: center;
   align-items: start;
   padding: clamp(24px, 12vh, 120px) var(--space-7) var(--space-7);
-  background: var(--auth-bg);
   overflow: hidden;
 }
 /* Vệt sáng nhấn — gradient thương hiệu, mờ, không cản đọc */
-.auth::before {
+.auth-main::before {
   content: '';
   position: absolute;
   inset: -30% -10% auto auto;
@@ -27,10 +55,14 @@
   filter: blur(90px);
   pointer-events: none;
 }
+@media (max-width: 720px) {
+  .auth { grid-template-columns: minmax(0, 1fr); }
+  .auth-panel { display: none; }
+}
 .auth-card {
   position: relative;
   z-index: 1;
-  width: min(94vw, 420px);
+  width: min(100%, 420px);
   display: flex;
   flex-direction: column;
   gap: var(--space-9);
@@ -40,6 +72,8 @@
   backdrop-filter: blur(18px) saturate(1.2);
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
   border: 1px solid var(--auth-card-border);
+  /* Viền nhấn trên cùng: tách card khỏi nền tối, cùng màu với thanh "Bước 1/2". */
+  border-top: 3px solid var(--warm);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   animation: pageIn 0.3s var(--ease) both;
@@ -57,14 +91,16 @@
 .auth-card > .ghost.sm:hover { color: var(--auth-ink); }
 .auth-logo {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-4);
+  text-align: center;
   font-size: var(--fs-xl);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.auth-logo .brand-mark { width: 34px; height: 34px; font-size: var(--fs-xs); }
-.auth-brand { display: flex; flex-direction: column; line-height: 1.2; }
+.auth-logo .brand-mark { width: 56px; height: 56px; font-size: var(--fs-md); border-radius: var(--r); }
+.auth-brand { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .auth-brand-sub { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 500; letter-spacing: 0; }
 /* "Bước 1/2 · …" của luồng cài đặt lần đầu: thanh mảnh + một dòng chữ. */
 .auth-steps { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -85,7 +121,26 @@
 }
 .auth-form .inp::placeholder { color: var(--auth-ink-2); }
 .auth-form .inp:focus-visible { outline: none; box-shadow: var(--ring); }
-.auth-form .btn.primary { justify-content: center; padding: var(--space-5); }
+.auth-form .btn.primary {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+  padding: var(--space-5);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+/* Biểu tượng đầu ô (`features/auth/input-icon.tsx`): vẽ bằng currentColor, ô chừa chỗ bên trái. */
+.auth-inp-icon { position: relative; display: block; }
+.auth-inp-glyph {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--auth-ink-2);
+  pointer-events: none;
+  z-index: 1;
+}
+.auth-inp-icon .inp { width: 100%; padding-left: 40px; }
 /* Ô nhập mã TOTP — 6 số, mono, giãn chữ */
 .auth-otp {
   font-family: var(--mono);
@@ -215,7 +270,8 @@
 .pw-rule { display: flex; gap: 6px; color: var(--ink-3); }
 .pw-rule.ok { color: var(--ok); }
 .pw-rule-icon { flex: none; width: 1em; text-align: center; font-weight: 700; }
-.pw-group.on { font-weight: 700; }
+/* Bốn nhóm ký tự thụt vào dưới dòng "Có ít nhất 3 trong 4:" — chúng là chi tiết của dòng đó. */
+.pw-rules-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 1.4em; }
 .auth-card .pw-rule { color: var(--auth-hint); }
 .auth-card .pw-rule.ok { color: var(--auth-ok-ink); }
 
@@ -247,6 +303,6 @@
 }
 
 @media (max-width: 480px) {
-  .auth { padding-top: var(--space-7); }
+  .auth-main { padding-top: var(--space-7); }
   .auth-card { padding: var(--space-9) var(--space-7); gap: var(--space-7); }
 }

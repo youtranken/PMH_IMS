@@ -3,7 +3,8 @@
  * gõ mật khẩu (hoặc để trình quản lý mật khẩu điền).
  *
  * CHỈ email, không bao giờ mật khẩu hay trạng thái phiên. localStorage vì phải sống qua lần đóng
- * trình duyệt; màn đăng nhập có nút "Không phải tôi" xoá nó cho máy dùng chung.
+ * trình duyệt. Màn đăng nhập chỉ điền sẵn, không in email ra thành dòng riêng (Q-18); người khác
+ * đăng nhập được trên cùng máy thì email của họ đè lên.
  */
 const KEY = 'ims_login_email';
 
@@ -29,13 +30,5 @@ export function rememberEmail(email: string): void {
     localStorage.setItem(KEY, value);
   } catch {
     // Kho bị chặn: lần sau gõ lại email — mất tiện ích, không mất chức năng.
-  }
-}
-
-export function forgetRememberedEmail(): void {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    // như trên
   }
 }

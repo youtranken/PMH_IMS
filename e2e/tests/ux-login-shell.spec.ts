@@ -41,6 +41,11 @@ test.describe('Đăng nhập', () => {
     await expect(password).toHaveAttribute('type', 'text');
     await page.getByRole('button', { name: 'Ẩn mật khẩu' }).click();
     await expect(password).toHaveAttribute('type', 'password');
+    // Q-18: rời ô là tự che, không đợi người dùng nhớ bấm.
+    await page.getByRole('button', { name: 'Hiện mật khẩu' }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+    await page.getByLabel('Email').click();
+    await expect(password).toHaveAttribute('type', 'password');
 
     await firstLogin(page, E2E_SA);
     await logout(page);
