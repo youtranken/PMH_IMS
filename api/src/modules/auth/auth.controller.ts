@@ -278,9 +278,13 @@ export class AuthController {
     const session = await this.requireSession(req);
     // UI cần biết đã cài 2 lớp chưa để đưa về ĐÚNG bước còn thiếu (enroll hay nhập mã).
     const enrolledAt = await this.auth.totpEnrolledAt(user.id);
-    const [graceMinutes, revealSeconds] = await Promise.all([
+    const [graceMinutes, revealSeconds, fileMaxSizeMb, fileMaxFilesPerBatch] = await Promise.all([
       this.config.getNumber('secretStepUpGraceMinutes'),
       this.config.getNumber('secretRevealSeconds'),
+      // Ô chọn giấy tờ kiểm trần TRƯỚC khi gửi (Q-18): form thêm mới chỉ đẩy file sau khi hồ sơ
+      // đã lưu, nên file quá cỡ phải bị bắt từ lúc chọn.
+      this.config.getNumber('fileMaxSizeMb'),
+      this.config.getNumber('fileMaxFilesPerBatch'),
     ]);
     return {
       id: user.id,
@@ -294,7 +298,12 @@ export class AuthController {
       totpEnrolledAt: enrolledAt,
       steppedUpAt: session.steppedUpAt,
       csrfToken: session.csrfToken,
-      config: { stepUpGraceMinutes: graceMinutes, secretRevealSeconds: revealSeconds },
+      config: {
+        stepUpGraceMinutes: graceMinutes,
+        secretRevealSeconds: revealSeconds,
+        fileMaxSizeMb,
+        fileMaxFilesPerBatch,
+      },
     };
   }
 

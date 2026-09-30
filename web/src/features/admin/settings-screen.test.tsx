@@ -49,6 +49,45 @@ const ROWS = [
     updatedAt: null,
     updatedBy: null,
   },
+  {
+    name: 'fileMaxSizeMb',
+    key: 'file.max_size_mb',
+    group: 'files',
+    type: 'int',
+    unit: 'mb',
+    min: 1,
+    max: 25,
+    defaultValue: 25,
+    value: 25,
+    updatedAt: null,
+    updatedBy: null,
+  },
+  {
+    name: 'fileMaxFilesPerBatch',
+    key: 'file.max_files_per_batch',
+    group: 'files',
+    type: 'int',
+    unit: 'files',
+    min: 1,
+    max: 20,
+    defaultValue: 6,
+    value: 6,
+    updatedAt: null,
+    updatedBy: null,
+  },
+  {
+    name: 'filePurgeAfterDays',
+    key: 'file.purge_after_days',
+    group: 'files',
+    type: 'int',
+    unit: 'days',
+    min: 7,
+    max: 3650,
+    defaultValue: 30,
+    value: 30,
+    updatedAt: null,
+    updatedBy: null,
+  },
 ];
 
 function renderAt(entry: string) {
@@ -81,6 +120,16 @@ describe('Màn Tham số hệ thống', () => {
     renderAt('/admin/settings?group=ipam');
     expect(await screen.findByLabelText('Cảnh báo luật NAT mở dải cổng rộng hơn')).toHaveValue('1000');
     expect(screen.getByText(/Mặc định: 1000 cổng/)).toBeInTheDocument();
+  });
+
+  it('nhóm Giấy tờ đính kèm (Q-18): ba tham số, nhãn và đơn vị tiếng Việt', async () => {
+    renderAt('/admin/settings?group=files');
+    expect(await screen.findByRole('button', { name: 'Giấy tờ đính kèm' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByLabelText('Dung lượng tối đa mỗi file')).toHaveValue('25');
+    expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Số file tối đa mỗi lượt chọn')).toHaveValue('6');
+    expect(screen.getByText(/Mặc định: 6 file/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Gỡ nội dung file đã xóa sau')).toHaveValue('30');
   });
 
   it('nới quá ngưỡng → cảnh báo; Lưu mở hộp Trước → Sau, chưa gửi gì', async () => {

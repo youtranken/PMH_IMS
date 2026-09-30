@@ -761,13 +761,15 @@ export default {
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
-    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận jpg, png, webp, pdf, xlsx.',
-    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận jpg, png, webp, pdf, xlsx.',
-    hint_service_account:
-      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận jpg, png, webp, pdf, xlsx.',
-    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận jpg, png, webp, pdf, xlsx.',
-    hint_nat_rule:
-      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận jpg, png, webp, pdf, xlsx.',
+    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành…',
+    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh…',
+    hint_service_account: 'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu.',
+    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP…',
+    hint_nat_rule: 'Ảnh chụp cấu hình router, email xác nhận mở port…',
+    // Trần lấy từ `file.max_size_mb` / `file.max_files_per_batch` (Q-18), không viết cứng số.
+    limits: 'Tối đa {{size}} MB/file, {{count}} file mỗi lần — PDF, Word, Excel, PowerPoint, ảnh.',
+    rejectedTooLarge: 'Không đính kèm {{names}}: vượt {{size}} MB mỗi file.',
+    rejectedOverCount: 'Mỗi lần chỉ nhận {{count}} file — đã bỏ ra: {{names}}.',
     pick: 'Chọn file để đính kèm',
     // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
     uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
@@ -791,8 +793,7 @@ export default {
     removed: 'Đã xóa giấy tờ.',
     noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
-    draftHint:
-      'Không bắt buộc. File (jpg, png, webp, pdf, xlsx) được đính kèm ngay sau khi lưu hồ sơ.',
+    draftHint: 'Không bắt buộc. File được đính kèm ngay sau khi lưu hồ sơ.',
     // Nút (i) cạnh tiêu đề "Giấy tờ đính kèm" của hộp SỬA hồ sơ.
     liveTip: 'Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.',
     draftRemove: 'Bỏ ra',
@@ -2271,6 +2272,7 @@ export default {
       fileUploaded: 'Tải tệp lên',
       fileDownloaded: 'Tải tệp xuống',
       fileDeleted: 'Xóa tệp',
+      filePurged: 'Dọn nội dung tệp đã xóa',
       ipCreated: 'Tạo hồ sơ IP',
       ipUpdated: 'Sửa hồ sơ IP',
       ipAssigned: 'Cấp IP',
@@ -2861,7 +2863,7 @@ export default {
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   settings: {
     title: 'Tham số hệ thống',
-    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển và mạng IP. Sửa phải xác thực lại.',
+    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển, mạng IP và giấy tờ đính kèm. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
     groupAuth: 'Đăng nhập & bảo mật',
     groupVault: 'Két sắt',
@@ -2870,6 +2872,7 @@ export default {
     groupDashboard: 'Bảng điều khiển',
     groupSoftware: 'Phần mềm',
     groupIpam: 'Mạng IP & NAT',
+    groupFiles: 'Giấy tờ đính kèm',
     defaultIs: 'Mặc định: {{value}}',
     resetDefault: 'Về mặc định',
     lastEdited: 'Sửa lần cuối bởi {{who}} lúc {{at}}',
@@ -2898,6 +2901,8 @@ export default {
     unitPerMinute: 'lần/phút',
     unitPorts: 'cổng',
     unitRows: 'dòng',
+    unitMb: 'MB',
+    unitFiles: 'file',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -2962,5 +2967,13 @@ export default {
       '24 nghĩa là /24 (254 máy). Chỉ siết được (số lớn hơn là dải hẹp hơn), không nới rộng hơn /24. Dải đã khai không bị ảnh hưởng.',
     natWidePortRangeLabel: 'Cảnh báo luật NAT mở dải cổng rộng hơn',
     natWidePortRangeDesc: 'Chỉ cảnh báo trước khi lưu, không chặn.',
+    fileMaxSizeMbLabel: 'Dung lượng tối đa mỗi file',
+    fileMaxSizeMbDesc:
+      'Áp cho mọi loại giấy tờ (ảnh, PDF, Word, Excel, PowerPoint). Không đặt quá 25 MB: máy chủ chặn cứng ở mức đó.',
+    fileMaxFilesPerBatchLabel: 'Số file tối đa mỗi lượt chọn',
+    fileMaxFilesPerBatchDesc: 'Chọn hoặc kéo thả nhiều hơn thì các file dư bị bỏ ra, kèm lời báo.',
+    filePurgeAfterDaysLabel: 'Gỡ nội dung file đã xóa sau',
+    filePurgeAfterDaysDesc:
+      'Qua mốc này nội dung file bị gỡ khỏi ổ đĩa, không khôi phục được nữa. Tên file và nhật ký vẫn giữ.',
   },
 } as const;

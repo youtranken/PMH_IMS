@@ -2,6 +2,12 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { uploadFile } from '@/lib/upload';
+import {
+  limitsHint,
+  rejectionText,
+  screenAttachments,
+  useAttachmentLimits,
+} from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
 import { FormSection } from '@/ui/page-header';
 import {
@@ -25,6 +31,12 @@ import {
 export interface AttachmentDraft {
   files: File[];
   add: (file: File | null) => void;
+  /**
+   * Thêm một lượt chọn, lọc cỡ/số file NGAY lúc chọn (Q-18): hồ sơ mới lưu xong mới đẩy file,
+   * nên file quá cỡ phải bị bắt trước khi hồ sơ ghi xuống. `rejected` là lời báo cho phần bị bỏ.
+   */
+  addMany: (picked: File[]) => void;
+  rejected: string | null;
   removeAt: (index: number) => void;
   /**
    * Đẩy hết file đang giữ lên cho một chủ thể ĐÃ CÓ id.
@@ -42,6 +54,8 @@ export interface AttachmentDraft {
 export function useAttachmentDraft(): AttachmentDraft {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
+  const [rejected, setRejected] = useState<string | null>(null);
+  const limits = useAttachmentLimits();
   /**
    * `upload` được gọi từ callback `onSuccess` của mutation lưu hồ sơ — một closure dựng ở
    * lượt render TRƯỚC lúc bấm Lưu. Đọc `files` thẳng ra là đọc bản chụp cũ; ref luôn là bản
@@ -55,17 +69,29 @@ export function useAttachmentDraft(): AttachmentDraft {
     setFiles(next);
   };
 
+  const addMany = (picked: File[]) => {
+    // Chọn nhầm hai lần cùng một file thì server nhận hai bản trùng tên, không ai gỡ ra được.
+    const fresh = picked.filter(
+      (file, index) =>
+        !latest.current.some((item) => item.name === file.name && item.size === file.size) &&
+        picked.findIndex((other) => other.name === file.name && other.size === file.size) === index,
+    );
+    const screened = screenAttachments(fresh, limits, latest.current.length);
+    setRejected(rejectionText(t, screened, limits));
+    if (screened.accepted.length > 0) put([...latest.current, ...screened.accepted]);
+  };
+
   return {
     files,
+    rejected,
     add: (file) => {
-      if (!file) return;
-      // Chọn nhầm hai lần cùng một file thì server nhận hai bản trùng tên, không ai gỡ ra được.
-      const already = latest.current.some(
-        (item) => item.name === file.name && item.size === file.size,
-      );
-      if (!already) put([...latest.current, file]);
+      if (file) addMany([file]);
     },
-    removeAt: (index) => put(latest.current.filter((_, i) => i !== index)),
+    addMany,
+    removeAt: (index) => {
+      setRejected(null);
+      put(latest.current.filter((_, i) => i !== index));
+    },
     upload: async (ownerType, ownerId, csrfToken) => {
       const errors: string[] = [];
       for (const file of latest.current) {
@@ -95,6 +121,7 @@ export function AttachmentDraftSection({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+  const limits = useAttachmentLimits();
 
   return (
     <FormSection title={t('attachments.title')} columns={1}>
@@ -108,7 +135,14 @@ export function AttachmentDraftSection({
         file={null}
         disabled={disabled}
         onPick={draft.add}
+        onPickFiles={draft.addMany}
       />
+      <p className="muted small">{limitsHint(t, limits)}</p>
+      {draft.rejected ? (
+        <p className="field-error" role="alert">
+          {draft.rejected}
+        </p>
+      ) : null}
 
       {draft.files.length > 0 ? (
         <ul className="draft-file-list">

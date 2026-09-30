@@ -166,3 +166,80 @@ describe('AttachmentPanel — hủy từng file đang tải', () => {
     expect(screen.queryByText(/Không tải lên được/)).not.toBeInTheDocument();
   });
 });
+
+/*
+ * Q-18: trần cỡ file và số file mỗi lượt đọc từ `/auth/me` và kiểm TRƯỚC khi gửi — file quá cỡ
+ * không phải đi hết qua mạng rồi mới bị từ chối, và lượt chọn quá số file bị cắt kèm lời báo.
+ */
+describe('AttachmentPanel — trần cỡ file và số file mỗi lượt (Q-18)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const MB = 1024 * 1024;
+  const sized = (name: string, bytes: number) => {
+    const f = new File(['%PDF'], name);
+    Object.defineProperty(f, 'size', { value: bytes });
+    return f;
+  };
+
+  const renderWithLimits = (fileMaxSizeMb: number, fileMaxFilesPerBatch: number) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          String(url).includes('/auth/me')
+            ? jsonResponse(200, {
+                id: 'u1',
+                email: 'a@pmh.com.vn',
+                role: 'admin',
+                config: { fileMaxSizeMb, fileMaxFilesPerBatch },
+              })
+            : jsonResponse(200, []),
+        ),
+      ),
+    );
+    uploadFile.mockReset();
+    uploadFile.mockResolvedValue({});
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType="device" ownerId="d1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+  };
+
+  it('câu gợi ý cạnh ô chọn nói trần lấy từ cấu hình', async () => {
+    renderWithLimits(25, 6);
+    expect(
+      await screen.findByText('Tối đa 25 MB/file, 6 file mỗi lần — PDF, Word, Excel, PowerPoint, ảnh.'),
+    ).toBeInTheDocument();
+  });
+
+  it('file quá cỡ KHÔNG được gửi, có lời báo nêu tên; file vừa cỡ vẫn lên', async () => {
+    renderWithLimits(10, 6);
+    await screen.findByText(/Tối đa 10 MB\/file/);
+    await userEvent.upload(screen.getByLabelText('Chọn file để đính kèm'), [
+      sized('scan-to.pdf', 11 * MB),
+      sized('hoa-don.pdf', 1 * MB),
+    ]);
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(1));
+    expect((uploadFile.mock.calls[0][1] as File).name).toBe('hoa-don.pdf');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Không đính kèm "scan-to.pdf": vượt 10 MB mỗi file.',
+    );
+  });
+
+  it('chọn quá số file mỗi lượt: chỉ gửi đủ trần, phần dư bị bỏ kèm lời báo', async () => {
+    renderWithLimits(25, 2);
+    await screen.findByText(/2 file mỗi lần/);
+    await userEvent.upload(screen.getByLabelText('Chọn file để đính kèm'), [
+      sized('1.pdf', 10),
+      sized('2.pdf', 10),
+      sized('3.pdf', 10),
+    ]);
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Mỗi lần chỉ nhận 2 file — đã bỏ ra: "3.pdf".',
+    );
+  });
+});

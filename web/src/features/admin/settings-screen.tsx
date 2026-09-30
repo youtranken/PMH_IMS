@@ -24,6 +24,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'dashboard', label: 'settings.groupDashboard' },
   { key: 'software', label: 'settings.groupSoftware' },
   { key: 'ipam', label: 'settings.groupIpam' },
+  { key: 'files', label: 'settings.groupFiles' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -36,6 +37,8 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   per_minute: 'settings.unitPerMinute',
   ports: 'settings.unitPorts',
   rows: 'settings.unitRows',
+  mb: 'settings.unitMb',
+  files: 'settings.unitFiles',
 };
 
 /*
@@ -98,6 +101,9 @@ const TEXT: Record<string, [string, string]> = {
   dashboardMaxItems: ['settings.dashboardMaxItemsLabel', 'settings.dashboardMaxItemsDesc'],
   ipamSubnetMinPrefix: ['settings.ipamSubnetMinPrefixLabel', 'settings.ipamSubnetMinPrefixDesc'],
   natWidePortRange: ['settings.natWidePortRangeLabel', 'settings.natWidePortRangeDesc'],
+  fileMaxSizeMb: ['settings.fileMaxSizeMbLabel', 'settings.fileMaxSizeMbDesc'],
+  fileMaxFilesPerBatch: ['settings.fileMaxFilesPerBatchLabel', 'settings.fileMaxFilesPerBatchDesc'],
+  filePurgeAfterDays: ['settings.filePurgeAfterDaysLabel', 'settings.filePurgeAfterDaysDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

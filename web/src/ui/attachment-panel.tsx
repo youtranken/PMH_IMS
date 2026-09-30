@@ -6,6 +6,12 @@ import { errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { downloadFile } from '@/lib/download-file';
 import { formatDateTime } from '@/lib/format';
 import { uploadFile } from '@/lib/upload';
+import {
+  limitsHint,
+  rejectionText,
+  screenAttachments,
+  useAttachmentLimits,
+} from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useConfirm } from '@/ui/confirm-provider';
@@ -28,9 +34,10 @@ export type AttachmentOwnerType =
 
 /**
  * Đuôi file gợi ý cho hộp thoại chọn — MỘT chỗ duy nhất, dùng chung cho panel (đính kèm sau)
- * và cho khối chọn trước lúc lưu. Chốt chặn thật là magic-byte ở server, đây chỉ là gợi ý.
+ * và cho khối chọn trước lúc lưu. Chốt chặn thật là kiểm nội dung ở server (Q-18: docx/pptx
+ * đọc cả loại gói, bản có macro bị chặn), đây chỉ là gợi ý.
  */
-export const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,.xlsx';
+export const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx';
 
 export interface AttachmentRecord {
   id: string;
@@ -124,6 +131,8 @@ export function AttachmentPanel({
   /** Tiến độ lô đang tải: `done`/`total`. `null` = không tải gì. */
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [queue, setQueue] = useState<UploadQueueItem[]>([]);
+  const limits = useAttachmentLimits();
+  const [rejected, setRejected] = useState<string | null>(null);
   const cancelledRef = useRef(new Set<string>());
   const controllersRef = useRef(new Map<string, AbortController>());
   const markQueue = (key: string, state: UploadQueueItem['state']) =>
@@ -190,6 +199,13 @@ export function AttachmentPanel({
     await refresh();
   };
 
+  /** Lọc cỡ/số file TRƯỚC khi gửi (Q-18); file bị bỏ ra có lời báo ngay dưới ô chọn. */
+  const pickMany = (picked: File[]) => {
+    const screened = screenAttachments(picked, limits);
+    setRejected(rejectionText(t, screened, limits));
+    if (screened.accepted.length > 0) void uploadAll(screened.accepted);
+  };
+
   /** Hủy MỘT file của lô: file đang chờ thì bỏ qua, file đang tải thì ngắt yêu cầu (DEV-081). */
   const cancelOne = (key: string) => {
     cancelledRef.current.add(key);
@@ -210,10 +226,16 @@ export function AttachmentPanel({
             file={null}
             disabled={busy}
             onPick={(one) => {
-              if (one) void uploadAll([one]);
+              if (one) pickMany([one]);
             }}
-            onPickFiles={(many) => void uploadAll(many)}
+            onPickFiles={pickMany}
           />
+          <p className="muted small">{limitsHint(t, limits)}</p>
+          {rejected ? (
+            <p className="field-error" role="alert">
+              {rejected}
+            </p>
+          ) : null}
           {progress ? (
             <p className="muted" role="status">
               {t('attachments.uploadingOf', { done: progress.done, total: progress.total })}

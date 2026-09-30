@@ -337,6 +337,8 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 | DB dựng **trước lượt gộp migration** (Q-17) | Chỉ có ở máy dev/thử nghiệm: không nâng cấp được, phải dựng lại DB trắng (xem **H2**). Cài mới theo **B** không bị ảnh hưởng. Cũng vì thế, không quay về một tag trước lượt gộp trên DB đã dựng từ bộ gộp |
 | Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
 | Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
+| Đổi trần giấy tờ đính kèm | Màn **Tham số hệ thống → Giấy tờ đính kèm**: `file.max_size_mb` (1–25), `file.max_files_per_batch`, `file.purge_after_days`. Trần cứng 25 MB nằm ở `FILE_HARD_CAP_MB` (API) và `client_max_body_size 26m` (`web/nginx.conf`); muốn quá 25 MB phải sửa code và dựng lại `api` + `web`, không chỉnh được bằng tham số |
+| Dọn nội dung file đã xoá | Worker tự chạy mỗi phút: file xoá mềm quá `file.purge_after_days` ngày (mặc định 30) bị gỡ khỏi volume `filesdata`, hàng DB giữ lại với `purged_at`, nhật ký ghi `file.purged`. Cần lấy lại một file đã xoá thì phải làm **trước** mốc đó (từ volume), hoặc lấy từ bản `files-<ngày>.tgz` trên NAS |
 
 ### H1. Nâng cấp một lần: migration chuyển sang role chủ sở hữu `ims_owner` (DB-03)
 

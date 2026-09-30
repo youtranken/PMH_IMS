@@ -22,7 +22,7 @@ const ADMIN: Me = {
   totpEnrolled: true,
   steppedUpAt: null,
   csrfToken: 'c',
-  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 60 },
+  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 60, fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 },
 };
 
 const EMPTY = { available: true, items: [], total: 0 };

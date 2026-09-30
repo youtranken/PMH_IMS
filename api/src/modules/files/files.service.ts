@@ -2,21 +2,26 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  type OnModuleInit,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ReadStream } from 'node:fs';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { redactMessage } from '../../common/log-redact';
+import { SweepService } from '../queue/sweep.service';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { UsersApiService } from '../users/users.api';
-import { detectFileType, SIZE_LIMITS } from './file-validation';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { detectFileType, sizeLimitBytes } from './file-validation';
 import type { FileKind } from './file-validation';
 import { filesTable } from './files.schema';
 
@@ -63,17 +68,89 @@ function storageDir(): string {
   return dir;
 }
 
+/** Số file tối đa mỗi lượt dọn — một phút một lượt, dồn bao nhiêu cũng hết trong vài lượt. */
+const PURGE_BATCH = 200;
+
 @Injectable()
-export class FilesService {
+export class FilesService implements OnModuleInit {
+  private readonly logger = new Logger(FilesService.name);
+
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
     private readonly owners: OwnerExistsRegistry,
     private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
+    private readonly sweep: SweepService,
   ) {}
 
+  onModuleInit(): void {
+    this.sweep.register({ name: 'file-purge', run: () => this.purgeDeleted().then(() => undefined) });
+  }
+
   /**
-   * Lưu file: whitelist magic-byte + trần theo loại; ghi đĩa TRƯỚC, row SAU — insert fail
+   * Gỡ blob của file đã xoá mềm quá `file.purge_after_days` ngày (Q-18). GIỮ hàng: lịch sử và
+   * nhật ký vẫn phải nói được ai đã đính kèm gì, ai đã xoá. Trả về số file vừa dọn.
+   *
+   * Xoá đĩa TRƯỚC, đánh dấu SAU: đánh dấu hỏng thì lượt sau gặp lại, thấy blob đã mất (ENOENT)
+   * và đánh dấu nốt — chạy lại bao nhiêu lần cũng ra cùng một kết quả. Lỗi đĩa khác (quyền,
+   * ổ đầy) thì bỏ qua file đó, KHÔNG đánh dấu: `purged_at` phải nghĩa là blob thật sự đã đi.
+   */
+  async purgeDeleted(): Promise<number> {
+    const days = await this.config.getNumber('filePurgeAfterDays');
+    // Cấu hình hỏng (0, âm) mà vẫn chạy thì mọi file vừa xoá mất nội dung ngay — không lùi được.
+    if (!(days >= 1)) return 0;
+
+    const due = await this.db
+      .select({
+        id: filesTable.id,
+        storedName: filesTable.storedName,
+      })
+      .from(filesTable)
+      .where(
+        and(
+          isNotNull(filesTable.deletedAt),
+          isNull(filesTable.purgedAt),
+          lt(filesTable.deletedAt, sql`now() - make_interval(days => ${days})`),
+        ),
+      )
+      .orderBy(asc(filesTable.deletedAt))
+      .limit(PURGE_BATCH);
+    if (due.length === 0) return 0;
+
+    const dir = storageDir();
+    const gone: string[] = [];
+    for (const row of due) {
+      try {
+        await unlink(join(dir, row.storedName));
+        gone.push(row.id);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') gone.push(row.id);
+        else this.logger.warn(`không gỡ được blob của file ${row.id}: ${redactMessage(error)}`);
+      }
+    }
+    if (gone.length === 0) return 0;
+
+    return this.db.transaction(async (tx) => {
+      const marked = await tx
+        .update(filesTable)
+        .set({ purgedAt: new Date() })
+        .where(and(inArray(filesTable.id, gone), isNull(filesTable.purgedAt)))
+        .returning({ id: filesTable.id });
+      if (marked.length === 0) return 0;
+      // Một dòng cho cả lượt: dọn là việc của hệ thống, mỗi file một dòng chỉ làm ngập nhật ký.
+      await this.audit.appendWithin(tx, {
+        actor: 'system',
+        action: 'file.purged',
+        objectType: 'file',
+        detail: { count: marked.length, afterDays: days, fileIds: marked.map((row) => row.id) },
+      });
+      return marked.length;
+    });
+  }
+
+  /**
+   * Lưu file: whitelist theo nội dung + trần `file.max_size_mb`; ghi đĩa TRƯỚC, row SAU — insert fail
    * thì xóa file mồ côi (đĩa có mà DB không = rác vô hại; DB có mà đĩa không = tải về 500).
    */
   async save(input: {
@@ -89,14 +166,14 @@ export class FilesService {
       throw new BadRequestException({
         code: 'UNSUPPORTED_FILE',
         message:
-          'Định dạng không được hỗ trợ — chỉ nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+          'Định dạng không được hỗ trợ — chỉ nhận ảnh (jpg/png/webp), PDF, Word (docx), Excel (xlsx), PowerPoint (pptx). File có macro và file chạy được bị chặn.',
       });
     }
-    const limit = SIZE_LIMITS[detected.kind];
+    const limit = sizeLimitBytes(await this.config.getNumber('fileMaxSizeMb'));
     if (input.buffer.length > limit) {
       throw new BadRequestException({
         code: 'FILE_TOO_LARGE',
-        message: `File vượt trần ${Math.round(limit / 1024 / 1024)}MB.`,
+        message: `File vượt trần ${Math.round(limit / 1024 / 1024)} MB.`,
       });
     }
 
@@ -193,7 +270,7 @@ export class FilesService {
 
   /**
    * XÓA MỀM: đánh dấu `deleted_at`, giữ nguyên blob trên đĩa. Người dùng lỡ tay xóa biên bản
-   * bảo hành thì còn lấy lại được; dọn đĩa (nếu cần) là việc của một job riêng, có kiểm soát.
+   * bảo hành thì còn lấy lại được, tới khi `purgeDeleted` gỡ blob sau `file.purge_after_days`.
    */
   async remove(actor: string, id: string): Promise<void> {
     const meta = await this.requireAlive(id);

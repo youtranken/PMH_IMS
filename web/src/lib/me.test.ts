@@ -21,7 +21,7 @@ const base: Me = {
   totpEnrolled: true,
   steppedUpAt: null,
   csrfToken: 'tok',
-  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30 },
+  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30, fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 },
 };
 
 describe('nextStepPath — luồng đăng nhập chỉ có MỘT nơi quyết định', () => {

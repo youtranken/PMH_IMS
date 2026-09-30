@@ -96,6 +96,7 @@ export const ACTION_KEY: Record<string, string> = {
   'file.uploaded': 'audit.actions.fileUploaded',
   'file.downloaded': 'audit.actions.fileDownloaded',
   'file.deleted': 'audit.actions.fileDeleted',
+  'file.purged': 'audit.actions.filePurged',
   'ip.created': 'audit.actions.ipCreated',
   'ip.updated': 'audit.actions.ipUpdated',
   'ip.assigned': 'audit.actions.ipAssigned',
