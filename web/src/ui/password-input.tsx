@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState, type InputHTMLAttributes, type Ref } from 'react';
+import { useEffect, useRef, useState, type FocusEvent, type InputHTMLAttributes, type Ref } from 'react';
 import { useTranslation } from 'react-i18next';
+
+/**
+ * Chuỗi mật khẩu được hiện tối đa bấy lâu rồi tự che (Q-18). Hằng số giao diện, KHÔNG đưa vào
+ * `system_config`: đây không phải tham số nghiệp vụ IT cần chỉnh (AD-11), và nó phải có hiệu lực
+ * ngay ở màn đăng nhập — trước khi có phiên để đọc cấu hình.
+ */
+export const PASSWORD_SHOWN_MS = 10_000;
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   ref?: Ref<HTMLInputElement>;
@@ -15,13 +22,21 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
  * Mọi prop khác (id, aria-describedby, aria-invalid mà `Field` gắn vào) đi thẳng xuống `<input>`,
  * nên đặt nó trong `Field` y như một `<input>` thường.
  *
- * Tự che lại khi form được gửi: chuỗi đang hiện không được nằm trên màn sau khi người dùng đã
- * xong việc với nó (máy dùng chung, người đứng sau lưng).
+ * Tự che lại khi form được gửi, khi rời ô, và sau `PASSWORD_SHOWN_MS` (Q-18): chuỗi đang hiện
+ * không được nằm trên màn sau khi người dùng đã xong việc với nó (máy dùng chung, người đứng sau
+ * lưng) — kể cả khi họ quên bấm che.
  */
-export function PasswordInput({ ref, className, ...rest }: Props) {
+export function PasswordInput({ ref, className, onBlur, ...rest }: Props) {
   const { t } = useTranslation();
   const [shown, setShown] = useState(false);
   const inner = useRef<HTMLInputElement | null>(null);
+  const toggle = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!shown) return;
+    const timer = window.setTimeout(() => setShown(false), PASSWORD_SHOWN_MS);
+    return () => window.clearTimeout(timer);
+  }, [shown]);
 
   useEffect(() => {
     const form = inner.current?.form;
@@ -42,17 +57,31 @@ export function PasswordInput({ ref, className, ...rest }: Props) {
         }}
         className={className ?? 'inp'}
         type={shown ? 'text' : 'password'}
+        onBlur={(e: FocusEvent<HTMLInputElement>) => {
+          // Tab sang chính nút con mắt chưa phải rời ô — che ở đây thì phím Enter kế tiếp lại
+          // hiện ra, nút như không ăn. Rời tiếp khỏi nút thì `onBlur` của nút che.
+          if (e.relatedTarget !== toggle.current) setShown(false);
+          onBlur?.(e);
+        }}
         // Chuỗi đang hiện thì bàn phím điện thoại không được tự sửa chính tả hay viết hoa nó.
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
       />
       <button
+        ref={toggle}
         type="button"
         className="pw-toggle"
         aria-label={shown ? t('auth.hidePassword') : t('auth.showPassword')}
         aria-pressed={shown}
         aria-controls={rest.id}
+        // Bấm chuột vào nút không được lấy tiêu điểm khỏi ô, nếu không ô tự che đúng lúc định
+        // hiện. Không trông vào `relatedTarget` cho việc này: Safari không đặt tiêu điểm lên nút
+        // khi bấm, `relatedTarget` là null.
+        onMouseDown={(e) => e.preventDefault()}
+        onBlur={(e) => {
+          if (e.relatedTarget !== inner.current) setShown(false);
+        }}
         onClick={() => {
           setShown((v) => !v);
           inner.current?.focus();
