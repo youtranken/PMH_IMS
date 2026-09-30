@@ -56,6 +56,10 @@ test.describe('Danh mục', () => {
     await cabinetForm.getByLabel('Mã').fill(cabinetCode);
     await cabinetForm.getByRole('button', { name: 'Thuộc site' }).click();
     await page.getByRole('option', { name: new RegExp(siteCode) }).click();
+    // Vị trí đặt tủ khai ở ô mô tả (không có cột riêng) — form phải nói ra điều đó.
+    await expect(cabinetForm.getByRole('textbox', { name: 'Vị trí / mô tả' })).toHaveAccessibleDescription(
+      /vd P\.server tầng 2/,
+    );
     await cabinetForm.getByLabel('Số U').fill('42');
     await cabinetForm.getByRole('button', { name: 'Lưu' }).click();
 
@@ -295,10 +299,10 @@ test.describe('Danh mục', () => {
     await expect(firstDataRow()).toContainText(`SORT-E2E-${stamp}-A`); // mặc định: theo mã tăng
 
     const head = page.locator('thead');
-    await head.getByRole('button', { name: 'Mô tả' }).click();
+    await head.getByRole('button', { name: 'Vị trí / mô tả' }).click();
     await expect(firstDataRow()).toContainText('Alpha tủ đầu bảng');
 
-    await head.getByRole('button', { name: 'Mô tả' }).click();
+    await head.getByRole('button', { name: 'Vị trí / mô tả' }).click();
     await expect(firstDataRow()).toContainText('Zulu tủ cuối bảng');
 
     // Cột dựa vào JOIN sang bảng site: hiện chữ, nhưng KHÔNG phải nút bấm được.

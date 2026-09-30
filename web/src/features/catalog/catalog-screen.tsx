@@ -181,7 +181,7 @@ const ENTITY_COLUMNS: Record<
     },
     {
       accessorKey: 'description',
-      header: t('catalog.description'),
+      header: t('catalog.cabinetDescription'),
       cell: ({ row }) => note((row.original as CabinetRow).description),
     },
     {

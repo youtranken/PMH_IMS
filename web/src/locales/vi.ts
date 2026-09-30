@@ -573,6 +573,9 @@ export default {
     emptyFilteredOnly: 'Không có {{kind}} nào khớp bộ lọc.',
     clearAllFilters: 'Xóa bộ lọc',
     cabinetCodeHint: 'Quy ước TU-<mã site>-NN — chọn site là điền sẵn số kế tiếp, sửa được.',
+    cabinetNumberHint: 'Tủ số {{n}} của site {{site}} — số tủ là đuôi mã (TU-<mã site>-NN).',
+    cabinetDescription: 'Vị trí / mô tả',
+    cabinetDescriptionHint: 'vd P.server tầng 2',
     uHeightHint: 'Số nguyên 1–60 (tủ thường 42U).',
     changeCode: 'Đổi mã…',
     changeCodeWarn:

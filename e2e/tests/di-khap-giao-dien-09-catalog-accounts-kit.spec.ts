@@ -125,7 +125,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Tủ mạng',
       addButton: 'Thêm tủ mạng',
-      columns: ['Mã', 'Thuộc site', 'Mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Mã', 'Thuộc site', 'Vị trí / mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
@@ -285,7 +285,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         tab: 'Tủ mạng',
         title: 'Thêm tủ mạng',
         // "Số U" là ô SỐ (1–60) — vai `spinbutton`, không nằm trong bộ ô gõ chữ.
-        textFields: ['Mã', 'Mô tả'],
+        textFields: ['Mã', 'Vị trí / mô tả'],
         selectField: ['Thuộc site'],
         toggles: [],
       },

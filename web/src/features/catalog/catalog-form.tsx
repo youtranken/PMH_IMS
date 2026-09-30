@@ -21,7 +21,7 @@ import {
   type ServicePortRow,
   type ServiceProtocol,
 } from '@/lib/catalog-types';
-import { suggestCabinetCode } from './cabinet-code';
+import { cabinetNumber, suggestCabinetCode } from './cabinet-code';
 import { deviceUsage } from './catalog-usage';
 
 type FormState = {
@@ -206,6 +206,15 @@ export function CatalogForm({
     });
   };
 
+  /* Số tủ ("tủ 1, 2, 3" của site) là đuôi mã — nói ra ngay dưới ô Mã, vì không có ô số tủ riêng. */
+  const cabinetSiteCode =
+    entity === 'cabinet'
+      ? lists.data?.sites.find((item) => item.id === form.siteId)?.code ??
+        (row as CabinetRow | null)?.siteCode ??
+        ''
+      : '';
+  const cabinetNo = entity === 'cabinet' ? cabinetNumber(form.code, cabinetSiteCode) : null;
+
   const pickSite = (siteId: string) => {
     const site = lists.data?.sites.find((item) => item.id === siteId);
     const suggest = Boolean(site) && row === null && (form.code.trim() === '' || codeSuggested);
@@ -291,7 +300,13 @@ export function CatalogForm({
             label={t('catalog.code')}
             required
             htmlFor="catalog-code"
-            hint={entity === 'cabinet' && row === null ? t('catalog.cabinetCodeHint') : undefined}
+            hint={
+              cabinetNo !== null
+                ? t('catalog.cabinetNumberHint', { n: cabinetNo, site: cabinetSiteCode })
+                : entity === 'cabinet' && row === null
+                  ? t('catalog.cabinetCodeHint')
+                  : undefined
+            }
             error={fieldError('code')}
           >
             {codeUnlocked ? (
@@ -372,7 +387,11 @@ export function CatalogForm({
 
         {entity === 'cabinet' ? (
           <>
-            <Field label={t('catalog.description')} htmlFor="catalog-description">
+            <Field
+              label={t('catalog.cabinetDescription')}
+              hint={t('catalog.cabinetDescriptionHint')}
+              htmlFor="catalog-description"
+            >
               <textarea
                 id="catalog-description"
                 className="inp"
