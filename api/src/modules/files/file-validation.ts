@@ -1,6 +1,10 @@
+import { detectOoxml } from './ooxml';
+
 /**
- * Whitelist file theo MAGIC-BYTE (NFR-9) — không tin Content-Type/đuôi file
- * client gửi; đuôi chỉ dùng THÊM cho xlsx (magic zip không phân biệt được).
+ * Whitelist file theo NỘI DUNG (NFR-9, Q-18) — không tin Content-Type/đuôi file client gửi.
+ * Ảnh và PDF nhận theo magic-byte; Office dạng mới đọc `[Content_Types].xml` trong gói
+ * (`ooxml.ts`). Mọi thứ khác bị từ chối, kể cả .doc/.xls/.ppt đời cũ (OLE, chở macro được) và
+ * file chạy được đổi đuôi.
  */
 export type FileKind = 'image' | 'document';
 
@@ -22,18 +26,14 @@ export const FILE_HARD_CAP_MB = 25;
  * nhận câu báo có số MB, thay vì lỗi chung chung của multer. `files: 1` — mỗi request một file;
  * trần "mỗi lượt chọn" (`file.max_files_per_batch`) do web giữ.
  */
-export const MULTER_LIMIT = { fileSize: (FILE_HARD_CAP_MB + 1) * MIB, files: 1 };
+export const MULTER_LIMIT = {
+  fileSize: (FILE_HARD_CAP_MB + 1) * MIB,
+  files: 1,
+};
 
 /** Trần byte cho một file theo cấu hình, không bao giờ vượt trần cứng. */
 export function sizeLimitBytes(maxSizeMb: number): number {
   return Math.min(maxSizeMb, FILE_HARD_CAP_MB) * MIB;
-}
-
-interface DetectedType {
-  mime: string;
-  kind: FileKind;
-  /** Đuôi bắt buộc (lowercase, gồm dấu chấm) — chỉ dùng khi magic không đủ. */
-  requiredExt?: string[];
 }
 
 function startsWith(buf: Buffer, bytes: number[], offset = 0): boolean {
@@ -41,51 +41,47 @@ function startsWith(buf: Buffer, bytes: number[], offset = 0): boolean {
   return bytes.every((b, i) => buf[offset + i] === b);
 }
 
-/** Nhận diện loại file từ magic-byte; null = không nằm trong whitelist. */
+const MAGIC: Array<{
+  bytes: number[];
+  also?: { bytes: number[]; offset: number };
+  mime: string;
+  kind: FileKind;
+}> = [
+  { bytes: [0xff, 0xd8, 0xff], mime: 'image/jpeg', kind: 'image' },
+  {
+    bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    mime: 'image/png',
+    kind: 'image',
+  },
+  // RIFF....WEBP — RIFF trần còn là WAVE/AVI.
+  {
+    bytes: [0x52, 0x49, 0x46, 0x46],
+    also: { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
+    mime: 'image/webp',
+    kind: 'image',
+  },
+  {
+    bytes: [0x25, 0x50, 0x44, 0x46],
+    mime: 'application/pdf',
+    kind: 'document',
+  }, // %PDF
+];
+
+const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04];
+
+/** Nhận diện loại file theo nội dung; null = không nằm trong whitelist. */
 export function detectFileType(
   buf: Buffer,
   originalName: string,
 ): { mime: string; kind: FileKind } | null {
-  const candidates: Array<{ match: boolean } & DetectedType> = [
-    {
-      match: startsWith(buf, [0xff, 0xd8, 0xff]),
-      mime: 'image/jpeg',
-      kind: 'image',
-    },
-    {
-      match: startsWith(buf, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-      mime: 'image/png',
-      kind: 'image',
-    },
-    {
-      // RIFF....WEBP
-      match:
-        startsWith(buf, [0x52, 0x49, 0x46, 0x46]) &&
-        startsWith(buf, [0x57, 0x45, 0x42, 0x50], 8),
-      mime: 'image/webp',
-      kind: 'image',
-    },
-    {
-      match: startsWith(buf, [0x25, 0x50, 0x44, 0x46]), // %PDF
-      mime: 'application/pdf',
-      kind: 'document',
-    },
-    {
-      // PK\x03\x04 = zip — xlsx là zip; magic không phân biệt docx/zip thuần
-      // nên bắt buộc thêm đuôi .xlsx (whitelist NFR-9)
-      match: startsWith(buf, [0x50, 0x4b, 0x03, 0x04]),
-      mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      kind: 'document',
-      requiredExt: ['.xlsx'],
-    },
-  ];
-  const lower = originalName.toLowerCase();
-  for (const c of candidates) {
-    if (!c.match) continue;
-    if (c.requiredExt && !c.requiredExt.some((e) => lower.endsWith(e))) {
-      return null;
-    }
-    return { mime: c.mime, kind: c.kind };
+  for (const magic of MAGIC) {
+    if (!startsWith(buf, magic.bytes)) continue;
+    if (magic.also && !startsWith(buf, magic.also.bytes, magic.also.offset)) continue;
+    return { mime: magic.mime, kind: magic.kind };
+  }
+  if (startsWith(buf, ZIP_MAGIC)) {
+    const mime = detectOoxml(buf, originalName.toLowerCase());
+    return mime ? { mime, kind: 'document' } : null;
   }
   return null;
 }

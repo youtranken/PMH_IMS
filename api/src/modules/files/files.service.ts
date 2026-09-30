@@ -91,7 +91,7 @@ export class FilesService {
       throw new BadRequestException({
         code: 'UNSUPPORTED_FILE',
         message:
-          'Định dạng không được hỗ trợ — chỉ nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+          'Định dạng không được hỗ trợ — chỉ nhận ảnh (jpg/png/webp), PDF, Word (docx), Excel (xlsx), PowerPoint (pptx). File có macro và file chạy được bị chặn.',
       });
     }
     const limit = sizeLimitBytes(await this.config.getNumber('fileMaxSizeMb'));
