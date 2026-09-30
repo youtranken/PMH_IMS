@@ -767,6 +767,20 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   lại" kèm số "đang dùng ở N …"; mở lại thiết bị đã thanh lý thì về "Đang dùng"; gán license chọn
   nhanh theo phòng ban hoặc người; luật NAT không có hạn rà lại. 0e16c5a, 3f74fe1, 93cf1ed, 1837027
   (v1.4.1).
+- [x] **DOM-23 · Két: loại ngăn "Mã 2 lớp" + một lần gõ mã cho mọi thao tác két** (Q-18). Nhánh
+  `fix/dot8-ket-totp` (efdb528, 9db1814, 20f84aa, 60eec73, ffc5680), migration
+  `0035_secret_kind_totp` (chỉ nới `secret_kind_check`).
+  - Cất khóa base32 hoặc `otpauth://totp/…`, server chuẩn hóa về một URI rồi mã hóa như mọi ngăn;
+    khóa hỏng / HOTP / chu kỳ ≠ 30 / 7 số → `TOTP_SEED_INVALID`, không nhắc lại khóa; ghi chú chứa
+    khóa bị chặn.
+  - Mở két (cùng route `no-store`, cùng dòng audit) trả thêm QR sinh lại + mã các chu kỳ trong
+    `secret.reveal_seconds`; web hiện QR, khóa che sẵn, mã chạy theo chu kỳ, nút chép khóa/mã.
+    Không lưu ảnh QR.
+  - Form đọc ảnh QR ngay trên trình duyệt (`jsqr`), ảnh không gửi lên.
+  - Grace: một lần gõ mã phủ cất mật khẩu rồi cất mã 2 lớp — kiểm ở `api/test/vault-totp.spec.ts`
+    (guard + phiên thật) và `web/src/ui/vault-totp.test.tsx`; không thấy lỗi.
+  - Kiểm: `totp-seed.spec.ts` (vector RFC 6238), `qr-decode.test.ts`, `reveal-totp.test.tsx`,
+    E2E `vault-totp.spec.ts` (mới viết, chạy ở tầng giữa trước khi merge).
 
 ### Còn chờ chủ dự án
 
