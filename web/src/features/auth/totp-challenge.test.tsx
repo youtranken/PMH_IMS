@@ -61,4 +61,12 @@ describe('TotpChallenge', () => {
     expect(input).toHaveValue('');
     expect(input).toHaveFocus();
   });
+
+  it('gợi ý dưới ô nói mã lấy ở đâu, và vẫn giữ "Không lấy được mã?" (Q-18)', () => {
+    renderChallenge();
+    expect(screen.getByLabelText('Mã xác thực')).toHaveAccessibleDescription(
+      'Mã 6 số đang hiện trong ứng dụng. Nhập mã mới nhất.',
+    );
+    expect(screen.getByRole('button', { name: 'Không lấy được mã?' })).toBeInTheDocument();
+  });
 });
