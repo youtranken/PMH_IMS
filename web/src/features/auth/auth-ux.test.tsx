@@ -62,24 +62,17 @@ describe('AUTH-011: cài 2 lớp trên chính điện thoại', () => {
   });
 });
 
-describe('AUTH-003 / AUTH-018: chỉ đường khi quên mật khẩu hoặc mất mã', () => {
-  it('bấm "Quên mật khẩu?" → hiện hướng dẫn + câu liên hệ đọc từ route công khai', async () => {
+describe('AUTH-018: màn mã 2 lớp chỉ đường khi không lấy được mã (Q-14, Q-18)', () => {
+  it('bấm "Không lấy được mã?" → hướng dẫn đặt lại 2 lớp + câu liên hệ đọc từ route công khai', async () => {
     const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(200, { contact: 'Gọi anh Tuấn — máy lẻ 123' }));
     vi.stubGlobal('fetch', fetchSpy);
-    withProviders(<SupportHelp kind="password" />);
+    withProviders(<SupportHelp />);
     // Chưa bấm thì chưa hỏi server: người không cần hướng dẫn không tốn một lượt gọi.
     expect(fetchSpy).not.toHaveBeenCalled();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Quên mật khẩu?' }));
-    expect(await screen.findByText(/Gọi anh Tuấn — máy lẻ 123/)).toBeInTheDocument();
-    expect(screen.getByText(/Nhờ Super Admin cấp mật khẩu tạm/)).toBeInTheDocument();
-    expect(String(fetchSpy.mock.calls[0][0])).toBe('/api/v1/auth/support-contact');
-  });
-
-  it('màn mã 2 lớp: "Không lấy được mã?" nói về đặt lại 2 lớp, không nói về mật khẩu', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { contact: 'x' })));
-    withProviders(<SupportHelp kind="totp" />);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Không lấy được mã?' }));
-    expect(await screen.findByText(/nhờ Super Admin đặt lại xác thực 2 lớp/)).toBeInTheDocument();
+    expect(await screen.findByText(/Gọi anh Tuấn — máy lẻ 123/)).toBeInTheDocument();
+    expect(screen.getByText(/nhờ Super Admin đặt lại xác thực 2 lớp/)).toBeInTheDocument();
+    expect(String(fetchSpy.mock.calls[0][0])).toBe('/api/v1/auth/support-contact');
   });
 });
 

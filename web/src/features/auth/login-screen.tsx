@@ -4,11 +4,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { clearSignedOut, justSignedOut } from '@/lib/after-logout';
 import { classifyLoginError, formatWait, type LoginErrorKind } from '@/lib/login-error';
 import { nextPathLabelKey, peekNextPath } from '@/lib/next-path';
-import {
-  forgetRememberedEmail,
-  readRememberedEmail,
-  rememberEmail,
-} from '@/lib/remembered-email';
+import { readRememberedEmail, rememberEmail } from '@/lib/remembered-email';
 import { Field } from '@/ui/page-header';
 import { PasswordInput } from '@/ui/password-input';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -16,7 +12,6 @@ import { useSupportContact } from '@/ui/use-support-contact';
 import { useNow } from '@/ui/use-now';
 import { AuthCard } from './auth-card';
 import { AUTH_ERROR_ID, clearSetupSteps } from './setup-steps';
-import { SupportHelp } from './support-help';
 
 interface LoginResult {
   status: 'authenticated' | 'totp-required' | 'totp-enroll-required';
@@ -31,7 +26,11 @@ const WARN_FROM_WRONG = 2;
  * Bước 1 của đăng nhập: email + mật khẩu (NFR-01).
  *
  * Email đăng nhập thành công được nhớ trên thiết bị: người duyệt mở thư trên điện thoại chỉ còn
- * gõ mật khẩu. Máy dùng chung thì "Không phải tôi?" xoá nó ngay trên màn này.
+ * gõ mật khẩu. Chỉ điền sẵn vào ô, không nói ra thành dòng riêng (Q-18); người khác ngồi vào
+ * máy thì xoá ô gõ email của mình, lần đăng nhập được sẽ nhớ email mới.
+ *
+ * Không có "Quên mật khẩu?" (Q-18): câu liên hệ quản trị chỉ hiện khi tài khoản bị khóa / vô
+ * hiệu hóa (Q-16).
  *
  * Mỗi kiểu hỏng làm một việc khác nhau (`classifyLoginError`): sai mật khẩu thì xoá ô và đưa con
  * trỏ về; bị tạm khoá thì đếm ngược và khoá nút — bấm thêm trong lúc chờ là thêm một lượt sai
@@ -39,7 +38,7 @@ const WARN_FROM_WRONG = 2;
  */
 export function LoginScreen() {
   const { t } = useTranslation();
-  const [remembered, setRemembered] = useState(() => readRememberedEmail());
+  const [remembered] = useState(() => readRememberedEmail());
   const [email, setEmail] = useState(remembered);
   const [password, setPassword] = useState('');
   const [failure, setFailure] = useState<{ kind: LoginErrorKind; message: string } | null>(null);
@@ -47,7 +46,6 @@ export function LoginScreen() {
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   // Vừa bấm Đăng xuất: nói ra là phiên đã đóng — trên máy dùng chung người ta cần chắc điều đó.
   const [signedOut, setSignedOut] = useState(justSignedOut);
-  const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const now = useNow(1000, lockedUntil !== null);
@@ -125,7 +123,6 @@ export function LoginScreen() {
       error={errorBody}
       errorTone={errorTone}
       notice={signedOut ? t('auth.signedOut') : null}
-      footer={<SupportHelp kind="password" />}
     >
       <form
         className="auth-form"
@@ -162,27 +159,8 @@ export function LoginScreen() {
           );
         }}
       >
-        {remembered ? (
-          <p className="auth-sub">
-            {t('auth.rememberedAs', { email: remembered })}{' '}
-            <button
-              type="button"
-              className="auth-link"
-              onClick={() => {
-                forgetRememberedEmail();
-                setRemembered('');
-                setEmail('');
-                emailRef.current?.focus();
-              }}
-            >
-              {t('auth.notMe')}
-            </button>
-          </p>
-        ) : null}
-
         <Field label={t('auth.email')} htmlFor="login-email" error={check.error('email')}>
           <input
-            ref={emailRef}
             className="inp"
             type="email"
             autoComplete="username"

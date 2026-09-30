@@ -315,9 +315,6 @@ export default {
     passwordMismatch: 'Hai mật khẩu nhập không khớp.',
     stepUpTitle: 'Xác nhận danh tính',
     stepUpSub: 'Nhập mã xác thực để xem thông tin bí mật',
-    forgotPassword: 'Quên mật khẩu?',
-    forgotPasswordHelp:
-      'Hệ thống không gửi mật khẩu qua email. Nhờ Super Admin cấp mật khẩu tạm, rồi đặt mật khẩu mới khi đăng nhập.',
     lostTotp: 'Không lấy được mã?',
     lostTotpHelp:
       'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
@@ -328,8 +325,6 @@ export default {
     signOut: 'Đăng xuất',
     signingOut: 'Đang đăng xuất…',
     resumeTo: 'Đăng nhập để mở: {{screen}}',
-    rememberedAs: 'Email đã nhớ trên máy này: {{email}}.',
-    notMe: 'Không phải tôi',
     openInAuthenticator: 'Mở trong ứng dụng xác thực',
     copySecret: 'Sao chép khóa',
     secretLabel: 'Khóa cài đặt',
