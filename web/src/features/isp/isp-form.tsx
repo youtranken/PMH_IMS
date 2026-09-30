@@ -150,7 +150,7 @@ export function IspForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
       guardUnsaved
-      maxWidth={800}
+      maxWidth={1040}
       title={row ? `${t('isp.edit')} — ${row.code}` : t('isp.add')}
       footer={
         <>
@@ -243,7 +243,7 @@ export function IspForm({
           </p>
         ) : null}
         {check.summary}
-        <FormSection title={t('isp.tabProfile')} columns={3}>
+        <FormSection title={t('isp.tabProfile')} columns={4}>
           <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code')}>
             <input
               id="isp-code"
@@ -392,7 +392,7 @@ export function IspForm({
             Tiêu đề khối KHÔNG là "Hotline" — khối này chứa cả hợp đồng và ngày bắt đầu, đặt
             tên theo ô đầu tiên là nói sai về các ô còn lại. Không có ô hết hạn: đường truyền
             không có hạn, dùng tới khi thanh lý (Q-04). */}
-        <FormSection title={t('isp.sectionContract')} columns={3}>
+        <FormSection title={t('isp.sectionContract')} columns={4}>
           <Field label={t('isp.hotline')} htmlFor="isp-hotline">
             <PhoneInput
               id="isp-hotline"
@@ -416,7 +416,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} htmlFor="isp-note" span={2}>
+          <Field label={t('isp.note')} htmlFor="isp-note">
             <input
               id="isp-note"
               className="inp"

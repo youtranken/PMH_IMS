@@ -794,7 +794,7 @@ function NatForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
       guardUnsaved
-      maxWidth={720}
+      maxWidth={960}
       title={
         rule
           ? t('common.titleOf', {
@@ -888,7 +888,7 @@ function NatForm({
         }}
       >
         {check.summary}
-        <FormSection title={t('nat.sectionExternal')} columns={2}>
+        <FormSection title={t('nat.sectionExternal')} columns={4}>
           {/* MỘT ô chọn router, không hai. Ô "Loại thiết bị" cũ chỉ là bộ lọc cho chính ô
               này, nhưng đứng thành trường riêng nên chọn một con router phải thao tác hai
               dropdown — và chọn nhầm loại là danh sách rỗng trơn. */}
@@ -1123,7 +1123,7 @@ function NatForm({
         </FormSection>
 
         {/* Khối này là LÝ DO cuốn sổ tồn tại — nên hai ô đầu bắt buộc, không phải tùy chọn. */}
-        <FormSection title={t('nat.sectionWhy')} columns={2}>
+        <FormSection title={t('nat.sectionWhy')} columns={4}>
           <Field
             label={t('nat.usedBy')}
             required
@@ -1191,16 +1191,9 @@ function NatForm({
         </FormSection>
 
         {/*
-          SỬA một rule đang có thì mở thêm hai khu: giấy tờ và lịch sử.
-
-          Giấy tờ — ảnh chụp cấu hình Draytek, email nhà mạng xác nhận mở port — trước đây
-          không có chỗ đính nên nằm trong thư mục chia sẻ của phòng IT.
-
-          Lịch sử — "ai mở port này, ngày nào, vì sao, ai gỡ" — là câu auditor hỏi nhiều nhất
-          về sổ NAT; không có khu này thì chỉ tra được bằng SQL trên `audit_log`.
-
-          THÊM MỚI thì không hiện: chưa có id để gắn, và một rule chưa tồn tại thì chưa có gì
-          để kể.
+          Giấy tờ (ảnh cấu hình router, email nhà mạng xác nhận mở port) chỉ có khi SỬA: rule
+          chưa tồn tại thì chưa có id để gắn. Lịch sử KHÔNG nhúng ở đây — menu ⋮ của dòng đã có
+          mục "Lịch sử", nhúng thêm vào hộp Sửa chỉ làm hộp dài gấp đôi cho một thứ không sửa được.
         */}
         {rule ? (
           <>
@@ -1217,10 +1210,6 @@ function NatForm({
                 csrfToken={csrfToken}
                 canEdit={!busy}
               />
-            </FormSection>
-
-            <FormSection title={t('nat.tabHistory')} columns={1}>
-              <NatHistory ruleId={rule.id} />
             </FormSection>
           </>
         ) : null}
@@ -1367,8 +1356,7 @@ function RemoveDialog({
 /**
  * Lịch sử của MỘT rule NAT.
  *
- * Tách thành component riêng vì truy vấn chỉ chạy khi hộp Sửa mở ra — nhét `useQuery` vào
- * `NatForm` thì nó chạy cả lúc THÊM MỚI, gọi `/nat/undefined/history` và nhận 400.
+ * Tách thành component riêng để truy vấn chỉ chạy khi hộp Lịch sử thật sự mở ra.
  */
 function NatHistory({ ruleId }: { ruleId: string }) {
   const { t } = useTranslation();

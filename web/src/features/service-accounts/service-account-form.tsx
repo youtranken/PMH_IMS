@@ -126,7 +126,7 @@ export function ServiceAccountForm({
       // vẫn chạy tiếp và ghi nốt, nên người dùng tin là đã hủy trong khi dữ liệu đã vào.
       dismissible={!busy}
       guardUnsaved
-      maxWidth={780}
+      maxWidth={1000}
       title={row ? `${t('serviceAccounts.edit')} — ${row.code}` : t('serviceAccounts.add')}
       footer={
         <>
@@ -244,7 +244,7 @@ export function ServiceAccountForm({
           );
         }}
       >
-        <FormSection title={t('serviceAccounts.sectionProfile')} columns={3}>
+        <FormSection title={t('serviceAccounts.sectionProfile')} columns={4}>
           {/*
             TÊN ĐĂNG NHẬP đứng đầu và là ô bắt buộc — nó là thứ người khai THẬT SỰ biết.
 
@@ -265,7 +265,6 @@ export function ServiceAccountForm({
             required={!form.code.trim()}
             hint={t('serviceAccounts.loginHint')}
             htmlFor="sa-login"
-            span={2}
             error={check.error('login')}
           >
             <input
@@ -346,7 +345,7 @@ export function ServiceAccountForm({
           */}
         </FormSection>
 
-        <FormSection title={t('serviceAccounts.sectionOwner')} columns={3}>
+        <FormSection title={t('serviceAccounts.sectionOwner')} columns={4}>
           <Field label={t('serviceAccounts.department')}>
             {/* Cùng danh mục Bộ phận với hồ sơ IP và sổ NAT — ba chỗ trả lời cùng một câu,
                 viết lệch nhau thì lọc chéo không ra. */}
@@ -377,7 +376,7 @@ export function ServiceAccountForm({
         {/* Khối này CHỈ hiện với tài khoản VPN — hai ô của nó vô nghĩa với email dùng chung,
             và khai vào là ghi ra dữ liệu mà sáu tháng sau không ai dám xóa. */}
         {vpn ? (
-          <FormSection title={t('serviceAccounts.sectionVpn')} columns={3}>
+          <FormSection title={t('serviceAccounts.sectionVpn')} columns={4}>
             <Field
               label={t('serviceAccounts.groupName')}
               hint={t('serviceAccounts.groupNameHint')}

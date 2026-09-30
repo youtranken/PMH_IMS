@@ -1780,7 +1780,6 @@ export default {
   },
   nat: {
     title: 'Sổ NAT',
-    tabHistory: 'Lịch sử luật NAT',
     subtitle: 'Mọi luật chuyển cổng: cổng nào mở, dẫn tới máy nào, cho ai, vì sao.',
     add: 'Thêm luật NAT',
     edit: 'Sửa luật NAT',

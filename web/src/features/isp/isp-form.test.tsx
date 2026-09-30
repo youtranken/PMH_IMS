@@ -133,3 +133,18 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     expect(within(ask).queryByRole('button', { name: 'Đã thanh lý' })).toBeNull();
   });
 });
+
+describe('Bố cục form đường truyền', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('hộp rộng, hai khối xếp 4 cột — không thành dây dọc cao hơn màn laptop', () => {
+    mockFetch();
+    renderForm(ROW_ON_INACTIVE);
+    const dialog = screen.getAllByRole('dialog')[0];
+    expect(Number.parseInt(dialog.style.maxWidth, 10)).toBeGreaterThanOrEqual(960);
+    for (const heading of ['Hồ sơ', 'Hợp đồng và liên hệ sự cố']) {
+      const section = within(dialog).getByRole('heading', { name: heading }).closest('section');
+      expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    }
+  });
+});

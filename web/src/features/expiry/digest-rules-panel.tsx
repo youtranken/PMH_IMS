@@ -393,7 +393,7 @@ function RuleForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
       guardUnsaved
-      maxWidth={640}
+      maxWidth={800}
       title={
         rule
           ? t('common.titleOf', { action: t('digest.edit'), subject: rule.name })
@@ -413,7 +413,7 @@ function RuleForm({
       <form
         id="rule-form"
         className="form-grid"
-        data-columns={1}
+        data-columns={2}
         ref={check.formRef}
         noValidate
         onSubmit={(e) => {
@@ -437,7 +437,7 @@ function RuleForm({
           );
         }}
       >
-        {check.summary}
+        {check.summary ? <div className="span-2">{check.summary}</div> : null}
         <Field label={t('digest.name')} required htmlFor="rule-name" error={check.error('name')}>
           <input
             id="rule-name"
@@ -448,7 +448,22 @@ function RuleForm({
           />
         </Field>
 
-        <Field label={t('digest.scope')} hint={t('digest.scopeHint')}>
+        <Field
+          label={t('digest.withinDays')}
+          hint={t('digest.withinHint', { min: WITHIN_MIN, max: WITHIN_MAX })}
+          htmlFor="rule-within"
+          error={check.error('withinDays')}
+        >
+          <input
+            id="rule-within"
+            className="inp"
+            inputMode="numeric"
+            value={withinDays}
+            onChange={(e) => setWithinDays(e.target.value)}
+          />
+        </Field>
+
+        <Field label={t('digest.scope')} hint={t('digest.scopeHint')} span={2}>
           {/* `role="group"` + tên: trình đọc màn hình đọc được "Theo dõi loại" khi vào từng ô. */}
           <div
             className="row"
@@ -470,25 +485,11 @@ function RuleForm({
         </Field>
 
         <Field
-          label={t('digest.withinDays')}
-          hint={t('digest.withinHint', { min: WITHIN_MIN, max: WITHIN_MAX })}
-          htmlFor="rule-within"
-          error={check.error('withinDays')}
-        >
-          <input
-            id="rule-within"
-            className="inp"
-            inputMode="numeric"
-            value={withinDays}
-            onChange={(e) => setWithinDays(e.target.value)}
-          />
-        </Field>
-
-        <Field
           label={t('digest.recipients')}
           required
           hint={t('digest.recipientsHint')}
           htmlFor="rule-recipients"
+          span={2}
           error={check.error('recipients')}
         >
           <textarea
@@ -502,7 +503,7 @@ function RuleForm({
         {/* Đọc lại ô tự do thành từng chip: email sai đỏ ngay chip của nó, không phải dò trong
             một dòng dài. Gợi ý là hộp thư đã dùng ở luật khác — bấm là thêm vào ô. */}
         {parsed.length > 0 ? (
-          <ul className="chip-row recipient-chips" aria-label={t('digest.recipientsParsed')}>
+          <ul className="chip-row recipient-chips span-2" aria-label={t('digest.recipientsParsed')}>
             {parsed.map((item, index) => (
               <li key={`${item.email}-${index}`} className={`badge ${item.valid ? 'muted' : 'danger'}`}>
                 {item.email}
@@ -512,7 +513,7 @@ function RuleForm({
           </ul>
         ) : null}
         {suggestions.length > 0 ? (
-          <div className="chip-row" role="group" aria-label={t('digest.recipientsSuggest')}>
+          <div className="chip-row span-2" role="group" aria-label={t('digest.recipientsSuggest')}>
             {suggestions.map((email) => (
               <button
                 key={email}
@@ -527,7 +528,7 @@ function RuleForm({
           </div>
         ) : null}
 
-        <Field label={t('digest.schedule')}>
+        <Field label={t('digest.schedule')} span={2}>
           {/* AD-15: luật gửi định kỳ dùng chung SchedulePicker, không tự dựng ô chọn lịch. */}
           <SchedulePicker value={schedule} onChange={setSchedule} />
         </Field>
@@ -553,7 +554,7 @@ function RuleForm({
         </Field>
 
         {error ? (
-          <p className="alert error" role="alert">
+          <p className="alert error span-2" role="alert">
             {error}
           </p>
         ) : null}
