@@ -359,7 +359,7 @@ export function SubnetCard({
 
   const actions: RowAction[] = disabled
     ? [
-        { key: 'restore', label: t('ipam.restore'), onSelect: onRestore },
+        { key: 'restore', label: t('ipam.restore'), onSelect: onRestore, ok: true },
         ...(canDelete
           ? [
               {
@@ -384,7 +384,7 @@ export function SubnetCard({
          */
         canDelete
           ? { key: 'delete', label: t('common.delete'), onSelect: onDelete, danger: true }
-          : { key: 'hide', label: t('ipam.hide'), onSelect: onHide, danger: true },
+          : { key: 'hide', label: t('ipam.hide'), onSelect: onHide, warn: true },
       ];
 
   return (
@@ -403,7 +403,7 @@ export function SubnetCard({
           {/* Badge trạng thái ĐI TRƯỚC badge VLAN: "dải này còn dùng không" là câu phải trả
               lời trước "dải này VLAN mấy". */}
           {disabled ? (
-            <span className="badge muted plain">{t('ipam.disabledBadge')}</span>
+            <span className="badge danger plain">{t('ipam.disabledBadge')}</span>
           ) : null}
           {subnet.vlan !== null ? (
             <span className={`badge ${active && !disabled ? 'brand' : 'muted'} plain`}>

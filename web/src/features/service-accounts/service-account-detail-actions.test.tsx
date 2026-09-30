@@ -63,7 +63,11 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     const user = userEvent.setup();
     expect(await screen.findByRole('button', { name: 'Sửa hồ sơ' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Thao tác với VPN-E2E-01' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Ngừng dùng…' }));
+    // Ngừng dùng đảo lại được: màu cảnh báo, không đỏ — đỏ dành cho việc không quay lại được.
+    const disable = screen.getByRole('menuitem', { name: 'Ngừng dùng…' });
+    expect(disable).toHaveClass('warn');
+    expect(disable).not.toHaveClass('danger');
+    await user.click(disable);
     expect(
       await screen.findByRole('dialog', { name: 'Ngừng dùng — VPN-E2E-01' }),
     ).toBeVisible();
@@ -76,6 +80,8 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với VPN-E2E-01' }));
     expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toHaveClass('ok');
+    expect(screen.getByText('Đã ngừng dùng', { selector: '.badge' })).toHaveClass('danger');
     expect(screen.queryByRole('menuitem', { name: 'Ngừng dùng…' })).toBeNull();
   });
 

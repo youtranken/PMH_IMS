@@ -128,6 +128,27 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(2);
   });
 
+  /* Q-18: trạng thái "Đã ngừng dùng" đọc ra ngay bằng màu đỏ; lối quay lại "Dùng lại" màu xanh.
+     Việc "Ngừng dùng" vẫn là `warn` — đỏ để dành cho việc không đảo được. */
+  it('mục đã ngừng dùng: huy hiệu đỏ, "Dùng lại" màu xanh', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          jsonResponse(200, { items: [{ ...SITE_HCM, active: false, usage: [] }], total: 1 }),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt('/admin/catalog');
+    await screen.findByText('E2E-HCM');
+    const badges = screen.getAllByText('Đã ngừng dùng', { selector: '.badge' });
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) expect(badge).toHaveClass('danger');
+    await user.click(screen.getAllByRole('button', { name: /Thao tác với E2E-HCM/ })[0]);
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại' })).toHaveClass('ok');
+  });
+
   it('cột "Đang dùng ở": số bấm được sang danh sách lọc sẵn; số màn đích không lọc được thì chữ thường', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = new URL(String(input), 'http://x');
