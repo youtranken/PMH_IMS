@@ -35,6 +35,50 @@ describe('runMigrations — validate format tên file (trước khi chạm DB)',
   });
 });
 
+describe('runMigrations — DB dựng từ bộ migration trước lượt gộp (Q-17)', () => {
+  /** Journal giả trả đúng các tên cho câu đọc cả journal; mọi câu khác trả rỗng. */
+  function poolWithJournal(names: string[], queries: string[]) {
+    const client = {
+      query: jest.fn((text: unknown) => {
+        if (typeof text === 'string') queries.push(text);
+        if (typeof text === 'string' && /^SELECT name FROM _migrations$/.test(text.trim())) {
+          const rows = names.map((name) => ({ name }));
+          return Promise.resolve({ rows, rowCount: rows.length });
+        }
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      }),
+      release: jest.fn(),
+    };
+    return { connect: jest.fn().mockResolvedValue(client) } as unknown as Pool;
+  }
+
+  it('journal có tên không còn file, và thiếu mốc của bộ đã gộp → NÉM, không chạy file nào', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'qlts-mig-'));
+    await writeFile(join(dir, '0000_extensions.sql'), 'SELECT 1;');
+    await writeFile(join(dir, '0001_app_role.sql'), 'SELECT 1;');
+    const queries: string[] = [];
+    const pool = poolWithJournal(['0000_extensions.sql', '0001_system_config.sql'], queries);
+
+    await expect(runMigrations(pool, dir, { log: () => undefined })).rejects.toThrow(
+      /trước lượt gộp migration \(Q-17\)[\s\S]*0001_system_config\.sql[\s\S]*dựng lại/,
+    );
+    expect(queries).not.toContain('BEGIN');
+    expect(queries.some((q) => q.includes('INSERT INTO _migrations'))).toBe(false);
+    // Khoá advisory vẫn được trả dù runner ném giữa chừng.
+    expect(queries.some((q) => q.includes('pg_advisory_unlock'))).toBe(true);
+  });
+
+  it('journal có tên lạ nhưng ĐÃ có mốc của bộ đã gộp → không chặn (vd DB từng chạy nhánh khác)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'qlts-mig-'));
+    await writeFile(join(dir, '0000_extensions.sql'), 'SELECT 1;');
+    await writeFile(join(dir, '0001_app_role.sql'), 'SELECT 1;');
+    const queries: string[] = [];
+    const pool = poolWithJournal(['0001_app_role.sql', '0099_nhanh_khac.sql'], queries);
+
+    await expect(runMigrations(pool, dir, { log: () => undefined })).resolves.toBeDefined();
+  });
+});
+
 describe('runMigrations — marker "-- ims:no-transaction" (story 3.1a, action item epic-2 review)', () => {
   function fakePool(queries: string[]) {
     const client = {
