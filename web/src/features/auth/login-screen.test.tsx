@@ -45,6 +45,11 @@ describe('LoginScreen', () => {
     expect(screen.getAllByText('Bắt buộc — chưa nhập ô này.')).toHaveLength(2);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Email')).toHaveFocus();
+    // Ô nằm trong gói biểu tượng: nhãn, lỗi và aria-invalid vẫn phải tới được ô thật.
+    for (const label of ['Email', 'Mật khẩu']) {
+      expect(screen.getByLabelText(label)).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true');
+    }
   });
 
   it('đăng nhập được → nhớ email; lần sau điền sẵn, con trỏ ở ô mật khẩu', async () => {

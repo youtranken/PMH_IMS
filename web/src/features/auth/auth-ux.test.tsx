@@ -85,7 +85,9 @@ describe('AUTH-017: màn giữa luồng cho thấy tài khoản và có lối th
         <p>thân</p>
       </AuthCard>,
     );
-    expect(screen.getByTestId('auth-signed-in-as')).toHaveTextContent('nham@pmh.com.vn');
+    expect(screen.getByTestId('auth-signed-in-as')).toHaveTextContent('Đang đăng nhập: nham@pmh.com.vn');
+    // Email in đậm: đó là thứ người ta cần soát lại, không phải chữ "Đang đăng nhập".
+    expect(screen.getByText('nham@pmh.com.vn', { selector: 'strong' })).toBeInTheDocument();
     expect(screen.getByText(/Không phải nham@pmh.com.vn\?/)).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Đăng xuất' }));
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
@@ -143,5 +145,18 @@ describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card n
       </AuthCard>,
     );
     expect(screen.getByText('Quản lý hệ thống IT · PMH')).toBeInTheDocument();
+  });
+
+  it('có mảng thương hiệu bên cạnh card (desktop): tên công ty và vài dòng về IMS', () => {
+    withProviders(
+      <AuthCard title="Đăng nhập">
+        <p>thân</p>
+      </AuthCard>,
+    );
+    const panel = screen.getByTestId('auth-panel');
+    expect(panel).toHaveTextContent('Phú Mỹ Hưng');
+    expect(within(panel).getAllByRole('listitem').length).toBeGreaterThanOrEqual(2);
+    // Mảng thương hiệu không được giành tiêu đề của màn.
+    expect(within(panel).queryByRole('heading')).toBeNull();
   });
 });

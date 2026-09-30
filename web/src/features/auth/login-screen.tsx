@@ -11,6 +11,7 @@ import { useFormErrors } from '@/ui/use-form-errors';
 import { useSupportContact } from '@/ui/use-support-contact';
 import { useNow } from '@/ui/use-now';
 import { AuthCard } from './auth-card';
+import { InputIcon } from './input-icon';
 import { AUTH_ERROR_ID, clearSetupSteps } from './setup-steps';
 
 interface LoginResult {
@@ -160,43 +161,47 @@ export function LoginScreen() {
         }}
       >
         <Field label={t('auth.email')} htmlFor="login-email" error={check.error('email')}>
-          <input
-            className="inp"
-            type="email"
-            autoComplete="username"
-            // Bàn phím điện thoại: bố cục email, không tự viết hoa chữ đầu, không sửa chính tả.
-            inputMode="email"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            required
-            // Chưa nhớ email thì ô email là việc đầu tiên — con trỏ nằm sẵn ở đó.
-            autoFocus={!remembered}
-            aria-invalid={wrong ? true : undefined}
-            aria-describedby={wrong ? AUTH_ERROR_ID : undefined}
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              typed();
-            }}
-          />
+          <InputIcon icon="mail">
+            <input
+              className="inp"
+              type="email"
+              autoComplete="username"
+              // Bàn phím điện thoại: bố cục email, không tự viết hoa chữ đầu, không sửa chính tả.
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              // Chưa nhớ email thì ô email là việc đầu tiên — con trỏ nằm sẵn ở đó.
+              autoFocus={!remembered}
+              aria-invalid={wrong ? true : undefined}
+              aria-describedby={wrong ? AUTH_ERROR_ID : undefined}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                typed();
+              }}
+            />
+          </InputIcon>
         </Field>
 
         <Field label={t('auth.password')} htmlFor="login-password" error={check.error('password')}>
-          <PasswordInput
-            ref={passwordRef}
-            autoComplete="current-password"
-            required
-            // Email đã điền sẵn thì việc còn lại là mật khẩu — đưa con trỏ tới đó luôn.
-            autoFocus={Boolean(remembered)}
-            aria-invalid={wrong ? true : undefined}
-            aria-describedby={wrong ? AUTH_ERROR_ID : undefined}
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              typed();
-            }}
-          />
+          <InputIcon icon="lock">
+            <PasswordInput
+              ref={passwordRef}
+              autoComplete="current-password"
+              required
+              // Email đã điền sẵn thì việc còn lại là mật khẩu — đưa con trỏ tới đó luôn.
+              autoFocus={Boolean(remembered)}
+              aria-invalid={wrong ? true : undefined}
+              aria-describedby={wrong ? AUTH_ERROR_ID : undefined}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                typed();
+              }}
+            />
+          </InputIcon>
         </Field>
 
         <button type="submit" className="btn primary" disabled={login.isPending || waiting}>

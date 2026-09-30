@@ -320,7 +320,14 @@ export default {
       'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
     supportContactLabel: 'Liên hệ',
     hideHelp: 'Ẩn hướng dẫn',
-    signingInAs: 'Đang đăng nhập: {{email}}',
+    /* Email in đậm ngay sau câu này (AuthCard) — thứ người dùng cần soát lại là email. */
+    signingInAs: 'Đang đăng nhập:',
+    /* Mảng thương hiệu cạnh card đăng nhập (màn rộng). */
+    panelOrg: 'Phú Mỹ Hưng',
+    panelSystem: 'IMS — Quản lý hệ thống IT',
+    panelPoint1: 'Thiết bị, phần mềm, mạng và đường truyền ở một chỗ.',
+    panelPoint2: 'Nhắc trước khi bản quyền, bảo hành, đường truyền hết hạn.',
+    panelPoint3: 'Két mật khẩu mã hóa; mỗi lần mở đều ghi nhật ký.',
     notYou: 'Không phải {{email}}?',
     signOut: 'Đăng xuất',
     signingOut: 'Đang đăng xuất…',
