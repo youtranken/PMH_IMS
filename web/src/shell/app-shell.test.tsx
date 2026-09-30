@@ -18,13 +18,13 @@ const ME: Me = {
   config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30 },
 };
 
-function renderShell() {
+function renderShell(path = '/') {
   return renderWithI18n(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route
-            path="/"
+            path="*"
             element={
               <AppShell me={ME}>
                 <p>Trang chủ</p>
@@ -134,14 +134,31 @@ describe('AppShell — mục "sắp có" trong menu', () => {
 });
 
 describe('AppShell — topbar', () => {
-  it('đầu topbar là TÊN MÀN, không phải tên người dùng; có ô tìm kèm phím tắt', () => {
+  /*
+   * Tên màn đã là `<h1>` của chính trang (PageHeader) — topbar nhắc lại lần nữa thì người dùng
+   * đọc cùng một chữ hai lần ngay đầu màn (Q-18).
+   */
+  it('topbar KHÔNG lặp tên màn; chỉ có tên NHÓM làm ngữ cảnh; có ô tìm kèm phím tắt', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
-    renderShell();
+    renderShell('/devices');
     const banner = screen.getByRole('banner');
-    expect(within(banner).getByTestId('topbar-title')).toHaveTextContent('Bảng điều khiển');
+    expect(within(banner).queryByText('Thiết bị')).toBeNull();
+    expect(within(banner).getByTestId('topbar-context')).toHaveTextContent(/^Tài sản$/);
     expect(within(banner).queryByText(/Nguyễn Văn A/)).toBeNull();
     const search = within(banner).getByRole('button', { name: /^Tìm nhanh \((Ctrl K|⌘K)\)$/ });
     expect(search).toHaveTextContent('Tìm mã, tên, serial, IP…');
+  });
+
+  it('trang chi tiết đội nhóm của danh sách nó thuộc về', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/devices/d-9');
+    expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toHaveTextContent(/^Tài sản$/);
+  });
+
+  it('màn không thuộc nhóm nào (Hồ sơ của tôi) thì topbar để trống, không đoán bừa', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/profile');
+    expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toBeEmptyDOMElement();
   });
 
   it('mục "sắp có" mang chip chữ thấy được, không chỉ mờ đi', () => {

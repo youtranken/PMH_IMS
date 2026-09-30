@@ -2,9 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import { type Me } from '@/lib/me';
-import { titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
-import { visibleGroups } from '@/shell/app-nav';
+import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { NavIcon } from '@/ui/nav-icon';
@@ -247,12 +246,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               </button>
             ) : null}
             {/*
-              Tên MÀN đang mở, không phải "Quản lý hệ thống IT · PMH — Tên": tên người dùng đã
-              nằm ở menu tài khoản, còn chỗ đầu topbar là phần đất quý nhất trên điện thoại.
-              Chữ thường, không phải link: trang chi tiết đã có breadcrumb đầy đủ ngay đầu nội
-              dung (`DetailHeader`), dựng thêm một đường quay ra thứ hai là lặp.
+              Tên NHÓM, không phải tên màn: tên màn đã là `<h1>` của chính trang, topbar nhắc lại
+              là người dùng đọc cùng một chữ hai lần ngay đầu màn (Q-18). Nhóm là ngữ cảnh mà
+              `<h1>` không nói — nhất là trên điện thoại, nơi menu đang khép.
             */}
-            <PageTitle pathname={pathname} />
+            <GroupContext groups={groups} pathname={pathname} />
             <span className="spacer" />
             {/*
               ĐƯỜNG VÀO THẤY ĐƯỢC CHO TÌM NHANH. Desktop: trông như một ô nhập kèm phím tắt đúng
@@ -400,13 +398,12 @@ function SearchIcon() {
   );
 }
 
-/** Tên màn đang mở — cùng bảng với tên tab trình duyệt (`titleKeyOf`), nên hai chỗ không lệch. */
-function PageTitle({ pathname }: { pathname: string }) {
+function GroupContext({ groups, pathname }: { groups: NavGroup[]; pathname: string }) {
   const { t } = useTranslation();
-  const key = titleKeyOf(pathname);
+  const group = groupOfPath(groups, pathname);
   return (
-    <span className="topbar-title" data-testid="topbar-title">
-      {key ? t(key) : null}
+    <span className="topbar-context" data-testid="topbar-context">
+      {group ? t(group.labelKey) : null}
     </span>
   );
 }

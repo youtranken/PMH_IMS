@@ -1,5 +1,5 @@
 import type { Me } from '@/lib/me';
-import { PATHS } from '@/lib/routes';
+import { PATHS, titleKeyOf } from '@/lib/routes';
 import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 
 interface NavItem {
@@ -107,4 +107,16 @@ export function visibleGroups(me: Me | null): NavGroup[] {
       items: group.items.filter((item) => !item.roles || item.roles.includes(me.role)),
     }))
     .filter((group) => group.items.length > 0);
+}
+
+/**
+ * Nhóm menu chứa màn đang mở — `null` nếu màn không có mục trên menu (Hồ sơ, 404).
+ *
+ * Đi qua `titleKeyOf` chứ không tự khớp tiền tố: trang chi tiết đội nhóm của danh sách nó thuộc
+ * về theo đúng luật của tên tab, và cái bẫy `'/'` là tiền tố của mọi đường chỉ phải gỡ một chỗ.
+ */
+export function groupOfPath(groups: NavGroup[], pathname: string): NavGroup | null {
+  const key = titleKeyOf(pathname);
+  if (!key) return null;
+  return groups.find((group) => group.items.some((item) => item.key === key)) ?? null;
 }

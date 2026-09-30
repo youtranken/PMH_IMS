@@ -237,14 +237,14 @@
   box-shadow: 0 0 0 2px var(--surface);
 }
 
-/* Tên màn đang mở ở đầu topbar. */
-.topbar-title {
+/* Tên nhóm menu ở đầu topbar: ngữ cảnh nhỏ, nhạt — tên màn là `<h1>` của trang, không ở đây. */
+.topbar-context {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ink);
-  font-size: var(--fs-md);
+  color: var(--muted);
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -326,7 +326,7 @@
 }
 
 @media (max-width: 900px) {
-  /* Điện thoại: topbar hẹp lại, tên màn cắt bằng "…" thay vì đẩy trang tràn ngang. */
+  /* Điện thoại: topbar hẹp lại, tên nhóm cắt bằng "…" thay vì đẩy trang tràn ngang. */
   .topbar {
     padding: 0 var(--space-5);
     gap: var(--space-4);
