@@ -1509,6 +1509,14 @@ export default {
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
+    // Báo trước khi gửi theo cùng luật server dùng cho NOTE_CONTAINS_SECRET / NOTE_LOOKS_LIKE_SECRET (Q-18).
+    noteContainsSecret: 'Ghi chú đang chứa chính giá trị cần cất. Xóa nó khỏi ghi chú.',
+    noteLooksLikeSecret:
+      'Ghi chú có một chuỗi trông như mật khẩu. Cất mật khẩu vào ô Giá trị; nếu đó là tên máy ' +
+      'hay mã model, tách bằng dấu cách.',
+    rotateValueInNote: 'Giá trị mới đang nằm trong ghi chú của ngăn này. Sửa ghi chú trước.',
+    noteToggle: 'Ghi chú',
+    noteHidden: 'Có ghi chú — hiện khi bạn mở được ngăn này',
     reveal: 'Xem',
     revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',

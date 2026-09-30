@@ -123,10 +123,18 @@ export class VaultController {
   @Roles('sa', 'admin', 'member')
   @Get()
   async list(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
+    let showNotes = true;
     /* Mặc định ĐÓNG (AD-9): hỏi "không phải SA/Admin" chứ không hỏi "có phải Member" — vai
        thứ tư thêm vào ngày nào cũng phải đi qua ma trận quyền, không được đi thẳng. */
     if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
       await this.breakGlass.assertCanSeeMetadata(actor(req), query.ownerType, query.ownerId);
+      /* Ghi chú là cột dạng rõ: người chưa mở được két mà đọc được nó là đi vòng qua duyệt,
+         mã 6 số và nhật ký (SEC-20). Hỏi lại mỗi lượt, không tin cờ phía client (AD-6). */
+      showNotes = await this.breakGlass.canRevealNow(
+        { email: actor(req), sessionId: req.user!.sessionId },
+        query.ownerType,
+        query.ownerId,
+      );
     }
     const [rows, staleDays] = await Promise.all([
       this.vault.listFor(query.ownerType, query.ownerId),
@@ -136,7 +144,15 @@ export class VaultController {
     const now = new Date();
     return rows.map((row) => {
       const age = valueAge(row.valueChangedAt, staleDays, now);
-      return { ...row, valueAgeDays: age.days, valueStale: age.stale, dueInDays: age.dueInDays };
+      return {
+        ...row,
+        note: showNotes ? row.note : null,
+        // Chỉ nói CÓ ghi chú, không nói gì trong đó: đủ để Member biết xin quyền là thấy thêm gì.
+        hasNote: row.note !== null,
+        valueAgeDays: age.days,
+        valueStale: age.stale,
+        dueInDays: age.dueInDays,
+      };
     });
   }
 

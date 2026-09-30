@@ -11,6 +11,7 @@ import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import type { SealedValue } from '../../common/crypto/envelope.types';
 import { conflictOnUnique } from '../../common/sql';
+import { noteContainsSecret, noteLooksLikeSecret } from '../../common/note-secret';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { secretTable } from './vault.schema';
@@ -176,6 +177,8 @@ export class VaultService {
         message: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
       });
     }
+    assertNoteHoldsNoValue(input.note, value, 'Ghi chú đang chứa chính giá trị cần cất.');
+    assertNoteLooksPlain(input.note);
 
     /*
      * Chủ thể phải CÓ THẬT trước khi cất bí mật vào (cùng hàng rào với kho file).
@@ -253,6 +256,12 @@ export class VaultService {
       });
     }
     const current = await this.requireAlive(id);
+    // So với ghi chú ĐANG LƯU: đây là lúc duy nhất server cầm cả hai mà không phải giải mã.
+    assertNoteHoldsNoValue(
+      current.note,
+      value,
+      'Giá trị mới đang nằm trong ghi chú của ngăn này. Sửa ghi chú trước rồi đổi giá trị.',
+    );
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
     await this.db.transaction(async (tx) => {
       // Hồ sơ đã ngừng dùng thì két đóng băng — xem chú thích ở `create()`.
@@ -298,7 +307,10 @@ export class VaultService {
       values.label = label;
     }
     if (input.username !== undefined) values.username = input.username?.trim() || null;
-    if (input.note !== undefined) values.note = input.note?.trim() || null;
+    if (input.note !== undefined) {
+      assertNoteLooksPlain(input.note);
+      values.note = input.note?.trim() || null;
+    }
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -415,6 +427,38 @@ export class VaultService {
  */
 function aliveSecret(id: string) {
   return and(eq(secretTable.id, id), isNull(secretTable.revokedAt));
+}
+
+/**
+ * Ghi chú là cột dạng rõ mà mọi người xem danh sách đều đọc được (Q-18, FR-035).
+ * Thông báo lỗi KHÔNG nhắc lại giá trị: thân lỗi đi qua log, toast và công cụ trình duyệt.
+ */
+function assertNoteHoldsNoValue(
+  note: string | null | undefined,
+  value: string,
+  message: string,
+): void {
+  if (noteContainsSecret(note, value)) {
+    throw new BadRequestException({
+      code: 'NOTE_CONTAINS_SECRET',
+      message: `${message} Ghi chú không được mã hóa — không ghi mật khẩu vào đó.`,
+    });
+  }
+}
+
+/**
+ * Ghi chú có một từ trông như mật khẩu (Q-18). Dùng cả khi sửa riêng ghi chú: đường đó không có
+ * giá trị trong tay, và giải mã ra để so là một lần mở két không ai xin (NFR-03).
+ */
+function assertNoteLooksPlain(note: string | null | undefined): void {
+  if (noteLooksLikeSecret(note)) {
+    throw new BadRequestException({
+      code: 'NOTE_LOOKS_LIKE_SECRET',
+      message:
+        'Ghi chú có một chuỗi trông như mật khẩu. Ghi chú không được mã hóa — cất mật khẩu vào ô Giá trị. ' +
+        'Nếu đó là tên máy hay mã model, tách bằng dấu cách.',
+    });
+  }
 }
 
 /** 0 hàng = secret không có hoặc đã bị thu hồi — với người gọi hai chuyện ấy là một: 404. */

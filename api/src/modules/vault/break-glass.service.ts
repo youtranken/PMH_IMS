@@ -506,6 +506,26 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
+   * Người này mở được két của chủ thể này NGAY BÂY GIỜ không — cùng câu trả lời với
+   * `verdictFor(...).canReveal`, không kèm phần dựng nút.
+   *
+   * Dùng để quyết ai đọc được GHI CHÚ của ngăn (SEC-20): ghi chú là cột dạng rõ, không qua mã
+   * 6 số, không để vết "đã xem". Chỉ người đằng nào cũng mở được giá trị mới được đọc nó; cần-
+   * duyệt mà chưa có quyền thì chỉ thấy tên ngăn. Tầng lạ (vai/tầng thêm sau) = không (AD-9).
+   */
+  async canRevealNow(
+    viewer: BreakGlassViewer,
+    ownerType: SecretOwnerType,
+    ownerId: string,
+  ): Promise<boolean> {
+    const tier = await this.access.tierFor(viewer.email, ownerType, ownerId);
+    if (tier === 'whitelist') return true;
+    if (tier !== 'needs_approval') return false;
+    if ((await this.grantOf(viewer, ownerType, ownerId)) !== null) return true;
+    return (await this.claimableOf(viewer, ownerType, ownerId)) !== null;
+  }
+
+  /**
    * Hàng rào ở đường ĐỌC secret. Gọi tại MỖI lần mở két, không cache (AD-6).
    *
    * Trả về id của grant đã dùng (hoặc null nếu whitelist) để nơi gọi ghi vào audit — không có
