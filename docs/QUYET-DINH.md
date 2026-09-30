@@ -244,6 +244,30 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **DB dựng trước khi gộp (chỉ có ở máy dev) phải dựng lại từ đầu.** Runner nhận ra journal cũ và
   dừng với câu nói rõ việc phải làm, không áp bộ mới lên trên.
 
+### Q-18 · Góp ý giao diện "Fix lỗi IMS" (30/09/2026, chủ dự án chốt)
+
+- **Màn đăng nhập bỏ nút "Quên mật khẩu?"** (sửa Q-14). Câu liên hệ quản trị vẫn hiện khi tài
+  khoản bị khóa / vô hiệu hóa (Q-16); màn nhập mã 2 lớp vẫn giữ "Không lấy được mã?".
+- **Không hiện dòng "Email đã nhớ trên máy này… Không phải tôi"**; ô Email vẫn được điền sẵn.
+- **Nút xem mật khẩu (con mắt) tự che lại** khi rời ô hoặc sau 10 giây.
+- **Luật mật khẩu giữ 3 trong 4 nhóm** (NFR-01). Bảng kiểm hiện riêng từng nhóm (thường, hoa, số,
+  ký tự đặc biệt), độ dài và "nhập lại khớp".
+- **Số điện thoại** (danh mục, đường truyền, người dùng IMS): chỉ nhận chữ số, dấu `+` ở đầu và
+  dấu cách; lưu thì bỏ dấu cách.
+- **Giấy tờ đính kèm:** tối đa 25 MB mỗi file, tối đa 6 file mỗi lượt chọn (đưa vào
+  `system_config`, AD-11). Nhận thêm Word/PowerPoint dạng mới (docx, pptx); loại có macro và file
+  chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi.
+- **Thuật ngữ:** "Phòng ban" thay cho "Bộ phận" trên toàn hệ thống; ô chọn trên hồ sơ thiết bị ghi
+  "Phòng ban sử dụng". Import Excel vẫn nhận cột "Bộ phận" của file cũ.
+- **Thao tác trên dòng / trang chi tiết:** nút "Sửa" để ngoài; mọi thao tác khác vào menu ⋮ (ba
+  chấm dọc) — đổi đồng loạt mọi màn.
+- **Két — loại ngăn "Mã 2 lớp"** (mở rộng FR-021): lưu chuỗi bí mật / `otpauth://` mã hoá như mọi
+  ngăn; khi xem hiện chuỗi, mã QR sinh lại từ chuỗi và mã 6 số hiện tại. Không lưu ảnh QR thành
+  file (ảnh QR chính là bí mật dạng rõ); có thể đọc ảnh QR ngay trên trình duyệt để điền chuỗi,
+  ảnh không gửi lên.
+- **Một lần xác thực mã 2 lớp dùng cho mọi thao tác két** trong `secret.stepup_grace_minutes`.
+- **Ghi chú của ngăn két không được chứa mật khẩu:** server từ chối, không chỉ nhắc (FR-035).
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
