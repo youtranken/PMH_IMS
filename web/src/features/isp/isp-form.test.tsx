@@ -147,4 +147,15 @@ describe('Bố cục form đường truyền', () => {
       expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     }
   });
+
+  it('gợi ý dài của ô Nhà mạng nằm sau nút (i); ô vẫn trỏ đúng mô tả còn lại', () => {
+    mockFetch();
+    renderForm(null);
+    expect(screen.getByRole('button', { name: 'Giải thích: Nhà mạng' })).toBeInTheDocument();
+    expect(screen.queryByText(/Chọn từ danh mục Nhà mạng/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Nhà mạng' })).not.toHaveAttribute(
+      'aria-describedby',
+      'isp-provider-hint',
+    );
+  });
 });

@@ -140,7 +140,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã đường').fill(code);
-    await form.getByRole('button', { name: 'Nhà mạng' }).click();
+    await form.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: 'FPT Telecom E2E', exact: true }).click();
     await picker(page).setInputFiles(writePdf(`scan-hd-${stamp}.pdf`));
 

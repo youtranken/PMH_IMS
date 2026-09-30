@@ -282,11 +282,11 @@ export function ServiceAccountForm({
             chung" là thứ người khác đang tra theo. Khai nhầm loại thì vô hiệu hóa và khai lại.
           */}
           {row ? (
-            <Field label={t('serviceAccounts.kind')} hint={t('serviceAccounts.kindLocked')}>
+            <Field label={t('serviceAccounts.kind')} tip={t('serviceAccounts.kindLocked')}>
               <p className="static-value">{t(KIND_KEY[form.kind])}</p>
             </Field>
           ) : (
-            <Field label={t('serviceAccounts.kind')} required hint={t('serviceAccounts.kindHint')}>
+            <Field label={t('serviceAccounts.kind')} required tip={t('serviceAccounts.kindHint')}>
               <Select
                 required
                 value={form.kind}
@@ -360,7 +360,7 @@ export function ServiceAccountForm({
           </Field>
           <Field
             label={t('serviceAccounts.ownerName')}
-            hint={t('serviceAccounts.ownerNameHint')}
+            tip={t('serviceAccounts.ownerNameHint')}
             htmlFor="sa-owner"
             span={2}
           >

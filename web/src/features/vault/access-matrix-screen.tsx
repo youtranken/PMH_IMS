@@ -1145,7 +1145,7 @@ function GrantToScopeDialog({
           </fieldset>
         )}
 
-        <Field label={t('access.tier')} hint={t('access.tierHint')}>
+        <Field label={t('access.tier')} tip={t('access.tierHint')}>
           <Select
             value={tier}
             onChange={(next) => setTier(next as Tier)}
@@ -1330,7 +1330,7 @@ function MultiGrantDialog({
           ))
         )}
 
-        <Field label={t('access.tier')} hint={t('access.tierHint')}>
+        <Field label={t('access.tier')} tip={t('access.tierHint')}>
           <Select
             value={tier}
             onChange={(next) => setTier(next as Tier)}
@@ -1491,7 +1491,7 @@ function CopyFromDialog({
         {colleagues.length === 0 ? (
           <p className="muted">{t('access.copyNoColleague')}</p>
         ) : (
-          <Field label={t('access.copySource')} hint={t('access.copyHint')}>
+          <Field label={t('access.copySource')} tip={t('access.copyHint')}>
             <Select
               value={sourceId}
               onChange={setSourceId}

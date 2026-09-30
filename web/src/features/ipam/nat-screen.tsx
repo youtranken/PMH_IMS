@@ -970,7 +970,7 @@ function NatForm({
           <Field
             label={t('nat.external')}
             required
-            hint={rule ? undefined : t('nat.externalHint')}
+            tip={rule ? undefined : t('nat.externalHint')}
             htmlFor="nat-external"
             error={check.error('ports')}
           >
@@ -1028,7 +1028,7 @@ function NatForm({
               Máy đích = con nào ĐƯỢC NAT (camera, NAS, máy chủ)  ← ô này
               Mở cho ai = NGƯỜI/bộ phận hưởng dịch vụ (câu auditor hỏi)
           */}
-          <Field label={t('nat.target')} hint={t('nat.targetHint')}>
+          <Field label={t('nat.target')} tip={t('nat.targetHint')}>
             <Combobox
               placeholder={t('nat.targetSearch')}
               ariaLabel={t('nat.target')}
@@ -1179,7 +1179,7 @@ function NatForm({
 
           {/* Ghi chú kỹ thuật (số phiếu yêu cầu, giới hạn IP nguồn trên router…) — API đã nhận
               và dữ liệu import đã có, form không có ô thì không ai sửa được nó. */}
-          <Field label={t('nat.note')} hint={t('nat.noteHint')} htmlFor="nat-note" span={2}>
+          <Field label={t('nat.note')} tip={t('nat.noteHint')} htmlFor="nat-note" span={2}>
             <textarea
               id="nat-note"
               className="inp"

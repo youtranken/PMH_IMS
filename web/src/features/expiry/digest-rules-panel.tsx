@@ -463,7 +463,7 @@ function RuleForm({
           />
         </Field>
 
-        <Field label={t('digest.scope')} hint={t('digest.scopeHint')} span={2}>
+        <Field label={t('digest.scope')} tip={t('digest.scopeHint')} span={2}>
           {/* `role="group"` + tên: trình đọc màn hình đọc được "Theo dõi loại" khi vào từng ô. */}
           <div
             className="row"
@@ -487,7 +487,7 @@ function RuleForm({
         <Field
           label={t('digest.recipients')}
           required
-          hint={t('digest.recipientsHint')}
+          tip={t('digest.recipientsHint')}
           htmlFor="rule-recipients"
           span={2}
           error={check.error('recipients')}

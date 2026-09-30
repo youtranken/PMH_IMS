@@ -256,7 +256,7 @@ export function IspForm({
           <Field
             label={t('isp.provider')}
             required
-            hint={t('isp.providerHint')}
+            tip={t('isp.providerHint')}
             htmlFor="isp-provider"
             error={check.error('providerId')}
           >
@@ -267,11 +267,7 @@ export function IspForm({
                 "+ Thêm nhà mạng", nên nối tay theo đúng quy ước id của Field. */}
             <Select
               id="isp-provider"
-              aria-describedby={
-                check.error('providerId')
-                  ? 'isp-provider-error isp-provider-hint'
-                  : 'isp-provider-hint'
-              }
+              aria-describedby={check.error('providerId') ? 'isp-provider-error' : undefined}
               aria-invalid={check.error('providerId') ? true : undefined}
               value={form.providerId}
               ariaLabel={t('isp.provider')}

@@ -32,4 +32,14 @@ describe('Form tài khoản dịch vụ — bố cục', () => {
       expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     }
   });
+
+  it('gợi ý dài vào nút (i) cạnh nhãn; gợi ý ngắn vẫn nằm dưới ô', () => {
+    const dialog = renderForm();
+    for (const label of ['Loại', 'Người phụ trách']) {
+      expect(within(dialog).getByRole('button', { name: `Giải thích: ${label}` })).toBeInTheDocument();
+    }
+    expect(within(dialog).queryByText(/Người chịu trách nhiệm khi tài khoản có sự cố/)).toBeNull();
+    expect(within(dialog).queryByText(/VPN thì có thêm nhóm/)).toBeNull();
+    expect(within(dialog).getByText('Email với tài khoản dùng chung, username với VPN.')).toBeVisible();
+  });
 });

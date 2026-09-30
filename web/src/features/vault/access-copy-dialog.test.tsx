@@ -106,4 +106,12 @@ describe('Quyền két — "Sao chép quyền từ…" (ADM-040)', () => {
     expect(within(dialog).getByRole('alert')).toHaveTextContent('Chọn một đồng nghiệp để sao chép.');
     expect(posts).toHaveLength(0);
   });
+
+  it('câu giải thích dài nằm sau nút (i), không thành dòng gợi ý dưới ô', async () => {
+    renderAt('/admin/vault-access?user=u-an');
+    await userEvent.click(await screen.findByRole('button', { name: 'Sao chép quyền từ…' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Giải thích: Đồng nghiệp' })).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Người nhận được đúng các nhóm/)).toBeNull();
+  });
 });

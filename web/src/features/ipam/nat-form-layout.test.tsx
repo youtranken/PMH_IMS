@@ -102,6 +102,20 @@ describe('Hộp Sửa luật NAT', () => {
     expect(grids[2]).toBe('4');
   });
 
+  it('gợi ý dài của Cổng ngoài, Máy đích, Ghi chú nằm sau nút (i)', async () => {
+    mockFetch([]);
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm luật NAT' }))[0]);
+    const dialog = await screen.findByRole('dialog');
+    for (const label of ['Cổng ngoài', 'Máy đích (được NAT)', 'Ghi chú']) {
+      expect(within(dialog).getByRole('button', { name: `Giải thích: ${label}` })).toBeInTheDocument();
+    }
+    expect(within(dialog).queryByText(/Mỗi khoảng thành một dòng trong sổ/)).toBeNull();
+    expect(within(dialog).queryByText(/Chọn máy thì ô IP chỉ còn IP/)).toBeNull();
+    expect(within(dialog).queryByText(/số phiếu yêu cầu/)).toBeNull();
+  });
+
   it('không nhúng Lịch sử — menu ⋮ của dòng đã có mục đó', async () => {
     const urls = mockFetch([RULE]);
     const user = userEvent.setup();

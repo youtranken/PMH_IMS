@@ -403,7 +403,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
     const thirdDialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await thirdDialog.getByRole('textbox', { name: 'Mã đường' }).fill(itemCode);
-    await thirdDialog.getByRole('button', { name: 'Nhà mạng' }).click();
+    await thirdDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
     await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
@@ -603,7 +603,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('button', { name: 'Nhà mạng' }),
+      editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }),
       'Ô Nhà mạng cũng phải chọn sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
     ).toContainText('VNPT E2E');
     await expect(
