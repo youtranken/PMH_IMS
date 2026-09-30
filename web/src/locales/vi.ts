@@ -793,8 +793,6 @@ export default {
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint:
       'Không bắt buộc. File (jpg, png, webp, pdf, xlsx) được đính kèm ngay sau khi lưu hồ sơ.',
-    liveWarning:
-      'Thêm, xóa giấy tờ ở đây có hiệu lực ngay, không chờ Lưu — nút Hủy không hoàn tác được.',
     // Nút (i) cạnh tiêu đề "Giấy tờ đính kèm" của hộp SỬA hồ sơ.
     liveTip: 'Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.',
     draftRemove: 'Bỏ ra',
