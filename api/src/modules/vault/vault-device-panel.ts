@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import type { DevicePanel, DevicePanelProvider, PanelViewer } from '../../common/device-panels';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { AccessListService } from './access-list.service';
-import { VaultService } from './vault.service';
+import { VaultService, type SecretKind } from './vault.service';
 
 /**
  * Khu "Két sắt" trên trang chi tiết thiết bị (cơ chế panel của `DevicePanelRegistry`).
@@ -70,8 +70,10 @@ export class VaultDevicePanel implements DevicePanelProvider, OnModuleInit {
   }
 }
 
-const KIND_LABEL: Record<string, string> = {
+// `Record<SecretKind, …>`: thêm loại ngăn mà quên nhãn ở đây là lỗi biên dịch, không phải "undefined".
+const KIND_LABEL: Record<SecretKind, string> = {
   password: 'Mật khẩu',
   license_key: 'License key',
+  totp: 'Mã 2 lớp',
   other: 'Khác',
 };

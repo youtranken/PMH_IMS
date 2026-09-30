@@ -28,6 +28,7 @@ import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { BreakGlassService } from './break-glass.service';
 import { valueAge } from './secret-age';
+import { totpRevealView } from './totp-seed';
 import {
   SECRET_KINDS,
   SECRET_OWNER_TYPES,
@@ -295,10 +296,18 @@ export class VaultController {
      * lại mã 6 số. Con số phải PHẢI do server nói: client không biết `stepped_up_at`, và tự
      * đếm từ lần gõ mã gần nhất thì mỗi tab ra một số khác nhau.
      */
+      /*
+       * Ngăn "Mã 2 lớp" (Q-18): QR và mã hiện tại sinh lại từ chuỗi vừa giải mã, chỉ sống trong
+       * phản hồi `no-store` này. Không lưu ảnh QR ở đâu — ảnh QR chính là bí mật dạng rõ.
+       */
+      const now = new Date();
       return {
         ...opened,
         revealSeconds,
-        stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, new Date()),
+        stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, now),
+        ...(opened.meta.kind === 'totp'
+          ? { totp: await totpRevealView(opened.value, now, revealSeconds) }
+          : {}),
       };
     });
   }

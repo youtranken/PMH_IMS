@@ -829,8 +829,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await form.getByRole('button', { name: 'Loại' }).click();
     expect(
       await page.getByRole('option').allTextContents(),
-      'két chỉ nhận đúng ba loại nội dung — thêm loại thứ tư là phải sửa cả CHECK ở tầng DB',
-    ).toEqual(['Mật khẩu', 'License key', 'Khác']);
+      'két chỉ nhận đúng bốn loại nội dung — thêm loại thứ năm là phải sửa cả CHECK ở tầng DB',
+    ).toEqual(['Mật khẩu', 'License key', 'Mã 2 lớp', 'Khác']);
     /*
      * Đổi ý thì bấm Esc — đúng thứ người dùng làm, và nó phải đóng MENU chứ không đóng cả hộp
      * (`ui/dialog.tsx`; bài cuối khối này canh cho nó không tái phát).
