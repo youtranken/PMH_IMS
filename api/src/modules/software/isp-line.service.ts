@@ -67,7 +67,7 @@ const TRACKED = [
 export interface IspLineRecord {
   id: string;
   code: string;
-  /** Tên nhà mạng — bản sao do Postgres giữ khớp với danh mục (0074). */
+  /** Tên nhà mạng — bản sao do Postgres giữ khớp với danh mục (Q-11). */
   provider: string;
   providerId: string;
   bandwidth: string | null;
@@ -485,7 +485,7 @@ export const ISP_SORT_KEYS = [
 export type IspSortKey = (typeof ISP_SORT_KEYS)[number];
 export const ISP_SORT_DEFAULT: SortQuery<IspSortKey> = { key: 'code', dir: 'asc' };
 
-/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058). */
+/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này. */
 export function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
   const column = {
     code: ispLineTable.code,
@@ -494,7 +494,7 @@ export function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
     contractNo: ispLineTable.contractNo,
     status: ispLineTable.status,
   }[sort.key];
-  // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG với cột đang sắp (0058).
+  // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG với cột đang sắp.
   return orderByStable(sort.dir, column, ispLineTable.code);
 }
 
@@ -503,7 +503,7 @@ function buildWhere(filter: IspFilter): SQL | undefined {
   const term = filter.search?.trim();
   if (term) {
     // Lúc đứt cáp người ta gõ bất cứ thứ gì nhớ được: mã, nhà mạng, IP, số hợp đồng. Cả bốn
-    // nằm trong cột sinh `isp_line.search_norm` (0052), đã gấp dấu — B-01.
+    // nằm trong cột sinh `isp_line.search_norm`, đã gấp dấu — B-01.
     parts.push(searchNormLike(ispLineTable, term));
   }
   if (filter.siteId) parts.push(eq(ispLineTable.siteId, filter.siteId));

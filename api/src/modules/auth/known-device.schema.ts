@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 /**
- * Thiết bị đã từng đăng nhập (NFR-01) — bảng tạo bằng migration 0008_known_device.sql.
+ * Thiết bị đã từng đăng nhập (NFR-01) — bảng tạo bằng migration 0007_known_device.sql.
  *
  * Chủ sở hữu: module `auth` (AD-3). Bảng này từng được khai trong `users/users.schema.ts`
  * dù `auth/known-device.service.ts` là nơi DUY NHẤT đọc/ghi nó — chủ trên giấy chưa bao giờ

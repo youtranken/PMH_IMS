@@ -409,7 +409,7 @@ export class MailConsumer {
         };
       }
       /*
-       * CÓ NGƯỜI ĐANG DÒ DẪM QUANH KÉT (0046) — em ruột của lá thư ngay trên.
+       * CÓ NGƯỜI ĐANG DÒ DẪM QUANH KÉT — em ruột của lá thư ngay trên.
        *
        * Khác một điểm quyết định: lá trên nói về cửa ĐĂNG NHẬP nên gắn được `userId`; lá này
        * nói về cửa KÉT, nơi người dò đã đăng nhập hợp lệ rồi — payload vì thế chỉ mang EMAIL,

@@ -659,7 +659,7 @@ export class DevicesService {
   }
 
   private translateWriteError(error: unknown): unknown {
-    // Khoá ngoại (site, tủ) của 0067 là lưới cuối khi lượt dời tủ đua với lượt ghi thiết bị (BE-08).
+    // Khoá ngoại (site, tủ) `device_cabinet_same_site_fkey` là lưới cuối khi lượt dời tủ đua với lượt ghi thiết bị (BE-08).
     if (
       pgErrorCode(error) === PG_FOREIGN_KEY_VIOLATION &&
       pgConstraint(error) === 'device_cabinet_same_site_fkey'
@@ -669,7 +669,7 @@ export class DevicesService {
         message: 'Tủ mạng vừa được dời sang site khác — tải lại hồ sơ rồi chọn lại tủ.',
       });
     }
-    // Chỉ có đường MỞ LẠI máy đã thanh lý chạm tới khoá này (trigger 0070): cổng máy này từng
+    // Chỉ có đường MỞ LẠI máy đã thanh lý chạm tới khoá này (`device_port_peer_port_key`): cổng máy này từng
     // ghi đấu vào nay đã có máy khác chiếm. Không bắt riêng thì nó rơi xuống câu "trùng mã".
     const peerTaken = conflictOnUnique(
       error,
@@ -713,7 +713,7 @@ export const DEVICE_SORT_KEYS = [
 export type DeviceSortKey = (typeof DEVICE_SORT_KEYS)[number];
 export const DEVICE_SORT_DEFAULT: SortQuery<DeviceSortKey> = { key: 'code', dir: 'asc' };
 
-/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058). */
+/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này. */
 export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
   const column = {
     code: deviceTable.code,
@@ -726,7 +726,7 @@ export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
   /*
    * Bảo hành: máy đã thanh lý ("Không tính hạn") và máy chưa khai hạn luôn xuống CUỐI, bất kể
    * chiều sắp — người sắp cột này là đang tìm máy sắp hết hạn, gặp rác ở đầu là phải lật trang.
-   * Khớp từng cột với chỉ mục 0100/0101 để không sinh node Sort (sort-index.spec).
+   * Khớp từng cột với `device_warranty_sort_asc_idx`/`_desc_idx` để không sinh node Sort (sort-index.spec).
    */
   if (sort.key === 'warrantyEnd') {
     const retiredLast = sql`(${deviceTable.status} = 'retired')`;
@@ -735,7 +735,7 @@ export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
       : [asc(retiredLast), sql`${deviceTable.warrantyEnd} ASC NULLS LAST`, asc(deviceTable.code)];
   }
   // Chốt hạ bằng `code`, CÙNG HƯỚNG với cột đang sắp — `orderByStable` giữ luật đó một chỗ,
-  // và chú thích ở đó nói vì sao hướng phải đi theo nhau (không thì mất chỉ mục, 0058).
+  // và chú thích ở đó nói vì sao hướng phải đi theo nhau (không thì mất chỉ mục).
   return orderByStable(sort.dir, column, deviceTable.code);
 }
 
@@ -745,7 +745,7 @@ function buildWhere(filter: DeviceFilter, extraIds: string[] = []): SQL | undefi
   if (term) {
     /*
      * Người ta gõ mã, tên, serial, model, người sử dụng hoặc bộ phận — tất cả nằm trong cột
-     * sinh `device.search_norm` (0052, 0085), đã gấp dấu. `extraIds` là máy mà module khác
+     * sinh `device.search_norm`, đã gấp dấu. `extraIds` là máy mà module khác
      * nhận ra từ khoá (IP) — HỢP chứ không giao, vì cùng một chuỗi số có thể vừa là serial
      * vừa là IP.
      */

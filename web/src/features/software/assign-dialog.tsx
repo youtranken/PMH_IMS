@@ -19,7 +19,7 @@ import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types'
 const QUICK_PICK_LIMIT = 200;
 
 /**
- * Hộp gán license vào máy — VÀ hộp sửa kỳ hạn/chi phí của một ghế đã gán (0027).
+ * Hộp gán license vào máy — VÀ hộp sửa kỳ hạn/chi phí của một ghế đã gán.
  *
  * Một hộp cho cả hai vì các ô là MỘT BỘ: chi phí, hợp đồng, kỳ hạn riêng, ghi chú. Tách hai
  * hộp thì lần sau thêm một ô sẽ chỉ nhớ thêm vào một bên — và bên còn lại âm thầm ghi thiếu.

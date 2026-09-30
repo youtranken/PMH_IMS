@@ -41,7 +41,7 @@ describe('Chỉ mục của audit_log và nat_rule', () => {
   }, TEST_TIMEOUT);
 
   /**
-   * `audit_log` chia ngăn theo năm (0302): kế hoạch đi qua chỉ mục của TỪNG ngăn, mang tên
+   * `audit_log` chia ngăn theo năm: kế hoạch đi qua chỉ mục của TỪNG ngăn, mang tên
    * `audit_log_<năm|default>_<hậu tố>`. Không ngăn nào được quét tuần tự.
    */
   function expectPartitionIndex(plan: string, suffix: string): void {

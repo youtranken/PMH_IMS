@@ -109,8 +109,8 @@ class PortBodyDto {
   @IsOptional() @IsString() @Length(0, 60) connectedPort?: string;
   @IsOptional() @IsString() @Length(0, 120) usedBy?: string;
 
-  // VLAN của cổng (0029): text, vì "trunk" là giá trị có thật và hay gặp nhất trên uplink.
-  // Dạng hợp lệ (1–4094 | trunk) kiểm ở `portVlanOf`, cùng luật CHECK 0301.
+  // VLAN của cổng: text, vì "trunk" là giá trị có thật và hay gặp nhất trên uplink.
+  // Dạng hợp lệ (1–4094 | trunk) kiểm ở `portVlanOf`, cùng luật CHECK `device_port_vlan_check`.
   @IsOptional() @IsString() @Length(0, 40) vlan?: string;
 
   @IsOptional() @IsString() @Length(0, 500) note?: string;

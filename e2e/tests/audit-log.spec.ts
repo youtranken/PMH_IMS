@@ -115,8 +115,8 @@ test.describe('Nhật ký kiểm toán — API', () => {
    *
    * Hàng rào có một lỗ tự nhiên: trigger `FOR EACH ROW` KHÔNG chạy khi TRUNCATE, còn câu
    * `REVOKE ... FROM current_user` là no-op vì app nối bằng chính owner/superuser. Nghĩa là
-   * `TRUNCATE audit_log` xóa sạch được nhật ký an ninh. Migration 0039 bịt bằng trigger cấp
-   * câu lệnh; bài này là thứ giữ cho nó không bị gỡ ra.
+   * `TRUNCATE audit_log` xóa sạch được nhật ký an ninh. Trigger cấp
+   * câu lệnh bịt nó; bài này là thứ giữ cho nó không bị gỡ ra.
    */
   test('audit_log là chỉ-thêm: UPDATE, DELETE và TRUNCATE đều bị DB từ chối', async () => {
     const { execSync } = await import('node:child_process');
@@ -127,7 +127,7 @@ test.describe('Nhật ký kiểm toán — API', () => {
      *
      * `catch` rỗng nuốt MỌI nguyên nhân: docker chưa chạy, sai tên container, máy không có
      * `psql`, gõ sai tên bảng, mất mạng — tất cả đều thành "đã bị chặn". Bài này là thứ DUY
-     * NHẤT giữ migration 0039 khỏi bị gỡ ra, và với `catch` trần nó xanh cả khi Postgres không
+     * NHẤT giữ trigger đó khỏi bị gỡ ra, và với `catch` trần nó xanh cả khi Postgres không
      * tồn tại. Nên phải soi `stderr` để biết nó bị chặn ĐÚNG
      * bởi hàng rào của mình, chứ không phải bởi một sự cố nào khác.
      */
@@ -162,7 +162,7 @@ test.describe('Nhật ký kiểm toán — API', () => {
 /**
  * NFR-03 đòi nhật ký trả lời được "AI làm gì, lúc nào, TỪ ĐÂU". Vế cuối dễ mất lặng lẽ nhất.
  *
- * Cột `ip` có trong `0004_audit_log.sql:8`; bảng drizzle không khai nó thì `toRow()` không map
+ * Cột `ip` có trong `0011_audit_log.sql`; bảng drizzle không khai nó thì `toRow()` không map
  * và không ai ghi. Không có gì đỏ vì cột NULL là hợp lệ với Postgres, và endpoint đọc không
  * `SELECT` nó thì không ai nhìn thấy khoảng trống.
  *

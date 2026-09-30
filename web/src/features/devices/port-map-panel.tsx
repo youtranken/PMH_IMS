@@ -31,7 +31,7 @@ export interface PortRow {
   connectedLabel: string | null;
   connectedPort: string | null;
   usedBy: string | null;
-  /** VLAN của cổng (0029) — text vì "trunk" là giá trị có thật trên uplink. */
+  /** VLAN của cổng — text vì "trunk" là giá trị có thật trên uplink. */
   vlan: string | null;
   note: string | null;
 }

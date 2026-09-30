@@ -20,7 +20,7 @@ export function escapeLike(input: string): string {
  *
  * ===== HAI HÌNH DẠNG, CHỌN THEO KÍCH CỠ BẢNG =====
  *
- * `searchNormLike` đọc CỘT SINH `search_norm` (migration 0052) — có chỉ mục GIN trigram nên
+ * `searchNormLike` đọc CỘT SINH `search_norm` (hàm `ims_norm`, `0003_search_norm.sql`) — có chỉ mục GIN trigram nên
  * chạy được ở cỡ triệu dòng. Dùng cho 5 bảng nghiệp vụ.
  *
  * `imsNormLike` gọi `ims_norm()` ngay tại chỗ trên một cột — KHÔNG chỉ mục nào phục vụ được

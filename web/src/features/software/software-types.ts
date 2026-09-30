@@ -42,7 +42,7 @@ export interface SoftwareDetailRow extends SoftwareRow {
 }
 
 /**
- * Kỳ hạn + chi phí RIÊNG của một chỗ ngồi (migration 0027).
+ * Kỳ hạn + chi phí RIÊNG của một chỗ ngồi.
  *
  * Một license 10 ghế hầu như không mua một lần: Kế toán mua 3 ghế theo hợp đồng này, Xưởng
  * mua 2 ghế hợp đồng khác giá khác kỳ khác. Đây là chỗ giữ những con số đó.

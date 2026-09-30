@@ -1,14 +1,14 @@
 import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { usersTable } from '../users/users.schema';
 
-/** Phiên server-side (AD-8) — bảng tạo bằng migration 0003_sessions.sql. */
+/** Phiên server-side (AD-8) — bảng tạo bằng migration 0006_sessions.sql. */
 export const sessionsTable = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
     .references(() => usersTable.id),
   csrfToken: text('csrf_token').notNull(),
-  /** SHA-256 (hex) của token trong cookie. Token thô không bao giờ nằm trong DB (0059). */
+  /** SHA-256 (hex) của token trong cookie. Token thô không bao giờ nằm trong DB (SEC-01). */
   tokenHash: text('token_hash').notNull(),
   ip: text('ip'),
   userAgent: text('user_agent'),

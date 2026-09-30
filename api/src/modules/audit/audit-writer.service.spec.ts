@@ -5,7 +5,7 @@ import type { Database } from '../../database/database.module';
 /**
  * Hai thứ bài này giữ, cả hai đều mức Chặn:
  *
- *   · `audit_log.ip` phải được ghi. Cột có trong migration `0004`, nhưng thiếu ở bảng drizzle
+ *   · `audit_log.ip` phải được ghi. Cột có trong migration `0011_audit_log.sql`, nhưng thiếu ở bảng drizzle
  *     thì `toRow()` không map và không ai ghi. Bảng chỉ-thêm: mỗi ngày trôi là thêm một ngày
  *     "từ đâu" vĩnh viễn rỗng (NFR-03).
  *

@@ -43,7 +43,7 @@ const allNavGroups: NavGroup[] = [
       { key: 'nav.devices', to: PATHS.devices },
       { key: 'nav.software', to: PATHS.software },
       { key: 'nav.isp', to: PATHS.ispLines },
-      // Tài khoản dùng chung + VPN (0032) — mật khẩu của chúng nằm ở két sắt.
+      // Tài khoản dùng chung + VPN — mật khẩu của chúng nằm ở két sắt.
       { key: 'nav.serviceAccounts', to: PATHS.serviceAccounts },
       /* Kho thanh lý cho MỌI vai: "cái máy này đâu rồi" là câu ai trong team IT cũng hỏi, và
          "đã thanh lý tháng trước" không phải bí mật gì. */

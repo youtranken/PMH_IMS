@@ -31,14 +31,14 @@ x-node-hardening: &node_hardening
 x-app-env: &app_env
   NODE_ENV: ${NODE_ENV:-production}
   # D-01: ứng dụng chạy bằng role HẸP (`ims_app`), migration chạy bằng CHỦ SỞ HỮU.
-  # Trước 20/09 cả hai là một, và role đó là superuser — nên câu REVOKE giữ sổ nhật ký
-  # chỉ-thêm (NFR-03) không có hiệu lực nào. Xem `0048_app_role_split.sql`.
+  # Chung một role thì câu REVOKE giữ sổ nhật ký chỉ-thêm (NFR-03) không có hiệu lực nào.
+  # Xem `0001_app_role.sql`.
   #
-  # Tên role viết THẲNG, không qua biến (§18 #7): `0048` tạo role bằng đúng chuỗi `ims_app` ở
-  # chín câu lệnh, và migration đã chạy thì không sửa được. Một biến `APP_DB_USER` đổi được
+  # Tên role viết THẲNG, không qua biến (§18 #7): migration tạo và cấp quyền cho role bằng đúng
+  # chuỗi `ims_app`, và migration đã chạy thì không sửa được. Một biến `APP_DB_USER` đổi được
   # chỉ là cái núm không nối dây — đặt khác đi cho ra một `.env` hợp lệ, một role chưa từng
   # được tạo, và một API không boot.
-  DATABASE_URL: postgresql://ims_app:${APP_DB_PASSWORD:?bắt buộc — mật khẩu role ứng dụng, xem 0048}@postgres:5432/${POSTGRES_DB:-ims}
+  DATABASE_URL: postgresql://ims_app:${APP_DB_PASSWORD:?bắt buộc — mật khẩu role ứng dụng, xem 0001_app_role.sql}@postgres:5432/${POSTGRES_DB:-ims}
   REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
   APP_BASE_URL: ${APP_BASE_URL:?bắt buộc — dùng để kiểm Origin chống CSRF}
   MASTER_KEY_FILE: /run/secrets/ims_master_key

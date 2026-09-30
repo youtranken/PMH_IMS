@@ -2,8 +2,8 @@ import { integer, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm
 
 /**
  * Bộ đếm gõ sai mật khẩu theo CẶP (người dùng, IP) — bảng tạo bằng
- * `0045_login_failure_per_ip.sql`, nơi có khối chú thích giải thích vì sao khoá chuyển từ
- * tài khoản sang cặp.
+ * `0008_login_failure.sql`. Khoá theo cặp chứ không theo tài khoản: khoá theo tài khoản thì
+ * ai biết email cũng khoá được người khác ra ngoài.
  *
  * Chủ sở hữu: module `auth` (AD-3), cùng chỗ với `sessions` và `known_device`. Không đặt bên
  * `users`: bảng này nói về LƯỢT ĐĂNG NHẬP chứ không về hồ sơ người dùng, và `auth.service` là

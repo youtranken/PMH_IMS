@@ -13,7 +13,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  * — không cột nào trong danh sách — nên trigger KHÔNG BAO GIỜ chạy trên đường bật lại.
  *
  * Ghép với hàng rào đổi dải, ba thao tác hoàn toàn bình thường dựng lại đúng trạng thái mà
- * `0040_subnet_cidr_lock.sql` tuyên bố sẽ không còn tồn tại:
+ * khoá `FOR SHARE` trong `ip_address_within_subnet` (`0030_ip_address.sql`) sinh ra để chặn:
  *
  *   1. Ẩn hồ sơ 10.0.0.5 ("khai nhầm địa chỉ").
  *   2. Sửa dải sang 192.168.1.0/24 — ĐƯỢC, vì `SubnetService.update` chỉ đếm IP đang sống
@@ -21,7 +21,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *   3. Bấm "Bật lại" hồ sơ đó.
  *
  * Không cần cuộc đua nào, không cần lỗi hạ tầng nào. Kết quả là một hàng 10.0.0.5 nằm trong
- * dải 192.168.1.0/24 — và nó TỆ HƠN trạng thái mà 0040 mô tả: `listBySubnet` liệt kê host
+ * dải 192.168.1.0/24 — và nó TỆ HƠN kết quả của cuộc đua mà khoá đó chặn: `listBySubnet` liệt kê host
  * theo cidr MỚI nên hàng này vô hình trên mọi màn dải, trong khi `listForDevice` và sổ NAT
  * vẫn trả nó ra.
  *
@@ -136,8 +136,7 @@ describe('Bật lại hồ sơ IP không được đưa một địa chỉ ra ng
    * "cột voided_at có bị đụng không".
    */
   it('ẩn một hồ sơ đang nằm ngoài dải vẫn phải làm được — ẩn là đường DỌN, không phải đường tạo rác', async () => {
-    // Dựng trạng thái "hàng sống nằm ngoài dải" ngay ở DB: đổi cidr không kích trigger nào,
-    // đúng như 0040 mô tả.
+    // Dựng trạng thái "hàng sống nằm ngoài dải" ngay ở DB: đổi cidr không kích trigger nào.
     await pool.query(`UPDATE subnet SET cidr = $1 WHERE id = $2`, [NEW_CIDR, subnetId]);
 
     const hidden = await pool.query(

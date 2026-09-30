@@ -264,8 +264,8 @@ describe('DB-03 — role chủ sở hữu không superuser chạy migration', ()
 
   /*
    * Postgres chạy phép kiểm khoá ngoại (`SELECT … FOR KEY SHARE` trên bảng con) bằng quyền CHỦ
-   * bảng con, và khoá hàng cần quyền UPDATE. Bảng lịch sử đã thu UPDATE của chính chủ bảng
-   * (0039), nên khi chủ bảng không còn là superuser thì mọi lệnh xoá bảng cha — kể cả của
+   * bảng con, và khoá hàng cần quyền UPDATE. Bảng lịch sử đã thu UPDATE của chính chủ bảng,
+   * nên khi chủ bảng không còn là superuser thì mọi lệnh xoá bảng cha — kể cả của
    * superuser dọn E2E — chết với "permission denied for table …_history".
    */
   it.each([

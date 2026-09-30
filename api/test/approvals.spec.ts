@@ -188,7 +188,7 @@ describe('ApprovalsService — máy trạng thái, tầng DB', () => {
     ]);
   });
 
-  it('mỗi người chỉ một yêu cầu treo cho một đối tượng (0025); đã quyết xong thì xin lại được', async () => {
+  it('mỗi người chỉ một yêu cầu treo cho một đối tượng; đã quyết xong thì xin lại được', async () => {
     const r = await request(ONE_SUBJECT, 'mot@qa.test');
     let violated: string | undefined;
     try {

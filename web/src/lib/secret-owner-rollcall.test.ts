@@ -13,7 +13,7 @@ import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES } from './secret-owner-kinds'
  * ĐIỂM DANH: danh sách loại chủ thể cất secret của web phải khớp NGUYÊN VĂN bên API.
  *
  * Whitelist này có ba bản: API (`SECRET_OWNER_TYPES`), DB (`secret_owner_type_check`) và web.
- * Bài học 0033 đã ghi rằng tầng DB là tầng bị quên. Bài này canh cặp API↔web — cặp mà khi
+ * Tầng DB là tầng hay bị quên. Bài này canh cặp API↔web — cặp mà khi
  * lệch thì KHÔNG có gì đỏ, chỉ có một ô trống và một link dẫn sang trang khác (xem chú thích
  * dài ở `secret-owner-kinds.ts`).
  *

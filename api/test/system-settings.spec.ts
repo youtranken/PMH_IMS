@@ -178,7 +178,7 @@ describe('Tham số hệ thống — /admin/settings', () => {
   it(
     'giờ nhắc người duyệt phải nhỏ hơn giờ tự hết hạn yêu cầu mở két (Q-15); nhắc = 0 thì bỏ qua',
     async () => {
-      // Seed 0241: hết hạn chờ 8 giờ, nhắc 4 giờ.
+      // Giá trị gieo: hết hạn chờ 8 giờ, nhắc 4 giờ.
       expect(await valueOf('breakglass.pending_expire_hours')).toEqual(8);
       expect(
         await codeOf(settings.update('sa@qa.test', [{ key: 'approval.reminder_hours', value: 8 }])),

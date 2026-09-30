@@ -17,7 +17,7 @@ import { deviceTemplateSheets } from '../src/modules/devices/device-template';
 
 const OUT_DIR = resolve(process.argv[2] ?? '../docs/mau-du-lieu');
 
-/** 12 loại thiết bị khớp migration 0011 — bản trong repo phải giống hệ thống mới cài. */
+/** 12 loại thiết bị khớp giá trị gieo ở migration 0014_device_type.sql — bản trong repo phải giống hệ thống mới cài. */
 const SEED_DEVICE_TYPES: [string, boolean, string][] = [
   ['Switch', true, 'Thiết bị chuyển mạch — trang chi tiết có bảng port map'],
   ['Firewall', true, 'Router/tường lửa biên — gắn hồ sơ ISP và sổ NAT'],

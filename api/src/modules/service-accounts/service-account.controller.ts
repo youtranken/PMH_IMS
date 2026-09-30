@@ -102,7 +102,7 @@ function filterOf(query: {
 }
 
 /**
- * Tài khoản dịch vụ (0032): tài khoản DÙNG CHUNG (email kế toán, cổng VNPT…) và tài khoản VPN.
+ * Tài khoản dịch vụ: tài khoản DÙNG CHUNG (email kế toán, cổng VNPT…) và tài khoản VPN.
  *
  * Quyền: đọc thì mọi vai đã đăng nhập — biết công ty có những tài khoản nào là việc bình
  * thường của team IT. GHI thì chỉ SA/Admin, cùng mức với danh mục và két sắt: một tài khoản

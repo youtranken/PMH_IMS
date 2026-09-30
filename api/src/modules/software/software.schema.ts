@@ -15,7 +15,7 @@ const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 const inet = customType<{ data: string }>({ dataType: () => 'inet' });
 
 /**
- * Bảng `software` + `software_history` — migration 0014. Chủ sở hữu: module `software` (AD-3).
+ * Bảng `software` + `software_history` — migration 0022_software.sql. Chủ sở hữu: module `software` (AD-3).
  *
  * KHÔNG có cột key/mật khẩu: chìa khóa nằm ở két sắt, bảng này chỉ giữ hồ sơ
  * hành chính. Ngày dùng kiểu `date` thuần vì "hết hạn 30/08/2026" là một NGÀY LỊCH.
@@ -25,7 +25,7 @@ export const softwareTable = pgTable('software', {
   code: citext('code').notNull(),
   name: text('name').notNull(),
   kind: text('kind').notNull(),
-  /** 'subscription' | 'perpetual' — chỉ có nghĩa với kind='license' (0026). */
+  /** 'subscription' | 'perpetual' — chỉ có nghĩa với kind='license'. */
   licenseModel: text('license_model').notNull().default('subscription'),
   vendorId: uuid('vendor_id'),
   seatTotal: integer('seat_total'),
@@ -35,7 +35,7 @@ export const softwareTable = pgTable('software', {
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  /** Website dùng chứng chỉ SSL / tên miền này — danh sách hiện tại (0181, Q-15). */
+  /** Website dùng chứng chỉ SSL / tên miền này — danh sách hiện tại (Q-15). */
   websites: text('websites').array().notNull().default([]),
 });
 
@@ -50,7 +50,7 @@ export const softwareHistoryTable = pgTable('software_history', {
 });
 
 /**
- * Gán license vào thiết bị — migration 0015. CÙNG module `software` sở hữu (AD-3): bảng nói
+ * Gán license vào thiết bị — migration 0023_license_assignment.sql. CÙNG module `software` sở hữu (AD-3): bảng nói
  * về license, và license là tài sản của software.
  *
  * Gỡ gán KHÔNG xóa dòng mà đánh dấu `released_at` — "key này từng nhập máy nào" là câu hỏi
@@ -67,7 +67,7 @@ export const licenseAssignmentTable = pgTable('license_assignment', {
   overSeatReason: text('over_seat_reason'),
   note: text('note'),
   /**
-   * Kỳ hạn + chi phí RIÊNG của từng ghế (0027). Một license 10 ghế thường gồm nhiều đợt mua,
+   * Kỳ hạn + chi phí RIÊNG của từng ghế. Một license 10 ghế thường gồm nhiều đợt mua,
    * mỗi đợt một hợp đồng, một giá, một kỳ — nhét vào hồ sơ chung là mất hết thông tin đó.
    */
   cost: bigint('cost', { mode: 'number' }),
@@ -77,17 +77,17 @@ export const licenseAssignmentTable = pgTable('license_assignment', {
 });
 
 /**
- * Đường truyền ISP — migration 0016. Cùng module `software` sở hữu (AD-3): đều là "hợp đồng
+ * Đường truyền ISP — migration 0024_isp_line.sql. Cùng module `software` sở hữu (AD-3): đều là "hợp đồng
  * có ngày gia hạn", và spine chỉ khai 8 module nghiệp vụ, không có module `isp` riêng.
  */
 export const ispLineTable = pgTable('isp_line', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: citext('code').notNull(),
-  // Bản sao tên danh mục, khoá bằng FK kép (provider_id, provider) ON UPDATE CASCADE — 0074.
+  // Bản sao tên danh mục, khoá bằng FK kép (provider_id, provider) ON UPDATE CASCADE (Q-11).
   provider: citext('provider').notNull(),
   providerId: uuid('provider_id').notNull(),
   bandwidth: text('bandwidth'),
-  // inet (0300): một IPv4 hoặc một khối IPv4/prefix — Q-04.
+  // inet: một IPv4 hoặc một khối IPv4/prefix — Q-04.
   wanIp: inet('wan_ip'),
   siteId: uuid('site_id'),
   deviceId: uuid('device_id'),

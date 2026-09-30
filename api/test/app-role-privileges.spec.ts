@@ -27,7 +27,7 @@ import {
  *
  * ===== VÀ VÌ SAO NÓ KIỂM MÃ LỖI, KHÔNG CHỈ KIỂM "CÓ NÉM" =====
  *
- * `UPDATE audit_log` bị chặn bởi HAI lớp: ACL (REVOKE của 0048) và trigger append-only (0005).
+ * `UPDATE audit_log` bị chặn bởi HAI lớp: ACL (REVOKE trong `0011_audit_log.sql`) và trigger append-only.
  * Nếu chỉ khẳng định "câu lệnh ném lỗi" thì bài này xanh cả khi ACL không có tác dụng gì —
  * trigger một mình cũng làm nó xanh. Mà trigger là lớp CHỦ SỞ HỮU tháo được bằng một câu
  * `ALTER TABLE`; ACL mới là lớp `ims_app` không chạm tới được.
@@ -97,15 +97,14 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
   /*
    * ===== CHÍN BẢNG LỊCH SỬ, KHÔNG PHẢI MỘT =====
    *
-   * `0048` phát quyền bằng `GRANT ... ON ALL TABLES` rồi REVOKE lại đúng MỘT bảng:
-   * `audit_log`. Chín bảng chỉ-thêm mà `0039` liệt kê thì nhận trọn `UPDATE`/`DELETE`.
+   * Quyền mặc định (`0001_app_role.sql`) cấp trọn `UPDATE`/`DELETE` cho mọi bảng mới, kể cả
+   * bảng lịch sử; mỗi bảng chỉ-thêm phải tự REVOKE trong file tạo nó.
    *
-   * Lập luận của chính `0048` là "trigger chưa đủ, phải có ACL" — và lập luận đó đúng y hệt
-   * với chín bảng này: trigger là lớp CHỦ SỞ HỮU tháo được, ACL mới là lớp `ims_app` không
-   * chạm tới. Bản vá D-01 chốt lập luận cho một bảng rồi dừng; rà soát chéo 21/09 tìm ra.
+   * "Trigger chưa đủ, phải có ACL" đúng với mọi bảng chỉ-thêm như với `audit_log`: trigger là
+   * lớp CHỦ SỞ HỮU tháo được, ACL mới là lớp `ims_app` không chạm tới.
    *
-   * Vì sao chốt `42501` chứ không chốt "có ném": cả chín bảng ĐỀU có trigger append-only từ
-   * `0039`, nên một bài kiểu "câu lệnh này phải ném" sẽ XANH kể cả khi không có dòng REVOKE
+   * Vì sao chốt `42501` chứ không chốt "có ném": cả chín bảng ĐỀU có trigger append-only,
+   * nên một bài kiểu "câu lệnh này phải ném" sẽ XANH kể cả khi không có dòng REVOKE
    * nào — trigger một mình làm nó xanh, bằng `P0001`. Đúng cái bẫy mà mục 17.3 vừa ghi lại.
    */
   const APPEND_ONLY_HISTORY = [
@@ -150,7 +149,7 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
      * Danh sách cứng ở trên là TÀI LIỆU — đọc nó biết chín bảng nào đang được canh. Bài này
      * mới là CỔNG, và nó canh thứ danh sách cứng không canh được: bảng thứ mười.
      *
-     * `ALTER DEFAULT PRIVILEGES` của `0048` cấp UPDATE/DELETE cho mọi bảng chủ sở hữu tạo về
+     * `ALTER DEFAULT PRIVILEGES` của `0001_app_role.sql` cấp UPDATE/DELETE cho mọi bảng chủ sở hữu tạo về
      * sau. Nên một `*_history` mới ra đời là một bảng chỉ-thêm KHÔNG có ACL, im lặng, và
      * danh sách cứng sẽ không biết gì — người thêm bảng cũng chẳng có lý do nào để sửa nó.
      * Quét động thì ngày bảng đó vào repo cũng là ngày bài này đỏ.
@@ -168,7 +167,7 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
            AND c.relkind IN ('r', 'p')
            AND (c.relname LIKE '%\\_history'
                 OR c.relname = 'audit_log'
-                -- Ngăn năm của audit_log (0302): ALTER DEFAULT PRIVILEGES cấp cho mọi bảng mới,
+                -- Ngăn năm của audit_log: ALTER DEFAULT PRIVILEGES cấp cho mọi bảng mới,
                 -- kể cả ngăn, nên ngăn cũng phải bị quét.
                 OR c.oid IN (SELECT inhrelid FROM pg_inherits
                               WHERE inhparent = 'public.audit_log'::regclass))
@@ -184,8 +183,8 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
   });
 
   it('không tháo được trigger append-only — đó là lỗ mà chủ sở hữu vẫn còn', async () => {
-    // `ALTER TABLE ... DISABLE TRIGGER` đòi QUYỀN SỞ HỮU. Đây là câu lệnh mà `0039` tự khai
-    // là lối thoát cuối cùng; nó chỉ thật sự bị bịt khi ứng dụng không sở hữu bảng.
+    // `ALTER TABLE ... DISABLE TRIGGER` đòi QUYỀN SỞ HỮU. Đây là lối thoát cuối cùng qua
+    // trigger chỉ-thêm; nó chỉ thật sự bị bịt khi ứng dụng không sở hữu bảng.
     expect(await sqlStateOf(app, `ALTER TABLE audit_log DISABLE TRIGGER ALL`)).toBe('42501');
     expect(await sqlStateOf(app, `DROP TRIGGER audit_log_no_delete ON audit_log`)).toBe('42501');
   });
@@ -221,7 +220,7 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
      * Không có quyền mặc định thì bảng của migration kế tiếp ra đời KHÔNG có quyền cho
      * `ims_app`, và lỗi hiện ra ở production dưới dạng "permission denied" giữa một nghiệp vụ
      * — chứ không phải ở đây. Bài này giả lập đúng bước đó: chủ sở hữu tạo một bảng SAU khi
-     * 0048 đã chạy.
+     * `0001_app_role.sql` đã chạy.
      */
     await scratch.pool.query(`CREATE TABLE late_table (id int primary key)`);
     await app.query(`INSERT INTO late_table (id) VALUES (1)`);

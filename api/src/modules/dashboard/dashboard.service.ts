@@ -277,7 +277,7 @@ export class DashboardService {
   /**
    * "Ngăn nào lâu quá không ai đụng tới".
    *
-   * KHÔNG phải một hạn chót xoay mật khẩu: IMS không ép xoay theo lịch (xem 0038). Đây là một
+   * KHÔNG phải một hạn chót xoay mật khẩu: IMS không ép xoay theo lịch. Đây là một
    * câu rà soát — mật khẩu wifi khách đổi lần cuối năm 2024, tài khoản quản trị firewall của
    * một người đã nghỉ việc, những thứ chỉ lộ ra khi có ai đi nhìn.
    *

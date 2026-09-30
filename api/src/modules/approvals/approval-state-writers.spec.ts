@@ -7,8 +7,8 @@ import { stripComments } from '../../test/source-text';
  *
  * ===== VÌ SAO KHÔNG THÊM `CHECK` =====
  *
- * Sổ rà soát đề nghị: *"CHECK cho `approval.state`/`kind`/`subject_type`"*. Nhưng migration
- * `0023` đã quyết ngược lại, có ghi lý do:
+ * Sổ rà soát đề nghị: *"CHECK cho `approval.state`/`kind`/`subject_type`"*. Nhưng thiết kế
+ * bảng `approval` (`0032_approval.sql`) đã quyết ngược lại, vì lý do:
  *
  *   "Từ vựng state KHÔNG nằm trong CHECK constraint: mỗi loại yêu cầu tự mang máy trạng thái
  *    của mình (`ApprovalFlowSpec`) và `approvals` chỉ biết cách chạy một máy bất kỳ.
@@ -20,7 +20,7 @@ import { stripComments } from '../../test/source-text';
  *
  * ===== NHƯNG QUYẾT ĐỊNH ẤY CÓ MỘT ĐIỀU KIỆN BÙ, VÀ KHÔNG AI CANH NÓ =====
  *
- * Chính `0023` viết tiếp:
+ * Quyết định ấy đi kèm điều kiện:
  *
  *   "Đổi lại, tầng DB không bảo vệ được từ vựng — nên `ApprovalService.transition()` là đường
  *    DUY NHẤT đổi `state`, và nó tra sổ đăng ký trước khi ghi."
@@ -79,7 +79,7 @@ describe('Chỉ `approvals` được ghi `approval.state`', () => {
    * VÀ GIÁ TRỊ GHI VÀO PHẢI ĐẾN TỪ SỔ ĐĂNG KÝ, KHÔNG PHẢI MỘT CHUỖI GÕ TAY.
    *
    * Đây mới là vế khó thấy. Ngay trong `approvals.service.ts`, một dòng `state: 'approved'`
-   * cũng phá đúng lời hứa của `0023` — nó bỏ qua `ApprovalFlowSpec` và tự quyết từ vựng, mà
+   * cũng phá đúng lời hứa đó — nó bỏ qua `ApprovalFlowSpec` và tự quyết từ vựng, mà
    * DB thì cố ý không cản.
    */
   it('mọi giá trị gán cho `state` đều là biến, không phải chuỗi viết thẳng', () => {

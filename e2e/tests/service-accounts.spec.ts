@@ -17,7 +17,7 @@ import {
 } from './helpers';
 
 /**
- * Tài khoản dịch vụ (0032) — tài khoản DÙNG CHUNG và tài khoản VPN.
+ * Tài khoản dịch vụ — tài khoản DÙNG CHUNG và tài khoản VPN.
  *
  * Vì sao tồn tại: két sắt chỉ gắn được vào thiết bị hoặc hồ sơ phần mềm, nên mật khẩu email
  * dùng chung của Kế toán, tài khoản cổng VNPT… không có chỗ nào để đứng.

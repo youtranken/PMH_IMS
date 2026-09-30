@@ -54,7 +54,7 @@ function initialState(row: ServiceAccountRow | null): FormState {
 }
 
 /**
- * Form tài khoản dịch vụ (0032). Màn nhập — desktop-first.
+ * Form tài khoản dịch vụ. Màn nhập — desktop-first.
  *
  * Một hộp cho CẢ HAI loại, và ô nào chỉ thuộc một loại thì chỉ hiện với loại đó — đúng khuôn
  * của form Phần mềm (ô Số seat chỉ hiện với license). Đổi loại sang "dùng chung" thì xóa

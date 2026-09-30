@@ -92,7 +92,7 @@ export class AccountsService {
     const passwordHash = await this.passwords.hash(temporaryPassword);
 
     /*
-     * Bọc cả transaction: `users_employee_code_uq` (0031) là index duy nhất MỘT PHẦN, và
+     * Bọc cả transaction: `users_employee_code_uq` là index duy nhất MỘT PHẦN, và
      * `create` không hề tra trước như đã tra email. Không dịch mã lỗi ở đây thì SA gõ trùng
      * một mã nhân viên là nhận 500 trắng, không biết ô nào đụng.
      * `updateProfile` bên dưới đã dịch đúng — hai đường ghi phải nói cùng một câu.
@@ -144,7 +144,7 @@ export class AccountsService {
       /*
        * Đọc TÊN ràng buộc, không đoán.
        *
-       * Bảng `users` có HAI khóa duy nhất: `email` (0002) và `users_employee_code_uq` (0031).
+       * Bảng `users` có HAI khóa duy nhất: `email` và `users_employee_code_uq`.
        * Tra email ở trên là TOCTOU — hai SA cùng gửi một email (hay một người bấm Lưu hai
        * lần) thì lượt sau đụng khóa email. Gán mọi 23505 vào một câu là chỉ sai hẳn ô: người
        * dùng đọc `Mã nhân viên "" đã thuộc về một tài khoản khác` trong khi họ để trống ô đó.
@@ -168,7 +168,7 @@ export class AccountsService {
   }
 
   /**
-   * Sửa hồ sơ: họ tên, SĐT, mã nhân viên (0031).
+   * Sửa hồ sơ: họ tên, SĐT, mã nhân viên.
    *
    * KHÔNG đụng email — email là danh tính đăng nhập, đổi nó là đổi người. Ai cần đổi email
    * thì tạo tài khoản mới và vô hiệu hoá cái cũ, để nhật ký cũ vẫn trỏ đúng người đã làm.

@@ -194,14 +194,14 @@ describe('§8.8 — mọi cột sắp xếp được đều có chỉ mục ph�
   );
 
   it(
-    'các chỉ mục cũ CHỈ CÓ MỘT CỘT hoặc PARTIAL vẫn còn — 0058 thêm chứ không thay',
+    'các chỉ mục cũ CHỈ CÓ MỘT CỘT hoặc PARTIAL vẫn còn — chỉ mục sắp xếp thêm chứ không thay',
     async () => {
       /*
        * `device_warranty_idx … WHERE status <> 'retired'` và `software_end_idx` là chỉ mục
        * PARTIAL, dựng cho màn Sắp hết hạn. Chúng không phục vụ `ORDER BY` của màn danh sách
        * (câu đó không mang điều kiện ấy), nhưng gỡ chúng đi là làm chậm một màn khác. Ô này
-       * khoá lại việc 0058 chỉ THÊM. `isp_line_end_idx` không có ở đây: 0064 gỡ nó có chủ
-       * đích, vì đường truyền không còn hạn (Q-04).
+       * khoá lại việc chỉ mục sắp xếp chỉ THÊM. `isp_line_end_idx` không có: đường truyền không
+       * còn hạn (Q-04).
        */
       const { rows } = await scratch.pool.query<{ indexname: string }>(
         `SELECT indexname FROM pg_indexes

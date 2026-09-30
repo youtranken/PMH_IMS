@@ -1,7 +1,7 @@
 import { RealDateOrEmpty } from '../../common/real-date';
 
 /**
- * Ngày sinh (0031) — regex khuôn `YYYY-MM-DD` KHÔNG đủ.
+ * Ngày sinh — regex khuôn `YYYY-MM-DD` KHÔNG đủ.
  *
  * `2026-13-45` khớp khuôn, đi thẳng vào cột `date`, và Postgres ném 22008 → 500 trắng thay
  * vì câu tiếng Việt mà DTO viết ra để nói. Đây là loại lỗi chỉ lộ ra ở tầng DB, nên khoá nó

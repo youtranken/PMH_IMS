@@ -120,7 +120,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     /*
      * `exact: true`: menu có cả "Tài khoản" (tài khoản đăng nhập IMS) lẫn "Tài khoản dịch vụ"
-     * (0032) — khớp lỏng là trúng hai mục và Playwright từ chối ở chế độ strict.
+     * — khớp lỏng là trúng hai mục và Playwright từ chối ở chế độ strict.
      */
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();

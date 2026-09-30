@@ -11,7 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 /**
- * Lịch sử gia hạn — migration 0017. Chủ sở hữu: module `expiry` (AD-3).
+ * Lịch sử gia hạn — migration 0025_renewal_history.sql. Chủ sở hữu: module `expiry` (AD-3).
  *
  * `object_kind` + `object_id` là tham chiếu LỎNG, không có khóa ngoại: engine không được
  * biết bảng nào tồn tại (AD-2/AD-7). Append-only theo AD-13.
@@ -25,15 +25,15 @@ export const renewalHistoryTable = pgTable('renewal_history', {
   newEnd: date('new_end').notNull(),
   actor: text('actor').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  /** Hợp đồng + chi phí của RIÊNG lượt gia hạn này (0180, Q-15). Null = chưa khai, khác 0 ₫. */
+  /** Hợp đồng + chi phí của RIÊNG lượt gia hạn này (Q-15). Null = chưa khai, khác 0 ₫. */
   contract: text('contract'),
   cost: bigint('cost', { mode: 'number' }),
-  /** Website của kỳ này (SSL/tên miền, 0181). Null = loại hồ sơ không có khái niệm website. */
+  /** Website của kỳ này (SSL/tên miền). Null = loại hồ sơ không có khái niệm website. */
   websites: text('websites').array(),
 });
 
 /**
- * Luật gửi báo cáo tổng hợp — migration 0018. Chủ sở hữu: module `expiry` (AD-3).
+ * Luật gửi báo cáo tổng hợp — migration 0026_expiry_rule.sql. Chủ sở hữu: module `expiry` (AD-3).
  *
  * MỘT luật = MỘT email tổng hợp theo kỳ, không phải mail lẻ từng món (FR-013).
  * `last_sent_at` là mốc chống gửi trùng: sweep chạy mỗi phút, thiếu nó thì một sáng gửi 60 lần.

@@ -76,7 +76,7 @@ const MAY_GROW: Record<string, string> = {
  */
 const NO_CREATED_AT: Record<string, string> = {
   _migrations: 'Sổ migration của chính runner — không phải dữ liệu nghiệp vụ.',
-  /* Con số phải khớp thực tế: migration 0046 thêm ba khoá `secret.probe_*` nên 17 → 20. Đây
+  /* Con số phải khớp thực tế (số khoá gieo ở `0004_system_config.sql`). Đây
      là chú thích GIẢI THÍCH VÌ SAO một bảng được miễn canh rác, nên nó sai là cửa canh mất
      căn cứ. Thêm khoá cấu hình mới thì sửa luôn số ở đây. */
   system_config: 'Bảng cấu hình, 20 hàng cố định. Lượt dọn chỉ SỬA giá trị, không thêm hàng.',

@@ -175,7 +175,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     });
     const type = catalog.deviceTypes.find((one) => one.name === 'Firewall');
     if (!type) {
-      throw new Error('Danh mục thiếu loại "Firewall" — migration 0011 phải gieo sẵn loại này.');
+      throw new Error('Danh mục thiếu loại "Firewall" — migration phải gieo sẵn loại này.');
     }
 
     const siteCode = `E2E-ST${stamp}`;

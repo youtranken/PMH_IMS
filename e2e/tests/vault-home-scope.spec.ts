@@ -56,7 +56,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
 /** Cất một secret vào một chủ thể, để trang tổng có cái mà liệt kê. */
 async function stash(
   page: Page,
-  /* `isp` là loại thứ TƯ, thêm ở 0036 — `file.owner_type` nhận đường truyền từ lâu nên hợp
+  /* `isp` là loại thứ TƯ: `file.owner_type` nhận đường truyền từ lâu nên hợp
      đồng PDF đính vào được mà mật khẩu PPPoE thì không, và người ta chép nó vào ô Ghi chú. */
   ownerType: 'device' | 'software' | 'isp',
   ownerId: string,

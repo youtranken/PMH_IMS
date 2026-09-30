@@ -158,8 +158,7 @@ const DOMAINS = {
 
   isp: [
     /*
-     * LỖ ĐÃ VÁ 12/09: migration 0036 cho `secret.owner_type` nhận thêm `isp`, và dòng `file`
-     * ngay dưới được thêm cùng lúc — nhưng `secret` thì không. Ba loại chủ thể kia đều có
+     * `secret.owner_type` nhận cả `isp`, như dòng `file` ngay dưới. Ba loại chủ thể kia đều có
      * dòng dọn secret của mình (`device` ở dòng 66, `software` 89, `service_account` 152);
      * đường truyền đứng ngoài suốt.
      *
@@ -214,7 +213,7 @@ const DOMAINS = {
     `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
     `DELETE FROM department WHERE name ILIKE '%E2E%'`,
     /*
-     * Nhà mạng còn đường truyền trỏ vào thì để lại (FK RESTRICT, 0074): spec chỉ dọn vùng
+     * Nhà mạng còn đường truyền trỏ vào thì để lại (FK RESTRICT): spec chỉ dọn vùng
      * `catalog` mà không dọn `isp` sẽ đâm khoá ngoại và ROLLBACK cả vùng. Lượt `all` chạy `isp`
      * trước nên cuối cùng vẫn dọn hết.
      */

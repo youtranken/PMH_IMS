@@ -138,7 +138,7 @@ test.describe('Trang chi tiết thiết bị', () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
       return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
     });
-    // Máy in: `has_port_map = false` trong seed 0011 — đúng loại không có tab Port map.
+    // Máy in: `has_port_map = false` trong giá trị gieo — đúng loại không có tab Port map.
     const printer = catalog.deviceTypes.find((t) => t.name === 'Printer')!;
     const created = await page.request.post('/api/v1/devices', {
       headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },

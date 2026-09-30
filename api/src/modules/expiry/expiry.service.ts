@@ -36,7 +36,7 @@ export type ExpirySort = (typeof EXPIRY_SORTS)[number];
 export type ExpiryFilterState = ExpiryLevel | 'autoRetire';
 
 /**
- * Hai ngưỡng "sắp hết hạn", đọc từ `system_config` (AD-11, 0041).
+ * Hai ngưỡng "sắp hết hạn", đọc từ `system_config` (AD-11).
  *
  * Trả kèm mọi câu `list()` để giao diện dùng ĐÚNG hai con số mà server vừa đếm bằng. Không có
  * chúng trong payload thì web phải tự giữ một bản sao — và đó chính là lỗi đang vá.

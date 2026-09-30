@@ -339,7 +339,7 @@ export class AuditQueryService {
    *
    * Câu đệ quy dưới đây là mẫu "loose index scan" chuẩn của Postgres (Postgres < 18 không có
    * skip scan sẵn): lấy giá trị nhỏ nhất, rồi mỗi vòng nhảy tới giá trị KẾ TIẾP LỚN HƠN bằng
-   * `audit_log_action_idx` (migration 0042). Chi phí thành O(số giá trị khác nhau × log n)
+   * `audit_log_action_idx`. Chi phí thành O(số giá trị khác nhau × log n)
    * thay vì O(số dòng) — với 60 hành động thì đó là 60 lần dò index, bất kể bảng có một nghìn
    * hay một tỷ dòng.
    */

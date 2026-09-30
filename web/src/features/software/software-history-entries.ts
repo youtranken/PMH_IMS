@@ -20,7 +20,7 @@ const FIELD_LABEL: Record<string, string> = {
   note: 'history.fNote',
   status: 'history.fStatus',
   licenseModel: 'history.software.fLicenseModel',
-  // Kỳ hạn/chi phí RIÊNG của một ghế (0027) — `device` là mã máy, đi kèm làm bối cảnh.
+  // Kỳ hạn/chi phí RIÊNG của một ghế — `device` là mã máy, đi kèm làm bối cảnh.
   device: 'history.software.fDevice',
   // Dòng gán/gỡ: API đã đổi `deviceId` thành mã máy (`history-device-codes.ts`).
   machine: 'history.software.fMachine',

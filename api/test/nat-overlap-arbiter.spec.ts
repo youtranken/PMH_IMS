@@ -10,8 +10,8 @@ import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb } from './db'
  * Sổ NAT tồn tại để trả lời MỘT câu: "port 8080 trên router này mở cho ai". Hai dòng cùng
  * phủ TCP/8080 thì câu trả lời là hai, và cuốn sổ mất đúng công dụng của nó.
  *
- * `EXCLUDE` của 0022 so `protocol WITH =`, nên nó KHÔNG bao giờ thấy `both` va `tcp` — chú
- * thích trong chính migration ấy nói đó là cố ý, và nhường việc cho service. Nhưng
+ * Một `EXCLUDE` so `protocol WITH =` KHÔNG bao giờ thấy `both` va `tcp` — cố ý, để TCP và UDP
+ * riêng được khai chung port, còn phần còn lại nhường cho service. Nhưng
  * `requireNoProtocolOverlap` chạy trên `this.db`, NGOÀI mọi transaction, TRƯỚC khi
  * `db.transaction` mở ra. Nên nó là một phép đọc-rồi-quyết không khóa gì:
  *
@@ -33,7 +33,7 @@ import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb } from './db'
  *     tcp → [1,1]      udp → [2,2]      both → [1,2]
  *
  * `tcp && udp` rỗng nên hai giao thức riêng vẫn khai chung port được — đúng thứ Draytek cho
- * phép và migration 0022 cố ý chừa. `tcp && both` khác rỗng nên bị chặn, ở mọi mức đồng thời,
+ * phép và ràng buộc cố ý chừa. `tcp && both` khác rỗng nên bị chặn, ở mọi mức đồng thời,
  * không cần khóa nào và không ai phải nhớ gì.
  *
  * Phép kiểm trong service KHÔNG bị gỡ: nó vẫn là đường cho câu lỗi tử tế (nói rõ đụng rule
@@ -55,7 +55,7 @@ const PROTOCOL_PAIRS: [string, string, boolean][] = [
   ['both', 'udp', false],
   ['both', 'both', false],
   ['tcp', 'tcp', false],
-  // Vế phải giữ: Draytek khai riêng TCP và UDP cùng port là việc hợp lệ (migration 0022).
+  // Vế phải giữ: Draytek khai riêng TCP và UDP cùng port là việc hợp lệ.
   ['tcp', 'udp', true],
   ['udp', 'tcp', true],
 ];

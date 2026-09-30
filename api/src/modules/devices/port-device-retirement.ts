@@ -23,7 +23,7 @@ import { DevicesService } from './devices.service';
  *
  * ===== HAI CHIỀU CỦA MỘT SỢI DÂY, VÀ CHỈ MỘT CHIỀU ĐƯỢC ĐỘNG =====
  *
- * `0013_device_port.sql` ghi rõ: một sợi dây chỉ tạo MỘT bản ghi, không có bản đối xứng. Nên
+ * `0021_device_port.sql` ghi rõ: một sợi dây chỉ tạo MỘT bản ghi, không có bản đối xứng. Nên
  * khi máy X bị thanh lý có hai loại bản ghi liên quan, và chúng KHÁC NHAU:
  *
  *   · cổng NẰM TRÊN X (`device_port.device_id = X`) — đó là hồ sơ của chính X. Giữ nguyên.

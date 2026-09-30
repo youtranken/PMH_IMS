@@ -10,7 +10,7 @@ export const CONFIG_KEYS = {
   loginLockoutMinutes: { key: 'login.lockout_minutes', fallback: 15 },
   loginRateLimitPerIp: { key: 'login.rate_limit_per_ip', fallback: 20 },
   /*
-   * Trần theo phút, THEO USER, của các route nhạy cảm (0283) — đọc qua `@ConfigThrottle`.
+   * Trần theo phút, THEO USER, của các route nhạy cảm — đọc qua `@ConfigThrottle`.
    *
    * `rate.totp_per_minute`: ba cửa nhận mã TOTP (đăng nhập bước 2, xác nhận cài lại 2 lớp,
    * step-up mở két). Mã chỉ có một triệu khả năng, trần chung 300/phút quá rộng cho một ô 6 số.
@@ -21,14 +21,14 @@ export const CONFIG_KEYS = {
   rateTotpPerMinute: { key: 'rate.totp_per_minute', fallback: 10 },
   rateSecretRevealPerMinute: { key: 'rate.secret_reveal_per_minute', fallback: 30 },
   rateFileUploadPerMinute: { key: 'rate.file_upload_per_minute', fallback: 20 },
-  // Bậc chờ khi một tài khoản bị đoán sai nhiều lần (0060, SEC-03). Xem `common/lockout.ts`.
+  // Bậc chờ khi một tài khoản bị đoán sai nhiều lần (SEC-03). Xem `common/lockout.ts`.
   loginAccountBackoffMinutes: { key: 'login.account_backoff_minutes', fallback: '5,15,30,60' },
-  // 60s (0034): 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.
+  // 60s: 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.
   secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 60 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
   secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
   /*
-   * Canh người DÒ DẪM quanh két (0046) — xem `audit/security-probe.service.ts`.
+   * Canh người DÒ DẪM quanh két — xem `audit/security-probe.service.ts`.
    *
    * Ngưỡng 3 là con số chủ dự án chọn. Cửa sổ 15 phút để ba lần rải rác trong một ngày làm
    * việc KHÔNG thành báo động giả — gõ nhầm mã một lần sáng, một lần chiều là chuyện thường.
@@ -38,7 +38,7 @@ export const CONFIG_KEYS = {
    * Đặt ngưỡng = 0 là TẮT hẳn cảnh báo (vẫn ghi nhật ký) — có đường tắt mà không phải sửa code.
    */
   /*
-   * Cửa sổ MIỄN gõ lại mật khẩu khi cài yếu tố thứ hai lần đầu (0047, A-02).
+   * Cửa sổ MIỄN gõ lại mật khẩu khi cài yếu tố thứ hai lần đầu (A-02).
    *
    * Cài 2 lớp ngay sau màn đăng nhập bắt buộc thì mật khẩu vừa được chứng minh vài giây
    * trước — hỏi lại là ma sát không đổi lấy được gì. Nhưng một phiên chờ bị bỏ quên trên
@@ -49,7 +49,7 @@ export const CONFIG_KEYS = {
    */
   totpEnrollReauthMinutes: { key: 'totp.enroll_reauth_minutes', fallback: 15 },
   /*
-   * Câu chỉ đường cho người quên mật khẩu / mất điện thoại 2 lớp (0077, Q-14). Đọc được khi CHƯA
+   * Câu chỉ đường cho người quên mật khẩu / mất điện thoại 2 lớp (Q-14). Đọc được khi CHƯA
    * đăng nhập qua `GET /auth/support-contact` — route đó chỉ trả đúng khoá này, không mở bảng.
    */
   authSupportContact: {
@@ -59,14 +59,14 @@ export const CONFIG_KEYS = {
   secretProbeAlertThreshold: { key: 'secret.probe_alert_threshold', fallback: 3 },
   secretProbeWindowMinutes: { key: 'secret.probe_window_minutes', fallback: 15 },
   secretProbeCooldownMinutes: { key: 'secret.probe_cooldown_minutes', fallback: 60 },
-  // Trong lúc nghỉ, vượt hệ số × ngưỡng thì đi thêm một lá leo thang (0250, OLD-SEC-01).
+  // Trong lúc nghỉ, vượt hệ số × ngưỡng thì đi thêm một lá leo thang (OLD-SEC-01).
   secretProbeEscalationMultiplier: { key: 'secret.probe_escalation_multiplier', fallback: 3 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },
-  // Cửa sổ đếm "người này đã xin N lần" trên phiếu người duyệt đọc (0098).
+  // Cửa sổ đếm "người này đã xin N lần" trên phiếu người duyệt đọc.
   breakGlassRecentWindowDays: { key: 'breakglass.recent_window_days', fallback: 30 },
   approvalReminderHours: { key: 'approval.reminder_hours', fallback: 4 },
   /*
-   * Yêu cầu mở két chờ quá số giờ này mà không ai quyết thì tự hết hạn (0241, Q-15). Phải lớn
+   * Yêu cầu mở két chờ quá số giờ này mà không ai quyết thì tự hết hạn (Q-15). Phải lớn
    * hơn `approval.reminder_hours` — màn Tham số chặn cặp ngược, vì khi đó thư nhắc không bao giờ
    * kịp đi trước lúc yêu cầu hết hạn.
    */
@@ -74,7 +74,7 @@ export const CONFIG_KEYS = {
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },
   appTimezone: { key: 'app.timezone', fallback: 'Asia/Ho_Chi_Minh' },
   /*
-   * Hai ngưỡng của bảng điều khiển (0038).
+   * Hai ngưỡng của bảng điều khiển.
    *
    * Vào đây chứ không nằm trong `dashboard.service.ts` vì chúng là LUẬT NGHIỆP VỤ, không phải
    * hằng số hiển thị: "dải bao nhiêu phần trăm thì gọi là sắp đầy" và "mật khẩu bao lâu không
@@ -84,14 +84,14 @@ export const CONFIG_KEYS = {
   dashboardSubnetFullPercent: { key: 'dashboard.subnet_full_percent', fallback: 80 },
   dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
   /*
-   * Số dòng tối đa mỗi khối của trang chủ (0281). Trang này đọc trong ba phút; khối dài quá
+   * Số dòng tối đa mỗi khối của trang chủ. Trang này đọc trong ba phút; khối dài quá
    * thì người ta cuộn qua chứ không đọc, và cuối mỗi khối đã có đường sang màn đầy đủ.
    */
   dashboardMaxItems: { key: 'dashboard.max_items', fallback: 8 },
-  // Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT (0140) — xem `ipam/nat-sensitive.ts`.
+  // Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT — xem `ipam/nat-sensitive.ts`.
   natSensitivePorts: { key: 'nat.sensitive_ports', fallback: '21,22,23,445,1433,3306,3389,5432,5900' },
   /*
-   * Dải rộng nhất được khai, tính bằng độ dài prefix (0280): 24 = /24, 254 host.
+   * Dải rộng nhất được khai, tính bằng độ dài prefix: 24 = /24, 254 host.
    *
    * Chỉ được SIẾT (số lớn hơn), không được nới dưới 24 — màn Tham số chặn ở 24..30. Màn dải
    * liệt kê MỌI host trong một lượt gọi và `enumerateHosts` dựng mảng đồng bộ, nên /16 là 65.534
@@ -100,13 +100,13 @@ export const CONFIG_KEYS = {
    * nới thì phải đẩy phân trang dải xuống server trước.
    */
   ipamSubnetMinPrefix: { key: 'ipam.subnet_min_prefix', fallback: 24 },
-  // Dải cổng ngoài của một luật NAT rộng hơn ngần này thì CẢNH BÁO, không chặn (0280).
+  // Dải cổng ngoài của một luật NAT rộng hơn ngần này thì CẢNH BÁO, không chặn.
   natWidePortRange: { key: 'nat.wide_port_range', fallback: 1000 },
-  // Q-13 (0076): Hết hạn quá số ngày này thì tự Thanh lý + gỡ ghế. 0 = tắt.
+  // Q-13: Hết hạn quá số ngày này thì tự Thanh lý + gỡ ghế. 0 = tắt.
   softwareAutoRetireGraceDays: { key: 'software.auto_retire_grace_days', fallback: 30 },
   /*
-   * Hai ngưỡng "sắp hết hạn" (0041). Trước đó chúng nằm cứng ở BA chỗ độc lập — hai bên API,
-   * một bên web — và mỗi chú thích tự nhận là "khớp nhau" bằng lời hứa chứ không bằng cơ chế.
+   * Hai ngưỡng "sắp hết hạn". Nằm ở DB chứ không cứng trong code: cứng ở ba chỗ (hai bên API,
+   * một bên web) thì "khớp nhau" chỉ bằng lời hứa chứ không bằng cơ chế.
    *
    * "Trước bao nhiêu ngày thì phải bắt đầu lo" là câu trả lời của bộ phận IT, không của lập
    * trình viên: gia hạn SSL mất một buổi, gia hạn hợp đồng đường truyền mất ba tuần.
@@ -114,7 +114,7 @@ export const CONFIG_KEYS = {
   expiryCriticalDays: { key: 'expiry.critical_days', fallback: 7 },
   expiryWarningDays: { key: 'expiry.warning_days', fallback: 30 },
   /*
-   * Email báo cáo nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn (0043).
+   * Email báo cáo nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn.
    *
    * Màn hình nhìn lùi một năm và đó là đúng — nó là thứ người ta KÉO tới xem. Email thì ĐẨY
    * tới, hằng tuần, mãi mãi: một tên miền đã bỏ sẽ nằm trong 52 lá thư liên tiếp và dạy người
@@ -122,12 +122,12 @@ export const CONFIG_KEYS = {
    */
   expiryDigestExpiredDays: { key: 'expiry.digest_expired_days', fallback: 30 },
   /*
-   * Màn "Sắp hết hạn" nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn (0281). Cũng là trần của
+   * Màn "Sắp hết hạn" nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn. Cũng là trần của
    * `expiry.digest_expired_days`: email không bao giờ nhìn lùi xa hơn màn hình.
    */
   expiryLookBackDays: { key: 'expiry.look_back_days', fallback: 365 },
   /*
-   * GIỮ BAO LÂU RỒI DỌN (0051) — hai ngưỡng, hai bảng chỉ-lớn-lên.
+   * GIỮ BAO LÂU RỒI DỌN — hai ngưỡng, hai bảng chỉ-lớn-lên.
    *
    * Vào `system_config` chứ không viết cứng: "giữ vết bao lâu" là một quyết định của bộ phận
    * IT, và nó sẽ được siết dần — một bản ghi audit cần giữ lâu hơn một dòng outbox đã gửi
@@ -141,12 +141,12 @@ export const CONFIG_KEYS = {
   outboxRetentionDays: { key: 'outbox.retention_days', fallback: 30 },
   /*
    * Ngăn năm của `audit_log` cũ hơn ngần này năm thì `ops/audit-archive.sh` tách ra và dump
-   * (0303, OLD-DB-03). Chỉ script vận hành đọc — không có gì tự chạy: lưu trữ sổ NFR-03 là
+   * (OLD-DB-03). Chỉ script vận hành đọc — không có gì tự chạy: lưu trữ sổ NFR-03 là
    * việc người trực làm có chủ đích, không phải việc một cron lặng lẽ làm.
    */
   auditArchiveAfterYears: { key: 'audit.archive_after_years', fallback: 2 },
   /**
-   * Relay bỏ một thư sau ngần này lần hỏng (0282). Lease tăng gấp đôi sau mỗi lần hỏng (5, 10,
+   * Relay bỏ một thư sau ngần này lần hỏng. Lease tăng gấp đôi sau mỗi lần hỏng (5, 10,
    * 20, 40, 80 rồi giữ 160 phút) nên 14 lần ≈ 24 giờ thử lại: SMTP chết vài giờ (Google bảo
    * trì, mất Internet) không làm thư rơi vào trạng thái bỏ. Khoá kỹ thuật, không mở trên màn
    * Tham số — hạ nó xuống là thư bị bỏ sớm mà không ai thấy ngoài danh sách gửi lỗi.

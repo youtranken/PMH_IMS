@@ -23,7 +23,7 @@ export class KnownDeviceService {
     // MỘT câu, chạy trong CHÍNH transaction đăng nhập — không đọc-rồi-ghi.
     // Bản cũ `select` bằng `this.db` (pool) rồi mới `insert` bằng `tx`: hai tab đăng nhập
     // cùng lúc từ một máy thì cả hai không thấy hàng, cả hai INSERT, và UNIQUE
-    // (user_id, device_hash) của 0008 ném 23505 — không ai bắt, nên 500 và rollback cả
+    // (user_id, device_hash) ném 23505 — không ai bắt, nên 500 và rollback cả
     // lượt đăng nhập. `xmax = 0` là cách Postgres cho biết hàng vừa được CHÈN chứ không
     // phải bị cập nhật, tức đây có đúng là thiết bị lạ hay không.
     const rows = await tx

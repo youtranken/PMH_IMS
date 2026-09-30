@@ -1,7 +1,7 @@
 import { bigint, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 /**
- * Bảng `file` — migration 0007. Chủ sở hữu: module `files` (AD-3).
+ * Bảng `file` — migration 0010_file.sql. Chủ sở hữu: module `files` (AD-3).
  *
  * Nội dung file nằm trên volume, tên đĩa là `stored_name` (uuid, không đoán được);
  * DB chỉ giữ metadata. Xóa là XÓA MỀM (`deleted_at`): biên bản mua thiết bị lỡ tay xóa

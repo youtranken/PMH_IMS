@@ -85,7 +85,7 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
   });
 
   /**
-   * Sửa ghế (0027): một license 10 ghế thì "đổi chi phí" là vô nghĩa nếu không nói ghế nào.
+   * Sửa ghế: một license 10 ghế thì "đổi chi phí" là vô nghĩa nếu không nói ghế nào.
    * Mã máy đi kèm dưới dạng trường KHÔNG đổi — hiện làm bối cảnh, không phải mũi tên.
    */
   it('sửa ghế license: nói rõ ghế nào, rồi mới tới cái đã đổi', () => {

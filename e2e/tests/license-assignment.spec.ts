@@ -313,7 +313,7 @@ test.describe('Gán license theo seat', () => {
   });
 
   /**
-   * Kỳ hạn + chi phí RIÊNG của từng ghế (0027).
+   * Kỳ hạn + chi phí RIÊNG của từng ghế.
    *
    * Một license 10 ghế hầu như không mua một lần: Kế toán mua 3 ghế hợp đồng này giá này,
    * Xưởng mua 2 ghế hợp đồng khác giá khác kỳ khác. Trước đó mọi con số ấy chỉ có MỘT ô ở

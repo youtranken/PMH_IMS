@@ -14,7 +14,7 @@
  *
  * ===== HAI BẢN ANH EM =====
  *
- * `api/src/common/search-fold.ts` (JS) và `ims_norm(text)` trong Postgres (migration 0052)
+ * `api/src/common/search-fold.ts` (JS) và `ims_norm(text)` trong Postgres (`0003_search_norm.sql`)
  * phải cho KẾT QUẢ Y HỆT. Ba nơi không import được nhau — `web/tsconfig.app.json` chỉ
  * `include: ["src"]`, `api/` là dự án npm riêng, DB là thế giới thứ ba. Thứ dùng chung được
  * là DỮ LIỆU: `ops/search-fold-cases.json`. Xem `src/test/search-fold.test.ts`.

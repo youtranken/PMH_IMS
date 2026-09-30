@@ -263,7 +263,7 @@ test.describe('Ma trận quyền két sắt', () => {
 });
 
 /**
- * Hai hàng rào cùng một họ (migration 0036):
+ * Hai hàng rào cùng một họ:
  *
  *  - Két sắt phải với tới ĐƯỜNG TRUYỀN, như giấy tờ.
  *  - Ma trận quyền phải có nhóm phủ TÀI KHOẢN DỊCH VỤ; thiếu nó thì két cất được mật khẩu mà
@@ -287,7 +287,7 @@ test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản d
     const lineId = ((await line.json()) as { id: string }).id;
 
     /*
-     * Đây là chỗ TRƯỚC 0036 trả 500: CHECK ở tầng DB chỉ nhận device/software/service_account.
+     * Thiếu `isp` trong CHECK ở tầng DB là 500 ngay ở đây.
      * Whitelist ba tầng và tầng DB là tầng bị quên — nên bài này gọi thẳng API để chạm đúng
      * tầng đó, không chỉ chạm cái mảng trong TypeScript.
      */
@@ -328,7 +328,7 @@ test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản d
     );
     expect(((await before.json()) as { tier: string }).tier).toBe('denied');
 
-    // Gán "Tài khoản: VPN" → tầng đổi. Trước 0036 thì không có ô nào để chọn.
+    // Gán "Tài khoản: VPN" → tầng đổi.
     const granted = await page.request.post('/api/v1/vault/access', {
       headers,
       data: {

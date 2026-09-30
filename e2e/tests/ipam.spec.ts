@@ -553,7 +553,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
   });
 
   /**
-   * Gateway (0035) — thứ người ta hỏi đầu tiên khi khai IP tĩnh. Nằm ngoài chính dải của nó là cấu hình sai mà nhìn vẫn thấy hợp lệ.
+   * Gateway — thứ người ta hỏi đầu tiên khi khai IP tĩnh. Nằm ngoài chính dải của nó là cấu hình sai mà nhìn vẫn thấy hợp lệ.
    */
   test('gateway phải nằm trong chính dải của nó', async ({ page }) => {
     await firstLogin(page, E2E_SA);

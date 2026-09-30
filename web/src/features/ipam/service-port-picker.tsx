@@ -5,7 +5,7 @@ import { portRangeLabel, type ServicePortRow } from '@/lib/catalog-types';
 import { foldSearch } from '@/lib/search-fold';
 
 /**
- * Ô chọn dịch vụ/port (0028) — DROPDOWN xổ khi bấm, không phải bảng bày sẵn.
+ * Ô chọn dịch vụ/port — DROPDOWN xổ khi bấm, không phải bảng bày sẵn.
  *
  * Một bảng nhỏ luôn mở dưới ô nhập thì đúng lý lẽ "khai NAT cần thấy cả tên lẫn số cùng
  * lúc", nhưng cái giá thì sai: form NAT có HAI ô port nên có HAI bảng giống hệt nhau luôn

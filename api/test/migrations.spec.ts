@@ -24,8 +24,8 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *
  * ===== VÌ SAO STACK E2E ĐANG CHẠY KHÔNG THAY THẾ ĐƯỢC =====
  *
- * Compose có chạy migration lúc khởi động, nhưng trên một volume ĐÃ CÓ SẴN dữ liệu. File
- * 0007 chỉ chạy đúng nhờ ai đó từng vá tay bảng trên DB dev sẽ vẫn im lặng qua cửa mãi mãi —
+ * Compose có chạy migration lúc khởi động, nhưng trên một volume ĐÃ CÓ SẴN dữ liệu. Một file
+ * chỉ chạy đúng nhờ ai đó từng vá tay bảng trên DB dev sẽ vẫn im lặng qua cửa mãi mãi —
  * journal đã ghi rồi, runner bỏ qua. Chỉ một DATABASE TRẮNG mới hỏi được câu của DoD.
  */
 

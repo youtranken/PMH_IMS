@@ -32,7 +32,7 @@ describe('DeviceRetirementRegistry — thiếu người dọn thì nổ lúc kh�
   /**
    * TRẠNG THÁI THIẾU HAI NGƯỜI DỌN — hai chủ nợ không ai nhận.
    *
-   * `device_port.connected_device_id` (0013) và `isp_line.device_id` (0016) đều trỏ tới
+   * `device_port.connected_device_id` và `isp_line.device_id` đều trỏ tới
    * `device`, đều `ON DELETE RESTRICT`, và đều không nằm trong sổ. Thanh lý con switch thì
    * màn hình của nó sạch, còn sợi dây ma vẫn nằm trên hồ sơ con router bên cạnh.
    */

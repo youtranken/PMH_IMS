@@ -131,7 +131,7 @@ export class NatRuleService {
     if (filters.deviceId) where.push(eq(natRuleTable.deviceId, filters.deviceId));
     if (filters.search?.trim()) {
       const text = filters.search.trim();
-      // Người dùng · lý do · IP nội bộ, cả ba trong cột sinh `nat_rule.search_norm` (0052) và
+      // Người dùng · lý do · IP nội bộ, cả ba trong cột sinh `nat_rule.search_norm` và
       // đã gấp dấu (B-01). Cột sinh giữ nguyên
       // `host(internal_ip)` chứ không `internal_ip::text`, để gõ "10.0.0.5" vẫn khớp mà
       // không bị mặt nạ mạng chen vào.
@@ -571,12 +571,11 @@ export class NatRuleService {
    *
    * ===== VÌ SAO NÓ KHÔNG ĐƯỢC LÀ TRỌNG TÀI =====
    *
-   * `EXCLUDE` của 0022 so `protocol WITH =` nên không thấy `both` va `tcp`. Hàm này chạy trên
-   * `this.db` — ngoài mọi transaction, trước khi `db.transaction` mở ra — nên nó là một phép
-   * đọc-rồi-quyết không khóa gì: nếu chỉ trông vào nó, hai lượt ghi song song cùng đọc thấy
-   * sổ trống, cả hai qua cửa, cả hai ghi.
+   * Hàm này chạy trên `this.db` — ngoài mọi transaction, trước khi `db.transaction` mở ra —
+   * nên nó là một phép đọc-rồi-quyết không khóa gì: nếu chỉ trông vào nó, hai lượt ghi song
+   * song cùng đọc thấy sổ trống, cả hai qua cửa, cả hai ghi.
    *
-   * Migration `0050` chuyển trọng tài xuống DB bằng cách ánh xạ giao thức thành KHOẢNG
+   * Trọng tài nằm ở DB (`nat_rule_no_overlap`, `0031_nat_rule.sql`) bằng cách ánh xạ giao thức thành KHOẢNG
    * (`tcp → [1,1]`, `udp → [2,2]`, `both → [1,2]`) rồi hỏi `&&` thay cho `=`. Không khóa nào,
    * và không ai phải nhớ gì.
    *

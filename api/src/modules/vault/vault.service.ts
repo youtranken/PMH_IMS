@@ -16,7 +16,7 @@ import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { secretTable } from './vault.schema';
 
 /*
- * Thêm `isp` (0036): `file.owner_type` đã nhận đường truyền từ lâu, nên hợp đồng PDF đính vào
+ * Có `isp` vì `file.owner_type` đã nhận đường truyền từ lâu, nên hợp đồng PDF đính vào
  * được mà mật khẩu PPPoE thì không có chỗ đứng — bất đối xứng đẩy mật khẩu thật vào ô Ghi chú
  * không mã hóa. Whitelist này có BẢN SAO ở tầng DB (`secret_owner_type_check`) và ở
  * `SecretOwnerType` bên web; thêm loại mới phải sờ đủ ba chỗ.

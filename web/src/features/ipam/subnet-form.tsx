@@ -209,7 +209,7 @@ export function SubnetForm({
           />
         </Field>
 
-        {/* Gateway (0035): câu hỏi ĐẦU TIÊN khi khai IP tĩnh cho một cái máy. Là một ô riêng
+        {/* Gateway: câu hỏi ĐẦU TIÊN khi khai IP tĩnh cho một cái máy. Là một ô riêng
             để tra được, thay vì nhét vào ô mô tả, mỗi người một kiểu. */}
         <Field
           label={t('ipam.gateway')}

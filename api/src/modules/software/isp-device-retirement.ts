@@ -12,7 +12,7 @@ import { ispLineTable } from './software.schema';
  *
  * ===== LỖ ĐANG VÁ =====
  *
- * `isp_line.device_id` trỏ tới `device` (0016), nhưng `software` chỉ đăng ký người dọn cho
+ * `isp_line.device_id` trỏ tới `device`, nhưng `software` chỉ đăng ký người dọn cho
  * GHẾ LICENSE. Nên thanh lý con router: ghế license được trả, IP được thu, rule NAT được gỡ
  * — còn hồ sơ đường truyền vẫn trỏ nguyên vào một máy đã ra khỏi công ty, và không câu nào
  * trong lượt thanh lý nhắc tới nó.

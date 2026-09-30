@@ -62,8 +62,8 @@ describe('Đếm nhật ký an ninh có trần', () => {
   /**
    * CHỈ CỘNG THÊM, không bao giờ dọn.
    *
-   * Thử `DELETE` rồi `TRUNCATE` giữa các bài đều bị chặn — `audit_log` có trigger chặn cả hai
-   * (0005), đúng như NFR-03/AD-13 muốn. Hàng rào đó không phải thứ bài kiểm được tắt đi cho
+   * Thử `DELETE` rồi `TRUNCATE` giữa các bài đều bị chặn — `audit_log` có trigger chặn cả hai,
+   * đúng như NFR-03/AD-13 muốn. Hàng rào đó không phải thứ bài kiểm được tắt đi cho
    * tiện, nên các bài dưới xếp theo thứ tự TĂNG DẦN số dòng và mỗi bài cộng thêm vào cái bài
    * trước để lại. Đọc hơi lạ, nhưng nó phản ánh đúng bản chất bảng này: nhật ký chỉ lớn lên.
    */

@@ -10,17 +10,17 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-/** citext: email so sánh không phân biệt hoa/thường (migration 0000 bật extension). */
+/** citext: email so sánh không phân biệt hoa/thường (extension bật ở `0000_extensions.sql`). */
 const citext = customType<{ data: string }>({
   dataType: () => 'citext',
 });
 
-/** Người dùng (NFR-01) — bảng tạo bằng migration 0002_users.sql. Chủ sở hữu: module auth/users (AD-3). */
+/** Người dùng (NFR-01) — bảng tạo bằng migration 0005_users.sql. Chủ sở hữu: module auth/users (AD-3). */
 export const usersTable = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: citext('email').notNull(),
   fullName: text('full_name').notNull(),
-  // Liên hệ (migration 0031): gọi được người giữ máy lúc 2h sáng, và đối chiếu được sang
+  // Liên hệ: gọi được người giữ máy lúc 2h sáng, và đối chiếu được sang
   // bảng lương. Cả hai cho phép rỗng — tài khoản cũ chưa có sẵn hai giá trị này.
   phone: text('phone'),
   employeeCode: text('employee_code'),

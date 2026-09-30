@@ -1,6 +1,6 @@
 /**
  * VLAN của một cổng: số 1–4094 (dải 802.1Q, như `subnet.vlan`) hoặc "trunk" (Q-16).
- * Cùng luật với CHECK `device_port_vlan_check` (0301); kiểm ở đây để trả 400 có câu tiếng Việt
+ * Cùng luật với CHECK `device_port_vlan_check`; kiểm ở đây để trả 400 có câu tiếng Việt
  * thay vì để ràng buộc DB ném 500.
  */
 export function portVlanOf(raw: string): { value: string | null; valid: boolean } {

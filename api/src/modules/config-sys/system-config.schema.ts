@@ -1,6 +1,6 @@
 import { jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
-/** AD-11: tham số vận hành — migration 0001 + seed 0009. */
+/** AD-11: tham số vận hành — bảng + giá trị gieo ở migration 0004_system_config.sql. */
 export const systemConfigTable = pgTable('system_config', {
   key: text('key').primaryKey(),
   value: jsonb('value').notNull(),
