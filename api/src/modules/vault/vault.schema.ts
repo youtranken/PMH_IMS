@@ -11,7 +11,7 @@ import {
 const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
 
 /**
- * Bảng `secret` — migration 0019. Chủ sở hữu DUY NHẤT: module `vault` (AD-4).
+ * Bảng `secret` — migration 0027_secret.sql. Chủ sở hữu DUY NHẤT: module `vault` (AD-4).
  *
  * dependency-cruiser có luật `secret-table-only-in-vault`: bất kỳ file nào ngoài
  * `src/modules/vault/` import file này là CI đỏ. Đây là hàng rào máy, không phải lời hứa.
@@ -36,7 +36,7 @@ export const secretTable = pgTable('secret', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   revokedBy: text('revoked_by'),
-  /** Lúc GIÁ TRỊ đổi lần cuối (cất/đổi giá trị) — `updated_at` nhảy cả khi sửa ghi chú (0150). */
+  /** Lúc GIÁ TRỊ đổi lần cuối (cất/đổi giá trị) — `updated_at` nhảy cả khi sửa ghi chú. */
   valueChangedAt: timestamp('value_changed_at', { withTimezone: true }).notNull().defaultNow(),
   valueChangedBy: text('value_changed_by'),
 });
@@ -45,7 +45,7 @@ export const secretTable = pgTable('secret', {
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
- * Bảng `access_list` — migration 0024. Chủ sở hữu: `vault` (AD-3).
+ * Bảng `access_list` — migration 0028_access_list.sql. Chủ sở hữu: `vault` (AD-3).
  *
  * Chỉ chứa `whitelist` và `needs_approval`. CẤM là mặc định (không có dòng), không phải một
  * lời gán — xem `access-tier.ts`.

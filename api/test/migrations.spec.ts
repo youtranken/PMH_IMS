@@ -24,8 +24,8 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *
  * ===== VÌ SAO STACK E2E ĐANG CHẠY KHÔNG THAY THẾ ĐƯỢC =====
  *
- * Compose có chạy migration lúc khởi động, nhưng trên một volume ĐÃ CÓ SẴN dữ liệu. File
- * 0007 chỉ chạy đúng nhờ ai đó từng vá tay bảng trên DB dev sẽ vẫn im lặng qua cửa mãi mãi —
+ * Compose có chạy migration lúc khởi động, nhưng trên một volume ĐÃ CÓ SẴN dữ liệu. Một file
+ * chỉ chạy đúng nhờ ai đó từng vá tay bảng trên DB dev sẽ vẫn im lặng qua cửa mãi mãi —
  * journal đã ghi rồi, runner bỏ qua. Chỉ một DATABASE TRẮNG mới hỏi được câu của DoD.
  */
 
@@ -48,7 +48,7 @@ describe('Migration chạy trên DATABASE TRẮNG thật', () => {
       const onDisk = (await readdir(migrationsDir()))
         .filter((f) => f.endsWith('.sql'))
         .sort();
-      expect(onDisk.length).toBeGreaterThanOrEqual(40);
+      expect(onDisk.length).toBeGreaterThanOrEqual(30);
 
       const applied = await runMigrations(scratch.pool, migrationsDir(), {
         log: () => undefined,
@@ -109,6 +109,63 @@ describe('Migration chạy trên DATABASE TRẮNG thật', () => {
       await expect(
         runMigrations(scratch.pool, dir, { log: () => undefined }),
       ).rejects.toThrow(/checksum lệch/);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'journal có tên lạ nhưng DB dựng từ bộ đã gộp (Q-17) → không chặn, không apply lại gì',
+    async () => {
+      await scratch.pool.query(
+        `INSERT INTO _migrations (name, checksum) VALUES ('9999_nhanh_khac.sql', 'x')`,
+      );
+      try {
+        expect(
+          await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined }),
+        ).toEqual([]);
+      } finally {
+        await scratch.pool.query(`DELETE FROM _migrations WHERE name = '9999_nhanh_khac.sql'`);
+      }
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'DB dựng từ bộ migration TRƯỚC lượt gộp (Q-17) → NÉM câu nói rõ phải dựng lại, không chạm lược đồ',
+    async () => {
+      /*
+       * Dựng lại đúng hình dạng DB dev cũ: journal mang tên các file đã bị gộp, và bảng thật đã
+       * nằm đó. `0000_extensions.sql` là tên duy nhất trùng giữa hai bộ — không có chốt thì
+       * runner chết ở "checksum lệch" và người trực đi tìm một file bị sửa không hề tồn tại.
+       */
+      const old = await createScratchDb('ims_mig_presquash');
+      try {
+        await old.pool.query(
+          `CREATE TABLE _migrations (name text PRIMARY KEY, checksum text,
+             applied_at timestamptz NOT NULL DEFAULT now());
+           INSERT INTO _migrations (name, checksum) VALUES
+             ('0000_extensions.sql', 'cu'), ('0001_system_config.sql', 'cu'),
+             ('0304_fk_child_owner_update.sql', 'cu');
+           CREATE TABLE system_config (key text PRIMARY KEY, value jsonb NOT NULL);`,
+        );
+
+        await expect(
+          runMigrations(old.pool, migrationsDir(), { log: () => undefined }),
+        ).rejects.toThrow(/trước lượt gộp migration \(Q-17\).*0001_system_config\.sql.*dựng lại/s);
+
+        const journal = await old.pool.query<{ name: string }>(
+          'SELECT name FROM _migrations ORDER BY name',
+        );
+        expect(journal.rows.map((r) => r.name)).toEqual([
+          '0000_extensions.sql',
+          '0001_system_config.sql',
+          '0304_fk_child_owner_update.sql',
+        ]);
+        const ext = await old.pool.query(`SELECT 1 FROM pg_extension WHERE extname = 'citext'`);
+        expect(ext.rowCount).toBe(0);
+      } finally {
+        await old.drop();
+      }
     },
     TEST_TIMEOUT,
   );

@@ -74,7 +74,7 @@ test('danh sách phần mềm và tab Máy đang dùng đọc được ở 390px
 });
 
 /**
- * Bảng ghế (0027) nhiều cột — thứ tràn ngang dễ nhất trong cả hệ thống. Ở 390px nó phải gập
+ * Bảng ghế nhiều cột — thứ tràn ngang dễ nhất trong cả hệ thống. Ở 390px nó phải gập
  * thành thẻ dọc CÓ NHÃN: một cột số tiền không nhãn thì đọc ra cũng không biết là chi phí hay
  * số hợp đồng.
  */

@@ -1,6 +1,4 @@
 import { ConflictException } from '@nestjs/common';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { runMigrations } from '../src/database/migration-runner';
 import { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { DevicesService } from '../src/modules/devices/devices.service';
@@ -14,9 +12,10 @@ import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 /**
  * OLD-DB-02 (AD-14) — một cổng đầu kia chỉ được một dòng port map ghi đấu vào.
  *
- * Trước 0070 chỉ có `device_port_label_key` (đầu ghi), nên hai máy khác nhau cùng khai "đấu
- * vào SW-01 cổng 24" được. Dòng của máy đã thanh lý thì không tính: nó bị khoá không gỡ được,
- * nếu vẫn chiếm cổng thì máy thay thế không bao giờ khai được vào đúng lỗ cắm đó.
+ * `device_port_label_key` chỉ giữ đầu GHI; `device_port_peer_port_key` giữ đầu KIA, để hai máy
+ * khác nhau không cùng khai "đấu vào SW-01 cổng 24". Dòng của máy đã thanh lý thì không tính:
+ * nó bị khoá không gỡ được, nếu vẫn chiếm cổng thì máy thay thế không bao giờ khai được vào
+ * đúng lỗ cắm đó.
  */
 
 const TEST_TIMEOUT = 120_000;
@@ -168,46 +167,4 @@ describe('OLD-DB-02 · device_port không cho hai dòng cùng đấu vào một 
       ),
     ).rejects.toMatchObject({ code: '23505', constraint: 'device_port_peer_port_key' });
   });
-
-  it('migration dừng với danh sách dòng trùng khi dữ liệu cũ đã vi phạm', async () => {
-    const legacy = await createScratchDb('ims_port_peer_legacy');
-    try {
-      const dir = migrationsDir();
-      const upTo = await legacyDirWithout0070(dir);
-      await runMigrations(legacy.pool, upTo, { log: () => undefined });
-      const t = await legacy.pool.query<{ id: string }>(
-        `INSERT INTO device_type (name) VALUES ('Switch OLD-DB-02') RETURNING id`,
-      );
-      const ids: string[] = [];
-      for (const code of ['SW-L', 'SRV-L1', 'SRV-L2']) {
-        const r = await legacy.pool.query<{ id: string }>(
-          `INSERT INTO device (code, name, device_type_id) VALUES ($1::text, $1::text, $2) RETURNING id`,
-          [code, t.rows[0].id],
-        );
-        ids.push(r.rows[0].id);
-      }
-      for (const owner of [ids[1], ids[2]]) {
-        await legacy.pool.query(
-          `INSERT INTO device_port (device_id, port_label, connected_device_id, connected_port)
-           VALUES ($1, 'eth0', $2, 'Gi1/0/24')`,
-          [owner, ids[0]],
-        );
-      }
-      const sql = readFileSync(join(dir, '0070_device_port_peer_port_unique.sql'), 'utf8');
-      await expect(legacy.pool.query(sql)).rejects.toThrow(/SW-L cổng Gi1\/0\/24 ← SRV-L1\/eth0 .*SRV-L2\/eth0/);
-    } finally {
-      await legacy.drop();
-    }
-  }, TEST_TIMEOUT);
 });
-
-/** Thư mục tạm chứa mọi migration TRƯỚC 0070 — dựng đúng DB như lúc chưa có khoá mới. */
-async function legacyDirWithout0070(dir: string): Promise<string> {
-  const { mkdtempSync, readdirSync, copyFileSync } = await import('node:fs');
-  const { tmpdir } = await import('node:os');
-  const out = mkdtempSync(join(tmpdir(), 'ims-mig-'));
-  for (const name of readdirSync(dir)) {
-    if (/^\d{4}_.+\.sql$/.test(name) && name < '0070') copyFileSync(join(dir, name), join(out, name));
-  }
-  return out;
-}

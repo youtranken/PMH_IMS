@@ -39,7 +39,7 @@ export interface PortRow {
   /**
    * VLAN của cổng — `text`, không phải số: "trunk" là giá trị có thật và hay gặp nhất trên
    * cổng uplink. Ép kiểu số là ép bỏ trống ô cho cổng quan trọng nhất của con switch. Chỉ
-   * nhận số 1–4094 hoặc "trunk" (`portVlanOf`, CHECK 0301).
+   * nhận số 1–4094 hoặc "trunk" (`portVlanOf`, CHECK `device_port_vlan_check`).
    */
   vlan: string | null;
   note: string | null;

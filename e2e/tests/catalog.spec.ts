@@ -306,7 +306,7 @@ test.describe('Danh mục', () => {
   });
 
   /**
-   * Ba danh mục của migration 0028: Bộ phận, Nhà mạng, Dịch vụ/Port.
+   * Ba danh mục: Bộ phận, Nhà mạng, Dịch vụ/Port.
    *
    * Chúng ra đời vì cùng một lý do — ba ô đang gõ tay tự do, gõ mỗi nơi một kiểu ("P. Kế
    * toán" / "Phòng Kế toán" / "KT"), nên lọc ra thiếu và báo cáo cộng nhầm.

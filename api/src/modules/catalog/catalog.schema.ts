@@ -13,7 +13,7 @@ import {
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
- * Bảng danh mục — tạo bằng migration 0010. Chủ sở hữu: module `catalog` (AD-3).
+ * Bảng danh mục — migration 0012_site … 0019_catalog_history. Chủ sở hữu: module `catalog` (AD-3).
  * Module khác KHÔNG import file này; đi qua `CatalogApiService` (AD-2).
  */
 export const siteTable = pgTable('site', {
@@ -60,7 +60,7 @@ export const vendorTable = pgTable('vendor', {
 });
 
 /**
- * Ba danh mục của migration 0028 — cùng chủ, cùng nếp `active` (vô hiệu chứ không xóa).
+ * Ba danh mục bộ phận / nhà mạng / dịch vụ — cùng chủ, cùng nếp `active` (vô hiệu chứ không xóa).
  *
  * Chúng ra đời vì cùng một lý do: ba ô đang gõ tay tự do, gõ mỗi nơi một kiểu, nên lọc ra
  * thiếu và báo cáo cộng nhầm.
@@ -87,7 +87,7 @@ export const ispProviderTable = pgTable('isp_provider', {
 export const servicePortTable = pgTable('service_port', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: citext('name').notNull(),
-  /** 'tcp' | 'udp' | 'both' — CHECK ở tầng DB (0028). */
+  /** 'tcp' | 'udp' | 'both' — CHECK ở tầng DB. */
   protocol: text('protocol').notNull().default('tcp'),
   portFrom: integer('port_from').notNull(),
   portTo: integer('port_to').notNull(),

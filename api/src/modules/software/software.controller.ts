@@ -115,7 +115,7 @@ class RenewDto {
 }
 
 /**
- * Kỳ hạn + chi phí RIÊNG của một ghế (0027). Dùng chung cho lúc gán và lúc sửa: hai bản DTO
+ * Kỳ hạn + chi phí RIÊNG của một ghế. Dùng chung cho lúc gán và lúc sửa: hai bản DTO
  * riêng sẽ trôi khác nhau đúng vào lúc luật đổi.
  */
 class AssignmentTermsDto {
@@ -430,7 +430,7 @@ export class SoftwareController {
   }
 
   /**
-   * Sửa kỳ hạn / chi phí / hợp đồng / ghi chú của MỘT ghế (0027).
+   * Sửa kỳ hạn / chi phí / hợp đồng / ghi chú của MỘT ghế.
    *
    * Tách khỏi `PATCH :id` (sửa hồ sơ) vì đây là dữ liệu của một chỗ ngồi cụ thể: cùng một
    * license, ghế của Kế toán và ghế của Xưởng có hợp đồng và giá khác nhau.

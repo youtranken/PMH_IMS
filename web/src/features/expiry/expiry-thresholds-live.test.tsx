@@ -25,7 +25,7 @@ import type { Me } from '@/lib/me';
  *
  * ===== VÌ SAO CỔNG KHÁC KHÔNG BẮT ĐƯỢC =====
  *
- * `DEFAULT_EXPIRY_THRESHOLDS` = 7/30 = ĐÚNG giá trị seed của migration 0041. Mọi lượt chạy
+ * `DEFAULT_EXPIRY_THRESHOLDS` = 7/30 = ĐÚNG giá trị gieo sẵn trong `system_config`. Mọi lượt chạy
  * dev và E2E vì thế ở đúng cấu hình che lỗi — thiếu dep mà mọi cổng vẫn xanh.
  *
  * ===== BÀI NÀY HỎI GÌ =====

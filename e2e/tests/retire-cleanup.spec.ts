@@ -342,10 +342,10 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
  * `DeviceRetirementRegistry` chỉ có `ipam` (IP + rule NAT) và `software` (ghế license) đăng
  * ký, thì hai bảng sau không ai nhận:
  *
- *   · `device_port.connected_device_id` (0013) — cổng đấu chéo. `0013` ghi rõ một sợi dây chỉ
+ *   · `device_port.connected_device_id` — cổng đấu chéo. `0021_device_port.sql` ghi rõ một sợi dây chỉ
  *     tạo MỘT bản ghi, không có bản đối xứng, nên bản ghi trỏ tới máy bị thanh lý nằm trên
  *     hồ sơ của MÁY KHÁC — một máy vẫn đang chạy.
- *   · `isp_line.device_id` (0016) — đường truyền cắm vào thiết bị biên.
+ *   · `isp_line.device_id` — đường truyền cắm vào thiết bị biên.
  *
  * Khi đó thanh lý con router: IP được thu, rule NAT được gỡ, ghế license được trả — còn sơ đồ
  * đấu nối của con switch bên cạnh vẫn trỏ vào một máy đã ra khỏi công ty, và hồ sơ đường

@@ -37,7 +37,7 @@ import type { AuthedRequest, UserRole } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
 
 /**
- * SĐT và mã nhân viên (0031) — hai ô TÙY CHỌN, dùng chung cho cả tạo mới lẫn sửa hồ sơ.
+ * SĐT và mã nhân viên — hai ô TÙY CHỌN, dùng chung cho cả tạo mới lẫn sửa hồ sơ.
  *
  * Không bắt buộc vì hàng chục tài khoản đã tạo từ trước không có sẵn hai giá trị này; bắt
  * buộc ngay là khóa luôn màn Sửa cho tới khi có người đi điền đủ cho mọi người.

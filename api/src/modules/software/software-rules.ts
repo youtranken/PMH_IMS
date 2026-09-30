@@ -48,7 +48,7 @@ export function effectiveSoftwareStatus(
  *
  * Lượt quét thanh lý khi `end_date < today - grace`, tức từ ngày `end + grace + 1`. Hàm này
  * phải khớp đúng điều kiện ấy: màn hình đếm ngược tới đây, lệch một ngày là màn hứa sai.
- * `graceDays <= 0` nghĩa là tắt tự thanh lý (migration 0076).
+ * `graceDays <= 0` nghĩa là tắt tự thanh lý (Q-13).
  */
 export function autoRetireOn(
   status: SoftwareStatus,
@@ -113,7 +113,7 @@ export function requiresEndDate(
 }
 
 /**
- * Kỳ hạn và chi phí RIÊNG của một chỗ ngồi (bản ghi gán) — migration 0027.
+ * Kỳ hạn và chi phí RIÊNG của một chỗ ngồi (bản ghi gán).
  *
  * Vì sao không nằm ở hồ sơ: một license 10 ghế thường không mua một lần. Phòng Kế toán mua
  * 3 ghế theo hợp đồng HD-2026-014 giá 3,5tr/ghế kỳ 2026, Xưởng mua thêm 2 ghế hợp đồng khác

@@ -1,7 +1,7 @@
 import { jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 /**
- * Bảng `approval` + `approval_history` — migration 0023. Chủ sở hữu: `approvals` (AD-3).
+ * Bảng `approval` + `approval_history` — migration 0032_approval.sql. Chủ sở hữu: `approvals` (AD-3).
  *
  * `state` là `text` TRẦN, không enum, không CHECK: từ vựng đăng ký theo LOẠI (AD-6). Đổi lại,
  * `ApprovalService.transition()` là đường duy nhất ghi cột này.
@@ -20,10 +20,10 @@ export const approvalTable = pgTable('approval', {
   decisionNote: text('decision_note'),
   /** NGUỒN SỰ THẬT về hiệu lực (AD-6) — `state` chỉ nói "đã có người duyệt". */
   expiresAt: timestamp('expires_at', { withTimezone: true }),
-  /** Phiên đăng nhập đã GỬI yêu cầu (0170) — chỉ để tra vết, không gác quyền nào. */
+  /** Phiên đăng nhập đã GỬI yêu cầu — chỉ để tra vết, không gác quyền nào. */
   requesterSessionId: uuid('requester_session_id'),
   /**
-   * Phiên đang GIỮ grant (0240, Q-15): phiên đã dùng grant lần đầu. NULL = chưa ai dùng. KHÔNG
+   * Phiên đang GIỮ grant (Q-15): phiên đã dùng grant lần đầu. NULL = chưa ai dùng. KHÔNG
    * trả ra ngoài trong `ApprovalRecord` — id phiên không đi ra màn hình.
    */
   claimedSessionId: uuid('claimed_session_id'),

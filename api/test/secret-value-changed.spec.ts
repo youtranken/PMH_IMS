@@ -1,6 +1,3 @@
-import { mkdtempSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { runMigrations } from '../src/database/migration-runner';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
@@ -17,7 +14,6 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  */
 
 const TEST_TIMEOUT = 120_000;
-const MIGRATION = '0150_secret_value_changed.sql';
 
 describe('Két: mốc đổi giá trị (value_changed_at/by)', () => {
   let scratch: ScratchDb;
@@ -119,30 +115,4 @@ describe('Két: mốc đổi giá trị (value_changed_at/by)', () => {
     expect(Date.now() - after.valueChangedAt.getTime()).toBeLessThan(60_000);
     expect(after.valueChangedBy).toBe('c@qa.test');
   });
-
-  it('migration điền mốc cho ngăn cũ từ updated_at + created_by', async () => {
-    const legacy = await createScratchDb('ims_secret_value_changed_legacy');
-    try {
-      const dir = migrationsDir();
-      const out = mkdtempSync(join(tmpdir(), 'ims-mig-'));
-      for (const name of readdirSync(dir).filter((f) => f.endsWith('.sql') && f < MIGRATION)) {
-        copyFileSync(join(dir, name), join(out, name));
-      }
-      await runMigrations(legacy.pool, out, { log: () => undefined });
-      await legacy.pool.query(
-        `INSERT INTO secret (owner_type, owner_id, kind, label, value_ct, value_iv, value_tag,
-                             dek_wrapped, key_version, created_by, updated_at)
-         VALUES ('device', gen_random_uuid(), 'password', 'E2E cũ', '\\x00', '\\x00', '\\x00',
-                 '\\x00', 1, 'cu@qa.test', '2025-01-02T03:04:05Z')`,
-      );
-      await legacy.pool.query(readFileSync(join(dir, MIGRATION), 'utf8'));
-      const { rows } = await legacy.pool.query<{ at: Date; by: string }>(
-        `SELECT value_changed_at AS at, value_changed_by AS by FROM secret WHERE label = 'E2E cũ'`,
-      );
-      expect(rows[0].at.toISOString()).toBe('2025-01-02T03:04:05.000Z');
-      expect(rows[0].by).toBe('cu@qa.test');
-    } finally {
-      await legacy.drop();
-    }
-  }, TEST_TIMEOUT);
 });

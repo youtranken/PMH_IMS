@@ -293,7 +293,7 @@ export function IspDetail({ me }: { me: Me }) {
         items={[
           { key: "profile", label: t("isp.tabProfile") },
           /*
-            Két sắt cho đường truyền (0036).
+            Két sắt cho đường truyền.
             Mật khẩu PPPoE và tài khoản quản trị modem nhà mạng trước đây không có chỗ đứng —
             `file.owner_type` đã nhận `isp` từ lâu mà `secret.owner_type` thì chưa, nên hợp
             đồng PDF đính vào được còn mật khẩu thì chảy vào ô Ghi chú, chỗ không mã hóa.

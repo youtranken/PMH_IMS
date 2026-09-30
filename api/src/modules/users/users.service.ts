@@ -58,7 +58,7 @@ export class UsersService {
      * Gấp dấu TÍNH TẠI CHỖ (B-01) — `imsNormLike`, không cột sinh.
      *
      * Bảng này là nhân sự IT nội bộ, luôn dưới vài trăm dòng, nên nó cố ý đứng ngoài bộ cột
-     * sinh + chỉ mục GIN của migration 0052. Nhưng "không cần chỉ mục" và "không cần gấp dấu"
+     * sinh + chỉ mục GIN của các bảng nghiệp vụ. Nhưng "không cần chỉ mục" và "không cần gấp dấu"
      * là HAI chuyện khác nhau: `full_name` là họ tên tiếng Việt, tức đúng chỗ dấu làm hỏng việc
      * tìm nhất. Để nguyên `ILIKE` thì gõ `nguyen thi` ở màn Tài khoản ra bảng rỗng, trong khi
      * sáu màn kia tìm được.
@@ -154,7 +154,7 @@ export class UsersService {
     return strip(toCredentials(rows[0]));
   }
 
-  /** Sửa hồ sơ (0031). Email KHÔNG nằm ở đây — xem chú thích ở `accounts.service.ts`. */
+  /** Sửa hồ sơ. Email KHÔNG nằm ở đây — xem chú thích ở `accounts.service.ts`. */
   async updateProfileWithin(
     tx: Tx,
     userId: string,
@@ -554,7 +554,7 @@ function userOrderBy(sort: SortQuery<UserSortKey>): SQL[] {
     lastLoginAt: usersTable.lastLoginAt,
   }[sort.key];
   const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  // Chốt hạ bằng `email` (duy nhất, UNIQUE ở migration 0002): không cột nào trong whitelist ở
+  // Chốt hạ bằng `email` (duy nhất, `users_email_key`): không cột nào trong whitelist ở
   // trên là duy nhất, thiếu chốt hạ thì hai người cùng vai/trạng thái có thể đổi chỗ nhau giữa
   // hai lần tải — sang trang 2 lại thấy đúng người vừa xem ở trang 1, hoặc mất hẳn một dòng.
   return [primary, asc(usersTable.email)];

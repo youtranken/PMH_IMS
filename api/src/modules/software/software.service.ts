@@ -744,7 +744,7 @@ export const SOFTWARE_SORT_KEYS = [
 export type SoftwareSortKey = (typeof SOFTWARE_SORT_KEYS)[number];
 export const SOFTWARE_SORT_DEFAULT: SortQuery<SoftwareSortKey> = { key: 'code', dir: 'asc' };
 
-/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058). */
+/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này. */
 export function softwareOrderBy(sort: SortQuery<SoftwareSortKey>): SQL[] {
   const column = {
     code: softwareTable.code,
@@ -755,7 +755,7 @@ export function softwareOrderBy(sort: SortQuery<SoftwareSortKey>): SQL[] {
     endDate: softwareTable.endDate,
     status: softwareTable.status,
   }[sort.key];
-  // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG, nếu không chỉ mục (0058) vô dụng
+  // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG, nếu không chỉ mục sắp xếp vô dụng
   // ở đúng một nửa số lượt sắp xếp.
   return orderByStable(sort.dir, column, softwareTable.code);
 }
@@ -764,7 +764,7 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
   if (term) {
-    // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` (0052) và đã gấp dấu.
+    // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` và đã gấp dấu.
     // Tìm phải gấp dấu — B-01.
     // Website của SSL/tên miền không nằm trong `search_norm`: cột sinh không gọi được hàm
     // STABLE như `array_to_string`. Bảng hồ sơ phần mềm cỡ vài trăm dòng — quét tại chỗ được.

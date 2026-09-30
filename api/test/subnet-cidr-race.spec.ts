@@ -29,7 +29,7 @@ import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb, waitForLock 
  * transaction mở giữa chừng để chèn transaction thứ hai vào đúng khe hở. Chỉ hai kết nối thật,
  * mỗi bên một transaction mở, mới dựng lại được đúng khe hở đó.
  *
- * Bài này khóa HỢP ĐỒNG KHÓA (migration 0040 + `FOR UPDATE` trong `update()`) chứ không đi
+ * Bài này khóa HỢP ĐỒNG KHÓA (`FOR SHARE` trong trigger `ip_address_within_subnet` + `FOR UPDATE` trong `update()`) chứ không đi
  * qua service: dựng cả `SubnetService` cần audit + catalog + Nest container, trong khi thứ
  * đang kiểm là hành vi của Postgres. Đổi lại, hai câu lệnh ở đây phải KHỚP NGUYÊN VĂN thứ
  * service chạy — nếu ai đó bỏ `FOR UPDATE` khỏi service thì bài này vẫn xanh mà lỗi quay lại.

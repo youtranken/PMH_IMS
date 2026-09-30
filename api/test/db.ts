@@ -193,7 +193,7 @@ export async function waitForLock(pool: Pool, timeoutMs = 10_000): Promise<void>
 
 /**
  * Gieo nhà mạng vào danh mục, trả tên → id. `isp_line.provider_id` là khoá ngoại bắt buộc
- * (0074), nên mọi bài gieo đường truyền đều cần bước này trước.
+ * (Q-11), nên mọi bài gieo đường truyền đều cần bước này trước.
  */
 export async function seedIspProviders(
   pool: Pool,

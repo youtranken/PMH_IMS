@@ -147,7 +147,7 @@ export class CatalogService {
       departments,
       ispProviders,
       // `protocol` ở DB là `text` nên drizzle trả `string`; kiểu công khai hẹp hơn
-      // ('tcp' | 'udp' | 'both'). CHECK của migration 0028 mới là chỗ giữ lời hứa đó.
+      // ('tcp' | 'udp' | 'both'). CHECK `service_port_protocol_check` mới là chỗ giữ lời hứa đó.
       servicePorts: servicePorts as ServicePortRecord[],
     };
   }
@@ -170,7 +170,7 @@ export class CatalogService {
      * Danh mục gấp dấu bằng `imsNormLike` — TÍNH TẠI CHỖ, không qua cột sinh.
      *
      * Bảy bảng danh mục đều là bảng tra cứu vài chục tới vài trăm dòng. Dựng cột sinh
-     * `search_norm` + chỉ mục GIN cho từng bảng (như năm bảng nghiệp vụ ở migration 0052) là
+     * `search_norm` + chỉ mục GIN cho từng bảng (như năm bảng nghiệp vụ) là
      * trả giá lưu trữ và giá ghi mà không mua được gì: ở cỡ ấy quét tuần tự đã là chuyện
      * không đáng bàn. Cái CẦN chữa ở đây là sự ĐÚNG ĐẮN — `ILIKE` không gấp dấu nên gõ
      * `tru so` không ra `Trụ sở` — chứ không phải tốc độ (B-01).
@@ -492,7 +492,7 @@ export class CatalogService {
   }
 
   private translateWriteError(error: unknown, entity: CatalogEntity): unknown {
-    // Khoá ngoại kép của 0067 — trọng tài duy nhất, vì `catalog` không được đếm bảng `device`.
+    // Khoá ngoại kép `device_cabinet_same_site_fkey` — trọng tài duy nhất, vì `catalog` không được đếm bảng `device`.
     if (pgConstraint(error) === 'device_cabinet_same_site_fkey') {
       return new ConflictException({
         code: 'CABINET_HAS_DEVICES',

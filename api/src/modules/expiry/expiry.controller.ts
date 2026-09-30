@@ -128,7 +128,7 @@ export class ExpiryController {
   }
 
   /**
-   * Hai ngưỡng "sắp hết hạn" đang hiệu lực (AD-11, 0041).
+   * Hai ngưỡng "sắp hết hạn" đang hiệu lực (AD-11).
    *
    * Có endpoint riêng vì `ExpiryBadge` và `WarrantyTimeline` xuất hiện ở MỌI màn — thiết bị,
    * phần mềm, tài khoản dịch vụ, đường truyền, bảng điều khiển — chứ không riêng màn Sắp hết

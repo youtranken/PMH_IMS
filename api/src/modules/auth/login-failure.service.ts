@@ -11,8 +11,7 @@ import { loginFailureTable } from './login-failure.schema';
 /**
  * Khoá đăng nhập theo CẶP (người dùng, IP) — NFR-01.
  *
- * Vì sao không khoá theo tài khoản: xem khối chú thích đầu
- * `0045_login_failure_per_ip.sql`. Tóm tắt — khoá theo tài khoản là một cái nút mà người lạ
+ * Vì sao không khoá theo tài khoản (bảng ở `0008_login_failure.sql`): khoá theo tài khoản là một cái nút mà người lạ
  * bấm được, và người đáng bị khoá nhất là SA đúng lúc đang có sự cố.
  *
  * Luật (ngưỡng, "khoá hết hạn thì đếm lại từ 0", `justLocked`) KHÔNG viết lại ở đây: vẫn là

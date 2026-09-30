@@ -24,9 +24,9 @@ export interface SubnetRecord {
   cidr: string;
   siteId: string | null;
   siteCode: string | null;
-  /** Số VLAN 802.1Q (0029) — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
+  /** Số VLAN 802.1Q — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
   vlan: number | null;
-  /** Gateway của dải (0035) — câu hỏi đầu tiên khi khai IP tĩnh cho một cái máy. */
+  /** Gateway của dải — câu hỏi đầu tiên khi khai IP tĩnh cho một cái máy. */
   gateway: string | null;
   description: string | null;
   createdBy: string;
@@ -35,7 +35,7 @@ export interface SubnetRecord {
   /**
    * Dải đã VÔ HIỆU HÓA hay chưa — `null` là đang dùng.
    *
-   * Ba cột này (migration 0020) PHẢI ra khỏi service. Giấu chúng đi và để `list()` lọc thẳng
+   * Ba cột này PHẢI ra khỏi service. Giấu chúng đi và để `list()` lọc thẳng
    * `voidedAt IS NULL` thì một dải vừa vô hiệu hóa là BIẾN MẤT khỏi màn hình. Người dùng đọc
    * đúng cái đó là "đã xóa", và họ không sai — không còn chỗ nào trên giao diện nói nó tồn
    * tại, trong khi mấy chục máy vẫn đang cắm IP tĩnh thuộc dải ấy.
@@ -264,7 +264,7 @@ export class SubnetService {
            * hồ sơ IP nằm ngoài dải của chính nó, không lỗi, không cảnh báo, trigger không bao
            * giờ chạy lại trên hàng đó.
            *
-           * `FOR UPDATE` ở đây bắt cặp với `FOR SHARE` trong trigger (migration 0040): hai lượt
+           * `FOR UPDATE` ở đây bắt cặp với `FOR SHARE` trong trigger `ip_address_within_subnet`: hai lượt
            * loại trừ nhau nên thứ tự nào cũng đúng — hoặc lượt khai IP bị dải mới từ chối, hoặc
            * lượt đổi dải đếm được IP vừa khai và từ chối.
            */
@@ -542,7 +542,7 @@ export class SubnetService {
 
   /**
    * Gateway phải nằm TRONG chính dải của nó — kiểm ở đây để báo một câu tiếng Việt, và CHECK
-   * ở tầng DB (`subnet_gateway_within_check`, 0035) là hàng rào cuối cho mọi đường vào khác.
+   * ở tầng DB (`subnet_gateway_within_check`) là hàng rào cuối cho mọi đường vào khác.
    *
    * Ô để trống là một ý định rõ ràng ("dải này không có gateway", vd dải point-to-point), nên
    * chuỗi rỗng → `null` chứ không phải lỗi.
@@ -646,7 +646,7 @@ export class SubnetService {
    * là liên kết MỀM (`linkIp()` để null khi rule được khai trước lúc địa chỉ có hồ sơ IPAM),
    * nên khớp theo cột đó sẽ bỏ sót đúng những rule nguy hiểm nhất — những rule không ai nối
    * vào sổ. Thứ router THẬT SỰ chuyển gói tới là `internal_ip`, và `nat_rule_internal_host_idx`
-   * (0042) đánh chỉ mục đúng biểu thức `host(internal_ip)` mà câu này dùng.
+   * đánh chỉ mục đúng biểu thức `host(internal_ip)` mà câu này dùng.
    *
    * Nêu ĐỊA CHỈ chứ không chỉ số lượng: một dải /24 có 254 ô, câu "còn 3 rule" là bắt người
    * trực đi mò cả sổ. Cắt ở 5 để thông điệp còn đọc được.

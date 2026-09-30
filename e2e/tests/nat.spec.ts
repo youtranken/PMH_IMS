@@ -38,7 +38,7 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
   });
-  // 'Firewall' mang cờ Router/Firewall (0088) — ô Router của form NAT chỉ liệt kê loại có cờ.
+  // 'Firewall' mang cờ Router/Firewall (Q-14) — ô Router của form NAT chỉ liệt kê loại có cờ.
   const type = catalog.deviceTypes.find((t) => t.name === 'Firewall')!;
 
   const routerCode = `RT-E2E-NAT-${stamp}`;
@@ -148,7 +148,7 @@ test.describe('Sổ NAT', () => {
   });
 
   /**
-   * Bảng dịch vụ/port nhỏ ngay trong hộp (0028).
+   * Bảng dịch vụ/port nhỏ ngay trong hộp.
    *
    * Một dòng NAT ghi "5001" thì sáu tháng sau không ai biết nó là gì và không ai dám đóng.
    * Chọn "OpenVPN" thì port VÀ giao thức tự điền — đó là toàn bộ lý do danh mục này tồn tại.

@@ -17,7 +17,7 @@ import { Pool } from 'pg';
  *
  * `rolsuper` là câu hiển nhiên. Câu thứ hai ít hiển nhiên hơn và cũng nguy hiểm ngang:
  * CHỦ SỞ HỮU một bảng làm được `ALTER TABLE audit_log DISABLE TRIGGER ALL` — tức tháo được
- * chính cái lưới mà `0005` dựng lên — rồi `DELETE` thoải mái. Không cần superuser.
+ * chính cái lưới trigger chỉ-thêm — rồi `DELETE` thoải mái. Không cần superuser.
  *
  * Bỏ sót câu thứ hai thì "đã tách role" trở thành một câu nói đúng về giấy tờ mà sai về
  * thực tế: `ims_app` không phải superuser, nhưng nếu nó sở hữu bảng thì chẳng có gì đổi.
@@ -64,7 +64,7 @@ export function appRoleVerdict(facts: AppRoleFacts): AppRoleVerdict {
       reason:
         `Ứng dụng đang kết nối DB bằng SUPERUSER "${facts.currentUser}". Superuser bỏ qua ` +
         'toàn bộ phân quyền, nên sổ nhật ký chỉ-thêm (NFR-03) không có hàng rào nào ở tầng ' +
-        'DB. Đổi DATABASE_URL sang role ims_app (xem 0048_app_role_split.sql).',
+        'DB. Đổi DATABASE_URL sang role ims_app (xem 0001_app_role.sql).',
     };
   }
   if (facts.ownsAuditLog) {
@@ -73,7 +73,7 @@ export function appRoleVerdict(facts: AppRoleFacts): AppRoleVerdict {
       reason:
         `Ứng dụng đang kết nối DB bằng CHỦ SỞ HỮU bảng audit_log ("${facts.currentUser}"). ` +
         'Chủ sở hữu tháo được trigger append-only bằng một câu ALTER TABLE, nên REVOKE không ' +
-        'còn nghĩa gì. Đổi DATABASE_URL sang role ims_app (xem 0048_app_role_split.sql).',
+        'còn nghĩa gì. Đổi DATABASE_URL sang role ims_app (xem 0001_app_role.sql).',
     };
   }
   if (facts.inheritsOwner) {
@@ -83,7 +83,7 @@ export function appRoleVerdict(facts: AppRoleFacts): AppRoleVerdict {
         `Role "${facts.currentUser}" là THÀNH VIÊN của role sở hữu bảng audit_log. Nó không ` +
         'sở hữu bảng, nhưng một câu SET ROLE là có trọn quyền chủ sở hữu — tháo được trigger ' +
         'append-only, và REVOKE không còn nghĩa gì. Gỡ bằng: REVOKE <chủ sở hữu> FROM ' +
-        `${facts.currentUser}; (xem 0048_app_role_split.sql).`,
+        `${facts.currentUser}; (xem 0001_app_role.sql).`,
     };
   }
   return { ok: true, reason: null };

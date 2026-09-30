@@ -58,7 +58,7 @@ class CatalogBodyDto {
   @IsOptional() @IsString() @Length(0, 40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
 
-  // Ba danh mục của 0028. Một DTO chung cho mọi loại, đúng nếp sẵn có: `toRow` phía service
+  // Ba danh mục bộ phận / nhà mạng / dịch vụ. Một DTO chung cho mọi loại, đúng nếp sẵn có: `toRow` phía service
   // mới là chỗ quyết định loại nào nhận trường nào — DTO chỉ chặn rác và giới hạn độ dài.
   @IsOptional() @IsString() @Length(0, 40) hotline?: string;
 

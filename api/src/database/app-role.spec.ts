@@ -56,7 +56,7 @@ describe('appRoleVerdict — cổng khởi động D-01', () => {
       const reason = appRoleVerdict(facts).reason as string;
       expect(reason).toContain(facts.currentUser);
       expect(reason).toContain('DATABASE_URL');
-      expect(reason).toContain('0048_app_role_split.sql');
+      expect(reason).toContain('0001_app_role.sql');
     }
   });
 });

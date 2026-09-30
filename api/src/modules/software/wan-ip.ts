@@ -3,7 +3,7 @@ const OCTET = '(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
 const WAN_IP = new RegExp(`^${OCTET}(?:\\.${OCTET}){3}(?:/(3[0-2]|[12]?\\d))?$`);
 
 /**
- * IP WAN của đường truyền: một IPv4 hoặc một khối IPv4/prefix (Q-04, cột inet — 0300).
+ * IP WAN của đường truyền: một IPv4 hoặc một khối IPv4/prefix (Q-04, cột inet).
  *
  * Cùng luật với form web (`isIpv4OrCidr`), kiểm lại ở đây vì cột inet ném 22P02 = 500 trắng.
  * "/32" bị bỏ vì Postgres in inet /32 thành địa chỉ trần: giữ thì lịch sử ghi một lần "đổi"

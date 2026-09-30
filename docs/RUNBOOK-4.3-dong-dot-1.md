@@ -334,6 +334,7 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 | Nâng cấp lên bản mới | `git fetch --tags && git checkout <tag-mới> && docker compose up -d --build` (backup tay trước) |
 | Quay lại bản trước | `git checkout <tag-cũ> && docker compose up -d --build`. Migration chỉ tiến: nếu bản mới đã thêm migration thì bản cũ vẫn chạy trên schema mới — kiểm log api; hỏng thì khôi phục theo **G** từ bản sao lưu trước nâng cấp |
 | Nâng cấp từ bản **trước DB-03** (migrate còn chạy bằng superuser) | Làm **một lần**, xem mục **H1** bên dưới |
+| DB dựng **trước lượt gộp migration** (Q-17) | Chỉ có ở máy dev/thử nghiệm: không nâng cấp được, phải dựng lại DB trắng (xem **H2**). Cài mới theo **B** không bị ảnh hưởng. Cũng vì thế, không quay về một tag trước lượt gộp trên DB đã dựng từ bộ gộp |
 | Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
 | Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
 
@@ -364,6 +365,15 @@ dump (mục **G**; `ops/restore-drill.sh` tự làm), và sau khi lỡ quay về
 nâng lên lại: bản cũ migrate bằng superuser nên bảng nó tạo ra sẽ thuộc superuser.
 
 Ghi `MIGRATION_DB_PASSWORD` mới vào bản in `.env` trong phong bì thứ ba (mục **C**).
+
+### H2. DB dựng trước lượt gộp migration (Q-17) — chỉ máy dev
+
+96 file migration cũ đã được gộp thành 34 file theo bảng. DB nào dựng từ bộ cũ có journal
+`_migrations` mang tên file không còn tồn tại; service `migrate` dừng ngay với câu "DB này dựng từ
+bộ migration trước lượt gộp migration (Q-17)…" và không áp gì. Không có đường nâng cấp: DB đó chỉ
+có dữ liệu thử, nên xoá volume postgres rồi dựng lại (`docker compose down` + `docker volume rm
+<project>_pgdata`, rồi làm lại mục **B** từ đầu, gồm cả **B1** tạo SA). Máy prod cài sau lượt gộp
+không bao giờ gặp mục này.
 
 **Không bao giờ chạy trên máy prod:** `ops/ci-local.sh`, `ops/seed-demo.sql`,
 `ops/unseed-demo.sql`, `api/scripts/reset-e2e.mjs`, hay các file `docker-compose.override.*.yml`.

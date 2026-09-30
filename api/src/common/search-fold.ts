@@ -13,7 +13,7 @@
  * ===== HAI BẢN ANH EM, KHÔNG IMPORT ĐƯỢC NHAU =====
  *
  * Cùng phép gấp dấu này còn phải sống ở `web/src/lib/search-fold.ts` và ở hàm `ims_norm(text)`
- * trong Postgres (migration 0052). `api/`, `web/` là hai dự án npm độc lập và DB là thế giới
+ * trong Postgres (`0003_search_norm.sql`). `api/`, `web/` là hai dự án npm độc lập và DB là thế giới
  * thứ ba — không có đường import nào bắc qua. Thứ dùng chung được là DỮ LIỆU:
  * `ops/search-fold-cases.json`, và ba bộ kiểm cùng đọc nó. Xem `search-fold.spec.ts`.
  *

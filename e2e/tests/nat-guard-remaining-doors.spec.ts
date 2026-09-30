@@ -34,7 +34,7 @@ import {
  *    `restore` chỉ đụng `voided_at`. Danh sách cột đó là một BỘ LỌC, nên trigger không bao giờ
  *    chạy trên đường này. Ghép với hàng rào đổi dải (chỉ đếm IP đang sống), ba cú bấm bình
  *    thường có thể để lại một hàng nằm ngoài dải của chính nó — đúng thứ
- *    `0040_subnet_cidr_lock.sql` chặn, mà KHÔNG cần cuộc đua nào.
+ *    khoá `FOR SHARE` trong `ip_address_within_subnet` chặn, mà KHÔNG cần cuộc đua nào.
  *
  * ===== MỖI CỬA ĐI KÈM MỘT VẾ ĐỐI CHỨNG =====
  *

@@ -13,7 +13,7 @@ export type CatalogEntity = (typeof CATALOG_ENTITIES)[number];
 /**
  * Loại nhập được từ file Excel — khớp `IMPORTABLE_ENTITIES` phía API.
  *
- * Ba danh mục của 0028 chỉ vài chục dòng, khai tay trong hai phút; kéo chúng vào file mẫu là
+ * Ba danh mục bộ phận / nhà mạng / dịch vụ chỉ vài chục dòng, khai tay trong hai phút; kéo chúng vào file mẫu là
  * thêm ba sheet mà không ai dùng.
  */
 export const IMPORTABLE_ENTITIES = ['site', 'cabinet', 'device_type', 'vendor'] as const;
@@ -55,7 +55,7 @@ export interface VendorRow {
   active: boolean;
 }
 
-/** Bộ phận / phòng ban (0028) — nguồn gợi ý cho mọi ô "ai đang dùng". */
+/** Bộ phận / phòng ban — nguồn gợi ý cho mọi ô "ai đang dùng". */
 export interface DepartmentRow {
   id: string;
   name: string;
@@ -63,7 +63,7 @@ export interface DepartmentRow {
   active: boolean;
 }
 
-/** Nhà mạng (0028). */
+/** Nhà mạng. */
 export interface IspProviderRow {
   id: string;
   name: string;
@@ -75,7 +75,7 @@ export interface IspProviderRow {
 export const SERVICE_PROTOCOLS = ['tcp', 'udp', 'both'] as const;
 export type ServiceProtocol = (typeof SERVICE_PROTOCOLS)[number];
 
-/** Dịch vụ / port (0028) — khai một lần rồi chọn lại ở sổ NAT. */
+/** Dịch vụ / port — khai một lần rồi chọn lại ở sổ NAT. */
 export interface ServicePortRow {
   id: string;
   name: string;

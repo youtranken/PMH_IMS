@@ -24,8 +24,9 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   4. Tick ô.
 - Gom theo **cụm**, mỗi cụm một commit. Cuối mỗi cụm chạy `bash ops/ci-local.sh --e2e`. Sau khi hết
   P0, chạy `/code-review high`.
-- **Không sửa file migration đã có (0000–0058), kể cả chú thích.** Checksum tính trên cả file, đổi
-  một ký tự là API từ chối khởi động. Thay đổi schema luôn đi bằng file mới (`0059_…`, `0060_…`).
+- **Không sửa file migration đã có, kể cả chú thích.** Checksum tính trên cả file, đổi một ký tự là
+  API từ chối khởi động. Thay đổi schema luôn đi bằng file mới đánh số sau `0033` (bộ đã gộp theo
+  bảng, Q-17).
 
 ## Lộ trình tổng
 
@@ -308,7 +309,10 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 ## 3. Database
 
 Kết luận của đợt rà migration: chuỗi 0000–0058 đã được **chạy thật** trên Postgres 17 trắng.
-Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squash**; gắn tag `v1.0-schema` lúc go-live.
+Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. Khi đó chốt "không squash"; **quyết định này đã
+đổi** (Q-17, 30/09/2026): 96 file được gộp thành 34 file theo bảng, lược đồ cuối trùng hệt (so
+`pg_dump` + catalog, cả luồng superuser lẫn `ims_owner`). DB dev dựng trước lượt gộp phải dựng lại.
+Gắn tag `v1.0-schema` lúc go-live.
 
 ### P0
 
@@ -341,7 +345,7 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 - Index mới trên bảng có dữ liệu phải dùng `CREATE INDEX CONCURRENTLY` trong file có dòng đầu
   `-- ims:no-transaction`.
-- `ALTER DEFAULT PRIVILEGES` (0048) cấp sẵn UPDATE/DELETE cho `ims_app` trên **mọi bảng mới**. Bảng
+- `ALTER DEFAULT PRIVILEGES` (`0001_app_role.sql`) cấp sẵn UPDATE/DELETE cho `ims_app` trên **mọi bảng mới**. Bảng
   chỉ-thêm mới phải tự REVOKE trong cùng file. Bài kiểm động hiện chỉ bắt tên `%_history`.
 - `ims_norm` bọc `unaccent`: nâng major Postgres thì phải tính lại các cột `search_norm`.
 

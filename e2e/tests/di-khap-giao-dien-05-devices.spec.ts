@@ -80,14 +80,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
   test.beforeEach(() => {
     resetUsers();
     resetDevices();
-    // Loại thiết bị là danh mục CHUNG do migration 0011 gieo, nhưng site/tủ/NCC thì các bài
+    // Loại thiết bị là danh mục CHUNG do migration gieo sẵn, nhưng site/tủ/NCC thì các bài
     // khác tự dựng bằng tiền tố `E2E-`. Không dọn thì tập hợp lựa chọn của ô lọc phình ra
     // theo lần chạy trước và bài này đỏ vì lý do chẳng liên quan.
     resetCatalog();
   });
 
   /**
-   * 12 loại thiết bị của migration `0011_seed_device_type.sql` — danh mục CHUNG của mọi công
+   * 12 loại thiết bị gieo ở migration `0014_device_type.sql` — danh mục CHUNG của mọi công
    * ty, nên nó là hằng số kiểm được. Site · tủ · nhà cung cấp thì KHÔNG: đó là dữ liệu riêng
    * của PMH, nhập qua màn Danh mục, nên bài này chỉ chốt mục "Tất cả …" đứng đầu.
    */
@@ -176,7 +176,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     const res = await page.request.get('/api/v1/catalog');
     const lists = (await res.json()) as { deviceTypes: { id: string; name: string }[] };
     const found = lists.deviceTypes.find((type) => type.name === 'Switch');
-    expect(found, 'danh mục gốc phải có loại "Switch" (migration 0011 gieo)').toBeTruthy();
+    expect(found, 'danh mục gốc phải có loại "Switch" (migration gieo sẵn)').toBeTruthy();
     return found!.id;
   }
 
@@ -308,7 +308,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
     expect(
       [...kind.slice(1)].sort(),
-      'Ô lọc Loại phải khớp ĐÚNG 12 loại do migration 0011 gieo — thừa một loại nghĩa là danh mục E2E chưa được dọn, thiếu một loại nghĩa là seed đã đổi',
+      'Ô lọc Loại phải khớp ĐÚNG 12 loại do migration gieo sẵn — thừa một loại nghĩa là danh mục E2E chưa được dọn, thiếu một loại nghĩa là seed đã đổi',
     ).toEqual([...BASE_DEVICE_TYPES].sort());
 
     // Site và tủ là dữ liệu riêng của PMH (nhập qua màn Danh mục), nên chỉ chốt được mục đầu.

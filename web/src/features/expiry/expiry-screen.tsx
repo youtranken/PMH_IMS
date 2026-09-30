@@ -358,7 +358,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
      * vẫn tô theo 7: ô "Gấp" ghi 6, bấm vào ra 6 dòng, chỉ 2 dòng đỏ. Đúng cảnh mà khối chú
      * thích ở `ui/expiry-badge.tsx:38-40` sinh ra để dẹp.
      *
-     * Không bài kiểm nào bắt được vì 7/30 cũng là seed của migration 0041 — mọi lượt chạy
+     * Không bài kiểm nào bắt được vì 7/30 cũng là giá trị gieo sẵn trong `system_config` — mọi lượt chạy
      * dev/E2E đều ở đúng cấu hình che lỗi.
      */
     [t, kindLabel, nguong],

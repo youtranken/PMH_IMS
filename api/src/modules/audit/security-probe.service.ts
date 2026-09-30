@@ -96,7 +96,7 @@ export class SecurityProbeService {
       /*
        * BA THAM SỐ, BA CÁCH HỎNG KHÁC NHAU KHI BẰNG 0.
        *
-       * `threshold <= 0` là công tắc TẮT có chủ ý — migration 0046 khai đúng như vậy.
+       * `threshold <= 0` là công tắc TẮT có chủ ý — mô tả của khoá trong `system_config` nói đúng như vậy.
        * Hai cái còn lại thì không, và hỏng ngược nhau:
        *   · `windowMinutes <= 0` → `since` = hiện tại → `recent` luôn 0 → hàng rào tắt TRONG IM
        *     LẶNG, trông y hệt "chưa ai dò". Nguy hiểm hơn hẳn công tắc tắt tường minh.

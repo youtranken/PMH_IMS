@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, searchAndWaitForFilter, uniqueStamp } from './helpers';
 
 /**
- * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh (migration 0031).
+ * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh.
  *
  * Vì sao cần: máy hỏng lúc 2 giờ sáng thì người trực phải GỌI được người giữ máy — email
  * không ai đọc lúc đang chạy sự cố. Mã nhân viên là khoá đối chiếu sang bảng lương.

@@ -132,7 +132,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
     /*
      * Chặn mà KHÔNG kêu là nửa hàng rào, và chỉ làm-chậm cũng vậy.
      *
-     * `SecurityProbeService` (0046) đã có sẵn bộ đếm lẫn đường gửi thư; việc của A-02 là ĐĂNG
+     * `SecurityProbeService` đã có sẵn bộ đếm lẫn đường gửi thư; việc của A-02 là ĐĂNG
      * KÝ cửa mới vào `PROBE_ACTIONS` — đếm CHUNG với lượt gõ sai mã ở cửa két, vì tách hai bộ
      * đếm thì kẻ khôn ngoan chỉ cần xen kẽ hai kiểu là không chạm ngưỡng nào cả.
      *

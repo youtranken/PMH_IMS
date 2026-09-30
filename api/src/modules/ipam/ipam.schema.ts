@@ -21,7 +21,7 @@ const cidr = customType<{ data: string }>({ dataType: () => 'cidr' });
 const inet = customType<{ data: string }>({ dataType: () => 'inet' });
 
 /**
- * Bảng `subnet` — migration 0020. Chủ sở hữu: module `ipam` (AD-3).
+ * Bảng `subnet` — migration 0029_subnet.sql. Chủ sở hữu: module `ipam` (AD-3).
  * Module khác đọc qua `IpamApiService`, không import file này (AD-2).
  */
 export const subnetTable = pgTable('subnet', {
@@ -29,9 +29,9 @@ export const subnetTable = pgTable('subnet', {
   name: text('name').notNull(),
   cidr: cidr('cidr').notNull(),
   siteId: uuid('site_id'),
-  /** Số VLAN 802.1Q, 1–4094 (0029). CHECK ở tầng DB. */
+  /** Số VLAN 802.1Q, 1–4094. CHECK ở tầng DB. */
   vlan: integer('vlan'),
-  /** Gateway của dải (0035) — CHECK ở tầng DB bắt nó phải nằm TRONG chính dải của nó. */
+  /** Gateway của dải — CHECK ở tầng DB bắt nó phải nằm TRONG chính dải của nó. */
   gateway: inet('gateway'),
   description: text('description'),
   createdBy: text('created_by').notNull(),
@@ -43,7 +43,7 @@ export const subnetTable = pgTable('subnet', {
 });
 
 /**
- * Bảng `ip_address` — migration 0020.
+ * Bảng `ip_address` — migration 0030_ip_address.sql.
  *
  * `assigned_at` là `date` thuần, không timestamptz: "cấp ngày 23/08" là một NGÀY LỊCH.
  * Lưu kèm giờ là tự chuốc lệch múi giờ, theo đúng nếp của `device.warranty_end`.
@@ -82,7 +82,7 @@ export const ipHistoryTable = pgTable('ip_history', {
 });
 
 /**
- * Bảng `nat_rule_history` — migration 0037. CHỈ-THÊM (AD-13), cùng khuôn `ip_history`.
+ * Bảng `nat_rule_history` — migration 0031_nat_rule.sql. CHỈ-THÊM (AD-13), cùng khuôn `ip_history`.
  *
  * Sinh ra vì câu auditor hỏi nhiều nhất về sổ NAT — "ai mở port 3389 ra internet, ngày nào,
  * vì sao" — phải trả lời được mà không cần SQL trên `audit_log`.
@@ -97,7 +97,7 @@ export const natRuleHistoryTable = pgTable('nat_rule_history', {
 });
 
 /**
- * Bảng `nat_rule` — migration 0022 (FR-017). Cùng chủ với `ip_address`: một rule
+ * Bảng `nat_rule` — migration 0031_nat_rule.sql (FR-017). Cùng chủ với `ip_address`: một rule
  * NAT chỉ có nghĩa khi gắn được với một IP trong, ranh giới giữa hai thứ đó là ranh giới giả.
  *
  * Chồng port ngoài trên cùng một router bị chặn ở tầng DB bằng `EXCLUDE USING gist` — bắt

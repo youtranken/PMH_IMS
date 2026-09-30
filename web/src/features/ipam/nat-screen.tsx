@@ -1194,7 +1194,7 @@ function NatForm({
           không có chỗ đính nên nằm trong thư mục chia sẻ của phòng IT.
 
           Lịch sử — "ai mở port này, ngày nào, vì sao, ai gỡ" — là câu auditor hỏi nhiều nhất
-          về sổ NAT, và trước 0037 chỉ tra được bằng SQL trên `audit_log`.
+          về sổ NAT; không có khu này thì chỉ tra được bằng SQL trên `audit_log`.
 
           THÊM MỚI thì không hiện: chưa có id để gắn, và một rule chưa tồn tại thì chưa có gì
           để kể.
@@ -1359,7 +1359,7 @@ function RemoveDialog({
 }
 
 /**
- * Lịch sử của MỘT rule NAT (0037).
+ * Lịch sử của MỘT rule NAT.
  *
  * Tách thành component riêng vì truy vấn chỉ chạy khi hộp Sửa mở ra — nhét `useQuery` vào
  * `NatForm` thì nó chạy cả lúc THÊM MỚI, gọi `/nat/undefined/history` và nhận 400.

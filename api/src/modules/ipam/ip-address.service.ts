@@ -857,7 +857,7 @@ export class IpAddressService {
    *    trước (mẫu M2): để chính `ip_address_key` (UNIQUE ... WHERE voided_at IS NULL) làm
    *    trọng tài rồi dịch 23505 thành câu tiếng Việt.
    * 3. DẢI ĐÃ ĐỔI từ lúc hồ sơ bị ẩn thì từ chối. Trọng tài cũng ở tầng DB
-   *    (`ip_address_within_subnet`, mở rộng sang `voided_at` ở migration 0044), vì cùng lý do
+   *    (`ip_address_within_subnet`, trigger UPDATE có cả cột `voided_at`), vì cùng lý do
    *    với gạch 2: một câu SELECT chạy trước lại đẻ ra đúng mẫu M2 mà cả nhánh này đi dọn.
    *
    * VÌ SAO GẠCH 3 TỪNG KHÔNG CÓ. Trigger khai `BEFORE UPDATE OF address, subnet_id`, mà
@@ -979,9 +979,9 @@ export class IpAddressService {
    * Thứ router THẬT SỰ chuyển gói tới là `internal_ip`. Nên hỏi đúng cột đó, bằng chính vị từ
    * `host(...)` mà `NatRuleService.linkIp()` dùng, để hai bên không bao giờ trả lời khác nhau.
    * Có index riêng cho nó: `nat_rule_internal_host_idx ON nat_rule (host(internal_ip))
-   * WHERE voided_at IS NULL` (migration 0042). Bản 0022 đánh chỉ mục cột `internal_ip` THÔ, mà
-   * mọi câu ở đây lại bọc nó trong `host(...)` — một hàm quanh cột được đánh chỉ mục là chỉ
-   * mục KHÔNG bao giờ được chọn. Nó tồn tại, tốn chỗ, tốn công ghi, và chưa từng giúp đọc.
+   * WHERE voided_at IS NULL`. Chỉ mục trên cột `internal_ip` THÔ thì vô dụng ở đây: mọi câu
+   * bọc nó trong `host(...)`, và một hàm quanh cột được đánh chỉ mục là chỉ mục KHÔNG bao giờ
+   * được chọn.
    *
    * Chặn (chứ không cảnh báo) là có chủ ý: một port-forward đang mở trỏ vào máy sắp rời đi là
    * lỗ thủng tường lửa, và bước đúng — gỡ hoặc trỏ lại rule — luôn phải làm trước. Thông điệp

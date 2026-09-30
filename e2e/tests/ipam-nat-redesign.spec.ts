@@ -532,7 +532,7 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
 });
 
 /**
- * Lịch sử nghiệp vụ của sổ NAT (0037) + giấy tờ đính kèm cho rule và cho dải.
+ * Lịch sử nghiệp vụ của sổ NAT + giấy tờ đính kèm cho rule và cho dải.
  *
  * Vì sao đáng có một bài riêng: "ai mở port 3389 ra internet, ngày nào, vì sao, ai gỡ" là câu
  * auditor hỏi nhiều nhất về sổ NAT; không có lịch sử nghiệp vụ thì nó chỉ tra được bằng SQL

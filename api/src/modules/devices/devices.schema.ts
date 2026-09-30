@@ -12,7 +12,7 @@ import {
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
- * Bảng `device` + `device_history` — migration 0012. Chủ sở hữu: module `devices` (AD-3).
+ * Bảng `device` + `device_history` — migration 0020_device.sql. Chủ sở hữu: module `devices` (AD-3).
  * Module khác đọc qua `DevicesApiService`, không import file này (AD-2).
  *
  * Ngày (mua, bảo hành) dùng kiểu `date` THUẦN, không timestamptz: "hết hạn 30/08/2026" là
@@ -50,7 +50,7 @@ export const deviceHistoryTable = pgTable('device_history', {
 });
 
 /**
- * Port map — migration 0013 (AD-14). MỘT kết nối = MỘT bản ghi; chiều ngược hiện bằng
+ * Port map — migration 0021_device_port.sql (AD-14). MỘT kết nối = MỘT bản ghi; chiều ngược hiện bằng
  * query trên `connected_device_id`, không có bản ghi đối xứng.
  */
 export const devicePortTable = pgTable('device_port', {
@@ -61,7 +61,7 @@ export const devicePortTable = pgTable('device_port', {
   connectedLabel: text('connected_label'),
   connectedPort: text('connected_port'),
   usedBy: text('used_by'),
-  /** VLAN của cổng (0029) — text vì "trunk" là giá trị có thật trên cổng uplink. */
+  /** VLAN của cổng — text vì "trunk" là giá trị có thật trên cổng uplink. */
   vlan: text('vlan'),
   note: text('note'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

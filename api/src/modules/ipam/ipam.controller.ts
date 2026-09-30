@@ -69,7 +69,7 @@ class SubnetBodyDto {
   vlan?: number | null;
 
   /**
-   * Gateway của dải (0035). Chuỗi rỗng = xóa gateway đang có — ô để trống là ý định rõ ràng
+   * Gateway của dải. Chuỗi rỗng = xóa gateway đang có — ô để trống là ý định rõ ràng
    * ("dải point-to-point này không có gateway"), không phải "đừng đụng tới".
    *
    * Chỉ kiểm ĐỘ DÀI ở đây; "có nằm trong dải không" là luật nghiệp vụ, thuộc về service —

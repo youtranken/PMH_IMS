@@ -154,15 +154,22 @@ Playwright (`e2e/`), chạy trên compose thật, không mock API.
 ## Migration & DB
 
 - Đánh số 4 chữ số, **chỉ tiến**, chạy sạch trên DB trắng (AD-10).
+- Bộ migration đã được gộp theo bảng (Q-17): `0000_extensions` … `0033_service_account`, mỗi file là
+  trạng thái cuối của một bảng. File mới đánh số tiếp sau `0033`; muốn biết một bảng trông thế nào
+  thì đọc file của bảng đó rồi các file sau có nhắc tới nó.
+- DB dựng trước lượt gộp (chỉ dev) phải dựng lại: runner thấy journal cũ thì dừng, không áp bộ mới.
 - **Không bao giờ sửa file migration đã có, kể cả chú thích.** Bộ chạy kiểm checksum trên cả file,
   nên đổi một ký tự là API từ chối khởi động. Muốn đổi schema thì thêm file mới.
 - `api/src/migrations/*.sql` được git giữ nguyên từng byte (`-text` trong `.gitattributes`). Đừng
   đổi thuộc tính đó.
 - Sau go-live, index trên bảng đã có dữ liệu phải dùng `CREATE INDEX CONCURRENTLY` trong file có
   dòng đầu `-- ims:no-transaction`.
-- `ALTER DEFAULT PRIVILEGES` của 0048 cấp sẵn SELECT/INSERT/UPDATE/DELETE cho `ims_app` trên **mọi
-  bảng mới**. Bảng chỉ-thêm (nhật ký, lịch sử) phải tự `REVOKE UPDATE, DELETE, TRUNCATE` ngay trong
-  file tạo nó, và thêm bảng đó vào `api/test/app-role-privileges.spec.ts`.
+- `ALTER DEFAULT PRIVILEGES` của `0001_app_role.sql` cấp sẵn SELECT/INSERT/UPDATE/DELETE cho
+  `ims_app` trên **mọi bảng mới**. Bảng chỉ-thêm (nhật ký, lịch sử) phải tự `REVOKE UPDATE, DELETE,
+  TRUNCATE` ngay trong file tạo nó (các file bảng lịch sử làm mẫu, kể cả `FROM CURRENT_USER`), và
+  thêm bảng đó vào `api/test/app-role-privileges.spec.ts`.
+- Không ghi tên role chủ sở hữu trong migration: cùng một file phải chạy được bằng superuser lẫn
+  bằng `ims_owner` (DB-03). Quyền của chính role đang chạy viết bằng `CURRENT_USER`.
 - Ứng dụng chạy bằng role hẹp `ims_app`; migration chạy bằng role chủ sở hữu. Đừng gộp lại.
 
 ## Git & nhánh

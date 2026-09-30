@@ -19,13 +19,13 @@ export interface ExpiryThresholds {
 /**
  * Giá trị dùng TRONG LÚC CHỜ, không phải bản sao của luật.
  *
- * Luật thật nằm ở `system_config` (`expiry.critical_days` / `expiry.warning_days`, migration
- * 0041) và web đọc nó qua `useExpiryThresholds()`. Hai con số dưới đây KHÔNG phải một bản
+ * Luật thật nằm ở `system_config` (`expiry.critical_days` / `expiry.warning_days`)
+ * và web đọc nó qua `useExpiryThresholds()`. Hai con số dưới đây KHÔNG phải một bản
  * sao độc lập của luật — một bản sao chỉ "khớp nhau" bằng lời hứa chứ không bằng cơ chế.
  *
  * Giữ lại vì hai lý do, cả hai đều KHÔNG phải "để tiện": (1) vẽ huy hiệu xám cho cả màn trong
  * 200ms đầu rồi đổi màu tệ hơn nhiều so với vẽ đúng ngay; (2) hàm thuần dưới đây có bảng test
- * riêng và không được phụ thuộc mạng. Hai số này PHẢI khớp giá trị seed của 0041.
+ * riêng và không được phụ thuộc mạng. Hai số này PHẢI khớp giá trị gieo ở `0004_system_config.sql`.
  */
 export const DEFAULT_EXPIRY_THRESHOLDS: ExpiryThresholds = {
   criticalDays: 7,

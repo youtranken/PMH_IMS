@@ -7,9 +7,9 @@ export interface SubnetRow {
   cidr: string;
   siteId: string | null;
   siteCode: string | null;
-  /** Số VLAN 802.1Q (0029) — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
+  /** Số VLAN 802.1Q — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
   vlan: number | null;
-  /** Gateway của dải (0035) — câu hỏi đầu tiên khi khai IP tĩnh cho một cái máy. */
+  /** Gateway của dải — câu hỏi đầu tiên khi khai IP tĩnh cho một cái máy. */
   gateway: string | null;
   description: string | null;
   createdBy: string;

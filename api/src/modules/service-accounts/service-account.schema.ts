@@ -1,7 +1,7 @@
 import { customType, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 /**
- * `citext` THẬT (migration 0042), cùng quy ước cột `code` với năm bảng kia.
+ * `citext` THẬT, cùng quy ước cột `code` với năm bảng kia.
  *
  * `dataType` phải trả `'citext'`, không phải `'text'`: `UNIQUE (lower(code))` chặn được trùng
  * nhưng KHÔNG chữa việc tra cứu — cùng một câu `WHERE code = 'sv-01'`, bảng `citext` tìm ra
@@ -11,7 +11,7 @@ import { customType, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/p
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
- * Bảng `service_account` + `service_account_history` — migration 0032.
+ * Bảng `service_account` + `service_account_history` — migration 0033_service_account.sql.
  * Chủ sở hữu: module `service-accounts` (AD-3).
  *
  * KHÔNG có cột mật khẩu: mật khẩu nằm ở két sắt (`ownerType: 'service_account'`), bảng này

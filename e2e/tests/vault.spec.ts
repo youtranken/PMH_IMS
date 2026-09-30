@@ -208,7 +208,7 @@ test.describe('Két sắt', () => {
   });
 
   /**
-   * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU ĐỂ LẠI VẾT, VÀ ĐỦ NGƯỠNG THÌ BÁO CHO QUẢN TRỊ (0046).
+   * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU ĐỂ LẠI VẾT, VÀ ĐỦ NGƯỠNG THÌ BÁO CHO QUẢN TRỊ.
    *
    * `assertCanReveal` ném trước khi `vault.reveal()` chạy, mà dòng audit của lượt thành công
    * nằm bên trong hàm đó — nên lượt bị chặn phải có dòng vết riêng, không thì "ai đã thử mà bị
@@ -227,7 +227,7 @@ test.describe('Két sắt', () => {
    * một tài khoản cố định thì lượt chạy đầu xanh, còn mọi lượt trong một tiếng kế tiếp ĐỎ — vì
    * thời gian nghỉ đang làm đúng việc của nó. Người đọc sẽ tưởng mình vừa làm hỏng cảnh báo.
    *
-   * Và không có đường dọn: `audit_log` bị trigger chặn cả UPDATE lẫn DELETE ở tầng DB (0005,
+   * Và không có đường dọn: `audit_log` bị trigger chặn cả UPDATE lẫn DELETE ở tầng DB (
    * NFR-03) — đúng như nó phải vậy. Một hàm trợ giúp tắt được trigger đó là khẩu súng đã lên
    * đạn nằm sẵn trong repo. Nên bài kiểm lấy lịch sử rỗng bằng cách đổi NGƯỜI, không bằng cách
    * xoá vết.
@@ -277,7 +277,7 @@ test.describe('Két sắt', () => {
      * NGƯỠNG ĐỌC TỪ `system_config`, KHÔNG GÕ CỨNG (AD-11).
      *
      * Chốt cứng "sáu lượt" là ngầm giả định ngưỡng là 3. Hai chuyện hỏng theo:
-     * đổi `secret.probe_alert_threshold` — đúng đường lùi mà migration 0046 quảng cáo — là
+     * đổi `secret.probe_alert_threshold` — đúng đường lùi mà mô tả của khoá đó quảng cáo — là
      * bài này đỏ vì một lý do chẳng liên quan; còn HẠ ngưỡng xuống 1 thì bài vẫn xanh mà
      * thời gian nghỉ không còn được kiểm đúng cảnh (phải vượt ngưỡng rồi mới nói được là
      * "nhiều lượt chỉ một thư").

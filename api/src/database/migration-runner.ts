@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import { redactMessage } from '../common/log-redact';
 
 /** Khóa advisory cố định — 2 instance api cùng khởi động không chạy migration chồng nhau. */
@@ -21,6 +21,18 @@ const MIGRATION_NAME_PATTERN = /^\d{4}_.+\.sql$/;
  * Runner thêm lưới: sau file no-tx có CONCURRENTLY, phát hiện index INVALID → fail to.
  */
 const NO_TX_MARKER = /^--\s*ims:no-transaction\b/;
+
+/**
+ * Q-17: bộ migration được gộp theo bảng và đánh số lại từ 0000. Một DB dựng từ bộ cũ có
+ * journal mang tên file không còn tồn tại, còn các tên mới thì với runner là "chưa apply" —
+ * cứ để chạy tiếp là nó áp `CREATE TABLE` lên một DB đã có bảng, hỏng giữa chừng với một câu
+ * lỗi không nói gì về nguyên nhân (hoặc tệ hơn, chết ở "checksum lệch" của `0000_extensions`,
+ * cái tên duy nhất trùng giữa hai bộ, và người trực đi tìm file bị sửa).
+ *
+ * Tên file này chỉ có trong bộ đã gộp, nên journal có nó nghĩa là DB dựng từ bộ mới. Tên lạ
+ * trong journal lúc đó (DB từng chạy một nhánh khác) không thuộc chuyện gộp và giữ cách xử lý cũ.
+ */
+const SQUASHED_SET_MARKER = '0001_app_role.sql';
 
 export interface MigrationLogger {
   log(message: string): void;
@@ -59,6 +71,7 @@ export async function runMigrations(
     await client.query(
       'ALTER TABLE _migrations ADD COLUMN IF NOT EXISTS checksum text',
     );
+    await assertNotPreSquash(client, files);
     for (const file of files) {
       const sql = await readFile(join(dir, file), 'utf8');
       const checksum = createHash('sha256').update(sql).digest('hex');
@@ -140,6 +153,26 @@ export async function runMigrations(
     client.release();
   }
   return applied;
+}
+
+/** Chặn DB dựng từ bộ migration trước lượt gộp (xem SQUASHED_SET_MARKER). */
+async function assertNotPreSquash(
+  client: PoolClient,
+  files: string[],
+): Promise<void> {
+  const journal = await client.query<{ name: string }>('SELECT name FROM _migrations');
+  const names = journal.rows.map((r) => r.name);
+  if (names.includes(SQUASHED_SET_MARKER)) return;
+  const onDisk = new Set(files);
+  const unknown = names.filter((n) => !onDisk.has(n)).sort();
+  if (unknown.length === 0) return;
+  const sample = unknown.slice(0, 5).join(', ') + (unknown.length > 5 ? ', …' : '');
+  throw new Error(
+    `DB này dựng từ bộ migration trước lượt gộp migration (Q-17): journal _migrations có ` +
+      `${unknown.length} file không còn trong thư mục (${sample}). Không áp bộ mới lên trên ` +
+      'được. DB dev/thử nghiệm: xoá database (hoặc volume postgres) rồi dựng lại từ đầu — ' +
+      'xem docs/RUNBOOK-4.3-dong-dot-1.md.',
+  );
 }
 
 /** dist/main.js → dist/migrations (copy qua nest-cli assets); ts-jest/ts-node → src/migrations. */

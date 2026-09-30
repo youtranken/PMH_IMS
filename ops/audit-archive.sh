@@ -52,7 +52,7 @@ YEARS="$(psql_q "SELECT COALESCE((SELECT value #>> '{}' FROM system_config WHERE
 [[ "$YEARS" =~ ^[0-9]+$ ]] && [ "$YEARS" -ge 1 ] \
   || die "audit.archive_after_years = '$YEARS' — phải là số nguyên >= 1."
 
-# Chỉ ngăn đúng khuôn `audit_log_<năm>` do 0302 dựng; ranh giới năm là UTC như 0302.
+# Chỉ ngăn đúng khuôn `audit_log_<năm>` do `audit_log_create_year_partition` dựng; ranh giới năm là UTC.
 CANDIDATES="$(psql_q "
   SELECT c.relname
     FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid

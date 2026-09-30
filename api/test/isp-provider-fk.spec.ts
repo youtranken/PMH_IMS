@@ -1,6 +1,3 @@
-import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { runMigrations } from '../src/database/migration-runner';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
@@ -14,17 +11,16 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  * OLD-DB-01 (QUYET-DINH Q-11) — nhà mạng của đường truyền là khoá ngoại tới danh mục.
  *
  * Hai nửa hỏng theo hai kiểu:
- *   1. Migration 0074 đổi dữ liệu ĐÃ CÓ: chữ gõ tay phải khớp đúng mục danh mục, chữ lạ phải
- *      thành mục mới (không mất đường truyền nào), và bản sao tên phải bị khoá vào danh mục.
- *   2. Cửa ghi: id lạ / id ngừng dùng bị chặn, và danh mục không xoá được mục đang dùng.
+ *   1. Lược đồ: bản sao tên `isp_line.provider` bị khoá vào danh mục bằng khoá ngoại kép, nên
+ *      không trôi được, đổi tên thì đi theo, và danh mục không xoá được mục đang dùng.
+ *   2. Cửa ghi: id lạ / id ngừng dùng bị chặn, và danh mục trả lỗi đọc được.
  */
 
 const TEST_TIMEOUT = 120_000;
-const MIGRATION = '0074_isp_line_provider_fk.sql';
 const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
 const devices = { getByIds: () => Promise.resolve(new Map()) } as unknown as DevicesApiService;
 
-describe('Migration 0074 — nối chữ nhà mạng cũ vào danh mục', () => {
+describe('Lược đồ — nhà mạng của đường truyền là khoá ngoại kép (id, tên)', () => {
   let scratch: ScratchDb;
 
   const line = async (code: string) =>
@@ -37,99 +33,30 @@ describe('Migration 0074 — nối chữ nhà mạng cũ vào danh mục', () =>
     ).rows[0];
 
   beforeAll(async () => {
-    scratch = await createScratchDb('ims_isp_provider_mig');
-    const before = await mkdtemp(join(tmpdir(), 'ims-mig-before-0074-'));
-    const files = (await readdir(migrationsDir())).filter((f) => f.endsWith('.sql')).sort();
-    for (const f of files.filter((name) => name < MIGRATION)) {
-      await writeFile(join(before, f), await readFile(join(migrationsDir(), f)));
-    }
-    await runMigrations(scratch.pool, before, { log: () => undefined });
-
-    await scratch.pool.query(
-      `INSERT INTO isp_provider (name, active) VALUES ('FPT Telecom', true), ('VNPT', false)`,
-    );
-    await scratch.pool.query(
-      `INSERT INTO isp_line (code, provider) VALUES
-         ('MIG-FPT-1', 'fpt telecom '),
-         ('MIG-FPT-2', 'FPT   Telecom'),
-         ('MIG-FPT-3', 'FPT Telecom'),
-         ('MIG-VNPT', 'vnpt'),
-         ('MIG-VT-1', 'Viettel'),
-         ('MIG-VT-2', ' viettel'),
-         ('MIG-CMC', 'CMC'),
-         ('MIG-BLANK', '  ')`,
-    );
+    scratch = await createScratchDb('ims_isp_provider_schema');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
+    await scratch.pool.query(
+      `INSERT INTO isp_provider (name) VALUES ('CMC'), ('Viettel');
+       INSERT INTO isp_line (code, provider, provider_id)
+         SELECT 'SCH-' || upper(name::text), name, id FROM isp_provider`,
+    );
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
     await scratch?.drop();
   }, TEST_TIMEOUT);
 
-  it('chữ khớp danh mục (bỏ qua hoa-thường, khoảng trắng) nối vào đúng mục có sẵn', async () => {
-    const fpt = await scratch.pool.query<{ id: string }>(
-      `SELECT id FROM isp_provider WHERE name = 'FPT Telecom'`,
-    );
-    for (const code of ['MIG-FPT-1', 'MIG-FPT-2', 'MIG-FPT-3']) {
-      expect(await line(code)).toEqual({
-        provider: 'FPT Telecom',
-        provider_id: fpt.rows[0].id,
-        name: 'FPT Telecom',
-      });
-    }
-    // Mục ngừng dùng vẫn là mục đúng — hồ sơ cũ không bị ép sang một mục đẻ thêm.
-    expect((await line('MIG-VNPT')).name).toBe('VNPT');
-  });
-
-  it('chữ chưa có trong danh mục thành MỘT mục mới đang dùng cho mỗi tên', async () => {
-    const { rows } = await scratch.pool.query<{ name: string; active: boolean }>(
-      `SELECT name::text AS name, active FROM isp_provider ORDER BY lower(name::text) COLLATE "C"`,
-    );
-    expect(rows).toEqual([
-      { name: 'Chưa rõ nhà mạng', active: true },
-      { name: 'CMC', active: true },
-      { name: 'FPT Telecom', active: true },
-      { name: 'Viettel', active: true },
-      { name: 'VNPT', active: false },
-    ]);
-    expect((await line('MIG-VT-1')).provider_id).toBe((await line('MIG-VT-2')).provider_id);
-    expect((await line('MIG-BLANK')).name).toBe('Chưa rõ nhà mạng');
-  });
-
-  it('mỗi hàng đổi chữ có một dòng lịch sử; hàng giữ nguyên chữ thì không', async () => {
-    const { rows } = await scratch.pool.query<{ code: string; changes: unknown }>(
-      `SELECT l.code::text AS code, h.changes FROM isp_line_history h
-         JOIN isp_line l ON l.id = h.isp_line_id
-        WHERE h.actor = 'system:migration' ORDER BY l.code`,
-    );
-    expect(rows.map((r) => r.code)).toEqual([
-      'MIG-BLANK',
-      'MIG-FPT-1',
-      'MIG-FPT-2',
-      'MIG-VNPT',
-      'MIG-VT-2',
-    ]);
-    expect(rows.find((r) => r.code === 'MIG-FPT-1')?.changes).toEqual({
-      provider: { before: 'fpt telecom ', after: 'FPT Telecom' },
-    });
-  });
-
-  it('provider_id bắt buộc và không có hàng nào lệch tên với danh mục', async () => {
+  it('provider_id bắt buộc', async () => {
     await expect(
-      scratch.pool.query(`INSERT INTO isp_line (code, provider) VALUES ('MIG-NULL', 'CMC')`),
+      scratch.pool.query(`INSERT INTO isp_line (code, provider) VALUES ('SCH-NULL', 'CMC')`),
     ).rejects.toMatchObject({ code: '23502' });
-    const { rows } = await scratch.pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM isp_line l JOIN isp_provider p ON p.id = l.provider_id
-        WHERE l.provider::text <> p.name::text`,
-    );
-    expect(rows[0].n).toBe(0);
   });
 
   it('ghi một tên không khớp id → 23503: bản sao tên không trôi khỏi danh mục được', async () => {
-    const cmc = await line('MIG-CMC');
+    const cmc = await line('SCH-CMC');
     await expect(
       scratch.pool.query(
-        `INSERT INTO isp_line (code, provider, provider_id) VALUES ('MIG-LECH', 'Tên khác', $1)`,
+        `INSERT INTO isp_line (code, provider, provider_id) VALUES ('SCH-LECH', 'Tên khác', $1)`,
         [cmc.provider_id],
       ),
     ).rejects.toMatchObject({ code: '23503' });
@@ -137,14 +64,14 @@ describe('Migration 0074 — nối chữ nhà mạng cũ vào danh mục', () =>
 
   it('đổi tên trong danh mục → mọi đường truyền đổi theo, kể cả chỉ đổi hoa-thường', async () => {
     await scratch.pool.query(`UPDATE isp_provider SET name = 'CMC Telecom' WHERE name = 'CMC'`);
-    expect((await line('MIG-CMC')).provider).toBe('CMC Telecom');
+    expect((await line('SCH-CMC')).provider).toBe('CMC Telecom');
     const found = await scratch.pool.query<{ code: string }>(
       `SELECT code::text AS code FROM isp_line WHERE search_norm LIKE ims_norm('%cmc telecom%')`,
     );
-    expect(found.rows.map((r) => r.code)).toEqual(['MIG-CMC']);
+    expect(found.rows.map((r) => r.code)).toEqual(['SCH-CMC']);
 
     await scratch.pool.query(`UPDATE isp_provider SET name = 'cmc telecom' WHERE name = 'CMC Telecom'`);
-    expect((await line('MIG-CMC')).provider).toBe('cmc telecom');
+    expect((await line('SCH-CMC')).provider).toBe('cmc telecom');
   });
 
   it('xoá mục danh mục đang có đường truyền → 23503', async () => {
@@ -153,7 +80,7 @@ describe('Migration 0074 — nối chữ nhà mạng cũ vào danh mục', () =>
     ).rejects.toMatchObject({ code: '23503' });
   });
 
-  it('chỉ mục tìm kiếm được dựng lại và hợp lệ', async () => {
+  it('chỉ mục tìm kiếm hợp lệ', async () => {
     const { rows } = await scratch.pool.query<{ valid: boolean }>(
       `SELECT i.indisvalid AS valid FROM pg_index i
         WHERE i.indexrelid = 'isp_line_search_norm_trgm'::regclass`,

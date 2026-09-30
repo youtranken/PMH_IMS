@@ -423,7 +423,7 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
   const term = filter.search?.trim();
   if (term) {
     // Mã · tên · tên đăng nhập · phòng ban · người phụ trách — cả năm nằm trong cột sinh
-    // `service_account.search_norm` (0052) và đã gấp dấu. `ilike()` thẳng trên từng cột thì
+    // `service_account.search_norm` và đã gấp dấu. `ilike()` thẳng trên từng cột thì
     // không gấp dấu, nên gõ "ke toan" không ra "Kế toán".
     parts.push(searchNormLike(serviceAccountTable, term));
   }
@@ -449,7 +449,7 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
 }
 
 /**
- * Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058).
+ * Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này.
  *
  * Đổi tên từ `orderBy` sang `serviceAccountOrderBy`: ba service kia đã mang tiền tố module,
  * và một hàm tên `orderBy` xuất khẩu ra khỏi file thì nơi gọi không biết nó sắp bảng nào.

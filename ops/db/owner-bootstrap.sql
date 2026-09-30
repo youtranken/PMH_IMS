@@ -2,7 +2,7 @@
 --
 -- Chạy bằng SUPERUSER, trong database của IMS, và chỉ bằng superuser: đây là việc duy nhất còn
 -- cần quyền đó. Sau file này service `migrate` chạy bằng role chủ sở hữu, api/worker bằng
--- `ims_app` (0048).
+-- `ims_app` (`0001_app_role.sql`).
 --
 -- Đầu vào là hai GUC đặt trong CÙNG phiên trước khi chạy file (`ops/db/initdb-owner.sh` đặt
 -- chúng; bài kiểm `api/test/db-owner-role.spec.ts` cũng vậy):
@@ -155,9 +155,9 @@ BEGIN
   END LOOP;
 
   -- Bảng migration TẠO SAU chỉ có quyền cho ims_app nhờ quyền mặc định, mà quyền mặc định gắn
-  -- vào role TẠO bảng. 0048 đặt nó cho role đã chạy 0048 — ở cài cũ là superuser — nên role
-  -- chủ sở hữu mới phải có bộ của riêng nó, cùng nội dung với 0048. Trên cụm mới `ims_app`
-  -- chưa có ở đây; khi đó 0048 chạy bằng chính role chủ sở hữu và tự đặt.
+  -- vào role TẠO bảng. `0001_app_role.sql` đặt nó cho role đã chạy nó — có thể là superuser —
+  -- nên role chủ sở hữu phải có bộ của riêng nó, cùng nội dung. Trên cụm mới `ims_app` chưa có
+  -- ở đây; khi đó `0001_app_role.sql` chạy bằng chính role chủ sở hữu và tự đặt.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ims_app') THEN
     EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
       || 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ims_app', owner_role);
@@ -168,7 +168,7 @@ BEGIN
   END IF;
 
   -- Phép kiểm khoá ngoại chạy bằng quyền CHỦ bảng con và khoá hàng bảng con (cần UPDATE). Các
-  -- bảng lịch sử đã thu UPDATE của chính chủ bảng (0039), vô hại khi chủ là superuser; với chủ
+  -- bảng lịch sử đã thu UPDATE của chính chủ bảng, vô hại khi chủ là superuser; với chủ
   -- không superuser thì mọi lệnh xoá bảng cha chết với "permission denied for table …_history".
   -- Trả UPDATE cho chủ bảng là đủ: trigger chỉ-thêm vẫn chặn mọi lệnh UPDATE/DELETE.
   FOR obj IN
