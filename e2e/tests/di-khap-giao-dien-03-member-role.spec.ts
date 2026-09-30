@@ -287,9 +287,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
      * Sửa · Xoay · Thu hồi nằm trong menu ba chấm, và mục menu chỉ vào DOM khi menu đang mở
      * — nên bám theo chữ "Sửa"/"Xoay" ở đây là một khẳng định LUÔN XANH, kể cả với người có
      * đủ quyền. Bám đúng cái nút MỞ menu: nó chỉ được vẽ khi `canEdit`.
+     *
+     * Chỉ tìm TRONG tab Két sắt: đầu trang chi tiết có menu ⋮ của chính thiết bị (Q-18) cùng
+     * tiền tố "Thao tác với", và nó không phải menu ghi vào két.
      */
     await expect(
-      page.getByRole('button', { name: /^Thao tác với/ }),
+      page.getByRole('tabpanel').getByRole('button', { name: /^Thao tác với/ }),
       'nút mở menu ghi chỉ được vẽ khi canEdit — Member không có nó',
     ).toHaveCount(0);
 

@@ -705,6 +705,26 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
     expect(screen.queryByText(/cất vào đây/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();
   });
+
+  /*
+   * Người chỉ được xem (Thành viên có grant) vẫn thấy ngăn và nút Xem, nhưng KHÔNG có nút mở
+   * menu Sửa · Xoay · Thu hồi — bày ra là hứa một việc API sẽ trả 403.
+   */
+  it('canEdit=false có ngăn: còn nút Xem, không có menu ghi của ngăn', async () => {
+    mockApi(WHITELIST, [SECRET]);
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <ConfirmProvider>
+            <VaultPanel ownerType="device" ownerId="d1" me={ME} canEdit={false} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Thao tác với/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();
+  });
 });
 
 /**
