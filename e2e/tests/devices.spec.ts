@@ -76,7 +76,8 @@ test.describe('Kho thiết bị', () => {
     const { siteCode } = await seedLocation(page, stamp);
     const code = `SW-E2E-${stamp}`;
 
-    await page.getByRole('link', { name: 'Thiết bị' }).click();
+    // `exact`: màn Danh mục vừa dựng có link đếm "1 thiết bị" của tủ, khớp lỏng cũng trúng nó.
+    await page.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, {
       code,
@@ -119,7 +120,7 @@ test.describe('Kho thiết bị', () => {
     const stamp = uniqueStamp();
     const serial = `DUP-${stamp}`;
 
-    await page.getByRole('link', { name: 'Thiết bị' }).click();
+    await page.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code: `PC-E2E-A-${stamp}`, name: 'Máy A', type: 'PC', serial });
     await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-A-${stamp}`) })).toBeVisible();
@@ -137,7 +138,7 @@ test.describe('Kho thiết bị', () => {
     const stamp = uniqueStamp();
     const code = `PC-E2E-DUP-${stamp}`;
 
-    await page.getByRole('link', { name: 'Thiết bị' }).click();
+    await page.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code, name: 'Máy đầu tiên', type: 'PC' });
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
@@ -155,7 +156,7 @@ test.describe('Kho thiết bị', () => {
     const stamp = uniqueStamp();
     const code = `UPS-E2E-${stamp}`;
 
-    await page.getByRole('link', { name: 'Thiết bị' }).click();
+    await page.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code, name: 'UPS phòng máy', type: 'UPS' });
     await page.getByRole('link', { name: code }).click();
