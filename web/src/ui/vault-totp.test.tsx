@@ -28,7 +28,7 @@ const ME: Me = {
   // Client KHÔNG biết mốc step-up — đúng như thật: `me` không mang nó sau lượt gõ mã.
   steppedUpAt: null,
   csrfToken: 'csrf-1',
-  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 60 },
+  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 60, fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 },
 };
 
 const WHITELIST: AccessVerdict = {
