@@ -3,6 +3,7 @@ import { runMigrations } from '../src/database/migration-runner';
 import type { OwnerExistsRegistry } from '../src/common/owner-exists.registry';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
+import type { SweepService } from '../src/modules/queue/sweep.service';
 import { FilesService } from '../src/modules/files/files.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
@@ -29,6 +30,7 @@ describe('Giấy tờ · người tải lên', () => {
       {} as OwnerExistsRegistry,
       new UsersApiService(new UsersService(scratch.db)),
       {} as SystemConfigService,
+      {} as SweepService,
     );
   }, TEST_TIMEOUT);
 
