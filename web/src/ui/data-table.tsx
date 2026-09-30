@@ -102,7 +102,7 @@ interface DataTableProps<T> {
    * Chữ đứng cạnh mũi tên bung ("3 license").
    *
    * @deprecated Mẫu chuẩn (Q-18) là mũi tên trơn: số đếm đi vào `expandLabel` (tên cho trình
-   * đọc màn hình) và vào `ExpandHeader` trong khu bung. Còn giữ cho tới khi /devices chuyển.
+   * đọc màn hình) và vào `ExpandHeader` trong khu bung. Không màn nào còn dùng.
    */
   expandText?: (row: T) => string;
   /** ≤680px gập bảng thành thẻ dọc (mỗi ô 1 dòng có nhãn cột). */

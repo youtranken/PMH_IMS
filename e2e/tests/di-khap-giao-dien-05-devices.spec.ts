@@ -7,6 +7,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
+  rowActionNames,
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
@@ -444,12 +445,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toContainText(`${stamp}-01`);
 
     /*
-     * MỘT DÒNG CÓ ĐÚNG MỘT VIỆC LÀM ĐƯỢC TẠI CHỖ.
+     * CỘT THAO TÁC THEO Q-18: "Sửa" đứng ngoài, mọi việc khác vào menu ⋮.
      *
-     * Phòng này CỐ Ý không dùng menu ba chấm `RowActions` như các bảng khác: cột "Thao tác"
-     * chỉ có một nút "Sửa máy <mã>" mở thẳng hộp thoại. Chốt lại đây để lần sau ai gom về
-     * menu ba chấm cho "đồng bộ" thì bài này đỏ và người đó biết mình đang đổi một quyết định,
-     * chứ không phải đang dọn dẹp.
+     * Đúng HAI nút mỗi dòng, cả hai mang mã máy. Ai đưa thêm nút phẳng ra ngoài (Thanh lý, Nhân
+     * bản…) thì bài này đỏ — cột thao tác phình ra là cột Tên bị ép.
      */
     await expect
       .poll(
@@ -459,10 +458,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
           ),
         {
           message:
-            'Mỗi dòng thiết bị có đúng MỘT nút, và nhãn phải riêng cho từng dòng (hai chục nút cùng tên "Sửa" là không ai bấm đúng được)',
+            'Mỗi dòng thiết bị có đúng nút Sửa + menu ⋮, và nhãn phải riêng cho từng dòng (hai chục nút cùng tên "Sửa" là không ai bấm đúng được)',
         },
       )
-      .toEqual([`Sửa máy TB-E2E-BANG-${stamp}-01`]);
+      .toEqual([`Sửa máy TB-E2E-BANG-${stamp}-01`, `Thao tác với TB-E2E-BANG-${stamp}-01`]);
 
     /*
      * PHÂN TRANG.
@@ -964,20 +963,21 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(main.getByRole('button')), {
         message:
-          'Đầu hồ sơ thiết bị: chép mã, sửa, đổi trạng thái, nhân bản, thanh lý; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
+          'Đầu hồ sơ thiết bị: "Sửa hồ sơ" + menu ⋮; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
       })
       // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
-      // Chép mã (DEV-059), Đổi trạng thái (DEV-053), Nhân bản (DEV-034) ở đầu trang; "Bổ sung n ô
-      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan.
+      // Q-18: "Sửa hồ sơ" đứng ngoài; Đổi trạng thái (DEV-053) · Nhân bản (DEV-034) · Thanh lý
+      // vào menu ⋮. Mã máy không còn nút chép (tiêu đề trang, bôi đen chép được). "Bổ sung n ô
+      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan — máy chưa có IP thì "Cấp IP"
+      // là nút chính ngay trong ô "IP quản trị", nên đứng trước "Bổ sung".
       .toEqual([
-        'Chép mã thiết bị',
         'Sửa hồ sơ',
-        'Đổi trạng thái',
-        'Nhân bản',
-        'Thanh lý',
-        'Bổ sung 6 ô còn thiếu',
+        `Thao tác với ${code}`,
         'Cấp IP',
+        'Bổ sung 6 ô còn thiếu',
       ]);
+    await expect(panel.getByText('Chưa có IP', { exact: true })).toBeVisible();
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*
      * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".

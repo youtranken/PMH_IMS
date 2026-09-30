@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -14,13 +14,17 @@ import { FilterBar } from '@/ui/filter-bar';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
-import { useDisabledReason } from '@/ui/disabled-reason';
+import { errorMessage, useApiMutation } from '@/lib/api';
 import { PageHeader } from '@/ui/page-header';
+import { useToast } from '@/ui/toast';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
+import { ExpandHeader } from '@/ui/expand-header';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
+import { DeviceRowActions } from './device-actions';
+import { StatusDialog } from './status-dialog';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -57,6 +61,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const toast = useToast();
   /*
    * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState`. Nhờ
    * vậy: F5 giữ nguyên bộ lọc, gửi được link "máy hỏng ở tủ T-1" cho đồng nghiệp, và bấm Back
@@ -79,6 +84,23 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
+  const [cloning, setCloning] = useState<DeviceRow | null>(null);
+  /** Hộp đổi trạng thái — cũng là hộp "Đưa lại vào dùng" của máy đã thanh lý. */
+  const [statusOf, setStatusOf] = useState<DeviceRow | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const setStatus = useApiMutation<{ id: string; status: DeviceStatus }, unknown>(
+    (input) => `/api/v1/devices/${input.id}/status`,
+    {
+      method: 'PATCH',
+      csrfToken: me.csrfToken,
+      refreshMe: false,
+      body: (input) => ({ status: input.status }),
+    },
+  );
+  const openStatus = useCallback((device: DeviceRow) => {
+    setStatusError(null);
+    setStatusOf(device);
+  }, []);
   /* Máy vừa thêm sáng lên một lúc nếu nó nằm ở trang đang xem. Gỡ cờ khi hiệu ứng chạy xong:
      để lại thì mỗi lần bảng vẽ lại (đổi trang rồi quay về) dòng đó lại nháy. */
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -246,10 +268,20 @@ export function DevicesScreen({ me }: { me: Me }) {
         // Sửa NGAY TRÊN DANH SÁCH: đổi người giữ máy hay hạn bảo hành là việc lặt vặt
         // hằng ngày, bắt vào trang chi tiết rồi quay ra là ba lần chuyển trang cho một ô.
         // Mở đúng hộp "Thêm thiết bị" (AD-15) — cùng bộ trường, chỉ khác đã điền sẵn.
-        cell: ({ row }) => <EditCell device={row.original} onEdit={setEditing} />,
+        // Thanh lý thì sang trang chi tiết: hộp thanh lý phải liệt kê thứ máy đang giữ (IP,
+        // NAT, license…), và chỉ trang đó đọc đủ các khu ấy.
+        cell: ({ row }) => (
+          <DeviceRowActions
+            device={row.original}
+            onEdit={setEditing}
+            onStatus={openStatus}
+            onClone={setCloning}
+            onRetire={(device) => navigate(`${PATHS.device(device.id)}?action=retire`)}
+          />
+        ),
       },
     ],
-    [t, ipsOf],
+    [t, ipsOf, navigate, openStatus],
   );
 
   /* Điện thoại: thẻ gọn ~96px thay cho bảng xếp chồng 8 dòng/máy. Không có nút Sửa — form
@@ -441,17 +473,33 @@ export function DevicesScreen({ me }: { me: Me }) {
             canExpand={(item) =>
               installedCounts.isError || (installedCounts.data?.[item.id] ?? 0) > 0
             }
-            renderExpanded={(item) => <DeviceLicensesExpand deviceId={item.id} />}
+            /* Mẫu bung dòng chuẩn (Q-18, giống /software): đầu khu `ExpandHeader` mang số đếm,
+               bảng ghế bên dưới không tự vẽ tiêu đề thứ hai. Chưa đọc được số đếm thì bỏ số —
+               đừng in "0" cho một máy có thể đang cài. */
+            renderExpanded={(item) => (
+              <>
+                <ExpandHeader
+                  title={t('devices.installedTitle')}
+                  count={installedCounts.data?.[item.id]}
+                />
+                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
+              </>
+            )}
             manualSorting
             sorting={sorting}
             /* Bấm vào dòng là mở hồ sơ — nhắm trúng mã 12px là quá khó. Ô Mã vẫn là `<Link>`
                thật cho Ctrl+bấm / mở tab mới; `DataTable` bỏ qua lượt bấm rơi vào link/nút. */
             onRowClick={(item) => navigate(PATHS.device(item.id))}
-            expandText={(item) =>
-              installedCounts.data?.[item.id]
-                ? t('devices.licenseCount', { count: installedCounts.data[item.id] })
-                : t('devices.software')
-            }
+            expandLabel={(item, open) => {
+              const count = installedCounts.data?.[item.id];
+              const what = count
+                ? t('devices.licenseCount', { count })
+                : t('devices.installedUnknown');
+              return t(open ? 'devices.collapseInstalled' : 'devices.expandInstalled', {
+                code: item.code,
+                what,
+              });
+            }}
             onSortingChange={(updater) => {
               const next = typeof updater === 'function' ? updater(sorting) : updater;
               const first = next[0];
@@ -509,35 +557,45 @@ export function DevicesScreen({ me }: { me: Me }) {
           }}
         />
       ) : null}
-    </>
-  );
-}
 
-/**
- * Nút Sửa của một dòng. Máy đã thanh lý thì API từ chối mọi lượt sửa (DEVICE_RETIRED): để nút
- * bấm được là cho người dùng gõ xong cả form rồi mới nhận lỗi. Nút vẫn ĐỨNG ĐÓ (tắt) kèm lý do
- * đọc được bằng trình đọc màn hình, để hàng không lệch cột và người ta biết vì sao.
- */
-function EditCell({ device, onEdit }: { device: DeviceRow; onEdit: (d: DeviceRow) => void }) {
-  const { t } = useTranslation();
-  const retired = device.status === 'retired';
-  const reason = useDisabledReason(retired ? t('devices.retiredLockedShort') : null);
-  return (
-    <>
-      <button
-        type="button"
-        className="btn sm ghost"
-        aria-label={t('devices.editOf', { device: device.code })}
-        disabled={retired}
-        {...reason.buttonProps}
-        onClick={(event) => {
-          event.stopPropagation();
-          onEdit(device);
-        }}
-      >
-        {t('common.edit')}
-      </button>
-      {reason.hint}
+      {cloning ? (
+        <DeviceForm
+          device={null}
+          cloneFrom={cloning}
+          csrfToken={me.csrfToken}
+          onClose={() => setCloning(null)}
+          onSaved={(result, options) => {
+            if (!options?.keepOpen) setCloning(null);
+            setFlashId(result.device.id);
+            void queryClient.invalidateQueries({ queryKey: ['devices'] });
+          }}
+          onOpenCreated={(created) => navigate(PATHS.device(created.id))}
+        />
+      ) : null}
+
+      {statusOf ? (
+        <StatusDialog
+          code={statusOf.code}
+          current={statusOf.status}
+          reopen={statusOf.status === 'retired'}
+          busy={setStatus.isPending}
+          error={statusError}
+          onCancel={() => setStatusOf(null)}
+          onConfirm={(status) =>
+            setStatus.mutate(
+              { id: statusOf.id, status },
+              {
+                onSuccess: () => {
+                  setStatusOf(null);
+                  toast({ message: t('devices.statusChanged') });
+                  void queryClient.invalidateQueries({ queryKey: ['devices'] });
+                },
+                onError: (err) => setStatusError(errorMessage(err)),
+              },
+            )
+          }
+        />
+      ) : null}
     </>
   );
 }

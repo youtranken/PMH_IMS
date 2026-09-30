@@ -9,6 +9,7 @@ import {
   resetIsp,
   resetSoftware,
   resetUsers,
+  rowAction,
   sql,
   writeHeaders,
 } from './helpers';
@@ -279,7 +280,7 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     const ipText = new RegExp(kit.ip.replace(/\./g, '\\.'));
 
     await page.goto(`/devices/${kit.deviceId}`);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, `PC-E2E-RC-${stamp}`, 'Thanh lý');
 
     const dialog = page.getByRole('dialog');
     // Hộp nói TRƯỚC khi bấm: IP này sẽ bị gỡ — đọc từ dữ liệu thật của máy.
@@ -305,7 +306,7 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     const code = `PC-E2E-RC-${stamp}`;
 
     await page.goto(`/devices/${kit.deviceId}`);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, `PC-E2E-RC-${stamp}`, 'Thanh lý');
 
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' }).check();

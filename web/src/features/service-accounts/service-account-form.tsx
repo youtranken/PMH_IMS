@@ -459,11 +459,14 @@ export function ServiceAccountForm({
         </FormSection>
 
         {row ? (
-          <FormSection title={t('attachments.title')} columns={1}>
-            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
-                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
-                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
-            <p className="alert">{t('attachments.liveWarning')}</p>
+          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
+             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
+             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
+          <FormSection
+            title={t('attachments.title')}
+            titleTip={t('attachments.liveTip')}
+            columns={1}
+          >
             <AttachmentPanel
               ownerType="service_account"
               ownerId={row.id}

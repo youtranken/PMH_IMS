@@ -1204,10 +1204,13 @@ function NatForm({
         */}
         {rule ? (
           <>
-            <FormSection title={t('attachments.title')} columns={1}>
-              {/* Panel này GHI THẲNG, không nằm trong lượt Lưu của form — trong hộp thoại CÓ
-                  nút Hủy thì điều đó không hiển nhiên, nên phải nói ra. */}
-              <p className="alert">{t('attachments.liveWarning')}</p>
+            {/* Panel này GHI THẲNG, không nằm trong lượt Lưu của form — trong hộp thoại CÓ
+                nút Hủy thì điều đó không hiển nhiên, nên nói ra ở nút (i) cạnh tiêu đề. */}
+            <FormSection
+              title={t('attachments.title')}
+              titleTip={t('attachments.liveTip')}
+              columns={1}
+            >
               <AttachmentPanel
                 ownerType="nat_rule"
                 ownerId={rule.id}
