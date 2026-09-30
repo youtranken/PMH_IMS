@@ -48,7 +48,7 @@ export function FormSection({
   /** Câu giải thích ngắn sau nút (i) cạnh tiêu đề. Cần `title` — nút mang tên theo tiêu đề. */
   titleTip?: ReactNode;
   children: ReactNode;
-  columns?: 1 | 2 | 3;
+  columns?: 1 | 2 | 3 | 4;
 }) {
   const heading = title ? <h2 className="form-section-title">{title}</h2> : null;
   return (

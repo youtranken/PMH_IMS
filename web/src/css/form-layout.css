@@ -157,15 +157,20 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
 .form-grid[data-columns='3'] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-/* Lưới 3 cột ở khổ vừa còn 2, khổ hẹp còn 1. */
+.form-grid[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+/* Lưới 3–4 cột ở khổ vừa còn 2, khổ hẹp còn 1. */
 @media (max-width: 860px) {
-  .form-grid[data-columns='3'] {
+  .form-grid[data-columns='3'],
+  .form-grid[data-columns='4'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 560px) {
   .form-grid[data-columns='2'],
-  .form-grid[data-columns='3'] {
+  .form-grid[data-columns='3'],
+  .form-grid[data-columns='4'] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -188,11 +193,13 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
 }
 /* Ở lưới 3 cột, `span={2}` phải là ĐÚNG hai cột — trải hết hàng thì nó không khác `span={3}`
    và ô Ghi chú/Tên hồ sơ mất hẳn ý nghĩa "rộng hơn nhưng chưa hết hàng". */
-.form-grid[data-columns='3'] .span-2 {
+.form-grid[data-columns='3'] .span-2,
+.form-grid[data-columns='4'] .span-2 {
   grid-column: span 2;
 }
 @media (max-width: 860px) {
-  .form-grid[data-columns='3'] .span-2 {
+  .form-grid[data-columns='3'] .span-2,
+  .form-grid[data-columns='4'] .span-2 {
     grid-column: 1 / -1;
   }
 }
