@@ -968,13 +968,15 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
       // Q-18: "Sửa hồ sơ" đứng ngoài; Đổi trạng thái (DEV-053) · Nhân bản (DEV-034) · Thanh lý
       // vào menu ⋮. Mã máy không còn nút chép (tiêu đề trang, bôi đen chép được). "Bổ sung n ô
-      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan.
+      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan — máy chưa có IP thì "Cấp IP"
+      // là nút chính ngay trong ô "IP quản trị", nên đứng trước "Bổ sung".
       .toEqual([
         'Sửa hồ sơ',
         `Thao tác với ${code}`,
-        'Bổ sung 6 ô còn thiếu',
         'Cấp IP',
+        'Bổ sung 6 ô còn thiếu',
       ]);
+    await expect(panel.getByText('Chưa có IP', { exact: true })).toBeVisible();
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*

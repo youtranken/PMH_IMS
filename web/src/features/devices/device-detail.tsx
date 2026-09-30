@@ -505,6 +505,8 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   /* IP quản trị = IP đầu tiên do module `ipam` khai cho máy này (nhãn của dòng là địa chỉ). */
   const firstIp = panelOf("ipam")?.items[0]?.label ?? null;
+  /** Đã đọc được khu mở rộng và máy KHÔNG có IP nào — khác "chưa biết". */
+  const ipKnownEmpty = !!panels.data && !firstIp;
   const vendor = (lists.data?.vendors ?? []).find((entry) => entry.id === item.vendorId);
 
   const blankLabels = [
@@ -816,6 +818,24 @@ export function DeviceDetail({ me }: { me: Me }) {
                   <span className="mono">{firstIp}</span>
                   {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} /> : null}
                 </DataItemIfSet>
+                {/* Máy CHẮC CHẮN chưa có IP (khu mở rộng đã về): ô IP quản trị nói thẳng "chưa có"
+                    và nút Cấp IP là nút chính ngay tại đó — đây là việc còn thiếu đầu tiên của
+                    một máy mạng, không được là một nút mờ lẫn cuối khu. */}
+                {ipKnownEmpty && !retired ? (
+                  <div className="data-item">
+                    <dt>{t("devices.managementIp")}</dt>
+                    <dd>
+                      <span className="muted">{t("devices.noIpYet")}</span>{" "}
+                      <button
+                        type="button"
+                        className="btn sm primary"
+                        onClick={() => setAssigningIp(true)}
+                      >
+                        {t("devices.assignIp")}
+                      </button>
+                    </dd>
+                  </div>
+                ) : null}
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
               </dl>
@@ -848,10 +868,14 @@ export function DeviceDetail({ me }: { me: Me }) {
                     </button>
                   ) : null}
                   {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
-                      trang tìm ô trống rồi gõ lại mã máy này. */}
-                  <button type="button" className="btn sm ghost" onClick={() => setAssigningIp(true)}>
-                    {t("devices.assignIp")}
-                  </button>
+                      trang tìm ô trống rồi gõ lại mã máy này. Máy đã có IP (cấp thêm) hoặc chưa
+                      đọc được khu IP thì nút đứng ở đây; chắc chắn chưa có IP thì nó là nút
+                      chính trong ô "IP quản trị" phía trên. */}
+                  {ipKnownEmpty ? null : (
+                    <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
+                      {t("devices.assignIp")}
+                    </button>
+                  )}
                 </div>
               ) : null}
             </DetailSection>
