@@ -1,3 +1,4 @@
+import { Chevron } from '@/ui/chevron';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -58,11 +59,7 @@ export function DetailHeader({
             ) : null}
             {crumb.to ? (
               <Link className={index === 0 ? 'crumb-back' : undefined} to={crumb.to}>
-                {index === 0 ? (
-                  <span aria-hidden="true" className="crumb-arrow">
-                    ‹
-                  </span>
-                ) : null}
+                {index === 0 ? <Chevron direction="left" className="crumb-arrow" /> : null}
                 {crumb.label}
               </Link>
             ) : (
