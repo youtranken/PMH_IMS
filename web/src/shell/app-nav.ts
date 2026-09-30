@@ -1,5 +1,5 @@
 import type { Me } from '@/lib/me';
-import { PATHS } from '@/lib/routes';
+import { PATHS, titleKeyOf } from '@/lib/routes';
 import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 
 interface NavItem {
@@ -10,8 +10,6 @@ interface NavItem {
   to: string;
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
-  /** Màn chưa làm (epic sau) — hiện mờ, không điều hướng được. */
-  planned?: boolean;
   /** Mục mang số việc đang chờ — shell tự hỏi số và vẽ `.nav-badge`. */
   badge?: 'approvals' | 'overdue';
 }
@@ -19,11 +17,17 @@ interface NavItem {
 export interface NavGroup {
   labelKey: string;
   items: NavItem[];
+  /**
+   * Tiêu đề nhóm thành nút khép/mở, mặc định khép. Chỉ cho nhóm ít dùng hằng ngày: menu của SA
+   * dài hơn màn laptop 768–900px, và cuộn sidebar để tìm "Thiết bị" là cái giá trả mỗi ngày
+   * cho vài mục quản trị mở mỗi tuần một lần (Q-18).
+   */
+  collapsible?: boolean;
 }
 
 /**
- * Sidebar của IMS. Mục của epic sau đã có chỗ sẵn (`planned: true`) để bản đồ điều hướng
- * không phải vẽ lại mỗi epic — thêm màn chỉ là bỏ cờ `planned`.
+ * Sidebar của IMS. Chỉ liệt kê màn đã có: mục "sắp có" chiếm chỗ trên một menu vốn đã dài
+ * mà không đưa người dùng tới đâu (Q-18).
  *
  * Nhóm theo VIỆC người trực đang làm, không theo thứ tự làm ra màn: một danh sách phẳng mười
  * mấy mục thì khó quét, nhất là trong drawer điện thoại. Tài khoản dịch vụ đứng trong "Tài sản"
@@ -48,7 +52,6 @@ const allNavGroups: NavGroup[] = [
       /* Kho thanh lý cho MỌI vai: "cái máy này đâu rồi" là câu ai trong team IT cũng hỏi, và
          "đã thanh lý tháng trước" không phải bí mật gì. */
       { key: 'nav.disposal', to: PATHS.disposal },
-      { key: 'nav.documents', to: PATHS.documents, planned: true },
     ],
   },
   {
@@ -75,6 +78,7 @@ const allNavGroups: NavGroup[] = [
   },
   {
     labelKey: 'nav.groupAdmin',
+    collapsible: true,
     items: [
       { key: 'nav.accounts', to: PATHS.adminAccounts, roles: ['sa'] },
       // Member vào xem được (form thiết bị cần biết danh mục có gì); sửa thì API chặn.
@@ -107,4 +111,16 @@ export function visibleGroups(me: Me | null): NavGroup[] {
       items: group.items.filter((item) => !item.roles || item.roles.includes(me.role)),
     }))
     .filter((group) => group.items.length > 0);
+}
+
+/**
+ * Nhóm menu chứa màn đang mở — `null` nếu màn không có mục trên menu (Hồ sơ, 404).
+ *
+ * Đi qua `titleKeyOf` chứ không tự khớp tiền tố: trang chi tiết đội nhóm của danh sách nó thuộc
+ * về theo đúng luật của tên tab, và cái bẫy `'/'` là tiền tố của mọi đường chỉ phải gỡ một chỗ.
+ */
+export function groupOfPath(groups: NavGroup[], pathname: string): NavGroup | null {
+  const key = titleKeyOf(pathname);
+  if (!key) return null;
+  return groups.find((group) => group.items.some((item) => item.key === key)) ?? null;
 }

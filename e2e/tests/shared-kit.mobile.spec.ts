@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, horizontalOverflow, openNavDrawer, resetUsers } from './helpers';
+import { E2E_SA, firstLogin, horizontalOverflow, openNavDrawer, resetUsers, openNavGroup } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -30,6 +30,7 @@ test.describe('390px', () => {
   test('danh sách tài khoản đọc được ở 390px', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await openNavDrawer(page);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
     // Ở khổ này mỗi tài khoản là một THẺ (tên · vai, dòng phụ email) chứ không phải dòng bảng.

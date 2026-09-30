@@ -9,6 +9,7 @@ import {
   resetUsers,
   writeHeaders,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 test.describe('SA đi một vòng cả hệ thống', () => {
@@ -28,11 +29,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     heading: RegExp;
   }
 
-  /**
-   * Bản đồ menu của vai SA, đúng thứ tự trong `web/src/shell/app-nav.ts`.
-   * Mục `planned` (Tài liệu) KHÔNG có ở đây — nó được kiểm riêng bên dưới, vì nó không phải
-   * link.
-   */
+  /** Bản đồ menu của vai SA — mọi link trong `web/src/shell/app-nav.ts`. */
   const NAV_STOPS: NavStop[] = [
     { link: 'Bảng điều khiển', path: '/', heading: /^Bảng điều khiển$/ },
     { link: 'Thiết bị', path: '/devices', heading: /^Thiết bị$/ },
@@ -62,8 +59,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * đúng thay vì bấm menu.
    *
    * ĐỎ KHI: một mục menu trỏ sai đường, một route bị xóa hoặc gác nhầm vai (ra 404), một
-   * `<h1>` đổi chữ mà i18n không đổi theo, hoặc mục "chưa mở" bỗng thành link bấm được
-   * (đưa người dùng vào màn của epic chưa làm).
+   * `<h1>` đổi chữ mà i18n không đổi theo, hoặc một mục cho màn chưa có quay lại menu.
    */
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
     // 15 lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
@@ -73,6 +69,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
 
     for (const stop of NAV_STOPS) {
+      // Nhóm "Hệ thống" mặc định khép (Q-18); mở lại mỗi chặng vì rời nhóm thì nó không tự mở.
+      await openNavGroup(page);
       await nav.getByRole('link', { name: stop.link, exact: true }).click();
 
       await expect(
@@ -90,44 +88,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       ).toBe(stop.path);
     }
 
-    /*
-     * Mục của epic sau: `<span title="…">` kèm lời giải thích `sr-only`, KHÔNG phải `<a>`.
-     * Nó có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
-     * được thì tệ hơn không có.
-     */
-    for (const planned of ['Tài liệu']) {
-      await expect(
-        nav.getByRole('link', { name: planned, exact: true }),
-        `"${planned}" thuộc epic sau — nó KHÔNG được là link bấm được`,
-      ).toHaveCount(0);
-
-      const label = nav.getByText(planned, { exact: true });
-      await expect(
-        label,
-        `Mục "${planned}" vẫn phải hiện trong menu (chỗ đã dành sẵn cho epic sau)`,
-      ).toBeVisible();
-
-      const host = await label.evaluate((el) => {
-        const owner = el.closest('[title]');
-        return {
-          text: owner?.textContent ?? '',
-          title: owner?.getAttribute('title') ?? null,
-        };
-      });
-      /*
-       * Lời giải thích phải nằm trong CHỮ của mục (bản `sr-only`) — `title` chỉ tới được người
-       * rê chuột, còn `aria-disabled` trên một <span> không vai trò thì trình đọc màn hình bỏ
-       * qua (OLD-A11Y-01).
-       */
-      expect(
-        host.text,
-        `"${planned}" phải tự giải thích bằng chữ mà trình đọc màn hình đọc được`,
-      ).toContain('Phần này chưa mở trong bản hiện tại');
-      expect(
-        host.title,
-        `"${planned}" phải tự giải thích vì sao bấm không được, không im lặng`,
-      ).toBe('Phần này chưa mở trong bản hiện tại');
-    }
+    // Màn Tài liệu chưa có — menu không bày chỗ cho nó (Q-18).
+    await expect(nav.getByText('Tài liệu', { exact: true }), 'menu chỉ liệt kê màn đã có').toHaveCount(0);
   });
 
   /*
@@ -425,7 +387,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     /*
      * Gõ Tab cho tới khi tới nút — KHÔNG dùng `.focus()`. Chính việc đi tới được mới là điều
      * cần chứng minh: `.focus()` gọi được trên cả thứ không hề nằm trong luồng Tab.
-     * 80 lượt là dư cho sidebar (~15 mục) + chân sidebar + topbar + hàng nút đầu trang.
+     * 80 lượt là dư cho sidebar (~12 mục khi "Hệ thống" khép) + chân sidebar + topbar + hàng nút
+     * đầu trang.
      */
     let reached = false;
     for (let i = 0; i < 80 && !reached; i += 1) {

@@ -267,6 +267,11 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   ảnh không gửi lên.
 - **Một lần xác thực mã 2 lớp dùng cho mọi thao tác két** trong `secret.stepup_grace_minutes`.
 - **Ghi chú của ngăn két không được chứa mật khẩu:** server từ chối, không chỉ nhắc (FR-035).
+- **Topbar không lặp tên màn:** tên màn chỉ là `<h1>` của trang; topbar hiện tên nhóm menu ("Tài
+  sản", "Hệ thống"…) làm ngữ cảnh. Tab trình duyệt vẫn mang tên màn.
+- **Menu gọn cho màn laptop:** bỏ mục "Tài liệu" (chưa có màn); nhóm "Hệ thống" mặc định khép,
+  tự mở khi đang ở màn trong nhóm, nhớ lựa chọn trên từng máy. Menu SA khi khép phải vừa màn
+  cao 768px không cuộn.
 
 ### Q-09 · Tài liệu
 

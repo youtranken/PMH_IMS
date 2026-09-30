@@ -859,6 +859,22 @@ export async function openNavDrawer(page: Page): Promise<void> {
 }
 
 /**
+ * Mở nhóm menu khép được ("Hệ thống", mặc định khép — Q-18) nếu nó đang khép. Nhóm tự mở khi
+ * đang đứng ở một màn trong nhóm, nên gọi thừa cũng vô hại.
+ *
+ * Gọi TRƯỚC mọi khẳng định "không có link X" trong nhóm này: link của nhóm khép nằm dưới
+ * `hidden`, `getByRole` bỏ qua nó, và `toHaveCount(0)` sẽ xanh cả khi link vẫn còn trên menu.
+ * Màn hẹp thì mở drawer trước (`openNavDrawer`).
+ */
+export async function openNavGroup(page: Page, name = 'Hệ thống'): Promise<void> {
+  const toggle = page
+    .getByRole('navigation', { name: 'Điều hướng chính' })
+    .getByRole('button', { name, exact: true });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+}
+
+/**
  * Số pixel trang bị tràn ngang. 0 (hoặc 1 do làm tròn) = không tràn.
  *
  * Một bản dùng chung cho mọi `*.mobile.spec.ts` (AD-15): bản chép trong từng file sẽ trôi —

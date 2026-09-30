@@ -18,13 +18,13 @@ const ME: Me = {
   config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30 },
 };
 
-function renderShell() {
+function renderShell(path = '/') {
   return renderWithI18n(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route
-            path="/"
+            path="*"
             element={
               <AppShell me={ME}>
                 <p>Trang chủ</p>
@@ -51,6 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  localStorage.clear();
 });
 
 /** Đăng xuất nằm trong menu tài khoản ở chân sidebar. */
@@ -117,38 +118,86 @@ describe('AppShell — đăng xuất', () => {
   });
 });
 
-describe('AppShell — mục "sắp có" trong menu', () => {
-  it('không phải link, và lời giải thích nằm trong CHỮ (không chỉ trong title)', () => {
-    vi.stubGlobal('fetch', vi.fn());
-    renderShell();
-    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
-    expect(within(nav).queryByRole('link', { name: /Tài liệu/ })).not.toBeInTheDocument();
-
-    const label = within(nav).getByText('Tài liệu', { exact: true });
-    const item = label.parentElement as HTMLElement;
-    // `aria-disabled` trên một <span> không vai trò là ARIA sai — trình đọc màn hình bỏ qua nó.
-    expect(item).not.toHaveAttribute('aria-disabled');
-    expect(item).toHaveTextContent('Phần này chưa mở trong bản hiện tại');
-    expect(item).toHaveAttribute('title', 'Phần này chưa mở trong bản hiện tại');
-  });
-});
-
 describe('AppShell — topbar', () => {
-  it('đầu topbar là TÊN MÀN, không phải tên người dùng; có ô tìm kèm phím tắt', () => {
+  /*
+   * Tên màn đã là `<h1>` của chính trang (PageHeader) — topbar nhắc lại lần nữa thì người dùng
+   * đọc cùng một chữ hai lần ngay đầu màn (Q-18).
+   */
+  it('topbar KHÔNG lặp tên màn; chỉ có tên NHÓM làm ngữ cảnh; có ô tìm kèm phím tắt', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
-    renderShell();
+    renderShell('/devices');
     const banner = screen.getByRole('banner');
-    expect(within(banner).getByTestId('topbar-title')).toHaveTextContent('Bảng điều khiển');
+    expect(within(banner).queryByText('Thiết bị')).toBeNull();
+    expect(within(banner).getByTestId('topbar-context')).toHaveTextContent(/^Tài sản$/);
     expect(within(banner).queryByText(/Nguyễn Văn A/)).toBeNull();
     const search = within(banner).getByRole('button', { name: /^Tìm nhanh \((Ctrl K|⌘K)\)$/ });
     expect(search).toHaveTextContent('Tìm mã, tên, serial, IP…');
   });
 
-  it('mục "sắp có" mang chip chữ thấy được, không chỉ mờ đi', () => {
+  it('trang chi tiết đội nhóm của danh sách nó thuộc về', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
-    renderShell();
-    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
-    expect(within(nav).getByText('Tài liệu', { exact: true }).parentElement).toHaveTextContent('Sắp có');
+    renderShell('/devices/d-9');
+    expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toHaveTextContent(/^Tài sản$/);
   });
+
+  it('màn không thuộc nhóm nào (Hồ sơ của tôi) thì topbar để trống, không đoán bừa', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/profile');
+    expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toBeEmptyDOMElement();
+  });
+
 });
 
+
+describe('AppShell — menu gọn (Q-18)', () => {
+  const nav = () => screen.getByRole('navigation', { name: 'Điều hướng chính' });
+  const systemToggle = () => within(nav()).getByRole('button', { name: 'Hệ thống' });
+
+  it('không còn mục "Tài liệu" — không link, không chữ', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell();
+    expect(within(nav()).queryByText('Tài liệu')).toBeNull();
+  });
+
+  it('nhóm "Hệ thống" mặc định khép; bấm tiêu đề thì mở, và nhớ qua lần mở sau', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    const first = renderShell('/devices');
+    const toggle = systemToggle();
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const region = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+    expect(region).not.toBeNull();
+    expect(within(nav()).queryByRole('link', { name: 'Danh mục' })).toBeNull();
+
+    await userEvent.setup().click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav()).getByRole('link', { name: 'Danh mục' })).toBeVisible();
+
+    first.unmount();
+    renderShell('/devices');
+    expect(systemToggle()).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('các nhóm khác không khép được — chỉ "Hệ thống"', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/devices');
+    expect(within(nav()).queryByRole('button', { name: 'Tài sản' })).toBeNull();
+    expect(within(nav()).getByRole('link', { name: 'Thiết bị' })).toBeVisible();
+  });
+
+  it('đang ở một màn trong nhóm thì nhóm tự mở, dù mặc định khép', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/admin/catalog');
+    expect(systemToggle()).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav()).getByRole('link', { name: 'Danh mục' })).toBeVisible();
+  });
+
+  it('localStorage bị chặn (trình duyệt khoá dữ liệu trang) thì menu vẫn dựng, nhóm khép', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    renderShell('/devices');
+    expect(systemToggle()).toHaveAttribute('aria-expanded', 'false');
+    spy.mockRestore();
+  });
+});

@@ -237,14 +237,14 @@
   box-shadow: 0 0 0 2px var(--surface);
 }
 
-/* Tên màn đang mở ở đầu topbar. */
-.topbar-title {
+/* Tên nhóm menu ở đầu topbar: ngữ cảnh nhỏ, nhạt — tên màn là `<h1>` của trang, không ở đây. */
+.topbar-context {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ink);
-  font-size: var(--fs-md);
+  color: var(--muted);
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -326,7 +326,7 @@
 }
 
 @media (max-width: 900px) {
-  /* Điện thoại: topbar hẹp lại, tên màn cắt bằng "…" thay vì đẩy trang tràn ngang. */
+  /* Điện thoại: topbar hẹp lại, tên nhóm cắt bằng "…" thay vì đẩy trang tràn ngang. */
   .topbar {
     padding: 0 var(--space-5);
     gap: var(--space-4);
@@ -336,26 +336,36 @@
     height: 44px;
   }
   /* Mục menu trong drawer là thứ ngón tay chạm nhiều nhất — tối thiểu 44px. */
-  .sidebar.is-drawer .nav-item {
+  .sidebar.is-drawer .nav-item,
+  .sidebar.is-drawer .nav-group-toggle {
     min-height: 44px;
   }
 }
 
-/* Mục của epic sau (`planned` trong app-nav.ts): render ra <span>, KHÔNG phải link. Chip "Sắp
-   có" nói điều đó bằng chữ — độ mờ + con trỏ cấm chỉ nói được với người rê chuột. */
-.nav-item.is-planned {
-  cursor: default;
-  color: var(--sidebar-label);
-}
-.nav-item.is-planned:hover {
+/* Tiêu đề nhóm khép/mở được (`collapsible` trong app-nav.ts): giữ nguyên dáng `.nav-label`, chỉ
+   thêm mũi tên — để nó đọc như một tiêu đề nhóm, không như một mục menu thứ mười mấy. */
+.nav-group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
   background: none;
-  color: var(--sidebar-label);
-  transform: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.nav-badge.planned {
-  min-width: 0;
-  padding: 0 var(--space-3);
-  font-weight: 700;
-  background: var(--sidebar-chip);
-  color: var(--sidebar-label);
+.nav-group-toggle:hover {
+  color: var(--sidebar-ink-2);
+}
+.nav-group-chev {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  transition: transform 0.15s var(--ease);
+}
+.nav-group-toggle[aria-expanded='true'] .nav-group-chev {
+  transform: rotate(90deg);
 }

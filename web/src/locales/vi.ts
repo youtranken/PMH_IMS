@@ -449,8 +449,6 @@ export default {
     groupSecurity: 'Bảo mật',
     groupAdmin: 'Hệ thống',
     groupDev: 'Dành cho nhà phát triển',
-    plannedHint: 'Phần này chưa mở trong bản hiện tại',
-    plannedChip: 'Sắp có',
   },
   catalog: {
     title: 'Danh mục',

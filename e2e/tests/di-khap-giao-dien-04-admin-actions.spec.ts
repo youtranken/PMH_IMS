@@ -13,6 +13,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
@@ -80,6 +81,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
 
       // --- SA vào màn Tài khoản và bấm nút, đúng như người thật.
       await firstLogin(page, E2E_SA);
+      await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
@@ -192,6 +194,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
     const temporaryPassword = ((await created.json()) as { temporaryPassword: string })
       .temporaryPassword;
 
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await page.getByRole('searchbox').fill(stamp);
     const row = page.getByRole('row', { name: new RegExp(fullName) });

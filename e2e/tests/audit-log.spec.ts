@@ -9,6 +9,7 @@ import {
   resetUsers,
   sql,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
@@ -277,6 +278,7 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await firstLogin(page, E2E_SA);
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    await openNavGroup(page);
     await nav.getByRole('link', { name: 'Nhật ký hệ thống', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/admin/audit-log');
@@ -339,6 +341,7 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     // Menu đã dựng xong thì vế "không có" bên dưới mới có nghĩa.
     await expect(nav.getByRole('link', { name: 'Thiết bị', exact: true })).toBeVisible();
+    await openNavGroup(page);
     await expect(nav.getByText('Nhật ký hệ thống', { exact: true })).toHaveCount(0);
 
     await page.goto('/admin/audit-log');
