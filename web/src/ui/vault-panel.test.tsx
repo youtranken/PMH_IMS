@@ -768,3 +768,39 @@ describe('VaultPanel — ghi chú không được chứa mật khẩu', () => {
     expect(writes(fetchMock)).toHaveLength(0);
   });
 });
+
+/**
+ * SEC-20: ghi chú không in sẵn dưới tên ngăn (người đứng sau lưng đọc được, và đó là thứ server
+ * chỉ gửi cho người mở được ngăn). Bấm "Ghi chú" mới hiện.
+ */
+describe('VaultPanel — ghi chú của ngăn hiện khi bấm, không in sẵn', () => {
+  const NOTE = 'Gọi NOC trước khi reboot';
+
+  it('có ghi chú: dòng không in chữ, bấm "Ghi chú" mới hiện, bấm lại thì ẩn', async () => {
+    mockApi(WHITELIST, [{ ...SECRET, note: NOTE, hasNote: true }]);
+    renderPanel();
+    const toggle = await screen.findByRole('button', { name: 'Ghi chú' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(NOTE)).toBeNull();
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(NOTE)).toBeVisible();
+    await userEvent.click(toggle);
+    expect(screen.queryByText(NOTE)).toBeNull();
+  });
+
+  it('server giấu ghi chú (chưa mở được ngăn): nói là có, không nút, không chữ', async () => {
+    mockApi(NEEDS_APPROVAL, [{ ...SECRET, note: null, hasNote: true }]);
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/Có ghi chú — hiện khi bạn mở được ngăn này/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ghi chú' })).toBeNull();
+  });
+
+  it('không có ghi chú: không nút, không câu nào', async () => {
+    mockApi(WHITELIST, [{ ...SECRET, note: null, hasNote: false }]);
+    renderPanel();
+    expect(await screen.findByText('admin web')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ghi chú' })).toBeNull();
+    expect(screen.queryByText(/Có ghi chú/)).toBeNull();
+  });
+});

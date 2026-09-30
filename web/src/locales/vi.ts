@@ -1515,6 +1515,8 @@ export default {
       'Ghi chú có một chuỗi trông như mật khẩu. Cất mật khẩu vào ô Giá trị; nếu đó là tên máy ' +
       'hay mã model, tách bằng dấu cách.',
     rotateValueInNote: 'Giá trị mới đang nằm trong ghi chú của ngăn này. Sửa ghi chú trước.',
+    noteToggle: 'Ghi chú',
+    noteHidden: 'Có ghi chú — hiện khi bạn mở được ngăn này',
     reveal: 'Xem',
     revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',
