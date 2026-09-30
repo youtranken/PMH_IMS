@@ -989,7 +989,8 @@ export default {
     startDate: 'Bắt đầu',
     endDate: 'Kết thúc',
     endDateHint: 'Để trống thì ghế theo hạn của hồ sơ.',
-    seatsHeader: 'Đã gán {{seats}} ghế',
+    /* Đầu khu bung dòng license (`ExpandHeader`), số đếm đứng ngay sau. */
+    seatsInUse: 'Ghế đang dùng',
     editSeatTitle: 'Sửa ghế license',
     seatSaved: 'Đã lưu ghế của máy {{device}}.',
     emptySeats: 'Chưa gán license này vào máy nào.',
@@ -1015,8 +1016,7 @@ export default {
     filterState: 'Lọc ghế theo tình trạng',
     tabActive: 'Đang dùng',
     tabReleased: 'Đã gỡ',
-    seatsFullTag: 'hết ghế',
-    expandLabel: 'Mở rộng {{code}} — xem máy đang dùng',
+    expandLabel: 'Mở rộng {{code}} — {{count}} ghế đang dùng',
     collapseLabel: 'Thu gọn {{code}}',
     /* Chọn nhanh cả lô theo phòng ban / người sử dụng trong hộp Gán (Q-15). */
     quickPickBy: 'Chọn máy theo',

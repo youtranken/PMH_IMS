@@ -123,7 +123,7 @@ test('ghế license ở 390px: thẻ danh sách mở hồ sơ, bảng ghế gậ
   await expect(page.getByRole('link', { name: code })).toBeVisible();
   /* ≤600px danh sách là thẻ gọn (SW-022), không bung ghế trong thẻ: chạm thẻ mở hồ sơ, ghế
      nằm ở tab Máy đang dùng. */
-  await expect(page.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Mở rộng / })).toHaveCount(0);
   await page.getByRole('link', { name: code }).click();
   await page.getByRole('tab', { name: /Máy đang dùng/ }).click();
 
