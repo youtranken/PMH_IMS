@@ -15,6 +15,11 @@ graphify god-nodes --top 15  # hub mới phải là *.api.ts / service dùng chu
 
 Rồi thêm một mục vào đây.
 
+> **Migration đã được gộp (30/09/2026, Q-17).** 96 file cũ (`0000_extensions` … `0304_…`) được gộp
+> thành 34 file theo bảng (`0000_extensions` … `0033_service_account`), lược đồ cuối trùng hệt. Các
+> mục epic bên dưới là LỊCH SỬ và vẫn nhắc số migration CŨ — số đó không còn là tên file; tra bảng
+> tương ứng ở `api/src/migrations/00NN_<bảng>.sql`. DB dựng trước lượt gộp (chỉ dev) phải dựng lại.
+
 ---
 
 ## Epic 1 — Nền tảng & Đăng nhập an toàn (đóng 2026-08-22)

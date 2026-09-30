@@ -230,6 +230,20 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **VLAN của cổng thiết bị giữ kiểu chữ**: chỉ nhận để trống, `trunk`, hoặc số 1–4094. Không đổi sang
   kiểu số vì sẽ mất giá trị `trunk` hay gặp trên cổng uplink (OLD-DB-04).
 
+### Q-17 · Gộp migration trước go-live (30/09/2026, chủ dự án chốt)
+
+- **Gộp 96 file migration thành 34 file theo bảng** (`0000_extensions` … `0033_service_account`):
+  mỗi file là trạng thái cuối của một bảng (hoặc bảng + bảng lịch sử của nó), gồm cột, ràng buộc,
+  chỉ mục, trigger, quyền và dữ liệu gieo. Lý do: chưa có dữ liệu thật ở đâu cả, và muốn bản
+  production gọn — đọc một file là biết một bảng, không phải lần qua chuỗi ALTER.
+- Lược đồ cuối **trùng hệt** bộ cũ (so bằng `pg_dump` và catalog, cả khi migrate bằng superuser lẫn
+  bằng `ims_owner`), trừ hai chỗ cố ý: khoá ngoại `device_cabinet_same_site_fkey` được xác nhận luôn
+  (NOT VALID chỉ để khỏi quét dữ liệu cũ), và chú thích trong thân hàm `ip_address_within_subnet`.
+- **Từ nay chỉ thêm file mới đánh số sau `0033`.** Luật "không sửa migration đã có, kể cả chú thích"
+  áp lại nguyên vẹn cho 34 file này.
+- **DB dựng trước khi gộp (chỉ có ở máy dev) phải dựng lại từ đầu.** Runner nhận ra journal cũ và
+  dừng với câu nói rõ việc phải làm, không áp bộ mới lên trên.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
