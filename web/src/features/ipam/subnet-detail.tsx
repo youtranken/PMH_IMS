@@ -780,7 +780,7 @@ function Empty() {
  * Gỡ hết máy lẫn người dùng của hồ sơ đang dùng là quay lại dòng mồ côi Q-14 cấm — muốn trả
  * địa chỉ về pool thì đi "Thu hồi", nơi lịch sử ghi lại chủ cũ.
  */
-function IpForm({
+export function IpForm({
   record,
   csrfToken,
   onClose,
@@ -899,7 +899,7 @@ function IpForm({
           />
         </Field>
 
-        <Field label={t("ipam.note")} htmlFor="ip-note" span={2}>
+        <Field label={t("ipam.note")} hint={t("ipam.noteHint")} htmlFor="ip-note" span={2}>
           <textarea
             id="ip-note"
             className="inp"

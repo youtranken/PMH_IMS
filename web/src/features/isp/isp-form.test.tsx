@@ -114,6 +114,14 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     expect(calls.some((c) => c.url === '/api/v1/isp-lines')).toBe(false);
   });
 
+  it('ô Ghi chú nhắc không ghi mật khẩu (ghi chú không mã hóa, FR-035)', () => {
+    mockFetch();
+    renderForm(null);
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAccessibleDescription(
+      /Không ghi mật khẩu/,
+    );
+  });
+
   it('hồ sơ đang trỏ vào mục ngừng dùng vẫn hiện đúng mục đó', async () => {
     mockFetch();
     renderForm(ROW_ON_INACTIVE);

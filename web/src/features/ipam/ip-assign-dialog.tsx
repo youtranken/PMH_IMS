@@ -296,7 +296,7 @@ export function AssignIpDialog({
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />
         </Field>
 
-        <Field label={t('ipam.note')} htmlFor="ip-assign-note" span={2}>
+        <Field label={t('ipam.note')} hint={t('ipam.noteHint')} htmlFor="ip-assign-note" span={2}>
           <textarea
             id="ip-assign-note"
             className="inp"

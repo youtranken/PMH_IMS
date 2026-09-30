@@ -416,7 +416,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} htmlFor="isp-note" span={2}>
+          <Field label={t('isp.note')} hint={t('isp.noteHint')} htmlFor="isp-note" span={2}>
             <input
               id="isp-note"
               className="inp"

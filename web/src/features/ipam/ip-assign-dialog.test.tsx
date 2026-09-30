@@ -118,6 +118,14 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     });
   });
 
+  it('ô Ghi chú nhắc không ghi mật khẩu (ghi chú không mã hóa, FR-035)', async () => {
+    mockFetch();
+    renderDialog(null);
+    expect(await screen.findByRole('textbox', { name: 'Ghi chú' })).toHaveAccessibleDescription(
+      /Không ghi mật khẩu/,
+    );
+  });
+
   it('hồ sơ Trống: cùng hộp, nhưng đi đường transition để lịch sử nối tiếp', async () => {
     const calls = mockFetch();
     const onDone = vi.fn();
