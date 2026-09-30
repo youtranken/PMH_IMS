@@ -1019,8 +1019,7 @@ export default {
     expandLabel: 'Mở rộng {{code}} — xem máy đang dùng',
     collapseLabel: 'Thu gọn {{code}}',
     /* Chọn nhanh cả lô theo phòng ban / người sử dụng trong hộp Gán (Q-15). */
-    quickPickOpen: 'Chọn theo phòng ban / người sử dụng',
-    quickPickBy: 'Chọn nhanh theo',
+    quickPickBy: 'Chọn máy theo',
     quickPickDepartment: 'Phòng ban',
     quickPickPerson: 'Người sử dụng',
     quickPickDepartmentLabel: 'Tên phòng ban',
