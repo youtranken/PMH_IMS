@@ -8,7 +8,7 @@
  * của API; checklist nói khác API thì người dùng thấy tick xanh rồi vẫn bị từ chối.
  */
 export const PASSWORD_MIN_LENGTH = 12;
-const PASSWORD_MIN_GROUPS = 3;
+export const PASSWORD_MIN_GROUPS = 3;
 
 export interface PasswordRules {
   length: number;

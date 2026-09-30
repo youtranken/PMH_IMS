@@ -30,12 +30,6 @@ export function ChangePasswordForm({
   const [newPassword, setNew] = useState('');
   const [repeat, setRepeat] = useState('');
   const [error, setError] = useState<string | null>(null);
-  /*
-   * Chỉ nói "khớp/chưa khớp" khi ô Nhập lại đã dài bằng ô mới — nói ngay từ ký tự đầu là mắng
-   * người đang gõ. KHÔNG canh theo lúc rời ô: dòng báo mọc ra đúng lúc bấm chuột xuống nút
-   * (rời ô) đẩy nút trôi xuống, nhả chuột rơi ra ngoài nút và cú bấm mất.
-   */
-  const repeatDone = repeat.length > 0 && repeat.length >= newPassword.length;
   const prefix = variant === 'auth' ? 'cp' : 'cpd';
   const rules = checkPasswordRules(newPassword);
 
@@ -120,18 +114,16 @@ export function ChangePasswordForm({
             onChange={(e) => setNew(e.target.value)}
           />
         </Field>
-        <PasswordChecklist password={newPassword} id={`${prefix}-rules`} />
+        {/* Dòng "Hai mật khẩu khớp" nằm SẴN trong checklist và chỉ đổi ○/✓, không mọc thêm dòng
+            lúc rời ô: dòng mọc ra đúng lúc bấm chuột xuống nút đẩy nút trôi, nhả chuột rơi ra
+            ngoài nút và cú bấm mất. */}
+        <PasswordChecklist password={newPassword} repeat={repeat} id={`${prefix}-rules`} />
       </div>
 
       <Field
         label={t('auth.confirmPassword')}
         htmlFor={`${prefix}-repeat`}
         error={check.error('repeat')}
-        hint={
-          repeatDone && !check.error('repeat')
-            ? t(repeat === newPassword ? 'auth.passwordMatch' : 'auth.passwordNoMatch')
-            : undefined
-        }
       >
         <PasswordInput
           autoComplete="new-password"

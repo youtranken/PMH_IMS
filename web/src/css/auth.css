@@ -215,7 +215,8 @@
 .pw-rule { display: flex; gap: 6px; color: var(--ink-3); }
 .pw-rule.ok { color: var(--ok); }
 .pw-rule-icon { flex: none; width: 1em; text-align: center; font-weight: 700; }
-.pw-group.on { font-weight: 700; }
+/* Bốn nhóm ký tự thụt vào dưới dòng "Có ít nhất 3 trong 4:" — chúng là chi tiết của dòng đó. */
+.pw-rules-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 1.4em; }
 .auth-card .pw-rule { color: var(--auth-hint); }
 .auth-card .pw-rule.ok { color: var(--auth-ok-ink); }
 
