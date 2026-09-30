@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Combobox } from '@/ui/combobox';
+import { Dialog } from '@/ui/dialog';
 import { SuggestInput } from '@/ui/suggest-input';
 import { fireEvent, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
@@ -329,5 +330,49 @@ describe('Combobox — đang tải, và phím Enter khi lọc ra 0 dòng', () =>
     await userEvent.click(screen.getByRole('combobox'));
 
     expect(screen.getByText('Không có dịch vụ nào khớp')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Hộp mở ra với `initialFocus="first-field"` đặt tiêu điểm vào ô gợi ý đầu tiên (ô Thiết bị
+ * của hộp Cấp IP). Tiêu điểm do CODE đặt không phải người dùng chạm vào ô: menu bung ngay lúc
+ * hộp hiện thì che các ô bên dưới, và phím Esc đầu tiên chỉ đóng menu — người dùng bấm Esc để
+ * thoát hộp mà hộp vẫn đứng đó.
+ */
+describe('Combobox trong Dialog — tiêu điểm tự đặt không bung menu', () => {
+  function setup() {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <Dialog open onOpenChange={onOpenChange} title="Cấp IP" initialFocus="first-field">
+        <Combobox
+          placeholder="Thiết bị"
+          ariaLabel="Thiết bị"
+          query=""
+          onQuery={() => {}}
+          options={['SW-01', 'SW-02']}
+          getKey={(item) => item}
+          renderOption={(item) => <span>{item}</span>}
+          onSelect={() => {}}
+        />
+      </Dialog>,
+    );
+    return { onOpenChange };
+  }
+
+  it('mở hộp: ô được focus nhưng menu CHƯA bung; Esc đóng được hộp', async () => {
+    const { onOpenChange } = setup();
+    const input = screen.getByRole('combobox', { name: 'Thiết bị' });
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('listbox')).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  /** Vế đối chứng: ô đã có tiêu điểm sẵn, bấm vào nó vẫn phải bung menu. */
+  it('bấm vào ô đang có tiêu điểm sẵn: menu bung', async () => {
+    setup();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Thiết bị' }));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 });
