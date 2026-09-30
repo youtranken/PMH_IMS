@@ -715,3 +715,74 @@ input.switch:focus-visible {
   border-top: 1px solid var(--border-2);
   background: var(--surface-2);
 }
+
+/* --- Nút (i) giải thích (ui/info-tip.tsx) ---------------------------------- */
+/* Tiêu đề khu / nhãn ô có nút (i) đứng sau: hai thứ cùng hàng, nút không lọt vào thẻ tiêu đề. */
+.form-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+.form-section-head > .form-section-title {
+  margin-bottom: 0;
+}
+.field-label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.info-tip {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+/* Hình vẽ 16px, vùng bấm 24px (WCAG 2.5.8) — nhỏ hơn thì trên điện thoại chạm trượt sang nhãn. */
+.info-tip-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.info-tip-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+.info-tip-btn:hover,
+.info-tip-btn[aria-expanded='true'] {
+  color: var(--primary-ink);
+  background: var(--primary-soft);
+}
+.info-tip-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.info-tip-pop {
+  /* Vị trí do Floating UI (useAnchoredMenu, `position: fixed`) đặt inline. */
+  z-index: var(--z-popover);
+  /* Radix modal đặt body{pointer-events:none}; bong bóng portal vào đó thừa hưởng — bật lại. */
+  pointer-events: auto;
+  /* 390px: không bao giờ rộng hơn khung nhìn trừ lề 16px mỗi bên; chữ dài thì xuống dòng. */
+  max-width: min(20rem, calc(100vw - 2rem));
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  animation: rowIn 0.13s var(--ease) both;
+}

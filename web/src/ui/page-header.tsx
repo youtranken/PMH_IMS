@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
+import { InfoTip } from '@/ui/info-tip';
 
 /**
  * Đầu trang dùng chung (AD-15): tiêu đề + mô tả + vùng thao tác bên phải.
@@ -31,6 +32,7 @@ export function PageHeader({
  */
 export function FormSection({
   title,
+  titleTip,
   children,
   columns = 3,
 }: {
@@ -43,12 +45,23 @@ export function FormSection({
    * đọc biết mấy ô ấy thuộc về nhau.
    */
   title?: string;
+  /** Câu giải thích ngắn sau nút (i) cạnh tiêu đề. Cần `title` — nút mang tên theo tiêu đề. */
+  titleTip?: ReactNode;
   children: ReactNode;
   columns?: 1 | 2 | 3;
 }) {
+  const heading = title ? <h2 className="form-section-title">{title}</h2> : null;
   return (
     <section className="form-section">
-      {title ? <h2 className="form-section-title">{title}</h2> : null}
+      {/* Nút (i) đứng NGOÀI `<h2>`: đặt trong thì tên của tiêu đề thành "Bảo hành Giải thích: …". */}
+      {heading && titleTip ? (
+        <div className="form-section-head">
+          {heading}
+          <InfoTip subject={title as string}>{titleTip}</InfoTip>
+        </div>
+      ) : (
+        heading
+      )}
       <div className="form-grid" data-columns={columns}>
         {children}
       </div>
@@ -95,6 +108,7 @@ export function Field({
   error,
   htmlFor,
   span,
+  tip,
   children,
 }: {
   label: string;
@@ -119,6 +133,8 @@ export function Field({
   error?: string | null;
   htmlFor?: string;
   span?: 2 | 3;
+  /** Câu giải thích ngắn sau nút (i) cạnh nhãn — cho điều `hint` một dòng không nói hết. */
+  tip?: ReactNode;
   children: ReactNode;
 }) {
   /*
@@ -162,27 +178,40 @@ export function Field({
       })
     : children;
 
+  const labelEl = (
+    <label className="lbl-t" htmlFor={id}>
+      {label}{' '}
+      {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
+          đúng nhãn ("Email"), không thành "Email *". Chặn thật nằm ở `useFormErrors` của
+          form (form đặt `noValidate`); `required` trên ô để trình đọc màn hình đọc "bắt buộc". */}
+      {/*
+        `field-req`, KHÔNG phải `req`.
+
+        `form-layout.css` khai `.field-req { color: var(--danger) }`; `className="req"` là một
+        lớp không tồn tại. Viết sai thì dấu `*` vẫn hiện, chỉ là cùng màu với nhãn: đúng cái
+        bẫy `CLAUDE.md` cảnh báo cho `.dark` — một khối CSS hợp lệ mà không
+        bao giờ chạy, và không có gì đỏ vì trang vẫn dựng ra bình thường.
+      */}
+      {required ? (
+        <span className="field-req" aria-hidden="true">
+          *
+        </span>
+      ) : null}
+    </label>
+  );
+
   return (
     <div className={`field${span ? ` span-${span}` : ''}`}>
-      <label className="lbl-t" htmlFor={id}>
-        {label}{' '}
-        {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
-            đúng nhãn ("Email"), không thành "Email *". Chặn thật nằm ở `useFormErrors` của
-            form (form đặt `noValidate`); `required` trên ô để trình đọc màn hình đọc "bắt buộc". */}
-        {/*
-          `field-req`, KHÔNG phải `req`.
-
-          `form-layout.css` khai `.field-req { color: var(--danger) }`; `className="req"` là một
-          lớp không tồn tại. Viết sai thì dấu `*` vẫn hiện, chỉ là cùng màu với nhãn: đúng cái
-          bẫy `CLAUDE.md` cảnh báo cho `.dark` — một khối CSS hợp lệ mà không
-          bao giờ chạy, và không có gì đỏ vì trang vẫn dựng ra bình thường.
-        */}
-        {required ? (
-          <span className="field-req" aria-hidden="true">
-            *
-          </span>
-        ) : null}
-      </label>
+      {/* Nút (i) đứng NGOÀI `<label>`: nằm trong thì tên của nút lọt vào tên trợ năng của ô
+          ("Serial Giải thích: Serial"), `getByLabel('Serial', { exact: true })` hết khớp. */}
+      {tip ? (
+        <div className="field-label-row">
+          {labelEl}
+          <InfoTip subject={label}>{tip}</InfoTip>
+        </div>
+      ) : (
+        labelEl
+      )}
       {control}
       {/*
         LỖI VÀ GỢI Ý KHÔNG LOẠI TRỪ NHAU.

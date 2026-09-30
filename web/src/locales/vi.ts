@@ -242,6 +242,7 @@ export default {
     sortBy: 'Sắp xếp theo {{column}}',
     expandRow: 'Mở rộng dòng',
     collapseRow: 'Thu gọn dòng',
+    infoTipOf: 'Giải thích: {{subject}}',
     loading: 'Đang tải…',
     /*
      * KHÔNG có `common.empty` ('Chưa có dữ liệu') dùng chung.
