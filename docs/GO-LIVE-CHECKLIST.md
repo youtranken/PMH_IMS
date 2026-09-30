@@ -158,6 +158,22 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 - [x] **SEC-18 · SA "Đóng tất cả phiên" của một người**, có step-up (ADM-049). b9e91dc, v1.4.1.
 - [x] **SEC-19 · Thư xin duyệt mở két không gửi cho chính người xin** (bốn mắt) và không ghi tên
   secret (VLT-015). 7bd87ee, v1.4.0.
+- [x] **SEC-20 · Ghi chú của ngăn két lộ mật khẩu** (Q-18, FR-035). Cột `secret.note` dạng rõ được trả
+  cho cả Member cần-duyệt chưa có quyền, và in sẵn dưới tên ngăn; người thử gõ mật khẩu vào đó là
+  Member đọc được, không duyệt, không mã 6 số, không vết. Đã vá ba lớp:
+  (1) cất mới / đổi giá trị từ chối ghi chú chứa giá trị (bỏ khoảng trắng, không phân biệt hoa-thường;
+  giá trị ≥ 6 ký tự nằm trong ghi chú, hoặc trùng nguyên) — `NOTE_CONTAINS_SECRET`;
+  (2) cất mới / sửa ghi chú từ chối ghi chú có một từ dài ≥ 10, ≥ 3 nhóm ký tự, entropy ≥ 2,5
+  bit/ký tự (bỏ qua URL/email/tên máy trừ `user:pass@` và giá trị query) — `NOTE_LOOKS_LIKE_SECRET`,
+  không giải mã khi sửa; form web báo ngay tại ô theo cùng luật (`web/src/lib/note-secret.ts`, bản
+  chép có cổng); (3) `GET /vault/secrets` chỉ trả `note` cho SA/Admin và người đang mở được ngăn
+  (whitelist hoặc grant còn hạn), còn lại `note: null` + `hasNote`; UI gập ghi chú sau nút "Ghi
+  chú". Bài kiểm: `api/src/common/note-secret.spec.ts` (bảng, gồm ghi chú thường không được chặn),
+  `note-secret-mirror.spec.ts`, `api/test/secret-note-guard.spec.ts`,
+  `api/test/vault-note-exposure.spec.ts`, `web/src/ui/vault-panel.test.tsx`, E2E
+  `security.spec.ts` "SEC-20 · ghi chú két không lộ mật khẩu" (chạy ở tầng giữa trước khi merge).
+  Hàng CŨ đã có mật khẩu trong ghi chú không tự sạch: SA rà `SELECT id, label FROM secret WHERE note
+  IS NOT NULL` trên máy thật, sửa ghi chú và xoay giá trị đã lộ.
 
 ---
 
