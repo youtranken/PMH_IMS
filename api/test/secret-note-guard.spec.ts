@@ -86,6 +86,34 @@ describe('Két: ghi chú không được chứa bí mật', () => {
     expect(meta.note).toBe('Đổi theo chu kỳ 90 ngày');
   });
 
+  it('cất mới: ghi chú có một từ trông như mật khẩu (khác giá trị) cũng bị từ chối', async () => {
+    const data = input('mk cũ Admin@123456 nhé');
+    expect(await rejection(() => vault.create('a@qa.test', data), 'Admin@123456')).toBe(
+      'NOTE_LOOKS_LIKE_SECRET',
+    );
+    expect(await countByOwner(data.ownerId)).toBe(0);
+  });
+
+  it('sửa riêng ghi chú: trông như mật khẩu thì từ chối, ghi chú cũ giữ nguyên', async () => {
+    const meta = await vault.create('a@qa.test', input('Đổi theo chu kỳ 90 ngày'));
+    expect(
+      await rejection(
+        () => vault.updateMeta('b@qa.test', meta.id, { note: 'mới: Xk9#mP2vLq' }),
+        'Xk9#mP2vLq',
+      ),
+    ).toBe('NOTE_LOOKS_LIKE_SECRET');
+    expect((await vault.findMeta(meta.id)).note).toBe('Đổi theo chu kỳ 90 ngày');
+  });
+
+  it('sửa nhãn không gửi ghi chú: không kiểm ghi chú (không có gì mới để chặn)', async () => {
+    const meta = await vault.create('a@qa.test', input(null));
+    await scratch.pool.query(`UPDATE secret SET note = 'cũ Admin@123456' WHERE id = $1`, [
+      meta.id,
+    ]);
+    const edited = await vault.updateMeta('b@qa.test', meta.id, { label: `E2E đổi ${meta.id.slice(0, 6)}` });
+    expect(edited.label).toContain('E2E đổi');
+  });
+
   it('đổi giá trị: giá trị MỚI trùng ghi chú đang có thì bị từ chối, giá trị cũ giữ nguyên', async () => {
     const meta = await vault.create('a@qa.test', input('mo cong 8443 truoc'));
     const next = 'mocong8443';

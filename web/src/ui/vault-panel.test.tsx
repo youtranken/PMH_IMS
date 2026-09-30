@@ -706,3 +706,65 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
     expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();
   });
 });
+
+/**
+ * Q-18 / FR-035: ghi chú của ngăn két không được chứa mật khẩu. Server chặn; form chặn TRƯỚC
+ * khi gửi để người dùng không phải qua mã 6 số rồi mới biết là hỏng.
+ */
+describe('VaultPanel — ghi chú không được chứa mật khẩu', () => {
+  function writes(fetchMock: ReturnType<typeof mockApi>) {
+    return fetchMock.mock.calls.filter(([, init]) => (init?.method ?? 'GET') !== 'GET');
+  }
+
+  async function openCreate() {
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await userEvent.type(within(dialog).getByLabelText(/Tên gọi/), 'admin web');
+    await userEvent.type(within(dialog).getByLabelText(/^Giá trị/), 'Sup3r#Secret');
+    return dialog;
+  }
+
+  it('ghi chú chứa chính giá trị: báo ngay tại ô, bấm Lưu không gửi gì', async () => {
+    const fetchMock = mockApi(WHITELIST, []);
+    renderPanel();
+    const dialog = await openCreate();
+    await userEvent.type(within(dialog).getByLabelText(/Ghi chú/), 'mk là sup3r#secret');
+    expect(within(dialog).getByText(/Ghi chú đang chứa chính giá trị/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    expect(writes(fetchMock)).toHaveLength(0);
+  });
+
+  it('ghi chú có chuỗi trông như mật khẩu: báo ngay tại ô, bấm Lưu không gửi gì', async () => {
+    const fetchMock = mockApi(WHITELIST, []);
+    renderPanel();
+    const dialog = await openCreate();
+    await userEvent.type(within(dialog).getByLabelText(/Ghi chú/), 'mk cũ Admin@123456');
+    expect(within(dialog).getByText(/trông như mật khẩu/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    expect(writes(fetchMock)).toHaveLength(0);
+  });
+
+  it('ghi chú bình thường: gửi đi như cũ', async () => {
+    const fetchMock = mockApi(WHITELIST, []);
+    renderPanel();
+    const dialog = await openCreate();
+    await userEvent.type(
+      within(dialog).getByLabelText(/Ghi chú/),
+      'Model FortiGate 60F, IP quản trị 10.0.0.1',
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    await screen.findByRole('button', { name: 'Đang tải…' });
+    expect(writes(fetchMock)).toHaveLength(1);
+  });
+
+  it('Đổi giá trị: giá trị mới nằm trong ghi chú đang có thì không gửi', async () => {
+    const fetchMock = mockApi(WHITELIST, [{ ...SECRET, note: 'mo cong 8443 truoc' }]);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
+    await userEvent.type(screen.getByLabelText(/Giá trị mới/), 'mocong8443');
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi giá trị' }));
+    expect(screen.getByText(/Giá trị mới đang nằm trong ghi chú/)).toBeInTheDocument();
+    expect(writes(fetchMock)).toHaveLength(0);
+  });
+});

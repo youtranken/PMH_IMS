@@ -11,7 +11,7 @@ import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import type { SealedValue } from '../../common/crypto/envelope.types';
 import { conflictOnUnique } from '../../common/sql';
-import { noteContainsSecret } from '../../common/note-secret';
+import { noteContainsSecret, noteLooksLikeSecret } from '../../common/note-secret';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { secretTable } from './vault.schema';
@@ -178,6 +178,7 @@ export class VaultService {
       });
     }
     assertNoteHoldsNoValue(input.note, value, 'Ghi chú đang chứa chính giá trị cần cất.');
+    assertNoteLooksPlain(input.note);
 
     /*
      * Chủ thể phải CÓ THẬT trước khi cất bí mật vào (cùng hàng rào với kho file).
@@ -306,7 +307,10 @@ export class VaultService {
       values.label = label;
     }
     if (input.username !== undefined) values.username = input.username?.trim() || null;
-    if (input.note !== undefined) values.note = input.note?.trim() || null;
+    if (input.note !== undefined) {
+      assertNoteLooksPlain(input.note);
+      values.note = input.note?.trim() || null;
+    }
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -438,6 +442,21 @@ function assertNoteHoldsNoValue(
     throw new BadRequestException({
       code: 'NOTE_CONTAINS_SECRET',
       message: `${message} Ghi chú không được mã hóa — không ghi mật khẩu vào đó.`,
+    });
+  }
+}
+
+/**
+ * Ghi chú có một từ trông như mật khẩu (Q-18). Dùng cả khi sửa riêng ghi chú: đường đó không có
+ * giá trị trong tay, và giải mã ra để so là một lần mở két không ai xin (NFR-03).
+ */
+function assertNoteLooksPlain(note: string | null | undefined): void {
+  if (noteLooksLikeSecret(note)) {
+    throw new BadRequestException({
+      code: 'NOTE_LOOKS_LIKE_SECRET',
+      message:
+        'Ghi chú có một chuỗi trông như mật khẩu. Ghi chú không được mã hóa — cất mật khẩu vào ô Giá trị. ' +
+        'Nếu đó là tên máy hay mã model, tách bằng dấu cách.',
     });
   }
 }

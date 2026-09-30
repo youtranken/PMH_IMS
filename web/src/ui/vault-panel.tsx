@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash, remainingParts } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
+import { noteContainsSecret, noteLooksLikeSecret } from '@/lib/note-secret';
 import { Dialog } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -830,9 +831,17 @@ function SecretForm({
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = secret !== null;
+  /* Báo ngay khi gõ chứ không đợi bấm Lưu: bấm Lưu là qua mã 6 số rồi mới bị server từ chối.
+     Server vẫn là nơi phán (Q-18) — đây là bản chép có cổng của cùng luật. */
+  const noteError = noteContainsSecret(note, value)
+    ? t('vault.noteContainsSecret')
+    : noteLooksLikeSecret(note)
+      ? t('vault.noteLooksLikeSecret')
+      : null;
   const check = useFormErrors({
     label: !label.trim() && t('vault.labelRequired'),
     value: !isEdit && !value && t('vault.valueRequired'),
+    note: noteError,
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
@@ -965,7 +974,12 @@ function SecretForm({
         ) : null}
 
         {/* FR-035: ghi chú KHÔNG được chứa mật khẩu — nói thẳng ngay tại ô nhập. */}
-        <Field label={t('vault.note')} hint={t('vault.noteHint')} htmlFor="secret-note">
+        <Field
+          label={t('vault.note')}
+          hint={t('vault.noteHint')}
+          htmlFor="secret-note"
+          error={noteError ?? undefined}
+        >
           <textarea
             id="secret-note"
             className="inp"
@@ -1001,7 +1015,11 @@ function RotateForm({
   const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ value: !value && t('vault.valueRequired') });
+  const check = useFormErrors({
+    value: !value
+      ? t('vault.valueRequired')
+      : noteContainsSecret(secret.note, value) && t('vault.rotateValueInNote'),
+  });
 
   const rotate = useApiMutation<{ value: string }, unknown>(
     `/api/v1/vault/secrets/${secret.id}/rotate`,
