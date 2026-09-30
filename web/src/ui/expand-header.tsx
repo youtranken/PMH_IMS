@@ -23,7 +23,7 @@ export function ExpandHeader({
   action?: { label: string; onClick: () => void; disabled?: boolean };
 }) {
   return (
-    <div className="exp-head">
+    <div className="exp-head" data-testid="expand-header">
       <span className="exp-head-title">{title}</span>
       {count != null ? <span className="exp-head-count">{count}</span> : null}
       {note ? <span className="exp-head-note">{note}</span> : null}

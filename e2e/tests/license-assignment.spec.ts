@@ -359,7 +359,8 @@ test.describe('Gán license theo seat', () => {
     // con số của hồ sơ như thể người dùng đã khai riêng cho ghế đó.
     await expect(page.getByText('Theo hồ sơ')).toBeVisible();
     // Đầu khu bung (ExpandHeader): "Ghế đang dùng" + số đếm ngay sau.
-    await expect(page.getByText('Ghế đang dùng', { exact: true }).locator('..')).toContainText('2/5');
+    await expect(page.getByTestId('expand-header')).toContainText('Ghế đang dùng');
+    await expect(page.getByTestId('expand-header')).toContainText('2/5');
   });
 
   /** Sửa ghế NGAY TẠI khu bung dòng, bằng đúng hộp đã dùng để gán (AD-15). */
@@ -473,7 +474,7 @@ test.describe('Gán license theo seat', () => {
     await expect(caret).toHaveCount(1);
     await caret.click();
     await expect(page.getByText('Chưa gán license này vào máy nào.')).toBeVisible();
-    await expect(page.getByText('Ghế đang dùng', { exact: true }).locator('..')).toContainText('0/5');
+    await expect(page.getByTestId('expand-header')).toContainText('0/5');
     await expect(
       page.getByRole('button', { name: 'Gán vào máy', exact: true }),
       'Khu bung rỗng phải có nút gán ngay tại chỗ',
