@@ -190,7 +190,7 @@ test.describe('SW-053 · Gán license chọn nhanh theo phòng ban / người s�
     await page.getByRole('button', { name: 'Gán vào máy' }).first().click();
     const dialog = page.getByRole('dialog', { name: `Gán license vào máy — ${code}` });
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Chọn theo phòng ban / người sử dụng' }).click();
+    await dialog.getByRole('radio', { name: 'Phòng ban', exact: true }).click();
     await dialog.getByRole('combobox', { name: 'Tên phòng ban' }).fill(dept);
     await dialog.getByRole('button', { name: 'Thêm các máy' }).click();
 
@@ -232,8 +232,7 @@ test.describe('SW-053 · Gán license chọn nhanh theo phòng ban / người s�
     await page.goto(`/software/${id}?tab=devices`);
     await page.getByRole('button', { name: 'Gán vào máy' }).first().click();
     const dialog = page.getByRole('dialog', { name: `Gán license vào máy — ${code}` });
-    await dialog.getByRole('button', { name: 'Chọn theo phòng ban / người sử dụng' }).click();
-    await dialog.getByRole('button', { name: 'Người sử dụng', exact: true }).click();
+    await dialog.getByRole('radio', { name: 'Người sử dụng', exact: true }).click();
     const who = `Người E2E ${stamp}`;
     await dialog.getByRole('combobox', { name: 'Tên người sử dụng' }).fill(who);
     await dialog.getByRole('button', { name: 'Thêm các máy' }).click();

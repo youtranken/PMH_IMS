@@ -95,7 +95,7 @@ describe('Hộp Cấp IP — đổi địa chỉ, cảnh báo máy đã có IP',
     await user.click(await screen.findByRole('button', { name: 'Địa chỉ' }));
     await user.click(screen.getByRole('option', { name: '10.77.1.4' }));
     expect(screen.getByRole('dialog', { name: 'Cấp IP — 10.77.1.4' })).toBeVisible();
-    await user.type(screen.getByRole('combobox', { name: 'Người / bộ phận dùng' }), 'Kho');
+    await user.type(screen.getByRole('combobox', { name: 'Người / phòng ban dùng' }), 'Kho');
     await user.click(screen.getByRole('button', { name: 'Cấp IP' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith('10.77.1.4'));
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ address: '10.77.1.4' });
@@ -107,7 +107,7 @@ describe('Hộp Cấp IP — đổi địa chỉ, cảnh báo máy đã có IP',
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Địa chỉ' }));
     await user.click(screen.getByRole('option', { name: /10\.77\.1\.9/ }));
-    await user.type(screen.getByRole('combobox', { name: 'Người / bộ phận dùng' }), 'Kho');
+    await user.type(screen.getByRole('combobox', { name: 'Người / phòng ban dùng' }), 'Kho');
     await user.click(screen.getByRole('button', { name: 'Cấp IP' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith('10.77.1.9'));
     expect(calls.find((c) => c.method === 'POST')?.url).toBe(

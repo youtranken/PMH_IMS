@@ -358,7 +358,9 @@ test.describe('Gán license theo seat', () => {
     // Ghế không khai kỳ hạn riêng thì đi theo hồ sơ — và phải NÓI RA như vậy, không hiện
     // con số của hồ sơ như thể người dùng đã khai riêng cho ghế đó.
     await expect(page.getByText('Theo hồ sơ')).toBeVisible();
-    await expect(page.getByText(`Đã gán 2/5 ghế`)).toBeVisible();
+    // Đầu khu bung (ExpandHeader): "Ghế đang dùng" + số đếm ngay sau.
+    await expect(page.getByTestId('expand-header')).toContainText('Ghế đang dùng');
+    await expect(page.getByTestId('expand-header')).toContainText('2/5');
   });
 
   /** Sửa ghế NGAY TẠI khu bung dòng, bằng đúng hộp đã dùng để gán (AD-15). */
@@ -468,11 +470,11 @@ test.describe('Gán license theo seat', () => {
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
-    const caret = row.getByRole('button', { name: `Mở rộng ${code} — xem máy đang dùng` });
+    const caret = row.getByRole('button', { name: `Mở rộng ${code} — 0 ghế đang dùng` });
     await expect(caret).toHaveCount(1);
     await caret.click();
     await expect(page.getByText('Chưa gán license này vào máy nào.')).toBeVisible();
-    await expect(page.getByText('Đã gán 0/5 ghế')).toBeVisible();
+    await expect(page.getByTestId('expand-header')).toContainText('0/5');
     await expect(
       page.getByRole('button', { name: 'Gán vào máy', exact: true }),
       'Khu bung rỗng phải có nút gán ngay tại chỗ',

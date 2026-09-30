@@ -17,6 +17,10 @@ import { SignOutLink } from './sign-out-link';
  *
  * `errorTone`: "đang tạm khoá, chờ chút" không phải lỗi người dùng vừa gây ra; tô đỏ nó thì
  * người ta nghĩ mình lại gõ sai và bấm tiếp.
+ *
+ * Mảng thương hiệu bên trái (chỉ màn rộng, CSS ẩn nó ≤720px): người mở link từ thư cần chắc đây
+ * là trang thật của PMH trước khi gõ mật khẩu. Nó không có tiêu đề — `h1` của màn vẫn là tiêu đề
+ * của card.
  */
 export function AuthCard({
   title,
@@ -44,60 +48,71 @@ export function AuthCard({
   const step = useSetupStep(setupFor ?? null);
   return (
     <div className="ims auth">
-      <section className="auth-card">
-        <div className="auth-logo">
-          <span className="brand-mark" aria-hidden="true">
-            IMS
-          </span>
-          {/* Tên đầy đủ + công ty: người mở link từ thư cần chắc đây là trang thật của PMH. */}
-          <span className="auth-brand">
-            <span>{t('app.brand')}</span>
-            <span className="auth-brand-sub">{t('app.brandFull')}</span>
-          </span>
-        </div>
-        {step ? (
-          <div className="auth-steps" data-testid="auth-steps">
-            <div className="auth-steps-bar" aria-hidden="true">
-              {Array.from({ length: step.total }, (_, i) => (
-                <span key={i} className={i < step.current ? 'on' : undefined} />
-              ))}
-            </div>
-            <p className="auth-steps-text">
-              {t('auth.stepOf', { current: step.current, total: step.total, label: t(step.label) })}
-            </p>
+      <aside className="auth-panel" data-testid="auth-panel">
+        <p className="auth-panel-org">{t('auth.panelOrg')}</p>
+        <p className="auth-panel-system">{t('auth.panelSystem')}</p>
+        <ul className="auth-panel-points">
+          <li>{t('auth.panelPoint1')}</li>
+          <li>{t('auth.panelPoint2')}</li>
+          <li>{t('auth.panelPoint3')}</li>
+        </ul>
+      </aside>
+      <div className="auth-main">
+        <section className="auth-card">
+          <div className="auth-logo">
+            <span className="brand-mark" aria-hidden="true">
+              IMS
+            </span>
+            {/* Tên đầy đủ + công ty: người mở link từ thư cần chắc đây là trang thật của PMH. */}
+            <span className="auth-brand">
+              <span>{t('app.brand')}</span>
+              <span className="auth-brand-sub">{t('app.brandFull')}</span>
+            </span>
           </div>
-        ) : null}
-        <div>
-          <h1 className="auth-title">{title}</h1>
-          {signedInAs ? (
-            <p className="auth-sub" data-testid="auth-signed-in-as">
-              {t('auth.signingInAs', { email: signedInAs.email })}
+          {step ? (
+            <div className="auth-steps" data-testid="auth-steps">
+              <div className="auth-steps-bar" aria-hidden="true">
+                {Array.from({ length: step.total }, (_, i) => (
+                  <span key={i} className={i < step.current ? 'on' : undefined} />
+                ))}
+              </div>
+              <p className="auth-steps-text">
+                {t('auth.stepOf', { current: step.current, total: step.total, label: t(step.label) })}
+              </p>
+            </div>
+          ) : null}
+          <div>
+            <h1 className="auth-title">{title}</h1>
+            {signedInAs ? (
+              <p className="auth-sub" data-testid="auth-signed-in-as">
+                {t('auth.signingInAs')} <strong className="auth-account">{signedInAs.email}</strong>
+              </p>
+            ) : null}
+            {subtitle ? <p className="auth-sub">{subtitle}</p> : null}
+          </div>
+          {notice ? (
+            <p className="auth-notice" role="status">
+              {notice}
             </p>
           ) : null}
-          {subtitle ? <p className="auth-sub">{subtitle}</p> : null}
-        </div>
-        {notice ? (
-          <p className="auth-notice" role="status">
-            {notice}
-          </p>
-        ) : null}
-        {error ? (
-          <div
-            id={AUTH_ERROR_ID}
-            className={errorTone === 'danger' ? 'auth-error' : `auth-error ${errorTone}`}
-            role="alert"
-          >
-            {error}
-          </div>
-        ) : null}
-        {children}
-        {footer || signedInAs ? (
-          <div className="auth-foot">
-            {footer}
-            {signedInAs ? <SignOutLink account={signedInAs} /> : null}
-          </div>
-        ) : null}
-      </section>
+          {error ? (
+            <div
+              id={AUTH_ERROR_ID}
+              className={errorTone === 'danger' ? 'auth-error' : `auth-error ${errorTone}`}
+              role="alert"
+            >
+              {error}
+            </div>
+          ) : null}
+          {children}
+          {footer || signedInAs ? (
+            <div className="auth-foot">
+              {footer}
+              {signedInAs ? <SignOutLink account={signedInAs} /> : null}
+            </div>
+          ) : null}
+        </section>
+      </div>
     </div>
   );
 }

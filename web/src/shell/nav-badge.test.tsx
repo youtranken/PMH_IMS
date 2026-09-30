@@ -22,7 +22,7 @@ const ADMIN: Me = {
   totpEnrolled: true,
   steppedUpAt: null,
   csrfToken: 'tok',
-  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30 },
+  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30, fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 },
 };
 
 function renderShell(me: Me, narrow = false) {

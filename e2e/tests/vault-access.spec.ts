@@ -14,6 +14,7 @@ import {
   resetUsers,
   catalogItem,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -258,6 +259,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await firstLogin(page, E2E_MEMBER);
     expect((await page.request.get('/api/v1/vault/access')).status()).toBe(403);
     expect((await page.request.get('/api/v1/vault/access/scopes')).status()).toBe(403);
+    await openNavGroup(page);
     await expect(page.getByRole('link', { name: 'Quyền két sắt' })).toHaveCount(0);
   });
 });

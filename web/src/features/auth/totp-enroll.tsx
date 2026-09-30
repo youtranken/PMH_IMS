@@ -150,12 +150,11 @@ export function TotpEnroll() {
       error={error}
       signedInAs={me}
       setupFor={me}
-      footer={<p>{t('auth.enrollLostPhone')}</p>}
     >
       {enroll ? (
         <>
           {/* Ba bước đánh số: người chưa từng dùng ứng dụng xác thực không biết phải cài app
-              trước, và không biết mã đổi mỗi 30 giây. */}
+              trước. Mã lấy ở đâu thì gợi ý dưới ô mã nói — các bước không nhắc lại. */}
           <ol className="totp-steps">
             <li>{t('auth.enrollStep1')}</li>
             <li>{t(narrow ? 'auth.enrollStep2Phone' : 'auth.enrollStep2')}</li>

@@ -8,6 +8,7 @@ import {
   resetSecrets,
   resetSoftware,
   resetUsers,
+  rowAction,
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
@@ -63,7 +64,7 @@ async function assignIp(page: Page, deviceId: string, stamp: string): Promise<st
   return address;
 }
 
-test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, bộ phận', () => {
+test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, phòng ban', () => {
   test('đường hạnh phúc: gõ IP hoặc tên người dùng ra đúng máy', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -206,6 +207,8 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
     await page.goto('/devices');
     await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
+    // `boundingBox()` không chờ hiện: gọi lúc bảng còn đang vẽ lại là nhận `null`.
+    await expect(row).toBeVisible();
     await expectInsideWidth(page, row.getByRole('button', { name: `Sửa máy ${code}` }), 'nút Sửa');
   });
 });
@@ -307,14 +310,14 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('button', { name: /cắt gì/ })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, code, 'Thanh lý');
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText(new RegExp(address.replace(/\./g, '\\.'))).first()).toBeVisible();
     await expect(dialog.getByText('Hồ sơ máy và toàn bộ lịch sử')).toBeVisible();
     // Huỷ thì không có gì xảy ra.
     await dialog.getByRole('button', { name: 'Hủy' }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Thanh lý', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Thao tác với ${code}` })).toBeVisible();
   });
 
   test('đường hỏng: bị chặn 409 lần thứ hai thì hộp vẫn dựng lại, không giữ chữ đã gõ lượt trước', async ({
@@ -327,7 +330,7 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
     const address = await assignIp(page, deviceId, stamp);
 
     await page.goto(`/devices/${deviceId}`);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, code, 'Thanh lý');
     const dialog = page.getByRole('dialog');
     const typeCode = dialog.getByLabel(`Gõ lại mã máy ${code} để xác nhận`);
     const only = dialog.getByRole('radio', { name: /Chỉ thanh lý/ });

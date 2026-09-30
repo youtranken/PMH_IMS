@@ -100,7 +100,7 @@ export class FilesController {
 
   @Roles('sa', 'admin', 'member')
   @Post()
-  // Upload giữ nguyên buffer 20MB trong RAM — siết theo `rate.file_upload_per_minute` mỗi user.
+  // Upload giữ trọn file (tới `MULTER_LIMIT`) trong RAM — siết theo `rate.file_upload_per_minute` mỗi user.
   @ConfigThrottle('rateFileUploadPerMinute')
   @Audited('file.uploaded', 'file', { writtenByService: true })
   @UseInterceptors(FileInterceptor('file', { limits: MULTER_LIMIT }))

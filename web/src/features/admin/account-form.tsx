@@ -7,6 +7,7 @@ import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { PhoneInput } from '@/ui/phone-input';
 import { RoleChoice } from './role-choice';
 
 interface CreateResult {
@@ -199,15 +200,12 @@ export function AccountForm({
 
         {/* Hai ô mới: gọi được người giữ máy lúc 2h sáng, và đối chiếu được sang bảng lương. */}
         <Field label={t('accounts.phone')} htmlFor="acc-phone">
-          <input
+          <PhoneInput
             id="acc-phone"
-            className="inp mono"
-            type="tel"
-            inputMode="tel"
             maxLength={32}
             placeholder={t('accounts.phPhone')}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={setPhone}
           />
         </Field>
 

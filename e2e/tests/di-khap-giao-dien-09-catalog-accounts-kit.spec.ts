@@ -12,6 +12,7 @@ import {
   sql,
   searchAndWaitForFilter,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 /*
@@ -99,7 +100,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     'Tủ mạng',
     'Loại thiết bị',
     'Nhà cung cấp',
-    'Bộ phận',
+    'Phòng ban',
     'Nhà mạng',
     'Dịch vụ / Port',
   ] as const;
@@ -125,7 +126,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Tủ mạng',
       addButton: 'Thêm tủ mạng',
-      columns: ['Mã', 'Thuộc site', 'Mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Mã', 'Thuộc site', 'Vị trí / mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
@@ -141,8 +142,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       excelImport: true,
     },
     {
-      tab: 'Bộ phận',
-      addButton: 'Thêm bộ phận',
+      tab: 'Phòng ban',
+      addButton: 'Thêm phòng ban',
       columns: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
@@ -162,6 +163,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
   /** Đi từ màn nào cũng được về phòng Danh mục bằng đúng cái link người dùng bấm. */
   async function mockCatalog(page: Page): Promise<void> {
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await expect(page.getByRole('heading', { name: 'Danh mục', exact: true })).toBeVisible();
   }
@@ -285,7 +287,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         tab: 'Tủ mạng',
         title: 'Thêm tủ mạng',
         // "Số U" là ô SỐ (1–60) — vai `spinbutton`, không nằm trong bộ ô gõ chữ.
-        textFields: ['Mã', 'Mô tả'],
+        textFields: ['Mã', 'Vị trí / mô tả'],
         selectField: ['Thuộc site'],
         toggles: [],
       },
@@ -304,8 +306,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         toggles: [],
       },
       {
-        tab: 'Bộ phận',
-        title: 'Thêm bộ phận',
+        tab: 'Phòng ban',
+        title: 'Thêm phòng ban',
         textFields: ['Tên', 'Mô tả'],
         selectField: [],
         toggles: [],
@@ -564,7 +566,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
    * File mẫu chỉ có sheet cho BỐN danh mục gốc. Nếu "Tải file mẫu" / "Nhập từ Excel" hiện ra
-   * ở ba danh mục sinh sau (Bộ phận · Nhà mạng · Dịch vụ) thì đó là một lời hứa hão: người
+   * ở ba danh mục sinh sau (Phòng ban · Nhà mạng · Dịch vụ) thì đó là một lời hứa hão: người
    * dùng tải mẫu về, không tìm thấy sheet của mình, và đi hỏi. Ngược lại, nút biến mất khỏi
    * bốn danh mục gốc thì đường nhập hàng loạt coi như không còn.
    *
@@ -672,6 +674,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await firstLogin(page, E2E_SA);
 
     // `exact`: menu có cả "Tài khoản" lẫn "Tài khoản dịch vụ".
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
@@ -788,6 +791,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
@@ -899,7 +903,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       editDialog.getByLabel(fieldLabel('Họ tên')),
       'hộp Sửa mở ra trống là bấm Lưu một phát xóa sạch hồ sơ của người ta',
     ).toHaveValue(fullName);
-    await expect(editDialog.getByLabel(fieldLabel('Số điện thoại'))).toHaveValue(phoneNumber);
+    // Q-18: lưu bỏ dấu cách, nên mở lại thấy số liền.
+    await expect(editDialog.getByLabel(fieldLabel('Số điện thoại'))).toHaveValue(
+      phoneNumber.replace(/ /g, ''),
+    );
     await expect(editDialog.getByLabel(fieldLabel('Mã nhân viên'))).toHaveValue(employeeCode);
 
     // Đóng bằng Esc — không lưu gì cả.

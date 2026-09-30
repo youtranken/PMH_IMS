@@ -1,10 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import { type Me } from '@/lib/me';
-import { titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
-import { visibleGroups } from '@/shell/app-nav';
+import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { NavIcon } from '@/ui/nav-icon';
@@ -66,8 +65,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
       {/*
         BỎ QUA NAV → NỘI DUNG (WCAG 2.4.1).
         Luật `.skip-link` ở `css/base.css` — ẩn off-screen, hiện ra khi Tab tới. Không có nó
-        thì người dùng bàn phím phải Tab qua trọn sidebar (7 nhóm điều hướng) ở MỖI lần đổi
-        trang.
+        thì người dùng bàn phím phải Tab qua trọn sidebar ở MỖI lần đổi trang.
         Phải là phần tử ĐẦU TIÊN trong cây để nó là điểm dừng Tab đầu tiên.
       */}
       <a className="skip-link" href="#noi-dung">
@@ -143,67 +141,43 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               khối tài khoản ở đáy luôn đứng yên và có mép mờ báo còn mục bên dưới. */}
           <div className="sb-scroll">
           {groups.map((group) => (
-            <div key={group.labelKey}>
-              <p className="nav-label">{t(group.labelKey)}</p>
-              {group.items.map((item) =>
-                item.planned ? (
-                  /*
-                   * CHỮ thường, không phải điều khiển: không có vai trò nào để `aria-disabled`
-                   * bám vào (trên một <span> trần nó là ARIA sai, trình đọc màn hình bỏ qua), và
-                   * nó cũng không được là link — bấm vào là rơi xuống 404. Lời giải thích nằm
-                   * trong chữ (`sr-only`) để trình đọc màn hình đọc được; `title` còn lại cho
-                   * người rê chuột.
-                   */
-                  <span
-                    key={item.key}
-                    className="nav-item is-planned"
-                    title={t('nav.plannedHint')}
-                  >
-                    <NavIcon navKey={item.key} />
-                    <span className="lbl">{t(item.key)}</span>
-                    {/* Chip thấy được thay cho độ mờ + tooltip: điện thoại không có hover. */}
-                    <span className="nav-badge planned" aria-hidden="true">
-                      {t('nav.plannedChip')}
-                    </span>
-                    <span className="sr-only">{t('nav.plannedHint')}</span>
+            <NavSection key={group.labelKey} group={group} pathname={pathname}>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.key}
+                  to={item.to}
+                  className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                  end={item.to === '/'}
+                  aria-describedby={
+                    item.badge === 'approvals' && pendingApprovals > 0
+                      ? PENDING_APPROVALS_ID
+                      : item.badge === 'overdue' && overdue > 0
+                        ? OVERDUE_ID
+                        : undefined
+                  }
+                  // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  <NavIcon navKey={item.key} />
+                  <span className="lbl">
+                    {t(me.role === 'member' && item.memberKey ? item.memberKey : item.key)}
                   </span>
-                ) : (
-                  <NavLink
-                    key={item.key}
-                    to={item.to}
-                    className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-                    end={item.to === '/'}
-                    aria-describedby={
-                      item.badge === 'approvals' && pendingApprovals > 0
-                        ? PENDING_APPROVALS_ID
-                        : item.badge === 'overdue' && overdue > 0
-                          ? OVERDUE_ID
-                          : undefined
-                    }
-                    // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    <NavIcon navKey={item.key} />
-                    <span className="lbl">
-                      {t(me.role === 'member' && item.memberKey ? item.memberKey : item.key)}
+                  {item.badge === 'approvals' && pendingApprovals > 0 ? (
+                    /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn
+                       là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */
+                    <span className="nav-badge warn" aria-hidden="true">
+                      {pendingApprovals}
                     </span>
-                    {item.badge === 'approvals' && pendingApprovals > 0 ? (
-                      /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn
-                         là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */
-                      <span className="nav-badge warn" aria-hidden="true">
-                        {pendingApprovals}
-                      </span>
-                    ) : null}
-                    {item.badge === 'overdue' && overdue > 0 ? (
-                      /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
-                      <span className="nav-badge" aria-hidden="true">
-                        {overdue}
-                      </span>
-                    ) : null}
-                  </NavLink>
-                ),
-              )}
-            </div>
+                  ) : null}
+                  {item.badge === 'overdue' && overdue > 0 ? (
+                    /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
+                    <span className="nav-badge" aria-hidden="true">
+                      {overdue}
+                    </span>
+                  ) : null}
+                </NavLink>
+              ))}
+            </NavSection>
           ))}
           </div>
 
@@ -247,12 +221,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               </button>
             ) : null}
             {/*
-              Tên MÀN đang mở, không phải "Quản lý hệ thống IT · PMH — Tên": tên người dùng đã
-              nằm ở menu tài khoản, còn chỗ đầu topbar là phần đất quý nhất trên điện thoại.
-              Chữ thường, không phải link: trang chi tiết đã có breadcrumb đầy đủ ngay đầu nội
-              dung (`DetailHeader`), dựng thêm một đường quay ra thứ hai là lặp.
+              Tên NHÓM, không phải tên màn: tên màn đã là `<h1>` của chính trang, topbar nhắc lại
+              là người dùng đọc cùng một chữ hai lần ngay đầu màn (Q-18). Nhóm là ngữ cảnh mà
+              `<h1>` không nói — nhất là trên điện thoại, nơi menu đang khép.
             */}
-            <PageTitle pathname={pathname} />
+            <GroupContext groups={groups} pathname={pathname} />
             <span className="spacer" />
             {/*
               ĐƯỜNG VÀO THẤY ĐƯỢC CHO TÌM NHANH. Desktop: trông như một ô nhập kèm phím tắt đúng
@@ -400,13 +373,107 @@ function SearchIcon() {
   );
 }
 
-/** Tên màn đang mở — cùng bảng với tên tab trình duyệt (`titleKeyOf`), nên hai chỗ không lệch. */
-function PageTitle({ pathname }: { pathname: string }) {
+/** Khoá nhớ nhóm nào người dùng đã tự mở — theo từng máy, không phải dữ liệu cần giữ lâu. */
+const NAV_OPEN_PREFIX = 'ims_nav_open:';
+
+/*
+ * localStorage có thể ném lỗi (trình duyệt chặn dữ liệu trang, cửa sổ riêng tư): lúc đó menu
+ * vẫn phải dựng, chỉ mất phần "nhớ".
+ */
+function readGroupOpen(labelKey: string): boolean {
+  try {
+    return window.localStorage.getItem(NAV_OPEN_PREFIX + labelKey) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeGroupOpen(labelKey: string, open: boolean): void {
+  try {
+    if (open) window.localStorage.setItem(NAV_OPEN_PREFIX + labelKey, '1');
+    else window.localStorage.removeItem(NAV_OPEN_PREFIX + labelKey);
+  } catch {
+    /* Không nhớ được thì thôi — lần sau nhóm khép như mặc định. */
+  }
+}
+
+/**
+ * Một nhóm trên menu. Nhóm `collapsible` có tiêu đề là nút khép/mở (Q-18).
+ *
+ * Đang đứng ở một màn TRONG nhóm thì nhóm tự mở: mục đang chọn mà nằm khuất sau một nhóm khép
+ * thì người dùng mất dấu mình đang ở đâu. Lần tự mở ấy không ghi vào localStorage — chỉ lựa
+ * chọn chính tay người dùng mới được nhớ.
+ *
+ * Vùng mục dùng `hidden` chứ không gỡ khỏi cây: `aria-controls` phải trỏ vào một phần tử có
+ * thật.
+ */
+function NavSection({
+  group,
+  pathname,
+  children,
+}: {
+  group: NavGroup;
+  pathname: string;
+  children: ReactNode;
+}) {
   const { t } = useTranslation();
-  const key = titleKeyOf(pathname);
+  const regionId = useId();
+  const holdsRoute = groupOfPath([group], pathname) !== null;
+  const [open, setOpen] = useState(() => holdsRoute || readGroupOpen(group.labelKey));
+
+  useEffect(() => {
+    if (holdsRoute) setOpen(true);
+  }, [holdsRoute, pathname]);
+
+  if (!group.collapsible) {
+    return (
+      <div>
+        <p className="nav-label">{t(group.labelKey)}</p>
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <span className="topbar-title" data-testid="topbar-title">
-      {key ? t(key) : null}
+    <div>
+      <button
+        type="button"
+        className="nav-label nav-group-toggle"
+        aria-expanded={open}
+        aria-controls={regionId}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          writeGroupOpen(group.labelKey, next);
+        }}
+      >
+        <span>{t(group.labelKey)}</span>
+        <svg
+          className="nav-group-chev"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </button>
+      <div id={regionId} hidden={!open}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function GroupContext({ groups, pathname }: { groups: NavGroup[]; pathname: string }) {
+  const { t } = useTranslation();
+  const group = groupOfPath(groups, pathname);
+  return (
+    <span className="topbar-context" data-testid="topbar-context">
+      {group ? t(group.labelKey) : null}
     </span>
   );
 }

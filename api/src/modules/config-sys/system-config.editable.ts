@@ -17,7 +17,8 @@ export type SettingGroup =
   | 'expiry'
   | 'dashboard'
   | 'software'
-  | 'ipam';
+  | 'ipam'
+  | 'files';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -28,7 +29,9 @@ export type SettingUnit =
   | 'times'
   | 'per_minute'
   | 'ports'
-  | 'rows';
+  | 'rows'
+  | 'mb'
+  | 'files';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -86,6 +89,11 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   // Mạng IP & NAT. Trần dải chỉ siết (24..30) — lý do ở chú thích khoá trong `system-config.keys.ts`.
   { name: 'ipamSubnetMinPrefix', group: 'ipam', type: 'int', min: 24, max: 30 },
   { name: 'natWidePortRange', group: 'ipam', type: 'int', unit: 'ports', min: 10, max: 65535 },
+  // Giấy tờ đính kèm (Q-18). Trần 25 = `FILE_HARD_CAP_MB`: multer/nginx chặn cứng ở đó.
+  { name: 'fileMaxSizeMb', group: 'files', type: 'int', unit: 'mb', min: 1, max: 25 },
+  { name: 'fileMaxFilesPerBatch', group: 'files', type: 'int', unit: 'files', min: 1, max: 20 },
+  // Dọn blob không lùi lại được: dưới 7 ngày thì một lần xoá nhầm cuối tuần đã mất hẳn nội dung.
+  { name: 'filePurgeAfterDays', group: 'files', type: 'int', unit: 'days', min: 7, max: 3650 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

@@ -417,8 +417,13 @@ test.describe('Break-glass', () => {
      * Sửa · Xoay · Thu hồi nằm trong menu ba chấm, nên bám theo chữ trên nút
      * đã thành một khẳng định luôn xanh: mục menu không có trong DOM khi menu đóng, kể cả
      * với người CÓ quyền. Bám đúng cái nút mở menu — nó chỉ được vẽ khi `canEdit`.
+     *
+     * Chỉ tìm TRONG tab Két sắt: đầu trang chi tiết có menu ⋮ của chính thiết bị (Q-18) cùng
+     * tiền tố "Thao tác với", và quyền sửa hồ sơ máy không phải điều bài này kiểm.
      */
-    await expect(page.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);
+    await expect(
+      page.getByRole('tabpanel').getByRole('button', { name: /^Thao tác với/ }),
+    ).toHaveCount(0);
   });
 
   /** Member mở màn duyệt phải thấy NGAY yêu cầu của mình. */

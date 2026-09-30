@@ -16,11 +16,23 @@ export const CONFIG_KEYS = {
    * step-up mở két). Mã chỉ có một triệu khả năng, trần chung 300/phút quá rộng cho một ô 6 số.
    * `rate.secret_reveal_per_minute`: cửa mở két — hàng rào PHÒNG việc rút cả két trong vài phút
    * bằng một phiên đã step-up; audit là hàng rào PHÁT HIỆN.
-   * `rate.file_upload_per_minute`: mỗi lượt upload giữ trọn tệp (tới 20MB) trong RAM.
+   * `rate.file_upload_per_minute`: mỗi lượt upload giữ trọn tệp (tới `file.max_size_mb`) trong RAM.
    */
   rateTotpPerMinute: { key: 'rate.totp_per_minute', fallback: 10 },
   rateSecretRevealPerMinute: { key: 'rate.secret_reveal_per_minute', fallback: 30 },
   rateFileUploadPerMinute: { key: 'rate.file_upload_per_minute', fallback: 20 },
+  /*
+   * Giấy tờ đính kèm (Q-18). Trần dung lượng áp cho MỌI loại file, không còn tách ảnh/biên bản.
+   * `file.max_size_mb` không được vượt `FILE_HARD_CAP_MB` (`files/file-validation.ts`): multer
+   * và nginx chặn cứng ở trần đó trước khi đọc được cấu hình, nên màn Tham số khoá khoảng 1..25.
+   *
+   * `file.max_files_per_batch`: mỗi request chỉ mang một file, nên trần "mỗi lượt chọn" do web
+   * giữ; server đã có `rate.file_upload_per_minute` làm hàng rào cứng.
+   */
+  fileMaxSizeMb: { key: 'file.max_size_mb', fallback: 25 },
+  fileMaxFilesPerBatch: { key: 'file.max_files_per_batch', fallback: 6 },
+  // File xoá mềm quá ngần này ngày thì lượt dọn gỡ blob khỏi đĩa, giữ hàng (`FilesService.purgeDeleted`).
+  filePurgeAfterDays: { key: 'file.purge_after_days', fallback: 30 },
   // Bậc chờ khi một tài khoản bị đoán sai nhiều lần (SEC-03). Xem `common/lockout.ts`.
   loginAccountBackoffMinutes: { key: 'login.account_backoff_minutes', fallback: '5,15,30,60' },
   // 60s: 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.

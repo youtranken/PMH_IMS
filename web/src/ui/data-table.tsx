@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Chevron } from './chevron';
@@ -99,8 +99,10 @@ interface DataTableProps<T> {
    */
   expandLabel?: (row: T, expanded: boolean) => string;
   /**
-   * Chữ đứng cạnh mũi tên bung ("3 license"). Mũi tên trơn không nói bung ra thấy gì, và
-   * mọc ở dòng này không mọc ở dòng kia thì trông như lỗi căn lề.
+   * Chữ đứng cạnh mũi tên bung ("3 license").
+   *
+   * @deprecated Mẫu chuẩn (Q-18) là mũi tên trơn: số đếm đi vào `expandLabel` (tên cho trình
+   * đọc màn hình) và vào `ExpandHeader` trong khu bung. Không màn nào còn dùng.
    */
   expandText?: (row: T) => string;
   /** ≤680px gập bảng thành thẻ dọc (mỗi ô 1 dòng có nhãn cột). */
@@ -207,6 +209,9 @@ export function DataTable<T>({
   const [internalSort, setInternalSort] = useState<SortingState>(initialSort);
   const [globalFilter, setGlobalFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const expandIdBase = useId();
+  // IDREF tách nhau bằng khoảng trắng: mã dòng có dấu cách thì `aria-controls` trỏ vào hai id rỗng.
+  const expandRegionId = (rowId: string) => `${expandIdBase}-exp-${rowId.replace(/\s/g, '_')}`;
   // Controlled (server-side) nếu parent truyền sorting; ngược lại tự giữ state (client).
   const sorting = controlledSorting ?? internalSort;
   const onSortingChange = controlledOnSortingChange ?? setInternalSort;
@@ -462,6 +467,7 @@ export function DataTable<T>({
                               type="button"
                               className={expandText ? 'caret-btn caret-chip' : 'caret-btn'}
                               aria-expanded={expanded}
+                              aria-controls={expandRegionId(row.id)}
                               aria-label={
                                 expandLabel?.(row.original, expanded) ??
                                 (expandText
@@ -507,6 +513,7 @@ export function DataTable<T>({
                     {expanded && renderExpanded && (
                       <tr className="exp">
                         <td
+                          id={expandRegionId(row.id)}
                           colSpan={
                             row.getVisibleCells().length +
                             1 +

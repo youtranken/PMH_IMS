@@ -5,7 +5,7 @@ import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-uti
 import { LoginScreen } from './login-screen';
 
 /**
- * Màn đăng nhập trên điện thoại (VLT-FLOW, AUTH-029): email nhớ trên máy, nói tên màn sẽ mở,
+ * Màn đăng nhập trên điện thoại (VLT-FLOW, AUTH-029): email nhớ trên máy (điền sẵn, Q-18), nói tên màn sẽ mở,
  * và báo lỗi bằng tiếng Việt dưới từng ô thay cho bong bóng tiếng Anh của trình duyệt.
  */
 
@@ -45,6 +45,11 @@ describe('LoginScreen', () => {
     expect(screen.getAllByText('Bắt buộc — chưa nhập ô này.')).toHaveLength(2);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Email')).toHaveFocus();
+    // Ô nằm trong gói biểu tượng: nhãn, lỗi và aria-invalid vẫn phải tới được ô thật.
+    for (const label of ['Email', 'Mật khẩu']) {
+      expect(screen.getByLabelText(label)).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true');
+    }
   });
 
   it('đăng nhập được → nhớ email; lần sau điền sẵn, con trỏ ở ô mật khẩu', async () => {
@@ -62,7 +67,9 @@ describe('LoginScreen', () => {
     renderLogin();
     expect(screen.getByLabelText('Email')).toHaveValue('a@pmh.com.vn');
     expect(screen.getByLabelText('Mật khẩu')).toHaveFocus();
-    expect(screen.getByText('Email đã nhớ trên máy này: a@pmh.com.vn.')).toBeInTheDocument();
+    // Q-18: điền sẵn nhưng KHÔNG nói ra thành một dòng riêng, không có nút "Không phải tôi".
+    expect(screen.queryByText(/Email đã nhớ/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Không phải tôi' })).toBeNull();
   });
 
   it('sai mật khẩu → KHÔNG nhớ email (không lưu thứ chưa chứng minh là của mình)', async () => {
@@ -78,21 +85,18 @@ describe('LoginScreen', () => {
     expect(localStorage.getItem('ims_login_email')).toBeNull();
   });
 
-  it('"Không phải tôi" → xoá email đã nhớ khỏi máy và khỏi ô', async () => {
-    localStorage.setItem('ims_login_email', 'a@pmh.com.vn');
-    renderLogin();
-    await userEvent.click(screen.getByRole('button', { name: 'Không phải tôi' }));
-    expect(localStorage.getItem('ims_login_email')).toBeNull();
-    expect(screen.getByLabelText('Email')).toHaveValue('');
-    expect(screen.getByLabelText('Email')).toHaveFocus();
-    expect(screen.queryByText(/Email đã nhớ/)).toBeNull();
-  });
-
   it('kho bị sửa tay thành thứ không phải email → bỏ qua', () => {
     localStorage.setItem('ims_login_email', '<img src=x onerror=alert(1)>');
     renderLogin();
     expect(screen.getByLabelText('Email')).toHaveValue('');
-    expect(screen.queryByRole('button', { name: 'Không phải tôi' })).toBeNull();
+  });
+});
+
+describe('LoginScreen — Q-18', () => {
+  it('không có nút "Quên mật khẩu?" (chỉ còn câu liên hệ khi bị khóa)', () => {
+    renderLogin();
+    expect(screen.queryByRole('button', { name: 'Quên mật khẩu?' })).toBeNull();
+    expect(screen.queryByText(/Quên mật khẩu/)).toBeNull();
   });
 });
 

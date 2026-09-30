@@ -208,4 +208,36 @@ describe('RowActions — menu ba chấm dùng chung', () => {
     await user.click(screen.getByRole('button', { name: 'Thao tác với LIC-02' }));
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
+
+  /** Q-18: menu thao tác là ba chấm DỌC ở mọi màn; tên nút giữ nguyên để bài E2E vẫn tìm ra. */
+  it('nút mở menu vẽ "⋮" (dọc), hình là aria-hidden, tên vẫn là nhãn', () => {
+    renderWithI18n(<RowActions label="Thao tác với LIC-01" items={items()} />);
+    const trigger = screen.getByRole('button', { name: 'Thao tác với LIC-01' });
+    expect(trigger.textContent).toBe('⋮');
+    expect(trigger.querySelector('[aria-hidden="true"]')?.textContent).toBe('⋮');
+  });
+
+  /**
+   * `ok`: việc đảo ngược theo chiều TỐT ("Dùng lại" một mục đã ngừng) — chữ xanh, cùng nhóm với
+   * việc thường (không vạch ngăn, không bị đẩy xuống cuối như việc cần nghĩ).
+   */
+  it('mục `ok` mang lớp ok, đứng cùng nhóm việc thường', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <RowActions
+        label="Thao tác với LOAI-01"
+        items={[
+          { key: 'edit', label: 'Sửa', onSelect: vi.fn() },
+          { key: 'reuse', label: 'Dùng lại', onSelect: vi.fn(), ok: true },
+          { key: 'delete', label: 'Xóa', onSelect: vi.fn(), danger: true },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Thao tác với LOAI-01' }));
+    const reuse = screen.getByRole('menuitem', { name: 'Dùng lại' });
+    expect(reuse).toHaveClass('ok');
+    expect(screen.getByRole('menuitem', { name: 'Sửa' })).not.toHaveClass('ok');
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual(['Sửa', 'Dùng lại', 'Xóa']);
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+  });
 });

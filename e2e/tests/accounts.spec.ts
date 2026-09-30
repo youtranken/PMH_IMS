@@ -13,6 +13,7 @@ import {
   SECOND_BROWSER,
   writeHeaders,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
@@ -28,6 +29,7 @@ test.describe('Quản trị tài khoản', () => {
   test('SA tạo tài khoản mới và nhận mật khẩu tạm', async ({ page }) => {
     await firstLogin(page, E2E_SA);
 
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
@@ -75,6 +77,7 @@ test.describe('Quản trị tài khoản', () => {
   test('member không thấy mục Tài khoản và bị chặn khi gõ thẳng URL', async ({ page }) => {
     await firstLogin(page, { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' });
 
+    await openNavGroup(page);
     await expect(page.getByRole('link', { name: 'Người dùng IMS', exact: true })).toHaveCount(0);
 
     const response = await page.request.get('/api/v1/accounts');
@@ -83,6 +86,7 @@ test.describe('Quản trị tài khoản', () => {
 
   test('SA xem và đá được phiên đang mở', async ({ page }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
@@ -92,6 +96,7 @@ test.describe('Quản trị tài khoản', () => {
 
   test('khóa rồi mở lại tài khoản (hồi quy: body chỉ được chứa field của DTO)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
@@ -126,6 +131,7 @@ test.describe('Quản trị tài khoản', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
@@ -166,6 +172,7 @@ test.describe('Quản trị tài khoản', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
     await page.getByRole('searchbox').fill('E2E Thành viên');
@@ -200,6 +207,7 @@ test.describe('Quản trị tài khoản', () => {
       expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
 
       await firstLogin(page, E2E_SA);
+      await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       const row = page.getByRole('row', { name: /E2E Thành viên/ });
       await rowAction(page, 'E2E Thành viên', 'Khóa');
@@ -235,6 +243,7 @@ test.describe('Quản trị tài khoản', () => {
       expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
 
       await firstLogin(page, E2E_SA);
+      await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
 
@@ -268,6 +277,7 @@ test.describe('Quản trị tài khoản', () => {
       // Cùng một SA ở hai máy: máy thứ hai đăng nhập lại bằng mật khẩu mới + TOTP đã cài.
       const saSecret = await firstLogin(saOther, E2E_SA);
       await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saSecret);
+      await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
       await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
@@ -322,6 +332,7 @@ test.describe('Quản trị tài khoản', () => {
     }
 
     await page.goto('/');
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     // Tìm bằng RIÊNG dấu thời gian: họ tên là "E2E Sort Zulu 123456" nên chuỗi
     // "E2E Sort 123456" KHÔNG nằm trong đó — dấu thời gian thì có mặt ở cả tên lẫn email.
@@ -357,6 +368,7 @@ test.describe('Quản trị tài khoản', () => {
  */
 test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ được, reload giữ nguyên', async ({ page }) => {
   await firstLogin(page, E2E_SA);
+  await openNavGroup(page);
   await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/accounts$/);
 

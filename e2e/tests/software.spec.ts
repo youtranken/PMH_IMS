@@ -229,7 +229,7 @@ test.describe('Hồ sơ phần mềm', () => {
     const code = `MAINT-E2E-UI-${stamp}`;
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
     await fillSoftware(page, { code, name: 'Hợp đồng bảo trì UPS', kind: 'Hợp đồng bảo trì' });
 
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
@@ -307,7 +307,7 @@ test.describe('Hồ sơ phần mềm', () => {
    * Sửa NGAY TRÊN DANH SÁCH, cùng nếp với màn Thiết bị.
    *
    * Đổi tên hồ sơ hay đổi trạng thái là việc lặt vặt hằng ngày; bắt vào trang chi tiết rồi
-   * quay ra là ba lần chuyển trang cho một ô. Nút mở ĐÚNG hộp "Thêm hồ sơ" đã điền sẵn.
+   * quay ra là ba lần chuyển trang cho một ô. Nút mở ĐÚNG hộp "Thêm phần mềm" đã điền sẵn.
    */
   test('sửa hồ sơ ngay từ cột Thao tác của danh sách', async ({ page }) => {
     await firstLogin(page, E2E_SA);

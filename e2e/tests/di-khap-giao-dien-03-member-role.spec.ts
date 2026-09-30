@@ -10,6 +10,7 @@ import {
   resetSecrets,
   resetUsers,
   writeHeaders,
+  openNavGroup,
 } from './helpers';
 
 /* ===========================================================================================
@@ -47,14 +48,17 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    * hiện có đếm số mục. Thành viên sẽ thấy một cửa mà bấm vào chỉ nhận 404 hoặc màn lỗi.
    *
    * Bài này đỏ khi: một mục quản trị rò rỉ sang vai member (danh sách dài ra), một mục
-   * nghiệp vụ bị gắn `roles` nhầm (danh sách ngắn lại), hoặc mục "Tài liệu" của epic sau
-   * biến thành link bấm được trong khi màn hình chưa hề tồn tại.
+   * nghiệp vụ bị gắn `roles` nhầm (danh sách ngắn lại), hoặc một mục cho màn chưa có quay lại
+   * menu.
    */
   test('Thanh điều hướng của Thành viên thiếu đúng những thứ phải thiếu', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     await expect(nav).toBeVisible();
+    // Nhóm "Hệ thống" mặc định khép: không mở thì link trong đó không được đếm, và các vế
+    // "không có" bên dưới xanh vô nghĩa.
+    await openNavGroup(page);
 
     /*
      * KIỂM KÊ chứ không chỉ kiểm một mục: so cả danh sách, sắp xếp trước khi so để thứ tự
@@ -64,8 +68,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       .map((text) => text.trim())
       .sort();
     const expected = [
-      // 10 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật) + mục "Tài liệu"
-      // không phải link (xem dưới).
+      // 10 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
@@ -121,19 +124,10 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     // Còn Danh mục thì PHẢI có: form thiết bị cần biết danh mục có gì (quyền sửa do API chặn).
     await expect(nav.getByRole('link', { name: 'Danh mục', exact: true })).toBeVisible();
 
-    /*
-     * "Tài liệu" là mục của epic sau: nó HIỆN RA (để bản đồ điều hướng không phải vẽ lại mỗi
-     * epic) nhưng KHÔNG phải link — chữ thường `<span>`. Đây là chỗ dễ hỏng nhất
-     * trong cả file `app-shell.tsx`: bỏ cờ `planned` sớm một epic là người dùng bấm vào và
-     * rơi thẳng xuống trang 404, mà không lỗi biên dịch nào báo.
-     */
+    // Màn Tài liệu chưa có — menu không bày chỗ cho nó (Q-18).
     await expect(
       nav.getByText('Tài liệu', { exact: true }),
-      'mục của epic sau vẫn phải hiện để giữ chỗ trên bản đồ điều hướng',
-    ).toBeVisible();
-    await expect(
-      nav.getByRole('link', { name: 'Tài liệu', exact: true }),
-      'màn Tài liệu chưa tồn tại — bày nó thành link là hứa một đường đi không có thật',
+      'menu chỉ liệt kê màn đã có',
     ).toHaveCount(0);
   });
 
@@ -293,9 +287,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
      * Sửa · Xoay · Thu hồi nằm trong menu ba chấm, và mục menu chỉ vào DOM khi menu đang mở
      * — nên bám theo chữ "Sửa"/"Xoay" ở đây là một khẳng định LUÔN XANH, kể cả với người có
      * đủ quyền. Bám đúng cái nút MỞ menu: nó chỉ được vẽ khi `canEdit`.
+     *
+     * Chỉ tìm TRONG tab Két sắt: đầu trang chi tiết có menu ⋮ của chính thiết bị (Q-18) cùng
+     * tiền tố "Thao tác với", và nó không phải menu ghi vào két.
      */
     await expect(
-      page.getByRole('button', { name: /^Thao tác với/ }),
+      page.getByRole('tabpanel').getByRole('button', { name: /^Thao tác với/ }),
       'nút mở menu ghi chỉ được vẽ khi canEdit — Member không có nó',
     ).toHaveCount(0);
 

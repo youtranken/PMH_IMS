@@ -90,7 +90,7 @@ export const CATALOG_SHEET_NAME: Record<CatalogEntity, string> = {
   cabinet: 'Tủ mạng',
   device_type: 'Loại thiết bị',
   vendor: 'Nhà cung cấp',
-  department: 'Bộ phận',
+  department: 'Phòng ban',
   isp_provider: 'Nhà mạng',
   service_port: 'Dịch vụ - Port',
 };

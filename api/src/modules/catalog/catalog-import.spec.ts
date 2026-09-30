@@ -299,3 +299,36 @@ describe('planCatalogImport — ô Excel không đọc được giá trị (BE-1
     expect(plan.rows[0].message).toContain('công thức');
   });
 });
+
+/* Q-18: cột "Điện thoại" của file nhập theo cùng luật số điện thoại với form. */
+describe('planCatalogImport — số điện thoại nhà cung cấp', () => {
+  it.each([
+    ['0909 111 222', '0909111222'],
+    ['+84 28 3822 1234', '+842838221234'],
+    ['', null],
+  ])('"%s" lưu thành %p', (input, stored) => {
+    const plan = planCatalogImport(
+      sheet('Nhà cung cấp', [{ 'Tên nhà cung cấp *': 'NCC E2E', 'Điện thoại': input }]),
+      emptySnapshot(),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'create', values: { phone: stored } });
+  });
+
+  it('ký tự lạ → dòng lỗi nêu tên cột, không ghi', () => {
+    const plan = planCatalogImport(
+      sheet('Nhà cung cấp', [{ 'Tên nhà cung cấp *': 'NCC E2E', 'Điện thoại': '(028) 3822-1234' }]),
+      emptySnapshot(),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'error' });
+    expect(plan.rows[0].message).toContain('Điện thoại');
+    expect(plan.rows[0].message).toContain('chữ số');
+  });
+
+  it('file cũ ghi số dạng số (ô Excel kiểu Number) vẫn nhận', () => {
+    const plan = planCatalogImport(
+      sheet('Nhà cung cấp', [{ 'Tên nhà cung cấp *': 'NCC E2E', 'Điện thoại': '19006600' }]),
+      emptySnapshot(),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'create', values: { phone: '19006600' } });
+  });
+});

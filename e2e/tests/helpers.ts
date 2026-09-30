@@ -550,7 +550,7 @@ export async function firstLogin(
 
   // Đủ 6 số là màn tự gửi — KHÔNG bấm Xác nhận nữa: lúc nút kịp hiện lại thì trang đã sang
   // bước đổi mật khẩu, và cú bấm chờ một nút không còn tồn tại.
-  await page.getByLabel('Mã 6 số đang hiện trong ứng dụng').fill(await freshTotpCode(secret));
+  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
 
   await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
   await page.getByLabel('Mật khẩu hiện tại').fill(user.password);
@@ -856,6 +856,22 @@ export async function signOutMidFlow(page: Page): Promise<void> {
  */
 export async function openNavDrawer(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Mở menu' }).click();
+}
+
+/**
+ * Mở nhóm menu khép được ("Hệ thống", mặc định khép — Q-18) nếu nó đang khép. Nhóm tự mở khi
+ * đang đứng ở một màn trong nhóm, nên gọi thừa cũng vô hại.
+ *
+ * Gọi TRƯỚC mọi khẳng định "không có link X" trong nhóm này: link của nhóm khép nằm dưới
+ * `hidden`, `getByRole` bỏ qua nó, và `toHaveCount(0)` sẽ xanh cả khi link vẫn còn trên menu.
+ * Màn hẹp thì mở drawer trước (`openNavDrawer`).
+ */
+export async function openNavGroup(page: Page, name = 'Hệ thống'): Promise<void> {
+  const toggle = page
+    .getByRole('navigation', { name: 'Điều hướng chính' })
+    .getByRole('button', { name, exact: true });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 }
 
 /**

@@ -56,6 +56,39 @@ describe('CatalogForm — gợi ý và cảnh báo', () => {
     expect(code).toHaveValue('TU-E2E-HCM-03');
   });
 
+  /* Chủ dự án hỏi "vị trí tủ 1, 2, 3": số tủ là đuôi mã, vị trí đặt tủ là ô mô tả — form phải
+     nói thẳng hai điều đó thay vì để người dùng đi tìm một ô không có. */
+  it('tủ mạng: nói rõ số tủ theo đuôi mã; ô mô tả là "Vị trí / mô tả" kèm ví dụ', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    renderForm('cabinet');
+    await user.click(await screen.findByRole('button', { name: 'Thuộc site' }));
+    await user.click(await screen.findByRole('option', { name: /E2E-HCM/ }));
+    const code = screen.getByRole('textbox', { name: /^Mã/ });
+    expect(code).toHaveAccessibleDescription(/Tủ số 3 của site E2E-HCM/);
+
+    await user.clear(code);
+    await user.type(code, 'R01');
+    expect(code).not.toHaveAccessibleDescription(/Tủ số/);
+
+    const where = screen.getByRole('textbox', { name: 'Vị trí / mô tả' });
+    expect(where).toHaveAccessibleDescription(/vd P\.server tầng 2/);
+  });
+
+  it('sửa tủ: số tủ đọc từ mã đang có', async () => {
+    stubFetch();
+    renderForm('cabinet', {
+      id: 'c-2',
+      code: 'TU-E2E-HCM-02',
+      siteId: 's-hcm',
+      siteCode: 'E2E-HCM',
+      description: 'P.server tầng 2',
+      uHeight: 42,
+      active: true,
+    } as unknown as CatalogRow);
+    expect(await screen.findByText(/Tủ số 2 của site E2E-HCM/)).toBeInTheDocument();
+  });
+
   it('sửa site: ô Mã khoá sẵn, phải bấm "Đổi mã…" và đọc cảnh báo mới gõ được', async () => {
     stubFetch();
     const user = userEvent.setup();
@@ -89,13 +122,13 @@ describe('CatalogForm — gợi ý và cảnh báo', () => {
     expect(onClose).toHaveBeenCalledWith(false);
   });
 
-  it('bộ phận: gõ tên gần trùng (bỏ dấu, hoa thường) thì nhắc tên đã có', async () => {
+  it('phòng ban: gõ tên gần trùng (bỏ dấu, hoa thường) thì nhắc tên đã có', async () => {
     stubFetch();
     const user = userEvent.setup();
     renderForm('department');
     await waitFor(() => expect(screen.getByRole('textbox', { name: /^Tên/ })).toBeInTheDocument());
     await user.type(screen.getByRole('textbox', { name: /^Tên/ }), 'phong it e2e');
-    expect(await screen.findByText('Đã có "Phòng IT E2E" — có phải cùng bộ phận?')).toBeInTheDocument();
+    expect(await screen.findByText('Đã có "Phòng IT E2E" — có phải cùng phòng ban?')).toBeInTheDocument();
   });
 
   it('dịch vụ: port + giao thức trùng dịch vụ đã có thì cảnh báo nhẹ', async () => {

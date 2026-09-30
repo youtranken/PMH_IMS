@@ -8,6 +8,7 @@ import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draf
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
+import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
 import {
@@ -142,7 +143,7 @@ export function SoftwareForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
       guardUnsaved
-      maxWidth={760}
+      maxWidth={960}
       title={row ? `${t('software.edit')} — ${row.code}` : t('software.add')}
       footer={
         <>
@@ -218,7 +219,7 @@ export function SoftwareForm({
           </p>
         ) : null}
         {check.summary}
-        <FormSection title={t('software.tabProfile')} columns={3}>
+        <FormSection title={t('software.tabProfile')} columns={4}>
           {/* Loại đứng ĐẦU: nó quyết định form có Kỳ hạn, Số ghế, Hết hạn hay không — chọn sau
               khi đã gõ mã và tên thì form nhảy bố cục ngay dưới tay người gõ. */}
           <Field label={t('software.kind')} required span={3}>
@@ -298,13 +299,10 @@ export function SoftwareForm({
           ) : null}
         </FormSection>
 
-        <FormSection title={t('software.sectionTerm')} columns={3}>
+        <FormSection title={t('software.sectionTerm')} columns={4}>
           {/* Chỉ license mới có bản mua đứt — loại khác không hiện ô này cho đỡ rối. */}
           {hasSeats ? (
-            <Field
-              label={t('software.licenseModel')}
-              hint={t(isPerpetual ? 'software.perpetualHint' : 'software.subscriptionHint')}
-            >
+            <Field label={t('software.licenseModel')} tip={t('software.licenseModelTip')} span={2}>
               <div className="segmented" role="radiogroup" aria-label={t('software.licenseModel')}>
                 {LICENSE_MODELS.map((model) => (
                   <label key={model}>
@@ -345,14 +343,32 @@ export function SoftwareForm({
                   ariaLabel={t('software.endDate')}
                   onChange={(value) => set('endDate', value)}
                 />
+                <YearQuickPicks
+                  base={form.startDate}
+                  onPick={(value) => set('endDate', value)}
+                  label={t('software.endQuick')}
+                  needBaseHint={t('software.endQuickNeedBase')}
+                />
               </Field>
             )}
           </div>
         </FormSection>
 
-        {/* Ô ghế chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}
-        {hasSeats ? (
-          <FormSection title={t('software.seats')} columns={3}>
+        {/* Ghế / website và ghi chú chung một khu: mỗi thứ chỉ một ô, tách khu riêng thì hộp cao
+            gấp đôi. Loại không có ghế lẫn website thì khu chỉ còn ô Ghi chú — bỏ tiêu đề để
+            không in "Ghi chú" hai lần. */}
+        <FormSection
+          title={
+            hasSeats
+              ? t('software.sectionSeatsNote')
+              : supportsWebsites(form.kind)
+                ? t('software.sectionWebsitesNote')
+                : undefined
+          }
+          columns={4}
+        >
+          {/* Ô ghế chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}
+          {hasSeats ? (
             <Field
               label={t('software.seatTotal')}
               hint={t('software.seatHint')}
@@ -370,18 +386,13 @@ export function SoftwareForm({
                 onChange={(e) => set('seatTotal', e.target.value)}
               />
             </Field>
-          </FormSection>
-        ) : null}
-
-        {supportsWebsites(form.kind) ? (
-          <FormSection
-            title={t(form.kind === 'ssl' ? 'software.websitesSsl' : 'software.websitesDomain')}
-            columns={1}
-          >
+          ) : null}
+          {supportsWebsites(form.kind) ? (
             <Field
               label={t(form.kind === 'ssl' ? 'software.websitesSsl' : 'software.websitesDomain')}
               hint={t('software.websitesHint')}
               htmlFor="sw-websites"
+              span={2}
             >
               <textarea
                 id="sw-websites"
@@ -391,11 +402,13 @@ export function SoftwareForm({
                 onChange={(e) => set('websites', e.target.value)}
               />
             </Field>
-          </FormSection>
-        ) : null}
-
-        <FormSection title={t('software.note')} columns={1}>
-          <Field label={t('software.note')} hint={t('software.noteHint')} htmlFor="sw-note">
+          ) : null}
+          <Field
+            label={t('software.note')}
+            hint={t('software.noteHint')}
+            htmlFor="sw-note"
+            span={hasSeats || supportsWebsites(form.kind) ? 2 : 3}
+          >
             <textarea
               id="sw-note"
               className="inp"
@@ -411,11 +424,14 @@ export function SoftwareForm({
             file (đẩy lên sau khi có id); sửa thì dùng thẳng panel giấy tờ, có đủ danh sách
             đang có + tải về + xóa. */}
         {row ? (
-          <FormSection title={t('attachments.title')} columns={1}>
-            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
-                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
-                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
-            <p className="alert">{t('attachments.liveWarning')}</p>
+          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
+             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nút (i)
+             cạnh tiêu đề phải nói ra. */
+          <FormSection
+            title={t('attachments.title')}
+            titleTip={t('attachments.liveTip')}
+            columns={1}
+          >
             <AttachmentPanel
               ownerType="software"
               ownerId={row.id}

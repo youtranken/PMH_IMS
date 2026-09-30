@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/ui/toast';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { MemoryRouter } from 'react-router-dom';
 import { DeviceIpAssign } from './device-ip-assign';
 
 /**
@@ -85,5 +86,25 @@ describe('DeviceIpAssign', () => {
     const post = calls.find((call) => call.method === 'POST');
     expect(post?.url).toBe('/api/v1/ipam/addresses');
     expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2', deviceId: 'dev-1' });
+  });
+
+  it('đường hỏng: chưa có dải nào thì không bày ô chọn rỗng — chỉ lối sang khai dải', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(jsonResponse(200, url === '/api/v1/ipam/subnets' ? [] : {})),
+      ),
+    );
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <DeviceIpAssign device={{ id: 'dev-1', code: 'PC-E2E-1' }} csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Chưa có dải mạng nào để cấp IP.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Khai dải mạng' })).toHaveAttribute('href', '/ip-addresses');
+    expect(screen.queryByRole('button', { name: 'Dải mạng' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tiếp tục' })).toBeNull();
   });
 });

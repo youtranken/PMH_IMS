@@ -13,7 +13,9 @@ import { useTranslation } from 'react-i18next';
  *
  * Ngoại lệ duy nhất: khoá cài 2 lớp ở `features/auth/totp-setup.tsx`. Trên điện thoại, chép rồi
  * dán vào ứng dụng xác thực là CÁCH cài đặt (không quét được QR trên chính màn hình mình), và
- * khoá đó đang hiện nguyên văn ngay cạnh nút — chép không lộ thêm gì.
+ * khoá đó đang hiện nguyên văn ngay cạnh nút — chép không lộ thêm gì. Cùng lý do cho ngăn két
+ * "Mã 2 lớp" (`TotpBody` trong `reveal-dialog.tsx`): chép khoá để cài trên chính điện thoại đang
+ * mở két, và chép mã 6 số vốn tự hết hạn sau một chu kỳ.
  */
 export function CopyButton({
   value,

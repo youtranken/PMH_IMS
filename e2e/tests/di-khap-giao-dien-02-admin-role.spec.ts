@@ -17,6 +17,7 @@ import {
   sql,
   writeHeaders,
   uniqueStamp,
+  openNavGroup,
 } from './helpers';
 
 /**
@@ -122,6 +123,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      * `exact: true`: menu có cả "Tài khoản" (tài khoản đăng nhập IMS) lẫn "Tài khoản dịch vụ"
      * — khớp lỏng là trúng hai mục và Playwright từ chối ở chế độ strict.
      */
+    await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
@@ -163,6 +165,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
 
     const menu = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    // Nhóm "Hệ thống" mặc định khép — mở ra thì các vế "không có" bên dưới mới có nghĩa.
+    await openNavGroup(page);
 
     // Phần admin ĐƯỢC thấy.
     await expect(
@@ -190,14 +194,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       'nới/siết hàng rào đăng nhập và két là việc của SA (Q-14)',
     ).toHaveCount(0);
 
-    /*
-     * Mục "chưa mở" (Tài liệu) là chữ thường `<span>`, KHÔNG phải link. Kiểm bằng
-     * "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó biến nó thành link
-     * trỏ vào hư không, bài này đỏ.
-     */
+    // Màn Tài liệu chưa có — menu không bày chỗ cho nó (Q-18).
     await expect(
-      menu.getByRole('link', { name: 'Tài liệu', exact: true }),
-      'màn thuộc epic sau chỉ được hiện mờ, không được là link',
+      menu.getByText('Tài liệu', { exact: true }),
+      'menu chỉ liệt kê màn đã có',
     ).toHaveCount(0);
     // `audit.controller.ts` mở cho sa + admin — menu phải khớp cửa sau nó.
     await expect(

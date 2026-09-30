@@ -11,8 +11,10 @@ import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import type { SealedValue } from '../../common/crypto/envelope.types';
 import { conflictOnUnique } from '../../common/sql';
+import { noteContainsSecret, noteLooksLikeSecret } from '../../common/note-secret';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
+import { normalizeTotpSeed, TOTP_SEED_MESSAGES } from './totp-seed';
 import { secretTable } from './vault.schema';
 
 /*
@@ -24,7 +26,8 @@ import { secretTable } from './vault.schema';
 export const SECRET_OWNER_TYPES = ['device', 'software', 'service_account', 'isp'] as const;
 export type SecretOwnerType = (typeof SECRET_OWNER_TYPES)[number];
 
-export const SECRET_KINDS = ['password', 'license_key', 'other'] as const;
+/* Bản sao ở tầng DB (`secret_kind_check`, 0035) và `SecretKind` bên web — thêm loại sửa đủ ba chỗ. */
+export const SECRET_KINDS = ['password', 'license_key', 'totp', 'other'] as const;
 export type SecretKind = (typeof SECRET_KINDS)[number];
 
 /**
@@ -162,8 +165,7 @@ export class VaultService {
    * đều mở ra cửa sổ có hàng chưa mã đúng ngữ cảnh.
    */
   async create(actor: string, input: SecretInput): Promise<SecretMeta> {
-    const value = input.value;
-    if (!value) {
+    if (!input.value) {
       throw new BadRequestException({
         code: 'SECRET_EMPTY',
         message: 'Chưa nhập giá trị cần cất.',
@@ -176,6 +178,9 @@ export class VaultService {
         message: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
       });
     }
+    const { value, probe } = storedValue(input.kind, input.value, label, input.username);
+    assertNoteHoldsNoValue(input.note, probe, 'Ghi chú đang chứa chính giá trị cần cất.');
+    assertNoteLooksPlain(input.note);
 
     /*
      * Chủ thể phải CÓ THẬT trước khi cất bí mật vào (cùng hàng rào với kho file).
@@ -245,14 +250,26 @@ export class VaultService {
   }
 
   /** Đổi giá trị (xoay mật khẩu). Mã lại từ đầu với DEK MỚI, không dùng lại DEK cũ. */
-  async rotate(actor: string, id: string, value: string): Promise<void> {
-    if (!value) {
+  async rotate(actor: string, id: string, input: string): Promise<void> {
+    if (!input) {
       throw new BadRequestException({
         code: 'SECRET_EMPTY',
         message: 'Chưa nhập giá trị mới.',
       });
     }
     const current = await this.requireAlive(id);
+    const { value, probe } = storedValue(
+      current.kind as SecretKind,
+      input,
+      current.label,
+      current.username,
+    );
+    // So với ghi chú ĐANG LƯU: đây là lúc duy nhất server cầm cả hai mà không phải giải mã.
+    assertNoteHoldsNoValue(
+      current.note,
+      probe,
+      'Giá trị mới đang nằm trong ghi chú của ngăn này. Sửa ghi chú trước rồi đổi giá trị.',
+    );
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
     await this.db.transaction(async (tx) => {
       // Hồ sơ đã ngừng dùng thì két đóng băng — xem chú thích ở `create()`.
@@ -298,7 +315,10 @@ export class VaultService {
       values.label = label;
     }
     if (input.username !== undefined) values.username = input.username?.trim() || null;
-    if (input.note !== undefined) values.note = input.note?.trim() || null;
+    if (input.note !== undefined) {
+      assertNoteLooksPlain(input.note);
+      values.note = input.note?.trim() || null;
+    }
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -415,6 +435,70 @@ export class VaultService {
  */
 function aliveSecret(id: string) {
   return and(eq(secretTable.id, id), isNull(secretTable.revokedAt));
+}
+
+/**
+ * Chuỗi thật sự đem đi mã hoá, và phần cần so với ghi chú (FR-035).
+ *
+ * Ngăn "Mã 2 lớp" cất URI `otpauth://` chuẩn hoá (Q-18) nên thứ phải cấm trong ghi chú là KHOÁ
+ * base32 bên trong nó: ghi chú chứa khoá là lộ cả mã 2 lớp dù không ai chép nguyên URI.
+ * Khoá hay được chép theo nhóm có gạch nối ("JBSW-Y3DP-…"), nên ghi chú bỏ gạch nối trước khi
+ * so. Thông báo lỗi không nhắc lại khoá — cùng luật với ghi chú.
+ */
+function storedValue(
+  kind: SecretKind,
+  input: string,
+  label: string,
+  username: string | null | undefined,
+): { value: string; probe: NoteProbe } {
+  if (kind !== 'totp') return { value: input, probe: { value: input, strip: null } };
+  const normalized = normalizeTotpSeed(input, { label, username });
+  if (normalized.value === null || normalized.secret === null) {
+    throw new BadRequestException({
+      code: 'TOTP_SEED_INVALID',
+      message: TOTP_SEED_MESSAGES[normalized.reason ?? 'BAD_SECRET'],
+    });
+  }
+  return { value: normalized.value, probe: { value: normalized.secret, strip: /-/g } };
+}
+
+/** Thứ cần tìm trong ghi chú, và ký tự bỏ khỏi ghi chú trước khi tìm. */
+interface NoteProbe {
+  value: string;
+  strip: RegExp | null;
+}
+
+/**
+ * Ghi chú là cột dạng rõ mà mọi người xem danh sách đều đọc được (Q-18, FR-035).
+ * Thông báo lỗi KHÔNG nhắc lại giá trị: thân lỗi đi qua log, toast và công cụ trình duyệt.
+ */
+function assertNoteHoldsNoValue(
+  note: string | null | undefined,
+  probe: NoteProbe,
+  message: string,
+): void {
+  const seen = probe.strip && note ? note.replace(probe.strip, '') : note;
+  if (noteContainsSecret(seen, probe.value)) {
+    throw new BadRequestException({
+      code: 'NOTE_CONTAINS_SECRET',
+      message: `${message} Ghi chú không được mã hóa — không ghi mật khẩu vào đó.`,
+    });
+  }
+}
+
+/**
+ * Ghi chú có một từ trông như mật khẩu (Q-18). Dùng cả khi sửa riêng ghi chú: đường đó không có
+ * giá trị trong tay, và giải mã ra để so là một lần mở két không ai xin (NFR-03).
+ */
+function assertNoteLooksPlain(note: string | null | undefined): void {
+  if (noteLooksLikeSecret(note)) {
+    throw new BadRequestException({
+      code: 'NOTE_LOOKS_LIKE_SECRET',
+      message:
+        'Ghi chú có một chuỗi trông như mật khẩu. Ghi chú không được mã hóa — cất mật khẩu vào ô Giá trị. ' +
+        'Nếu đó là tên máy hay mã model, tách bằng dấu cách.',
+    });
+  }
 }
 
 /** 0 hàng = secret không có hoặc đã bị thu hồi — với người gọi hai chuyện ấy là một: 404. */

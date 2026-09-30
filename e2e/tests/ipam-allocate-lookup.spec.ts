@@ -14,7 +14,7 @@ import {
 /**
  * NET-001 · NET-002 · NET-003 · NET-005 — màn Địa chỉ IP.
  *
- *   · hồ sơ IP phải có thiết bị hoặc người/bộ phận (Q-14): hộp báo lỗi dưới ô, API từ chối;
+ *   · hồ sơ IP phải có thiết bị hoặc người/phòng ban (Q-14): hộp báo lỗi dưới ô, API từ chối;
  *   · MỘT hộp "Cấp IP" cho ô trống lẫn hồ sơ đã thu hồi, có ô Thiết bị ở cả hai;
  *   · cột Thiết bị: mã một dòng, tên máy là dòng phụ;
  *   · ô lọc trong dải + ô "Tra IP hoặc máy…" cấp trang.
@@ -100,7 +100,7 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
     const dialog = page.getByRole('dialog', { name: `Cấp IP — ${address}` });
     await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(
-      dialog.getByText('Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.'),
+      dialog.getByText('Chọn thiết bị hoặc nhập người/phòng ban dùng IP này.'),
     ).toBeVisible();
     await expect(dialog).toBeVisible();
     expect(
@@ -148,7 +148,7 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: `Cấp IP — ${address}` });
     await expect(dialog.getByRole('combobox', { name: 'Thiết bị' })).toBeVisible();
-    await expect(dialog.getByRole('combobox', { name: 'Người / bộ phận dùng' })).toHaveValue('');
+    await expect(dialog.getByRole('combobox', { name: 'Người / phòng ban dùng' })).toHaveValue('');
     await dialog.getByRole('combobox', { name: 'Thiết bị' }).fill(f.deviceCode);
     await page.getByRole('option', { name: new RegExp(f.deviceCode) }).click();
     await dialog.getByRole('textbox', { name: 'Lý do' }).fill('cấp lại E2E');

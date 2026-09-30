@@ -421,7 +421,8 @@ export function NatScreen({ me }: { me: Me }) {
                   {/*
                     Trạng thái là CỘT riêng, không dính vào số port: "Đã tắt" là trạng thái của
                     CẢ rule và là thứ auditor soi kỹ nhất — nó phải đọc rõ ở cả hai theme, nên
-                    không làm mờ cả dòng mà dùng huy hiệu cảnh báo.
+                    không làm mờ cả dòng mà dùng huy hiệu đỏ, cùng màu "Đã ngừng dùng" ở mọi
+                    màn (Q-18).
                   */}
                   <td data-label={t('nat.status')} className="col-status">
                     {voided ? (
@@ -435,7 +436,7 @@ export function NatScreen({ me }: { me: Me }) {
                     ) : rule.enabled ? (
                       <span className="badge ok">{t('nat.bucketOpen')}</span>
                     ) : (
-                      <span className="badge warn">{t('nat.disabled')}</span>
+                      <span className="badge danger">{t('nat.disabled')}</span>
                     )}
                   </td>
                   <td data-label={t('common.actions')} className="col-actions">
@@ -465,6 +466,8 @@ export function NatScreen({ me }: { me: Me }) {
                                   key: 'toggle',
                                   label: t(rule.enabled ? 'nat.disableRule' : 'nat.enableRule'),
                                   onSelect: () => void toggleRule(rule),
+                                  warn: rule.enabled,
+                                  ok: !rule.enabled,
                                 },
                               ]),
                           ...(canHide && !voided
@@ -1201,10 +1204,13 @@ function NatForm({
         */}
         {rule ? (
           <>
-            <FormSection title={t('attachments.title')} columns={1}>
-              {/* Panel này GHI THẲNG, không nằm trong lượt Lưu của form — trong hộp thoại CÓ
-                  nút Hủy thì điều đó không hiển nhiên, nên phải nói ra. */}
-              <p className="alert">{t('attachments.liveWarning')}</p>
+            {/* Panel này GHI THẲNG, không nằm trong lượt Lưu của form — trong hộp thoại CÓ
+                nút Hủy thì điều đó không hiển nhiên, nên nói ra ở nút (i) cạnh tiêu đề. */}
+            <FormSection
+              title={t('attachments.title')}
+              titleTip={t('attachments.liveTip')}
+              columns={1}
+            >
               <AttachmentPanel
                 ownerType="nat_rule"
                 ownerId={rule.id}

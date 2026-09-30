@@ -72,7 +72,7 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
       }),
     ], t);
     expect(entry.detail).toBe(
-      'người sử dụng: anh Nam → chị Lan; bộ phận: (trống) → Kế toán',
+      'người sử dụng: anh Nam → chị Lan; phòng ban: (trống) → Kế toán',
     );
   });
 

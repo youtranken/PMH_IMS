@@ -41,6 +41,11 @@ test.describe('Đăng nhập', () => {
     await expect(password).toHaveAttribute('type', 'text');
     await page.getByRole('button', { name: 'Ẩn mật khẩu' }).click();
     await expect(password).toHaveAttribute('type', 'password');
+    // Q-18: rời ô là tự che, không đợi người dùng nhớ bấm.
+    await page.getByRole('button', { name: 'Hiện mật khẩu' }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+    await page.getByLabel('Email').click();
+    await expect(password).toHaveAttribute('type', 'password');
 
     await firstLogin(page, E2E_SA);
     await logout(page);
@@ -77,13 +82,16 @@ test.describe('Trang lỗi', () => {
 });
 
 test.describe('Khung app và Tìm nhanh', () => {
-  test('topbar nói tên màn; ô tìm giả mở Tìm nhanh với "Đi tới"; không khớp thì có lối "Tìm trong …"', async ({
+  test('topbar nói tên NHÓM, không lặp tên màn đã có ở h1; ô tìm giả mở Tìm nhanh với "Đi tới"; không khớp thì có lối "Tìm trong …"', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/devices');
     const banner = page.getByRole('banner');
-    await expect(banner.getByTestId('topbar-title')).toHaveText('Thiết bị');
+    // Tên màn chỉ nằm ở `<h1>` (Q-18); topbar mang nhóm menu làm ngữ cảnh.
+    await expect(page.getByRole('heading', { level: 1, name: 'Thiết bị' })).toBeVisible();
+    await expect(banner.getByText('Thiết bị', { exact: true })).toHaveCount(0);
+    await expect(banner.getByTestId('topbar-context')).toHaveText('Tài sản');
     await expect(banner.getByText('E2E Super Admin')).toHaveCount(0);
 
     await banner.getByRole('button', { name: /^Tìm nhanh \((Ctrl K|⌘K)\)$/ }).click();

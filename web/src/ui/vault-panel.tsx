@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash, remainingParts } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
+import { noteContainsSecret, noteLooksLikeSecret } from '@/lib/note-secret';
 import { Dialog } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -14,7 +15,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
-import { RevealDialog, RevealStep } from '@/ui/reveal-dialog';
+import { RevealDialog, RevealStep, type TotpReveal } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
@@ -28,6 +29,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
 import { SecretDue } from '@/ui/secret-due';
+import { Chevron } from '@/ui/chevron';
 
 /*
  * Danh sách loại chủ thể nằm ở `lib/secret-owner-kinds.ts` — ở đó nó đứng cạnh
@@ -35,7 +37,8 @@ import { SecretDue } from '@/ui/secret-due';
  * `import type { SecretOwnerType } from '@/ui/vault-panel'` vẫn đúng, mà chỉ còn MỘT khai báo.
  */
 export type { SecretOwnerType };
-type SecretKind = 'password' | 'license_key' | 'other';
+/* Bản sao của `SECRET_KINDS` (api) và `secret_kind_check` (DB) — thêm loại sửa đủ ba chỗ. */
+type SecretKind = 'password' | 'license_key' | 'totp' | 'other';
 
 export interface AccessVerdict {
   tier: 'whitelist' | 'needs_approval' | 'denied';
@@ -76,7 +79,10 @@ export interface SecretMeta {
   kind: SecretKind;
   label: string;
   username: string | null;
+  /** `null` cả khi ngăn có ghi chú mà người xem chưa mở được ngăn — server giấu (SEC-20). */
   note: string | null;
+  /** Ngăn có ghi chú hay không, kể cả khi `note` bị giấu. */
+  hasNote?: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -195,6 +201,7 @@ export function VaultPanel({
       label: string;
       username: string | null;
       value: string;
+      totp?: TotpReveal;
       seconds: number;
       stepUpSecondsLeft: number;
     } | null
@@ -271,6 +278,8 @@ export function VaultPanel({
       try {
         const opened = await apiFetch<{
           value: string;
+          /** Chỉ ngăn "Mã 2 lớp": QR + mã hiện tại, server sinh lại mỗi lần mở (Q-18). */
+          totp?: TotpReveal;
           revealSeconds: number;
           /** Grace step-up còn lại — server tính, client không tự đoán được (xem session-policy). */
           stepUpSecondsLeft: number;
@@ -282,6 +291,7 @@ export function VaultPanel({
           label: secret.label,
           username: secret.username,
           value: opened.value,
+          totp: opened.totp,
           seconds: opened.revealSeconds,
           stepUpSecondsLeft: opened.stepUpSecondsLeft,
         });
@@ -372,6 +382,7 @@ export function VaultPanel({
             label={revealed.label}
             username={revealed.username}
             value={revealed.value}
+            totp={revealed.totp}
             seconds={revealed.seconds}
             stepUpSecondsLeft={revealed.stepUpSecondsLeft}
             onClose={() => setRevealed(null)}
@@ -593,10 +604,8 @@ export function VaultPanel({
                 <tr key={secret.id}>
                   <td data-label={t('vault.label')} className="col-name">
                     {secret.label}
-                    <span className="cell-sub">
-                      {t(`vault.kind_${secret.kind}`)}
-                      {secret.note ? ` · ${secret.note}` : ''}
-                    </span>
+                    <span className="cell-sub">{t(`vault.kind_${secret.kind}`)}</span>
+                    <SecretNote secret={secret} />
                   </td>
                   <td data-label={t('vault.username')}>
                     <span className="mono">{orDash(secret.username)}</span>
@@ -751,6 +760,7 @@ export function VaultPanel({
           label={revealed.label}
           username={revealed.username}
           value={revealed.value}
+          totp={revealed.totp}
           seconds={revealed.seconds}
           stepUpSecondsLeft={revealed.stepUpSecondsLeft}
           onClose={() => setRevealed(null)}
@@ -796,7 +806,7 @@ export function VaultPanel({
   );
 }
 
-const KINDS: SecretKind[] = ['password', 'license_key', 'other'];
+const KINDS: SecretKind[] = ['password', 'license_key', 'totp', 'other'];
 
 /**
  * Thêm mới mang theo plaintext; SỬA thì không.
@@ -830,9 +840,17 @@ function SecretForm({
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = secret !== null;
+  /* Báo ngay khi gõ chứ không đợi bấm Lưu: bấm Lưu là qua mã 6 số rồi mới bị server từ chối.
+     Server vẫn là nơi phán (Q-18) — đây là bản chép có cổng của cùng luật. */
+  const noteError = noteContainsSecret(note, value)
+    ? t('vault.noteContainsSecret')
+    : noteLooksLikeSecret(note)
+      ? t('vault.noteLooksLikeSecret')
+      : null;
   const check = useFormErrors({
     label: !label.trim() && t('vault.labelRequired'),
     value: !isEdit && !value && t('vault.valueRequired'),
+    note: noteError,
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
@@ -942,7 +960,7 @@ function SecretForm({
           <Field
             label={t('vault.value')}
             required
-            hint={t('vault.valueHint')}
+            hint={t(kind === 'totp' ? 'vault.totpValueHint' : 'vault.valueHint')}
             htmlFor="secret-value"
             error={check.error('value')}
           >
@@ -959,13 +977,19 @@ function SecretForm({
               }
               initiallyShown={kind === 'license_key'}
               allowGenerate={kind === 'password'}
+              qrImport={kind === 'totp'}
             />
             {kind === 'password' ? <SecretStrengthMeter value={value} /> : null}
           </Field>
         ) : null}
 
         {/* FR-035: ghi chú KHÔNG được chứa mật khẩu — nói thẳng ngay tại ô nhập. */}
-        <Field label={t('vault.note')} hint={t('vault.noteHint')} htmlFor="secret-note">
+        <Field
+          label={t('vault.note')}
+          hint={t('vault.noteHint')}
+          htmlFor="secret-note"
+          error={noteError ?? undefined}
+        >
           <textarea
             id="secret-note"
             className="inp"
@@ -987,6 +1011,44 @@ function SecretForm({
   );
 }
 
+/**
+ * Ghi chú của một ngăn — gập sẵn, bấm mới mở (SEC-20).
+ *
+ * Không in thẳng dưới tên ngăn: bảng két hay được mở trước mặt người khác, và ghi chú là cột
+ * dạng rõ. Nút mang chữ "Ghi chú" chứ không phải "Xem ghi chú": các bài kiểm và người dùng tìm
+ * nút "Xem" (mở giá trị) theo tên, hai nút cùng chữ "Xem" trên một dòng là nhầm nút.
+ * Không dùng `title`: rê chuột mới đọc được, bàn phím và cảm ứng không bao giờ thấy.
+ */
+function SecretNote({ secret }: { secret: SecretMeta }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const panelId = `secret-note-${secret.id}`;
+  if (secret.note) {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm ghost"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((current) => !current)}
+        >
+          {t('vault.noteToggle')}
+          <Chevron direction={open ? 'up' : 'down'} />
+        </button>
+        {/* Dựng khi mở chứ không dùng `hidden`: `.cell-sub { display: block }` đè luật
+            `[hidden]` của trình duyệt, chữ sẽ hiện dù đang "ẩn". */}
+        {open ? (
+          <span id={panelId} className="cell-sub">
+            {secret.note}
+          </span>
+        ) : null}
+      </>
+    );
+  }
+  return secret.hasNote ? <span className="cell-sub">{t('vault.noteHidden')}</span> : null;
+}
+
 function RotateForm({
   secret,
   csrfToken,
@@ -1001,7 +1063,11 @@ function RotateForm({
   const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ value: !value && t('vault.valueRequired') });
+  const check = useFormErrors({
+    value: !value
+      ? t('vault.valueRequired')
+      : noteContainsSecret(secret.note, value) && t('vault.rotateValueInNote'),
+  });
 
   const rotate = useApiMutation<{ value: string }, unknown>(
     `/api/v1/vault/secrets/${secret.id}/rotate`,
@@ -1077,6 +1143,7 @@ function RotateForm({
             describedBy={check.error('value') ? 'secret-new-value-error' : undefined}
             initiallyShown={secret.kind === 'license_key'}
             allowGenerate={secret.kind === 'password'}
+            qrImport={secret.kind === 'totp'}
           />
           {/* Đổi mật khẩu là lúc người ta ĐẶT một giá trị mới, không phải chép lại cái đang
               có — nên thanh đo ở đây còn đáng nói hơn ở ô cất lần đầu. */}

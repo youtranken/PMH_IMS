@@ -174,7 +174,7 @@ export class ServiceAccountController {
         { header: 'Tên', width: 28, value: (r) => r.name },
         { header: 'Loại', width: 12, value: (r) => KIND_LABEL[r.kind] ?? r.kind },
         { header: 'Tên đăng nhập', width: 28, value: (r) => r.login ?? '' },
-        { header: 'Bộ phận', width: 20, value: (r) => r.department ?? '' },
+        { header: 'Phòng ban', width: 20, value: (r) => r.department ?? '' },
         { header: 'Người phụ trách', width: 22, value: (r) => r.ownerName ?? '' },
         { header: 'Nhóm VPN', width: 18, value: (r) => r.groupName ?? '' },
         { header: 'Dải IP được phép', width: 28, value: (r) => r.allowedIps ?? '' },

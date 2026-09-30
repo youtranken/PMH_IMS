@@ -351,3 +351,33 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     expect(VALUES.filter(([, v]) => OLD.test(v))).toEqual([]);
   });
 });
+
+/**
+ * Q-18: "Phòng ban" thay cho "Bộ phận" ở mọi chữ người dùng đọc. Danh mục, ô chọn trên hồ sơ
+ * thiết bị và ô "ai đang dùng" của IP/NAT/TKDV cùng trỏ về MỘT danh mục — hai tên cho nó thì
+ * người ta đi tìm hai danh mục.
+ */
+describe('Q-18: "Phòng ban", không còn "Bộ phận"', () => {
+  it('không chuỗi nào còn chữ "bộ phận"', () => {
+    expect(allValues().filter(([, v]) => /bộ phận/iu.test(v))).toEqual([]);
+  });
+
+  it('tab danh mục, nút thêm, ô trên hồ sơ thiết bị và ô "ai đang dùng" của IP', () => {
+    expect(lookup('catalog.tabDepartment')).toBe('Phòng ban');
+    expect(lookup('catalog.addDepartment')).toBe('Thêm phòng ban');
+    expect(lookup('devices.department')).toBe('Phòng ban sử dụng');
+    expect(lookup('ipam.usedBy')).toBe('Người / phòng ban dùng');
+  });
+});
+
+/**
+ * Q-04 (làm rõ): tốc độ ghi trên đường truyền là tốc độ GÓI CƯỚC của line đó. Chữ "băng thông"
+ * đứng cạnh ô Nhà mạng khiến người ta đi tìm chỗ khai băng thông cho nhà mạng — chỗ đó không có.
+ */
+describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
+  it('form, lịch sử cùng một chữ; không còn "băng thông"', () => {
+    expect(lookup('isp.bandwidth')).toBe('Tốc độ gói cước');
+    expect(lookup('history.isp.fBandwidth')).toBe(lookup('isp.bandwidth').toLowerCase());
+    expect(allValues().filter(([, v]) => /băng thông/iu.test(v))).toEqual([]);
+  });
+});

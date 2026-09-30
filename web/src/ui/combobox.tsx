@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
-import { useDialogPortal } from '@/ui/dialog';
+import { PROGRAMMATIC_FOCUS_ATTR, useDialogPortal } from '@/ui/dialog';
 
 interface ComboboxProps<T> {
   placeholder: string;
@@ -149,7 +149,7 @@ export function Combobox<T>({
    * `.filter().map()` — mảng MỚI sau mỗi lần cha render, kể cả khi nội dung y hệt.
    *
    * Nên effect chạy sau MỌI lần cha render, và `setClosed(false)` bung lại đúng cái menu người
-   * dùng vừa bấm Esc để đóng: mở hộp Chuyển → bấm ô "Người/bộ phận dùng" → Esc → gõ tiếp vào
+   * dùng vừa bấm Esc để đóng: mở hộp Chuyển → bấm ô "Người/phòng ban dùng" → Esc → gõ tiếp vào
    * ô "Lý do" → menu bung lại, đè lên chính ô đang gõ. Esc không còn là một đường thoát.
    *
    * `choose()` đã gặp đúng cơ chế này và vá riêng cho đường CHỌN bằng `touched = false`; đây
@@ -249,8 +249,17 @@ export function Combobox<T>({
         aria-autocomplete="list"
         /* Chạm vào ô là một hành vi CÓ Ý của người dùng → mở lại menu đã đóng bằng Esc.
            Esc không làm rơi tiêu điểm, nên sự kiện này KHÔNG bắn ngay sau Esc: muốn mở lại
-           thì phải rời ô rồi quay lại, hoặc gõ tiếp — đúng ý "người dùng chủ động". */
-        onFocus={() => {
+           thì phải rời ô rồi quay lại, hoặc gõ tiếp — đúng ý "người dùng chủ động".
+           Tiêu điểm do hộp thoại tự đặt lúc mở thì KHÔNG tính là chạm: menu bung sẵn che các ô
+           bên dưới và nuốt phím Esc đầu tiên người dùng bấm để thoát hộp. */
+        onFocus={(e) => {
+          if (e.currentTarget.hasAttribute(PROGRAMMATIC_FOCUS_ATTR)) return;
+          setTouched(true);
+          setClosed(false);
+        }}
+        /* Ô đã có tiêu điểm sẵn (hộp tự đặt) thì bấm vào không sinh `focus` nữa — bấm vẫn là
+           chạm, nên mở ở đây. */
+        onMouseDown={() => {
           setTouched(true);
           setClosed(false);
         }}

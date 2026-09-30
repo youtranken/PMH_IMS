@@ -28,6 +28,7 @@ import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { BreakGlassService } from './break-glass.service';
 import { valueAge } from './secret-age';
+import { totpRevealView } from './totp-seed';
 import {
   SECRET_KINDS,
   SECRET_OWNER_TYPES,
@@ -123,10 +124,18 @@ export class VaultController {
   @Roles('sa', 'admin', 'member')
   @Get()
   async list(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
+    let showNotes = true;
     /* Mặc định ĐÓNG (AD-9): hỏi "không phải SA/Admin" chứ không hỏi "có phải Member" — vai
        thứ tư thêm vào ngày nào cũng phải đi qua ma trận quyền, không được đi thẳng. */
     if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
       await this.breakGlass.assertCanSeeMetadata(actor(req), query.ownerType, query.ownerId);
+      /* Ghi chú là cột dạng rõ: người chưa mở được két mà đọc được nó là đi vòng qua duyệt,
+         mã 6 số và nhật ký (SEC-20). Hỏi lại mỗi lượt, không tin cờ phía client (AD-6). */
+      showNotes = await this.breakGlass.canRevealNow(
+        { email: actor(req), sessionId: req.user!.sessionId },
+        query.ownerType,
+        query.ownerId,
+      );
     }
     const [rows, staleDays] = await Promise.all([
       this.vault.listFor(query.ownerType, query.ownerId),
@@ -136,7 +145,15 @@ export class VaultController {
     const now = new Date();
     return rows.map((row) => {
       const age = valueAge(row.valueChangedAt, staleDays, now);
-      return { ...row, valueAgeDays: age.days, valueStale: age.stale, dueInDays: age.dueInDays };
+      return {
+        ...row,
+        note: showNotes ? row.note : null,
+        // Chỉ nói CÓ ghi chú, không nói gì trong đó: đủ để Member biết xin quyền là thấy thêm gì.
+        hasNote: row.note !== null,
+        valueAgeDays: age.days,
+        valueStale: age.stale,
+        dueInDays: age.dueInDays,
+      };
     });
   }
 
@@ -279,10 +296,18 @@ export class VaultController {
      * lại mã 6 số. Con số phải PHẢI do server nói: client không biết `stepped_up_at`, và tự
      * đếm từ lần gõ mã gần nhất thì mỗi tab ra một số khác nhau.
      */
+      /*
+       * Ngăn "Mã 2 lớp" (Q-18): QR và mã hiện tại sinh lại từ chuỗi vừa giải mã, chỉ sống trong
+       * phản hồi `no-store` này. Không lưu ảnh QR ở đâu — ảnh QR chính là bí mật dạng rõ.
+       */
+      const now = new Date();
       return {
         ...opened,
         revealSeconds,
-        stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, new Date()),
+        stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, now),
+        ...(opened.meta.kind === 'totp'
+          ? { totp: await totpRevealView(opened.value, now, revealSeconds) }
+          : {}),
       };
     });
   }

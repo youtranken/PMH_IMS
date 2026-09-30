@@ -34,6 +34,21 @@ describe('Danh sách tham số sửa được trên màn (Q-14)', () => {
     expect(editableByKey('nat.wide_port_range')?.group).toBe('ipam');
   });
 
+  it('giấy tờ đính kèm (Q-18): ba khoá sửa được, có khoảng', () => {
+    const size = editableByKey('file.max_size_mb')!;
+    const batch = editableByKey('file.max_files_per_batch')!;
+    const purge = editableByKey('file.purge_after_days')!;
+    for (const spec of [size, batch, purge]) expect(spec.group).toBe('files');
+    // Trần 25 khớp trần cứng multer/nginx — `files/file-validation.spec.ts` chốt hai số bằng nhau.
+    expect(validateSetting(size, 25)).toEqual({ value: 25, reason: null });
+    expect(validateSetting(size, 26).reason).not.toBeNull();
+    expect(validateSetting(size, 0).reason).not.toBeNull();
+    expect(validateSetting(batch, 0).reason).not.toBeNull();
+    // Dọn blob là việc không lùi lại được: không cho đặt ngắn tới mức lỡ tay xoá hôm qua đã mất.
+    expect(validateSetting(purge, 6).reason).not.toBeNull();
+    expect(validateSetting(purge, 7)).toEqual({ value: 7, reason: null });
+  });
+
   it('mặc định của mọi khoá số nằm trong khoảng của chính nó', () => {
     for (const spec of EDITABLE_SETTINGS) {
       const fallback = CONFIG_KEYS[spec.name].fallback;

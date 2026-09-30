@@ -109,21 +109,18 @@ test('"Không lấy được mã?" hiện hướng dẫn và câu liên hệ t�
   const help = page.getByRole('region', { name: 'Không lấy được mã?' });
   await expect(help.getByText(/nhờ Super Admin đặt lại xác thực 2 lớp/)).toBeVisible();
   await expect(help.getByText(/Liên hệ:/)).toBeVisible();
-});
-
-test('màn đăng nhập: "Quên mật khẩu?" chỉ đường, không có luồng tự đặt lại qua mail', async ({
-  page,
-}) => {
-  await page.goto('/login');
-  await page.getByRole('button', { name: 'Quên mật khẩu?' }).click();
-  const help = page.getByRole('region', { name: 'Quên mật khẩu?' });
-  await expect(help.getByText(/Nhờ Super Admin cấp mật khẩu tạm/)).toBeVisible();
-  await expect(help.getByText(/Liên hệ:/)).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   // Route công khai chỉ trả đúng một khoá.
   const res = await page.request.get('/api/v1/auth/support-contact');
   expect(res.status()).toBe(200);
   expect(Object.keys((await res.json()) as object)).toEqual(['contact']);
+});
+
+test('màn đăng nhập không có "Quên mật khẩu?" (Q-18), không tràn ngang ở 390px', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Quên mật khẩu?' })).toHaveCount(0);
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });
 
 test('máy dùng chung: phiên của A chết giữa chừng → B đăng nhập thì về trang chủ, không bị kéo tới trang dở của A', async ({
@@ -158,22 +155,21 @@ test('máy dùng chung: phiên của A chết giữa chừng → B đăng nhập
   await expect(page).toHaveURL((url) => url.pathname === '/software');
 });
 
-test('email đăng nhập được nhớ trên máy; "Không phải tôi" xoá nó', async ({ page }) => {
+test('email đăng nhập được nhớ trên máy: điền sẵn, không in thành dòng riêng (Q-18)', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   await logout(page);
 
   await page.goto('/login');
   await expect(page.getByLabel('Email')).toHaveValue(E2E_SA.email);
-  await expect(page.getByText(`Email đã nhớ trên máy này: ${E2E_SA.email}.`)).toBeVisible();
+  await expect(page.getByText(/Email đã nhớ/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Không phải tôi' })).toHaveCount(0);
   // Email đã có thì con trỏ ở ô mật khẩu — trên điện thoại bàn phím bật đúng ô cần gõ.
   await expect(page.getByLabel('Mật khẩu', { exact: true })).toBeFocused();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.getByRole('button', { name: 'Không phải tôi' }).click();
-  await expect(page.getByLabel('Email')).toHaveValue('');
+  // Vẫn điền sẵn sau khi nạp lại trang — nhớ trên máy, không chỉ trong bộ nhớ của tab.
   await page.reload();
-  await expect(page.getByLabel('Email')).toHaveValue('');
-  await expect(page.getByRole('button', { name: 'Không phải tôi' })).toHaveCount(0);
+  await expect(page.getByLabel('Email')).toHaveValue(E2E_SA.email);
 });
 
 test('bấm Đăng nhập khi trống: lỗi tiếng Việt dưới từng ô, không phải bong bóng của trình duyệt', async ({

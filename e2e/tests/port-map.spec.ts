@@ -49,7 +49,7 @@ test.describe('Port map', () => {
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('Gi1/0/12');
-    // Bám theo TÊN: form có hai combobox (thiết bị đầu kia, và ô "ai dùng" gợi ý bộ phận).
+    // Bám theo TÊN: form có hai combobox (thiết bị đầu kia, và ô "ai dùng" gợi ý phòng ban).
     await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(serverCode);
     await page.getByRole('option', { name: new RegExp(serverCode) }).click();
     await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('eth0');

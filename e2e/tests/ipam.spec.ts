@@ -66,7 +66,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
 
     await page.getByRole('button', { name: 'Cấp IP', exact: true }).first().click();
     const ipForm = page.getByRole('dialog');
-    await ipForm.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Chị Lan — Kế toán');
+    await ipForm.getByRole('combobox', { name: 'Người / phòng ban dùng' }).fill('Chị Lan — Kế toán');
     await ipForm.getByRole('button', { name: 'Cấp IP', exact: true }).click();
 
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
@@ -107,8 +107,8 @@ test.describe('Dải mạng và hồ sơ IP', () => {
 
     // Đường hỏng: bấm Cấp khi chưa có chủ → lỗi dưới ô, hộp vẫn mở, không tạo hồ sơ.
     await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
-    await expect(dialog.getByText('Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.')).toBeVisible();
-    await dialog.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Phòng IT E2E');
+    await expect(dialog.getByText('Chọn thiết bị hoặc nhập người/phòng ban dùng IP này.')).toBeVisible();
+    await dialog.getByRole('combobox', { name: 'Người / phòng ban dùng' }).fill('Phòng IT E2E');
 
     // NET-007: lối "kế tiếp" cho đổi sang chỗ trống khác ngay trong hộp (gateway không có).
     await dialog.getByRole('button', { name: 'Địa chỉ' }).click();

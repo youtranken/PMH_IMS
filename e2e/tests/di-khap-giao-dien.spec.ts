@@ -106,7 +106,7 @@ import { fileURLToPath } from 'node:url';
  * [x] Đầu trang · ô tìm · đủ cột · menu ba chấm ĐỔI theo loại hồ sơ
  *     → Phòng Phần mềm: đúng bộ nút, ô tìm thu hẹp thật, đủ cột, và menu ba chấm theo loại
  * [x] Hộp Thêm/Sửa hồ sơ: đủ ô · đúng vai · ô chọn có đúng lựa chọn
- *     → Bên trong hộp "Thêm hồ sơ" và hộp "Sửa hồ sơ" — đủ ô, đúng vai, đúng lựa chọn
+ *     → Bên trong hộp "Thêm phần mềm" và hộp "Sửa hồ sơ" — đủ ô, đúng vai, đúng lựa chọn
  * [x] Hộp Gán vào máy: hai chế độ (gán mới / sửa ghế) khác nhau đúng chỗ
  *     → Bên trong hộp "Gán vào máy" — chế độ gán mới và chế độ sửa ghế
  * [x] Hồ sơ: mỗi tab đúng đồ; tab "Máy đang dùng" CHỈ có với license

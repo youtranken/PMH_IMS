@@ -52,29 +52,51 @@ describe('ChangePasswordForm', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('"✓ Khớp" hiện ngay khi gõ xong ô nhập lại, KHÔNG đợi rời ô (rời ô mà nút trôi thì cú bấm trượt)', async () => {
+  it('"Hai mật khẩu khớp" tick ngay khi gõ xong ô nhập lại, KHÔNG đợi rời ô (rời ô mà nút trôi thì cú bấm trượt)', async () => {
     renderForm();
+    const line = () => screen.getByText('Hai mật khẩu khớp').closest('.pw-rule');
+    expect(line()).not.toHaveClass('ok');
     await userEvent.type(screen.getByLabelText('Mật khẩu mới'), 'Matkhau12345!');
     await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'Matkhau12345!');
-    // Tiêu điểm vẫn ở ô nhập lại: dòng báo phải có mặt từ trước cú bấm nút.
+    // Tiêu điểm vẫn ở ô nhập lại: dòng báo phải đổi từ trước cú bấm nút.
     expect(screen.getByLabelText('Nhập lại mật khẩu mới')).toHaveFocus();
-    expect(screen.getByText('✓ Khớp')).toBeInTheDocument();
+    expect(line()).toHaveClass('ok');
+    await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'x');
+    expect(line()).not.toHaveClass('ok');
   });
 
-  it('đang gõ dở ô nhập lại (ngắn hơn mật khẩu mới) thì chưa nói "Chưa khớp"', async () => {
+  it('đang gõ dở ô nhập lại thì dòng khớp chỉ chưa tick, không mắng "Chưa khớp"', async () => {
     renderForm();
     await userEvent.type(screen.getByLabelText('Mật khẩu mới'), 'Matkhau12345!');
     await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'Matkh');
     expect(screen.queryByText('Chưa khớp')).not.toBeInTheDocument();
+    expect(screen.getByText('Hai mật khẩu khớp').closest('.pw-rule')).not.toHaveClass('ok');
   });
 
-  it('checklist tick dần khi gõ', async () => {
+  it('checklist tick dần khi gõ: độ dài, từng nhóm trong 4 nhóm, và dòng "3 trong 4" (Q-18)', async () => {
     renderForm();
     const box = screen.getByLabelText('Mật khẩu mới');
-    expect(screen.getByText(/Ít nhất 12 ký tự \(đang có 0\)/).closest('.pw-rule')).not.toHaveClass('ok');
-    await userEvent.type(box, 'Mat-Khau-2026');
-    expect(screen.getByText(/Ít nhất 12 ký tự \(đang có 13\)/).closest('.pw-rule')).toHaveClass('ok');
-    expect(screen.getByText(/đang có 4\):/).closest('.pw-rule')).toHaveClass('ok');
+    const rule = (text: string | RegExp) => screen.getByText(text).closest('.pw-rule');
+    expect(rule(/Ít nhất 12 ký tự \(đang có 0\)/)).not.toHaveClass('ok');
+    expect(rule('Có ít nhất 3 trong 4:')).not.toHaveClass('ok');
+
+    await userEvent.type(box, 'matkhau');
+    expect(rule('chữ thường')).toHaveClass('ok');
+    expect(rule('chữ HOA')).not.toHaveClass('ok');
+    expect(rule('số')).not.toHaveClass('ok');
+    expect(rule('ký tự đặc biệt')).not.toHaveClass('ok');
+    expect(rule('Có ít nhất 3 trong 4:')).not.toHaveClass('ok');
+
+    await userEvent.type(box, 'A1');
+    expect(rule('chữ HOA')).toHaveClass('ok');
+    expect(rule('số')).toHaveClass('ok');
+    // Đủ 3 nhóm là đạt luật, dù nhóm thứ tư còn trống (NFR-01).
+    expect(rule('Có ít nhất 3 trong 4:')).toHaveClass('ok');
+    expect(rule('ký tự đặc biệt')).not.toHaveClass('ok');
+
+    await userEvent.type(box, '-2026');
+    expect(rule(/Ít nhất 12 ký tự \(đang có 14\)/)).toHaveClass('ok');
+    expect(rule('ký tự đặc biệt')).toHaveClass('ok');
   });
 
   it('ô mật khẩu có nút hiện/ẩn; gửi form thì tự che lại', async () => {

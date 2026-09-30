@@ -90,7 +90,7 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     const device = screen.getByRole('combobox', { name: 'Thiết bị' });
     await waitFor(() => expect(device).toHaveAttribute('aria-invalid', 'true'));
     expect(device).toHaveAccessibleDescription(
-      expect.stringContaining('Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.'),
+      expect.stringContaining('Chọn thiết bị hoặc nhập người/phòng ban dùng IP này.'),
     );
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
@@ -101,7 +101,7 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     renderDialog(null, onDone);
     const user = userEvent.setup();
     await user.type(
-      await screen.findByRole('combobox', { name: 'Người / bộ phận dùng' }),
+      await screen.findByRole('combobox', { name: 'Người / phòng ban dùng' }),
       'Chị Lan',
     );
     await user.type(screen.getByRole('textbox', { name: 'Lý do' }), 'máy mới');
@@ -124,7 +124,7 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     renderDialog(FREE_RECORD, onDone);
     const user = userEvent.setup();
     // Chủ cũ đã đi khỏi lúc thu hồi — ô mở ra trống, ghi chú thì giữ.
-    const usedBy = await screen.findByRole('combobox', { name: 'Người / bộ phận dùng' });
+    const usedBy = await screen.findByRole('combobox', { name: 'Người / phòng ban dùng' });
     expect(usedBy).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('đã thu hồi');
     await user.type(usedBy, 'Kho');

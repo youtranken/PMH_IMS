@@ -7,6 +7,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
+  rowActionNames,
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
@@ -105,6 +106,27 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     'Điện thoại IP',
     'Thiết bị khác',
   ];
+
+  /**
+   * Tập loại mà ô chọn phải bày = đúng danh mục server trả, không phải hằng số 12: chủ dự án
+   * nhập thêm loại riêng qua màn Danh mục, và đó là dữ liệu thật chứ không phải rác E2E.
+   * Hai điều vẫn chốt: đủ 12 loại gieo sẵn, và không còn loại mang chữ E2E sót lại.
+   */
+  async function catalogDeviceTypes(page: Page, onlyActive: boolean): Promise<string[]> {
+    const res = await page.request.get('/api/v1/catalog');
+    expect(res.status(), 'đọc danh mục để biết tập loại thiết bị hiện có').toBe(200);
+    const rows = ((await res.json()) as { deviceTypes: { name: string; active: boolean }[] })
+      .deviceTypes;
+    const names = rows.filter((row) => !onlyActive || row.active).map((row) => row.name);
+    expect(names, 'thiếu một loại gieo sẵn nghĩa là seed đã đổi').toEqual(
+      expect.arrayContaining(BASE_DEVICE_TYPES),
+    );
+    expect(
+      names.filter((name) => /e2e/i.test(name)),
+      'loại thiết bị E2E sót lại — reset-e2e chưa dọn',
+    ).toEqual([]);
+    return names.sort();
+  }
 
   /**
    * Tên TRỢ NĂNG của một tập điều khiển, đúng thứ tự chúng nằm trong DOM.
@@ -308,8 +330,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
     expect(
       [...kind.slice(1)].sort(),
-      'Ô lọc Loại phải khớp ĐÚNG 12 loại do migration gieo sẵn — thừa một loại nghĩa là danh mục E2E chưa được dọn, thiếu một loại nghĩa là seed đã đổi',
-    ).toEqual([...BASE_DEVICE_TYPES].sort());
+      'Ô lọc Loại phải khớp ĐÚNG danh mục loại thiết bị (kể cả loại đã ngưng — lọc thì vẫn cần tìm máy cũ)',
+    ).toEqual(await catalogDeviceTypes(page, false));
 
     // Site và tủ là dữ liệu riêng của PMH (nhập qua màn Danh mục), nên chỉ chốt được mục đầu.
     expect(
@@ -444,12 +466,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toContainText(`${stamp}-01`);
 
     /*
-     * MỘT DÒNG CÓ ĐÚNG MỘT VIỆC LÀM ĐƯỢC TẠI CHỖ.
+     * CỘT THAO TÁC THEO Q-18: "Sửa" đứng ngoài, mọi việc khác vào menu ⋮.
      *
-     * Phòng này CỐ Ý không dùng menu ba chấm `RowActions` như các bảng khác: cột "Thao tác"
-     * chỉ có một nút "Sửa máy <mã>" mở thẳng hộp thoại. Chốt lại đây để lần sau ai gom về
-     * menu ba chấm cho "đồng bộ" thì bài này đỏ và người đó biết mình đang đổi một quyết định,
-     * chứ không phải đang dọn dẹp.
+     * Đúng HAI nút mỗi dòng, cả hai mang mã máy. Ai đưa thêm nút phẳng ra ngoài (Thanh lý, Nhân
+     * bản…) thì bài này đỏ — cột thao tác phình ra là cột Tên bị ép.
      */
     await expect
       .poll(
@@ -459,10 +479,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
           ),
         {
           message:
-            'Mỗi dòng thiết bị có đúng MỘT nút, và nhãn phải riêng cho từng dòng (hai chục nút cùng tên "Sửa" là không ai bấm đúng được)',
+            'Mỗi dòng thiết bị có đúng nút Sửa + menu ⋮, và nhãn phải riêng cho từng dòng (hai chục nút cùng tên "Sửa" là không ai bấm đúng được)',
         },
       )
-      .toEqual([`Sửa máy TB-E2E-BANG-${stamp}-01`]);
+      .toEqual([`Sửa máy TB-E2E-BANG-${stamp}-01`, `Thao tác với TB-E2E-BANG-${stamp}-01`]);
 
     /*
      * PHÂN TRANG.
@@ -534,7 +554,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
    * `devices.spec.ts` mở hộp "Thêm thiết bị" hàng chục lần, nhưng lần nào cũng chỉ chạm ba ô:
-   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người sử dụng, Bộ phận,
+   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người sử dụng, Phòng ban,
    * Nhà cung cấp, ba ô ngày, Ghi chú — chưa có bài nào biết chúng còn tồn tại hay không. Xóa
    * hẳn ô "Bảo hành đến" khỏi form thì cả bộ E2E vẫn xanh, và cái máy tiếp theo được khai sẽ
    * không có hạn bảo hành, mãi mãi.
@@ -542,7 +562,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * Bài này còn chốt hai quyết định thiết kế mà chỉ đọc chú thích trong code mới biết:
    *   - Ô "Trạng thái" KHÔNG hiện khi thêm mới (máy mới thì luôn "đang dùng"; bày một ô có
    *     đúng một câu trả lời hợp lý là mở đường cho hồ sơ vừa tạo đã "đã thanh lý").
-   *   - Từng ô phải đúng LOẠI tay nắm: Bộ phận là `combobox` (gõ tự do được, vì bộ phận mới
+   *   - Từng ô phải đúng LOẠI tay nắm: Phòng ban là `combobox` (gõ tự do được, vì phòng ban mới
    *     lập tuần này phải khai được ngay), Loại là `button` mở listbox, ngày là nút mở lịch.
    *     Nhầm vai nghĩa là người dùng bàn phím thao tác khác hẳn điều ta tưởng.
    *
@@ -606,13 +626,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     }
 
     /*
-     * ĐÚNG LOẠI TAY NẮM. Bộ phận là `combobox` chứ không phải `Select`: danh mục ở đây chỉ
+     * ĐÚNG LOẠI TAY NẮM. Phòng ban là `combobox` chứ không phải `Select`: danh mục ở đây chỉ
      * HƯỚNG chứ không được ép, nên nó phải gõ tự do được. Đổi nó thành `Select` là lặng lẽ
-     * cấm khai một bộ phận vừa lập.
+     * cấm khai một phòng ban vừa lập.
      */
     await expect(
-      dialog.getByRole('combobox', { name: 'Bộ phận' }),
-      'Ô Bộ phận phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
+      dialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      'Ô Phòng ban phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
     ).toHaveCount(1);
 
     /*
@@ -671,8 +691,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       [...typeInForm].sort(),
-      'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
-    ).toEqual([...BASE_DEVICE_TYPES].sort());
+      'Ô "Loại" trong form phải bày đúng các loại đang dùng của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
+    ).toEqual(await catalogDeviceTypes(page, true));
 
     /*
      * ĐƯỜNG HỎNG — BẤM LƯU KHI CÒN THIẾU (DEV-025).
@@ -809,8 +829,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('combobox', { name: 'Bộ phận' }),
-      'Ô Bộ phận (combobox) cũng phải điền sẵn',
+      editDialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      'Ô Phòng ban (combobox) cũng phải điền sẵn',
     ).toHaveValue('Phòng CNTT');
     await expect(
       editDialog.getByRole('button', { name: 'Loại', exact: true }),
@@ -822,9 +842,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveText('Đang dùng');
 
     /*
-     * BỘ NÚT CỦA CHẾ ĐỘ SỬA — đúng bằng bộ của chế độ thêm mới CỘNG hai thứ, không hơn:
+     * BỘ NÚT CỦA CHẾ ĐỘ SỬA — đúng bằng bộ của chế độ thêm mới CỘNG hai thứ, BỚT một, không hơn:
      *   + "Trạng thái": máy đã tồn tại thì trạng thái mới là một quyết định thật.
-     *   + "Tải lên": hồ sơ đã có id nên giấy tờ đẩy lên được NGAY, không phải chờ lưu xong.
+     *   - "Ghi rồi thêm máy khác": đang sửa một máy thì không có "máy tiếp theo".
+     *   + (i) cạnh "Giấy tờ đính kèm": khu này GHI THẲNG, nút Hủy của hộp không gỡ được file đã tải —
+     *     nói ra ở nút giải thích thay cho băng cảnh báo (Q-18).
      */
     await expect
       .poll(() => controlName(editDialog.getByRole('button')), {
@@ -844,6 +866,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        'Giải thích: Giấy tờ đính kèm',
         'Chọn file để đính kèm',
         'Hủy',
         'Lưu',
@@ -964,20 +987,21 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(main.getByRole('button')), {
         message:
-          'Đầu hồ sơ thiết bị: chép mã, sửa, đổi trạng thái, nhân bản, thanh lý; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
+          'Đầu hồ sơ thiết bị: "Sửa hồ sơ" + menu ⋮; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
       })
       // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
-      // Chép mã (DEV-059), Đổi trạng thái (DEV-053), Nhân bản (DEV-034) ở đầu trang; "Bổ sung n ô
-      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan.
+      // Q-18: "Sửa hồ sơ" đứng ngoài; Đổi trạng thái (DEV-053) · Nhân bản (DEV-034) · Thanh lý
+      // vào menu ⋮. Mã máy không còn nút chép (tiêu đề trang, bôi đen chép được). "Bổ sung n ô
+      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan — máy chưa có IP thì "Cấp IP"
+      // là nút chính ngay trong ô "IP quản trị", nên đứng trước "Bổ sung".
       .toEqual([
-        'Chép mã thiết bị',
         'Sửa hồ sơ',
-        'Đổi trạng thái',
-        'Nhân bản',
-        'Thanh lý',
-        'Bổ sung 6 ô còn thiếu',
+        `Thao tác với ${code}`,
         'Cấp IP',
+        'Bổ sung 6 ô còn thiếu',
       ]);
+    await expect(panel.getByText('Chưa có IP', { exact: true })).toBeVisible();
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*
      * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".
@@ -995,7 +1019,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ).toHaveCount(0);
     }
     await expect(
-      panel.getByText('Chưa khai: Model, Serial, Nhà cung cấp, Bộ phận, Ngày mua, Ghi chú.'),
+      panel.getByText('Chưa khai: Model, Serial, Nhà cung cấp, Phòng ban sử dụng, Ngày mua, Ghi chú.'),
       'Ô chưa khai phải gom về MỘT dòng nói rõ còn thiếu gì, thay cho một dãy hộp toàn dấu gạch ngang',
     ).toBeVisible();
 

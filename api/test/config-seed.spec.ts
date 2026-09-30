@@ -79,4 +79,20 @@ describe('system_config seed', () => {
     expect(read('criticalDays')).toBe(Number(seeded.get('expiry.critical_days')));
     expect(read('warningDays')).toBe(Number(seeded.get('expiry.warning_days')));
   });
+
+  it('trần giấy tờ dự phòng của web khớp giá trị đã seed (Q-18)', async () => {
+    const source = await readFile(
+      join(__dirname, '..', '..', 'web', 'src', 'ui', 'attachment-limits.ts'),
+      'utf8',
+    );
+    const block = source.slice(source.indexOf('DEFAULT_ATTACHMENT_LIMITS: AttachmentLimits'));
+    const read = (field: string): number => {
+      const found = new RegExp(`${field}:\\s*(\\d+)`).exec(block);
+      if (!found) throw new Error(`Không đọc được ${field} trong web/src/ui/attachment-limits.ts`);
+      return Number(found[1]);
+    };
+
+    expect(read('maxSizeMb')).toBe(Number(seeded.get('file.max_size_mb')));
+    expect(read('maxFiles')).toBe(Number(seeded.get('file.max_files_per_batch')));
+  });
 });

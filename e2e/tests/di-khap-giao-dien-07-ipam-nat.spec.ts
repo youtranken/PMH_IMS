@@ -336,7 +336,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveCount(0);
     // Khai MỚI thì chưa có id để gắn giấy tờ, nên khu đính kèm phải chưa hiện.
     await expect(
-      addForm.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
+      addForm.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }),
     ).toHaveCount(0);
 
     // Lựa chọn của `Select` PORTAL ra ngoài phần thân hộp — bắt ở cấp trang.
@@ -408,7 +408,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Địa chỉ',
       'Trạng thái',
       'Thiết bị',
-      'Người / bộ phận dùng',
+      'Người / phòng ban dùng',
       'Ngày cấp',
       'Thao tác',
     ]);
@@ -488,11 +488,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toBeVisible();
 
     await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
-    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người / bộ phận dùng".
+    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người / phòng ban dùng".
     await expectHandles(
       assign,
       'combobox',
-      ['Thiết bị', 'Người / bộ phận dùng'],
+      ['Thiết bị', 'Người / phòng ban dùng'],
       'Hộp "Cấp IP"',
     );
     // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày; nó điền sẵn hôm nay nên có nút "Xóa ngày".
@@ -515,7 +515,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await ipRow(page, first).getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const again = page.getByRole('dialog', { name: `Cấp IP — ${first}` });
     await again
-      .getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true })
+      .getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true })
       .fill('Chị Lan — Kế toán');
     await again
       .getByRole('textbox', { name: 'Ghi chú', exact: true })
@@ -538,7 +538,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Hộp "Sửa hồ sơ IP"',
     );
     await expect(
-      edit.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
+      edit.getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true }),
       'mở Sửa mà ô trống thì bấm Lưu là xóa sạch chủ cũ, im lặng',
     ).toHaveValue('Chị Lan — Kế toán');
     await expect(edit.getByRole('textbox', { name: 'Ghi chú', exact: true })).toHaveValue(
@@ -626,11 +626,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       assign,
       'combobox',
-      ['Thiết bị', 'Người / bộ phận dùng'],
+      ['Thiết bị', 'Người / phòng ban dùng'],
       'Hộp "Cấp IP"',
     );
     await expect(
-      assign.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
+      assign.getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true }),
       'chủ cũ đã đi khỏi lúc thu hồi — điền sẵn tên họ là hồi sinh một chủ không còn',
     ).toHaveValue('');
     await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
@@ -697,7 +697,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '',
     );
     await expect(
-      form.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
+      form.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }),
       'giấy tờ của dải ghi thẳng nên KHÔNG nằm trong hộp có nút Hủy — nó ở đầu cột phải',
     ).toHaveCount(0);
 

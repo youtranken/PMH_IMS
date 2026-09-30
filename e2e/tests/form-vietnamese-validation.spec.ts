@@ -65,8 +65,8 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
-    const form = page.getByRole('dialog', { name: 'Thêm hồ sơ' });
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    const form = page.getByRole('dialog', { name: 'Thêm phần mềm' });
     await form.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill(`SW-E2E-GHE-${uniqueStamp()}`);
     await form.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('License E2E số ghế');
     await form.getByRole('textbox', { name: 'Số ghế' }).fill('10 ghế');

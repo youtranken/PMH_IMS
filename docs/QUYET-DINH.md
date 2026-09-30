@@ -47,6 +47,9 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 - Trạng thái: **Đang dùng / Tạm ngưng / Thanh lý**. Thanh lý ghi ngày và người thanh lý; lịch sử
   giữ nguyên.
 - Draytek là một **thiết bị**. Một Draytek gắn được nhiều line (dual-WAN, ví dụ FPT + Viettel).
+- **Làm rõ (30/09/2026, chủ dự án chốt):** "băng thông" là **tốc độ gói cước** của từng line —
+  giao diện và file Excel gọi là **"Tốc độ gói cước"**. Nó thuộc đường truyền, không thêm cột tốc
+  độ vào danh mục Nhà mạng (một nhà mạng bán nhiều gói khác tốc độ).
 
 ### Q-05 · Bộ máy xin – duyệt dùng chung; chữ ký
 
@@ -256,7 +259,9 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   dấu cách; lưu thì bỏ dấu cách.
 - **Giấy tờ đính kèm:** tối đa 25 MB mỗi file, tối đa 6 file mỗi lượt chọn (đưa vào
   `system_config`, AD-11). Nhận thêm Word/PowerPoint dạng mới (docx, pptx); loại có macro và file
-  chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi.
+  chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi. File đã xoá giữ nội dung
+  thêm `file.purge_after_days` ngày (mặc định 30) rồi mới gỡ khỏi ổ đĩa; tên file và nhật ký vẫn
+  giữ (30/09/2026: xoá mềm giữ blob mãi thì ổ đĩa chỉ lớn lên).
 - **Thuật ngữ:** "Phòng ban" thay cho "Bộ phận" trên toàn hệ thống; ô chọn trên hồ sơ thiết bị ghi
   "Phòng ban sử dụng". Import Excel vẫn nhận cột "Bộ phận" của file cũ.
 - **Thao tác trên dòng / trang chi tiết:** nút "Sửa" để ngoài; mọi thao tác khác vào menu ⋮ (ba
@@ -267,6 +272,11 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   ảnh không gửi lên.
 - **Một lần xác thực mã 2 lớp dùng cho mọi thao tác két** trong `secret.stepup_grace_minutes`.
 - **Ghi chú của ngăn két không được chứa mật khẩu:** server từ chối, không chỉ nhắc (FR-035).
+- **Topbar không lặp tên màn:** tên màn chỉ là `<h1>` của trang; topbar hiện tên nhóm menu ("Tài
+  sản", "Hệ thống"…) làm ngữ cảnh. Tab trình duyệt vẫn mang tên màn.
+- **Menu gọn cho màn laptop:** bỏ mục "Tài liệu" (chưa có màn); nhóm "Hệ thống" mặc định khép,
+  tự mở khi đang ở màn trong nhóm, nhớ lựa chọn trên từng máy. Menu SA khi khép phải vừa màn
+  cao 768px không cuộn.
 
 ### Q-09 · Tài liệu
 

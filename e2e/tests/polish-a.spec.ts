@@ -12,7 +12,8 @@ import {
  * Đợt trau chuốt thiết bị + mạng: những chỗ nối dữ liệu giữa các màn.
  *
  *   · DEV-014 — danh sách thiết bị có IP đang giữ dưới mã;
- *   · DEV-045 — "Đang giữ: 1 IP" ở Thông tin nhanh, bấm là tới khu Địa chỉ IP;
+ *   · DEV-045 — nút "Địa chỉ IP 1" của bản đồ quan hệ (máy tính; điện thoại là chip "Đang
+ *     giữ") bấm là tới khu Địa chỉ IP;
  *   · NET-017 — hồ sơ IP đã thu hồi ghi "trước: <chủ cũ>";
  *   · NET-086 — đầu dải nói gateway là máy nào.
  */
@@ -64,7 +65,7 @@ async function setUp(page: Page) {
 }
 
 test.describe('Thiết bị ↔ IP', () => {
-  test('DEV-014 · DEV-045: IP đang giữ hiện dưới mã và ở "Đang giữ"; máy không IP thì không', async ({
+  test('DEV-014 · DEV-045: IP đang giữ hiện dưới mã và trên bản đồ quan hệ; máy không IP thì không', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -84,14 +85,15 @@ test.describe('Thiết bị ↔ IP', () => {
     ).toHaveCount(0);
 
     await page.goto(`/devices/${withId}`);
-    const held = page.getByRole('group', { name: 'Đang giữ:' });
-    await held.getByRole('button', { name: '1 IP' }).click();
+    // Máy tính: MỘT bản "máy đang giữ gì" là bản đồ quan hệ — hàng chip chỉ có ở điện thoại.
+    await expect(page.getByRole('group', { name: 'Đang giữ:' })).toHaveCount(0);
+    await page.getByRole('button', { name: /^Địa chỉ IP\s*1$/ }).click();
     await expect(page.getByRole('region', { name: 'Địa chỉ IP' })).toBeFocused();
   });
 });
 
 test.describe('Sổ IP nối về máy', () => {
-  test('NET-017: hồ sơ đã thu hồi ghi chủ cũ — mã máy, hoặc người/bộ phận', async ({ page }) => {
+  test('NET-017: hồ sơ đã thu hồi ghi chủ cũ — mã máy, hoặc người/phòng ban', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     const code = `PR-E2E-CU-${f.stamp}`;

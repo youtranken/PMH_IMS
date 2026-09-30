@@ -55,7 +55,7 @@ function mockFetch(
     vi.fn((url: string, init?: RequestInit) => {
       if (!init?.method || init.method === 'GET') gets.push(url);
       if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, CATALOG));
-      if (url.includes('department=') || url.includes('assignedTo=')) {
+      if (url.includes('department=') || url.includes('assignedTo=') || url.includes('status=in_use')) {
         return Promise.resolve(
           jsonResponse(200, { items: quick.items, total: quick.total ?? quick.items.length }),
         );
@@ -143,20 +143,58 @@ const chipCodes = () =>
     .map((item) => item.textContent);
 
 async function quickPick(by: 'Phòng ban' | 'Người sử dụng', value: string) {
-  await userEvent.click(
-    screen.getByRole('button', { name: 'Chọn theo phòng ban / người sử dụng' }),
-  );
-  await userEvent.click(screen.getByRole('button', { name: by }));
+  await userEvent.click(screen.getByRole('radio', { name: by }));
   const label = by === 'Phòng ban' ? 'Tên phòng ban' : 'Tên người sử dụng';
   await userEvent.type(screen.getByRole('combobox', { name: label }), value);
   await userEvent.click(screen.getByRole('button', { name: 'Thêm các máy' }));
 }
 
 describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử dụng (Q-15)', () => {
-  it('lối chọn nhanh đóng sẵn: hộp chỉ có MỘT ô tìm máy cho tới khi mở', () => {
+  it('ba chế độ Máy | Phòng ban | Người sử dụng — mỗi chế độ chỉ bày đúng ô của nó', async () => {
     mockFetch();
     render();
+    const modes = screen.getByRole('radiogroup', { name: 'Chọn máy theo' });
+    expect(within(modes).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      'Máy',
+      'Phòng ban',
+      'Người sử dụng',
+    ]);
+    expect(within(modes).getByRole('radio', { name: 'Máy' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByPlaceholderText('Tìm máy trong kho…')).toBeInTheDocument();
+
+    await userEvent.click(within(modes).getByRole('radio', { name: 'Phòng ban' }));
+    expect(screen.queryByPlaceholderText('Tìm máy trong kho…')).toBeNull();
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByRole('combobox', { name: 'Tên phòng ban' })).toBeInTheDocument();
+
+    await userEvent.click(within(modes).getByRole('radio', { name: 'Người sử dụng' }));
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByRole('combobox', { name: 'Tên người sử dụng' })).toBeInTheDocument();
+  });
+
+  it('câu "Thêm mọi máy…" nằm sau nút (i), không in thẳng', async () => {
+    mockFetch();
+    render();
+    await userEvent.click(screen.getByRole('radio', { name: 'Phòng ban' }));
+    expect(screen.queryByText(/Thêm mọi máy đang dùng khớp đúng tên này/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Giải thích: Tên phòng ban' }));
+    expect(screen.getByText(/Thêm mọi máy đang dùng khớp đúng tên này/)).toBeInTheDocument();
+  });
+
+  it('chế độ Người sử dụng gợi ý tên người đang giữ máy', async () => {
+    mockFetch(undefined, {
+      items: [
+        { id: 'd1', code: 'PC-E2E-01', name: 'Máy 1', assignedTo: 'Chị Bình' },
+        { id: 'd2', code: 'PC-E2E-02', name: 'Máy 2', assignedTo: 'Chị Bình' },
+        { id: 'd3', code: 'PC-E2E-03', name: 'Máy 3', assignedTo: null },
+      ] as unknown as typeof DEVICES,
+    });
+    render();
+    await userEvent.click(screen.getByRole('radio', { name: 'Người sử dụng' }));
+    await userEvent.type(screen.getByRole('combobox', { name: 'Tên người sử dụng' }), 'bin');
+    expect(await screen.findAllByRole('option')).toHaveLength(1);
+    expect(screen.getByRole('option', { name: 'Chị Bình' })).toBeInTheDocument();
   });
 
   it('chọn một phòng ban → thêm sẵn mọi máy đang dùng của phòng, bỏ máy đã có license', async () => {
@@ -201,9 +239,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
   it('bấm Thêm khi chưa gõ tên → nhắc, không hỏi API', async () => {
     const calls = mockFetch();
     render();
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Chọn theo phòng ban / người sử dụng' }),
-    );
+    await userEvent.click(screen.getByRole('radio', { name: 'Phòng ban' }));
     await userEvent.click(screen.getByRole('button', { name: 'Thêm các máy' }));
     expect(await screen.findByText('Gõ tên phòng ban hoặc người sử dụng.')).toBeInTheDocument();
     expect(calls.gets.some((url) => url.includes('department='))).toBe(false);
