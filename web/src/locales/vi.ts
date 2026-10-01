@@ -639,7 +639,9 @@ export default {
     allSites: 'Mọi site',
     allCabinets: 'Mọi tủ',
     allTypes: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái',
+    /* Mặc định của bộ lọc trạng thái (Q-20): máy đã thanh lý xem ở Kho thanh lý. */
+    liveStatuses: 'Mọi trạng thái (trừ Đã thanh lý)',
+    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
        thích cho cả ô. Đem `noCabinet` làm `hint` của ô "Tủ mạng" thì dưới ô hiện dòng xám
        "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
@@ -1960,7 +1962,9 @@ export default {
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái',
+    /* Mặc định của bộ lọc trạng thái (Q-20): tài khoản đã ngừng dùng xem ở Kho thanh lý. */
+    liveStatuses: 'Mọi trạng thái (trừ Đã ngừng dùng)',
+    allStatuses: 'Mọi trạng thái (cả Đã ngừng dùng)',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
     emptyHint: 'Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.',

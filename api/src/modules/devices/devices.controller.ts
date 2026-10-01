@@ -47,7 +47,7 @@ import {
   DEVICE_SORT_KEYS,
   DevicesService,
 } from './devices.service';
-import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
+import { DEVICE_STATUSES, deviceStatusQuery, type DeviceStatus } from './devices.types';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 export class DeviceBodyDto {
@@ -153,7 +153,8 @@ export class DevicesController {
       siteId?: string;
       cabinetId?: string;
       deviceTypeId?: string;
-      status?: DeviceStatus;
+      /** `live` = trừ máy đã thanh lý (Q-20). Xem `deviceStatusQuery`. */
+      status?: string;
       /** '?usable=true' — chỉ máy còn nhận thêm được. Xem `DeviceFilter.usableOnly`. */
       usable?: string;
       /** Khớp đúng phòng ban / người sử dụng — hộp gán license chọn cả lô (SW-053). */
@@ -170,7 +171,7 @@ export class DevicesController {
         siteId: query.siteId,
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
-        status: query.status,
+        status: deviceStatusQuery(query.status),
         // So với chuỗi 'true', không ép boolean: `?usable=false` phải nghĩa là KHÔNG lọc.
         usableOnly: query.usable === 'true',
         // `?department=a&department=b` ra MẢNG — không phải một phòng, bỏ qua thay vì nổ 500.
@@ -208,7 +209,7 @@ export class DevicesController {
       siteId?: string;
       cabinetId?: string;
       deviceTypeId?: string;
-      status?: DeviceStatus;
+      status?: string;
       sort?: string;
       dir?: string;
     },
@@ -220,7 +221,8 @@ export class DevicesController {
         siteId: query.siteId,
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
-        status: query.status,
+        // Cùng cách đọc với danh sách: file xuất khớp đúng cái đang xem (FR-028).
+        status: deviceStatusQuery(query.status),
       },
       parseSortQuery(query, DEVICE_SORT_KEYS, DEVICE_SORT_DEFAULT),
     );

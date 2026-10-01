@@ -764,7 +764,8 @@ function buildWhere(filter: DeviceFilter, extraIds: string[] = []): SQL | undefi
   if (filter.siteId) parts.push(eq(deviceTable.siteId, filter.siteId));
   if (filter.cabinetId) parts.push(eq(deviceTable.cabinetId, filter.cabinetId));
   if (filter.deviceTypeId) parts.push(eq(deviceTable.deviceTypeId, filter.deviceTypeId));
-  if (filter.status) parts.push(eq(deviceTable.status, filter.status));
+  if (filter.status === 'live') parts.push(ne(deviceTable.status, 'retired'));
+  else if (filter.status) parts.push(eq(deviceTable.status, filter.status));
   /*
    * Phòng ban / người sử dụng: KHỚP ĐÚNG sau khi gấp dấu + hoa thường + khoảng trắng thừa,
    * không phải "có chứa". Hộp gán license tick sẵn cả lô theo bộ lọc này — "Kế toán" mà kéo

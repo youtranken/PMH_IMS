@@ -320,8 +320,15 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       status,
-      'Ô lọc Trạng thái phải bày đúng vòng đời thiết bị: mục "mọi" rồi bốn trạng thái của DEVICE_STATUSES',
-    ).toEqual(['Mọi trạng thái', 'Đang dùng', 'Dự phòng', 'Hỏng', 'Đã thanh lý']);
+      'Ô lọc Trạng thái: mặc định trừ Đã thanh lý (Q-20), bốn trạng thái của DEVICE_STATUSES, rồi mục "cả Đã thanh lý"',
+    ).toEqual([
+      'Mọi trạng thái (trừ Đã thanh lý)',
+      'Đang dùng',
+      'Dự phòng',
+      'Hỏng',
+      'Đã thanh lý',
+      'Mọi trạng thái (cả Đã thanh lý)',
+    ]);
 
     const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại', exact: true }));
     expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Mọi loại');

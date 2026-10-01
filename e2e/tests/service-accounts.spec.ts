@@ -365,6 +365,9 @@ test.describe('Tài khoản dịch vụ', () => {
     await offForm.getByRole('button', { name: 'Ngừng dùng' }).click();
 
     await expect(page.getByText('Đã ngừng dùng tài khoản.')).toBeVisible();
+    // Q-20: danh sách mặc định ẩn tài khoản đã ngừng dùng; lọc đích danh trạng thái đó thì ra.
+    await expect(row).toHaveCount(0);
+    await page.goto('/service-accounts?status=disabled');
     await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
     // Cột Thao tác là menu ba chấm — mở ra mới đọc được có mục nào.
@@ -471,8 +474,9 @@ test.describe('Tài khoản dịch vụ', () => {
     const stillOff = await page.request.get(`/api/v1/service-accounts/${id}`);
     expect(((await stillOff.json()) as { status: string }).status).toBe('disabled');
 
-    // Cửa trước: nút Bật lại ngay trên dòng, kèm ô lý do.
-    await page.goto('/service-accounts');
+    // Cửa trước: nút Bật lại ngay trên dòng, kèm ô lý do. Danh sách mặc định ẩn tài khoản đã
+    // ngừng dùng (Q-20) — xem cả hai trạng thái để thấy dòng đổi tại chỗ.
+    await page.goto('/service-accounts?status=all');
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
     await rowAction(page, code, 'Dùng lại');

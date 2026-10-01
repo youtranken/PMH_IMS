@@ -810,7 +810,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Dàn cảnh: đóng sẵn một tài khoản để có đủ HAI trạng thái trên cùng một màn',
     ).toBe(200);
 
-    await page.goto('/service-accounts');
+    // Mặc định danh sách ẩn tài khoản đã ngừng dùng (Q-20) — bài này cần CẢ HAI trạng thái.
+    await page.goto('/service-accounts?status=all');
     const searchBox = page.getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, phòng ban…' });
     await searchBox.fill(`TK-E2E-PHONG-${stamp}`);
     await expect(page.getByRole('row'), 'Lọc còn đúng hai tài khoản của lượt chạy này').toHaveCount(
