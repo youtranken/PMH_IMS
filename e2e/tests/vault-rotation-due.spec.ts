@@ -73,7 +73,7 @@ test.describe('Két — hạn đổi mật khẩu (Q-15)', () => {
     await secretRow.getByRole('button', { name: `Thao tác với ${kit.label}` }).click();
     await page.getByRole('menuitem', { name: 'Đổi mật khẩu' }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText(/IMS không đổi gì trên thiết bị thật/)).toBeVisible();
+    await expect(dialog.getByText(/IMS không đổi gì trên hệ thống thật/)).toBeVisible();
     await expect(dialog.getByRole('checkbox')).toHaveCount(0);
     await dialog.getByLabel(/Giá trị mới/).fill('Vpn#Moi2026!x');
     await dialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();

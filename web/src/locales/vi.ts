@@ -1515,7 +1515,7 @@ export default {
     rotate_totp: 'Đổi mã 2 lớp',
     rotate_other: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    rotateOrder: 'IMS không đổi gì trên thiết bị thật. Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
+    rotateOrder: 'IMS không đổi gì trên hệ thống thật. Đổi ở nơi cấp (thiết bị, phần mềm, cổng VPN, nhà mạng…) và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
