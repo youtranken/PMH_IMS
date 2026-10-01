@@ -21,7 +21,7 @@ import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
@@ -93,11 +93,6 @@ interface AccountRow {
 }
 
 /** Huy hiệu trạng thái cạnh tên người — người đã nghỉ / đang khóa không được trông như người thường. */
-/** Người dùng đóng hộp hỏi mã 6 số — đó là hủy, không phải lỗi để báo. */
-function isStepUpCancelled(error: unknown): boolean {
-  return (error as Error | null)?.message === 'STEPUP_CANCELLED';
-}
-
 function StatusTag({ account }: { account: AccountRow }) {
   const { t } = useTranslation();
   if (account.status === 'locked') {

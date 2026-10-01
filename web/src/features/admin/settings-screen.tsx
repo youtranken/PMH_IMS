@@ -11,7 +11,7 @@ import { Dialog } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { checkDraft, descriptionSlot, toDraft, warningOf, type SettingRow } from './settings-rules';
 
@@ -202,7 +202,7 @@ export function SettingsScreen({ me }: { me: Me }) {
       if (saveThenGo) switchGroup(saveThenGo);
       setSaveThenGo(null);
     } catch (err) {
-      if (!(err instanceof Error && err.message === 'STEPUP_CANCELLED')) {
+      if (!isStepUpCancelled(err)) {
         /* API báo lỗi khoảng dạng "<khóa>: <lý do>"; người đọc chỉ thấy nhãn tiếng Việt của ô,
            không thấy khóa thô. */
         const message = errorMessage(err);

@@ -6,7 +6,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { textRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { PhoneInput } from '@/ui/phone-input';
 import { isEmail } from '@/lib/email';
 import { RoleChoice } from './role-choice';
@@ -146,7 +146,7 @@ export function AccountForm({
                 role: result.user.role,
               }),
             (err: unknown) => {
-              if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err, t('accounts.createFailed')));
             },
           );

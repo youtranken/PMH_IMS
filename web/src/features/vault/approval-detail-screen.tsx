@@ -12,10 +12,10 @@ import {
   BreakGlassStateBadge,
   BreakGlassSubject,
   DecisionDialog,
-  isStepUpCancelled,
   useBreakGlassActions,
   type BreakGlassRow,
 } from '@/ui/break-glass';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { useConfirm } from '@/ui/confirm-provider';
 import { DetailHeader } from '@/ui/detail-header';
 import { DetailLoadFailed, Loading } from '@/ui/load-state';

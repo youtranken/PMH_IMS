@@ -14,10 +14,10 @@ import {
   BreakGlassStateBadge,
   BreakGlassSubject,
   DecisionDialog,
-  isStepUpCancelled,
   useBreakGlassActions,
   type BreakGlassRow,
 } from "@/ui/break-glass";
+import { isStepUpCancelled } from "@/ui/use-step-up-retry";
 import { DataTable } from "@/ui/data-table";
 import { DatePicker } from "@/ui/date-picker";
 import { ExportXlsxButton } from "@/ui/export-xlsx-button";

@@ -5,6 +5,7 @@ import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { reasonRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { AccountFootprint } from './account-footprint';
 import { RoleChoice } from './role-choice';
 
@@ -94,7 +95,7 @@ export function AccountStatusDialog({
             () => setBusy(false),
             (err: unknown) => {
               setBusy(false);
-              if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err));
             },
           );
@@ -178,7 +179,7 @@ export function RoleDialog({
                 () => setBusy(false),
                 (err: unknown) => {
                   setBusy(false);
-                  if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+                  if (isStepUpCancelled(err)) return;
                   setError(errorMessage(err));
                 },
               );

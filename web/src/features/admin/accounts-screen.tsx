@@ -24,7 +24,7 @@ import { Select } from '@/ui/select';
 import { useConfirm } from '@/ui/confirm-provider';
 import { CopyButton } from '@/ui/copy-button';
 import { SessionList, type SessionItem } from '@/ui/session-list';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { PATHS } from '@/lib/routes';
 import { AccountForm } from './account-form';
@@ -336,7 +336,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         return result;
       } catch (err) {
         // Người dùng tự đóng hộp hỏi mã = tự huỷ, không phải lỗi để báo.
-        if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return undefined;
+        if (isStepUpCancelled(err)) return undefined;
         toast({ message: errorMessage(err), tone: 'error' });
         return undefined;
       }
@@ -374,7 +374,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         void refresh();
         setTemporaryPassword({ password: result.temporaryPassword, who: account.email });
       } catch (err) {
-        if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+        if (isStepUpCancelled(err)) return;
         toast({ message: errorMessage(err), tone: 'error' });
       }
     },
@@ -1142,7 +1142,7 @@ function SessionsDialog({
       toast({ message: t('accounts.allSessionsKilled', { count: result.killed }) });
       void sessions.refetch();
     } catch (err) {
-      if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+      if (isStepUpCancelled(err)) return;
       toast({ message: errorMessage(err), tone: 'error' });
     }
   };

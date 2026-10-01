@@ -12,7 +12,7 @@ import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
@@ -223,7 +223,7 @@ export function ServiceAccountForm({
                        * nó chỉ hiện 4 giây thay vì 7 — trong đúng luồng mà mật khẩu vừa gõ sẽ
                        * không lấy lại được sau khi hộp đóng.
                        */
-                      const cancelled = (err as Error).message === 'STEPUP_CANCELLED';
+                      const cancelled = isStepUpCancelled(err);
                       toast({
                         message: cancelled
                           ? t('serviceAccounts.secretSkipped')
