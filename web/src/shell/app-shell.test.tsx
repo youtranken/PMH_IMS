@@ -166,9 +166,22 @@ describe('AppShell — topbar', () => {
     expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toHaveTextContent(/^Tài sản$/);
   });
 
-  it('màn không thuộc nhóm nào (Hồ sơ của tôi) thì topbar để trống, không đoán bừa', () => {
+  /*
+   * Màn không thuộc nhóm menu nào (Hồ sơ của tôi): topbar trống trơn trông như shell nạp hỏng.
+   * Ngữ cảnh duy nhất có thật là tên màn (cùng tên tab trình duyệt) — lặp `<h1>` một lần vẫn hơn
+   * một thanh trắng. Đường không có tên màn (404) thì vẫn trống, không đoán bừa.
+   */
+  it('màn không thuộc nhóm nào (Hồ sơ của tôi) thì topbar hiện tên màn', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
     renderShell('/profile');
+    expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toHaveTextContent(
+      /^Hồ sơ của tôi$/,
+    );
+  });
+
+  it('đường không có tên màn (404) thì topbar để trống', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/khong-co-duong-nay');
     expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toBeEmptyDOMElement();
   });
 
