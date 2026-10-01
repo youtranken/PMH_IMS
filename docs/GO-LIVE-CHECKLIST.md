@@ -174,6 +174,20 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   `security.spec.ts` "SEC-20 · ghi chú két không lộ mật khẩu" (chạy ở tầng giữa trước khi merge).
   Hàng CŨ đã có mật khẩu trong ghi chú không tự sạch: SA rà `SELECT id, label FROM secret WHERE note
   IS NOT NULL` trên máy thật, sửa ghi chú và xoay giá trị đã lộ.
+- [x] **SEC-21 · Ghi chú / mô tả / lý do NGOÀI két lộ mật khẩu** (Q-19). Ghi chú thiết bị, cổng,
+  đường truyền, NAT, IP, dải, tài khoản dịch vụ, ghế license, phần mềm, mô tả danh mục, địa chỉ
+  site, lý do (cấp/xóa IP, NAT, ngừng tài khoản dịch vụ, khóa tài khoản, phiếu xin quyền két — lý
+  do này còn đi vào email) là cột dạng rõ, đi vào lịch sử và file xuất. Nay server chặn theo
+  `textLooksLikeSecret` (từ ≥ 10 ký tự có chữ thường + ký tự đặc biệt + hoa/số, entropy ≥ 2,5; hoặc
+  product key 5×5) — `@NoSecretText` trên mọi DTO, 400 `NOTE_LOOKS_LIKE_SECRET`, câu không nhắc lại
+  đoạn chữ; file Excel thiết bị/danh mục báo dòng lỗi; form web báo tại ô (`secretTextRule`).
+  Bài kiểm: `note-secret.spec.ts` (bảng 45 "không chặn": model, part number, MAC, IP/CIDR, VLAN,
+  URL, đường dẫn, số HĐ, câu tiếng Việt), `no-secret-text.spec.ts` (gồm điểm danh DTO),
+  `*-secret-text.spec.ts` theo module, `api/test/scan-secret-text.spec.ts`,
+  `web/src/ui/use-form-errors.test.tsx`, `device-form.test.tsx`.
+  - [ ] **Thủ công:** sau khi nhập dữ liệu thật, SA chạy quét và rà
+    (`docker compose exec api node dist/ops/scan-secret-text.main.js --lich-su`, RUNBOOK mục F1):
+    mỗi dòng là mật khẩu thật thì cất vào két, xoá khỏi ghi chú và xoay mật khẩu đó.
 
 ---
 

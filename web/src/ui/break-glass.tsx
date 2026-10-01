@@ -10,7 +10,7 @@ import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-
 import { Dialog, DialogDescription } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { grantHoursCheck, hourSteps, requestedHours } from '@/ui/grant-hours';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
@@ -244,11 +244,12 @@ export function DecisionDialog({
         hours: requested,
       }),
     note:
-      noteRequired &&
-      note.trim().length < NOTE_MIN_LEN &&
-      t(mode === 'revoke' ? 'approvals.revokeNoteRequired' : 'approvals.denyNoteRequired', {
-        min: NOTE_MIN_LEN,
-      }),
+      (noteRequired &&
+        note.trim().length < NOTE_MIN_LEN &&
+        t(mode === 'revoke' ? 'approvals.revokeNoteRequired' : 'approvals.denyNoteRequired', {
+          min: NOTE_MIN_LEN,
+        })) ||
+      secretTextRule(t, note),
   });
 
   const submit = async () => {

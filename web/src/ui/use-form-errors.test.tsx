@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@/lib/i18n';
+import type { TFunction } from 'i18next';
+import i18n from '@/lib/i18n';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { DatePicker } from '@/ui/date-picker';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 
 /**
  * Kiểm form bằng tiếng Việt thay cho bong bóng của trình duyệt (DoD 6).
@@ -118,5 +119,21 @@ describe('Field error nối vào mọi loại điều khiển', () => {
     const trigger = screen.getByLabelText('Hạn mới');
     expect(trigger).toHaveAttribute('aria-invalid', 'true');
     expect(trigger).toHaveAccessibleDescription('Chọn ngày.');
+  });
+});
+
+describe('secretTextRule — ô chữ tự do ngoài két (Q-19)', () => {
+  const t = i18n.t.bind(i18n) as TFunction;
+
+  it.each([
+    ['mk wifi Pmh@Guest2026', true],
+    ['Key VK7JG-NPHTM-C97JM-9MPGT-3V66T', true],
+    ['Model WS-C2960X-48FPD-L, serial FOC2010X1AB', false],
+    ['Gói Microsoft365_E3', false],
+    ['', false],
+  ])('%s → chặn: %s', (value, blocked) => {
+    const message = secretTextRule(t, value);
+    expect(Boolean(message)).toBe(blocked);
+    if (message) expect(message).not.toContain('Pmh@Guest2026');
   });
 });

@@ -13,7 +13,7 @@ import { Field } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types';
 
 /** Trần của một lượt chọn nhanh — đúng trần `limit` của API danh sách thiết bị. */
@@ -153,7 +153,10 @@ export function AssignDialog({
   const check = useFormErrors({
     device: !editing && devices.length === 0 && t('license.pickDevice'),
     cost: money.reason === 'invalid' && t('license.costInvalid'),
-    overSeatReason: needReason && !overSeatReason.trim() && t('license.overSeatRequired'),
+    overSeatReason:
+      (needReason && !overSeatReason.trim() && t('license.overSeatRequired')) ||
+      secretTextRule(t, overSeatReason),
+    note: secretTextRule(t, note),
   });
 
   useEffect(() => {
@@ -476,7 +479,7 @@ export function AssignDialog({
           </Field>
         )}
 
-        <Field label={t('license.note')} htmlFor="assign-note" span={2}>
+        <Field label={t('license.note')} htmlFor="assign-note" span={2} error={check.error('note')}>
           <input
             id="assign-note"
             className="inp"

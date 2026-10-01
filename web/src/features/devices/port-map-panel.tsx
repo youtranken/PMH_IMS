@@ -15,7 +15,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -442,7 +442,10 @@ function PortForm({
   const [error, setError] = useState<string | null>(null);
   const keepOpen = useRef(false);
   const labelRef = useRef<HTMLInputElement>(null);
-  const check = useFormErrors({ portLabel: !portLabel.trim() && t('ports.portRequired') });
+  const check = useFormErrors({
+    portLabel: !portLabel.trim() && t('ports.portRequired'),
+    note: secretTextRule(t, note),
+  });
 
   // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
   useEffect(() => {
@@ -661,7 +664,7 @@ function PortForm({
             ariaLabel={t('ports.usedBy')}
           />
         </Field>
-        <Field label={t('ports.note')} htmlFor="port-note">
+        <Field label={t('ports.note')} htmlFor="port-note" error={check.error('note')}>
           <input
             id="port-note"
             className="inp"

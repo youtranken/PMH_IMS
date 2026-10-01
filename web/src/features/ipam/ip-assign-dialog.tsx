@@ -15,7 +15,7 @@ import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import type { IpRow } from './ipam-types';
 
 export interface DeviceOption {
@@ -186,7 +186,11 @@ export function AssignIpDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const departments = useDepartments();
-  const check = useFormErrors({ owner: ownerRule(t, device.deviceId, usedBy) });
+  const check = useFormErrors({
+    owner: ownerRule(t, device.deviceId, usedBy),
+    note: secretTextRule(t, note),
+    reason: secretTextRule(t, reason),
+  });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
     record ? `/api/v1/ipam/addresses/${record.id}/transition` : '/api/v1/ipam/addresses',
@@ -296,7 +300,7 @@ export function AssignIpDialog({
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />
         </Field>
 
-        <Field label={t('ipam.note')} htmlFor="ip-assign-note" span={2}>
+        <Field label={t('ipam.note')} htmlFor="ip-assign-note" span={2} error={check.error('note')}>
           <textarea
             id="ip-assign-note"
             className="inp"
@@ -306,7 +310,13 @@ export function AssignIpDialog({
           />
         </Field>
 
-        <Field label={t('ipam.reason')} hint={t('ipam.reasonHint')} htmlFor="ip-assign-reason" span={2}>
+        <Field
+          label={t('ipam.reason')}
+          hint={t('ipam.reasonHint')}
+          htmlFor="ip-assign-reason"
+          span={2}
+          error={check.error('reason')}
+        >
           <input
             id="ip-assign-reason"
             className="inp"

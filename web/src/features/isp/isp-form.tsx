@@ -18,7 +18,7 @@ import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
 import { ACTION_KEY, ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 
 interface FormState {
@@ -134,6 +134,7 @@ export function IspForm({
     providerId: !form.providerId && t('formErrors.requiredPick'),
     // IP tĩnh hoặc một khối IP tĩnh — gõ sai thì nói ngay, không để lưu một chuỗi không tra được.
     wanIp: form.wanIp.trim() !== '' && !isIpv4OrCidr(form.wanIp) && t('isp.wanIpInvalid'),
+    note: secretTextRule(t, form.note),
   });
   const askConfirm = useConfirm();
   const me = useMe().data;
@@ -416,7 +417,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} htmlFor="isp-note" span={2}>
+          <Field label={t('isp.note')} htmlFor="isp-note" span={2} error={check.error('note')}>
             <input
               id="isp-note"
               className="inp"

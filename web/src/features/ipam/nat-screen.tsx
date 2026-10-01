@@ -48,7 +48,7 @@ import { useIpamSettings } from './ipam-settings';
 import { PATHS } from '@/lib/routes';
 import { clampPage } from '@/lib/paging';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
-import { textRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Pagination } from '@/ui/pagination';
 import { useListUrlState } from '@/ui/use-list-url-state';
@@ -777,7 +777,8 @@ function NatForm({
     internalPort: !internalPort.trim() && t('formErrors.required'),
     internalIp: ipCheck.reason && t(`nat.${ipCheck.reason}`),
     usedBy: !usedBy.trim() && t('formErrors.required'),
-    reason: !reason.trim() && t('formErrors.required'),
+    reason: (!reason.trim() && t('formErrors.required')) || secretTextRule(t, reason),
+    note: secretTextRule(t, note),
   });
 
   const save = useApiMutation<Record<string, unknown>, { warnings?: string[] }>(
@@ -1179,7 +1180,13 @@ function NatForm({
 
           {/* Ghi chú kỹ thuật (số phiếu yêu cầu, giới hạn IP nguồn trên router…) — API đã nhận
               và dữ liệu import đã có, form không có ô thì không ai sửa được nó. */}
-          <Field label={t('nat.note')} hint={t('nat.noteHint')} htmlFor="nat-note" span={2}>
+          <Field
+            label={t('nat.note')}
+            hint={t('nat.noteHint')}
+            htmlFor="nat-note"
+            span={2}
+            error={check.error('note')}
+          >
             <textarea
               id="nat-note"
               className="inp"
@@ -1287,7 +1294,7 @@ function RemoveDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) });
+  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
 
   const remove = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {
     method: 'DELETE',
