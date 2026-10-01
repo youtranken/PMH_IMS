@@ -20,7 +20,7 @@ import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
 import { hourSteps } from '@/ui/grant-hours';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { PATHS } from '@/lib/routes';
@@ -712,7 +712,7 @@ export function VaultPanel({
                                     void refresh();
                                   } catch (error) {
                                     // Người dùng đóng hộp hỏi mã = hủy, không phải lỗi.
-                                    if ((error as Error).message === 'STEPUP_CANCELLED') return;
+                                    if (isStepUpCancelled(error)) return;
                                     toast({ message: errorMessage(error), tone: 'error' });
                                   }
                                 })();
@@ -924,7 +924,7 @@ function SecretForm({
               setValue('');
               onSaved();
             } catch (err) {
-              if ((err as Error).message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err));
             }
           })();
@@ -1121,7 +1121,7 @@ function RotateForm({
               setValue('');
               onSaved();
             } catch (err) {
-              if ((err as Error).message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err));
             }
           })();

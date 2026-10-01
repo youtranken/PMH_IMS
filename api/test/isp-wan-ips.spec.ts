@@ -15,6 +15,8 @@ import {
   createScratchDb,
   migrationsDir,
   seedIspProviders,
+  testDbUrl,
+  waitForLock,
   type ScratchDb,
 } from './db';
 
@@ -202,6 +204,36 @@ describe('isp_line_wan_ip · DB trắng', () => {
     await isp.update('wan@test', line.id, { wanIps: ['192.0.2.9'] });
     const kept = await isp.update('wan@test', line.id, { hotline: '1800 1166' });
     expect(kept.wanIps).toEqual(['192.0.2.9']);
+  });
+
+  it('hai lượt sửa IP WAN chồng nhau: lượt sau ghi lịch sử từ ảnh SAU lượt trước', async () => {
+    const line = await isp.create('wan@test', {
+      code: 'E2E-WAN-RACE',
+      providerId,
+      wanIps: ['192.0.2.70'],
+    });
+    // Lượt chen ngang: khoá hàng cha và thay IP như `update` làm, nhưng CHƯA commit.
+    const holder = new Pool({ connectionString: testDbUrl(scratch.name), max: 1 });
+    holder.on('error', () => undefined);
+    const client = await holder.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`UPDATE isp_line SET updated_at = now() WHERE id = $1`, [line.id]);
+      await client.query(`DELETE FROM isp_line_wan_ip WHERE isp_line_id = $1`, [line.id]);
+      await client.query(
+        `INSERT INTO isp_line_wan_ip (isp_line_id, address, sort_order) VALUES ($1, '192.0.2.71', 0)`,
+        [line.id],
+      );
+      const running = isp.update('wan@test', line.id, { wanIps: ['192.0.2.72'] });
+      await waitForLock(scratch.pool);
+      await client.query('COMMIT');
+      await running;
+    } finally {
+      client.release();
+      await holder.end();
+    }
+    const history = await isp.history(line.id);
+    expect(history[0].changes?.wanIps).toEqual({ before: '192.0.2.71', after: '192.0.2.72' });
   });
 
   it('ims_app ghi/xoá được bảng IP WAN (bảng thường, không phải bảng chỉ-thêm)', async () => {

@@ -564,6 +564,7 @@ export class IpAddressService {
     input: {
       subnetId: string;
       address: string;
+      usedBy?: string | null;
       assignedAt?: string | null;
       note?: string | null;
       reason?: string | null;
@@ -589,6 +590,11 @@ export class IpAddressService {
           });
         }
         const deviceId = current.deviceId;
+        // Người/bộ phận dùng máy và ghi chú về chỗ cắm đi theo MÁY, không theo địa chỉ: đổi IP
+        // mà rơi mất chúng thì sổ mất câu trả lời "IP này của ai". Gửi giá trị (kể cả rỗng)
+        // nghĩa là người dùng đã sửa — vắng mặt mới là "giữ như cũ".
+        const usedBy = input.usedBy !== undefined ? input.usedBy : current.usedBy;
+        const note = input.note !== undefined ? input.note : current.note;
         const reason = input.reason?.trim() || `Đổi IP: ${from} → ${address}`;
         await this.transitionWithin(tx, actor, id, 'free', { reason });
 
@@ -609,8 +615,9 @@ export class IpAddressService {
             subnetId: input.subnetId,
             address,
             deviceId,
+            usedBy,
             assignedAt: input.assignedAt || isoDateInTz(await this.timezone()),
-            note: input.note,
+            note,
             reason,
           });
         } else if (isOccupying(existing[0].status as IpStatus)) {
@@ -621,8 +628,9 @@ export class IpAddressService {
         } else {
           next = await this.transitionWithin(tx, actor, existing[0].id, 'assigned', {
             deviceId,
+            usedBy,
             assignedAt: input.assignedAt,
-            note: input.note,
+            note,
             reason,
           });
         }

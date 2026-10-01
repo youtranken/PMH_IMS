@@ -9,6 +9,11 @@ describe('ispStatusesOf — lọc nhiều trạng thái một lượt', () => {
     ['active,suspended', ['active', 'suspended']],
     [' active , terminated ', ['active', 'terminated']],
     ['active,active', ['active']],
+    // Đoạn rỗng (dấu phẩy thừa) không phải chữ lạ — bỏ đi, giữ đúng lựa chọn của người dùng.
+    ['active,', ['active']],
+    [',terminated', ['terminated']],
+    ['active,,suspended', ['active', 'suspended']],
+    [',', []],
   ])('%s → %j', (text, expected) => {
     expect(ispStatusesOf(text)).toEqual(expected);
   });

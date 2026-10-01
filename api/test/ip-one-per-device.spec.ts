@@ -290,6 +290,29 @@ describe('Một thiết bị một IP trên DB thật', () => {
       expect(history.rowCount).toBe(0);
     });
 
+    it('người/bộ phận và ghi chú của IP cũ đi theo máy sang IP mới khi không gửi giá trị mới', async () => {
+      const held = await addresses.create(ACTOR, {
+        subnetId,
+        address: host(40),
+        deviceId: otherDeviceId,
+        usedBy: 'Phong Ke toan',
+        note: 'Cong 3 switch tang 2',
+      });
+      const carried = await addresses.changeAddress(ACTOR, held.id, {
+        subnetId: otherSubnetId,
+        address: `10.${index}.0.40`,
+      });
+      expect(carried).toMatchObject({ usedBy: 'Phong Ke toan', note: 'Cong 3 switch tang 2' });
+
+      const replaced = await addresses.changeAddress(ACTOR, carried.id, {
+        subnetId: otherSubnetId,
+        address: `10.${index}.0.41`,
+        usedBy: 'Phong Nhan su',
+        note: '',
+      });
+      expect(replaced).toMatchObject({ usedBy: 'Phong Nhan su', note: null });
+    });
+
     it('đổi sang chính địa chỉ đang giữ là lỗi 400, không ghi gì', async () => {
       await expect(
         addresses.changeAddress(ACTOR, currentId, { subnetId, address: host(5) }),

@@ -88,7 +88,11 @@ export function DeviceIpAssign({
         record={chosen.record}
         network={{ cidr: subnet.cidr, gateway: subnet.gateway, vlan: subnet.vlan }}
         initialDevice={{ deviceId: device.id, term: device.code }}
-        replacing={current ? { id: current.id, address: current.address } : undefined}
+        replacing={
+          current
+            ? { id: current.id, address: current.address, usedBy: current.usedBy, note: current.note }
+            : undefined
+        }
         csrfToken={csrfToken}
         onClose={onClose}
         onDone={onDone}

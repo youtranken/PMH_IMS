@@ -2,6 +2,16 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { errorCode } from '@/lib/api';
 import { StepUpDialog } from '@/ui/step-up-dialog';
 
+const STEPUP_CANCELLED = 'STEPUP_CANCELLED';
+
+/**
+ * Người dùng đóng hộp hỏi mã = HỦY, không phải lỗi để báo. Lời hứa của `run` bị reject bằng
+ * lỗi này để nút Lưu không kẹt; nơi gọi hỏi qua đây thay vì so chữ, để chữ chỉ sống một chỗ.
+ */
+export function isStepUpCancelled(error: unknown): boolean {
+  return (error as Error | null)?.message === STEPUP_CANCELLED;
+}
+
 /**
  * "Chạy việc này; gặp `STEPUP_REQUIRED` thì hỏi mã 6 số rồi chạy lại đúng việc đó."
  *
@@ -62,7 +72,7 @@ export function useStepUpRetry(csrfToken: string): {
     const previous = pendingRef.current;
     pendingRef.current = next;
     setPending(next);
-    if (previous) previous.reject(new Error('STEPUP_CANCELLED'));
+    if (previous) previous.reject(new Error(STEPUP_CANCELLED));
   }, []);
 
   useEffect(() => () => settle(null), [settle]);

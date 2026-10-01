@@ -133,9 +133,10 @@ export function AssignIpDialog({
   initialDevice?: { deviceId: string; term: string };
   /**
    * Đổi IP (Q-20): IP máy đang giữ. Có thì hộp gửi MỘT lượt `change` — API thu hồi IP này và
-   * cấp địa chỉ mới trong cùng transaction — và máy không đổi được trong hộp.
+   * cấp địa chỉ mới trong cùng transaction — và máy không đổi được trong hộp. Người/bộ phận
+   * và ghi chú đi theo máy nên điền sẵn từ IP cũ.
    */
-  replacing?: { id: string; address: string };
+  replacing?: { id: string; address: string; usedBy?: string | null; note?: string | null };
   /**
    * Các chỗ trống của dải để đổi địa chỉ ngay trong hộp ("Cấp IP trống kế tiếp" điền sẵn chỗ
    * nhỏ nhất, người cắm máy có thể muốn chỗ khác). Không truyền thì địa chỉ cố định.
@@ -151,10 +152,12 @@ export function AssignIpDialog({
   const { address, record } = target;
   const [device, setDevice] = useState(initialDevice ?? { deviceId: '', term: '' });
   // Hồ sơ Trống đã bị gỡ chủ lúc thu hồi, nên ô người dùng mở ra trống — điền lại tên chủ cũ
-  // là hồi sinh một chủ không còn.
-  const [usedBy, setUsedBy] = useState('');
+  // là hồi sinh một chủ không còn. Đổi IP thì khác: chủ vẫn là máy đó, người dùng máy không đổi.
+  const [usedBy, setUsedBy] = useState(replacing?.usedBy ?? '');
   const [assignedAt, setAssignedAt] = useState(todayIso());
-  const [note, setNote] = useState(initialRecord?.note ?? '');
+  const [note, setNote] = useState(
+    replacing ? (replacing.note ?? '') : (initialRecord?.note ?? ''),
+  );
   const [reason, setReason] = useState('');
   const [error, setError] = useSubmitError([target, device, usedBy, assignedAt, note, reason]);
   const departments = useDepartments();
@@ -218,7 +221,14 @@ export function AssignIpDialog({
           };
           save.mutate(
             replacing
-              ? { subnetId, address, assignedAt, note: owner.note, reason: owner.reason }
+              ? {
+                  subnetId,
+                  address,
+                  usedBy: owner.usedBy,
+                  assignedAt,
+                  note: owner.note,
+                  reason: owner.reason,
+                }
               : record
                 ? { to: 'assigned', ...owner }
                 : { subnetId, address, ...owner },
@@ -275,18 +285,16 @@ export function AssignIpDialog({
 
         {network ? <NetworkConfig network={network} /> : null}
 
-        {replacing ? null : (
-          <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
-            <SuggestInput
-              value={usedBy}
-              onChange={setUsedBy}
-              options={departments.names}
-              failed={departments.failed}
-              placeholder={t('ipam.usedByPlaceholder')}
-              ariaLabel={t('ipam.usedBy')}
-            />
-          </Field>
-        )}
+        <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
+          <SuggestInput
+            value={usedBy}
+            onChange={setUsedBy}
+            options={departments.names}
+            failed={departments.failed}
+            placeholder={t('ipam.usedByPlaceholder')}
+            ariaLabel={t('ipam.usedBy')}
+          />
+        </Field>
 
         <Field label={t('ipam.assignedAt')}>
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />
