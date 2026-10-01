@@ -40,7 +40,7 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 ### Q-04 · Đường truyền ISP
 
 - Có **màn riêng**, không khai như một loại phần mềm.
-- Trường giữ lại: mã, nhà mạng, băng thông, IP WAN (**1 IP mỗi line**), site, thiết bị Draytek,
+- Trường giữ lại: mã, nhà mạng, băng thông, IP WAN (~~1 IP mỗi line~~ — nhiều IP, xem Q-20), site, thiết bị Draytek,
   hotline, số hợp đồng, ngày bắt đầu, ghi chú.
 - **Bỏ ngày kết thúc. ISP không còn nằm trong mail nhắc hạn.** Line không có hạn; khi không dùng
   nữa thì thanh lý.
@@ -343,7 +343,10 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   vẫn ẩn; muốn xem thì lọc đích danh hoặc vào Kho thanh lý.
 - **Sơ đồ cổng:** mỗi cổng chỉ một sợi cáp, kiểm cả hai chiều (A:p1→B:g1 thì B:g1 không nối đi nơi
   khác); tên cổng không phân biệt hoa/thường.
-- **IP WAN:** không chặn trùng giữa các đường truyền.
+- **IP WAN — sửa Q-04:** một đường truyền có **nhiều IP WAN** (nhà mạng có thể cấp 2–3 IP hoặc cả
+  một dải, vd `203.113.10.8/29`). Lưu ở bảng riêng, mỗi hàng một IP hoặc một dải IPv4. Không chặn
+  trùng giữa các đường truyền; trong cùng một đường thì không lặp. Danh sách, tìm kiếm, Ctrl+K và
+  Excel hiện / tìm theo mọi IP; nhập Excel nhận nhiều IP ngăn bằng dấu phẩy.
 - **Người dùng IMS đã vô hiệu hoá** ẩn khỏi danh sách theo mặc định; lọc đích danh mới hiện.
 
 ### Q-09 · Tài liệu
