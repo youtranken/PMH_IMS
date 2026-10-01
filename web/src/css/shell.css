@@ -156,9 +156,29 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.sb-check {
-  width: 1em;
-  flex: none;
+/* Hàng "Giao diện": nhãn bên trái, ba nút biểu tượng bên phải trên cùng một dòng. */
+.sb-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-right: var(--space-2);
+}
+.sb-theme .sb-act-label { margin: 0 var(--space-3); }
+/* Đè màu app của `.theme-choice.compact` bằng token sidebar (nền menu tối ở cả hai theme).
+   Hover chỉ sáng biểu tượng, KHÔNG tô nền: tô nền thì nút đang rê và nút đang chọn trông như
+   hai lựa chọn cùng bật. */
+.sb-theme .theme-choice.compact button {
+  color: var(--sidebar-ink);
+}
+.sb-theme .theme-choice.compact button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--sidebar-ink-2);
+}
+.sb-theme .theme-choice.compact button.on {
+  background: var(--sidebar-chip-strong);
+  border-color: var(--sidebar-border);
+  color: var(--sidebar-ink-2);
 }
 .sb-sep {
   height: 1px;

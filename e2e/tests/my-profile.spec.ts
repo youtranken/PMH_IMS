@@ -214,3 +214,17 @@ test('Giao diện trong Hồ sơ: chọn Tối áp ngay, chọn Theo hệ thốn
   await group.getByRole('button', { name: 'Theo hệ thống' }).click();
   expect(await page.evaluate(() => localStorage.getItem('ims_theme'))).toBeNull();
 });
+
+test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, chọn Tối áp ngay (Q-20)', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  await page.getByRole('button', { name: /^Menu tài khoản của / }).click();
+  const row = page.getByRole('menu').getByRole('group', { name: 'Giao diện' });
+  const items = row.getByRole('menuitemradio');
+  await expect(items).toHaveCount(3);
+  // Một hàng: ba nút cùng một đường ngang.
+  const tops = await Promise.all([0, 1, 2].map(async (i) => (await items.nth(i).boundingBox())!.y));
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+  await row.getByRole('menuitemradio', { name: 'Tối' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(row.getByRole('menuitemradio', { name: 'Tối' })).toHaveAttribute('aria-checked', 'true');
+});

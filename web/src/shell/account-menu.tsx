@@ -7,15 +7,8 @@ import { useApiMutation } from '@/lib/api';
 import { afterLogout } from '@/lib/after-logout';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
-import { setThemePreference, type ThemePreference } from '@/lib/theme';
-import { useThemePreference } from '@/ui/theme-choice';
+import { ThemeChoice } from '@/ui/theme-choice';
 import { useToast } from '@/ui/toast';
-
-const THEME_ITEMS: { value: ThemePreference; labelKey: string }[] = [
-  { value: 'light', labelKey: 'profile.themeLight' },
-  { value: 'dark', labelKey: 'profile.themeDark' },
-  { value: 'system', labelKey: 'profile.themeSystem' },
-];
 
 /**
  * Khối người dùng ở chân sidebar = nút mở menu tài khoản (WAI-ARIA menu button).
@@ -24,7 +17,8 @@ const THEME_ITEMS: { value: ThemePreference; labelKey: string }[] = [
  * câu báo lỗi `TOTP_NOT_ENROLLED` của API chỉ người dùng tới đây. Trên điện thoại nó nằm trong
  * drawer cùng sidebar, nên không cần một bản thứ hai ở topbar.
  *
- * Bàn phím: mở thì tiêu điểm vào mục đầu; ↑/↓ đi vòng, Home/End về đầu/cuối; Esc (và Tab) đóng
+ * Bàn phím: mở thì tiêu điểm vào mục đầu; ↑/↓ đi vòng (←/→ cũng vậy — hàng Giao diện nằm ngang),
+ * Home/End về đầu/cuối; Esc (và Tab) đóng
  * rồi trả tiêu điểm về nút — không trả thì người dùng bàn phím rơi về đầu trang.
  */
 export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: string; roleLabel: string }) {
@@ -36,7 +30,6 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
   const menuId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const theme = useThemePreference();
   const logout = useApiMutation<undefined, { status: string }>('/api/v1/auth/logout', {
     csrfToken: me.csrfToken,
   });
@@ -77,10 +70,12 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
     const focusAt = (i: number) => list[(i + list.length) % list.length]?.focus();
     switch (event.key) {
       case 'ArrowDown':
+      case 'ArrowRight':
         event.preventDefault();
         focusAt(at + 1);
         break;
       case 'ArrowUp':
+      case 'ArrowLeft':
         event.preventDefault();
         focusAt(at - 1);
         break;
@@ -136,26 +131,12 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
         >
           {t('profile.menuTotp')}
         </button>
-        <div role="group" aria-label={t('profile.menuAppearance')}>
-          <p className="sb-act-label" aria-hidden="true">
+        {/* Một hàng ba nút biểu tượng như nút ở topbar, không phải ba dòng chữ có dấu ✓ (Q-20). */}
+        <div className="sb-theme">
+          <span className="sb-act-label" aria-hidden="true">
             {t('profile.menuAppearance')}
-          </p>
-          {THEME_ITEMS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              role="menuitemradio"
-              aria-checked={theme === item.value}
-              tabIndex={-1}
-              className="sb-act"
-              onClick={() => setThemePreference(item.value)}
-            >
-              <span className="sb-check" aria-hidden="true">
-                {theme === item.value ? '✓' : ''}
-              </span>
-              {t(item.labelKey)}
-            </button>
-          ))}
+          </span>
+          <ThemeChoice label={t('profile.menuAppearance')} compact inMenu />
         </div>
         <div role="separator" className="sb-sep" />
         <button

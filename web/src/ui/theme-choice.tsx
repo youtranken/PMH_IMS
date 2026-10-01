@@ -6,11 +6,12 @@ import {
   themePreference,
   type ThemePreference,
 } from '@/lib/theme';
+import { MonitorIcon, MoonIcon, SunIcon } from '@/ui/glyph-icons';
 
-const OPTIONS: { value: ThemePreference; labelKey: string }[] = [
-  { value: 'light', labelKey: 'profile.themeLight' },
-  { value: 'dark', labelKey: 'profile.themeDark' },
-  { value: 'system', labelKey: 'profile.themeSystem' },
+const OPTIONS: { value: ThemePreference; labelKey: string; Icon: typeof SunIcon }[] = [
+  { value: 'light', labelKey: 'profile.themeLight', Icon: SunIcon },
+  { value: 'dark', labelKey: 'profile.themeDark', Icon: MoonIcon },
+  { value: 'system', labelKey: 'profile.themeSystem', Icon: MonitorIcon },
 ];
 
 /**
@@ -35,23 +36,46 @@ export function useThemePreference(): ThemePreference {
   return pref;
 }
 
-/** Sáng / Tối / Theo hệ thống — dùng ở Hồ sơ của tôi và menu tài khoản. */
-export function ThemeChoice({ label }: { label: string }) {
+/**
+ * Sáng / Tối / Theo hệ thống — dùng ở Hồ sơ của tôi (biểu tượng + chữ) và menu tài khoản
+ * (`compact`: một hàng ba nút chỉ biểu tượng, tên ở `aria-label` + tooltip `title`).
+ *
+ * `inMenu`: nút mang vai `menuitemradio` + `aria-checked` và `tabIndex=-1` để menu tài khoản
+ * tự lo phím mũi tên (WAI-ARIA menu); ngoài menu là nút bật `aria-pressed`.
+ */
+export function ThemeChoice({
+  label,
+  compact = false,
+  inMenu = false,
+}: {
+  label: string;
+  compact?: boolean;
+  inMenu?: boolean;
+}) {
   const { t } = useTranslation();
   const pref = useThemePreference();
   return (
-    <div className="segmented" role="group" aria-label={label}>
-      {OPTIONS.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className={pref === option.value ? 'on' : undefined}
-          aria-pressed={pref === option.value}
-          onClick={() => setThemePreference(option.value)}
-        >
-          {t(option.labelKey)}
-        </button>
-      ))}
+    <div className={compact ? 'theme-choice compact' : 'segmented theme-choice'} role="group" aria-label={label}>
+      {OPTIONS.map(({ value, labelKey, Icon }) => {
+        const name = t(labelKey);
+        const on = pref === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            className={on ? 'on' : undefined}
+            {...(inMenu
+              ? { role: 'menuitemradio', 'aria-checked': on, tabIndex: -1 }
+              : { 'aria-pressed': on })}
+            aria-label={compact ? name : undefined}
+            title={compact ? name : undefined}
+            onClick={() => setThemePreference(value)}
+          >
+            <Icon />
+            {compact ? null : name}
+          </button>
+        );
+      })}
     </div>
   );
 }
