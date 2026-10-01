@@ -354,6 +354,7 @@ account:<id>`) và đường dẫn trong JSON (`detail.reason`).
 | Quay lại bản trước | `git checkout <tag-cũ> && docker compose up -d --build`. Migration chỉ tiến: nếu bản mới đã thêm migration thì bản cũ vẫn chạy trên schema mới — kiểm log api; hỏng thì khôi phục theo **G** từ bản sao lưu trước nâng cấp |
 | Nâng cấp từ bản **trước DB-03** (migrate còn chạy bằng superuser) | Làm **một lần**, xem mục **H1** bên dưới |
 | DB dựng **trước lượt gộp migration** (Q-17) | Chỉ có ở máy dev/thử nghiệm: không nâng cấp được, phải dựng lại DB trắng (xem **H2**). Cài mới theo **B** không bị ảnh hưởng. Cũng vì thế, không quay về một tag trước lượt gộp trên DB đã dựng từ bộ gộp |
+| Nâng cấp qua migration `0037` (một máy một IP, Q-20) | Chạy câu kiểm ở **H3** **trước** khi `up` bản mới; ra dòng nào thì thu hồi bớt IP thừa trên bản đang chạy |
 | Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
 | Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
 | Đổi trần giấy tờ đính kèm | Màn **Tham số hệ thống → Giấy tờ đính kèm**: `file.max_size_mb` (1–25), `file.max_files_per_batch`, `file.purge_after_days`. Trần cứng 25 MB nằm ở `FILE_HARD_CAP_MB` (API) và `client_max_body_size 26m` (`web/nginx.conf`); muốn quá 25 MB phải sửa code và dựng lại `api` + `web`, không chỉnh được bằng tham số |
@@ -386,6 +387,30 @@ dump (mục **G**; `ops/restore-drill.sh` tự làm), và sau khi lỡ quay về
 nâng lên lại: bản cũ migrate bằng superuser nên bảng nó tạo ra sẽ thuộc superuser.
 
 Ghi `MIGRATION_DB_PASSWORD` mới vào bản in `.env` trong phong bì thứ ba (mục **C**).
+
+### H3. Nâng cấp qua migration `0037` — một máy một IP (Q-20)
+
+`0037_ip_one_per_device.sql` dựng chỉ mục duy nhất: mỗi thiết bị giữ tối đa **một** IP đang cấp.
+DB nào đã có máy giữ hai IP trở lên thì service `migrate` dừng, không áp gì, với câu "Migration
+0037_ip_one_per_device.sql chưa chạy được: N thiết bị đang giữ hơn một IP đang cấp (PC-KT-01:
+10.0.1.5, 10.0.1.9; …)". Bản mới khi đó không lên được.
+
+Kiểm **trước** khi `up` bản mới (không ra dòng nào là qua được):
+
+```bash
+$ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+    SELECT d.code, string_agg(host(ip.address), '"'"', '"'"' ORDER BY ip.address) AS ips
+      FROM ip_address ip JOIN device d ON d.id = ip.device_id
+     WHERE ip.voided_at IS NULL AND ip.status = '"'"'assigned'"'"'
+     GROUP BY d.code HAVING count(*) > 1 ORDER BY d.code"'
+```
+
+Ra dòng nào thì, **trên bản đang chạy**, mở màn **Địa chỉ IP** và **Thu hồi** các IP thừa của máy
+đó (giữ lại IP máy đang dùng thật). Đừng sửa bằng psql: thu hồi qua màn hình mới ghi lịch sử IP và
+nhật ký. Nếu đã lỡ `up` và `migrate` dừng ở câu trên: quay về tag cũ (`git checkout <tag-cũ> &&
+docker compose up -d --build`), thu hồi như trên, rồi nâng cấp lại. Không cần khôi phục bản sao
+lưu: `0037` chạy trong transaction, và câu kiểm của runner chạy trước cả transaction đó, nên dừng là
+không để lại gì.
 
 ### H2. DB dựng trước lượt gộp migration (Q-17) — chỉ máy dev
 
