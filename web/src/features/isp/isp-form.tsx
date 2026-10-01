@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { useMe } from '@/lib/api';
 import { isIpv4OrCidr } from '@/lib/ipv4';
-import { useConfirm } from '@/ui/confirm-provider';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
@@ -16,7 +15,7 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
-import { ACTION_KEY, ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
+import type { IspRow } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
@@ -31,7 +30,6 @@ interface FormState {
   contractNo: string;
   startDate: string;
   note: string;
-  status: IspStatus;
 }
 
 function initialState(row: IspRow | null): FormState {
@@ -45,7 +43,6 @@ function initialState(row: IspRow | null): FormState {
     contractNo: row?.contractNo ?? '',
     startDate: row?.startDate ?? '',
     note: row?.note ?? '',
-    status: row?.status ?? 'active',
   };
 }
 
@@ -135,7 +132,6 @@ export function IspForm({
     // IP tĩnh hoặc một khối IP tĩnh — gõ sai thì nói ngay, không để lưu một chuỗi không tra được.
     wanIp: form.wanIp.trim() !== '' && !isIpv4OrCidr(form.wanIp) && t('isp.wanIpInvalid'),
   });
-  const askConfirm = useConfirm();
   const me = useMe().data;
   const canAddProvider = me?.role === 'sa' || me?.role === 'admin';
   const [addingProvider, setAddingProvider] = useState(false);
@@ -167,24 +163,10 @@ export function IspForm({
         id="isp-form"
         ref={check.formRef}
         noValidate
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
-          /*
-           * Thanh lý là việc KHÔNG nên lỡ tay: nó đổi cả danh sách, và việc thật đi kèm (huỷ
-           * mật khẩu PPPoE trong két, gỡ khỏi Draytek) không tự làm. Hỏi lại và nhắc hai việc
-           * đó — đổi trạng thái khác thì không cần.
-           */
-          if (row && row.status !== 'terminated' && form.status === 'terminated') {
-            const ok = await askConfirm({
-              title: t('isp.terminateTitle', { code: row.code }),
-              message: t('isp.terminateMessage'),
-              confirmLabel: t(ACTION_KEY.terminated),
-              danger: true,
-            });
-            if (!ok) return;
-          }
           save.mutate(
             {
               code: form.code.trim(),
@@ -197,7 +179,6 @@ export function IspForm({
               contractNo: form.contractNo.trim(),
               startDate: form.startDate,
               note: form.note.trim(),
-              status: form.status,
             },
             {
               onSuccess: (created) => {
@@ -334,25 +315,11 @@ export function IspForm({
             />
           </Field>
           {/*
-            Ô Trạng thái CHỈ hiện khi SỬA.
-
-            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
-            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
-            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+            KHÔNG có ô Trạng thái. Đổi trạng thái chỉ đi menu ⋮ của trang chi tiết, nơi hộp hỏi
+            lại nhắc ngăn két PPPoE/modem và thiết bị biên đang cắm — ô chọn ở đây bỏ qua cả
+            hai. Form cũng không gửi `status`: gửi lại giá trị lúc mở hộp là đè mất lượt đổi
+            trạng thái vừa làm ở nơi khác.
           */}
-          {row ? (
-            <Field label={t('isp.status')}>
-              <Select
-                value={form.status}
-                ariaLabel={t('isp.status')}
-                options={ISP_STATUSES.map((status) => ({
-                  value: status,
-                  label: t(STATUS_KEY[status]),
-                }))}
-                onChange={(value) => set('status', value as IspStatus)}
-              />
-            </Field>
-          ) : null}
 
           <Field label={t('isp.device')} hint={t('isp.deviceHint')} span={3}>
             <Combobox
@@ -416,7 +383,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} htmlFor="isp-note" span={2}>
+          <Field label={t('isp.note')} hint={t('isp.noteHint')} htmlFor="isp-note" span={2}>
             <input
               id="isp-note"
               className="inp"

@@ -493,6 +493,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
       } as unknown as EnvelopeCryptoService;
       const owners = {
         assertUsableWithin: () => Promise.resolve(),
+        ownerNote: () => Promise.resolve(null),
       } as unknown as OwnerExistsRegistry;
       vault = new VaultService(db, crypto, audit, owners);
     });

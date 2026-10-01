@@ -21,4 +21,8 @@ export class ServiceAccountOwnerResolver implements OwnerResolver, OnModuleInit 
     const row = await this.accounts.findOne(ownerId).catch(() => null);
     return row ? `${row.code} — ${row.name}` : null;
   }
+
+  async noteOf(_ownerType: string, ownerId: string): Promise<string | null> {
+    return (await this.accounts.findOne(ownerId)).note;
+  }
 }

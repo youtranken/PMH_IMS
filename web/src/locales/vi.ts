@@ -1070,6 +1070,7 @@ export default {
     contractNo: 'Số hợp đồng',
     startDate: 'Bắt đầu',
     note: 'Ghi chú',
+    noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu PPPoE, modem cất ở tab Két sắt.',
     status: 'Trạng thái',
     /* Ba chữ của Q-04 (trạng thái cuối viết "Đã thanh lý" — Q-14); `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
     statusActive: 'Đang dùng',
@@ -1094,8 +1095,6 @@ export default {
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
     phHotline: 'vd 1800 1166',
     addProvider: '+ Thêm vào danh mục',
-    terminateTitle: 'Thanh lý đường truyền {{code}}?',
-    terminateMessage: 'Đường này rời khỏi danh sách mặc định. Nhớ xử lý mật khẩu PPPoE/modem trong két và gỡ đường khỏi thiết bị biên.',
     liquidatedUnknown: 'Đường truyền đã thanh lý, không rõ ngày.',
     incidentCard: 'Khi mất mạng',
     callHotline: 'Gọi {{hotline}}',
@@ -1698,6 +1697,7 @@ export default {
     usedByHint: 'vd "Chị Lan — Kế toán" hoặc "Phòng IT".',
     assignedAt: 'Ngày cấp',
     note: 'Ghi chú',
+    noteHint: 'Không ghi mật khẩu ở đây — ghi chú không được mã hóa.',
     /* Nút trên dòng, tiêu đề hộp và nút gửi cùng một chữ: ô trống và hồ sơ đã thu hồi mở CÙNG
        một hộp, nên hai chữ khác nhau là nói với người dùng rằng đó là hai việc khác nhau. */
     assign: 'Cấp IP',

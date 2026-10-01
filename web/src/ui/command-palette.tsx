@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { PALETTE_RECENT_PREFIX } from '@/lib/after-logout';
 import { apiFetch } from '@/lib/api-client';
 import { disposalStatusKey } from '@/lib/disposal-kinds';
 import type { Me } from '@/lib/me';
@@ -56,7 +57,7 @@ interface Hit {
 /** Hồ sơ vừa mở gần đây — chỉ đường dẫn, mã và tên; không bao giờ có bí mật. */
 const RECENT_LIMIT = 5;
 function recentKey(email: string): string {
-  return `ims_palette_recent:${email.toLowerCase()}`;
+  return `${PALETTE_RECENT_PREFIX}${email.toLowerCase()}`;
 }
 function readRecent(email: string): Hit[] {
   try {

@@ -53,6 +53,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
     const owners = {
       assertExists: () => Promise.resolve(),
       assertUsableWithin: () => Promise.resolve(),
+      ownerNote: () => Promise.resolve(null),
     } as unknown as OwnerExistsRegistry;
     vault = new VaultService(
       scratch.db,

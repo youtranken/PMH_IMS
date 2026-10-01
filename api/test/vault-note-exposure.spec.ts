@@ -62,6 +62,7 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
     const owners = {
       assertExists: () => Promise.resolve(),
       assertUsableWithin: () => Promise.resolve(),
+      ownerNote: () => Promise.resolve(null),
     } as unknown as OwnerExistsRegistry;
     vault = new VaultService(scratch.db, crypto, audit, owners);
 
