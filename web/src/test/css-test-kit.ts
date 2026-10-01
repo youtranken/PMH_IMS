@@ -9,7 +9,7 @@ import { join } from 'node:path';
 export type Spec = [number, number, number];
 export type Rule = { selector: string; body: string; media: string | null };
 
-const CSS_DIR = __dirname;
+const CSS_DIR = join(__dirname, '..', 'css');
 
 export function stripComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\r\n/g, '\n');

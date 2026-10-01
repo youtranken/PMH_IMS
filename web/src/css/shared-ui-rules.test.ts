@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { cmpSpec, cssRules, declValue, readCss, specificity, type Rule } from './css-test-kit';
+import { cmpSpec, cssRules, declValue, readCss, specificity, type Rule } from '@/test/css-test-kit';
 
 /**
  * Luật CSS dùng chung mà jsdom không kiểm được: thứ tự lớp, độ ưu tiên giữa luật chung và luật

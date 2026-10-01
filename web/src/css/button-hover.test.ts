@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cmpSpec as cmp, cssRules, specificity } from './css-test-kit';
+import { cmpSpec as cmp, cssRules, specificity } from '@/test/css-test-kit';
 
 /**
  * Nền hover CHUNG của nút (`surface-2`, gần trắng ở theme sáng) không được thắng luật của chính
