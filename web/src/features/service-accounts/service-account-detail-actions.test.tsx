@@ -74,15 +74,18 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     expect(screen.getByRole('textbox', { name: /Lý do ngừng dùng/ })).toBeVisible();
   });
 
-  it('hồ sơ đã vô hiệu: menu đổi thành "Bật lại…"', async () => {
+  it('hồ sơ đã ngừng dùng: "Dùng lại…" và trạng thái chỉ ở băng đầu trang, mỗi thứ một lần', async () => {
     mockFetch('disabled');
     renderAs('admin');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Thao tác với VPN-E2E-01' }));
-    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toBeVisible();
-    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toHaveClass('ok');
-    expect(screen.getByText('Đã ngừng dùng', { selector: '.badge' })).toHaveClass('danger');
-    expect(screen.queryByRole('menuitem', { name: 'Ngừng dùng…' })).toBeNull();
+    const banner = await screen.findByRole('note');
+    expect(banner).toHaveTextContent('Đã ngừng dùng');
+    expect(screen.getAllByRole('button', { name: 'Dùng lại…' })).toHaveLength(1);
+    // Menu ⋮ chỉ còn đúng mục đó thì bỏ hẳn — băng đã có nút.
+    expect(screen.queryByRole('button', { name: 'Thao tác với VPN-E2E-01' })).toBeNull();
+    expect(screen.getAllByText('Đã ngừng dùng')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Dùng lại…' }));
+    expect(await screen.findByRole('dialog', { name: 'Dùng lại — VPN-E2E-01' })).toBeVisible();
   });
 
   it('member: không có nút nào để bấm rồi ăn 403', async () => {

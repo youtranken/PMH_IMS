@@ -242,7 +242,8 @@ export function IspDetail({ me }: { me: Me }) {
                   <RailRow label={t("isp.hotline")}>—</RailRow>
                 )}
                 {item.contractNo ? (
-                  <RailRow label={t("isp.contractNo")} note={item.provider}>
+                  /* Không kèm tên nhà mạng: nó đã là tên trang và breadcrumb. */
+                  <RailRow label={t("isp.contractNo")}>
                     <span className="mono">{item.contractNo}</span>{" "}
                     <CopyButton
                       value={item.contractNo}
@@ -321,7 +322,9 @@ export function IspDetail({ me }: { me: Me }) {
                 một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
             <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
-                <DataItemIfSet label={t("isp.device")} value={item.deviceId}>
+                {/* Đường còn dùng thì thiết bị đầu cuối đã đứng ở thẻ "Khi mất mạng" bên
+                    phải; chỉ khi thanh lý (thẻ đó ẩn) nó mới cần chỗ ở lưới này. */}
+                <DataItemIfSet label={t("isp.device")} value={terminated ? item.deviceId : null}>
                   {/* `?? ''` chứ KHÔNG `!`: JSX dựng `children` TRƯỚC khi `DataItemIfSet`
                       quyết định `return null`, nên dòng này CHẠY THẬT cả khi `deviceId` rỗng
                       — `!` ở đây là một lời khẳng định sai ở đúng nhánh nó khẳng định. Link
