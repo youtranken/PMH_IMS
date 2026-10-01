@@ -1687,7 +1687,6 @@ table.access-grid thead tr:last-child th {
 .empty .empty-hint {
   font-size: var(--fs-xs);
   color: var(--ink-3);
-  max-width: 32ch;
 }
 .empty .empty-action {
   margin-top: var(--space-2);

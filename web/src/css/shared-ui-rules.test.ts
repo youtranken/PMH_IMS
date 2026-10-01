@@ -290,6 +290,19 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(rule('detail-tabs.css', '.filter-bar > .grow', '(max-width: 600px)')!.body, 'flex-basis')).toBe('100%');
   });
 
+  // Chữ mô tả chạy một hàng khi còn chỗ (Q-21): không ép xuống dòng bằng trần theo số ký tự.
+  // Ngoại lệ có chủ đích: lý do xin mở két là chữ người dùng gõ mà người duyệt phải đọc kỹ.
+  // `.page-header .sub` / `.alert` đang được gỡ trần ở nhánh khác nên tạm cho qua.
+  it('không ép chữ mô tả xuống dòng bằng max-width theo ch', () => {
+    const allowed = new Set(['.approval-reason', '.page-header .sub', '.alert']);
+    const capped = FILES.flatMap((f) =>
+      cssRules(f)
+        .filter((r) => r.media === null && /^\d+(\.\d+)?ch$/.test(declValue(r.body, 'max-width') ?? ''))
+        .map((r) => r.selector),
+    ).filter((s) => !allowed.has(s));
+    expect(capped).toEqual([]);
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
