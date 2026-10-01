@@ -153,7 +153,11 @@ describe('AttachmentPanel — hủy từng file đang tải', () => {
     await userEvent.upload(screen.getByLabelText('Chọn file để đính kèm'), [a, b]);
     await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(1));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hủy tải "bang-luong.xlsx"' }));
+    // Cùng dấu ✕ đỏ như nút bỏ file ở form thêm mới (Q-20): không chữ "Hủy", tên ở aria-label.
+    const cancelB = screen.getByRole('button', { name: 'Hủy tải "bang-luong.xlsx"' });
+    expect(cancelB).toHaveTextContent('');
+    expect(cancelB.querySelector('svg')).not.toBeNull();
+    await userEvent.click(cancelB);
     await userEvent.click(screen.getByRole('button', { name: 'Hủy tải "hoa-don.pdf"' }));
 
     const signal = uploadFile.mock.calls[0][5] as AbortSignal;

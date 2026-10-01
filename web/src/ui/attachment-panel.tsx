@@ -13,6 +13,7 @@ import {
   useAttachmentLimits,
 } from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { InfoTip } from '@/ui/info-tip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useConfirm } from '@/ui/confirm-provider';
@@ -256,11 +257,12 @@ export function AttachmentPanel({
                   {item.state === 'waiting' || item.state === 'uploading' ? (
                     <button
                       type="button"
-                      className="btn sm ghost"
+                      className="btn-x danger"
                       aria-label={t('attachments.cancelUpload', { name: item.name })}
+                      title={t('common.cancel')}
                       onClick={() => cancelOne(item.key)}
                     >
-                      {t('common.cancel')}
+                      <CloseIcon />
                     </button>
                   ) : null}
                 </li>

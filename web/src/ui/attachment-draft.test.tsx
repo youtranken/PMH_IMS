@@ -77,7 +77,11 @@ describe('AttachmentDraft — giấy tờ chọn trước lúc lưu hồ sơ', (
     await user.upload(screen.getByLabelText('Chọn file để đính kèm'), pdf('hoa-don.pdf'));
     expect(screen.getAllByText('hoa-don.pdf')).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: /Bỏ "hoa-don.pdf"/ }));
+    // Nút bỏ là dấu ✕ đỏ, không chữ (Q-20): tên nút chỉ nằm ở aria-label.
+    const remove = screen.getByRole('button', { name: /Bỏ "hoa-don.pdf"/ });
+    expect(remove).toHaveTextContent('');
+    expect(remove.querySelector('svg')).not.toBeNull();
+    await user.click(remove);
     expect(screen.queryByText('hoa-don.pdf')).not.toBeInTheDocument();
     expect(screen.getByText('bien-ban.pdf')).toBeInTheDocument();
   });

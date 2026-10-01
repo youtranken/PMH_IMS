@@ -782,3 +782,37 @@ table.table tbody tr.exp:hover td {
    nav/dropdown/lịch: xoay 90° khi mở, không đổi ký tự. */
 /* `.cell-caret` cũ (ký tự › xoay 90°) đã bỏ: caret bung dòng giờ dùng `<Chevron>` chung,
    tự đổi hướng phải→xuống. Không giữ lại luật chết để lần sau có người tưởng nó còn chạy. */
+
+/*
+ * Nút ✕ chỉ có hình, đứng cuối một dòng (bỏ file khỏi danh sách, hủy file đang tải). Ô vuông
+ * 28px để bấm trúng mà không đẩy dòng cao lên; tên nút nằm ở `aria-label`.
+ * `.danger`: ✕ đỏ trên nền trong — việc BỎ một thứ chưa lưu, không phải nút xác nhận phá
+ * (`button.danger` đặc đỏ), nên chọn `button.btn-x.danger` để thắng luật nền đỏ đặc kia.
+ */
+button.btn-x {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  flex: none;
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+}
+button.btn-x:hover:not(:disabled) {
+  background: var(--muted-soft);
+  color: var(--ink);
+}
+button.btn-x.danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--danger);
+}
+button.btn-x.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--border-danger);
+  color: var(--danger-strong);
+}
