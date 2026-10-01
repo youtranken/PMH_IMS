@@ -177,6 +177,15 @@ export class IspLineService {
     return this.decorate(rows);
   }
 
+  /** Ghi chú dạng rõ của hồ sơ — két so giá trị đang cất với nó (FR-035). */
+  async noteOf(id: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ note: ispLineTable.note })
+      .from(ispLineTable)
+      .where(eq(ispLineTable.id, id));
+    return row?.note ?? null;
+  }
+
   async findOne(id: string): Promise<IspLineListItem> {
     const rows = await this.db.select().from(ispLineTable).where(eq(ispLineTable.id, id));
     if (rows.length === 0) {

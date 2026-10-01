@@ -44,4 +44,8 @@ export class DeviceOwnerResolver implements OwnerResolver, OnModuleInit {
   async assertUsableWithin(tx: Tx, _ownerType: string, ownerId: string): Promise<void> {
     await this.devices.assertUsableWithin(tx, ownerId);
   }
+
+  async noteOf(_ownerType: string, ownerId: string): Promise<string | null> {
+    return this.devices.noteOf(ownerId);
+  }
 }

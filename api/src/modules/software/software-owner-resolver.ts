@@ -27,4 +27,8 @@ export class SoftwareOwnerResolver implements OwnerResolver, OnModuleInit {
     const row = await this.software.findOne(ownerId).catch(() => null);
     return row ? `${row.code} — ${row.name}` : null;
   }
+
+  async noteOf(ownerType: string, ownerId: string): Promise<string | null> {
+    return ownerType === 'isp' ? this.isp.noteOf(ownerId) : this.software.noteOf(ownerId);
+  }
 }

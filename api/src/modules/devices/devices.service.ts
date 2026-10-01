@@ -119,6 +119,15 @@ export class DevicesService {
     return this.decorate(rows);
   }
 
+  /** Ghi chú dạng rõ của hồ sơ — két so giá trị đang cất với nó (FR-035). */
+  async noteOf(id: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ note: deviceTable.note })
+      .from(deviceTable)
+      .where(eq(deviceTable.id, id));
+    return row?.note ?? null;
+  }
+
   async findOne(id: string): Promise<DeviceListItem> {
     const rows = await this.db.select().from(deviceTable).where(eq(deviceTable.id, id));
     if (rows.length === 0) {
