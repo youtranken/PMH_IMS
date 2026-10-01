@@ -156,6 +156,17 @@ describe('hover của các nút tự vẽ', () => {
   });
 });
 
+describe('nút "Quay lại" ở bước nhập mã 2 lớp', () => {
+  // Bấm nó là đóng phiên dở: rê chuột phải báo trước bằng tông đỏ nhạt. Card đăng nhập tối ở cả
+  // hai theme nên dùng bộ --auth-danger-* (không đổi theo theme), không dùng --danger-soft.
+  it('hover tô nền/viền/chữ đỏ nhạt bằng token --auth-danger-*', () => {
+    const body = rule('auth.css', '.auth-form .btn.auth-secondary:hover:not(:disabled)')!.body;
+    expect(declValue(body, 'background')).toBe('var(--auth-danger-bg)');
+    expect(declValue(body, 'border-color')).toBe('var(--auth-danger-border)');
+    expect(declValue(body, 'color')).toBe('var(--auth-danger-ink)');
+  });
+});
+
 describe('vòng tiêu điểm vẽ một lần', () => {
   it.each([
     '.settings-nav button:focus-visible',
