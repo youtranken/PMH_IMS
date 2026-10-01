@@ -211,10 +211,12 @@ export function Dialog({
       // `NodeListOf` chưa có `[Symbol.iterator]`.
       Array.from(root.querySelectorAll('input, textarea, select')).map((el) => {
         const field = el as HTMLInputElement;
+        // Ô tự định dạng lại chữ (ô số điện thoại tách nhóm khi rời ô) khai `data-guard-value`
+        // là dạng chuẩn hoá: so chữ thô thì chỉ cần Tab ngang qua là hộp tưởng đã bị sửa.
         const value =
           field.type === 'checkbox' || field.type === 'radio'
             ? String(field.checked)
-            : field.value;
+            : (field.dataset.guardValue ?? field.value);
         return [field.name || field.id || '', value];
       }),
     );

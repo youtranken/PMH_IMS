@@ -52,6 +52,8 @@ export function PhoneInput({
       value={value}
       aria-describedby={describedBy}
       aria-invalid={invalid}
+      // `Dialog guardUnsaved` so bản bỏ dấu cách: tách nhóm lúc rời ô không phải là sửa.
+      data-guard-value={value.replace(/\s+/g, '')}
       onChange={(e) => onChange(filterPhoneTyping(e.target.value))}
       // Rời ô thì tách nhóm như chỗ hiển thị, để người gõ soát lại được; API bỏ dấu cách khi lưu.
       onBlur={() => onChange(formatPhone(value))}

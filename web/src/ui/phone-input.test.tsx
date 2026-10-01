@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { render, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { ConfirmProvider } from './confirm-provider';
+import { Dialog } from './dialog';
 import { Field } from './page-header';
 import { PhoneInput, filterPhoneTyping } from './phone-input';
 
@@ -50,5 +51,51 @@ describe('PhoneInput', () => {
   it('lỗi của Field gắn vào ô', () => {
     render(<Harness error="Số điện thoại không hợp lệ" />);
     expect(screen.getByLabelText('Số điện thoại')).toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
+/**
+ * Rời ô thì ô tách nhóm số ("0901234567" → "0901 234 567"). `Dialog guardUnsaved` so chữ ký
+ * các ô native, nên nếu nó so chữ thô thì chỉ cần Tab đi ngang qua ô là hộp tưởng đã bị sửa —
+ * mở form sửa, không đổi gì, Esc cũng bị hỏi "Bỏ những gì vừa nhập?".
+ */
+describe('PhoneInput trong hộp guardUnsaved', () => {
+  function EditHarness({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+    const [value, setValue] = useState('0901234567');
+    const [note, setNote] = useState('');
+    return (
+      <ConfirmProvider>
+        <Dialog open onOpenChange={onOpenChange} guardUnsaved title="Sửa nhà mạng">
+          <Field label="Số điện thoại" htmlFor="phone">
+            <PhoneInput value={value} onChange={setValue} />
+          </Field>
+          <input aria-label="Ghi chú" value={note} onChange={(e) => setNote(e.target.value)} />
+        </Dialog>
+      </ConfirmProvider>
+    );
+  }
+
+  it('Tab qua ô số chưa sửa rồi Esc: đóng thẳng, không hỏi', async () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(<EditHarness onOpenChange={onOpenChange} />);
+    const input = screen.getByLabelText('Số điện thoại');
+    await userEvent.click(input);
+    await userEvent.tab();
+    expect(input).toHaveValue('0901 234 567');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('đổi số thật rồi Esc: vẫn hỏi lại', async () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(<EditHarness onOpenChange={onOpenChange} />);
+    const input = screen.getByLabelText('Số điện thoại');
+    await userEvent.clear(input);
+    await userEvent.type(input, '0909999999');
+    await userEvent.tab();
+    await userEvent.keyboard('{Escape}');
+    expect(await screen.findByText('Bỏ những gì vừa nhập?')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });
