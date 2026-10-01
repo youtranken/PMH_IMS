@@ -226,13 +226,17 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
               </RailRow>
             ) : null}
             {/* Hạn dùng (Q-20): thanh hạn dùng chung, cùng luật với huy hiệu ở danh sách. Không
-                có mốc đầu riêng nên thanh chỉ có đích. Không có hạn, hay đã ngừng dùng (không
-                còn được nhắc), thì chỉ một huy hiệu. */}
+                có mốc đầu riêng nên thanh chỉ có đích. Đã ngừng dùng thì thanh xám "không tính
+                hạn" như thiết bị / phần mềm đã thanh lý. */}
             <RailRow label={t("serviceAccounts.endDate")}>
-              {item.endDate && item.status !== "disabled" ? (
-                <WarrantyTimeline end={item.endDate} endLabel={t("serviceAccounts.endDate")} />
+              {item.endDate ? (
+                <WarrantyTimeline
+                  end={item.endDate}
+                  endLabel={t("serviceAccounts.endDate")}
+                  notCounted={item.status === "disabled"}
+                />
               ) : (
-                <ExpiryBadge end={item.endDate} notCounted={item.status === "disabled"} />
+                <ExpiryBadge end={null} notCounted={item.status === "disabled"} />
               )}
             </RailRow>
             {item.createdBy ? (

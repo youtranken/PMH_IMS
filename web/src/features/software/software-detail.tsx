@@ -307,6 +307,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
                   end={item.endDate}
                   startLabel={t("software.startDate")}
                   endLabel={t("software.endDate")}
+                  notCounted={retired}
                 />
               ) : (
                 <ExpiryBadge end={null} />
