@@ -197,6 +197,48 @@ describe('nút "Quay lại" ở bước nhập mã 2 lớp', () => {
   });
 });
 
+// --- Chuyển động khi rê chuột (Q-21) -------------------------------------------------------------
+
+describe('chuyển động nhẹ khi rê chuột', () => {
+  const REDUCE = '(prefers-reduced-motion: reduce)';
+
+  it('thời lượng là token --dur-fast / --dur trong khoảng 150–200ms', () => {
+    const light = tokenBlock('light');
+    expect(light.get('--dur-fast')).toBe('150ms');
+    expect(light.get('--dur')).toBe('200ms');
+  });
+
+  it.each([
+    ['base.css', 'button'],
+    ['base.css', 'a.linkbtn'],
+    ['base.css', '.nav-item'],
+    ['shared-kit.css', '.kpi'],
+    ['form-layout.css', '.chip'],
+    ['primitives.css', '.subnet-card'],
+    ['table.css', 'table.table > tbody > tr > td'],
+  ])('%s %s đổi trạng thái có transition theo token thời lượng', (file, selector) => {
+    const t = declValue(rule(file, selector)!.body, 'transition');
+    expect(t, selector).toMatch(/var\(--dur(-fast)?\)/);
+  });
+
+  it('ô số trên Bảng điều khiển nhấc 1px + bóng khi rê chuột', () => {
+    const body = rule('shared-kit.css', '.kpi:hover')!.body;
+    expect(declValue(body, 'transform')).toBe('translateY(-1px)');
+    expect(declValue(body, 'box-shadow')).toBeDefined();
+  });
+
+  it('"giảm chuyển động": tắt mọi transition/animation và bỏ cả các cú nhấc/trượt khi hover', () => {
+    const all = cssRules('detail-tabs.css').find((r) => r.selector === '*' && r.media === REDUCE)!;
+    expect(declValue(all.body, 'transition')).toBe('none !important');
+    for (const [file, selector] of [
+      ['base.css', '.nav-item:hover'],
+      ['shared-kit.css', '.kpi:hover'],
+    ]) {
+      expect(declValue(rule(file, selector, REDUCE)!.body, 'transform'), selector).toBe('none');
+    }
+  });
+});
+
 describe('vòng tiêu điểm vẽ một lần', () => {
   it.each([
     '.settings-nav button:focus-visible',

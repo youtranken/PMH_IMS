@@ -670,7 +670,9 @@ input.switch:focus-visible {
   border-radius: 999px;
   font-size: var(--fs-sm);
   font-weight: 600;
+  transition: background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
+.chip:hover { box-shadow: inset 0 0 0 1px var(--primary); }
 .chip button {
   display: grid;
   place-items: center;
@@ -683,6 +685,7 @@ input.switch:focus-visible {
   color: var(--primary-ink);
   font-size: var(--fs-2xs);
   line-height: 1;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .chip button:hover:not(:disabled) {
   background: var(--primary);

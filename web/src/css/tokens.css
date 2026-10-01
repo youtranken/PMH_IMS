@@ -137,6 +137,10 @@
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Thời lượng chuyển trạng thái khi rê chuột (Q-21): đủ để mắt thấy là có phản hồi, không đủ
+     để người bấm nhanh phải chờ. "Giảm chuyển động" tắt hết ở detail-tabs.css. */
+  --dur-fast: 150ms;
+  --dur: 200ms;
 
   font-family: var(--font);
   color: var(--ink);
