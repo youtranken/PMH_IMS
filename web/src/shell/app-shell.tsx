@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
+import { BrandEmblem } from '@/ui/brand-logo';
 import { Chevron } from '@/ui/chevron';
 import { type Me } from '@/lib/me';
 import { ErrorBoundary } from '@/ui/error-boundary';
@@ -99,9 +100,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           aria-label={t('app.mainNav')}
         >
           <div className="brand">
-            <span className="brand-mark" aria-hidden="true">
-              IMS
-            </span>
+            <BrandEmblem alt="" className="brand-emblem" />
             <span>{t('app.brand')}</span>
             {narrow ? (
               /* Nút đóng NGAY TRONG drawer: không thì người dùng phải đoán là chạm vào dải mờ.

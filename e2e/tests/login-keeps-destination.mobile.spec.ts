@@ -121,6 +121,14 @@ test('màn đăng nhập không có "Quên mật khẩu?" (Q-18), không tràn n
   await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Quên mật khẩu?' })).toHaveCount(0);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+  // Q-19: điện thoại không có mảng ảnh, nên biểu tượng PMH trên card là dấu nhận diện duy nhất —
+  // và đúng MỘT cái (logo đầy đủ của mảng ảnh phải ẩn cùng mảng).
+  const logo = page.getByRole('img', { name: 'Phú Mỹ Hưng' });
+  await expect(logo).toHaveCount(1);
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveJSProperty('complete', true);
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByTestId('auth-panel')).toBeHidden();
 });
 
 test('máy dùng chung: phiên của A chết giữa chừng → B đăng nhập thì về trang chủ, không bị kéo tới trang dở của A', async ({

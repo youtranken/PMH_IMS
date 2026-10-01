@@ -1,25 +1,49 @@
 /* --- Đăng nhập IMS -----------------------------------------------------------
    Nền grove tối (cố định, không theo theme app vì là màn ngoài shell) + card kính.
-   Màn rộng: mảng thương hiệu bên trái, card bên phải; ≤720px chỉ còn card.
+   Màn rộng: ảnh PMH bên trái RỘNG hơn cột form (~60/40, Q-19), card bên phải; ≤720px chỉ còn
+   card, mang biểu tượng PMH.
    Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
 .auth {
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(300px, 2fr) 3fr;
+  /* Cột form có sàn: card rộng 420px + lề, hẹp hơn thì ô nhập bị bóp ngay trên khổ laptop. */
+  grid-template-columns: minmax(0, 3fr) minmax(460px, 2fr);
   background: var(--auth-bg);
 }
-/* Chữ trên gradient thương hiệu dùng --on-brand: trắng trên lục/cam không đạt AA (tokens.css). */
+/* Chữ nằm trên ẢNH, nên độ tương phản đến từ lớp phủ --auth-photo-veil (tối dần về mép trái,
+   nơi đặt chữ), không phải từ nền đơn sắc. Ảnh có thể là bất cứ gì sau này: đừng bỏ lớp phủ. */
 .auth-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-5);
   padding: clamp(32px, 8vh, 96px) clamp(24px, 5vw, 72px);
-  color: var(--on-brand);
-  background: var(--grad);
+  color: var(--auth-ink);
+  background: var(--auth-bg);
 }
-.auth-panel-org { font-size: var(--fs-3xl); font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+.auth-photo { position: absolute; inset: 0; z-index: -2; }
+/* Cầu và hồ nằm ở nửa phải-giữa của ảnh: neo điểm cắt về đó để cột hẹp vẫn thấy cây cầu. */
+.auth-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 60%;
+}
+.auth-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--auth-photo-veil);
+  pointer-events: none;
+}
+.auth-panel-body { display: flex; flex-direction: column; gap: var(--space-5); }
+/* Chữ "Phu My Hung" trong logo xám sáng: chỉ đọc được trên lớp phủ tối. */
+.auth-panel-logo img { display: block; width: clamp(140px, 14vw, 220px); height: auto; }
 .auth-panel-system { font-size: var(--fs-lg); font-weight: 600; }
 .auth-panel-points {
   margin: var(--space-4) 0 0;
@@ -43,21 +67,28 @@
   padding: clamp(24px, 12vh, 120px) var(--space-7) var(--space-7);
   overflow: hidden;
 }
-/* Vệt sáng nhấn — gradient thương hiệu, mờ, không cản đọc */
+/* Màn rộng: nền cột form là CHÍNH ảnh bên trái, phóng to + làm mờ + tối đi — hai nửa cùng tông
+   chạng vạng nên liền một khối, thay cho nền lục riêng trông như hai trang ghép. Không trải ảnh
+   rõ ra toàn màn: cây cầu nằm ở nửa phải ảnh, card sẽ che đúng nó. Ảnh đã được mảng trái tải nên
+   không tốn thêm lượt tải; ≤720px không có ảnh nào (khối @media dưới tắt luật này). */
 .auth-main::before {
   content: '';
   position: absolute;
-  inset: -30% -10% auto auto;
-  width: 60vw;
-  height: 60vw;
-  background: var(--grad);
-  opacity: 0.14;
-  filter: blur(90px);
+  inset: -40px;
+  z-index: 0;
+  background: url('/brand/login-photo.webp') 70% 60% / cover no-repeat;
+  filter: blur(28px) brightness(0.45) saturate(1.1);
   pointer-events: none;
 }
+/* Màn rộng đã có logo đầy đủ ở mảng ảnh, nên biểu tượng trong card chỉ hiện ≤720px. Luật này
+   phải đứng TRƯỚC khối @media ngay dưới: cùng độ ưu tiên, luật đứng sau thắng. */
+.auth-emblem { display: none; }
+.auth-emblem img { display: block; width: 72px; height: auto; }
 @media (max-width: 720px) {
   .auth { grid-template-columns: minmax(0, 1fr); }
   .auth-panel { display: none; }
+  .auth-main::before { display: none; }
+  .auth-emblem { display: block; }
 }
 .auth-card {
   position: relative;
@@ -99,7 +130,6 @@
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.auth-logo .brand-mark { width: 56px; height: 56px; font-size: var(--fs-md); border-radius: var(--r); }
 .auth-brand { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .auth-brand-sub { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 500; letter-spacing: 0; }
 /* "Bước 1/2 · …" của luồng cài đặt lần đầu: thanh mảnh + một dòng chữ. */

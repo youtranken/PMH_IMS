@@ -55,6 +55,40 @@ test.describe('Đăng nhập', () => {
   });
 });
 
+test.describe('Thương hiệu PMH trên màn đăng nhập (Q-19)', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('màn rộng: mảng ảnh bên trái rộng hơn cột form (~60/40), có logo PMH tải được', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
+    const panel = page.getByTestId('auth-panel');
+    await expect(panel).toBeVisible();
+    const logo = panel.getByRole('img', { name: 'Phú Mỹ Hưng' });
+    await expect(logo).toBeVisible();
+    await expect(logo).toHaveJSProperty('complete', true);
+    expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    // Logo đầy đủ đã ở mảng ảnh: biểu tượng trong card phải ẩn, không hiện hai logo.
+    await expect(page.getByRole('img', { name: 'Phú Mỹ Hưng' })).toHaveCount(1);
+
+    const box = await panel.boundingBox();
+    expect(box).not.toBeNull();
+    const ratio = box!.width / 1440;
+    expect(ratio).toBeGreaterThan(0.55);
+    expect(ratio).toBeLessThan(0.65);
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+  });
+
+  test('đường hỏng: sai mật khẩu thì card hiện lỗi mà mảng ảnh không co lại', async ({ page }) => {
+    await page.goto('/login');
+    const panel = page.getByTestId('auth-panel');
+    await expect(panel).toBeVisible();
+    const before = (await panel.boundingBox())!.width;
+    await fillLogin(page, E2E_MEMBER.email, 'mat-khau-sai-hoan-toan');
+    await expect(page.getByRole('alert')).toHaveText('Email hoặc mật khẩu không đúng.');
+    expect(Math.abs((await panel.boundingBox())!.width - before)).toBeLessThanOrEqual(1);
+  });
+});
+
 test.describe('Trang lỗi', () => {
   test('Thành viên mở trang quản trị → 403 nói thiếu quyền, có Quay lại và Về trang chủ (MISC-001)', async ({
     page,
