@@ -1158,9 +1158,10 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
-    notCountedTitle: 'Hồ sơ đã thanh lý nên không tính hạn nữa',
+    /* Trung tính: dùng chung cho hồ sơ đã thanh lý lẫn tài khoản dịch vụ đã ngừng dùng. */
+    notCountedTitle: 'Hồ sơ không còn dùng (đã thanh lý hoặc ngừng dùng) nên không tính hạn nữa',
     labelNoneTitle: 'Chưa khai báo ngày hết hạn',
-    notCountedRetired: 'Không tính hạn (đã thanh lý)',
+    notCountedRetired: 'Không tính hạn (không còn dùng)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
     navBadge: '{{count}} mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
