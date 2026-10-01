@@ -115,6 +115,8 @@ export function AttachmentPanel({
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
+  // Ô thả file và khối "chưa có giấy tờ" gợi ý cùng một câu theo loại hồ sơ.
+  const hintKey = HINT_BY_OWNER[ownerType] ?? 'attachments.hint';
   const queryClient = useQueryClient();
 
   /*
@@ -224,7 +226,7 @@ export function AttachmentPanel({
           <FilePicker
             accept={ATTACHMENT_ACCEPT}
             label={t('attachments.pick')}
-            hint={t(HINT_BY_OWNER[ownerType] ?? 'attachments.hint')}
+            hint={t(hintKey)}
             file={null}
             disabled={busy}
             onPick={(one) => {
@@ -279,7 +281,7 @@ export function AttachmentPanel({
       ) : rows.length === 0 ? (
         <EmptyState
           title={t('attachments.empty')}
-          hint={canEdit ? t('attachments.emptyHint') : undefined}
+          hint={canEdit ? t('attachments.emptyHint', { examples: t(hintKey) }) : undefined}
         />
       ) : (
         <div className="table-wrap">

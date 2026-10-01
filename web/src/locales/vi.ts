@@ -815,7 +815,8 @@ export default {
     uploadedCount: 'Đã đính kèm {{count}} giấy tờ.',
     draftFailedLive: 'Không tải lên được "{{name}}": {{reason}}',
     empty: 'Chưa có giấy tờ nào.',
-    emptyHint: 'Kéo hóa đơn, biên bản bàn giao vào ô phía trên, hoặc bấm chọn file.',
+    /* `examples` = câu gợi ý theo loại hồ sơ (`hint*`), cùng câu với ô thả file. */
+    emptyHint: '{{examples}} Kéo vào ô phía trên, hoặc bấm chọn file.',
     name: 'Tên file',
     size: 'Dung lượng',
     uploadedAt: 'Tải lên lúc',
