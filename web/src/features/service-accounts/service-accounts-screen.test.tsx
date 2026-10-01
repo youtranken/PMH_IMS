@@ -156,3 +156,22 @@ describe('Tài khoản dịch vụ — cột "Hết hạn" (Q-20)', () => {
     expect(rowOf('SVC-E2E-NGUNG').textContent).not.toMatch(/Quá hạn/);
   });
 });
+
+/* 390px: thẻ gọn thay cho bảng — tài khoản có hạn phải mang huy hiệu hạn trên thẻ, không thì
+   điện thoại là chỗ duy nhất không biết tài khoản VPN sắp hết hạn. */
+describe('Tài khoản dịch vụ — thẻ điện thoại mang huy hiệu hạn', () => {
+  it('có hạn → huy hiệu hạn trên thẻ; không có hạn → không thêm gì', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    );
+    stubFetch([
+      { ...ROW, id: 'a', code: 'SVC-E2E-HAN', endDate: '2020-01-01' },
+      { ...ROW, id: 'b', code: 'SVC-E2E-KHONG', endDate: null },
+    ]);
+    renderAs('member');
+    const cardOf = async (code: string) => (await screen.findByText(code)).closest('.list-card')!;
+    expect((await cardOf('SVC-E2E-HAN')).textContent).toMatch(/Quá hạn/);
+    expect((await cardOf('SVC-E2E-KHONG')).textContent).not.toMatch(/hạn/i);
+  });
+});

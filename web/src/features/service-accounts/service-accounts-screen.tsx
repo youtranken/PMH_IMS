@@ -379,11 +379,22 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               subtitle: (row) => row.name,
               meta: (row) =>
                 [row.login, t(KIND_SHORT_KEY[row.kind]), row.department].filter(Boolean).join(' · '),
+              /* Hạn của tài khoản (Q-20) lên thẻ cùng hạn đổi mật khẩu: thiếu nó thì điện thoại
+                 là chỗ duy nhất không biết tài khoản VPN sắp hết hạn. Không có hạn thì bỏ —
+                 "Không có hạn" trên mọi thẻ chỉ làm thẻ dài thêm. */
               aside: (row) => {
                 const item = canEdit ? dueByOwner.get(row.id) : undefined;
-                return item ? (
-                  <SecretDue changedAt={item.valueChangedAt} dueInDays={item.dueInDays} />
-                ) : null;
+                if (!item && !row.endDate) return null;
+                return (
+                  <>
+                    {row.endDate ? (
+                      <ExpiryBadge end={row.endDate} notCounted={row.status === 'disabled'} />
+                    ) : null}
+                    {item ? (
+                      <SecretDue changedAt={item.valueChangedAt} dueInDays={item.dueInDays} />
+                    ) : null}
+                  </>
+                );
               },
             }}
             manualSorting
