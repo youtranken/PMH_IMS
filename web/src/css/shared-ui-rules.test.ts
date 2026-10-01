@@ -329,6 +329,15 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(own.body, 'padding') ?? pad).toBe('0');
   });
 
+  // Nút vuông có viền đứng sát chữ thì viền dính vào ký tự cuối, và canh theo đường chân chữ
+  // (mặc định của inline-grid) thì nó trồi lên lệch khỏi dòng.
+  it('.copy-btn canh giữa dòng chữ và cách chữ đứng trước nó', () => {
+    expect(declValue(rule('detail-tabs.css', '.copy-btn')!.body, 'vertical-align')).toBe('middle');
+    const gap = rule('detail-tabs.css', '.mono + .copy-btn:not(.inline)');
+    expect(gap, 'thiếu luật cách chữ cho nút có viền').toBeDefined();
+    expect(declValue(gap!.body, 'margin-inline-start')).toBeDefined();
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
