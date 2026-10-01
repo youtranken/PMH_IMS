@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
 import { AccessMatrixScreen } from './access-matrix-screen';
@@ -165,6 +166,24 @@ describe('Quyền xem két sắt — theo người', () => {
     for (const th of groups) expect(th).toHaveAttribute('scope', 'colgroup');
   });
 
+  /*
+   * Lưới chia ô (Q-20): cột đầu của mỗi họ (trừ họ đầu tiên, đã có vạch của cột tên người) mang
+   * `access-group-start` ở CẢ tiêu đề lẫn mọi ô bên dưới — CSS kẻ vạch đậm hơn ở đó để mắt biết
+   * đâu là ranh giới "Phần mềm" / "Thiết bị theo loại".
+   */
+  it('ma trận: cột đầu của họ thứ hai trở đi đánh dấu ranh giới nhóm ở tiêu đề và từng ô', async () => {
+    renderAt('/admin/vault-access?view=matrix');
+    await screen.findByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' });
+    const starts = screen.getAllByRole('columnheader').filter((th) => th.classList.contains('access-group-start'));
+    expect(starts).toHaveLength(1);
+    // Thứ tự họ: thiết bị theo loại trước, phần mềm sau.
+    expect(starts[0]).toHaveTextContent(/SSL/);
+    const sslCell = screen.getByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' });
+    expect(sslCell.closest('td')).toHaveClass('access-group-start');
+    const switchCell = screen.getByRole('button', { name: 'Trần Bình — Thiết bị loại Switch: Không có quyền' });
+    expect(switchCell.closest('td')).not.toHaveClass('access-group-start');
+  });
+
   it('"+ Thêm quyền" chỉ liệt kê nhóm người đó CHƯA có', async () => {
     renderAt('/admin/vault-access?user=u-binh');
     await userEvent.click(await screen.findByRole('button', { name: '+ Thêm quyền' }));
@@ -174,5 +193,124 @@ describe('Quyền xem két sắt — theo người', () => {
     // Câu giải thích hai tầng dài: nằm sau nút (i) cạnh nhãn, không thành dòng gợi ý dưới ô.
     expect(within(dialog).getByRole('button', { name: 'Giải thích: Tầng quyền' })).toBeInTheDocument();
     expect(dialog).not.toHaveTextContent('phải xin và chờ duyệt');
+  });
+});
+
+/*
+ * Q-20: POST/DELETE /vault/access đòi step-up. Hết thời gian ân hạn thì server trả
+ * STEPUP_REQUIRED — màn phải mở hộp hỏi mã 6 số rồi chạy lại đúng việc đó, không được in câu lỗi
+ * đỏ "Nhập mã 6 số…" mà không có ô nào để nhập.
+ */
+describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân hạn', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function stubStepUp() {
+    const writes: { method: string; url: string }[] = [];
+    let steppedUp = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (url.includes('/auth/step-up')) {
+        steppedUp = true;
+        return Promise.resolve(jsonResponse(200, { graceMinutes: 10 }));
+      }
+      if (method !== 'GET' && url.includes('/vault/access')) {
+        writes.push({ method, url });
+        if (!steppedUp) {
+          return Promise.resolve(
+            jsonResponse(403, {
+              code: 'STEPUP_REQUIRED',
+              message: 'Nhập mã 6 số trên ứng dụng xác thực để mở két.',
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse(method === 'DELETE' ? 200 : 201, { id: 'r-new' }));
+      }
+      if (url.includes('/vault/access/scopes')) return Promise.resolve(jsonResponse(200, SCOPES));
+      if (url.includes('/vault/access/people')) return Promise.resolve(jsonResponse(200, ACCOUNTS));
+      if (url.includes('/vault/access')) return Promise.resolve(jsonResponse(200, RULES));
+      return Promise.resolve(jsonResponse(403, { code: 'FORBIDDEN_ROLE', message: 'x' }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/admin/vault-access?view=matrix']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AccessMatrixScreen me={ME} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    return writes;
+  }
+
+  const codeInput = () => screen.getByLabelText(/mã/i, { selector: 'input' });
+
+  it('gán một ô: hỏi mã 6 số với câu cấp quyền, gõ xong thì gửi lại và đóng hộp', async () => {
+    const writes = stubStepUp();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Nguyễn An — Thiết bị loại Switch: Không có quyền' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    expect(await screen.findByText('Nhập mã 6 số để xác nhận cấp quyền két.')).toBeInTheDocument();
+    expect(screen.queryByText(/để mở két/)).toBeNull();
+    await userEvent.type(codeInput(), '123456');
+    expect(await screen.findByText('Đã gán quyền.')).toBeInTheDocument();
+    expect(writes.filter((write) => write.method === 'POST')).toHaveLength(2);
+  });
+
+  it('gỡ một ô: hỏi mã 6 số với câu gỡ quyền, gõ xong thì gửi lại DELETE', async () => {
+    const writes = stubStepUp();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Gỡ' }));
+    const confirm = await screen.findByRole('dialog');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Gỡ' }));
+    expect(await screen.findByText('Nhập mã 6 số để xác nhận gỡ quyền két.')).toBeInTheDocument();
+    await userEvent.type(codeInput(), '123456');
+    expect(await screen.findByText('Đã gỡ quyền.')).toBeInTheDocument();
+    expect(writes.filter((write) => write.method === 'DELETE')).toHaveLength(2);
+  });
+
+  it('gán một nhóm cho nhiều người: hỏi mã MỘT lần, những người sau nằm trong ân hạn', async () => {
+    const writes = stubStepUp();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Gán "Thiết bị loại Switch" cho nhiều người' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn tất cả' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    expect(await screen.findByText('Nhập mã 6 số để xác nhận cấp quyền két.')).toBeInTheDocument();
+    await userEvent.type(codeInput(), '123456');
+    expect(await screen.findByText(/Đã gán quyền cho 2 người/)).toBeInTheDocument();
+    // 2 người: lượt đầu bị đòi mã + chạy lại, người thứ hai đi thẳng.
+    expect(writes.filter((write) => write.method === 'POST')).toHaveLength(3);
+  });
+
+  it('đóng hộp hỏi mã giữa lượt gán nhiều người: dừng cả lượt, không hỏi lại, không báo lỗi', async () => {
+    const writes = stubStepUp();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Gán "Thiết bị loại Switch" cho nhiều người' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn tất cả' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    const ask = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    await userEvent.click(within(ask).getByRole('button', { name: 'Hủy' }));
+    expect(screen.queryByRole('dialog', { name: 'Xác nhận danh tính' })).toBeNull();
+    expect(writes.filter((write) => write.method === 'POST')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('gán nhiều nhóm cho một người: hỏi mã rồi gán tiếp', async () => {
+    const writes = stubStepUp();
+    await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền cho Nguyễn An' }));
+    const dialog = await screen.findByRole('dialog');
+    for (const box of within(dialog).getAllByRole('checkbox')) await userEvent.click(box);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền' }));
+    expect(await screen.findByText('Nhập mã 6 số để xác nhận cấp quyền két.')).toBeInTheDocument();
+    await userEvent.type(codeInput(), '123456');
+    expect(await screen.findByText('Đã gán 2 nhóm.')).toBeInTheDocument();
+    expect(writes.filter((write) => write.method === 'POST')).toHaveLength(3);
   });
 });

@@ -1177,6 +1177,28 @@ table.access-grid thead .access-row-head {
 .access-col-btn:hover { color: var(--primary-ink); }
 .access-col-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 .access-cell { text-align: center; padding: 2px; }
+/*
+ * Lưới chia ô dọc ngang (Q-20): vạch dọc giữa mọi cột, vạch đậm hơn ở cột đầu mỗi họ
+ * (`.access-group-start`, dựng ở `access-matrix-screen.tsx`) và dưới hàng tiêu đề — cuộn ngang
+ * tới cột thứ 20 vẫn dò được ô thuộc nhóm nào. Cột đầu tiên sát cột tên người thì bỏ vạch trái:
+ * cột tên người đã có vạch phải, hai vạch cạnh nhau thành một đường dày.
+ */
+table.access-grid .access-col,
+table.access-grid .access-cell {
+  border-left: 1px solid var(--border);
+}
+table.access-grid .access-group-start,
+table.access-grid .access-family {
+  border-left: 1px solid var(--border-2);
+}
+table.access-grid thead tr:first-child .access-family:nth-child(2),
+table.access-grid thead tr:last-child .access-col:first-child,
+table.access-grid tbody .access-row-head + .access-cell {
+  border-left: 0;
+}
+table.access-grid thead tr:last-child th {
+  border-bottom: 1px solid var(--border-2);
+}
 /* Ô là một NÚT vuông đủ 30px — bấm nhầm sang ô bên cạnh khi đang cuộn ngang là mở quyền cho
    nhầm người, nên vùng bấm phải rõ ràng chứ không phải một ký tự. */
 .access-chip {

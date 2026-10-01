@@ -2396,6 +2396,8 @@ export default {
       'Gán cho {{member}} tầng "{{tier}}" trên nhóm "{{scope}}"? Họ sẽ xem được mật khẩu của mọi hồ sơ thuộc nhóm này.',
     removed: 'Đã gỡ quyền.',
     remove: 'Gỡ',
+    stepUpGrant: 'Nhập mã 6 số để xác nhận cấp quyền két.',
+    stepUpRemove: 'Nhập mã 6 số để xác nhận gỡ quyền két.',
     confirmRemove: 'Gỡ quyền của {{member}} trên "{{scope}}"? Sau đó họ sẽ không xem và không xin được nữa.',
     tier: 'Tầng quyền',
     tierHint: '"Xem thẳng": xem ngay, vẫn phải nhập mã 6 số. "Cần duyệt": phải xin và chờ duyệt.',
