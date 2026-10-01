@@ -314,3 +314,79 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     expect(writes.filter((write) => write.method === 'POST')).toHaveLength(3);
   });
 });
+
+/*
+ * Q-21: nhiều loại thiết bị — danh sách gán chia 2 cột thay vì cuộn trong ô nhỏ; thẻ quyền theo
+ * người hiện vài chip + "+N"; tiêu đề họ thiết bị có (i) nói rõ site và loại CỘNG DỒN.
+ */
+describe('Quyền xem két sắt — nhiều nhóm', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const TYPES = ['AP', 'Camera', 'Firewall', 'Laptop', 'NAS', 'PC', 'Printer', 'Server', 'Switch', 'UPS'];
+  const MANY_SCOPES = [
+    { scopeType: 'device_site', scopeRef: 's1', label: 'Thiết bị tại CR3' },
+    ...TYPES.map((name, i) => ({ scopeType: 'device_type', scopeRef: `t${i}`, label: `Thiết bị loại ${name}` })),
+  ];
+  const MANY_RULES = TYPES.map((name, i) => ({
+    id: `r${i}`,
+    memberEmail: 'binh@pmh.com.vn',
+    scopeType: 'device_type',
+    scopeRef: `t${i}`,
+    scopeLabel: `Thiết bị loại ${name}`,
+    tier: 'needs_approval',
+    grantedBy: 'sa@pmh.com.vn',
+    note: null,
+  }));
+
+  function renderMany(entry: string, rules: unknown[] = MANY_RULES) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/vault/access/scopes')) return Promise.resolve(jsonResponse(200, MANY_SCOPES));
+        if (url.includes('/vault/access/people')) return Promise.resolve(jsonResponse(200, ACCOUNTS));
+        if (url.includes('/vault/access')) return Promise.resolve(jsonResponse(200, rules));
+        return Promise.resolve(jsonResponse(403, { code: 'FORBIDDEN_ROLE', message: 'x' }));
+      }),
+    );
+    renderWithI18n(
+      <MemoryRouter initialEntries={[entry]}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AccessMatrixScreen me={ME} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('thẻ theo người: 10 quyền cùng họ hiện 6 chip + nút "+4", bấm thì hiện đủ', async () => {
+    renderMany('/admin/vault-access?user=u-binh');
+    await screen.findByRole('heading', { name: 'Trần Bình' });
+    expect(screen.getAllByRole('button', { name: /^Trần Bình — Thiết bị loại/ })).toHaveLength(6);
+    const more = screen.getByRole('button', { name: 'Xem thêm 4 quyền' });
+    expect(more).toHaveTextContent('+4');
+    await userEvent.click(more);
+    expect(screen.getAllByRole('button', { name: /^Trần Bình — Thiết bị loại/ })).toHaveLength(10);
+    await userEvent.click(screen.getByRole('button', { name: 'Thu gọn' }));
+    expect(screen.getAllByRole('button', { name: /^Trần Bình — Thiết bị loại/ })).toHaveLength(6);
+  });
+
+  it('hộp gán quyền: họ có nhiều nhóm chia 2 cột, không cuộn trong ô nhỏ', async () => {
+    renderMany('/admin/vault-access?user=u-an', []);
+    await userEvent.click(await screen.findByRole('button', { name: '+ Gán quyền' }));
+    const dialog = await screen.findByRole('dialog');
+    const types = within(dialog).getByRole('checkbox', { name: 'Thiết bị loại Switch' }).closest('ul');
+    expect(types).toHaveClass('pick-list', 'cols-2');
+    const sites = within(dialog).getByRole('checkbox', { name: 'Thiết bị tại CR3' }).closest('ul');
+    expect(sites).not.toHaveClass('cols-2');
+  });
+
+  it('tiêu đề họ thiết bị có nút (i) nói rõ site và loại cộng dồn', async () => {
+    renderMany('/admin/vault-access?view=matrix');
+    const tip = await screen.findByRole('button', { name: 'Giải thích: Thiết bị theo site' });
+    await userEvent.click(tip);
+    expect(await screen.findByText(/mọi thiết bị ở site đó, bất kể loại/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Giải thích: Thiết bị theo loại' })).toBeInTheDocument();
+  });
+});

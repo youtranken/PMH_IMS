@@ -254,7 +254,8 @@
 .detail-rail {
   min-width: 0;
   position: sticky;
-  top: var(--space-10);
+  /* Tính từ DƯỚI topbar (56px, dính `top: 0`): `top` nhỏ hơn thì đầu thẻ bị topbar nuốt khi cuộn. */
+  top: calc(56px + var(--space-10));
   display: flex;
   flex-direction: column;
   gap: var(--space-9);
@@ -498,7 +499,9 @@
  */
 .tabs {
   position: sticky;
-  top: 0;
+  /* Dính ngay DƯỚI topbar (56px, `top: 0`, base.css). `top: 0` thì thanh tab trượt vào đúng dải
+     topbar và — z-index cao hơn — che mất ô tìm Ctrl+K cùng nút đổi giao diện. */
+  top: 56px;
   z-index: var(--z-sticky);
   background: var(--canvas);
   /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối

@@ -14,6 +14,7 @@ import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -186,11 +187,17 @@ interface AccountFilters extends Record<string, string> {
 
 const EMPTY_FILTERS: AccountFilters = { search: '', role: '', status: '', totp: '' };
 
+const ACCOUNT_STATUSES = ['active', 'locked', 'disabled'] as const;
+
+/**
+ * Trạng thái để trống = `live` (trừ đã vô hiệu hóa, Q-20) — người đã nghỉ chỉ hiện khi lọc đích
+ * danh hoặc chọn "Tất cả". Thẻ đếm đầu trang dùng cùng hàm này nên số khớp bảng khi bấm vào.
+ */
 function filterQuery(filters: AccountFilters): string[] {
   return [
     filters.search ? `search=${encodeURIComponent(filters.search)}` : '',
     filters.role ? `role=${filters.role}` : '',
-    filters.status ? `status=${filters.status}` : '',
+    filters.status === ALL_STATUSES ? '' : `status=${filters.status || 'live'}`,
     filters.totp ? `totp=${filters.totp}` : '',
   ].filter(Boolean);
 }
@@ -200,7 +207,6 @@ export function AccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   /* Trạng thái danh sách sống trên THANH ĐỊA CHỈ: chia sẻ được link đã lọc, Back gỡ bộ lọc. */
   const url = useListUrlState<AccountFilters>({
@@ -208,6 +214,8 @@ export function AccountsScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'fullName', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn người đã vô hiệu hóa), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...ACCOUNT_STATUSES, ALL_STATUSES] },
   });
   const { page, limit, filters } = url;
   // Sắp xếp chạy ở SERVER (`manualSorting`): sắp ở client chỉ đảo chỗ 20 dòng đang xem.
@@ -259,9 +267,9 @@ export function AccountsScreen({ me }: { me: Me }) {
           (page) => page.total,
         ),
     }) as const;
-  const countAll = useQuery(countOf('all', ''));
+  const countAll = useQuery(countOf('all', '&status=live'));
   const countLocked = useQuery(countOf('locked', '&status=locked'));
-  const countNoTotp = useQuery(countOf('noTotp', '&totp=none'));
+  const countNoTotp = useQuery(countOf('noTotp', '&status=live&totp=none'));
 
   const refresh = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
@@ -402,22 +410,8 @@ export function AccountsScreen({ me }: { me: Me }) {
         disabled: busy,
         onSelect: () => setSessionsFor(account),
       },
-      ...(account.role === 'member'
-        ? [
-            {
-              key: 'vault',
-              label: t('accounts.vaultAccess'),
-              onSelect: () =>
-                navigate(`${PATHS.adminVaultAccess}?user=${encodeURIComponent(account.id)}`),
-            },
-          ]
-        : []),
-      {
-        key: 'audit',
-        label: t('accounts.auditLog'),
-        onSelect: () =>
-          navigate(`${PATHS.adminAuditLog}?objectId=${encodeURIComponent(account.id)}`),
-      },
+      /* Đi xem Quyền két / Nhật ký nằm trong hộp Chi tiết (Q-21): menu dòng chỉ còn VIỆC LÀM,
+         đủ ngắn để không phải cuộn trong menu. */
       {
         key: 'reset-password',
         label: t('accounts.resetPassword'),
@@ -739,13 +733,11 @@ export function AccountsScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('accounts.filterStatus')}
-          placeholder={t('accounts.allStatuses')}
-          options={[
-            { value: '', label: t('accounts.allStatuses') },
-            { value: 'active', label: t('accounts.statusActive') },
-            { value: 'locked', label: t('accounts.statusLocked') },
-            { value: 'disabled', label: t('accounts.statusDisabled') },
-          ]}
+          options={lifecycleStatusOptions(t, {
+            statuses: ACCOUNT_STATUSES,
+            labelOf: (status) => t(STATUS_LABEL[status]),
+            endStatus: 'disabled',
+          })}
           onChange={(value) => url.setFilter('status', value)}
         />
         <Select
@@ -927,6 +919,11 @@ export function AccountsScreen({ me }: { me: Me }) {
             setSessionsFor(detailFor);
             setDetailFor(null);
           }}
+          vaultAccessPath={
+            detailFor.role === 'member'
+              ? `${PATHS.adminVaultAccess}?user=${encodeURIComponent(detailFor.id)}`
+              : undefined
+          }
           onEdit={() => {
             setEditing(detailFor);
             setDetailFor(null);

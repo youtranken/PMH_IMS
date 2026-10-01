@@ -9,10 +9,15 @@ export type DeviceStatus = (typeof DEVICE_STATUSES)[number];
  */
 export type DeviceStatusQuery = DeviceStatus | 'live';
 
-/** Đọc `?status=` — chữ lạ (hay mảng từ `?status=a&status=b`) thì bỏ qua, không lọt xuống SQL. */
+/**
+ * Đọc `?status=`. Vắng / rỗng = không lọc (⌘K). Chữ lạ (hay mảng từ `?status=a&status=b`) coi
+ * như mặc định `live` (Q-20): bỏ qua thì lặng lẽ bày lại máy đã thanh lý, 400 thì cả màn thành
+ * trang lỗi.
+ */
 export function deviceStatusQuery(value: unknown): DeviceStatusQuery | undefined {
+  if (value === undefined || value === '') return undefined;
   if (value === 'live') return 'live';
-  return DEVICE_STATUSES.includes(value as DeviceStatus) ? (value as DeviceStatus) : undefined;
+  return DEVICE_STATUSES.includes(value as DeviceStatus) ? (value as DeviceStatus) : 'live';
 }
 
 export interface DeviceRecord {

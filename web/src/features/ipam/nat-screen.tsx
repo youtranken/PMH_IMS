@@ -53,7 +53,7 @@ import { useIpamSettings } from './ipam-settings';
 import { PATHS } from '@/lib/routes';
 import { clampPage } from '@/lib/paging';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
-import { reasonRule, secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Pagination } from '@/ui/pagination';
 import { useListUrlState } from '@/ui/use-list-url-state';
@@ -649,7 +649,19 @@ function NatForm({
   const [reason, setReason] = useState(rule?.reason ?? '');
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
   const [note, setNote] = useState(rule?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  /* KHÔNG theo dõi `ports`: ghi hỏng một phần thì chính lượt ghi bỏ các khoảng đã xong khỏi
+     danh sách cùng lúc đặt câu lỗi — theo dõi nó là câu lỗi tắt ngay khi vừa hiện. */
+  const [error, setError] = useSubmitError([
+    deviceId,
+    targetId,
+    protocol,
+    internalIp,
+    internalPort,
+    usedBy,
+    reason,
+    enabled,
+    note,
+  ]);
   /** Sửa = một khoảng; thêm mới = bao nhiêu khoảng cũng được (mỗi khoảng ra một dòng). */
   const maxPorts = rule ? 1 : Number.POSITIVE_INFINITY;
   /* Nhiều chip = nhiều lượt gọi nối tiếp; giữa hai lượt `isPending` tụt về false, không khoá
@@ -1246,7 +1258,7 @@ function RemoveDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: reasonRule(t, reason) });
 
   const remove = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {

@@ -726,7 +726,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
     /*
      * So TẬP HỢP (đã sắp) chứ không so thứ tự: thứ tự trong menu do `RowActions` tự xếp lại
-     * theo cờ `danger`, còn điều bài này bảo vệ là "còn đủ năm việc hay không".
+     * theo cờ `danger`, còn điều bài này bảo vệ là "còn đủ bốn việc hay không".
      */
     expect(
       sortOrder(await rowActionNames(page, saFullName)),
@@ -736,7 +736,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
         'Xem chi tiết',
         'Phiên đang mở',
-        'Nhật ký thao tác',
+        // Nhật ký / Quyền két nằm trong hộp Chi tiết (Q-21), không còn ở menu dòng.
         'Đặt lại mật khẩu',
         // Hạt giống SA luôn bị bắt 2 lớp (`reset-e2e.mjs`), nên mục bật/tắt đang ở vế "Bỏ".
         'Bỏ bắt buộc 2 lớp khi đăng nhập',

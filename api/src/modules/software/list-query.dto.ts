@@ -27,7 +27,7 @@ export class IspExportQueryDto {
   @IsOptional() @IsString() search?: string;
   @OptionalUuidQuery('Mã site không hợp lệ.') siteId?: string;
   @OptionalUuidQuery('Mã nhà cung cấp không hợp lệ.') providerId?: string;
-  /** `active,suspended` — service tự kiểm từng phần (`ISP_STATUS_INVALID`). */
+  /** `active,suspended` — service tự đọc (`ispStatusesOf`): chữ lạ về mặc định đang chạy. */
   @IsOptional() @IsString() status?: string;
   @IsOptional() @IsString() sort?: string;
   @IsOptional() @IsString() dir?: string;

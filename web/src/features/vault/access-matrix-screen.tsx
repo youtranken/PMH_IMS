@@ -11,6 +11,7 @@ import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from 
 import type { Me } from '@/lib/me';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
+import { InfoTip } from '@/ui/info-tip';
 import { PlusIcon } from '@/ui/glyph-icons';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
@@ -21,7 +22,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
 
@@ -42,6 +43,27 @@ const SCOPE_ORDER: ScopeType[] = [
   'service_account_kind',
   'isp_provider',
 ];
+
+/**
+ * Hai họ thiết bị CỘNG DỒN (`access-tier.ts` `groupsOfDevice` + `explainTier`): một máy thuộc
+ * đồng thời nhóm site và nhóm loại của nó, khớp dòng nào cũng thấy, nhiều dòng thì lấy tầng rộng
+ * nhất. Không nói ra thì SA tưởng phải gán cả hai mới thấy, hoặc tưởng "loại" thu hẹp "site".
+ */
+function FamilyLabel({ type, label }: { type: ScopeType; label: string }) {
+  const { t } = useTranslation();
+  if (type !== 'device_site' && type !== 'device_type') return <>{label}</>;
+  return (
+    <span className="access-family-label">
+      {label}
+      <InfoTip subject={label}>{t('access.deviceUnionTip')}</InfoTip>
+    </span>
+  );
+}
+
+/** Thẻ theo người: quá số chip này trong một họ thì gập lại sau nút "+N". */
+const CHIP_LIMIT = 6;
+/** Hộp gán quyền: họ có nhiều hơn số nhóm này thì danh sách chia 2 cột. */
+const PICK_COLUMNS_FROM = 5;
 
 interface AccessRule {
   id: string;
@@ -361,7 +383,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   scope="colgroup"
                   className="access-family"
                 >
-                  {group.label}
+                  <FamilyLabel type={group.type} label={group.label} />
                 </th>
               ))}
             </tr>
@@ -705,6 +727,8 @@ function PeopleView({
 
       {showDetail && selected ? (
         <PersonRules
+          /* Đổi người thì các họ đã mở "+N" gập lại — trạng thái mở thuộc về thẻ của một người. */
+          key={selected.id}
           account={selected}
           rules={rulesOf.get(selected.email.toLowerCase()) ?? []}
           onBack={narrow ? () => onSelect(null) : undefined}
@@ -734,6 +758,7 @@ function PersonRules({
   onOpenRule: (rule: AccessRule) => void;
 }) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState<ScopeType[]>([]);
   const groups = SCOPE_ORDER.map((type) => ({
     type,
     rules: rules
@@ -766,29 +791,59 @@ function PersonRules({
       {groups.length === 0 ? (
         <p className="muted">{t('access.noRulesYet')}</p>
       ) : (
-        groups.map((group) => (
-          <div key={group.type} className="access-rule-group">
-            <h3>{t(`access.scope_${group.type}`)}</h3>
-            <ul className="access-rule-chips">
-              {group.rules.map((rule) => (
-                <li key={rule.id}>
-                  <button
-                    type="button"
-                    className={`access-rule-chip ${rule.tier}`}
-                    aria-label={t('access.cellLabel', {
-                      member: account.fullName,
-                      scope: rule.scopeLabel,
-                      tier: t(`access.tier_${rule.tier}`),
-                    })}
-                    onClick={() => onOpenRule(rule)}
-                  >
-                    {shortLabel(rule.scopeLabel)} · {t(`access.tier_${rule.tier}`)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
+        groups.map((group) => {
+          const open = expanded.includes(group.type);
+          const hidden = open ? 0 : Math.max(0, group.rules.length - CHIP_LIMIT);
+          const shown = hidden > 0 ? group.rules.slice(0, CHIP_LIMIT) : group.rules;
+          return (
+            <div key={group.type} className="access-rule-group">
+              <h3>{t(`access.scope_${group.type}`)}</h3>
+              <ul className="access-rule-chips">
+                {shown.map((rule) => (
+                  <li key={rule.id}>
+                    <button
+                      type="button"
+                      className={`access-rule-chip ${rule.tier}`}
+                      aria-label={t('access.cellLabel', {
+                        member: account.fullName,
+                        scope: rule.scopeLabel,
+                        tier: t(`access.tier_${rule.tier}`),
+                      })}
+                      onClick={() => onOpenRule(rule)}
+                    >
+                      {shortLabel(rule.scopeLabel)} · {t(`access.tier_${rule.tier}`)}
+                    </button>
+                  </li>
+                ))}
+                {hidden > 0 ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="access-rule-chip more"
+                      aria-label={t('access.showMoreRules', { count: hidden })}
+                      onClick={() => setExpanded((current) => [...current, group.type])}
+                    >
+                      +{hidden}
+                    </button>
+                  </li>
+                ) : null}
+                {open && group.rules.length > CHIP_LIMIT ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() =>
+                        setExpanded((current) => current.filter((type) => type !== group.type))
+                      }
+                    >
+                      {t('access.showLessRules')}
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          );
+        })
       )}
     </section>
   );
@@ -861,7 +916,7 @@ function CellDialog({
   const askConfirm = useConfirm();
   const [tier, setTier] = useState<Tier>(rule?.tier ?? 'needs_approval');
   const [note, setNote] = useState(rule?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([tier, note]);
   const check = useFormErrors({ note: secretTextRule(t, note) });
   const stepUp = useStepUpRetry(csrfToken);
 
@@ -1026,7 +1081,7 @@ function GrantToScopeDialog({
   const [query, setQuery] = useState('');
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([picked, tier, note]);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
   const stepUp = useStepUpRetry(csrfToken);
@@ -1256,7 +1311,7 @@ function MultiGrantDialog({
   const [picked, setPicked] = useState<string[]>([]);
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([picked, tier, note]);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
   const stepUp = useStepUpRetry(csrfToken);
@@ -1366,8 +1421,11 @@ function MultiGrantDialog({
         ) : (
           groups.map((group) => (
             <fieldset key={group.type} className="ff-contents">
-              <legend className="lbl-t">{t(`access.scope_${group.type}`)}</legend>
-              <ul className="pick-list">
+              <legend className="lbl-t">
+                <FamilyLabel type={group.type} label={t(`access.scope_${group.type}`)} />
+              </legend>
+              {/* Họ dài (loại thiết bị) chia 2 cột thay vì cuộn trong một ô nhỏ (Q-21). */}
+              <ul className={group.scopes.length > PICK_COLUMNS_FROM ? 'pick-list cols-2' : 'pick-list'}>
                 {group.scopes.map((scope) => {
                   const key = scopeKey(scope);
                   return (
@@ -1451,7 +1509,7 @@ function CopyFromDialog({
   const askConfirm = useConfirm();
   const stepUp = useStepUpRetry(csrfToken);
   const [sourceId, setSourceId] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([sourceId]);
   const [saving, setSaving] = useState(false);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
@@ -1656,7 +1714,7 @@ function CheckAccessDialog({
   const [ownerType, setOwnerType] = useState<SecretOwnerType>('device');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([memberId, ownerType, code]);
   const [result, setResult] = useState<(TierExplain & { label: string }) | null>(null);
   const scopeLabel = (scope: { scopeType: string; scopeRef: string }) =>
     scopes.find((item) => scopeKey(item) === scopeKey(scope))?.label ?? scope.scopeRef;

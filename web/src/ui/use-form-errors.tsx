@@ -115,3 +115,30 @@ export function useFormErrors<K extends string>(rules: FormRules<K>): FormErrors
     reset: () => setShown(false),
   };
 }
+
+/**
+ * Lỗi MÁY CHỦ của một lần gửi form (`setError(errorMessage(err))`), tự tắt khi một giá trị trong
+ * `watch` đổi.
+ *
+ * Lỗi kiểm tại chỗ của `useFormErrors` tính lại từ giá trị hiện tại nên tự đúng. Lỗi máy chủ thì
+ * là câu về giá trị LÚC GỬI: đổi loại ngăn két từ "Mã 2 lớp" sang "Mật khẩu" mà câu "Khóa bí mật
+ * chỉ gồm chữ A–Z…" vẫn đứng đó là bảo người dùng sửa một thứ không còn sai.
+ *
+ * `watch` là các STATE của form (giá trị ô, hoặc cả object `form`). Đừng đưa giá trị tính mới
+ * mỗi lần render (mảng/obj dựng tại chỗ): nó "đổi" ở mọi lần render và lỗi không bao giờ hiện.
+ * Cũng đừng đưa state mà CHÍNH nhánh báo lỗi sửa cùng lúc (vd bỏ các dòng đã ghi xong khỏi danh
+ * sách rồi `setError`): hai thay đổi vào cùng một lần render và câu lỗi tắt ngay khi vừa hiện.
+ */
+export function useSubmitError(
+  watch: readonly unknown[],
+): [string | null, (message: string | null) => void] {
+  const [error, setError] = useState<string | null>(null);
+  const [seen, setSeen] = useState(watch);
+  // Mẫu "lưu giá trị của lần render trước" của React: đặt state ngay trong render, không qua
+  // effect — effect thì lỗi cũ còn kịp vẽ ra một khung hình.
+  if (seen.length !== watch.length || seen.some((value, index) => !Object.is(value, watch[index]))) {
+    setSeen(watch);
+    if (error !== null) setError(null);
+  }
+  return [error, setError];
+}

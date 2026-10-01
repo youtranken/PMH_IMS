@@ -40,6 +40,7 @@ import {
   LICENSE_MODELS,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
+  softwareStatusQuery,
   type LicenseModel,
   type SoftwareKind,
   type SoftwareStatus,
@@ -213,10 +214,7 @@ export class SoftwareController {
       licenseModel: LICENSE_MODELS.includes(query.licenseModel as LicenseModel)
         ? query.licenseModel
         : undefined,
-      status:
-        query.status === 'live' || SOFTWARE_STATUSES.includes(query.status as SoftwareStatus)
-          ? query.status
-          : undefined,
+      status: softwareStatusQuery(query.status),
       vendorId: query.vendorId,
     };
   }

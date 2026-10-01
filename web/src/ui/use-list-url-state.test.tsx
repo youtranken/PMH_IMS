@@ -351,3 +351,34 @@ describe('useListUrlState — sắp xếp khi cột mặc định sắp GIẢM d
     expect(result.current.url.sorting).toEqual({ key: sort.key, desc });
   });
 });
+
+/*
+ * Q-20: tham số trạng thái LẠ trên URL (`?status=abc`) coi như bộ lọc mặc định — màn đọc ra `''`
+ * nên vẫn gửi bộ lọc "trừ hồ sơ cuối đời", không gửi thẳng chữ lạ lên API.
+ */
+describe('useListUrlState — giá trị lọc ngoài danh sách cho phép', () => {
+  const options = {
+    emptyFilters: { status: '', siteId: '' },
+    allowed: { status: ['in_use', 'retired', 'all'] },
+  };
+  it.each([
+    ['/devices?status=abc', ''],
+    ['/devices?status=retired', 'retired'],
+    ['/devices?status=all', 'all'],
+    ['/devices', ''],
+  ])('%s → status %j', (path, expected) => {
+    const { result } = mount(path, options);
+    expect(result.current.url.filters.status).toBe(expected);
+  });
+
+  it('giá trị lạ không tính là đang lọc', () => {
+    const { result } = mount('/devices?status=abc', options);
+    expect(result.current.url.isFiltered).toBe(false);
+    expect(result.current.url.activeCount).toBe(0);
+  });
+
+  it('ô không khai `allowed` thì giữ nguyên giá trị (mã site là UUID tự do)', () => {
+    const { result } = mount('/devices?siteId=whatever', options);
+    expect(result.current.url.filters.siteId).toBe('whatever');
+  });
+});

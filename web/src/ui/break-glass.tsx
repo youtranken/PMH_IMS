@@ -10,7 +10,7 @@ import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-
 import { Dialog, DialogCancel, DialogDescription } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { grantHoursCheck, hourSteps, requestedHours } from '@/ui/grant-hours';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
@@ -228,7 +228,7 @@ export function DecisionDialog({
   const requested = requestedHours(row.payload);
   const [hours, setHours] = useState(String(requested ?? 4));
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([hours, note]);
   const [busy, setBusy] = useState(false);
 
   /* Không âm thầm rơi về một con số mặc định: "2 tiếng" hay "0" phải bị báo, không được thành

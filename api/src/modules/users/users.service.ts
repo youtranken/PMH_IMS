@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -77,7 +77,11 @@ export class UsersService {
           )
         : undefined,
       filters.role ? eq(usersTable.role, filters.role) : undefined,
-      filters.status ? eq(usersTable.status, filters.status) : undefined,
+      filters.status === 'live'
+        ? ne(usersTable.status, 'disabled')
+        : filters.status
+          ? eq(usersTable.status, filters.status)
+          : undefined,
       filters.totp === 'none' ? isNull(usersTable.totpEnrolledAt) : undefined,
       filters.totp === 'enrolled' ? isNotNull(usersTable.totpEnrolledAt) : undefined,
     );
@@ -541,7 +545,8 @@ export class UsersService {
 /** Bộ lọc màn Tài khoản: "ai đang khóa", "admin nào chưa cài 2 lớp", "danh sách SA". */
 export interface UserListFilters {
   role?: UserRole;
-  status?: UserRecord['status'];
+  /** `live` = trừ đã vô hiệu hóa — mặc định của màn Người dùng IMS (Q-20). */
+  status?: UserRecord['status'] | 'live';
   /** `none` = chưa cài 2 lớp, `enrolled` = đã cài. */
   totp?: 'none' | 'enrolled';
 }

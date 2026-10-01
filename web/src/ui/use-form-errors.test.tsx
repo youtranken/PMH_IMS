@@ -7,7 +7,7 @@ import i18n from '@/lib/i18n';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { DatePicker } from '@/ui/date-picker';
-import { REASON_MIN, reasonRule, secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { REASON_MIN, reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 
 /**
  * Kiểm form bằng tiếng Việt thay cho bong bóng của trình duyệt (DoD 6).
@@ -158,3 +158,44 @@ describe('reasonRule', () => {
   });
 });
 
+/*
+ * Lỗi máy chủ trả về sau khi bấm Lưu (vd "Khóa bí mật chỉ gồm chữ A–Z…" của loại Mã 2 lớp) là
+ * câu về các giá trị LÚC GỬI. Người dùng đổi loại / sửa ô thì câu đó hết đúng — để nó đứng lại
+ * là bảo người ta sửa một thứ không còn sai.
+ */
+function SubmitDemo() {
+  const [kind, setKind] = useState('totp');
+  const [note, setNote] = useState('');
+  const [error, setError] = useSubmitError([kind]);
+  return (
+    <div>
+      <button type="button" onClick={() => setError('Khóa bí mật sai.')}>
+        Gửi
+      </button>
+      <button type="button" onClick={() => setKind('password')}>
+        Đổi loại
+      </button>
+      <button type="button" onClick={() => setNote((n) => `${n}x`)}>
+        Sửa ghi chú
+      </button>
+      <span>{note}</span>
+      {error ? <p role="alert">{error}</p> : null}
+    </div>
+  );
+}
+
+describe('useSubmitError — lỗi máy chủ tự tắt khi giá trị nó nói tới đổi', () => {
+  it('giữ lỗi khi thứ không theo dõi đổi; tắt khi một giá trị theo dõi đổi', async () => {
+    const user = userEvent.setup();
+    render(<SubmitDemo />);
+    await user.click(screen.getByRole('button', { name: 'Gửi' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Khóa bí mật sai.');
+    await user.click(screen.getByRole('button', { name: 'Sửa ghi chú' }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Đổi loại' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // Gửi lại với giá trị mới thì lỗi mới hiện bình thường.
+    await user.click(screen.getByRole('button', { name: 'Gửi' }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+});

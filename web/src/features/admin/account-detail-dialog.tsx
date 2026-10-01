@@ -33,6 +33,7 @@ export function AccountDetailDialog({
   onOpenSessions,
   onClearLockout,
   onEdit,
+  vaultAccessPath,
 }: {
   account: AccountRef;
   facts: { label: string; value: ReactNode }[];
@@ -44,6 +45,8 @@ export function AccountDetailDialog({
    */
   onClearLockout?: () => void;
   onEdit: () => void;
+  /** Chỉ Thành viên có dòng quyền két (SA/Admin xem theo vai) — có thì hiện link ở "Xem thêm". */
+  vaultAccessPath?: string;
 }) {
   const { t } = useTranslation();
   const lockouts = useQuery({
@@ -151,6 +154,11 @@ export function AccountDetailDialog({
           >
             {t('accounts.auditAbout')}
           </Link>
+          {vaultAccessPath ? (
+            <Link className="linkbtn sm" to={vaultAccessPath}>
+              {t('accounts.vaultAccess')}
+            </Link>
+          ) : null}
         </div>
       </section>
     </Dialog>

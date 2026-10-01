@@ -15,7 +15,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
@@ -85,7 +85,7 @@ export function ServiceAccountForm({
   const stepUp = useStepUpRetry(csrfToken);
   const departments = useDepartments();
   const [form, setForm] = useState<FormState>(() => initialState(row));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form]);
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /*

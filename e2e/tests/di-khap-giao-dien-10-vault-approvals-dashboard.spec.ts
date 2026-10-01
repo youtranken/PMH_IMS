@@ -333,14 +333,18 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---- Khối "Luật của két" ---- */
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Luật của két' })).toBeVisible();
+    /* Luật két nằm sau nút "Luật két" (Q-21), không chiếm chỗ cố định dưới bảng. */
+    await expect(page.getByRole('heading', { level: 2, name: 'Luật của két' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Luật két', exact: true }).click();
+    const rules = page.getByRole('dialog', { name: 'Luật của két' });
+    await expect(rules).toBeVisible();
     /*
-     * `<ul class="vault-rules">` là danh sách DUY NHẤT trong `<main>` của màn này, nên gom
-     * `listitem` là gom đúng bốn gạch luật. So nguyên văn: đây là chỗ duy nhất trong sản phẩm
-     * nói cho người dùng biết luật mở két, sửa chữ ở đây phải là một quyết định có ý thức.
+     * `<ul class="vault-rules">` là danh sách DUY NHẤT trong hộp này, nên gom `listitem` là
+     * gom đúng bốn gạch luật. So nguyên văn: đây là chỗ duy nhất trong sản phẩm nói cho người
+     * dùng biết luật mở két, sửa chữ ở đây phải là một quyết định có ý thức.
      */
     expect(
-      await page.getByRole('main').getByRole('listitem').allTextContents(),
+      await rules.getByRole('listitem').allTextContents(),
       '"Luật của két" phải đủ BỐN gạch: cất · gõ mã · tự ẩn · ghi nhật ký',
     /*
      * Vì sao từng câu nói đúng như thế:
@@ -359,6 +363,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Giá trị hiện ra rồi tự ẩn (có đồng hồ đếm ngược). Không có nút sao chép hàng loạt.',
       'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xóa được.',
     ]);
+    await rules.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await expect(rules).toBeHidden();
   });
 
   /* ================================================================== *

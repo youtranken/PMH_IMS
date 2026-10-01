@@ -13,7 +13,9 @@ describe('ispStatusesOf — lọc nhiều trạng thái một lượt', () => {
     expect(ispStatusesOf(text)).toEqual(expected);
   });
 
-  it('chữ lạ bị từ chối thay vì lặng lẽ bỏ qua (lọc sai trông y như lọc đúng)', () => {
-    expect(() => ispStatusesOf('active,dead')).toThrow();
+  /* Q-20: tham số trạng thái lạ coi như bộ lọc mặc định — đường còn chạy, ẩn đường đã thanh lý.
+     400 thì cả màn thành trang lỗi; bỏ qua thì lặng lẽ bày lại đường đã thanh lý. */
+  it.each(['dead', 'active,dead', ',,x'])('chữ lạ %j → mặc định đang chạy + tạm ngưng', (text) => {
+    expect(ispStatusesOf(text)).toEqual(['active', 'suspended']);
   });
 });

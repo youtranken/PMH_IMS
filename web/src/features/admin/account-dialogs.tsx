@@ -4,7 +4,7 @@ import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { reasonRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { AccountFootprint } from './account-footprint';
 import { RoleChoice } from './role-choice';
 
@@ -52,7 +52,7 @@ export function AccountStatusDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: reasonRule(t, reason) });
 
   return (
@@ -152,7 +152,7 @@ export function RoleDialog({
   const { t } = useTranslation();
   const [role, setRole] = useState<Me['role']>(account.role);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([role]);
   const unchanged = role === account.role;
 
   return (

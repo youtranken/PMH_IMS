@@ -69,7 +69,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
     await page.goto('/admin/accounts');
     await searchAndWaitForFilter(page, acc.email);
     const row = page.getByRole('row', { name: new RegExp(acc.email) });
-    await expect(row.getByText('Bắt buộc – chưa cài')).toBeVisible();
+    await expect(row.getByText('Bắt buộc – chưa kích hoạt')).toBeVisible();
 
     await rowAction(page, acc.fullName, 'Bỏ bắt buộc 2 lớp khi đăng nhập');
     await confirmAction(page, 'Bỏ bắt buộc 2 lớp khi đăng nhập');
@@ -79,7 +79,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
 
     await rowAction(page, acc.fullName, 'Bắt buộc 2 lớp khi đăng nhập');
     await confirmAction(page, 'Bắt buộc 2 lớp khi đăng nhập');
-    await expect(row.getByText('Bắt buộc – chưa cài')).toBeVisible();
+    await expect(row.getByText('Bắt buộc – chưa kích hoạt')).toBeVisible();
     expect(sql(`SELECT totp_login_required FROM users WHERE id = '${acc.id}'`)).toBe('t');
   });
 

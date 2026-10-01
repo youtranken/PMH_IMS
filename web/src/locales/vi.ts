@@ -1414,7 +1414,7 @@ export default {
     toastReactivated: 'Đã bật lại {{name}}.',
     totpColumn: '2 lớp',
     totpStateEnrolled: 'Đã cài',
-    totpStateMissing: 'Bắt buộc – chưa cài',
+    totpStateMissing: 'Bắt buộc – chưa kích hoạt',
     totpStateOptional: 'Không bắt buộc',
     totpRequireOn: 'Bắt buộc 2 lớp khi đăng nhập',
     totpRequireOff: 'Bỏ bắt buộc 2 lớp khi đăng nhập',
@@ -1469,7 +1469,6 @@ export default {
     toastRoleChanged: 'Đã đổi vai trò của {{name}} thành {{role}}.',
     resetAlsoUnlock: 'Mở khóa luôn (tài khoản đang bị khóa)',
     vaultAccess: 'Quyền két sắt',
-    auditLog: 'Nhật ký thao tác',
     clearLockout: 'Gỡ tạm chặn',
     confirmClearLockout: 'Bộ đếm gõ sai của {{name}} được xóa, người dùng đăng nhập lại được ngay.',
     toastClearLockout: 'Đã gỡ tạm chặn cho {{name}}.',
@@ -1486,7 +1485,6 @@ export default {
     filterRole: 'Lọc theo vai trò',
     allRoles: 'Mọi vai trò',
     filterStatus: 'Lọc theo trạng thái',
-    allStatuses: 'Mọi trạng thái',
     filterTotp: 'Lọc theo xác thực 2 lớp',
     allTotp: 'Mọi trạng thái 2 lớp',
     totpNone: 'Chưa cài 2 lớp',
@@ -2083,7 +2081,7 @@ export default {
   },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Hồ sơ đang có mật khẩu trong két: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+    subtitle: 'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
     whereItLives:
       'Trang này chỉ liệt kê hồ sơ và số ngăn, không hiện tên hay giá trị từng ngăn. Bấm "Mở két" để xem từng ngăn.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',
@@ -2111,6 +2109,7 @@ export default {
     noHitHint: 'Thử tìm bằng mã máy (vd SRV-01), tên hoặc site.',
     noHitHintKinds: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
     rulesTitle: 'Luật của két',
+    rulesButton: 'Luật két',
     rule1: 'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
     /* KHÔNG nói "mỗi phiên": luật thật là một khoảng ÂN HẠN do `secret.stepup_grace_minutes`
        quy định, và chính màn hình có đồng hồ đếm ngược nói điều đó (`reveal-dialog.tsx` —
@@ -2479,6 +2478,10 @@ export default {
     allFamilies: 'Tất cả nhóm',
     scope_device_site: 'Thiết bị theo site',
     scope_device_type: 'Thiết bị theo loại',
+    deviceUnionTip:
+      'Cấp theo site là xem được mọi thiết bị ở site đó, bất kể loại. Cấp theo loại là mọi thiết bị loại đó ở mọi site. Hai cách cộng dồn: khớp dòng nào cũng thấy; nhiều dòng cùng khớp thì lấy quyền rộng nhất.',
+    showMoreRules: 'Xem thêm {{count}} quyền',
+    showLessRules: 'Thu gọn',
     scope_software_kind: 'Phần mềm',
     scope_service_account_kind: 'Tài khoản dịch vụ',
     scope_isp_provider: 'Đường truyền',
@@ -2972,6 +2975,9 @@ export default {
     save: 'Lưu nhóm này',
     discard: 'Bỏ thay đổi',
     dirty: 'Có {{count}} thay đổi chưa lưu',
+    leaveTitle: 'Chưa lưu thay đổi',
+    leaveMessage: 'Nhóm này còn {{count}} thay đổi chưa lưu. Lưu trước khi sang nhóm khác, hay bỏ các thay đổi đó?',
+    leaveStay: 'Ở lại',
     reviewTitle: 'Xác nhận đổi tham số',
     reviewHint: 'Có hiệu lực trong vòng 30 giây cho mọi người dùng. Mỗi thay đổi ghi một dòng nhật ký.',
     reviewConfirm: 'Lưu thay đổi',

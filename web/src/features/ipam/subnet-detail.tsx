@@ -20,7 +20,7 @@ import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
-import { reasonRule, secretTextRule, useFormErrors } from "@/ui/use-form-errors";
+import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from "@/ui/use-form-errors";
 import { FilterBar } from "@/ui/filter-bar";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
@@ -817,7 +817,7 @@ export function IpForm({
   const departments = useDepartments();
   const [assignedAt, setAssignedAt] = useState(record.assignedAt ?? "");
   const [note, setNote] = useState(record.note ?? "");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([device, usedBy, assignedAt, note]);
   const check = useFormErrors({
     owner: record.status === "assigned" ? ownerRule(t, device.deviceId, usedBy) : null,
     note: secretTextRule(t, note),
@@ -961,7 +961,7 @@ function TransitionDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: secretTextRule(t, reason) });
 
   const move = useApiMutation<Record<string, unknown>, unknown>(
@@ -1154,7 +1154,7 @@ function VoidAddressDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: reasonRule(t, reason) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,

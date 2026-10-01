@@ -15,7 +15,7 @@ import { SegmentedRadio } from '@/ui/segmented-radio';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
 import { useDebouncedValue } from '@/ui/use-debounced-value';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types';
 
@@ -73,7 +73,9 @@ export function AssignDialog({
     (!editing &&
       software.seatTotal !== null &&
       software.seatUsed + devices.length > software.seatTotal);
-  const [error, setError] = useState<string | null>(null);
+  /* KHÔNG theo dõi `devices`: gán lỗi giữa lô thì chính lượt gán rút các máy đã xong khỏi danh
+     sách, và câu lỗi nêu máy hỏng phải còn đó. */
+  const [error, setError] = useSubmitError([note, cost, contract, startDate, endDate, overSeatReason]);
   /* Ba cách chọn máy, mỗi lúc chỉ bày MỘT ô: tìm từng máy, hoặc cả lô theo phòng ban / người
      sử dụng (mua 10 ghế cho phòng Kế toán thì chọn "Kế toán" một lần, rồi bỏ bớt máy không
      cần). Kết quả luôn là chip MÁY: ghế license gắn vào máy (device_id NOT NULL), phòng ban

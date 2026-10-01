@@ -9,7 +9,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import {
   formerDevices,
@@ -48,7 +48,7 @@ export function RestoreDialog({
   const [endDate, setEndDate] = useState(needsEnd ? addYearsIso(today, 1) : '');
   const [note, setNote] = useState(software.note ?? '');
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([endDate, note, picked]);
   const hasSeats = supportsSeats(software.kind);
 
   const history = useQuery({

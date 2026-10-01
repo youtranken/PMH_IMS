@@ -94,12 +94,19 @@ export function useListUrlState<F extends Record<string, string>>(options: {
    * về đã có sẵn từ khoá, nên `buildFilterQuery(filters)` của màn không phải đổi một chữ.
    */
   searchKey?: keyof F;
+  /**
+   * Giá trị hợp lệ của từng ô lọc (thường là `status`). Giá trị trên URL không nằm trong danh
+   * sách đọc ra `''` — tức bộ lọc MẶC ĐỊNH (Q-20: `?status=abc` vẫn ẩn hồ sơ cuối đời), thay vì
+   * gửi thẳng chữ lạ lên API rồi nhận bảng rỗng / trang lỗi / cả hồ sơ đã thanh lý.
+   */
+  allowed?: { [K in keyof F]?: readonly string[] };
 }): ListUrlState<F> {
   const {
     emptyFilters,
     defaultLimit = 20,
     defaultSort = { key: '', desc: false },
     searchKey,
+    allowed,
   } = options;
   const [params, setParams] = useSearchParams();
 
@@ -113,7 +120,9 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   const filters = useMemo(() => {
     const out = { ...emptyFilters };
     for (const key of Object.keys(emptyFilters)) {
-      (out as Record<string, string>)[key] = params.get(key) ?? '';
+      const value = params.get(key) ?? '';
+      const ok = (allowed as Record<string, readonly string[] | undefined> | undefined)?.[key];
+      (out as Record<string, string>)[key] = value && ok && !ok.includes(value) ? '' : value;
     }
     /*
      * Ô tìm sống dưới khóa NGẮN `q` trên URL, nhưng mọi màn danh sách đã có sẵn một hàm

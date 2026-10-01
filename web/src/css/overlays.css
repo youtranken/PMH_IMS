@@ -3,10 +3,8 @@
   padding: var(--space-4) var(--space-6);
   border-radius: var(--r);
   font-size: var(--fs-sm);
-  /* Cùng luật với `.page-header .sub`: trang rộng gần trọn màn nhưng CHỮ thì không nên dài
-     theo. Đoạn giới thiệu ở màn Két sắt đang chạy ~200 ký tự một dòng trên màn 1920 —
-     gấp ba ngưỡng đọc được (60–75). Bảng rộng, chữ hẹp. */
-  max-width: 68ch;
+  /* Không trần bề ngang (Q-21): khung báo thường một hai câu; ép 68ch thì câu ngắn cũng xuống
+     dòng trong khi nửa phải màn rộng bỏ trống. */
   margin-bottom: var(--space-7);
   border: 1px solid transparent;
   animation: rowIn 0.2s var(--ease) both;
