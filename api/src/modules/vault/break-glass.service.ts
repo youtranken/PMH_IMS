@@ -89,6 +89,24 @@ export interface BreakGlassViewer {
   sessionId: string;
 }
 
+/**
+ * Quyền mở két của MỘT người ở MỘT phiên trên một chủ thể, khi đã biết tầng. Một câu trả lời
+ * dùng chung cho nút Xem (`verdictFor`) và cho việc đọc ghi chú ngăn (`VaultController.list`).
+ */
+export interface RevealAccess {
+  /** Grant còn hạn đã gắn vào CHÍNH phiên này. */
+  grant: ApprovalRecord | null;
+  /** Grant còn hạn chưa gắn phiên nào — lần Xem đầu (qua mã 6 số) sẽ gắn nó vào phiên này. */
+  claimable: ApprovalRecord | null;
+  /** Bấm Xem được không. Grant chưa gắn cũng tính: lần Xem đầu gắn nó. */
+  canReveal: boolean;
+  /**
+   * Đọc được ghi chú ngăn không (SEC-20). Chặt hơn `canReveal`: grant chưa gắn thì CHƯA —
+   * trước lần Xem đầu, phiên nào của người xin cũng "có thể" nhận quyền (Q-15).
+   */
+  canReadNotes: boolean;
+}
+
 export interface BreakGlassRequestInput {
   ownerType: SecretOwnerType;
   ownerId: string;
@@ -398,9 +416,8 @@ export class BreakGlassService implements OnModuleInit {
       };
     }
 
-    const [grant, claimable, anyGrant, pending, latest, maxGrantHours] = await Promise.all([
-      this.grantOf(viewer, ownerType, ownerId),
-      this.claimableOf(viewer, ownerType, ownerId),
+    const [access, anyGrant, pending, latest, maxGrantHours] = await Promise.all([
+      this.revealAccess(viewer, ownerType, ownerId, tier),
       this.approvals.activeGrantFor({
         kind: BREAK_GLASS_KIND,
         requester: memberEmail,
@@ -419,14 +436,14 @@ export class BreakGlassService implements OnModuleInit {
       ),
       this.maxGrantHours(),
     ]);
+    const { grant, claimable, canReveal } = access;
     const last = latest.items[0];
     const live = grant ?? claimable;
 
     return {
       tier,
       tierLabel: tierLabel(tier),
-      // Chưa xem lần nào cũng là "xem được": lần bấm Xem đầu tiên gắn quyền vào phiên này.
-      canReveal: live !== null,
+      canReveal,
       // Đang có quyền dùng được hoặc đang có yêu cầu treo thì KHÔNG xin thêm — hai yêu cầu
       // cùng nội dung chỉ làm người duyệt phải quyết hai lần cho một việc.
       canRequest: live === null && pending === null,
@@ -485,7 +502,8 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
-   * Hàng rào ở đường đọc METADATA. Nhẹ hơn `assertCanReveal`: chỉ cần KHÔNG bị cấm.
+   * Hàng rào ở đường đọc METADATA. Nhẹ hơn `assertCanReveal`: chỉ cần KHÔNG bị cấm. Trả tầng
+   * để nơi gọi khỏi hỏi ma trận lần hai (`revealAccess`).
    *
    * Cần-duyệt mà chưa có grant vẫn xem được tên gọi — đó chính là thứ để họ biết phải xin cái
    * gì. Không cho thì màn của Member trống trơn và họ phải đi hỏi người khác "máy này có mật
@@ -495,7 +513,7 @@ export class BreakGlassService implements OnModuleInit {
     memberEmail: string,
     ownerType: SecretOwnerType,
     ownerId: string,
-  ): Promise<void> {
+  ): Promise<AccessTier> {
     const tier = await this.access.tierFor(memberEmail, ownerType, ownerId);
     if (tier === 'denied') {
       throw new ForbiddenException({
@@ -503,26 +521,35 @@ export class BreakGlassService implements OnModuleInit {
         message: 'Bạn không có quyền trên đối tượng này.',
       });
     }
+    return tier;
   }
 
   /**
-   * Người này mở được két của chủ thể này NGAY BÂY GIỜ không — cùng câu trả lời với
-   * `verdictFor(...).canReveal`, không kèm phần dựng nút.
-   *
-   * Dùng để quyết ai đọc được GHI CHÚ của ngăn (SEC-20): ghi chú là cột dạng rõ, không qua mã
-   * 6 số, không để vết "đã xem". Chỉ người đằng nào cũng mở được giá trị mới được đọc nó; cần-
-   * duyệt mà chưa có quyền thì chỉ thấy tên ngăn. Tầng lạ (vai/tầng thêm sau) = không (AD-9).
+   * Người này, ở phiên này, làm được gì với két của chủ thể — khi đã biết tầng. Tầng lạ (vai /
+   * tầng thêm sau) = không gì cả (AD-9). Grant hỏi song song, mỗi lần gọi, không cache (AD-6).
    */
-  async canRevealNow(
+  async revealAccess(
     viewer: BreakGlassViewer,
     ownerType: SecretOwnerType,
     ownerId: string,
-  ): Promise<boolean> {
-    const tier = await this.access.tierFor(viewer.email, ownerType, ownerId);
-    if (tier === 'whitelist') return true;
-    if (tier !== 'needs_approval') return false;
-    if ((await this.grantOf(viewer, ownerType, ownerId)) !== null) return true;
-    return (await this.claimableOf(viewer, ownerType, ownerId)) !== null;
+    tier: AccessTier,
+  ): Promise<RevealAccess> {
+    if (tier === 'whitelist') {
+      return { grant: null, claimable: null, canReveal: true, canReadNotes: true };
+    }
+    if (tier !== 'needs_approval') {
+      return { grant: null, claimable: null, canReveal: false, canReadNotes: false };
+    }
+    const [grant, claimable] = await Promise.all([
+      this.grantOf(viewer, ownerType, ownerId),
+      this.claimableOf(viewer, ownerType, ownerId),
+    ]);
+    return {
+      grant,
+      claimable,
+      canReveal: (grant ?? claimable) !== null,
+      canReadNotes: grant !== null,
+    };
   }
 
   /**

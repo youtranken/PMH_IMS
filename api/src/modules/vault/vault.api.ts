@@ -101,11 +101,11 @@ export class VaultApiService implements OnModuleInit, OwnerAccessChecker {
    * chủ thể của FILE nhưng không phải của KÉT — với chúng không tồn tại khái niệm "tầng quyền",
    * nên bên gọi phải tự quyết, xem chú thích ở `files.controller.ts`.
    */
-  assertMemberCanSee(
+  async assertMemberCanSee(
     memberEmail: string,
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<void> {
-    return this.breakGlass.assertCanSeeMetadata(memberEmail, ownerType, ownerId);
+    await this.breakGlass.assertCanSeeMetadata(memberEmail, ownerType, ownerId);
   }
 }

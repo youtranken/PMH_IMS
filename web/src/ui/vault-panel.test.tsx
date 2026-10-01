@@ -550,6 +550,36 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     expect(screen.getByRole('button', { name: 'Trả quyền' })).toBeInTheDocument();
   });
 
+  /* SEC-20 + Q-15: ghi chú ngăn chỉ về khi grant đã gắn phiên này — lần Xem đầu gắn nó, nên
+     danh sách phải tải lại để ghi chú hiện ra, không đợi người dùng F5. */
+  it('lần Xem đầu (gắn quyền vào phiên): tải lại danh sách ngăn để ghi chú hiện ra', async () => {
+    const calls = mockRelease({
+      ...NEEDS_APPROVAL,
+      canReveal: true,
+      canRequest: false,
+      claimable: { id: 'g1', expiresAt: '2026-09-20T05:30:00.000Z' },
+      grantSecondsLeft: 3600,
+    });
+    const base = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'POST' && String(input).includes('/reveal')) {
+        calls.push({ url: String(input), method: 'POST' });
+        return Promise.resolve(
+          jsonResponse(200, { value: 'Sup3r#Secret', revealSeconds: 60, stepUpSecondsLeft: 600 }),
+        );
+      }
+      return base(input, init);
+    });
+    renderPanel({ ...ME, role: 'member' });
+    const listLoads = () =>
+      calls.filter((c) => c.method === 'GET' && /\/vault\/secrets\?/.test(c.url)).length;
+    await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+    expect(await screen.findByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
+    const before = listLoads();
+    await vi.waitFor(() => expect(listLoads()).toBeGreaterThan(1));
+    expect(before).toBeGreaterThanOrEqual(1);
+  });
+
   it('hộp xin nói trước: lần xem đầu gắn quyền vào phiên, đăng xuất hay hết phiên là hết', async () => {
     mockRelease(NEEDS_APPROVAL);
     renderPanel({ ...ME, role: 'member' });
