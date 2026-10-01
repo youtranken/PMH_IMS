@@ -32,7 +32,7 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     const type = await scratch.pool.query<{ id: string }>(
       `INSERT INTO device_type (name) VALUES ('Camera tim kiem') RETURNING id`,
     );
-    for (const code of ['CAM-TIM-01', 'PC-TIM-02']) {
+    for (const code of ['CAM-TIM-01', 'PC-TIM-02', 'CAM-TIM-03']) {
       const { rows } = await scratch.pool.query<{ id: string }>(
         `INSERT INTO device (code, name, device_type_id, status)
          VALUES ($1, $2, $3, 'in_use') RETURNING id`,
@@ -98,9 +98,9 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     };
     await ip(forbiddenLabel, '10.77.30.5', { device: 'CAM-TIM-01' });
     await ip(lanSubnet, '10.77.1.53', { usedBy: 'Chị Bình — Kế toán' });
-    await ip(lanSubnet, '10.77.1.54', { device: 'CAM-TIM-01', usedBy: 'Cổng phụ' });
+    await ip(lanSubnet, '10.77.1.54', { device: 'PC-TIM-02', usedBy: 'Cổng phụ' });
     await ip(lanSubnet, '10.77.1.60', { usedBy: 'gõ nhầm', voided: true });
-    await ip(old, '10.88.0.9', { device: 'CAM-TIM-01' });
+    await ip(old, '10.88.0.9', { device: 'CAM-TIM-03' });
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -128,9 +128,11 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     expect(await addresses.search('10.77.1.5')).toEqual([]);
   });
 
-  it('gõ mã máy → mọi IP của máy đó ở dải đang dùng (không lôi dải đã ẩn ra)', async () => {
+  // Một máy một IP (Q-20): CAM-TIM-03 chỉ có IP trong dải đã ẩn nên không hiện.
+  it('gõ mã máy → IP của các máy khớp ở dải đang dùng (không lôi dải đã ẩn ra)', async () => {
     const hits = await addresses.search('cam-tim');
-    expect(hits.map((h) => h.address)).toEqual(['10.77.1.54', '10.77.30.5']);
+    expect(hits.map((h) => h.address)).toEqual(['10.77.30.5']);
+    expect((await addresses.search('pc-tim')).map((h) => h.address)).toEqual(['10.77.1.54']);
   });
 
   it('gõ tên người, không dấu → tìm được, bỏ qua hồ sơ đã ẩn', async () => {

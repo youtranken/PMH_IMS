@@ -869,12 +869,13 @@ export function DeviceDetail({ me }: { me: Me }) {
                     </button>
                   ) : null}
                   {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
-                      trang tìm ô trống rồi gõ lại mã máy này. Máy đã có IP (cấp thêm) hoặc chưa
-                      đọc được khu IP thì nút đứng ở đây; chắc chắn chưa có IP thì nó là nút
-                      chính trong ô "IP quản trị" phía trên. */}
+                      trang tìm ô trống rồi gõ lại mã máy này. Chắc chắn chưa có IP thì nút là
+                      nút chính trong ô "IP quản trị" phía trên. Máy đã có IP thì là "Đổi IP"
+                      (Q-20 — một máy một IP); chưa đọc được khu IP thì vẫn "Cấp IP", API chặn
+                      nếu máy thật ra đã có IP. */}
                   {ipKnownEmpty ? null : (
                     <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                      {t("devices.assignIp")}
+                      {t(firstIp ? "devices.changeIp" : "devices.assignIp")}
                     </button>
                   )}
                 </div>
@@ -1080,13 +1081,14 @@ export function DeviceDetail({ me }: { me: Me }) {
       {assigningIp ? (
         <DeviceIpAssign
           device={{ id: item.id, code: item.code }}
+          change={!!firstIp}
           csrfToken={me.csrfToken}
           onClose={() => setAssigningIp(false)}
           onDone={() => {
             setAssigningIp(false);
-            toast({ message: t("devices.ipAssigned") });
+            toast({ message: t(firstIp ? "devices.ipChanged" : "devices.ipAssigned") });
             void queryClient.invalidateQueries({ queryKey: ["devices", id] });
-            void queryClient.invalidateQueries({ queryKey: ["ipam", "subnets"] });
+            void queryClient.invalidateQueries({ queryKey: ["ipam"] });
           }}
         />
       ) : null}

@@ -112,6 +112,19 @@ export class TransitionDto {
   @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 }
 
+/**
+ * "Đổi IP" của một thiết bị (Q-20) — địa chỉ mới; máy lấy từ hồ sơ IP đang giữ, không nhận từ
+ * body, để không ai dùng cửa này chuyển IP sang một máy khác.
+ */
+export class ChangeIpDto {
+  @IsUUID(undefined, { message: 'Mã dải không hợp lệ.' }) subnetId!: string;
+  @IsString() @Length(1, 15) address!: string;
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày cấp phải là ngày có thật, dạng YYYY-MM-DD.' })
+  assignedAt?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() reason?: string;
+}
+
 /** Xóa hồ sơ IP nhập nhầm — LUÔN phải có lý do, vì vết duy nhất còn lại nằm trong nhật ký. */
 export class VoidDto {
   @IsString() @Length(3, 500) @NoSecretText() reason!: string;
@@ -533,6 +546,27 @@ export class IpamController {
       usedBy: body.usedBy,
       assignedAt: body.assignedAt,
       note: body.note,
+    });
+  }
+
+  /**
+   * ĐỔI IP (Q-20): thu hồi IP máy đang giữ và cấp địa chỉ mới trong MỘT transaction. Cùng mức
+   * quyền với Cấp IP / Thu hồi — đây chỉ là hai việc đó gộp lại cho khỏi hở giữa chừng.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Post('addresses/:id/change')
+  @Audited('ip.changed', 'ip_address', { writtenByService: true })
+  changeAddress(
+    @Param() params: IdParamDto,
+    @Body() body: ChangeIpDto,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.addresses.changeAddress(actor(req), params.id, {
+      subnetId: body.subnetId,
+      address: body.address,
+      assignedAt: body.assignedAt,
+      note: body.note,
+      reason: body.reason,
     });
   }
 

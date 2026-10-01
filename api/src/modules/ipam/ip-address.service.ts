@@ -16,6 +16,7 @@ import {
   conflictOnUnique,
   escapeLike,
   imsNormLike,
+  pgConstraint,
   pgErrorCode,
 } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
@@ -35,6 +36,7 @@ import {
 import { describePortRange } from './nat-rules';
 import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
 import { SubnetService } from './subnet.service';
+import { DEVICE_ONE_IP_CONSTRAINT, deviceHasIp } from './ip-one-per-device';
 
 export type { IpStatus };
 
@@ -451,44 +453,149 @@ export class IpAddressService {
     const cidr = await this.subnets.cidrOf(input.subnetId);
     const address = this.requireHost(input.address, cidr);
     requireOwner(input.deviceId, input.usedBy);
+
+    try {
+      const row = await this.db.transaction((tx) =>
+        this.insertWithin(tx, actor, { ...input, address }),
+      );
+      return (await this.decorate([row]))[0];
+    } catch (error) {
+      throw this.translate(error, address, cidr);
+    }
+  }
+
+  /** Thân của `create` — `changeAddress` dùng lại trong transaction của nó. `address` đã kiểm. */
+  private async insertWithin(
+    tx: Tx,
+    actor: string,
+    input: IpAddressInput,
+  ): Promise<typeof ipAddressTable.$inferSelect> {
     const status = input.status ?? 'assigned';
+    const address = input.address;
+    await this.requireDeviceWithin(tx, input.deviceId);
+    if (isOccupying(status)) await this.assertDeviceHasNoIpWithin(tx, input.deviceId);
+    const rows = await tx
+      .insert(ipAddressTable)
+      .values({
+        subnetId: input.subnetId,
+        address,
+        deviceId: input.deviceId || null,
+        usedBy: input.usedBy?.trim() || null,
+        assignedBy: actor,
+        assignedAt: input.assignedAt || null,
+        status,
+        note: input.note?.trim() || null,
+      })
+      .returning();
+    await this.audit.appendWithin(tx, {
+      actor,
+      action: 'ip.created',
+      objectType: 'ip_address',
+      objectId: rows[0].id,
+      detail: { address, status },
+    });
+    await tx.insert(ipHistoryTable).values({
+      ipAddressId: rows[0].id,
+      action: 'ip.created',
+      actor,
+      toStatus: status,
+      changes: {
+        address,
+        deviceId: input.deviceId || null,
+        usedBy: input.usedBy?.trim() || null,
+        reason: input.reason?.trim() || null,
+      },
+    });
+    return rows[0];
+  }
+
+  /**
+   * ĐỔI IP của một thiết bị (Q-20): thu hồi IP đang giữ về pool rồi cấp địa chỉ mới, trong MỘT
+   * transaction (AD-5).
+   *
+   * Hai cú bấm rời (Thu hồi, rồi Cấp IP) thì giữa chừng máy không có IP nào trong sổ, và nếu
+   * bước hai hỏng (địa chỉ vừa bị người khác cấp) thì máy mất luôn IP cũ. Gộp lại thì hỏng ở
+   * bước nào cũng rollback về đúng trạng thái trước.
+   *
+   * Đi qua `transitionWithin` / `insertWithin` chứ không tự UPDATE: hàng rào NAT, CAS, chủ cũ
+   * trong lịch sử và luật một-máy-một-IP phải là MỘT bản cho mọi đường cấp.
+   */
+  async changeAddress(
+    actor: string,
+    id: string,
+    input: {
+      subnetId: string;
+      address: string;
+      assignedAt?: string | null;
+      note?: string | null;
+      reason?: string | null;
+    },
+  ): Promise<IpAddressRecord> {
+    const cidr = await this.subnets.cidrOf(input.subnetId);
+    const address = this.requireHost(input.address, cidr);
 
     try {
       const row = await this.db.transaction(async (tx) => {
-        await this.requireDeviceWithin(tx, input.deviceId);
-        const rows = await tx
-          .insert(ipAddressTable)
-          .values({
+        const current = await this.requireAliveWithin(tx, id, 'update');
+        if (!current.deviceId || !isOccupying(current.status as IpStatus)) {
+          throw new BadRequestException({
+            code: 'IP_CHANGE_NEEDS_DEVICE',
+            message: 'Chỉ đổi được IP đang cấp cho một thiết bị.',
+          });
+        }
+        const from = hostOf(current.address);
+        if (current.subnetId === input.subnetId && from === address) {
+          throw new BadRequestException({
+            code: 'IP_CHANGE_SAME',
+            message: `Thiết bị đang giữ đúng ${address}. Chọn một địa chỉ khác.`,
+          });
+        }
+        const deviceId = current.deviceId;
+        const reason = input.reason?.trim() || `Đổi IP: ${from} → ${address}`;
+        await this.transitionWithin(tx, actor, id, 'free', { reason });
+
+        const existing = await tx
+          .select()
+          .from(ipAddressTable)
+          .where(
+            and(
+              eq(ipAddressTable.subnetId, input.subnetId),
+              sql`host(${ipAddressTable.address}) = ${address}`,
+              isNull(ipAddressTable.voidedAt),
+            ),
+          )
+          .for('update');
+        let next: typeof ipAddressTable.$inferSelect;
+        if (existing.length === 0) {
+          next = await this.insertWithin(tx, actor, {
             subnetId: input.subnetId,
             address,
-            deviceId: input.deviceId || null,
-            usedBy: input.usedBy?.trim() || null,
-            assignedBy: actor,
-            assignedAt: input.assignedAt || null,
-            status,
-            note: input.note?.trim() || null,
-          })
-          .returning();
+            deviceId,
+            assignedAt: input.assignedAt || isoDateInTz(await this.timezone()),
+            note: input.note,
+            reason,
+          });
+        } else if (isOccupying(existing[0].status as IpStatus)) {
+          throw new ConflictException({
+            code: 'IP_TAKEN',
+            message: `Địa chỉ ${address} đang cấp cho chỗ khác. Chọn một địa chỉ còn trống.`,
+          });
+        } else {
+          next = await this.transitionWithin(tx, actor, existing[0].id, 'assigned', {
+            deviceId,
+            assignedAt: input.assignedAt,
+            note: input.note,
+            reason,
+          });
+        }
         await this.audit.appendWithin(tx, {
           actor,
-          action: 'ip.created',
+          action: 'ip.changed',
           objectType: 'ip_address',
-          objectId: rows[0].id,
-          detail: { address, status },
+          objectId: next.id,
+          detail: { deviceId, from, to: address, previousIpId: id },
         });
-        await tx.insert(ipHistoryTable).values({
-          ipAddressId: rows[0].id,
-          action: 'ip.created',
-          actor,
-          toStatus: status,
-          changes: {
-            address,
-            deviceId: input.deviceId || null,
-            usedBy: input.usedBy?.trim() || null,
-            reason: input.reason?.trim() || null,
-          },
-        });
-        return rows[0];
+        return next;
       });
       return (await this.decorate([row]))[0];
     } catch (error) {
@@ -591,6 +698,9 @@ export class IpAddressService {
           message: 'Hồ sơ IP này vừa được người khác sửa — tải lại rồi thử lại.',
         });
         await this.requireDeviceWithin(tx, values.deviceId);
+        if (ownerMoves && (becomesAssigned || isOccupying(before.status as IpStatus))) {
+          await this.assertDeviceHasNoIpWithin(tx, values.deviceId, id);
+        }
         if (addressMoves || ownerMoves) {
           await this.assertNoLiveNatWithin(
             tx,
@@ -717,10 +827,9 @@ export class IpAddressService {
         values.deviceId = options.deviceId || null;
       }
       if (options.usedBy !== undefined) values.usedBy = options.usedBy?.trim() || null;
-      requireOwner(
-        values.deviceId !== undefined ? values.deviceId : before.deviceId,
-        values.usedBy !== undefined ? values.usedBy : before.usedBy,
-      );
+      const nextDeviceId = values.deviceId !== undefined ? values.deviceId : before.deviceId;
+      requireOwner(nextDeviceId, values.usedBy !== undefined ? values.usedBy : before.usedBy);
+      await this.assertDeviceHasNoIpWithin(tx, nextDeviceId, id);
       // Ngày cấp người dùng chọn thắng "hôm nay": cấp bù một IP đã cắm từ tuần trước là
       // chuyện thường, và sổ phải ghi ngày thật.
       values.assignedAt = options.assignedAt || isoDateInTz(await this.timezone());
@@ -932,6 +1041,7 @@ export class IpAddressService {
             'không còn nằm trong dải. Khai một hồ sơ mới với địa chỉ thuộc dải hiện tại.',
         });
       }
+      if (pgConstraint(error) === DEVICE_ONE_IP_CONSTRAINT) throw deviceHasIp(null);
       throw conflictOnUnique(error, {
         code: 'IP_TAKEN',
         message:
@@ -1037,6 +1147,31 @@ export class IpAddressService {
     await this.devices.assertUsableWithin(tx, deviceId);
   }
 
+  /**
+   * Q-20: máy đã giữ một IP đang cấp thì không nhận thêm. Kiểm trước để câu lỗi nêu được địa
+   * chỉ đang giữ; trọng tài thật là chỉ mục `ip_address_device_uq` (lượt song song — `translate`).
+   * `exceptId`: chính hồ sơ đang sửa / đang cấp lại không tính là "IP khác".
+   */
+  private async assertDeviceHasNoIpWithin(
+    tx: Tx,
+    deviceId: string | null | undefined,
+    exceptId?: string,
+  ): Promise<void> {
+    if (!deviceId) return;
+    const held = await tx
+      .select({ id: ipAddressTable.id, address: ipAddressTable.address })
+      .from(ipAddressTable)
+      .where(
+        and(
+          eq(ipAddressTable.deviceId, deviceId),
+          isNull(ipAddressTable.voidedAt),
+          inArray(ipAddressTable.status, OCCUPYING_STATUSES),
+        ),
+      );
+    const other = held.find((row) => row.id !== exceptId);
+    if (other) throw deviceHasIp(hostOf(other.address));
+  }
+
   /** Tra một hồ sơ KỂ CẢ đã ẩn — đường đọc lịch sử, và đường BẬT LẠI (`restore`). */
   private async requireAny(id: string): Promise<typeof ipAddressTable.$inferSelect> {
     const rows = await this.db.select().from(ipAddressTable).where(eq(ipAddressTable.id, id));
@@ -1120,6 +1255,9 @@ export class IpAddressService {
           : `Địa chỉ ${address} không nằm trong dải của hồ sơ này.`,
       });
     }
+    // Lượt cấp song song thua ở chỉ mục một-máy-một-IP: câu kiểm trước của nó chạy khi lượt kia
+    // chưa commit nên không biết địa chỉ đang giữ — báo chung, người dùng tải lại sẽ thấy.
+    if (pgConstraint(error) === DEVICE_ONE_IP_CONSTRAINT) return deviceHasIp(null);
     return conflictOnUnique(error, {
       code: 'IP_TAKEN',
       message:

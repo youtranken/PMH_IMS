@@ -185,14 +185,19 @@ test.describe('Tra IP và máy (NET-005)', () => {
     await expect(page.getByRole('navigation', { name: 'Trang' }).getByText(/151–200/)).toBeVisible();
   });
 
-  test('gõ mã máy ở ô tra → liệt kê mọi IP của máy, bấm là tới đúng dòng', async ({ page }) => {
+  test('gõ mã máy ở ô tra → liệt kê IP của máy và IP ghi tên máy, bấm là tới đúng dòng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
-    for (const host of [11, 12]) {
-      await page.request.post('/api/v1/ipam/addresses', {
+    // Một máy chỉ giữ một IP (Q-20): .11 gắn máy, .12 chỉ ghi tên máy ở ô người dùng.
+    for (const [host, owner] of [
+      [11, { deviceId: f.deviceId }],
+      [12, { usedBy: `Cổng phụ ${f.deviceCode}` }],
+    ] as const) {
+      const res = await page.request.post('/api/v1/ipam/addresses', {
         headers: f.headers,
-        data: { subnetId: f.subnetId, address: `${f.net}.${host}`, deviceId: f.deviceId },
+        data: { subnetId: f.subnetId, address: `${f.net}.${host}`, ...owner },
       });
+      expect(res.status(), await res.text()).toBe(201);
     }
 
     await page.goto('/ip-addresses');

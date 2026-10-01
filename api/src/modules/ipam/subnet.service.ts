@@ -8,13 +8,19 @@ import {
 import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { conflictOnUnique, PG_EXCLUSION_VIOLATION, pgErrorCode } from '../../common/sql';
+import {
+  conflictOnUnique,
+  PG_EXCLUSION_VIOLATION,
+  pgConstraint,
+  pgErrorCode,
+} from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
 import { OCCUPYING_STATUSES } from './ip-lifecycle';
+import { DEVICE_ONE_IP_CONSTRAINT, deviceHasIp } from './ip-one-per-device';
 import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
 import { describePortRange } from './nat-rules';
 
@@ -700,6 +706,8 @@ export class SubnetService {
       message: `Dải ${cidr} chồng lên một dải đang dùng. Mỗi địa chỉ IP chỉ được thuộc một dải.`,
     };
     if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION) return new ConflictException(body);
+    // Dùng lại dải: một máy có IP trong dải này đã được cấp IP khác trong lúc dải ngừng dùng.
+    if (pgConstraint(error) === DEVICE_ONE_IP_CONSTRAINT) return deviceHasIp(null);
     return conflictOnUnique(error, body);
   }
 }

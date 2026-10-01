@@ -41,6 +41,11 @@ function mockFetch() {
           ]),
         );
       }
+      if (url === '/api/v1/ipam/devices/dev-1/addresses') {
+        return Promise.resolve(
+          jsonResponse(200, [{ id: 'ip-old', address: '10.9.9.5', status: 'assigned', deviceId: 'dev-1' }]),
+        );
+      }
       if (url.startsWith('/api/v1/catalog')) {
         return Promise.resolve(jsonResponse(200, { departments: [] }));
       }
@@ -86,6 +91,36 @@ describe('DeviceIpAssign', () => {
     const post = calls.find((call) => call.method === 'POST');
     expect(post?.url).toBe('/api/v1/ipam/addresses');
     expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2', deviceId: 'dev-1' });
+  });
+
+  it('Q-20 Đổi IP: hộp nói IP hiện tại, máy cố định, gửi một lượt đổi chứ không cấp thêm', async () => {
+    const calls = mockFetch();
+    const onDone = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <DeviceIpAssign change device={{ id: 'dev-1', code: 'PC-E2E-1' }} csrfToken="t" onClose={vi.fn()} onDone={onDone} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    expect(await screen.findByRole('dialog', { name: 'Đổi IP cho PC-E2E-1' })).toBeInTheDocument();
+    expect(await screen.findByText('10.9.9.5')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Dải mạng' }));
+    await userEvent.click(await screen.findByRole('option', { name: /LAN E2E/ }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'IP trống' })).toHaveTextContent('10.77.1.2'),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Đổi IP — 10.77.1.2' })).toBeInTheDocument();
+    // Máy không đổi được trong hộp Đổi IP — chỉ địa chỉ đổi.
+    expect(screen.queryByRole('combobox', { name: 'Thiết bị' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi IP' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const post = calls.find((call) => call.method === 'POST');
+    expect(post?.url).toBe('/api/v1/ipam/addresses/ip-old/change');
+    expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2' });
+    expect(post?.body).not.toHaveProperty('deviceId');
   });
 
   it('đường hỏng: chưa có dải nào thì không bày ô chọn rỗng — chỉ lối sang khai dải', async () => {

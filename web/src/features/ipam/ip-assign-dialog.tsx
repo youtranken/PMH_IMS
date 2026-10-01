@@ -148,6 +148,7 @@ export function AssignIpDialog({
   record: initialRecord,
   network,
   initialDevice,
+  replacing,
   choices,
   csrfToken,
   onClose,
@@ -164,6 +165,11 @@ export function AssignIpDialog({
   network?: { cidr: string; gateway: string | null; vlan: number | null };
   /** Máy điền sẵn — mở từ trang thiết bị thì máy đã biết, không bắt gõ lại mã. */
   initialDevice?: { deviceId: string; term: string };
+  /**
+   * Đổi IP (Q-20): IP máy đang giữ. Có thì hộp gửi MỘT lượt `change` — API thu hồi IP này và
+   * cấp địa chỉ mới trong cùng transaction — và máy không đổi được trong hộp.
+   */
+  replacing?: { id: string; address: string };
   /**
    * Các chỗ trống của dải để đổi địa chỉ ngay trong hộp ("Cấp IP trống kế tiếp" điền sẵn chỗ
    * nhỏ nhất, người cắm máy có thể muốn chỗ khác). Không truyền thì địa chỉ cố định.
@@ -193,7 +199,11 @@ export function AssignIpDialog({
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
-    record ? `/api/v1/ipam/addresses/${record.id}/transition` : '/api/v1/ipam/addresses',
+    replacing
+      ? `/api/v1/ipam/addresses/${replacing.id}/change`
+      : record
+        ? `/api/v1/ipam/addresses/${record.id}/transition`
+        : '/api/v1/ipam/addresses',
     { csrfToken, refreshMe: false },
   );
 
@@ -206,7 +216,7 @@ export function AssignIpDialog({
       dismissible={!save.isPending}
       initialFocus="first-field"
       maxWidth={560}
-      title={t('ipam.assignIp', { address })}
+      title={t(replacing ? 'ipam.changeIp' : 'ipam.assignIp', { address })}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -218,7 +228,7 @@ export function AssignIpDialog({
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t('common.loading') : t('ipam.trAssign')}
+            {save.isPending ? t('common.loading') : t(replacing ? 'ipam.trChange' : 'ipam.trAssign')}
           </button>
         </>
       }
@@ -241,7 +251,11 @@ export function AssignIpDialog({
             reason: reason.trim(),
           };
           save.mutate(
-            record ? { to: 'assigned', ...owner } : { subnetId, address, ...owner },
+            replacing
+              ? { subnetId, address, assignedAt, note: owner.note, reason: owner.reason }
+              : record
+                ? { to: 'assigned', ...owner }
+                : { subnetId, address, ...owner },
             { onSuccess: () => onDone(address), onError: (err) => setError(errorMessage(err)) },
           );
         }}
@@ -275,26 +289,38 @@ export function AssignIpDialog({
           </Field>
         )}
 
-        <Field label={t('ipam.device')} hint={t('ipam.deviceHint')} error={check.error('owner')}>
-          <DeviceCombobox
-            deviceId={device.deviceId}
-            term={device.term}
-            onChange={setDevice}
-          />
-        </Field>
+        {replacing ? (
+          <Field label={t('ipam.device')} hint={t('ipam.changeHint')}>
+            <p className="static-value">
+              <span className="mono">{device.term}</span>
+              {' · '}
+              {t('ipam.currentIp')} <span className="mono">{replacing.address}</span>
+            </p>
+          </Field>
+        ) : (
+          <Field label={t('ipam.device')} hint={t('ipam.deviceHint')} error={check.error('owner')}>
+            <DeviceCombobox
+              deviceId={device.deviceId}
+              term={device.term}
+              onChange={setDevice}
+            />
+          </Field>
+        )}
 
         {network ? <NetworkConfig network={network} /> : null}
 
-        <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
-          <SuggestInput
-            value={usedBy}
-            onChange={setUsedBy}
-            options={departments.names}
-            failed={departments.failed}
-            placeholder={t('ipam.usedByPlaceholder')}
-            ariaLabel={t('ipam.usedBy')}
-          />
-        </Field>
+        {replacing ? null : (
+          <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
+            <SuggestInput
+              value={usedBy}
+              onChange={setUsedBy}
+              options={departments.names}
+              failed={departments.failed}
+              placeholder={t('ipam.usedByPlaceholder')}
+              ariaLabel={t('ipam.usedBy')}
+            />
+          </Field>
+        )}
 
         <Field label={t('ipam.assignedAt')}>
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />

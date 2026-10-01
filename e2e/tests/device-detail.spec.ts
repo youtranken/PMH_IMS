@@ -346,6 +346,28 @@ test.describe('Cấp IP từ trang thiết bị', () => {
     await expect(
       page.getByRole('region', { name: 'Địa chỉ IP' }).getByRole('link', { name: `172.21.${octet}.2` }),
     ).toBeVisible();
+
+    /* Q-20: một máy một IP — cấp thêm qua API bị chặn, nút giờ là "Đổi IP". */
+    const second = await page.request.post('/api/v1/ipam/addresses', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: { subnetId: (await subnet.json()).id, address: `172.21.${octet}.4`, deviceId },
+    });
+    expect(second.status(), await second.text()).toBe(409);
+    expect(await second.text()).toContain('DEVICE_HAS_IP');
+
+    await page.getByRole('button', { name: 'Đổi IP', exact: true }).click();
+    const changePick = page.getByRole('dialog', { name: `Đổi IP cho ${code}` });
+    await expect(changePick.getByText(`172.21.${octet}.2`, { exact: true })).toBeVisible();
+    await changePick.getByRole('button', { name: 'Dải mạng' }).click();
+    await page.getByRole('option', { name: new RegExp(subnetName) }).click();
+    await expect(changePick.getByRole('button', { name: 'IP trống' })).toContainText(`172.21.${octet}.3`);
+    await changePick.getByRole('button', { name: 'Tiếp tục' }).click();
+    const change = page.getByRole('dialog', { name: `Đổi IP — 172.21.${octet}.3` });
+    await change.getByRole('button', { name: 'Đổi IP', exact: true }).click();
+    await expect(page.getByText('Đã đổi IP cho máy này.')).toBeVisible();
+    const ipRegion = page.getByRole('region', { name: 'Địa chỉ IP' });
+    await expect(ipRegion.getByRole('link', { name: `172.21.${octet}.3` })).toBeVisible();
+    await expect(ipRegion.getByRole('link', { name: `172.21.${octet}.2` })).toHaveCount(0);
   });
 
   test('đường hỏng: bấm Tiếp tục khi chưa chọn dải thì báo lỗi dưới ô', async ({ page }) => {
