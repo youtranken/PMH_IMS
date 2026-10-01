@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { useMe } from '@/lib/api';
@@ -6,11 +6,10 @@ import { isIpv4OrCidr } from '@/lib/ipv4';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { Combobox } from '@/ui/combobox';
+import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import {
   DeviceTypeFilter,
-  deviceTypeIdsParam,
   isRouterType,
   useDeviceTypeFilter,
 } from '@/ui/device-type-filter';
@@ -20,7 +19,6 @@ import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draf
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import type { DeviceRow } from '@/lib/device-types';
 import type { IspRow } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
@@ -77,25 +75,12 @@ export function IspForm({
     row?.deviceId ? { id: row.deviceId, code: row.deviceCode ?? '' } : null,
   );
   const [query, setQuery] = useState(row?.deviceCode ?? '');
-  const [debounced, setDebounced] = useState('');
   const [error, setError] = useState<string | null>(null);
   // Bản scan hợp đồng ISP đi kèm ngay lúc khai đường mới (AD-15 — cùng khối với thiết bị và
   // phần mềm). Sửa đường thì tab "Giấy tờ" ở trang chi tiết mới là chỗ xem cả danh sách.
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(query), 250);
-    return () => clearTimeout(id);
-  }, [query]);
-
-  /*
-   * Chưa gõ gì vẫn hỏi (10 máy đầu): ô mở ra trắng trơn thì người khai không biết đây là ô
-   * tìm hay ô chọn. Đã chọn xong thì thôi hỏi — ô đang hiện đúng mã máy.
-   */
-  /* Chưa gõ mà đã chọn site: danh sách mở sẵn là máy CÙNG site (thiết bị biên nằm ở đó).
-     Gõ thì tìm khắp kho — Draytek chưa gán site vẫn phải tìm ra được. */
-  const nearSite = debounced.trim() === '' ? form.siteId : '';
   /* Lọc theo LOẠI, mặc định các loại cờ Router (Q-20) — cùng bộ lọc với ô Router của NAT. Chọn
      máy ngoài các loại đó chỉ cảnh báo: đường truyền cắm thẳng vào Core/Firewall là chuyện có. */
   const deviceTypes = lists.data?.deviceTypes;
@@ -105,18 +90,6 @@ export function IspForm({
     device !== null &&
     (deviceTypes ?? []).some((type) => type.isRouter) &&
     !isRouterType(deviceTypes, pickedTypeId);
-  const byType = deviceTypeIdsParam(typeFilter.value);
-  const candidates = useQuery({
-    queryKey: ['devices', 'picker', debounced, nearSite, typeFilter.value.join(',')],
-    // Chờ danh mục: hỏi trước khi biết loại nào là Router thì danh sách mở ra chưa lọc rồi co lại.
-    enabled: device === null && !lists.isPending,
-    queryFn: () =>
-      apiFetch<{ items: DeviceRow[] }>(
-        `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}${
-          nearSite ? `&siteId=${nearSite}` : ''
-        }${byType ? `&${byType}` : ''}`,
-      ),
-  });
   /* Máy nào đang là thiết bị biên của đường KHÁC — một Draytek hai đường là chuyện có thật,
      nhưng người chọn phải thấy để khỏi gắn nhầm. Hỏng thì chỉ thiếu dòng ghi thêm. */
   const otherLines = useQuery({
@@ -337,38 +310,26 @@ export function IspForm({
 
           <Field label={t('isp.device')} hint={t('isp.deviceHint')} span={3} htmlFor="isp-device">
             {/* Có thêm dải chip lọc loại nên Field không tự nối id/mô tả — nối tay theo quy ước. */}
-            <Combobox
+            {/* Chưa gõ mà đã chọn site: danh sách mở sẵn là máy CÙNG site (thiết bị biên nằm ở
+                đó); gõ thì tìm khắp kho — Draytek chưa gán site vẫn phải ra. Chờ danh mục: hỏi
+                trước khi biết loại nào là Router thì danh sách mở ra chưa lọc rồi co lại. */}
+            <DeviceCombobox
               id="isp-device"
               aria-describedby="isp-device-hint"
               ariaLabel={t('isp.device')}
               placeholder={t('isp.deviceSearch')}
-              query={query}
-              onQuery={(value) => {
-                setQuery(value);
-                // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện tên A mà id vẫn là B.
-                setDevice(null);
+              value={{ deviceId: device?.id ?? '', term: query }}
+              onChange={(next) => {
+                setQuery(next.term);
+                setDevice(next.device ? { id: next.device.id, code: next.device.code } : null);
+                setPickedTypeId(next.device?.deviceTypeId ?? null);
               }}
-              options={candidates.data?.items ?? []}
-              failed={candidates.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => {
+              typeIds={typeFilter.value}
+              nearSiteId={form.siteId}
+              ready={!lists.isPending}
+              renderExtra={(item) => {
                 const used = linesOn(item.id);
-                return (
-                  <>
-                    <span className="mono">{item.code}</span> <small>{item.name}</small>
-                    {used.length > 0 ? (
-                      <small>
-                        {' · '}
-                        {t('isp.edgeInUse', { lines: used.join(', ') })}
-                      </small>
-                    ) : null}
-                  </>
-                );
-              }}
-              onSelect={(item) => {
-                setDevice({ id: item.id, code: item.code });
-                setPickedTypeId(item.deviceTypeId);
-                setQuery(item.code);
+                return used.length > 0 ? t('isp.edgeInUse', { lines: used.join(', ') }) : null;
               }}
             />
             {notRouter ? (

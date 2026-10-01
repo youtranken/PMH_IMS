@@ -50,7 +50,7 @@ import {
   type SlotFilter,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
-import { AssignIpDialog, DeviceCombobox, ownerRule } from "./ip-assign-dialog";
+import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
 import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
 import { clampPage } from "@/lib/paging";
@@ -888,7 +888,7 @@ export function IpForm({
         </Field>
 
         <Field label={t("ipam.device")} hint={t("ipam.deviceHint")} error={check.error("owner")}>
-          <DeviceCombobox
+          <IpDeviceCombobox
             deviceId={device.deviceId}
             term={device.term}
             onChange={setDevice}

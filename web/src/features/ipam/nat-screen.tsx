@@ -7,11 +7,10 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { CellNote } from '@/ui/cell-note';
-import { Combobox } from '@/ui/combobox';
+import { DeviceCombobox } from '@/ui/device-combobox';
 import { Dialog } from '@/ui/dialog';
 import {
   DeviceTypeFilter,
-  deviceTypeIdsParam,
   isRouterType,
   useDeviceTypeFilter,
 } from '@/ui/device-type-filter';
@@ -87,15 +86,6 @@ interface NatRow {
   voidedAt: string | null;
   voidedBy: string | null;
   voidReason: string | null;
-}
-
-interface DeviceOption {
-  id: string;
-  code: string;
-  name: string;
-  siteCode?: string | null;
-  /** Để cảnh báo khi chọn máy không phải loại Router (Q-20) — không chặn. */
-  deviceTypeId?: string;
 }
 
 /** Bộ lọc của sổ NAT — nằm trên URL: Back giữ bộ lọc, và gửi được link "sổ NAT của FW-01". */
@@ -684,41 +674,6 @@ function NatForm({
   const notRouter = deviceId !== '' && hasRouterType && !isRouterType(deviceTypes, deviceTypeId);
 
   /**
-   * KHÔNG còn `enabled: deviceTerm.length > 0`.
-   *
-   * Chỉ hỏi khi đã gõ thì ô Router mở ra là một ô trắng với dòng nhắc "Gõ mã hoặc
-   * tên router…" — người dùng gõ, không ra gì (kho chưa có router nào), và kết luận là hệ
-   * thống hỏng. Danh sách hiện sẵn thì thấy ngay có gì để chọn, hoặc thấy ngay là chưa có gì
-   * và bấm "Thêm router mới" ở đầu menu.
-   */
-  const devices = useQuery({
-    queryKey: ['devices', 'picker', deviceTerm, typeFilter.value.join(',')],
-    // Chờ danh mục: bắn trước khi biết loại nào là router thì ô mở ra với mọi thiết bị rồi
-    // mới co lại — đúng cảnh camera đứng đầu danh sách mà mục này dọn.
-    enabled: !lists.isPending,
-    queryFn: () => {
-      // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
-      const params = new URLSearchParams({ limit: '20', usable: 'true' });
-      if (deviceTerm.trim()) params.set('search', deviceTerm.trim());
-      const byType = deviceTypeIdsParam(typeFilter.value);
-      return apiFetch<{ items: DeviceOption[] }>(
-        `/api/v1/devices?${params.toString()}${byType ? `&${byType}` : ''}`,
-      );
-    },
-  });
-
-  /** Danh sách máy cho ô "Máy đích" — cùng cửa với ô Router, khác từ khoá tìm. */
-  const targets = useQuery({
-    queryKey: ['devices', 'picker', 'target', targetTerm],
-    queryFn: () => {
-      // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
-      const params = new URLSearchParams({ limit: '20', usable: 'true' });
-      if (targetTerm.trim()) params.set('search', targetTerm.trim());
-      return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
-    },
-  });
-
-  /**
    * IP của máy đích. Chọn máy xong thì ô "IP trong" chỉ còn IP của chính máy đó — hết cảnh
    * gõ tay một địa chỉ không thuộc máy nào (thứ `validateNatRule` đang phải chặn ở tầng sau).
    */
@@ -919,7 +874,11 @@ function NatForm({
           >
             {/* Field chỉ tự nối id/mô tả/lỗi khi nó có ĐÚNG MỘT đứa con — ở đây có thêm dải chip
                 lọc loại, nên nối tay theo đúng quy ước id của Field. */}
-            <Combobox
+            {/* Danh sách mở sẵn (không chờ gõ): ô trắng thì người dùng kết luận hệ thống hỏng
+                thay vì thấy ngay là chưa có router và bấm "Thêm router mới". Chờ danh mục loại:
+                hỏi sớm thì camera đứng đầu danh sách rồi mới co lại. Máy đã thanh lý không dựng
+                được rule NAT (API chặn) nên ô chọn chỉ bày máy còn dùng được. */}
+            <DeviceCombobox
               id="nat-router"
               aria-describedby={
                 check.error('deviceId') ? 'nat-router-error nat-router-hint' : 'nat-router-hint'
@@ -927,26 +886,14 @@ function NatForm({
               aria-invalid={check.error('deviceId') ? true : undefined}
               placeholder={t('nat.routerSearch')}
               ariaLabel={t('nat.router')}
-              query={deviceTerm}
-              onQuery={(value) => {
-                setDeviceTerm(value);
-                setDeviceId('');
-                setDeviceTypeId(null);
+              value={{ deviceId, term: deviceTerm }}
+              onChange={(next) => {
+                setDeviceTerm(next.term);
+                setDeviceId(next.deviceId);
+                setDeviceTypeId(next.device?.deviceTypeId ?? null);
               }}
-              options={devices.data?.items ?? []}
-              failed={devices.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span>{' '}
-                  <small>{[item.name, item.siteCode].filter(Boolean).join(' · ')}</small>
-                </>
-              )}
-              onSelect={(item) => {
-                setDeviceId(item.id);
-                setDeviceTerm(item.code);
-                setDeviceTypeId(item.deviceTypeId ?? null);
-              }}
+              typeIds={typeFilter.value}
+              ready={!lists.isPending}
               /* Router chưa có trong kho thì thêm NGAY TẠI ĐÂY. Bắt người dùng thoát ra,
                  sang màn Thiết bị, khai xong rồi quay lại gõ lại cả form NAT là ba lần
                  chuyển màn cho một việc — và form đang dở thì mất trắng. */
@@ -1057,26 +1004,14 @@ function NatForm({
               Mở cho ai = NGƯỜI/bộ phận hưởng dịch vụ (câu auditor hỏi)
           */}
           <Field label={t('nat.target')} tip={t('nat.targetHint')}>
-            <Combobox
+            <DeviceCombobox
               placeholder={t('nat.targetSearch')}
               ariaLabel={t('nat.target')}
-              query={targetTerm}
-              onQuery={(value) => {
-                setTargetTerm(value);
-                setTargetId('');
-              }}
-              options={targets.data?.items ?? []}
-              failed={targets.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
-                </>
-              )}
-              onSelect={(item) => {
-                setTargetId(item.id);
-                setTargetTerm(item.code);
-                setInternalIp('');
+              value={{ deviceId: targetId, term: targetTerm }}
+              onChange={(next) => {
+                setTargetTerm(next.term);
+                setTargetId(next.deviceId);
+                if (next.device) setInternalIp('');
               }}
             />
           </Field>

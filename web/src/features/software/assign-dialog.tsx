@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import type { DeviceRow } from '@/lib/device-types';
 import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
-import { Combobox } from '@/ui/combobox';
+import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { CloseIcon } from '@/ui/glyph-icons';
@@ -53,7 +53,6 @@ export function AssignDialog({
   const full =
     !editing && software.seatTotal !== null && software.seatUsed >= software.seatTotal;
   const [query, setQuery] = useState('');
-  const [debounced, setDebounced] = useState('');
   /* NHIỀU máy một lượt (SW-053): mua 10 ghế cho phòng Kế toán không phải mở hộp 10 lần và gõ
      lại 10 lần cùng chi phí/hợp đồng/kỳ hạn. Điều khoản ghế dùng chung cho cả lô. */
   const [devices, setDevices] = useState<{ id: string; code: string }[]>([]);
@@ -159,20 +158,6 @@ export function AssignDialog({
       (needReason && !overSeatReason.trim() && t('license.overSeatRequired')) ||
       secretTextRule(t, overSeatReason),
     note: secretTextRule(t, note),
-  });
-
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(query), 250);
-    return () => clearTimeout(id);
-  }, [query]);
-
-  const candidates = useQuery({
-    queryKey: ['devices', 'picker', debounced],
-    enabled: !editing && pickBy === 'device' && debounced.trim().length >= 2,
-    queryFn: () =>
-      apiFetch<{ items: DeviceRow[] }>(
-        `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
-      ),
   });
 
   const save = useApiMutation<Record<string, unknown>, { warnings?: string[] }>(
@@ -338,26 +323,23 @@ export function AssignDialog({
                 span={2}
                 error={check.error('device')}
               >
-                <Combobox
+                <DeviceCombobox
                   placeholder={t('license.deviceSearch')}
-                  query={query}
-                  onQuery={setQuery}
-                  // Máy đã nằm trong lô thì không mời chọn lần nữa.
-                  options={(candidates.data?.items ?? []).filter(
-                    (item) => !devices.some((picked) => picked.id === item.id),
-                  )}
-                  failed={candidates.isError}
-                  getKey={(item) => item.id}
-                  renderOption={(item) => (
-                    <>
-                      <span className="mono">{item.code}</span> <small>{item.name}</small>
-                    </>
-                  )}
-                  onSelect={(item) => {
-                    setDevices((current) => [...current, { id: item.id, code: item.code }]);
+                  ariaLabel={t('license.device')}
+                  value={{ deviceId: '', term: query }}
+                  onChange={(next) => {
+                    if (!next.device) {
+                      setQuery(next.term);
+                      return;
+                    }
+                    const picked = next.device;
+                    setDevices((current) => [...current, { id: picked.id, code: picked.code }]);
                     // Xoá ô để gõ tìm máy kế tiếp — chọn xong một máy là chip nằm bên dưới.
                     setQuery('');
                   }}
+                  minChars={2}
+                  // Máy đã nằm trong lô thì không mời chọn lần nữa.
+                  exclude={devices.map((picked) => picked.id)}
                 />
               </Field>
             ) : (
