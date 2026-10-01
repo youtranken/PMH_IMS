@@ -163,11 +163,24 @@ describe('Khối trống có nút bước tiếp', () => {
   });
 
   it('License chưa gán máy nào: nút Gán vào máy nằm trong khối trống, không lặp ở thanh trên', async () => {
-    const software = { id: 's1', code: 'SW-E2E', kind: 'license' } as SoftwareRow;
+    const software = { id: 's1', code: 'SW-E2E', kind: 'license', status: 'active' } as SoftwareRow;
     renderAt('/software/s1', <LicenseAssignmentsPanel software={software} csrfToken="t" />);
     const block = await emptyBlock('Chưa gán license này vào máy nào.');
     expect(within(block).getByRole('button', { name: 'Gán vào máy' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Gán vào máy' })).toHaveLength(1);
+  });
+
+  /* API từ chối gán vào hồ sơ đã thanh lý (SOFTWARE_RETIRED): nút ở khối trống mà vẫn hiện là
+     bày ra một thao tác chắc chắn hỏng. */
+  it('License đã thanh lý, chưa gán máy nào: khối trống không có nút Gán vào máy', async () => {
+    const software = { id: 's1', code: 'SW-E2E', kind: 'license', status: 'retired' } as SoftwareRow;
+    renderAt('/software/s1', <LicenseAssignmentsPanel software={software} csrfToken="t" />);
+    const block = await emptyBlock('Chưa gán license này vào máy nào.');
+    expect(within(block).queryByRole('button', { name: 'Gán vào máy' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gán vào máy' })).toBeNull();
+    // Sang tab đã gỡ thì nút ở thanh trên hiện lại với license còn dùng — ở đây cũng không.
+    await userEvent.click(screen.getByRole('button', { name: /Đã gỡ/ }));
+    expect(screen.queryByRole('button', { name: 'Gán vào máy' })).toBeNull();
   });
 
   it('Sơ đồ cổng trống: nút Thêm cổng nằm trong khối trống, không lặp ở thanh trên', async () => {
