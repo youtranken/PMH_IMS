@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cssRules, declValue } from './css-test-kit';
+import { cssRules, declValue } from '@/test/css-test-kit';
 
 /**
  * Trang cuộn theo CỬA SỔ, và `.topbar` (base.css) dính `top: 0` cao 56px. Mọi khối dính khác
