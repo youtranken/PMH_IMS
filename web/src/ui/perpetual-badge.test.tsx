@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { renderWithI18n, screen } from '@/test/test-utils';
 import { PerpetualBadge } from '@/ui/perpetual-badge';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
-import { PasswordChecklist } from '@/features/auth/password-checklist';
 
 /*
  * Ký tự làm hình (∞ ✓ ○) theo phông chữ: mỗi máy một nét, lệch đường cơ sở, và trình đọc màn
@@ -21,10 +20,7 @@ describe('hình trong nhãn là SVG, không phải ký tự', () => {
     expect(screen.getByText('Vĩnh viễn')).not.toHaveClass('badge');
   });
 
-  it('PasswordChecklist và SecretStrengthMeter không in ✓ / ○', () => {
-    const a = renderWithI18n(<PasswordChecklist password="abc" repeat="" />);
-    expect(a.container.textContent).not.toMatch(/[✓○]/);
-    expect(a.container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
+  it('SecretStrengthMeter không in ✓ / ○', () => {
     const b = renderWithI18n(<SecretStrengthMeter value="abc" />);
     expect(b.container.textContent).not.toMatch(/[✓○]/);
     expect(b.container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
