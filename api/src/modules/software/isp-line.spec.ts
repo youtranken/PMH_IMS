@@ -7,6 +7,7 @@ import { messagesOf } from '../../common/validation-messages';
 import { IspBodyDto, IspLineController } from './isp-line.controller';
 import { ISP_SORT_KEYS, IspLineService } from './isp-line.service';
 import { SoftwareExpiryRegistrar } from './software-expiry-sources';
+import { MAX_WAN_IPS } from './wan-ip';
 import type { SoftwareService } from './software.service';
 import type { UsersApiService } from '../users/users.api';
 import type { CatalogApiService } from '../catalog/catalog.api';
@@ -61,7 +62,7 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
         code: 'FPT-01',
         providerId: '6f1c1e0a-3b7e-4a51-9a39-5d1c0f6b2a10',
         bandwidth: '300Mbps',
-        wanIp: '203.0.113.10',
+        wanIps: ['203.0.113.10', '203.0.113.11'],
         hotline: '1900 6600',
         contractNo: 'HD-01',
         startDate: '2026-01-01',
@@ -69,6 +70,25 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
         status: 'terminated',
       }),
     ).resolves.toBeDefined();
+  });
+
+  it('DTO: `wanIps` là mảng chuỗi có trần; trường cũ `wanIp` bị từ chối (Q-20)', async () => {
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      stopAtFirstError: true,
+      exceptionFactory: (errors) => new BadRequestException(messagesOf(errors)),
+    });
+    const run = (payload: Record<string, unknown>) =>
+      pipe.transform(payload, { type: 'body', metatype: IspBodyDto });
+
+    await expect(run({ wanIps: [] })).resolves.toBeDefined();
+    await expect(run({ wanIp: '203.0.113.10' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(run({ wanIps: '203.0.113.10' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(run({ wanIps: [42] })).rejects.toBeInstanceOf(BadRequestException);
+    const many = Array.from({ length: MAX_WAN_IPS + 1 }, (_v, i) => `10.0.0.${i + 1}`);
+    await expect(run({ wanIps: many })).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('DTO nhận nhà mạng bằng id danh mục, từ chối tên gõ tay (Q-11)', async () => {

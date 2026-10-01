@@ -10,7 +10,8 @@ export interface IspRow {
   provider: string;
   providerId: string;
   bandwidth: string | null;
-  wanIp: string | null;
+  /** IPv4 đơn, theo thứ tự người nhập; rỗng = chưa ghi (Q-20). */
+  wanIps: string[];
   siteId: string | null;
   siteCode: string | null;
   deviceId: string | null;

@@ -186,7 +186,7 @@ export function NatScreen({ me }: { me: Me }) {
   const ispLines = useQuery({
     queryKey: ['isp', 'nat-wan'],
     queryFn: () =>
-      apiFetch<{ items: { deviceId: string | null; wanIp: string | null }[] }>(
+      apiFetch<{ items: { deviceId: string | null; wanIps: string[] }[] }>(
         '/api/v1/isp-lines?limit=200',
       ),
   });

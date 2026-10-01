@@ -57,7 +57,7 @@ test.describe('Đường truyền ISP', () => {
       code,
       providerId: await ispProviderId(page, 'FPT Telecom E2E'),
       bandwidth: '200 Mbps',
-      wanIp: '113.161.0.10',
+      wanIps: ['113.161.0.10'],
       hotline: '1900 6600',
       contractNo: `HD-${stamp}`,
       startDate: '2026-01-01',
@@ -318,7 +318,11 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     const provider = await ispProviderId(page, `Nha mang loc E2E ${stamp}`);
     const live = `ISP-E2E-LIVE-${stamp}`;
     const dead = `ISP-E2E-DEAD-${stamp}`;
-    await createLine(page, { code: live, providerId: provider, wanIp: '113.161.20.16/29' });
+    await createLine(page, {
+      code: live,
+      providerId: provider,
+      wanIps: ['113.161.20.16', '113.161.20.17'],
+    });
     const created = await createLine(page, { code: dead, providerId: provider });
     await page.request.patch(`/api/v1/isp-lines/${String(created.body.id)}`, {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
@@ -331,7 +335,12 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await page.getByRole('option', { name: `Nha mang loc E2E ${stamp}` }).click();
     const liveRow = page.getByRole('row', { name: new RegExp(live) });
     await expect(liveRow).toBeVisible();
-    await expect(liveRow.getByText('113.161.20.16/29')).toBeVisible();
+    await expect(liveRow.getByText('113.161.20.16', { exact: true })).toBeVisible();
+    // Nhiều IP (Q-20): IP đầu + "+N", rê chuột đọc đủ.
+    await expect(liveRow.getByText('+1', { exact: true })).toHaveAttribute(
+      'title',
+      '113.161.20.16, 113.161.20.17',
+    );
     await expect(page.getByRole('row', { name: new RegExp(dead) })).toHaveCount(0);
 
     // `.first()`: ô lọc đứng trước tiêu đề cột "Trạng thái" (cũng là nút sắp xếp).
@@ -402,13 +411,99 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await dialog.getByLabel('Mã đường').fill(`ISP-E2E-WAN-${stamp}`);
     await dialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: provider }).click();
-    await dialog.getByLabel('IP WAN').fill('113.161.10');
+    const first = dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true });
+    await first.fill('113.161.10');
     await dialog.getByRole('button', { name: 'Lưu' }).click();
-    await expect(dialog.getByText(/IP WAN phải là một IPv4/)).toBeVisible();
+    await expect(first).toHaveAccessibleDescription(/Không phải một IPv4/);
     await expect(dialog).toBeVisible();
 
-    await dialog.getByLabel('IP WAN').fill('113.161.10.20');
+    await first.fill('113.161.10.20');
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(dialog).toHaveCount(0);
+  });
+});
+
+/*
+ * Q-20 (sửa Q-04): một đường truyền có NHIỀU IP WAN, mỗi dòng một IPv4 đơn — nhà mạng cấp từng
+ * IP, không cấp dải. Tìm theo bất kỳ IP nào của đường (ô tìm và Ctrl+K cùng dùng `?search=`).
+ */
+test.describe('Đường truyền — nhiều IP WAN', () => {
+  test('form nhận hai IP, báo dải ngay tại dòng; tìm theo IP thứ hai ra đúng đường; trang chi tiết chép từng IP', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const provider = `Nha mang nhieu IP E2E ${stamp}`;
+    await ispProviderId(page, provider);
+    const code = `ISP-E2E-2IP-${stamp}`;
+    // Octet cuối theo stamp để hai lượt chạy không tìm ra đường của nhau.
+    const tail = Number(stamp.replace(/\D/g, '').slice(-2) || '0') + 100;
+    const ipA = `198.51.100.${tail}`;
+    const ipB = `203.0.113.${tail}`;
+
+    await page.goto('/isp-lines');
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Mã đường').fill(code);
+    await dialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
+    await page.getByRole('option', { name: provider }).click();
+
+    await dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true }).fill(ipA);
+    await dialog.getByRole('button', { name: 'Thêm IP' }).click();
+    const second = dialog.getByRole('textbox', { name: 'IP WAN 2', exact: true });
+    await expect(second).toBeFocused();
+    await second.fill(`${ipB.replace(/\d+$/, '8')}/29`);
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await expect(second).toHaveAccessibleDescription(/Nhập từng IP, không nhập dải/);
+    await expect(dialog).toBeVisible();
+
+    await second.fill(ipB);
+    const saved = page.waitForResponse(
+      (response) => response.url().endsWith('/api/v1/isp-lines') && response.request().method() === 'POST',
+    );
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    expect((await saved).status()).toBe(201);
+    await expect(dialog).toHaveCount(0);
+
+    // Tìm theo IP THỨ HAI — trước đây chỉ IP duy nhất của đường nằm trong khoá tìm.
+    await page.getByRole('searchbox', { name: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng' }).fill(ipB);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+    await expect(page.getByRole('row')).toHaveCount(2); // tiêu đề + đúng một đường
+
+    await row.getByRole('link', { name: code, exact: true }).click();
+    const main = page.getByRole('main');
+    await expect(main.getByRole('button', { name: `Chép IP WAN ${ipA}` })).toBeVisible();
+    await expect(main.getByRole('button', { name: `Chép IP WAN ${ipB}` })).toBeVisible();
+  });
+
+  test('đường hỏng qua API: dải và IP trùng trong cùng đường bị chặn đúng mã lỗi', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const providerId = await ispProviderId(page, 'VNPT E2E');
+
+    const range = await createLine(page, {
+      code: `ISP-E2E-RANGE-${stamp}`,
+      providerId,
+      wanIps: ['113.161.10.16/29'],
+    });
+    expect(range.status).toBe(400);
+    expect(range.body.code).toBe('WAN_IP_RANGE');
+
+    const legacy = await createLine(page, {
+      code: `ISP-E2E-LEGACY-${stamp}`,
+      providerId,
+      wanIp: '113.161.10.20',
+    });
+    expect(legacy.status, 'trường cũ `wanIp` không còn nhận — client cũ phải thấy 400').toBe(400);
+
+    // Trùng trong cùng đường: lưu một lần, không lỗi, không lặp.
+    const dup = await createLine(page, {
+      code: `ISP-E2E-DUP-${stamp}`,
+      providerId,
+      wanIps: ['113.161.10.20', ' 113.161.10.20'],
+    });
+    expect(dup.status).toBe(201);
+    expect(dup.body.wanIps).toEqual(['113.161.10.20']);
   });
 });

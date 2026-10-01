@@ -133,6 +133,7 @@ export const FIELD_LABEL: Record<string, string> = {
   value: 'Giá trị',
   vendorId: 'Nhà cung cấp',
   vlan: 'VLAN',
+  wanIps: 'IP WAN',
   warrantyEnd: 'Hết bảo hành',
   warrantyStart: 'Bắt đầu bảo hành',
   websites: 'Danh sách website',

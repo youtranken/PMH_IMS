@@ -59,7 +59,7 @@ const ROW_ON_INACTIVE = {
   provider: 'Nhà mạng cũ',
   providerId: 'p-cu',
   bandwidth: null,
-  wanIp: null,
+  wanIps: [],
   siteId: null,
   siteCode: null,
   deviceId: null,
@@ -214,5 +214,72 @@ describe('Form đường truyền — ô Thiết bị lọc theo loại', () => 
     expect(
       screen.getByText('Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.'),
     ).toBeVisible();
+  });
+});
+
+/* Q-20: một đường có nhiều IP WAN — mỗi dòng một IPv4 đơn, không nhận dải. */
+describe('Form đường truyền — IP WAN nhiều dòng', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('thêm dòng, dải bị báo ngay tại dòng đó, sửa xong thì gửi mảng `wanIps`', async () => {
+    const calls = mockFetch();
+    renderForm(null);
+    const user = userEvent.setup();
+    await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/v1/catalog'))).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Nhà mạng' }));
+    await user.click(await screen.findByRole('option', { name: 'VNPT' }));
+    await user.type(screen.getByLabelText(/Mã đường/), 'ISP-E2E-WAN');
+
+    await user.type(screen.getByRole('textbox', { name: 'IP WAN 1' }), '113.161.10.20');
+    await user.click(screen.getByRole('button', { name: 'Thêm IP' }));
+    const second = screen.getByRole('textbox', { name: 'IP WAN 2' });
+    expect(second).toHaveFocus();
+    await user.type(second, '113.161.10.16/29');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    await waitFor(() => expect(second).toHaveAttribute('aria-invalid', 'true'));
+    expect(second).toHaveAccessibleDescription(/Nhập từng IP, không nhập dải/);
+    expect(screen.getByRole('textbox', { name: 'IP WAN 1' })).not.toHaveAttribute('aria-invalid');
+    expect(calls.some((c) => c.url === '/api/v1/isp-lines')).toBe(false);
+
+    await user.clear(second);
+    await user.type(second, '113.161.10.21');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/isp-lines')).toBe(true));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines')!.body as Record<string, unknown>;
+    expect(body.wanIps).toEqual(['113.161.10.20', '113.161.10.21']);
+    expect(body).not.toHaveProperty('wanIp');
+  });
+
+  it('IP trùng trong cùng đường bị báo; nút ✕ bỏ đúng dòng đó', async () => {
+    const calls = mockFetch();
+    renderForm({ ...ROW_ON_INACTIVE, wanIps: ['1.1.1.1', '2.2.2.2', '1.1.1.1'] });
+    const user = userEvent.setup();
+    expect(screen.getByRole('textbox', { name: 'IP WAN 1' })).toHaveValue('1.1.1.1');
+    expect(screen.getByRole('textbox', { name: 'IP WAN 2' })).toHaveValue('2.2.2.2');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    const third = screen.getByRole('textbox', { name: 'IP WAN 3' });
+    await waitFor(() => expect(third).toHaveAccessibleDescription(/trùng/));
+
+    await user.click(screen.getByRole('button', { name: 'Bỏ IP WAN 2' }));
+    await user.click(screen.getByRole('button', { name: 'Bỏ IP WAN 2' }));
+    expect(screen.queryByRole('textbox', { name: 'IP WAN 2' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/isp-lines/line-1')).toBe(true));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines/line-1')!.body as Record<string, unknown>;
+    expect(body.wanIps).toEqual(['1.1.1.1']);
+  });
+
+  it('bỏ hết thì còn một dòng trống và gửi mảng rỗng (xoá IP)', async () => {
+    const calls = mockFetch();
+    renderForm({ ...ROW_ON_INACTIVE, wanIps: ['1.1.1.1'] });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Bỏ IP WAN 1' }));
+    expect(screen.getByRole('textbox', { name: 'IP WAN 1' })).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Bỏ IP WAN 1' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/isp-lines/line-1')).toBe(true));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines/line-1')!.body as Record<string, unknown>;
+    expect(body.wanIps).toEqual([]);
   });
 });

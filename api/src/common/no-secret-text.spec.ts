@@ -95,7 +95,7 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'groupName', 'ownerName', 'assignedTo', 'department', 'usedBy', 'login', 'bandwidth',
     'contract', 'contractNo', 'contact', 'vlan', 'key', 'kind',
     // Mạng.
-    'cidr', 'gateway', 'internalIp', 'wanIp', 'allowedIps', 'externalPorts',
+    'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
