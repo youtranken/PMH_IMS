@@ -2083,7 +2083,7 @@ export default {
   },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Hồ sơ đang có mật khẩu trong két: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+    subtitle: 'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
     whereItLives:
       'Trang này chỉ liệt kê hồ sơ và số ngăn, không hiện tên hay giá trị từng ngăn. Bấm "Mở két" để xem từng ngăn.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',
@@ -2111,6 +2111,7 @@ export default {
     noHitHint: 'Thử tìm bằng mã máy (vd SRV-01), tên hoặc site.',
     noHitHintKinds: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
     rulesTitle: 'Luật của két',
+    rulesButton: 'Luật két',
     rule1: 'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
     /* KHÔNG nói "mỗi phiên": luật thật là một khoảng ÂN HẠN do `secret.stepup_grace_minutes`
        quy định, và chính màn hình có đồng hồ đếm ngược nói điều đó (`reveal-dialog.tsx` —

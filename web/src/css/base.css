@@ -485,9 +485,8 @@ a.linkbtn.sm {
   margin-top: var(--space-2);
   color: var(--ink-2);
   font-size: var(--fs-sm);
-  /* Trang giờ rộng gần trọn màn, nhưng CHỮ thì không nên dài theo: phụ đề dài ~95 ký tự
-     chạy một dòng ngang 1880px là mắt phải quét quá xa. Bảng rộng, chữ hẹp. */
-  max-width: 68ch;
+  /* Không trần bề ngang (Q-21): phụ đề là MỘT câu ngắn, ép xuống dòng khi bên phải còn trống
+     chỉ đẩy bảng xuống thêm một hàng. */
 }
 /* Cột nội dung hẹp, canh giữa NHẤT QUÁN cho trang cấu hình/danh mục — tiêu đề, thẻ, nút
    cùng một mép trái (tránh cảnh tiêu đề trái / thẻ giữa / nút trái lệch nhau). */

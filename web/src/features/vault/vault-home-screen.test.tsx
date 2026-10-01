@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { VaultHomeScreen } from './vault-home-screen';
 
 /**
@@ -103,5 +103,24 @@ describe('Trang tổng Két sắt', () => {
     expect(screen.queryByText(/bỏ bớt bộ lọc loại/)).not.toBeInTheDocument();
     // Dòng tổng kết "0 hồ sơ · 0 ngăn" thừa ngay trên khối rỗng.
     expect(screen.queryByText(/hồ sơ đang giữ két/)).not.toBeInTheDocument();
+  });
+
+  /* Q-21: luật két nằm sau một nút mở hộp đọc, không chiếm chỗ cố định cuối trang. */
+  it('phụ đề liệt kê bốn loại hồ sơ; luật két chỉ hiện khi bấm nút "Luật két"', async () => {
+    renderHome();
+    expect(
+      await screen.findByText(
+        'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Luật của két' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mỗi lần mở đều ghi nhật ký/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Luật két' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Luật của két' });
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(4);
+    expect(dialog).toHaveTextContent(/Trang này chỉ liệt kê hồ sơ và số ngăn/);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Đóng', exact: true }));
+    expect(screen.queryByRole('dialog', { name: 'Luật của két' })).not.toBeInTheDocument();
   });
 });
