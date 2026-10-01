@@ -1,3 +1,10 @@
+import { STATUS_TONE as DEVICE_STATUS_TONE } from '@/lib/device-types';
+import {
+  ISP_STATUS_TONE,
+  SERVICE_ACCOUNT_STATUS_TONE,
+  SOFTWARE_STATUS_TONE,
+} from '@/lib/status-tone';
+
 /**
  * Các loại hồ sơ vào kho thanh lý + nhãn i18n của chúng — MỘT nơi khai (AD-15).
  *
@@ -35,6 +42,21 @@ const STATUS_KEY = new Map<string, string>([
 
 export function disposalStatusKey(status: string): string | null {
   return STATUS_KEY.get(status) ?? null;
+}
+
+/**
+ * Màu badge trạng thái lấy từ CHÍNH bảng màu của màn gốc (Q-19): cùng chữ "Đã ngừng dùng" mà
+ * ở kho một màu, ở danh sách tài khoản dịch vụ một màu khác thì người đọc tưởng hai trạng thái.
+ */
+const STATUS_TONE_OF: Record<DisposalKind, Readonly<Record<string, string>>> = {
+  device: DEVICE_STATUS_TONE,
+  software: SOFTWARE_STATUS_TONE,
+  service_account: SERVICE_ACCOUNT_STATUS_TONE,
+  isp: ISP_STATUS_TONE,
+};
+
+export function disposalStatusTone(kind: DisposalKind, status: string): string {
+  return STATUS_TONE_OF[kind][status] ?? 'muted';
 }
 
 /**
