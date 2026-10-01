@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext, type APIResponse } from '@playwright/test';
 import {
   APP_ORIGIN,
   E2E_LOGIN_RATE_LIMIT,
@@ -18,13 +18,46 @@ import {
  *   - `resetUsers()` nới trần lên 500 trong MỌI beforeEach của mọi spec khác.
  * Tức là thiếu bài này: unit test giả lập cấu hình → E2E tắt tính năng → 0 phủ sóng thực.
  *
- * Bài này mượn trần xuống thấp, chứng minh 429 là thật trên stack thật, rồi TRẢ LẠI ngay để
- * các spec sau không bị 429 oan. Bộ đếm của guard nằm trong RAM tiến trình api (cửa sổ 1
- * phút) — trả trần về 500 là đủ, vì vài lượt đã đếm luôn nhỏ hơn 500.
+ * Bài này mượn trần xuống thấp, chứng minh 429 là thật trên stack thật, rồi TRẢ LẠI và CHỜ
+ * api thật sự nhận trần cũ trước khi nhường cho spec sau. Bộ đếm của guard nằm trong RAM
+ * tiến trình api, cửa sổ CỐ ĐỊNH 1 phút, đếm MỌI lượt đăng nhập từ IP này (cả lượt đúng của
+ * các spec chạy trước) — nên bài không được coi cửa sổ là trống lúc mình bắt đầu.
  */
 test.describe('Chống dò mật khẩu theo IP', () => {
   const LIMIT = 3;
+  /** Giãn cách giữa các lượt dò — xem ghi chú ThrottlerModule ở bài 429. */
+  const SPACING_MS = 4_000;
+  /** Đủ phủ 30 giây cache cấu hình + trọn một cửa sổ 60 giây, với giãn cách ở trên. */
+  const MAX_ROUNDS = 25;
   let restoreTo = String(E2E_LOGIN_RATE_LIMIT);
+
+  const loginWrong = (request: APIRequestContext) =>
+    request.post('/api/v1/auth/login', {
+      headers: { Origin: APP_ORIGIN },
+      data: { email: E2E_SA.email, password: 'sai-mat-khau-co-y' },
+      failOnStatusCode: false,
+    });
+
+  /**
+   * Chờ tới khi api THẬT SỰ dùng trần lớn hơn `LIMIT`: một loạt `LIMIT + 1` lượt liền nhau
+   * không lượt nào bị 429.
+   *
+   * Thấy MỘT lượt 401 là chưa đủ: cửa sổ cố định vừa sang phút mới thì lượt đầu luôn lọt, kể
+   * cả khi api vẫn đang giữ trần 3 trong cache. Bài cũ tin đúng điều đó, trả trần rồi đi —
+   * và spec kế tiếp đăng nhập tới lượt thứ tư thì ăn 429 "thử lại sau 51 giây".
+   */
+  async function waitUntilLimitLifted(request: APIRequestContext): Promise<void> {
+    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+      const statuses: number[] = [];
+      for (let i = 0; i <= LIMIT; i += 1) statuses.push((await loginWrong(request)).status());
+      if (!statuses.includes(429)) {
+        expect(statuses.every((status) => status === 401)).toBe(true);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, SPACING_MS));
+    }
+    throw new Error(`api vẫn chặn 429 sau ${MAX_ROUNDS} vòng — trần đăng nhập chưa được trả lại`);
+  }
 
   test.beforeAll(() => {
     resetUsers();
@@ -32,8 +65,22 @@ test.describe('Chống dò mật khẩu theo IP', () => {
     setLoginRateLimit(LIMIT);
   });
 
-  test.afterAll(() => {
+  /*
+   * Trả trần rồi CHỜ api nhận — kể cả khi bài AD-11 bên dưới bị bỏ (`--e2e-fast` lọc @slow)
+   * hoặc đỏ giữa chừng. Không chờ thì cache 30 giây của api còn giữ trần 3 và spec chạy sau
+   * bị 429 oan.
+   */
+  test.afterAll(async ({ playwright }) => {
     setLoginRateLimit(Number(restoreTo) || E2E_LOGIN_RATE_LIMIT);
+    const request = await playwright.request.newContext({
+      baseURL: APP_ORIGIN,
+      ignoreHTTPSErrors: true,
+    });
+    try {
+      await waitUntilLimitLifted(request);
+    } finally {
+      await request.dispose();
+    }
   });
 
   /*
@@ -46,7 +93,7 @@ test.describe('Chống dò mật khẩu theo IP', () => {
    * thời gian: "đổi cấu hình có hiệu lực ngay" là không đúng — có độ trễ tới 30 giây, và
    * worker giữ cache riêng của nó.
    */
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
 
   /**
    * CANH CHÍNH CÁI GIÀN GIÁO — không phải canh sản phẩm.
@@ -67,33 +114,44 @@ test.describe('Chống dò mật khẩu theo IP', () => {
 
   test('vượt trần thì trả 429 LOGIN_RATE_LIMITED, không phải 401 @slow', async ({ page }) => {
     await page.goto('/login');
-
-    const attempt = () =>
-      page.request.post('/api/v1/auth/login', {
-        headers: { Origin: APP_ORIGIN },
-        data: { email: E2E_SA.email, password: 'sai-mat-khau-co-y' },
-        failOnStatusCode: false,
-      });
-
-    // Trong trần: phải là 401 (sai mật khẩu), KHÔNG được là 429.
-    for (let i = 0; i < LIMIT; i += 1) {
-      expect(await attempt().then((r) => r.status())).toBe(401);
-    }
+    const attempt = () => loginWrong(page.request);
+    const pause = () => page.waitForTimeout(SPACING_MS);
 
     /*
-     * Vượt trần: guard phải cắt TRƯỚC cả khi kiểm mật khẩu.
-     *
-     * GIÃN CÁCH 4 giây giữa các lần bắn, KHÔNG bắn liên tục: `ThrottlerModule` toàn cục có
+     * GIÃN CÁCH 4 giây giữa các lượt chờ, KHÔNG bắn liên tục: `ThrottlerModule` toàn cục có
      * trần 300 request/phút (`app.module.ts`), nên vòng lặp dày sẽ trúng guard ĐÓ trước và
-     * trả `TOO_MANY_REQUESTS` thay vì `LOGIN_RATE_LIMITED` — đúng lỗi bài này mắc phải lần
-     * chạy đầu. Hai hàng rào khác nhau, phải phân biệt được thì test mới nói lên điều gì.
+     * trả `TOO_MANY_REQUESTS` thay vì `LOGIN_RATE_LIMITED`. Hai hàng rào khác nhau, phải phân
+     * biệt được thì test mới nói lên điều gì.
+     *
+     * Bước 1 — chờ trần 3 có hiệu lực: bắn tới khi bị chặn. Không đếm "ba lượt 401 rồi mới
+     * 429" ngay từ đầu được: cửa sổ hiện tại có thể đã mang sẵn các lượt đăng nhập của spec
+     * chạy trước, và cache cấu hình có thể đổi từ 500 sang 3 giữa vòng đếm.
      */
-    let blocked = await attempt();
-    for (let i = 0; i < 12 && blocked.status() !== 429; i += 1) {
-      await page.waitForTimeout(4_000);
-      blocked = await attempt();
+    let res: APIResponse = await attempt();
+    for (let i = 0; i < MAX_ROUNDS && res.status() !== 429; i += 1) {
+      await pause();
+      res = await attempt();
+    }
+    expect(res.status(), 'trần 3 phải có hiệu lực trong ~30 giây cache cấu hình').toBe(429);
+    expect(await res.json()).toMatchObject({ code: 'LOGIN_RATE_LIMITED' });
+
+    /*
+     * Bước 2 — chờ cửa sổ MỚI. Trong một cửa sổ, bộ đếm chỉ tăng; đã 429 mà nay lọt 401 thì
+     * lượt đó chắc chắn là lượt SỐ MỘT của cửa sổ mới. Từ đây đếm được chính xác.
+     */
+    for (let i = 0; i < MAX_ROUNDS && res.status() === 429; i += 1) {
+      await pause();
+      res = await attempt();
+    }
+    expect(res.status(), 'hết cửa sổ 1 phút thì phải đăng nhập lại được').toBe(401);
+
+    // Bước 3 — các lượt còn lại trong trần: 401 (sai mật khẩu), KHÔNG được là 429.
+    for (let i = 1; i < LIMIT; i += 1) {
+      expect((await attempt()).status(), `lượt ${i + 1}/${LIMIT} vẫn trong trần`).toBe(401);
     }
 
+    // Lượt vượt trần: guard phải cắt TRƯỚC cả khi kiểm mật khẩu.
+    const blocked = await attempt();
     expect(blocked.status()).toBe(429);
     expect(await blocked.json()).toMatchObject({ code: 'LOGIN_RATE_LIMITED' });
   });
@@ -104,22 +162,7 @@ test.describe('Chống dò mật khẩu theo IP', () => {
     setLoginRateLimit(E2E_LOGIN_RATE_LIMIT);
     await page.goto('/login');
 
-    const send = () =>
-      page.request.post('/api/v1/auth/login', {
-        headers: { Origin: APP_ORIGIN },
-        data: { email: E2E_SA.email, password: 'sai-mat-khau-co-y' },
-        failOnStatusCode: false,
-      });
-
-    // Lại phải đợi cache 30 giây của SystemConfigService nhả ra, và vẫn giãn cách để không
-    // trúng throttler toàn cục — xem ghi chú ở bài trên.
-    let res = await send();
-    for (let i = 0; i < 12 && res.status() === 429; i += 1) {
-      await page.waitForTimeout(4_000);
-      res = await send();
-    }
-
     // Đổi một dòng trong system_config là đổi hành vi — không cần dựng lại ảnh docker.
-    expect(res.status()).toBe(401);
+    await waitUntilLimitLifted(page.request);
   });
 });
