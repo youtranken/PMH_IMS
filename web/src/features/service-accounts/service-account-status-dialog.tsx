@@ -70,7 +70,7 @@ export function ServiceAccountStatusDialog({
             className={off ? 'btn danger' : 'btn primary'}
             disabled={change.isPending}
           >
-            {change.isPending ? t('common.loading') : label}
+            {change.isPending ? t('common.working') : label}
           </button>
         </>
       }

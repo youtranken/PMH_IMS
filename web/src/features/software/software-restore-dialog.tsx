@@ -132,7 +132,7 @@ export function RestoreDialog({
             className="btn primary"
             disabled={restore.isPending}
           >
-            {restore.isPending ? t('common.loading') : t('software.restoreSubmit')}
+            {restore.isPending ? t('common.working') : t('software.restoreSubmit')}
           </button>
         </>
       }

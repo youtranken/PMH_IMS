@@ -334,7 +334,7 @@ export function SettingsScreen({ me }: { me: Me }) {
                 {t('common.cancel')}
               </button>
               <button type="button" className="btn primary" disabled={saving} onClick={() => void save()}>
-                {saving ? t('common.loading') : t('settings.reviewConfirm')}
+                {saving ? t('common.working') : t('settings.reviewConfirm')}
               </button>
             </>
           }

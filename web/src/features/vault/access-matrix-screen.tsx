@@ -903,7 +903,7 @@ function CellDialog({
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1073,7 +1073,7 @@ function GrantToScopeDialog({
             {t('common.cancel')}
           </DialogCancel>
           <button type="submit" form="grant-scope-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1295,7 +1295,7 @@ function MultiGrantDialog({
             {t('common.cancel')}
           </DialogCancel>
           <button type="submit" form="multi-grant-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1486,7 +1486,7 @@ function CopyFromDialog({
             {t('common.cancel')}
           </button>
           <button type="submit" form="copy-access-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('access.add')}
+            {saving ? t('common.working') : t('access.add')}
           </button>
         </>
       }

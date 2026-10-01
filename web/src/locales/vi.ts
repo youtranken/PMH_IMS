@@ -233,6 +233,10 @@ export default {
   },
   common: {
     save: 'Lưu',
+    /* Nhãn nút trong lúc lượt GHI đang bay. "Đang tải…" (`loading`) là câu của lượt ĐỌC — đặt
+       trên nút Lưu thì người dùng tưởng hệ thống đang tải lại chứ chưa lưu. */
+    saving: 'Đang lưu…',
+    working: 'Đang xử lý…',
     cancel: 'Hủy',
     close: 'Đóng',
     // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.

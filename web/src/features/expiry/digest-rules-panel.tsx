@@ -415,7 +415,7 @@ function RuleForm({
             {t('common.cancel')}
           </DialogCancel>
           <button type="submit" form="rule-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

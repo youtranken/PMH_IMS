@@ -749,7 +749,7 @@ function BulkRenewBar({
         disabled={busy || renewable.length === 0}
         onClick={() => void run()}
       >
-        {busy ? t('common.loading') : t('expiry.bulkRenew', { count: renewable.length })}
+        {busy ? t('common.working') : t('expiry.bulkRenew', { count: renewable.length })}
       </button>
     </StickyActionBar>
   );

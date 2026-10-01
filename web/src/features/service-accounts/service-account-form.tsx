@@ -146,7 +146,7 @@ export function ServiceAccountForm({
             {t('common.cancel')}
           </DialogCancel>
           <button type="submit" form="sa-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

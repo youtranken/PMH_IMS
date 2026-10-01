@@ -107,6 +107,11 @@
 .dialog-viewport .sheet-footer {
   flex-wrap: wrap;
 }
+/* Nút chính đổi chữ trong lúc ghi ("Lưu" → "Đang lưu…"): có sàn bề ngang thì nút không phình
+   ra rồi co lại, kéo nút Hủy bên cạnh nhảy theo đúng lúc người dùng đang nhìn. */
+.dialog-viewport .sheet-footer > button.primary {
+  min-width: 7rem;
+}
 
 /*
  * Điện thoại: hộp là BOTTOM SHEET cao theo nội dung.

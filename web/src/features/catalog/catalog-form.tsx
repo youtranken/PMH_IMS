@@ -262,7 +262,7 @@ export function CatalogForm({
             {t('common.cancel')}
           </DialogCancel>
           <button type="submit" form="catalog-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

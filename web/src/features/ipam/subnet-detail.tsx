@@ -849,7 +849,7 @@ export function IpForm({
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t("common.loading") : t("common.save")}
+            {save.isPending ? t("common.saving") : t("common.save")}
           </button>
         </>
       }
@@ -1007,7 +1007,7 @@ function TransitionDialog({
             className={to === "free" ? "btn caution" : "btn primary"}
             disabled={move.isPending}
           >
-            {move.isPending ? t("common.loading") : label}
+            {move.isPending ? t("common.working") : label}
           </button>
         </>
       }
@@ -1182,7 +1182,7 @@ function VoidAddressDialog({
             className="btn danger"
             disabled={remove.isPending}
           >
-            {remove.isPending ? t("common.loading") : t("ipam.voidAddress")}
+            {remove.isPending ? t("common.working") : t("ipam.voidAddress")}
           </button>
         </>
       }

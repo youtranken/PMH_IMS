@@ -549,7 +549,7 @@ function PortForm({
               keepOpen.current = false;
             }}
           >
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

@@ -322,7 +322,7 @@ export function DecisionDialog({
             className={mode === 'approve' ? 'btn primary' : 'btn danger'}
             disabled={busy}
           >
-            {busy ? t('common.loading') : submitLabel}
+            {busy ? t('common.working') : submitLabel}
           </button>
         </>
       }

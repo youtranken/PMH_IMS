@@ -128,7 +128,7 @@ export function SubnetForm({
             {t('common.cancel')}
           </DialogCancel>
           <button type="submit" form="subnet-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -342,7 +342,7 @@ export function HideDialog({
             className="btn danger"
             disabled={hide.isPending}
           >
-            {hide.isPending ? t('common.loading') : t('ipam.hide')}
+            {hide.isPending ? t('common.working') : t('ipam.hide')}
           </button>
         </>
       }

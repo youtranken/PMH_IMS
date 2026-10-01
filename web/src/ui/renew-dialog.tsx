@@ -145,7 +145,7 @@ export function RenewDialog({
             className="btn primary"
             disabled={renew.isPending || uploading}
           >
-            {renew.isPending || uploading ? t('common.loading') : t('expiry.renew')}
+            {renew.isPending || uploading ? t('common.working') : t('expiry.renew')}
           </button>
         </>
       }
