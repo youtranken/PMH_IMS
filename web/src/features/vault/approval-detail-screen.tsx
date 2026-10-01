@@ -299,7 +299,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
           </button>
           <button type="button" className="btn primary" disabled={busy} onClick={onApprove}>
             {busy
-              ? t('common.loading')
+              ? t('common.working')
               : armed
                 ? t('approvals.approveConfirm', { hours: granted })
                 : t('approvals.approveHours', { hours: granted })}

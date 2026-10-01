@@ -7,7 +7,7 @@ import { errorCode, errorMessage } from '@/lib/api';
 import { agoParts, formatDateTime } from '@/lib/format';
 import { OWNER_PATH } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-kinds';
-import { Dialog, DialogDescription } from '@/ui/dialog';
+import { Dialog, DialogCancel, DialogDescription } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { grantHoursCheck, hourSteps, requestedHours } from '@/ui/grant-hours';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
@@ -313,16 +313,16 @@ export function DecisionDialog({
       )}
       footer={
         <>
-          <button type="button" className="btn" disabled={busy} onClick={onClose}>
+          <DialogCancel disabled={busy}>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="decision-form"
             className={mode === 'approve' ? 'btn primary' : 'btn danger'}
             disabled={busy}
           >
-            {busy ? t('common.loading') : submitLabel}
+            {busy ? t('common.working') : submitLabel}
           </button>
         </>
       }

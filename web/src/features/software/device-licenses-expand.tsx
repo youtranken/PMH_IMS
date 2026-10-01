@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, formatMoney } from '@/lib/format';
 import { TableWrap } from '@/ui/data-table';
+import { PerpetualBadge } from '@/ui/perpetual-badge';
 import { SeatEndCell } from './seat-cells';
 import type { InstalledLicense } from './software-types';
 import { PATHS } from '@/lib/routes';
@@ -67,7 +68,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
               </td>
               <td data-label={t('software.licenseModel')}>
                 {item.licenseModel === 'perpetual' ? (
-                  <span className="badge outline plain">∞ {t('software.perpetual')}</span>
+                  <PerpetualBadge />
                 ) : (
                   <span className="muted">{t('software.subscription')}</span>
                 )}

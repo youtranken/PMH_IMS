@@ -107,6 +107,25 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(screen.queryByRole('button', { name: /Tải file mẫu/ })).not.toBeInTheDocument();
   });
 
+  it('điện thoại: Xuất / Nhập vào menu ⋮ đầu trang, nút Thêm đứng riêng (một hàng ở 390px)', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 600px)',
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    stubFetch();
+    renderAt('/admin/catalog');
+    expect(screen.queryByRole('button', { name: 'Nhập từ Excel' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Thêm site' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với Danh mục' }));
+    expect(screen.getByRole('menuitem', { name: 'Xuất Excel' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Nhập từ Excel' })).toBeInTheDocument();
+  });
+
   it('member không có đường nhập Excel và được nói rõ ai làm việc đó (Q-12)', async () => {
     stubFetch();
     renderAt('/admin/catalog', MEMBER);

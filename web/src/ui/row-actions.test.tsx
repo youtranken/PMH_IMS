@@ -103,6 +103,23 @@ describe('RowActions — menu ba chấm dùng chung', () => {
     expect(trigger).toHaveFocus();
   });
 
+  it('Tab đóng menu và cũng TRẢ focus về nút ba chấm (menu portal ra body, Tab tự nhiên rơi mất)', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <>
+        <button type="button">Ô trước</button>
+        <RowActions label="Thao tác với LIC-01" items={items()} />
+      </>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Thao tác với LIC-01' });
+
+    await user.click(trigger);
+    await user.keyboard('{Tab}');
+
+    expect(screen.queryByRole('menuitem', { name: 'Sửa' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it('mục bị khóa thì không nhận focus khi vừa mở', async () => {
     const user = userEvent.setup();
     renderWithI18n(

@@ -564,6 +564,11 @@
   gap: var(--space-3);
   flex: 0 1 23rem;
 }
+/* Cụm cũng mang `role="group"` nên trúng luật `.filter-bar [role='group']` ở trên (cùng độ ưu
+   tiên): phải khai lại ở đây, sau nó, không thì "đến ngày" rơi xuống dưới "từ ngày". */
+.filter-bar .filter-range {
+  flex-wrap: nowrap;
+}
 .filter-range .dp {
   flex: 1 1 0;
 }
@@ -591,6 +596,22 @@
 .filter-bar .grow {
   flex: 1;
   min-width: 200px;
+}
+/* Điện thoại: ô tìm một hàng riêng, ô chọn / ô ngày chia đều HAI cột. Để bề ngang tối thiểu
+   10.5rem tự xếp thì ở 390px mỗi hàng một ô dài một ô ngắn, mép phải lởm chởm. Thanh gập
+   (`FilterBar collapsible`) xếp cột ở `.filter-panel`, không đi qua luật này. */
+@media (max-width: 600px) {
+  .filter-bar > .grow {
+    flex-basis: 100%;
+  }
+  .filter-bar > .fsel,
+  .filter-bar > .dp {
+    flex: 1 1 calc(50% - var(--space-4));
+    min-width: 0;
+  }
+  .filter-bar > .filter-range {
+    flex: 1 1 100%;
+  }
 }
 input.search {
   background-image: var(--icon-search);
@@ -664,7 +685,7 @@ input.search {
     padding: var(--space-1) var(--space-5);
   }
   /*
-   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table tbody tr:last-child td`
+   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table > tbody > tr:last-child > td`
    * tắt viền ở dòng cuối, nên thẻ cuối mất vạch trong khi các thẻ trên còn — `:not()` nâng
    * độ ưu tiên vừa đủ thắng nó. Ô cuối của thẻ không kẻ: viền dưới của `tr` đã ngăn thẻ.
    */

@@ -298,7 +298,8 @@ export function DevicesScreen({ me }: { me: Me }) {
      thiết bị là màn nhập desktop; chạm thẻ là mở chi tiết. */
   const mobileCard = useMemo<MobileCard<DeviceRow>>(
     () => ({
-      title: (item) => <span className="mono">{item.code}</span>,
+      title: (item) => item.code,
+      titleIsCode: true,
       href: (item) => PATHS.device(item.id),
       badge: (item) => (
         <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>

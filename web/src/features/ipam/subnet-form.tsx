@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { cidrContains, cidrOverlaps, parseIpv4, previewCidr } from '@/lib/ipv4';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
@@ -124,11 +124,11 @@ export function SubnetForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="subnet-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -333,16 +333,16 @@ export function HideDialog({
       title={t('ipam.hideSubnetTitle', { cidr: subnet.cidr })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="hide-subnet-form"
             className="btn danger"
             disabled={hide.isPending}
           >
-            {hide.isPending ? t('common.loading') : t('ipam.hide')}
+            {hide.isPending ? t('common.working') : t('ipam.hide')}
           </button>
         </>
       }

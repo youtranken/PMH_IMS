@@ -254,7 +254,9 @@ export function AttachmentPanel({
             <ul className="upload-queue">
               {queue.map((item) => (
                 <li key={item.key}>
-                  <span className="upload-queue-name">{item.name}</span>
+                  <span className="upload-queue-name" title={item.name}>
+                    {item.name}
+                  </span>
                   <span className="muted">{t(`attachments.queue_${item.state}`)}</span>
                   {item.state === 'waiting' || item.state === 'uploading' ? (
                     <button

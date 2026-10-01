@@ -194,7 +194,7 @@ export function AssignIpDialog({
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t('common.loading') : t(replacing ? 'ipam.trChange' : 'ipam.trAssign')}
+            {save.isPending ? t('common.working') : t(replacing ? 'ipam.trChange' : 'ipam.trAssign')}
           </button>
         </>
       }

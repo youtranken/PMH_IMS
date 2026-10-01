@@ -72,6 +72,33 @@ export function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+/** Vô cực — kỳ hạn "Vĩnh viễn" (`PerpetualBadge`). */
+export function InfinityIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
+    </Glyph>
+  );
+}
+
+/** Vòng tròn rỗng — điều kiện CHƯA đạt trong danh sách luật (cặp với `CheckIcon`). */
+export function CircleIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <circle cx="12" cy="12" r="6.5" />
+    </Glyph>
+  );
+}
+
+/**
+ * Dấu đạt / chưa đạt của MỘT điều kiện trong danh sách luật (luật mật khẩu đăng nhập, độ khó
+ * mật khẩu cất két). Một chỗ vẽ để hai danh sách không lệch nhau; trạng thái thật vẫn phải
+ * nói bằng chữ sr-only ở nơi gọi — hình luôn `aria-hidden`.
+ */
+export function RuleMark({ met, className }: { met: boolean; className?: string }) {
+  return met ? <CheckIcon className={className} /> : <CircleIcon className={className} />;
+}
+
 /** Ba chấm DỌC (Q-18) — chấm tô đặc, nét `currentColor`. */
 export function KebabIcon({ className }: { className?: string }) {
   return (

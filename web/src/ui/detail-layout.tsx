@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
+import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 
 /**
@@ -83,8 +84,8 @@ export function DetailLayout({
   );
 }
 
-/** Mốc thu thẻ định danh — PHẢI khớp `@media (max-width: 680px)` của `.rail-card` ở detail-tabs.css. */
-const RAIL_COLLAPSE_QUERY = '(max-width: 680px)';
+/** Mốc thu thẻ định danh — khớp `.rail-card` ở detail-tabs.css. */
+const RAIL_COLLAPSE_QUERY = BREAKPOINTS.railCollapse;
 
 /**
  * Thẻ định danh. `title` mặc định để mọi trang gọi cùng một tên, khỏi mỗi nơi một kiểu.

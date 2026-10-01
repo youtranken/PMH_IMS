@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { reasonRule, useFormErrors } from '@/ui/use-form-errors';
 import type { ServiceAccountRow, ServiceAccountStatus } from './service-account-types';
@@ -61,16 +61,16 @@ export function ServiceAccountStatusDialog({
       title={`${label} — ${row.code}`}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="sa-status-form"
             className={off ? 'btn danger' : 'btn primary'}
             disabled={change.isPending}
           >
-            {change.isPending ? t('common.loading') : label}
+            {change.isPending ? t('common.working') : label}
           </button>
         </>
       }

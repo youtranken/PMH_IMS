@@ -73,4 +73,28 @@ describe('Select — nhãn gọn trên nút, nhãn đủ trong menu', () => {
     expect(screen.getByRole('button', { name: 'A' })).not.toHaveAttribute('data-filled');
     expect(screen.getByRole('button', { name: 'B' })).toHaveAttribute('data-filled', 'true');
   });
+
+  it('ô sắp xếp (indicateFilled=false) luôn có giá trị nhưng KHÔNG tô như đang lọc', () => {
+    renderWithI18n(
+      <Select
+        value="newest"
+        indicateFilled={false}
+        onChange={() => {}}
+        ariaLabel="Sắp xếp"
+        options={[{ value: 'newest', label: 'Mới trước' }]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Sắp xếp' })).not.toHaveAttribute('data-filled');
+  });
+
+  it('chữ dài bị cắt "…" vẫn đọc đủ qua title — trên nút và trong menu', async () => {
+    const long = 'HCM-01 — Trụ sở chính tòa nhà A tầng 12 phòng máy chủ';
+    renderWithI18n(
+      <Select value="s1" onChange={() => {}} ariaLabel="Site" options={[{ value: 's1', label: long, short: 'HCM-01' }]} />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Site' });
+    expect(trigger.querySelector('.fsel-val')).toHaveAttribute('title', long);
+    await userEvent.click(trigger);
+    expect(screen.getByRole('option', { name: long }).querySelector('[title]')).toHaveAttribute('title', long);
+  });
 });

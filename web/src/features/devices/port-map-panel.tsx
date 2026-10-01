@@ -9,7 +9,7 @@ import { foldSearch } from '@/lib/search-fold';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { MOBILE_CARD_QUERY, TableWrap } from '@/ui/data-table';
 import { useMediaQuery } from '@/ui/use-media-query';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
@@ -507,9 +507,9 @@ function PortForm({
       })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           {/* Khai cả dãy cổng: tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
           {port ? null : (
             <button
@@ -533,7 +533,7 @@ function PortForm({
               keepOpen.current = false;
             }}
           >
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

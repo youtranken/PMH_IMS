@@ -189,7 +189,7 @@ export function AssignDialog({
             disabled={save.isPending || running}
           >
             {save.isPending || running
-              ? t('common.loading')
+              ? t('common.working')
               : editing
                 ? t('common.save')
                 : needReason

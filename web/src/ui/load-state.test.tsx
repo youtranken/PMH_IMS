@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ApiError } from '@/lib/api-client';
 import { MemoryRouter } from 'react-router-dom';
-import { DetailLoadFailed, Forbidden, LoadError, NotFound } from '@/ui/load-state';
+import { DetailLoadFailed, Forbidden, LoadError, NotFound, ScreenError } from '@/ui/load-state';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 describe('LoadError', () => {
@@ -104,3 +104,15 @@ describe('NotFound / Forbidden / DetailLoadFailed', () => {
   });
 });
 
+
+// Hai lối ra của màn lỗi render nằm chung khung `.error-actions` như 404/403: khung khác thì
+// luật khoảng trên của nút chính làm hai nút lệch nhau (css/shared-ui-rules.test.ts canh luật).
+describe('ScreenError', () => {
+  it('Tải lại + Về trang chủ đứng chung một khung lối ra như 404', () => {
+    renderWithI18n(<ScreenError />);
+    const reload = screen.getByRole('button', { name: 'Tải lại trang' });
+    const home = screen.getByRole('button', { name: 'Về trang chủ' });
+    expect(reload.parentElement).toBe(home.parentElement);
+    expect(reload.parentElement).toHaveClass('error-actions');
+  });
+});

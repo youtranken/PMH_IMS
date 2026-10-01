@@ -274,8 +274,10 @@ function RowActionsMenu({
                 close(true);
               } else if (event.key === 'Tab') {
                 // Tab ra khỏi menu = đã xong với nó. Để mở thì menu nổi lại lơ lửng trên một
-                // ô khác đang được focus.
-                close(false);
+                // ô khác đang được focus. Menu portal ra cuối body nên bước Tab tự nhiên rơi
+                // về đầu trang — chặn nó và trả focus về nút ⋮, Tab tiếp đi đúng thứ tự dòng.
+                event.preventDefault();
+                close(true);
               }
             }}
           >

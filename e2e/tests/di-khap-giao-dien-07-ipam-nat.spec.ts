@@ -870,7 +870,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    *
    * Hộp "Thêm luật NAT" là form phức tạp nhất hệ thống: ba khối theo đúng đường đi của một gói
    * tin, một ô cổng dạng CHIP nhận nhiều khoảng, một nhóm giao thức `role="group"`, và HAI
-   * đường mở tiếp hộp con ("+ Thêm thiết bị mới", "+ Thêm dịch vụ") cho thứ chưa có trong kho.
+   * đường mở tiếp hộp con ("Thêm thiết bị mới", "Thêm dịch vụ") cho thứ chưa có trong kho.
    *
    * Ba khối ấy không phải trang trí: một dây mười ô xếp dọc làm "Loại thiết bị" — một BỘ LỌC
    * của ô ngay dưới — đứng như thể là dữ liệu của rule.
@@ -992,10 +992,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'ô này nhận cả một DẢI cổng, không chỉ một số',
     ).toBeVisible();
 
-    /* ----- Hộp con 1: "+ Thêm thiết bị mới" — hộp CHA phải sống ----- */
+    /* ----- Hộp con 1: "Thêm thiết bị mới" — hộp CHA phải sống ----- */
     await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('Phòng Nhân sự');
     await form.getByRole('combobox', { name: 'Router', exact: true }).click();
-    await form.getByRole('button', { name: '+ Thêm thiết bị mới' }).click();
+    await form.getByRole('button', { name: 'Thêm thiết bị mới', exact: true }).click();
     const deviceForm = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await expect(
       deviceForm,
@@ -1013,9 +1013,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Phòng Nhân sự',
     );
 
-    /* ----- Hộp con 2: "+ Thêm dịch vụ" ----- */
+    /* ----- Hộp con 2: "Thêm dịch vụ" ----- */
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài', exact: true }).click();
-    await form.getByRole('button', { name: '+ Thêm dịch vụ' }).click();
+    await form.getByRole('button', { name: 'Thêm dịch vụ', exact: true }).click();
     const serviceForm = page.getByRole('dialog', { name: 'Thêm dịch vụ' });
     await expect(serviceForm).toBeVisible();
     await serviceForm.getByRole('button', { name: 'Hủy' }).click();
@@ -1042,7 +1042,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveText('Thêm ít nhất một cổng ngoài.');
     await expect(form, 'lỗi thì hộp Ở LẠI — đóng là mất trắng thứ vừa gõ').toBeVisible();
 
+    // Form đã gõ dở: Hủy đi cùng cửa với Esc — hỏi lại trước khi vứt.
     await form.getByRole('button', { name: 'Hủy' }).click();
+    await confirmAction(page, 'Bỏ và đóng');
     await expect(form).toHaveCount(0);
     await expect(page.getByText('Chưa có luật NAT nào'), 'bấm Hủy là không ghi gì cả').toBeVisible();
   });

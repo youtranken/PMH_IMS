@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { RuleMark } from '@/ui/glyph-icons';
 import {
   PASSWORD_MIN_GROUPS,
   PASSWORD_MIN_LENGTH,
@@ -10,10 +11,10 @@ import {
  * Luật mật khẩu dạng checklist tick dần khi gõ, thay cho một dòng gợi ý mờ: người dùng thấy
  * mình thiếu gì TRƯỚC khi bấm, không phải đoán sau câu lỗi.
  *
- * Bốn nhóm ký tự mỗi nhóm một dòng (Q-18): luật là 3 trong 4 (NFR-01), nên một nhóm còn ○ chưa
+ * Bốn nhóm ký tự mỗi nhóm một dòng (Q-18): luật là 3 trong 4 (NFR-01), nên một nhóm còn vòng rỗng chưa
  * chắc là thiếu — dòng tiêu đề "Có ít nhất 3 trong 4" mới là dòng phán đạt/chưa.
  *
- * `repeat`: có thì thêm dòng "Hai mật khẩu khớp". Chưa khớp chỉ là ○, không phải chữ đỏ — người
+ * `repeat`: có thì thêm dòng "Hai mật khẩu khớp". Chưa khớp chỉ là vòng rỗng, không phải chữ đỏ — người
  * đang gõ dở ô nhập lại không bị mắng.
  *
  * `aria-live="polite"`: trình đọc màn hình nghe được khi một dòng đổi sang đạt, không bị cắt
@@ -61,7 +62,7 @@ function Rule({ ok, children }: { ok: boolean; children: ReactNode }) {
   return (
     <p className={ok ? 'pw-rule ok' : 'pw-rule'}>
       <span className="pw-rule-icon" aria-hidden="true">
-        {ok ? '✓' : '○'}
+        <RuleMark met={ok} />
       </span>
       <span>
         {children}

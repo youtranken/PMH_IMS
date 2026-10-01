@@ -65,13 +65,16 @@ table.table tbody td {
   color: var(--ink);
   vertical-align: middle;
 }
-table.table tbody tr:last-child td {
+/* `>` ở mọi chặng: dạng hậu duệ rò vào bảng con trong khu bung (`tr.exp`) — hàng bung là hàng
+   cuối thì MỌI ô bảng con mất vạch ngăn, nằm ở vị trí chẵn thì cả bảng con nhuộm sọc. Combinator
+   không cộng độ ưu tiên nên các luật nền trạng thái bên dưới vẫn so như cũ. */
+table.table > tbody > tr:last-child > td {
   border-bottom: none;
 }
 table.table tbody tr {
   transition: background 0.12s var(--ease);
 }
-table.table tbody tr:nth-child(even) td {
+table.table > tbody > tr:nth-child(even) > td {
   background: var(--row-alt);
 }
 /* Ô mono trống chỉ còn dấu "—": vẽ bằng font mono thì nó ngắn lại thành "–", đứng cạnh "—"
@@ -102,7 +105,7 @@ table.table tbody tr.due-today td:first-child {
 }
 /*
  * Nền trạng thái của dòng PHẢI thắng sọc dòng chẵn. Viết `.table tr.row-danger td` (0,2,2)
- * thì thua `table.table tbody tr:nth-child(even) td` (0,2,4): dòng quá hạn ở vị trí chẵn mất
+ * thì thua `table.table > tbody > tr:nth-child(even) > td` (0,2,4): dòng quá hạn ở vị trí chẵn mất
  * nền đỏ, người dùng tưởng hai nhóm khác nhau. Cùng độ ưu tiên với luật sọc và đặt SAU nó,
  * như `.overdue`/`.due-today` ngay trên.
  */
@@ -524,22 +527,6 @@ button.cell-note.cell-sub {
   box-shadow: inset 0 0 0 1px var(--border-2);
 }
 
-/* --- Recurring session expander (4.5b) ------------------------------------ */
-.session-list {
-  margin: 0;
-  padding: var(--space-2) var(--space-7);
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.session-list li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  font-size: var(--fs-sm);
-}
-
 /* Chữ phụ trong ô bảng (serial dưới tên máy, email dưới họ tên, băng thông dưới nhà mạng…).
    Dùng ở 10 màn nhưng CHƯA TỪNG có luật — cùng họ lỗi với `.shell`/`.row`/`.spinner`. Không có
    nó, span này là inline trần nên dính thẳng vào chữ trước: "Switch lõi auditFOC-AUD-907714",
@@ -711,11 +698,19 @@ table.table .col-sticky-end::after {
 }
 .list-card-title {
   min-width: 0;
-  font-family: var(--mono);
   font-weight: 700;
-  white-space: nowrap;
+  /* Hai dòng rồi "…": họ tên / nhãn hạn dài một dòng thì cắt mất nửa câu. Chữ đủ ở `title`. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+}
+/* `.mono` chung thu chữ còn 0.85em cho mã trong bảng; tiêu đề thẻ là dòng chính, giữ cỡ. */
+.list-card-title.mono {
+  font-family: var(--mono);
+  font-size: inherit;
 }
 /* Link/nút định danh phủ cả thẻ: chạm đâu cũng mở, mà thẻ vẫn chỉ có MỘT điểm dừng Tab. */
 .list-card-link {
@@ -730,6 +725,9 @@ table.table .col-sticky-end::after {
 }
 .list-card-link:focus-visible {
   outline: none;
+  /* Vòng tiêu điểm vẽ trên CẢ thẻ (luật dưới); ring chung của <button> mà vẽ thêm quanh tiêu đề
+     là hai vòng lồng nhau. */
+  box-shadow: none;
 }
 .list-card:has(.list-card-link:focus-visible) {
   box-shadow: inset var(--ring);
@@ -796,6 +794,13 @@ table.table thead th .th-sort:focus-visible .sort-arrow.idle {
   font-size: var(--fs-2xs);
   font-weight: 600;
   white-space: nowrap;
+}
+/* `.caret-btn:hover` (primitives.css, nạp SAU file này, cùng độ ưu tiên) sẽ đổi chip thành ô xám
+   chữ đen — hover giữ màu chip, chỉ thêm viền. */
+.caret-btn.caret-chip:hover {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  box-shadow: inset 0 0 0 1px var(--primary-ink);
 }
 /* Bảng đang tải trang/bộ lọc mới: giữ bảng cũ (không nháy trắng) nhưng làm mờ để người dùng
    biết số liệu đang đổi. */

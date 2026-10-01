@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { PerpetualBadge } from '@/ui/perpetual-badge';
 import { UsageBar } from '@/ui/usage-bar';
 import { seatFlag, standingOf } from './software-standing';
 import { STATUS_KEY, STATUS_TONE, seatLabel, supportsSeats, type SoftwareRow } from './software-types';
@@ -28,7 +29,7 @@ export function SoftwareStanding({ item, compact = false }: { item: SoftwareRow;
 
   const sub =
     standing.kind === 'perpetual'
-      ? `∞ ${t('software.perpetual')}`
+      ? <PerpetualBadge plain />
       : standing.kind === 'noEnd'
         ? t('expiry.labelNone')
         : standing.kind === 'expired'

@@ -117,12 +117,12 @@ describe('VaultPanel — hộp Cất mật khẩu/khóa khóa lại khi đang gh
     await userEvent.type(screen.getByLabelText(/Giá trị/), 'Sup3r#Secret');
     await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
 
-    // Lượt POST đang bay: nút Lưu đã đổi sang "Đang tải…".
-    await screen.findByRole('button', { name: 'Đang tải…' });
+    // Lượt POST đang bay: nút Lưu đã đổi sang "Đang lưu…".
+    await screen.findByRole('button', { name: 'Đang lưu…' });
 
     expect(cancelButton()).toBeDisabled();
     await userEvent.click(cancelButton());
-    expect(screen.getByRole('button', { name: 'Đang tải…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Đang lưu…' })).toBeInTheDocument();
   });
 });
 
@@ -138,11 +138,11 @@ describe('VaultPanel — hộp Đổi mật khẩu khóa lại khi đang ghi', (
     await userEvent.type(screen.getByLabelText(/Giá trị mới/), 'N3w#Secret');
     await userEvent.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
 
-    await screen.findByRole('button', { name: 'Đang tải…' });
+    await screen.findByRole('button', { name: 'Đang xử lý…' });
 
     expect(cancelButton()).toBeDisabled();
     await userEvent.click(cancelButton());
-    expect(screen.getByRole('button', { name: 'Đang tải…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Đang xử lý…' })).toBeInTheDocument();
   });
 });
 
@@ -178,11 +178,11 @@ describe('VaultPanel — hộp Xin quyền xem khóa lại khi đang gửi', () 
     );
     await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu' }));
 
-    await screen.findByRole('button', { name: 'Đang tải…' });
+    await screen.findByRole('button', { name: 'Đang xử lý…' });
 
     expect(cancelButton()).toBeDisabled();
     await userEvent.click(cancelButton());
-    expect(screen.getByRole('button', { name: 'Đang tải…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Đang xử lý…' })).toBeInTheDocument();
   });
 });
 
@@ -826,7 +826,7 @@ describe('VaultPanel — ghi chú không được chứa mật khẩu', () => {
       'Model FortiGate 60F, IP quản trị 10.0.0.1',
     );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
-    await screen.findByRole('button', { name: 'Đang tải…' });
+    await screen.findByRole('button', { name: 'Đang lưu…' });
     expect(writes(fetchMock)).toHaveLength(1);
   });
 

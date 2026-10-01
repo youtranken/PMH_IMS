@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { cmpSpec as cmp, cssRules, specificity } from './css-test-kit';
 
 /**
  * Nền hover CHUNG của nút (`surface-2`, gần trắng ở theme sáng) không được thắng luật của chính
@@ -10,49 +9,11 @@ import { describe, expect, it } from 'vitest';
  * jsdom không tính cascade, nên tính độ ưu tiên của selector thật trong CSS rồi so.
  */
 
-const CSS_DIR = __dirname;
-
-function stripComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\r\n/g, '\n');
-}
-
-type Spec = [number, number, number];
-const add = (a: Spec, b: Spec): Spec => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const cmp = (a: Spec, b: Spec) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
-
-/** Độ ưu tiên theo CSS Selectors 4: `:where()` = 0, `:not()`/`:is()` = selector bên trong. */
-function specificity(selector: string): Spec {
-  let s: Spec = [0, 0, 0];
-  let rest = selector;
-  for (;;) {
-    const m = /:(where|not|is)\(/.exec(rest);
-    if (!m) break;
-    let depth = 1;
-    let i = m.index + m[0].length;
-    for (; i < rest.length && depth > 0; i++) {
-      if (rest[i] === '(') depth++;
-      else if (rest[i] === ')') depth--;
-    }
-    const inner = rest.slice(m.index + m[0].length, i - 1);
-    if (m[1] !== 'where') s = add(s, specificity(inner));
-    rest = rest.slice(0, m.index) + ' ' + rest.slice(i);
-  }
-  const ids = (rest.match(/#[\w-]+/g) ?? []).length;
-  const classes = (rest.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/g) ?? []).length;
-  const types = (rest.replace(/\.[\w-]+|\[[^\]]+\]|:{1,2}[\w-]+|#[\w-]+/g, ' ').match(/[a-z][\w-]*/gi) ?? [])
-    .length;
-  return add(s, [ids, classes, types]);
-}
-
 /** Mọi selector (đã tách dấu phẩy) có khai `background` ở mức gốc của file. */
 function backgroundSelectors(file: string): string[] {
-  const css = stripComments(readFileSync(join(CSS_DIR, file), 'utf8'));
-  const out: string[] = [];
-  for (const m of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
-    if (!/(^|;|\s)background(-color)?\s*:/.test(m[2])) continue;
-    out.push(...m[1].split(',').map((s) => s.trim()));
-  }
-  return out;
+  return cssRules(file)
+    .filter((r) => r.media === null && /(^|;|\s)background(-color)?\s*:/.test(r.body))
+    .map((r) => r.selector);
 }
 
 const globalHover = backgroundSelectors('base.css').filter((s) => /^button\b/.test(s) && s.includes(':hover') && !/[.[]/.test(s.replace(/:\w+\([^)]*\)/g, '')));

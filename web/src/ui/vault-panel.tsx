@@ -887,7 +887,7 @@ function SecretForm({
             {t('common.cancel')}
           </button>
           <button type="submit" form="secret-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1096,7 +1096,7 @@ function RotateForm({
             {t('common.cancel')}
           </button>
           <button type="submit" form="rotate-form" className="btn primary" disabled={rotate.isPending}>
-            {rotate.isPending ? t('common.loading') : t(`vault.rotate_${secret.kind}`)}
+            {rotate.isPending ? t('common.working') : t(`vault.rotate_${secret.kind}`)}
           </button>
         </>
       }
@@ -1238,7 +1238,7 @@ function BreakGlassDialog({
             {t('common.cancel')}
           </button>
           <button type="submit" form="break-glass-form" className="btn primary" disabled={send.isPending}>
-            {send.isPending ? t('common.loading') : t('vault.requestSend')}
+            {send.isPending ? t('common.working') : t('vault.requestSend')}
           </button>
         </>
       }

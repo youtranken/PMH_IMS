@@ -292,7 +292,7 @@ input[list]::-webkit-calendar-picker-indicator {
   align-items: center;
   width: 100%;
   padding: var(--space-4) 2rem var(--space-4) var(--space-5);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   background: var(--surface);
   color: var(--ink);
@@ -424,7 +424,7 @@ input[list]::-webkit-calendar-picker-indicator {
   flex: 0 0 auto;
   margin: 0 0 var(--space-1);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink);
@@ -438,7 +438,14 @@ input[list]::-webkit-calendar-picker-indicator {
 .fsel-option {
   white-space: nowrap;
   overflow: hidden;
+}
+/* `.fsel-option` là flex, mà `text-overflow` không cắt chữ của chính hộp flex: chữ phải nằm
+   trong một khối riêng co được (`min-width: 0`) thì mới ra "…". Chữ đầy đủ ở `title`. */
+.fsel-opt-label {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* Ô lọc đang mang giá trị: chữ trên nút đổi mà khung y nguyên thì không ai nhận ra danh sách
    đang bị lọc. Chỉ trong thanh lọc — ô trong form luôn có giá trị, tô thì cả form thành màu. */

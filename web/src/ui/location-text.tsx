@@ -4,8 +4,8 @@ import { locationLabel } from '@/lib/device-types';
  * Vị trí "site · tủ" của thiết bị, CHỈ được xuống dòng sau dấu "·".
  *
  * Mã đọc theo khối: ngắt "TU-E2E-" / "HCM-01" giữa mã là người đọc chép sai tủ. Mỗi mã nằm
- * trong một `.mono` không ngắt, `<wbr>` sau dấu chấm giữa là chỗ ngắt duy nhất được phép. Chữ
- * đọc ra vẫn y hệt `locationLabel` nên tìm theo chữ trên màn không đổi.
+ * trong một `.mono` không ngắt; khoảng TRƯỚC dấu chấm giữa là khoảng trắng không ngắt, nên chỗ
+ * ngắt duy nhất là khoảng SAU dấu — không có dòng nào bắt đầu bằng "·" đứng trơ trọi.
  */
 export function LocationText({
   device,
@@ -17,7 +17,8 @@ export function LocationText({
   }
   return (
     <span className="location-text">
-      <span className="mono">{device.siteCode}</span> · <wbr />
+      <span className="mono">{device.siteCode}</span>
+      {'\u00a0· '}
       <span className="mono">{device.cabinetCode}</span>
     </span>
   );

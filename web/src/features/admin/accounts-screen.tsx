@@ -1029,8 +1029,11 @@ export function TemporaryPasswordDialog({
             {password}
           </p>
         ) : (
-          <p className="mono temp-password" aria-label={t('accounts.passwordMasked')}>
-            {'•'.repeat(password.length)}
+          /* `aria-label` trên <p> bị trình đọc màn hình bỏ qua (vai trò chung không nhận tên),
+             nên nó đọc "chấm chấm chấm…". Giấu dãy chấm, đọc câu chữ ẩn thay vào. */
+          <p className="mono temp-password">
+            <span aria-hidden="true">{'•'.repeat(password.length)}</span>
+            <span className="sr-only">{t('accounts.passwordMasked')}</span>
           </p>
         )}
         {/* Không `aria-pressed`: nhãn đã đổi theo trạng thái, thêm cờ nhấn là hai tín hiệu. */}

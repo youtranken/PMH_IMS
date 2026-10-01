@@ -161,6 +161,7 @@ export function RelationMap({
         <span
           key={i}
           className={`rn-i${line.tone ? ` ${line.tone}` : ''}${line.mono ? ' mono' : ''}`}
+          title={line.text}
         >
           {line.text}
         </span>
@@ -226,7 +227,9 @@ export function RelationMap({
           nodes.map((node) => (
             <button key={node.key} type="button" onClick={node.onOpen}>
               <span>{node.title}</span>
-              <span className="rl-i">{node.lines[0]?.text ?? ''}</span>
+              <span className="rl-i" title={node.lines[0]?.text}>
+                {node.lines[0]?.text ?? ''}
+              </span>
               <span className="badge">{node.count}</span>
             </button>
           ))

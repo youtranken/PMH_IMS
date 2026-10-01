@@ -336,6 +336,7 @@ export function IspScreen({ me }: { me: Me }) {
                góc thay cho bảng gập bảy dòng toàn nhãn. */
             mobileCard={{
               title: (row) => row.code,
+              titleIsCode: true,
               href: (row) => PATHS.ispLine(row.id),
               badge: (row) => (
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>

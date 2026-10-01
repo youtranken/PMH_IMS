@@ -7,7 +7,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { parseRecipients, recipientSuggestions } from './digest-recipients';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
@@ -411,11 +411,11 @@ function RuleForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="rule-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

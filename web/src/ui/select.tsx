@@ -71,6 +71,7 @@ export function Select({
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
   searchable,
+  indicateFilled = true,
 }: {
   /** Ô đang báo lỗi — `Field error` tự truyền; viền đỏ và tiêu điểm của `useFormErrors` bám vào đây. */
   'aria-invalid'?: boolean;
@@ -125,6 +126,11 @@ export function Select({
   required?: boolean;
   /** Ô gõ để lọc trong menu. Mặc định tự bật khi có hơn 8 lựa chọn. */
   searchable?: boolean;
+  /**
+   * `false` = không gắn `data-filled` dù đang có giá trị. Cho ô KHÔNG phải bộ lọc nằm trong thanh
+   * lọc (ô sắp xếp): nó luôn có giá trị, tô lên thì thanh lọc báo "đang lọc" khi chẳng lọc gì.
+   */
+  indicateFilled?: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -137,6 +143,9 @@ export function Select({
 
   const selected = options.find((o) => o.value === value);
   const label = selected ? (selected.short ?? selected.label) : (placeholder ?? '—');
+  /* Chữ đầy đủ cho `title`: nút và dòng menu cắt "…" khi hẹp, rê chuột vẫn đọc được hết.
+     Lấy theo `label` đầy đủ (không theo `short`) để nút chỉ in mã vẫn cho xem tên. */
+  const selectedTitle = selected ? optionText(selected) || undefined : undefined;
 
   const canSearch = searchable ?? options.length > SEARCH_THRESHOLD;
   const folded = foldSearch(query.trim());
@@ -281,7 +290,9 @@ export function Select({
               onMouseEnter={() => setActive(i)}
               onClick={() => choose(o.value)}
             >
-              {o.label}
+              <span className="fsel-opt-label" title={optionText(o) || undefined}>
+                {o.label}
+              </span>
             </button>
           </li>
         ));
@@ -323,12 +334,14 @@ export function Select({
         aria-activedescendant={activeId}
         /* Thanh lọc tô ô đang mang giá trị (`.filter-bar .fsel-trigger[data-filled]`): chữ
            trên nút đổi mà khung y nguyên thì không ai nhận ra danh sách đang bị lọc. */
-        data-filled={value !== '' ? 'true' : undefined}
+        data-filled={indicateFilled && value !== '' ? 'true' : undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onKey}
       >
-        <span className={selected ? 'fsel-val' : 'fsel-val ph'}>{label}</span>
+        <span className={selected ? 'fsel-val' : 'fsel-val ph'} title={selectedTitle}>
+          {label}
+        </span>
         <Chevron className="fsel-caret" />
       </button>
       {open &&

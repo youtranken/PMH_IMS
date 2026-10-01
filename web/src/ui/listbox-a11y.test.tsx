@@ -217,13 +217,32 @@ describe('Dòng chọn nằm ngoài vòng Tab và không chen tầng lạ vào c
         renderOption={(o) => <span>{o.label}</span>}
         onSelect={vi.fn()}
         ariaLabel="Thiết bị"
-        action={{ label: '+ Thêm thiết bị mới', onClick: vi.fn() }}
+        action={{ label: 'Thêm thiết bị mới', onClick: vi.fn() }}
       />,
     );
     await userEvent.click(screen.getByRole('combobox', { name: 'Thiết bị' }));
 
     const list = screen.getByRole('listbox');
     expect(list.querySelectorAll('li:not([role])')).toHaveLength(0);
+  });
+
+  it('Combobox: dòng hành động vẽ dấu + bằng hình (aria-hidden), tên nút là đúng câu chữ', async () => {
+    renderWithI18n(
+      <Combobox
+        placeholder="Tìm thiết bị"
+        query=""
+        onQuery={vi.fn()}
+        options={OPTIONS}
+        getKey={(o) => o.value}
+        renderOption={(o) => <span>{o.label}</span>}
+        onSelect={vi.fn()}
+        ariaLabel="Thiết bị"
+        action={{ label: 'Thêm thiết bị mới', onClick: vi.fn() }}
+      />,
+    );
+    await userEvent.click(screen.getByRole('combobox', { name: 'Thiết bị' }));
+    const action = screen.getByRole('button', { name: 'Thêm thiết bị mới' });
+    expect(action.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
   /**

@@ -74,7 +74,7 @@ export function AccountStatusDialog({
             className={danger ? 'btn danger' : 'btn primary'}
             disabled={busy}
           >
-            {busy ? t('common.loading') : confirmLabel}
+            {busy ? t('common.working') : confirmLabel}
           </button>
         </>
       }
@@ -184,7 +184,7 @@ export function RoleDialog({
               );
             }}
           >
-            {busy ? t('common.loading') : t('accounts.changeRoleSubmit')}
+            {busy ? t('common.working') : t('accounts.changeRoleSubmit')}
           </button>
         </>
       }

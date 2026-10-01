@@ -8,7 +8,7 @@ import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { CellNote } from '@/ui/cell-note';
 import { DeviceCombobox } from '@/ui/device-combobox';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import {
   DeviceTypeFilter,
   isRouterType,
@@ -780,11 +780,11 @@ function NatForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="nat-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1275,7 +1275,7 @@ function RemoveDialog({
             className="btn danger"
             disabled={remove.isPending}
           >
-            {remove.isPending ? t('common.loading') : t('nat.remove')}
+            {remove.isPending ? t('common.working') : t('nat.remove')}
           </button>
         </>
       }

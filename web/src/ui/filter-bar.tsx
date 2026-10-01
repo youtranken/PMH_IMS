@@ -1,10 +1,11 @@
 import { Children, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
+import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 
-/** Bề ngang gập ô lọc — cùng mốc với thẻ gọn của `DataTable` (`MOBILE_CARD_QUERY`). */
-const COLLAPSE_QUERY = '(max-width: 600px)';
+/** Bề ngang gập ô lọc — cùng mốc với thẻ gọn của `DataTable`. */
+const COLLAPSE_QUERY = BREAKPOINTS.cards;
 
 /**
  * Thanh lọc dùng chung (AD-15): ô tìm kiếm + các bộ lọc + thao tác bên phải.

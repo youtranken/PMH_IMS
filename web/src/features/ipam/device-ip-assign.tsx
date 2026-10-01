@@ -121,7 +121,7 @@ export function DeviceIpAssign({
           title={t('ipam.noSubnetToAssign')}
           hint={t('ipam.noSubnetToAssignHint')}
           action={
-            <Link className="btn primary" to={PATHS.ipAddresses} onClick={onClose}>
+            <Link className="linkbtn primary" to={PATHS.ipAddresses} onClick={onClose}>
               {t('ipam.goAddSubnet')}
             </Link>
           }

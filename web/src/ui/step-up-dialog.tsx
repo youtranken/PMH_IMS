@@ -104,7 +104,7 @@ function ConfirmButton({ formId, form }: { formId: string; form: ReturnType<type
       className="btn primary"
       disabled={form.pending || form.token.length !== 6}
     >
-      {form.pending ? t('common.loading') : t('common.confirm')}
+      {form.pending ? t('common.working') : t('common.confirm')}
     </button>
   );
 }

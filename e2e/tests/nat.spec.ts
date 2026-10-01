@@ -205,9 +205,9 @@ test.describe('Sổ NAT', () => {
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
-    // Dịch vụ chưa có: dòng "＋ Thêm dịch vụ" ghim ở đầu menu dropdown.
+    // Dịch vụ chưa có: dòng "Thêm dịch vụ" (có hình +) ghim ở đầu menu dropdown.
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài' }).click();
-    await page.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
+    await page.getByRole('button', { name: 'Thêm dịch vụ' }).first().click();
     const serviceForm = page.getByRole('dialog').last();
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
@@ -253,7 +253,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
 
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').click();
-    await page.getByRole('button', { name: '+ Thêm thiết bị mới' }).click();
+    await page.getByRole('button', { name: 'Thêm thiết bị mới' }).click();
 
     const deviceForm = page.getByRole('dialog').last();
     await deviceForm.getByLabel('Mã thiết bị').fill(newRouter);

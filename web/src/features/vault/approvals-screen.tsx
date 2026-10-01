@@ -28,6 +28,7 @@ import { Pagination } from "@/ui/pagination";
 import { Select } from "@/ui/select";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
+import { BREAKPOINTS } from "@/ui/breakpoints";
 import { useMediaQuery } from "@/ui/use-media-query";
 import { useDebouncedValue } from "@/ui/use-debounced-value";
 import { useToast } from "@/ui/toast";
@@ -43,8 +44,10 @@ const PAGE_LIMIT = 20;
  */
 const PENDING_REFETCH_MS = 30_000;
 
-/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab. */
-const NARROW_QUERY = "(max-width: 640px)";
+/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab.
+    Cùng mốc với thẻ gọn của bảng: lệch mốc thì ở 600–640px nút đã rời đầu trang trong khi bảng
+    vẫn là bảng desktop. */
+const NARROW_QUERY = BREAKPOINTS.cards;
 
 interface ApprovalPage {
   items: ApprovalRow[];
@@ -343,14 +346,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
               <DatePicker
                 value={logFilters.from}
                 ariaLabel={t("approvals.filterFrom")}
-                placeholder={t("approvals.filterFrom")}
+                placeholder={t("common.fromDate")}
                 max={logFilters.to || undefined}
                 onChange={(value) => setLogFilter("from", value)}
               />
               <DatePicker
                 value={logFilters.to}
                 ariaLabel={t("approvals.filterTo")}
-                placeholder={t("approvals.filterTo")}
+                placeholder={t("common.toDate")}
                 min={logFilters.from || undefined}
                 onChange={(value) => setLogFilter("to", value)}
               />
@@ -556,7 +559,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     row.subjectLabel ? (
                       <>
                         <Link
-                          className="btn primary"
+                          className="linkbtn primary"
                           to={`${OWNER_PATH[row.subjectType](row.subjectId)}?tab=vault`}
                         >
                           {t("approvals.openVault")}
@@ -571,7 +574,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       </>
                     ) : null}
 
-                    <Link className="btn sm" to={PATHS.approval(row.id)}>
+                    <Link className="linkbtn sm" to={PATHS.approval(row.id)}>
                       {t("approvals.openDetail")}
                     </Link>
                   </div>
@@ -729,7 +732,7 @@ function LogTable({
         cell: ({ row }) => (
           <div className="action-cell">
             {actionOf(row.original)}
-            <Link className="btn sm" to={PATHS.approval(row.original.id)}>
+            <Link className="linkbtn sm" to={PATHS.approval(row.original.id)}>
               {t("approvals.openDetail")}
             </Link>
           </div>

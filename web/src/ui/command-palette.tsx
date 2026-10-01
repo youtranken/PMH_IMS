@@ -10,8 +10,7 @@ import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
 import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
 import { NavIcon } from '@/ui/nav-icon';
-import { useMediaQuery } from '@/ui/use-media-query';
-import { NARROW_QUERY } from '@/ui/use-narrow';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { foldSearch, foldedMatchRange } from '@/lib/search-fold';
 import { looksLikeIp, parseIpv4, subnetOf } from '@/lib/ipv4';
 
@@ -177,8 +176,7 @@ export function CommandPalette({ me }: { me: Me }) {
   const anchoredTo = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const openedBy = useRef<Element | null>(null);
-  // `useMediaQuery` chứ không `useIsNarrow`: hộp này dựng cả ở nơi không có `matchMedia`.
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useIsNarrow();
   const [recent, setRecent] = useState<Hit[]>([]);
 
   /*
@@ -845,9 +843,9 @@ export function CommandPalette({ me }: { me: Me }) {
                       <NavIcon navKey={hit.navKey} />
                     </span>
                     <span className="it-name">
-                      <b>{hit.kind ? hit.title : <Highlight text={hit.title} q={q} />}</b>
+                      <b title={hit.title}>{hit.kind ? hit.title : <Highlight text={hit.title} q={q} />}</b>
                       {hit.sub ? (
-                        <span>
+                        <span title={hit.sub}>
                           <Highlight text={hit.sub} q={q} />
                         </span>
                       ) : null}

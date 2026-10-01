@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/ui/confirm-provider';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 /**
@@ -198,5 +198,51 @@ describe('Dialog không có title', () => {
     const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
     expect(backdrops).toHaveLength(2);
     expect(backdrops.filter((el) => !el.classList.contains('bare'))).toHaveLength(1);
+  });
+});
+
+/**
+ * Nút "Hủy" ở chân hộp là lối đóng thứ tư, nằm sát nút Lưu — bấm trượt là mất cả form. Nó phải
+ * đi cùng một cửa với Esc / nền / ✕ (`DialogCancel`), không gọi thẳng `onClose`.
+ */
+describe('Dialog — DialogCancel đi qua cửa canh dữ liệu chưa lưu', () => {
+  const setup = (guardUnsaved: boolean) => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog
+          open
+          onOpenChange={onOpenChange}
+          guardUnsaved={guardUnsaved}
+          title="Thêm thiết bị"
+          footer={<DialogCancel>Hủy</DialogCancel>}
+        >
+          <input aria-label="Mã máy" defaultValue="" />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    return { onOpenChange };
+  };
+
+  it('chưa gõ gì: Hủy đóng thẳng', async () => {
+    const { onOpenChange } = setup(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('đã gõ: Hủy hỏi lại như Esc, chưa đóng', async () => {
+    const { onOpenChange } = setup(true);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
+    expect(await screen.findByText('Bỏ những gì vừa nhập?')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('hộp không canh: Hủy đóng thẳng dù đã gõ', async () => {
+    const { onOpenChange } = setup(false);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

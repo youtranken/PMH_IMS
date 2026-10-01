@@ -6,7 +6,7 @@ import { noteContainsSecret } from '@/lib/note-secret';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
@@ -142,11 +142,11 @@ export function ServiceAccountForm({
       title={row ? `${t('serviceAccounts.edit')} — ${row.code}` : t('serviceAccounts.add')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose} disabled={busy}>
+          <DialogCancel disabled={busy}>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="sa-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

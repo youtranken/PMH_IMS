@@ -77,7 +77,7 @@ export function RetireDialog({
             disabled={!canSubmit}
             onClick={() => onConfirm(cleanup)}
           >
-            {busy ? t('common.loading') : t('devices.retire')}
+            {busy ? t('common.working') : t('devices.retire')}
           </button>
         </>
       }

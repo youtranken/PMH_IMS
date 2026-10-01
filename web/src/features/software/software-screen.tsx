@@ -330,6 +330,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
                ghế — chạm thẻ mở chi tiết, ghế nằm ở tab Máy đang dùng. */
             mobileCard={{
               title: (item) => item.code,
+              titleIsCode: true,
               href: (item) => PATHS.softwareItem(item.id),
               badge: (item) => <SoftwareStanding item={item} compact />,
               actions: (item) => (

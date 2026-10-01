@@ -6,7 +6,7 @@ import { errorMessage } from '@/lib/api';
 import { addYearsIso } from '@/lib/add-years';
 import { formatDate } from '@/lib/format';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -123,16 +123,16 @@ export function RestoreDialog({
       title={`${t('software.restoreTitle')} — ${software.code}`}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="restore-form"
             className="btn primary"
             disabled={restore.isPending}
           >
-            {restore.isPending ? t('common.loading') : t('software.restoreSubmit')}
+            {restore.isPending ? t('common.working') : t('software.restoreSubmit')}
           </button>
         </>
       }

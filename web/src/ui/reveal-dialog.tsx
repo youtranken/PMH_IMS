@@ -206,7 +206,6 @@ function RevealContent({
           <button
             type="button"
             className="btn sm"
-            aria-pressed={perChar}
           onClick={() => setPerChar((current) => !current)}
         >
             {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
@@ -324,7 +323,6 @@ function TotpBody({ label, totp }: { label: string; totp: TotpReveal }) {
           <button
             type="button"
             className="btn sm"
-            aria-pressed={shown}
             onClick={() => setShown((current) => !current)}
           >
             {t(shown ? 'vault.totpSecretHide' : 'vault.totpSecretShow')}

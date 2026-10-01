@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { RuleMark } from '@/ui/glyph-icons';
 import { checkSecretStrength, type SecretRuleKey } from './secret-strength';
 
 /**
@@ -46,7 +47,7 @@ export function SecretStrengthMeter({ value }: { value: string }) {
           <li key={rule.key} className={rule.met ? 'met' : undefined} data-rule={rule.key}>
             {/* Ký hiệu là trang trí — trạng thái thật đọc qua chữ trong ngoặc cho trình đọc
                 màn hình, không để người mù chỉ nghe được tên điều kiện mà không biết đạt chưa. */}
-            <span aria-hidden="true">{rule.met ? '✓' : '○'}</span> {t(RULE_KEY[rule.key])}
+            <RuleMark met={rule.met} /> {t(RULE_KEY[rule.key])}
             <span className="sr-only">
               {rule.met ? t('vault.strengthMet') : t('vault.strengthMissing')}
             </span>

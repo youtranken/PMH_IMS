@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/format';
 import { PATHS } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import type { Me } from '@/lib/me';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { PlusIcon } from '@/ui/glyph-icons';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -18,8 +18,7 @@ import { ScrollX } from '@/ui/scroll-x';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
-import { useMediaQuery } from '@/ui/use-media-query';
-import { NARROW_QUERY } from '@/ui/use-narrow';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
@@ -137,7 +136,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useIsNarrow();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   /** Người đã vô hiệu hóa (nghỉ việc) mặc định ẨN — gán quyền cho họ là việc không ai cần làm. */
@@ -894,16 +893,16 @@ function CellDialog({
               <span className="spacer" />
             </>
           ) : null}
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="access-cell-form"
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1069,11 +1068,11 @@ function GrantToScopeDialog({
       title={t('access.grantScopeTitle', { scope: scope.label })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="grant-scope-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1291,11 +1290,11 @@ function MultiGrantDialog({
       title={t('access.grantTitle', { member: account.fullName })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="multi-grant-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1486,7 +1485,7 @@ function CopyFromDialog({
             {t('common.cancel')}
           </button>
           <button type="submit" form="copy-access-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('access.add')}
+            {saving ? t('common.working') : t('access.add')}
           </button>
         </>
       }
