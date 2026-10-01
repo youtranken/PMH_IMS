@@ -278,6 +278,19 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   tự mở khi đang ở màn trong nhóm, nhớ lựa chọn trên từng máy. Menu SA khi khép phải vừa màn
   cao 768px không cuộn.
 
+### Q-19 · Rà các màn còn lại theo góp ý Q-18 (01/10/2026, chủ dự án chốt)
+
+- **Ghi chú / mô tả / lý do ngoài két** (thiết bị, đường truyền, NAT, IP, dải, tài khoản dịch vụ,
+  ghế license, danh mục, nhập Excel) chứa chuỗi trông như mật khẩu thì **bị chặn** như ghi chú
+  két (FR-035, SEC-20). Dữ liệu đang có: chạy một lượt quét **báo cáo** (không tự sửa) để SA rà.
+- **Kho thanh lý:** màu trạng thái theo đúng màn gốc ("Đã ngừng dùng" đỏ). Thao tác "Dùng lại"
+  cho thiết bị / tài khoản dịch vụ / đường truyền dẫn sang trang hồ sơ đó (không làm tại kho).
+- **Thẻ dải IP** giữ "Sửa" trong menu ⋮ (thẻ hẹp) — ngoại lệ của luật "Sửa để ngoài".
+- **"Thu hồi IP"** tô màu cảnh báo (cam), không phải đỏ: IP về pool và cấp lại được.
+- **Trang chi tiết phần mềm:** "Gia hạn" giữ ngoài cạnh "Sửa" (việc chính); "Khôi phục" vào ⋮.
+- **Màn Tham số hệ thống:** mô tả dài hơn ~80 ký tự chuyển vào nút (i).
+- Số điện thoại hiển thị tách nhóm; tên công ty trên màn đăng nhập là "Phú Mỹ Hưng".
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
