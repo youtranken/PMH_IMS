@@ -89,6 +89,9 @@ input.tp-time:focus {
   width: 15px;
   height: 15px;
 }
+.tp-seg button:not(.on):hover {
+  background: var(--surface-2);
+}
 .tp-seg button.on {
   background: var(--primary);
   border-color: var(--primary);
@@ -217,6 +220,9 @@ input.tp-time:focus {
   font-weight: 700;
   cursor: pointer;
   transition: 0.15s var(--ease);
+}
+.tp-mer button:not(.on):hover {
+  color: var(--ink);
 }
 .tp-mer button.on {
   background: var(--primary);

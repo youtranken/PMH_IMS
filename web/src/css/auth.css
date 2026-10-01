@@ -228,6 +228,8 @@
   text-decoration: underline;
   cursor: pointer;
 }
+/* Không đổi nền khi hover: card tối, nền sáng sẽ nuốt chữ sáng. Chỉ đậm gạch chân. */
+.auth-link:hover:not(:disabled) { text-decoration-thickness: 2px; }
 .auth-link:focus-visible { outline: none; box-shadow: var(--ring); border-radius: var(--r-sm); }
 .auth-foot { display: flex; flex-direction: column; gap: var(--space-4); align-items: center; }
 .auth-help {

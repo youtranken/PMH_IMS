@@ -132,8 +132,7 @@
   text-align: left;
   cursor: pointer;
 }
-/* Đè rule chung `button:hover{background:surface-2}` + `button.danger:hover` (specificity cao
-   hơn) — nếu không, hover ra nền sáng/đỏ-đậm làm chữ mất/khó đọc. */
+/* Đè `button.danger:hover` — nếu không, hover ra nền đỏ đậm làm chữ khó đọc trên sidebar tối. */
 .sb-foot .sb-act:hover:not(:disabled) {
   background: var(--sidebar-chip);
   color: var(--sidebar-ink-2);
