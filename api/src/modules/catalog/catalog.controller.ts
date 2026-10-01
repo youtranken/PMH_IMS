@@ -56,7 +56,7 @@ export class CatalogBodyDto {
   @IsOptional() @Min(1) @Max(60) @IsInt() uHeight?: number;
   @IsOptional() @IsBoolean() hasPortMap?: boolean;
   @IsOptional() @IsBoolean() isRouter?: boolean;
-  @IsOptional() @IsString() @Length(0, 200) supplies?: string;
+  @IsOptional() @IsString() @Length(0, 200) @NoSecretText('Cung cấp gì') supplies?: string;
   @IsOptional() @IsPhone(40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
 

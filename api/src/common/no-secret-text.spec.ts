@@ -67,14 +67,45 @@ describe('@NoSecretText', () => {
 });
 
 /**
- * Điểm danh trên mã nguồn: mọi trường ghi chú / mô tả / lý do của DTO ngoài két phải mang
- * `@NoSecretText`. Thiếu bài này thì DTO tiếp theo thêm ô "Ghi chú" mà quên decorator, và cửa
- * vòng qua két mở lại im lặng.
+ * Điểm danh trên mã nguồn: MỌI trường chữ (`@IsString`) của DTO ngoài két phải được xếp loại
+ * tường minh — chữ tự do (phải mang `@NoSecretText`) hay chữ có cấu trúc (mã, tên, IP, email…).
+ * Dò theo tên ("note", "description"…) thì ô chữ tự do mang tên khác — "connectedLabel" — lọt
+ * im lặng; bắt xếp loại thì trường mới chưa ai xếp làm bài đỏ, và người thêm phải tự trả lời.
  */
 describe('Điểm danh @NoSecretText trên DTO', () => {
   const MODULES = join(__dirname, '..', 'modules');
-  // Trường khai riêng một dòng, hoặc đứng cuối dòng decorator (`@IsOptional() @IsString() note?:`).
-  const FREE_TEXT_FIELD = /^\s+(?:@.*\)\s+)?(note|description|reason|overSeatReason)[!?]?:/;
+  /** Trường khai riêng một dòng, hoặc đứng cuối dòng decorator (`@IsOptional() @IsString() note?:`). */
+  const FIELD = /^\s+(?:@.*\)\s+)?(\w+)[!?]?:\s*[\w[{'"]/;
+
+  /** Chữ tự do: người dùng gõ câu tuỳ ý, cột dạng rõ — phải mang `@NoSecretText`. */
+  const FREE_TEXT = new Set([
+    'note',
+    'description',
+    'reason',
+    'overSeatReason',
+    'connectedLabel',
+    'supplies',
+    'catalog/catalog.controller.ts#address',
+  ]);
+
+  /** Chữ có cấu trúc / ô lọc / chính là bí mật — luật ô chữ tự do không áp. */
+  const STRUCTURED = new Set([
+    // Mã, tên, nhãn ngắn.
+    'code', 'name', 'fullName', 'employeeCode', 'model', 'serial', 'portLabel', 'connectedPort',
+    'groupName', 'ownerName', 'assignedTo', 'department', 'usedBy', 'login', 'bandwidth',
+    'contract', 'contractNo', 'contact', 'vlan', 'key', 'kind',
+    // Mạng.
+    'cidr', 'gateway', 'internalIp', 'wanIp', 'allowedIps', 'externalPorts',
+    'ipam/ipam.controller.ts#address',
+    // Id, ngày, email.
+    'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
+    'recipients', 'websites', 'kinds',
+    // Ô lọc / phân trang của câu truy vấn đọc.
+    'action', 'actor', 'objectId', 'objectType', 'search', 'requester', 'page', 'limit',
+    // Chính là bí mật / vé xác thực: đi vào két hoặc chỉ băm, không lưu dạng rõ.
+    'password', 'currentPassword', 'newPassword', 'token', 'ticket',
+  ]);
+
   /*
    * Ghi chú két đi theo luật RIÊNG, chặt hơn (`noteLooksLikeSecret` + so với giá trị trong
    * `VaultService`) — gắn thêm luật ô tự do ở cửa DTO sẽ đổi hành vi két.
@@ -89,33 +120,56 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     });
   }
 
-  /** Khối decorator ngay trên (và trên cùng dòng với) dòng khai trường. */
+  /**
+   * Khối decorator của MỘT trường: dòng khai trường cộng các dòng decorator ngay trên nó. Dừng
+   * ở dòng đã khai trường khác (kết thúc bằng `;`): hai trường một-dòng đứng liền nhau không được
+   * mượn decorator của nhau.
+   */
   function decoratorBlock(lines: string[], at: number): string {
     const block = [lines[at]];
-    for (let i = at - 1; i >= 0 && lines[i].trim().startsWith('@'); i--) block.push(lines[i]);
+    for (let i = at - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (!line.startsWith('@') || line.endsWith(';')) break;
+      block.push(lines[i]);
+    }
     return block.join('\n');
   }
 
   const files = dtoFiles(MODULES).filter((f) => !EXEMPT.has(relative(MODULES, f)));
-  const fields: string[] = [];
+  const freeFields: string[] = [];
   const missing: string[] = [];
+  const unclassified: string[] = [];
   for (const file of files) {
+    const rel = relative(MODULES, file).split('\\').join('/');
     const lines = readFileSync(file, 'utf8').split(/\r?\n/);
     lines.forEach((line, i) => {
-      const m = FREE_TEXT_FIELD.exec(line);
-      if (!m || !decoratorBlock(lines, i).includes('@Is')) return;
-      const where = `${relative(MODULES, file)}:${i + 1} ${m[1]}`;
-      fields.push(where);
-      if (!decoratorBlock(lines, i).includes('@NoSecretText(')) missing.push(where);
+      const m = FIELD.exec(line);
+      if (!m) return;
+      const block = decoratorBlock(lines, i);
+      if (!block.includes('@IsString(')) return;
+      const field = m[1];
+      const where = `${rel}:${i + 1} ${field}`;
+      const scoped = `${rel}#${field}`;
+      const free = FREE_TEXT.has(scoped) || (FREE_TEXT.has(field) && !STRUCTURED.has(scoped));
+      if (free) {
+        freeFields.push(where);
+        if (!block.includes('@NoSecretText(')) missing.push(where);
+      } else if (!STRUCTURED.has(scoped) && !STRUCTURED.has(field)) {
+        unclassified.push(where);
+      }
     });
   }
 
   it('tìm thấy đủ trường để bài có nghĩa', () => {
     // Sàn chống regex hụt: đổi cách viết DTO mà regex không bắt gì thì bài xanh rỗng.
-    expect(fields.length).toBeGreaterThanOrEqual(20);
+    expect(freeFields.length).toBeGreaterThanOrEqual(20);
   });
 
-  it('mọi ghi chú / mô tả / lý do ngoài két đều mang @NoSecretText', () => {
+  it('mọi trường chữ của DTO đã được xếp loại (tự do / có cấu trúc)', () => {
+    expect(unclassified).toEqual([]);
+  });
+
+  it('mọi ô chữ tự do ngoài két đều mang @NoSecretText', () => {
     expect(missing).toEqual([]);
   });
 

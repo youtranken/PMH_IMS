@@ -35,7 +35,7 @@ const text = textLooksLikeSecret;
 /** Mọi ô chữ tự do có `@NoSecretText` ở cửa ghi, cộng ghi chú két. */
 export const COLUMN_SCANS: readonly ColumnScan[] = [
   { table: 'device', ref: 'code', columns: ['note'], rule: text },
-  { table: 'device_port', ref: 'port_label', columns: ['note'], rule: text },
+  { table: 'device_port', ref: 'port_label', columns: ['note', 'connected_label'], rule: text },
   { table: 'software', ref: 'code', columns: ['note'], rule: text },
   { table: 'license_assignment', ref: 'id::text', columns: ['note', 'over_seat_reason'], rule: text },
   { table: 'isp_line', ref: 'code', columns: ['note'], rule: text },
@@ -51,6 +51,7 @@ export const COLUMN_SCANS: readonly ColumnScan[] = [
   { table: 'site', ref: 'code::text', columns: ['address'], rule: text },
   { table: 'cabinet', ref: 'code::text', columns: ['description'], rule: text },
   { table: 'device_type', ref: 'name::text', columns: ['description'], rule: text },
+  { table: 'vendor', ref: 'name::text', columns: ['supplies'], rule: text },
   { table: 'department', ref: 'name::text', columns: ['description'], rule: text },
   { table: 'service_port', ref: 'name::text', columns: ['description'], rule: text },
   { table: 'approval', ref: 'id::text', columns: ['reason', 'decision_note'], rule: text },

@@ -150,6 +150,7 @@ export function CatalogForm({
     portTo: builtError('portTo'),
     description: secretTextRule(t, form.description),
     address: secretTextRule(t, form.address),
+    supplies: secretTextRule(t, form.supplies),
   });
   const fieldError = (field: 'code' | 'name') =>
     check.error(field) ?? (serverField?.field === field ? serverField.message : null);
@@ -459,7 +460,7 @@ export function CatalogForm({
 
         {entity === 'vendor' ? (
           <>
-            <Field label={t('catalog.supplies')} htmlFor="catalog-supplies">
+            <Field label={t('catalog.supplies')} htmlFor="catalog-supplies" error={check.error('supplies')}>
               <input
                 id="catalog-supplies"
                 className="inp"

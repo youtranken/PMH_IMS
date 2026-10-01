@@ -10,6 +10,7 @@ import { DeviceBodyDto, PortBodyDto } from './devices.controller';
 const cases: [string, Type<unknown>, string, Record<string, unknown>][] = [
   ['ghi chú thiết bị', DeviceBodyDto, 'note', {}],
   ['ghi chú cổng (port map)', PortBodyDto, 'note', {}],
+  ['đầu kia của cổng (mô tả tự do)', PortBodyDto, 'connectedLabel', {}],
 ];
 
 describe('Thiết bị · ô chữ tự do không chứa mật khẩu (Q-19)', () => {

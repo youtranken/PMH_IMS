@@ -471,6 +471,7 @@ function PortForm({
   const check = useFormErrors({
     portLabel: !portLabel.trim() && t('ports.portRequired'),
     note: secretTextRule(t, note),
+    connectedLabel: mode === 'free' ? secretTextRule(t, connectedLabel) : null,
   });
 
   // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
@@ -650,7 +651,12 @@ function PortForm({
             />
           </Field>
         ) : (
-          <Field label={t('ports.freeText')} hint={t('ports.freeTextHint')} htmlFor="port-free">
+          <Field
+            label={t('ports.freeText')}
+            hint={t('ports.freeTextHint')}
+            htmlFor="port-free"
+            error={check.error('connectedLabel')}
+          >
             <input
               id="port-free"
               className="inp"

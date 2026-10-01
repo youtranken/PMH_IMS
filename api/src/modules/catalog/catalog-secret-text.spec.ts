@@ -10,6 +10,7 @@ import { CatalogBodyDto } from './catalog.controller';
 const cases: [string, Type<unknown>, string, Record<string, unknown>][] = [
   ['mô tả (tủ, loại thiết bị, bộ phận, dịch vụ)', CatalogBodyDto, 'description', {}],
   ['địa chỉ / ghi chú site', CatalogBodyDto, 'address', {}],
+  ['nhà cung cấp: cung cấp gì', CatalogBodyDto, 'supplies', {}],
 ];
 
 describe('Danh mục · ô chữ tự do không chứa mật khẩu (Q-19)', () => {

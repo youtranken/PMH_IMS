@@ -185,7 +185,12 @@ const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
       aliases: ['tên nhà cung cấp', 'ten nha cung cap', 'nhà cung cấp', 'tên ncc'],
       required: true,
     },
-    { key: 'supplies', label: 'Cung cấp gì', aliases: ['cung cấp gì', 'cung cấp', 'cung cap gi'] },
+    {
+      key: 'supplies',
+      label: 'Cung cấp gì',
+      aliases: ['cung cấp gì', 'cung cấp', 'cung cap gi'],
+      noSecret: true,
+    },
     {
       key: 'phone',
       label: 'Điện thoại',

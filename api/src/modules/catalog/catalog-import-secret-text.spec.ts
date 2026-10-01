@@ -24,6 +24,11 @@ describe('Nhập danh mục · ô chữ tự do không chứa mật khẩu (Q-19
       { 'Tên loại *': 'Switch E2E', 'Mô tả': `mk ${SECRET}` },
       'Mô tả',
     ],
+    [
+      'Nhà cung cấp',
+      { 'Tên nhà cung cấp': 'NCC E2E', 'Cung cấp gì': `switch, mk ${SECRET}` },
+      'Cung cấp gì',
+    ],
   ])('sheet %s → dòng lỗi', (name, cells, column) => {
     const plan = planCatalogImport(sheet(name, cells), emptySnapshot());
     expect(plan.rows[0].action).toBe('error');

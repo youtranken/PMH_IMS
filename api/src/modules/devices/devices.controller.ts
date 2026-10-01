@@ -106,7 +106,8 @@ export class PortBodyDto {
   // Chuỗi rỗng = gỡ liên kết tới thiết bị trong kho (đầu kia thành mô tả tự do).
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() connectedDeviceId?: string;
 
-  @IsOptional() @IsString() @Length(0, 200) connectedLabel?: string;
+  // Đầu kia không có trong kho thì người dùng gõ mô tả tự do — ô chữ dạng rõ như ghi chú.
+  @IsOptional() @IsString() @Length(0, 200) @NoSecretText('Đầu kia') connectedLabel?: string;
   @IsOptional() @IsString() @Length(0, 60) connectedPort?: string;
   @IsOptional() @IsString() @Length(0, 120) usedBy?: string;
 
