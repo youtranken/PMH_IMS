@@ -66,6 +66,36 @@ describe('token màu đạt ngưỡng WCAG', () => {
     }
   });
 
+  // Chữ thường gặp trên các mặt nền chính, kể cả dòng chẵn của bảng (dòng quá hạn chữ đỏ).
+  it.each(['--ink', '--ink-2', '--ink-3', '--muted', '--danger', '--primary-ink', '--info'])(
+    'chữ %s ≥ 4.5:1 trên canvas/surface/surface-2/row-alt (dark)',
+    (fg) => {
+      for (const bg of ['--canvas', '--surface', '--surface-2', '--row-alt', '--muted-soft']) {
+        expect(contrast(hex('dark', fg), hex('dark', bg)), `${fg} trên ${bg}`).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
+
+  it.each([
+    ['--primary-soft', '--primary-ink'],
+    ['--ok-soft', '--ok'],
+    ['--warn-soft', '--warn'],
+    ['--warm-soft', '--warm-ink'],
+    ['--danger-soft', '--danger'],
+    ['--danger-soft', '--danger-strong'],
+    ['--info-soft', '--info'],
+  ])('huy hiệu: chữ trên %s ≥ 4.5:1 (dark, %s)', (bg, fg) => {
+    expect(contrast(hex('dark', fg), hex('dark', bg))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Mặc định là tối (Q-21) nên nền tối không được đen kịt: canvas tối thiểu sáng như #171e18, và
+  // sidebar vẫn tối hơn canvas để tách khối.
+  it('nền tối đã sáng lên mà sidebar vẫn tối hơn canvas', () => {
+    expect(luminance(hex('dark', '--canvas'))).toBeGreaterThanOrEqual(luminance('#171e18'));
+    expect(luminance(hex('dark', '--surface'))).toBeGreaterThan(luminance(hex('dark', '--canvas')));
+    expect(luminance(hex('dark', '--sidebar-bg'))).toBeLessThan(luminance(hex('dark', '--canvas')));
+  });
+
   it('--field-border có cặp dark khai tường minh', () => {
     expect(tokenBlock('dark').has('--field-border')).toBe(true);
   });

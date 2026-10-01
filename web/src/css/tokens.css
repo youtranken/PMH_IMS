@@ -180,43 +180,46 @@
     --sidebar-chip-strong:rgba(255,255,255,.14);
 }
 
-/* Dark mode — chỉ override token, các component dùng var() tự đổi theo. */
+/* Dark mode — chỉ override token, các component dùng var() tự đổi theo. Đây là giao diện MẶC
+   ĐỊNH (Q-21) nên nền là xám lục đậm chứ không đen kịt: dễ nhìn lâu, và các lớp nền vẫn lệch
+   nhau đủ để tách khối. Ngưỡng tương phản do css/shared-ui-rules.test.ts canh. */
 html[data-theme='dark'] {
-  --canvas: #0f140f;
-  --surface: #161d16;
-  --surface-2: #1d261d;
+  --canvas: #171e18;
+  --surface: #1f2820;
+  --surface-2: #273128;
   /* Sọc dòng trên nền tối: --surface-2 chỉ lệch mặt thẻ vài đơn vị, mắt không dò được hàng. */
-  --row-alt: #232f24;
+  --row-alt: #2c382d;
   --ink: #e9ede7;
   --ink-2: #a7b0a5;
   /* Sáng để chữ phụ nhỏ đạt AA (≥4.5:1) trên nền tối/tint — verify axe live 2026-08-06. */
   --ink-3: #9aa39a;
   /* Viền thẻ phải thấy được trên laptop độ sáng thấp: nền trang và mặt thẻ tối chỉ lệch nhau
      rất ít, viền mờ quá thì các khối trông như trôi nổi, không tách lớp. */
-  --border: #313e35;
-  --border-2: #425145;
-  --field-border: #6b7a6e;
+  --border: #3a483e;
+  --border-2: #4b5b4f;
+  --field-border: #788a7c;
   --primary: #34d399;
   --primary-ink: #6ee7b7;
-  --primary-soft: #123024;
+  --primary-soft: #173a2c;
   --warm: #fbbf24;
   --warm-ink: #f59e0b;
-  --warm-soft: #3a2c14;
+  --warm-soft: #45341a;
   --warm-strong: #f59e0b;
   --grad: linear-gradient(135deg, #34d399, #fbbf24);
   --ok: #43c294;
-  --ok-soft: #13312a;
+  --ok-soft: #183a31;
   --warn: #e0a35a;
-  --warn-soft: #3a2c18;
-  --danger: #ef6f63;
-  --danger-soft: #3a1f1d;
+  --warn-soft: #433420;
+  /* Sáng hơn bản sáng một nấc: chữ đỏ (dòng quá hạn) phải ≥4.5:1 cả trên dòng chẵn --row-alt. */
+  --danger: #f27e72;
+  --danger-soft: #452522;
   --muted: #9aa59a;
-  --muted-soft: #232d23;
+  --muted-soft: #2c372d;
   --info: #7fb6ea;
-  --info-soft: #16273a;
+  --info-soft: #1b2f45;
   /* Sidebar tối hơn canvas để tách khối */
-  --sidebar-bg: #0e140f;
-  --sidebar-border: #1e2a22;
+  --sidebar-bg: #121914;
+  --sidebar-border: #243028;
   --sidebar-active-bg: rgba(251, 191, 36, 0.16);
   --sidebar-active-ink: #ffe1b3;
   --ring: 0 0 0 3px rgba(52, 211, 153, 0.3);

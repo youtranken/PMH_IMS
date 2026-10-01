@@ -9,6 +9,7 @@ import {
   resetUsers,
   uniqueStamp,
   writeHeaders,
+  switchTheme,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -33,6 +34,7 @@ test('Sắp hết hạn ở 390px: thẻ 2 dòng, ba ô số một hàng, sáng 
   expect(res.status()).toBe(201);
 
   await page.goto('/expiry');
+  await switchTheme(page, 'light');
   await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
 
   const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: new RegExp(code) }) });
@@ -53,8 +55,7 @@ test('Sắp hết hạn ở 390px: thẻ 2 dòng, ba ô số một hàng, sáng 
   expect(new Set(tops.map(Math.round)).size, 'ba ô số phải nằm cùng một hàng').toBe(1);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.getByRole('button', { name: /chế độ tối/i }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await switchTheme(page, 'dark');
   await expect(card.getByText('Còn 10 ngày')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
