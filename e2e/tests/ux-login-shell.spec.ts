@@ -6,6 +6,7 @@ import {
   firstLogin,
   horizontalOverflow,
   logout,
+  NEW_PASSWORD,
   openNavDrawer,
   resetUsers,
 } from './helpers';
@@ -58,17 +59,32 @@ test.describe('Đăng nhập', () => {
 test.describe('Thương hiệu PMH trên màn đăng nhập (Q-19)', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('màn rộng: mảng ảnh bên trái rộng hơn cột form (~60/40), có logo PMH tải được', async ({ page }) => {
+  test('màn rộng: mảng ảnh bên trái (chỉ ảnh) rộng hơn cột form (~60/40); logo PMH + giới thiệu ở cột form (Q-20)', async ({
+    page,
+  }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
     const panel = page.getByTestId('auth-panel');
     await expect(panel).toBeVisible();
-    const logo = panel.getByRole('img', { name: 'Phú Mỹ Hưng' });
+    await expect(panel).toHaveText('');
+    await expect(panel.getByRole('img', { name: 'Phú Mỹ Hưng' })).toHaveCount(0);
+
+    const head = page.getByTestId('auth-head');
+    const logo = head.getByRole('img', { name: 'Phú Mỹ Hưng' });
     await expect(logo).toBeVisible();
     await expect(logo).toHaveJSProperty('complete', true);
     expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
-    // Logo đầy đủ đã ở mảng ảnh: biểu tượng trong card phải ẩn, không hiện hai logo.
+    await expect(head.getByText('IMS — Quản lý hệ thống IT')).toBeVisible();
+    await expect(head.getByRole('listitem')).toHaveCount(3);
+    // Logo nằm GIỮA cột form, phía trên card.
+    const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Đăng nhập' }) });
+    const logoBox = (await logo.boundingBox())!;
+    const cardBox = (await card.boundingBox())!;
+    expect(logoBox.y + logoBox.height).toBeLessThanOrEqual(cardBox.y);
+    expect(Math.abs(logoBox.x + logoBox.width / 2 - (cardBox.x + cardBox.width / 2))).toBeLessThanOrEqual(2);
+    // Không hiện hai logo, không lặp chữ thương hiệu trong card.
     await expect(page.getByRole('img', { name: 'Phú Mỹ Hưng' })).toHaveCount(1);
+    await expect(card.getByText('Quản lý hệ thống IT · PMH')).toBeHidden();
 
     const box = await panel.boundingBox();
     expect(box).not.toBeNull();
@@ -86,6 +102,20 @@ test.describe('Thương hiệu PMH trên màn đăng nhập (Q-19)', () => {
     await fillLogin(page, E2E_MEMBER.email, 'mat-khau-sai-hoan-toan');
     await expect(page.getByRole('alert')).toHaveText('Email hoặc mật khẩu không đúng.');
     expect(Math.abs((await panel.boundingBox())!.width - before)).toBeLessThanOrEqual(1);
+  });
+
+  test('laptop 1366×768: bước mã 2 lớp chỉ có logo (không ba dòng giới thiệu), không phải cuộn (Q-20)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await firstLogin(page, E2E_SA);
+    await logout(page);
+    await fillLogin(page, E2E_SA.email, NEW_PASSWORD);
+    await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
+    const head = page.getByTestId('auth-head');
+    await expect(head.getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeVisible();
+    await expect(head.getByRole('listitem')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
   });
 });
 

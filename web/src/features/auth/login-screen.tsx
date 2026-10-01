@@ -119,6 +119,7 @@ export function LoginScreen() {
 
   return (
     <AuthCard
+      intro
       title={t('auth.signInTitle')}
       subtitle={nextKey ? t('auth.resumeTo', { screen: t(nextKey) }) : t('auth.signInSub')}
       error={errorBody}

@@ -149,19 +149,31 @@ describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card n
     expect(screen.getByText('Quản lý hệ thống IT · PMH')).toBeInTheDocument();
   });
 
-  it('có mảng thương hiệu bên cạnh card (desktop): logo công ty và vài dòng về IMS', () => {
+  it('màn đăng nhập (`intro`): trên card có logo công ty, tên hệ thống và ba dòng về IMS', () => {
     withProviders(
-      <AuthCard title="Đăng nhập">
+      <AuthCard title="Đăng nhập" intro>
         <p>thân</p>
       </AuthCard>,
     );
-    const panel = screen.getByTestId('auth-panel');
+    const head = screen.getByTestId('auth-head');
     // Tên công ty chỉ nằm trong logo (alt), không lặp thành dòng chữ ngay dưới logo.
-    expect(within(panel).getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeInTheDocument();
-    expect(panel).not.toHaveTextContent('Phú Mỹ Hưng');
-    expect(within(panel).getAllByRole('listitem').length).toBeGreaterThanOrEqual(2);
-    // Mảng thương hiệu không được giành tiêu đề của màn.
-    expect(within(panel).queryByRole('heading')).toBeNull();
+    expect(within(head).getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeInTheDocument();
+    expect(head).not.toHaveTextContent('Phú Mỹ Hưng');
+    expect(head).toHaveTextContent('IMS — Quản lý hệ thống IT');
+    expect(within(head).getAllByRole('listitem')).toHaveLength(3);
+    // Khối thương hiệu không được giành tiêu đề của màn.
+    expect(within(head).queryByRole('heading')).toBeNull();
+  });
+
+  it('các bước giữa luồng (không `intro`): chỉ logo + tên hệ thống, không ba dòng giới thiệu (Q-20)', () => {
+    withProviders(
+      <AuthCard title="Xác thực 2 lớp">
+        <p>thân</p>
+      </AuthCard>,
+    );
+    const head = screen.getByTestId('auth-head');
+    expect(within(head).getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeInTheDocument();
+    expect(within(head).queryAllByRole('listitem')).toHaveLength(0);
   });
 });
 
@@ -189,14 +201,23 @@ describe('Thương hiệu PMH trên khung đăng nhập (Q-19)', () => {
     expect(img).toHaveAttribute('height');
   });
 
-  it('mảng trái có logo PMH đầy đủ tên "Phú Mỹ Hưng", cùng các dòng giới thiệu', () => {
+  it('mảng trái CHỈ có ảnh: không logo, không chữ (Q-20)', () => {
     renderCard();
     const panel = screen.getByTestId('auth-panel');
-    const logo = within(panel).getByRole('img', { name: 'Phú Mỹ Hưng' });
+    expect(within(panel).queryAllByRole('img', { name: /.+/ })).toHaveLength(0);
+    expect(panel.textContent?.trim()).toBe('');
+  });
+
+  it('logo PMH đầy đủ tên "Phú Mỹ Hưng" nằm ở cột form, TRƯỚC card', () => {
+    const { container } = renderCard();
+    const head = screen.getByTestId('auth-head');
+    const logo = within(head).getByRole('img', { name: 'Phú Mỹ Hưng' });
     expect(logo.getAttribute('src')).toMatch(/pmh-logo\.png$/);
     expect(logo).toHaveAttribute('width');
     expect(logo).toHaveAttribute('height');
-    expect(panel).toHaveTextContent('IMS — Quản lý hệ thống IT');
+    expect(head.closest('.auth-main')).not.toBeNull();
+    const card = container.querySelector('.auth-card')!;
+    expect(head.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('card có biểu tượng PMH (móc .auth-emblem cho màn hẹp) đứng trước tiêu đề, không còn ô chữ "IMS"', () => {
@@ -224,14 +245,15 @@ describe('auth.css — bố cục ảnh / form', () => {
     new RegExp(`(?:^|[\\n}])\\s*${escape(selector)}\\s*\\{([^}]*)\\}`).exec(body)?.[1] ?? '';
   const narrow = /@media \(max-width: 720px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
 
-  it('màn rộng: cột ảnh 3fr, cột form 2fr; biểu tượng trong card ẩn (logo đầy đủ đã ở mảng ảnh)', () => {
+  it('màn rộng: cột ảnh 3fr, cột form 2fr; khối logo trong card ẩn (logo đầy đủ đã ở trên card)', () => {
     expect(rule(css, '.auth')).toMatch(/grid-template-columns:[^;]*3fr[^;]*2fr/);
-    expect(rule(css, '.auth-emblem')).toMatch(/display:\s*none/);
+    expect(rule(css, '.auth-logo')).toMatch(/display:\s*none/);
     expect(rule(css, '.auth-photo img')).toMatch(/object-fit:\s*cover/);
   });
 
-  it('≤720px: bỏ mảng ảnh, hiện biểu tượng trên card', () => {
+  it('≤720px: bỏ mảng ảnh và khối logo trên card, hiện biểu tượng + tên trong card', () => {
     expect(rule(narrow, '.auth-panel')).toMatch(/display:\s*none/);
-    expect(rule(narrow, '.auth-emblem')).toMatch(/display:\s*(block|flex|grid)/);
+    expect(rule(narrow, '.auth-head')).toMatch(/display:\s*none/);
+    expect(rule(narrow, '.auth-logo')).toMatch(/display:\s*(block|flex|grid)/);
   });
 });
