@@ -1344,6 +1344,7 @@ export default {
     killSession: 'Đóng phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại xác thực 2 lớp',
+    resetTotpNotEnrolled: 'Người này chưa cài xác thực 2 lớp',
     /* Chuỗi trong `toast({ message: '…' })` cũng phải qua i18n — nó không nằm trên JSX nên mắt
        dễ quét sót. */
     totpReset: 'Đã đặt lại xác thực 2 lớp.',

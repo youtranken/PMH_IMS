@@ -119,6 +119,18 @@ describe('Màn Tài khoản', () => {
     );
   });
 
+  // Chưa cài 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.
+  it('"Đặt lại xác thực 2 lớp" tắt kèm lý do khi người đó chưa cài', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Thành viên');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Thành viên' }));
+    const item = screen.getByRole('menuitem', { name: 'Đặt lại xác thực 2 lớp' });
+    expect(item).toBeDisabled();
+    expect(item).toHaveTextContent('Người này chưa cài xác thực 2 lớp');
+  });
+
   it('menu chia nhóm: Đặt lại mật khẩu không đỏ, Khóa là cảnh báo, Vô hiệu hóa đỏ', async () => {
     stubFetch();
     const user = userEvent.setup();
