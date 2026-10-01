@@ -84,14 +84,14 @@ describe('Hình nhỏ trên nút là SVG, không phải ký tự', () => {
     const { container } = renderWithI18n(<CopyIcon />);
     const xs: number[] = [];
     const ys: number[] = [];
-    for (const r of container.querySelectorAll('rect')) {
+    for (const r of Array.from(container.querySelectorAll('rect'))) {
       const [x, y, w, h] = ['x', 'y', 'width', 'height'].map((a) => Number(r.getAttribute(a)));
       xs.push(x, x + w);
       ys.push(y, y + h);
     }
     let cx = 0;
     let cy = 0;
-    for (const p of container.querySelectorAll('path')) {
+    for (const p of Array.from(container.querySelectorAll('path'))) {
       const d = p.getAttribute('d')!;
       expect(d, 'chỉ dùng lệnh tuyệt đối').not.toMatch(/[a-z]/);
       for (const [, cmd, args] of d.matchAll(/([MHVA])([^MHVA]*)/g)) {
