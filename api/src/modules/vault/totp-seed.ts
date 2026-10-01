@@ -126,15 +126,27 @@ function parseUri(
   const algorithm = (url.searchParams.get('algorithm') ?? 'SHA1').toUpperCase();
   if (!(algorithm in ALGORITHMS)) return { reason: 'BAD_ALGORITHM' };
 
-  let label: string;
+  /*
+   * Tách issuer:tài-khoản trên đường dẫn CÒN MÃ HOÁ rồi mới giải mã từng phần: `buildUri` mã
+   * hoá ":" nằm TRONG tên ("SW:core" → "SW%3Acore"), giải mã trước thì không còn biết dấu nào
+   * là dấu ngăn cách. URI không có ":" trần thì dấu ngăn cách là "%3A" đầu tiên — chuẩn
+   * Key Uri Format cho phép mã hoá nó.
+   */
+  const rawLabel = url.pathname.replace(/^\//, '');
+  let colon = rawLabel.indexOf(':');
+  let sepLength = 1;
+  if (colon < 0) {
+    colon = rawLabel.search(/%3A/i);
+    sepLength = 3;
+  }
+  let prefix: string;
+  let account: string;
   try {
-    label = decodeURIComponent(url.pathname.replace(/^\//, '')).trim();
+    prefix = colon >= 0 ? decodeURIComponent(rawLabel.slice(0, colon)).trim() : '';
+    account = decodeURIComponent(colon >= 0 ? rawLabel.slice(colon + sepLength) : rawLabel).trim();
   } catch {
     return { reason: 'BAD_URI' };
   }
-  const colon = label.indexOf(':');
-  const prefix = colon >= 0 ? label.slice(0, colon).trim() : '';
-  const account = (colon >= 0 ? label.slice(colon + 1) : label).trim();
   const issuer = url.searchParams.get('issuer')?.trim() || prefix;
   const names = account ? { issuer: issuer || account, account } : fallbackNames(fallback);
 

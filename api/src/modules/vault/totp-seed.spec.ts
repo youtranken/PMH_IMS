@@ -61,6 +61,19 @@ describe('normalizeTotpSeed — nhận khóa trần hoặc otpauth, cất một 
     );
   });
 
+  it('tên ngăn có dấu ":" đi vòng cất → đọc lại vẫn đúng issuer và tài khoản', () => {
+    const once = normalizeTotpSeed('JBSWY3DPEHPK3PXP', { label: 'SW:core', username: 'admin:ro' }).value!;
+    expect(normalizeTotpSeed(once, FALLBACK).value).toBe(once);
+    expect(once).toContain('otpauth://totp/SW%3Acore:admin%3Aro?');
+  });
+
+  it('URI ngoài mã hoá luôn dấu ngăn cách thành %3A: vẫn tách được issuer', () => {
+    const out = normalizeTotpSeed('otpauth://totp/ACME%3Ajohn?secret=JBSWY3DPEHPK3PXP', FALLBACK);
+    expect(out.value).toBe(
+      'otpauth://totp/ACME:john?secret=JBSWY3DPEHPK3PXP&issuer=ACME&algorithm=SHA1&digits=6&period=30',
+    );
+  });
+
   it('chuẩn hóa hai lần ra cùng một chuỗi (xoay giá trị đưa lại chính URI đã cất)', () => {
     const once = normalizeTotpSeed('jbsw y3dp ehpk 3pxp', FALLBACK).value!;
     expect(normalizeTotpSeed(once, { label: 'khác', username: null }).value).toBe(once);
