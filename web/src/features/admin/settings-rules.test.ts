@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkDraft, warningOf, type SettingRow } from './settings-rules';
+import { checkDraft, descriptionSlot, warningOf, type SettingRow } from './settings-rules';
 
 const base: SettingRow = {
   name: 'loginRateLimitPerIp',
@@ -55,5 +55,18 @@ describe('warningOf — giá trị nguy hiểm', () => {
     const row: SettingRow = { ...base, warnAbove: undefined, warnZero: true, min: 0 };
     expect(warningOf(row, 0)?.key).toBe('settings.warnZero');
     expect(warningOf(row, 3)).toBeNull();
+  });
+});
+
+describe('descriptionSlot (Q-19)', () => {
+  const of = (length: number) => 'a'.repeat(length);
+  it.each([
+    [0, undefined, undefined],
+    [40, of(40), undefined],
+    [80, of(80), undefined],
+    [81, undefined, of(81)],
+    [140, undefined, of(140)],
+  ])('mô tả %i ký tự', (length, hint, tip) => {
+    expect(descriptionSlot(length ? of(length) : undefined)).toEqual({ hint, tip });
   });
 });
