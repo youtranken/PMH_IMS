@@ -34,6 +34,8 @@ export type OwnerIdentity = Pick<
   'code' | 'name' | 'siteCode' | 'orphan' | 'retired'
 >;
 
+type DeviceMap = Awaited<ReturnType<DevicesApiService['getByIds']>>;
+
 const ORPHAN: OwnerIdentity = { code: '—', name: '', siteCode: null, orphan: true, retired: false };
 
 /**
@@ -60,7 +62,8 @@ export class VaultOwnersService {
   async list(): Promise<VaultOwnerSummary[]> {
     const summaries = await this.vault.listOwnerSummaries();
     const deviceIds = summaries.filter((s) => s.ownerType === 'device').map((s) => s.ownerId);
-    const devices = deviceIds.length > 0 ? await this.devices.getByIds(deviceIds) : new Map();
+    const devices: DeviceMap =
+      deviceIds.length > 0 ? await this.devices.getByIds(deviceIds) : (new Map() as DeviceMap);
 
     const rows = await Promise.all(
       summaries.map(async (item): Promise<VaultOwnerSummary> => {
