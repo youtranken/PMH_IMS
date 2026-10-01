@@ -356,11 +356,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await nameByRole(dialog, 'button'),
       'Bộ nút trong hộp thêm mới: ô chọn Nhà mạng, ô chọn Site, ô ngày Bắt đầu, ô chọn file, ' +
-        '✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
+        '(i) của Nhà mạng, ✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
       sortVi([
         'Đóng hộp thoại',
         'Nhà mạng',
+        // Lời dặn dài của ô Nhà mạng nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
+        'Giải thích: Nhà mạng',
         // Nhà mạng mới khai ngay tại chỗ (SA/Admin) — không bắt huỷ form sang Danh mục.
         '+ Thêm vào danh mục',
         'Site',
@@ -1045,11 +1047,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
-      'Hộp thêm tài khoản có đúng bảy nút: ô chọn Loại, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
+      'Hộp thêm tài khoản có đúng chín nút: ô chọn Loại, (i) của Loại và Người phụ trách, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
     ).toEqual(
       sortVi([
         'Đóng hộp thoại',
         'Loại',
+        // Lời dặn dài nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
+        'Giải thích: Loại',
+        'Giải thích: Người phụ trách',
         'Hiện',
         'Tạo ngẫu nhiên',
         'Chọn file để đính kèm',
