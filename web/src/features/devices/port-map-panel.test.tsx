@@ -95,3 +95,42 @@ describe('PortMapPanel — sửa cổng thì lịch sử máy phải đọc lạ
     expect(qc.getQueryState(['devices', DEVICE.id, 'timeline'])?.isInvalidated).toBe(true);
   });
 });
+
+/* Q-20: một cổng một sợi cáp — API trả 409 kèm câu nêu cổng + máy đang giữ; form phải hiện
+   nguyên câu đó, không thay bằng câu chung. */
+describe('PortMapPanel — cổng đã có cáp', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('409 PORT_ALREADY_LINKED → câu của server hiện trong form, form vẫn mở', async () => {
+    const message =
+      'Cổng "ETH0" của thiết bị này đã có cáp nối từ SW-E2E-01 cổng "Gi1/0/12". Mỗi cổng chỉ một sợi cáp — sửa hoặc gỡ dòng đó trước.';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === 'POST'
+            ? jsonResponse(409, { code: 'PORT_ALREADY_LINKED', message })
+            : jsonResponse(200, PORTS),
+        ),
+      ),
+    );
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <I18nextProvider i18n={i18n}>
+          <ToastProvider>
+            <ConfirmProvider>
+              <PortMapPanel device={DEVICE} csrfToken="t" canEdit />
+            </ConfirmProvider>
+          </ToastProvider>
+        </I18nextProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm cổng' }))[0]);
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox', { name: /^Cổng(\s\*)?$/ }), 'ETH0');
+    await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message);
+  });
+});
