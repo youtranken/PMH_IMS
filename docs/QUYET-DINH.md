@@ -299,6 +299,42 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   Sidebar, favicon và biểu tượng cài lên màn hình chính dùng biểu tượng PMH. Lý do: người mở
   link từ thư nhận ra ngay trang của PMH, mà không phải dựng lại bảng màu đã soát tương phản.
 
+### Q-20 · Góp ý "Fix lỗi IMS_2" (01/10/2026, chủ dự án chốt)
+
+- **Một thiết bị giữ tối đa MỘT IP đang cấp** (sửa ngầm định cũ "một máy nhiều IP"). DB chặn bằng
+  chỉ mục duy nhất trên `ip_address(device_id)` cho hàng đang dùng. Máy đã có IP thì nút là
+  **"Đổi IP"**: thu hồi IP cũ và cấp IP mới trong một transaction (AD-5), IP cũ về pool.
+  IP gán cho người / phòng ban (không gắn máy) không bị luật này ràng.
+- **Màn đăng nhập:** cột trái chỉ còn ảnh; logo PMH (giữa) + "IMS — Quản lý hệ thống IT" sang cột
+  form. Ba dòng giới thiệu chỉ hiện ở màn đăng nhập; các bước mã 2 lớp / đổi mật khẩu chỉ có logo
+  (sửa Q-19).
+- **Bước nhập mã 2 lớp khi đăng nhập:** có nút "Quay lại" (đăng xuất phiên chờ rồi về
+  `/login`); để trống thì báo "Vui lòng nhập mã xác thực."; bỏ câu gợi ý dưới ô. Phiên chờ mã
+  sống tối đa `auth.totp_challenge_minutes` phút (mặc định 5, AD-11) tính từ lúc tạo; tải lại
+  trang ở bước này cũng về `/login`. Không áp cho luồng cài 2 lớp bắt buộc.
+- **Nhóm "Dành cho nhà phát triển"** bỏ khỏi menu kể cả bản dev; route `/dev/components` giữ.
+- **Hồ sơ đã thanh lý / đã ngừng dùng** ẩn khỏi danh sách Thiết bị, Phần mềm, Đường truyền,
+  Tài khoản dịch vụ theo mặc định; vẫn xem được khi lọc đích danh trạng thái đó, Ctrl+K vẫn tìm
+  ra, và Kho thanh lý là nơi xem tập trung.
+- **Mở lại thiết bị đã thanh lý** trên hồ sơ ghi "Đổi trạng thái"; Kho thanh lý giữ "Dùng lại".
+- **"Dự phòng" và "Hỏng" chỉ là nhãn:** vẫn nhắc hạn bảo hành, vẫn giữ IP và license.
+- **Dải IP:** nút "Thêm dải mạng" (VLAN chỉ là thuộc tính tuỳ chọn của dải); ô site của dải để
+  trống nghĩa là "Tất cả site (dùng chung)"; màn IP có bộ lọc site; mọi bộ lọc ghi "Tất cả site".
+  Cột Site của IP lấy từ hồ sơ thiết bị (làm rõ Q-01); IP không gắn máy hiện "—".
+- **Xuất Excel màn IP:** menu "Xuất dải đang xem" / "Xuất tất cả".
+- **Tra IP sai định dạng** (mỗi phần 0–255, đủ 4 phần): khung đỏ có nút ✕ dưới ô tra, không gọi
+  tìm kiếm.
+- **Két:** chữ đổi giá trị theo loại ngăn — "Đổi mật khẩu" / "Đổi license key" / "Đổi mã 2 lớp"
+  / "Đổi giá trị". Gán / gỡ quyền ở ma trận hỏi mã 6 số khi hết thời gian ân hạn.
+- **NAT / Đường truyền:** ô chọn thiết bị có **lọc theo loại** (Firewall, Core, Router… tuỳ người
+  dùng chọn, mặc định các loại có cờ Router). Chọn máy không phải router chỉ cảnh báo, không chặn.
+  "Thiết bị biên" đổi thành "Thiết bị".
+- **Tài khoản dịch vụ có ngày hết hạn** (tuỳ chọn): cột "Hết hạn", nhắc trước như các hạn khác,
+  có Gia hạn. Quá hạn chỉ nhắc, không tự ngừng dùng (IMS không nối tới VPN thật). Khác cột "Đổi
+  lần cuối" (hạn đổi mật khẩu, Q-15).
+- **Lịch sử** mọi màn dạng trục dọc "ga tàu"; desktop ngày ở cột trái, màn hẹp dưới dòng.
+- Thuật ngữ: "Chưa khai báo", "Lưu và nhân bản", "Nhập tiếp"; nút bỏ file là dấu ✕ đỏ.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
