@@ -80,6 +80,18 @@ describe('SW-053 · lọc thiết bị theo phòng ban / người sử dụng', 
   );
 
   it(
+    'Q-20: status=live bỏ máy đã thanh lý (màn Thiết bị mặc định); status=retired vẫn ra',
+    async () => {
+      expect(await codes({ department: 'Kế toán', status: 'live' })).toEqual([
+        'E2E-PB-1',
+        'E2E-PB-2',
+      ]);
+      expect(await codes({ department: 'Kế toán', status: 'retired' })).toEqual(['E2E-PB-4']);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'người sử dụng khớp đúng người — "Chị Bình" không kéo theo "Chị Bình Minh"',
     async () => {
       expect(await codes({ assignedTo: 'chi binh' })).toEqual(['E2E-PB-1', 'E2E-PB-3']);

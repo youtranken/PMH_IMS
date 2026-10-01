@@ -2,6 +2,19 @@
 export const DEVICE_STATUSES = ['in_use', 'spare', 'broken', 'retired'] as const;
 export type DeviceStatus = (typeof DEVICE_STATUSES)[number];
 
+/**
+ * `live` = mọi trạng thái trừ "Đã thanh lý" — mặc định của màn Thiết bị (Q-20): máy đã thanh lý
+ * có Kho thanh lý riêng. Lọc đích danh `retired` vẫn ra; ô tìm ⌘K không gửi `status` nên vẫn tìm
+ * thấy máy đã thanh lý.
+ */
+export type DeviceStatusQuery = DeviceStatus | 'live';
+
+/** Đọc `?status=` — chữ lạ (hay mảng từ `?status=a&status=b`) thì bỏ qua, không lọt xuống SQL. */
+export function deviceStatusQuery(value: unknown): DeviceStatusQuery | undefined {
+  if (value === 'live') return 'live';
+  return DEVICE_STATUSES.includes(value as DeviceStatus) ? (value as DeviceStatus) : undefined;
+}
+
 export interface DeviceRecord {
   id: string;
   code: string;
@@ -49,7 +62,7 @@ export interface DeviceFilter {
   siteId?: string;
   cabinetId?: string;
   deviceTypeId?: string;
-  status?: DeviceStatus;
+  status?: DeviceStatusQuery;
   /** Khớp ĐÚNG phòng ban / người sử dụng (gấp dấu, hoa thường) — chọn nhanh cả lô máy. */
   department?: string;
   assignedTo?: string;

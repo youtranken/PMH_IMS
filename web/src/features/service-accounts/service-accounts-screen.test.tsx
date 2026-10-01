@@ -49,10 +49,10 @@ function stubFetch() {
   return calls;
 }
 
-function renderAs(role: 'sa' | 'member') {
+function renderAs(role: 'sa' | 'member', entry = '/service-accounts') {
   const me = { id: 'u', role, csrfToken: 't', email: 'x@pmh.com.vn' } as unknown as Me;
   return renderWithI18n(
-    <MemoryRouter initialEntries={['/service-accounts']}>
+    <MemoryRouter initialEntries={[entry]}>
       <ToastProvider>
         <ConfirmProvider>
           <ServiceAccountsScreen me={me} />
@@ -83,5 +83,34 @@ describe('Tài khoản dịch vụ — cột "Đổi lần cuối" (Q-15)', () =
     expect(await screen.findAllByText('SVC-E2E-01')).not.toHaveLength(0);
     expect(screen.queryByRole('columnheader', { name: 'Đổi lần cuối' })).not.toBeInTheDocument();
     expect(calls.some((url) => url.includes('/vault/owners/due'))).toBe(false);
+  });
+});
+
+/*
+ * Q-20 — tài khoản đã ngừng dùng ẩn khỏi danh sách theo mặc định (Kho thanh lý là nơi xem tập
+ * trung); lọc đích danh "Đã ngừng dùng" vẫn ra, "Mọi trạng thái (cả …)" thì không lọc.
+ */
+describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q-20)', () => {
+  async function listParams(entry: string): Promise<URLSearchParams> {
+    const calls = stubFetch();
+    renderAs('member', entry);
+    await screen.findAllByText('SVC-E2E-01');
+    const url = calls.find((u) => u.startsWith('/api/v1/service-accounts?')) ?? '';
+    return new URLSearchParams(url.split('?')[1]);
+  }
+
+  it('mặc định chỉ hỏi tài khoản đang dùng, ô lọc nói rõ', async () => {
+    expect((await listParams('/service-accounts')).get('status')).toBe('active');
+    expect(screen.getByRole('button', { name: 'Trạng thái' })).toHaveTextContent(
+      'Mọi trạng thái (trừ Đã ngừng dùng)',
+    );
+  });
+
+  it('lọc đích danh "Đã ngừng dùng" vẫn ra', async () => {
+    expect((await listParams('/service-accounts?status=disabled')).get('status')).toBe('disabled');
+  });
+
+  it('"Mọi trạng thái (cả Đã ngừng dùng)": không gửi status', async () => {
+    expect((await listParams('/service-accounts?status=all')).has('status')).toBe(false);
   });
 });

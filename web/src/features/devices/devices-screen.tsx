@@ -45,7 +45,8 @@ interface Filters extends Record<string, string> {
   siteId: string;
   cabinetId: string;
   deviceTypeId: string;
-  status: '' | DeviceStatus;
+  /** '' = mặc định "trừ Đã thanh lý" (API `live`, Q-20); 'all' = không lọc trạng thái. */
+  status: '' | 'all' | DeviceStatus;
 }
 
 const EMPTY_FILTERS: Filters = {
@@ -85,7 +86,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
   const [cloning, setCloning] = useState<DeviceRow | null>(null);
-  /** Hộp đổi trạng thái — cũng là hộp "Đưa lại vào dùng" của máy đã thanh lý. */
+  /** Hộp đổi trạng thái — cũng là hộp mở lại máy đã thanh lý. */
   const [statusOf, setStatusOf] = useState<DeviceRow | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const setStatus = useApiMutation<{ id: string; status: DeviceStatus }, unknown>(
@@ -396,13 +397,14 @@ export function DevicesScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('devices.status')}
-          placeholder={t('devices.allStatuses')}
+          placeholder={t('devices.liveStatuses')}
           options={[
-            { value: '', label: t('devices.allStatuses') },
+            { value: '', label: t('devices.liveStatuses') },
             ...DEVICE_STATUSES.map((status) => ({
               value: status,
               label: t(STATUS_KEY[status]),
             })),
+            { value: 'all', label: t('devices.allStatuses') },
           ]}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
@@ -627,6 +629,8 @@ function buildFilterQuery(filters: Filters): string {
   if (filters.siteId) params.set('siteId', filters.siteId);
   if (filters.cabinetId) params.set('cabinetId', filters.cabinetId);
   if (filters.deviceTypeId) params.set('deviceTypeId', filters.deviceTypeId);
-  if (filters.status) params.set('status', filters.status);
+  // Mặc định ẩn máy đã thanh lý (Q-20): Kho thanh lý là nơi xem chúng. ⌘K không đi qua đây
+  // nên vẫn tìm ra máy đã thanh lý.
+  if (filters.status !== 'all') params.set('status', filters.status || 'live');
   return params.toString();
 }

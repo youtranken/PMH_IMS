@@ -188,7 +188,7 @@ export default {
     /* Tên KHU "Hồ sơ" ở đầu cột chính. Không dùng lại `*.tabProfile` được: bên thiết bị khoá
        ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
     profileSection: 'Hồ sơ',
-    blankFields: 'Chưa khai: {{list}}.',
+    blankFields: 'Chưa khai báo: {{list}}.',
     railMore: 'Chi tiết',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
@@ -540,9 +540,9 @@ export default {
     importHint:
       'File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
       '(đã kèm danh mục đang có); dòng VÍ DỤ được bỏ qua.',
-    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
+    emptyHint: 'Chưa khai báo mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
-    emptyHintManual: 'Chưa khai mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
+    emptyHintManual: 'Chưa khai báo mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
     clearSearch: 'Xóa từ khóa',
     nounSite: 'site',
@@ -639,7 +639,9 @@ export default {
     allSites: 'Mọi site',
     allCabinets: 'Mọi tủ',
     allTypes: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái',
+    /* Mặc định của bộ lọc trạng thái (Q-20): máy đã thanh lý xem ở Kho thanh lý. */
+    liveStatuses: 'Mọi trạng thái (trừ Đã thanh lý)',
+    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
        thích cho cả ô. Đem `noCabinet` làm `hint` của ô "Tủ mạng" thì dưới ô hiện dòng xám
        "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
@@ -682,11 +684,13 @@ export default {
     retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
     retireBlocked:
       'Máy còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc gỡ từng thứ trước.',
-    reopen: 'Đưa lại vào dùng',
+    // Mở lại máy đã thanh lý chỉ là đổi trạng thái về Đang dùng/Dự phòng/Hỏng (Q-20). Kho thanh
+    // lý vẫn ghi "Dùng lại" (`disposal.restore`): ở đó việc là kéo hồ sơ ra khỏi kho.
+    reopen: 'Đổi trạng thái',
     confirmReopen:
       'Hồ sơ "{{name}}" mở lại để sửa được, và hạn bảo hành của máy lại có trong ' +
       'email nhắc hạn.',
-    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.',
+    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.',
     /*
      * HAI câu cho HAI cảnh, đừng gộp lại. Một câu chung có chữ "khớp bộ lọc" khiến hệ thống
      * vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa có thiết bị nào khớp bộ lọc" — và người dùng
@@ -706,7 +710,7 @@ export default {
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
-    retiredLockedShort: 'Đã thanh lý — đưa lại vào dùng mới sửa được.',
+    retiredLockedShort: 'Đã thanh lý — đổi trạng thái rồi mới sửa được.',
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
@@ -718,8 +722,9 @@ export default {
     ipMore: '{{ip}} +{{count}}',
     created: 'Đã thêm {{code}}.',
     openProfile: 'Mở hồ sơ',
-    // KHÔNG chứa chữ "Lưu": Playwright khớp tên nút theo chuỗi con, hai nút sẽ giành nhau.
-    saveAndNext: 'Ghi rồi thêm máy khác',
+    // Bắt đầu bằng "Lưu" (Q-20): Playwright khớp tên nút theo chuỗi con, nên mọi E2E bấm nút
+    // "Lưu" của form thêm thiết bị phải ghi `exact: true`, không thì hai nút giành nhau.
+    saveAndNext: 'Lưu và nhân bản',
     clone: 'Nhân bản',
     cloneOf: 'Nhân bản từ {{code}}',
     retireViaButton: 'Thanh lý: chọn "Thanh lý" trong menu ⋮ của máy.',
@@ -799,6 +804,7 @@ export default {
     remove: 'Xóa',
     confirmRemove: '"{{name}}" sẽ biến khỏi hồ sơ. Việc xóa được ghi vào nhật ký.',
     removed: 'Đã xóa giấy tờ.',
+    noPreviewSubject: 'Cách mở file đính kèm',
     noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint: 'Không bắt buộc. File được đính kèm ngay sau khi lưu hồ sơ.',
@@ -838,7 +844,7 @@ export default {
     fromDevice: 'Từ thiết bị',
     usedBy: 'Người sử dụng',
     note: 'Ghi chú',
-    empty: 'Chưa khai cổng nào.',
+    empty: 'Chưa khai báo cổng nào.',
     emptyHint: 'Khai cổng để xuống site là biết ngay cổng nào đi đâu.',
     portRequired: 'Nhập tên cổng (vd 12, Gi1/0/24, WAN1).',
     removed: 'Đã xóa cổng {{port}}.',
@@ -1087,7 +1093,7 @@ export default {
     allSites: 'Mọi site',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
-    empty: 'Chưa khai đường truyền nào.',
+    empty: 'Chưa khai báo đường truyền nào.',
     emptyHint: 'Thêm đường truyền để có sẵn hotline và số hợp đồng khi sự cố.',
     emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
@@ -1133,7 +1139,7 @@ export default {
      */
     notCounted: 'Không tính hạn',
     notCountedTitle: 'Hồ sơ đã thanh lý nên không tính hạn nữa',
-    labelNoneTitle: 'Chưa khai ngày hết hạn',
+    labelNoneTitle: 'Chưa khai báo ngày hết hạn',
     notCountedRetired: 'Không tính hạn (đã thanh lý)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
     navBadge: '{{count}} mục đã quá hạn',
@@ -1148,7 +1154,7 @@ export default {
     from: 'Từ',
     to: 'Đến',
     walked: 'Đã đi {{percent}}%',
-    noStart: 'Chưa khai mốc bắt đầu',
+    noStart: 'Chưa khai báo mốc bắt đầu',
     title: 'Sắp hết hạn',
     subtitle: 'Bảo hành, license, SSL, tên miền, hợp đồng — mọi thứ có hạn',
     item: 'Mục',
@@ -1642,7 +1648,7 @@ export default {
     editSubnet: 'Sửa dải',
     subnetSaved: 'Đã lưu dải.',
     subnetHidden: 'Đã ngừng dùng dải.',
-    empty: 'Chưa khai dải nào',
+    empty: 'Chưa khai báo dải nào',
     emptyHint: 'Khai dải LAN (vd 172.16.10.0/24) rồi mới tạo được hồ sơ IP bên trong.',
     cidr: 'Dải',
     phCidr: 'vd 172.16.10.0/24',
@@ -1956,7 +1962,9 @@ export default {
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái',
+    /* Mặc định của bộ lọc trạng thái (Q-20): tài khoản đã ngừng dùng xem ở Kho thanh lý. */
+    liveStatuses: 'Mọi trạng thái (trừ Đã ngừng dùng)',
+    allStatuses: 'Mọi trạng thái (cả Đã ngừng dùng)',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
     emptyHint: 'Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.',
@@ -2076,8 +2084,11 @@ export default {
     periodMonth: 'Tháng này',
     periodQuarter: 'Quý này',
     periodYear: 'Năm nay',
+    dateRange: 'Khoảng ngày thanh lý',
     from: 'Thanh lý từ ngày',
     to: 'Thanh lý đến ngày',
+    fromShort: 'Từ ngày',
+    toShort: 'Đến ngày',
     sort: 'Sắp xếp',
     sort_newest: 'Mới thanh lý trước',
     sort_oldest: 'Cũ trước',

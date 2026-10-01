@@ -19,8 +19,9 @@ import {
  * thay vì ở phút đầu. Và với người không biết máy đó đã thanh lý (đa số), thông báo lỗi là
  * lần đầu họ nghe tin đó.
  *
- * Nay `GET /devices?usable=true` bỏ máy `retired`. Màn DANH SÁCH thiết bị không dùng cờ này —
- * ở đó máy đã thanh lý vẫn phải hiện, vì đó là cuốn sổ.
+ * Nay `GET /devices?usable=true` bỏ máy `retired`. Không có cờ (⌘K, Kho thanh lý) thì máy đã
+ * thanh lý vẫn phải ra. Màn DANH SÁCH ẩn chúng bằng bộ lọc trạng thái mặc định `status=live`
+ * (Q-20), không bằng cờ này.
  */
 
 test.beforeEach(() => {
@@ -71,13 +72,13 @@ test.describe('Ô chọn thiết bị bỏ máy đã thanh lý', () => {
     expect(forPicker, 'máy đã thanh lý không được nằm trong ô chọn').not.toContain(codes.dead);
 
     /*
-     * Vế đối chứng, và là vế quan trọng hơn: màn DANH SÁCH không truyền cờ, nên nó vẫn phải
-     * thấy cả hai. Thiếu vế này thì một bản vá thô bạo (lọc `retired` ở tầng service, mọi nơi)
+     * Vế đối chứng, và là vế quan trọng hơn: không truyền cờ (⌘K tìm theo đúng lượt gọi này)
+     * thì vẫn phải thấy cả hai. Thiếu vế này thì một bản vá thô bạo (lọc `retired` ở tầng service, mọi nơi)
      * sẽ xanh ở trên mà làm biến mất cả Kho thanh lý.
      */
     const forList = await search(page, `PC-E2E-UP-`, false);
     expect(forList).toContain(codes.live);
-    expect(forList, 'sổ thiết bị vẫn phải giữ máy đã thanh lý').toContain(codes.dead);
+    expect(forList, '⌘K vẫn phải tìm ra máy đã thanh lý').toContain(codes.dead);
   });
 
   test('lọc đích danh status=retired vẫn xem được — Kho thanh lý sống nhờ nó', async ({

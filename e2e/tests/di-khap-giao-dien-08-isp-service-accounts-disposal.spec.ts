@@ -810,7 +810,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Dàn cảnh: đóng sẵn một tài khoản để có đủ HAI trạng thái trên cùng một màn',
     ).toBe(200);
 
-    await page.goto('/service-accounts');
+    // Mặc định danh sách ẩn tài khoản đã ngừng dùng (Q-20) — bài này cần CẢ HAI trạng thái.
+    await page.goto('/service-accounts?status=all');
     const searchBox = page.getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, phòng ban…' });
     await searchBox.fill(`TK-E2E-PHONG-${stamp}`);
     await expect(page.getByRole('row'), 'Lọc còn đúng hai tài khoản của lượt chạy này').toHaveCount(
@@ -907,13 +908,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const tabName = (await page.getByRole('tab').allTextContents()).map((raw) =>
       tidyLabel(raw).replace(/\s+\d+$/, ''),
     );
-    /* NET-075: khu Hồ sơ (ghi chú + "Chưa khai") đứng thẳng đầu cột chính, không sau một
+    /* NET-075: khu Hồ sơ (ghi chú + "Chưa khai báo") đứng thẳng đầu cột chính, không sau một
        tab — thanh tab mở vào Két sắt. */
     expect(
       tabName,
       'Hồ sơ tài khoản dịch vụ: ba tab Két sắt · Giấy tờ · Lịch sử, khu Hồ sơ nằm trên thanh tab',
     ).toEqual(['Két sắt', 'Giấy tờ', 'Lịch sử']);
-    await expect(page.getByText('Chưa khai:')).toBeVisible();
+    await expect(page.getByText('Chưa khai báo:')).toBeVisible();
     await expect(page.getByRole('tab', { name: /^Két sắt/ })).toHaveAttribute(
       'aria-selected',
       'true',

@@ -13,6 +13,8 @@ import {
   useAttachmentLimits,
 } from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
+import { CloseIcon } from '@/ui/glyph-icons';
+import { InfoTip } from '@/ui/info-tip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useConfirm } from '@/ui/confirm-provider';
 import { RowActions } from '@/ui/row-actions';
@@ -230,7 +232,12 @@ export function AttachmentPanel({
             }}
             onPickFiles={pickMany}
           />
-          <p className="muted small">{limitsHint(t, limits)}</p>
+          {/* Luật "chỉ tải về, không mở inline" nằm trong (i) cạnh dòng giới hạn: tra được ngay
+              chỗ đính kèm mà không chiếm thêm một dòng thường trực (Q-20). */}
+          <p className="muted small">
+            {limitsHint(t, limits)}{' '}
+            <InfoTip subject={t('attachments.noPreviewSubject')}>{t('attachments.noPreview')}</InfoTip>
+          </p>
           {rejected ? (
             <p className="field-error" role="alert">
               {rejected}
@@ -250,19 +257,18 @@ export function AttachmentPanel({
                   {item.state === 'waiting' || item.state === 'uploading' ? (
                     <button
                       type="button"
-                      className="btn sm ghost"
+                      className="btn-x danger"
                       aria-label={t('attachments.cancelUpload', { name: item.name })}
+                      title={t('common.cancel')}
                       onClick={() => cancelOne(item.key)}
                     >
-                      {t('common.cancel')}
+                      <CloseIcon />
                     </button>
                   ) : null}
                 </li>
               ))}
             </ul>
           ) : null}
-          {/* Luật "chỉ tải về, không mở inline" nói ngay chỗ đính kèm — không phải câu rỗng. */}
-          <p className="muted small">{t('attachments.noPreview')}</p>
         </>
       ) : null}
 

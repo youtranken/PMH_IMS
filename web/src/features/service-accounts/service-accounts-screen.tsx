@@ -42,7 +42,8 @@ const DEFAULT_LIMIT = 20;
 interface Filters extends Record<string, string> {
   search: string;
   kind: '' | ServiceAccountKind;
-  status: '' | ServiceAccountStatus;
+  /** '' = mặc định "trừ Đã ngừng dùng" (Q-20); 'all' = không lọc trạng thái. */
+  status: '' | 'all' | ServiceAccountStatus;
   /** '1' = chỉ VPN mở cho mọi IP nguồn — lọc ở API vì danh sách phân trang. */
   anyIp: '' | '1';
 }
@@ -274,13 +275,14 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('serviceAccounts.status')}
-          placeholder={t('serviceAccounts.allStatuses')}
+          placeholder={t('serviceAccounts.liveStatuses')}
           options={[
-            { value: '', label: t('serviceAccounts.allStatuses') },
+            { value: '', label: t('serviceAccounts.liveStatuses') },
             ...SERVICE_ACCOUNT_STATUSES.map((status) => ({
               value: status,
               label: t(STATUS_KEY[status]),
             })),
+            { value: 'all', label: t('serviceAccounts.allStatuses') },
           ]}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
@@ -434,7 +436,9 @@ function buildFilterQuery(filters: Filters, sorting: SortingState): string {
   const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
-  if (filters.status) params.set('status', filters.status);
+  // Mặc định ẩn tài khoản đã ngừng dùng (Q-20): Kho thanh lý là nơi xem chúng; ⌘K không đi
+  // qua đây nên vẫn tìm ra.
+  if (filters.status !== 'all') params.set('status', filters.status || 'active');
   if (filters.anyIp) params.set('anyIp', 'true');
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }

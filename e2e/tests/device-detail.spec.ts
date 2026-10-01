@@ -74,9 +74,12 @@ test.describe('Trang chi tiết thiết bị', () => {
       await expect(page.getByRole('tab', { name })).toBeVisible();
     }
 
-    /* `.first()`: serial giờ hiện ở HAI chỗ có chủ ý — dòng định danh ngay dưới tiêu đề
-       (thứ người ta đọc qua điện thoại cho nhà cung cấp) và ô Serial trong lưới hồ sơ. */
-    await expect(page.getByText(`FOC-${code}`).first()).toBeVisible();
+    /* Serial nằm MỘT chỗ: ô "Serial" trong Thông tin nhanh, kèm nút chép (Q-20) — không còn
+       dòng S/N dưới tiêu đề. */
+    const quick = page.getByRole('tabpanel');
+    await expect(quick.getByText(`FOC-${code}`, { exact: true })).toBeVisible();
+    await expect(quick.getByRole('button', { name: 'Chép serial' })).toBeVisible();
+    await expect(page.getByText(`FOC-${code}`, { exact: true })).toHaveCount(1);
 
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     await expect(page.getByRole('row', { name: /Gi1\/0\/1/ })).toBeVisible();
@@ -251,7 +254,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     await expect(page.getByRole('progressbar')).toHaveCount(0);
 
     // Và ô chưa khai gom về MỘT dòng, không phải một dãy hộp gạch ngang.
-    await expect(page.getByText(/Chưa khai:/)).toBeVisible();
+    await expect(page.getByText(/Chưa khai báo:/)).toBeVisible();
   });
 
   /**
