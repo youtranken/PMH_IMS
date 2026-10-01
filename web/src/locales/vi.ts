@@ -47,12 +47,12 @@ export default {
     confirmOk: 'Xác nhận',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
        Nút xác nhận nói rõ việc SẼ xảy ra ("Bỏ và đóng"), nút hủy nói rõ việc KHÔNG xảy ra
-       ("Ở lại nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
+       ("Nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
     discardTitle: 'Bỏ những gì vừa nhập?',
     discardMessage:
       'Dữ liệu chưa lưu trong hộp này sẽ mất, không khôi phục được.',
     discardConfirm: 'Bỏ và đóng',
-    discardCancel: 'Ở lại nhập tiếp',
+    discardCancel: 'Nhập tiếp',
     openNav: 'Mở menu',
     closeNav: 'Đóng menu',
     skipToContent: 'Bỏ qua menu, vào thẳng nội dung',
