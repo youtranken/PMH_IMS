@@ -61,6 +61,14 @@ describe('normalizeTotpSeed — nhận khóa trần hoặc otpauth, cất một 
     );
   });
 
+  it.each([
+    ['18 ký tự', 'A'.repeat(18)],
+    ['23 ký tự', 'A'.repeat(23)],
+    ['26 ký tự, bit đệm bằng 0', `${'A'.repeat(25)}E`],
+  ])('base32 trọn vẹn thì nhận: %s', (_name, raw) => {
+    expect(normalizeTotpSeed(raw, FALLBACK).reason).toBeNull();
+  });
+
   it('tên ngăn có dấu ":" đi vòng cất → đọc lại vẫn đúng issuer và tài khoản', () => {
     const once = normalizeTotpSeed('JBSWY3DPEHPK3PXP', { label: 'SW:core', username: 'admin:ro' }).value!;
     expect(normalizeTotpSeed(once, FALLBACK).value).toBe(once);
@@ -91,6 +99,12 @@ describe('normalizeTotpSeed — nhận khóa trần hoặc otpauth, cất một 
     ['period 60', 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&period=60', 'BAD_PERIOD'],
     ['thuật toán MD5', 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&algorithm=MD5', 'BAD_ALGORITHM'],
     ['link web thường', 'https://example.com/?secret=JBSWY3DPEHPK3PXP', 'BAD_SECRET'],
+    // Base32 không trọn: cất được thì mọi lần mở két hỏng — phải chặn ngay lúc cất.
+    ['17 ký tự (dư 1 ký tự lẻ)', 'JBSWY3DPEHPK3PXPA', 'SECRET_ENCODING'],
+    ['19 ký tự (dư 3)', 'A'.repeat(19), 'SECRET_ENCODING'],
+    ['22 ký tự (dư 6)', 'A'.repeat(22), 'SECRET_ENCODING'],
+    ['26 ký tự, bit đệm khác 0', `${'A'.repeat(25)}B`, 'SECRET_ENCODING'],
+    ['URI có khóa 17 ký tự', 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXPA', 'SECRET_ENCODING'],
   ])('từ chối: %s', (_name, raw, reason) => {
     const out = normalizeTotpSeed(raw, FALLBACK);
     expect(out.reason).toBe(reason);

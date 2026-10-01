@@ -390,13 +390,17 @@ export class VaultService {
    *
    * Mỗi lần gọi ghi MỘT dòng audit (NFR-03). Ghi TRƯỚC khi trả giá trị: giải mã được mà
    * mất vết thì đúng thứ két sắt sinh ra để chống.
+   *
+   * Giải mã và dựng phần hiển thị (`present`, vd QR + mã của ngăn "Mã 2 lớp") chạy TRƯỚC dòng
+   * "đã xem": hỏng ở đó thì người gọi không nhận được gì, và nhật ký không được nói là đã xem.
    */
-  async reveal(
+  async reveal<V = undefined>(
     actor: string,
     id: string,
     /** Grant break-glass đã dùng. `null` = quyền đến từ vai hoặc whitelist. */
     grantId: string | null = null,
-  ): Promise<{ meta: SecretMeta; value: string }> {
+    present?: (opened: { meta: SecretMeta; value: string }) => Promise<V>,
+  ): Promise<{ meta: SecretMeta; value: string; view?: V }> {
     const row = await this.requireAlive(id);
     const sealed: SealedValue = {
       ciphertext: row.valueCt,
@@ -405,6 +409,9 @@ export class VaultService {
       wrappedDek: row.dekWrapped,
       keyVersion: row.keyVersion,
     };
+    const meta = toMeta(row);
+    const value = this.crypto.openText(sealed, { table: AAD_TABLE, recordId: id });
+    const view = present ? await present({ meta, value }) : undefined;
     await this.audit.append({
       actor,
       action: 'vault.secret.revealed',
@@ -419,8 +426,7 @@ export class VaultService {
         grantId,
       },
     });
-    const value = this.crypto.openText(sealed, { table: AAD_TABLE, recordId: id });
-    return { meta: toMeta(row), value };
+    return { meta, value, view };
   }
 
   private async requireAlive(id: string): Promise<typeof secretTable.$inferSelect> {

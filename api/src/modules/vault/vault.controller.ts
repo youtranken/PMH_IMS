@@ -281,14 +281,29 @@ export class VaultController {
       ));
     }
 
-    const [opened, revealSeconds, graceMinutes] = await Promise.all([
-      // `grantId` đi vào dòng audit: không có nó thì nhật ký break-glass đứt đúng ở khúc quan
-      // trọng nhất — "xem bằng quyền nào" (FR-025).
-      this.vault.reveal(who, params.id, grantId),
+    const [revealSeconds, graceMinutes] = await Promise.all([
       // AD-11: bao lâu thì tự ẩn — system_config, không hardcode 30.
       this.config.getNumber('secretRevealSeconds'),
       this.config.getNumber('secretStepUpGraceMinutes'),
     ]);
+    const now = new Date();
+    /*
+     * Ngăn "Mã 2 lớp" (Q-18): QR và mã hiện tại sinh lại từ chuỗi vừa giải mã, chỉ sống trong
+     * phản hồi `no-store` này. Không lưu ảnh QR ở đâu — ảnh QR chính là bí mật dạng rõ. Dựng
+     * BÊN TRONG `reveal` (trước dòng "đã xem"): chuỗi hỏng thì không ai thấy gì, nhật ký cũng
+     * không được nói là đã xem.
+     */
+    const { view: totp, ...opened } = await this.vault.reveal(
+      who,
+      params.id,
+      // `grantId` đi vào dòng audit: không có nó thì nhật ký break-glass đứt đúng ở khúc quan
+      // trọng nhất — "xem bằng quyền nào" (FR-025).
+      grantId,
+      ({ meta: shown, value }) =>
+        shown.kind === 'totp'
+          ? totpRevealView(value, now, revealSeconds)
+          : Promise.resolve(undefined),
+    );
     /*
      * Hộp hiện secret đếm ngược HAI số: `60s / 600s`.
      *
@@ -296,18 +311,11 @@ export class VaultController {
      * lại mã 6 số. Con số phải PHẢI do server nói: client không biết `stepped_up_at`, và tự
      * đếm từ lần gõ mã gần nhất thì mỗi tab ra một số khác nhau.
      */
-      /*
-       * Ngăn "Mã 2 lớp" (Q-18): QR và mã hiện tại sinh lại từ chuỗi vừa giải mã, chỉ sống trong
-       * phản hồi `no-store` này. Không lưu ảnh QR ở đâu — ảnh QR chính là bí mật dạng rõ.
-       */
-      const now = new Date();
       return {
         ...opened,
         revealSeconds,
         stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, now),
-        ...(opened.meta.kind === 'totp'
-          ? { totp: await totpRevealView(opened.value, now, revealSeconds) }
-          : {}),
+        ...(totp ? { totp } : {}),
       };
     });
   }
