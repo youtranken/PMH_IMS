@@ -293,6 +293,11 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Trang chi tiết phần mềm:** "Gia hạn" giữ ngoài cạnh "Sửa" (việc chính); "Khôi phục" vào ⋮.
 - **Màn Tham số hệ thống:** mô tả dài hơn ~80 ký tự chuyển vào nút (i).
 - Số điện thoại hiển thị tách nhóm; tên công ty trên màn đăng nhập là "Phú Mỹ Hưng".
+- **Thương hiệu PMH (01/10/2026, phương án B):** giữ nguyên hệ màu hiện tại (không đổi token
+  màu), chỉ thêm logo PMH và ảnh nền đăng nhập. Màn đăng nhập: mảng ảnh bên trái RỘNG hơn form
+  bên phải, khoảng 60/40, để ảnh lộ nhiều hơn; ≤720px bỏ ảnh, chỉ còn card có biểu tượng PMH.
+  Sidebar, favicon và biểu tượng cài lên màn hình chính dùng biểu tượng PMH. Lý do: người mở
+  link từ thư nhận ra ngay trang của PMH, mà không phải dựng lại bảng màu đã soát tương phản.
 
 ### Q-09 · Tài liệu
 
