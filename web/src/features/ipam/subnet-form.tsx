@@ -187,7 +187,7 @@ export function SubnetForm({
           />
         </Field>
 
-        {/* Xem trước NGAY dưới ô: dạng chuẩn API sẽ lưu, số host, host đầu–cuối, mask. */}
+        {/* Xem trước NGAY dưới ô: số host và host đầu–cuối (Q-20) — đủ để biết dải gõ đúng chưa. */}
         {preview.value && !cidrLocked ? (
           <p className="muted span-2 mono" aria-live="polite">
             {t('ipam.cidrPreview', { ...preview.value })}

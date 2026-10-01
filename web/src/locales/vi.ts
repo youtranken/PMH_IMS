@@ -1785,7 +1785,7 @@ export default {
     mapFree: '{{address}} — trống',
     mapGateway: 'gateway',
     mapHint: 'Bấm ô trống để cấp; bấm ô đang dùng để mở dòng của nó trong danh sách.',
-    cidrPreview: '→ {{cidr}} · {{hosts}} host ({{first}} – {{last}}) · mask {{mask}}',
+    cidrPreview: '{{hosts}} host ({{first}} – {{last}})',
     cidrFormat: 'Viết dạng địa chỉ/prefix, vd 172.16.10.0/24.',
     cidrTooWide: 'Tối đa /{{prefix}} ({{hosts}} host). Dải rộng hơn thì khai thành nhiều dải /{{prefix}}.',
     cidrOverlap: 'Chồng lên dải {{cidr}} ({{name}}) đã khai.',
