@@ -120,8 +120,8 @@ describe('Hộp Sửa luật NAT', () => {
     const urls = mockFetch([RULE]);
     const user = userEvent.setup();
     renderScreen();
-    await user.click(await screen.findByRole('button', { name: /Thao tác với/ }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Sửa' }));
+    // "Sửa" đứng ngoài cạnh menu ⋮ (Q-18).
+    await user.click(await screen.findByRole('button', { name: /^Sửa / }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: 'Giấy tờ đính kèm' })).toBeVisible();
     expect(within(dialog).queryByRole('heading', { name: /Lịch sử/ })).toBeNull();
