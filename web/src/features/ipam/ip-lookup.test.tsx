@@ -9,7 +9,7 @@ afterEach(() => vi.unstubAllGlobals());
 const INVALID = 'Địa chỉ IP không hợp lệ: đủ 4 phần, mỗi phần là số 0–255.';
 
 function setUp() {
-  const fetch = vi.fn(() => Promise.resolve(jsonResponse(200, [])));
+  const fetch = vi.fn((_url: string) => Promise.resolve(jsonResponse(200, [])));
   vi.stubGlobal('fetch', fetch);
   renderWithI18n(
     <MemoryRouter>
