@@ -145,6 +145,7 @@ export class UsersService {
       role: UserRole;
       passwordHash: string;
       totpLoginRequired: boolean;
+      tempPasswordExpiresAt: Date;
     },
   ): Promise<UserRecord> {
     const rows = await tx
@@ -173,15 +174,25 @@ export class UsersService {
     return strip(toCredentials(rows[0]));
   }
 
+  /**
+   * `tempExpiresAt` có giá trị = SA cấp mật khẩu tạm (buộc đổi, có hạn); `null` = người dùng tự
+   * đặt (hết buộc đổi, xoá hạn). Một tham số cho cả hai cờ để không bao giờ có hàng "buộc đổi"
+   * mà quên mốc hạn, hay "đã tự đặt" mà còn sót mốc.
+   */
   async setPasswordWithin(
     tx: Tx,
     userId: string,
     passwordHash: string,
-    mustChangePassword: boolean,
+    tempExpiresAt: Date | null,
   ): Promise<void> {
     await tx
       .update(usersTable)
-      .set({ passwordHash, mustChangePassword, updatedAt: new Date() })
+      .set({
+        passwordHash,
+        mustChangePassword: tempExpiresAt !== null,
+        tempPasswordExpiresAt: tempExpiresAt,
+        updatedAt: new Date(),
+      })
       .where(eq(usersTable.id, userId));
   }
 
@@ -573,6 +584,7 @@ function toCredentials(row: Row): UserCredentials {
     role: row.role as UserRole,
     status: row.status as UserCredentials['status'],
     mustChangePassword: row.mustChangePassword,
+    tempPasswordExpiresAt: row.tempPasswordExpiresAt ?? null,
     totpEnrolledAt: row.totpEnrolledAt,
     totpLoginRequired: row.totpLoginRequired,
     failedAttempts: row.failedAttempts,

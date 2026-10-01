@@ -67,6 +67,11 @@ export const CONFIG_KEYS = {
    */
   authTotpChallengeMinutes: { key: 'auth.totp_challenge_minutes', fallback: 5 },
   /*
+   * Mật khẩu tạm (tạo tài khoản, SA đặt lại) dùng được ngần này giờ kể từ lúc cấp (Q-20). Xem
+   * `isTempPasswordExpired`.
+   */
+  authTempPasswordHours: { key: 'auth.temp_password_hours', fallback: 24 },
+  /*
    * Câu chỉ đường cho người quên mật khẩu / mất điện thoại 2 lớp (Q-14). Đọc được khi CHƯA
    * đăng nhập qua `GET /auth/support-contact` — route đó chỉ trả đúng khoá này, không mở bảng.
    */

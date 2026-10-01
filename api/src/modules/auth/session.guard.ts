@@ -19,6 +19,7 @@ import { NO_IDLE_TOUCH_KEY } from './no-idle-touch.decorator';
 import { evaluateSession, isTotpChallengeExpired } from './session-policy';
 import { SessionService } from './session.service';
 import { SESSION_COOKIE } from './cookie';
+import { isTempPasswordExpired, TEMP_PASSWORD_EXPIRED_MESSAGE } from './temp-password-policy';
 import type { AuthedRequest } from './types';
 
 /**
@@ -79,6 +80,9 @@ export class SessionGuard implements CanActivate {
     if (user.status !== 'active') {
       throw unauthorized('ACCOUNT_DISABLED', 'Tài khoản đã bị khóa hoặc vô hiệu hóa.');
     }
+
+    // Kể cả ở cửa đổi mật khẩu: phiên mở bằng mật khẩu tạm không được sống lâu hơn mật khẩu đó.
+    if (isTempPasswordExpired(user, new Date())) await this.rejectExpiredTempPassword(session.id, user);
 
     /*
      * ĐANG BỊ BẮT ĐỔI MẬT KHẨU thì chỉ đi được bốn cửa.
@@ -154,6 +158,32 @@ export class SessionGuard implements CanActivate {
       code: 'SESSION_EXPIRED',
       reason: 'TOTP_CHALLENGE_EXPIRED',
       message: 'Hết thời gian nhập mã. Đăng nhập lại.',
+    });
+  }
+
+  /**
+   * Phiên đang chờ đổi mật khẩu mà mật khẩu tạm đã quá `auth.temp_password_hours` (Q-20): thu
+   * hồi + nhật ký trong một transaction (AD-5), rồi 401. Không thu hồi thì người cầm phiên vẫn
+   * đổi được mật khẩu bằng chính mật khẩu tạm đã hết hạn — đúng thứ hạn này phải chặn.
+   */
+  private async rejectExpiredTempPassword(
+    sessionId: string,
+    user: { email: string; tempPasswordExpiresAt: Date | null },
+  ): Promise<never> {
+    await this.db.transaction(async (tx) => {
+      await this.sessions.revokeWithin(tx, sessionId, 'temp-password-expired');
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.temp_password.expired',
+        objectType: 'session',
+        objectId: sessionId,
+        detail: { expiredAt: user.tempPasswordExpiresAt?.toISOString() ?? null },
+      });
+    });
+    throw new UnauthorizedException({
+      code: 'SESSION_EXPIRED',
+      reason: 'TEMP_PASSWORD_EXPIRED',
+      message: TEMP_PASSWORD_EXPIRED_MESSAGE,
     });
   }
 }

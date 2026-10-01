@@ -92,6 +92,30 @@ describe('apiFetch', () => {
     clearSignedOut();
   });
 
+  it('401 vì MẬT KHẨU TẠM QUÁ HẠN ở phiên đang mở → màn đăng nhập nói rõ lý do (Q-20)', async () => {
+    vi.stubGlobal('location', { href: '', pathname: '/change-password', search: '', hash: '' } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(401, { code: 'SESSION_EXPIRED', reason: 'TEMP_PASSWORD_EXPIRED', message: 'Hết' }),
+      ),
+    );
+    await expect(apiFetch('/api/v1/auth/change-password')).rejects.toMatchObject({ status: 401 });
+    expect(window.location.href).toBe('/login');
+    expect(signOutNotice()).toBe('tempPasswordExpired');
+    clearSignedOut();
+  });
+
+  it('401 TEMP_PASSWORD_EXPIRED ở cửa đăng nhập → lỗi tại chỗ, KHÔNG nạp lại trang', async () => {
+    vi.stubGlobal('location', { href: '' } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'TEMP_PASSWORD_EXPIRED', message: 'Hết' })),
+    );
+    await expect(apiFetch('/api/v1/auth/login')).rejects.toMatchObject({ status: 401 });
+    expect(window.location.href).toBe('');
+  });
+
   it('401 vì PHIÊN CHẾT → đá về màn đăng nhập', async () => {
     vi.stubGlobal('location', { href: '' } as unknown as Location);
     vi.stubGlobal(

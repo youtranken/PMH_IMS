@@ -374,6 +374,7 @@ export default {
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
     signedOut: 'Bạn đã đăng xuất.',
     totpExpired: 'Hết thời gian nhập mã, vui lòng đăng nhập lại.',
+    tempPasswordExpired: 'Mật khẩu tạm đã hết hạn. Liên hệ Super Admin để được đặt lại mật khẩu.',
     totpEmpty: 'Vui lòng nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
     /* "Quay lại" ở màn nhập mã: phiên chờ phải đóng thật, không chỉ đổi màn. */
@@ -2291,6 +2292,7 @@ export default {
       authTotpFailed: 'Mã 2 lớp sai',
       authTotpSessionRevoked: 'Đóng phiên vì mã 2 lớp sai nhiều lần',
       authTotpChallengeExpired: 'Đóng phiên vì quá thời gian nhập mã 2 lớp',
+      authTempPasswordExpired: 'Đóng phiên vì mật khẩu tạm đã hết hạn',
       authTotpEnrollStart: 'Bắt đầu cài 2 lớp',
       authTotpEnrollDone: 'Cài xong 2 lớp',
       authTotpEnrollFailed: 'Cài 2 lớp thất bại',
@@ -3002,6 +3004,9 @@ export default {
     authTotpChallengeMinutesLabel: 'Thời gian nhập mã 2 lớp khi đăng nhập',
     authTotpChallengeMinutesDesc:
       'Đã đúng mật khẩu thì phải nhập mã 2 lớp trong khoảng này, quá thì phải đăng nhập lại. Không áp cho lần cài 2 lớp đầu tiên.',
+    authTempPasswordHoursLabel: 'Thời hạn mật khẩu tạm',
+    authTempPasswordHoursDesc:
+      'Mật khẩu tạm (tạo tài khoản, đặt lại mật khẩu) dùng được trong khoảng này. Quá hạn thì không đăng nhập được, Super Admin phải đặt lại.',
     authSupportContactLabel: 'Câu liên hệ khi quên mật khẩu / mất điện thoại',
     authSupportContactDesc: 'Hiện ở màn đăng nhập và màn mã 2 lớp. Ghi rõ gặp ai, gọi số nào.',
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',

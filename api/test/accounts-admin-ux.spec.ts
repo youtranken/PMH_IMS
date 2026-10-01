@@ -71,6 +71,7 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
       new ApprovalsApiService(
         new ApprovalsService(db, new AuditWriterService(db), new ApprovalKindRegistry()),
       ),
+      config,
     );
     // Migration seed có thể đã tạo sẵn SA — dọn để phép đếm trong bài kiểm là của bài kiểm.
     await scratch.pool.query(`DELETE FROM users`);

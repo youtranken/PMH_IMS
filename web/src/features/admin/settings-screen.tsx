@@ -63,6 +63,7 @@ const TEXT: Record<string, [string, string]> = {
   ],
   totpEnrollReauthMinutes: ['settings.totpEnrollReauthMinutesLabel', 'settings.totpEnrollReauthMinutesDesc'],
   authTotpChallengeMinutes: ['settings.authTotpChallengeMinutesLabel', 'settings.authTotpChallengeMinutesDesc'],
+  authTempPasswordHours: ['settings.authTempPasswordHoursLabel', 'settings.authTempPasswordHoursDesc'],
   authSupportContact: ['settings.authSupportContactLabel', 'settings.authSupportContactDesc'],
   secretRevealSeconds: ['settings.secretRevealSecondsLabel', 'settings.secretRevealSecondsDesc'],
   secretStepUpGraceMinutes: ['settings.secretStepUpGraceMinutesLabel', 'settings.secretStepUpGraceMinutesDesc'],

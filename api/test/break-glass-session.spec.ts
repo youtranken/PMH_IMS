@@ -109,6 +109,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       new OutboxService(scratch.db, config, noopSweep),
       new LoginFailureService(scratch.db, config, noopSweep),
       approvalsApi,
+      config,
     );
     const rows = await scratch.pool.query<{ id: string }>(
       `INSERT INTO users (email, full_name, role, password_hash, must_change_password)

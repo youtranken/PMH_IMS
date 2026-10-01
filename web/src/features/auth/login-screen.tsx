@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { clearSignedOut, signOutNotice } from '@/lib/after-logout';
+import { clearSignedOut, signOutNotice, type SignOutNotice } from '@/lib/after-logout';
 import { classifyLoginError, formatWait, type LoginErrorKind } from '@/lib/login-error';
 import { nextPathLabelKey, peekNextPath } from '@/lib/next-path';
 import { readRememberedEmail, rememberEmail } from '@/lib/remembered-email';
@@ -23,6 +23,19 @@ interface LoginResult {
 
 /** Lượt sai thứ mấy thì nhắc trước chuyện tạm khoá (Q-06: chờ 5→15→30→60 phút). */
 const WARN_FROM_WRONG = 2;
+
+/** Ba kiểu hỏng không tự hết — câu nói việc phải làm, kèm người liên hệ. */
+const CONTACT_TEXT: Partial<Record<LoginErrorKind, string>> = {
+  locked: 'auth.lockedByAdmin',
+  disabled: 'auth.accountDisabled',
+  tempExpired: 'auth.tempPasswordExpired',
+};
+
+const NOTICE_TEXT: Record<SignOutNotice, string> = {
+  signedOut: 'auth.signedOut',
+  totpExpired: 'auth.totpExpired',
+  tempPasswordExpired: 'auth.tempPasswordExpired',
+};
 
 /**
  * Bước 1 của đăng nhập: email + mật khẩu (NFR-01).
@@ -70,7 +83,8 @@ export function LoginScreen() {
     }
   }, [lockedUntil, waiting]);
 
-  const needsContact = failure?.kind === 'locked' || failure?.kind === 'disabled';
+  const needsContact =
+    failure?.kind === 'locked' || failure?.kind === 'disabled' || failure?.kind === 'tempExpired';
   const contact = useSupportContact(needsContact);
 
   // Đích đã nhớ (link trong mail…): nói TÊN MÀN sẽ mở sau khi đăng nhập, không in đường dẫn.
@@ -92,11 +106,11 @@ export function LoginScreen() {
         <p>{t('auth.lockedUrgent')}</p>
       </>
     );
-  } else if (failure?.kind === 'locked' || failure?.kind === 'disabled') {
+  } else if (needsContact) {
     errorTone = 'neutral';
     errorBody = (
       <>
-        <p>{t(failure.kind === 'locked' ? 'auth.lockedByAdmin' : 'auth.accountDisabled')}</p>
+        <p>{t(CONTACT_TEXT[failure.kind])}</p>
         {contact.data ? (
           <p>
             <strong>{t('auth.supportContactLabel')}:</strong> {contact.data.contact}
@@ -126,7 +140,7 @@ export function LoginScreen() {
       subtitle={nextKey ? t('auth.resumeTo', { screen: t(nextKey) }) : t('auth.signInSub')}
       error={errorBody}
       errorTone={errorTone}
-      notice={notice ? t(notice === 'totpExpired' ? 'auth.totpExpired' : 'auth.signedOut') : null}
+      notice={notice ? t(NOTICE_TEXT[notice]) : null}
     >
       <form
         className="auth-form"

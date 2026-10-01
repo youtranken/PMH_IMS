@@ -1,6 +1,6 @@
 import { ApiError } from '@/lib/api-client';
 
-export type LoginErrorKind = 'wrong' | 'wait' | 'locked' | 'disabled' | 'other';
+export type LoginErrorKind = 'wrong' | 'wait' | 'locked' | 'disabled' | 'tempExpired' | 'other';
 
 /**
  * Nguyên nhân một lượt đăng nhập hỏng → việc màn đăng nhập phải làm.
@@ -30,6 +30,9 @@ export function classifyLoginError(error: unknown): {
     }
     case 'ACCOUNT_DISABLED':
       return { kind: 'disabled', retryAfterSeconds: null, clearPassword: false };
+    // Mật khẩu tạm đúng nhưng quá hạn (Q-20): gõ lại không giúp gì, chỉ SA đặt lại được.
+    case 'TEMP_PASSWORD_EXPIRED':
+      return { kind: 'tempExpired', retryAfterSeconds: null, clearPassword: false };
     default:
       return { kind: 'other', retryAfterSeconds: null, clearPassword: false };
   }

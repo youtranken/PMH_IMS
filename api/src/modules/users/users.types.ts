@@ -11,6 +11,8 @@ export interface UserRecord {
   role: UserRole;
   status: 'active' | 'locked' | 'disabled';
   mustChangePassword: boolean;
+  /** Mật khẩu tạm dùng được tới lúc này (Q-20); NULL khi không có hạn. */
+  tempPasswordExpiresAt: Date | null;
   totpEnrolledAt: Date | null;
   totpLoginRequired: boolean;
   failedAttempts: number;
