@@ -125,7 +125,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
    * ĐỎ KHI: có thêm/bớt một nút ở đầu trang, một cột bị đổi tên hoặc rơi mất, ô tìm ngừng
    * lọc thật (bảng không thu hẹp), `aria-sort` không lật khi bấm tiêu đề, hàng không đảo
    * thứ tự, hoặc một trong hai luật ẩn của menu ba chấm bị gỡ — bày "Gán vào máy" cho một
-   * hợp đồng bảo trì, hoặc bày "Đưa vào kho thanh lý" cho hồ sơ đã bỏ.
+   * hợp đồng bảo trì, hoặc bày "Thanh lý…" cho hồ sơ đã bỏ.
    */
   test('Phòng Phần mềm: đúng bộ nút, ô tìm thu hẹp thật, đủ cột, và menu ba chấm theo loại', async ({
     page,
@@ -258,14 +258,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     expect(
       await rowActionNames(page, licenseCode),
-      'Hồ sơ LICENSE còn dùng: Gán vào máy · Gia hạn · Đưa vào kho thanh lý (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
-    ).toEqual(['Gán vào máy', 'Gia hạn', 'Đưa vào kho thanh lý']);
+      'Hồ sơ LICENSE còn dùng: Gán vào máy · Gia hạn · Thanh lý… (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Gán vào máy', 'Gia hạn', 'Thanh lý…']);
     await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
 
     expect(
       await rowActionNames(page, maintCode),
       'Hợp đồng bảo trì KHÔNG có ghế để gán — mục "Gán vào máy" không được xuất hiện',
-    ).toEqual(['Gia hạn', 'Đưa vào kho thanh lý']);
+    ).toEqual(['Gia hạn', 'Thanh lý…']);
 
     /*
      * Vế còn lại của luật ẩn: hồ sơ ĐÃ BỎ thì không bày mục bỏ nữa. Đưa vào kho bằng API cho
@@ -277,7 +277,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     });
     expect(retired.status(), 'đưa hồ sơ vào kho thanh lý qua API phải thành công').toBeLessThan(300);
 
-    // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Mọi trạng thái" qua URL.
+    // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Tất cả" qua URL.
     await page.goto('/software?status=all');
     await search.fill(prefix);
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
@@ -786,8 +786,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Thanh lý nằm trong menu "⋯" (mục nguy hiểm ở cuối), không còn là nút đỏ đứng lẻ.
     expect(
       await rowActionNames(page, licenseCode),
-      'Menu "⋯" đầu trang hồ sơ có mục Đưa vào kho thanh lý',
-    ).toEqual(['Đưa vào kho thanh lý']);
+      'Menu "⋯" đầu trang hồ sơ có mục Thanh lý…',
+    ).toEqual(['Thanh lý…']);
 
     /*
      * ===== THANH TAB =====

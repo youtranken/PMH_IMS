@@ -10,7 +10,7 @@ import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
 import { useIpamSettings } from './ipam-settings';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 
 /**
  * Khai / sửa một dải.
@@ -300,7 +300,7 @@ export function HideDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
   /* Luật NAT còn trỏ vào IP trong dải. Sổ NAT của một văn phòng chỉ vài chục dòng, lọc theo
      CIDR ngay ở đây. Hỏng thì im — API vẫn là nơi chặn. */
   const nat = useQuery({

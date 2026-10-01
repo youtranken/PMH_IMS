@@ -307,6 +307,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
                   end={item.endDate}
                   startLabel={t("software.startDate")}
                   endLabel={t("software.endDate")}
+                  notCounted={retired}
                 />
               ) : (
                 <ExpiryBadge end={null} />
@@ -551,7 +552,7 @@ function DetailMoreActions({
           : [
               {
                 key: "dispose",
-                label: t("disposal.dispose"),
+                label: t("software.disposeMenu"),
                 onSelect: dispose.run,
                 danger: true,
                 disabled: dispose.isPending,

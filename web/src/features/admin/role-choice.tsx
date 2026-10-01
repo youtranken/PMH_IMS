@@ -10,7 +10,7 @@ const ROLES: { role: Role; label: string; hint: string }[] = [
 ];
 
 /**
- * Chọn vai trò bằng ba lựa chọn CÓ MÔ TẢ — dùng ở hộp Thêm tài khoản và hộp Đổi vai trò.
+ * Chọn vai trò bằng ba lựa chọn CÓ MÔ TẢ — dùng ở hộp Thêm người dùng và hộp Đổi vai trò.
  *
  * Vai trò là lựa chọn hệ trọng nhất của cả form (nó quyết ai xem được mọi két), nên không
  * được là một ô `<select>` ba chữ không giải thích: người chọn phải đọc được mỗi vai làm được

@@ -310,7 +310,7 @@ test.describe('Đường truyền ISP', () => {
 });
 
 test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý có hỏi lại', () => {
-  test('danh sách mặc định bỏ đường đã thanh lý; "Mọi trạng thái" thì hiện lại; IP WAN ngay dưới mã', async ({
+  test('danh sách mặc định bỏ đường đã thanh lý; "Tất cả" thì hiện lại; IP WAN ngay dưới mã', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -345,7 +345,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
 
     // `.first()`: ô lọc đứng trước tiêu đề cột "Trạng thái" (cũng là nút sắp xếp).
     await page.getByRole('button', { name: 'Trạng thái', exact: true }).first().click();
-    await page.getByRole('option', { name: 'Mọi trạng thái' }).click();
+    await page.getByRole('option', { name: 'Tất cả (cả Đã thanh lý)' }).click();
     await expect(page.getByRole('row', { name: new RegExp(dead) })).toBeVisible();
   });
 

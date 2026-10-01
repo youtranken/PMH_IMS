@@ -29,6 +29,7 @@ import { Select } from "@/ui/select";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useMediaQuery } from "@/ui/use-media-query";
+import { useDebouncedValue } from "@/ui/use-debounced-value";
 import { useToast } from "@/ui/toast";
 
 type ApprovalRow = BreakGlassRow;
@@ -81,8 +82,6 @@ export function logFilterQuery(filters: LogFilters): string {
   return params.toString();
 }
 
-/** Ô người xin gửi đi sau khi ngừng gõ — mỗi phím một lượt quét sổ là phí. */
-const REQUESTER_DEBOUNCE_MS = 300;
 
 /** "Thời hạn xin": không biết thì nói không biết — "— giờ" là chỗ trống đội lốt câu trả lời. */
 function askedText(
@@ -149,13 +148,9 @@ export function ApprovalsScreen({ me }: { me: Me }) {
     setLogFilters((current) => (current[key] === value ? current : { ...current, [key]: value }));
     setLogPage(1);
   }, []);
-  useEffect(() => {
-    const handle = setTimeout(
-      () => setLogFilter("requester", requesterInput.trim()),
-      REQUESTER_DEBOUNCE_MS,
-    );
-    return () => clearTimeout(handle);
-  }, [requesterInput, setLogFilter]);
+  // Ô người xin gửi đi sau khi ngừng gõ — mỗi phím một lượt quét sổ là phí.
+  const requesterSettled = useDebouncedValue(requesterInput.trim());
+  useEffect(() => setLogFilter("requester", requesterSettled), [requesterSettled, setLogFilter]);
   const logQuery = logFilterQuery(logFilters);
   const logFiltered = logQuery !== "";
   const [minePage, setMinePage] = useState(1);

@@ -446,7 +446,10 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi license key' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/IMS không đổi gì trên thiết bị thật/)).toBeInTheDocument();
+    // Chủ két có thể là phần mềm / tài khoản dịch vụ / đường truyền: câu nói "hệ thống thật",
+    // không nói "thiết bị".
+    expect(within(dialog).getByText(/IMS không đổi gì trên hệ thống thật/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/thiết bị thật/)).not.toBeInTheDocument();
     // Chỉ cảnh báo — không có ô tick nào phải bấm trước khi lưu.
     expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
   });

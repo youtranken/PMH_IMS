@@ -40,6 +40,7 @@ import {
   type IspStatus,
 } from './isp-line.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { IspExportQueryDto, IspListQueryDto } from './list-query.dto';
 import { UsersApiService } from '../users/users.api';
 import { withActorNames } from '../../common/history';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -105,17 +106,7 @@ export class IspLineController {
   @Roles('sa', 'admin', 'member')
   @Get()
   list(
-    @Query()
-    query: {
-      page?: string;
-      limit?: string;
-      search?: string;
-      siteId?: string;
-      providerId?: string;
-      status?: string;
-      sort?: string;
-      dir?: string;
-    },
+    @Query() query: IspListQueryDto,
   ) {
     return this.isp.list(
       parsePageQuery(query),
@@ -138,15 +129,7 @@ export class IspLineController {
   @Audited('isp.exported', 'isp_line')
   @Get('export.xlsx')
   async export(
-    @Query()
-    query: {
-      search?: string;
-      siteId?: string;
-      providerId?: string;
-      status?: string;
-      sort?: string;
-      dir?: string;
-    },
+    @Query() query: IspExportQueryDto,
     @Res() res: Response,
   ) {
     // `listAll` — không cắt ở một con số bịa ra; xem ghi chú ở software.controller.

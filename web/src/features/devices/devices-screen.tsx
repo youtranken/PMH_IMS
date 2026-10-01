@@ -19,6 +19,8 @@ import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
 import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
@@ -77,6 +79,13 @@ export function DevicesScreen({ me }: { me: Me }) {
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: DEVICE_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'retired',
+  });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả kho — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -397,15 +406,8 @@ export function DevicesScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('devices.status')}
-          placeholder={t('devices.liveStatuses')}
-          options={[
-            { value: '', label: t('devices.liveStatuses') },
-            ...DEVICE_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-            { value: 'all', label: t('devices.allStatuses') },
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
       </FilterBar>
@@ -415,38 +417,47 @@ export function DevicesScreen({ me }: { me: Me }) {
       ) : devices.isError ? (
         <LoadError error={devices.error} onRetry={() => void devices.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
-             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
-          title={
-            url.isFiltered
-              ? url.search
-                ? t('devices.emptySearch', { q: url.search })
-                : t('devices.emptyFiltered')
-              : t('devices.empty')
-          }
-          hint={url.isFiltered ? t('devices.emptyFilteredHint') : t('devices.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('devices.clearFilters')}
-              </button>
-            ) : (
-              <>
-                <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                  {t('devices.add')}
-                </button>
-                <button
-                  type="button"
-                  className="btn hide-narrow"
-                  onClick={() => setImporting(true)}
-                >
-                  {t('devices.importExcel')}
-                </button>
-              </>
-            )
+        <LifecycleHiddenEmpty
+          probeKey={['devices', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/devices?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['retired'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+                 gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
+              title={
+                url.isFiltered
+                  ? url.search
+                    ? t('devices.emptySearch', { q: url.search })
+                    : t('devices.emptyFiltered')
+                  : t('devices.empty')
+              }
+              hint={url.isFiltered ? t('devices.emptyFilteredHint') : t('devices.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('devices.clearFilters')}
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                      {t('devices.add')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn hide-narrow"
+                      onClick={() => setImporting(true)}
+                    >
+                      {t('devices.importExcel')}
+                    </button>
+                  </>
+                )
+              }
+            />
           }
         />
       ) : (

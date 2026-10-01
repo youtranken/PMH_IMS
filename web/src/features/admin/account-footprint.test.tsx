@@ -57,12 +57,18 @@ describe('AccountFootprint — người này còn giữ gì', () => {
       'href',
       '/approvals',
     );
-    expect(await screen.findByRole('link', { name: '2 thiết bị khớp tên người này' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '2 thiết bị đang ghi người này sử dụng' })).toHaveAttribute(
       'href',
       `/devices?q=${encodeURIComponent('Nguyễn An')}`,
     );
     const urls = fetchMock.mock.calls.map(([input]) => String(input));
     expect(urls.some((url) => url.includes(`memberEmail=${encodeURIComponent(MEMBER.email)}`))).toBe(true);
+    // Khớp ĐÚNG ô "Người sử dụng" và bỏ máy đã thanh lý — tìm chữ tự do đếm cả máy ghi chú tên
+    // người này, và máy đã thanh lý thì không còn gì phải thu.
+    const devicesUrl = new URL(urls.find((url) => url.includes('/devices?'))!, 'http://x');
+    expect(devicesUrl.searchParams.get('assignedTo')).toBe('Nguyễn An');
+    expect(devicesUrl.searchParams.get('status')).toBe('live');
+    expect(devicesUrl.searchParams.has('search')).toBe(false);
   });
 
   it('Quản trị/SA: không hỏi quyền két (xem theo vai), nói rõ điều đó', async () => {
@@ -84,7 +90,7 @@ describe('AccountFootprint — người này còn giữ gì', () => {
       </MemoryRouter>,
     );
     expect(
-      await screen.findByRole('link', { name: 'Thiết bị khớp tên người này (không đếm được)' }),
+      await screen.findByRole('link', { name: 'Thiết bị đang ghi người này sử dụng (không đếm được)' }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/^0 thiết bị/)).not.toBeInTheDocument();
   });

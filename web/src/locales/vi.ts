@@ -237,6 +237,12 @@ export default {
     close: 'Đóng',
     // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
     clearFilters: 'Xóa bộ lọc',
+    /* Ô lọc trạng thái vòng đời (Q-20, `ui/lifecycle-status-options.ts`): một khuôn cho bốn màn. */
+    lifecycleLive: 'Đang theo dõi (trừ {{end}})',
+    lifecycleAll: 'Tất cả (cả {{end}})',
+    /* Bảng trống ở bộ lọc mặc định mà vẫn còn hồ sơ cuối đời khớp (`ui/lifecycle-hidden-empty.tsx`). */
+    lifecycleHidden: 'Có {{count}} hồ sơ {{end}} đang ẩn',
+    lifecycleHiddenHint: 'Danh sách mặc định không hiện hồ sơ cuối đời. Chọn "{{all}}" hoặc xem ở Kho thanh lý.',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
@@ -563,7 +569,7 @@ export default {
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
     emptyHintManual: 'Chưa khai báo mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
-    clearSearch: 'Xóa từ khóa',
+    clearSearch: 'Xóa tìm kiếm',
     nounSite: 'site',
     nounCabinet: 'tủ mạng',
     nounDeviceType: 'loại thiết bị',
@@ -657,9 +663,6 @@ export default {
     allSites: 'Tất cả site',
     allCabinets: 'Mọi tủ',
     allTypes: 'Mọi loại',
-    /* Mặc định của bộ lọc trạng thái (Q-20): máy đã thanh lý xem ở Kho thanh lý. */
-    liveStatuses: 'Mọi trạng thái (trừ Đã thanh lý)',
-    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
        thích cho cả ô. Đem `noCabinet` làm `hint` của ô "Tủ mạng" thì dưới ô hiện dòng xám
        "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
@@ -816,7 +819,8 @@ export default {
     uploadedCount: 'Đã đính kèm {{count}} giấy tờ.',
     draftFailedLive: 'Không tải lên được "{{name}}": {{reason}}',
     empty: 'Chưa có giấy tờ nào.',
-    emptyHint: 'Kéo hóa đơn, biên bản bàn giao vào ô phía trên, hoặc bấm chọn file.',
+    /* `examples` = câu gợi ý theo loại hồ sơ (`hint*`), cùng câu với ô thả file. */
+    emptyHint: '{{examples}} Kéo vào ô phía trên, hoặc bấm chọn file.',
     name: 'Tên file',
     size: 'Dung lượng',
     uploadedAt: 'Tải lên lúc',
@@ -895,6 +899,8 @@ export default {
     title: 'Phần mềm',
     subtitle: 'License, SSL, tên miền, hợp đồng bảo trì và ngày gia hạn',
     add: 'Thêm phần mềm',
+    /* Mục menu: cùng chữ với `isp.terminateMenu`. Hộp hỏi lại vẫn nói rõ "vào kho thanh lý". */
+    disposeMenu: 'Thanh lý…',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, tên, ghi chú hoặc mã máy',
     code: 'Mã hồ sơ',
@@ -935,9 +941,6 @@ export default {
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
     allKinds: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
-    /* Mặc định của bộ lọc trạng thái: hai trạng thái còn trên máy. */
-    liveStatuses: 'Đang dùng + Hết hạn',
     allVendors: 'Mọi nhà cung cấp',
     allModels: 'Mọi kỳ hạn',
     seatsExpired: 'đang cài license đã hết hạn',
@@ -1112,7 +1115,6 @@ export default {
     statusTerminated: 'Đã thanh lý',
     liquidated: 'Đã thanh lý ngày {{date}} bởi {{actor}}',
     allSites: 'Tất cả site',
-    allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa khai báo đường truyền nào.',
     emptyHint: 'Thêm đường truyền để có sẵn hotline và số hợp đồng khi sự cố.',
@@ -1123,7 +1125,6 @@ export default {
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     allProviders: 'Mọi nhà mạng',
-    liveStatuses: 'Đang dùng + Tạm ngưng',
     wanIpInvalid: 'Không phải một IPv4 (vd 113.161.10.20).',
     wanIpRange: 'Nhập từng IP, không nhập dải.',
     wanIpDuplicate: 'IP này trùng với một dòng ở trên.',
@@ -1165,9 +1166,10 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
-    notCountedTitle: 'Hồ sơ đã thanh lý nên không tính hạn nữa',
+    /* Trung tính: dùng chung cho hồ sơ đã thanh lý lẫn tài khoản dịch vụ đã ngừng dùng. */
+    notCountedTitle: 'Hồ sơ không còn dùng (đã thanh lý hoặc ngừng dùng) nên không tính hạn nữa',
     labelNoneTitle: 'Chưa khai báo ngày hết hạn',
-    notCountedRetired: 'Không tính hạn (đã thanh lý)',
+    notCountedRetired: 'Không tính hạn (không còn dùng)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
     navBadge: '{{count}} mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
@@ -1328,7 +1330,7 @@ export default {
     createFailed: 'Không tạo được tài khoản.',
     title: 'Người dùng IMS',
     subtitle: 'Super Admin tạo, khóa, đặt lại mật khẩu và đóng phiên đăng nhập từ xa',
-    create: 'Thêm tài khoản',
+    create: 'Thêm người dùng',
     profileSaved: 'Đã lưu hồ sơ tài khoản.',
     fullName: 'Họ tên',
     phPhone: 'VD: 0912 345 678',
@@ -1351,6 +1353,7 @@ export default {
     killSession: 'Đóng phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại xác thực 2 lớp',
+    resetTotpNotEnrolled: 'Người này chưa cài xác thực 2 lớp',
     /* Chuỗi trong `toast({ message: '…' })` cũng phải qua i18n — nó không nằm trên JSX nên mắt
        dễ quét sót. */
     totpReset: 'Đã đặt lại xác thực 2 lớp.',
@@ -1448,8 +1451,8 @@ export default {
     footprintVaultRole: 'Xem mọi két theo vai — không có dòng quyền riêng.',
     footprintRequests: '{{count}} yêu cầu mở két đang chờ duyệt',
     footprintRequestsFailed: 'Yêu cầu mở két (không đếm được)',
-    footprintDevices: '{{count}} thiết bị khớp tên người này',
-    footprintDevicesFailed: 'Thiết bị khớp tên người này (không đếm được)',
+    footprintDevices: '{{count}} thiết bị đang ghi người này sử dụng',
+    footprintDevicesFailed: 'Thiết bị đang ghi người này sử dụng (không đếm được)',
     changeRole: 'Đổi vai trò…',
     changeRoleSubmit: 'Đổi vai trò',
     changeRoleOf: 'Đổi vai trò: {{name}}',
@@ -1520,7 +1523,7 @@ export default {
     rotate_totp: 'Đổi mã 2 lớp',
     rotate_other: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    rotateOrder: 'IMS không đổi gì trên thiết bị thật. Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
+    rotateOrder: 'IMS không đổi gì trên hệ thống thật. Đổi ở nơi cấp (thiết bị, phần mềm, cổng VPN, nhà mạng…) và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
@@ -2019,9 +2022,6 @@ export default {
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Mọi loại',
-    /* Mặc định của bộ lọc trạng thái (Q-20): tài khoản đã ngừng dùng xem ở Kho thanh lý. */
-    liveStatuses: 'Mọi trạng thái (trừ Đã ngừng dùng)',
-    allStatuses: 'Mọi trạng thái (cả Đã ngừng dùng)',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
     emptyHint: 'Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.',
@@ -2093,7 +2093,7 @@ export default {
     secretChip: '{{count}} ngăn',
     clearSearch: 'Xóa tìm kiếm',
     filterKind: 'Lọc theo loại hồ sơ',
-    clearKinds: 'Bỏ lọc',
+    clearKinds: 'Xóa bộ lọc',
     summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
     /* Bảng chỉ liệt kê hồ sơ ĐANG có ngăn, nên lúc trống không có nút "Mở két" nào để bấm:
@@ -2391,7 +2391,7 @@ export default {
       updated: 'Sửa',
       deleted: 'Xóa',
       imported: 'Nhập từ Excel',
-      importedUpdate: 'Cập nhật khi nhập Excel',
+      importedUpdate: 'Cập nhật khi nhập từ Excel',
       activated: 'Dùng lại',
       deactivated: 'Ngừng dùng',
       enabled: 'Bật',
@@ -2493,7 +2493,7 @@ export default {
     memberList: 'Danh sách thành viên',
     ruleCount: '{{count}} quyền',
     backToList: 'Danh sách thành viên',
-    addRules: '+ Thêm quyền',
+    addRules: '+ Gán quyền',
     /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
     copyFrom: 'Sao chép quyền từ…',
     copyTitle: 'Sao chép quyền két cho {{member}}',
@@ -2510,7 +2510,7 @@ export default {
       'Gán cho {{member}} {{count}} nhóm quyền két giống {{source}}, giữ nguyên tầng? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các nhóm này.',
     copyNote: 'Sao chép từ {{source}}',
     copyDone: 'Đã sao chép {{count}} nhóm từ {{source}}.',
-    noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Thêm quyền" để gán.',
+    noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Gán quyền" để gán.',
     roleHolders: 'Có toàn quyền theo vai ({{count}})',
     pickScopes: 'Chọn ít nhất một nhóm.',
     allScopesGranted: 'Người này đã có quyền trên mọi nhóm. Đổi tầng một nhóm thì bấm vào nhóm đó.',
@@ -3018,7 +3018,7 @@ export default {
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',
     secretRevealSecondsDesc: 'Hết giờ thì hộp tự ẩn giá trị. Cũng là thời gian hộp mật khẩu tạm (tạo, đặt lại tài khoản) tự che.',
     secretStepUpGraceMinutesLabel: 'Ân hạn sau khi xác thực lại',
-    secretStepUpGraceMinutesDesc: 'Trong khoảng này mở két, sửa két, sửa tham số không phải gõ lại mã 6 số.',
+    secretStepUpGraceMinutesDesc: 'Trong khoảng này mọi thao tác cần mã 6 số (két, cấp quyền, người dùng IMS, tham số) không phải gõ lại.',
     secretStepUpMaxFailuresLabel: 'Số lần gõ sai mã xác thực lại trước khi đóng phiên',
     secretStepUpMaxFailuresDesc: 'Nhập sai quá số này thì phiên bị đóng.',
     secretProbeAlertThresholdLabel: 'Ngưỡng cảnh báo dò két',

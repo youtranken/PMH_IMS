@@ -73,7 +73,7 @@ describe('Hồ sơ của tôi — cài lại 2 lớp và phiên của chính mì
       audit,
       outbox,
       config,
-      new KnownDeviceService(db),
+      new KnownDeviceService(db, config, noopSweep),
       new LoginFailureService(db, config, noopSweep),
       new AuditApiService(new SecurityProbeService(db, config, outbox, audit)),
     );
@@ -245,6 +245,32 @@ describe('Hồ sơ của tôi — cài lại 2 lớp và phiên của chính mì
             ),
           ),
         ).toBe('REENROLL_TICKET_INVALID');
+      },
+      TEST_TIMEOUT,
+    );
+
+    /*
+     * Vé không có hạn thì một vé lộ ra (log trình duyệt, máy bỏ ngỏ) dùng được suốt đời phiên.
+     * Hạn = `totp.enroll_reauth_minutes` (AD-11), tính từ lúc phát vé.
+     */
+    it(
+      'vé quá `totp.enroll_reauth_minutes` → từ chối, secret giữ nguyên',
+      async () => {
+        const u = await makeUser();
+        const s = await openSession(u.id, true);
+        const started = await auth.startTotpReEnrollment(s, PASSWORD);
+        const code = await codeFor(started.secret);
+        const before = await storedSecret(u.id);
+        const issuedAt = Date.now();
+        const later = jest.spyOn(Date, 'now').mockReturnValue(issuedAt + 16 * 60_000);
+        try {
+          expect(await outcome(auth.confirmTotpReEnrollment(s, started.ticket, code))).toBe(
+            'REENROLL_TICKET_INVALID',
+          );
+        } finally {
+          later.mockRestore();
+        }
+        expect(await storedSecret(u.id)).toBe(before);
       },
       TEST_TIMEOUT,
     );

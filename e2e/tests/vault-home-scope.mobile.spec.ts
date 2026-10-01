@@ -112,7 +112,7 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
   await member.click();
   await expect(page.getByRole('button', { name: 'Danh sách thành viên', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /: Cần duyệt$/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: '+ Thêm quyền' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ Gán quyền' })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   // SA/Admin không là thẻ trống: khối gập "Có toàn quyền theo vai".

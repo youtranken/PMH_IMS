@@ -23,6 +23,7 @@ const OWNERS = [
     secretCount: 2,
     lastChangeAt: '2026-09-20T01:30:00.000Z',
     orphan: false,
+    retired: false,
   },
   {
     ownerType: 'software',
@@ -33,6 +34,18 @@ const OWNERS = [
     secretCount: 1,
     lastChangeAt: '2025-01-02T01:30:00.000Z',
     orphan: false,
+    retired: false,
+  },
+  {
+    ownerType: 'service_account',
+    ownerId: 'sa1',
+    code: 'VPN-E2E-01',
+    name: 'VPN cũ',
+    siteCode: null,
+    secretCount: 1,
+    lastChangeAt: '2025-01-02T01:30:00.000Z',
+    orphan: false,
+    retired: true,
   },
 ];
 
@@ -72,6 +85,15 @@ describe('Trang tổng Két sắt', () => {
     await userEvent.click(screen.getByRole('button', { name: /Thay đổi gần nhất/ }));
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows[0]).toHaveTextContent('LIC-E2E-01');
+  });
+
+  // Két của hồ sơ đã bỏ vẫn hiện (còn phải dọn) nhưng có nhãn trạng thái theo đúng tên của module chủ.
+  it('chủ đã thanh lý / ngừng dùng mang nhãn trạng thái', async () => {
+    renderHome();
+    const row = (await screen.findByText('VPN-E2E-01')).closest('tr')!;
+    expect(row).toHaveTextContent('Đã ngừng dùng');
+    const live = screen.getByText('SW-E2E-01').closest('tr')!;
+    expect(live).not.toHaveTextContent('Đã thanh lý');
   });
 
   it('tìm không ra: có nút "Xoá tìm kiếm", không gợi ý bỏ lọc khi không bật lọc nào', async () => {

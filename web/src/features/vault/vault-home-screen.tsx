@@ -30,6 +30,13 @@ interface VaultOwner {
   secretCount: number;
   lastChangeAt: string;
   orphan: boolean;
+  /** Hồ sơ chủ đã thanh lý / ngừng dùng — két còn treo, cần dọn. */
+  retired: boolean;
+}
+
+/** Tên trạng thái giữ theo module chủ, như Kho thanh lý. */
+function retiredLabelKey(ownerType: SecretOwnerType): string {
+  return ownerType === 'service_account' ? 'disposal.statusDisabled' : 'disposal.statusRetired';
 }
 
 /**
@@ -163,6 +170,12 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         cell: ({ row }) => (
           <>
             <span className="mono">{row.original.code}</span>
+            {row.original.retired ? (
+              <>
+                {' '}
+                <span className="badge danger">{t(retiredLabelKey(row.original.ownerType))}</span>
+              </>
+            ) : null}
             <span className="cell-sub">
               {row.original.orphan ? t('vaultHome.orphan') : row.original.name}
             </span>
@@ -305,9 +318,14 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                       ? t('vaultHome.orphan')
                       : [row.name, row.siteCode].filter(Boolean).join(' · '),
                   badge: (row) => (
-                    <span className="badge muted">
-                      {t('vaultHome.secretChip', { count: row.secretCount })}
-                    </span>
+                    <>
+                      {row.retired ? (
+                        <span className="badge danger">{t(retiredLabelKey(row.ownerType))}</span>
+                      ) : null}
+                      <span className="badge muted">
+                        {t('vaultHome.secretChip', { count: row.secretCount })}
+                      </span>
+                    </>
                   ),
                   meta: (row) =>
                     `${t(SECRET_OWNER_KIND_KEY[row.ownerType])} · ${formatDateTime(row.lastChangeAt)}`,

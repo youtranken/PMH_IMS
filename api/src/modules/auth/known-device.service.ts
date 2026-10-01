@@ -1,8 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { sql } from 'drizzle-orm';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { lt, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { SweepService } from '../queue/sweep.service';
 import { knownDeviceTable } from './known-device.schema';
 
 /**
@@ -10,8 +12,30 @@ import { knownDeviceTable } from './known-device.schema';
  * không phải mỗi lần đăng nhập.
  */
 @Injectable()
-export class KnownDeviceService {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Database) {}
+export class KnownDeviceService implements OnModuleInit {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly config: SystemConfigService,
+    private readonly sweep: SweepService,
+  ) {}
+
+  onModuleInit(): void {
+    this.sweep.register({ name: 'known-device-purge', run: () => this.purgeStale().then(() => undefined) });
+  }
+
+  /**
+   * Quên máy lâu không thấy (`auth.known_device_retention_days`, AD-11). Bảng chỉ dùng để quyết
+   * định có báo thư "thiết bị lạ" không, nên quên đi thì lần quay lại được báo như máy mới —
+   * không mất gì, còn giữ mãi thì bảng chỉ lớn lên.
+   */
+  async purgeStale(): Promise<number> {
+    const days = await this.config.getNumber('knownDeviceRetentionDays');
+    const rows = await this.db
+      .delete(knownDeviceTable)
+      .where(lt(knownDeviceTable.lastSeenAt, sql`now() - make_interval(days => ${days})`))
+      .returning({ id: knownDeviceTable.id });
+    return rows.length;
+  }
 
   /** Trả `true` nếu đây là thiết bị MỚI (vừa được ghi lần đầu). */
   async rememberWithin(

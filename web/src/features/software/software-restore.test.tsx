@@ -87,7 +87,7 @@ describe('Trang chi tiết phần mềm — Gia hạn / Khôi phục', () => {
     expect(await screen.findByText(/Đã thanh lý ngày 01\/09\/2026 · tự động sau 31 ngày hết hạn/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Gia hạn' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Khôi phục…' }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: 'Đưa vào kho thanh lý' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Thanh lý…' })).not.toBeInTheDocument();
   });
 
   /* Q-19: header chỉ giữ việc chính; "Khôi phục…" vào ⋮ (màu ok), băng Thanh lý vẫn giữ nút của nó. */
@@ -101,7 +101,7 @@ describe('Trang chi tiết phần mềm — Gia hạn / Khôi phục', () => {
     await user.click(screen.getByRole('button', { name: `Thao tác với ${BASE.code}` }));
     const restore = screen.getByRole('menuitem', { name: 'Khôi phục…' });
     expect(restore).toHaveClass('ok');
-    expect(screen.queryByRole('menuitem', { name: 'Đưa vào kho thanh lý' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Thanh lý…' })).not.toBeInTheDocument();
     await user.click(restore);
     expect(
       await screen.findByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${BASE.code}`) }),

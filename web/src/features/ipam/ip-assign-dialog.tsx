@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -8,7 +7,7 @@ import { todayIso } from '@/lib/format';
 import { maskOfCidr } from '@/lib/ipv4';
 import { CopyButton } from '@/ui/copy-button';
 import { DataItemIfSet } from '@/ui/detail-header';
-import { Combobox } from '@/ui/combobox';
+import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
@@ -18,12 +17,6 @@ import { useDepartments } from '@/ui/use-departments';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import type { IpRow } from './ipam-types';
 
-export interface DeviceOption {
-  id: string;
-  code: string;
-  name: string;
-}
-
 /**
  * Q-14: hồ sơ IP phải gắn thiết bị hoặc người/bộ phận — cùng luật `IP_OWNER_REQUIRED` của API,
  * kiểm trước ở đây để lỗi hiện ngay dưới ô thay vì một dòng đỏ chung chung sau lượt gửi.
@@ -32,8 +25,11 @@ export function ownerRule(t: TFunction, deviceId: string, usedBy: string): strin
   return deviceId || usedBy.trim() ? null : t('ipam.ownerRequired');
 }
 
-/** Ô chọn thiết bị cho hồ sơ IP — hộp Cấp và hộp Sửa hỏi cùng một câu, cùng một cách. */
-export function DeviceCombobox({
+/**
+ * Ô chọn thiết bị cho hồ sơ IP — hộp Cấp và hộp Sửa hỏi cùng một câu, cùng một cách. Ghi ngay
+ * cạnh mã máy nào ĐÃ giữ IP để khỏi cấp hai địa chỉ cho một máy (Q-20).
+ */
+export function IpDeviceCombobox({
   deviceId,
   term,
   onChange,
@@ -50,58 +46,28 @@ export function DeviceCombobox({
   'aria-invalid'?: boolean;
 }) {
   const { t } = useTranslation();
-  const devices = useQuery({
-    queryKey: ['devices', 'search', term],
-    queryFn: () =>
-      apiFetch<{ items: DeviceOption[] }>(
-        `/api/v1/devices?limit=20&usable=true&search=${encodeURIComponent(term)}`,
-      ),
-    /*
-     * Chưa gõ gì vẫn hỏi (20 máy đầu): mở ô ra mà trắng trơn thì người dùng không biết đây là
-     * ô tìm hay ô chọn — cùng cách ô Router của form NAT. Đã chọn xong thì ô đang hiện đúng
-     * mã máy, hỏi lại API cho chính cái mã đó là thừa.
-     */
-    enabled: !deviceId,
-  });
-  /* Máy nào ĐÃ giữ IP — ghi ngay cạnh mã để khỏi cấp hai địa chỉ cho một máy. Hỏng thì chỉ
-     mất dòng ghi thêm, ô chọn vẫn dùng được. */
-  const optionIds = (devices.data?.items ?? []).map((item) => item.id);
-  const held = useQuery({
-    queryKey: ['ipam', 'devices', 'addresses', optionIds],
-    enabled: !deviceId && optionIds.length > 0,
-    queryFn: () =>
-      apiFetch<Record<string, string[]>>(
-        `/api/v1/ipam/devices/addresses?deviceIds=${optionIds.join(',')}`,
-      ),
-  });
   return (
-    <Combobox
+    <DeviceCombobox
       id={id}
       aria-describedby={describedBy}
       aria-invalid={invalid}
       ariaLabel={t('ipam.device')}
       placeholder={t('ipam.deviceSearch')}
-      query={term}
-      // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện mã A mà id gửi đi là B.
-      onQuery={(value) => onChange({ deviceId: '', term: value })}
-      options={devices.data?.items ?? []}
-      failed={devices.isError}
-      getKey={(item) => item.id}
-      renderOption={(item) => {
-        const ips = held.data?.[item.id];
-        return (
-          <>
-            <span className="mono">{item.code}</span> <small>{item.name}</small>
-            {ips?.length ? (
-              <small>
-                {' · '}
-                {t('ipam.deviceHasIp', { ip: ips.join(', ') })}
-              </small>
-            ) : null}
-          </>
-        );
-      }}
-      onSelect={(item) => onChange({ deviceId: item.id, term: item.code })}
+      value={{ deviceId, term }}
+      onChange={(next) => onChange({ deviceId: next.deviceId, term: next.term })}
+      annotate={(ids) => ({
+        queryKey: ['ipam', 'devices', 'addresses', ids],
+        queryFn: async () => {
+          const held = await apiFetch<Record<string, string[]>>(
+            `/api/v1/ipam/devices/addresses?deviceIds=${ids.join(',')}`,
+          );
+          return Object.fromEntries(
+            Object.entries(held)
+              .filter(([, ips]) => ips.length > 0)
+              .map(([deviceKey, ips]) => [deviceKey, t('ipam.deviceHasIp', { ip: ips.join(', ') })]),
+          );
+        },
+      })}
     />
   );
 }
@@ -299,7 +265,7 @@ export function AssignIpDialog({
           </Field>
         ) : (
           <Field label={t('ipam.device')} hint={t('ipam.deviceHint')} error={check.error('owner')}>
-            <DeviceCombobox
+            <IpDeviceCombobox
               deviceId={device.deviceId}
               term={device.term}
               onChange={setDevice}

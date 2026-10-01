@@ -162,6 +162,8 @@ export const CONFIG_KEYS = {
    */
   sessionRetentionDays: { key: 'session.retention_days', fallback: 30 },
   outboxRetentionDays: { key: 'outbox.retention_days', fallback: 30 },
+  // Máy không đăng nhập lại quá ngần này ngày thì quên; lần sau được báo như thiết bị lạ.
+  knownDeviceRetentionDays: { key: 'auth.known_device_retention_days', fallback: 180 },
   /*
    * Ngăn năm của `audit_log` cũ hơn ngần này năm thì `ops/audit-archive.sh` tách ra và dump
    * (OLD-DB-03). Chỉ script vận hành đọc — không có gì tự chạy: lưu trữ sổ NFR-03 là

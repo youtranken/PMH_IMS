@@ -18,6 +18,8 @@ import { RowActions } from '@/ui/row-actions';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { SecretDue } from '@/ui/secret-due';
 import { Select } from '@/ui/select';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ServiceAccountForm } from './service-account-form';
@@ -76,6 +78,13 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: SERVICE_ACCOUNT_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'disabled',
+  });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES }, []);
   // Sắp xếp chạy ở SERVER (`manualSorting`), nên dựng lại `SortingState` cho `DataTable`.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
   const setPage = url.setPage;
@@ -287,15 +296,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('serviceAccounts.status')}
-          placeholder={t('serviceAccounts.liveStatuses')}
-          options={[
-            { value: '', label: t('serviceAccounts.liveStatuses') },
-            ...SERVICE_ACCOUNT_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-            { value: 'all', label: t('serviceAccounts.allStatuses') },
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
         {/* Tên chỉ là dòng phụ dưới mã nên không có tiêu đề cột để bấm — sắp theo tên đi ô này.
@@ -328,23 +330,32 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       ) : accounts.isError ? (
         <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Nút Thêm chỉ cho người
-             được thêm — mời Member bấm một nút rồi báo 403 là tệ hơn không mời. */
-          title={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
-          hint={url.isFiltered ? t('serviceAccounts.emptyFilteredHint') : t('serviceAccounts.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('common.clearFilters')}
-              </button>
-            ) : canEdit ? (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('serviceAccounts.add')}
-              </button>
-            ) : undefined
+        <LifecycleHiddenEmpty
+          probeKey={['service-accounts', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/service-accounts?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['disabled'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Nút Thêm chỉ cho người
+                 được thêm — mời Member bấm một nút rồi báo 403 là tệ hơn không mời. */
+              title={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
+              hint={url.isFiltered ? t('serviceAccounts.emptyFilteredHint') : t('serviceAccounts.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('common.clearFilters')}
+                  </button>
+                ) : canEdit ? (
+                  <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                    {t('serviceAccounts.add')}
+                  </button>
+                ) : undefined
+              }
+            />
           }
         />
       ) : (

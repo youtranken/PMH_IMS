@@ -29,6 +29,18 @@ export function secretTextRule(t: TFunction, value: string | null | undefined): 
   return textLooksLikeSecret(value) ? t('formErrors.secretText') : null;
 }
 
+/** Độ dài tối thiểu của ô "lý do" — cùng ngưỡng API kiểm cho các lý do ẩn/vô hiệu/gỡ. */
+export const REASON_MIN = 3;
+
+/**
+ * Luật MỘT bản cho ô "lý do" (vô hiệu tài khoản, ngừng dùng tài khoản dịch vụ, xoá dải, gỡ rule
+ * NAT, xoá IP nhập nhầm): bắt buộc, tối thiểu `REASON_MIN`, không chứa chuỗi trông như mật khẩu
+ * — lý do vào lịch sử dạng rõ và người xin đọc nó trong thư.
+ */
+export function reasonRule(t: TFunction, value: string): string | null {
+  return textRule(t, value, REASON_MIN) ?? secretTextRule(t, value);
+}
+
 export interface FormErrors<K extends string> {
   /** Gắn lên `<form>` — hook cần nó để tìm ô lỗi đầu tiên theo đúng thứ tự trên màn. */
   formRef: RefObject<HTMLFormElement | null>;

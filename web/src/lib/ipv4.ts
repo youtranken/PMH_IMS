@@ -23,9 +23,15 @@ export function parseIpv4(text: string): number | null {
 /**
  * Câu gõ có DÁNG địa chỉ IP/CIDR không (kể cả gõ dở "10.77.1.") — để đưa nhóm IP lên đầu.
  * Cần ít nhất một dấu chấm: gõ "10" là mã máy cũng được, chưa đủ để đoán.
+ * Mỗi khúc theo đúng luật của `parseIpv4` (0–255, không số 0 đứng đầu): "300.1.1.1" không phải IP.
  */
 export function looksLikeIp(text: string): boolean {
-  return /^\d{1,3}(\.\d{1,3}){1,3}\.?(\/\d{1,2})?$/.test(text.trim());
+  const m = /^(\d{1,3}(?:\.\d{1,3}){1,3})\.?(?:\/(\d{1,2}))?$/.exec(text.trim());
+  if (!m) return false;
+  if (m[2] !== undefined && Number(m[2]) > 32) return false;
+  const parts = m[1].split('.');
+  const padded = [...parts, '0', '0', '0'].slice(0, 4).join('.');
+  return parseIpv4(padded) !== null;
 }
 
 function parseCidr(cidr: string): { base: number; prefix: number } | null {

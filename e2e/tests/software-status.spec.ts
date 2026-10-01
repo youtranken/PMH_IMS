@@ -163,7 +163,7 @@ test('Hết hạn đỏ, Đã thanh lý xám — ở cả sáng lẫn tối', as
     }),
   );
 
-  // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Mọi trạng thái" qua URL.
+  // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Tất cả" qua URL.
   await page.goto('/software?status=all');
   await searchAndWaitForFilter(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
@@ -218,7 +218,7 @@ test('thanh lý từ danh sách: câu hỏi lại nói ghế sẽ BỊ GỠ và 
   await page.goto('/software');
   await searchAndWaitForFilter(page, code);
   await expect(page.getByRole('row')).toHaveCount(2);
-  await rowAction(page, code, 'Đưa vào kho thanh lý');
+  await rowAction(page, code, 'Thanh lý…');
 
   const dialog = page.getByRole('alertdialog').or(page.getByRole('dialog'));
   await expect(dialog).toContainText('2 máy đang dùng sẽ bị gỡ license');
@@ -230,7 +230,7 @@ test('thanh lý từ danh sách: câu hỏi lại nói ghế sẽ BỊ GỠ và 
   await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
   expect(await seatUsed(page, id)).toBe(2);
 
-  await rowAction(page, code, 'Đưa vào kho thanh lý');
+  await rowAction(page, code, 'Thanh lý…');
   await dialog.getByRole('button', { name: 'Đưa vào kho thanh lý' }).click();
   await expect(page.getByText('Đã đưa vào kho thanh lý.')).toBeVisible();
   expect(await seatUsed(page, id)).toBe(0);

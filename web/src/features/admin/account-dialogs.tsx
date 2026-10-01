@@ -4,7 +4,7 @@ import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, useFormErrors } from '@/ui/use-form-errors';
 import { AccountFootprint } from './account-footprint';
 import { RoleChoice } from './role-choice';
 
@@ -53,7 +53,7 @@ export function AccountStatusDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
 
   return (
     <Dialog

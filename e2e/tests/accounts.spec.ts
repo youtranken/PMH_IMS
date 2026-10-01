@@ -33,7 +33,7 @@ test.describe('Quản trị tài khoản', () => {
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
     const unique = `e2e-tao-moi-${Date.now()}@pmh.com.vn`;
     // Dùng vai + tên trợ năng (accessible name) thay vì getByLabel: nhãn có kèm dấu *
     // trang trí, còn ô tìm kiếm phía trên cũng chứa chữ "email".

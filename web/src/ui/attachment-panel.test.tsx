@@ -277,3 +277,32 @@ describe('AttachmentPanel — luật tải về nằm trong nút (i)', () => {
     expect(screen.getByText(sentence)).toBeInTheDocument();
   });
 });
+
+/*
+ * Gợi ý khi chưa có giấy tờ phải nói đúng loại hồ sơ, như ô thả file: tài khoản dịch vụ không có
+ * "hóa đơn", và ở đó còn phải nhắc KHÔNG đính mật khẩu.
+ */
+describe('AttachmentPanel — gợi ý khi trống theo loại hồ sơ', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    ['service_account', /cấu hình VPN/],
+    ['nat_rule', /cấu hình router/],
+    ['device', /hóa đơn/i],
+  ] as const)('%s', async (ownerType, expected) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(200, []))),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType={ownerType} ownerId="o1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const empty = (await screen.findByText('Chưa có giấy tờ nào.')).parentElement!;
+    expect(empty).toHaveTextContent(expected);
+    if (ownerType !== 'device') expect(empty).not.toHaveTextContent(/hóa đơn/i);
+  });
+});

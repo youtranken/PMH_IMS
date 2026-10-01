@@ -44,3 +44,25 @@ describe('WarrantyTimeline — nhãn mốc theo bề ngang', () => {
     expect(screen.getByText(/^Đến/)).toBeInTheDocument();
   });
 });
+
+/*
+ * Thanh "không tính hạn" dùng chung cho thiết bị/phần mềm đã thanh lý VÀ tài khoản dịch vụ đã
+ * ngừng dùng — câu không được gọi tên một trạng thái riêng của module nào.
+ */
+describe('WarrantyTimeline — notCounted nói trung tính', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('không nói "thanh lý" cho mọi loại hồ sơ', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    );
+    renderWithI18n(
+      <QueryClientProvider client={new QueryClient()}>
+        <WarrantyTimeline end="2025-01-01" notCounted now={new Date('2026-06-01')} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText(/^Không tính hạn/)).toBeInTheDocument();
+    expect(screen.queryByText(/thanh lý/)).toBeNull();
+  });
+});

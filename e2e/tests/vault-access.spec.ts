@@ -82,7 +82,7 @@ test.describe('Ma trận quyền két sắt', () => {
 
   /**
    * Q-20 — đường hỏng: POST/DELETE /vault/access đòi step-up. Hết ân hạn mà màn chỉ gọi API trơn
-   * thì người dùng thấy câu lỗi đỏ "Nhập mã 6 số … để mở két" mà không có ô nào để nhập. Dựng lại
+   * thì người dùng thấy câu lỗi đỏ "Nhập mã 6 số … để xác nhận thao tác này" mà không có ô nào để nhập. Dựng lại
    * đúng cảnh đó (ép hết ân hạn của chính phiên này) rồi gán và gỡ: phải hiện hộp hỏi mã.
    */
   test('hết ân hạn: gán và gỡ trên ma trận hỏi mã 6 số rồi làm tiếp, không báo lỗi đỏ', async ({
@@ -109,7 +109,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
     const granted = row.getByRole('button', { name: /Thiết bị loại Switch: Cần duyệt/ });
     await expect(granted, 'gõ mã xong thì lượt gán chạy lại và ô đổi ngay').toBeVisible();
-    await expect(page.getByText(/để mở két/), 'không được còn câu lỗi đỏ bảo nhập mã').toHaveCount(0);
+    await expect(page.getByText(/để xác nhận thao tác này/), 'không được còn câu lỗi đỏ bảo nhập mã').toHaveCount(0);
 
     expireStepUp(E2E_SA.email);
     await granted.click();

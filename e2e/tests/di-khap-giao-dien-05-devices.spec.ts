@@ -322,12 +322,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       status,
       'Ô lọc Trạng thái: mặc định trừ Đã thanh lý (Q-20), bốn trạng thái của DEVICE_STATUSES, rồi mục "cả Đã thanh lý"',
     ).toEqual([
-      'Mọi trạng thái (trừ Đã thanh lý)',
+      'Đang theo dõi (trừ Đã thanh lý)',
       'Đang dùng',
       'Dự phòng',
       'Hỏng',
       'Đã thanh lý',
-      'Mọi trạng thái (cả Đã thanh lý)',
+      'Tất cả (cả Đã thanh lý)',
     ]);
 
     const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại', exact: true }));
