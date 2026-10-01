@@ -394,4 +394,34 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
       expect(lookup(key), key).not.toContain('Thêm quyền');
     }
   });
+
+  /*
+   * Cùng một việc, nhiều màn: nút xoá ô tìm, nút bỏ lọc, dòng "cập nhật khi nhập Excel" ở nhật ký
+   * và ở lịch sử hồ sơ. Hai chữ cho một việc thì người dùng đi tìm khác biệt không tồn tại.
+   */
+  it('xoá ô tìm / bỏ lọc / nhập Excel: một chữ mỗi việc', () => {
+    for (const key of ['catalog.clearSearch', 'access.clearSearch']) {
+      expect(lookup(key), key).toBe(lookup('vaultHome.clearSearch'));
+    }
+    expect(lookup('vaultHome.clearKinds')).toBe(lookup('common.clearFilters'));
+    expect(lookup('audit.verb.importedUpdate')).toBe(lookup('history.devices.actImportedUpdate'));
+    expect(lookup('history.catalog.actImportedUpdate')).toBe(
+      lookup('history.devices.actImportedUpdate'),
+    );
+  });
+
+  /* Màn tên "Người dùng IMS" — nút thêm cũng gọi đúng thứ đó, không lẫn với "tài khoản dịch vụ". */
+  it('màn Người dùng IMS: nút thêm là "Thêm người dùng"', () => {
+    expect(lookup('accounts.create')).toBe('Thêm người dùng');
+  });
+
+  /* Mục menu thanh lý của phần mềm gọi như đường truyền ("Thanh lý…"), không phải câu dài. */
+  it('menu thanh lý phần mềm cùng chữ với đường truyền', () => {
+    expect(lookup('software.disposeMenu')).toBe(lookup('isp.terminateMenu'));
+    for (const file of ['features/software/software-detail.tsx', 'features/software/software-screen.tsx']) {
+      const source = readFileSync(join(SRC, file), 'utf8');
+      expect(source, file).toContain('software.disposeMenu');
+    }
+  });
 });
+

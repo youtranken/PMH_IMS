@@ -127,7 +127,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Họ tên' }).fill(ADMIN_NAME);
     await form.getByRole('textbox', { name: 'Email' }).fill(ADMIN_EMAIL);

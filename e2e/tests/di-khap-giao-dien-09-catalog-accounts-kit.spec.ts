@@ -660,7 +660,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * hỏng của nó dễ nói "Chưa có dữ liệu" khi API 500. Bài này chốt rằng bên trong hộp có
    * BẢNG THẬT với đủ bốn cột và có nút đá phiên — tức là nó đã hỏi được và đã trả lời.
    *
-   * ĐỎ KHI: mất nút "Thêm tài khoản", bảng thừa/thiếu/đổi tên một cột (nhất là cột Vai trò —
+   * ĐỎ KHI: mất nút "Thêm người dùng", bảng thừa/thiếu/đổi tên một cột (nhất là cột Vai trò —
    * không thấy vai trò thì không ai biết mình đang khóa nhầm ai), menu rụng một mục, hoặc
    * hộp Phiên mở ra mà bên trong không có bảng.
    *
@@ -680,8 +680,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
     await expect(
       page.getByRole('button', { name: /^Thêm/ }),
-      'màn Tài khoản phải có đúng một nút thêm và nó ghi "Thêm tài khoản"',
-    ).toHaveText(['Thêm tài khoản']);
+      'màn Tài khoản phải có đúng một nút thêm và nó ghi "Thêm người dùng"',
+    ).toHaveText(['Thêm người dùng']);
 
     const columns = page.getByRole('table').getByRole('columnheader');
     await expect(
@@ -807,8 +807,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const employeeCode = `NV-${stamp}`;
 
     // ===== CHẾ ĐỘ TẠO =====
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
-    const createDialog = page.getByRole('dialog', { name: 'Thêm tài khoản', exact: true });
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
+    const createDialog = page.getByRole('dialog', { name: 'Thêm người dùng', exact: true });
     await expect(createDialog).toBeVisible();
 
     expect(

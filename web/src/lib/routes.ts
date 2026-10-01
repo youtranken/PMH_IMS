@@ -118,7 +118,7 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
  * ===== LỖ BẢNG NÀY BỊT =====
  *
  * Màn nào không gác ở `<Route>` thì Member gõ thẳng URL vào là màn dựng đủ `h1`, phụ đề, và
- * một nút "Thêm tài khoản" BẤM ĐƯỢC, rồi mới báo không có quyền.
+ * một nút "Thêm người dùng" BẤM ĐƯỢC, rồi mới báo không có quyền.
  *
  * Dữ liệu không rò (API trả 403 sạch), nên đây không phải lỗ bảo mật. Nhưng nó dạy sai: một
  * màn dựng ra đủ hình hài rồi mới từ chối trông như một lỗi hệ thống, không như một ranh giới

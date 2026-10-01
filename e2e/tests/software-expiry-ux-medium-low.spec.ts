@@ -256,8 +256,8 @@ test.describe('Trang hồ sơ phần mềm', () => {
     const id = await createSoftware(page, { code, name: 'SSL thanh lý từ menu', kind: 'ssl', endDate: isoInDays(90) });
 
     await page.goto(`/software/${id}`);
-    await expect(page.getByRole('button', { name: 'Đưa vào kho thanh lý' })).toHaveCount(0);
-    await rowAction(page, code, 'Đưa vào kho thanh lý');
+    await expect(page.getByRole('button', { name: 'Thanh lý…', exact: true })).toHaveCount(0);
+    await rowAction(page, code, 'Thanh lý…');
     // Đường hỏng: Hủy thì không gì đổi.
     await page.getByRole('dialog').getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
     const still = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as { status: string };
