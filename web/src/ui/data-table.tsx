@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-table';
 import { SkeletonCards, SkeletonRows } from '@/ui/skeleton-rows';
 import { useScrollEdges } from '@/ui/scroll-x';
+import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 
 // Cho phép cột khai báo className (vd 'num' căn phải cột số) qua columnDef.meta.
@@ -30,11 +31,8 @@ declare module '@tanstack/react-table' {
   }
 }
 
-/**
- * Mốc chuyển bảng → thẻ gọn. PHẢI khớp `@media (max-width: 600px)` của `.list-card*` trong
- * `css/table.css`.
- */
-export const MOBILE_CARD_QUERY = '(max-width: 600px)';
+/** Mốc chuyển bảng → thẻ gọn (`BREAKPOINTS.cards`, khớp `.list-card*` trong `css/table.css`). */
+export const MOBILE_CARD_QUERY = BREAKPOINTS.cards;
 
 /**
  * Thẻ gọn thay cho bảng trên điện thoại. Mọi khe là hàm của dòng; bỏ khe nào thì thẻ không có

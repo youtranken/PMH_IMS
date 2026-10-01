@@ -28,6 +28,7 @@ import { Pagination } from "@/ui/pagination";
 import { Select } from "@/ui/select";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
+import { BREAKPOINTS } from "@/ui/breakpoints";
 import { useMediaQuery } from "@/ui/use-media-query";
 import { useToast } from "@/ui/toast";
 
@@ -42,8 +43,10 @@ const PAGE_LIMIT = 20;
  */
 const PENDING_REFETCH_MS = 30_000;
 
-/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab. */
-const NARROW_QUERY = "(max-width: 640px)";
+/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab.
+    Cùng mốc với thẻ gọn của bảng: lệch mốc thì ở 600–640px nút đã rời đầu trang trong khi bảng
+    vẫn là bảng desktop. */
+const NARROW_QUERY = BREAKPOINTS.cards;
 
 interface ApprovalPage {
   items: ApprovalRow[];

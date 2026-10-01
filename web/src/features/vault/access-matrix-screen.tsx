@@ -18,8 +18,7 @@ import { ScrollX } from '@/ui/scroll-x';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
-import { useMediaQuery } from '@/ui/use-media-query';
-import { NARROW_QUERY } from '@/ui/use-narrow';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
@@ -137,7 +136,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useIsNarrow();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   /** Người đã vô hiệu hóa (nghỉ việc) mặc định ẨN — gán quyền cho họ là việc không ai cần làm. */

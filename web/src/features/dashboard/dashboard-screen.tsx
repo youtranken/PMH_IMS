@@ -24,6 +24,7 @@ import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
+import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { DISPOSAL_KIND_KEY, disposalDetailText, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
@@ -103,7 +104,7 @@ interface Dashboard {
 
 /** Trên điện thoại mỗi khối chỉ bày chừng này mục, phần còn lại bung tại chỗ. */
 const MOBILE_ITEMS = 3;
-const MOBILE_QUERY = '(max-width: 600px)';
+const MOBILE_QUERY = BREAKPOINTS.cards;
 
 /**
  * Bảng điều khiển (FR-025).
