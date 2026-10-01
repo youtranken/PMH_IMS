@@ -16,6 +16,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
 import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';
@@ -69,6 +70,11 @@ export function IspScreen({ me }: { me: Me }) {
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: ISP_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'terminated',
+  });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả sổ — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -269,12 +275,8 @@ export function IspScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('isp.status')}
-          placeholder={t('isp.liveStatuses')}
-          options={[
-            { value: '', label: t('isp.liveStatuses') },
-            { value: 'all', label: t('isp.allStatuses') },
-            ...ISP_STATUSES.map((status) => ({ value: status, label: t(STATUS_KEY[status]) })),
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
       </FilterBar>

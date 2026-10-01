@@ -72,7 +72,7 @@ async function retire(page: Page, softwareId: string): Promise<void> {
 }
 
 test.describe('Danh sách phần mềm', () => {
-  test('SW-006/SW-009: mặc định giấu hồ sơ Thanh lý; "Mọi trạng thái" thì hiện; lọc kỳ hạn qua URL', async ({
+  test('SW-006/SW-009: mặc định giấu hồ sơ Thanh lý; "Tất cả" thì hiện; lọc kỳ hạn qua URL', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -108,7 +108,7 @@ test.describe('Danh sách phần mềm', () => {
     ).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    await page.getByRole('option', { name: 'Mọi trạng thái (cả Đã thanh lý)' }).click();
+    await page.getByRole('option', { name: 'Tất cả (cả Đã thanh lý)' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`${prefix}-BO`) })).toBeVisible();
 
     // Đường hỏng: giá trị kỳ hạn lạ trên URL không được lọc ra rỗng — server bỏ qua nó.

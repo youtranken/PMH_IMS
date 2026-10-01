@@ -105,7 +105,7 @@ describe('Tài khoản dịch vụ — cột "Đổi lần cuối" (Q-15)', () =
 
 /*
  * Q-20 — tài khoản đã ngừng dùng ẩn khỏi danh sách theo mặc định (Kho thanh lý là nơi xem tập
- * trung); lọc đích danh "Đã ngừng dùng" vẫn ra, "Mọi trạng thái (cả …)" thì không lọc.
+ * trung); lọc đích danh "Đã ngừng dùng" vẫn ra, "Tất cả (cả …)" thì không lọc.
  */
 describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q-20)', () => {
   async function listParams(entry: string): Promise<URLSearchParams> {
@@ -119,7 +119,7 @@ describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q
   it('mặc định chỉ hỏi tài khoản đang dùng, ô lọc nói rõ', async () => {
     expect((await listParams('/service-accounts')).get('status')).toBe('active');
     expect(screen.getByRole('button', { name: 'Trạng thái' })).toHaveTextContent(
-      'Mọi trạng thái (trừ Đã ngừng dùng)',
+      'Đang theo dõi (trừ Đã ngừng dùng)',
     );
   });
 
@@ -127,7 +127,7 @@ describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q
     expect((await listParams('/service-accounts?status=disabled')).get('status')).toBe('disabled');
   });
 
-  it('"Mọi trạng thái (cả Đã ngừng dùng)": không gửi status', async () => {
+  it('"Tất cả (cả Đã ngừng dùng)": không gửi status', async () => {
     expect((await listParams('/service-accounts?status=all')).has('status')).toBe(false);
   });
 });

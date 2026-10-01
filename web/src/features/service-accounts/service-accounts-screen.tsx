@@ -18,6 +18,7 @@ import { RowActions } from '@/ui/row-actions';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { SecretDue } from '@/ui/secret-due';
 import { Select } from '@/ui/select';
+import { lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ServiceAccountForm } from './service-account-form';
@@ -76,6 +77,11 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: SERVICE_ACCOUNT_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'disabled',
+  });
   // Sắp xếp chạy ở SERVER (`manualSorting`), nên dựng lại `SortingState` cho `DataTable`.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
   const setPage = url.setPage;
@@ -287,15 +293,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('serviceAccounts.status')}
-          placeholder={t('serviceAccounts.liveStatuses')}
-          options={[
-            { value: '', label: t('serviceAccounts.liveStatuses') },
-            ...SERVICE_ACCOUNT_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-            { value: 'all', label: t('serviceAccounts.allStatuses') },
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
         {/* Tên chỉ là dòng phụ dưới mã nên không có tiêu đề cột để bấm — sắp theo tên đi ô này.

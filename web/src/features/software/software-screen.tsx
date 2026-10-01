@@ -18,6 +18,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { RenewDialog } from '@/ui/renew-dialog';
@@ -86,6 +87,11 @@ export function SoftwareScreen({ me }: { me: Me }) {
   /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: SOFTWARE_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'retired',
+  });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -246,15 +252,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('software.status')}
-          placeholder={t('software.liveStatuses')}
-          options={[
-            { value: '', label: t('software.liveStatuses') },
-            ...SOFTWARE_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-            { value: 'all', label: t('software.allStatuses') },
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
         <Select

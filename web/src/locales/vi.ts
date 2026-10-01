@@ -237,6 +237,9 @@ export default {
     close: 'Đóng',
     // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
     clearFilters: 'Xóa bộ lọc',
+    /* Ô lọc trạng thái vòng đời (Q-20, `ui/lifecycle-status-options.ts`): một khuôn cho bốn màn. */
+    lifecycleLive: 'Đang theo dõi (trừ {{end}})',
+    lifecycleAll: 'Tất cả (cả {{end}})',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
@@ -656,9 +659,6 @@ export default {
     allSites: 'Tất cả site',
     allCabinets: 'Mọi tủ',
     allTypes: 'Mọi loại',
-    /* Mặc định của bộ lọc trạng thái (Q-20): máy đã thanh lý xem ở Kho thanh lý. */
-    liveStatuses: 'Mọi trạng thái (trừ Đã thanh lý)',
-    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
        thích cho cả ô. Đem `noCabinet` làm `hint` của ô "Tủ mạng" thì dưới ô hiện dòng xám
        "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
@@ -937,9 +937,6 @@ export default {
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
     allKinds: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
-    /* Mặc định của bộ lọc trạng thái: hai trạng thái còn trên máy. */
-    liveStatuses: 'Đang dùng + Hết hạn',
     allVendors: 'Mọi nhà cung cấp',
     allModels: 'Mọi kỳ hạn',
     seatsExpired: 'đang cài license đã hết hạn',
@@ -1114,7 +1111,6 @@ export default {
     statusTerminated: 'Đã thanh lý',
     liquidated: 'Đã thanh lý ngày {{date}} bởi {{actor}}',
     allSites: 'Tất cả site',
-    allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa khai báo đường truyền nào.',
     emptyHint: 'Thêm đường truyền để có sẵn hotline và số hợp đồng khi sự cố.',
@@ -1125,7 +1121,6 @@ export default {
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     allProviders: 'Mọi nhà mạng',
-    liveStatuses: 'Đang dùng + Tạm ngưng',
     wanIpInvalid: 'IP WAN phải là một IPv4 (vd 113.161.10.20) hoặc một khối IP (vd 113.161.10.16/29).',
     wanIpHint: 'IP tĩnh hoặc khối IP tĩnh nhà mạng cấp.',
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
@@ -2017,9 +2012,6 @@ export default {
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Mọi loại',
-    /* Mặc định của bộ lọc trạng thái (Q-20): tài khoản đã ngừng dùng xem ở Kho thanh lý. */
-    liveStatuses: 'Mọi trạng thái (trừ Đã ngừng dùng)',
-    allStatuses: 'Mọi trạng thái (cả Đã ngừng dùng)',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
     emptyHint: 'Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.',

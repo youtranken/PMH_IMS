@@ -58,7 +58,7 @@ describe('Màn Thiết bị — bộ lọc trạng thái mặc định (Q-20)', 
     const query = await listQuery('/devices');
     expect(query.get('status')).toBe('live');
     expect(screen.getByRole('button', { name: 'Trạng thái' })).toHaveTextContent(
-      'Mọi trạng thái (trừ Đã thanh lý)',
+      'Đang theo dõi (trừ Đã thanh lý)',
     );
   });
 
@@ -67,7 +67,7 @@ describe('Màn Thiết bị — bộ lọc trạng thái mặc định (Q-20)', 
     expect(query.get('status')).toBe('retired');
   });
 
-  it('"Mọi trạng thái (cả Đã thanh lý)": không gửi status', async () => {
+  it('"Tất cả (cả Đã thanh lý)": không gửi status', async () => {
     const query = await listQuery('/devices?status=all');
     expect(query.has('status')).toBe(false);
   });

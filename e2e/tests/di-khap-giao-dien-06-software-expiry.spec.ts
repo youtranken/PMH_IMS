@@ -277,7 +277,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     });
     expect(retired.status(), 'đưa hồ sơ vào kho thanh lý qua API phải thành công').toBeLessThan(300);
 
-    // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Mọi trạng thái" qua URL.
+    // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Tất cả" qua URL.
     await page.goto('/software?status=all');
     await search.fill(prefix);
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();

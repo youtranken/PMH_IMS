@@ -19,6 +19,7 @@ import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
 import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
@@ -77,6 +78,11 @@ export function DevicesScreen({ me }: { me: Me }) {
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: DEVICE_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'retired',
+  });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả kho — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -397,15 +403,8 @@ export function DevicesScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('devices.status')}
-          placeholder={t('devices.liveStatuses')}
-          options={[
-            { value: '', label: t('devices.liveStatuses') },
-            ...DEVICE_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-            { value: 'all', label: t('devices.allStatuses') },
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
       </FilterBar>
