@@ -210,9 +210,10 @@ test.describe('Danh mục', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
-    // "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Ngừng dùng, Xóa) thì không.
+    // "Sửa" đứng ngoài menu (Q-18). "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Ngừng
+    // dùng, Xóa) thì không.
+    await expect(page.getByRole('button', { name: `Sửa ${siteCode}` })).toBeVisible();
     expect(await rowActionNames(page, siteCode)).toEqual([
-      'Sửa',
       'Lịch sử',
       'Xem thiết bị dùng mục này',
     ]);

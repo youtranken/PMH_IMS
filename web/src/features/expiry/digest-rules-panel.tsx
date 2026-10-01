@@ -168,126 +168,124 @@ export function DigestRulesPanel({
                   </td>
                   {canEdit ? (
                     <td data-label={t('common.actions')}>
-                      <div className="action-cell">
-                        <RowActions
-                          label={t('common.actionsOf', { subject: rule.name })}
-                          items={[
-                            {
-                              key: 'edit',
-                              label: t('digest.edit'),
-                              onSelect: () => setEditing({ rule }),
-                            },
-                            {
-                              key: 'toggle',
-                              label: t(rule.active ? 'digest.pause' : 'digest.resume'),
-                              disabled: toggle.isPending,
-                              onSelect: () =>
-                                toggle.mutate(
-                                  { id: rule.id, active: !rule.active },
-                                  {
-                                    onSuccess: () => {
-                                      toast({
-                                        message: t(rule.active ? 'digest.pausedDone' : 'digest.resumed'),
-                                      });
-                                      void refresh();
-                                    },
-                                    onError: (error) =>
-                                      toast({ message: errorMessage(error), tone: 'error' }),
+                      <RowActions
+                        primary={{
+                          label: t('common.edit'),
+                          ariaLabel: t('common.editOf', { subject: rule.name }),
+                          onClick: () => setEditing({ rule }),
+                        }}
+                        label={t('common.actionsOf', { subject: rule.name })}
+                        items={[
+                          {
+                            key: 'toggle',
+                            label: t(rule.active ? 'digest.pause' : 'digest.resume'),
+                            disabled: toggle.isPending,
+                            onSelect: () =>
+                              toggle.mutate(
+                                { id: rule.id, active: !rule.active },
+                                {
+                                  onSuccess: () => {
+                                    toast({
+                                      message: t(rule.active ? 'digest.pausedDone' : 'digest.resumed'),
+                                    });
+                                    void refresh();
                                   },
-                                ),
-                            },
-                            {
-                              key: 'preview',
-                              label: t('digest.preview'),
-                              onSelect: () => setPreviewing(rule),
-                            },
-                            /* Gửi cho CHÍNH người bấm: xem thư thật trong hộp thư mình mà không
-                               làm phiền danh sách của luật — nên không cần hỏi lại. */
-                            {
-                              key: 'test-me',
-                              label: t('digest.testMe'),
-                              disabled: sendTest.isPending,
-                              onSelect: () =>
+                                  onError: (error) =>
+                                    toast({ message: errorMessage(error), tone: 'error' }),
+                                },
+                              ),
+                          },
+                          {
+                            key: 'preview',
+                            label: t('digest.preview'),
+                            onSelect: () => setPreviewing(rule),
+                          },
+                          /* Gửi cho CHÍNH người bấm: xem thư thật trong hộp thư mình mà không
+                             làm phiền danh sách của luật — nên không cần hỏi lại. */
+                          {
+                            key: 'test-me',
+                            label: t('digest.testMe'),
+                            disabled: sendTest.isPending,
+                            onSelect: () =>
+                              sendTest.mutate(
+                                { id: rule.id, onlyMe: true },
+                                {
+                                  onSuccess: testSentToast,
+                                  onError: (error) =>
+                                    toast({ message: errorMessage(error), tone: 'error' }),
+                                },
+                              ),
+                          },
+                          {
+                            key: 'test',
+                            label: t('digest.test'),
+                            disabled: sendTest.isPending,
+                            /*
+                             * "Gửi thử" KHÔNG gửi vào một hộp thư nháp nào cả — nó bắn email
+                             * THẬT tới đúng danh sách người nhận của luật, mà danh sách ấy
+                             * thường là sếp và cả phòng. Chữ "thử" làm người ta tưởng ngược
+                             * lại, nên đây là chỗ hiếm hoi phải hỏi lại dù thao tác không
+                             * ghi gì xuống DB: cái không hoàn tác được là email đã rời đi.
+                             *
+                             * Câu hỏi NÊU ĐÍCH DANH người nhận — đó mới là thông tin giúp
+                             * người dùng dừng lại đúng lúc, chứ không phải chữ "chắc chưa?".
+                             */
+                            onSelect: () => {
+                              void (async () => {
+                                const ok = await askConfirm({
+                                  title: t('common.titleOf', {
+                                    action: t('digest.test'),
+                                    subject: rule.name,
+                                  }),
+                                  message: t('digest.confirmTest', {
+                                    to: rule.recipients.join(', '),
+                                  }),
+                                  confirmLabel: t('digest.test'),
+                                });
+                                if (!ok) return;
                                 sendTest.mutate(
-                                  { id: rule.id, onlyMe: true },
+                                  { id: rule.id },
                                   {
                                     onSuccess: testSentToast,
                                     onError: (error) =>
                                       toast({ message: errorMessage(error), tone: 'error' }),
                                   },
-                                ),
+                                );
+                              })();
                             },
-                            {
-                              key: 'test',
-                              label: t('digest.test'),
-                              disabled: sendTest.isPending,
-                              /*
-                               * "Gửi thử" KHÔNG gửi vào một hộp thư nháp nào cả — nó bắn email
-                               * THẬT tới đúng danh sách người nhận của luật, mà danh sách ấy
-                               * thường là sếp và cả phòng. Chữ "thử" làm người ta tưởng ngược
-                               * lại, nên đây là chỗ hiếm hoi phải hỏi lại dù thao tác không
-                               * ghi gì xuống DB: cái không hoàn tác được là email đã rời đi.
-                               *
-                               * Câu hỏi NÊU ĐÍCH DANH người nhận — đó mới là thông tin giúp
-                               * người dùng dừng lại đúng lúc, chứ không phải chữ "chắc chưa?".
-                               */
-                              onSelect: () => {
-                                void (async () => {
-                                  const ok = await askConfirm({
-                                    title: t('common.titleOf', {
-                                      action: t('digest.test'),
-                                      subject: rule.name,
-                                    }),
-                                    message: t('digest.confirmTest', {
-                                      to: rule.recipients.join(', '),
-                                    }),
-                                    confirmLabel: t('digest.test'),
-                                  });
-                                  if (!ok) return;
-                                  sendTest.mutate(
-                                    { id: rule.id },
-                                    {
-                                      onSuccess: testSentToast,
-                                      onError: (error) =>
-                                        toast({ message: errorMessage(error), tone: 'error' }),
+                          },
+                          {
+                            key: 'delete',
+                            label: t('digest.delete'),
+                            danger: true,
+                            onSelect: () => {
+                              void (async () => {
+                                const ok = await askConfirm({
+                                  title: t('common.titleOf', {
+                                    action: t('digest.delete'),
+                                    subject: rule.name,
+                                  }),
+                                  message: t('digest.confirmDelete', { name: rule.name }),
+                                  danger: true,
+                                  confirmLabel: t('digest.delete'),
+                                });
+                                if (!ok) return;
+                                remove.mutate(
+                                  { id: rule.id },
+                                  {
+                                    onSuccess: () => {
+                                      toast({ message: t('digest.deleted') });
+                                      void refresh();
                                     },
-                                  );
-                                })();
-                              },
+                                    onError: (error) =>
+                                      toast({ message: errorMessage(error), tone: 'error' }),
+                                  },
+                                );
+                              })();
                             },
-                            {
-                              key: 'delete',
-                              label: t('digest.delete'),
-                              danger: true,
-                              onSelect: () => {
-                                void (async () => {
-                                  const ok = await askConfirm({
-                                    title: t('common.titleOf', {
-                                      action: t('digest.delete'),
-                                      subject: rule.name,
-                                    }),
-                                    message: t('digest.confirmDelete', { name: rule.name }),
-                                    danger: true,
-                                    confirmLabel: t('digest.delete'),
-                                  });
-                                  if (!ok) return;
-                                  remove.mutate(
-                                    { id: rule.id },
-                                    {
-                                      onSuccess: () => {
-                                        toast({ message: t('digest.deleted') });
-                                        void refresh();
-                                      },
-                                      onError: (error) =>
-                                        toast({ message: errorMessage(error), tone: 'error' }),
-                                    },
-                                  );
-                                })();
-                              },
-                            },
-                          ]}
-                        />
-                      </div>
+                          },
+                        ]}
+                      />
                     </td>
                   ) : null}
                 </tr>

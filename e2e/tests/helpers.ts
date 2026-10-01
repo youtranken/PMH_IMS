@@ -975,15 +975,16 @@ export async function searchAndWaitForFilter(page: Page, keyword: string): Promi
 }
 
 /**
- * Mở menu ba chấm của một dòng rồi chọn một việc trong đó.
+ * Làm một việc trên một dòng: bấm nút "Sửa" đứng ngoài, hoặc mở menu ba chấm rồi chọn.
  *
- * Cột "Thao tác" của mọi bảng danh sách là menu ba chấm (`ui/row-actions.tsx`), nên
- * `getByRole('button', { name: 'Sửa' })` không tìm thấy gì:
- * mục menu chỉ tồn tại trong DOM khi menu đang mở, và nó mang vai `menuitem` chứ không phải
- * `button`. Để ở đây thay vì chép hai dòng vào hai chục chỗ — AD-15.
+ * Cột "Thao tác" của mọi bảng danh sách là `RowActions` (`ui/row-actions.tsx`): theo Q-18 nút
+ * "Sửa" đứng NGOÀI (tên "Sửa <định danh dòng>"), mọi việc khác nằm trong menu ⋮ — mục menu chỉ
+ * tồn tại trong DOM khi menu đang mở, và mang vai `menuitem` chứ không phải `button`. Bài gọi
+ * không cần biết việc nào đứng ở đâu; đổi chỗ một việc giữa nút và menu không phải sửa hai chục
+ * bài. Để ở đây thay vì chép vào từng chỗ — AD-15.
  *
- * `subject` là thứ đứng sau "Thao tác với …" trong `aria-label` của nút ba chấm: mã hồ sơ,
- * địa chỉ IP, tên tài khoản… Nó phải RIÊNG cho từng dòng, đó chính là lý do nhãn mang nó.
+ * `subject` là thứ đứng sau "Thao tác với …" trong `aria-label` của nút ba chấm (và sau "Sửa …"
+ * của nút chính): mã hồ sơ, địa chỉ IP, tên tài khoản… Nó phải RIÊNG cho từng dòng.
  */
 export async function rowAction(
   page: Page,
@@ -994,8 +995,26 @@ export async function rowAction(
     typeof subject === 'string'
       ? `Thao tác với ${subject}`
       : new RegExp(`Thao tác với .*${subject.source}`, subject.flags);
-  await page.getByRole('button', { name: label }).click();
+  const trigger = page.getByRole('button', { name: label });
+  const primary = page.getByRole('button', { name: primaryName(subject, action) });
+  /* Chờ dòng hiện ra rồi mới đếm: `count()` không tự chờ. Nút chính và ba chấm vẽ trong CÙNG
+     một lượt, nên thấy một trong hai là đếm được cái kia. */
+  await expect(primary.or(trigger).first()).toBeVisible();
+  if ((await primary.count()) > 0) {
+    await primary.first().click();
+    return;
+  }
+  await trigger.click();
   await page.getByRole('menuitem', { name: action }).click();
+}
+
+/** Tên nút chính của một dòng: bắt đầu bằng việc, chứa định danh dòng ("Sửa cổng Gi1/0/2"). */
+function primaryName(subject: string | RegExp, action: string | RegExp): RegExp {
+  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const actionSource =
+    typeof action === 'string' ? escape(action) : action.source.replace(/^\^/, '').replace(/\$$/, '');
+  const subjectSource = typeof subject === 'string' ? escape(subject) : subject.source;
+  return new RegExp(`^${actionSource}.*${subjectSource}`, typeof subject === 'string' ? '' : subject.flags);
 }
 
 /** Menu ba chấm của một dòng CÓ mục này không — dùng để kiểm việc bị ẩn theo quyền. */

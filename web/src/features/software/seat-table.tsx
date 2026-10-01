@@ -152,11 +152,14 @@ export function SeatTable({
                   {/* "Gỡ" nằm trong menu, không đứng cạnh "Sửa": hai nút sát nhau thì trượt tay
                       một ô là thu license khỏi một máy đang dùng. */}
                   {row.releasedAt ? null : (
-                    <div className="action-cell">
-                      <RowActions
+                    <RowActions
+                        primary={{
+                          label: t('common.edit'),
+                          ariaLabel: t('common.editOf', { subject: row.deviceCode }),
+                          onClick: () => setEditing(row),
+                        }}
                         label={t('common.actionsOf', { subject: row.deviceCode })}
                         items={[
-                          { key: 'edit', label: t('common.edit'), onSelect: () => setEditing(row) },
                           {
                             key: 'release',
                             label: t('license.release'),
@@ -166,7 +169,6 @@ export function SeatTable({
                           },
                         ]}
                       />
-                    </div>
                   )}
                 </td>
               </tr>

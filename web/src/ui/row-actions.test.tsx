@@ -240,4 +240,66 @@ describe('RowActions — menu ba chấm dùng chung', () => {
     expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual(['Sửa', 'Dùng lại', 'Xóa']);
     expect(screen.getAllByRole('separator')).toHaveLength(1);
   });
+
+  /*
+   * Q-18: "Sửa" đứng NGOÀI menu, mọi việc khác vào ⋮. Nút chính mang tên riêng theo dòng
+   * (`ariaLabel`) — hai chục nút "Sửa" cùng tên thì trình đọc màn hình lẫn `getByRole` không
+   * phân biệt được.
+   */
+  describe('nút chính `primary` đứng ngoài menu', () => {
+    it('vẽ nút chính cạnh ba chấm, bấm thì gọi onClick, không mở menu', async () => {
+      const user = userEvent.setup();
+      const onEdit = vi.fn();
+      renderWithI18n(
+        <RowActions
+          label="Thao tác với LIC-01"
+          primary={{ label: 'Sửa', ariaLabel: 'Sửa LIC-01', onClick: onEdit }}
+          items={[{ key: 'delete', label: 'Xóa', onSelect: vi.fn(), danger: true }]}
+        />,
+      );
+      const edit = screen.getByRole('button', { name: 'Sửa LIC-01' });
+      expect(edit).toHaveTextContent('Sửa');
+      await user.click(edit);
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Thao tác với LIC-01' })).toBeInTheDocument();
+    });
+
+    it('menu rỗng thì chỉ còn nút chính, không có ba chấm', () => {
+      renderWithI18n(
+        <RowActions
+          label="Thao tác với LIC-01"
+          primary={{ label: 'Sửa', onClick: vi.fn() }}
+          items={[]}
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Sửa' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Thao tác với LIC-01' })).not.toBeInTheDocument();
+    });
+
+    it('nút chính bị khóa vẫn đứng đó, kèm lý do đọc được', () => {
+      renderWithI18n(
+        <RowActions
+          label="Thao tác với LIC-01"
+          primary={{ label: 'Sửa', onClick: vi.fn(), disabledReason: 'Đã thanh lý' }}
+          items={[{ key: 'x', label: 'Nhân bản', onSelect: vi.fn() }]}
+        />,
+      );
+      const edit = screen.getByRole('button', { name: 'Sửa' });
+      expect(edit).toBeDisabled();
+      expect(edit).toHaveAccessibleDescription('Đã thanh lý');
+    });
+
+    it('bấm nút chính không lan lên dòng (onRowClick)', async () => {
+      const user = userEvent.setup();
+      const onRow = vi.fn();
+      renderWithI18n(
+        <div onClick={onRow}>
+          <RowActions label="Thao tác với LIC-01" primary={{ label: 'Sửa', onClick: vi.fn() }} items={[]} />
+        </div>,
+      );
+      await user.click(screen.getByRole('button', { name: 'Sửa' }));
+      expect(onRow).not.toHaveBeenCalled();
+    });
+  });
 });

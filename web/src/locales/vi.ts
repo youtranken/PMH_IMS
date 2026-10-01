@@ -264,6 +264,8 @@ export default {
        trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
        kiểm khớp cả hai chục dòng cùng lúc. */
     actionsOf: 'Thao tác với {{subject}}',
+    /* Tên riêng cho nút "Sửa" đứng ngoài menu của từng dòng (Q-18) — cùng lý do với `actionsOf`. */
+    editOf: 'Sửa {{subject}}',
     /* Tiêu đề của MỌI hộp — hỏi lại lẫn form: việc sắp làm — với cái gì. Tiêu đề trống kiểu
        "Xác nhận" (`app.confirmTitle`) khiến hộp mở ra từ dòng thứ sáu trong một bảng không còn
        gì nói cho người đọc biết họ đang đụng vào hàng nào. */

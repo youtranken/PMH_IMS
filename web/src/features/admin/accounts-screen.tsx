@@ -18,7 +18,7 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
-import { RowActions, type RowAction } from '@/ui/row-actions';
+import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { useConfirm } from '@/ui/confirm-provider';
 import { CopyButton } from '@/ui/copy-button';
@@ -378,17 +378,23 @@ export function AccountsScreen({ me }: { me: Me }) {
 
   /**
    * Menu dòng, chia NHÓM theo mức độ (RowActions tự kẻ vạch giữa các nhóm):
-   * xem/sửa · đặt lại (việc thường, không lấy gì của ai) · khóa (warn) · vô hiệu hóa (danger).
+   * xem · đặt lại (việc thường, không lấy gì của ai) · khóa (warn) · vô hiệu hóa (danger).
    * Dòng của CHÍNH MÌNH không có khóa / vô hiệu / đặt lại 2 lớp / đổi vai — API đã chặn, bày
    * ra rồi báo lỗi là mời bấm vào ngõ cụt.
    */
+  const primaryFor = (account: AccountRow): RowPrimaryAction => ({
+    label: t('common.edit'),
+    ariaLabel: t('common.editOf', { subject: account.fullName }),
+    disabled: setStatus.isPending || resetPassword.isPending || resetTotp.isPending,
+    onClick: () => setEditing(account),
+  });
+
   const actionsFor = (account: AccountRow): RowAction[] => {
     const self = account.id === me.id;
     const busy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
     const temp = tempLockOf(account, now);
     const items: RowAction[] = [
       { key: 'detail', label: t('accounts.detail'), onSelect: () => setDetailFor(account) },
-      { key: 'edit', label: t('common.edit'), disabled: busy, onSelect: () => setEditing(account) },
       {
         key: 'sessions',
         label: t('accounts.sessions'),
@@ -606,13 +612,12 @@ export function AccountsScreen({ me }: { me: Me }) {
         header: t('common.actions'),
         meta: { className: 'col-center' },
         cell: ({ row }) => (
-          <div className="action-cell">
-            <RowActions
-              label={t('common.actionsOf', { subject: row.original.fullName })}
-              subject={row.original.fullName}
-              items={actionsFor(row.original)}
-            />
-          </div>
+          <RowActions
+            primary={primaryFor(row.original)}
+            label={t('common.actionsOf', { subject: row.original.fullName })}
+            subject={row.original.fullName}
+            items={actionsFor(row.original)}
+          />
         ),
       },
     ],
@@ -644,6 +649,7 @@ export function AccountsScreen({ me }: { me: Me }) {
     ),
     actions: (row) => (
       <RowActions
+        primary={primaryFor(row)}
         label={t('common.actionsOf', { subject: row.fullName })}
         subject={row.fullName}
         items={actionsFor(row)}

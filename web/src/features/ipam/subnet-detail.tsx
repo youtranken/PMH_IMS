@@ -585,6 +585,16 @@ export function SubnetPane({
                             cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ.
                           */}
                           <RowActions
+                            primary={
+                              // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
+                              canWrite && !slot.voidedAt && !isFreeRecord(slot)
+                                ? {
+                                    label: t("common.edit"),
+                                    ariaLabel: t("common.editOf", { subject: slot.address }),
+                                    onClick: () => setEditing(slot),
+                                  }
+                                : undefined
+                            }
                             label={t("common.actionsOf", { subject: slot.address })}
                             items={rowActions(slot)}
                           />
@@ -733,10 +743,6 @@ export function SubnetPane({
   /** Menu ⋯ của một hồ sơ: việc hay làm trước, Thu hồi (đỏ), rồi Xóa nhập nhầm (xám) cuối. */
   function rowActions(slot: IpRow): RowAction[] {
     const items: RowAction[] = [];
-    // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
-    if (canWrite && !slot.voidedAt && !isFreeRecord(slot)) {
-      items.push({ key: "edit", label: t("common.edit"), onSelect: () => setEditing(slot) });
-    }
     items.push({ key: "history", label: t("ipam.history"), onSelect: () => setHistoryOf(slot) });
     /* Chỉ những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại. Bước CẤP đã là nút trên dòng. */
     if (canWrite && !slot.voidedAt) {

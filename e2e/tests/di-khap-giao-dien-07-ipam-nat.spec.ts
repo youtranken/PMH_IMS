@@ -584,8 +584,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(ipRow(page, address).getByText('Đang dùng')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Xóa của SA. Thu hồi (đỏ) xếp sau việc thường, Xóa hồ sơ nhập nhầm (xám) xếp CUỐI',
-    ).toEqual(['Sửa', 'Lịch sử', 'Thu hồi IP', 'Xóa']);
+      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Xóa của SA. Thu hồi (đỏ) xếp sau việc thường, Xóa hồ sơ nhập nhầm (xám) xếp CUỐI',
+    ).toEqual(['Lịch sử', 'Thu hồi IP', 'Xóa']);
+    // Q-18: "Sửa" đứng ngoài menu.
+    await expect(ipRow(page, address).getByRole('button', { name: `Sửa ${address}` })).toBeVisible();
 
     /* ----- Hộp "Thu hồi": KHÔNG hỏi chủ mới — chủ cũ đi khỏi, không ai dọn vào ----- */
     await rowAction(page, address, 'Thu hồi IP');
@@ -616,6 +618,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       await rowActionNames(page, address),
       'từ "Trống" KHÔNG còn "Thu hồi"; bước cấp là nút "Cấp IP" ngay trên dòng, và "Sửa" một hồ sơ trống chính là cấp nên không bày riêng',
     ).toEqual(['Lịch sử', 'Xóa']);
+    await expect(ipRow(page, address).getByRole('button', { name: /^Sửa / })).toHaveCount(0);
 
     /* ----- Hồ sơ Trống mở CÙNG hộp "Cấp IP" với ô trống: có ô Thiết bị, ô người dùng mở ra trống ----- */
     await ipRow(page, address).getByRole('button', { name: 'Cấp IP', exact: true }).click();
@@ -830,8 +833,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     /* ----- Menu của một dòng ----- */
     expect(
       await rowActionNames(page, 'TCP 8080'),
-      'SA gỡ được rule; "Gỡ" là việc lấy đi nên phải xếp CUỐI; Lịch sử và Tắt rule ngay từ bảng',
-    ).toEqual(['Sửa', 'Lịch sử', 'Ngừng dùng', 'Gỡ']);
+      'SA gỡ được rule; "Gỡ" là việc lấy đi nên phải xếp CUỐI; Lịch sử và Tắt rule ngay từ bảng; Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Lịch sử', 'Ngừng dùng', 'Gỡ']);
+    await expect(page.getByRole('button', { name: 'Sửa TCP 8080' })).toBeVisible();
 
     /* ----- Bộ lọc site: bấm là bảng đổi THẬT ----- */
     await page.getByRole('button', { name: 'Site', exact: true }).click();

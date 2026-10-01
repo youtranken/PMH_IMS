@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/ui/dialog';
+import { useDisabledReason } from '@/ui/disabled-reason';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
 export interface RowAction {
@@ -35,6 +36,27 @@ export interface RowAction {
 }
 
 /**
+ * Nút chính đứng NGOÀI menu — theo Q-18 là "Sửa": việc hằng ngày không đáng thêm một cú bấm.
+ */
+export interface RowPrimaryAction {
+  /** Chữ trên nút ("Sửa"). */
+  label: string;
+  /**
+   * Tên khả truy cập — NÊN kèm định danh dòng ("Sửa máy PC-01"): hai chục nút "Sửa" cùng tên
+   * thì trình đọc màn hình đọc y hệt nhau và `getByRole` khớp cả hai chục.
+   */
+  ariaLabel?: string;
+  onClick: () => void;
+  /** Tắt tạm trong lúc một việc khác của dòng đang chạy — không cần giải thích. */
+  disabled?: boolean;
+  /**
+   * Có lý do thì nút vẫn ĐỨNG ĐÓ nhưng tắt, lý do gắn bằng `aria-describedby` — ẩn nút đi thì
+   * hàng lệch cột và người dùng không biết vì sao không sửa được.
+   */
+  disabledReason?: string | null;
+}
+
+/**
  * Menu ba chấm (dọc) cho cột "Thao tác" của MỌI bảng danh sách (AD-15).
  *
  * Vì sao thay dãy nút phẳng: cột thao tác đã phình tới ba–năm cái nút cạnh nhau ("Sửa" ·
@@ -54,8 +76,44 @@ export interface RowAction {
  * KHÔNG dùng cho hành động CHÍNH của một màn: nút "Duyệt"/"Từ chối" ở màn phiếu duyệt là toàn
  * bộ lý do màn đó tồn tại, giấu chúng sau một cú bấm là đắt hơn phần bề ngang tiết kiệm được.
  * Ở đó dùng nút phẳng, hoặc để nút chính bên ngoài và cho phần còn lại vào đây.
+ *
+ * `primary` vẽ nút chính ("Sửa", Q-18) cạnh ba chấm trong `.action-cell` — mọi bảng cùng một
+ * bố cục, không tự dựng lại cặp nút + menu ở từng màn.
  */
 export function RowActions({
+  primary,
+  ...menu
+}: {
+  primary?: RowPrimaryAction;
+  label: string;
+  items: RowAction[];
+  subject?: string;
+}) {
+  const reason = useDisabledReason(primary?.disabledReason);
+  if (!primary) return <RowActionsMenu {...menu} />;
+  return (
+    <div className="action-cell">
+      <button
+        type="button"
+        className="btn sm ghost"
+        aria-label={primary.ariaLabel}
+        disabled={primary.disabled || Boolean(primary.disabledReason)}
+        {...reason.buttonProps}
+        onClick={(event) => {
+          // Cùng lý do với nút ba chấm: dòng có `onRowClick` thì bấm Sửa cũng rời trang.
+          event.stopPropagation();
+          primary.onClick();
+        }}
+      >
+        {primary.label}
+      </button>
+      {reason.hint}
+      <RowActionsMenu {...menu} />
+    </div>
+  );
+}
+
+function RowActionsMenu({
   label,
   items,
   subject,

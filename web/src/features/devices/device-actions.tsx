@@ -1,7 +1,6 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { DeviceRow } from '@/lib/device-types';
-import { useDisabledReason } from '@/ui/disabled-reason';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 
 /**
@@ -64,33 +63,22 @@ export function DeviceRowActions({
 }) {
   const { t } = useTranslation();
   const retired = device.status === 'retired';
-  const reason = useDisabledReason(retired ? t('devices.retiredLockedShort') : null);
   return (
-    <div className="action-cell">
-      <button
-        type="button"
-        className="btn sm ghost"
-        aria-label={t('devices.editOf', { device: device.code })}
-        disabled={retired}
-        {...reason.buttonProps}
-        onClick={(event) => {
-          event.stopPropagation();
-          onEdit(device);
-        }}
-      >
-        {t('common.edit')}
-      </button>
-      {reason.hint}
-      <RowActions
-        label={t('common.actionsOf', { subject: device.code })}
-        subject={device.code}
-        items={deviceMenuItems(t, retired, {
-          onStatus: () => onStatus(device),
-          onReopen: () => onStatus(device),
-          onClone: () => onClone(device),
-          onRetire: () => onRetire(device),
-        })}
-      />
-    </div>
+    <RowActions
+      primary={{
+        label: t('common.edit'),
+        ariaLabel: t('devices.editOf', { device: device.code }),
+        onClick: () => onEdit(device),
+        disabledReason: retired ? t('devices.retiredLockedShort') : null,
+      }}
+      label={t('common.actionsOf', { subject: device.code })}
+      subject={device.code}
+      items={deviceMenuItems(t, retired, {
+        onStatus: () => onStatus(device),
+        onReopen: () => onStatus(device),
+        onClone: () => onClone(device),
+        onRetire: () => onRetire(device),
+      })}
+    />
   );
 }

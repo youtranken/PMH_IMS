@@ -195,7 +195,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // ĐỦ CỘT, ĐÚNG THỨ TỰ. Cột rơi mất là một thông tin không ai còn đọc được trên danh sách.
     expect(
       await tableColumnNames(main),
-      'Bảng đường truyền phải có đúng 7 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04)',
+      'Bảng đường truyền phải có đúng 8 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04), cột cuối là Thao tác (Q-18)',
     ).toEqual([
       'Mã đường',
       'Nhà mạng',
@@ -204,6 +204,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Hotline',
       'Số hợp đồng',
       'Trạng thái',
+      'Thao tác',
     ]);
 
     /*
@@ -261,17 +262,26 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Hotline',
         'Sắp xếp theo Số hợp đồng',
         'Sắp xếp theo Trạng thái',
+        // Q-18: "Sửa" đứng ngoài, đổi trạng thái vào menu ⋮.
+        `Sửa ${codeA}`,
+        `Thao tác với ${codeA}`,
         'Số dòng',
         'Trang trước',
         'Trang sau',
       ]),
     );
 
-    // Nói thẳng ra điều vừa suy ra được từ tập hợp trên — để lúc đỏ đọc log là hiểu ngay.
+    /* Menu ⋮ của đường đang dùng: Tạm ngưng rồi Thanh lý (việc nguy hiểm xếp cuối). Thanh lý
+       đi sang trang hồ sơ — hộp hỏi lại cần số ngăn két của đường này. */
+    expect(await rowActionNames(page, codeA)).toEqual(['Tạm ngưng…', 'Thanh lý…']);
+    await rowAction(page, codeA, 'Thanh lý…');
     await expect(
-      main.getByRole('button', { name: /^Thao tác với/ }),
-      'Màn Đường truyền KHÔNG có cột Thao tác: sửa và thanh lý chỉ làm từ trang hồ sơ',
-    ).toHaveCount(0);
+      page.getByRole('dialog', { name: `Thanh lý đường truyền ${codeA}?` }),
+      'Thanh lý từ danh sách mở trang hồ sơ với hộp hỏi lại bật sẵn',
+    ).toBeVisible();
+    // Tham số `?action=` bị gỡ ngay: F5 hay Back không được bật lại hộp thanh lý.
+    await expect(page).toHaveURL(/\/isp-lines\/[^/?]+$/);
+    await confirmAction(page, 'Hủy');
   });
 
   /*
@@ -816,12 +826,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       (await rowActionNames(page, activeCode)).map(tidyLabel),
-      'Tài khoản ĐANG DÙNG có đúng hai việc: Sửa, rồi Vô hiệu hóa (việc nguy hiểm xếp cuối)',
-    ).toEqual(['Sửa', 'Ngừng dùng']);
+      'Tài khoản ĐANG DÙNG: Sửa đứng ngoài (Q-18), menu chỉ còn Ngừng dùng',
+    ).toEqual(['Ngừng dùng']);
     expect(
       (await rowActionNames(page, disabledCode)).map(tidyLabel),
       'Tài khoản ĐÃ ĐÓNG phải có đường mở lại — thiếu nó là hồ sơ đóng vĩnh viễn với giao diện',
-    ).toEqual(['Sửa', 'Dùng lại']);
+    ).toEqual(['Dùng lại']);
+    await expect(page.getByRole('button', { name: `Sửa ${activeCode}` })).toBeVisible();
 
     // Bộ nút và bộ cột đầy đủ của vai SA — thu hẹp còn một dòng cho phần phân trang cố định.
     await searchBox.fill(activeCode);
@@ -855,6 +866,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Mã tài khoản',
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
+        `Sửa ${activeCode}`,
         `Thao tác với ${activeCode}`,
         'Số dòng',
         'Trang trước',

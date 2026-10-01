@@ -382,8 +382,7 @@ test.describe('Gán license theo seat', () => {
         await row.getByRole('button').first().click();
       }
       await expect(page.getByText('1.000.000 ₫')).toBeVisible({ timeout: 2_000 });
-      await page.getByRole('button', { name: `Thao tác với ${deviceCode}` }).click();
-      await page.getByRole('menuitem', { name: 'Sửa' }).click({ timeout: 2_000 });
+      await page.getByRole('button', { name: `Sửa ${deviceCode}` }).click({ timeout: 2_000 });
       await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
     const form = page.getByRole('dialog');
@@ -530,7 +529,7 @@ test.describe('Gán license theo seat', () => {
     await searchAndWaitForFilter(page, code);
     // Cột Thao tác là menu ba chấm: mục chỉ có trong DOM khi menu đang mở.
     const names = await rowActionNames(page, code);
-    expect(names).toContain('Sửa');
+    await expect(page.getByRole('button', { name: `Sửa ${code}` })).toBeVisible();
     expect(names).not.toContain('Gán vào máy');
   });
 
