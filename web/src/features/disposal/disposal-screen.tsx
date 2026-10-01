@@ -296,6 +296,7 @@ export function DisposalScreen() {
               rowKey={(item) => `${item.kind}-${item.id}`}
               card={{
                 title: (item) => item.code,
+                titleIsCode: true,
                 href: (item) => LINK[item.kind](item.id),
                 badge: (item) => <span className="badge muted">{t(KIND_KEY[item.kind])}</span>,
                 actions: (item) => (

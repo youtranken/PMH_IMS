@@ -185,3 +185,31 @@ describe('DataTable — cột dính khi bảng cuộn ngang', () => {
     expect(wrap).toHaveAttribute('data-more-end', 'true');
   });
 });
+
+/*
+ * Tiêu đề thẻ chỉ dùng phông mono khi nó là MÃ. Họ tên, nhãn hạn ("Bảo hành PC-01 — Dell…")
+ * mà ép mono một dòng thì vừa rộng vừa cắt mất nửa câu, không có cách nào đọc phần còn lại.
+ */
+describe('DataTable — tiêu đề thẻ gọn', () => {
+  it('mặc định: không mono, có title đủ chữ', () => {
+    viewport(390);
+    renderWithI18n(
+      <MemoryRouter>
+        <DataTable data={DATA} columns={COLUMNS} emptyText="Trống" mobileCard={{ title: (r) => r.name }} />
+      </MemoryRouter>,
+    );
+    const title = screen.getByText('Switch lõi').closest('.list-card-title');
+    expect(title).not.toHaveClass('mono');
+    expect(title).toHaveAttribute('title', 'Switch lõi');
+  });
+
+  it('`titleIsCode`: tiêu đề là mã thì mono', () => {
+    viewport(390);
+    renderWithI18n(
+      <MemoryRouter>
+        <DataTable data={DATA} columns={COLUMNS} emptyText="Trống" mobileCard={{ ...CARD, titleIsCode: true }} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('SW-E2E-CORE-01').closest('.list-card-title')).toHaveClass('mono');
+  });
+});

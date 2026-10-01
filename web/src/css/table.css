@@ -698,11 +698,19 @@ table.table .col-sticky-end::after {
 }
 .list-card-title {
   min-width: 0;
-  font-family: var(--mono);
   font-weight: 700;
-  white-space: nowrap;
+  /* Hai dòng rồi "…": họ tên / nhãn hạn dài một dòng thì cắt mất nửa câu. Chữ đủ ở `title`. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+}
+/* `.mono` chung thu chữ còn 0.85em cho mã trong bảng; tiêu đề thẻ là dòng chính, giữ cỡ. */
+.list-card-title.mono {
+  font-family: var(--mono);
+  font-size: inherit;
 }
 /* Link/nút định danh phủ cả thẻ: chạm đâu cũng mở, mà thẻ vẫn chỉ có MỘT điểm dừng Tab. */
 .list-card-link {

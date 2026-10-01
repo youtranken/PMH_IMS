@@ -300,6 +300,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                 emptyText={t('vaultHome.noHit')}
                 mobileCard={{
                   title: (row) => row.code,
+                  titleIsCode: true,
                   subtitle: (row) =>
                     row.orphan
                       ? t('vaultHome.orphan')

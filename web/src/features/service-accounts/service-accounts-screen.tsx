@@ -358,6 +358,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                5 hàng nhãn–giá trị ~270px một tài khoản. */
             mobileCard={{
               title: (row) => row.code,
+              titleIsCode: true,
               href: (row) => PATHS.serviceAccount(row.id),
               badge: (row) => (
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
