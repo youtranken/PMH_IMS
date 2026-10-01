@@ -89,6 +89,24 @@ describe('Trang chi tiết phần mềm — Gia hạn / Khôi phục', () => {
     expect(screen.queryByRole('button', { name: 'Đưa vào kho thanh lý' })).not.toBeInTheDocument();
   });
 
+  /* Q-19: header chỉ giữ việc chính; "Khôi phục…" vào ⋮ (màu ok), băng Thanh lý vẫn giữ nút của nó. */
+  it('hồ sơ Thanh lý: "Khôi phục…" nằm trong ⋮ của header, không đứng thành nút cạnh Sửa', async () => {
+    const user = userEvent.setup();
+    mockFetch(BASE);
+    renderDetail(BASE);
+    await screen.findByText(/Đã thanh lý ngày 01\/09\/2026/);
+    expect(screen.getAllByRole('button', { name: 'Khôi phục…' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Khôi phục…' }).closest('.alert')).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: `Thao tác với ${BASE.code}` }));
+    const restore = screen.getByRole('menuitem', { name: 'Khôi phục…' });
+    expect(restore).toHaveClass('ok');
+    expect(screen.queryByRole('menuitem', { name: 'Đưa vào kho thanh lý' })).not.toBeInTheDocument();
+    await user.click(restore);
+    expect(
+      await screen.findByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${BASE.code}`) }),
+    ).toBeInTheDocument();
+  });
+
   it('người thanh lý: băng ghi "bởi <email>"', async () => {
     const detail = { ...BASE, retirement: { at: '2026-09-01T02:00:00Z', by: 'a@pmh.com.vn', auto: false } };
     mockFetch(detail);
