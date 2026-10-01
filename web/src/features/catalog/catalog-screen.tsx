@@ -664,7 +664,7 @@ export function CatalogScreen({ me }: { me: Me }) {
               fileName={`danh-muc-${entity}.xlsx`}
             />
             {importable && canManage ? (
-              <button type="button" className="btn" onClick={() => setImporting(true)}>
+              <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
                 {t('catalog.importExcel')}
               </button>
             ) : null}

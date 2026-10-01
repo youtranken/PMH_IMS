@@ -104,6 +104,9 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     renderAt('/admin/catalog');
     await screen.findByText('E2E-HCM');
     expect(screen.getByRole('button', { name: 'Nhập từ Excel' })).toBeInTheDocument();
+    // Nhập Excel là màn desktop: ở ≤600px nút ẩn (`hide-narrow`, như danh sách thiết bị) để
+    // Xuất + Thêm còn chung một hàng — không thì nút Thêm rơi xuống hàng riêng ở 390px.
+    expect(screen.getByRole('button', { name: 'Nhập từ Excel' })).toHaveClass('hide-narrow');
     expect(screen.queryByRole('button', { name: /Tải file mẫu/ })).not.toBeInTheDocument();
   });
 
