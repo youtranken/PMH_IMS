@@ -89,13 +89,13 @@ export function warningOf(
  */
 const INLINE_DESCRIPTION_MAX = 80;
 
-/** Mô tả đi chỗ nào: `hint` (hiện dưới ô) hay `tip` (sau nút (i)) — đúng một trong hai. */
 /**
  * Tham số mà mô tả là GIỚI HẠN người sửa phải thấy ngay khi đặt số (trần cứng 25 MB của file),
  * nên luôn hiện dưới ô dù dài — chủ dự án chốt.
  */
 const ALWAYS_INLINE: ReadonlySet<string> = new Set(['fileMaxSizeMb']);
 
+/** Mô tả đi chỗ nào: `hint` (hiện dưới ô) hay `tip` (sau nút (i)) — đúng một trong hai. */
 export function descriptionSlot(
   text: string | undefined,
   name?: string,
