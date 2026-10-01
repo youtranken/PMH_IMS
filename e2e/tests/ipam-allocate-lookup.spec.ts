@@ -219,7 +219,22 @@ test.describe('Tra IP và máy (NET-005)', () => {
     const lookup = page.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
     await lookup.fill('203.0.113.77');
     await lookup.press('Enter');
-    await expect(page.getByText('Không dải nào đang dùng chứa 203.0.113.77.')).toBeVisible();
+    const alert = page.getByRole('alert');
+    await expect(alert).toHaveText('Không dải nào đang dùng chứa 203.0.113.77.');
+    await alert.getByRole('button', { name: 'Đóng thông báo' }).click();
+    await expect(alert).toHaveCount(0);
+
+    // Q-20: IP sai dạng (một phần > 255) → khung đỏ, không đi tìm theo máy.
+    const searched: string[] = [];
+    page.on('request', (req) => {
+      if (req.url().includes('/api/v1/ipam/addresses?')) searched.push(req.url());
+    });
+    await lookup.fill('172.16.1100.10');
+    await lookup.press('Enter');
+    await expect(page.getByRole('alert')).toHaveText(
+      'Địa chỉ IP không hợp lệ: đủ 4 phần, mỗi phần là số 0–255.',
+    );
+    expect(searched, 'IP sai dạng không được gửi đi tìm').toEqual([]);
   });
 
   test('ô lọc trong dải: gõ tên người → chỉ còn dòng của họ', async ({ page }) => {

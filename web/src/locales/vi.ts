@@ -1742,6 +1742,8 @@ export default {
     lookupButton: 'Tra',
     lookupHint: 'Gõ IP để mở đúng dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
     lookupNoSubnet: 'Không dải nào đang dùng chứa {{ip}}.',
+    lookupInvalid: 'Địa chỉ IP không hợp lệ: đủ 4 phần, mỗi phần là số 0–255.',
+    lookupDismiss: 'Đóng thông báo',
     lookupResults: 'IP khớp "{{q}}"',
     lookupEmpty: 'Không có hồ sơ IP nào khớp "{{q}}".',
     lookupTooShort: 'Gõ ít nhất 2 ký tự.',
