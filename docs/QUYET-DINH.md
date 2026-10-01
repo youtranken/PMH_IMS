@@ -334,6 +334,17 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   lần cuối" (hạn đổi mật khẩu, Q-15).
 - **Lịch sử** mọi màn dạng trục dọc "ga tàu"; desktop ngày ở cột trái, màn hẹp dưới dòng.
 - Thuật ngữ: "Chưa khai báo", "Lưu và nhân bản", "Nhập tiếp"; nút bỏ file là dấu ✕ đỏ.
+- **Mật khẩu tạm** (tạo tài khoản, đặt lại mật khẩu) hết hạn sau `auth.temp_password_hours` giờ
+  (mặc định 24, AD-11); quá hạn thì đăng nhập bị từ chối, SA phải đặt lại. Lần đầu đăng nhập bằng
+  mật khẩu tạm vẫn bắt đổi mật khẩu như cũ. **Mật khẩu thường không có hạn định kỳ:** chỉ bắt đổi
+  khi SA đặt lại hoặc nghi lộ — đã có xác thực 2 lớp, ép đổi theo lịch chỉ sinh mật khẩu dễ đoán
+  (NIST SP 800-63B §5.1.1.2).
+- **Tham số trạng thái lạ trên URL** (`?status=abc`) coi như bộ lọc mặc định — hồ sơ đã thanh lý
+  vẫn ẩn; muốn xem thì lọc đích danh hoặc vào Kho thanh lý.
+- **Sơ đồ cổng:** mỗi cổng chỉ một sợi cáp, kiểm cả hai chiều (A:p1→B:g1 thì B:g1 không nối đi nơi
+  khác); tên cổng không phân biệt hoa/thường.
+- **IP WAN:** không chặn trùng giữa các đường truyền.
+- **Người dùng IMS đã vô hiệu hoá** ẩn khỏi danh sách theo mặc định; lọc đích danh mới hiện.
 
 ### Q-09 · Tài liệu
 
