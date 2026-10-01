@@ -90,6 +90,17 @@ describe('textLooksLikeSecret', () => {
     'Key Office: VK7JG-NPHTM-C97JM-9MPGT-3V66T',
     'product key NPPR9-FWDCX-D2C8J-H872K-2YT43.',
     'vk7jg-nphtm-c97jm-9mpgt-3v66t',
+    // Product key dính dấu câu hai đầu vẫn là product key.
+    'Key:BCDFG-HJKMN-PQRTV-WXY23-46789',
+    '(BCDFG-HJKMN-PQRTV-WXY23-46789)',
+    'key "BCDFG-HJKMN-PQRTV-WXY23-46789"',
+    "key 'BCDFG-HJKMN-PQRTV-WXY23-46789';",
+    // Trước @ là mật khẩu chứ không phải tên đăng nhập.
+    'S3cr3t!Pass@10.0.0.1',
+    'kết nối Matkhau2026@10.0.0.1:22',
+    'Pa$$w0rd!@10.0.0.1',
+    // Khoá thật trong URL không có scheme vẫn là khoá.
+    'portal.pmh.vn/api?token=Ab12Cd34Ef56Gh',
   ];
 
   const allowed: (string | null)[] = [
@@ -117,6 +128,9 @@ describe('textLooksLikeSecret', () => {
     'Rule: allow TCP/UDP 3389 từ 10.0.0.0/8',
     'SSID PMH-Guest, kênh 36/40/44',
     'ssh admin@10.10.20.5 rồi chạy lệnh show run',
+    'ssh root@srv-db01',
+    'ssh svc_backup@SRV-DB01:2222 rồi chạy backup',
+    'Đăng nhập Administrator@10.0.0.5 bằng RDP',
     'Line FTTH Fiber200Mbps-PMH, mã KH: HCM-FTTH-0012345',
     'Mạch kênh riêng MPLS_HCM_PMH_01',
     // Hợp đồng, phiếu, đơn hàng.
@@ -129,6 +143,12 @@ describe('textLooksLikeSecret', () => {
     // Đường dẫn, URL, tài khoản miền.
     'Tài liệu \\\\fileserver\\IT\\HopDong\\2026\\VNPT.pdf',
     'Đường dẫn C:\\Program Files\\Microsoft Office\\root',
+    'Share quản trị \\\\PMH-FS01\\data$',
+    'Ổ \\\\SRV-AD01\\C$\\Logs2026\\Backup_Q3',
+    'Share ẩn \\\\SRV-AD01\\Backup2026$\\Q3',
+    'portal.pmh.vn/login?next=Home2026',
+    'https://x.vn/r?id=Q3Report2026',
+    '10.0.0.1:8443/Admin?tab=Users2026',
     'Xem https://portal.vnpt.vn/hop-dong?ma=HD2026PMH01',
     'Server: SRV-AD01.pmh.local, Domain\\Administrators',
     'Tài khoản PMH\\svc_backup chạy Veeam',

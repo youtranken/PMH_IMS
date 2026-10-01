@@ -120,39 +120,98 @@ function strongTextToken(token: string): boolean {
 const URL_RE = /^[a-z][a-z0-9+.-]*:\/\/([^/?#\s]*)(.*)$/i;
 const EMAIL_RE = /^[^@\s]+@[\p{L}\p{N}-]+(\.[\p{L}\p{N}-]+)*\.\p{L}{2,}$/u;
 const HOSTNAME_RE = /^[\p{L}\p{N}-]+(\.[\p{L}\p{N}-]+)*\.\p{L}{2,}$/u;
-/** "ssh admin@10.10.20.5": địa chỉ đăng nhập, không phải mật khẩu. */
-const LOGIN_AT_IP_RE = /^[^@\s:]+@\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
+/**
+ * "portal.pmh.vn/login?next=…", "10.0.0.1:8443/Admin": URL gõ thiếu scheme. Máy phải có tên
+ * miền hoặc là IP, và phải có đường dẫn hay tham số theo sau — tên máy trơn đã có `HOSTNAME_RE`.
+ */
+const BARE_URL_RE =
+  /^((?:[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,})|(?:\d{1,3}(?:\.\d{1,3}){3}))(?::\d+)?([/?#].*)$/u;
+/**
+ * "ssh root@srv-db01", "admin@10.10.20.5": địa chỉ đăng nhập. Máy phải là IP hoặc tên có dấu
+ * chấm/gạch nối — "Pmh@Guest2026" có dạng y hệt nhưng là mật khẩu Wi-Fi.
+ */
+const LOGIN_AT_HOST_RE = /^([^@\s]+)@([\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)+)(?::\d+)?$/u;
+/** Tên đăng nhập chỉ có chữ, số và `._-`; "S3cr3t!Pass" trước @ là mật khẩu, không phải tên. */
+const LOGIN_NAME_RE = /^[\p{L}\p{N}._-]+$/u;
+/** "\\PMH-FS01\data$", "C:\Program Files": đường dẫn Windows. */
+const WINDOWS_PATH_RE = /^(\\\\|[a-z]:\\)/i;
 /**
  * Product key Windows/Office: 5 nhóm × 5 ký tự. Không có chữ thường, không có ký tự đặc biệt
- * nên luật ô chữ tự do không bắt được — mà đây là bí mật có giá thật, chỗ của nó là két.
+ * nên luật ô chữ tự do không bắt được — mà đây là bí mật có giá thật, chỗ của nó là két. Dò
+ * trên cả đoạn chữ chứ không theo từ: "Key:XXXXX-…", "(XXXXX-…)", "\"XXXXX-…\"" đều là nó.
  */
-const PRODUCT_KEY_RE = /^[A-Z0-9]{5}(-[A-Z0-9]{5}){4}$/i;
+const PRODUCT_KEY_RE = /(?<![A-Z0-9-])[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}(?![A-Z0-9-])/i;
+/**
+ * Tên tham số URL mà giá trị của nó LÀ khoá. Ở ô chữ tự do chỉ các tham số này đo bằng luật
+ * của két; "?id=Q3Report2026", "?next=Home2026" là mã trang, đo bằng luật ô chữ tự do.
+ */
+const SECRET_PARAM_RE = /(key|token|secret|pass|pwd|auth|sig|credential)/i;
 
 /** Dấu câu cuối câu không thuộc về từ: "SW-Core01.PMH.local," vẫn là tên máy. */
 function trimTrailingPunctuation(raw: string): string {
   return raw.replace(/[.,;)\]]+$/u, '');
 }
 
+/** Có giá trị tham số nào trông như khoá không. `strongValue(tên, giá trị)` do từng luật chọn. */
+function queryHasSecret(rest: string, strongValue: (name: string, value: string) => boolean): boolean {
+  const query = rest.split(/[?#]/).slice(1).join('&');
+  return query.split('&').some((pair) => {
+    const eq = pair.indexOf('=');
+    return strongValue(eq >= 0 ? pair.slice(0, eq) : '', pair.slice(eq + 1));
+  });
+}
+
 /**
  * URL, email, tên máy là địa chỉ chứ không phải mật khẩu — trừ đúng hai chỗ trong URL mang
- * bí mật thật: `user:mật-khẩu@` và giá trị tham số (`?key=…`, `?token=…`). Hai chỗ ấy luôn đo
- * bằng luật của két, kể cả ở ô chữ tự do: đã nằm ở vị trí của khoá thì không cần ký tự đặc biệt.
+ * bí mật thật: `user:mật-khẩu@` và giá trị tham số (`?key=…`, `?token=…`). Hai chỗ ấy đo bằng
+ * luật của két: đã nằm ở vị trí của khoá thì không cần ký tự đặc biệt.
  */
-function tokenLooksLikeSecret(raw: string, strong: (token: string) => boolean = strongToken): boolean {
+function tokenLooksLikeSecret(raw: string): boolean {
   const token = trimTrailingPunctuation(raw);
   const url = URL_RE.exec(token);
   if (url) {
     const [, authority, rest] = url;
     const at = authority.lastIndexOf('@');
     if (at >= 0 && authority.slice(0, at).includes(':')) return true;
-    const query = rest.split(/[?#]/).slice(1).join('&');
-    return query
-      .split('&')
-      .map((pair) => pair.slice(pair.indexOf('=') + 1))
-      .some(strongToken);
+    return queryHasSecret(rest, (_name, value) => strongToken(value));
   }
   if (EMAIL_RE.test(token) || HOSTNAME_RE.test(token)) return false;
-  return strong(token);
+  return strongToken(token);
+}
+
+/** Giá trị tham số ở ô chữ tự do: tên tham số là khoá thì luật két, còn lại luật ô chữ. */
+function textParamLooksLikeSecret(name: string, value: string): boolean {
+  return SECRET_PARAM_RE.test(name) ? strongToken(value) : strongTextToken(value);
+}
+
+/** Một "từ" của ô chữ tự do — cùng các ngoại lệ địa chỉ như két, cộng thêm dạng hay gõ ở đây. */
+function textTokenLooksLikeSecret(raw: string): boolean {
+  const token = trimTrailingPunctuation(raw);
+  const url = URL_RE.exec(token);
+  if (url) {
+    const [, authority, rest] = url;
+    const at = authority.lastIndexOf('@');
+    if (at >= 0 && authority.slice(0, at).includes(':')) return true;
+    return queryHasSecret(rest, textParamLooksLikeSecret);
+  }
+  if (EMAIL_RE.test(token) || HOSTNAME_RE.test(token)) return false;
+  const bare = BARE_URL_RE.exec(token);
+  if (bare) {
+    const path = bare[2].split(/[?#]/)[0];
+    return (
+      path.split('/').some((segment) => segment !== '' && strongTextToken(segment)) ||
+      queryHasSecret(bare[2], textParamLooksLikeSecret)
+    );
+  }
+  const login = LOGIN_AT_HOST_RE.exec(token);
+  if (login && LOGIN_NAME_RE.test(login[1]) && !strongToken(login[1])) return false;
+  if (WINDOWS_PATH_RE.test(token)) {
+    // `$` cuối tên thư mục là share quản trị (C$, ADMIN$, data$), không phải ký tự mật khẩu.
+    return token
+      .split('\\')
+      .some((segment) => segment !== '' && strongTextToken(segment.replace(/\$$/, '')));
+  }
+  return strongTextToken(token);
 }
 
 /**
@@ -172,11 +231,6 @@ export function noteLooksLikeSecret(note: string | null | undefined): boolean {
  */
 export function textLooksLikeSecret(text: string | null | undefined): boolean {
   if (!text) return false;
-  return text.split(/\s+/).some((raw) => {
-    if (raw === '') return false;
-    const token = trimTrailingPunctuation(raw);
-    if (PRODUCT_KEY_RE.test(token)) return true;
-    if (LOGIN_AT_IP_RE.test(token)) return false;
-    return tokenLooksLikeSecret(token, strongTextToken);
-  });
+  if (PRODUCT_KEY_RE.test(text)) return true;
+  return text.split(/\s+/).some((raw) => raw !== '' && textTokenLooksLikeSecret(raw));
 }
