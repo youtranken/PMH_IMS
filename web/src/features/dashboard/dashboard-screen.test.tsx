@@ -119,6 +119,7 @@ describe('Bảng điều khiển', () => {
     const overdue = await screen.findByRole('link', { name: /^3\s*Đã quá hạn/ });
     expect(overdue).toHaveAttribute('href', '/expiry?state=expired');
     expect(screen.getByRole('link', { name: /^16\s*Sắp hết hạn/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Đã quá hạn (3)' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sắp tới (16)' })).toBeInTheDocument();
     expect(screen.getByText('Xin chào, Trần Sếp', { exact: false })).toBeInTheDocument();
@@ -137,7 +138,7 @@ describe('Bảng điều khiển', () => {
   it('khối thanh lý không in mã loại thô ("vpn")', async () => {
     mockApi(BOARD);
     renderBoard();
-    const block = (await screen.findByRole('heading', { name: 'Vừa vào kho thanh lý (7 ngày)' })).closest('section')!;
+    const block = (await screen.findByRole('heading', { name: 'Tổng hợp kho thanh lý (7 ngày)' })).closest('section')!;
     expect(within(block).getByText(/Tài khoản VPN/)).toBeInTheDocument();
     expect(within(block).queryByText(/^vpn/)).toBeNull();
   });
@@ -145,7 +146,7 @@ describe('Bảng điều khiển', () => {
   it('khối LỖI có tông cảnh báo + Thử lại; khối chưa có (Sự cố) là thông tin — không cùng kiểu với tin tốt', async () => {
     mockApi({ ...BOARD, disposed: { available: false, items: [], total: 0 } });
     renderBoard();
-    const errorBlock = (await screen.findByRole('heading', { name: 'Vừa vào kho thanh lý (7 ngày)' })).closest('section')!;
+    const errorBlock = (await screen.findByRole('heading', { name: 'Tổng hợp kho thanh lý (7 ngày)' })).closest('section')!;
     expect(errorBlock).toHaveClass('tone-error');
     expect(within(errorBlock).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
     const incidents = screen.getByRole('heading', { name: 'Sự cố tuần qua' }).closest('section')!;
