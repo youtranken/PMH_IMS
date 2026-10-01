@@ -845,9 +845,9 @@ export function CommandPalette({ me }: { me: Me }) {
                       <NavIcon navKey={hit.navKey} />
                     </span>
                     <span className="it-name">
-                      <b>{hit.kind ? hit.title : <Highlight text={hit.title} q={q} />}</b>
+                      <b title={hit.title}>{hit.kind ? hit.title : <Highlight text={hit.title} q={q} />}</b>
                       {hit.sub ? (
-                        <span>
+                        <span title={hit.sub}>
                           <Highlight text={hit.sub} q={q} />
                         </span>
                       ) : null}

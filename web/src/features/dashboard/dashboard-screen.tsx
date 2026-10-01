@@ -315,7 +315,7 @@ export function DashboardScreen({ me }: { me: Me }) {
           render={(item) => (
             <li key={`${item.ownerType}-${item.ownerId}`}>
               <div className="dash-line">
-                <span className="dash-line-name">
+                <span className="dash-line-name" title={[item.code, item.name].filter(Boolean).join(' · ')}>
                   <Link to={OWNER_PATH[item.ownerType](item.ownerId)}>{item.code}</Link>
                   <span className="dash-line-sub">{item.name}</span>
                 </span>
@@ -358,7 +358,7 @@ export function DashboardScreen({ me }: { me: Me }) {
           return (
             <li key={`${item.kind}-${item.id}`}>
               <div className="dash-line">
-                <span className="dash-line-name">
+                <span className="dash-line-name" title={[item.code, item.name].filter(Boolean).join(' · ')}>
                   {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xóa". */}
                   <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
                   <span className="dash-line-sub">{item.name}</span>
@@ -528,7 +528,9 @@ function NeedsYouBlock({ me }: { me: Me }) {
         {rows.map((row) => (
           <li key={row.id}>
             <div className="dash-line">
-              <strong className="dash-line-name">{row.requesterName}</strong>
+              <strong className="dash-line-name" title={row.requesterName}>
+                {row.requesterName}
+              </strong>
               <span className="muted">
                 {t('dashboard.askedAt', {
                   at: formatDateTime(row.createdAt),
@@ -540,7 +542,9 @@ function NeedsYouBlock({ me }: { me: Me }) {
               </span>
             </div>
             <BreakGlassSubject row={row} />
-            <p className="approval-reason">{row.reason}</p>
+            <p className="approval-reason" title={row.reason}>
+              {row.reason}
+            </p>
             <div className="action-cell">
               <button
                 type="button"
@@ -605,7 +609,7 @@ function MyRequestsBlock() {
         {live.map((row) => (
           <li key={row.id}>
             <div className="dash-line">
-              <span className="dash-line-name">
+              <span className="dash-line-name" title={row.subjectLabel ?? undefined}>
                 <BreakGlassSubject row={row} />
               </span>
               <BreakGlassStateBadge row={row} />

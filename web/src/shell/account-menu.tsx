@@ -181,7 +181,7 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
             {initials}
           </span>
           <span className="sb-who">
-            <b>{me.fullName}</b>
+            <b title={me.fullName}>{me.fullName}</b>
             <span>{roleLabel}</span>
           </span>
           <Chevron direction="right" className="nav-caret" />

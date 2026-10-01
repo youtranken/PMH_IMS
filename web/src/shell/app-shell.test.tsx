@@ -76,6 +76,12 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(3);
   });
 
+  it('họ tên dài ở chân sidebar bị cắt "…" vẫn đọc đủ khi rê chuột (title)', () => {
+    renderShell();
+    const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
+    expect(within(trigger).getByText('Nguyễn Văn A')).toHaveAttribute('title', 'Nguyễn Văn A');
+  });
+
   it('phím mũi tên đi vòng trong menu; Esc đóng và trả tiêu điểm về nút', async () => {
     renderShell();
     const user = userEvent.setup();
