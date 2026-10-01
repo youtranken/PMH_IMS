@@ -1832,6 +1832,7 @@ export default {
     reclaimMenuHint: 'Trả IP về ô trống, giữ lịch sử',
     voidMenuHint: 'Chỉ cho bản ghi khai nhầm',
     freedOn: 'Thu hồi {{date}}',
+    assignedOn: 'Cấp {{date}}',
     assignedByLine: 'bởi {{by}}',
     viewGroup: 'Kiểu xem',
     viewList: 'Danh sách',
