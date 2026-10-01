@@ -18,7 +18,8 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import { lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { RenewDialog } from '@/ui/renew-dialog';
@@ -92,6 +93,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
     labelOf: (status) => t(STATUS_KEY[status]),
     endStatus: 'retired',
   });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -288,22 +291,31 @@ export function SoftwareScreen({ me }: { me: Me }) {
       ) : software.isError ? (
         <LoadError error={software.error} onRetry={() => void software.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
-          title={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
-          hint={url.isFiltered ? t('software.emptyFilteredHint') : t('software.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('common.clearFilters')}
-              </button>
-            ) : (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('software.add')}
-              </button>
-            )
+        <LifecycleHiddenEmpty
+          probeKey={['software', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/software?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['retired'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+              title={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
+              hint={url.isFiltered ? t('software.emptyFilteredHint') : t('software.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('common.clearFilters')}
+                  </button>
+                ) : (
+                  <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                    {t('software.add')}
+                  </button>
+                )
+              }
+            />
           }
         />
       ) : (

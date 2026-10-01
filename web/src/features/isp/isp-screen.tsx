@@ -16,7 +16,8 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import { lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';
@@ -75,6 +76,8 @@ export function IspScreen({ me }: { me: Me }) {
     labelOf: (status) => t(STATUS_KEY[status]),
     endStatus: 'terminated',
   });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả sổ — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -286,23 +289,32 @@ export function IspScreen({ me }: { me: Me }) {
       ) : lines.isError ? (
         <LoadError error={lines.error} onRetry={() => void lines.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
-             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
-          title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
-          hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('common.clearFilters')}
-              </button>
-            ) : (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('isp.add')}
-              </button>
-            )
+        <LifecycleHiddenEmpty
+          probeKey={['isp-lines', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/isp-lines?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['terminated'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+                 gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
+              title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
+              hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('common.clearFilters')}
+                  </button>
+                ) : (
+                  <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                    {t('isp.add')}
+                  </button>
+                )
+              }
+            />
           }
         />
       ) : (

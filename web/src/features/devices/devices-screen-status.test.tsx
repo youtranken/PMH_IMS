@@ -72,3 +72,54 @@ describe('Màn Thiết bị — bộ lọc trạng thái mặc định (Q-20)', 
     expect(query.has('status')).toBe(false);
   });
 });
+
+/*
+ * Bảng trống ở bộ lọc mặc định mà vẫn còn máy đã thanh lý khớp: nói chúng đang ẩn, không nói
+ * "chưa có thiết bị nào" (người dùng sẽ đi thêm lại máy đã có).
+ */
+describe('Màn Thiết bị — trống vì máy đã thanh lý đang ẩn', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function render(entry: string, hidden: number) {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith('/api/v1/devices?')) {
+        const all = !new URLSearchParams(url.split('?')[1]).has('status');
+        return Promise.resolve(jsonResponse(200, { items: [], total: all ? hidden : 0 }));
+      }
+      if (url.startsWith('/api/v1/catalog')) {
+        return Promise.resolve(
+          jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [] }),
+        );
+      }
+      return Promise.resolve(jsonResponse(200, {}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderWithI18n(
+      <MemoryRouter initialEntries={[entry]}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <DevicesScreen me={ME} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    return fetchMock;
+  }
+
+  it('mặc định, chỉ còn máy đã thanh lý → "đang ẩn", không mời Thêm thiết bị', async () => {
+    render('/devices', 2);
+    expect(await screen.findByText('Có 2 hồ sơ đã thanh lý đang ẩn')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tất cả (cả Đã thanh lý)' })).toBeInTheDocument();
+  });
+
+  it('tìm mã của máy đã thanh lý → "đang ẩn", không phải "không khớp"', async () => {
+    render('/devices?q=PC-CU', 1);
+    expect(await screen.findByText('Có 1 hồ sơ đã thanh lý đang ẩn')).toBeInTheDocument();
+  });
+
+  it('thật sự không có máy nào → khối trống gốc', async () => {
+    render('/devices', 0);
+    expect(await screen.findByText('Kho thiết bị đang trống.')).toBeInTheDocument();
+  });
+});
+

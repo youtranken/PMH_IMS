@@ -240,6 +240,9 @@ export default {
     /* Ô lọc trạng thái vòng đời (Q-20, `ui/lifecycle-status-options.ts`): một khuôn cho bốn màn. */
     lifecycleLive: 'Đang theo dõi (trừ {{end}})',
     lifecycleAll: 'Tất cả (cả {{end}})',
+    /* Bảng trống ở bộ lọc mặc định mà vẫn còn hồ sơ cuối đời khớp (`ui/lifecycle-hidden-empty.tsx`). */
+    lifecycleHidden: 'Có {{count}} hồ sơ {{end}} đang ẩn',
+    lifecycleHiddenHint: 'Danh sách mặc định không hiện hồ sơ cuối đời. Chọn "{{all}}" hoặc xem ở Kho thanh lý.',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
