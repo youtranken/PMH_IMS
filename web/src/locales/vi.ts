@@ -2480,6 +2480,10 @@ export default {
     allFamilies: 'Tất cả nhóm',
     scope_device_site: 'Thiết bị theo site',
     scope_device_type: 'Thiết bị theo loại',
+    deviceUnionTip:
+      'Cấp theo site là xem được mọi thiết bị ở site đó, bất kể loại. Cấp theo loại là mọi thiết bị loại đó ở mọi site. Hai cách cộng dồn: khớp dòng nào cũng thấy; nhiều dòng cùng khớp thì lấy quyền rộng nhất.',
+    showMoreRules: 'Xem thêm {{count}} quyền',
+    showLessRules: 'Thu gọn',
     scope_software_kind: 'Phần mềm',
     scope_service_account_kind: 'Tài khoản dịch vụ',
     scope_isp_provider: 'Đường truyền',
