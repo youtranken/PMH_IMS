@@ -44,7 +44,7 @@ test.describe('Port map', () => {
 
     await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
-    await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
+    await expect(page.getByText('Chưa khai báo cổng nào.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
     const form = page.getByRole('dialog');
@@ -63,7 +63,7 @@ test.describe('Port map', () => {
     // Trang thiết bị ĐẦU KIA: dòng hiện ở bảng chiều ngược, KHÔNG có bản ghi đối xứng.
     await page.goto(`/devices/${serverId}`);
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
-    await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
+    await expect(page.getByText('Chưa khai báo cổng nào.')).toBeVisible();
 
     const reverse = page.getByRole('row', { name: new RegExp(switchCode) });
     await expect(reverse).toBeVisible();
@@ -150,7 +150,7 @@ test.describe('Port map', () => {
 
     await rowAction(page, 'WAN1', 'Xóa');
     await confirmAction(page);
-    await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
+    await expect(page.getByText('Chưa khai báo cổng nào.')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     // Câu tự nhiên, tên cổng nằm ngay trong câu — không phải "cổng: (trống) → WAN1".

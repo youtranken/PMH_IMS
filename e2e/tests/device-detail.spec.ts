@@ -254,7 +254,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     await expect(page.getByRole('progressbar')).toHaveCount(0);
 
     // Và ô chưa khai gom về MỘT dòng, không phải một dãy hộp gạch ngang.
-    await expect(page.getByText(/Chưa khai:/)).toBeVisible();
+    await expect(page.getByText(/Chưa khai báo:/)).toBeVisible();
   });
 
   /**

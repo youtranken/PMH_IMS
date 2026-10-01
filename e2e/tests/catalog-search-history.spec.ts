@@ -33,7 +33,7 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     await page.getByRole('searchbox', { name: /Tìm/ }).fill('zzz-khong-co-e2e');
     await expect(page.getByText('Không có site nào khớp "zzz-khong-co-e2e".')).toBeVisible();
     // Câu "chưa khai mục nào" là câu cho tab RỖNG — ở đây danh mục đâu có rỗng.
-    await expect(page.getByText(/Chưa khai mục nào/)).toHaveCount(0);
+    await expect(page.getByText(/Chưa khai báo mục nào/)).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Xóa từ khóa' }).click();
     await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('');

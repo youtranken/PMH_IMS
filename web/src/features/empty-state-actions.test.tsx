@@ -90,7 +90,7 @@ async function emptyBlock(title: string | RegExp) {
 describe('Khối trống có nút bước tiếp', () => {
   it('Đường truyền: chưa có → nút Thêm; lọc không ra → Xóa bộ lọc', async () => {
     renderAt('/isp-lines', <IspScreen me={SA} />);
-    const block = await emptyBlock('Chưa khai đường truyền nào.');
+    const block = await emptyBlock('Chưa khai báo đường truyền nào.');
     expect(within(block).getByRole('button', { name: 'Thêm đường truyền' })).toBeInTheDocument();
   });
 
@@ -129,11 +129,11 @@ describe('Khối trống có nút bước tiếp', () => {
 
   it('Dải IP: chưa có dải → nút khai dải (chỉ SA/Admin)', async () => {
     const { unmount } = renderAt('/ipam', <IpamScreen me={SA} />);
-    const block = await emptyBlock('Chưa khai dải nào');
+    const block = await emptyBlock('Chưa khai báo dải nào');
     expect(within(block).getByRole('button', { name: 'Khai dải mới' })).toBeInTheDocument();
     unmount();
     renderAt('/ipam', <IpamScreen me={MEMBER} />);
-    const memberBlock = await emptyBlock('Chưa khai dải nào');
+    const memberBlock = await emptyBlock('Chưa khai báo dải nào');
     expect(within(memberBlock).queryByRole('button')).toBeNull();
   });
 
@@ -186,7 +186,7 @@ describe('Khối trống có nút bước tiếp', () => {
   it('Sơ đồ cổng trống: nút Thêm cổng nằm trong khối trống, không lặp ở thanh trên', async () => {
     const device = { id: 'd-1', code: 'SW-E2E-01', name: 'Switch', status: 'in_use' } as DeviceRow;
     renderAt('/devices/d-1', <PortMapPanel device={device} csrfToken="t" canEdit />);
-    const block = await emptyBlock('Chưa khai cổng nào.');
+    const block = await emptyBlock('Chưa khai báo cổng nào.');
     expect(within(block).getByRole('button', { name: 'Thêm cổng' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Thêm cổng' })).toHaveLength(1);
   });

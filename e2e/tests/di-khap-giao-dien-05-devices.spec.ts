@@ -1004,9 +1004,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*
-     * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".
+     * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai báo".
      *
-     * Đòi CẢ HAI cùng lúc — ô "Model" rỗng (một dấu gạch ngang) VÀ dòng "Chưa khai: Model, …"
+     * Đòi CẢ HAI cùng lúc — ô "Model" rỗng (một dấu gạch ngang) VÀ dòng "Chưa khai báo: Model, …"
      * — là khoá lại một lưới toàn gạch ngang, rồi ngay dưới là một câu nói lại y hệt danh sách
      * ấy.
      *
@@ -1015,11 +1015,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     for (const label of ['Model', 'Serial', 'Nhà cung cấp', 'Ngày mua', 'Ghi chú']) {
       await expect(
         panel.getByText(label, { exact: true }),
-        `Máy này chưa khai "${label}" nên KHÔNG được vẽ một ô rỗng cho nó — tên của nó chỉ được xuất hiện trong dòng "Chưa khai"`,
+        `Máy này chưa khai báo "${label}" nên KHÔNG được vẽ một ô rỗng cho nó — tên của nó chỉ được xuất hiện trong dòng "Chưa khai báo"`,
       ).toHaveCount(0);
     }
     await expect(
-      panel.getByText('Chưa khai: Model, Serial, Nhà cung cấp, Phòng ban sử dụng, Ngày mua, Ghi chú.'),
+      panel.getByText('Chưa khai báo: Model, Serial, Nhà cung cấp, Phòng ban sử dụng, Ngày mua, Ghi chú.'),
       'Ô chưa khai phải gom về MỘT dòng nói rõ còn thiếu gì, thay cho một dãy hộp toàn dấu gạch ngang',
     ).toBeVisible();
 
@@ -1045,7 +1045,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       panel.getByRole('button', { name: 'Thêm cổng' }),
       'Máy chưa thanh lý thì phải khai được cổng',
     ).toBeVisible();
-    await expect(panel.getByText('Chưa khai cổng nào.')).toBeVisible();
+    await expect(panel.getByText('Chưa khai báo cổng nào.')).toBeVisible();
     await expect(
       panel.getByText('Chưa có thiết bị nào khai là đang cắm vào đây.'),
       'Chiều ngược rỗng vẫn phải nói ra, không được im lặng biến mất',

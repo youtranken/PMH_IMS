@@ -188,7 +188,7 @@ export default {
     /* Tên KHU "Hồ sơ" ở đầu cột chính. Không dùng lại `*.tabProfile` được: bên thiết bị khoá
        ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
     profileSection: 'Hồ sơ',
-    blankFields: 'Chưa khai: {{list}}.',
+    blankFields: 'Chưa khai báo: {{list}}.',
     railMore: 'Chi tiết',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
@@ -540,9 +540,9 @@ export default {
     importHint:
       'File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
       '(đã kèm danh mục đang có); dòng VÍ DỤ được bỏ qua.',
-    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
+    emptyHint: 'Chưa khai báo mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
-    emptyHintManual: 'Chưa khai mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
+    emptyHintManual: 'Chưa khai báo mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
     clearSearch: 'Xóa từ khóa',
     nounSite: 'site',
@@ -839,7 +839,7 @@ export default {
     fromDevice: 'Từ thiết bị',
     usedBy: 'Người sử dụng',
     note: 'Ghi chú',
-    empty: 'Chưa khai cổng nào.',
+    empty: 'Chưa khai báo cổng nào.',
     emptyHint: 'Khai cổng để xuống site là biết ngay cổng nào đi đâu.',
     portRequired: 'Nhập tên cổng (vd 12, Gi1/0/24, WAN1).',
     removed: 'Đã xóa cổng {{port}}.',
@@ -1088,7 +1088,7 @@ export default {
     allSites: 'Mọi site',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
-    empty: 'Chưa khai đường truyền nào.',
+    empty: 'Chưa khai báo đường truyền nào.',
     emptyHint: 'Thêm đường truyền để có sẵn hotline và số hợp đồng khi sự cố.',
     emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
@@ -1134,7 +1134,7 @@ export default {
      */
     notCounted: 'Không tính hạn',
     notCountedTitle: 'Hồ sơ đã thanh lý nên không tính hạn nữa',
-    labelNoneTitle: 'Chưa khai ngày hết hạn',
+    labelNoneTitle: 'Chưa khai báo ngày hết hạn',
     notCountedRetired: 'Không tính hạn (đã thanh lý)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
     navBadge: '{{count}} mục đã quá hạn',
@@ -1149,7 +1149,7 @@ export default {
     from: 'Từ',
     to: 'Đến',
     walked: 'Đã đi {{percent}}%',
-    noStart: 'Chưa khai mốc bắt đầu',
+    noStart: 'Chưa khai báo mốc bắt đầu',
     title: 'Sắp hết hạn',
     subtitle: 'Bảo hành, license, SSL, tên miền, hợp đồng — mọi thứ có hạn',
     item: 'Mục',
@@ -1643,7 +1643,7 @@ export default {
     editSubnet: 'Sửa dải',
     subnetSaved: 'Đã lưu dải.',
     subnetHidden: 'Đã ngừng dùng dải.',
-    empty: 'Chưa khai dải nào',
+    empty: 'Chưa khai báo dải nào',
     emptyHint: 'Khai dải LAN (vd 172.16.10.0/24) rồi mới tạo được hồ sơ IP bên trong.',
     cidr: 'Dải',
     phCidr: 'vd 172.16.10.0/24',

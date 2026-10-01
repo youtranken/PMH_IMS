@@ -177,8 +177,8 @@ test.describe('Đường truyền ISP', () => {
     await expect(page.getByText('Đã thanh lý', { exact: true })).toBeVisible();
     // Băng rôn đầu trang: ngày và NGƯỜI thanh lý (họ tên khi tra được, không thì email).
     await expect(page.getByText(/Đã thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
-    // Đường đã chết thì thôi nhắc "Chưa khai" và thôi thẻ "Khi mất mạng".
-    await expect(page.getByText(/^Chưa khai/)).toHaveCount(0);
+    // Đường đã chết thì thôi nhắc "Chưa khai báo" và thôi thẻ "Khi mất mạng".
+    await expect(page.getByText(/^Chưa khai báo/)).toHaveCount(0);
     await expect(page.getByText('Khi mất mạng')).toHaveCount(0);
 
     /* Đường hỏng của lối `?action=` từ danh sách: link cũ "Thanh lý" trên đường ĐÃ thanh lý thì
