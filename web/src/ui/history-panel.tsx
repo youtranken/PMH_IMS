@@ -12,6 +12,11 @@ export interface HistoryEntry {
   actorName?: string;
   action: string;
   detail?: string | null;
+  /**
+   * Màu của ga (tuỳ chọn): `create` tạo mới, `status` đổi trạng thái, `void` thanh lý / gỡ /
+   * thu hồi. Bỏ trống là ga thường. Màu nằm ở CSS theo token, nơi gọi không truyền màu.
+   */
+  tone?: 'create' | 'status' | 'void';
 }
 
 /**
@@ -30,21 +35,30 @@ export function HistoryPanel({
   if (entries.length === 0) {
     return <p className="muted">{emptyText ?? t('history.emptyDefault')}</p>;
   }
+  /*
+   * Trục dọc "ga tàu" (Q-20): ngày giờ · đường ray + ga · nội dung. API trả mới trước, nên ga
+   * ĐẦU là ga mới nhất (tô đặc). Đường ray vẽ bằng CSS giữa các ga, ga cuối không kéo dài.
+   * Màn hẹp: ngày giờ xuống dưới nội dung (CSS đổi vị trí ô lưới, DOM giữ nguyên).
+   */
   return (
     <ol className="history">
-      {entries.map((entry) => (
-        <li key={entry.id} className="history-item">
-          <div className="history-dot" aria-hidden="true" />
+      {entries.map((entry, index) => (
+        <li
+          key={entry.id}
+          className={index === 0 ? 'history-item is-latest' : 'history-item'}
+          data-tone={entry.tone}
+        >
+          <time className="history-time muted" dateTime={entry.at}>
+            {formatDateTime(entry.at)}
+          </time>
+          <div className="history-rail" aria-hidden="true">
+            <span className="history-dot" />
+          </div>
           <div className="history-body">
             <p className="history-action">{entry.action}</p>
             {entry.detail ? <p className="history-detail muted">{entry.detail}</p> : null}
             <p className="history-meta muted">
-              {entry.actorName ? (
-                <span title={entry.actor}>{entry.actorName}</span>
-              ) : (
-                entry.actor
-              )}{' '}
-              · {formatDateTime(entry.at)}
+              {entry.actorName ? <span title={entry.actor}>{entry.actorName}</span> : entry.actor}
             </p>
           </div>
         </li>
