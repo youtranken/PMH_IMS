@@ -138,7 +138,7 @@ describe('DeviceIpAssign', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText('Chưa có dải mạng nào để cấp IP.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Khai dải mạng' })).toHaveAttribute('href', '/ip-addresses');
+    expect(screen.getByRole('link', { name: 'Thêm dải mạng' })).toHaveAttribute('href', '/ip-addresses');
     expect(screen.queryByRole('button', { name: 'Dải mạng' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Tiếp tục' })).toBeNull();
   });

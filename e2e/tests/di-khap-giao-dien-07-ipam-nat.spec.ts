@@ -274,7 +274,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'button',
       [
         ['Xuất Excel', 1],
-        ['Khai dải mới', 1],
+        ['Thêm dải mạng', 1],
         ['Tra', 1],
         [/^Thao tác với /, cards],
         ['Giấy tờ (0)', 1],
@@ -308,19 +308,19 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'dải đã mang lịch sử thì KHÔNG có "Xóa" — `ip_history` là bảng chỉ-thêm (AD-13), bày nút ra là bày để bấm rồi ăn lỗi',
     ).toEqual(['Sửa', 'Ngừng dùng']);
 
-    /* ----- Hộp "Khai dải mới": bên trong có đúng những ô nào ----- */
-    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
-    const addForm = page.getByRole('dialog', { name: 'Khai dải mới' });
+    /* ----- Hộp "Thêm dải mạng": bên trong có đúng những ô nào ----- */
+    await page.getByRole('button', { name: 'Thêm dải mạng' }).first().click();
+    const addForm = page.getByRole('dialog', { name: 'Thêm dải mạng' });
     await expect(addForm).toBeVisible();
     await expect(
       addForm.getByRole('heading', { level: 2 }),
       'hộp KHAI MỚI không chia khối — chỉ có đúng tiêu đề hộp',
-    ).toHaveText(['Khai dải mới']);
+    ).toHaveText(['Thêm dải mạng']);
     await expectHandles(
       addForm,
       'textbox',
       ['Dải', 'Tên gọi', 'VLAN', 'Gateway', 'Mô tả'],
-      'Hộp "Khai dải mới"',
+      'Hộp "Thêm dải mạng"',
     );
     // Site là `Select` → tay nắm của nó là NÚT, không phải ô nhập. Nhầm vai nghĩa là người
     // dùng bàn phím thao tác khác hẳn điều ta tưởng.
@@ -328,7 +328,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       addForm,
       'button',
       ['Đóng hộp thoại', 'Site', 'Hủy', 'Lưu'],
-      'Hộp "Khai dải mới"',
+      'Hộp "Thêm dải mạng"',
     );
     await expect(
       addForm.getByRole('combobox'),
