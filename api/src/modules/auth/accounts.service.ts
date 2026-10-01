@@ -14,6 +14,7 @@ import type { SortQuery } from "../../common/sorting";
 import type { Tx } from "../../common/tx";
 import { ApprovalsApiService } from "../approvals/approvals.api";
 import { AuditWriterService } from "../audit/audit-writer.service";
+import { SystemConfigService } from "../config-sys/system-config.service";
 import { OutboxService } from "../outbox/outbox.service";
 import {
   UsersService,
@@ -24,6 +25,7 @@ import type { UserRecord } from "../users/users.types";
 import { LoginFailureService } from "./login-failure.service";
 import { PasswordService } from "./password.service";
 import { SessionService, type SessionSummary } from "./session.service";
+import { tempPasswordExpiresAt } from "./temp-password-policy";
 import type { UserRole } from "./types";
 
 export interface ActorRef {
@@ -57,6 +59,7 @@ export class AccountsService {
     private readonly outbox: OutboxService,
     private readonly loginFailures: LoginFailureService,
     private readonly approvals: ApprovalsApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   list(
@@ -97,7 +100,7 @@ export class AccountsService {
      * một mã nhân viên là nhận 500 trắng, không biết ô nào đụng.
      * `updateProfile` bên dưới đã dịch đúng — hai đường ghi phải nói cùng một câu.
      */
-    const user = await this.createUser(actor, input, passwordHash);
+    const user = await this.createUser(actor, input, passwordHash, await this.tempExpiry());
     return { user, temporaryPassword };
   }
 
@@ -113,6 +116,7 @@ export class AccountsService {
       totpLoginRequired?: boolean;
     },
     passwordHash: string,
+    tempExpiresAt: Date,
   ): Promise<UserRecord> {
     try {
       return await this.db.transaction(async (tx) => {
@@ -127,6 +131,7 @@ export class AccountsService {
           role: input.role,
           passwordHash,
           totpLoginRequired: input.totpLoginRequired ?? true,
+          tempPasswordExpiresAt: tempExpiresAt,
         });
         await this.audit.appendWithin(tx, {
           actor: actor.email,
@@ -356,8 +361,9 @@ export class AccountsService {
     await this.requireUser(userId);
     const temporaryPassword = generateTemporaryPassword();
     const hash = await this.passwords.hash(temporaryPassword);
+    const expiresAt = await this.tempExpiry();
     await this.db.transaction(async (tx) => {
-      await this.users.setPasswordWithin(tx, userId, hash, true);
+      await this.users.setPasswordWithin(tx, userId, hash, expiresAt);
       const killed = await this.sessions.revokeAllForUserWithin(
         tx,
         userId,
@@ -373,6 +379,12 @@ export class AccountsService {
       await this.outbox.enqueueWithin(tx, "account.password.reset", { userId });
     });
     return { temporaryPassword };
+  }
+
+  /** Mốc hết hạn cho mật khẩu tạm vừa cấp (Q-20, `auth.temp_password_hours`). */
+  private async tempExpiry(): Promise<Date> {
+    const hours = await this.config.getNumber("authTempPasswordHours");
+    return tempPasswordExpiresAt(new Date(), hours);
   }
 
   /** Reset MFA (mất điện thoại): xóa secret, buộc enroll lại, đá sạch phiên. */

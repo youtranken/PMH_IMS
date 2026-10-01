@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, ne } from 'drizzle-orm';
+import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { diffRecord, type RecordChanges } from '../../common/record-diff';
@@ -99,6 +99,19 @@ function hasPortChange(changes: RecordChanges): boolean {
   );
 }
 
+/**
+ * Mã lớp khoá advisory `(int, int)` của port map — riêng với mã lớp của
+ * `audit/security-probe.service.ts` (42_001), xem chú thích ở đó.
+ */
+const PORT_LOCK_CLASS = 42_002;
+
+const ONE_CABLE_HINT = 'Mỗi cổng chỉ một sợi cáp — sửa hoặc gỡ dòng đó trước.';
+
+/** Thứ tự khoá các cổng — chỉ để hai lượt khoá cùng một cặp cổng theo cùng một thứ tự. */
+function portKey(deviceId: string, label: string): string {
+  return `${deviceId}/${label.toLowerCase()}`;
+}
+
 function portNotFound(): NotFoundException {
   return new NotFoundException({
     code: 'PORT_NOT_FOUND',
@@ -180,6 +193,11 @@ export class DevicePortsService {
       if (values.connectedDeviceId) {
         await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
       }
+      await this.assertOneCableWithin(tx, deviceId, null, {
+        portLabel: values.portLabel as string,
+        connectedDeviceId: (values.connectedDeviceId as string | null | undefined) ?? null,
+        connectedPort: (values.connectedPort as string | null | undefined) ?? null,
+      });
       let inserted;
       try {
         inserted = await tx
@@ -209,6 +227,18 @@ export class DevicePortsService {
       if (values.connectedDeviceId && values.connectedDeviceId !== before.connectedDeviceId) {
         await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
       }
+      // Trạng thái SAU khi sửa: ô không gửi lên thì giữ giá trị đang có.
+      await this.assertOneCableWithin(tx, deviceId, portId, {
+        portLabel: (values.portLabel as string | undefined) ?? before.snapshot.portLabel,
+        connectedDeviceId:
+          values.connectedDeviceId !== undefined
+            ? (values.connectedDeviceId as string | null)
+            : before.connectedDeviceId,
+        connectedPort:
+          values.connectedPort !== undefined
+            ? (values.connectedPort as string | null)
+            : before.snapshot.connectedPort,
+      });
       let updated;
       try {
         updated = await tx
@@ -307,23 +337,24 @@ export class DevicePortsService {
       }
     }
     // Trùng tên cổng trong cùng thiết bị: bắt sớm để câu lỗi nói được TÊN CỔNG,
-    // thay vì để unique constraint bắn ra một câu SQL.
+    // thay vì để unique constraint bắn ra một câu SQL. Không phân biệt hoa/thường (Q-20), như
+    // chỉ mục `device_port_label_key`; câu lỗi dùng tên đang có để người ta tìm ra dòng đó.
     const label = values.portLabel as string | undefined;
     if (label) {
       const clash = await this.db
-        .select({ id: devicePortTable.id })
+        .select({ portLabel: devicePortTable.portLabel })
         .from(devicePortTable)
         .where(
           and(
             eq(devicePortTable.deviceId, deviceId),
-            eq(devicePortTable.portLabel, label),
+            sql`lower(${devicePortTable.portLabel}) = lower(${label})`,
             portId ? ne(devicePortTable.id, portId) : undefined,
           ),
         );
       if (clash.length > 0) {
         throw new ConflictException({
           code: 'PORT_LABEL_TAKEN',
-          message: `Thiết bị này đã có dòng cho cổng "${label}".`,
+          message: `Thiết bị này đã có dòng cho cổng "${clash[0].portLabel}".`,
         });
       }
     }
@@ -394,6 +425,111 @@ export class DevicePortsService {
     const found = map.ports.find((port) => port.id === portId);
     if (!found) throw portNotFound();
     return found;
+  }
+
+  /**
+   * MỘT CỔNG MỘT SỢI CÁP, kiểm cả hai chiều (Q-20). Một sợi dây có hai đầu: đầu GHI
+   * (`device_id`, `port_label`) và đầu KIA (`connected_device_id`, `connected_port`). Một cổng
+   * không được làm đầu của hai sợi khác nhau, dù nó xuất hiện ở cột GHI của dòng này và cột KIA
+   * của dòng khác. Ngoại lệ duy nhất là dòng ngược của CÙNG sợi (X:p1→Y:g1 và Y:g1→X:p1).
+   *
+   * Chỉ dây nối tới thiết bị CÓ HỒ SƠ mới chiếm cổng. Dòng chỉ ghi VLAN/người dùng, hay đầu kia
+   * chỉ là chữ (máy chưa có hồ sơ, hoặc nhãn "(đã thanh lý)" mà `PortDeviceRetirement` để lại)
+   * thì không — chặn theo chữ là bắt người ta sửa dòng cũ trước khi được khai máy thật vào.
+   * Dòng của máy đã thanh lý cũng không tính, cùng lý do với `device_port_peer_port_key`.
+   *
+   * Phần "trùng ở cùng một cột" có chỉ mục duy nhất giữ; phần chéo cột thì không chỉ mục nào
+   * diễn đạt được, nên mọi lượt ghi khoá advisory theo TỪNG CỔNG mình chạm (đầu ghi + đầu kia)
+   * trước khi đọc. Hai lượt đụng cùng một cổng thì xếp hàng; lượt sau đọc thấy dòng lượt trước
+   * vừa commit. Khoá theo thứ tự chuỗi để hai lượt khoá chéo hai cổng không deadlock.
+   */
+  private async assertOneCableWithin(
+    tx: Tx,
+    deviceId: string,
+    portId: string | null,
+    row: { portLabel: string; connectedDeviceId: string | null; connectedPort: string | null },
+  ): Promise<void> {
+    const peerId = row.connectedDeviceId;
+    const peerPort = peerId ? row.connectedPort : null;
+    const ends: Array<[string, string]> = [[deviceId, row.portLabel]];
+    if (peerId && peerPort) ends.push([peerId, peerPort]);
+    ends.sort((a, b) => portKey(...a).localeCompare(portKey(...b)));
+    for (const [id, label] of ends) {
+      // `lower()` của Postgres, không phải của JS: khoá phải băm đúng thứ hai chỉ mục so.
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${PORT_LOCK_CLASS}, hashtext(${id}::text || '/' || lower(${label}::text)))`,
+      );
+    }
+    if (!peerId) return;
+    const self = portId ?? '00000000-0000-0000-0000-000000000000';
+
+    // Đầu GHI của dòng này đã là đầu KIA của một sợi khác.
+    const incoming = await tx.execute<{ owner_code: string; port_label: string }>(sql`
+      SELECT d.code AS owner_code, p.port_label
+        FROM device_port p JOIN device d ON d.id = p.device_id
+       WHERE p.connected_device_id = ${deviceId}::uuid
+         AND lower(p.connected_port) = lower(${row.portLabel})
+         AND NOT p.owner_retired
+         AND p.id <> ${self}::uuid
+         AND NOT (p.device_id = ${peerId}::uuid
+                  AND (${peerPort}::text IS NULL OR lower(p.port_label) = lower(${peerPort}::text)))
+       LIMIT 1`);
+    if (incoming.rows.length > 0) {
+      const hit = incoming.rows[0];
+      throw new ConflictException({
+        code: 'PORT_ALREADY_LINKED',
+        message:
+          `Cổng "${row.portLabel}" của thiết bị này đã có cáp nối từ ${hit.owner_code} cổng ` +
+          `"${hit.port_label}". ${ONE_CABLE_HINT}`,
+      });
+    }
+    if (!peerPort) return;
+
+    const [peer] = await tx
+      .select({ code: deviceTable.code })
+      .from(deviceTable)
+      .where(eq(deviceTable.id, peerId));
+
+    // Đầu KIA đã có một dòng khác cắm vào (cùng việc với `device_port_peer_port_key`, nhưng
+    // làm trước để câu lỗi nói được máy nào đang giữ cổng).
+    const taken = await tx.execute<{ owner_code: string; port_label: string; connected_port: string }>(sql`
+      SELECT d.code AS owner_code, p.port_label, p.connected_port
+        FROM device_port p JOIN device d ON d.id = p.device_id
+       WHERE p.connected_device_id = ${peerId}::uuid
+         AND lower(p.connected_port) = lower(${peerPort})
+         AND NOT p.owner_retired
+         AND p.id <> ${self}::uuid
+       LIMIT 1`);
+    if (taken.rows.length > 0) {
+      const hit = taken.rows[0];
+      throw new ConflictException({
+        code: 'PORT_PEER_TAKEN',
+        message:
+          `Cổng "${hit.connected_port}" của ${peer.code} đã có cáp nối từ ${hit.owner_code} cổng ` +
+          `"${hit.port_label}". ${ONE_CABLE_HINT}`,
+      });
+    }
+
+    // Đầu KIA, nhìn từ dòng của chính máy kia, đã nối sang nơi khác.
+    const outgoing = await tx.execute<{ port_label: string; target_code: string; connected_port: string | null }>(sql`
+      SELECT p.port_label, d.code AS target_code, p.connected_port
+        FROM device_port p JOIN device d ON d.id = p.connected_device_id
+       WHERE p.device_id = ${peerId}::uuid
+         AND lower(p.port_label) = lower(${peerPort})
+         AND NOT p.owner_retired
+         AND NOT (p.connected_device_id = ${deviceId}::uuid
+                  AND (p.connected_port IS NULL OR lower(p.connected_port) = lower(${row.portLabel})))
+       LIMIT 1`);
+    if (outgoing.rows.length > 0) {
+      const hit = outgoing.rows[0];
+      const target = hit.connected_port
+        ? `${hit.target_code} cổng "${hit.connected_port}"`
+        : hit.target_code;
+      throw new ConflictException({
+        code: 'PORT_PEER_TAKEN',
+        message: `Cổng "${hit.port_label}" của ${peer.code} đã có cáp nối sang ${target}. ${ONE_CABLE_HINT}`,
+      });
+    }
   }
 
   private translate(error: unknown, peerPort: string | null): unknown {

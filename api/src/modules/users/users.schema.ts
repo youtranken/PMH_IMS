@@ -28,6 +28,8 @@ export const usersTable = pgTable('users', {
   role: text('role').notNull(),
   passwordHash: text('password_hash').notNull(),
   mustChangePassword: boolean('must_change_password').notNull().default(true),
+  // Mốc hết hạn của mật khẩu tạm (Q-20, migration 0040). NULL = không có hạn.
+  tempPasswordExpiresAt: timestamp('temp_password_expires_at', { withTimezone: true }),
   // TOTP secret cất bằng envelope (AD-4, NFR-02) — 5 cột khớp SealedValue.
   totpSecretCt: customType<{ data: Buffer }>({ dataType: () => 'bytea' })('totp_secret_ct'),
   totpSecretIv: customType<{ data: Buffer }>({ dataType: () => 'bytea' })('totp_secret_iv'),

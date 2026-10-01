@@ -39,9 +39,13 @@ export function clearPaletteRecent(): void {
 export type SignOutReason = 'signedOut' | 'back' | 'totpExpired';
 
 /** Câu báo màn đăng nhập sẽ hiện ở lượt mở kế tiếp trong tab này. */
-export type SignOutNotice = 'signedOut' | 'totpExpired';
+export type SignOutNotice = 'signedOut' | 'totpExpired' | 'tempPasswordExpired';
 
-const NOTICE_VALUE: Record<SignOutNotice, string> = { signedOut: '1', totpExpired: 'totp-expired' };
+const NOTICE_VALUE: Record<SignOutNotice, string> = {
+  signedOut: '1',
+  totpExpired: 'totp-expired',
+  tempPasswordExpired: 'temp-password-expired',
+};
 
 /**
  * Ghi câu báo cho màn đăng nhập. Đi qua sessionStorage chứ không qua state của router: ngay sau
@@ -88,6 +92,7 @@ export function signOutNotice(): SignOutNotice | null {
   try {
     const value = sessionStorage.getItem(SIGNED_OUT_KEY);
     if (value === NOTICE_VALUE.totpExpired) return 'totpExpired';
+    if (value === NOTICE_VALUE.tempPasswordExpired) return 'tempPasswordExpired';
     return value === NOTICE_VALUE.signedOut ? 'signedOut' : null;
   } catch {
     return null;

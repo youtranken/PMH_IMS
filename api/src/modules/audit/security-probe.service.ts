@@ -67,6 +67,8 @@ const ALERTED_ACTION = 'security.probe.alerted';
  * Dạng `(int, int)` là một không gian khoá RIÊNG, không đụng `pg_advisory_lock(727001)` mà
  * `database/migration-runner.ts` (`MIGRATION_LOCK_ID`) giữ ở mức phiên. Thêm khoá advisory mới
  * ở đâu thì cấp cho nó một mã lớp khác và ghi cạnh đây.
+ *
+ * Đã cấp: 42_002 — một cổng port map (`devices/device-ports.service.ts`, `PORT_LOCK_CLASS`).
  */
 const PROBE_LOCK_CLASS = 42_001;
 

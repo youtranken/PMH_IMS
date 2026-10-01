@@ -36,6 +36,12 @@ describe('classifyLoginError', () => {
       null,
     ],
     ['đã vô hiệu hoá', new ApiError(401, { code: 'ACCOUNT_DISABLED', message: 'x' }), 'disabled', null],
+    [
+      'mật khẩu tạm quá hạn (Q-20)',
+      new ApiError(401, { code: 'TEMP_PASSWORD_EXPIRED', message: 'x' }),
+      'tempExpired',
+      null,
+    ],
     ['quá hạn mức theo IP', new ApiError(429, { message: 'x' }), 'other', null],
     ['máy chủ lỗi', new ApiError(502, null), 'other', null],
     ['mất mạng', new TypeError('Failed to fetch'), 'other', null],

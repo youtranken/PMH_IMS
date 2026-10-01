@@ -34,6 +34,7 @@ import {
   type SessionSummary,
 } from './session.service';
 import { TotpService } from './totp.service';
+import { isTempPasswordExpired, TEMP_PASSWORD_EXPIRED_MESSAGE } from './temp-password-policy';
 import { KnownDeviceService } from './known-device.service';
 import { LoginFailureService } from './login-failure.service';
 
@@ -180,6 +181,20 @@ export class AuthService {
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
         message: 'Email hoặc mật khẩu không đúng.',
+      });
+    }
+
+    /*
+     * Mật khẩu tạm quá hạn (Q-20). Kiểm SAU khi mật khẩu đúng: gõ sai thì vẫn nhận câu chung ở
+     * trên, nên câu này chỉ tới tay người đã cầm đúng mật khẩu tạm — và với họ nó vô hại, vì
+     * mật khẩu đó không còn mở được gì. Không cộng lượt sai (người thật không đoán gì cả) và
+     * không xoá bộ đếm (chưa có lần đăng nhập nào thành).
+     */
+    if (isTempPasswordExpired(user, now)) {
+      await this.auditFailure(user, 'temp-password-expired');
+      throw new UnauthorizedException({
+        code: 'TEMP_PASSWORD_EXPIRED',
+        message: TEMP_PASSWORD_EXPIRED_MESSAGE,
       });
     }
 
@@ -763,7 +778,7 @@ export class AuthService {
     }
     const hash = await this.passwords.hash(newPassword);
     await this.db.transaction(async (tx) => {
-      await this.users.setPasswordWithin(tx, user.id, hash, false);
+      await this.users.setPasswordWithin(tx, user.id, hash, null);
       // Chứng minh được mật khẩu thì bộ đếm "gõ sai liên tiếp" về 0 (cùng luật với cửa cài TOTP).
       await this.sessions.clearStepUpFailuresWithin(tx, session.id);
       const killed = await this.sessions.revokeAllForUserWithin(

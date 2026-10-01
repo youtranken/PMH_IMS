@@ -106,6 +106,49 @@ test.describe('Port map', () => {
     await expect(page.getByText(/đã có dòng cho cổng "24"/)).toBeVisible();
   });
 
+  test('Q-20: một cổng một sợi cáp, kiểm cả chiều ngược, không phân biệt hoa/thường', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const switchCode = `SW-E2E-1C-${stamp}`;
+    const serverCode = `SRV-E2E-1C-${stamp}`;
+    const otherCode = `SW-E2E-1C2-${stamp}`;
+    const switchId = await createDevice(page, switchCode, 'Switch');
+    const serverId = await createDevice(page, serverCode, 'Server');
+    await createDevice(page, otherCode, 'Switch');
+
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    // Switch Gi1/0/12 → server eth0.
+    const first = await page.request.post(`/api/v1/devices/${switchId}/ports`, {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: { portLabel: 'Gi1/0/12', connectedDeviceId: serverId, connectedPort: 'eth0' },
+    });
+    expect(first.status()).toBe(201);
+
+    // Trên server, khai cổng ETH0 (viết hoa) nối sang switch khác → bị chặn, nói rõ ai giữ cổng.
+    await page.goto(`/devices/${serverId}`);
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
+    await page.getByRole('button', { name: 'Thêm cổng' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('ETH0');
+    await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(otherCode);
+    await page.getByRole('option', { name: new RegExp(otherCode) }).click();
+    await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('1');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(form.getByRole('alert')).toContainText(
+      `Cổng "ETH0" của thiết bị này đã có cáp nối từ ${switchCode} cổng "Gi1/0/12"`,
+    );
+
+    // Dòng ngược của CÙNG sợi cáp thì được (chọn lại đầu kia là switch, cổng gi1/0/12).
+    await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(switchCode);
+    await page.getByRole('option', { name: new RegExp(switchCode) }).click();
+    await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('gi1/0/12');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByRole('row', { name: /ETH0/ })).toBeVisible();
+  });
+
   test('không cắm được thiết bị vào chính nó', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();

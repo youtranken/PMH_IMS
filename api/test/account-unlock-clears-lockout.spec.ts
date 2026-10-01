@@ -44,6 +44,7 @@ describe('Mở khóa / kích hoạt lại tài khoản xoá sạch bộ đếm s
       outbox,
       new LoginFailureService(db, config, noopSweep),
       new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())),
+      config,
     );
   }, TEST_TIMEOUT);
 
