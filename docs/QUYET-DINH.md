@@ -255,8 +255,11 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Nút xem mật khẩu (con mắt) tự che lại** khi rời ô hoặc sau 10 giây.
 - **Luật mật khẩu giữ 3 trong 4 nhóm** (NFR-01). Bảng kiểm hiện riêng từng nhóm (thường, hoa, số,
   ký tự đặc biệt), độ dài và "nhập lại khớp".
-- **Số điện thoại** (danh mục, đường truyền, người dùng IMS): chỉ nhận chữ số, dấu `+` ở đầu và
-  dấu cách; lưu thì bỏ dấu cách.
+- **Số điện thoại** (danh mục, đường truyền, người dùng IMS): nhận chữ số, dấu `+` ở đầu, và các
+  dấu trình bày quen dùng — dấu cách, `-`, `.`, `(`, `)`; lưu thì bỏ hết các dấu trình bày, chỉ còn
+  chữ số và `+` đầu. Chữ cái và ký tự khác vẫn bị từ chối. *(Sửa 01/10/2026: bản đầu từ chối
+  `-`, `.`, `( )`, làm hồ sơ cũ nhập kiểu "(028) 3822-1234" không lưu lại được khi form gửi lại
+  số không đổi — chuẩn hoá thay vì từ chối.)*
 - **Giấy tờ đính kèm:** tối đa 25 MB mỗi file, tối đa 6 file mỗi lượt chọn (đưa vào
   `system_config`, AD-11). Nhận thêm Word/PowerPoint dạng mới (docx, pptx); loại có macro và file
   chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi. File đã xoá giữ nội dung

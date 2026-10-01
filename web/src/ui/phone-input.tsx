@@ -1,12 +1,12 @@
 import { formatPhone } from '@/lib/phone-format';
 
 /**
- * Bỏ khỏi chuỗi gõ/dán mọi ký tự không thuộc số điện thoại (Q-18): giữ chữ số, dấu cách, và
- * MỘT dấu `+` nếu nó đứng đầu. Dấu cách giữ lại để người gõ chia nhóm cho dễ soát; API bỏ
- * chúng khi lưu.
+ * Bỏ khỏi chuỗi gõ/dán mọi ký tự không thuộc số điện thoại (Q-18): giữ chữ số, dấu trình bày
+ * (dấu cách, `-`, `.`, `( )`) và MỘT dấu `+` nếu nó đứng đầu. Dấu trình bày giữ lại để người gõ
+ * chia nhóm cho dễ soát; API bỏ chúng khi lưu.
  */
 export function filterPhoneTyping(text: string): string {
-  const kept = text.replace(/[^\d +]/g, '');
+  const kept = text.replace(/[^\d +.()-]/g, '');
   const leadingPlus = /^\s*\+/.test(kept);
   const body = kept.replace(/\+/g, '');
   return leadingPlus ? `+${body.trimStart()}` : body;
@@ -52,8 +52,9 @@ export function PhoneInput({
       value={value}
       aria-describedby={describedBy}
       aria-invalid={invalid}
-      // `Dialog guardUnsaved` so bản bỏ dấu cách: tách nhóm lúc rời ô không phải là sửa.
-      data-guard-value={value.replace(/\s+/g, '')}
+      // `Dialog guardUnsaved` so bản bỏ dấu trình bày (đúng thứ API lưu): tách nhóm lúc rời ô
+      // không phải là sửa.
+      data-guard-value={value.replace(/[\s.()-]+/g, '')}
       onChange={(e) => onChange(filterPhoneTyping(e.target.value))}
       // Rời ô thì tách nhóm như chỗ hiển thị, để người gõ soát lại được; API bỏ dấu cách khi lưu.
       onBlur={() => onChange(formatPhone(value))}

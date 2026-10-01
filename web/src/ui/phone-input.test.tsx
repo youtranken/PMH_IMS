@@ -6,13 +6,14 @@ import { Dialog } from './dialog';
 import { Field } from './page-header';
 import { PhoneInput, filterPhoneTyping } from './phone-input';
 
-/** Q-18: chỉ chữ số, dấu + ở đầu và dấu cách — ký tự khác không vào được ô. */
+/** Q-18: chữ số, dấu + ở đầu và dấu trình bày ` - . ( )` — ký tự khác không vào được ô. */
 describe('filterPhoneTyping', () => {
   it.each([
     ['0912 345 678', '0912 345 678'],
     ['+84 912 345 678', '+84 912 345 678'],
-    ['(028) 3822-1234', '028 38221234'],
-    ['0912.345.678', '0912345678'],
+    ['(028) 3822-1234', '(028) 3822-1234'],
+    ['0912.345.678', '0912.345.678'],
+    ['0912/345_678', '0912345678'],
     ['84+912', '84912'],
     ['++84', '+84'],
     ['  +84', '+84'],
@@ -41,11 +42,11 @@ describe('PhoneInput', () => {
     expect(input).toHaveAttribute('aria-describedby', 'phone-hint');
   });
 
-  it('gõ lẫn chữ và ký tự lạ thì ô chỉ giữ số, dấu + đầu và dấu cách', async () => {
+  it('gõ lẫn chữ và ký tự lạ thì ô chỉ giữ số, dấu + đầu và dấu trình bày', async () => {
     render(<Harness />);
     const input = screen.getByLabelText('Số điện thoại');
-    await userEvent.type(input, '+84 (28) 3822-12a34');
-    expect(input).toHaveValue('+84 28 38221234');
+    await userEvent.type(input, '+84 (28) 3822-12a3/4');
+    expect(input).toHaveValue('+84 (28) 3822-1234');
   });
 
   it('lỗi của Field gắn vào ô', () => {
@@ -60,8 +61,14 @@ describe('PhoneInput', () => {
  * mở form sửa, không đổi gì, Esc cũng bị hỏi "Bỏ những gì vừa nhập?".
  */
 describe('PhoneInput trong hộp guardUnsaved', () => {
-  function EditHarness({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
-    const [value, setValue] = useState('0901234567');
+  function EditHarness({
+    onOpenChange,
+    initial = '0901234567',
+  }: {
+    onOpenChange: (open: boolean) => void;
+    initial?: string;
+  }) {
+    const [value, setValue] = useState(initial);
     const [note, setNote] = useState('');
     return (
       <ConfirmProvider>
@@ -82,6 +89,16 @@ describe('PhoneInput trong hộp guardUnsaved', () => {
     await userEvent.click(input);
     await userEvent.tab();
     expect(input).toHaveValue('0901 234 567');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('số cũ có dấu trình bày, Tab qua rồi Esc: đóng thẳng, không hỏi', async () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(<EditHarness onOpenChange={onOpenChange} initial="(090) 123-4567" />);
+    await userEvent.click(screen.getByLabelText('Số điện thoại'));
+    await userEvent.tab();
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
     expect(onOpenChange).toHaveBeenCalledWith(false);
