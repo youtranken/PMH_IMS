@@ -44,6 +44,10 @@ describe('noteLooksLikeSecret', () => {
     ['mk: Admin@123456.', true],
     ['API https://portal.example.vn/api?user=it&key=Ab12Cd34Ef56Gh', true],
     ['Ghi đè: SW-Core01.PMH.local mật khẩu Cisco#Core2026!', true],
+    ['S3cr3t!Pass@10.0.0.1', true],
+    ['Pmh#2026Secret', true],
+    ['mk:Admin@123456', true],
+    ['Pass:Word2026x', true],
     // Không được chặn.
     ['Mật khẩu đổi theo chu kỳ 90 ngày', false],
     ['IP quản trị 10.0.0.1', false],
@@ -58,6 +62,12 @@ describe('noteLooksLikeSecret', () => {
     ['Aaaaaaaaa1!', false],
     ['Serial FGT60FTK2109ABCD', false],
     ['Đổi-mật-khẩu-sau', false],
+    // Địa chỉ đăng nhập, số thứ tự, số điện thoại, IPv6 có zone — không phải mật khẩu.
+    ['SSH admin@10.0.0.1 port 22', false],
+    ['admin@SW-CORE01', false],
+    ['VLAN#10_Mgmt', false],
+    ['Hotline:+842838221234', false],
+    ['fe80::1%eth0', false],
     ['', false],
     [null, false],
   ];
@@ -153,6 +163,11 @@ describe('textLooksLikeSecret', () => {
     'Server: SRV-AD01.pmh.local, Domain\\Administrators',
     'Tài khoản PMH\\svc_backup chạy Veeam',
     'Speed=1000Mbps, Duplex=Full',
+    'SSH admin@10.0.0.1 port 22',
+    'admin@SW-CORE01',
+    'VLAN#10_Mgmt',
+    'Hotline:+842838221234',
+    'fe80::1%eth0',
     // Câu tiếng Việt thường.
     'Tủ đặt tại Tầng 3, phòng máy chủ, toà nhà Sky Garden (R4-3)',
     'Đã bàn giao cho chị Lan phòng Kế toán ngày 01/10/2026.',

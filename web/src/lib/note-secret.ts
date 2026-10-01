@@ -133,6 +133,10 @@ const BARE_URL_RE =
 const LOGIN_AT_HOST_RE = /^([^@\s]+)@([\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)+)(?::\d+)?$/u;
 /** Tên đăng nhập chỉ có chữ, số và `._-`; "S3cr3t!Pass" trước @ là mật khẩu, không phải tên. */
 const LOGIN_NAME_RE = /^[\p{L}\p{N}._-]+$/u;
+/** IPv6, có thể kèm zone ("fe80::1%eth0") và độ dài tiền tố: ít nhất hai dấu `:`, chỉ chữ số hex. */
+const IPV6_RE = /^(?=[^:]*:[^:]*:)[0-9a-f:]+(?:%[\p{L}\p{N}._-]+)?(?:\/\d{1,3})?$/iu;
+/** "Hotline:+84…", "IP:10.0.0.1": nhãn dính liền trước một con số không thuộc về con số đó. */
+const LABEL_PREFIX_RE = /^\p{L}+:(?=[+\d])/u;
 /** "\\PMH-FS01\data$", "C:\Program Files": đường dẫn Windows. */
 const WINDOWS_PATH_RE = /^(\\\\|[a-z]:\\)/i;
 /**
@@ -150,6 +154,30 @@ const SECRET_PARAM_RE = /(key|token|secret|pass|pwd|auth|sig|credential)/i;
 /** Dấu câu cuối câu không thuộc về từ: "SW-Core01.PMH.local," vẫn là tên máy. */
 function trimTrailingPunctuation(raw: string): string {
   return raw.replace(/[.,;)\]]+$/u, '');
+}
+
+/** Địa chỉ đăng nhập: trước @ phải là tên đăng nhập, và bản thân nó không phải mật khẩu mạnh. */
+function isLoginAddress(token: string): boolean {
+  const login = LOGIN_AT_HOST_RE.exec(token);
+  return login !== null && LOGIN_NAME_RE.test(login[1]) && !strongToken(login[1]);
+}
+
+/** Email, tên máy, IPv6, địa chỉ đăng nhập — địa chỉ chứ không phải mật khẩu. */
+function isAddress(token: string): boolean {
+  return (
+    EMAIL_RE.test(token) || HOSTNAME_RE.test(token) || IPV6_RE.test(token) || isLoginAddress(token)
+  );
+}
+
+/**
+ * Mẩu cần đo của một từ. `#` đứng trước chữ số là "số thứ tự" ("VLAN#10_Mgmt", "Seat#12"), nên
+ * hai bên đo riêng; "#" giữa hai chữ cái ("Cisco#Core2026!") vẫn là ký tự của mật khẩu.
+ */
+function pieces(token: string): string[] {
+  return token
+    .replace(LABEL_PREFIX_RE, '')
+    .split(/#(?=\d)/)
+    .filter((piece) => piece !== '');
 }
 
 /** Có giá trị tham số nào trông như khoá không. `strongValue(tên, giá trị)` do từng luật chọn. */
@@ -175,8 +203,8 @@ function tokenLooksLikeSecret(raw: string): boolean {
     if (at >= 0 && authority.slice(0, at).includes(':')) return true;
     return queryHasSecret(rest, (_name, value) => strongToken(value));
   }
-  if (EMAIL_RE.test(token) || HOSTNAME_RE.test(token)) return false;
-  return strongToken(token);
+  if (isAddress(token)) return false;
+  return pieces(token).some((piece) => !isAddress(piece) && strongToken(piece));
 }
 
 /** Giá trị tham số ở ô chữ tự do: tên tham số là khoá thì luật két, còn lại luật ô chữ. */
@@ -194,7 +222,7 @@ function textTokenLooksLikeSecret(raw: string): boolean {
     if (at >= 0 && authority.slice(0, at).includes(':')) return true;
     return queryHasSecret(rest, textParamLooksLikeSecret);
   }
-  if (EMAIL_RE.test(token) || HOSTNAME_RE.test(token)) return false;
+  if (isAddress(token)) return false;
   const bare = BARE_URL_RE.exec(token);
   if (bare) {
     const path = bare[2].split(/[?#]/)[0];
@@ -203,15 +231,13 @@ function textTokenLooksLikeSecret(raw: string): boolean {
       queryHasSecret(bare[2], textParamLooksLikeSecret)
     );
   }
-  const login = LOGIN_AT_HOST_RE.exec(token);
-  if (login && LOGIN_NAME_RE.test(login[1]) && !strongToken(login[1])) return false;
   if (WINDOWS_PATH_RE.test(token)) {
     // `$` cuối tên thư mục là share quản trị (C$, ADMIN$, data$), không phải ký tự mật khẩu.
     return token
       .split('\\')
       .some((segment) => segment !== '' && strongTextToken(segment.replace(/\$$/, '')));
   }
-  return strongTextToken(token);
+  return pieces(token).some((piece) => !isAddress(piece) && strongTextToken(piece));
 }
 
 /**
