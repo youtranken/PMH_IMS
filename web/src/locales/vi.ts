@@ -682,11 +682,13 @@ export default {
     retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
     retireBlocked:
       'Máy còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc gỡ từng thứ trước.',
-    reopen: 'Đưa lại vào dùng',
+    // Mở lại máy đã thanh lý chỉ là đổi trạng thái về Đang dùng/Dự phòng/Hỏng (Q-20). Kho thanh
+    // lý vẫn ghi "Dùng lại" (`disposal.restore`): ở đó việc là kéo hồ sơ ra khỏi kho.
+    reopen: 'Đổi trạng thái',
     confirmReopen:
       'Hồ sơ "{{name}}" mở lại để sửa được, và hạn bảo hành của máy lại có trong ' +
       'email nhắc hạn.',
-    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.',
+    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.',
     /*
      * HAI câu cho HAI cảnh, đừng gộp lại. Một câu chung có chữ "khớp bộ lọc" khiến hệ thống
      * vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa có thiết bị nào khớp bộ lọc" — và người dùng
@@ -706,7 +708,7 @@ export default {
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
-    retiredLockedShort: 'Đã thanh lý — đưa lại vào dùng mới sửa được.',
+    retiredLockedShort: 'Đã thanh lý — đổi trạng thái rồi mới sửa được.',
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',

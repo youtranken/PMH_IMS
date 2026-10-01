@@ -85,7 +85,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
   const [cloning, setCloning] = useState<DeviceRow | null>(null);
-  /** Hộp đổi trạng thái — cũng là hộp "Đưa lại vào dùng" của máy đã thanh lý. */
+  /** Hộp đổi trạng thái — cũng là hộp mở lại máy đã thanh lý. */
   const [statusOf, setStatusOf] = useState<DeviceRow | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const setStatus = useApiMutation<{ id: string; status: DeviceStatus }, unknown>(

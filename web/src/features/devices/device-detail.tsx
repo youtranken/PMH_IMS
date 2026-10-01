@@ -595,7 +595,7 @@ export function DeviceDetail({ me }: { me: Me }) {
           narrow ? (
             /* Điện thoại: đứng trước tủ, việc cần là két (mật khẩu) — không phải Sửa/Thanh lý.
                Nút chính đưa thẳng tới tab Két sắt; mọi việc sửa hồ sơ vào menu ⋯. Máy đã
-               thanh lý thì "Mở lại" vẫn là nút chính như trên máy tính. */
+               thanh lý thì "Đổi trạng thái" (mở lại) vẫn là nút chính như trên máy tính. */
             <>
               {retired ? (
                 <button type="button" className="btn primary" onClick={openStatus}>

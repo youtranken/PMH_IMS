@@ -17,7 +17,7 @@ describe('Hộp đổi trạng thái thiết bị', () => {
       />,
     );
     expect(screen.getByRole('button', { name: 'Trạng thái mới' })).toHaveTextContent('Đang dùng');
-    await userEvent.click(screen.getByRole('button', { name: 'Đưa lại vào dùng' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi trạng thái' }));
     expect(onConfirm).toHaveBeenCalledWith('in_use');
   });
 

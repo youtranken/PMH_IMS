@@ -164,18 +164,18 @@ test.describe('Kho thiết bị', () => {
     // Q-18: Thanh lý nằm trong menu ⋮ ở đầu trang hồ sơ.
     await rowAction(page, code, 'Thanh lý');
     await confirmAction(page);
-    await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.')).toBeVisible();
+    await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.')).toBeVisible();
     // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
     await expect(page.getByText(/Thanh lý lúc .* bởi /)).toBeVisible();
-    // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đưa lại vào dùng".
+    // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đổi trạng thái" (Q-20).
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toHaveCount(0);
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.
     await expect(page.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
 
     // Mở lại hỏi trạng thái đích, mặc định "Đang dùng" (Q-15); chọn khác vẫn được.
-    await page.getByRole('button', { name: 'Đưa lại vào dùng' }).click();
+    await page.getByRole('button', { name: 'Đổi trạng thái' }).click();
     await expect(page.getByRole('button', { name: 'Trạng thái mới' })).toHaveText(/Đang dùng/);
-    await confirmAction(page, 'Đưa lại vào dùng');
+    await confirmAction(page, 'Đổi trạng thái');
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeEnabled();
     await expect(page.getByText('Đang dùng').first()).toBeVisible();
   });
