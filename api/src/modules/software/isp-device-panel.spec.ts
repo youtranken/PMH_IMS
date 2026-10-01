@@ -22,20 +22,20 @@ describe('IspDevicePanel', () => {
         provider: 'VNPT',
         hotline: '1800 1166',
         contractNo: 'HD-9',
-        wanIp: '113.161.10.20/29',
+        wanIps: ['113.161.10.20', '113.161.10.21'],
       },
     ]);
     expect(panel?.items).toHaveLength(1);
     expect(panel?.items[0]).toMatchObject({
       label: 'ISP-VNPT-01',
-      value: 'VNPT · Hotline 1800 1166 · HĐ HD-9 · WAN 113.161.10.20/29',
+      value: 'VNPT · Hotline 1800 1166 · HĐ HD-9 · WAN 113.161.10.20, 113.161.10.21',
     });
     expect(panel?.items[0].link).toContain('l-1');
   });
 
   it('bỏ mảnh trống, không để lại dấu "·" thừa', async () => {
     const panel = await build([
-      { id: 'l-2', code: 'ISP-FPT-02', provider: 'FPT', hotline: null, contractNo: null, wanIp: null },
+      { id: 'l-2', code: 'ISP-FPT-02', provider: 'FPT', hotline: null, contractNo: null, wanIps: [] },
     ]);
     expect(panel?.items[0].value).toBe('FPT');
   });

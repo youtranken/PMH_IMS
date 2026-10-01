@@ -10,7 +10,17 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsIn, IsOptional, IsString, IsUUID, Length, Validate, ValidateIf } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Validate,
+  ValidateIf,
+} from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { IsPhone } from '../../common/phone';
 import { RealDateOrEmpty } from '../../common/real-date';
@@ -35,6 +45,7 @@ import { withActorNames } from '../../common/history';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
+import { MAX_WAN_IPS } from './wan-ip';
 
 /**
  * KHÔNG có `endDate` (Q-04): đường truyền không có hạn. `forbidNonWhitelisted` bật toàn cục nên
@@ -45,7 +56,14 @@ export class IspBodyDto {
   // Chọn từ danh mục Nhà mạng (Q-11). Tên gửi kèm bị từ chối: tên do danh mục quyết.
   @IsOptional() @IsUUID(undefined, { message: 'Nhà mạng không hợp lệ.' }) providerId?: string;
   @IsOptional() @IsString() @Length(0, 60) bandwidth?: string;
-  @IsOptional() @IsString() @Length(0, 120) wanIp?: string;
+  // Nhiều IPv4 đơn (Q-20). DTO chỉ chặn hình dạng + trần; từng IP do `wanIpsOf` kiểm để trả
+  // thông báo nêu đúng IP sai.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_WAN_IPS, { message: `Một đường truyền ghi tối đa ${MAX_WAN_IPS} IP WAN.` })
+  @IsString({ each: true })
+  @Length(0, 45, { each: true })
+  wanIps?: string[];
 
   // Chuỗi rỗng = bỏ gán, nên không ép UUID trong trường hợp đó.
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() siteId?: string;
@@ -218,7 +236,8 @@ export const ISP_EXPORT_COLUMNS: ExportColumn<IspLineListItem>[] = [
   { header: 'Mã', width: 18, value: (r) => r.code },
   { header: 'Nhà mạng', width: 22, value: (r) => r.provider },
   { header: 'Tốc độ gói cước', width: 16, value: (r) => r.bandwidth ?? '' },
-  { header: 'IP WAN', width: 18, value: (r) => r.wanIp ?? '' },
+  // Mọi IP của đường trong MỘT ô (Q-20): một đường vẫn là một dòng, lọc/đếm theo dòng không lệch.
+  { header: 'IP WAN', width: 24, value: (r) => r.wanIps.join(', ') },
   { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },
   { header: 'Thiết bị', width: 18, value: (r) => r.deviceCode ?? '' },
   { header: 'Hotline', width: 16, value: (r) => r.hotline ?? '' },

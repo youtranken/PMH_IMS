@@ -115,7 +115,7 @@ export function maskOfCidr(cidr: string): string | null {
   return range ? maskOfPrefix(range.prefix) : null;
 }
 
-/** Một IPv4, hoặc một khối IPv4/prefix — ô "IP WAN" nhận cả hai. */
+/** Một IPv4, hoặc một khối IPv4/prefix — ô "IP được phép" của tài khoản dịch vụ nhận cả hai. */
 export function isIpv4OrCidr(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed.includes('/')) return parseIpv4(trimmed) !== null;

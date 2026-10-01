@@ -35,12 +35,12 @@ describe('serviceNameFor — tên dịch vụ của cổng trong', () => {
 describe('wanByRouter — IP WAN của đường truyền gắn router', () => {
   it('gom theo thiết bị biên, bỏ đường không có WAN hoặc không gắn máy', () => {
     const map = wanByRouter([
-      { deviceId: 'r1', wanIp: '113.161.10.20/29' },
-      { deviceId: 'r1', wanIp: '14.1.1.1' },
-      { deviceId: 'r2', wanIp: null },
-      { deviceId: null, wanIp: '1.1.1.1' },
+      { deviceId: 'r1', wanIps: ['113.161.10.20', '113.161.10.21'] },
+      { deviceId: 'r1', wanIps: ['14.1.1.1'] },
+      { deviceId: 'r2', wanIps: [] },
+      { deviceId: null, wanIps: ['1.1.1.1'] },
     ]);
-    expect(map.get('r1')).toEqual(['113.161.10.20/29', '14.1.1.1']);
+    expect(map.get('r1')).toEqual(['113.161.10.20', '113.161.10.21', '14.1.1.1']);
     expect(map.has('r2')).toBe(false);
     expect(map.size).toBe(1);
   });

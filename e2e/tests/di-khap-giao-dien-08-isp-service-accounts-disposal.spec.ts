@@ -331,7 +331,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await nameByRole(dialog, 'textbox'),
       'Sáu ô gõ chữ của hộp thêm đường truyền — thiếu một ô là một trường không ai khai nữa',
-    ).toEqual(sortVi(['Mã đường', 'Tốc độ gói cước', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
+    ).toEqual(sortVi(['Mã đường', 'Tốc độ gói cước', 'IP WAN 1', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
 
     /*
      * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị" tra ngược vào kho thiết bị.
@@ -373,6 +373,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Giải thích: Nhà mạng',
         // Nhà mạng mới khai ngay tại chỗ (SA/Admin) — không bắt huỷ form sang Danh mục.
         '+ Thêm vào danh mục',
+        // IP WAN nhiều dòng (Q-20): thêm dòng ngay dưới ô.
+        'Thêm IP',
         'Site',
         'Bắt đầu',
         'Chọn file để đính kèm',
@@ -467,7 +469,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         code: itemCode,
         providerId: await ispProviderId(page, 'VNPT E2E'),
         bandwidth: '100 Mbps',
-        wanIp: '203.113.99.9',
+        wanIps: ['203.113.99.9'],
         hotline: '18001166',
         contractNo: `HD-E2E-${stamp}`,
         startDate: '2026-01-01',
@@ -502,7 +504,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ĐÚNG BỘ NÚT ĐẦU TRANG. Hai cái, không hơn:
-     *   - "Chép IP tĩnh" (nằm ở dòng định danh, chỉ vẽ khi hồ sơ có IP WAN),
+     *   - "Chép IP WAN <ip>" (nằm ở dòng định danh, mỗi IP WAN một nút — Q-20),
      *   - "Sửa hồ sơ" ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04).
      * Mã hồ sơ CỐ Ý không có nút chép — nó là tiêu đề, bôi đen chép như mọi chữ khác. Tập hợp
      * này giữ đúng quyết định đó.
@@ -510,7 +512,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await nameByRole(main, 'button'),
       'Đầu trang hồ sơ đường truyền: Chép IP WAN · Sửa hồ sơ · menu ⋯ (đổi trạng thái) · Chép số hợp đồng (thẻ "Khi mất mạng")',
-    ).toEqual(sortVi(['Chép IP WAN', 'Sửa hồ sơ', `Thao tác với ${itemCode}`, 'Chép số hợp đồng']));
+    ).toEqual(
+      sortVi(['Chép IP WAN 203.113.99.9', 'Sửa hồ sơ', `Thao tác với ${itemCode}`, 'Chép số hợp đồng']),
+    );
     // Thẻ "Khi mất mạng": gọi hotline là MỘT cú chạm.
     await expect(main.getByRole('link', { name: 'Gọi 1800 1166' })).toHaveAttribute(
       'href',
@@ -611,7 +615,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     for (const [label, value] of [
       ['Mã đường', itemCode],
       ['Tốc độ gói cước', '100 Mbps'],
-      ['IP WAN', '203.113.99.9'],
+      ['IP WAN 1', '203.113.99.9'],
       ['Hotline', '18001166'],
       ['Số hợp đồng', `HD-E2E-${stamp}`],
       ['Ghi chú', note],

@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { useMe } from '@/lib/api';
-import { isIpv4OrCidr } from '@/lib/ipv4';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
@@ -25,12 +24,21 @@ import type { IspRow } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
+import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
+import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
+
+const WAN_ISSUE_KEY: Record<Exclude<WanIpIssue, null>, string> = {
+  range: 'isp.wanIpRange',
+  invalid: 'isp.wanIpInvalid',
+  duplicate: 'isp.wanIpDuplicate',
+};
 
 interface FormState {
   code: string;
   providerId: string;
   bandwidth: string;
-  wanIp: string;
+  /** Mỗi phần tử một dòng nhập; luôn có ít nhất một dòng (có thể trống). */
+  wanIps: string[];
   siteId: string;
   hotline: string;
   contractNo: string;
@@ -43,7 +51,7 @@ function initialState(row: IspRow | null): FormState {
     code: row?.code ?? '',
     providerId: row?.providerId ?? '',
     bandwidth: row?.bandwidth ?? '',
-    wanIp: row?.wanIp ?? '',
+    wanIps: row && row.wanIps.length > 0 ? [...row.wanIps] : [''],
     siteId: row?.siteId ?? '',
     hotline: row?.hotline ?? '',
     contractNo: row?.contractNo ?? '',
@@ -143,13 +151,36 @@ export function IspForm({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
+  /* IP WAN (Q-20): mỗi dòng một IPv4 đơn — gõ sai thì báo NGAY TẠI DÒNG đó, không để lưu một
+     chuỗi không tra được. Luật của form chỉ cần biết "có dòng sai" để chặn Lưu; câu lỗi nằm ở
+     từng dòng nên không truyền `error` cho Field (sẽ thành hai câu cho một lỗi). */
+  const wanIssues = wanIpIssues(form.wanIps);
+  const firstWanIssue = wanIssues.find((issue) => issue !== null) ?? null;
+  const [focusWanRow, setFocusWanRow] = useState<number | null>(null);
+  const wanInputs = useRef<(HTMLInputElement | null)[]>([]);
+  useEffect(() => {
+    if (focusWanRow === null) return;
+    wanInputs.current[focusWanRow]?.focus();
+    setFocusWanRow(null);
+  }, [focusWanRow]);
+  const setWanIp = (index: number, value: string) =>
+    setForm((current) => ({
+      ...current,
+      wanIps: current.wanIps.map((entry, i) => (i === index ? value : entry)),
+    }));
+  const removeWanIp = (index: number) =>
+    setForm((current) => {
+      const rest = current.wanIps.filter((_entry, i) => i !== index);
+      return { ...current, wanIps: rest.length > 0 ? rest : [''] };
+    });
+
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
     providerId: !form.providerId && t('formErrors.requiredPick'),
-    // IP tĩnh hoặc một khối IP tĩnh — gõ sai thì nói ngay, không để lưu một chuỗi không tra được.
-    wanIp: form.wanIp.trim() !== '' && !isIpv4OrCidr(form.wanIp) && t('isp.wanIpInvalid'),
+    wanIps: firstWanIssue && t(WAN_ISSUE_KEY[firstWanIssue]),
     note: secretTextRule(t, form.note),
   });
+  const wanShown = check.error('wanIps') !== null;
   const me = useMe().data;
   const canAddProvider = me?.role === 'sa' || me?.role === 'admin';
   const [addingProvider, setAddingProvider] = useState(false);
@@ -190,7 +221,7 @@ export function IspForm({
               code: form.code.trim(),
               providerId: form.providerId,
               bandwidth: form.bandwidth.trim(),
-              wanIp: form.wanIp.trim(),
+              wanIps: wanIpsPayload(form.wanIps),
               siteId: form.siteId,
               deviceId: device?.id ?? '',
               hotline: form.hotline.trim(),
@@ -298,19 +329,67 @@ export function IspForm({
             />
           </Field>
 
-          <Field
-            label={t('isp.wanIp')}
-            hint={t('isp.wanIpHint')}
-            htmlFor="isp-wanip"
-            error={check.error('wanIp')}
-          >
-            <input
-              id="isp-wanip"
-              className="inp mono"
-              inputMode="decimal"
-              value={form.wanIp}
-              onChange={(e) => set('wanIp', e.target.value)}
-            />
+          {/* Nhiều dòng nên Field không tự nối được id/mô tả (nó chỉ nối khi có MỘT ô con):
+              nhãn trỏ vào dòng đầu, mỗi dòng tự mang tên "IP WAN n", gợi ý và lỗi của chính nó. */}
+          <Field label={t('isp.wanIp')} hint={t('isp.wanIpHint')} htmlFor="isp-wanip-0">
+            <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+              {form.wanIps.map((entry, index) => {
+                const issue = wanShown ? wanIssues[index] : null;
+                const errorId = `isp-wanip-${index}-error`;
+                const removable = form.wanIps.length > 1 || entry.trim() !== '';
+                return (
+                  <div key={index}>
+                    <div className="row" style={{ gap: 'var(--space-2)' }}>
+                      <input
+                        id={`isp-wanip-${index}`}
+                        ref={(node) => {
+                          wanInputs.current[index] = node;
+                        }}
+                        className="inp mono"
+                        inputMode="decimal"
+                        aria-label={t('isp.wanIpRow', { n: index + 1 })}
+                        aria-invalid={issue ? true : undefined}
+                        aria-describedby={issue ? `${errorId} isp-wanip-0-hint` : 'isp-wanip-0-hint'}
+                        value={entry}
+                        onChange={(e) => setWanIp(index, e.target.value)}
+                      />
+                      {removable ? (
+                        <button
+                          type="button"
+                          className="btn-x danger"
+                          disabled={busy}
+                          aria-label={t('isp.wanIpRemove', { n: index + 1 })}
+                          title={t('isp.wanIpRemove', { n: index + 1 })}
+                          onClick={() => removeWanIp(index)}
+                        >
+                          <CloseIcon />
+                        </button>
+                      ) : null}
+                    </div>
+                    {issue ? (
+                      <span id={errorId} className="field-error">
+                        {t(WAN_ISSUE_KEY[issue])}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+              {form.wanIps.length < MAX_WAN_IPS ? (
+                <div>
+                  <button
+                    type="button"
+                    className="btn sm ghost with-icon"
+                    disabled={busy}
+                    onClick={() => {
+                      setFocusWanRow(form.wanIps.length);
+                      set('wanIps', [...form.wanIps, '']);
+                    }}
+                  >
+                    <PlusIcon /> {t('isp.wanIpAdd')}
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </Field>
           <Field label={t('isp.site')}>
             {/* Chữ của Ô GHI, không phải của bộ lọc: "Tất cả site" ở đây đọc thành "line này

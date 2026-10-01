@@ -116,11 +116,19 @@ export function IspScreen({ me }: { me: Me }) {
               {row.original.code}
             </Link>
             {/* IP WAN là câu thứ hai lúc mất mạng ("IP tĩnh của line này là gì") — dòng phụ
-                ngay dưới mã, chép được, không phải mở trang chi tiết. */}
-            {row.original.wanIp ? (
+                ngay dưới mã, chép được, không phải mở trang chi tiết. Nhiều IP (Q-20): hiện IP
+                đầu + "+N" để dòng không phình; rê chuột đọc đủ, trang chi tiết chép từng IP. */}
+            {row.original.wanIps.length > 0 ? (
               <span className="cell-sub">
-                <span className="mono">{row.original.wanIp}</span>{' '}
-                <CopyButton value={row.original.wanIp} label={t('isp.copyWanIp')} inline />
+                <span className="mono">{row.original.wanIps[0]}</span>{' '}
+                {row.original.wanIps.length > 1 ? (
+                  <>
+                    <span className="muted" title={row.original.wanIps.join(', ')}>
+                      {t('isp.wanIpMore', { count: row.original.wanIps.length - 1 })}
+                    </span>{' '}
+                  </>
+                ) : null}
+                <CopyButton value={row.original.wanIps[0]} label={t('isp.copyWanIp')} inline />
               </span>
             ) : null}
           </>
@@ -319,7 +327,8 @@ export function IspScreen({ me }: { me: Me }) {
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
               ),
               subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
-              meta: (row) => [row.siteCode, row.deviceCode, row.wanIp].filter(Boolean).join(' · '),
+              meta: (row) =>
+                [row.siteCode, row.deviceCode, row.wanIps.join(', ')].filter(Boolean).join(' · '),
               aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
             }}
             // Tạm ngưng: vạch cam ở mép trái — đường đang "nửa sống" là thứ phải thấy từ xa.

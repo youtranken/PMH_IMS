@@ -19,7 +19,7 @@ const LINE = {
   provider: 'FPT Telecom',
   providerId: 'p-fpt',
   bandwidth: '300 Mbps',
-  wanIp: '113.161.10.20',
+  wanIps: ['113.161.10.20', '113.161.10.21'],
   siteId: 's1',
   siteCode: 'HCM',
   deviceId: 'd-fw',
@@ -69,5 +69,46 @@ describe('Danh sách đường truyền ở 390px', () => {
     expect(card).toHaveTextContent('FPT Telecom');
     expect(card).toHaveTextContent('HCM · FW-E2E-01');
     expect(within(card).getByRole('link', { name: /1900/ })).toHaveAttribute('href', 'tel:19006600');
+    // Q-20: mọi IP WAN của đường, không chỉ IP đầu.
+    expect(card).toHaveTextContent('113.161.10.20, 113.161.10.21');
+  });
+});
+
+describe('Danh sách đường truyền trên desktop — nhiều IP WAN', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('dòng phụ dưới mã: IP đầu + "+N", rê chuột đọc đủ danh sách', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).startsWith('/api/v1/isp-lines')
+            ? jsonResponse(200, {
+                items: [{ ...LINE, wanIps: ['113.161.10.20', '113.161.10.21', '113.161.10.22'] }],
+                total: 1,
+              })
+            : jsonResponse(200, {}),
+        ),
+      ),
+    );
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/isp-lines']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <IspScreen me={me} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const link = await screen.findByRole('link', { name: 'ISP-E2E-01' });
+    const cell = link.closest('td');
+    if (!(cell instanceof HTMLElement)) throw new Error('không phải ô bảng');
+    expect(cell).toHaveTextContent('113.161.10.20');
+    const more = within(cell).getByText('+2');
+    expect(more).toHaveAttribute('title', '113.161.10.20, 113.161.10.21, 113.161.10.22');
   });
 });
