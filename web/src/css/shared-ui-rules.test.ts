@@ -197,6 +197,16 @@ describe('bố cục khối dùng chung', () => {
     for (const r of rules) expect(r.selector).toMatch(/^table\.table > tbody > tr[^ ]* > td$/);
   });
 
+  it('thanh lọc ≤600px: ô chọn / ô ngày chia đều hai cột thay cho bề ngang tối thiểu lởm chởm', () => {
+    for (const selector of ['.filter-bar > .fsel', '.filter-bar > .dp']) {
+      const r = rule('detail-tabs.css', selector, '(max-width: 600px)');
+      expect(r, selector).toBeDefined();
+      expect(declValue(r!.body, 'flex')).toMatch(/calc\(50% - /);
+      expect(declValue(r!.body, 'min-width')).toBe('0');
+    }
+    expect(declValue(rule('detail-tabs.css', '.filter-bar > .grow', '(max-width: 600px)')!.body, 'flex-basis')).toBe('100%');
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
