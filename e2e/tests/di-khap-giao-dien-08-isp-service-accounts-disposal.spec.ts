@@ -966,13 +966,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await tableColumnNames(mainMember),
       'Thành viên KHÔNG thấy cột Thao tác — cột đó chỉ dựng khi có quyền ghi',
-    ).toEqual(['Mã tài khoản', 'Loại', 'Tên đăng nhập', 'Thuộc về', 'Trạng thái']);
+    ).toEqual(['Mã tài khoản', 'Loại', 'Tên đăng nhập', 'Thuộc về', 'Trạng thái', 'Hết hạn']);
     expect(
       await nameByRole(mainMember, 'button'),
       'Bộ nút của Thành viên: không có "Thêm tài khoản", không có một nút ba chấm nào (Xuất Excel thì có — file không chứa mật khẩu)',
     ).toEqual(
       sortVi([
         'Xuất Excel',
+        'Giải thích: Tài khoản dịch vụ',
         'Loại',
         'Trạng thái',
         // NET-074: chip lọc tài khoản VPN không giới hạn IP nguồn.
