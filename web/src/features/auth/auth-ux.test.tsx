@@ -149,14 +149,16 @@ describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card n
     expect(screen.getByText('Quản lý hệ thống IT · PMH')).toBeInTheDocument();
   });
 
-  it('có mảng thương hiệu bên cạnh card (desktop): tên công ty và vài dòng về IMS', () => {
+  it('có mảng thương hiệu bên cạnh card (desktop): logo công ty và vài dòng về IMS', () => {
     withProviders(
       <AuthCard title="Đăng nhập">
         <p>thân</p>
       </AuthCard>,
     );
     const panel = screen.getByTestId('auth-panel');
-    expect(panel).toHaveTextContent('Phú Mỹ Hưng');
+    // Tên công ty chỉ nằm trong logo (alt), không lặp thành dòng chữ ngay dưới logo.
+    expect(within(panel).getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeInTheDocument();
+    expect(panel).not.toHaveTextContent('Phú Mỹ Hưng');
     expect(within(panel).getAllByRole('listitem').length).toBeGreaterThanOrEqual(2);
     // Mảng thương hiệu không được giành tiêu đề của màn.
     expect(within(panel).queryByRole('heading')).toBeNull();

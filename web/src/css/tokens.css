@@ -163,10 +163,10 @@
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-card:rgba(255,255,255,.06); --auth-card-border:rgba(255,255,255,.14);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
-    /* Lớp phủ trên ảnh đăng nhập (Q-19): cùng sắc lục tối của --auth-bg, đậm ở mép trái nơi đặt
+    /* Lớp phủ trên ảnh đăng nhập (Q-19): xanh than trung tính hợp tông trời chạng vạng của ảnh, đậm ở mép trái nơi đặt
        chữ --auth-ink (ảnh có trời xanh sáng, không phủ thì chữ sáng chìm), nhạt dần sang phải để
        cây cầu vẫn thấy. Màn đăng nhập tối ở cả hai theme nên cặp dark giữ nguyên giá trị. */
-    --auth-photo-veil:linear-gradient(90deg,rgba(14,26,19,.88) 0%,rgba(14,26,19,.66) 42%,rgba(14,26,19,.2) 100%);
+    --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.86) 0%,rgba(12,16,30,.62) 42%,rgba(12,16,30,.38) 100%);
     /* Card đăng nhập LUÔN tối ở cả hai theme, nên lỗi/gợi ý trên nó không được dùng
        --danger/--muted (đổi theo theme): ở theme sáng chúng thành mảng hồng chói và chữ xám
        ~2:1 trên nền kính tối. Chữ đỏ nhạt đạt ~6:1 trên card; cặp dark ở dưới giữ nguyên giá trị. */
@@ -262,7 +262,7 @@ html[data-theme='dark'] {
     --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee; --sidebar-label:#9fb0a5;
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
-    --auth-photo-veil:linear-gradient(90deg,rgba(14,26,19,.88) 0%,rgba(14,26,19,.66) 42%,rgba(14,26,19,.2) 100%);
+    --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.86) 0%,rgba(12,16,30,.62) 42%,rgba(12,16,30,.38) 100%);
 }
 
 * {

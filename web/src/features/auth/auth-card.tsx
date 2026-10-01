@@ -66,7 +66,6 @@ export function AuthCard({
         </picture>
         <div className="auth-panel-body">
           <BrandLogo alt={t('auth.panelOrg')} className="auth-panel-logo" lazy />
-          <p className="auth-panel-org">{t('auth.panelOrg')}</p>
           <p className="auth-panel-system">{t('auth.panelSystem')}</p>
           <ul className="auth-panel-points">
             <li>{t('auth.panelPoint1')}</li>
