@@ -1757,7 +1757,7 @@ export default {
     pickSubnet: 'Chọn dải mạng',
     subnetOption: '{{cidr}}{{vlan}} · còn {{free}}',
     voidedBy: 'Ngừng dùng ngày {{date}} bởi {{by}} — lý do: {{reason}}',
-    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋯ của thẻ dải.',
+    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋮ của thẻ dải.',
     reclaimOwner: 'Đang cấp cho {{who}}',
     reclaimSince: 'từ {{date}}',
     reclaimNatWarn: 'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước mới thu hồi được:',
@@ -2023,7 +2023,7 @@ export default {
     openOf: 'Mở két của {{code}}',
     openRecord: 'Mở hồ sơ đầy đủ',
     orphan: '(hồ sơ đã xóa, còn ngăn treo)',
-    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋯.',
+    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋮.',
     site: 'Site',
     secretChip: '{{count}} ngăn',
     clearSearch: 'Xóa tìm kiếm',
@@ -2050,7 +2050,7 @@ export default {
   disposal: {
     title: 'Kho thanh lý',
     subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã thanh lý hoặc ngừng dùng',
-    /* Cách dùng lại khác nhau theo loại — nên ở menu ⋯ của từng dòng, không trong câu chung. */
+    /* Cách dùng lại khác nhau theo loại — nên ở menu ⋮ của từng dòng, không trong câu chung. */
     note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',

@@ -137,6 +137,17 @@ describe('Quyền xem két sắt — theo người', () => {
     expect(cell.textContent).not.toContain('✓');
   });
 
+  // Dấu "+" dạng ký tự nằm theo đường cơ sở của chữ, lệch khỏi tâm nút — phải là SVG.
+  it('nút gán ở tiêu đề cột và đầu dòng dùng dấu + SVG, không ký tự', async () => {
+    renderAt('/admin/vault-access?view=matrix');
+    const col = await screen.findByRole('button', { name: 'Gán "Phần mềm: Chứng chỉ SSL" cho nhiều người' });
+    const row = screen.getByRole('button', { name: 'Gán quyền cho Trần Bình' });
+    for (const button of [col, row]) {
+      expect(button.querySelector('svg')).not.toBeNull();
+      expect(button.textContent).not.toContain('+');
+    }
+  });
+
   /*
    * Bảng hai tầng tiêu đề (họ → nhóm): thiếu `scope` thì trình đọc màn hình không biết ô tiêu
    * đề nào áp cho ô nào, và đọc một ô quyền mà không kèm tên nhóm.

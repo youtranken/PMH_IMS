@@ -11,6 +11,7 @@ import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from 
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
+import { PlusIcon } from '@/ui/glyph-icons';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { ScrollX } from '@/ui/scroll-x';
@@ -362,9 +363,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   >
                     {shortLabel(scope.label)}
                     {/* Dấu + cho thấy tiêu đề cột BẤM ĐƯỢC — chỉ có tooltip thì không ai biết. */}
-                    <span className="access-col-plus" aria-hidden="true">
-                      +
-                    </span>
+                    <PlusIcon className="access-col-plus" />
                   </button>
                 </th>
               ))}
@@ -398,7 +397,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                       title={t('access.addFor', { member: account.fullName })}
                       onClick={() => setAddingFor(account)}
                     >
-                      +
+                      <PlusIcon />
                     </button>
                   </div>
                 </th>

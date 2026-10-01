@@ -830,6 +830,8 @@ describe('VaultPanel — ghi chú của ngăn hiện khi bấm, không in sẵn'
     mockApi(WHITELIST, [{ ...SECRET, note: NOTE, hasNote: true }]);
     renderPanel();
     const toggle = await screen.findByRole('button', { name: 'Ghi chú' });
+    // Chữ + mũi tên: thiếu `with-icon` thì mũi tên nằm theo đường cơ sở, lệch khỏi tâm nút.
+    expect(toggle).toHaveClass('with-icon');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText(NOTE)).toBeNull();
     await userEvent.click(toggle);

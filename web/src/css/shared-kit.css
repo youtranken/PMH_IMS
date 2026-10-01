@@ -1116,14 +1116,15 @@ table.access-grid thead .access-row-head {
 .access-row-add {
   flex: none;
   min-width: 2rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Dấu + ở tiêu đề cột: báo tiêu đề BẤM ĐƯỢC (gán nhóm cho nhiều người). */
 .access-col-plus {
-  display: inline-block;
   margin-left: var(--space-1);
+  vertical-align: -0.125em;
   color: var(--primary-ink);
-  font-weight: 700;
 }
 .access-intro p {
   margin: 0;
