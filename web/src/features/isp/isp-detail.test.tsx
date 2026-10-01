@@ -92,5 +92,8 @@ describe('Trang đường truyền — nhiều IP WAN (Q-20)', () => {
     expect(screen.getByText('113.161.10.21')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Chép IP WAN 113.161.10.20' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Chép IP WAN 113.161.10.21' })).toBeInTheDocument();
+    // Dấu phẩy đứng sát IP trước nó: "a , b" là dấu cách lạc trước dấu phẩy.
+    const line = screen.getByText('113.161.10.20').closest('.detail-subline')!;
+    expect(line.textContent).toContain('113.161.10.20, 113.161.10.21');
   });
 });

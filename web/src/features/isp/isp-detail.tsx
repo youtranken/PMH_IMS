@@ -180,7 +180,9 @@ export function IspDetail({ me }: { me: Me }) {
                   {item.wanIps.map((ip, index) => (
                     <span key={ip}>
                       {index > 0 ? ", " : null}
-                      <span className="mono">{ip}</span>{" "}
+                      {/* Không chèn dấu cách giữa IP và nút: bản `inline` đã có đệm quanh hình,
+                          thêm dấu cách là dấu phẩy sau nó trông như "a , b". */}
+                      <span className="mono">{ip}</span>
                       <CopyButton value={ip} label={`${t("isp.copyWanIp")} ${ip}`} inline />
                     </span>
                   ))}

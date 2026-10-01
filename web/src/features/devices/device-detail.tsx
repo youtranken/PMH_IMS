@@ -831,7 +831,9 @@ export function DeviceDetail({ me }: { me: Me }) {
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
                 <DataItemIfSet label={t("devices.serial")} value={item.serial}>
                   <span className="mono">{item.serial}</span>
-                  <CopyButton value={item.serial ?? ""} label={t("devices.copySerial")} />
+                  {/* Cùng kiểu nút chép với IP quản trị ngay bên cạnh: hai ô trong một khung mà
+                      một ô có nút vuông viền, một ô không, là hai kiểu cho cùng một việc. */}
+                  <CopyButton value={item.serial ?? ""} label={t("devices.copySerial")} inline />
                 </DataItemIfSet>
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
               </dl>

@@ -117,7 +117,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
 });
 
 test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
-  test('lọc "Chưa cài 2 lớp" lên URL; khóa bắt ghi lý do và lý do vào nhật ký', async ({ page }) => {
+  test('lọc "Chưa kích hoạt 2 lớp" lên URL; khóa bắt ghi lý do và lý do vào nhật ký', async ({ page }) => {
     test.setTimeout(120_000);
     await firstLogin(page, E2E_SA);
     const user = await createMember(page);

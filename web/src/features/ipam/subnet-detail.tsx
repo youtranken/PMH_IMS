@@ -289,9 +289,11 @@ export function SubnetPane({
         <th>{t("ipam.address")}</th>
         <th>{t("ipam.status")}</th>
         <th className="col-device">{t("ipam.device")}</th>
-        <th>{t("ipam.site")}</th>
+        <th className="col-site">{t("ipam.site")}</th>
         <th>{t("ipam.usedBy")}</th>
-        <th className="col-date">{t("ipam.assignedAt")}</th>
+        {/* Khổ 961–1440px: cột ẩn (CSS `.col-wide`), ngày cấp thành dòng phụ dưới Trạng thái —
+            bảng 7 cột trong khung phải ~770px đẩy cột Thao tác ra ngoài khung. */}
+        <th className="col-date col-wide">{t("ipam.assignedAt")}</th>
         <th className="col-center">{t("common.actions")}</th>
       </tr>
     </thead>
@@ -486,13 +488,13 @@ export function SubnetPane({
                       <td data-label={t("ipam.device")}>
                         <Empty />
                       </td>
-                      <td data-label={t("ipam.site")}>
+                      <td data-label={t("ipam.site")} className="col-site">
                         <Empty />
                       </td>
                       <td data-label={t("ipam.usedBy")}>
                         <Empty />
                       </td>
-                      <td data-label={t("ipam.assignedAt")}>
+                      <td data-label={t("ipam.assignedAt")} className="col-date col-wide">
                         <Empty />
                       </td>
                       {/* Ô Thao tác cũng phải có `data-label`: ở ≤960px bảng gập thẻ dọc và
@@ -547,6 +549,11 @@ export function SubnetPane({
                               : null}
                           </span>
                         ) : null}
+                        {!isFreeRecord(slot) && slot.assignedAt ? (
+                          <span className="cell-sub only-mid" title={slot.assignedBy}>
+                            {t("ipam.assignedOn", { date: formatDate(slot.assignedAt) })}
+                          </span>
+                        ) : null}
                       </td>
                       <td data-label={t("ipam.device")} className="col-device">
                         {/* Mã máy một dòng (`.mono` trong ô bảng không ngắt), tên máy là dòng
@@ -566,8 +573,18 @@ export function SubnetPane({
                       </td>
                       {/* Site của MÁY, không của dải: dải để trống site là dùng chung mọi
                           site (Q-20), nên chỉ hồ sơ thiết bị nói được IP này đang ở đâu. */}
-                      <td data-label={t("ipam.site")}>
-                        {slot.deviceSiteCode ? slot.deviceSiteCode : <Empty />}
+                      {/* Một dòng, cắt bằng "…" và đủ chữ ở `title`: mã site để trần gãy ở mỗi
+                          dấu "-" thành ba dòng, làm dòng IP cao gấp ba. */}
+                      <td data-label={t("ipam.site")} className="col-site">
+                        {slot.deviceSiteCode ? (
+                          <div className="cell-stack">
+                            <span className="cell-clip" title={slot.deviceSiteCode}>
+                              {slot.deviceSiteCode}
+                            </span>
+                          </div>
+                        ) : (
+                          <Empty />
+                        )}
                       </td>
                       <td data-label={t("ipam.usedBy")}>
                         {slot.usedBy ? slot.usedBy : <Empty />}
@@ -575,7 +592,7 @@ export function SubnetPane({
                             không còn mở được. Một dòng, bị cắt thì bấm để mở đủ câu. */}
                         {slot.note ? <CellNote text={slot.note} className="cell-sub" /> : null}
                       </td>
-                      <td data-label={t("ipam.assignedAt")} className="col-date">
+                      <td data-label={t("ipam.assignedAt")} className="col-date col-wide">
                         {isFreeRecord(slot) || !slot.assignedAt ? (
                           <Empty />
                         ) : (

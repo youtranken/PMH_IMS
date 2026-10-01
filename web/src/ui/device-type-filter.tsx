@@ -69,6 +69,7 @@ export function DeviceTypeFilter({
   const shown = (types ?? []).filter((type) => type.active);
   return (
     <ChipToggleGroup
+      wrap
       label={t('deviceTypeFilter.label')}
       allLabel={t('deviceTypeFilter.all')}
       options={shown.map((type) => ({ value: type.id, label: type.name }))}

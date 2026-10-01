@@ -21,7 +21,8 @@ export function toggleChip(value: string[], key: string, order: string[]): strin
  * "Tất cả" — nút đầu nhóm bật, bấm nó là gỡ mọi lựa chọn.
  *
  * Dùng `aria-pressed` chứ không phải ô tick: đây là bộ lọc áp ngay, không phải ô của một form
- * chờ bấm Lưu. Cùng kiểu dáng `.segmented`, dải nút quá rộng thì cuộn ngang trong chính nó.
+ * chờ bấm Lưu. Cùng kiểu dáng `.segmented`, dải nút quá rộng thì cuộn ngang trong chính nó —
+ * trừ khi `wrap`: khi đó chip xuống dòng.
  */
 export function ChipToggleGroup({
   label,
@@ -29,6 +30,7 @@ export function ChipToggleGroup({
   options,
   value,
   onChange,
+  wrap = false,
 }: {
   /** Tên nhóm cho trình đọc màn hình. */
   label: string;
@@ -36,10 +38,16 @@ export function ChipToggleGroup({
   options: ChipToggleOption[];
   value: string[];
   onChange: (next: string[]) => void;
+  /**
+   * Chip xuống dòng thay vì cuộn ngang. Dùng khi danh sách dài và chip ĐANG BẬT phải luôn thấy
+   * (lọc loại thiết bị: 12+ loại, cuộn thì chip đang lọc nằm khuất). Dải lọc ngắn trên đầu màn
+   * giữ cuộn ngang để không đẩy bảng xuống.
+   */
+  wrap?: boolean;
 }) {
   const order = options.map((option) => option.value);
   return (
-    <div className="segmented" role="group" aria-label={label}>
+    <div className={wrap ? 'segmented wrap' : 'segmented'} role="group" aria-label={label}>
       <button type="button" aria-pressed={value.length === 0} onClick={() => onChange([])}>
         {allLabel}
       </button>

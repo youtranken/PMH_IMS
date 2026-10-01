@@ -137,19 +137,33 @@ describe('toast nổi trên hộp thoại', () => {
 
   /*
    * Toast ở góc dưới phải nằm đúng chỗ nút Lưu của chân hộp thoại: nổi trên hộp mà vẫn ở đáy thì
-   * che nút, người dùng bấm Lưu không ăn (E2E nat.spec "thêm router mới ngay trong hộp").
-   * Có hộp mở thì toast lên mép trên, cả màn rộng lẫn màn hẹp.
+   * che nút, người dùng bấm Lưu không ăn (E2E nat.spec "thêm router mới ngay trong hộp"). Lên góc
+   * trên PHẢI thì lại đè nút ✕ đóng hộp. Có hộp mở thì toast lên mép trên, GIỮA màn: chỗ đó là
+   * phần trống của đầu hộp (tiêu đề bên trái, ✕ bên phải). Màn đăng nhập / đổi mật khẩu ở
+   * 1366×768 có nút chính sát đáy, nên toast cũng lên trên.
    */
-  it('có hộp thoại mở thì toast lên mép trên, không đè chân hộp', () => {
-    for (const role of ['dialog', 'alertdialog']) {
-      const sel = `body:has([role='${role}']) .toast-stack`;
-      for (const media of [null, '(max-width: 480px)']) {
-        const r = rule('shared-kit.css', sel, media);
-        expect(r, `thiếu luật ${sel} @media ${media}`).toBeDefined();
-        expect(declValue(r!.body, 'bottom')).toBe('auto');
-        expect(declValue(r!.body, 'top')).toBeDefined();
-      }
+  const TOP_PLACED = [
+    "body:has([role='dialog']) .toast-stack",
+    "body:has([role='alertdialog']) .toast-stack",
+    'body:has(.auth) .toast-stack',
+  ];
+  it.each(TOP_PLACED)('%s: toast lên mép trên, không đè chân hộp hay nút chính', (sel) => {
+    for (const media of [null, '(max-width: 480px)']) {
+      const r = rule('shared-kit.css', sel, media);
+      expect(r, `thiếu luật ${sel} @media ${media}`).toBeDefined();
+      expect(declValue(r!.body, 'bottom')).toBe('auto');
+      expect(declValue(r!.body, 'top')).toBeDefined();
     }
+  });
+
+  it.each(TOP_PLACED)('%s: màn rộng thì toast ở GIỮA, không ở góc phải (nút ✕)', (sel) => {
+    const r = rule('shared-kit.css', sel)!;
+    expect(declValue(r.body, 'right')).toBe('auto');
+    expect(declValue(r.body, 'left')).toBe('50%');
+    expect(declValue(r.body, 'transform')).toBe('translateX(-50%)');
+    // Màn hẹp toast trải gần trọn bề ngang: bỏ dịch nửa bề rộng, không thì lệch khỏi màn.
+    const narrow = rule('shared-kit.css', sel, '(max-width: 480px)')!;
+    expect(declValue(narrow.body, 'transform')).toBe('none');
   });
 });
 
@@ -329,9 +343,78 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(own.body, 'padding') ?? pad).toBe('0');
   });
 
+  // Nút vuông có viền đứng sát chữ thì viền dính vào ký tự cuối, và canh theo đường chân chữ
+  // (mặc định của inline-grid) thì nó trồi lên lệch khỏi dòng.
+  it('.copy-btn canh giữa dòng chữ và cách chữ đứng trước nó', () => {
+    expect(declValue(rule('detail-tabs.css', '.copy-btn')!.body, 'vertical-align')).toBe('middle');
+    const gap = rule('detail-tabs.css', '.mono + .copy-btn:not(.inline)');
+    expect(gap, 'thiếu luật cách chữ cho nút có viền').toBeDefined();
+    expect(declValue(gap!.body, 'margin-inline-start')).toBeDefined();
+  });
+
+  // Nút ghost "Ghi chú ▾" dưới tên ngăn két: đệm ngang của `button.sm` đẩy chữ thụt vào ~9px so
+  // với tên ngăn phía trên và ghi chú mở ra phía dưới. Lề âm đúng bằng đệm kéo chữ về thẳng hàng.
+  it('nút "Ghi chú" của ngăn két thẳng mép chữ với dòng trên/dưới', () => {
+    const r = rule('table.css', 'button.note-toggle');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'margin-inline-start')).toBe('calc(-1 * var(--space-4) - 1px)');
+    expect(declValue(rule('base.css', 'button.sm')!.body, 'padding')).toContain('var(--space-4)');
+  });
+
+  // `.vault-rules` đặt margin 0: đoạn dẫn ngay trên nó (hộp "Luật của két") dính vào gạch đầu.
+  it('danh sách luật két cách đoạn dẫn phía trên', () => {
+    const r = rule('shared-kit.css', 'p + .vault-rules');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'margin-top')).toBe('var(--space-6)');
+  });
+
+  // Hộp gán quyền: họ dài (loại thiết bị) chia 2 cột còn họ ngắn (Phần mềm, Tài khoản) 1 cột thì
+  // các cột trong cùng một hộp không thẳng hàng. Có một họ chia cột thì mọi họ cùng chia.
+  it('một danh sách chọn chia 2 cột thì mọi danh sách cùng form chia theo', () => {
+    const r = rule('shared-kit.css', '.form-grid:has(.pick-list.cols-2) .pick-list');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'grid-template-columns')).toBe('repeat(2, minmax(0, 1fr))');
+    expect(declValue(r!.body, 'display')).toBe('grid');
+    const narrow = rule('shared-kit.css', '.form-grid:has(.pick-list.cols-2) .pick-list', '(max-width: 480px)');
+    expect(declValue(narrow!.body, 'grid-template-columns')).toBe('minmax(0, 1fr)');
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
+  });
+});
+
+/*
+ * Bảng thiết bị ở 1280–1440px có sidebar: chữ `nowrap` trong ô Tên mang bề rộng TOÀN câu vào
+ * bề rộng tối thiểu của cột, nên bảng không co lại được và cột Trạng thái / Bảo hành bị cột
+ * thao tác dính mép che mất. Ô Tên phải co được tới sàn `col-name`, và ở khổ này Vị trí là dòng
+ * phụ dưới Tên thay cho một cột riêng.
+ */
+describe('bảng thiết bị vừa khung ở 1280–1440px', () => {
+  const MID = '(min-width: 961px) and (max-width: 1440px)';
+
+  it('.cell-stack không đóng góp bề rộng tối thiểu (rãnh lưới bắt đầu từ 0)', () => {
+    const r = rule('table.css', '.cell-stack');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'display')).toBe('grid');
+    expect(declValue(r!.body, 'grid-template-columns')).toBe('minmax(0, max-content)');
+  });
+
+  it('khổ giữa: cột .col-wide ẩn, dòng phụ .only-mid hiện', () => {
+    expect(declValue(rule('table.css', 'table.table .col-wide', MID)!.body, 'display')).toBe('none');
+    expect(declValue(rule('table.css', '.cell-sub.only-mid')!.body, 'display')).toBe('none');
+    expect(declValue(rule('table.css', '.cell-sub.only-mid', MID)!.body, 'display')).toBe('block');
+  });
+
+  // Bảng IP nằm trong khung phải ~770px ở 1366: tiêu đề "Người / phòng ban dùng" không ngắt
+  // dòng thì một mình nó đòi 190px, và ô đệm 14px × 14 mép ăn thêm gần 200px.
+  it('bảng IP: tiêu đề ngắt dòng được, ô đệm hẹp lại ở khổ giữa', () => {
+    const head = rule('primitives.css', 'table.table.ip-table thead th', '(min-width: 961px)');
+    expect(declValue(head!.body, 'white-space')).toBe('normal');
+    for (const sel of ['table.table.ip-table thead th', 'table.table.ip-table tbody td']) {
+      expect(declValue(rule('primitives.css', sel, MID)!.body, 'padding-inline'), sel).toBe('var(--space-5)');
+    }
   });
 });
 

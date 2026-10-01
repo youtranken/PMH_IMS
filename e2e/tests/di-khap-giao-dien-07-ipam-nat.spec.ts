@@ -405,7 +405,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
     ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
-    /* ----- Bảng: đúng bảy cột (Site của máy — Q-20) ----- */
+    /* ----- Bảng: đúng sáu cột ở 1280px (Site của máy — Q-20). Ngày cấp ở khổ 961–1440px là
+       dòng phụ dưới Trạng thái: cột thứ bảy đẩy cột Thao tác ra ngoài khung phải. ----- */
     const table = page.getByRole('table');
     await expect(
       table.getByRole('columnheader'),
@@ -416,7 +417,6 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Thiết bị',
       'Site',
       'Người / phòng ban dùng',
-      'Ngày cấp',
       'Thao tác',
     ]);
     await expect(table.getByRole('row'), 'một hàng tiêu đề + 6 địa chỉ').toHaveCount(7);

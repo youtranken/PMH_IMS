@@ -1033,7 +1033,7 @@ function SecretNote({ secret }: { secret: SecretMeta }) {
       <>
         <button
           type="button"
-          className="btn sm ghost with-icon"
+          className="btn sm ghost with-icon note-toggle"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}

@@ -46,6 +46,21 @@ describe('IpLookup — IP sai định dạng', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  /* Khung đỏ nói về câu VỪA tra: xoá hay sửa ô tra mà khung còn đó là báo lỗi cho một chữ đã
+     không còn trên màn. */
+  it.each([
+    ['xoá trắng ô', ''],
+    ['gõ thêm', '9'],
+  ])('%s → khung lỗi biến mất', async (_what, extra) => {
+    setUp();
+    await lookup('256.1.1.1');
+    expect(await screen.findByRole('alert')).toHaveTextContent(INVALID);
+    const box = screen.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
+    if (extra) await userEvent.type(box, extra);
+    else await userEvent.clear(box);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('"a.b.c.d" là chữ tự do → tìm theo máy/người, không báo sai IP', async () => {
     const fetch = setUp();
     await lookup('a.b.c.d');

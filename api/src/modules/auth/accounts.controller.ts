@@ -149,6 +149,15 @@ const STATUS_LABEL: Record<'active' | 'locked' | 'disabled', string> = {
   disabled: 'Đã vô hiệu hóa',
 };
 
+/**
+ * Cột "Xác thực 2 lớp" của file xuất: cùng chữ "kích hoạt" với huy hiệu trên màn Người dùng IMS
+ * (Q-21) — người kiểm toán đối chiếu file với màn, hai chữ cho một trạng thái là hai trạng thái.
+ */
+export function totpExportLabel(r: { totpEnrolledAt: Date | null; totpLoginRequired: boolean }): string {
+  if (r.totpEnrolledAt) return 'Đã kích hoạt';
+  return r.totpLoginRequired ? 'Bắt buộc – chưa kích hoạt' : 'Chưa kích hoạt';
+}
+
 /** Trần số dòng một file xuất — danh sách nhân sự IT, vài trăm người là cùng. */
 const EXPORT_LIMIT = 5000;
 
@@ -215,7 +224,7 @@ export class AccountsController {
         {
           header: 'Xác thực 2 lớp',
           width: 16,
-          value: (r) => (r.totpEnrolledAt ? 'Đã cài' : r.totpLoginRequired ? 'Chưa cài (bắt buộc)' : 'Chưa cài'),
+          value: (r) => totpExportLabel(r),
         },
         { header: 'Đăng nhập gần nhất', width: 20, value: (r) => dateTimeInTz(r.lastLoginAt, tz) },
         { header: 'Ngày tạo', width: 20, value: (r) => dateTimeInTz(r.createdAt, tz) },

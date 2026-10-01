@@ -139,7 +139,13 @@
   color: var(--ink-3);
   font-size: var(--fs-xs);
   cursor: pointer;
+  /* Mặc định của inline-grid là canh theo đường chân chữ: nút 24px trồi lên khỏi dòng chữ
+     đứng cạnh, trông như hình chép lệch về góc trên. */
+  vertical-align: middle;
 }
+/* Nút có viền đứng ngay sau giá trị: không có khoảng thì viền dính vào ký tự cuối. Bản `inline`
+   không viền, phần đệm quanh hình đã là khoảng cách. */
+.mono + .copy-btn:not(.inline) { margin-inline-start: var(--space-2); }
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
 /* Hình SVG theo cỡ cố định: chữ của nút là `--fs-xs`, để `1em` thì hình chép chỉ còn 12px. */
 .copy-btn .glyph { display: block; width: 15px; height: 15px; }

@@ -484,6 +484,25 @@ table.table.table-sub td .mono {
 .subnet-pane td.col-device {
   min-width: 14ch;
 }
+/* Cột Site là mã một dòng cắt "…" (`.cell-stack`): sàn đủ cho ~6 ký tự để còn nhận ra site. */
+.subnet-pane th.col-site,
+.subnet-pane td.col-site {
+  min-width: 5rem;
+}
+/* Bảng IP nằm trong khung phải (~770px ở 1366px có sidebar): tiêu đề "Người / phòng ban dùng"
+   không ngắt dòng thì một mình nó đòi ~190px; ở khổ giữa ô đệm hẹp lại để cột Thao tác còn
+   trong khung. Ngày cấp đã thành dòng phụ ở khổ này (`.col-wide`, table.css). */
+@media (min-width: 961px) {
+  table.table.ip-table thead th {
+    white-space: normal;
+  }
+}
+@media (min-width: 961px) and (max-width: 1440px) {
+  table.table.ip-table thead th,
+  table.table.ip-table tbody td {
+    padding-inline: var(--space-5);
+  }
+}
 /* Chỉ ở ≥961px: dưới mốc đó `.table-stack` gập dòng thành thẻ dọc, ô là một hàng flex của
    thẻ — `width: 1%` ở đó bóp ô "Ngày cấp" còn một mẩu, nhãn và giá trị chồng lên nhau. */
 @media (min-width: 961px) {

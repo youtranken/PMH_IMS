@@ -215,7 +215,7 @@ export function DevicesScreen({ me }: { me: Me }) {
           const d = row.original;
           const sub = [d.deviceTypeName, d.model].filter(Boolean).join(' · ');
           return (
-            <>
+            <div className="cell-stack">
               <span className="cell-clip" title={d.name}>
                 {d.name}
               </span>
@@ -231,13 +231,20 @@ export function DevicesScreen({ me }: { me: Me }) {
                   </>
                 ) : null}
               </span>
-            </>
+              {/* Vị trí ở khổ 961–1440px: cột riêng ẩn đi (CSS `.col-wide`), hiện ở đây. */}
+              {d.siteCode ? (
+                <span className="cell-sub cell-clip only-mid">
+                  <LocationText device={d} />
+                </span>
+              ) : null}
+            </div>
           );
         },
       },
       {
         id: 'location',
         header: t('devices.locationCol'),
+        meta: { className: 'col-wide' },
         cell: ({ row }) => <LocationText device={row.original} />,
       },
       {

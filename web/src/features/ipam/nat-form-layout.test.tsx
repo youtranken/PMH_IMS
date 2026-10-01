@@ -102,6 +102,18 @@ describe('Hộp Sửa luật NAT', () => {
     expect(grids[2]).toBe('4');
   });
 
+  /* Ô Router chỉ một cột (~210px) thì dải chip lọc loại cuộn ngang và chip đang bật bị khuất:
+     ô Router trải hết hàng như ô Thiết bị của form đường truyền. */
+  it('ô Router trải hết hàng để dải chip lọc loại đủ chỗ', async () => {
+    mockFetch([]);
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm luật NAT' }))[0]);
+    const dialog = await screen.findByRole('dialog');
+    const chips = within(dialog).getByRole('group', { name: 'Lọc theo loại thiết bị' });
+    expect(chips.closest('.field')).toHaveClass('span-3');
+  });
+
   it('gợi ý dài của Cổng ngoài, Máy đích, Ghi chú nằm sau nút (i)', async () => {
     mockFetch([]);
     const user = userEvent.setup();

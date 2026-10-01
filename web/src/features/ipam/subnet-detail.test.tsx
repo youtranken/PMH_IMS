@@ -138,3 +138,45 @@ describe('SubnetPane — cột Site', () => {
     expect(person.querySelector('td[data-label="Site"]')?.textContent).toBe('—');
   });
 });
+
+/*
+ * Bảng IP trong khung phải ở 1366px có sidebar: mã site để trần thì gãy ba dòng ở dấu "-", và
+ * cột Ngày cấp đẩy cột Thao tác ra ngoài khung. Site một dòng (đủ chữ ở `title`); ở khổ giữa
+ * Ngày cấp thành dòng phụ dưới Trạng thái (cột `.col-wide` ẩn bằng CSS).
+ */
+describe('SubnetPane — bảng vừa khung ở 1366px', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('Site một dòng có title; Ngày cấp là cột rộng + dòng phụ dưới Trạng thái', async () => {
+    const onDevice = {
+      ...ASSIGNED,
+      id: 'a2',
+      address: '10.0.1.2',
+      deviceId: 'd1',
+      deviceCode: 'PC-E2E-1',
+      deviceName: 'May tram',
+      deviceSiteCode: 'E2E-VTA-076919',
+      usedBy: null,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(jsonResponse(200, String(url).endsWith('/addresses') ? [onDevice] : [])),
+      ),
+    );
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <SubnetPane subnet={SUBNET} me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const row = (await screen.findByText('PC-E2E-1')).closest('tr')!;
+    const site = row.querySelector('td[data-label="Site"] .cell-clip');
+    expect(site).toHaveAttribute('title', 'E2E-VTA-076919');
+    expect(screen.getByRole('columnheader', { name: 'Ngày cấp' })).toHaveClass('col-wide');
+    expect(row.querySelector('td[data-label="Ngày cấp"]')).toHaveClass('col-wide');
+    const mid = row.querySelector('td[data-label="Trạng thái"] .only-mid');
+    expect(mid?.textContent).toContain('Cấp 01/09/2026');
+  });
+});
