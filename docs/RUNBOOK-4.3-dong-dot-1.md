@@ -309,13 +309,14 @@ và chỉ in bảng · mã hồ sơ · cột · id — không in nội dung ô:
 
 ```bash
 $ docker compose exec api node dist/ops/scan-secret-text.main.js            # bảng chính + ghi chú két
-$ docker compose exec api node dist/ops/scan-secret-text.main.js --lich-su  # thêm các bảng *_history
+$ docker compose exec api node dist/ops/scan-secret-text.main.js --lich-su  # thêm các bảng *_history + audit_log.detail
 ```
 
 Với mỗi dòng: SA mở hồ sơ trên giao diện. Là mật khẩu thật thì cất vào két của hồ sơ, xoá khỏi
 ghi chú, và **xoay mật khẩu đó** (nó đã nằm dạng rõ trong lịch sử, file xuất, bản sao lưu). Là mã
-model / tên gói bị bắt nhầm thì để nguyên. Dòng ở bảng `*_history` không sửa được (chỉ-thêm): chỉ
-xoay mật khẩu.
+model / tên gói bị bắt nhầm thì để nguyên. Dòng ở bảng `*_history` và `audit_log` không sửa được
+(chỉ-thêm): chỉ xoay mật khẩu. Dòng `audit_log` ghi hành động + đối tượng (vd `account.locked
+account:<id>`) và đường dẫn trong JSON (`detail.reason`).
 
 - [ ] SA chạy quét (cả `--lich-su`) sau khi nhập dữ liệu thật, rà hết từng dòng
 

@@ -43,6 +43,16 @@ describe('Quét ô chữ trông như mật khẩu (SEC-21)', () => {
       `INSERT INTO device_history (device_id, action, actor, changes) VALUES ($1, 'update', 'a@qa.test', $2)`,
       [device.rows[0].id, JSON.stringify({ note: { before: null, after: `mk ${SECRET}` } })],
     );
+    // Lý do khoá / vô hiệu tài khoản đi thẳng vào nhật ký, không qua bảng lịch sử nào.
+    await q(
+      `INSERT INTO audit_log (actor, action, object_type, object_id, detail)
+       VALUES ('sa@qa.test', 'account.locked', 'account', 'E2E-ACC-1', $1),
+              ('sa@qa.test', 'account.locked', 'account', 'E2E-ACC-2', $2)`,
+      [
+        JSON.stringify({ reason: `lộ mk ${SECRET}`, meta: { tags: ['ok', 'Xk9#mP2vLq'] } }),
+        JSON.stringify({ reason: 'Nghỉ việc từ 01/10/2026' }),
+      ],
+    );
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -81,11 +91,35 @@ describe('Quét ô chữ trông như mật khẩu (SEC-21)', () => {
     );
   });
 
+  it('--lich-su: quét cả audit_log.detail, báo hành động · mã đối tượng · đường dẫn JSON', async () => {
+    const found = await scanSecretText(scratch.pool, { history: true });
+    const audit = found
+      .filter((f) => f.table === 'audit_log')
+      .map((f) => `${f.ref}|${f.field}`)
+      .sort();
+    expect(audit).toEqual([
+      'account.locked account:E2E-ACC-1|detail.meta.tags[1]',
+      'account.locked account:E2E-ACC-1|detail.reason',
+    ]);
+  });
+
+  it('audit_log đọc theo lô: lô 1 dòng vẫn ra đúng chừng ấy phát hiện', async () => {
+    const all = await scanSecretText(scratch.pool, { history: true });
+    const paged = await scanSecretText(scratch.pool, { history: true, auditBatch: 1 });
+    expect(paged).toEqual(all);
+  });
+
+  it('không có --lich-su thì không đụng audit_log', async () => {
+    const found = await scanSecretText(scratch.pool);
+    expect(found.filter((f) => f.table === 'audit_log')).toEqual([]);
+  });
+
   it('báo cáo KHÔNG chứa nội dung ô', async () => {
     const lines = formatFindings(await scanSecretText(scratch.pool, { history: true })).join('\n');
     expect(lines).not.toContain(SECRET);
     expect(lines).not.toContain('VK7JG');
     expect(lines).not.toContain('Matkhau2026');
+    expect(lines).not.toContain('Xk9#mP2vLq');
     expect(lines).toContain('SW-E2E-LO');
   });
 });

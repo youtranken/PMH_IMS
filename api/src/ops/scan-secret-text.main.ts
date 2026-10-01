@@ -7,8 +7,8 @@ import { formatFindings, scanSecretText } from './scan-secret-text';
  *   docker compose exec api node dist/ops/scan-secret-text.main.js
  *   docker compose exec api node dist/ops/scan-secret-text.main.js --lich-su
  *
- * `--lich-su` quét thêm các bảng lịch sử (chỉ-thêm, không sửa được — mật khẩu nằm ở đó thì
- * phải xoay). Không in nội dung ô; mở hồ sơ trên giao diện để xem.
+ * `--lich-su` quét thêm các bảng lịch sử và `audit_log.detail` (chỉ-thêm, không sửa được —
+ * mật khẩu nằm ở đó thì phải xoay). Không in nội dung ô; mở hồ sơ trên giao diện để xem.
  */
 async function main(): Promise<void> {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

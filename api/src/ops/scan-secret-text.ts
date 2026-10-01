@@ -115,9 +115,50 @@ async function scanHistory(client: PoolClient): Promise<SecretTextFinding[]> {
   return found;
 }
 
+/**
+ * `audit_log.detail` cũng là chữ dạng rõ chỉ-thêm: lý do khoá / vô hiệu tài khoản, lý do xin
+ * quyền… đi thẳng vào đây mà không qua bảng lịch sử nào. Nhãn là hành động + đối tượng để SA
+ * tìm lại được dòng nhật ký trên màn Nhật ký.
+ *
+ * Đọc theo lô bằng con trỏ khoá (created_at, id): bảng này lớn nhất DB, nạp hết một lần là
+ * dồn cả nhật ký nhiều năm vào RAM của script.
+ */
+const AUDIT_BATCH = 2000;
+
+async function scanAudit(client: PoolClient, batch: number): Promise<SecretTextFinding[]> {
+  const found: SecretTextFinding[] = [];
+  let after: { at: string; id: string } | null = null;
+  for (;;) {
+    const page: { rows: { id: string; at: string; ref: string; doc: unknown }[] } =
+      await client.query(
+        `SELECT id::text AS id, created_at::text AS at,
+                action || ' ' || coalesce(object_type, '') || ':' || coalesce(object_id, '') AS ref,
+                detail AS doc
+           FROM audit_log
+          WHERE detail IS NOT NULL
+            AND ($1::timestamptz IS NULL OR (created_at, id) > ($1::timestamptz, $2::uuid))
+          ORDER BY created_at, id
+          LIMIT ${batch}`,
+        [after?.at ?? null, after?.id ?? null],
+      );
+    for (const row of page.rows) {
+      const fields = new Set<string>();
+      walkStrings(row.doc, 'detail', (path, s) => {
+        if (textLooksLikeSecret(s)) fields.add(path);
+      });
+      for (const field of fields) found.push({ table: 'audit_log', ref: row.ref, id: row.id, field });
+    }
+    if (page.rows.length < batch) return found;
+    const last = page.rows[page.rows.length - 1];
+    after = { at: last.at, id: last.id };
+  }
+}
+
 export interface ScanOptions {
-  /** Quét thêm cột JSON của các bảng `*_history`. */
+  /** Quét thêm cột JSON của các bảng `*_history` và `audit_log.detail`. */
   history?: boolean;
+  /** Cỡ lô khi đọc `audit_log`; chỉ bài kiểm đổi để đi qua nhiều lô với ít dòng. */
+  auditBatch?: number;
 }
 
 /** Chạy trong transaction READ ONLY: script báo cáo không bao giờ được là đường ghi. */
@@ -126,7 +167,10 @@ export async function scanSecretText(pool: Pool, options: ScanOptions = {}): Pro
   try {
     await client.query('BEGIN READ ONLY');
     const found = await scanColumns(client);
-    if (options.history) found.push(...(await scanHistory(client)));
+    if (options.history) {
+      found.push(...(await scanHistory(client)));
+      found.push(...(await scanAudit(client, options.auditBatch ?? AUDIT_BATCH)));
+    }
     await client.query('COMMIT');
     return found;
   } catch (error) {
