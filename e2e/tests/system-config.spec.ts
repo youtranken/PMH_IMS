@@ -79,6 +79,29 @@ test.describe('Tham số hệ thống', () => {
     await expect(page.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeVisible();
   });
 
+  /* Q-21: đổi nhóm khi còn thay đổi chưa lưu thì hỏi; "Ở lại" giữ nguyên, "Bỏ thay đổi" mới sang. */
+  test('đổi nhóm khi chưa lưu: hỏi Lưu / Bỏ thay đổi / Ở lại, không ghi gì', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await page.goto('/admin/settings?group=auth');
+    const rate = page.getByRole('textbox', { name: 'Số lượt đăng nhập tối đa mỗi IP' });
+    const before = await rate.inputValue();
+    await rate.fill(before === '30' ? '31' : '30');
+    const nav = page.getByRole('navigation', { name: 'Nhóm tham số' });
+    await nav.getByRole('button', { name: 'Phần mềm' }).click();
+
+    const ask = page.getByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await expect(ask).toBeVisible();
+    await ask.getByTestId('dialog-footer').getByRole('button', { name: 'Ở lại' }).click();
+    await expect(ask).toBeHidden();
+    await expect(rate).not.toHaveValue(before);
+
+    await nav.getByRole('button', { name: 'Phần mềm' }).click();
+    await ask.getByRole('button', { name: 'Bỏ thay đổi' }).click();
+    await expect(page.getByLabel('Ân hạn trước khi tự thanh lý phần mềm')).toBeVisible();
+    await nav.getByRole('button', { name: 'Đăng nhập & bảo mật' }).click();
+    await expect(rate).toHaveValue(before);
+  });
+
   test('TẤN CÔNG: Thành viên gọi thẳng API → 403; SA gửi khoá ngoài danh sách / ngoài khoảng → 400', async ({
     page,
     browser,

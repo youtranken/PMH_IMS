@@ -1029,6 +1029,19 @@ table.table tbody tr.row-muted td {
 .sticky-action-buttons > .btn.primary {
   flex: 3 1 0;
 }
+/* Thanh gọn cho màn cấu hình desktop: ghi chú trái, nút nhỏ dồn phải trên cùng một hàng. */
+.sticky-action-bar.compact {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding-block: var(--space-4);
+}
+.sticky-action-bar.compact .sticky-action-note { margin-right: auto; }
+.sticky-action-bar.compact .sticky-action-buttons > .btn {
+  flex: 0 0 auto;
+  min-height: 0;
+}
 @media (max-width: 680px) {
   /* Điện thoại: tràn sát hai mép như thanh công cụ, không phải một thẻ lơ lửng. */
   .sticky-action-bar {

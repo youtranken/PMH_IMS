@@ -212,3 +212,82 @@ describe('Màn Tham số hệ thống', () => {
     expect(screen.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeInTheDocument();
   });
 });
+
+/*
+ * Q-21: đổi nhóm khi còn thay đổi chưa lưu thì hỏi Lưu nhóm này / Bỏ thay đổi / Ở lại; nút của
+ * thanh lưu cỡ nhỏ.
+ */
+describe('Màn Tham số hệ thống — đổi nhóm khi chưa lưu', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function editRate() {
+    const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await userEvent.clear(input);
+    await userEvent.type(input, '30');
+    return input;
+  }
+
+  it('nút Bỏ thay đổi / Lưu nhóm này cỡ nhỏ', async () => {
+    renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    expect(screen.getByRole('button', { name: 'Lưu nhóm này' })).toHaveClass('sm');
+    expect(screen.getByRole('button', { name: 'Bỏ thay đổi' })).toHaveClass('sm');
+  });
+
+  it('không có thay đổi thì đổi nhóm ngay, không hỏi', async () => {
+    renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm')).toBeInTheDocument();
+  });
+
+  it('Ở lại: giữ nhóm và giá trị đang sửa', async () => {
+    renderAt('/admin/settings');
+    const input = await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    expect(within(dialog).getByRole('button', { name: 'Lưu nhóm này' })).toBeInTheDocument();
+    // Nút ✕ ở đầu hộp cũng mang tên "Ở lại" (đóng = ở lại); bấm nút ở chân hộp.
+    await userEvent.click(within(within(dialog).getByTestId('dialog-footer')).getByRole('button', { name: 'Ở lại' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(input).toHaveValue('30');
+    expect(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('Bỏ thay đổi: sang nhóm mới, giá trị cũ không còn', async () => {
+    renderAt('/admin/settings');
+    await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Bỏ thay đổi' }));
+    expect(await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' }));
+    expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toHaveValue('20');
+  });
+
+  it('Lưu nhóm này: qua hộp Trước → Sau rồi PATCH, lưu xong mới sang nhóm mới', async () => {
+    const fetchMock = renderAt('/admin/settings');
+    await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu nhóm này' }));
+    const review = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    expect(review).toHaveTextContent('20 lần/phút → 30 lần/phút');
+    await userEvent.click(within(review).getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(true);
+  });
+
+  it('Lưu nhóm này rồi Hủy ở hộp Trước → Sau: vẫn ở nhóm cũ, giữ giá trị', async () => {
+    renderAt('/admin/settings');
+    const input = await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu nhóm này' }));
+    const review = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    await userEvent.click(within(review).getByRole('button', { name: 'Hủy' }));
+    expect(input).toHaveValue('30');
+    expect(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});

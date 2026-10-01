@@ -13,15 +13,21 @@ import type { ReactNode } from 'react';
 export function StickyActionBar({
   label,
   note,
+  compact = false,
   children,
 }: {
   /** Tên nhóm cho trình đọc màn hình — vd "Quyết định". */
   label: string;
   note?: ReactNode;
+  /**
+   * Màn cấu hình trên desktop (Tham số hệ thống): ghi chú bên trái, nút `btn sm` dồn phải cùng
+   * một hàng — hai nút 48px kéo hết bề ngang là quá to cho việc lưu một nhóm tham số (Q-21).
+   */
+  compact?: boolean;
   children?: ReactNode;
 }) {
   return (
-    <div className="sticky-action-bar" role="group" aria-label={label}>
+    <div className={compact ? 'sticky-action-bar compact' : 'sticky-action-bar'} role="group" aria-label={label}>
       {note ? <p className="sticky-action-note">{note}</p> : null}
       {children ? <div className="sticky-action-buttons">{children}</div> : null}
     </div>

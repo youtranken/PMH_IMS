@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useBeforeUnload, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { ConfirmDialog } from '@/ui/confirm-dialog';
 import { Dialog } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
@@ -128,6 +129,9 @@ export function SettingsScreen({ me }: { me: Me }) {
   const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  /** Nhóm người dùng bấm sang khi còn thay đổi chưa lưu: hỏi trước (Q-21), lưu xong mới sang. */
+  const [leavingTo, setLeavingTo] = useState<Group | null>(null);
+  const [saveThenGo, setSaveThenGo] = useState<Group | null>(null);
 
   const list = useQuery({
     queryKey: SETTINGS_KEY,
@@ -147,6 +151,20 @@ export function SettingsScreen({ me }: { me: Me }) {
       : row.unit
         ? `${String(value)} ${t(UNIT[row.unit])}`
         : String(value);
+
+  /* Đóng tab / tải lại trang khi còn thay đổi: trình duyệt hỏi bằng hộp của nó. Điều hướng
+     trong app (menu) không chặn được: `useBlocker` cần data router, app dùng `BrowserRouter`. */
+  useBeforeUnload((event) => {
+    if (changed.length === 0) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  const askSwitch = (next: Group) => {
+    if (next === group) return;
+    if (changed.length > 0) setLeavingTo(next);
+    else switchGroup(next);
+  };
 
   const switchGroup = (next: Group) => {
     setDrafts({});
@@ -181,6 +199,8 @@ export function SettingsScreen({ me }: { me: Me }) {
       toast({ message: t('settings.saved', { count: changed.length }) });
       setDrafts({});
       setReviewing(false);
+      if (saveThenGo) switchGroup(saveThenGo);
+      setSaveThenGo(null);
     } catch (err) {
       if (!(err instanceof Error && err.message === 'STEPUP_CANCELLED')) {
         /* API báo lỗi khoảng dạng "<khóa>: <lý do>"; người đọc chỉ thấy nhãn tiếng Việt của ô,
@@ -215,7 +235,7 @@ export function SettingsScreen({ me }: { me: Me }) {
                     /* Đổi khu ngay trên trang, không sang trang khác: nút bật/tắt, không
                        `aria-current="page"` (giá trị đó dành cho link điều hướng). */
                     aria-pressed={g.key === group}
-                    onClick={() => switchGroup(g.key)}
+                    onClick={() => askSwitch(g.key)}
                   >
                     {t(g.label)}
                   </button>
@@ -293,12 +313,13 @@ export function SettingsScreen({ me }: { me: Me }) {
             })}
 
             <StickyActionBar
+              compact
               label={t('settings.save')}
               note={changed.length > 0 ? t('settings.dirty', { count: changed.length }) : undefined}
             >
               <button
                 type="button"
-                className="btn"
+                className="btn sm"
                 disabled={changed.length === 0}
                 onClick={() => setDrafts({})}
               >
@@ -306,7 +327,7 @@ export function SettingsScreen({ me }: { me: Me }) {
               </button>
               <button
                 type="button"
-                className="btn primary"
+                className="btn sm primary"
                 disabled={changed.length === 0 || invalid}
                 onClick={() => {
                   setSaveError(null);
@@ -324,14 +345,24 @@ export function SettingsScreen({ me }: { me: Me }) {
         <Dialog
           open
           onOpenChange={(open) => {
-            if (!open) setReviewing(false);
+            if (!open) {
+              setReviewing(false);
+              setSaveThenGo(null);
+            }
           }}
           dismissible={!saving}
           maxWidth={560}
           title={t('settings.reviewTitle')}
           footer={
             <>
-              <button type="button" className="btn" onClick={() => setReviewing(false)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setReviewing(false);
+                  setSaveThenGo(null);
+                }}
+              >
                 {t('common.cancel')}
               </button>
               <button type="button" className="btn primary" disabled={saving} onClick={() => void save()}>
@@ -364,6 +395,33 @@ export function SettingsScreen({ me }: { me: Me }) {
             </p>
           ) : null}
         </Dialog>
+      ) : null}
+
+      {leavingTo ? (
+        /* "Lưu nhóm này" đi qua ĐÚNG đường của nút Lưu: hộp Trước → Sau rồi step-up — không có
+           lối lưu tắt nào bỏ qua bước đọc lại hay bước xác thực. */
+        <ConfirmDialog
+          title={t('settings.leaveTitle')}
+          message={t('settings.leaveMessage', { count: changed.length })}
+          confirmLabel={t('settings.save')}
+          confirmDisabled={invalid}
+          cancelLabel={t('settings.leaveStay')}
+          extra={{
+            label: t('settings.discard'),
+            onClick: () => {
+              const next = leavingTo;
+              setLeavingTo(null);
+              switchGroup(next);
+            },
+          }}
+          onConfirm={() => {
+            setSaveThenGo(leavingTo);
+            setLeavingTo(null);
+            setSaveError(null);
+            setReviewing(true);
+          }}
+          onCancel={() => setLeavingTo(null)}
+        />
       ) : null}
 
       {stepUp.dialog}
