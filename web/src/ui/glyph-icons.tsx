@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * Hình nhỏ trên nút — đóng (✕), ba chấm (⋮), và ba dấu tròn trạng thái (! · i · ✓) — dùng
+ * Hình nhỏ trên nút — đóng (✕), ba chấm (⋮), chép / đã chép, và ba dấu tròn trạng thái (! · i · ✓) — dùng
  * chung cho cả app (AD-15).
  *
  * Không viết KÝ TỰ: chúng theo phông và cỡ chữ nên ở 14px mảnh như dấu ngoặc, nằm theo đường
@@ -40,6 +40,25 @@ export function CloseIcon({ className }: { className?: string }) {
   return (
     <Glyph className={className}>
       <path d="M6 6l12 12M18 6 6 18" />
+    </Glyph>
+  );
+}
+
+/** Hai tờ giấy chồng nhau — nút chép (`CopyButton`). */
+export function CopyIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={['glyph-copy', className].filter(Boolean).join(' ')} strokeWidth={2}>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+    </Glyph>
+  );
+}
+
+/** Dấu tích — nút chép vừa chép xong. */
+export function CheckIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={['glyph-check', className].filter(Boolean).join(' ')} strokeWidth={3}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
     </Glyph>
   );
 }

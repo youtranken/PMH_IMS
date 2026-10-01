@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import vi_ from '@/locales/vi';
-import { renderWithI18n, screen } from '@/test/test-utils';
+import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { DetailHeader } from '@/ui/detail-header';
 import { Dialog } from '@/ui/dialog';
-import { CloseIcon, KebabIcon } from '@/ui/glyph-icons';
+import { CheckIcon, CloseIcon, CopyIcon, KebabIcon } from '@/ui/glyph-icons';
+import { CopyButton } from '@/ui/copy-button';
 import { RowActions } from '@/ui/row-actions';
 
 /*
@@ -59,6 +60,30 @@ describe('Hình nhỏ trên nút là SVG, không phải ký tự', () => {
     const nav = screen.getByRole('navigation', { name: 'breadcrumb' });
     expect(nav.textContent).not.toContain('›');
     expect(container.querySelectorAll('svg.chevron.crumb-sep')).toHaveLength(2);
+  });
+
+  /* Nút chép không dùng ký tự ⧉ / ✓: mỗi phông vẽ một kiểu, có phông không có glyph đó (Q-20). */
+  it('nút chép vẽ SVG (CopyIcon), bấm xong đổi sang CheckIcon — không ký tự nào', async () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn(() => Promise.resolve()) } });
+    renderWithI18n(<CopyButton value="10.0.0.1" label="Chép IP" />);
+    const button = screen.getByRole('button', { name: 'Chép IP' });
+    expect(button.textContent).toBe('');
+    expect(button.querySelector('svg.glyph-copy')).not.toBeNull();
+    await userEvent.click(button);
+    expect(await screen.findByTitle('Đã sao chép')).toBe(button);
+    expect(button.textContent).toBe('');
+    expect(button.querySelector('svg.glyph-check')).not.toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it('CopyIcon và CheckIcon là SVG aria-hidden', () => {
+    const { container } = renderWithI18n(
+      <>
+        <CopyIcon />
+        <CheckIcon />
+      </>,
+    );
+    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(2);
   });
 
   it.each([

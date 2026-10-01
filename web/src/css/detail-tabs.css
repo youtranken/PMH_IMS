@@ -137,6 +137,8 @@
   cursor: pointer;
 }
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
+/* Hình SVG theo cỡ cố định: chữ của nút là `--fs-xs`, để `1em` thì hình chép chỉ còn 12px. */
+.copy-btn .glyph { width: 14px; height: 14px; }
 /* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
 .isp-call {
   display: flex;

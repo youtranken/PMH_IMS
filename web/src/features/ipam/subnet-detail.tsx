@@ -325,6 +325,7 @@ export function SubnetPane({
                 <CopyButton
                   value={item.gateway}
                   label={t("ipam.copyOf", { label: t("ipam.gateway") })}
+                  inline
                 />
                 {/* Máy đang giữ địa chỉ gateway (router/firewall) — nối dải với thiết bị biên,
                     đọc từ chính hồ sơ IP của dải, không hỏi thêm gì. */}

@@ -817,7 +817,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               <dl className="data-grid">
                 <DataItemIfSet label={t("devices.managementIp")} value={firstIp}>
                   <span className="mono">{firstIp}</span>
-                  {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} /> : null}
+                  {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} inline /> : null}
                 </DataItemIfSet>
                 {/* Máy CHẮC CHẮN chưa có IP (khu mở rộng đã về): ô IP quản trị nói thẳng "chưa có"
                     và nút Cấp IP là nút chính ngay tại đó — đây là việc còn thiếu đầu tiên của

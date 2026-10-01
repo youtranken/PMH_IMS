@@ -126,7 +126,7 @@ function NetworkConfig({
         {rows.map(([label, value]) => (
           <DataItemIfSet key={label} label={label} value={value}>
             <span className="mono">{value}</span>{' '}
-            <CopyButton value={value ?? ''} label={t('ipam.copyOf', { label })} />
+            <CopyButton value={value ?? ''} label={t('ipam.copyOf', { label })} inline />
           </DataItemIfSet>
         ))}
       </dl>
