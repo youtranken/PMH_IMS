@@ -2906,7 +2906,7 @@ export default {
     kpiCalm: 'Không có việc gì gấp.',
     itemsCount: '{{count}} mục',
     showMore: 'Xem thêm {{count}}',
-    expiring: 'Hạn cần xử lý',
+    expiring: 'Tổng hợp hết hạn cần xử lý',
     expiringOverdue: 'Đã quá hạn ({{count}})',
     expiringUpcoming: 'Sắp tới ({{count}})',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
@@ -2944,7 +2944,7 @@ export default {
     secretCount: '{{count}} ngăn',
     staleSince: 'đổi lần cuối {{date}} · {{days}} ngày trước',
 
-    disposed: 'Vừa vào kho thanh lý (7 ngày)',
+    disposed: 'Tổng hợp kho thanh lý (7 ngày)',
     disposedEmpty: 'Tuần qua không thanh lý gì.',
     seeAllDisposed: 'Xem toàn bộ kho thanh lý',
     /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */

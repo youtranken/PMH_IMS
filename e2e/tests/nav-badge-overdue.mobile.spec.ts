@@ -10,6 +10,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  switchTheme,
 } from './helpers';
 
 /**
@@ -58,6 +59,7 @@ test('có mục quá hạn → badge số trên mục Sắp hết hạn, đọc 
   expect(count).toBeGreaterThan(0);
 
   await page.goto('/');
+  await switchTheme(page, 'light');
   await openNavDrawer(page);
   const link = page
     .getByRole('navigation', { name: 'Điều hướng chính' })
@@ -68,8 +70,7 @@ test('có mục quá hạn → badge số trên mục Sắp hết hạn, đọc 
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: /chế độ tối/i }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await switchTheme(page, 'dark');
   await openNavDrawer(page);
   await expect(link.getByText(String(count), { exact: true })).toBeVisible();
 });

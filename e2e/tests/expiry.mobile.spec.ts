@@ -9,6 +9,7 @@ import {
   resetUsers,
   writeHeaders,
   uniqueStamp,
+  switchTheme,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -38,12 +39,12 @@ test('màn Sắp hết hạn đọc được ở 390px, sáng và tối', async 
   expect(created.status()).toBe(201);
 
   await page.goto('/expiry');
+  await switchTheme(page, 'light');
   await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
   await expect(page.getByText('Chứng chỉ web E2E')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.getByRole('button', { name: /chế độ tối/i }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await switchTheme(page, 'dark');
   await expect(page.getByText('Chứng chỉ web E2E')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });

@@ -129,6 +129,10 @@
   place-items: center;
   width: 1.75rem;
   height: 1.75rem;
+  /* `button` chung có đệm ngang 0.85rem: trong ô 28px vùng nội dung thành âm và hình tràn
+     sang phải, lệch tâm. Ô vuông thì không cần đệm — `place-items` tự canh giữa. */
+  padding: 0;
+  line-height: 0;
   border: 1px solid var(--border-2);
   border-radius: 6px;
   background: var(--surface);
@@ -138,7 +142,7 @@
 }
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
 /* Hình SVG theo cỡ cố định: chữ của nút là `--fs-xs`, để `1em` thì hình chép chỉ còn 12px. */
-.copy-btn .glyph { width: 14px; height: 14px; }
+.copy-btn .glyph { display: block; width: 15px; height: 15px; }
 /* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
 .isp-call {
   display: flex;

@@ -9,6 +9,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  switchTheme,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -37,6 +38,7 @@ test('danh sách phần mềm ở 390px là thẻ gọn 3 dòng, chạm thẻ m�
   expect(res.status()).toBe(201);
 
   await page.goto('/software');
+  await switchTheme(page, 'light');
   await searchAndWaitForFilter(page, code);
   const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: code }) });
   await expect(card).toHaveCount(1);
@@ -48,8 +50,7 @@ test('danh sách phần mềm ở 390px là thẻ gọn 3 dòng, chạm thẻ m�
   await expect(page.getByRole('button', { name: `Thao tác với ${code}` })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.getByRole('button', { name: /chế độ tối/i }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await switchTheme(page, 'dark');
   await expect(card.getByText('Hết hạn', { exact: true })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 

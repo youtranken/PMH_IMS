@@ -213,16 +213,20 @@ test('"Đăng xuất các máy khác" đá mọi phiên khác, giữ máy đang 
   await own.context().close();
 });
 
-test('Giao diện trong Hồ sơ: chọn Tối áp ngay, chọn Theo hệ thống bỏ lựa chọn đã lưu', async ({
+test('Giao diện trong Hồ sơ: mặc định Tối, chọn Sáng áp ngay, chọn Theo hệ thống được lưu lại', async ({
   page,
 }) => {
   await firstLogin(page, E2E_SA);
   await page.goto('/profile');
   const group = page.getByRole('group', { name: 'Giao diện' });
-  await group.getByRole('button', { name: 'Tối' }).click();
+  // Chưa chọn gì = tối (Q-21), và nút "Tối" phải đang được đánh dấu.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(group.getByRole('button', { name: 'Tối' })).toHaveAttribute('aria-pressed', 'true');
+  await group.getByRole('button', { name: 'Sáng' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  // "Theo hệ thống" phải lưu hẳn: không lưu thì lần nạp sau rơi về mặc định tối.
   await group.getByRole('button', { name: 'Theo hệ thống' }).click();
-  expect(await page.evaluate(() => localStorage.getItem('ims_theme'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('ims_theme'))).toBe('system');
 });
 
 test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, chọn Tối áp ngay (Q-20)', async ({ page }) => {

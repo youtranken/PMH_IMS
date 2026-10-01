@@ -160,7 +160,7 @@ table.table.table-sub td .mono {
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
-  transition: border-color 0.14s var(--ease), box-shadow 0.14s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
 }
 .subnet-card:hover {
   border-color: var(--border-2);

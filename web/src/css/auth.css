@@ -102,7 +102,7 @@
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.auth-emblem img { display: block; width: 72px; height: auto; }
+.auth-emblem img { display: block; width: 64px; height: auto; }
 @media (max-width: 720px) {
   .auth { grid-template-columns: minmax(0, 1fr); }
   .auth-panel { display: none; }
@@ -179,7 +179,13 @@
   background: transparent;
   border-color: var(--auth-card-border);
 }
-.auth-form .btn.auth-secondary:hover:not(:disabled) { background: var(--auth-card); }
+/* "Quay lại" đóng phiên dở: rê chuột tô đỏ nhạt để báo trước. Card tối ở cả hai theme nên dùng
+   bộ --auth-danger-* (chữ đỏ nhạt ~6:1 trên kính tối), không dùng --danger-soft đổi theo theme. */
+.auth-form .btn.auth-secondary:hover:not(:disabled) {
+  background: var(--auth-danger-bg);
+  border-color: var(--auth-danger-border);
+  color: var(--auth-danger-ink);
+}
 /* Biểu tượng đầu ô (`features/auth/input-icon.tsx`): vẽ bằng currentColor, ô chừa chỗ bên trái. */
 .auth-inp-icon { position: relative; display: block; }
 .auth-inp-glyph {

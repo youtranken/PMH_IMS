@@ -71,8 +71,9 @@ table.table tbody td {
 table.table > tbody > tr:last-child > td {
   border-bottom: none;
 }
-table.table tbody tr {
-  transition: background 0.12s var(--ease);
+/* Nền hover/sọc đặt trên ô (td), nên transition cũng phải ở ô mới có tác dụng. */
+table.table > tbody > tr > td {
+  transition: background var(--dur-fast) var(--ease);
 }
 table.table > tbody > tr:nth-child(even) > td {
   background: var(--row-alt);

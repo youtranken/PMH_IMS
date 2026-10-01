@@ -289,15 +289,10 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     const topbar = page.getByRole('banner');
     const themeOf = () => page.evaluate(() => document.documentElement.dataset.theme ?? '');
 
-    /*
-     * Khởi điểm phụ thuộc `prefers-color-scheme` của trình duyệt chạy test, nên đưa về SÁNG
-     * trước rồi mới đo. Không có bước này thì bài kiểm xanh/đỏ theo cấu hình máy chứ không
-     * theo code.
-     */
-    if ((await themeOf()) === 'dark') {
-      await topbar.getByRole('button', { name: 'Chuyển sang chế độ sáng' }).click();
-    }
-    expect(await themeOf(), 'Bài kiểm bắt đầu từ giao diện sáng').toBe('light');
+    // Ngữ cảnh mới chưa lưu lựa chọn nào: mặc định là TỐI, không theo `prefers-color-scheme` (Q-21).
+    expect(await themeOf(), 'Người chưa chọn giao diện phải thấy giao diện tối').toBe('dark');
+    await topbar.getByRole('button', { name: 'Chuyển sang chế độ sáng' }).click();
+    expect(await themeOf(), 'Bài kiểm đo tiếp từ giao diện sáng').toBe('light');
 
     await topbar.getByRole('button', { name: 'Chuyển sang chế độ tối' }).click();
     expect(

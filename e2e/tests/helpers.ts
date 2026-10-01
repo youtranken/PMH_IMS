@@ -511,6 +511,18 @@ export async function freshTotpCode(secret: string): Promise<string> {
   return code;
 }
 
+/**
+ * Đưa trang về đúng theme bằng nút ở topbar. Mặc định là TỐI (Q-21) nhưng trang có thể đang ở
+ * theme khác do lựa chọn đã lưu, nên bấm khi cần rồi chờ `<html data-theme>` khớp.
+ */
+export async function switchTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
+  const button = page.getByRole('button', {
+    name: theme === 'dark' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng',
+  });
+  if ((await button.count()) > 0) await button.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+}
+
 export async function fillLogin(page: Page, email: string, password: string): Promise<void> {
   /*
    * NUỐT ĐÚNG MỘT LỖI, VÀ CHỈ KHI ĐÍCH ĐẾN TRÙNG.

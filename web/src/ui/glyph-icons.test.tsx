@@ -76,6 +76,37 @@ describe('Hình nhỏ trên nút là SVG, không phải ký tự', () => {
     vi.unstubAllGlobals();
   });
 
+  /*
+   * Hình chép phải cân giữa khung 24×24: lệch nửa đơn vị đã thấy rõ trong ô vuông 28px. Đường
+   * viền tờ sau viết bằng lệnh TUYỆT ĐỐI (M/H/V/A) để bài này đọc được toạ độ điểm cuối.
+   */
+  it('CopyIcon: hai tờ giấy cân giữa khung 24×24', () => {
+    const { container } = renderWithI18n(<CopyIcon />);
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const r of Array.from(container.querySelectorAll('rect'))) {
+      const [x, y, w, h] = ['x', 'y', 'width', 'height'].map((a) => Number(r.getAttribute(a)));
+      xs.push(x, x + w);
+      ys.push(y, y + h);
+    }
+    let cx = 0;
+    let cy = 0;
+    for (const p of Array.from(container.querySelectorAll('path'))) {
+      const d = p.getAttribute('d')!;
+      expect(d, 'chỉ dùng lệnh tuyệt đối').not.toMatch(/[a-z]/);
+      for (const [, cmd, args] of d.matchAll(/([MHVA])([^MHVA]*)/g)) {
+        const n = args.trim().split(/[\s,]+/).map(Number);
+        if (cmd === 'H') cx = n[0];
+        else if (cmd === 'V') cy = n[0];
+        else [cx, cy] = n.slice(-2);
+        xs.push(cx);
+        ys.push(cy);
+      }
+    }
+    expect((Math.min(...xs) + Math.max(...xs)) / 2).toBe(12);
+    expect((Math.min(...ys) + Math.max(...ys)) / 2).toBe(12);
+  });
+
   it('CopyIcon và CheckIcon là SVG aria-hidden', () => {
     const { container } = renderWithI18n(
       <>

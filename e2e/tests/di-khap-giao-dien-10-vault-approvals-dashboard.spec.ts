@@ -693,12 +693,12 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'SA phải thấy đủ sáu khối — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
     ).toEqual(
       asSet([
-        'Hạn cần xử lý',
+        'Tổng hợp hết hạn cần xử lý',
         'Dải mạng ≥ N%',
         'Két lâu chưa đổi',
         'Sự cố tuần qua',
         'Yêu cầu mở két tuần qua',
-        'Vừa vào kho thanh lý (7 ngày)',
+        'Tổng hợp kho thanh lý (7 ngày)',
       ]),
     );
 
@@ -721,7 +721,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
     // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Hạn cần xử lý' }),
+      page.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' }),
       'Member vẫn phải thấy khối "Sắp hết hạn" — cắt theo vai không phải là cắt sạch',
     ).toBeVisible();
 
@@ -731,10 +731,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Member phải thấy đúng bốn khối không dính bí mật',
     ).toEqual(
       asSet([
-        'Hạn cần xử lý',
+        'Tổng hợp hết hạn cần xử lý',
         'Dải mạng ≥ N%',
         'Sự cố tuần qua',
-        'Vừa vào kho thanh lý (7 ngày)',
+        'Tổng hợp kho thanh lý (7 ngày)',
       ]),
     );
 

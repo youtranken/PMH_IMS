@@ -66,6 +66,36 @@ describe('token màu đạt ngưỡng WCAG', () => {
     }
   });
 
+  // Chữ thường gặp trên các mặt nền chính, kể cả dòng chẵn của bảng (dòng quá hạn chữ đỏ).
+  it.each(['--ink', '--ink-2', '--ink-3', '--muted', '--danger', '--primary-ink', '--info'])(
+    'chữ %s ≥ 4.5:1 trên canvas/surface/surface-2/row-alt (dark)',
+    (fg) => {
+      for (const bg of ['--canvas', '--surface', '--surface-2', '--row-alt', '--muted-soft']) {
+        expect(contrast(hex('dark', fg), hex('dark', bg)), `${fg} trên ${bg}`).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
+
+  it.each([
+    ['--primary-soft', '--primary-ink'],
+    ['--ok-soft', '--ok'],
+    ['--warn-soft', '--warn'],
+    ['--warm-soft', '--warm-ink'],
+    ['--danger-soft', '--danger'],
+    ['--danger-soft', '--danger-strong'],
+    ['--info-soft', '--info'],
+  ])('huy hiệu: chữ trên %s ≥ 4.5:1 (dark, %s)', (bg, fg) => {
+    expect(contrast(hex('dark', fg), hex('dark', bg))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Mặc định là tối (Q-21) nên nền tối không được đen kịt: canvas tối thiểu sáng như #171e18, và
+  // sidebar vẫn tối hơn canvas để tách khối.
+  it('nền tối đã sáng lên mà sidebar vẫn tối hơn canvas', () => {
+    expect(luminance(hex('dark', '--canvas'))).toBeGreaterThanOrEqual(luminance('#171e18'));
+    expect(luminance(hex('dark', '--surface'))).toBeGreaterThan(luminance(hex('dark', '--canvas')));
+    expect(luminance(hex('dark', '--sidebar-bg'))).toBeLessThan(luminance(hex('dark', '--canvas')));
+  });
+
   it('--field-border có cặp dark khai tường minh', () => {
     expect(tokenBlock('dark').has('--field-border')).toBe(true);
   });
@@ -173,6 +203,59 @@ describe('hover của các nút tự vẽ', () => {
   });
 });
 
+describe('nút "Quay lại" ở bước nhập mã 2 lớp', () => {
+  // Bấm nó là đóng phiên dở: rê chuột phải báo trước bằng tông đỏ nhạt. Card đăng nhập tối ở cả
+  // hai theme nên dùng bộ --auth-danger-* (không đổi theo theme), không dùng --danger-soft.
+  it('hover tô nền/viền/chữ đỏ nhạt bằng token --auth-danger-*', () => {
+    const body = rule('auth.css', '.auth-form .btn.auth-secondary:hover:not(:disabled)')!.body;
+    expect(declValue(body, 'background')).toBe('var(--auth-danger-bg)');
+    expect(declValue(body, 'border-color')).toBe('var(--auth-danger-border)');
+    expect(declValue(body, 'color')).toBe('var(--auth-danger-ink)');
+  });
+});
+
+// --- Chuyển động khi rê chuột (Q-21) -------------------------------------------------------------
+
+describe('chuyển động nhẹ khi rê chuột', () => {
+  const REDUCE = '(prefers-reduced-motion: reduce)';
+
+  it('thời lượng là token --dur-fast / --dur trong khoảng 150–200ms', () => {
+    const light = tokenBlock('light');
+    expect(light.get('--dur-fast')).toBe('150ms');
+    expect(light.get('--dur')).toBe('200ms');
+  });
+
+  it.each([
+    ['base.css', 'button'],
+    ['base.css', 'a.linkbtn'],
+    ['base.css', '.nav-item'],
+    ['shared-kit.css', '.kpi'],
+    ['form-layout.css', '.chip'],
+    ['primitives.css', '.subnet-card'],
+    ['table.css', 'table.table > tbody > tr > td'],
+  ])('%s %s đổi trạng thái có transition theo token thời lượng', (file, selector) => {
+    const t = declValue(rule(file, selector)!.body, 'transition');
+    expect(t, selector).toMatch(/var\(--dur(-fast)?\)/);
+  });
+
+  it('ô số trên Bảng điều khiển nhấc 1px + bóng khi rê chuột', () => {
+    const body = rule('shared-kit.css', '.kpi:hover')!.body;
+    expect(declValue(body, 'transform')).toBe('translateY(-1px)');
+    expect(declValue(body, 'box-shadow')).toBeDefined();
+  });
+
+  it('"giảm chuyển động": tắt mọi transition/animation và bỏ cả các cú nhấc/trượt khi hover', () => {
+    const all = cssRules('detail-tabs.css').find((r) => r.selector === '*' && r.media === REDUCE)!;
+    expect(declValue(all.body, 'transition')).toBe('none !important');
+    for (const [file, selector] of [
+      ['base.css', '.nav-item:hover'],
+      ['shared-kit.css', '.kpi:hover'],
+    ]) {
+      expect(declValue(rule(file, selector, REDUCE)!.body, 'transform'), selector).toBe('none');
+    }
+  });
+});
+
 describe('vòng tiêu điểm vẽ một lần', () => {
   it.each([
     '.settings-nav button:focus-visible',
@@ -222,6 +305,28 @@ describe('bố cục khối dùng chung', () => {
       expect(declValue(r!.body, 'min-width')).toBe('0');
     }
     expect(declValue(rule('detail-tabs.css', '.filter-bar > .grow', '(max-width: 600px)')!.body, 'flex-basis')).toBe('100%');
+  });
+
+  // Chữ mô tả chạy một hàng khi còn chỗ (Q-21): không ép xuống dòng bằng trần theo số ký tự.
+  // Ngoại lệ có chủ đích: lý do xin mở két là chữ người dùng gõ mà người duyệt phải đọc kỹ.
+  // `.page-header .sub` / `.alert` đang được gỡ trần ở nhánh khác nên tạm cho qua.
+  it('không ép chữ mô tả xuống dòng bằng max-width theo ch', () => {
+    const allowed = new Set(['.approval-reason', '.page-header .sub', '.alert']);
+    const capped = FILES.flatMap((f) =>
+      cssRules(f)
+        .filter((r) => r.media === null && /^\d+(\.\d+)?ch$/.test(declValue(r.body, 'max-width') ?? ''))
+        .map((r) => r.selector),
+    ).filter((s) => !allowed.has(s));
+    expect(capped).toEqual([]);
+  });
+
+  // Nút vuông 28px mà giữ đệm ngang 0.85rem của `button` chung thì vùng nội dung âm, hình chép
+  // tràn sang phải — lệch tâm ở mọi chỗ dùng.
+  it.each(['.copy-btn', '.copy-btn.inline'])('%s không mang đệm của button chung (hình nằm giữa ô)', (selector) => {
+    const pad = declValue(rule('detail-tabs.css', '.copy-btn')!.body, 'padding');
+    expect(pad).toBe('0');
+    const own = rule('detail-tabs.css', selector)!;
+    expect(declValue(own.body, 'padding') ?? pad).toBe('0');
   });
 
   it('.session-list chỉ khai ở một file', () => {
