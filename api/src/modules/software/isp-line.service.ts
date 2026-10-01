@@ -36,13 +36,13 @@ export type IspStatus = (typeof ISP_STATUSES)[number];
 const ISP_LIVE_STATUSES: IspStatus[] = ['active', 'suspended'];
 
 /**
- * `?status=active,suspended`. Vắng / rỗng = không lọc (⌘K). Có chữ lạ thì cả tham số coi như
- * mặc định (Q-20): 400 thì cả màn thành trang lỗi, bỏ riêng phần lạ thì `?status=terminated,x`
- * lại bày đường đã thanh lý như thể người dùng chọn đích danh.
+ * `?status=active,suspended`. Vắng / rỗng = không lọc (⌘K). Đoạn rỗng (dấu phẩy thừa) bị bỏ.
+ * Có chữ lạ thì cả tham số coi như mặc định (Q-20): 400 thì cả màn thành trang lỗi, bỏ riêng
+ * phần lạ thì `?status=terminated,x` lại bày đường đã thanh lý như thể người dùng chọn đích danh.
  */
 export function ispStatusesOf(text: string | undefined): IspStatus[] {
-  const parts = [...new Set((text ?? '').split(',').map((part) => part.trim()))];
-  if (parts.every((part) => part === '')) return [];
+  const parts = [...new Set((text ?? '').split(',').map((part) => part.trim()).filter(Boolean))];
+  if (parts.length === 0) return [];
   if (parts.some((part) => !(ISP_STATUSES as readonly string[]).includes(part))) {
     return [...ISP_LIVE_STATUSES];
   }
