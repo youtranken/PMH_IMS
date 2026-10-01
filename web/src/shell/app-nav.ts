@@ -1,6 +1,5 @@
 import type { Me } from '@/lib/me';
 import { PATHS, titleKeyOf } from '@/lib/routes';
-import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 
 interface NavItem {
   /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
@@ -32,8 +31,11 @@ export interface NavGroup {
  * Nhóm theo VIỆC người trực đang làm, không theo thứ tự làm ra màn: một danh sách phẳng mười
  * mấy mục thì khó quét, nhất là trong drawer điện thoại. Tài khoản dịch vụ đứng trong "Tài sản"
  * cạnh thiết bị/phần mềm; két sắt và duyệt mở két đứng chung "Bảo mật".
+ *
+ * "Bộ giao diện" (`/dev/components`) cố ý KHÔNG có ở đây, kể cả bản dev/E2E (Q-20): trang dữ
+ * liệu giả mà nằm trên menu thì người dùng tưởng là chức năng thật. Vào bằng URL.
  */
-const allNavGroups: NavGroup[] = [
+export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groupOverview',
     items: [
@@ -90,18 +92,7 @@ const allNavGroups: NavGroup[] = [
       { key: 'nav.settings', to: PATHS.adminSettings, roles: ['sa'] },
     ],
   },
-  {
-    /* Trang nội bộ của đội phát triển (dữ liệu giả) — nhóm riêng ở cuối, nhãn nói rõ, để SA
-       không tưởng đây là một chức năng thật. Chỉ SA thấy, khớp gác quyền ở App.tsx. */
-    labelKey: 'nav.groupDev',
-    items: [{ key: 'nav.components', to: PATHS.devComponents, roles: ['sa'] }],
-  },
 ];
-
-/** Nhóm dev (Bộ giao diện) chỉ có khi build bật cờ — bản production không có (FE-09). */
-export const navGroups: NavGroup[] = allNavGroups.filter(
-  (group) => DEV_KIT_ENABLED || group.labelKey !== 'nav.groupDev',
-);
 
 export function visibleGroups(me: Me | null): NavGroup[] {
   if (!me) return [];

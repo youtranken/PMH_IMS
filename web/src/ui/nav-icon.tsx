@@ -132,13 +132,6 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M10 13h4" />
     </>
   ),
-  'nav.components': (
-    <>
-      {/* Khối lắp ghép — bộ giao diện dùng chung. */}
-      <path d="m12 2 9 5v10l-9 5-9-5V7Z" />
-      <path d="M12 12 3 7M12 12l9-5M12 12v10" />
-    </>
-  ),
 };
 
 /** Có icon riêng cho khoá này không — bài kiểm canh mục menu mới không rơi về chấm tròn. */

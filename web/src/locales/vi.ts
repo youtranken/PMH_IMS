@@ -458,7 +458,6 @@ export default {
     groupNetwork: 'Mạng',
     groupSecurity: 'Bảo mật',
     groupAdmin: 'Hệ thống',
-    groupDev: 'Dành cho nhà phát triển',
   },
   catalog: {
     title: 'Danh mục',

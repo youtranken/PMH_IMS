@@ -77,9 +77,9 @@ test.describe('Menu gọn', () => {
     await page.goto('/devices');
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    // "Hệ thống" là mục cuối của menu (nhóm dev đã bỏ khỏi menu, Q-20).
     await expect(nav.getByRole('button', { name: 'Hệ thống', exact: true })).toBeInViewport({ ratio: 1 });
-    // Mục cuối của menu trên bản dựng E2E (nhóm dev nằm SAU "Hệ thống").
-    await expect(nav.getByRole('link', { name: 'Bộ giao diện', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(nav.getByRole('link', { name: 'Bộ giao diện', exact: true })).toHaveCount(0);
     await expect(nav.getByText('Tài liệu', { exact: true })).toHaveCount(0);
   });
 

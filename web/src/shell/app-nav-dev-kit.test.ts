@@ -9,26 +9,30 @@ async function navWith(env: { DEV: boolean; VITE_DEV_KIT?: string }) {
   vi.stubEnv('DEV', env.DEV);
   vi.stubEnv('VITE_DEV_KIT', env.VITE_DEV_KIT ?? '');
   const nav = await import('./app-nav');
-  return nav.visibleGroups(SA).flatMap((group) => group.items.map((item) => item.key));
+  return {
+    keys: nav.visibleGroups(SA).flatMap((group) => group.items.map((item) => item.key)),
+    groups: nav.visibleGroups(SA).map((group) => group.labelKey),
+  };
 }
 
-describe('FE-09 — "Bộ giao diện" chỉ có ở stack dev/E2E', () => {
+/**
+ * "Bộ giao diện" là trang nội bộ: không bao giờ có trên menu (Q-20), kể cả bản dev/E2E. Route
+ * `/dev/components` vẫn còn ở bản dev/E2E (FE-09), vào bằng URL.
+ */
+describe('Q-20 — menu không có nhóm "Dành cho nhà phát triển"', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
 
-  it('build production (không cờ): SA cũng không thấy mục, kể cả trong bảng lệnh', async () => {
-    const keys = await navWith({ DEV: false });
+  it.each([
+    ['build production (không cờ)', { DEV: false }],
+    ['build có VITE_DEV_KIT=1 (override E2E)', { DEV: false, VITE_DEV_KIT: '1' }],
+    ['vite dev', { DEV: true }],
+  ])('%s: SA không thấy mục Bộ giao diện', async (_name, env) => {
+    const { keys, groups } = await navWith(env);
     expect(keys).not.toContain('nav.components');
+    expect(groups).not.toContain('nav.groupDev');
     expect(keys).toContain('nav.settings');
-  });
-
-  it('build có VITE_DEV_KIT=1 (override E2E): SA thấy mục', async () => {
-    expect(await navWith({ DEV: false, VITE_DEV_KIT: '1' })).toContain('nav.components');
-  });
-
-  it('vite dev: có mục', async () => {
-    expect(await navWith({ DEV: true })).toContain('nav.components');
   });
 });

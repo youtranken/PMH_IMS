@@ -16,8 +16,8 @@ test.describe('390px', () => {
 
   test('bộ dùng chung (light + dark) không tràn ngang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    await openNavDrawer(page);
-    await page.getByRole('link', { name: 'Bộ giao diện' }).click();
+    // Trang nội bộ không có trên menu (Q-20) — vào bằng URL.
+    await page.goto('/dev/components');
     await expect(page.getByRole('heading', { name: 'Bộ giao diện' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
