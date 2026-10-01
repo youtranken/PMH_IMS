@@ -32,11 +32,16 @@ import { BadRequestException } from '@nestjs/common';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
-import { IP_SEARCH_MAX, IpAddressService } from './ip-address.service';
+import {
+  IP_SEARCH_MAX,
+  IpAddressService,
+  type IpAddressRecord,
+  type IpSearchHit,
+} from './ip-address.service';
 import { IP_LIFECYCLE_STATUSES, type IpStatus } from './ip-lifecycle';
 import { NAT_PROTOCOLS, NatRuleService, type NatProtocol } from './nat-rule.service';
 import { parsePortRange } from './nat-rules';
-import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { ExcelExportService, type ExportColumn } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { SubnetService } from './subnet.service';
 import { NoStepUp } from '../auth/step-up.decorator';
@@ -356,19 +361,35 @@ export class IpamController {
     });
     const buffer = await this.excel.build({
       sheetName: 'Địa chỉ IP',
-      columns: [
-        { header: 'Địa chỉ', width: 18, value: (r) => r.address },
-        { header: 'Trạng thái', width: 16, value: (r) => IP_STATUS_LABEL[r.status] ?? r.status },
-        { header: 'Thiết bị', width: 22, value: (r) => r.deviceCode ?? '' },
-        { header: 'Site', width: 12, value: (r) => r.deviceSiteCode ?? '' },
-        { header: 'Người / phòng ban', width: 28, value: (r) => r.usedBy ?? '' },
-        { header: 'Ngày cấp', width: 14, value: (r) => r.assignedAt ?? '' },
-        { header: 'Người cấp', width: 24, value: (r) => r.assignedBy },
-        { header: 'Ghi chú', width: 36, value: (r) => r.note ?? '' },
-      ],
+      columns: IP_EXPORT_COLUMNS,
       rows,
     });
     sendXlsx(res, buffer, `ip-${subnet.cidr.replace('/', '-')}.xlsx`);
+  }
+
+  /**
+   * "Xuất tất cả" của màn IP (Q-20): mọi hồ sơ IP của mọi dải đang dùng, thêm ba cột Dải / Tên
+   * dải / VLAN đứng đầu để một file đọc được mà không cần mở từng dải.
+   *
+   * Khai TRƯỚC `addresses/:id`: Express khớp theo thứ tự khai, đứng sau thì `export.xlsx` rơi
+   * vào route `:id` và bị chặn ở kiểm uuid.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('ip.exported', 'subnet')
+  @Get('addresses/export.xlsx')
+  async exportAllAddresses(@Res() res: Response) {
+    const rows = await this.addresses.listAllForExport();
+    const buffer = await this.excel.build<IpSearchHit>({
+      sheetName: 'Địa chỉ IP',
+      columns: [
+        { header: 'Dải', width: 18, value: (r) => r.subnetCidr },
+        { header: 'Tên dải', width: 24, value: (r) => r.subnetName },
+        { header: 'VLAN', width: 8, value: (r) => r.subnetVlan ?? '' },
+        ...IP_EXPORT_COLUMNS,
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'ip-tat-ca.xlsx');
   }
 
   @Roles('sa', 'admin')
@@ -766,3 +787,15 @@ const IP_STATUS_LABEL: Record<string, string> = {
   free: 'Trống',
   assigned: 'Đang dùng',
 };
+
+/** Cột hồ sơ IP — chung cho file một dải và file tất cả, để hai file không lệch cột. */
+const IP_EXPORT_COLUMNS: ExportColumn<IpAddressRecord>[] = [
+  { header: 'Địa chỉ', width: 18, value: (r) => r.address },
+  { header: 'Trạng thái', width: 16, value: (r) => IP_STATUS_LABEL[r.status] ?? r.status },
+  { header: 'Thiết bị', width: 22, value: (r) => r.deviceCode ?? '' },
+  { header: 'Site', width: 12, value: (r) => r.deviceSiteCode ?? '' },
+  { header: 'Người / phòng ban', width: 28, value: (r) => r.usedBy ?? '' },
+  { header: 'Ngày cấp', width: 14, value: (r) => r.assignedAt ?? '' },
+  { header: 'Người cấp', width: 24, value: (r) => r.assignedBy },
+  { header: 'Ghi chú', width: 36, value: (r) => r.note ?? '' },
+];

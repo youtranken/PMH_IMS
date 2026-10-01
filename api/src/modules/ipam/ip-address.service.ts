@@ -406,6 +406,32 @@ export class IpAddressService {
     }));
   }
 
+  /**
+   * "Xuất tất cả" ở màn IP (Q-20): mọi hồ sơ còn sống của mọi dải đang dùng, sắp theo dải rồi
+   * địa chỉ. Dải đã ngừng dùng không vào: file này là sổ IP ĐANG dùng; dải đã tắt vẫn xuất
+   * riêng được ở chính dải đó.
+   */
+  async listAllForExport(): Promise<IpSearchHit[]> {
+    const rows = await this.db
+      .select({
+        ip: ipAddressTable,
+        subnetCidr: sql<string>`${subnetTable.cidr}::text`,
+        subnetName: subnetTable.name,
+        subnetVlan: subnetTable.vlan,
+      })
+      .from(ipAddressTable)
+      .innerJoin(subnetTable, eq(subnetTable.id, ipAddressTable.subnetId))
+      .where(and(isNull(ipAddressTable.voidedAt), isNull(subnetTable.voidedAt)))
+      .orderBy(asc(subnetTable.cidr), asc(ipAddressTable.address));
+    const records = await this.decorate(rows.map((row) => row.ip));
+    return records.map((record, index) => ({
+      ...record,
+      subnetCidr: rows[index].subnetCidr,
+      subnetName: rows[index].subnetName,
+      subnetVlan: rows[index].subnetVlan,
+    }));
+  }
+
   async findOne(id: string): Promise<IpAddressRecord> {
     return (await this.decorate([await this.requireAlive(id)]))[0];
   }

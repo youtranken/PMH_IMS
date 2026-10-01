@@ -203,6 +203,9 @@ export function IpamScreen({ me }: { me: Me }) {
               <ExportXlsxButton
                 url={`/api/v1/ipam/subnets/${selected.id}/export.xlsx`}
                 fileName={`ip-${selected.cidr.replace('/', '-')}.xlsx`}
+                currentLabel={t('ipam.exportCurrent')}
+                allUrl="/api/v1/ipam/addresses/export.xlsx"
+                allFileName="ip-tat-ca.xlsx"
               />
             ) : null}
             {canEdit ? (

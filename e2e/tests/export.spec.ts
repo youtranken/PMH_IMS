@@ -75,6 +75,8 @@ test.describe('Xuất Excel', () => {
       '/api/v1/isp-lines/export.xlsx',
       '/api/v1/expiry/export.xlsx',
       `/api/v1/ipam/subnets/${subnetId}/export.xlsx`,
+      // Q-20: "Xuất tất cả" của màn IP.
+      '/api/v1/ipam/addresses/export.xlsx',
       '/api/v1/ipam/nat/export.xlsx',
       '/api/v1/vault/break-glass/export.xlsx',
     ]) {
@@ -130,6 +132,7 @@ test.describe('Xuất Excel', () => {
       '/api/v1/software/export.xlsx',
       '/api/v1/isp-lines/export.xlsx',
       '/api/v1/expiry/export.xlsx',
+      '/api/v1/ipam/addresses/export.xlsx',
       '/api/v1/ipam/nat/export.xlsx',
       '/api/v1/vault/break-glass/export.xlsx',
     ]) {

@@ -257,10 +257,15 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
      */
     const cards = await rail.getByRole('link').count();
     expect(cards, 'ít nhất phải có hai thẻ của chính bài này').toBeGreaterThanOrEqual(2);
+    /* Ô "Lọc theo site" (Q-20) chỉ mọc khi máy có dải gắn site — dữ liệu của máy, không phải
+       của bài, nên đếm tại chỗ như số thẻ. */
+    const siteFilter = await rail
+      .getByRole('button', { name: 'Lọc theo site', exact: true })
+      .count();
     await expect(
       rail.getByRole('button'),
       'mỗi thẻ đúng MỘT nút ba chấm — thẻ nào mất nút là dải đó hết sửa được mà không có gì báo',
-    ).toHaveCount(cards);
+    ).toHaveCount(cards + siteFilter);
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
@@ -275,6 +280,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       [
         ['Xuất Excel', 1],
         ['Thêm dải mạng', 1],
+        ['Lọc theo site', siteFilter],
         ['Tra', 1],
         [/^Thao tác với /, cards],
         ['Giấy tờ (0)', 1],

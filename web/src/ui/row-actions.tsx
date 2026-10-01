@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
+import { Chevron } from '@/ui/chevron';
 import { KebabIcon } from '@/ui/glyph-icons';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
@@ -89,6 +90,11 @@ export function RowActions({
   label: string;
   items: RowAction[];
   subject?: string;
+  /**
+   * Nút mở menu là nút CHỮ ("Xuất Excel" + mũi tên) thay vì ba chấm — cho menu nhỏ ở đầu trang
+   * (`ExportXlsxButton` có `allUrl`). Bàn phím, thứ tự, vạch ngăn giữ nguyên như menu dòng.
+   */
+  triggerText?: string;
 }) {
   const reason = useDisabledReason(primary?.disabledReason);
   if (!primary) return <RowActionsMenu {...menu} />;
@@ -118,6 +124,7 @@ function RowActionsMenu({
   label,
   items,
   subject,
+  triggerText,
 }: {
   /** Tên khả truy cập của nút ba chấm — PHẢI nói rõ nó thuộc dòng nào ("Thao tác với LIC-01"). */
   label: string;
@@ -127,6 +134,7 @@ function RowActionsMenu({
    * bảng rộng có thể đang cuộn mất cột định danh: nhìn menu là biết mình sắp Thu hồi cái gì.
    */
   subject?: string;
+  triggerText?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -207,7 +215,7 @@ function RowActionsMenu({
       <button
         ref={triggerRef}
         type="button"
-        className="ghost kebab"
+        className={triggerText ? 'btn with-icon' : 'ghost kebab'}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -229,7 +237,14 @@ function RowActionsMenu({
       >
         {/* Ba chấm DỌC ở mọi màn (Q-18). Là HÌNH, tên nút nằm ở `aria-label` — trình đọc màn
             hình không đọc ký tự, và bài E2E tìm nút theo tên nên đổi hình không đổi bài. */}
-        <KebabIcon />
+        {triggerText ? (
+          <>
+            {triggerText}
+            <Chevron />
+          </>
+        ) : (
+          <KebabIcon />
+        )}
       </button>
 
       {open &&

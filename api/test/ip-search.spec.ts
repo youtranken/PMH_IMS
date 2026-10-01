@@ -146,6 +146,22 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     expect(await addresses.search('go nham')).toEqual([]);
   });
 
+  /* Q-20: "Xuất tất cả" ở màn IP — mọi hồ sơ còn sống của mọi dải đang dùng, kèm dải. */
+  it('xuất tất cả: mọi IP sống của dải đang dùng, sắp theo dải rồi địa chỉ, kèm CIDR/tên/VLAN', async () => {
+    const rows = await addresses.listAllForExport();
+    expect(rows.map((r) => [r.subnetCidr, r.address])).toEqual([
+      ['10.77.1.0/24', '10.77.1.53'],
+      ['10.77.1.0/24', '10.77.1.54'],
+      ['10.77.30.0/28', '10.77.30.5'],
+    ]);
+    expect(rows[2]).toMatchObject({
+      subnetName: 'Camera tim',
+      subnetVlan: 30,
+      deviceCode: 'CAM-TIM-01',
+      deviceSiteCode: 'TOWER',
+    });
+  });
+
   it('có trần số dòng', async () => {
     expect(await addresses.search('10.77', 1)).toHaveLength(1);
   });

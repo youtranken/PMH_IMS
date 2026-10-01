@@ -265,6 +265,8 @@ export default {
     /* Câu dự phòng của `errorMessage()` khi API không gửi `message`. */
     errorFallback: 'Có lỗi xảy ra.',
     export: 'Xuất Excel',
+    exportCurrent: 'Xuất bảng đang xem',
+    exportAll: 'Xuất tất cả',
     actions: 'Thao tác',
     /* Tên riêng cho nút ba chấm của TỪNG dòng. Dùng chung một chữ "Thao tác" thì hai chục nút
        trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
@@ -1718,6 +1720,7 @@ export default {
     assign: 'Cấp IP',
     assignIp: 'Cấp IP — {{address}}',
     assignForDevice: 'Cấp IP cho {{code}}',
+    exportCurrent: 'Xuất dải đang xem',
     changeIp: 'Đổi IP — {{address}}',
     changeForDevice: 'Đổi IP cho {{code}}',
     currentIp: 'IP hiện tại',
