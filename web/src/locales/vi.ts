@@ -607,7 +607,6 @@ export default {
     // tên trợ năng theo chuỗi con — hai nút sẽ giành nhau trong mọi bài kiểm.
     editOf: 'Sửa máy {{device}}',
     software: 'Phần mềm',
-    installedHeader: 'Phần mềm đang cài ({{count}})',
     noInstalled: 'Máy này chưa được gán license nào.',
     search: 'Tìm mã, tên, serial, IP hoặc người dùng',
     code: 'Mã thiết bị',
