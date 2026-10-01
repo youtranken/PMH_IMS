@@ -227,7 +227,10 @@ export function SettingsScreen({ me }: { me: Me }) {
               const check = checks.get(row.key) ?? checkDraft(row, draftOf(row));
               const dirty = draftOf(row).trim() !== toDraft(row.value);
               const warn = dirty ? warningOf(row, check.value) : null;
-              const description = descriptionSlot(TEXT[row.name] ? t(TEXT[row.name][1]) : undefined);
+              const description = descriptionSlot(
+                TEXT[row.name] ? t(TEXT[row.name][1]) : undefined,
+                row.name,
+              );
               return (
                 <div key={row.key} className="settings-row">
                   <Field

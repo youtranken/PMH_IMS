@@ -137,14 +137,17 @@ describe('Màn Tham số hệ thống', () => {
   });
 
   /* Q-19: mô tả dài vào nút (i) cạnh nhãn, mô tả ngắn vẫn hiện ngay dưới ô. */
-  it('mô tả dài hơn ~80 ký tự vào nút (i); mô tả ngắn vẫn hiện', async () => {
+  it('mô tả dài hơn ~80 ký tự vào nút (i); mô tả ngắn vẫn hiện; trần 25 MB luôn hiện', async () => {
     const user = userEvent.setup();
     renderAt('/admin/settings?group=files');
     await screen.findByLabelText('Dung lượng tối đa mỗi file');
     expect(screen.getByText(/Chọn hoặc kéo thả nhiều hơn thì các file dư bị bỏ ra/)).toBeVisible();
-    expect(screen.queryByText(/Áp cho mọi loại giấy tờ/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Giải thích: Dung lượng tối đa mỗi file' }));
-    expect(await screen.findByText(/Áp cho mọi loại giấy tờ/)).toBeVisible();
+    // Trần dung lượng: mô tả dài nhưng luôn hiện dưới ô (chủ dự án chốt), không có nút (i).
+    expect(screen.getByText(/Áp cho mọi loại giấy tờ/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Giải thích: Dung lượng tối đa mỗi file' })).toBeNull();
+    expect(screen.queryByText(/Qua mốc này nội dung file bị gỡ khỏi ổ đĩa/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Giải thích: Gỡ nội dung file đã xóa sau' }));
+    expect(await screen.findByText(/Qua mốc này nội dung file bị gỡ khỏi ổ đĩa/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Giải thích: Số file tối đa mỗi lượt chọn' })).toBeNull();
     expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
   });

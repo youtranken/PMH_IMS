@@ -90,9 +90,18 @@ export function warningOf(
 const INLINE_DESCRIPTION_MAX = 80;
 
 /** Mô tả đi chỗ nào: `hint` (hiện dưới ô) hay `tip` (sau nút (i)) — đúng một trong hai. */
-export function descriptionSlot(text: string | undefined): { hint?: string; tip?: string } {
+/**
+ * Tham số mà mô tả là GIỚI HẠN người sửa phải thấy ngay khi đặt số (trần cứng 25 MB của file),
+ * nên luôn hiện dưới ô dù dài — chủ dự án chốt.
+ */
+const ALWAYS_INLINE: ReadonlySet<string> = new Set(['fileMaxSizeMb']);
+
+export function descriptionSlot(
+  text: string | undefined,
+  name?: string,
+): { hint?: string; tip?: string } {
   if (!text) return { hint: undefined, tip: undefined };
-  return text.length > INLINE_DESCRIPTION_MAX
+  return text.length > INLINE_DESCRIPTION_MAX && !(name && ALWAYS_INLINE.has(name))
     ? { hint: undefined, tip: text }
     : { hint: text, tip: undefined };
 }

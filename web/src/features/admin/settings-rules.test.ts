@@ -69,4 +69,9 @@ describe('descriptionSlot (Q-19)', () => {
   ])('mô tả %i ký tự', (length, hint, tip) => {
     expect(descriptionSlot(length ? of(length) : undefined)).toEqual({ hint, tip });
   });
+
+  it('trần dung lượng file luôn hiện dưới ô dù mô tả dài (chủ dự án chốt)', () => {
+    expect(descriptionSlot(of(140), 'fileMaxSizeMb')).toEqual({ hint: of(140), tip: undefined });
+    expect(descriptionSlot(of(140), 'fileMaxFilesPerBatch')).toEqual({ hint: undefined, tip: of(140) });
+  });
 });
