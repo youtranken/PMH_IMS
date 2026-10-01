@@ -188,7 +188,7 @@
 | Tên | Đường dẫn | Dùng ở đâu | Ghi chú |
 | --- | --- | --- | --- |
 | `expiryLevel`, `expiryLabel`, `daysUntil`, `levelFromDays` | `lib/expiry.ts` | **Luật "sắp hết hạn" duy nhất** của hệ thống | Tính theo ngày lịch, không theo 24 giờ.  Dùng `levelFromDays` khi server ĐÃ tính sẵn `daysLeft` (màn `/expiry`); dùng `expiryLevel` khi chỉ có ngày kết thúc và nó có thể `null` — chỉ bản này trả `'none'`. Có `daysLeft` rồi mà tự viết ba nhánh `<0 / <=critical / <=warning` trong màn là dựng bản luật thứ hai, đúng thứ `expiry-screen.tsx` vừa gỡ ngày 19/09 |
-| `afterLogout` | `lib/after-logout.ts` | Mọi đường đăng xuất phía web (hiện: nút Đăng xuất ở shell) | Xoá sạch cache react-query rồi mới về màn đăng nhập (FE-02). Tự `navigate(LOGIN_PATH)` mà không xoá cache là để dữ liệu người trước trên máy dùng chung |
+| `afterLogout` | `lib/after-logout.ts` | Mọi đường đăng xuất phía web (hiện: nút Đăng xuất ở shell) | Xoá sạch cache react-query và danh sách "mở gần đây" của ô tìm nhanh (mọi khoá `PALETTE_RECENT_PREFIX` trong localStorage — `ui/command-palette.tsx` dựng khoá từ hằng này) rồi mới về màn đăng nhập (FE-02). Tự `navigate(LOGIN_PATH)` mà không xoá cache là để dữ liệu người trước trên máy dùng chung |
 | `nextStepPath` | `lib/me.ts` | Nơi DUY NHẤT quyết định bước tiếp theo của luồng đăng nhập | Màn không tự `navigate()` |
 | `pendingSetupSteps`, `setupProgress` | `lib/me.ts` | "Bước mấy/mấy" của luồng đăng nhập lần đầu (`AuthCard setupFor`) | Cùng thứ tự với `nextStepPath` — thêm bước mới thì thêm ở cả hai |
 | `PATHS.subnetAt(id, ip)` | `lib/routes.ts` | Link tới một dải ở ĐÚNG một địa chỉ (`?ip=`): màn tự nhảy trang, tô sáng dòng. Dùng ở ô tra IP và hộp Tìm nhanh | Chỉ mở dải thì dùng `PATHS.subnet(id)` |
