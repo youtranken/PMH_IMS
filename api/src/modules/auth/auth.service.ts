@@ -823,8 +823,10 @@ export class AuthService {
     }
 
     const secret = this.totp.generateSecret();
+    const issuedAt = Date.now();
     const ticket = encodeTicket(
-      this.envelope.seal(secret, reenrollContext(user.id, session.id)),
+      this.envelope.seal(secret, reenrollContext(user.id, session.id, issuedAt)),
+      issuedAt,
     );
     await this.db.transaction(async (tx) => {
       await this.sessions.clearStepUpFailuresWithin(tx, session.id);
@@ -854,7 +856,7 @@ export class AuthService {
     token: string,
   ): Promise<{ revokedSessions: number }> {
     const user = await this.requireUser(session.userId);
-    const secret = this.openTicket(ticket, user.id, session.id);
+    const secret = await this.openTicket(ticket, user.id, session.id);
     const result = await this.totp.verify({ token, secret, lastUsedTimeStep: null });
     if (!result.ok) {
       await this.audit.append({
@@ -966,10 +968,19 @@ export class AuthService {
     });
   }
 
-  /** Vé hỏng, bị sửa, hay của phiên/người khác đều ra cùng một câu — không nói hỏng ở đâu. */
-  private openTicket(ticket: string, userId: string, sessionId: string): string {
+  /**
+   * Vé hỏng, bị sửa, quá hạn, hay của phiên/người khác đều ra cùng một câu — không nói hỏng ở đâu.
+   *
+   * Hạn `totp.enroll_reauth_minutes` tính từ lúc phát: vé không hạn thì một vé lộ ra dùng được suốt
+   * đời phiên. `iat` đi dạng rõ nhưng nằm trong ngữ cảnh mã hoá, nên sửa nó là vé không mở được.
+   */
+  private async openTicket(ticket: string, userId: string, sessionId: string): Promise<string> {
+    const minutes = await this.config.getNumber('totpEnrollReauthMinutes');
     try {
-      return this.envelope.openText(decodeTicket(ticket), reenrollContext(userId, sessionId));
+      const { sealed, issuedAt } = decodeTicket(ticket);
+      const age = Date.now() - issuedAt;
+      if (age < 0 || age > minutes * 60_000) throw new Error('ticket');
+      return this.envelope.openText(sealed, reenrollContext(userId, sessionId, issuedAt));
     } catch {
       throw new BadRequestException({
         code: 'REENROLL_TICKET_INVALID',
@@ -1172,23 +1183,24 @@ export class AuthService {
   }
 }
 
-function reenrollContext(userId: string, sessionId: string) {
-  return { table: REENROLL_TICKET_TABLE, recordId: `${userId}:${sessionId}` };
+function reenrollContext(userId: string, sessionId: string, issuedAt: number) {
+  return { table: REENROLL_TICKET_TABLE, recordId: `${userId}:${sessionId}:${issuedAt}` };
 }
 
-function encodeTicket(sealed: SealedValue): string {
+function encodeTicket(sealed: SealedValue, issuedAt: number): string {
   const json = JSON.stringify({
     c: sealed.ciphertext.toString('base64'),
     i: sealed.iv.toString('base64'),
     t: sealed.tag.toString('base64'),
     w: sealed.wrappedDek.toString('base64'),
     k: sealed.keyVersion,
+    a: issuedAt,
   });
   return Buffer.from(json, 'utf8').toString('base64url');
 }
 
 /** Ném khi vé không đúng hình dạng — nơi gọi gộp mọi lỗi thành một mã. */
-function decodeTicket(ticket: string): SealedValue {
+function decodeTicket(ticket: string): { sealed: SealedValue; issuedAt: number } {
   const raw = JSON.parse(Buffer.from(ticket, 'base64url').toString('utf8')) as Record<
     string,
     unknown
@@ -1198,12 +1210,16 @@ function decodeTicket(ticket: string): SealedValue {
     return Buffer.from(v, 'base64');
   };
   if (typeof raw.k !== 'number') throw new Error('ticket');
+  if (typeof raw.a !== 'number' || !Number.isSafeInteger(raw.a)) throw new Error('ticket');
   return {
-    ciphertext: buf(raw.c),
-    iv: buf(raw.i),
-    tag: buf(raw.t),
-    wrappedDek: buf(raw.w),
-    keyVersion: raw.k,
+    sealed: {
+      ciphertext: buf(raw.c),
+      iv: buf(raw.i),
+      tag: buf(raw.t),
+      wrappedDek: buf(raw.w),
+      keyVersion: raw.k,
+    },
+    issuedAt: raw.a,
   };
 }
 

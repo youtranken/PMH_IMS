@@ -75,7 +75,7 @@ describe('Trần đăng nhập theo tài khoản — AuthService trên DB thật
       audit,
       outbox,
       config,
-      new KnownDeviceService(db),
+      new KnownDeviceService(db, config, noopSweep),
       new LoginFailureService(db, config, noopSweep),
       new AuditApiService(new SecurityProbeService(db, config, outbox, audit)),
     );

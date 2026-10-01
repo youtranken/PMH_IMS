@@ -3,6 +3,7 @@ import { runMigrations } from '../src/database/migration-runner';
 import type { Database } from '../src/database/database.module';
 import { OutboxService } from '../src/modules/outbox/outbox.service';
 import { SessionService } from '../src/modules/auth/session.service';
+import { KnownDeviceService } from '../src/modules/auth/known-device.service';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
@@ -51,6 +52,7 @@ describe('Dọn định kỳ — phiên chết và outbox đã xử lý', () => 
   let scratch: ScratchDb;
   let outbox: OutboxService;
   let sessions: SessionService;
+  let knownDevices: KnownDeviceService;
   const registered: string[] = [];
 
   beforeAll(async () => {
@@ -67,8 +69,10 @@ describe('Dọn định kỳ — phiên chết và outbox đã xử lý', () => 
 
     outbox = new OutboxService(db, config, sweep);
     sessions = new SessionService(db, config, sweep);
+    knownDevices = new KnownDeviceService(db, config, sweep);
     outbox.onModuleInit();
     sessions.onModuleInit();
+    knownDevices.onModuleInit();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -78,6 +82,7 @@ describe('Dọn định kỳ — phiên chết và outbox đã xử lý', () => 
   beforeEach(async () => {
     await scratch.pool.query('DELETE FROM outbox');
     await scratch.pool.query('DELETE FROM sessions');
+    await scratch.pool.query('DELETE FROM known_device');
     await scratch.pool.query('DELETE FROM users');
   });
 
@@ -115,6 +120,7 @@ describe('Dọn định kỳ — phiên chết và outbox đã xử lý', () => 
       // Một hàm dọn không ai gọi trông y hệt một hàm dọn đang chạy.
       expect(registered).toContain('session-purge');
       expect(registered).toContain('outbox-purge');
+      expect(registered).toContain('known-device-purge');
     });
   });
 
@@ -171,6 +177,36 @@ describe('Dọn định kỳ — phiên chết và outbox đã xử lý', () => 
       async () => {
         await seedSession(10);
         expect(await sessions.purgeOld()).toBe(1);
+      },
+      TEST_TIMEOUT,
+    );
+  });
+
+  /*
+   * Thiết bị đã nhớ chỉ dùng để quyết định "có báo thư thiết bị lạ không". Máy lâu không đăng
+   * nhập thì quên đi: lần quay lại được báo như máy mới — đúng điều chủ tài khoản muốn biết.
+   */
+  describe('thiết bị đã nhớ (known_device)', () => {
+    async function seedKnownDevice(lastSeenDaysAgo: number): Promise<void> {
+      const user = await scratch.pool.query<{ id: string }>(
+        `INSERT INTO users (email, full_name, role, password_hash)
+         VALUES ($1, 'Nguoi kiem', 'member', 'x') RETURNING id`,
+        [`may-${lastSeenDaysAgo}-${Date.now()}@pmh.com.vn`],
+      );
+      await scratch.pool.query(
+        `INSERT INTO known_device (user_id, device_hash, last_seen_at)
+         VALUES ($1, md5(random()::text), now() - ($2 || ' days')::interval)`,
+        [user.rows[0].id, lastSeenDaysAgo],
+      );
+    }
+
+    it(
+      'máy lâu hơn ngưỡng không thấy thì bị quên; máy mới thấy thì ở lại — ngưỡng từ system_config',
+      async () => {
+        await seedKnownDevice(KEEP_DAYS + 3);
+        await seedKnownDevice(1);
+        expect(await knownDevices.purgeStale()).toBe(1);
+        expect(await countOf('known_device')).toBe(1);
       },
       TEST_TIMEOUT,
     );
