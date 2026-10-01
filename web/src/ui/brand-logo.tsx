@@ -9,7 +9,7 @@
  * nghe tên hai lần.
  */
 const LOGO = { base: '/brand/pmh-logo', width: 480, height: 354 };
-const EMBLEM = { base: '/brand/pmh-emblem', width: 256, height: 178 };
+const EMBLEM = { base: '/brand/pmh-emblem', width: 191, height: 192 };
 
 function BrandPicture({
   asset,
@@ -43,7 +43,10 @@ export function BrandLogo(props: { alt: string; className?: string; lazy?: boole
   return <BrandPicture asset={LOGO} {...props} />;
 }
 
-/** Chỉ biểu tượng vàng, không chữ: chỗ hẹp (sidebar, đầu card trên điện thoại). */
+/**
+ * Chỉ biểu tượng vàng, không chữ: chỗ hẹp (sidebar, đầu card trên điện thoại). Hình thoi phải
+ * đủ bốn góc: thiếu góc dưới thì nhìn như logo bị cắt.
+ */
 export function BrandEmblem(props: { alt: string; className?: string; lazy?: boolean }) {
   return <BrandPicture asset={EMBLEM} {...props} />;
 }
