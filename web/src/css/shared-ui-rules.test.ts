@@ -137,19 +137,33 @@ describe('toast nổi trên hộp thoại', () => {
 
   /*
    * Toast ở góc dưới phải nằm đúng chỗ nút Lưu của chân hộp thoại: nổi trên hộp mà vẫn ở đáy thì
-   * che nút, người dùng bấm Lưu không ăn (E2E nat.spec "thêm router mới ngay trong hộp").
-   * Có hộp mở thì toast lên mép trên, cả màn rộng lẫn màn hẹp.
+   * che nút, người dùng bấm Lưu không ăn (E2E nat.spec "thêm router mới ngay trong hộp"). Lên góc
+   * trên PHẢI thì lại đè nút ✕ đóng hộp. Có hộp mở thì toast lên mép trên, GIỮA màn: chỗ đó là
+   * phần trống của đầu hộp (tiêu đề bên trái, ✕ bên phải). Màn đăng nhập / đổi mật khẩu ở
+   * 1366×768 có nút chính sát đáy, nên toast cũng lên trên.
    */
-  it('có hộp thoại mở thì toast lên mép trên, không đè chân hộp', () => {
-    for (const role of ['dialog', 'alertdialog']) {
-      const sel = `body:has([role='${role}']) .toast-stack`;
-      for (const media of [null, '(max-width: 480px)']) {
-        const r = rule('shared-kit.css', sel, media);
-        expect(r, `thiếu luật ${sel} @media ${media}`).toBeDefined();
-        expect(declValue(r!.body, 'bottom')).toBe('auto');
-        expect(declValue(r!.body, 'top')).toBeDefined();
-      }
+  const TOP_PLACED = [
+    "body:has([role='dialog']) .toast-stack",
+    "body:has([role='alertdialog']) .toast-stack",
+    'body:has(.auth) .toast-stack',
+  ];
+  it.each(TOP_PLACED)('%s: toast lên mép trên, không đè chân hộp hay nút chính', (sel) => {
+    for (const media of [null, '(max-width: 480px)']) {
+      const r = rule('shared-kit.css', sel, media);
+      expect(r, `thiếu luật ${sel} @media ${media}`).toBeDefined();
+      expect(declValue(r!.body, 'bottom')).toBe('auto');
+      expect(declValue(r!.body, 'top')).toBeDefined();
     }
+  });
+
+  it.each(TOP_PLACED)('%s: màn rộng thì toast ở GIỮA, không ở góc phải (nút ✕)', (sel) => {
+    const r = rule('shared-kit.css', sel)!;
+    expect(declValue(r.body, 'right')).toBe('auto');
+    expect(declValue(r.body, 'left')).toBe('50%');
+    expect(declValue(r.body, 'transform')).toBe('translateX(-50%)');
+    // Màn hẹp toast trải gần trọn bề ngang: bỏ dịch nửa bề rộng, không thì lệch khỏi màn.
+    const narrow = rule('shared-kit.css', sel, '(max-width: 480px)')!;
+    expect(declValue(narrow.body, 'transform')).toBe('none');
   });
 });
 

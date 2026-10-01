@@ -15,11 +15,18 @@
   gap: var(--space-4);
   max-width: min(92vw, 420px);
 }
-/* Đáy phải là chỗ của nút Lưu ở chân hộp thoại: toast nổi trên hộp mà vẫn ở đáy thì che nút. */
+/* Đáy phải là chỗ của nút Lưu ở chân hộp thoại: toast nổi trên hộp mà vẫn ở đáy thì che nút.
+   Góc trên phải lại là nút ✕ của hộp. Nên có hộp mở thì toast lên mép trên, GIỮA màn — phần
+   trống của đầu hộp (tiêu đề bên trái, ✕ bên phải). Màn đăng nhập / đổi mật khẩu (`.auth`) ở
+   1366×768 có nút chính sát đáy màn, cùng cách xử lý. */
 body:has([role='dialog']) .toast-stack,
-body:has([role='alertdialog']) .toast-stack {
-  top: var(--space-9);
+body:has([role='alertdialog']) .toast-stack,
+body:has(.auth) .toast-stack {
+  top: var(--space-4);
   bottom: auto;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .toast {
   display: flex;
@@ -1665,10 +1672,16 @@ table.access-grid thead tr:last-child th {
   body:has(.sticky-action-bar) .toast-stack {
     bottom: calc(var(--space-5) + 7rem + env(safe-area-inset-bottom));
   }
+  /* Màn hẹp toast trải gần trọn bề ngang (left/right ở `.toast-stack` trên): trả lại hai mép và
+     bỏ dịch nửa bề rộng của bản màn rộng. */
   body:has([role='dialog']) .toast-stack,
-  body:has([role='alertdialog']) .toast-stack {
+  body:has([role='alertdialog']) .toast-stack,
+  body:has(.auth) .toast-stack {
     top: calc(var(--space-5) + env(safe-area-inset-top));
     bottom: auto;
+    left: var(--space-5);
+    right: var(--space-5);
+    transform: none;
   }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
