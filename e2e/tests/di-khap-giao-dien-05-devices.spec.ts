@@ -404,12 +404,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(page.getByRole('columnheader')), {
         message:
-          'Bảng thiết bị có đúng 7 cột, đúng thứ tự này. Loại máy là dòng phụ dưới Tên (không bớt thông tin): thêm cột là cột Tên bị ép và nút Sửa bị đẩy khỏi khung ở 1280px',
+          'Bảng thiết bị ở 1280px có đúng 6 cột, đúng thứ tự này. Loại máy và Vị trí là dòng phụ dưới Tên (không bớt thông tin): thêm cột là cột Tên bị ép và nút Sửa bị đẩy khỏi khung ở 1280px. Màn >1440px mới có cột Vị trí riêng',
       })
       .toEqual([
         'Mã thiết bị',
         'Tên thiết bị',
-        'Vị trí',
         'Người sử dụng',
         'Bảo hành',
         'Trạng thái',

@@ -335,6 +335,29 @@ describe('bố cục khối dùng chung', () => {
   });
 });
 
+/*
+ * Bảng thiết bị ở 1280–1440px có sidebar: chữ `nowrap` trong ô Tên mang bề rộng TOÀN câu vào
+ * bề rộng tối thiểu của cột, nên bảng không co lại được và cột Trạng thái / Bảo hành bị cột
+ * thao tác dính mép che mất. Ô Tên phải co được tới sàn `col-name`, và ở khổ này Vị trí là dòng
+ * phụ dưới Tên thay cho một cột riêng.
+ */
+describe('bảng thiết bị vừa khung ở 1280–1440px', () => {
+  const MID = '(min-width: 961px) and (max-width: 1440px)';
+
+  it('.cell-stack không đóng góp bề rộng tối thiểu (rãnh lưới bắt đầu từ 0)', () => {
+    const r = rule('table.css', '.cell-stack');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'display')).toBe('grid');
+    expect(declValue(r!.body, 'grid-template-columns')).toBe('minmax(0, max-content)');
+  });
+
+  it('khổ giữa: cột .col-wide ẩn, dòng phụ .only-mid hiện', () => {
+    expect(declValue(rule('table.css', 'table.table .col-wide', MID)!.body, 'display')).toBe('none');
+    expect(declValue(rule('table.css', '.cell-sub.only-mid')!.body, 'display')).toBe('none');
+    expect(declValue(rule('table.css', '.cell-sub.only-mid', MID)!.body, 'display')).toBe('block');
+  });
+});
+
 describe('không còn CSS/token chết', () => {
   it.each(['time-picker.css', 'time-field.css'])('ui/%s đã xoá', (f) => {
     expect(existsSync(join(__dirname, '..', 'ui', f))).toBe(false);

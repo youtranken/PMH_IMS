@@ -770,6 +770,31 @@ table.table .col-sticky-end::after {
     white-space: normal;
   }
 }
+/* Bọc các dòng `.cell-clip` của ô cần CO được (Tên thiết bị). Chữ `nowrap` để trần trong ô bảng
+   đem bề rộng cả câu vào bề rộng tối thiểu của cột: bảng không co lại, tràn ngang, và cột thao
+   tác dính mép che mất Bảo hành / Trạng thái. Rãnh lưới `minmax(0, max-content)` cho bề rộng tối
+   thiểu bằng 0 (sàn thật là `min-width` của cột) mà vẫn xin đủ chỗ cho cả câu khi màn rộng. */
+.cell-stack {
+  display: grid;
+  grid-template-columns: minmax(0, max-content);
+}
+.cell-stack .cell-clip {
+  max-width: 36rem;
+}
+/* Khổ 961–1440px có sidebar không đủ chỗ cho mọi cột: cột `.col-wide` (Vị trí) ẩn và nội dung của
+   nó hiện thành dòng phụ `.only-mid` trong ô Tên. Dưới 961px bảng gập thành thẻ dọc, đủ chỗ cho
+   mọi ô, nên cột vẫn hiện và dòng phụ ẩn. */
+.cell-sub.only-mid {
+  display: none;
+}
+@media (min-width: 961px) and (max-width: 1440px) {
+  table.table .col-wide {
+    display: none;
+  }
+  .cell-sub.only-mid {
+    display: block;
+  }
+}
 /* Mũi tên của cột sắp được nhưng CHƯA sắp: ẩn, hiện mờ khi rê chuột/focus — để cột sắp được
    không trông y hệt cột không sắp được. */
 table.table thead th .sort-arrow.idle {
