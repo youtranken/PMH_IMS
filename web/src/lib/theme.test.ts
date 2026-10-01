@@ -28,6 +28,23 @@ afterEach(() => {
   delete document.documentElement.dataset.theme;
 });
 
+describe('đổi theme không chạy hiệu ứng chuyển màu', () => {
+  /*
+   * Ô bảng, nút, menu có transition màu nền (Q-21). Đổi theme mà để transition chạy thì cả màn
+   * mờ dần qua nhiều nhịp, và hai dòng cùng trạng thái đọc ra hai màu khác nhau giữa chừng
+   * (E2E ui-shared "hai dòng quá hạn liền nhau"). Lúc đổi theme phải tắt transition một nhịp.
+   */
+  it('gắn data-theme-switching trong lúc đổi rồi gỡ ở khung hình kế', async () => {
+    setThemePreference('light');
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    expect(document.documentElement.hasAttribute('data-theme-switching')).toBe(false);
+    setThemePreference('dark');
+    expect(document.documentElement.hasAttribute('data-theme-switching')).toBe(true);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    expect(document.documentElement.hasAttribute('data-theme-switching')).toBe(false);
+  });
+});
+
 describe('theme mặc định là TỐI (Q-21)', () => {
   it('chưa lưu gì: tối, kể cả khi máy đang để sáng', () => {
     expect(runInit()).toBe('dark');

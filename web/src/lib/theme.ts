@@ -35,10 +35,26 @@ export function themePreference(): ThemePreference {
   }
 }
 
+/**
+ * Nền/viền có transition cho lúc rê chuột (Q-21); đổi theme mà để nó chạy thì cả màn mờ dần
+ * qua vài trăm ms, và hai ô cùng trạng thái đọc ra hai màu khác nhau giữa chừng. Tắt transition
+ * (`html[data-theme-switching]` trong base.css) đúng lúc đổi, bật lại ở khung hình thứ hai —
+ * khung đầu là lúc trình duyệt tính style mới.
+ */
+function applyWithoutTransitions(theme: Theme): void {
+  const root = document.documentElement;
+  root.setAttribute('data-theme-switching', '');
+  root.dataset.theme = theme;
+  void getComputedStyle(root).color;
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => root.removeAttribute('data-theme-switching')),
+  );
+}
+
 export function setThemePreference(pref: ThemePreference): void {
   const theme: Theme =
     pref === 'system' ? (window.matchMedia(SYSTEM_DARK).matches ? 'dark' : 'light') : pref;
-  document.documentElement.dataset.theme = theme;
+  applyWithoutTransitions(theme);
   try {
     localStorage.setItem(THEME_KEY, pref);
   } catch {

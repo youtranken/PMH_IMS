@@ -784,6 +784,13 @@ input.search {
   }
 }
 
+/* Đổi theme: màu đổi ngay một lần, không mờ dần qua transition của từng ô (lib/theme.ts). */
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
+}
+
 /* Dòng vừa thêm/vừa đổi sáng lên rồi nhạt dần: máy mới thường rơi vào giữa trang theo thứ tự
    mã, không có dấu này thì mắt không tìm ra nó. Dùng chung cho mọi `.table`. */
 .table tr.row-flash > td {
