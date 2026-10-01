@@ -853,13 +853,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await tableColumnNames(main),
-      'Bảng tài khoản dịch vụ của SA có đúng 7 cột (Q-15: thêm "Đổi lần cuối"), cột cuối là Thao tác',
+      'Bảng tài khoản dịch vụ của SA có đúng 8 cột (Q-15 "Đổi lần cuối", Q-20 "Hết hạn"), cột cuối là Thao tác',
     ).toEqual([
       'Mã tài khoản',
       'Loại',
       'Tên đăng nhập',
       'Thuộc về',
       'Trạng thái',
+      'Hết hạn',
       'Đổi lần cuối',
       'Thao tác',
     ]);
@@ -1060,7 +1061,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
-      'Hộp thêm tài khoản có đúng chín nút: ô chọn Loại, (i) của Loại và Người phụ trách, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
+      'Hộp thêm tài khoản có đúng mười một nút: ô chọn Loại, (i) của Loại và Người phụ trách, ô ngày Hết hạn + (i) của nó, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
     ).toEqual(
       sortVi([
         'Đóng hộp thoại',
@@ -1068,6 +1069,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         // Lời dặn dài nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
         'Giải thích: Loại',
         'Giải thích: Người phụ trách',
+        // Hạn dùng của tài khoản (Q-20).
+        'Hết hạn (tùy chọn)',
+        'Giải thích: Hết hạn (tùy chọn)',
         'Hiện',
         'Tạo ngẫu nhiên',
         'Chọn file để đính kèm',

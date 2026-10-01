@@ -569,7 +569,7 @@ test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
     await form.getByRole('textbox', { name: 'Tên tài khoản' }).fill('VPN đối tác E2E');
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill(`vpn-han-${stamp}`);
     // Ô ngày: gõ chữ số trên nút mở lịch là mở ô gõ ngày dd/mm/yyyy.
-    await form.getByRole('button', { name: 'Hết hạn (tùy chọn)' }).focus();
+    await form.getByRole('button', { name: 'Hết hạn (tùy chọn)', exact: true }).focus();
     await page.keyboard.type(`${d}/${m}/${y}`);
     await page.keyboard.press('Enter');
     await form.getByRole('button', { name: 'Lưu' }).click();

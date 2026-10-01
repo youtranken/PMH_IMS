@@ -875,6 +875,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+3 năm',
         'Giải thích: Giấy tờ đính kèm',
         'Chọn file để đính kèm',
+        // Câu "chỉ tải về, không mở trong trình duyệt" nằm trong nút (i) (Q-20).
+        'Giải thích: Cách mở file đính kèm',
         'Hủy',
         'Lưu',
       ]);

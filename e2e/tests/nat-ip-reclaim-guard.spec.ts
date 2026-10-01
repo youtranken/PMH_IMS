@@ -66,11 +66,22 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
   expect(device.status()).toBe(201);
   const routerId = ((await device.json()) as { device: { id: string } }).device.id;
 
-  const octet = Number(stamp) % 200;
-  const subnet = await page.request.post('/api/v1/ipam/subnets', {
+  /*
+   * Octet suy từ stamp có thể trùng dải mà bài khác trong cùng lượt vừa khai (SUBNET_OVERLAP),
+   * nên lùi sang octet khác thay vì đỏ vì dữ liệu của bài bên cạnh.
+   */
+  let octet = Number(stamp) % 200;
+  let subnet = await page.request.post('/api/v1/ipam/subnets', {
     headers,
     data: { cidr: `172.16.${octet}.0/29`, name: `LAN thu hoi E2E ${stamp}` },
   });
+  for (let i = 0; i < 20 && subnet.status() === 409; i += 1) {
+    octet = (octet + 7) % 250;
+    subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.16.${octet}.0/29`, name: `LAN thu hoi E2E ${stamp}` },
+    });
+  }
   expect(subnet.status()).toBe(201);
   const subnetId = ((await subnet.json()) as { id: string }).id;
 

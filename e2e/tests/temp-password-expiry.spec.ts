@@ -92,7 +92,9 @@ test.describe('Mật khẩu tạm có hạn (Q-20)', () => {
     await member.getByRole('button', { name: 'Đổi mật khẩu và tiếp tục' }).click();
 
     await expect(member).toHaveURL(/\/login$/);
-    await expect(member.getByRole('status')).toContainText('Mật khẩu tạm đã hết hạn');
+    await expect(
+      member.getByRole('status').filter({ hasText: 'Mật khẩu tạm đã hết hạn' }),
+    ).toBeVisible();
     expect(
       sql(`SELECT must_change_password FROM users WHERE email = '${who.email}'`),
       'mật khẩu tạm quá hạn không được dùng để tự đặt mật khẩu mới',
