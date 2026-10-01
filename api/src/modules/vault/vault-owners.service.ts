@@ -21,10 +21,20 @@ export interface VaultOwnerSummary {
   lastChangeAt: Date;
   /** Hồ sơ chủ đã bị xoá mà secret còn treo — phải HIỆN để có người đi dọn. */
   orphan: boolean;
+  /**
+   * Hồ sơ chủ đã thanh lý / ngừng dùng / cắt đường truyền. Trang tổng vẫn hiện (két treo cần dọn)
+   * nhưng gắn nhãn; bảng điều khiển không nhắc "lâu không đổi" cho chủ đã bỏ.
+   */
+  retired: boolean;
 }
 
 /** Chủ thể gọi bằng tên — `orphan` khi hồ sơ chủ đã bị xoá. */
-export type OwnerIdentity = Pick<VaultOwnerSummary, 'code' | 'name' | 'siteCode' | 'orphan'>;
+export type OwnerIdentity = Pick<
+  VaultOwnerSummary,
+  'code' | 'name' | 'siteCode' | 'orphan' | 'retired'
+>;
+
+const ORPHAN: OwnerIdentity = { code: '—', name: '', siteCode: null, orphan: true, retired: false };
 
 /**
  * Trang tổng của Két sắt (`/vault`).
@@ -35,8 +45,8 @@ export type OwnerIdentity = Pick<VaultOwnerSummary, 'code' | 'name' | 'siteCode'
  * màn Thiết bị cũng thấy — chứ không biết trong két có gì.
  *
  * Tra tên hồ sơ qua `*.api.ts` của module chủ (AD-2), không SELECT bảng `device`/`software`.
- * Số chủ thể có két là hàng chục, nên N lượt gọi ở đây là chấp nhận được và đổi lại là ranh
- * giới module còn nguyên.
+ * Thiết bị tra MỘT lượt (`getByIds`) vì `getById` tốn 8 câu mỗi máy; ba loại còn lại mỗi chủ một
+ * câu, số chủ thể có két là hàng chục nên chấp nhận được.
  */
 @Injectable()
 export class VaultOwnersService {
@@ -49,12 +59,17 @@ export class VaultOwnersService {
 
   async list(): Promise<VaultOwnerSummary[]> {
     const summaries = await this.vault.listOwnerSummaries();
+    const deviceIds = summaries.filter((s) => s.ownerType === 'device').map((s) => s.ownerId);
+    const devices = deviceIds.length > 0 ? await this.devices.getByIds(deviceIds) : new Map();
 
     const rows = await Promise.all(
-      summaries.map(async (item): Promise<VaultOwnerSummary> => ({
-        ...item,
-        ...(await this.describe(item.ownerType, item.ownerId)),
-      })),
+      summaries.map(async (item): Promise<VaultOwnerSummary> => {
+        if (item.ownerType !== 'device') {
+          return { ...item, ...(await this.describe(item.ownerType, item.ownerId)) };
+        }
+        const device = devices.get(item.ownerId);
+        return { ...item, ...(device ? deviceIdentity(device) : ORPHAN) };
+      }),
     );
 
     // Nhiều ngăn nhất lên đầu — chỗ tập trung nhiều bí mật nhất là chỗ đáng soi trước.
@@ -77,21 +92,37 @@ export class VaultOwnersService {
        * đang sống. `never` ở nhánh cuối biến chuyện đó thành lỗi biên dịch.
        */
       switch (ownerType) {
-        case 'device': {
-          const device = await this.devices.getById(ownerId);
-          return { code: device.code, name: device.name, siteCode: device.siteCode, orphan: false };
-        }
+        case 'device':
+          return deviceIdentity(await this.devices.getById(ownerId));
         case 'service_account': {
           const account = await this.serviceAccounts.getById(ownerId);
-          return { code: account.code, name: account.name, siteCode: null, orphan: false };
+          return {
+            code: account.code,
+            name: account.name,
+            siteCode: null,
+            orphan: false,
+            retired: account.status === 'disabled',
+          };
         }
         case 'isp': {
           const line = await this.software.getIspById(ownerId);
-          return { code: line.code, name: line.provider, siteCode: line.siteCode, orphan: false };
+          return {
+            code: line.code,
+            name: line.provider,
+            siteCode: line.siteCode,
+            orphan: false,
+            retired: line.status === 'terminated',
+          };
         }
         case 'software': {
           const software = await this.software.getById(ownerId);
-          return { code: software.code, name: software.name, siteCode: null, orphan: false };
+          return {
+            code: software.code,
+            name: software.name,
+            siteCode: null,
+            orphan: false,
+            retired: software.status === 'retired',
+          };
         }
         default: {
           const missed: never = ownerType;
@@ -106,7 +137,23 @@ export class VaultOwnersService {
        * đúng là đang hỏng, không phải báo sai là đang rác.
        */
       if (!(error instanceof NotFoundException)) throw error;
-      return { code: '—', name: '', siteCode: null, orphan: true };
+      return ORPHAN;
     }
   }
+}
+
+function deviceIdentity(device: {
+  code: string;
+  name: string;
+  siteCode: string | null;
+  status: string;
+}): OwnerIdentity {
+  return {
+    code: device.code,
+    name: device.name,
+    siteCode: device.siteCode,
+    orphan: false,
+    // "Hỏng" / "Dự phòng" chỉ là nhãn (Q-20): két của chúng vẫn cần đổi như thường.
+    retired: device.status === 'retired',
+  };
 }
