@@ -255,22 +255,23 @@ export class IspLineService {
   }
 
   async update(actor: string, id: string, input: IspLineInput): Promise<IspLineRecord> {
-    const before = await this.requireRow(id);
     const values = await this.prepare(input, id);
     const nextWanIps = requireWanIps(input.wanIps);
-    const beforeWanIps = (await this.wanIpsByLine([id])).get(id) ?? [];
-    const changes = diffRecord(
-      TRACKED,
-      { ...before, wanIps: joinWanIps(beforeWanIps) },
-      nextWanIps === undefined ? values : { ...values, wanIps: joinWanIps(nextWanIps) },
-    );
-    if (!hasChanges(changes)) return toRecord(before, beforeWanIps);
-
-    const wanChanged = 'wanIps' in changes && nextWanIps !== undefined;
     return this.db.transaction(async (tx) => {
+      // Ảnh "trước" đọc SAU khi khoá hàng cha: đọc ngoài transaction thì một lượt sửa khác commit
+      // vào giữa, và dòng lịch sử của lượt này ghi "before" là thứ đã không còn — sổ nói sai
+      // IP WAN đã đổi từ đâu. Khoá này cũng xếp hàng hai lượt thay IP cùng một đường.
+      const before = await this.lockRowWithin(tx, id);
+      const beforeWanIps = (await this.wanIpsByLine([id], tx)).get(id) ?? [];
+      const changes = diffRecord(
+        TRACKED,
+        { ...before, wanIps: joinWanIps(beforeWanIps) },
+        nextWanIps === undefined ? values : { ...values, wanIps: joinWanIps(nextWanIps) },
+      );
+      if (!hasChanges(changes)) return toRecord(before, beforeWanIps);
+
+      const wanChanged = 'wanIps' in changes && nextWanIps !== undefined;
       await this.assertDeviceWithin(tx, values, before.deviceId);
-      // UPDATE hàng cha chạy TRƯỚC và luôn chạy (ít nhất `updated_at`): khoá hàng của nó xếp hàng
-      // hai lượt sửa IP cùng một đường, nên lượt sau không chèn trùng vào giữa lượt trước.
       const updated = await this.updateWithin(tx, id, values);
       if (wanChanged) await this.replaceWanIpsWithin(tx, id, nextWanIps);
       await this.recordWithin(tx, actor, id, 'updated', changes);
@@ -333,11 +334,14 @@ export class IspLineService {
   // ─────────────────────────── Nội bộ ───────────────────────────
 
   /** IP WAN của nhiều đường trong MỘT câu — danh sách và file Excel đọc theo trang. */
-  private async wanIpsByLine(ids: string[]): Promise<Map<string, string[]>> {
+  private async wanIpsByLine(
+    ids: string[],
+    executor: Database | Tx = this.db,
+  ): Promise<Map<string, string[]>> {
     const out = new Map<string, string[]>();
     if (ids.length === 0) return out;
     // `host()`: địa chỉ trần, không kèm "/32" — đúng chữ màn hình in và lịch sử so.
-    const rows = await this.db
+    const rows = await executor
       .select({
         ispLineId: ispLineWanIpTable.ispLineId,
         address: sql<string>`host(${ispLineWanIpTable.address})`,
@@ -492,6 +496,17 @@ export class IspLineService {
     if (nextDeviceId && nextDeviceId !== currentDeviceId) {
       await this.devices.assertUsableWithin(tx, nextDeviceId);
     }
+  }
+
+  private async lockRowWithin(tx: Tx, id: string): Promise<IspLineRow> {
+    const rows = await tx.select().from(ispLineTable).where(eq(ispLineTable.id, id)).for('update');
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'ISP_NOT_FOUND',
+        message: 'Không tìm thấy đường truyền này.',
+      });
+    }
+    return rows[0];
   }
 
   private async requireRow(id: string): Promise<IspLineRow> {
