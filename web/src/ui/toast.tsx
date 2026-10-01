@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CloseIcon } from '@/ui/glyph-icons';
 
 type ToastTone = 'ok' | 'error' | 'warn';
 
@@ -200,7 +201,7 @@ function ToastRow({
         aria-label={t('toast.close')}
         onClick={() => onClose(item.id)}
       >
-        ×
+        <CloseIcon />
       </button>
     </div>
   );

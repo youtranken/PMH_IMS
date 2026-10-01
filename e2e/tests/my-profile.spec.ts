@@ -102,17 +102,27 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
 
   await own.getByRole('button', { name: 'Cài lại trên điện thoại mới' }).click();
   const dialog = own.getByRole('dialog', { name: 'Cài lại trên điện thoại mới' });
+  // Nói trước hệ quả, trước khi hỏi gì (Q-20).
+  await expect(
+    dialog.getByText(
+      'Lưu ý: sau khi cài lại, mã trên điện thoại cũ không dùng được nữa; các máy khác đang đăng nhập sẽ bị đăng xuất.',
+    ),
+  ).toBeVisible();
   await dialog.getByLabel('Mật khẩu hiện tại').fill(person.password);
   await dialog.getByRole('button', { name: 'Tiếp tục' }).click();
 
-  // Hộp hỏi mã của điện thoại HIỆN TẠI.
-  const stepUp = own.getByRole('dialog', { name: 'Xác nhận danh tính' });
+  // Bước hỏi mã của điện thoại HIỆN TẠI nằm NGAY TRONG hộp này, câu nói đúng việc cài lại.
+  const stepUp = dialog.getByRole('region', { name: 'Xác nhận danh tính' });
   await expect(stepUp).toBeVisible();
+  await expect(own.getByRole('dialog')).toHaveCount(1);
+  await expect(
+    stepUp.getByText('Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.'),
+  ).toBeVisible();
   await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(person.secret));
 
   const newSecret = (await dialog.getByTestId('totp-secret').innerText()).trim();
   expect(newSecret).not.toBe(person.secret);
-  // Hộp step-up cũng có ô "Mã xác thực" — đợi nó đóng hẳn để nhãn chỉ còn trỏ một ô.
+  // Bước hỏi mã cũng có ô "Mã xác thực" — đợi nó rời hẳn để nhãn chỉ còn trỏ một ô.
   await expect(stepUp).toHaveCount(0);
   await dialog.getByLabel('Mã xác thực').fill(await freshTotpCode(newSecret));
   await dialog.getByRole('button', { name: 'Xác nhận' }).click();
@@ -213,4 +223,18 @@ test('Giao diện trong Hồ sơ: chọn Tối áp ngay, chọn Theo hệ thốn
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await group.getByRole('button', { name: 'Theo hệ thống' }).click();
   expect(await page.evaluate(() => localStorage.getItem('ims_theme'))).toBeNull();
+});
+
+test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, chọn Tối áp ngay (Q-20)', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  await page.getByRole('button', { name: /^Menu tài khoản của / }).click();
+  const row = page.getByRole('menu').getByRole('group', { name: 'Giao diện' });
+  const items = row.getByRole('menuitemradio');
+  await expect(items).toHaveCount(3);
+  // Một hàng: ba nút cùng một đường ngang.
+  const tops = await Promise.all([0, 1, 2].map(async (i) => (await items.nth(i).boundingBox())!.y));
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+  await row.getByRole('menuitemradio', { name: 'Tối' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(row.getByRole('menuitemradio', { name: 'Tối' })).toHaveAttribute('aria-checked', 'true');
 });

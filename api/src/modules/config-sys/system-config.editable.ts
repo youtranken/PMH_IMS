@@ -60,6 +60,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'rateFileUploadPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 5, max: 300 },
   { name: 'loginAccountBackoffMinutes', group: 'auth', type: 'int_list', unit: 'minutes', min: 1, max: 1440 },
   { name: 'totpEnrollReauthMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60 },
+  // Dưới 1 phút thì người gõ chậm không kịp mở ứng dụng xác thực.
+  { name: 'authTotpChallengeMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 30, warnAbove: 10 },
   { name: 'authSupportContact', group: 'auth', type: 'text', maxLength: 300 },
   // Két sắt
   { name: 'rateSecretRevealPerMinute', group: 'vault', type: 'int', unit: 'per_minute', min: 5, max: 300, warnAbove: 60 },

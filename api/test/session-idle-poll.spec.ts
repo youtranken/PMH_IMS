@@ -1,6 +1,7 @@
 import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { runMigrations } from '../src/database/migration-runner';
+import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import { SessionGuard } from '../src/modules/auth/session.guard';
 import { SessionService } from '../src/modules/auth/session.service';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
@@ -45,7 +46,14 @@ describe('NFR-01 · route hỏi định kỳ không gia hạn phiên idle', () =
           ? Promise.resolve(IDLE_MINUTES)
           : Promise.reject(new Error(`khoá không ngờ tới: ${key}`)),
     } as unknown as SystemConfigService;
-    guard = new SessionGuard(new Reflector(), sessions, new UsersService(scratch.db), config);
+    guard = new SessionGuard(
+      new Reflector(),
+      sessions,
+      new UsersService(scratch.db),
+      config,
+      scratch.db,
+      new AuditWriterService(scratch.db),
+    );
     touchSpy = jest.spyOn(sessions, 'touch');
     const rows = await scratch.pool.query<{ id: string }>(
       `INSERT INTO users (email, full_name, role, password_hash, must_change_password)

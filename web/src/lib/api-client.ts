@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { clearPaletteRecent } from '@/lib/after-logout';
+import { clearPaletteRecent, noteSignOutNotice } from '@/lib/after-logout';
 import { LOGIN_PATH, ME_KEY, type Me } from '@/lib/me';
 import { rememberNextPath, tabOwner } from '@/lib/next-path';
 
@@ -90,6 +90,10 @@ export async function readResponse<T>(res: Response): Promise<T> {
         queryClient.getQueryData<Pick<Me, 'email'> | null>(ME_KEY)?.email ?? tabOwner();
       rememberNextPath(`${pathname}${search}${hash}`, owner);
       clearPaletteRecent();
+      // Phiên chờ mã 2 lớp quá hạn (Q-20): màn đăng nhập nói vì sao phải gõ lại mật khẩu.
+      if ((errBody as { reason?: string } | null)?.reason === 'TOTP_CHALLENGE_EXPIRED') {
+        noteSignOutNotice('totpExpired');
+      }
       window.location.href = LOGIN_PATH;
     }
     throw new ApiError(res.status, errBody);

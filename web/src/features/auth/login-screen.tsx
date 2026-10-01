@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { clearSignedOut, justSignedOut } from '@/lib/after-logout';
+import { clearSignedOut, signOutNotice } from '@/lib/after-logout';
 import { classifyLoginError, formatWait, type LoginErrorKind } from '@/lib/login-error';
 import { nextPathLabelKey, peekNextPath } from '@/lib/next-path';
 import { readRememberedEmail, rememberEmail } from '@/lib/remembered-email';
@@ -13,6 +13,7 @@ import { useNow } from '@/ui/use-now';
 import { AuthCard } from './auth-card';
 import { InputIcon } from './input-icon';
 import { AUTH_ERROR_ID, clearSetupSteps } from './setup-steps';
+import { markTotpChallengeStarted } from './totp-challenge-clock';
 
 interface LoginResult {
   status: 'authenticated' | 'totp-required' | 'totp-enroll-required';
@@ -46,7 +47,8 @@ export function LoginScreen() {
   const [wrongCount, setWrongCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   // Vừa bấm Đăng xuất: nói ra là phiên đã đóng — trên máy dùng chung người ta cần chắc điều đó.
-  const [signedOut, setSignedOut] = useState(justSignedOut);
+  // Hết thời gian nhập mã 2 lớp (Q-20): nói vì sao lại phải gõ mật khẩu.
+  const [notice, setNotice] = useState(signOutNotice);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const now = useNow(1000, lockedUntil !== null);
@@ -113,17 +115,18 @@ export function LoginScreen() {
   }
 
   const typed = () => {
-    setSignedOut(false);
+    setNotice(null);
     clearSignedOut();
   };
 
   return (
     <AuthCard
+      intro
       title={t('auth.signInTitle')}
       subtitle={nextKey ? t('auth.resumeTo', { screen: t(nextKey) }) : t('auth.signInSub')}
       error={errorBody}
       errorTone={errorTone}
-      notice={signedOut ? t('auth.signedOut') : null}
+      notice={notice ? t(notice === 'totpExpired' ? 'auth.totpExpired' : 'auth.signedOut') : null}
     >
       <form
         className="auth-form"
@@ -141,7 +144,11 @@ export function LoginScreen() {
           login.mutate(
             { email: typedEmail, password },
             {
-              onSuccess: () => rememberEmail(typedEmail),
+              onSuccess: (result) => {
+                rememberEmail(typedEmail);
+                // Mốc bắt đầu bước nhập mã — chỉ sống trong bộ nhớ của tab (Q-20).
+                if (result.status === 'totp-required') markTotpChallengeStarted();
+              },
               onError: (err) => {
                 const kind = classifyLoginError(err);
                 if (kind.clearPassword) {

@@ -322,7 +322,10 @@ export default {
     confirmPassword: 'Nhập lại mật khẩu mới',
     passwordMismatch: 'Hai mật khẩu nhập không khớp.',
     stepUpTitle: 'Xác nhận danh tính',
-    stepUpSub: 'Nhập mã xác thực để xem thông tin bí mật',
+    /* Câu chung khi nơi gọi không nói việc gì — trung tính: hộp này dùng cho cả két lẫn cài lại
+       2 lớp, đặt lại mật khẩu…, nói "xem thông tin bí mật" là sai với mọi việc khác. */
+    stepUpSub: 'Nhập mã 6 số trên điện thoại để xác nhận thao tác này.',
+    stepUpFor: 'Nhập mã 6 số trên điện thoại để xác nhận: {{action}}.',
     lostTotp: 'Không lấy được mã?',
     lostTotpHelp:
       'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
@@ -362,7 +365,12 @@ export default {
     /* Không kèm số lần còn lại: con số đó cho kẻ dò biết email nào có thật. */
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
     signedOut: 'Bạn đã đăng xuất.',
+    totpExpired: 'Hết thời gian nhập mã, vui lòng đăng nhập lại.',
+    totpEmpty: 'Vui lòng nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
+    /* "Quay lại" ở màn nhập mã: phiên chờ phải đóng thật, không chỉ đổi màn. */
+    totpBack: 'Quay lại',
+    totpBacking: 'Đang quay lại…',
     totpChecking: 'Đang kiểm tra…',
     totpHint: 'Mã 6 số đang hiện trong ứng dụng. Nhập mã mới nhất.',
     enrollStep1: 'Cài ứng dụng xác thực trên điện thoại: Google Authenticator hoặc Microsoft Authenticator.',
@@ -404,8 +412,11 @@ export default {
     totpOff: 'Chưa bật — chưa mở được két sắt cho tới khi bật.',
     totpEnable: 'Bật ngay',
     totpReEnroll: 'Cài lại trên điện thoại mới',
-    totpReEnrollHint:
-      'Cần mật khẩu và mã 6 số trên điện thoại đang dùng. Xong thì điện thoại cũ hết dùng được, các máy khác bị đăng xuất.',
+    totpReEnrollHint: 'Cần mật khẩu hiện tại và mã 6 số trên điện thoại đang dùng.',
+    totpReEnrollWarning:
+      'Lưu ý: sau khi cài lại, mã trên điện thoại cũ không dùng được nữa; các máy khác đang đăng nhập sẽ bị đăng xuất.',
+    totpReEnrollStepUp: 'Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.',
+    totpReEnrollBack: 'Nhập lại mật khẩu',
     totpReEnrollPasswordSub: 'Nhập mật khẩu hiện tại để bắt đầu cài xác thực 2 lớp.',
     totpReEnrollContinue: 'Tiếp tục',
     totpEnrolled: 'Đã bật xác thực 2 lớp.',
@@ -458,7 +469,6 @@ export default {
     groupNetwork: 'Mạng',
     groupSecurity: 'Bảo mật',
     groupAdmin: 'Hệ thống',
-    groupDev: 'Dành cho nhà phát triển',
   },
   catalog: {
     title: 'Danh mục',
@@ -1294,6 +1304,7 @@ export default {
     confirmDelete: 'Xóa luật "{{name}}"? Luật này sẽ thôi gửi email.',
   },
   accounts: {
+    stepUpCreate: 'Nhập mã 6 số trên điện thoại để xác nhận tạo tài khoản {{email}}.',
     searchPlaceholder: 'Tìm theo tên hoặc email',
     saveProfileFailed: 'Không lưu được hồ sơ.',
     createFailed: 'Không tạo được tài khoản.',
@@ -1920,6 +1931,7 @@ export default {
     ipAssignNow: 'Cấp IP này trong sổ',
   },
   serviceAccounts: {
+    stepUpStoreSecret: 'Nhập mã 6 số trên điện thoại để xác nhận cất mật khẩu vào két.',
     phLogin: 'vd ketoan@pmh.com.vn',
     phAllowedIps: 'vd 203.113.1.5, 118.70.2.0/24',
     title: 'Tài khoản dịch vụ',
@@ -2255,6 +2267,7 @@ export default {
       authStepupSessionRevoked: 'Đóng phiên vì xác thực lại sai nhiều lần',
       authTotpFailed: 'Mã 2 lớp sai',
       authTotpSessionRevoked: 'Đóng phiên vì mã 2 lớp sai nhiều lần',
+      authTotpChallengeExpired: 'Đóng phiên vì quá thời gian nhập mã 2 lớp',
       authTotpEnrollStart: 'Bắt đầu cài 2 lớp',
       authTotpEnrollDone: 'Cài xong 2 lớp',
       authTotpEnrollFailed: 'Cài 2 lớp thất bại',
@@ -2395,6 +2408,7 @@ export default {
     },
   },
   access: {
+    stepUpCopy: 'Nhập mã 6 số trên điện thoại để xác nhận gán quyền két cho {{name}}.',
     title: 'Quyền két sắt',
     subtitle: 'Ai xem thẳng được mật khẩu nào, ai phải xin duyệt.',
     search: 'Tìm theo tên hoặc email…',
@@ -2899,6 +2913,7 @@ export default {
   },
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   settings: {
+    stepUpSave: 'Nhập mã 6 số trên điện thoại để xác nhận lưu tham số hệ thống.',
     title: 'Tham số hệ thống',
     subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển, mạng IP và giấy tờ đính kèm. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
@@ -2960,6 +2975,9 @@ export default {
     loginAccountBackoffMinutesDesc: 'Bậc chờ tăng dần áp cho cả tài khoản, bất kể đoán từ máy nào.',
     totpEnrollReauthMinutesLabel: 'Miễn gõ lại mật khẩu khi cài 2 lớp lần đầu',
     totpEnrollReauthMinutesDesc: 'Trong khoảng này sau khi đăng nhập thì cài 2 lớp không phải gõ lại mật khẩu.',
+    authTotpChallengeMinutesLabel: 'Thời gian nhập mã 2 lớp khi đăng nhập',
+    authTotpChallengeMinutesDesc:
+      'Đã đúng mật khẩu thì phải nhập mã 2 lớp trong khoảng này, quá thì phải đăng nhập lại. Không áp cho lần cài 2 lớp đầu tiên.',
     authSupportContactLabel: 'Câu liên hệ khi quên mật khẩu / mất điện thoại',
     authSupportContactDesc: 'Hiện ở màn đăng nhập và màn mã 2 lớp. Ghi rõ gặp ai, gọi số nào.',
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',

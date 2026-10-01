@@ -136,7 +136,7 @@ export function AccountForm({
             return;
           }
           const input = { ...contact, email: email.trim(), role, totpLoginRequired };
-          stepUp.run(() => create.mutateAsync(input)).then(
+          stepUp.run(() => create.mutateAsync(input), t('accounts.stepUpCreate', { email: input.email })).then(
             (result) =>
               onCreated(result.temporaryPassword, {
                 id: result.user.id,

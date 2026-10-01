@@ -44,6 +44,7 @@ export const ACTION_KEY: Record<string, string> = {
   'auth.stepup.session_revoked': 'audit.actions.authStepupSessionRevoked',
   'auth.totp.failed': 'audit.actions.authTotpFailed',
   'auth.totp.session_revoked': 'audit.actions.authTotpSessionRevoked',
+  'auth.totp.challenge_expired': 'audit.actions.authTotpChallengeExpired',
   'auth.totp.enroll.start': 'audit.actions.authTotpEnrollStart',
   'auth.totp.enroll.done': 'audit.actions.authTotpEnrollDone',
   'auth.totp.enroll.failed': 'audit.actions.authTotpEnrollFailed',

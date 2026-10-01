@@ -339,6 +339,9 @@ table.table.table-sub td .mono {
 .ip-cell.is-gw {
   box-shadow: inset 0 0 0 2px var(--primary);
 }
+.ip-cell:hover:not(:disabled) {
+  border-color: var(--primary);
+}
 .ip-cell:disabled {
   cursor: default;
 }

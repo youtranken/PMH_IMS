@@ -1,7 +1,7 @@
 /* --- Đăng nhập IMS -----------------------------------------------------------
    Nền grove tối (cố định, không theo theme app vì là màn ngoài shell) + card kính.
-   Màn rộng: ảnh PMH bên trái RỘNG hơn cột form (~60/40, Q-19), card bên phải; ≤720px chỉ còn
-   card, mang biểu tượng PMH.
+   Màn rộng: ảnh PMH bên trái RỘNG hơn cột form (~60/40, Q-19), chỉ ảnh; logo + card bên phải
+   (Q-20). ≤720px chỉ còn card, mang biểu tượng PMH.
    Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
 .auth {
   min-height: 100vh;
@@ -11,17 +11,12 @@
   grid-template-columns: minmax(0, 3fr) minmax(460px, 2fr);
   background: var(--auth-bg);
 }
-/* Chữ nằm trên ẢNH, nên độ tương phản đến từ lớp phủ --auth-photo-veil (tối dần về mép trái,
-   nơi đặt chữ), không phải từ nền đơn sắc. Ảnh có thể là bất cứ gì sau này: đừng bỏ lớp phủ. */
+/* Mảng trái chỉ có ảnh (Q-20). Lớp phủ --auth-photo-veil nhẹ, tối dần về mép phải để ảnh liền
+   với nền mờ của cột form. */
 .auth-panel {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: clamp(32px, 8vh, 96px) clamp(24px, 5vw, 72px);
-  color: var(--auth-ink);
   background: var(--auth-bg);
 }
 .auth-photo { position: absolute; inset: 0; z-index: -2; }
@@ -41,31 +36,46 @@
   background: var(--auth-photo-veil);
   pointer-events: none;
 }
-.auth-panel-body { display: flex; flex-direction: column; gap: var(--space-5); }
-/* Chữ "Phu My Hung" trong logo xám sáng: chỉ đọc được trên lớp phủ tối. */
-.auth-panel-logo img { display: block; width: clamp(140px, 14vw, 220px); height: auto; }
-.auth-panel-system { font-size: var(--fs-lg); font-weight: 600; }
-.auth-panel-points {
-  margin: var(--space-4) 0 0;
-  padding-left: 1.2em;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  max-width: 36ch;
-}
 /* Card neo MÉP TRÊN, không căn giữa dọc: căn giữa thì hộp lỗi (hay QR) hiện ra làm cả card
    dịch lên nửa khoảng đó, đúng lúc người dùng định gõ lại vào ô vừa đổi chỗ. Trên điện thoại
-   mép trên thấp còn giữ nút chính ở trên vùng bàn phím ảo. */
+   mép trên thấp còn giữ nút chính ở trên vùng bàn phím ảo. `align-content: start`: có hai hàng
+   (logo + card), để mặc định thì khoảng trống chia đều cho hai hàng và đẩy card xuống. Lề trên
+   thấp để logo + card bước mã 2 lớp vừa màn 1366×768 không phải cuộn. */
 .auth-main {
   position: relative;
   min-width: 0;
   display: grid;
   justify-items: center;
   align-items: start;
-  padding: clamp(24px, 12vh, 120px) var(--space-7) var(--space-7);
+  align-content: start;
+  row-gap: var(--space-8);
+  padding: clamp(16px, 5vh, 56px) var(--space-7) var(--space-7);
   overflow: hidden;
+}
+/* Logo PMH + tên hệ thống, giữa cột form, trên card. Chữ "Phu My Hung" trong logo xám sáng: chỉ
+   đọc được trên nền tối — nền cột form là ảnh làm mờ + tối (luật ngay dưới). */
+.auth-head {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--auth-ink);
+  text-align: center;
+}
+.auth-head-logo img { display: block; width: clamp(120px, 10vw, 168px); height: auto; }
+.auth-head-system { font-size: var(--fs-lg); font-weight: 600; }
+.auth-head-points {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-align: left;
 }
 /* Màn rộng: nền cột form là CHÍNH ảnh bên trái, phóng to + làm mờ + tối đi — hai nửa cùng tông
    chạng vạng nên liền một khối, thay cho nền lục riêng trông như hai trang ghép. Không trải ảnh
@@ -80,15 +90,25 @@
   filter: blur(28px) brightness(0.45) saturate(1.1);
   pointer-events: none;
 }
-/* Màn rộng đã có logo đầy đủ ở mảng ảnh, nên biểu tượng trong card chỉ hiện ≤720px. Luật này
-   phải đứng TRƯỚC khối @media ngay dưới: cùng độ ưu tiên, luật đứng sau thắng. */
-.auth-emblem { display: none; }
+/* Màn rộng đã có logo đầy đủ trên card (`.auth-head`), nên khối biểu tượng + tên TRONG card chỉ
+   hiện ≤720px. Luật này phải đứng TRƯỚC khối @media ngay dưới: cùng độ ưu tiên, luật sau thắng. */
+.auth-logo {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
 .auth-emblem img { display: block; width: 72px; height: auto; }
 @media (max-width: 720px) {
   .auth { grid-template-columns: minmax(0, 1fr); }
   .auth-panel { display: none; }
+  .auth-head { display: none; }
   .auth-main::before { display: none; }
-  .auth-emblem { display: block; }
+  .auth-logo { display: flex; }
 }
 .auth-card {
   position: relative;
@@ -120,16 +140,6 @@
   border-radius: var(--r-sm);
 }
 .auth-card > .ghost.sm:hover { color: var(--auth-ink); }
-.auth-logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  text-align: center;
-  font-size: var(--fs-xl);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
 .auth-brand { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .auth-brand-sub { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 500; letter-spacing: 0; }
 /* "Bước 1/2 · …" của luồng cài đặt lần đầu: thanh mảnh + một dòng chữ. */
@@ -159,6 +169,17 @@
   font-size: var(--fs-md);
   font-weight: 600;
 }
+/* Nút phụ trên card tối ("Quay lại"): viền kính, chữ sáng, cùng cỡ với nút chính bên trên.
+   Nền mặc định của `button` là nền sáng của app — trên card tối nó thành một mảng trắng. */
+.auth-form .btn.auth-secondary {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  color: var(--auth-ink);
+  background: transparent;
+  border-color: var(--auth-card-border);
+}
+.auth-form .btn.auth-secondary:hover:not(:disabled) { background: var(--auth-card); }
 /* Biểu tượng đầu ô (`features/auth/input-icon.tsx`): vẽ bằng currentColor, ô chừa chỗ bên trái. */
 .auth-inp-icon { position: relative; display: block; }
 .auth-inp-glyph {
@@ -228,6 +249,8 @@
   text-decoration: underline;
   cursor: pointer;
 }
+/* Không đổi nền khi hover: card tối, nền sáng sẽ nuốt chữ sáng. Chỉ đậm gạch chân. */
+.auth-link:hover:not(:disabled) { text-decoration-thickness: 2px; }
 .auth-link:focus-visible { outline: none; box-shadow: var(--ring); border-radius: var(--r-sm); }
 .auth-foot { display: flex; flex-direction: column; gap: var(--space-4); align-items: center; }
 .auth-help {

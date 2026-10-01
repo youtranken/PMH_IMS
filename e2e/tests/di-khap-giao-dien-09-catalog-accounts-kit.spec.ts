@@ -943,7 +943,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   test('Phòng Bộ giao diện liệt kê đủ mọi khu, đúng thứ tự', async ({ page }) => {
     await firstLogin(page, E2E_SA);
 
-    await page.getByRole('link', { name: 'Bộ giao diện' }).click();
+    // Trang nội bộ không có trên menu (Q-20) — vào bằng URL.
+    await page.goto('/dev/components');
     await expect(page.getByRole('heading', { name: 'Bộ giao diện', exact: true })).toBeVisible();
 
     await expect(

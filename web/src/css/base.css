@@ -98,7 +98,11 @@ button {
     box-shadow 0.15s var(--ease), transform 0.08s var(--ease), opacity 0.15s;
   white-space: nowrap;
 }
-button:hover:not(:disabled) {
+/* `:where()` giữ độ ưu tiên ở (0,0,1), ngang `button` ở trên: chỉ nút KHÔNG tự khai nền mới ăn
+   nền hover chung. Bản `button:hover:not(:disabled)` là (0,2,1), thắng cả luật `.x:hover` của
+   component, nên nút trong suốt trên mặt tối (sidebar, card đăng nhập, toast) hover ra ô gần
+   trắng với chữ trắng. Component nào tự khai nền thì tự khai luôn hover (css/button-hover.test.ts). */
+button:where(:hover:not(:disabled)) {
   background: var(--surface-2);
 }
 button:active:not(:disabled) {
@@ -173,8 +177,6 @@ button.primary {
   box-shadow: var(--shadow-sm);
 }
 button.primary:hover:not(:disabled) {
-  /* PHẢI khai báo lại background: rule chung `button:hover{background:surface-2}` có
-     specificity cao hơn base `button.primary` → nếu không, hover đè nền sáng lên nút chính. */
   background: var(--primary);
   filter: brightness(1.06);
   box-shadow: var(--shadow);

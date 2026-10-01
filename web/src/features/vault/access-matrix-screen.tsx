@@ -1524,16 +1524,15 @@ function CopyFromDialog({
             const failures: string[] = [];
             for (const rule of plan.grant) {
               try {
-                await stepUp.run(
-                  () =>
-                    save.mutateAsync({
-                      memberEmail: account.email,
-                      scopeType: rule.scopeType,
-                      scopeRef: rule.scopeRef,
-                      tier: rule.tier,
-                      note: t('access.copyNote', { source: source.email }),
-                    }),
-                  t('access.stepUpGrant'),
+                await stepUp.run(() =>
+                  save.mutateAsync({
+                    memberEmail: account.email,
+                    scopeType: rule.scopeType,
+                    scopeRef: rule.scopeRef,
+                    tier: rule.tier,
+                    note: t('access.copyNote', { source: source.email }),
+                  }),
+                  t('access.stepUpCopy', { name: account.fullName }),
                 );
                 done += 1;
               } catch (err) {

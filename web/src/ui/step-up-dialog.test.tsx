@@ -39,6 +39,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('StepUpDialog — câu trên ô mã', () => {
+  it('không truyền `purpose` → câu TRUNG TÍNH, không nói "xem thông tin bí mật" (Q-20)', () => {
+    renderWithI18n(<StepUpDialog csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />);
+    expect(screen.getByText('Nhập mã 6 số trên điện thoại để xác nhận thao tác này.')).toBeInTheDocument();
+    expect(screen.queryByText(/xem thông tin bí mật/)).toBeNull();
+  });
+});
+
 describe('StepUpDialog — cảnh báo sắp hết lượt', () => {
   it('server trả `attemptsLeft` nhỏ → ghép thêm câu "còn mấy lần nữa"', async () => {
     mockStepUp(401, { code: 'STEP_UP_INVALID', message: 'Mã không đúng.', attemptsLeft: 1 });

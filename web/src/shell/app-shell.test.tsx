@@ -98,6 +98,26 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(screen.getByRole('menuitemradio', { name: /Tối/ })).toHaveAttribute('aria-checked', 'true');
   });
+
+  it('Giao diện là MỘT hàng ba nút biểu tượng (Sáng · Tối · Theo hệ thống) có tên và tooltip; ←/→ đi trong hàng', async () => {
+    renderShell();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ }));
+    const group = screen.getByRole('group', { name: 'Giao diện' });
+    const radios = within(group).getAllByRole('menuitemradio');
+    expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual(['Sáng', 'Tối', 'Theo hệ thống']);
+    for (const radio of radios) {
+      expect(radio.querySelector('svg')).not.toBeNull();
+      expect(radio).toHaveAttribute('title', radio.getAttribute('aria-label'));
+      // Không còn dấu ✓ bằng chữ: trạng thái chọn nằm ở aria-checked + kiểu nút.
+      expect(radio.textContent).toBe('');
+    }
+    radios[0].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(radios[1]).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(radios[0]).toHaveFocus();
+  });
 });
 
 describe('AppShell — đăng xuất', () => {
