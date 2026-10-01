@@ -838,12 +838,14 @@ export async function logout(page: Page): Promise<void> {
  * Đăng xuất từ GIỮA luồng đăng nhập (màn mã 2 lớp / cài 2 lớp / đổi mật khẩu bắt buộc) — nút
  * "Không phải …? Đăng xuất" ở chân card. Cùng luật chờ phản hồi với `logout()` ở trên, và cùng
  * lý do: bấm rồi đi tiếp ngay là hủy request đang bay, phiên dở sống sót.
+ *
+ * `label = 'Quay lại'`: nút "Quay lại" ở màn nhập mã 2 lớp (Q-20) đi đúng đường đăng xuất này.
  */
-export async function signOutMidFlow(page: Page): Promise<void> {
+export async function signOutMidFlow(page: Page, label: 'Đăng xuất' | 'Quay lại' = 'Đăng xuất'): Promise<void> {
   const done = page.waitForResponse(
     (res) => res.url().includes('/api/v1/auth/logout') && res.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Đăng xuất' }).click();
+  await page.getByRole('button', { name: label, exact: true }).click();
   expect((await done).status(), 'đăng xuất giữa luồng phải thành công').toBeLessThan(300);
   await page.waitForURL(/\/login(\?|$)/);
 }

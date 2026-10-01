@@ -2,6 +2,7 @@ import {
   canEnrollWithoutPassword,
   evaluateSession,
   isStepUpValid,
+  isTotpChallengeExpired,
   stepUpSecondsLeft,
 } from './session-policy';
 
@@ -144,4 +145,34 @@ describe('canEnrollWithoutPassword — cửa sổ miễn xác thực lại', () 
     const session = { totpPending: true, createdAt: NOW };
     expect(canEnrollWithoutPassword(session, 0, NOW)).toBe(false);
   });
+});
+
+describe('isTotpChallengeExpired — phiên chờ nhập mã 2 lớp sống tối đa N phút (Q-20)', () => {
+  const MINUTES = 5;
+  const cases: Array<{
+    name: string;
+    totpPending: boolean;
+    enrolled: boolean;
+    createdAt: string;
+    expected: boolean;
+  }> = [
+    { name: 'vừa nhập mật khẩu 4:59 trước → còn nhập được', totpPending: true, enrolled: true, createdAt: '2026-08-22T09:55:01Z', expected: false },
+    { name: 'đúng 5 phút → hết', totpPending: true, enrolled: true, createdAt: '2026-08-22T09:55:00Z', expected: true },
+    { name: 'bỏ quên 1 giờ → hết', totpPending: true, enrolled: true, createdAt: '2026-08-22T09:00:00Z', expected: true },
+    {
+      name: 'luồng CÀI 2 lớp bắt buộc (chưa có mã) không bị luật này cắt — tải app mất thời gian',
+      totpPending: true,
+      enrolled: false,
+      createdAt: '2026-08-22T09:00:00Z',
+      expected: false,
+    },
+    { name: 'phiên đã đăng nhập đủ thì không liên quan', totpPending: false, enrolled: true, createdAt: '2026-08-22T01:00:00Z', expected: false },
+  ];
+
+  for (const c of cases) {
+    it(c.name, () => {
+      const session = { totpPending: c.totpPending, createdAt: new Date(c.createdAt) };
+      expect(isTotpChallengeExpired(session, c.enrolled, MINUTES, NOW)).toBe(c.expected);
+    });
+  }
 });

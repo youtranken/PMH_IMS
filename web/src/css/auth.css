@@ -169,6 +169,17 @@
   font-size: var(--fs-md);
   font-weight: 600;
 }
+/* Nút phụ trên card tối ("Quay lại"): viền kính, chữ sáng, cùng cỡ với nút chính bên trên.
+   Nền mặc định của `button` là nền sáng của app — trên card tối nó thành một mảng trắng. */
+.auth-form .btn.auth-secondary {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  color: var(--auth-ink);
+  background: transparent;
+  border-color: var(--auth-card-border);
+}
+.auth-form .btn.auth-secondary:hover:not(:disabled) { background: var(--auth-card); }
 /* Biểu tượng đầu ô (`features/auth/input-icon.tsx`): vẽ bằng currentColor, ô chừa chỗ bên trái. */
 .auth-inp-icon { position: relative; display: block; }
 .auth-inp-glyph {

@@ -362,7 +362,12 @@ export default {
     /* Không kèm số lần còn lại: con số đó cho kẻ dò biết email nào có thật. */
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
     signedOut: 'Bạn đã đăng xuất.',
+    totpExpired: 'Hết thời gian nhập mã, vui lòng đăng nhập lại.',
+    totpEmpty: 'Vui lòng nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
+    /* "Quay lại" ở màn nhập mã: phiên chờ phải đóng thật, không chỉ đổi màn. */
+    totpBack: 'Quay lại',
+    totpBacking: 'Đang quay lại…',
     totpChecking: 'Đang kiểm tra…',
     totpHint: 'Mã 6 số đang hiện trong ứng dụng. Nhập mã mới nhất.',
     enrollStep1: 'Cài ứng dụng xác thực trên điện thoại: Google Authenticator hoặc Microsoft Authenticator.',
@@ -2228,6 +2233,7 @@ export default {
       authStepupSessionRevoked: 'Đóng phiên vì xác thực lại sai nhiều lần',
       authTotpFailed: 'Mã 2 lớp sai',
       authTotpSessionRevoked: 'Đóng phiên vì mã 2 lớp sai nhiều lần',
+      authTotpChallengeExpired: 'Đóng phiên vì quá thời gian nhập mã 2 lớp',
       authTotpEnrollStart: 'Bắt đầu cài 2 lớp',
       authTotpEnrollDone: 'Cài xong 2 lớp',
       authTotpEnrollFailed: 'Cài 2 lớp thất bại',
@@ -2930,6 +2936,9 @@ export default {
     loginAccountBackoffMinutesDesc: 'Bậc chờ tăng dần áp cho cả tài khoản, bất kể đoán từ máy nào.',
     totpEnrollReauthMinutesLabel: 'Miễn gõ lại mật khẩu khi cài 2 lớp lần đầu',
     totpEnrollReauthMinutesDesc: 'Trong khoảng này sau khi đăng nhập thì cài 2 lớp không phải gõ lại mật khẩu.',
+    authTotpChallengeMinutesLabel: 'Thời gian nhập mã 2 lớp khi đăng nhập',
+    authTotpChallengeMinutesDesc:
+      'Đã đúng mật khẩu thì phải nhập mã 2 lớp trong khoảng này, quá thì phải đăng nhập lại. Không áp cho lần cài 2 lớp đầu tiên.',
     authSupportContactLabel: 'Câu liên hệ khi quên mật khẩu / mất điện thoại',
     authSupportContactDesc: 'Hiện ở màn đăng nhập và màn mã 2 lớp. Ghi rõ gặp ai, gọi số nào.',
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',

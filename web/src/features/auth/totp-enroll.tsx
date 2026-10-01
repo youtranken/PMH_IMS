@@ -7,7 +7,7 @@ import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { AuthCard } from './auth-card';
-import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
+import { OtpInput, otpMissingText, useOtpSubmit } from '@/ui/otp-input';
 import { TotpSetup, type TotpSetupData } from './totp-setup';
 
 type EnrollStart = TotpSetupData;
@@ -185,7 +185,7 @@ export function TotpEnroll() {
               autoFocus={!narrow}
               label={t('auth.enrollConfirm')}
               hint={t('auth.totpHint')}
-              error={missing ? t('auth.totpMissing', { count: missing }) : codeError}
+              error={otpMissingText(t, missing) ?? codeError}
               inputRef={codeRef}
               readOnly={confirm.isPending}
             />

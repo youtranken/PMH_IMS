@@ -61,6 +61,12 @@ export const CONFIG_KEYS = {
    */
   totpEnrollReauthMinutes: { key: 'totp.enroll_reauth_minutes', fallback: 15 },
   /*
+   * Phiên chờ NHẬP MÃ 2 lớp sống tối đa ngần này phút kể từ lúc đúng mật khẩu (Q-20). Bỏ dở
+   * màn nhập mã trên máy dùng chung thì người sau không thừa hưởng nửa phiên đã qua mật khẩu.
+   * Xem `isTotpChallengeExpired`.
+   */
+  authTotpChallengeMinutes: { key: 'auth.totp_challenge_minutes', fallback: 5 },
+  /*
    * Câu chỉ đường cho người quên mật khẩu / mất điện thoại 2 lớp (Q-14). Đọc được khi CHƯA
    * đăng nhập qua `GET /auth/support-contact` — route đó chỉ trả đúng khoá này, không mở bảng.
    */

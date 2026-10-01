@@ -6,6 +6,15 @@ export function otpJustCompleted(prev: string, next: string): boolean {
 }
 
 /**
+ * Câu báo khi bấm gửi lúc ô chưa đủ 6 số (`missing` = số còn thiếu). Ô trống hẳn thì nhắc
+ * nhập (Q-20): "Còn thiếu 6 số." đọc như thể đã gõ gì đó sai.
+ */
+export function otpMissingText(t: (key: string, opts?: Record<string, unknown>) => string, missing: number | null): string | null {
+  if (!missing) return null;
+  return missing >= 6 ? t('auth.totpEmpty') : t('auth.totpMissing', { count: missing });
+}
+
+/**
  * Gửi mã 6 số, MỘT lượt mỗi lần. Ô tự gửi khi đủ 6 số, trong khi người dùng vẫn có thể bấm nút
  * hoặc Enter cùng lúc — mã TOTP dùng được một lần (chống replay), nên lượt thứ hai của cùng mã
  * bị server coi là sai và trừ một lượt thử. Chốt bằng ref vì hai lượt rơi vào cùng một nhịp

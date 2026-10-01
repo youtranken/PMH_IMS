@@ -5,7 +5,7 @@ import {
   queryClient,
   shouldRetryQuery,
 } from '@/lib/api-client';
-import { PALETTE_RECENT_PREFIX } from '@/lib/after-logout';
+import { clearSignedOut, PALETTE_RECENT_PREFIX, signOutNotice } from '@/lib/after-logout';
 import { ME_KEY } from '@/lib/me';
 import { clearNextPath, noteTabOwner, peekNextPath } from '@/lib/next-path';
 import { jsonResponse } from '@/test/test-utils';
@@ -76,6 +76,20 @@ describe('apiFetch', () => {
     expect(peekNextPath('a@pmh.com.vn')).toBe('/devices/9?tab=vault');
     clearNextPath();
     noteTabOwner(null);
+  });
+
+  it('401 vì HẾT THỜI GIAN NHẬP MÃ 2 lớp → màn đăng nhập nói rõ lý do (Q-20)', async () => {
+    vi.stubGlobal('location', { href: '', pathname: '/login/2fa', search: '', hash: '' } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(401, { code: 'SESSION_EXPIRED', reason: 'TOTP_CHALLENGE_EXPIRED', message: 'Hết' }),
+      ),
+    );
+    await expect(apiFetch('/api/v1/auth/login/totp')).rejects.toMatchObject({ status: 401 });
+    expect(window.location.href).toBe('/login');
+    expect(signOutNotice()).toBe('totpExpired');
+    clearSignedOut();
   });
 
   it('401 vì PHIÊN CHẾT → đá về màn đăng nhập', async () => {

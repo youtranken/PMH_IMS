@@ -66,6 +66,28 @@ export function canEnrollWithoutPassword(
 }
 
 /**
+ * Phiên chờ NHẬP MÃ 2 lớp (đã đúng mật khẩu, tài khoản ĐÃ cài 2 lớp) chỉ sống `minutes` phút
+ * tính từ lúc sinh ra (Q-20, `auth.totp_challenge_minutes`). Bỏ dở màn nhập mã trên máy dùng
+ * chung thì người sau không được thừa hưởng "nửa phiên" đã qua mật khẩu.
+ *
+ * Đo từ `createdAt`, cùng lý do với `canEnrollWithoutPassword`: `last_seen_at` bị đẩy tới ở mỗi
+ * request nên kẻ giữ cookie tự gia hạn được.
+ *
+ * Không áp cho luồng CÀI 2 lớp bắt buộc (`enrolled = false`): người mới phải tải ứng dụng
+ * xác thực về máy, có khi mất hơn N phút. Luồng đó đã có hàng rào riêng: quá
+ * `totp.enroll_reauth_minutes` thì cài phải gõ lại mật khẩu (`canEnrollWithoutPassword`).
+ */
+export function isTotpChallengeExpired(
+  session: { totpPending: boolean; createdAt: Date },
+  enrolled: boolean,
+  minutes: number,
+  now: Date,
+): boolean {
+  if (!session.totpPending || !enrolled) return false;
+  return now.getTime() - session.createdAt.getTime() >= minutes * 60_000;
+}
+
+/**
  * Còn bao nhiêu GIÂY nữa thì phải gõ lại TOTP. Hết hạn (hoặc chưa từng gõ) → 0.
  *
  * Vì sao client cần con số này: hộp hiện secret đếm ngược HAI số — `60s / 600s`. Số trái là
