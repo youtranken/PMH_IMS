@@ -62,7 +62,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
     });
 
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).click();
+    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Dải' }).fill(cidr);
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(name);
@@ -94,7 +94,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
   test('không ghi gì thì Esc vẫn đóng hộp như thường', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).click();
+    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
 
     const form = page.getByRole('dialog');
     await expect(form).toBeVisible();
@@ -133,7 +133,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
     });
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();

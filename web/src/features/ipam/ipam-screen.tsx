@@ -201,7 +201,21 @@ export function IpamScreen({ me }: { me: Me }) {
       ) : subnets.isError ? (
         <LoadError error={subnets.error} onRetry={() => void subnets.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('ipam.empty')} hint={t('ipam.emptyHint')} />
+        <EmptyState
+          title={t('ipam.empty')}
+          hint={t('ipam.emptyHint')}
+          action={
+            canEdit ? (
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setEditing({ subnet: null })}
+              >
+                {t('ipam.addSubnet')}
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
         <>
         <IpLookup subnets={rows} />

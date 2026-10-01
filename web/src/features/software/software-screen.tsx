@@ -295,6 +295,17 @@ export function SoftwareScreen({ me }: { me: Me }) {
              bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
           title={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
           hint={url.isFiltered ? t('software.emptyFilteredHint') : t('software.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('software.add')}
+              </button>
+            )
+          }
         />
       ) : (
         <>

@@ -37,7 +37,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).click();
+    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('button', { name: 'Lưu' }).click();
 
@@ -65,7 +65,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
     const form = page.getByRole('dialog', { name: 'Thêm phần mềm' });
     await form.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill(`SW-E2E-GHE-${uniqueStamp()}`);
     await form.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('License E2E số ghế');

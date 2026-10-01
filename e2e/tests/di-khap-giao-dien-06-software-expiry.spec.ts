@@ -326,7 +326,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     );
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
 
     const add = page.getByRole('dialog', { name: 'Thêm phần mềm' });
     await expect(add, 'Bấm "Thêm phần mềm" phải mở đúng hộp mang tên đó').toBeVisible();
@@ -470,7 +470,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await confirmAction(page, 'Bỏ và đóng');
     await expect(add, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
     await expect(add).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(add, 'Phím Esc cũng phải đóng được hộp (hộp không đang ghi)').toHaveCount(0);
@@ -599,8 +599,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     await expect(
       assign.getByRole('button'),
-      'Hộp gán có đúng 5 nút: ✕ · hai ô ngày · Hủy · Gán vào máy',
-    ).toHaveCount(5);
+      'Hộp gán có đúng 8 nút: ✕ · hai ô ngày · +1/+2/+3 năm · Hủy · Gán vào máy',
+    ).toHaveCount(8);
     // Chọn máy theo Máy | Phòng ban | Người sử dụng (Q-15) — dải radio, mặc định là Máy.
     const pickBy = assign.getByRole('radiogroup', { name: 'Chọn máy theo' });
     await expect(pickBy.getByRole('radio')).toHaveText(['Máy', 'Phòng ban', 'Người sử dụng']);
@@ -609,6 +609,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Đóng hộp thoại',
       'Bắt đầu',
       'Kết thúc',
+      '+1 năm',
+      '+2 năm',
+      '+3 năm',
       'Hủy',
       'Gán vào máy',
     ]) {
@@ -1156,7 +1159,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
 
     await expect(
-      page.getByRole('button', { name: 'Thêm luật', exact: true }),
+      page.getByRole('button', { name: 'Thêm luật', exact: true }).first(),
       'SA phải thêm được luật ngay tại tab này',
     ).toHaveCount(1);
 
@@ -1211,7 +1214,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBe(mailCountBefore);
 
     // ===== BÊN TRONG HỘP "THÊM LUẬT" =====
-    await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
+    await page.getByRole('button', { name: 'Thêm luật', exact: true }).first().click();
     const add = page.getByRole('dialog', { name: 'Thêm luật' });
     await expect(add).toBeVisible();
 

@@ -171,7 +171,7 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
     await expect(page.getByRole('heading', { name: target.fullName })).toBeVisible();
     await page.getByRole('button', { name: 'Sao chép quyền từ…' }).click();
     const dialog = page.getByRole('dialog', { name: `Sao chép quyền két cho ${target.fullName}` });
-    await dialog.getByRole('button', { name: 'Đồng nghiệp' }).click();
+    await dialog.getByRole('button', { name: 'Đồng nghiệp', exact: true }).click();
     await page.getByRole('option', { name: new RegExp(source.fullName) }).click();
     await expect(dialog.getByText('Sẽ gán 1 nhóm:')).toBeVisible();
     await expect(dialog.getByText(`${scope.label} · Xem thẳng`)).toBeVisible();
@@ -196,7 +196,7 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
     await page.goto(`/admin/vault-access?user=${target.id}`);
     await page.getByRole('button', { name: 'Sao chép quyền từ…' }).click();
     const dialog = page.getByRole('dialog', { name: `Sao chép quyền két cho ${target.fullName}` });
-    await dialog.getByRole('button', { name: 'Đồng nghiệp' }).click();
+    await dialog.getByRole('button', { name: 'Đồng nghiệp', exact: true }).click();
     await page.getByRole('option', { name: new RegExp(source.fullName) }).click();
     await expect(dialog.getByText('Bỏ qua 1 nhóm người này đã có:')).toBeVisible();
 

@@ -348,7 +348,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     await page.getByRole('button', { name: `Gán "${label}" cho nhiều người` }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('checkbox').first().check();
-    await form.getByRole('button', { name: 'Tầng quyền' }).click();
+    await form.getByRole('button', { name: 'Tầng quyền', exact: true }).click();
     await page.getByRole('option', { name: 'Xem thẳng', exact: true }).click();
     await form.getByRole('button', { name: 'Lưu' }).click();
 

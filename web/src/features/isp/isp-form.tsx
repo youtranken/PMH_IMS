@@ -146,7 +146,7 @@ export function IspForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
       guardUnsaved
-      maxWidth={800}
+      maxWidth={1040}
       title={row ? `${t('isp.edit')} — ${row.code}` : t('isp.add')}
       footer={
         <>
@@ -212,11 +212,11 @@ export function IspForm({
         }}
       >
         {/*
-          Khối lỗi nằm ở ĐẦU form, không phải ở cuối (12/09, rà UI/UX #12).
+          Khối lỗi nằm ở ĐẦU form, không phải ở cuối.
 
-          Bản cũ đặt nó ngay trên `</form>`, tức DƯỚI cả khu Giấy tờ đính kèm. Trên một form
-          dài như thế này thì nó nằm ngoài màn hình: người dùng bấm Lưu, không thấy gì xảy
-          ra, và bấm tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
+          Đặt ngay trên `</form>` là nằm DƯỚI cả khu Giấy tờ đính kèm: trên một form dài như
+          thế này nó rơi ra ngoài màn hình, người dùng bấm Lưu, không thấy gì xảy ra, và bấm
+          tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
         */}
         {error ? (
           <p className="alert error" role="alert">
@@ -224,7 +224,7 @@ export function IspForm({
           </p>
         ) : null}
         {check.summary}
-        <FormSection title={t('isp.tabProfile')} columns={3}>
+        <FormSection title={t('isp.tabProfile')} columns={4}>
           <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code')}>
             <input
               id="isp-code"
@@ -237,7 +237,7 @@ export function IspForm({
           <Field
             label={t('isp.provider')}
             required
-            hint={t('isp.providerHint')}
+            tip={t('isp.providerHint')}
             htmlFor="isp-provider"
             error={check.error('providerId')}
           >
@@ -248,11 +248,7 @@ export function IspForm({
                 "+ Thêm nhà mạng", nên nối tay theo đúng quy ước id của Field. */}
             <Select
               id="isp-provider"
-              aria-describedby={
-                check.error('providerId')
-                  ? 'isp-provider-error isp-provider-hint'
-                  : 'isp-provider-hint'
-              }
+              aria-describedby={check.error('providerId') ? 'isp-provider-error' : undefined}
               aria-invalid={check.error('providerId') ? true : undefined}
               value={form.providerId}
               ariaLabel={t('isp.provider')}
@@ -359,7 +355,7 @@ export function IspForm({
             Tiêu đề khối KHÔNG là "Hotline" — khối này chứa cả hợp đồng và ngày bắt đầu, đặt
             tên theo ô đầu tiên là nói sai về các ô còn lại. Không có ô hết hạn: đường truyền
             không có hạn, dùng tới khi thanh lý (Q-04). */}
-        <FormSection title={t('isp.sectionContract')} columns={3}>
+        <FormSection title={t('isp.sectionContract')} columns={4}>
           <Field label={t('isp.hotline')} htmlFor="isp-hotline">
             <PhoneInput
               id="isp-hotline"
@@ -383,7 +379,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} hint={t('isp.noteHint')} htmlFor="isp-note" span={2}>
+          <Field label={t('isp.note')} hint={t('isp.noteHint')} htmlFor="isp-note">
             <input
               id="isp-note"
               className="inp"

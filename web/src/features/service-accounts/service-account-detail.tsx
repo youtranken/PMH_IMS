@@ -131,25 +131,22 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
                 {t("serviceAccounts.edit")}
               </button>
               {/* Đổi trạng thái đi hộp RIÊNG vì nó bắt ghi lý do — cùng hộp với danh sách, để
-                  không phải quay ra danh sách, tìm dòng rồi mở ⋯ mới đóng được một tài khoản. */}
-              <RowActions
-                label={t("common.actionsOf", { subject: item.code })}
-                items={[
-                  item.status === "active"
-                    ? {
-                        key: "disable",
-                        label: t("serviceAccounts.disableMenu"),
-                        onSelect: () => setSwitching(true),
-                        warn: true,
-                      }
-                    : {
-                        key: "enable",
-                        label: t("serviceAccounts.enableMenu"),
-                        onSelect: () => setSwitching(true),
-                        ok: true,
-                      },
-                ]}
-              />
+                  không phải quay ra danh sách, tìm dòng rồi mở ⋯ mới đóng được một tài khoản.
+                  Đã ngừng dùng thì "Dùng lại…" nằm ở băng cảnh báo ngay dưới; menu chỉ còn đúng
+                  mục đó thì là một nút thứ hai cho cùng một việc, nên bỏ hẳn. */}
+              {item.status === "active" ? (
+                <RowActions
+                  label={t("common.actionsOf", { subject: item.code })}
+                  items={[
+                    {
+                      key: "disable",
+                      label: t("serviceAccounts.disableMenu"),
+                      onSelect: () => setSwitching(true),
+                      warn: true,
+                    },
+                  ]}
+                />
+              ) : null}
             </>
           ) : null
         }
@@ -187,11 +184,14 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
                 <CopyButton value={item.login} label={t("serviceAccounts.copyLogin")} inline />
               </RailRow>
             ) : null}
-            <RailRow label={t("serviceAccounts.status")}>
-              <span className={`badge ${STATUS_TONE[item.status]}`}>
-                {t(STATUS_KEY[item.status])}
-              </span>
-            </RailRow>
+            {/* Đã ngừng dùng thì băng đầu trang nói rồi (kèm ai, khi nào, vì sao). */}
+            {item.status === "disabled" ? null : (
+              <RailRow label={t("serviceAccounts.status")}>
+                <span className={`badge ${STATUS_TONE[item.status]}`}>
+                  {t(STATUS_KEY[item.status])}
+                </span>
+              </RailRow>
+            )}
             {/* Cùng luật với trang thiết bị: chưa có người phụ trách thì bộ phận đứng thành
                 dòng riêng, đừng để nó biến mất theo. */}
             {item.ownerName ? (

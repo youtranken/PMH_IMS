@@ -225,6 +225,8 @@ export default {
     save: 'Lưu',
     cancel: 'Hủy',
     close: 'Đóng',
+    // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
+    clearFilters: 'Xóa bộ lọc',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
@@ -964,7 +966,6 @@ export default {
     restoreIntro: 'Hồ sơ về Đang dùng. Ghế đã gỡ không tự gán lại — tick máy bên dưới để gán lại.',
     restoreEnd: 'Hạn mới',
     restoreEndHint: 'Chọn từ hôm nay trở đi.',
-    restorePlusYear: '+1 năm',
     restoreNeedEnd: 'Chọn hạn mới.',
     restorePastEnd: 'Hạn mới phải từ hôm nay trở đi.',
     restoreNote: 'Ghi chú hồ sơ',
@@ -1782,7 +1783,6 @@ export default {
   },
   nat: {
     title: 'Sổ NAT',
-    tabHistory: 'Lịch sử luật NAT',
     subtitle: 'Mọi luật chuyển cổng: cổng nào mở, dẫn tới máy nào, cho ai, vì sao.',
     add: 'Thêm luật NAT',
     edit: 'Sửa luật NAT',
@@ -1802,7 +1802,8 @@ export default {
     routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
-    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Đánh dấu ở Danh mục → Loại thiết bị.',
+    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',
+    routerNoTypeLink: 'Đánh dấu ở Danh mục → Loại thiết bị',
     protocol: 'Giao thức',
     /*
      * KHÔNG có `nat.protocolBoth`: ô chọn giao thức của luật NAT dùng `catalog.protocolBoth`,
@@ -2556,7 +2557,6 @@ export default {
     secretCount: '{{count}} ngăn két',
     openDetail: 'Xem chi tiết',
     detailTitle: 'Yêu cầu mở két',
-    backToList: 'Về danh sách duyệt',
     sentAgo_now: 'Gửi vừa xong',
     sentAgo_minutes: 'Gửi {{count}} phút trước',
     sentAgo_hours: 'Gửi {{count}} giờ trước',

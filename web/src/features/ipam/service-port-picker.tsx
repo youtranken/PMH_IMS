@@ -76,9 +76,7 @@ export function ServicePortPicker({
         setQuery('');
       }}
       action={{ label: t('nat.serviceAdd'), onClick: onAdd }}
-      /* Lọc không ra thì NÓI RA, đừng để người dùng nhìn một menu trống rồi tự đoán. Câu này
-         đã nằm sẵn trong `vi.ts` từ lâu nhưng chưa ai nối vào — `.combo-empty` bên
-         `form-layout.css` cũng vậy. Đấu dây 20/09/2026. */
+      /* Lọc không ra thì NÓI RA, đừng để người dùng nhìn một menu trống rồi tự đoán. */
       empty={t('nat.serviceEmpty')}
       pending={pending}
     />

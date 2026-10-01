@@ -15,6 +15,7 @@ import { SegmentedRadio } from '@/ui/segmented-radio';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
 import { useFormErrors } from '@/ui/use-form-errors';
+import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types';
 
 /** Trần của một lượt chọn nhanh — đúng trần `limit` của API danh sách thiết bị. */
@@ -470,6 +471,12 @@ export function AssignDialog({
         {hasEndDate ? (
           <Field label={t('license.endDate')} hint={t('license.endDateHint')}>
             <DatePicker value={endDate} ariaLabel={t('license.endDate')} onChange={setEndDate} />
+            <YearQuickPicks
+              base={startDate}
+              onPick={setEndDate}
+              label={t('software.endQuick')}
+              needBaseHint={t('software.endQuickNeedBase')}
+            />
           </Field>
         ) : (
           <Field label={t('license.endDate')}>

@@ -277,7 +277,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
     await expect(page.getByText('Chưa có luật gửi báo cáo nào.')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm luật' }).click();
+    await page.getByRole('button', { name: 'Thêm luật' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên luật' }).fill(`E2E luật UI ${stamp}`);
     await form.getByRole('textbox', { name: 'Người nhận' }).fill('sep@pmh.com.vn');

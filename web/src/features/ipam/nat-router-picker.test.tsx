@@ -92,5 +92,9 @@ describe('Ô Router của sổ NAT', () => {
     await openRouterPicker();
     expect(await screen.findByRole('option', { name: /CAM-01/ })).toBeVisible();
     expect(screen.getByText(/Chưa loại thiết bị nào được đánh dấu Router\/Firewall/)).toBeVisible();
+    // Chỉ thẳng tới chỗ sửa, mở tab mới để form NAT đang gõ dở không mất.
+    const link = screen.getByRole('link', { name: /Danh mục → Loại thiết bị/ });
+    expect(link).toHaveAttribute('href', '/admin/catalog?tab=device_type');
+    expect(link).toHaveAttribute('target', '_blank');
   });
 });

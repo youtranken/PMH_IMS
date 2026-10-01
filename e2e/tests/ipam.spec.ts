@@ -44,7 +44,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const cidr = `172.16.${Number(stamp) % 200}.0/29`;
 
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).click();
+    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Dải' }).fill(cidr);
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(`LAN thử E2E ${stamp}`);

@@ -313,7 +313,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await ispProviderId(page, 'FPT E2E');
 
     await page.goto('/isp-lines');
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
 
     const dialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await expect(dialog, 'Bấm "Thêm đường truyền" phải mở ra hộp thoại').toBeVisible();
@@ -403,16 +403,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(dialog, 'Esc phải đóng được hộp khi chưa có lượt ghi nào đang chạy').toHaveCount(0);
 
     // ĐƯỜNG ĐÓNG THỨ HAI: nút ✕. Hai đường, hai đoạn code khác nhau — kiểm cả hai.
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
     const secondDialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await secondDialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(secondDialog, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
 
     // Và cuối cùng: khai đủ thì hộp đóng, dòng mới nằm ngay trên bảng.
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
     const thirdDialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await thirdDialog.getByRole('textbox', { name: 'Mã đường' }).fill(itemCode);
-    await thirdDialog.getByRole('button', { name: 'Nhà mạng' }).click();
+    await thirdDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
     await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
@@ -612,7 +612,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('button', { name: 'Nhà mạng' }),
+      editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }),
       'Ô Nhà mạng cũng phải chọn sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
     ).toContainText('VNPT E2E');
     await expect(
@@ -1000,7 +1000,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const itemCode = `TK-E2E-HOP-${stamp}`;
 
     await page.goto('/service-accounts');
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Thêm tài khoản' });
     await expect(dialog).toBeVisible();
 

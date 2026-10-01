@@ -320,13 +320,45 @@ export function NatScreen({ me }: { me: Me }) {
       ) : rules.isError ? (
         <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
       ) : all.length === 0 && !filtered ? (
-        <EmptyState title={t('nat.empty')} hint={t('nat.emptyHint')} />
+        <EmptyState
+          title={t('nat.empty')}
+          hint={t('nat.emptyHint')}
+          action={
+            <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
+              {t('nat.add')}
+            </button>
+          }
+        />
       ) : narrowed.length === 0 ? (
         /* Tìm/lọc không ra thì NÓI là lọc không ra — câu "Chưa có rule NAT nào" ở đây làm
            người ta tưởng cả sổ trống. */
-        <EmptyState title={t('nat.emptySearch')} hint={t('nat.emptySearchHint')} />
+        <EmptyState
+          title={t('nat.emptySearch')}
+          hint={t('nat.emptySearchHint')}
+          action={
+            <button type="button" className="btn" onClick={url.clearFilters}>
+              {t('common.clearFilters')}
+            </button>
+          }
+        />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('nat.emptyFiltered')} hint={t('nat.emptyFilteredHint')} />
+        /* Chỉ mấy chip trạng thái đang ẩn hết: nút đưa chip về mặc định và bỏ luôn bộ lọc. */
+        <EmptyState
+          title={t('nat.emptyFiltered')}
+          hint={t('nat.emptyFilteredHint')}
+          action={
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setShown(NAT_DEFAULT_SHOWN);
+                url.clearFilters();
+              }}
+            >
+              {t('common.clearFilters')}
+            </button>
+          }
+        />
       ) : (
         <>
         <p className="muted nat-count">{t('nat.countLine', { count: rows.length })}</p>
@@ -792,7 +824,7 @@ function NatForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
       guardUnsaved
-      maxWidth={720}
+      maxWidth={960}
       title={
         rule
           ? t('common.titleOf', {
@@ -814,9 +846,8 @@ function NatForm({
     >
       {/*
         Ba khối theo ĐÚNG đường đi của một gói tin: vào từ đâu → chuyển tới đâu → vì sao mở.
-        Bản cũ là một dây 10 ô xếp dọc, trong đó "Loại thiết bị" (một BỘ LỌC của ô Router
-        ngay dưới) đứng đầu như thể là dữ liệu của rule, còn Port ngoài và Port trong — hai
-        thứ luôn phải đọc cùng nhau — thì bị IP trong chen vào giữa.
+        Port ngoài và Port trong luôn phải đọc cùng nhau nên đứng chung một khối; xếp thành
+        một dây ô dọc thì IP trong chen vào giữa hai thứ ấy.
       */}
       <form
         id="nat-form"
@@ -886,7 +917,7 @@ function NatForm({
         }}
       >
         {check.summary}
-        <FormSection title={t('nat.sectionExternal')} columns={2}>
+        <FormSection title={t('nat.sectionExternal')} columns={4}>
           {/* MỘT ô chọn router, không hai. Ô "Loại thiết bị" cũ chỉ là bộ lọc cho chính ô
               này, nhưng đứng thành trường riêng nên chọn một con router phải thao tác hai
               dropdown — và chọn nhầm loại là danh sách rỗng trơn. */}
@@ -940,7 +971,17 @@ function NatForm({
                 <span className="muted">{t('nat.routerShowAll')}</span>
               </label>
             ) : lists.data ? (
-              <span className="field-hint muted">{t('nat.routerNoType')}</span>
+              <span className="field-hint muted">
+                {t('nat.routerNoType')}{' '}
+                {/* Tab mới: rời trang ở đây là mất trắng form NAT đang gõ dở. */}
+                <Link
+                  to={`${PATHS.adminCatalog}?tab=device_type`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t('nat.routerNoTypeLink')}
+                </Link>
+              </span>
             ) : null}
           </Field>
 
@@ -968,7 +1009,7 @@ function NatForm({
           <Field
             label={t('nat.external')}
             required
-            hint={rule ? undefined : t('nat.externalHint')}
+            tip={rule ? undefined : t('nat.externalHint')}
             htmlFor="nat-external"
             error={check.error('ports')}
           >
@@ -1019,14 +1060,13 @@ function NatForm({
 
         <FormSection title={t('nat.sectionInternal')} columns={2}>
           {/*
-            MÁY ĐÍCH — ô này trước đây KHÔNG có, và đó là lỗ hổng lớn nhất của cuốn sổ: nó
-            ghi "dẫn tới 172.16.10.5" mà không nói 172.16.10.5 là máy nào. Ba thứ trong form
-            là ba câu khác nhau, không trùng nhau:
+            MÁY ĐÍCH — không có ô này thì sổ chỉ ghi "dẫn tới 172.16.10.5" mà không nói
+            172.16.10.5 là máy nào. Ba thứ trong form là ba câu khác nhau, không trùng nhau:
               Router   = con nào THỰC HIỆN NAT (Draytek)
               Máy đích = con nào ĐƯỢC NAT (camera, NAS, máy chủ)  ← ô này
               Mở cho ai = NGƯỜI/bộ phận hưởng dịch vụ (câu auditor hỏi)
           */}
-          <Field label={t('nat.target')} hint={t('nat.targetHint')}>
+          <Field label={t('nat.target')} tip={t('nat.targetHint')}>
             <Combobox
               placeholder={t('nat.targetSearch')}
               ariaLabel={t('nat.target')}
@@ -1121,7 +1161,7 @@ function NatForm({
         </FormSection>
 
         {/* Khối này là LÝ DO cuốn sổ tồn tại — nên hai ô đầu bắt buộc, không phải tùy chọn. */}
-        <FormSection title={t('nat.sectionWhy')} columns={2}>
+        <FormSection title={t('nat.sectionWhy')} columns={4}>
           <Field
             label={t('nat.usedBy')}
             required
@@ -1177,7 +1217,7 @@ function NatForm({
 
           {/* Ghi chú kỹ thuật (số phiếu yêu cầu, giới hạn IP nguồn trên router…) — API đã nhận
               và dữ liệu import đã có, form không có ô thì không ai sửa được nó. */}
-          <Field label={t('nat.note')} hint={t('nat.noteHint')} htmlFor="nat-note" span={2}>
+          <Field label={t('nat.note')} tip={t('nat.noteHint')} htmlFor="nat-note" span={2}>
             <textarea
               id="nat-note"
               className="inp"
@@ -1189,16 +1229,9 @@ function NatForm({
         </FormSection>
 
         {/*
-          SỬA một rule đang có thì mở thêm hai khu: giấy tờ và lịch sử.
-
-          Giấy tờ — ảnh chụp cấu hình Draytek, email nhà mạng xác nhận mở port — trước đây
-          không có chỗ đính nên nằm trong thư mục chia sẻ của phòng IT.
-
-          Lịch sử — "ai mở port này, ngày nào, vì sao, ai gỡ" — là câu auditor hỏi nhiều nhất
-          về sổ NAT; không có khu này thì chỉ tra được bằng SQL trên `audit_log`.
-
-          THÊM MỚI thì không hiện: chưa có id để gắn, và một rule chưa tồn tại thì chưa có gì
-          để kể.
+          Giấy tờ (ảnh cấu hình router, email nhà mạng xác nhận mở port) chỉ có khi SỬA: rule
+          chưa tồn tại thì chưa có id để gắn. Lịch sử KHÔNG nhúng ở đây — menu ⋮ của dòng đã có
+          mục "Lịch sử", nhúng thêm vào hộp Sửa chỉ làm hộp dài gấp đôi cho một thứ không sửa được.
         */}
         {rule ? (
           <>
@@ -1215,10 +1248,6 @@ function NatForm({
                 csrfToken={csrfToken}
                 canEdit={!busy}
               />
-            </FormSection>
-
-            <FormSection title={t('nat.tabHistory')} columns={1}>
-              <NatHistory ruleId={rule.id} />
             </FormSection>
           </>
         ) : null}
@@ -1365,8 +1394,7 @@ function RemoveDialog({
 /**
  * Lịch sử của MỘT rule NAT.
  *
- * Tách thành component riêng vì truy vấn chỉ chạy khi hộp Sửa mở ra — nhét `useQuery` vào
- * `NatForm` thì nó chạy cả lúc THÊM MỚI, gọi `/nat/undefined/history` và nhận 400.
+ * Tách thành component riêng để truy vấn chỉ chạy khi hộp Lịch sử thật sự mở ra.
  */
 function NatHistory({ ruleId }: { ruleId: string }) {
   const { t } = useTranslation();

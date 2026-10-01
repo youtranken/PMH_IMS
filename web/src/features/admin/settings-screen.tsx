@@ -208,7 +208,9 @@ export function SettingsScreen({ me }: { me: Me }) {
                 <li key={g.key}>
                   <button
                     type="button"
-                    aria-current={g.key === group ? 'page' : undefined}
+                    /* Đổi khu ngay trên trang, không sang trang khác: nút bật/tắt, không
+                       `aria-current="page"` (giá trị đó dành cho link điều hướng). */
+                    aria-pressed={g.key === group}
                     onClick={() => switchGroup(g.key)}
                   >
                     {t(g.label)}

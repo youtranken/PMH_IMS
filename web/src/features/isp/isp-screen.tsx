@@ -287,9 +287,21 @@ export function IspScreen({ me }: { me: Me }) {
         <EmptyState
           /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
              ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
           title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
           hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('isp.add')}
+              </button>
+            )
+          }
         />
       ) : (
         <>
@@ -298,6 +310,18 @@ export function IspScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
             stackOnMobile
+            /* Màn này hay được mở trên điện thoại lúc mất mạng: thẻ gọn với nút gọi hotline ở
+               góc thay cho bảng gập bảy dòng toàn nhãn. */
+            mobileCard={{
+              title: (row) => row.code,
+              href: (row) => PATHS.ispLine(row.id),
+              badge: (row) => (
+                <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
+              ),
+              subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
+              meta: (row) => [row.siteCode, row.deviceCode, row.wanIp].filter(Boolean).join(' · '),
+              aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
+            }}
             // Tạm ngưng: vạch cam ở mép trái — đường đang "nửa sống" là thứ phải thấy từ xa.
             rowClassName={(row) => (row.status === 'suspended' ? 'row-suspended' : '')}
             manualSorting

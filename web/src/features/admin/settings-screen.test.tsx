@@ -124,7 +124,10 @@ describe('Màn Tham số hệ thống', () => {
 
   it('nhóm Giấy tờ đính kèm (Q-18): ba tham số, nhãn và đơn vị tiếng Việt', async () => {
     renderAt('/admin/settings?group=files');
-    expect(await screen.findByRole('button', { name: 'Giấy tờ đính kèm' })).toHaveAttribute('aria-current', 'page');
+    // Nút đổi khu NGAY TRÊN TRANG, không phải link sang trang khác: `aria-pressed`, không `aria-current="page"`.
+    const groupButton = await screen.findByRole('button', { name: 'Giấy tờ đính kèm' });
+    expect(groupButton).toHaveAttribute('aria-pressed', 'true');
+    expect(groupButton).not.toHaveAttribute('aria-current');
     expect(await screen.findByLabelText('Dung lượng tối đa mỗi file')).toHaveValue('25');
     expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
     expect(screen.getByLabelText('Số file tối đa mỗi lượt chọn')).toHaveValue('6');

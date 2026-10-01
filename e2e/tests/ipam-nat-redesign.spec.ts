@@ -167,7 +167,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
@@ -207,7 +207,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -239,7 +239,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
@@ -350,7 +350,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -422,7 +422,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     // MỘT ô chọn router — ô "Loại thiết bị" cũ đã bỏ, vì nó bắt thao tác hai dropdown cho
@@ -490,7 +490,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -577,16 +577,16 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
     expect(afterEdit[afterEdit.length - 1].action).toBe('created');
 
     /*
-     * Đọc trên GIAO DIỆN trước khi gỡ — gỡ rồi thì dòng biến khỏi sổ, không còn nút Sửa để mở.
+     * Đọc trên GIAO DIỆN qua mục "Lịch sử" của menu ⋮ — hộp Sửa không nhúng lịch sử nữa.
      * Đây cũng là thứ tự thật của người dùng: sửa xong mở lại xem lịch sử.
      */
     await page.goto('/nat');
-    await rowAction(page, /8080-8090/, 'Sửa');
-    const form = page.getByRole('dialog');
+    await rowAction(page, /8080-8090/, 'Lịch sử');
+    const form = page.getByRole('dialog', { name: /Lịch sử luật NAT/ });
     await expect(form.getByText(/mở cho ai: Camera tầng 2 → Đầu ghi NVR/)).toBeVisible();
     // Dòng "Mở rule" cũng phải còn đó — lịch sử là cả quãng đời, không chỉ lần sửa gần nhất.
     await expect(form.getByText('Mở luật NAT')).toBeVisible();
-    await form.getByRole('button', { name: 'Hủy' }).click();
+    await form.getByRole('button', { name: 'Đóng' }).click();
 
     // Gỡ rule: lý do phải nằm trong LỊCH SỬ, không chỉ trong audit_log.
     const removed = await page.request.delete(`/api/v1/ipam/nat/${ruleId}`, {

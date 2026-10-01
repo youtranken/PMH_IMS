@@ -245,3 +245,14 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     expect(calls.gets.some((url) => url.includes('department='))).toBe(false);
   });
 });
+
+describe('AssignDialog — đặt nhanh hạn của ghế', () => {
+  it('hàng +1/+2/+3 năm tính từ ngày bắt đầu; chưa có ngày bắt đầu thì nút tắt', () => {
+    mockFetch();
+    render();
+    const group = screen.getByRole('group', { name: 'Đặt nhanh ngày hết hạn' });
+    const buttons = within(group).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['+1 năm', '+2 năm', '+3 năm']);
+    for (const button of buttons) expect(button).toBeDisabled();
+  });
+});

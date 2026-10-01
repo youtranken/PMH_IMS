@@ -171,7 +171,9 @@ export function PortMapPanel({
       <div className="section-bar">
         <h2 className="form-section-title">{t('ports.own')}</h2>
         {map.data ? <span className="section-count">{allPorts.length}</span> : null}
-        {canEdit ? (
+        {/* Chưa khai cổng nào thì nút Thêm nằm trong khối trống ngay bên dưới — hai nút cùng
+            tên cách nhau một dòng là thừa. */}
+        {canEdit && !(map.data && allPorts.length === 0) ? (
           <button type="button" className="btn primary" onClick={() => setEditing({ port: null })}>
             {t('ports.add')}
           </button>
@@ -197,12 +199,31 @@ export function PortMapPanel({
           {allPorts.length === 0 ? (
             /* Hồ sơ đã khoá (máy thanh lý) thì không mời "khai cổng" — không có nút nào để khai. */
             canEdit ? (
-              <EmptyState title={t('ports.empty')} hint={t('ports.emptyHint')} />
+              <EmptyState
+                title={t('ports.empty')}
+                hint={t('ports.emptyHint')}
+                action={
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => setEditing({ port: null })}
+                  >
+                    {t('ports.add')}
+                  </button>
+                }
+              />
             ) : (
               <EmptyState title={t('ports.lockedEmpty')} />
             )
           ) : ports.length === 0 ? (
-            <EmptyState title={t('ports.filterEmpty', { q: filter.trim() })} />
+            <EmptyState
+              title={t('ports.filterEmpty', { q: filter.trim() })}
+              action={
+                <button type="button" className="btn" onClick={() => setFilter('')}>
+                  {t('common.clearFilters')}
+                </button>
+              }
+            />
           ) : cards ? (
             /* Điện thoại: mỗi cổng HAI dòng — "cổng → đầu kia : cổng đầu kia", rồi "VLAN · người
                dùng" — ⋯ ở góc. Người đứng trước tủ dò một cổng giữa 48 cái, thẻ 7 dòng là phải

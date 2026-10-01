@@ -1225,7 +1225,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toEqual(['Tầng quyền']);
 
     // Ô chọn tầng có gì bên trong — chỉ hai tầng CẤP được; "không có quyền" là GỠ, không phải gán.
-    await bulk.getByRole('button', { name: 'Tầng quyền' }).click();
+    await bulk.getByRole('button', { name: 'Tầng quyền', exact: true }).click();
     expect(
       await page.getByRole('option').allTextContents(),
       'chỉ gán được hai tầng. "Không có quyền" là mặc định và là kết quả của việc GỠ, ' +

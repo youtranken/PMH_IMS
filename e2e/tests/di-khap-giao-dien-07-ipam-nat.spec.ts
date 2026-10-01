@@ -309,7 +309,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toEqual(['Sửa', 'Ngừng dùng']);
 
     /* ----- Hộp "Khai dải mới": bên trong có đúng những ô nào ----- */
-    await page.getByRole('button', { name: 'Khai dải mới' }).click();
+    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
     const addForm = page.getByRole('dialog', { name: 'Khai dải mới' });
     await expect(addForm).toBeVisible();
     await expect(
@@ -882,7 +882,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const fixture = await setUpNat(page, stamp, octet);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog', { name: 'Thêm luật NAT', exact: true });
     await expect(form).toBeVisible();
 
@@ -1065,10 +1065,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const form = page.getByRole('dialog', { name: /^Sửa luật NAT — / });
     await expect(form).toBeVisible();
 
-    /* ----- Sửa mở thêm HAI khối mà hộp Thêm không có ----- */
+    /* ----- Sửa mở thêm khối giấy tờ; lịch sử nằm ở menu ⋮, không nhúng vào hộp Sửa ----- */
     await expect(
       form.getByRole('heading', { level: 2 }),
-      'sửa một rule đang có thì mở luôn giấy tờ và lịch sử — đó là câu auditor hỏi nhiều nhất',
+      'sửa một rule đang có thì mở thêm giấy tờ; lịch sử đã có mục riêng ở menu ⋮',
       /* Tiêu đề hộp LÀ một `h2`, và nó kèm giao thức và cổng. */
     ).toHaveText([
       'Sửa luật NAT — UDP 9000-9010',
@@ -1076,7 +1076,6 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Chuyển tới máy bên trong',
       'Mở cho ai và vì sao',
       'Giấy tờ đính kèm',
-      'Lịch sử luật NAT',
     ]);
 
     /* ----- Giá trị cũ ----- */

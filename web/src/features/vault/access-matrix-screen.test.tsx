@@ -160,5 +160,8 @@ describe('Quyền xem két sắt — theo người', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Thiết bị loại Switch');
     expect(dialog).not.toHaveTextContent('Chứng chỉ SSL');
+    // Câu giải thích hai tầng dài: nằm sau nút (i) cạnh nhãn, không thành dòng gợi ý dưới ô.
+    expect(within(dialog).getByRole('button', { name: 'Giải thích: Tầng quyền' })).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('phải xin và chờ duyệt');
   });
 });
