@@ -799,6 +799,7 @@ export default {
     remove: 'Xóa',
     confirmRemove: '"{{name}}" sẽ biến khỏi hồ sơ. Việc xóa được ghi vào nhật ký.',
     removed: 'Đã xóa giấy tờ.',
+    noPreviewSubject: 'Cách mở file đính kèm',
     noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint: 'Không bắt buộc. File được đính kèm ngay sau khi lưu hồ sơ.',

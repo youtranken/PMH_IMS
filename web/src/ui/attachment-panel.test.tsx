@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
@@ -241,5 +241,35 @@ describe('AttachmentPanel — trần cỡ file và số file mỗi lượt (Q-18
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Mỗi lần chỉ nhận 2 file — đã bỏ ra: "3.pdf".',
     );
+  });
+});
+
+/*
+ * Luật "chỉ tải về, không mở trong trình duyệt" là chú giải, không phải câu thường trực: nó nằm
+ * trong nút (i) cạnh dòng giới hạn để khu đính kèm gọn mà vẫn tra được (Q-20).
+ */
+describe('AttachmentPanel — luật tải về nằm trong nút (i)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('câu chống mã độc không hiện sẵn, bấm (i) cạnh dòng giới hạn mới hiện', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(200, []))),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType="device" ownerId="d1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const sentence = 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).';
+    expect(screen.queryByText(sentence)).not.toBeInTheDocument();
+    const limitLine = screen.getByText(/^Tối đa \d+ MB\/file/).closest('p') as HTMLElement;
+    const tip = within(limitLine).getByRole('button', {
+      name: 'Giải thích: Cách mở file đính kèm',
+    });
+    await userEvent.click(tip);
+    expect(screen.getByText(sentence)).toBeInTheDocument();
   });
 });

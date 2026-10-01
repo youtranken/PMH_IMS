@@ -1062,12 +1062,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Chọn file là tải ngay — không còn nút "Tải lên" riêng để người dùng quên bấm',
     ).toHaveCount(0);
     await expect(panel.getByText('Chưa có giấy tờ nào.')).toBeVisible();
+    // Luật "chỉ tải về" nằm trong nút (i) cạnh dòng giới hạn (Q-20); bong bóng portal ra `body`.
+    await panel.getByRole('button', { name: 'Giải thích: Cách mở file đính kèm' }).click();
     await expect(
-      panel.getByText(
-        'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
-      ),
-      'Luật "chỉ tải về, không mở inline" phải nói ra ngay chỗ người dùng đính kèm',
+      page.getByText('File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).'),
+      'Luật "chỉ tải về, không mở inline" phải tra được ngay chỗ người dùng đính kèm',
     ).toBeVisible();
+    await page.keyboard.press('Escape');
 
     /* ===== TAB KÉT SẮT ===== */
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
