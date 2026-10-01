@@ -5,7 +5,7 @@ import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { textRule, useFormErrors } from '@/ui/use-form-errors';
+import { textRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { PhoneInput } from '@/ui/phone-input';
 import { isEmail } from '@/lib/email';
@@ -63,7 +63,7 @@ export function AccountForm({
   const [birthDate, setBirthDate] = useState(account?.birthDate ?? '');
   const [role, setRole] = useState<Me['role']>('member');
   const [totpLoginRequired, setTotpLoginRequired] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired]);
 
   const create = useApiMutation<Record<string, unknown>, CreateResult>('/api/v1/accounts', {
     csrfToken,

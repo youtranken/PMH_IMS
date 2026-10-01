@@ -20,7 +20,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { IspRow } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
@@ -83,7 +83,7 @@ export function IspForm({
     row?.deviceId ? { id: row.deviceId, code: row.deviceCode ?? '' } : null,
   );
   const [query, setQuery] = useState(row?.deviceCode ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form, device]);
   // Bản scan hợp đồng ISP đi kèm ngay lúc khai đường mới (AD-15 — cùng khối với thiết bị và
   // phần mềm). Sửa đường thì tab "Giấy tờ" ở trang chi tiết mới là chỗ xem cả danh sách.
   const draft = useAttachmentDraft();

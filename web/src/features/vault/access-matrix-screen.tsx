@@ -22,7 +22,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
 
@@ -916,7 +916,7 @@ function CellDialog({
   const askConfirm = useConfirm();
   const [tier, setTier] = useState<Tier>(rule?.tier ?? 'needs_approval');
   const [note, setNote] = useState(rule?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([tier, note]);
   const check = useFormErrors({ note: secretTextRule(t, note) });
   const stepUp = useStepUpRetry(csrfToken);
 
@@ -1081,7 +1081,7 @@ function GrantToScopeDialog({
   const [query, setQuery] = useState('');
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([picked, tier, note]);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
   const stepUp = useStepUpRetry(csrfToken);
@@ -1311,7 +1311,7 @@ function MultiGrantDialog({
   const [picked, setPicked] = useState<string[]>([]);
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([picked, tier, note]);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
   const stepUp = useStepUpRetry(csrfToken);
@@ -1509,7 +1509,7 @@ function CopyFromDialog({
   const askConfirm = useConfirm();
   const stepUp = useStepUpRetry(csrfToken);
   const [sourceId, setSourceId] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([sourceId]);
   const [saving, setSaving] = useState(false);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
@@ -1714,7 +1714,7 @@ function CheckAccessDialog({
   const [ownerType, setOwnerType] = useState<SecretOwnerType>('device');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([memberId, ownerType, code]);
   const [result, setResult] = useState<(TierExplain & { label: string }) | null>(null);
   const scopeLabel = (scope: { scopeType: string; scopeRef: string }) =>
     scopes.find((item) => scopeKey(item) === scopeKey(scope))?.label ?? scope.scopeRef;

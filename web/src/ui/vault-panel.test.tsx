@@ -879,3 +879,35 @@ describe('VaultPanel — ghi chú của ngăn hiện khi bấm, không in sẵn'
     expect(screen.queryByText(/Có ghi chú/)).toBeNull();
   });
 });
+
+/*
+ * Lỗi máy chủ của lượt gửi trước ("Khóa bí mật chỉ gồm chữ A–Z…" của loại Mã 2 lớp) phải tắt khi
+ * đổi loại sang Mật khẩu — câu đó nói về giá trị lúc gửi, không còn đúng nữa.
+ */
+describe('VaultPanel — lỗi máy chủ không đứng lại sau khi đổi loại', () => {
+  it('Mã 2 lớp bị từ chối → đổi sang Mật khẩu thì khung lỗi biến mất', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'GET' && url.includes('/vault/secrets/verdict')) return Promise.resolve(jsonResponse(200, WHITELIST));
+      if (method === 'GET' && url.includes('/vault/secrets')) return Promise.resolve(jsonResponse(200, []));
+      return Promise.resolve(
+        jsonResponse(400, { code: 'BAD_TOTP_SECRET', message: 'Khóa bí mật chỉ gồm chữ A–Z và số 2–7 (base32).' }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await userEvent.type(within(dialog).getByLabelText(/Tên gọi/), 'otp');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Loại' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Mã 2 lớp' }));
+    await userEvent.type(within(dialog).getByLabelText(/^Giá trị/), 'abc!');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dialog).findByText(/Khóa bí mật chỉ gồm chữ A–Z/)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Loại' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Mật khẩu' }));
+    expect(within(dialog).queryByText(/Khóa bí mật chỉ gồm chữ A–Z/)).not.toBeInTheDocument();
+  });
+});

@@ -11,7 +11,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -122,7 +122,7 @@ export function DeviceForm({
         ? { ...initialState(null), deviceTypeId: presetDeviceTypeId }
         : initialState(device),
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form]);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();

@@ -10,7 +10,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   codePrefix,
   KIND_KEY,
@@ -82,7 +82,7 @@ export function SoftwareForm({
    */
   const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(row));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form]);
   // Giấy tờ chọn kèm lúc THÊM MỚI (AD-15). Hồ sơ đang sửa thì đã có tab Giấy tờ ở trang
   // chi tiết — bày thêm một ô chọn ở đây chỉ làm người ta tưởng danh sách cũ biến mất.
   const draft = useAttachmentDraft();

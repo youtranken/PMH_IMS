@@ -12,7 +12,7 @@ import { Dialog, DialogCancel } from '@/ui/dialog';
 import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 
 /** Đủ để gia hạn một mục: `kind` + `id` là khoá của `POST /expiry/renew`. */
 export interface RenewTarget {
@@ -90,7 +90,7 @@ export function RenewDialog({
   const today = todayIso();
   const min = renewMinDate(row.end, today);
   const [endDate, setEndDate] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([endDate]);
   const [withSeats, setWithSeats] = useState(true);
   const showTerms = !!withTerms;
   const [contract, setContract] = useState('');

@@ -10,7 +10,7 @@ import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
 import { useIpamSettings } from './ipam-settings';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { reasonRule, secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 
 /**
  * Khai / sửa một dải.
@@ -43,7 +43,7 @@ export function SubnetForm({
   const [vlan, setVlan] = useState(subnet?.vlan != null ? String(subnet.vlan) : '');
   const [gateway, setGateway] = useState(subnet?.gateway ?? '');
   const [description, setDescription] = useState(subnet?.description ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([name, cidr, siteId, vlan, gateway, description]);
 
   const lists = useCatalogLists();
 
@@ -299,7 +299,7 @@ export function HideDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: reasonRule(t, reason) });
   /* Luật NAT còn trỏ vào IP trong dải. Sổ NAT của một văn phòng chỉ vài chục dòng, lọc theo
      CIDR ngay ở đây. Hỏng thì im — API vẫn là nơi chặn. */

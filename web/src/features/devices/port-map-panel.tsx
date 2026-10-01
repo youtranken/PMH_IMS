@@ -15,7 +15,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -464,7 +464,7 @@ function PortForm({
   const [vlan, setVlan] = useState(port?.vlan ?? '');
   const departments = useDepartments();
   const [note, setNote] = useState(port?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([portLabel, mode, peer, connectedLabel, connectedPort, usedBy, vlan, note]);
   const keepOpen = useRef(false);
   const labelRef = useRef<HTMLInputElement>(null);
   const check = useFormErrors({

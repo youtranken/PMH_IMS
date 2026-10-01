@@ -14,7 +14,7 @@ import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import type { IpRow } from './ipam-types';
 
 /**
@@ -156,7 +156,7 @@ export function AssignIpDialog({
   const [assignedAt, setAssignedAt] = useState(todayIso());
   const [note, setNote] = useState(initialRecord?.note ?? '');
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([target, device, usedBy, assignedAt, note, reason]);
   const departments = useDepartments();
   const check = useFormErrors({
     owner: ownerRule(t, device.deviceId, usedBy),
