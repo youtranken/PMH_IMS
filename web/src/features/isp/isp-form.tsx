@@ -7,7 +7,6 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
-import { PlusIcon } from '@/ui/glyph-icons';
 import {
   DeviceTypeFilter,
   isRouterType,
