@@ -871,6 +871,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       sortVi([
         'Xuất Excel',
         'Thêm tài khoản',
+        // Câu giải thích màn nằm trong nút (i) cạnh tiêu đề (Q-20).
+        'Giải thích: Tài khoản dịch vụ',
         'Loại',
         'Trạng thái',
         // NET-074: chip lọc tài khoản VPN không giới hạn IP nguồn.
