@@ -11,6 +11,10 @@ import { inflateRawSync } from 'node:zlib';
  * Bản có macro (docm/xlsm/pptm) bị chặn theo loại nội dung khai trong gói, kể cả khi đổi đuôi
  * thành .docx/.xlsx/.pptx. Gói nào mang `vbaProject.bin` cũng bị chặn, dù khai loại gì.
  *
+ * Gói không macro vẫn chạy được mã khi mở: mẫu .dotm kéo từ máy lạ (template injection qua
+ * `attachedTemplate`), khung / OLE trỏ ra ngoài, và đối tượng OLE nhúng (`oleObject*.bin`). Các
+ * thứ đó cũng bị chặn — xem `hasActiveContent`.
+ *
  * Tự đọc thư mục trung tâm của zip thay vì kéo thư viện: chỉ cần danh sách tên và một mục nhỏ,
  * và mọi trần (số mục, dung lượng giải nén) nằm ngay ở đây — một gói độc không làm nổ RAM.
  */
@@ -33,6 +37,24 @@ const MAIN_TYPES: Record<string, { ext: string; mime: string }> = {
 // Loại nội dung nói lên macro: `...macroEnabled.main+xml` và `application/vnd.ms-office.vbaProject`.
 const MACRO_TYPE = /macroEnabled|vbaProject/i;
 const VBA_PART = /(^|\/)vbaProject\.bin$/i;
+/** Đối tượng OLE nhúng: phần `.bin` trong `embeddings/`, hoặc khai loại oleObject. */
+const OLE_PART = /(^|\/)embeddings\/[^/]+\.bin$/i;
+const OLE_TYPE = /oleObject/i;
+/**
+ * Quan hệ kéo mã từ ngoài vào lúc mở. `hyperlink` External là link bình thường; biểu đồ nhúng
+ * bảng Excel đi bằng quan hệ `package` NỘI BỘ — cả hai phải qua.
+ */
+const ACTIVE_EXTERNAL_REL = /\/(attachedTemplate|oleObject|frame|subDocument)$/i;
+/** Mọi quan hệ OLE, kể cả nội bộ. */
+const OLE_REL = /\/oleObject$/i;
+/**
+ * Mẫu nằm trên chính ổ đĩa người soạn (`file:///C:/…/Normal.dotm`) là thứ Word tự ghi vào mọi
+ * tài liệu tạo từ mẫu riêng — không kéo gì qua mạng. Đích khác (http, `\\máy\share`,
+ * `file://máy/…`) là kéo từ máy lạ.
+ */
+const LOCAL_FILE_TARGET = /^file:\/\/\/[a-z]:[\\/]/i;
+/** Một tệp `.rels` thật chỉ vài KB. */
+const MAX_RELS_BYTES = 1024 * 1024;
 
 /** Một gói Office thật có vài trăm mục; hơn thế này là thứ khác, không đọc tiếp. */
 const MAX_ENTRIES = 20_000;
@@ -56,12 +78,13 @@ interface ZipEntry {
 export function detectOoxml(buf: Buffer, lowerName: string): string | null {
   const entries = readCentralDirectory(buf);
   if (!entries) return null;
-  if (entries.some((entry) => VBA_PART.test(entry.name))) return null;
+  if (entries.some((entry) => VBA_PART.test(entry.name) || OLE_PART.test(entry.name))) return null;
 
   const typesEntry = entries.find((entry) => entry.name === '[Content_Types].xml');
   if (!typesEntry) return null;
   const typesXml = readEntry(buf, typesEntry, MAX_CONTENT_TYPES_BYTES)?.toString('utf8');
-  if (!typesXml || MACRO_TYPE.test(typesXml)) return null;
+  if (!typesXml || MACRO_TYPE.test(typesXml) || OLE_TYPE.test(typesXml)) return null;
+  if (hasActiveContent(buf, entries)) return null;
 
   const mains = [...typesXml.matchAll(/<Override\b[^>]*>/g)]
     .map((match) => ({
@@ -77,6 +100,26 @@ export function detectOoxml(buf: Buffer, lowerName: string): string | null {
 
   const spec = MAIN_TYPES[mains[0].contentType!];
   return lowerName.endsWith(spec.ext) ? spec.mime : null;
+}
+
+/**
+ * Có quan hệ nào kéo mã vào lúc mở không. Đọc mọi `.rels` của gói; `.rels` không đọc được (mã
+ * hoá, quá trần) thì coi như CÓ — không xem được là không cho qua.
+ */
+function hasActiveContent(buf: Buffer, entries: ZipEntry[]): boolean {
+  for (const entry of entries) {
+    if (!entry.name.toLowerCase().endsWith('.rels')) continue;
+    const xml = readEntry(buf, entry, MAX_RELS_BYTES)?.toString('utf8');
+    if (xml === undefined) return true;
+    for (const match of xml.matchAll(/<Relationship\b[^>]*>/g)) {
+      const type = attr(match[0], 'Type') ?? '';
+      if (OLE_REL.test(type)) return true;
+      if (attr(match[0], 'TargetMode')?.toLowerCase() !== 'external') continue;
+      if (!ACTIVE_EXTERNAL_REL.test(type)) continue;
+      if (!LOCAL_FILE_TARGET.test(attr(match[0], 'Target') ?? '')) return true;
+    }
+  }
+  return false;
 }
 
 function attr(tag: string, name: string): string | null {
