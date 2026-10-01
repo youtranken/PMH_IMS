@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -158,5 +160,76 @@ describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card n
     expect(within(panel).getAllByRole('listitem').length).toBeGreaterThanOrEqual(2);
     // Mảng thương hiệu không được giành tiêu đề của màn.
     expect(within(panel).queryByRole('heading')).toBeNull();
+  });
+});
+
+describe('Thương hiệu PMH trên khung đăng nhập (Q-19)', () => {
+  function renderCard() {
+    return withProviders(
+      <AuthCard title="Đăng nhập">
+        <p>thân</p>
+      </AuthCard>,
+    );
+  }
+
+  it('mảng trái là ảnh trang trí: <picture> có WebP + JPEG dự phòng, alt rỗng, có kích thước', () => {
+    renderCard();
+    const panel = screen.getByTestId('auth-panel');
+    const picture = panel.querySelector('picture.auth-photo');
+    expect(picture).not.toBeNull();
+    const source = picture!.querySelector('source')!;
+    expect(source).toHaveAttribute('type', 'image/webp');
+    expect(source.getAttribute('srcset')).toMatch(/login-photo\.webp$/);
+    const img = picture!.querySelector('img')!;
+    expect(img.getAttribute('src')).toMatch(/login-photo\.jpg$/);
+    expect(img).toHaveAttribute('alt', '');
+    expect(img).toHaveAttribute('width');
+    expect(img).toHaveAttribute('height');
+  });
+
+  it('mảng trái có logo PMH đầy đủ tên "Phú Mỹ Hưng", cùng các dòng giới thiệu', () => {
+    renderCard();
+    const panel = screen.getByTestId('auth-panel');
+    const logo = within(panel).getByRole('img', { name: 'Phú Mỹ Hưng' });
+    expect(logo.getAttribute('src')).toMatch(/pmh-logo\.png$/);
+    expect(logo).toHaveAttribute('width');
+    expect(logo).toHaveAttribute('height');
+    expect(panel).toHaveTextContent('IMS — Quản lý hệ thống IT');
+  });
+
+  it('card có biểu tượng PMH (móc .auth-emblem cho màn hẹp) đứng trước tiêu đề, không còn ô chữ "IMS"', () => {
+    const { container } = renderCard();
+    const card = container.querySelector<HTMLElement>('.auth-card')!;
+    const emblem = within(card).getByRole('img', { name: 'Phú Mỹ Hưng' });
+    expect(emblem.closest('.auth-emblem')).not.toBeNull();
+    expect(emblem.getAttribute('src')).toMatch(/pmh-emblem\.png$/);
+    expect(card.querySelector('.brand-mark')).toBeNull();
+    const title = screen.getByRole('heading', { name: 'Đăng nhập' });
+    expect(emblem.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+/**
+ * jsdom không dựng CSS, nên đọc thẳng luật: ảnh rộng hơn form (~60/40) và ≤720px chỉ còn card
+ * mang biểu tượng. Thiếu một trong hai luật thì màn vẫn "chạy" mà sai bố cục, không gì báo.
+ */
+describe('auth.css — bố cục ảnh / form', () => {
+  const css = readFileSync(join(__dirname, '..', '..', 'css', 'auth.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\r\n/g, '\n');
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rule = (body: string, selector: string) =>
+    new RegExp(`(?:^|[\\n}])\\s*${escape(selector)}\\s*\\{([^}]*)\\}`).exec(body)?.[1] ?? '';
+  const narrow = /@media \(max-width: 720px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+  it('màn rộng: cột ảnh 3fr, cột form 2fr; biểu tượng trong card ẩn (logo đầy đủ đã ở mảng ảnh)', () => {
+    expect(rule(css, '.auth')).toMatch(/grid-template-columns:[^;]*3fr[^;]*2fr/);
+    expect(rule(css, '.auth-emblem')).toMatch(/display:\s*none/);
+    expect(rule(css, '.auth-photo img')).toMatch(/object-fit:\s*cover/);
+  });
+
+  it('≤720px: bỏ mảng ảnh, hiện biểu tượng trên card', () => {
+    expect(rule(narrow, '.auth-panel')).toMatch(/display:\s*none/);
+    expect(rule(narrow, '.auth-emblem')).toMatch(/display:\s*(block|flex|grid)/);
   });
 });

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Me } from '@/lib/me';
+import { BrandEmblem, BrandLogo } from '@/ui/brand-logo';
 import { AUTH_ERROR_ID, useSetupStep } from './setup-steps';
 import { SignOutLink } from './sign-out-link';
 
@@ -20,7 +21,9 @@ import { SignOutLink } from './sign-out-link';
  *
  * Mảng thương hiệu bên trái (chỉ màn rộng, CSS ẩn nó ≤720px): người mở link từ thư cần chắc đây
  * là trang thật của PMH trước khi gõ mật khẩu. Nó không có tiêu đề — `h1` của màn vẫn là tiêu đề
- * của card.
+ * của card. Ảnh nền là trang trí (`alt=""`); tên công ty đã nằm ở alt của logo và dòng chữ.
+ * Màn hẹp không có mảng đó, nên biểu tượng PMH trong card (`.auth-emblem`) gánh việc nhận diện;
+ * màn rộng CSS ẩn biểu tượng đi vì logo đầy đủ đã ở bên trái.
  */
 export function AuthCard({
   title,
@@ -49,20 +52,33 @@ export function AuthCard({
   return (
     <div className="ims auth">
       <aside className="auth-panel" data-testid="auth-panel">
-        <p className="auth-panel-org">{t('auth.panelOrg')}</p>
-        <p className="auth-panel-system">{t('auth.panelSystem')}</p>
-        <ul className="auth-panel-points">
-          <li>{t('auth.panelPoint1')}</li>
-          <li>{t('auth.panelPoint2')}</li>
-          <li>{t('auth.panelPoint3')}</li>
-        </ul>
+        {/* `lazy`: ≤720px mảng này bị ẩn, điện thoại không phải tải ảnh nền về. */}
+        <picture className="auth-photo">
+          <source srcSet="/brand/login-photo.webp" type="image/webp" />
+          <img
+            src="/brand/login-photo.jpg"
+            width={1200}
+            height={628}
+            alt=""
+            decoding="async"
+            loading="lazy"
+          />
+        </picture>
+        <div className="auth-panel-body">
+          <BrandLogo alt={t('auth.panelOrg')} className="auth-panel-logo" lazy />
+          <p className="auth-panel-org">{t('auth.panelOrg')}</p>
+          <p className="auth-panel-system">{t('auth.panelSystem')}</p>
+          <ul className="auth-panel-points">
+            <li>{t('auth.panelPoint1')}</li>
+            <li>{t('auth.panelPoint2')}</li>
+            <li>{t('auth.panelPoint3')}</li>
+          </ul>
+        </div>
       </aside>
       <div className="auth-main">
         <section className="auth-card">
           <div className="auth-logo">
-            <span className="brand-mark" aria-hidden="true">
-              IMS
-            </span>
+            <BrandEmblem alt={t('auth.panelOrg')} className="auth-emblem" lazy />
             {/* Tên đầy đủ + công ty: người mở link từ thư cần chắc đây là trang thật của PMH. */}
             <span className="auth-brand">
               <span>{t('app.brand')}</span>
