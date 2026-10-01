@@ -100,3 +100,41 @@ describe('SubnetPane — menu ⋮ của một IP', () => {
     expect(submit).not.toHaveClass('danger');
   });
 });
+
+/* Q-20: cột Site của IP lấy từ hồ sơ THIẾT BỊ (một dải có thể dùng chung nhiều site). */
+describe('SubnetPane — cột Site', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('IP gắn máy hiện site của máy; IP không gắn máy hiện "—"', async () => {
+    const onDevice = {
+      ...ASSIGNED,
+      id: 'a2',
+      address: '10.0.1.2',
+      deviceId: 'd1',
+      deviceCode: 'PC-E2E-1',
+      deviceName: 'May tram',
+      deviceSiteCode: 'TOWER',
+      usedBy: null,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          jsonResponse(200, String(url).endsWith('/addresses') ? [onDevice, ASSIGNED] : []),
+        ),
+      ),
+    );
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <SubnetPane subnet={SUBNET} me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('columnheader', { name: 'Site' })).toBeInTheDocument();
+    const row = (await screen.findByText('PC-E2E-1')).closest('tr')!;
+    expect(row.querySelector('td[data-label="Site"]')?.textContent).toBe('TOWER');
+    const person = screen.getByText('Chị Lan').closest('tr')!;
+    expect(person.querySelector('td[data-label="Site"]')?.textContent).toBe('—');
+  });
+});

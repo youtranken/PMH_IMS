@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupSubnets } from './subnet-groups';
+import { filterSubnetsBySite, groupSubnets, siteOptionsOf } from './subnet-groups';
 
 const row = (cidr: string, siteCode: string | null, voided = false) => ({
   cidr,
@@ -34,5 +34,32 @@ describe('groupSubnets', () => {
   it('giữ thứ tự đầu vào trong từng nhóm', () => {
     const groups = groupSubnets([row('10.0.2.0/24', 'A'), row('10.0.1.0/24', 'A'), row('x', 'B')]);
     expect(groups[0].rows.map((r) => r.cidr)).toEqual(['10.0.2.0/24', '10.0.1.0/24']);
+  });
+});
+
+/*
+ * Q-20: bộ lọc site ở cột dải. Dải để trống site là "Tất cả site (dùng chung)" — nó phục vụ
+ * MỌI site, nên lọc theo một site vẫn phải giữ nó lại.
+ */
+describe('filterSubnetsBySite', () => {
+  const rows = [
+    { cidr: 'a', siteId: 's1', siteCode: 'HCM', voidedAt: null },
+    { cidr: 'b', siteId: 's2', siteCode: 'HN', voidedAt: null },
+    { cidr: 'c', siteId: null, siteCode: null, voidedAt: null },
+  ];
+  it.each([
+    ['', ['a', 'b', 'c']],
+    ['s1', ['a', 'c']],
+    ['s2', ['b', 'c']],
+    ['khong-co', ['c']],
+  ])('lọc site "%s" → %j', (siteId, expected) => {
+    expect(filterSubnetsBySite(rows, siteId).map((r) => r.cidr)).toEqual(expected);
+  });
+
+  it('danh sách site để chọn: chỉ site có dải, A→Z, không lặp', () => {
+    expect(siteOptionsOf([rows[1], ...rows, { ...rows[0], cidr: 'd' }])).toEqual([
+      { id: 's1', code: 'HCM' },
+      { id: 's2', code: 'HN' },
+    ]);
   });
 });

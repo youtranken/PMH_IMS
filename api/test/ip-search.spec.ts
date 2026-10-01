@@ -54,7 +54,10 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
           new Map(
             Object.entries(device)
               .filter(([, id]) => ids.includes(id))
-              .map(([code, id]) => [id, { id, code, name: `Máy ${code}` }]),
+              .map(([code, id]) => [
+                id,
+                { id, code, name: `Máy ${code}`, siteCode: code === 'CAM-TIM-01' ? 'TOWER' : null },
+              ]),
           ),
         ),
     } as unknown as DevicesApiService;
@@ -113,6 +116,8 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     expect(hits[0]).toMatchObject({
       address: '10.77.30.5',
       deviceCode: 'CAM-TIM-01',
+      // Q-20: site lấy từ hồ sơ THIẾT BỊ, không từ dải.
+      deviceSiteCode: 'TOWER',
       subnetCidr: '10.77.30.0/28',
       subnetName: 'Camera tim',
       subnetVlan: 30,

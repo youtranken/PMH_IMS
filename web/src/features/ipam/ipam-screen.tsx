@@ -22,7 +22,12 @@ import { IpLookup } from './ip-lookup';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
 import { useIpamSettings } from './ipam-settings';
-import { groupSubnets, type SubnetGroupKey } from './subnet-groups';
+import {
+  filterSubnetsBySite,
+  groupSubnets,
+  siteOptionsOf,
+  type SubnetGroupKey,
+} from './subnet-groups';
 
 /** Từ bao nhiêu dải thì cột trái cần ô lọc — ít hơn thế thì liếc là thấy. */
 const RAIL_FILTER_FROM = 6;
@@ -143,14 +148,31 @@ export function IpamScreen({ me }: { me: Me }) {
   const navigate = useNavigate();
   const narrow = useIsNarrow();
   const [railFilter, setRailFilter] = useState('');
+  const [siteFilter, setSiteFilter] = useState('');
+  const siteOptions = useMemo(() => siteOptionsOf(rows), [rows]);
+  const siteRows = useMemo(() => filterSubnetsBySite(rows, siteFilter), [rows, siteFilter]);
   const shownRows = useMemo(() => {
     const needle = foldSearch(railFilter.trim());
-    if (!needle) return rows;
-    return rows.filter((row) =>
+    if (!needle) return siteRows;
+    return siteRows.filter((row) =>
       [row.cidr, row.name, row.siteCode, row.vlan === null ? null : String(row.vlan), row.gateway]
         .some((field) => field && foldSearch(field).includes(needle)),
     );
-  }, [rows, railFilter]);
+  }, [siteRows, railFilter]);
+
+  /* Q-20: lọc site chỉ có nghĩa khi đã có dải gắn site; dải dùng chung luôn ở lại khi lọc. */
+  const siteSelect =
+    siteOptions.length > 0 ? (
+      <Select
+        value={siteFilter}
+        ariaLabel={t('ipam.siteFilter')}
+        options={[
+          { value: '', label: t('ipam.allSites') },
+          ...siteOptions.map((site) => ({ value: site.id, label: site.code })),
+        ]}
+        onChange={setSiteFilter}
+      />
+    ) : null;
 
   /*
    * Thẻ đang mở phải NẰM TRONG tầm nhìn của cột trái: cột cuộn riêng, và mở thẳng link của dải
@@ -227,10 +249,11 @@ export function IpamScreen({ me }: { me: Me }) {
           */}
           {narrow && selected ? (
             <div className="subnet-picker">
+              {siteSelect}
               <Select
                 value={selected.id}
                 ariaLabel={t('ipam.pickSubnet')}
-                options={groupSubnets(rows).flatMap((group) =>
+                options={groupSubnets(siteRows).flatMap((group) =>
                   group.rows.map((row) => ({
                     value: row.id,
                     label: t('ipam.subnetOption', {
@@ -257,6 +280,7 @@ export function IpamScreen({ me }: { me: Me }) {
           ) : (
           <nav className="subnet-rail" aria-label={t('ipam.railLabel')} ref={railRef}>
             <h2 className="form-section-title">{t('ipam.railTitle')}</h2>
+            {siteSelect}
             {/* Ô lọc chỉ mọc ra khi dải đủ nhiều để phải tìm — bốn năm thẻ thì liếc là thấy. */}
             {rows.length > RAIL_FILTER_FROM ? (
               <input

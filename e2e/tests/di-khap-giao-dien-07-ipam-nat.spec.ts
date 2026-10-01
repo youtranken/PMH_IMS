@@ -342,12 +342,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     // Lựa chọn của `Select` PORTAL ra ngoài phần thân hộp — bắt ở cấp trang.
     await addForm.getByRole('button', { name: 'Site', exact: true }).click();
     await expect(
-      page.getByRole('option', { name: 'Không gắn site', exact: true }),
+      page.getByRole('option', { name: 'Tất cả site (dùng chung)', exact: true }),
       'phải có đường "không gắn site" — không thì mọi dải bị ép thuộc về một site nào đó',
     ).toBeVisible();
     // Esc trong `Select` chỉ đóng menu, KHÔNG được đóng luôn cả hộp thoại.
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('option', { name: 'Không gắn site', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('option', { name: 'Tất cả site (dùng chung)', exact: true })).toHaveCount(0);
     await expect(addForm, 'Esc đóng menu chọn thì hộp thoại phải còn nguyên').toBeVisible();
 
     await addForm.getByRole('button', { name: 'Đóng hộp thoại' }).click();
@@ -399,7 +399,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
     ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
-    /* ----- Bảng: đúng sáu cột ----- */
+    /* ----- Bảng: đúng bảy cột (Site của máy — Q-20) ----- */
     const table = page.getByRole('table');
     await expect(
       table.getByRole('columnheader'),
@@ -408,6 +408,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Địa chỉ',
       'Trạng thái',
       'Thiết bị',
+      'Site',
       'Người / phòng ban dùng',
       'Ngày cấp',
       'Thao tác',
@@ -777,7 +778,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveText([
       'Xuất Excel',
       'Thêm luật NAT',
-      'Mọi site',
+      'Tất cả site',
       'Mọi router',
       'Mọi giao thức',
       /^Đang mở \d+$/,
@@ -843,7 +844,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       page.getByRole('option').first(),
       'lựa chọn đầu luôn là đường bỏ lọc',
-    ).toHaveText('Mọi site');
+    ).toHaveText('Tất cả site');
     await expect(
       page.getByRole('option', { name: fixture.siteCode, exact: true }),
       'site vừa khai phải có trong danh sách — không thì bộ lọc chỉ bày ra thứ không dùng được',

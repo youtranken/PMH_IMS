@@ -240,7 +240,7 @@ export function SubnetForm({
           </p>
         ) : null}
 
-        <Field label={t('ipam.site')}>
+        <Field label={t('ipam.site')} hint={t('ipam.siteHint')}>
           <Select
             value={siteId}
             onChange={setSiteId}

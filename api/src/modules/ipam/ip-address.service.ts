@@ -58,6 +58,11 @@ export interface IpAddressRecord {
   deviceId: string | null;
   deviceCode: string | null;
   deviceName: string | null;
+  /**
+   * Site của THIẾT BỊ giữ IP (Q-20). Dải để trống site là dùng chung mọi site, nên site của một
+   * IP chỉ đọc được từ máy; IP không gắn máy thì `null`.
+   */
+  deviceSiteCode: string | null;
   usedBy: string | null;
   assignedBy: string;
   assignedAt: string | null;
@@ -1230,6 +1235,7 @@ export class IpAddressService {
         deviceId: row.deviceId,
         deviceCode: device?.code ?? null,
         deviceName: device?.name ?? null,
+        deviceSiteCode: device?.siteCode ?? null,
         usedBy: row.usedBy,
         assignedBy: row.assignedBy,
         assignedAt: row.assignedAt,

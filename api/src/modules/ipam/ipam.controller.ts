@@ -360,6 +360,7 @@ export class IpamController {
         { header: 'Địa chỉ', width: 18, value: (r) => r.address },
         { header: 'Trạng thái', width: 16, value: (r) => IP_STATUS_LABEL[r.status] ?? r.status },
         { header: 'Thiết bị', width: 22, value: (r) => r.deviceCode ?? '' },
+        { header: 'Site', width: 12, value: (r) => r.deviceSiteCode ?? '' },
         { header: 'Người / phòng ban', width: 28, value: (r) => r.usedBy ?? '' },
         { header: 'Ngày cấp', width: 14, value: (r) => r.assignedAt ?? '' },
         { header: 'Người cấp', width: 24, value: (r) => r.assignedBy },

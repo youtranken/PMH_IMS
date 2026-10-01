@@ -337,7 +337,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     expect(
       (await optionsOf(page, main.getByRole('button', { name: 'Site', exact: true })))[0],
       'Ô lọc Site phải mở đầu bằng mục bỏ lọc',
-    ).toBe('Mọi site');
+    ).toBe('Tất cả site');
     expect(
       (await optionsOf(page, main.getByRole('button', { name: 'Tủ mạng', exact: true })))[0],
       'Ô lọc Tủ mạng phải mở đầu bằng mục bỏ lọc',

@@ -14,6 +14,7 @@ const RECORD: IpRow = {
   deviceId: null,
   deviceCode: null,
   deviceName: null,
+  deviceSiteCode: null,
   usedBy: 'Kho',
   assignedBy: 'e2e',
   assignedAt: '2026-01-02',
