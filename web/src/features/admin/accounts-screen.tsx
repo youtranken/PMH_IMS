@@ -1016,12 +1016,8 @@ export function TemporaryPasswordDialog({
             {'•'.repeat(password.length)}
           </p>
         )}
-        <button
-          type="button"
-          className="btn sm"
-          aria-pressed={!shown}
-          onClick={() => setShown((value) => !value)}
-        >
+        {/* Không `aria-pressed`: nhãn đã đổi theo trạng thái, thêm cờ nhấn là hai tín hiệu. */}
+        <button type="button" className="btn sm" onClick={() => setShown((value) => !value)}>
           {t(shown ? 'accounts.hidePassword' : 'accounts.showPassword')}
         </button>
         <CopyButton value={password} label={t('accounts.copyPassword')} />
