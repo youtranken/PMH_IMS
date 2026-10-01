@@ -79,9 +79,6 @@ export function useAnyDialogOpen(): boolean {
 const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
 
-/** Có mặt trên phần tử CHỈ trong lúc `initialFocus` gọi `focus()` — xem `Combobox.onFocus`. */
-export const PROGRAMMATIC_FOCUS_ATTR = 'data-programmatic-focus';
-
 /**
  * Khung modal dùng chung trên Radix Dialog — thay các khối .modal-backdrop/.sheet
  * copy tay (mỗi dialog một bản). Radix lo focus trap, scroll-lock, Esc, trả focus,
@@ -419,11 +416,7 @@ export function Dialog({
               if (!target) return;
               event.preventDefault();
               if (initialFocus === 'title') target.tabIndex = -1;
-              /* Đánh dấu tiêu điểm này do CODE đặt: `Combobox` đọc cờ trong `onFocus` (chạy
-                 đồng bộ ngay trong `focus()`) để không bung menu khi người dùng chưa chạm ô. */
-              target.setAttribute(PROGRAMMATIC_FOCUS_ATTR, '');
               target.focus();
-              target.removeAttribute(PROGRAMMATIC_FOCUS_ATTR);
             }}
           >
             <DialogPortalContext.Provider value={portalEl}>
