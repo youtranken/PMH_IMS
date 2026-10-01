@@ -964,7 +964,6 @@ export default {
     restoreIntro: 'Hồ sơ về Đang dùng. Ghế đã gỡ không tự gán lại — tick máy bên dưới để gán lại.',
     restoreEnd: 'Hạn mới',
     restoreEndHint: 'Chọn từ hôm nay trở đi.',
-    restorePlusYear: '+1 năm',
     restoreNeedEnd: 'Chọn hạn mới.',
     restorePastEnd: 'Hạn mới phải từ hôm nay trở đi.',
     restoreNote: 'Ghi chú hồ sơ',

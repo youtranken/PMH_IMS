@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   formerDevices,
   isoDay,
-  plusOneYear,
   restoreEndReason,
   retiredAfterDays,
   seatFlag,
@@ -77,11 +76,6 @@ describe('retiredAfterDays — "tự động sau N ngày hết hạn"', () => {
 describe('hộp Khôi phục — hạn mới và các máy từng dùng', () => {
   it('isoDay: ngày lịch địa phương, không lệch múi giờ', () => {
     expect(isoDay(new Date(2026, 9, 1, 23, 30))).toBe('2026-10-01');
-  });
-
-  it('plusOneYear: 29/02 lùi về 28/02 thay vì tràn sang tháng 3', () => {
-    expect(plusOneYear('2026-10-01')).toBe('2027-10-01');
-    expect(plusOneYear('2028-02-29')).toBe('2029-02-28');
   });
 
   it.each([

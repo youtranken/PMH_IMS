@@ -3,16 +3,17 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
+import { addYearsIso } from '@/lib/add-years';
 import { formatDate } from '@/lib/format';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { useFormErrors } from '@/ui/use-form-errors';
+import { YearQuickPicks } from '@/ui/year-quick-picks';
 import {
   formerDevices,
   isoDay,
-  plusOneYear,
   restoreEndReason,
   type FormerDevice,
 } from './software-standing';
@@ -44,7 +45,7 @@ export function RestoreDialog({
   const needsEnd =
     requiresEndDate(software.kind, software.licenseModel) ||
     (!perpetual && software.endDate !== null);
-  const [endDate, setEndDate] = useState(needsEnd ? plusOneYear(today) : '');
+  const [endDate, setEndDate] = useState(needsEnd ? addYearsIso(today, 1) : '');
   const [note, setNote] = useState(software.note ?? '');
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -173,9 +174,7 @@ export function RestoreDialog({
                 min={today}
                 onChange={setEndDate}
               />
-              <button type="button" className="btn sm" onClick={() => setEndDate(plusOneYear(today))}>
-                {t('software.restorePlusYear')}
-              </button>
+              <YearQuickPicks base={today} onPick={setEndDate} label={t('software.endQuick')} />
             </div>
           </Field>
         )}

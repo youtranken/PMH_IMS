@@ -3,10 +3,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { SoftwareDetail } from './software-detail';
 import { RestoreDialog } from './software-restore-dialog';
-import { isoDay, plusOneYear } from './software-standing';
+import { addYearsIso } from '@/lib/add-years';
+import { isoDay } from './software-standing';
 import type { SoftwareDetailRow } from './software-types';
 
 /**
@@ -146,10 +147,25 @@ describe('Hộp Khôi phục', () => {
       {
         url: '/api/v1/software/sw-1',
         method: 'PATCH',
-        body: { status: 'active', endDate: plusOneYear(isoDay(new Date())) },
+        body: { status: 'active', endDate: addYearsIso(isoDay(new Date()), 1) },
       },
       { url: '/api/v1/software/sw-1/assignments', method: 'POST', body: { deviceId: 'd-2' } },
     ]);
+  });
+
+  it('đặt nhanh +2 năm dùng hàng nút chung, tính từ hôm nay', async () => {
+    const calls = mockFetch(BASE);
+    const onDone = renderDialog(BASE);
+    const user = userEvent.setup();
+    const group = screen.getByRole('group', { name: 'Đặt nhanh ngày hết hạn' });
+    await user.click(within(group).getByRole('button', { name: '+2 năm' }));
+    await user.click(await screen.findByRole('checkbox', { name: /PC-02/ }));
+    await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      status: 'active',
+      endDate: addYearsIso(isoDay(new Date()), 2),
+    });
   });
 
   it('tick nhiều máy hơn số ghế: báo lỗi trong hộp, không gửi gì', async () => {
