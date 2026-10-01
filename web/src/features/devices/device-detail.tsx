@@ -917,7 +917,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 open={!folded.has("software")}
                 onToggle={() => toggleZone("software")}
               >
-                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
+                <DeviceLicensesExpand deviceId={item.id} />
               </ZoneSection>
             ) : null}
 

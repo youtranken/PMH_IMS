@@ -54,7 +54,40 @@ function mockFetch() {
       if (url.startsWith('/api/v1/software/installed/counts')) {
         return Promise.resolve(jsonResponse(200, { d1: 2 }));
       }
-      if (url.startsWith('/api/v1/software/installed/d1')) return Promise.resolve(jsonResponse(200, []));
+      if (url.startsWith('/api/v1/software/installed/d1')) {
+        return Promise.resolve(
+          jsonResponse(200, [
+            {
+              id: 'a1',
+              softwareId: 'sw1',
+              softwareCode: 'LIC-OFFICE',
+              softwareName: 'Office 365',
+              licenseModel: 'subscription',
+              softwareEndDate: '2030-01-01',
+              assignedAt: '2026-01-01T00:00:00Z',
+              startDate: null,
+              endDate: null,
+              cost: 1200000,
+              contract: 'HD-01',
+              note: null,
+            },
+            {
+              id: 'a2',
+              softwareId: 'sw2',
+              softwareCode: 'LIC-WIN',
+              softwareName: 'Windows 11',
+              licenseModel: 'perpetual',
+              softwareEndDate: null,
+              assignedAt: '2026-01-01T00:00:00Z',
+              startDate: null,
+              endDate: null,
+              cost: null,
+              contract: null,
+              note: null,
+            },
+          ]),
+        );
+      }
       if (url.startsWith('/api/v1/ipam/devices/addresses')) return Promise.resolve(jsonResponse(200, {}));
       if (url.startsWith('/api/v1/catalog')) {
         return Promise.resolve(
@@ -98,6 +131,31 @@ describe('/devices — bung dòng license theo mẫu chuẩn', () => {
     const region = document.getElementById(open.getAttribute('aria-controls') ?? '') as HTMLElement;
     expect(within(region).getByText('License đang cài')).toBeInTheDocument();
     expect(within(region).getByText('2')).toBeInTheDocument();
+  });
+
+  /*
+   * Q-20: khu bung của /devices và /software là CÙNG một khung (ExpandPanel) và CÙNG một kiểu
+   * bảng con (`table-sub`) — không còn lưới thẻ riêng ở /devices, không còn đầu khu dí mép.
+   */
+  it('khu bung dùng khung chung và bảng con thật: đầu khu trong khung, cột có tiêu đề', async () => {
+    mockFetch();
+    renderScreen();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: 'Mở rộng PC-01 — 2 license' }, { timeout: 5000 }),
+    );
+    const open = screen.getByRole('button', { name: 'Thu gọn PC-01 — 2 license' });
+    const region = document.getElementById(open.getAttribute('aria-controls') ?? '') as HTMLElement;
+    const table = await within(region).findByRole('table');
+    expect(table).toHaveClass('table-sub');
+    expect(within(region).getByTestId('expand-header').closest('.exp-panel')).toBe(
+      table.closest('.exp-panel'),
+    );
+    const headers = within(table).getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers).toEqual(['Phần mềm', 'Kỳ hạn', 'Chi phí', 'Kết thúc', 'Hợp đồng · Ghi chú']);
+    expect(within(table).getByRole('link', { name: 'LIC-OFFICE' })).toBeInTheDocument();
+    expect(within(table).getByText('Office 365')).toBeInTheDocument();
+    expect(within(table).getByText('HD-01')).toBeInTheDocument();
   });
 
   it('đường hỏng: máy không cài gì thì không có mũi tên bung', async () => {

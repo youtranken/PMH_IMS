@@ -20,7 +20,7 @@ import { useToast } from '@/ui/toast';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
-import { ExpandHeader } from '@/ui/expand-header';
+import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
 import { DeviceRowActions } from './device-actions';
@@ -473,17 +473,13 @@ export function DevicesScreen({ me }: { me: Me }) {
             canExpand={(item) =>
               installedCounts.isError || (installedCounts.data?.[item.id] ?? 0) > 0
             }
-            /* Mẫu bung dòng chuẩn (Q-18, giống /software): đầu khu `ExpandHeader` mang số đếm,
-               bảng ghế bên dưới không tự vẽ tiêu đề thứ hai. Chưa đọc được số đếm thì bỏ số —
-               đừng in "0" cho một máy có thể đang cài. */
+            /* Mẫu bung dòng chuẩn (Q-18, Q-20, giống /software): khung `ExpandPanel` có đầu khu
+               mang số đếm, bảng con bên dưới. Chưa đọc được số đếm thì bỏ số — đừng in "0" cho
+               một máy có thể đang cài. */
             renderExpanded={(item) => (
-              <>
-                <ExpandHeader
-                  title={t('devices.installedTitle')}
-                  count={installedCounts.data?.[item.id]}
-                />
-                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
-              </>
+              <ExpandPanel title={t('devices.installedTitle')} count={installedCounts.data?.[item.id]}>
+                <DeviceLicensesExpand deviceId={item.id} />
+              </ExpandPanel>
             )}
             manualSorting
             sorting={sorting}
