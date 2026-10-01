@@ -1042,7 +1042,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveText('Thêm ít nhất một cổng ngoài.');
     await expect(form, 'lỗi thì hộp Ở LẠI — đóng là mất trắng thứ vừa gõ').toBeVisible();
 
+    // Form đã gõ dở: Hủy đi cùng cửa với Esc — hỏi lại trước khi vứt.
     await form.getByRole('button', { name: 'Hủy' }).click();
+    await confirmAction(page, 'Bỏ và đóng');
     await expect(form).toHaveCount(0);
     await expect(page.getByText('Chưa có luật NAT nào'), 'bấm Hủy là không ghi gì cả').toBeVisible();
   });

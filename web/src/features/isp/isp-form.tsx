@@ -14,7 +14,7 @@ import {
   isRouterType,
   useDeviceTypeFilter,
 } from '@/ui/device-type-filter';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
@@ -168,9 +168,9 @@ export function IspForm({
       title={row ? `${t('isp.edit')} — ${row.code}` : t('isp.add')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="isp-form" className="btn primary" disabled={busy}>
             {busy ? t('common.loading') : t('common.save')}
           </button>

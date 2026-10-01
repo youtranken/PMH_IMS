@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/format';
 import { PATHS } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import type { Me } from '@/lib/me';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { PlusIcon } from '@/ui/glyph-icons';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -894,9 +894,9 @@ function CellDialog({
               <span className="spacer" />
             </>
           ) : null}
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="access-cell-form"
@@ -1069,9 +1069,9 @@ function GrantToScopeDialog({
       title={t('access.grantScopeTitle', { scope: scope.label })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="grant-scope-form" className="btn primary" disabled={saving}>
             {saving ? t('common.loading') : t('common.save')}
           </button>
@@ -1291,9 +1291,9 @@ function MultiGrantDialog({
       title={t('access.grantTitle', { member: account.fullName })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="multi-grant-form" className="btn primary" disabled={saving}>
             {saving ? t('common.loading') : t('common.save')}
           </button>

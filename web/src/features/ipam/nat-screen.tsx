@@ -8,7 +8,7 @@ import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { CellNote } from '@/ui/cell-note';
 import { Combobox } from '@/ui/combobox';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import {
   DeviceTypeFilter,
   deviceTypeIdsParam,
@@ -825,9 +825,9 @@ function NatForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="nat-form" className="btn primary" disabled={busy}>
             {busy ? t('common.loading') : t('common.save')}
           </button>

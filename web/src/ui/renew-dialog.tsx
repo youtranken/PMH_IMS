@@ -8,7 +8,7 @@ import { renewMinDate, renewPreset } from '@/lib/renew-dates';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import type { AttachmentOwnerType } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
@@ -136,9 +136,9 @@ export function RenewDialog({
       title={t('expiry.renewTitleOf', { subject })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="renew-form"

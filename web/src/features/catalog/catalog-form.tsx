@@ -4,7 +4,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { ApiError } from '@/lib/api-client';
 import { foldSearch } from '@/lib/search-fold';
 import { useConfirm } from '@/ui/confirm-provider';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
@@ -258,9 +258,9 @@ export function CatalogForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="catalog-form" className="btn primary" disabled={save.isPending}>
             {save.isPending ? t('common.loading') : t('common.save')}
           </button>
