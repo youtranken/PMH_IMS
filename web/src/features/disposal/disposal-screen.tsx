@@ -247,6 +247,7 @@ export function DisposalScreen() {
         <Select
           value={sortName}
           ariaLabel={t('disposal.sort')}
+          indicateFilled={false}
           options={(Object.keys(SORTS) as SortName[]).map((name) => ({
             value: name,
             label: t(`disposal.sort_${name}`),
