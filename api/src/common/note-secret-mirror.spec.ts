@@ -7,15 +7,23 @@ import { join } from 'node:path';
  * hoặc chặn thứ server cho qua (người dùng bị nói sai luật). So nguyên file, chỉ bỏ khác biệt
  * xuống dòng — file lẻ trong repo có CRLF.
  */
-const API_FILE = join(__dirname, 'note-secret.ts');
-const WEB_FILE = join(__dirname, '..', '..', '..', 'web', 'src', 'lib', 'note-secret.ts');
+const WEB_LIB = join(__dirname, '..', '..', '..', 'web', 'src', 'lib');
+
+/**
+ * [file api, file web]. `phone-format.ts`: số điện thoại tách nhóm — server ghép chữ (khu
+ * đường truyền trên trang thiết bị) và màn hình phải ra cùng một dạng (Q-18).
+ */
+const MIRRORS: [string, string][] = [
+  [join(__dirname, 'note-secret.ts'), join(WEB_LIB, 'note-secret.ts')],
+  [join(__dirname, 'phone-format.ts'), join(WEB_LIB, 'phone-format.ts')],
+];
 
 function read(path: string): string {
   return readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
 }
 
-describe('luật ghi chú két: bản web trùng từng byte với bản api', () => {
-  it('hai file giống hệt nhau', () => {
-    expect(read(WEB_FILE)).toBe(read(API_FILE));
+describe('hàm thuần chép sang web: bản web trùng từng byte với bản api', () => {
+  it.each(MIRRORS)('%s ≡ %s', (api, web) => {
+    expect(read(web)).toBe(read(api));
   });
 });
