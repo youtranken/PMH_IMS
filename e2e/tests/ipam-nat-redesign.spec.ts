@@ -586,7 +586,9 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
     await expect(form.getByText(/mở cho ai: Camera tầng 2 → Đầu ghi NVR/)).toBeVisible();
     // Dòng "Mở rule" cũng phải còn đó — lịch sử là cả quãng đời, không chỉ lần sửa gần nhất.
     await expect(form.getByText('Mở luật NAT')).toBeVisible();
-    await form.getByRole('button', { name: 'Đóng' }).click();
+    // `exact`: hộp còn có nút ✕ "Đóng hộp thoại" — không khóa tên thì khớp cả hai.
+    await form.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await expect(form).toHaveCount(0);
 
     // Gỡ rule: lý do phải nằm trong LỊCH SỬ, không chỉ trong audit_log.
     const removed = await page.request.delete(`/api/v1/ipam/nat/${ruleId}`, {
