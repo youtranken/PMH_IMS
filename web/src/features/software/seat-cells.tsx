@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { PerpetualBadge } from '@/ui/perpetual-badge';
 import type { LicenseModel, SeatTerms } from './software-types';
 
 /**
@@ -26,7 +27,7 @@ export function SeatEndCell({
   // Mua đứt: nói thẳng "Vĩnh viễn". Để trống thì người đọc tưởng thiếu dữ liệu, mà đây là
   // trạng thái hoàn toàn bình thường.
   if (licenseModel === 'perpetual') {
-    return <span className="badge outline plain">∞ {t('software.perpetual')}</span>;
+    return <PerpetualBadge />;
   }
   // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts.
   if (seat.endDate) return <ExpiryBadge end={seat.endDate} />;

@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
+import { PlusIcon } from '@/ui/glyph-icons';
 import {
   DeviceTypeFilter,
   deviceTypeIdsParam,
@@ -281,10 +282,11 @@ export function IspForm({
             {canAddProvider ? (
               <button
                 type="button"
-                className="btn sm ghost"
+                className="btn sm ghost with-icon"
                 disabled={busy}
                 onClick={() => setAddingProvider(true)}
               >
+                <PlusIcon />
                 {t('isp.addProvider')}
               </button>
             ) : null}

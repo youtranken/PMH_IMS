@@ -348,14 +348,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
               <DatePicker
                 value={logFilters.from}
                 ariaLabel={t("approvals.filterFrom")}
-                placeholder={t("approvals.filterFrom")}
+                placeholder={t("common.fromDate")}
                 max={logFilters.to || undefined}
                 onChange={(value) => setLogFilter("from", value)}
               />
               <DatePicker
                 value={logFilters.to}
                 ariaLabel={t("approvals.filterTo")}
-                placeholder={t("approvals.filterTo")}
+                placeholder={t("common.toDate")}
                 min={logFilters.from || undefined}
                 onChange={(value) => setLogFilter("to", value)}
               />

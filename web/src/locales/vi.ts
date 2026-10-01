@@ -237,6 +237,10 @@ export default {
        trên nút Lưu thì người dùng tưởng hệ thống đang tải lại chứ chưa lưu. */
     saving: 'Đang lưu…',
     working: 'Đang xử lý…',
+    /* Chữ mờ trong ô ngày của cụm "từ – đến" ở thanh lọc: ô hẹp, câu dài ("Gia hạn từ ngày")
+       bị cắt. Ngữ cảnh nằm ở `ariaLabel` riêng của từng màn. */
+    fromDate: 'Từ ngày',
+    toDate: 'Đến ngày',
     cancel: 'Hủy',
     close: 'Đóng',
     // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
@@ -1091,7 +1095,7 @@ export default {
     code: 'Mã đường',
     provider: 'Nhà mạng',
     providerPlaceholder: '— Chọn nhà mạng —',
-    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "+ Thêm vào danh mục".',
+    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "Thêm vào danh mục".',
     bandwidth: 'Tốc độ gói cước',
     wanIp: 'IP WAN',
     site: 'Site',
@@ -1131,7 +1135,7 @@ export default {
     wanIpHint: 'IP tĩnh hoặc khối IP tĩnh nhà mạng cấp.',
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
     phHotline: 'vd 1800 1166',
-    addProvider: '+ Thêm vào danh mục',
+    addProvider: 'Thêm vào danh mục',
     liquidatedUnknown: 'Đường truyền đã thanh lý, không rõ ngày.',
     incidentCard: 'Khi mất mạng',
     callHotline: 'Gọi {{hotline}}',
@@ -1853,11 +1857,11 @@ export default {
     site: 'Site',
     allSites: 'Tất cả site',
     router: 'Router',
-    addRouter: '+ Thêm thiết bị mới',
+    addRouter: 'Thêm thiết bị mới',
     servicePickerPlaceholder: 'Chọn dịch vụ có sẵn…',
     serviceSearchOf: 'Lọc dịch vụ cho {{field}}',
-    serviceAdd: '+ Thêm dịch vụ',
-    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai mới.',
+    serviceAdd: 'Thêm dịch vụ',
+    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "Thêm dịch vụ" để khai mới.',
     routerHint: 'Thiết bị mang luật này (router, firewall, core…). Mặc định chỉ hiện loại Router — bấm chip để thêm loại khác.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',

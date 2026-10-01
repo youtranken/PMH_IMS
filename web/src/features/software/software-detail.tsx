@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { ExpiryBadge } from "@/ui/expiry-badge";
+import { PerpetualBadge } from "@/ui/perpetual-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
@@ -300,7 +301,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
              */}
             <RailRow label={t("software.endDate")}>
               {item.licenseModel === "perpetual" ? (
-                <span className="badge outline plain">∞ {t("software.perpetual")}</span>
+                <PerpetualBadge />
               ) : item.endDate ? (
                 <WarrantyTimeline
                   start={item.startDate}

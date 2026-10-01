@@ -1449,6 +1449,7 @@ table.access-grid thead tr:last-child th {
   font-size: var(--fs-xs);
   color: var(--ink-3);
 }
+.strength-rules li { display: inline-flex; align-items: center; gap: var(--space-1); }
 .strength-rules li.met { color: var(--ok); font-weight: 600; }
 .warn-text { color: var(--warn); }
 

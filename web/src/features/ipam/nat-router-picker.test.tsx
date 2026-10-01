@@ -90,10 +90,10 @@ describe('Ô Router của sổ NAT', () => {
     ).toBeVisible();
   });
 
-  it('"+ Thêm thiết bị mới" mở hộp Thêm thiết bị với loại đang lọc điền sẵn', async () => {
+  it('"Thêm thiết bị mới" mở hộp Thêm thiết bị với loại đang lọc điền sẵn', async () => {
     mockFetch();
     const user = await openRouterPicker();
-    await user.click(await screen.findByRole('button', { name: '+ Thêm thiết bị mới' }));
+    await user.click(await screen.findByRole('button', { name: 'Thêm thiết bị mới' }));
     const form = await screen.findByRole('dialog', { name: 'Thêm thiết bị' });
     await waitFor(() =>
       expect(within(form).getByRole('button', { name: 'Loại' })).toHaveTextContent('Firewall'),

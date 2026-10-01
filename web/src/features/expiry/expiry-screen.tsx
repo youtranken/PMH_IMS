@@ -820,14 +820,14 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         <DatePicker
           value={range.from}
           ariaLabel={t('expiry.renewalsFrom')}
-          placeholder={t('expiry.renewalsFrom')}
+          placeholder={t('common.fromDate')}
           max={range.to || undefined}
           onChange={(from) => setRange((current) => ({ ...current, from }))}
         />
         <DatePicker
           value={range.to}
           ariaLabel={t('expiry.renewalsTo')}
-          placeholder={t('expiry.renewalsTo')}
+          placeholder={t('common.toDate')}
           min={range.from || undefined}
           onChange={(to) => setRange((current) => ({ ...current, to }))}
         />

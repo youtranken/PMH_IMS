@@ -372,7 +372,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         // Lời dặn dài của ô Nhà mạng nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
         'Giải thích: Nhà mạng',
         // Nhà mạng mới khai ngay tại chỗ (SA/Admin) — không bắt huỷ form sang Danh mục.
-        '+ Thêm vào danh mục',
+        'Thêm vào danh mục',
         'Site',
         'Bắt đầu',
         'Chọn file để đính kèm',

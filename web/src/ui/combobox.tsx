@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
+import { PlusIcon } from '@/ui/glyph-icons';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
 
@@ -357,7 +358,12 @@ export function Combobox<T>({
                     action.onClick();
                   }}
                 >
-                  {action.label}
+                  {/* Dòng hành động luôn là "thêm mới": dấu + là hình vẽ, không nằm trong chữ để
+                      tên nút đọc ra đúng câu. */}
+                  <span className="with-icon">
+                    <PlusIcon />
+                    {action.label}
+                  </span>
                 </button>
               </li>
             ) : null}
