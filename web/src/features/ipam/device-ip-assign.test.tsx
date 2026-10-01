@@ -43,7 +43,16 @@ function mockFetch() {
       }
       if (url === '/api/v1/ipam/devices/dev-1/addresses') {
         return Promise.resolve(
-          jsonResponse(200, [{ id: 'ip-old', address: '10.9.9.5', status: 'assigned', deviceId: 'dev-1' }]),
+          jsonResponse(200, [
+            {
+              id: 'ip-old',
+              address: '10.9.9.5',
+              status: 'assigned',
+              deviceId: 'dev-1',
+              usedBy: 'Phòng Kế toán',
+              note: 'Cổng 3 switch tầng 2',
+            },
+          ]),
         );
       }
       if (url.startsWith('/api/v1/catalog')) {
@@ -115,11 +124,19 @@ describe('DeviceIpAssign', () => {
     expect(await screen.findByRole('dialog', { name: 'Đổi IP — 10.77.1.2' })).toBeInTheDocument();
     // Máy không đổi được trong hộp Đổi IP — chỉ địa chỉ đổi.
     expect(screen.queryByRole('combobox', { name: 'Thiết bị' })).toBeNull();
+    // Người/bộ phận và ghi chú của IP cũ đi theo máy — điền sẵn, sửa được.
+    expect(screen.getByRole('combobox', { name: 'Người / phòng ban dùng' })).toHaveValue('Phòng Kế toán');
+    expect(screen.getByLabelText('Ghi chú')).toHaveValue('Cổng 3 switch tầng 2');
     await userEvent.click(screen.getByRole('button', { name: 'Đổi IP' }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     const post = calls.find((call) => call.method === 'POST');
     expect(post?.url).toBe('/api/v1/ipam/addresses/ip-old/change');
-    expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2' });
+    expect(post?.body).toMatchObject({
+      subnetId: 'sub-1',
+      address: '10.77.1.2',
+      usedBy: 'Phòng Kế toán',
+      note: 'Cổng 3 switch tầng 2',
+    });
     expect(post?.body).not.toHaveProperty('deviceId');
   });
 

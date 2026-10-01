@@ -126,6 +126,8 @@ export class ChangeIpDto {
   @IsString() @Length(1, 15) address!: string;
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày cấp phải là ngày có thật, dạng YYYY-MM-DD.' })
   assignedAt?: string;
+  /** Vắng mặt = giữ người/bộ phận của IP cũ; chuỗi rỗng = gỡ. */
+  @IsOptional() @IsString() @Length(0, 160) usedBy?: string;
   @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
   @IsOptional() @IsString() @Length(0, 500) @NoSecretText() reason?: string;
 }
@@ -586,6 +588,7 @@ export class IpamController {
     return this.addresses.changeAddress(actor(req), params.id, {
       subnetId: body.subnetId,
       address: body.address,
+      usedBy: body.usedBy,
       assignedAt: body.assignedAt,
       note: body.note,
       reason: body.reason,
