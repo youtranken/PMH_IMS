@@ -206,10 +206,16 @@ export async function totpRevealView(
   uri: string,
   now: Date,
   revealSeconds: number,
+  /**
+   * Tên ngăn + tên đăng nhập HIỆN TẠI. Đổi tên ngăn không giải mã để viết lại URI đã cất, nên
+   * issuer/tài khoản trong URI có thể đã cũ; chỉ khoá, thuật toán, số chữ số lấy từ URI.
+   */
+  names: { label: string; username?: string | null },
 ): Promise<TotpRevealView> {
-  const parsed = parseUri(uri, { label: '', username: null });
+  const stored = parseUri(uri, names);
   // Chuỗi trong két đã qua `normalizeTotpSeed` lúc cất; hỏng ở đây là dữ liệu bị sửa tay.
-  if ('reason' in parsed) throw new Error(`Ngăn mã 2 lớp chứa chuỗi không hợp lệ (${parsed.reason}).`);
+  if ('reason' in stored) throw new Error(`Ngăn mã 2 lớp chứa chuỗi không hợp lệ (${stored.reason}).`);
+  const parsed: TotpParams = { ...stored, ...fallbackNames(names) };
 
   const totp = new TOTP({
     crypto: new NobleCryptoPlugin(),

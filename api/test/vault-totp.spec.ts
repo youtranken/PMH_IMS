@@ -229,6 +229,20 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   );
 
   it(
+    'đổi tên ngăn mã 2 lớp: lần mở sau QR mang tên mới (URI đã cất không phải viết lại)',
+    async () => {
+      const meta = await controller.create(body('totp', SEED, { username: 'cu' }), saReq());
+      const label = `E2E tên mới ${randomUUID().slice(0, 6)}`;
+      await vault.updateMeta(sa, meta.id, { label, username: 'moi' });
+      const opened = (await controller.reveal({ id: meta.id }, saReq())) as unknown as {
+        totp: { issuer: string; account: string };
+      };
+      expect(opened.totp).toMatchObject({ issuer: label, account: 'moi' });
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'mở ngăn mật khẩu: không có khối `totp`',
     async () => {
       const meta = await controller.create(body('password', 'Cisco#Core2026!'), saReq());

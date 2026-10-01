@@ -291,7 +291,7 @@ export class VaultController {
      * Ngăn "Mã 2 lớp" (Q-18): QR và mã hiện tại sinh lại từ chuỗi vừa giải mã, chỉ sống trong
      * phản hồi `no-store` này. Không lưu ảnh QR ở đâu — ảnh QR chính là bí mật dạng rõ. Dựng
      * BÊN TRONG `reveal` (trước dòng "đã xem"): chuỗi hỏng thì không ai thấy gì, nhật ký cũng
-     * không được nói là đã xem.
+     * không được nói là đã xem. Tên trên QR là tên ngăn hiện tại, không phải tên lúc cất.
      */
     const { view: totp, ...opened } = await this.vault.reveal(
       who,
@@ -301,7 +301,7 @@ export class VaultController {
       grantId,
       ({ meta: shown, value }) =>
         shown.kind === 'totp'
-          ? totpRevealView(value, now, revealSeconds)
+          ? totpRevealView(value, now, revealSeconds, shown)
           : Promise.resolve(undefined),
     );
     /*

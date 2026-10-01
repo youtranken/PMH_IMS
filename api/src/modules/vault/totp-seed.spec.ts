@@ -123,24 +123,47 @@ describe('totpRevealView — QR + mã hiện tại, server tính', () => {
     [RFC_SHA512, 'SHA512', 8, '90693936'],
     [RFC_SHA1, 'SHA1', 6, '287082'],
   ])('vector RFC 6238: %s %s %d số', async (secret, algorithm, digits, code) => {
-    const view = await totpRevealView(uri(secret, algorithm, digits), new Date(59_000), 10);
+    const view = await totpRevealView(uri(secret, algorithm, digits), new Date(59_000), 10, FALLBACK);
     expect(view.codes[0]).toBe(code);
     expect(view.digits).toBe(digits);
   });
 
   it('mã theo từng chu kỳ phủ hết thời gian hiện, giây còn lại tính từ mốc server', async () => {
     // T = 59: còn 1 giây của chu kỳ đầu; hiện 60 giây → cần thêm 2 chu kỳ nữa.
-    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 8), new Date(59_000), 60);
+    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 8), new Date(59_000), 60, FALLBACK);
     expect(view.secondsLeft).toBe(1);
     expect(view.codes).toHaveLength(3);
     // RFC 6238: T = 1111111109 (chu kỳ 37037036) → 07081804; chu kỳ kế tiếp khác mã đầu.
-    const later = await totpRevealView(uri(RFC_SHA1, 'SHA1', 8), new Date(1_111_111_109_000), 30);
+    const later = await totpRevealView(
+      uri(RFC_SHA1, 'SHA1', 8),
+      new Date(1_111_111_109_000),
+      30,
+      FALLBACK,
+    );
     expect(later.codes[0]).toBe('07081804');
     expect(later.codes[1]).not.toBe(later.codes[0]);
   });
 
+  it('issuer / tài khoản lấy từ tên ngăn + tên đăng nhập HIỆN TẠI, không từ URI đã cất', async () => {
+    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60, {
+      label: 'Fortinet mới',
+      username: 'admin2',
+    });
+    expect(view.issuer).toBe('Fortinet mới');
+    expect(view.account).toBe('admin2');
+    expect(view.secret).toBe(RFC_SHA1);
+    const noUser = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60, {
+      label: 'VPN',
+      username: null,
+    });
+    expect(noUser.account).toBe('VPN');
+  });
+
   it('trả khóa, issuer, tài khoản để hiện; QR là ảnh data URL PNG', async () => {
-    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60);
+    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60, {
+      label: 'RFC',
+      username: 'test',
+    });
     expect(view.secret).toBe(RFC_SHA1);
     expect(view.issuer).toBe('RFC');
     expect(view.account).toBe('test');
