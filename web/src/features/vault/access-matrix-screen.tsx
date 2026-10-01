@@ -1486,6 +1486,7 @@ function CopyFromDialog({
                     tier: rule.tier,
                     note: t('access.copyNote', { source: source.email }),
                   }),
+                  t('access.stepUpCopy', { name: account.fullName }),
                 );
                 done += 1;
               } catch (err) {

@@ -102,17 +102,27 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
 
   await own.getByRole('button', { name: 'Cài lại trên điện thoại mới' }).click();
   const dialog = own.getByRole('dialog', { name: 'Cài lại trên điện thoại mới' });
+  // Nói trước hệ quả, trước khi hỏi gì (Q-20).
+  await expect(
+    dialog.getByText(
+      'Lưu ý: sau khi cài lại, mã trên điện thoại cũ không dùng được nữa; các máy khác đang đăng nhập sẽ bị đăng xuất.',
+    ),
+  ).toBeVisible();
   await dialog.getByLabel('Mật khẩu hiện tại').fill(person.password);
   await dialog.getByRole('button', { name: 'Tiếp tục' }).click();
 
-  // Hộp hỏi mã của điện thoại HIỆN TẠI.
-  const stepUp = own.getByRole('dialog', { name: 'Xác nhận danh tính' });
+  // Bước hỏi mã của điện thoại HIỆN TẠI nằm NGAY TRONG hộp này, câu nói đúng việc cài lại.
+  const stepUp = dialog.getByRole('region', { name: 'Xác nhận danh tính' });
   await expect(stepUp).toBeVisible();
+  await expect(own.getByRole('dialog')).toHaveCount(1);
+  await expect(
+    stepUp.getByText('Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.'),
+  ).toBeVisible();
   await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(person.secret));
 
   const newSecret = (await dialog.getByTestId('totp-secret').innerText()).trim();
   expect(newSecret).not.toBe(person.secret);
-  // Hộp step-up cũng có ô "Mã xác thực" — đợi nó đóng hẳn để nhãn chỉ còn trỏ một ô.
+  // Bước hỏi mã cũng có ô "Mã xác thực" — đợi nó rời hẳn để nhãn chỉ còn trỏ một ô.
   await expect(stepUp).toHaveCount(0);
   await dialog.getByLabel('Mã xác thực').fill(await freshTotpCode(newSecret));
   await dialog.getByRole('button', { name: 'Xác nhận' }).click();

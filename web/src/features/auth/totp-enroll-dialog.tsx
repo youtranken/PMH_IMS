@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { Dialog } from '@/ui/dialog';
 import { OtpInput } from '@/ui/otp-input';
 import { PasswordInput } from '@/ui/password-input';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { StepUpStep } from '@/ui/step-up-dialog';
 import { TotpSetup, type TotpSetupData } from './totp-setup';
 
 type Started = TotpSetupData & { ticket?: string };
@@ -16,9 +16,12 @@ type Started = TotpSetupData & { ticket?: string };
  *
  * Hai bước giống nhau: mật khẩu hiện tại → quét/nhập khoá → gõ mã đầu tiên. Khác ở cửa API:
  *   · `enable`   → `/auth/totp/enroll` — phiên đã đăng nhập đủ nên API luôn đòi mật khẩu;
- *   · `reenroll` → `/auth/totp/re-enroll` — API đòi THÊM step-up bằng mã của điện thoại hiện tại,
- *     nên đi qua `useStepUpRetry`: gặp `STEPUP_REQUIRED` thì hỏi mã rồi chạy lại đúng lượt đó.
+ *   · `reenroll` → `/auth/totp/re-enroll` — API đòi THÊM step-up bằng mã của điện thoại hiện tại:
+ *     gặp `STEPUP_REQUIRED` thì bước hỏi mã (`StepUpStep`) hiện NGAY TRONG hộp này rồi chạy lại
+ *     đúng lượt đó. Không chồng hộp step-up chung lên: câu của hộp ấy nói về việc khác, và hai
+ *     hộp chồng nhau người dùng không biết mình đang ở đâu.
  * Điện thoại cũ vẫn dùng được tới khi gõ đúng mã của máy mới — bỏ dở giữa chừng không mất gì.
+ * Hộp cảnh báo ở đầu nói trước hệ quả: `confirmReEnroll` thu hồi mọi phiên khác của người này.
  */
 export function TotpEnrollDialog({
   mode,
@@ -33,7 +36,7 @@ export function TotpEnrollDialog({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const stepUp = useStepUpRetry(csrfToken);
+  const [needStepUp, setNeedStepUp] = useState(false);
   const [password, setPassword] = useState('');
   const [started, setStarted] = useState<Started | null>(null);
   const [token, setToken] = useState('');
@@ -47,15 +50,17 @@ export function TotpEnrollDialog({
     setBusy(true);
     setError(null);
     try {
-      const result =
-        mode === 'reenroll'
-          ? await stepUp.run(() =>
-              post<Started>('/api/v1/auth/totp/re-enroll', { currentPassword: password }),
-            )
-          : await post<Started>('/api/v1/auth/totp/enroll', { currentPassword: password });
+      const result = await post<Started>(
+        mode === 'reenroll' ? '/api/v1/auth/totp/re-enroll' : '/api/v1/auth/totp/enroll',
+        { currentPassword: password },
+      );
       setStarted(result);
     } catch (err) {
-      if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+      // Giữ mật khẩu: gõ mã xong sẽ gửi lại đúng lượt này.
+      if (mode === 'reenroll' && errorCode(err) === 'STEPUP_REQUIRED') {
+        setNeedStepUp(true);
+        return;
+      }
       setPassword('');
       setError(
         errorMessage(err, t('auth.currentPasswordWrong'), (left) =>
@@ -97,7 +102,6 @@ export function TotpEnrollDialog({
       maxWidth={480}
       title={mode === 'reenroll' ? t('profile.totpReEnroll') : t('auth.enrollTitle')}
     >
-      {stepUp.dialog}
       {error ? (
         <p className="alert error" role="alert">
           {error}
@@ -118,6 +122,17 @@ export function TotpEnrollDialog({
             {t('auth.totpVerify')}
           </button>
         </form>
+      ) : needStepUp ? (
+        <StepUpStep
+          csrfToken={csrfToken}
+          purpose={t('profile.totpReEnrollStepUp')}
+          backLabel={t('profile.totpReEnrollBack')}
+          onBack={() => setNeedStepUp(false)}
+          onDone={() => {
+            setNeedStepUp(false);
+            void start();
+          }}
+        />
       ) : (
         <form
           className="form-grid"
@@ -127,6 +142,11 @@ export function TotpEnrollDialog({
             void start();
           }}
         >
+          {mode === 'reenroll' ? (
+            <p className="alert warn" role="note">
+              {t('profile.totpReEnrollWarning')}
+            </p>
+          ) : null}
           <p className="muted">
             {mode === 'reenroll' ? t('profile.totpReEnrollHint') : t('profile.totpReEnrollPasswordSub')}
           </p>

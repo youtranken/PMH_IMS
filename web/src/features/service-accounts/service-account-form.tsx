@@ -205,6 +205,7 @@ export function ServiceAccountForm({
                             value: secretValue,
                           }),
                         }),
+                        t('serviceAccounts.stepUpStoreSecret'),
                       );
                       toast({ message: t('serviceAccounts.secretSaved') });
                     } catch (err) {

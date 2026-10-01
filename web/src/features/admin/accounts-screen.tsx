@@ -322,7 +322,7 @@ export function AccountsScreen({ me }: { me: Me }) {
       });
       if (!ok) return undefined;
       try {
-        const result = await runWithStepUp(options.run);
+        const result = await runWithStepUp(options.run, t('auth.stepUpFor', { action: options.title }));
         if (options.done) toast({ message: options.done });
         void refresh();
         return result;
@@ -333,7 +333,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         return undefined;
       }
     },
-    [askConfirm, runWithStepUp, toast, refresh],
+    [askConfirm, runWithStepUp, toast, refresh, t],
   );
 
   /** Đặt lại mật khẩu; tài khoản đang KHÓA thì mở khóa luôn (bật sẵn) — không thì vẫn không vào được. */
@@ -357,9 +357,10 @@ export function AccountsScreen({ me }: { me: Me }) {
       if (!answer.ok) return;
       const unlock = answer.checked;
       try {
-        const result = await runWithStepUp(() => resetPassword.mutateAsync({ id: account.id }));
+        const purpose = t('auth.stepUpFor', { action: heading });
+        const result = await runWithStepUp(() => resetPassword.mutateAsync({ id: account.id }), purpose);
         if (unlock) {
-          await runWithStepUp(() => setStatus.mutateAsync({ id: account.id, status: 'active' }));
+          await runWithStepUp(() => setStatus.mutateAsync({ id: account.id, status: 'active' }), purpose);
           toast({ message: t('accounts.toastUnlocked', { name: account.fullName }) });
         }
         void refresh();
@@ -835,8 +836,11 @@ export function AccountsScreen({ me }: { me: Me }) {
           onClose={() => setStatusFor(null)}
           onSubmit={async (reason) => {
             const { account, action } = statusFor;
-            await runWithStepUp(() =>
-              setStatus.mutateAsync({ id: account.id, status: action.to, reason }),
+            await runWithStepUp(
+              () => setStatus.mutateAsync({ id: account.id, status: action.to, reason }),
+              t('auth.stepUpFor', {
+                action: t('common.titleOf', { action: t(action.label), subject: account.fullName }),
+              }),
             );
             setStatusFor(null);
             toast({ message: t(action.done, { name: account.fullName }) });
@@ -850,7 +854,10 @@ export function AccountsScreen({ me }: { me: Me }) {
           account={roleFor}
           onClose={() => setRoleFor(null)}
           onSubmit={async (role) => {
-            await runWithStepUp(() => setRole.mutateAsync({ id: roleFor.id, role }));
+            await runWithStepUp(
+              () => setRole.mutateAsync({ id: roleFor.id, role }),
+              t('auth.stepUpFor', { action: t('accounts.changeRoleOf', { name: roleFor.fullName }) }),
+            );
             toast({
               message: t('accounts.toastRoleChanged', {
                 name: roleFor.fullName,
@@ -1077,7 +1084,7 @@ function SessionsDialog({
 }: {
   account: AccountRow;
   csrfToken: string;
-  runWithStepUp: <T>(action: () => Promise<T>) => Promise<T>;
+  runWithStepUp: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -1126,7 +1133,10 @@ function SessionsDialog({
       return;
     }
     try {
-      const result = await runWithStepUp(() => killAll.mutateAsync({ includeCurrent }));
+      const result = await runWithStepUp(
+        () => killAll.mutateAsync({ includeCurrent }),
+        t('auth.stepUpFor', { action: question.title }),
+      );
       toast({ message: t('accounts.allSessionsKilled', { count: result.killed }) });
       void sessions.refetch();
     } catch (err) {

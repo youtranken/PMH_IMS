@@ -167,12 +167,14 @@ export function SettingsScreen({ me }: { me: Me }) {
       const body = {
         changes: changed.map((row) => ({ key: row.key, value: checks.get(row.key)?.value })),
       };
-      const next = await stepUp.run(() =>
-        apiFetch<SettingRow[]>('/api/v1/admin/settings', {
-          method: 'PATCH',
-          csrfToken: me.csrfToken,
-          body: JSON.stringify(body),
-        }),
+      const next = await stepUp.run(
+        () =>
+          apiFetch<SettingRow[]>('/api/v1/admin/settings', {
+            method: 'PATCH',
+            csrfToken: me.csrfToken,
+            body: JSON.stringify(body),
+          }),
+        t('settings.stepUpSave'),
       );
       queryClient.setQueryData(SETTINGS_KEY, next);
       toast({ message: t('settings.saved', { count: changed.length }) });
