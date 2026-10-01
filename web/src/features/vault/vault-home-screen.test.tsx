@@ -120,7 +120,7 @@ describe('Trang tổng Két sắt', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Luật của két' });
     expect(within(dialog).getAllByRole('listitem')).toHaveLength(4);
     expect(dialog).toHaveTextContent(/Trang này chỉ liệt kê hồ sơ và số ngăn/);
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Đóng', exact: true }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Đóng' }));
     expect(screen.queryByRole('dialog', { name: 'Luật của két' })).not.toBeInTheDocument();
   });
 });

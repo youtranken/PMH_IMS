@@ -98,7 +98,7 @@ describe('ConfirmDialog — lựa chọn thứ ba', () => {
       />,
     );
     const footer = screen.getByTestId('dialog-footer');
-    expect([...footer.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
+    expect(Array.from(footer.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
       'Ở lại',
       'Bỏ thay đổi',
       'Lưu nhóm này',
