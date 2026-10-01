@@ -210,11 +210,11 @@ describe('RowActions — menu ba chấm dùng chung', () => {
   });
 
   /** Q-18: menu thao tác là ba chấm DỌC ở mọi màn; tên nút giữ nguyên để bài E2E vẫn tìm ra. */
-  it('nút mở menu vẽ "⋮" (dọc), hình là aria-hidden, tên vẫn là nhãn', () => {
+  it('nút mở menu vẽ ba chấm dọc bằng SVG aria-hidden, tên vẫn là nhãn', () => {
     renderWithI18n(<RowActions label="Thao tác với LIC-01" items={items()} />);
     const trigger = screen.getByRole('button', { name: 'Thao tác với LIC-01' });
-    expect(trigger.textContent).toBe('⋮');
-    expect(trigger.querySelector('[aria-hidden="true"]')?.textContent).toBe('⋮');
+    expect(trigger.textContent).toBe('');
+    expect(trigger.querySelectorAll('svg[aria-hidden="true"] circle')).toHaveLength(3);
   });
 
   /**

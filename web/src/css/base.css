@@ -71,6 +71,18 @@ label {
   flex: none;
   transition: transform 0.18s var(--ease);
 }
+/* Nút / link có mũi tên hay hình đi kèm chữ: canh giữa theo trục dọc, không theo đường cơ sở. */
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Hình nhỏ trên nút (`ui/glyph-icons.tsx`): ✕ · ⋮ · dấu trạng thái — cùng cỡ `1em` như chevron. */
+.glyph {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
 
 /* --- Buttons -------------------------------------------------------------- */
 button {

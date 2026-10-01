@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
+import { KebabIcon } from '@/ui/glyph-icons';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
 export interface RowAction {
@@ -228,7 +229,7 @@ function RowActionsMenu({
       >
         {/* Ba chấm DỌC ở mọi màn (Q-18). Là HÌNH, tên nút nằm ở `aria-label` — trình đọc màn
             hình không đọc ký tự, và bài E2E tìm nút theo tên nên đổi hình không đổi bài. */}
-        <span aria-hidden="true">⋮</span>
+        <KebabIcon />
       </button>
 
       {open &&

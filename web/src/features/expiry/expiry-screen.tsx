@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
@@ -343,8 +344,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
           ) : (
             /* Bảo hành không gia hạn ở đây: cho lối sang hồ sơ (sửa ngày ở đó) thay vì một câu
                xám lặp lại trên mọi dòng, đọc như chữ của một nút bị vô hiệu. */
-            <Link to={row.original.link}>
-              {t('expiry.openRecord')}
+            <Link className="with-icon" to={row.original.link}>
+              {t('expiry.openRecordShort')}
+              <Chevron direction="right" />
             </Link>
           ),
       },

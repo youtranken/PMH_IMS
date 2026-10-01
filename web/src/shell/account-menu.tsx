@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 import { useApiMutation } from '@/lib/api';
 import { afterLogout } from '@/lib/after-logout';
 import type { Me } from '@/lib/me';
@@ -202,9 +203,7 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
             <b>{me.fullName}</b>
             <span>{roleLabel}</span>
           </span>
-          <span className="nav-caret" aria-hidden="true">
-            ›
-          </span>
+          <Chevron direction="right" className="nav-caret" />
         </button>
       </div>
     </>

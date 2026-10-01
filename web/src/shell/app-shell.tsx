@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 import { type Me } from '@/lib/me';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
@@ -448,18 +449,7 @@ function NavSection({
         }}
       >
         <span>{t(group.labelKey)}</span>
-        <svg
-          className="nav-group-chev"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m9 6 6 6-6 6" />
-        </svg>
+        <Chevron className="nav-group-chev" />
       </button>
       <div id={regionId} hidden={!open}>
         {children}

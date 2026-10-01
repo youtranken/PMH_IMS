@@ -1044,14 +1044,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'License gia hạn được ngay tại đây — module chủ có hàm renew',
     ).toHaveCount(1);
     await expect(
-      licenseRow.getByRole('link', { name: 'Mở hồ sơ →' }),
-      'Dòng gia hạn được thì KHÔNG kèm lối "Mở hồ sơ →" ở cột Thao tác',
+      licenseRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }),
+      'Dòng gia hạn được thì KHÔNG kèm lối "Mở hồ sơ" ở cột Thao tác',
     ).toHaveCount(0);
 
     const warrantyRow = page.getByRole('row', { name: new RegExp(deviceCode) });
     await expect(warrantyRow, 'Bảo hành sắp hết cũng phải có mặt').toBeVisible();
     await expect(
-      warrantyRow.getByRole('link', { name: 'Mở hồ sơ →' }),
+      warrantyRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }),
       'Bảo hành do nhà cung cấp quyết — cho lối sang hồ sơ để sửa ngày, không để nút chết',
     ).toHaveCount(1);
     await expect(

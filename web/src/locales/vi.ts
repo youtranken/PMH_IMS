@@ -162,11 +162,11 @@ export default {
     groupSearchIn: 'Tìm trong danh sách',
     searchIn: 'Tìm "{{q}}" trong {{where}}',
     emptyHint: 'Thử mã, serial, hoặc một phần tên.',
-    seeAll: 'Xem tất cả {{count}} kết quả trong {{group}} →',
+    seeAll: 'Xem tất cả {{count}} kết quả trong {{group}}',
     groupIp: 'Địa chỉ IP',
     groupSubnet: 'Dải mạng',
     ipTitle: 'IP {{address}}',
-    ipSub: '→ {{owner}} · {{subnet}}',
+    ipSub: '{{owner}} · {{subnet}}',
     empty: 'Không có hồ sơ nào khớp "{{q}}".',
     /* Một trong bốn nhóm hỏng thì KHÔNG được nói "không có gì khớp" — người trực sẽ đi khai
        trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */
@@ -1190,8 +1190,8 @@ export default {
     renewPresets: 'Chọn nhanh hạn mới',
     presetMonths: '+{{count}} tháng',
     presetYears: '+{{count}} năm',
-    /* Dòng không gia hạn tại đây được (bảo hành): lối sang hồ sơ để sửa ngày ở đó. */
-    openRecord: 'Mở hồ sơ →',
+    /* Dòng không gia hạn tại đây được (bảo hành): lối sang hồ sơ để sửa ngày ở đó. Mũi tên là
+       `Chevron` trong JSX, không nằm trong chuỗi. */
     openRecordShort: 'Mở hồ sơ',
     startedOn: 'từ {{date}}',
     autoRetireOn: 'Tự thanh lý sau {{count}} ngày ({{date}}) · gỡ mọi ghế',
@@ -1622,7 +1622,7 @@ export default {
     releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
     /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
-    stepBack: '‹ Quay lại',
+    stepBack: 'Quay lại',
   },
   ipam: {
     title: 'Địa chỉ IP',
@@ -2411,7 +2411,7 @@ export default {
     viewMatrix: 'Ma trận',
     memberList: 'Danh sách thành viên',
     ruleCount: '{{count}} quyền',
-    backToList: '← Danh sách thành viên',
+    backToList: 'Danh sách thành viên',
     addRules: '+ Thêm quyền',
     /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
     copyFrom: 'Sao chép quyền từ…',

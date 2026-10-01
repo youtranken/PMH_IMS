@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -725,7 +726,8 @@ function PersonRules({
   return (
     <section className="card access-person-card" aria-labelledby="access-person-title">
       {onBack ? (
-        <button type="button" className="btn sm" onClick={onBack}>
+        <button type="button" className="btn sm with-icon" onClick={onBack}>
+          <Chevron direction="left" />
           {t('access.backToList')}
         </button>
       ) : null}

@@ -53,9 +53,7 @@ export function DetailHeader({
         {crumbs.map((crumb, index) => (
           <span key={`${crumb.label}-${index}`} className="crumb">
             {index > 0 ? (
-              <span className="crumb-sep" aria-hidden="true">
-                ›
-              </span>
+              <Chevron direction="right" className="crumb-sep" />
             ) : null}
             {crumb.to ? (
               <Link className={index === 0 ? 'crumb-back' : undefined} to={crumb.to}>

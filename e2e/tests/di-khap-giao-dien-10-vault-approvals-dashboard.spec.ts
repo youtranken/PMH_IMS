@@ -988,7 +988,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(
       await stepUp.getByRole('button').allTextContents(),
       'bước mã phải có đúng cặp Quay lại / Xác nhận',
-    ).toEqual(['‹ Quay lại', 'Xác nhận']);
+    ).toEqual(['Quay lại', 'Xác nhận']);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
