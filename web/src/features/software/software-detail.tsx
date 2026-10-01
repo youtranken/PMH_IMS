@@ -362,11 +362,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
             <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
-              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang (`_SPEC.md:53`, gạch nghiệm thu
-                  `:528`): với SSL và tên miền thì "Kỳ hạn" không có nghĩa, nên ô ấy trước đây
-                  được vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa khai" bên
-                  dưới là nơi DUY NHẤT nói về ô trống. Bốn màn chi tiết kia đã theo luật này,
-                  riêng chỗ này còn dùng `Item` trần. */}
+              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang: với SSL và tên miền thì "Kỳ hạn"
+                  không có nghĩa, vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa
+                  khai" bên dưới là nơi DUY NHẤT nói về ô trống — cùng luật với các trang chi
+                  tiết khác. */}
               {supportsSeats(item.kind) ? (
                 <Item label={t("software.licenseModel")}>
                   {t(

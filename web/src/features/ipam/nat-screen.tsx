@@ -848,9 +848,8 @@ function NatForm({
     >
       {/*
         Ba khối theo ĐÚNG đường đi của một gói tin: vào từ đâu → chuyển tới đâu → vì sao mở.
-        Bản cũ là một dây 10 ô xếp dọc, trong đó "Loại thiết bị" (một BỘ LỌC của ô Router
-        ngay dưới) đứng đầu như thể là dữ liệu của rule, còn Port ngoài và Port trong — hai
-        thứ luôn phải đọc cùng nhau — thì bị IP trong chen vào giữa.
+        Port ngoài và Port trong luôn phải đọc cùng nhau nên đứng chung một khối; xếp thành
+        một dây ô dọc thì IP trong chen vào giữa hai thứ ấy.
       */}
       <form
         id="nat-form"
@@ -1063,9 +1062,8 @@ function NatForm({
 
         <FormSection title={t('nat.sectionInternal')} columns={2}>
           {/*
-            MÁY ĐÍCH — ô này trước đây KHÔNG có, và đó là lỗ hổng lớn nhất của cuốn sổ: nó
-            ghi "dẫn tới 172.16.10.5" mà không nói 172.16.10.5 là máy nào. Ba thứ trong form
-            là ba câu khác nhau, không trùng nhau:
+            MÁY ĐÍCH — không có ô này thì sổ chỉ ghi "dẫn tới 172.16.10.5" mà không nói
+            172.16.10.5 là máy nào. Ba thứ trong form là ba câu khác nhau, không trùng nhau:
               Router   = con nào THỰC HIỆN NAT (Draytek)
               Máy đích = con nào ĐƯỢC NAT (camera, NAS, máy chủ)  ← ô này
               Mở cho ai = NGƯỜI/bộ phận hưởng dịch vụ (câu auditor hỏi)

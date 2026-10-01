@@ -716,7 +716,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               <LocationText device={item} />
             </RailRow>
             {/*
-              BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG (18/09/2026).
+              BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG.
               `department` chỉ sống dưới dạng CHÚ của dòng này, mà `RailRowIfSet` ẩn cả dòng
               khi `assignedTo` rỗng — nên một máy đã gán cho phòng Kế toán nhưng chưa ghi tên
               người cụ thể thì không hiện bộ phận ở đâu cả, và `BlankFields` cũng bỏ qua vì

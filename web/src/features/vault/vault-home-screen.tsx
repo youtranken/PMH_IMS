@@ -260,10 +260,9 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       ) : (
         <>
           {/*
-            DÒNG NÀY PHẢI NÓI SỐ CỦA TẬP ĐANG XEM (sửa 17/09/2026).
-            Bản trước luôn đếm trên `all`, nên lọc "Thiết bị" còn 3 dòng mà ngay phía trên vẫn
-            đọc "12 hồ sơ đang giữ két · tổng 47 ngăn" — hai con số mâu thuẫn trên cùng một màn
-            hình, và con số duy nhất người dùng đang cần thì không có ở đâu cả.
+            DÒNG NÀY PHẢI NÓI SỐ CỦA TẬP ĐANG XEM, không đếm trên `all`: lọc "Thiết bị" còn
+            3 dòng mà ngay phía trên vẫn đọc "12 hồ sơ đang giữ két · tổng 47 ngăn" là hai con
+            số mâu thuẫn trên cùng một màn hình, và con số người dùng đang cần thì không có.
           */}
           {rows.length === 0 ? (
             /* Gợi ý theo ĐÚNG tình huống: có từ khoá thì cho nút xoá tìm, có lọc thì nút bỏ lọc —
@@ -347,10 +346,9 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                   {t('vaultHome.openRecord')}
                 </Link>
               )}
-              {/* PHẢI dùng `closePopup`, không phải `setOpened(null)` trần: nút này mới là
-                  đường phần lớn người dùng đóng hộp, mà bản trước chỉ làm mới ở
-                  `onOpenChange` (Esc / bấm nền) — nên đúng lối đi thường nhất lại không nạp
-                  lại danh sách. */}
+              {/* PHẢI dùng `closePopup`, không phải `setOpened(null)` trần: nút này là đường
+                  phần lớn người dùng đóng hộp, và danh sách chỉ nạp lại trong `closePopup` —
+                  đóng trần thì đúng lối đi thường nhất lại không làm mới gì. */}
               {/* KHÔNG `primary`: nút nhấn mạnh của một hộp là việc người ta tới đây để làm,
                   mà ở đây việc đó là "Mở hồ sơ đầy đủ" — "Đóng" chỉ là lối ra. Tô đậm lối ra
                   là dạy người dùng bấm nút sáng nhất mà không đọc. */}
