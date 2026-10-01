@@ -2487,7 +2487,7 @@ export default {
     memberList: 'Danh sách thành viên',
     ruleCount: '{{count}} quyền',
     backToList: 'Danh sách thành viên',
-    addRules: '+ Thêm quyền',
+    addRules: '+ Gán quyền',
     /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
     copyFrom: 'Sao chép quyền từ…',
     copyTitle: 'Sao chép quyền két cho {{member}}',
@@ -2504,7 +2504,7 @@ export default {
       'Gán cho {{member}} {{count}} nhóm quyền két giống {{source}}, giữ nguyên tầng? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các nhóm này.',
     copyNote: 'Sao chép từ {{source}}',
     copyDone: 'Đã sao chép {{count}} nhóm từ {{source}}.',
-    noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Thêm quyền" để gán.',
+    noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Gán quyền" để gán.',
     roleHolders: 'Có toàn quyền theo vai ({{count}})',
     pickScopes: 'Chọn ít nhất một nhóm.',
     allScopesGranted: 'Người này đã có quyền trên mọi nhóm. Đổi tầng một nhóm thì bấm vào nhóm đó.',

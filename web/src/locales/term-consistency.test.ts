@@ -380,4 +380,18 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
     expect(lookup('history.isp.fBandwidth')).toBe(lookup('isp.bandwidth').toLowerCase());
     expect(allValues().filter(([, v]) => /băng thông/iu.test(v))).toEqual([]);
   });
+
+  /*
+   * Ma trận két: nút mở hộp và tiêu đề hộp nói cùng một động từ. "+ Thêm quyền" mở hộp "Gán
+   * quyền cho …" thì người đọc tưởng hai việc khác nhau.
+   */
+  it('ma trận két: nút mở hộp gán quyền dùng đúng chữ "Gán quyền"', () => {
+    const add = lookup('access.add');
+    expect(lookup('access.addRules')).toContain(add);
+    expect(lookup('access.addFor')).toContain(add);
+    expect(lookup('access.noRulesYet')).toContain(lookup('access.addRules'));
+    for (const key of ['access.addRules', 'access.noRulesYet']) {
+      expect(lookup(key), key).not.toContain('Thêm quyền');
+    }
+  });
 });

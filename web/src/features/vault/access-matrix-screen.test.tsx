@@ -184,9 +184,9 @@ describe('Quyền xem két sắt — theo người', () => {
     expect(switchCell.closest('td')).not.toHaveClass('access-group-start');
   });
 
-  it('"+ Thêm quyền" chỉ liệt kê nhóm người đó CHƯA có', async () => {
+  it('"+ Gán quyền" chỉ liệt kê nhóm người đó CHƯA có', async () => {
     renderAt('/admin/vault-access?user=u-binh');
-    await userEvent.click(await screen.findByRole('button', { name: '+ Thêm quyền' }));
+    await userEvent.click(await screen.findByRole('button', { name: '+ Gán quyền' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Thiết bị loại Switch');
     expect(dialog).not.toHaveTextContent('Chứng chỉ SSL');

@@ -120,7 +120,7 @@ const scopeKey = (scope: { scopeType: string; scopeRef: string }) =>
  * Quyền xem két sắt (FR-023) — hai cách nhìn trên CÙNG một sổ quyền.
  *
  * "Theo người" là mô hình chính: việc hằng ngày là "anh A cần xem gì" — chọn người bên trái,
- * bên phải là thẻ quyền của họ gom theo họ nhóm, "+ Thêm quyền" chọn nhiều nhóm một lượt. Lưới
+ * bên phải là thẻ quyền của họ gom theo họ nhóm, "+ Gán quyền" chọn nhiều nhóm một lượt. Lưới
  * 32 cột × N người thì phần lớn là ô trống, phải kéo ngang dài mới tìm ra một nhóm.
  *
  * "Ma trận" vẫn giữ (chỉ màn rộng) cho việc RÀ SOÁT tổng: đọc theo cột ra "nhóm này ai xem
@@ -1231,7 +1231,7 @@ function GrantToScopeDialog({
 }
 
 /**
- * Gán NHIỀU nhóm cho MỘT người một lượt — "+ Thêm quyền" ở thẻ theo người và "Gán quyền" ở dòng
+ * Gán NHIỀU nhóm cho MỘT người một lượt — "+ Gán quyền" ở thẻ theo người và "Gán quyền" ở dòng
  * của lưới. Một nhân viên mới thường cần ba bốn nhóm cùng lúc (site mình trực, loại switch,
  * đường truyền); mở hộp ba bốn lần, mỗi lần chọn lại tầng, là chỗ dễ chọn nhầm nhất.
  *
