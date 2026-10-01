@@ -589,17 +589,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        /* Dòng định danh: không in lại loại (đã ở breadcrumb) hay model (ở Thông tin nhanh).
-           Serial có nút chép (dán vào terminal/phiếu bảo hành). Mã thì KHÔNG: nó là tiêu đề
-           trang, bôi đen chép được, và `DetailHeader` đã bỏ nút chép mã ở mọi trang chi tiết. */
-        subline={
-          item.serial ? (
-            <span className="subline-item">
-              S/N <span className="mono">{item.serial}</span>
-              <CopyButton value={item.serial} label={t("devices.copySerial")} />
-            </span>
-          ) : undefined
-        }
+        /* Không có dòng định danh: loại đã ở breadcrumb, model và serial (kèm nút chép) ở
+           Thông tin nhanh (Q-20). Mã không có nút chép: nó là tiêu đề trang, bôi đen chép được. */
         actions={
           narrow ? (
             /* Điện thoại: đứng trước tủ, việc cần là két (mật khẩu) — không phải Sửa/Thanh lý.
@@ -809,9 +800,9 @@ export function DeviceDetail({ me }: { me: Me }) {
           <>
             {/*
               THÔNG TIN NHANH đứng ĐẦU tab: mở máy ra, câu hỏi đầu tiên là IP quản trị và
-              model, nên chúng không được nằm cuối trang hay sau bản đồ quan hệ. Trạng
-              thái, vị trí, người dùng, bảo hành đã ở cột Tóm tắt, serial ở dòng dưới tiêu đề (có
-              nút chép) — nên không in lại ở đây.
+              model, nên chúng không được nằm cuối trang hay sau bản đồ quan hệ. Serial ở đây
+              kèm nút chép (dán vào phiếu bảo hành, đọc cho nhà cung cấp). Trạng thái, vị trí,
+              người dùng, bảo hành đã ở cột Tóm tắt — nên không in lại ở đây.
             */}
             <DetailSection title={t("devices.quickInfo")} compact>
               <dl className="data-grid">
@@ -838,6 +829,10 @@ export function DeviceDetail({ me }: { me: Me }) {
                   </div>
                 ) : null}
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
+                <DataItemIfSet label={t("devices.serial")} value={item.serial}>
+                  <span className="mono">{item.serial}</span>
+                  <CopyButton value={item.serial ?? ""} label={t("devices.copySerial")} />
+                </DataItemIfSet>
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
               </dl>
               {/* MỘT bản "máy đang giữ gì" cho mỗi khổ: máy tính có bản đồ quan hệ ngay dưới
