@@ -53,7 +53,7 @@ export function LifecycleHiddenEmpty({
           <button type="button" className="btn" onClick={onShowAll}>
             {allLabel}
           </button>{' '}
-          <Link className="btn ghost" to={PATHS.disposal}>
+          <Link className="linkbtn" to={PATHS.disposal}>
             {t('nav.disposal')}
           </Link>
         </>
