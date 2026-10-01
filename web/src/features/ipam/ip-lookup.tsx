@@ -78,7 +78,12 @@ export function IpLookup({ subnets }: { subnets: SubnetRow[] }) {
           placeholder={t('ipam.lookup')}
           aria-label={t('ipam.lookup')}
           title={t('ipam.lookupHint')}
-          onChange={(event) => setTerm(event.target.value)}
+          onChange={(event) => {
+            setTerm(event.target.value);
+            // Khung lỗi / câu nhắc nói về câu VỪA tra: sửa ô là chữ đó không còn trên màn.
+            setProblem(null);
+            setMessage(null);
+          }}
         />
         <button type="submit" className="btn">
           {t('ipam.lookupButton')}
