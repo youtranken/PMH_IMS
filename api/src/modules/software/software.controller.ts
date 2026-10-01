@@ -45,6 +45,7 @@ import {
   type SoftwareStatus,
 } from './software-rules';
 import { LicenseAssignmentService } from './license-assignment.service';
+import { SoftwareExportQueryDto, SoftwareListQueryDto } from './list-query.dto';
 import {
   SOFTWARE_SORT_DEFAULT,
   SOFTWARE_SORT_KEYS,
@@ -223,18 +224,7 @@ export class SoftwareController {
   @Roles('sa', 'admin', 'member')
   @Get()
   async list(
-    @Query()
-    query: {
-      page?: string;
-      limit?: string;
-      search?: string;
-      kind?: SoftwareKind;
-      licenseModel?: LicenseModel;
-      status?: SoftwareStatus | 'live';
-      vendorId?: string;
-      sort?: string;
-      dir?: string;
-    },
+    @Query() query: SoftwareListQueryDto,
   ) {
     const search = query.search?.trim();
     const matches = search
@@ -266,16 +256,7 @@ export class SoftwareController {
   @Audited('software.exported', 'software')
   @Get('export.xlsx')
   async export(
-    @Query()
-    query: {
-      search?: string;
-      kind?: SoftwareKind;
-      licenseModel?: LicenseModel;
-      status?: SoftwareStatus | 'live';
-      vendorId?: string;
-      sort?: string;
-      dir?: string;
-    },
+    @Query() query: SoftwareExportQueryDto,
     @Res() res: Response,
   ) {
     /**

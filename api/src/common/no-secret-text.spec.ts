@@ -102,6 +102,7 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'recipients', 'websites', 'kinds',
     // Ô lọc / phân trang của câu truy vấn đọc.
     'action', 'actor', 'objectId', 'objectType', 'search', 'requester', 'page', 'limit',
+    'status', 'sort', 'dir', 'usable', 'licenseModel',
     // Chính là bí mật / vé xác thực: đi vào két hoặc chỉ băm, không lưu dạng rõ.
     'password', 'currentPassword', 'newPassword', 'token', 'ticket',
   ]);

@@ -28,6 +28,7 @@ import { NoSecretText } from '../../common/no-secret-text';
 import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
+import { splitUuidList } from '../../common/query-uuid';
 import {
   requireXlsx,
   sendXlsx,
@@ -41,6 +42,7 @@ import { DeviceTimelineRegistry } from '../../common/device-timeline.registry';
 import { HISTORY_PAGE_LIMIT, withActorNames } from '../../common/history';
 import { UsersApiService } from '../users/users.api';
 import { DeviceImportService } from './device-import.service';
+import { DeviceExportQueryDto, DeviceListQueryDto } from './device-query.dto';
 import { DevicePortsService } from './device-ports.service';
 import {
   DEVICE_SORT_DEFAULT,
@@ -145,26 +147,7 @@ export class DevicesController {
   @Roles('sa', 'admin', 'member')
   @Get()
   list(
-    @Query()
-    query: {
-      page?: string;
-      limit?: string;
-      search?: string;
-      siteId?: string;
-      cabinetId?: string;
-      deviceTypeId?: string;
-      /** Nhiều loại, ngăn bởi dấu phẩy — ô chọn thiết bị lọc theo loại (Q-20). */
-      deviceTypeIds?: string;
-      /** `live` = trừ máy đã thanh lý (Q-20). Xem `deviceStatusQuery`. */
-      status?: string;
-      /** '?usable=true' — chỉ máy còn nhận thêm được. Xem `DeviceFilter.usableOnly`. */
-      usable?: string;
-      /** Khớp đúng phòng ban / người sử dụng — hộp gán license chọn cả lô (SW-053). */
-      department?: string;
-      assignedTo?: string;
-      sort?: string;
-      dir?: string;
-    },
+    @Query() query: DeviceListQueryDto,
   ) {
     return this.devices.list(
       parsePageQuery(query),
@@ -173,13 +156,12 @@ export class DevicesController {
         siteId: query.siteId,
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
-        deviceTypeIds: uuidList(query.deviceTypeIds),
+        deviceTypeIds: splitUuidList(query.deviceTypeIds),
         status: deviceStatusQuery(query.status),
         // So với chuỗi 'true', không ép boolean: `?usable=false` phải nghĩa là KHÔNG lọc.
         usableOnly: query.usable === 'true',
-        // `?department=a&department=b` ra MẢNG — không phải một phòng, bỏ qua thay vì nổ 500.
-        department: typeof query.department === 'string' ? query.department : undefined,
-        assignedTo: typeof query.assignedTo === 'string' ? query.assignedTo : undefined,
+        department: query.department,
+        assignedTo: query.assignedTo,
       },
       parseSortQuery(query, DEVICE_SORT_KEYS, DEVICE_SORT_DEFAULT),
     );
@@ -206,16 +188,7 @@ export class DevicesController {
   @Audited('devices.exported', 'device')
   @Get('export')
   async export(
-    @Query()
-    query: {
-      search?: string;
-      siteId?: string;
-      cabinetId?: string;
-      deviceTypeId?: string;
-      status?: string;
-      sort?: string;
-      dir?: string;
-    },
+    @Query() query: DeviceExportQueryDto,
     @Res() res: Response,
   ) {
     const buffer = await this.imports.buildExport(
@@ -381,18 +354,4 @@ function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * `?deviceTypeIds=a,b` → mảng id. Mục sai dạng bị bỏ lặng lẽ: đi thẳng xuống `inArray` thì
- * Postgres nổ 22P02 thành 500, mà đây chỉ là bộ lọc của một ô chọn.
- */
-function uuidList(value: unknown): string[] | undefined {
-  if (typeof value !== 'string') return undefined;
-  const ids = value
-    .split(',')
-    .map((id) => id.trim())
-    .filter((id) => UUID_RE.test(id));
-  return ids.length > 0 ? ids : undefined;
-}
 
