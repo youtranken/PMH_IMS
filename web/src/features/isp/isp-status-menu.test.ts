@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { ispMenuTargets, parseIspAction } from './isp-status-menu';
+import { ispMenuItems, ispMenuTargets, parseIspAction } from './isp-status-menu';
+
+/* Tạm ngưng đảo được (`warn`), Dùng lại là lối quay lại (`ok`), Thanh lý thì không (`danger`). */
+describe('ispMenuItems — màu từng việc', () => {
+  const t = ((key: string) => key) as unknown as Parameters<typeof ispMenuItems>[0];
+  it('đường đang dùng: Tạm ngưng warn, Thanh lý danger', () => {
+    const [suspend, terminate] = ispMenuItems(t, 'active', () => {});
+    expect(suspend).toMatchObject({ key: 'suspended', warn: true });
+    expect(terminate).toMatchObject({ key: 'terminated', danger: true });
+  });
+  it('đường tạm ngưng / đã thanh lý: Dùng lại ok', () => {
+    expect(ispMenuItems(t, 'suspended', () => {})[0]).toMatchObject({ key: 'active', ok: true });
+    expect(ispMenuItems(t, 'terminated', () => {})[0]).toMatchObject({ key: 'active', ok: true });
+  });
+});
 
 describe('ispMenuTargets — việc đổi trạng thái trong menu ⋮ của một đường truyền', () => {
   it.each([

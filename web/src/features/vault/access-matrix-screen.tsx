@@ -75,7 +75,7 @@ function StatusTag({ account }: { account: AccountRow }) {
     return <span className="badge warn plain">{t('accounts.statusLocked')}</span>;
   }
   if (account.status === 'disabled') {
-    return <span className="badge muted plain">{t('accounts.statusDisabled')}</span>;
+    return <span className="badge danger plain">{t('accounts.statusDisabled')}</span>;
   }
   return null;
 }

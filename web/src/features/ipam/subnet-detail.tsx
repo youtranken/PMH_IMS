@@ -524,7 +524,7 @@ export function SubnetPane({
                           dối về một hàng không cấp hay sửa được.
                         */}
                         {slot.voidedAt ? (
-                          <span className="badge muted" title={slot.voidReason ?? undefined}>
+                          <span className="badge danger" title={slot.voidReason ?? undefined}>
                             {t("ipam.voidedBadge")}
                           </span>
                         ) : (

@@ -179,6 +179,8 @@ export function DigestRulesPanel({
                           {
                             key: 'toggle',
                             label: t(rule.active ? 'digest.pause' : 'digest.resume'),
+                            warn: rule.active,
+                            ok: !rule.active,
                             disabled: toggle.isPending,
                             onSelect: () =>
                               toggle.mutate(

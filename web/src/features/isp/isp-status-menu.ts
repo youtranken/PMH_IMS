@@ -36,6 +36,8 @@ export function ispMenuItems(
     key: next,
     label: t(MENU_KEY[next]),
     onSelect: () => onPick(next),
+    warn: next === 'suspended',
+    ok: next === 'active',
     danger: next === 'terminated',
   }));
 }

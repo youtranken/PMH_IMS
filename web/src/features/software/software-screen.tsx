@@ -513,7 +513,14 @@ function SoftwareRowActions({
           ? [{ key: 'renew', label: t('software.renew'), onSelect: () => onRenew(item) }]
           : []),
         ...(item.status === 'retired'
-          ? [{ key: 'restore', label: t('software.restore'), onSelect: () => onRestore(item) }]
+          ? [
+              {
+                key: 'restore',
+                label: t('software.restore'),
+                onSelect: () => onRestore(item),
+                ok: true,
+              },
+            ]
           : []),
         /* Hồ sơ đã bỏ thì không bày mục bỏ nữa — bấm lần hai chỉ ghi thêm một dòng lịch sử
            rỗng nghĩa. */

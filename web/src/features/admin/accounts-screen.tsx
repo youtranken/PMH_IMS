@@ -63,10 +63,10 @@ interface StatusAction {
   label: string;
   to: AccountStatus;
   /**
-   * `warn` = lấy đi nhưng mở lại được (khóa tạm); `danger` = cắt hẳn (vô hiệu hóa). Trả lại
-   * quyền thì không tô màu gì.
+   * `warn` = lấy đi nhưng mở lại được (khóa tạm); `danger` = cắt hẳn (vô hiệu hóa); `ok` = trả
+   * lại quyền (Mở khóa, Bật lại) — chữ xanh để nhận ra đây là lối quay lại.
    */
-  tone: 'normal' | 'warn' | 'danger';
+  tone: 'ok' | 'warn' | 'danger';
   /** Lấy quyền thì bắt ghi lý do (hộp riêng); trả quyền thì chỉ hỏi lại. */
   needsReason: boolean;
   confirm: string;
@@ -100,7 +100,7 @@ const STATUS_ACTIONS: Record<AccountStatus, StatusAction[]> = {
       key: 'unlock',
       label: 'accounts.unlock',
       to: 'active',
-      tone: 'normal',
+      tone: 'ok',
       needsReason: false,
       confirm: 'accounts.confirmUnlock',
       done: 'accounts.toastUnlocked',
@@ -121,7 +121,7 @@ const STATUS_ACTIONS: Record<AccountStatus, StatusAction[]> = {
       key: 'reactivate',
       label: 'accounts.reactivate',
       to: 'active',
-      tone: 'normal',
+      tone: 'ok',
       needsReason: false,
       confirm: 'accounts.confirmReactivate',
       done: 'accounts.toastReactivated',
@@ -428,6 +428,7 @@ export function AccountsScreen({ me }: { me: Me }) {
       items.push({
         key: 'clear-lockout',
         label: t('accounts.clearLockout'),
+        ok: true,
         disabled: setStatus.isPending,
         onSelect: () =>
           void confirmThenRun({
@@ -493,6 +494,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         key: action.key,
         label: t(action.label),
         warn: action.tone === 'warn',
+        ok: action.tone === 'ok',
         danger: action.tone === 'danger',
         disabled: setStatus.isPending,
         onSelect: () => {
