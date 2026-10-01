@@ -90,6 +90,7 @@ function initialState(device: DeviceRow | null): FormState {
 export function DeviceForm({
   device,
   cloneFrom,
+  presetDeviceTypeId,
   csrfToken,
   onClose,
   onSaved,
@@ -99,6 +100,11 @@ export function DeviceForm({
   device: DeviceRow | null;
   /** Thêm mới điền sẵn từ máy này (trừ mã/serial/người dùng/ghi chú). Bỏ qua khi `device` có. */
   cloneFrom?: DeviceRow | null;
+  /**
+   * Thêm mới từ một ô chọn đang lọc theo loại (NAT, Đường truyền — Q-20): điền sẵn ô Loại.
+   * Bỏ qua khi có `device` hoặc `cloneFrom`.
+   */
+  presetDeviceTypeId?: string;
   csrfToken: string;
   onClose: () => void;
   /** `keepOpen`: người dùng chọn "Lưu và nhân bản" — form đã tự làm trống, đừng đóng. */
@@ -110,7 +116,11 @@ export function DeviceForm({
   const toast = useToast();
   const codeRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<FormState>(() =>
-    !device && cloneFrom ? cloneState(cloneFrom) : initialState(device),
+    !device && cloneFrom
+      ? cloneState(cloneFrom)
+      : !device && presetDeviceTypeId
+        ? { ...initialState(null), deviceTypeId: presetDeviceTypeId }
+        : initialState(device),
   );
   const [error, setError] = useState<string | null>(null);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với

@@ -62,6 +62,8 @@ export interface DeviceFilter {
   siteId?: string;
   cabinetId?: string;
   deviceTypeId?: string;
+  /** HỢP nhiều loại một lượt — ô chọn thiết bị của NAT / Đường truyền (Q-20). Rỗng = không lọc. */
+  deviceTypeIds?: string[];
   status?: DeviceStatusQuery;
   /** Khớp ĐÚNG phòng ban / người sử dụng (gấp dấu, hoa thường) — chọn nhanh cả lô máy. */
   department?: string;

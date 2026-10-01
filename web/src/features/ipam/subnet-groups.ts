@@ -30,3 +30,26 @@ export function groupSubnets<T extends GroupableSubnet>(
     .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
     .map(([key, list]) => ({ key, rows: list }));
 }
+
+interface SiteFilterable {
+  siteId: string | null;
+  siteCode: string | null;
+}
+
+/**
+ * Lọc dải theo site (Q-20). `''` = tất cả. Dải không gắn site là dải DÙNG CHUNG mọi site, nên
+ * luôn ở lại khi lọc một site — bỏ nó đi thì người ở site đó không thấy dải họ vẫn đang dùng.
+ */
+export function filterSubnetsBySite<T extends SiteFilterable>(rows: T[], siteId: string): T[] {
+  if (!siteId) return rows;
+  return rows.filter((row) => row.siteId === null || row.siteId === siteId);
+}
+
+/** Site có ít nhất một dải — ô lọc không bày site mà chọn vào chỉ ra cột rỗng. */
+export function siteOptionsOf(rows: SiteFilterable[]): { id: string; code: string }[] {
+  const byId = new Map<string, string>();
+  for (const row of rows) if (row.siteId && row.siteCode) byId.set(row.siteId, row.siteCode);
+  return [...byId.entries()]
+    .map(([id, code]) => ({ id, code }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}

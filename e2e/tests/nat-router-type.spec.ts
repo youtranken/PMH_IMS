@@ -45,7 +45,7 @@ async function openRouterPicker(page: Page) {
 }
 
 test.describe('Ô Router chỉ liệt kê Router/Firewall (NET-041)', () => {
-  test('mặc định: có Firewall, không có camera; "Hiện mọi thiết bị" mở lại cả kho', async ({
+  test('mặc định: có Firewall, không có camera; "Tất cả loại" mở lại cả kho, chọn camera chỉ cảnh báo', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -58,10 +58,20 @@ test.describe('Ô Router chỉ liệt kê Router/Firewall (NET-041)', () => {
     await expect(page.getByRole('option', { name: new RegExp(`FW-E2E-${stamp}`) })).toBeVisible();
     await expect(page.getByRole('option', { name: new RegExp(`CAM-E2E-${stamp}`) })).toHaveCount(0);
 
-    await form.getByRole('checkbox', { name: /Hiện mọi thiết bị/ }).check();
+    // Q-20: lọc loại là dải chip, mặc định các loại cờ Router.
+    const types = form.getByRole('group', { name: 'Lọc theo loại thiết bị' });
+    await expect(types.getByRole('button', { name: 'Firewall', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await types.getByRole('button', { name: 'Tất cả loại', exact: true }).click();
     await picker.fill('');
     await picker.fill(stamp);
-    await expect(page.getByRole('option', { name: new RegExp(`CAM-E2E-${stamp}`) })).toBeVisible();
+    await page.getByRole('option', { name: new RegExp(`CAM-E2E-${stamp}`) }).click();
+    // Không chặn — Core/Firewall… vẫn làm NAT được; chỉ nhắc kiểm lại.
+    await expect(
+      form.getByText('Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.'),
+    ).toBeVisible();
   });
 
   test('bật cờ cho một loại ở Danh mục → thiết bị loại đó vào ô Router; audit có dấu', async ({

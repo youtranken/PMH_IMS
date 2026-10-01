@@ -185,14 +185,19 @@ test.describe('Tra IP và máy (NET-005)', () => {
     await expect(page.getByRole('navigation', { name: 'Trang' }).getByText(/151–200/)).toBeVisible();
   });
 
-  test('gõ mã máy ở ô tra → liệt kê mọi IP của máy, bấm là tới đúng dòng', async ({ page }) => {
+  test('gõ mã máy ở ô tra → liệt kê IP của máy và IP ghi tên máy, bấm là tới đúng dòng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
-    for (const host of [11, 12]) {
-      await page.request.post('/api/v1/ipam/addresses', {
+    // Một máy chỉ giữ một IP (Q-20): .11 gắn máy, .12 chỉ ghi tên máy ở ô người dùng.
+    for (const [host, owner] of [
+      [11, { deviceId: f.deviceId }],
+      [12, { usedBy: `Cổng phụ ${f.deviceCode}` }],
+    ] as const) {
+      const res = await page.request.post('/api/v1/ipam/addresses', {
         headers: f.headers,
-        data: { subnetId: f.subnetId, address: `${f.net}.${host}`, deviceId: f.deviceId },
+        data: { subnetId: f.subnetId, address: `${f.net}.${host}`, ...owner },
       });
+      expect(res.status(), await res.text()).toBe(201);
     }
 
     await page.goto('/ip-addresses');
@@ -214,7 +219,22 @@ test.describe('Tra IP và máy (NET-005)', () => {
     const lookup = page.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
     await lookup.fill('203.0.113.77');
     await lookup.press('Enter');
-    await expect(page.getByText('Không dải nào đang dùng chứa 203.0.113.77.')).toBeVisible();
+    const alert = page.getByRole('alert');
+    await expect(alert).toHaveText('Không dải nào đang dùng chứa 203.0.113.77.');
+    await alert.getByRole('button', { name: 'Đóng thông báo' }).click();
+    await expect(alert).toHaveCount(0);
+
+    // Q-20: IP sai dạng (một phần > 255) → khung đỏ, không đi tìm theo máy.
+    const searched: string[] = [];
+    page.on('request', (req) => {
+      if (req.url().includes('/api/v1/ipam/addresses?')) searched.push(req.url());
+    });
+    await lookup.fill('172.16.1100.10');
+    await lookup.press('Enter');
+    await expect(page.getByRole('alert')).toHaveText(
+      'Địa chỉ IP không hợp lệ: đủ 4 phần, mỗi phần là số 0–255.',
+    );
+    expect(searched, 'IP sai dạng không được gửi đi tìm').toEqual([]);
   });
 
   test('ô lọc trong dải: gõ tên người → chỉ còn dòng của họ', async ({ page }) => {

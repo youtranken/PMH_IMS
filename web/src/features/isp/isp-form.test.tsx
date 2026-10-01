@@ -173,3 +173,46 @@ describe('Bố cục form đường truyền', () => {
     );
   });
 });
+
+/* Q-20: ô Thiết bị của đường truyền dùng chung bộ lọc loại với form NAT. */
+describe('Form đường truyền — ô Thiết bị lọc theo loại', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('mặc định hỏi các loại Router; "Tất cả loại" bỏ lọc; chọn máy khác loại chỉ cảnh báo', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.startsWith('/api/v1/catalog')) {
+          return Promise.resolve(
+            jsonResponse(200, {
+              ...LISTS,
+              deviceTypes: [
+                { id: 'fw', name: 'Firewall', isRouter: true, hasPortMap: false, description: null, active: true },
+                { id: 'pc', name: 'PC', isRouter: false, hasPortMap: false, description: null, active: true },
+              ],
+            }),
+          );
+        }
+        if (url.startsWith('/api/v1/devices')) {
+          urls.push(url);
+          return Promise.resolve(
+            jsonResponse(200, {
+              items: [{ id: 'd-pc', code: 'PC-E2E-01', name: 'May tram', deviceTypeId: 'pc' }],
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse(200, { items: [] }));
+      }),
+    );
+    renderForm(null);
+    await waitFor(() => expect(urls.some((url) => url.includes('deviceTypeIds=fw'))).toBe(true));
+    await userEvent.click(screen.getByRole('button', { name: 'Tất cả loại' }));
+    await waitFor(() => expect(urls.at(-1)).not.toContain('deviceTypeIds'));
+    await userEvent.click(screen.getByRole('combobox', { name: /Thiết bị/ }));
+    await userEvent.click(await screen.findByRole('option', { name: /PC-E2E-01/ }));
+    expect(
+      screen.getByText('Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.'),
+    ).toBeVisible();
+  });
+});

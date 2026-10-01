@@ -112,7 +112,7 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
     const headers = captured.map((column) => column.header);
     expect(headers).not.toContain('Hết hạn');
     // File xuất khớp bảng trên màn: có Site, thiết bị biên và ghi chú.
-    expect(headers).toEqual(expect.arrayContaining(['Site', 'Thiết bị biên', 'Ghi chú']));
+    expect(headers).toEqual(expect.arrayContaining(['Site', 'Thiết bị', 'Ghi chú']));
     const site = captured.find((column) => column.header === 'Site')!;
     expect(site.value({ siteCode: 'E2E-HCM' })).toBe('E2E-HCM');
     expect(site.value({ siteCode: null })).toBe('');

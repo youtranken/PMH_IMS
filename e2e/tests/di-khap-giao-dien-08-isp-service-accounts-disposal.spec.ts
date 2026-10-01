@@ -200,7 +200,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Mã đường',
       'Nhà mạng',
       'Site',
-      'Thiết bị biên',
+      'Thiết bị',
       'Hotline',
       'Số hợp đồng',
       'Trạng thái',
@@ -334,18 +334,18 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sortVi(['Mã đường', 'Tốc độ gói cước', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
 
     /*
-     * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị biên" tra ngược vào kho thiết bị.
+     * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị" tra ngược vào kho thiết bị.
      * "Nhà mạng" KHÔNG còn ở đây — nó là khoá ngoại tới danh mục, chọn chứ không gõ (Q-11),
      * nên nằm trong bộ nút bên dưới.
      *
-     * F-06: `Field` tự nối `id` vào `Combobox`, nên tên khả truy cập là NHÃN thật: "Thiết bị
-     * biên". Không có nhãn nối vào thì tên rơi về `placeholder` — trình đọc màn hình đọc "Tìm
-     * thiết bị trong kho…" thay vì tên của ô.
+     * F-06: ô được nối `id` với nhãn, nên tên khả truy cập là NHÃN thật: "Thiết bị". Không có
+     * nhãn nối vào thì tên rơi về `placeholder` — trình đọc màn hình đọc "Tìm thiết bị trong
+     * kho…" thay vì tên của ô.
      */
     expect(
       await nameByRole(dialog, 'combobox'),
-      'Hộp có đúng một ô gợi ý: ô tra thiết bị biên',
-    ).toEqual(sortVi(['Thiết bị biên']));
+      'Hộp có đúng một ô gợi ý: ô tra thiết bị',
+    ).toEqual(sortVi(['Thiết bị']));
 
     /*
      * "Chọn file để đính kèm" nằm trong bộ NÚT chứ không phải bộ ô nhập, và đó là điều đúng:
@@ -353,12 +353,20 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * bị CSS thu về 1×1 px nhưng KHÔNG bị `visibility: hidden` — cố ý, để trình đọc màn hình
      * vẫn với tới được. Bỏ nó khỏi mảng này là bỏ luôn khả năng thấy khi khối giấy tờ rơi mất.
      */
+    /* Dải chip lọc loại dưới ô Thiết bị (Q-20): "Tất cả loại" + mỗi loại đang dùng của máy chạy
+       test — đọc danh mục tại chỗ. */
+    const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
+      deviceTypes: { name: string; active: boolean }[];
+    };
+    const typeChips = catalog.deviceTypes.filter((type) => type.active).map((type) => type.name);
     expect(
       await nameByRole(dialog, 'button'),
       'Bộ nút trong hộp thêm mới: ô chọn Nhà mạng, ô chọn Site, ô ngày Bắt đầu, ô chọn file, ' +
-        '(i) của Nhà mạng, ✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
+        '(i) của Nhà mạng, chip lọc loại, ✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
       sortVi([
+        'Tất cả loại',
+        ...typeChips,
         'Đóng hộp thoại',
         'Nhà mạng',
         // Lời dặn dài của ô Nhà mạng nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.

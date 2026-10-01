@@ -12,7 +12,7 @@ describe('ISP_EXPORT_COLUMNS', () => {
       'Tốc độ gói cước',
       'IP WAN',
       'Site',
-      'Thiết bị biên',
+      'Thiết bị',
       'Hotline',
       'Số hợp đồng',
       'Bắt đầu',

@@ -130,7 +130,7 @@ describe('Khối trống có nút bước tiếp', () => {
   it('Dải IP: chưa có dải → nút khai dải (chỉ SA/Admin)', async () => {
     const { unmount } = renderAt('/ipam', <IpamScreen me={SA} />);
     const block = await emptyBlock('Chưa khai báo dải nào');
-    expect(within(block).getByRole('button', { name: 'Khai dải mới' })).toBeInTheDocument();
+    expect(within(block).getByRole('button', { name: 'Thêm dải mạng' })).toBeInTheDocument();
     unmount();
     renderAt('/ipam', <IpamScreen me={MEMBER} />);
     const memberBlock = await emptyBlock('Chưa khai báo dải nào');

@@ -289,6 +289,7 @@ export function SubnetPane({
         <th>{t("ipam.address")}</th>
         <th>{t("ipam.status")}</th>
         <th className="col-device">{t("ipam.device")}</th>
+        <th>{t("ipam.site")}</th>
         <th>{t("ipam.usedBy")}</th>
         <th className="col-date">{t("ipam.assignedAt")}</th>
         <th className="col-center">{t("common.actions")}</th>
@@ -324,6 +325,7 @@ export function SubnetPane({
                 <CopyButton
                   value={item.gateway}
                   label={t("ipam.copyOf", { label: t("ipam.gateway") })}
+                  inline
                 />
                 {/* Máy đang giữ địa chỉ gateway (router/firewall) — nối dải với thiết bị biên,
                     đọc từ chính hồ sơ IP của dải, không hỏi thêm gì. */}
@@ -484,6 +486,9 @@ export function SubnetPane({
                       <td data-label={t("ipam.device")}>
                         <Empty />
                       </td>
+                      <td data-label={t("ipam.site")}>
+                        <Empty />
+                      </td>
                       <td data-label={t("ipam.usedBy")}>
                         <Empty />
                       </td>
@@ -558,6 +563,11 @@ export function SubnetPane({
                         ) : (
                           <Empty />
                         )}
+                      </td>
+                      {/* Site của MÁY, không của dải: dải để trống site là dùng chung mọi
+                          site (Q-20), nên chỉ hồ sơ thiết bị nói được IP này đang ở đâu. */}
+                      <td data-label={t("ipam.site")}>
+                        {slot.deviceSiteCode ? slot.deviceSiteCode : <Empty />}
                       </td>
                       <td data-label={t("ipam.usedBy")}>
                         {slot.usedBy ? slot.usedBy : <Empty />}

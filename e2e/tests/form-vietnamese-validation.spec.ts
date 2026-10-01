@@ -37,7 +37,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
+    await page.getByRole('button', { name: 'Thêm dải mạng' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 

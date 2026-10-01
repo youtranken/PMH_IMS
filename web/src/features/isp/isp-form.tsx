@@ -8,6 +8,12 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
+import {
+  DeviceTypeFilter,
+  deviceTypeIdsParam,
+  isRouterType,
+  useDeviceTypeFilter,
+} from '@/ui/device-type-filter';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
@@ -90,14 +96,25 @@ export function IspForm({
   /* Chưa gõ mà đã chọn site: danh sách mở sẵn là máy CÙNG site (thiết bị biên nằm ở đó).
      Gõ thì tìm khắp kho — Draytek chưa gán site vẫn phải tìm ra được. */
   const nearSite = debounced.trim() === '' ? form.siteId : '';
+  /* Lọc theo LOẠI, mặc định các loại cờ Router (Q-20) — cùng bộ lọc với ô Router của NAT. Chọn
+     máy ngoài các loại đó chỉ cảnh báo: đường truyền cắm thẳng vào Core/Firewall là chuyện có. */
+  const deviceTypes = lists.data?.deviceTypes;
+  const typeFilter = useDeviceTypeFilter(deviceTypes);
+  const [pickedTypeId, setPickedTypeId] = useState<string | null>(null);
+  const notRouter =
+    device !== null &&
+    (deviceTypes ?? []).some((type) => type.isRouter) &&
+    !isRouterType(deviceTypes, pickedTypeId);
+  const byType = deviceTypeIdsParam(typeFilter.value);
   const candidates = useQuery({
-    queryKey: ['devices', 'picker', debounced, nearSite],
-    enabled: device === null,
+    queryKey: ['devices', 'picker', debounced, nearSite, typeFilter.value.join(',')],
+    // Chờ danh mục: hỏi trước khi biết loại nào là Router thì danh sách mở ra chưa lọc rồi co lại.
+    enabled: device === null && !lists.isPending,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[] }>(
         `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}${
           nearSite ? `&siteId=${nearSite}` : ''
-        }`,
+        }${byType ? `&${byType}` : ''}`,
       ),
   });
   /* Máy nào đang là thiết bị biên của đường KHÁC — một Draytek hai đường là chuyện có thật,
@@ -318,8 +335,12 @@ export function IspForm({
             trạng thái vừa làm ở nơi khác.
           */}
 
-          <Field label={t('isp.device')} hint={t('isp.deviceHint')} span={3}>
+          <Field label={t('isp.device')} hint={t('isp.deviceHint')} span={3} htmlFor="isp-device">
+            {/* Có thêm dải chip lọc loại nên Field không tự nối id/mô tả — nối tay theo quy ước. */}
             <Combobox
+              id="isp-device"
+              aria-describedby="isp-device-hint"
+              ariaLabel={t('isp.device')}
               placeholder={t('isp.deviceSearch')}
               query={query}
               onQuery={(value) => {
@@ -346,8 +367,17 @@ export function IspForm({
               }}
               onSelect={(item) => {
                 setDevice({ id: item.id, code: item.code });
+                setPickedTypeId(item.deviceTypeId);
                 setQuery(item.code);
               }}
+            />
+            {notRouter ? (
+              <span className="field-hint warn-text">{t('deviceTypeFilter.notRouter')}</span>
+            ) : null}
+            <DeviceTypeFilter
+              types={deviceTypes}
+              value={typeFilter.value}
+              onChange={typeFilter.setValue}
             />
           </Field>
         </FormSection>
