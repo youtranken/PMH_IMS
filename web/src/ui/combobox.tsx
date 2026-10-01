@@ -78,6 +78,12 @@ interface ComboboxProps<T> {
    * sách thay cho mũi tên: mũi tên là hình của ô CHỌN, người dùng thấy nó thì không dám gõ.
    */
   caret?: 'chevron' | 'suggest';
+  /**
+   * `match` (mặc định): menu rộng đúng bằng ô. `min`: ít nhất bằng ô, nới theo nội dung tới
+   * 360px — cho ô hẹp mà mỗi dòng có nhiều mẩu (tên · giao thức · port của dịch vụ NAT), nơi
+   * rộng bằng ô là cắt cụt tên.
+   */
+  menuWidth?: 'match' | 'min';
   /** Nối `hint`/`error` của `Field` vào ô — `Field` tự truyền, nơi gọi không phải biết. */
   'aria-describedby'?: string;
   /** Ô đang báo lỗi — `Field error` tự truyền; viền đỏ và tiêu điểm của `useFormErrors` bám vào đây. */
@@ -108,6 +114,7 @@ export function Combobox<T>({
   required,
   id,
   caret = 'chevron',
+  menuWidth = 'match',
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
 }: ComboboxProps<T>) {
@@ -185,7 +192,7 @@ export function Combobox<T>({
       pending === true ||
       empty !== undefined);
   const { refs, floatingStyles } = useAnchoredMenu(open, {
-    matchWidth: true,
+    matchWidth: menuWidth === 'min' ? 'min' : true,
     maxHeight: 260,
   });
 

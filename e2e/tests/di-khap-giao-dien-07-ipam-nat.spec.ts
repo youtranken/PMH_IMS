@@ -870,7 +870,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    *
    * Hộp "Thêm luật NAT" là form phức tạp nhất hệ thống: ba khối theo đúng đường đi của một gói
    * tin, một ô cổng dạng CHIP nhận nhiều khoảng, một nhóm giao thức `role="group"`, và HAI
-   * đường mở tiếp hộp con ("+ Thêm router mới", "+ Thêm dịch vụ") cho thứ chưa có trong kho.
+   * đường mở tiếp hộp con ("+ Thêm thiết bị mới", "+ Thêm dịch vụ") cho thứ chưa có trong kho.
    *
    * Ba khối ấy không phải trang trí: một dây mười ô xếp dọc làm "Loại thiết bị" — một BỘ LỌC
    * của ô ngay dưới — đứng như thể là dữ liệu của rule.
@@ -924,12 +924,20 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       ['Cổng ngoài', 'Cổng trong', 'IP trong', 'Lý do mở', 'Ghi chú'],
       'Hộp "Thêm luật NAT"',
     );
+    /* Dải chip lọc loại dưới ô Router (Q-20): "Tất cả loại" + mỗi loại thiết bị đang dùng —
+       danh mục của máy chạy test, nên đọc tại chỗ. */
+    const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
+      deviceTypes: { name: string; active: boolean }[];
+    };
+    const typeChips = catalog.deviceTypes.filter((type) => type.active).map((type) => type.name);
     await expectHandles(
       form,
       'button',
       /* Ba nút (i) "Giải thích: …" mang lời dặn dài khỏi dưới ô (Q-19) — mất một cái là lời
          dặn đó biến khỏi form. */
       [
+        'Tất cả loại',
+        ...typeChips,
         'Đóng hộp thoại',
         'Giải thích: Cổng ngoài',
         'Thêm',
@@ -948,7 +956,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       form,
       'checkbox',
-      [/^Hiện mọi thiết bị/, 'Đang dùng'],
+      ['Đang dùng'],
       'Hộp "Thêm luật NAT"',
     );
     const enabledBox = form.getByRole('checkbox', { name: 'Đang dùng', exact: true });
@@ -984,10 +992,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'ô này nhận cả một DẢI cổng, không chỉ một số',
     ).toBeVisible();
 
-    /* ----- Hộp con 1: "+ Thêm router mới" — hộp CHA phải sống ----- */
+    /* ----- Hộp con 1: "+ Thêm thiết bị mới" — hộp CHA phải sống ----- */
     await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('Phòng Nhân sự');
     await form.getByRole('combobox', { name: 'Router', exact: true }).click();
-    await form.getByRole('button', { name: '+ Thêm router mới' }).click();
+    await form.getByRole('button', { name: '+ Thêm thiết bị mới' }).click();
     const deviceForm = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await expect(
       deviceForm,

@@ -253,7 +253,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
 
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').click();
-    await page.getByRole('button', { name: '+ Thêm router mới' }).click();
+    await page.getByRole('button', { name: '+ Thêm thiết bị mới' }).click();
 
     const deviceForm = page.getByRole('dialog').last();
     await deviceForm.getByLabel('Mã thiết bị').fill(newRouter);

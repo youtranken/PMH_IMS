@@ -563,7 +563,9 @@ input.switch:focus-visible {
    chiếm quá nửa hộp thoại — xem `service-port-picker.tsx`.) */
 .svc-opt {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 74px;
+  /* Tên ít nhất 8rem: menu dịch vụ nới theo nội dung (`menuWidth="min"`), cột tên co về 0 thì
+     menu co theo và tên lại bị cắt cụt. */
+  grid-template-columns: minmax(8rem, 1fr) auto 74px;
   gap: var(--space-4);
   align-items: center;
   width: 100%;

@@ -154,6 +154,12 @@ export default {
   toast: {
     close: 'Đóng thông báo',
   },
+  // Bộ lọc loại dưới ô chọn thiết bị (ui/device-type-filter.tsx, Q-20).
+  deviceTypeFilter: {
+    label: 'Lọc theo loại thiết bị',
+    all: 'Tất cả loại',
+    notRouter: 'Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.',
+  },
   // Tìm nhanh ⌘K (ui/command-palette.tsx).
   palette: {
     title: 'Tìm nhanh',
@@ -1816,14 +1822,13 @@ export default {
     site: 'Site',
     allSites: 'Tất cả site',
     router: 'Router',
-    addRouter: '+ Thêm router mới',
+    addRouter: '+ Thêm thiết bị mới',
     servicePickerPlaceholder: 'Chọn dịch vụ có sẵn…',
     serviceSearchOf: 'Lọc dịch vụ cho {{field}}',
     serviceAdd: '+ Thêm dịch vụ',
     serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai mới.',
-    routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
+    routerHint: 'Thiết bị mang luật này (router, firewall, core…). Mặc định chỉ hiện loại Router — bấm chip để thêm loại khác.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
-    routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
     routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',
     routerNoTypeLink: 'Đánh dấu ở Danh mục → Loại thiết bị',
     protocol: 'Giao thức',

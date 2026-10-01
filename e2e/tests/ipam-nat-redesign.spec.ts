@@ -425,8 +425,8 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
-    // MỘT ô chọn router — ô "Loại thiết bị" cũ đã bỏ, vì nó bắt thao tác hai dropdown cho
-    // một việc và chọn nhầm loại là danh sách rỗng trơn.
+    // MỘT ô chọn router — lọc loại là dải chip ngay dưới ô (Q-20), không phải một dropdown
+    // "Loại thiết bị" thứ hai bắt thao tác hai lần cho một việc.
     await expect(form.getByRole('button', { name: 'Loại thiết bị' })).toHaveCount(0);
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();

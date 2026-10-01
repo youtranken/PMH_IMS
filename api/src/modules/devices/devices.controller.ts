@@ -153,6 +153,8 @@ export class DevicesController {
       siteId?: string;
       cabinetId?: string;
       deviceTypeId?: string;
+      /** Nhiều loại, ngăn bởi dấu phẩy — ô chọn thiết bị lọc theo loại (Q-20). */
+      deviceTypeIds?: string;
       status?: DeviceStatus;
       /** '?usable=true' — chỉ máy còn nhận thêm được. Xem `DeviceFilter.usableOnly`. */
       usable?: string;
@@ -170,6 +172,7 @@ export class DevicesController {
         siteId: query.siteId,
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
+        deviceTypeIds: uuidList(query.deviceTypeIds),
         status: query.status,
         // So với chuỗi 'true', không ép boolean: `?usable=false` phải nghĩa là KHÔNG lọc.
         usableOnly: query.usable === 'true',
@@ -374,5 +377,20 @@ export class DevicesController {
 
 function actor(req: AuthedRequest): string {
   return req.user!.email;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * `?deviceTypeIds=a,b` → mảng id. Mục sai dạng bị bỏ lặng lẽ: đi thẳng xuống `inArray` thì
+ * Postgres nổ 22P02 thành 500, mà đây chỉ là bộ lọc của một ô chọn.
+ */
+function uuidList(value: unknown): string[] | undefined {
+  if (typeof value !== 'string') return undefined;
+  const ids = value
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => UUID_RE.test(id));
+  return ids.length > 0 ? ids : undefined;
 }
 
