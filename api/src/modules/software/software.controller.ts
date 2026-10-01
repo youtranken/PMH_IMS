@@ -368,11 +368,16 @@ export class SoftwareController {
     );
   }
 
-  /** Sổ gia hạn của hồ sơ: từng lượt với hạn cũ → mới, hợp đồng, chi phí (Q-15). */
+  /**
+   * Sổ gia hạn của hồ sơ: từng lượt với hạn cũ → mới, hợp đồng, chi phí (Q-15). Kèm họ tên người
+   * gia hạn như màn Sắp hết hạn — một người không mang hai cách gọi ở hai màn.
+   */
   @Roles('sa', 'admin', 'member')
   @Get(':id/renewals')
-  renewals(@Param() params: IdParamDto) {
-    return this.software.renewals(params.id);
+  async renewals(@Param() params: IdParamDto) {
+    return withActorNames(await this.software.renewals(params.id), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   // ───────────── Gán license vào máy (FR-011) ─────────────
