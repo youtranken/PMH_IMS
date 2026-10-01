@@ -75,7 +75,7 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
       ],
       t,
     );
-    expect(entry.detail).toBe('site: HCM → HN; thiết bị biên: (trống) → RT-E2E-01');
+    expect(entry.detail).toBe('site: HCM → HN; thiết bị: (trống) → RT-E2E-01');
   });
 
   it('người làm hiện bằng họ tên khi API tra được', () => {

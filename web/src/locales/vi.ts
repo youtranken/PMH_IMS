@@ -1070,7 +1070,7 @@ export default {
     bandwidth: 'Tốc độ gói cước',
     wanIp: 'IP WAN',
     site: 'Site',
-    device: 'Thiết bị biên',
+    device: 'Thiết bị',
     deviceHint: 'Router/firewall đang cắm đường này.',
     deviceSearch: 'Tìm thiết bị trong kho…',
     edgeInUse: 'đang gắn {{lines}}',
@@ -1125,7 +1125,7 @@ export default {
     statusMessage_suspended: 'Đường vẫn ở danh sách với nhãn "Tạm ngưng" (vd nhà mạng tạm cắt, chờ thanh toán).',
     statusMessage_terminated: 'Đường này rời khỏi danh sách mặc định, hợp đồng coi như đã cắt.',
     terminateVault: 'Két còn {{count}} ngăn của đường này — xóa hoặc đổi giá trị nếu không còn dùng.',
-    terminateDevice: 'Đường đang gắn với {{device}} — gỡ khỏi thiết bị biên nếu đã rút cáp.',
+    terminateDevice: 'Đường đang gắn với {{device}} — gỡ khỏi thiết bị nếu đã rút cáp.',
   },
   expiry: {
     /*
@@ -2751,7 +2751,7 @@ export default {
       fProvider: 'nhà mạng',
       fBandwidth: 'tốc độ gói cước',
       fWanIp: 'IP WAN',
-      fDeviceId: 'thiết bị biên',
+      fDeviceId: 'thiết bị',
       fHotline: 'hotline',
       fContractNo: 'số hợp đồng',
       actCreated: 'Tạo hồ sơ',

@@ -200,7 +200,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Mã đường',
       'Nhà mạng',
       'Site',
-      'Thiết bị biên',
+      'Thiết bị',
       'Hotline',
       'Số hợp đồng',
       'Trạng thái',
@@ -334,7 +334,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sortVi(['Mã đường', 'Tốc độ gói cước', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
 
     /*
-     * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị biên" tra ngược vào kho thiết bị.
+     * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị" tra ngược vào kho thiết bị.
      * "Nhà mạng" KHÔNG còn ở đây — nó là khoá ngoại tới danh mục, chọn chứ không gõ (Q-11),
      * nên nằm trong bộ nút bên dưới.
      *
@@ -345,7 +345,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await nameByRole(dialog, 'combobox'),
       'Hộp có đúng một ô gợi ý: ô tra thiết bị biên',
-    ).toEqual(sortVi(['Thiết bị biên']));
+    ).toEqual(sortVi(['Thiết bị']));
 
     /*
      * "Chọn file để đính kèm" nằm trong bộ NÚT chứ không phải bộ ô nhập, và đó là điều đúng:
