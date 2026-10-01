@@ -1,5 +1,6 @@
 import {
   checkAllowedIps,
+  checkServiceAccountRenewal,
   codeFromLogin,
   mergeServiceAccount,
   supportsVpnFields,
@@ -134,6 +135,7 @@ describe('mergeServiceAccount — ghép body với dòng đang có', () => {
     groupName: 'vpn-ketoan',
     allowedIps: '0.0.0.0/0',
     note: 'ghi chú cũ',
+    endDate: '2027-03-31',
   };
   const patch = (over: Partial<ServiceAccountPatch> = {}): ServiceAccountPatch => ({
     code: 'VPN-KETOAN',
@@ -169,6 +171,11 @@ describe('mergeServiceAccount — ghép body với dòng đang có', () => {
     { name: 'đổi sang dùng chung: dải IP cũ KHÔNG theo sang', input: patch({ kind: 'shared' }), before: stored, field: 'allowedIps', expected: null },
     // …nhưng ô mà body THẬT SỰ gửi lên thì vẫn phải thấy, để còn báo là gõ nhầm loại.
     { name: 'dùng chung mà vẫn gửi nhóm VPN: giữ để báo lỗi', input: patch({ kind: 'shared', groupName: 'vpn-lo' }), before: null, field: 'groupName', expected: 'vpn-lo' },
+    // 6. Hạn dùng (Q-20) theo đúng luật ô tùy chọn: không gửi = giữ, rỗng = bỏ hạn.
+    { name: 'sửa: hạn dùng không gửi giữ hạn cũ', input: patch(), before: stored, field: 'endDate', expected: '2027-03-31' },
+    { name: 'sửa: gửi rỗng thì tài khoản hết có hạn', input: patch({ endDate: '' }), before: stored, field: 'endDate', expected: null },
+    { name: 'tạo: có hạn dùng thì giữ', input: patch({ endDate: '2026-12-31' }), before: null, field: 'endDate', expected: '2026-12-31' },
+    { name: 'đổi loại vẫn giữ hạn dùng (ô chung của hai loại)', input: patch({ kind: 'shared' }), before: stored, field: 'endDate', expected: '2027-03-31' },
   ];
 
   for (const { name, input, before, field, expected } of cases) {
@@ -224,6 +231,28 @@ describe('codeFromLogin — suy mã từ tên đăng nhập', () => {
   for (const { login, expected } of cases) {
     it(`"${login}" → ${expected}`, () => {
       expect(codeFromLogin(login)).toBe(expected);
+    });
+  }
+});
+
+/*
+ * Gia hạn tài khoản dịch vụ (Q-20): hạn mới phải SAU hạn đang có (sửa nhầm hạn thì dùng Sửa hồ
+ * sơ), và tài khoản đã ngừng dùng thì không gia hạn — nó không còn được nhắc, gia hạn nó là
+ * mở lại bằng cửa sau mà không ghi lý do như `enable()`.
+ */
+describe('checkServiceAccountRenewal — gia hạn tài khoản dịch vụ', () => {
+  const cases: { name: string; status: 'active' | 'disabled'; endDate: string | null; newEnd: string; error: RegExp | null }[] = [
+    { name: 'hạn mới sau hạn cũ', status: 'active', endDate: '2026-10-31', newEnd: '2027-10-31', error: null },
+    { name: 'chưa có hạn thì đặt hạn đầu tiên', status: 'active', endDate: null, newEnd: '2027-01-01', error: null },
+    { name: 'hạn mới trùng hạn cũ', status: 'active', endDate: '2026-10-31', newEnd: '2026-10-31', error: /phải sau hạn hiện tại \(31\/10\/2026\)/ },
+    { name: 'hạn mới lùi về trước', status: 'active', endDate: '2026-10-31', newEnd: '2026-01-01', error: /phải sau hạn hiện tại/ },
+    { name: 'tài khoản đã ngừng dùng', status: 'disabled', endDate: '2026-10-31', newEnd: '2027-10-31', error: /ngừng dùng/ },
+  ];
+  for (const { name, status, endDate, newEnd, error } of cases) {
+    it(`${name} → ${error ? 'từ chối' : 'cho qua'}`, () => {
+      const result = checkServiceAccountRenewal({ status, endDate }, newEnd);
+      if (error) expect(result).toMatch(error);
+      else expect(result).toBeNull();
     });
   }
 });

@@ -15,6 +15,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
+import { ExpiryBadge } from '@/ui/expiry-badge';
 import { SecretDue } from '@/ui/secret-due';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
@@ -176,6 +177,15 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           <span className={`badge ${STATUS_TONE[row.original.status]}`}>
             {t(STATUS_KEY[row.original.status])}
           </span>
+        ),
+      },
+      /* Hạn dùng (Q-20). Ngừng dùng thì "Không tính hạn": nguồn hạn bên API không nhắc tài
+         khoản đã ngừng dùng, màn này không được kêu "Quá hạn" trái với /expiry. */
+      {
+        id: 'endDate',
+        header: t('serviceAccounts.endDate'),
+        cell: ({ row }) => (
+          <ExpiryBadge end={row.original.endDate} notCounted={row.original.status === 'disabled'} />
         ),
       },
       ...(canEdit

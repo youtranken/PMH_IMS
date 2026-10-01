@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { noteContainsSecret } from '@/lib/note-secret';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
+import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
@@ -37,6 +38,8 @@ interface FormState {
   groupName: string;
   allowedIps: string;
   note: string;
+  /** 'YYYY-MM-DD' hoặc rỗng (không có hạn) — cùng quy ước với `DatePicker`. */
+  endDate: string;
   status: ServiceAccountStatus;
 }
 
@@ -51,6 +54,7 @@ function initialState(row: ServiceAccountRow | null): FormState {
     groupName: row?.groupName ?? '',
     allowedIps: row?.allowedIps ?? '',
     note: row?.note ?? '',
+    endDate: row?.endDate ?? '',
     status: row?.status ?? 'active',
   };
 }
@@ -166,6 +170,8 @@ export function ServiceAccountForm({
               groupName: vpn ? form.groupName.trim() : '',
               allowedIps: vpn ? form.allowedIps.trim() : '',
               note: form.note.trim(),
+              // Rỗng = bỏ hạn (API: chuỗi rỗng xoá, không gửi mới là giữ nguyên).
+              endDate: form.endDate,
             },
             {
               onSuccess: (created) => {
@@ -377,6 +383,15 @@ export function ServiceAccountForm({
               className="inp"
               value={form.ownerName}
               onChange={(e) => set('ownerName', e.target.value)}
+            />
+          </Field>
+          {/* Hạn dùng (Q-20) đứng cạnh "thuộc về ai": người phụ trách là người được nhắc khi
+              tài khoản cấp có thời hạn sắp hết. */}
+          <Field label={t('serviceAccounts.endDateOptional')} tip={t('serviceAccounts.endDateTip')}>
+            <DatePicker
+              value={form.endDate}
+              ariaLabel={t('serviceAccounts.endDateOptional')}
+              onChange={(value) => set('endDate', value)}
             />
           </Field>
         </FormSection>

@@ -12,6 +12,8 @@ export interface ServiceAccountRecord {
   groupName: string | null;
   allowedIps: string | null;
   note: string | null;
+  /** Hạn dùng `YYYY-MM-DD` (Q-20). `null` = không có hạn. */
+  endDate: string | null;
   status: ServiceAccountStatus;
   createdBy: string;
   createdAt: Date;
@@ -54,6 +56,8 @@ export interface ServiceAccountInput {
   groupName?: string;
   allowedIps?: string;
   note?: string;
+  /** Hạn dùng `YYYY-MM-DD`; chuỗi rỗng = bỏ hạn, không gửi = giữ nguyên. */
+  endDate?: string;
   /*
    * KHÔNG có `status` ở đây, và đó là chủ ý.
    *

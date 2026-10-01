@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { runMigrations } from '../src/database/migration-runner';
 import type { Database } from '../src/database/database.module';
 import { ServiceAccountService } from '../src/modules/service-accounts/service-account.service';
+import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -22,7 +23,7 @@ describe('Lọc VPN mở mọi IP', () => {
     scratch = await createScratchDb('ims_sa_any_ip');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     const db = drizzle(scratch.pool) as unknown as Database;
-    accounts = new ServiceAccountService(db, {} as unknown as AuditWriterService);
+    accounts = new ServiceAccountService(db, {} as unknown as AuditWriterService, {} as ExpiryApiService);
     const seed = async (code: string, kind: string, allowedIps: string | null) =>
       scratch.pool.query(
         `INSERT INTO service_account (code, kind, name, allowed_ips, created_by)

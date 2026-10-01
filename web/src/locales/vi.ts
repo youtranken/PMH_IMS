@@ -1939,6 +1939,11 @@ export default {
     groupName: 'Nhóm VPN',
     groupNameHint: 'Tên nhóm trên máy chủ VPN.',
     allowedIps: 'Dải IP được phép',
+    /* Hạn dùng (Q-20) — khác cột "Đổi lần cuối" (hạn đổi mật khẩu trong két, Q-15). */
+    endDate: 'Hết hạn',
+    endDateOptional: 'Hết hạn (tùy chọn)',
+    endDateTip:
+      'Tài khoản cấp có thời hạn (VPN cho đối tác, tài khoản dùng thử…). Gần tới hạn hệ thống nhắc như các hạn khác; quá hạn chỉ nhắc, không tự ngừng dùng. Để trống nếu không có hạn.',
     allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng.',
     note: 'Ghi chú',
     noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu cất ở tab Két sắt.',
@@ -2731,6 +2736,7 @@ export default {
       actUpdated: 'Sửa hồ sơ',
       actDisabled: 'Ngừng dùng',
       actEnabled: 'Dùng lại',
+      actRenewed: 'Gia hạn',
       kindShared: 'Tài khoản dùng chung',
       kindVpn: 'Tài khoản VPN',
       stActive: 'Đang dùng',

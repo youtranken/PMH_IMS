@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { formatDate } from '@/lib/format';
 import type { HistoryEntry } from '@/ui/history-panel';
 import type { ServiceAccountHistoryRow } from './service-account-types';
 import { describeFieldChanges, type FieldChanges } from '@/ui/history-changes';
@@ -19,6 +20,7 @@ const FIELD_LABEL: Record<string, string> = {
   groupName: 'history.serviceAccounts.fGroupName',
   allowedIps: 'history.serviceAccounts.fAllowedIps',
   note: 'history.fNote',
+  endDate: 'history.fEndDate',
   status: 'history.fStatus',
   reason: 'history.fReason',
 };
@@ -28,6 +30,7 @@ export const ACTION_LABEL: Record<string, string> = {
   updated: 'history.serviceAccounts.actUpdated',
   disabled: 'history.serviceAccounts.actDisabled',
   enabled: 'history.serviceAccounts.actEnabled',
+  renewed: 'history.serviceAccounts.actRenewed',
 };
 
 const KIND_LABEL: Record<string, string> = {
@@ -84,6 +87,7 @@ function describe(changes: FieldChanges, t: TFunction, initial: boolean): string
     label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
     display: (field, value) => {
       if (value === null || value === undefined || value === '') return undefined;
+      if (field === 'endDate') return formatDate(String(value));
       const table = field === 'kind' ? KIND_LABEL : field === 'status' ? STATUS_LABEL : null;
       if (!table) return undefined;
       const key = table[String(value)];

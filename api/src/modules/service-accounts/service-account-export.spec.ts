@@ -37,4 +37,13 @@ describe('Xuất Excel tài khoản dịch vụ', () => {
     expect(kind.value({ kind: 'vpn' })).toBe('VPN');
     expect(kind.value({ kind: 'shared' })).toBe('Dùng chung');
   });
+
+  // Q-20: hạn dùng của tài khoản (VPN cấp có thời hạn) — trống là không có hạn.
+  it('có cột "Hết hạn" dạng YYYY-MM-DD như các file xuất khác; không có hạn thì để trống', async () => {
+    await new ServiceAccountController(accounts, excel, {} as UsersApiService).export({}, res);
+    const end = captured.find((column) => column.header === 'Hết hạn');
+    expect(end).toBeDefined();
+    expect(end!.value({ endDate: '2027-03-31' })).toBe('2027-03-31');
+    expect(end!.value({ endDate: null })).toBe('');
+  });
 });

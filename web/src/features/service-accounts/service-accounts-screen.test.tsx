@@ -23,13 +23,14 @@ const ROW = {
   groupName: null,
   allowedIps: null,
   note: null,
+  endDate: null as string | null,
   status: 'active',
   createdBy: 'sa@pmh.com.vn',
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
-function stubFetch() {
+function stubFetch(rows: (typeof ROW)[] = [ROW]) {
   const calls: string[] = [];
   vi.stubGlobal(
     'fetch',
@@ -43,7 +44,7 @@ function stubFetch() {
           ]),
         );
       }
-      return Promise.resolve(jsonResponse(200, { items: [ROW], total: 1 }));
+      return Promise.resolve(jsonResponse(200, { items: rows, total: rows.length }));
     }),
   );
   return calls;
@@ -99,5 +100,26 @@ describe('Tài khoản dịch vụ — cột "Đổi lần cuối" (Q-15)', () =
     expect(await screen.findAllByText('SVC-E2E-01')).not.toHaveLength(0);
     expect(screen.queryByRole('columnheader', { name: 'Đổi lần cuối' })).not.toBeInTheDocument();
     expect(calls.some((url) => url.includes('/vault/owners/due'))).toBe(false);
+  });
+});
+
+/*
+ * Q-20: cột "Hết hạn" — huy hiệu hạn dùng chung (`ExpiryBadge`). Tài khoản đã ngừng dùng thì
+ * "Không tính hạn" như nguồn hạn bên API (nó không nhắc tài khoản ngừng dùng).
+ */
+describe('Tài khoản dịch vụ — cột "Hết hạn" (Q-20)', () => {
+  it('có cột; tài khoản có hạn hiện huy hiệu hạn, không có hạn ghi "Không có hạn", ngừng dùng thì "Không tính hạn"', async () => {
+    stubFetch([
+      { ...ROW, id: 'a', code: 'SVC-E2E-HAN', endDate: '2020-01-01' },
+      { ...ROW, id: 'b', code: 'SVC-E2E-KHONG', endDate: null },
+      { ...ROW, id: 'c', code: 'SVC-E2E-NGUNG', endDate: '2020-01-01', status: 'disabled' },
+    ]);
+    renderAs('sa');
+    expect(await screen.findByRole('columnheader', { name: 'Hết hạn' })).toBeInTheDocument();
+    const rowOf = (code: string) => screen.getAllByRole('row').find((tr) => tr.textContent?.includes(code))!;
+    expect(rowOf('SVC-E2E-HAN').textContent).toMatch(/Quá hạn/);
+    expect(rowOf('SVC-E2E-KHONG').textContent).toContain('Không có hạn');
+    expect(rowOf('SVC-E2E-NGUNG').textContent).toContain('Không tính hạn');
+    expect(rowOf('SVC-E2E-NGUNG').textContent).not.toMatch(/Quá hạn/);
   });
 });

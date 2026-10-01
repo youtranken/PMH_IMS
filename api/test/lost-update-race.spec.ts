@@ -394,7 +394,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
     let accountCode: string;
 
     beforeAll(() => {
-      accounts = new ServiceAccountService(db, audit);
+      accounts = new ServiceAccountService(db, audit, {} as ExpiryApiService);
     });
 
     beforeEach(async () => {

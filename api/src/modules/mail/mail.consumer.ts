@@ -580,6 +580,7 @@ const KIND_LABEL: Record<string, string> = {
   ssl: 'Chứng chỉ SSL',
   domain: 'Tên miền',
   maintenance: 'Hợp đồng bảo trì',
+  service_account: 'Tài khoản dịch vụ',
 };
 
 /**

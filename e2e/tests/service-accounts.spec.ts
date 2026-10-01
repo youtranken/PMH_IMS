@@ -533,3 +533,102 @@ test.describe('Tài khoản dịch vụ', () => {
     expect(asMember.status()).toBe(403);
   });
 });
+
+/** Ngày `days` ngày tới theo lịch máy chạy bài kiểm, dạng YYYY-MM-DD. */
+function inDays(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * Q-20 — tài khoản dịch vụ có hạn dùng (tùy chọn). Có hạn thì vào màn Sắp hết hạn như mọi
+ * nguồn hạn khác và gia hạn được ở đó; đã ngừng dùng thì không nhắc nữa.
+ */
+test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
+  test('đường hạnh phúc: khai VPN có ngày hết hạn trên UI → cột Hết hạn → có trên /expiry → gia hạn', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `VPN-E2E-HAN-${stamp}`;
+    const end = inDays(10);
+    const [y, m, d] = end.split('-');
+
+    await page.goto('/service-accounts');
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).first().click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Mã tài khoản' }).fill(code);
+    await form.getByRole('textbox', { name: 'Tên tài khoản' }).fill('VPN đối tác E2E');
+    await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill(`vpn-han-${stamp}`);
+    // Ô ngày: gõ chữ số trên nút mở lịch là mở ô gõ ngày dd/mm/yyyy.
+    await form.getByRole('button', { name: 'Hết hạn (tùy chọn)' }).focus();
+    await page.keyboard.type(`${d}/${m}/${y}`);
+    await page.keyboard.press('Enter');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(form).toBeHidden();
+
+    // Danh sách: cột "Hết hạn" mang huy hiệu hạn dùng chung.
+    await expect(page.getByRole('columnheader', { name: 'Hết hạn' })).toBeVisible();
+    const listRow = page.getByRole('row', { name: new RegExp(code) });
+    await expect(listRow.getByText('Còn 10 ngày')).toBeVisible();
+
+    // Màn Sắp hết hạn có dòng của tài khoản này, gia hạn được ngay tại đó.
+    await page.goto('/expiry');
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('Tài khoản dịch vụ');
+    await row.getByRole('button', { name: 'Gia hạn' }).click();
+    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
+    const renewed = page.waitForResponse((r) => r.url().endsWith('/expiry/renew'));
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
+    expect((await renewed).status()).toBeLessThan(300);
+    await expect(page.getByText(new RegExp(`^Đã gia hạn ${code} tới`))).toBeVisible();
+
+    // Lịch sử hồ sơ có dòng "Gia hạn".
+    const id = String(
+      ((await (await page.request.get(`/api/v1/service-accounts?search=${code}`)).json()) as {
+        items: { id: string }[];
+      }).items[0].id,
+    );
+    await page.goto(`/service-accounts/${id}?tab=history`);
+    await expect(page.getByRole('listitem').filter({ hasText: 'Gia hạn' }).first()).toBeVisible();
+  });
+
+  test('đường hỏng: tài khoản đã ngừng dùng không lên /expiry và không gia hạn được', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `VPN-E2E-NGUNG-${stamp}`;
+    const created = await createViaApi(page, {
+      code,
+      kind: 'vpn',
+      name: 'VPN đã đóng E2E',
+      endDate: inDays(5),
+    });
+    expect(created.status).toBe(201);
+    const id = String(created.body.id);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const off = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
+      headers,
+      data: { reason: 'đối tác hết hợp đồng' },
+    });
+    expect(off.status()).toBe(200);
+
+    await page.goto('/expiry');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
+
+    const renew = await page.request.post('/api/v1/expiry/renew', {
+      headers,
+      data: { kind: 'service_account', id, endDate: inDays(400) },
+    });
+    expect(renew.status()).toBe(400);
+    expect(((await renew.json()) as { code: string }).code).toBe('SERVICE_ACCOUNT_RENEW_INVALID');
+  });
+});
