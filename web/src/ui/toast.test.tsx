@@ -119,3 +119,17 @@ describe('Toast — nút bước kế tiếp', () => {
     expect(screen.queryByText('Đã thêm LT-09.')).not.toBeInTheDocument();
   });
 });
+
+describe('Toast — nút đóng', () => {
+  it('× là hình SVG dùng chung, không phải ký tự: ký tự đi theo đường cơ sở và rớt khỏi dòng chữ', async () => {
+    renderWithI18n(
+      <ToastProvider>
+        <ToastFireButton tone="ok" text="Đã lưu." label="bắn ok" />
+      </ToastProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'bắn ok' }));
+    const close = screen.getByRole('button', { name: 'Đóng thông báo' });
+    expect(close.querySelector('svg.glyph')).not.toBeNull();
+    expect(close.textContent).toBe('');
+  });
+});
