@@ -170,7 +170,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Lúc bảng có dòng thì mỗi tiêu đề sắp-xếp-được là một nút, mỗi dòng thêm một nút ba
      * chấm, và phân trang thêm ba nút nữa — không còn đếm được cái gì. Gõ một chuỗi chắc
      * chắn không khớp là dọn sạch phần đó đi, chỉ còn lại đúng bộ đồ cố định của phòng:
-     * hai nút đầu trang + hai ô lọc.
+     * hai nút đầu trang + bốn ô lọc, cộng nút "Xóa bộ lọc" của câu rỗng (Q-19: câu rỗng vì
+     * lọc phải chỉ lối ra, không bắt người dùng tự dò xem mình đã lọc gì).
      */
     await search.fill(`KHONG-CO-HO-SO-NAO-E2E-${stamp}`);
     await expect(
@@ -180,9 +181,17 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 6 nút: Xuất Excel · Thêm phần mềm · ô lọc Loại · Trạng thái · Nhà cung cấp · Kỳ hạn',
-    ).toHaveCount(6);
-    for (const name of ['Xuất Excel', 'Thêm phần mềm', 'Loại', 'Trạng thái', 'Nhà cung cấp', 'Kỳ hạn']) {
+      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · ô lọc Loại · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc',
+    ).toHaveCount(7);
+    for (const name of [
+      'Xuất Excel',
+      'Thêm phần mềm',
+      'Loại',
+      'Trạng thái',
+      'Nhà cung cấp',
+      'Kỳ hạn',
+      'Xóa bộ lọc',
+    ]) {
       await expect(
         main.getByRole('button', { name, exact: true }),
         `Đầu phòng Phần mềm phải có đúng một nút "${name}"`,
@@ -1184,8 +1193,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     expect(
       await rowActionNames(page, ruleName),
-      'Menu của một dòng luật: Tạm ngưng · Xem trước thư · Gửi thử cho tôi · Gửi thử · Xóa (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
-    ).toEqual(['Tạm ngưng', 'Xem trước thư', 'Gửi thử cho tôi', 'Gửi thử', 'Xóa']);
+      /* "Tạm ngưng" là việc `warn` (lấy đi nhưng đảo được) nên đứng thành nhóm riêng giữa việc
+         thường và "Xóa" — RowActions xếp theo nhóm, không theo thứ tự khai báo. */
+      'Menu của một dòng luật: Xem trước thư · Gửi thử cho tôi · Gửi thử · Tạm ngưng · Xóa (việc cần nghĩ xếp sau, nguy hiểm cuối); Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Xem trước thư', 'Gửi thử cho tôi', 'Gửi thử', 'Tạm ngưng', 'Xóa']);
     await expect(page.getByRole('button', { name: `Sửa ${ruleName}` })).toBeVisible();
 
     /*
@@ -1296,9 +1307,19 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     );
     await expect(
       add.getByRole('button'),
-      'Hộp thêm luật (hằng tháng) có đúng 6 nút ngoài gợi ý: ✕ · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
-    ).toHaveCount(6 + (await suggestions.count()));
-    for (const name of ['Đóng hộp thoại', 'Tần suất', 'Ngày trong tháng', 'Lúc', 'Hủy', 'Lưu']) {
+      'Hộp thêm luật (hằng tháng) có đúng 8 nút ngoài gợi ý: ✕ · (i) Theo dõi loại · (i) Người nhận · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
+    ).toHaveCount(8 + (await suggestions.count()));
+    // Hai nút (i) mang lời dặn dài khỏi dưới ô (Q-19).
+    for (const name of [
+      'Đóng hộp thoại',
+      'Giải thích: Theo dõi loại',
+      'Giải thích: Người nhận',
+      'Tần suất',
+      'Ngày trong tháng',
+      'Lúc',
+      'Hủy',
+      'Lưu',
+    ]) {
       await expect(add.getByRole('button', { name, exact: true })).toHaveCount(1);
     }
 
