@@ -773,7 +773,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(page.getByText('Chưa có luật NAT nào')).toBeVisible();
     await expect(
       page.getByRole('main').getByRole('button'),
-      'đầu trang hai nút + ba ô lọc (site · router · giao thức) + ba chip trạng thái + chip port nhạy cảm + ô sắp xếp; nút nào khác mọc ra ở đây là thứ không ai khai',
+      'đầu trang hai nút + ba ô lọc (site · router · giao thức) + ba chip trạng thái + chip port nhạy cảm + ô sắp xếp + nút "Thêm luật NAT" của câu rỗng (Q-19); nút nào khác mọc ra ở đây là thứ không ai khai',
     ).toHaveText([
       'Xuất Excel',
       'Thêm luật NAT',
@@ -785,6 +785,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       /^Đã gỡ \d+$/,
       'Chỉ cổng nhạy cảm',
       'Sắp theo cổng ngoài',
+      'Thêm luật NAT',
     ]);
     // Sổ mặc định chỉ bày rule còn hiệu lực: rule đã gỡ phải bật chip mới thấy.
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
@@ -919,7 +920,17 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       form,
       'button',
-      ['Đóng hộp thoại', 'Thêm', 'Hủy', 'Lưu'],
+      /* Ba nút (i) "Giải thích: …" mang lời dặn dài khỏi dưới ô (Q-19) — mất một cái là lời
+         dặn đó biến khỏi form. */
+      [
+        'Đóng hộp thoại',
+        'Giải thích: Cổng ngoài',
+        'Thêm',
+        'Giải thích: Máy đích (được NAT)',
+        'Giải thích: Ghi chú',
+        'Hủy',
+        'Lưu',
+      ],
       'Hộp "Thêm luật NAT"',
     );
     await expectHandles(form, 'radio', ['TCP', 'UDP', 'TCP + UDP'], 'Hộp "Thêm luật NAT"');
