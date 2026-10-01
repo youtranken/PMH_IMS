@@ -149,6 +149,20 @@ describe('AppShell — topbar', () => {
 });
 
 
+describe('AppShell — thương hiệu ở sidebar (Q-19)', () => {
+  it('biểu tượng PMH (trang trí) đứng cạnh chữ "IMS"; không còn ô chữ IMS', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    const { container } = renderShell('/');
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    const brand = nav.querySelector<HTMLElement>('.brand')!;
+    expect(brand).toHaveTextContent(/^IMS$/);
+    const emblem = brand.querySelector('img')!;
+    expect(emblem.getAttribute('src')).toMatch(/pmh-emblem\.png$/);
+    expect(emblem).toHaveAttribute('alt', '');
+    expect(container.querySelector('.brand-mark')).toBeNull();
+  });
+});
+
 describe('AppShell — menu gọn (Q-18)', () => {
   const nav = () => screen.getByRole('navigation', { name: 'Điều hướng chính' });
   const systemToggle = () => within(nav()).getByRole('button', { name: 'Hệ thống' });
