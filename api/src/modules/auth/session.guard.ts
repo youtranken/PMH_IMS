@@ -144,8 +144,9 @@ export class SessionGuard implements CanActivate {
   ): Promise<void> {
     const minutes = await this.config.getNumber('authTotpChallengeMinutes');
     if (!isTotpChallengeExpired(session, user.totpEnrolledAt !== null, minutes, new Date())) return;
+    // Chỉ lượt thật sự thu hồi mới ghi nhật ký — request song song vẫn nhận 401 như nhau.
     await this.db.transaction(async (tx) => {
-      await this.sessions.revokeWithin(tx, session.id, 'totp-challenge-expired');
+      if (!(await this.sessions.revokeWithin(tx, session.id, 'totp-challenge-expired'))) return;
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.totp.challenge_expired',
@@ -171,7 +172,7 @@ export class SessionGuard implements CanActivate {
     user: { email: string; tempPasswordExpiresAt: Date | null },
   ): Promise<never> {
     await this.db.transaction(async (tx) => {
-      await this.sessions.revokeWithin(tx, sessionId, 'temp-password-expired');
+      if (!(await this.sessions.revokeWithin(tx, sessionId, 'temp-password-expired'))) return;
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.temp_password.expired',

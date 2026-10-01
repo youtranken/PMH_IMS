@@ -23,7 +23,7 @@ import { SystemConfigService } from '../src/modules/config-sys/system-config.ser
 import { OutboxService } from '../src/modules/outbox/outbox.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { UsersService } from '../src/modules/users/users.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, waitForLock, type ScratchDb } from './db';
 
 /**
  * Q-20 — mật khẩu tạm (tạo tài khoản, SA đặt lại) hết hạn sau `auth.temp_password_hours` giờ.
@@ -134,6 +134,25 @@ describe('Q-20 · mật khẩu tạm có hạn', () => {
   async function count(sql: string, params: unknown[]): Promise<number> {
     const { rows } = await scratch.pool.query<{ n: string }>(sql, params);
     return Number(rows[0].n);
+  }
+
+  /**
+   * Hai request song song cùng mang phiên đã quá hạn: cả hai đọc phiên lúc nó còn sống, rồi cùng
+   * vào nhánh thu hồi. Chỉ lượt THẬT SỰ thu hồi được ghi nhật ký. Dàn cảnh tất định: một kết nối
+   * giữ khoá hàng phiên, đợi đủ hai lượt đứng chờ khoá, rồi mới nhả.
+   */
+  async function raceTwo(sessionId: string, run: () => Promise<unknown>) {
+    const holder = await scratch.pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT 1 FROM sessions WHERE id = $1 FOR UPDATE', [sessionId]);
+      const both = Promise.allSettled([run(), run()]);
+      await waitForLock(scratch.pool, 10_000, 2);
+      await holder.query('COMMIT');
+      return await both;
+    } finally {
+      holder.release();
+    }
   }
 
   function context(handler: 'changePassword' | 'me', token: string): ExecutionContext {
@@ -282,6 +301,27 @@ describe('Q-20 · mật khẩu tạm có hạn', () => {
       ).toBe(1);
       // Gọi lại: phiên đã chết → 401, không ghi thêm nhật ký.
       await expect(guard.canActivate(context('me', token))).rejects.toMatchObject({ status: 401 });
+      expect(
+        await count(
+          `SELECT count(*) AS n FROM audit_log WHERE action = 'auth.temp_password.expired' AND object_id = $1`,
+          [r.session.id],
+        ),
+      ).toBe(1);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'hai request song song khi mật khẩu tạm vừa hết hạn → cả hai 401, chỉ MỘT dòng nhật ký',
+    async () => {
+      const u = await newAccount();
+      const r = await auth.login(u.email, u.temp, CTX);
+      if (r.status !== 'authenticated') throw new Error(`không mong ${r.status}`);
+      await moveExpiry(u.id, -1);
+      const results = await raceTwo(r.session.id, () =>
+        guard.canActivate(context('changePassword', r.session.token)),
+      );
+      expect(results.map((x) => x.status)).toEqual(['rejected', 'rejected']);
       expect(
         await count(
           `SELECT count(*) AS n FROM audit_log WHERE action = 'auth.temp_password.expired' AND object_id = $1`,

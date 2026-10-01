@@ -9,7 +9,7 @@ import { SessionService } from '../src/modules/auth/session.service';
 import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { UsersService } from '../src/modules/users/users.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, waitForLock, type ScratchDb } from './db';
 
 /**
  * Q-20 — phiên chờ NHẬP MÃ 2 lớp sống tối đa `auth.totp_challenge_minutes` phút (seed 5) kể từ
@@ -103,6 +103,25 @@ describe('Q-20 · phiên chờ mã 2 lớp có hạn', () => {
     return Number(rows[0].n);
   }
 
+  /**
+   * Hai request song song cùng mang phiên đã quá hạn: cả hai đọc phiên lúc nó còn sống, rồi cùng
+   * vào nhánh thu hồi. Chỉ lượt THẬT SỰ thu hồi được ghi nhật ký. Dàn cảnh tất định: một kết nối
+   * giữ khoá hàng phiên, đợi đủ hai lượt đứng chờ khoá, rồi mới nhả.
+   */
+  async function raceTwo(sessionId: string, run: () => Promise<unknown>) {
+    const holder = await scratch.pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT 1 FROM sessions WHERE id = $1 FOR UPDATE', [sessionId]);
+      const both = Promise.allSettled([run(), run()]);
+      await waitForLock(scratch.pool, 10_000, 2);
+      await holder.query('COMMIT');
+      return await both;
+    } finally {
+      holder.release();
+    }
+  }
+
   it('seed mặc định là 5 phút', async () => {
     const { rows } = await scratch.pool.query<{ value: unknown }>(
       `SELECT value FROM system_config WHERE key = 'auth.totp_challenge_minutes'`,
@@ -129,6 +148,13 @@ describe('Q-20 · phiên chờ mã 2 lớp có hạn', () => {
 
     // Gọi lại: phiên đã thu hồi → SESSION_REVOKED, không ghi thêm nhật ký.
     await expect(guard.canActivate(meContext(s.token))).rejects.toMatchObject({ status: 401 });
+    expect(await auditCount(s.id)).toBe(1);
+  });
+
+  it('hai request song song trên phiên chờ mã quá hạn → cả hai 401, chỉ MỘT dòng nhật ký', async () => {
+    const s = await pendingSessionAged(enrolledId, 6);
+    const results = await raceTwo(s.id, () => guard.canActivate(meContext(s.token)));
+    expect(results.map((r) => r.status)).toEqual(['rejected', 'rejected']);
     expect(await auditCount(s.id)).toBe(1);
   });
 
