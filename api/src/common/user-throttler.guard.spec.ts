@@ -1,7 +1,7 @@
-import type { ExecutionContext } from '@nestjs/common';
+import { HttpException, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
-import { ThrottlerException, ThrottlerModule, ThrottlerStorageService } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerStorageService } from '@nestjs/throttler';
 import { ConfigThrottle, THROTTLE_LIMITS, type ThrottleLimitSource } from './config-throttle';
 import { UserThrottlerGuard } from './user-throttler.guard';
 
@@ -50,7 +50,7 @@ async function passes(guard: UserThrottlerGuard, handler: 'guarded' | 'plain', e
   try {
     return await guard.canActivate(contextFor(handler, email));
   } catch (error) {
-    if (error instanceof ThrottlerException) return false;
+    if (error instanceof HttpException && error.getStatus() === 429) return false;
     throw error;
   }
 }
@@ -111,5 +111,28 @@ describe('UserThrottlerGuard — trần theo phút lấy từ system_config', ()
     await guard.onModuleInit();
     expect(await passes(guard, 'guarded', 'f@pmh.com.vn')).toBe(true);
     expect(await passes(guard, 'guarded', 'f@pmh.com.vn')).toBe(false);
+  });
+
+  /*
+   * Câu mặc định của thư viện là "ThrottlerException: Too Many Requests" — tiếng Anh thô lọt lên
+   * toast. Body phải mang mã riêng + câu tiếng Việt + số giây để web nói được "thử lại sau N giây".
+   */
+  it('429 mang mã RATE_LIMITED, câu tiếng Việt và số giây chờ', async () => {
+    const guard = await guardWith({ value: 1 }, []);
+    await passes(guard, 'guarded', 'g@pmh.com.vn');
+    let caught: unknown;
+    try {
+      await guard.canActivate(contextFor('guarded', 'g@pmh.com.vn'));
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(HttpException);
+    const http = caught as HttpException;
+    expect(http.getStatus()).toBe(429);
+    const body = http.getResponse() as { code: string; message: string; retryAfter: number };
+    expect(body.code).toBe('RATE_LIMITED');
+    expect(body.retryAfter).toBeGreaterThan(0);
+    expect(body.retryAfter).toBeLessThanOrEqual(60);
+    expect(body.message).toBe(`Thao tác quá nhanh, thử lại sau ${body.retryAfter} giây.`);
   });
 });
