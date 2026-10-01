@@ -104,6 +104,23 @@ describe('toast nổi trên hộp thoại', () => {
     expect(declValue(body, 'z-index')).toBe('var(--z-toast)');
     expect(declValue(body, 'pointer-events')).toBe('auto');
   });
+
+  /*
+   * Toast ở góc dưới phải nằm đúng chỗ nút Lưu của chân hộp thoại: nổi trên hộp mà vẫn ở đáy thì
+   * che nút, người dùng bấm Lưu không ăn (E2E nat.spec "thêm router mới ngay trong hộp").
+   * Có hộp mở thì toast lên mép trên, cả màn rộng lẫn màn hẹp.
+   */
+  it('có hộp thoại mở thì toast lên mép trên, không đè chân hộp', () => {
+    for (const role of ['dialog', 'alertdialog']) {
+      const sel = `body:has([role='${role}']) .toast-stack`;
+      for (const media of [null, '(max-width: 480px)']) {
+        const r = rule('shared-kit.css', sel, media);
+        expect(r, `thiếu luật ${sel} @media ${media}`).toBeDefined();
+        expect(declValue(r!.body, 'bottom')).toBe('auto');
+        expect(declValue(r!.body, 'top')).toBeDefined();
+      }
+    }
+  });
 });
 
 // --- Độ ưu tiên: luật chung không được đè luật của component ------------------------------------

@@ -15,6 +15,12 @@
   gap: var(--space-4);
   max-width: min(92vw, 420px);
 }
+/* Đáy phải là chỗ của nút Lưu ở chân hộp thoại: toast nổi trên hộp mà vẫn ở đáy thì che nút. */
+body:has([role='dialog']) .toast-stack,
+body:has([role='alertdialog']) .toast-stack {
+  top: var(--space-9);
+  bottom: auto;
+}
 .toast {
   display: flex;
   align-items: center;
@@ -1624,6 +1630,11 @@ table.access-grid thead tr:last-child th {
   /* Màn có thanh quyết định dính đáy (phiếu duyệt): toast nổi LÊN TRÊN thanh, không đè nút. */
   body:has(.sticky-action-bar) .toast-stack {
     bottom: calc(var(--space-5) + 7rem + env(safe-area-inset-bottom));
+  }
+  body:has([role='dialog']) .toast-stack,
+  body:has([role='alertdialog']) .toast-stack {
+    top: calc(var(--space-5) + env(safe-area-inset-top));
+    bottom: auto;
   }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
