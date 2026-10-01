@@ -56,6 +56,11 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+/* Nút gợi ý một cú bấm ngay dưới ô ("Dùng 172.16.110.1"): cỡ theo chữ, không kéo hết bề ngang
+   ô như con của cột flex mặc định — to bằng ô nhập là trông như một ô thứ hai. */
+.field > .field-suggest {
+  align-self: flex-start;
+}
 
 /* --- Modal ---------------------------------------------------------------- */
 .modal-backdrop {

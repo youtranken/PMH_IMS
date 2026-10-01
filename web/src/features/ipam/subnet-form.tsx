@@ -218,27 +218,32 @@ export function SubnetForm({
           htmlFor="subnet-gateway"
           error={check.error('gateway')}
         >
+          {/* Field chỉ tự nối id/mô tả/lỗi khi có ĐÚNG MỘT đứa con — ở đây có thêm nút gợi ý
+              (phải đứng ngay dưới ô Gateway, không trôi sang cột VLAN), nên nối tay theo đúng
+              quy ước id của Field. */}
           <input
             id="subnet-gateway"
             className="inp mono"
             placeholder={t('ipam.phGateway')}
             value={gateway}
+            aria-describedby={
+              check.error('gateway') ? 'subnet-gateway-error subnet-gateway-hint' : 'subnet-gateway-hint'
+            }
+            aria-invalid={check.error('gateway') ? true : undefined}
             onChange={(e) => setGateway(e.target.value)}
           />
-        </Field>
-        {/* Gateway gần như luôn là host đầu của dải — gợi ý một cú bấm, không tự điền: dải
-            không có gateway là chuyện có thật và ô trống phải là lựa chọn người khai tự làm. */}
-        {typed && !gatewayText && typed.hosts > 1 ? (
-          <p className="span-2">
+          {/* Gateway gần như luôn là host đầu của dải — gợi ý một cú bấm, không tự điền: dải
+              không có gateway là chuyện có thật và ô trống phải là lựa chọn người khai tự làm. */}
+          {typed && !gatewayText && typed.hosts > 1 ? (
             <button
               type="button"
-              className="btn sm ghost"
+              className="btn sm ghost field-suggest"
               onClick={() => setGateway(typed.first)}
             >
               {t('ipam.gatewayUse', { gateway: typed.first })}
             </button>
-          </p>
-        ) : null}
+          ) : null}
+        </Field>
 
         <Field label={t('ipam.site')} hint={t('ipam.siteHint')}>
           <Select
