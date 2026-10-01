@@ -1,4 +1,4 @@
-import type { ValidationError } from '@nestjs/common';
+import { BadRequestException, type ValidationError } from '@nestjs/common';
 
 /**
  * DỊCH CÂU LỖI NHẬP LIỆU SANG TIẾNG VIỆT — MỘT CHỖ, CHO MỌI DTO.
@@ -243,6 +243,29 @@ export function vietnameseFor(
        */
       return `${label} không hợp lệ.`;
   }
+}
+
+/** Tên ràng buộc của `@NoSecretText` — khai ở đây để `validationException` nhận ra nó. */
+export const NO_SECRET_TEXT_CONSTRAINT = 'noSecretText';
+
+function hasConstraint(errors: ValidationError[], key: string): boolean {
+  return errors.some(
+    (err) => key in (err.constraints ?? {}) || hasConstraint(err.children ?? [], key),
+  );
+}
+
+/**
+ * `exceptionFactory` của `ValidationPipe`. Giữ hình dạng cũ (`string[]` → `BAD_REQUEST`) cho
+ * mọi lỗi, TRỪ khi có ô chữ tự do trông như mật khẩu: lúc đó body mang mã
+ * `NOTE_LOOKS_LIKE_SECRET` — cùng mã với ghi chú két — để web và E2E phân biệt được "bị chặn
+ * vì lộ mật khẩu" với "nhập sai định dạng" mà không phải dò câu chữ.
+ */
+export function validationException(errors: ValidationError[]): BadRequestException {
+  const messages = messagesOf(errors);
+  if (hasConstraint(errors, NO_SECRET_TEXT_CONSTRAINT)) {
+    return new BadRequestException({ code: 'NOTE_LOOKS_LIKE_SECRET', message: messages.join('; ') });
+  }
+  return new BadRequestException(messages);
 }
 
 /** Rút mọi câu lỗi của một cây `ValidationError` ra thành danh sách câu tiếng Việt. */

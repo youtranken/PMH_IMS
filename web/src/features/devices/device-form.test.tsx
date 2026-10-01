@@ -73,6 +73,19 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
+  it('ghi chú có chuỗi trông như mật khẩu: báo tại ô, không gửi (Q-19)', async () => {
+    const calls = mockFetch();
+    renderForm(null);
+    const user = userEvent.setup();
+    const note = screen.getByRole('textbox', { name: 'Ghi chú' });
+    await user.type(note, 'mk wifi Pmh@Guest2026');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    await waitFor(() => expect(note).toHaveAttribute('aria-invalid', 'true'));
+    expect(note).toHaveAccessibleDescription(expect.stringContaining('trông như mật khẩu'));
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
   it('thêm mới: loại và site đã vô hiệu không có trong ô chọn', async () => {
     const calls = mockFetch();
     renderForm(null);

@@ -26,6 +26,7 @@ import {
   Validate,
   ValidateIf,
 } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { RealDateOrEmpty } from '../../common/real-date';
 import { BadRequestException } from '@nestjs/common';
 import { Audited } from '../audit/audited.decorator';
@@ -52,7 +53,7 @@ class DeviceIdsQueryDto {
   @IsOptional() @IsString() @Length(0, 4000) deviceIds?: string;
 }
 
-class SubnetBodyDto {
+export class SubnetBodyDto {
   @IsOptional() @IsString() @Length(1, 120) name?: string;
   @IsOptional() @IsString() @Length(1, 43) cidr?: string;
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() siteId?: string;
@@ -77,10 +78,10 @@ class SubnetBodyDto {
    */
   @IsOptional() @IsString() @Length(0, 15) gateway?: string;
 
-  @IsOptional() @IsString() @Length(0, 500) description?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() description?: string;
 }
 
-class IpBodyDto {
+export class IpBodyDto {
   @IsOptional() @IsUUID(undefined, { message: 'Mã dải không hợp lệ.' }) subnetId?: string;
   @IsOptional() @IsString() @Length(1, 15) address?: string;
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() deviceId?: string;
@@ -89,17 +90,17 @@ class IpBodyDto {
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày cấp phải là ngày có thật, dạng YYYY-MM-DD.' })
   assignedAt?: string;
 
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 
   /** Chỉ khi tạo: lý do cấp, ghi vào dòng lịch sử đầu tiên. */
-  @IsOptional() @IsString() @Length(0, 500) reason?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() reason?: string;
 }
 
-class TransitionDto {
+export class TransitionDto {
   @IsIn([...IP_LIFECYCLE_STATUSES], { message: 'Trạng thái đích không hợp lệ.' })
   to!: IpStatus;
 
-  @IsOptional() @IsString() @Length(0, 500) reason?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() reason?: string;
 
   // Cấp / cấp lại thường đi kèm chủ mới — nhận luôn để lịch sử ghi thành MỘT dòng.
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() deviceId?: string;
@@ -108,15 +109,15 @@ class TransitionDto {
   // Hộp "Cấp IP" dùng chung cho ô trống và hồ sơ Trống gửi cùng một bộ trường.
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày cấp phải là ngày có thật, dạng YYYY-MM-DD.' })
   assignedAt?: string;
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 }
 
 /** Xóa hồ sơ IP nhập nhầm — LUÔN phải có lý do, vì vết duy nhất còn lại nằm trong nhật ký. */
-class VoidDto {
-  @IsString() @Length(3, 500) reason!: string;
+export class VoidDto {
+  @IsString() @Length(3, 500) @NoSecretText() reason!: string;
 }
 
-class NatBodyDto {
+export class NatBodyDto {
   /*
    * `@ValidateIf` cho chuỗi RỖNG đi qua cửa DTO — giống hệt `IpBodyDto` và `TransitionDto`
    * ngay trên, và vì đúng một lý do.
@@ -161,9 +162,9 @@ class NatBodyDto {
   internalIp?: string;
   @IsOptional() @Min(1) @Max(65535) @IsInt() internalPort?: number;
   @IsOptional() @IsString() @Length(1, 160) usedBy?: string;
-  @IsOptional() @IsString() @Length(1, 500) reason?: string;
+  @IsOptional() @IsString() @Length(1, 500) @NoSecretText() reason?: string;
   @IsOptional() @IsBoolean() enabled?: boolean;
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 }
 
 /**

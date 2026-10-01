@@ -21,6 +21,7 @@ import { useMediaQuery } from '@/ui/use-media-query';
 import { NARROW_QUERY } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
 
@@ -844,6 +845,7 @@ function CellDialog({
   const [tier, setTier] = useState<Tier>(rule?.tier ?? 'needs_approval');
   const [note, setNote] = useState(rule?.note ?? '');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ note: secretTextRule(t, note) });
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -889,11 +891,14 @@ function CellDialog({
     >
       <form
         id="access-cell-form"
+        ref={check.formRef}
+        noValidate
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           void (async () => {
             /*
              * Chỉ HỎI LẠI khi nâng lên "Xem thẳng" — tầng mở cửa rộng nhất (xem không cần ai
@@ -938,7 +943,7 @@ function CellDialog({
             ]}
           />
         </Field>
-        <Field label={t('access.note')} htmlFor="access-cell-note">
+        <Field label={t('access.note')} htmlFor="access-cell-note" error={check.error('note')}>
           <input
             id="access-cell-note"
             className="inp"
@@ -997,6 +1002,7 @@ function GrantToScopeDialog({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const check = useFormErrors({ note: secretTextRule(t, note) });
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1046,11 +1052,14 @@ function GrantToScopeDialog({
     >
       <form
         id="grant-scope-form"
+        ref={check.formRef}
+        noValidate
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           if (picked.length === 0) {
             setError(t('access.pickPeople'));
             return;
@@ -1159,7 +1168,7 @@ function GrantToScopeDialog({
           />
         </Field>
 
-        <Field label={t('access.note')} htmlFor="grant-scope-note">
+        <Field label={t('access.note')} htmlFor="grant-scope-note" error={check.error('note')}>
           <input
             id="grant-scope-note"
             className="inp"
@@ -1213,6 +1222,7 @@ function MultiGrantDialog({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const check = useFormErrors({ note: secretTextRule(t, note) });
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1254,12 +1264,14 @@ function MultiGrantDialog({
     >
       <form
         id="multi-grant-form"
+        ref={check.formRef}
         className="form-grid"
         data-columns={1}
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           if (picked.length === 0) {
             setError(t('access.pickScopes'));
             return;
@@ -1344,7 +1356,7 @@ function MultiGrantDialog({
           />
         </Field>
 
-        <Field label={t('access.note')} htmlFor="multi-grant-note">
+        <Field label={t('access.note')} htmlFor="multi-grant-note" error={check.error('note')}>
           <input
             id="multi-grant-note"
             className="inp"

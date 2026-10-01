@@ -20,7 +20,7 @@ import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
-import { textRule, useFormErrors } from "@/ui/use-form-errors";
+import { secretTextRule, textRule, useFormErrors } from "@/ui/use-form-errors";
 import { FilterBar } from "@/ui/filter-bar";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
@@ -810,6 +810,7 @@ export function IpForm({
   const [error, setError] = useState<string | null>(null);
   const check = useFormErrors({
     owner: record.status === "assigned" ? ownerRule(t, device.deviceId, usedBy) : null,
+    note: secretTextRule(t, note),
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
@@ -906,7 +907,7 @@ export function IpForm({
           />
         </Field>
 
-        <Field label={t("ipam.note")} hint={t("ipam.noteHint")} htmlFor="ip-note" span={2}>
+        <Field label={t("ipam.note")} hint={t("ipam.noteHint")} htmlFor="ip-note" span={2} error={check.error("note")}>
           <textarea
             id="ip-note"
             className="inp"
@@ -951,6 +952,7 @@ function TransitionDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: secretTextRule(t, reason) });
 
   const move = useApiMutation<Record<string, unknown>, unknown>(
     `/api/v1/ipam/addresses/${record.id}/transition`,
@@ -1002,11 +1004,14 @@ function TransitionDialog({
     >
       <form
         id="transition-form"
+        ref={check.formRef}
+        noValidate
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           move.mutate(
             { to, reason: reason.trim() },
             {
@@ -1056,6 +1061,7 @@ function TransitionDialog({
           label={t("ipam.reason")}
           hint={t("ipam.reasonHint")}
           htmlFor="tr-reason"
+          error={check.error("reason")}
         >
           <input
             id="tr-reason"
@@ -1139,7 +1145,7 @@ function VoidAddressDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) });
+  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,
     { method: "DELETE", csrfToken, refreshMe: false },

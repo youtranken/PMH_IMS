@@ -10,7 +10,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import {
   codePrefix,
   KIND_KEY,
@@ -133,6 +133,7 @@ export function SoftwareForm({
         : seats.reason === 'belowUsed'
           ? t('software.seatBelowUsed', { used: row?.seatUsed ?? 0, total: seats.value })
           : null,
+    note: secretTextRule(t, form.note),
   });
 
   return (
@@ -408,6 +409,7 @@ export function SoftwareForm({
             hint={t('software.noteHint')}
             htmlFor="sw-note"
             span={hasSeats || supportsWebsites(form.kind) ? 2 : 3}
+            error={check.error('note')}
           >
             <textarea
               id="sw-note"

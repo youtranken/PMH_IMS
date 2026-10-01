@@ -11,7 +11,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -162,6 +162,7 @@ export function DeviceForm({
     code: !form.code.trim() && t('formErrors.required'),
     name: !form.name.trim() && t('formErrors.required'),
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
+    note: secretTextRule(t, form.note),
   });
 
   // Mốc tính "+n năm": bảo hành từ, không có thì ngày mua.
@@ -444,7 +445,13 @@ export function DeviceForm({
               needBaseHint={t('devices.warrantyQuickNeedBase')}
             />
           </Field>
-          <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={3}>
+          <Field
+            label={t('devices.note')}
+            hint={t('devices.noteHint')}
+            htmlFor="device-note"
+            span={3}
+            error={check.error('note')}
+          >
             <textarea
               id="device-note"
               className="inp"

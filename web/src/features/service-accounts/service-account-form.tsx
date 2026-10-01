@@ -14,7 +14,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
@@ -123,6 +123,7 @@ export function ServiceAccountForm({
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
     allowedIps:
       badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
+    note: secretTextRule(t, form.note),
   });
 
   return (
@@ -456,7 +457,7 @@ export function ServiceAccountForm({
             label={t('serviceAccounts.note')}
             hint={t('serviceAccounts.noteHint')}
             htmlFor="sa-note"
-            error={noteLeak || null}
+            error={noteLeak || check.error('note')}
           >
             <textarea
               id="sa-note"

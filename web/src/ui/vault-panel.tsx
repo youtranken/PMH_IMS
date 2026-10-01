@@ -21,7 +21,7 @@ import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
 import { hourSteps } from '@/ui/grant-hours';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { PATHS } from '@/lib/routes';
 import { Link } from 'react-router-dom';
@@ -1207,7 +1207,9 @@ function BreakGlassDialog({
   /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
   const askedHours = Number(hours.trim());
   const check = useFormErrors({
-    reason: reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired'),
+    reason:
+      (reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired')) ||
+      secretTextRule(t, reason),
     hours: (!Number.isInteger(askedHours) || askedHours <= 0) && t('vault.requestHoursInvalid'),
   });
 

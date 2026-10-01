@@ -1,5 +1,5 @@
-import { BadRequestException, ValidationPipe, type INestApplication } from '@nestjs/common';
-import { messagesOf } from './common/validation-messages';
+import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import { validationException } from './common/validation-messages';
 import type { Express, NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -68,9 +68,10 @@ export function setupApp(app: INestApplication): void {
        *
        * Giữ NGUYÊN hình dạng lỗi cũ (`BadRequestException(string[])`) để
        * `GlobalExceptionFilter` nối bằng '; ' và gắn `code: 'BAD_REQUEST'` y như trước —
-       * đây là bản vá câu chữ, không phải dịp đổi hợp đồng API.
+       * đây là bản vá câu chữ, không phải dịp đổi hợp đồng API. Ngoại lệ duy nhất: ô chữ tự
+       * do trông như mật khẩu (`@NoSecretText`) mang mã `NOTE_LOOKS_LIKE_SECRET`.
        */
-      exceptionFactory: (errors) => new BadRequestException(messagesOf(errors)),
+      exceptionFactory: validationException,
     }),
   );
 

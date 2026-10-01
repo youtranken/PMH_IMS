@@ -75,6 +75,10 @@ export default {
     summary: 'Còn {{count}} ô cần sửa trước khi lưu.',
     minLength: 'Cần ít nhất {{min}} ký tự.',
     email: 'Email chưa đúng dạng (vd ten@pmh.com.vn).',
+    // Cùng luật server dùng cho NOTE_LOOKS_LIKE_SECRET ở ô chữ tự do ngoài két (Q-19).
+    secretText:
+      'Có một chuỗi trông như mật khẩu. Ô này không được mã hóa — cất mật khẩu vào két của hồ sơ; ' +
+      'nếu đó là mã model hay tên gói, tách bằng dấu cách.',
     /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
     retiredOption: '(ngừng dùng)',
   },

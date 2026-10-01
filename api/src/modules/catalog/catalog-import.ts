@@ -13,6 +13,8 @@ import {
   type ParsedRow,
   type ParsedSheets,
 } from '../../common/import-plan';
+import { secretTextMessage } from '../../common/no-secret-text';
+import { textLooksLikeSecret } from '../../common/note-secret';
 import { normalizePhone } from '../../common/phone';
 import {
   IMPORTABLE_ENTITIES,
@@ -130,6 +132,8 @@ interface FieldSpec {
   label: string;
   required?: boolean;
   kind?: 'text' | 'boolean' | 'integer' | 'phone';
+  /** Ô chữ tự do — cùng luật `@NoSecretText` với form (Q-19), file không là cửa sau. */
+  noSecret?: boolean;
 }
 
 const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
@@ -140,6 +144,7 @@ const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
       key: 'address',
       label: 'Địa chỉ',
       aliases: ['địa chỉ / ghi chú', 'địa chỉ', 'dia chi', 'ghi chú'],
+      noSecret: true,
     },
   ],
   cabinet: [
@@ -154,6 +159,7 @@ const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
       key: 'description',
       label: 'Mô tả',
       aliases: ['mô tả / vị trí', 'mô tả', 'mo ta', 'vị trí'],
+      noSecret: true,
     },
     { key: 'uHeight', label: 'Số U', aliases: ['số u', 'so u', 'u'], kind: 'integer' },
   ],
@@ -170,7 +176,7 @@ const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
       aliases: ['có port map?', 'có port map', 'co port map', 'port map'],
       kind: 'boolean',
     },
-    { key: 'description', label: 'Mô tả', aliases: ['mô tả', 'mo ta'] },
+    { key: 'description', label: 'Mô tả', aliases: ['mô tả', 'mo ta'], noSecret: true },
   ],
   vendor: [
     {
@@ -307,6 +313,15 @@ function planRow(
       }
       values[field.key] = phone.value === '' ? null : phone.value;
       continue;
+    }
+    if (field.noSecret && textLooksLikeSecret(text)) {
+      // Câu lỗi không nhắc lại ô: bảng đối chiếu hiện ra màn hình.
+      return {
+        ...base,
+        action: 'error',
+        label: rawLabel(entity, row.cells),
+        message: secretTextMessage(`Cột "${field.label}"`),
+      };
     }
     values[field.key] = text === '' ? null : text;
   }

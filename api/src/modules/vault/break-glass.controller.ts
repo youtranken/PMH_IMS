@@ -12,6 +12,7 @@ import {
   Min,
   Validate,
 } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { RealDate } from '../../common/real-date';
 import { Audited } from '../audit/audited.decorator';
 import { parsePageQuery } from '../../common/pagination';
@@ -45,14 +46,14 @@ function logFilters(query: LogQueryDto) {
   return { state: query.state, requester: query.requester, from: query.from, to: query.to };
 }
 
-class RequestDto {
+export class RequestDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại chủ thể không hợp lệ.' })
   ownerType!: SecretOwnerType;
 
   @IsUUID(undefined, { message: 'Mã chủ thể không hợp lệ.' })
   ownerId!: string;
 
-  @IsString() @Length(5, 500) reason!: string;
+  @IsString() @Length(5, 500) @NoSecretText() reason!: string;
 
   /**
    * Trần thật nằm ở `breakglass.max_grant_hours` (AD-11) và service KẸP theo nó. Chặn 168 ở
@@ -61,9 +62,9 @@ class RequestDto {
   @Min(1) @Max(168) @IsInt() hours!: number;
 }
 
-class DecisionDto {
+export class DecisionDto {
   @IsOptional() @Min(1) @Max(168) @IsInt() hours?: number;
-  @IsOptional() @IsString() @Length(0, 500) note?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() note?: string;
 }
 
 class IdParamDto {
