@@ -126,7 +126,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await form.getByLabel('Tên thiết bị').fill('Switch của bài đi một vòng');
     await form.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row, 'Thiết bị vừa tạo phải xuất hiện ngay trên danh sách').toBeVisible();

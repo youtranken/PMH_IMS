@@ -54,7 +54,7 @@ function cloneState(source: DeviceRow): FormState {
   };
 }
 
-/** Sau "Ghi rồi thêm máy khác": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
+/** Sau "Lưu và nhân bản": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
 function nextState(saved: FormState): FormState {
   return { ...saved, code: '', serial: '', assignedTo: '', note: '' };
 }
@@ -101,7 +101,7 @@ export function DeviceForm({
   cloneFrom?: DeviceRow | null;
   csrfToken: string;
   onClose: () => void;
-  /** `keepOpen`: người dùng chọn "Ghi rồi thêm máy khác" — form đã tự làm trống, đừng đóng. */
+  /** `keepOpen`: người dùng chọn "Lưu và nhân bản" — form đã tự làm trống, đừng đóng. */
   onSaved: (result: DeviceWriteResult, options?: { keepOpen: boolean }) => void;
   /** Có thì toast "Đã thêm …" kèm nút "Mở hồ sơ" — máy mới thường nằm ở trang khác của bảng. */
   onOpenCreated?: (created: DeviceRow) => void;
@@ -244,7 +244,8 @@ export function DeviceForm({
             {t('common.cancel')}
           </button>
           {/* Khai cả lô máy: lưu xong form làm trống bốn ô riêng từng máy, giữ phần còn lại.
-              Tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
+              Nút chính vẫn là "Lưu"; E2E bấm nó phải ghi `exact: true` vì tên nút này cũng
+              bắt đầu bằng "Lưu". */}
           {device ? null : (
             <button
               type="button"

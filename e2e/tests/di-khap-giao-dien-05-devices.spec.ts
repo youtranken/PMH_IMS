@@ -660,7 +660,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+3 năm',
         'Chọn file để đính kèm',
         'Hủy',
-        'Ghi rồi thêm máy khác',
+        'Lưu và nhân bản',
         'Lưu',
       ]);
 
@@ -668,7 +668,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       .poll(() => controlName(page.getByTestId('dialog-footer').getByRole('button')), {
         message: 'Chân hộp đi theo đúng nếp toàn app: Hủy trước, nút ghi chính sau cùng',
       })
-      .toEqual(['Hủy', 'Ghi rồi thêm máy khác', 'Lưu']);
+      .toEqual(['Hủy', 'Lưu và nhân bản', 'Lưu']);
 
     /* Ô NGÀY mở ra một lịch thật, không phải một ô gõ chữ trá hình. */
     const purchaseDateField = dialog.getByRole('button', { name: 'Ngày mua' });
@@ -702,7 +702,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * `aria-describedby`, tiêu điểm về ô lỗi đầu tiên, và hộp phải còn nguyên (đóng im lặng là
      * nuốt mất mọi thứ người dùng vừa gõ). Loại thiết bị là `Select` (nút bấm) — ô dễ rơi nhất.
      */
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(dialog, 'Bấm Lưu khi form trống: hộp PHẢI còn đó').toBeVisible();
     await expect(
       dialog.getByText('Còn 3 ô cần sửa trước khi lưu.'),
@@ -716,7 +716,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     await codeField.fill(`TB-E2E-HOP-${stamp}`);
     await dialog.getByLabel('Tên thiết bị').fill('Máy chỉ để xem hộp thoại');
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(
       dialog.getByRole('button', { name: 'Loại', exact: true }),
@@ -844,14 +844,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     /*
      * BỘ NÚT CỦA CHẾ ĐỘ SỬA — đúng bằng bộ của chế độ thêm mới CỘNG hai thứ, BỚT một, không hơn:
      *   + "Trạng thái": máy đã tồn tại thì trạng thái mới là một quyết định thật.
-     *   - "Ghi rồi thêm máy khác": đang sửa một máy thì không có "máy tiếp theo".
+     *   - "Lưu và nhân bản": đang sửa một máy thì không có "máy tiếp theo".
      *   + (i) cạnh "Giấy tờ đính kèm": khu này GHI THẲNG, nút Hủy của hộp không gỡ được file đã tải —
      *     nói ra ở nút giải thích thay cho băng cảnh báo (Q-18).
      */
     await expect
       .poll(() => controlName(editDialog.getByRole('button')), {
         message:
-          'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Ghi rồi thêm máy khác"; khu giấy tờ ghi thẳng (chọn là tải, không có nút "Tải lên")',
+          'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Lưu và nhân bản"; khu giấy tờ ghi thẳng (chọn là tải, không có nút "Tải lên")',
       })
       .toEqual([
         'Đóng hộp thoại',
@@ -954,7 +954,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await form.getByLabel('Tên thiết bị').fill('Switch của bài kiểm kê phòng');
     await form.getByRole('button', { name: 'Loại', exact: true }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form, 'lưu xong thì hộp phải đóng').toHaveCount(0);
 
     await searchAndWaitForFilter(page, code);

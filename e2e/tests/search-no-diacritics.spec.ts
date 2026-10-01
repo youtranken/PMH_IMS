@@ -49,7 +49,7 @@ async function createDeviceWithDiacritics(page: Page, stamp: string): Promise<st
   await form.getByLabel('Tên thiết bị').fill('Máy trạm kế toán Đường mới');
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: 'PC', exact: true }).click();
-  await form.getByRole('button', { name: 'Lưu' }).click();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   return code;
 }
@@ -109,7 +109,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã').fill(siteCode);
     await form.getByLabel('Tên').fill('Trụ sở Hà Nội');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
     /*

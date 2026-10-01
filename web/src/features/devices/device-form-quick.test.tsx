@@ -85,13 +85,13 @@ describe('Form thiết bị — khai nhanh', () => {
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('');
   });
 
-  it('+2 năm tính từ Bảo hành từ; "Ghi rồi thêm máy khác" giữ phần chung, làm trống phần riêng', async () => {
+  it('+2 năm tính từ Bảo hành từ; "Lưu và nhân bản" giữ phần chung, làm trống phần riêng', async () => {
     const posts = mockFetch();
     const { onSaved } = render({ cloneFrom: SOURCE });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: '+2 năm' }));
     await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'LT-02');
-    await user.click(screen.getByRole('button', { name: 'Ghi rồi thêm máy khác' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(posts[0]).toMatchObject({ code: 'LT-02', warrantyEnd: '2027-03-15', status: 'in_use' });

@@ -39,7 +39,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
     await page.goto('/ip-addresses');
     await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
     const form = page.getByRole('dialog');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(form, 'Lưu hỏng thì hộp phải ở lại').toBeVisible();
     await expect(form.getByText('Còn 2 ô cần sửa trước khi lưu.')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
 
     // VLAN gõ chữ: báo ngay dưới ô, không gửi đi.
     await form.getByRole('textbox', { name: 'VLAN' }).fill('mười');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form.getByRole('textbox', { name: 'VLAN' })).toHaveAccessibleDescription(
       /VLAN phải là số nguyên từ 1 đến 4094\./,
     );
@@ -74,7 +74,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
     const posted = page.waitForRequest((r) => r.url().endsWith('/api/v1/software') && r.method() === 'POST', {
       timeout: 2_000,
     });
-    await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form.getByRole('textbox', { name: 'Số ghế' })).toHaveAccessibleDescription(
       /Số ghế là số nguyên từ 1 trở lên/,
     );

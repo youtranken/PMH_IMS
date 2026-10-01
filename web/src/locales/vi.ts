@@ -718,8 +718,9 @@ export default {
     ipMore: '{{ip}} +{{count}}',
     created: 'Đã thêm {{code}}.',
     openProfile: 'Mở hồ sơ',
-    // KHÔNG chứa chữ "Lưu": Playwright khớp tên nút theo chuỗi con, hai nút sẽ giành nhau.
-    saveAndNext: 'Ghi rồi thêm máy khác',
+    // Bắt đầu bằng "Lưu" (Q-20): Playwright khớp tên nút theo chuỗi con, nên mọi E2E bấm nút
+    // "Lưu" của form thêm thiết bị phải ghi `exact: true`, không thì hai nút giành nhau.
+    saveAndNext: 'Lưu và nhân bản',
     clone: 'Nhân bản',
     cloneOf: 'Nhân bản từ {{code}}',
     retireViaButton: 'Thanh lý: chọn "Thanh lý" trong menu ⋮ của máy.',

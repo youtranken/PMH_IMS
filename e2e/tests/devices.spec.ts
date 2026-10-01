@@ -34,7 +34,7 @@ async function seedLocation(page: Page, stamp: string) {
   const siteForm = page.getByRole('dialog');
   await siteForm.getByLabel('Mã').fill(siteCode);
   await siteForm.getByLabel('Tên').fill('Site thiết bị');
-  await siteForm.getByRole('button', { name: 'Lưu' }).click();
+  await siteForm.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Tủ mạng' }).click();
@@ -43,7 +43,7 @@ async function seedLocation(page: Page, stamp: string) {
   await cabinetForm.getByLabel('Mã').fill(cabinetCode);
   await cabinetForm.getByRole('button', { name: 'Thuộc site' }).click();
   await page.getByRole('option', { name: new RegExp(siteCode) }).click();
-  await cabinetForm.getByRole('button', { name: 'Lưu' }).click();
+  await cabinetForm.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(page.getByRole('row', { name: new RegExp(cabinetCode) })).toBeVisible();
 
   return { siteCode, cabinetCode };
@@ -64,7 +64,7 @@ async function fillDevice(
     await form.getByRole('button', { name: 'Site' }).click();
     await page.getByRole('option', { name: new RegExp(values.siteCode) }).click();
   }
-  await form.getByRole('button', { name: 'Lưu' }).click();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 }
 
 test.describe('Kho thiết bị', () => {
@@ -108,7 +108,7 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
     await form.getByLabel('Người sử dụng').fill('anh Nam');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
@@ -313,7 +313,7 @@ test.describe('Kho thiết bị', () => {
     await expect(form.getByLabel('Serial')).toBeVisible();
 
     await form.getByLabel('Người sử dụng').fill('anh Tuấn');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByRole('row', { name: new RegExp(code) }).getByText('anh Tuấn')).toBeVisible();
