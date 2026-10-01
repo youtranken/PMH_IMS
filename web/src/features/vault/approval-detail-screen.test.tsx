@@ -98,12 +98,15 @@ describe('Trang chi tiết phiếu break-glass', () => {
     const subject = await screen.findByRole('link', { name: ROW.subjectLabel });
     expect(subject).toHaveAttribute('href', '/devices/d1');
     expect(screen.getByText('Switch tầng 3 mất kết nối')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '4 giờ · theo xin' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    // Chọn MỘT số giờ: dải radio dùng chung (SegmentedRadio), không phải nút bật/tắt tự dựng.
+    const durations = screen.getByRole('radiogroup', { name: 'Thời hạn cấp' });
+    expect(within(durations).getByRole('radio', { name: '4 giờ · theo xin' })).toBeChecked();
     // Chỉ RÚT NGẮN được — không có nấc nào dài hơn số xin.
-    expect(screen.queryByRole('button', { name: '8 giờ' })).not.toBeInTheDocument();
+    expect(within(durations).queryByRole('radio', { name: '8 giờ' })).not.toBeInTheDocument();
+    // Đầu trang là DetailHeader dùng chung: breadcrumb quay về danh sách duyệt.
+    const crumbs = screen.getByRole('navigation', { name: 'breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'Duyệt mở két' })).toHaveAttribute('href', '/approvals');
+    expect(screen.getByRole('heading', { level: 1, name: 'Yêu cầu mở két' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Duyệt 4 giờ' })).toBeInTheDocument();
   });
 
@@ -111,7 +114,7 @@ describe('Trang chi tiết phiếu break-glass', () => {
     const calls = mockApi(ROW);
     renderDetail();
 
-    await userEvent.click(await screen.findByRole('button', { name: '2 giờ' }));
+    await userEvent.click(await screen.findByRole('radio', { name: '2 giờ' }));
     await userEvent.click(screen.getByRole('button', { name: 'Duyệt 2 giờ' }));
     expect(calls.some((c) => c.url.endsWith('/approve'))).toBe(false);
 

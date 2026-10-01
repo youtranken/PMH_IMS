@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -17,8 +17,10 @@ import {
   type BreakGlassRow,
 } from '@/ui/break-glass';
 import { useConfirm } from '@/ui/confirm-provider';
+import { DetailHeader } from '@/ui/detail-header';
 import { LoadError, Loading } from '@/ui/load-state';
-import { Field, PageHeader } from '@/ui/page-header';
+import { Field } from '@/ui/page-header';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
@@ -147,10 +149,13 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
 
   return (
     <div className="approval-detail">
-      <Link to={PATHS.approvals}>{t('approvals.backToList')}</Link>
-      <PageHeader
-        title={t('approvals.detailTitle')}
-        subtitle={
+      <DetailHeader
+        crumbs={[
+          { label: t(canDecide ? 'nav.approvals' : 'nav.approvalsMine'), to: PATHS.approvals },
+          { label: t('approvals.detailTitle') },
+        ]}
+        name={t('approvals.detailTitle')}
+        subline={
           /* Người trực cần biết phiếu đã chờ BAO LÂU; giờ tuyệt đối vẫn ở `title` và `dateTime`. */
           <time dateTime={row.createdAt} title={formatDateTime(row.createdAt)}>
             {sentAgo ? t(`approvals.sentAgo_${sentAgo.unit}`, { count: sentAgo.count }) : null}
@@ -191,21 +196,21 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       {decidable ? (
         <section className="card" aria-label={t('approvals.durationBlock')}>
           <p className="approval-detail-label">{t('approvals.durationBlock')}</p>
-          <div className="segmented" role="group" aria-label={t('approvals.durationBlock')}>
-            {choices.map((h) => (
-              <button
-                key={h}
-                type="button"
-                aria-pressed={h === granted}
-                onClick={() => {
-                  setHours(h);
-                  setArmed(false);
-                }}
-              >
-                {h === asked ? t('approvals.durationAsked', { hours: h }) : t('approvals.hours', { hours: h })}
-              </button>
-            ))}
-          </div>
+          <SegmentedRadio
+            label={t('approvals.durationBlock')}
+            value={String(granted)}
+            onChange={(next) => {
+              setHours(Number(next));
+              setArmed(false);
+            }}
+            options={choices.map((h) => ({
+              value: String(h),
+              label:
+                h === asked
+                  ? t('approvals.durationAsked', { hours: h })
+                  : t('approvals.hours', { hours: h }),
+            }))}
+          />
           {/* Chỉ để người duyệt hình dung — hạn thật do server đặt lúc duyệt (AD-6). */}
           <p className="muted">
             {t('approvals.endsAt', {

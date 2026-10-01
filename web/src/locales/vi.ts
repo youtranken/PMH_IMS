@@ -2555,7 +2555,6 @@ export default {
     secretCount: '{{count}} ngăn két',
     openDetail: 'Xem chi tiết',
     detailTitle: 'Yêu cầu mở két',
-    backToList: 'Về danh sách duyệt',
     sentAgo_now: 'Gửi vừa xong',
     sentAgo_minutes: 'Gửi {{count}} phút trước',
     sentAgo_hours: 'Gửi {{count}} giờ trước',
