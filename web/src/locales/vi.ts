@@ -3007,7 +3007,7 @@ export default {
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',
     secretRevealSecondsDesc: 'Hết giờ thì hộp tự ẩn giá trị. Cũng là thời gian hộp mật khẩu tạm (tạo, đặt lại tài khoản) tự che.',
     secretStepUpGraceMinutesLabel: 'Ân hạn sau khi xác thực lại',
-    secretStepUpGraceMinutesDesc: 'Trong khoảng này mở két, sửa két, sửa tham số không phải gõ lại mã 6 số.',
+    secretStepUpGraceMinutesDesc: 'Trong khoảng này mọi thao tác cần mã 6 số (két, cấp quyền, người dùng IMS, tham số) không phải gõ lại.',
     secretStepUpMaxFailuresLabel: 'Số lần gõ sai mã xác thực lại trước khi đóng phiên',
     secretStepUpMaxFailuresDesc: 'Nhập sai quá số này thì phiên bị đóng.',
     secretProbeAlertThresholdLabel: 'Ngưỡng cảnh báo dò két',

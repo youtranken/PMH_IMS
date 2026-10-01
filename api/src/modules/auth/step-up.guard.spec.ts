@@ -150,4 +150,15 @@ describe('StepUpGuard — FR-022', () => {
     });
     expect.assertions(1);
   });
+
+  // Guard này chặn cả quản lý tài khoản, gán quyền ma trận… chứ không riêng két.
+  it('câu nhắc trung tính, không nói "mở két" cho mọi thao tác', async () => {
+    const ctx = contextFor(userSteppedUpMinutesAgo(null));
+    await guardWith(true).canActivate(ctx).catch((error: UnauthorizedException) => {
+      expect(error.getResponse()).toMatchObject({
+        message: 'Nhập mã 6 số trên ứng dụng xác thực để xác nhận thao tác này.',
+      });
+    });
+    expect.assertions(1);
+  });
 });

@@ -220,7 +220,7 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
           return Promise.resolve(
             jsonResponse(403, {
               code: 'STEPUP_REQUIRED',
-              message: 'Nhập mã 6 số trên ứng dụng xác thực để mở két.',
+              message: 'Nhập mã 6 số trên ứng dụng xác thực để xác nhận thao tác này.',
             }),
           );
         }
@@ -253,7 +253,7 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     );
     await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
     expect(await screen.findByText('Nhập mã 6 số để xác nhận cấp quyền két.')).toBeInTheDocument();
-    expect(screen.queryByText(/để mở két/)).toBeNull();
+    expect(screen.queryByText(/để xác nhận thao tác này/)).toBeNull();
     await userEvent.type(codeInput(), '123456');
     expect(await screen.findByText('Đã gán quyền.')).toBeInTheDocument();
     expect(writes.filter((write) => write.method === 'POST')).toHaveLength(2);
