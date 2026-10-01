@@ -352,6 +352,15 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(gap!.body, 'margin-inline-start')).toBeDefined();
   });
 
+  // Nút ghost "Ghi chú ▾" dưới tên ngăn két: đệm ngang của `button.sm` đẩy chữ thụt vào ~9px so
+  // với tên ngăn phía trên và ghi chú mở ra phía dưới. Lề âm đúng bằng đệm kéo chữ về thẳng hàng.
+  it('nút "Ghi chú" của ngăn két thẳng mép chữ với dòng trên/dưới', () => {
+    const r = rule('table.css', 'button.note-toggle');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'margin-inline-start')).toBe('calc(-1 * var(--space-4) - 1px)');
+    expect(declValue(rule('base.css', 'button.sm')!.body, 'padding')).toContain('var(--space-4)');
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
