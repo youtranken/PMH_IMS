@@ -746,7 +746,8 @@ export function SubnetPane({
           label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
           hint: to === "free" ? t("ipam.reclaimMenuHint") : undefined,
           onSelect: () => setMoving({ record: slot, to }),
-          danger: to === "free",
+          // Q-19: IP về pool và cấp lại được — đảo được nên cam, không đỏ.
+          warn: to === "free",
         });
       }
     }
