@@ -254,7 +254,7 @@ test.describe('Luật gửi báo cáo — công tắc Đang chạy, chip + gợi
     await firstLogin(page, E2E_SA);
     await page.goto('/expiry');
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
-    await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
+    await page.getByRole('button', { name: 'Thêm luật', exact: true }).first().click();
     const form = page.getByRole('dialog', { name: 'Thêm luật' });
 
     await form.getByRole('button', { name: `Thêm ${E2E_SA.email}` }).click();

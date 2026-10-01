@@ -319,9 +319,21 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <EmptyState
           /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
              ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Nút Thêm chỉ cho người
+             được thêm — mời Member bấm một nút rồi báo 403 là tệ hơn không mời. */
           title={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
           hint={url.isFiltered ? t('serviceAccounts.emptyFilteredHint') : t('serviceAccounts.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : canEdit ? (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('serviceAccounts.add')}
+              </button>
+            ) : undefined
+          }
         />
       ) : (
         <>

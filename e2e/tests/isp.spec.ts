@@ -261,7 +261,7 @@ test.describe('Đường truyền ISP', () => {
     const code = `ISP-E2E-FK-${stamp}`;
 
     await page.goto('/isp-lines');
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Mã đường').fill(code);
     await dialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
@@ -391,7 +391,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     const provider = `Nha mang form E2E ${stamp}`;
     await ispProviderId(page, provider);
     await page.goto('/isp-lines');
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Mã đường').fill(`ISP-E2E-WAN-${stamp}`);
     await dialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();

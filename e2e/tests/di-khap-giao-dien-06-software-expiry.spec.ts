@@ -324,7 +324,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     );
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
 
     const add = page.getByRole('dialog', { name: 'Thêm phần mềm' });
     await expect(add, 'Bấm "Thêm phần mềm" phải mở đúng hộp mang tên đó').toBeVisible();
@@ -468,7 +468,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await confirmAction(page, 'Bỏ và đóng');
     await expect(add, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
     await expect(add).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(add, 'Phím Esc cũng phải đóng được hộp (hộp không đang ghi)').toHaveCount(0);
@@ -1155,7 +1155,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
 
     await expect(
-      page.getByRole('button', { name: 'Thêm luật', exact: true }),
+      page.getByRole('button', { name: 'Thêm luật', exact: true }).first(),
       'SA phải thêm được luật ngay tại tab này',
     ).toHaveCount(1);
 
@@ -1209,7 +1209,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBe(mailCountBefore);
 
     // ===== BÊN TRONG HỘP "THÊM LUẬT" =====
-    await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
+    await page.getByRole('button', { name: 'Thêm luật', exact: true }).first().click();
     const add = page.getByRole('dialog', { name: 'Thêm luật' });
     await expect(add).toBeVisible();
 

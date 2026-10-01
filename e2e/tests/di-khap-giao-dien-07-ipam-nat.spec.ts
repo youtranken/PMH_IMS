@@ -309,7 +309,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toEqual(['Sửa', 'Ngừng dùng']);
 
     /* ----- Hộp "Khai dải mới": bên trong có đúng những ô nào ----- */
-    await page.getByRole('button', { name: 'Khai dải mới' }).click();
+    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
     const addForm = page.getByRole('dialog', { name: 'Khai dải mới' });
     await expect(addForm).toBeVisible();
     await expect(
@@ -878,7 +878,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const fixture = await setUpNat(page, stamp, octet);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog', { name: 'Thêm luật NAT', exact: true });
     await expect(form).toBeVisible();
 

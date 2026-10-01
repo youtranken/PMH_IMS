@@ -106,7 +106,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const code = `LIC-E2E-ATT-${stamp}`;
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
 
     const form = await fillSoftwareBasics(page, code, 'Office 365 có hợp đồng');
     await picker(page).setInputFiles(writePdf(`hop-dong-${stamp}.pdf`));
@@ -136,7 +136,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await ispProviderId(page, 'FPT Telecom E2E');
 
     await page.goto('/isp-lines');
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã đường').fill(code);
@@ -160,7 +160,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const code = `LIC-E2E-BO-${stamp}`;
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
 
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ đổi ý');
     await picker(page).setInputFiles(writePdf(`nham-${stamp}.pdf`));
@@ -186,7 +186,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     writeFileSync(fake, '<html><script>alert(1)</script></html>');
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ kèm file lạ');
     await picker(page).setInputFiles(fake);
     await form.getByRole('button', { name: 'Lưu' }).click();

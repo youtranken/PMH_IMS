@@ -44,6 +44,7 @@ export function LicenseAssignmentsPanel({
   const active = all.filter((row) => !row.releasedAt);
   const released = all.filter((row) => row.releasedAt);
   const rows = view === 'active' ? active : released;
+  const noSeatYet = assignments.isSuccess && view === 'active' && active.length === 0;
 
   return (
     <div className="attachment-panel">
@@ -74,10 +75,14 @@ export function LicenseAssignmentsPanel({
             label={t('license.exportDevices')}
           />
         ) : null}
-        {/* Nút thường, không primary: màn chi tiết đã có "Sửa hồ sơ" là điểm nhấn duy nhất. */}
-        <button type="button" className="btn" onClick={() => setAssigning(true)}>
-          {t('license.assign')}
-        </button>
+        {/* Nút thường, không primary: màn chi tiết đã có "Sửa hồ sơ" là điểm nhấn duy nhất.
+            Chưa gán máy nào thì nút nằm trong khối trống ngay bên dưới — hai nút cùng tên
+            cách nhau một dòng là thừa. */}
+        {noSeatYet ? null : (
+          <button type="button" className="btn" onClick={() => setAssigning(true)}>
+            {t('license.assign')}
+          </button>
+        )}
       </div>
 
       {assignments.isLoading ? (
@@ -86,7 +91,15 @@ export function LicenseAssignmentsPanel({
         <LoadError error={assignments.error} onRetry={() => void assignments.refetch()} />
       ) : rows.length === 0 ? (
         view === 'active' ? (
-          <EmptyState title={t('license.empty')} hint={t('license.emptyHint')} />
+          <EmptyState
+            title={t('license.empty')}
+            hint={t('license.emptyHint')}
+            action={
+              <button type="button" className="btn primary" onClick={() => setAssigning(true)}>
+                {t('license.assign')}
+              </button>
+            }
+          />
         ) : (
           <p className="muted">{t('license.emptyReleased')}</p>
         )

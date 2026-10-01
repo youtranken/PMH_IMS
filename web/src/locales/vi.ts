@@ -225,6 +225,8 @@ export default {
     save: 'Lưu',
     cancel: 'Hủy',
     close: 'Đóng',
+    // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
+    clearFilters: 'Xóa bộ lọc',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
@@ -1799,7 +1801,8 @@ export default {
     routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
-    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Đánh dấu ở Danh mục → Loại thiết bị.',
+    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',
+    routerNoTypeLink: 'Đánh dấu ở Danh mục → Loại thiết bị',
     protocol: 'Giao thức',
     /*
      * KHÔNG có `nat.protocolBoth`: ô chọn giao thức của luật NAT dùng `catalog.protocolBoth`,

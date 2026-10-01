@@ -167,7 +167,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
@@ -207,7 +207,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -239,7 +239,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await createRouter(page, routerCode);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
@@ -350,7 +350,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -422,7 +422,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     // MỘT ô chọn router — ô "Loại thiết bị" cũ đã bỏ, vì nó bắt thao tác hai dropdown cho
@@ -490,7 +490,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     ).toBe(201);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();

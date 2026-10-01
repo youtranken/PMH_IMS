@@ -262,9 +262,21 @@ export function IspScreen({ me }: { me: Me }) {
         <EmptyState
           /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
              ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
           title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
           hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('isp.add')}
+              </button>
+            )
+          }
         />
       ) : (
         <>

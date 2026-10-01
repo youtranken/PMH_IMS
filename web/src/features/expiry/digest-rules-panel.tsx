@@ -117,7 +117,17 @@ export function DigestRulesPanel({
       ) : rules.isError ? (
         <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('digest.empty')} hint={t('digest.emptyHint')} />
+        <EmptyState
+          title={t('digest.empty')}
+          hint={t('digest.emptyHint')}
+          action={
+            canEdit ? (
+              <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
+                {t('digest.add')}
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="table-wrap">
           <table className="table table-stack">

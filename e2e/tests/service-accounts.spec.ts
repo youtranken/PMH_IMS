@@ -49,7 +49,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
     await page.goto('/service-accounts');
     await expect(page.getByRole('heading', { name: 'Tài khoản dịch vụ' })).toBeVisible();
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).first().click();
 
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Mã tài khoản' }).fill(code);
@@ -94,7 +94,7 @@ test.describe('Tài khoản dịch vụ', () => {
     const login = `ke-toan-e2e-${stamp}@pmh.com.vn`;
 
     await page.goto('/service-accounts');
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill(login);
     await form.getByLabel('Mật khẩu', { exact: true }).fill('MatKhau#2026');
@@ -125,7 +125,7 @@ test.describe('Tài khoản dịch vụ', () => {
     const code = `VPN-E2E-${stamp}`;
 
     await page.goto('/service-accounts');
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Mã tài khoản' }).fill(code);
     await form.getByRole('textbox', { name: 'Tên tài khoản' }).fill('VPN kế toán');

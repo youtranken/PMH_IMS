@@ -320,13 +320,45 @@ export function NatScreen({ me }: { me: Me }) {
       ) : rules.isError ? (
         <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
       ) : all.length === 0 && !filtered ? (
-        <EmptyState title={t('nat.empty')} hint={t('nat.emptyHint')} />
+        <EmptyState
+          title={t('nat.empty')}
+          hint={t('nat.emptyHint')}
+          action={
+            <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
+              {t('nat.add')}
+            </button>
+          }
+        />
       ) : narrowed.length === 0 ? (
         /* Tìm/lọc không ra thì NÓI là lọc không ra — câu "Chưa có rule NAT nào" ở đây làm
            người ta tưởng cả sổ trống. */
-        <EmptyState title={t('nat.emptySearch')} hint={t('nat.emptySearchHint')} />
+        <EmptyState
+          title={t('nat.emptySearch')}
+          hint={t('nat.emptySearchHint')}
+          action={
+            <button type="button" className="btn" onClick={url.clearFilters}>
+              {t('common.clearFilters')}
+            </button>
+          }
+        />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('nat.emptyFiltered')} hint={t('nat.emptyFilteredHint')} />
+        /* Chỉ mấy chip trạng thái đang ẩn hết: nút đưa chip về mặc định và bỏ luôn bộ lọc. */
+        <EmptyState
+          title={t('nat.emptyFiltered')}
+          hint={t('nat.emptyFilteredHint')}
+          action={
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setShown(NAT_DEFAULT_SHOWN);
+                url.clearFilters();
+              }}
+            >
+              {t('common.clearFilters')}
+            </button>
+          }
+        />
       ) : (
         <>
         <p className="muted nat-count">{t('nat.countLine', { count: rows.length })}</p>
@@ -942,7 +974,17 @@ function NatForm({
                 <span className="muted">{t('nat.routerShowAll')}</span>
               </label>
             ) : lists.data ? (
-              <span className="field-hint muted">{t('nat.routerNoType')}</span>
+              <span className="field-hint muted">
+                {t('nat.routerNoType')}{' '}
+                {/* Tab mới: rời trang ở đây là mất trắng form NAT đang gõ dở. */}
+                <Link
+                  to={`${PATHS.adminCatalog}?tab=device_type`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t('nat.routerNoTypeLink')}
+                </Link>
+              </span>
             ) : null}
           </Field>
 
