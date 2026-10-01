@@ -343,8 +343,9 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   vẫn ẩn; muốn xem thì lọc đích danh hoặc vào Kho thanh lý.
 - **Sơ đồ cổng:** mỗi cổng chỉ một sợi cáp, kiểm cả hai chiều (A:p1→B:g1 thì B:g1 không nối đi nơi
   khác); tên cổng không phân biệt hoa/thường.
-- **IP WAN — sửa Q-04:** một đường truyền có **nhiều IP WAN** (nhà mạng có thể cấp 2–3 IP hoặc cả
-  một dải, vd `203.113.10.8/29`). Lưu ở bảng riêng, mỗi hàng một IP hoặc một dải IPv4. Không chặn
+- **IP WAN — sửa Q-04:** một đường truyền có **nhiều IP WAN** (nhà mạng có thể cấp 2–3 IP). Chỉ
+  khai từng IP lẻ, không khai dải (nhà mạng chỉ gửi IP, không gửi mask). Lưu ở bảng riêng, mỗi
+  hàng một IPv4. Không chặn
   trùng giữa các đường truyền; trong cùng một đường thì không lặp. Danh sách, tìm kiếm, Ctrl+K và
   Excel hiện / tìm theo mọi IP; nhập Excel nhận nhiều IP ngăn bằng dấu phẩy.
 - **Người dùng IMS đã vô hiệu hoá** ẩn khỏi danh sách theo mặc định; lọc đích danh mới hiện.
