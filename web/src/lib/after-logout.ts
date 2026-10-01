@@ -11,8 +11,12 @@ export const PALETTE_RECENT_PREFIX = 'ims_palette_recent:';
  * Danh sách "mở gần đây" nằm trong localStorage, sống qua cả lượt đăng xuất: trên máy dùng chung
  * người kế tiếp (hay ai mở công cụ trình duyệt) đọc được mã + tên hồ sơ người trước vừa mở.
  * Xoá của MỌI email chứ không chỉ người vừa ra — lúc này không còn chắc biết email đó.
+ *
+ * Gọi ở MỌI lúc phiên kết thúc: bấm Đăng xuất (`afterLogout`) và 401-phiên-chết của
+ * `lib/api-client` (hết hạn, bị thu hồi, tài khoản bị khoá) — phần lớn phiên trên máy dùng chung
+ * kết thúc theo đường sau, không ai bấm Đăng xuất.
  */
-function clearPaletteRecent(): void {
+export function clearPaletteRecent(): void {
   try {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i += 1) {
