@@ -20,7 +20,7 @@ import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
-import { textRule, useFormErrors } from "@/ui/use-form-errors";
+import { secretTextRule, textRule, useFormErrors } from "@/ui/use-form-errors";
 import { FilterBar } from "@/ui/filter-bar";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
@@ -524,7 +524,7 @@ export function SubnetPane({
                           dối về một hàng không cấp hay sửa được.
                         */}
                         {slot.voidedAt ? (
-                          <span className="badge muted" title={slot.voidReason ?? undefined}>
+                          <span className="badge danger" title={slot.voidReason ?? undefined}>
                             {t("ipam.voidedBadge")}
                           </span>
                         ) : (
@@ -585,6 +585,16 @@ export function SubnetPane({
                             cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ.
                           */}
                           <RowActions
+                            primary={
+                              // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
+                              canWrite && !slot.voidedAt && !isFreeRecord(slot)
+                                ? {
+                                    label: t("common.edit"),
+                                    ariaLabel: t("common.editOf", { subject: slot.address }),
+                                    onClick: () => setEditing(slot),
+                                  }
+                                : undefined
+                            }
                             label={t("common.actionsOf", { subject: slot.address })}
                             items={rowActions(slot)}
                           />
@@ -733,10 +743,6 @@ export function SubnetPane({
   /** Menu ⋯ của một hồ sơ: việc hay làm trước, Thu hồi (đỏ), rồi Xóa nhập nhầm (xám) cuối. */
   function rowActions(slot: IpRow): RowAction[] {
     const items: RowAction[] = [];
-    // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
-    if (canWrite && !slot.voidedAt && !isFreeRecord(slot)) {
-      items.push({ key: "edit", label: t("common.edit"), onSelect: () => setEditing(slot) });
-    }
     items.push({ key: "history", label: t("ipam.history"), onSelect: () => setHistoryOf(slot) });
     /* Chỉ những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại. Bước CẤP đã là nút trên dòng. */
     if (canWrite && !slot.voidedAt) {
@@ -746,7 +752,8 @@ export function SubnetPane({
           label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
           hint: to === "free" ? t("ipam.reclaimMenuHint") : undefined,
           onSelect: () => setMoving({ record: slot, to }),
-          danger: to === "free",
+          // Q-19: IP về pool và cấp lại được — đảo được nên cam, không đỏ.
+          warn: to === "free",
         });
       }
     }
@@ -780,7 +787,7 @@ function Empty() {
  * Gỡ hết máy lẫn người dùng của hồ sơ đang dùng là quay lại dòng mồ côi Q-14 cấm — muốn trả
  * địa chỉ về pool thì đi "Thu hồi", nơi lịch sử ghi lại chủ cũ.
  */
-function IpForm({
+export function IpForm({
   record,
   csrfToken,
   onClose,
@@ -803,6 +810,7 @@ function IpForm({
   const [error, setError] = useState<string | null>(null);
   const check = useFormErrors({
     owner: record.status === "assigned" ? ownerRule(t, device.deviceId, usedBy) : null,
+    note: secretTextRule(t, note),
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
@@ -899,7 +907,7 @@ function IpForm({
           />
         </Field>
 
-        <Field label={t("ipam.note")} htmlFor="ip-note" span={2}>
+        <Field label={t("ipam.note")} hint={t("ipam.noteHint")} htmlFor="ip-note" span={2} error={check.error("note")}>
           <textarea
             id="ip-note"
             className="inp"
@@ -944,6 +952,7 @@ function TransitionDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: secretTextRule(t, reason) });
 
   const move = useApiMutation<Record<string, unknown>, unknown>(
     `/api/v1/ipam/addresses/${record.id}/transition`,
@@ -985,7 +994,7 @@ function TransitionDialog({
           <button
             type="submit"
             form="transition-form"
-            className={to === "free" ? "btn danger" : "btn primary"}
+            className={to === "free" ? "btn caution" : "btn primary"}
             disabled={move.isPending}
           >
             {move.isPending ? t("common.loading") : label}
@@ -995,11 +1004,14 @@ function TransitionDialog({
     >
       <form
         id="transition-form"
+        ref={check.formRef}
+        noValidate
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           move.mutate(
             { to, reason: reason.trim() },
             {
@@ -1049,6 +1061,7 @@ function TransitionDialog({
           label={t("ipam.reason")}
           hint={t("ipam.reasonHint")}
           htmlFor="tr-reason"
+          error={check.error("reason")}
         >
           <input
             id="tr-reason"
@@ -1132,7 +1145,7 @@ function VoidAddressDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) });
+  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,
     { method: "DELETE", csrfToken, refreshMe: false },

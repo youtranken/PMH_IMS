@@ -1,3 +1,5 @@
+import { SOFTWARE_STATUS_TONE } from '@/lib/status-tone';
+
 /** Loại hồ sơ phần mềm — khớp `SOFTWARE_KINDS` phía API. */
 export const SOFTWARE_KINDS = ['license', 'ssl', 'domain', 'maintenance', 'other'] as const;
 export type SoftwareKind = (typeof SOFTWARE_KINDS)[number];
@@ -105,15 +107,8 @@ export const STATUS_KEY: Record<SoftwareStatus, string> = {
   retired: 'software.statusRetired',
 };
 
-/**
- * Luật màu: xanh = ổn, đỏ = cần làm gì đó, xám = đã ra khỏi vòng đời. Hết hạn vẫn đang cài
- * trên máy và đang trong ân hạn trước khi tự thanh lý (Q-13), nên nó đỏ, không xám như Thanh lý.
- */
-export const STATUS_TONE: Record<SoftwareStatus, string> = {
-  active: 'ok',
-  expired_ok: 'danger',
-  retired: 'muted',
-};
+/** Bản gốc (và luật màu) ở `lib/status-tone.ts` — Kho thanh lý tô cùng màu (Q-19). */
+export const STATUS_TONE: Record<SoftwareStatus, string> = SOFTWARE_STATUS_TONE;
 
 /** Chỉ license mới nói tới seat — khớp `supportsSeats` phía API. */
 /**

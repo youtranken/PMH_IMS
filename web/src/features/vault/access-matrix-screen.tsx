@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -20,6 +21,7 @@ import { useMediaQuery } from '@/ui/use-media-query';
 import { NARROW_QUERY } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
 
@@ -75,7 +77,7 @@ function StatusTag({ account }: { account: AccountRow }) {
     return <span className="badge warn plain">{t('accounts.statusLocked')}</span>;
   }
   if (account.status === 'disabled') {
-    return <span className="badge muted plain">{t('accounts.statusDisabled')}</span>;
+    return <span className="badge danger plain">{t('accounts.statusDisabled')}</span>;
   }
   return null;
 }
@@ -725,7 +727,8 @@ function PersonRules({
   return (
     <section className="card access-person-card" aria-labelledby="access-person-title">
       {onBack ? (
-        <button type="button" className="btn sm" onClick={onBack}>
+        <button type="button" className="btn sm with-icon" onClick={onBack}>
+          <Chevron direction="left" />
           {t('access.backToList')}
         </button>
       ) : null}
@@ -842,6 +845,7 @@ function CellDialog({
   const [tier, setTier] = useState<Tier>(rule?.tier ?? 'needs_approval');
   const [note, setNote] = useState(rule?.note ?? '');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ note: secretTextRule(t, note) });
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -887,11 +891,14 @@ function CellDialog({
     >
       <form
         id="access-cell-form"
+        ref={check.formRef}
+        noValidate
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           void (async () => {
             /*
              * Chỉ HỎI LẠI khi nâng lên "Xem thẳng" — tầng mở cửa rộng nhất (xem không cần ai
@@ -936,7 +943,7 @@ function CellDialog({
             ]}
           />
         </Field>
-        <Field label={t('access.note')} htmlFor="access-cell-note">
+        <Field label={t('access.note')} htmlFor="access-cell-note" error={check.error('note')}>
           <input
             id="access-cell-note"
             className="inp"
@@ -995,6 +1002,7 @@ function GrantToScopeDialog({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const check = useFormErrors({ note: secretTextRule(t, note) });
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1044,11 +1052,14 @@ function GrantToScopeDialog({
     >
       <form
         id="grant-scope-form"
+        ref={check.formRef}
+        noValidate
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           if (picked.length === 0) {
             setError(t('access.pickPeople'));
             return;
@@ -1145,7 +1156,7 @@ function GrantToScopeDialog({
           </fieldset>
         )}
 
-        <Field label={t('access.tier')} hint={t('access.tierHint')}>
+        <Field label={t('access.tier')} tip={t('access.tierHint')}>
           <Select
             value={tier}
             onChange={(next) => setTier(next as Tier)}
@@ -1157,7 +1168,7 @@ function GrantToScopeDialog({
           />
         </Field>
 
-        <Field label={t('access.note')} htmlFor="grant-scope-note">
+        <Field label={t('access.note')} htmlFor="grant-scope-note" error={check.error('note')}>
           <input
             id="grant-scope-note"
             className="inp"
@@ -1211,6 +1222,7 @@ function MultiGrantDialog({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const check = useFormErrors({ note: secretTextRule(t, note) });
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1252,12 +1264,14 @@ function MultiGrantDialog({
     >
       <form
         id="multi-grant-form"
+        ref={check.formRef}
         className="form-grid"
         data-columns={1}
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           if (picked.length === 0) {
             setError(t('access.pickScopes'));
             return;
@@ -1330,7 +1344,7 @@ function MultiGrantDialog({
           ))
         )}
 
-        <Field label={t('access.tier')} hint={t('access.tierHint')}>
+        <Field label={t('access.tier')} tip={t('access.tierHint')}>
           <Select
             value={tier}
             onChange={(next) => setTier(next as Tier)}
@@ -1342,7 +1356,7 @@ function MultiGrantDialog({
           />
         </Field>
 
-        <Field label={t('access.note')} htmlFor="multi-grant-note">
+        <Field label={t('access.note')} htmlFor="multi-grant-note" error={check.error('note')}>
           <input
             id="multi-grant-note"
             className="inp"
@@ -1491,7 +1505,7 @@ function CopyFromDialog({
         {colleagues.length === 0 ? (
           <p className="muted">{t('access.copyNoColleague')}</p>
         ) : (
-          <Field label={t('access.copySource')} hint={t('access.copyHint')}>
+          <Field label={t('access.copySource')} tip={t('access.copyHint')}>
             <Select
               value={sourceId}
               onChange={setSourceId}

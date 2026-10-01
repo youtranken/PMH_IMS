@@ -255,8 +255,11 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Nút xem mật khẩu (con mắt) tự che lại** khi rời ô hoặc sau 10 giây.
 - **Luật mật khẩu giữ 3 trong 4 nhóm** (NFR-01). Bảng kiểm hiện riêng từng nhóm (thường, hoa, số,
   ký tự đặc biệt), độ dài và "nhập lại khớp".
-- **Số điện thoại** (danh mục, đường truyền, người dùng IMS): chỉ nhận chữ số, dấu `+` ở đầu và
-  dấu cách; lưu thì bỏ dấu cách.
+- **Số điện thoại** (danh mục, đường truyền, người dùng IMS): nhận chữ số, dấu `+` ở đầu, và các
+  dấu trình bày quen dùng — dấu cách, `-`, `.`, `(`, `)`; lưu thì bỏ hết các dấu trình bày, chỉ còn
+  chữ số và `+` đầu. Chữ cái và ký tự khác vẫn bị từ chối. *(Sửa 01/10/2026: bản đầu từ chối
+  `-`, `.`, `( )`, làm hồ sơ cũ nhập kiểu "(028) 3822-1234" không lưu lại được khi form gửi lại
+  số không đổi — chuẩn hoá thay vì từ chối.)*
 - **Giấy tờ đính kèm:** tối đa 25 MB mỗi file, tối đa 6 file mỗi lượt chọn (đưa vào
   `system_config`, AD-11). Nhận thêm Word/PowerPoint dạng mới (docx, pptx); loại có macro và file
   chạy được (exe, ps1, js…) vẫn bị chặn theo nội dung, không theo đuôi. File đã xoá giữ nội dung
@@ -277,6 +280,19 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Menu gọn cho màn laptop:** bỏ mục "Tài liệu" (chưa có màn); nhóm "Hệ thống" mặc định khép,
   tự mở khi đang ở màn trong nhóm, nhớ lựa chọn trên từng máy. Menu SA khi khép phải vừa màn
   cao 768px không cuộn.
+
+### Q-19 · Rà các màn còn lại theo góp ý Q-18 (01/10/2026, chủ dự án chốt)
+
+- **Ghi chú / mô tả / lý do ngoài két** (thiết bị, đường truyền, NAT, IP, dải, tài khoản dịch vụ,
+  ghế license, danh mục, nhập Excel) chứa chuỗi trông như mật khẩu thì **bị chặn** như ghi chú
+  két (FR-035, SEC-20). Dữ liệu đang có: chạy một lượt quét **báo cáo** (không tự sửa) để SA rà.
+- **Kho thanh lý:** màu trạng thái theo đúng màn gốc ("Đã ngừng dùng" đỏ). Thao tác "Dùng lại"
+  cho thiết bị / tài khoản dịch vụ / đường truyền dẫn sang trang hồ sơ đó (không làm tại kho).
+- **Thẻ dải IP** giữ "Sửa" trong menu ⋮ (thẻ hẹp) — ngoại lệ của luật "Sửa để ngoài".
+- **"Thu hồi IP"** tô màu cảnh báo (cam), không phải đỏ: IP về pool và cấp lại được.
+- **Trang chi tiết phần mềm:** "Gia hạn" giữ ngoài cạnh "Sửa" (việc chính); "Khôi phục" vào ⋮.
+- **Màn Tham số hệ thống:** mô tả dài hơn ~80 ký tự chuyển vào nút (i).
+- Số điện thoại hiển thị tách nhóm; tên công ty trên màn đăng nhập là "Phú Mỹ Hưng".
 
 ### Q-09 · Tài liệu
 

@@ -1,3 +1,4 @@
+import { Chevron } from '@/ui/chevron';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
@@ -155,9 +156,7 @@ export function DetailLoadFailed({
       <nav className="crumbs" aria-label="breadcrumb">
         <span className="crumb">
           <Link className="crumb-back" to={backTo}>
-            <span aria-hidden="true" className="crumb-arrow">
-              ‹
-            </span>
+            <Chevron direction="left" className="crumb-arrow" />
             {backLabel}
           </Link>
         </span>

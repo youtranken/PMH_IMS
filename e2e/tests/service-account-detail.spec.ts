@@ -55,10 +55,11 @@ test.describe('Trang hồ sơ TKDV — thao tác ngay tại chỗ (NET-072)', ()
     await off.getByRole('textbox', { name: /Lý do ngừng dùng/ }).fill('nhân sự đã nghỉ E2E');
     await off.getByRole('button', { name: 'Ngừng dùng' }).click();
     await expect(off).toHaveCount(0);
-    await expect(page.getByText('Đã ngừng dùng', { exact: true }).first()).toBeVisible();
-
-    await page.getByRole('button', { name: `Thao tác với ${code}` }).click();
-    await page.getByRole('menuitem', { name: 'Dùng lại…' }).click();
+    // Đã ngừng dùng: trạng thái và nút "Dùng lại…" chỉ ở băng đầu trang, menu ⋮ không lặp lại.
+    const banner = page.getByRole('note').filter({ hasText: /Ngừng dùng ngày/ });
+    await expect(banner).toContainText('nhân sự đã nghỉ E2E');
+    await expect(page.getByRole('button', { name: `Thao tác với ${code}` })).toHaveCount(0);
+    await banner.getByRole('button', { name: 'Dùng lại…' }).click();
     const on = page.getByRole('dialog', { name: `Dùng lại — ${code}` });
     await on.getByRole('textbox', { name: /Lý do dùng lại/ }).fill('người mới nhận E2E');
     await on.getByRole('button', { name: 'Dùng lại' }).click();

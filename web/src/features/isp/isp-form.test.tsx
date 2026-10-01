@@ -114,6 +114,14 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     expect(calls.some((c) => c.url === '/api/v1/isp-lines')).toBe(false);
   });
 
+  it('ô Ghi chú nhắc không ghi mật khẩu (ghi chú không mã hóa, FR-035)', () => {
+    mockFetch();
+    renderForm(null);
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAccessibleDescription(
+      /Không ghi mật khẩu/,
+    );
+  });
+
   it('hồ sơ đang trỏ vào mục ngừng dùng vẫn hiện đúng mục đó', async () => {
     mockFetch();
     renderForm(ROW_ON_INACTIVE);
@@ -121,15 +129,47 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     await waitFor(() => expect(picker).toHaveTextContent(/Nhà mạng cũ \(ngừng dùng\)/));
   });
 
-  it('đổi sang Đã thanh lý thì hỏi lại, nút xác nhận là HÀNH ĐỘNG "Thanh lý" (Q-14)', async () => {
-    mockFetch();
+  /*
+   * Đổi trạng thái chỉ đi menu ⋮ của trang chi tiết: ở đó hộp hỏi lại nhắc ngăn két và thiết bị
+   * biên. Ô Trạng thái trong form là lối tắt bỏ qua cả hai, và gửi lại trạng thái cũ lúc lưu thì
+   * đè mất lượt đổi trạng thái vừa làm ở tab khác.
+   */
+  it('form sửa KHÔNG có ô Trạng thái, lưu không gửi `status`', async () => {
+    const calls = mockFetch();
     renderForm(ROW_ON_INACTIVE);
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Trạng thái' }));
-    await user.click(await screen.findByRole('option', { name: 'Đã thanh lý' }));
+    expect(screen.queryByRole('button', { name: 'Trạng thái' })).toBeNull();
+    expect(screen.queryByText('Trạng thái', { exact: true })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
-    const ask = await screen.findByRole('dialog', { name: /^Thanh lý đường truyền ISP-CU/ });
-    expect(within(ask).getByRole('button', { name: 'Thanh lý' })).toBeInTheDocument();
-    expect(within(ask).queryByRole('button', { name: 'Đã thanh lý' })).toBeNull();
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/isp-lines/line-1')).toBe(true));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines/line-1')!.body;
+    expect(body).not.toHaveProperty('status');
+    expect(screen.queryByRole('dialog', { name: /^Thanh lý/ })).toBeNull();
+  });
+});
+
+describe('Bố cục form đường truyền', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('hộp rộng, hai khối xếp 4 cột — không thành dây dọc cao hơn màn laptop', () => {
+    mockFetch();
+    renderForm(ROW_ON_INACTIVE);
+    const dialog = screen.getAllByRole('dialog')[0];
+    expect(Number.parseInt(dialog.style.maxWidth, 10)).toBeGreaterThanOrEqual(960);
+    for (const heading of ['Hồ sơ', 'Hợp đồng và liên hệ sự cố']) {
+      const section = within(dialog).getByRole('heading', { name: heading }).closest('section');
+      expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    }
+  });
+
+  it('gợi ý dài của ô Nhà mạng nằm sau nút (i); ô vẫn trỏ đúng mô tả còn lại', () => {
+    mockFetch();
+    renderForm(null);
+    expect(screen.getByRole('button', { name: 'Giải thích: Nhà mạng' })).toBeInTheDocument();
+    expect(screen.queryByText(/Chọn từ danh mục Nhà mạng/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Nhà mạng' })).not.toHaveAttribute(
+      'aria-describedby',
+      'isp-provider-hint',
+    );
   });
 });

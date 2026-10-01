@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { clearPaletteRecent } from '@/lib/after-logout';
 import { LOGIN_PATH, ME_KEY, type Me } from '@/lib/me';
 import { rememberNextPath, tabOwner } from '@/lib/next-path';
 
@@ -88,6 +89,7 @@ export async function readResponse<T>(res: Response): Promise<T> {
       const owner =
         queryClient.getQueryData<Pick<Me, 'email'> | null>(ME_KEY)?.email ?? tabOwner();
       rememberNextPath(`${pathname}${search}${hash}`, owner);
+      clearPaletteRecent();
       window.location.href = LOGIN_PATH;
     }
     throw new ApiError(res.status, errBody);

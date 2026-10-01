@@ -5,6 +5,7 @@ import {
   queryClient,
   shouldRetryQuery,
 } from '@/lib/api-client';
+import { PALETTE_RECENT_PREFIX } from '@/lib/after-logout';
 import { ME_KEY } from '@/lib/me';
 import { clearNextPath, noteTabOwner, peekNextPath } from '@/lib/next-path';
 import { jsonResponse } from '@/test/test-utils';
@@ -85,6 +86,31 @@ describe('apiFetch', () => {
     );
     await expect(apiFetch('/api/v1/accounts')).rejects.toMatchObject({ status: 401 });
     expect(window.location.href).toBe('/login');
+  });
+
+  /*
+   * FE-02: phiên hết hạn / bị thu hồi mà không ai bấm Đăng xuất thì "mở gần đây" của ô tìm
+   * nhanh (mã + tên hồ sơ) vẫn nằm lại trong localStorage cho người kế tiếp trên máy dùng chung.
+   */
+  it('401 vì PHIÊN CHẾT → xoá "mở gần đây" của ô tìm nhanh; 401 vì SAI THÔNG TIN thì giữ', async () => {
+    const key = `${PALETTE_RECENT_PREFIX}a@pmh.com.vn`;
+    vi.stubGlobal('location', { href: '' } as unknown as Location);
+
+    localStorage.setItem(key, '[{"to":"/devices/1"}]');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'LOGIN_FAILED', message: 'Sai' })),
+    );
+    await expect(apiFetch('/api/v1/auth/login')).rejects.toMatchObject({ status: 401 });
+    expect(localStorage.getItem(key)).not.toBeNull();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'SESSION_REVOKED', message: 'Bị đá' })),
+    );
+    await expect(apiFetch('/api/v1/devices')).rejects.toMatchObject({ status: 401 });
+    expect(localStorage.getItem(key)).toBeNull();
+    clearNextPath();
   });
 
   it('gắn Content-Type + X-CSRF-Token khi có body/csrf', async () => {

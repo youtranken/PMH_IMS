@@ -9,7 +9,7 @@ import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import {
   catalogLabel,
@@ -148,6 +148,9 @@ export function CatalogForm({
     uHeight: builtError('uHeight'),
     portFrom: builtError('portFrom'),
     portTo: builtError('portTo'),
+    description: secretTextRule(t, form.description),
+    address: secretTextRule(t, form.address),
+    supplies: secretTextRule(t, form.supplies),
   });
   const fieldError = (field: 'code' | 'name') =>
     check.error(field) ?? (serverField?.field === field ? serverField.message : null);
@@ -375,7 +378,7 @@ export function CatalogForm({
         ) : null}
 
         {entity === 'site' ? (
-          <Field label={t('catalog.address')} htmlFor="catalog-address">
+          <Field label={t('catalog.address')} htmlFor="catalog-address" error={check.error('address')}>
             <input
               id="catalog-address"
               className="inp"
@@ -390,7 +393,7 @@ export function CatalogForm({
             <Field
               label={t('catalog.cabinetDescription')}
               hint={t('catalog.cabinetDescriptionHint')}
-              htmlFor="catalog-description"
+              htmlFor="catalog-description" error={check.error('description')}
             >
               <textarea
                 id="catalog-description"
@@ -444,7 +447,7 @@ export function CatalogForm({
                 <span className="muted">{t('catalog.isRouterHint')}</span>
               </label>
             </Field>
-            <Field label={t('catalog.description')} htmlFor="catalog-description">
+            <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
               <input
                 id="catalog-description"
                 className="inp"
@@ -457,7 +460,7 @@ export function CatalogForm({
 
         {entity === 'vendor' ? (
           <>
-            <Field label={t('catalog.supplies')} htmlFor="catalog-supplies">
+            <Field label={t('catalog.supplies')} htmlFor="catalog-supplies" error={check.error('supplies')}>
               <input
                 id="catalog-supplies"
                 className="inp"
@@ -485,7 +488,7 @@ export function CatalogForm({
         ) : null}
 
         {entity === 'department' ? (
-          <Field label={t('catalog.description')} htmlFor="catalog-description">
+          <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
             <input
               id="catalog-description"
               className="inp"
@@ -565,7 +568,7 @@ export function CatalogForm({
                 {t('catalog.portOverlap', { name: overlappingPort.name })}
               </p>
             ) : null}
-            <Field label={t('catalog.description')} htmlFor="catalog-description">
+            <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
               <input
                 id="catalog-description"
                 className="inp"

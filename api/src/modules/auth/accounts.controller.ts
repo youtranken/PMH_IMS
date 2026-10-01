@@ -21,6 +21,7 @@ import {
   Length,
   Validate,
 } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { IsPhone } from '../../common/phone';
@@ -79,7 +80,7 @@ class ProfileDto extends ContactDto {
   fullName!: string;
 }
 
-class StatusDto {
+export class StatusDto {
   @IsIn(['active', 'locked', 'disabled'], { message: 'Trạng thái không hợp lệ.' })
   status!: 'active' | 'locked' | 'disabled';
 
@@ -87,6 +88,7 @@ class StatusDto {
   @IsOptional()
   @IsString()
   @Length(0, 500, { message: 'Lý do tối đa 500 ký tự.' })
+  @NoSecretText()
   reason?: string;
 }
 

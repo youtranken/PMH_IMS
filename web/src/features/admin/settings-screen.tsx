@@ -12,7 +12,7 @@ import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
-import { checkDraft, toDraft, warningOf, type SettingRow } from './settings-rules';
+import { checkDraft, descriptionSlot, toDraft, warningOf, type SettingRow } from './settings-rules';
 
 type Group = SettingRow['group'];
 
@@ -208,7 +208,9 @@ export function SettingsScreen({ me }: { me: Me }) {
                 <li key={g.key}>
                   <button
                     type="button"
-                    aria-current={g.key === group ? 'page' : undefined}
+                    /* Đổi khu ngay trên trang, không sang trang khác: nút bật/tắt, không
+                       `aria-current="page"` (giá trị đó dành cho link điều hướng). */
+                    aria-pressed={g.key === group}
                     onClick={() => switchGroup(g.key)}
                   >
                     {t(g.label)}
@@ -225,12 +227,17 @@ export function SettingsScreen({ me }: { me: Me }) {
               const check = checks.get(row.key) ?? checkDraft(row, draftOf(row));
               const dirty = draftOf(row).trim() !== toDraft(row.value);
               const warn = dirty ? warningOf(row, check.value) : null;
+              const description = descriptionSlot(
+                TEXT[row.name] ? t(TEXT[row.name][1]) : undefined,
+                row.name,
+              );
               return (
                 <div key={row.key} className="settings-row">
                   <Field
                     label={labelOf(row)}
                     htmlFor={id}
-                    hint={TEXT[row.name] ? t(TEXT[row.name][1]) : undefined}
+                    hint={description.hint}
+                    tip={description.tip}
                     error={dirty && check.reason ? t(check.reason.key, check.reason.params) : null}
                   >
                     {row.type === 'text' ? (

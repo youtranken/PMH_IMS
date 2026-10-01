@@ -52,8 +52,13 @@ test.describe('Hồ sơ tài khoản', () => {
     // Cả hai giá trị hiện NGAY trên danh sách — không phải mở lại hộp mới thấy.
     const row = page.getByRole('row', { name: new RegExp(E2E_SA.email) });
     await expect(row).toContainText(`NV-${stamp}`);
-    // Q-18: gõ có dấu cách cho dễ soát, lưu thì bỏ dấu cách.
-    await expect(row).toContainText('0912345678');
+    // Q-18 lưu bỏ dấu cách; Q-19 hiện lại thành nhóm cho dễ đọc. Kiểm cả hai phía: màn hình
+    // hiện nhóm, còn bản ghi lưu chỉ còn chữ số (để tìm theo số gõ liền vẫn trúng).
+    await expect(row).toContainText('0912 345 678');
+    const users = await page.request.get('/api/v1/accounts?limit=200');
+    const items = ((await users.json()) as { items: { email: string; phone: string | null }[] })
+      .items;
+    expect(items.find((item) => item.email === E2E_SA.email)?.phone).toBe('0912345678');
   });
 
   test('tìm được theo số điện thoại và theo mã nhân viên, không chỉ theo tên', async ({

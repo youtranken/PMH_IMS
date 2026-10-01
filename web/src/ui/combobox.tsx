@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
-import { PROGRAMMATIC_FOCUS_ATTR, useDialogPortal } from '@/ui/dialog';
+import { useDialogPortal } from '@/ui/dialog';
 
 interface ComboboxProps<T> {
   placeholder: string;
@@ -247,18 +247,9 @@ export function Combobox<T>({
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && options[active] ? optionId(active) : undefined}
         aria-autocomplete="list"
-        /* Chạm vào ô là một hành vi CÓ Ý của người dùng → mở lại menu đã đóng bằng Esc.
-           Esc không làm rơi tiêu điểm, nên sự kiện này KHÔNG bắn ngay sau Esc: muốn mở lại
-           thì phải rời ô rồi quay lại, hoặc gõ tiếp — đúng ý "người dùng chủ động".
-           Tiêu điểm do hộp thoại tự đặt lúc mở thì KHÔNG tính là chạm: menu bung sẵn che các ô
-           bên dưới và nuốt phím Esc đầu tiên người dùng bấm để thoát hộp. */
-        onFocus={(e) => {
-          if (e.currentTarget.hasAttribute(PROGRAMMATIC_FOCUS_ATTR)) return;
-          setTouched(true);
-          setClosed(false);
-        }}
-        /* Ô đã có tiêu điểm sẵn (hộp tự đặt) thì bấm vào không sinh `focus` nữa — bấm vẫn là
-           chạm, nên mở ở đây. */
+        /* Menu bung theo THAO TÁC — bấm, gõ, ↓/↑ — không theo tiêu điểm. Tiêu điểm còn do code
+           đặt ở nhiều chỗ (hộp mở, hộp con đóng trả tiêu điểm về, FocusScope kéo về trong hộp);
+           bung theo nó thì menu che các ô bên dưới và nuốt phím Esc đầu tiên người dùng bấm. */
         onMouseDown={() => {
           setTouched(true);
           setClosed(false);
@@ -269,7 +260,15 @@ export function Combobox<T>({
           setClosed(false);
         }}
         onKeyDown={(e) => {
-          if (!open) return;
+          if (!open) {
+            // Bàn phím mở menu bằng ↓/↑ (mẫu combobox của ARIA APG): Tab vào ô không bung.
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              setTouched(true);
+              setClosed(false);
+            }
+            return;
+          }
           if (e.key === 'ArrowDown') {
             e.preventDefault();
             setActive((i) => Math.min(i + 1, options.length - 1));

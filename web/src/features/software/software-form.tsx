@@ -10,7 +10,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import {
   codePrefix,
   KIND_KEY,
@@ -133,6 +133,7 @@ export function SoftwareForm({
         : seats.reason === 'belowUsed'
           ? t('software.seatBelowUsed', { used: row?.seatUsed ?? 0, total: seats.value })
           : null,
+    note: secretTextRule(t, form.note),
   });
 
   return (
@@ -207,11 +208,11 @@ export function SoftwareForm({
         }}
       >
         {/*
-          Khối lỗi nằm ở ĐẦU form, không phải ở cuối (12/09, rà UI/UX #12).
+          Khối lỗi nằm ở ĐẦU form, không phải ở cuối.
 
-          Bản cũ đặt nó ngay trên `</form>`, tức DƯỚI cả khu Giấy tờ đính kèm. Trên một form
-          dài như thế này thì nó nằm ngoài màn hình: người dùng bấm Lưu, không thấy gì xảy
-          ra, và bấm tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
+          Đặt ngay trên `</form>` là nằm DƯỚI cả khu Giấy tờ đính kèm: trên một form dài như
+          thế này nó rơi ra ngoài màn hình, người dùng bấm Lưu, không thấy gì xảy ra, và bấm
+          tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
         */}
         {error ? (
           <p className="alert error" role="alert">
@@ -408,6 +409,7 @@ export function SoftwareForm({
             hint={t('software.noteHint')}
             htmlFor="sw-note"
             span={hasSeats || supportsWebsites(form.kind) ? 2 : 3}
+            error={check.error('note')}
           >
             <textarea
               id="sw-note"

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { formatPhone } from '@/lib/phone-format';
+import { PhoneLink } from '@/ui/phone-link';
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -33,6 +35,8 @@ import {
 } from "./isp-types";
 import { errorMessage } from "@/lib/api";
 import { RowActions } from "@/ui/row-actions";
+import { useOwnerSecrets } from "@/ui/vault-panel";
+import { ispMenuItems, parseIspAction } from "./isp-status-menu";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
 import { useIsNarrow } from "@/ui/use-narrow";
@@ -46,7 +50,7 @@ export function IspDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   // `?tab=vault` từ thư "đã được duyệt": người xin mở thẳng két, không phải tìm tab.
   const [tab, setTab] = useState(() =>
     initialTab(params.get("tab"), ["profile", "vault", "attachments", "history"]),
@@ -75,6 +79,28 @@ export function IspDetail({ me }: { me: Me }) {
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["isp"] });
+
+  /*
+   * `?action=` từ menu ⋮ của danh sách: chờ tới khi biết số ngăn két (câu hỏi lại của Thanh lý
+   * nhắc hủy mật khẩu trong két — hỏi trước khi đếm xong là nói thiếu), rồi hỏi đúng MỘT lần
+   * và gỡ tham số, để F5 hay Back không bật lại hộp.
+   */
+  const vault = useOwnerSecrets("isp", id, me);
+  const vaultKnown = vault.verdict.isFetched && (!vault.allowed || vault.secrets.isFetched);
+  const changeStatusRef = useRef<((next: IspStatus) => Promise<void>) | null>(null);
+  const pendingAction = line.data ? parseIspAction(params.get("action"), line.data.status) : null;
+  useEffect(() => {
+    if (!params.has("action") || !line.data || !vaultKnown) return;
+    setParams(
+      (next) => {
+        next.delete("action");
+        return next;
+      },
+      { replace: true },
+    );
+    if (pendingAction) void changeStatusRef.current?.(pendingAction);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line.data, vaultKnown, pendingAction]);
 
   if (line.isLoading) return <Loading />;
   if (line.isError) {
@@ -123,6 +149,7 @@ export function IspDetail({ me }: { me: Me }) {
       toast({ message: errorMessage(error), tone: "error" });
     }
   };
+  changeStatusRef.current = changeStatus;
 
   return (
     <>
@@ -177,31 +204,7 @@ export function IspDetail({ me }: { me: Me }) {
                 ...(narrow
                   ? [{ key: "edit", label: t("isp.edit"), onSelect: () => setEditing(true) }]
                   : []),
-                ...(item.status === "active"
-                  ? [
-                      {
-                        key: "suspend",
-                        label: t("isp.suspendMenu"),
-                        onSelect: () => void changeStatus("suspended"),
-                      },
-                    ]
-                  : [
-                      {
-                        key: "reactivate",
-                        label: t("isp.reactivateMenu"),
-                        onSelect: () => void changeStatus("active"),
-                      },
-                    ]),
-                ...(terminated
-                  ? []
-                  : [
-                      {
-                        key: "terminate",
-                        label: t("isp.terminateMenu"),
-                        onSelect: () => void changeStatus("terminated"),
-                        danger: true,
-                      },
-                    ]),
+                ...ispMenuItems(t, item.status, (next) => void changeStatus(next)),
               ]}
             />
           </>
@@ -233,17 +236,15 @@ export function IspDetail({ me }: { me: Me }) {
             {terminated ? null : (
               <RailCard title={t("isp.incidentCard")}>
                 {item.hotline ? (
-                  <a
-                    className="btn primary isp-call"
-                    href={`tel:${item.hotline.replace(/\s/g, "")}`}
-                  >
-                    {t("isp.callHotline", { hotline: item.hotline })}
-                  </a>
+                  <PhoneLink className="btn primary isp-call" value={item.hotline}>
+                    {t("isp.callHotline", { hotline: formatPhone(item.hotline) })}
+                  </PhoneLink>
                 ) : (
                   <RailRow label={t("isp.hotline")}>—</RailRow>
                 )}
                 {item.contractNo ? (
-                  <RailRow label={t("isp.contractNo")} note={item.provider}>
+                  /* Không kèm tên nhà mạng: nó đã là tên trang và breadcrumb. */
+                  <RailRow label={t("isp.contractNo")}>
                     <span className="mono">{item.contractNo}</span>{" "}
                     <CopyButton
                       value={item.contractNo}
@@ -293,10 +294,9 @@ export function IspDetail({ me }: { me: Me }) {
         items={[
           { key: "profile", label: t("isp.tabProfile") },
           /*
-            Két sắt cho đường truyền.
-            Mật khẩu PPPoE và tài khoản quản trị modem nhà mạng trước đây không có chỗ đứng —
-            `file.owner_type` đã nhận `isp` từ lâu mà `secret.owner_type` thì chưa, nên hợp
-            đồng PDF đính vào được còn mật khẩu thì chảy vào ô Ghi chú, chỗ không mã hóa.
+            Két sắt cho đường truyền: mật khẩu PPPoE và tài khoản quản trị modem nhà mạng
+            phải có chỗ mã hoá riêng — không có tab này thì chúng chảy vào ô Ghi chú, chỗ
+            không mã hoá.
           */
           { key: "vault", label: t("vault.tab"), count: counts.secrets },
           {
@@ -322,7 +322,9 @@ export function IspDetail({ me }: { me: Me }) {
                 một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
             <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
-                <DataItemIfSet label={t("isp.device")} value={item.deviceId}>
+                {/* Đường còn dùng thì thiết bị đầu cuối đã đứng ở thẻ "Khi mất mạng" bên
+                    phải; chỉ khi thanh lý (thẻ đó ẩn) nó mới cần chỗ ở lưới này. */}
+                <DataItemIfSet label={t("isp.device")} value={terminated ? item.deviceId : null}>
                   {/* `?? ''` chứ KHÔNG `!`: JSX dựng `children` TRƯỚC khi `DataItemIfSet`
                       quyết định `return null`, nên dòng này CHẠY THẬT cả khi `deviceId` rỗng
                       — `!` ở đây là một lời khẳng định sai ở đúng nhánh nó khẳng định. Link

@@ -291,7 +291,7 @@ test.describe('Cỗ máy Expiry', () => {
 
     await page.goto('/expiry');
     const row = page.getByRole('row', { name: new RegExp(`PC-E2E-NOREN-${stamp}`) });
-    await expect(row.getByRole('link', { name: 'Mở hồ sơ →' })).toBeVisible();
+    await expect(row.getByRole('link', { name: 'Mở hồ sơ', exact: true })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
   });
 

@@ -1,8 +1,9 @@
+import { PhoneLink } from '@/ui/phone-link';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -20,6 +21,8 @@ import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } fr
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { CopyButton } from '@/ui/copy-button';
+import { RowActions } from '@/ui/row-actions';
+import { ispMenuItems } from './isp-status-menu';
 
 const DEFAULT_LIMIT = 20;
 
@@ -72,6 +75,8 @@ export function IspScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<IspRow | null>(null);
+  const navigate = useNavigate();
 
   const lists = useCatalogLists();
 
@@ -161,9 +166,7 @@ export function IspScreen({ me }: { me: Me }) {
         cell: ({ row }) =>
           row.original.hotline ? (
             // Bấm gọi thẳng từ điện thoại — màn này hay được mở ở 390px.
-            <a className="mono" href={`tel:${row.original.hotline.replace(/\s/g, '')}`}>
-              {row.original.hotline}
-            </a>
+            <PhoneLink value={row.original.hotline} />
           ) : (
             '—'
           ),
@@ -187,8 +190,29 @@ export function IspScreen({ me }: { me: Me }) {
           </span>
         ),
       },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        meta: { className: 'col-center' },
+        cell: ({ row }) => (
+          <RowActions
+            primary={{
+              label: t('common.edit'),
+              ariaLabel: t('common.editOf', { subject: row.original.code }),
+              onClick: () => setEditing(row.original),
+            }}
+            label={t('common.actionsOf', { subject: row.original.code })}
+            subject={row.original.code}
+            /* Đổi trạng thái đi sang trang chi tiết (`?action=`): câu hỏi lại của Thanh lý nhắc
+               hủy mật khẩu trong két, và chỉ trang chi tiết đếm ngăn két của đường này. */
+            items={ispMenuItems(t, row.original.status, (next) =>
+              navigate(`${PATHS.ispLine(row.original.id)}?action=${next}`),
+            )}
+          />
+        ),
+      },
     ],
-    [t],
+    [t, navigate],
   );
 
   return (
@@ -263,9 +287,21 @@ export function IspScreen({ me }: { me: Me }) {
         <EmptyState
           /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
              ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
           title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
           hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('isp.add')}
+              </button>
+            )
+          }
         />
       ) : (
         <>
@@ -274,6 +310,18 @@ export function IspScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
             stackOnMobile
+            /* Màn này hay được mở trên điện thoại lúc mất mạng: thẻ gọn với nút gọi hotline ở
+               góc thay cho bảng gập bảy dòng toàn nhãn. */
+            mobileCard={{
+              title: (row) => row.code,
+              href: (row) => PATHS.ispLine(row.id),
+              badge: (row) => (
+                <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
+              ),
+              subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
+              meta: (row) => [row.siteCode, row.deviceCode, row.wanIp].filter(Boolean).join(' · '),
+              aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
+            }}
             // Tạm ngưng: vạch cam ở mép trái — đường đang "nửa sống" là thứ phải thấy từ xa.
             rowClassName={(row) => (row.status === 'suspended' ? 'row-suspended' : '')}
             manualSorting
@@ -298,6 +346,18 @@ export function IspScreen({ me }: { me: Me }) {
           />
         </>
       )}
+
+      {editing ? (
+        <IspForm
+          row={editing}
+          csrfToken={me.csrfToken}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void queryClient.invalidateQueries({ queryKey: ['isp'] });
+          }}
+        />
+      ) : null}
 
       {creating ? (
         <IspForm

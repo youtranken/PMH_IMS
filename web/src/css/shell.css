@@ -33,12 +33,10 @@
   background: var(--warm);
   color: var(--ink);
 }
-/* Mũi tên của khối tài khoản: chevron ›. */
+/* Mũi tên của khối tài khoản (`Chevron` sang phải). */
 .nav-caret {
-  font-size: var(--fs-lg);
-  line-height: 1;
+  font-size: var(--fs-sm);
   opacity: 0.75;
-  transition: transform 0.18s var(--ease);
 }
 
 /* Vùng cuộn riêng của danh sách mục: brand ở trên và khối tài khoản ở đáy đứng yên. Mép dưới
@@ -360,12 +358,13 @@
 .nav-group-toggle:hover {
   color: var(--sidebar-ink-2);
 }
+/* `Chevron` gốc chỉ XUỐNG (nhóm đang mở); nhóm khép thì xoay sang phải. Xoay bằng CSS chứ
+   không bằng `direction` — `direction` đặt `transform` inline và đè mất luật mở/khép này. */
 .nav-group-chev {
   width: 14px;
   height: 14px;
-  flex: none;
-  transition: transform 0.15s var(--ease);
+  transform: rotate(-90deg);
 }
 .nav-group-toggle[aria-expanded='true'] .nav-group-chev {
-  transform: rotate(90deg);
+  transform: none;
 }

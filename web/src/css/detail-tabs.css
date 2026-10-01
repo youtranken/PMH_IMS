@@ -37,7 +37,8 @@
   color: var(--primary-ink);
   text-decoration: none;
 }
-.crumb-arrow { font-size: var(--fs-md); line-height: 1; }
+/* SVG chứ không phải ký tự `‹`: ký tự nằm theo đường cơ sở của phông nên lệch khỏi chữ bên cạnh. */
+.crumb-arrow { font-size: var(--fs-sm); }
 .crumb { display: inline-flex; align-items: center; gap: var(--space-2); }
 .crumb-sep { opacity: 0.55; }
 

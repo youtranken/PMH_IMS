@@ -222,14 +222,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
             >
               {t("software.edit")}
             </button>
-            {/* Gia hạn không dùng cho hồ sơ Thanh lý (Q-13: hồi sinh phải là một thao tác Sửa
-                có chủ ý) và vô nghĩa với license vĩnh viễn — API từ chối cả hai. Hồ sơ Thanh lý
-                thì chỗ này là "Khôi phục…". */}
-            {retired ? (
-              <button type="button" className="btn" onClick={() => setRestoring(true)}>
-                {t("software.restore")}
-              </button>
-            ) : item.licenseModel !== "perpetual" ? (
+            {/* Gia hạn là việc chính thứ hai nên đứng ngoài cạnh Sửa (Q-19). Không dùng cho hồ
+                sơ Thanh lý (Q-13: hồi sinh phải là một thao tác có chủ ý) và vô nghĩa với
+                license vĩnh viễn — API từ chối cả hai. */}
+            {!retired && item.licenseModel !== "perpetual" ? (
               <button
                 type="button"
                 className="btn"
@@ -238,11 +234,16 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 {t("software.renew")}
               </button>
             ) : null}
-            {/* Thanh lý vào menu "⋯", không đứng lẻ một nút đỏ ở mép phải: header chỉ giữ hai
-                nút cùng cỡ, và mục nguy hiểm nằm cuối menu như mọi chỗ khác (RowActions). */}
-            {!retired ? (
-              <DetailMoreActions item={item} csrfToken={me.csrfToken} onDone={() => void refresh()} />
-            ) : null}
+            {/* Thanh lý và Khôi phục vào menu "⋯" (Q-19): header chỉ giữ việc chính, mục nguy
+                hiểm nằm cuối menu như mọi chỗ khác (RowActions). Hồ sơ Thanh lý còn nút
+                Khôi phục ngay trên băng báo của nó. */}
+            <DetailMoreActions
+              item={item}
+              retired={retired}
+              csrfToken={me.csrfToken}
+              onRestore={() => setRestoring(true)}
+              onDone={() => void refresh()}
+            />
           </>
         }
       />
@@ -362,11 +363,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
             <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
-              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang (`_SPEC.md:53`, gạch nghiệm thu
-                  `:528`): với SSL và tên miền thì "Kỳ hạn" không có nghĩa, nên ô ấy trước đây
-                  được vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa khai" bên
-                  dưới là nơi DUY NHẤT nói về ô trống. Bốn màn chi tiết kia đã theo luật này,
-                  riêng chỗ này còn dùng `Item` trần. */}
+              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang: với SSL và tên miền thì "Kỳ hạn"
+                  không có nghĩa, vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa
+                  khai" bên dưới là nơi DUY NHẤT nói về ô trống — cùng luật với các trang chi
+                  tiết khác. */}
               {supportsSeats(item.kind) ? (
                 <Item label={t("software.licenseModel")}>
                   {t(
@@ -517,11 +517,15 @@ function defaultTab(kind: SoftwareKind | undefined): string {
  */
 function DetailMoreActions({
   item,
+  retired,
   csrfToken,
+  onRestore,
   onDone,
 }: {
   item: SoftwareRow;
+  retired: boolean;
   csrfToken: string;
+  onRestore: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -541,15 +545,19 @@ function DetailMoreActions({
   return (
     <RowActions
       label={t("common.actionsOf", { subject: item.code })}
-      items={[
-        {
-          key: "dispose",
-          label: t("disposal.dispose"),
-          onSelect: dispose.run,
-          danger: true,
-          disabled: dispose.isPending,
-        },
-      ]}
+      items={
+        retired
+          ? [{ key: "restore", label: t("software.restore"), onSelect: onRestore, ok: true }]
+          : [
+              {
+                key: "dispose",
+                label: t("disposal.dispose"),
+                onSelect: dispose.run,
+                danger: true,
+                disabled: dispose.isPending,
+              },
+            ]
+      }
     />
   );
 }

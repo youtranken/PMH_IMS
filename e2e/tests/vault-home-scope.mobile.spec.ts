@@ -110,7 +110,7 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await member.click();
-  await expect(page.getByRole('button', { name: '← Danh sách thành viên' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Danh sách thành viên', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /: Cần duyệt$/ })).toBeVisible();
   await expect(page.getByRole('button', { name: '+ Thêm quyền' })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
@@ -167,7 +167,7 @@ test('popup két ở 390px: bước mã có Quay lại — về danh sách, khô
   await page.getByRole('listitem').filter({ hasText: code }).getByRole('button', { name: code }).click();
   const popup = page.getByRole('dialog');
   await popup.getByRole('button', { name: 'Xem' }).click();
-  await popup.getByRole('button', { name: '‹ Quay lại', exact: true }).click();
+  await popup.getByRole('button', { name: 'Quay lại', exact: true }).click();
   await expect(popup.getByText(label)).toBeVisible();
   await expect(popup.getByRole('button', { name: 'Xem' })).toBeVisible();
   await expect(page.getByTestId('secret-value')).toHaveCount(0);

@@ -35,6 +35,7 @@ describe('Két: mốc đổi giá trị (value_changed_at/by)', () => {
     const owners = {
       assertExists: () => Promise.resolve(),
       assertUsableWithin: () => Promise.resolve(),
+      ownerNote: () => Promise.resolve(null),
     } as unknown as OwnerExistsRegistry;
     vault = new VaultService(scratch.db, crypto, audit, owners);
   }, TEST_TIMEOUT);

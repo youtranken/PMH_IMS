@@ -295,6 +295,17 @@ export function SoftwareScreen({ me }: { me: Me }) {
              bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
           title={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
           hint={url.isFiltered ? t('software.emptyFilteredHint') : t('software.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('software.add')}
+              </button>
+            )
+          }
         />
       ) : (
         <>
@@ -488,46 +499,55 @@ function SoftwareRowActions({
   });
 
   return (
-    <div className="action-cell">
-      <RowActions
-        label={t('common.actionsOf', { subject: item.code })}
-        items={[
-          { key: 'edit', label: t('common.edit'), onSelect: () => onEdit(item) },
-          /* Chỉ license CÒN DÙNG mới có ghế để gán. SSL hay tên miền, hoặc hồ sơ đã Thanh lý,
-             thì mục này vô nghĩa — bày ra để bấm vào rồi báo lỗi là một kiểu hứa hão. */
-          ...(supportsSeats(item.kind) && item.status !== 'retired'
-            ? [
-                {
-                  key: 'assign',
-                  label: t('license.assign'),
-                  onSelect: () => onAssign(item),
-                },
-              ]
-            : []),
-          /* Gia hạn: hồ sơ thuê bao còn sống có hạn. Hồ sơ Thanh lý thì là "Khôi phục…" (Q-13:
-             hồi sinh là một thao tác Sửa có chủ ý, Gia hạn không dùng cho nó). */
-          ...(item.status !== 'retired' && item.licenseModel !== 'perpetual' && item.endDate
-            ? [{ key: 'renew', label: t('software.renew'), onSelect: () => onRenew(item) }]
-            : []),
-          ...(item.status === 'retired'
-            ? [{ key: 'restore', label: t('software.restore'), onSelect: () => onRestore(item) }]
-            : []),
-          /* Hồ sơ đã bỏ thì không bày mục bỏ nữa — bấm lần hai chỉ ghi thêm một dòng lịch sử
-             rỗng nghĩa. */
-          ...(item.status !== 'retired'
-            ? [
-                {
-                  key: 'dispose',
-                  label: t('disposal.dispose'),
-                  onSelect: dispose.run,
-                  danger: true,
-                  disabled: dispose.isPending,
-                },
-              ]
-            : []),
-        ]}
-      />
-    </div>
+    <RowActions
+      primary={{
+        label: t('common.edit'),
+        ariaLabel: t('common.editOf', { subject: item.code }),
+        onClick: () => onEdit(item),
+      }}
+      label={t('common.actionsOf', { subject: item.code })}
+      items={[
+        /* Chỉ license CÒN DÙNG mới có ghế để gán. SSL hay tên miền, hoặc hồ sơ đã Thanh lý,
+           thì mục này vô nghĩa — bày ra để bấm vào rồi báo lỗi là một kiểu hứa hão. */
+        ...(supportsSeats(item.kind) && item.status !== 'retired'
+          ? [
+              {
+                key: 'assign',
+                label: t('license.assign'),
+                onSelect: () => onAssign(item),
+              },
+            ]
+          : []),
+        /* Gia hạn: hồ sơ thuê bao còn sống có hạn. Hồ sơ Thanh lý thì là "Khôi phục…" (Q-13:
+           hồi sinh là một thao tác Sửa có chủ ý, Gia hạn không dùng cho nó). */
+        ...(item.status !== 'retired' && item.licenseModel !== 'perpetual' && item.endDate
+          ? [{ key: 'renew', label: t('software.renew'), onSelect: () => onRenew(item) }]
+          : []),
+        ...(item.status === 'retired'
+          ? [
+              {
+                key: 'restore',
+                label: t('software.restore'),
+                onSelect: () => onRestore(item),
+                ok: true,
+              },
+            ]
+          : []),
+        /* Hồ sơ đã bỏ thì không bày mục bỏ nữa — bấm lần hai chỉ ghi thêm một dòng lịch sử
+           rỗng nghĩa. */
+        ...(item.status !== 'retired'
+          ? [
+              {
+                key: 'dispose',
+                label: t('disposal.dispose'),
+                onSelect: dispose.run,
+                danger: true,
+                disabled: dispose.isPending,
+              },
+            ]
+          : []),
+      ]}
+    />
   );
 }
 

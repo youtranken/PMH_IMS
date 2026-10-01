@@ -1,5 +1,6 @@
 import { isIpv4OrCidr } from '@/lib/ipv4';
 import { stripDiacritics } from '@/lib/search-fold';
+import { SERVICE_ACCOUNT_STATUS_TONE } from '@/lib/status-tone';
 
 /**
  * Xem trước mã API sẽ đặt khi ô Mã để trống — bản web của `codeFromLogin` (API), cùng bảng
@@ -101,10 +102,8 @@ export const STATUS_KEY: Record<ServiceAccountStatus, string> = {
   disabled: 'serviceAccounts.statusDisabled',
 };
 
-export const STATUS_TONE: Record<ServiceAccountStatus, string> = {
-  active: 'ok',
-  disabled: 'danger',
-};
+/** Bản gốc ở `lib/status-tone.ts` — Kho thanh lý tô cùng màu (Q-19). */
+export const STATUS_TONE: Record<ServiceAccountStatus, string> = SERVICE_ACCOUNT_STATUS_TONE;
 
 /**
  * Ô nào thuộc loại nào — bản đọc của `supportsVpnFields` phía API.

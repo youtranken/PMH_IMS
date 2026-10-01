@@ -197,37 +197,35 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               header: t('common.actions'),
               meta: { className: 'col-center' },
               cell: ({ row }) => (
-                <div className="action-cell">
-                  <RowActions
-                    label={t('common.actionsOf', { subject: row.original.code })}
-                    items={[
-                      {
-                        key: 'edit',
-                        label: t('common.edit'),
-                        onSelect: () => setEditing(row.original),
-                      },
-                      /* Đổi trạng thái là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá
-                         trị trong ô Trạng thái của form. Xem chú thích ở `service-account-form`.
-                         Hai chiều đối xứng: đóng rồi thì phải có đường mở lại, cũng kèm lý do,
-                         không thì hồ sơ đã đóng là đóng vĩnh viễn với người dùng giao diện. */
-                      row.original.status === 'active'
-                        ? {
-                            key: 'disable',
-                            label: t('serviceAccounts.disable'),
-                            onSelect: () =>
-                              setSwitching({ row: row.original, next: 'disabled' }),
-                            warn: true,
-                          }
-                        : {
-                            key: 'enable',
-                            label: t('serviceAccounts.enable'),
-                            onSelect: () =>
-                              setSwitching({ row: row.original, next: 'active' }),
-                            ok: true,
-                          },
-                    ]}
-                  />
-                </div>
+                <RowActions
+                  primary={{
+                    label: t('common.edit'),
+                    ariaLabel: t('common.editOf', { subject: row.original.code }),
+                    onClick: () => setEditing(row.original),
+                  }}
+                  label={t('common.actionsOf', { subject: row.original.code })}
+                  items={[
+                    /* Đổi trạng thái là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá
+                       trị trong ô Trạng thái của form. Xem chú thích ở `service-account-form`.
+                       Hai chiều đối xứng: đóng rồi thì phải có đường mở lại, cũng kèm lý do,
+                       không thì hồ sơ đã đóng là đóng vĩnh viễn với người dùng giao diện. */
+                    row.original.status === 'active'
+                      ? {
+                          key: 'disable',
+                          label: t('serviceAccounts.disable'),
+                          onSelect: () =>
+                            setSwitching({ row: row.original, next: 'disabled' }),
+                          warn: true,
+                        }
+                      : {
+                          key: 'enable',
+                          label: t('serviceAccounts.enable'),
+                          onSelect: () =>
+                            setSwitching({ row: row.original, next: 'active' }),
+                          ok: true,
+                        },
+                  ]}
+                />
               ),
             } as ColumnDef<ServiceAccountRow, unknown>,
           ]
@@ -319,9 +317,21 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <EmptyState
           /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
              ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Nút Thêm chỉ cho người
+             được thêm — mời Member bấm một nút rồi báo 403 là tệ hơn không mời. */
           title={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
           hint={url.isFiltered ? t('serviceAccounts.emptyFilteredHint') : t('serviceAccounts.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('common.clearFilters')}
+              </button>
+            ) : canEdit ? (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('serviceAccounts.add')}
+              </button>
+            ) : undefined
+          }
         />
       ) : (
         <>

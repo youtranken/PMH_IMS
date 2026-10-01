@@ -1,3 +1,4 @@
+import { formatPhone } from '../../common/phone';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import type { DevicePanel, DevicePanelProvider } from '../../common/device-panels';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
@@ -36,7 +37,7 @@ export class IspDevicePanel implements DevicePanelProvider, OnModuleInit {
       label: line.code,
       value: [
         line.provider,
-        line.hotline ? `Hotline ${line.hotline}` : null,
+        line.hotline ? `Hotline ${formatPhone(line.hotline)}` : null,
         line.contractNo ? `HĐ ${line.contractNo}` : null,
         line.wanIp ? `WAN ${line.wanIp}` : null,
       ]

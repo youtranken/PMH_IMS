@@ -3,10 +3,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { SoftwareDetail } from './software-detail';
 import { RestoreDialog } from './software-restore-dialog';
-import { isoDay, plusOneYear } from './software-standing';
+import { addYearsIso } from '@/lib/add-years';
+import { isoDay } from './software-standing';
 import type { SoftwareDetailRow } from './software-types';
 
 /**
@@ -89,6 +90,24 @@ describe('Trang chi tiết phần mềm — Gia hạn / Khôi phục', () => {
     expect(screen.queryByRole('button', { name: 'Đưa vào kho thanh lý' })).not.toBeInTheDocument();
   });
 
+  /* Q-19: header chỉ giữ việc chính; "Khôi phục…" vào ⋮ (màu ok), băng Thanh lý vẫn giữ nút của nó. */
+  it('hồ sơ Thanh lý: "Khôi phục…" nằm trong ⋮ của header, không đứng thành nút cạnh Sửa', async () => {
+    const user = userEvent.setup();
+    mockFetch(BASE);
+    renderDetail(BASE);
+    await screen.findByText(/Đã thanh lý ngày 01\/09\/2026/);
+    expect(screen.getAllByRole('button', { name: 'Khôi phục…' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Khôi phục…' }).closest('.alert')).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: `Thao tác với ${BASE.code}` }));
+    const restore = screen.getByRole('menuitem', { name: 'Khôi phục…' });
+    expect(restore).toHaveClass('ok');
+    expect(screen.queryByRole('menuitem', { name: 'Đưa vào kho thanh lý' })).not.toBeInTheDocument();
+    await user.click(restore);
+    expect(
+      await screen.findByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${BASE.code}`) }),
+    ).toBeInTheDocument();
+  });
+
   it('người thanh lý: băng ghi "bởi <email>"', async () => {
     const detail = { ...BASE, retirement: { at: '2026-09-01T02:00:00Z', by: 'a@pmh.com.vn', auto: false } };
     mockFetch(detail);
@@ -146,10 +165,25 @@ describe('Hộp Khôi phục', () => {
       {
         url: '/api/v1/software/sw-1',
         method: 'PATCH',
-        body: { status: 'active', endDate: plusOneYear(isoDay(new Date())) },
+        body: { status: 'active', endDate: addYearsIso(isoDay(new Date()), 1) },
       },
       { url: '/api/v1/software/sw-1/assignments', method: 'POST', body: { deviceId: 'd-2' } },
     ]);
+  });
+
+  it('đặt nhanh +2 năm dùng hàng nút chung, tính từ hôm nay', async () => {
+    const calls = mockFetch(BASE);
+    const onDone = renderDialog(BASE);
+    const user = userEvent.setup();
+    const group = screen.getByRole('group', { name: 'Đặt nhanh ngày hết hạn' });
+    await user.click(within(group).getByRole('button', { name: '+2 năm' }));
+    await user.click(await screen.findByRole('checkbox', { name: /PC-02/ }));
+    await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      status: 'active',
+      endDate: addYearsIso(isoDay(new Date()), 2),
+    });
   });
 
   it('tick nhiều máy hơn số ghế: báo lỗi trong hộp, không gửi gì', async () => {

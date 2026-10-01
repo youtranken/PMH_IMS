@@ -74,7 +74,7 @@ test.describe('Sổ NAT', () => {
     const { routerCode, internalIp } = await setUp(page, stamp);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -134,7 +134,7 @@ test.describe('Sổ NAT', () => {
 
     // Và hàng rào phải hiện ra tận màn hình, không chỉ nằm ở API.
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -159,7 +159,7 @@ test.describe('Sổ NAT', () => {
     const { routerCode, internalIp } = await setUp(page, stamp);
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -200,7 +200,7 @@ test.describe('Sổ NAT', () => {
     const serviceName = `Cong E2E ${stamp}`;
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
@@ -246,7 +246,7 @@ test.describe('Sổ NAT', () => {
     const newRouter = `RT-E2E-NEW-${stamp}`;
 
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).first().click();
     const form = page.getByRole('dialog');
 
     // Khai dở một ô TRƯỚC khi mở hộp thêm router — nó phải còn nguyên khi quay lại.

@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
@@ -343,8 +344,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
           ) : (
             /* Bảo hành không gia hạn ở đây: cho lối sang hồ sơ (sửa ngày ở đó) thay vì một câu
                xám lặp lại trên mọi dòng, đọc như chữ của một nút bị vô hiệu. */
-            <Link to={row.original.link}>
-              {t('expiry.openRecord')}
+            <Link className="with-icon" to={row.original.link}>
+              {t('expiry.openRecordShort')}
+              <Chevron direction="right" />
             </Link>
           ),
       },
@@ -391,11 +393,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
 
       {/*
         BA CON SỐ NÀY LÀ THỨ NGƯỜI TA NHÌN ĐẦU TIÊN MỖI SÁNG — nên chúng phải ĐỌC ĐƯỢC và
-        BẤM ĐƯỢC (dựng lại 17/09/2026).
-        Trước đây là ba cái pill 11px nằm sát nhau ("Đã quá hạn: 4  Gấp (≤7 ngày): 2  Sắp tới:
-        11"): muốn biết có bao nhiêu thứ quá hạn thì phải dí mắt vào đọc, và biết rồi cũng
-        không làm gì được với nó — vẫn phải tự dò trong bảng 30 dòng xem cái nào quá hạn.
-        Giờ bấm một ô là bảng thu về đúng nhóm ấy; bấm lại là bỏ lọc.
+        BẤM ĐƯỢC: biết có 4 thứ quá hạn mà vẫn phải tự dò trong bảng 30 dòng thì con số
+        chẳng giúp gì. Bấm một ô là bảng thu về đúng nhóm ấy; bấm lại là bỏ lọc.
       */}
       {failedLabels && tab === 'list' ? (
         <div className="alert warn" role="status">

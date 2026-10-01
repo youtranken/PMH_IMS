@@ -62,6 +62,7 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
     const owners = {
       assertExists: () => Promise.resolve(),
       assertUsableWithin: () => Promise.resolve(),
+      ownerNote: () => Promise.resolve(null),
     } as unknown as OwnerExistsRegistry;
     vault = new VaultService(scratch.db, crypto, audit, owners);
 
@@ -119,8 +120,8 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
     return ownerId;
   }
 
-  function as(role: string, email: string): AuthedRequest {
-    return { user: { role, email, sessionId: randomUUID() } } as unknown as AuthedRequest;
+  function as(role: string, email: string, sessionId = randomUUID()): AuthedRequest {
+    return { user: { role, email, sessionId } } as unknown as AuthedRequest;
   }
 
   async function list(ownerId: string, req: AuthedRequest) {
@@ -139,10 +140,7 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
     expect(rows.filter((row) => row.hasNote)).toHaveLength(1);
   });
 
-  it('Member cần-duyệt đã được duyệt (chưa xem lần nào): thấy ghi chú', async () => {
-    const ownerId = await seed();
-    tier = 'needs_approval';
-    const member = 'e2e-note-granted@qa.test';
+  async function approvedFor(member: string, ownerId: string): Promise<void> {
     const created = await scratch.db.transaction((tx) =>
       approvals.createWithin(tx, {
         kind: 'break_glass',
@@ -154,8 +152,35 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
       }),
     );
     await breakGlass.approve('duyet@qa.test', created.id, {});
+  }
+
+  /*
+   * Q-15: quyền gắn với phiên XEM LẦN ĐẦU (qua mã 6 số). Trước lần đó, phiên nào của người xin
+   * cũng "có thể" nhận quyền — cho đọc ghi chú lúc này là cho mọi phiên đọc, kể cả phiên sẽ
+   * không bao giờ giữ quyền.
+   */
+  it('Member cần-duyệt đã được duyệt nhưng CHƯA xem lần nào: chưa thấy ghi chú', async () => {
+    const ownerId = await seed();
+    tier = 'needs_approval';
+    const member = 'e2e-note-granted@qa.test';
+    await approvedFor(member, ownerId);
     const rows = await list(ownerId, as('member', member));
-    expect(rows.find((row) => row.hasNote)?.note).toBe(NOTE);
+    expect(JSON.stringify(rows)).not.toContain(NOTE);
+    expect(rows.find((row) => row.hasNote)?.note).toBeNull();
+  });
+
+  it('đã xem lần đầu ở phiên A: phiên A thấy ghi chú, phiên B của cùng người thì không', async () => {
+    const ownerId = await seed();
+    tier = 'needs_approval';
+    const member = 'e2e-note-bound@qa.test';
+    await approvedFor(member, ownerId);
+    const sessionA = randomUUID();
+    await breakGlass.assertCanReveal({ email: member, sessionId: sessionA }, 'device', ownerId);
+
+    const inA = await list(ownerId, as('member', member, sessionA));
+    expect(inA.find((row) => row.hasNote)?.note).toBe(NOTE);
+    const inB = await list(ownerId, as('member', member));
+    expect(JSON.stringify(inB)).not.toContain(NOTE);
   });
 
   it('Member xem thẳng (whitelist): thấy ghi chú', async () => {

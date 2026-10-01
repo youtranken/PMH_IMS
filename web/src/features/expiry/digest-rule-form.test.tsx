@@ -92,4 +92,19 @@ describe('Form luật gửi báo cáo — chip người nhận, gợi ý, công 
     expect(toggle).not.toBeChecked();
     expect(within(dialog).getByText('Đang tạm ngưng')).toBeInTheDocument();
   });
+
+  it('lưới 2 cột trong hộp đủ rộng cho hai ô cạnh nhau', async () => {
+    const dialog = await renderForm();
+    expect(dialog.querySelector('form.form-grid')).toHaveAttribute('data-columns', '2');
+    expect(Number.parseInt(dialog.style.maxWidth, 10)).toBeGreaterThanOrEqual(760);
+  });
+
+  it('gợi ý dài của Theo dõi loại và Người nhận nằm sau nút (i)', async () => {
+    const dialog = await renderForm();
+    for (const label of ['Theo dõi loại', 'Người nhận']) {
+      expect(within(dialog).getByRole('button', { name: `Giải thích: ${label}` })).toBeInTheDocument();
+    }
+    expect(within(dialog).queryByText(/kể cả loại thêm về sau/)).toBeNull();
+    expect(within(dialog).queryByText(/Không cần có tài khoản IMS/)).toBeNull();
+  });
 });

@@ -195,7 +195,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // ĐỦ CỘT, ĐÚNG THỨ TỰ. Cột rơi mất là một thông tin không ai còn đọc được trên danh sách.
     expect(
       await tableColumnNames(main),
-      'Bảng đường truyền phải có đúng 7 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04)',
+      'Bảng đường truyền phải có đúng 8 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04), cột cuối là Thao tác (Q-18)',
     ).toEqual([
       'Mã đường',
       'Nhà mạng',
@@ -204,6 +204,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Hotline',
       'Số hợp đồng',
       'Trạng thái',
+      'Thao tác',
     ]);
 
     /*
@@ -261,17 +262,26 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Hotline',
         'Sắp xếp theo Số hợp đồng',
         'Sắp xếp theo Trạng thái',
+        // Q-18: "Sửa" đứng ngoài, đổi trạng thái vào menu ⋮.
+        `Sửa ${codeA}`,
+        `Thao tác với ${codeA}`,
         'Số dòng',
         'Trang trước',
         'Trang sau',
       ]),
     );
 
-    // Nói thẳng ra điều vừa suy ra được từ tập hợp trên — để lúc đỏ đọc log là hiểu ngay.
+    /* Menu ⋮ của đường đang dùng: Tạm ngưng rồi Thanh lý (việc nguy hiểm xếp cuối). Thanh lý
+       đi sang trang hồ sơ — hộp hỏi lại cần số ngăn két của đường này. */
+    expect(await rowActionNames(page, codeA)).toEqual(['Tạm ngưng…', 'Thanh lý…']);
+    await rowAction(page, codeA, 'Thanh lý…');
     await expect(
-      main.getByRole('button', { name: /^Thao tác với/ }),
-      'Màn Đường truyền KHÔNG có cột Thao tác: sửa và thanh lý chỉ làm từ trang hồ sơ',
-    ).toHaveCount(0);
+      page.getByRole('dialog', { name: `Thanh lý đường truyền ${codeA}?` }),
+      'Thanh lý từ danh sách mở trang hồ sơ với hộp hỏi lại bật sẵn',
+    ).toBeVisible();
+    // Tham số `?action=` bị gỡ ngay: F5 hay Back không được bật lại hộp thanh lý.
+    await expect(page).toHaveURL(/\/isp-lines\/[^/?]+$/);
+    await confirmAction(page, 'Hủy');
   });
 
   /*
@@ -287,8 +297,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * "Nhà mạng" và "Site" là `button` mở danh sách chọn, không phải ô gõ — nhầm vai nghĩa là
    * người dùng bàn phím thao tác khác hẳn điều ta tưởng.
    *
-   * ĐỎ KHI: một ô rơi mất hoặc mọc thêm; một ô đổi loại tay nắm; ô Trạng thái (chỉ dành cho
-   * lượt SỬA) lọt vào hộp thêm mới; lời báo lỗi đổi chữ; hoặc một trong hai đường đóng hộp
+   * ĐỎ KHI: một ô rơi mất hoặc mọc thêm; một ô đổi loại tay nắm; ô Trạng thái (đổi trạng thái
+   * chỉ đi menu ⋮ của trang chi tiết) lọt vào hộp; lời báo lỗi đổi chữ; hoặc một trong hai đường đóng hộp
    * (Esc và ✕) thôi hoạt động.
    */
   test('Hộp "Thêm đường truyền": đủ ô, đúng loại tay nắm, chặn thiếu nhà mạng, đóng được cả hai đường', async ({
@@ -303,7 +313,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await ispProviderId(page, 'FPT E2E');
 
     await page.goto('/isp-lines');
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
 
     const dialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await expect(dialog, 'Bấm "Thêm đường truyền" phải mở ra hộp thoại').toBeVisible();
@@ -346,11 +356,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await nameByRole(dialog, 'button'),
       'Bộ nút trong hộp thêm mới: ô chọn Nhà mạng, ô chọn Site, ô ngày Bắt đầu, ô chọn file, ' +
-        '✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
+        '(i) của Nhà mạng, ✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
       sortVi([
         'Đóng hộp thoại',
         'Nhà mạng',
+        // Lời dặn dài của ô Nhà mạng nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
+        'Giải thích: Nhà mạng',
         // Nhà mạng mới khai ngay tại chỗ (SA/Admin) — không bắt huỷ form sang Danh mục.
         '+ Thêm vào danh mục',
         'Site',
@@ -362,9 +374,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     );
 
     /*
-     * Ô TRẠNG THÁI CHỈ CÓ Ở LƯỢT SỬA — nói thẳng ra, đừng để nó chìm trong tập hợp trên.
-     * Bày một ô chọn có đúng một câu trả lời hợp lý ở lượt thêm mới là mở đường cho một hồ sơ
-     * vừa tạo đã mang trạng thái "Thanh lý".
+     * KHÔNG CÓ Ô TRẠNG THÁI — nói thẳng ra, đừng để nó chìm trong tập hợp trên. Hồ sơ mới
+     * luôn "Đang dùng"; đổi trạng thái chỉ đi menu ⋮ của trang chi tiết.
      */
     await expect(
       dialog.getByRole('button', { name: 'Trạng thái', exact: true }),
@@ -394,16 +405,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(dialog, 'Esc phải đóng được hộp khi chưa có lượt ghi nào đang chạy').toHaveCount(0);
 
     // ĐƯỜNG ĐÓNG THỨ HAI: nút ✕. Hai đường, hai đoạn code khác nhau — kiểm cả hai.
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
     const secondDialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await secondDialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(secondDialog, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
 
     // Và cuối cùng: khai đủ thì hộp đóng, dòng mới nằm ngay trên bảng.
-    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
     const thirdDialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await thirdDialog.getByRole('textbox', { name: 'Mã đường' }).fill(itemCode);
-    await thirdDialog.getByRole('button', { name: 'Nhà mạng' }).click();
+    await thirdDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
     await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
@@ -493,7 +504,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Đầu trang hồ sơ đường truyền: Chép IP WAN · Sửa hồ sơ · menu ⋯ (đổi trạng thái) · Chép số hợp đồng (thẻ "Khi mất mạng")',
     ).toEqual(sortVi(['Chép IP WAN', 'Sửa hồ sơ', `Thao tác với ${itemCode}`, 'Chép số hợp đồng']));
     // Thẻ "Khi mất mạng": gọi hotline là MỘT cú chạm.
-    await expect(main.getByRole('link', { name: 'Gọi 18001166' })).toHaveAttribute(
+    await expect(main.getByRole('link', { name: 'Gọi 1800 1166' })).toHaveAttribute(
       'href',
       'tel:18001166',
     );
@@ -603,7 +614,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('button', { name: 'Nhà mạng' }),
+      editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }),
       'Ô Nhà mạng cũng phải chọn sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
     ).toContainText('VNPT E2E');
     await expect(
@@ -616,23 +627,21 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toHaveCount(0);
 
     /*
-     * Ô Trạng thái CHỈ có ở lượt sửa, và nó có đúng ba lựa chọn.
-     * Các option `portal` ra khỏi locator của hộp, nên phải hỏi ở tầng `page`.
+     * Form Sửa KHÔNG có ô Trạng thái: đổi trạng thái chỉ đi menu ⋮ của trang chi tiết, nơi hộp
+     * hỏi lại nhắc ngăn két PPPoE/modem và thiết bị biên. Ô chọn ở đây là lối tắt bỏ qua cả hai.
      */
-    await editDialog.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    expect(
-      (await page.getByRole('option').allTextContents()).map(tidyLabel),
-      'Trạng thái đường truyền có đúng ba giá trị của `ISP_STATUSES`',
-    ).toEqual(['Đang dùng', 'Tạm ngưng', 'Đã thanh lý']);
+    await expect(
+      editDialog.getByRole('button', { name: 'Trạng thái', exact: true }),
+      'Form Sửa đường truyền không được có ô Trạng thái — Thanh lý phải đi menu ⋮ và hỏi lại',
+    ).toHaveCount(0);
 
     /*
      * ĐÓNG DANH SÁCH bằng cách bấm lại chính ô chọn, rồi đóng hộp bằng nút ✕.
-     *
-     * CỐ Ý KHÔNG dùng Esc ở đây, và đây là một PHÁT HIỆN chứ không phải một lối tránh: Esc lúc
-     * đang mở ô chọn đóng LUÔN cả hộp Sửa, ném đi cả form đang gõ dở. Bài `test.fixme` ngay
-     * dưới khối này giữ nguyên khẳng định đúng và nói rõ vì sao phần mềm chưa làm được.
+     * Các option `portal` ra khỏi locator của hộp, nên phải hỏi ở tầng `page`.
      */
-    await editDialog.getByRole('button', { name: 'Trạng thái', exact: true }).click();
+    await editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
+    await expect(page.getByRole('option').first(), 'Ô chọn Nhà mạng phải bung ra').toBeVisible();
+    await editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await expect(
       page.getByRole('option'),
       'Bấm lại vào ô chọn thì danh sách phải thu lại',
@@ -648,7 +657,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    *
    * VÌ SAO BÀI NÀY TỒN TẠI: hàng rào giữ cho một lỗi thật không quay lại.
    *
-   * TRIỆU CHỨNG KHI HỎNG: mở hồ sơ đường truyền → "Sửa hồ sơ" → bấm ô chọn Trạng thái → gõ Esc.
+   * TRIỆU CHỨNG KHI HỎNG: mở hồ sơ đường truyền → "Sửa hồ sơ" → bấm ô chọn Nhà mạng → gõ Esc.
    * Danh sách chọn không đóng một mình: CẢ HỘP Sửa biến mất, mang theo mọi ô vừa gõ. Người
    * dùng bàn phím gõ Esc để bỏ một menu vừa lỡ bung ra thì mất trắng lần nhập.
    *
@@ -686,8 +695,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // Gõ dở một ô, để chỗ mất mát nhìn thấy được chứ không chỉ là "hộp biến mất".
     await editDialog.getByRole('textbox', { name: 'Ghi chú', exact: true }).fill('đang gõ dở E2E');
 
-    await editDialog.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    await expect(page.getByRole('option'), 'Ô chọn phải bung ra danh sách').toHaveCount(3);
+    await editDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
+    await expect(page.getByRole('option').first(), 'Ô chọn phải bung ra danh sách').toBeVisible();
 
     await page.keyboard.press('Escape');
 
@@ -816,12 +825,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       (await rowActionNames(page, activeCode)).map(tidyLabel),
-      'Tài khoản ĐANG DÙNG có đúng hai việc: Sửa, rồi Vô hiệu hóa (việc nguy hiểm xếp cuối)',
-    ).toEqual(['Sửa', 'Ngừng dùng']);
+      'Tài khoản ĐANG DÙNG: Sửa đứng ngoài (Q-18), menu chỉ còn Ngừng dùng',
+    ).toEqual(['Ngừng dùng']);
     expect(
       (await rowActionNames(page, disabledCode)).map(tidyLabel),
       'Tài khoản ĐÃ ĐÓNG phải có đường mở lại — thiếu nó là hồ sơ đóng vĩnh viễn với giao diện',
-    ).toEqual(['Sửa', 'Dùng lại']);
+    ).toEqual(['Dùng lại']);
+    await expect(page.getByRole('button', { name: `Sửa ${activeCode}` })).toBeVisible();
 
     // Bộ nút và bộ cột đầy đủ của vai SA — thu hẹp còn một dòng cho phần phân trang cố định.
     await searchBox.fill(activeCode);
@@ -855,6 +865,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Mã tài khoản',
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
+        `Sửa ${activeCode}`,
         `Thao tác với ${activeCode}`,
         'Số dòng',
         'Trang trước',
@@ -991,7 +1002,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const itemCode = `TK-E2E-HOP-${stamp}`;
 
     await page.goto('/service-accounts');
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Thêm tài khoản' });
     await expect(dialog).toBeVisible();
 
@@ -1036,8 +1047,21 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
-      'Hộp thêm tài khoản có đúng năm nút: ô chọn Loại, ô chọn file, ✕, Hủy, Lưu',
-    ).toEqual(sortVi(['Đóng hộp thoại', 'Loại', 'Chọn file để đính kèm', 'Hủy', 'Lưu']));
+      'Hộp thêm tài khoản có đúng chín nút: ô chọn Loại, (i) của Loại và Người phụ trách, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
+    ).toEqual(
+      sortVi([
+        'Đóng hộp thoại',
+        'Loại',
+        // Lời dặn dài nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
+        'Giải thích: Loại',
+        'Giải thích: Người phụ trách',
+        'Hiện',
+        'Tạo ngẫu nhiên',
+        'Chọn file để đính kèm',
+        'Hủy',
+        'Lưu',
+      ]),
+    );
 
     /*
      * Ô MẬT KHẨU: cây trợ năng KHÔNG phân biệt nó với một ô chữ thường.
@@ -1329,13 +1353,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     // Nói thẳng ra ba thứ tuyệt đối không được có, để log lúc đỏ đọc là hiểu ngay.
     /*
-     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): "Mở hồ sơ", và "Khôi phục…" cho phần mềm — không
-     * mục nào ghi dữ liệu ngay tại đây, sửa vẫn về đúng module chủ.
+     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): "Mở hồ sơ", và "Khôi phục…" cho phần mềm hoặc
+     * "Mở hồ sơ để dùng lại" cho loại khác (Q-19) — không mục nào ghi dữ liệu ngay tại đây,
+     * dùng lại vẫn làm ở đúng module chủ.
      */
     expect(
       await rowActionNames(page, deviceCode),
       'Thiết bị trong kho: chỉ có lối mở hồ sơ gốc',
-    ).toEqual(['Mở hồ sơ']);
+    ).toEqual(['Mở hồ sơ', 'Mở hồ sơ để dùng lại']);
     // "Xuất Excel" ĐƯỢC có (DP-004): nó chỉ đọc, và lượt xuất vẫn ghi sổ `disposal.exported`.
     for (const forbiddenLabel of [/Thêm/, /^Sửa/, /^Xóa/, /Khôi phục/]) {
       await expect(

@@ -116,8 +116,19 @@ const DESKTOP = { width: 1280, height: 800 };
 
 /** Phần tử nằm TRỌN trong bề ngang cửa sổ (không phải cuộn ngang mới thấy). */
 async function expectInsideWidth(page: Page, locator: Locator, what: string): Promise<void> {
-  const box = await locator.boundingBox();
-  expect(box, `${what}: không có hộp bao`).not.toBeNull();
+  /*
+   * `boundingBox()` không chờ: bảng nạp lại sau bộ lọc (thay hàng bằng bản mới) đúng lúc đo
+   * thì nhận `null` dù nút vẫn ở đó. Chờ nút hiện, rồi hỏi lại hộp bao tới khi có — vế đo
+   * mép bên dưới vẫn là một lần đo thật, không thử lại.
+   */
+  await expect(locator, `${what}: không hiện`).toBeVisible();
+  const measured: { box: Awaited<ReturnType<Locator['boundingBox']>> } = { box: null };
+  await expect
+    .poll(async () => (measured.box = await locator.boundingBox()) !== null, {
+      message: `${what}: không có hộp bao`,
+    })
+    .toBe(true);
+  const box = measured.box;
   expect(box!.x, `${what}: tràn mép trái`).toBeGreaterThanOrEqual(-1);
   expect(box!.x + box!.width, `${what}: tràn mép phải`).toBeLessThanOrEqual(
     page.viewportSize()!.width + 1,

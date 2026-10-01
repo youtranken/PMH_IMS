@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useConfirm } from '@/ui/confirm-context';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
@@ -77,9 +78,6 @@ export function useAnyDialogOpen(): boolean {
 
 const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
-
-/** Có mặt trên phần tử CHỈ trong lúc `initialFocus` gọi `focus()` — xem `Combobox.onFocus`. */
-export const PROGRAMMATIC_FOCUS_ATTR = 'data-programmatic-focus';
 
 /**
  * Khung modal dùng chung trên Radix Dialog — thay các khối .modal-backdrop/.sheet
@@ -210,10 +208,12 @@ export function Dialog({
       // `NodeListOf` chưa có `[Symbol.iterator]`.
       Array.from(root.querySelectorAll('input, textarea, select')).map((el) => {
         const field = el as HTMLInputElement;
+        // Ô tự định dạng lại chữ (ô số điện thoại tách nhóm khi rời ô) khai `data-guard-value`
+        // là dạng chuẩn hoá: so chữ thô thì chỉ cần Tab ngang qua là hộp tưởng đã bị sửa.
         const value =
           field.type === 'checkbox' || field.type === 'radio'
             ? String(field.checked)
-            : field.value;
+            : (field.dataset.guardValue ?? field.value);
         return [field.name || field.id || '', value];
       }),
     );
@@ -416,11 +416,7 @@ export function Dialog({
               if (!target) return;
               event.preventDefault();
               if (initialFocus === 'title') target.tabIndex = -1;
-              /* Đánh dấu tiêu điểm này do CODE đặt: `Combobox` đọc cờ trong `onFocus` (chạy
-                 đồng bộ ngay trong `focus()`) để không bung menu khi người dùng chưa chạm ô. */
-              target.setAttribute(PROGRAMMATIC_FOCUS_ATTR, '');
               target.focus();
-              target.removeAttribute(PROGRAMMATIC_FOCUS_ATTR);
             }}
           >
             <DialogPortalContext.Provider value={portalEl}>
@@ -453,7 +449,7 @@ export function Dialog({
                         disabled={!dismissible || requireExplicitClose}
                         onClick={tryClose}
                       >
-                        ✕
+                        <CloseIcon />
                       </button>
                     ) : (
                       <RD.Close asChild>
@@ -465,7 +461,7 @@ export function Dialog({
                           aria-label={closeLabel ?? t('common.closeDialog')}
                           disabled={!dismissible || requireExplicitClose}
                         >
-                          ✕
+                          <CloseIcon />
                         </button>
                       </RD.Close>
                     )}

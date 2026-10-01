@@ -1,3 +1,4 @@
+import { Chevron } from '@/ui/chevron';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -33,8 +34,10 @@ export function DetailHeader({
    * nút nhỏ nhét giữa mã và tên làm hàng tiêu đề gãy làm ba mảnh mà đổi lại gần như không ai
    * bấm — khác hẳn nút chép ở serial / IP WAN / tài khoản đăng nhập, những giá trị người ta
    * dán thẳng vào terminal và gõ tay thì sai. Mấy nút đó GIỮ NGUYÊN.
+   *
+   * Trang không có mã hồ sơ (phiếu duyệt) thì bỏ trống: `name` lên làm tiêu đề cỡ lớn.
    */
-  code: string;
+  code?: string;
   name?: string | null;
   /** Dòng định danh kỹ thuật dưới tiêu đề (loại · model · serial…). */
   subline?: ReactNode;
@@ -52,17 +55,11 @@ export function DetailHeader({
         {crumbs.map((crumb, index) => (
           <span key={`${crumb.label}-${index}`} className="crumb">
             {index > 0 ? (
-              <span className="crumb-sep" aria-hidden="true">
-                ›
-              </span>
+              <Chevron direction="right" className="crumb-sep" />
             ) : null}
             {crumb.to ? (
               <Link className={index === 0 ? 'crumb-back' : undefined} to={crumb.to}>
-                {index === 0 ? (
-                  <span aria-hidden="true" className="crumb-arrow">
-                    ‹
-                  </span>
-                ) : null}
+                {index === 0 ? <Chevron direction="left" className="crumb-arrow" /> : null}
                 {crumb.label}
               </Link>
             ) : (
@@ -75,8 +72,8 @@ export function DetailHeader({
       <div className="detail-title-row">
         <div className="detail-title-main">
           <h1 className="detail-code">
-            <span className="mono">{code}</span>
-            {name ? <span className="detail-name">{name}</span> : null}
+            {code ? <span className="mono">{code}</span> : null}
+            {name ? <span className={code ? 'detail-name' : undefined}>{name}</span> : null}
           </h1>
           {subline ? <div className="detail-subline">{subline}</div> : null}
         </div>

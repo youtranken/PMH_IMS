@@ -18,6 +18,7 @@ export type TotpSeedReason =
   | 'NOT_TOTP'
   | 'BAD_SECRET'
   | 'SECRET_LENGTH'
+  | 'SECRET_ENCODING'
   | 'BAD_DIGITS'
   | 'BAD_PERIOD'
   | 'BAD_ALGORITHM';
@@ -29,6 +30,7 @@ export const TOTP_SEED_MESSAGES: Record<TotpSeedReason, string> = {
   NOT_TOTP: 'Chỉ nhận mã 2 lớp theo thời gian (TOTP). Mã theo bộ đếm (HOTP) chưa hỗ trợ.',
   BAD_SECRET: 'Khóa bí mật chỉ gồm chữ A–Z và số 2–7 (base32).',
   SECRET_LENGTH: 'Khóa bí mật phải dài từ 16 tới 103 ký tự base32.',
+  SECRET_ENCODING: 'Khóa bí mật bị thiếu hoặc thừa ký tự ở cuối. Dán lại nguyên khóa từ hệ thống cấp.',
   BAD_DIGITS: 'Mã 2 lớp chỉ nhận loại 6 hoặc 8 chữ số.',
   BAD_PERIOD: 'Mã 2 lớp chỉ nhận chu kỳ 30 giây.',
   BAD_ALGORITHM: 'Thuật toán chỉ nhận SHA1, SHA256 hoặc SHA512.',
@@ -48,6 +50,7 @@ const PERIOD = 30;
 const MIN_SECRET_BYTES = 10;
 const MAX_SECRET_BYTES = 64;
 const GUARDRAILS = createGuardrails({ MIN_SECRET_BYTES, MAX_SECRET_BYTES });
+const BASE32 = new ScureBase32Plugin();
 
 interface TotpParams {
   secret: string;
@@ -126,15 +129,27 @@ function parseUri(
   const algorithm = (url.searchParams.get('algorithm') ?? 'SHA1').toUpperCase();
   if (!(algorithm in ALGORITHMS)) return { reason: 'BAD_ALGORITHM' };
 
-  let label: string;
+  /*
+   * Tách issuer:tài-khoản trên đường dẫn CÒN MÃ HOÁ rồi mới giải mã từng phần: `buildUri` mã
+   * hoá ":" nằm TRONG tên ("SW:core" → "SW%3Acore"), giải mã trước thì không còn biết dấu nào
+   * là dấu ngăn cách. URI không có ":" trần thì dấu ngăn cách là "%3A" đầu tiên — chuẩn
+   * Key Uri Format cho phép mã hoá nó.
+   */
+  const rawLabel = url.pathname.replace(/^\//, '');
+  let colon = rawLabel.indexOf(':');
+  let sepLength = 1;
+  if (colon < 0) {
+    colon = rawLabel.search(/%3A/i);
+    sepLength = 3;
+  }
+  let prefix: string;
+  let account: string;
   try {
-    label = decodeURIComponent(url.pathname.replace(/^\//, '')).trim();
+    prefix = colon >= 0 ? decodeURIComponent(rawLabel.slice(0, colon)).trim() : '';
+    account = decodeURIComponent(colon >= 0 ? rawLabel.slice(colon + sepLength) : rawLabel).trim();
   } catch {
     return { reason: 'BAD_URI' };
   }
-  const colon = label.indexOf(':');
-  const prefix = colon >= 0 ? label.slice(0, colon).trim() : '';
-  const account = (colon >= 0 ? label.slice(colon + 1) : label).trim();
   const issuer = url.searchParams.get('issuer')?.trim() || prefix;
   const names = account ? { issuer: issuer || account, account } : fallbackNames(fallback);
 
@@ -146,6 +161,15 @@ function normalizeSecret(raw: string): string | { reason: TotpSeedReason } {
   if (!secret || !/^[A-Z2-7]+$/.test(secret)) return { reason: 'BAD_SECRET' };
   const bytes = Math.floor((secret.length * 5) / 8);
   if (bytes < MIN_SECRET_BYTES || bytes > MAX_SECRET_BYTES) return { reason: 'SECRET_LENGTH' };
+  /*
+   * Giải thử bằng ĐÚNG bộ giải lúc mở két. Độ dài lẻ (17, 19, 22… ký tự) hay bit đệm khác 0
+   * lọt qua regex, cất được, rồi mọi lần mở két hỏng — sau khi nhật ký đã ghi "đã xem".
+   */
+  try {
+    BASE32.decode(secret);
+  } catch {
+    return { reason: 'SECRET_ENCODING' };
+  }
   return secret;
 }
 
@@ -182,14 +206,20 @@ export async function totpRevealView(
   uri: string,
   now: Date,
   revealSeconds: number,
+  /**
+   * Tên ngăn + tên đăng nhập HIỆN TẠI. Đổi tên ngăn không giải mã để viết lại URI đã cất, nên
+   * issuer/tài khoản trong URI có thể đã cũ; chỉ khoá, thuật toán, số chữ số lấy từ URI.
+   */
+  names: { label: string; username?: string | null },
 ): Promise<TotpRevealView> {
-  const parsed = parseUri(uri, { label: '', username: null });
+  const stored = parseUri(uri, names);
   // Chuỗi trong két đã qua `normalizeTotpSeed` lúc cất; hỏng ở đây là dữ liệu bị sửa tay.
-  if ('reason' in parsed) throw new Error(`Ngăn mã 2 lớp chứa chuỗi không hợp lệ (${parsed.reason}).`);
+  if ('reason' in stored) throw new Error(`Ngăn mã 2 lớp chứa chuỗi không hợp lệ (${stored.reason}).`);
+  const parsed: TotpParams = { ...stored, ...fallbackNames(names) };
 
   const totp = new TOTP({
     crypto: new NobleCryptoPlugin(),
-    base32: new ScureBase32Plugin(),
+    base32: BASE32,
     algorithm: ALGORITHMS[parsed.algorithm],
     digits: parsed.digits,
     period: PERIOD,

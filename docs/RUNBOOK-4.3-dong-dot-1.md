@@ -301,6 +301,25 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 - [ ] Import xong, 0 dòng lỗi, bốn phép đối chiếu khớp
 - [ ] Chạy tay `bash ops/backup-nightly.sh /mnt/nas/ims-backup` ngay sau khi nhập xong
 
+### F1. Quét ghi chú trông như mật khẩu (SEC-21, Q-19)
+
+Từ Q-19, ghi chú / mô tả / lý do ngoài két chứa chuỗi trông như mật khẩu bị chặn khi ghi. Hàng
+đã có từ trước (dữ liệu thử, bản cài cũ) không tự sạch. Lệnh dưới chỉ ĐỌC (transaction read-only)
+và chỉ in bảng · mã hồ sơ · cột · id — không in nội dung ô:
+
+```bash
+$ docker compose exec api node dist/ops/scan-secret-text.main.js            # bảng chính + ghi chú két
+$ docker compose exec api node dist/ops/scan-secret-text.main.js --lich-su  # thêm các bảng *_history + audit_log.detail
+```
+
+Với mỗi dòng: SA mở hồ sơ trên giao diện. Là mật khẩu thật thì cất vào két của hồ sơ, xoá khỏi
+ghi chú, và **xoay mật khẩu đó** (nó đã nằm dạng rõ trong lịch sử, file xuất, bản sao lưu). Là mã
+model / tên gói bị bắt nhầm thì để nguyên. Dòng ở bảng `*_history` và `audit_log` không sửa được
+(chỉ-thêm): chỉ xoay mật khẩu. Dòng `audit_log` ghi hành động + đối tượng (vd `account.locked
+account:<id>`) và đường dẫn trong JSON (`detail.reason`).
+
+- [ ] SA chạy quét (cả `--lich-su`) sau khi nhập dữ liệu thật, rà hết từng dòng
+
 ---
 
 ## G. Khôi phục production thật (khi máy chủ hỏng)

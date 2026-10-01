@@ -75,6 +75,10 @@ export default {
     summary: 'Còn {{count}} ô cần sửa trước khi lưu.',
     minLength: 'Cần ít nhất {{min}} ký tự.',
     email: 'Email chưa đúng dạng (vd ten@pmh.com.vn).',
+    // Cùng luật server dùng cho NOTE_LOOKS_LIKE_SECRET ở ô chữ tự do ngoài két (Q-19).
+    secretText:
+      'Có một chuỗi trông như mật khẩu. Ô này không được mã hóa — cất mật khẩu vào két của hồ sơ; ' +
+      'nếu đó là mã model hay tên gói, tách bằng dấu cách.',
     /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
     retiredOption: '(ngừng dùng)',
   },
@@ -162,11 +166,11 @@ export default {
     groupSearchIn: 'Tìm trong danh sách',
     searchIn: 'Tìm "{{q}}" trong {{where}}',
     emptyHint: 'Thử mã, serial, hoặc một phần tên.',
-    seeAll: 'Xem tất cả {{count}} kết quả trong {{group}} →',
+    seeAll: 'Xem tất cả {{count}} kết quả trong {{group}}',
     groupIp: 'Địa chỉ IP',
     groupSubnet: 'Dải mạng',
     ipTitle: 'IP {{address}}',
-    ipSub: '→ {{owner}} · {{subnet}}',
+    ipSub: '{{owner}} · {{subnet}}',
     empty: 'Không có hồ sơ nào khớp "{{q}}".',
     /* Một trong bốn nhóm hỏng thì KHÔNG được nói "không có gì khớp" — người trực sẽ đi khai
        trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */
@@ -225,6 +229,8 @@ export default {
     save: 'Lưu',
     cancel: 'Hủy',
     close: 'Đóng',
+    // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
+    clearFilters: 'Xóa bộ lọc',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
@@ -264,6 +270,8 @@ export default {
        trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
        kiểm khớp cả hai chục dòng cùng lúc. */
     actionsOf: 'Thao tác với {{subject}}',
+    /* Tên riêng cho nút "Sửa" đứng ngoài menu của từng dòng (Q-18) — cùng lý do với `actionsOf`. */
+    editOf: 'Sửa {{subject}}',
     /* Tiêu đề của MỌI hộp — hỏi lại lẫn form: việc sắp làm — với cái gì. Tiêu đề trống kiểu
        "Xác nhận" (`app.confirmTitle`) khiến hộp mở ra từ dòng thứ sáu trong một bảng không còn
        gì nói cho người đọc biết họ đang đụng vào hàng nào. */
@@ -962,7 +970,6 @@ export default {
     restoreIntro: 'Hồ sơ về Đang dùng. Ghế đã gỡ không tự gán lại — tick máy bên dưới để gán lại.',
     restoreEnd: 'Hạn mới',
     restoreEndHint: 'Chọn từ hôm nay trở đi.',
-    restorePlusYear: '+1 năm',
     restoreNeedEnd: 'Chọn hạn mới.',
     restorePastEnd: 'Hạn mới phải từ hôm nay trở đi.',
     restoreNote: 'Ghi chú hồ sơ',
@@ -1070,6 +1077,7 @@ export default {
     contractNo: 'Số hợp đồng',
     startDate: 'Bắt đầu',
     note: 'Ghi chú',
+    noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu PPPoE, modem cất ở tab Két sắt.',
     status: 'Trạng thái',
     /* Ba chữ của Q-04 (trạng thái cuối viết "Đã thanh lý" — Q-14); `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
     statusActive: 'Đang dùng',
@@ -1094,8 +1102,6 @@ export default {
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
     phHotline: 'vd 1800 1166',
     addProvider: '+ Thêm vào danh mục',
-    terminateTitle: 'Thanh lý đường truyền {{code}}?',
-    terminateMessage: 'Đường này rời khỏi danh sách mặc định. Nhớ xử lý mật khẩu PPPoE/modem trong két và gỡ đường khỏi thiết bị biên.',
     liquidatedUnknown: 'Đường truyền đã thanh lý, không rõ ngày.',
     incidentCard: 'Khi mất mạng',
     callHotline: 'Gọi {{hotline}}',
@@ -1188,8 +1194,8 @@ export default {
     renewPresets: 'Chọn nhanh hạn mới',
     presetMonths: '+{{count}} tháng',
     presetYears: '+{{count}} năm',
-    /* Dòng không gia hạn tại đây được (bảo hành): lối sang hồ sơ để sửa ngày ở đó. */
-    openRecord: 'Mở hồ sơ →',
+    /* Dòng không gia hạn tại đây được (bảo hành): lối sang hồ sơ để sửa ngày ở đó. Mũi tên là
+       `Chevron` trong JSX, không nằm trong chuỗi. */
     openRecordShort: 'Mở hồ sơ',
     startedOn: 'từ {{date}}',
     autoRetireOn: 'Tự thanh lý sau {{count}} ngày ({{date}}) · gỡ mọi ghế',
@@ -1620,7 +1626,7 @@ export default {
     releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
     /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
-    stepBack: '‹ Quay lại',
+    stepBack: 'Quay lại',
   },
   ipam: {
     title: 'Địa chỉ IP',
@@ -1698,6 +1704,7 @@ export default {
     usedByHint: 'vd "Chị Lan — Kế toán" hoặc "Phòng IT".',
     assignedAt: 'Ngày cấp',
     note: 'Ghi chú',
+    noteHint: 'Không ghi mật khẩu ở đây — ghi chú không được mã hóa.',
     /* Nút trên dòng, tiêu đề hộp và nút gửi cùng một chữ: ô trống và hồ sơ đã thu hồi mở CÙNG
        một hộp, nên hai chữ khác nhau là nói với người dùng rằng đó là hai việc khác nhau. */
     assign: 'Cấp IP',
@@ -1780,7 +1787,6 @@ export default {
   },
   nat: {
     title: 'Sổ NAT',
-    tabHistory: 'Lịch sử luật NAT',
     subtitle: 'Mọi luật chuyển cổng: cổng nào mở, dẫn tới máy nào, cho ai, vì sao.',
     add: 'Thêm luật NAT',
     edit: 'Sửa luật NAT',
@@ -1800,7 +1806,8 @@ export default {
     routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
-    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Đánh dấu ở Danh mục → Loại thiết bị.',
+    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',
+    routerNoTypeLink: 'Đánh dấu ở Danh mục → Loại thiết bị',
     protocol: 'Giao thức',
     /*
      * KHÔNG có `nat.protocolBoth`: ô chọn giao thức của luật NAT dùng `catalog.protocolBoth`,
@@ -2047,6 +2054,8 @@ export default {
     note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',
+    /* Q-19: dùng lại thiết bị / tài khoản dịch vụ / đường truyền làm ở trang hồ sơ, không tại kho. */
+    reuse: 'Mở hồ sơ để dùng lại',
     clearFilters: 'Xóa bộ lọc',
     filterKind: 'Lọc theo loại hồ sơ',
     allKinds: 'Tất cả',
@@ -2409,7 +2418,7 @@ export default {
     viewMatrix: 'Ma trận',
     memberList: 'Danh sách thành viên',
     ruleCount: '{{count}} quyền',
-    backToList: '← Danh sách thành viên',
+    backToList: 'Danh sách thành viên',
     addRules: '+ Thêm quyền',
     /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
     copyFrom: 'Sao chép quyền từ…',
@@ -2554,7 +2563,6 @@ export default {
     secretCount: '{{count}} ngăn két',
     openDetail: 'Xem chi tiết',
     detailTitle: 'Yêu cầu mở két',
-    backToList: 'Về danh sách duyệt',
     sentAgo_now: 'Gửi vừa xong',
     sentAgo_minutes: 'Gửi {{count}} phút trước',
     sentAgo_hours: 'Gửi {{count}} giờ trước',

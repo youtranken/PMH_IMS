@@ -210,9 +210,10 @@ test.describe('Danh mục', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
-    // "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Ngừng dùng, Xóa) thì không.
+    // "Sửa" đứng ngoài menu (Q-18). "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Ngừng
+    // dùng, Xóa) thì không.
+    await expect(page.getByRole('button', { name: `Sửa ${siteCode}` })).toBeVisible();
     expect(await rowActionNames(page, siteCode)).toEqual([
-      'Sửa',
       'Lịch sử',
       'Xem thiết bị dùng mục này',
     ]);
@@ -345,7 +346,7 @@ test.describe('Danh mục', () => {
     await expect(ispRow).toBeVisible();
     // Hotline bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
     // Q-18: gõ "1900 1234", lưu bỏ dấu cách.
-    await expect(ispRow.getByRole('link', { name: '19001234' })).toHaveAttribute(
+    await expect(ispRow.getByRole('link', { name: '1900 1234' })).toHaveAttribute(
       'href',
       'tel:19001234',
     );

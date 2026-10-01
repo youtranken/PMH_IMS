@@ -38,6 +38,7 @@ const noopSweep = { register: () => undefined } as unknown as SweepService;
 describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
   let scratch: ScratchDb;
   let vault: VaultService;
+  let crypto: EnvelopeCryptoService;
   let controller: VaultController;
   let sessions: SessionService;
   let sessionGuard: SessionGuard;
@@ -53,13 +54,10 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
     const owners = {
       assertExists: () => Promise.resolve(),
       assertUsableWithin: () => Promise.resolve(),
+      ownerNote: () => Promise.resolve(null),
     } as unknown as OwnerExistsRegistry;
-    vault = new VaultService(
-      scratch.db,
-      new EnvelopeCryptoService(new MasterKeyRing(MASTER_KEY)),
-      audit,
-      owners,
-    );
+    crypto = new EnvelopeCryptoService(new MasterKeyRing(MASTER_KEY));
+    vault = new VaultService(scratch.db, crypto, audit, owners);
     controller = new VaultController(
       vault,
       config,
@@ -202,6 +200,44 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
       const text = JSON.stringify(logged.rows);
       expect(text).not.toContain(SEED);
       expect(text).not.toContain('data:image');
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'ngăn mã 2 lớp chứa chuỗi hỏng: mở két lỗi và KHÔNG ghi "đã xem" (chưa ai thấy gì)',
+    async () => {
+      const meta = await controller.create(body('totp', SEED), saReq());
+      // Dữ liệu cất trước khi có cửa kiểm base32: 17 ký tự, bộ giải từ chối.
+      const broken = crypto.seal(
+        'otpauth://totp/x:y?secret=JBSWY3DPEHPK3PXPA&issuer=x&algorithm=SHA1&digits=6&period=30',
+        { table: 'secret', recordId: meta.id },
+      );
+      await scratch.pool.query(
+        `UPDATE secret SET value_ct = $2, value_iv = $3, value_tag = $4, dek_wrapped = $5,
+                           key_version = $6 WHERE id = $1`,
+        [meta.id, broken.ciphertext, broken.iv, broken.tag, broken.wrappedDek, broken.keyVersion],
+      );
+      await expect(controller.reveal({ id: meta.id }, saReq())).rejects.toThrow();
+      const logged = await scratch.pool.query(
+        `SELECT 1 FROM audit_log WHERE object_id = $1 AND action = 'vault.secret.revealed'`,
+        [meta.id],
+      );
+      expect(logged.rowCount).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'đổi tên ngăn mã 2 lớp: lần mở sau QR mang tên mới (URI đã cất không phải viết lại)',
+    async () => {
+      const meta = await controller.create(body('totp', SEED, { username: 'cu' }), saReq());
+      const label = `E2E tên mới ${randomUUID().slice(0, 6)}`;
+      await vault.updateMeta(sa, meta.id, { label, username: 'moi' });
+      const opened = (await controller.reveal({ id: meta.id }, saReq())) as unknown as {
+        totp: { issuer: string; account: string };
+      };
+      expect(opened.totp).toMatchObject({ issuer: label, account: 'moi' });
     },
     TEST_TIMEOUT,
   );

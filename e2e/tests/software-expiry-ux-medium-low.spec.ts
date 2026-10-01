@@ -308,7 +308,7 @@ test.describe('Sắp hết hạn', () => {
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
     await expect(page.getByRole('button', { name: /Đã quá hạn/ }), 'Tab Luật không bày ô số').toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
+    await page.getByRole('button', { name: 'Thêm luật', exact: true }).first().click();
     const form = page.getByRole('dialog', { name: 'Thêm luật' });
     await form.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`Luật E2E ${uniqueStamp()}`);
     const within = form.getByRole('textbox', { name: 'Trong vòng (ngày)', exact: true });

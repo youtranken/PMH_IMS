@@ -229,7 +229,7 @@ test.describe('Hồ sơ phần mềm', () => {
     const code = `MAINT-E2E-UI-${stamp}`;
 
     await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).click();
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
     await fillSoftware(page, { code, name: 'Hợp đồng bảo trì UPS', kind: 'Hợp đồng bảo trì' });
 
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();

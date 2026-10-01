@@ -71,13 +71,6 @@ export function isoDay(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/** Nút "+1 năm" của hộp Khôi phục. 29/02 lùi về 28/02, không tràn sang tháng 3. */
-export function plusOneYear(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const lastDay = new Date(y + 1, m, 0).getDate();
-  return isoDay(new Date(y + 1, m - 1, Math.min(d, lastDay)));
-}
-
 /**
  * Hạn mới của hộp Khôi phục. Hạn cũ hơn hôm nay thì API từ chối (`RESTORE_NEEDS_FUTURE_END`)
  * vì lượt quét kế tiếp sẽ lại tự thanh lý — chặn ngay ở hộp cho khỏi đi một vòng.

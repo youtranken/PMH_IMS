@@ -505,8 +505,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      */
     expect(
       await rowActionNames(page, siteCode),
-      'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Ngừng dùng (cảnh báo) rồi Xóa xếp cuối',
-    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Ngừng dùng', 'Xóa']);
+      'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Ngừng dùng (cảnh báo) rồi Xóa xếp cuối; Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Ngừng dùng', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, siteCode, 'Sửa');
@@ -552,7 +552,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, siteCode),
       'hồ sơ ĐÃ NGỪNG DÙNG mà menu vẫn ghi "Ngừng dùng" thì không còn đường nào dùng lại nó',
-    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Dùng lại', 'Xóa']);
+    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Dùng lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
     await rowAction(page, siteCode, 'Xóa');
@@ -721,6 +721,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await searchAndWaitForFilter(page, E2E_SA.email);
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
     await expect(page.getByRole('button', { name: `Thao tác với ${saFullName}` })).toBeVisible();
+    // Q-18: "Sửa" đứng ngoài menu.
+    await expect(page.getByRole('button', { name: `Sửa ${saFullName}` })).toBeVisible();
 
     /*
      * So TẬP HỢP (đã sắp) chứ không so thứ tự: thứ tự trong menu do `RowActions` tự xếp lại
@@ -733,7 +735,6 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       sortOrder([
         // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
         'Xem chi tiết',
-        'Sửa',
         'Phiên đang mở',
         'Nhật ký thao tác',
         'Đặt lại mật khẩu',

@@ -102,8 +102,8 @@ describe('AssignDialog — gán nhiều máy một lượt', () => {
     await pick('PC-E2E-02');
     const chips = screen.getByRole('list', { name: 'Máy sẽ gán' });
     expect(within(chips).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'PC-E2E-01✕',
-      'PC-E2E-02✕',
+      'PC-E2E-01',
+      'PC-E2E-02',
     ]);
     await userEvent.type(screen.getByRole('textbox', { name: 'Hợp đồng' }), 'HD-01');
     await userEvent.click(screen.getByRole('button', { name: 'Gán 2 máy' }));
@@ -124,7 +124,7 @@ describe('AssignDialog — gán nhiều máy một lượt', () => {
     expect(onDone).not.toHaveBeenCalled();
     const chips = screen.getByRole('list', { name: 'Máy sẽ gán' });
     expect(within(chips).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'PC-E2E-02✕',
+      'PC-E2E-02',
     ]);
   });
 
@@ -205,7 +205,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     await quickPick('Phòng ban', 'Kế toán');
     expect(await screen.findByText(/Đã thêm 2 máy của Kế toán\./)).toBeInTheDocument();
     expect(screen.getByText(/1 máy đã có license này, bỏ qua\./)).toBeInTheDocument();
-    expect(chipCodes()).toEqual(['PC-E2E-02✕', 'PC-E2E-03✕']);
+    expect(chipCodes()).toEqual(['PC-E2E-02', 'PC-E2E-03']);
     const query = calls.gets.find((url) => url.includes('department='))!;
     expect(query).toContain(`department=${encodeURIComponent('Kế toán')}`);
     expect(query).toContain('status=in_use');
@@ -243,5 +243,16 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     await userEvent.click(screen.getByRole('button', { name: 'Thêm các máy' }));
     expect(await screen.findByText('Gõ tên phòng ban hoặc người sử dụng.')).toBeInTheDocument();
     expect(calls.gets.some((url) => url.includes('department='))).toBe(false);
+  });
+});
+
+describe('AssignDialog — đặt nhanh hạn của ghế', () => {
+  it('hàng +1/+2/+3 năm tính từ ngày bắt đầu; chưa có ngày bắt đầu thì nút tắt', () => {
+    mockFetch();
+    render();
+    const group = screen.getByRole('group', { name: 'Đặt nhanh ngày hết hạn' });
+    const buttons = within(group).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['+1 năm', '+2 năm', '+3 năm']);
+    for (const button of buttons) expect(button).toBeDisabled();
   });
 });

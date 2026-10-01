@@ -124,12 +124,32 @@ describe('Màn Tham số hệ thống', () => {
 
   it('nhóm Giấy tờ đính kèm (Q-18): ba tham số, nhãn và đơn vị tiếng Việt', async () => {
     renderAt('/admin/settings?group=files');
-    expect(await screen.findByRole('button', { name: 'Giấy tờ đính kèm' })).toHaveAttribute('aria-current', 'page');
+    // Nút đổi khu NGAY TRÊN TRANG, không phải link sang trang khác: `aria-pressed`, không `aria-current="page"`.
+    const groupButton = await screen.findByRole('button', { name: 'Giấy tờ đính kèm' });
+    expect(groupButton).toHaveAttribute('aria-pressed', 'true');
+    expect(groupButton).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' })).toHaveAttribute('aria-pressed', 'false');
     expect(await screen.findByLabelText('Dung lượng tối đa mỗi file')).toHaveValue('25');
     expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
     expect(screen.getByLabelText('Số file tối đa mỗi lượt chọn')).toHaveValue('6');
     expect(screen.getByText(/Mặc định: 6 file/)).toBeInTheDocument();
     expect(screen.getByLabelText('Gỡ nội dung file đã xóa sau')).toHaveValue('30');
+  });
+
+  /* Q-19: mô tả dài vào nút (i) cạnh nhãn, mô tả ngắn vẫn hiện ngay dưới ô. */
+  it('mô tả dài hơn ~80 ký tự vào nút (i); mô tả ngắn vẫn hiện; trần 25 MB luôn hiện', async () => {
+    const user = userEvent.setup();
+    renderAt('/admin/settings?group=files');
+    await screen.findByLabelText('Dung lượng tối đa mỗi file');
+    expect(screen.getByText(/Chọn hoặc kéo thả nhiều hơn thì các file dư bị bỏ ra/)).toBeVisible();
+    // Trần dung lượng: mô tả dài nhưng luôn hiện dưới ô (chủ dự án chốt), không có nút (i).
+    expect(screen.getByText(/Áp cho mọi loại giấy tờ/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Giải thích: Dung lượng tối đa mỗi file' })).toBeNull();
+    expect(screen.queryByText(/Qua mốc này nội dung file bị gỡ khỏi ổ đĩa/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Giải thích: Gỡ nội dung file đã xóa sau' }));
+    expect(await screen.findByText(/Qua mốc này nội dung file bị gỡ khỏi ổ đĩa/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Giải thích: Số file tối đa mỗi lượt chọn' })).toBeNull();
+    expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
   });
 
   it('nới quá ngưỡng → cảnh báo; Lưu mở hộp Trước → Sau, chưa gửi gì', async () => {

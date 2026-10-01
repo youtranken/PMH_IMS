@@ -2,17 +2,20 @@ import { applyDecorators } from '@nestjs/common';
 import { Transform, type TransformFnParams } from 'class-transformer';
 import { IsString, Length, Matches } from 'class-validator';
 
-export const PHONE_MESSAGE = 'Số điện thoại chỉ gồm chữ số, dấu + ở đầu và dấu cách.';
+export const PHONE_MESSAGE =
+  'Số điện thoại chỉ gồm chữ số, dấu + ở đầu, dấu cách và các dấu - . ( ).';
 
 /*
- * Q-18: chỉ chữ số, một dấu `+` ở đầu, và dấu cách để người gõ chia nhóm cho dễ đọc. Lưu thì
- * bỏ dấu cách — cùng một số viết hai kiểu ("0912 345 678" và "0912345678") phải ra MỘT giá
- * trị, không thì tìm kiếm và link `tel:` lệch nhau. Chuỗi rỗng = xóa giá trị, nên hợp lệ.
+ * Q-18: chữ số, một dấu `+` ở đầu, cộng các dấu trình bày người ta quen gõ (dấu cách, `-`, `.`,
+ * `( )`). Lưu thì bỏ hết dấu trình bày — cùng một số viết nhiều kiểu ("(028) 3822-1234",
+ * "028 3822 1234") phải ra MỘT giá trị, không thì tìm kiếm và link `tel:` lệch nhau. Chuẩn hoá
+ * thay vì từ chối: hồ sơ cũ nhập kiểu đó phải lưu lại được khi form gửi lại số không đổi.
+ * Chuỗi rỗng = xóa giá trị, nên hợp lệ.
  */
 const STORED_PHONE = /^(\+?\d+)?$/;
 
-function stripSpaces(text: string): string {
-  return text.replace(/\s+/g, '');
+function stripPresentation(text: string): string {
+  return text.replace(/[\s.()-]+/g, '');
 }
 
 /**
@@ -20,24 +23,27 @@ function stripSpaces(text: string): string {
  * để lưu (null khi không hợp lệ), `error` là câu báo cho người dùng.
  */
 export function normalizePhone(raw: string): { value: string | null; error: string | null } {
-  const value = stripSpaces(raw);
+  const value = stripPresentation(raw);
   return STORED_PHONE.test(value) ? { value, error: null } : { value: null, error: PHONE_MESSAGE };
 }
 
-function stripPhoneSpaces({ value }: TransformFnParams): unknown {
-  return typeof value === 'string' ? stripSpaces(value) : value;
+function stripPhonePresentation({ value }: TransformFnParams): unknown {
+  return typeof value === 'string' ? stripPresentation(value) : value;
 }
 
 /**
- * Ô số điện thoại trong DTO. Bỏ dấu cách TRƯỚC khi kiểm, nên `maxLength` là độ dài đã lưu —
- * người gõ "0912 345 678" không bị trừ chỗ vì mấy dấu cách sẽ không vào DB. Dùng kèm
+ * Ô số điện thoại trong DTO. Bỏ dấu trình bày TRƯỚC khi kiểm, nên `maxLength` là độ dài đã lưu
+ * — người gõ "0912 345 678" không bị trừ chỗ vì mấy dấu cách sẽ không vào DB. Dùng kèm
  * `@IsOptional()` khi ô không bắt buộc.
  */
 export function IsPhone(maxLength: number): PropertyDecorator {
   return applyDecorators(
-    Transform(stripPhoneSpaces),
+    Transform(stripPhonePresentation),
     IsString({ message: PHONE_MESSAGE }),
     Length(0, maxLength, { message: `Số điện thoại tối đa ${maxLength} ký tự.` }),
     Matches(STORED_PHONE, { message: PHONE_MESSAGE }),
   );
 }
+
+/** Tách nhóm cho CHỮ server tự ghép — bản chép y hệt của web, xem `phone-format.ts`. */
+export { formatPhone } from './phone-format';

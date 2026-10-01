@@ -1,3 +1,4 @@
+import { PhoneLink } from '@/ui/phone-link';
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -715,7 +716,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               <LocationText device={item} />
             </RailRow>
             {/*
-              BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG (18/09/2026).
+              BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG.
               `department` chỉ sống dưới dạng CHÚ của dòng này, mà `RailRowIfSet` ẩn cả dòng
               khi `assignedTo` rỗng — nên một máy đã gán cho phòng Kế toán nhưng chưa ghi tên
               người cụ thể thì không hiện bộ phận ở đâu cả, và `BlankFields` cũng bỏ qua vì
@@ -770,7 +771,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                       {vendor.contact ? <span>{vendor.contact}</span> : null}
                       {vendor.contact && vendor.phone ? " · " : null}
                       {vendor.phone ? (
-                        <a href={`tel:${vendor.phone.replace(/[^\d+]/g, "")}`}>{vendor.phone}</a>
+                        <PhoneLink className="" value={vendor.phone} />
                       ) : null}
                     </>
                   ) : undefined

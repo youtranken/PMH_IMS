@@ -21,7 +21,7 @@ import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
 import { hourSteps } from '@/ui/grant-hours';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { PATHS } from '@/lib/routes';
 import { Link } from 'react-router-dom';
@@ -296,8 +296,12 @@ export function VaultPanel({
           stepUpSecondsLeft: opened.stepUpSecondsLeft,
         });
         /* Lần xem đầu sau khi được duyệt vừa gắn quyền vào phiên này (Q-15): hỏi lại verdict để
-           khung "Đã được duyệt" chuyển sang khung quyền đang chạy. */
-        if (!isAdmin) void refetchVerdict();
+           khung "Đã được duyệt" chuyển sang khung quyền đang chạy, và tải lại danh sách — ghi
+           chú ngăn chỉ về khi quyền đã gắn phiên (SEC-20). */
+        if (!isAdmin) {
+          void refetchVerdict();
+          void queryClient.invalidateQueries({ queryKey: secretsKey(ownerType, ownerId) });
+        }
       } catch (error) {
         const code = errorCode(error);
         if (!afterStepUp && code === 'STEPUP_REQUIRED') {
@@ -314,7 +318,7 @@ export function VaultPanel({
         setOpening(null);
       }
     },
-    [me.csrfToken, toast, isAdmin, refetchVerdict],
+    [me.csrfToken, toast, isAdmin, refetchVerdict, queryClient, ownerType, ownerId],
   );
 
   // Ngoài danh sách: chỉ đường tới người gán quyền được (VLT-056). Gọi TRƯỚC các nhánh thoát
@@ -1207,7 +1211,9 @@ function BreakGlassDialog({
   /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
   const askedHours = Number(hours.trim());
   const check = useFormErrors({
-    reason: reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired'),
+    reason:
+      (reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired')) ||
+      secretTextRule(t, reason),
     hours: (!Number.isInteger(askedHours) || askedHours <= 0) && t('vault.requestHoursInvalid'),
   });
 

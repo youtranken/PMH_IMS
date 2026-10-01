@@ -25,6 +25,7 @@ import {
   Validate,
   ValidateIf,
 } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { RealDate, RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -84,7 +85,7 @@ export class SoftwareBodyDto {
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày hết hạn phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate?: string;
 
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 
   @IsOptional()
   @IsIn([...SOFTWARE_STATUSES], { message: 'Trạng thái hồ sơ không hợp lệ.' })
@@ -134,15 +135,15 @@ class AssignmentTermsDto {
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày kết thúc của ghế phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate?: string;
 
-  @IsOptional() @IsString() @Length(0, 500) note?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() note?: string;
 }
 
-class AssignDto extends AssignmentTermsDto {
+export class AssignDto extends AssignmentTermsDto {
   @IsUUID(undefined, { message: 'Thiết bị được chọn không hợp lệ.' })
   deviceId!: string;
 
   /** Bắt buộc khi vượt seat (AC 3.2) — service kiểm, DTO chỉ giới hạn độ dài. */
-  @IsOptional() @IsString() @Length(0, 500) overSeatReason?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText('Lý do vượt số ghế') overSeatReason?: string;
 }
 
 class DeviceIdsQueryDto {

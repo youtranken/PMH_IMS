@@ -11,7 +11,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -162,6 +162,7 @@ export function DeviceForm({
     code: !form.code.trim() && t('formErrors.required'),
     name: !form.name.trim() && t('formErrors.required'),
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
+    note: secretTextRule(t, form.note),
   });
 
   // Mốc tính "+n năm": bảo hành từ, không có thì ngày mua.
@@ -270,11 +271,11 @@ export function DeviceForm({
         }}
       >
         {/*
-          Khối lỗi nằm ở ĐẦU form, không phải ở cuối (12/09, rà UI/UX #12).
+          Khối lỗi nằm ở ĐẦU form, không phải ở cuối.
 
-          Bản cũ đặt nó ngay trên `</form>`, tức DƯỚI cả khu Giấy tờ đính kèm. Trên một form
-          dài như thế này thì nó nằm ngoài màn hình: người dùng bấm Lưu, không thấy gì xảy
-          ra, và bấm tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
+          Đặt ngay trên `</form>` là nằm DƯỚI cả khu Giấy tờ đính kèm: trên một form dài như
+          thế này nó rơi ra ngoài màn hình, người dùng bấm Lưu, không thấy gì xảy ra, và bấm
+          tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
         */}
         {error ? (
           <p className="alert error" role="alert">
@@ -444,7 +445,13 @@ export function DeviceForm({
               needBaseHint={t('devices.warrantyQuickNeedBase')}
             />
           </Field>
-          <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={3}>
+          <Field
+            label={t('devices.note')}
+            hint={t('devices.noteHint')}
+            htmlFor="device-note"
+            span={3}
+            error={check.error('note')}
+          >
             <textarea
               id="device-note"
               className="inp"

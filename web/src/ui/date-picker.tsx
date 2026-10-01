@@ -9,6 +9,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
 
@@ -330,7 +331,7 @@ export function DatePicker({
           disabled={disabled}
           onClick={() => onChange('')}
         >
-          ✕
+          <CloseIcon />
         </button>
       ) : null}
 

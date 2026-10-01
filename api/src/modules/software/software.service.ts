@@ -121,6 +121,15 @@ export class SoftwareService {
     return this.decorate(rows);
   }
 
+  /** Ghi chú dạng rõ của hồ sơ — két so giá trị đang cất với nó (FR-035). */
+  async noteOf(id: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ note: softwareTable.note })
+      .from(softwareTable)
+      .where(eq(softwareTable.id, id));
+    return row?.note ?? null;
+  }
+
   async findOne(id: string): Promise<SoftwareListItem> {
     const rows = await this.db.select().from(softwareTable).where(eq(softwareTable.id, id));
     if (rows.length === 0) {

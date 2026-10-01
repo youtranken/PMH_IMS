@@ -191,6 +191,11 @@ export class VaultService {
      * mở nữa.
      */
     await this.owners.assertExists(input.ownerType, input.ownerId);
+    assertNoteHoldsNoValue(
+      await this.owners.ownerNote(input.ownerType, input.ownerId),
+      probe,
+      OWNER_NOTE_HOLDS_VALUE,
+    );
 
     const id = randomUUID();
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
@@ -269,6 +274,11 @@ export class VaultService {
       current.note,
       probe,
       'Giá trị mới đang nằm trong ghi chú của ngăn này. Sửa ghi chú trước rồi đổi giá trị.',
+    );
+    assertNoteHoldsNoValue(
+      await this.owners.ownerNote(current.ownerType, current.ownerId),
+      probe,
+      OWNER_NOTE_HOLDS_VALUE,
     );
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
     await this.db.transaction(async (tx) => {
@@ -380,13 +390,17 @@ export class VaultService {
    *
    * Mỗi lần gọi ghi MỘT dòng audit (NFR-03). Ghi TRƯỚC khi trả giá trị: giải mã được mà
    * mất vết thì đúng thứ két sắt sinh ra để chống.
+   *
+   * Giải mã và dựng phần hiển thị (`present`, vd QR + mã của ngăn "Mã 2 lớp") chạy TRƯỚC dòng
+   * "đã xem": hỏng ở đó thì người gọi không nhận được gì, và nhật ký không được nói là đã xem.
    */
-  async reveal(
+  async reveal<V = undefined>(
     actor: string,
     id: string,
     /** Grant break-glass đã dùng. `null` = quyền đến từ vai hoặc whitelist. */
     grantId: string | null = null,
-  ): Promise<{ meta: SecretMeta; value: string }> {
+    present?: (opened: { meta: SecretMeta; value: string }) => Promise<V>,
+  ): Promise<{ meta: SecretMeta; value: string; view?: V }> {
     const row = await this.requireAlive(id);
     const sealed: SealedValue = {
       ciphertext: row.valueCt,
@@ -395,6 +409,9 @@ export class VaultService {
       wrappedDek: row.dekWrapped,
       keyVersion: row.keyVersion,
     };
+    const meta = toMeta(row);
+    const value = this.crypto.openText(sealed, { table: AAD_TABLE, recordId: id });
+    const view = present ? await present({ meta, value }) : undefined;
     await this.audit.append({
       actor,
       action: 'vault.secret.revealed',
@@ -409,8 +426,7 @@ export class VaultService {
         grantId,
       },
     });
-    const value = this.crypto.openText(sealed, { table: AAD_TABLE, recordId: id });
-    return { meta: toMeta(row), value };
+    return { meta, value, view };
   }
 
   private async requireAlive(id: string): Promise<typeof secretTable.$inferSelect> {
@@ -461,6 +477,13 @@ function storedValue(
   }
   return { value: normalized.value, probe: { value: normalized.secret, strip: /-/g } };
 }
+
+/**
+ * Ghi chú của HỒ SƠ chủ thể (vd tài khoản dịch vụ) cũng là cột rõ: form thêm hồ sơ lưu nó trước
+ * rồi mới cất mật khẩu, nên chỉ két cầm được cả hai để so (FR-035).
+ */
+const OWNER_NOTE_HOLDS_VALUE =
+  'Ghi chú của hồ sơ đang chứa chính giá trị cần cất. Sửa ghi chú hồ sơ trước rồi cất lại.';
 
 /** Thứ cần tìm trong ghi chú, và ký tự bỏ khỏi ghi chú trước khi tìm. */
 interface NoteProbe {

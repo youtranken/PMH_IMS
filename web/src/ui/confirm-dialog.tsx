@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogTitle, DialogDescription, DialogClose } from '@/ui/dialog';
+import { CloseIcon } from '@/ui/glyph-icons';
 
 /**
  * Hộp thoại xác nhận dùng chung — thay window.confirm cho các thao tác nguy hiểm
@@ -69,7 +70,7 @@ export function ConfirmDialog({
             aria-label={cancelLabel ?? t('common.cancel')}
             disabled={busy}
           >
-            ✕
+            <CloseIcon />
           </button>
         </DialogClose>
       </div>

@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { Chevron } from '@/ui/chevron';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Dialog } from '@/ui/dialog';
@@ -177,7 +178,8 @@ export function StepUpStep({
         autoFocus
       />
       <div className="row" style={{ gap: 'var(--space-4)', justifyContent: 'space-between' }}>
-        <button type="button" className="btn" onClick={onBack}>
+        <button type="button" className="btn with-icon" onClick={onBack}>
+          <Chevron direction="left" />
           {backLabel}
         </button>
         <ConfirmButton formId="stepup-step-form" form={form} />

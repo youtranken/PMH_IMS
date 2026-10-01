@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
+import { noteContainsSecret } from '@/lib/note-secret';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
+import { SecretValueInput } from '@/ui/secret-value-input';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
@@ -112,10 +114,16 @@ export function ServiceAccountForm({
   const vpn = supportsVpnFields(form.kind);
   // Mã suy từ tên đăng nhập — thiếu cả hai thì hồ sơ không có gì để gọi tên.
   const badIps = vpn ? invalidAllowedIps(form.allowedIps) : [];
+  // Ghi chú hồ sơ là cột rõ (FR-035): chứa mật khẩu đang cất là đi vòng qua két. Báo ngay khi
+  // gõ như hộp két; server vẫn chặn lần nữa lúc cất.
+  const noteLeak =
+    !row && noteContainsSecret(form.note, secretValue) && t('vault.noteContainsSecret');
   const check = useFormErrors({
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
     allowedIps:
       badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
+    // Chứa đúng mật khẩu đang cất (B1) hay trông như mật khẩu (Q-19) — cùng một ô, một lỗi.
+    note: noteLeak || secretTextRule(t, form.note),
   });
 
   return (
@@ -126,7 +134,7 @@ export function ServiceAccountForm({
       // vẫn chạy tiếp và ghi nốt, nên người dùng tin là đã hủy trong khi dữ liệu đã vào.
       dismissible={!busy}
       guardUnsaved
-      maxWidth={780}
+      maxWidth={1000}
       title={row ? `${t('serviceAccounts.edit')} — ${row.code}` : t('serviceAccounts.add')}
       footer={
         <>
@@ -244,7 +252,7 @@ export function ServiceAccountForm({
           );
         }}
       >
-        <FormSection title={t('serviceAccounts.sectionProfile')} columns={3}>
+        <FormSection title={t('serviceAccounts.sectionProfile')} columns={4}>
           {/*
             TÊN ĐĂNG NHẬP đứng đầu và là ô bắt buộc — nó là thứ người khai THẬT SỰ biết.
 
@@ -265,7 +273,6 @@ export function ServiceAccountForm({
             required={!form.code.trim()}
             hint={t('serviceAccounts.loginHint')}
             htmlFor="sa-login"
-            span={2}
             error={check.error('login')}
           >
             <input
@@ -283,11 +290,11 @@ export function ServiceAccountForm({
             chung" là thứ người khác đang tra theo. Khai nhầm loại thì vô hiệu hóa và khai lại.
           */}
           {row ? (
-            <Field label={t('serviceAccounts.kind')} hint={t('serviceAccounts.kindLocked')}>
+            <Field label={t('serviceAccounts.kind')} tip={t('serviceAccounts.kindLocked')}>
               <p className="static-value">{t(KIND_KEY[form.kind])}</p>
             </Field>
           ) : (
-            <Field label={t('serviceAccounts.kind')} required hint={t('serviceAccounts.kindHint')}>
+            <Field label={t('serviceAccounts.kind')} required tip={t('serviceAccounts.kindHint')}>
               <Select
                 required
                 value={form.kind}
@@ -346,7 +353,7 @@ export function ServiceAccountForm({
           */}
         </FormSection>
 
-        <FormSection title={t('serviceAccounts.sectionOwner')} columns={3}>
+        <FormSection title={t('serviceAccounts.sectionOwner')} columns={4}>
           <Field label={t('serviceAccounts.department')}>
             {/* Cùng danh mục Bộ phận với hồ sơ IP và sổ NAT — ba chỗ trả lời cùng một câu,
                 viết lệch nhau thì lọc chéo không ra. */}
@@ -361,7 +368,7 @@ export function ServiceAccountForm({
           </Field>
           <Field
             label={t('serviceAccounts.ownerName')}
-            hint={t('serviceAccounts.ownerNameHint')}
+            tip={t('serviceAccounts.ownerNameHint')}
             htmlFor="sa-owner"
             span={2}
           >
@@ -377,7 +384,7 @@ export function ServiceAccountForm({
         {/* Khối này CHỈ hiện với tài khoản VPN — hai ô của nó vô nghĩa với email dùng chung,
             và khai vào là ghi ra dữ liệu mà sáu tháng sau không ai dám xóa. */}
         {vpn ? (
-          <FormSection title={t('serviceAccounts.sectionVpn')} columns={3}>
+          <FormSection title={t('serviceAccounts.sectionVpn')} columns={4}>
             <Field
               label={t('serviceAccounts.groupName')}
               hint={t('serviceAccounts.groupNameHint')}
@@ -431,13 +438,12 @@ export function ServiceAccountForm({
               hint={t('serviceAccounts.secretHint')}
               htmlFor="sa-secret"
             >
-              <input
+              <SecretValueInput
                 id="sa-secret"
-                className="inp mono"
-                type="password"
-                autoComplete="new-password"
                 value={secretValue}
-                onChange={(e) => setSecretValue(e.target.value)}
+                onChange={setSecretValue}
+                allowGenerate
+                required={false}
               />
               <SecretStrengthMeter value={secretValue} />
             </Field>
@@ -447,7 +453,12 @@ export function ServiceAccountForm({
         {/* Khu chỉ có ĐÚNG một ô, nên tiêu đề khu và nhãn ô nói y hệt nhau, hai dòng chồng
             nhau cách nhau 8px. Bỏ tiêu đề khu — nhãn ô mới là thứ ô nhập cần. */}
         <FormSection columns={1}>
-          <Field label={t('serviceAccounts.note')} hint={t('serviceAccounts.noteHint')} htmlFor="sa-note">
+          <Field
+            label={t('serviceAccounts.note')}
+            hint={t('serviceAccounts.noteHint')}
+            htmlFor="sa-note"
+            error={check.error('note')}
+          >
             <textarea
               id="sa-note"
               className="inp"

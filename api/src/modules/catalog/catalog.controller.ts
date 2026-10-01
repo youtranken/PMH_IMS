@@ -26,6 +26,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import type { Response } from 'express';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -49,13 +50,13 @@ import { IsPhone } from '../../common/phone';
 export class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
   @IsOptional() @IsString() @Length(1, 160) name?: string;
-  @IsOptional() @IsString() @Length(0, 400) address?: string;
+  @IsOptional() @IsString() @Length(0, 400) @NoSecretText('Địa chỉ') address?: string;
   @IsOptional() @IsUUID() siteId?: string;
-  @IsOptional() @IsString() @Length(0, 400) description?: string;
+  @IsOptional() @IsString() @Length(0, 400) @NoSecretText() description?: string;
   @IsOptional() @Min(1) @Max(60) @IsInt() uHeight?: number;
   @IsOptional() @IsBoolean() hasPortMap?: boolean;
   @IsOptional() @IsBoolean() isRouter?: boolean;
-  @IsOptional() @IsString() @Length(0, 200) supplies?: string;
+  @IsOptional() @IsString() @Length(0, 200) @NoSecretText('Cung cấp gì') supplies?: string;
   @IsOptional() @IsPhone(40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
 

@@ -1,3 +1,5 @@
+import { ISP_STATUS_TONE } from '@/lib/status-tone';
+
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
 
@@ -49,8 +51,5 @@ export const ACTION_KEY: Record<IspStatus, string> = {
   terminated: 'isp.actionTerminated',
 };
 
-export const STATUS_TONE: Record<IspStatus, string> = {
-  active: 'ok',
-  suspended: 'warn',
-  terminated: 'muted',
-};
+/** Bản gốc ở `lib/status-tone.ts` — Kho thanh lý tô cùng màu (Q-19). */
+export const STATUS_TONE: Record<IspStatus, string> = ISP_STATUS_TONE;

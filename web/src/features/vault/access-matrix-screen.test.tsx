@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
 import { AccessMatrixScreen } from './access-matrix-screen';
@@ -113,6 +113,8 @@ describe('Quyền xem két sắt — theo người', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Hiện cả tài khoản đã vô hiệu hóa (1)' }));
     expect(list).toHaveTextContent('Lý Đã Nghỉ');
     expect(list).toHaveTextContent('Đã vô hiệu hóa');
+    // Người đã nghỉ: huy hiệu đỏ như mọi trạng thái "đã ngừng" khác (Q-18), không xám nhạt.
+    expect(within(list).getByText('Đã vô hiệu hóa')).toHaveClass('badge', 'danger');
   });
 
   it('gán một nhóm cho nhiều người: người đã có quyền hiện tầng hiện tại, tóm tắt tách thêm / đổi', async () => {
@@ -158,5 +160,8 @@ describe('Quyền xem két sắt — theo người', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Thiết bị loại Switch');
     expect(dialog).not.toHaveTextContent('Chứng chỉ SSL');
+    // Câu giải thích hai tầng dài: nằm sau nút (i) cạnh nhãn, không thành dòng gợi ý dưới ô.
+    expect(within(dialog).getByRole('button', { name: 'Giải thích: Tầng quyền' })).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('phải xin và chờ duyệt');
   });
 });

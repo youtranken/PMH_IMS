@@ -305,6 +305,7 @@ describe('planCatalogImport — số điện thoại nhà cung cấp', () => {
   it.each([
     ['0909 111 222', '0909111222'],
     ['+84 28 3822 1234', '+842838221234'],
+    ['(028) 3822-1234', '02838221234'],
     ['', null],
   ])('"%s" lưu thành %p', (input, stored) => {
     const plan = planCatalogImport(
@@ -316,7 +317,7 @@ describe('planCatalogImport — số điện thoại nhà cung cấp', () => {
 
   it('ký tự lạ → dòng lỗi nêu tên cột, không ghi', () => {
     const plan = planCatalogImport(
-      sheet('Nhà cung cấp', [{ 'Tên nhà cung cấp *': 'NCC E2E', 'Điện thoại': '(028) 3822-1234' }]),
+      sheet('Nhà cung cấp', [{ 'Tên nhà cung cấp *': 'NCC E2E', 'Điện thoại': '028 3822 1234 ext 5' }]),
       emptySnapshot(),
     );
     expect(plan.rows[0]).toMatchObject({ action: 'error' });

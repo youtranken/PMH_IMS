@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Combobox } from '@/ui/combobox';
 import { Dialog } from '@/ui/dialog';
 import { SuggestInput } from '@/ui/suggest-input';
-import { fireEvent, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { act, fireEvent, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 /**
  * "KHÔNG TÌM THẤY" và "KHÔNG HỎI ĐƯỢC" là hai câu khác nhau.
@@ -373,6 +373,94 @@ describe('Combobox trong Dialog — tiêu điểm tự đặt không bung menu',
   it('bấm vào ô đang có tiêu điểm sẵn: menu bung', async () => {
     setup();
     await userEvent.click(screen.getByRole('combobox', { name: 'Thiết bị' }));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Menu bung theo THAO TÁC của người dùng (bấm, gõ, ↓), không theo tiêu điểm. Tiêu điểm còn do
+ * code đặt ở nhiều chỗ ngoài lúc hộp mở: hộp con đóng lại trả tiêu điểm về ô, FocusScope kéo
+ * tiêu điểm về trong hộp… Mỗi lần như thế mà menu tự bung là nó che các ô bên dưới và nuốt
+ * phím Esc đầu tiên người dùng bấm.
+ */
+describe('Combobox — tiêu điểm không phải thao tác', () => {
+  function setup() {
+    renderWithI18n(
+      <>
+        <button type="button">Trước</button>
+        <Combobox
+          placeholder="Thiết bị"
+          ariaLabel="Thiết bị"
+          query=""
+          onQuery={() => {}}
+          options={['SW-01', 'SW-02']}
+          getKey={(item) => item}
+          renderOption={(item) => <span>{item}</span>}
+          onSelect={() => {}}
+        />
+      </>,
+    );
+    return screen.getByRole('combobox', { name: 'Thiết bị' });
+  }
+
+  it('code đặt tiêu điểm vào ô (vd hộp con đóng, trả tiêu điểm về): menu KHÔNG bung', () => {
+    const input = setup();
+    act(() => input.focus());
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('hộp con đóng lại trả tiêu điểm về ô chọn: menu KHÔNG bung', async () => {
+    function Nested() {
+      const [child, setChild] = useState(false);
+      return (
+        <Dialog open onOpenChange={() => {}} title="Cấp IP">
+          <Combobox
+            placeholder="Thiết bị"
+            ariaLabel="Thiết bị"
+            query=""
+            onQuery={() => {}}
+            options={['SW-01', 'SW-02']}
+            getKey={(item) => item}
+            renderOption={(item) => <span>{item}</span>}
+            onSelect={() => {}}
+          />
+          <button type="button" onClick={() => setChild(true)}>
+            Mở hộp con
+          </button>
+          {child ? (
+            <Dialog open onOpenChange={() => setChild(false)} title="Hộp con">
+              <button type="button" onClick={() => setChild(false)}>
+                Xong
+              </button>
+            </Dialog>
+          ) : null}
+        </Dialog>
+      );
+    }
+    renderWithI18n(<Nested />);
+    await userEvent.click(screen.getByRole('button', { name: 'Mở hộp con' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    act(() => screen.getByRole('combobox', { name: 'Thiết bị' }).focus());
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('Tab vào ô: chưa bung; ↓ mới bung (bàn phím vẫn mở được)', async () => {
+    const input = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Trước' }));
+    await userEvent.tab();
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    await userEvent.keyboard('{ArrowDown}');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  it('bấm vào ô hoặc gõ: bung như cũ', async () => {
+    const input = setup();
+    await userEvent.click(input);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.type(input, 'S');
     expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 });

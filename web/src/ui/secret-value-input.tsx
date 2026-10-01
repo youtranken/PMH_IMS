@@ -23,6 +23,7 @@ export function SecretValueInput({
   initiallyShown = false,
   allowGenerate = false,
   qrImport = false,
+  required = true,
 }: {
   id: string;
   value: string;
@@ -36,6 +37,8 @@ export function SecretValueInput({
    * Ảnh không rời máy — ảnh QR chính là khóa dạng rõ.
    */
   qrImport?: boolean;
+  /** `false` khi bỏ trống vẫn lưu được (hộp thêm tài khoản dịch vụ: cất mật khẩu sau cũng được). */
+  required?: boolean;
 }) {
   const { t } = useTranslation();
   const [shown, setShown] = useState(initiallyShown);
@@ -74,7 +77,7 @@ export function SecretValueInput({
           autoComplete="new-password"
           spellCheck={false}
           autoCapitalize="off"
-          required
+          required={required}
           aria-invalid={invalid ? true : undefined}
           aria-describedby={describedBy}
           value={value}

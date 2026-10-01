@@ -61,6 +61,27 @@ describe('normalizeTotpSeed — nhận khóa trần hoặc otpauth, cất một 
     );
   });
 
+  it.each([
+    ['18 ký tự', 'A'.repeat(18)],
+    ['23 ký tự', 'A'.repeat(23)],
+    ['26 ký tự, bit đệm bằng 0', `${'A'.repeat(25)}E`],
+  ])('base32 trọn vẹn thì nhận: %s', (_name, raw) => {
+    expect(normalizeTotpSeed(raw, FALLBACK).reason).toBeNull();
+  });
+
+  it('tên ngăn có dấu ":" đi vòng cất → đọc lại vẫn đúng issuer và tài khoản', () => {
+    const once = normalizeTotpSeed('JBSWY3DPEHPK3PXP', { label: 'SW:core', username: 'admin:ro' }).value!;
+    expect(normalizeTotpSeed(once, FALLBACK).value).toBe(once);
+    expect(once).toContain('otpauth://totp/SW%3Acore:admin%3Aro?');
+  });
+
+  it('URI ngoài mã hoá luôn dấu ngăn cách thành %3A: vẫn tách được issuer', () => {
+    const out = normalizeTotpSeed('otpauth://totp/ACME%3Ajohn?secret=JBSWY3DPEHPK3PXP', FALLBACK);
+    expect(out.value).toBe(
+      'otpauth://totp/ACME:john?secret=JBSWY3DPEHPK3PXP&issuer=ACME&algorithm=SHA1&digits=6&period=30',
+    );
+  });
+
   it('chuẩn hóa hai lần ra cùng một chuỗi (xoay giá trị đưa lại chính URI đã cất)', () => {
     const once = normalizeTotpSeed('jbsw y3dp ehpk 3pxp', FALLBACK).value!;
     expect(normalizeTotpSeed(once, { label: 'khác', username: null }).value).toBe(once);
@@ -78,6 +99,12 @@ describe('normalizeTotpSeed — nhận khóa trần hoặc otpauth, cất một 
     ['period 60', 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&period=60', 'BAD_PERIOD'],
     ['thuật toán MD5', 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&algorithm=MD5', 'BAD_ALGORITHM'],
     ['link web thường', 'https://example.com/?secret=JBSWY3DPEHPK3PXP', 'BAD_SECRET'],
+    // Base32 không trọn: cất được thì mọi lần mở két hỏng — phải chặn ngay lúc cất.
+    ['17 ký tự (dư 1 ký tự lẻ)', 'JBSWY3DPEHPK3PXPA', 'SECRET_ENCODING'],
+    ['19 ký tự (dư 3)', 'A'.repeat(19), 'SECRET_ENCODING'],
+    ['22 ký tự (dư 6)', 'A'.repeat(22), 'SECRET_ENCODING'],
+    ['26 ký tự, bit đệm khác 0', `${'A'.repeat(25)}B`, 'SECRET_ENCODING'],
+    ['URI có khóa 17 ký tự', 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXPA', 'SECRET_ENCODING'],
   ])('từ chối: %s', (_name, raw, reason) => {
     const out = normalizeTotpSeed(raw, FALLBACK);
     expect(out.reason).toBe(reason);
@@ -96,24 +123,47 @@ describe('totpRevealView — QR + mã hiện tại, server tính', () => {
     [RFC_SHA512, 'SHA512', 8, '90693936'],
     [RFC_SHA1, 'SHA1', 6, '287082'],
   ])('vector RFC 6238: %s %s %d số', async (secret, algorithm, digits, code) => {
-    const view = await totpRevealView(uri(secret, algorithm, digits), new Date(59_000), 10);
+    const view = await totpRevealView(uri(secret, algorithm, digits), new Date(59_000), 10, FALLBACK);
     expect(view.codes[0]).toBe(code);
     expect(view.digits).toBe(digits);
   });
 
   it('mã theo từng chu kỳ phủ hết thời gian hiện, giây còn lại tính từ mốc server', async () => {
     // T = 59: còn 1 giây của chu kỳ đầu; hiện 60 giây → cần thêm 2 chu kỳ nữa.
-    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 8), new Date(59_000), 60);
+    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 8), new Date(59_000), 60, FALLBACK);
     expect(view.secondsLeft).toBe(1);
     expect(view.codes).toHaveLength(3);
     // RFC 6238: T = 1111111109 (chu kỳ 37037036) → 07081804; chu kỳ kế tiếp khác mã đầu.
-    const later = await totpRevealView(uri(RFC_SHA1, 'SHA1', 8), new Date(1_111_111_109_000), 30);
+    const later = await totpRevealView(
+      uri(RFC_SHA1, 'SHA1', 8),
+      new Date(1_111_111_109_000),
+      30,
+      FALLBACK,
+    );
     expect(later.codes[0]).toBe('07081804');
     expect(later.codes[1]).not.toBe(later.codes[0]);
   });
 
+  it('issuer / tài khoản lấy từ tên ngăn + tên đăng nhập HIỆN TẠI, không từ URI đã cất', async () => {
+    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60, {
+      label: 'Fortinet mới',
+      username: 'admin2',
+    });
+    expect(view.issuer).toBe('Fortinet mới');
+    expect(view.account).toBe('admin2');
+    expect(view.secret).toBe(RFC_SHA1);
+    const noUser = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60, {
+      label: 'VPN',
+      username: null,
+    });
+    expect(noUser.account).toBe('VPN');
+  });
+
   it('trả khóa, issuer, tài khoản để hiện; QR là ảnh data URL PNG', async () => {
-    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60);
+    const view = await totpRevealView(uri(RFC_SHA1, 'SHA1', 6), new Date(0), 60, {
+      label: 'RFC',
+      username: 'test',
+    });
     expect(view.secret).toBe(RFC_SHA1);
     expect(view.issuer).toBe('RFC');
     expect(view.account).toBe('test');

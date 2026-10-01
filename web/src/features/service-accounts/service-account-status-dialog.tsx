@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { textRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
 import type { ServiceAccountRow, ServiceAccountStatus } from './service-account-types';
 
 /**
@@ -41,7 +41,7 @@ export function ServiceAccountStatusDialog({
   const [lockedAtSource, setLockedAtSource] = useState(false);
   const [secretHandled, setSecretHandled] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) });
+  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
   const change = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/service-accounts/${row.id}/${off ? 'disable' : 'enable'}`,
     { method: 'PATCH', csrfToken, refreshMe: false },

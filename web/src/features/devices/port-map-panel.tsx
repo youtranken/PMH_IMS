@@ -12,10 +12,10 @@ import { useMediaQuery } from '@/ui/use-media-query';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { RowActions, type RowAction } from '@/ui/row-actions';
+import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -125,8 +125,13 @@ export function PortMapPanel({
     : allPorts;
   const incoming = sortByPortLabel(map.data?.incoming ?? []);
 
+  const primaryFor = (port: PortRow): RowPrimaryAction => ({
+    label: t('ports.edit'),
+    ariaLabel: t('ports.editOf', { port: port.portLabel }),
+    onClick: () => setEditing({ port }),
+  });
+
   const actionsFor = (port: PortRow): RowAction[] => [
-    { key: 'edit', label: t('ports.edit'), onSelect: () => setEditing({ port }) },
     {
       key: 'remove',
       label: t('ports.remove'),
@@ -166,7 +171,9 @@ export function PortMapPanel({
       <div className="section-bar">
         <h2 className="form-section-title">{t('ports.own')}</h2>
         {map.data ? <span className="section-count">{allPorts.length}</span> : null}
-        {canEdit ? (
+        {/* Chưa khai cổng nào thì nút Thêm nằm trong khối trống ngay bên dưới — hai nút cùng
+            tên cách nhau một dòng là thừa. */}
+        {canEdit && !(map.data && allPorts.length === 0) ? (
           <button type="button" className="btn primary" onClick={() => setEditing({ port: null })}>
             {t('ports.add')}
           </button>
@@ -192,12 +199,31 @@ export function PortMapPanel({
           {allPorts.length === 0 ? (
             /* Hồ sơ đã khoá (máy thanh lý) thì không mời "khai cổng" — không có nút nào để khai. */
             canEdit ? (
-              <EmptyState title={t('ports.empty')} hint={t('ports.emptyHint')} />
+              <EmptyState
+                title={t('ports.empty')}
+                hint={t('ports.emptyHint')}
+                action={
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => setEditing({ port: null })}
+                  >
+                    {t('ports.add')}
+                  </button>
+                }
+              />
             ) : (
               <EmptyState title={t('ports.lockedEmpty')} />
             )
           ) : ports.length === 0 ? (
-            <EmptyState title={t('ports.filterEmpty', { q: filter.trim() })} />
+            <EmptyState
+              title={t('ports.filterEmpty', { q: filter.trim() })}
+              action={
+                <button type="button" className="btn" onClick={() => setFilter('')}>
+                  {t('common.clearFilters')}
+                </button>
+              }
+            />
           ) : cards ? (
             /* Điện thoại: mỗi cổng HAI dòng — "cổng → đầu kia : cổng đầu kia", rồi "VLAN · người
                dùng" — ⋯ ở góc. Người đứng trước tủ dò một cổng giữa 48 cái, thẻ 7 dòng là phải
@@ -235,6 +261,7 @@ export function PortMapPanel({
                       {canEdit ? (
                         <span className="list-card-end">
                           <RowActions
+                            primary={primaryFor(port)}
                             label={t('common.actionsOf', { subject: port.portLabel })}
                             subject={port.portLabel}
                             items={actionsFor(port)}
@@ -310,13 +337,12 @@ export function PortMapPanel({
                       </td>
                       {canEdit ? (
                         <td data-label={t('common.actions')} className="col-sticky-end">
-                          <div className="action-cell">
-                            <RowActions
-                              label={t('common.actionsOf', { subject: port.portLabel })}
-                              subject={port.portLabel}
-                              items={actionsFor(port)}
-                            />
-                          </div>
+                          <RowActions
+                            primary={primaryFor(port)}
+                            label={t('common.actionsOf', { subject: port.portLabel })}
+                            subject={port.portLabel}
+                            items={actionsFor(port)}
+                          />
                         </td>
                       ) : null}
                     </tr>
@@ -442,7 +468,11 @@ function PortForm({
   const [error, setError] = useState<string | null>(null);
   const keepOpen = useRef(false);
   const labelRef = useRef<HTMLInputElement>(null);
-  const check = useFormErrors({ portLabel: !portLabel.trim() && t('ports.portRequired') });
+  const check = useFormErrors({
+    portLabel: !portLabel.trim() && t('ports.portRequired'),
+    note: secretTextRule(t, note),
+    connectedLabel: mode === 'free' ? secretTextRule(t, connectedLabel) : null,
+  });
 
   // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
   useEffect(() => {
@@ -621,7 +651,12 @@ function PortForm({
             />
           </Field>
         ) : (
-          <Field label={t('ports.freeText')} hint={t('ports.freeTextHint')} htmlFor="port-free">
+          <Field
+            label={t('ports.freeText')}
+            hint={t('ports.freeTextHint')}
+            htmlFor="port-free"
+            error={check.error('connectedLabel')}
+          >
             <input
               id="port-free"
               className="inp"
@@ -661,7 +696,7 @@ function PortForm({
             ariaLabel={t('ports.usedBy')}
           />
         </Field>
-        <Field label={t('ports.note')} htmlFor="port-note">
+        <Field label={t('ports.note')} htmlFor="port-note" error={check.error('note')}>
           <input
             id="port-note"
             className="inp"
