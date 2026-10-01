@@ -285,6 +285,18 @@ export function IspScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
             stackOnMobile
+            /* Màn này hay được mở trên điện thoại lúc mất mạng: thẻ gọn với nút gọi hotline ở
+               góc thay cho bảng gập bảy dòng toàn nhãn. */
+            mobileCard={{
+              title: (row) => row.code,
+              href: (row) => PATHS.ispLine(row.id),
+              badge: (row) => (
+                <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
+              ),
+              subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
+              meta: (row) => [row.siteCode, row.deviceCode, row.wanIp].filter(Boolean).join(' · '),
+              aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
+            }}
             // Tạm ngưng: vạch cam ở mép trái — đường đang "nửa sống" là thứ phải thấy từ xa.
             rowClassName={(row) => (row.status === 'suspended' ? 'row-suspended' : '')}
             manualSorting
