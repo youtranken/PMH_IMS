@@ -5,6 +5,23 @@ import { RowActions } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
 
 /**
+ * Tải file xlsx từ API export + báo lỗi bằng toast. Tách ra để màn hẹp đặt "Xuất Excel" vào menu
+ * ⋮ đầu trang (`RowActions`) mà không chép lại logic tải — vẫn là MỘT đường xuất (FR-028).
+ */
+export function useXlsxDownload(): { busy: boolean; run: (url: string, fileName: string) => void } {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const run = (target: string, name: string) => {
+    setBusy(true);
+    void downloadFile(target, name)
+      .catch(() => toast({ message: t('common.error'), tone: 'error' }))
+      .finally(() => setBusy(false));
+  };
+  return { busy, run };
+}
+
+/**
  * FR-028: xuất xlsx từ MỌI bảng đang xem — AD-15 nên chỉ có MỘT nút này.
  * Nơi gọi truyền đường dẫn API export của module chủ (server dựng file bằng
  * ExcelExportService dùng chung), UI không tự sinh file.
@@ -36,16 +53,8 @@ export function ExportXlsxButton({
   allLabel?: string;
 }) {
   const { t } = useTranslation();
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
+  const { busy, run } = useXlsxDownload();
   const text = label ?? t('common.export');
-
-  const run = (target: string, name: string) => {
-    setBusy(true);
-    void downloadFile(target, name)
-      .catch(() => toast({ message: t('common.error'), tone: 'error' }))
-      .finally(() => setBusy(false));
-  };
 
   if (allUrl) {
     return (

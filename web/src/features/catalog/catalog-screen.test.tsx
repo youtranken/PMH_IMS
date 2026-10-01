@@ -104,10 +104,26 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     renderAt('/admin/catalog');
     await screen.findByText('E2E-HCM');
     expect(screen.getByRole('button', { name: 'Nhập từ Excel' })).toBeInTheDocument();
-    // Nhập Excel là màn desktop: ở ≤600px nút ẩn (`hide-narrow`, như danh sách thiết bị) để
-    // Xuất + Thêm còn chung một hàng — không thì nút Thêm rơi xuống hàng riêng ở 390px.
-    expect(screen.getByRole('button', { name: 'Nhập từ Excel' })).toHaveClass('hide-narrow');
     expect(screen.queryByRole('button', { name: /Tải file mẫu/ })).not.toBeInTheDocument();
+  });
+
+  it('điện thoại: Xuất / Nhập vào menu ⋮ đầu trang, nút Thêm đứng riêng (một hàng ở 390px)', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 600px)',
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    stubFetch();
+    renderAt('/admin/catalog');
+    expect(screen.queryByRole('button', { name: 'Nhập từ Excel' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Thêm site' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với Danh mục' }));
+    expect(screen.getByRole('menuitem', { name: 'Xuất Excel' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Nhập từ Excel' })).toBeInTheDocument();
   });
 
   it('member không có đường nhập Excel và được nói rõ ai làm việc đó (Q-12)', async () => {
