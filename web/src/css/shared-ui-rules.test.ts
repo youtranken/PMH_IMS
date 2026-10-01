@@ -368,6 +368,17 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(r!.body, 'margin-top')).toBe('var(--space-6)');
   });
 
+  // Hộp gán quyền: họ dài (loại thiết bị) chia 2 cột còn họ ngắn (Phần mềm, Tài khoản) 1 cột thì
+  // các cột trong cùng một hộp không thẳng hàng. Có một họ chia cột thì mọi họ cùng chia.
+  it('một danh sách chọn chia 2 cột thì mọi danh sách cùng form chia theo', () => {
+    const r = rule('shared-kit.css', '.form-grid:has(.pick-list.cols-2) .pick-list');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'grid-template-columns')).toBe('repeat(2, minmax(0, 1fr))');
+    expect(declValue(r!.body, 'display')).toBe('grid');
+    const narrow = rule('shared-kit.css', '.form-grid:has(.pick-list.cols-2) .pick-list', '(max-width: 480px)');
+    expect(declValue(narrow!.body, 'grid-template-columns')).toBe('minmax(0, 1fr)');
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);

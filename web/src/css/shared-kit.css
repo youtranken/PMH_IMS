@@ -456,8 +456,18 @@ body:has(.auth) .toast-stack {
   max-height: none;
   overflow: visible;
 }
+/* Cùng một hộp (gán quyền két): có một họ chia 2 cột thì mọi họ chia theo — họ dài 2 cột cạnh
+   họ ngắn 1 cột thì các ô tick không thẳng hàng, mắt phải dò hai lưới khác nhau. */
+.form-grid:has(.pick-list.cols-2) .pick-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-7);
+  max-height: none;
+  overflow: visible;
+}
 @media (max-width: 480px) {
   .pick-list.cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .form-grid:has(.pick-list.cols-2) .pick-list { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) --------------- */
