@@ -469,6 +469,10 @@ body:has(.auth) .toast-stack {
   padding: 0;
   list-style: none;
 }
+/* Đoạn dẫn ngay trên (hộp "Luật của két"): margin 0 ở trên làm nó dính vào gạch đầu dòng. */
+p + .vault-rules {
+  margin-top: var(--space-6);
+}
 .vault-rules li {
   padding-left: var(--space-5);
   position: relative;

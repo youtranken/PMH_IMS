@@ -361,6 +361,13 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(rule('base.css', 'button.sm')!.body, 'padding')).toContain('var(--space-4)');
   });
 
+  // `.vault-rules` đặt margin 0: đoạn dẫn ngay trên nó (hộp "Luật của két") dính vào gạch đầu.
+  it('danh sách luật két cách đoạn dẫn phía trên', () => {
+    const r = rule('shared-kit.css', 'p + .vault-rules');
+    expect(r).toBeDefined();
+    expect(declValue(r!.body, 'margin-top')).toBe('var(--space-6)');
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
