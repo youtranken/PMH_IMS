@@ -43,6 +43,21 @@ describe('DeviceListQueryDto', () => {
     expect(String(body?.message)).toMatch(/không hợp lệ/);
   });
 
+  /* Q-20: tham số trạng thái lạ coi như bộ lọc mặc định — `?status=a&status=b` (mảng) cũng vậy,
+     controller đọc qua `deviceStatusQuery` ra `live`. 400 thì cả màn thành trang lỗi. */
+  it.each([DeviceListQueryDto, DeviceExportQueryDto])(
+    '%p: status lặp (mảng) không 400 — về mặc định live',
+    async (dto) => {
+      expect(await dtoErrorBody(dto, { status: ['live', 'retired'] })).toBeNull();
+    },
+  );
+
+  /* department / assignedTo là khớp ĐÚNG một giá trị: mảng không có nghĩa "một phòng", và bỏ
+     qua thì trả về tập rộng hơn cái hộp gán license đã chọn. Giữ 400 như mọi query DTO chặt. */
+  it.each(['department', 'assignedTo'])('%s lặp (mảng) → 400', async (field) => {
+    expect(await dtoErrorBody(DeviceListQueryDto, { [field]: ['IT', 'KT'] })).not.toBeNull();
+  });
+
   it('deviceTypeIds có một mục rác → 400, không lặng lẽ bỏ lọc', async () => {
     const body = await dtoErrorBody(DeviceListQueryDto, { deviceTypeIds: `${UUID},rac` });
     expect(body).not.toBeNull();
