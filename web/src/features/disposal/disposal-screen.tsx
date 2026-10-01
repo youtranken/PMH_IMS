@@ -10,6 +10,7 @@ import {
   DISPOSAL_KINDS,
   disposalDetail,
   disposalStatusKey,
+  disposalStatusTone,
   type DisposalKind,
 } from '@/lib/disposal-kinds';
 import { MOBILE_CARD_QUERY, MobileCardList } from '@/ui/data-table';
@@ -151,17 +152,22 @@ export function DisposalScreen() {
       label: t('disposal.open'),
       onSelect: () => navigate(LINK[item.kind](item.id)),
     },
-    /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13);
-       loại khác đổi trạng thái trong Sửa hồ sơ. */
-    ...(item.kind === 'software'
-      ? [
-          {
-            key: 'restore',
-            label: t('software.restore'),
-            onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
-          },
-        ]
-      : []),
+    /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13).
+       Loại khác dùng lại ở trang hồ sơ của nó (Q-19): kho không ghi gì, nên mục này chỉ dẫn
+       đường, và mang tên nói rõ việc người ta tìm tới. */
+    item.kind === 'software'
+      ? {
+          key: 'restore',
+          label: t('software.restore'),
+          ok: true,
+          onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
+        }
+      : {
+          key: 'reuse',
+          label: t('disposal.reuse'),
+          ok: true,
+          onSelect: () => navigate(LINK[item.kind](item.id)),
+        },
   ];
 
   const setPeriod = (next: Period | '') => {
@@ -331,7 +337,9 @@ export function DisposalScreen() {
                         <span>{t(KIND_KEY[item.kind])}</span>
                         {/* Tên gốc của trạng thái theo module chủ — thứ cả màn này sinh ra để nói. */}
                         <span className="cell-sub">
-                          <span className="badge muted">{statusLabel(item.status, t)}</span>
+                          <span className={`badge ${disposalStatusTone(item.kind, item.status)}`}>
+                            {statusLabel(item.status, t)}
+                          </span>
                         </span>
                       </td>
                       <td data-label={t('disposal.detail')}>

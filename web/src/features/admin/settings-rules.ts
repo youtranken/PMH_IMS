@@ -82,6 +82,21 @@ export function warningOf(
   return null;
 }
 
+/**
+ * Q-19: mô tả quá chừng này ký tự thì vào nút (i) cạnh nhãn. Mô tả dài hiện thẳng dưới mỗi ô
+ * làm cột tham số dài gấp đôi và đẩy dòng "mặc định · sửa lần cuối" ra xa ô của nó. Đây là
+ * luật trình bày, không phải tham số nghiệp vụ, nên không vào `system_config`.
+ */
+const INLINE_DESCRIPTION_MAX = 80;
+
+/** Mô tả đi chỗ nào: `hint` (hiện dưới ô) hay `tip` (sau nút (i)) — đúng một trong hai. */
+export function descriptionSlot(text: string | undefined): { hint?: string; tip?: string } {
+  if (!text) return { hint: undefined, tip: undefined };
+  return text.length > INLINE_DESCRIPTION_MAX
+    ? { hint: undefined, tip: text }
+    : { hint: text, tip: undefined };
+}
+
 function inRange(row: SettingRow, n: number): boolean {
   return (row.min === undefined || n >= row.min) && (row.max === undefined || n <= row.max);
 }

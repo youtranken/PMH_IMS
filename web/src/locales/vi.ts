@@ -2050,6 +2050,8 @@ export default {
     note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',
+    /* Q-19: dùng lại thiết bị / tài khoản dịch vụ / đường truyền làm ở trang hồ sơ, không tại kho. */
+    reuse: 'Mở hồ sơ để dùng lại',
     clearFilters: 'Xóa bộ lọc',
     filterKind: 'Lọc theo loại hồ sơ',
     allKinds: 'Tất cả',

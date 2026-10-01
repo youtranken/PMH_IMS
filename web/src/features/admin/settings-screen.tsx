@@ -12,7 +12,7 @@ import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
-import { checkDraft, toDraft, warningOf, type SettingRow } from './settings-rules';
+import { checkDraft, descriptionSlot, toDraft, warningOf, type SettingRow } from './settings-rules';
 
 type Group = SettingRow['group'];
 
@@ -227,12 +227,14 @@ export function SettingsScreen({ me }: { me: Me }) {
               const check = checks.get(row.key) ?? checkDraft(row, draftOf(row));
               const dirty = draftOf(row).trim() !== toDraft(row.value);
               const warn = dirty ? warningOf(row, check.value) : null;
+              const description = descriptionSlot(TEXT[row.name] ? t(TEXT[row.name][1]) : undefined);
               return (
                 <div key={row.key} className="settings-row">
                   <Field
                     label={labelOf(row)}
                     htmlFor={id}
-                    hint={TEXT[row.name] ? t(TEXT[row.name][1]) : undefined}
+                    hint={description.hint}
+                    tip={description.tip}
                     error={dirty && check.reason ? t(check.reason.key, check.reason.params) : null}
                   >
                     {row.type === 'text' ? (

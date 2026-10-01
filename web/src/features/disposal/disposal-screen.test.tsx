@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen } from '@/test/test-utils';
 import { DisposalScreen } from './disposal-screen';
@@ -21,11 +22,32 @@ const DEVICE = {
 
 const COUNTS = { device: 1, software: 0, service_account: 0, isp: 0 };
 
-function renderWith(truncated: string[]) {
+const SERVICE_ACCOUNT = {
+  ...DEVICE,
+  kind: 'service_account',
+  id: 's1',
+  code: 'TK-E2E-01',
+  name: 'Tài khoản cũ',
+  detail: 'shared',
+  status: 'disabled',
+  auto: false,
+};
+
+const SOFTWARE = {
+  ...DEVICE,
+  kind: 'software',
+  id: 'w1',
+  code: 'SW-E2E-01',
+  name: 'Phần mềm cũ',
+  detail: 'license',
+  auto: false,
+};
+
+function renderWith(truncated: string[], items: unknown[] = [DEVICE]) {
   vi.stubGlobal(
     'fetch',
     vi.fn(() =>
-      Promise.resolve(jsonResponse(200, { items: [DEVICE], total: 1, counts: COUNTS, truncated })),
+      Promise.resolve(jsonResponse(200, { items, total: items.length, counts: COUNTS, truncated })),
     ),
   );
   return renderWithI18n(
@@ -60,5 +82,35 @@ describe('Kho thanh lý', () => {
   it('tự thanh lý → cột Người thanh lý ghi "Hệ thống"', async () => {
     renderWith([]);
     expect(await screen.findByText('Hệ thống · tự thanh lý khi quá hạn')).toBeInTheDocument();
+  });
+
+  /* Q-19: màu badge theo màn gốc — tài khoản dịch vụ "Đã ngừng dùng" đỏ như ở danh sách của nó. */
+  it('badge trạng thái mang màu của màn gốc', async () => {
+    renderWith([], [DEVICE, SERVICE_ACCOUNT]);
+    expect(await screen.findByText('Đã ngừng dùng')).toHaveClass('badge', 'danger');
+    expect(screen.getByText('Đã thanh lý')).toHaveClass('badge', 'muted');
+  });
+
+  /* Q-19: "Dùng lại" thiết bị / tài khoản dịch vụ / đường truyền làm ở trang hồ sơ, không tại kho. */
+  it('thiết bị, tài khoản dịch vụ: menu có lối mở hồ sơ để dùng lại (màu ok)', async () => {
+    const user = userEvent.setup();
+    renderWith([], [DEVICE, SERVICE_ACCOUNT]);
+    await user.click(await screen.findByRole('button', { name: 'Thao tác với TK-E2E-01' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Mở hồ sơ',
+      'Mở hồ sơ để dùng lại',
+    ]);
+    expect(screen.getByRole('menuitem', { name: 'Mở hồ sơ để dùng lại' })).toHaveClass('ok');
+  });
+
+  it('phần mềm: "Khôi phục…" tô ok, không có lối dùng lại riêng', async () => {
+    const user = userEvent.setup();
+    renderWith([], [SOFTWARE]);
+    await user.click(await screen.findByRole('button', { name: 'Thao tác với SW-E2E-01' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Mở hồ sơ',
+      'Khôi phục…',
+    ]);
+    expect(screen.getByRole('menuitem', { name: 'Khôi phục…' })).toHaveClass('ok');
   });
 });

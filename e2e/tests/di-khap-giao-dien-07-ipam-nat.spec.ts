@@ -584,7 +584,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(ipRow(page, address).getByText('Đang dùng')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Xóa của SA. Thu hồi (đỏ) xếp sau việc thường, Xóa hồ sơ nhập nhầm (xám) xếp CUỐI',
+      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Xóa của SA. Thu hồi (cam, Q-19) xếp sau việc thường, Xóa hồ sơ nhập nhầm (xám) xếp CUỐI',
     ).toEqual(['Lịch sử', 'Thu hồi IP', 'Xóa']);
     // Q-18: "Sửa" đứng ngoài menu.
     await expect(ipRow(page, address).getByRole('button', { name: `Sửa ${address}` })).toBeVisible();
