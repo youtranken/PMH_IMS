@@ -60,6 +60,25 @@ export function ipSearchPattern(
   return { exact: null, prefix: `${text}.` };
 }
 
+export type IpAddressSearch =
+  | { kind: 'ip'; exact: string | null; prefix: string | null }
+  | { kind: 'invalid' }
+  | { kind: 'text' };
+
+/**
+ * Ô tra hồ sơ IP: chuỗi chỉ có số, dấu chấm (và `/nn` ở đuôi) mà có ít nhất một chấm thì người
+ * gõ đang tra ĐỊA CHỈ. Sai định dạng thì `invalid` — không rơi về tìm theo chữ, vì tìm theo chữ
+ * với "10.77.1.300" chỉ ra hồ sơ chẳng liên quan tới câu hỏi (Q-20: IP sai thì báo, không tìm).
+ */
+export function ipAddressSearchOf(term: string): IpAddressSearch {
+  const text = term.trim();
+  if (!/^[\d./]+$/.test(text) || !text.includes('.')) return { kind: 'text' };
+  const slash = /^([^/]*)\/(\d{1,2})$/.exec(text);
+  if (text.includes('/') && (!slash || Number(slash[2]) > 32)) return { kind: 'invalid' };
+  const pattern = ipSearchPattern(slash ? slash[1] : text);
+  return pattern ? { kind: 'ip', ...pattern } : { kind: 'invalid' };
+}
+
 export function addressToLong(address: string): number {
   const [a, b, c, d] = address.split('.').map(Number);
   // `>>> 0`: dịch bit trong JS làm việc trên số CÓ DẤU 32 bit, nên 255.x.x.x ra số âm.

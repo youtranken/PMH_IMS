@@ -24,7 +24,13 @@ import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
-import { enumerateHosts, hostOf, keepPreferredByAddress, parseAddress } from './ip-rules';
+import {
+  enumerateHosts,
+  hostOf,
+  ipAddressSearchOf,
+  keepPreferredByAddress,
+  parseAddress,
+} from './ip-rules';
 import {
   OCCUPYING_STATUSES,
   canTransition,
@@ -359,7 +365,8 @@ export class IpAddressService {
    * Tra hồ sơ IP xuyên MỌI dải đang dùng: "10.77.1.53 là máy nào" và "máy CAM-01 giữ IP nào".
    *
    * Câu gõ có dáng IP thì so theo địa chỉ: đủ bốn khúc là khớp ĐÚNG (gõ .5 mà ra .53 là trả lời
-   * sai câu hỏi), gõ dở thì khớp phần đầu. Còn lại thì tìm theo máy — qua `devices.api` chứ
+   * sai câu hỏi), gõ dở thì khớp trọn nhóm đã gõ. Chỉ số và chấm mà sai định dạng thì trả rỗng,
+   * không rơi về tìm theo chữ (`ipAddressSearchOf`). Còn lại thì tìm theo máy — qua `devices.api` chứ
    * không join bảng `device` (AD-2) — và theo người/bộ phận, gấp dấu.
    *
    * Bỏ dải đã vô hiệu hoá và hồ sơ đã ẩn: kết quả dẫn người ta tới chỗ CẤP/SỬA, mà hai chỗ đó
@@ -371,12 +378,12 @@ export class IpAddressService {
     const cap = Math.min(Math.max(1, Math.trunc(limit) || 1), IP_SEARCH_MAX);
 
     let match: SQL | undefined;
-    const ipLike = /^\d{1,3}(\.\d{1,3}){0,3}\.?(\/\d{1,2})?$/.test(q) && q.includes('.');
-    if (ipLike) {
-      const host = q.replace(/\/\d{1,2}$/, '');
-      match = /^\d{1,3}(\.\d{1,3}){3}$/.test(host)
-        ? sql`host(${ipAddressTable.address}) = ${host}`
-        : sql`host(${ipAddressTable.address}) LIKE ${`${escapeLike(host)}%`}`;
+    const intent = ipAddressSearchOf(q);
+    if (intent.kind === 'invalid') return [];
+    if (intent.kind === 'ip') {
+      match = intent.exact
+        ? sql`host(${ipAddressTable.address}) = ${intent.exact}`
+        : sql`host(${ipAddressTable.address}) LIKE ${`${escapeLike(intent.prefix ?? '')}%`}`;
     } else {
       const deviceIds = (await this.devices.search(q, IP_SEARCH_MAX)).map((d) => d.id);
       match = or(

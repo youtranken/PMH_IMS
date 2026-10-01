@@ -4,6 +4,7 @@ import {
   hostRole,
   hostRoleIn,
   keepPreferredByAddress,
+  ipAddressSearchOf,
   ipSearchPattern,
   isHostInSubnet,
   longToAddress,
@@ -322,5 +323,33 @@ describe('ipSearchPattern — ô tìm thiết bị nhận ra từ khoá dạng I
     [''],
   ])('%j không phải IP → null', (term) => {
     expect(ipSearchPattern(term)).toBeNull();
+  });
+});
+
+/*
+ * Ô tra IP (màn IP, Ctrl+K): chuỗi chỉ gồm số và dấu chấm thì người gõ ĐANG tra địa chỉ. Sai
+ * định dạng (octet > 255, thừa khúc, hai chấm liền) thì trả "không có gì", không rơi về tìm theo
+ * chữ — tìm theo chữ với "10.77.1.300" ra những hồ sơ chẳng liên quan gì tới câu hỏi.
+ */
+describe('ipAddressSearchOf — tra IP hay tìm theo chữ', () => {
+  it.each([
+    ['10.77.1.50', { kind: 'ip', exact: '10.77.1.50', prefix: null }],
+    ['10.77.1.', { kind: 'ip', exact: null, prefix: '10.77.1.' }],
+    // Đuôi `/nn` bị bỏ: tra theo phần địa chỉ đã gõ.
+    ['10.77.1.0/24', { kind: 'ip', exact: '10.77.1.0', prefix: null }],
+    ['10.77.1.50/32', { kind: 'ip', exact: '10.77.1.50', prefix: null }],
+  ])('%s → %j', (term, expected) => {
+    expect(ipAddressSearchOf(term)).toEqual(expected);
+  });
+
+  it.each(['10.77.1.300', '10.77.1.50.3', '10..1', '256.1', '1.2.3.4/40'])(
+    '%s sai định dạng → invalid, không tìm theo chữ',
+    (term) => {
+      expect(ipAddressSearchOf(term)).toEqual({ kind: 'invalid' });
+    },
+  );
+
+  it.each(['cam-tim', 'chi binh', '10', 'PC-10.77'])('%s → tìm theo chữ', (term) => {
+    expect(ipAddressSearchOf(term)).toEqual({ kind: 'text' });
   });
 });

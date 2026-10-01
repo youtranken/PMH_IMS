@@ -133,6 +133,19 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     expect(await addresses.search('10.77.1.5')).toEqual([]);
   });
 
+  // "10.77.1" là trọn nhóm 10.77.1.*, không phải "bắt đầu bằng chữ số" (kéo cả 10.77.10–199).
+  it('gõ thiếu nhóm cuối → trọn nhóm đó', async () => {
+    expect((await addresses.search('10.77.1')).map((h) => h.address)).toEqual([
+      '10.77.1.53',
+      '10.77.1.54',
+    ]);
+  });
+
+  it('IP sai định dạng → rỗng, không tìm theo chữ', async () => {
+    expect(await addresses.search('10.77.1.300')).toEqual([]);
+    expect(await addresses.search('10.77.30.5.1')).toEqual([]);
+  });
+
   // Một máy một IP (Q-20): CAM-TIM-03 chỉ có IP trong dải đã ẩn nên không hiện.
   it('gõ mã máy → IP của các máy khớp ở dải đang dùng (không lôi dải đã ẩn ra)', async () => {
     const hits = await addresses.search('cam-tim');
