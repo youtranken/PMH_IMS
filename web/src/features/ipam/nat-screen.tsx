@@ -53,7 +53,7 @@ import { useIpamSettings } from './ipam-settings';
 import { PATHS } from '@/lib/routes';
 import { clampPage } from '@/lib/paging';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Pagination } from '@/ui/pagination';
 import { useListUrlState } from '@/ui/use-list-url-state';
@@ -1247,7 +1247,7 @@ function RemoveDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
 
   const remove = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {
     method: 'DELETE',

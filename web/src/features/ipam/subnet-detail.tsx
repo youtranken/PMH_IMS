@@ -20,7 +20,7 @@ import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
-import { secretTextRule, textRule, useFormErrors } from "@/ui/use-form-errors";
+import { reasonRule, secretTextRule, useFormErrors } from "@/ui/use-form-errors";
 import { FilterBar } from "@/ui/filter-bar";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
@@ -1155,7 +1155,7 @@ function VoidAddressDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,
     { method: "DELETE", csrfToken, refreshMe: false },

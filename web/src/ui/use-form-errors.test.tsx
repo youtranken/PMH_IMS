@@ -7,7 +7,7 @@ import i18n from '@/lib/i18n';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { DatePicker } from '@/ui/date-picker';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { REASON_MIN, reasonRule, secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 
 /**
  * Kiểm form bằng tiếng Việt thay cho bong bóng của trình duyệt (DoD 6).
@@ -137,3 +137,24 @@ describe('secretTextRule — ô chữ tự do ngoài két (Q-19)', () => {
     if (message) expect(message).not.toContain('Pmh@Guest2026');
   });
 });
+
+/*
+ * Ô "lý do" (vô hiệu tài khoản, ngừng dùng tài khoản dịch vụ, xoá dải, gỡ rule NAT, xoá IP) có
+ * MỘT luật: bắt buộc, tối thiểu REASON_MIN ký tự, không chứa chuỗi trông như mật khẩu.
+ */
+describe('reasonRule', () => {
+  const t = i18n.t.bind(i18n) as TFunction;
+  it.each([
+    ['', 'Bắt buộc'],
+    ['  ', 'Bắt buộc'],
+    ['ab', `ít nhất ${REASON_MIN} ký tự`],
+    ['Pmh@Guest2026 nhé', 'mật khẩu'],
+  ])('%j → lỗi chứa "%s"', (value, expected) => {
+    expect(reasonRule(t, value) ?? '').toContain(expected);
+  });
+
+  it('lý do bình thường thì qua', () => {
+    expect(reasonRule(t, 'Nhân viên nghỉ việc')).toBeNull();
+  });
+});
+

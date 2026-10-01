@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -14,6 +14,7 @@ import { Field } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
+import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types';
@@ -82,11 +83,7 @@ export function AssignDialog({
   const [quickNote, setQuickNote] = useState<string | null>(null);
   const [quickLoading, setQuickLoading] = useState(false);
   const departments = useDepartments();
-  const [personDebounced, setPersonDebounced] = useState('');
-  useEffect(() => {
-    const id = setTimeout(() => setPersonDebounced(quickValue.trim()), 250);
-    return () => clearTimeout(id);
-  }, [quickValue]);
+  const personDebounced = useDebouncedValue(quickValue.trim());
   /* Không có danh mục người sử dụng: gợi ý lấy từ chính các máy đang dùng khớp chữ đang gõ,
      để tên chọn ra là tên có máy thật — phép lọc `assignedTo` phía API khớp ĐÚNG, không "chứa". */
   const people = useQuery({

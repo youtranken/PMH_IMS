@@ -1,5 +1,4 @@
-/** Dạng email đủ để bắt lỗi gõ ở ô Người nhận — server vẫn là hàng rào cuối. */
-const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+import { isEmail } from '@/lib/email';
 
 /** Số gợi ý tối đa dưới ô Người nhận — nhiều hơn là thành một danh bạ phải đọc. */
 const MAX_SUGGESTIONS = 6;
@@ -10,7 +9,7 @@ export function parseRecipients(text: string): { email: string; valid: boolean }
     .split(/[,;\n]/)
     .map((email) => email.trim())
     .filter(Boolean)
-    .map((email) => ({ email, valid: EMAIL.test(email) }));
+    .map((email) => ({ email, valid: isEmail(email) }));
 }
 
 /**
