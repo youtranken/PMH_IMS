@@ -119,11 +119,11 @@ export function ServiceAccountForm({
   const noteLeak =
     !row && noteContainsSecret(form.note, secretValue) && t('vault.noteContainsSecret');
   const check = useFormErrors({
-    note: noteLeak,
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
     allowedIps:
       badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
-    note: secretTextRule(t, form.note),
+    // Chứa đúng mật khẩu đang cất (B1) hay trông như mật khẩu (Q-19) — cùng một ô, một lỗi.
+    note: noteLeak || secretTextRule(t, form.note),
   });
 
   return (
@@ -457,7 +457,7 @@ export function ServiceAccountForm({
             label={t('serviceAccounts.note')}
             hint={t('serviceAccounts.noteHint')}
             htmlFor="sa-note"
-            error={noteLeak || check.error('note')}
+            error={check.error('note')}
           >
             <textarea
               id="sa-note"

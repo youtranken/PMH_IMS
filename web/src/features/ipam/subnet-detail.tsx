@@ -994,7 +994,7 @@ function TransitionDialog({
           <button
             type="submit"
             form="transition-form"
-            className={to === "free" ? "btn danger" : "btn primary"}
+            className={to === "free" ? "btn caution" : "btn primary"}
             disabled={move.isPending}
           >
             {move.isPending ? t("common.loading") : label}

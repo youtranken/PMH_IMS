@@ -75,4 +75,28 @@ describe('SubnetPane — menu ⋮ của một IP', () => {
     expect(reclaim).toHaveClass('warn');
     expect(reclaim).not.toHaveClass('danger');
   });
+
+  it('nút xác nhận trong hộp "Thu hồi" cũng màu cảnh báo (caution), không đỏ', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(jsonResponse(200, String(url).endsWith('/addresses') ? [ASSIGNED] : [])),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <SubnetPane subnet={SUBNET} me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const [kebab] = await screen.findAllByRole('button', { name: /Thao tác với 10\.0\.1\.3/ });
+    await user.click(kebab);
+    await user.click(screen.getByRole('menuitem', { name: 'Thu hồi IP' }));
+    const dialog = await screen.findByRole('dialog');
+    const submit = Array.from(dialog.querySelectorAll('button[type="submit"]'))[0];
+    expect(submit).toHaveClass('caution');
+    expect(submit).not.toHaveClass('danger');
+  });
 });

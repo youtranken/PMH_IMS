@@ -195,6 +195,17 @@ button.danger {
 button.danger:hover:not(:disabled) {
   background: var(--danger-strong);
 }
+/* Xác nhận việc ĐẢO ĐƯỢC nhưng cần nghĩ (thu hồi IP về pool…): màu cảnh báo, không đỏ — đỏ dành
+   cho việc không hoàn tác được (Q-19). Tên `caution`, không `warn`: `button.warn` đã là tông chữ
+   của mục menu ⋮. */
+button.caution {
+  color: var(--on-accent);
+  background: var(--warn);
+  border-color: var(--warn);
+}
+button.caution:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
 /*
  * Nút phá ở ĐẦU TRANG chi tiết: đỏ nhưng KHÔNG đặc.
  *
