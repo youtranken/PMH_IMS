@@ -95,7 +95,7 @@ describe('Hộp Sửa luật NAT', () => {
     await user.click((await screen.findAllByRole('button', { name: 'Thêm luật NAT' }))[0]);
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveStyle({ maxWidth: '960px' });
-    const grids = [...dialog.querySelectorAll('.form-grid')].map((grid) =>
+    const grids = Array.from(dialog.querySelectorAll('.form-grid')).map((grid) =>
       grid.getAttribute('data-columns'),
     );
     expect(grids[0]).toBe('4');
