@@ -18,6 +18,10 @@
   --ink-3: #5c635c;
   --border: #e9eae2;
   --border-2: #d8dbd0;
+  /* Viền ô nhập / ô chọn / nút viền. --border-2 chỉ 1,4:1 trên nền trắng — dưới ngưỡng 3:1 của
+     thành phần giao diện (WCAG 1.4.11), mắt không thấy khung ô đâu. Thẻ/khối vẫn dùng --border-2
+     để trang không thành lưới kẻ đậm. */
+  --field-border: #868d83;
 
   /* Accent chính: lục bảo (emerald) */
   --primary: #0e9f6e;
@@ -28,6 +32,8 @@
   --warm: #f59e0b;
   --warm-ink: #ea580c;
   --warm-soft: #fef2df;
+  /* Chữ cam trên nền xám ấm (ký hiệu trong chuỗi bí mật): --warm-ink chỉ 3,1:1 trên --surface-2. */
+  --warm-strong: #a14a0a;
   --grad: linear-gradient(135deg, #0e9f6e, #f59e0b);
 
   /* Sidebar grove (xanh rừng đậm) */
@@ -56,8 +62,8 @@
 
   /* Thang z-index (thấp→cao). Không có thang thì nhiều lớp cùng một z tranh nhau, thứ tự
      hiển thị do DOM quyết định. Popup nổi (dropdown/popover) < modal là chủ ý:
-     palette/lightbox/toast phải NỔI TRÊN modal. Lớp cục bộ trong component
-     (sticky thead, bánh xe time-picker, drawer mobile) giữ z-index riêng. */
+     palette/toast phải NỔI TRÊN modal. Lớp cục bộ trong component (sticky thead, drawer
+     mobile) giữ z-index riêng. */
   --z-sticky: 10;
   --z-modal-backdrop: 50;
   --z-modal: 60;
@@ -65,7 +71,6 @@
      modal để dùng được trong dialog (trước dùng hack zIndex:1000). */
   --z-dropdown: 70;
   --z-popover: 70;
-  --z-lightbox: 80;
   --z-palette: 85;
   --z-toast: 90;
 
@@ -115,15 +120,6 @@
    * độ tối: trang vốn đã tối mà bị phủ thêm 44% đen thì bảng phía sau gần như đen tuyền.
    */
   --scrim: rgba(20, 26, 20, 0.44);
-  /*
-   * Bản ĐẬM, dành cho lớp phủ toàn màn hình xem ảnh (`lightbox.css`). Ở đó nền phải lùi hẳn
-   * đi để mắt chỉ còn thấy tấm ảnh, nên 0.44 là quá nhạt — đây không phải hộp thoại có nội
-   * dung cần đọc song song với trang phía sau.
-   *
-   * Tách token riêng thay vì để `lightbox.css` viết tay: bản viết tay không có cặp cho chế độ
-   * tối, nên ở theme tối nó phủ thêm 62% sắc XANH lên một nền vốn đã tối — ảnh bị ám màu.
-   */
-  --scrim-strong: rgba(20, 26, 20, 0.62);
   /* Vệt mờ ở mép khung cuộn ngang còn nội dung khuất (`ui/scroll-x.tsx`). */
   --edge-fade: rgba(16, 24, 40, 0.16);
   /* Bóng của khối nổi tách khỏi luồng trang (toast vòng đời, menu thao tác dòng). */
@@ -199,12 +195,14 @@ html[data-theme='dark'] {
      rất ít, viền mờ quá thì các khối trông như trôi nổi, không tách lớp. */
   --border: #313e35;
   --border-2: #425145;
+  --field-border: #6b7a6e;
   --primary: #34d399;
   --primary-ink: #6ee7b7;
   --primary-soft: #123024;
   --warm: #fbbf24;
   --warm-ink: #f59e0b;
   --warm-soft: #3a2c14;
+  --warm-strong: #f59e0b;
   --grad: linear-gradient(135deg, #34d399, #fbbf24);
   --ok: #43c294;
   --ok-soft: #13312a;
@@ -230,8 +228,6 @@ html[data-theme='dark'] {
   /* Chế độ tối: nền đã tối sẵn nên lớp phủ phải THUẦN ĐEN và đậm hơn một chút mới tách được
      hộp ra khỏi trang; dùng lại sắc xanh của bản sáng thì hai lớp hòa vào nhau. */
   --scrim: rgba(0, 0, 0, 0.62);
-  /* Cùng lý do: thuần đen, và đậm hơn bản thường một nấc. */
-  --scrim-strong: rgba(0, 0, 0, 0.78);
   /* Nền tối: vệt phải thuần đen và đậm hơn mới thấy được trên mặt bảng tối. */
   --edge-fade: rgba(0, 0, 0, 0.55);
   /* Nền tối nuốt bóng nhạt: phải đậm hơn mới tách khối nổi khỏi trang. */

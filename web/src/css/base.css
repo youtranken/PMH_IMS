@@ -5,7 +5,7 @@ textarea {
   font: inherit;
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   padding: var(--space-4) var(--space-5);
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
@@ -14,9 +14,12 @@ textarea {
 input::placeholder {
   color: var(--ink-3);
 }
-input:hover:not(:focus):not(:disabled),
-select:hover:not(:focus):not(:disabled),
-textarea:hover:not(:focus):not(:disabled) {
+/* `:where()` giữ độ ưu tiên (0,0,1): viền hover chung phải THUA mọi luật có class — viền đỏ của
+   ô lỗi (`.inp[aria-invalid]`) và viền kính trên card đăng nhập (`.auth-form .inp`). Bản
+   `input:hover:not(:focus):not(:disabled)` là (0,3,1), rê chuột vào là ô lỗi mất viền đỏ. */
+input:where(:hover:not(:focus):not(:disabled)),
+select:where(:hover:not(:focus):not(:disabled)),
+textarea:where(:hover:not(:focus):not(:disabled)) {
   border-color: var(--ink-3);
 }
 input:focus,
@@ -90,7 +93,7 @@ button {
   font-weight: var(--fw-semibold);
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   padding: 0.48rem var(--space-6);
   cursor: pointer;
@@ -105,7 +108,9 @@ button {
 button:where(:hover:not(:disabled)) {
   background: var(--surface-2);
 }
-button:active:not(:disabled) {
+/* Cùng lý do `:where()`: nút tự định vị bằng `transform` (mũi tên combobox, nút xoá ngày — cả hai
+   `translateY(-50%)`) không được bị cái nhún 1px này đè mất khi bấm, nhảy lệch nửa chiều cao. */
+button:where(:active:not(:disabled)) {
   transform: translateY(1px);
 }
 button:focus-visible {
@@ -245,7 +250,7 @@ a.linkbtn {
   font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   padding: 0.48rem var(--space-6);
   text-decoration: none;

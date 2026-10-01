@@ -564,6 +564,11 @@
   gap: var(--space-3);
   flex: 0 1 23rem;
 }
+/* Cụm cũng mang `role="group"` nên trúng luật `.filter-bar [role='group']` ở trên (cùng độ ưu
+   tiên): phải khai lại ở đây, sau nó, không thì "đến ngày" rơi xuống dưới "từ ngày". */
+.filter-bar .filter-range {
+  flex-wrap: nowrap;
+}
 .filter-range .dp {
   flex: 1 1 0;
 }
@@ -664,7 +669,7 @@ input.search {
     padding: var(--space-1) var(--space-5);
   }
   /*
-   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table tbody tr:last-child td`
+   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table > tbody > tr:last-child > td`
    * tắt viền ở dòng cuối, nên thẻ cuối mất vạch trong khi các thẻ trên còn — `:not()` nâng
    * độ ưu tiên vừa đủ thắng nó. Ô cuối của thẻ không kẻ: viền dưới của `tr` đã ngăn thẻ.
    */
