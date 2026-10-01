@@ -255,7 +255,7 @@ describe('TemporaryPasswordDialog — tự che sau secret.reveal_seconds (SEC-14
 
     advance(1);
     expect(screen.queryByTestId('temp-password')).toBeNull();
-    expect(screen.getByLabelText('Mật khẩu tạm đang ẩn')).toBeInTheDocument();
+    expect(screen.getByText('Mật khẩu tạm đang ẩn')).toHaveClass('sr-only');
     // Nhãn đã đổi theo trạng thái ("Hiện"/"Ẩn") — thêm `aria-pressed` là trình đọc màn hình
     // đọc hai tín hiệu, và cái cũ còn ngược nghĩa ("Hiện, đã nhấn" khi mật khẩu đang ẩn).
     expect(screen.getByRole('button', { name: 'Hiện' })).not.toHaveAttribute('aria-pressed');

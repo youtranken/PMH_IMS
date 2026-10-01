@@ -337,7 +337,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {/* Đường sang hồ sơ đầy đủ vẫn giữ: xem két xong thường là muốn xem cả máy. */}
               {opened.orphan ? null : (
                 <Link
-                  className="btn"
+                  className="linkbtn"
                   /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: chuỗi `if`
                      kết bằng một nhánh vét như `return PATHS.softwareItem(...)` thì một đường
                      truyền rơi vào đó và cái nút này mở trang PHẦN MỀM với id đường truyền. */

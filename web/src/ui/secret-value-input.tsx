@@ -87,7 +87,6 @@ export function SecretValueInput({
           type="button"
           className="btn sm"
           aria-controls={id}
-          aria-pressed={shown}
           onClick={() => setShown((current) => !current)}
         >
           {t(shown ? 'vault.valueHide' : 'vault.valueShow')}

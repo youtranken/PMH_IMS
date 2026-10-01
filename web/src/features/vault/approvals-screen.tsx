@@ -561,7 +561,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     row.subjectLabel ? (
                       <>
                         <Link
-                          className="btn primary"
+                          className="linkbtn primary"
                           to={`${OWNER_PATH[row.subjectType](row.subjectId)}?tab=vault`}
                         >
                           {t("approvals.openVault")}
@@ -576,7 +576,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       </>
                     ) : null}
 
-                    <Link className="btn sm" to={PATHS.approval(row.id)}>
+                    <Link className="linkbtn sm" to={PATHS.approval(row.id)}>
                       {t("approvals.openDetail")}
                     </Link>
                   </div>
@@ -734,7 +734,7 @@ function LogTable({
         cell: ({ row }) => (
           <div className="action-cell">
             {actionOf(row.original)}
-            <Link className="btn sm" to={PATHS.approval(row.original.id)}>
+            <Link className="linkbtn sm" to={PATHS.approval(row.original.id)}>
               {t("approvals.openDetail")}
             </Link>
           </div>
