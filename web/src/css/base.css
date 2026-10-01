@@ -429,6 +429,16 @@ a.linkbtn.sm {
   margin-right: auto;
   font-size: var(--fs-2xl);
 }
+/* Tiêu đề + nút (i) (`PageHeader titleTip`): nút đứng sát chữ, không bị `margin-right:auto`
+   của h1 đẩy ra mép phải. */
+.page-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.page-header-title > h1 {
+  margin-right: 0;
+}
 /* `PageHeader` (ui/page-header.tsx) bọc tiêu đề trong `.grow` và nút trong `.row`, nên
    `margin-right:auto` ở h1 KHÔNG còn tác dụng (h1 hết là flex item trực tiếp) — thiếu hai
    luật dưới đây thì tiêu đề, phụ đề và toàn bộ nút dồn cụm sát trái ở mọi màn. */

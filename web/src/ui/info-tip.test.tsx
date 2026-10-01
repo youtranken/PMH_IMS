@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent } from '@testing-library/react';
 import { Dialog } from '@/ui/dialog';
 import { InfoTip } from '@/ui/info-tip';
-import { FormSection, Field } from '@/ui/page-header';
+import { FormSection, Field, PageHeader } from '@/ui/page-header';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 const TIP = 'Mã do hệ thống cấp, không sửa được.';
@@ -128,6 +128,20 @@ describe('InfoTip — nút (i) giải thích ngắn', () => {
 });
 
 describe('FormSection titleTip · Field tip', () => {
+  it('PageHeader titleTip: nút (i) cạnh <h1>, NGOÀI thẻ h1 — tên tiêu đề không lẫn chữ của nút', async () => {
+    renderWithI18n(<PageHeader title="Tài khoản dịch vụ" titleTip="Khai email dùng chung." />);
+    const heading = screen.getByRole('heading', { level: 1, name: 'Tài khoản dịch vụ' });
+    const tipButton = screen.getByRole('button', { name: 'Giải thích: Tài khoản dịch vụ' });
+    expect(heading.contains(tipButton)).toBe(false);
+    await userEvent.click(tipButton);
+    expect(screen.getByText('Khai email dùng chung.')).toBeInTheDocument();
+  });
+
+  it('PageHeader không có titleTip thì không có nút (i)', () => {
+    renderWithI18n(<PageHeader title="Thiết bị" />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('FormSection vẽ InfoTip sau tiêu đề; tên của tiêu đề không bị lẫn chữ của nút', () => {
     renderWithI18n(
       <FormSection title="Bảo hành" titleTip="Tính từ ngày mua nếu trống.">

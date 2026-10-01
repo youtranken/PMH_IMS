@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
-import { jsonResponse, renderWithI18n, screen } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { ServiceAccountsScreen } from './service-accounts-screen';
@@ -64,6 +64,22 @@ function renderAs(role: 'sa' | 'member') {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+/*
+ * Q-20: câu giải thích "khai gì ở đây" chỉ hiện ở trạng thái rỗng; có dữ liệu rồi thì người mới
+ * vào vẫn cần đọc được — nằm sau nút (i) cạnh tiêu đề trang.
+ */
+describe('Tài khoản dịch vụ — câu giải thích sau nút (i) cạnh tiêu đề', () => {
+  it('có dữ liệu: bấm (i) cạnh tiêu đề thì hiện câu giải thích', async () => {
+    stubFetch();
+    renderAs('sa');
+    await screen.findByText('VPN kế toán');
+    await userEvent.click(screen.getByRole('button', { name: 'Giải thích: Tài khoản dịch vụ' }));
+    expect(
+      screen.getByText('Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('Tài khoản dịch vụ — cột "Đổi lần cuối" (Q-15)', () => {

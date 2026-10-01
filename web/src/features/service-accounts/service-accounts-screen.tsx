@@ -238,6 +238,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('serviceAccounts.title')}
+        /* Cùng câu với trạng thái rỗng: có dữ liệu thì câu ấy không còn in ra nữa. */
+        titleTip={t('serviceAccounts.emptyHint')}
         subtitle={t('serviceAccounts.subtitle')}
         actions={
           <>
