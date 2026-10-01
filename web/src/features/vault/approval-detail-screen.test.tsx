@@ -91,6 +91,18 @@ afterEach(() => {
 });
 
 describe('Trang chi tiết phiếu break-glass', () => {
+  // Link trong thư trỏ tới phiếu đã bị dọn / gõ sai id: phải có đường về danh sách phiếu, và
+  // nói "không còn" chứ không phải một khối lỗi chung chung.
+  it('phiếu không tồn tại (404): nói không còn, có link về Duyệt mở két', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(404, { code: 'NOT_FOUND', message: 'Không tìm thấy' }))),
+    );
+    renderDetail();
+    expect(await screen.findByText('404')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Duyệt mở két/ })[0]).toHaveAttribute('href', '/approvals');
+  });
+
   it('nói máy nào (link hồ sơ), lý do, và mặc định cấp đúng số giờ xin', async () => {
     mockApi(ROW);
     renderDetail();
