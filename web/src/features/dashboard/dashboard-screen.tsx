@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import { ToneIcon } from '@/ui/glyph-icons';
 import { apiFetch } from '@/lib/api-client';
 import {
   BREAK_GLASS_KEY,
@@ -770,7 +771,7 @@ function BlockCard({
     return (
       <section className={`card dash-card slim tone-${tone}`}>
         <span className="dash-tone-ic" aria-hidden="true">
-          {tone === 'error' ? '!' : tone === 'info' ? 'i' : '✓'}
+          <ToneIcon tone={tone} />
         </span>
         <h2 className="dash-slim-title">{title}</h2>
         <p>{tone === 'good' ? emptyText : unavailableText}</p>

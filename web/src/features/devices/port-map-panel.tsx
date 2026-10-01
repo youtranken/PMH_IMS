@@ -12,7 +12,7 @@ import { useMediaQuery } from '@/ui/use-media-query';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { RowActions, type RowAction } from '@/ui/row-actions';
+import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -125,8 +125,13 @@ export function PortMapPanel({
     : allPorts;
   const incoming = sortByPortLabel(map.data?.incoming ?? []);
 
+  const primaryFor = (port: PortRow): RowPrimaryAction => ({
+    label: t('ports.edit'),
+    ariaLabel: t('ports.editOf', { port: port.portLabel }),
+    onClick: () => setEditing({ port }),
+  });
+
   const actionsFor = (port: PortRow): RowAction[] => [
-    { key: 'edit', label: t('ports.edit'), onSelect: () => setEditing({ port }) },
     {
       key: 'remove',
       label: t('ports.remove'),
@@ -235,6 +240,7 @@ export function PortMapPanel({
                       {canEdit ? (
                         <span className="list-card-end">
                           <RowActions
+                            primary={primaryFor(port)}
                             label={t('common.actionsOf', { subject: port.portLabel })}
                             subject={port.portLabel}
                             items={actionsFor(port)}
@@ -310,13 +316,12 @@ export function PortMapPanel({
                       </td>
                       {canEdit ? (
                         <td data-label={t('common.actions')} className="col-sticky-end">
-                          <div className="action-cell">
-                            <RowActions
-                              label={t('common.actionsOf', { subject: port.portLabel })}
-                              subject={port.portLabel}
-                              items={actionsFor(port)}
-                            />
-                          </div>
+                          <RowActions
+                            primary={primaryFor(port)}
+                            label={t('common.actionsOf', { subject: port.portLabel })}
+                            subject={port.portLabel}
+                            items={actionsFor(port)}
+                          />
                         </td>
                       ) : null}
                     </tr>

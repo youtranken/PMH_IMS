@@ -249,13 +249,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     expect(
       await rowActionNames(page, licenseCode),
-      'Hồ sơ LICENSE còn dùng: Sửa · Gán vào máy · Gia hạn · Đưa vào kho thanh lý (việc nguy hiểm xếp cuối)',
-    ).toEqual(['Sửa', 'Gán vào máy', 'Gia hạn', 'Đưa vào kho thanh lý']);
+      'Hồ sơ LICENSE còn dùng: Gán vào máy · Gia hạn · Đưa vào kho thanh lý (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Gán vào máy', 'Gia hạn', 'Đưa vào kho thanh lý']);
+    await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
 
     expect(
       await rowActionNames(page, maintCode),
       'Hợp đồng bảo trì KHÔNG có ghế để gán — mục "Gán vào máy" không được xuất hiện',
-    ).toEqual(['Sửa', 'Gia hạn', 'Đưa vào kho thanh lý']);
+    ).toEqual(['Gia hạn', 'Đưa vào kho thanh lý']);
 
     /*
      * Vế còn lại của luật ẩn: hồ sơ ĐÃ BỎ thì không bày mục bỏ nữa. Đưa vào kho bằng API cho
@@ -273,8 +274,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     expect(
       await rowActionNames(page, licenseCode),
-      'Hồ sơ đã bỏ: không Gán, không Gia hạn, không bỏ lần hai — chỉ Sửa và Khôi phục…',
-    ).toEqual(['Sửa', 'Khôi phục…']);
+      'Hồ sơ đã bỏ: không Gán, không Gia hạn, không bỏ lần hai — menu chỉ còn Khôi phục…',
+    ).toEqual(['Khôi phục…']);
+    await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
   });
 
   /*
@@ -663,9 +665,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('tab', { name: /^Máy đang dùng/ }).click();
     const seatRow = page.getByRole('row', { name: new RegExp(deviceCode) });
     await expect(seatRow, 'Ghế vừa gán phải hiện trong tab Máy đang dùng').toBeVisible();
-    /* "Sửa" và "Gỡ" ở trong menu ba chấm, không phải hai nút sát nhau. */
-    await seatRow.getByRole('button', { name: /^Thao tác với / }).click();
-    await page.getByRole('menuitem', { name: 'Sửa', exact: true }).click();
+    /* "Sửa" đứng ngoài (Q-18); "Gỡ" ở trong menu ba chấm, không đứng sát nút Sửa. */
+    await seatRow.getByRole('button', { name: `Sửa ${deviceCode}` }).click();
 
     const editSeat = page.getByRole('dialog', { name: `Sửa ghế license — ${deviceCode}` });
     await expect(editSeat, 'Hộp sửa ghế phải mang mã máy trên tiêu đề').toBeVisible();
@@ -1043,14 +1044,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'License gia hạn được ngay tại đây — module chủ có hàm renew',
     ).toHaveCount(1);
     await expect(
-      licenseRow.getByRole('link', { name: 'Mở hồ sơ →' }),
-      'Dòng gia hạn được thì KHÔNG kèm lối "Mở hồ sơ →" ở cột Thao tác',
+      licenseRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }),
+      'Dòng gia hạn được thì KHÔNG kèm lối "Mở hồ sơ" ở cột Thao tác',
     ).toHaveCount(0);
 
     const warrantyRow = page.getByRole('row', { name: new RegExp(deviceCode) });
     await expect(warrantyRow, 'Bảo hành sắp hết cũng phải có mặt').toBeVisible();
     await expect(
-      warrantyRow.getByRole('link', { name: 'Mở hồ sơ →' }),
+      warrantyRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }),
       'Bảo hành do nhà cung cấp quyết — cho lối sang hồ sơ để sửa ngày, không để nút chết',
     ).toHaveCount(1);
     await expect(
@@ -1180,8 +1181,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     expect(
       await rowActionNames(page, ruleName),
-      'Menu của một dòng luật: Sửa luật · Tạm ngưng · Xem trước thư · Gửi thử cho tôi · Gửi thử · Xóa (việc nguy hiểm xếp cuối)',
-    ).toEqual(['Sửa luật', 'Tạm ngưng', 'Xem trước thư', 'Gửi thử cho tôi', 'Gửi thử', 'Xóa']);
+      'Menu của một dòng luật: Tạm ngưng · Xem trước thư · Gửi thử cho tôi · Gửi thử · Xóa (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Tạm ngưng', 'Xem trước thư', 'Gửi thử cho tôi', 'Gửi thử', 'Xóa']);
+    await expect(page.getByRole('button', { name: `Sửa ${ruleName}` })).toBeVisible();
 
     /*
      * "GỬI THỬ" PHẢI HỎI LẠI, VÀ CÂU HỎI PHẢI NÊU ĐÍCH DANH NGƯỜI NHẬN.
@@ -1327,7 +1329,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(add, 'trả lời "Bỏ và đóng" rồi thì hộp thêm luật phải đóng').toHaveCount(0);
 
     // ===== HỘP "SỬA LUẬT" PHẢI MANG CẤU HÌNH CŨ VÀO =====
-    await rowAction(page, ruleName, 'Sửa luật');
+    await rowAction(page, ruleName, 'Sửa');
     const edit = page.getByRole('dialog', { name: 'Sửa luật' });
     await expect(edit).toBeVisible();
 

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -21,6 +21,8 @@ import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } fr
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { CopyButton } from '@/ui/copy-button';
+import { RowActions } from '@/ui/row-actions';
+import { ispMenuItems } from './isp-status-menu';
 
 const DEFAULT_LIMIT = 20;
 
@@ -73,6 +75,8 @@ export function IspScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<IspRow | null>(null);
+  const navigate = useNavigate();
 
   const lists = useCatalogLists();
 
@@ -186,8 +190,29 @@ export function IspScreen({ me }: { me: Me }) {
           </span>
         ),
       },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        meta: { className: 'col-center' },
+        cell: ({ row }) => (
+          <RowActions
+            primary={{
+              label: t('common.edit'),
+              ariaLabel: t('common.editOf', { subject: row.original.code }),
+              onClick: () => setEditing(row.original),
+            }}
+            label={t('common.actionsOf', { subject: row.original.code })}
+            subject={row.original.code}
+            /* Đổi trạng thái đi sang trang chi tiết (`?action=`): câu hỏi lại của Thanh lý nhắc
+               hủy mật khẩu trong két, và chỉ trang chi tiết đếm ngăn két của đường này. */
+            items={ispMenuItems(t, row.original.status, (next) =>
+              navigate(`${PATHS.ispLine(row.original.id)}?action=${next}`),
+            )}
+          />
+        ),
+      },
     ],
-    [t],
+    [t, navigate],
   );
 
   return (
@@ -297,6 +322,18 @@ export function IspScreen({ me }: { me: Me }) {
           />
         </>
       )}
+
+      {editing ? (
+        <IspForm
+          row={editing}
+          csrfToken={me.csrfToken}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void queryClient.invalidateQueries({ queryKey: ['isp'] });
+          }}
+        />
+      ) : null}
 
       {creating ? (
         <IspForm

@@ -440,20 +440,19 @@ export function NatScreen({ me }: { me: Me }) {
                     )}
                   </td>
                   <td data-label={t('common.actions')} className="col-actions">
-                    <div className="action-cell">
-                      <RowActions
+                    <RowActions
+                        // Rule đã gỡ chỉ còn để TRA: sửa, bật/tắt hay gỡ tiếp đều bị API từ chối.
+                        primary={
+                          voided
+                            ? undefined
+                            : {
+                                label: t('common.edit'),
+                                ariaLabel: t('common.editOf', { subject: ports }),
+                                onClick: () => setEditing({ rule }),
+                              }
+                        }
                         label={t('common.actionsOf', { subject: ports })}
                         items={[
-                          // Rule đã gỡ chỉ còn để TRA: sửa, bật/tắt hay gỡ tiếp đều bị API từ chối.
-                          ...(voided
-                            ? []
-                            : [
-                                {
-                                  key: 'edit',
-                                  label: t('common.edit'),
-                                  onSelect: () => setEditing({ rule }),
-                                },
-                              ]),
                           {
                             key: 'history',
                             label: t('nat.history'),
@@ -482,7 +481,6 @@ export function NatScreen({ me }: { me: Me }) {
                             : []),
                         ]}
                       />
-                    </div>
                   </td>
                 </tr>
                 );

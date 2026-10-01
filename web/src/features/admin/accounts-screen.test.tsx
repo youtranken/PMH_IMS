@@ -131,6 +131,30 @@ describe('Màn Tài khoản', () => {
     expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(2);
   });
 
+  /* Lối QUAY LẠI (Mở khóa · Bật lại · Gỡ tạm chặn) chữ xanh — nghịch đảo của việc warn/danger. */
+  it('Mở khóa, Bật lại, Gỡ tạm chặn mang lớp ok', async () => {
+    const rows = [
+      ROWS[1],
+      { ...ROWS[1], id: 'u-k', fullName: 'E2E Đang khóa', status: 'locked', lockedUntil: null },
+      { ...ROWS[1], id: 'u-n', fullName: 'E2E Đã nghỉ', status: 'disabled', lockedUntil: null },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(200, { items: rows, total: 3 }))),
+    );
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Đang khóa');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Thành viên' }));
+    expect(screen.getByRole('menuitem', { name: 'Gỡ tạm chặn' })).toHaveClass('ok');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Đang khóa' }));
+    expect(screen.getByRole('menuitem', { name: 'Mở khóa' })).toHaveClass('ok');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Đã nghỉ' }));
+    expect(screen.getByRole('menuitem', { name: 'Bật lại' })).toHaveClass('ok');
+  });
+
   it('tài khoản đang tạm chặn vì gõ sai: nói ra cạnh trạng thái; chưa từng đăng nhập thì nói rõ', async () => {
     stubFetch();
     renderAt('/admin/accounts');

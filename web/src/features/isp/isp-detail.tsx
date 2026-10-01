@@ -1,6 +1,6 @@
 import { formatPhone } from '@/lib/phone-format';
 import { PhoneLink } from '@/ui/phone-link';
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -35,6 +35,8 @@ import {
 } from "./isp-types";
 import { errorMessage } from "@/lib/api";
 import { RowActions } from "@/ui/row-actions";
+import { useOwnerSecrets } from "@/ui/vault-panel";
+import { ispMenuItems, parseIspAction } from "./isp-status-menu";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
 import { useIsNarrow } from "@/ui/use-narrow";
@@ -48,7 +50,7 @@ export function IspDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   // `?tab=vault` từ thư "đã được duyệt": người xin mở thẳng két, không phải tìm tab.
   const [tab, setTab] = useState(() =>
     initialTab(params.get("tab"), ["profile", "vault", "attachments", "history"]),
@@ -77,6 +79,28 @@ export function IspDetail({ me }: { me: Me }) {
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["isp"] });
+
+  /*
+   * `?action=` từ menu ⋮ của danh sách: chờ tới khi biết số ngăn két (câu hỏi lại của Thanh lý
+   * nhắc hủy mật khẩu trong két — hỏi trước khi đếm xong là nói thiếu), rồi hỏi đúng MỘT lần
+   * và gỡ tham số, để F5 hay Back không bật lại hộp.
+   */
+  const vault = useOwnerSecrets("isp", id, me);
+  const vaultKnown = vault.verdict.isFetched && (!vault.allowed || vault.secrets.isFetched);
+  const changeStatusRef = useRef<((next: IspStatus) => Promise<void>) | null>(null);
+  const pendingAction = line.data ? parseIspAction(params.get("action"), line.data.status) : null;
+  useEffect(() => {
+    if (!params.has("action") || !line.data || !vaultKnown) return;
+    setParams(
+      (next) => {
+        next.delete("action");
+        return next;
+      },
+      { replace: true },
+    );
+    if (pendingAction) void changeStatusRef.current?.(pendingAction);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line.data, vaultKnown, pendingAction]);
 
   if (line.isLoading) return <Loading />;
   if (line.isError) {
@@ -125,6 +149,7 @@ export function IspDetail({ me }: { me: Me }) {
       toast({ message: errorMessage(error), tone: "error" });
     }
   };
+  changeStatusRef.current = changeStatus;
 
   return (
     <>
@@ -179,31 +204,7 @@ export function IspDetail({ me }: { me: Me }) {
                 ...(narrow
                   ? [{ key: "edit", label: t("isp.edit"), onSelect: () => setEditing(true) }]
                   : []),
-                ...(item.status === "active"
-                  ? [
-                      {
-                        key: "suspend",
-                        label: t("isp.suspendMenu"),
-                        onSelect: () => void changeStatus("suspended"),
-                      },
-                    ]
-                  : [
-                      {
-                        key: "reactivate",
-                        label: t("isp.reactivateMenu"),
-                        onSelect: () => void changeStatus("active"),
-                      },
-                    ]),
-                ...(terminated
-                  ? []
-                  : [
-                      {
-                        key: "terminate",
-                        label: t("isp.terminateMenu"),
-                        onSelect: () => void changeStatus("terminated"),
-                        danger: true,
-                      },
-                    ]),
+                ...ispMenuItems(t, item.status, (next) => void changeStatus(next)),
               ]}
             />
           </>

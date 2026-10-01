@@ -181,6 +181,12 @@ test.describe('Đường truyền ISP', () => {
     await expect(page.getByText(/^Chưa khai/)).toHaveCount(0);
     await expect(page.getByText('Khi mất mạng')).toHaveCount(0);
 
+    /* Đường hỏng của lối `?action=` từ danh sách: link cũ "Thanh lý" trên đường ĐÃ thanh lý thì
+       không bật hộp nào, và tham số bị gỡ khỏi thanh địa chỉ. */
+    await page.goto(`/isp-lines/${id}?action=terminated`);
+    await expect(page).toHaveURL(new RegExp(`/isp-lines/${id}$`));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(
       page.getByRole('listitem').filter({ hasText: 'Thanh lý đường truyền' }),

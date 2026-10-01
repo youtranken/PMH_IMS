@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useConfirm } from '@/ui/confirm-context';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
@@ -453,7 +454,7 @@ export function Dialog({
                         disabled={!dismissible || requireExplicitClose}
                         onClick={tryClose}
                       >
-                        ✕
+                        <CloseIcon />
                       </button>
                     ) : (
                       <RD.Close asChild>
@@ -465,7 +466,7 @@ export function Dialog({
                           aria-label={closeLabel ?? t('common.closeDialog')}
                           disabled={!dismissible || requireExplicitClose}
                         >
-                          ✕
+                          <CloseIcon />
                         </button>
                       </RD.Close>
                     )}

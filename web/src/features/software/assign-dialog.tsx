@@ -8,6 +8,7 @@ import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
@@ -417,7 +418,7 @@ export function AssignDialog({
                     setDevices((current) => current.filter((picked) => picked.id !== item.id))
                   }
                 >
-                  ✕
+                  <CloseIcon />
                 </button>
               </span>
             ))}

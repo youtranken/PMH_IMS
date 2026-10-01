@@ -633,7 +633,7 @@ describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)
     const calls = mockReveal();
     renderInline();
     await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
-    await userEvent.click(await screen.findByRole('button', { name: '‹ Quay lại' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Quay lại' }));
     expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
     expect(calls.some((c) => c.url.includes('/auth/step-up'))).toBe(false);
   });

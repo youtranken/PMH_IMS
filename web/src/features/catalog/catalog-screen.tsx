@@ -23,7 +23,7 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
-import { RowActions, type RowAction } from '@/ui/row-actions';
+import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
@@ -470,15 +470,16 @@ export function CatalogScreen({ me }: { me: Me }) {
     url.setSorting({ key: '', desc: false });
   };
 
+  const primaryFor = (catalogRow: CatalogRow): RowPrimaryAction => ({
+    label: t('catalog.edit'),
+    ariaLabel: t('common.editOf', { subject: catalogLabel(entity, catalogRow) }),
+    onClick: () => setEditing({ row: catalogRow }),
+  });
+
   const actionsFor = (catalogRow: CatalogRow): RowAction[] => {
     const name = catalogLabel(entity, catalogRow);
     const devices = devicesFilterOf(entity, catalogRow);
     return [
-      {
-        key: 'edit',
-        label: t('catalog.edit'),
-        onSelect: () => setEditing({ row: catalogRow }),
-      },
       {
         key: 'history',
         label: t('catalog.history'),
@@ -523,13 +524,12 @@ export function CatalogScreen({ me }: { me: Me }) {
       header: t('common.actions'),
       meta: { className: 'col-center' },
       cell: ({ row }) => (
-        <div className="action-cell">
-          <RowActions
-            label={t('common.actionsOf', { subject: catalogLabel(entity, row.original) })}
-            subject={catalogLabel(entity, row.original)}
-            items={actionsFor(row.original)}
-          />
-        </div>
+        <RowActions
+          primary={primaryFor(row.original)}
+          label={t('common.actionsOf', { subject: catalogLabel(entity, row.original) })}
+          subject={catalogLabel(entity, row.original)}
+          items={actionsFor(row.original)}
+        />
       ),
     };
     const usageColumn: ColumnDef<CatalogRow, unknown> = {
@@ -555,6 +555,7 @@ export function CatalogScreen({ me }: { me: Me }) {
       [mobileMeta(entity, row, t), usageSummary(entity, row, t)].filter(Boolean).join(' · ') || null,
     actions: (row) => (
       <RowActions
+        primary={primaryFor(row)}
         label={t('common.actionsOf', { subject: catalogLabel(entity, row) })}
         subject={catalogLabel(entity, row)}
         items={actionsFor(row)}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { useIpamSettings } from './ipam-settings';
 import { isWideRange, parsePortChip, type ChipError, type PortChip } from './port-chips';
 
@@ -64,7 +65,7 @@ export function PortChipsField({
                 aria-label={t('nat.portRemove', { port: chip.value })}
                 onClick={() => onChange(chips.filter((_, i) => i !== index))}
               >
-                ✕
+                <CloseIcon />
               </button>
             </li>
           ))}
