@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
@@ -8,7 +9,7 @@ import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { SCOPE_TYPES, type ScopeType } from './access-tier';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 
-class AccessRuleDto {
+export class AccessRuleDto {
   @IsString() @Length(3, 160) memberEmail!: string;
 
   @IsIn([...SCOPE_TYPES], { message: 'Nhóm đối tượng không hợp lệ.' })
@@ -28,7 +29,7 @@ class AccessRuleDto {
   })
   tier!: 'whitelist' | 'needs_approval';
 
-  @IsOptional() @IsString() @Length(0, 500) note?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() note?: string;
 }
 
 /** Hỏi "người này có tầng gì trên đối tượng kia" — màn ma trận và break-glass đều cần. */

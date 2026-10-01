@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, ValidateIf } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
@@ -31,7 +32,7 @@ class IdParamDto {
   id!: string;
 }
 
-class ServiceAccountBodyDto {
+export class ServiceAccountBodyDto {
   /*
    * Mã và tên KHÔNG còn bắt buộc ở tầng HTTP (2026-08-27).
    *
@@ -66,7 +67,7 @@ class ServiceAccountBodyDto {
   @IsOptional() @IsString() @Length(0, 120) groupName?: string;
   /** Danh sách IP/CIDR ngăn bằng phẩy hoặc xuống dòng — luật ở `service-account-rules.ts`. */
   @IsOptional() @IsString() @Length(0, 2000) allowedIps?: string;
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 
   /*
    * KHÔNG có `status` — xem chú thích ở `ServiceAccountInput`. Đổi trạng thái đi qua
@@ -74,15 +75,17 @@ class ServiceAccountBodyDto {
    */
 }
 
-class DisableDto {
+export class DisableDto {
   @IsString()
   @Length(3, 500, { message: 'Lý do ngừng dùng từ 3 ký tự.' })
+  @NoSecretText()
   reason!: string;
 }
 
-class EnableDto {
+export class EnableDto {
   @IsString()
   @Length(3, 500, { message: 'Lý do dùng lại từ 3 ký tự.' })
+  @NoSecretText()
   reason!: string;
 }
 

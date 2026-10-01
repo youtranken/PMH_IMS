@@ -24,6 +24,7 @@ import {
   Validate,
   ValidateIf,
 } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -49,7 +50,7 @@ import {
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
 import { NoStepUp } from '../auth/step-up.decorator';
 
-class DeviceBodyDto {
+export class DeviceBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
   @IsOptional() @IsString() @Length(1, 200) name?: string;
   @IsOptional() @IsUUID() deviceTypeId?: string;
@@ -77,7 +78,7 @@ class DeviceBodyDto {
   @IsIn([...DEVICE_STATUSES], { message: 'Trạng thái thiết bị không hợp lệ.' })
   status?: DeviceStatus;
 
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 }
 
 class StatusDto {
@@ -99,7 +100,7 @@ class IdParamDto {
 }
 
 
-class PortBodyDto {
+export class PortBodyDto {
   @IsOptional() @IsString() @Length(1, 60) portLabel?: string;
 
   // Chuỗi rỗng = gỡ liên kết tới thiết bị trong kho (đầu kia thành mô tả tự do).
@@ -113,7 +114,7 @@ class PortBodyDto {
   // Dạng hợp lệ (1–4094 | trunk) kiểm ở `portVlanOf`, cùng luật CHECK `device_port_vlan_check`.
   @IsOptional() @IsString() @Length(0, 40) vlan?: string;
 
-  @IsOptional() @IsString() @Length(0, 500) note?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText() note?: string;
 }
 
 class PortParamDto extends IdParamDto {

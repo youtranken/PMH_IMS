@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Validate, ValidateIf } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
 import { IsPhone } from '../../common/phone';
 import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
@@ -56,7 +57,7 @@ export class IspBodyDto {
   @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu phải là ngày có thật, dạng YYYY-MM-DD.' })
   startDate?: string;
 
-  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+  @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 
   @IsOptional()
   @IsIn([...ISP_STATUSES], { message: 'Trạng thái đường truyền không hợp lệ.' })

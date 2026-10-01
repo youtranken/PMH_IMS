@@ -15,6 +15,8 @@ import {
 } from '../../common/import-plan';
 import { effectiveOf } from '../../common/merge-effective';
 import { viDate } from '../../common/today';
+import { secretTextMessage } from '../../common/no-secret-text';
+import { textLooksLikeSecret } from '../../common/note-secret';
 import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
 
@@ -100,6 +102,8 @@ interface FieldSpec {
   aliases: string[];
   required?: boolean;
   kind: 'text' | 'date' | 'status' | 'siteCode' | 'cabinetCode' | 'typeName' | 'vendorName';
+  /** Ô chữ tự do — cùng luật `@NoSecretText` với form (Q-19), file không là cửa sau. */
+  noSecret?: boolean;
 }
 
 /** Cột của file mẫu thiết bị — khớp FR-001. */
@@ -177,7 +181,13 @@ const FIELDS: FieldSpec[] = [
     aliases: ['trạng thái', 'trang thai', 'status'],
     kind: 'status',
   },
-  { key: 'note', label: 'Ghi chú', aliases: ['ghi chú', 'ghi chu', 'note'], kind: 'text' },
+  {
+    key: 'note',
+    label: 'Ghi chú',
+    aliases: ['ghi chú', 'ghi chu', 'note'],
+    kind: 'text',
+    noSecret: true,
+  },
 ];
 
 export function planDeviceImport(
@@ -233,6 +243,10 @@ function planRow(
 
     switch (field.kind) {
       case 'text':
+        if (field.noSecret && textLooksLikeSecret(text)) {
+          // Câu lỗi không nhắc lại ô: bảng đối chiếu hiện ra màn hình.
+          return { ...base, action: 'error', label, message: secretTextMessage(`Cột "${field.label}"`) };
+        }
         values[field.key] = text === '' ? null : text;
         break;
 
