@@ -69,4 +69,11 @@ describe('DeviceTypeFilter', () => {
       'true',
     );
   });
+
+  /* Danh sách loại dài (12+ loại) trong một ô hẹp: cuộn ngang thì chip đang bật (Firewall)
+     nằm khuất, người dùng không thấy bộ lọc đang lọc gì. Chip xuống dòng thay vì cuộn. */
+  it('dải chip xuống dòng (không cuộn ngang)', () => {
+    renderWithI18n(<Harness onValue={() => undefined} />);
+    expect(screen.getByRole('group', { name: 'Lọc theo loại thiết bị' })).toHaveClass('segmented', 'wrap');
+  });
 });

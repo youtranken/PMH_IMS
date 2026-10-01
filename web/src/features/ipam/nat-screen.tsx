@@ -877,9 +877,12 @@ function NatForm({
         <FormSection title={t('nat.sectionExternal')} columns={4}>
           {/* MỘT ô chọn router; lọc loại là dải chip ngay dưới nó chứ không phải trường riêng —
               lọc nhầm loại thì chip đang bật nằm ngay đó để gỡ, không phải đoán vì sao rỗng. */}
+          {/* Trải hết hàng (như ô Thiết bị của form đường truyền): một cột ~210px thì dải chip
+              lọc loại thành ba bốn hàng hoặc cuộn ngang làm khuất chip đang bật. */}
           <Field
             label={t('nat.router')}
             required
+            span={3}
             hint={t('nat.routerHint')}
             htmlFor="nat-router"
             error={check.error('deviceId')}

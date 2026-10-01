@@ -17,6 +17,13 @@
   max-width: 100%;
   overflow-x: auto;
 }
+/* `ChipToggleGroup wrap` (lọc loại thiết bị): chip xuống dòng trong đúng bề ngang của ô thay vì
+   cuộn — danh sách 12+ loại mà cuộn thì chip ĐANG BẬT nằm khuất, không biết đang lọc gì. */
+.segmented.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
 .segmented label {
   position: relative;
   display: inline-flex;
