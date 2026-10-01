@@ -71,6 +71,11 @@ describe('Màn Thiết bị — bộ lọc trạng thái mặc định (Q-20)', 
     const query = await listQuery('/devices?status=all');
     expect(query.has('status')).toBe(false);
   });
+
+  it('?status lạ trên URL coi như mặc định: vẫn gửi status=live', async () => {
+    const query = await listQuery('/devices?status=abc');
+    expect(query.get('status')).toBe('live');
+  });
 });
 
 /*

@@ -84,6 +84,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...SOFTWARE_STATUSES, ALL_STATUSES] },
   });
   /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
   const { page, limit } = url;

@@ -130,6 +130,10 @@ describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q
   it('"Tất cả (cả Đã ngừng dùng)": không gửi status', async () => {
     expect((await listParams('/service-accounts?status=all')).has('status')).toBe(false);
   });
+
+  it('?status lạ trên URL coi như mặc định: vẫn chỉ hỏi tài khoản đang dùng', async () => {
+    expect((await listParams('/service-accounts?status=abc')).get('status')).toBe('active');
+  });
 });
 
 /*

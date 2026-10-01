@@ -76,6 +76,8 @@ export function DevicesScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...DEVICE_STATUSES, ALL_STATUSES] },
   });
   const { page, limit } = url;
   const filters = url.filters;

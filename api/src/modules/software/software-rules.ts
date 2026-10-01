@@ -12,6 +12,16 @@ export type SoftwareKind = (typeof SOFTWARE_KINDS)[number];
 export const SOFTWARE_STATUSES = ['active', 'expired_ok', 'retired'] as const;
 export type SoftwareStatus = (typeof SOFTWARE_STATUSES)[number];
 
+/**
+ * Đọc `?status=`. Vắng / rỗng = không lọc (⌘K); `live` = trừ đã thanh lý (mặc định của màn).
+ * Chữ lạ coi như `live` (Q-20) — bỏ qua thì lặng lẽ bày lại phần mềm đã thanh lý.
+ */
+export function softwareStatusQuery(value: unknown): SoftwareStatus | 'live' | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (value === 'live') return 'live';
+  return SOFTWARE_STATUSES.includes(value as SoftwareStatus) ? (value as SoftwareStatus) : 'live';
+}
+
 /** Nhãn tiếng Việt — dùng cho thông báo lỗi phía API và cho file export. */
 export const KIND_LABEL: Record<SoftwareKind, string> = {
   license: 'License phần mềm',

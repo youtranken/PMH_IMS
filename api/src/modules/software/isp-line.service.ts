@@ -32,20 +32,19 @@ import { MAX_WAN_IPS, wanIpsOf } from './wan-ip';
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
 
+/** Mặc định của màn danh sách: đường CÒN CHẠY — lúc sự cố không phải lọc bằng mắt đường đã thanh lý. */
+const ISP_LIVE_STATUSES: IspStatus[] = ['active', 'suspended'];
+
 /**
- * `?status=active,suspended` — màn danh sách mặc định chỉ bày đường CÒN CHẠY; lúc sự cố người
- * đọc không phải lọc bằng mắt mấy đường đã thanh lý. Chữ lạ thì ném: lọc sai trông y hệt lọc
- * đúng mà ít dòng hơn.
+ * `?status=active,suspended`. Vắng / rỗng = không lọc (⌘K). Có chữ lạ thì cả tham số coi như
+ * mặc định (Q-20): 400 thì cả màn thành trang lỗi, bỏ riêng phần lạ thì `?status=terminated,x`
+ * lại bày đường đã thanh lý như thể người dùng chọn đích danh.
  */
 export function ispStatusesOf(text: string | undefined): IspStatus[] {
-  const parts = [...new Set((text ?? '').split(',').map((part) => part.trim()).filter(Boolean))];
-  for (const part of parts) {
-    if (!(ISP_STATUSES as readonly string[]).includes(part)) {
-      throw new BadRequestException({
-        code: 'ISP_STATUS_INVALID',
-        message: 'Trạng thái đường truyền không hợp lệ.',
-      });
-    }
+  const parts = [...new Set((text ?? '').split(',').map((part) => part.trim()))];
+  if (parts.every((part) => part === '')) return [];
+  if (parts.some((part) => !(ISP_STATUSES as readonly string[]).includes(part))) {
+    return [...ISP_LIVE_STATUSES];
   }
   return parts as IspStatus[];
 }

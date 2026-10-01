@@ -10,6 +10,7 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import {
   SERVICE_ACCOUNT_KINDS,
+  serviceAccountStatusQuery,
   type ServiceAccountKind,
   type ServiceAccountStatus,
 } from './service-account-rules';
@@ -105,7 +106,7 @@ function filterOf(query: {
   return {
     search: query.search,
     kind: query.kind,
-    status: query.status,
+    status: serviceAccountStatusQuery(query.status),
     anyIp: query.anyIp === 'true',
   };
 }

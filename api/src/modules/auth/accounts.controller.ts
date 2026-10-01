@@ -108,8 +108,23 @@ type ListQuery = {
   totp?: string;
 };
 
+const ACCOUNT_STATUSES = ['active', 'locked', 'disabled'] as const;
+
 /**
- * Bộ lọc màn Tài khoản. Giá trị lạ thì 400 chứ không lặng lẽ bỏ: "lọc theo vai `superadmin`"
+ * Đọc `?status=`. Vắng / rỗng = không lọc; `live` = trừ đã vô hiệu hóa (mặc định của màn, Q-20).
+ * Chữ lạ coi như `live` — trạng thái là bộ lọc có MẶC ĐỊNH, nên khác vai / 2 lớp (400): chữ lạ
+ * mà về mặc định thì bảng vẫn là bảng người ta mở màn ra là thấy, không đọc nhầm được.
+ */
+export function accountStatusQuery(value: unknown): UserListFilters['status'] {
+  if (value === undefined || value === '') return undefined;
+  if (value === 'live') return 'live';
+  return (ACCOUNT_STATUSES as readonly unknown[]).includes(value)
+    ? (value as (typeof ACCOUNT_STATUSES)[number])
+    : 'live';
+}
+
+/**
+ * Bộ lọc màn Tài khoản. Vai / 2 lớp lạ thì 400 chứ không lặng lẽ bỏ: "lọc theo vai `superadmin`"
  * mà ra cả bảng là đọc nhầm thành "ai cũng là SA".
  */
 function listFilters(query: ListQuery): UserListFilters {
@@ -122,7 +137,7 @@ function listFilters(query: ListQuery): UserListFilters {
   };
   return {
     role: pick(query.role, ['sa', 'admin', 'member'] as const, 'vai trò'),
-    status: pick(query.status, ['active', 'locked', 'disabled'] as const, 'trạng thái'),
+    status: accountStatusQuery(query.status),
     totp: pick(query.totp, ['none', 'enrolled'] as const, '2 lớp'),
   };
 }

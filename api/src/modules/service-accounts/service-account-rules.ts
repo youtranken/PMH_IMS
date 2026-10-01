@@ -14,6 +14,17 @@ export type ServiceAccountKind = (typeof SERVICE_ACCOUNT_KINDS)[number];
 export const SERVICE_ACCOUNT_STATUSES =['active', 'disabled'] as const;
 export type ServiceAccountStatus = (typeof SERVICE_ACCOUNT_STATUSES)[number];
 
+/**
+ * Đọc `?status=`. Vắng / rỗng = không lọc (⌘K). Chữ lạ coi như mặc định của màn — `active`, ẩn
+ * tài khoản đã ngừng dùng (Q-20) — thay vì đi thẳng xuống `WHERE status = 'abc'` ra bảng rỗng.
+ */
+export function serviceAccountStatusQuery(value: unknown): ServiceAccountStatus | undefined {
+  if (value === undefined || value === '') return undefined;
+  return SERVICE_ACCOUNT_STATUSES.includes(value as ServiceAccountStatus)
+    ? (value as ServiceAccountStatus)
+    : 'active';
+}
+
 const KIND_LABEL: Record<ServiceAccountKind, string> = {
   shared: 'Tài khoản dùng chung',
   vpn: 'Tài khoản VPN',
