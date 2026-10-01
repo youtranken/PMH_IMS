@@ -11,7 +11,7 @@ import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/
  *
  * ===== CẢNH THẬT =====
  *
- * Gõ mật khẩu mới → bấm Đổi giá trị → gõ mã 6 số → trong lúc `rotate.mutateAsync` còn đang bay, bấm
+ * Gõ mật khẩu mới → bấm Đổi mật khẩu → gõ mã 6 số → trong lúc `rotate.mutateAsync` còn đang bay, bấm
  * Esc / click nền / bấm Hủy. Hộp biến mất; POST vẫn hoàn tất; secret ĐÃ bị xoay thật. Nhưng
  * `onSaved()` không bao giờ chạy: không toast, không refresh danh sách. Người vận hành tin là
  * mình vừa hủy, và giá trị cũ — thứ họ đang dán vào cấu hình thiết bị — đã không còn đúng nữa.
@@ -126,7 +126,7 @@ describe('VaultPanel — hộp Cất mật khẩu/khóa khóa lại khi đang gh
   });
 });
 
-describe('VaultPanel — hộp Đổi giá trị khóa lại khi đang ghi', () => {
+describe('VaultPanel — hộp Đổi mật khẩu khóa lại khi đang ghi', () => {
   it('đang xoay: nút Hủy mờ đi VÀ không đóng được hộp', async () => {
     mockApi(WHITELIST, [SECRET]);
     renderPanel();
@@ -134,15 +134,35 @@ describe('VaultPanel — hộp Đổi giá trị khóa lại khi đang ghi', () 
     await userEvent.click(
       await screen.findByRole('button', { name: 'Thao tác với admin web' }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi mật khẩu' }));
     await userEvent.type(screen.getByLabelText(/Giá trị mới/), 'N3w#Secret');
-    await userEvent.click(screen.getByRole('button', { name: 'Đổi giá trị' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
 
     await screen.findByRole('button', { name: 'Đang tải…' });
 
     expect(cancelButton()).toBeDisabled();
     await userEvent.click(cancelButton());
     expect(screen.getByRole('button', { name: 'Đang tải…' })).toBeInTheDocument();
+  });
+});
+
+/*
+ * Q-20: chữ "Đổi …" nói đúng thứ đang đổi theo loại ngăn — "Đổi giá trị" chung chung làm người
+ * dùng phải đoán. Cùng một chữ ở menu, tiêu đề hộp và nút lưu.
+ */
+describe('VaultPanel — chữ đổi giá trị theo loại ngăn', () => {
+  it.each([
+    ['password', 'Đổi mật khẩu'],
+    ['license_key', 'Đổi license key'],
+    ['totp', 'Đổi mã 2 lớp'],
+    ['other', 'Đổi giá trị'],
+  ] as const)('ngăn %s: menu, tiêu đề hộp và nút lưu ghi "%s"', async (kind, label) => {
+    mockApi(WHITELIST, [{ ...SECRET, kind }]);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: label }));
+    const dialog = screen.getByRole('dialog', { name: `${label} — admin web` });
+    expect(within(dialog).getByRole('button', { name: label })).toBeInTheDocument();
   });
 });
 
@@ -420,11 +440,11 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     expect(screen.getByText('Người đổi: it01@pmh.com.vn')).toBeInTheDocument();
   });
 
-  it('hộp Đổi giá trị luôn nhắc: IMS không nối tới máy chủ/thiết bị — đổi trên hệ thống thật trước', async () => {
+  it('hộp Đổi license key luôn nhắc: IMS không nối tới máy chủ/thiết bị — đổi trên hệ thống thật trước', async () => {
     mockApi(WHITELIST, [{ ...SECRET, kind: 'license_key' }]);
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi license key' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText(/IMS không đổi gì trên thiết bị thật/)).toBeInTheDocument();
     // Chỉ cảnh báo — không có ô tick nào phải bấm trước khi lưu.
@@ -807,13 +827,13 @@ describe('VaultPanel — ghi chú không được chứa mật khẩu', () => {
     expect(writes(fetchMock)).toHaveLength(1);
   });
 
-  it('Đổi giá trị: giá trị mới nằm trong ghi chú đang có thì không gửi', async () => {
+  it('Đổi mật khẩu: giá trị mới nằm trong ghi chú đang có thì không gửi', async () => {
     const fetchMock = mockApi(WHITELIST, [{ ...SECRET, note: 'mo cong 8443 truoc' }]);
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi mật khẩu' }));
     await userEvent.type(screen.getByLabelText(/Giá trị mới/), 'mocong8443');
-    await userEvent.click(screen.getByRole('button', { name: 'Đổi giá trị' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
     expect(screen.getByText(/Giá trị mới đang nằm trong ghi chú/)).toBeInTheDocument();
     expect(writes(fetchMock)).toHaveLength(0);
   });

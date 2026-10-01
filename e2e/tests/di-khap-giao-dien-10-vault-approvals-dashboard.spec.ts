@@ -914,8 +914,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "XOAY": một ô, và Esc đóng được ---------- */
 
-    await rowAction(page, label, 'Đổi giá trị');
-    const rotate = page.getByRole('dialog', { name: `Đổi giá trị — ${label}` });
+    await rowAction(page, label, 'Đổi mật khẩu');
+    const rotate = page.getByRole('dialog', { name: `Đổi mật khẩu — ${label}` });
     await expect(rotate).toBeVisible();
     expect(
       await textboxLabels(rotate),
@@ -926,7 +926,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /*
      * Xoay RỖNG: cùng hàng rào với hộp Cất — form `noValidate`, câu tiếng Việt dưới ô.
      */
-    await rotate.getByRole('button', { name: 'Đổi giá trị' }).click();
+    await rotate.getByRole('button', { name: 'Đổi mật khẩu' }).click();
     await expect(
       rotate.getByLabel('Giá trị mới'),
       'xoay rỗng phải bị chặn bằng câu tiếng Việt ngay dưới ô',
