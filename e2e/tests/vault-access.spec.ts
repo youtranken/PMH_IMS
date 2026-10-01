@@ -4,6 +4,8 @@ import {
   confirmAction,
   E2E_MEMBER,
   E2E_SA,
+  expireStepUp,
+  freshTotpCode,
   firstLogin,
   ispProviderId,
   resetAccessList,
@@ -75,6 +77,47 @@ test.describe('Ma trận quyền két sắt', () => {
     await granted.click();
     await page.getByRole('dialog').getByRole('button', { name: 'Gỡ' }).click();
     await confirmAction(page);
+    await expect(row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ })).toBeVisible();
+  });
+
+  /**
+   * Q-20 — đường hỏng: POST/DELETE /vault/access đòi step-up. Hết ân hạn mà màn chỉ gọi API trơn
+   * thì người dùng thấy câu lỗi đỏ "Nhập mã 6 số … để mở két" mà không có ô nào để nhập. Dựng lại
+   * đúng cảnh đó (ép hết ân hạn của chính phiên này) rồi gán và gỡ: phải hiện hộp hỏi mã.
+   */
+  test('hết ân hạn: gán và gỡ trên ma trận hỏi mã 6 số rồi làm tiếp, không báo lỗi đỏ', async ({
+    page,
+  }) => {
+    // Hai lượt chờ chu kỳ TOTP 30 giây có thể dồn lại.
+    test.setTimeout(150_000);
+    const totpSecret = await firstLogin(page, E2E_SA);
+
+    await page.goto('/admin/vault-access?view=matrix');
+    const row = page.getByRole('row').filter({ hasText: E2E_MEMBER.email });
+    await expect(row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ })).toBeVisible();
+
+    expireStepUp(E2E_SA.email);
+    await row.getByRole('button', { name: 'Gán quyền' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('checkbox', { name: 'Thiết bị loại Switch' }).check();
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await confirmAction(page);
+
+    const ask = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    await expect(ask).toBeVisible();
+    await expect(ask).toContainText('Nhập mã 6 số để xác nhận cấp quyền két.');
+    await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    const granted = row.getByRole('button', { name: /Thiết bị loại Switch: Cần duyệt/ });
+    await expect(granted, 'gõ mã xong thì lượt gán chạy lại và ô đổi ngay').toBeVisible();
+    await expect(page.getByText(/để mở két/), 'không được còn câu lỗi đỏ bảo nhập mã').toHaveCount(0);
+
+    expireStepUp(E2E_SA.email);
+    await granted.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Gỡ' }).click();
+    await confirmAction(page);
+    await expect(ask).toBeVisible();
+    await expect(ask).toContainText('Nhập mã 6 số để xác nhận gỡ quyền két.');
+    await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
     await expect(row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ })).toBeVisible();
   });
 

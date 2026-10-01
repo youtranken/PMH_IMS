@@ -62,3 +62,43 @@ describe('Khu bung dòng license — mẫu chuẩn ExpandHeader', () => {
     expect(screen.queryByRole('button', { name: 'Gán vào máy' })).toBeNull();
   });
 });
+
+describe('Khu bung dòng license — khung chung + bảng con', () => {
+  it('đầu khu và bảng ghế nằm cùng khung ExpandPanel; bảng ghế là bảng con `table-sub`', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          jsonResponse(200, [
+            {
+              id: 'seat1',
+              deviceId: 'd1',
+              deviceCode: 'PC-01',
+              deviceName: 'Máy kế toán',
+              deviceAssignedTo: null,
+              assignedBy: 'sa@pmh.com.vn',
+              assignedAt: '2026-01-01T00:00:00Z',
+              startDate: null,
+              endDate: null,
+              cost: null,
+              contract: null,
+              note: null,
+            },
+          ]),
+        ),
+      ),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <MemoryRouter>
+            <LicenseSeatsExpand software={LICENSE} csrfToken="t" />
+          </MemoryRouter>
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const table = await screen.findByRole('table');
+    expect(table).toHaveClass('table-sub');
+    expect(screen.getByTestId('expand-header').closest('.exp-panel')).toBe(table.closest('.exp-panel'));
+  });
+});

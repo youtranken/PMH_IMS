@@ -739,7 +739,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * trở lại cây trợ năng, và câu trả lời mới có nghĩa.
      */
 
-    // Chọn "Ở lại nhập tiếp" → hộp gốc còn, và chữ vẫn y nguyên.
+    // Chọn "Nhập tiếp" → hộp gốc còn, và chữ vẫn y nguyên.
     await page.getByTestId('dialog-footer').last().getByRole('button').first().click();
     await expect(editDialog).toBeVisible();
     await expect(

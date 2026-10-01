@@ -103,10 +103,10 @@ test.describe('Két sắt', () => {
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Xoay: đổi giá trị, metadata giữ nguyên.
-    await rowAction(page, label, 'Đổi giá trị');
+    await rowAction(page, label, 'Đổi mật khẩu');
     const rotate = page.getByRole('dialog');
     await rotate.getByRole('textbox', { name: 'Giá trị mới' }).fill(`${secretValue}-v2`);
-    await rotate.getByRole('button', { name: 'Đổi giá trị' }).click();
+    await rotate.getByRole('button', { name: 'Đổi mật khẩu' }).click();
     await expect(page.getByRole('row', { name: new RegExp(label) })).toBeVisible();
     await expect(page.locator('body')).not.toContainText(secretValue);
 

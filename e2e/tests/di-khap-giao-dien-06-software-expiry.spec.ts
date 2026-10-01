@@ -1025,7 +1025,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     );
     expect(
       [...kindOptions].sort(),
-      'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký (cả "Khác" — Q-14), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
+      'Bộ lọc loại phải bày đủ 7 nguồn hạn đang đăng ký (cả "Khác" — Q-14, "Tài khoản dịch vụ" — Q-20), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
         'Mọi loại',
@@ -1035,6 +1035,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
         'Hợp đồng bảo trì',
         'Khác',
         'Bảo hành thiết bị',
+        'Tài khoản dịch vụ',
       ].sort(),
     );
     await expect(
@@ -1246,8 +1247,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await expect(
       add.getByRole('checkbox'),
-      'Sáu ô tick loại (đúng bằng số nguồn hạn)',
-    ).toHaveCount(6);
+      'Bảy ô tick loại (đúng bằng số nguồn hạn)',
+    ).toHaveCount(7);
     await expect(
       add.getByRole('switch', { name: 'Đang chạy', exact: true }),
       'Trạng thái chạy của luật là một công tắc, mặc định bật',
@@ -1259,6 +1260,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hợp đồng bảo trì',
       'Khác',
       'Bảo hành thiết bị',
+      'Tài khoản dịch vụ',
     ]) {
       await expect(
         add.getByRole('checkbox', { name: label, exact: true }),

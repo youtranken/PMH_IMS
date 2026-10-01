@@ -1103,7 +1103,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeVisible();
     // DEV-085: lịch sử nêu HỌ TÊN người làm (không phải email).
     await expect(
-      panel.getByText(/^E2E Super Admin · /),
+      // Trục "ga tàu" (Q-20): ngày giờ ở cột riêng, người làm đứng một mình trong nội dung.
+      panel.getByText('E2E Super Admin', { exact: true }),
       'Lịch sử phải nói AI làm — "ai đổi gì, lúc nào" là cả lý do tab này tồn tại (FR-007)',
     ).toBeVisible();
   });

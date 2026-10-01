@@ -1,4 +1,4 @@
-import { customType, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { customType, date, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 /**
  * `citext` THẬT, cùng quy ước cột `code` với năm bảng kia.
@@ -11,7 +11,8 @@ import { customType, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/p
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
- * Bảng `service_account` + `service_account_history` — migration 0033_service_account.sql.
+ * Bảng `service_account` + `service_account_history` — migration 0033_service_account.sql
+ * (+ `end_date` ở 0038_service_account_end_date.sql).
  * Chủ sở hữu: module `service-accounts` (AD-3).
  *
  * KHÔNG có cột mật khẩu: mật khẩu nằm ở két sắt (`ownerType: 'service_account'`), bảng này
@@ -30,6 +31,8 @@ export const serviceAccountTable = pgTable('service_account', {
   groupName: text('group_name'),
   allowedIps: text('allowed_ips'),
   note: text('note'),
+  /** Hạn dùng (Q-20). NULL = không có hạn. Quá hạn chỉ nhắc, không tự ngừng dùng. */
+  endDate: date('end_date'),
   status: text('status').notNull().default('active'),
   createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

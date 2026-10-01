@@ -26,7 +26,8 @@ export interface SeatRow extends LicenseSeat {
  *
  * `compact` (khu bung): bỏ dòng "gán lúc · ai gán", và cột nào mọi ghế đều trống (chi phí, hợp
  * đồng/ghi chú) thì không vẽ — cột toàn "—" chỉ đẩy nút thao tác ra ngoài khung. Cột thao tác
- * dính mép phải khi bảng phải cuộn ngang.
+ * dính mép phải khi bảng phải cuộn ngang. Mang kiểu bảng con `table-sub` như mọi bảng trong
+ * khu bung dòng (Q-20).
  *
  * Là `<table>` thật (không phải lưới div) để trình đọc màn hình gắn được tiêu đề cột.
  */
@@ -83,7 +84,7 @@ export function SeatTable({
   return (
     <>
       <TableWrap>
-        <table className="table table-stack seat-table">
+        <table className={compact ? 'table table-stack table-sub seat-table' : 'table table-stack seat-table'}>
           <thead>
             <tr>
               <th>{t('license.device')}</th>

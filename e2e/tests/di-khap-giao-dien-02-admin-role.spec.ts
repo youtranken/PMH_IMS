@@ -372,11 +372,11 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('button', { name: 'Ẩn ngay' }).click();
 
     // --- XOAY.
-    await rowAction(page, label, 'Đổi giá trị');
+    await rowAction(page, label, 'Đổi mật khẩu');
     const rotateDialog = page.getByRole('dialog');
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(newValue);
-    await rotateDialog.getByRole('button', { name: 'Đổi giá trị' }).click();
-    await expect(page.getByText('Đã đổi giá trị.')).toBeVisible();
+    await rotateDialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();
+    await expect(page.getByText('Đã đổi mật khẩu.')).toBeVisible();
 
     // --- XEM LẠI: grace còn hiệu lực nên không bị hỏi mã nữa, và giá trị phải là bản MỚI.
     await page.getByRole('button', { name: 'Xem' }).click();

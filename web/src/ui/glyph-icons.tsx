@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * Hình nhỏ trên nút — đóng (✕), ba chấm (⋮), và ba dấu tròn trạng thái (! · i · ✓) — dùng
+ * Hình nhỏ trên nút — đóng (✕), thêm (+), ba chấm (⋮), và ba dấu tròn trạng thái (! · i · ✓) — dùng
  * chung cho cả app (AD-15).
  *
  * Không viết KÝ TỰ: chúng theo phông và cỡ chữ nên ở 14px mảnh như dấu ngoặc, nằm theo đường
@@ -40,6 +40,14 @@ export function CloseIcon({ className }: { className?: string }) {
   return (
     <Glyph className={className}>
       <path d="M6 6l12 12M18 6 6 18" />
+    </Glyph>
+  );
+}
+
+export function PlusIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className}>
+      <path d="M12 5v14M5 12h14" />
     </Glyph>
   );
 }

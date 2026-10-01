@@ -141,21 +141,70 @@
   pointer-events: none;
 }
 
-/* Lịch sử (AD-13) */
+/* Lịch sử (AD-13) — trục dọc "ga tàu" (Q-20), dựng ở `ui/history-panel.tsx`.
+   Ba cột: ngày giờ | đường ray + ga | nội dung. Không kẻ vạch ngang giữa các dòng: đường ray
+   dọc đã nối các ga, thêm vạch ngang là hai hệ thống chia dòng chồng lên nhau. */
 .history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.history-item { display: flex; gap: var(--space-6); padding: var(--space-5) 0; }
-.history-item + .history-item { border-top: 1px solid var(--border); }
-.history-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: var(--primary);
+.history-item {
+  --history-dot: 12px;
+  --history-dot-top: 4px;
+  display: grid;
+  grid-template-columns: 8.5rem var(--history-dot) minmax(0, 1fr);
+  column-gap: var(--space-5);
 }
-.history-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.history-time {
+  font-size: var(--fs-xs);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.history-rail { position: relative; }
+/* Đoạn ray từ ga này xuống ga sau: chạy từ tâm ga tới hết dòng (dòng có đệm dưới ở
+   `.history-body`), ga sau che đầu đoạn bằng nền của nó. Ga cuối không có đoạn nào. */
+.history-item:not(:last-child) .history-rail::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--history-dot-top) + var(--history-dot) / 2);
+  bottom: calc(-1 * (var(--history-dot-top) + var(--history-dot) / 2));
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--border-2);
+}
+.history-dot {
+  position: relative;
+  z-index: 1;
+  display: block;
+  box-sizing: border-box;
+  width: var(--history-dot);
+  height: var(--history-dot);
+  margin-top: var(--history-dot-top);
+  border-radius: 50%;
+  border: 2px solid var(--history-tone, var(--primary));
+  background: var(--surface);
+}
+/* Ga mới nhất tô đặc — mắt tìm "trạng thái hiện giờ" ở đầu trục. */
+.history-item.is-latest .history-dot { background: var(--history-tone, var(--primary)); }
+.history-item[data-tone='create'] { --history-tone: var(--ok); }
+.history-item[data-tone='status'] { --history-tone: var(--warn); }
+.history-item[data-tone='void'] { --history-tone: var(--danger); }
+.history-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--space-7);
+}
+.history-item:last-child .history-body { padding-bottom: 0; }
 .history-action { font-weight: 600; font-size: var(--fs-sm); }
 .history-detail, .history-meta { font-size: var(--fs-xs); }
+/* Màn hẹp: cột ngày giờ bên trái ăn mất chỗ của nội dung — ngày giờ xuống dưới nội dung. */
+@media (max-width: 640px) {
+  .history-item { grid-template-columns: var(--history-dot) minmax(0, 1fr); }
+  .history-rail { grid-column: 1; grid-row: 1 / span 2; }
+  .history-body { grid-column: 2; grid-row: 1; padding-bottom: 0; }
+  .history-time { grid-column: 2; grid-row: 2; text-align: left; padding: 2px 0 var(--space-7); }
+  .history-item:last-child .history-time { padding-bottom: 0; }
+}
 
 /* Gallery /dev/components */
 .kit-section { display: flex; flex-direction: column; gap: var(--space-6); margin-bottom: var(--space-10); }
@@ -1116,14 +1165,15 @@ table.access-grid thead .access-row-head {
 .access-row-add {
   flex: none;
   min-width: 2rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Dấu + ở tiêu đề cột: báo tiêu đề BẤM ĐƯỢC (gán nhóm cho nhiều người). */
 .access-col-plus {
-  display: inline-block;
   margin-left: var(--space-1);
+  vertical-align: -0.125em;
   color: var(--primary-ink);
-  font-weight: 700;
 }
 .access-intro p {
   margin: 0;
@@ -1176,6 +1226,28 @@ table.access-grid thead .access-row-head {
 .access-col-btn:hover { color: var(--primary-ink); }
 .access-col-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 .access-cell { text-align: center; padding: 2px; }
+/*
+ * Lưới chia ô dọc ngang (Q-20): vạch dọc giữa mọi cột, vạch đậm hơn ở cột đầu mỗi họ
+ * (`.access-group-start`, dựng ở `access-matrix-screen.tsx`) và dưới hàng tiêu đề — cuộn ngang
+ * tới cột thứ 20 vẫn dò được ô thuộc nhóm nào. Cột đầu tiên sát cột tên người thì bỏ vạch trái:
+ * cột tên người đã có vạch phải, hai vạch cạnh nhau thành một đường dày.
+ */
+table.access-grid .access-col,
+table.access-grid .access-cell {
+  border-left: 1px solid var(--border);
+}
+table.access-grid .access-group-start,
+table.access-grid .access-family {
+  border-left: 1px solid var(--border-2);
+}
+table.access-grid thead tr:first-child .access-family:nth-child(2),
+table.access-grid thead tr:last-child .access-col:first-child,
+table.access-grid tbody .access-row-head + .access-cell {
+  border-left: 0;
+}
+table.access-grid thead tr:last-child th {
+  border-bottom: 1px solid var(--border-2);
+}
 /* Ô là một NÚT vuông đủ 30px — bấm nhầm sang ô bên cạnh khi đang cuộn ngang là mở quyền cho
    nhầm người, nên vùng bấm phải rõ ràng chứ không phải một ký tự. */
 .access-chip {

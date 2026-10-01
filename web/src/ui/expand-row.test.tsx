@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/ui/data-table';
 import { ExpandHeader } from '@/ui/expand-header';
+import { ExpandPanel } from '@/ui/expand-panel';
 import { renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 interface Row {
@@ -99,5 +102,55 @@ describe('ExpandHeader — đầu khu bung dòng', () => {
       <ExpandHeader title="Ghế" action={{ label: 'Gán vào máy', onClick: vi.fn(), disabled: true }} />,
     );
     expect(screen.getByRole('button', { name: 'Gán vào máy' })).toBeDisabled();
+  });
+});
+
+/*
+ * MỘT khung cho mọi khu bung (Q-20): đầu khu và thân nằm trong CÙNG một hộp có đệm. Trước đây
+ * /devices đặt `ExpandHeader` ngoài hộp có đệm (đầu khu dí sát mép trái) còn /software đặt trong.
+ */
+describe('ExpandPanel — khung chung của khu bung dòng', () => {
+  it('đầu khu và thân nằm cùng một khung; đầu khu đứng trước thân', () => {
+    renderWithI18n(
+      <ExpandPanel title="License đang cài" count={2}>
+        <p>thân khu</p>
+      </ExpandPanel>,
+    );
+    const head = screen.getByTestId('expand-header');
+    const body = screen.getByText('thân khu');
+    const panel = head.closest('.exp-panel');
+    expect(panel).not.toBeNull();
+    expect(panel?.contains(body)).toBe(true);
+    expect(head.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(head).toHaveTextContent('2');
+  });
+
+  it('chuyển tiếp note và action sang đầu khu', async () => {
+    const onAssign = vi.fn();
+    renderWithI18n(
+      <ExpandPanel title="Ghế" count="5/5" note="Hết ghế" action={{ label: 'Gán vào máy', onClick: onAssign }}>
+        <span />
+      </ExpandPanel>,
+    );
+    expect(screen.getByText('Hết ghế')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Gán vào máy' }));
+    expect(onAssign).toHaveBeenCalledTimes(1);
+  });
+});
+
+/*
+ * Luật của ô hàng bung PHẢI nhắm ô CON TRỰC TIẾP của `tr.exp`. Viết dạng hậu duệ
+ * (`tr.exp td`) thì nó rơi cả vào ô của bảng con nằm trong khu bung: mọi ô bảng ghế mất đệm,
+ * có vạch đứt trên đầu và nền xám. jsdom không dựng CSS nên đọc thẳng file.
+ */
+describe('CSS hàng bung — không rò vào bảng con', () => {
+  const css = readFileSync(join(__dirname, '..', 'css', 'primitives.css'), 'utf8').replace(
+    /\/\*[\s\S]*?\*\//g,
+    '',
+  );
+  it('mọi luật `tr.exp … td` đều là ô con trực tiếp (`tr.exp > td`)', () => {
+    const rules = css.match(/tr\.exp(?::hover)?\s*>?\s*td/g) ?? [];
+    expect(rules.length).toBeGreaterThan(0);
+    for (const rule of rules) expect(rule).toMatch(/>\s*td$/);
   });
 });

@@ -112,14 +112,14 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
     expect(onOpenChange, 'hỏi xong mới được đóng — hỏi rồi đóng luôn là hỏi cho có').not.toHaveBeenCalled();
   });
 
-  it('đã gõ rồi chọn "Ở lại nhập tiếp": hộp vẫn mở, chữ vẫn còn', async () => {
+  it('đã gõ rồi chọn "Nhập tiếp": hộp vẫn mở, chữ vẫn còn', async () => {
     const { onOpenChange } = setup();
     const o = screen.getByRole('textbox', { name: 'Mã máy' });
     await userEvent.type(o, 'PC-01');
     await userEvent.keyboard('{Escape}');
     // `ConfirmDialog` dùng `cancelLabel` cho CẢ nút ✕ lẫn nút chân hộp, nên tên này trúng
     // hai nút. Lấy cái CUỐI — chân hộp nằm sau phần đầu hộp trong tài liệu.
-    const triggerButton = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
+    const triggerButton = await screen.findAllByRole('button', { name: 'Nhập tiếp' });
     await userEvent.click(triggerButton[triggerButton.length - 1]);
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(o).toHaveValue('PC-01');

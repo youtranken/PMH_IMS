@@ -60,7 +60,7 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
     disposal = new DisposalService(
       new DevicesApiService(devices),
       new SoftwareApiService(software, isp),
-      new ServiceAccountsApiService(new ServiceAccountService(db, audit)),
+      new ServiceAccountsApiService(new ServiceAccountService(db, audit, {} as ExpiryApiService)),
       {
         namesByEmails: (emails: string[]) =>
           Promise.resolve(

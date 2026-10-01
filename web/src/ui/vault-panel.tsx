@@ -675,7 +675,7 @@ export function VaultPanel({
                             },
                             {
                               key: 'rotate',
-                              label: t('vault.rotate'),
+                              label: t(`vault.rotate_${secret.kind}`),
                               onSelect: () => setRotating(secret),
                             },
                             {
@@ -801,7 +801,7 @@ export function VaultPanel({
           onClose={() => setRotating(null)}
           onSaved={() => {
             setRotating(null);
-            toast({ message: t('vault.rotated') });
+            toast({ message: t(`vault.rotated_${rotating.kind}`) });
             void refresh();
           }}
         />
@@ -1032,7 +1032,7 @@ function SecretNote({ secret }: { secret: SecretMeta }) {
       <>
         <button
           type="button"
-          className="btn sm ghost"
+          className="btn sm ghost with-icon"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
@@ -1089,14 +1089,14 @@ function RotateForm({
          cấu hình thiết bị vừa hết hiệu lực. */
       dismissible={!rotate.isPending}
       maxWidth={480}
-      title={t('common.titleOf', { action: t('vault.rotate'), subject: secret.label })}
+      title={t('common.titleOf', { action: t(`vault.rotate_${secret.kind}`), subject: secret.label })}
       footer={
         <>
           <button type="button" className="btn" disabled={rotate.isPending} onClick={onClose}>
             {t('common.cancel')}
           </button>
           <button type="submit" form="rotate-form" className="btn primary" disabled={rotate.isPending}>
-            {rotate.isPending ? t('common.loading') : t('vault.rotate')}
+            {rotate.isPending ? t('common.loading') : t(`vault.rotate_${secret.kind}`)}
           </button>
         </>
       }
@@ -1115,7 +1115,7 @@ function RotateForm({
             try {
               await stepUp.run(
                 () => rotate.mutateAsync({ value }),
-                t('vault.stepUpRotate'),
+                t(`vault.stepUpRotate_${secret.kind}`),
               );
               setValue('');
               onSaved();

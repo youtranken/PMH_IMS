@@ -11,6 +11,7 @@ import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from 
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
+import { PlusIcon } from '@/ui/glyph-icons';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { ScrollX } from '@/ui/scroll-x';
@@ -71,6 +72,11 @@ interface AccountRow {
 }
 
 /** Huy hiệu trạng thái cạnh tên người — người đã nghỉ / đang khóa không được trông như người thường. */
+/** Người dùng đóng hộp hỏi mã 6 số — đó là hủy, không phải lỗi để báo. */
+function isStepUpCancelled(error: unknown): boolean {
+  return (error as Error | null)?.message === 'STEPUP_CANCELLED';
+}
+
 function StatusTag({ account }: { account: AccountRow }) {
   const { t } = useTranslation();
   if (account.status === 'locked') {
@@ -189,6 +195,13 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
   );
 
+  /*
+   * POST/DELETE /vault/access đòi step-up: hết ân hạn thì server trả STEPUP_REQUIRED. Mọi lượt
+   * ghi trên màn này phải đi qua `stepUp.run` — không thì người dùng chỉ thấy câu lỗi đỏ bảo
+   * nhập mã mà không có ô nào để nhập.
+   */
+  const stepUp = useStepUpRetry(me.csrfToken);
+
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['vault', 'access'] });
 
   /** Gỡ một dòng quyền — MỘT bản cho mọi chỗ gỡ trên màn này (AD-15). */
@@ -203,16 +216,14 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       confirmLabel: t('access.remove'),
     });
     if (!ok) return;
-    remove.mutate(
-      { id: rule.id },
-      {
-        onSuccess: () => {
-          toast({ message: t('access.removed') });
-          void refresh();
-        },
-        onError: (error) => toast({ message: errorMessage(error), tone: 'error' }),
-      },
-    );
+    try {
+      await stepUp.run(() => remove.mutateAsync({ id: rule.id }), t('access.stepUpRemove'));
+      toast({ message: t('access.removed') });
+      void refresh();
+    } catch (error) {
+      if (isStepUpCancelled(error)) return;
+      toast({ message: errorMessage(error), tone: 'error' });
+    }
   };
 
   /** `email|scopeType|scopeRef` → luật — `Map` vì lưới là N×M ô, `.find()` mỗi ô là quá nhiều. */
@@ -250,6 +261,13 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   }, [scopes.data, rules.data, family, onlyEmpty, t]);
 
   const columns = columnGroups.flatMap((group) => group.scopes);
+  /* Cột đầu của mỗi họ, trừ họ đầu tiên (cạnh nó đã là vạch của cột tên người): CSS kẻ vạch
+     đậm hơn ở đó để mắt thấy ranh giới giữa các họ khi cuộn ngang. */
+  const groupStarts = new Set(
+    columnGroups.slice(1).map((group) => scopeKey(group.scopes[0])),
+  );
+  const colClass = (base: string, scope: ScopeOption) =>
+    groupStarts.has(scopeKey(scope)) ? `${base} access-group-start` : base;
 
   const allAccounts = accounts.data ?? [];
   const members = allAccounts.filter(
@@ -350,7 +368,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
             </tr>
             <tr>
               {columns.map((scope) => (
-                <th key={scopeKey(scope)} scope="col" className="access-col">
+                <th key={scopeKey(scope)} scope="col" className={colClass('access-col', scope)}>
                   {/* Bấm tiêu đề cột = gán nhóm này cho NHIỀU người một lượt. Nhãn trợ năng là câu
                       đầy đủ vì chữ hiện ra đã cắt tiền tố họ. */}
                   <button
@@ -362,9 +380,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   >
                     {shortLabel(scope.label)}
                     {/* Dấu + cho thấy tiêu đề cột BẤM ĐƯỢC — chỉ có tooltip thì không ai biết. */}
-                    <span className="access-col-plus" aria-hidden="true">
-                      +
-                    </span>
+                    <PlusIcon className="access-col-plus" />
                   </button>
                 </th>
               ))}
@@ -398,7 +414,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                       title={t('access.addFor', { member: account.fullName })}
                       onClick={() => setAddingFor(account)}
                     >
-                      +
+                      <PlusIcon />
                     </button>
                   </div>
                 </th>
@@ -406,7 +422,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   const key = scopeKey(scope);
                   const rule = ruleAt.get(`${account.email.toLowerCase()}|${key}`) ?? null;
                   return (
-                    <td key={key} className="access-cell">
+                    <td key={key} className={colClass('access-cell', scope)}>
                       <button
                         type="button"
                         className={`access-chip ${rule ? rule.tier : 'none'}`}
@@ -615,6 +631,8 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           }}
         />
       ) : null}
+
+      {stepUp.dialog}
     </>
   );
 }
@@ -846,6 +864,7 @@ function CellDialog({
   const [note, setNote] = useState(rule?.note ?? '');
   const [error, setError] = useState<string | null>(null);
   const check = useFormErrors({ note: secretTextRule(t, note) });
+  const stepUp = useStepUpRetry(csrfToken);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -918,16 +937,23 @@ function CellDialog({
               });
               if (!ok) return;
             }
-            save.mutate(
-              {
-                memberEmail: account.email,
-                scopeType: scope.scopeType,
-                scopeRef: scope.scopeRef,
-                tier,
-                note: note.trim(),
-              },
-              { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
-            );
+            try {
+              await stepUp.run(
+                () =>
+                  save.mutateAsync({
+                    memberEmail: account.email,
+                    scopeType: scope.scopeType,
+                    scopeRef: scope.scopeRef,
+                    tier,
+                    note: note.trim(),
+                  }),
+                t('access.stepUpGrant'),
+              );
+              onSaved();
+            } catch (err) {
+              if (isStepUpCancelled(err)) return;
+              setError(errorMessage(err));
+            }
           })();
         }}
       >
@@ -968,6 +994,7 @@ function CellDialog({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }
@@ -1003,6 +1030,7 @@ function GrantToScopeDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
+  const stepUp = useStepUpRetry(csrfToken);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1068,21 +1096,29 @@ function GrantToScopeDialog({
             setSaving(true);
             let done = 0;
             const failures: string[] = [];
+            /* Lượt đầu hỏi mã (nếu hết ân hạn); các lượt sau nằm trong ân hạn nên đi thẳng.
+               Đóng hộp hỏi mã = dừng cả lượt, không hỏi lại cho từng người còn lại. */
             for (const memberEmail of picked) {
               try {
-                await save.mutateAsync({
-                  memberEmail,
-                  scopeType: scope.scopeType,
-                  scopeRef: scope.scopeRef,
-                  tier,
-                  note: note.trim(),
-                });
+                await stepUp.run(
+                  () =>
+                    save.mutateAsync({
+                      memberEmail,
+                      scopeType: scope.scopeType,
+                      scopeRef: scope.scopeRef,
+                      tier,
+                      note: note.trim(),
+                    }),
+                  t('access.stepUpGrant'),
+                );
                 done += 1;
               } catch (err) {
+                if (isStepUpCancelled(err)) break;
                 failures.push(`${memberEmail}: ${errorMessage(err)}`);
               }
             }
             setSaving(false);
+            if (done === 0 && failures.length === 0) return;
             if (done === 0) {
               setError(failures.join(' '));
               return;
@@ -1189,6 +1225,7 @@ function GrantToScopeDialog({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }
@@ -1223,6 +1260,7 @@ function MultiGrantDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
+  const stepUp = useStepUpRetry(csrfToken);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1295,19 +1333,26 @@ function MultiGrantDialog({
               const scope = scopes.find((item) => scopeKey(item) === key);
               if (!scope) continue;
               try {
-                await save.mutateAsync({
-                  memberEmail: account.email,
-                  scopeType: scope.scopeType,
-                  scopeRef: scope.scopeRef,
-                  tier,
-                  note: note.trim(),
-                });
+                await stepUp.run(
+                  () =>
+                    save.mutateAsync({
+                      memberEmail: account.email,
+                      scopeType: scope.scopeType,
+                      scopeRef: scope.scopeRef,
+                      tier,
+                      note: note.trim(),
+                    }),
+                  t('access.stepUpGrant'),
+                );
                 done += 1;
               } catch (err) {
+                // Đóng hộp hỏi mã = dừng cả lượt, không hỏi lại cho từng nhóm còn lại.
+                if (isStepUpCancelled(err)) break;
                 failures.push(`${scope.label}: ${errorMessage(err)}`);
               }
             }
             setSaving(false);
+            if (done === 0 && failures.length === 0) return;
             if (done === 0) {
               setError(failures.join(' '));
               return;
@@ -1375,6 +1420,7 @@ function MultiGrantDialog({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }
@@ -1478,21 +1524,26 @@ function CopyFromDialog({
             const failures: string[] = [];
             for (const rule of plan.grant) {
               try {
-                await stepUp.run(() =>
-                  save.mutateAsync({
-                    memberEmail: account.email,
-                    scopeType: rule.scopeType,
-                    scopeRef: rule.scopeRef,
-                    tier: rule.tier,
-                    note: t('access.copyNote', { source: source.email }),
-                  }),
+                await stepUp.run(
+                  () =>
+                    save.mutateAsync({
+                      memberEmail: account.email,
+                      scopeType: rule.scopeType,
+                      scopeRef: rule.scopeRef,
+                      tier: rule.tier,
+                      note: t('access.copyNote', { source: source.email }),
+                    }),
+                  t('access.stepUpGrant'),
                 );
                 done += 1;
               } catch (err) {
+                // Đóng hộp hỏi mã = dừng cả lượt, không hỏi lại cho từng nhóm còn lại.
+                if (isStepUpCancelled(err)) break;
                 failures.push(`${rule.scopeLabel}: ${errorMessage(err)}`);
               }
             }
             setSaving(false);
+            if (done === 0 && failures.length === 0) return;
             if (done === 0) {
               setError(failures.join(' '));
               return;

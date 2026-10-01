@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
-import { jsonResponse, renderWithI18n, screen } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { ServiceAccountsScreen } from './service-accounts-screen';
@@ -23,13 +23,14 @@ const ROW = {
   groupName: null,
   allowedIps: null,
   note: null,
+  endDate: null as string | null,
   status: 'active',
   createdBy: 'sa@pmh.com.vn',
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
-function stubFetch() {
+function stubFetch(rows: (typeof ROW)[] = [ROW]) {
   const calls: string[] = [];
   vi.stubGlobal(
     'fetch',
@@ -43,7 +44,7 @@ function stubFetch() {
           ]),
         );
       }
-      return Promise.resolve(jsonResponse(200, { items: [ROW], total: 1 }));
+      return Promise.resolve(jsonResponse(200, { items: rows, total: rows.length }));
     }),
   );
   return calls;
@@ -64,6 +65,22 @@ function renderAs(role: 'sa' | 'member', entry = '/service-accounts') {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+/*
+ * Q-20: câu giải thích "khai gì ở đây" chỉ hiện ở trạng thái rỗng; có dữ liệu rồi thì người mới
+ * vào vẫn cần đọc được — nằm sau nút (i) cạnh tiêu đề trang.
+ */
+describe('Tài khoản dịch vụ — câu giải thích sau nút (i) cạnh tiêu đề', () => {
+  it('có dữ liệu: bấm (i) cạnh tiêu đề thì hiện câu giải thích', async () => {
+    stubFetch();
+    renderAs('sa');
+    await screen.findByText('VPN kế toán');
+    await userEvent.click(screen.getByRole('button', { name: 'Giải thích: Tài khoản dịch vụ' }));
+    expect(
+      screen.getByText('Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('Tài khoản dịch vụ — cột "Đổi lần cuối" (Q-15)', () => {
@@ -112,5 +129,26 @@ describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q
 
   it('"Mọi trạng thái (cả Đã ngừng dùng)": không gửi status', async () => {
     expect((await listParams('/service-accounts?status=all')).has('status')).toBe(false);
+  });
+});
+
+/*
+ * Q-20: cột "Hết hạn" — huy hiệu hạn dùng chung (`ExpiryBadge`). Tài khoản đã ngừng dùng thì
+ * "Không tính hạn" như nguồn hạn bên API (nó không nhắc tài khoản ngừng dùng).
+ */
+describe('Tài khoản dịch vụ — cột "Hết hạn" (Q-20)', () => {
+  it('có cột; tài khoản có hạn hiện huy hiệu hạn, không có hạn ghi "Không có hạn", ngừng dùng thì "Không tính hạn"', async () => {
+    stubFetch([
+      { ...ROW, id: 'a', code: 'SVC-E2E-HAN', endDate: '2020-01-01' },
+      { ...ROW, id: 'b', code: 'SVC-E2E-KHONG', endDate: null },
+      { ...ROW, id: 'c', code: 'SVC-E2E-NGUNG', endDate: '2020-01-01', status: 'disabled' },
+    ]);
+    renderAs('sa');
+    expect(await screen.findByRole('columnheader', { name: 'Hết hạn' })).toBeInTheDocument();
+    const rowOf = (code: string) => screen.getAllByRole('row').find((tr) => tr.textContent?.includes(code))!;
+    expect(rowOf('SVC-E2E-HAN').textContent).toMatch(/Quá hạn/);
+    expect(rowOf('SVC-E2E-KHONG').textContent).toContain('Không có hạn');
+    expect(rowOf('SVC-E2E-NGUNG').textContent).toContain('Không tính hạn');
+    expect(rowOf('SVC-E2E-NGUNG').textContent).not.toMatch(/Quá hạn/);
   });
 });

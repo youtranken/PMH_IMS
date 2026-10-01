@@ -30,6 +30,7 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
     { action: 'updated', label: 'Sửa hồ sơ' },
     { action: 'disabled', label: 'Ngừng dùng' },
     { action: 'enabled', label: 'Dùng lại' },
+    { action: 'renewed', label: 'Gia hạn' },
   ];
 
   for (const { action, label } of actions) {
@@ -157,5 +158,28 @@ describe('lastDisable — ai vô hiệu hóa, lúc nào, vì sao', () => {
   });
   it('sổ rỗng', () => {
     expect(lastDisable([])).toBeNull();
+  });
+});
+
+// Q-20: hạn dùng của tài khoản — đọc ra ngày dạng dd/mm/yyyy, bỏ hạn đọc là "trống".
+describe('toServiceAccountHistory — hạn dùng', () => {
+  it('gia hạn: "ngày hết hạn: 20/10/2026 → 20/10/2027"', () => {
+    const [entry] = toServiceAccountHistory(
+      [row({ action: 'renewed', changes: { endDate: { before: '2026-10-20', after: '2027-10-20' } } })],
+      t,
+    );
+    expect(entry.action).toBe('Gia hạn');
+    expect(entry.detail).toContain('20/10/2026');
+    expect(entry.detail).toContain('20/10/2027');
+    expect(entry.detail).not.toContain('2027-10-20');
+  });
+
+  it('sửa bỏ hạn: ngày cũ → trống', () => {
+    const [entry] = toServiceAccountHistory(
+      [row({ changes: { endDate: { before: '2026-10-20', after: null } } })],
+      t,
+    );
+    expect(entry.detail).toMatch(/ngày hết hạn/);
+    expect(entry.detail).toContain('20/10/2026');
   });
 });

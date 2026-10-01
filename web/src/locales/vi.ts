@@ -47,12 +47,12 @@ export default {
     confirmOk: 'Xác nhận',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
        Nút xác nhận nói rõ việc SẼ xảy ra ("Bỏ và đóng"), nút hủy nói rõ việc KHÔNG xảy ra
-       ("Ở lại nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
+       ("Nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
     discardTitle: 'Bỏ những gì vừa nhập?',
     discardMessage:
       'Dữ liệu chưa lưu trong hộp này sẽ mất, không khôi phục được.',
     discardConfirm: 'Bỏ và đóng',
-    discardCancel: 'Ở lại nhập tiếp',
+    discardCancel: 'Nhập tiếp',
     openNav: 'Mở menu',
     closeNav: 'Đóng menu',
     skipToContent: 'Bỏ qua menu, vào thẳng nội dung',
@@ -607,7 +607,6 @@ export default {
     // tên trợ năng theo chuỗi con — hai nút sẽ giành nhau trong mọi bài kiểm.
     editOf: 'Sửa máy {{device}}',
     software: 'Phần mềm',
-    installedHeader: 'Phần mềm đang cài ({{count}})',
     noInstalled: 'Máy này chưa được gán license nào.',
     search: 'Tìm mã, tên, serial, IP hoặc người dùng',
     code: 'Mã thiết bị',
@@ -1485,7 +1484,12 @@ export default {
        break-glass (cắt quyền tạm, không mất dữ liệu). */
     add: 'Cất mật khẩu/khóa',
     edit: 'Sửa thông tin',
-    rotate: 'Đổi giá trị',
+    /* Chữ "Đổi …" theo loại ngăn (Q-20): nói đúng thứ đang đổi. Menu, tiêu đề hộp, nút lưu,
+       câu hỏi mã 6 số và thông báo dùng cùng một bộ — thêm loại ngăn thì thêm đủ ba khóa. */
+    rotate_password: 'Đổi mật khẩu',
+    rotate_license_key: 'Đổi license key',
+    rotate_totp: 'Đổi mã 2 lớp',
+    rotate_other: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     rotateOrder: 'IMS không đổi gì trên thiết bị thật. Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
@@ -1508,7 +1512,10 @@ export default {
     stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
     stepUpSave: 'Nhập mã 6 số để cất "{{label}}" vào két.',
     stepUpEdit: 'Nhập mã 6 số để lưu thay đổi của "{{label}}".',
-    stepUpRotate: 'Nhập mã 6 số để lưu giá trị mới vào két.',
+    stepUpRotate_password: 'Nhập mã 6 số để lưu mật khẩu mới vào két.',
+    stepUpRotate_license_key: 'Nhập mã 6 số để lưu license key mới vào két.',
+    stepUpRotate_totp: 'Nhập mã 6 số để lưu mã 2 lớp mới vào két.',
+    stepUpRotate_other: 'Nhập mã 6 số để lưu giá trị mới vào két.',
     stepUpRevoke: 'Nhập mã 6 số để xóa "{{label}}" khỏi két.',
     stepUpGrace: 'Xác nhận xong thì {{minutes}} phút tới mở ngăn khác không phải gõ lại.',
     perCharOn: 'Hiện từng ký tự',
@@ -1520,7 +1527,10 @@ export default {
        thao tác xoá vĩnh viễn một giá trị đã mã hóa; phải nói thẳng ra như vậy. */
     confirmRevoke: 'Xóa vĩnh viễn "{{label}}"? Giá trị bị xóa, không ai xem lại được, kể cả Super Admin. Chưa có bản khác thì đừng xóa.',
     saved: 'Đã lưu vào két.',
-    rotated: 'Đã đổi giá trị.',
+    rotated_password: 'Đã đổi mật khẩu.',
+    rotated_license_key: 'Đã đổi license key.',
+    rotated_totp: 'Đã đổi mã 2 lớp.',
+    rotated_other: 'Đã đổi giá trị.',
     empty: 'Két chưa có ngăn nào',
     emptyHint: 'Mật khẩu admin, SSH, SNMP… cất vào đây thay vì ghi ra file Excel.',
     emptyLockedHint: 'Hồ sơ đã khóa — không cất thêm được vào két này.',
@@ -1763,7 +1773,7 @@ export default {
     pickSubnet: 'Chọn dải mạng',
     subnetOption: '{{cidr}}{{vlan}} · còn {{free}}',
     voidedBy: 'Ngừng dùng ngày {{date}} bởi {{by}} — lý do: {{reason}}',
-    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋯ của thẻ dải.',
+    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋮ của thẻ dải.',
     reclaimOwner: 'Đang cấp cho {{who}}',
     reclaimSince: 'từ {{date}}',
     reclaimNatWarn: 'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước mới thu hồi được:',
@@ -1935,6 +1945,11 @@ export default {
     groupName: 'Nhóm VPN',
     groupNameHint: 'Tên nhóm trên máy chủ VPN.',
     allowedIps: 'Dải IP được phép',
+    /* Hạn dùng (Q-20) — khác cột "Đổi lần cuối" (hạn đổi mật khẩu trong két, Q-15). */
+    endDate: 'Hết hạn',
+    endDateOptional: 'Hết hạn (tùy chọn)',
+    endDateTip:
+      'Tài khoản cấp có thời hạn (VPN cho đối tác, tài khoản dùng thử…). Gần tới hạn hệ thống nhắc như các hạn khác; quá hạn chỉ nhắc, không tự ngừng dùng. Để trống nếu không có hạn.',
     allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng.',
     note: 'Ghi chú',
     noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu cất ở tab Két sắt.',
@@ -2031,7 +2046,7 @@ export default {
     openOf: 'Mở két của {{code}}',
     openRecord: 'Mở hồ sơ đầy đủ',
     orphan: '(hồ sơ đã xóa, còn ngăn treo)',
-    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋯.',
+    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋮.',
     site: 'Site',
     secretChip: '{{count}} ngăn',
     clearSearch: 'Xóa tìm kiếm',
@@ -2058,7 +2073,7 @@ export default {
   disposal: {
     title: 'Kho thanh lý',
     subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã thanh lý hoặc ngừng dùng',
-    /* Cách dùng lại khác nhau theo loại — nên ở menu ⋯ của từng dòng, không trong câu chung. */
+    /* Cách dùng lại khác nhau theo loại — nên ở menu ⋮ của từng dòng, không trong câu chung. */
     note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',
@@ -2396,6 +2411,8 @@ export default {
       'Gán cho {{member}} tầng "{{tier}}" trên nhóm "{{scope}}"? Họ sẽ xem được mật khẩu của mọi hồ sơ thuộc nhóm này.',
     removed: 'Đã gỡ quyền.',
     remove: 'Gỡ',
+    stepUpGrant: 'Nhập mã 6 số để xác nhận cấp quyền két.',
+    stepUpRemove: 'Nhập mã 6 số để xác nhận gỡ quyền két.',
     confirmRemove: 'Gỡ quyền của {{member}} trên "{{scope}}"? Sau đó họ sẽ không xem và không xin được nữa.',
     tier: 'Tầng quyền',
     tierHint: '"Xem thẳng": xem ngay, vẫn phải nhập mã 6 số. "Cần duyệt": phải xin và chờ duyệt.',
@@ -2730,6 +2747,7 @@ export default {
       actUpdated: 'Sửa hồ sơ',
       actDisabled: 'Ngừng dùng',
       actEnabled: 'Dùng lại',
+      actRenewed: 'Gia hạn',
       kindShared: 'Tài khoản dùng chung',
       kindVpn: 'Tài khoản VPN',
       stActive: 'Đang dùng',

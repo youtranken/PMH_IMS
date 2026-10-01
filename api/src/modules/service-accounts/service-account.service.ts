@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, desc, eq, ilike, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, isNotNull, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -15,8 +15,10 @@ import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { ExpiryApiService } from '../expiry/expiry.api';
 import {
   checkAllowedIps,
+  checkServiceAccountRenewal,
   codeFromLogin,
   mergeServiceAccount,
   validateServiceAccount,
@@ -42,6 +44,7 @@ const TRACKED = [
   'groupName',
   'allowedIps',
   'note',
+  'endDate',
   'status',
 ] as const;
 
@@ -63,6 +66,7 @@ export class ServiceAccountService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
+    private readonly expiry: ExpiryApiService,
   ) {}
 
   async list(
@@ -107,6 +111,62 @@ export class ServiceAccountService {
       .from(serviceAccountTable)
       .where(eq(serviceAccountTable.id, id));
     return rows.length > 0;
+  }
+
+  /**
+   * Tài khoản ĐANG DÙNG có hạn trong [from, to] — nguồn hạn `service_account` hỏi qua đây (Q-20).
+   * Đã ngừng dùng thì không nhắc: không ai định gia hạn một tài khoản đã đóng.
+   */
+  async findExpiringBetween(from: string, to: string): Promise<ServiceAccountRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(serviceAccountTable)
+      .where(
+        and(
+          eq(serviceAccountTable.status, 'active'),
+          isNotNull(serviceAccountTable.endDate),
+          gte(serviceAccountTable.endDate, from),
+          lte(serviceAccountTable.endDate, to),
+        ),
+      )
+      .orderBy(asc(serviceAccountTable.endDate), asc(serviceAccountTable.code));
+    return rows.map(toRecord);
+  }
+
+  /**
+   * Gia hạn (Q-20): đổi `end_date`, ghi lịch sử hồ sơ VÀ sổ gia hạn dùng chung trong CÙNG một
+   * transaction — đổi hạn mà sổ không có dòng thì báo cáo gia hạn thiếu vĩnh viễn (bảng
+   * chỉ-thêm). Không đổi trạng thái: gia hạn không phải đường mở lại tài khoản đã ngừng dùng.
+   */
+  async renew(actor: string, id: string, newEnd: string): Promise<ServiceAccountRecord> {
+    const updated = await this.db.transaction(async (tx) => {
+      // Đọc hạn cũ SAU khi khóa hàng: hai lượt gia hạn cùng lúc thì lượt sau phải thấy hạn mới
+      // của lượt trước, không ghi sai "hạn cũ" vào sổ.
+      const before = await this.requireRowWithin(tx, id, 'update');
+      const problem = checkServiceAccountRenewal(before, newEnd);
+      if (problem) {
+        throw new BadRequestException({ code: 'SERVICE_ACCOUNT_RENEW_INVALID', message: problem });
+      }
+      const rows = await tx
+        .update(serviceAccountTable)
+        .set({ endDate: newEnd, updatedAt: new Date() })
+        .where(eq(serviceAccountTable.id, id))
+        .returning();
+      await this.recordWithin(tx, actor, id, 'renewed', {
+        endDate: { before: before.endDate, after: newEnd },
+      });
+      await this.expiry.recordRenewalWithin(tx, {
+        objectKind: SERVICE_ACCOUNT_EXPIRY_KIND,
+        objectId: id,
+        // Cùng chuỗi với nhãn của nguồn hạn — một hồ sơ, một cách gọi tên trong sổ.
+        label: serviceAccountLabel(before),
+        oldEnd: before.endDate,
+        newEnd,
+        actor,
+      });
+      return rows[0];
+    });
+    return toRecord(updated);
   }
 
   /** Lần vô hiệu hoá gần nhất của từng tài khoản, kèm lý do bắt buộc đã ghi. */
@@ -347,6 +407,7 @@ export class ServiceAccountService {
          */
         allowedIps: vpn ? normalizeIps(merged.allowedIps) : null,
         note: merged.note,
+        endDate: merged.endDate,
         /*
          * Trạng thái KHÔNG đọc từ body — `ServiceAccountInput` không còn ô đó.
          *
@@ -409,6 +470,14 @@ export class ServiceAccountService {
     }
     return rows[0];
   }
+}
+
+/** `kind` của tài khoản dịch vụ trong sổ nguồn hạn và sổ gia hạn (AD-7). */
+export const SERVICE_ACCOUNT_EXPIRY_KIND = 'service_account';
+
+/** "MÃ — tên": nhãn của một tài khoản trên màn Sắp hết hạn, mail tổng hợp và sổ gia hạn. */
+export function serviceAccountLabel(row: { code: string; name: string }): string {
+  return `${row.code} — ${row.name}`;
 }
 
 /** Chuẩn hóa danh sách IP được phép; giữ `null` nguyên là `null`. */
@@ -478,6 +547,7 @@ function toRecord(row: typeof serviceAccountTable.$inferSelect): ServiceAccountR
     groupName: row.groupName,
     allowedIps: row.allowedIps,
     note: row.note,
+    endDate: row.endDate,
     status: row.status as ServiceAccountRecord['status'],
     createdBy: row.createdBy,
     createdAt: row.createdAt,
