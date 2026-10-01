@@ -67,7 +67,7 @@ test('Người dùng IMS và Sắp hết hạn 390px: hàng con số đầu tran
 }) => {
   await firstLogin(page, E2E_SA);
   await page.goto('/admin/accounts');
-  await expect(page.getByRole('button', { name: /Chưa cài 2 lớp/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Chưa kích hoạt 2 lớp/ })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await page.goto('/expiry');

@@ -81,7 +81,7 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
 });
 
 test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo IP, ba con số lọc (ADM-035/041/043/044)', () => {
-  test('bấm dòng mở Chi tiết: thấy IP đang tạm chặn + "Còn giữ"; ô "Chưa cài 2 lớp" lọc bảng', async ({
+  test('bấm dòng mở Chi tiết: thấy IP đang tạm chặn + "Còn giữ"; ô "Chưa kích hoạt 2 lớp" lọc bảng', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -92,7 +92,7 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
     );
 
     await page.goto('/admin/accounts');
-    await page.getByRole('button', { name: /Chưa cài 2 lớp/ }).click();
+    await page.getByRole('button', { name: /Chưa kích hoạt 2 lớp/ }).click();
     await expect(page).toHaveURL(/totp=none/);
 
     await searchAndWaitForFilter(page, user.fullName);

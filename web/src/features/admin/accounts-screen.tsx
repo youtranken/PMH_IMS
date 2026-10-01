@@ -441,7 +441,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         {
           key: 'reset-totp',
           label: t('accounts.resetTotp'),
-          // Chưa cài thì không có gì để đặt lại — mục vẫn đứng đó (tắt) và nói vì sao.
+          // Chưa kích hoạt thì không có gì để đặt lại — mục vẫn đứng đó (tắt) và nói vì sao.
           disabled: resetTotp.isPending || !account.totpEnrolledAt,
           hint: account.totpEnrolledAt ? undefined : t('accounts.resetTotpNotEnrolled'),
           onSelect: () =>

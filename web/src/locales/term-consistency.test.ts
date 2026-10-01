@@ -123,6 +123,27 @@ describe('Một khái niệm — một tên', () => {
   it('kho thanh lý: tài khoản dịch vụ đã ngừng đọc giống màn gốc', () => {
     expect(lookup('disposal.statusDisabled')).toBe(lookup('serviceAccounts.statusDisabled'));
   });
+
+  /**
+   * Q-21: màn Người dùng IMS nói "kích hoạt" 2 lớp. Ô KPI "Chưa cài 2 lớp" đứng ngay trên cột
+   * huy hiệu "Bắt buộc – chưa kích hoạt" — hai chữ cho một trạng thái trên cùng một màn.
+   */
+  it('màn Người dùng IMS: trạng thái 2 lớp nói "kích hoạt", không còn "cài"', () => {
+    const keys = [
+      'accounts.totpStateEnrolled',
+      'accounts.totpStateMissing',
+      'accounts.noTotpShort',
+      'accounts.totpNone',
+      'accounts.resetTotpNotEnrolled',
+      'accounts.confirmTotpRequireOn',
+    ];
+    for (const key of keys) {
+      expect(lookup(key), key).toContain('kích hoạt');
+      expect(lookup(key), key).not.toMatch(/(^|\s)cài(\s|$)/iu);
+    }
+    // Ô KPI và lựa chọn lọc là cùng một bộ lọc (`?totp=none`): một chữ.
+    expect(lookup('accounts.noTotpShort')).toBe(lookup('accounts.totpNone'));
+  });
 });
 
 /**

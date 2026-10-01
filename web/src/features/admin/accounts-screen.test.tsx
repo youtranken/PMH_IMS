@@ -119,8 +119,8 @@ describe('Màn Tài khoản', () => {
     );
   });
 
-  // Chưa cài 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.
-  it('"Đặt lại xác thực 2 lớp" tắt kèm lý do khi người đó chưa cài', async () => {
+  // Chưa kích hoạt 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.
+  it('"Đặt lại xác thực 2 lớp" tắt kèm lý do khi người đó chưa kích hoạt', async () => {
     stubFetch();
     const user = userEvent.setup();
     renderAt('/admin/accounts');
@@ -128,7 +128,7 @@ describe('Màn Tài khoản', () => {
     await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Thành viên' }));
     const item = screen.getByRole('menuitem', { name: 'Đặt lại xác thực 2 lớp' });
     expect(item).toBeDisabled();
-    expect(item).toHaveTextContent('Người này chưa cài xác thực 2 lớp');
+    expect(item).toHaveTextContent('Người này chưa kích hoạt xác thực 2 lớp');
   });
 
   it('menu chia nhóm: Đặt lại mật khẩu không đỏ, Khóa là cảnh báo, Vô hiệu hóa đỏ', async () => {
@@ -345,7 +345,7 @@ describe('Màn Tài khoản — mặc định ẩn người đã vô hiệu hóa
     });
   });
 
-  it('2 lớp bắt buộc mà chưa cài: "Bắt buộc – chưa kích hoạt"', async () => {
+  it('2 lớp bắt buộc mà chưa kích hoạt: "Bắt buộc – chưa kích hoạt"', async () => {
     stubFetch();
     renderAt('/admin/accounts');
     await screen.findByText('E2E Thành viên');
