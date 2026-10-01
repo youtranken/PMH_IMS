@@ -53,12 +53,16 @@ export function PlusIcon({ className }: { className?: string }) {
   );
 }
 
-/** Hai tờ giấy chồng nhau — nút chép (`CopyButton`). */
+/**
+ * Hai tờ giấy chồng nhau — nút chép (`CopyButton`). Hai hình vuông bằng nhau lệch chéo 4 đơn vị,
+ * cả cụm cân đúng giữa khung 4..20 để nằm giữa ô vuông của nút; tờ sau chỉ vẽ phần lộ ra.
+ * Nét 2.2: mảnh hơn ✕/+ một chút vì hình này có nhiều nét song song sát nhau.
+ */
 export function CopyIcon({ className }: { className?: string }) {
   return (
-    <Glyph className={['glyph-copy', className].filter(Boolean).join(' ')} strokeWidth={2}>
-      <rect x="9" y="9" width="11" height="11" rx="2" />
-      <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+    <Glyph className={['glyph-copy', className].filter(Boolean).join(' ')} strokeWidth={2.2}>
+      <rect x="8" y="8" width="12" height="12" rx="2.5" />
+      <path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4H6.5A2.5 2.5 0 0 0 4 6.5V13.5A2.5 2.5 0 0 0 6.5 16H8" />
     </Glyph>
   );
 }

@@ -303,6 +303,15 @@ describe('bố cục khối dùng chung', () => {
     expect(capped).toEqual([]);
   });
 
+  // Nút vuông 28px mà giữ đệm ngang 0.85rem của `button` chung thì vùng nội dung âm, hình chép
+  // tràn sang phải — lệch tâm ở mọi chỗ dùng.
+  it.each(['.copy-btn', '.copy-btn.inline'])('%s không mang đệm của button chung (hình nằm giữa ô)', (selector) => {
+    const pad = declValue(rule('detail-tabs.css', '.copy-btn')!.body, 'padding');
+    expect(pad).toBe('0');
+    const own = rule('detail-tabs.css', selector)!;
+    expect(declValue(own.body, 'padding') ?? pad).toBe('0');
+  });
+
   it('.session-list chỉ khai ở một file', () => {
     const owners = FILES.filter((f) => cssRules(f).some((r) => /^\.session-list\b/.test(r.selector)));
     expect(owners).toEqual(['shared-kit.css']);
