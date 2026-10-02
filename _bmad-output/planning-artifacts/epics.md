@@ -858,7 +858,7 @@ So that bản vẽ và sơ đồ cổng là MỘT dữ liệu, đọc là hiểu
 
 **Acceptance Criteria:**
 
-**Given** danh mục mới `cable_type` (chủ `catalog`: tên, ô màu `color_slot` 1..N, mô tả, `active`) seed vài loại cơ bản (Cat6, Cat5e, Quang single-mode, Quang multi-mode, DAC) và cột `device_port.cable_type_id?` (chủ `devices`) — migration
+**Given** danh mục mới `cable_type` (chủ `catalog`: tên, ô màu `color_slot` 1..N, mô tả, `active`) seed đúng 3 loại chủ dự án chốt (Cat6, Fiber, DAC; SA thêm được sau) và cột `device_port.cable_type_id?` (chủ `devices`) — migration
 **When** Admin/Thành viên quản trị loại dây ở màn Danh mục
 **Then** màu chọn từ bảng ô màu có sẵn (token `--diagram-cable-1..N` trong `tokens.css`, có cặp dark) — không có ô nhập hex; chú giải màu trên mọi bản vẽ tự sinh từ danh mục này, người vẽ không tự chọn màu
 **And** vô hiệu loại dây đang dùng: dây cũ giữ màu + nhãn "(ngừng dùng)", không chọn mới được (Q-14)

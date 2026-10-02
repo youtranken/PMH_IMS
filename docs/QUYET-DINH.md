@@ -411,6 +411,10 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   mở ghi nhật ký.
 - **Cảnh báo lệch kho, không ép sửa:** máy thanh lý / đổi IP / đổi cổng sau khi vẽ thì hiện dấu.
 - Không liên kết Epic 9 / phiếu 0213; không xuất Excel danh sách dây.
+- **Chốt thêm (02/10/2026):** dây vẽ trong bản nháp chỉ ghi vào sơ đồ cổng khi bản được phát hành;
+  xem cây bản vẽ (tên, trạng thái) không cần mã, mở nội dung mới hỏi TOTP; Admin/SA lưu là bản nháp,
+  bấm "Phát hành" mới thành chính thức; chồng U trong cùng tủ thì chặn; ảnh theo model định danh
+  bằng loại thiết bị + chuỗi model; loại dây seed sẵn **Cat6, Fiber, DAC** (SA thêm được).
 
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
