@@ -26,6 +26,7 @@ import {
   nextStepPath,
 } from '@/lib/me';
 import { LEGACY_ROUTES, PATHS, ROUTE_ROLES, canSeeRoute } from '@/lib/routes';
+import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS } from '@/lib/software-screens';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
@@ -252,8 +253,22 @@ function AppRoutes() {
         <Route path={PATHS.disposal} element={<DisposalScreen />} />
         <Route path={PATHS.devices} element={<DevicesScreen me={me} />} />
         <Route path={`${PATHS.devices}/:id`} element={<DeviceDetail me={me} />} />
-        <Route path={PATHS.software} element={<SoftwareScreen me={me} />} />
-        <Route path={`${PATHS.software}/:id`} element={<SoftwareDetail me={me} />} />
+        {/* Bốn màn cùng một bảng `software`, tách theo loại (Q-22). Trang chi tiết tự chuyển
+            sang đúng màn của loại hồ sơ, nên `/software/<id>` cũ vẫn mở được mọi loại. */}
+        {SOFTWARE_SCREEN_KEYS.map((key) => (
+          <Route
+            key={key}
+            path={SOFTWARE_SCREENS[key].list}
+            element={<SoftwareScreen key={key} me={me} screen={key} />}
+          />
+        ))}
+        {SOFTWARE_SCREEN_KEYS.map((key) => (
+          <Route
+            key={`${key}-item`}
+            path={`${SOFTWARE_SCREENS[key].list}/:id`}
+            element={<SoftwareDetail key={key} me={me} screen={key} />}
+          />
+        ))}
         <Route path={PATHS.ispLines} element={<IspScreen me={me} />} />
         <Route path={`${PATHS.ispLines}/:id`} element={<IspDetail me={me} />} />
         <Route path={PATHS.expiry} element={<ExpiryScreen me={me} />} />

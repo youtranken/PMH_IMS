@@ -64,6 +64,27 @@ describe('UI_PATHS bên api khớp `routes.ts` bên web', () => {
     expect(nat.searchParams.get('deviceId')).toBe('a b');
   });
 
+  /*
+   * Mỗi loại hồ sơ phần mềm có màn riêng (Q-22). Link từ API (khối hạn, nhật ký) phải tới
+   * đúng màn của loại đó — `/software/<id>` của một SSL vẫn mở được (web chuyển hướng), nhưng
+   * crumb và menu sáng sai một nhịp trước khi nhảy.
+   */
+  it.each([
+    ['license', 'softwareItem'],
+    ['ssl', 'domainItem'],
+    ['domain', 'domainItem'],
+    ['maintenance', 'maintenanceItem'],
+    ['other', 'serviceItem'],
+  ])('`softwareOf(%s)` sinh đúng đường web khai ở `%s`', (kind, webKey) => {
+    const expected = webPathTemplate(webKey)?.replace('${id}', 'ID');
+    expect(expected).toBeTruthy();
+    expect(UI_PATHS.softwareOf(kind, 'ID')).toBe(expected);
+  });
+
+  it('`softwareOf` loại lạ → đường chung `/software/<id>` (web tự chuyển đúng màn)', () => {
+    expect(UI_PATHS.softwareOf('???', 'ID')).toBe(UI_PATHS.software('ID'));
+  });
+
   it('`approvals` — đường không tham số', () => {
     expect(UI_PATHS.approvals).toBe(webPathTemplate('approvals'));
   });

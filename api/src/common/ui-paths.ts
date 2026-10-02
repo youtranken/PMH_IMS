@@ -25,10 +25,28 @@
  * khác hẳn bản sao trôi tự do: năm bản chép không cổng của một hàm là năm bản ĐÃ lệch.
  */
 
+/**
+ * Loại hồ sơ phần mềm → màn danh sách của nó (Q-22) — khớp `SOFTWARE_SCREENS` bên web.
+ * Khoá là chuỗi chứ không phải `SoftwareKind`: `common` không import module `software` (AD-2).
+ */
+const SOFTWARE_KIND_LIST: Record<string, string> = {
+  license: '/software',
+  ssl: '/domains',
+  domain: '/domains',
+  maintenance: '/maintenance',
+  other: '/services',
+};
+
 /** Đường dẫn tương đối, KHÔNG kèm host — nơi gọi tự ghép `APP_BASE_URL` nếu cần link tuyệt đối. */
 export const UI_PATHS = {
   device: (id: string) => `/devices/${id}`,
+  /**
+   * Đường CHUNG tới một hồ sơ phần mềm khi không biết loại (thư mở két chỉ có id). Web đọc hồ sơ
+   * rồi chuyển sang đúng màn của loại, giữ nguyên `?tab=`.
+   */
   software: (id: string) => `/software/${id}`,
+  /** Biết loại thì đi thẳng tới màn của loại đó — menu và crumb sáng đúng ngay từ đầu. */
+  softwareOf: (kind: string, id: string) => `${SOFTWARE_KIND_LIST[kind] ?? '/software'}/${id}`,
   ispLine: (id: string) => `/isp-lines/${id}`,
   /** Màn dải IP nhận id của DẢI, không phải của địa chỉ — giữ đúng như `routes.ts.subnet`. */
   subnet: (id: string) => `/ip-addresses/${id}`,

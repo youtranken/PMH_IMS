@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -49,16 +49,26 @@ import { activeSeatCodes, softwareDisposeMessage } from "./software-dispose-mess
 import { RestoreDialog } from "./software-restore-dialog";
 import { retiredAfterDays, standingOf } from "./software-standing";
 import { SeatUsage } from "./software-standing-cell";
-import { PATHS } from "@/lib/routes";
+import {
+  SOFTWARE_SCREENS,
+  screenOfKind,
+  type SoftwareScreenKey,
+} from "@/lib/software-screens";
 
 /**
- * Trang chi tiết hồ sơ phần mềm.
+ * Trang chi tiết hồ sơ phần mềm — dùng chung cho bốn màn của Q-22, `screen` là màn của route.
+ *
+ * Hồ sơ mở bằng route của màn khác (link `/software/<id>` trong thư mở két, kho thanh lý, link
+ * ghim từ trước khi tách màn) thì chuyển sang đúng màn của loại nó, giữ `?tab=`: menu, crumb và
+ * tên tab trình duyệt phải nói đúng hồ sơ này thuộc đâu.
  *
  * Khối "Chìa khóa / mật khẩu" cố tình để TRỐNG với một câu giải thích: key nằm ở Két sắt,
  * không nằm trong bảng này — nói rõ còn hơn để người dùng đi tìm.
  */
-export function SoftwareDetail({ me }: { me: Me }) {
+export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: SoftwareScreenKey }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const spec = SOFTWARE_SCREENS[screen];
   const toast = useToast();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
@@ -175,8 +185,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
       <DetailLoadFailed
         error={software.error}
         onRetry={() => void software.refetch()}
-        backTo={PATHS.software}
-        backLabel={t("nav.software")}
+        backTo={spec.list}
+        backLabel={t(spec.navKey)}
       />
     );
   }
@@ -185,6 +195,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
   // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx`.
   if (!software.data) return <Loading />;
   const item = software.data;
+  const home = screenOfKind(item.kind);
+  if (home.key !== spec.key) {
+    return <Navigate to={`${home.item(item.id)}${location.search}${location.hash}`} replace />;
+  }
   const retired = item.status === "retired";
   const standing = standingOf(item);
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
@@ -194,9 +208,11 @@ export function SoftwareDetail({ me }: { me: Me }) {
     <>
       <DetailHeader
         crumbs={[
-          { label: t("nav.software"), to: PATHS.software },
-          // Mắt xích loại dẫn về danh sách đã lọc đúng loại này.
-          { label: t(KIND_KEY[item.kind]), to: `${PATHS.software}?kind=${item.kind}` },
+          { label: t(spec.navKey), to: spec.list },
+          // Màn nhiều loại (Tên miền & SSL): mắt xích loại dẫn về danh sách đã lọc đúng loại.
+          ...(spec.kinds.length > 1
+            ? [{ label: t(KIND_KEY[item.kind]), to: `${spec.list}?kind=${item.kind}` }]
+            : []),
           { label: item.code },
         ]}
         code={item.code}
@@ -325,12 +341,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
             <RailRowIfSet label={t("software.vendor")} value={item.vendorName} />
           </RailCard>
-          {/* Website nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
-              này đang phủ website nào" là câu người trực sự cố hỏi đầu tiên (Q-15, SW-043). */}
+          {/* Tên miền nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
+              này đang phủ tên miền nào" là câu người trực sự cố hỏi đầu tiên (Q-15, Q-22). */}
           {supportsWebsites(item.kind) ? (
-            <RailCard
-              title={t(item.kind === "ssl" ? "software.websitesSsl" : "software.websitesDomain")}
-            >
+            <RailCard title={t("software.domainNames")}>
               {(item.websites ?? []).length > 0 ? (
                 <ul className="chip-row">
                   {(item.websites ?? []).map((site) => (
@@ -351,7 +365,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
           items={tabItems}
           value={safeTab}
           onChange={setTab}
-          ariaLabel={t("software.title")}
+          ariaLabel={t(spec.titleKey)}
         />
 
         <TabPanel tabKey={safeTab}>
@@ -449,6 +463,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
       {editing ? (
         <SoftwareForm
           row={item}
+          screen={spec.key}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(false)}
           onSaved={() => {

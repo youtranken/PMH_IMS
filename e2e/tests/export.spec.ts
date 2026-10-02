@@ -222,8 +222,9 @@ test.describe('Xuất Excel', () => {
     );
 
     expect(filtered).toContain('Tên miền lọc B');
-    // SW-043: website của SSL/tên miền có cột riêng trong file.
-    expect(filtered).toContain('Website');
+    // Q-22: file của màn Tên miền & SSL có cột "Tên miền", không có cột ghế của license.
+    expect(filtered).toContain('Tên miền');
+    expect(filtered).not.toContain('Ghế dùng/tổng');
     expect(filtered).toContain(`e2e-loc-${stamp}.pmh.vn`);
     expect(filtered).not.toContain('License lọc A');
     expect(all).toContain('Tên miền lọc B');

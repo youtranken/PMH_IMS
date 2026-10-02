@@ -47,7 +47,12 @@ export const navGroups: NavGroup[] = [
     labelKey: 'nav.groupAssets',
     items: [
       { key: 'nav.devices', to: PATHS.devices },
+      /* Bốn màn cùng bảng `software`, tách theo loại (Q-22): để chung một màn rồi lọc theo loại
+         thì người dùng không tìm ra SSL / tên miền / hợp đồng. */
       { key: 'nav.software', to: PATHS.software },
+      { key: 'nav.domains', to: PATHS.domains },
+      { key: 'nav.maintenance', to: PATHS.maintenance },
+      { key: 'nav.services', to: PATHS.services },
       { key: 'nav.isp', to: PATHS.ispLines },
       // Tài khoản dùng chung + VPN — mật khẩu của chúng nằm ở két sắt.
       { key: 'nav.serviceAccounts', to: PATHS.serviceAccounts },

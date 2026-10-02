@@ -102,7 +102,7 @@ export class AccessListService {
       ...SOFTWARE_KINDS.map((kind) => ({
         scopeType: 'software_kind' as const,
         scopeRef: kind.key,
-        label: `Phần mềm: ${kind.label}`,
+        label: kind.label,
       })),
       ...SERVICE_ACCOUNT_SCOPES.map((kind) => ({
         scopeType: 'service_account_kind' as const,
@@ -417,11 +417,15 @@ const SERVICE_ACCOUNT_SCOPES = [
   { key: 'vpn', label: 'VPN' },
 ];
 
-/** Khớp `SOFTWARE_KINDS` của module software — nhãn để người gán đọc, không phải khóa mới. */
+/**
+ * Khớp `SOFTWARE_KINDS` của module software — nhãn để người gán đọc, không phải khóa mới.
+ * Nhãn gọi theo tên MÀN trên menu (Q-22): người gán tìm "Tên miền & SSL", không tìm "Phần mềm".
+ * Phần trước ": " là họ — lưới quyền cắt nó khỏi tiêu đề cột (`shortLabel` bên web).
+ */
 const SOFTWARE_KINDS = [
-  { key: 'license', label: 'License' },
-  { key: 'ssl', label: 'Chứng chỉ SSL' },
-  { key: 'domain', label: 'Tên miền' },
+  { key: 'license', label: 'Phần mềm: License' },
+  { key: 'ssl', label: 'Tên miền & SSL: Chứng chỉ SSL' },
+  { key: 'domain', label: 'Tên miền & SSL: Tên miền' },
   { key: 'maintenance', label: 'Hợp đồng bảo trì' },
-  { key: 'other', label: 'Khác' },
+  { key: 'other', label: 'Dịch vụ có hạn khác' },
 ];

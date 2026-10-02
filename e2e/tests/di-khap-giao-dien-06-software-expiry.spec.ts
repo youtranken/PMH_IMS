@@ -136,7 +136,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     const stamp = stampOf();
     const prefix = `PHONG-E2E-${stamp}`;
     const licenseCode = `${prefix}-A-LIC`;
-    const sslCode = `${prefix}-B-SSL`;
+    const secondCode = `${prefix}-B-LIC`;
     const maintCode = `${prefix}-C-MAINT`;
 
     const licenseId = await createSoftware(page, {
@@ -148,9 +148,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       endDate: '2028-12-31',
     });
     await createSoftware(page, {
-      code: sslCode,
-      name: 'Alpha — chứng chỉ xếp đầu theo tên',
-      kind: 'ssl',
+      code: secondCode,
+      name: 'Alpha — license xếp đầu theo tên',
+      kind: 'license',
       endDate: '2029-01-31',
     });
     await createSoftware(page, {
@@ -179,14 +179,15 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Lọc không ra gì phải nói rõ là rỗng, không phải bảng trắng',
     ).toBeVisible();
 
+    // Q-22: màn Phần mềm chỉ giữ license nên không còn ô lọc Loại.
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · ô lọc Loại · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc',
-    ).toHaveCount(7);
+      'Phòng Phần mềm lúc rỗng chỉ được có 6 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc',
+    ).toHaveCount(6);
+    await expect(main.getByRole('button', { name: 'Loại', exact: true })).toHaveCount(0);
     for (const name of [
       'Xuất Excel',
       'Thêm phần mềm',
-      'Loại',
       'Trạng thái',
       'Nhà cung cấp',
       'Kỳ hạn',
@@ -202,10 +203,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await search.fill(prefix);
     await expect(
       page.getByRole('row'),
-      'Gõ tiền tố chung phải ra đúng 3 hồ sơ vừa tạo (cộng 1 dòng tiêu đề)',
-    ).toHaveCount(4);
+      'Gõ tiền tố chung phải ra đúng 2 license vừa tạo (cộng 1 dòng tiêu đề) — hợp đồng bảo trì ở màn riêng (Q-22)',
+    ).toHaveCount(3);
 
-    await search.fill(sslCode);
+    await search.fill(secondCode);
     await expect(
       page.getByRole('row'),
       'Gõ đích danh một mã thì bảng phải còn đúng dòng đó',
@@ -217,7 +218,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== ĐỦ BỘ CỘT =====
     await search.fill(prefix);
-    await expect(page.getByRole('row')).toHaveCount(4);
+    await expect(page.getByRole('row')).toHaveCount(3);
     expect(
       await columnTexts(page),
       /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
@@ -248,7 +249,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       page.getByRole('row').nth(1),
       'Lật `aria-sort` mà thứ tự dòng không đổi thì cái mũi tên đang nói dối',
-    ).toContainText(maintCode);
+    ).toContainText(secondCode);
 
     /*
      * ===== MENU BA CHẤM: ĐÚNG NHỮNG MỤC NÀO =====
@@ -262,6 +263,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toEqual(['Gán vào máy', 'Gia hạn', 'Thanh lý…']);
     await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
 
+    // Hợp đồng bảo trì nằm ở màn của nó (Q-22).
+    await page.goto(`/maintenance?q=${encodeURIComponent(prefix)}`);
+    await expect(page.getByRole('row', { name: new RegExp(maintCode) })).toBeVisible();
     expect(
       await rowActionNames(page, maintCode),
       'Hợp đồng bảo trì KHÔNG có ghế để gán — mục "Gán vào máy" không được xuất hiện',
@@ -279,7 +283,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Tất cả" qua URL.
     await page.goto('/software?status=all');
-    await search.fill(prefix);
+    await page
+      .getByRole('searchbox', { name: 'Tìm theo mã, tên, ghi chú hoặc mã máy' })
+      .fill(prefix);
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     expect(
       await rowActionNames(page, licenseCode),
@@ -405,21 +411,12 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Đóng menu bằng cách bấm lại đúng lựa chọn đang chọn — không đổi dữ liệu, và không phải
      * mượn phím Esc (Esc ở đây còn có nghĩa "đóng cả hộp thoại").
      */
-    // Loại là dải nút chọn ĐẦU form (SW-026): nó quyết định form có những ô nào.
-    const kindGroup = add.getByRole('radiogroup', { name: 'Loại' });
-    expect(
-      (await kindGroup.getByRole('radio').evaluateAll((els) =>
-        els.map((el) => (el.closest('label')?.textContent ?? '').trim()),
-      )),
-      'Ô "Loại" phải bày đủ 5 loại hồ sơ mà hệ thống biết',
-    ).toEqual([
-      'License phần mềm',
-      'Chứng chỉ SSL',
-      'Tên miền',
-      'Hợp đồng bảo trì',
-      'Khác',
-    ]);
-    await expect(kindGroup.getByRole('radio', { name: 'License phần mềm' })).toBeChecked();
+    // Q-22: màn Phần mềm chỉ có license — form không hỏi Loại (SSL, tên miền, hợp đồng có màn
+    // riêng; ô chọn loại chỉ còn ở màn Tên miền & SSL).
+    await expect(
+      add.getByRole('radiogroup', { name: 'Loại' }),
+      'Form của màn Phần mềm không được bày ô Loại',
+    ).toHaveCount(0);
 
     const modelGroup = add.getByRole('radiogroup', { name: 'Kỳ hạn' });
     await expect(
@@ -514,10 +511,6 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Ô ghi chú phải mang ghi chú cũ',
     ).toHaveValue('Ghi chú cũ của hồ sơ E2E');
 
-    await expect(
-      edit.getByRole('radio', { name: 'License phần mềm' }),
-      'Ô chọn Loại phải đang đứng ở loại cũ',
-    ).toBeChecked();
     await expect(
       edit.getByRole('radio', { name: 'Thuê bao' }),
       'Ô chọn Kỳ hạn phải đang đứng ở kỳ hạn cũ',
@@ -904,7 +897,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      *
      * Thiếu vế này thì một bản sửa thô bạo (luôn vẽ tab đó) vẫn xanh ở trên.
      */
-    await page.goto(`/software/${domainId}`);
+    await page.goto(`/domains/${domainId}`);
     await expect(
       page.getByRole('heading', { level: 1, name: new RegExp(domainCode) }),
     ).toBeVisible();

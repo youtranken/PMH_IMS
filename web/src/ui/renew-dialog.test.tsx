@@ -171,7 +171,7 @@ describe('RenewDialog — website của kỳ mới (SSL/tên miền, SW-043)', (
 
   it('điền sẵn danh sách hiện tại, sửa được, gửi danh sách của kỳ mới', async () => {
     const { fetchMock, onDone } = renderSsl(['a.pmh.vn', 'b.pmh.vn']);
-    const box = screen.getByRole('textbox', { name: 'Website của kỳ mới' });
+    const box = screen.getByRole('textbox', { name: 'Tên miền của kỳ mới' });
     expect(box).toHaveValue('a.pmh.vn\nb.pmh.vn');
     await userEvent.clear(box);
     await userEvent.type(box, 'a.pmh.vn{enter}c.pmh.vn{enter}');
@@ -186,7 +186,7 @@ describe('RenewDialog — website của kỳ mới (SSL/tên miền, SW-043)', (
 
   it('không truyền websites (license) → không có ô, không gửi', async () => {
     const { fetchMock, onDone } = renderSsl(undefined);
-    expect(screen.queryByRole('textbox', { name: 'Website của kỳ mới' })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Tên miền của kỳ mới' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
     await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());

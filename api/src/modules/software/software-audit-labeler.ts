@@ -35,11 +35,16 @@ export class SoftwareAuditLabeler implements AuditObjectLabeler, OnModuleInit {
       );
     }
     const rows = await this.db
-      .select({ id: softwareTable.id, code: softwareTable.code, name: softwareTable.name })
+      .select({
+        id: softwareTable.id,
+        code: softwareTable.code,
+        name: softwareTable.name,
+        kind: softwareTable.kind,
+      })
       .from(softwareTable)
       .where(inArray(softwareTable.id, ids));
     return new Map(
-      rows.map((r) => [r.id, { label: `${r.code} — ${r.name}`, path: UI_PATHS.software(r.id) }]),
+      rows.map((r) => [r.id, { label: `${r.code} — ${r.name}`, path: UI_PATHS.softwareOf(r.kind, r.id) }]),
     );
   }
 }

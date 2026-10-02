@@ -241,7 +241,7 @@ test.describe('SW-053 · Gán license chọn nhanh theo phòng ban / người s�
   });
 });
 
-test.describe('SW-043 · Website dùng chứng chỉ SSL, theo từng kỳ gia hạn', () => {
+test.describe('SW-043 · Tên miền dùng chứng chỉ SSL, theo từng kỳ gia hạn (Q-22)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
   test('hồ sơ SSL hiện website, tìm được từ danh sách; gia hạn chụp danh sách của kỳ mới vào sổ', async ({
@@ -261,19 +261,19 @@ test.describe('SW-043 · Website dùng chứng chỉ SSL, theo từng kỳ gia h
       websites: [`https://${shop}/`, mail],
     });
 
-    // Ô tìm của danh sách phần mềm ra hồ sơ theo website.
-    await page.goto('/software');
+    // Ô tìm của màn Tên miền & SSL ra hồ sơ theo BẤT KỲ tên miền nào trong hồ sơ (Q-22).
+    await page.goto('/domains');
     await searchAndWaitForFilter(page, `mail-e2e-${stamp}`);
     await expect(page.getByRole('link', { name: code })).toBeVisible();
 
-    await page.goto(`/software/${id}`);
-    const sites = page.getByRole('region', { name: 'Website dùng chứng chỉ này' });
+    await page.goto(`/domains/${id}`);
+    const sites = page.getByRole('region', { name: 'Tên miền', exact: true });
     await expect(sites.getByText(shop, { exact: true })).toBeVisible();
     await expect(sites.getByText(mail, { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
     const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
-    const box = dialog.getByRole('textbox', { name: 'Website của kỳ mới', exact: true });
+    const box = dialog.getByRole('textbox', { name: 'Tên miền của kỳ mới', exact: true });
     await expect(box).toHaveValue(`${shop}\n${mail}`);
     // Năm nay bỏ mail, thêm portal.
     await box.fill(`${shop}\n${portal}`);
@@ -306,12 +306,12 @@ test.describe('SW-043 · Website dùng chứng chỉ SSL, theo từng kỳ gia h
       endDate: isoInDays(40),
     });
 
-    await page.goto(`/software/${id}`);
-    await expect(page.getByText('Chưa ghi website nào.')).toBeVisible();
+    await page.goto(`/domains/${id}`);
+    await expect(page.getByText('Chưa ghi tên miền nào.')).toBeVisible();
     await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
     const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
     await dialog
-      .getByRole('textbox', { name: 'Website của kỳ mới', exact: true })
+      .getByRole('textbox', { name: 'Tên miền của kỳ mới', exact: true })
       .fill('a-e2e.pmh.vn b-e2e.pmh.vn');
     await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();

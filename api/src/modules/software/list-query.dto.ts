@@ -1,14 +1,18 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, Matches } from 'class-validator';
 import { OptionalUuidQuery } from '../../common/query-uuid';
-import { SOFTWARE_KINDS, type LicenseModel, type SoftwareKind, type SoftwareStatus } from './software-rules';
+import { SOFTWARE_KINDS_QUERY, type LicenseModel, type SoftwareStatus } from './software-rules';
 
 /** Bộ lọc phần mềm — dùng chung cho danh sách và file xuất (FR-028). */
 export class SoftwareExportQueryDto {
   @IsOptional() @IsString() search?: string;
-  // `kind` đi thẳng xuống `eq` trên cột enum: giá trị lạ cũng là 22P02 → 500.
+  /**
+   * Một loại hoặc nhiều loại ngăn bằng dấu phẩy (`ssl,domain` — màn Tên miền & SSL, Q-22). Đi
+   * xuống `inArray` trên cột enum: giá trị lạ là 22P02 → 500, nên chặn 400 tại đây.
+   */
   @IsOptional()
-  @IsIn([...SOFTWARE_KINDS, ''], { message: 'Loại phần mềm không hợp lệ.' })
-  kind?: SoftwareKind;
+  @IsString()
+  @Matches(SOFTWARE_KINDS_QUERY, { message: 'Loại phần mềm không hợp lệ.' })
+  kind?: string;
   /** Giá trị lạ bị `filterOf` bỏ qua, nên không cần chặn ở đây. */
   @IsOptional() @IsString() licenseModel?: LicenseModel;
   @IsOptional() @IsString() status?: SoftwareStatus | 'live';

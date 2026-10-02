@@ -63,7 +63,8 @@ export interface SoftwareFilter {
    * bằng OR với phép khớp mã/tên: "máy X đang dùng license nào" hỏi bằng chính ô tìm.
    */
   alsoIds?: string[];
-  kind?: SoftwareKind;
+  /** Một màn = một hoặc vài loại (Q-22); vắng = mọi loại. */
+  kinds?: SoftwareKind[];
   licenseModel?: LicenseModel;
   /** `live` = Đang dùng + Hết hạn — hai trạng thái còn trên máy, mặc định của màn danh sách. */
   status?: SoftwareStatus | 'live';

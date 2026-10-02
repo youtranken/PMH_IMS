@@ -34,6 +34,10 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Bảng điều khiển', path: '/', heading: /^Bảng điều khiển$/ },
     { link: 'Thiết bị', path: '/devices', heading: /^Thiết bị$/ },
     { link: 'Phần mềm', path: '/software', heading: /^Phần mềm$/ },
+    // Ba màn tách từ Phần mềm (Q-22).
+    { link: 'Tên miền & SSL', path: '/domains', heading: /^Tên miền & SSL$/ },
+    { link: 'Hợp đồng bảo trì', path: '/maintenance', heading: /^Hợp đồng bảo trì$/ },
+    { link: 'Dịch vụ có hạn khác', path: '/services', heading: /^Dịch vụ có hạn khác$/ },
     { link: 'Đường truyền', path: '/isp-lines', heading: /^Đường truyền$/ },
     { link: 'Sắp hết hạn', path: '/expiry', heading: /^Sắp hết hạn$/ },
     { link: 'Địa chỉ IP', path: '/ip-addresses', heading: /^Địa chỉ IP$/ },
@@ -61,7 +65,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * `<h1>` đổi chữ mà i18n không đổi theo, hoặc một mục cho màn chưa có quay lại menu.
    */
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
-    // 15 lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
+    // 18 lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 

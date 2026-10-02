@@ -56,7 +56,7 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
         changes: { websites: { before: 'a.pmh.vn', after: 'a.pmh.vn, b.pmh.vn' } },
       }),
     ], t);
-    expect(entry.detail).toBe('website: a.pmh.vn → a.pmh.vn, b.pmh.vn');
+    expect(entry.detail).toBe('tên miền: a.pmh.vn → a.pmh.vn, b.pmh.vn');
   });
 
   it('loại và trạng thái hiện nhãn tiếng Việt, không phải mã máy', () => {

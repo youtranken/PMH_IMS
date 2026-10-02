@@ -119,7 +119,7 @@ describe('Khối trống có nút bước tiếp', () => {
 
   it('Phần mềm: chưa có → Thêm; đang lọc → Xóa bộ lọc', async () => {
     const { unmount } = renderAt('/software', <SoftwareScreen me={SA} />);
-    const block = await emptyBlock('Chưa có hồ sơ license, SSL hay tên miền nào.');
+    const block = await emptyBlock('Chưa có license phần mềm nào.');
     expect(within(block).getByRole('button', { name: 'Thêm phần mềm' })).toBeInTheDocument();
     unmount();
     renderAt('/software?q=zzz', <SoftwareScreen me={SA} />);

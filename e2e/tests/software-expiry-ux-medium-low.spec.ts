@@ -152,7 +152,8 @@ test.describe('Danh sách phần mềm', () => {
     const code = `SSL-E2E-GHNHANH-${uniqueStamp()}`;
     await createSoftware(page, { code, name: 'SSL gia hạn nhanh', kind: 'ssl', endDate: isoInDays(20) });
 
-    await page.goto('/software');
+    // SSL nằm ở màn Tên miền & SSL (Q-22).
+    await page.goto('/domains');
     await searchAndWaitForFilter(page, code);
     await rowAction(page, code, 'Gia hạn');
     const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });

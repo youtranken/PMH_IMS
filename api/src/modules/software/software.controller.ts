@@ -40,6 +40,8 @@ import {
   LICENSE_MODELS,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
+  softwareExportShape,
+  softwareKindsQuery,
   softwareStatusQuery,
   type LicenseModel,
   type SoftwareKind,
@@ -195,7 +197,7 @@ export class SoftwareController {
   private async filterOf(
     query: {
       search?: string;
-      kind?: SoftwareKind;
+      kind?: string;
       licenseModel?: LicenseModel;
       status?: SoftwareStatus | 'live';
       vendorId?: string;
@@ -210,7 +212,7 @@ export class SoftwareController {
           ? [...deviceMatches.keys()]
           : await this.assignments.softwareIdsOnDevices(search)
         : undefined,
-      kind: query.kind,
+      kinds: softwareKindsQuery(query.kind),
       licenseModel: LICENSE_MODELS.includes(query.licenseModel as LicenseModel)
         ? query.licenseModel
         : undefined,
@@ -264,28 +266,33 @@ export class SoftwareController {
      * không có gì báo. `SoftwareService.listAll` đã có sẵn và ghi rõ trong doc là "chỉ dùng
      * cho export xlsx (FR-028)".
      */
+    const filter = await this.filterOf(query);
     const rows = await this.software.listAll(
-      await this.filterOf(query),
+      filter,
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
-    const buffer = await this.excel.build({
-      sheetName: 'Phần mềm',
-      columns: [
-        { header: 'Mã hồ sơ', width: 20, value: (r) => r.code },
-        { header: 'Tên', width: 32, value: (r) => r.name },
-        { header: 'Loại', width: 16, value: (r) => KIND_LABEL[r.kind] },
-        { header: 'Nhà cung cấp', width: 22, value: (r) => r.vendorName ?? '' },
-        { header: 'Ghế dùng/tổng', width: 14, value: (r) => seatText(r) },
-        { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
-        { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
-        { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
-        // SW-043: SSL/tên miền phủ những website nào — cùng danh sách với hồ sơ.
-        { header: 'Website', width: 36, value: (r) => (r.websites ?? []).join(', ') },
-        { header: 'Ghi chú', width: 40, value: (r) => r.note ?? '' },
-      ],
-      rows,
-    });
-    sendXlsx(res, buffer, 'phan-mem.xlsx');
+    // Mỗi màn chỉ xuất cột của loại nó (Q-22) — xem `softwareExportShape`.
+    const shape = softwareExportShape(filter.kinds);
+    type Row = (typeof rows)[number];
+    const columns: { header: string; width: number; value: (r: Row) => string }[] = [
+      { header: 'Mã hồ sơ', width: 20, value: (r) => r.code },
+      { header: 'Tên', width: 32, value: (r) => r.name },
+      { header: 'Loại', width: 16, value: (r) => KIND_LABEL[r.kind] },
+      { header: 'Nhà cung cấp', width: 22, value: (r) => r.vendorName ?? '' },
+      ...(shape.seats
+        ? [{ header: 'Ghế dùng/tổng', width: 14, value: (r: Row) => seatText(r) }]
+        : []),
+      { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
+      { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
+      { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
+      // Q-22: một hồ sơ = các tên miền dùng chung một ngày hết hạn — cùng danh sách với hồ sơ.
+      ...(shape.websites
+        ? [{ header: 'Tên miền', width: 36, value: (r: Row) => (r.websites ?? []).join(', ') }]
+        : []),
+      { header: 'Ghi chú', width: 40, value: (r) => r.note ?? '' },
+    ];
+    const buffer = await this.excel.build({ sheetName: shape.sheetName, columns, rows });
+    sendXlsx(res, buffer, shape.fileName);
   }
 
   /**

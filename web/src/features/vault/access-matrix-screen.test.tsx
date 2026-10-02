@@ -15,7 +15,7 @@ const ACCOUNTS = [
   { id: 'u-binh', email: 'binh@pmh.com.vn', fullName: 'Trần Bình', role: 'member' },
 ];
 const SCOPES = [
-  { scopeType: 'software_kind', scopeRef: 'ssl', label: 'Phần mềm: Chứng chỉ SSL' },
+  { scopeType: 'software_kind', scopeRef: 'ssl', label: 'Tên miền & SSL: Chứng chỉ SSL' },
   { scopeType: 'device_type', scopeRef: 't1', label: 'Thiết bị loại Switch' },
 ];
 const RULES = [
@@ -24,7 +24,7 @@ const RULES = [
     memberEmail: 'binh@pmh.com.vn',
     scopeType: 'software_kind',
     scopeRef: 'ssl',
-    scopeLabel: 'Phần mềm: Chứng chỉ SSL',
+    scopeLabel: 'Tên miền & SSL: Chứng chỉ SSL',
     tier: 'whitelist',
     grantedBy: 'sa@pmh.com.vn',
     note: null,
@@ -59,7 +59,7 @@ describe('Quyền xem két sắt — theo người', () => {
   it('?user= mở sẵn đúng người; thẻ quyền gom theo họ, chip "SSL · Xem thẳng"', async () => {
     renderAt('/admin/vault-access?user=u-binh');
     expect(await screen.findByRole('heading', { name: 'Trần Bình' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Phần mềm' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Phần mềm & dịch vụ có hạn' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Chứng chỉ SSL: Xem thẳng/ })).toHaveTextContent(
       'Chứng chỉ SSL · Xem thẳng',
     );
@@ -121,7 +121,7 @@ describe('Quyền xem két sắt — theo người', () => {
   it('gán một nhóm cho nhiều người: người đã có quyền hiện tầng hiện tại, tóm tắt tách thêm / đổi', async () => {
     renderAt('/admin/vault-access?view=matrix');
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Gán "Phần mềm: Chứng chỉ SSL" cho nhiều người' }),
+      await screen.findByRole('button', { name: 'Gán "Tên miền & SSL: Chứng chỉ SSL" cho nhiều người' }),
     );
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Đang: Xem thẳng');
@@ -132,7 +132,7 @@ describe('Quyền xem két sắt — theo người', () => {
   it('ô trên lưới dùng biểu tượng SVG, không emoji', async () => {
     renderAt('/admin/vault-access?view=matrix');
     const cell = await screen.findByRole('button', {
-      name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng',
+      name: 'Trần Bình — Tên miền & SSL: Chứng chỉ SSL: Xem thẳng',
     });
     expect(cell.querySelector('svg')).not.toBeNull();
     expect(cell.textContent).not.toContain('✓');
@@ -141,7 +141,7 @@ describe('Quyền xem két sắt — theo người', () => {
   // Dấu "+" dạng ký tự nằm theo đường cơ sở của chữ, lệch khỏi tâm nút — phải là SVG.
   it('nút gán ở tiêu đề cột và đầu dòng dùng dấu + SVG, không ký tự', async () => {
     renderAt('/admin/vault-access?view=matrix');
-    const col = await screen.findByRole('button', { name: 'Gán "Phần mềm: Chứng chỉ SSL" cho nhiều người' });
+    const col = await screen.findByRole('button', { name: 'Gán "Tên miền & SSL: Chứng chỉ SSL" cho nhiều người' });
     const row = screen.getByRole('button', { name: 'Gán quyền cho Trần Bình' });
     for (const button of [col, row]) {
       expect(button.querySelector('svg')).not.toBeNull();
@@ -155,7 +155,7 @@ describe('Quyền xem két sắt — theo người', () => {
    */
   it('ma trận: tiêu đề cột có scope="col", tiêu đề họ có scope="colgroup"', async () => {
     renderAt('/admin/vault-access?view=matrix');
-    await screen.findByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' });
+    await screen.findByRole('button', { name: 'Trần Bình — Tên miền & SSL: Chứng chỉ SSL: Xem thẳng' });
     const headers = screen.getAllByRole('columnheader');
     expect(headers.length).toBeGreaterThan(2);
     for (const th of headers) {
@@ -173,12 +173,12 @@ describe('Quyền xem két sắt — theo người', () => {
    */
   it('ma trận: cột đầu của họ thứ hai trở đi đánh dấu ranh giới nhóm ở tiêu đề và từng ô', async () => {
     renderAt('/admin/vault-access?view=matrix');
-    await screen.findByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' });
+    await screen.findByRole('button', { name: 'Trần Bình — Tên miền & SSL: Chứng chỉ SSL: Xem thẳng' });
     const starts = screen.getAllByRole('columnheader').filter((th) => th.classList.contains('access-group-start'));
     expect(starts).toHaveLength(1);
     // Thứ tự họ: thiết bị theo loại trước, phần mềm sau.
     expect(starts[0]).toHaveTextContent(/SSL/);
-    const sslCell = screen.getByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' });
+    const sslCell = screen.getByRole('button', { name: 'Trần Bình — Tên miền & SSL: Chứng chỉ SSL: Xem thẳng' });
     expect(sslCell.closest('td')).toHaveClass('access-group-start');
     const switchCell = screen.getByRole('button', { name: 'Trần Bình — Thiết bị loại Switch: Không có quyền' });
     expect(switchCell.closest('td')).not.toHaveClass('access-group-start');
@@ -262,7 +262,7 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
   it('gỡ một ô: hỏi mã 6 số với câu gỡ quyền, gõ xong thì gửi lại DELETE', async () => {
     const writes = stubStepUp();
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng' }),
+      await screen.findByRole('button', { name: 'Trần Bình — Tên miền & SSL: Chứng chỉ SSL: Xem thẳng' }),
     );
     await userEvent.click(screen.getByRole('button', { name: 'Gỡ' }));
     const confirm = await screen.findByRole('dialog');

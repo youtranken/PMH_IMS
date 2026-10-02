@@ -44,7 +44,9 @@ test('danh sách phần mềm ở 390px là thẻ gọn 3 dòng, chạm thẻ m�
   await expect(card).toHaveCount(1);
   await expect(card.getByText('Hết hạn', { exact: true })).toBeVisible();
   await expect(card).toContainText('Office thẻ gọn E2E');
-  await expect(card).toContainText('License phần mềm · 0/10 ghế');
+  // Màn Phần mềm chỉ có license (Q-22) — thẻ không nhắc lại loại.
+  await expect(card).toContainText('0/10 ghế');
+  await expect(card).not.toContainText('License phần mềm');
   // Không còn bảng gập với dòng "Thao tác", ô mũi tên rỗng.
   await expect(page.getByRole('table')).toHaveCount(0);
   await expect(page.getByRole('button', { name: `Thao tác với ${code}` })).toBeVisible();

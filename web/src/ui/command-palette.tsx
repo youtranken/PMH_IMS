@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { disposalStatusKey } from '@/lib/disposal-kinds';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS, screenOfKind } from '@/lib/software-screens';
 import { visibleGroups } from '@/shell/app-nav';
 import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
 import { NavIcon } from '@/ui/nav-icon';
@@ -269,7 +270,7 @@ export function CommandPalette({ me }: { me: Me }) {
   const software = useQuery({
     queryKey: ['palette', 'software', q],
     queryFn: () =>
-      apiFetch<Page<{ id: string; code: string; name: string; status?: string }>>(
+      apiFetch<Page<{ id: string; code: string; name: string; kind?: string; status?: string }>>(
         `/api/v1/software?page=1&limit=4&search=${encodeURIComponent(q)}`,
       ),
     enabled,
@@ -427,15 +428,37 @@ export function CommandPalette({ me }: { me: Me }) {
         status: row.status,
       })),
       ...more(t('nav.devices'), devices.data?.total, deviceRows.length, PATHS.devices, 'nav.devices'),
-      ...softwareRows.map((row) => ({
-        group: t('nav.software'),
-        title: row.code,
-        sub: row.name,
-        to: PATHS.softwareItem(row.id),
-        navKey: 'nav.software',
-        status: row.status,
-      })),
-      ...more(t('nav.software'), software.data?.total, softwareRows.length, PATHS.software, 'nav.software'),
+      /* Một lượt hỏi cho cả bảng `software`, rồi chia về bốn màn của Q-22 theo loại: mỗi dòng
+         đứng dưới tên màn nó thuộc và mở thẳng trang của màn đó. Bị cắt thì mỗi màn có mặt có
+         một lối "Tìm … trong <màn>" — không có tổng riêng từng màn để in "Xem tất cả N". */
+      ...SOFTWARE_SCREEN_KEYS.flatMap((key) => {
+        const spec = SOFTWARE_SCREENS[key];
+        const rows = softwareRows.filter((row) => screenOfKind(row.kind ?? '').key === key);
+        if (rows.length === 0) return [];
+        const cut = (software.data?.total ?? 0) > softwareRows.length;
+        return [
+          ...rows.map((row) => ({
+            group: t(spec.navKey),
+            title: row.code,
+            sub: row.name,
+            to: spec.item(row.id),
+            navKey: spec.navKey,
+            status: row.status,
+          })),
+          ...(cut
+            ? [
+                {
+                  group: t(spec.navKey),
+                  title: t('palette.searchIn', { q, where: t(spec.navKey) }),
+                  sub: '',
+                  to: `${spec.list}?q=${encodeURIComponent(q)}`,
+                  navKey: spec.navKey,
+                  kind: 'more' as const,
+                },
+              ]
+            : []),
+        ];
+      }),
       ...ispRows.map((row) => ({
         group: t('nav.isp'),
         title: row.code,
@@ -522,7 +545,10 @@ export function CommandPalette({ me }: { me: Me }) {
     const group = t('palette.groupSearchIn');
     return [
       { list: PATHS.devices, key: 'nav.devices' },
-      { list: PATHS.software, key: 'nav.software' },
+      ...SOFTWARE_SCREEN_KEYS.map((key) => ({
+        list: SOFTWARE_SCREENS[key].list,
+        key: SOFTWARE_SCREENS[key].navKey,
+      })),
       { list: PATHS.ispLines, key: 'nav.isp' },
       { list: PATHS.serviceAccounts, key: 'nav.serviceAccounts' },
     ].map(({ list, key }) => ({
