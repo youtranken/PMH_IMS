@@ -10,7 +10,7 @@ const ACCOUNTS = [{ id: 'u-binh', email: 'binh@pmh.com.vn', fullName: 'Trần B�
 const SCOPES = [
   { scopeType: 'device_site', scopeRef: 's-hn', label: 'Thiết bị tại E2E-HN' },
   { scopeType: 'device_type', scopeRef: 't-sw', label: 'Thiết bị loại Switch' },
-  { scopeType: 'software_kind', scopeRef: 'ssl', label: 'Phần mềm: Chứng chỉ SSL' },
+  { scopeType: 'software_kind', scopeRef: 'ssl', label: 'Tên miền & SSL: Chứng chỉ SSL' },
 ];
 const RULES = [
   {

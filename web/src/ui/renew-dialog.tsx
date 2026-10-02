@@ -69,7 +69,7 @@ export function RenewDialog({
   withTerms?: boolean;
   /**
    * Website đang dùng chứng chỉ / tên miền (chỉ SSL, tên miền; cần `url`). Có thì hộp hiện ô
-   * "Website của kỳ mới" điền sẵn, sửa được, và gửi `websites` — API chụp danh sách này vào sổ
+   * "Tên miền của kỳ mới" điền sẵn, sửa được, và gửi `websites` — API chụp danh sách này vào sổ
    * gia hạn của RIÊNG kỳ đó (Q-15, SW-043).
    */
   websites?: string[];

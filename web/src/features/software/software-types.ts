@@ -1,8 +1,8 @@
 import { SOFTWARE_STATUS_TONE } from '@/lib/status-tone';
 
-/** Loại hồ sơ phần mềm — khớp `SOFTWARE_KINDS` phía API. */
-export const SOFTWARE_KINDS = ['license', 'ssl', 'domain', 'maintenance', 'other'] as const;
-export type SoftwareKind = (typeof SOFTWARE_KINDS)[number];
+/* Danh sách loại nằm ở `lib/` vì bảng màn (`software-screens.ts`) và các màn tổng cũng cần nó. */
+import type { SoftwareKind } from '@/lib/software-screens';
+export { SOFTWARE_KINDS, type SoftwareKind } from '@/lib/software-screens';
 
 /**
  * Kỳ hạn license: thuê bao (có ngày hết hạn, phải gia hạn) hay mua đứt (dùng mãi).

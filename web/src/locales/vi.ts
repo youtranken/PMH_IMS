@@ -471,6 +471,10 @@ export default {
     dashboard: 'Bảng điều khiển',
     devices: 'Thiết bị',
     software: 'Phần mềm',
+    /* Ba màn tách từ "Phần mềm" (Q-22) — cùng bảng `software`, khác loại. */
+    domains: 'Tên miền & SSL',
+    maintenance: 'Hợp đồng bảo trì',
+    services: 'Dịch vụ có hạn khác',
     isp: 'Đường truyền',
     expiry: 'Sắp hết hạn',
     ipam: 'Địa chỉ IP',
@@ -905,7 +909,7 @@ export default {
   },
   software: {
     title: 'Phần mềm',
-    subtitle: 'License, SSL, tên miền, hợp đồng bảo trì và ngày gia hạn',
+    subtitle: 'License phần mềm, số ghế và máy đang cài',
     add: 'Thêm phần mềm',
     /* Mục menu: cùng chữ với `isp.terminateMenu`. Hộp hỏi lại vẫn nói rõ "vào kho thanh lý". */
     disposeMenu: 'Thanh lý…',
@@ -928,7 +932,7 @@ export default {
     endQuickNeedBase: 'Chọn ngày bắt đầu trước.',
     sectionTerm: 'Thời hạn',
     sectionSeatsNote: 'Ghế và ghi chú',
-    sectionWebsitesNote: 'Website và ghi chú',
+    sectionWebsitesNote: 'Tên miền và ghi chú',
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',
@@ -948,14 +952,15 @@ export default {
     /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
-    allKinds: 'Mọi loại',
+    /* Ô lọc loại của màn Tên miền & SSL (Q-22): "Tất cả / Tên miền / Chứng chỉ SSL". */
+    allTypes: 'Tất cả',
     allVendors: 'Mọi nhà cung cấp',
     allModels: 'Mọi kỳ hạn',
     seatsExpired: 'đang cài license đã hết hạn',
     noVendor: 'Chưa rõ nhà cung cấp',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
-    empty: 'Chưa có hồ sơ license, SSL hay tên miền nào.',
-    emptyHint: 'Thêm license, SSL hoặc tên miền để được nhắc gia hạn.',
+    empty: 'Chưa có license phần mềm nào.',
+    emptyHint: 'Thêm license để biết máy nào đang dùng và được nhắc gia hạn.',
     emptyFiltered: 'Không có hồ sơ nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
     saved: 'Đã lưu hồ sơ.',
@@ -989,12 +994,15 @@ export default {
     renewalCost: 'Chi phí',
     renewalActor: 'Người gia hạn',
     renewalNoContract: 'Chưa ghi hợp đồng',
-    renewalWebsites: 'Website',
-    /* Website dùng chứng chỉ SSL / tên miền (Q-15, SW-043). */
-    websitesSsl: 'Website dùng chứng chỉ này',
-    websitesDomain: 'Website dùng tên miền này',
-    websitesHint: 'Mỗi dòng một website, vd shop.pmh.com.vn. Dán cả link cũng được.',
-    websitesEmpty: 'Chưa ghi website nào.',
+    renewalWebsites: 'Tên miền',
+    /* Một hồ sơ Tên miền / SSL = các tên miền dùng chung MỘT ngày hết hạn (Q-22, Q-15). */
+    domainNames: 'Tên miền',
+    domainNamesHint:
+      'Mỗi dòng một tên miền — một hoặc nhiều tên miền dùng chung ngày hết hạn này. Khác hạn thì tạo hồ sơ khác.',
+    domainNamesRequired: 'Nhập ít nhất một tên miền.',
+    websitesEmpty: 'Chưa ghi tên miền nào.',
+    /* Cột "Tên miền": tên đầu + "+N" — rê chuột thấy đủ. */
+    domainNamesMore: '+{{count}}',
     seatsFull: 'Hết ghế',
     seatsOver: '+{{count}} vượt',
     /* Băng đầu trang hồ sơ Thanh lý + hộp Khôi phục (Q-13: bên trong là Sửa hồ sơ). */
@@ -1018,6 +1026,36 @@ export default {
     restored: 'Đã khôi phục hồ sơ.',
     restoredAssigned: 'Đã gán lại {{count}} máy.',
     restoreAssignFailed: 'Không gán lại được {{code}}: {{reason}}',
+  },
+  /*
+   * Chữ riêng của ba màn tách từ "Phần mềm" (Q-22). Mọi chữ chung (cột, trạng thái, gia hạn,
+   * thanh lý…) vẫn ở `software.*` — một component vẽ cả bốn màn.
+   */
+  softwareScreens: {
+    domains: {
+      title: 'Tên miền & SSL',
+      subtitle: 'Tên miền và chứng chỉ SSL — mỗi hồ sơ là các tên miền dùng chung một ngày hết hạn',
+      add: 'Thêm tên miền / SSL',
+      empty: 'Chưa có hồ sơ tên miền hay chứng chỉ SSL nào.',
+      emptyHint: 'Thêm tên miền hoặc chứng chỉ SSL để được nhắc gia hạn trước khi hết hạn.',
+      search: 'Tìm theo mã, tên, tên miền hoặc ghi chú',
+    },
+    maintenance: {
+      title: 'Hợp đồng bảo trì',
+      subtitle: 'Hợp đồng bảo trì, hỗ trợ kỹ thuật và ngày gia hạn',
+      add: 'Thêm hợp đồng bảo trì',
+      empty: 'Chưa có hợp đồng bảo trì nào.',
+      emptyHint: 'Thêm hợp đồng bảo trì để được nhắc gia hạn.',
+      search: 'Tìm theo mã, tên hoặc ghi chú',
+    },
+    services: {
+      title: 'Dịch vụ có hạn khác',
+      subtitle: 'Thuê bao, dịch vụ đám mây và mọi thứ có ngày hết hạn khác',
+      add: 'Thêm dịch vụ',
+      empty: 'Chưa có dịch vụ có hạn nào.',
+      emptyHint: 'Thêm dịch vụ có ngày hết hạn để được nhắc gia hạn.',
+      search: 'Tìm theo mã, tên hoặc ghi chú',
+    },
   },
   license: {
     assign: 'Gán vào máy',
@@ -1229,8 +1267,8 @@ export default {
     renewContract: 'Số hợp đồng',
     renewContractHint: 'Hợp đồng của lần gia hạn này. Để trống nếu chưa có.',
     renewCost: 'Chi phí kỳ mới',
-    renewWebsites: 'Website của kỳ mới',
-    renewWebsitesHint: 'Mỗi dòng một website, lưu riêng cho kỳ này.',
+    renewWebsites: 'Tên miền của kỳ mới',
+    renewWebsitesHint: 'Mỗi dòng một tên miền, lưu riêng cho kỳ này.',
     currentEnd: 'Hạn hiện tại',
     renewMinHint: 'Hạn mới phải từ {{date}} trở đi.',
     renewTooEarly: 'Hạn mới phải từ {{date}} trở đi.',
@@ -2483,7 +2521,8 @@ export default {
       'Cấp theo site là xem được mọi thiết bị ở site đó, bất kể loại. Cấp theo loại là mọi thiết bị loại đó ở mọi site. Hai cách cộng dồn: khớp dòng nào cũng thấy; nhiều dòng cùng khớp thì lấy quyền rộng nhất.',
     showMoreRules: 'Xem thêm {{count}} quyền',
     showLessRules: 'Thu gọn',
-    scope_software_kind: 'Phần mềm',
+    /* Họ gồm bốn màn tách từ Phần mềm (Q-22) — khóa vẫn là `software_kind`. */
+    scope_software_kind: 'Phần mềm & dịch vụ có hạn',
     scope_service_account_kind: 'Tài khoản dịch vụ',
     scope_isp_provider: 'Đường truyền',
     tier_denied: 'Không có quyền',
@@ -2766,7 +2805,7 @@ export default {
       fMachine: 'máy',
       fCost: 'chi phí',
       fContract: 'hợp đồng',
-      fWebsites: 'website',
+      fWebsites: 'tên miền',
       fOverSeatReason: 'lý do vượt số ghế',
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',

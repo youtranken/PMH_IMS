@@ -15,7 +15,7 @@ const ACCOUNTS = [
   { id: 'u-chi', email: 'chi@pmh.com.vn', fullName: 'Lê Chi', role: 'member' },
 ];
 const SCOPES = [
-  { scopeType: 'software_kind', scopeRef: 'ssl', label: 'Phần mềm: Chứng chỉ SSL' },
+  { scopeType: 'software_kind', scopeRef: 'ssl', label: 'Tên miền & SSL: Chứng chỉ SSL' },
   { scopeType: 'device_type', scopeRef: 't1', label: 'Thiết bị loại Switch' },
 ];
 const rule = (id: string, memberEmail: string, scopeRef: string, tier: string) => {
@@ -80,7 +80,7 @@ describe('Quyền két — "Sao chép quyền từ…" (ADM-040)', () => {
     await userEvent.click(screen.getByRole('option', { name: 'Trần Bình (2 quyền)' }));
 
     expect(within(dialog).getByText('Sẽ gán 1 nhóm:')).toBeInTheDocument();
-    expect(within(dialog).getByText('Phần mềm: Chứng chỉ SSL · Xem thẳng')).toBeInTheDocument();
+    expect(within(dialog).getByText('Tên miền & SSL: Chứng chỉ SSL · Xem thẳng')).toBeInTheDocument();
     expect(within(dialog).getByText('Bỏ qua 1 nhóm người này đã có:')).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gán quyền' }));

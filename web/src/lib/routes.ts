@@ -18,8 +18,19 @@ export const PATHS = {
   devices: '/devices',
   device: (id: string) => `/devices/${id}`,
 
+  /**
+   * Bốn màn tách từ "Phần mềm" (Q-22) — cùng bảng `software`, khác `kind`. Bảng loại → màn ở
+   * `lib/software-screens.ts`. `softwareItem` còn là đường CHUNG khi chỉ biết id (thư mở két,
+   * kho thanh lý): trang chi tiết đọc loại rồi chuyển sang đúng màn.
+   */
   software: '/software',
   softwareItem: (id: string) => `/software/${id}`,
+  domains: '/domains',
+  domainItem: (id: string) => `/domains/${id}`,
+  maintenance: '/maintenance',
+  maintenanceItem: (id: string) => `/maintenance/${id}`,
+  services: '/services',
+  serviceItem: (id: string) => `/services/${id}`,
 
   ispLines: '/isp-lines',
   ispLine: (id: string) => `/isp-lines/${id}`,
@@ -171,6 +182,9 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.dashboard]: 'nav.dashboard',
   [PATHS.devices]: 'nav.devices',
   [PATHS.software]: 'nav.software',
+  [PATHS.domains]: 'nav.domains',
+  [PATHS.maintenance]: 'nav.maintenance',
+  [PATHS.services]: 'nav.services',
   [PATHS.ispLines]: 'nav.isp',
   [PATHS.expiry]: 'nav.expiry',
   [PATHS.ipAddresses]: 'nav.ipam',

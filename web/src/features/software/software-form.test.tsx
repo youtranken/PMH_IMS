@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { SoftwareForm } from './software-form';
 import type { SoftwareRow } from './software-types';
 
@@ -97,5 +97,61 @@ describe('Form hồ sơ phần mềm', () => {
     expect(
       screen.getByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
     ).toBeInTheDocument();
+  });
+});
+
+/** Form mở từ màn nào thì chỉ cho chọn loại của màn đó (Q-22). */
+describe('Form theo màn (Q-22)', () => {
+  function renderOn(screenKey: 'software' | 'domains' | 'maintenance' | 'services') {
+    return renderWithI18n(
+      <ToastProvider>
+        <SoftwareForm row={null} screen={screenKey} csrfToken="csrf" onClose={() => {}} onSaved={() => {}} />
+      </ToastProvider>,
+    );
+  }
+
+  it('Tên miền & SSL: hai lựa chọn Tên miền / Chứng chỉ SSL, tiêu đề "Thêm tên miền / SSL"', () => {
+    mockFetch();
+    renderOn('domains');
+    expect(screen.getByRole('dialog', { name: 'Thêm tên miền / SSL' })).toBeInTheDocument();
+    const kinds = within(screen.getByRole('radiogroup', { name: 'Loại' }))
+      .getAllByRole('radio')
+      .map((radio) => radio.closest('label')?.textContent);
+    expect(kinds).toEqual(['Tên miền', 'Chứng chỉ SSL']);
+    // Không còn ô của license.
+    expect(screen.queryByRole('textbox', { name: 'Số ghế' })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Kỳ hạn' })).toBeNull();
+  });
+
+  it('Tên miền & SSL: phải có ít nhất một tên miền — ô "Tên miền" báo lỗi, không gửi', async () => {
+    const writes = mockFetch();
+    renderOn('domains');
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /Mã hồ sơ/ }), 'DOM-E2E-1');
+    await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Tên miền chính');
+    expect(screen.getByText(/một hoặc nhiều tên miền dùng chung ngày hết hạn này/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    expect(await screen.findAllByText('Nhập ít nhất một tên miền.')).not.toHaveLength(0);
+    expect(writes).toHaveLength(0);
+  });
+
+  it.each([
+    ['maintenance', 'Thêm hợp đồng bảo trì', 'maintenance'],
+    ['services', 'Thêm dịch vụ', 'other'],
+    ['software', 'Thêm phần mềm', 'license'],
+  ] as const)('%s (%s): loại cố định, không có ô chọn Loại, gửi kind=%s', async (key, title, kind) => {
+    const writes = mockFetch();
+    renderOn(key);
+    expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Loại' })).toBeNull();
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /Mã hồ sơ/ }), 'X-E2E-1');
+    await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Hồ sơ thử');
+    if (kind === 'license') {
+      await user.click(screen.getByRole('radio', { name: 'Vĩnh viễn' }));
+    }
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ kind });
   });
 });
