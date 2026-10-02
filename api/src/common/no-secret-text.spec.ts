@@ -97,6 +97,9 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     // Mạng.
     'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',
+    // Tệp draw.io nguyên khối (bản thử): chữ trong hình nằm lẫn trong XML, luật một-ô-một-câu
+    // của `@NoSecretText` không đọc được nó. Bản thật của Epic 10 soi chữ từng hình khi lưu.
+    'diagrams/diagram-spike.controller.ts#xml',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',

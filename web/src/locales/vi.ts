@@ -2415,6 +2415,7 @@ export default {
       natUpdated: 'Sửa luật NAT',
       natVoided: 'Gỡ luật NAT',
       systemConfigUpdated: 'Sửa tham số hệ thống',
+      diagramSpikeSaved: 'Lưu sơ đồ mạng (bản thử)',
       cryptoRewrapped: 'Đổi khóa mã hóa két và mã 2 lớp',
     },
     family: {
@@ -2483,6 +2484,7 @@ export default {
       disposal: 'Kho thanh lý',
       file: 'Tệp',
       systemConfig: 'Tham số hệ thống',
+      diagramSpike: 'Sơ đồ mạng (bản thử)',
     },
   },
   access: {

@@ -140,6 +140,7 @@ export const FIELD_LABEL: Record<string, string> = {
   weekday: 'Thứ trong tuần',
   width: 'Độ rộng',
   withinDays: 'Trong vòng (ngày)',
+  xml: 'Nội dung bản vẽ',
 };
 
 function fieldLabel(property: string): string {
