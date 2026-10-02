@@ -46,6 +46,9 @@ export const PATHS = {
   /** Sổ NAT lọc sẵn theo một router (bộ lọc nằm trên URL — gửi được link cho nhau). */
   natOf: (deviceId: string) => `/nat?deviceId=${encodeURIComponent(deviceId)}`,
 
+  /** Bản thử nhúng draw.io (Q-23) — Epic 10 thay bằng cây bản vẽ thật. */
+  diagramSpike: '/diagrams-spike',
+
   serviceAccounts: '/service-accounts',
   serviceAccount: (id: string) => `/service-accounts/${id}`,
 
@@ -158,6 +161,8 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
   [PATHS.vault]: ['sa', 'admin'],
+  // `diagram-spike.controller.ts` — `@Roles('sa', 'admin')` cho cả đọc lẫn lưu.
+  [PATHS.diagramSpike]: ['sa', 'admin'],
   [PATHS.devComponents]: ['sa'],
 };
 
@@ -189,6 +194,7 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.expiry]: 'nav.expiry',
   [PATHS.ipAddresses]: 'nav.ipam',
   [PATHS.nat]: 'nav.nat',
+  [PATHS.diagramSpike]: 'nav.diagramSpike',
   [PATHS.serviceAccounts]: 'nav.serviceAccounts',
   [PATHS.approvals]: 'nav.approvals',
   [PATHS.vault]: 'nav.vault',

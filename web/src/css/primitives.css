@@ -812,3 +812,15 @@ button.btn-x.danger:hover:not(:disabled) {
   border-color: var(--border-danger);
   color: var(--danger-strong);
 }
+
+/* Khung nhúng một ứng dụng tĩnh cùng máy (draw.io ở /drawio/): cao bằng phần màn còn lại dưới
+   đầu trang + thanh tab, để thanh cuộn là của khung vẽ chứ không phải của cả trang. */
+.embed-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 220px);
+  min-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}

@@ -83,6 +83,14 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M20 17H4" />
     </>
   ),
+  'nav.diagramSpike': (
+    <>
+      {/* Hai khối nối nhau bằng một đường gấp — một bản vẽ sơ đồ. */}
+      <rect x="2" y="3" width="8" height="6" rx="1" />
+      <rect x="14" y="15" width="8" height="6" rx="1" />
+      <path d="M6 9v5a2 2 0 0 0 2 2h6" />
+    </>
+  ),
   'nav.serviceAccounts': (
     <>
       {/* Thẻ danh tính — một tài khoản có chủ, khác với "tài khoản đăng nhập IMS". */}
