@@ -350,21 +350,23 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   Excel hiện / tìm theo mọi IP; nhập Excel nhận nhiều IP ngăn bằng dấu phẩy.
 - **Người dùng IMS đã vô hiệu hoá** ẩn khỏi danh sách theo mặc định; lọc đích danh mới hiện.
 
-### Q-21 · Góp ý "Fix lỗi IMS_3" (02/10/2026 — Claude chốt theo đề xuất trong đêm, CHỜ chủ dự án xác nhận)
+### Q-21 · Góp ý "Fix lỗi IMS_3" (02/10/2026 — Claude đề xuất trong đêm, chủ dự án xác nhận cùng ngày)
 
 Chủ dự án giao làm qua đêm "tương tự IMS_2"; các điểm dưới là đề xuất Claude tự chọn, đảo được
 nếu chủ dự án không đồng ý.
 
-- **Giao diện mặc định là TỐI** cho người chưa chọn (lựa chọn đã lưu trên máy vẫn giữ). Bảng màu tối
-  sáng lên khoảng 2 nấc (nền, mặt thẻ, viền), vẫn giữ tương phản chữ ≥ 4.5:1 và viền ô ≥ 3:1.
+- **Giao diện mặc định là SÁNG** cho người chưa chọn (chủ dự án đổi lại sau khi xem bản tối mặc
+  định; lựa chọn đã lưu trên máy vẫn giữ). Bảng màu tối sáng lên khoảng 2 nấc (nền, mặt thẻ,
+  viền), vẫn giữ tương phản chữ ≥ 4.5:1 và viền ô ≥ 3:1.
 - **Hiệu ứng chuyển động nhẹ:** đổi màu nền / viền / bóng 150–200 ms khi rê chuột (mục menu, thẻ,
   chip, nút, dòng bảng), thẻ dashboard nhấc 1px. Không dùng chuyển động lớn; tắt hết khi hệ điều
   hành bật "giảm chuyển động" (`prefers-reduced-motion`).
 - **Nút "Quay lại"** ở bước nhập mã 2 lớp: rê chuột tô đỏ nhạt (token `--danger-soft`).
 - **Bảng điều khiển:** "Tổng hợp hết hạn cần xử lý", "Tổng hợp kho thanh lý (7 ngày)".
 - **Luật két:** đưa vào một nút mở hộp đọc, không chiếm chỗ cố định trên trang.
-- **Tham số hệ thống:** nút "Bỏ thay đổi" / "Lưu nhóm này" cỡ nhỏ; đổi tab khi còn thay đổi chưa lưu
-  thì hỏi: Lưu nhóm này / Bỏ thay đổi / Ở lại.
+- **Tham số hệ thống:** nút "Bỏ thay đổi" / "Lưu nhóm này" cỡ nhỏ, ở thanh dính đáy; còn thay đổi
+  chưa lưu mà đổi tab, bấm sang màn khác trên menu / Ctrl+K / nút lùi của trình duyệt, đóng hoặc
+  tải lại tab thì hỏi: Lưu nhóm này / Bỏ thay đổi / Ở lại.
 - **Ma trận quyền két:** danh sách loại thiết bị dài thì chia 2 cột, không cuộn trong ô nhỏ; thẻ
   quyền theo người quá nhiều thì hiện vài thẻ + "+N" bấm để xem hết.
 - **Người dùng IMS:** "Bắt buộc – chưa kích hoạt" thay "Bắt buộc – chưa cài"; dòng chỉ để nút chính,
