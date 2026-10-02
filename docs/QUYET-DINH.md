@@ -386,7 +386,32 @@ nếu chủ dự án không đồng ý.
 - Lưu trữ giữ một bảng `software` với cột `kind` (không tách bảng): nhắc hạn, gia hạn, két, lịch sử,
   thanh lý dùng nguyên như cũ; chỉ tách màn và menu.
 
-### Q-09 · Tài liệu
+### Q-23 · Epic 10 — Sơ đồ mạng thay Visio (02/10/2026, chủ dự án chốt qua buổi brainstorm)
+
+Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlog.md`.
+
+- **Làm Epic 10 trước Epic 8–9.** Vẽ mới, không nhập file Visio cũ.
+- **Sơ đồ tĩnh gắn dữ liệu:** mỗi hình thiết bị là một hồ sơ trong kho; vẽ dây = khai một dòng sơ
+  đồ cổng (luật một cổng một cáp áp nguyên). Cộng lớp vẽ tự do (khung tòa nhà/tầng/phòng/VLAN,
+  đám mây ISP, chữ, mũi tên). Không giám sát sống trong Epic 10; chừa sẵn API nhận trạng thái từ
+  máy giám sát ngoài và lớp "trạng thái sống" để cắm sau.
+- **Cây bản vẽ:** Tổng công ty → site chính → site phụ → tầng → phòng → tủ rack. Tầng/phòng chỉ là
+  tên bản vẽ, không thêm danh mục vị trí mới.
+- **Biểu tượng SVG theo Loại thiết bị** (SA chọn hoặc tải SVG, lọc mã độc); thêm **ảnh thật** theo
+  model hoặc theo từng máy (lấy từ giấy tờ đính kèm).
+- **Phiên bản:** mỗi lần lưu là một phiên bản, hai người cùng sửa thì bản lưu sau thắng; lịch sử
+  tóm tắt một dòng; đặt tên phiên bản quan trọng; phiên bản chụp lại thông tin thiết bị lúc đó;
+  khôi phục bản trước. **Bản trình bày:** nhân bản từ bản chính thức thành bản tách rời (không duyệt,
+  có thiết bị dự kiến + ảnh tự do, PDF ghi "BẢN TRÌNH BÀY"), không ảnh hưởng bản chính thức.
+- **Duyệt:** bản của Thành viên phải gửi Admin duyệt mới thành chính thức; gửi duyệt thì hệ thống
+  tự kiểm (lỗi chặn, cảnh báo cho qua); trả về kèm ghi chú ghim trên bản vẽ. Bản Admin/SA vẽ tự
+  thành chính thức. Không bắt Admin bấm qua từng thay đổi — có tóm tắt và nút xem so sánh.
+- **TOTP:** mọi lần xem bản vẽ (chính thức, phiên bản cũ, trình bày) đều phải nhập mã; nhập một lần
+  xem tiếp trong 10 phút (tham số riêng). Phạm vi tách riêng với két: nhập ở đâu tính ở đó. Mỗi lần
+  mở ghi nhật ký.
+- **Cảnh báo lệch kho, không ép sửa:** máy thanh lý / đổi IP / đổi cổng sau khi vẽ thì hiện dấu.
+- Không liên kết Epic 9 / phiếu 0213; không xuất Excel danh sách dây.
+
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
   gom phần còn mở vào checklist; lịch sử nằm trong git.
