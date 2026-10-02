@@ -28,7 +28,7 @@ created: 2026-08-21
 | HTTP hardening | `helmet` (CSP, HSTS, nosniff) |
 | Form ISO in | CSS `@media print` tái tạo layout + `exceljs` (đã có trong QLTS) cho xuất xlsx |
 | IPAM | Postgres native `inet`/`cidr` types |
-| Phase sau — sơ đồ | `@xyflow/react` (React Flow) + `html-to-image` |
+| Sơ đồ mạng (Epic 10) | **draw.io tự host** — image `jgraph/drawio` ghim tag + digest, nhúng iframe chế độ embed (`embed=1&proto=json`), offline/stealth, không plugin; Apache-2.0. Thay `@xyflow/react` + `html-to-image` của kế hoạch cũ (Q-23, 02/10/2026). Ghép chân trang/watermark/PDF phía server: thư viện chọn trong story xuất file |
 | Phase sau — scan | `fping`/`net-ping` trong worker (cap NET_RAW); ARP chỉ thấy cùng L2 → đa site cần probe per-site hoặc SNMP |
 
 ## 3. Kết quả thẩm định bảo mật (tóm tắt cho architect)
@@ -50,7 +50,7 @@ created: 2026-08-21
 - **File scan hợp đồng ISP giữ as-is** dù có mật khẩu PPPoE in trên scan — rủi ro chấp nhận.
 - **v1 không ping scan** — vòng đời IP thủ công; scan + sơ đồ + Wazuh/Meraki dồn về phase sau (sau khi dự án SIEM Wazuh xong).
 - **Email là kênh duyệt break-glass duy nhất v1** — chưa cần Telegram/push.
-- **Sơ đồ mạng:** node data-bound chọn từ kho thiết bị (không hình trôi nổi), vẽ dây = ghi bản ghi đấu nối port A↔B (sơ đồ và port map là MỘT dữ liệu) — thiết kế đã chốt cho phase sau.
+- **Sơ đồ mạng — dùng draw.io tự host, không tự viết khung vẽ** (02/10/2026, sửa gạch cũ "node data-bound, vẽ dây = ghi port map"). Bác khung vẽ React Flow tự viết sau khi chủ dự án xem mẫu: đi dây tự do (góc vuông, điểm uốn, bó dây) và thư viện hình mạng/rack là phần tốn công nhất, draw.io có sẵn và chủ dự án đã quen. Hình thiết bị vẫn gắn hồ sơ kho (`ims_device_id`), nhưng **dây trên bản vẽ không ghi sơ đồ cổng**: dây chỉ gắn với dòng sơ đồ cổng đã có (`ims_link_id`), kết nối mới khai qua hộp sơ đồ cổng dùng chung. Lý do: nét vẽ draw.io là đồ hoạ tự do (kéo rời, nhân bản, xoá), suy ra dữ liệu cổng từ đó cần đoán; một kết nối có mặt ở nhiều bản vẽ (tổng + phòng + tủ) nên "xoá dây trên một bản vẽ" không thể nghĩa là "xoá kết nối"; và Thành viên vốn sửa sơ đồ cổng trực tiếp được, nên chặn nó sau lượt duyệt bản vẽ là không nhất quán. Chi tiết: ARCHITECTURE-SPINE AD-17/AD-18, `docs/QUYET-DINH.md` Q-23.
 
 ## 5. Dữ liệu nguồn
 
