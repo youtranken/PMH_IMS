@@ -284,15 +284,14 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * vào sẽ ra sáng hay tối).
    */
   test('Đổi sáng/tối trên máy bàn và nó dính lại sau khi đổi trang', async ({ page }) => {
+    // Máy để tối mà người chưa chọn vẫn phải thấy sáng: mặc định không theo hệ điều hành (Q-21).
+    await page.emulateMedia({ colorScheme: 'dark' });
     await firstLogin(page, E2E_SA);
 
     const topbar = page.getByRole('banner');
     const themeOf = () => page.evaluate(() => document.documentElement.dataset.theme ?? '');
 
-    // Ngữ cảnh mới chưa lưu lựa chọn nào: mặc định là TỐI, không theo `prefers-color-scheme` (Q-21).
-    expect(await themeOf(), 'Người chưa chọn giao diện phải thấy giao diện tối').toBe('dark');
-    await topbar.getByRole('button', { name: 'Chuyển sang chế độ sáng' }).click();
-    expect(await themeOf(), 'Bài kiểm đo tiếp từ giao diện sáng').toBe('light');
+    expect(await themeOf(), 'Người chưa chọn giao diện phải thấy giao diện sáng').toBe('light');
 
     await topbar.getByRole('button', { name: 'Chuyển sang chế độ tối' }).click();
     expect(

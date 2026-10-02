@@ -33,11 +33,6 @@
   background: var(--warm);
   color: var(--ink);
 }
-/* Mũi tên của khối tài khoản (`Chevron` sang phải). */
-.nav-caret {
-  font-size: var(--fs-sm);
-  opacity: 0.75;
-}
 
 /* Vùng cuộn riêng của danh sách mục: brand ở trên và khối tài khoản ở đáy đứng yên. Mép dưới
    có một dải mờ DÍNH đáy — còn mục khuất phía dưới thì chúng mờ dần vào đó; không còn gì thì
@@ -87,7 +82,9 @@
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: inherit;
+  /* Sidebar tối ở cả hai giao diện: `inherit` sẽ lấy --ink của vùng nội dung, và con nào không
+     tự khai màu thì vô hình ở giao diện sáng, hiện rõ ở giao diện tối. */
+  color: var(--sidebar-ink-2);
   cursor: pointer;
   text-align: left;
 }

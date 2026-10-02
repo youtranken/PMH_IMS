@@ -512,7 +512,7 @@ export async function freshTotpCode(secret: string): Promise<string> {
 }
 
 /**
- * Đưa trang về đúng theme bằng nút ở topbar. Mặc định là TỐI (Q-21) nhưng trang có thể đang ở
+ * Đưa trang về đúng theme bằng nút ở topbar. Mặc định là SÁNG (Q-21) nhưng trang có thể đang ở
  * theme khác do lựa chọn đã lưu, nên bấm khi cần rồi chờ `<html data-theme>` khớp.
  */
 export async function switchTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {

@@ -45,18 +45,20 @@ describe('đổi theme không chạy hiệu ứng chuyển màu', () => {
   });
 });
 
-describe('theme mặc định là TỐI (Q-21)', () => {
-  it('chưa lưu gì: tối, kể cả khi máy đang để sáng', () => {
-    expect(runInit()).toBe('dark');
-    expect(themePreference()).toBe('dark');
+describe('theme mặc định là SÁNG (Q-21)', () => {
+  it('chưa lưu gì: sáng, kể cả khi máy đang để tối', () => {
+    stubSystemDark(true);
+    expect(runInit()).toBe('light');
+    expect(themePreference()).toBe('light');
   });
 
-  it('kho bị chặn: vẫn tối, không rơi về nền sáng mặc định của CSS', () => {
+  it('kho bị chặn: vẫn sáng, kể cả khi máy đang để tối', () => {
+    stubSystemDark(true);
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
-    expect(runInit()).toBe('dark');
-    expect(themePreference()).toBe('dark');
+    expect(runInit()).toBe('light');
+    expect(themePreference()).toBe('light');
   });
 
   it.each([
@@ -71,7 +73,7 @@ describe('theme mặc định là TỐI (Q-21)', () => {
     expect(themePreference()).toBe(saved);
   });
 
-  it('chọn "Theo hệ thống" thì LƯU lựa chọn đó (không lưu = mặc định tối) và áp theo máy', () => {
+  it('chọn "Theo hệ thống" thì LƯU lựa chọn đó (không lưu = mặc định sáng) và áp theo máy', () => {
     stubSystemDark(false);
     setThemePreference('system');
     expect(localStorage.getItem('ims_theme')).toBe('system');

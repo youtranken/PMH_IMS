@@ -40,7 +40,7 @@ export function EmptyState({
 
 /**
  * Khối hiện thay cho một màn vừa ném lỗi lúc render (`ErrorBoundary`). Không dùng router: nó
- * còn được đặt ở gốc app, ngoài `BrowserRouter`.
+ * còn được đặt ở gốc app, ngoài router.
  */
 export function ScreenError() {
   const { t } = useTranslation();

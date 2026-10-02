@@ -109,6 +109,22 @@ describe('token màu đạt ngưỡng WCAG', () => {
   });
 });
 
+describe('khối tài khoản ở chân sidebar dùng màu của sidebar', () => {
+  /*
+   * Sidebar tối ở CẢ HAI giao diện. Nút tài khoản để `color: inherit` thì con nào không tự
+   * khai màu (một biểu tượng, một chữ mới) lấy `--ink` của vùng nội dung: tối trên nền tối ở
+   * giao diện sáng, sáng ở giao diện tối — cùng một phần tử lúc ẩn lúc hiện theo theme.
+   */
+  it.each(['light', 'dark'] as const)('.sb-userbtn lấy màu từ token --sidebar-*, đọc được trên --sidebar-bg (%s)', (theme) => {
+    const r = rule('shell.css', '.sb-userbtn');
+    expect(r).toBeDefined();
+    const color = declValue(r!.body, 'color') ?? '';
+    const token = /var\((--sidebar-[\w-]+)\)/.exec(color)?.[1];
+    expect(token, `color của .sb-userbtn đang là "${color}"`).toBeDefined();
+    expect(contrast(hex(theme, token!), hex(theme, '--sidebar-bg'))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe('viền ô nhập và nút viền dùng --field-border', () => {
   it.each([
     ['base.css', 'input'],
