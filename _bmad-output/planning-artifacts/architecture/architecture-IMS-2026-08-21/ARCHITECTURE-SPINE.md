@@ -4,11 +4,11 @@ type: architecture-spine
 purpose: build-substrate
 altitude: initiative
 paradigm: 'modular monolith — module theo nghiệp vụ, public-api ranh giới, layered một chiều trong module'
-scope: 'Toàn hệ thống IMS v1 (PRD prd-IMS-2026-08-19, FR-001..036, NFR-01..06)'
+scope: 'Toàn hệ thống IMS v1 (PRD prd-IMS-2026-08-19, FR-001..049, NFR-01..07)'
 status: final
 created: '2026-08-21'
-updated: '2026-08-21'
-binds: [FR-001..036, NFR-01..06]
+updated: '2026-10-02'
+binds: [FR-001..049, NFR-01..07]
 sources:
   - _bmad-output/planning-artifacts/prds/prd-IMS-2026-08-19/prd.md
   - _bmad-output/planning-artifacts/prds/prd-IMS-2026-08-19/addendum.md
@@ -24,7 +24,7 @@ companions: []
 ```mermaid
 graph TD
   subgraph BIZ["Tầng nghiệp vụ — gọi ngang CHỈ qua *.api.ts, đồ thị phải acyclic"]
-    devices; software; ipam; vault; sheets; incidents; documents; dashboard
+    devices; software; ipam; vault; sheets; incidents; documents; dashboard; diagrams
   end
   subgraph BASE["Tầng nền dùng chung"]
     auth; audit; approvals; outbox; expiry; files; config; catalog
@@ -38,6 +38,7 @@ graph TD
   devices -. "public api" .-> ipam & software & vault
   sheets -. "public api (snapshot)" .-> devices & software
   incidents -. "public api" .-> devices
+  diagrams -. "public api (đọc kho; KHÔNG ghi)" .-> devices & ipam
 ```
 
 ## Invariants & Rules
@@ -59,7 +60,7 @@ graph TD
 
 - **Binds:** all
 - **Prevents:** hai module cùng ghi một bảng; "chỉ đọc" biến thành SELECT lậu.
-- **Rule:** chủ bảng duy nhất — `devices`: device, port_map · `software`: software, license_assignment, renewal_history · `ipam`: subnet, ip_address, ip_history, nat_rule · `vault`: secret, access_list, access_grant · `sheets`: sheet_template, sheet_period, sheet_entry · `incidents`: incident · `approvals`: approval · `audit`: audit_log (ghi qua interceptor) · `auth`: user, session · `catalog`: site, cabinet, device_type, vendor · `config`: system_config · `files`: file · `outbox`: outbox · `expiry`: expiry_rule. Module khác không đụng bảng — đọc lẫn ghi đều qua public api của module chủ (vd: devices gọi `ipam.api.assignIp(deviceId, ...)`). FR-005 (trang thiết bị tổng hợp) và FR-027 (dashboard) compose bằng public api, không SQL chéo.
+- **Rule:** chủ bảng duy nhất — `devices`: device, port_map · `software`: software, license_assignment, renewal_history · `ipam`: subnet, ip_address, ip_history, nat_rule · `vault`: secret, access_list, access_grant · `sheets`: sheet_template, sheet_period, sheet_entry · `incidents`: incident · `approvals`: approval · `audit`: audit_log (ghi qua interceptor) · `auth`: user, session · `catalog`: site, cabinet, device_type, vendor, cable_type · `diagrams`: diagram, diagram_version, diagram_version_label, diagram_history, diagram_comment (AD-18) · `config`: system_config · `files`: file · `outbox`: outbox · `expiry`: expiry_rule. Module khác không đụng bảng — đọc lẫn ghi đều qua public api của module chủ (vd: devices gọi `ipam.api.assignIp(deviceId, ...)`). FR-005 (trang thiết bị tổng hợp) và FR-027 (dashboard) compose bằng public api, không SQL chéo.
 
 ### AD-4 — Bảng secret là lãnh địa cấm
 
@@ -141,6 +142,25 @@ graph TD
 - **Enforce:** `no-restricted-syntax` với selector `Identifier[name=/[À-ỹ]/]` trong cả ba cấu hình eslint (api · web · e2e), cùng chỗ với AD-2/AD-15. **Lớp này chỉ bắt định danh CÓ DẤU**; tiếng Việt không dấu (`soLuong`, `ghi`, `truoc`) cần một từ điển âm tiết — đó là lớp hai, làm cùng đợt đổi tên (mục 3.4 của `docs/RA-SOAT-TOAN-DIEN-2026-09-19.md`).
 - **Cổng phải có bài canh cổng.** Luật lint không có bài kiểm là luật có thể khớp **đúng số không chuỗi** mà repo vẫn sạch nên không ai biết — đã xảy ra hai lần ở repo này (AD-2 bên api, 28/08, chín epic; `window.confirm` bên web, 07/09). Bản canh cổng: `api/src/ad16-gate.lint.spec.ts` và `web/src/lint-rules.test.ts`. Rà soát chéo 21/09 tìm ra AD-16 chưa hề áp cho `api/test/**` và bị một khối ngoại lệ đánh rơi ở hai tệp `audit` — cả hai vô hình cho tới khi có bài canh.
 
+### AD-17 — Trình vẽ draw.io là container ghim phiên bản; XML bản vẽ là dữ liệu không tin cậy
+
+- **Binds:** FR-037..049, NFR-01, NFR-03, NFR-04, NFR-07
+- **Prevents:** trình vẽ bên thứ ba gọi ra Internet hay tự nâng phiên bản; một bản vẽ chứa nhãn `<img onerror>` chạy script trong trang IMS và gọi `/api` bằng phiên của người xem; mã 2 lớp nhập để xem sơ đồ vô tình mở luôn két; "xem bản vẽ" không để lại dấu vết.
+- **Rule — container:** service compose `drawio` (image `jgraph/drawio`, ghim **tag + digest**, không `latest`) chỉ nằm trên mạng compose `internal: true`, không publish cổng, không có đường ra ngoài. Nginx của `web` proxy `/drawio/` → `drawio:8080`, nên trình vẽ **cùng host** với IMS và đi chung cert. Mở bằng `embed=1&proto=json&offline=1&stealth=1&plugins=0&pages=0&configure=1` (cấu hình đẩy qua sự kiện `configure`: tắt nguồn đám mây, bảng màu dây từ token, `compressXml: false`). Nâng phiên bản 1–2 lần/năm hoặc khi có cảnh báo bảo mật: đổi tag → dựng lại → chạy E2E sơ đồ → giữ tag cũ để lùi (RUNBOOK). Healthcheck compose; trang sửa báo "Trình vẽ chưa sẵn sàng" nếu không nhận sự kiện `init` trong `diagram.editor_init_timeout_seconds`.
+- **Rule — nhúng:** chỉ một cầu nối `web/src/ui/drawio-frame` (AD-15) được tạo iframe trình vẽ. Iframe mang `sandbox="allow-scripts"` — **không** `allow-same-origin`, không `allow-top-navigation`, không `allow-popups`, không `allow-downloads` (xuất file đi qua server); cờ nào spike chứng minh là bắt buộc thì ghi thêm vào đây kèm lý do — nên chạy ở origin mờ, không đọc được cookie/DOM/`localStorage` của IMS, gọi `/api` không kèm phiên. Bên IMS chỉ nhận tin khi `event.source === iframe.contentWindow` và dữ liệu đúng hình dạng giao thức (bỏ qua tin lạ, không `eval`); bên draw.io nhận tin chỉ từ `window.parent` (hành vi embed sẵn có). CSP của IMS thêm `frame-src 'self'` (chặn iframe điều hướng đi nơi khác); location `/drawio/` có CSP riêng: `connect-src 'self'`, `img-src 'self' data: blob:`, `frame-ancestors 'self'`, không host ngoài. Nếu spike chứng minh draw.io không chạy được ở origin mờ thì đường lùi là **origin riêng** (`drawio.ims.pmh.com.vn`, cùng cert wildcard, cùng nginx) — **không** thêm `allow-same-origin`: sandbox có cả `allow-scripts` lẫn `allow-same-origin` trên trang cùng origin là sandbox tự gỡ được.
+- **Rule — XML/SVG không tin cậy:** server là cổng duy nhất vào kho bản vẽ. Mỗi lần lưu: kiểm cỡ (`diagram.xml_max_kb`, `diagram.svg_max_kb`, `diagram.max_cells`), parse bằng parser tắt DTD/thực thể ngoài, đúng **một** trang, không nén; từ chối 400 khi gặp `<script`, thuộc tính `on*`, `javascript:`/`vbscript:`/`data:text/html`, thuộc tính `link` của ô, ảnh không phải `data:image/(png|jpeg|webp)` hoặc SVG đã lọc; nhãn HTML lọc theo allowlist thẻ định dạng. SVG để xem do trình vẽ xuất lúc lưu, server làm sạch theo allowlist (bỏ script, `on*`, `foreignObject`, `href` ra ngoài, `<use>` trỏ ngoài) rồi mới lưu; nếu nhãn chỉ xuất được dạng `foreignObject` thì story 10.2 chọn allowlist XHTML hẹp và ghi lại ở đây. **Chế độ xem không chạy draw.io:** IMS chèn SVG đã làm sạch vào DOM của trình xem dùng chung (`web/src/ui/diagram-viewer`), lắp tương tác (bấm ô, tô sáng, bay tới, lớp) bằng `data-cell-id` + chỉ mục ô do server dựng (AD-18). Trình vẽ chỉ nạp XML đã qua cổng server.
+- **Rule — step-up có phạm vi:** step-up mang phạm vi `vault | diagram`, mỗi phạm vi một mốc trên `sessions` (`stepped_up_at` cho két, `diagram_stepped_up_at` cho sơ đồ) và một ân hạn trong `system_config` (`secret.stepup_grace_minutes`, `diagram.stepup_grace_minutes`). `@RequiresStepUp()` giữ nghĩa két; route nội dung sơ đồ khai `@RequiresStepUp('diagram')`; route khác của module khai `@NoStepUp()` rõ ràng. Nhập mã ở phạm vi nào chỉ đóng dấu phạm vi đó; **mã lúc đăng nhập không mở phạm vi nào** — kể cả két: hiện `completeTotpWithin` của đăng nhập đóng dấu `stepped_up_at`, Story 10.1 bỏ việc đó (Q-23 "nhập ở đâu tính ở đó"; mã đăng nhập chứng minh danh tính, không phải ý định mở két); bộ đếm gõ sai dùng chung cho hai phạm vi. Đọc nội dung (`diagram.viewed`) và xuất (`diagram.exported`) đều ghi audit — đây là ngoại lệ có chủ ý của nếp "chỉ audit thao tác ghi", cùng loại với audit giải mã két (AD-4).
+
+### AD-18 — Module `diagrams`: lớp nhìn đọc kho, không ghi kho; hợp đồng gắn dữ liệu bằng thuộc tính ô
+
+- **Binds:** FR-037..049, AD-2, AD-3, AD-5, AD-13, AD-14
+- **Prevents:** sơ đồ cổng có hai đường ghi (bảng trang thiết bị + nét vẽ) rồi lệch nhau; một sợi dây xoá trên bản vẽ tầng làm mất kết nối đang hiện ở bản vẽ tổng; module `devices` phải biết `diagrams` tồn tại (vòng phụ thuộc); lịch sử bản vẽ bị sửa ngược.
+- **Rule — sở hữu:** module nghiệp vụ `diagrams` là chủ duy nhất `diagram` (cây; `kind = official | presentation`; bản trình bày là hàng `diagram` có `source_diagram_id` + `source_version_id`), `diagram_version` (XML, SVG đã lọc, chỉ mục ô, ảnh chụp thiết bị/dây), `diagram_version_label`, `diagram_history`, `diagram_comment`. `diagram_version`, `diagram_version_label`, `diagram_history` **chỉ-thêm**: trigger `history_append_only` + `REVOKE UPDATE, DELETE, TRUNCATE` khỏi `ims_app` và `CURRENT_USER` ngay trong file tạo bảng, có trong `app-role-privileges.spec.ts`. `diagram_comment` chỉ thêm nội dung; "Đã xử lý" là một hàng sự kiện, không UPDATE nội dung. `diagrams` đọc kho **chỉ** qua `devices.api`, `ipam.api`, `catalog.api`, `files.api`; duyệt qua `approvals.api` (AD-6, đổi trạng thái trong cùng `tx` với việc phát hành). **Không gọi `vault`** — nút "Mở két" là web chuyển sang luồng két sẵn có, `diagrams` không bao giờ cầm secret (AD-4). Không module nào import `diagrams`; trang thiết bị muốn hiện "có mặt trong bản vẽ nào" thì web gọi endpoint của `diagrams`.
+- **Rule — bản vẽ không ghi sơ đồ cổng.** `device_port` (AD-14) chỉ có một đường ghi: endpoint của `devices` (bảng sơ đồ cổng trên trang thiết bị, và cùng hộp đó mở từ panel bên trình vẽ — kể cả "nối hàng loạt"). Dây trên bản vẽ là đồ hoạ, **tuỳ chọn** gắn một dòng `device_port` qua `ims_link_id`; phát hành không ghi gì vào kho. Lý do: nét draw.io kéo rời/nhân bản/xoá tự do nên suy ra dữ liệu từ nét là đoán; một kết nối có mặt ở nhiều bản vẽ nên xoá nét không thể nghĩa là xoá kết nối; Thành viên vốn sửa sơ đồ cổng trực tiếp được nên đặt nó sau lượt duyệt bản vẽ là không nhất quán. Thay "Chốt thêm" cũ của Q-23 về ghi sơ đồ cổng lúc phát hành.
+- **Rule — hợp đồng gắn dữ liệu.** Ô thiết bị là `UserObject` mang `ims_device_id` (UUID) + `ims_device_code` (để đọc được khi mất kết nối kho); dây mang `ims_link_id` (UUID `device_port`) + `ims_cable_type_id`; khung mang `ims_subnet_id` (khung VLAN), `ims_cabinet_id` (khung tủ), `ims_child_diagram_id` (bản vẽ con); ảnh mang `ims_photo_file_id`; thiết bị dự kiến (chỉ bản trình bày) mang `ims_planned="1"`. Mọi thuộc tính khác của ô là đồ hoạ. **XML lưu ở dạng "khô":** biểu tượng, ảnh, màu dây, nhãn cổng KHÔNG lưu cứng mà được IMS **"hydrate"** từ kho/danh mục/token trước khi nạp vào trình vẽ và **"dehydrate"** lại trước khi lưu — nên đổi biểu tượng loại thiết bị hay đổi màu token áp cho mọi bản vẽ, và mã nguồn không chứa hex (màu đọc từ `tokens.css` lúc chạy).
+- **Rule — tính toán phía server.** Lúc lưu, server parse XML ra **chỉ mục ô** (id, loại, `ims_*`, lớp, khung bao) lưu cùng phiên bản; tóm tắt một dòng, so sánh hai phiên bản, tự kiểm khi gửi duyệt/phát hành và phát hiện lệch kho đều là **một bộ hàm thuần** chạy trên chỉ mục ô + dữ liệu đọc qua public api (test bảng dữ liệu), không chạy trên client. Tự kiểm đỏ: `ims_device_id`/`ims_link_id` không tồn tại, máy đã thanh lý, dây gắn link mà hai đầu link khác hai máy ở hai đầu dây, hai dây gắn cùng một link; vàng: dây giữa hai máy kho chưa gắn link, máy đặt trong khung tủ khác tủ trong kho, dây giữa hai site không có đường nối site.
+- **Rule — chừa chỗ trạng thái sống (FR-049, chỉ thiết kế).** Hợp đồng dự kiến: `POST /api/v1/device-status` bằng khoá API riêng (không phải phiên người dùng), chỉ ghi trạng thái, không đọc gì; dữ liệu thuộc module mới, không thuộc `diagrams`; trình xem có chỗ cho lớp "trạng thái sống" trong mô hình lớp. Epic 10 **không** tạo route, bảng hay giao diện nào cho nó (bài kiểm bề mặt route xác nhận vắng mặt).
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -159,16 +179,16 @@ graph TD
 
 ## Seed (cold-start — code sở hữu sau khi tồn tại)
 
-- **Stack:** NestJS + React (Vite) + Postgres + Redis 7 (pin `redis:7`) + BullMQ **^5 (theo QLTS)** + drizzle-orm (theo QLTS), docker-compose 5 service (pg, redis, api, worker, web); pg/redis không publish port; container non-root; **TLS terminate tại service `web` (nginx: serve SPA + reverse proxy `/api` → api)** — nơi duy nhất giữ cert wildcard.
-- **Thư viện đã kiểm chứng (npm + web, 2026-08-21):** `@node-rs/argon2` 2.1.0 · `otplib` 13.4.1 · `helmet` 8.3.0 · `exceljs` 4.4.0 *(ngừng bảo trì 12/2024 — dùng vì QLTS đang chạy ổn; community fork là đường lui)* · (phase sau: `@xyflow/react` 12.x).
-- **Cây module API:** `src/modules/{auth, audit, approvals, outbox, queue, expiry, files, config, catalog, devices, software, ipam, vault, sheets, incidents, documents, dashboard}` + `src/common` + `src/database`.
-- **Web:** `web/src/{ui, lib, shell, features/{devices, software, ipam, vault, sheets, incidents, documents, dashboard, admin, profile}}`.
+- **Stack:** NestJS + React (Vite) + Postgres + Redis 7 (pin `redis:7`) + BullMQ **^5 (theo QLTS)** + drizzle-orm (theo QLTS), docker-compose 5 service (pg, redis, api, worker, web) + `drawio` từ Epic 10 (AD-17, mạng nội bộ, không publish cổng); pg/redis không publish port; container non-root; **TLS terminate tại service `web` (nginx: serve SPA + reverse proxy `/api` → api)** — nơi duy nhất giữ cert wildcard.
+- **Thư viện đã kiểm chứng (npm + web, 2026-08-21):** `@node-rs/argon2` 2.1.0 · `otplib` 13.4.1 · `helmet` 8.3.0 · `exceljs` 4.4.0 *(ngừng bảo trì 12/2024 — dùng vì QLTS đang chạy ổn; community fork là đường lui)* · trình vẽ sơ đồ `jgraph/drawio` (Apache-2.0, ghim tag + digest — AD-17; thay `@xyflow/react` của kế hoạch cũ).
+- **Cây module API:** `src/modules/{auth, audit, approvals, outbox, queue, expiry, files, config, catalog, devices, software, ipam, vault, sheets, incidents, documents, dashboard, diagrams}` + `src/common` + `src/database`.
+- **Web:** `web/src/{ui, lib, shell, features/{devices, software, ipam, vault, sheets, incidents, documents, dashboard, diagrams, admin, profile}}`; trình vẽ/trình xem sơ đồ dùng chung ở `web/src/ui/drawio-frame` và `web/src/ui/diagram-viewer` (AD-15, AD-17).
 - **Môi trường:** dev (compose + mailpit) / prod (VM LAN, HTTPS 443, wildcard *.pmh.com.vn). Backup pg_dump đêm → NAS tách máy, không kèm master key; 30 bản ngày + 12 bản tháng. **Vận hành định kỳ:** restore drill mỗi quý có biên bản; master key in giấy 2 phong bì 2 người giữ, cập nhật khi xoay chìa.
 - **CI tối thiểu:** lint + `dependency-cruiser` (AD-2) + test + build image.
 
 ## Deferred — spine không quyết
 
-- Ping/ARP scan, sơ đồ React Flow, SNMP, Meraki API, Wazuh connector (phase sau — thêm job vào worker sweep + module mới, không đổi AD).
+- Ping/ARP scan, SNMP, LLDP tự dò, Meraki API, Wazuh connector (phase sau — thêm job vào worker sweep + module mới, không đổi AD; trạng thái sống cắm vào chỗ đã chừa ở AD-18). Sơ đồ mạng đã rời mục này: AD-17/AD-18, Epic 10.
 - Schema chi tiết từng bảng (dev quyết trong migration, theo AD-3 ownership + AD-13 history).
 - Cấu trúc component React trong từng feature (theo pattern `features/` QLTS).
 - Chi tiết template 10 phiếu ISO (tài sản module `sheets`, theo AD-14 snapshot).
