@@ -245,4 +245,6 @@ test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, 
   await row.getByRole('menuitemradio', { name: 'Tối' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(row.getByRole('menuitemradio', { name: 'Tối' })).toHaveAttribute('aria-checked', 'true');
+  // Nút tài khoản giống nhau ở mọi giao diện: không có mũi tên chỉ hiện khi tối.
+  await expect(page.getByRole('button', { name: /^Menu tài khoản của / }).locator('svg')).toHaveCount(0);
 });

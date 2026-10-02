@@ -76,6 +76,21 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(3);
   });
 
+  /*
+   * Nút tài khoản từng có một `Chevron` lấy màu `--ink` của vùng nội dung: sáng thì gần trùng
+   * nền sidebar (vô hình), tối thì hiện rõ — người dùng thấy "mũi tên" xuất hiện tuỳ giao diện.
+   * Chủ dự án chốt dáng của bản Sáng: nút chỉ có avatar + tên + vai, ở mọi giao diện.
+   */
+  it.each(['light', 'dark', 'system'] as const)(
+    'nút tài khoản không có mũi tên/biểu tượng nào, kể cả khi giao diện là %s',
+    (pref) => {
+      localStorage.setItem('ims_theme', pref);
+      renderShell();
+      const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
+      expect(trigger.querySelector('svg')).toBeNull();
+    },
+  );
+
   it('họ tên dài ở chân sidebar bị cắt "…" vẫn đọc đủ khi rê chuột (title)', () => {
     renderShell();
     const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
