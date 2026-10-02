@@ -213,20 +213,24 @@ test('"Đăng xuất các máy khác" đá mọi phiên khác, giữ máy đang 
   await own.context().close();
 });
 
-test('Giao diện trong Hồ sơ: mặc định Tối, chọn Sáng áp ngay, chọn Theo hệ thống được lưu lại', async ({
+test('Giao diện trong Hồ sơ: mặc định Sáng, chọn Tối áp ngay, chọn Theo hệ thống được lưu lại', async ({
   page,
 }) => {
+  // Máy để tối: chỉ khi hệ điều hành khác mặc định mới phân biệt được "Theo hệ thống" với "Sáng".
+  await page.emulateMedia({ colorScheme: 'dark' });
   await firstLogin(page, E2E_SA);
   await page.goto('/profile');
   const group = page.getByRole('group', { name: 'Giao diện' });
-  // Chưa chọn gì = tối (Q-21), và nút "Tối" phải đang được đánh dấu.
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(group.getByRole('button', { name: 'Tối' })).toHaveAttribute('aria-pressed', 'true');
-  await group.getByRole('button', { name: 'Sáng' }).click();
+  // Chưa chọn gì = sáng (Q-21), và nút "Sáng" phải đang được đánh dấu.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  // "Theo hệ thống" phải lưu hẳn: không lưu thì lần nạp sau rơi về mặc định tối.
+  await expect(group.getByRole('button', { name: 'Sáng' })).toHaveAttribute('aria-pressed', 'true');
+  await group.getByRole('button', { name: 'Tối' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  // "Theo hệ thống" phải lưu hẳn: không lưu thì lần nạp sau rơi về mặc định sáng.
   await group.getByRole('button', { name: 'Theo hệ thống' }).click();
   expect(await page.evaluate(() => localStorage.getItem('ims_theme'))).toBe('system');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
 test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, chọn Tối áp ngay (Q-20)', async ({ page }) => {

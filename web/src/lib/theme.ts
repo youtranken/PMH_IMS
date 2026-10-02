@@ -18,11 +18,11 @@ function setTheme(theme: Theme): void {
   setThemePreference(theme);
 }
 
-/** Chưa chọn gì thì dùng giao diện tối (Q-21). */
-const DEFAULT_THEME: Theme = 'dark';
+/** Chưa chọn gì thì dùng giao diện sáng (Q-21). */
+const DEFAULT_THEME: Theme = 'light';
 
 /**
- * Lựa chọn đang lưu. Không có khoá (hoặc kho bị chặn) = mặc định tối; "Theo hệ thống" lưu hẳn
+ * Lựa chọn đang lưu. Không có khoá (hoặc kho bị chặn) = mặc định sáng; "Theo hệ thống" lưu hẳn
  * chữ 'system'. Đúng quy ước mà `public/theme-init.js` đọc lúc tải trang — hai nơi phải hiểu
  * giống nhau, không thì trang chớp sang theme khác khi React lên.
  */
