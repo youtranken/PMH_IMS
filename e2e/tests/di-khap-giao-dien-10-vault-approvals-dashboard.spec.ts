@@ -406,9 +406,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(grid, 'ma trận phải nằm trong khung cuộn riêng, không để cả trang cuộn ngang')
       .toBeVisible();
 
-    // Lọc CỘT về đúng họ "Phần mềm" — danh sách cố định, so được nguyên văn.
+    // Lọc CỘT về đúng họ "Phần mềm & dịch vụ có hạn" — danh sách cố định, so được nguyên văn.
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
-    await page.getByRole('option', { name: 'Phần mềm', exact: true }).click();
+    await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
 
     /*
      * Tiêu đề cột loại là NÚT "Gán … cho nhiều người", kèm dấu `+` trang trí
@@ -421,16 +421,16 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
           text.replace(/\+$/, ''),
         ),
       ),
-      'lọc về họ "Phần mềm" thì lưới phải còn đúng: cột tên người + tiêu đề họ + năm loại phần mềm',
+      'lọc về họ "Phần mềm & dịch vụ có hạn" thì lưới phải còn đúng: cột tên người + tiêu đề họ + năm loại phần mềm',
     ).toEqual(
       asSet([
         'Người',
-        'Phần mềm',
+        'Phần mềm & dịch vụ có hạn',
         'License',
         'Chứng chỉ SSL',
         'Tên miền',
         'Hợp đồng bảo trì',
-        'Khác',
+        'Dịch vụ có hạn khác',
       ]),
     );
     await expect(
@@ -1193,7 +1193,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
-    await page.getByRole('option', { name: 'Phần mềm', exact: true }).click();
+    await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
     await grid.getByRole('button', { name: 'Gán "Phần mềm: License" cho nhiều người' }).click();
 
     const bulk = page.getByRole('dialog', { name: 'Gán "Phần mềm: License" cho người dùng' });

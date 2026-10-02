@@ -525,7 +525,8 @@ test.describe('Gán license theo seat', () => {
     });
     expect(created.status()).toBe(201);
 
-    await page.goto('/software');
+    // SSL nằm ở màn Tên miền & SSL (Q-22).
+    await page.goto('/domains');
     await searchAndWaitForFilter(page, code);
     // Cột Thao tác là menu ba chấm: mục chỉ có trong DOM khi menu đang mở.
     const names = await rowActionNames(page, code);

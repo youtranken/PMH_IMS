@@ -36,7 +36,7 @@ test.describe('Quyền két sắt — theo người', () => {
     await page.getByRole('button', { name: '+ Gán quyền' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('checkbox', { name: 'Phần mềm: License' }).check();
-    await dialog.getByRole('checkbox', { name: 'Phần mềm: Chứng chỉ SSL' }).check();
+    await dialog.getByRole('checkbox', { name: 'Tên miền & SSL: Chứng chỉ SSL' }).check();
     await expect(dialog.getByText('Bấm Lưu sẽ tạo 2 dòng quyền, cùng tầng và cùng ghi chú.')).toBeVisible();
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await confirmAction(page);

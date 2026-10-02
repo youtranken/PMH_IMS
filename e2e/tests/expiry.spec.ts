@@ -352,7 +352,8 @@ test.describe('Cỗ máy Expiry', () => {
 
     // Mở hồ sơ rồi bấm Back — không được rơi về một bảng chưa lọc.
     await linkRow.click();
-    await expect(page).toHaveURL(/\/software\//);
+    // SSL mở thẳng trang của màn Tên miền & SSL (Q-22) — link do API dựng theo loại.
+    await expect(page).toHaveURL(/\/domains\//);
     await page.goBack();
     await expect(page).toHaveURL(/[?&]state=expired/);
     await expect(linkRow).toBeVisible();

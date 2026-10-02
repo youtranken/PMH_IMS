@@ -19,12 +19,13 @@ test.beforeEach(() => {
 
 async function fillSoftware(
   page: Page,
-  values: { code: string; name: string; kind: string; end?: string; seats?: string },
+  values: { code: string; name: string; kind?: string; end?: string; seats?: string },
 ) {
   const form = page.getByRole('dialog');
   await form.getByRole('textbox', { name: 'Mã hồ sơ' }).fill(values.code);
   await form.getByRole('textbox', { name: 'Tên hồ sơ' }).fill(values.name);
-  await form.getByRole('radio', { name: values.kind, exact: true }).check();
+  // Màn một loại (Q-22) không có ô Loại — chỉ màn Tên miền & SSL mới chọn.
+  if (values.kind) await form.getByRole('radio', { name: values.kind, exact: true }).check();
   if (values.seats) {
     await form.getByRole('textbox', { name: 'Số ghế' }).fill(values.seats);
   }
@@ -72,14 +73,12 @@ test.describe('Hồ sơ phần mềm', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText('0/10')).toBeVisible();
 
-    // Lọc theo loại: license còn, SSL thì mất.
-    const kindFilter = page.getByRole('button', { name: 'Loại', exact: true });
-    await kindFilter.click();
-    await page.getByRole('option', { name: 'Chứng chỉ SSL', exact: true }).click();
+    // Q-22: màn Phần mềm chỉ còn license — không còn ô lọc Loại, và license không lạc sang
+    // màn Tên miền & SSL.
+    await expect(page.getByRole('button', { name: 'Loại', exact: true })).toHaveCount(0);
+    await page.goto(`/domains?q=${encodeURIComponent(code)}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Tên miền & SSL' })).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
-    await kindFilter.click();
-    await page.getByRole('option', { name: 'Mọi loại' }).click();
-    await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 
     // Gia hạn qua API rồi kiểm lịch sử trên UI (widget lịch không phải thứ story này kiểm).
     const csrf = await page.evaluate(async () => {
@@ -202,9 +201,10 @@ test.describe('Hồ sơ phần mềm', () => {
       });
     }
 
-    await page.goto('/software');
+    // Hợp đồng bảo trì có màn riêng (Q-22).
+    await page.goto('/maintenance');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, ghi chú hoặc mã máy' })
+      .getByRole('searchbox', { name: 'Tìm theo mã, tên hoặc ghi chú' })
       .fill(`SORT-E2E-${stamp}`);
     await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 hồ sơ
 
@@ -228,15 +228,15 @@ test.describe('Hồ sơ phần mềm', () => {
     const stamp = uniqueStamp();
     const code = `MAINT-E2E-UI-${stamp}`;
 
-    await page.goto('/software');
-    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
-    await fillSoftware(page, { code, name: 'Hợp đồng bảo trì UPS', kind: 'Hợp đồng bảo trì' });
+    await page.goto('/maintenance');
+    await page.getByRole('button', { name: 'Thêm hợp đồng bảo trì' }).first().click();
+    // Màn một loại: form không hỏi Loại (Q-22).
+    await expect(page.getByRole('dialog').getByRole('radiogroup', { name: 'Loại' })).toHaveCount(0);
+    await fillSoftware(page, { code, name: 'Hợp đồng bảo trì UPS' });
 
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
-    // Loại không có seat thì cột seat là gạch, không phải 0/0.
-    await expect(
-      page.getByRole('row', { name: new RegExp(code) }).getByText('—').first(),
-    ).toBeVisible();
+    // Hợp đồng không có ghế: màn này không có cột Ghế.
+    await expect(page.getByRole('columnheader', { name: 'Ghế' })).toHaveCount(0);
   });
 
   /**
@@ -352,7 +352,14 @@ test.describe('Hồ sơ phần mềm', () => {
    * nhưng chỉ khi hạn còn hiệu lực — hạn cũ thì lượt quét kế tiếp lại tự thanh lý nó.
    */
   async function retiredViaApi(page: Page, code: string, endDate: string): Promise<string> {
-    const created = await createViaApi(page, { code, name: 'Hồ sơ Q-13', kind: 'ssl', endDate });
+    // Hồ sơ SSL phải có ít nhất một tên miền thì form Sửa mới lưu được (Q-22).
+    const created = await createViaApi(page, {
+      code,
+      name: 'Hồ sơ Q-13',
+      kind: 'ssl',
+      endDate,
+      websites: [`${code.toLowerCase()}.e2e.pmh.vn`],
+    });
     expect(created.status).toBe(201);
     const id = created.body.id as string;
     const csrf = await page.evaluate(async () => {

@@ -163,8 +163,9 @@ test('Hết hạn đỏ, Đã thanh lý xám — ở cả sáng lẫn tối', as
     }),
   );
 
-  // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Tất cả" qua URL.
-  await page.goto('/software?status=all');
+  // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Tất cả" qua URL. SSL nằm ở màn
+  // Tên miền & SSL (Q-22).
+  await page.goto('/domains?status=all');
   await searchAndWaitForFilter(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
 
