@@ -415,6 +415,20 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   xem cây bản vẽ (tên, trạng thái) không cần mã, mở nội dung mới hỏi TOTP; Admin/SA lưu là bản nháp,
   bấm "Phát hành" mới thành chính thức; chồng U trong cùng tủ thì chặn; ảnh theo model định danh
   bằng loại thiết bị + chuỗi model; loại dây seed sẵn **Cat6, Fiber, DAC** (SA thêm được).
+- **Trình vẽ và sơ đồ cổng (02/10/2026, chủ dự án chốt trình vẽ sau khi xem mẫu khung vẽ tự viết):**
+  - Trình vẽ là **draw.io (diagrams.net) tự host**: image `jgraph/drawio` ghim tag + digest, nhúng
+    iframe chế độ embed, phục vụ qua nginx tại `/drawio/`, chạy offline trong mạng nội bộ (không
+    đám mây, CDN, plugin). Lý do: sơ đồ mạng thật cần đi dây tự do và thư viện hình Cisco/rack, chủ
+    dự án đã quen draw.io. Thay React Flow của kế hoạch cũ.
+  - Nâng phiên bản draw.io 1–2 lần/năm hoặc khi có cảnh báo bảo mật: đổi tag → dựng lại → chạy E2E
+    sơ đồ, giữ tag cũ để lùi (RUNBOOK).
+  - **Sửa gạch "Chốt thêm" ở trên: bản vẽ KHÔNG ghi sơ đồ cổng**, kể cả lúc phát hành. Dây trên bản
+    vẽ chỉ gắn với một dòng sơ đồ cổng đã có. Kết nối mới, kể cả nối hàng loạt, khai qua hộp sơ đồ
+    cổng dùng chung và ghi ngay như ở trang thiết bị.
+  - Lý do: nét vẽ draw.io kéo rời, nhân bản, xoá được tự do, nên suy ra cổng từ nét vẽ là đoán. Một
+    kết nối có mặt ở nhiều bản vẽ, nên xoá dây trên một bản vẽ không thể nghĩa là xoá kết nối. Thành
+    viên vốn được sửa sơ đồ cổng trực tiếp, nên bắt nó chờ duyệt bản vẽ là không nhất quán. Tự kiểm
+    và cảnh báo lệch kho vẫn so dây với sơ đồ cổng (ARCHITECTURE-SPINE AD-17, AD-18).
 
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
