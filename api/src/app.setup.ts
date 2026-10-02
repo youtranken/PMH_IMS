@@ -1,6 +1,6 @@
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { validationException } from './common/validation-messages';
-import type { Express, NextFunction, Request, Response } from 'express';
+import { json, type Express, type NextFunction, type Request, type Response } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { clientIp } from './common/client-ip';
@@ -28,6 +28,20 @@ export function setupApp(app: INestApplication): void {
   app.use((req: Request, _res: Response, next: NextFunction) =>
     runWithRequestContext({ ip: clientIp(req) }, next),
   );
+
+  /*
+   * Body JSON mặc định của Nest trần 100 KB — vừa cho mọi form, quá nhỏ cho một bản vẽ draw.io
+   * vài trăm hình. Nới RIÊNG route bản vẽ, không nới toàn cục: một trần 5 MB cho mọi route là
+   * mời gửi body khổng lồ vào những cửa chưa từng cần. Đăng ký ở đây chạy TRƯỚC parser mặc định
+   * (Nest gắn nó lúc `listen`), và parser mặc định bỏ qua body đã đọc.
+   *
+   * Bọc trong một hàm tên khác: Nest thấy trong stack đã có layer tên `jsonParser` (tên hàm
+   * `json()` trả về) thì KHÔNG gắn parser mặc định nữa, và mọi route khác mất body JSON.
+   */
+  const diagramJson = json({ limit: '5mb' });
+  app.use('/api/v1/diagram-spike', function diagramSpikeBody(req: Request, res: Response, next: NextFunction) {
+    diagramJson(req, res, next);
+  });
 
   app.use(cookieParser());
   app.use(

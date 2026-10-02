@@ -45,6 +45,7 @@ import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
+import { DiagramsSpikeScreen } from '@/features/diagrams-spike/diagrams-spike-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
 import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
 import { IpamScreen } from '@/features/ipam/ipam-screen';
@@ -277,6 +278,11 @@ function AppRoutes() {
         <Route path={PATHS.ipAddresses} element={<IpamScreen me={me} />} />
         <Route path={`${PATHS.ipAddresses}/:id`} element={<IpamScreen me={me} />} />
         <Route path={PATHS.nat} element={<NatScreen me={me} />} />
+        {canSeeRoute(PATHS.diagramSpike, me.role) ? (
+          <Route path={PATHS.diagramSpike} element={<DiagramsSpikeScreen me={me} />} />
+        ) : (
+          <Route path={PATHS.diagramSpike} element={<Forbidden roles={ROUTE_ROLES[PATHS.diagramSpike]} />} />
+        )}
         <Route path={PATHS.serviceAccounts} element={<ServiceAccountsScreen me={me} />} />
         <Route
           path={`${PATHS.serviceAccounts}/:id`}

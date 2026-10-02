@@ -42,6 +42,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Sắp hết hạn', path: '/expiry', heading: /^Sắp hết hạn$/ },
     { link: 'Địa chỉ IP', path: '/ip-addresses', heading: /^Địa chỉ IP$/ },
     { link: 'Sổ NAT', path: '/nat', heading: /^Sổ NAT$/ },
+    // Bản thử draw.io (Q-23): màn dựng được cả khi service drawio chưa chạy.
+    { link: 'Sơ đồ mạng (thử)', path: '/diagrams-spike', heading: /^Sơ đồ mạng \(bản thử\)$/ },
     { link: 'Tài khoản dịch vụ', path: '/service-accounts', heading: /^Tài khoản dịch vụ$/ },
     { link: 'Duyệt mở két', path: '/approvals', heading: /^Duyệt mở két$/ },
     { link: 'Két sắt', path: '/vault', heading: /^Két sắt$/ },
@@ -65,7 +67,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * `<h1>` đổi chữ mà i18n không đổi theo, hoặc một mục cho màn chưa có quay lại menu.
    */
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
-    // 18 lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
+    // Mỗi mục menu một lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 

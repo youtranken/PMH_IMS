@@ -10,6 +10,7 @@ import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DisposalModule } from './modules/disposal/disposal.module';
+import { DiagramsModule } from './modules/diagrams/diagrams.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { OwnerAccessModule } from './common/owner-access.registry';
@@ -99,6 +100,7 @@ import { VaultModule } from './modules/vault/vault.module';
     IpamModule,
     DashboardModule,
     DisposalModule,
+    DiagramsModule,
   ],
   controllers: [HealthController],
   providers: [

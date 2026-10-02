@@ -84,7 +84,7 @@ export function useMe() {
 export function useApiMutation<TInput, TResult>(
   path: string | ((input: TInput) => string),
   options: {
-    method?: 'POST' | 'PATCH' | 'DELETE';
+    method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     csrfToken?: string | null;
     refreshMe?: boolean;
     /**

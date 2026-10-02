@@ -116,6 +116,7 @@ export const ACTION_KEY: Record<string, string> = {
   'nat.updated': 'audit.actions.natUpdated',
   'nat.voided': 'audit.actions.natVoided',
   'system_config.updated': 'audit.actions.systemConfigUpdated',
+  'diagram_spike.saved': 'audit.actions.diagramSpikeSaved',
   'crypto.rewrapped': 'audit.actions.cryptoRewrapped',
 };
 
@@ -270,6 +271,7 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   ip: 'network',
   subnet: 'network',
   nat: 'network',
+  diagram_spike: 'network',
   expiry: 'expiry',
   disposal: 'disposal',
   file: 'file',
@@ -320,6 +322,7 @@ export const OBJECT_TYPE_KEY: Record<string, string> = {
   disposal: 'audit.objectType.disposal',
   file: 'audit.objectType.file',
   system_config: 'audit.objectType.systemConfig',
+  diagram_spike: 'audit.objectType.diagramSpike',
 };
 
 export function objectTypeLabel(type: string | null, t: TFunction): string | null {

@@ -156,6 +156,9 @@ const DOMAINS = {
     `DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'`,
   ],
 
+  /** Bản thử draw.io: bài E2E lưu dưới tên có chữ E2E, không bao giờ đè bản vẽ thật. */
+  diagrams: [`DELETE FROM diagram_spike WHERE name ILIKE '%E2E%'`],
+
   isp: [
     /*
      * `secret.owner_type` nhận cả `isp`, như dòng `file` ngay dưới. Ba loại chủ thể kia đều có

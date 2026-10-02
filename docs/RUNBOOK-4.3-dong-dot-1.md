@@ -356,6 +356,7 @@ account:<id>`) và đường dẫn trong JSON (`detail.reason`).
 | DB dựng **trước lượt gộp migration** (Q-17) | Chỉ có ở máy dev/thử nghiệm: không nâng cấp được, phải dựng lại DB trắng (xem **H2**). Cài mới theo **B** không bị ảnh hưởng. Cũng vì thế, không quay về một tag trước lượt gộp trên DB đã dựng từ bộ gộp |
 | Nâng cấp qua migration `0037` (một máy một IP, Q-20) | Chạy câu kiểm ở **H3** **trước** khi `up` bản mới; ra dòng nào thì thu hồi bớt IP thừa trên bản đang chạy |
 | Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
+| draw.io (sơ đồ mạng thử): phiên bản, nâng cấp, chạy offline | Xem **H4** |
 | Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
 | Đổi trần giấy tờ đính kèm | Màn **Tham số hệ thống → Giấy tờ đính kèm**: `file.max_size_mb` (1–25), `file.max_files_per_batch`, `file.purge_after_days`. Trần cứng 25 MB nằm ở `FILE_HARD_CAP_MB` (API) và `client_max_body_size 26m` (`web/nginx.conf`); muốn quá 25 MB phải sửa code và dựng lại `api` + `web`, không chỉnh được bằng tham số |
 | Dọn nội dung file đã xoá | Worker tự chạy mỗi phút: file xoá mềm quá `file.purge_after_days` ngày (mặc định 30) bị gỡ khỏi volume `filesdata`, hàng DB giữ lại với `purged_at`, nhật ký ghi `file.purged`. Cần lấy lại một file đã xoá thì phải làm **trước** mốc đó (từ volume), hoặc lấy từ bản `files-<ngày>.tgz` trên NAS |
@@ -461,6 +462,52 @@ SQL
 
 - [ ] Bước 1 chỉ liệt kê, không đổi gì
 - [ ] Sau bước 3: file `.dump` có trên NAS, `pg_restore --list` thấy `TABLE DATA public audit_archive_<năm>`
+
+### H4. draw.io — sơ đồ mạng (bản thử, Q-23)
+
+Màn **Mạng → Sơ đồ mạng (thử)** nhúng draw.io tự host. draw.io chạy ở service `drawio` (không mở
+cổng ra host); trình duyệt chỉ thấy nó qua `https://<ims>/drawio/` của nginx `web`.
+
+**Phiên bản đang khoá:** `jgraph/drawio:31.6.1@sha256:54a3a3e6e8f9ff9bf5ee3a722d8ebe3f497da3addbcf14ef62938d07854b2561`
+(dòng `image:` của service `drawio` trong `docker-compose.yml`). Ghim cả digest vì một tag có thể
+bị đẩy lại.
+
+**Chạy offline.** Ảnh chứa trọn draw.io (mã, hình, tiếng Việt); khung vẽ không gọi ra Internet
+(đã kiểm: không request nào ra ngoài). Máy chủ không có Internet thì mang ảnh sang:
+
+```bash
+# ở máy có mạng
+docker pull jgraph/drawio:31.6.1 && docker save jgraph/drawio:31.6.1 | gzip > drawio-31.6.1.tgz
+# ở máy chủ IMS
+docker load < drawio-31.6.1.tgz
+```
+
+**Bật lần đầu** (bản có sơ đồ thử): `docker compose up -d --build` — `migrate` áp `0043_diagram_spike`,
+`web` dựng lại với cấu hình nginx mới, `drawio` lên. Kiểm:
+
+```bash
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost/drawio/        # 200
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost/drawio/proxy   # 404 — servlet tải hộ URL phải bị chặn
+docker compose ps drawio                                                   # healthy
+```
+
+Log `drawio` có dòng `WARNING: No write access to /usr/local/tomcat` lúc khởi động: chủ ý (rootfs
+chỉ đọc), cấu hình chạy là bản đóng sẵn trong ảnh.
+
+**Nâng cấp draw.io:**
+
+1. Chọn tag mới ở Docker Hub `jgraph/drawio`; đọc ghi chú phát hành phần "embed" (giao thức nhúng).
+2. `docker pull jgraph/drawio:<tag>` rồi lấy digest: `docker image inspect --format '{{index .RepoDigests 0}}' jgraph/drawio:<tag>`.
+3. Sửa dòng `image:` của `drawio` (tag + digest), commit.
+4. Trên stack dev/E2E (KHÔNG phải prod): `docker compose ... up -d drawio`, rồi
+   `cd e2e && npx playwright test tests/diagrams-spike.spec.ts --reporter=line`. Đỏ ở bước chèn hoặc
+   lưu = giao thức nhúng đã đổi → giữ tag cũ, ghi lại vào checklist.
+5. Xanh thì lên prod: `docker compose up -d drawio` (không cần dựng lại `web` nếu nginx không đổi).
+6. Quay lại: trả dòng `image:` cũ, `docker compose up -d drawio`. Bản vẽ không bị ảnh hưởng: chúng
+   nằm trong bảng `diagram_spike`, service `drawio` không giữ dữ liệu.
+
+**Khi `drawio` dừng:** IMS vẫn chạy bình thường; riêng màn sơ đồ báo "Không mở được draw.io" sau
+khoảng 15 giây. Bản vẽ đi theo bản sao lưu DB hằng đêm (mục **D**), không cần sao lưu gì thêm.
 
 ---
 
