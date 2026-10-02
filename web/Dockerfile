@@ -14,5 +14,6 @@ FROM nginx:1.29.8-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY proxy-api-headers.conf /etc/nginx/proxy-api-headers.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
+COPY drawio-headers.conf /etc/nginx/drawio-headers.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80 443
