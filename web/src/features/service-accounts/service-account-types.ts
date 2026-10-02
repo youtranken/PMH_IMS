@@ -34,6 +34,8 @@ export interface ServiceAccountRow {
   groupName: string | null;
   allowedIps: string | null;
   note: string | null;
+  /** Hạn dùng `YYYY-MM-DD` (Q-20). `null` = không có hạn. */
+  endDate: string | null;
   status: ServiceAccountStatus;
   createdBy: string;
   createdAt: string;

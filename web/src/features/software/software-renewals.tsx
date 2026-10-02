@@ -18,6 +18,8 @@ export interface RenewalRow {
   /** Website của RIÊNG kỳ này (SSL/tên miền); null = loại hồ sơ không có website. */
   websites: string[] | null;
   actor: string;
+  /** Họ tên người gia hạn (API tra qua users); null = không tra được, hiện email. */
+  actorName?: string | null;
   createdAt: string;
 }
 
@@ -82,7 +84,17 @@ export function SoftwareRenewals({
           } satisfies ColumnDef<RenewalRow, unknown>,
         ]
       : []),
-    { id: 'actor', header: t('software.renewalActor'), cell: ({ row }) => row.original.actor },
+    {
+      id: 'actor',
+      header: t('software.renewalActor'),
+      // Cùng cách gọi người như màn Sắp hết hạn: họ tên, email ở chú thích.
+      cell: ({ row }) =>
+        row.original.actorName ? (
+          <span title={row.original.actor}>{row.original.actorName}</span>
+        ) : (
+          row.original.actor
+        ),
+    },
   ];
 
   return (

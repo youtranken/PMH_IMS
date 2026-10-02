@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, within } from '@/test/test-utils';
 import { DisposalScreen } from './disposal-screen';
 
 const DEVICE = {
@@ -112,5 +112,16 @@ describe('Kho thanh lý', () => {
       'Khôi phục…',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Khôi phục…' })).toHaveClass('ok');
+  });
+
+  /* Q-20: hai ô ngày là MỘT cụm "từ – đến" trên cùng hàng; chữ trong ô ngắn, tên đầy đủ ở nhãn. */
+  it('khoảng ngày thanh lý: hai ô chung một cụm, chữ ngắn "Từ ngày"/"Đến ngày"', async () => {
+    renderWith([]);
+    await screen.findByText('PC-E2E-01');
+    const range = screen.getByRole('group', { name: 'Khoảng ngày thanh lý' });
+    const from = within(range).getByRole('button', { name: 'Thanh lý từ ngày' });
+    const to = within(range).getByRole('button', { name: 'Thanh lý đến ngày' });
+    expect(from).toHaveTextContent('Từ ngày');
+    expect(to).toHaveTextContent('Đến ngày');
   });
 });

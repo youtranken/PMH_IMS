@@ -59,12 +59,17 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'rateTotpPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 3, max: 60, warnAbove: 20 },
   { name: 'rateFileUploadPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 5, max: 300 },
   { name: 'loginAccountBackoffMinutes', group: 'auth', type: 'int_list', unit: 'minutes', min: 1, max: 1440 },
+  // Ân hạn này mở cho MỌI route `@RequiresStepUp` (tài khoản, tham số, két, cấp quyền), nên nằm nhóm đăng nhập chứ không phải két.
+  { name: 'secretStepUpGraceMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
   { name: 'totpEnrollReauthMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60 },
+  // Dưới 1 phút thì người gõ chậm không kịp mở ứng dụng xác thực.
+  { name: 'authTotpChallengeMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 30, warnAbove: 10 },
+  // Trần một tuần: mật khẩu tạm nằm trong hộp thư lâu hơn thế là chìa thất lạc.
+  { name: 'authTempPasswordHours', group: 'auth', type: 'int', unit: 'hours', min: 1, max: 168, warnAbove: 72 },
   { name: 'authSupportContact', group: 'auth', type: 'text', maxLength: 300 },
   // Két sắt
   { name: 'rateSecretRevealPerMinute', group: 'vault', type: 'int', unit: 'per_minute', min: 5, max: 300, warnAbove: 60 },
   { name: 'secretRevealSeconds', group: 'vault', type: 'int', unit: 'seconds', min: 10, max: 600, warnAbove: 120 },
-  { name: 'secretStepUpGraceMinutes', group: 'vault', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
   { name: 'secretStepUpMaxFailures', group: 'vault', type: 'int', unit: 'times', min: 3, max: 20 },
   { name: 'secretProbeAlertThreshold', group: 'vault', type: 'int', unit: 'times', min: 0, max: 50, warnZero: true },
   { name: 'secretProbeWindowMinutes', group: 'vault', type: 'int', unit: 'minutes', min: 1, max: 1440 },

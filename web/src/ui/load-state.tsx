@@ -40,7 +40,7 @@ export function EmptyState({
 
 /**
  * Khối hiện thay cho một màn vừa ném lỗi lúc render (`ErrorBoundary`). Không dùng router: nó
- * còn được đặt ở gốc app, ngoài `BrowserRouter`.
+ * còn được đặt ở gốc app, ngoài router.
  */
 export function ScreenError() {
   const { t } = useTranslation();
@@ -48,7 +48,7 @@ export function ScreenError() {
     <div className="error-state" role="alert">
       <h1>{t('app.screenErrorTitle')}</h1>
       <p className="muted">{t('app.screenErrorHint')}</p>
-      <div className="detail-actions">
+      <div className="error-actions">
         <button type="button" className="primary" onClick={() => window.location.reload()}>
           {t('app.reload')}
         </button>

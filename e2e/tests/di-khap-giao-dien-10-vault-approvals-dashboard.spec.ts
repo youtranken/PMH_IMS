@@ -333,14 +333,18 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---- Khối "Luật của két" ---- */
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Luật của két' })).toBeVisible();
+    /* Luật két nằm sau nút "Luật két" (Q-21), không chiếm chỗ cố định dưới bảng. */
+    await expect(page.getByRole('heading', { level: 2, name: 'Luật của két' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Luật két', exact: true }).click();
+    const rules = page.getByRole('dialog', { name: 'Luật của két' });
+    await expect(rules).toBeVisible();
     /*
-     * `<ul class="vault-rules">` là danh sách DUY NHẤT trong `<main>` của màn này, nên gom
-     * `listitem` là gom đúng bốn gạch luật. So nguyên văn: đây là chỗ duy nhất trong sản phẩm
-     * nói cho người dùng biết luật mở két, sửa chữ ở đây phải là một quyết định có ý thức.
+     * `<ul class="vault-rules">` là danh sách DUY NHẤT trong hộp này, nên gom `listitem` là
+     * gom đúng bốn gạch luật. So nguyên văn: đây là chỗ duy nhất trong sản phẩm nói cho người
+     * dùng biết luật mở két, sửa chữ ở đây phải là một quyết định có ý thức.
      */
     expect(
-      await page.getByRole('main').getByRole('listitem').allTextContents(),
+      await rules.getByRole('listitem').allTextContents(),
       '"Luật của két" phải đủ BỐN gạch: cất · gõ mã · tự ẩn · ghi nhật ký',
     /*
      * Vì sao từng câu nói đúng như thế:
@@ -359,6 +363,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Giá trị hiện ra rồi tự ẩn (có đồng hồ đếm ngược). Không có nút sao chép hàng loạt.',
       'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xóa được.',
     ]);
+    await rules.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await expect(rules).toBeHidden();
   });
 
   /* ================================================================== *
@@ -400,9 +406,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(grid, 'ma trận phải nằm trong khung cuộn riêng, không để cả trang cuộn ngang')
       .toBeVisible();
 
-    // Lọc CỘT về đúng họ "Phần mềm" — danh sách cố định, so được nguyên văn.
+    // Lọc CỘT về đúng họ "Phần mềm & dịch vụ có hạn" — danh sách cố định, so được nguyên văn.
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
-    await page.getByRole('option', { name: 'Phần mềm', exact: true }).click();
+    await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
 
     /*
      * Tiêu đề cột loại là NÚT "Gán … cho nhiều người", kèm dấu `+` trang trí
@@ -415,16 +421,16 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
           text.replace(/\+$/, ''),
         ),
       ),
-      'lọc về họ "Phần mềm" thì lưới phải còn đúng: cột tên người + tiêu đề họ + năm loại phần mềm',
+      'lọc về họ "Phần mềm & dịch vụ có hạn" thì lưới phải còn đúng: cột tên người + tiêu đề họ + năm loại phần mềm',
     ).toEqual(
       asSet([
         'Người',
-        'Phần mềm',
+        'Phần mềm & dịch vụ có hạn',
         'License',
         'Chứng chỉ SSL',
         'Tên miền',
         'Hợp đồng bảo trì',
-        'Khác',
+        'Dịch vụ có hạn khác',
       ]),
     );
     await expect(
@@ -693,12 +699,12 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'SA phải thấy đủ sáu khối — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
     ).toEqual(
       asSet([
-        'Hạn cần xử lý',
+        'Tổng hợp hết hạn cần xử lý',
         'Dải mạng ≥ N%',
         'Két lâu chưa đổi',
         'Sự cố tuần qua',
         'Yêu cầu mở két tuần qua',
-        'Vừa vào kho thanh lý (7 ngày)',
+        'Tổng hợp kho thanh lý (7 ngày)',
       ]),
     );
 
@@ -721,7 +727,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
     // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Hạn cần xử lý' }),
+      page.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' }),
       'Member vẫn phải thấy khối "Sắp hết hạn" — cắt theo vai không phải là cắt sạch',
     ).toBeVisible();
 
@@ -731,10 +737,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Member phải thấy đúng bốn khối không dính bí mật',
     ).toEqual(
       asSet([
-        'Hạn cần xử lý',
+        'Tổng hợp hết hạn cần xử lý',
         'Dải mạng ≥ N%',
         'Sự cố tuần qua',
-        'Vừa vào kho thanh lý (7 ngày)',
+        'Tổng hợp kho thanh lý (7 ngày)',
       ]),
     );
 
@@ -914,8 +920,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "XOAY": một ô, và Esc đóng được ---------- */
 
-    await rowAction(page, label, 'Đổi giá trị');
-    const rotate = page.getByRole('dialog', { name: `Đổi giá trị — ${label}` });
+    await rowAction(page, label, 'Đổi mật khẩu');
+    const rotate = page.getByRole('dialog', { name: `Đổi mật khẩu — ${label}` });
     await expect(rotate).toBeVisible();
     expect(
       await textboxLabels(rotate),
@@ -926,7 +932,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /*
      * Xoay RỖNG: cùng hàng rào với hộp Cất — form `noValidate`, câu tiếng Việt dưới ô.
      */
-    await rotate.getByRole('button', { name: 'Đổi giá trị' }).click();
+    await rotate.getByRole('button', { name: 'Đổi mật khẩu' }).click();
     await expect(
       rotate.getByLabel('Giá trị mới'),
       'xoay rỗng phải bị chặn bằng câu tiếng Việt ngay dưới ô',
@@ -1187,7 +1193,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
-    await page.getByRole('option', { name: 'Phần mềm', exact: true }).click();
+    await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
     await grid.getByRole('button', { name: 'Gán "Phần mềm: License" cho nhiều người' }).click();
 
     const bulk = page.getByRole('dialog', { name: 'Gán "Phần mềm: License" cho người dùng' });

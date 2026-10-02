@@ -11,7 +11,7 @@ import { formatDate, formatDateTime, orDash, todayIso } from '@/lib/format';
 import { daysBetweenIso, periodRange } from '@/lib/period-range';
 import type { Me } from '@/lib/me';
 import { renewPreset } from '@/lib/renew-dates';
-import { PATHS } from '@/lib/routes';
+import { softwareItemPath } from '@/lib/software-screens';
 import { useApiMutation } from '@/lib/api';
 import { DataTable, type TableGroupBy } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
@@ -749,7 +749,7 @@ function BulkRenewBar({
         disabled={busy || renewable.length === 0}
         onClick={() => void run()}
       >
-        {busy ? t('common.loading') : t('expiry.bulkRenew', { count: renewable.length })}
+        {busy ? t('common.working') : t('expiry.bulkRenew', { count: renewable.length })}
       </button>
     </StickyActionBar>
   );
@@ -779,7 +779,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         header: t('expiry.item'),
         // Chỉ hồ sơ phần mềm ghi lượt gia hạn — link về đúng trang chi tiết của nó.
         cell: ({ row }) => (
-          <Link to={PATHS.softwareItem(row.original.objectId)}>{row.original.label}</Link>
+          <Link to={softwareItemPath(row.original.objectKind, row.original.objectId)}>{row.original.label}</Link>
         ),
       },
       {
@@ -820,14 +820,14 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         <DatePicker
           value={range.from}
           ariaLabel={t('expiry.renewalsFrom')}
-          placeholder={t('expiry.renewalsFrom')}
+          placeholder={t('common.fromDate')}
           max={range.to || undefined}
           onChange={(from) => setRange((current) => ({ ...current, from }))}
         />
         <DatePicker
           value={range.to}
           ariaLabel={t('expiry.renewalsTo')}
-          placeholder={t('expiry.renewalsTo')}
+          placeholder={t('common.toDate')}
           min={range.from || undefined}
           onChange={(to) => setRange((current) => ({ ...current, to }))}
         />
@@ -861,7 +861,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         stackOnMobile
         mobileCard={{
           title: (row) => row.label,
-          href: (row) => PATHS.softwareItem(row.objectId),
+          href: (row) => softwareItemPath(row.objectKind, row.objectId),
           meta: (row) =>
             `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actorName ?? row.actor}`,
           aside: (row) => formatDate(row.createdAt),

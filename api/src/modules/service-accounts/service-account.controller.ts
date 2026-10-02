@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsIn, IsOptional, IsString, IsUUID, Length, ValidateIf } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, Validate, ValidateIf } from 'class-validator';
+import { RealDateOrEmpty } from '../../common/real-date';
 import { NoSecretText } from '../../common/no-secret-text';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -9,6 +10,7 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import {
   SERVICE_ACCOUNT_KINDS,
+  serviceAccountStatusQuery,
   type ServiceAccountKind,
   type ServiceAccountStatus,
 } from './service-account-rules';
@@ -69,6 +71,11 @@ export class ServiceAccountBodyDto {
   @IsOptional() @IsString() @Length(0, 2000) allowedIps?: string;
   @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
 
+  /** Hạn dùng (Q-20) — VPN/tài khoản cấp có thời hạn. Chuỗi rỗng = bỏ hạn. */
+  @IsOptional()
+  @Validate(RealDateOrEmpty, { message: 'Ngày hết hạn phải là ngày có thật, dạng YYYY-MM-DD.' })
+  endDate?: string;
+
   /*
    * KHÔNG có `status` — xem chú thích ở `ServiceAccountInput`. Đổi trạng thái đi qua
    * `:id/disable` và `:id/enable`, hai đường bắt ghi lý do.
@@ -99,7 +106,7 @@ function filterOf(query: {
   return {
     search: query.search,
     kind: query.kind,
-    status: query.status,
+    status: serviceAccountStatusQuery(query.status),
     anyIp: query.anyIp === 'true',
   };
 }
@@ -182,6 +189,7 @@ export class ServiceAccountController {
         { header: 'Nhóm VPN', width: 18, value: (r) => r.groupName ?? '' },
         { header: 'Dải IP được phép', width: 28, value: (r) => r.allowedIps ?? '' },
         { header: 'Trạng thái', width: 16, value: (r) => STATUS_LABEL[r.status] ?? r.status },
+        { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Ghi chú', width: 30, value: (r) => r.note ?? '' },
       ],
       rows,

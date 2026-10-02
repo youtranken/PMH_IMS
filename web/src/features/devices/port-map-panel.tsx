@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -6,16 +6,16 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import { foldSearch } from '@/lib/search-fold';
-import { Combobox } from '@/ui/combobox';
+import { DeviceCombobox } from '@/ui/device-combobox';
 import { MOBILE_CARD_QUERY, TableWrap } from '@/ui/data-table';
 import { useMediaQuery } from '@/ui/use-media-query';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -458,35 +458,19 @@ function PortForm({
       : null,
   );
   const [query, setQuery] = useState(port?.connectedDeviceCode ?? '');
-  const [debounced, setDebounced] = useState(query);
   const [connectedLabel, setConnectedLabel] = useState(port?.connectedLabel ?? '');
   const [connectedPort, setConnectedPort] = useState(port?.connectedPort ?? '');
   const [usedBy, setUsedBy] = useState(port?.usedBy ?? '');
   const [vlan, setVlan] = useState(port?.vlan ?? '');
   const departments = useDepartments();
   const [note, setNote] = useState(port?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([portLabel, mode, peer, connectedLabel, connectedPort, usedBy, vlan, note]);
   const keepOpen = useRef(false);
   const labelRef = useRef<HTMLInputElement>(null);
   const check = useFormErrors({
     portLabel: !portLabel.trim() && t('ports.portRequired'),
     note: secretTextRule(t, note),
     connectedLabel: mode === 'free' ? secretTextRule(t, connectedLabel) : null,
-  });
-
-  // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(query), 250);
-    return () => clearTimeout(id);
-  }, [query]);
-
-  const candidates = useQuery({
-    queryKey: ['devices', 'picker', debounced],
-    enabled: mode === 'device' && debounced.trim().length >= 2,
-    queryFn: () =>
-      apiFetch<{ items: DeviceRow[] }>(
-        `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
-      ),
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
@@ -523,9 +507,9 @@ function PortForm({
       })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           {/* Khai cả dãy cổng: tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
           {port ? null : (
             <button
@@ -549,7 +533,7 @@ function PortForm({
               keepOpen.current = false;
             }}
           >
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -625,29 +609,19 @@ function PortForm({
 
         {mode === 'device' ? (
           <Field label={t('ports.peerDevice')} hint={t('ports.peerDeviceHint')}>
-            <Combobox
+            <DeviceCombobox
               placeholder={t('ports.peerSearch')}
               /* Tên trợ năng tường minh: form này có HAI combobox (thiết bị đầu kia và ô "ai
                  dùng" gợi ý theo danh mục Bộ phận). */
               ariaLabel={t('ports.peerDevice')}
-              query={query}
-              onQuery={(value) => {
-                setQuery(value);
-                // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện tên A mà id vẫn là B.
-                setPeer(null);
+              value={{ deviceId: peer?.id ?? '', term: query }}
+              onChange={(next) => {
+                setQuery(next.term);
+                setPeer(next.device ? { id: next.device.id, code: next.device.code } : null);
               }}
-              options={candidates.data?.items.filter((item) => item.id !== deviceId) ?? []}
-              failed={candidates.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
-                </>
-              )}
-              onSelect={(item) => {
-                setPeer({ id: item.id, code: item.code });
-                setQuery(item.code);
-              }}
+              minChars={2}
+              // Cổng không nối vào chính máy chứa nó.
+              exclude={[deviceId]}
             />
           </Field>
         ) : (

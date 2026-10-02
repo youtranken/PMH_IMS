@@ -12,12 +12,20 @@ describe('ISP_EXPORT_COLUMNS', () => {
       'Tốc độ gói cước',
       'IP WAN',
       'Site',
-      'Thiết bị biên',
+      'Thiết bị',
       'Hotline',
       'Số hợp đồng',
       'Bắt đầu',
       'Trạng thái',
       'Ghi chú',
     ]);
+  });
+
+  it('nhiều IP WAN chung một ô, ngăn bằng dấu phẩy (Q-20)', () => {
+    const wan = ISP_EXPORT_COLUMNS.find((c) => c.header === 'IP WAN')!;
+    expect(wan.value({ wanIps: ['113.161.10.20', '113.161.10.21'] } as never)).toBe(
+      '113.161.10.20, 113.161.10.21',
+    );
+    expect(wan.value({ wanIps: [] } as never)).toBe('');
   });
 });

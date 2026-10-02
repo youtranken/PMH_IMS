@@ -1,7 +1,7 @@
 const THEME_KEY = 'ims_theme'; // chỉ theme — KHÔNG token (AD-8)
 
 export type Theme = 'light' | 'dark';
-/** Lựa chọn của người dùng. 'system' = không lưu gì, theo `prefers-color-scheme` của máy. */
+/** Lựa chọn của người dùng. 'system' = theo `prefers-color-scheme` của máy. */
 export type ThemePreference = Theme | 'system';
 
 const SYSTEM_DARK = '(prefers-color-scheme: dark)';
@@ -18,26 +18,45 @@ function setTheme(theme: Theme): void {
   setThemePreference(theme);
 }
 
+/** Chưa chọn gì thì dùng giao diện sáng (Q-21). */
+const DEFAULT_THEME: Theme = 'light';
+
 /**
- * Lựa chọn đang lưu. "Theo hệ thống" là KHÔNG có khoá trong kho — đúng quy ước mà
- * `public/theme-init.js` đọc lúc tải trang, nên hai nơi không thể hiểu lệch nhau.
+ * Lựa chọn đang lưu. Không có khoá (hoặc kho bị chặn) = mặc định sáng; "Theo hệ thống" lưu hẳn
+ * chữ 'system'. Đúng quy ước mà `public/theme-init.js` đọc lúc tải trang — hai nơi phải hiểu
+ * giống nhau, không thì trang chớp sang theme khác khi React lên.
  */
 export function themePreference(): ThemePreference {
   try {
     const saved = localStorage.getItem(THEME_KEY);
-    return saved === 'dark' || saved === 'light' ? saved : 'system';
+    return saved === 'dark' || saved === 'light' || saved === 'system' ? saved : DEFAULT_THEME;
   } catch {
-    return 'system';
+    return DEFAULT_THEME;
   }
+}
+
+/**
+ * Nền/viền có transition cho lúc rê chuột (Q-21); đổi theme mà để nó chạy thì cả màn mờ dần
+ * qua vài trăm ms, và hai ô cùng trạng thái đọc ra hai màu khác nhau giữa chừng. Tắt transition
+ * (`html[data-theme-switching]` trong base.css) đúng lúc đổi, bật lại ở khung hình thứ hai —
+ * khung đầu là lúc trình duyệt tính style mới.
+ */
+function applyWithoutTransitions(theme: Theme): void {
+  const root = document.documentElement;
+  root.setAttribute('data-theme-switching', '');
+  root.dataset.theme = theme;
+  void getComputedStyle(root).color;
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => root.removeAttribute('data-theme-switching')),
+  );
 }
 
 export function setThemePreference(pref: ThemePreference): void {
   const theme: Theme =
     pref === 'system' ? (window.matchMedia(SYSTEM_DARK).matches ? 'dark' : 'light') : pref;
-  document.documentElement.dataset.theme = theme;
+  applyWithoutTransitions(theme);
   try {
-    if (pref === 'system') localStorage.removeItem(THEME_KEY);
-    else localStorage.setItem(THEME_KEY, pref);
+    localStorage.setItem(THEME_KEY, pref);
   } catch {
     // storage bị chặn thì vẫn đổi theme phiên hiện tại
   }

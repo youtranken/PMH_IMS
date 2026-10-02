@@ -17,7 +17,9 @@ function stub(lockouts: AccountLockout[]) {
   vi.stubGlobal('fetch', fetchMock);
 }
 
-function renderDialog(props: { onClearLockout?: () => void; onOpenSessions?: () => void } = {}) {
+function renderDialog(
+  props: { onClearLockout?: () => void; onOpenSessions?: () => void; vaultAccessPath?: string } = {},
+) {
   return renderWithI18n(
     <MemoryRouter>
       <AccountDetailDialog
@@ -27,6 +29,7 @@ function renderDialog(props: { onClearLockout?: () => void; onOpenSessions?: () 
         onEdit={() => {}}
         onOpenSessions={props.onOpenSessions ?? (() => {})}
         onClearLockout={props.onClearLockout}
+        vaultAccessPath={props.vaultAccessPath}
       />
     </MemoryRouter>,
   );
@@ -78,5 +81,19 @@ describe('AccountDetailDialog', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Phiên đang mở' }));
     expect(onOpenSessions).toHaveBeenCalledOnce();
+  });
+
+  /* Q-21: lối sang Quyền két của một Thành viên chuyển từ menu dòng vào đây. */
+  it('có vaultAccessPath thì có link Quyền két sắt; không có thì không', async () => {
+    stub([]);
+    const { unmount } = renderDialog({ vaultAccessPath: '/admin/vault-access?user=u-7' });
+    expect(await screen.findByRole('link', { name: 'Quyền két sắt' })).toHaveAttribute(
+      'href',
+      '/admin/vault-access?user=u-7',
+    );
+    unmount();
+    renderDialog();
+    await screen.findByText('Không bị tạm chặn ở đâu.');
+    expect(screen.queryByRole('link', { name: 'Quyền két sắt' })).not.toBeInTheDocument();
   });
 });

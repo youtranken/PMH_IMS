@@ -5,7 +5,7 @@ textarea {
   font: inherit;
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   padding: var(--space-4) var(--space-5);
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
@@ -14,9 +14,12 @@ textarea {
 input::placeholder {
   color: var(--ink-3);
 }
-input:hover:not(:focus):not(:disabled),
-select:hover:not(:focus):not(:disabled),
-textarea:hover:not(:focus):not(:disabled) {
+/* `:where()` giữ độ ưu tiên (0,0,1): viền hover chung phải THUA mọi luật có class — viền đỏ của
+   ô lỗi (`.inp[aria-invalid]`) và viền kính trên card đăng nhập (`.auth-form .inp`). Bản
+   `input:hover:not(:focus):not(:disabled)` là (0,3,1), rê chuột vào là ô lỗi mất viền đỏ. */
+input:where(:hover:not(:focus):not(:disabled)),
+select:where(:hover:not(:focus):not(:disabled)),
+textarea:where(:hover:not(:focus):not(:disabled)) {
   border-color: var(--ink-3);
 }
 input:focus,
@@ -90,18 +93,25 @@ button {
   font-weight: var(--fw-semibold);
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   padding: 0.48rem var(--space-6);
   cursor: pointer;
-  transition: background 0.15s var(--ease), border-color 0.15s var(--ease),
-    box-shadow 0.15s var(--ease), transform 0.08s var(--ease), opacity 0.15s;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
+    transform 0.08s var(--ease), opacity var(--dur-fast);
   white-space: nowrap;
 }
-button:hover:not(:disabled) {
+/* `:where()` giữ độ ưu tiên ở (0,0,1), ngang `button` ở trên: chỉ nút KHÔNG tự khai nền mới ăn
+   nền hover chung. Bản `button:hover:not(:disabled)` là (0,2,1), thắng cả luật `.x:hover` của
+   component, nên nút trong suốt trên mặt tối (sidebar, card đăng nhập, toast) hover ra ô gần
+   trắng với chữ trắng. Component nào tự khai nền thì tự khai luôn hover (css/button-hover.test.ts). */
+button:where(:hover:not(:disabled)) {
   background: var(--surface-2);
 }
-button:active:not(:disabled) {
+/* Cùng lý do `:where()`: nút tự định vị bằng `transform` (mũi tên combobox, nút xoá ngày — cả hai
+   `translateY(-50%)`) không được bị cái nhún 1px này đè mất khi bấm, nhảy lệch nửa chiều cao. */
+button:where(:active:not(:disabled)) {
   transform: translateY(1px);
 }
 button:focus-visible {
@@ -173,8 +183,6 @@ button.primary {
   box-shadow: var(--shadow-sm);
 }
 button.primary:hover:not(:disabled) {
-  /* PHẢI khai báo lại background: rule chung `button:hover{background:surface-2}` có
-     specificity cao hơn base `button.primary` → nếu không, hover đè nền sáng lên nút chính. */
   background: var(--primary);
   filter: brightness(1.06);
   box-shadow: var(--shadow);
@@ -243,11 +251,11 @@ a.linkbtn {
   font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   border-radius: var(--r);
   padding: 0.48rem var(--space-6);
   text-decoration: none;
-  transition: background 0.15s var(--ease);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 a.linkbtn:hover {
   background: var(--surface-2);
@@ -303,7 +311,7 @@ a.linkbtn.sm {
 }
 /* Biểu tượng PMH vàng trên sidebar tối ở cả hai theme (Q-19); khung cố định để chữ "IMS" không
    nhảy khi ảnh chưa về. */
-.brand-emblem { flex: none; display: block; width: 38px; height: 26px; }
+.brand-emblem { flex: none; display: block; width: 32px; height: 32px; }
 .brand-emblem img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .nav-label {
   font-size: var(--fs-2xs);
@@ -325,14 +333,18 @@ a.linkbtn.sm {
   font-weight: var(--fw-semibold);
   font-size: var(--fs-sm);
   text-decoration: none;
-  transition: background 0.15s var(--ease), color 0.15s var(--ease),
-    transform 0.12s var(--ease);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+    transform var(--dur) var(--ease);
 }
 .nav-item:hover {
   background: var(--sidebar-hover);
   color: var(--sidebar-ink-2);
   text-decoration: none;
   transform: translateX(2px);
+}
+/* Transition đã tắt toàn cục (detail-tabs.css), nhưng cú trượt 2px vẫn giật khi rê qua menu. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-item:hover { transform: none; }
 }
 .nav-item.active {
   background: var(--sidebar-active-bg);
@@ -429,6 +441,16 @@ a.linkbtn.sm {
   margin-right: auto;
   font-size: var(--fs-2xl);
 }
+/* Tiêu đề + nút (i) (`PageHeader titleTip`): nút đứng sát chữ, không bị `margin-right:auto`
+   của h1 đẩy ra mép phải. */
+.page-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.page-header-title > h1 {
+  margin-right: 0;
+}
 /* `PageHeader` (ui/page-header.tsx) bọc tiêu đề trong `.grow` và nút trong `.row`, nên
    `margin-right:auto` ở h1 KHÔNG còn tác dụng (h1 hết là flex item trực tiếp) — thiếu hai
    luật dưới đây thì tiêu đề, phụ đề và toàn bộ nút dồn cụm sát trái ở mọi màn. */
@@ -468,9 +490,8 @@ a.linkbtn.sm {
   margin-top: var(--space-2);
   color: var(--ink-2);
   font-size: var(--fs-sm);
-  /* Trang giờ rộng gần trọn màn, nhưng CHỮ thì không nên dài theo: phụ đề dài ~95 ký tự
-     chạy một dòng ngang 1880px là mắt phải quét quá xa. Bảng rộng, chữ hẹp. */
-  max-width: 68ch;
+  /* Không trần bề ngang (Q-21): phụ đề là MỘT câu ngắn, ép xuống dòng khi bên phải còn trống
+     chỉ đẩy bảng xuống thêm một hàng. */
 }
 /* Cột nội dung hẹp, canh giữa NHẤT QUÁN cho trang cấu hình/danh mục — tiêu đề, thẻ, nút
    cùng một mép trái (tránh cảnh tiêu đề trái / thẻ giữa / nút trái lệch nhau). */

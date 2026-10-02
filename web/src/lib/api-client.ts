@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { clearPaletteRecent } from '@/lib/after-logout';
+import { clearPaletteRecent, noteSignOutNotice } from '@/lib/after-logout';
 import { LOGIN_PATH, ME_KEY, type Me } from '@/lib/me';
 import { rememberNextPath, tabOwner } from '@/lib/next-path';
 
@@ -31,6 +31,8 @@ const USER_INPUT_401_CODES = new Set([
   // Tài khoản bị vô hiệu hoá ở cửa đăng nhập: chưa có phiên nào để "chết". Thiếu dòng này thì
   // màn đăng nhập tự tải lại mà không nói một lời nào.
   'ACCOUNT_DISABLED',
+  // Mật khẩu tạm quá hạn ở cửa đăng nhập (Q-20): cũng chưa có phiên, màn phải nói nhờ SA đặt lại.
+  'TEMP_PASSWORD_EXPIRED',
   'TOTP_INVALID',
   'TOTP_REPLAYED',
   'CURRENT_PASSWORD_WRONG',
@@ -90,6 +92,11 @@ export async function readResponse<T>(res: Response): Promise<T> {
         queryClient.getQueryData<Pick<Me, 'email'> | null>(ME_KEY)?.email ?? tabOwner();
       rememberNextPath(`${pathname}${search}${hash}`, owner);
       clearPaletteRecent();
+      // Phiên chờ mã 2 lớp quá hạn (Q-20): màn đăng nhập nói vì sao phải gõ lại mật khẩu.
+      // Phiên chờ đổi mật khẩu bị đóng vì mật khẩu tạm quá hạn: nói rằng phải nhờ SA đặt lại.
+      const reason = (errBody as { reason?: string } | null)?.reason;
+      if (reason === 'TOTP_CHALLENGE_EXPIRED') noteSignOutNotice('totpExpired');
+      if (reason === 'TEMP_PASSWORD_EXPIRED') noteSignOutNotice('tempPasswordExpired');
       window.location.href = LOGIN_PATH;
     }
     throw new ApiError(res.status, errBody);

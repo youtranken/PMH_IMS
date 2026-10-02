@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -18,6 +18,8 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { RenewDialog } from '@/ui/renew-dialog';
@@ -30,7 +32,6 @@ import { standingOf } from './software-standing';
 import { SeatUsage, SoftwareStanding } from './software-standing-cell';
 import {
   KIND_KEY,
-  SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
   STATUS_KEY,
   matchedDevicesText,
@@ -42,7 +43,14 @@ import {
   type SoftwareRow,
   type SoftwareStatus,
 } from './software-types';
-import { PATHS } from '@/lib/routes';
+import {
+  SOFTWARE_SCREENS,
+  legacySoftwareListRedirect,
+  softwareItemPath,
+  softwareKindsParam,
+  type SoftwareScreenKey,
+  type SoftwareScreenSpec,
+} from '@/lib/software-screens';
 
 const DEFAULT_LIMIT = 20;
 
@@ -51,6 +59,7 @@ const DEFAULT_LIMIT = 20;
    dùng. */
 interface Filters extends Record<string, string> {
   search: string;
+  /** Chỉ màn nhiều loại (Tên miền & SSL) mới lọc theo loại; '' = mọi loại của màn. */
   kind: '' | SoftwareKind;
   /** '' = còn dùng (Đang dùng + Hết hạn), mặc định; 'all' = mọi trạng thái kể cả Thanh lý. */
   status: '' | 'all' | SoftwareStatus;
@@ -66,9 +75,27 @@ const EMPTY_FILTERS: Filters = {
   licenseModel: '',
 };
 
-/** Danh sách phần mềm (FR-008/FR-009) — lọc theo loại, cột tình trạng hạn. */
-export function SoftwareScreen({ me }: { me: Me }) {
+/**
+ * Danh sách hồ sơ phần mềm (FR-008/FR-009) cho MỘT màn của Q-22: Phần mềm (license), Tên miền &
+ * SSL, Hợp đồng bảo trì, Dịch vụ có hạn khác. Cùng một component, khác bảng `SOFTWARE_SCREENS`
+ * (AD-15) — bốn bản chép sẽ trôi khác nhau đúng lúc luật thanh lý hay gia hạn đổi.
+ *
+ * Link cũ `/software?kind=ssl` (đã ghim, đã gửi) chuyển sang màn mới trước khi dựng gì cả.
+ */
+export function SoftwareScreen({ me, screen = 'software' }: { me: Me; screen?: SoftwareScreenKey }) {
+  const { search } = useLocation();
+  const moved = screen === 'software' ? legacySoftwareListRedirect(search) : null;
+  if (moved) return <Navigate to={moved} replace />;
+  return <SoftwareList me={me} spec={SOFTWARE_SCREENS[screen]} />;
+}
+
+function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
   const { t } = useTranslation();
+  /* Cột và bộ lọc theo LOẠI của màn: ghế / kỳ hạn chỉ có ở license, cột Tên miền chỉ ở SSL /
+     tên miền. Bày cột ghế trống trơn trên màn hợp đồng là bảo người đọc tìm thứ không có. */
+  const manyKinds = spec.kinds.length > 1;
+  const hasSeats = spec.kinds.some(supportsSeats);
+  const hasDomains = spec.kinds.some(supportsWebsites);
   const toast = useToast();
   const queryClient = useQueryClient();
   /*
@@ -82,10 +109,24 @@ export function SoftwareScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
+    // `kind` chỉ nhận loại của màn; màn một loại thì mọi `kind` trên URL đều bị bỏ qua.
+    allowed: {
+      status: [...SOFTWARE_STATUSES, ALL_STATUSES],
+      kind: manyKinds ? spec.kinds : [],
+      licenseModel: hasSeats ? ['subscription', 'perpetual'] : [],
+    },
   });
   /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: SOFTWARE_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'retired',
+  });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES }, spec);
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -106,13 +147,13 @@ export function SoftwareScreen({ me }: { me: Me }) {
   );
 
   const software = useQuery({
-    queryKey: ['software', page, limit, filters, sorting],
+    queryKey: ['software', spec.key, page, limit, filters, sorting],
     // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
     // mất dòng đang bung và bảng nháy trắng sau mỗi lần gõ tìm.
     placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<{ items: SoftwareRow[]; total: number }>(
-        `/api/v1/software?${buildQuery(page, limit, filters, sorting)}`,
+        `/api/v1/software?${buildQuery(page, limit, filters, sorting, spec)}`,
       ),
   });
   useClampPage(url, software.data?.total);
@@ -140,7 +181,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
           const matched = matchedDevicesText(row.original.matchedDevices);
           return (
             <>
-              <Link className="mono" to={PATHS.softwareItem(row.original.id)}>
+              <Link className="mono" to={softwareItemPath(row.original.kind, row.original.id)}>
                 {row.original.code}
               </Link>
               {/* Hồ sơ hiện ra vì MÁY đang giữ ghế khớp ô tìm — nói ra, không thì người tìm
@@ -158,26 +199,43 @@ export function SoftwareScreen({ me }: { me: Me }) {
       },
       {
         /* Loại là dòng phụ dưới tên, không phải một cột riêng: bảng phải vừa 1280px với cột
-           Thao tác còn trong khung. Lọc theo loại vẫn có ở thanh lọc. */
+           Thao tác còn trong khung. Màn một loại thì dòng phụ chỉ lặp lại tên màn — bỏ. */
         accessorKey: 'name',
         header: t('software.name'),
         cell: ({ row }) => (
           <>
             {row.original.name}
-            <span className="cell-sub">{t(KIND_KEY[row.original.kind])}</span>
+            {manyKinds ? (
+              <span className="cell-sub">{t(KIND_KEY[row.original.kind])}</span>
+            ) : null}
           </>
         ),
       },
+      ...(hasDomains
+        ? [
+            {
+              id: 'websites',
+              header: t('software.domainNames'),
+              cell: ({ row }: { row: { original: SoftwareRow } }) => (
+                <DomainNames names={row.original.websites ?? []} />
+              ),
+            } satisfies ColumnDef<SoftwareRow, unknown>,
+          ]
+        : []),
       {
         id: 'vendorName',
         header: t('software.vendor'),
         cell: ({ row }) => orDash(row.original.vendorName),
       },
-      {
-        id: 'seats',
-        header: t('software.seats'),
-        cell: ({ row }) => <SeatUsage item={row.original} />,
-      },
+      ...(hasSeats
+        ? [
+            {
+              id: 'seats',
+              header: t('software.seats'),
+              cell: ({ row }: { row: { original: SoftwareRow } }) => <SeatUsage item={row.original} />,
+            } satisfies ColumnDef<SoftwareRow, unknown>,
+          ]
+        : []),
       {
         /* MỘT cột "Tình trạng" thay cho "Tình trạng hạn" + "Trạng thái" — xem
            `software-standing.ts`. Id `endDate` để bấm tiêu đề là sắp theo hạn. */
@@ -202,25 +260,25 @@ export function SoftwareScreen({ me }: { me: Me }) {
         ),
       },
     ],
-    [t, me.csrfToken, refresh],
+    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats],
   );
 
   return (
     <>
       <PageHeader
-        title={t('software.title')}
-        subtitle={t('software.subtitle')}
+        title={t(spec.titleKey)}
+        subtitle={t(spec.subtitleKey)}
         actions={
           <>
             {/* FR-028: xuất đúng bộ lọc VÀ đúng thứ tự đang xem — cùng query với bảng dưới. */}
             <ExportXlsxButton
-              url={`/api/v1/software/export.xlsx?${[buildFilterQuery(filters), sortQuery(sorting)]
+              url={`/api/v1/software/export.xlsx?${[buildFilterQuery(filters, spec), sortQuery(sorting)]
                 .filter(Boolean)
                 .join('&')}`}
-              fileName="phan-mem.xlsx"
+              fileName={spec.exportFile}
             />
           <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-            {t('software.add')}
+            {t(spec.addKey)}
           </button>
           </>
         }
@@ -229,32 +287,27 @@ export function SoftwareScreen({ me }: { me: Me }) {
       <FilterBar
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
-        searchPlaceholder={t('software.search')}
+        searchPlaceholder={t(spec.searchKey)}
       >
-        <Select
-          value={filters.kind}
-          ariaLabel={t('software.kind')}
-          placeholder={t('software.allKinds')}
-          options={[
-            { value: '', label: t('software.allKinds') },
-            ...SOFTWARE_KINDS.map((kind) => ({ value: kind, label: t(KIND_KEY[kind]) })),
-          ]}
-          onChange={(value) => setFilter('kind', value as Filters['kind'])}
-        />
+        {manyKinds ? (
+          <Select
+            value={filters.kind}
+            ariaLabel={t('software.kind')}
+            placeholder={t('software.allTypes')}
+            options={[
+              { value: '', label: t('software.allTypes') },
+              ...spec.kinds.map((kind) => ({ value: kind, label: t(KIND_KEY[kind]) })),
+            ]}
+            onChange={(value) => setFilter('kind', value as Filters['kind'])}
+          />
+        ) : null}
         {/* Mặc định KHÔNG gồm Thanh lý: hồ sơ đã bỏ có Kho thanh lý riêng, và theo Q-13 số hồ
             sơ tự thanh lý tăng dần — trộn vào là danh sách việc hằng ngày loãng dần. */}
         <Select
           value={filters.status}
           ariaLabel={t('software.status')}
-          placeholder={t('software.liveStatuses')}
-          options={[
-            { value: '', label: t('software.liveStatuses') },
-            ...SOFTWARE_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-            { value: 'all', label: t('software.allStatuses') },
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
         <Select
@@ -271,17 +324,20 @@ export function SoftwareScreen({ me }: { me: Me }) {
           ]}
           onChange={(value) => setFilter('vendorId', value)}
         />
-        <Select
-          value={filters.licenseModel}
-          ariaLabel={t('software.licenseModel')}
-          placeholder={t('software.allModels')}
-          options={[
-            { value: '', label: t('software.allModels') },
-            { value: 'subscription', label: t('software.subscription') },
-            { value: 'perpetual', label: t('software.perpetual') },
-          ]}
-          onChange={(value) => setFilter('licenseModel', value as Filters['licenseModel'])}
-        />
+        {/* Kỳ hạn mua đứt / thuê bao chỉ có ở license. */}
+        {hasSeats ? (
+          <Select
+            value={filters.licenseModel}
+            ariaLabel={t('software.licenseModel')}
+            placeholder={t('software.allModels')}
+            options={[
+              { value: '', label: t('software.allModels') },
+              { value: 'subscription', label: t('software.subscription') },
+              { value: 'perpetual', label: t('software.perpetual') },
+            ]}
+            onChange={(value) => setFilter('licenseModel', value as Filters['licenseModel'])}
+          />
+        ) : null}
       </FilterBar>
 
       {software.isLoading ? (
@@ -289,22 +345,31 @@ export function SoftwareScreen({ me }: { me: Me }) {
       ) : software.isError ? (
         <LoadError error={software.error} onRetry={() => void software.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
-          title={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
-          hint={url.isFiltered ? t('software.emptyFilteredHint') : t('software.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('common.clearFilters')}
-              </button>
-            ) : (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('software.add')}
-              </button>
-            )
+        <LifecycleHiddenEmpty
+          probeKey={['software', spec.key, 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/software?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['retired'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+              title={url.isFiltered ? t('software.emptyFiltered') : t(spec.emptyKey)}
+              hint={url.isFiltered ? t('software.emptyFilteredHint') : t(spec.emptyHintKey)}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('common.clearFilters')}
+                  </button>
+                ) : (
+                  <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                    {t(spec.addKey)}
+                  </button>
+                )
+              }
+            />
           }
         />
       ) : (
@@ -312,14 +377,15 @@ export function SoftwareScreen({ me }: { me: Me }) {
           <DataTable
             data={rows}
             columns={columns}
-            emptyText={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
+            emptyText={url.isFiltered ? t('software.emptyFiltered') : t(spec.emptyKey)}
             stackOnMobile
             stickyActions
             /* ≤600px: thẻ 3 dòng để quét "cái gì sắp hết hạn" trên điện thoại. Thẻ không bung
                ghế — chạm thẻ mở chi tiết, ghế nằm ở tab Máy đang dùng. */
             mobileCard={{
               title: (item) => item.code,
-              href: (item) => PATHS.softwareItem(item.id),
+              titleIsCode: true,
+              href: (item) => softwareItemPath(item.kind, item.id),
               badge: (item) => <SoftwareStanding item={item} compact />,
               actions: (item) => (
                 <SoftwareRowActions
@@ -333,7 +399,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
                 />
               ),
               subtitle: (item) => item.name,
-              meta: (item) => cardMeta(item, t),
+              meta: (item) => cardMeta(item, t, manyKinds),
             }}
             /* Bung dòng ra là thấy MÁY NÀO đang dùng key (AC 3.2 + nếp QLTS, AD-12). Mọi
                license còn dùng đều bung được, kể cả chưa có ghế nào: khu bung rỗng là chỗ đặt
@@ -376,6 +442,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {creating ? (
         <SoftwareForm
           row={null}
+          screen={spec.key}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
           onSaved={() => {
@@ -388,6 +455,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {editing ? (
         <SoftwareForm
           row={editing}
+          screen={spec.key}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
           onSaved={() => {
@@ -539,7 +607,7 @@ function SoftwareRowActions({
           ? [
               {
                 key: 'dispose',
-                label: t('disposal.dispose'),
+                label: t('software.disposeMenu'),
                 onSelect: dispose.run,
                 danger: true,
                 disabled: dispose.isPending,
@@ -551,13 +619,37 @@ function SoftwareRowActions({
   );
 }
 
-/** Dòng 3 của thẻ điện thoại: "License phần mềm · 6/10 ghế · Microsoft VN · quá 3 ngày". */
-function cardMeta(item: SoftwareRow, t: TFunction): string {
+/**
+ * Ô "Tên miền": tên đầu + "+N", rê chuột thấy đủ (Q-22). Một hồ sơ có thể gom hàng chục tên
+ * miền dùng chung một hạn — in hết thì một dòng cao bằng cả trang.
+ */
+function DomainNames({ names }: { names: string[] }) {
+  const { t } = useTranslation();
+  if (names.length === 0) return <>{orDash(null)}</>;
+  return (
+    <span title={names.join(', ')}>
+      <span className="mono">{names[0]}</span>
+      {names.length > 1 ? (
+        <>
+          {' '}
+          <span className="badge plain">{t('software.domainNamesMore', { count: names.length - 1 })}</span>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+/** Dòng 3 của thẻ điện thoại: "6/10 ghế · Microsoft VN · quá 3 ngày" (kèm loại ở màn nhiều loại). */
+function cardMeta(item: SoftwareRow, t: TFunction, withKind: boolean): string {
   const standing = standingOf(item);
   const matched = matchedDevicesText(item.matchedDevices);
+  const names = item.websites ?? [];
   return [
     matched ? t('software.matchedDevices', { codes: matched }) : null,
-    t(KIND_KEY[item.kind]),
+    withKind ? t(KIND_KEY[item.kind]) : null,
+    names.length > 0
+      ? `${names[0]}${names.length > 1 ? ` ${t('software.domainNamesMore', { count: names.length - 1 })}` : ''}`
+      : null,
     supportsSeats(item.kind) && item.seatTotal !== null
       ? `${seatLabel(item)} ${t('software.seats').toLowerCase()}`
       : null,
@@ -570,9 +662,15 @@ function cardMeta(item: SoftwareRow, t: TFunction): string {
     .join(' · ');
 }
 
-function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
+function buildQuery(
+  page: number,
+  limit: number,
+  filters: Filters,
+  sorting: SortingState,
+  spec: SoftwareScreenSpec,
+): string {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
+  return [params.toString(), buildFilterQuery(filters, spec), sortQuery(sorting)]
     .filter(Boolean)
     .join('&');
 }
@@ -581,10 +679,11 @@ function buildQuery(page: number, limit: number, filters: Filters, sorting: Sort
  * Phần lọc (không kèm phân trang) — dùng CHUNG cho danh sách và cho nút Xuất Excel, nên
  * file xuất ra luôn khớp đúng cái đang nhìn thấy (FR-028).
  */
-function buildFilterQuery(filters: Filters): string {
+function buildFilterQuery(filters: Filters, spec: SoftwareScreenSpec): string {
   const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
-  if (filters.kind) params.set('kind', filters.kind);
+  // Màn luôn hỏi đúng loại của nó (Q-22) — kể cả khi chưa chọn gì ở ô Loại.
+  params.set('kind', softwareKindsParam(spec, filters.kind));
   // '' = mặc định "còn dùng" (API: `live`); 'all' = không lọc trạng thái.
   if (filters.status !== 'all') params.set('status', filters.status || 'live');
   if (filters.vendorId) params.set('vendorId', filters.vendorId);

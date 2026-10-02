@@ -72,7 +72,7 @@ async function retire(page: Page, softwareId: string): Promise<void> {
 }
 
 test.describe('Danh sách phần mềm', () => {
-  test('SW-006/SW-009: mặc định giấu hồ sơ Thanh lý; "Mọi trạng thái" thì hiện; lọc kỳ hạn qua URL', async ({
+  test('SW-006/SW-009: mặc định giấu hồ sơ Thanh lý; "Tất cả" thì hiện; lọc kỳ hạn qua URL', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -108,7 +108,7 @@ test.describe('Danh sách phần mềm', () => {
     ).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    await page.getByRole('option', { name: 'Mọi trạng thái (cả Đã thanh lý)' }).click();
+    await page.getByRole('option', { name: 'Tất cả (cả Đã thanh lý)' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`${prefix}-BO`) })).toBeVisible();
 
     // Đường hỏng: giá trị kỳ hạn lạ trên URL không được lọc ra rỗng — server bỏ qua nó.
@@ -152,7 +152,8 @@ test.describe('Danh sách phần mềm', () => {
     const code = `SSL-E2E-GHNHANH-${uniqueStamp()}`;
     await createSoftware(page, { code, name: 'SSL gia hạn nhanh', kind: 'ssl', endDate: isoInDays(20) });
 
-    await page.goto('/software');
+    // SSL nằm ở màn Tên miền & SSL (Q-22).
+    await page.goto('/domains');
     await searchAndWaitForFilter(page, code);
     await rowAction(page, code, 'Gia hạn');
     const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
@@ -256,8 +257,8 @@ test.describe('Trang hồ sơ phần mềm', () => {
     const id = await createSoftware(page, { code, name: 'SSL thanh lý từ menu', kind: 'ssl', endDate: isoInDays(90) });
 
     await page.goto(`/software/${id}`);
-    await expect(page.getByRole('button', { name: 'Đưa vào kho thanh lý' })).toHaveCount(0);
-    await rowAction(page, code, 'Đưa vào kho thanh lý');
+    await expect(page.getByRole('button', { name: 'Thanh lý…', exact: true })).toHaveCount(0);
+    await rowAction(page, code, 'Thanh lý…');
     // Đường hỏng: Hủy thì không gì đổi.
     await page.getByRole('dialog').getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
     const still = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as { status: string };

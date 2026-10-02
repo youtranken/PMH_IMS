@@ -108,8 +108,23 @@ type ListQuery = {
   totp?: string;
 };
 
+const ACCOUNT_STATUSES = ['active', 'locked', 'disabled'] as const;
+
 /**
- * Bộ lọc màn Tài khoản. Giá trị lạ thì 400 chứ không lặng lẽ bỏ: "lọc theo vai `superadmin`"
+ * Đọc `?status=`. Vắng / rỗng = không lọc; `live` = trừ đã vô hiệu hóa (mặc định của màn, Q-20).
+ * Chữ lạ coi như `live` — trạng thái là bộ lọc có MẶC ĐỊNH, nên khác vai / 2 lớp (400): chữ lạ
+ * mà về mặc định thì bảng vẫn là bảng người ta mở màn ra là thấy, không đọc nhầm được.
+ */
+export function accountStatusQuery(value: unknown): UserListFilters['status'] {
+  if (value === undefined || value === '') return undefined;
+  if (value === 'live') return 'live';
+  return (ACCOUNT_STATUSES as readonly unknown[]).includes(value)
+    ? (value as (typeof ACCOUNT_STATUSES)[number])
+    : 'live';
+}
+
+/**
+ * Bộ lọc màn Tài khoản. Vai / 2 lớp lạ thì 400 chứ không lặng lẽ bỏ: "lọc theo vai `superadmin`"
  * mà ra cả bảng là đọc nhầm thành "ai cũng là SA".
  */
 function listFilters(query: ListQuery): UserListFilters {
@@ -122,7 +137,7 @@ function listFilters(query: ListQuery): UserListFilters {
   };
   return {
     role: pick(query.role, ['sa', 'admin', 'member'] as const, 'vai trò'),
-    status: pick(query.status, ['active', 'locked', 'disabled'] as const, 'trạng thái'),
+    status: accountStatusQuery(query.status),
     totp: pick(query.totp, ['none', 'enrolled'] as const, '2 lớp'),
   };
 }
@@ -133,6 +148,15 @@ const STATUS_LABEL: Record<'active' | 'locked' | 'disabled', string> = {
   locked: 'Đang khóa',
   disabled: 'Đã vô hiệu hóa',
 };
+
+/**
+ * Cột "Xác thực 2 lớp" của file xuất: cùng chữ "kích hoạt" với huy hiệu trên màn Người dùng IMS
+ * (Q-21) — người kiểm toán đối chiếu file với màn, hai chữ cho một trạng thái là hai trạng thái.
+ */
+export function totpExportLabel(r: { totpEnrolledAt: Date | null; totpLoginRequired: boolean }): string {
+  if (r.totpEnrolledAt) return 'Đã kích hoạt';
+  return r.totpLoginRequired ? 'Bắt buộc – chưa kích hoạt' : 'Chưa kích hoạt';
+}
 
 /** Trần số dòng một file xuất — danh sách nhân sự IT, vài trăm người là cùng. */
 const EXPORT_LIMIT = 5000;
@@ -200,7 +224,7 @@ export class AccountsController {
         {
           header: 'Xác thực 2 lớp',
           width: 16,
-          value: (r) => (r.totpEnrolledAt ? 'Đã cài' : r.totpLoginRequired ? 'Chưa cài (bắt buộc)' : 'Chưa cài'),
+          value: (r) => totpExportLabel(r),
         },
         { header: 'Đăng nhập gần nhất', width: 20, value: (r) => dateTimeInTz(r.lastLoginAt, tz) },
         { header: 'Ngày tạo', width: 20, value: (r) => dateTimeInTz(r.createdAt, tz) },

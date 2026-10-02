@@ -2,13 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import type { Me } from '@/lib/me';
 import { NatScreen } from './nat-screen';
 
 /**
- * NET-041: ô Router của form NAT mặc định chỉ liệt kê thiết bị thuộc loại mang cờ
- * "Router/Firewall"; ô tick "Hiện mọi thiết bị" mở lại toàn bộ kho.
+ * NET-041 + Q-20: ô Router của form NAT có bộ lọc LOẠI (chip, chọn nhiều), mặc định các loại
+ * mang cờ "Router/Firewall"; "Tất cả loại" mở lại toàn bộ kho. Chọn máy không phải loại Router
+ * chỉ cảnh báo, không chặn.
  */
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
@@ -37,12 +38,9 @@ function mockFetch(routerTypes = LISTS.deviceTypes) {
       }
       if (url.startsWith('/api/v1/devices')) {
         deviceUrls.push(url);
-        const items = url.includes('deviceTypeId=fw')
-          ? [{ id: 'd-fw', code: 'FW-01', name: 'Draytek', siteCode: 'HCM' }]
-          : [
-              { id: 'd-cam', code: 'CAM-01', name: 'Camera cổng', siteCode: null },
-              { id: 'd-fw', code: 'FW-01', name: 'Draytek', siteCode: 'HCM' },
-            ];
+        const fw = { id: 'd-fw', code: 'FW-01', name: 'Draytek', siteCode: 'HCM', deviceTypeId: 'fw' };
+        const cam = { id: 'd-cam', code: 'CAM-01', name: 'Camera cổng', siteCode: null, deviceTypeId: 'cam' };
+        const items = url.includes('deviceTypeIds=fw') ? [fw] : [cam, fw];
         return Promise.resolve(jsonResponse(200, { items }));
       }
       return Promise.resolve(jsonResponse(200, []));
@@ -75,16 +73,31 @@ describe('Ô Router của sổ NAT', () => {
     await openRouterPicker();
     expect(await screen.findByRole('option', { name: /FW-01/ })).toHaveTextContent('HCM');
     expect(screen.queryByRole('option', { name: /CAM-01/ })).toBeNull();
-    // Ô "Máy đích" cũng hỏi /devices (mọi loại) — nên chỉ khẳng định ô Router đã lọc theo loại.
-    expect(urls.some((url) => url.includes('deviceTypeId=fw'))).toBe(true);
+    // Ô "Máy đích" cũng hỏi /devices (mọi loại) — nên chỉ khẳng định ô Router đã lọc theo loại,
+    // và lọc bằng MỘT lượt hỏi nhiều loại (`deviceTypeIds`).
+    expect(urls.some((url) => url.includes('deviceTypeIds=fw'))).toBe(true);
+    expect(screen.getByRole('button', { name: 'Firewall' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('"Hiện mọi thiết bị" mở lại toàn bộ kho', async () => {
+  it('"Tất cả loại" mở lại toàn bộ kho; chọn máy không phải Router chỉ cảnh báo', async () => {
     mockFetch();
     const user = await openRouterPicker();
-    await user.click(screen.getByRole('checkbox', { name: /Hiện mọi thiết bị/ }));
+    await user.click(screen.getByRole('button', { name: 'Tất cả loại' }));
     await user.click(screen.getByRole('combobox', { name: 'Router' }));
-    await waitFor(() => expect(screen.getByRole('option', { name: /CAM-01/ })).toBeVisible());
+    await user.click(await screen.findByRole('option', { name: /CAM-01/ }));
+    expect(
+      screen.getByText('Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.'),
+    ).toBeVisible();
+  });
+
+  it('"Thêm thiết bị mới" mở hộp Thêm thiết bị với loại đang lọc điền sẵn', async () => {
+    mockFetch();
+    const user = await openRouterPicker();
+    await user.click(await screen.findByRole('button', { name: 'Thêm thiết bị mới' }));
+    const form = await screen.findByRole('dialog', { name: 'Thêm thiết bị' });
+    await waitFor(() =>
+      expect(within(form).getByRole('button', { name: 'Loại' })).toHaveTextContent('Firewall'),
+    );
   });
 
   it('danh mục chưa loại nào mang cờ: hiện mọi thiết bị và nói rõ vì sao', async () => {

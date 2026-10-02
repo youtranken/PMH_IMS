@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
@@ -153,7 +153,11 @@ describe('AttachmentPanel — hủy từng file đang tải', () => {
     await userEvent.upload(screen.getByLabelText('Chọn file để đính kèm'), [a, b]);
     await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(1));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hủy tải "bang-luong.xlsx"' }));
+    // Cùng dấu ✕ đỏ như nút bỏ file ở form thêm mới (Q-20): không chữ "Hủy", tên ở aria-label.
+    const cancelB = screen.getByRole('button', { name: 'Hủy tải "bang-luong.xlsx"' });
+    expect(cancelB).toHaveTextContent('');
+    expect(cancelB.querySelector('svg')).not.toBeNull();
+    await userEvent.click(cancelB);
     await userEvent.click(screen.getByRole('button', { name: 'Hủy tải "hoa-don.pdf"' }));
 
     const signal = uploadFile.mock.calls[0][5] as AbortSignal;
@@ -241,5 +245,64 @@ describe('AttachmentPanel — trần cỡ file và số file mỗi lượt (Q-18
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Mỗi lần chỉ nhận 2 file — đã bỏ ra: "3.pdf".',
     );
+  });
+});
+
+/*
+ * Luật "chỉ tải về, không mở trong trình duyệt" là chú giải, không phải câu thường trực: nó nằm
+ * trong nút (i) cạnh dòng giới hạn để khu đính kèm gọn mà vẫn tra được (Q-20).
+ */
+describe('AttachmentPanel — luật tải về nằm trong nút (i)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('câu chống mã độc không hiện sẵn, bấm (i) cạnh dòng giới hạn mới hiện', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(200, []))),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType="device" ownerId="d1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const sentence = 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).';
+    expect(screen.queryByText(sentence)).not.toBeInTheDocument();
+    const limitLine = screen.getByText(/^Tối đa \d+ MB\/file/).closest('p') as HTMLElement;
+    const tip = within(limitLine).getByRole('button', {
+      name: 'Giải thích: Cách mở file đính kèm',
+    });
+    await userEvent.click(tip);
+    expect(screen.getByText(sentence)).toBeInTheDocument();
+  });
+});
+
+/*
+ * Gợi ý khi chưa có giấy tờ phải nói đúng loại hồ sơ, như ô thả file: tài khoản dịch vụ không có
+ * "hóa đơn", và ở đó còn phải nhắc KHÔNG đính mật khẩu.
+ */
+describe('AttachmentPanel — gợi ý khi trống theo loại hồ sơ', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    ['service_account', /cấu hình VPN/],
+    ['nat_rule', /cấu hình router/],
+    ['device', /hóa đơn/i],
+  ] as const)('%s', async (ownerType, expected) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(200, []))),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType={ownerType} ownerId="o1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const empty = (await screen.findByText('Chưa có giấy tờ nào.')).parentElement!;
+    expect(empty).toHaveTextContent(expected);
+    if (ownerType !== 'device') expect(empty).not.toHaveTextContent(/hóa đơn/i);
   });
 });

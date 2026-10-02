@@ -18,6 +18,10 @@
   --ink-3: #5c635c;
   --border: #e9eae2;
   --border-2: #d8dbd0;
+  /* Viền ô nhập / ô chọn / nút viền. --border-2 chỉ 1,4:1 trên nền trắng — dưới ngưỡng 3:1 của
+     thành phần giao diện (WCAG 1.4.11), mắt không thấy khung ô đâu. Thẻ/khối vẫn dùng --border-2
+     để trang không thành lưới kẻ đậm. */
+  --field-border: #868d83;
 
   /* Accent chính: lục bảo (emerald) */
   --primary: #0e9f6e;
@@ -28,6 +32,8 @@
   --warm: #f59e0b;
   --warm-ink: #ea580c;
   --warm-soft: #fef2df;
+  /* Chữ cam trên nền xám ấm (ký hiệu trong chuỗi bí mật): --warm-ink chỉ 3,1:1 trên --surface-2. */
+  --warm-strong: #a14a0a;
   --grad: linear-gradient(135deg, #0e9f6e, #f59e0b);
 
   /* Sidebar grove (xanh rừng đậm) */
@@ -56,8 +62,8 @@
 
   /* Thang z-index (thấp→cao). Không có thang thì nhiều lớp cùng một z tranh nhau, thứ tự
      hiển thị do DOM quyết định. Popup nổi (dropdown/popover) < modal là chủ ý:
-     palette/lightbox/toast phải NỔI TRÊN modal. Lớp cục bộ trong component
-     (sticky thead, bánh xe time-picker, drawer mobile) giữ z-index riêng. */
+     palette/toast phải NỔI TRÊN modal. Lớp cục bộ trong component (sticky thead, drawer
+     mobile) giữ z-index riêng. */
   --z-sticky: 10;
   --z-modal-backdrop: 50;
   --z-modal: 60;
@@ -65,7 +71,6 @@
      modal để dùng được trong dialog (trước dùng hack zIndex:1000). */
   --z-dropdown: 70;
   --z-popover: 70;
-  --z-lightbox: 80;
   --z-palette: 85;
   --z-toast: 90;
 
@@ -115,15 +120,6 @@
    * độ tối: trang vốn đã tối mà bị phủ thêm 44% đen thì bảng phía sau gần như đen tuyền.
    */
   --scrim: rgba(20, 26, 20, 0.44);
-  /*
-   * Bản ĐẬM, dành cho lớp phủ toàn màn hình xem ảnh (`lightbox.css`). Ở đó nền phải lùi hẳn
-   * đi để mắt chỉ còn thấy tấm ảnh, nên 0.44 là quá nhạt — đây không phải hộp thoại có nội
-   * dung cần đọc song song với trang phía sau.
-   *
-   * Tách token riêng thay vì để `lightbox.css` viết tay: bản viết tay không có cặp cho chế độ
-   * tối, nên ở theme tối nó phủ thêm 62% sắc XANH lên một nền vốn đã tối — ảnh bị ám màu.
-   */
-  --scrim-strong: rgba(20, 26, 20, 0.62);
   /* Vệt mờ ở mép khung cuộn ngang còn nội dung khuất (`ui/scroll-x.tsx`). */
   --edge-fade: rgba(16, 24, 40, 0.16);
   /* Bóng của khối nổi tách khỏi luồng trang (toast vòng đời, menu thao tác dòng). */
@@ -141,6 +137,10 @@
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Thời lượng chuyển trạng thái khi rê chuột (Q-21): đủ để mắt thấy là có phản hồi, không đủ
+     để người bấm nhanh phải chờ. "Giảm chuyển động" tắt hết ở detail-tabs.css. */
+  --dur-fast: 150ms;
+  --dur: 200ms;
 
   font-family: var(--font);
   color: var(--ink);
@@ -163,10 +163,10 @@
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-card:rgba(255,255,255,.06); --auth-card-border:rgba(255,255,255,.14);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
-    /* Lớp phủ trên ảnh đăng nhập (Q-19): xanh than trung tính hợp tông trời chạng vạng của ảnh, đậm ở mép trái nơi đặt
-       chữ --auth-ink (ảnh có trời xanh sáng, không phủ thì chữ sáng chìm), nhạt dần sang phải để
-       cây cầu vẫn thấy. Màn đăng nhập tối ở cả hai theme nên cặp dark giữ nguyên giá trị. */
-    --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.86) 0%,rgba(12,16,30,.62) 42%,rgba(12,16,30,.38) 100%);
+    /* Lớp phủ trên ảnh đăng nhập: xanh than trung tính hợp tông trời chạng vạng của ảnh. Ảnh không
+       còn chữ đè lên (Q-20) nên phủ nhẹ, chỉ tối dần về mép phải để ảnh liền với nền mờ của cột
+       form. Màn đăng nhập tối ở cả hai theme nên cặp dark giữ nguyên giá trị. */
+    --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.12) 0%,rgba(12,16,30,.18) 60%,rgba(12,16,30,.45) 100%);
     /* Card đăng nhập LUÔN tối ở cả hai theme, nên lỗi/gợi ý trên nó không được dùng
        --danger/--muted (đổi theo theme): ở theme sáng chúng thành mảng hồng chói và chữ xám
        ~2:1 trên nền kính tối. Chữ đỏ nhạt đạt ~6:1 trên card; cặp dark ở dưới giữ nguyên giá trị. */
@@ -184,41 +184,46 @@
     --sidebar-chip-strong:rgba(255,255,255,.14);
 }
 
-/* Dark mode — chỉ override token, các component dùng var() tự đổi theo. */
+/* Dark mode — chỉ override token, các component dùng var() tự đổi theo. Đây là giao diện MẶC
+   ĐỊNH (Q-21) nên nền là xám lục đậm chứ không đen kịt: dễ nhìn lâu, và các lớp nền vẫn lệch
+   nhau đủ để tách khối. Ngưỡng tương phản do css/shared-ui-rules.test.ts canh. */
 html[data-theme='dark'] {
-  --canvas: #0f140f;
-  --surface: #161d16;
-  --surface-2: #1d261d;
+  --canvas: #171e18;
+  --surface: #1f2820;
+  --surface-2: #273128;
   /* Sọc dòng trên nền tối: --surface-2 chỉ lệch mặt thẻ vài đơn vị, mắt không dò được hàng. */
-  --row-alt: #232f24;
+  --row-alt: #2c382d;
   --ink: #e9ede7;
   --ink-2: #a7b0a5;
   /* Sáng để chữ phụ nhỏ đạt AA (≥4.5:1) trên nền tối/tint — verify axe live 2026-08-06. */
   --ink-3: #9aa39a;
   /* Viền thẻ phải thấy được trên laptop độ sáng thấp: nền trang và mặt thẻ tối chỉ lệch nhau
      rất ít, viền mờ quá thì các khối trông như trôi nổi, không tách lớp. */
-  --border: #313e35;
-  --border-2: #425145;
+  --border: #3a483e;
+  --border-2: #4b5b4f;
+  --field-border: #788a7c;
   --primary: #34d399;
   --primary-ink: #6ee7b7;
-  --primary-soft: #123024;
+  --primary-soft: #173a2c;
   --warm: #fbbf24;
   --warm-ink: #f59e0b;
-  --warm-soft: #3a2c14;
+  --warm-soft: #45341a;
+  --warm-strong: #f59e0b;
   --grad: linear-gradient(135deg, #34d399, #fbbf24);
   --ok: #43c294;
-  --ok-soft: #13312a;
+  --ok-soft: #183a31;
   --warn: #e0a35a;
-  --warn-soft: #3a2c18;
-  --danger: #ef6f63;
-  --danger-soft: #3a1f1d;
+  --warn-soft: #433420;
+  /* Sáng hơn bản sáng một nấc: chữ đỏ (dòng quá hạn) phải ≥4.5:1 cả trên dòng chẵn --row-alt. */
+  --danger: #f27e72;
+  --danger-soft: #452522;
   --muted: #9aa59a;
-  --muted-soft: #232d23;
+  --muted-soft: #2c372d;
   --info: #7fb6ea;
-  --info-soft: #16273a;
+  --info-soft: #1b2f45;
   /* Sidebar tối hơn canvas để tách khối */
-  --sidebar-bg: #0e140f;
-  --sidebar-border: #1e2a22;
+  --sidebar-bg: #121914;
+  --sidebar-border: #243028;
   --sidebar-active-bg: rgba(251, 191, 36, 0.16);
   --sidebar-active-ink: #ffe1b3;
   --ring: 0 0 0 3px rgba(52, 211, 153, 0.3);
@@ -230,8 +235,6 @@ html[data-theme='dark'] {
   /* Chế độ tối: nền đã tối sẵn nên lớp phủ phải THUẦN ĐEN và đậm hơn một chút mới tách được
      hộp ra khỏi trang; dùng lại sắc xanh của bản sáng thì hai lớp hòa vào nhau. */
   --scrim: rgba(0, 0, 0, 0.62);
-  /* Cùng lý do: thuần đen, và đậm hơn bản thường một nấc. */
-  --scrim-strong: rgba(0, 0, 0, 0.78);
   /* Nền tối: vệt phải thuần đen và đậm hơn mới thấy được trên mặt bảng tối. */
   --edge-fade: rgba(0, 0, 0, 0.55);
   /* Nền tối nuốt bóng nhạt: phải đậm hơn mới tách khối nổi khỏi trang. */
@@ -262,7 +265,7 @@ html[data-theme='dark'] {
     --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee; --sidebar-label:#9fb0a5;
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
-    --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.86) 0%,rgba(12,16,30,.62) 42%,rgba(12,16,30,.38) 100%);
+    --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.12) 0%,rgba(12,16,30,.18) 60%,rgba(12,16,30,.45) 100%);
 }
 
 * {

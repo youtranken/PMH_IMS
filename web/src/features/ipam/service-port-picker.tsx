@@ -57,9 +57,14 @@ export function ServicePortPicker({
       onQuery={setQuery}
       options={rows}
       getKey={(service) => service.id}
+      /* Ô dịch vụ hẹp (một phần tư hàng): menu rộng bằng ô là tên "Hikvision" còn "Hkvi…".
+         Nới theo nội dung, và tên còn bị cắt thì rê chuột đọc được đủ (title). */
+      menuWidth="min"
       renderOption={(service) => (
         <span className="svc-opt">
-          <span className="svc-name">{service.name}</span>
+          <span className="svc-name" title={service.name}>
+            {service.name}
+          </span>
           <span className="badge muted plain">
             {service.protocol === 'both'
               ? t('catalog.protocolBoth')

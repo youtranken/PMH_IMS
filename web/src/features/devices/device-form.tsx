@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
@@ -11,7 +11,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -54,7 +54,7 @@ function cloneState(source: DeviceRow): FormState {
   };
 }
 
-/** Sau "Ghi rồi thêm máy khác": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
+/** Sau "Lưu và nhân bản": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
 function nextState(saved: FormState): FormState {
   return { ...saved, code: '', serial: '', assignedTo: '', note: '' };
 }
@@ -90,6 +90,7 @@ function initialState(device: DeviceRow | null): FormState {
 export function DeviceForm({
   device,
   cloneFrom,
+  presetDeviceTypeId,
   csrfToken,
   onClose,
   onSaved,
@@ -99,9 +100,14 @@ export function DeviceForm({
   device: DeviceRow | null;
   /** Thêm mới điền sẵn từ máy này (trừ mã/serial/người dùng/ghi chú). Bỏ qua khi `device` có. */
   cloneFrom?: DeviceRow | null;
+  /**
+   * Thêm mới từ một ô chọn đang lọc theo loại (NAT, Đường truyền — Q-20): điền sẵn ô Loại.
+   * Bỏ qua khi có `device` hoặc `cloneFrom`.
+   */
+  presetDeviceTypeId?: string;
   csrfToken: string;
   onClose: () => void;
-  /** `keepOpen`: người dùng chọn "Ghi rồi thêm máy khác" — form đã tự làm trống, đừng đóng. */
+  /** `keepOpen`: người dùng chọn "Lưu và nhân bản" — form đã tự làm trống, đừng đóng. */
   onSaved: (result: DeviceWriteResult, options?: { keepOpen: boolean }) => void;
   /** Có thì toast "Đã thêm …" kèm nút "Mở hồ sơ" — máy mới thường nằm ở trang khác của bảng. */
   onOpenCreated?: (created: DeviceRow) => void;
@@ -110,9 +116,13 @@ export function DeviceForm({
   const toast = useToast();
   const codeRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<FormState>(() =>
-    !device && cloneFrom ? cloneState(cloneFrom) : initialState(device),
+    !device && cloneFrom
+      ? cloneState(cloneFrom)
+      : !device && presetDeviceTypeId
+        ? { ...initialState(null), deviceTypeId: presetDeviceTypeId }
+        : initialState(device),
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form]);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();
@@ -240,11 +250,12 @@ export function DeviceForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           {/* Khai cả lô máy: lưu xong form làm trống bốn ô riêng từng máy, giữ phần còn lại.
-              Tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
+              Nút chính vẫn là "Lưu"; E2E bấm nó phải ghi `exact: true` vì tên nút này cũng
+              bắt đầu bằng "Lưu". */}
           {device ? null : (
             <button
               type="button"
@@ -256,7 +267,7 @@ export function DeviceForm({
             </button>
           )}
           <button type="submit" form="device-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

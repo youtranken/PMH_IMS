@@ -12,6 +12,74 @@ export type SoftwareKind = (typeof SOFTWARE_KINDS)[number];
 export const SOFTWARE_STATUSES = ['active', 'expired_ok', 'retired'] as const;
 export type SoftwareStatus = (typeof SOFTWARE_STATUSES)[number];
 
+/**
+ * Đọc `?status=`. Vắng / rỗng = không lọc (⌘K); `live` = trừ đã thanh lý (mặc định của màn).
+ * Chữ lạ coi như `live` (Q-20) — bỏ qua thì lặng lẽ bày lại phần mềm đã thanh lý.
+ */
+export function softwareStatusQuery(value: unknown): SoftwareStatus | 'live' | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (value === 'live') return 'live';
+  return SOFTWARE_STATUSES.includes(value as SoftwareStatus) ? (value as SoftwareStatus) : 'live';
+}
+
+/**
+ * `?kind=` của danh sách / file xuất: một loại, hoặc nhiều loại ngăn bằng dấu phẩy — màn Tên
+ * miền & SSL hỏi `ssl,domain` (Q-22). Rỗng = mọi loại (⌘K, Kho thanh lý).
+ *
+ * Chữ lạ bị bỏ chứ không đi xuống `inArray` trên cột enum: Postgres trả 22P02 thành 500. DTO đã
+ * chặn chữ lạ bằng 400; đây là lớp thứ hai cho nơi gọi không qua DTO.
+ */
+export const SOFTWARE_KINDS_QUERY = new RegExp(
+  `^(?:(?:${SOFTWARE_KINDS.join('|')})(?:,(?:${SOFTWARE_KINDS.join('|')}))*)?$`,
+);
+
+export function softwareKindsQuery(value: string | undefined): SoftwareKind[] | undefined {
+  const kinds = [
+    ...new Set(
+      (value ?? '')
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part): part is SoftwareKind => SOFTWARE_KINDS.includes(part as SoftwareKind)),
+    ),
+  ];
+  return kinds.length > 0 ? kinds : undefined;
+}
+
+/**
+ * Hình dạng file Excel theo MÀN đang xuất (Q-22): mỗi màn chỉ có cột của loại nó.
+ *
+ * Cột Ghế chỉ có nghĩa với license, cột Tên miền chỉ với SSL / tên miền — xuất danh sách hợp
+ * đồng bảo trì mà kèm một cột ghế trống trơn là bảo người đọc đi tìm thứ không tồn tại. Không
+ * lọc loại (gọi thẳng API) thì giữ đủ cột như bản gộp.
+ */
+export function softwareExportShape(kinds: readonly SoftwareKind[] | undefined): {
+  sheetName: string;
+  fileName: string;
+  seats: boolean;
+  websites: boolean;
+} {
+  const only = (allowed: SoftwareKind[]) =>
+    kinds !== undefined && kinds.length > 0 && kinds.every((kind) => allowed.includes(kind));
+  if (only(['license'])) {
+    return { sheetName: 'Phần mềm', fileName: 'phan-mem.xlsx', seats: true, websites: false };
+  }
+  if (only(['ssl', 'domain'])) {
+    return { sheetName: 'Tên miền & SSL', fileName: 'ten-mien-ssl.xlsx', seats: false, websites: true };
+  }
+  if (only(['maintenance'])) {
+    return { sheetName: 'Hợp đồng bảo trì', fileName: 'hop-dong-bao-tri.xlsx', seats: false, websites: false };
+  }
+  if (only(['other'])) {
+    return { sheetName: 'Dịch vụ có hạn khác', fileName: 'dich-vu-co-han.xlsx', seats: false, websites: false };
+  }
+  return {
+    sheetName: 'Phần mềm',
+    fileName: 'phan-mem.xlsx',
+    seats: !kinds || kinds.some(supportsSeats),
+    websites: !kinds || kinds.some(supportsWebsites),
+  };
+}
+
 /** Nhãn tiếng Việt — dùng cho thông báo lỗi phía API và cho file export. */
 export const KIND_LABEL: Record<SoftwareKind, string> = {
   license: 'License phần mềm',
@@ -191,17 +259,17 @@ export function normalizeWebsites(list: readonly string[]): { value: string[]; e
       .toLowerCase();
     if (!site) continue;
     if (/\s/.test(site)) {
-      errors.push(`Website "${raw.trim()}" có khoảng trắng — mỗi dòng một website.`);
+      errors.push(`Tên miền "${raw.trim()}" có khoảng trắng — mỗi dòng một tên miền.`);
       continue;
     }
     if (site.length > WEBSITE_MAX_LENGTH) {
-      errors.push(`Website "${site.slice(0, 40)}…" dài quá ${WEBSITE_MAX_LENGTH} ký tự.`);
+      errors.push(`Tên miền "${site.slice(0, 40)}…" dài quá ${WEBSITE_MAX_LENGTH} ký tự.`);
       continue;
     }
     if (!value.includes(site)) value.push(site);
   }
   if (value.length > WEBSITES_MAX) {
-    errors.push(`Tối đa ${WEBSITES_MAX} website cho một hồ sơ.`);
+    errors.push(`Tối đa ${WEBSITES_MAX} tên miền cho một hồ sơ.`);
   }
   return { value, errors };
 }

@@ -27,6 +27,11 @@ export interface Me {
     /** `file.max_size_mb` / `file.max_files_per_batch` (Q-18) — đọc qua `useAttachmentLimits`. */
     fileMaxSizeMb: number;
     fileMaxFilesPerBatch: number;
+    /**
+     * `auth.totp_challenge_minutes` (Q-20): màn nhập mã tự về đăng nhập khi hết. Tuỳ chọn vì
+     * server mới là hàng rào thật (401 khi quá hạn); thiếu số này chỉ mất đồng hồ phía máy.
+     */
+    totpChallengeMinutes?: number;
   };
 }
 

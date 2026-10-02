@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useExpiryThresholds } from './use-expiry-thresholds';
+import { BREAKPOINTS } from './breakpoints';
 import { useMediaQuery } from './use-media-query';
 import { warrantyProgress } from './warranty-progress';
 
@@ -41,7 +42,7 @@ export function WarrantyTimeline({
   const { t } = useTranslation();
   /* Màn hẹp (khớp `@media (max-width: 480px)`): ô chỉ còn nửa thẻ, nhãn dài "Bảo hành từ" gãy
      ba dòng đè lên ngày. Rút còn Từ/Đến — tên đầy đủ đã là nhãn của dòng chứa thanh này. */
-  const tight = useMediaQuery('(max-width: 480px)');
+  const tight = useMediaQuery(BREAKPOINTS.tight);
   const fromLabel = tight ? t('expiry.from') : (startLabel ?? t('expiry.from'));
   const toLabel = tight ? t('expiry.to') : (endLabel ?? t('expiry.to'));
   // Cùng nguồn ngưỡng với `ExpiryBadge` — nếu không thì thanh và huy hiệu lại nói khác nhau,

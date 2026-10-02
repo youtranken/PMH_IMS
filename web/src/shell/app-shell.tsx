@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { BrandEmblem } from '@/ui/brand-logo';
 import { Chevron } from '@/ui/chevron';
 import { type Me } from '@/lib/me';
+import { titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
@@ -457,12 +458,17 @@ function NavSection({
   );
 }
 
+/**
+ * Tên NHÓM menu làm ngữ cảnh (Q-18: không lặp tên màn). Màn không thuộc nhóm nào (Hồ sơ của tôi)
+ * thì lấy tên màn — topbar trống trơn trông như shell nạp hỏng. Đường lạ (404) vẫn để trống.
+ */
 function GroupContext({ groups, pathname }: { groups: NavGroup[]; pathname: string }) {
   const { t } = useTranslation();
   const group = groupOfPath(groups, pathname);
+  const titleKey = group ? null : titleKeyOf(pathname);
   return (
     <span className="topbar-context" data-testid="topbar-context">
-      {group ? t(group.labelKey) : null}
+      {group ? t(group.labelKey) : titleKey ? t(titleKey) : null}
     </span>
   );
 }

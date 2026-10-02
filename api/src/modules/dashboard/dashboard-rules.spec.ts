@@ -77,6 +77,15 @@ describe('pickStaleOwners — két lâu không đổi', () => {
     expect(first).toEqual({ ownerId: 'rat-cu', lastChangeAt: ago(900), daysSince: 900 });
   });
 
+  // Máy đã thanh lý mà két còn treo: việc của trang tổng két (dọn), không phải "nhắc đổi".
+  it('bỏ chủ đã thanh lý / ngừng dùng', () => {
+    const withRetired = [
+      { ownerId: 'da-bo', lastChangeAt: ago(900), retired: true },
+      { ownerId: 'con-dung', lastChangeAt: ago(400), retired: false },
+    ];
+    expect(pickStaleOwners(withRetired, 180, NOW).map((row) => row.ownerId)).toEqual(['con-dung']);
+  });
+
   it('không đụng vào mảng gốc', () => {
     const before = rows.map((row) => row.ownerId);
     pickStaleOwners(rows, 0, NOW);

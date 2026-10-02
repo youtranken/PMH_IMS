@@ -14,10 +14,10 @@ import {
   BreakGlassStateBadge,
   BreakGlassSubject,
   DecisionDialog,
-  isStepUpCancelled,
   useBreakGlassActions,
   type BreakGlassRow,
 } from "@/ui/break-glass";
+import { isStepUpCancelled } from "@/ui/use-step-up-retry";
 import { DataTable } from "@/ui/data-table";
 import { DatePicker } from "@/ui/date-picker";
 import { ExportXlsxButton } from "@/ui/export-xlsx-button";
@@ -28,7 +28,9 @@ import { Pagination } from "@/ui/pagination";
 import { Select } from "@/ui/select";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
+import { BREAKPOINTS } from "@/ui/breakpoints";
 import { useMediaQuery } from "@/ui/use-media-query";
+import { useDebouncedValue } from "@/ui/use-debounced-value";
 import { useToast } from "@/ui/toast";
 
 type ApprovalRow = BreakGlassRow;
@@ -42,8 +44,10 @@ const PAGE_LIMIT = 20;
  */
 const PENDING_REFETCH_MS = 30_000;
 
-/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab. */
-const NARROW_QUERY = "(max-width: 640px)";
+/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab.
+    Cùng mốc với thẻ gọn của bảng: lệch mốc thì ở 600–640px nút đã rời đầu trang trong khi bảng
+    vẫn là bảng desktop. */
+const NARROW_QUERY = BREAKPOINTS.cards;
 
 interface ApprovalPage {
   items: ApprovalRow[];
@@ -81,8 +85,6 @@ export function logFilterQuery(filters: LogFilters): string {
   return params.toString();
 }
 
-/** Ô người xin gửi đi sau khi ngừng gõ — mỗi phím một lượt quét sổ là phí. */
-const REQUESTER_DEBOUNCE_MS = 300;
 
 /** "Thời hạn xin": không biết thì nói không biết — "— giờ" là chỗ trống đội lốt câu trả lời. */
 function askedText(
@@ -149,13 +151,9 @@ export function ApprovalsScreen({ me }: { me: Me }) {
     setLogFilters((current) => (current[key] === value ? current : { ...current, [key]: value }));
     setLogPage(1);
   }, []);
-  useEffect(() => {
-    const handle = setTimeout(
-      () => setLogFilter("requester", requesterInput.trim()),
-      REQUESTER_DEBOUNCE_MS,
-    );
-    return () => clearTimeout(handle);
-  }, [requesterInput, setLogFilter]);
+  // Ô người xin gửi đi sau khi ngừng gõ — mỗi phím một lượt quét sổ là phí.
+  const requesterSettled = useDebouncedValue(requesterInput.trim());
+  useEffect(() => setLogFilter("requester", requesterSettled), [requesterSettled, setLogFilter]);
   const logQuery = logFilterQuery(logFilters);
   const logFiltered = logQuery !== "";
   const [minePage, setMinePage] = useState(1);
@@ -348,14 +346,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
               <DatePicker
                 value={logFilters.from}
                 ariaLabel={t("approvals.filterFrom")}
-                placeholder={t("approvals.filterFrom")}
+                placeholder={t("common.fromDate")}
                 max={logFilters.to || undefined}
                 onChange={(value) => setLogFilter("from", value)}
               />
               <DatePicker
                 value={logFilters.to}
                 ariaLabel={t("approvals.filterTo")}
-                placeholder={t("approvals.filterTo")}
+                placeholder={t("common.toDate")}
                 min={logFilters.from || undefined}
                 onChange={(value) => setLogFilter("to", value)}
               />
@@ -561,7 +559,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     row.subjectLabel ? (
                       <>
                         <Link
-                          className="btn primary"
+                          className="linkbtn primary"
                           to={`${OWNER_PATH[row.subjectType](row.subjectId)}?tab=vault`}
                         >
                           {t("approvals.openVault")}
@@ -576,7 +574,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       </>
                     ) : null}
 
-                    <Link className="btn sm" to={PATHS.approval(row.id)}>
+                    <Link className="linkbtn sm" to={PATHS.approval(row.id)}>
                       {t("approvals.openDetail")}
                     </Link>
                   </div>
@@ -734,7 +732,7 @@ function LogTable({
         cell: ({ row }) => (
           <div className="action-cell">
             {actionOf(row.original)}
-            <Link className="btn sm" to={PATHS.approval(row.original.id)}>
+            <Link className="linkbtn sm" to={PATHS.approval(row.original.id)}>
               {t("approvals.openDetail")}
             </Link>
           </div>

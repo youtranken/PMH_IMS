@@ -87,8 +87,6 @@ export const ispLineTable = pgTable('isp_line', {
   provider: citext('provider').notNull(),
   providerId: uuid('provider_id').notNull(),
   bandwidth: text('bandwidth'),
-  // inet: một IPv4 hoặc một khối IPv4/prefix — Q-04.
-  wanIp: inet('wan_ip'),
   siteId: uuid('site_id'),
   deviceId: uuid('device_id'),
   hotline: text('hotline'),
@@ -99,6 +97,18 @@ export const ispLineTable = pgTable('isp_line', {
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * IP WAN của đường truyền — migration 0042_isp_line_wan_ip.sql. Nhiều IPv4 đơn mỗi đường (Q-20);
+ * `sortOrder` giữ thứ tự người nhập để lịch sử không báo "đổi" khi lưu lại cùng danh sách.
+ */
+export const ispLineWanIpTable = pgTable('isp_line_wan_ip', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ispLineId: uuid('isp_line_id').notNull(),
+  address: inet('address').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** AD-13: append-only (trigger `history_append_only` chặn UPDATE/DELETE ở tầng DB). */

@@ -89,7 +89,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await expect(form.getByText(`hoa-don-${stamp}.pdf`)).toBeVisible();
     await expect(form.getByText(`anh-may-${stamp}.png`)).toBeVisible();
 
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText('Đã đính kèm 2 giấy tờ.')).toBeVisible();
 
     await page.getByRole('row', { name: new RegExp(code) }).getByRole('link').first().click();
@@ -111,7 +111,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const form = await fillSoftwareBasics(page, code, 'Office 365 có hợp đồng');
     await picker(page).setInputFiles(writePdf(`hop-dong-${stamp}.pdf`));
 
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText('Đã đính kèm 1 giấy tờ.')).toBeVisible();
 
     await page.getByRole('row', { name: new RegExp(code) }).getByRole('link').first().click();
@@ -144,7 +144,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await page.getByRole('option', { name: 'FPT Telecom E2E', exact: true }).click();
     await picker(page).setInputFiles(writePdf(`scan-hd-${stamp}.pdf`));
 
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText('Đã đính kèm 1 giấy tờ.')).toBeVisible();
 
     await page.getByRole('row', { name: new RegExp(code) }).getByRole('link').first().click();
@@ -167,7 +167,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await form.getByRole('button', { name: `Bỏ "nham-${stamp}.pdf" khỏi danh sách sẽ đính kèm` }).click();
     await expect(form.getByText(`nham-${stamp}.pdf`)).toHaveCount(0);
 
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText('Đã lưu hồ sơ.')).toBeVisible();
 
     await page.getByRole('row', { name: new RegExp(code) }).getByRole('link').first().click();
@@ -189,7 +189,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ kèm file lạ');
     await picker(page).setInputFiles(fake);
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByText(/Định dạng không được hỗ trợ/)).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();

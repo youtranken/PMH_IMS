@@ -13,6 +13,8 @@ import {
   useAttachmentLimits,
 } from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
+import { CloseIcon } from '@/ui/glyph-icons';
+import { InfoTip } from '@/ui/info-tip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useConfirm } from '@/ui/confirm-provider';
 import { RowActions } from '@/ui/row-actions';
@@ -113,6 +115,8 @@ export function AttachmentPanel({
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
+  // Ô thả file và khối "chưa có giấy tờ" gợi ý cùng một câu theo loại hồ sơ.
+  const hintKey = HINT_BY_OWNER[ownerType] ?? 'attachments.hint';
   const queryClient = useQueryClient();
 
   /*
@@ -222,7 +226,7 @@ export function AttachmentPanel({
           <FilePicker
             accept={ATTACHMENT_ACCEPT}
             label={t('attachments.pick')}
-            hint={t(HINT_BY_OWNER[ownerType] ?? 'attachments.hint')}
+            hint={t(hintKey)}
             file={null}
             disabled={busy}
             onPick={(one) => {
@@ -230,7 +234,12 @@ export function AttachmentPanel({
             }}
             onPickFiles={pickMany}
           />
-          <p className="muted small">{limitsHint(t, limits)}</p>
+          {/* Luật "chỉ tải về, không mở inline" nằm trong (i) cạnh dòng giới hạn: tra được ngay
+              chỗ đính kèm mà không chiếm thêm một dòng thường trực (Q-20). */}
+          <p className="muted small">
+            {limitsHint(t, limits)}{' '}
+            <InfoTip subject={t('attachments.noPreviewSubject')}>{t('attachments.noPreview')}</InfoTip>
+          </p>
           {rejected ? (
             <p className="field-error" role="alert">
               {rejected}
@@ -245,24 +254,25 @@ export function AttachmentPanel({
             <ul className="upload-queue">
               {queue.map((item) => (
                 <li key={item.key}>
-                  <span className="upload-queue-name">{item.name}</span>
+                  <span className="upload-queue-name" title={item.name}>
+                    {item.name}
+                  </span>
                   <span className="muted">{t(`attachments.queue_${item.state}`)}</span>
                   {item.state === 'waiting' || item.state === 'uploading' ? (
                     <button
                       type="button"
-                      className="btn sm ghost"
+                      className="btn-x danger"
                       aria-label={t('attachments.cancelUpload', { name: item.name })}
+                      title={t('common.cancel')}
                       onClick={() => cancelOne(item.key)}
                     >
-                      {t('common.cancel')}
+                      <CloseIcon />
                     </button>
                   ) : null}
                 </li>
               ))}
             </ul>
           ) : null}
-          {/* Luật "chỉ tải về, không mở inline" nói ngay chỗ đính kèm — không phải câu rỗng. */}
-          <p className="muted small">{t('attachments.noPreview')}</p>
         </>
       ) : null}
 
@@ -273,7 +283,7 @@ export function AttachmentPanel({
       ) : rows.length === 0 ? (
         <EmptyState
           title={t('attachments.empty')}
-          hint={canEdit ? t('attachments.emptyHint') : undefined}
+          hint={canEdit ? t('attachments.emptyHint', { examples: t(hintKey) }) : undefined}
         />
       ) : (
         <div className="table-wrap">

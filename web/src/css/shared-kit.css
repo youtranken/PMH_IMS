@@ -6,15 +6,31 @@
   position: fixed;
   right: var(--space-9);
   bottom: var(--space-9);
-  z-index: 60;
+  /* Toast báo kết quả của thao tác trong hộp thoại: phải nổi TRÊN hộp và bấm được nút ×.
+     Radix đặt body{pointer-events:none} khi mở modal, stack portal ra body thừa hưởng. */
+  z-index: var(--z-toast);
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   max-width: min(92vw, 420px);
 }
+/* Đáy phải là chỗ của nút Lưu ở chân hộp thoại: toast nổi trên hộp mà vẫn ở đáy thì che nút.
+   Góc trên phải lại là nút ✕ của hộp. Nên có hộp mở thì toast lên mép trên, GIỮA màn — phần
+   trống của đầu hộp (tiêu đề bên trái, ✕ bên phải). Màn đăng nhập / đổi mật khẩu (`.auth`) ở
+   1366×768 có nút chính sát đáy màn, cùng cách xử lý. */
+body:has([role='dialog']) .toast-stack,
+body:has([role='alertdialog']) .toast-stack,
+body:has(.auth) .toast-stack {
+  top: var(--space-4);
+  bottom: auto;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
 .toast {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-5);
   padding: var(--space-5) var(--space-6);
   border-radius: var(--r);
@@ -31,7 +47,6 @@
 .toast-icon {
   /* Dấu hiệu THỨ HAI ngoài màu (ok/warn/error) cho người khó phân biệt màu sắc. */
   flex: none;
-  margin-top: 2px;
 }
 /* Chữ giãn hết phần giữa để nút × luôn nằm ở MÉP PHẢI — trên điện thoại toast rộng gần trọn
    màn, chữ ngắn thì × trôi ra giữa hộp như một ký tự lạc. */
@@ -39,18 +54,24 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+/* Ô vuông nhỏ, không đệm: đệm mặc định của `button` đẩy hình xuống dưới dòng chữ. */
 .toast-close {
   flex: none;
   margin-left: auto;
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
   border: none;
+  border-radius: var(--r-sm);
   background: transparent;
   color: inherit;
-  font-size: var(--fs-lg);
-  line-height: 1;
+  font-size: var(--fs-md);
   cursor: pointer;
   opacity: 0.7;
 }
-.toast-close:hover { opacity: 1; }
+.toast-close:hover:not(:disabled) { opacity: 1; background: var(--muted-soft); }
 
 /* Phân trang */
 .pager {
@@ -141,21 +162,70 @@
   pointer-events: none;
 }
 
-/* Lịch sử (AD-13) */
+/* Lịch sử (AD-13) — trục dọc "ga tàu" (Q-20), dựng ở `ui/history-panel.tsx`.
+   Ba cột: ngày giờ | đường ray + ga | nội dung. Không kẻ vạch ngang giữa các dòng: đường ray
+   dọc đã nối các ga, thêm vạch ngang là hai hệ thống chia dòng chồng lên nhau. */
 .history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.history-item { display: flex; gap: var(--space-6); padding: var(--space-5) 0; }
-.history-item + .history-item { border-top: 1px solid var(--border); }
-.history-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: var(--primary);
+.history-item {
+  --history-dot: 12px;
+  --history-dot-top: 4px;
+  display: grid;
+  grid-template-columns: 8.5rem var(--history-dot) minmax(0, 1fr);
+  column-gap: var(--space-5);
 }
-.history-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.history-time {
+  font-size: var(--fs-xs);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.history-rail { position: relative; }
+/* Đoạn ray từ ga này xuống ga sau: chạy từ tâm ga tới hết dòng (dòng có đệm dưới ở
+   `.history-body`), ga sau che đầu đoạn bằng nền của nó. Ga cuối không có đoạn nào. */
+.history-item:not(:last-child) .history-rail::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--history-dot-top) + var(--history-dot) / 2);
+  bottom: calc(-1 * (var(--history-dot-top) + var(--history-dot) / 2));
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--border-2);
+}
+.history-dot {
+  position: relative;
+  z-index: 1;
+  display: block;
+  box-sizing: border-box;
+  width: var(--history-dot);
+  height: var(--history-dot);
+  margin-top: var(--history-dot-top);
+  border-radius: 50%;
+  border: 2px solid var(--history-tone, var(--primary));
+  background: var(--surface);
+}
+/* Ga mới nhất tô đặc — mắt tìm "trạng thái hiện giờ" ở đầu trục. */
+.history-item.is-latest .history-dot { background: var(--history-tone, var(--primary)); }
+.history-item[data-tone='create'] { --history-tone: var(--ok); }
+.history-item[data-tone='status'] { --history-tone: var(--warn); }
+.history-item[data-tone='void'] { --history-tone: var(--danger); }
+.history-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--space-7);
+}
+.history-item:last-child .history-body { padding-bottom: 0; }
 .history-action { font-weight: 600; font-size: var(--fs-sm); }
 .history-detail, .history-meta { font-size: var(--fs-xs); }
+/* Màn hẹp: cột ngày giờ bên trái ăn mất chỗ của nội dung — ngày giờ xuống dưới nội dung. */
+@media (max-width: 640px) {
+  .history-item { grid-template-columns: var(--history-dot) minmax(0, 1fr); }
+  .history-rail { grid-column: 1; grid-row: 1 / span 2; }
+  .history-body { grid-column: 2; grid-row: 1; padding-bottom: 0; }
+  .history-time { grid-column: 2; grid-row: 2; text-align: left; padding: 2px 0 var(--space-7); }
+  .history-item:last-child .history-time { padding-bottom: 0; }
+}
 
 /* Gallery /dev/components */
 .kit-section { display: flex; flex-direction: column; gap: var(--space-6); margin-bottom: var(--space-10); }
@@ -219,7 +289,7 @@
   align-self: flex-start;
   align-items: center;
   padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink);
@@ -245,8 +315,8 @@
   box-shadow: var(--ring);
 }
 .file-picker-label:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--primary-ink);
+  color: var(--primary-ink);
 }
 .file-picker-hint {
   font-size: var(--fs-xs);
@@ -377,6 +447,28 @@
   max-height: 240px;
   overflow-y: auto;
 }
+/* Danh sách dài (loại thiết bị) chia 2 cột và cao theo nội dung: cuộn lồng trong khung đã cuộn
+   của hộp thì không thấy được còn bao nhiêu mục (Q-21). */
+.pick-list.cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-7);
+  max-height: none;
+  overflow: visible;
+}
+/* Cùng một hộp (gán quyền két): có một họ chia 2 cột thì mọi họ chia theo — họ dài 2 cột cạnh
+   họ ngắn 1 cột thì các ô tick không thẳng hàng, mắt phải dò hai lưới khác nhau. */
+.form-grid:has(.pick-list.cols-2) .pick-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-7);
+  max-height: none;
+  overflow: visible;
+}
+@media (max-width: 480px) {
+  .pick-list.cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .form-grid:has(.pick-list.cols-2) .pick-list { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) --------------- */
 .vault-rules {
@@ -386,6 +478,10 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+/* Đoạn dẫn ngay trên (hộp "Luật của két"): margin 0 ở trên làm nó dính vào gạch đầu dòng. */
+p + .vault-rules {
+  margin-top: var(--space-6);
 }
 .vault-rules li {
   padding-left: var(--space-5);
@@ -530,9 +626,14 @@ table.table tbody tr.row-muted td {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease),
+    transform var(--dur) var(--ease);
 }
-.kpi:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+/* Ô nào cũng bấm được: nhấc 1px + bóng để mời bấm. */
+.kpi:hover { border-color: var(--primary); box-shadow: var(--shadow); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .kpi:hover { transform: none; }
+}
 .kpi:focus-visible { outline: none; box-shadow: var(--ring); }
 /* Ô lọc ĐANG BẬT. Không chỉ đổi màu: viền dày lên và nền đổi, để người không phân biệt được
    màu vẫn thấy ô nào đang bật (WCAG 1.4.1 — đừng nói bằng mỗi màu). */
@@ -960,6 +1061,19 @@ table.table tbody tr.row-muted td {
 .sticky-action-buttons > .btn.primary {
   flex: 3 1 0;
 }
+/* Thanh gọn cho màn cấu hình desktop: ghi chú trái, nút nhỏ dồn phải trên cùng một hàng. */
+.sticky-action-bar.compact {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding-block: var(--space-4);
+}
+.sticky-action-bar.compact .sticky-action-note { margin-right: auto; }
+.sticky-action-bar.compact .sticky-action-buttons > .btn {
+  flex: 0 0 auto;
+  min-height: 0;
+}
 @media (max-width: 680px) {
   /* Điện thoại: tràn sát hai mép như thanh công cụ, không phải một thẻ lơ lửng. */
   .sticky-action-bar {
@@ -1116,14 +1230,15 @@ table.access-grid thead .access-row-head {
 .access-row-add {
   flex: none;
   min-width: 2rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Dấu + ở tiêu đề cột: báo tiêu đề BẤM ĐƯỢC (gán nhóm cho nhiều người). */
 .access-col-plus {
-  display: inline-block;
   margin-left: var(--space-1);
+  vertical-align: -0.125em;
   color: var(--primary-ink);
-  font-weight: 700;
 }
 .access-intro p {
   margin: 0;
@@ -1174,8 +1289,29 @@ table.access-grid thead .access-row-head {
   overflow-wrap: anywhere;
 }
 .access-col-btn:hover { color: var(--primary-ink); }
-.access-col-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 .access-cell { text-align: center; padding: 2px; }
+/*
+ * Lưới chia ô dọc ngang (Q-20): vạch dọc giữa mọi cột, vạch đậm hơn ở cột đầu mỗi họ
+ * (`.access-group-start`, dựng ở `access-matrix-screen.tsx`) và dưới hàng tiêu đề — cuộn ngang
+ * tới cột thứ 20 vẫn dò được ô thuộc nhóm nào. Cột đầu tiên sát cột tên người thì bỏ vạch trái:
+ * cột tên người đã có vạch phải, hai vạch cạnh nhau thành một đường dày.
+ */
+table.access-grid .access-col,
+table.access-grid .access-cell {
+  border-left: 1px solid var(--border);
+}
+table.access-grid .access-group-start,
+table.access-grid .access-family {
+  border-left: 1px solid var(--border-2);
+}
+table.access-grid thead tr:first-child .access-family:nth-child(2),
+table.access-grid thead tr:last-child .access-col:first-child,
+table.access-grid tbody .access-row-head + .access-cell {
+  border-left: 0;
+}
+table.access-grid thead tr:last-child th {
+  border-bottom: 1px solid var(--border-2);
+}
 /* Ô là một NÚT vuông đủ 30px — bấm nhầm sang ô bên cạnh khi đang cuộn ngang là mở quyền cho
    nhầm người, nên vùng bấm phải rõ ràng chứ không phải một ký tự. */
 .access-chip {
@@ -1194,7 +1330,6 @@ table.access-grid thead .access-row-head {
 .access-chip.needs_approval { background: var(--warn-soft); color: var(--warn); }
 .access-chip.none { color: var(--ink-3); }
 .access-chip.none:hover { background: var(--surface-2); border-color: var(--border-2); }
-.access-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .access-legend { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .access-legend .access-chip { cursor: default; }
 
@@ -1232,7 +1367,6 @@ table.access-grid thead .access-row-head {
   background: var(--surface);
 }
 .access-member:hover { border-color: var(--border-2); background: var(--surface-2); }
-.access-member:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .access-member[aria-current='true'] { border-color: var(--primary); background: var(--primary-soft); }
 .access-member-name { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 .access-person-card { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
@@ -1272,7 +1406,10 @@ table.access-grid thead .access-row-head {
 .access-rule-chip.whitelist { background: var(--ok-soft); color: var(--ok); }
 .access-rule-chip.needs_approval { background: var(--warn-soft); color: var(--warn); }
 .access-rule-chip:hover { border-color: var(--border-2); }
-.access-rule-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+/* Nút "+N" gập các chip dư: viền đứt để không đọc nhầm thành một quyền thứ N+1. */
+.access-rule-chip.more { background: var(--surface-2); color: var(--ink-2); border: 1px dashed var(--border-2); }
+/* Tiêu đề họ + nút (i) giải thích site/loại cộng dồn. */
+.access-family-label { display: inline-flex; align-items: center; gap: var(--space-2); }
 .access-role-holders { margin-top: var(--space-6); }
 .access-role-holders summary { cursor: pointer; font-weight: 600; }
 .access-role-holders ul { margin: var(--space-3) 0 0; padding-left: var(--space-6); }
@@ -1373,6 +1510,7 @@ table.access-grid thead .access-row-head {
   font-size: var(--fs-xs);
   color: var(--ink-3);
 }
+.strength-rules li { display: inline-flex; align-items: center; gap: var(--space-1); }
 .strength-rules li.met { color: var(--ok); font-weight: 600; }
 .warn-text { color: var(--warn); }
 
@@ -1427,7 +1565,7 @@ table.access-grid thead .access-row-head {
 }
 /* Tô theo lớp ký tự để gõ tay không nhầm l/1, O/0: số và ký hiệu mang màu riêng, chữ HOA đậm. */
 .ch-digit { color: var(--primary-ink); }
-.ch-symbol { color: var(--warm-ink); }
+.ch-symbol { color: var(--warm-strong); }
 .ch-upper { font-weight: var(--fw-bold); }
 /* Chế độ "từng ký tự": ô đánh số, đọc từng ô khi gõ sang console. */
 .secret-chars {
@@ -1548,6 +1686,17 @@ table.access-grid thead .access-row-head {
   body:has(.sticky-action-bar) .toast-stack {
     bottom: calc(var(--space-5) + 7rem + env(safe-area-inset-bottom));
   }
+  /* Màn hẹp toast trải gần trọn bề ngang (left/right ở `.toast-stack` trên): trả lại hai mép và
+     bỏ dịch nửa bề rộng của bản màn rộng. */
+  body:has([role='dialog']) .toast-stack,
+  body:has([role='alertdialog']) .toast-stack,
+  body:has(.auth) .toast-stack {
+    top: calc(var(--space-5) + env(safe-area-inset-top));
+    bottom: auto;
+    left: var(--space-5);
+    right: var(--space-5);
+    transform: none;
+  }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
   /* 390px: "Trang x/y" đã nói đủ vị trí; dãy số nhường chỗ cho ‹ › và ô "Tới trang". */
@@ -1605,10 +1754,13 @@ table.access-grid thead .access-row-head {
 .empty .empty-hint {
   font-size: var(--fs-xs);
   color: var(--ink-3);
-  max-width: 32ch;
 }
 .empty .empty-action {
   margin-top: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
 }
 .error-state {
   min-height: 60vh;
@@ -1633,7 +1785,7 @@ table.access-grid thead .access-row-head {
 .error-state h1 {
   margin: var(--space-1) 0 0;
 }
-.error-state .primary {
+.error-state > .primary {
   margin-top: var(--space-3);
 }
 /* Lối ra của 404/403: Quay lại (phụ) + Về trang chủ (chính), đứng cạnh nhau. */
@@ -1854,7 +2006,6 @@ table.access-grid thead .access-row-head {
   white-space: nowrap;
 }
 .settings-nav button:hover { background: var(--surface-2); }
-.settings-nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .settings-nav button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary-ink); }
 .settings-panel { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
 .settings-panel h2 { margin: 0; }

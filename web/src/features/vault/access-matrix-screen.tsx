@@ -9,19 +9,20 @@ import { formatDate } from '@/lib/format';
 import { PATHS } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import type { Me } from '@/lib/me';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
+import { InfoTip } from '@/ui/info-tip';
+import { PlusIcon } from '@/ui/glyph-icons';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { ScrollX } from '@/ui/scroll-x';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
-import { useMediaQuery } from '@/ui/use-media-query';
-import { NARROW_QUERY } from '@/ui/use-narrow';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
 
@@ -42,6 +43,27 @@ const SCOPE_ORDER: ScopeType[] = [
   'service_account_kind',
   'isp_provider',
 ];
+
+/**
+ * Hai họ thiết bị CỘNG DỒN (`access-tier.ts` `groupsOfDevice` + `explainTier`): một máy thuộc
+ * đồng thời nhóm site và nhóm loại của nó, khớp dòng nào cũng thấy, nhiều dòng thì lấy tầng rộng
+ * nhất. Không nói ra thì SA tưởng phải gán cả hai mới thấy, hoặc tưởng "loại" thu hẹp "site".
+ */
+function FamilyLabel({ type, label }: { type: ScopeType; label: string }) {
+  const { t } = useTranslation();
+  if (type !== 'device_site' && type !== 'device_type') return <>{label}</>;
+  return (
+    <span className="access-family-label">
+      {label}
+      <InfoTip subject={label}>{t('access.deviceUnionTip')}</InfoTip>
+    </span>
+  );
+}
+
+/** Thẻ theo người: quá số chip này trong một họ thì gập lại sau nút "+N". */
+const CHIP_LIMIT = 6;
+/** Hộp gán quyền: họ có nhiều hơn số nhóm này thì danh sách chia 2 cột. */
+const PICK_COLUMNS_FROM = 5;
 
 interface AccessRule {
   id: string;
@@ -114,7 +136,7 @@ const scopeKey = (scope: { scopeType: string; scopeRef: string }) =>
  * Quyền xem két sắt (FR-023) — hai cách nhìn trên CÙNG một sổ quyền.
  *
  * "Theo người" là mô hình chính: việc hằng ngày là "anh A cần xem gì" — chọn người bên trái,
- * bên phải là thẻ quyền của họ gom theo họ nhóm, "+ Thêm quyền" chọn nhiều nhóm một lượt. Lưới
+ * bên phải là thẻ quyền của họ gom theo họ nhóm, "+ Gán quyền" chọn nhiều nhóm một lượt. Lưới
  * 32 cột × N người thì phần lớn là ô trống, phải kéo ngang dài mới tìm ra một nhóm.
  *
  * "Ma trận" vẫn giữ (chỉ màn rộng) cho việc RÀ SOÁT tổng: đọc theo cột ra "nhóm này ai xem
@@ -131,7 +153,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useIsNarrow();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   /** Người đã vô hiệu hóa (nghỉ việc) mặc định ẨN — gán quyền cho họ là việc không ai cần làm. */
@@ -189,6 +211,13 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
   );
 
+  /*
+   * POST/DELETE /vault/access đòi step-up: hết ân hạn thì server trả STEPUP_REQUIRED. Mọi lượt
+   * ghi trên màn này phải đi qua `stepUp.run` — không thì người dùng chỉ thấy câu lỗi đỏ bảo
+   * nhập mã mà không có ô nào để nhập.
+   */
+  const stepUp = useStepUpRetry(me.csrfToken);
+
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['vault', 'access'] });
 
   /** Gỡ một dòng quyền — MỘT bản cho mọi chỗ gỡ trên màn này (AD-15). */
@@ -203,16 +232,14 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       confirmLabel: t('access.remove'),
     });
     if (!ok) return;
-    remove.mutate(
-      { id: rule.id },
-      {
-        onSuccess: () => {
-          toast({ message: t('access.removed') });
-          void refresh();
-        },
-        onError: (error) => toast({ message: errorMessage(error), tone: 'error' }),
-      },
-    );
+    try {
+      await stepUp.run(() => remove.mutateAsync({ id: rule.id }), t('access.stepUpRemove'));
+      toast({ message: t('access.removed') });
+      void refresh();
+    } catch (error) {
+      if (isStepUpCancelled(error)) return;
+      toast({ message: errorMessage(error), tone: 'error' });
+    }
   };
 
   /** `email|scopeType|scopeRef` → luật — `Map` vì lưới là N×M ô, `.find()` mỗi ô là quá nhiều. */
@@ -250,6 +277,13 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   }, [scopes.data, rules.data, family, onlyEmpty, t]);
 
   const columns = columnGroups.flatMap((group) => group.scopes);
+  /* Cột đầu của mỗi họ, trừ họ đầu tiên (cạnh nó đã là vạch của cột tên người): CSS kẻ vạch
+     đậm hơn ở đó để mắt thấy ranh giới giữa các họ khi cuộn ngang. */
+  const groupStarts = new Set(
+    columnGroups.slice(1).map((group) => scopeKey(group.scopes[0])),
+  );
+  const colClass = (base: string, scope: ScopeOption) =>
+    groupStarts.has(scopeKey(scope)) ? `${base} access-group-start` : base;
 
   const allAccounts = accounts.data ?? [];
   const members = allAccounts.filter(
@@ -344,13 +378,13 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   scope="colgroup"
                   className="access-family"
                 >
-                  {group.label}
+                  <FamilyLabel type={group.type} label={group.label} />
                 </th>
               ))}
             </tr>
             <tr>
               {columns.map((scope) => (
-                <th key={scopeKey(scope)} scope="col" className="access-col">
+                <th key={scopeKey(scope)} scope="col" className={colClass('access-col', scope)}>
                   {/* Bấm tiêu đề cột = gán nhóm này cho NHIỀU người một lượt. Nhãn trợ năng là câu
                       đầy đủ vì chữ hiện ra đã cắt tiền tố họ. */}
                   <button
@@ -362,9 +396,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   >
                     {shortLabel(scope.label)}
                     {/* Dấu + cho thấy tiêu đề cột BẤM ĐƯỢC — chỉ có tooltip thì không ai biết. */}
-                    <span className="access-col-plus" aria-hidden="true">
-                      +
-                    </span>
+                    <PlusIcon className="access-col-plus" />
                   </button>
                 </th>
               ))}
@@ -398,7 +430,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                       title={t('access.addFor', { member: account.fullName })}
                       onClick={() => setAddingFor(account)}
                     >
-                      +
+                      <PlusIcon />
                     </button>
                   </div>
                 </th>
@@ -406,7 +438,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                   const key = scopeKey(scope);
                   const rule = ruleAt.get(`${account.email.toLowerCase()}|${key}`) ?? null;
                   return (
-                    <td key={key} className="access-cell">
+                    <td key={key} className={colClass('access-cell', scope)}>
                       <button
                         type="button"
                         className={`access-chip ${rule ? rule.tier : 'none'}`}
@@ -615,6 +647,8 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           }}
         />
       ) : null}
+
+      {stepUp.dialog}
     </>
   );
 }
@@ -688,6 +722,8 @@ function PeopleView({
 
       {showDetail && selected ? (
         <PersonRules
+          /* Đổi người thì các họ đã mở "+N" gập lại — trạng thái mở thuộc về thẻ của một người. */
+          key={selected.id}
           account={selected}
           rules={rulesOf.get(selected.email.toLowerCase()) ?? []}
           onBack={narrow ? () => onSelect(null) : undefined}
@@ -717,6 +753,7 @@ function PersonRules({
   onOpenRule: (rule: AccessRule) => void;
 }) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState<ScopeType[]>([]);
   const groups = SCOPE_ORDER.map((type) => ({
     type,
     rules: rules
@@ -749,29 +786,59 @@ function PersonRules({
       {groups.length === 0 ? (
         <p className="muted">{t('access.noRulesYet')}</p>
       ) : (
-        groups.map((group) => (
-          <div key={group.type} className="access-rule-group">
-            <h3>{t(`access.scope_${group.type}`)}</h3>
-            <ul className="access-rule-chips">
-              {group.rules.map((rule) => (
-                <li key={rule.id}>
-                  <button
-                    type="button"
-                    className={`access-rule-chip ${rule.tier}`}
-                    aria-label={t('access.cellLabel', {
-                      member: account.fullName,
-                      scope: rule.scopeLabel,
-                      tier: t(`access.tier_${rule.tier}`),
-                    })}
-                    onClick={() => onOpenRule(rule)}
-                  >
-                    {shortLabel(rule.scopeLabel)} · {t(`access.tier_${rule.tier}`)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
+        groups.map((group) => {
+          const open = expanded.includes(group.type);
+          const hidden = open ? 0 : Math.max(0, group.rules.length - CHIP_LIMIT);
+          const shown = hidden > 0 ? group.rules.slice(0, CHIP_LIMIT) : group.rules;
+          return (
+            <div key={group.type} className="access-rule-group">
+              <h3>{t(`access.scope_${group.type}`)}</h3>
+              <ul className="access-rule-chips">
+                {shown.map((rule) => (
+                  <li key={rule.id}>
+                    <button
+                      type="button"
+                      className={`access-rule-chip ${rule.tier}`}
+                      aria-label={t('access.cellLabel', {
+                        member: account.fullName,
+                        scope: rule.scopeLabel,
+                        tier: t(`access.tier_${rule.tier}`),
+                      })}
+                      onClick={() => onOpenRule(rule)}
+                    >
+                      {shortLabel(rule.scopeLabel)} · {t(`access.tier_${rule.tier}`)}
+                    </button>
+                  </li>
+                ))}
+                {hidden > 0 ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="access-rule-chip more"
+                      aria-label={t('access.showMoreRules', { count: hidden })}
+                      onClick={() => setExpanded((current) => [...current, group.type])}
+                    >
+                      +{hidden}
+                    </button>
+                  </li>
+                ) : null}
+                {open && group.rules.length > CHIP_LIMIT ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() =>
+                        setExpanded((current) => current.filter((type) => type !== group.type))
+                      }
+                    >
+                      {t('access.showLessRules')}
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          );
+        })
       )}
     </section>
   );
@@ -844,8 +911,9 @@ function CellDialog({
   const askConfirm = useConfirm();
   const [tier, setTier] = useState<Tier>(rule?.tier ?? 'needs_approval');
   const [note, setNote] = useState(rule?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([tier, note]);
   const check = useFormErrors({ note: secretTextRule(t, note) });
+  const stepUp = useStepUpRetry(csrfToken);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -875,16 +943,16 @@ function CellDialog({
               <span className="spacer" />
             </>
           ) : null}
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="access-cell-form"
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -918,16 +986,23 @@ function CellDialog({
               });
               if (!ok) return;
             }
-            save.mutate(
-              {
-                memberEmail: account.email,
-                scopeType: scope.scopeType,
-                scopeRef: scope.scopeRef,
-                tier,
-                note: note.trim(),
-              },
-              { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
-            );
+            try {
+              await stepUp.run(
+                () =>
+                  save.mutateAsync({
+                    memberEmail: account.email,
+                    scopeType: scope.scopeType,
+                    scopeRef: scope.scopeRef,
+                    tier,
+                    note: note.trim(),
+                  }),
+                t('access.stepUpGrant'),
+              );
+              onSaved();
+            } catch (err) {
+              if (isStepUpCancelled(err)) return;
+              setError(errorMessage(err));
+            }
           })();
         }}
       >
@@ -968,6 +1043,7 @@ function CellDialog({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }
@@ -1000,9 +1076,10 @@ function GrantToScopeDialog({
   const [query, setQuery] = useState('');
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([picked, tier, note]);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
+  const stepUp = useStepUpRetry(csrfToken);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1041,11 +1118,11 @@ function GrantToScopeDialog({
       title={t('access.grantScopeTitle', { scope: scope.label })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="grant-scope-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1068,21 +1145,29 @@ function GrantToScopeDialog({
             setSaving(true);
             let done = 0;
             const failures: string[] = [];
+            /* Lượt đầu hỏi mã (nếu hết ân hạn); các lượt sau nằm trong ân hạn nên đi thẳng.
+               Đóng hộp hỏi mã = dừng cả lượt, không hỏi lại cho từng người còn lại. */
             for (const memberEmail of picked) {
               try {
-                await save.mutateAsync({
-                  memberEmail,
-                  scopeType: scope.scopeType,
-                  scopeRef: scope.scopeRef,
-                  tier,
-                  note: note.trim(),
-                });
+                await stepUp.run(
+                  () =>
+                    save.mutateAsync({
+                      memberEmail,
+                      scopeType: scope.scopeType,
+                      scopeRef: scope.scopeRef,
+                      tier,
+                      note: note.trim(),
+                    }),
+                  t('access.stepUpGrant'),
+                );
                 done += 1;
               } catch (err) {
+                if (isStepUpCancelled(err)) break;
                 failures.push(`${memberEmail}: ${errorMessage(err)}`);
               }
             }
             setSaving(false);
+            if (done === 0 && failures.length === 0) return;
             if (done === 0) {
               setError(failures.join(' '));
               return;
@@ -1189,12 +1274,13 @@ function GrantToScopeDialog({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }
 
 /**
- * Gán NHIỀU nhóm cho MỘT người một lượt — "+ Thêm quyền" ở thẻ theo người và "Gán quyền" ở dòng
+ * Gán NHIỀU nhóm cho MỘT người một lượt — "+ Gán quyền" ở thẻ theo người và "Gán quyền" ở dòng
  * của lưới. Một nhân viên mới thường cần ba bốn nhóm cùng lúc (site mình trực, loại switch,
  * đường truyền); mở hộp ba bốn lần, mỗi lần chọn lại tầng, là chỗ dễ chọn nhầm nhất.
  *
@@ -1220,9 +1306,10 @@ function MultiGrantDialog({
   const [picked, setPicked] = useState<string[]>([]);
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([picked, tier, note]);
   const [saving, setSaving] = useState(false);
   const check = useFormErrors({ note: secretTextRule(t, note) });
+  const stepUp = useStepUpRetry(csrfToken);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
     csrfToken,
@@ -1253,11 +1340,11 @@ function MultiGrantDialog({
       title={t('access.grantTitle', { member: account.fullName })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="multi-grant-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -1295,19 +1382,26 @@ function MultiGrantDialog({
               const scope = scopes.find((item) => scopeKey(item) === key);
               if (!scope) continue;
               try {
-                await save.mutateAsync({
-                  memberEmail: account.email,
-                  scopeType: scope.scopeType,
-                  scopeRef: scope.scopeRef,
-                  tier,
-                  note: note.trim(),
-                });
+                await stepUp.run(
+                  () =>
+                    save.mutateAsync({
+                      memberEmail: account.email,
+                      scopeType: scope.scopeType,
+                      scopeRef: scope.scopeRef,
+                      tier,
+                      note: note.trim(),
+                    }),
+                  t('access.stepUpGrant'),
+                );
                 done += 1;
               } catch (err) {
+                // Đóng hộp hỏi mã = dừng cả lượt, không hỏi lại cho từng nhóm còn lại.
+                if (isStepUpCancelled(err)) break;
                 failures.push(`${scope.label}: ${errorMessage(err)}`);
               }
             }
             setSaving(false);
+            if (done === 0 && failures.length === 0) return;
             if (done === 0) {
               setError(failures.join(' '));
               return;
@@ -1322,8 +1416,11 @@ function MultiGrantDialog({
         ) : (
           groups.map((group) => (
             <fieldset key={group.type} className="ff-contents">
-              <legend className="lbl-t">{t(`access.scope_${group.type}`)}</legend>
-              <ul className="pick-list">
+              <legend className="lbl-t">
+                <FamilyLabel type={group.type} label={t(`access.scope_${group.type}`)} />
+              </legend>
+              {/* Họ dài (loại thiết bị) chia 2 cột thay vì cuộn trong một ô nhỏ (Q-21). */}
+              <ul className={group.scopes.length > PICK_COLUMNS_FROM ? 'pick-list cols-2' : 'pick-list'}>
                 {group.scopes.map((scope) => {
                   const key = scopeKey(scope);
                   return (
@@ -1375,6 +1472,7 @@ function MultiGrantDialog({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }
@@ -1406,7 +1504,7 @@ function CopyFromDialog({
   const askConfirm = useConfirm();
   const stepUp = useStepUpRetry(csrfToken);
   const [sourceId, setSourceId] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([sourceId]);
   const [saving, setSaving] = useState(false);
 
   const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
@@ -1440,7 +1538,7 @@ function CopyFromDialog({
             {t('common.cancel')}
           </button>
           <button type="submit" form="copy-access-form" className="btn primary" disabled={saving}>
-            {saving ? t('common.loading') : t('access.add')}
+            {saving ? t('common.working') : t('access.add')}
           </button>
         </>
       }
@@ -1486,13 +1584,17 @@ function CopyFromDialog({
                     tier: rule.tier,
                     note: t('access.copyNote', { source: source.email }),
                   }),
+                  t('access.stepUpCopy', { name: account.fullName }),
                 );
                 done += 1;
               } catch (err) {
+                // Đóng hộp hỏi mã = dừng cả lượt, không hỏi lại cho từng nhóm còn lại.
+                if (isStepUpCancelled(err)) break;
                 failures.push(`${rule.scopeLabel}: ${errorMessage(err)}`);
               }
             }
             setSaving(false);
+            if (done === 0 && failures.length === 0) return;
             if (done === 0) {
               setError(failures.join(' '));
               return;
@@ -1607,7 +1709,7 @@ function CheckAccessDialog({
   const [ownerType, setOwnerType] = useState<SecretOwnerType>('device');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([memberId, ownerType, code]);
   const [result, setResult] = useState<(TierExplain & { label: string }) | null>(null);
   const scopeLabel = (scope: { scopeType: string; scopeRef: string }) =>
     scopes.find((item) => scopeKey(item) === scopeKey(scope))?.label ?? scope.scopeRef;

@@ -589,22 +589,13 @@ export function DeviceDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        /* Dòng định danh: không in lại loại (đã ở breadcrumb) hay model (ở Thông tin nhanh).
-           Serial có nút chép (dán vào terminal/phiếu bảo hành). Mã thì KHÔNG: nó là tiêu đề
-           trang, bôi đen chép được, và `DetailHeader` đã bỏ nút chép mã ở mọi trang chi tiết. */
-        subline={
-          item.serial ? (
-            <span className="subline-item">
-              S/N <span className="mono">{item.serial}</span>
-              <CopyButton value={item.serial} label={t("devices.copySerial")} />
-            </span>
-          ) : undefined
-        }
+        /* Không có dòng định danh: loại đã ở breadcrumb, model và serial (kèm nút chép) ở
+           Thông tin nhanh (Q-20). Mã không có nút chép: nó là tiêu đề trang, bôi đen chép được. */
         actions={
           narrow ? (
             /* Điện thoại: đứng trước tủ, việc cần là két (mật khẩu) — không phải Sửa/Thanh lý.
                Nút chính đưa thẳng tới tab Két sắt; mọi việc sửa hồ sơ vào menu ⋯. Máy đã
-               thanh lý thì "Mở lại" vẫn là nút chính như trên máy tính. */
+               thanh lý thì "Đổi trạng thái" (mở lại) vẫn là nút chính như trên máy tính. */
             <>
               {retired ? (
                 <button type="button" className="btn primary" onClick={openStatus}>
@@ -809,15 +800,15 @@ export function DeviceDetail({ me }: { me: Me }) {
           <>
             {/*
               THÔNG TIN NHANH đứng ĐẦU tab: mở máy ra, câu hỏi đầu tiên là IP quản trị và
-              model, nên chúng không được nằm cuối trang hay sau bản đồ quan hệ. Trạng
-              thái, vị trí, người dùng, bảo hành đã ở cột Tóm tắt, serial ở dòng dưới tiêu đề (có
-              nút chép) — nên không in lại ở đây.
+              model, nên chúng không được nằm cuối trang hay sau bản đồ quan hệ. Serial ở đây
+              kèm nút chép (dán vào phiếu bảo hành, đọc cho nhà cung cấp). Trạng thái, vị trí,
+              người dùng, bảo hành đã ở cột Tóm tắt — nên không in lại ở đây.
             */}
             <DetailSection title={t("devices.quickInfo")} compact>
               <dl className="data-grid">
                 <DataItemIfSet label={t("devices.managementIp")} value={firstIp}>
                   <span className="mono">{firstIp}</span>
-                  {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} /> : null}
+                  {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} inline /> : null}
                 </DataItemIfSet>
                 {/* Máy CHẮC CHẮN chưa có IP (khu mở rộng đã về): ô IP quản trị nói thẳng "chưa có"
                     và nút Cấp IP là nút chính ngay tại đó — đây là việc còn thiếu đầu tiên của
@@ -838,6 +829,12 @@ export function DeviceDetail({ me }: { me: Me }) {
                   </div>
                 ) : null}
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
+                <DataItemIfSet label={t("devices.serial")} value={item.serial}>
+                  <span className="mono">{item.serial}</span>
+                  {/* Cùng kiểu nút chép với IP quản trị ngay bên cạnh: hai ô trong một khung mà
+                      một ô có nút vuông viền, một ô không, là hai kiểu cho cùng một việc. */}
+                  <CopyButton value={item.serial ?? ""} label={t("devices.copySerial")} inline />
+                </DataItemIfSet>
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
               </dl>
               {/* MỘT bản "máy đang giữ gì" cho mỗi khổ: máy tính có bản đồ quan hệ ngay dưới
@@ -869,12 +866,13 @@ export function DeviceDetail({ me }: { me: Me }) {
                     </button>
                   ) : null}
                   {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
-                      trang tìm ô trống rồi gõ lại mã máy này. Máy đã có IP (cấp thêm) hoặc chưa
-                      đọc được khu IP thì nút đứng ở đây; chắc chắn chưa có IP thì nó là nút
-                      chính trong ô "IP quản trị" phía trên. */}
+                      trang tìm ô trống rồi gõ lại mã máy này. Chắc chắn chưa có IP thì nút là
+                      nút chính trong ô "IP quản trị" phía trên. Máy đã có IP thì là "Đổi IP"
+                      (Q-20 — một máy một IP); chưa đọc được khu IP thì vẫn "Cấp IP", API chặn
+                      nếu máy thật ra đã có IP. */}
                   {ipKnownEmpty ? null : (
                     <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                      {t("devices.assignIp")}
+                      {t(firstIp ? "devices.changeIp" : "devices.assignIp")}
                     </button>
                   )}
                 </div>
@@ -917,7 +915,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 open={!folded.has("software")}
                 onToggle={() => toggleZone("software")}
               >
-                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
+                <DeviceLicensesExpand deviceId={item.id} />
               </ZoneSection>
             ) : null}
 
@@ -1080,13 +1078,14 @@ export function DeviceDetail({ me }: { me: Me }) {
       {assigningIp ? (
         <DeviceIpAssign
           device={{ id: item.id, code: item.code }}
+          change={!!firstIp}
           csrfToken={me.csrfToken}
           onClose={() => setAssigningIp(false)}
           onDone={() => {
             setAssigningIp(false);
-            toast({ message: t("devices.ipAssigned") });
+            toast({ message: t(firstIp ? "devices.ipChanged" : "devices.ipAssigned") });
             void queryClient.invalidateQueries({ queryKey: ["devices", id] });
-            void queryClient.invalidateQueries({ queryKey: ["ipam", "subnets"] });
+            void queryClient.invalidateQueries({ queryKey: ["ipam"] });
           }}
         />
       ) : null}

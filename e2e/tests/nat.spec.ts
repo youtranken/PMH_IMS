@@ -83,7 +83,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('máy chấm công truy cập từ ngoài');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     // Ba câu của auditor phải nằm NGAY TRÊN BẢNG, không giấu trong trang chi tiết.
     const row = page.getByRole('row', { name: new RegExp(routerCode) });
@@ -143,7 +143,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('thử');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('thử');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form.getByText(/ĐỊA CHỈ MẠNG/)).toBeVisible();
   });
 
@@ -185,7 +185,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('VPN vào LAN nội bộ');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     const row = page.getByRole('row', { name: new RegExp(routerCode) });
     await expect(row.getByText('UDP 1194')).toBeVisible();
@@ -205,15 +205,15 @@ test.describe('Sổ NAT', () => {
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
-    // Dịch vụ chưa có: dòng "＋ Thêm dịch vụ" ghim ở đầu menu dropdown.
+    // Dịch vụ chưa có: dòng "Thêm dịch vụ" (có hình +) ghim ở đầu menu dropdown.
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài' }).click();
-    await page.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
+    await page.getByRole('button', { name: 'Thêm dịch vụ' }).first().click();
     const serviceForm = page.getByRole('dialog').last();
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
     await serviceForm.getByRole('textbox', { name: 'Tên', exact: true }).fill(serviceName);
     await serviceForm.getByRole('textbox', { name: 'Từ port' }).fill('8443');
-    await serviceForm.getByRole('button', { name: 'Lưu' }).click();
+    await serviceForm.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     // Lưu xong là ÁP THẲNG vào ô đang khai — không bắt người dùng đi tìm lại trong danh sách.
     await expect(form.getByRole('button', { name: 'Bỏ cổng 8443' })).toBeVisible();
@@ -222,7 +222,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('443');
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kinh doanh');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('web đơn hàng cho đối tác');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(
       page.getByRole('row', { name: new RegExp(routerCode) }).getByText('TCP 8443'),
     ).toBeVisible();
@@ -253,14 +253,14 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
 
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').click();
-    await page.getByRole('button', { name: '+ Thêm router mới' }).click();
+    await page.getByRole('button', { name: 'Thêm thiết bị mới' }).click();
 
     const deviceForm = page.getByRole('dialog').last();
     await deviceForm.getByLabel('Mã thiết bị').fill(newRouter);
     await deviceForm.getByLabel('Tên thiết bị').fill('Draytek mới');
     await deviceForm.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
-    await deviceForm.getByRole('button', { name: 'Lưu' }).click();
+    await deviceForm.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     // Router vừa tạo được CHỌN SẴN, và ô khai dở còn nguyên.
     await expect(form.getByPlaceholder('Chọn hoặc gõ để lọc…')).toHaveValue(newRouter);
@@ -270,7 +270,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('443');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('thử router mới');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('row', { name: new RegExp(newRouter) })).toBeVisible();
   });

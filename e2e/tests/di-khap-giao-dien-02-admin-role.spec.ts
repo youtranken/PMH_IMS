@@ -127,7 +127,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Họ tên' }).fill(ADMIN_NAME);
     await form.getByRole('textbox', { name: 'Email' }).fill(ADMIN_EMAIL);
@@ -372,11 +372,11 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('button', { name: 'Ẩn ngay' }).click();
 
     // --- XOAY.
-    await rowAction(page, label, 'Đổi giá trị');
+    await rowAction(page, label, 'Đổi mật khẩu');
     const rotateDialog = page.getByRole('dialog');
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(newValue);
-    await rotateDialog.getByRole('button', { name: 'Đổi giá trị' }).click();
-    await expect(page.getByText('Đã đổi giá trị.')).toBeVisible();
+    await rotateDialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();
+    await expect(page.getByText('Đã đổi mật khẩu.')).toBeVisible();
 
     // --- XEM LẠI: grace còn hiệu lực nên không bị hỏi mã nữa, và giá trị phải là bản MỚI.
     await page.getByRole('button', { name: 'Xem' }).click();

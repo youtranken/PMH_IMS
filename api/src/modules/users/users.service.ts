@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -77,7 +77,11 @@ export class UsersService {
           )
         : undefined,
       filters.role ? eq(usersTable.role, filters.role) : undefined,
-      filters.status ? eq(usersTable.status, filters.status) : undefined,
+      filters.status === 'live'
+        ? ne(usersTable.status, 'disabled')
+        : filters.status
+          ? eq(usersTable.status, filters.status)
+          : undefined,
       filters.totp === 'none' ? isNull(usersTable.totpEnrolledAt) : undefined,
       filters.totp === 'enrolled' ? isNotNull(usersTable.totpEnrolledAt) : undefined,
     );
@@ -145,6 +149,7 @@ export class UsersService {
       role: UserRole;
       passwordHash: string;
       totpLoginRequired: boolean;
+      tempPasswordExpiresAt: Date;
     },
   ): Promise<UserRecord> {
     const rows = await tx
@@ -173,15 +178,25 @@ export class UsersService {
     return strip(toCredentials(rows[0]));
   }
 
+  /**
+   * `tempExpiresAt` có giá trị = SA cấp mật khẩu tạm (buộc đổi, có hạn); `null` = người dùng tự
+   * đặt (hết buộc đổi, xoá hạn). Một tham số cho cả hai cờ để không bao giờ có hàng "buộc đổi"
+   * mà quên mốc hạn, hay "đã tự đặt" mà còn sót mốc.
+   */
   async setPasswordWithin(
     tx: Tx,
     userId: string,
     passwordHash: string,
-    mustChangePassword: boolean,
+    tempExpiresAt: Date | null,
   ): Promise<void> {
     await tx
       .update(usersTable)
-      .set({ passwordHash, mustChangePassword, updatedAt: new Date() })
+      .set({
+        passwordHash,
+        mustChangePassword: tempExpiresAt !== null,
+        tempPasswordExpiresAt: tempExpiresAt,
+        updatedAt: new Date(),
+      })
       .where(eq(usersTable.id, userId));
   }
 
@@ -530,7 +545,8 @@ export class UsersService {
 /** Bộ lọc màn Tài khoản: "ai đang khóa", "admin nào chưa cài 2 lớp", "danh sách SA". */
 export interface UserListFilters {
   role?: UserRole;
-  status?: UserRecord['status'];
+  /** `live` = trừ đã vô hiệu hóa — mặc định của màn Người dùng IMS (Q-20). */
+  status?: UserRecord['status'] | 'live';
   /** `none` = chưa cài 2 lớp, `enrolled` = đã cài. */
   totp?: 'none' | 'enrolled';
 }
@@ -573,6 +589,7 @@ function toCredentials(row: Row): UserCredentials {
     role: row.role as UserRole,
     status: row.status as UserCredentials['status'],
     mustChangePassword: row.mustChangePassword,
+    tempPasswordExpiresAt: row.tempPasswordExpiresAt ?? null,
     totpEnrolledAt: row.totpEnrolledAt,
     totpLoginRequired: row.totpLoginRequired,
     failedAttempts: row.failedAttempts,

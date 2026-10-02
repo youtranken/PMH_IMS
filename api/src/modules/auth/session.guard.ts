@@ -2,19 +2,24 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { DRIZZLE_DB } from '../../database/database.module';
+import type { Database } from '../../database/database.module';
+import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersService } from '../users/users.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { ALLOW_PASSWORD_PENDING_KEY } from './password-pending.decorator';
 import { ALLOW_TOTP_PENDING_KEY } from './totp-pending.decorator';
 import { NO_IDLE_TOUCH_KEY } from './no-idle-touch.decorator';
-import { evaluateSession } from './session-policy';
+import { evaluateSession, isTotpChallengeExpired } from './session-policy';
 import { SessionService } from './session.service';
 import { SESSION_COOKIE } from './cookie';
+import { isTempPasswordExpired, TEMP_PASSWORD_EXPIRED_MESSAGE } from './temp-password-policy';
 import type { AuthedRequest } from './types';
 
 /**
@@ -28,6 +33,8 @@ export class SessionGuard implements CanActivate {
     private readonly sessions: SessionService,
     private readonly users: UsersService,
     private readonly config: SystemConfigService,
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly audit: AuditWriterService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -55,8 +62,11 @@ export class SessionGuard implements CanActivate {
       );
     }
 
+    const user = await this.users.findById(session.userId);
+
     // Đúng mật khẩu nhưng chưa qua TOTP: chỉ vài route được phép (nhập mã / enroll / logout).
     if (session.totpPending) {
+      if (user) await this.rejectStaleTotpChallenge(session, user);
       const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_TOTP_PENDING_KEY, [
         context.getHandler(),
         context.getClass(),
@@ -66,11 +76,13 @@ export class SessionGuard implements CanActivate {
       }
     }
 
-    const user = await this.users.findById(session.userId);
     if (!user) throw unauthorized('SESSION_INVALID', 'Tài khoản không còn tồn tại.');
     if (user.status !== 'active') {
       throw unauthorized('ACCOUNT_DISABLED', 'Tài khoản đã bị khóa hoặc vô hiệu hóa.');
     }
+
+    // Kể cả ở cửa đổi mật khẩu: phiên mở bằng mật khẩu tạm không được sống lâu hơn mật khẩu đó.
+    if (isTempPasswordExpired(user, new Date())) await this.rejectExpiredTempPassword(session.id, user);
 
     /*
      * ĐANG BỊ BẮT ĐỔI MẬT KHẨU thì chỉ đi được bốn cửa.
@@ -116,6 +128,64 @@ export class SessionGuard implements CanActivate {
     ]);
     if (!noTouch) void this.sessions.touch(session.id).catch(() => undefined);
     return true;
+  }
+
+  /**
+   * Phiên chờ nhập mã quá `auth.totp_challenge_minutes` (Q-20): thu hồi + nhật ký trong một
+   * transaction (AD-5), rồi 401. Kể cả ở route được phép khi chờ mã — đó chính là cửa cần đóng.
+   *
+   * Thu hồi chứ không chỉ từ chối: phiên ấy không bao giờ sống lại được, để nó nằm trong danh
+   * sách phiên tới khi hết idle chỉ làm người dùng tưởng còn một máy đang đăng nhập.
+   * `reason` để web nói "Hết thời gian nhập mã" thay vì câu hết phiên chung chung.
+   */
+  private async rejectStaleTotpChallenge(
+    session: { id: string; totpPending: boolean; createdAt: Date },
+    user: { email: string; totpEnrolledAt: Date | null },
+  ): Promise<void> {
+    const minutes = await this.config.getNumber('authTotpChallengeMinutes');
+    if (!isTotpChallengeExpired(session, user.totpEnrolledAt !== null, minutes, new Date())) return;
+    // Chỉ lượt thật sự thu hồi mới ghi nhật ký — request song song vẫn nhận 401 như nhau.
+    await this.db.transaction(async (tx) => {
+      if (!(await this.sessions.revokeWithin(tx, session.id, 'totp-challenge-expired'))) return;
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.totp.challenge_expired',
+        objectType: 'session',
+        objectId: session.id,
+        detail: { minutes },
+      });
+    });
+    throw new UnauthorizedException({
+      code: 'SESSION_EXPIRED',
+      reason: 'TOTP_CHALLENGE_EXPIRED',
+      message: 'Hết thời gian nhập mã. Đăng nhập lại.',
+    });
+  }
+
+  /**
+   * Phiên đang chờ đổi mật khẩu mà mật khẩu tạm đã quá `auth.temp_password_hours` (Q-20): thu
+   * hồi + nhật ký trong một transaction (AD-5), rồi 401. Không thu hồi thì người cầm phiên vẫn
+   * đổi được mật khẩu bằng chính mật khẩu tạm đã hết hạn — đúng thứ hạn này phải chặn.
+   */
+  private async rejectExpiredTempPassword(
+    sessionId: string,
+    user: { email: string; tempPasswordExpiresAt: Date | null },
+  ): Promise<never> {
+    await this.db.transaction(async (tx) => {
+      if (!(await this.sessions.revokeWithin(tx, sessionId, 'temp-password-expired'))) return;
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.temp_password.expired',
+        objectType: 'session',
+        objectId: sessionId,
+        detail: { expiredAt: user.tempPasswordExpiresAt?.toISOString() ?? null },
+      });
+    });
+    throw new UnauthorizedException({
+      code: 'SESSION_EXPIRED',
+      reason: 'TEMP_PASSWORD_EXPIRED',
+      message: TEMP_PASSWORD_EXPIRED_MESSAGE,
+    });
   }
 }
 

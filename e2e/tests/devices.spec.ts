@@ -34,7 +34,7 @@ async function seedLocation(page: Page, stamp: string) {
   const siteForm = page.getByRole('dialog');
   await siteForm.getByLabel('Mã').fill(siteCode);
   await siteForm.getByLabel('Tên').fill('Site thiết bị');
-  await siteForm.getByRole('button', { name: 'Lưu' }).click();
+  await siteForm.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Tủ mạng' }).click();
@@ -43,7 +43,7 @@ async function seedLocation(page: Page, stamp: string) {
   await cabinetForm.getByLabel('Mã').fill(cabinetCode);
   await cabinetForm.getByRole('button', { name: 'Thuộc site' }).click();
   await page.getByRole('option', { name: new RegExp(siteCode) }).click();
-  await cabinetForm.getByRole('button', { name: 'Lưu' }).click();
+  await cabinetForm.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(page.getByRole('row', { name: new RegExp(cabinetCode) })).toBeVisible();
 
   return { siteCode, cabinetCode };
@@ -64,7 +64,7 @@ async function fillDevice(
     await form.getByRole('button', { name: 'Site' }).click();
     await page.getByRole('option', { name: new RegExp(values.siteCode) }).click();
   }
-  await form.getByRole('button', { name: 'Lưu' }).click();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 }
 
 test.describe('Kho thiết bị', () => {
@@ -108,7 +108,7 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
     await form.getByLabel('Người sử dụng').fill('anh Nam');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
@@ -164,18 +164,18 @@ test.describe('Kho thiết bị', () => {
     // Q-18: Thanh lý nằm trong menu ⋮ ở đầu trang hồ sơ.
     await rowAction(page, code, 'Thanh lý');
     await confirmAction(page);
-    await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.')).toBeVisible();
+    await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.')).toBeVisible();
     // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
     await expect(page.getByText(/Thanh lý lúc .* bởi /)).toBeVisible();
-    // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đưa lại vào dùng".
+    // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đổi trạng thái" (Q-20).
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toHaveCount(0);
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.
     await expect(page.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
 
     // Mở lại hỏi trạng thái đích, mặc định "Đang dùng" (Q-15); chọn khác vẫn được.
-    await page.getByRole('button', { name: 'Đưa lại vào dùng' }).click();
+    await page.getByRole('button', { name: 'Đổi trạng thái' }).click();
     await expect(page.getByRole('button', { name: 'Trạng thái mới' })).toHaveText(/Đang dùng/);
-    await confirmAction(page, 'Đưa lại vào dùng');
+    await confirmAction(page, 'Đổi trạng thái');
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeEnabled();
     await expect(page.getByText('Đang dùng').first()).toBeVisible();
   });
@@ -313,7 +313,7 @@ test.describe('Kho thiết bị', () => {
     await expect(form.getByLabel('Serial')).toBeVisible();
 
     await form.getByLabel('Người sử dụng').fill('anh Tuấn');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByRole('row', { name: new RegExp(code) }).getByText('anh Tuấn')).toBeVisible();

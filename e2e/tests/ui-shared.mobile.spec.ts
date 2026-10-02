@@ -81,7 +81,8 @@ test.describe('Hộp thoại trên điện thoại', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/admin/catalog');
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    // Điện thoại: Xuất / Nhập nằm trong menu ⋮ đầu trang của Danh mục.
+    await rowAction(page, 'Danh mục', 'Nhập từ Excel');
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();

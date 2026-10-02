@@ -218,6 +218,13 @@ describe('RevealDialog — đọc để gõ tay', () => {
     expect(items.map((li) => li.textContent)).toEqual(['1l', '21', '3O', '40']);
   });
 
+  it('nút đổi kiểu hiện đổi NHÃN theo trạng thái nên không mang thêm aria-pressed (hai tín hiệu ngược nhau)', () => {
+    renderWithI18n(<RevealDialog label="x" value="l1O0" seconds={60} onClose={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Hiện từng ký tự' })).not.toHaveAttribute('aria-pressed');
+    fireEvent.click(screen.getByRole('button', { name: 'Hiện từng ký tự' }));
+    expect(screen.getByRole('button', { name: 'Hiện liền một dòng' })).not.toHaveAttribute('aria-pressed');
+  });
+
   it.each([
     ['7', 'digit'],
     ['Q', 'upper'],

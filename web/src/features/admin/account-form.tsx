@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { textRule, useFormErrors } from '@/ui/use-form-errors';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { textRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { PhoneInput } from '@/ui/phone-input';
+import { isEmail } from '@/lib/email';
 import { RoleChoice } from './role-choice';
 
 interface CreateResult {
@@ -62,7 +63,7 @@ export function AccountForm({
   const [birthDate, setBirthDate] = useState(account?.birthDate ?? '');
   const [role, setRole] = useState<Me['role']>('member');
   const [totpLoginRequired, setTotpLoginRequired] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired]);
 
   const create = useApiMutation<Record<string, unknown>, CreateResult>('/api/v1/accounts', {
     csrfToken,
@@ -86,7 +87,7 @@ export function AccountForm({
       !editing &&
       (!email.trim()
         ? t('formErrors.required')
-        : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && t('formErrors.email')),
+        : !isEmail(email) && t('formErrors.email')),
   });
 
   return (
@@ -103,11 +104,11 @@ export function AccountForm({
       title={editing ? t('accounts.editTitle', { name: account.fullName }) : t('accounts.create')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="account-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -136,7 +137,7 @@ export function AccountForm({
             return;
           }
           const input = { ...contact, email: email.trim(), role, totpLoginRequired };
-          stepUp.run(() => create.mutateAsync(input)).then(
+          stepUp.run(() => create.mutateAsync(input), t('accounts.stepUpCreate', { email: input.email })).then(
             (result) =>
               onCreated(result.temporaryPassword, {
                 id: result.user.id,
@@ -145,7 +146,7 @@ export function AccountForm({
                 role: result.user.role,
               }),
             (err: unknown) => {
-              if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err, t('accounts.createFailed')));
             },
           );

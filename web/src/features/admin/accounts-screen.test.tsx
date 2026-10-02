@@ -115,8 +115,20 @@ describe('Màn Tài khoản', () => {
     }
     const other = await menuOf(user, 'E2E Thành viên');
     expect(other).toEqual(
-      expect.arrayContaining(['Khóa', 'Vô hiệu hóa', 'Đổi vai trò…', 'Quyền két sắt', 'Gỡ tạm chặn']),
+      expect.arrayContaining(['Khóa', 'Vô hiệu hóa', 'Đổi vai trò…', 'Gỡ tạm chặn']),
     );
+  });
+
+  // Chưa kích hoạt 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.
+  it('"Đặt lại xác thực 2 lớp" tắt kèm lý do khi người đó chưa kích hoạt', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Thành viên');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Thành viên' }));
+    const item = screen.getByRole('menuitem', { name: 'Đặt lại xác thực 2 lớp' });
+    expect(item).toBeDisabled();
+    expect(item).toHaveTextContent('Người này chưa kích hoạt xác thực 2 lớp');
   });
 
   it('menu chia nhóm: Đặt lại mật khẩu không đỏ, Khóa là cảnh báo, Vô hiệu hóa đỏ', async () => {
@@ -255,7 +267,7 @@ describe('TemporaryPasswordDialog — tự che sau secret.reveal_seconds (SEC-14
 
     advance(1);
     expect(screen.queryByTestId('temp-password')).toBeNull();
-    expect(screen.getByLabelText('Mật khẩu tạm đang ẩn')).toBeInTheDocument();
+    expect(screen.getByText('Mật khẩu tạm đang ẩn')).toHaveClass('sr-only');
     // Nhãn đã đổi theo trạng thái ("Hiện"/"Ẩn") — thêm `aria-pressed` là trình đọc màn hình
     // đọc hai tín hiệu, và cái cũ còn ngược nghĩa ("Hiện, đã nhấn" khi mật khẩu đang ẩn).
     expect(screen.getByRole('button', { name: 'Hiện' })).not.toHaveAttribute('aria-pressed');
@@ -279,5 +291,75 @@ describe('TemporaryPasswordDialog — tự che sau secret.reveal_seconds (SEC-14
     fireEvent.click(screen.getByRole('button', { name: 'Ẩn' }));
     advance(120);
     expect(screen.queryByTestId('temp-password')).toBeNull();
+  });
+});
+
+/*
+ * Q-20 + Q-21: người đã vô hiệu hóa ẩn theo mặc định (lọc đích danh mới hiện, `?status` lạ coi
+ * như mặc định); menu dòng gọn — việc ĐI XEM (nhật ký, quyền két) nằm trong hộp Chi tiết.
+ */
+describe('Màn Tài khoản — mặc định ẩn người đã vô hiệu hóa, menu gọn', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function listParams(fetchMock: ReturnType<typeof stubFetch>): URLSearchParams {
+    const url = fetchMock.mock.calls
+      .map((call) => String(call[0]))
+      .find((u) => u.startsWith('/api/v1/accounts?') && u.includes('limit=20'));
+    return new URLSearchParams((url ?? '').split('?')[1]);
+  }
+
+  it.each([
+    ['/admin/accounts', 'live'],
+    ['/admin/accounts?status=abc', 'live'],
+    ['/admin/accounts?status=disabled', 'disabled'],
+    ['/admin/accounts?status=locked', 'locked'],
+  ])('%s → gửi status=%s', async (entry, expected) => {
+    const fetchMock = stubFetch();
+    renderAt(entry);
+    await screen.findByText('E2E Thành viên');
+    expect(listParams(fetchMock).get('status')).toBe(expected);
+  });
+
+  it('"Tất cả (cả Đã vô hiệu hóa)": không gửi status', async () => {
+    const fetchMock = stubFetch();
+    renderAt('/admin/accounts?status=all');
+    await screen.findByText('E2E Thành viên');
+    expect(listParams(fetchMock).has('status')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Lọc theo trạng thái' })).toHaveTextContent(
+      'Tất cả (cả Đã vô hiệu hóa)',
+    );
+  });
+
+  it('số trên thẻ "Tài khoản" đếm cùng bộ lọc mặc định với bảng', async () => {
+    const fetchMock = stubFetch();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Thành viên');
+    await waitFor(() => {
+      const counts = fetchMock.mock.calls
+        .map((call) => String(call[0]))
+        .filter((u) => u.includes('limit=1&') || u.endsWith('limit=1'));
+      expect(counts.length).toBeGreaterThan(0);
+      for (const u of counts.filter((x) => !x.includes('status=locked'))) {
+        expect(u).toContain('status=live');
+      }
+    });
+  });
+
+  it('2 lớp bắt buộc mà chưa kích hoạt: "Bắt buộc – chưa kích hoạt"', async () => {
+    stubFetch();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Thành viên');
+    expect(screen.getByText('Bắt buộc – chưa kích hoạt')).toBeInTheDocument();
+  });
+
+  it('menu dòng không còn mục đi xem Nhật ký / Quyền két — chúng nằm trong hộp Chi tiết', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Thành viên');
+    const items = await menuOf(user, 'E2E Thành viên');
+    expect(items).not.toContain('Nhật ký thao tác');
+    expect(items).not.toContain('Quyền két sắt');
+    expect(items).toEqual(expect.arrayContaining(['Xem chi tiết', 'Phiên đang mở', 'Đặt lại mật khẩu']));
   });
 });

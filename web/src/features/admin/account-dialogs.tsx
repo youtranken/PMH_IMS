@@ -4,7 +4,8 @@ import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { AccountFootprint } from './account-footprint';
 import { RoleChoice } from './role-choice';
 
@@ -52,8 +53,8 @@ export function AccountStatusDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const [error, setError] = useSubmitError([reason]);
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
 
   return (
     <Dialog
@@ -74,7 +75,7 @@ export function AccountStatusDialog({
             className={danger ? 'btn danger' : 'btn primary'}
             disabled={busy}
           >
-            {busy ? t('common.loading') : confirmLabel}
+            {busy ? t('common.working') : confirmLabel}
           </button>
         </>
       }
@@ -94,7 +95,7 @@ export function AccountStatusDialog({
             () => setBusy(false),
             (err: unknown) => {
               setBusy(false);
-              if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err));
             },
           );
@@ -152,7 +153,7 @@ export function RoleDialog({
   const { t } = useTranslation();
   const [role, setRole] = useState<Me['role']>(account.role);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([role]);
   const unchanged = role === account.role;
 
   return (
@@ -178,13 +179,13 @@ export function RoleDialog({
                 () => setBusy(false),
                 (err: unknown) => {
                   setBusy(false);
-                  if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+                  if (isStepUpCancelled(err)) return;
                   setError(errorMessage(err));
                 },
               );
             }}
           >
-            {busy ? t('common.loading') : t('accounts.changeRoleSubmit')}
+            {busy ? t('common.working') : t('accounts.changeRoleSubmit')}
           </button>
         </>
       }

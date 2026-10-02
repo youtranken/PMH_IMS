@@ -7,14 +7,14 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { parseRecipients, recipientSuggestions } from './digest-recipients';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/schedule-picker';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 
 /** Khoảng hợp lệ của "Trong vòng (ngày)" — cùng mốc xa nhất của bộ lọc màn Sắp hết hạn. */
 const WITHIN_MIN = 1;
@@ -364,7 +364,7 @@ function RuleForm({
     weekday: rule?.weekday ?? 1,
     dayOfMonth: rule?.dayOfMonth ?? 1,
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([name, withinDays, recipients, selected, active, schedule]);
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
     rule ? `/api/v1/expiry/rules/${rule.id}` : '/api/v1/expiry/rules',
@@ -411,11 +411,11 @@ function RuleForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="rule-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

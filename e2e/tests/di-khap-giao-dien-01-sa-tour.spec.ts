@@ -34,6 +34,10 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Bảng điều khiển', path: '/', heading: /^Bảng điều khiển$/ },
     { link: 'Thiết bị', path: '/devices', heading: /^Thiết bị$/ },
     { link: 'Phần mềm', path: '/software', heading: /^Phần mềm$/ },
+    // Ba màn tách từ Phần mềm (Q-22).
+    { link: 'Tên miền & SSL', path: '/domains', heading: /^Tên miền & SSL$/ },
+    { link: 'Hợp đồng bảo trì', path: '/maintenance', heading: /^Hợp đồng bảo trì$/ },
+    { link: 'Dịch vụ có hạn khác', path: '/services', heading: /^Dịch vụ có hạn khác$/ },
     { link: 'Đường truyền', path: '/isp-lines', heading: /^Đường truyền$/ },
     { link: 'Sắp hết hạn', path: '/expiry', heading: /^Sắp hết hạn$/ },
     { link: 'Địa chỉ IP', path: '/ip-addresses', heading: /^Địa chỉ IP$/ },
@@ -47,7 +51,6 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền két sắt$/ },
     { link: 'Nhật ký hệ thống', path: '/admin/audit-log', heading: /^Nhật ký hệ thống$/ },
     { link: 'Tham số hệ thống', path: '/admin/settings', heading: /^Tham số hệ thống$/ },
-    { link: 'Bộ giao diện', path: '/dev/components', heading: /^Bộ giao diện$/ },
   ];
 
   /*
@@ -62,7 +65,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * `<h1>` đổi chữ mà i18n không đổi theo, hoặc một mục cho màn chưa có quay lại menu.
    */
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
-    // 15 lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
+    // 18 lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
@@ -126,7 +129,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await form.getByLabel('Tên thiết bị').fill('Switch của bài đi một vòng');
     await form.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row, 'Thiết bị vừa tạo phải xuất hiện ngay trên danh sách').toBeVisible();
@@ -285,20 +288,14 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * vào sẽ ra sáng hay tối).
    */
   test('Đổi sáng/tối trên máy bàn và nó dính lại sau khi đổi trang', async ({ page }) => {
+    // Máy để tối mà người chưa chọn vẫn phải thấy sáng: mặc định không theo hệ điều hành (Q-21).
+    await page.emulateMedia({ colorScheme: 'dark' });
     await firstLogin(page, E2E_SA);
 
     const topbar = page.getByRole('banner');
     const themeOf = () => page.evaluate(() => document.documentElement.dataset.theme ?? '');
 
-    /*
-     * Khởi điểm phụ thuộc `prefers-color-scheme` của trình duyệt chạy test, nên đưa về SÁNG
-     * trước rồi mới đo. Không có bước này thì bài kiểm xanh/đỏ theo cấu hình máy chứ không
-     * theo code.
-     */
-    if ((await themeOf()) === 'dark') {
-      await topbar.getByRole('button', { name: 'Chuyển sang chế độ sáng' }).click();
-    }
-    expect(await themeOf(), 'Bài kiểm bắt đầu từ giao diện sáng').toBe('light');
+    expect(await themeOf(), 'Người chưa chọn giao diện phải thấy giao diện sáng').toBe('light');
 
     await topbar.getByRole('button', { name: 'Chuyển sang chế độ tối' }).click();
     expect(

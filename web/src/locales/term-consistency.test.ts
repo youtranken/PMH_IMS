@@ -123,6 +123,27 @@ describe('Một khái niệm — một tên', () => {
   it('kho thanh lý: tài khoản dịch vụ đã ngừng đọc giống màn gốc', () => {
     expect(lookup('disposal.statusDisabled')).toBe(lookup('serviceAccounts.statusDisabled'));
   });
+
+  /**
+   * Q-21: màn Người dùng IMS nói "kích hoạt" 2 lớp. Ô KPI "Chưa cài 2 lớp" đứng ngay trên cột
+   * huy hiệu "Bắt buộc – chưa kích hoạt" — hai chữ cho một trạng thái trên cùng một màn.
+   */
+  it('màn Người dùng IMS: trạng thái 2 lớp nói "kích hoạt", không còn "cài"', () => {
+    const keys = [
+      'accounts.totpStateEnrolled',
+      'accounts.totpStateMissing',
+      'accounts.noTotpShort',
+      'accounts.totpNone',
+      'accounts.resetTotpNotEnrolled',
+      'accounts.confirmTotpRequireOn',
+    ];
+    for (const key of keys) {
+      expect(lookup(key), key).toContain('kích hoạt');
+      expect(lookup(key), key).not.toMatch(/(^|\s)cài(\s|$)/iu);
+    }
+    // Ô KPI và lựa chọn lọc là cùng một bộ lọc (`?totp=none`): một chữ.
+    expect(lookup('accounts.noTotpShort')).toBe(lookup('accounts.totpNone'));
+  });
 });
 
 /**
@@ -380,4 +401,48 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
     expect(lookup('history.isp.fBandwidth')).toBe(lookup('isp.bandwidth').toLowerCase());
     expect(allValues().filter(([, v]) => /băng thông/iu.test(v))).toEqual([]);
   });
+
+  /*
+   * Ma trận két: nút mở hộp và tiêu đề hộp nói cùng một động từ. "+ Thêm quyền" mở hộp "Gán
+   * quyền cho …" thì người đọc tưởng hai việc khác nhau.
+   */
+  it('ma trận két: nút mở hộp gán quyền dùng đúng chữ "Gán quyền"', () => {
+    const add = lookup('access.add');
+    expect(lookup('access.addRules')).toContain(add);
+    expect(lookup('access.addFor')).toContain(add);
+    expect(lookup('access.noRulesYet')).toContain(lookup('access.addRules'));
+    for (const key of ['access.addRules', 'access.noRulesYet']) {
+      expect(lookup(key), key).not.toContain('Thêm quyền');
+    }
+  });
+
+  /*
+   * Cùng một việc, nhiều màn: nút xoá ô tìm, nút bỏ lọc, dòng "cập nhật khi nhập Excel" ở nhật ký
+   * và ở lịch sử hồ sơ. Hai chữ cho một việc thì người dùng đi tìm khác biệt không tồn tại.
+   */
+  it('xoá ô tìm / bỏ lọc / nhập Excel: một chữ mỗi việc', () => {
+    for (const key of ['catalog.clearSearch', 'access.clearSearch']) {
+      expect(lookup(key), key).toBe(lookup('vaultHome.clearSearch'));
+    }
+    expect(lookup('vaultHome.clearKinds')).toBe(lookup('common.clearFilters'));
+    expect(lookup('audit.verb.importedUpdate')).toBe(lookup('history.devices.actImportedUpdate'));
+    expect(lookup('history.catalog.actImportedUpdate')).toBe(
+      lookup('history.devices.actImportedUpdate'),
+    );
+  });
+
+  /* Màn tên "Người dùng IMS" — nút thêm cũng gọi đúng thứ đó, không lẫn với "tài khoản dịch vụ". */
+  it('màn Người dùng IMS: nút thêm là "Thêm người dùng"', () => {
+    expect(lookup('accounts.create')).toBe('Thêm người dùng');
+  });
+
+  /* Mục menu thanh lý của phần mềm gọi như đường truyền ("Thanh lý…"), không phải câu dài. */
+  it('menu thanh lý phần mềm cùng chữ với đường truyền', () => {
+    expect(lookup('software.disposeMenu')).toBe(lookup('isp.terminateMenu'));
+    for (const file of ['features/software/software-detail.tsx', 'features/software/software-screen.tsx']) {
+      const source = readFileSync(join(SRC, file), 'utf8');
+      expect(source, file).toContain('software.disposeMenu');
+    }
+  });
 });
+

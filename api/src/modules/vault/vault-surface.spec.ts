@@ -243,6 +243,7 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
         'orphan',
         'ownerId',
         'ownerType',
+        'retired',
         'secretCount',
         'siteCode',
       ]);

@@ -1,5 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ThrottlerGuard, type ThrottlerRequest } from '@nestjs/throttler';
+import { ExecutionContext, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ThrottlerGuard, type ThrottlerLimitDetail, type ThrottlerRequest } from '@nestjs/throttler';
 import type { AuthedRequest } from '../modules/auth/types';
 import { CONFIG_THROTTLE, THROTTLE_LIMITS, type ThrottleLimitSource } from './config-throttle';
 
@@ -37,5 +37,24 @@ export class UserThrottlerGuard extends ThrottlerGuard {
       ttl: CONFIG_WINDOW_MS,
       blockDuration: CONFIG_WINDOW_MS,
     });
+  }
+
+  /*
+   * Câu mặc định của thư viện là tiếng Anh thô ("Too Many Requests") và không có số giây chờ;
+   * web cần `code` để nhận ra và `retryAfter` để nói người dùng chờ bao lâu.
+   */
+  protected throwThrottlingException(
+    _context: ExecutionContext,
+    detail: ThrottlerLimitDetail,
+  ): Promise<void> {
+    const retryAfter = Math.max(1, Math.ceil(detail.timeToBlockExpire));
+    throw new HttpException(
+      {
+        code: 'RATE_LIMITED',
+        message: `Thao tác quá nhanh, thử lại sau ${retryAfter} giây.`,
+        retryAfter,
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 }

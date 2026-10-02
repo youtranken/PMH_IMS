@@ -25,6 +25,8 @@ import { RowActions } from "@/ui/row-actions";
 import { useToast } from "@/ui/toast";
 import { lastDisable, toServiceAccountHistory } from "./service-account-history-entries";
 import { formatDate } from "@/lib/format";
+import { ExpiryBadge } from "@/ui/expiry-badge";
+import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { ServiceAccountForm } from "./service-account-form";
 import { ServiceAccountStatusDialog } from "./service-account-status-dialog";
 import {
@@ -223,6 +225,20 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
                 ) : null}
               </RailRow>
             ) : null}
+            {/* Hạn dùng (Q-20): thanh hạn dùng chung, cùng luật với huy hiệu ở danh sách. Không
+                có mốc đầu riêng nên thanh chỉ có đích. Đã ngừng dùng thì thanh xám "không tính
+                hạn" như thiết bị / phần mềm đã thanh lý. */}
+            <RailRow label={t("serviceAccounts.endDate")}>
+              {item.endDate ? (
+                <WarrantyTimeline
+                  end={item.endDate}
+                  endLabel={t("serviceAccounts.endDate")}
+                  notCounted={item.status === "disabled"}
+                />
+              ) : (
+                <ExpiryBadge end={null} notCounted={item.status === "disabled"} />
+              )}
+            </RailRow>
             {item.createdBy ? (
               <RailRow label={t("serviceAccounts.createdBy")}>
                 <span title={item.createdBy}>{item.createdBy.split("@")[0]}</span>

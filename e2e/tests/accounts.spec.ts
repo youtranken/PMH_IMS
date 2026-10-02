@@ -33,7 +33,7 @@ test.describe('Quản trị tài khoản', () => {
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
     const unique = `e2e-tao-moi-${Date.now()}@pmh.com.vn`;
     // Dùng vai + tên trợ năng (accessible name) thay vì getByLabel: nhãn có kèm dấu *
     // trang trí, còn ô tìm kiếm phía trên cũng chứa chữ "email".
@@ -146,6 +146,11 @@ test.describe('Quản trị tài khoản', () => {
     // Khóa / Vô hiệu hóa bắt ghi lý do (vết an ninh) trước khi nút xác nhận chạy.
     await page.getByRole('dialog').getByRole('textbox', { name: /Lý do/ }).fill('E2E nghỉ việc');
     await confirmAction(page, 'Vô hiệu hóa');
+    /* Q-20: người đã vô hiệu hóa ẩn khỏi danh sách mặc định; lọc đích danh mới hiện. */
+    await expect(row, 'mặc định không bày người đã vô hiệu hóa').toHaveCount(0);
+    const statusFilter = page.getByRole('button', { name: 'Lọc theo trạng thái' });
+    await statusFilter.click();
+    await page.getByRole('option', { name: 'Đã vô hiệu hóa', exact: true }).click();
     await expect(
       row.getByText('Đã vô hiệu hóa', { exact: true }),
       'huy hiệu phải nói đúng trạng thái — "Đang khóa" ở đây là một câu sai',
@@ -162,6 +167,10 @@ test.describe('Quản trị tài khoản', () => {
 
     await rowAction(page, 'E2E Thành viên', 'Bật lại');
     await confirmAction(page, 'Bật lại');
+    // Đang lọc "Đã vô hiệu hóa" nên dòng rời bảng; về bộ lọc mặc định để thấy nó sống lại.
+    await expect(row).toHaveCount(0);
+    await statusFilter.click();
+    await page.getByRole('option', { name: 'Đang theo dõi (trừ Đã vô hiệu hóa)' }).click();
     await expect(
       row.getByText('Đang hoạt động'),
       'kích hoạt lại phải mở THẬT, không chỉ đổi chữ',

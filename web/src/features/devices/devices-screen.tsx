@@ -19,8 +19,10 @@ import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
-import { ExpandHeader } from '@/ui/expand-header';
+import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
 import { DeviceRowActions } from './device-actions';
@@ -45,7 +47,8 @@ interface Filters extends Record<string, string> {
   siteId: string;
   cabinetId: string;
   deviceTypeId: string;
-  status: '' | DeviceStatus;
+  /** '' = mặc định "trừ Đã thanh lý" (API `live`, Q-20); 'all' = không lọc trạng thái. */
+  status: '' | 'all' | DeviceStatus;
 }
 
 const EMPTY_FILTERS: Filters = {
@@ -73,9 +76,18 @@ export function DevicesScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...DEVICE_STATUSES, ALL_STATUSES] },
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: DEVICE_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'retired',
+  });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả kho — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -85,7 +97,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
   const [cloning, setCloning] = useState<DeviceRow | null>(null);
-  /** Hộp đổi trạng thái — cũng là hộp "Đưa lại vào dùng" của máy đã thanh lý. */
+  /** Hộp đổi trạng thái — cũng là hộp mở lại máy đã thanh lý. */
   const [statusOf, setStatusOf] = useState<DeviceRow | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const setStatus = useApiMutation<{ id: string; status: DeviceStatus }, unknown>(
@@ -203,7 +215,7 @@ export function DevicesScreen({ me }: { me: Me }) {
           const d = row.original;
           const sub = [d.deviceTypeName, d.model].filter(Boolean).join(' · ');
           return (
-            <>
+            <div className="cell-stack">
               <span className="cell-clip" title={d.name}>
                 {d.name}
               </span>
@@ -219,13 +231,20 @@ export function DevicesScreen({ me }: { me: Me }) {
                   </>
                 ) : null}
               </span>
-            </>
+              {/* Vị trí ở khổ 961–1440px: cột riêng ẩn đi (CSS `.col-wide`), hiện ở đây. */}
+              {d.siteCode ? (
+                <span className="cell-sub cell-clip only-mid">
+                  <LocationText device={d} />
+                </span>
+              ) : null}
+            </div>
           );
         },
       },
       {
         id: 'location',
         header: t('devices.locationCol'),
+        meta: { className: 'col-wide' },
         cell: ({ row }) => <LocationText device={row.original} />,
       },
       {
@@ -288,7 +307,8 @@ export function DevicesScreen({ me }: { me: Me }) {
      thiết bị là màn nhập desktop; chạm thẻ là mở chi tiết. */
   const mobileCard = useMemo<MobileCard<DeviceRow>>(
     () => ({
-      title: (item) => <span className="mono">{item.code}</span>,
+      title: (item) => item.code,
+      titleIsCode: true,
       href: (item) => PATHS.device(item.id),
       badge: (item) => (
         <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
@@ -396,14 +416,8 @@ export function DevicesScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('devices.status')}
-          placeholder={t('devices.allStatuses')}
-          options={[
-            { value: '', label: t('devices.allStatuses') },
-            ...DEVICE_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
       </FilterBar>
@@ -413,38 +427,47 @@ export function DevicesScreen({ me }: { me: Me }) {
       ) : devices.isError ? (
         <LoadError error={devices.error} onRetry={() => void devices.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
-             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
-          title={
-            url.isFiltered
-              ? url.search
-                ? t('devices.emptySearch', { q: url.search })
-                : t('devices.emptyFiltered')
-              : t('devices.empty')
-          }
-          hint={url.isFiltered ? t('devices.emptyFilteredHint') : t('devices.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('devices.clearFilters')}
-              </button>
-            ) : (
-              <>
-                <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                  {t('devices.add')}
-                </button>
-                <button
-                  type="button"
-                  className="btn hide-narrow"
-                  onClick={() => setImporting(true)}
-                >
-                  {t('devices.importExcel')}
-                </button>
-              </>
-            )
+        <LifecycleHiddenEmpty
+          probeKey={['devices', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/devices?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['retired'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+                 gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
+              title={
+                url.isFiltered
+                  ? url.search
+                    ? t('devices.emptySearch', { q: url.search })
+                    : t('devices.emptyFiltered')
+                  : t('devices.empty')
+              }
+              hint={url.isFiltered ? t('devices.emptyFilteredHint') : t('devices.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('devices.clearFilters')}
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                      {t('devices.add')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn hide-narrow"
+                      onClick={() => setImporting(true)}
+                    >
+                      {t('devices.importExcel')}
+                    </button>
+                  </>
+                )
+              }
+            />
           }
         />
       ) : (
@@ -473,17 +496,13 @@ export function DevicesScreen({ me }: { me: Me }) {
             canExpand={(item) =>
               installedCounts.isError || (installedCounts.data?.[item.id] ?? 0) > 0
             }
-            /* Mẫu bung dòng chuẩn (Q-18, giống /software): đầu khu `ExpandHeader` mang số đếm,
-               bảng ghế bên dưới không tự vẽ tiêu đề thứ hai. Chưa đọc được số đếm thì bỏ số —
-               đừng in "0" cho một máy có thể đang cài. */
+            /* Mẫu bung dòng chuẩn (Q-18, Q-20, giống /software): khung `ExpandPanel` có đầu khu
+               mang số đếm, bảng con bên dưới. Chưa đọc được số đếm thì bỏ số — đừng in "0" cho
+               một máy có thể đang cài. */
             renderExpanded={(item) => (
-              <>
-                <ExpandHeader
-                  title={t('devices.installedTitle')}
-                  count={installedCounts.data?.[item.id]}
-                />
-                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
-              </>
+              <ExpandPanel title={t('devices.installedTitle')} count={installedCounts.data?.[item.id]}>
+                <DeviceLicensesExpand deviceId={item.id} />
+              </ExpandPanel>
             )}
             manualSorting
             sorting={sorting}
@@ -627,6 +646,8 @@ function buildFilterQuery(filters: Filters): string {
   if (filters.siteId) params.set('siteId', filters.siteId);
   if (filters.cabinetId) params.set('cabinetId', filters.cabinetId);
   if (filters.deviceTypeId) params.set('deviceTypeId', filters.deviceTypeId);
-  if (filters.status) params.set('status', filters.status);
+  // Mặc định ẩn máy đã thanh lý (Q-20): Kho thanh lý là nơi xem chúng. ⌘K không đi qua đây
+  // nên vẫn tìm ra máy đã thanh lý.
+  if (filters.status !== 'all') params.set('status', filters.status || 'live');
   return params.toString();
 }

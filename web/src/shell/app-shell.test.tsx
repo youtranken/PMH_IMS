@@ -76,6 +76,27 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(3);
   });
 
+  /*
+   * Nút tài khoản từng có một `Chevron` lấy màu `--ink` của vùng nội dung: sáng thì gần trùng
+   * nền sidebar (vô hình), tối thì hiện rõ — người dùng thấy "mũi tên" xuất hiện tuỳ giao diện.
+   * Chủ dự án chốt dáng của bản Sáng: nút chỉ có avatar + tên + vai, ở mọi giao diện.
+   */
+  it.each(['light', 'dark', 'system'] as const)(
+    'nút tài khoản không có mũi tên/biểu tượng nào, kể cả khi giao diện là %s',
+    (pref) => {
+      localStorage.setItem('ims_theme', pref);
+      renderShell();
+      const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
+      expect(trigger.querySelector('svg')).toBeNull();
+    },
+  );
+
+  it('họ tên dài ở chân sidebar bị cắt "…" vẫn đọc đủ khi rê chuột (title)', () => {
+    renderShell();
+    const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
+    expect(within(trigger).getByText('Nguyễn Văn A')).toHaveAttribute('title', 'Nguyễn Văn A');
+  });
+
   it('phím mũi tên đi vòng trong menu; Esc đóng và trả tiêu điểm về nút', async () => {
     renderShell();
     const user = userEvent.setup();
@@ -97,6 +118,26 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     await user.click(screen.getByRole('menuitemradio', { name: /Tối/ }));
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(screen.getByRole('menuitemradio', { name: /Tối/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('Giao diện là MỘT hàng ba nút biểu tượng (Sáng · Tối · Theo hệ thống) có tên và tooltip; ←/→ đi trong hàng', async () => {
+    renderShell();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ }));
+    const group = screen.getByRole('group', { name: 'Giao diện' });
+    const radios = within(group).getAllByRole('menuitemradio');
+    expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual(['Sáng', 'Tối', 'Theo hệ thống']);
+    for (const radio of radios) {
+      expect(radio.querySelector('svg')).not.toBeNull();
+      expect(radio).toHaveAttribute('title', radio.getAttribute('aria-label'));
+      // Không còn dấu ✓ bằng chữ: trạng thái chọn nằm ở aria-checked + kiểu nút.
+      expect(radio.textContent).toBe('');
+    }
+    radios[0].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(radios[1]).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(radios[0]).toHaveFocus();
   });
 });
 
@@ -140,9 +181,22 @@ describe('AppShell — topbar', () => {
     expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toHaveTextContent(/^Tài sản$/);
   });
 
-  it('màn không thuộc nhóm nào (Hồ sơ của tôi) thì topbar để trống, không đoán bừa', () => {
+  /*
+   * Màn không thuộc nhóm menu nào (Hồ sơ của tôi): topbar trống trơn trông như shell nạp hỏng.
+   * Ngữ cảnh duy nhất có thật là tên màn (cùng tên tab trình duyệt) — lặp `<h1>` một lần vẫn hơn
+   * một thanh trắng. Đường không có tên màn (404) thì vẫn trống, không đoán bừa.
+   */
+  it('màn không thuộc nhóm nào (Hồ sơ của tôi) thì topbar hiện tên màn', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
     renderShell('/profile');
+    expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toHaveTextContent(
+      /^Hồ sơ của tôi$/,
+    );
+  });
+
+  it('đường không có tên màn (404) thì topbar để trống', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell('/khong-co-duong-nay');
     expect(within(screen.getByRole('banner')).getByTestId('topbar-context')).toBeEmptyDOMElement();
   });
 

@@ -20,8 +20,8 @@ import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
 import { hourSteps } from '@/ui/grant-hours';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { PATHS } from '@/lib/routes';
 import { Link } from 'react-router-dom';
@@ -675,7 +675,7 @@ export function VaultPanel({
                             },
                             {
                               key: 'rotate',
-                              label: t('vault.rotate'),
+                              label: t(`vault.rotate_${secret.kind}`),
                               onSelect: () => setRotating(secret),
                             },
                             {
@@ -712,7 +712,7 @@ export function VaultPanel({
                                     void refresh();
                                   } catch (error) {
                                     // Người dùng đóng hộp hỏi mã = hủy, không phải lỗi.
-                                    if ((error as Error).message === 'STEPUP_CANCELLED') return;
+                                    if (isStepUpCancelled(error)) return;
                                     toast({ message: errorMessage(error), tone: 'error' });
                                   }
                                 })();
@@ -801,7 +801,7 @@ export function VaultPanel({
           onClose={() => setRotating(null)}
           onSaved={() => {
             setRotating(null);
-            toast({ message: t('vault.rotated') });
+            toast({ message: t(`vault.rotated_${rotating.kind}`) });
             void refresh();
           }}
         />
@@ -841,7 +841,8 @@ function SecretForm({
   const [username, setUsername] = useState(secret?.username ?? '');
   const [note, setNote] = useState(secret?.note ?? '');
   const [value, setValue] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  /* Lỗi máy chủ nói về giá trị lúc gửi (vd khóa base32 của Mã 2 lớp): đổi loại hay sửa ô là tắt. */
+  const [error, setError] = useSubmitError([label, kind, username, note, value]);
 
   const isEdit = secret !== null;
   /* Báo ngay khi gõ chứ không đợi bấm Lưu: bấm Lưu là qua mã 6 số rồi mới bị server từ chối.
@@ -887,7 +888,7 @@ function SecretForm({
             {t('common.cancel')}
           </button>
           <button type="submit" form="secret-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -923,7 +924,7 @@ function SecretForm({
               setValue('');
               onSaved();
             } catch (err) {
-              if ((err as Error).message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err));
             }
           })();
@@ -1032,7 +1033,7 @@ function SecretNote({ secret }: { secret: SecretMeta }) {
       <>
         <button
           type="button"
-          className="btn sm ghost"
+          className="btn sm ghost with-icon note-toggle"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
@@ -1066,7 +1067,7 @@ function RotateForm({
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([value]);
   const check = useFormErrors({
     value: !value
       ? t('vault.valueRequired')
@@ -1089,14 +1090,14 @@ function RotateForm({
          cấu hình thiết bị vừa hết hiệu lực. */
       dismissible={!rotate.isPending}
       maxWidth={480}
-      title={t('common.titleOf', { action: t('vault.rotate'), subject: secret.label })}
+      title={t('common.titleOf', { action: t(`vault.rotate_${secret.kind}`), subject: secret.label })}
       footer={
         <>
           <button type="button" className="btn" disabled={rotate.isPending} onClick={onClose}>
             {t('common.cancel')}
           </button>
           <button type="submit" form="rotate-form" className="btn primary" disabled={rotate.isPending}>
-            {rotate.isPending ? t('common.loading') : t('vault.rotate')}
+            {rotate.isPending ? t('common.working') : t(`vault.rotate_${secret.kind}`)}
           </button>
         </>
       }
@@ -1115,12 +1116,12 @@ function RotateForm({
             try {
               await stepUp.run(
                 () => rotate.mutateAsync({ value }),
-                t('vault.stepUpRotate'),
+                t(`vault.stepUpRotate_${secret.kind}`),
               );
               setValue('');
               onSaved();
             } catch (err) {
-              if ((err as Error).message === 'STEPUP_CANCELLED') return;
+              if (isStepUpCancelled(err)) return;
               setError(errorMessage(err));
             }
           })();
@@ -1207,7 +1208,7 @@ function BreakGlassDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [hours, setHours] = useState('4');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason, hours]);
   /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
   const askedHours = Number(hours.trim());
   const check = useFormErrors({
@@ -1238,7 +1239,7 @@ function BreakGlassDialog({
             {t('common.cancel')}
           </button>
           <button type="submit" form="break-glass-form" className="btn primary" disabled={send.isPending}>
-            {send.isPending ? t('common.loading') : t('vault.requestSend')}
+            {send.isPending ? t('common.working') : t('vault.requestSend')}
           </button>
         </>
       }

@@ -2,6 +2,16 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { errorCode } from '@/lib/api';
 import { StepUpDialog } from '@/ui/step-up-dialog';
 
+const STEPUP_CANCELLED = 'STEPUP_CANCELLED';
+
+/**
+ * Người dùng đóng hộp hỏi mã = HỦY, không phải lỗi để báo. Lời hứa của `run` bị reject bằng
+ * lỗi này để nút Lưu không kẹt; nơi gọi hỏi qua đây thay vì so chữ, để chữ chỉ sống một chỗ.
+ */
+export function isStepUpCancelled(error: unknown): boolean {
+  return (error as Error | null)?.message === STEPUP_CANCELLED;
+}
+
 /**
  * "Chạy việc này; gặp `STEPUP_REQUIRED` thì hỏi mã 6 số rồi chạy lại đúng việc đó."
  *
@@ -23,23 +33,24 @@ import { StepUpDialog } from '@/ui/step-up-dialog';
  * Dùng:
  *   const stepUp = useStepUpRetry(csrfToken);
  *   ...
- *   await stepUp.run(() => apiFetch('/api/v1/vault/secrets/x/rotate', {...}));
+ *   await stepUp.run(() => apiFetch('/api/v1/vault/secrets/x/rotate', {...}), t('vault.stepUpRotate'));
  *   ...
  *   {stepUp.dialog}
  */
 export function useStepUpRetry(csrfToken: string): {
   /**
    * Chạy việc, tự hỏi mã và chạy lại MỘT lần nếu server đòi step-up. `purpose` là câu trên hộp
-   * hỏi mã ("Nhập mã 6 số để duyệt mở két cho …") — không có thì hộp nói câu chung về "xem",
-   * sai với việc đang làm là duyệt / thu hồi / cất (VLT-047).
+   * hỏi mã ("Nhập mã 6 số để duyệt mở két cho …"). BẮT BUỘC: câu chung không nói được người
+   * dùng đang xác nhận việc gì, và từng có lúc nó nói "để xem thông tin bí mật" trong khi việc
+   * đang làm là duyệt / thu hồi / cất / cài lại 2 lớp (VLT-047, Q-20).
    */
-  run: <T>(action: () => Promise<T>, purpose?: string) => Promise<T>;
+  run: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   /** Đặt vào cây JSX của màn — hộp hỏi mã chỉ hiện khi cần. */
   dialog: ReactNode;
 } {
   type Pending = {
     action: () => Promise<unknown>;
-    purpose?: string;
+    purpose: string;
     resolve: (value: unknown) => void;
     reject: (reason: unknown) => void;
   };
@@ -61,13 +72,13 @@ export function useStepUpRetry(csrfToken: string): {
     const previous = pendingRef.current;
     pendingRef.current = next;
     setPending(next);
-    if (previous) previous.reject(new Error('STEPUP_CANCELLED'));
+    if (previous) previous.reject(new Error(STEPUP_CANCELLED));
   }, []);
 
   useEffect(() => () => settle(null), [settle]);
 
   const run = useCallback(
-    async <T,>(action: () => Promise<T>, purpose?: string): Promise<T> => {
+    async <T,>(action: () => Promise<T>, purpose: string): Promise<T> => {
       try {
         return await action();
       } catch (error) {

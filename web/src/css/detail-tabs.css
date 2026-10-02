@@ -129,14 +129,26 @@
   place-items: center;
   width: 1.75rem;
   height: 1.75rem;
+  /* `button` chung có đệm ngang 0.85rem: trong ô 28px vùng nội dung thành âm và hình tràn
+     sang phải, lệch tâm. Ô vuông thì không cần đệm — `place-items` tự canh giữa. */
+  padding: 0;
+  line-height: 0;
   border: 1px solid var(--border-2);
   border-radius: 6px;
   background: var(--surface);
   color: var(--ink-3);
   font-size: var(--fs-xs);
   cursor: pointer;
+  /* Mặc định của inline-grid là canh theo đường chân chữ: nút 24px trồi lên khỏi dòng chữ
+     đứng cạnh, trông như hình chép lệch về góc trên. */
+  vertical-align: middle;
 }
+/* Nút có viền đứng ngay sau giá trị: không có khoảng thì viền dính vào ký tự cuối. Bản `inline`
+   không viền, phần đệm quanh hình đã là khoảng cách. */
+.mono + .copy-btn:not(.inline) { margin-inline-start: var(--space-2); }
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
+/* Hình SVG theo cỡ cố định: chữ của nút là `--fs-xs`, để `1em` thì hình chép chỉ còn 12px. */
+.copy-btn .glyph { display: block; width: 15px; height: 15px; }
 /* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
 .isp-call {
   display: flex;
@@ -248,7 +260,8 @@
 .detail-rail {
   min-width: 0;
   position: sticky;
-  top: var(--space-10);
+  /* Tính từ DƯỚI topbar (56px, dính `top: 0`): `top` nhỏ hơn thì đầu thẻ bị topbar nuốt khi cuộn. */
+  top: calc(56px + var(--space-10));
   display: flex;
   flex-direction: column;
   gap: var(--space-9);
@@ -492,7 +505,9 @@
  */
 .tabs {
   position: sticky;
-  top: 0;
+  /* Dính ngay DƯỚI topbar (56px, `top: 0`, base.css). `top: 0` thì thanh tab trượt vào đúng dải
+     topbar và — z-index cao hơn — che mất ô tìm Ctrl+K cùng nút đổi giao diện. */
+  top: 56px;
   z-index: var(--z-sticky);
   background: var(--canvas);
   /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối
@@ -562,6 +577,11 @@
   gap: var(--space-3);
   flex: 0 1 23rem;
 }
+/* Cụm cũng mang `role="group"` nên trúng luật `.filter-bar [role='group']` ở trên (cùng độ ưu
+   tiên): phải khai lại ở đây, sau nó, không thì "đến ngày" rơi xuống dưới "từ ngày". */
+.filter-bar .filter-range {
+  flex-wrap: nowrap;
+}
 .filter-range .dp {
   flex: 1 1 0;
 }
@@ -589,6 +609,22 @@
 .filter-bar .grow {
   flex: 1;
   min-width: 200px;
+}
+/* Điện thoại: ô tìm một hàng riêng, ô chọn / ô ngày chia đều HAI cột. Để bề ngang tối thiểu
+   10.5rem tự xếp thì ở 390px mỗi hàng một ô dài một ô ngắn, mép phải lởm chởm. Thanh gập
+   (`FilterBar collapsible`) xếp cột ở `.filter-panel`, không đi qua luật này. */
+@media (max-width: 600px) {
+  .filter-bar > .grow {
+    flex-basis: 100%;
+  }
+  .filter-bar > .fsel,
+  .filter-bar > .dp {
+    flex: 1 1 calc(50% - var(--space-4));
+    min-width: 0;
+  }
+  .filter-bar > .filter-range {
+    flex: 1 1 100%;
+  }
 }
 input.search {
   background-image: var(--icon-search);
@@ -662,7 +698,7 @@ input.search {
     padding: var(--space-1) var(--space-5);
   }
   /*
-   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table tbody tr:last-child td`
+   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table > tbody > tr:last-child > td`
    * tắt viền ở dòng cuối, nên thẻ cuối mất vạch trong khi các thẻ trên còn — `:not()` nâng
    * độ ưu tiên vừa đủ thắng nó. Ô cuối của thẻ không kẻ: viền dưới của `tr` đã ngăn thẻ.
    */
@@ -746,6 +782,13 @@ input.search {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Đổi theme: màu đổi ngay một lần, không mờ dần qua transition của từng ô (lib/theme.ts). */
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
 }
 
 /* Dòng vừa thêm/vừa đổi sáng lên rồi nhạt dần: máy mới thường rơi vào giữa trang theo thứ tự

@@ -67,7 +67,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
     );
     sessions = new SessionService(scratch.db, config, noopSweep);
     const reflector = new Reflector();
-    sessionGuard = new SessionGuard(reflector, sessions, new UsersService(scratch.db), config);
+    sessionGuard = new SessionGuard(reflector, sessions, new UsersService(scratch.db), config, scratch.db, audit);
     stepUpGuard = new StepUpGuard(reflector, config);
     const rows = await scratch.pool.query<{ id: string }>(
       `INSERT INTO users (email, full_name, role, password_hash, must_change_password)

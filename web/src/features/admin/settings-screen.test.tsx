@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
+import { act, jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
 import { SettingsScreen } from './settings-screen';
@@ -90,19 +90,29 @@ const ROWS = [
   },
 ];
 
-function renderAt(entry: string) {
-  const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
-    Promise.resolve(jsonResponse(200, ROWS)),
-  );
+/** Data router như `App.tsx` thật: màn chặn rời trang bằng `useBlocker`, chỉ chạy dưới data router. */
+function renderAt(
+  entry: string,
+  respond: (init?: RequestInit) => Response = () => jsonResponse(200, ROWS),
+) {
+  const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => Promise.resolve(respond(init)));
   vi.stubGlobal('fetch', fetchMock);
-  renderWithI18n(
-    <MemoryRouter initialEntries={[entry]}>
-      <ToastProvider>
-        <SettingsScreen me={ME} />
-      </ToastProvider>
-    </MemoryRouter>,
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/admin/settings',
+        element: (
+          <ToastProvider>
+            <SettingsScreen me={ME} />
+          </ToastProvider>
+        ),
+      },
+      { path: '*', element: <h1>Màn khác</h1> },
+    ],
+    { initialEntries: [entry] },
   );
-  return fetchMock;
+  renderWithI18n(<RouterProvider router={router} />);
+  return { fetchMock, router };
 }
 
 describe('Màn Tham số hệ thống', () => {
@@ -153,7 +163,7 @@ describe('Màn Tham số hệ thống', () => {
   });
 
   it('nới quá ngưỡng → cảnh báo; Lưu mở hộp Trước → Sau, chưa gửi gì', async () => {
-    const fetchMock = renderAt('/admin/settings');
+    const { fetchMock } = renderAt('/admin/settings');
     const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
     await userEvent.clear(input);
     await userEvent.type(input, '150');
@@ -174,23 +184,13 @@ describe('Màn Tham số hệ thống', () => {
   });
 
   it('API từ chối SETTING_OUT_OF_RANGE → lỗi gọi tham số bằng nhãn tiếng Việt, không bằng khóa thô', async () => {
-    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
-      Promise.resolve(
-        init?.method === 'PATCH'
-          ? jsonResponse(400, {
-              code: 'SETTING_OUT_OF_RANGE',
-              message: 'login.rate_limit_per_ip: Phải từ 5 đến 1000.',
-            })
-          : jsonResponse(200, ROWS),
-      ),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-    renderWithI18n(
-      <MemoryRouter initialEntries={['/admin/settings']}>
-        <ToastProvider>
-          <SettingsScreen me={ME} />
-        </ToastProvider>
-      </MemoryRouter>,
+    renderAt('/admin/settings', (init) =>
+      init?.method === 'PATCH'
+        ? jsonResponse(400, {
+            code: 'SETTING_OUT_OF_RANGE',
+            message: 'login.rate_limit_per_ip: Phải từ 5 đến 1000.',
+          })
+        : jsonResponse(200, ROWS),
     );
     const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
     await userEvent.clear(input);
@@ -210,5 +210,159 @@ describe('Màn Tham số hệ thống', () => {
     await userEvent.clear(input);
     await userEvent.type(input, '0');
     expect(screen.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeInTheDocument();
+  });
+});
+
+/*
+ * Q-21: đổi nhóm khi còn thay đổi chưa lưu thì hỏi Lưu nhóm này / Bỏ thay đổi / Ở lại; nút của
+ * thanh lưu cỡ nhỏ.
+ */
+describe('Màn Tham số hệ thống — đổi nhóm khi chưa lưu', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function editRate() {
+    const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await userEvent.clear(input);
+    await userEvent.type(input, '30');
+    return input;
+  }
+
+  it('nút Bỏ thay đổi / Lưu nhóm này cỡ nhỏ', async () => {
+    renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    expect(screen.getByRole('button', { name: 'Lưu nhóm này' })).toHaveClass('sm');
+    expect(screen.getByRole('button', { name: 'Bỏ thay đổi' })).toHaveClass('sm');
+  });
+
+  it('không có thay đổi thì đổi nhóm ngay, không hỏi', async () => {
+    renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm')).toBeInTheDocument();
+  });
+
+  it('Ở lại: giữ nhóm và giá trị đang sửa', async () => {
+    renderAt('/admin/settings');
+    const input = await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    expect(within(dialog).getByRole('button', { name: 'Lưu nhóm này' })).toBeInTheDocument();
+    // Nút ✕ ở đầu hộp cũng mang tên "Ở lại" (đóng = ở lại); bấm nút ở chân hộp.
+    await userEvent.click(within(within(dialog).getByTestId('dialog-footer')).getByRole('button', { name: 'Ở lại' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(input).toHaveValue('30');
+    expect(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('Bỏ thay đổi: sang nhóm mới, giá trị cũ không còn', async () => {
+    renderAt('/admin/settings');
+    await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Bỏ thay đổi' }));
+    expect(await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' }));
+    expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toHaveValue('20');
+  });
+
+  it('Lưu nhóm này: qua hộp Trước → Sau rồi PATCH, lưu xong mới sang nhóm mới', async () => {
+    const { fetchMock } = renderAt('/admin/settings');
+    await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu nhóm này' }));
+    const review = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    expect(review).toHaveTextContent('20 lần/phút → 30 lần/phút');
+    await userEvent.click(within(review).getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(true);
+  });
+
+  it('Lưu nhóm này rồi Hủy ở hộp Trước → Sau: vẫn ở nhóm cũ, giữ giá trị', async () => {
+    renderAt('/admin/settings');
+    const input = await editRate();
+    await userEvent.click(screen.getByRole('button', { name: 'Phần mềm' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu nhóm này' }));
+    const review = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    await userEvent.click(within(review).getByRole('button', { name: 'Hủy' }));
+    expect(input).toHaveValue('30');
+    expect(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+/*
+ * Q-21: còn thay đổi chưa lưu mà rời màn bằng menu / breadcrumb / Ctrl+K / nút lùi thì hỏi như khi
+ * đổi nhóm. Bài dùng `router.navigate` — đúng thứ mà Link của menu và `navigate()` của Ctrl+K gọi.
+ */
+describe('Màn Tham số hệ thống — rời màn khi chưa lưu', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function editRate() {
+    const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await userEvent.clear(input);
+    await userEvent.type(input, '30');
+    return input;
+  }
+
+  const footer = (dialog: HTMLElement) => within(within(dialog).getByTestId('dialog-footer'));
+
+  it('không có thay đổi thì rời màn ngay, không hỏi', async () => {
+    const { router } = renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    await act(() => router.navigate('/devices'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/devices');
+  });
+
+  it('Ở lại: không rời màn, giữ giá trị đang sửa', async () => {
+    const { router } = renderAt('/admin/settings');
+    const input = await editRate();
+    await act(() => router.navigate('/devices'));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    expect(router.state.location.pathname).toBe('/admin/settings');
+    await userEvent.click(footer(dialog).getByRole('button', { name: 'Ở lại' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin/settings');
+    expect(input).toHaveValue('30');
+  });
+
+  it('Bỏ thay đổi: sang đúng màn vừa bấm', async () => {
+    const { router, fetchMock } = renderAt('/admin/settings');
+    await editRate();
+    await act(() => router.navigate('/devices'));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(footer(dialog).getByRole('button', { name: 'Bỏ thay đổi' }));
+    expect(await screen.findByRole('heading', { name: 'Màn khác' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/devices');
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false);
+  });
+
+  it('Lưu nhóm này: qua hộp Trước → Sau rồi PATCH, lưu xong mới sang màn vừa bấm', async () => {
+    const { router, fetchMock } = renderAt('/admin/settings');
+    await editRate();
+    await act(() => router.navigate('/devices'));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(footer(dialog).getByRole('button', { name: 'Lưu nhóm này' }));
+    const review = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    expect(router.state.location.pathname).toBe('/admin/settings');
+    await userEvent.click(within(review).getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(await screen.findByRole('heading', { name: 'Màn khác' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/devices');
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(true);
+  });
+
+  it('Lưu nhóm này rồi Hủy ở hộp Trước → Sau: ở lại màn, giữ giá trị, không hỏi lại', async () => {
+    const { router } = renderAt('/admin/settings');
+    const input = await editRate();
+    await act(() => router.navigate('/devices'));
+    const dialog = await screen.findByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await userEvent.click(footer(dialog).getByRole('button', { name: 'Lưu nhóm này' }));
+    const review = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
+    await userEvent.click(within(review).getByRole('button', { name: 'Hủy' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin/settings');
+    expect(input).toHaveValue('30');
   });
 });

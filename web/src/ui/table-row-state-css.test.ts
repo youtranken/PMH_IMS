@@ -51,7 +51,7 @@ function backgroundRules(): { selector: string; order: number }[] {
 
 describe('CSS bảng — nền trạng thái dòng thắng sọc dòng chẵn', () => {
   const rules = backgroundRules();
-  const zebra = rules.find((r) => /tr:nth-child\(even\) td$/.test(r.selector) && r.selector.startsWith('table.table'));
+  const zebra = rules.find((r) => /tr:nth-child\(even\)\s*>?\s*td$/.test(r.selector) && r.selector.startsWith('table.table'));
 
   it.each(['row-danger', 'overdue', 'due-today'])('.%s', (state) => {
     expect(zebra).toBeDefined();

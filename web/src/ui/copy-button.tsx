@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CheckIcon, CopyIcon } from './glyph-icons';
 
 /**
  * Chép một chuỗi ngắn (mã hồ sơ, serial, IP) vào clipboard.
@@ -62,7 +63,7 @@ export function CopyButton({
         })();
       }}
     >
-      {done ? '✓' : '⧉'}
+      {done ? <CheckIcon /> : <CopyIcon />}
     </button>
   );
 }

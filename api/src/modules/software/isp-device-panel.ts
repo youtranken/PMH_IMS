@@ -39,7 +39,7 @@ export class IspDevicePanel implements DevicePanelProvider, OnModuleInit {
         line.provider,
         line.hotline ? `Hotline ${formatPhone(line.hotline)}` : null,
         line.contractNo ? `HĐ ${line.contractNo}` : null,
-        line.wanIp ? `WAN ${line.wanIp}` : null,
+        line.wanIps.length > 0 ? `WAN ${line.wanIps.join(', ')}` : null,
       ]
         .filter(Boolean)
         .join(' · '),

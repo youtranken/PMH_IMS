@@ -5,6 +5,8 @@ import {
   normalizeWebsites,
   requiresEndDate,
   seatConflicts,
+  softwareExportShape,
+  softwareKindsQuery,
   STATUS_LABEL,
   supportsSeats,
   supportsWebsites,
@@ -338,6 +340,69 @@ describe('normalizeWebsites — website dùng chứng chỉ SSL / tên miền (Q
     expect(supportsWebsites('domain')).toBe(true);
     expect(supportsWebsites('license')).toBe(false);
     expect(supportsWebsites('maintenance')).toBe(false);
+  });
+});
+
+describe('softwareKindsQuery — `?kind=` một hoặc nhiều loại (Q-22)', () => {
+  it.each([
+    [undefined, undefined],
+    ['', undefined],
+    ['license', ['license']],
+    ['ssl,domain', ['ssl', 'domain']],
+    [' ssl , domain ', ['ssl', 'domain']],
+    ['ssl,ssl', ['ssl']],
+  ] as const)('%p → %p', (input, expected) => {
+    expect(softwareKindsQuery(input)).toEqual(expected);
+  });
+
+  it('chữ lạ bị bỏ — không lọt xuống cột enum (22P02 → 500)', () => {
+    expect(softwareKindsQuery('ssl,abc')).toEqual(['ssl']);
+    expect(softwareKindsQuery('abc')).toBeUndefined();
+  });
+});
+
+describe('softwareExportShape — file Excel theo màn (Q-22)', () => {
+  it('Phần mềm (license): có cột ghế, không cột tên miền', () => {
+    expect(softwareExportShape(['license'])).toEqual({
+      sheetName: 'Phần mềm',
+      fileName: 'phan-mem.xlsx',
+      seats: true,
+      websites: false,
+    });
+  });
+
+  it.each([[['ssl', 'domain']], [['ssl']], [['domain']]] as const)(
+    'Tên miền & SSL (%p): cột tên miền, không cột ghế',
+    (kinds) => {
+      expect(softwareExportShape([...kinds])).toEqual({
+        sheetName: 'Tên miền & SSL',
+        fileName: 'ten-mien-ssl.xlsx',
+        seats: false,
+        websites: true,
+      });
+    },
+  );
+
+  it('Hợp đồng bảo trì và Dịch vụ có hạn khác: không ghế, không tên miền', () => {
+    expect(softwareExportShape(['maintenance'])).toMatchObject({
+      fileName: 'hop-dong-bao-tri.xlsx',
+      seats: false,
+      websites: false,
+    });
+    expect(softwareExportShape(['other'])).toMatchObject({
+      fileName: 'dich-vu-co-han.xlsx',
+      seats: false,
+      websites: false,
+    });
+  });
+
+  it('không lọc loại: đủ mọi cột như bản gộp cũ', () => {
+    expect(softwareExportShape(undefined)).toEqual({
+      sheetName: 'Phần mềm',
+      fileName: 'phan-mem.xlsx',
+      seats: true,
+      websites: true,
+    });
   });
 });
 

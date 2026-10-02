@@ -51,6 +51,8 @@ export function pickLoadedSubnets<T extends SubnetLoadInput>(
 
 export interface StaleOwnerInput {
   lastChangeAt: Date;
+  /** Chủ đã thanh lý / ngừng dùng — két treo của nó là việc dọn ở trang tổng két, không nhắc ở đây. */
+  retired?: boolean;
 }
 
 /**
@@ -68,6 +70,7 @@ export function pickStaleOwners<T extends StaleOwnerInput>(
   now: Date,
 ): (T & { daysSince: number })[] {
   return rows
+    .filter((row) => !row.retired)
     .map((row) => ({ ...row, daysSince: daysBetween(row.lastChangeAt, now) }))
     .filter((row) => row.daysSince >= staleDays)
     .sort((a, b) => b.daysSince - a.daysSince);

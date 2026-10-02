@@ -14,6 +14,7 @@ import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -23,7 +24,7 @@ import { Select } from '@/ui/select';
 import { useConfirm } from '@/ui/confirm-provider';
 import { CopyButton } from '@/ui/copy-button';
 import { SessionList, type SessionItem } from '@/ui/session-list';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { PATHS } from '@/lib/routes';
 import { AccountForm } from './account-form';
@@ -186,11 +187,17 @@ interface AccountFilters extends Record<string, string> {
 
 const EMPTY_FILTERS: AccountFilters = { search: '', role: '', status: '', totp: '' };
 
+const ACCOUNT_STATUSES = ['active', 'locked', 'disabled'] as const;
+
+/**
+ * Trạng thái để trống = `live` (trừ đã vô hiệu hóa, Q-20) — người đã nghỉ chỉ hiện khi lọc đích
+ * danh hoặc chọn "Tất cả". Thẻ đếm đầu trang dùng cùng hàm này nên số khớp bảng khi bấm vào.
+ */
 function filterQuery(filters: AccountFilters): string[] {
   return [
     filters.search ? `search=${encodeURIComponent(filters.search)}` : '',
     filters.role ? `role=${filters.role}` : '',
-    filters.status ? `status=${filters.status}` : '',
+    filters.status === ALL_STATUSES ? '' : `status=${filters.status || 'live'}`,
     filters.totp ? `totp=${filters.totp}` : '',
   ].filter(Boolean);
 }
@@ -200,7 +207,6 @@ export function AccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   /* Trạng thái danh sách sống trên THANH ĐỊA CHỈ: chia sẻ được link đã lọc, Back gỡ bộ lọc. */
   const url = useListUrlState<AccountFilters>({
@@ -208,6 +214,8 @@ export function AccountsScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'fullName', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn người đã vô hiệu hóa), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...ACCOUNT_STATUSES, ALL_STATUSES] },
   });
   const { page, limit, filters } = url;
   // Sắp xếp chạy ở SERVER (`manualSorting`): sắp ở client chỉ đảo chỗ 20 dòng đang xem.
@@ -259,9 +267,9 @@ export function AccountsScreen({ me }: { me: Me }) {
           (page) => page.total,
         ),
     }) as const;
-  const countAll = useQuery(countOf('all', ''));
+  const countAll = useQuery(countOf('all', '&status=live'));
   const countLocked = useQuery(countOf('locked', '&status=locked'));
-  const countNoTotp = useQuery(countOf('noTotp', '&totp=none'));
+  const countNoTotp = useQuery(countOf('noTotp', '&status=live&totp=none'));
 
   const refresh = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
@@ -322,18 +330,18 @@ export function AccountsScreen({ me }: { me: Me }) {
       });
       if (!ok) return undefined;
       try {
-        const result = await runWithStepUp(options.run);
+        const result = await runWithStepUp(options.run, t('auth.stepUpFor', { action: options.title }));
         if (options.done) toast({ message: options.done });
         void refresh();
         return result;
       } catch (err) {
         // Người dùng tự đóng hộp hỏi mã = tự huỷ, không phải lỗi để báo.
-        if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return undefined;
+        if (isStepUpCancelled(err)) return undefined;
         toast({ message: errorMessage(err), tone: 'error' });
         return undefined;
       }
     },
-    [askConfirm, runWithStepUp, toast, refresh],
+    [askConfirm, runWithStepUp, toast, refresh, t],
   );
 
   /** Đặt lại mật khẩu; tài khoản đang KHÓA thì mở khóa luôn (bật sẵn) — không thì vẫn không vào được. */
@@ -357,15 +365,16 @@ export function AccountsScreen({ me }: { me: Me }) {
       if (!answer.ok) return;
       const unlock = answer.checked;
       try {
-        const result = await runWithStepUp(() => resetPassword.mutateAsync({ id: account.id }));
+        const purpose = t('auth.stepUpFor', { action: heading });
+        const result = await runWithStepUp(() => resetPassword.mutateAsync({ id: account.id }), purpose);
         if (unlock) {
-          await runWithStepUp(() => setStatus.mutateAsync({ id: account.id, status: 'active' }));
+          await runWithStepUp(() => setStatus.mutateAsync({ id: account.id, status: 'active' }), purpose);
           toast({ message: t('accounts.toastUnlocked', { name: account.fullName }) });
         }
         void refresh();
         setTemporaryPassword({ password: result.temporaryPassword, who: account.email });
       } catch (err) {
-        if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+        if (isStepUpCancelled(err)) return;
         toast({ message: errorMessage(err), tone: 'error' });
       }
     },
@@ -401,22 +410,8 @@ export function AccountsScreen({ me }: { me: Me }) {
         disabled: busy,
         onSelect: () => setSessionsFor(account),
       },
-      ...(account.role === 'member'
-        ? [
-            {
-              key: 'vault',
-              label: t('accounts.vaultAccess'),
-              onSelect: () =>
-                navigate(`${PATHS.adminVaultAccess}?user=${encodeURIComponent(account.id)}`),
-            },
-          ]
-        : []),
-      {
-        key: 'audit',
-        label: t('accounts.auditLog'),
-        onSelect: () =>
-          navigate(`${PATHS.adminAuditLog}?objectId=${encodeURIComponent(account.id)}`),
-      },
+      /* Đi xem Quyền két / Nhật ký nằm trong hộp Chi tiết (Q-21): menu dòng chỉ còn VIỆC LÀM,
+         đủ ngắn để không phải cuộn trong menu. */
       {
         key: 'reset-password',
         label: t('accounts.resetPassword'),
@@ -446,7 +441,9 @@ export function AccountsScreen({ me }: { me: Me }) {
         {
           key: 'reset-totp',
           label: t('accounts.resetTotp'),
-          disabled: resetTotp.isPending,
+          // Chưa kích hoạt thì không có gì để đặt lại — mục vẫn đứng đó (tắt) và nói vì sao.
+          disabled: resetTotp.isPending || !account.totpEnrolledAt,
+          hint: account.totpEnrolledAt ? undefined : t('accounts.resetTotpNotEnrolled'),
           onSelect: () =>
             void confirmThenRun({
               title: t('common.titleOf', { action: t('accounts.resetTotp'), subject: account.fullName }),
@@ -736,13 +733,11 @@ export function AccountsScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('accounts.filterStatus')}
-          placeholder={t('accounts.allStatuses')}
-          options={[
-            { value: '', label: t('accounts.allStatuses') },
-            { value: 'active', label: t('accounts.statusActive') },
-            { value: 'locked', label: t('accounts.statusLocked') },
-            { value: 'disabled', label: t('accounts.statusDisabled') },
-          ]}
+          options={lifecycleStatusOptions(t, {
+            statuses: ACCOUNT_STATUSES,
+            labelOf: (status) => t(STATUS_LABEL[status]),
+            endStatus: 'disabled',
+          })}
           onChange={(value) => url.setFilter('status', value)}
         />
         <Select
@@ -835,8 +830,11 @@ export function AccountsScreen({ me }: { me: Me }) {
           onClose={() => setStatusFor(null)}
           onSubmit={async (reason) => {
             const { account, action } = statusFor;
-            await runWithStepUp(() =>
-              setStatus.mutateAsync({ id: account.id, status: action.to, reason }),
+            await runWithStepUp(
+              () => setStatus.mutateAsync({ id: account.id, status: action.to, reason }),
+              t('auth.stepUpFor', {
+                action: t('common.titleOf', { action: t(action.label), subject: account.fullName }),
+              }),
             );
             setStatusFor(null);
             toast({ message: t(action.done, { name: account.fullName }) });
@@ -850,7 +848,10 @@ export function AccountsScreen({ me }: { me: Me }) {
           account={roleFor}
           onClose={() => setRoleFor(null)}
           onSubmit={async (role) => {
-            await runWithStepUp(() => setRole.mutateAsync({ id: roleFor.id, role }));
+            await runWithStepUp(
+              () => setRole.mutateAsync({ id: roleFor.id, role }),
+              t('auth.stepUpFor', { action: t('accounts.changeRoleOf', { name: roleFor.fullName }) }),
+            );
             toast({
               message: t('accounts.toastRoleChanged', {
                 name: roleFor.fullName,
@@ -918,6 +919,11 @@ export function AccountsScreen({ me }: { me: Me }) {
             setSessionsFor(detailFor);
             setDetailFor(null);
           }}
+          vaultAccessPath={
+            detailFor.role === 'member'
+              ? `${PATHS.adminVaultAccess}?user=${encodeURIComponent(detailFor.id)}`
+              : undefined
+          }
           onEdit={() => {
             setEditing(detailFor);
             setDetailFor(null);
@@ -1020,8 +1026,11 @@ export function TemporaryPasswordDialog({
             {password}
           </p>
         ) : (
-          <p className="mono temp-password" aria-label={t('accounts.passwordMasked')}>
-            {'•'.repeat(password.length)}
+          /* `aria-label` trên <p> bị trình đọc màn hình bỏ qua (vai trò chung không nhận tên),
+             nên nó đọc "chấm chấm chấm…". Giấu dãy chấm, đọc câu chữ ẩn thay vào. */
+          <p className="mono temp-password">
+            <span aria-hidden="true">{'•'.repeat(password.length)}</span>
+            <span className="sr-only">{t('accounts.passwordMasked')}</span>
           </p>
         )}
         {/* Không `aria-pressed`: nhãn đã đổi theo trạng thái, thêm cờ nhấn là hai tín hiệu. */}
@@ -1077,7 +1086,7 @@ function SessionsDialog({
 }: {
   account: AccountRow;
   csrfToken: string;
-  runWithStepUp: <T>(action: () => Promise<T>) => Promise<T>;
+  runWithStepUp: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -1126,11 +1135,14 @@ function SessionsDialog({
       return;
     }
     try {
-      const result = await runWithStepUp(() => killAll.mutateAsync({ includeCurrent }));
+      const result = await runWithStepUp(
+        () => killAll.mutateAsync({ includeCurrent }),
+        t('auth.stepUpFor', { action: question.title }),
+      );
       toast({ message: t('accounts.allSessionsKilled', { count: result.killed }) });
       void sessions.refetch();
     } catch (err) {
-      if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+      if (isStepUpCancelled(err)) return;
       toast({ message: errorMessage(err), tone: 'error' });
     }
   };

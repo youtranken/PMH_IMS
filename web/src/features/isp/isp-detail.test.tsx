@@ -15,7 +15,7 @@ const LINE: IspRow = {
   provider: 'FPT Telecom',
   providerId: 'p-fpt',
   bandwidth: '300 Mbps',
-  wanIp: null,
+  wanIps: [],
   siteId: null,
   siteCode: null,
   deviceId: 'd-fw',
@@ -74,5 +74,26 @@ describe('Trang đường truyền — không nói một điều hai lần', () 
   it('đường đã thanh lý: thẻ sự cố ẩn nên thiết bị hiện ở lưới hồ sơ', async () => {
     renderLine({ ...LINE, status: 'terminated' });
     expect(await screen.findAllByRole('link', { name: 'FW-E2E-01' })).toHaveLength(1);
+  });
+});
+
+describe('Trang đường truyền — nhiều IP WAN (Q-20)', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('hiện mọi IP, mỗi IP một nút chép', async () => {
+    renderLine({ ...LINE, wanIps: ['113.161.10.20', '113.161.10.21'] });
+    expect(await screen.findByText('113.161.10.20')).toBeVisible();
+    expect(screen.getByText('113.161.10.21')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Chép IP WAN 113.161.10.20' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chép IP WAN 113.161.10.21' })).toBeInTheDocument();
+    // Dấu phẩy đứng sát IP trước nó: "a , b" là dấu cách lạc trước dấu phẩy.
+    const line = screen.getByText('113.161.10.20').closest('.detail-subline')!;
+    expect(line.textContent).toContain('113.161.10.20, 113.161.10.21');
   });
 });

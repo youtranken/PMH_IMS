@@ -47,12 +47,12 @@ export default {
     confirmOk: 'Xác nhận',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
        Nút xác nhận nói rõ việc SẼ xảy ra ("Bỏ và đóng"), nút hủy nói rõ việc KHÔNG xảy ra
-       ("Ở lại nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
+       ("Nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
     discardTitle: 'Bỏ những gì vừa nhập?',
     discardMessage:
       'Dữ liệu chưa lưu trong hộp này sẽ mất, không khôi phục được.',
     discardConfirm: 'Bỏ và đóng',
-    discardCancel: 'Ở lại nhập tiếp',
+    discardCancel: 'Nhập tiếp',
     openNav: 'Mở menu',
     closeNav: 'Đóng menu',
     skipToContent: 'Bỏ qua menu, vào thẳng nội dung',
@@ -154,6 +154,12 @@ export default {
   toast: {
     close: 'Đóng thông báo',
   },
+  // Bộ lọc loại dưới ô chọn thiết bị (ui/device-type-filter.tsx, Q-20).
+  deviceTypeFilter: {
+    label: 'Lọc theo loại thiết bị',
+    all: 'Tất cả loại',
+    notRouter: 'Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.',
+  },
   // Tìm nhanh ⌘K (ui/command-palette.tsx).
   palette: {
     title: 'Tìm nhanh',
@@ -188,7 +194,7 @@ export default {
     /* Tên KHU "Hồ sơ" ở đầu cột chính. Không dùng lại `*.tabProfile` được: bên thiết bị khoá
        ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
     profileSection: 'Hồ sơ',
-    blankFields: 'Chưa khai: {{list}}.',
+    blankFields: 'Chưa khai báo: {{list}}.',
     railMore: 'Chi tiết',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
@@ -227,10 +233,24 @@ export default {
   },
   common: {
     save: 'Lưu',
+    /* Nhãn nút trong lúc lượt GHI đang bay. "Đang tải…" (`loading`) là câu của lượt ĐỌC — đặt
+       trên nút Lưu thì người dùng tưởng hệ thống đang tải lại chứ chưa lưu. */
+    saving: 'Đang lưu…',
+    working: 'Đang xử lý…',
+    /* Chữ mờ trong ô ngày của cụm "từ – đến" ở thanh lọc: ô hẹp, câu dài ("Gia hạn từ ngày")
+       bị cắt. Ngữ cảnh nằm ở `ariaLabel` riêng của từng màn. */
+    fromDate: 'Từ ngày',
+    toDate: 'Đến ngày',
     cancel: 'Hủy',
     close: 'Đóng',
     // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
     clearFilters: 'Xóa bộ lọc',
+    /* Ô lọc trạng thái vòng đời (Q-20, `ui/lifecycle-status-options.ts`): một khuôn cho bốn màn. */
+    lifecycleLive: 'Đang theo dõi (trừ {{end}})',
+    lifecycleAll: 'Tất cả (cả {{end}})',
+    /* Bảng trống ở bộ lọc mặc định mà vẫn còn hồ sơ cuối đời khớp (`ui/lifecycle-hidden-empty.tsx`). */
+    lifecycleHidden: 'Có {{count}} hồ sơ {{end}} đang ẩn',
+    lifecycleHiddenHint: 'Danh sách mặc định không hiện hồ sơ cuối đời. Chọn "{{all}}" hoặc xem ở Kho thanh lý.',
     // Nút ✕ của MỌI hộp thoại đọc khóa này. Thiếu nó thì i18next trả về nguyên chuỗi khóa,
     // và trình đọc màn hình đọc ra "common.closeDialog" — bài kiểm e2e vừa chụp được đúng
     // cảnh đó trong ảnh trạng thái.
@@ -265,6 +285,8 @@ export default {
     /* Câu dự phòng của `errorMessage()` khi API không gửi `message`. */
     errorFallback: 'Có lỗi xảy ra.',
     export: 'Xuất Excel',
+    exportCurrent: 'Xuất bảng đang xem',
+    exportAll: 'Xuất tất cả',
     actions: 'Thao tác',
     /* Tên riêng cho nút ba chấm của TỪNG dòng. Dùng chung một chữ "Thao tác" thì hai chục nút
        trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
@@ -322,7 +344,10 @@ export default {
     confirmPassword: 'Nhập lại mật khẩu mới',
     passwordMismatch: 'Hai mật khẩu nhập không khớp.',
     stepUpTitle: 'Xác nhận danh tính',
-    stepUpSub: 'Nhập mã xác thực để xem thông tin bí mật',
+    /* Câu chung khi nơi gọi không nói việc gì — trung tính: hộp này dùng cho cả két lẫn cài lại
+       2 lớp, đặt lại mật khẩu…, nói "xem thông tin bí mật" là sai với mọi việc khác. */
+    stepUpSub: 'Nhập mã 6 số trên điện thoại để xác nhận thao tác này.',
+    stepUpFor: 'Nhập mã 6 số trên điện thoại để xác nhận: {{action}}.',
     lostTotp: 'Không lấy được mã?',
     lostTotpHelp:
       'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
@@ -362,7 +387,13 @@ export default {
     /* Không kèm số lần còn lại: con số đó cho kẻ dò biết email nào có thật. */
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
     signedOut: 'Bạn đã đăng xuất.',
+    totpExpired: 'Hết thời gian nhập mã, vui lòng đăng nhập lại.',
+    tempPasswordExpired: 'Mật khẩu tạm đã hết hạn. Liên hệ Super Admin để được đặt lại mật khẩu.',
+    totpEmpty: 'Vui lòng nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
+    /* "Quay lại" ở màn nhập mã: phiên chờ phải đóng thật, không chỉ đổi màn. */
+    totpBack: 'Quay lại',
+    totpBacking: 'Đang quay lại…',
     totpChecking: 'Đang kiểm tra…',
     totpHint: 'Mã 6 số đang hiện trong ứng dụng. Nhập mã mới nhất.',
     enrollStep1: 'Cài ứng dụng xác thực trên điện thoại: Google Authenticator hoặc Microsoft Authenticator.',
@@ -404,8 +435,11 @@ export default {
     totpOff: 'Chưa bật — chưa mở được két sắt cho tới khi bật.',
     totpEnable: 'Bật ngay',
     totpReEnroll: 'Cài lại trên điện thoại mới',
-    totpReEnrollHint:
-      'Cần mật khẩu và mã 6 số trên điện thoại đang dùng. Xong thì điện thoại cũ hết dùng được, các máy khác bị đăng xuất.',
+    totpReEnrollHint: 'Cần mật khẩu hiện tại và mã 6 số trên điện thoại đang dùng.',
+    totpReEnrollWarning:
+      'Lưu ý: sau khi cài lại, mã trên điện thoại cũ không dùng được nữa; các máy khác đang đăng nhập sẽ bị đăng xuất.',
+    totpReEnrollStepUp: 'Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.',
+    totpReEnrollBack: 'Nhập lại mật khẩu',
     totpReEnrollPasswordSub: 'Nhập mật khẩu hiện tại để bắt đầu cài xác thực 2 lớp.',
     totpReEnrollContinue: 'Tiếp tục',
     totpEnrolled: 'Đã bật xác thực 2 lớp.',
@@ -437,6 +471,10 @@ export default {
     dashboard: 'Bảng điều khiển',
     devices: 'Thiết bị',
     software: 'Phần mềm',
+    /* Ba màn tách từ "Phần mềm" (Q-22) — cùng bảng `software`, khác loại. */
+    domains: 'Tên miền & SSL',
+    maintenance: 'Hợp đồng bảo trì',
+    services: 'Dịch vụ có hạn khác',
     isp: 'Đường truyền',
     expiry: 'Sắp hết hạn',
     ipam: 'Địa chỉ IP',
@@ -458,7 +496,6 @@ export default {
     groupNetwork: 'Mạng',
     groupSecurity: 'Bảo mật',
     groupAdmin: 'Hệ thống',
-    groupDev: 'Dành cho nhà phát triển',
   },
   catalog: {
     title: 'Danh mục',
@@ -540,11 +577,11 @@ export default {
     importHint:
       'File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
       '(đã kèm danh mục đang có); dòng VÍ DỤ được bỏ qua.',
-    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
+    emptyHint: 'Chưa khai báo mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
-    emptyHintManual: 'Chưa khai mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
+    emptyHintManual: 'Chưa khai báo mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
-    clearSearch: 'Xóa từ khóa',
+    clearSearch: 'Xóa tìm kiếm',
     nounSite: 'site',
     nounCabinet: 'tủ mạng',
     nounDeviceType: 'loại thiết bị',
@@ -558,7 +595,7 @@ export default {
     statusFilter: 'Lọc theo trạng thái',
     statusAll: 'Mọi trạng thái',
     siteFilter: 'Lọc theo site',
-    siteAll: 'Mọi site',
+    siteAll: 'Tất cả site',
     memberHint: 'Ngừng dùng, xóa và nhập Excel do Quản trị thực hiện.',
     viewDevices: 'Xem thiết bị dùng mục này',
     usageColumn: 'Đang dùng ở',
@@ -607,7 +644,6 @@ export default {
     // tên trợ năng theo chuỗi con — hai nút sẽ giành nhau trong mọi bài kiểm.
     editOf: 'Sửa máy {{device}}',
     software: 'Phần mềm',
-    installedHeader: 'Phần mềm đang cài ({{count}})',
     noInstalled: 'Máy này chưa được gán license nào.',
     search: 'Tìm mã, tên, serial, IP hoặc người dùng',
     code: 'Mã thiết bị',
@@ -636,10 +672,9 @@ export default {
     statusSpare: 'Dự phòng',
     statusBroken: 'Hỏng',
     statusRetired: 'Đã thanh lý',
-    allSites: 'Mọi site',
+    allSites: 'Tất cả site',
     allCabinets: 'Mọi tủ',
     allTypes: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
        thích cho cả ô. Đem `noCabinet` làm `hint` của ô "Tủ mạng" thì dưới ô hiện dòng xám
        "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
@@ -682,11 +717,13 @@ export default {
     retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
     retireBlocked:
       'Máy còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc gỡ từng thứ trước.',
-    reopen: 'Đưa lại vào dùng',
+    // Mở lại máy đã thanh lý chỉ là đổi trạng thái về Đang dùng/Dự phòng/Hỏng (Q-20). Kho thanh
+    // lý vẫn ghi "Dùng lại" (`disposal.restore`): ở đó việc là kéo hồ sơ ra khỏi kho.
+    reopen: 'Đổi trạng thái',
     confirmReopen:
       'Hồ sơ "{{name}}" mở lại để sửa được, và hạn bảo hành của máy lại có trong ' +
       'email nhắc hạn.',
-    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.',
+    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.',
     /*
      * HAI câu cho HAI cảnh, đừng gộp lại. Một câu chung có chữ "khớp bộ lọc" khiến hệ thống
      * vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa có thiết bị nào khớp bộ lọc" — và người dùng
@@ -706,7 +743,7 @@ export default {
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
-    retiredLockedShort: 'Đã thanh lý — đưa lại vào dùng mới sửa được.',
+    retiredLockedShort: 'Đã thanh lý — đổi trạng thái rồi mới sửa được.',
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
@@ -718,8 +755,9 @@ export default {
     ipMore: '{{ip}} +{{count}}',
     created: 'Đã thêm {{code}}.',
     openProfile: 'Mở hồ sơ',
-    // KHÔNG chứa chữ "Lưu": Playwright khớp tên nút theo chuỗi con, hai nút sẽ giành nhau.
-    saveAndNext: 'Ghi rồi thêm máy khác',
+    // Bắt đầu bằng "Lưu" (Q-20): Playwright khớp tên nút theo chuỗi con, nên mọi E2E bấm nút
+    // "Lưu" của form thêm thiết bị phải ghi `exact: true`, không thì hai nút giành nhau.
+    saveAndNext: 'Lưu và nhân bản',
     clone: 'Nhân bản',
     cloneOf: 'Nhân bản từ {{code}}',
     retireViaButton: 'Thanh lý: chọn "Thanh lý" trong menu ⋮ của máy.',
@@ -728,6 +766,9 @@ export default {
     copyIp: 'Chép IP quản trị',
     assignIp: 'Cấp IP',
     ipAssigned: 'Đã cấp IP cho máy này.',
+    /* Q-20: một máy một IP — máy đã có IP thì nút là Đổi IP (thu hồi cũ + cấp mới một lượt). */
+    changeIp: 'Đổi IP',
+    ipChanged: 'Đã đổi IP cho máy này.',
     timelineFilter: 'Lọc lịch sử theo nguồn',
     timelineAll: 'Tất cả',
     timelineProfile: 'Hồ sơ · Cổng',
@@ -790,7 +831,8 @@ export default {
     uploadedCount: 'Đã đính kèm {{count}} giấy tờ.',
     draftFailedLive: 'Không tải lên được "{{name}}": {{reason}}',
     empty: 'Chưa có giấy tờ nào.',
-    emptyHint: 'Kéo hóa đơn, biên bản bàn giao vào ô phía trên, hoặc bấm chọn file.',
+    /* `examples` = câu gợi ý theo loại hồ sơ (`hint*`), cùng câu với ô thả file. */
+    emptyHint: '{{examples}} Kéo vào ô phía trên, hoặc bấm chọn file.',
     name: 'Tên file',
     size: 'Dung lượng',
     uploadedAt: 'Tải lên lúc',
@@ -799,6 +841,7 @@ export default {
     remove: 'Xóa',
     confirmRemove: '"{{name}}" sẽ biến khỏi hồ sơ. Việc xóa được ghi vào nhật ký.',
     removed: 'Đã xóa giấy tờ.',
+    noPreviewSubject: 'Cách mở file đính kèm',
     noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint: 'Không bắt buộc. File được đính kèm ngay sau khi lưu hồ sơ.',
@@ -838,7 +881,7 @@ export default {
     fromDevice: 'Từ thiết bị',
     usedBy: 'Người sử dụng',
     note: 'Ghi chú',
-    empty: 'Chưa khai cổng nào.',
+    empty: 'Chưa khai báo cổng nào.',
     emptyHint: 'Khai cổng để xuống site là biết ngay cổng nào đi đâu.',
     portRequired: 'Nhập tên cổng (vd 12, Gi1/0/24, WAN1).',
     removed: 'Đã xóa cổng {{port}}.',
@@ -866,8 +909,10 @@ export default {
   },
   software: {
     title: 'Phần mềm',
-    subtitle: 'License, SSL, tên miền, hợp đồng bảo trì và ngày gia hạn',
+    subtitle: 'License phần mềm, số ghế và máy đang cài',
     add: 'Thêm phần mềm',
+    /* Mục menu: cùng chữ với `isp.terminateMenu`. Hộp hỏi lại vẫn nói rõ "vào kho thanh lý". */
+    disposeMenu: 'Thanh lý…',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, tên, ghi chú hoặc mã máy',
     code: 'Mã hồ sơ',
@@ -887,7 +932,7 @@ export default {
     endQuickNeedBase: 'Chọn ngày bắt đầu trước.',
     sectionTerm: 'Thời hạn',
     sectionSeatsNote: 'Ghế và ghi chú',
-    sectionWebsitesNote: 'Website và ghi chú',
+    sectionWebsitesNote: 'Tên miền và ghi chú',
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',
@@ -907,17 +952,15 @@ export default {
     /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
-    allKinds: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
-    /* Mặc định của bộ lọc trạng thái: hai trạng thái còn trên máy. */
-    liveStatuses: 'Đang dùng + Hết hạn',
+    /* Ô lọc loại của màn Tên miền & SSL (Q-22): "Tất cả / Tên miền / Chứng chỉ SSL". */
+    allTypes: 'Tất cả',
     allVendors: 'Mọi nhà cung cấp',
     allModels: 'Mọi kỳ hạn',
     seatsExpired: 'đang cài license đã hết hạn',
     noVendor: 'Chưa rõ nhà cung cấp',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
-    empty: 'Chưa có hồ sơ license, SSL hay tên miền nào.',
-    emptyHint: 'Thêm license, SSL hoặc tên miền để được nhắc gia hạn.',
+    empty: 'Chưa có license phần mềm nào.',
+    emptyHint: 'Thêm license để biết máy nào đang dùng và được nhắc gia hạn.',
     emptyFiltered: 'Không có hồ sơ nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
     saved: 'Đã lưu hồ sơ.',
@@ -951,12 +994,15 @@ export default {
     renewalCost: 'Chi phí',
     renewalActor: 'Người gia hạn',
     renewalNoContract: 'Chưa ghi hợp đồng',
-    renewalWebsites: 'Website',
-    /* Website dùng chứng chỉ SSL / tên miền (Q-15, SW-043). */
-    websitesSsl: 'Website dùng chứng chỉ này',
-    websitesDomain: 'Website dùng tên miền này',
-    websitesHint: 'Mỗi dòng một website, vd shop.pmh.com.vn. Dán cả link cũng được.',
-    websitesEmpty: 'Chưa ghi website nào.',
+    renewalWebsites: 'Tên miền',
+    /* Một hồ sơ Tên miền / SSL = các tên miền dùng chung MỘT ngày hết hạn (Q-22, Q-15). */
+    domainNames: 'Tên miền',
+    domainNamesHint:
+      'Mỗi dòng một tên miền — một hoặc nhiều tên miền dùng chung ngày hết hạn này. Khác hạn thì tạo hồ sơ khác.',
+    domainNamesRequired: 'Nhập ít nhất một tên miền.',
+    websitesEmpty: 'Chưa ghi tên miền nào.',
+    /* Cột "Tên miền": tên đầu + "+N" — rê chuột thấy đủ. */
+    domainNamesMore: '+{{count}}',
     seatsFull: 'Hết ghế',
     seatsOver: '+{{count}} vượt',
     /* Băng đầu trang hồ sơ Thanh lý + hộp Khôi phục (Q-13: bên trong là Sửa hồ sơ). */
@@ -980,6 +1026,36 @@ export default {
     restored: 'Đã khôi phục hồ sơ.',
     restoredAssigned: 'Đã gán lại {{count}} máy.',
     restoreAssignFailed: 'Không gán lại được {{code}}: {{reason}}',
+  },
+  /*
+   * Chữ riêng của ba màn tách từ "Phần mềm" (Q-22). Mọi chữ chung (cột, trạng thái, gia hạn,
+   * thanh lý…) vẫn ở `software.*` — một component vẽ cả bốn màn.
+   */
+  softwareScreens: {
+    domains: {
+      title: 'Tên miền & SSL',
+      subtitle: 'Tên miền và chứng chỉ SSL — mỗi hồ sơ là các tên miền dùng chung một ngày hết hạn',
+      add: 'Thêm tên miền / SSL',
+      empty: 'Chưa có hồ sơ tên miền hay chứng chỉ SSL nào.',
+      emptyHint: 'Thêm tên miền hoặc chứng chỉ SSL để được nhắc gia hạn trước khi hết hạn.',
+      search: 'Tìm theo mã, tên, tên miền hoặc ghi chú',
+    },
+    maintenance: {
+      title: 'Hợp đồng bảo trì',
+      subtitle: 'Hợp đồng bảo trì, hỗ trợ kỹ thuật và ngày gia hạn',
+      add: 'Thêm hợp đồng bảo trì',
+      empty: 'Chưa có hợp đồng bảo trì nào.',
+      emptyHint: 'Thêm hợp đồng bảo trì để được nhắc gia hạn.',
+      search: 'Tìm theo mã, tên hoặc ghi chú',
+    },
+    services: {
+      title: 'Dịch vụ có hạn khác',
+      subtitle: 'Thuê bao, dịch vụ đám mây và mọi thứ có ngày hết hạn khác',
+      add: 'Thêm dịch vụ',
+      empty: 'Chưa có dịch vụ có hạn nào.',
+      emptyHint: 'Thêm dịch vụ có ngày hết hạn để được nhắc gia hạn.',
+      search: 'Tìm theo mã, tên hoặc ghi chú',
+    },
   },
   license: {
     assign: 'Gán vào máy',
@@ -1061,11 +1137,11 @@ export default {
     code: 'Mã đường',
     provider: 'Nhà mạng',
     providerPlaceholder: '— Chọn nhà mạng —',
-    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "+ Thêm vào danh mục".',
+    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "Thêm vào danh mục".',
     bandwidth: 'Tốc độ gói cước',
     wanIp: 'IP WAN',
     site: 'Site',
-    device: 'Thiết bị biên',
+    device: 'Thiết bị',
     deviceHint: 'Router/firewall đang cắm đường này.',
     deviceSearch: 'Tìm thiết bị trong kho…',
     edgeInUse: 'đang gắn {{lines}}',
@@ -1084,10 +1160,9 @@ export default {
     statusSuspended: 'Tạm ngưng',
     statusTerminated: 'Đã thanh lý',
     liquidated: 'Đã thanh lý ngày {{date}} bởi {{actor}}',
-    allSites: 'Mọi site',
-    allStatuses: 'Mọi trạng thái',
+    allSites: 'Tất cả site',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
-    empty: 'Chưa khai đường truyền nào.',
+    empty: 'Chưa khai báo đường truyền nào.',
     emptyHint: 'Thêm đường truyền để có sẵn hotline và số hợp đồng khi sự cố.',
     emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
@@ -1096,12 +1171,17 @@ export default {
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     allProviders: 'Mọi nhà mạng',
-    liveStatuses: 'Đang dùng + Tạm ngưng',
-    wanIpInvalid: 'IP WAN phải là một IPv4 (vd 113.161.10.20) hoặc một khối IP (vd 113.161.10.16/29).',
-    wanIpHint: 'IP tĩnh hoặc khối IP tĩnh nhà mạng cấp.',
+    wanIpInvalid: 'Không phải một IPv4 (vd 113.161.10.20).',
+    wanIpRange: 'Nhập từng IP, không nhập dải.',
+    wanIpDuplicate: 'IP này trùng với một dòng ở trên.',
+    wanIpHint: 'IP tĩnh nhà mạng cấp — mỗi dòng một IP.',
+    wanIpRow: 'IP WAN {{n}}',
+    wanIpAdd: 'Thêm IP',
+    wanIpRemove: 'Bỏ IP WAN {{n}}',
+    wanIpMore: '+{{count}}',
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
     phHotline: 'vd 1800 1166',
-    addProvider: '+ Thêm vào danh mục',
+    addProvider: 'Thêm vào danh mục',
     liquidatedUnknown: 'Đường truyền đã thanh lý, không rõ ngày.',
     incidentCard: 'Khi mất mạng',
     callHotline: 'Gọi {{hotline}}',
@@ -1120,7 +1200,7 @@ export default {
     statusMessage_suspended: 'Đường vẫn ở danh sách với nhãn "Tạm ngưng" (vd nhà mạng tạm cắt, chờ thanh toán).',
     statusMessage_terminated: 'Đường này rời khỏi danh sách mặc định, hợp đồng coi như đã cắt.',
     terminateVault: 'Két còn {{count}} ngăn của đường này — xóa hoặc đổi giá trị nếu không còn dùng.',
-    terminateDevice: 'Đường đang gắn với {{device}} — gỡ khỏi thiết bị biên nếu đã rút cáp.',
+    terminateDevice: 'Đường đang gắn với {{device}} — gỡ khỏi thiết bị nếu đã rút cáp.',
   },
   expiry: {
     /*
@@ -1132,9 +1212,10 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
-    notCountedTitle: 'Hồ sơ đã thanh lý nên không tính hạn nữa',
-    labelNoneTitle: 'Chưa khai ngày hết hạn',
-    notCountedRetired: 'Không tính hạn (đã thanh lý)',
+    /* Trung tính: dùng chung cho hồ sơ đã thanh lý lẫn tài khoản dịch vụ đã ngừng dùng. */
+    notCountedTitle: 'Hồ sơ không còn dùng (đã thanh lý hoặc ngừng dùng) nên không tính hạn nữa',
+    labelNoneTitle: 'Chưa khai báo ngày hết hạn',
+    notCountedRetired: 'Không tính hạn (không còn dùng)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
     navBadge: '{{count}} mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
@@ -1148,7 +1229,7 @@ export default {
     from: 'Từ',
     to: 'Đến',
     walked: 'Đã đi {{percent}}%',
-    noStart: 'Chưa khai mốc bắt đầu',
+    noStart: 'Chưa khai báo mốc bắt đầu',
     title: 'Sắp hết hạn',
     subtitle: 'Bảo hành, license, SSL, tên miền, hợp đồng — mọi thứ có hạn',
     item: 'Mục',
@@ -1186,8 +1267,8 @@ export default {
     renewContract: 'Số hợp đồng',
     renewContractHint: 'Hợp đồng của lần gia hạn này. Để trống nếu chưa có.',
     renewCost: 'Chi phí kỳ mới',
-    renewWebsites: 'Website của kỳ mới',
-    renewWebsitesHint: 'Mỗi dòng một website, lưu riêng cho kỳ này.',
+    renewWebsites: 'Tên miền của kỳ mới',
+    renewWebsitesHint: 'Mỗi dòng một tên miền, lưu riêng cho kỳ này.',
     currentEnd: 'Hạn hiện tại',
     renewMinHint: 'Hạn mới phải từ {{date}} trở đi.',
     renewTooEarly: 'Hạn mới phải từ {{date}} trở đi.',
@@ -1289,12 +1370,13 @@ export default {
     confirmDelete: 'Xóa luật "{{name}}"? Luật này sẽ thôi gửi email.',
   },
   accounts: {
+    stepUpCreate: 'Nhập mã 6 số trên điện thoại để xác nhận tạo tài khoản {{email}}.',
     searchPlaceholder: 'Tìm theo tên hoặc email',
     saveProfileFailed: 'Không lưu được hồ sơ.',
     createFailed: 'Không tạo được tài khoản.',
     title: 'Người dùng IMS',
     subtitle: 'Super Admin tạo, khóa, đặt lại mật khẩu và đóng phiên đăng nhập từ xa',
-    create: 'Thêm tài khoản',
+    create: 'Thêm người dùng',
     profileSaved: 'Đã lưu hồ sơ tài khoản.',
     fullName: 'Họ tên',
     phPhone: 'VD: 0912 345 678',
@@ -1317,6 +1399,7 @@ export default {
     killSession: 'Đóng phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại xác thực 2 lớp',
+    resetTotpNotEnrolled: 'Người này chưa kích hoạt xác thực 2 lớp',
     /* Chuỗi trong `toast({ message: '…' })` cũng phải qua i18n — nó không nằm trên JSX nên mắt
        dễ quét sót. */
     totpReset: 'Đã đặt lại xác thực 2 lớp.',
@@ -1368,12 +1451,12 @@ export default {
     toastDisabled: 'Đã vô hiệu hóa {{name}}.',
     toastReactivated: 'Đã bật lại {{name}}.',
     totpColumn: '2 lớp',
-    totpStateEnrolled: 'Đã cài',
-    totpStateMissing: 'Bắt buộc – chưa cài',
+    totpStateEnrolled: 'Đã kích hoạt',
+    totpStateMissing: 'Bắt buộc – chưa kích hoạt',
     totpStateOptional: 'Không bắt buộc',
     totpRequireOn: 'Bắt buộc 2 lớp khi đăng nhập',
     totpRequireOff: 'Bỏ bắt buộc 2 lớp khi đăng nhập',
-    confirmTotpRequireOn: 'Mỗi lần đăng nhập {{name}} phải gõ mã 2 lớp. Chưa cài thì lần đăng nhập tới phải cài ngay.',
+    confirmTotpRequireOn: 'Mỗi lần đăng nhập {{name}} phải gõ mã 2 lớp. Chưa kích hoạt thì lần đăng nhập tới phải kích hoạt ngay.',
     confirmTotpRequireOff: '{{name}} chỉ cần mật khẩu là đăng nhập được — lộ mật khẩu là mất tài khoản. Két sắt vẫn đòi mã 2 lớp.',
     toastTotpRequireOn: 'Đã bắt buộc 2 lớp cho {{name}}.',
     toastTotpRequireOff: 'Đã bỏ bắt buộc 2 lớp cho {{name}}.',
@@ -1414,8 +1497,8 @@ export default {
     footprintVaultRole: 'Xem mọi két theo vai — không có dòng quyền riêng.',
     footprintRequests: '{{count}} yêu cầu mở két đang chờ duyệt',
     footprintRequestsFailed: 'Yêu cầu mở két (không đếm được)',
-    footprintDevices: '{{count}} thiết bị khớp tên người này',
-    footprintDevicesFailed: 'Thiết bị khớp tên người này (không đếm được)',
+    footprintDevices: '{{count}} thiết bị đang ghi người này sử dụng',
+    footprintDevicesFailed: 'Thiết bị đang ghi người này sử dụng (không đếm được)',
     changeRole: 'Đổi vai trò…',
     changeRoleSubmit: 'Đổi vai trò',
     changeRoleOf: 'Đổi vai trò: {{name}}',
@@ -1424,14 +1507,13 @@ export default {
     toastRoleChanged: 'Đã đổi vai trò của {{name}} thành {{role}}.',
     resetAlsoUnlock: 'Mở khóa luôn (tài khoản đang bị khóa)',
     vaultAccess: 'Quyền két sắt',
-    auditLog: 'Nhật ký thao tác',
     clearLockout: 'Gỡ tạm chặn',
     confirmClearLockout: 'Bộ đếm gõ sai của {{name}} được xóa, người dùng đăng nhập lại được ngay.',
     toastClearLockout: 'Đã gỡ tạm chặn cho {{name}}.',
     you: 'Bạn',
     tempLocked: 'Tạm chặn tới {{time}} ({{count}} lần sai)',
     tempLockedShort: 'Đang tạm chặn',
-    noTotpShort: 'Chưa cài 2 lớp',
+    noTotpShort: 'Chưa kích hoạt 2 lớp',
     neverLoggedIn: 'Chưa đăng nhập',
     neverLoggedInSince: 'Chưa đăng nhập · tạo {{ago}}',
     ago_now: 'vừa xong',
@@ -1441,10 +1523,9 @@ export default {
     filterRole: 'Lọc theo vai trò',
     allRoles: 'Mọi vai trò',
     filterStatus: 'Lọc theo trạng thái',
-    allStatuses: 'Mọi trạng thái',
     filterTotp: 'Lọc theo xác thực 2 lớp',
     allTotp: 'Mọi trạng thái 2 lớp',
-    totpNone: 'Chưa cài 2 lớp',
+    totpNone: 'Chưa kích hoạt 2 lớp',
     sessionsOf: 'Phiên đang mở: {{name}}',
     thisSession: 'Phiên này',
     editTitle: 'Sửa hồ sơ: {{name}}',
@@ -1479,9 +1560,14 @@ export default {
        break-glass (cắt quyền tạm, không mất dữ liệu). */
     add: 'Cất mật khẩu/khóa',
     edit: 'Sửa thông tin',
-    rotate: 'Đổi giá trị',
+    /* Chữ "Đổi …" theo loại ngăn (Q-20): nói đúng thứ đang đổi. Menu, tiêu đề hộp, nút lưu,
+       câu hỏi mã 6 số và thông báo dùng cùng một bộ — thêm loại ngăn thì thêm đủ ba khóa. */
+    rotate_password: 'Đổi mật khẩu',
+    rotate_license_key: 'Đổi license key',
+    rotate_totp: 'Đổi mã 2 lớp',
+    rotate_other: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    rotateOrder: 'IMS không đổi gì trên thiết bị thật. Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
+    rotateOrder: 'IMS không đổi gì trên hệ thống thật. Đổi ở nơi cấp (thiết bị, phần mềm, cổng VPN, nhà mạng…) và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
@@ -1502,7 +1588,10 @@ export default {
     stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
     stepUpSave: 'Nhập mã 6 số để cất "{{label}}" vào két.',
     stepUpEdit: 'Nhập mã 6 số để lưu thay đổi của "{{label}}".',
-    stepUpRotate: 'Nhập mã 6 số để lưu giá trị mới vào két.',
+    stepUpRotate_password: 'Nhập mã 6 số để lưu mật khẩu mới vào két.',
+    stepUpRotate_license_key: 'Nhập mã 6 số để lưu license key mới vào két.',
+    stepUpRotate_totp: 'Nhập mã 6 số để lưu mã 2 lớp mới vào két.',
+    stepUpRotate_other: 'Nhập mã 6 số để lưu giá trị mới vào két.',
     stepUpRevoke: 'Nhập mã 6 số để xóa "{{label}}" khỏi két.',
     stepUpGrace: 'Xác nhận xong thì {{minutes}} phút tới mở ngăn khác không phải gõ lại.',
     perCharOn: 'Hiện từng ký tự',
@@ -1514,7 +1603,10 @@ export default {
        thao tác xoá vĩnh viễn một giá trị đã mã hóa; phải nói thẳng ra như vậy. */
     confirmRevoke: 'Xóa vĩnh viễn "{{label}}"? Giá trị bị xóa, không ai xem lại được, kể cả Super Admin. Chưa có bản khác thì đừng xóa.',
     saved: 'Đã lưu vào két.',
-    rotated: 'Đã đổi giá trị.',
+    rotated_password: 'Đã đổi mật khẩu.',
+    rotated_license_key: 'Đã đổi license key.',
+    rotated_totp: 'Đã đổi mã 2 lớp.',
+    rotated_other: 'Đã đổi giá trị.',
     empty: 'Két chưa có ngăn nào',
     emptyHint: 'Mật khẩu admin, SSH, SNMP… cất vào đây thay vì ghi ra file Excel.',
     emptyLockedHint: 'Hồ sơ đã khóa — không cất thêm được vào két này.',
@@ -1638,12 +1730,13 @@ export default {
     vlanHint: 'VLAN 802.1Q (1–4094). Để trống nếu dải không gắn VLAN.',
     vlanInvalid: 'VLAN phải là số nguyên từ 1 đến 4094.',
     filterAll: 'Tất cả',
-    addSubnet: 'Khai dải mới',
+    /* Q-20: VLAN chỉ là thuộc tính tuỳ chọn của dải, nên nút gọi tên dải chứ không gọi VLAN. */
+    addSubnet: 'Thêm dải mạng',
     editSubnet: 'Sửa dải',
     subnetSaved: 'Đã lưu dải.',
     subnetHidden: 'Đã ngừng dùng dải.',
-    empty: 'Chưa khai dải nào',
-    emptyHint: 'Khai dải LAN (vd 172.16.10.0/24) rồi mới tạo được hồ sơ IP bên trong.',
+    empty: 'Chưa khai báo dải nào',
+    emptyHint: 'Thêm dải LAN (vd 172.16.10.0/24) rồi mới tạo được hồ sơ IP bên trong.',
     cidr: 'Dải',
     phCidr: 'vd 172.16.10.0/24',
     phVlan: 'vd 20',
@@ -1651,7 +1744,11 @@ export default {
     cidrHint: 'Dạng 172.16.10.0/24. Gõ IP bất kỳ kèm /24 cũng được, hệ thống tự quy về địa chỉ mạng.',
     name: 'Tên gọi',
     site: 'Site',
-    noSite: 'Không gắn site',
+    /* Q-20: dải để trống site là dải dùng chung mọi site, không phải "thiếu site". */
+    noSite: 'Tất cả site (dùng chung)',
+    siteHint: 'Để "Tất cả site" nếu dải dùng chung cho mọi site. Cột Site của từng IP lấy theo hồ sơ thiết bị.',
+    siteFilter: 'Lọc theo site',
+    allSites: 'Tất cả site',
     description: 'Mô tả',
     usageFree: 'Còn {{free}} IP trống',
     usageUsed: '{{used}}/{{total}} đang dùng',
@@ -1710,6 +1807,12 @@ export default {
     assign: 'Cấp IP',
     assignIp: 'Cấp IP — {{address}}',
     assignForDevice: 'Cấp IP cho {{code}}',
+    exportCurrent: 'Xuất dải đang xem',
+    changeIp: 'Đổi IP — {{address}}',
+    changeForDevice: 'Đổi IP cho {{code}}',
+    currentIp: 'IP hiện tại',
+    changeHint: 'IP hiện tại về lại dải (Trống) và máy nhận địa chỉ mới trong cùng một lượt.',
+    trChange: 'Đổi IP',
     pickNext: 'Tiếp tục',
     pickSubnetLabel: 'Dải mạng',
     pickSubnetPlaceholder: 'Chọn dải…',
@@ -1718,14 +1821,16 @@ export default {
     pickAddressHint: 'Còn {{count}} IP trống (đã bỏ gateway). Điền sẵn ô trống đầu tiên.',
     noFreeInSubnet: 'Dải này đã hết IP trống.',
     noSubnetToAssign: 'Chưa có dải mạng nào để cấp IP.',
-    noSubnetToAssignHint: 'Khai dải mạng ở màn Địa chỉ IP trước, rồi quay lại cấp IP cho máy này.',
-    goAddSubnet: 'Khai dải mạng',
+    noSubnetToAssignHint: 'Thêm dải mạng ở màn Địa chỉ IP trước, rồi quay lại cấp IP cho máy này.',
+    goAddSubnet: 'Thêm dải mạng',
     ownerRequired: 'Chọn thiết bị hoặc nhập người/phòng ban dùng IP này.',
     paneSearch: 'Lọc trong dải: IP, máy, người dùng, ghi chú…',
     lookup: 'Tra IP hoặc máy…',
     lookupButton: 'Tra',
     lookupHint: 'Gõ IP để mở đúng dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
     lookupNoSubnet: 'Không dải nào đang dùng chứa {{ip}}.',
+    lookupInvalid: 'Địa chỉ IP không hợp lệ: đủ 4 phần, mỗi phần là số 0–255.',
+    lookupDismiss: 'Đóng thông báo',
     lookupResults: 'IP khớp "{{q}}"',
     lookupEmpty: 'Không có hồ sơ IP nào khớp "{{q}}".',
     lookupTooShort: 'Gõ ít nhất 2 ký tự.',
@@ -1757,7 +1862,7 @@ export default {
     pickSubnet: 'Chọn dải mạng',
     subnetOption: '{{cidr}}{{vlan}} · còn {{free}}',
     voidedBy: 'Ngừng dùng ngày {{date}} bởi {{by}} — lý do: {{reason}}',
-    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋯ của thẻ dải.',
+    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋮ của thẻ dải.',
     reclaimOwner: 'Đang cấp cho {{who}}',
     reclaimSince: 'từ {{date}}',
     reclaimNatWarn: 'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước mới thu hồi được:',
@@ -1765,6 +1870,7 @@ export default {
     reclaimMenuHint: 'Trả IP về ô trống, giữ lịch sử',
     voidMenuHint: 'Chỉ cho bản ghi khai nhầm',
     freedOn: 'Thu hồi {{date}}',
+    assignedOn: 'Cấp {{date}}',
     assignedByLine: 'bởi {{by}}',
     viewGroup: 'Kiểu xem',
     viewList: 'Danh sách',
@@ -1773,7 +1879,7 @@ export default {
     mapFree: '{{address}} — trống',
     mapGateway: 'gateway',
     mapHint: 'Bấm ô trống để cấp; bấm ô đang dùng để mở dòng của nó trong danh sách.',
-    cidrPreview: '→ {{cidr}} · {{hosts}} host ({{first}} – {{last}}) · mask {{mask}}',
+    cidrPreview: '{{hosts}} host ({{first}} – {{last}})',
     cidrFormat: 'Viết dạng địa chỉ/prefix, vd 172.16.10.0/24.',
     cidrTooWide: 'Tối đa /{{prefix}} ({{hosts}} host). Dải rộng hơn thì khai thành nhiều dải /{{prefix}}.',
     cidrOverlap: 'Chồng lên dải {{cidr}} ({{name}}) đã khai.',
@@ -1796,16 +1902,15 @@ export default {
     emptyHint: 'Mở cổng trên router thì ghi vào đây để sau này tra được.',
     search: 'Tìm theo cổng, IP, người dùng hoặc lý do…',
     site: 'Site',
-    allSites: 'Mọi site',
+    allSites: 'Tất cả site',
     router: 'Router',
-    addRouter: '+ Thêm router mới',
+    addRouter: 'Thêm thiết bị mới',
     servicePickerPlaceholder: 'Chọn dịch vụ có sẵn…',
     serviceSearchOf: 'Lọc dịch vụ cho {{field}}',
-    serviceAdd: '+ Thêm dịch vụ',
-    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai mới.',
-    routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
+    serviceAdd: 'Thêm dịch vụ',
+    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "Thêm dịch vụ" để khai mới.',
+    routerHint: 'Thiết bị mang luật này (router, firewall, core…). Mặc định chỉ hiện loại Router — bấm chip để thêm loại khác.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
-    routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
     routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',
     routerNoTypeLink: 'Đánh dấu ở Danh mục → Loại thiết bị',
     protocol: 'Giao thức',
@@ -1904,6 +2009,7 @@ export default {
     ipAssignNow: 'Cấp IP này trong sổ',
   },
   serviceAccounts: {
+    stepUpStoreSecret: 'Nhập mã 6 số trên điện thoại để xác nhận cất mật khẩu vào két.',
     phLogin: 'vd ketoan@pmh.com.vn',
     phAllowedIps: 'vd 203.113.1.5, 118.70.2.0/24',
     title: 'Tài khoản dịch vụ',
@@ -1929,6 +2035,11 @@ export default {
     groupName: 'Nhóm VPN',
     groupNameHint: 'Tên nhóm trên máy chủ VPN.',
     allowedIps: 'Dải IP được phép',
+    /* Hạn dùng (Q-20) — khác cột "Đổi lần cuối" (hạn đổi mật khẩu trong két, Q-15). */
+    endDate: 'Hết hạn',
+    endDateOptional: 'Hết hạn (tùy chọn)',
+    endDateTip:
+      'Tài khoản cấp có thời hạn (VPN cho đối tác, tài khoản dùng thử…). Gần tới hạn hệ thống nhắc như các hạn khác; quá hạn chỉ nhắc, không tự ngừng dùng. Để trống nếu không có hạn.',
     allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng.',
     note: 'Ghi chú',
     noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu cất ở tab Két sắt.',
@@ -1956,7 +2067,6 @@ export default {
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Mọi loại',
-    allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
     emptyHint: 'Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.',
@@ -2010,7 +2120,7 @@ export default {
   },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Hồ sơ đang có mật khẩu trong két: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+    subtitle: 'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
     whereItLives:
       'Trang này chỉ liệt kê hồ sơ và số ngăn, không hiện tên hay giá trị từng ngăn. Bấm "Mở két" để xem từng ngăn.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',
@@ -2023,12 +2133,12 @@ export default {
     openOf: 'Mở két của {{code}}',
     openRecord: 'Mở hồ sơ đầy đủ',
     orphan: '(hồ sơ đã xóa, còn ngăn treo)',
-    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋯.',
+    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋮.',
     site: 'Site',
     secretChip: '{{count}} ngăn',
     clearSearch: 'Xóa tìm kiếm',
     filterKind: 'Lọc theo loại hồ sơ',
-    clearKinds: 'Bỏ lọc',
+    clearKinds: 'Xóa bộ lọc',
     summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
     /* Bảng chỉ liệt kê hồ sơ ĐANG có ngăn, nên lúc trống không có nút "Mở két" nào để bấm:
@@ -2038,6 +2148,7 @@ export default {
     noHitHint: 'Thử tìm bằng mã máy (vd SRV-01), tên hoặc site.',
     noHitHintKinds: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
     rulesTitle: 'Luật của két',
+    rulesButton: 'Luật két',
     rule1: 'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
     /* KHÔNG nói "mỗi phiên": luật thật là một khoảng ÂN HẠN do `secret.stepup_grace_minutes`
        quy định, và chính màn hình có đồng hồ đếm ngược nói điều đó (`reveal-dialog.tsx` —
@@ -2050,7 +2161,7 @@ export default {
   disposal: {
     title: 'Kho thanh lý',
     subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã thanh lý hoặc ngừng dùng',
-    /* Cách dùng lại khác nhau theo loại — nên ở menu ⋯ của từng dòng, không trong câu chung. */
+    /* Cách dùng lại khác nhau theo loại — nên ở menu ⋮ của từng dòng, không trong câu chung. */
     note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',
@@ -2076,8 +2187,11 @@ export default {
     periodMonth: 'Tháng này',
     periodQuarter: 'Quý này',
     periodYear: 'Năm nay',
+    dateRange: 'Khoảng ngày thanh lý',
     from: 'Thanh lý từ ngày',
     to: 'Thanh lý đến ngày',
+    fromShort: 'Từ ngày',
+    toShort: 'Đến ngày',
     sort: 'Sắp xếp',
     sort_newest: 'Mới thanh lý trước',
     sort_oldest: 'Cũ trước',
@@ -2229,6 +2343,8 @@ export default {
       authStepupSessionRevoked: 'Đóng phiên vì xác thực lại sai nhiều lần',
       authTotpFailed: 'Mã 2 lớp sai',
       authTotpSessionRevoked: 'Đóng phiên vì mã 2 lớp sai nhiều lần',
+      authTotpChallengeExpired: 'Đóng phiên vì quá thời gian nhập mã 2 lớp',
+      authTempPasswordExpired: 'Đóng phiên vì mật khẩu tạm đã hết hạn',
       authTotpEnrollStart: 'Bắt đầu cài 2 lớp',
       authTotpEnrollDone: 'Cài xong 2 lớp',
       authTotpEnrollFailed: 'Cài 2 lớp thất bại',
@@ -2286,6 +2402,7 @@ export default {
       ipUpdated: 'Sửa hồ sơ IP',
       ipAssigned: 'Cấp IP',
       ipTransitioned: 'Đổi trạng thái IP',
+      ipChanged: 'Đổi IP thiết bị',
       ipVoided: 'Xóa hồ sơ IP nhập nhầm',
       ipSubnetVoided: 'Hồ sơ IP ngừng dùng theo dải',
       ipRestored: 'Khôi phục hồ sơ IP đã xóa',
@@ -2320,7 +2437,7 @@ export default {
       updated: 'Sửa',
       deleted: 'Xóa',
       imported: 'Nhập từ Excel',
-      importedUpdate: 'Cập nhật khi nhập Excel',
+      importedUpdate: 'Cập nhật khi nhập từ Excel',
       activated: 'Dùng lại',
       deactivated: 'Ngừng dùng',
       enabled: 'Bật',
@@ -2369,6 +2486,7 @@ export default {
     },
   },
   access: {
+    stepUpCopy: 'Nhập mã 6 số trên điện thoại để xác nhận gán quyền két cho {{name}}.',
     title: 'Quyền két sắt',
     subtitle: 'Ai xem thẳng được mật khẩu nào, ai phải xin duyệt.',
     search: 'Tìm theo tên hoặc email…',
@@ -2385,6 +2503,8 @@ export default {
       'Gán cho {{member}} tầng "{{tier}}" trên nhóm "{{scope}}"? Họ sẽ xem được mật khẩu của mọi hồ sơ thuộc nhóm này.',
     removed: 'Đã gỡ quyền.',
     remove: 'Gỡ',
+    stepUpGrant: 'Nhập mã 6 số để xác nhận cấp quyền két.',
+    stepUpRemove: 'Nhập mã 6 số để xác nhận gỡ quyền két.',
     confirmRemove: 'Gỡ quyền của {{member}} trên "{{scope}}"? Sau đó họ sẽ không xem và không xin được nữa.',
     tier: 'Tầng quyền',
     tierHint: '"Xem thẳng": xem ngay, vẫn phải nhập mã 6 số. "Cần duyệt": phải xin và chờ duyệt.',
@@ -2397,7 +2517,12 @@ export default {
     allFamilies: 'Tất cả nhóm',
     scope_device_site: 'Thiết bị theo site',
     scope_device_type: 'Thiết bị theo loại',
-    scope_software_kind: 'Phần mềm',
+    deviceUnionTip:
+      'Cấp theo site là xem được mọi thiết bị ở site đó, bất kể loại. Cấp theo loại là mọi thiết bị loại đó ở mọi site. Hai cách cộng dồn: khớp dòng nào cũng thấy; nhiều dòng cùng khớp thì lấy quyền rộng nhất.',
+    showMoreRules: 'Xem thêm {{count}} quyền',
+    showLessRules: 'Thu gọn',
+    /* Họ gồm bốn màn tách từ Phần mềm (Q-22) — khóa vẫn là `software_kind`. */
+    scope_software_kind: 'Phần mềm & dịch vụ có hạn',
     scope_service_account_kind: 'Tài khoản dịch vụ',
     scope_isp_provider: 'Đường truyền',
     tier_denied: 'Không có quyền',
@@ -2419,7 +2544,7 @@ export default {
     memberList: 'Danh sách thành viên',
     ruleCount: '{{count}} quyền',
     backToList: 'Danh sách thành viên',
-    addRules: '+ Thêm quyền',
+    addRules: '+ Gán quyền',
     /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
     copyFrom: 'Sao chép quyền từ…',
     copyTitle: 'Sao chép quyền két cho {{member}}',
@@ -2436,7 +2561,7 @@ export default {
       'Gán cho {{member}} {{count}} nhóm quyền két giống {{source}}, giữ nguyên tầng? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các nhóm này.',
     copyNote: 'Sao chép từ {{source}}',
     copyDone: 'Đã sao chép {{count}} nhóm từ {{source}}.',
-    noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Thêm quyền" để gán.',
+    noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Gán quyền" để gán.',
     roleHolders: 'Có toàn quyền theo vai ({{count}})',
     pickScopes: 'Chọn ít nhất một nhóm.',
     allScopesGranted: 'Người này đã có quyền trên mọi nhóm. Đổi tầng một nhóm thì bấm vào nhóm đó.',
@@ -2680,7 +2805,7 @@ export default {
       fMachine: 'máy',
       fCost: 'chi phí',
       fContract: 'hợp đồng',
-      fWebsites: 'website',
+      fWebsites: 'tên miền',
       fOverSeatReason: 'lý do vượt số ghế',
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
@@ -2719,6 +2844,7 @@ export default {
       actUpdated: 'Sửa hồ sơ',
       actDisabled: 'Ngừng dùng',
       actEnabled: 'Dùng lại',
+      actRenewed: 'Gia hạn',
       kindShared: 'Tài khoản dùng chung',
       kindVpn: 'Tài khoản VPN',
       stActive: 'Đang dùng',
@@ -2732,7 +2858,7 @@ export default {
       fProvider: 'nhà mạng',
       fBandwidth: 'tốc độ gói cước',
       fWanIp: 'IP WAN',
-      fDeviceId: 'thiết bị biên',
+      fDeviceId: 'thiết bị',
       fHotline: 'hotline',
       fContractNo: 'số hợp đồng',
       actCreated: 'Tạo hồ sơ',
@@ -2823,7 +2949,7 @@ export default {
     kpiCalm: 'Không có việc gì gấp.',
     itemsCount: '{{count}} mục',
     showMore: 'Xem thêm {{count}}',
-    expiring: 'Hạn cần xử lý',
+    expiring: 'Tổng hợp hết hạn cần xử lý',
     expiringOverdue: 'Đã quá hạn ({{count}})',
     expiringUpcoming: 'Sắp tới ({{count}})',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
@@ -2861,7 +2987,7 @@ export default {
     secretCount: '{{count}} ngăn',
     staleSince: 'đổi lần cuối {{date}} · {{days}} ngày trước',
 
-    disposed: 'Vừa vào kho thanh lý (7 ngày)',
+    disposed: 'Tổng hợp kho thanh lý (7 ngày)',
     disposedEmpty: 'Tuần qua không thanh lý gì.',
     seeAllDisposed: 'Xem toàn bộ kho thanh lý',
     /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */
@@ -2870,6 +2996,7 @@ export default {
   },
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   settings: {
+    stepUpSave: 'Nhập mã 6 số trên điện thoại để xác nhận lưu tham số hệ thống.',
     title: 'Tham số hệ thống',
     subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển, mạng IP và giấy tờ đính kèm. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
@@ -2888,6 +3015,9 @@ export default {
     save: 'Lưu nhóm này',
     discard: 'Bỏ thay đổi',
     dirty: 'Có {{count}} thay đổi chưa lưu',
+    leaveTitle: 'Chưa lưu thay đổi',
+    leaveMessage: 'Nhóm này còn {{count}} thay đổi chưa lưu. Lưu trước khi sang nhóm khác, hay bỏ các thay đổi đó?',
+    leaveStay: 'Ở lại',
     reviewTitle: 'Xác nhận đổi tham số',
     reviewHint: 'Có hiệu lực trong vòng 30 giây cho mọi người dùng. Mỗi thay đổi ghi một dòng nhật ký.',
     reviewConfirm: 'Lưu thay đổi',
@@ -2931,12 +3061,18 @@ export default {
     loginAccountBackoffMinutesDesc: 'Bậc chờ tăng dần áp cho cả tài khoản, bất kể đoán từ máy nào.',
     totpEnrollReauthMinutesLabel: 'Miễn gõ lại mật khẩu khi cài 2 lớp lần đầu',
     totpEnrollReauthMinutesDesc: 'Trong khoảng này sau khi đăng nhập thì cài 2 lớp không phải gõ lại mật khẩu.',
+    authTotpChallengeMinutesLabel: 'Thời gian nhập mã 2 lớp khi đăng nhập',
+    authTotpChallengeMinutesDesc:
+      'Đã đúng mật khẩu thì phải nhập mã 2 lớp trong khoảng này, quá thì phải đăng nhập lại. Không áp cho lần cài 2 lớp đầu tiên.',
+    authTempPasswordHoursLabel: 'Thời hạn mật khẩu tạm',
+    authTempPasswordHoursDesc:
+      'Mật khẩu tạm (tạo tài khoản, đặt lại mật khẩu) dùng được trong khoảng này. Quá hạn thì không đăng nhập được, Super Admin phải đặt lại.',
     authSupportContactLabel: 'Câu liên hệ khi quên mật khẩu / mất điện thoại',
     authSupportContactDesc: 'Hiện ở màn đăng nhập và màn mã 2 lớp. Ghi rõ gặp ai, gọi số nào.',
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',
     secretRevealSecondsDesc: 'Hết giờ thì hộp tự ẩn giá trị. Cũng là thời gian hộp mật khẩu tạm (tạo, đặt lại tài khoản) tự che.',
     secretStepUpGraceMinutesLabel: 'Ân hạn sau khi xác thực lại',
-    secretStepUpGraceMinutesDesc: 'Trong khoảng này mở két, sửa két, sửa tham số không phải gõ lại mã 6 số.',
+    secretStepUpGraceMinutesDesc: 'Trong khoảng này mọi thao tác cần mã 6 số (két, cấp quyền, người dùng IMS, tham số) không phải gõ lại.',
     secretStepUpMaxFailuresLabel: 'Số lần gõ sai mã xác thực lại trước khi đóng phiên',
     secretStepUpMaxFailuresDesc: 'Nhập sai quá số này thì phiên bị đóng.',
     secretProbeAlertThresholdLabel: 'Ngưỡng cảnh báo dò két',

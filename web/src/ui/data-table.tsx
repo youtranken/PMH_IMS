@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-table';
 import { SkeletonCards, SkeletonRows } from '@/ui/skeleton-rows';
 import { useScrollEdges } from '@/ui/scroll-x';
+import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 
 // Cho phép cột khai báo className (vd 'num' căn phải cột số) qua columnDef.meta.
@@ -30,11 +31,8 @@ declare module '@tanstack/react-table' {
   }
 }
 
-/**
- * Mốc chuyển bảng → thẻ gọn. PHẢI khớp `@media (max-width: 600px)` của `.list-card*` trong
- * `css/table.css`.
- */
-export const MOBILE_CARD_QUERY = '(max-width: 600px)';
+/** Mốc chuyển bảng → thẻ gọn (`BREAKPOINTS.cards`, khớp `.list-card*` trong `css/table.css`). */
+export const MOBILE_CARD_QUERY = BREAKPOINTS.cards;
 
 /**
  * Thẻ gọn thay cho bảng trên điện thoại. Mọi khe là hàm của dòng; bỏ khe nào thì thẻ không có
@@ -44,8 +42,13 @@ export const MOBILE_CARD_QUERY = '(max-width: 600px)';
  * (`onRowClick`) phủ cả thẻ — tự bọc thêm link bên trong là thành tương tác lồng nhau.
  */
 export interface MobileCard<T> {
-  /** Dòng 1 bên trái — định danh (mã). */
+  /** Dòng 1 bên trái — định danh (mã, hoặc họ tên / nhãn khi màn không có mã). */
   title: (row: T) => ReactNode;
+  /**
+   * Tiêu đề là MÃ (thiết bị, phần mềm, đường truyền…) → phông mono. Mặc định không: họ tên hay
+   * nhãn dài mà ép mono thì vừa rộng vừa khó đọc.
+   */
+  titleIsCode?: boolean;
   /** Góc phải trên — badge trạng thái. */
   badge?: (row: T) => ReactNode;
   /** Góc phải trên, sau badge — menu ⋯ (`RowActions`). Bấm vào đây không mở dòng. */
@@ -596,6 +599,9 @@ function MobileCardItem<T>({
   onRowClick?: (row: T) => void;
 }) {
   const title = card.title(row);
+  /* Tiêu đề xuống tối đa hai dòng rồi "…" (`.list-card-title`): chữ đủ nằm ở `title` khi nó là
+     chuỗi — node tự dựng thì nơi gọi tự lo. */
+  const titleText = typeof title === 'string' || typeof title === 'number' ? String(title) : undefined;
   const href = card.href?.(row);
   const badge = card.badge?.(row);
   const actions = card.actions?.(row);
@@ -605,7 +611,7 @@ function MobileCardItem<T>({
   return (
     <li className={['list-card', className].filter(Boolean).join(' ')}>
       <div className="list-card-top">
-        <span className="list-card-title">
+        <span className={card.titleIsCode ? 'list-card-title mono' : 'list-card-title'} title={titleText}>
           {href ? (
             <Link to={href} className="list-card-link">
               {title}

@@ -9,7 +9,7 @@ const FIELD_LABEL: Record<string, string> = {
   code: 'history.isp.fCode',
   provider: 'history.isp.fProvider',
   bandwidth: 'history.isp.fBandwidth',
-  wanIp: 'history.isp.fWanIp',
+  wanIps: 'history.isp.fWanIp',
   siteId: 'history.fSiteId',
   deviceId: 'history.isp.fDeviceId',
   // API đã đổi `siteId`/`deviceId` thành MÃ (khoá `site`/`device`) — xem isp-line.controller.

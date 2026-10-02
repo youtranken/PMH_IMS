@@ -30,6 +30,13 @@ interface VaultOwner {
   secretCount: number;
   lastChangeAt: string;
   orphan: boolean;
+  /** Hồ sơ chủ đã thanh lý / ngừng dùng — két còn treo, cần dọn. */
+  retired: boolean;
+}
+
+/** Tên trạng thái giữ theo module chủ, như Kho thanh lý. */
+function retiredLabelKey(ownerType: SecretOwnerType): string {
+  return ownerType === 'service_account' ? 'disposal.statusDisabled' : 'disposal.statusRetired';
 }
 
 /**
@@ -91,6 +98,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
     [url.filters.kinds],
   );
   const [opened, setOpened] = useState<VaultOwner | null>(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const owners = useQuery({
     queryKey: ['vault', 'owners'],
@@ -163,6 +171,12 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         cell: ({ row }) => (
           <>
             <span className="mono">{row.original.code}</span>
+            {row.original.retired ? (
+              <>
+                {' '}
+                <span className="badge danger">{t(retiredLabelKey(row.original.ownerType))}</span>
+              </>
+            ) : null}
             <span className="cell-sub">
               {row.original.orphan ? t('vaultHome.orphan') : row.original.name}
             </span>
@@ -208,9 +222,17 @@ export function VaultHomeScreen({ me }: { me: Me }) {
 
   return (
     <>
-      {/* Một dòng phụ đề là đủ; lời giải thích "vì sao không có trang đọc được mọi bí mật"
-          về ở khối Luật cuối trang — ba nơi nói cùng một điều là đẩy danh sách xuống cả màn. */}
-      <PageHeader title={t('vaultHome.title')} subtitle={t('vaultHome.subtitle')} />
+      {/* Một dòng phụ đề là đủ; luật két nằm sau nút "Luật két" (Q-21) — khối cố định cuối
+          trang chiếm chỗ của bảng mà người ta chỉ đọc một lần. */}
+      <PageHeader
+        title={t('vaultHome.title')}
+        subtitle={t('vaultHome.subtitle')}
+        actions={
+          <button type="button" className="btn" onClick={() => setRulesOpen(true)}>
+            {t('vaultHome.rulesButton')}
+          </button>
+        }
+      />
 
       <FilterBar
         search={url.searchInput}
@@ -300,14 +322,20 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                 emptyText={t('vaultHome.noHit')}
                 mobileCard={{
                   title: (row) => row.code,
+                  titleIsCode: true,
                   subtitle: (row) =>
                     row.orphan
                       ? t('vaultHome.orphan')
                       : [row.name, row.siteCode].filter(Boolean).join(' · '),
                   badge: (row) => (
-                    <span className="badge muted">
-                      {t('vaultHome.secretChip', { count: row.secretCount })}
-                    </span>
+                    <>
+                      {row.retired ? (
+                        <span className="badge danger">{t(retiredLabelKey(row.ownerType))}</span>
+                      ) : null}
+                      <span className="badge muted">
+                        {t('vaultHome.secretChip', { count: row.secretCount })}
+                      </span>
+                    </>
                   ),
                   meta: (row) =>
                     `${t(SECRET_OWNER_KIND_KEY[row.ownerType])} · ${formatDateTime(row.lastChangeAt)}`,
@@ -337,7 +365,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {/* Đường sang hồ sơ đầy đủ vẫn giữ: xem két xong thường là muốn xem cả máy. */}
               {opened.orphan ? null : (
                 <Link
-                  className="btn"
+                  className="linkbtn"
                   /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: chuỗi `if`
                      kết bằng một nhánh vét như `return PATHS.softwareItem(...)` thì một đường
                      truyền rơi vào đó và cái nút này mở trang PHẦN MỀM với id đường truyền. */
@@ -380,16 +408,27 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         </Dialog>
       ) : null}
 
-      <section className="form-section">
-        <h2 className="form-section-title">{t('vaultHome.rulesTitle')}</h2>
-        <p className="muted">{t('vaultHome.whereItLives')}</p>
-        <ul className="vault-rules">
-          <li>{t('vaultHome.rule1')}</li>
-          <li>{t('vaultHome.rule2')}</li>
-          <li>{t('vaultHome.rule3')}</li>
-          <li>{t('vaultHome.rule4')}</li>
-        </ul>
-      </section>
+      {rulesOpen ? (
+        <Dialog
+          open
+          onOpenChange={() => setRulesOpen(false)}
+          maxWidth={620}
+          title={t('vaultHome.rulesTitle')}
+          footer={
+            <button type="button" className="btn" onClick={() => setRulesOpen(false)}>
+              {t('common.close')}
+            </button>
+          }
+        >
+          <p className="muted">{t('vaultHome.whereItLives')}</p>
+          <ul className="vault-rules">
+            <li>{t('vaultHome.rule1')}</li>
+            <li>{t('vaultHome.rule2')}</li>
+            <li>{t('vaultHome.rule3')}</li>
+            <li>{t('vaultHome.rule4')}</li>
+          </ul>
+        </Dialog>
+      ) : null}
     </>
   );
 }

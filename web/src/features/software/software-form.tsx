@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
@@ -10,14 +10,13 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   codePrefix,
   KIND_KEY,
   LICENSE_MODELS,
   requiresEndDate,
   seatCheck,
-  SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
   STATUS_KEY,
   supportsSeats,
@@ -28,6 +27,11 @@ import {
   type SoftwareRow,
   type SoftwareStatus,
 } from './software-types';
+import {
+  SOFTWARE_SCREENS,
+  screenOfKind,
+  type SoftwareScreenKey,
+} from '@/lib/software-screens';
 
 interface FormState {
   code: string;
@@ -40,15 +44,15 @@ interface FormState {
   endDate: string;
   note: string;
   status: SoftwareStatus;
-  /** Mỗi dòng một website — chỉ SSL / tên miền. */
+  /** Mỗi dòng một tên miền — chỉ SSL / tên miền (Q-22). */
   websites: string;
 }
 
-function initialState(row: SoftwareRow | null): FormState {
+function initialState(row: SoftwareRow | null, firstKind: SoftwareKind): FormState {
   return {
     code: row?.code ?? '',
     name: row?.name ?? '',
-    kind: row?.kind ?? 'license',
+    kind: row?.kind ?? firstKind,
     licenseModel: row?.licenseModel ?? 'subscription',
     vendorId: row?.vendorId ?? '',
     seatTotal: row?.seatTotal != null ? String(row.seatTotal) : '',
@@ -60,20 +64,32 @@ function initialState(row: SoftwareRow | null): FormState {
   };
 }
 
-/** Form hồ sơ phần mềm (FR-008). Màn nhập — desktop-first. */
+/**
+ * Form hồ sơ phần mềm (FR-008). Màn nhập — desktop-first.
+ *
+ * `screen` quyết những loại được chọn (Q-22): màn Tên miền & SSL chọn giữa hai loại của nó, các
+ * màn còn lại cố định loại nên không bày ô Loại. Vắng `screen` thì lấy màn của hồ sơ đang sửa.
+ */
 export function SoftwareForm({
   row,
+  screen,
   csrfToken,
   onClose,
   onSaved,
 }: {
   /** null = thêm mới. */
   row: SoftwareRow | null;
+  screen?: SoftwareScreenKey;
   csrfToken: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
+  const spec = screen ? SOFTWARE_SCREENS[screen] : row ? screenOfKind(row.kind) : SOFTWARE_SCREENS.software;
+  /* Hồ sơ đang sửa mà loại không thuộc màn (dữ liệu cũ) vẫn giữ được loại của nó — ép đổi loại
+     chỉ vì mở form từ màn khác là đổi dữ liệu ngoài ý người sửa. */
+  const kinds: readonly SoftwareKind[] =
+    row && !spec.kinds.includes(row.kind) ? [row.kind, ...spec.kinds] : spec.kinds;
   const toast = useToast();
   /*
    * Form TỰ hỏi danh mục thay vì nhận qua props: `useCatalogLists` dùng chung `queryKey` nên
@@ -81,8 +97,8 @@ export function SoftwareForm({
    * undefined` không có đường nào phân biệt "danh mục hỏng" với "chưa tải xong".
    */
   const lists = useCatalogLists();
-  const [form, setForm] = useState<FormState>(() => initialState(row));
-  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(() => initialState(row, kinds[0]));
+  const [error, setError] = useSubmitError([form]);
   // Giấy tờ chọn kèm lúc THÊM MỚI (AD-15). Hồ sơ đang sửa thì đã có tab Giấy tờ ở trang
   // chi tiết — bày thêm một ô chọn ở đây chỉ làm người ta tưởng danh sách cũ biến mất.
   const draft = useAttachmentDraft();
@@ -121,6 +137,7 @@ export function SoftwareForm({
   const isPerpetual = form.licenseModel === 'perpetual';
   const seats = seatCheck(form.seatTotal, hasSeats, row?.seatUsed ?? 0, row?.seatTotal ?? null);
   const endRequired = requiresEndDate(form.kind, form.licenseModel);
+  const hasDomains = supportsWebsites(form.kind);
 
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
@@ -134,6 +151,9 @@ export function SoftwareForm({
           ? t('software.seatBelowUsed', { used: row?.seatUsed ?? 0, total: seats.value })
           : null,
     note: secretTextRule(t, form.note),
+    // Q-22: hồ sơ Tên miền / SSL là các tên miền dùng chung một hạn — không có tên nào thì nó
+    // không theo dõi gì cả.
+    websites: hasDomains && websiteLines(form.websites).length === 0 && t('software.domainNamesRequired'),
   });
 
   return (
@@ -145,14 +165,14 @@ export function SoftwareForm({
       dismissible={!busy}
       guardUnsaved
       maxWidth={960}
-      title={row ? `${t('software.edit')} — ${row.code}` : t('software.add')}
+      title={row ? `${t('software.edit')} — ${row.code}` : t(spec.addKey)}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="software-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -178,7 +198,7 @@ export function SoftwareForm({
               note: form.note.trim(),
               status: form.status,
               // Đổi loại sang license thì danh sách cũ phải đi theo, không nằm ẩn mà vẫn tìm ra.
-              websites: supportsWebsites(form.kind) ? websiteLines(form.websites) : [],
+              websites: hasDomains ? websiteLines(form.websites) : [],
             },
             {
               onSuccess: (created) => {
@@ -222,23 +242,26 @@ export function SoftwareForm({
         {check.summary}
         <FormSection title={t('software.tabProfile')} columns={4}>
           {/* Loại đứng ĐẦU: nó quyết định form có Kỳ hạn, Số ghế, Hết hạn hay không — chọn sau
-              khi đã gõ mã và tên thì form nhảy bố cục ngay dưới tay người gõ. */}
-          <Field label={t('software.kind')} required span={3}>
-            <div className="segmented" role="radiogroup" aria-label={t('software.kind')}>
-              {SOFTWARE_KINDS.map((kind) => (
-                <label key={kind}>
-                  <input
-                    type="radio"
-                    name="sw-kind"
-                    value={kind}
-                    checked={form.kind === kind}
-                    onChange={() => set('kind', kind)}
-                  />
-                  {t(KIND_KEY[kind])}
-                </label>
-              ))}
-            </div>
-          </Field>
+              khi đã gõ mã và tên thì form nhảy bố cục ngay dưới tay người gõ. Màn một loại thì
+              không có gì để chọn — không bày ô. */}
+          {kinds.length > 1 ? (
+            <Field label={t('software.kind')} required span={3}>
+              <div className="segmented" role="radiogroup" aria-label={t('software.kind')}>
+                {kinds.map((kind) => (
+                  <label key={kind}>
+                    <input
+                      type="radio"
+                      name="sw-kind"
+                      value={kind}
+                      checked={form.kind === kind}
+                      onChange={() => set('kind', kind)}
+                    />
+                    {t(KIND_KEY[kind])}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          ) : null}
           <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code')}>
             <input
               id="sw-code"
@@ -362,7 +385,7 @@ export function SoftwareForm({
           title={
             hasSeats
               ? t('software.sectionSeatsNote')
-              : supportsWebsites(form.kind)
+              : hasDomains
                 ? t('software.sectionWebsitesNote')
                 : undefined
           }
@@ -388,12 +411,14 @@ export function SoftwareForm({
               />
             </Field>
           ) : null}
-          {supportsWebsites(form.kind) ? (
+          {hasDomains ? (
             <Field
-              label={t(form.kind === 'ssl' ? 'software.websitesSsl' : 'software.websitesDomain')}
-              hint={t('software.websitesHint')}
+              label={t('software.domainNames')}
+              hint={t('software.domainNamesHint')}
               htmlFor="sw-websites"
+              required
               span={2}
+              error={check.error('websites')}
             >
               <textarea
                 id="sw-websites"
@@ -408,7 +433,7 @@ export function SoftwareForm({
             label={t('software.note')}
             hint={t('software.noteHint')}
             htmlFor="sw-note"
-            span={hasSeats || supportsWebsites(form.kind) ? 2 : 3}
+            span={hasSeats || hasDomains ? 2 : 3}
             error={check.error('note')}
           >
             <textarea

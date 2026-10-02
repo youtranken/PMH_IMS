@@ -16,6 +16,8 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';
@@ -66,9 +68,18 @@ export function IspScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...ISP_STATUSES, ALL_STATUSES] },
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: ISP_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'terminated',
+  });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả sổ — sai mà không có dấu hiệu nào.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
@@ -116,11 +127,19 @@ export function IspScreen({ me }: { me: Me }) {
               {row.original.code}
             </Link>
             {/* IP WAN là câu thứ hai lúc mất mạng ("IP tĩnh của line này là gì") — dòng phụ
-                ngay dưới mã, chép được, không phải mở trang chi tiết. */}
-            {row.original.wanIp ? (
+                ngay dưới mã, chép được, không phải mở trang chi tiết. Nhiều IP (Q-20): hiện IP
+                đầu + "+N" để dòng không phình; rê chuột đọc đủ, trang chi tiết chép từng IP. */}
+            {row.original.wanIps.length > 0 ? (
               <span className="cell-sub">
-                <span className="mono">{row.original.wanIp}</span>{' '}
-                <CopyButton value={row.original.wanIp} label={t('isp.copyWanIp')} inline />
+                <span className="mono">{row.original.wanIps[0]}</span>{' '}
+                {row.original.wanIps.length > 1 ? (
+                  <>
+                    <span className="muted" title={row.original.wanIps.join(', ')}>
+                      {t('isp.wanIpMore', { count: row.original.wanIps.length - 1 })}
+                    </span>{' '}
+                  </>
+                ) : null}
+                <CopyButton value={row.original.wanIps[0]} label={t('isp.copyWanIp')} inline />
               </span>
             ) : null}
           </>
@@ -269,12 +288,8 @@ export function IspScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('isp.status')}
-          placeholder={t('isp.liveStatuses')}
-          options={[
-            { value: '', label: t('isp.liveStatuses') },
-            { value: 'all', label: t('isp.allStatuses') },
-            ...ISP_STATUSES.map((status) => ({ value: status, label: t(STATUS_KEY[status]) })),
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
       </FilterBar>
@@ -284,23 +299,32 @@ export function IspScreen({ me }: { me: Me }) {
       ) : lines.isError ? (
         <LoadError error={lines.error} onRetry={() => void lines.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
-             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
-          title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
-          hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('common.clearFilters')}
-              </button>
-            ) : (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('isp.add')}
-              </button>
-            )
+        <LifecycleHiddenEmpty
+          probeKey={['isp-lines', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/isp-lines?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['terminated'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+                 gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
+              title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
+              hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('common.clearFilters')}
+                  </button>
+                ) : (
+                  <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                    {t('isp.add')}
+                  </button>
+                )
+              }
+            />
           }
         />
       ) : (
@@ -314,12 +338,14 @@ export function IspScreen({ me }: { me: Me }) {
                góc thay cho bảng gập bảy dòng toàn nhãn. */
             mobileCard={{
               title: (row) => row.code,
+              titleIsCode: true,
               href: (row) => PATHS.ispLine(row.id),
               badge: (row) => (
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
               ),
               subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
-              meta: (row) => [row.siteCode, row.deviceCode, row.wanIp].filter(Boolean).join(' · '),
+              meta: (row) =>
+                [row.siteCode, row.deviceCode, row.wanIps.join(', ')].filter(Boolean).join(' · '),
               aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
             }}
             // Tạm ngưng: vạch cam ở mép trái — đường đang "nửa sống" là thứ phải thấy từ xa.

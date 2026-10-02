@@ -30,41 +30,76 @@ export function clearPaletteRecent(): void {
 }
 
 /**
+ * Vì sao phiên kết thúc:
+ *   - `signedOut`: bấm Đăng xuất — bỏ trang dở, báo "Bạn đã đăng xuất.".
+ *   - `back`: "Quay lại" ở màn nhập mã 2 lớp — cùng người sửa lại bước mật khẩu, nên GIỮ trang
+ *     dở (Q-14) và không báo gì.
+ *   - `totpExpired`: quá thời gian nhập mã (Q-20) — giữ trang dở, báo hết thời gian.
+ */
+export type SignOutReason = 'signedOut' | 'back' | 'totpExpired';
+
+/** Câu báo màn đăng nhập sẽ hiện ở lượt mở kế tiếp trong tab này. */
+export type SignOutNotice = 'signedOut' | 'totpExpired' | 'tempPasswordExpired';
+
+const NOTICE_VALUE: Record<SignOutNotice, string> = {
+  signedOut: '1',
+  totpExpired: 'totp-expired',
+  tempPasswordExpired: 'temp-password-expired',
+};
+
+/**
+ * Ghi câu báo cho màn đăng nhập. Đi qua sessionStorage chứ không qua state của router: ngay sau
+ * lượt `navigate`, một lượt gọi API bất kỳ gặp 401 sẽ NẠP LẠI CỨNG trang `/login`, và state của
+ * router mất theo. `lib/api-client` cũng gọi hàm này khi server báo hết thời gian nhập mã.
+ */
+export function noteSignOutNotice(notice: SignOutNotice): void {
+  try {
+    sessionStorage.setItem(SIGNED_OUT_KEY, NOTICE_VALUE[notice]);
+  } catch {
+    // Kho bị chặn thì chỉ mất câu báo, đăng xuất vẫn xong.
+  }
+}
+
+/**
  * Sau khi đăng xuất (FE-02): xoá MỌI dữ liệu đã tải khỏi bộ nhớ rồi mới về màn đăng nhập. Không
  * xoá thì danh sách tài khoản, thiết bị, nhật ký… của người trước còn nằm trong cache vài phút —
  * người đăng nhập kế tiếp trên cùng máy thấy chúng trước khi dữ liệu mới về.
  */
-export function afterLogout(client: QueryClient, navigate: (path: string) => void): void {
+export function afterLogout(
+  client: QueryClient,
+  navigate: (path: string) => void,
+  reason: SignOutReason = 'signedOut',
+): void {
   client.clear();
   clearPaletteRecent();
-  // Chủ động đăng xuất thì không còn "trang đang làm dở" — người đăng nhập kế tiếp về trang chủ.
-  // Tab cũng thôi thuộc về người vừa ra: link trong thư mở sau đó thuộc người sắp đăng nhập.
-  clearNextPath();
-  noteTabOwner(null);
-  /*
-   * Cờ "vừa đăng xuất" cho màn đăng nhập nói "Bạn đã đăng xuất." — trên máy dùng chung người
-   * ta cần chắc phiên đã đóng. Đi qua sessionStorage chứ không qua state của router: ngay sau
-   * lượt `navigate` này, một lượt gọi API bất kỳ gặp 401 sẽ NẠP LẠI CỨNG trang `/login`, và
-   * state của router mất theo.
-   */
-  try {
-    sessionStorage.setItem(SIGNED_OUT_KEY, '1');
-  } catch {
-    // Kho bị chặn thì chỉ mất câu báo, đăng xuất vẫn xong.
+  if (reason === 'signedOut') {
+    // Chủ động đăng xuất thì không còn "trang đang làm dở" — người đăng nhập kế tiếp về trang chủ.
+    // Tab cũng thôi thuộc về người vừa ra: link trong thư mở sau đó thuộc người sắp đăng nhập.
+    clearNextPath();
+    noteTabOwner(null);
+    // Trên máy dùng chung người ta cần chắc phiên đã đóng.
+    noteSignOutNotice('signedOut');
+  } else if (reason === 'totpExpired') {
+    noteSignOutNotice('totpExpired');
+  } else {
+    clearSignedOut();
   }
   navigate(LOGIN_PATH);
 }
 
-/** Màn đăng nhập hỏi: người dùng vừa đăng xuất ở tab này? */
-export function justSignedOut(): boolean {
+/** Màn đăng nhập hỏi: tab này vừa kết thúc phiên vì lý do nào cần nói ra? */
+export function signOutNotice(): SignOutNotice | null {
   try {
-    return sessionStorage.getItem(SIGNED_OUT_KEY) === '1';
+    const value = sessionStorage.getItem(SIGNED_OUT_KEY);
+    if (value === NOTICE_VALUE.totpExpired) return 'totpExpired';
+    if (value === NOTICE_VALUE.tempPasswordExpired) return 'tempPasswordExpired';
+    return value === NOTICE_VALUE.signedOut ? 'signedOut' : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-/** Tắt câu "đã đăng xuất" — người dùng bắt đầu gõ, hoặc đã đăng nhập lại. */
+/** Tắt câu báo — người dùng bắt đầu gõ, hoặc đã đăng nhập lại. */
 export function clearSignedOut(): void {
   try {
     sessionStorage.removeItem(SIGNED_OUT_KEY);

@@ -77,7 +77,7 @@ describe('IP đang giữ của nhiều máy một lượt', () => {
       );
     };
     await ip('10.66.1.20', 'SW-COT-01', 'assigned');
-    await ip('10.66.1.3', 'SW-COT-01', 'assigned');
+    await ip('10.66.1.3', 'PC-COT-03', 'assigned');
     await ip('10.66.1.40', 'PC-COT-02', 'assigned', true);
     await ip('10.66.1.41', 'PC-COT-02', 'free');
   }, TEST_TIMEOUT);
@@ -86,13 +86,15 @@ describe('IP đang giữ của nhiều máy một lượt', () => {
     await scratch?.drop();
   }, TEST_TIMEOUT);
 
-  it('mỗi máy → địa chỉ đang giữ, sắp theo số (".3" trước ".20")', async () => {
-    const map = await addresses.heldAddressesOf([device['SW-COT-01']]);
-    expect(map.get(device['SW-COT-01'])).toEqual(['10.66.1.3', '10.66.1.20']);
+  // Một máy giữ tối đa một IP đang cấp (Q-20, chỉ mục `ip_address_device_uq`).
+  it('mỗi máy → đúng địa chỉ nó đang giữ', async () => {
+    const map = await addresses.heldAddressesOf([device['SW-COT-01'], device['PC-COT-03']]);
+    expect(map.get(device['SW-COT-01'])).toEqual(['10.66.1.20']);
+    expect(map.get(device['PC-COT-03'])).toEqual(['10.66.1.3']);
   });
 
   it('bỏ hồ sơ đã ẩn và hồ sơ đã trả về pool; máy không giữ gì thì không có khóa', async () => {
-    const map = await addresses.heldAddressesOf([device['PC-COT-02'], device['PC-COT-03']]);
+    const map = await addresses.heldAddressesOf([device['PC-COT-02']]);
     expect(map.size).toBe(0);
   });
 

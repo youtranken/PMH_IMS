@@ -129,6 +129,13 @@ describe('titleKeyOf — tên tab theo màn', () => {
     [PATHS.dashboard, 'nav.dashboard'],
     [PATHS.devices, 'nav.devices'],
     [PATHS.software, 'nav.software'],
+    // Q-22: mỗi màn tách từ "Phần mềm" mang tên của chính nó, cả trang chi tiết.
+    [PATHS.domains, 'nav.domains'],
+    [PATHS.domainItem('d1'), 'nav.domains'],
+    [PATHS.maintenance, 'nav.maintenance'],
+    [PATHS.maintenanceItem('m1'), 'nav.maintenance'],
+    [PATHS.services, 'nav.services'],
+    [PATHS.serviceItem('o1'), 'nav.services'],
     [PATHS.expiry, 'nav.expiry'],
     [PATHS.adminAccounts, 'nav.accounts'],
     [PATHS.adminVaultAccess, 'nav.vaultAccess'],

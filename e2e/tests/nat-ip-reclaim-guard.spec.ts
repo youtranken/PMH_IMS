@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  createTestSubnet,
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
@@ -66,13 +67,12 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
   expect(device.status()).toBe(201);
   const routerId = ((await device.json()) as { device: { id: string } }).device.id;
 
-  const octet = Number(stamp) % 200;
-  const subnet = await page.request.post('/api/v1/ipam/subnets', {
+  const { id: subnetId, octet } = await createTestSubnet(
+    page,
     headers,
-    data: { cidr: `172.16.${octet}.0/29`, name: `LAN thu hoi E2E ${stamp}` },
-  });
-  expect(subnet.status()).toBe(201);
-  const subnetId = ((await subnet.json()) as { id: string }).id;
+    `LAN thu hoi E2E ${stamp}`,
+    Number(stamp),
+  );
 
   const internalIp = `172.16.${octet}.5`;
   // `usedBy` khác rỗng → `create()` đặt status 'assigned' (ip-address.service.ts:278).

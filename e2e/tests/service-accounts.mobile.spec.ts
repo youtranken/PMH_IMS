@@ -48,7 +48,9 @@ test('danh sách và hồ sơ tài khoản dịch vụ đọc được ở 390px
   // Bảng gập thành thẻ dọc — nhãn cột phải đi theo giá trị, không thì đọc ra một cột số liệu
   // không biết của cái gì.
   await expect(page.getByText('vpn-ketoan@pmh.com.vn')).toBeVisible();
-  await expect(page.getByText('Đang dùng')).toBeVisible();
+  await expect(
+    page.getByRole('listitem').filter({ hasText: code }).getByText('Đang dùng'),
+  ).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await page.goto(`/service-accounts/${id}`);

@@ -4,12 +4,12 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { ApiError } from '@/lib/api-client';
 import { foldSearch } from '@/lib/search-fold';
 import { useConfirm } from '@/ui/confirm-provider';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import {
   catalogLabel,
@@ -115,7 +115,7 @@ export function CatalogForm({
    */
   const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(entity, row));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form]);
   /* Lỗi server gắn được vào MỘT ô (409 trùng mã/tên) — hiện ngay dưới ô đó, không ở cuối form. */
   const [serverField, setServerField] = useState<{ field: 'code' | 'name'; message: string } | null>(
     null,
@@ -258,11 +258,11 @@ export function CatalogForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="catalog-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }

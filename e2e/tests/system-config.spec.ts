@@ -79,6 +79,74 @@ test.describe('Tham số hệ thống', () => {
     await expect(page.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeVisible();
   });
 
+  /* Q-21: đổi nhóm khi còn thay đổi chưa lưu thì hỏi; "Ở lại" giữ nguyên, "Bỏ thay đổi" mới sang. */
+  test('đổi nhóm khi chưa lưu: hỏi Lưu / Bỏ thay đổi / Ở lại, không ghi gì', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await page.goto('/admin/settings?group=auth');
+    const rate = page.getByRole('textbox', { name: 'Số lượt đăng nhập tối đa mỗi IP' });
+    const before = await rate.inputValue();
+    await rate.fill(before === '30' ? '31' : '30');
+    const nav = page.getByRole('navigation', { name: 'Nhóm tham số' });
+    await nav.getByRole('button', { name: 'Phần mềm' }).click();
+
+    const ask = page.getByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    await expect(ask).toBeVisible();
+    await ask.getByTestId('dialog-footer').getByRole('button', { name: 'Ở lại' }).click();
+    await expect(ask).toBeHidden();
+    await expect(rate).not.toHaveValue(before);
+
+    await nav.getByRole('button', { name: 'Phần mềm' }).click();
+    await ask.getByRole('button', { name: 'Bỏ thay đổi' }).click();
+    await expect(page.getByLabel('Ân hạn trước khi tự thanh lý phần mềm')).toBeVisible();
+    await nav.getByRole('button', { name: 'Đăng nhập & bảo mật' }).click();
+    await expect(rate).toHaveValue(before);
+  });
+
+  /* Q-21: rời màn bằng menu bên trái / nút lùi của trình duyệt khi chưa lưu cũng phải hỏi. */
+  test('rời màn khi chưa lưu: menu và nút lùi đều hỏi; "Ở lại" giữ URL, "Bỏ thay đổi" mới sang', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    // Vào bằng menu (không `goto`): nút lùi phải là lượt lùi TRONG app, thứ router chặn được.
+    await openNavGroup(page);
+    await page
+      .getByRole('navigation', { name: 'Điều hướng chính' })
+      .getByRole('link', { name: 'Tham số hệ thống', exact: true })
+      .click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Tham số hệ thống' })).toBeVisible();
+    const rate = page.getByRole('textbox', { name: 'Số lượt đăng nhập tối đa mỗi IP' });
+    const before = await rate.inputValue();
+    await rate.fill(before === '30' ? '31' : '30');
+
+    const menuLink = page
+      .getByRole('navigation', { name: 'Điều hướng chính' })
+      .getByRole('link', { name: 'Thiết bị', exact: true });
+    const ask = page.getByRole('dialog', { name: 'Chưa lưu thay đổi' });
+    const stay = ask.getByTestId('dialog-footer').getByRole('button', { name: 'Ở lại' });
+
+    await menuLink.click();
+    await expect(ask).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/settings(\?.*)?$/);
+    await stay.click();
+    await expect(ask).toBeHidden();
+    await expect(page).toHaveURL(/\/admin\/settings(\?.*)?$/);
+    await expect(rate).not.toHaveValue(before);
+
+    await page.goBack();
+    await expect(ask).toBeVisible();
+    await stay.click();
+    await expect(page).toHaveURL(/\/admin\/settings(\?.*)?$/);
+    await expect(rate).not.toHaveValue(before);
+
+    await menuLink.click();
+    await ask.getByRole('button', { name: 'Bỏ thay đổi' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/devices$/);
+    // Không ghi gì: quay lại màn vẫn là giá trị cũ.
+    await page.goto('/admin/settings?group=auth');
+    await expect(rate).toHaveValue(before);
+  });
+
   test('TẤN CÔNG: Thành viên gọi thẳng API → 403; SA gửi khoá ngoài danh sách / ngoài khoảng → 400', async ({
     page,
     browser,

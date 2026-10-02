@@ -12,13 +12,13 @@ import {
   BreakGlassStateBadge,
   BreakGlassSubject,
   DecisionDialog,
-  isStepUpCancelled,
   useBreakGlassActions,
   type BreakGlassRow,
 } from '@/ui/break-glass';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { useConfirm } from '@/ui/confirm-provider';
 import { DetailHeader } from '@/ui/detail-header';
-import { LoadError, Loading } from '@/ui/load-state';
+import { DetailLoadFailed, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
@@ -73,8 +73,17 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
 
   if (detail.isLoading) return <Loading />;
   if (detail.isError) {
-    return <LoadError error={detail.error} onRetry={() => void detail.refetch()} />;
+    // Link trong thư có thể trỏ tới phiếu không còn: giữ đường về danh sách, tách 404 khỏi lỗi máy chủ.
+    return (
+      <DetailLoadFailed
+        error={detail.error}
+        onRetry={() => void detail.refetch()}
+        backTo={PATHS.approvals}
+        backLabel={t(canDecide ? 'nav.approvals' : 'nav.approvalsMine')}
+      />
+    );
   }
+  // Mất mạng ⇒ `fetchStatus:'paused'`: không lỗi, không dữ liệu — xem `devices/device-detail.tsx`.
   if (!detail.data) return <Loading />;
   const row = detail.data;
 
@@ -290,7 +299,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
           </button>
           <button type="button" className="btn primary" disabled={busy} onClick={onApprove}>
             {busy
-              ? t('common.loading')
+              ? t('common.working')
               : armed
                 ? t('approvals.approveConfirm', { hours: granted })
                 : t('approvals.approveHours', { hours: granted })}

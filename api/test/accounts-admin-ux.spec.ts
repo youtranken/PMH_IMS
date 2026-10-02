@@ -71,6 +71,7 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
       new ApprovalsApiService(
         new ApprovalsService(db, new AuditWriterService(db), new ApprovalKindRegistry()),
       ),
+      config,
     );
     // Migration seed có thể đã tạo sẵn SA — dọn để phép đếm trong bài kiểm là của bài kiểm.
     await scratch.pool.query(`DELETE FROM users`);
@@ -97,6 +98,23 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
       'locked-e2e@qa.test',
     ]);
     expect(noTotp.total).toBe(2);
+  });
+
+  /* Q-20: màn Người dùng IMS mặc định gửi `status=live` — ẩn người đã vô hiệu hóa; lọc đích danh
+     `disabled` mới hiện; vắng tham số thì đủ cả (đường đọc khác của API). */
+  it('status=live ẩn tài khoản đã vô hiệu hóa; disabled lọc đích danh; vắng thì đủ', async () => {
+    const gone = await user('gone-e2e@qa.test', 'member', 'disabled', true);
+    try {
+      const live = await accounts.list(PAGE, undefined, undefined, { status: 'live' });
+      expect(live.items.map((row) => row.email)).not.toContain('gone-e2e@qa.test');
+      expect(live.items.map((row) => row.email)).toContain('locked-e2e@qa.test');
+      const disabled = await accounts.list(PAGE, undefined, undefined, { status: 'disabled' });
+      expect(disabled.items.map((row) => row.email)).toEqual(['gone-e2e@qa.test']);
+      const all = await accounts.list(PAGE);
+      expect(all.total).toBe(live.total + 1);
+    } finally {
+      await scratch.pool.query(`DELETE FROM users WHERE id = $1`, [gone]);
+    }
   });
 
   it('khóa kèm lý do → lý do nằm trong nhật ký', async () => {

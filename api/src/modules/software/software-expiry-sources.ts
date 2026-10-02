@@ -50,7 +50,7 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
           kind,
           start: row.startDate,
           end: row.endDate!,
-          link: UI_PATHS.software(row.id),
+          link: UI_PATHS.softwareOf(kind, row.id),
           quietInDigest: row.status === 'expired_ok',
         }));
       },

@@ -95,13 +95,14 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'groupName', 'ownerName', 'assignedTo', 'department', 'usedBy', 'login', 'bandwidth',
     'contract', 'contractNo', 'contact', 'vlan', 'key', 'kind',
     // Mạng.
-    'cidr', 'gateway', 'internalIp', 'wanIp', 'allowedIps', 'externalPorts',
+    'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',
     // Ô lọc / phân trang của câu truy vấn đọc.
     'action', 'actor', 'objectId', 'objectType', 'search', 'requester', 'page', 'limit',
+    'status', 'sort', 'dir', 'usable', 'licenseModel',
     // Chính là bí mật / vé xác thực: đi vào két hoặc chỉ băm, không lưu dạng rõ.
     'password', 'currentPassword', 'newPassword', 'token', 'ticket',
   ]);

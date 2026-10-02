@@ -22,12 +22,14 @@
   color: var(--ink);
   background: var(--surface-2);
 }
-table.table tbody tr.exp td {
+/* `>` bắt buộc: dạng hậu duệ (`tr.exp td`) rơi cả vào ô của bảng con trong khu bung — ô
+   bảng ghế mất đệm, có vạch đứt và nền xám (`expand-row.test.tsx` đọc luật này). */
+table.table tbody tr.exp > td {
   background: var(--surface-2);
   border-top: 1px dashed var(--border-2);
   padding: 0;
 }
-table.table tbody tr.exp:hover td {
+table.table tbody tr.exp:hover > td {
   background: var(--surface-2);
 }
 .exp .panel {
@@ -36,16 +38,59 @@ table.table tbody tr.exp:hover td {
   gap: var(--space-8);
   padding: var(--space-7) var(--space-7);
 }
-/* Hàng bung phần mềm của máy: bảng FULL-WIDTH (không ép 3 cột như .panel cũ). */
-.exp .exp-soft {
-  padding: var(--space-7) var(--space-7);
+/*
+ * Khung chung của khu bung (`ui/expand-panel.tsx`): đầu khu + bảng con trong cùng một hộp có
+ * đệm. Lề trái = bề ngang cột mũi tên của bảng cha (đệm ô hai bên + nút 1.75rem), nên mép bảng
+ * con thẳng mép ô Mã, và chữ cột đầu bảng con thẳng chữ của mã (cùng đệm ô `--space-7`).
+ */
+.exp-panel {
+  --exp-indent: calc(var(--space-7) * 2 + 1.75rem);
+  padding: var(--space-6) var(--space-7) var(--space-7) var(--exp-indent);
+  max-width: 100%;
 }
-.exp .exp-soft .table-wrap {
+/* Bảng con (`table.table.table-sub`): nền trắng, khung mảnh bo góc, vạch ngang mảnh giữa các
+   dòng, không sọc, chữ nhỏ hơn bảng cha một bậc. Khung nằm ở `.table-wrap` bọc ngoài (nó lo
+   cuộn ngang) — bỏ bóng để không thành "thẻ nổi" giữa một dòng bảng. */
+.exp-panel .table-wrap {
+  box-shadow: none;
+  border-radius: var(--r);
   margin: 0;
+}
+table.table.table-sub {
+  font-size: var(--fs-sm);
+}
+table.table.table-sub thead th {
+  background: var(--surface);
+  padding: var(--space-4) var(--space-7);
+}
+table.table.table-sub tbody td {
+  padding: var(--space-5) var(--space-7);
+}
+table.table.table-sub tbody tr:nth-child(even) td,
+table.table.table-sub tbody tr:hover td {
+  background: var(--surface);
+}
+table.table.table-sub td .mono {
+  white-space: nowrap;
 }
 @media (max-width: 760px) {
   .exp .panel {
     grid-template-columns: 1fr;
+  }
+}
+/* Cùng mốc gập `.table-stack`: bảng cha đã thành thẻ dọc, không còn cột mũi tên để thụt theo.
+   Ô của hàng bung không phải một "nhãn: giá trị" — trả nó về khối thường, nếu không luật thẻ
+   dọc đẩy cả khu bung sang cột phải và canh phải. */
+@media (max-width: 960px) {
+  .exp-panel {
+    padding-left: var(--space-7);
+  }
+  .table-stack tr.exp > td {
+    display: block;
+    text-align: left;
+  }
+  .table-stack tr.exp > td::before {
+    content: none;
   }
 }
 .exp .panel h5 {
@@ -115,7 +160,7 @@ table.table tbody tr.exp:hover td {
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
-  transition: border-color 0.14s var(--ease), box-shadow 0.14s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
 }
 .subnet-card:hover {
   border-color: var(--border-2);
@@ -294,6 +339,9 @@ table.table tbody tr.exp:hover td {
 .ip-cell.is-gw {
   box-shadow: inset 0 0 0 2px var(--primary);
 }
+.ip-cell:hover:not(:disabled) {
+  border-color: var(--primary);
+}
 .ip-cell:disabled {
   cursor: default;
 }
@@ -436,6 +484,25 @@ table.table tbody tr.exp:hover td {
 .subnet-pane td.col-device {
   min-width: 14ch;
 }
+/* Cột Site là mã một dòng cắt "…" (`.cell-stack`): sàn đủ cho ~6 ký tự để còn nhận ra site. */
+.subnet-pane th.col-site,
+.subnet-pane td.col-site {
+  min-width: 5rem;
+}
+/* Bảng IP nằm trong khung phải (~770px ở 1366px có sidebar): tiêu đề "Người / phòng ban dùng"
+   không ngắt dòng thì một mình nó đòi ~190px; ở khổ giữa ô đệm hẹp lại để cột Thao tác còn
+   trong khung. Ngày cấp đã thành dòng phụ ở khổ này (`.col-wide`, table.css). */
+@media (min-width: 961px) {
+  table.table.ip-table thead th {
+    white-space: normal;
+  }
+}
+@media (min-width: 961px) and (max-width: 1440px) {
+  table.table.ip-table thead th,
+  table.table.ip-table tbody td {
+    padding-inline: var(--space-5);
+  }
+}
 /* Chỉ ở ≥961px: dưới mốc đó `.table-stack` gập dòng thành thẻ dọc, ô là một hàng flex của
    thẻ — `width: 1%` ở đó bóp ô "Ngày cấp" còn một mẩu, nhãn và giá trị chồng lên nhau. */
 @media (min-width: 961px) {
@@ -506,11 +573,9 @@ table.table tbody tr.exp:hover td {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Danh sách GHẾ (seat-list) — nếp bung dòng của code nền QLTS (AD-12).
-
-   Vì sao là lưới thẻ chứ không phải <table> lồng: hàng bung nằm TRONG một ô của bảng cha.
-   Bảng lồng bảng khiến bề rộng cột trong ngoài giằng nhau, và ở ≤960px thì bảng cha đã gập
-   thành thẻ dọc còn bảng con thì chưa. Lưới thẻ tự quyết bề rộng của mình, gập riêng.
+   Danh sách GHẾ (seat-list) — lưới thẻ của code nền QLTS (AD-12), chỉ còn ở trang mẫu
+   /dev/components. Khu bung dòng dùng bảng con `table.table.table-sub` trong `ExpandPanel`:
+   bảng con mang `.table-stack`, nên nó gập thẻ dọc CÙNG mốc 960px với bảng cha.
 
    Bề rộng CỐ ĐỊNH cho Chi phí/Bắt đầu/Hết hạn: header và các dòng là hai lưới riêng, dùng
    `auto` thì cột co theo nội dung ("—") nên lệch nhau.
@@ -518,31 +583,6 @@ table.table tbody tr.exp:hover td {
 .seat-list {
   --seat-cols: minmax(110px, 1.1fr) minmax(90px, 1fr) 120px 108px 118px
     minmax(0, 1fr) minmax(0, 1.2fr) 92px;
-}
-/* Hàng bung ở danh sách THIẾT BỊ: phần mềm đang cài trên máy này (không có cột Máy/Người). */
-.seat-list.inst-list {
-  --seat-cols: minmax(150px, 2fr) minmax(90px, 0.9fr) 120px 108px 118px
-    minmax(0, 1fr) minmax(0, 1.2fr);
-}
-/* Không máy nào khai ngày bắt đầu: bỏ hẳn cột đó, nhường chỗ cho tên phần mềm. */
-.seat-list.inst-list.no-start {
-  --seat-cols: minmax(180px, 2.4fr) minmax(90px, 0.9fr) 120px 118px minmax(0, 1fr)
-    minmax(0, 1.2fr);
-}
-/* Tên phần mềm là dòng chính, mã là dòng phụ mono nhỏ — không còn "mã | tên…" cắt ngang. */
-.seat-mc.seat-mc-stack {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-.seat-mc-stack .seat-code {
-  font-size: var(--fs-2xs);
-  font-weight: 500;
-}
-/* Khối bung nằm TRONG bề ngang bảng: lưới rộng hơn thì cuộn trong khung, không tràn mép phải. */
-.exp .exp-soft {
-  max-width: 100%;
-  overflow-x: auto;
 }
 /* Tiêu đề khu bung: chữ thường cỡ nhỏ — "Đã gán 3/10 ghế" là một câu, in hoa thì đọc ngược.
    Nút "Gán vào máy" đứng NGAY cạnh câu đó, không trôi ra mép phải của một hàng rất rộng. */
@@ -722,50 +762,6 @@ table.table tbody tr.exp:hover td {
   }
 }
 
-/* Khu "License đang cài" nằm trong cột chính của trang chi tiết (~650px ở 1280 có sidebar):
-   bảy cột không vừa, tiêu đề cột chồng nhau và mã license gãy ba dòng. Đo theo bề ngang của
-   CHÍNH KHU (container query), không theo cửa sổ: cùng thành phần ấy ở hàng bung của danh sách
-   thì rộng đủ và giữ nguyên dạng bảng. Hẹp thì thành thẻ: mã + tên một dòng, phần còn lại
-   xếp nối tiếp bên dưới. */
-.exp-soft {
-  container-type: inline-size;
-}
-@container (max-width: 800px) {
-  .inst-list .seat-hd {
-    display: none;
-  }
-  .inst-list .seat-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-1) var(--space-7);
-  }
-  .inst-list .seat-card > .seat-mc {
-    flex: 1 0 100%;
-  }
-  .inst-list .seat-mc .mono {
-    flex: none;
-    white-space: nowrap;
-  }
-  .inst-list .seat-card > [data-label]:not(.seat-mc)::before {
-    content: attr(data-label) ': ';
-    color: var(--ink-3);
-  }
-  /* Thẻ gọn: MỘT cỡ chữ cho mọi dòng, bỏ dòng chỉ có "—". */
-  .inst-list .seat-card > [data-label]:not(.seat-mc) {
-    font-size: var(--fs-sm);
-  }
-  .inst-list .seat-card > [data-empty] {
-    display: none;
-  }
-  .inst-list .seat-cost {
-    text-align: left;
-  }
-  .inst-list .seat-note {
-    max-width: 100%;
-  }
-}
-
 /* --- Hàng ngang dùng chung ------------------------------------------------------
  * `.row` được dùng 47 chỗ (chân dialog, cặp nhãn + công tắc, thanh nút của form) và hầu hết
  * đi kèm `style={{ justifyContent: 'flex-end', gap: … }}`. Thiếu luật này thì container là
@@ -782,3 +778,37 @@ table.table tbody tr.exp:hover td {
    nav/dropdown/lịch: xoay 90° khi mở, không đổi ký tự. */
 /* `.cell-caret` cũ (ký tự › xoay 90°) đã bỏ: caret bung dòng giờ dùng `<Chevron>` chung,
    tự đổi hướng phải→xuống. Không giữ lại luật chết để lần sau có người tưởng nó còn chạy. */
+
+/*
+ * Nút ✕ chỉ có hình, đứng cuối một dòng (bỏ file khỏi danh sách, hủy file đang tải). Ô vuông
+ * 28px để bấm trúng mà không đẩy dòng cao lên; tên nút nằm ở `aria-label`.
+ * `.danger`: ✕ đỏ trên nền trong — việc BỎ một thứ chưa lưu, không phải nút xác nhận phá
+ * (`button.danger` đặc đỏ), nên chọn `button.btn-x.danger` để thắng luật nền đỏ đặc kia.
+ */
+button.btn-x {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  flex: none;
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+}
+button.btn-x:hover:not(:disabled) {
+  background: var(--muted-soft);
+  color: var(--ink);
+}
+button.btn-x.danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--danger);
+}
+button.btn-x.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--border-danger);
+  color: var(--danger-strong);
+}

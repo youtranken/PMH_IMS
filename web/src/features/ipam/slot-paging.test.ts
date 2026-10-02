@@ -29,6 +29,7 @@ function record(address: string, status: IpStatus): SubnetSlot {
     deviceId: null,
     deviceCode: null,
     deviceName: null,
+    deviceSiteCode: null,
     usedBy: null,
     assignedBy: 'e2e',
     assignedAt: null,

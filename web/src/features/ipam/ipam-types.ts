@@ -45,6 +45,8 @@ export interface IpRow {
   deviceId: string | null;
   deviceCode: string | null;
   deviceName: string | null;
+  /** Site của THIẾT BỊ đang giữ IP (Q-20) — `null` khi IP không gắn máy hoặc máy chưa khai site. */
+  deviceSiteCode: string | null;
   usedBy: string | null;
   assignedBy: string;
   assignedAt: string | null;

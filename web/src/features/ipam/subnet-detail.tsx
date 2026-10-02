@@ -20,7 +20,7 @@ import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
-import { secretTextRule, textRule, useFormErrors } from "@/ui/use-form-errors";
+import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from "@/ui/use-form-errors";
 import { FilterBar } from "@/ui/filter-bar";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
@@ -50,7 +50,7 @@ import {
   type SlotFilter,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
-import { AssignIpDialog, DeviceCombobox, ownerRule } from "./ip-assign-dialog";
+import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
 import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
 import { clampPage } from "@/lib/paging";
@@ -289,8 +289,11 @@ export function SubnetPane({
         <th>{t("ipam.address")}</th>
         <th>{t("ipam.status")}</th>
         <th className="col-device">{t("ipam.device")}</th>
+        <th className="col-site">{t("ipam.site")}</th>
         <th>{t("ipam.usedBy")}</th>
-        <th className="col-date">{t("ipam.assignedAt")}</th>
+        {/* Khổ 961–1440px: cột ẩn (CSS `.col-wide`), ngày cấp thành dòng phụ dưới Trạng thái —
+            bảng 7 cột trong khung phải ~770px đẩy cột Thao tác ra ngoài khung. */}
+        <th className="col-date col-wide">{t("ipam.assignedAt")}</th>
         <th className="col-center">{t("common.actions")}</th>
       </tr>
     </thead>
@@ -324,6 +327,7 @@ export function SubnetPane({
                 <CopyButton
                   value={item.gateway}
                   label={t("ipam.copyOf", { label: t("ipam.gateway") })}
+                  inline
                 />
                 {/* Máy đang giữ địa chỉ gateway (router/firewall) — nối dải với thiết bị biên,
                     đọc từ chính hồ sơ IP của dải, không hỏi thêm gì. */}
@@ -484,10 +488,13 @@ export function SubnetPane({
                       <td data-label={t("ipam.device")}>
                         <Empty />
                       </td>
+                      <td data-label={t("ipam.site")} className="col-site">
+                        <Empty />
+                      </td>
                       <td data-label={t("ipam.usedBy")}>
                         <Empty />
                       </td>
-                      <td data-label={t("ipam.assignedAt")}>
+                      <td data-label={t("ipam.assignedAt")} className="col-date col-wide">
                         <Empty />
                       </td>
                       {/* Ô Thao tác cũng phải có `data-label`: ở ≤960px bảng gập thẻ dọc và
@@ -542,6 +549,11 @@ export function SubnetPane({
                               : null}
                           </span>
                         ) : null}
+                        {!isFreeRecord(slot) && slot.assignedAt ? (
+                          <span className="cell-sub only-mid" title={slot.assignedBy}>
+                            {t("ipam.assignedOn", { date: formatDate(slot.assignedAt) })}
+                          </span>
+                        ) : null}
                       </td>
                       <td data-label={t("ipam.device")} className="col-device">
                         {/* Mã máy một dòng (`.mono` trong ô bảng không ngắt), tên máy là dòng
@@ -559,13 +571,28 @@ export function SubnetPane({
                           <Empty />
                         )}
                       </td>
+                      {/* Site của MÁY, không của dải: dải để trống site là dùng chung mọi
+                          site (Q-20), nên chỉ hồ sơ thiết bị nói được IP này đang ở đâu. */}
+                      {/* Một dòng, cắt bằng "…" và đủ chữ ở `title`: mã site để trần gãy ở mỗi
+                          dấu "-" thành ba dòng, làm dòng IP cao gấp ba. */}
+                      <td data-label={t("ipam.site")} className="col-site">
+                        {slot.deviceSiteCode ? (
+                          <div className="cell-stack">
+                            <span className="cell-clip" title={slot.deviceSiteCode}>
+                              {slot.deviceSiteCode}
+                            </span>
+                          </div>
+                        ) : (
+                          <Empty />
+                        )}
+                      </td>
                       <td data-label={t("ipam.usedBy")}>
                         {slot.usedBy ? slot.usedBy : <Empty />}
                         {/* Ghi chú đọc được ngay trên bảng — cả với dải đã tắt, nơi hộp Sửa
                             không còn mở được. Một dòng, bị cắt thì bấm để mở đủ câu. */}
                         {slot.note ? <CellNote text={slot.note} className="cell-sub" /> : null}
                       </td>
-                      <td data-label={t("ipam.assignedAt")} className="col-date">
+                      <td data-label={t("ipam.assignedAt")} className="col-date col-wide">
                         {isFreeRecord(slot) || !slot.assignedAt ? (
                           <Empty />
                         ) : (
@@ -807,7 +834,7 @@ export function IpForm({
   const departments = useDepartments();
   const [assignedAt, setAssignedAt] = useState(record.assignedAt ?? "");
   const [note, setNote] = useState(record.note ?? "");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([device, usedBy, assignedAt, note]);
   const check = useFormErrors({
     owner: record.status === "assigned" ? ownerRule(t, device.deviceId, usedBy) : null,
     note: secretTextRule(t, note),
@@ -839,7 +866,7 @@ export function IpForm({
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t("common.loading") : t("common.save")}
+            {save.isPending ? t("common.saving") : t("common.save")}
           </button>
         </>
       }
@@ -878,7 +905,7 @@ export function IpForm({
         </Field>
 
         <Field label={t("ipam.device")} hint={t("ipam.deviceHint")} error={check.error("owner")}>
-          <DeviceCombobox
+          <IpDeviceCombobox
             deviceId={device.deviceId}
             term={device.term}
             onChange={setDevice}
@@ -951,7 +978,7 @@ function TransitionDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: secretTextRule(t, reason) });
 
   const move = useApiMutation<Record<string, unknown>, unknown>(
@@ -997,7 +1024,7 @@ function TransitionDialog({
             className={to === "free" ? "btn caution" : "btn primary"}
             disabled={move.isPending}
           >
-            {move.isPending ? t("common.loading") : label}
+            {move.isPending ? t("common.working") : label}
           </button>
         </>
       }
@@ -1144,8 +1171,8 @@ function VoidAddressDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const [error, setError] = useSubmitError([reason]);
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,
     { method: "DELETE", csrfToken, refreshMe: false },
@@ -1172,7 +1199,7 @@ function VoidAddressDialog({
             className="btn danger"
             disabled={remove.isPending}
           >
-            {remove.isPending ? t("common.loading") : t("ipam.voidAddress")}
+            {remove.isPending ? t("common.working") : t("ipam.voidAddress")}
           </button>
         </>
       }

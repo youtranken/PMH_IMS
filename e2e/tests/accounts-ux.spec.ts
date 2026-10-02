@@ -69,7 +69,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
     await page.goto('/admin/accounts');
     await searchAndWaitForFilter(page, acc.email);
     const row = page.getByRole('row', { name: new RegExp(acc.email) });
-    await expect(row.getByText('Bắt buộc – chưa cài')).toBeVisible();
+    await expect(row.getByText('Bắt buộc – chưa kích hoạt')).toBeVisible();
 
     await rowAction(page, acc.fullName, 'Bỏ bắt buộc 2 lớp khi đăng nhập');
     await confirmAction(page, 'Bỏ bắt buộc 2 lớp khi đăng nhập');
@@ -79,7 +79,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
 
     await rowAction(page, acc.fullName, 'Bắt buộc 2 lớp khi đăng nhập');
     await confirmAction(page, 'Bắt buộc 2 lớp khi đăng nhập');
-    await expect(row.getByText('Bắt buộc – chưa cài')).toBeVisible();
+    await expect(row.getByText('Bắt buộc – chưa kích hoạt')).toBeVisible();
     expect(sql(`SELECT totp_login_required FROM users WHERE id = '${acc.id}'`)).toBe('t');
   });
 
@@ -106,7 +106,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
     const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
     const fullName = `E2E Onboard ${stamp}`;
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
     await page.getByRole('textbox', { name: 'Họ tên' }).fill(fullName);
     await page.getByRole('textbox', { name: 'Email' }).fill(email);
     await page.getByRole('button', { name: 'Lưu' }).click();
@@ -215,7 +215,7 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
     const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
     const fullName = `E2E Gán máy ${stamp}`;
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
     await page.getByRole('textbox', { name: 'Họ tên' }).fill(fullName);
     await page.getByRole('textbox', { name: 'Email' }).fill(email);
     await page.getByRole('button', { name: 'Lưu' }).click();

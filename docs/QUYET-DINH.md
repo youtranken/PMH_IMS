@@ -40,7 +40,7 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 ### Q-04 · Đường truyền ISP
 
 - Có **màn riêng**, không khai như một loại phần mềm.
-- Trường giữ lại: mã, nhà mạng, băng thông, IP WAN (**1 IP mỗi line**), site, thiết bị Draytek,
+- Trường giữ lại: mã, nhà mạng, băng thông, IP WAN (~~1 IP mỗi line~~ — nhiều IP, xem Q-20), site, thiết bị Draytek,
   hotline, số hợp đồng, ngày bắt đầu, ghi chú.
 - **Bỏ ngày kết thúc. ISP không còn nằm trong mail nhắc hạn.** Line không có hạn; khi không dùng
   nữa thì thanh lý.
@@ -298,6 +298,93 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   bên phải, khoảng 60/40, để ảnh lộ nhiều hơn; ≤720px bỏ ảnh, chỉ còn card có biểu tượng PMH.
   Sidebar, favicon và biểu tượng cài lên màn hình chính dùng biểu tượng PMH. Lý do: người mở
   link từ thư nhận ra ngay trang của PMH, mà không phải dựng lại bảng màu đã soát tương phản.
+
+### Q-20 · Góp ý "Fix lỗi IMS_2" (01/10/2026, chủ dự án chốt)
+
+- **Một thiết bị giữ tối đa MỘT IP đang cấp** (sửa ngầm định cũ "một máy nhiều IP"). DB chặn bằng
+  chỉ mục duy nhất trên `ip_address(device_id)` cho hàng đang dùng. Máy đã có IP thì nút là
+  **"Đổi IP"**: thu hồi IP cũ và cấp IP mới trong một transaction (AD-5), IP cũ về pool.
+  IP gán cho người / phòng ban (không gắn máy) không bị luật này ràng.
+- **Màn đăng nhập:** cột trái chỉ còn ảnh; logo PMH (giữa) + "IMS — Quản lý hệ thống IT" sang cột
+  form. Ba dòng giới thiệu chỉ hiện ở màn đăng nhập; các bước mã 2 lớp / đổi mật khẩu chỉ có logo
+  (sửa Q-19).
+- **Bước nhập mã 2 lớp khi đăng nhập:** có nút "Quay lại" (đăng xuất phiên chờ rồi về
+  `/login`); để trống thì báo "Vui lòng nhập mã xác thực."; bỏ câu gợi ý dưới ô. Phiên chờ mã
+  sống tối đa `auth.totp_challenge_minutes` phút (mặc định 5, AD-11) tính từ lúc tạo; tải lại
+  trang ở bước này cũng về `/login`. Không áp cho luồng cài 2 lớp bắt buộc.
+- **Nhóm "Dành cho nhà phát triển"** bỏ khỏi menu kể cả bản dev; route `/dev/components` giữ.
+- **Hồ sơ đã thanh lý / đã ngừng dùng** ẩn khỏi danh sách Thiết bị, Phần mềm, Đường truyền,
+  Tài khoản dịch vụ theo mặc định; vẫn xem được khi lọc đích danh trạng thái đó, Ctrl+K vẫn tìm
+  ra, và Kho thanh lý là nơi xem tập trung.
+- **Mở lại thiết bị đã thanh lý** trên hồ sơ ghi "Đổi trạng thái"; Kho thanh lý giữ "Dùng lại".
+- **"Dự phòng" và "Hỏng" chỉ là nhãn:** vẫn nhắc hạn bảo hành, vẫn giữ IP và license.
+- **Dải IP:** nút "Thêm dải mạng" (VLAN chỉ là thuộc tính tuỳ chọn của dải); ô site của dải để
+  trống nghĩa là "Tất cả site (dùng chung)"; màn IP có bộ lọc site; mọi bộ lọc ghi "Tất cả site".
+  Cột Site của IP lấy từ hồ sơ thiết bị (làm rõ Q-01); IP không gắn máy hiện "—".
+- **Xuất Excel màn IP:** menu "Xuất dải đang xem" / "Xuất tất cả".
+- **Tra IP sai định dạng** (mỗi phần 0–255, đủ 4 phần): khung đỏ có nút ✕ dưới ô tra, không gọi
+  tìm kiếm.
+- **Két:** chữ đổi giá trị theo loại ngăn — "Đổi mật khẩu" / "Đổi license key" / "Đổi mã 2 lớp"
+  / "Đổi giá trị". Gán / gỡ quyền ở ma trận hỏi mã 6 số khi hết thời gian ân hạn.
+- **NAT / Đường truyền:** ô chọn thiết bị có **lọc theo loại** (Firewall, Core, Router… tuỳ người
+  dùng chọn, mặc định các loại có cờ Router). Chọn máy không phải router chỉ cảnh báo, không chặn.
+  "Thiết bị biên" đổi thành "Thiết bị".
+- **Tài khoản dịch vụ có ngày hết hạn** (tuỳ chọn): cột "Hết hạn", nhắc trước như các hạn khác,
+  có Gia hạn. Quá hạn chỉ nhắc, không tự ngừng dùng (IMS không nối tới VPN thật). Khác cột "Đổi
+  lần cuối" (hạn đổi mật khẩu, Q-15).
+- **Lịch sử** mọi màn dạng trục dọc "ga tàu"; desktop ngày ở cột trái, màn hẹp dưới dòng.
+- Thuật ngữ: "Chưa khai báo", "Lưu và nhân bản", "Nhập tiếp"; nút bỏ file là dấu ✕ đỏ.
+- **Mật khẩu tạm** (tạo tài khoản, đặt lại mật khẩu) hết hạn sau `auth.temp_password_hours` giờ
+  (mặc định 24, AD-11); quá hạn thì đăng nhập bị từ chối, SA phải đặt lại. Lần đầu đăng nhập bằng
+  mật khẩu tạm vẫn bắt đổi mật khẩu như cũ. **Mật khẩu thường không có hạn định kỳ:** chỉ bắt đổi
+  khi SA đặt lại hoặc nghi lộ — đã có xác thực 2 lớp, ép đổi theo lịch chỉ sinh mật khẩu dễ đoán
+  (NIST SP 800-63B §5.1.1.2).
+- **Tham số trạng thái lạ trên URL** (`?status=abc`) coi như bộ lọc mặc định — hồ sơ đã thanh lý
+  vẫn ẩn; muốn xem thì lọc đích danh hoặc vào Kho thanh lý.
+- **Sơ đồ cổng:** mỗi cổng chỉ một sợi cáp, kiểm cả hai chiều (A:p1→B:g1 thì B:g1 không nối đi nơi
+  khác); tên cổng không phân biệt hoa/thường.
+- **IP WAN — sửa Q-04:** một đường truyền có **nhiều IP WAN** (nhà mạng có thể cấp 2–3 IP). Chỉ
+  khai từng IP lẻ, không khai dải (nhà mạng chỉ gửi IP, không gửi mask). Lưu ở bảng riêng, mỗi
+  hàng một IPv4. Không chặn
+  trùng giữa các đường truyền; trong cùng một đường thì không lặp. Danh sách, tìm kiếm, Ctrl+K và
+  Excel hiện / tìm theo mọi IP; nhập Excel nhận nhiều IP ngăn bằng dấu phẩy.
+- **Người dùng IMS đã vô hiệu hoá** ẩn khỏi danh sách theo mặc định; lọc đích danh mới hiện.
+
+### Q-21 · Góp ý "Fix lỗi IMS_3" (02/10/2026 — Claude đề xuất trong đêm, chủ dự án xác nhận cùng ngày)
+
+Chủ dự án giao làm qua đêm "tương tự IMS_2"; các điểm dưới là đề xuất Claude tự chọn, đảo được
+nếu chủ dự án không đồng ý.
+
+- **Giao diện mặc định là SÁNG** cho người chưa chọn (chủ dự án đổi lại sau khi xem bản tối mặc
+  định; lựa chọn đã lưu trên máy vẫn giữ). Bảng màu tối sáng lên khoảng 2 nấc (nền, mặt thẻ,
+  viền), vẫn giữ tương phản chữ ≥ 4.5:1 và viền ô ≥ 3:1.
+- **Hiệu ứng chuyển động nhẹ:** đổi màu nền / viền / bóng 150–200 ms khi rê chuột (mục menu, thẻ,
+  chip, nút, dòng bảng), thẻ dashboard nhấc 1px. Không dùng chuyển động lớn; tắt hết khi hệ điều
+  hành bật "giảm chuyển động" (`prefers-reduced-motion`).
+- **Nút "Quay lại"** ở bước nhập mã 2 lớp: rê chuột tô đỏ nhạt (token `--danger-soft`).
+- **Bảng điều khiển:** "Tổng hợp hết hạn cần xử lý", "Tổng hợp kho thanh lý (7 ngày)".
+- **Luật két:** đưa vào một nút mở hộp đọc, không chiếm chỗ cố định trên trang.
+- **Tham số hệ thống:** nút "Bỏ thay đổi" / "Lưu nhóm này" cỡ nhỏ, ở thanh dính đáy; còn thay đổi
+  chưa lưu mà đổi tab, bấm sang màn khác trên menu / Ctrl+K / nút lùi của trình duyệt, đóng hoặc
+  tải lại tab thì hỏi: Lưu nhóm này / Bỏ thay đổi / Ở lại.
+- **Ma trận quyền két:** danh sách loại thiết bị dài thì chia 2 cột, không cuộn trong ô nhỏ; thẻ
+  quyền theo người quá nhiều thì hiện vài thẻ + "+N" bấm để xem hết.
+- **Người dùng IMS:** "Bắt buộc – chưa kích hoạt" thay "Bắt buộc – chưa cài"; dòng chỉ để nút chính,
+  còn lại vào ⋮ (Q-18).
+- Chữ mô tả dài trên màn rộng chạy một hàng (không ép xuống dòng khi còn chỗ).
+
+### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
+
+- Nhóm **Tài sản** trên sidebar: Thiết bị · **Phần mềm** (chỉ license) · **Tên miền & SSL** ·
+  **Hợp đồng bảo trì** · **Dịch vụ có hạn khác** · Kho thanh lý. Lý do: để chung trong "Phần mềm"
+  rồi lọc theo loại khiến người dùng không tìm ra SSL / tên miền / hợp đồng.
+- **Tên miền & SSL** có hai loại hồ sơ: *Tên miền* và *Chứng chỉ SSL*. Một hồ sơ = một hoặc nhiều
+  tên miền **dùng chung một ngày hết hạn** (khác hạn thì tạo hồ sơ khác). Tìm theo bất kỳ tên miền
+  nào trong hồ sơ.
+- IMS **không lưu file cert / khoá** (`.crt .pem .key .pfx .jks`…): chủ dự án tự bảo quản. IMS chỉ
+  theo dõi hạn.
+- Lưu trữ giữ một bảng `software` với cột `kind` (không tách bảng): nhắc hạn, gia hạn, két, lịch sử,
+  thanh lý dùng nguyên như cũ; chỉ tách màn và menu.
 
 ### Q-09 · Tài liệu
 

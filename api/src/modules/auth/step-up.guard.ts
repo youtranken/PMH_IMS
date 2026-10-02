@@ -109,7 +109,7 @@ export class StepUpGuard implements CanActivate {
 function stepUpRequired(graceMinutes: number): UnauthorizedException {
   return new UnauthorizedException({
     code: 'STEPUP_REQUIRED',
-    message: 'Nhập mã 6 số trên ứng dụng xác thực để mở két.',
+    message: 'Nhập mã 6 số trên ứng dụng xác thực để xác nhận thao tác này.',
     graceMinutes,
   });
 }

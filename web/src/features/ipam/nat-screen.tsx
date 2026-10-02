@@ -7,8 +7,13 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { CellNote } from '@/ui/cell-note';
-import { Combobox } from '@/ui/combobox';
-import { Dialog } from '@/ui/dialog';
+import { DeviceCombobox } from '@/ui/device-combobox';
+import { Dialog, DialogCancel } from '@/ui/dialog';
+import {
+  DeviceTypeFilter,
+  isRouterType,
+  useDeviceTypeFilter,
+} from '@/ui/device-type-filter';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -48,7 +53,7 @@ import { useIpamSettings } from './ipam-settings';
 import { PATHS } from '@/lib/routes';
 import { clampPage } from '@/lib/paging';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Pagination } from '@/ui/pagination';
 import { useListUrlState } from '@/ui/use-list-url-state';
@@ -81,13 +86,6 @@ interface NatRow {
   voidedAt: string | null;
   voidedBy: string | null;
   voidReason: string | null;
-}
-
-interface DeviceOption {
-  id: string;
-  code: string;
-  name: string;
-  siteCode?: string | null;
 }
 
 /** Bộ lọc của sổ NAT — nằm trên URL: Back giữ bộ lọc, và gửi được link "sổ NAT của FW-01". */
@@ -178,7 +176,7 @@ export function NatScreen({ me }: { me: Me }) {
   const ispLines = useQuery({
     queryKey: ['isp', 'nat-wan'],
     queryFn: () =>
-      apiFetch<{ items: { deviceId: string | null; wanIp: string | null }[] }>(
+      apiFetch<{ items: { deviceId: string | null; wanIps: string[] }[] }>(
         '/api/v1/isp-lines?limit=200',
       ),
   });
@@ -622,14 +620,8 @@ function NatForm({
   const queryClient = useQueryClient();
   const [deviceId, setDeviceId] = useState(rule?.deviceId ?? '');
   const [deviceTerm, setDeviceTerm] = useState(rule?.deviceCode ?? '');
-  /*
-   * KHÔNG có ô "Loại thiết bị" lọc cho ô Router.
-   *
-   * Đứng thành một trường riêng thì để chọn MỘT con router phải thao tác HAI dropdown. Tệ
-   * hơn: chọn nhầm loại là danh sách router rỗng trơn, và người dùng kết luận kho không có
-   * router nào. Router ở PMH gần như luôn là Firewall/Draytek — một ô tìm là đủ, gõ hai chữ
-   * ra ngay.
-   */
+  /** Loại của máy vừa chọn — chỉ để cảnh báo nhẹ "không phải Router" (Q-20). */
+  const [deviceTypeId, setDeviceTypeId] = useState<string | null>(null);
   /** Máy ĐƯỢC NAT — chọn máy thì ô IP trong chỉ còn IP của chính máy đó. */
   const [targetId, setTargetId] = useState(rule?.internalDeviceId ?? '');
   const [targetTerm, setTargetTerm] = useState(rule?.internalDeviceCode ?? '');
@@ -657,7 +649,19 @@ function NatForm({
   const [reason, setReason] = useState(rule?.reason ?? '');
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
   const [note, setNote] = useState(rule?.note ?? '');
-  const [error, setError] = useState<string | null>(null);
+  /* KHÔNG theo dõi `ports`: ghi hỏng một phần thì chính lượt ghi bỏ các khoảng đã xong khỏi
+     danh sách cùng lúc đặt câu lỗi — theo dõi nó là câu lỗi tắt ngay khi vừa hiện. */
+  const [error, setError] = useSubmitError([
+    deviceId,
+    targetId,
+    protocol,
+    internalIp,
+    internalPort,
+    usedBy,
+    reason,
+    enabled,
+    note,
+  ]);
   /** Sửa = một khoảng; thêm mới = bao nhiêu khoảng cũng được (mỗi khoảng ra một dòng). */
   const maxPorts = rule ? 1 : Number.POSITIVE_INFINITY;
   /* Nhiều chip = nhiều lượt gọi nối tiếp; giữa hai lượt `isPending` tụt về false, không khoá
@@ -668,66 +672,18 @@ function NatForm({
   const lists = useCatalogLists();
 
   /**
-   * NET-041 (Q-14): ô Router chỉ liệt kê thiết bị thuộc loại mang cờ "Router/Firewall" — bản
-   * cũ bày mọi thiết bị, mục đầu là camera, và chọn nhầm camera làm router là dữ liệu sai mà
-   * không ai phát hiện. Tính cả loại đã ngừng dùng: một con router cũ vẫn là router.
+   * NET-041 (Q-14) + Q-20: ô Router lọc theo LOẠI, mặc định các loại mang cờ "Router/Firewall"
+   * — bản không lọc bày mục đầu là camera, và chọn nhầm camera làm router là dữ liệu sai mà
+   * không ai phát hiện. Nhưng NAT ở PMH còn đặt trên Firewall, Core… nên người dùng tự bật thêm
+   * loại (chip, chọn nhiều) hoặc "Tất cả loại"; chọn máy ngoài loại Router chỉ cảnh báo.
    *
-   * Chưa loại nào mang cờ (danh mục chưa khai) thì bày mọi thiết bị như trước, kèm lời nhắc —
-   * một ô Router rỗng trơn là người dùng kết luận kho không có router nào.
+   * Chưa loại nào mang cờ (danh mục chưa khai) thì mặc định là mọi loại, kèm lời nhắc — một ô
+   * Router rỗng trơn là người dùng kết luận kho không có router nào.
    */
-  const routerTypeIds = useMemo(
-    () => (lists.data?.deviceTypes ?? []).filter((type) => type.isRouter).map((type) => type.id),
-    [lists.data],
-  );
-  const [allDevices, setAllDevices] = useState(false);
-  const routersOnly = !allDevices && routerTypeIds.length > 0;
-
-  /**
-   * KHÔNG còn `enabled: deviceTerm.length > 0`.
-   *
-   * Chỉ hỏi khi đã gõ thì ô Router mở ra là một ô trắng với dòng nhắc "Gõ mã hoặc
-   * tên router…" — người dùng gõ, không ra gì (kho chưa có router nào), và kết luận là hệ
-   * thống hỏng. Danh sách hiện sẵn thì thấy ngay có gì để chọn, hoặc thấy ngay là chưa có gì
-   * và bấm "Thêm router mới" ở đầu menu.
-   */
-  const devices = useQuery({
-    queryKey: ['devices', 'picker', deviceTerm, routersOnly ? routerTypeIds.join(',') : 'all'],
-    // Chờ danh mục: bắn trước khi biết loại nào là router thì ô mở ra với mọi thiết bị rồi
-    // mới co lại — đúng cảnh camera đứng đầu danh sách mà mục này dọn.
-    enabled: !lists.isPending,
-    queryFn: async () => {
-      // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
-      const params = new URLSearchParams({ limit: '20', usable: 'true' });
-      if (deviceTerm.trim()) params.set('search', deviceTerm.trim());
-      if (!routersOnly) {
-        return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
-      }
-      // API lọc theo MỘT loại mỗi lượt; loại router chỉ một hai cái nên hỏi song song rồi gộp.
-      const pages = await Promise.all(
-        routerTypeIds.map((typeId) => {
-          const byType = new URLSearchParams(params);
-          byType.set('deviceTypeId', typeId);
-          return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${byType.toString()}`);
-        }),
-      );
-      const items = pages
-        .flatMap((page) => page.items)
-        .sort((a, b) => a.code.localeCompare(b.code))
-        .slice(0, 20);
-      return { items };
-    },
-  });
-
-  /** Danh sách máy cho ô "Máy đích" — cùng cửa với ô Router, khác từ khoá tìm. */
-  const targets = useQuery({
-    queryKey: ['devices', 'picker', 'target', targetTerm],
-    queryFn: () => {
-      // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
-      const params = new URLSearchParams({ limit: '20', usable: 'true' });
-      if (targetTerm.trim()) params.set('search', targetTerm.trim());
-      return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
-    },
-  });
+  const deviceTypes = lists.data?.deviceTypes;
+  const typeFilter = useDeviceTypeFilter(deviceTypes);
+  const hasRouterType = (deviceTypes ?? []).some((type) => type.isRouter);
+  const notRouter = deviceId !== '' && hasRouterType && !isRouterType(deviceTypes, deviceTypeId);
 
   /**
    * IP của máy đích. Chọn máy xong thì ô "IP trong" chỉ còn IP của chính máy đó — hết cảnh
@@ -836,11 +792,11 @@ function NatForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="nat-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -919,19 +875,25 @@ function NatForm({
       >
         {check.summary}
         <FormSection title={t('nat.sectionExternal')} columns={4}>
-          {/* MỘT ô chọn router, không hai. Ô "Loại thiết bị" cũ chỉ là bộ lọc cho chính ô
-              này, nhưng đứng thành trường riêng nên chọn một con router phải thao tác hai
-              dropdown — và chọn nhầm loại là danh sách rỗng trơn. */}
+          {/* MỘT ô chọn router; lọc loại là dải chip ngay dưới nó chứ không phải trường riêng —
+              lọc nhầm loại thì chip đang bật nằm ngay đó để gỡ, không phải đoán vì sao rỗng. */}
+          {/* Trải hết hàng (như ô Thiết bị của form đường truyền): một cột ~210px thì dải chip
+              lọc loại thành ba bốn hàng hoặc cuộn ngang làm khuất chip đang bật. */}
           <Field
             label={t('nat.router')}
             required
+            span={3}
             hint={t('nat.routerHint')}
             htmlFor="nat-router"
             error={check.error('deviceId')}
           >
-            {/* Field chỉ tự nối id/mô tả/lỗi khi nó có ĐÚNG MỘT đứa con — ở đây có thêm ô tick
-                "Hiện mọi thiết bị", nên nối tay theo đúng quy ước id của Field. */}
-            <Combobox
+            {/* Field chỉ tự nối id/mô tả/lỗi khi nó có ĐÚNG MỘT đứa con — ở đây có thêm dải chip
+                lọc loại, nên nối tay theo đúng quy ước id của Field. */}
+            {/* Danh sách mở sẵn (không chờ gõ): ô trắng thì người dùng kết luận hệ thống hỏng
+                thay vì thấy ngay là chưa có router và bấm "Thêm router mới". Chờ danh mục loại:
+                hỏi sớm thì camera đứng đầu danh sách rồi mới co lại. Máy đã thanh lý không dựng
+                được rule NAT (API chặn) nên ô chọn chỉ bày máy còn dùng được. */}
+            <DeviceCombobox
               id="nat-router"
               aria-describedby={
                 check.error('deviceId') ? 'nat-router-error nat-router-hint' : 'nat-router-hint'
@@ -939,39 +901,28 @@ function NatForm({
               aria-invalid={check.error('deviceId') ? true : undefined}
               placeholder={t('nat.routerSearch')}
               ariaLabel={t('nat.router')}
-              query={deviceTerm}
-              onQuery={(value) => {
-                setDeviceTerm(value);
-                setDeviceId('');
+              value={{ deviceId, term: deviceTerm }}
+              onChange={(next) => {
+                setDeviceTerm(next.term);
+                setDeviceId(next.deviceId);
+                setDeviceTypeId(next.device?.deviceTypeId ?? null);
               }}
-              options={devices.data?.items ?? []}
-              failed={devices.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span>{' '}
-                  <small>{[item.name, item.siteCode].filter(Boolean).join(' · ')}</small>
-                </>
-              )}
-              onSelect={(item) => {
-                setDeviceId(item.id);
-                setDeviceTerm(item.code);
-              }}
+              typeIds={typeFilter.value}
+              ready={!lists.isPending}
               /* Router chưa có trong kho thì thêm NGAY TẠI ĐÂY. Bắt người dùng thoát ra,
                  sang màn Thiết bị, khai xong rồi quay lại gõ lại cả form NAT là ba lần
                  chuyển màn cho một việc — và form đang dở thì mất trắng. */
               action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
             />
-            {routerTypeIds.length > 0 ? (
-              <label className="row" style={{ gap: 'var(--space-3)' }}>
-                <input
-                  type="checkbox"
-                  checked={allDevices}
-                  onChange={(e) => setAllDevices(e.target.checked)}
-                />
-                <span className="muted">{t('nat.routerShowAll')}</span>
-              </label>
-            ) : lists.data ? (
+            {notRouter ? (
+              <span className="field-hint warn-text">{t('deviceTypeFilter.notRouter')}</span>
+            ) : null}
+            <DeviceTypeFilter
+              types={deviceTypes}
+              value={typeFilter.value}
+              onChange={typeFilter.setValue}
+            />
+            {hasRouterType || !lists.data ? null : (
               <span className="field-hint muted">
                 {t('nat.routerNoType')}{' '}
                 {/* Tab mới: rời trang ở đây là mất trắng form NAT đang gõ dở. */}
@@ -983,7 +934,7 @@ function NatForm({
                   {t('nat.routerNoTypeLink')}
                 </Link>
               </span>
-            ) : null}
+            )}
           </Field>
 
           {/*
@@ -1068,26 +1019,14 @@ function NatForm({
               Mở cho ai = NGƯỜI/bộ phận hưởng dịch vụ (câu auditor hỏi)
           */}
           <Field label={t('nat.target')} tip={t('nat.targetHint')}>
-            <Combobox
+            <DeviceCombobox
               placeholder={t('nat.targetSearch')}
               ariaLabel={t('nat.target')}
-              query={targetTerm}
-              onQuery={(value) => {
-                setTargetTerm(value);
-                setTargetId('');
-              }}
-              options={targets.data?.items ?? []}
-              failed={targets.isError}
-              getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
-                </>
-              )}
-              onSelect={(item) => {
-                setTargetId(item.id);
-                setTargetTerm(item.code);
-                setInternalIp('');
+              value={{ deviceId: targetId, term: targetTerm }}
+              onChange={(next) => {
+                setTargetTerm(next.term);
+                setTargetId(next.deviceId);
+                if (next.device) setInternalIp('');
               }}
             />
           </Field>
@@ -1277,12 +1216,14 @@ function NatForm({
     {addingRouter ? (
       <DeviceForm
         device={null}
+        presetDeviceTypeId={typeFilter.value[0]}
         csrfToken={csrfToken}
         onClose={() => setAddingRouter(false)}
         onSaved={(result) => {
           setAddingRouter(false);
           setDeviceId(result.device.id);
           setDeviceTerm(result.device.code);
+          setDeviceTypeId(result.device.deviceTypeId);
           void queryClient.invalidateQueries({ queryKey: ['devices'] });
         }}
       />
@@ -1320,8 +1261,8 @@ function RemoveDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const [error, setError] = useSubmitError([reason]);
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
 
   const remove = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {
     method: 'DELETE',
@@ -1349,7 +1290,7 @@ function RemoveDialog({
             className="btn danger"
             disabled={remove.isPending}
           >
-            {remove.isPending ? t('common.loading') : t('nat.remove')}
+            {remove.isPending ? t('common.working') : t('nat.remove')}
           </button>
         </>
       }

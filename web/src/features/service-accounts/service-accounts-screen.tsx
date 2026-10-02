@@ -15,8 +15,11 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
+import { ExpiryBadge } from '@/ui/expiry-badge';
 import { SecretDue } from '@/ui/secret-due';
 import { Select } from '@/ui/select';
+import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
+import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ServiceAccountForm } from './service-account-form';
@@ -42,7 +45,8 @@ const DEFAULT_LIMIT = 20;
 interface Filters extends Record<string, string> {
   search: string;
   kind: '' | ServiceAccountKind;
-  status: '' | ServiceAccountStatus;
+  /** '' = mặc định "trừ Đã ngừng dùng" (Q-20); 'all' = không lọc trạng thái. */
+  status: '' | 'all' | ServiceAccountStatus;
   /** '1' = chỉ VPN mở cho mọi IP nguồn — lọc ở API vì danh sách phân trang. */
   anyIp: '' | '1';
 }
@@ -71,9 +75,18 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
+    // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
+    allowed: { status: [...SERVICE_ACCOUNT_STATUSES, ALL_STATUSES] },
   });
   const { page, limit } = url;
   const filters = url.filters;
+  const statusOptions = lifecycleStatusOptions(t, {
+    statuses: SERVICE_ACCOUNT_STATUSES,
+    labelOf: (status) => t(STATUS_KEY[status]),
+    endStatus: 'disabled',
+  });
+  // Cùng bộ lọc, kể cả hồ sơ cuối đời — để biết bảng trống có phải vì chúng đang ẩn (Q-20).
+  const hiddenProbeQuery = buildFilterQuery({ ...filters, status: ALL_STATUSES }, []);
   // Sắp xếp chạy ở SERVER (`manualSorting`), nên dựng lại `SortingState` cho `DataTable`.
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
   const setPage = url.setPage;
@@ -178,6 +191,15 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           </span>
         ),
       },
+      /* Hạn dùng (Q-20). Ngừng dùng thì "Không tính hạn": nguồn hạn bên API không nhắc tài
+         khoản đã ngừng dùng, màn này không được kêu "Quá hạn" trái với /expiry. */
+      {
+        id: 'endDate',
+        header: t('serviceAccounts.endDate'),
+        cell: ({ row }) => (
+          <ExpiryBadge end={row.original.endDate} notCounted={row.original.status === 'disabled'} />
+        ),
+      },
       ...(canEdit
         ? [
             {
@@ -238,6 +260,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('serviceAccounts.title')}
+        /* Cùng câu với trạng thái rỗng: có dữ liệu thì câu ấy không còn in ra nữa. */
+        titleTip={t('serviceAccounts.emptyHint')}
         subtitle={t('serviceAccounts.subtitle')}
         actions={
           <>
@@ -274,14 +298,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <Select
           value={filters.status}
           ariaLabel={t('serviceAccounts.status')}
-          placeholder={t('serviceAccounts.allStatuses')}
-          options={[
-            { value: '', label: t('serviceAccounts.allStatuses') },
-            ...SERVICE_ACCOUNT_STATUSES.map((status) => ({
-              value: status,
-              label: t(STATUS_KEY[status]),
-            })),
-          ]}
+          placeholder={statusOptions[0].label}
+          options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
         {/* Tên chỉ là dòng phụ dưới mã nên không có tiêu đề cột để bấm — sắp theo tên đi ô này.
@@ -314,23 +332,32 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       ) : accounts.isError ? (
         <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
-             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Nút Thêm chỉ cho người
-             được thêm — mời Member bấm một nút rồi báo 403 là tệ hơn không mời. */
-          title={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
-          hint={url.isFiltered ? t('serviceAccounts.emptyFilteredHint') : t('serviceAccounts.emptyHint')}
-          action={
-            url.isFiltered ? (
-              <button type="button" className="btn" onClick={url.clearFilters}>
-                {t('common.clearFilters')}
-              </button>
-            ) : canEdit ? (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('serviceAccounts.add')}
-              </button>
-            ) : undefined
+        <LifecycleHiddenEmpty
+          probeKey={['service-accounts', 'hidden-probe', hiddenProbeQuery]}
+          probeUrl={filters.status === '' ? `/api/v1/service-accounts?page=1&limit=1&${hiddenProbeQuery}` : null}
+          endLabel={t(STATUS_KEY['disabled'])}
+          allLabel={statusOptions[statusOptions.length - 1].label}
+          onShowAll={() => setFilter('status', ALL_STATUSES)}
+          fallback={
+            <EmptyState
+              /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+                 ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+                 bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Nút Thêm chỉ cho người
+                 được thêm — mời Member bấm một nút rồi báo 403 là tệ hơn không mời. */
+              title={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
+              hint={url.isFiltered ? t('serviceAccounts.emptyFilteredHint') : t('serviceAccounts.emptyHint')}
+              action={
+                url.isFiltered ? (
+                  <button type="button" className="btn" onClick={url.clearFilters}>
+                    {t('common.clearFilters')}
+                  </button>
+                ) : canEdit ? (
+                  <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                    {t('serviceAccounts.add')}
+                  </button>
+                ) : undefined
+              }
+            />
           }
         />
       ) : (
@@ -344,6 +371,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                5 hàng nhãn–giá trị ~270px một tài khoản. */
             mobileCard={{
               title: (row) => row.code,
+              titleIsCode: true,
               href: (row) => PATHS.serviceAccount(row.id),
               badge: (row) => (
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
@@ -351,11 +379,22 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               subtitle: (row) => row.name,
               meta: (row) =>
                 [row.login, t(KIND_SHORT_KEY[row.kind]), row.department].filter(Boolean).join(' · '),
+              /* Hạn của tài khoản (Q-20) lên thẻ cùng hạn đổi mật khẩu: thiếu nó thì điện thoại
+                 là chỗ duy nhất không biết tài khoản VPN sắp hết hạn. Không có hạn thì bỏ —
+                 "Không có hạn" trên mọi thẻ chỉ làm thẻ dài thêm. */
               aside: (row) => {
                 const item = canEdit ? dueByOwner.get(row.id) : undefined;
-                return item ? (
-                  <SecretDue changedAt={item.valueChangedAt} dueInDays={item.dueInDays} />
-                ) : null;
+                if (!item && !row.endDate) return null;
+                return (
+                  <>
+                    {row.endDate ? (
+                      <ExpiryBadge end={row.endDate} notCounted={row.status === 'disabled'} />
+                    ) : null}
+                    {item ? (
+                      <SecretDue changedAt={item.valueChangedAt} dueInDays={item.dueInDays} />
+                    ) : null}
+                  </>
+                );
               },
             }}
             manualSorting
@@ -434,7 +473,9 @@ function buildFilterQuery(filters: Filters, sorting: SortingState): string {
   const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
-  if (filters.status) params.set('status', filters.status);
+  // Mặc định ẩn tài khoản đã ngừng dùng (Q-20): Kho thanh lý là nơi xem chúng; ⌘K không đi
+  // qua đây nên vẫn tìm ra.
+  if (filters.status !== 'all') params.set('status', filters.status || 'active');
   if (filters.anyIp) params.set('anyIp', 'true');
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }

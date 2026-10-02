@@ -19,14 +19,19 @@ import { nextFreeSlot, slotStatus } from './slot-paging';
  *
  * Không có lối này thì phải sang màn Địa chỉ IP, chọn dải, lật trang tìm ô trống rồi gõ lại mã
  * máy. Bước hai là CHÍNH hộp `AssignIpDialog` của màn dải — một luật cấp IP, không phải hai.
+ *
+ * `change`: máy đã có IP (Q-20 — một máy một IP) thì đây là "Đổi IP": cùng hai bước, nhưng bước
+ * hai gửi MỘT lượt đổi (thu hồi IP cũ + cấp IP mới trong một transaction).
  */
 export function DeviceIpAssign({
   device,
+  change = false,
   csrfToken,
   onClose,
   onDone,
 }: {
   device: { id: string; code: string };
+  change?: boolean;
   csrfToken: string;
   onClose: () => void;
   onDone: () => void;
@@ -42,6 +47,12 @@ export function DeviceIpAssign({
     queryFn: () => apiFetch<SubnetRow[]>('/api/v1/ipam/subnets'),
   });
   const subnet = subnets.data?.find((row) => row.id === subnetId) ?? null;
+  const held = useQuery({
+    queryKey: ['ipam', 'devices', device.id, 'addresses'],
+    queryFn: () => apiFetch<IpRow[]>(`/api/v1/ipam/devices/${device.id}/addresses`),
+    enabled: change,
+  });
+  const current = held.data?.find((row) => row.status === 'assigned') ?? null;
   const slots = useQuery({
     queryKey: ['ipam', 'subnets', subnetId, 'addresses', false],
     queryFn: () => apiFetch<SubnetSlot[]>(`/api/v1/ipam/subnets/${subnetId}/addresses`),
@@ -77,6 +88,11 @@ export function DeviceIpAssign({
         record={chosen.record}
         network={{ cidr: subnet.cidr, gateway: subnet.gateway, vlan: subnet.vlan }}
         initialDevice={{ deviceId: device.id, term: device.code }}
+        replacing={
+          current
+            ? { id: current.id, address: current.address, usedBy: current.usedBy, note: current.note }
+            : undefined
+        }
         csrfToken={csrfToken}
         onClose={onClose}
         onDone={onDone}
@@ -90,7 +106,7 @@ export function DeviceIpAssign({
       onOpenChange={onClose}
       initialFocus="first-field"
       maxWidth={520}
-      title={t('ipam.assignForDevice', { code: device.code })}
+      title={t(change ? 'ipam.changeForDevice' : 'ipam.assignForDevice', { code: device.code })}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -109,7 +125,7 @@ export function DeviceIpAssign({
           title={t('ipam.noSubnetToAssign')}
           hint={t('ipam.noSubnetToAssignHint')}
           action={
-            <Link className="btn primary" to={PATHS.ipAddresses} onClick={onClose}>
+            <Link className="linkbtn primary" to={PATHS.ipAddresses} onClick={onClose}>
               {t('ipam.goAddSubnet')}
             </Link>
           }
@@ -123,11 +139,18 @@ export function DeviceIpAssign({
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
-            if (!check.check() || !address) return;
+            // Đổi IP mà chưa đọc được IP đang giữ thì chưa đi tiếp: gửi lượt cấp thường sẽ bị
+            // API từ chối (một máy một IP) với câu khó hiểu hơn.
+            if (!check.check() || !address || (change && !current)) return;
             const slot = free.find((row) => row.address === address);
             setChosen({ address, record: slot?.kind === 'record' ? slot : null });
           }}
         >
+          {change ? (
+            <Field label={t('ipam.currentIp')} hint={t('ipam.changeHint')}>
+              <p className="static-value mono">{current?.address ?? '—'}</p>
+            </Field>
+          ) : null}
           <Field label={t('ipam.pickSubnetLabel')} required error={check.error('subnet')}>
             <Select
               value={subnetId}

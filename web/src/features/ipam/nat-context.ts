@@ -25,12 +25,12 @@ export function serviceNameFor(
 
 /** IP WAN theo thiết bị biên — rule NAT trên router nào thì đi ra WAN của đường gắn router đó. */
 export function wanByRouter(
-  lines: { deviceId: string | null; wanIp: string | null }[],
+  lines: { deviceId: string | null; wanIps: string[] }[],
 ): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const line of lines) {
-    if (!line.deviceId || !line.wanIp) continue;
-    map.set(line.deviceId, [...(map.get(line.deviceId) ?? []), line.wanIp]);
+    if (!line.deviceId || line.wanIps.length === 0) continue;
+    map.set(line.deviceId, [...(map.get(line.deviceId) ?? []), ...line.wanIps]);
   }
   return map;
 }

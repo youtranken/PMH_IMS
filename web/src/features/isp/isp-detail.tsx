@@ -170,12 +170,22 @@ export function IspDetail({ me }: { me: Me }) {
                 <span>{item.siteCode}</span>
               </>
             ) : null}
-            {item.wanIp ? (
+            {/* Mọi IP WAN của đường (Q-20), mỗi IP một nút chép — lúc gọi nhà mạng người ta đọc
+                từng IP một, không chép cả chuỗi. */}
+            {item.wanIps.length > 0 ? (
               <>
                 <span aria-hidden="true">·</span>
                 <span>
-                  {t("isp.wanIp")} <span className="mono">{item.wanIp}</span>{" "}
-                  <CopyButton value={item.wanIp} label={t("isp.copyWanIp")} inline />
+                  {t("isp.wanIp")}{" "}
+                  {item.wanIps.map((ip, index) => (
+                    <span key={ip}>
+                      {index > 0 ? ", " : null}
+                      {/* Không chèn dấu cách giữa IP và nút: bản `inline` đã có đệm quanh hình,
+                          thêm dấu cách là dấu phẩy sau nó trông như "a , b". */}
+                      <span className="mono">{ip}</span>
+                      <CopyButton value={ip} label={`${t("isp.copyWanIp")} ${ip}`} inline />
+                    </span>
+                  ))}
                 </span>
               </>
             ) : null}
@@ -340,7 +350,7 @@ export function IspDetail({ me }: { me: Me }) {
               <BlankFields
                 labels={terminated ? [] : [
                   item.bandwidth ? null : t("isp.bandwidth"),
-                  item.wanIp ? null : t("isp.wanIp"),
+                  item.wanIps.length > 0 ? null : t("isp.wanIp"),
                   item.hotline ? null : t("isp.hotline"),
                   item.siteCode ? null : t("isp.site"),
                   item.deviceId ? null : t("isp.device"),

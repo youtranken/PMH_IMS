@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -8,21 +7,15 @@ import { todayIso } from '@/lib/format';
 import { maskOfCidr } from '@/lib/ipv4';
 import { CopyButton } from '@/ui/copy-button';
 import { DataItemIfSet } from '@/ui/detail-header';
-import { Combobox } from '@/ui/combobox';
+import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import type { IpRow } from './ipam-types';
-
-export interface DeviceOption {
-  id: string;
-  code: string;
-  name: string;
-}
 
 /**
  * Q-14: hồ sơ IP phải gắn thiết bị hoặc người/bộ phận — cùng luật `IP_OWNER_REQUIRED` của API,
@@ -32,8 +25,11 @@ export function ownerRule(t: TFunction, deviceId: string, usedBy: string): strin
   return deviceId || usedBy.trim() ? null : t('ipam.ownerRequired');
 }
 
-/** Ô chọn thiết bị cho hồ sơ IP — hộp Cấp và hộp Sửa hỏi cùng một câu, cùng một cách. */
-export function DeviceCombobox({
+/**
+ * Ô chọn thiết bị cho hồ sơ IP — hộp Cấp và hộp Sửa hỏi cùng một câu, cùng một cách. Ghi ngay
+ * cạnh mã máy nào ĐÃ giữ IP để khỏi cấp hai địa chỉ cho một máy (Q-20).
+ */
+export function IpDeviceCombobox({
   deviceId,
   term,
   onChange,
@@ -50,58 +46,28 @@ export function DeviceCombobox({
   'aria-invalid'?: boolean;
 }) {
   const { t } = useTranslation();
-  const devices = useQuery({
-    queryKey: ['devices', 'search', term],
-    queryFn: () =>
-      apiFetch<{ items: DeviceOption[] }>(
-        `/api/v1/devices?limit=20&usable=true&search=${encodeURIComponent(term)}`,
-      ),
-    /*
-     * Chưa gõ gì vẫn hỏi (20 máy đầu): mở ô ra mà trắng trơn thì người dùng không biết đây là
-     * ô tìm hay ô chọn — cùng cách ô Router của form NAT. Đã chọn xong thì ô đang hiện đúng
-     * mã máy, hỏi lại API cho chính cái mã đó là thừa.
-     */
-    enabled: !deviceId,
-  });
-  /* Máy nào ĐÃ giữ IP — ghi ngay cạnh mã để khỏi cấp hai địa chỉ cho một máy. Hỏng thì chỉ
-     mất dòng ghi thêm, ô chọn vẫn dùng được. */
-  const optionIds = (devices.data?.items ?? []).map((item) => item.id);
-  const held = useQuery({
-    queryKey: ['ipam', 'devices', 'addresses', optionIds],
-    enabled: !deviceId && optionIds.length > 0,
-    queryFn: () =>
-      apiFetch<Record<string, string[]>>(
-        `/api/v1/ipam/devices/addresses?deviceIds=${optionIds.join(',')}`,
-      ),
-  });
   return (
-    <Combobox
+    <DeviceCombobox
       id={id}
       aria-describedby={describedBy}
       aria-invalid={invalid}
       ariaLabel={t('ipam.device')}
       placeholder={t('ipam.deviceSearch')}
-      query={term}
-      // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện mã A mà id gửi đi là B.
-      onQuery={(value) => onChange({ deviceId: '', term: value })}
-      options={devices.data?.items ?? []}
-      failed={devices.isError}
-      getKey={(item) => item.id}
-      renderOption={(item) => {
-        const ips = held.data?.[item.id];
-        return (
-          <>
-            <span className="mono">{item.code}</span> <small>{item.name}</small>
-            {ips?.length ? (
-              <small>
-                {' · '}
-                {t('ipam.deviceHasIp', { ip: ips.join(', ') })}
-              </small>
-            ) : null}
-          </>
-        );
-      }}
-      onSelect={(item) => onChange({ deviceId: item.id, term: item.code })}
+      value={{ deviceId, term }}
+      onChange={(next) => onChange({ deviceId: next.deviceId, term: next.term })}
+      annotate={(ids) => ({
+        queryKey: ['ipam', 'devices', 'addresses', ids],
+        queryFn: async () => {
+          const held = await apiFetch<Record<string, string[]>>(
+            `/api/v1/ipam/devices/addresses?deviceIds=${ids.join(',')}`,
+          );
+          return Object.fromEntries(
+            Object.entries(held)
+              .filter(([, ips]) => ips.length > 0)
+              .map(([deviceKey, ips]) => [deviceKey, t('ipam.deviceHasIp', { ip: ips.join(', ') })]),
+          );
+        },
+      })}
     />
   );
 }
@@ -126,7 +92,7 @@ function NetworkConfig({
         {rows.map(([label, value]) => (
           <DataItemIfSet key={label} label={label} value={value}>
             <span className="mono">{value}</span>{' '}
-            <CopyButton value={value ?? ''} label={t('ipam.copyOf', { label })} />
+            <CopyButton value={value ?? ''} label={t('ipam.copyOf', { label })} inline />
           </DataItemIfSet>
         ))}
       </dl>
@@ -148,6 +114,7 @@ export function AssignIpDialog({
   record: initialRecord,
   network,
   initialDevice,
+  replacing,
   choices,
   csrfToken,
   onClose,
@@ -165,6 +132,12 @@ export function AssignIpDialog({
   /** Máy điền sẵn — mở từ trang thiết bị thì máy đã biết, không bắt gõ lại mã. */
   initialDevice?: { deviceId: string; term: string };
   /**
+   * Đổi IP (Q-20): IP máy đang giữ. Có thì hộp gửi MỘT lượt `change` — API thu hồi IP này và
+   * cấp địa chỉ mới trong cùng transaction — và máy không đổi được trong hộp. Người/bộ phận
+   * và ghi chú đi theo máy nên điền sẵn từ IP cũ.
+   */
+  replacing?: { id: string; address: string; usedBy?: string | null; note?: string | null };
+  /**
    * Các chỗ trống của dải để đổi địa chỉ ngay trong hộp ("Cấp IP trống kế tiếp" điền sẵn chỗ
    * nhỏ nhất, người cắm máy có thể muốn chỗ khác). Không truyền thì địa chỉ cố định.
    */
@@ -179,12 +152,14 @@ export function AssignIpDialog({
   const { address, record } = target;
   const [device, setDevice] = useState(initialDevice ?? { deviceId: '', term: '' });
   // Hồ sơ Trống đã bị gỡ chủ lúc thu hồi, nên ô người dùng mở ra trống — điền lại tên chủ cũ
-  // là hồi sinh một chủ không còn.
-  const [usedBy, setUsedBy] = useState('');
+  // là hồi sinh một chủ không còn. Đổi IP thì khác: chủ vẫn là máy đó, người dùng máy không đổi.
+  const [usedBy, setUsedBy] = useState(replacing?.usedBy ?? '');
   const [assignedAt, setAssignedAt] = useState(todayIso());
-  const [note, setNote] = useState(initialRecord?.note ?? '');
+  const [note, setNote] = useState(
+    replacing ? (replacing.note ?? '') : (initialRecord?.note ?? ''),
+  );
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([target, device, usedBy, assignedAt, note, reason]);
   const departments = useDepartments();
   const check = useFormErrors({
     owner: ownerRule(t, device.deviceId, usedBy),
@@ -193,7 +168,11 @@ export function AssignIpDialog({
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
-    record ? `/api/v1/ipam/addresses/${record.id}/transition` : '/api/v1/ipam/addresses',
+    replacing
+      ? `/api/v1/ipam/addresses/${replacing.id}/change`
+      : record
+        ? `/api/v1/ipam/addresses/${record.id}/transition`
+        : '/api/v1/ipam/addresses',
     { csrfToken, refreshMe: false },
   );
 
@@ -206,7 +185,7 @@ export function AssignIpDialog({
       dismissible={!save.isPending}
       initialFocus="first-field"
       maxWidth={560}
-      title={t('ipam.assignIp', { address })}
+      title={t(replacing ? 'ipam.changeIp' : 'ipam.assignIp', { address })}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -218,7 +197,7 @@ export function AssignIpDialog({
             className="btn primary"
             disabled={save.isPending}
           >
-            {save.isPending ? t('common.loading') : t('ipam.trAssign')}
+            {save.isPending ? t('common.working') : t(replacing ? 'ipam.trChange' : 'ipam.trAssign')}
           </button>
         </>
       }
@@ -241,7 +220,18 @@ export function AssignIpDialog({
             reason: reason.trim(),
           };
           save.mutate(
-            record ? { to: 'assigned', ...owner } : { subnetId, address, ...owner },
+            replacing
+              ? {
+                  subnetId,
+                  address,
+                  usedBy: owner.usedBy,
+                  assignedAt,
+                  note: owner.note,
+                  reason: owner.reason,
+                }
+              : record
+                ? { to: 'assigned', ...owner }
+                : { subnetId, address, ...owner },
             { onSuccess: () => onDone(address), onError: (err) => setError(errorMessage(err)) },
           );
         }}
@@ -275,13 +265,23 @@ export function AssignIpDialog({
           </Field>
         )}
 
-        <Field label={t('ipam.device')} hint={t('ipam.deviceHint')} error={check.error('owner')}>
-          <DeviceCombobox
-            deviceId={device.deviceId}
-            term={device.term}
-            onChange={setDevice}
-          />
-        </Field>
+        {replacing ? (
+          <Field label={t('ipam.device')} hint={t('ipam.changeHint')}>
+            <p className="static-value">
+              <span className="mono">{device.term}</span>
+              {' · '}
+              {t('ipam.currentIp')} <span className="mono">{replacing.address}</span>
+            </p>
+          </Field>
+        ) : (
+          <Field label={t('ipam.device')} hint={t('ipam.deviceHint')} error={check.error('owner')}>
+            <IpDeviceCombobox
+              deviceId={device.deviceId}
+              term={device.term}
+              onChange={setDevice}
+            />
+          </Field>
+        )}
 
         {network ? <NetworkConfig network={network} /> : null}
 

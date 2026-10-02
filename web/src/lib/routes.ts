@@ -18,8 +18,19 @@ export const PATHS = {
   devices: '/devices',
   device: (id: string) => `/devices/${id}`,
 
+  /**
+   * Bốn màn tách từ "Phần mềm" (Q-22) — cùng bảng `software`, khác `kind`. Bảng loại → màn ở
+   * `lib/software-screens.ts`. `softwareItem` còn là đường CHUNG khi chỉ biết id (thư mở két,
+   * kho thanh lý): trang chi tiết đọc loại rồi chuyển sang đúng màn.
+   */
   software: '/software',
   softwareItem: (id: string) => `/software/${id}`,
+  domains: '/domains',
+  domainItem: (id: string) => `/domains/${id}`,
+  maintenance: '/maintenance',
+  maintenanceItem: (id: string) => `/maintenance/${id}`,
+  services: '/services',
+  serviceItem: (id: string) => `/services/${id}`,
 
   ispLines: '/isp-lines',
   ispLine: (id: string) => `/isp-lines/${id}`,
@@ -118,7 +129,7 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
  * ===== LỖ BẢNG NÀY BỊT =====
  *
  * Màn nào không gác ở `<Route>` thì Member gõ thẳng URL vào là màn dựng đủ `h1`, phụ đề, và
- * một nút "Thêm tài khoản" BẤM ĐƯỢC, rồi mới báo không có quyền.
+ * một nút "Thêm người dùng" BẤM ĐƯỢC, rồi mới báo không có quyền.
  *
  * Dữ liệu không rò (API trả 403 sạch), nên đây không phải lỗ bảo mật. Nhưng nó dạy sai: một
  * màn dựng ra đủ hình hài rồi mới từ chối trông như một lỗi hệ thống, không như một ranh giới
@@ -171,6 +182,9 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.dashboard]: 'nav.dashboard',
   [PATHS.devices]: 'nav.devices',
   [PATHS.software]: 'nav.software',
+  [PATHS.domains]: 'nav.domains',
+  [PATHS.maintenance]: 'nav.maintenance',
+  [PATHS.services]: 'nav.services',
   [PATHS.ispLines]: 'nav.isp',
   [PATHS.expiry]: 'nav.expiry',
   [PATHS.ipAddresses]: 'nav.ipam',

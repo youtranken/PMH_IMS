@@ -6,12 +6,24 @@
  * mà sáu tháng sau không ai dám xóa vì không biết nó từng có ý gì.
  */
 import { stripDiacritics } from '../../common/search-fold';
+import { viDate } from '../../common/today';
 
 export const SERVICE_ACCOUNT_KINDS = ['shared', 'vpn'] as const;
 export type ServiceAccountKind = (typeof SERVICE_ACCOUNT_KINDS)[number];
 
 export const SERVICE_ACCOUNT_STATUSES =['active', 'disabled'] as const;
 export type ServiceAccountStatus = (typeof SERVICE_ACCOUNT_STATUSES)[number];
+
+/**
+ * Đọc `?status=`. Vắng / rỗng = không lọc (⌘K). Chữ lạ coi như mặc định của màn — `active`, ẩn
+ * tài khoản đã ngừng dùng (Q-20) — thay vì đi thẳng xuống `WHERE status = 'abc'` ra bảng rỗng.
+ */
+export function serviceAccountStatusQuery(value: unknown): ServiceAccountStatus | undefined {
+  if (value === undefined || value === '') return undefined;
+  return SERVICE_ACCOUNT_STATUSES.includes(value as ServiceAccountStatus)
+    ? (value as ServiceAccountStatus)
+    : 'active';
+}
 
 const KIND_LABEL: Record<ServiceAccountKind, string> = {
   shared: 'Tài khoản dùng chung',
@@ -121,6 +133,8 @@ export const SERVICE_ACCOUNT_OPTIONAL_FIELDS =[
   'groupName',
   'allowedIps',
   'note',
+  /** Hạn dùng `YYYY-MM-DD` (Q-20). Trống = không có hạn. */
+  'endDate',
 ] as const;
 export type ServiceAccountOptionalField = (typeof SERVICE_ACCOUNT_OPTIONAL_FIELDS)[number];
 
@@ -194,7 +208,28 @@ export function mergeServiceAccount(
     groupName: vpn ? keep('groupName') : foreign('groupName'),
     allowedIps: vpn ? keep('allowedIps') : foreign('allowedIps'),
     note: keep('note'),
+    endDate: keep('endDate'),
   };
+}
+
+/**
+ * Gia hạn một tài khoản dịch vụ (Q-20) — trả câu lỗi, hoặc `null` nếu cho qua.
+ *
+ * Tài khoản đã ngừng dùng thì không gia hạn: nó đã rời danh sách nhắc hạn, và "gia hạn" nó là
+ * mở lại bằng cửa sau, không ghi lý do như `enable()`. Hạn mới phải SAU hạn đang có — kéo hạn
+ * lùi là sửa nhầm, việc đó làm ở Sửa hồ sơ để lịch sử ghi đúng là "sửa", không phải "gia hạn".
+ */
+export function checkServiceAccountRenewal(
+  current: { status: string; endDate: string | null },
+  newEnd: string,
+): string | null {
+  if (current.status !== 'active') {
+    return 'Tài khoản này đã ngừng dùng nên không gia hạn được. Dùng lại trước nếu vẫn cần.';
+  }
+  if (current.endDate && newEnd <= current.endDate) {
+    return `Hạn mới (${viDate(newEnd)}) phải sau hạn hiện tại (${viDate(current.endDate)}). Sửa nhầm hạn thì dùng Sửa hồ sơ.`;
+  }
+  return null;
 }
 
 export interface ServiceAccountCheck {

@@ -82,12 +82,12 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     // Playwright coi đó là lỗi. Ở đây chỉ cần biết ngăn đã xuất hiện.
     await expect(page.getByRole('cell', { name: label }).first()).toBeVisible();
 
-    await rowAction(page, label, 'Đổi giá trị');
+    await rowAction(page, label, 'Đổi mật khẩu');
     // Khoanh theo tiêu đề: khi hộp hỏi mã mở ra thì có HAI dialog, `getByRole('dialog')`
     // trần sẽ mơ hồ.
-    const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Đổi giá trị' });
+    const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Đổi mật khẩu' });
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(`Moi#${stamp}`);
-    await rotateDialog.getByRole('button', { name: 'Đổi giá trị' }).click();
+    await rotateDialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();
 
     /*
      * ĐÂY là điều bài này sinh ra để chứng minh: hộp hỏi mã phải hiện, chứ không phải một
@@ -158,12 +158,12 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await rowAction(page, label, 'Đổi giá trị');
+    await rowAction(page, label, 'Đổi mật khẩu');
     // Khoanh theo tiêu đề: khi hộp hỏi mã mở ra thì có HAI dialog, `getByRole('dialog')`
     // trần sẽ mơ hồ.
-    const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Đổi giá trị' });
+    const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Đổi mật khẩu' });
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(`Moi#${stamp}`);
-    await rotateDialog.getByRole('button', { name: 'Đổi giá trị' }).click();
+    await rotateDialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
 
     /*
@@ -186,7 +186,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
      * thay vì `reject` khi đóng hộp, `finally { setBusy(false) }` của nơi gọi không bao giờ
      * chạy và nút kẹt ở "Đang xử lý…" vĩnh viễn — người dùng phải tải lại trang.
      */
-    const rotateButton = rotateDialog.getByRole('button', { name: 'Đổi giá trị' });
+    const rotateButton = rotateDialog.getByRole('button', { name: 'Đổi mật khẩu' });
     await expect(rotateButton, 'hủy gõ mã thì nút Xoay phải bấm lại được').toBeEnabled();
 
     /*

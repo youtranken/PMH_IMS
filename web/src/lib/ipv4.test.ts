@@ -35,6 +35,13 @@ describe('looksLikeIp — câu gõ có dáng IP/CIDR thì nhóm IP lên đầu',
   it.each(['SW-CORE-01', '10', 'vlan 20', 'PC-10.1', ''])('%s → không', (q) => {
     expect(looksLikeIp(q)).toBe(false);
   });
+  // Mỗi khúc 0–255, đủ bốn khúc thì phải là IPv4 chuẩn — cùng luật với `parseIpv4`.
+  it.each(['300.1.1.1', '10.77.256', '10.77.1.999', '010.1.1.1', '10.77.1.0/33'])(
+    '%s sai định dạng → không',
+    (q) => {
+      expect(looksLikeIp(q)).toBe(false);
+    },
+  );
 });
 
 describe('cidrContains', () => {

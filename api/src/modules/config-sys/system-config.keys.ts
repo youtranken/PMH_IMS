@@ -61,6 +61,17 @@ export const CONFIG_KEYS = {
    */
   totpEnrollReauthMinutes: { key: 'totp.enroll_reauth_minutes', fallback: 15 },
   /*
+   * Phiên chờ NHẬP MÃ 2 lớp sống tối đa ngần này phút kể từ lúc đúng mật khẩu (Q-20). Bỏ dở
+   * màn nhập mã trên máy dùng chung thì người sau không thừa hưởng nửa phiên đã qua mật khẩu.
+   * Xem `isTotpChallengeExpired`.
+   */
+  authTotpChallengeMinutes: { key: 'auth.totp_challenge_minutes', fallback: 5 },
+  /*
+   * Mật khẩu tạm (tạo tài khoản, SA đặt lại) dùng được ngần này giờ kể từ lúc cấp (Q-20). Xem
+   * `isTempPasswordExpired`.
+   */
+  authTempPasswordHours: { key: 'auth.temp_password_hours', fallback: 24 },
+  /*
    * Câu chỉ đường cho người quên mật khẩu / mất điện thoại 2 lớp (Q-14). Đọc được khi CHƯA
    * đăng nhập qua `GET /auth/support-contact` — route đó chỉ trả đúng khoá này, không mở bảng.
    */
@@ -151,6 +162,8 @@ export const CONFIG_KEYS = {
    */
   sessionRetentionDays: { key: 'session.retention_days', fallback: 30 },
   outboxRetentionDays: { key: 'outbox.retention_days', fallback: 30 },
+  // Máy không đăng nhập lại quá ngần này ngày thì quên; lần sau được báo như thiết bị lạ.
+  knownDeviceRetentionDays: { key: 'auth.known_device_retention_days', fallback: 180 },
   /*
    * Ngăn năm của `audit_log` cũ hơn ngần này năm thì `ops/audit-archive.sh` tách ra và dump
    * (OLD-DB-03). Chỉ script vận hành đọc — không có gì tự chạy: lưu trữ sổ NFR-03 là

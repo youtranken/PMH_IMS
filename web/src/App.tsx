@@ -1,8 +1,9 @@
 import {
-  BrowserRouter,
   Navigate,
   Route,
+  RouterProvider,
   Routes,
+  createBrowserRouter,
   useLocation,
   useParams,
 } from 'react-router-dom';
@@ -25,6 +26,7 @@ import {
   nextStepPath,
 } from '@/lib/me';
 import { LEGACY_ROUTES, PATHS, ROUTE_ROLES, canSeeRoute } from '@/lib/routes';
+import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS } from '@/lib/software-screens';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
@@ -61,22 +63,33 @@ import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 import { usePageTitle } from '@/ui/use-page-title';
 import { LiveRegion } from '@/ui/live-region';
 
+/**
+ * Data router chứ không `BrowserRouter`: `useBlocker` (chặn rời màn khi còn thay đổi chưa lưu,
+ * `ui/use-unsaved-guard`) chỉ chạy dưới data router. Cả cây route vẫn là `<Routes>` lồng bên
+ * trong một route `*` duy nhất, nên luồng đăng nhập ở `AppRoutes` giữ nguyên.
+ *
+ * Tạo router theo từng lần gắn `App`, không ở cấp module: router đọc `window.location` lúc tạo,
+ * và bài kiểm gắn `App` nhiều lần với địa chỉ khác nhau.
+ */
 export default function App() {
+  const [router] = useState(() => createBrowserRouter([{ path: '*', element: <AppRoot /> }]));
+  return <RouterProvider router={router} />;
+}
+
+function AppRoot() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <ConfirmProvider>
-          {/*
-            Vùng sống thường trực, gắn NGOÀI `AppRoutes`. Phải nằm ngoài vì `AppRoutes`
-            tự `return <Loading/>` trong lúc hỏi `/auth/me`: đặt bên trong thì đúng lượt tải
-            đầu tiên — lượt duy nhất người dùng chắc chắn phải chờ — lại không có vùng sống
-            nào đang đứng sẵn để loan báo.
-          */}
-          <LiveRegion />
-          <AppRoutes />
-        </ConfirmProvider>
-      </ToastProvider>
-    </BrowserRouter>
+    <ToastProvider>
+      <ConfirmProvider>
+        {/*
+          Vùng sống thường trực, gắn NGOÀI `AppRoutes`. Phải nằm ngoài vì `AppRoutes`
+          tự `return <Loading/>` trong lúc hỏi `/auth/me`: đặt bên trong thì đúng lượt tải
+          đầu tiên — lượt duy nhất người dùng chắc chắn phải chờ — lại không có vùng sống
+          nào đang đứng sẵn để loan báo.
+        */}
+        <LiveRegion />
+        <AppRoutes />
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
 
@@ -240,8 +253,22 @@ function AppRoutes() {
         <Route path={PATHS.disposal} element={<DisposalScreen />} />
         <Route path={PATHS.devices} element={<DevicesScreen me={me} />} />
         <Route path={`${PATHS.devices}/:id`} element={<DeviceDetail me={me} />} />
-        <Route path={PATHS.software} element={<SoftwareScreen me={me} />} />
-        <Route path={`${PATHS.software}/:id`} element={<SoftwareDetail me={me} />} />
+        {/* Bốn màn cùng một bảng `software`, tách theo loại (Q-22). Trang chi tiết tự chuyển
+            sang đúng màn của loại hồ sơ, nên `/software/<id>` cũ vẫn mở được mọi loại. */}
+        {SOFTWARE_SCREEN_KEYS.map((key) => (
+          <Route
+            key={key}
+            path={SOFTWARE_SCREENS[key].list}
+            element={<SoftwareScreen key={key} me={me} screen={key} />}
+          />
+        ))}
+        {SOFTWARE_SCREEN_KEYS.map((key) => (
+          <Route
+            key={`${key}-item`}
+            path={`${SOFTWARE_SCREENS[key].list}/:id`}
+            element={<SoftwareDetail key={key} me={me} screen={key} />}
+          />
+        ))}
         <Route path={PATHS.ispLines} element={<IspScreen me={me} />} />
         <Route path={`${PATHS.ispLines}/:id`} element={<IspDetail me={me} />} />
         <Route path={PATHS.expiry} element={<ExpiryScreen me={me} />} />

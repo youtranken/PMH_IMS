@@ -219,12 +219,17 @@ export class SessionService implements OnModuleInit {
    * không còn gì nói ai đá và đá lúc nào (`audit_log` chỉ-thêm, không có đường bù).
    *
    * Nên ĐỪNG thêm bản chạy-trên-pool: muốn thu hồi phiên thì buộc phải có `tx` trong tay.
+   *
+   * Trả `true` khi CHÍNH lượt này thu hồi (CAS trên `revoked_at IS NULL`): hai request song song
+   * cùng thấy phiên còn sống thì chỉ một bên được ghi nhật ký, bên kia không đẻ dòng trùng.
    */
-  async revokeWithin(tx: Tx, id: string, reason: string): Promise<void> {
-    await tx
+  async revokeWithin(tx: Tx, id: string, reason: string): Promise<boolean> {
+    const rows = await tx
       .update(sessionsTable)
       .set({ revokedAt: new Date(), revokedReason: reason })
-      .where(and(eq(sessionsTable.id, id), isNull(sessionsTable.revokedAt)));
+      .where(and(eq(sessionsTable.id, id), isNull(sessionsTable.revokedAt)))
+      .returning({ id: sessionsTable.id });
+    return rows.length > 0;
   }
 
   /**

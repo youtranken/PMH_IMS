@@ -79,6 +79,32 @@ export function useAnyDialogOpen(): boolean {
 const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
 
+/** Lối đóng "có chủ ý" của hộp gần nhất — đi qua cửa canh dữ liệu chưa lưu nếu hộp bật nó. */
+const DialogCloseContext = createContext<(() => void) | null>(null);
+
+/**
+ * Nút "Hủy" ở chân hộp. Dùng nó thay cho `<button onClick={onClose}>`: Hủy nằm sát nút Lưu,
+ * bấm trượt mà đóng thẳng thì mất cả form — nên nó đi CÙNG cửa với Esc / nền / ✕
+ * (`guardUnsaved`): chưa gõ gì thì đóng ngay, đã gõ thì hỏi. Hộp không bật `guardUnsaved` thì
+ * đóng thẳng như cũ. Đặt ngoài `Dialog` thì không có hộp nào để đóng — dùng nút thường.
+ */
+export function DialogCancel({
+  children,
+  disabled,
+  className = 'btn',
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const close = useContext(DialogCloseContext);
+  return (
+    <button type="button" className={className} disabled={disabled} onClick={() => close?.()}>
+      {children}
+    </button>
+  );
+}
+
 /**
  * Khung modal dùng chung trên Radix Dialog — thay các khối .modal-backdrop/.sheet
  * copy tay (mỗi dialog một bản). Radix lo focus trap, scroll-lock, Esc, trả focus,
@@ -166,8 +192,8 @@ export function Dialog({
    * báo động giả (chỉ hỏi khi có thay đổi thật), và vẫn bắt đúng cảnh hay gặp nhất — gõ tay
    * một lúc rồi lỡ Esc. Thà bắt được phần lớn còn hơn bắt 0% như hiện nay.
    *
-   * KHÔNG canh nút "Hủy" ở chân hộp: bấm Hủy là CỐ Ý bỏ, hỏi lại ở đó chỉ là thêm một cú bấm
-   * cho việc người ta vừa nói rõ là muốn làm. Cửa này dành cho ba lối đóng TÌNH CỜ.
+   * Nút "Hủy" ở chân hộp cũng đi qua cửa này khi viết bằng `DialogCancel`: nó nằm sát nút Lưu,
+   * bấm trượt là lối đóng tình cờ thứ tư. Vẫn không hỏi thừa — chưa gõ gì thì đóng ngay.
    *
    * Ảnh chụp gốc lấy sau lượt render đầu, nên form nào nạp dữ liệu BÊN TRONG hộp (thay vì nhận
    * qua prop) sẽ trông như vừa bị sửa lúc dữ liệu về. 10 form đang bật cờ này đều khởi tạo
@@ -257,6 +283,11 @@ export function Dialog({
       if (ok) onOpenChange(false);
     })();
   }, [askConfirm, fieldSignature, onOpenChange, t]);
+
+  const requestClose = useCallback(() => {
+    if (guardUnsaved) tryClose();
+    else onOpenChange(false);
+  }, [guardUnsaved, tryClose, onOpenChange]);
 
   /*
    * ===== ESC LÚC MENU Ô CHỌN ĐANG MỞ CHỈ ĐƯỢC ĐÓNG MENU =====
@@ -419,6 +450,7 @@ export function Dialog({
               target.focus();
             }}
           >
+            <DialogCloseContext.Provider value={requestClose}>
             <DialogPortalContext.Provider value={portalEl}>
               {title === undefined ? (
                 /*
@@ -513,6 +545,7 @@ export function Dialog({
                 </>
               )}
             </DialogPortalContext.Provider>
+            </DialogCloseContext.Provider>
             {/* Mount-point cho popover portal vào (trong Content → tránh RRS chặn cuộn/click). */}
             <div ref={setPortalEl} />
           </RD.Content>

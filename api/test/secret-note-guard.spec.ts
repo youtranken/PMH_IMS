@@ -11,6 +11,7 @@ import { SoftwareOwnerResolver } from '../src/modules/software/software-owner-re
 import { SoftwareService } from '../src/modules/software/software.service';
 import { ServiceAccountOwnerResolver } from '../src/modules/service-accounts/service-account-owner-resolver';
 import { ServiceAccountService } from '../src/modules/service-accounts/service-account.service';
+import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import { VaultService } from '../src/modules/vault/vault.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -158,7 +159,7 @@ describe('Két: ghi chú của HỒ SƠ chủ thể không được chứa giá 
     const registry = new OwnerExistsRegistry();
     new ServiceAccountOwnerResolver(
       registry,
-      new ServiceAccountService(scratch.db, audit),
+      new ServiceAccountService(scratch.db, audit, {} as ExpiryApiService),
     ).onModuleInit();
     vault = new VaultService(scratch.db, crypto, audit, registry);
   }, TEST_TIMEOUT);

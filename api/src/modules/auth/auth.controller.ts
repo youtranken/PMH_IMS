@@ -278,14 +278,17 @@ export class AuthController {
     const session = await this.requireSession(req);
     // UI cần biết đã cài 2 lớp chưa để đưa về ĐÚNG bước còn thiếu (enroll hay nhập mã).
     const enrolledAt = await this.auth.totpEnrolledAt(user.id);
-    const [graceMinutes, revealSeconds, fileMaxSizeMb, fileMaxFilesPerBatch] = await Promise.all([
-      this.config.getNumber('secretStepUpGraceMinutes'),
-      this.config.getNumber('secretRevealSeconds'),
-      // Ô chọn giấy tờ kiểm trần TRƯỚC khi gửi (Q-18): form thêm mới chỉ đẩy file sau khi hồ sơ
-      // đã lưu, nên file quá cỡ phải bị bắt từ lúc chọn.
-      this.config.getNumber('fileMaxSizeMb'),
-      this.config.getNumber('fileMaxFilesPerBatch'),
-    ]);
+    const [graceMinutes, revealSeconds, fileMaxSizeMb, fileMaxFilesPerBatch, totpChallengeMinutes] =
+      await Promise.all([
+        this.config.getNumber('secretStepUpGraceMinutes'),
+        this.config.getNumber('secretRevealSeconds'),
+        // Ô chọn giấy tờ kiểm trần TRƯỚC khi gửi (Q-18): form thêm mới chỉ đẩy file sau khi hồ sơ
+        // đã lưu, nên file quá cỡ phải bị bắt từ lúc chọn.
+        this.config.getNumber('fileMaxSizeMb'),
+        this.config.getNumber('fileMaxFilesPerBatch'),
+        // Màn nhập mã tự về đăng nhập khi hết hạn (Q-20), không đợi người dùng gõ mã rồi mới biết.
+        this.config.getNumber('authTotpChallengeMinutes'),
+      ]);
     return {
       id: user.id,
       email: user.email,
@@ -303,6 +306,7 @@ export class AuthController {
         secretRevealSeconds: revealSeconds,
         fileMaxSizeMb,
         fileMaxFilesPerBatch,
+        totpChallengeMinutes,
       },
     };
   }

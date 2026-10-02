@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/ui/confirm-provider';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 /**
@@ -112,14 +112,14 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
     expect(onOpenChange, 'hỏi xong mới được đóng — hỏi rồi đóng luôn là hỏi cho có').not.toHaveBeenCalled();
   });
 
-  it('đã gõ rồi chọn "Ở lại nhập tiếp": hộp vẫn mở, chữ vẫn còn', async () => {
+  it('đã gõ rồi chọn "Nhập tiếp": hộp vẫn mở, chữ vẫn còn', async () => {
     const { onOpenChange } = setup();
     const o = screen.getByRole('textbox', { name: 'Mã máy' });
     await userEvent.type(o, 'PC-01');
     await userEvent.keyboard('{Escape}');
     // `ConfirmDialog` dùng `cancelLabel` cho CẢ nút ✕ lẫn nút chân hộp, nên tên này trúng
     // hai nút. Lấy cái CUỐI — chân hộp nằm sau phần đầu hộp trong tài liệu.
-    const triggerButton = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
+    const triggerButton = await screen.findAllByRole('button', { name: 'Nhập tiếp' });
     await userEvent.click(triggerButton[triggerButton.length - 1]);
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(o).toHaveValue('PC-01');
@@ -198,5 +198,51 @@ describe('Dialog không có title', () => {
     const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
     expect(backdrops).toHaveLength(2);
     expect(backdrops.filter((el) => !el.classList.contains('bare'))).toHaveLength(1);
+  });
+});
+
+/**
+ * Nút "Hủy" ở chân hộp là lối đóng thứ tư, nằm sát nút Lưu — bấm trượt là mất cả form. Nó phải
+ * đi cùng một cửa với Esc / nền / ✕ (`DialogCancel`), không gọi thẳng `onClose`.
+ */
+describe('Dialog — DialogCancel đi qua cửa canh dữ liệu chưa lưu', () => {
+  const setup = (guardUnsaved: boolean) => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog
+          open
+          onOpenChange={onOpenChange}
+          guardUnsaved={guardUnsaved}
+          title="Thêm thiết bị"
+          footer={<DialogCancel>Hủy</DialogCancel>}
+        >
+          <input aria-label="Mã máy" defaultValue="" />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    return { onOpenChange };
+  };
+
+  it('chưa gõ gì: Hủy đóng thẳng', async () => {
+    const { onOpenChange } = setup(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('đã gõ: Hủy hỏi lại như Esc, chưa đóng', async () => {
+    const { onOpenChange } = setup(true);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
+    expect(await screen.findByText('Bỏ những gì vừa nhập?')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('hộp không canh: Hủy đóng thẳng dù đã gõ', async () => {
+    const { onOpenChange } = setup(false);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

@@ -171,6 +171,31 @@ describe('LoginScreen — phản hồi theo từng kiểu hỏng', () => {
     expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeEnabled();
   });
 
+  it('mật khẩu tạm quá hạn (Q-20) → câu nhờ SA đặt lại + người liên hệ, nút vẫn bấm được', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          String(url).includes('support-contact')
+            ? jsonResponse(200, { contact: 'Anh Tuấn — máy lẻ 123' })
+            : jsonResponse(401, { code: 'TEMP_PASSWORD_EXPIRED', message: 'x' }),
+        ),
+      ),
+    );
+    renderLogin();
+    await submitWith('a@pmh.com.vn', 'Tam-E2E-123456');
+    expect(await screen.findByText(/Mật khẩu tạm đã hết hạn\. Liên hệ Super Admin/)).toBeInTheDocument();
+    expect(await screen.findByText(/Anh Tuấn — máy lẻ 123/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeEnabled();
+  });
+
+  it('phiên đổi mật khẩu bị đóng vì mật khẩu tạm quá hạn → dải báo nói rõ lý do', () => {
+    sessionStorage.setItem('ims_signed_out', 'temp-password-expired');
+    renderLogin();
+    expect(screen.getByRole('status')).toHaveTextContent(/Mật khẩu tạm đã hết hạn/);
+    sessionStorage.clear();
+  });
+
   it('vừa đăng xuất (kể cả sau lượt nạp lại trang) → dải "Bạn đã đăng xuất.", gõ vào là tắt', async () => {
     sessionStorage.setItem('ims_signed_out', '1');
     renderLogin();

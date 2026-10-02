@@ -15,7 +15,7 @@ import {
 /**
  * Q-15 — hạn đổi mật khẩu trong két (180 ngày, `dashboard.secret_stale_days`): cột "Đổi lần
  * cuối" + đếm ngược ở danh sách ngăn và danh sách tài khoản dịch vụ; quá hạn thì "Quá N ngày —
- * cần đổi"; Đổi giá trị là đếm lại từ đầu; hộp Đổi giá trị nhắc IMS không nối tới thiết bị.
+ * cần đổi"; Đổi mật khẩu là đếm lại từ đầu; hộp Đổi mật khẩu nhắc IMS không nối tới thiết bị.
  */
 
 test.beforeEach(() => {
@@ -50,7 +50,7 @@ function backdate(secretId: string, days: number) {
 }
 
 test.describe('Két — hạn đổi mật khẩu (Q-15)', () => {
-  test('đường hạnh phúc: quá hạn hiện "Quá N ngày — cần đổi"; Đổi giá trị xong đếm lại 180 ngày', async ({
+  test('đường hạnh phúc: quá hạn hiện "Quá N ngày — cần đổi"; Đổi mật khẩu xong đếm lại 180 ngày', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -69,15 +69,15 @@ test.describe('Két — hạn đổi mật khẩu (Q-15)', () => {
     const secretRow = page.getByRole('row', { name: new RegExp(kit.label) });
     await expect(secretRow.getByText('Quá 20 ngày — cần đổi')).toBeVisible();
 
-    // Đổi giá trị: hộp nhắc IMS không nối tới hệ thống thật, không bắt tick.
+    // Đổi mật khẩu: hộp nhắc IMS không nối tới hệ thống thật, không bắt tick.
     await secretRow.getByRole('button', { name: `Thao tác với ${kit.label}` }).click();
-    await page.getByRole('menuitem', { name: 'Đổi giá trị' }).click();
+    await page.getByRole('menuitem', { name: 'Đổi mật khẩu' }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText(/IMS không đổi gì trên thiết bị thật/)).toBeVisible();
+    await expect(dialog.getByText(/IMS không đổi gì trên hệ thống thật/)).toBeVisible();
     await expect(dialog.getByRole('checkbox')).toHaveCount(0);
     await dialog.getByLabel(/Giá trị mới/).fill('Vpn#Moi2026!x');
-    await dialog.getByRole('button', { name: 'Đổi giá trị' }).click();
-    await expect(page.getByText('Đã đổi giá trị.')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();
+    await expect(page.getByText('Đã đổi mật khẩu.')).toBeVisible();
     await expect(secretRow.getByText('còn 180 ngày')).toBeVisible();
   });
 

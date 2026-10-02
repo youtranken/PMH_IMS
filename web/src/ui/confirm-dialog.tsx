@@ -20,6 +20,8 @@ export function ConfirmDialog({
   checked = false,
   onCheckedChange,
   typeToConfirm,
+  extra,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: {
@@ -42,6 +44,14 @@ export function ConfirmDialog({
   onCheckedChange?: (next: boolean) => void;
   /** Ô gõ lại tên — nút xác nhận chỉ bật khi gõ ĐÚNG `expected` (bỏ khoảng trắng hai đầu). */
   typeToConfirm?: { expected: string; label: string };
+  /**
+   * Lối ra thứ ba nằm giữa Hủy và nút xác nhận — vd "Bỏ thay đổi" trong hộp "Chưa lưu thay đổi"
+   * (Lưu / Bỏ / Ở lại). Chỉ một nút: nhiều hơn thì người đọc phải so ba bốn lựa chọn, lúc đó là
+   * một Dialog riêng.
+   */
+  extra?: { label: string; onClick: () => void };
+  /** Tắt riêng nút xác nhận (vd còn ô sai thì không cho "Lưu"); Hủy và `extra` vẫn bấm được. */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -131,10 +141,15 @@ export function ConfirmDialog({
         <button type="button" disabled={busy} onClick={onCancel}>
           {cancelLabel ?? t('common.cancel')}
         </button>
+        {extra ? (
+          <button type="button" disabled={busy} onClick={extra.onClick}>
+            {extra.label}
+          </button>
+        ) : null}
         <button
           type="button"
           className={danger ? 'danger' : 'primary'}
-          disabled={busy || !typedOk}
+          disabled={busy || !typedOk || confirmDisabled}
           onClick={onConfirm}
         >
           {confirmLabel}

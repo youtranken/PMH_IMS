@@ -787,7 +787,9 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
         : byText,
     );
   }
-  if (filter.kind) parts.push(eq(softwareTable.kind, filter.kind));
+  if (filter.kinds && filter.kinds.length > 0) {
+    parts.push(inArray(softwareTable.kind, filter.kinds));
+  }
   if (filter.licenseModel) parts.push(eq(softwareTable.licenseModel, filter.licenseModel));
   if (filter.status === 'live') {
     parts.push(inArray(softwareTable.status, ['active', 'expired_ok']));

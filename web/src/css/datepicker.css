@@ -24,7 +24,7 @@
   gap: var(--space-3);
   /* Khớp chiều cao với <input>/<Select> (base 0.55rem) để cùng hàng không so le. */
   padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--field-border);
   background: var(--surface);
   color: var(--ink);
   border-radius: var(--r);
@@ -158,8 +158,7 @@
   line-height: 1;
   transition: background 0.14s var(--ease), transform 0.14s var(--ease);
 }
-/* :not(:disabled) để THẮNG base `button:hover{background:surface-2}` — nếu không nút mũi tên
-   bị nền sáng trên header gradient = "hover trắng" xấu. */
+/* Nút mũi tên nằm trên header gradient: hover chỉ đậm nền phủ, không lấy nền sáng của nút thường. */
 .dp-nav:hover:not(:disabled) {
   background: var(--on-brand-press);
   transform: scale(1.08);
@@ -251,6 +250,12 @@
   background: var(--grad);
   color: var(--on-brand);
   font-weight: 800;
+}
+/* Ô hôm nay / đang chọn tự có nền nên `.dp-cell:hover` không đổi được gì: báo hover bằng viền,
+   giữ nguyên nền để vẫn đọc ra ô nào là hôm nay, ô nào đang chọn. */
+.dp-cell.today:hover,
+.dp-cell.sel:hover {
+  border-color: var(--primary-ink);
 }
 .dp-cell:focus-visible {
   outline: none;

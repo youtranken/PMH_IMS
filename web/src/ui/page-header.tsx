@@ -7,10 +7,16 @@ import { InfoTip } from '@/ui/info-tip';
  */
 export function PageHeader({
   title,
+  titleTip,
   subtitle,
   actions,
 }: {
   title: string;
+  /**
+   * Câu giải thích "màn này để làm gì" sau nút (i) cạnh tiêu đề — cho màn mà câu ấy chỉ in ở
+   * trạng thái rỗng: có dữ liệu rồi thì người mới vào vẫn cần một chỗ đọc được nó.
+   */
+  titleTip?: ReactNode;
   /** Thường là chữ; nhận phần tử khi cần `<time title>` (giờ tuyệt đối khi rê chuột). */
   subtitle?: ReactNode;
   actions?: ReactNode;
@@ -18,7 +24,15 @@ export function PageHeader({
   return (
     <header className="page-header">
       <div className="grow">
-        <h1>{title}</h1>
+        {/* Nút (i) đứng NGOÀI `<h1>`: đặt trong thì tên của tiêu đề thành "… Giải thích: …". */}
+        {titleTip ? (
+          <div className="page-header-title">
+            <h1>{title}</h1>
+            <InfoTip subject={title}>{titleTip}</InfoTip>
+          </div>
+        ) : (
+          <h1>{title}</h1>
+        )}
         {subtitle ? <p className="sub">{subtitle}</p> : null}
       </div>
       {actions ? <div className="row">{actions}</div> : null}

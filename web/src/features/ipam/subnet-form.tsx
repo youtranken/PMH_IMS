@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { cidrContains, cidrOverlaps, parseIpv4, previewCidr } from '@/lib/ipv4';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
 import { useIpamSettings } from './ipam-settings';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 
 /**
  * Khai / sửa một dải.
@@ -43,7 +43,7 @@ export function SubnetForm({
   const [vlan, setVlan] = useState(subnet?.vlan != null ? String(subnet.vlan) : '');
   const [gateway, setGateway] = useState(subnet?.gateway ?? '');
   const [description, setDescription] = useState(subnet?.description ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([name, cidr, siteId, vlan, gateway, description]);
 
   const lists = useCatalogLists();
 
@@ -124,11 +124,11 @@ export function SubnetForm({
       }
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="subnet-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -187,7 +187,7 @@ export function SubnetForm({
           />
         </Field>
 
-        {/* Xem trước NGAY dưới ô: dạng chuẩn API sẽ lưu, số host, host đầu–cuối, mask. */}
+        {/* Xem trước NGAY dưới ô: số host và host đầu–cuối (Q-20) — đủ để biết dải gõ đúng chưa. */}
         {preview.value && !cidrLocked ? (
           <p className="muted span-2 mono" aria-live="polite">
             {t('ipam.cidrPreview', { ...preview.value })}
@@ -218,29 +218,34 @@ export function SubnetForm({
           htmlFor="subnet-gateway"
           error={check.error('gateway')}
         >
+          {/* Field chỉ tự nối id/mô tả/lỗi khi có ĐÚNG MỘT đứa con — ở đây có thêm nút gợi ý
+              (phải đứng ngay dưới ô Gateway, không trôi sang cột VLAN), nên nối tay theo đúng
+              quy ước id của Field. */}
           <input
             id="subnet-gateway"
             className="inp mono"
             placeholder={t('ipam.phGateway')}
             value={gateway}
+            aria-describedby={
+              check.error('gateway') ? 'subnet-gateway-error subnet-gateway-hint' : 'subnet-gateway-hint'
+            }
+            aria-invalid={check.error('gateway') ? true : undefined}
             onChange={(e) => setGateway(e.target.value)}
           />
-        </Field>
-        {/* Gateway gần như luôn là host đầu của dải — gợi ý một cú bấm, không tự điền: dải
-            không có gateway là chuyện có thật và ô trống phải là lựa chọn người khai tự làm. */}
-        {typed && !gatewayText && typed.hosts > 1 ? (
-          <p className="span-2">
+          {/* Gateway gần như luôn là host đầu của dải — gợi ý một cú bấm, không tự điền: dải
+              không có gateway là chuyện có thật và ô trống phải là lựa chọn người khai tự làm. */}
+          {typed && !gatewayText && typed.hosts > 1 ? (
             <button
               type="button"
-              className="btn sm ghost"
+              className="btn sm ghost field-suggest"
               onClick={() => setGateway(typed.first)}
             >
               {t('ipam.gatewayUse', { gateway: typed.first })}
             </button>
-          </p>
-        ) : null}
+          ) : null}
+        </Field>
 
-        <Field label={t('ipam.site')}>
+        <Field label={t('ipam.site')} hint={t('ipam.siteHint')}>
           <Select
             value={siteId}
             onChange={setSiteId}
@@ -299,8 +304,8 @@ export function HideDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const [error, setError] = useSubmitError([reason]);
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
   /* Luật NAT còn trỏ vào IP trong dải. Sổ NAT của một văn phòng chỉ vài chục dòng, lọc theo
      CIDR ngay ở đây. Hỏng thì im — API vẫn là nơi chặn. */
   const nat = useQuery({
@@ -333,16 +338,16 @@ export function HideDialog({
       title={t('ipam.hideSubnetTitle', { cidr: subnet.cidr })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="hide-subnet-form"
             className="btn danger"
             disabled={hide.isPending}
           >
-            {hide.isPending ? t('common.loading') : t('ipam.hide')}
+            {hide.isPending ? t('common.working') : t('ipam.hide')}
           </button>
         </>
       }

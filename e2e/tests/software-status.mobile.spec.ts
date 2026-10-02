@@ -9,6 +9,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  switchTheme,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -37,19 +38,21 @@ test('danh sách phần mềm ở 390px là thẻ gọn 3 dòng, chạm thẻ m�
   expect(res.status()).toBe(201);
 
   await page.goto('/software');
+  await switchTheme(page, 'light');
   await searchAndWaitForFilter(page, code);
   const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: code }) });
   await expect(card).toHaveCount(1);
   await expect(card.getByText('Hết hạn', { exact: true })).toBeVisible();
   await expect(card).toContainText('Office thẻ gọn E2E');
-  await expect(card).toContainText('License phần mềm · 0/10 ghế');
+  // Màn Phần mềm chỉ có license (Q-22) — thẻ không nhắc lại loại.
+  await expect(card).toContainText('0/10 ghế');
+  await expect(card).not.toContainText('License phần mềm');
   // Không còn bảng gập với dòng "Thao tác", ô mũi tên rỗng.
   await expect(page.getByRole('table')).toHaveCount(0);
   await expect(page.getByRole('button', { name: `Thao tác với ${code}` })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.getByRole('button', { name: /chế độ tối/i }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await switchTheme(page, 'dark');
   await expect(card.getByText('Hết hạn', { exact: true })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 

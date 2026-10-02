@@ -318,7 +318,7 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     await dialog.getByLabel(new RegExp(`Gõ lại mã máy ${code}`)).fill(code);
     await submit.click();
 
-    await expect(page.getByRole('button', { name: 'Đưa lại vào dùng' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Đổi trạng thái' })).toBeVisible();
     expect(sql(`SELECT status FROM device WHERE id = '${kit.deviceId}'`)).toBe('retired');
     expect(
       sql(`SELECT status FROM ip_address WHERE id = '${kit.ipId}'`),

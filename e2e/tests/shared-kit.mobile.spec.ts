@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, horizontalOverflow, openNavDrawer, resetUsers, openNavGroup } from './helpers';
+import { E2E_SA, firstLogin, horizontalOverflow, openNavDrawer, resetUsers, openNavGroup, switchTheme } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -16,14 +16,14 @@ test.describe('390px', () => {
 
   test('bộ dùng chung (light + dark) không tràn ngang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    await openNavDrawer(page);
-    await page.getByRole('link', { name: 'Bộ giao diện' }).click();
+    // Trang nội bộ không có trên menu (Q-20) — vào bằng URL.
+    await page.goto('/dev/components');
+    await switchTheme(page, 'light');
     await expect(page.getByRole('heading', { name: 'Bộ giao diện' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     // Đổi sang chế độ tối: token đổi, layout không được vỡ.
-    await page.getByRole('button', { name: /chế độ tối/i }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await switchTheme(page, 'dark');
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 

@@ -5,16 +5,17 @@ import { apiFetch } from '@/lib/api-client';
 import { noteContainsSecret } from '@/lib/note-secret';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
-import { Dialog } from '@/ui/dialog';
+import { DatePicker } from '@/ui/date-picker';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
-import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors } from '@/ui/use-form-errors';
+import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
@@ -37,6 +38,8 @@ interface FormState {
   groupName: string;
   allowedIps: string;
   note: string;
+  /** 'YYYY-MM-DD' hoặc rỗng (không có hạn) — cùng quy ước với `DatePicker`. */
+  endDate: string;
   status: ServiceAccountStatus;
 }
 
@@ -51,6 +54,7 @@ function initialState(row: ServiceAccountRow | null): FormState {
     groupName: row?.groupName ?? '',
     allowedIps: row?.allowedIps ?? '',
     note: row?.note ?? '',
+    endDate: row?.endDate ?? '',
     status: row?.status ?? 'active',
   };
 }
@@ -81,7 +85,7 @@ export function ServiceAccountForm({
   const stepUp = useStepUpRetry(csrfToken);
   const departments = useDepartments();
   const [form, setForm] = useState<FormState>(() => initialState(row));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([form]);
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /*
@@ -138,11 +142,11 @@ export function ServiceAccountForm({
       title={row ? `${t('serviceAccounts.edit')} — ${row.code}` : t('serviceAccounts.add')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose} disabled={busy}>
+          <DialogCancel disabled={busy}>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button type="submit" form="sa-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.loading') : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </>
       }
@@ -166,6 +170,8 @@ export function ServiceAccountForm({
               groupName: vpn ? form.groupName.trim() : '',
               allowedIps: vpn ? form.allowedIps.trim() : '',
               note: form.note.trim(),
+              // Rỗng = bỏ hạn (API: chuỗi rỗng xoá, không gửi mới là giữ nguyên).
+              endDate: form.endDate,
             },
             {
               onSuccess: (created) => {
@@ -205,6 +211,7 @@ export function ServiceAccountForm({
                             value: secretValue,
                           }),
                         }),
+                        t('serviceAccounts.stepUpStoreSecret'),
                       );
                       toast({ message: t('serviceAccounts.secretSaved') });
                     } catch (err) {
@@ -216,7 +223,7 @@ export function ServiceAccountForm({
                        * nó chỉ hiện 4 giây thay vì 7 — trong đúng luồng mà mật khẩu vừa gõ sẽ
                        * không lấy lại được sau khi hộp đóng.
                        */
-                      const cancelled = (err as Error).message === 'STEPUP_CANCELLED';
+                      const cancelled = isStepUpCancelled(err);
                       toast({
                         message: cancelled
                           ? t('serviceAccounts.secretSkipped')
@@ -377,6 +384,15 @@ export function ServiceAccountForm({
               className="inp"
               value={form.ownerName}
               onChange={(e) => set('ownerName', e.target.value)}
+            />
+          </Field>
+          {/* Hạn dùng (Q-20) đứng cạnh "thuộc về ai": người phụ trách là người được nhắc khi
+              tài khoản cấp có thời hạn sắp hết. */}
+          <Field label={t('serviceAccounts.endDateOptional')} tip={t('serviceAccounts.endDateTip')}>
+            <DatePicker
+              value={form.endDate}
+              ariaLabel={t('serviceAccounts.endDateOptional')}
+              onChange={(value) => set('endDate', value)}
             />
           </Field>
         </FormSection>

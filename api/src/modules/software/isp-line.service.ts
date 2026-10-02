@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -16,6 +16,7 @@ import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
 import {
   conflictOnUnique,
+  escapeLike,
   PG_FOREIGN_KEY_VIOLATION,
   pgConstraint,
   pgErrorCode,
@@ -25,36 +26,38 @@ import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CATALOG_REF_INACTIVE, CatalogApiService, inactiveRefMessage } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
-import { ispLineHistoryTable, ispLineTable } from './software.schema';
-import { wanIpOf } from './wan-ip';
+import { ispLineHistoryTable, ispLineTable, ispLineWanIpTable } from './software.schema';
+import { MAX_WAN_IPS, wanIpsOf } from './wan-ip';
 
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
 
+/** Mặc định của màn danh sách: đường CÒN CHẠY — lúc sự cố không phải lọc bằng mắt đường đã thanh lý. */
+const ISP_LIVE_STATUSES: IspStatus[] = ['active', 'suspended'];
+
 /**
- * `?status=active,suspended` — màn danh sách mặc định chỉ bày đường CÒN CHẠY; lúc sự cố người
- * đọc không phải lọc bằng mắt mấy đường đã thanh lý. Chữ lạ thì ném: lọc sai trông y hệt lọc
- * đúng mà ít dòng hơn.
+ * `?status=active,suspended`. Vắng / rỗng = không lọc (⌘K). Đoạn rỗng (dấu phẩy thừa) bị bỏ.
+ * Có chữ lạ thì cả tham số coi như mặc định (Q-20): 400 thì cả màn thành trang lỗi, bỏ riêng
+ * phần lạ thì `?status=terminated,x` lại bày đường đã thanh lý như thể người dùng chọn đích danh.
  */
 export function ispStatusesOf(text: string | undefined): IspStatus[] {
   const parts = [...new Set((text ?? '').split(',').map((part) => part.trim()).filter(Boolean))];
-  for (const part of parts) {
-    if (!(ISP_STATUSES as readonly string[]).includes(part)) {
-      throw new BadRequestException({
-        code: 'ISP_STATUS_INVALID',
-        message: 'Trạng thái đường truyền không hợp lệ.',
-      });
-    }
+  if (parts.length === 0) return [];
+  if (parts.some((part) => !(ISP_STATUSES as readonly string[]).includes(part))) {
+    return [...ISP_LIVE_STATUSES];
   }
   return parts as IspStatus[];
 }
 
-/** Trường được theo dõi trong lịch sử (AD-13). */
+/**
+ * Trường được theo dõi trong lịch sử (AD-13). `wanIps` so dưới dạng chuỗi ghép ", " (xem
+ * `joinWanIps`): `diffRecord` chỉ so giá trị đơn, và dòng lịch sử cần đọc được "a → a, b".
+ */
 const TRACKED = [
   'code',
   'provider',
   'bandwidth',
-  'wanIp',
+  'wanIps',
   'siteId',
   'deviceId',
   'hotline',
@@ -71,7 +74,8 @@ export interface IspLineRecord {
   provider: string;
   providerId: string;
   bandwidth: string | null;
-  wanIp: string | null;
+  /** IPv4 đơn, theo thứ tự người nhập; rỗng = chưa ghi IP (Q-20). */
+  wanIps: string[];
   siteId: string | null;
   deviceId: string | null;
   hotline: string | null;
@@ -103,7 +107,8 @@ export interface IspLineInput {
   code?: string;
   providerId?: string;
   bandwidth?: string | null;
-  wanIp?: string | null;
+  /** Vắng mặt = giữ nguyên IP đang có; mảng rỗng = xoá hết. */
+  wanIps?: string[];
   siteId?: string | null;
   deviceId?: string | null;
   hotline?: string | null;
@@ -237,27 +242,40 @@ export class IspLineService {
 
   async create(actor: string, input: IspLineInput): Promise<IspLineRecord> {
     const values = await this.prepare(input, null);
+    const wanIps = requireWanIps(input.wanIps) ?? [];
     return this.db.transaction(async (tx) => {
       await this.assertDeviceWithin(tx, values, null);
       const created = await this.insertWithin(tx, values);
+      await this.replaceWanIpsWithin(tx, created.id, wanIps);
       await this.recordWithin(tx, actor, created.id, 'created', {
         code: { before: null, after: created.code },
       });
-      return created;
+      return toRecord(created, wanIps);
     });
   }
 
   async update(actor: string, id: string, input: IspLineInput): Promise<IspLineRecord> {
-    const before = await this.requireRow(id);
     const values = await this.prepare(input, id);
-    const changes = diffRecord(TRACKED, before, values);
-    if (!hasChanges(changes)) return toRecord(before);
-
+    const nextWanIps = requireWanIps(input.wanIps);
     return this.db.transaction(async (tx) => {
+      // Ảnh "trước" đọc SAU khi khoá hàng cha: đọc ngoài transaction thì một lượt sửa khác commit
+      // vào giữa, và dòng lịch sử của lượt này ghi "before" là thứ đã không còn — sổ nói sai
+      // IP WAN đã đổi từ đâu. Khoá này cũng xếp hàng hai lượt thay IP cùng một đường.
+      const before = await this.lockRowWithin(tx, id);
+      const beforeWanIps = (await this.wanIpsByLine([id], tx)).get(id) ?? [];
+      const changes = diffRecord(
+        TRACKED,
+        { ...before, wanIps: joinWanIps(beforeWanIps) },
+        nextWanIps === undefined ? values : { ...values, wanIps: joinWanIps(nextWanIps) },
+      );
+      if (!hasChanges(changes)) return toRecord(before, beforeWanIps);
+
+      const wanChanged = 'wanIps' in changes && nextWanIps !== undefined;
       await this.assertDeviceWithin(tx, values, before.deviceId);
       const updated = await this.updateWithin(tx, id, values);
+      if (wanChanged) await this.replaceWanIpsWithin(tx, id, nextWanIps);
       await this.recordWithin(tx, actor, id, 'updated', changes);
-      return updated;
+      return toRecord(updated, wanChanged ? nextWanIps : beforeWanIps);
     });
   }
 
@@ -278,10 +296,10 @@ export class IspLineService {
     });
   }
 
-  private async insertWithin(tx: Tx, values: Record<string, unknown>): Promise<IspLineRecord> {
+  private async insertWithin(tx: Tx, values: Record<string, unknown>): Promise<IspLineRow> {
     try {
       const rows = await tx.insert(ispLineTable).values(values as never).returning();
-      return toRecord(rows[0]);
+      return rows[0];
     } catch (error) {
       throw this.translate(error);
     }
@@ -291,25 +309,55 @@ export class IspLineService {
     tx: Tx,
     id: string,
     values: Record<string, unknown>,
-  ): Promise<IspLineRecord> {
+  ): Promise<IspLineRow> {
     try {
       const rows = await tx
         .update(ispLineTable)
         .set({ ...values, updatedAt: new Date() })
         .where(eq(ispLineTable.id, id))
         .returning();
-      return toRecord(rows[0]);
+      return rows[0];
     } catch (error) {
       throw this.translate(error);
     }
   }
 
+  /** Thay trọn danh sách IP WAN của một đường, giữ thứ tự người nhập ở `sort_order`. */
+  private async replaceWanIpsWithin(tx: Tx, ispLineId: string, wanIps: string[]): Promise<void> {
+    await tx.delete(ispLineWanIpTable).where(eq(ispLineWanIpTable.ispLineId, ispLineId));
+    if (wanIps.length === 0) return;
+    await tx
+      .insert(ispLineWanIpTable)
+      .values(wanIps.map((address, sortOrder) => ({ ispLineId, address, sortOrder })));
+  }
+
   // ─────────────────────────── Nội bộ ───────────────────────────
 
-  private async decorate(
-    rows: (typeof ispLineTable.$inferSelect)[],
-  ): Promise<IspLineListItem[]> {
+  /** IP WAN của nhiều đường trong MỘT câu — danh sách và file Excel đọc theo trang. */
+  private async wanIpsByLine(
+    ids: string[],
+    executor: Database | Tx = this.db,
+  ): Promise<Map<string, string[]>> {
+    const out = new Map<string, string[]>();
+    if (ids.length === 0) return out;
+    // `host()`: địa chỉ trần, không kèm "/32" — đúng chữ màn hình in và lịch sử so.
+    const rows = await executor
+      .select({
+        ispLineId: ispLineWanIpTable.ispLineId,
+        address: sql<string>`host(${ispLineWanIpTable.address})`,
+      })
+      .from(ispLineWanIpTable)
+      .where(inArray(ispLineWanIpTable.ispLineId, ids))
+      .orderBy(asc(ispLineWanIpTable.sortOrder));
+    for (const row of rows) {
+      out.set(row.ispLineId, [...(out.get(row.ispLineId) ?? []), row.address]);
+    }
+    return out;
+  }
+
+  private async decorate(rows: IspLineRow[]): Promise<IspLineListItem[]> {
     if (rows.length === 0) return [];
+    const wanIps = await this.wanIpsByLine(rows.map((row) => row.id));
     const lists = await this.catalog.lists({ includeInactive: true });
     const sites = new Map(lists.sites.map((site) => [site.id, site]));
 
@@ -339,7 +387,7 @@ export class IspLineService {
         }
       }
       out.push({
-        ...toRecord(row),
+        ...toRecord(row, wanIps.get(row.id) ?? []),
         siteCode: row.siteId ? (sites.get(row.siteId)?.code ?? null) : null,
         deviceCode,
         deviceName,
@@ -359,7 +407,6 @@ export class IspLineService {
 
     put('code', input.code === undefined ? undefined : requireText(input.code, 'mã đường truyền'));
     put('bandwidth', text(input.bandwidth));
-    put('wanIp', input.wanIp === undefined ? undefined : requireWanIp(input.wanIp ?? ''));
     put('siteId', input.siteId === undefined ? undefined : (input.siteId || null));
     put('deviceId', input.deviceId === undefined ? undefined : (input.deviceId || null));
     put('hotline', text(input.hotline));
@@ -451,7 +498,18 @@ export class IspLineService {
     }
   }
 
-  private async requireRow(id: string): Promise<typeof ispLineTable.$inferSelect> {
+  private async lockRowWithin(tx: Tx, id: string): Promise<IspLineRow> {
+    const rows = await tx.select().from(ispLineTable).where(eq(ispLineTable.id, id)).for('update');
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'ISP_NOT_FOUND',
+        message: 'Không tìm thấy đường truyền này.',
+      });
+    }
+    return rows[0];
+  }
+
+  private async requireRow(id: string): Promise<IspLineRow> {
     const rows = await this.db.select().from(ispLineTable).where(eq(ispLineTable.id, id));
     if (rows.length === 0) {
       throw new NotFoundException({
@@ -511,9 +569,17 @@ function buildWhere(filter: IspFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
   if (term) {
-    // Lúc đứt cáp người ta gõ bất cứ thứ gì nhớ được: mã, nhà mạng, IP, số hợp đồng. Cả bốn
-    // nằm trong cột sinh `isp_line.search_norm`, đã gấp dấu — B-01.
-    parts.push(searchNormLike(ispLineTable, term));
+    // Lúc đứt cáp người ta gõ bất cứ thứ gì nhớ được: mã, nhà mạng, IP, số hợp đồng. Mã, nhà
+    // mạng, số hợp đồng nằm trong cột sinh `isp_line.search_norm` (đã gấp dấu — B-01); IP WAN ở
+    // bảng con nên tìm bằng truy vấn con — khớp BẤT KỲ IP nào của đường (Q-20). Ctrl+K gọi
+    // đúng `?search=` này.
+    parts.push(
+      or(
+        searchNormLike(ispLineTable, term),
+        sql`${ispLineTable.id} IN (SELECT ${ispLineWanIpTable.ispLineId} FROM ${ispLineWanIpTable}
+              WHERE host(${ispLineWanIpTable.address}) LIKE ${`%${escapeLike(term)}%`})`,
+      ),
+    );
   }
   if (filter.siteId) parts.push(eq(ispLineTable.siteId, filter.siteId));
   if (filter.providerId) parts.push(eq(ispLineTable.providerId, filter.providerId));
@@ -527,18 +593,38 @@ function buildWhere(filter: IspFilter): SQL | undefined {
  * Cột `end_date` vẫn nằm trong bảng (migration chỉ tiến) nhưng KHÔNG ra khỏi API: đường truyền
  * không có hạn (Q-04), và một ngày cũ lộ ra ở client nào đó sẽ bị đọc thành hạn thật.
  */
-function toRecord(row: typeof ispLineTable.$inferSelect): IspLineRecord {
+type IspLineRow = typeof ispLineTable.$inferSelect;
+
+function toRecord(row: IspLineRow, wanIps: string[]): IspLineRecord {
   const { endDate: _retired, ...rest } = row;
   void _retired;
-  return { ...rest, status: row.status as IspStatus };
+  return { ...rest, wanIps, status: row.status as IspStatus };
 }
 
-function requireWanIp(raw: string): string | null {
-  const wan = wanIpOf(raw);
-  if (!wan.valid) {
+function joinWanIps(wanIps: string[]): string {
+  return wanIps.join(', ');
+}
+
+/** `undefined` = client không gửi trường này → giữ nguyên IP đang có. */
+function requireWanIps(raw: string[] | undefined): string[] | undefined {
+  if (raw === undefined) return undefined;
+  const wan = wanIpsOf(raw);
+  if (wan.reason === 'range') {
+    throw new BadRequestException({
+      code: 'WAN_IP_RANGE',
+      message: `Nhập từng IP, không nhập dải: ${wan.bad}.`,
+    });
+  }
+  if (wan.reason === 'invalid') {
     throw new BadRequestException({
       code: 'WAN_IP_INVALID',
-      message: 'IP WAN phải là một IPv4 (vd 113.161.10.20) hoặc một khối IP (vd 113.161.10.16/29).',
+      message: `IP WAN "${wan.bad}" không phải một IPv4 (vd 113.161.10.20).`,
+    });
+  }
+  if (wan.reason === 'too_many') {
+    throw new BadRequestException({
+      code: 'WAN_IP_TOO_MANY',
+      message: `Một đường truyền ghi tối đa ${MAX_WAN_IPS} IP WAN.`,
     });
   }
   return wan.value;

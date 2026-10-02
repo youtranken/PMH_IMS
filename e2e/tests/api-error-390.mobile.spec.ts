@@ -100,14 +100,14 @@ test.describe('Màn danh sách hỏng, đọc ở 390px', () => {
     await expectErrorBlockFits(page);
   });
 
-  test('danh sách dải IP: hỏng thì hiện khối lỗi, không hiện "chưa khai dải nào"', async ({
+  test('danh sách dải IP: hỏng thì hiện khối lỗi, không hiện "chưa khai báo dải nào"', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
     await breakRoute(page, /\/api\/v1\/ipam\/subnets(\?|$)/);
     await page.goto('/ip-addresses');
 
-    await expect(page.getByText('Chưa khai dải nào')).toHaveCount(0);
+    await expect(page.getByText('Chưa khai báo dải nào')).toHaveCount(0);
     await expectErrorBlockFits(page);
   });
 

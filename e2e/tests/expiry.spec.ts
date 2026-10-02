@@ -127,8 +127,8 @@ test.describe('Cỗ máy Expiry', () => {
       endDate: inDays(15),
     });
 
-    // API phải khai đủ 6 nguồn: 5 loại phần mềm (cả "Khác" — Q-14) + bảo hành thiết bị. Đường
-    // truyền không có hạn nên không phải một nguồn (Q-04).
+    // API phải khai đủ 7 nguồn: 5 loại phần mềm (cả "Khác" — Q-14) + bảo hành thiết bị + tài
+    // khoản dịch vụ (Q-20). Đường truyền không có hạn nên không phải một nguồn (Q-04).
     const kinds = await page.evaluate(async () => {
       const res = await fetch('/api/v1/expiry/kinds', { credentials: 'include' });
       return (await res.json()) as { kind: string; canRenew: boolean }[];
@@ -138,6 +138,7 @@ test.describe('Cỗ máy Expiry', () => {
       'license',
       'maintenance',
       'other',
+      'service_account',
       'ssl',
       'warranty',
     ]);
@@ -351,7 +352,8 @@ test.describe('Cỗ máy Expiry', () => {
 
     // Mở hồ sơ rồi bấm Back — không được rơi về một bảng chưa lọc.
     await linkRow.click();
-    await expect(page).toHaveURL(/\/software\//);
+    // SSL mở thẳng trang của màn Tên miền & SSL (Q-22) — link do API dựng theo loại.
+    await expect(page).toHaveURL(/\/domains\//);
     await page.goBack();
     await expect(page).toHaveURL(/[?&]state=expired/);
     await expect(linkRow).toBeVisible();

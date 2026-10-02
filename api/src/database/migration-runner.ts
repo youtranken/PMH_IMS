@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Pool, type PoolClient } from 'pg';
 import { redactMessage } from '../common/log-redact';
+import { preflightMigration } from './migration-preflight';
 
 /** Khóa advisory cố định — 2 instance api cùng khởi động không chạy migration chồng nhau. */
 const MIGRATION_LOCK_ID = 727_001;
@@ -95,6 +96,8 @@ export async function runMigrations(
         }
         continue;
       }
+      const blocked = await preflightMigration(client, file);
+      if (blocked) throw new Error(`Migration ${file} chưa chạy được: ${blocked}`);
       if (NO_TX_MARKER.test(sql)) {
         // Không wrap transaction; journal ghi SAU khi câu lệnh thành công.
         try {

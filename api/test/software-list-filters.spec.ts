@@ -139,4 +139,23 @@ describe('Danh sách phần mềm · bộ lọc', () => {
   it('ô tìm vẫn khớp mã hồ sơ như cũ', async () => {
     expect(await codes({ search: 'LOC-RETIRED', alsoIds: [] })).toEqual(['LIC-E2E-LOC-RETIRED']);
   });
+
+  /*
+   * Q-22: mỗi màn hỏi đúng loại của nó — Tên miền & SSL hỏi HAI loại một lượt. `kinds` đi xuống
+   * `inArray` trên cột enum, nên bài này chạy trên Postgres thật chứ không giả câu truy vấn.
+   */
+  it('kinds lọc một hoặc nhiều loại; tìm theo tên miền bất kỳ trong hồ sơ', async () => {
+    await scratch.pool.query(
+      `INSERT INTO software (code, name, kind, end_date, websites) VALUES
+         ('SSL-E2E-LOC-Q22', 'Cert', 'ssl', '2030-01-01', ARRAY['shop-loc.pmh.vn', 'mail-loc.pmh.vn']),
+         ('DOM-E2E-LOC-Q22', 'Domain', 'domain', '2030-01-01', ARRAY['pmh-loc.vn']),
+         ('MNT-E2E-LOC-Q22', 'Bảo trì', 'maintenance', NULL, '{}')`,
+    );
+    expect(await codes({ kinds: ['ssl', 'domain'] })).toEqual(['DOM-E2E-LOC-Q22', 'SSL-E2E-LOC-Q22']);
+    expect(await codes({ kinds: ['maintenance'] })).toEqual(['MNT-E2E-LOC-Q22']);
+    expect(await codes({ kinds: ['license'], search: 'Q22', alsoIds: [] })).toEqual([]);
+    expect(await codes({ kinds: ['ssl', 'domain'], search: 'mail-loc', alsoIds: [] })).toEqual([
+      'SSL-E2E-LOC-Q22',
+    ]);
+  });
 });

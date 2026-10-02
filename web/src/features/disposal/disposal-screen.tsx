@@ -226,23 +226,28 @@ export function DisposalScreen() {
           onChange={(key) => setPeriod(period === key ? '' : key)}
           options={PERIODS.map((key) => ({ value: key, label: t(PERIOD_KEY[key]) }))}
         />
-        <DatePicker
-          value={filters.from}
-          ariaLabel={t('disposal.from')}
-          placeholder={t('disposal.from')}
-          max={filters.to || undefined}
-          onChange={(value) => url.setFilter('from', value)}
-        />
-        <DatePicker
-          value={filters.to}
-          ariaLabel={t('disposal.to')}
-          placeholder={t('disposal.to')}
-          min={filters.from || undefined}
-          onChange={(value) => url.setFilter('to', value)}
-        />
+        {/* "Từ – đến" là MỘT cụm cùng hàng (`.filter-range`). Chữ trong ô ngắn để không bị cắt
+            thành "Thanh lý đế…"; tên đầy đủ nằm ở nhãn trợ năng. */}
+        <div className="filter-range" role="group" aria-label={t('disposal.dateRange')}>
+          <DatePicker
+            value={filters.from}
+            ariaLabel={t('disposal.from')}
+            placeholder={t('disposal.fromShort')}
+            max={filters.to || undefined}
+            onChange={(value) => url.setFilter('from', value)}
+          />
+          <DatePicker
+            value={filters.to}
+            ariaLabel={t('disposal.to')}
+            placeholder={t('disposal.toShort')}
+            min={filters.from || undefined}
+            onChange={(value) => url.setFilter('to', value)}
+          />
+        </div>
         <Select
           value={sortName}
           ariaLabel={t('disposal.sort')}
+          indicateFilled={false}
           options={(Object.keys(SORTS) as SortName[]).map((name) => ({
             value: name,
             label: t(`disposal.sort_${name}`),
@@ -291,6 +296,7 @@ export function DisposalScreen() {
               rowKey={(item) => `${item.kind}-${item.id}`}
               card={{
                 title: (item) => item.code,
+                titleIsCode: true,
                 href: (item) => LINK[item.kind](item.id),
                 badge: (item) => <span className="badge muted">{t(KIND_KEY[item.kind])}</span>,
                 actions: (item) => (

@@ -9,6 +9,7 @@ import {
   useAttachmentLimits,
 } from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { FormSection } from '@/ui/page-header';
 import {
   ATTACHMENT_ACCEPT,
@@ -152,12 +153,13 @@ export function AttachmentDraftSection({
               <span className="muted">({formatSize(file.size)})</span>{' '}
               <button
                 type="button"
-                className="btn sm"
+                className="btn-x danger"
                 disabled={disabled}
                 aria-label={t('attachments.draftRemoveOf', { name: file.name })}
+                title={t('attachments.draftRemove')}
                 onClick={() => draft.removeAt(index)}
               >
-                {t('attachments.draftRemove')}
+                <CloseIcon />
               </button>
             </li>
           ))}

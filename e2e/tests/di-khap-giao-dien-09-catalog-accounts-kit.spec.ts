@@ -660,7 +660,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * hỏng của nó dễ nói "Chưa có dữ liệu" khi API 500. Bài này chốt rằng bên trong hộp có
    * BẢNG THẬT với đủ bốn cột và có nút đá phiên — tức là nó đã hỏi được và đã trả lời.
    *
-   * ĐỎ KHI: mất nút "Thêm tài khoản", bảng thừa/thiếu/đổi tên một cột (nhất là cột Vai trò —
+   * ĐỎ KHI: mất nút "Thêm người dùng", bảng thừa/thiếu/đổi tên một cột (nhất là cột Vai trò —
    * không thấy vai trò thì không ai biết mình đang khóa nhầm ai), menu rụng một mục, hoặc
    * hộp Phiên mở ra mà bên trong không có bảng.
    *
@@ -680,8 +680,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
     await expect(
       page.getByRole('button', { name: /^Thêm/ }),
-      'màn Tài khoản phải có đúng một nút thêm và nó ghi "Thêm tài khoản"',
-    ).toHaveText(['Thêm tài khoản']);
+      'màn Tài khoản phải có đúng một nút thêm và nó ghi "Thêm người dùng"',
+    ).toHaveText(['Thêm người dùng']);
 
     const columns = page.getByRole('table').getByRole('columnheader');
     await expect(
@@ -726,7 +726,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
     /*
      * So TẬP HỢP (đã sắp) chứ không so thứ tự: thứ tự trong menu do `RowActions` tự xếp lại
-     * theo cờ `danger`, còn điều bài này bảo vệ là "còn đủ năm việc hay không".
+     * theo cờ `danger`, còn điều bài này bảo vệ là "còn đủ bốn việc hay không".
      */
     expect(
       sortOrder(await rowActionNames(page, saFullName)),
@@ -736,7 +736,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
         'Xem chi tiết',
         'Phiên đang mở',
-        'Nhật ký thao tác',
+        // Nhật ký / Quyền két nằm trong hộp Chi tiết (Q-21), không còn ở menu dòng.
         'Đặt lại mật khẩu',
         // Hạt giống SA luôn bị bắt 2 lớp (`reset-e2e.mjs`), nên mục bật/tắt đang ở vế "Bỏ".
         'Bỏ bắt buộc 2 lớp khi đăng nhập',
@@ -807,8 +807,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const employeeCode = `NV-${stamp}`;
 
     // ===== CHẾ ĐỘ TẠO =====
-    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
-    const createDialog = page.getByRole('dialog', { name: 'Thêm tài khoản', exact: true });
+    await page.getByRole('button', { name: 'Thêm người dùng' }).click();
+    const createDialog = page.getByRole('dialog', { name: 'Thêm người dùng', exact: true });
     await expect(createDialog).toBeVisible();
 
     expect(
@@ -943,7 +943,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   test('Phòng Bộ giao diện liệt kê đủ mọi khu, đúng thứ tự', async ({ page }) => {
     await firstLogin(page, E2E_SA);
 
-    await page.getByRole('link', { name: 'Bộ giao diện' }).click();
+    // Trang nội bộ không có trên menu (Q-20) — vào bằng URL.
+    await page.goto('/dev/components');
     await expect(page.getByRole('heading', { name: 'Bộ giao diện', exact: true })).toBeVisible();
 
     await expect(

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
 /**
- * Hình nhỏ trên nút — đóng (✕), ba chấm (⋮), và ba dấu tròn trạng thái (! · i · ✓) — dùng
- * chung cho cả app (AD-15).
+ * Hình nhỏ trên nút — đóng (✕), thêm (+), ba chấm (⋮), chép / đã chép, ba dấu tròn trạng thái
+ * (! · i · ✓) và ba biểu tượng giao diện (sáng · tối · theo hệ thống) — dùng chung cho cả app
+ * (AD-15).
  *
  * Không viết KÝ TỰ: chúng theo phông và cỡ chữ nên ở 14px mảnh như dấu ngoặc, nằm theo đường
  * cơ sở của chữ nên lệch khỏi tâm ô bấm, và đứng cạnh `Chevron` SVG thì đọc ra hai hệ thống
@@ -44,6 +45,64 @@ export function CloseIcon({ className }: { className?: string }) {
   );
 }
 
+export function PlusIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className}>
+      <path d="M12 5v14M5 12h14" />
+    </Glyph>
+  );
+}
+
+/**
+ * Hai tờ giấy chồng nhau — nút chép (`CopyButton`). Hai hình vuông bằng nhau lệch chéo 4 đơn vị,
+ * cả cụm cân đúng giữa khung 4..20 để nằm giữa ô vuông của nút; tờ sau chỉ vẽ phần lộ ra.
+ * Nét 2.2: mảnh hơn ✕/+ một chút vì hình này có nhiều nét song song sát nhau.
+ */
+export function CopyIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={['glyph-copy', className].filter(Boolean).join(' ')} strokeWidth={2.2}>
+      <rect x="8" y="8" width="12" height="12" rx="2.5" />
+      <path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4H6.5A2.5 2.5 0 0 0 4 6.5V13.5A2.5 2.5 0 0 0 6.5 16H8" />
+    </Glyph>
+  );
+}
+
+/** Dấu tích — nút chép vừa chép xong. */
+export function CheckIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={['glyph-check', className].filter(Boolean).join(' ')} strokeWidth={3}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Glyph>
+  );
+}
+
+/** Vô cực — kỳ hạn "Vĩnh viễn" (`PerpetualBadge`). */
+export function InfinityIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
+    </Glyph>
+  );
+}
+
+/** Vòng tròn rỗng — điều kiện CHƯA đạt trong danh sách luật (cặp với `CheckIcon`). */
+export function CircleIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <circle cx="12" cy="12" r="6.5" />
+    </Glyph>
+  );
+}
+
+/**
+ * Dấu đạt / chưa đạt của MỘT điều kiện trong danh sách luật (luật mật khẩu đăng nhập, độ khó
+ * mật khẩu cất két). Một chỗ vẽ để hai danh sách không lệch nhau; trạng thái thật vẫn phải
+ * nói bằng chữ sr-only ở nơi gọi — hình luôn `aria-hidden`.
+ */
+export function RuleMark({ met, className }: { met: boolean; className?: string }) {
+  return met ? <CheckIcon className={className} /> : <CircleIcon className={className} />;
+}
+
 /** Ba chấm DỌC (Q-18) — chấm tô đặc, nét `currentColor`. */
 export function KebabIcon({ className }: { className?: string }) {
   return (
@@ -57,6 +116,38 @@ export function KebabIcon({ className }: { className?: string }) {
       <circle cx="12" cy="12" r="2" />
       <circle cx="12" cy="19" r="2" />
     </svg>
+  );
+}
+
+/*
+ * Ba biểu tượng giao diện sáng / tối / theo hệ thống — MỘT bộ cho nút ở topbar (`ThemeSwitch`),
+ * menu tài khoản và màn Hồ sơ (`ThemeChoice`): người dùng nhận ra cùng một lựa chọn ở cả ba chỗ.
+ * Nét 2 thay vì 2,4: hình nhiều chi tiết, nét dày thì tia mặt trời dính vào nhau ở cỡ 16px.
+ */
+export function SunIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </Glyph>
+  );
+}
+
+export function MoonIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </Glyph>
+  );
+}
+
+/** "Theo hệ thống": màn hình máy tính — giao diện theo cài đặt của máy. */
+export function MonitorIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2}>
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </Glyph>
   );
 }
 

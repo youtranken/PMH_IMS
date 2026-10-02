@@ -14,13 +14,15 @@ import { PATHS } from '@/lib/routes';
 import { CellNote } from '@/ui/cell-note';
 import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
-import { ExportXlsxButton } from '@/ui/export-xlsx-button';
+import { ExportXlsxButton, useXlsxDownload } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Dialog } from '@/ui/dialog';
 import { HistoryPanel } from '@/ui/history-panel';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
@@ -417,6 +419,10 @@ export function CatalogScreen({ me }: { me: Me }) {
   const canManage = me.role === 'sa' || me.role === 'admin';
   const csrfToken = me.csrfToken;
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
+  /* Điện thoại: Xuất / Nhập vào menu ⋮ như trang chi tiết thiết bị — ba nút một hàng không vừa
+     390px, nút Thêm (việc chính) rơi xuống hàng riêng. */
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
+  const xlsx = useXlsxDownload();
 
   /* Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng, và số mục trên nhãn từng tab
      (ADM-031): người mới nhìn thanh tab là biết bảy nhóm nào đã khai, nhóm nào còn trống. Cùng
@@ -648,6 +654,8 @@ export function CatalogScreen({ me }: { me: Me }) {
   }
 
   const kind = t(`catalog.noun${TAB_SUFFIX[entity]}`);
+  const exportUrl = `/api/v1/catalog/${entity}/export?${exportQuery(filters.search, filters.status, siteId, sorting)}`;
+  const exportFile = `danh-muc-${entity}.xlsx`;
 
   return (
     <>
@@ -659,15 +667,32 @@ export function CatalogScreen({ me }: { me: Me }) {
             {/* Nhập Excel chỉ có nghĩa với bốn danh mục gốc, và chỉ SA/Admin (Q-12). File mẫu
                 nằm TRONG hộp nhập — nó là bước con của việc nhập, không phải nút đầu trang. */}
             {/* Xuất đúng tab + bộ lọc đang xem — tờ in dán phòng máy (NCC, hotline nhà mạng). */}
-            <ExportXlsxButton
-              url={`/api/v1/catalog/${entity}/export?${exportQuery(filters.search, filters.status, siteId, sorting)}`}
-              fileName={`danh-muc-${entity}.xlsx`}
-            />
-            {importable && canManage ? (
-              <button type="button" className="btn" onClick={() => setImporting(true)}>
-                {t('catalog.importExcel')}
-              </button>
-            ) : null}
+            {narrow ? (
+              <RowActions
+                label={t('common.actionsOf', { subject: t('catalog.title') })}
+                triggerText={xlsx.busy ? t('common.loading') : undefined}
+                items={[
+                  {
+                    key: 'export',
+                    label: t('common.export'),
+                    disabled: xlsx.busy,
+                    onSelect: () => xlsx.run(exportUrl, exportFile),
+                  },
+                  ...(importable && canManage
+                    ? [{ key: 'import', label: t('catalog.importExcel'), onSelect: () => setImporting(true) }]
+                    : []),
+                ]}
+              />
+            ) : (
+              <>
+                <ExportXlsxButton url={exportUrl} fileName={exportFile} />
+                {importable && canManage ? (
+                  <button type="button" className="btn" onClick={() => setImporting(true)}>
+                    {t('catalog.importExcel')}
+                  </button>
+                ) : null}
+              </>
+            )}
             {/* Bề ngang tối thiểu cố định (`.catalog-add`): nhãn đổi theo tab ("Thêm site" →
                 "Thêm nhà cung cấp") mà nút co giãn theo chữ thì cả cụm nút giật mỗi lần đổi tab. */}
             <button

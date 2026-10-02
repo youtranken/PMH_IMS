@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  createTestSubnet,
   APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
@@ -58,12 +59,12 @@ test.describe('Xuất Excel', () => {
         hotline: '18008119',
       },
     });
-    const octet = Number(stamp) % 200;
-    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+    const { id: subnetId, octet } = await createTestSubnet(
+      page,
       headers,
-      data: { cidr: `172.16.${octet}.0/29`, name: `LAN xuất E2E ${stamp}` },
-    });
-    const subnetId = ((await subnet.json()) as { id: string }).id;
+      `LAN xuất E2E ${stamp}`,
+      Number(stamp),
+    );
     await page.request.post('/api/v1/ipam/addresses', {
       headers,
       data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'Máy kế toán' },
@@ -75,6 +76,8 @@ test.describe('Xuất Excel', () => {
       '/api/v1/isp-lines/export.xlsx',
       '/api/v1/expiry/export.xlsx',
       `/api/v1/ipam/subnets/${subnetId}/export.xlsx`,
+      // Q-20: "Xuất tất cả" của màn IP.
+      '/api/v1/ipam/addresses/export.xlsx',
       '/api/v1/ipam/nat/export.xlsx',
       '/api/v1/vault/break-glass/export.xlsx',
     ]) {
@@ -130,6 +133,7 @@ test.describe('Xuất Excel', () => {
       '/api/v1/software/export.xlsx',
       '/api/v1/isp-lines/export.xlsx',
       '/api/v1/expiry/export.xlsx',
+      '/api/v1/ipam/addresses/export.xlsx',
       '/api/v1/ipam/nat/export.xlsx',
       '/api/v1/vault/break-glass/export.xlsx',
     ]) {
@@ -219,8 +223,9 @@ test.describe('Xuất Excel', () => {
     );
 
     expect(filtered).toContain('Tên miền lọc B');
-    // SW-043: website của SSL/tên miền có cột riêng trong file.
-    expect(filtered).toContain('Website');
+    // Q-22: file của màn Tên miền & SSL có cột "Tên miền", không có cột ghế của license.
+    expect(filtered).toContain('Tên miền');
+    expect(filtered).not.toContain('Ghế dùng/tổng');
     expect(filtered).toContain(`e2e-loc-${stamp}.pmh.vn`);
     expect(filtered).not.toContain('License lọc A');
     expect(all).toContain('Tên miền lọc B');

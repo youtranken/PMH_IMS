@@ -257,10 +257,15 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
      */
     const cards = await rail.getByRole('link').count();
     expect(cards, 'ít nhất phải có hai thẻ của chính bài này').toBeGreaterThanOrEqual(2);
+    /* Ô "Lọc theo site" (Q-20) chỉ mọc khi máy có dải gắn site — dữ liệu của máy, không phải
+       của bài, nên đếm tại chỗ như số thẻ. */
+    const siteFilter = await rail
+      .getByRole('button', { name: 'Lọc theo site', exact: true })
+      .count();
     await expect(
       rail.getByRole('button'),
       'mỗi thẻ đúng MỘT nút ba chấm — thẻ nào mất nút là dải đó hết sửa được mà không có gì báo',
-    ).toHaveCount(cards);
+    ).toHaveCount(cards + siteFilter);
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
@@ -274,7 +279,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'button',
       [
         ['Xuất Excel', 1],
-        ['Khai dải mới', 1],
+        ['Thêm dải mạng', 1],
+        ['Lọc theo site', siteFilter],
         ['Tra', 1],
         [/^Thao tác với /, cards],
         ['Giấy tờ (0)', 1],
@@ -308,19 +314,19 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'dải đã mang lịch sử thì KHÔNG có "Xóa" — `ip_history` là bảng chỉ-thêm (AD-13), bày nút ra là bày để bấm rồi ăn lỗi',
     ).toEqual(['Sửa', 'Ngừng dùng']);
 
-    /* ----- Hộp "Khai dải mới": bên trong có đúng những ô nào ----- */
-    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
-    const addForm = page.getByRole('dialog', { name: 'Khai dải mới' });
+    /* ----- Hộp "Thêm dải mạng": bên trong có đúng những ô nào ----- */
+    await page.getByRole('button', { name: 'Thêm dải mạng' }).first().click();
+    const addForm = page.getByRole('dialog', { name: 'Thêm dải mạng' });
     await expect(addForm).toBeVisible();
     await expect(
       addForm.getByRole('heading', { level: 2 }),
       'hộp KHAI MỚI không chia khối — chỉ có đúng tiêu đề hộp',
-    ).toHaveText(['Khai dải mới']);
+    ).toHaveText(['Thêm dải mạng']);
     await expectHandles(
       addForm,
       'textbox',
       ['Dải', 'Tên gọi', 'VLAN', 'Gateway', 'Mô tả'],
-      'Hộp "Khai dải mới"',
+      'Hộp "Thêm dải mạng"',
     );
     // Site là `Select` → tay nắm của nó là NÚT, không phải ô nhập. Nhầm vai nghĩa là người
     // dùng bàn phím thao tác khác hẳn điều ta tưởng.
@@ -328,7 +334,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       addForm,
       'button',
       ['Đóng hộp thoại', 'Site', 'Hủy', 'Lưu'],
-      'Hộp "Khai dải mới"',
+      'Hộp "Thêm dải mạng"',
     );
     await expect(
       addForm.getByRole('combobox'),
@@ -342,12 +348,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     // Lựa chọn của `Select` PORTAL ra ngoài phần thân hộp — bắt ở cấp trang.
     await addForm.getByRole('button', { name: 'Site', exact: true }).click();
     await expect(
-      page.getByRole('option', { name: 'Không gắn site', exact: true }),
+      page.getByRole('option', { name: 'Tất cả site (dùng chung)', exact: true }),
       'phải có đường "không gắn site" — không thì mọi dải bị ép thuộc về một site nào đó',
     ).toBeVisible();
     // Esc trong `Select` chỉ đóng menu, KHÔNG được đóng luôn cả hộp thoại.
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('option', { name: 'Không gắn site', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('option', { name: 'Tất cả site (dùng chung)', exact: true })).toHaveCount(0);
     await expect(addForm, 'Esc đóng menu chọn thì hộp thoại phải còn nguyên').toBeVisible();
 
     await addForm.getByRole('button', { name: 'Đóng hộp thoại' }).click();
@@ -399,7 +405,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
     ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
-    /* ----- Bảng: đúng sáu cột ----- */
+    /* ----- Bảng: đúng sáu cột ở 1280px (Site của máy — Q-20). Ngày cấp ở khổ 961–1440px là
+       dòng phụ dưới Trạng thái: cột thứ bảy đẩy cột Thao tác ra ngoài khung phải. ----- */
     const table = page.getByRole('table');
     await expect(
       table.getByRole('columnheader'),
@@ -408,8 +415,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Địa chỉ',
       'Trạng thái',
       'Thiết bị',
+      'Site',
       'Người / phòng ban dùng',
-      'Ngày cấp',
       'Thao tác',
     ]);
     await expect(table.getByRole('row'), 'một hàng tiêu đề + 6 địa chỉ').toHaveCount(7);
@@ -777,7 +784,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveText([
       'Xuất Excel',
       'Thêm luật NAT',
-      'Mọi site',
+      'Tất cả site',
       'Mọi router',
       'Mọi giao thức',
       /^Đang mở \d+$/,
@@ -843,7 +850,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       page.getByRole('option').first(),
       'lựa chọn đầu luôn là đường bỏ lọc',
-    ).toHaveText('Mọi site');
+    ).toHaveText('Tất cả site');
     await expect(
       page.getByRole('option', { name: fixture.siteCode, exact: true }),
       'site vừa khai phải có trong danh sách — không thì bộ lọc chỉ bày ra thứ không dùng được',
@@ -863,7 +870,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    *
    * Hộp "Thêm luật NAT" là form phức tạp nhất hệ thống: ba khối theo đúng đường đi của một gói
    * tin, một ô cổng dạng CHIP nhận nhiều khoảng, một nhóm giao thức `role="group"`, và HAI
-   * đường mở tiếp hộp con ("+ Thêm router mới", "+ Thêm dịch vụ") cho thứ chưa có trong kho.
+   * đường mở tiếp hộp con ("Thêm thiết bị mới", "Thêm dịch vụ") cho thứ chưa có trong kho.
    *
    * Ba khối ấy không phải trang trí: một dây mười ô xếp dọc làm "Loại thiết bị" — một BỘ LỌC
    * của ô ngay dưới — đứng như thể là dữ liệu của rule.
@@ -917,12 +924,20 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       ['Cổng ngoài', 'Cổng trong', 'IP trong', 'Lý do mở', 'Ghi chú'],
       'Hộp "Thêm luật NAT"',
     );
+    /* Dải chip lọc loại dưới ô Router (Q-20): "Tất cả loại" + mỗi loại thiết bị đang dùng —
+       danh mục của máy chạy test, nên đọc tại chỗ. */
+    const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
+      deviceTypes: { name: string; active: boolean }[];
+    };
+    const typeChips = catalog.deviceTypes.filter((type) => type.active).map((type) => type.name);
     await expectHandles(
       form,
       'button',
       /* Ba nút (i) "Giải thích: …" mang lời dặn dài khỏi dưới ô (Q-19) — mất một cái là lời
          dặn đó biến khỏi form. */
       [
+        'Tất cả loại',
+        ...typeChips,
         'Đóng hộp thoại',
         'Giải thích: Cổng ngoài',
         'Thêm',
@@ -941,7 +956,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       form,
       'checkbox',
-      [/^Hiện mọi thiết bị/, 'Đang dùng'],
+      ['Đang dùng'],
       'Hộp "Thêm luật NAT"',
     );
     const enabledBox = form.getByRole('checkbox', { name: 'Đang dùng', exact: true });
@@ -977,10 +992,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'ô này nhận cả một DẢI cổng, không chỉ một số',
     ).toBeVisible();
 
-    /* ----- Hộp con 1: "+ Thêm router mới" — hộp CHA phải sống ----- */
+    /* ----- Hộp con 1: "Thêm thiết bị mới" — hộp CHA phải sống ----- */
     await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('Phòng Nhân sự');
     await form.getByRole('combobox', { name: 'Router', exact: true }).click();
-    await form.getByRole('button', { name: '+ Thêm router mới' }).click();
+    await form.getByRole('button', { name: 'Thêm thiết bị mới', exact: true }).click();
     const deviceForm = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await expect(
       deviceForm,
@@ -998,9 +1013,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Phòng Nhân sự',
     );
 
-    /* ----- Hộp con 2: "+ Thêm dịch vụ" ----- */
+    /* ----- Hộp con 2: "Thêm dịch vụ" ----- */
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài', exact: true }).click();
-    await form.getByRole('button', { name: '+ Thêm dịch vụ' }).click();
+    await form.getByRole('button', { name: 'Thêm dịch vụ', exact: true }).click();
     const serviceForm = page.getByRole('dialog', { name: 'Thêm dịch vụ' });
     await expect(serviceForm).toBeVisible();
     await serviceForm.getByRole('button', { name: 'Hủy' }).click();
@@ -1016,7 +1031,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     // "Mở cho ai" cũng bắt buộc (API từ chối rule không có người dùng) — điền để chỉ còn đúng lỗi port.
     await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở', exact: true }).fill(`thử E2E ${stamp}`);
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(
       form.getByRole('alert'),
       'một lỗi, một chỗ nói ra — không phải hai câu chồng nhau',
@@ -1027,7 +1042,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveText('Thêm ít nhất một cổng ngoài.');
     await expect(form, 'lỗi thì hộp Ở LẠI — đóng là mất trắng thứ vừa gõ').toBeVisible();
 
+    // Form đã gõ dở: Hủy đi cùng cửa với Esc — hỏi lại trước khi vứt.
     await form.getByRole('button', { name: 'Hủy' }).click();
+    await confirmAction(page, 'Bỏ và đóng');
     await expect(form).toHaveCount(0);
     await expect(page.getByText('Chưa có luật NAT nào'), 'bấm Hủy là không ghi gì cả').toBeVisible();
   });

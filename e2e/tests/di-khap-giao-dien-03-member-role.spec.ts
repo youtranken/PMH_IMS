@@ -68,10 +68,14 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       .map((text) => text.trim())
       .sort();
     const expected = [
-      // 10 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
+      // 13 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
+      // Ba màn tách từ Phần mềm (Q-22) — đọc mở cho mọi vai như Phần mềm.
+      'Tên miền & SSL',
+      'Hợp đồng bảo trì',
+      'Dịch vụ có hạn khác',
       'Đường truyền',
       'Sắp hết hạn',
       'Địa chỉ IP',
@@ -86,11 +90,11 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     ].sort();
     expect(
       seen,
-      'Thành viên phải thấy đúng 11 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
+      'Thành viên phải thấy đúng 14 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
     ).toEqual(expected);
 
     // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
-    // "Dành cho nhà phát triển" chỉ SA thấy (SHELL-008, SHELL-012).
+    // "Dành cho nhà phát triển" không còn trên menu của ai (Q-20).
     for (const group of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Hệ thống']) {
       await expect(nav.getByText(group, { exact: true })).toBeVisible();
     }

@@ -71,7 +71,7 @@ test.describe('Bảng điều khiển', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
-    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
+    const expiring = page.locator('section').filter({ hasText: 'Tổng hợp hết hạn cần xử lý' });
     await expect(expiring.getByText('License gấp')).toBeVisible();
     await expect(expiring.getByText('License thong tha')).toBeVisible();
 
@@ -213,7 +213,7 @@ test.describe('Bảng điều khiển', () => {
      * diện, nếu hạn rơi vào 30 ngày tới, sẽ làm khối này có dữ liệu. Bắt nó phải rỗng là bắt
      * cả cái DB dev phải sạch — điều kiện không đời nào giữ được, và khi vỡ thì báo sai chỗ.
      */
-    await expect(page.getByRole('heading', { name: 'Hạn cần xử lý' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tổng hợp hết hạn cần xử lý' })).toBeVisible();
     await expect(
       page.getByText('Không tải được khối này. Các khối còn lại vẫn đúng.'),
     ).toHaveCount(0);
@@ -347,7 +347,7 @@ test.describe('Bảng điều khiển', () => {
     await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toBeVisible();
   });
 
-  /** Khối "Vừa vào kho thanh lý" — đọc qua `disposal.api`, không tự gộp ba module lại lần nữa. */
+  /** Khối "Tổng hợp kho thanh lý" — đọc qua `disposal.api`, không tự gộp ba module lại lần nữa. */
   test('thiết bị vừa thanh lý hiện ngay ở khối kho thanh lý', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
@@ -366,7 +366,7 @@ test.describe('Bảng điều khiển', () => {
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
 
     await page.goto('/');
-    const block = page.locator('section').filter({ hasText: 'Vừa vào kho thanh lý' });
+    const block = page.locator('section').filter({ hasText: 'Tổng hợp kho thanh lý' });
     // Chưa thanh lý thì chưa được có mặt — nếu không, bài dưới xanh vì lý do khác.
     await expect(block.getByRole('link', { name: code })).toHaveCount(0);
 
@@ -448,7 +448,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
     await seedLoudBoard(page, stamp);
 
     await page.goto('/');
-    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
+    const expiring = page.locator('section').filter({ hasText: 'Tổng hợp hết hạn cần xử lý' });
     for (const name of ['Đối tượng', 'Loại', 'Hết hạn', 'Còn lại']) {
       // Hai nhóm (quá hạn / sắp tới) là hai bảng cùng cột — đọc cột ở bảng đầu.
       await expect(expiring.getByRole('columnheader', { name, exact: true }).first()).toBeVisible();
@@ -513,7 +513,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
     expect(warranty.status(), await warranty.text()).toBe(201);
 
     await page.goto('/');
-    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
+    const expiring = page.locator('section').filter({ hasText: 'Tổng hợp hết hạn cần xử lý' });
     const warrantyRow = expiring.getByRole('row', { name: new RegExp(`PC-E2E-D2BH-${stamp}`) });
     await expect(warrantyRow).toBeVisible();
     await expect(warrantyRow.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);

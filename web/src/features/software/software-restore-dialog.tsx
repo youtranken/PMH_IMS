@@ -6,10 +6,10 @@ import { errorMessage } from '@/lib/api';
 import { addYearsIso } from '@/lib/add-years';
 import { formatDate } from '@/lib/format';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import {
   formerDevices,
@@ -48,7 +48,7 @@ export function RestoreDialog({
   const [endDate, setEndDate] = useState(needsEnd ? addYearsIso(today, 1) : '');
   const [note, setNote] = useState(software.note ?? '');
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useSubmitError([endDate, note, picked]);
   const hasSeats = supportsSeats(software.kind);
 
   const history = useQuery({
@@ -123,16 +123,16 @@ export function RestoreDialog({
       title={`${t('software.restoreTitle')} — ${software.code}`}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="restore-form"
             className="btn primary"
             disabled={restore.isPending}
           >
-            {restore.isPending ? t('common.loading') : t('software.restoreSubmit')}
+            {restore.isPending ? t('common.working') : t('software.restoreSubmit')}
           </button>
         </>
       }

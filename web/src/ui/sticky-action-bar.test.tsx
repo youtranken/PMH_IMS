@@ -27,4 +27,16 @@ describe('StickyActionBar', () => {
     renderWithI18n(<StickyActionBar label="Quyết định" note="Đã xử lý" />);
     expect(screen.getByRole('group', { name: 'Quyết định' }).querySelector('.sticky-action-buttons')).toBeNull();
   });
+
+  /* Màn cấu hình (Tham số hệ thống): nút nhỏ dồn phải, không phải hai nút 48px kéo hết ngang. */
+  it('compact: thanh có lớp compact để CSS bỏ kiểu nút 48px kéo dài', () => {
+    renderWithI18n(
+      <StickyActionBar label="Lưu" note="Có 1 thay đổi" compact>
+        <button type="button" className="btn sm">
+          Lưu
+        </button>
+      </StickyActionBar>,
+    );
+    expect(screen.getByRole('group', { name: 'Lưu' })).toHaveClass('sticky-action-bar', 'compact');
+  });
 });

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { secretTextRule, textRule, useFormErrors } from '@/ui/use-form-errors';
+import { reasonRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import type { ServiceAccountRow, ServiceAccountStatus } from './service-account-types';
 
 /**
@@ -40,8 +40,8 @@ export function ServiceAccountStatusDialog({
    */
   const [lockedAtSource, setLockedAtSource] = useState(false);
   const [secretHandled, setSecretHandled] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ reason: textRule(t, reason, 3) ?? secretTextRule(t, reason) });
+  const [error, setError] = useSubmitError([reason, lockedAtSource, secretHandled]);
+  const check = useFormErrors({ reason: reasonRule(t, reason) });
   const change = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/service-accounts/${row.id}/${off ? 'disable' : 'enable'}`,
     { method: 'PATCH', csrfToken, refreshMe: false },
@@ -61,16 +61,16 @@ export function ServiceAccountStatusDialog({
       title={`${label} — ${row.code}`}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <DialogCancel>
             {t('common.cancel')}
-          </button>
+          </DialogCancel>
           <button
             type="submit"
             form="sa-status-form"
             className={off ? 'btn danger' : 'btn primary'}
             disabled={change.isPending}
           >
-            {change.isPending ? t('common.loading') : label}
+            {change.isPending ? t('common.working') : label}
           </button>
         </>
       }

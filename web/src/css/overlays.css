@@ -3,10 +3,8 @@
   padding: var(--space-4) var(--space-6);
   border-radius: var(--r);
   font-size: var(--fs-sm);
-  /* Cùng luật với `.page-header .sub`: trang rộng gần trọn màn nhưng CHỮ thì không nên dài
-     theo. Đoạn giới thiệu ở màn Két sắt đang chạy ~200 ký tự một dòng trên màn 1920 —
-     gấp ba ngưỡng đọc được (60–75). Bảng rộng, chữ hẹp. */
-  max-width: 68ch;
+  /* Không trần bề ngang (Q-21): khung báo thường một hai câu; ép 68ch thì câu ngắn cũng xuống
+     dòng trong khi nửa phải màn rộng bỏ trống. */
   margin-bottom: var(--space-7);
   border: 1px solid transparent;
   animation: rowIn 0.2s var(--ease) both;
@@ -26,6 +24,24 @@
   background: var(--warn-soft);
   border-color: var(--border-warn);
 }
+/* Khung báo người dùng tự đóng (nút ✕ mép phải): lỗi tra cứu không tự biến mất, vì người ta
+   còn cần đọc lại câu đó trong lúc sửa ô gõ. */
+.alert.dismissible {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.alert .alert-close {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
 /* Ghi chú trung tính (không phải lỗi hay cảnh báo): có nền và viền để không lơ lửng như một
    đoạn chữ thụt lề giữa bộ lọc và bảng. */
 .alert.info {
@@ -39,6 +55,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+/* Nút gợi ý một cú bấm ngay dưới ô ("Dùng 172.16.110.1"): cỡ theo chữ, không kéo hết bề ngang
+   ô như con của cột flex mặc định — to bằng ô nhập là trông như một ô thứ hai. */
+.field > .field-suggest {
+  align-self: flex-start;
 }
 
 /* --- Modal ---------------------------------------------------------------- */
@@ -88,6 +109,11 @@
    xuống hàng riêng, các nút không bị đẩy ra ngoài mép hộp. */
 .dialog-viewport .sheet-footer {
   flex-wrap: wrap;
+}
+/* Nút chính đổi chữ trong lúc ghi ("Lưu" → "Đang lưu…"): có sàn bề ngang thì nút không phình
+   ra rồi co lại, kéo nút Hủy bên cạnh nhảy theo đúng lúc người dùng đang nhìn. */
+.dialog-viewport .sheet-footer > button.primary {
+  min-width: 7rem;
 }
 
 /*

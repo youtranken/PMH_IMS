@@ -80,3 +80,45 @@ describe('ConfirmDialog — gõ lại tên để xác nhận', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ConfirmDialog — lựa chọn thứ ba', () => {
+  /* Hộp "Chưa lưu thay đổi": Lưu / Bỏ thay đổi / Ở lại — ba lối ra, không phải hai. */
+  it('extra là nút riêng giữa Hủy và nút xác nhận, bấm gọi onClick của nó', async () => {
+    const extra = vi.fn();
+    const confirm = vi.fn();
+    renderWithI18n(
+      <ConfirmDialog
+        title="Chưa lưu thay đổi"
+        message="Nhóm này còn thay đổi chưa lưu."
+        confirmLabel="Lưu nhóm này"
+        cancelLabel="Ở lại"
+        extra={{ label: 'Bỏ thay đổi', onClick: extra }}
+        onConfirm={confirm}
+        onCancel={() => {}}
+      />,
+    );
+    const footer = screen.getByTestId('dialog-footer');
+    expect(Array.from(footer.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'Ở lại',
+      'Bỏ thay đổi',
+      'Lưu nhóm này',
+    ]);
+    await userEvent.click(screen.getByRole('button', { name: 'Bỏ thay đổi' }));
+    expect(extra).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('confirmDisabled tắt riêng nút xác nhận', () => {
+    renderWithI18n(
+      <ConfirmDialog
+        title="t"
+        message="m"
+        confirmLabel="Lưu nhóm này"
+        confirmDisabled
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Lưu nhóm này' })).toBeDisabled();
+  });
+});

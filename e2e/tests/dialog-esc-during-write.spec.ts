@@ -62,14 +62,14 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
     });
 
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
+    await page.getByRole('button', { name: 'Thêm dải mạng' }).first().click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Dải' }).fill(cidr);
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(name);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
     // Nút đã chuyển sang trạng thái chờ → chắc chắn đang ở giữa lượt ghi.
-    await expect(form.getByRole('button', { name: 'Đang tải…' })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Đang lưu…' })).toBeVisible();
 
     await page.keyboard.press('Escape');
     await expect(
@@ -94,7 +94,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
   test('không ghi gì thì Esc vẫn đóng hộp như thường', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/ip-addresses');
-    await page.getByRole('button', { name: 'Khai dải mới' }).first().click();
+    await page.getByRole('button', { name: 'Thêm dải mạng' }).first().click();
 
     const form = page.getByRole('dialog');
     await expect(form).toBeVisible();
@@ -151,7 +151,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
 
     const before = Number(sql('SELECT count(*) FROM nat_rule WHERE external_from BETWEEN 18081 AND 18083'));
     await form.getByRole('button', { name: 'Lưu' }).click();
-    await expect(form.getByRole('button', { name: 'Đang tải…' })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Đang lưu…' })).toBeVisible();
 
     await page.keyboard.press('Escape');
     await expect(

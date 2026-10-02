@@ -32,7 +32,7 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     const type = await scratch.pool.query<{ id: string }>(
       `INSERT INTO device_type (name) VALUES ('Camera tim kiem') RETURNING id`,
     );
-    for (const code of ['CAM-TIM-01', 'PC-TIM-02']) {
+    for (const code of ['CAM-TIM-01', 'PC-TIM-02', 'CAM-TIM-03']) {
       const { rows } = await scratch.pool.query<{ id: string }>(
         `INSERT INTO device (code, name, device_type_id, status)
          VALUES ($1, $2, $3, 'in_use') RETURNING id`,
@@ -54,7 +54,10 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
           new Map(
             Object.entries(device)
               .filter(([, id]) => ids.includes(id))
-              .map(([code, id]) => [id, { id, code, name: `Máy ${code}` }]),
+              .map(([code, id]) => [
+                id,
+                { id, code, name: `Máy ${code}`, siteCode: code === 'CAM-TIM-01' ? 'TOWER' : null },
+              ]),
           ),
         ),
     } as unknown as DevicesApiService;
@@ -98,9 +101,9 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     };
     await ip(forbiddenLabel, '10.77.30.5', { device: 'CAM-TIM-01' });
     await ip(lanSubnet, '10.77.1.53', { usedBy: 'Chị Bình — Kế toán' });
-    await ip(lanSubnet, '10.77.1.54', { device: 'CAM-TIM-01', usedBy: 'Cổng phụ' });
+    await ip(lanSubnet, '10.77.1.54', { device: 'PC-TIM-02', usedBy: 'Cổng phụ' });
     await ip(lanSubnet, '10.77.1.60', { usedBy: 'gõ nhầm', voided: true });
-    await ip(old, '10.88.0.9', { device: 'CAM-TIM-01' });
+    await ip(old, '10.88.0.9', { device: 'CAM-TIM-03' });
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -113,6 +116,8 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     expect(hits[0]).toMatchObject({
       address: '10.77.30.5',
       deviceCode: 'CAM-TIM-01',
+      // Q-20: site lấy từ hồ sơ THIẾT BỊ, không từ dải.
+      deviceSiteCode: 'TOWER',
       subnetCidr: '10.77.30.0/28',
       subnetName: 'Camera tim',
       subnetVlan: 30,
@@ -128,15 +133,46 @@ describe('Tìm hồ sơ IP xuyên dải', () => {
     expect(await addresses.search('10.77.1.5')).toEqual([]);
   });
 
-  it('gõ mã máy → mọi IP của máy đó ở dải đang dùng (không lôi dải đã ẩn ra)', async () => {
+  // "10.77.1" là trọn nhóm 10.77.1.*, không phải "bắt đầu bằng chữ số" (kéo cả 10.77.10–199).
+  it('gõ thiếu nhóm cuối → trọn nhóm đó', async () => {
+    expect((await addresses.search('10.77.1')).map((h) => h.address)).toEqual([
+      '10.77.1.53',
+      '10.77.1.54',
+    ]);
+  });
+
+  it('IP sai định dạng → rỗng, không tìm theo chữ', async () => {
+    expect(await addresses.search('10.77.1.300')).toEqual([]);
+    expect(await addresses.search('10.77.30.5.1')).toEqual([]);
+  });
+
+  // Một máy một IP (Q-20): CAM-TIM-03 chỉ có IP trong dải đã ẩn nên không hiện.
+  it('gõ mã máy → IP của các máy khớp ở dải đang dùng (không lôi dải đã ẩn ra)', async () => {
     const hits = await addresses.search('cam-tim');
-    expect(hits.map((h) => h.address)).toEqual(['10.77.1.54', '10.77.30.5']);
+    expect(hits.map((h) => h.address)).toEqual(['10.77.30.5']);
+    expect((await addresses.search('pc-tim')).map((h) => h.address)).toEqual(['10.77.1.54']);
   });
 
   it('gõ tên người, không dấu → tìm được, bỏ qua hồ sơ đã ẩn', async () => {
     const hits = await addresses.search('chi binh');
     expect(hits.map((h) => h.address)).toEqual(['10.77.1.53']);
     expect(await addresses.search('go nham')).toEqual([]);
+  });
+
+  /* Q-20: "Xuất tất cả" ở màn IP — mọi hồ sơ còn sống của mọi dải đang dùng, kèm dải. */
+  it('xuất tất cả: mọi IP sống của dải đang dùng, sắp theo dải rồi địa chỉ, kèm CIDR/tên/VLAN', async () => {
+    const rows = await addresses.listAllForExport();
+    expect(rows.map((r) => [r.subnetCidr, r.address])).toEqual([
+      ['10.77.1.0/24', '10.77.1.53'],
+      ['10.77.1.0/24', '10.77.1.54'],
+      ['10.77.30.0/28', '10.77.30.5'],
+    ]);
+    expect(rows[2]).toMatchObject({
+      subnetName: 'Camera tim',
+      subnetVlan: 30,
+      deviceCode: 'CAM-TIM-01',
+      deviceSiteCode: 'TOWER',
+    });
   });
 
   it('có trần số dòng', async () => {

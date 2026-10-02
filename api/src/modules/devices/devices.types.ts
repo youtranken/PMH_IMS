@@ -2,6 +2,24 @@
 export const DEVICE_STATUSES = ['in_use', 'spare', 'broken', 'retired'] as const;
 export type DeviceStatus = (typeof DEVICE_STATUSES)[number];
 
+/**
+ * `live` = mọi trạng thái trừ "Đã thanh lý" — mặc định của màn Thiết bị (Q-20): máy đã thanh lý
+ * có Kho thanh lý riêng. Lọc đích danh `retired` vẫn ra; ô tìm ⌘K không gửi `status` nên vẫn tìm
+ * thấy máy đã thanh lý.
+ */
+export type DeviceStatusQuery = DeviceStatus | 'live';
+
+/**
+ * Đọc `?status=`. Vắng / rỗng = không lọc (⌘K). Chữ lạ (hay mảng từ `?status=a&status=b`) coi
+ * như mặc định `live` (Q-20): bỏ qua thì lặng lẽ bày lại máy đã thanh lý, 400 thì cả màn thành
+ * trang lỗi.
+ */
+export function deviceStatusQuery(value: unknown): DeviceStatusQuery | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (value === 'live') return 'live';
+  return DEVICE_STATUSES.includes(value as DeviceStatus) ? (value as DeviceStatus) : 'live';
+}
+
 export interface DeviceRecord {
   id: string;
   code: string;
@@ -49,7 +67,9 @@ export interface DeviceFilter {
   siteId?: string;
   cabinetId?: string;
   deviceTypeId?: string;
-  status?: DeviceStatus;
+  /** HỢP nhiều loại một lượt — ô chọn thiết bị của NAT / Đường truyền (Q-20). Rỗng = không lọc. */
+  deviceTypeIds?: string[];
+  status?: DeviceStatusQuery;
   /** Khớp ĐÚNG phòng ban / người sử dụng (gấp dấu, hoa thường) — chọn nhanh cả lô máy. */
   department?: string;
   assignedTo?: string;
