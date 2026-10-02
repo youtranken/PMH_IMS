@@ -366,6 +366,7 @@ const DOMAIN_ORDER = [
   'isp',
   'devices',
   'digest-rules',
+  'diagrams',
   'catalog',
 ] as const;
 
@@ -477,6 +478,11 @@ export function resetDigestRules(): void {
 /** Xóa đường truyền ISP do E2E tạo (mã luôn chứa "E2E"). */
 export function resetIsp(): void {
   queue('isp');
+}
+
+/** Xóa bản vẽ thử draw.io do E2E lưu (tên luôn chứa "E2E"). */
+export function resetDiagrams(): void {
+  queue('diagrams');
 }
 
 const totp = new TOTP({
