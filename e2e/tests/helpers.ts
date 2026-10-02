@@ -1141,3 +1141,27 @@ export function uniqueStamp(): string {
 export function catalogTab(name: string): RegExp {
   return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}(?: \\d+)?$`);
 }
+
+/**
+ * Khai một dải /29 `172.16.<octet>.0/29` cho bài kiểm. Octet suy từ stamp có thể trùng dải bài
+ * khác trong cùng lượt vừa khai (409 SUBNET_OVERLAP), nên lùi sang octet khác thay vì đỏ vì dữ
+ * liệu của bài bên cạnh. `name` phải mang chữ E2E để reset-e2e dọn được.
+ */
+export async function createTestSubnet(
+  page: Page,
+  headers: Record<string, string>,
+  name: string,
+  seed: number,
+): Promise<{ id: string; octet: number }> {
+  let octet = seed % 200;
+  for (let i = 0; i < 20; i += 1) {
+    const res = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.16.${octet}.0/29`, name },
+    });
+    if (res.status() === 201) return { id: ((await res.json()) as { id: string }).id, octet };
+    expect(res.status(), `khai dải 172.16.${octet}.0/29`).toBe(409);
+    octet = (octet + 7) % 250;
+  }
+  throw new Error('không tìm được dải /29 trống cho bài kiểm');
+}

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  createTestSubnet,
   APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
@@ -58,12 +59,12 @@ test.describe('Xuất Excel', () => {
         hotline: '18008119',
       },
     });
-    const octet = Number(stamp) % 200;
-    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+    const { id: subnetId, octet } = await createTestSubnet(
+      page,
       headers,
-      data: { cidr: `172.16.${octet}.0/29`, name: `LAN xuất E2E ${stamp}` },
-    });
-    const subnetId = ((await subnet.json()) as { id: string }).id;
+      `LAN xuất E2E ${stamp}`,
+      Number(stamp),
+    );
     await page.request.post('/api/v1/ipam/addresses', {
       headers,
       data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'Máy kế toán' },
