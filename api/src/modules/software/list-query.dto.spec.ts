@@ -21,6 +21,16 @@ describe('SoftwareListQueryDto', () => {
     ).toBeNull();
   });
 
+  it('kind nhận nhiều loại ngăn bằng dấu phẩy — màn Tên miền & SSL (Q-22)', async () => {
+    expect(await dtoErrorBody(SoftwareListQueryDto, { kind: 'ssl,domain' })).toBeNull();
+    expect(await dtoErrorBody(SoftwareListQueryDto, { kind: '' })).toBeNull();
+  });
+
+  it.each(['abc', 'ssl,abc', 'ssl,', 'ssl;domain'])('kind rác %p → 400', async (kind) => {
+    const body = await dtoErrorBody(SoftwareListQueryDto, { kind });
+    expect(String(body?.message)).toMatch(/không hợp lệ/);
+  });
+
   it('vendorId rác → 400', async () => {
     const body = await dtoErrorBody(SoftwareListQueryDto, { vendorId: 'abc' });
     expect(String(body?.message)).toMatch(/không hợp lệ/);

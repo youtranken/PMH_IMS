@@ -580,6 +580,8 @@ const KIND_LABEL: Record<string, string> = {
   ssl: 'Chứng chỉ SSL',
   domain: 'Tên miền',
   maintenance: 'Hợp đồng bảo trì',
+  // "Khác" là nguồn hạn như mọi loại (Q-14) — thiếu dòng này thì thư in mã thô `other`.
+  other: 'Dịch vụ có hạn khác',
   service_account: 'Tài khoản dịch vụ',
 };
 
