@@ -373,6 +373,19 @@ nếu chủ dự án không đồng ý.
   còn lại vào ⋮ (Q-18).
 - Chữ mô tả dài trên màn rộng chạy một hàng (không ép xuống dòng khi còn chỗ).
 
+### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
+
+- Nhóm **Tài sản** trên sidebar: Thiết bị · **Phần mềm** (chỉ license) · **Tên miền & SSL** ·
+  **Hợp đồng bảo trì** · **Dịch vụ có hạn khác** · Kho thanh lý. Lý do: để chung trong "Phần mềm"
+  rồi lọc theo loại khiến người dùng không tìm ra SSL / tên miền / hợp đồng.
+- **Tên miền & SSL** có hai loại hồ sơ: *Tên miền* và *Chứng chỉ SSL*. Một hồ sơ = một hoặc nhiều
+  tên miền **dùng chung một ngày hết hạn** (khác hạn thì tạo hồ sơ khác). Tìm theo bất kỳ tên miền
+  nào trong hồ sơ.
+- IMS **không lưu file cert / khoá** (`.crt .pem .key .pfx .jks`…): chủ dự án tự bảo quản. IMS chỉ
+  theo dõi hạn.
+- Lưu trữ giữ một bảng `software` với cột `kind` (không tách bảng): nhắc hạn, gia hạn, két, lịch sử,
+  thanh lý dùng nguyên như cũ; chỉ tách màn và menu.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
