@@ -97,3 +97,20 @@ development_status:
   9-3-phiếu-sự-kiện-0209-0210-0214: backlog
   9-4-documents-runbook-có-nhà: backlog
   epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-step-up-có-phạm-vi-két-và-sơ-đồ: backlog
+  10-2-cây-bản-vẽ-khung-vẽ-và-nhật-ký-mở: backlog
+  10-3-thiết-bị-từ-kho-với-biểu-tượng-theo-loại: backlog
+  10-4-vẽ-dây-là-khai-sơ-đồ-cổng: backlog
+  10-5-hình-tự-do-khung-tự-sinh-và-bản-vẽ-con: backlog
+  10-6-phiên-bản-lịch-sử-tóm-tắt-và-khôi-phục: backlog
+  10-7-so-sánh-tô-màu-và-thanh-trượt-thời-gian: backlog
+  10-8-gửi-duyệt-tự-kiểm-và-bình-luận-ghim: backlog
+  10-9-cảnh-báo-lệch-kho-và-kiểm-tra-khớp: backlog
+  10-10-xuất-png-pdf-có-chân-trang-và-watermark: backlog
+  10-11-bản-trình-bày: backlog
+  10-12-điều-hướng-trình-chiếu-và-xem-trên-điện-thoại: backlog
+  10-13-ảnh-thật-mặt-tủ-theo-u-và-ghim-cổng: backlog
+  10-14-tự-xếp-sơ-đồ-xếp-gọn-và-nối-hàng-loạt: backlog
+  epic-10-retrospective: optional

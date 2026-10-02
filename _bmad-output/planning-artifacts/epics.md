@@ -53,6 +53,21 @@ FR-033: Luồng Reported→Approved qua approval flow
 FR-034: Sidebar Documents link 2 chiều thiết bị/phần mềm
 FR-035: Documents không chứa secret (cảnh báo mức nhắc)
 FR-036: License key lưu vault như secret (SA/Admin TOTP; Member theo 3 tầng)
+FR-037: Cây bản vẽ (Tổng công ty → site → tầng → phòng → tủ) + khung vẽ; hình thiết bị là hồ sơ kho, biểu tượng SVG theo loại thiết bị, thẻ thông tin lấy từ kho
+FR-038: Vẽ dây = khai sơ đồ cổng (một cổng một cáp); màu theo loại dây với chú giải chung; bấm thiết bị tô sáng dây + nhảy bản vẽ
+FR-039: Lớp vẽ tự do (khung tòa nhà/tầng/phòng/VLAN gắn dải IP, đám mây ISP, chữ, mũi tên, đường nối site), khung tủ tự sinh, nháy đúp xuống bản vẽ con
+FR-040: Phiên bản bản vẽ: mỗi lần lưu một phiên bản, tóm tắt, đặt tên, snapshot dữ liệu thiết bị, khôi phục, so sánh tô màu, thanh trượt thời gian
+FR-041: Bản chính thức qua duyệt: Thành viên gửi duyệt (tự kiểm: lỗi chặn, cảnh báo cho qua), Admin duyệt/trả về kèm bình luận ghim; Admin/SA tự phát hành
+FR-042: Mọi lần xem bản vẽ nhập TOTP phạm vi sơ đồ (ân hạn riêng, tách két); nhật ký mỗi lần mở; watermark tên người xem + giờ
+FR-043: Cảnh báo bản vẽ lệch kho + nút kiểm tra khớp; chỉ cảnh báo, không ép sửa
+FR-044: Xuất PNG/PDF có chân trang (phiên bản, ngày duyệt, người vẽ, người duyệt) + watermark
+FR-045: Bản trình bày tách rời bản chính thức (thiết bị dự kiến, ảnh tự do, dải chữ "BẢN TRÌNH BÀY")
+FR-046: Điều hướng: phóng to hiện chi tiết, bật/tắt lớp, tìm và bay tới, chỉ đường, trình chiếu, xem trên điện thoại chỉ xem
+FR-047: Ảnh thật theo model/máy (mặt trước/sau, ghim cổng) + mặt tủ theo U (thiết bị thêm U bắt đầu + số U)
+FR-048: Tự xếp sơ đồ từ sơ đồ cổng, Xếp gọn, nối hàng loạt
+FR-049: (chỉ thiết kế, chưa làm) API nhận trạng thái sống từ máy giám sát ngoài + lớp "trạng thái sống"
+
+> FR-037..FR-049 thêm theo `docs/QUYET-DINH.md` Q-23 (02/10/2026): sơ đồ mạng vốn ở PRD §7 "Phase sau" nay kéo vào Epic 10, làm trước Epic 8–9. Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/`.
 
 ### NonFunctional Requirements
 
@@ -122,6 +137,19 @@ FR-033: Epic 9 - Reported→Approved qua approvals
 FR-034: Epic 9 - Sidebar Documents
 FR-035: Epic 9 - Cảnh báo secret trong Documents
 FR-036: Epic 4 - License key trong vault
+FR-037: Epic 10 - Cây bản vẽ + khung vẽ + thiết bị từ kho
+FR-038: Epic 10 - Dây = sơ đồ cổng + chú giải màu + tô sáng/nhảy bản vẽ
+FR-039: Epic 10 - Lớp vẽ tự do + khung tự sinh + bản vẽ con
+FR-040: Epic 10 - Phiên bản, snapshot, khôi phục, so sánh, thanh trượt thời gian
+FR-041: Epic 10 - Duyệt bản chính thức qua approvals
+FR-042: Epic 10 - TOTP phạm vi sơ đồ + nhật ký mở + watermark
+FR-043: Epic 10 - Cảnh báo lệch kho
+FR-044: Epic 10 - Xuất PNG/PDF
+FR-045: Epic 10 - Bản trình bày
+FR-046: Epic 10 - Điều hướng, trình chiếu, xem trên điện thoại
+FR-047: Epic 10 - Ảnh thật + mặt tủ theo U
+FR-048: Epic 10 - Tự xếp, xếp gọn, nối hàng loạt
+FR-049: Epic 10 - Chừa chỗ trạng thái sống (chỉ thiết kế)
 
 ## Epic List
 
@@ -160,6 +188,10 @@ Sếp 3 phút sáng thứ Hai: sắp hết hạn, sự cố tuần, break-glass 
 ### Epic 9: Sự cố, Phiếu sự kiện & Documents (Đợt 3)
 Sự cố có hồ sơ gắn thiết bị và nâng cấp được thành RCA; phiếu nhóm B chạy qua approvals; runbook/WI-IT có nhà trong sidebar Documents.
 **FRs covered:** FR-030, FR-032, FR-033, FR-034, FR-035
+
+### Epic 10: Sơ đồ mạng (thay Visio) — làm trước Epic 8–9, Q-23
+Bỏ Visio: bản vẽ hạ tầng gắn dữ liệu kho (thiết bị, sơ đồ cổng, dải IP, két) cộng lớp vẽ tự do; cây bản vẽ Tổng công ty → site → tầng → phòng → tủ; phiên bản có duyệt, bản trình bày tách rời; mọi lần xem nhập mã 2 lớp phạm vi sơ đồ, nhật ký mở, watermark; cảnh báo lệch kho; xuất PNG/PDF nộp ISO.
+**FRs covered:** FR-037, FR-038, FR-039, FR-040, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-049 (chỉ thiết kế), NFR-01 (step-up có phạm vi), NFR-03, NFR-05
 
 ## Epic 1: Nền tảng & Đăng nhập an toàn
 
@@ -722,3 +754,378 @@ So that tri thức xử lý sự cố nằm cạnh đúng thiết bị cần nó
 **When** tạo tài liệu và gắn thiết bị/phần mềm liên quan
 **Then** trang thiết bị hiển thị tài liệu liên quan và ngược lại (link 2 chiều, qua public api)
 **And** khi nội dung chứa chuỗi giống mật khẩu/secret, hệ thống hiển thị cảnh báo nhắc chuyển vào vault (mức nhắc, không chặn — FR-035); tài liệu có lịch sử phiên bản đơn giản (ai sửa, khi nào)
+
+## Epic 10: Sơ đồ mạng (thay Visio)
+
+Bỏ Visio: sơ đồ là lớp nhìn của dữ liệu kho cộng lớp vẽ tự do. Dây là DỮ LIỆU (một dòng sơ đồ cổng hai đầu), nên tô sáng, nhảy bản vẽ, tự kiểm, cảnh báo lệch kho và chỉ đường làm được. Làm trước Epic 8–9 (Q-23). Nguồn: `docs/QUYET-DINH.md` Q-23 (thắng khi lệch), `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/brainstorm-intent.md`.
+
+**Luật chung cho mọi story của epic (khỏi nhắc lại từng story):**
+- Module mới `diagrams` (tầng nghiệp vụ) là chủ duy nhất các bảng `diagram`, `diagram_version`, `diagram_version_label`, `diagram_history`, `diagram_comment` (AD-3). Đọc/ghi dữ liệu khác CHỈ qua `devices.api`, `ipam.api`, `catalog.api`, `approvals.api`, `files.api` (AD-2). KHÔNG module nào gọi ngược `diagrams` — đồ thị giữ acyclic; trang thiết bị muốn hiện "có mặt trong bản vẽ nào" thì web tự gọi endpoint của `diagrams`, không phải `devices` gọi sang.
+- Mọi endpoint ghi: `@Audited` + `@Roles` + `tx` tường minh, nghiệp vụ + audit + outbox cùng transaction (AD-5, AD-9). Mọi endpoint đọc NỘI DUNG bản vẽ khai `@RequiresStepUp('diagram')`; route còn lại khai `@NoStepUp()` rõ ràng (guard mặc định đóng).
+- Bảng lịch sử/phiên bản là chỉ-thêm: trigger `history_append_only` + `REVOKE UPDATE, DELETE, TRUNCATE ... FROM ims_app` và `FROM CURRENT_USER` ngay trong file tạo bảng, và thêm tên bảng vào `api/test/app-role-privileges.spec.ts` (mục "Migration & DB" của CLAUDE.md). Migration mới đánh số tiếp sau file cuối đang có, không sửa file cũ (AD-10).
+- Tham số nghiệp vụ vào `system_config` có mặc định + khai `EDITABLE_SETTINGS` (AD-11).
+- Thư viện vẽ: `@xyflow/react` 12.x + `html-to-image` (addendum PRD §2). Story 10.2 cập nhật `ARCHITECTURE-SPINE.md`: thêm `diagrams` vào cây module + bảng chủ sở hữu AD-3, gỡ "sơ đồ React Flow" khỏi mục Deferred.
+- Khung vẽ (canvas) và các khối dùng ở ≥2 màn (sửa, duyệt, so sánh, trình bày, trình chiếu, điện thoại) nằm ở `web/src/ui`, khai `docs/SHARED-REGISTRY.md` trong story sinh ra nó (AD-15). Màu thiết bị/dây/khung chỉ qua token trong `tokens.css` có cặp `html[data-theme='dark']`.
+- Màn SỬA bản vẽ chỉ desktop; màn XEM pass 390px ở Story 10.12. Mọi hàng bài kiểm tạo ra mang chữ `E2E` trong tên bản vẽ; `api/scripts/reset-e2e.mjs` dọn được mọi bảng mới.
+
+### Story 10.1: Step-up có phạm vi — két và sơ đồ
+
+As a SA,
+I want mã 2 lớp nhập cho sơ đồ và mã nhập cho két được tính riêng, mỗi bên một thời gian ân hạn,
+So that mở sơ đồ không vô tình mở luôn két, và ngược lại (Q-23: nhập ở đâu tính ở đó).
+
+**Acceptance Criteria:**
+
+**Given** step-up hiện là một mốc chung `sessions.stepped_up_at` dùng cho két, tài khoản, tham số hệ thống
+**When** dev thêm phạm vi `diagram` (migration thêm cột `sessions.diagram_stepped_up_at timestamptz`, chủ: `auth`) và khoá `diagram.stepup_grace_minutes` (mặc định 10, sửa được 1–60 trên màn Tham số hệ thống)
+**Then** `@RequiresStepUp()` không tham số giữ nghĩa cũ (phạm vi két, ân hạn `secret.stepup_grace_minutes`); `@RequiresStepUp('diagram')` chỉ đọc `diagram_stepped_up_at` với ân hạn `diagram.stepup_grace_minutes`
+**And** `POST /auth/step-up` bắt buộc nhận `scope: 'vault' | 'diagram'` và chỉ đóng dấu đúng cột của phạm vi đó; thiếu hoặc sai `scope` → 400; dòng audit step-up (thành công và thất bại) ghi kèm phạm vi
+**And** bộ đếm gõ sai `stepup_failures` dùng CHUNG cho hai phạm vi — sai đủ `secret.stepup_max_failures` ở bên nào cũng thu hồi phiên
+**And** nhập mã 2 lớp lúc đăng nhập KHÔNG mở phạm vi sơ đồ (chỉ giữ hành vi hiện có với phạm vi két)
+
+**Given** phiên vừa nhập mã cho két (còn trong ân hạn két)
+**When** gọi một route khai `@RequiresStepUp('diagram')`
+**Then** 401 `STEPUP_REQUIRED` kèm `scope: 'diagram'` và `graceMinutes` của sơ đồ; chiều ngược lại (mới nhập cho sơ đồ, gọi route két) cũng 401 với `scope: 'vault'`
+**And** bài kiểm guard dạng bảng dữ liệu (phạm vi × mốc × ân hạn) đỏ khi gieo đột biến "đọc nhầm cột"; `step-up-surface.spec.ts` biết phạm vi mới; E2E `security.spec.ts` dựng lại đúng đòn: phiên có ân hạn két gọi thẳng API sơ đồ → bị chặn
+
+**Given** web gặp `STEPUP_REQUIRED`
+**When** `StepUpDialog` / `StepUpStep` / `useStepUpRetry` mở hộp nhập mã
+**Then** hộp nhận prop `scope` và gửi đúng phạm vi server trả về; câu chữ nói rõ "xem sơ đồ" hay "mở két" qua `lib/i18n`; hết ân hạn thì hỏi lại TẠI CHỖ, không đá người dùng ra ngoài
+**And** `docs/SHARED-REGISTRY.md` cập nhật dòng `@RequiresStepUp`, `StepUpDialog`, `useStepUpRetry` (thêm phạm vi, khi nào dùng phạm vi nào)
+
+### Story 10.2: Cây bản vẽ, khung vẽ và nhật ký mở
+
+As a Thành viên,
+I want tạo bản vẽ trong một cây theo công ty → site → tầng → phòng → tủ và vẽ trên khung zoom/pan được,
+So that sơ đồ mạng có nhà trong IMS thay cho file Visio rải rác.
+
+**Acceptance Criteria:**
+
+**Given** module `diagrams` với bảng `diagram` (id, `parent_id`, tên, loại nút cây: `company`/`site`/`floor`/`room`/`cabinet`/`other`, `site_id?`, `cabinet_id?`, người phụ trách, `kind` = `official`/`presentation`, `official_version_id?`, `archived_at?`) và `diagram_version` chỉ-thêm (id, `diagram_id`, số thứ tự, `content jsonb`, `based_on_version_id`, người lưu, lúc lưu)
+**When** migration chạy trên DB trắng
+**Then** `diagram_version` không UPDATE/DELETE/TRUNCATE được bằng `ims_app` (trigger + REVOKE, có trong `app-role-privileges.spec.ts`); tầng/phòng chỉ là tên bản vẽ — KHÔNG thêm danh mục vị trí mới (Q-23)
+**And** `site_id`/`cabinet_id` kiểm qua `catalog.api` (mục ngừng dùng không chọn mới được, Q-14)
+
+**Given** người dùng bất kỳ vai (Thành viên, Admin, SA)
+**When** mở màn "Sơ đồ mạng" (menu mới, nhóm Tài sản)
+**Then** thấy cây bản vẽ dạng thư mục: CHỈ tên + loại + trạng thái (chính thức / có bản nháp / chờ duyệt), không ảnh thu nhỏ, không cần mã 2 lớp
+**And** mọi vai tạo được bản vẽ con và vẽ; đổi tên, chuyển nhánh, lưu trữ bản vẽ chỉ Admin/SA (`@Roles`), Thành viên gọi API → 403; không có xoá cứng (chỉ lưu trữ)
+
+**Given** người dùng mở NỘI DUNG một bản vẽ
+**When** chưa trong ân hạn sơ đồ
+**Then** hiện hộp nhập mã (Story 10.1); nhập đúng mới tải nội dung; trong ân hạn thì chuyển giữa các bản vẽ không hỏi lại
+**And** MỖI lần mở nội dung (bản chính thức, bản nháp, phiên bản cũ, bản trình bày) ghi một dòng audit `diagram.viewed` (ai, bản vẽ, phiên bản, lúc nào) — NFR-03
+**And** khung vẽ phủ watermark mờ lặp lại "tên người xem · email · giờ phút" (token màu riêng có cặp dark), không tắt được bằng giao diện
+
+**Given** người vẽ mở bản nháp trên desktop
+**When** kéo thả, zoom, pan, dùng bản đồ thu nhỏ (minimap) rồi bấm Lưu
+**Then** mỗi lần Lưu tạo một hàng `diagram_version` mới (bản lưu sau thắng — Q-23); rời màn khi còn thay đổi chưa lưu thì hỏi lại qua bộ hỏi dùng chung (không `window.confirm`)
+**And** khung vẽ là component dùng chung `DiagramCanvas` ở `web/src/ui` (chế độ `edit` / `view`), khai `SHARED-REGISTRY.md`; màn sửa ở bề ngang < 1024px hiện "Sửa sơ đồ chỉ làm trên máy tính" kèm lối sang chế độ xem
+**And** bản vẽ 300 hình + 600 dây mở xong < 3 giây trên máy dev, API trả nội dung < 1 giây (NFR-05)
+
+**Given** lưu với `content` sai hình dạng (thiếu khoá, kiểu nút lạ, quá kích thước cho phép)
+**When** gọi API lưu
+**Then** 400 với thông báo tiếng Việt, không tạo phiên bản; ARCHITECTURE-SPINE cập nhật cây module + bảng AD-3
+
+### Story 10.3: Thiết bị từ kho với biểu tượng theo loại
+
+As a Thành viên,
+I want kéo thiết bị có sẵn trong kho vào bản vẽ, hiện bằng biểu tượng đúng loại, bấm vào thấy đủ thông tin,
+So that không phải gõ lại tên/IP/model và bản vẽ luôn trỏ đúng hồ sơ thật.
+
+**Acceptance Criteria:**
+
+**Given** `device_type` thêm `icon_key` (biểu tượng có sẵn trong thư viện ~20 SVG tĩnh của web) và `icon_file_id?` (SVG riêng) — migration, chủ `catalog`
+**When** người sửa được danh mục (Q-12) chọn biểu tượng có sẵn cho một loại, hoặc SA tải SVG riêng
+**Then** loại mới chưa chọn gì hiện biểu tượng "Thiết bị khác"; chỉ SA tải SVG được (Admin/Thành viên gọi API → 403)
+**And** SVG tải lên được LỌC phía server trước khi lưu: bỏ `<script>`, `<foreignObject>`, thuộc tính `on*`, `href`/`xlink:href` trỏ ra ngoài hoặc `javascript:`, thực thể XML ngoài; file quá `diagram.icon_svg_max_kb` (mặc định 100) hoặc không phải SVG hợp lệ → từ chối; SVG chỉ hiện qua `<img>`/data trong canvas, phục vụ với `Content-Type: image/svg+xml` + `Content-Security-Policy: sandbox` (bài kiểm dựng lại SVG có script phải đỏ khi bỏ bộ lọc)
+
+**Given** khung vẽ ở chế độ sửa
+**When** người vẽ tìm thiết bị theo mã/tên/IP (dùng `DeviceCombobox` sẵn có) và thả vào bản vẽ
+**Then** hình mang `device_id`, không có ô nhập tên/IP riêng; một thiết bị chỉ xuất hiện MỘT lần trong một bản vẽ (thả lần hai thì bay tới hình đã có); thiết bị đã thanh lý không thả được
+**And** dưới hình có nhãn vị trí "Site · Tủ · U" lấy từ kho, rê chuột thấy đầy đủ
+
+**Given** người xem bấm một thiết bị
+**When** thẻ thông tin mở
+**Then** thẻ hiện mã, tên, loại, model, serial, IP (qua `ipam.api`), site/tủ/U, NCC + hotline, bảo hành bằng `ExpiryBadge`, và danh sách "Có mặt trong các bản vẽ" (bấm nhảy sang); có link "Mở hồ sơ"
+**And** nút "Mở két" mở luồng két sẵn có của thiết bị đó: VẪN đòi mã phạm vi két (đang trong ân hạn sơ đồ không đủ), Thành viên theo 3 tầng quyền (Epic 6); thẻ không bao giờ chứa giá trị két
+
+### Story 10.4: Vẽ dây là khai sơ đồ cổng
+
+As a Thành viên,
+I want kéo dây từ máy A sang máy B, chọn cổng hai đầu và loại dây, rồi bấm một thiết bị là thấy mọi dây của nó đi đâu,
+So that bản vẽ và sơ đồ cổng là MỘT dữ liệu, đọc là hiểu, không phải đoán màu dây.
+
+**Acceptance Criteria:**
+
+**Given** danh mục mới `cable_type` (chủ `catalog`: tên, ô màu `color_slot` 1..N, mô tả, `active`) seed vài loại cơ bản (Cat6, Cat5e, Quang single-mode, Quang multi-mode, DAC) và cột `device_port.cable_type_id?` (chủ `devices`) — migration
+**When** Admin/Thành viên quản trị loại dây ở màn Danh mục
+**Then** màu chọn từ bảng ô màu có sẵn (token `--diagram-cable-1..N` trong `tokens.css`, có cặp dark) — không có ô nhập hex; chú giải màu trên mọi bản vẽ tự sinh từ danh mục này, người vẽ không tự chọn màu
+**And** vô hiệu loại dây đang dùng: dây cũ giữ màu + nhãn "(ngừng dùng)", không chọn mới được (Q-14)
+
+**Given** người vẽ kéo dây từ A sang B
+**When** hộp chọn cổng mở
+**Then** mỗi đầu chỉ liệt kê cổng còn trống của thiết bị đó (hoặc gõ tên cổng mới), chọn loại dây, VLAN (trống / `trunk` / 1–4094 — Q-16), ghi chú
+**And** dây trong bản nháp là ĐỀ XUẤT lưu trong `content`; chỉ khi bản được phát hành (Story 10.8) mới ghi vào `device_port` qua `devices.api` trong cùng transaction — luật một cổng một cáp, kiểm hai chiều, không phân biệt hoa/thường (Q-20) áp nguyên
+**And** cổng đã có dây trong sơ đồ cổng được chọn lại thì dây trỏ tới dòng `device_port` đó (một kết nối = một bản ghi, AD-14), không tạo bản ghi đối xứng
+
+**Given** chọn một cổng mà đầu kia đã bị chiếm (trong kho hoặc trong chính bản nháp)
+**When** bấm Nối
+**Then** báo lỗi đỏ ngay trong hộp, không tạo dây
+
+**Given** người xem bấm vào một thiết bị
+**When** chế độ tô sáng bật
+**Then** mọi dây của thiết bị + thiết bị đầu kia sáng lên, phần còn lại mờ đi; dây có đầu kia KHÔNG nằm trên bản vẽ này hiện mũi tên "tới Core-01 (bản vẽ Phòng server)" — bấm nhảy sang bản vẽ đó và bay tới thiết bị (vẫn trong ân hạn sơ đồ, không hỏi lại)
+**And** nhãn trên dây hiện cổng hai đầu (vd `Gi0/24 ↔ Te1/0/1`); bấm dây mở thẻ dây: cổng hai đầu, loại dây, VLAN, ghi chú
+**And** màu dây/tô sáng kiểm cả light lẫn dark trong E2E
+
+### Story 10.5: Hình tự do, khung tự sinh và bản vẽ con
+
+As a Thành viên,
+I want vẽ khung tòa nhà/tầng/phòng/VLAN, đám mây ISP, chữ, mũi tên, kéo cả một tủ vào là ra khung chứa sẵn máy, và nháy đúp khung để xuống bản vẽ con,
+So that không phải dựng tay hàng chục khung và đường như trong Visio.
+
+**Acceptance Criteria:**
+
+**Given** khung vẽ ở chế độ sửa
+**When** người vẽ thêm hình tự do (khung chữ nhật có tên, đám mây ISP, chữ, mũi tên, đường nối site: cáp quang / VPN site-to-site)
+**Then** hình tự do chỉ nằm trong `content` của phiên bản, không ghi bảng kho nào; màu khung chọn từ bảng token, không hex
+
+**Given** khung loại VLAN
+**When** người vẽ gắn khung với một dải IP (chọn qua `ipam.api`)
+**Then** bấm khung hiện dải (CIDR, VLAN, site), số IP đã cấp / còn trống và vài IP trống đầu tiên; dải đã ngừng dùng hiện nhãn "(ngừng dùng)"
+
+**Given** người vẽ kéo "Tủ R1" từ danh mục tủ vào bản vẽ
+**When** thả
+**Then** sinh khung tủ chứa sẵn mọi thiết bị đang gắn tủ đó trong kho (qua `devices.api`, bỏ máy đã thanh lý); thêm máy vào khung thì khung tự giãn
+**And** máy sau này được gắn thêm vào tủ trong kho KHÔNG tự chui vào bản vẽ — hiện thành cảnh báo lệch kho (Story 10.9)
+
+**Given** một khung tòa nhà/tầng/phòng/tủ được nối với bản vẽ con trong cây
+**When** người xem nháy đúp khung
+**Then** mở bản vẽ con; thanh đường dẫn "Tổng > Tower > Tầng 3 > Phòng server" bấm lên được từng cấp; trong ân hạn sơ đồ không hỏi lại mã
+**And** nối khung với bản vẽ không cùng nhánh cây hoặc đã lưu trữ → từ chối kèm lý do
+
+### Story 10.6: Phiên bản, lịch sử tóm tắt và khôi phục
+
+As a Admin,
+I want mỗi lần lưu thành một phiên bản có tóm tắt một dòng, đặt tên được, và khôi phục bản trước bằng một bấm,
+So that 1–2 năm sau vẫn xem lại đúng bản vẽ lúc đó, kể cả máy đã thanh lý.
+
+**Acceptance Criteria:**
+
+**Given** người vẽ bấm Lưu
+**When** phiên bản mới được tạo
+**Then** cùng transaction chụp `device_snapshot` (mã, tên, loại, model, serial, IP, site, tủ, U, trạng thái của mọi thiết bị trên bản vẽ) và `cable_snapshot` (cổng hai đầu, loại dây, VLAN) vào phiên bản — AD-14: phiên bản là bằng chứng thời điểm, không đổi theo dữ liệu sống
+**And** sinh tóm tắt MỘT dòng so với phiên bản trước: "Thêm 3 thiết bị, bỏ 1, đổi 37 dây"; bấm xem chi tiết nhóm theo loại (thiết bị / dây / hình tự do) — không liệt kê phẳng hàng trăm dòng
+**And** lịch sử hiển thị bằng `HistoryPanel` dạng trục dọc (Q-20), đọc từ `diagram_history` chỉ-thêm (AD-13: lưu, phát hành, khôi phục, đặt tên), không đọc `audit_log`
+
+**Given** xem một phiên bản cũ có máy đã thanh lý
+**When** mở phiên bản đó
+**Then** máy hiện đúng tên/IP lúc vẽ lấy từ snapshot, kèm dấu "đã thanh lý sau ngày vẽ"
+
+**Given** một phiên bản quan trọng
+**When** người vẽ hoặc Admin đặt tên ("Sau khi thay core 2026")
+**Then** tên ghi thành một hàng mới ở `diagram_version_label` chỉ-thêm (tên mới nhất thắng) — `diagram_version` không bị UPDATE; danh sách phiên bản lọc được "chỉ phiên bản có tên"
+
+**Given** Admin/SA bấm "Khôi phục bản chính thức trước"
+**When** xác nhận qua `useConfirm`
+**Then** tạo một phiên bản MỚI có nội dung của bản được chọn và phát hành nó, ghi `diagram_history` + audit; không xoá phiên bản nào; dây của bản khôi phục đi qua tự kiểm (Story 10.8) như mọi lần phát hành
+**And** Thành viên không có nút này, gọi API → 403
+
+**Given** Nguyễn A đang mở sửa bản vẽ
+**When** người thứ hai mở cùng bản vẽ ở chế độ sửa
+**Then** thấy "Đang có Nguyễn A mở sửa bản vẽ này" (nhịp báo có mặt sống `diagram.presence_ttl_seconds`, mặc định 60); người thứ hai vẫn sửa và lưu được (bản lưu sau thắng — Q-23), tóm tắt của bản lưu sau ghi "lưu đè lên bản của Nguyễn A" khi `based_on_version_id` khác bản mới nhất
+
+### Story 10.7: So sánh tô màu và thanh trượt thời gian
+
+As a Admin,
+I want so sánh hai phiên bản bằng tô màu và kéo thanh thời gian về một ngày bất kỳ,
+So that thấy ngay đã đổi gì, và trả lời auditor "ngày X sơ đồ trông thế nào".
+
+**Acceptance Criteria:**
+
+**Given** hai phiên bản bất kỳ của cùng bản vẽ
+**When** bấm "So sánh"
+**Then** khung vẽ chế độ xem tô: thiết bị/dây THÊM màu xanh, BỎ màu đỏ, ĐỔI cổng/loại dây màu vàng (token có cặp dark, E2E kiểm light + dark); có chú giải và bộ đếm từng loại
+**And** phép so sánh là hàm thuần dùng chung với tóm tắt Story 10.6 (test bảng dữ liệu), không viết hai lần
+
+**Given** thanh trượt thời gian trên bản vẽ
+**When** kéo về ngày X
+**Then** hiện bản CHÍNH THỨC đang hiệu lực ngày X (tính từ sự kiện phát hành trong `diagram_history`), nhãn rõ "Bản chính thức hiệu lực ngày X — phiên bản N"; mỗi lần đổi phiên bản đang xem ghi `diagram.viewed`
+**And** ngày X trước bản chính thức đầu tiên → báo "Chưa có bản chính thức vào ngày này", không hiện bản nháp
+
+### Story 10.8: Gửi duyệt, tự kiểm và bình luận ghim
+
+As a Thành viên,
+I want gửi bản nháp cho Admin duyệt, được hệ thống tự kiểm trước, và nhận lại ghi chú ghim ngay trên hình/dây sai,
+So that bản chính thức luôn qua người có thẩm quyền mà không ai phải đọc từng thay đổi.
+
+**Acceptance Criteria:**
+
+**Given** loại yêu cầu `diagram_publish` đăng ký vào module `approvals` (AD-6): `pending → approved | returned | withdrawn`, đổi trạng thái chỉ qua `transition()`
+**When** Thành viên bấm "Gửi duyệt" (bắt ghi lý do thay đổi)
+**Then** hệ thống chạy tự kiểm (hàm thuần, test bảng dữ liệu): LỖI ĐỎ chặn gửi — cổng không tồn tại, một cổng hai dây (trong bản hoặc va với sơ đồ cổng hiện tại), máy đã thanh lý; CẢNH BÁO VÀNG cho qua — máy đặt trong khung tủ khác tủ ghi trong kho, dây giữa hai site không có đường nối site
+**And** gửi được thì tạo `approval` + email cho Admin/SA qua outbox, nhắc lại theo `approval.reminder_hours`; một bản vẽ chỉ có một yêu cầu chờ của một người (chỉ mục duy nhất `approval_one_pending_key` sẵn có); người gửi tự rút được
+
+**Given** Admin/SA mở yêu cầu chờ duyệt
+**When** xem trang duyệt
+**Then** thấy tóm tắt một dòng + danh sách cảnh báo vàng + nút "Xem so sánh với bản chính thức" (tuỳ chọn, Story 10.7) — KHÔNG bắt bấm qua từng thay đổi (Q-23)
+**And** bấm Duyệt: trong MỘT transaction phiên bản thành chính thức, dây đề xuất ghi vào `device_port` qua `devices.api`, `approval` → `approved`, `diagram_history` + audit + email báo người gửi; tự kiểm chạy LẠI tại lúc duyệt — có lỗi đỏ mới phát sinh (vd cổng vừa bị chiếm) thì không duyệt được và báo rõ
+**And** Thành viên gọi API duyệt → 403; chỉ Admin/SA duyệt
+
+**Given** Admin/SA tự vẽ
+**When** bấm "Phát hành"
+**Then** chạy cùng bộ tự kiểm (đỏ chặn, vàng cho qua), phát hành ngay không qua `approvals` (Q-23), ghi `diagram_history` + audit
+
+**Given** Admin trả về
+**When** ghim bình luận lên hình/dây sai (hoặc ghi chú chung) rồi bấm "Trả về"
+**Then** phải có ít nhất một bình luận hoặc ghi chú; `approval` → `returned`, email người gửi; người gửi mở bản nháp thấy các ghim, sửa rồi gửi lại
+**And** bình luận lưu ở `diagram_comment` (gắn phiên bản + id hình/dây, `parent_id` để trả lời thành luồng); không sửa/xoá nội dung bình luận, chỉ "Đã xử lý" (ghi audit); mọi vai bình luận được ngoài luồng duyệt
+**And** chuỗi ghi chú bị chặn nếu trông như mật khẩu (FR-035, Q-19)
+
+### Story 10.9: Cảnh báo lệch kho và kiểm tra khớp
+
+As a Admin,
+I want bản vẽ tự báo khi dữ liệu kho đã đổi khác lúc vẽ,
+So that biết bản vẽ nào đã cũ mà hệ thống không tự sửa hay ép sửa (Q-23).
+
+**Acceptance Criteria:**
+
+**Given** bản chính thức có snapshot (Story 10.6)
+**When** mở bản vẽ
+**Then** so snapshot với dữ liệu hiện tại qua `devices.api`/`ipam.api`: máy đã thanh lý, đổi IP, đổi site/tủ/U, dây trên bản vẽ không còn trong sơ đồ cổng, dây trong sơ đồ cổng giữa hai máy cùng có mặt trên bản vẽ mà chưa vẽ
+**And** có lệch thì hiện nhãn "Có N thay đổi chưa vẽ" và dấu trên từng hình/dây liên quan; bấm nhãn = "Kiểm tra khớp dữ liệu" liệt kê từng mục, bấm mục bay tới hình
+**And** KHÔNG có thao tác nào tự sửa bản vẽ hay sơ đồ cổng; cây bản vẽ hiện dấu cho bản đang lệch
+**And** phép so dùng chung bộ luật với tự kiểm Story 10.8 (một bộ hàm thuần, test bảng dữ liệu)
+
+**Given** lượt quét hằng ngày của worker
+**When** số lệch của một bản chính thức tăng so với lần quét trước
+**Then** email người phụ trách bản vẽ qua outbox (bật/tắt bằng `diagram.drift_notify_enabled`, mặc định bật); số không đổi thì không gửi lại; khử job đúp BullMQ có bài `test:db`
+**And** `devices` không phụ thuộc `diagrams` — phát hiện lệch là việc của `diagrams` đọc qua public api (depcruise xanh)
+
+### Story 10.10: Xuất PNG/PDF có chân trang và watermark
+
+As a Admin,
+I want xuất bản vẽ ra PNG/PDF có chân trang phiên bản, người vẽ, người duyệt và watermark người xuất,
+So that nộp hồ sơ ISO được, và ảnh lọt ra ngoài vẫn mang tên người đã lấy nó.
+
+**Acceptance Criteria:**
+
+**Given** người dùng đang xem một bản vẽ (trong ân hạn sơ đồ)
+**When** bấm "Xuất PNG" hoặc "Xuất PDF"
+**Then** web gọi `POST /diagrams/:id/exports` (`@Audited`, ghi `diagram.exported`: ai, phiên bản, định dạng, lúc nào); server trả dữ liệu chân trang + chữ watermark — không dựng chân trang từ dữ liệu client tự có
+**And** file có chân trang: tên bản vẽ, đường dẫn cây, phiên bản số + tên, trạng thái (Chính thức / Nháp / Trình bày), ngày duyệt, người vẽ, người duyệt; và watermark mờ "người xuất · giờ phút" lặp trên toàn hình (Q-23)
+**And** xuất bản nháp có dải "BẢN NHÁP — chưa duyệt"; chú giải màu dây đi kèm trong file
+**And** thư viện PDF chọn trong story, khai addendum/registry; phần dựng ảnh dùng chung với chế độ xem (`DiagramCanvas`), không vẽ lại lần hai
+
+**Given** hết ân hạn sơ đồ giữa chừng
+**When** bấm xuất
+**Then** hỏi lại mã tại chỗ rồi xuất tiếp; huỷ nhập mã thì không có file, không có dòng audit xuất
+
+### Story 10.11: Bản trình bày
+
+As a Admin,
+I want nhân bản bản chính thức thành bản trình bày để thêm thiết bị dự kiến, ảnh báo giá rồi xuất PDF xin mua sắm,
+So that trình nội bộ thoải mái mà không đụng tới bản chính thức.
+
+**Acceptance Criteria:**
+
+**Given** một bản chính thức
+**When** bất kỳ vai bấm "Tạo bản trình bày"
+**Then** tạo `diagram` mới `kind = 'presentation'` ghi `source_diagram_id` + `source_version_id`, chép nội dung phiên bản đó; bản trình bày không nằm trong chuỗi chính thức, không có Gửi duyệt/Phát hành, không bao giờ ghi `device_port`
+**And** một bản chính thức có nhiều bản trình bày; xem bản trình bày vẫn đòi mã phạm vi sơ đồ và ghi `diagram.viewed`
+
+**Given** đang sửa bản trình bày
+**When** thêm "thiết bị dự kiến" (tên, model, giá, nhà cung cấp — không cần có trong kho) và ảnh tự do (báo giá, ảnh sản phẩm — tải qua `files`, lọc loại file như đính kèm)
+**Then** thiết bị dự kiến vẽ viền đứt, nhãn "Dự kiến"; không bao giờ lọt vào kho hay bản chính thức
+**And** PDF/PNG của bản trình bày có dải "BẢN TRÌNH BÀY — không phải sơ đồ chính thức" (Story 10.10) và dòng "Dựa trên bản chính thức phiên bản N"
+
+**Given** bản gốc có phiên bản chính thức mới sau khi nhân bản
+**When** mở bản trình bày
+**Then** hiện "Bản gốc đã có phiên bản mới (N+k)" kèm link; không tự cập nhật
+
+**Given** thử thêm thiết bị dự kiến hoặc ảnh tự do vào bản chính thức qua API
+**When** lưu
+**Then** 400 — loại nút này chỉ hợp lệ trong `kind = 'presentation'`
+
+### Story 10.12: Điều hướng, trình chiếu và xem trên điện thoại
+
+As a Thành viên trực đêm,
+I want phóng to là hiện chi tiết, tắt bớt lớp, tìm một máy là bay tới, chỉ đường giữa hai máy, và mở được trên điện thoại,
+So that lúc sự cố 2 giờ sáng thấy ngay đường đi từ máy hỏng tới Internet.
+
+**Acceptance Criteria:**
+
+**Given** bản vẽ đang xem
+**When** phóng to/thu nhỏ
+**Then** xa: chỉ biểu tượng + tên; vừa: thêm nhãn vị trí; gần: thêm nhãn cổng trên dây và VLAN
+**And** bật/tắt lớp theo loại thiết bị, loại dây, hình tự do; watermark KHÔNG nằm trong danh sách lớp
+
+**Given** ô tìm trên bản vẽ
+**When** gõ mã/tên/IP
+**Then** có trong bản vẽ thì bay tới và tô sáng; không có thì liệt kê các bản vẽ khác chứa nó (bấm mở rồi bay tới)
+
+**Given** người xem chọn thiết bị A và B rồi bấm "Chỉ đường"
+**When** hệ thống tìm đường ngắn nhất trên đồ thị sơ đồ cổng (qua `devices.api`, hàm thuần có test bảng dữ liệu)
+**Then** tô sáng đường trên bản vẽ hiện tại, đoạn nằm ở bản vẽ khác hiện mũi tên nhảy sang; không có đường thì báo "Không có đường nối giữa A và B trong sơ đồ cổng"
+
+**Given** chế độ trình chiếu (bàn giao người mới)
+**When** chọn một nút cây và bấm "Trình chiếu"
+**Then** đi lần lượt bản chính thức từ tổng xuống chi tiết, toàn màn hình, phím ← → / Esc; hết ân hạn giữa chừng thì hỏi lại mã tại chỗ, không thoát trình chiếu; mỗi trang ghi `diagram.viewed`
+
+**Given** điện thoại 390px
+**When** mở cây bản vẽ và một bản chính thức
+**Then** xem được: cây, bản vẽ (phóng bằng hai ngón), bấm thiết bị ra thẻ, tô sáng dây, tìm; KHÔNG có công cụ sửa/gửi duyệt; mở đường dẫn sửa trên điện thoại → chế độ xem kèm "Sửa sơ đồ chỉ làm trên máy tính"; E2E có assertion 390px
+
+**Given** thiết kế chừa chỗ trạng thái sống (FR-049 — CHỈ thiết kế, không làm trong Epic 10)
+**When** story đóng
+**Then** `docs/` có mục thiết kế: hợp đồng API nhận trạng thái thiết bị từ máy giám sát ngoài (khoá API riêng, chỉ ghi trạng thái, không đọc gì), cách lưu, lớp "trạng thái sống" bật/tắt trong danh sách lớp; mô hình lớp của `DiagramCanvas` có chỗ cho lớp đó
+**And** mã KHÔNG có route nhận trạng thái và giao diện KHÔNG hiện lớp đó (bài kiểm bề mặt route xác nhận vắng mặt)
+
+### Story 10.13: Ảnh thật, mặt tủ theo U và ghim cổng
+
+As a Thành viên,
+I want đổi hình thiết bị sang ảnh thật, xem mặt trước/sau của tủ xếp đúng U, và ghim số cổng lên ảnh mặt sau,
+So that xuống tủ là nhận ra đúng máy, đúng lỗ cắm.
+
+**Acceptance Criteria:**
+
+**Given** thiết bị thêm `rack_u_start` và `rack_u_size` (cùng có hoặc cùng trống, 1–60; migration, chủ `devices`)
+**When** lưu hồ sơ thiết bị có U
+**Then** API chặn U vượt `cabinet.u_height` (đọc qua `catalog.api`) và chặn hai máy chồng U trong cùng tủ, báo tên máy đang chiếm; lịch sử thiết bị ghi thay đổi U; nhập/xuất Excel thiết bị có thêm cột "U bắt đầu", "Số U" (không bắt buộc)
+
+**Given** ảnh thật ở hai mức
+**When** người dùng chọn ảnh mặt trước/mặt sau từ giấy tờ đính kèm của thiết bị (mức máy) hoặc tải ảnh cho model (mức model: loại thiết bị + model, `files.owner_type` thêm `device_model` — migration)
+**Then** ảnh mức máy ghi đè ảnh mức model; chỉ nhận ảnh (jpeg/png/webp) theo kiểm nội dung sẵn có của `files`
+**And** mỗi hình trên bản vẽ có công tắc Biểu tượng / Ảnh thật; không có ảnh thì công tắc tắt kèm lý do (`useDisabledReason`)
+
+**Given** một bản vẽ loại tủ
+**When** bấm "Mặt tủ"
+**Then** tự sinh mặt tủ theo U từ kho (máy có U xếp đúng chỗ, máy chưa khai U nằm ở cột "Chưa khai U"), xem được mặt trước / mặt sau
+**And** máy có U vượt chiều cao tủ (dữ liệu cũ) hiện cảnh báo, không vỡ khung
+
+**Given** ảnh mặt sau
+**When** người dùng ghim chấm số lên vị trí cổng trên ảnh, gắn với tên cổng
+**Then** ghim lưu theo ảnh (mức model hoặc mức máy, chủ `devices`); trên bản vẽ chấm cổng nối với dây tương ứng; ghim tên cổng không có trên thiết bị → cảnh báo vàng
+
+### Story 10.14: Tự xếp sơ đồ, xếp gọn và nối hàng loạt
+
+As a Thành viên,
+I want hệ thống dựng sẵn bản nháp từ sơ đồ cổng đã khai, làm thẳng dây, và nối 24 máy vào switch một lượt,
+So that không mất buổi chiều kéo từng hình, từng dây như Visio.
+
+**Acceptance Criteria:**
+
+**Given** một site hoặc một tủ đã có sơ đồ cổng
+**When** bấm "Tự xếp sơ đồ" và chọn phạm vi (site / tủ / danh sách thiết bị)
+**Then** tạo một phiên bản nháp MỚI: thiết bị trong phạm vi + dây từ sơ đồ cổng, xếp tầng (tường lửa / lõi / switch / thiết bị cuối) bằng thư viện bố cục chọn trong story; phiên bản trước giữ nguyên nên "hoàn tác" = mở lại bản cũ
+**And** phạm vi > `diagram.autolayout_max_nodes` thiết bị (mặc định 300) → từ chối kèm gợi ý thu hẹp
+
+**Given** một bản vẽ có dây chéo nhau
+**When** bấm "Xếp gọn" (cả bản hoặc vùng chọn)
+**Then** dây đổi sang đường thẳng/góc vuông, giảm cắt nhau; chỉ đổi vị trí/đường đi trong `content`, không đổi dữ liệu dây
+
+**Given** chọn một switch và N thiết bị
+**When** bấm "Nối hàng loạt", chọn cổng bắt đầu và loại dây
+**Then** hiện bảng xem trước "thiết bị → cổng" theo thứ tự cổng, BỎ QUA cổng đã chiếm; cổng không đủ cho N máy → lỗi đỏ, không nối gì
+**And** chỉ khi xác nhận mới thêm dây đề xuất vào bản nháp (ghi sơ đồ cổng khi phát hành — Story 10.4/10.8)
