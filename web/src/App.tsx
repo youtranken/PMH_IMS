@@ -1,8 +1,9 @@
 import {
-  BrowserRouter,
   Navigate,
   Route,
+  RouterProvider,
   Routes,
+  createBrowserRouter,
   useLocation,
   useParams,
 } from 'react-router-dom';
@@ -61,22 +62,33 @@ import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 import { usePageTitle } from '@/ui/use-page-title';
 import { LiveRegion } from '@/ui/live-region';
 
+/**
+ * Data router chứ không `BrowserRouter`: `useBlocker` (chặn rời màn khi còn thay đổi chưa lưu,
+ * `ui/use-unsaved-guard`) chỉ chạy dưới data router. Cả cây route vẫn là `<Routes>` lồng bên
+ * trong một route `*` duy nhất, nên luồng đăng nhập ở `AppRoutes` giữ nguyên.
+ *
+ * Tạo router theo từng lần gắn `App`, không ở cấp module: router đọc `window.location` lúc tạo,
+ * và bài kiểm gắn `App` nhiều lần với địa chỉ khác nhau.
+ */
 export default function App() {
+  const [router] = useState(() => createBrowserRouter([{ path: '*', element: <AppRoot /> }]));
+  return <RouterProvider router={router} />;
+}
+
+function AppRoot() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <ConfirmProvider>
-          {/*
-            Vùng sống thường trực, gắn NGOÀI `AppRoutes`. Phải nằm ngoài vì `AppRoutes`
-            tự `return <Loading/>` trong lúc hỏi `/auth/me`: đặt bên trong thì đúng lượt tải
-            đầu tiên — lượt duy nhất người dùng chắc chắn phải chờ — lại không có vùng sống
-            nào đang đứng sẵn để loan báo.
-          */}
-          <LiveRegion />
-          <AppRoutes />
-        </ConfirmProvider>
-      </ToastProvider>
-    </BrowserRouter>
+    <ToastProvider>
+      <ConfirmProvider>
+        {/*
+          Vùng sống thường trực, gắn NGOÀI `AppRoutes`. Phải nằm ngoài vì `AppRoutes`
+          tự `return <Loading/>` trong lúc hỏi `/auth/me`: đặt bên trong thì đúng lượt tải
+          đầu tiên — lượt duy nhất người dùng chắc chắn phải chờ — lại không có vùng sống
+          nào đang đứng sẵn để loan báo.
+        */}
+        <LiveRegion />
+        <AppRoutes />
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useBeforeUnload, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
@@ -13,9 +13,12 @@ import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
+import { useUnsavedGuard } from '@/ui/use-unsaved-guard';
 import { checkDraft, descriptionSlot, toDraft, warningOf, type SettingRow } from './settings-rules';
 
 type Group = SettingRow['group'];
+/** Đích của một lượt rời nhóm đang dở: sang nhóm khác trên trang, hoặc sang màn khác (router giữ đích). */
+type Leave = { group: Group } | 'route';
 
 const GROUPS: { key: Group; label: string }[] = [
   { key: 'auth', label: 'settings.groupAuth' },
@@ -131,7 +134,7 @@ export function SettingsScreen({ me }: { me: Me }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   /** Nhóm người dùng bấm sang khi còn thay đổi chưa lưu: hỏi trước (Q-21), lưu xong mới sang. */
   const [leavingTo, setLeavingTo] = useState<Group | null>(null);
-  const [saveThenGo, setSaveThenGo] = useState<Group | null>(null);
+  const [saveThenGo, setSaveThenGo] = useState<Leave | null>(null);
 
   const list = useQuery({
     queryKey: SETTINGS_KEY,
@@ -152,13 +155,25 @@ export function SettingsScreen({ me }: { me: Me }) {
         ? `${String(value)} ${t(UNIT[row.unit])}`
         : String(value);
 
-  /* Đóng tab / tải lại trang khi còn thay đổi: trình duyệt hỏi bằng hộp của nó. Điều hướng
-     trong app (menu) không chặn được: `useBlocker` cần data router, app dùng `BrowserRouter`. */
-  useBeforeUnload((event) => {
-    if (changed.length === 0) return;
-    event.preventDefault();
-    event.returnValue = '';
-  });
+  /* Rời màn (menu, Ctrl+K, nút lùi) khi còn thay đổi: router giữ lượt đi lại, màn hỏi bằng
+     cùng hộp như khi đổi nhóm. Đóng / tải lại tab thì trình duyệt hỏi bằng hộp của nó. */
+  const guard = useUnsavedGuard(changed.length > 0);
+  /* Router vẫn giữ lượt rời màn trong lúc hộp Trước → Sau mở; khi đó không hỏi chồng lần nữa. */
+  const asking: Leave | null = reviewing ? null : leavingTo ? { group: leavingTo } : guard.blocked ? 'route' : null;
+
+  const stay = () => {
+    setLeavingTo(null);
+    if (guard.blocked) guard.stay();
+  };
+
+  const leave = (to: Leave) => {
+    if (to === 'route') {
+      setDrafts({});
+      guard.proceed();
+    } else {
+      switchGroup(to.group);
+    }
+  };
 
   const askSwitch = (next: Group) => {
     if (next === group) return;
@@ -199,7 +214,7 @@ export function SettingsScreen({ me }: { me: Me }) {
       toast({ message: t('settings.saved', { count: changed.length }) });
       setDrafts({});
       setReviewing(false);
-      if (saveThenGo) switchGroup(saveThenGo);
+      if (saveThenGo) leave(saveThenGo);
       setSaveThenGo(null);
     } catch (err) {
       if (!isStepUpCancelled(err)) {
@@ -215,6 +230,13 @@ export function SettingsScreen({ me }: { me: Me }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  /* Huỷ ở hộp Trước → Sau khi đang lưu-để-rời-màn = ở lại: trả lượt rời màn router đang giữ. */
+  const cancelReview = () => {
+    setReviewing(false);
+    if (saveThenGo === 'route') guard.stay();
+    setSaveThenGo(null);
   };
 
   return (
@@ -345,10 +367,7 @@ export function SettingsScreen({ me }: { me: Me }) {
         <Dialog
           open
           onOpenChange={(open) => {
-            if (!open) {
-              setReviewing(false);
-              setSaveThenGo(null);
-            }
+            if (!open) cancelReview();
           }}
           dismissible={!saving}
           maxWidth={560}
@@ -358,10 +377,7 @@ export function SettingsScreen({ me }: { me: Me }) {
               <button
                 type="button"
                 className="btn"
-                onClick={() => {
-                  setReviewing(false);
-                  setSaveThenGo(null);
-                }}
+                onClick={cancelReview}
               >
                 {t('common.cancel')}
               </button>
@@ -397,7 +413,7 @@ export function SettingsScreen({ me }: { me: Me }) {
         </Dialog>
       ) : null}
 
-      {leavingTo ? (
+      {asking ? (
         /* "Lưu nhóm này" đi qua ĐÚNG đường của nút Lưu: hộp Trước → Sau rồi step-up — không có
            lối lưu tắt nào bỏ qua bước đọc lại hay bước xác thực. */
         <ConfirmDialog
@@ -409,18 +425,17 @@ export function SettingsScreen({ me }: { me: Me }) {
           extra={{
             label: t('settings.discard'),
             onClick: () => {
-              const next = leavingTo;
               setLeavingTo(null);
-              switchGroup(next);
+              leave(asking);
             },
           }}
           onConfirm={() => {
-            setSaveThenGo(leavingTo);
+            setSaveThenGo(asking);
             setLeavingTo(null);
             setSaveError(null);
             setReviewing(true);
           }}
-          onCancel={() => setLeavingTo(null)}
+          onCancel={stay}
         />
       ) : null}
 
