@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  fillOtp,
   E2E_SA,
   expireStepUp,
   firstLogin,
@@ -98,7 +99,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
       'hết grace mà bấm Xoay thì phải được hỏi mã, không phải báo lỗi rồi thôi',
     ).toBeVisible();
 
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(page, await freshTotpCode(totpSecret));
 
     /*
      * Gõ mã xong thì việc vừa bấm TỰ CHẠY LẠI — người dùng không phải bấm Xoay lần nữa.

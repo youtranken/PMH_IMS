@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   APP_ORIGIN,
   COMPOSE,
   E2E_MEMBER,
@@ -155,7 +156,7 @@ test.describe('Break-glass', () => {
 
     await member.getByRole('button', { name: 'Xem' }).click();
     await expect(member.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
-    await member.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(member, await freshTotpCode(totpSecret));
     await expect(member.getByTestId('secret-value')).toHaveText(secretValue);
     // Lần xem đầu vừa gắn quyền vào phiên này: khung chuyển sang quyền đang chạy.
     await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();

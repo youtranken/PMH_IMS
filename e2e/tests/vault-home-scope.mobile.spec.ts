@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   E2E_MEMBER,
   E2E_SA,
   expireStepUp,
@@ -144,7 +145,7 @@ test('popup két ở 390px: Xem → mã → giá trị trong CÙNG một hộp, 
   await expect(page.getByRole('dialog')).toHaveCount(1);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await step.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+  await fillOtp(step, await freshTotpCode(totpSecret));
   await expect(popup.getByTestId('secret-value')).toHaveText('Mat-Khau#2026');
   await expect(page.getByRole('dialog')).toHaveCount(1);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

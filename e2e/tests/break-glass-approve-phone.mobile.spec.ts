@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
@@ -175,7 +176,7 @@ test.describe('Duyệt break-glass từ trang chi tiết, 390px', () => {
     // Không phải một dòng lỗi "nhập mã" mà không có ô nào: hộp mã hiện ngay tại chỗ.
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(saTotp));
+    await fillOtp(page, await freshTotpCode(saTotp));
 
     await expect(page.getByText(/Đã cấp cho .* tới/)).toBeVisible();
   });

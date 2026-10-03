@@ -568,7 +568,7 @@ export async function firstLogin(
 
   // Đủ 6 số là màn tự gửi — KHÔNG bấm Xác nhận nữa: lúc nút kịp hiện lại thì trang đã sang
   // bước đổi mật khẩu, và cú bấm chờ một nút không còn tồn tại.
-  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+  await fillOtp(page, await freshTotpCode(secret));
 
   await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
   await page.getByLabel('Mật khẩu hiện tại').fill(user.password);
@@ -589,8 +589,40 @@ export async function loginWithTotp(
 ): Promise<void> {
   await fillLogin(page, email, password);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
-  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+  await fillOtp(page, await freshTotpCode(secret));
   await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
+}
+
+/**
+ * Ô mã 2 lớp (`ui/otp-input.tsx`) là 6 ô riêng trong một nhóm mang tên nhãn — `getByLabel` trỏ
+ * vào NHÓM, không `fill` được. Dùng ba hàm dưới cho mọi chỗ nhập mã (đăng nhập, cài 2 lớp,
+ * step-up), đừng tự dò từng ô ở spec.
+ */
+export function otpGroup(scope: Page | Locator, label = 'Mã xác thực'): Locator {
+  return scope.getByRole('group', { name: label });
+}
+
+/**
+ * Gõ cả mã như tự điền của điện thoại: đổ chuỗi vào ô đầu, component tự chia ra 6 ô (bỏ ký tự
+ * không phải số). Chuỗi rỗng = xoá trắng: lùi từ ô cuối bằng Backspace, như người gõ.
+ */
+export async function fillOtp(scope: Page | Locator, code: string, label?: string): Promise<void> {
+  const boxes = otpGroup(scope, label).getByRole('textbox');
+  if (code) {
+    await boxes.first().fill(code);
+    return;
+  }
+  // End đưa con trỏ tới ô trống đầu tiên; mỗi Backspace từ đó lùi một ô và xoá nó.
+  await boxes.first().press('End');
+  const keyboard = 'keyboard' in scope ? scope.keyboard : scope.page().keyboard;
+  for (let i = 0; i < 6; i += 1) await keyboard.press('Backspace');
+}
+
+/** Mã đang nằm trong 6 ô, ghép lại thành một chuỗi — dùng với `expect.poll`. */
+export async function otpValue(scope: Page | Locator, label?: string): Promise<string> {
+  return otpGroup(scope, label)
+    .getByRole('textbox')
+    .evaluateAll((nodes) => nodes.map((n) => (n as HTMLInputElement).value).join(''));
 }
 
 /**

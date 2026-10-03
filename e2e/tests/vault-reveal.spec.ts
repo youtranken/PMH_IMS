@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { execSync } from 'node:child_process';
 import {
+  fillOtp,
+  otpValue,
   APP_ORIGIN,
   COMPOSE,
   E2E_MEMBER,
@@ -103,7 +105,7 @@ test.describe('Mở két với TOTP step-up', () => {
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/devices/${deviceId}`));
 
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(page, await freshTotpCode(totpSecret));
 
     await expect(page.getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
     /*
@@ -144,11 +146,11 @@ test.describe('Mở két với TOTP step-up', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
 
-    await page.getByLabel('Mã xác thực').fill('000000');
+    await fillOtp(page, '000000');
 
     await expect(page.getByRole('alert')).toContainText('Mã xác thực không đúng');
     await expect(page.getByTestId('secret-value')).toHaveCount(0);
-    await expect(page.getByLabel('Mã xác thực')).toHaveValue('');
+    await expect.poll(() => otpValue(page)).toBe('');
   });
 
   test('phiên hết grace không phải phiên chết: bị hỏi mã chứ không bị đá về đăng nhập', async ({

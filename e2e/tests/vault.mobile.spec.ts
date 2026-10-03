@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
+  otpGroup,
   APP_ORIGIN,
   E2E_SA,
   expireStepUp,
@@ -107,10 +109,10 @@ test.describe('Két sắt ở 390px', () => {
     await page.getByRole('button', { name: 'Xem' }).click();
 
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
-    await expect(page.getByLabel('Mã xác thực')).toBeVisible();
+    await expect(otpGroup(page)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(page, await freshTotpCode(totpSecret));
 
     await expect(page.getByTestId('secret-value')).toBeVisible();
     // Chuỗi phải ngắt dòng trong khung, không đẩy cả trang rộng ra.

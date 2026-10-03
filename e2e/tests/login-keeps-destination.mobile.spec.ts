@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
@@ -31,7 +32,7 @@ test.beforeEach(() => {
 async function loginKeepingTarget(page: Page, secret: string, email = E2E_SA.email): Promise<void> {
   await fillLogin(page, email, NEW_PASSWORD);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
-  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+  await fillOtp(page, await freshTotpCode(secret));
 }
 
 /** Phiên của một người chết ở máy chủ (hết idle, bị đá…) trong khi tab vẫn đang mở. */

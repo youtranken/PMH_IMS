@@ -1,5 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
+  fillOtp,
+  otpGroup,
+  otpValue,
   E2E_MEMBER,
   E2E_SA,
   SECOND_BROWSER,
@@ -980,17 +983,15 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     expect(
       await textboxLabels(stepUp),
-      'hộp xác nhận danh tính phải có ĐÚNG một ô: mã 6 số. Thêm ô nào ở đây cũng là thêm một ' +
-        'đường đi vòng qua hàng rào cuối',
-    ).toEqual(['Mã xác thực']);
-    // Không dùng `maxlength`: mã dán kèm khoảng trắng ("123 456") sẽ bị trình duyệt cắt trước khi
-    // lọc. Ô tự bỏ ký tự không phải số và cắt còn 6 — gõ 5 số để không kích hoạt tự gửi.
-    await stepUp.getByLabel('Mã xác thực').fill('12 34 5x');
-    await expect(
-      stepUp.getByLabel('Mã xác thực'),
-      'ô mã chỉ giữ chữ số ngay tại chỗ gõ',
-    ).toHaveValue('12345');
-    await stepUp.getByLabel('Mã xác thực').fill('');
+      'hộp xác nhận danh tính chỉ có ô mã 6 số (6 ô, mỗi ô một số). Thêm ô nào ở đây cũng là ' +
+        'thêm một đường đi vòng qua hàng rào cuối',
+    ).toEqual(Array.from({ length: 6 }, (_, i) => `Số thứ ${i + 1} trên 6`));
+    await expect(otpGroup(stepUp)).toHaveCount(1);
+    // Không dùng `maxlength`: mã dán/tự điền kèm khoảng trắng ("123 456") đổ vào MỘT ô sẽ bị trình
+    // duyệt cắt trước khi lọc. Ô tự bỏ ký tự không phải số — gõ 5 số để không kích hoạt tự gửi.
+    await fillOtp(stepUp, '12 34 5x');
+    await expect.poll(() => otpValue(stepUp), { message: 'ô mã chỉ giữ chữ số ngay tại chỗ gõ' }).toBe('12345');
+    await fillOtp(stepUp, '');
     expect(
       await stepUp.getByRole('button').allTextContents(),
       'bước mã phải có đúng cặp Quay lại / Xác nhận',
@@ -998,7 +999,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
-    await stepUp.getByLabel('Mã xác thực').fill('000000');
+    await fillOtp(stepUp, '000000');
     await expect(
       stepUp.getByRole('alert'),
       'gõ sai mã phải nói thẳng là sai mã, không phải một lỗi chung chung',
@@ -1007,10 +1008,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       stepUp,
       'GÕ SAI MÃ MÀ HỘP ĐÓNG LẠI LÀ MỘT LẦN LỘ BÍ MẬT — đây là hàng rào cuối, nó phải đứng nguyên',
     ).toBeVisible();
-    await expect(
-      stepUp.getByLabel('Mã xác thực'),
-      'mã TOTP chỉ sống 30 giây — giữ lại con số vừa bị từ chối chỉ dụ người ta bấm lại lần nữa',
-    ).toHaveValue('');
+    await expect
+      .poll(() => otpValue(stepUp), {
+        message: 'mã TOTP chỉ sống 30 giây — giữ lại con số vừa bị từ chối chỉ dụ người ta bấm lại lần nữa',
+      })
+      .toBe('');
     await expect(
       page.getByTestId('secret-value'),
       'chưa qua được hàng rào thì tuyệt đối chưa được thấy giá trị',
@@ -1018,7 +1020,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---- Gõ ĐÚNG mã: sang hộp hiện secret ---- */
 
-    await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(stepUp, await freshTotpCode(totpSecret));
     await expect(stepUp).toBeHidden();
 
     /* ---------- HỘP "HIỆN SECRET": đủ bộ ba, và một nút ẩn ngay ---------- */

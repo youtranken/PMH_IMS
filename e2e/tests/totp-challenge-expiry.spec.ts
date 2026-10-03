@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   E2E_SA,
   NEW_PASSWORD,
   agePendingSession,
@@ -67,7 +68,7 @@ test('đường hỏng: phiên chờ quá hạn ở server → gõ đúng mã c�
   const secret = await atChallenge(page);
   // Lùi tuổi phiên chờ 1 giờ (> 5 phút mặc định) — không ngồi đợi.
   agePendingSession(E2E_SA.email);
-  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+  await fillOtp(page, await freshTotpCode(secret));
   await expect(page).toHaveURL(/\/login(\?|$)/);
   await expect(page.getByRole('status').filter({ hasText: EXPIRED_NOTICE })).toBeVisible();
   await pendingSessionIsDead(page);
