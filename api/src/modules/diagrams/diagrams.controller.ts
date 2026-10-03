@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength, ValidateIf } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { OptionalUuidListQuery, splitUuidList } from '../../common/query-uuid';
 import { Audited } from '../audit/audited.decorator';
@@ -65,6 +65,27 @@ class SaveVersionDto {
   @ValidateIf((_o, v) => v !== null) @IsUUID(undefined, { message: 'Phiên bản gốc không hợp lệ.' }) basedOnVersionId!: string | null;
 }
 
+class LinksQueryDto {
+  @MaxLength(DEVICE_INFO_MAX_IDS * 38, { message: 'Quá nhiều kết nối trong một lần hỏi.' })
+  @OptionalUuidListQuery('Danh sách kết nối không hợp lệ.')
+  ids?: string;
+}
+
+class CableStatusDto {
+  @IsString() @MaxLength(RAW_MAX_BYTES, { message: 'Bản vẽ quá lớn.' }) xml!: string;
+}
+
+/** Trần thô của danh sách máy; trần thật là `diagram.autolayout_max_nodes`, service áp. */
+class DraftFromPortMapDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5000, { message: 'Quá nhiều thiết bị.' })
+  @IsUUID(undefined, { each: true, message: 'Danh sách thiết bị không hợp lệ.' })
+  deviceIds?: string[];
+  @IsOptional() @IsUUID(undefined, { message: 'Tủ mạng không hợp lệ.' }) cabinetId?: string;
+  @IsOptional() @IsUUID(undefined, { message: 'Site không hợp lệ.' }) siteId?: string;
+}
+
 class LabelDto {
   @ValidateIf((_o, v) => v !== null)
   @IsString()
@@ -122,6 +143,32 @@ export class DiagramsController {
       throw new BadRequestException({ code: 'DIAGRAM_DEVICE_INFO_TOO_MANY', message: 'Quá nhiều thiết bị trong một lần hỏi.' });
     }
     return this.diagrams.deviceInfos(ids);
+  }
+
+  /**
+   * Dòng sơ đồ cổng theo id (= `ims_link_id`) — thẻ dây, nét vừa khai. Không cần mã sơ đồ: đây là
+   * sơ đồ cổng mọi vai vốn đọc được ở trang thiết bị. CHỈ ĐỌC: `diagrams` không có route nào ghi
+   * sơ đồ cổng (AD-18) — "Khai"/"Gỡ" là web gọi thẳng endpoint của `devices`.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('links')
+  links(@Query() query: LinksQueryDto) {
+    const ids = splitUuidList(query.ids) ?? [];
+    if (ids.length > DEVICE_INFO_MAX_IDS) {
+      throw new BadRequestException({ code: 'DIAGRAM_LINKS_TOO_MANY', message: 'Quá nhiều kết nối trong một lần hỏi.' });
+    }
+    return this.diagrams.links(ids);
+  }
+
+  /**
+   * Trạng thái dây trên XML người dùng ĐANG VẼ (chưa lưu) — "Có N kết nối mới chưa vẽ" sau khi chèn
+   * máy. POST vì XML đi trong body; chỉ đọc, không lưu, không ghi nhật ký. Không cần mã sơ đồ: XML
+   * là của chính người gửi, thứ trả về là sơ đồ cổng.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Post('cable-status')
+  cableStatus(@Body() dto: CableStatusDto) {
+    return this.diagrams.cableStatus(dto.xml);
   }
 
   /** Bản vẽ có máy này ở phiên bản mới nhất — chỉ tên + id (thông tin của cây, không cần mã). */
@@ -202,6 +249,15 @@ export class DiagramsController {
   @Audited('diagram.saved', 'diagram', { writtenByService: true })
   save(@Param() params: IdParamDto, @Body() dto: SaveVersionDto, @Req() req: AuthedRequest) {
     return this.diagrams.save(req.user!.email, params.id, dto);
+  }
+
+  /** "Dựng nháp từ sơ đồ cổng" (FR-048): một phiên bản mới — sửa bản vẽ nên hỏi mã như lưu. */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/versions/from-port-map')
+  @Audited('diagram.saved', 'diagram', { writtenByService: true })
+  draftFromPortMap(@Param() params: IdParamDto, @Body() dto: DraftFromPortMapDto, @Req() req: AuthedRequest) {
+    return this.diagrams.draftFromPortMap(req.user!.email, params.id, dto);
   }
 
   /** Mọi vai gọi được; service chỉ cho Thành viên đặt tên phiên bản do chính họ lưu. */

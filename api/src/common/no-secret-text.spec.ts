@@ -95,6 +95,7 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
   const STRUCTURED = new Set([
     // Mã, tên, nhãn ngắn.
     'code', 'name', 'fullName', 'employeeCode', 'model', 'serial', 'portLabel', 'connectedPort',
+    'startPort', 'endPort', 'peerPort',
     'groupName', 'ownerName', 'assignedTo', 'department', 'usedBy', 'login', 'bandwidth',
     'contract', 'contractNo', 'contact', 'vlan', 'key', 'kind',
     // Mạng.

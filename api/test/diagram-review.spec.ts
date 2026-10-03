@@ -10,6 +10,7 @@ import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import { DevicesApiService } from '../src/modules/devices/devices.api';
 import { DevicesService } from '../src/modules/devices/devices.service';
 import { DiagramReviewService } from '../src/modules/diagrams/diagram-review.service';
@@ -89,7 +90,8 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     const audit = new AuditWriterService(db);
     const config = new SystemConfigService(db);
     const catalog = new CatalogApiService(new CatalogService(db, audit));
-    const devices = new DevicesApiService(new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry()));
+    const devicesService = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
+    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService));
     const ipam = { heldAddressesOf: (ids: string[]) => Promise.resolve(new Map(ids.map((id) => [id, []]))) } as unknown as IpamApiService;
     const users = new UsersApiService(new UsersService(db));
     const kinds = new ApprovalKindRegistry();

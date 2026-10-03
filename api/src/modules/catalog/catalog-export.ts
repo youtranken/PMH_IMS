@@ -78,6 +78,13 @@ export function catalogExportColumns(entity: CatalogEntity): ExportColumn<Row>[]
         { header: 'Mô tả', width: 40, value: (r) => text(r.description) },
         state,
       ];
+    case 'cable_type':
+      return [
+        { header: 'Tên', width: 20, value: (r) => text(r.name) },
+        { header: 'Ô màu', width: 10, value: (r) => text(r.colorSlot) },
+        { header: 'Mô tả', width: 40, value: (r) => text(r.description) },
+        state,
+      ];
   }
 }
 
@@ -93,6 +100,7 @@ export const CATALOG_SHEET_NAME: Record<CatalogEntity, string> = {
   department: 'Phòng ban',
   isp_provider: 'Nhà mạng',
   service_port: 'Dịch vụ - Port',
+  cable_type: 'Loại dây',
 };
 
 /** Tên file tải về theo danh mục — không dấu, an toàn cho URL tải. */
@@ -104,4 +112,5 @@ export const CATALOG_EXPORT_NAME: Record<CatalogEntity, string> = {
   department: 'bo-phan',
   isp_provider: 'nha-mang',
   service_port: 'dich-vu-port',
+  cable_type: 'loai-day',
 };

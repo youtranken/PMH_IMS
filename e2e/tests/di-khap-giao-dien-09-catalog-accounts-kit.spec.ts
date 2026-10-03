@@ -104,6 +104,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     'Phòng ban',
     'Nhà mạng',
     'Dịch vụ / Port',
+    'Loại dây',
   ] as const;
 
   /** Một ngăn: nhãn nút "Thêm …" và bộ cột của bảng bên trong. */
@@ -160,6 +161,12 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       columns: ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
+    {
+      tab: 'Loại dây',
+      addButton: 'Thêm loại dây',
+      columns: ['Tên', 'Màu dây', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: false,
+    },
   ];
 
   /** Đi từ màn nào cũng được về phòng Danh mục bằng đúng cái link người dùng bấm. */
@@ -205,7 +212,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const tabBar = page.getByRole('tablist', { name: 'Danh mục' });
     await expect(
       tabBar.getByRole('tab'),
-      'phòng Danh mục phải có ĐÚNG bảy ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
+      'phòng Danh mục phải có ĐÚNG tám ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
     ).toHaveText(TAB_NAMES.map(catalogTab));
 
     for (const section of SEVEN_SECTIONS) {
@@ -327,6 +334,14 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         // `catalog.portFrom` = "Từ port", `catalog.portTo` = "Đến port (tuỳ chọn)" — hai ô, một dải.
         textFields: ['Tên', 'Từ port', 'Đến port (tùy chọn)', 'Mô tả'],
         selectField: ['Giao thức'],
+        toggles: [],
+      },
+      {
+        tab: 'Loại dây',
+        title: 'Thêm loại dây',
+        // Màu là 8 ô màu (radio) — không có ô gõ mã màu (Q-23).
+        textFields: ['Tên', 'Mô tả'],
+        selectField: [],
         toggles: [],
       },
     ];

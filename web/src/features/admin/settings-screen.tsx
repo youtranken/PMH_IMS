@@ -46,6 +46,7 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   kb: 'settings.unitKb',
   files: 'settings.unitFiles',
   cells: 'settings.unitCells',
+  devices: 'settings.unitDevices',
 };
 
 /*
@@ -123,6 +124,7 @@ const TEXT: Record<string, [string, string]> = {
   diagramMaxCells: ['settings.diagramMaxCellsLabel', 'settings.diagramMaxCellsDesc'],
   diagramPresenceTtlSeconds: ['settings.diagramPresenceTtlSecondsLabel', 'settings.diagramPresenceTtlSecondsDesc'],
   diagramIconSvgMaxKb: ['settings.diagramIconSvgMaxKbLabel', 'settings.diagramIconSvgMaxKbDesc'],
+  diagramAutolayoutMaxNodes: ['settings.diagramAutolayoutMaxNodesLabel', 'settings.diagramAutolayoutMaxNodesDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

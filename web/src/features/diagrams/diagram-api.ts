@@ -1,3 +1,5 @@
+import type { PortLink } from '@/lib/port-types';
+
 /** Hình dạng trả về của `api/v1/diagrams` (module `diagrams`, AD-18). */
 
 export type DiagramNodeType = 'company' | 'site' | 'floor' | 'room' | 'cabinet' | 'other';
@@ -60,12 +62,48 @@ export interface DiagramDeviceInfo {
   cell: { style: string; label: string; width: number; height: number };
 }
 
+/**
+ * Một dòng sơ đồ cổng như sơ đồ thấy nó (`id` = `ims_link_id`). Nhãn cổng hai chiều + style ô dây
+ * do server dựng — web chèn nét bằng đúng luật hydrate, không tự ghép chuỗi.
+ */
+export interface DiagramLink extends PortLink {
+  colorSlot: number | null;
+  /** Nhãn khi nét đi từ máy giữ bản ghi (`deviceId`) / từ máy đầu kia. */
+  labelFromA: string;
+  labelFromB: string;
+  edgeStyle: string;
+}
+
+export type CableEdgeState = 'linked' | 'removed' | 'mismatch' | 'duplicate' | 'undeclared';
+
+/** Nét dây "của kho" và trạng thái — luật ở `api/src/modules/diagrams/diagram-checks.ts`. */
+export interface CableEdge {
+  cellId: string;
+  linkId: string | null;
+  state: CableEdgeState;
+  sourceDeviceId: string | null;
+  targetDeviceId: string | null;
+}
+
+export interface CableTypeInfo {
+  id: string;
+  name: string;
+  colorSlot: number;
+  active: boolean;
+}
+
 export interface DiagramContent {
   diagram: DiagramNode;
   version: (VersionItem & { xml: string; svg: string | null }) | null;
   /** Ô thiết bị của phiên bản (id ô → id máy + mã ghi trên ô). Thiếu → coi như rỗng. */
   deviceCells?: { cellId: string; deviceId: string; code: string }[];
   devices?: DiagramDeviceInfo[];
+  /** Dây của kho (vắng ở dữ liệu giả của bài kiểm cũ — coi như rỗng). */
+  cableEdges?: CableEdge[];
+  links?: DiagramLink[];
+  undrawnLinkIds?: string[];
+  externalLinkIds?: string[];
+  cableTypes?: CableTypeInfo[];
 }
 
 export const deviceInfoKey = (ids: string[]) => ['diagram-device-info', ...ids] as const;

@@ -17,7 +17,8 @@ export interface SettingRow {
     | 'mb'
     | 'kb'
     | 'files'
-    | 'cells';
+    | 'cells'
+    | 'devices';
   min?: number;
   max?: number;
   maxLength?: number;

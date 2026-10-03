@@ -7,6 +7,7 @@ export const CATALOG_ENTITIES = [
   'department',
   'isp_provider',
   'service_port',
+  'cable_type',
 ] as const;
 export type CatalogEntity = (typeof CATALOG_ENTITIES)[number];
 
@@ -86,6 +87,18 @@ export interface ServicePortRow {
   active: boolean;
 }
 
+/** Số ô màu dây (`--diagram-cable-1..8` trong `tokens.css`) — trùng CHECK `cable_type_color_slot_check`. */
+export const CABLE_COLOR_SLOTS = 8;
+
+/** Loại dây — màu là MỘT ô màu token, không phải mã màu (Q-23, AD-18). */
+export interface CableTypeRow {
+  id: string;
+  name: string;
+  colorSlot: number;
+  description: string | null;
+  active: boolean;
+}
+
 /**
  * "Đang dùng ở N …" — chỉ có ở danh sách phân trang của màn Danh mục (API đếm qua sổ đăng ký
  * của từng module chủ dữ liệu). `kind`: 'device' | 'software' | 'cabinet' | 'isp_line' |
@@ -104,6 +117,7 @@ export type CatalogRow = (
   | DepartmentRow
   | IspProviderRow
   | ServicePortRow
+  | CableTypeRow
 ) & { usage?: CatalogUsage[] };
 
 export interface CatalogLists {
@@ -114,6 +128,8 @@ export interface CatalogLists {
   departments: DepartmentRow[];
   ispProviders: IspProviderRow[];
   servicePorts: ServicePortRow[];
+  /** Vắng ở dữ liệu giả của bài kiểm cũ — nơi dùng coi vắng là rỗng. */
+  cableTypes?: CableTypeRow[];
 }
 
 /** "443" hoặc "50000-52000" — một dải một port thì chỉ hiện một số. */

@@ -11,8 +11,8 @@ import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useConfirm } from '@/ui/confirm-provider';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
 import { DiagramViewer, type ViewerCell } from '@/ui/diagram-viewer';
-import { DrawioFrame, type DrawioFrameHandle } from '@/ui/drawio-frame';
-import { exportedSvgText, type DrawioEvent } from '@/ui/drawio-protocol';
+import { DrawioFrame, readCablePalette, type DrawioFrameHandle } from '@/ui/drawio-frame';
+import { exportedSvgText, paintImsXml, type DrawioEvent } from '@/ui/drawio-protocol';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Popover } from '@/ui/popover';
 import { Tabs } from '@/ui/tabs';
@@ -28,11 +28,15 @@ import {
   nodeKey,
   versionsKey,
   type DiagramContent,
+  type CableEdge,
   type DiagramDeviceInfo,
+  type DiagramLink,
   type DiagramNode,
   type EditorSettings,
   type VersionItem,
 } from './diagram-api';
+import { CableLegend } from './cable-legend';
+import { DeviceConnections, DiagramCableCard } from './diagram-cable-card';
 import { DiagramDeviceCard } from './diagram-device-card';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
@@ -46,7 +50,9 @@ import {
   type Bounds,
   type DeviceCellSpec,
 } from './drawio-bridge';
+import { DraftFromPortMapDialog } from './draft-from-port-map-dialog';
 import { StockDevicePicker } from './stock-device-picker';
+import { useCableBridge } from './use-cable-bridge';
 
 type Mode = 'view' | 'edit';
 
@@ -81,6 +87,11 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [dirty, setDirty] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [cardCellId, setCardCellId] = useState<string | null>(null);
+  /*
+   * Tô sáng ở chế độ xem: máy đang được "bấm" (dây của nó + máy đầu kia sáng). Mở từ mũi tên "→ máy
+   * (bản vẽ khác)" thì `?focus=<id máy>` chọn sẵn máy đó và bay tới.
+   */
+  const [focusDeviceId, setFocusDeviceId] = useState<string | null>(() => params.get('focus'));
 
   const node = useQuery({ queryKey: nodeKey(id), queryFn: () => apiFetch<DiagramNode>(`/api/v1/diagrams/${id}`) });
   const settings = useQuery({
@@ -125,9 +136,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
 
   /*
    * Bay tới một ô (ghim, lời báo tự kiểm). Trình vẽ draw.io không nhận lệnh "bay tới", nên ở chế
-   * độ Sửa thì sang chế độ Xem với `?focus=` (hỏi trước nếu đang vẽ dở).
+   * độ Sửa thì sang chế độ Xem với `?cell=` (hỏi trước nếu đang vẽ dở). Không dùng `?focus=`: tham số
+   * đó là id MÁY để tô sáng (mũi tên "→ máy (bản vẽ khác)"), còn đây là id Ô.
    */
-  const [focusCell, setFocusCell] = useState<string | null>(params.get('focus'));
+  const [focusCell, setFocusCell] = useState<string | null>(params.get('cell'));
   const goToCell = (cellId: string) => {
     if (mode === 'view') {
       setFocusCell(null);
@@ -147,7 +159,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         setDirty(false);
       }
       setFocusCell(cellId);
-      setParams({ focus: cellId });
+      setParams({ cell: cellId });
     })();
   };
   const review = useDiagramReview({
@@ -288,6 +300,9 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         {actions}
       </>
     );
+    const edgeCard = cardCellId ? view.byEdge.get(cardCellId) : undefined;
+    const focus = focusDeviceId ? focusCells(content.data, focusDeviceId) : null;
+    const focusCode = focusDeviceId ? ((content.data.deviceCells ?? []).find((c) => c.deviceId === focusDeviceId)?.code ?? '') : '';
     body = (
       <>
         <DiagramViewer
@@ -296,14 +311,36 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           title={t('diagrams.screen.viewerTitle')}
           cells={view.cells}
           selectedCellId={cardCellId ?? focusCell}
-          onCellClick={review.pinMode ? review.viewer.onPickCell : setCardCellId}
+          onCellClick={
+            review.pinMode
+              ? review.viewer.onPickCell
+              : (cellId) => {
+                  setCardCellId(cellId);
+                  const deviceId = view.byCell.get(cellId)?.device?.id ?? (content.data.deviceCells ?? []).find((c) => c.cellId === cellId)?.deviceId;
+                  if (deviceId) setFocusDeviceId(deviceId);
+                }
+          }
           pickAnyCell={review.viewer.pickAnyCell}
           pins={review.viewer.pins}
           onPinClick={review.viewer.onPinClick}
-          focusCellId={focusCell}
+          focusCellId={focusCell ?? (focus && params.get('focus') ? focus[0] : null)}
+          highlightCellIds={focus}
         />
+        {(content.data.cableEdges ?? []).length > 0 ? <CableLegend cableTypes={content.data.cableTypes ?? []} floating /> : null}
         {card ? (
-          <DiagramDeviceCard me={me} device={card.device} code={card.code} diagramId={id} onClose={() => setCardCellId(null)} />
+          <DiagramDeviceCard me={me} device={card.device} code={card.code} diagramId={id} onClose={() => setCardCellId(null)}>
+            {card.device?.found ? (
+              <DeviceConnections
+                deviceId={card.device.id}
+                diagramId={id}
+                links={content.data.links ?? []}
+                onDrawing={new Set((content.data.deviceCells ?? []).map((c) => c.deviceId))}
+              />
+            ) : null}
+          </DiagramDeviceCard>
+        ) : null}
+        {edgeCard ? (
+          <DiagramCableCard edge={edgeCard.edge} link={edgeCard.link} cableTypes={content.data.cableTypes ?? []} onClose={() => setCardCellId(null)} />
         ) : null}
       </>
     );
@@ -315,6 +352,19 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           <button type="button" className="btn sm" onClick={() => setParams({ version: pendingVersion })}>
             {t('diagrams.review.viewPending')}
           </button>
+        </>
+      );
+    }
+    if (focusDeviceId && focus) {
+      status = (
+        <>
+          {status}
+          <p className="muted" role="status">
+            {t('diagrams.cable.highlighting', { code: focusCode })}{' '}
+            <button type="button" className="btn sm" onClick={() => setFocusDeviceId(null)}>
+              {t('diagrams.cable.clearHighlight')}
+            </button>
+          </p>
         </>
       );
     }
@@ -422,7 +472,9 @@ function DiagramEditor({
    * khung (xoá lịch sử hoàn tác của người vẽ) — chỉ dời mốc gốc sang phiên bản vừa tạo, để lượt
    * lưu sau của chính người này không bị ghi là "lưu đè".
    */
-  const [initialXml] = useState(content.version?.xml ?? '');
+  const [palette] = useState(() => readCablePalette());
+  // Nét dây của kho mang ô màu IMS (server hydrate); tô thành màu theo theme hiện tại trước khi nạp.
+  const [initialXml] = useState(() => paintImsXml(content.version?.xml ?? '', palette));
   const basedOn = useRef<string | null>(content.version?.id ?? null);
   const pendingXml = useRef<string | null>(null);
   /*
@@ -433,21 +485,33 @@ function DiagramEditor({
    * mang mô hình trần `<mxGraphModel>` không có `<diagram id>` (server từ chối, `patch` không biết
    * trang), còn XML đi kèm `export` svg lại bị nén. Chỉ `export` xml trả cả tệp không nén.
    */
-  const fileWaiters = useRef<('insert' | 'save')[]>([]);
-  const requestFile = (purpose: 'insert' | 'save') => {
-    fileWaiters.current.push(purpose);
+  const fileWaiters = useRef<((xml: string) => void)[]>([]);
+  const withFile = (fn: (xml: string) => void) => {
+    fileWaiters.current.push(fn);
     frame.current?.send({ action: 'export', format: 'xml' });
   };
-  const frameState = useRef<{ page: number; bounds: Bounds | null; pending: DeviceCellSpec[] | null }>({
+  const [draftOpen, setDraftOpen] = useState(false);
+  const frameState = useRef<{ page: number; bounds: Bounds | null }>({
     page: 0,
     bounds: null,
-    pending: null,
   });
 
   const setDirty = (value: boolean) => {
     setDirtyState(value);
     onDirtyChange(value);
   };
+
+  const cables = useCableBridge({
+    me,
+    content,
+    ready,
+    withFile,
+    send: (command) => frame.current?.send(command),
+    page: () => frameState.current.page,
+    markDirty: () => setDirty(true),
+    palette,
+    newId: newCellId,
+  });
 
   // Nhịp "đang mở sửa" (Q-23): nửa thời gian giữ một lần, để một nhịp lỡ không làm tên biến mất.
   // Hết ân hạn sơ đồ thì nhịp nhận 401 và im lặng: không bật hộp nhập mã chỉ vì một nhịp nền.
@@ -515,6 +579,8 @@ function DiagramEditor({
     setJustInserted((current) => [...current, ...devices.map((d) => d.id)]);
     setDirty(true);
     setStockOpen(false);
+    // Máy vừa chèn có thể đã có dây trong sơ đồ cổng với máy đang trên bản vẽ → "Có N kết nối mới chưa vẽ".
+    withFile((file) => cables.refreshUndrawn(file));
     toast({ tone: 'ok', message: t('diagrams.screen.inserted', { codes: devices.map((d) => d.code).join(', ') }) });
   };
 
@@ -537,6 +603,7 @@ function DiagramEditor({
         if (message.xml) {
           setFrameXml(message.xml);
           setJustInserted([]);
+          cables.onAutosave(message.xml);
         }
         break;
       case 'patch':
@@ -545,20 +612,14 @@ function DiagramEditor({
       case 'save':
         // Lưu = cả tệp XML + ảnh SVG để xem: xin tệp, rồi xin SVG, gửi cả hai khi SVG về.
         setSaving(true);
-        requestFile('save');
+        withFile((xml) => {
+          pendingXml.current = xml;
+          frame.current?.send({ action: 'export', format: 'svg' });
+        });
         break;
       case 'export': {
         if (message.format === 'xml') {
-          if (fileWaiters.current.shift() === 'save') {
-            pendingXml.current = message.xml ?? '';
-            frame.current?.send({ action: 'export', format: 'svg' });
-            break;
-          }
-          const devices = state.pending;
-          state.pending = null;
-          if (message.xml) setFrameXml(message.xml);
-          if (devices && message.xml) insertInto(message.xml, devices);
-          setInserting(false);
+          fileWaiters.current.shift()?.(message.xml ?? '');
           break;
         }
         const xml = pendingXml.current;
@@ -590,9 +651,15 @@ function DiagramEditor({
         toast({ tone: 'error', message: t('diagrams.screen.insertFailed', { reason: t('diagrams.stock.retired') }) });
         return;
       }
-      frameState.current.pending = usable.map((info) => ({ id: info.id, code: info.code ?? '', cell: info.cell }));
+      const devices = usable.map((info) => ({ id: info.id, code: info.code ?? '', cell: info.cell }));
       // Hỏi draw.io cả tệp đang mở (có phần chưa lưu, có id trang) để biết trang và lớp đích.
-      requestFile('insert');
+      withFile((xml) => {
+        if (xml) {
+          setFrameXml(xml);
+          insertInto(xml, devices);
+        }
+        setInserting(false);
+      });
     } catch (error) {
       setInserting(false);
       toast({ tone: 'error', message: errorMessage(error) });
@@ -607,6 +674,7 @@ function DiagramEditor({
           {t('diagrams.screen.presence', { names: others.map((o) => o.fullName).join(', ') })}
         </p>
       ) : null}
+      {cables.status}
       <p className="muted" role="status">
         {dirty
           ? t('diagrams.screen.unsaved')
@@ -631,6 +699,10 @@ function DiagramEditor({
           <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
             <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
           </Popover>
+          {cables.actions}
+          <button type="button" className="btn" disabled={!ready} onClick={() => setDraftOpen(true)}>
+            {t('diagrams.cable.draftButton')}
+          </button>
           <button type="button" className="btn primary" disabled={!ready || busy} onClick={() => frame.current?.send({ action: 'save' })}>
             {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
           </button>
@@ -650,6 +722,26 @@ function DiagramEditor({
             initTimeoutSeconds={settings.initTimeoutSeconds}
             onEvent={onEvent}
           />
+          {cables.dialogs}
+          {draftOpen ? (
+            <DraftFromPortMapDialog
+              diagramId={diagramId}
+              title={title}
+              dirty={dirty}
+              csrfToken={me.csrfToken}
+              run={run}
+              onClose={() => setDraftOpen(false)}
+              onDone={(version) => {
+                setDraftOpen(false);
+                setDirty(false);
+                toast({ tone: 'ok', message: t('diagrams.cable.draftDone', { seq: version.seq }) });
+                void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
+                void queryClient.invalidateQueries({ queryKey: TREE_KEY });
+                // Nạp phiên bản nháp vừa dựng vào khung (lượt vẽ dở, nếu có, người dùng đã đồng ý bỏ).
+                void queryClient.invalidateQueries({ queryKey: ['diagram-content', diagramId] });
+              }}
+            />
+          ) : null}
           {guard.blocked ? (
             <ConfirmDialog
               title={t('diagrams.screen.leaveTitle')}
@@ -674,7 +766,11 @@ function DiagramEditor({
 function viewerCells(
   content: DiagramContent,
   t: (key: string) => string,
-): { cells: ViewerCell[]; byCell: Map<string, { device: DiagramDeviceInfo | null; code: string }> } {
+): {
+  cells: ViewerCell[];
+  byCell: Map<string, { device: DiagramDeviceInfo | null; code: string }>;
+  byEdge: Map<string, { edge: CableEdge; link: DiagramLink | null }>;
+} {
   const devices = new Map((content.devices ?? []).map((d) => [d.id, d]));
   const cells: ViewerCell[] = [];
   const byCell = new Map<string, { device: DiagramDeviceInfo | null; code: string }>();
@@ -686,5 +782,34 @@ function viewerCells(
     else cells.push({ id: cellId, label });
     byCell.set(cellId, { device, code });
   }
-  return { cells, byCell };
+  /*
+   * Nét dây của kho: tô lại theo ô màu loại dây HIỆN TẠI (không tin màu chụp trong SVG); nét chưa
+   * khai vàng, nét có kết nối đã gỡ đỏ (AD-18). Bấm nét mở thẻ dây.
+   */
+  const links = new Map((content.links ?? []).map((l) => [l.id, l]));
+  const byEdge = new Map<string, { edge: CableEdge; link: DiagramLink | null }>();
+  for (const edge of content.cableEdges ?? []) {
+    const link = edge.linkId ? (links.get(edge.linkId) ?? null) : null;
+    byEdge.set(edge.cellId, { edge, link });
+    if (edge.state === 'linked' && link) {
+      const label = edge.sourceDeviceId === link.peerDeviceId ? link.labelFromB : link.labelFromA;
+      cells.push({ id: edge.cellId, label, paint: `cable-${link.colorSlot ?? 0}` });
+    } else if (edge.state === 'undeclared') {
+      cells.push({ id: edge.cellId, label: t('diagrams.cable.cardUndeclared'), paint: 'warn', mark: 'warn' });
+    } else {
+      cells.push({ id: edge.cellId, label: t('diagrams.cable.cardRemoved'), paint: 'danger', mark: 'danger' });
+    }
+  }
+  return { cells, byCell, byEdge };
+}
+
+/** Ô sáng khi bấm một máy: ô của máy, mọi nét dây chạm nó, ô của máy đầu kia (AD-18). */
+function focusCells(content: DiagramContent, deviceId: string): string[] | null {
+  const deviceCells = content.deviceCells ?? [];
+  const own = deviceCells.filter((c) => c.deviceId === deviceId).map((c) => c.cellId);
+  if (own.length === 0) return null;
+  const edges = (content.cableEdges ?? []).filter((e) => e.sourceDeviceId === deviceId || e.targetDeviceId === deviceId);
+  const far = new Set(edges.map((e) => (e.sourceDeviceId === deviceId ? e.targetDeviceId : e.sourceDeviceId)));
+  const farCells = deviceCells.filter((c) => far.has(c.deviceId)).map((c) => c.cellId);
+  return [...own, ...edges.map((e) => e.cellId), ...farCells];
 }

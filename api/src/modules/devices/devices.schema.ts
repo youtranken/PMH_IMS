@@ -64,6 +64,8 @@ export const devicePortTable = pgTable('device_port', {
   /** VLAN của cổng — text vì "trunk" là giá trị có thật trên cổng uplink. */
   vlan: text('vlan'),
   note: text('note'),
+  /** Loại dây (0048) — danh mục `cable_type` của `catalog`; `null` = chưa khai. */
+  cableTypeId: uuid('cable_type_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

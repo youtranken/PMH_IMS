@@ -143,3 +143,41 @@ describe('DiagramViewer — ghim bình luận (Q-23)', () => {
     expect(picked.map(([id]) => id)).toEqual(['s1']);
   });
 });
+
+describe('DiagramViewer — màu dây và tô sáng (AD-18)', () => {
+  const SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><g data-cell-id="0"><g data-cell-id="1">' +
+    '<g data-cell-id="d1"><rect width="10" height="10"/><text>SW-E2E-01</text></g>' +
+    '<g data-cell-id="d2"><rect width="10" height="10"/><text>SRV-E2E-01</text></g>' +
+    '<g data-cell-id="d3"><rect width="10" height="10"/><text>AP-E2E-01</text></g>' +
+    '<g data-cell-id="e1"><path d="M0 0L10 10"/></g>' +
+    '<g data-cell-id="e2"><path d="M0 0L10 10"/></g>' +
+    '<g data-cell-id="g1"><g data-cell-id="s1"><text>Tầng 3</text></g></g></g></g></svg>';
+
+  it('ô dây mang ô màu IMS (data-ims-paint) — CSS tô theo token của theme đang dùng', () => {
+    renderWithI18n(
+      <DiagramViewer
+        svg={SVG}
+        viewer={VIEWER}
+        title="Bản vẽ"
+        cells={[
+          { id: 'e1', label: 'Gi1 ↔ eth0', paint: 'cable-2' },
+          { id: 'e2', label: 'Chưa khai', paint: 'warn', mark: 'warn' },
+        ]}
+      />,
+    );
+    expect(document.querySelector('[data-cell-id="e1"]')?.getAttribute('data-ims-paint')).toBe('cable-2');
+    expect(document.querySelector('[data-cell-id="e2"]')?.getAttribute('data-ims-paint')).toBe('warn');
+  });
+
+  it('tô sáng: ô được chọn sáng, phần còn lại mờ; lớp/nhóm chứa ô sáng không bị mờ (mờ không nhân đôi)', () => {
+    const { rerender } = renderWithI18n(<DiagramViewer svg={SVG} viewer={VIEWER} title="Bản vẽ" highlightCellIds={['d1', 'e1', 'd2']} />);
+    const dimmed = () =>
+      Array.from(document.querySelectorAll('[data-ims-dim]'))
+        .map((el) => el.getAttribute('data-cell-id'))
+        .sort();
+    expect(dimmed()).toEqual(['d3', 'e2', 'g1']);
+    rerender(<DiagramViewer svg={SVG} viewer={VIEWER} title="Bản vẽ" highlightCellIds={null} />);
+    expect(dimmed()).toEqual([]);
+  });
+});

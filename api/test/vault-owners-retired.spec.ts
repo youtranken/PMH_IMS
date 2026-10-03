@@ -1,4 +1,5 @@
 import { runMigrations } from '../src/database/migration-runner';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
@@ -53,7 +54,7 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
       {} as ExpiryApiService,
       {} as SystemConfigService,
     );
-    const isp = new IspLineService(db, catalog, new DevicesApiService(devices), audit);
+    const isp = new IspLineService(db, catalog, new DevicesApiService(devices, new DevicePortsService(db, devices)), audit);
 
     const pool = scratch.pool;
     const providers = await seedIspProviders(pool, ['VNPT', 'FPT']);
@@ -114,7 +115,7 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
     } as unknown as VaultService;
     owners = new VaultOwnersService(
       vault,
-      new DevicesApiService(devices),
+      new DevicesApiService(devices, new DevicePortsService(db, devices)),
       new SoftwareApiService(software, isp),
       new ServiceAccountsApiService(new ServiceAccountService(db, audit, {} as ExpiryApiService)),
     );

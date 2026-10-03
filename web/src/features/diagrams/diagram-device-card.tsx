@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -26,6 +26,7 @@ export function DiagramDeviceCard({
   code,
   diagramId,
   onClose,
+  children,
 }: {
   me: Me;
   /** `null` = ô trỏ tới máy không có trong danh sách server trả (coi như không tìm thấy). */
@@ -34,6 +35,8 @@ export function DiagramDeviceCard({
   code: string;
   diagramId: string;
   onClose: () => void;
+  /** Phần thêm cuối thẻ (vd mục "Kết nối" của màn sơ đồ). */
+  children?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [vaultOpen, setVaultOpen] = useState(false);
@@ -123,6 +126,7 @@ export function DiagramDeviceCard({
             </ul>
           )}
         </section>
+        {children}
       </Dialog>
       {vaultOpen ? (
         <Dialog

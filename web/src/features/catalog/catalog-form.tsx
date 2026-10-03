@@ -12,7 +12,9 @@ import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
+import { CableSwatch } from '@/ui/cable-swatch';
 import {
+  CABLE_COLOR_SLOTS,
   catalogLabel,
   SERVICE_PROTOCOLS,
   type CabinetRow,
@@ -49,6 +51,8 @@ type FormState = {
   protocol: ServiceProtocol;
   portFrom: string;
   portTo: string;
+  /** Ô màu dây 1..`CABLE_COLOR_SLOTS`. */
+  colorSlot: number;
 };
 
 function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState {
@@ -66,6 +70,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
       protocol: ServiceProtocol;
       portFrom: number;
       portTo: number;
+      colorSlot: number;
     }
   >;
   return {
@@ -88,6 +93,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
     // dừng lại kiểm xem có phải mình gõ nhầm không.
     portTo:
       any.portTo != null && any.portTo !== any.portFrom ? String(any.portTo) : '',
+    colorSlot: any.colorSlot ?? 1,
   };
 }
 
@@ -370,7 +376,8 @@ export function CatalogForm({
         entity === 'vendor' ||
         entity === 'department' ||
         entity === 'isp_provider' ||
-        entity === 'service_port' ? (
+        entity === 'service_port' ||
+        entity === 'cable_type' ? (
           <Field
             label={t('catalog.name')}
             required
@@ -527,6 +534,37 @@ export function CatalogForm({
           </>
         ) : null}
 
+        {entity === 'cable_type' ? (
+          <>
+            {/* Ô màu token, không ô nhập mã màu: màu dây đổi theo theme và chỉ sửa ở `tokens.css`. */}
+            <Field label={t('catalog.colorSlot')} hint={t('catalog.colorSlotHint')}>
+              <div className="segmented" role="radiogroup" aria-label={t('catalog.colorSlot')}>
+                {Array.from({ length: CABLE_COLOR_SLOTS }, (_, i) => i + 1).map((slot) => (
+                  <label key={slot}>
+                    <input
+                      type="radio"
+                      name="cable-color-slot"
+                      value={slot}
+                      aria-label={t('catalog.colorSlotOf', { slot })}
+                      checked={form.colorSlot === slot}
+                      onChange={() => set('colorSlot', slot)}
+                    />
+                    <CableSwatch slot={slot} />
+                  </label>
+                ))}
+              </div>
+            </Field>
+            <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
+              <input
+                id="catalog-description"
+                className="inp"
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
+              />
+            </Field>
+          </>
+        ) : null}
+
         {entity === 'department' ? (
           <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
             <input
@@ -660,6 +698,7 @@ const ADD_KEY: Record<CatalogEntity, string> = {
   department: 'catalog.addDepartment',
   isp_provider: 'catalog.addIspProvider',
   service_port: 'catalog.addServicePort',
+  cable_type: 'catalog.addCableType',
 };
 
 type BodyField = 'siteId' | 'uHeight' | 'portFrom' | 'portTo';
@@ -729,6 +768,8 @@ function buildBody(entity: CatalogEntity, form: FormState): Built {
         hotline: form.hotline.trim(),
         contact: form.contact.trim(),
       });
+    case 'cable_type':
+      return ok({ name: form.name.trim(), colorSlot: form.colorSlot, description: form.description.trim() });
     case 'service_port': {
       // Ô trống là thiếu, không phải port 0: `Number('')` ra 0 và câu "port không hợp lệ"
       // cho một ô chưa gõ gì là câu sai.

@@ -25,6 +25,7 @@ import { sanitizeIconSvg } from '../../common/svg-sanitize';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   cabinetTable,
+  cableTypeTable,
   catalogHistoryTable,
   departmentTable,
   deviceTypeIconTable,
@@ -38,7 +39,9 @@ import { normalizeKey } from '../../common/import-plan';
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { diagramShapeDef } from './diagram-shapes';
 import {
+  CABLE_COLOR_SLOTS,
   type CabinetRecord,
+  type CableTypeRecord,
   type CatalogEntity,
   type CatalogHistoryRecord,
   type CatalogRecord,
@@ -59,6 +62,7 @@ export interface CatalogLists {
   departments: DepartmentRecord[];
   ispProviders: IspProviderRecord[];
   servicePorts: ServicePortRecord[];
+  cableTypes: CableTypeRecord[];
 }
 
 /** Hình của một loại thiết bị trên sơ đồ mạng — module `diagrams` hydrate ô thiết bị từ đây (AD-18). */
@@ -86,6 +90,8 @@ export interface CatalogInput {
   protocol?: string;
   portFrom?: number;
   portTo?: number;
+  /** Ô màu dây `--diagram-cable-<n>` (1..`CABLE_COLOR_SLOTS`). */
+  colorSlot?: number;
 }
 
 /**
@@ -113,6 +119,7 @@ export class CatalogService {
       departments,
       ispProviders,
       servicePorts,
+      cableTypes,
     ] = await Promise.all([
       this.db
         .select()
@@ -150,6 +157,11 @@ export class CatalogService {
         .from(servicePortTable)
         .where(onlyActive ? eq(servicePortTable.active, true) : undefined)
         .orderBy(asc(viOrder(servicePortTable.name))),
+      this.db
+        .select()
+        .from(cableTypeTable)
+        .where(onlyActive ? eq(cableTypeTable.active, true) : undefined)
+        .orderBy(asc(viOrder(cableTypeTable.name))),
     ]);
     return {
       sites,
@@ -161,6 +173,7 @@ export class CatalogService {
       // `protocol` ở DB là `text` nên drizzle trả `string`; kiểu công khai hẹp hơn
       // ('tcp' | 'udp' | 'both'). CHECK `service_port_protocol_check` mới là chỗ giữ lời hứa đó.
       servicePorts: servicePorts as ServicePortRecord[],
+      cableTypes,
     };
   }
 
@@ -687,6 +700,19 @@ export class CatalogService {
         }
         return values;
       }
+      case 'cable_type': {
+        if (input.colorSlot !== undefined && !isColorSlot(input.colorSlot)) {
+          throw new BadRequestException({
+            code: 'CABLE_COLOR_SLOT_INVALID',
+            message: `Màu dây phải là một ô trong bảng màu (1 đến ${CABLE_COLOR_SLOTS}).`,
+          });
+        }
+        return {
+          ...(input.name !== undefined ? { name: requireText(input.name, 'Tên loại dây') } : {}),
+          ...(input.colorSlot !== undefined ? { colorSlot: input.colorSlot } : {}),
+          ...(input.description !== undefined ? { description: text(input.description) } : {}),
+        };
+      }
     }
   }
 
@@ -749,6 +775,7 @@ export const CATALOG_SORT_KEYS = {
   department: ['name', 'description', 'active'],
   isp_provider: ['name', 'hotline', 'contact', 'active'],
   service_port: ['name', 'protocol', 'portFrom', 'description', 'active'],
+  cable_type: ['name', 'colorSlot', 'description', 'active'],
 } as const satisfies Record<CatalogEntity, readonly string[]>;
 
 export const CATALOG_SORT_DEFAULT: Record<CatalogEntity, SortQuery<string>> = {
@@ -759,6 +786,7 @@ export const CATALOG_SORT_DEFAULT: Record<CatalogEntity, SortQuery<string>> = {
   department: { key: 'name', dir: 'asc' },
   isp_provider: { key: 'name', dir: 'asc' },
   service_port: { key: 'name', dir: 'asc' },
+  cable_type: { key: 'name', dir: 'asc' },
 };
 
 /** Loại KHÔNG cần join (mọi loại trừ `cabinet`) — gộp một hàm theo entity. */
@@ -789,6 +817,12 @@ function entityOrderBy(entity: SimpleEntity, sort: SortQuery<string>): SQL[] {
         portFrom: servicePortTable.portFrom,
         description: viOrder(servicePortTable.description),
         active: servicePortTable.active,
+      });
+    case 'cable_type':
+      return nameFirstOrderBy(sort, viOrder(cableTypeTable.name), {
+        colorSlot: cableTypeTable.colorSlot,
+        description: viOrder(cableTypeTable.description),
+        active: cableTypeTable.active,
       });
   }
 }
@@ -884,6 +918,8 @@ function tableOf(entity: CatalogEntity) {
       return ispProviderTable;
     case 'service_port':
       return servicePortTable;
+    case 'cable_type':
+      return cableTypeTable;
   }
 }
 
@@ -900,6 +936,8 @@ function nameColumn(entity: Exclude<CatalogEntity, 'site' | 'cabinet'>) {
       return ispProviderTable.name;
     case 'service_port':
       return servicePortTable.name;
+    case 'cable_type':
+      return cableTypeTable.name;
   }
 }
 
@@ -918,6 +956,10 @@ function diagramShapeOf(value: string | null): string | null {
     throw new BadRequestException({ code: 'DIAGRAM_SHAPE_INVALID', message: 'Hình trên sơ đồ không có trong danh sách cho phép.' });
   }
   return value;
+}
+
+function isColorSlot(value: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= CABLE_COLOR_SLOTS;
 }
 
 function isPort(value: number | undefined): value is number {

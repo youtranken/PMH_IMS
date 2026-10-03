@@ -78,6 +78,9 @@ export class CatalogBodyDto {
   protocol?: string;
 
   @IsOptional() @Min(1) @Max(65535) @IsInt() portFrom?: number;
+
+  /** Loại dây: một ô màu token, không có ô nhập mã màu (Q-23). Trần thật do `toRow` kiểm. */
+  @IsOptional() @IsInt({ message: 'Màu dây phải là một ô trong bảng màu.' }) colorSlot?: number;
   @IsOptional() @Min(1) @Max(65535) @IsInt() portTo?: number;
 }
 

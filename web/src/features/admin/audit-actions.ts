@@ -150,6 +150,7 @@ export const FAMILY_KEY: Record<string, string> = {
   'catalog.department': 'audit.family.catalogDepartment',
   'catalog.isp_provider': 'audit.family.catalogIspProvider',
   'catalog.service_port': 'audit.family.catalogServicePort',
+  'catalog.cable_type': 'audit.family.catalogCableType',
 };
 
 /** Động từ cuối của mã ghép — cùng bộ mã với sổ lịch sử từng module và trạng thái phiếu duyệt. */

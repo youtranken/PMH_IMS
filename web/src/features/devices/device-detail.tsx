@@ -47,7 +47,8 @@ import {
 
 /** Trần dòng mỗi nguồn — khớp `HISTORY_PAGE_LIMIT` phía API (trần kỹ thuật, không phải AD-11). */
 const HISTORY_CAP = 200;
-import { PortMapPanel, type PortMap } from "./port-map-panel";
+import type { PortMap } from "@/lib/port-types";
+import { PortMapPanel } from "./port-map-panel";
 import { RelationMap, type RelationNode } from "./relation-map";
 import { RetireDialog, type RetireGroup } from "./retire-dialog";
 import { StatusDialog } from "./status-dialog";

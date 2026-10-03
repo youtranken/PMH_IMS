@@ -120,6 +120,11 @@ export interface ViewerCell {
   id: string;
   label: string;
   mark?: 'danger' | 'warn' | null;
+  /**
+   * Ô màu IMS của nét dây (`cable-<n>`, `warn`, `danger`): CSS tô nét theo token của theme ĐANG
+   * dùng — không tin màu đã chụp vào SVG lúc lưu (AD-18).
+   */
+  paint?: string | null;
 }
 
 /**
@@ -139,6 +144,7 @@ export function DiagramViewer({
   pins,
   onPinClick,
   focusCellId,
+  highlightCellIds,
 }: {
   svg: string;
   viewer: { fullName: string; email: string };
@@ -153,6 +159,8 @@ export function DiagramViewer({
   onPinClick?: (pinId: string) => void;
   /** Đổi giá trị = bay tới ô này (giữ mức thu phóng). */
   focusCellId?: string | null;
+  /** Tô sáng: các ô này sáng, mọi ô khác mờ đi. `null`/vắng = không tô. */
+  highlightCellIds?: string[] | null;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -185,8 +193,11 @@ export function DiagramViewer({
     if (!root) return;
     for (const el of Array.from(root.querySelectorAll('[data-cell-id]'))) {
       const cell = clickable.get(el.getAttribute('data-cell-id') ?? '');
-      for (const name of ['data-ims-clickable', 'data-ims-mark', 'data-ims-selected', 'role', 'tabindex', 'aria-label']) el.removeAttribute(name);
+      for (const name of ['data-ims-clickable', 'data-ims-mark', 'data-ims-paint', 'data-ims-selected', 'role', 'tabindex', 'aria-label']) {
+        el.removeAttribute(name);
+      }
       if (!cell) continue;
+      if (cell.paint) el.setAttribute('data-ims-paint', cell.paint);
       el.setAttribute('data-ims-clickable', '');
       el.setAttribute('role', 'button');
       el.setAttribute('tabindex', '0');
@@ -211,6 +222,28 @@ export function DiagramViewer({
     }
     setPinAt(next);
   }, [parsed, pins]);
+
+  /*
+   * Tô sáng: mờ những ô KHÔNG sáng và không chứa ô sáng. Lớp/nhóm chứa ô sáng không mờ (độ mờ của
+   * cha nhân vào con, mờ cha là mờ luôn ô sáng); ô nằm trong một ô đã mờ cũng không đánh dấu lại
+   * (mờ chồng mờ). `querySelectorAll` trả theo thứ tự cây nên cha luôn được xét trước con.
+   */
+  useLayoutEffect(() => {
+    const root = parsed.value;
+    if (!root) return;
+    const all = Array.from(root.querySelectorAll('[data-cell-id]'));
+    for (const el of all) el.removeAttribute('data-ims-dim');
+    if (!highlightCellIds || highlightCellIds.length === 0) return;
+    const lit = new Set(highlightCellIds);
+    const litEls = all.filter((el) => lit.has(el.getAttribute('data-cell-id') ?? ''));
+    for (const el of all) {
+      if (lit.has(el.getAttribute('data-cell-id') ?? '')) continue;
+      if (litEls.some((one) => el.contains(one))) continue;
+      const parentCell = el.parentElement?.closest('[data-cell-id]');
+      if (parentCell?.hasAttribute('data-ims-dim')) continue;
+      el.setAttribute('data-ims-dim', '');
+    }
+  }, [parsed, highlightCellIds]);
 
   /** Ô bấm được gần nhất chứa phần tử (ô con của nhóm thuộc về ô ngoài cùng được khai). */
   const cellAt = (target: EventTarget | null): string | null => {

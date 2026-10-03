@@ -3,7 +3,8 @@ import { CatalogService, type CatalogLists, type DeviceTypeDiagramLook } from '.
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 export { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { normalizeKey } from '../../common/import-plan';
-import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
+import type { CableTypeRecord, CatalogSnapshot, IspProviderRecord } from './catalog.types';
+export type { CableTypeRecord } from './catalog.types';
 export type { DeviceTypeDiagramLook } from './catalog.service';
 export { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef, type DiagramShapeDef } from './diagram-shapes';
 
@@ -28,6 +29,8 @@ export interface CatalogRefs {
   cabinetId?: string | null;
   deviceTypeId?: string | null;
   vendorId?: string | null;
+  /** Loại dây của một dòng sơ đồ cổng (Q-23). */
+  cableTypeId?: string | null;
 }
 
 /**
@@ -107,6 +110,14 @@ export class CatalogApiService {
     return this.catalog.diagramLooks(deviceTypeIds);
   }
 
+  /**
+   * Mọi loại dây kể cả loại đã ngừng dùng — dây cũ vẫn giữ màu và tên kèm "(ngừng dùng)" (Q-14).
+   * Sơ đồ cổng ghi tên vào lịch sử, sơ đồ mạng hydrate màu dây từ đây (AD-18).
+   */
+  async cableTypes(): Promise<CableTypeRecord[]> {
+    return (await this.catalog.lists({ includeInactive: true })).cableTypes;
+  }
+
   /** Loại này có bảng port map không (FR-006) — trang chi tiết thiết bị hỏi cái này. */
   async hasPortMap(deviceTypeId: string): Promise<boolean> {
     const lists = await this.catalog.lists({ includeInactive: true });
@@ -160,6 +171,7 @@ function inactiveRefErrors(
   check('siteId', lists.sites, 'Site', (row) => row.code);
   check('cabinetId', lists.cabinets, 'Tủ mạng', (row) => row.code);
   check('vendorId', lists.vendors, 'Nhà cung cấp', (row) => row.name);
+  check('cableTypeId', lists.cableTypes, 'Loại dây', (row) => row.name);
   return retired;
 }
 
@@ -198,6 +210,9 @@ function refErrors(lists: CatalogLists, refs: CatalogRefs): string[] {
   }
   if (refs.vendorId && !lists.vendors.some((v) => v.id === refs.vendorId)) {
     errors.push('Nhà cung cấp không tồn tại.');
+  }
+  if (refs.cableTypeId && !lists.cableTypes.some((c) => c.id === refs.cableTypeId)) {
+    errors.push('Loại dây không tồn tại.');
   }
   return errors;
 }

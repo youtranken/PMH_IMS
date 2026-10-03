@@ -4,6 +4,7 @@ import { DiagramWatermark } from './diagram-watermark';
 import {
   DRAWIO_SANDBOX,
   buildDrawioConfig,
+  cssColorToDrawio,
   drawioUrl,
   parseDrawioEvent,
   serializeDrawioCommand,
@@ -12,8 +13,34 @@ import {
   type DrawioMode,
 } from './drawio-protocol';
 
-/** Token màu dây trong `tokens.css` (có cặp dark) — đọc lúc chạy, đẩy cho draw.io làm bảng màu. */
-const WIRE_TOKENS = ['--diagram-wire-1', '--diagram-wire-2', '--diagram-wire-3', '--diagram-wire-4', '--diagram-wire-5', '--diagram-wire-6'];
+/** Ô màu dây IMS (`imsPaint`) → token trong `tokens.css` (có cặp dark). */
+const CABLE_PAINTS: Record<string, string> = {
+  'cable-0': '--diagram-cable-0',
+  'cable-1': '--diagram-cable-1',
+  'cable-2': '--diagram-cable-2',
+  'cable-3': '--diagram-cable-3',
+  'cable-4': '--diagram-cable-4',
+  'cable-5': '--diagram-cable-5',
+  'cable-6': '--diagram-cable-6',
+  'cable-7': '--diagram-cable-7',
+  'cable-8': '--diagram-cable-8',
+  warn: '--diagram-cable-warn',
+  danger: '--diagram-cable-danger',
+};
+
+/**
+ * Bảng ô màu dây → mã màu draw.io, đọc từ token theo theme ĐANG dùng (lúc nạp trình vẽ). Mã nguồn
+ * không chứa mã màu nào; đổi màu là sửa `tokens.css`.
+ */
+export function readCablePalette(): Record<string, string> {
+  const style = getComputedStyle(document.documentElement);
+  const out: Record<string, string> = {};
+  for (const [paint, token] of Object.entries(CABLE_PAINTS)) {
+    const color = cssColorToDrawio(style.getPropertyValue(token));
+    if (color) out[paint] = color;
+  }
+  return out;
+}
 
 export interface DrawioFrameHandle {
   send: (command: DrawioCommand) => void;
@@ -32,9 +59,10 @@ export interface DrawioFrameProps {
   onEvent?: (event: DrawioEvent) => void;
 }
 
+/** Bảng màu gợi ý của draw.io = các ô màu loại dây 1..8. */
 function readWireColors(): string[] {
   const style = getComputedStyle(document.documentElement);
-  return WIRE_TOKENS.map((token) => style.getPropertyValue(token));
+  return [1, 2, 3, 4, 5, 6, 7, 8].map((n) => style.getPropertyValue(`--diagram-cable-${n}`));
 }
 
 /**

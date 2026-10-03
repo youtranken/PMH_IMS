@@ -244,7 +244,7 @@ const DOMAINS = {
      * '%e2e%'`) — không phải quy ước mới, và không đụng tới lịch sử của người dùng thật (năm
      * tài khoản thật không ai có chữ "e2e" trong email).
      */
-    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM cable_type WHERE name ILIKE '%E2E%')`,
     `ALTER TABLE catalog_history ENABLE TRIGGER catalog_history_no_delete`,
     `DELETE FROM cabinet WHERE code ILIKE '%E2E%' OR site_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%')`,
     `DELETE FROM site WHERE code ILIKE '%E2E%'`,
@@ -252,6 +252,8 @@ const DOMAINS = {
     `DELETE FROM device_type WHERE name ILIKE '%E2E%'`,
     `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
     `DELETE FROM department WHERE name ILIKE '%E2E%'`,
+    // Loại dây còn dòng sơ đồ cổng (của máy không mang chữ E2E) trỏ vào thì để lại, như nhà mạng dưới.
+    `DELETE FROM cable_type WHERE name ILIKE '%E2E%' AND NOT EXISTS (SELECT 1 FROM device_port WHERE device_port.cable_type_id = cable_type.id)`,
     /*
      * Nhà mạng còn đường truyền trỏ vào thì để lại (FK RESTRICT): spec chỉ dọn vùng
      * `catalog` mà không dọn `isp` sẽ đâm khoá ngoại và ROLLBACK cả vùng. Lượt `all` chạy `isp`

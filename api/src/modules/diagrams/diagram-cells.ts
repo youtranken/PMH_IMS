@@ -215,19 +215,22 @@ const GROUP_OF: Record<CellKind, keyof CellDiff> = { device: 'devices', edge: 'e
  * Thiết bị đếm theo `ims_device_id`, không theo id ô: xoá ô rồi chèn lại đúng máy đó, hay nhân
  * bản ô của một máy đã có, không phải "thêm một thiết bị" — kho vẫn chừng ấy máy trên bản vẽ.
  * Máy còn đó mà ô của nó đổi (dời, đổi cỡ, thay ô) là "đổi".
+ *
+ * Dây đã khai đếm theo `ims_link_id` cùng lý do: vẽ lại nét của đúng kết nối đó là "đổi 1 dây".
+ * Nét chưa khai đếm theo id ô; nét vừa được gắn kết nối (cùng id ô) vẫn là một dây.
  */
 export function diffCellIndex(prev: CellIndex | null, next: CellIndex): CellDiff {
   const diff: CellDiff = { devices: emptyGroup(), edges: emptyGroup(), shapes: emptyGroup() };
   const before = new Map((prev?.cells ?? []).map((c) => [c.id, c]));
   const after = new Map(next.cells.map((c) => [c.id, c]));
   for (const cell of next.cells) {
-    if (cell.kind === 'device') continue;
+    if (cell.kind === 'device' || isLinkedEdge(cell)) continue;
     const old = before.get(cell.id);
     if (!old || old.kind !== cell.kind) diff[GROUP_OF[cell.kind]].added.push(itemOf(cell));
     else if (old.fp !== cell.fp) diff[GROUP_OF[cell.kind]].changed.push(itemOf(cell));
   }
   for (const cell of prev?.cells ?? []) {
-    if (cell.kind === 'device') continue;
+    if (cell.kind === 'device' || isLinkedEdge(cell)) continue;
     const now = after.get(cell.id);
     if (!now || now.kind !== cell.kind) diff[GROUP_OF[cell.kind]].removed.push(itemOf(cell));
   }
@@ -241,7 +244,64 @@ export function diffCellIndex(prev: CellIndex | null, next: CellIndex): CellDiff
   for (const [deviceId, cells] of devicesBefore) {
     if (!devicesAfter.has(deviceId)) diff.devices.removed.push(deviceItem(deviceId, cells));
   }
+  diffLinkedEdges(prev?.cells ?? [], next.cells, before, after, diff.edges);
   return diff;
+}
+
+function isLinkedEdge(cell: IndexedCell): boolean {
+  return cell.kind === 'edge' && Boolean(cell.ims.ims_link_id);
+}
+
+/**
+ * Nét đã khai, gom theo `ims_link_id`. Một nét đổi giữa "chưa khai" và "đã khai" mà giữ id ô là
+ * MỘT dây đổi trạng thái, không phải bỏ một thêm một — nên nhóm nào có ô từng là nét chưa khai ở
+ * phía bên kia thì tính "đổi" (và nét chưa khai đó đã được vòng trên tính rồi thì bỏ qua ở đây).
+ */
+function diffLinkedEdges(
+  prevCells: IndexedCell[],
+  nextCells: IndexedCell[],
+  before: Map<string, IndexedCell>,
+  after: Map<string, IndexedCell>,
+  group: GroupDiff,
+): void {
+  const byLink = (cells: IndexedCell[]) => {
+    const out = new Map<string, IndexedCell[]>();
+    for (const cell of cells) {
+      if (!isLinkedEdge(cell)) continue;
+      out.set(cell.ims.ims_link_id, [...(out.get(cell.ims.ims_link_id) ?? []), cell]);
+    }
+    return out;
+  };
+  const linksBefore = byLink(prevCells);
+  const linksAfter = byLink(nextCells);
+  const unlinkedCounterpart = (cells: IndexedCell[], other: Map<string, IndexedCell>) =>
+    cells.some((c) => {
+      const twin = other.get(c.id);
+      return twin !== undefined && twin.kind === 'edge' && !isLinkedEdge(twin);
+    });
+  for (const [linkId, cells] of linksAfter) {
+    const old = linksBefore.get(linkId);
+    if (old) {
+      if (cellsPrint(old) !== cellsPrint(cells)) group.changed.push(linkItem(linkId, cells));
+    } else if (unlinkedCounterpart(cells, before)) {
+      // Nét chưa khai ở bản trước vừa được gắn kết nối: vòng trên đã đếm "đổi" theo id ô.
+      if (!group.changed.some((item) => cells.some((c) => c.id === item.id))) group.changed.push(linkItem(linkId, cells));
+    } else {
+      group.added.push(linkItem(linkId, cells));
+    }
+  }
+  for (const [linkId, cells] of linksBefore) {
+    if (linksAfter.has(linkId)) continue;
+    if (unlinkedCounterpart(cells, after)) {
+      if (!group.changed.some((item) => cells.some((c) => c.id === item.id))) group.changed.push(linkItem(linkId, cells));
+    } else {
+      group.removed.push(linkItem(linkId, cells));
+    }
+  }
+}
+
+function linkItem(linkId: string, cells: IndexedCell[]): DiffItem {
+  return { id: linkId, label: cells[0].label || linkId };
 }
 
 function byDevice(cells: IndexedCell[]): Map<string, IndexedCell[]> {

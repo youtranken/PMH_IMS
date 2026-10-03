@@ -7,6 +7,8 @@ import {
   deviceLookStyle,
   dehydrateDiagramXml,
   hydrateDiagramXml,
+  linkEdgeCell,
+  type CableHydration,
   type DeviceCellSource,
 } from './diagram-hydrate';
 
@@ -193,3 +195,102 @@ describe('deviceInsertCell — ô mới khi chèn từ hộp "Thiết bị kho"'
     expect(other.style).toContain('rounded=1;');
   });
 });
+
+describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, lưu khô (AD-18)', () => {
+  const DEV_B = '7b0c1c1e-0000-4000-8000-000000000002';
+  const LINK = '11111111-0000-4000-8000-000000000001';
+  const GONE_LINK = '11111111-0000-4000-8000-0000000000ff';
+  const CAT6 = '22222222-0000-4000-8000-000000000001';
+  const FIBER = '22222222-0000-4000-8000-000000000002';
+  const devices = new Map([
+    [DEV, source()],
+    [DEV_B, source({ code: 'SRV-E2E-01' })],
+  ]);
+  const two = deviceCell() + deviceCell({ id: 'd2', deviceId: DEV_B, code: 'SRV-E2E-01' });
+  const cables: CableHydration = {
+    links: new Map([[LINK, { id: LINK, deviceA: DEV, portA: 'Gi1/0/24', deviceB: DEV_B, portB: 'eth0', cableTypeId: FIBER }]]),
+    slots: new Map([
+      [CAT6, 1],
+      [FIBER, 2],
+    ]),
+  };
+
+  function linkedEdge(opts: { id?: string; source?: string; target?: string; link?: string; label?: string; style?: string; cable?: string } = {}): string {
+    const { id = 'e1', source: from = 'd1', target: to = 'd2', link = LINK, label = '', style = 'edgeStyle=orthogonalEdgeStyle;', cable = CAT6 } = opts;
+    return `<UserObject label="${label}" ims_link_id="${link}" ims_cable_type_id="${cable}" id="${id}"><mxCell style="${style}" edge="1" parent="1" source="${from}" target="${to}"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="6"/></Array></mxGeometry></mxCell></UserObject>`;
+  }
+
+  function bareEdge(id = 'e2', style = 'edgeStyle=orthogonalEdgeStyle;strokeColor=#FF0000;', value = 'tạm'): string {
+    return `<mxCell id="${id}" value="${value}" style="${style}" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+  }
+
+  it('dây đã khai: nhãn "cổng đầu nguồn ↔ cổng đầu đích", màu theo loại dây HIỆN TẠI của dòng sơ đồ cổng', () => {
+    const wet = hydrateDiagramXml(page(two + linkedEdge()), devices, cables);
+    expect(wet).toContain('label="Gi1/0/24 ↔ eth0"');
+    expect(styleOf(wet, 'e1')).toMatchObject({ edgeStyle: 'orthogonalEdgeStyle', imsPaint: 'cable-2', html: '0' });
+    // Loại dây đổi ở trang thiết bị (Cat6 → Fiber): thuộc tính trên nét theo kho.
+    expect(wet).toContain(`ims_cable_type_id="${FIBER}"`);
+  });
+
+  it('nét vẽ ngược chiều (từ máy kia sang) thì nhãn cũng đọc ngược', () => {
+    const wet = hydrateDiagramXml(page(two + linkedEdge({ source: 'd2', target: 'd1' })), devices, cables);
+    expect(wet).toContain('label="eth0 ↔ Gi1/0/24"');
+  });
+
+  it('màu KHÔNG lấy từ strokeColor trong XML', () => {
+    const wet = hydrateDiagramXml(page(two + linkedEdge({ style: 'strokeColor=#00FF00;dashed=1;' })), devices, cables);
+    expect(styleOf(wet, 'e1').strokeColor).toBeUndefined();
+    expect(styleOf(wet, 'e1').dashed).toBeUndefined();
+    expect(styleOf(wet, 'e1').imsPaint).toBe('cable-2');
+  });
+
+  it('kết nối đã bị gỡ khỏi sơ đồ cổng → nét đỏ + chú thích, KHÔNG tự xoá nét', () => {
+    const wet = hydrateDiagramXml(page(two + linkedEdge({ link: GONE_LINK })), devices, cables);
+    expect(wet).toContain('label="⚠ Kết nối đã bị gỡ khỏi sơ đồ cổng"');
+    expect(styleOf(wet, 'e1')).toMatchObject({ imsPaint: 'danger', dashed: '1' });
+  });
+
+  it('nét giữa hai máy kho chưa khai → vàng + "Chưa khai vào sơ đồ cổng"', () => {
+    const wet = hydrateDiagramXml(page(two + bareEdge()), devices, cables);
+    expect(wet).toContain('value="⚠ Chưa khai vào sơ đồ cổng"');
+    expect(bareStyleOf(wet, 'e2')).toMatchObject({ imsPaint: 'warn', dashed: '1' });
+    expect(bareStyleOf(wet, 'e2').strokeColor).toBeUndefined();
+  });
+
+  it('dehydrate: dây của kho về khô (nhãn rỗng, bỏ khoá màu IMS), giữ đường đi; khứ hồi ổn định', () => {
+    const dry = dehydrateDiagramXml(
+      page(two + linkedEdge({ label: 'Gi1/0/24 ↔ eth0', cable: FIBER, style: 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;strokeColor=#123456;' }) + bareEdge()),
+    );
+    expect(dry).toContain('label=""');
+    expect(dry).toContain('value=""');
+    expect(dry).not.toContain('imsPaint');
+    expect(dry).not.toContain('strokeColor');
+    expect(dry).toContain('<mxPoint x="5" y="6"/>');
+    expect(dehydrateDiagramXml(hydrateDiagramXml(dry, devices, cables))).toBe(dry);
+  });
+
+  it('XML có dây đã hydrate vẫn qua cổng kiểm', () => {
+    const wet = hydrateDiagramXml(page(two + linkedEdge() + bareEdge()), devices, cables);
+    expect(checkDiagramXml(wet, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+  });
+
+  it('ô dây mới cho "Vẽ vào": gắn sẵn link + loại dây, nhãn + màu như lúc hydrate', () => {
+    const cell = linkEdgeCell(cables.links.get(LINK)!, { sourceDeviceId: DEV_B, slot: 2 });
+    expect(cell).toEqual({
+      label: 'eth0 ↔ Gi1/0/24',
+      style: 'edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;imsPaint=cable-2;html=0;',
+      attrs: { ims_link_id: LINK, ims_cable_type_id: FIBER },
+    });
+  });
+});
+
+/** Style của một `<mxCell>` trần (không bọc `UserObject`). */
+function bareStyleOf(xml: string, cellId: string): Record<string, string> {
+  const match = new RegExp(`<mxCell id="${cellId}"[^>]*style="([^"]*)"`).exec(xml);
+  const out: Record<string, string> = {};
+  for (const token of (match?.[1] ?? '').split(';')) {
+    const at = token.indexOf('=');
+    if (at > 0) out[token.slice(0, at)] = token.slice(at + 1);
+  }
+  return out;
+}

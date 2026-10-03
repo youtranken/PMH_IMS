@@ -1,28 +1,28 @@
 /**
- * Kiểu dùng chung của tự kiểm (AD-18): khung (`diagram-selfcheck.ts`) và bộ luật dây
- * (`diagram-checks.ts`) cùng đọc file này, để hai bên không import lẫn nhau thành vòng.
+ * Kiểu dùng chung của bộ tự kiểm bản vẽ (AD-18). Tách riêng để luật dây (`diagram-checks.ts`) và
+ * bộ tự kiểm khi gửi duyệt/phát hành cùng dùng mà không import vòng.
  */
 
 export type FindingLevel = 'error' | 'warning';
 
-export interface Finding {
+/** Một phát hiện của tự kiểm: `error` chặn gửi duyệt/phát hành, `warning` cho qua. */
+export type Finding = {
   level: FindingLevel;
-  /** Mã máy đọc được (web chọn câu theo mã, test so mã thay vì so chữ). */
   code: string;
-  /** Ô bị nêu — web bay tới ô đó; `null` = cả bản vẽ. */
+  /** Ô bị phát hiện (id ô draw.io); `null` = cả bản vẽ. */
   cellId: string | null;
   message: string;
-}
+};
 
 /**
- * Một dòng sơ đồ cổng mà luật dây cần, đọc qua `devices.api` theo `ims_link_id`. `diagrams` chỉ
- * ĐỌC — không ghi `device_port`.
+ * Một dòng sơ đồ cổng như tự kiểm thấy nó (đọc qua `devices.api`). `id` = `ims_link_id` trên nét;
+ * đầu A là máy giữ bản ghi. Không phân biệt chiều: dây khai A→B vẽ B→A vẫn đúng.
  */
-export interface CheckLink {
+export type CheckLink = {
   id: string;
   deviceA: string;
   deviceB: string;
   cableTypeId: string | null;
   portA?: string;
   portB?: string | null;
-}
+};

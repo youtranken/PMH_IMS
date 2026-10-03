@@ -229,6 +229,27 @@ export function buildDrawioConfig(wireColors: string[]): DrawioConfig {
   };
 }
 
+/**
+ * Ô màu IMS trên nét dây của kho (`imsPaint=cable-<n>|warn|danger`, server đặt lúc hydrate — AD-18)
+ * → `strokeColor`/`fontColor` theo bảng màu đọc từ token lúc chạy (`palette`: ô màu → mã draw.io
+ * viết hoa không `#`). Màu cũ trong style bị thay chứ không cộng dồn; ô màu lạ thì để nguyên —
+ * không đoán màu.
+ */
+export function paintImsStyle(style: string, palette: Record<string, string>): string {
+  const match = /(?:^|;)imsPaint=([a-z0-9-]+)/.exec(style);
+  const color = match ? palette[match[1]] : undefined;
+  if (!color) return style;
+  const kept = style
+    .split(';')
+    .filter((token) => token !== '' && !/^(strokeColor|fontColor)=/.test(token));
+  return `${kept.join(';')};strokeColor=#${color};fontColor=#${color};`;
+}
+
+/** `paintImsStyle` trên mọi thuộc tính `style="…"` của một XML (chỉ đụng style có ô màu IMS). */
+export function paintImsXml(xml: string, palette: Record<string, string>): string {
+  return xml.replace(/ style="([^"]*imsPaint=[^"]*)"/g, (_all, style: string) => ` style="${paintImsStyle(style, palette)}"`);
+}
+
 /** Dòng watermark "tên · email · giờ:phút" (giờ Việt Nam). */
 export function watermarkText(viewer: { fullName: string; email: string }, now: Date): string {
   return `${viewer.fullName} · ${viewer.email} · ${formatDateTime(now).slice(-5)}`;
