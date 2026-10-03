@@ -3,6 +3,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   catalogTab,
+  expireStepUp,
   fillOtp,
   firstLogin,
   freshTotpCode,
@@ -103,6 +104,8 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     // Bàn phím: gõ tìm (ô tìm có tiêu điểm sẵn), ↓ xuống danh sách, Space chọn, Enter chèn.
     await page.keyboard.type(code);
     const pick = stockBox(page).getByRole('checkbox', { name: `Chọn ${code} để chèn` });
+    // Ô tìm có debounce: chờ danh sách chỉ còn máy vừa gõ, không thì ↓ rơi vào dòng đầu của danh sách chưa lọc.
+    await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
     await expect(pick).toBeVisible();
     await page.keyboard.press('ArrowDown');
     await expect(pick).toBeFocused();
@@ -182,11 +185,14 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     const code = `SW-E2E-KET${stamp}`;
     const deviceId = await createDevice(page, code);
     const label = `admin web E2E ${stamp}`;
+    // Cất bí mật cũng đòi mã phạm vi két; cất xong đẩy mọi mốc lùi để bài kiểm đúng ý: chỉ có ân hạn SƠ ĐỒ.
+    await stepUpViaApi(page, secret, 'vault');
     const stored = await page.request.post('/api/v1/vault/secrets', {
       headers: await writeHeaders(page),
       data: { ownerType: 'device', ownerId: deviceId, kind: 'password', label, value: `Web#Pass#${stamp}` },
     });
     expect(stored.status(), await stored.text()).toBe(201);
+    expireStepUp(E2E_SA.email);
     const id = await createDiagram(page, `E2E Mở két ${stamp}`);
     await stepUpViaApi(page, secret, 'diagram');
     await saveWithDevice(page, id, deviceId, code);
@@ -224,8 +230,9 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await page.getByRole('button', { name: 'Thiết bị kho' }).click();
     await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(dead);
     const pick = stockBox(page).getByRole('checkbox', { name: `Chọn ${dead} để chèn` });
+    await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
     await expect(pick).toBeDisabled();
-    await expect(stockBox(page).getByText('Đã thanh lý — không chèn được')).toBeVisible();
+    await expect(pick).toHaveAccessibleDescription('Đã thanh lý — không chèn được');
     await expect(stockBox(page).getByRole('button', { name: 'Chèn', exact: true })).toBeDisabled();
     await page.keyboard.press('Escape');
 

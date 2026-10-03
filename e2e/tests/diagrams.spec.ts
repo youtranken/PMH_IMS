@@ -89,6 +89,8 @@ async function insertDevice(page: Page, code: string) {
   await page.getByRole('button', { name: 'Thiết bị kho' }).click();
   const box = page.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
   await box.getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(code);
+  // Chờ danh sách đã lọc theo mã (ô tìm có debounce) rồi mới tick — trước đó là danh sách chưa lọc.
+  await expect(box.getByRole('listitem')).toHaveCount(1);
   await box.getByRole('checkbox', { name: `Chọn ${code} để chèn` }).check();
   await box.getByRole('button', { name: 'Chèn 1 thiết bị' }).click();
   await expect(page.getByText(`Đã chèn ${code} vào bản vẽ.`)).toBeVisible();
@@ -331,8 +333,9 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(page.getByRole('tab', { name: 'Sửa' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Xem' })).toBeVisible();
     await expect(nav).toHaveAttribute('data-compact', 'true');
+    // Bề ngang sidebar có `transition` — đo ngay khi cờ đổi là đo giữa chừng hiệu ứng.
+    await expect.poll(async () => (await nav.boundingBox())!.width).toBeLessThan(wide / 2);
     const slim = (await nav.boundingBox())!.width;
-    expect(slim).toBeLessThan(wide / 2);
 
     const frame = page.locator('iframe[title="Khung vẽ draw.io"]');
     await expect(frame).toBeVisible();
@@ -345,7 +348,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await nav.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Thiết bị' })).toBeVisible();
     await expect(nav).not.toHaveAttribute('data-compact', 'true');
-    expect((await nav.boundingBox())!.width).toBeGreaterThan(wide - 2);
+    await expect.poll(async () => (await nav.boundingBox())!.width).toBeGreaterThan(wide - 2);
   });
 
   test('390px: cây đọc được, trình xem hiện bản vẽ; màn sửa báo "chỉ làm trên máy tính" kèm lối sang xem', async ({ page }) => {

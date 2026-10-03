@@ -296,7 +296,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         tab: 'Loại thiết bị',
         title: 'Thêm loại thiết bị',
         textFields: ['Tên', 'Mô tả'],
-        selectField: [],
+        // Hình của loại trên sơ đồ mạng (Q-23) — Select dùng chung. Tải SVG biểu tượng chỉ có ở hộp Sửa.
+        selectField: ['Hình trên sơ đồ mạng'],
         toggles: ['Có port map', 'Router/Firewall'],
       },
       {
