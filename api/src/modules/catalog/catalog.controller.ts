@@ -156,7 +156,7 @@ export class CatalogController {
   /** Chỉ SA tải biểu tượng riêng (Story Thiết bị kho): tệp lạ đi vào mọi bản vẽ có loại này. */
   @Roles('sa')
   @Post('device-types/:id/diagram-icon')
-  @Audited('catalog.device_type.diagram_icon_set', 'device_type', { writtenByService: true })
+  @Audited('catalog.updated', 'catalog', { writtenByService: true })
   async setDiagramIcon(@Param() params: DeviceTypeIdParamDto, @Body() body: DiagramIconDto, @Req() req: AuthedRequest) {
     const maxKb = await this.config.getNumber('diagramIconSvgMaxKb');
     await this.catalog.setDiagramIcon(actor(req), params.id, body.svg, maxKb);
@@ -165,7 +165,7 @@ export class CatalogController {
 
   @Roles('sa')
   @Delete('device-types/:id/diagram-icon')
-  @Audited('catalog.device_type.diagram_icon_removed', 'device_type', { writtenByService: true })
+  @Audited('catalog.updated', 'catalog', { writtenByService: true })
   async removeDiagramIcon(@Param() params: DeviceTypeIdParamDto, @Req() req: AuthedRequest) {
     await this.catalog.removeDiagramIcon(actor(req), params.id);
     return { ok: true };

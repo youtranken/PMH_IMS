@@ -307,7 +307,7 @@ export class CatalogService {
         .values({ deviceTypeId: id, svg: value, updatedBy: actor })
         .onConflictDoUpdate({ target: deviceTypeIconTable.deviceTypeId, set: { svg: value, updatedBy: actor, updatedAt: new Date() } });
       // Lịch sử ghi CỠ, không chép SVG: catalog_history không xoá được.
-      await this.recordWithin(tx, actor, 'device_type', id, 'diagram_icon_set', { bytes: Buffer.byteLength(value) });
+      await this.recordWithin(tx, actor, DEVICE_TYPE, id, 'diagram_icon_set', { bytes: Buffer.byteLength(value) });
     });
   }
 
@@ -318,7 +318,7 @@ export class CatalogService {
         .delete(deviceTypeIconTable)
         .where(eq(deviceTypeIconTable.deviceTypeId, id))
         .returning({ id: deviceTypeIconTable.deviceTypeId });
-      if (gone.length > 0) await this.recordWithin(tx, actor, 'device_type', id, 'diagram_icon_removed', {});
+      if (gone.length > 0) await this.recordWithin(tx, actor, DEVICE_TYPE, id, 'diagram_icon_removed', {});
     });
   }
 
@@ -907,6 +907,9 @@ function labelOf(entity: CatalogEntity, row: Record<string, unknown>): string {
   const value = entity === 'site' || entity === 'cabinet' ? row.code : row.name;
   return typeof value === 'string' ? value : '';
 }
+
+/** Loại danh mục của biểu tượng sơ đồ — biến, không chữ viết thẳng, để bộ điểm danh mã thao tác đọc đúng đối số. */
+const DEVICE_TYPE: CatalogEntity = 'device_type';
 
 /** Hình phải nằm trong danh sách ĐÓNG — không có đường nào ghi một chuỗi style tự do (AD-18). */
 function diagramShapeOf(value: string | null): string | null {

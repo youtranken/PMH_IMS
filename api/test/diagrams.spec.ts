@@ -333,7 +333,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       const opened = await service.content(MEMBER.email, diagramId, { mode: 'edit' });
       expect(opened.version?.xml).toContain('shape=mxgraph.networks.switch;');
       expect(opened.version?.xml).toContain('label="SW-E2E-SD&#xa;10.20.0.5&#xa;E2E-SD"');
-      expect(opened.deviceCells).toEqual([{ cellId: 'd1', deviceId }]);
+      expect(opened.deviceCells).toEqual([{ cellId: 'd1', deviceId, code: 'SW-E2E-SD' }]);
       expect(opened.devices[0]).toMatchObject({
         id: deviceId,
         found: true,

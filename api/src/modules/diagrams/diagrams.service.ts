@@ -113,8 +113,11 @@ export interface DiagramContent {
   diagram: DiagramNode;
   /** `null` = bản vẽ chưa lưu lần nào: màn sửa mở khung trống, màn xem báo "chưa có bản vẽ". */
   version: (VersionItem & { xml: string; svg: string | null; deviceSnapshot: DeviceSnapshotEntry[] }) | null;
-  /** Ô thiết bị của phiên bản (id ô → id máy) — trình xem nối cú bấm vào ô với thẻ thông tin. */
-  deviceCells: { cellId: string; deviceId: string }[];
+  /**
+   * Ô thiết bị của phiên bản (id ô → id máy + mã ghi trên ô) — trình xem nối cú bấm vào ô với thẻ
+   * thông tin; mã đọc từ ô để thẻ vẫn nói được "máy nào" khi máy đã không còn trong kho.
+   */
+  deviceCells: { cellId: string; deviceId: string; code: string }[];
   /** Mọi máy có ô trên phiên bản, đọc MỘT lượt (không N+1). */
   devices: DiagramDeviceInfo[];
 }
@@ -426,7 +429,7 @@ export class DiagramsService {
     const [item] = await this.toItems(diagramId, [row]);
     const deviceCells = row.cellIndex.cells
       .filter((cell) => cell.kind === 'device' && cell.deviceId)
-      .map((cell) => ({ cellId: cell.id, deviceId: cell.deviceId! }));
+      .map((cell) => ({ cellId: cell.id, deviceId: cell.deviceId!, code: cell.ims.ims_device_code ?? '' }));
     const { infos: devices, sources } = await this.deviceData(deviceCells.map((c) => c.deviceId));
     // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại — AD-18). Xem: ảnh SVG
     // chụp lúc lưu, XML để nguyên.
