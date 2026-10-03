@@ -71,9 +71,10 @@ export interface DiagramEditorSettings {
  * Sơ đồ mạng (AD-17, AD-18, Q-23). Mọi vai đọc cây và vẽ (Thành viên cũng vẽ); đổi tên, chuyển
  * nhánh, lưu trữ, khôi phục chỉ Admin/SA. Không có xoá cứng.
  *
- * Lớp `@NoStepUp()`: cây (tên, trạng thái) xem không cần mã. Route trả NỘI DUNG bản vẽ — XML/SVG,
- * phiên bản, lịch sử — khai `@RequiresStepUp('diagram')` từng cái (Q-23: mở nội dung mới hỏi mã).
- * Lưu không đòi mã: nó không trả nội dung, và mỗi lần lưu là một phiên bản có nhật ký.
+ * Lớp `@NoStepUp()`: cây (tên, trạng thái, tạo nút, đổi tên, lưu trữ) không cần mã. Mọi route
+ * XEM hoặc SỬA một bản vẽ có sẵn — nội dung, phiên bản, lịch sử, lưu, đặt tên, khôi phục, nhịp
+ * "đang sửa" — khai `@RequiresStepUp('diagram')` từng cái (Q-23: xem và sửa bản vẽ đều hỏi mã;
+ * một phiên bị chiếm không ghi đè được bản vẽ khi chưa gõ mã).
  */
 @NoStepUp()
 @Controller('api/v1/diagrams')
@@ -158,6 +159,7 @@ export class DiagramsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
   @Post(':id/versions')
   @Audited('diagram.saved', 'diagram', { writtenByService: true })
   save(@Param() params: IdParamDto, @Body() dto: SaveVersionDto, @Req() req: AuthedRequest) {
@@ -166,6 +168,7 @@ export class DiagramsController {
 
   /** Mọi vai gọi được; service chỉ cho Thành viên đặt tên phiên bản do chính họ lưu. */
   @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
   @Post(':id/versions/:versionId/label')
   @Audited('diagram.version_labeled', 'diagram', { writtenByService: true })
   async label(@Param() params: VersionParamDto, @Body() dto: LabelDto, @Req() req: AuthedRequest) {
@@ -174,6 +177,7 @@ export class DiagramsController {
   }
 
   @Roles('sa', 'admin')
+  @RequiresStepUp('diagram')
   @Post(':id/versions/:versionId/restore')
   @Audited('diagram.version_restored', 'diagram', { writtenByService: true })
   restore(@Param() params: VersionParamDto, @Req() req: AuthedRequest) {
@@ -181,6 +185,7 @@ export class DiagramsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
   @Post(':id/presence')
   @Audited('diagram.editing_started', 'diagram', { writtenByService: true })
   presence(@Param() params: IdParamDto, @Req() req: AuthedRequest) {

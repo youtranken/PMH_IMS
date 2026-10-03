@@ -710,6 +710,8 @@ export default {
       lockedHint: 'Nhập mã 6 số trên điện thoại để mở. Mã này chỉ mở phần xem sơ đồ, không mở két.',
       unlock: 'Nhập mã để mở',
       stepUpPurpose: 'Nhập mã 6 số để mở bản vẽ "{{name}}".',
+      stepUpSave: 'Nhập mã 6 số để lưu bản vẽ "{{name}}". Những gì đang vẽ vẫn giữ nguyên trong khung.',
+      stepUpEdit: 'Nhập mã 6 số để sửa phiên bản của bản vẽ "{{name}}".',
       noVersionTitle: 'Bản vẽ chưa có nội dung',
       noVersionHint: 'Chuyển sang tab Sửa, vẽ rồi bấm Lưu.',
       viewingOld: 'Đang xem phiên bản #{{seq}} ({{at}}).',

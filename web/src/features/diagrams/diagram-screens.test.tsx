@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { act } from '@testing-library/react';
+import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
@@ -131,5 +132,59 @@ describe('Cây bản vẽ', () => {
     renderScreen('/diagrams', me);
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
     expect((await screen.findAllByRole('menuitem')).map((el) => el.textContent)).toEqual(expected);
+  });
+});
+
+describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q-23)', () => {
+  it('server đòi mã → hộp hỏi mã sơ đồ, nhập xong lưu lại ĐÚNG XML đang có trong bộ nhớ, không xin trình vẽ xuất lại', async () => {
+    const version = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+    let saves = 0;
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...version, xml: '<mxfile/>', svg: null } }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1/versions': () => {
+        saves += 1;
+        return saves === 1
+          ? jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })
+          : jsonResponse(201, { ...version, id: 'v2', seq: 2, summary: 'Thêm 1 thiết bị' });
+      },
+      '/api/v1/auth/step-up': () => jsonResponse(200, { status: 'stepped-up', scope: 'diagram', graceMinutes: 10 }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    });
+    const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], {
+      initialEntries: ['/diagrams/d1?mode=edit'],
+    });
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    const posted = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    const fromDrawio = (data: Record<string, unknown>) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frame.contentWindow }));
+      });
+    fromDrawio({ event: 'init' });
+    fromDrawio({ event: 'load' });
+    fromDrawio({ event: 'save', xml: '<mxfile>NÉT ĐANG VẼ</mxfile>' });
+    fromDrawio({ event: 'export', data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}` });
+
+    const dialog = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    expect(dialog).toHaveTextContent('Mã này chỉ mở phần xem sơ đồ, không mở két.');
+    await userEvent.setup().type(screen.getByLabelText(/mã/i), '654321');
+
+    expect(await screen.findByText('Đã lưu phiên bản #2: Thêm 1 thiết bị')).toBeInTheDocument();
+    const bodies = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][])
+      .filter(([url, init]) => String(url).endsWith('/api/v1/diagrams/d1/versions') && init?.method === 'POST')
+      .map(([, init]) => JSON.parse(String(init?.body)) as { xml: string; basedOnVersionId: string });
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toEqual(bodies[0]);
+    expect(bodies[1]).toMatchObject({ xml: '<mxfile>NÉT ĐANG VẼ</mxfile>', basedOnVersionId: 'v1' });
+    const exports = posted.mock.calls.filter(([data]) => String(data).includes('"action":"export"'));
+    expect(exports).toHaveLength(1);
   });
 });

@@ -181,8 +181,8 @@ describe('Step-up mặc định đóng (FR-022)', () => {
   });
 
   /**
-   * Q-23: mở NỘI DUNG bản vẽ (mọi phiên bản), danh sách phiên bản và lịch sử đều hỏi mã phạm vi
-   * sơ đồ. Lớp `DiagramsController` mang `@NoStepUp()` (cây xem không cần mã), nên dòng khai ở
+   * Q-23: XEM và SỬA một bản vẽ có sẵn (nội dung mọi phiên bản, danh sách phiên bản, lịch sử,
+   * lưu, đặt tên, khôi phục, nhịp "đang sửa") đều hỏi mã phạm vi sơ đồ. Lớp `DiagramsController` mang `@NoStepUp()` (cây xem không cần mã), nên dòng khai ở
    * từng route là thứ DUY NHẤT giữ hàng rào — gỡ một dòng là nội dung bản vẽ mở cho phiên chưa
    * từng gõ mã.
    */
@@ -191,6 +191,10 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     "@Get(':id/versions')",
     "@Get(':id/versions/:versionId/changes')",
     "@Get(':id/history')",
+    "@Post(':id/versions')",
+    "@Post(':id/versions/:versionId/label')",
+    "@Post(':id/versions/:versionId/restore')",
+    "@Post(':id/presence')",
   ])('diagrams.controller %s đòi step-up phạm vi sơ đồ', (route) => {
     const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagrams.controller.ts'), 'utf8');
     const at = src.indexOf(route);

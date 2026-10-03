@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
+import { errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
@@ -233,6 +233,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         dialogs={dialogs}
         content={content.data}
         settings={settings.data}
+        run={stepUp.run}
         onDirtyChange={setDirty}
       />
     );
@@ -299,6 +300,7 @@ function DiagramEditor({
   dialogs,
   content,
   settings,
+  run,
   onDirtyChange,
 }: {
   me: Me;
@@ -309,6 +311,8 @@ function DiagramEditor({
   dialogs: ReactNode;
   content: DiagramContent;
   settings: EditorSettings;
+  /** `useStepUpRetry().run` của màn: lưu đòi mã sơ đồ, hết ân hạn giữa lúc vẽ thì hỏi tại chỗ. */
+  run: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -342,12 +346,8 @@ function DiagramEditor({
     onDirtyChange(value);
   };
 
-  const save = useApiMutation<{ xml: string; svg: string; basedOnVersionId: string | null }, VersionItem>(
-    `/api/v1/diagrams/${diagramId}/versions`,
-    { csrfToken: me.csrfToken, refreshMe: false },
-  );
-
   // Nhịp "đang mở sửa" (Q-23): nửa thời gian giữ một lần, để một nhịp lỡ không làm tên biến mất.
+  // Hết ân hạn sơ đồ thì nhịp nhận 401 và im lặng: không bật hộp nhập mã chỉ vì một nhịp nền.
   useEffect(() => {
     let alive = true;
     const beat = () =>
@@ -365,29 +365,36 @@ function DiagramEditor({
     };
   }, [diagramId, me.csrfToken, settings.presenceTtlSeconds]);
 
-  const submit = (xml: string, svg: string) => {
-    save.mutate(
-      { xml, svg, basedOnVersionId: basedOn.current },
-      {
-        onSuccess: (version) => {
-          basedOn.current = version.id;
-          setLastSaved(version);
-          setDirty(false);
-          void queryClient.invalidateQueries({ queryKey: TREE_KEY });
-          void queryClient.invalidateQueries({ queryKey: nodeKey(diagramId) });
-          void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
-          void queryClient.invalidateQueries({ queryKey: historyKey(diagramId) });
-          /*
-           * Nội dung đã cache (Xem, và Sửa của chính màn này) đã cũ: đánh dấu để lần MỞ sau tải
-           * lại, nhưng không tải ngay — tải ngay là nạp lại khung đang vẽ.
-           */
-          void queryClient.invalidateQueries({ queryKey: ['diagram-content', diagramId], refetchType: 'none' });
-          toast({ tone: 'ok', message: t('diagrams.screen.saved', { seq: version.seq, summary: version.summary }) });
-        },
-        onError: (error) => toast({ tone: 'error', message: errorMessage(error) }),
-        onSettled: () => setSaving(false),
-      },
-    );
+  /*
+   * Lưu đòi mã sơ đồ (Q-23: sửa bản vẽ có sẵn cũng hỏi mã). Hết ân hạn giữa lúc vẽ thì `run` mở
+   * hộp nhập mã rồi chạy lại ĐÚNG lời gọi này — XML/SVG nằm trong closure, không phải xin trình
+   * vẽ xuất lại, nên không mất nét nào. Đóng hộp = huỷ lượt lưu, bản vẽ vẫn còn trong khung.
+   */
+  const submit = async (xml: string, svg: string) => {
+    const body = JSON.stringify({ xml, svg, basedOnVersionId: basedOn.current });
+    try {
+      const version = await run(
+        () => apiFetch<VersionItem>(`/api/v1/diagrams/${diagramId}/versions`, { method: 'POST', csrfToken: me.csrfToken, body }),
+        t('diagrams.screen.stepUpSave', { name: title }),
+      );
+      basedOn.current = version.id;
+      setLastSaved(version);
+      setDirty(false);
+      void queryClient.invalidateQueries({ queryKey: TREE_KEY });
+      void queryClient.invalidateQueries({ queryKey: nodeKey(diagramId) });
+      void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
+      void queryClient.invalidateQueries({ queryKey: historyKey(diagramId) });
+      /*
+       * Nội dung đã cache (Xem, và Sửa của chính màn này) đã cũ: đánh dấu để lần MỞ sau tải lại,
+       * nhưng không tải ngay — tải ngay là nạp lại khung đang vẽ.
+       */
+      void queryClient.invalidateQueries({ queryKey: ['diagram-content', diagramId], refetchType: 'none' });
+      toast({ tone: 'ok', message: t('diagrams.screen.saved', { seq: version.seq, summary: version.summary }) });
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const insertInto = (xml: string, device: DeviceForDiagram) => {
@@ -444,7 +451,7 @@ function DiagramEditor({
           toast({ tone: 'error', message: t('diagrams.screen.saveFailed') });
           break;
         }
-        submit(xml, svg.value);
+        void submit(xml, svg.value);
         break;
       }
     }
@@ -473,7 +480,7 @@ function DiagramEditor({
     }
   };
 
-  const busy = saving || save.isPending;
+  const busy = saving;
   const status = (
     <>
       {others.length > 0 ? (

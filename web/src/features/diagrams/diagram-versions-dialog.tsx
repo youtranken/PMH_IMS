@@ -13,6 +13,7 @@ import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import {
   TREE_KEY,
   historyKey,
@@ -85,6 +86,7 @@ export function DiagramVersionsDialog({
   const [details, setDetails] = useState<VersionItem | null>(null);
   const manager = me.role === 'sa' || me.role === 'admin';
   const purpose = t('diagrams.screen.stepUpPurpose', { name: diagram.name });
+  const editPurpose = t('diagrams.screen.stepUpEdit', { name: diagram.name });
 
   const versions = useQuery({
     queryKey: versionsKey(diagram.id),
@@ -115,15 +117,19 @@ export function DiagramVersionsDialog({
     });
     if (!ok) return;
     try {
-      const created = await apiFetch<VersionItem>(`/api/v1/diagrams/${diagram.id}/versions/${version.id}/restore`, {
-        method: 'POST',
-        csrfToken: me.csrfToken,
-      });
+      const created = await run(
+        () =>
+          apiFetch<VersionItem>(`/api/v1/diagrams/${diagram.id}/versions/${version.id}/restore`, {
+            method: 'POST',
+            csrfToken: me.csrfToken,
+          }),
+        editPurpose,
+      );
       await refresh();
       onRestored();
       toast({ tone: 'ok', message: t('diagrams.versions.restored', { seq: created.seq }) });
     } catch (error) {
-      toast({ tone: 'error', message: errorMessage(error) });
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
     }
   };
 
@@ -210,6 +216,8 @@ export function DiagramVersionsDialog({
           me={me}
           diagramId={diagram.id}
           version={labeling}
+          run={run}
+          purpose={editPurpose}
           onSaved={async () => {
             await refresh();
             toast({ tone: 'ok', message: t('diagrams.versions.labelSaved', { seq: labeling.seq }) });
@@ -227,12 +235,16 @@ function LabelDialog({
   me,
   diagramId,
   version,
+  run,
+  purpose,
   onSaved,
   onClose,
 }: {
   me: Me;
   diagramId: string;
   version: VersionItem;
+  run: Run;
+  purpose: string;
   onSaved: () => Promise<void>;
   onClose: () => void;
 }) {
@@ -243,14 +255,18 @@ function LabelDialog({
   const submit = async () => {
     setBusy(true);
     try {
-      await apiFetch(`/api/v1/diagrams/${diagramId}/versions/${version.id}/label`, {
-        method: 'POST',
-        csrfToken: me.csrfToken,
-        body: JSON.stringify({ label: label.trim() ? label.trim() : null }),
-      });
+      await run(
+        () =>
+          apiFetch(`/api/v1/diagrams/${diagramId}/versions/${version.id}/label`, {
+            method: 'POST',
+            csrfToken: me.csrfToken,
+            body: JSON.stringify({ label: label.trim() ? label.trim() : null }),
+          }),
+        purpose,
+      );
       await onSaved();
     } catch (error) {
-      toast({ tone: 'error', message: errorMessage(error) });
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
     } finally {
       setBusy(false);
     }

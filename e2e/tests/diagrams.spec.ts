@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  expireStepUp,
   fillOtp,
   firstLogin,
   freshTotpCode,
@@ -193,6 +194,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const secret = await firstLogin(page, E2E_MEMBER);
     const name = `E2E Thành viên ${uniqueStamp()}`;
     const id = await createDiagram(page, name);
+    // Sửa bản vẽ có sẵn cũng đòi mã sơ đồ (Q-23) — Thành viên cũng vậy.
+    await stepUpViaApi(page, secret, 'diagram');
     const saved = await saveViaApi(page, id);
     expect(saved.status(), await saved.text()).toBe(201);
     const version = (await saved.json()) as { id: string };
@@ -221,7 +224,6 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(page.getByText(/Đã tạo bản vẽ "E2E Tầng con/)).toBeVisible();
 
     // Danh sách phiên bản lọc "chỉ có tên".
-    await stepUpViaApi(page, secret, 'diagram');
     await page.goto(`/diagrams/${id}`);
     await page.getByRole('button', { name: 'Phiên bản' }).click();
     const versions = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
@@ -237,7 +239,12 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const blocked = await page.request.get(`/api/v1/diagrams/${id}/content`, { failOnStatusCode: false });
     expect(blocked.status()).toBe(401);
     expect(await blocked.json()).toMatchObject({ code: 'STEPUP_REQUIRED', scope: 'diagram' });
+    // Lưu (sửa bản vẽ có sẵn) cũng đòi mã sơ đồ: phiên bị chiếm không ghi đè được bản vẽ.
+    const unsaved = await saveViaApi(page, id);
+    expect(unsaved.status()).toBe(401);
+    expect(await unsaved.json()).toMatchObject({ code: 'STEPUP_REQUIRED', scope: 'diagram' });
 
+    await stepUpViaApi(page, secret, 'diagram');
     const evil = XML_EMPTY.replace('value="Tầng 3 E2E"', 'value="&lt;img src=x onerror=alert(document.cookie)&gt;" ');
     const rejected = await saveViaApi(page, id, evil);
     expect(rejected.status()).toBe(400);
@@ -251,9 +258,37 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const evilSvg = await saveViaApi(page, id, XML_EMPTY, '<html><script>alert(1)</script></html>');
     expect(evilSvg.status()).toBe(400);
 
-    await stepUpViaApi(page, secret, 'diagram');
     const list = await page.request.get(`/api/v1/diagrams/${id}/versions`);
     expect(await list.json()).toEqual([]);
+  });
+
+  test('ân hạn sơ đồ hết giữa lúc vẽ: bấm Lưu → hỏi mã tại chỗ → nhập xong lưu được, không mất nét đang vẽ', async ({ page }) => {
+    test.setTimeout(150_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const code = `SW-E2E-HH${uniqueStamp()}`;
+    await createSwitch(page, code);
+    const id = await createDiagram(page, `E2E Hết ân hạn ${uniqueStamp()}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await insertDevice(page, code);
+
+    expireStepUp(E2E_SA.email);
+    const [first] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(first.status()).toBe(401);
+    await expect(stepUpDialog(page)).toBeVisible();
+    await expect(stepUpDialog(page).getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeVisible();
+    const [retried] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      fillOtp(stepUpDialog(page), await freshTotpCode(secret)),
+    ]);
+    expect(retried.status(), await retried.text()).toBe(201);
+    expect(retried.request().postData()).toBe(first.request().postData());
+    expect(((await retried.json()) as { summary: string }).summary).toBe('Thêm 1 thiết bị');
+    await expect(page.getByText('Đã lưu phiên bản #1: Thêm 1 thiết bị')).toBeVisible();
   });
 
   test('hai người cùng mở sửa: người sau thấy "Đang có … mở sửa"', async ({ browser, page }) => {
@@ -304,8 +339,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const secret = await firstLogin(page, E2E_SA);
     const name = `E2E Điện thoại ${uniqueStamp()}`;
     const id = await createDiagram(page, name);
-    expect((await saveViaApi(page, id)).status()).toBe(201);
     await stepUpViaApi(page, secret, 'diagram');
+    expect((await saveViaApi(page, id)).status()).toBe(201);
 
     await page.goto('/diagrams');
     await expect(page.getByRole('link', { name })).toBeVisible();

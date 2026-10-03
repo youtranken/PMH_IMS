@@ -769,7 +769,7 @@ Bỏ Visio: sơ đồ là lớp nhìn của dữ liệu kho cộng lớp vẽ t�
 
 **Luật chung cho mọi story của epic (khỏi nhắc lại từng story):**
 - Module mới `diagrams` (tầng nghiệp vụ) là chủ duy nhất `diagram`, `diagram_version`, `diagram_version_label`, `diagram_history`, `diagram_comment` (AD-3, AD-18). Đọc kho CHỈ qua `devices.api`, `ipam.api`, `catalog.api`, `files.api`; duyệt qua `approvals.api` (AD-2, AD-6). `diagrams` **không gọi `vault`** và **không ghi `device_port`** — mọi ghi sơ đồ cổng từ màn sơ đồ là web gọi endpoint của `devices` sau một xác nhận tường minh trong hộp IMS (AD-18). Không module nào import `diagrams`.
-- Mọi endpoint ghi: `@Audited` + `@Roles` + `tx` tường minh, nghiệp vụ + audit + outbox cùng transaction (AD-5, AD-9). Route đọc NỘI DUNG bản vẽ khai `@RequiresStepUp('diagram')` và ghi audit `diagram.viewed`; route còn lại khai `@NoStepUp()` rõ ràng.
+- Mọi endpoint ghi: `@Audited` + `@Roles` + `tx` tường minh, nghiệp vụ + audit + outbox cùng transaction (AD-5, AD-9). Route đọc NỘI DUNG bản vẽ khai `@RequiresStepUp('diagram')` và ghi audit `diagram.viewed`; route SỬA một bản vẽ có sẵn (lưu phiên bản, đặt tên, khôi phục, nhịp "đang sửa") cũng khai `@RequiresStepUp('diagram')` (chủ dự án chốt: xem VÀ sửa đều hỏi mã); cây (tạo nút, đổi tên, lưu trữ) thì không; route còn lại khai `@NoStepUp()` rõ ràng.
 - Bảng phiên bản/lịch sử chỉ-thêm: trigger `history_append_only` + `REVOKE UPDATE, DELETE, TRUNCATE ... FROM ims_app` và `FROM CURRENT_USER` ngay trong file tạo bảng, thêm vào `api/test/app-role-privileges.spec.ts`. Migration mới đánh số tiếp sau file cuối đang có, không sửa file cũ (AD-10).
 - XML/SVG bản vẽ là dữ liệu không tin cậy: chỉ vào kho qua cổng kiểm của server, chỉ hiện qua trình xem SVG đã làm sạch hoặc trình vẽ trong iframe sandbox (AD-17). Hợp đồng thuộc tính ô `ims_*`, XML "khô" + hydrate/dehydrate theo AD-18.
 - Tham số nghiệp vụ vào `system_config` có mặc định + khai `EDITABLE_SETTINGS` (AD-11).
@@ -871,6 +871,7 @@ So that sơ đồ mạng có nhà trong IMS thay file Visio rải rác, và 1–
 **Given** người dùng mở NỘI DUNG một bản vẽ (xem hoặc sửa, bất kỳ phiên bản)
 **When** chưa trong ân hạn sơ đồ
 **Then** hộp mã 2 lớp phạm vi sơ đồ hiện (Story 10.1); trong ân hạn thì chuyển giữa các bản vẽ không hỏi lại
+**And** LƯU cũng đòi mã phạm vi sơ đồ: ân hạn hết giữa lúc vẽ thì bấm Lưu → hộp hỏi mã tại chỗ → nhập xong lưu lại đúng XML đang giữ trong bộ nhớ (không xin trình vẽ xuất lại, không mất nét) — vitest `diagram-screens.test.tsx` + E2E `diagrams.spec.ts`
 **And** E2E (chuyển từ Story 10.1): vừa nhập mã cho két xong, mở bản vẽ vẫn hỏi mã phạm vi sơ đồ; `security.spec.ts` thêm đòn phiên chỉ có ân hạn két gọi thẳng API nội dung bản vẽ → 401 `scope: 'diagram'`
 **And** MỖI lần tải nội dung ghi một dòng audit `diagram.viewed` (ai, bản vẽ, phiên bản, chế độ xem/sửa) — NFR-03
 **And** chế độ xem dùng `web/src/ui/diagram-viewer` hiện SVG đã làm sạch (không nạp draw.io), có watermark như Story 10.2, zoom/pan; chế độ sửa dùng `drawio-frame`; màn sửa ở bề ngang < 1024px hiện "Sửa sơ đồ chỉ làm trên máy tính" kèm lối sang chế độ xem
