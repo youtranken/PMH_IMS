@@ -6,12 +6,10 @@ import {
   COMPOSE,
   E2E_MEMBER,
   E2E_SA,
-  NEW_PASSWORD,
   expireStepUp,
   firstLogin,
   freshTotpCode,
   lastAudit,
-  loginWithTotp,
   logout,
   resetAccessList,
   resetApprovals,
@@ -332,36 +330,34 @@ test.describe('Break-glass', () => {
    * của người khác — người xin ngồi chờ tiếp lúc 2 giờ sáng, còn lịch sử ghi sai tên người hủy.
    */
   test('không hủy được yêu cầu của người khác', async ({ page, browser }) => {
-    const saTotp = await firstLogin(page, E2E_SA);
-    await stepUpViaApi(page, saTotp);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
-    await logout(page);
 
-    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
-    const asked = await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+    /* Người xin ở ngữ cảnh riêng, SA giữ phiên của mình: đăng nhập lại SA tốn thêm hai mã TOTP,
+       mà chống replay bắt mỗi mã một chu kỳ 30 giây — đủ đẩy bài qua trần 60 giây. Xin, hủy và
+       xem hàng chờ đều không đòi step-up (controller `@NoStepUp`), nên không nhập mã két ở đây. */
+    const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const member = await memberCtx.newPage();
+    await firstLogin(member, E2E_MEMBER);
+    const asked = await member.request.post('/api/v1/vault/break-glass', {
+      headers: { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
     });
+    expect(asked.status()).toBe(201);
     const id = ((await asked.json()) as { id: string }).id;
+    await memberCtx.close();
 
-    /* SA ở ngữ cảnh riêng, người xin giữ phiên của mình. Phiếu chờ không gắn phiên (Q-15),
-       nên cách dựng này không bắt buộc — chỉ tránh đăng nhập lại hai lần. */
-    const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
-    const sa = await saCtx.newPage();
-    await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
-    await stepUpViaApi(sa, saTotp);
     // SA cũng KHÔNG hủy hộ được — muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc.
-    const stolen = await sa.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
-      headers: { 'X-CSRF-Token': await csrfOf(sa), Origin: APP_ORIGIN },
+    const stolen = await page.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
     expect(stolen.status()).toBe(403);
     expect(await stolen.json()).toMatchObject({ code: 'NOT_YOUR_REQUEST' });
 
     // Yêu cầu vẫn còn nguyên, vẫn chờ duyệt.
-    const pending = await sa.request.get('/api/v1/vault/break-glass/pending');
+    const pending = await page.request.get('/api/v1/vault/break-glass/pending');
     expect(((await pending.json()) as { id: string }[]).some((r) => r.id === id)).toBe(true);
-    await saCtx.close();
   });
 
   /**
