@@ -177,6 +177,19 @@ export const CONFIG_KEYS = {
    * Tham số — hạ nó xuống là thư bị bỏ sớm mà không ai thấy ngoài danh sách gửi lỗi.
    */
   outboxMaxRelayAttempts: { key: 'outbox.max_relay_attempts', fallback: 14 },
+  /*
+   * Sơ đồ mạng (AD-17). Trình vẽ không báo `init` trong ngần này giây thì màn báo "Trình vẽ chưa
+   * sẵn sàng" kèm nút thử lại, thay vì treo một khung trắng.
+   */
+  diagramEditorInitTimeoutSeconds: { key: 'diagram.editor_init_timeout_seconds', fallback: 20 },
+  /*
+   * Trần của cổng kiểm XML/SVG bản vẽ (`diagrams/diagram-gate.ts`). Bản vẽ được parse trọn trong
+   * RAM mỗi lần lưu và nạp trọn vào trình vẽ, nên trần là hàng rào cho cả server lẫn máy người
+   * xem. Trần trên của màn Tham số giữ dưới trần body của route lưu.
+   */
+  diagramXmlMaxKb: { key: 'diagram.xml_max_kb', fallback: 2048 },
+  diagramSvgMaxKb: { key: 'diagram.svg_max_kb', fallback: 4096 },
+  diagramMaxCells: { key: 'diagram.max_cells', fallback: 5000 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

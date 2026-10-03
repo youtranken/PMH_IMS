@@ -18,7 +18,8 @@ export type SettingGroup =
   | 'dashboard'
   | 'software'
   | 'ipam'
-  | 'files';
+  | 'files'
+  | 'diagram';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -31,7 +32,9 @@ export type SettingUnit =
   | 'ports'
   | 'rows'
   | 'mb'
-  | 'files';
+  | 'kb'
+  | 'files'
+  | 'cells';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -99,6 +102,11 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'fileMaxFilesPerBatch', group: 'files', type: 'int', unit: 'files', min: 1, max: 20 },
   // Dọn blob không lùi lại được: dưới 7 ngày thì một lần xoá nhầm cuối tuần đã mất hẳn nội dung.
   { name: 'filePurgeAfterDays', group: 'files', type: 'int', unit: 'days', min: 7, max: 3650 },
+  // Sơ đồ mạng. Trần trên của hai trần dung lượng giữ dưới trần body 5 MB của route lưu bản vẽ.
+  { name: 'diagramEditorInitTimeoutSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 5, max: 120 },
+  { name: 'diagramXmlMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 256, max: 4096 },
+  { name: 'diagramSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 256, max: 4096 },
+  { name: 'diagramMaxCells', group: 'diagram', type: 'int', unit: 'cells', min: 500, max: 20000, warnAbove: 10000 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

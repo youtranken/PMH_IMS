@@ -3,6 +3,8 @@ import { eq } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { checkDiagramXml } from './diagram-gate';
 import { diagramSpikeTable } from './diagram-spike.schema';
 
 export interface DiagramSpikeView {
@@ -16,15 +18,15 @@ export interface DiagramSpikeView {
 /**
  * Bản thử nhúng draw.io (Q-23): lưu nguyên XML draw.io theo tên, bản lưu sau thắng.
  *
- * XML là nội dung người dùng tự do. API không dựng lại hay hiển thị nó; chỗ duy nhất vẽ nó là
- * khung draw.io chạy trong iframe sandbox (xem `web/src/features/diagrams-spike`). Ở đây chỉ
- * kiểm nó TRÔNG như một tệp draw.io, để màn không phải nạp một thứ chắc chắn hỏng.
+ * XML là nội dung người dùng tự do, nên mọi lần lưu đi qua cổng kiểm `diagram-gate.ts` (AD-17)
+ * trước khi chạm DB: thứ qua cổng sẽ được nạp lại vào trình vẽ của người khác.
  */
 @Injectable()
 export class DiagramSpikeService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
+    private readonly config: SystemConfigService,
   ) {}
 
   async get(name: string): Promise<DiagramSpikeView> {
@@ -42,12 +44,12 @@ export class DiagramSpikeService {
   }
 
   async save(actor: string, name: string, xml: string): Promise<DiagramSpikeView> {
-    if (!/^<mxfile[\s>]/.test(xml.trimStart())) {
-      throw new BadRequestException({
-        code: 'DIAGRAM_XML_INVALID',
-        message: 'Nội dung không phải tệp draw.io.',
-      });
-    }
+    const [xmlMaxKb, maxCells] = await Promise.all([
+      this.config.getNumber('diagramXmlMaxKb'),
+      this.config.getNumber('diagramMaxCells'),
+    ]);
+    const { reason } = checkDiagramXml(xml, { xmlMaxKb, maxCells });
+    if (reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: reason });
     await this.db.transaction(async (tx) => {
       const now = new Date();
       const [row] = await tx

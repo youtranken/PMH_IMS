@@ -21,7 +21,8 @@ class SaveDiagramDto {
 }
 
 /**
- * BẢN THỬ nhúng draw.io (Q-23) — chỉ SA/Admin, để chủ dự án vẽ thử trước khi chốt Epic 10.
+ * BẢN THỬ nhúng draw.io (Q-23) — mọi vai, vì Thành viên cũng vẽ. Bảng thử chưa có duyệt: bản thật
+ * (cây bản vẽ, phiên bản, duyệt) thay nó.
  *
  * `@NoStepUp()` là cố ý cho bản thử: phạm vi step-up `diagram` (Story 10.1) chưa có. Bản thật
  * khai `@RequiresStepUp('diagram')` cho mọi route đọc nội dung bản vẽ.
@@ -31,13 +32,13 @@ class SaveDiagramDto {
 export class DiagramSpikeController {
   constructor(private readonly diagrams: DiagramSpikeService) {}
 
-  @Roles('sa', 'admin')
+  @Roles('sa', 'admin', 'member')
   @Get(':name')
   get(@Param() params: NameParamDto) {
     return this.diagrams.get(params.name);
   }
 
-  @Roles('sa', 'admin')
+  @Roles('sa', 'admin', 'member')
   @Put(':name')
   @Audited('diagram_spike.saved', 'diagram_spike', { writtenByService: true })
   save(@Param() params: NameParamDto, @Body() dto: SaveDiagramDto, @Req() req: AuthedRequest) {
