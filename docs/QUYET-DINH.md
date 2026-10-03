@@ -443,6 +443,9 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   vàng. Xoá nét đã khai thì hỏi "Chỉ xoá nét vẽ" (mặc định) / "Gỡ luôn kết nối". Chiều ngược lại: đổi
   cổng / loại dây hiện ngay khi mở bản vẽ; kết nối bị gỡ thì nét chuyển đỏ; kết nối mới giữa hai máy
   đã có trên bản vẽ thì báo "Có N kết nối mới chưa vẽ" + nút "Vẽ vào". Nút "Khai kết nối" vẫn giữ.
+  Gạch này bổ sung gạch 02/10 ("bản vẽ không ghi sơ đồ cổng"): LƯU hay PHÁT HÀNH bản vẽ vẫn không
+  ghi gì vào sơ đồ cổng; chỉ khi người dùng bấm "Khai" (hoặc "Gỡ luôn kết nối") thì web mới gọi API
+  của `devices`.
 - **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
   draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
 
