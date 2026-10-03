@@ -109,6 +109,8 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'catalog/catalog.controller.ts#svg',
     // Danh sách id máy ngăn bằng dấu phẩy (ô đọc của hộp Thiết bị kho).
     'diagrams/diagrams.controller.ts#ids',
+    // Ô tìm thiết bị của trình xem sơ đồ: chỉ đọc, không lưu.
+    'diagrams/diagrams.controller.ts#q',
     // Id ô draw.io mà bình luận ghim vào.
     'diagrams/diagram-review.controller.ts#cellId',
     // Id, ngày, email.
