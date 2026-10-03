@@ -16,6 +16,21 @@ export async function downloadFile(
 }
 
 /**
+ * POST một thân JSON (kèm CSRF) rồi lưu file server trả về — xuất có ghi nhật ký (bản vẽ PNG/PDF),
+ * nơi GET là sai: một thẻ `<img src>` ở trang khác không được tự xuất hộ người đang đăng nhập.
+ * Lỗi ném `ApiError` như `apiFetch`, nên `useStepUpRetry` bắt được `STEPUP_REQUIRED`.
+ */
+export async function postForDownload(url: string, body: unknown, csrfToken: string, fallbackName: string): Promise<void> {
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(body),
+  });
+  await saveResponse(res, fallbackName);
+}
+
+/**
  * Lưu một response file xuống máy (tên server gửi, lùi về `fallbackName`) — phần chung của
  * `downloadFile` (GET) và `uploadForDownload` (POST file, nhận file về).
  */

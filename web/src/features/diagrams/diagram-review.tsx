@@ -89,6 +89,7 @@ export function useDiagramReview({
   versionId,
   dirty,
   onGoToCell,
+  onCompare,
 }: {
   me: Me;
   /** `null` khi tên bản vẽ chưa tải xong — mọi truy vấn tắt, không nút nào. */
@@ -99,6 +100,8 @@ export function useDiagramReview({
   /** Đang vẽ dở chưa lưu — gửi duyệt / phát hành áp lên bản ĐÃ LƯU nên phải lưu trước. */
   dirty: boolean;
   onGoToCell: (cellId: string) => void;
+  /** "Xem so sánh với bản chính thức": mở trình xem so sánh `from` → `to`. */
+  onCompare: (fromVersionId: string, toVersionId: string) => void;
 }): {
   actions: ReactNode;
   dialogs: ReactNode;
@@ -301,6 +304,10 @@ export function useDiagramReview({
           onStartPinning={() => {
             setDecideOpen(false);
             setPinMode(true);
+          }}
+          onCompare={(from, to) => {
+            setDecideOpen(false);
+            onCompare(from, to);
           }}
           onDone={async (message) => {
             setDecideOpen(false);
@@ -558,6 +565,7 @@ function DecideDialog({
   pinned,
   onGoTo,
   onStartPinning,
+  onCompare,
   onDone,
   onFail,
   onClose,
@@ -568,6 +576,7 @@ function DecideDialog({
   pinned: number;
   onGoTo: (cellId: string) => void;
   onStartPinning: () => void;
+  onCompare: (fromVersionId: string, toVersionId: string) => void;
   onDone: (message: string) => Promise<void>;
   onFail: (error: unknown) => void;
   onClose: () => void;
@@ -575,7 +584,8 @@ function DecideDialog({
   const { t } = useTranslation();
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const compare = useDisabledReason(t('diagrams.review.compareLater'), { visible: true });
+  // Lần phát hành đầu chưa có bản chính thức nào để so — tóm tắt "bản đầu tiên" đã đủ.
+  const compare = useDisabledReason(page.officialVersionId ? null : t('diagrams.review.compareFirst'), { visible: true });
   const decide = async (to: 'approve' | 'return') => {
     setBusy(true);
     try {
@@ -621,7 +631,13 @@ function DecideDialog({
         </div>
       </dl>
       <p className="row">
-        <button type="button" className="btn sm" disabled {...compare.buttonProps}>
+        <button
+          type="button"
+          className="btn sm"
+          disabled={!page.officialVersionId || !page.versionId}
+          {...compare.buttonProps}
+          onClick={() => page.officialVersionId && page.versionId && onCompare(page.officialVersionId, page.versionId)}
+        >
           {t('diagrams.review.compare')}
         </button>
         {compare.hint}

@@ -236,6 +236,23 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
   });
 
+  /** Xuất PNG/PDF và so sánh phiên bản là đọc nội dung bản vẽ (FR-044, AD-17). */
+  it.each(["@Post(':id/versions/:versionId/exports')", "@Get(':id/compare')"])(
+    'diagram-export.controller %s đòi step-up phạm vi sơ đồ',
+    (route) => {
+      const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagram-export.controller.ts'), 'utf8');
+      const at = src.indexOf(route);
+      expect(at).toBeGreaterThan(-1);
+      const prevRoute = Math.max(
+        ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+          .map((m) => src.lastIndexOf(m, at - 1))
+          .filter((i) => i >= 0),
+        0,
+      );
+      expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+    },
+  );
+
   /**
    * AD-17/AD-18: phạm vi đi theo MODULE. Sơ đồ khai `'diagram'`; mọi chỗ khác (két, tài khoản,
    * tham số, quyền két) giữ nghĩa két. Một route két lỡ khai `'diagram'` thì mã nhập để xem sơ

@@ -40,7 +40,7 @@ export function matchPeriod(from: string, to: string, today: string): Period | '
 }
 
 /** Ngày YYYY-MM-DD dời `days` ngày — tính trên lịch UTC nên không vướng giờ mùa hè. */
-function shiftIso(iso: string, days: number): string {
+export function shiftIso(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);

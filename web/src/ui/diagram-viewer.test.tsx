@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import { DiagramViewer, fitTransform, parseSafeSvg, svgSize } from './diagram-viewer';
+import { DiagramViewer, fitTransform, ghostOffset, parseSafeSvg, svgSize } from './diagram-viewer';
 
 const VIEWER = { fullName: 'SA E2E', email: 'sa@e2e.local' };
 const SVG =
@@ -179,5 +179,70 @@ describe('DiagramViewer — màu dây và tô sáng (AD-18)', () => {
     expect(dimmed()).toEqual(['d3', 'e2', 'g1']);
     rerender(<DiagramViewer svg={SVG} viewer={VIEWER} title="Bản vẽ" highlightCellIds={null} />);
     expect(dimmed()).toEqual([]);
+  });
+});
+
+describe('DiagramViewer — so sánh tô màu hai phiên bản (Q-23)', () => {
+  const COMPARED =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.5 -0.5 400 200"><g data-cell-id="1">' +
+    '<g data-cell-id="n1"><rect width="10" height="10"/><text>Mới</text></g>' +
+    '<g data-cell-id="c1"><text>Đổi</text></g><g data-cell-id="k1"><text>Giữ</text></g></g></svg>';
+
+  it('ô thêm/đổi mang dấu riêng; ô bỏ thành khung đứt ở vị trí cũ; có chú giải + bộ đếm', () => {
+    const { container } = renderWithI18n(
+      <DiagramViewer
+        svg={COMPARED}
+        viewer={VIEWER}
+        title="Bản vẽ"
+        diff={{
+          added: ['n1'],
+          changed: ['c1'],
+          removed: [
+            { id: 'r1', label: 'SW-E2E-BỎ', bounds: { x: 120, y: 40, width: 80, height: 30 } },
+            { id: 'e9', label: 'dây bỏ', bounds: null },
+          ],
+          anchors: [],
+        }}
+      />,
+    );
+    expect(container.querySelector('[data-cell-id="n1"]')?.getAttribute('data-ims-diff')).toBe('added');
+    expect(container.querySelector('[data-cell-id="c1"]')?.getAttribute('data-ims-diff')).toBe('changed');
+    expect(container.querySelector('[data-cell-id="k1"]')?.hasAttribute('data-ims-diff')).toBe(false);
+    const ghost = screen.getByRole('img', { name: 'Đã bỏ: SW-E2E-BỎ' });
+    expect(ghost.style.left).toBe('120px');
+    expect(ghost.style.width).toBe('80px');
+    // Dây bỏ không có khung: vẫn đếm, không vẽ.
+    expect(screen.queryByRole('img', { name: 'Đã bỏ: dây bỏ' })).toBeNull();
+    const legend = screen.getByRole('group', { name: 'Chú giải so sánh' });
+    expect(legend).toHaveTextContent('Thêm 1');
+    expect(legend).toHaveTextContent('Bỏ 2');
+    expect(legend).toHaveTextContent('Đổi 1');
+  });
+
+  it('bỏ so sánh: gỡ hết dấu cũ', () => {
+    const diff = { added: ['n1'], changed: [], removed: [], anchors: [] };
+    const { container, rerender } = renderWithI18n(<DiagramViewer svg={COMPARED} viewer={VIEWER} title="Bản vẽ" diff={diff} />);
+    expect(container.querySelector('[data-ims-diff]')).not.toBeNull();
+    rerender(<DiagramViewer svg={COMPARED} viewer={VIEWER} title="Bản vẽ" />);
+    expect(container.querySelector('[data-ims-diff]')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Chú giải so sánh' })).toBeNull();
+  });
+});
+
+describe('ghostOffset — độ lệch ảnh SVG so với toạ độ mô hình', () => {
+  it('đo ô mốc đầu tiên đo được: hộp bao trên ảnh trừ khung trong mô hình', () => {
+    expect(
+      ghostOffset(
+        [null, { x: 30, y: 15 }],
+        [
+          { id: 'a', bounds: { x: 0, y: 0, width: 1, height: 1 } },
+          { id: 'b', bounds: { x: 110, y: 40, width: 1, height: 1 } },
+        ],
+      ),
+    ).toEqual({ x: -80, y: -25 });
+  });
+
+  it('không đo được ô nào: không dời', () => {
+    expect(ghostOffset([null], [{ id: 'a', bounds: { x: 5, y: 5, width: 1, height: 1 } }])).toEqual({ x: 0, y: 0 });
   });
 });

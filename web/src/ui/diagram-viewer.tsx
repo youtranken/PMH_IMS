@@ -83,12 +83,50 @@ function cellElement(root: Element, id: string): Element | null {
  * đo được (không `getBBox`) → `null`, nơi gọi lùi về toạ độ đã lưu.
  */
 export function cellPoint(svg: SVGSVGElement, el: Element): ViewerPoint | null {
+  const box = cellBox(svg, el);
+  return box ? { x: box.x + box.width, y: box.y } : null;
+}
+
+/** Hộp bao của ô trên khung chưa thu phóng (đã trừ gốc `viewBox`); không đo được → `null`. */
+function cellBox(svg: SVGSVGElement, el: Element): ViewerBounds | null {
   const measurable = el as unknown as { getBBox?: () => { x: number; y: number; width: number; height: number } };
   if (typeof measurable.getBBox !== 'function') return null;
   const box = measurable.getBBox();
   const view = (svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
   const [vx, vy] = view.length === 4 && view.every(Number.isFinite) ? view : [0, 0];
-  return { x: box.x - vx + box.width, y: box.y - vy };
+  return { x: box.x - vx, y: box.y - vy, width: box.width, height: box.height };
+}
+
+/**
+ * Độ lệch giữa toạ độ mô hình draw.io (khung trong chỉ mục ô) và toạ độ trên ảnh SVG: draw.io dời
+ * gốc ảnh theo khung bao cả bản vẽ, nên lấy ô mốc ĐẦU TIÊN đo được (`measured[i]` là góc trên-trái
+ * của `anchors[i]` trên ảnh, `null` nếu không đo được). Không đo được ô nào thì không dời.
+ */
+export function ghostOffset(measured: (ViewerPoint | null)[], anchors: { id: string; bounds: ViewerBounds }[]): ViewerPoint {
+  for (let i = 0; i < anchors.length; i += 1) {
+    const at = measured[i];
+    if (at) return { x: at.x - anchors[i].bounds.x, y: at.y - anchors[i].bounds.y };
+  }
+  return { x: 0, y: 0 };
+}
+
+export interface ViewerBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * So sánh hai phiên bản trên ảnh xem của bản SAU: ô thêm/đổi tô theo `data-cell-id`, ô bỏ vẽ khung
+ * đứt ở `bounds` (toạ độ mô hình của bản trước; `null` = dây, không vẽ nhưng vẫn đếm). `anchors` là
+ * ô có khung của bản sau để đo độ lệch ảnh (`ghostOffset`).
+ */
+export interface ViewerDiff {
+  added: string[];
+  changed: string[];
+  removed: { id: string; label: string; bounds: ViewerBounds | null }[];
+  anchors: { id: string; bounds: ViewerBounds }[];
 }
 
 function zoomAround(view: ViewTransform, factor: number, at: { x: number; y: number }): ViewTransform {
@@ -145,6 +183,7 @@ export function DiagramViewer({
   onPinClick,
   focusCellId,
   highlightCellIds,
+  diff,
 }: {
   svg: string;
   viewer: { fullName: string; email: string };
@@ -161,6 +200,8 @@ export function DiagramViewer({
   focusCellId?: string | null;
   /** Tô sáng: các ô này sáng, mọi ô khác mờ đi. `null`/vắng = không tô. */
   highlightCellIds?: string[] | null;
+  /** Chế độ so sánh: tô ô thêm/đổi, vẽ khung đứt ô bỏ, hiện chú giải + bộ đếm. */
+  diff?: ViewerDiff | null;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -206,6 +247,33 @@ export function DiagramViewer({
       if (cell.id === selectedCellId) el.setAttribute('data-ims-selected', '');
     }
   }, [parsed, clickable, selectedCellId]);
+
+  /*
+   * Dấu so sánh trên đúng `<g data-cell-id>` + độ lệch để đặt khung đứt của ô bỏ. Gỡ dấu cũ trước:
+   * thoát so sánh (hay đổi cặp phiên bản) không được để sót màu của lượt trước.
+   */
+  const [ghostShift, setGhostShift] = useState<ViewerPoint>({ x: 0, y: 0 });
+  useLayoutEffect(() => {
+    const root = parsed.value;
+    if (!root) return;
+    for (const el of Array.from(root.querySelectorAll('[data-ims-diff]'))) el.removeAttribute('data-ims-diff');
+    if (!diff) return;
+    for (const [ids, mark] of [
+      [diff.added, 'added'],
+      [diff.changed, 'changed'],
+    ] as const) {
+      for (const id of ids) cellElement(root, id)?.setAttribute('data-ims-diff', mark);
+    }
+    const shift = ghostOffset(
+      diff.anchors.map((anchor) => {
+        const el = cellElement(root, anchor.id);
+        const box = el ? cellBox(root, el) : null;
+        return box ? { x: box.x, y: box.y } : null;
+      }),
+      diff.anchors,
+    );
+    setGhostShift((prev) => (prev.x === shift.x && prev.y === shift.y ? prev : shift));
+  }, [parsed, diff]);
 
   /*
    * Vị trí ghim: đo ô trong ảnh xem đang hiện; ô không có ở phiên bản này (đã bỏ) hay không đo
@@ -393,7 +461,41 @@ export function DiagramViewer({
             })}
           </div>
         ) : null}
+        {diff && diff.removed.some((cell) => cell.bounds) ? (
+          <div className="diagram-viewer-pins" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
+            {diff.removed.map((cell) =>
+              cell.bounds ? (
+                <div
+                  key={cell.id}
+                  role="img"
+                  className="diagram-ghost"
+                  aria-label={t('diagramViewer.diffGhost', { label: cell.label })}
+                  title={t('diagramViewer.diffGhost', { label: cell.label })}
+                  style={{
+                    left: `${cell.bounds.x + ghostShift.x}px`,
+                    top: `${cell.bounds.y + ghostShift.y}px`,
+                    width: `${cell.bounds.width}px`,
+                    height: `${cell.bounds.height}px`,
+                  }}
+                />
+              ) : null,
+            )}
+          </div>
+        ) : null}
       </div>
+      {diff ? (
+        <div className="diagram-viewer-legend" role="group" aria-label={t('diagramViewer.diffLegend')}>
+          <span className="diagram-legend-item" data-diff="added">
+            {t('diagramViewer.diffAdded', { count: diff.added.length })}
+          </span>
+          <span className="diagram-legend-item" data-diff="removed">
+            {t('diagramViewer.diffRemoved', { count: diff.removed.length })}
+          </span>
+          <span className="diagram-legend-item" data-diff="changed">
+            {t('diagramViewer.diffChanged', { count: diff.changed.length })}
+          </span>
+        </div>
+      ) : null}
       <DiagramWatermark viewer={viewer} />
     </div>
   );

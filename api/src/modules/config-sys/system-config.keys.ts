@@ -207,6 +207,12 @@ export const CONFIG_KEYS = {
    * bản vẽ không đọc được — người dùng nên thu hẹp về một tủ / một danh sách máy.
    */
   diagramAutolayoutMaxNodes: { key: 'diagram.autolayout_max_nodes', fallback: 300 },
+  /*
+   * Xuất PNG/PDF bản vẽ raster hoá trong RAM của api (4 byte một điểm ảnh): trần điểm ảnh chặn một
+   * bản vẽ khổng lồ ăn hàng trăm MB, trần thời gian để người xuất nhận lỗi thay vì treo request.
+   */
+  diagramExportMaxMegapixels: { key: 'diagram.export_max_megapixels', fallback: 40 },
+  diagramExportTimeoutSeconds: { key: 'diagram.export_timeout_seconds', fallback: 30 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;
