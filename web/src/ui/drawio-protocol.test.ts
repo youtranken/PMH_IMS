@@ -5,6 +5,8 @@ import {
   cssColorToDrawio,
   drawioUrl,
   exportedSvgText,
+  paintImsStyle,
+  paintImsXml,
   parseDrawioEvent,
   serializeDrawioCommand,
   watermarkText,
@@ -173,5 +175,29 @@ describe('exportedSvgText — dữ liệu sự kiện export → chữ SVG gửi
   it('DOCTYPE có khai báo thực thể KHÔNG bị bỏ — để cổng server từ chối', () => {
     const evil = `<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]>${svg}`;
     expect(exportedSvgText(evil).value).toContain('<!DOCTYPE');
+  });
+});
+
+/**
+ * Màu dây của kho (AD-18): server chỉ ghi ô màu `imsPaint=cable-<n>|warn|danger`, web đổi thành
+ * `strokeColor` đọc từ token theo theme hiện tại lúc nạp trình vẽ — mã nguồn không chứa mã màu.
+ */
+describe('paintImsStyle / paintImsXml — ô màu IMS → strokeColor theo token', () => {
+  const palette = { 'cable-0': '5F665F', 'cable-2': '1D5F9E', warn: 'D97706', danger: 'C0392B' };
+
+  it.each([
+    ['ô màu loại dây', 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;', 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;strokeColor=#1D5F9E;fontColor=#1D5F9E;'],
+    ['màu cũ trong style bị thay, không cộng dồn', 'imsPaint=warn;strokeColor=#000000;fontColor=#111111;dashed=1;', 'imsPaint=warn;dashed=1;strokeColor=#D97706;fontColor=#D97706;'],
+    ['không có ô màu IMS → giữ nguyên', 'rounded=1;strokeColor=#000000;', 'rounded=1;strokeColor=#000000;'],
+    ['ô màu lạ (không có trong bảng) → giữ nguyên, không đoán', 'imsPaint=cable-9;', 'imsPaint=cable-9;'],
+  ])('%s', (_name, style, expected) => {
+    expect(paintImsStyle(style, palette)).toBe(expected);
+  });
+
+  it('cả tệp: chỉ đụng thuộc tính style có ô màu IMS', () => {
+    const xml = '<root><mxCell id="e1" style="imsPaint=danger;" edge="1"/><mxCell id="s1" style="fillColor=#fff;"/></root>';
+    expect(paintImsXml(xml, palette)).toBe(
+      '<root><mxCell id="e1" style="imsPaint=danger;strokeColor=#C0392B;fontColor=#C0392B;" edge="1"/><mxCell id="s1" style="fillColor=#fff;"/></root>',
+    );
   });
 });

@@ -1,0 +1,345 @@
+import { useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { apiFetch } from '@/lib/api-client';
+import { errorMessage } from '@/lib/api';
+import type { Me } from '@/lib/me';
+import { BulkLinkDialog } from '@/ui/bulk-link-dialog';
+import { useConfirm } from '@/ui/confirm-provider';
+import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
+import { Popover } from '@/ui/popover';
+import { PortFormDialog } from '@/ui/port-form-dialog';
+import { useToast } from '@/ui/toast';
+import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
+import { bindEdgeValue, diffAutosave, edgeById, edgeEnds, firstDeviceCell, styleWithoutImsEdge, undeclaredEdges, type NewEdge } from './cable-diff';
+import { CableLegend } from './cable-legend';
+import type { DiagramContent, DiagramLink } from './diagram-api';
+import { escapeXmlAttr, insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
+
+/** Ô màu IMS trong style server dựng (`imsPaint=cable-2`) — giữ nguyên khi gắn nét. */
+function paintTokenOf(style: string): string {
+  return /(?:^|;)(imsPaint=[a-z0-9-]+)/.exec(style)?.[1] ?? 'imsPaint=cable-0';
+}
+
+/**
+ * Cầu nối DÂY của màn sửa (Q-23 "vẽ là khai, có hỏi", AD-18): so hai lần `autosave` để hỏi
+ * "Khai" khi có nét mới nối hai máy kho và "Chỉ xoá nét vẽ / Gỡ luôn kết nối" khi nét đã khai bị
+ * xoá; giữ danh sách "Có N kết nối mới chưa vẽ"; nút "Dây chưa khai", "Khai kết nối", "Nối hàng
+ * loạt", chú giải màu. Mọi lượt GHI sơ đồ cổng là web gọi endpoint của `devices` sau một nút bấm
+ * trong hộp IMS; lưu bản vẽ không ghi gì vào sơ đồ cổng.
+ *
+ * Sửa nét trên trình vẽ dùng `patch` trên cả tệp xin bằng `export` xml (`withFile`) — biết trang
+ * và lớp, không đụng phần người vẽ chưa lưu.
+ */
+export function useCableBridge({
+  me,
+  content,
+  ready,
+  withFile,
+  send,
+  page,
+  markDirty,
+  palette,
+  newId,
+}: {
+  me: Me;
+  content: DiagramContent;
+  ready: boolean;
+  withFile: (fn: (xml: string) => void) => void;
+  send: (command: DrawioCommand) => void;
+  page: () => number;
+  markDirty: () => void;
+  /** Ô màu → mã màu draw.io, đọc từ token lúc chạy (`readCablePalette`). */
+  palette: Record<string, string>;
+  newId: () => string;
+}): {
+  onAutosave: (xml: string) => void;
+  refreshUndrawn: (xml: string) => void;
+  actions: ReactNode;
+  status: ReactNode;
+  dialogs: ReactNode;
+} {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const ask = useConfirm();
+  const cableTypes = content.cableTypes ?? [];
+  const lastXml = useRef(content.version?.xml ?? '');
+  const links = useRef(new Map((content.links ?? []).map((l) => [l.id, l])));
+  const [currentXml, setCurrentXml] = useState(content.version?.xml ?? '');
+  const [queue, setQueue] = useState<NewEdge[]>([]);
+  const [undrawn, setUndrawn] = useState<DiagramLink[]>(() => {
+    const ids = new Set(content.undrawnLinkIds ?? []);
+    return (content.links ?? []).filter((l) => ids.has(l.id));
+  });
+  const [undeclaredOpen, setUndeclaredOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [declareOpen, setDeclareOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const remember = (list: DiagramLink[]) => {
+    for (const link of list) links.current.set(link.id, link);
+  };
+
+  /** Cập nhật một nét bằng `patch` (giá trị + style) trên trang đang mở. */
+  const updateEdge = (file: string, edgeId: string, change: (edge: NonNullable<ReturnType<typeof edgeById>>) => Record<string, string>) => {
+    const pages = pageIds(file);
+    const pageId = pages[Math.min(page(), pages.length - 1)];
+    const edge = edgeById(file, edgeId);
+    if (!pageId || !edge) return;
+    send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: { [edgeId]: change(edge) } } } } } });
+    markDirty();
+  };
+
+  const bindEdge = (edge: NewEdge, link: DiagramLink) => {
+    remember([link]);
+    withFile((file) =>
+      updateEdge(file, edge.id, (current) => ({
+        xmlValue: bindEdgeValue(edge.id, current.attrs, {
+          label: link.deviceId === edge.sourceDeviceId ? link.labelFromA : link.labelFromB,
+          ims_link_id: link.id,
+          ims_cable_type_id: link.cableTypeId ?? '',
+        }),
+        style: paintImsStyle(`${styleWithoutImsEdge(current.style)}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
+      })),
+    );
+  };
+
+  /** "Chỉ vẽ": nét ở lại, không `ims_link_id`, viền vàng + chú "Chưa khai vào sơ đồ cổng". */
+  const markUndeclared = (edge: NewEdge) => {
+    withFile((file) =>
+      updateEdge(file, edge.id, (current) => {
+        const style = paintImsStyle(`${styleWithoutImsEdge(current.style)}imsPaint=warn;dashed=1;html=0;`, palette);
+        const label = t('diagrams.cable.undeclaredMark');
+        return Object.keys(current.attrs).length > 0
+          ? { xmlValue: bindEdgeValue(edge.id, current.attrs, { label }), style }
+          : { value: label, style };
+      }),
+    );
+  };
+
+  /** Bản sao của nét đã khai (nhân bản / dán) bỏ `ims_link_id` — không để hai nét cùng một kết nối. */
+  const stripLinks = (ids: string[]) => {
+    withFile((file) => {
+      for (const id of ids) {
+        updateEdge(file, id, (current) => ({
+          xmlValue: bindEdgeValue(id, current.attrs, { label: '' }, ['ims_link_id', 'ims_cable_type_id']),
+          style: styleWithoutImsEdge(current.style),
+        }));
+      }
+    });
+  };
+
+  const askRemove = async (removed: { id: string; linkId: string }[]) => {
+    const known = removed.map((r) => links.current.get(r.linkId)).filter((l): l is DiagramLink => Boolean(l));
+    if (known.length === 0) return;
+    const names = known.map((l) => `${l.deviceCode} ${l.portLabel} ↔ ${l.peerDeviceCode} ${l.peerPort ?? '—'}`);
+    // Nút mặc định (✕, Esc, Enter ở nút đóng) = "Chỉ xoá nét vẽ": không gọi gì.
+    const remove = await ask({
+      title: t('diagrams.cable.removeTitle'),
+      message: t('diagrams.cable.removeMessage', { links: names.join('; ') }),
+      cancelLabel: t('diagrams.cable.removeOnlyDrawing'),
+      confirmLabel: t('diagrams.cable.removeLink'),
+      danger: true,
+    });
+    if (!remove) return;
+    let done = 0;
+    for (const [i, link] of known.entries()) {
+      try {
+        await apiFetch(`/api/v1/devices/${link.deviceId}/ports/${link.id}/unlink`, { method: 'POST', csrfToken: me.csrfToken });
+        links.current.delete(link.id);
+        done += 1;
+      } catch (error) {
+        toast({ tone: 'error', message: t('diagrams.cable.removeFailed', { label: names[i], reason: errorMessage(error) }) });
+      }
+    }
+    if (done > 0) toast({ tone: 'ok', message: t('diagrams.cable.removed', { count: done }) });
+  };
+
+  const onAutosave = (xml: string) => {
+    const diff = diffAutosave(lastXml.current, xml);
+    lastXml.current = xml;
+    setCurrentXml(xml);
+    if (diff.strip.length > 0) stripLinks(diff.strip);
+    // Nét đang chờ hỏi mà người vẽ đã hoàn tác/xoá thì thôi hỏi.
+    setQueue((current) => {
+      const alive = current.filter((e) => edgeById(xml, e.id));
+      const fresh = diff.added.filter((e) => !alive.some((q) => q.id === e.id));
+      return [...alive, ...fresh];
+    });
+    if (diff.removed.length > 0) void askRemove(diff.removed);
+  };
+
+  /** Chèn nét cho các kết nối có HAI đầu trên bản vẽ; máy chưa có trên bản vẽ thì chỉ ghi kho. */
+  const drawLinks = (list: DiagramLink[]) => {
+    if (list.length === 0) return;
+    remember(list);
+    withFile((file) => {
+      const pages = pageIds(file);
+      const pageId = pages[Math.min(page(), pages.length - 1)];
+      if (!pageId) return;
+      const parent = layerIdOf(file, pageId) ?? '1';
+      let previous = lastChildId(file, pageId, parent);
+      const cells = list.flatMap((link) => {
+        const source = firstDeviceCell(file, link.deviceId);
+        const target = firstDeviceCell(file, link.peerDeviceId);
+        if (!source || !target) return [];
+        const id = newId();
+        const cell = {
+          id,
+          edge: 1,
+          parent,
+          ...(previous ? { previous } : {}),
+          source,
+          target,
+          style: paintImsStyle(link.edgeStyle, palette),
+          geometry: '<mxGeometry relative="1" as="geometry"/>',
+          xmlValue: `<UserObject label="${escapeXmlAttr(link.labelFromA)}" ims_link_id="${escapeXmlAttr(link.id)}" ims_cable_type_id="${escapeXmlAttr(link.cableTypeId ?? '')}" id="${escapeXmlAttr(id)}"/>`,
+        };
+        previous = id;
+        return [cell];
+      });
+      if (cells.length === 0) return;
+      send({ action: 'patch', patch: insertPatch(pageId, cells) });
+      markDirty();
+      toast({ tone: 'ok', message: t('diagrams.cable.drawn', { count: cells.length }) });
+    });
+  };
+
+  /** "Có N kết nối mới chưa vẽ" theo XML đang vẽ (sau khi chèn máy) — luật ở server. */
+  const refreshUndrawn = (xml: string) => {
+    void apiFetch<{ undrawn: DiagramLink[] }>('/api/v1/diagrams/cable-status', {
+      method: 'POST',
+      csrfToken: me.csrfToken,
+      body: JSON.stringify({ xml }),
+    })
+      .then((res) => {
+        remember(res.undrawn);
+        setUndrawn(res.undrawn);
+      })
+      .catch(() => undefined);
+  };
+
+  const current = queue[0] ?? null;
+  const dequeue = () => setQueue((q) => q.slice(1));
+  /*
+   * "Dây chưa khai" gồm nét không có `ims_link_id`, cộng nét có kết nối đã gỡ / gắn sai (đỏ) lúc
+   * mở — chọn nó là khai lại: kết nối mới thay `ims_link_id` cũ trên đúng nét đó.
+   */
+  const broken = (content.cableEdges ?? [])
+    .filter((e) => e.state !== 'linked' && e.linkId)
+    .flatMap((e) => edgeEnds(currentXml, e.cellId) ?? []);
+  const undeclared = [...undeclaredEdges(currentXml), ...broken];
+
+  const actions = (
+    <>
+      <Popover
+        label={t('diagrams.cable.undeclaredButton')}
+        title={t('diagrams.cable.undeclaredTitle')}
+        open={undeclaredOpen}
+        onOpenChange={setUndeclaredOpen}
+        disabled={!ready}
+      >
+        {undeclared.length === 0 ? (
+          <p className="muted">{t('diagrams.cable.undeclaredEmpty')}</p>
+        ) : (
+          <ul className="device-card-diagrams">
+            {undeclared.map((edge) => (
+              <li key={edge.id}>
+                <button
+                  type="button"
+                  className="linkbtn"
+                  onClick={() => {
+                    setUndeclaredOpen(false);
+                    setQueue((q) => [edge, ...q.filter((e) => e.id !== edge.id)]);
+                  }}
+                >
+                  {t('diagrams.cable.undeclaredItem', { from: edge.sourceCode, to: edge.targetCode })}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Popover>
+      <button type="button" className="btn" disabled={!ready} onClick={() => setDeclareOpen(true)}>
+        {t('diagrams.cable.declareButton')}
+      </button>
+      <button type="button" className="btn" disabled={!ready} onClick={() => setBulkOpen(true)}>
+        {t('diagrams.cable.bulkButton')}
+      </button>
+      <Popover label={t('diagrams.cable.legend')} title={t('diagrams.cable.legendTitle')} open={legendOpen} onOpenChange={setLegendOpen}>
+        <CableLegend cableTypes={cableTypes} />
+      </Popover>
+    </>
+  );
+
+  const status =
+    undrawn.length > 0 ? (
+      <p className="badge info" role="status">
+        {t('diagrams.cable.undrawn', { n: undrawn.length })}{' '}
+        <button
+          type="button"
+          className="btn sm"
+          disabled={!ready}
+          onClick={() => {
+            drawLinks(undrawn);
+            setUndrawn([]);
+          }}
+        >
+          {t('diagrams.cable.drawIn')}
+        </button>
+      </p>
+    ) : null;
+
+  const dialogs = (
+    <>
+      {current ? (
+        <CableDeclareDialog
+          key={current.id}
+          me={me}
+          edge={current}
+          cableTypes={cableTypes}
+          onDeclared={(link) => {
+            bindEdge(current, link);
+            toast({ tone: 'ok', message: t('diagrams.cable.declared', { label: `${link.deviceCode} ${link.portLabel} ↔ ${link.peerDeviceCode} ${link.peerPort ?? '—'}` }) });
+            dequeue();
+          }}
+          onBind={(link) => {
+            bindEdge(current, link);
+            toast({ tone: 'ok', message: t('diagrams.cable.bound', { label: link.labelFromA }) });
+            dequeue();
+          }}
+          onDrawOnly={() => {
+            markUndeclared(current);
+            dequeue();
+          }}
+        />
+      ) : null}
+      {declareOpen ? (
+        <PortFormDialog
+          device={null}
+          port={null}
+          csrfToken={me.csrfToken}
+          onClose={() => setDeclareOpen(false)}
+          onSaved={(keepOpen, saved) => {
+            if (!keepOpen) setDeclareOpen(false);
+            if (!saved.connectedDeviceId) return;
+            void fetchDiagramLinks([saved.id]).then(drawLinks).catch(() => undefined);
+          }}
+        />
+      ) : null}
+      {bulkOpen ? (
+        <BulkLinkDialog
+          device={null}
+          csrfToken={me.csrfToken}
+          onClose={() => setBulkOpen(false)}
+          onDone={(created, code) => {
+            setBulkOpen(false);
+            toast({ tone: 'ok', message: t('ports.bulkDone', { count: created.length, code }) });
+            void fetchDiagramLinks(created.map((l) => l.id)).then(drawLinks).catch(() => undefined);
+          }}
+        />
+      ) : null}
+    </>
+  );
+
+  return { onAutosave, refreshUndrawn, actions, status, dialogs };
+}

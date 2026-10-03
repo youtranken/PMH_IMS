@@ -83,6 +83,11 @@ export interface ViewerCell {
   id: string;
   label: string;
   mark?: 'danger' | 'warn' | null;
+  /**
+   * Ô màu IMS của nét dây (`cable-<n>`, `warn`, `danger`): CSS tô nét theo token của theme ĐANG
+   * dùng — không tin màu đã chụp vào SVG lúc lưu (AD-18).
+   */
+  paint?: string | null;
 }
 
 /**
@@ -98,6 +103,8 @@ export function DiagramViewer({
   cells,
   onCellClick,
   selectedCellId,
+  focusCellIds,
+  flyToCellId,
 }: {
   svg: string;
   viewer: { fullName: string; email: string };
@@ -105,6 +112,10 @@ export function DiagramViewer({
   cells?: ViewerCell[];
   onCellClick?: (cellId: string) => void;
   selectedCellId?: string | null;
+  /** Tô sáng: các ô này sáng, mọi ô khác mờ đi. `null`/vắng = không tô. */
+  focusCellIds?: string[] | null;
+  /** Bay tới: dời khung để ô này nằm giữa (giữ mức thu phóng). */
+  flyToCellId?: string | null;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -136,8 +147,11 @@ export function DiagramViewer({
     if (!root) return;
     for (const el of Array.from(root.querySelectorAll('[data-cell-id]'))) {
       const cell = clickable.get(el.getAttribute('data-cell-id') ?? '');
-      for (const name of ['data-ims-clickable', 'data-ims-mark', 'data-ims-selected', 'role', 'tabindex', 'aria-label']) el.removeAttribute(name);
+      for (const name of ['data-ims-clickable', 'data-ims-mark', 'data-ims-paint', 'data-ims-selected', 'role', 'tabindex', 'aria-label']) {
+        el.removeAttribute(name);
+      }
       if (!cell) continue;
+      if (cell.paint) el.setAttribute('data-ims-paint', cell.paint);
       el.setAttribute('data-ims-clickable', '');
       el.setAttribute('role', 'button');
       el.setAttribute('tabindex', '0');
@@ -146,6 +160,45 @@ export function DiagramViewer({
       if (cell.id === selectedCellId) el.setAttribute('data-ims-selected', '');
     }
   }, [parsed, clickable, selectedCellId]);
+
+  /*
+   * Tô sáng: mờ những ô KHÔNG sáng và không chứa ô sáng. Lớp/nhóm chứa ô sáng không mờ (độ mờ của
+   * cha nhân vào con, mờ cha là mờ luôn ô sáng); ô nằm trong một ô đã mờ cũng không đánh dấu lại
+   * (mờ chồng mờ). `querySelectorAll` trả theo thứ tự cây nên cha luôn được xét trước con.
+   */
+  useLayoutEffect(() => {
+    const root = parsed.value;
+    if (!root) return;
+    const all = Array.from(root.querySelectorAll('[data-cell-id]'));
+    for (const el of all) el.removeAttribute('data-ims-dim');
+    if (!focusCellIds || focusCellIds.length === 0) return;
+    const lit = new Set(focusCellIds);
+    const litEls = all.filter((el) => lit.has(el.getAttribute('data-cell-id') ?? ''));
+    for (const el of all) {
+      if (lit.has(el.getAttribute('data-cell-id') ?? '')) continue;
+      if (litEls.some((one) => el.contains(one))) continue;
+      const parentCell = el.parentElement?.closest('[data-cell-id]');
+      if (parentCell?.hasAttribute('data-ims-dim')) continue;
+      el.setAttribute('data-ims-dim', '');
+    }
+  }, [parsed, focusCellIds]);
+
+  useEffect(() => {
+    const root = parsed.value;
+    const stage = stageRef.current;
+    if (!root || !stage || !flyToCellId) return;
+    const el = Array.from(root.querySelectorAll('[data-cell-id]')).find(
+      (one) => one.getAttribute('data-cell-id') === flyToCellId,
+    ) as SVGGraphicsElement | undefined;
+    // jsdom và SVG chưa dựng không có getBBox: bỏ qua bay tới, không lỗi.
+    if (!el || typeof el.getBBox !== 'function') return;
+    const box = el.getBBox();
+    setView((v) => ({
+      ...v,
+      x: stage.clientWidth / 2 - (box.x + box.width / 2) * v.scale,
+      y: stage.clientHeight / 2 - (box.y + box.height / 2) * v.scale,
+    }));
+  }, [parsed, flyToCellId]);
 
   /** Ô bấm được gần nhất chứa phần tử (ô con của nhóm thuộc về ô ngoài cùng được khai). */
   const cellAt = (target: EventTarget | null): string | null => {

@@ -64,7 +64,8 @@ export function deviceCellJson(
   };
 }
 
-export function insertPatch(pageId: string, cells: DrawioCellJson[]) {
+/** Ô chèn bằng `patch`: ô thiết bị (`DrawioCellJson`) hoặc ô dây (`edge: 1`, `source`, `target`). */
+export function insertPatch(pageId: string, cells: object[]) {
   return { u: { [pageId]: { cells: { i: cells } } } };
 }
 
