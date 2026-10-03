@@ -9,6 +9,7 @@ import {
 
 const DEV_A = '7b0c1c1e-0000-4000-8000-00000000000a';
 const DEV_B = '7b0c1c1e-0000-4000-8000-00000000000b';
+const DEV_C = '7b0c1c1e-0000-4000-8000-00000000000c';
 
 function page(body: string): string {
   return `<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${body}</root></mxGraphModel></diagram></mxfile>`;
@@ -80,8 +81,20 @@ describe('diffCellIndex + summarizeDiff — tóm tắt một dòng (hàm thuần
     [
       'thêm một máy, bỏ một máy',
       base,
-      page(device('d1', DEV_A, 'SW-01') + device('d3', DEV_B, 'SW-02', 200) + edge('e1', 'd1', 'd2') + shape('s1', 'Tầng 3')),
+      page(device('d1', DEV_A, 'SW-01') + device('d3', DEV_C, 'SW-03', 200) + edge('e1', 'd1', 'd2') + shape('s1', 'Tầng 3')),
       'Thêm 1 thiết bị, bỏ 1 thiết bị',
+    ],
+    [
+      'xoá ô rồi chèn lại ĐÚNG máy đó (ô mới, id khác) — đếm theo ims_device_id: không thêm/bỏ máy nào',
+      base,
+      page(device('d1', DEV_A, 'SW-01') + device('d9', DEV_B, 'SW-02', 200) + edge('e1', 'd1', 'd2') + shape('s1', 'Tầng 3')),
+      'Đổi 1 thiết bị',
+    ],
+    [
+      'nhân bản ô của một máy đã có: vẫn 2 máy, không phải "thêm 1 thiết bị"',
+      base,
+      page(device('d1', DEV_A, 'SW-01') + device('d2', DEV_B, 'SW-02', 200) + device('d5', DEV_A, 'SW-01', 400) + edge('e1', 'd1', 'd2') + shape('s1', 'Tầng 3')),
+      'Đổi 1 thiết bị',
     ],
     [
       'đổi dây (nối sang máy khác + thêm điểm uốn)',
@@ -119,15 +132,20 @@ describe('diffCellIndex + summarizeDiff — tóm tắt một dòng (hàm thuần
     const next = buildCellIndex(page(device('d1', DEV_A, 'SW-01') + edge('e1', 'd1', 'd2') + shape('s1', 'Tầng 3')));
     expect(diffCellIndex(prev, next)).toEqual({
       ...EMPTY,
-      devices: { added: [], removed: [{ id: 'd2', label: 'SW-02' }], changed: [] },
+      devices: { added: [], removed: [{ id: DEV_B, label: 'SW-02' }], changed: [] },
     });
+  });
+
+  it('chi tiết thiết bị mang id máy (ims_device_id), không phải id ô', () => {
+    const next = buildCellIndex(page(device('d7', DEV_C, 'SW-03')));
+    expect(diffCellIndex(null, next).devices.added).toEqual([{ id: DEV_C, label: 'SW-03' }]);
   });
 
   it('đổi một ô từ hình thường sang ô thiết bị: bỏ hình, thêm thiết bị', () => {
     const prev = buildCellIndex(page(shape('x1', 'SW-01')));
     const next = buildCellIndex(page(device('x1', DEV_A, 'SW-01')));
     const diff = diffCellIndex(prev, next);
-    expect(diff.devices.added).toEqual([{ id: 'x1', label: 'SW-01' }]);
+    expect(diff.devices.added).toEqual([{ id: DEV_A, label: 'SW-01' }]);
     expect(diff.shapes.removed).toEqual([{ id: 'x1', label: 'SW-01' }]);
   });
 });

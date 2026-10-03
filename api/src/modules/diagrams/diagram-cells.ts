@@ -211,21 +211,58 @@ const GROUP_OF: Record<CellKind, keyof CellDiff> = { device: 'devices', edge: 'e
 /**
  * Hai phiên bản → thêm/bỏ/đổi theo nhóm. Ô đổi loại (hình thường → ô thiết bị) là bỏ ở nhóm
  * cũ + thêm ở nhóm mới: người đọc tóm tắt hỏi "bản vẽ có thêm máy nào không", không hỏi id ô.
+ *
+ * Thiết bị đếm theo `ims_device_id`, không theo id ô: xoá ô rồi chèn lại đúng máy đó, hay nhân
+ * bản ô của một máy đã có, không phải "thêm một thiết bị" — kho vẫn chừng ấy máy trên bản vẽ.
+ * Máy còn đó mà ô của nó đổi (dời, đổi cỡ, thay ô) là "đổi".
  */
 export function diffCellIndex(prev: CellIndex | null, next: CellIndex): CellDiff {
   const diff: CellDiff = { devices: emptyGroup(), edges: emptyGroup(), shapes: emptyGroup() };
   const before = new Map((prev?.cells ?? []).map((c) => [c.id, c]));
   const after = new Map(next.cells.map((c) => [c.id, c]));
   for (const cell of next.cells) {
+    if (cell.kind === 'device') continue;
     const old = before.get(cell.id);
     if (!old || old.kind !== cell.kind) diff[GROUP_OF[cell.kind]].added.push(itemOf(cell));
     else if (old.fp !== cell.fp) diff[GROUP_OF[cell.kind]].changed.push(itemOf(cell));
   }
   for (const cell of prev?.cells ?? []) {
+    if (cell.kind === 'device') continue;
     const now = after.get(cell.id);
     if (!now || now.kind !== cell.kind) diff[GROUP_OF[cell.kind]].removed.push(itemOf(cell));
   }
+  const devicesBefore = byDevice(prev?.cells ?? []);
+  const devicesAfter = byDevice(next.cells);
+  for (const [deviceId, cells] of devicesAfter) {
+    const old = devicesBefore.get(deviceId);
+    if (!old) diff.devices.added.push(deviceItem(deviceId, cells));
+    else if (cellsPrint(old) !== cellsPrint(cells)) diff.devices.changed.push(deviceItem(deviceId, cells));
+  }
+  for (const [deviceId, cells] of devicesBefore) {
+    if (!devicesAfter.has(deviceId)) diff.devices.removed.push(deviceItem(deviceId, cells));
+  }
   return diff;
+}
+
+function byDevice(cells: IndexedCell[]): Map<string, IndexedCell[]> {
+  const out = new Map<string, IndexedCell[]>();
+  for (const cell of cells) {
+    if (cell.kind !== 'device' || !cell.deviceId) continue;
+    out.set(cell.deviceId, [...(out.get(cell.deviceId) ?? []), cell]);
+  }
+  return out;
+}
+
+/** Dấu vân tay mọi ô của một máy, kèm id ô (thay ô cũng là đổi). */
+function cellsPrint(cells: IndexedCell[]): string {
+  return cells
+    .map((c) => `${c.id}:${c.fp}`)
+    .sort()
+    .join('|');
+}
+
+function deviceItem(deviceId: string, cells: IndexedCell[]): DiffItem {
+  return { id: deviceId, label: cells[0].ims.ims_device_code || cells[0].label || deviceId };
 }
 
 /** "Thêm 3 thiết bị, bỏ 1 thiết bị, đổi 37 dây, 5 hình tự do" — câu tóm tắt một dòng. */

@@ -28,6 +28,7 @@ import {
   type CellIndex,
 } from './diagram-cells';
 import { checkDiagramXml, sanitizeDiagramSvg } from './diagram-gate';
+import { dehydrateDiagramXml, deviceInsertCell, hydrateDiagramXml, type DeviceCellSource } from './diagram-hydrate';
 import {
   diagramHistoryTable,
   diagramPresenceTable,
@@ -83,11 +84,43 @@ export interface VersionItem {
   restoredFromSeq: number | null;
 }
 
+/**
+ * Một máy kho như sơ đồ thấy nó NGAY BÂY GIỜ: thẻ thông tin ở chế độ xem, ô mới khi chèn, nguồn
+ * hydrate. `found: false` = `ims_device_id` không còn trong kho — các trường khác `null`/rỗng.
+ * Không chứa gì của két (AD-4, AD-18).
+ */
+export interface DiagramDeviceInfo {
+  id: string;
+  found: boolean;
+  code: string | null;
+  name: string | null;
+  deviceTypeName: string | null;
+  model: string | null;
+  serial: string | null;
+  status: string | null;
+  ips: string[];
+  siteCode: string | null;
+  cabinetCode: string | null;
+  u: number | null;
+  vendorName: string | null;
+  vendorPhone: string | null;
+  warrantyEnd: string | null;
+  /** Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn, cỡ theo hình của loại). */
+  cell: { style: string; label: string; width: number; height: number };
+}
+
 export interface DiagramContent {
   diagram: DiagramNode;
   /** `null` = bản vẽ chưa lưu lần nào: màn sửa mở khung trống, màn xem báo "chưa có bản vẽ". */
   version: (VersionItem & { xml: string; svg: string | null; deviceSnapshot: DeviceSnapshotEntry[] }) | null;
+  /** Ô thiết bị của phiên bản (id ô → id máy) — trình xem nối cú bấm vào ô với thẻ thông tin. */
+  deviceCells: { cellId: string; deviceId: string }[];
+  /** Mọi máy có ô trên phiên bản, đọc MỘT lượt (không N+1). */
+  devices: DiagramDeviceInfo[];
 }
+
+/** Trần số máy một lần hỏi `device-info` — hơn thế là gọi nhầm, không phải một bản vẽ. */
+export const DEVICE_INFO_MAX_IDS = 500;
 
 export interface SaveInput {
   xml: string;
@@ -389,9 +422,95 @@ export class DiagramsService {
         detail: { versionId: row?.id ?? null, seq: row?.seq ?? null, mode: options.mode },
       }),
     );
-    if (!row) return { diagram, version: null };
+    if (!row) return { diagram, version: null, deviceCells: [], devices: [] };
     const [item] = await this.toItems(diagramId, [row]);
-    return { diagram, version: { ...item, xml: row.xml, svg: row.svg, deviceSnapshot: row.deviceSnapshot } };
+    const deviceCells = row.cellIndex.cells
+      .filter((cell) => cell.kind === 'device' && cell.deviceId)
+      .map((cell) => ({ cellId: cell.id, deviceId: cell.deviceId! }));
+    const { infos: devices, sources } = await this.deviceData(deviceCells.map((c) => c.deviceId));
+    // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại — AD-18). Xem: ảnh SVG
+    // chụp lúc lưu, XML để nguyên.
+    const xml = options.mode === 'edit' ? hydrateDiagramXml(row.xml, sources) : row.xml;
+    return {
+      diagram,
+      version: { ...item, xml, svg: row.svg, deviceSnapshot: row.deviceSnapshot },
+      deviceCells,
+      devices,
+    };
+  }
+
+  /**
+   * Thông tin hiện tại của nhiều máy MỘT lượt: thẻ thông tin, ô chèn, hydrate. Đọc qua public api
+   * (`devices`, `ipam`, `catalog` — AD-2); id không phải UUID hoặc không còn trong kho thành
+   * `found: false` thay vì lỗi, vì bản vẽ là dữ liệu không tin cậy và máy có thể đã bị xoá.
+   */
+  async deviceInfos(ids: string[]): Promise<DiagramDeviceInfo[]> {
+    return (await this.deviceData(ids)).infos;
+  }
+
+  /**
+   * Thông tin máy + nguồn hydrate cùng một lượt đọc. Máy không còn trong kho KHÔNG vào `sources`:
+   * hydrate tự dựng ô "Không tìm thấy trong kho" từ `ims_device_code` của chính ô đó.
+   */
+  private async deviceData(ids: string[]): Promise<{ infos: DiagramDeviceInfo[]; sources: Map<string, DeviceCellSource> }> {
+    const unique = [...new Set(ids)];
+    const sources = new Map<string, DeviceCellSource>();
+    if (unique.length === 0) return { infos: [], sources };
+    const valid = unique.filter((id) => UUID_RE.test(id));
+    const [devices, ips, lists] = await Promise.all([
+      this.devices.getByIds(valid),
+      this.ipam.heldAddressesOf(valid),
+      this.catalog.lists({ includeInactive: true }),
+    ]);
+    const looks = await this.catalog.diagramLooks([...devices.values()].map((d) => d.deviceTypeId));
+    const vendors = new Map(lists.vendors.map((v) => [v.id, v]));
+    const infos = unique.map((id): DiagramDeviceInfo => {
+      const device = devices.get(id);
+      if (!device) return { ...emptyInfo(id), cell: deviceInsertCell(missingSource('')) };
+      const look = looks.get(device.deviceTypeId);
+      const vendor = device.vendorId ? vendors.get(device.vendorId) : undefined;
+      const info: Omit<DiagramDeviceInfo, 'cell'> = {
+        id,
+        found: true,
+        code: device.code,
+        name: device.name,
+        deviceTypeName: device.deviceTypeName,
+        model: device.model,
+        serial: device.serial,
+        status: device.status,
+        ips: ips.get(id) ?? [],
+        siteCode: device.siteCode,
+        cabinetCode: device.cabinetCode,
+        u: null,
+        vendorName: vendor?.name ?? device.vendorName,
+        vendorPhone: vendor?.phone ?? null,
+        warrantyEnd: device.warrantyEnd,
+      };
+      const source = sourceOf(info, look ?? null);
+      sources.set(id, source);
+      return { ...info, cell: deviceInsertCell(source) };
+    });
+    return { infos, sources };
+  }
+
+  /**
+   * Bản vẽ (chưa lưu trữ) có máy này ở phiên bản MỚI NHẤT — thẻ thông tin "Có mặt trong các bản
+   * vẽ" và trang thiết bị (web gọi, AD-18: không module nào import `diagrams`). Chỉ tên + id: đây
+   * là thông tin của cây, không phải nội dung bản vẽ.
+   */
+  async diagramsWithDevice(deviceId: string): Promise<{ id: string; name: string }[]> {
+    const { rows } = await this.db.execute<{ id: string; name: string }>(sql`
+      SELECT d.id, d.name
+        FROM diagram d
+        JOIN LATERAL (
+          SELECT v.cell_index FROM diagram_version v
+           WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
+        ) lv ON true
+       WHERE d.archived_at IS NULL
+         AND lv.cell_index -> 'cells' @> ${JSON.stringify([{ deviceId }])}::jsonb
+       ORDER BY lower(d.name), d.id
+    `);
+    return rows;
   }
 
   async changes(diagramId: string, versionId: string): Promise<CellDiff> {
@@ -418,7 +537,9 @@ export class DiagramsService {
     if (gate.reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: gate.reason });
     const svg = sanitizeDiagramSvg(input.svg, { svgMaxKb });
     if (svg.reason) throw new BadRequestException({ code: 'DIAGRAM_SVG_INVALID', message: svg.reason });
-    const index = buildCellIndex(input.xml);
+    // Lưu "khô" (AD-18): hình/nhãn/dấu IMS dựng lại từ kho mỗi lần mở, không đóng băng vào phiên bản.
+    const xml = dehydrateDiagramXml(input.xml);
+    const index = buildCellIndex(xml);
     const secret = secretLabelReason(index);
     if (secret) throw new BadRequestException({ code: 'DIAGRAM_LABEL_SECRET', message: secret });
     const snapshot = await this.snapshot(index);
@@ -437,7 +558,7 @@ export class DiagramsService {
       }
       return this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
-        xml: input.xml,
+        xml,
         svg: svg.value,
         index,
         snapshot,
@@ -447,7 +568,7 @@ export class DiagramsService {
         restoredFromVersionId: null,
         history: 'version.saved',
         auditAction: 'diagram.saved',
-        bytes: Buffer.byteLength(input.xml),
+        bytes: Buffer.byteLength(xml),
       });
     });
     return this.versionItem(diagramId, id);
@@ -688,6 +809,44 @@ export class DiagramsService {
       detail: (changes ?? undefined) as Record<string, unknown> | undefined,
     });
   }
+}
+
+function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell'> {
+  return {
+    id,
+    found: false,
+    code: null,
+    name: null,
+    deviceTypeName: null,
+    model: null,
+    serial: null,
+    status: null,
+    ips: [],
+    siteCode: null,
+    cabinetCode: null,
+    u: null,
+    vendorName: null,
+    vendorPhone: null,
+    warrantyEnd: null,
+  };
+}
+
+function missingSource(code: string): DeviceCellSource {
+  return { found: false, code, status: null, ips: [], siteCode: null, cabinetCode: null, u: null, shape: null, iconSvg: null };
+}
+
+function sourceOf(info: Omit<DiagramDeviceInfo, 'cell'>, look: { shape: string | null; iconSvg: string | null } | null): DeviceCellSource {
+  return {
+    found: true,
+    code: info.code ?? '',
+    status: info.status,
+    ips: info.ips,
+    siteCode: info.siteCode,
+    cabinetCode: info.cabinetCode,
+    u: info.u,
+    shape: look?.shape ?? null,
+    iconSvg: look?.iconSvg ?? null,
+  };
 }
 
 function statusOf(latestId: string | null, officialId: string | null): DiagramStatus {
