@@ -455,6 +455,9 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   mới ở story 10.3); rời màn sơ đồ sang menu khác thì sidebar mở rộng lại; đóng hộp Khai (✕/Esc) =
   "Chỉ vẽ"; nhân bản nét dây đã khai thì bản sao chỉ là nét vẽ (như copy-paste). Chủ dự án cho chạy
   liền Epic 10 tới hết, kể cả E2E đầy đủ và code review.
+- **Sửa cũng hỏi mã sơ đồ (03/10/2026):** lưu, đặt tên, khôi phục phiên bản đều cần mã phạm vi sơ
+  đồ như khi xem; hết ân hạn giữa lúc vẽ thì hỏi mã tại chỗ rồi lưu lại đúng bản đang vẽ. Xem cây
+  bản vẽ (tên, trạng thái) không hỏi mã.
 - **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
   draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
 
