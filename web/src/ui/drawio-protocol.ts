@@ -131,7 +131,9 @@ export function parseDrawioEvent(data: unknown): DrawioEvent | null {
   if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(REQUIRED, name)) return null;
   const out: DrawioEvent = { event: name as DrawioEventName };
   for (const key of STRING_FIELDS) {
-    if (raw[key] === undefined) continue;
+    // `null` = vắng: draw.io gửi `load` của bản vẽ trống với `xml: null` — bỏ cả tin là màn không
+    // bao giờ biết trình vẽ đã nạp. Trường bắt buộc vẫn bị kiểm ở `REQUIRED` bên dưới.
+    if (raw[key] === undefined || raw[key] === null) continue;
     if (typeof raw[key] !== 'string') {
       if (key === 'error') continue;
       return null;

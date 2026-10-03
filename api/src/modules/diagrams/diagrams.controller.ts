@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength, ValidateIf } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
+import { OptionalUuidListQuery, splitUuidList } from '../../common/query-uuid';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
@@ -42,7 +43,9 @@ class UpdateNodeDto {
 }
 
 class DeviceInfoQueryDto {
-  @IsString() @MaxLength(DEVICE_INFO_MAX_IDS * 37, { message: 'Quá nhiều thiết bị trong một lần hỏi.' }) ids!: string;
+  @MaxLength(DEVICE_INFO_MAX_IDS * 38, { message: 'Quá nhiều thiết bị trong một lần hỏi.' })
+  @OptionalUuidListQuery('Danh sách thiết bị không hợp lệ.')
+  ids?: string;
 }
 
 class DeviceParamDto {
@@ -112,7 +115,7 @@ export class DiagramsController {
   @Roles('sa', 'admin', 'member')
   @Get('device-info')
   deviceInfo(@Query() query: DeviceInfoQueryDto) {
-    const ids = query.ids.split(',').map((id) => id.trim()).filter(Boolean);
+    const ids = splitUuidList(query.ids) ?? [];
     if (ids.length > DEVICE_INFO_MAX_IDS) {
       throw new BadRequestException({ code: 'DIAGRAM_DEVICE_INFO_TOO_MANY', message: 'Quá nhiều thiết bị trong một lần hỏi.' });
     }
