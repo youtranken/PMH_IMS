@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within, pickMenuItem } from '@/test/test-utils';
 import type { CommentThread, DiagramNode, ReviewPage } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
@@ -183,8 +183,10 @@ describe('Yêu cầu đang chờ', () => {
   it('người gửi thấy "Rút yêu cầu", không thấy nút duyệt (không tự duyệt)', async () => {
     routeFetch(base(PENDING, [], REVIEW));
     renderScreen('/diagrams/g1', { ...SA, email: 'member@e2e.local' } as Me);
-    expect(await screen.findByRole('button', { name: 'Rút yêu cầu' })).toBeInTheDocument();
+    await userEvent.setup().click(await screen.findByRole('button', { name: /^Thao tác với/ }));
+    expect(await screen.findByRole('menuitem', { name: 'Rút yêu cầu' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Duyệt…' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Duyệt…' })).toBeNull();
   });
 });
 
@@ -222,10 +224,10 @@ describe('Ghim bình luận', () => {
     const fetchMock = routeFetch([...base(diagram(), [THREAD])]);
     renderScreen('/diagrams/g1', SA);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Ghim (1)' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Ghim (1)');
     expect(await screen.findByRole('list', { name: 'Ghim bình luận trên bản vẽ' })).toHaveTextContent('Sai cổng uplink');
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'Ghim bình luận' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Ghim bình luận');
     await user.click(screen.getByText('Tầng 3'));
     const dialog = await screen.findByRole('dialog', { name: 'Ghim bình luận lên ô s1' });
     await user.type(within(dialog).getByLabelText(/Bình luận/), 'Đặt tên phòng');
@@ -253,5 +255,22 @@ describe('Cây bản vẽ — trạng thái duyệt', () => {
     expect(items[0]).toHaveTextContent('Chờ duyệt');
     expect(items[1]).toHaveTextContent('Chính thức v3');
     expect(items[2]).toHaveTextContent('Chính thức v3 · có bản nháp');
+  });
+});
+
+describe('Thanh mảnh (Q-23 một dòng, Q-18 việc chính ngoài, còn lại vào ⋮)', () => {
+  it('SA chế độ Xem: chỉ "Phát hành" đứng ngoài; Gửi duyệt, ghim, Kiểm tra khớp, Xuất, Dòng thời gian, Phiên bản nằm trong menu', async () => {
+    routeFetch(base(diagram()));
+    renderScreen('/diagrams/g1', SA);
+    await viewerReady();
+    expect(await screen.findByRole('button', { name: 'Phát hành' })).toBeInTheDocument();
+    for (const name of ['Gửi duyệt', 'Xuất', 'Dòng thời gian', 'Phiên bản', 'Kiểm tra khớp', 'Ghim bình luận']) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với Tầng 3 E2E' }));
+    const items = screen.getAllByRole('menuitem').map((item) => item.getAttribute('aria-label') ?? item.textContent);
+    for (const name of ['Gửi duyệt', 'Ghim bình luận', 'Ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Dòng thời gian', 'Phiên bản']) {
+      expect(items.some((label) => label?.startsWith(name))).toBe(true);
+    }
   });
 });

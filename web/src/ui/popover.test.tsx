@@ -52,3 +52,35 @@ describe('Popover — hộp nổi gọn neo vào nút', () => {
     expect(screen.getByRole('dialog', { name: 'Chèn thiết bị' })).toBeInTheDocument();
   });
 });
+
+function AnchoredHarness() {
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return (
+    <div>
+      <span ref={setAnchor}>
+        <button type="button" onClick={() => setOpen(true)}>
+          Thao tác khác
+        </button>
+      </span>
+      <Popover label="Chèn tủ" title="Chọn tủ" open={open} onOpenChange={setOpen} anchor={anchor}>
+        <input aria-label="Tìm tủ" />
+      </Popover>
+    </div>
+  );
+}
+
+describe('Popover prop anchor — mở từ một mục menu, neo vào chỗ khác', () => {
+  it('không vẽ nút riêng; mở thì tiêu điểm vào ô đầu; Esc đóng và trả tiêu điểm về nút trong điểm neo', async () => {
+    renderWithI18n(<AnchoredHarness />);
+    const user = userEvent.setup();
+    expect(screen.queryByRole('button', { name: 'Chèn tủ' })).toBeNull();
+    const trigger = screen.getByRole('button', { name: 'Thao tác khác' });
+    await user.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Chọn tủ' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Tìm tủ' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+});

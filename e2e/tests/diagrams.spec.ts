@@ -15,6 +15,7 @@ import {
   stepUpViaApi,
   uniqueStamp,
   writeHeaders,
+  diagramBarAction,
 } from './helpers';
 
 /*
@@ -158,7 +159,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect(v2).toMatchObject({ seq: 2, summary: 'Thêm 1 thiết bị' });
 
     // Phiên bản: tóm tắt một dòng, khôi phục #1 tạo phiên bản #3.
-    await page.getByRole('button', { name: 'Phiên bản' }).click();
+    await diagramBarAction(page, 'Phiên bản');
     const versions = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
     await expect(versions.getByText('Phiên bản #2')).toBeVisible();
     await expect(versions.getByText('Thêm 1 thiết bị').first()).toBeVisible();
@@ -239,7 +240,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
 
     // Danh sách phiên bản lọc "chỉ có tên".
     await page.goto(`/diagrams/${id}`);
-    await page.getByRole('button', { name: 'Phiên bản' }).click();
+    await diagramBarAction(page, 'Phiên bản');
     const versions = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
     await versions.getByLabel('Chỉ phiên bản có tên').check();
     await expect(versions.getByText('Bản đầu E2E')).toBeVisible();

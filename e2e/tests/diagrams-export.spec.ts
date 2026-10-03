@@ -12,6 +12,7 @@ import {
   switchTheme,
   uniqueStamp,
   writeHeaders,
+  diagramBarAction,
 } from './helpers';
 
 /*
@@ -87,7 +88,7 @@ function vnDate(at: Date): string {
 }
 
 async function exportVia(page: Page, format: 'PNG' | 'PDF') {
-  await page.getByRole('button', { name: 'Xuất', exact: true }).click();
+  await diagramBarAction(page, 'Xuất');
   const [download, response] = await Promise.all([
     page.waitForEvent('download'),
     page.waitForResponse((r) => r.url().includes('/exports') && r.request().method() === 'POST' && r.status() === 200),
@@ -167,7 +168,7 @@ test.describe('Sơ đồ mạng — xuất PNG/PDF', () => {
     await page.getByRole('button', { name: 'Nhập mã để mở' }).click();
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
     expireStepUp(E2E_SA.email);
-    await page.getByRole('button', { name: 'Xuất', exact: true }).click();
+    await diagramBarAction(page, 'Xuất');
     await page.getByRole('button', { name: 'Xuất PNG' }).click();
     const ask = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
     await expect(ask).toContainText(`Nhập mã 6 số để xuất bản vẽ "E2E Xuất khoá ${stamp}".`);
@@ -216,7 +217,7 @@ test.describe('Sơ đồ mạng — so sánh phiên bản', () => {
     await switchTheme(page, 'light');
     await page.goto(`/diagrams/${id}`);
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
-    await page.getByRole('button', { name: 'Phiên bản' }).click();
+    await diagramBarAction(page, 'Phiên bản');
     const box = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
     await box.getByRole('checkbox', { name: 'Chọn phiên bản #2 để so sánh' }).check();
     await box.getByRole('checkbox', { name: 'Chọn phiên bản #1 để so sánh' }).check();
@@ -308,7 +309,7 @@ test.describe('Sơ đồ mạng — thanh trượt thời gian', () => {
 
     await page.goto(`/diagrams/${id}`);
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
-    await page.getByRole('button', { name: 'Dòng thời gian' }).click();
+    await diagramBarAction(page, 'Dòng thời gian');
     const slider = page.getByRole('slider', { name: 'Chọn ngày' });
     // Thang bắt đầu HÔM TRƯỚC lần phát hành đầu: nấc 1 = ngày phát hành đầu → bản #1.
     await slider.fill('1');

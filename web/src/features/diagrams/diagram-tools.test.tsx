@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within, pickMenuItem } from '@/test/test-utils';
 import type { CompareView, DiagramNode, ReviewPage, VersionItem } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 
@@ -136,7 +136,7 @@ describe('Xuất PNG/PDF (FR-044)', () => {
     renderScreen('/diagrams/g1', MEMBER);
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    await user.click(screen.getByRole('button', { name: 'Xuất' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Xuất');
     await user.click(await screen.findByRole('button', { name: 'Xuất PDF' }));
     const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/exports'));
     expect(call).toBeTruthy();
@@ -154,7 +154,7 @@ describe('Xuất PNG/PDF (FR-044)', () => {
     renderScreen('/diagrams/g1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    await user.click(screen.getByRole('button', { name: 'Xuất' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Xuất');
     await user.click(await screen.findByRole('button', { name: 'Xuất PNG' }));
     const dialog = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
     expect(dialog).toHaveTextContent('Nhập mã 6 số để xuất bản vẽ "Tầng 3 E2E".');
@@ -184,7 +184,7 @@ describe('So sánh hai phiên bản (Q-23)', () => {
     renderScreen('/diagrams/g1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    await user.click(screen.getByRole('button', { name: 'Phiên bản' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Phiên bản');
     const dialog = await screen.findByRole('dialog', { name: 'Phiên bản và lịch sử' });
     const go = within(dialog).getByRole('button', { name: 'So sánh 2 phiên bản đã chọn' });
     expect(go).toBeDisabled();
@@ -225,7 +225,7 @@ describe('Thanh trượt thời gian', () => {
     renderScreen('/diagrams/g1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    await user.click(screen.getByRole('button', { name: 'Dòng thời gian' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Dòng thời gian');
     const slider = await screen.findByRole('slider', { name: 'Chọn ngày' });
     // Thang bắt đầu từ 31/08 (hôm trước lần phát hành đầu): nấc 5 = 05/09 → bản chính thức #1.
     fireEvent.change(slider, { target: { value: '5' } });

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { TREE_KEY, type DiagramNode } from './diagram-api';
+import type { BarAction } from './diagram-bar';
 import {
   fitImageSize,
   imageCellSpec,
@@ -51,19 +52,22 @@ export function PresentationBand({ diagram }: { diagram: DiagramNode }) {
   );
 }
 
+/** "Tạo bản trình bày" chỉ có nghĩa trên bản đã có bản chính thức — mọi vai. */
+export function canCreatePresentation(diagram: DiagramNode | undefined): boolean {
+  return Boolean(diagram && diagram.kind === 'official' && diagram.officialSeq);
+}
+
 /**
- * "Tạo bản trình bày" trên bản đã có bản chính thức — mọi vai. Lời gọi đi qua `run` vì nó chép
- * nội dung bản chính thức (đòi mã phạm vi sơ đồ như khi xem).
+ * Hộp "Tạo bản trình bày" (mở từ menu ⋮ của thanh). Lời gọi đi qua `run` vì nó chép nội dung bản
+ * chính thức (đòi mã phạm vi sơ đồ như khi xem).
  */
-export function CreatePresentationButton({ me, diagram, run }: { me: Me; diagram: DiagramNode; run: Run }) {
+export function CreatePresentationDialog({ me, diagram, run, onClose }: { me: Me; diagram: DiagramNode; run: Run; onClose: () => void }) {
   const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  if (diagram.kind !== 'official' || !diagram.officialSeq) return null;
 
   const create = async () => {
     setBusy(true);
@@ -75,7 +79,7 @@ export function CreatePresentationButton({ me, diagram, run }: { me: Me; diagram
       );
       void queryClient.invalidateQueries({ queryKey: TREE_KEY });
       toast({ tone: 'ok', message: t('diagrams.presentation.created', { name: created.name }) });
-      setOpen(false);
+      onClose();
       navigate(PATHS.diagram(created.id));
     } catch (error) {
       if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
@@ -85,45 +89,38 @@ export function CreatePresentationButton({ me, diagram, run }: { me: Me; diagram
   };
 
   return (
-    <>
-      <button type="button" className="btn" onClick={() => setOpen(true)}>
-        {t('diagrams.presentation.create')}
-      </button>
-      {open ? (
-        <Dialog
-          open
-          onOpenChange={() => setOpen(false)}
-          dismissible={!busy}
-          maxWidth={520}
-          initialFocus="first-field"
-          title={t('diagrams.presentation.createTitle', { name: diagram.name })}
-          footer={
-            <>
-              <DialogCancel>{t('diagrams.form.cancel')}</DialogCancel>
-              <button type="submit" form="diagram-presentation-form" className="btn primary" disabled={busy}>
-                {t('diagrams.presentation.createConfirm')}
-              </button>
-            </>
-          }
-        >
-          <form
-            id="diagram-presentation-form"
-            className="form-grid"
-            data-columns={1}
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault();
-              void create();
-            }}
-          >
-            <p className="muted">{t('diagrams.presentation.createIntro', { seq: diagram.officialSeq })}</p>
-            <Field label={t('diagrams.presentation.name')} hint={t('diagrams.presentation.nameHint', { name: diagram.name })}>
-              <input className="inp" value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
-            </Field>
-          </form>
-        </Dialog>
-      ) : null}
-    </>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      dismissible={!busy}
+      maxWidth={520}
+      initialFocus="first-field"
+      title={t('diagrams.presentation.createTitle', { name: diagram.name })}
+      footer={
+        <>
+          <DialogCancel>{t('diagrams.form.cancel')}</DialogCancel>
+          <button type="submit" form="diagram-presentation-form" className="btn primary" disabled={busy}>
+            {t('diagrams.presentation.createConfirm')}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="diagram-presentation-form"
+        className="form-grid"
+        data-columns={1}
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void create();
+        }}
+      >
+        <p className="muted">{t('diagrams.presentation.createIntro', { seq: diagram.officialSeq })}</p>
+        <Field label={t('diagrams.presentation.name')} hint={t('diagrams.presentation.nameHint', { name: diagram.name })}>
+          <input className="inp" value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
+        </Field>
+      </form>
+    </Dialog>
   );
 }
 
@@ -155,11 +152,12 @@ function naturalSize(dataUrl: string): Promise<{ width: number; height: number }
 }
 
 /**
- * Nút riêng của bản trình bày trên thanh trên trình vẽ: "Thiết bị dự kiến" (hộp nhập tên, model,
- * giá, NCC) và "Thêm ảnh" (ảnh nhúng vào XML — không đi qua `files`, cổng XML của server chỉ nhận
- * ảnh `data:image/...` và trần cỡ bản vẽ). Dựng ô xong thì trả cho màn sửa chèn bằng `patch`.
+ * Việc riêng của bản trình bày trên thanh trên trình vẽ (vào menu ⋮): "Thiết bị dự kiến" (hộp nhập
+ * tên, model, giá, NCC) và "Thêm ảnh" (ảnh nhúng vào XML — không đi qua `files`, cổng XML của
+ * server chỉ nhận ảnh `data:image/...` và trần cỡ bản vẽ). Dựng ô xong thì trả cho màn sửa chèn
+ * bằng `patch`. `elements` (ô chọn file ẩn + hộp) đặt vào cây JSX của màn.
  */
-export function PresentationTools({
+export function usePresentationTools({
   disabled,
   xmlMaxKb,
   onInsert,
@@ -167,7 +165,7 @@ export function PresentationTools({
   disabled: boolean;
   xmlMaxKb?: number;
   onInsert: (specs: FreeCellSpec[], message: string) => void;
-}) {
+}): { menu: BarAction[]; elements: ReactNode } {
   const { t } = useTranslation();
   const toast = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -222,14 +220,12 @@ export function PresentationTools({
     </Field>
   );
 
-  return (
+  const menu: BarAction[] = [
+    { key: 'planned', label: t('diagrams.presentation.planned'), disabled, onSelect: () => setPlannedOpen(true) },
+    { key: 'image', label: t('diagrams.presentation.image'), disabled, onSelect: () => fileInput.current?.click() },
+  ];
+  const elements = (
     <>
-      <button type="button" className="btn" disabled={disabled} onClick={() => setPlannedOpen(true)}>
-        {t('diagrams.presentation.planned')}
-      </button>
-      <button type="button" className="btn" disabled={disabled} onClick={() => fileInput.current?.click()}>
-        {t('diagrams.presentation.image')}
-      </button>
       <input
         ref={fileInput}
         type="file"
@@ -279,4 +275,5 @@ export function PresentationTools({
       ) : null}
     </>
   );
+  return { menu, elements };
 }

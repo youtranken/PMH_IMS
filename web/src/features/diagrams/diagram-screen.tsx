@@ -43,7 +43,8 @@ import { DeviceConnections, DiagramCableCard } from './diagram-cable-card';
 import { DiagramBreadcrumb } from './diagram-breadcrumb';
 import { DiagramDeviceCard } from './diagram-device-card';
 import { placeFreeCells, type FreeCellSpec } from './diagram-presentation';
-import { CreatePresentationButton, PresentationBand, PresentationTools } from './diagram-presentation-tools';
+import { canCreatePresentation, CreatePresentationDialog, PresentationBand, usePresentationTools } from './diagram-presentation-tools';
+import { BarAnchorProvider, BarButton, BarMenu, type BarAction } from './diagram-bar';
 import { DiagramSubnetCard } from './diagram-subnet-card';
 import { DriftCheckDialog, withDriftMarks } from './diagram-drift';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
@@ -114,6 +115,8 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    */
   const [focusDeviceId, setFocusDeviceId] = useState<string | null>(() => params.get('focus'));
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [presentationOpen, setPresentationOpen] = useState(false);
 
   const node = useQuery({ queryKey: nodeKey(id), queryFn: () => apiFetch<DiagramNode>(`/api/v1/diagrams/${id}`) });
   const settings = useQuery({
@@ -254,11 +257,12 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     />
   );
   const title = node.data?.name ?? t('diagrams.title');
-  const versionsButton = (
-    <button type="button" className="btn" disabled={!content.isSuccess} onClick={() => setVersionsOpen(true)}>
-      {t('diagrams.screen.versions')}
-    </button>
-  );
+  const versionsAction: BarAction = {
+    key: 'versions',
+    label: t('diagrams.screen.versions'),
+    disabled: !content.isSuccess,
+    onSelect: () => setVersionsOpen(true),
+  };
   const dialogs = (
     <>
       {stepUp.dialog}
@@ -291,18 +295,24 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    * Bản trình bày không qua duyệt (Q-23): không Gửi duyệt / Phát hành / ghim — server cũng từ chối
    * (`DIAGRAM_NOT_REVIEWABLE`), ẩn nút để không ai bấm vào một đường cụt.
    */
-  const reviewActions = node.data?.kind === 'presentation' ? null : review.actions;
+  const reviewable = node.data ? node.data.kind !== 'presentation' : false;
+  const reviewPrimary = reviewable ? review.primary : [];
+  const reviewMenu = reviewable ? review.menu : [];
   /*
    * Thanh nút dựng MỘT lần ở cuối với cùng thứ tự con ở mọi trạng thái tải: bọc thêm một lớp khi
    * nội dung về là dựng lại các nút, mất trạng thái của nút đang mở hộp.
    */
-  let pinToggle: ReactNode = null;
-  let exportMenu: ReactNode = null;
-  let driftButton: ReactNode = null;
+  let viewMenu: BarAction[] = [];
+  let exportVersionId: string | null = null;
   let showActions = true;
   /* So sánh chỉ còn nút Phiên bản; ngày chưa có bản chính thức chỉ còn thanh trượt để kéo đi ngày khác. */
   let toolbar: 'full' | 'compare' | 'timeline' = 'full';
-  let status: ReactNode = review.status;
+  let status: ReactNode = (
+    <>
+      {reviewable ? review.badge : null}
+      {review.status}
+    </>
+  );
   const band = node.data ? <PresentationBand diagram={node.data} /> : null;
   if (node.isPending || settings.isPending) body = <Loading />;
   else if (node.isError || settings.isError) {
@@ -377,8 +387,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         diagramId={id}
         title={title}
         tabs={tabs}
-        versionsButton={versionsButton}
-        reviewActions={reviewActions}
+        versionsAction={versionsAction}
+        reviewMenu={[...reviewPrimary, ...reviewMenu]}
+        reviewPopovers={reviewable ? review.popovers : null}
+        reviewStatus={status}
         dialogs={dialogs}
         band={band}
         content={content.data}
@@ -395,13 +407,12 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     // Lệch kho (Q-23): chỉ báo — dấu trên ô, lời báo trên thanh, hộp liệt kê; không nút nào sửa.
     const drift = content.data.drift ?? [];
     const card = cardCellId ? view.byCell.get(cardCellId) : undefined;
-    if (reviewActions) pinToggle = <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />;
-    if (node.data) exportMenu = <ExportMenu me={me} diagram={node.data} versionId={version.id} run={stepUp.run} />;
-    driftButton = (
-      <button type="button" className="btn" onClick={() => setDriftOpen(true)}>
-        {t('diagrams.drift.check')}
-      </button>
-    );
+    exportVersionId = version.id;
+    viewMenu = [
+      ...(reviewable && !review.pinMode ? [{ key: 'pin-mode', label: t('diagrams.review.pinMode'), onSelect: review.togglePinMode }] : []),
+      { key: 'drift', label: t('diagrams.drift.check'), onSelect: () => setDriftOpen(true) },
+      { key: 'export', label: t('diagrams.tools.export'), onSelect: () => setExportOpen(true) },
+    ];
     const edgeCard = cardCellId ? view.byEdge.get(cardCellId) : undefined;
     /*
      * Khung bản vẽ con: bấm (hay nháy đúp) là xuống bản vẽ con — trong ân hạn mã sơ đồ thì không hỏi
@@ -517,30 +528,85 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     }
   }
 
+  /*
+   * Thanh mảnh (Q-23 một thanh, Q-18 việc chính để ngoài): chế độ Xem để ngoài việc duyệt theo
+   * trạng thái (Phát hành / Gửi duyệt / Duyệt…) và nút "Đang ghim" khi đang bật; mọi việc khác vào
+   * menu ⋮. Thanh dựng MỘT lần ở cuối với cùng thứ tự ở mọi trạng thái tải: hộp nổi của menu giữ
+   * trạng thái mở ở màn, không bị dựng lại mất giữa chừng.
+   */
+  const inView = mode === 'view' && toolbar === 'full';
   const timelineMenu =
     node.data && toolbar !== 'compare' && mode === 'view' && (toolbar === 'timeline' || content.isSuccess) ? (
-      <TimelineMenu diagram={node.data} run={stepUp.run} day={atDay} onPick={pickDay} open={timelineOpen} onOpenChange={setTimelineOpen} />
+      <TimelineMenu
+        diagram={node.data}
+        run={stepUp.run}
+        day={atDay}
+        onPick={pickDay}
+        open={timelineOpen}
+        onOpenChange={setTimelineOpen}
+        inMenu={toolbar === 'full'}
+      />
     ) : null;
-  const actions = showActions ? (
+  const primary = showActions ? (
     <>
-      {pinToggle}
-      {driftButton}
-      {exportMenu}
-      {timelineMenu}
-      {toolbar === 'full' ? reviewActions : null}
-      {toolbar === 'full' && node.data ? <CreatePresentationButton me={me} diagram={node.data} run={stepUp.run} /> : null}
-      {toolbar !== 'timeline' ? versionsButton : null}
+      {inView && reviewable && review.pinMode ? <PinModeToggle active onToggle={review.togglePinMode} /> : null}
+      {inView ? reviewPrimary.map((action) => <BarButton key={action.key} action={action} />) : null}
+      {toolbar === 'timeline' ? timelineMenu : null}
+      {toolbar === 'compare' ? <BarButton action={versionsAction} /> : null}
     </>
   ) : null;
-  return <ScreenFrame diagramId={id} title={title} tabs={tabs} actions={actions} status={status} band={band} body={body} dialogs={dialogs} />;
+  const menu: BarAction[] =
+    showActions && inView
+      ? [
+          ...reviewMenu,
+          ...viewMenu,
+          ...(timelineMenu ? [{ key: 'timeline', label: t('diagrams.tools.timeline'), onSelect: () => setTimelineOpen(true) }] : []),
+          versionsAction,
+          ...(canCreatePresentation(node.data)
+            ? [{ key: 'presentation', label: t('diagrams.presentation.create'), onSelect: () => setPresentationOpen(true) }]
+            : []),
+        ]
+      : [];
+  const popovers = showActions ? (
+    <>
+      {inView && reviewable ? review.popovers : null}
+      {toolbar === 'full' ? timelineMenu : null}
+      {node.data && exportVersionId ? (
+        <ExportMenu me={me} diagram={node.data} versionId={exportVersionId} run={stepUp.run} open={exportOpen} onOpenChange={setExportOpen} />
+      ) : null}
+      {presentationOpen && node.data ? (
+        <CreatePresentationDialog me={me} diagram={node.data} run={stepUp.run} onClose={() => setPresentationOpen(false)} />
+      ) : null}
+    </>
+  ) : null;
+  return (
+    <ScreenFrame
+      diagramId={id}
+      title={title}
+      tabs={tabs}
+      primary={primary}
+      menu={menu}
+      popovers={popovers}
+      status={status}
+      band={band}
+      body={body}
+      dialogs={dialogs}
+    />
+  );
 }
 
-/** Thanh mảnh + vùng trình vẽ/trình xem. Không cột panel (Q-23). */
+/**
+ * Thanh mảnh + vùng trình vẽ/trình xem. Không cột panel (Q-23). Thanh là MỘT dòng trên màn laptop:
+ * đường dẫn, tên, tab, việc chính, menu ⋮ rồi các lời báo gọn; dòng không đủ chỗ thì đường dẫn và
+ * lời báo co lại (cắt "…") chứ không đẩy thanh xuống hai dòng che trình vẽ.
+ */
 function ScreenFrame({
   diagramId,
   title,
   tabs,
-  actions,
+  primary,
+  menu = [],
+  popovers,
   status,
   band,
   body,
@@ -549,20 +615,35 @@ function ScreenFrame({
   diagramId: string;
   title: string;
   tabs: ReactNode;
-  actions?: ReactNode;
+  /** Việc chính đứng ngoài thanh. */
+  primary?: ReactNode;
+  /** Việc còn lại — menu ⋮ (Q-18). */
+  menu?: BarAction[];
+  /** Hộp nổi mở từ mục menu — neo vào nút ⋮. */
+  popovers?: ReactNode;
   status?: ReactNode;
   /** Dải ngay dưới thanh trên (bản trình bày) — nằm ngoài trình vẽ/trình xem nên luôn thấy. */
   band?: ReactNode;
   body: ReactNode;
   dialogs?: ReactNode;
 }) {
+  const { t } = useTranslation();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <>
       <div className="full-bar">
         <DiagramBreadcrumb diagramId={diagramId} />
         <h1 className="full-bar-title">{title}</h1>
         {tabs}
-        {actions ? <div className="full-bar-actions">{actions}</div> : null}
+        <BarAnchorProvider value={anchor}>
+          <div className="full-bar-actions">
+            {primary}
+            <span ref={setAnchor} className="full-bar-more">
+              <BarMenu label={t('diagrams.actionsOf', { name: title })} subject={title} items={menu} />
+            </span>
+            {popovers}
+          </div>
+        </BarAnchorProvider>
         {status ? <div className="full-bar-status">{status}</div> : null}
       </div>
       {band}
@@ -577,8 +658,10 @@ function DiagramEditor({
   diagramId,
   title,
   tabs,
-  versionsButton,
-  reviewActions,
+  versionsAction,
+  reviewMenu,
+  reviewPopovers,
+  reviewStatus,
   dialogs,
   band,
   content,
@@ -590,9 +673,15 @@ function DiagramEditor({
   diagramId: string;
   title: string;
   tabs: ReactNode;
-  versionsButton: ReactNode;
-  /** Gửi duyệt / Phát hành / Ghim của `useDiagramReview` — cùng nút với chế độ Xem. */
-  reviewActions: ReactNode;
+  versionsAction: BarAction;
+  /**
+   * Gửi duyệt / Phát hành / Duyệt… / Ghim của `useDiagramReview` — cùng việc với chế độ Xem, nhưng
+   * ở đây vào menu ⋮: việc chính của màn sửa là Thiết bị kho và Lưu.
+   */
+  reviewMenu: BarAction[];
+  reviewPopovers: ReactNode;
+  /** Thẻ "Chờ duyệt" / lỗi tải trang duyệt cho vùng trạng thái. */
+  reviewStatus: ReactNode;
   dialogs: ReactNode;
   band: ReactNode;
   content: DiagramContent;
@@ -858,24 +947,32 @@ function DiagramEditor({
   };
 
   const busy = saving;
+  const presentationTools = usePresentationTools({
+    disabled: !ready,
+    xmlMaxKb: settings.xmlMaxKb,
+    onInsert: (specs, message) =>
+      withFile((xml) => {
+        if (!xml) return;
+        setFrameXml(xml);
+        insertFreeInto(xml, { specs, message });
+      }),
+  });
+  const savedNote = dirty
+    ? t('diagrams.screen.unsaved')
+    : lastSaved
+      ? t('diagrams.screen.savedAt', { seq: lastSaved.seq, at: formatDateTime(lastSaved.savedAt), by: lastSaved.savedByName ?? lastSaved.savedBy })
+      : t('diagrams.screen.neverSaved');
   const status = (
     <>
+      {reviewStatus}
       {others.length > 0 ? (
         <p className="badge warn" role="status">
           {t('diagrams.screen.presence', { names: others.map((o) => o.fullName).join(', ') })}
         </p>
       ) : null}
       {cables.status}
-      <p className="muted" role="status">
-        {dirty
-          ? t('diagrams.screen.unsaved')
-          : lastSaved
-            ? t('diagrams.screen.savedAt', {
-                seq: lastSaved.seq,
-                at: formatDateTime(lastSaved.savedAt),
-                by: lastSaved.savedByName ?? lastSaved.savedBy,
-              })
-            : t('diagrams.screen.neverSaved')}
+      <p className="muted full-bar-note" role="status" title={savedNote}>
+        {savedNote}
       </p>
     </>
   );
@@ -887,34 +984,29 @@ function DiagramEditor({
       tabs={tabs}
       dialogs={dialogs}
       band={band}
-      actions={
+      primary={
         <>
-          {content.diagram.kind === 'presentation' ? (
-            <PresentationTools
-              disabled={!ready}
-              xmlMaxKb={settings.xmlMaxKb}
-              onInsert={(specs, message) =>
-                withFile((xml) => {
-                  if (!xml) return;
-                  setFrameXml(xml);
-                  insertFreeInto(xml, { specs, message });
-                })
-              }
-            />
-          ) : null}
           <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
             <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
           </Popover>
-          {frames.actions}
-          {cables.actions}
-          <button type="button" className="btn" disabled={!ready} onClick={() => setDraftOpen(true)}>
-            {t('diagrams.cable.draftButton')}
-          </button>
           <button type="button" className="btn primary" disabled={!ready || busy} onClick={() => frame.current?.send({ action: 'save' })}>
             {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
           </button>
-          {reviewActions}
-          {versionsButton}
+        </>
+      }
+      menu={[
+        ...(content.diagram.kind === 'presentation' ? presentationTools.menu : []),
+        ...frames.menu,
+        ...cables.menu,
+        { key: 'draft', label: t('diagrams.cable.draftButton'), disabled: !ready, onSelect: () => setDraftOpen(true) },
+        ...reviewMenu,
+        versionsAction,
+      ]}
+      popovers={
+        <>
+          {frames.popovers}
+          {cables.popovers}
+          {reviewPopovers}
         </>
       }
       status={status}
@@ -931,6 +1023,7 @@ function DiagramEditor({
           />
           {cables.dialogs}
           {frames.dialogs}
+          {content.diagram.kind === 'presentation' ? presentationTools.elements : null}
           {draftOpen ? (
             <DraftFromPortMapDialog
               diagramId={diagramId}

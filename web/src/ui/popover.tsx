@@ -12,6 +12,10 @@ import { useAnchoredMenu } from '@/ui/use-anchored-menu';
  * `mousedown` lên trang IMS — chỉ `blur` của cửa sổ báo được cú bấm đó). Mở thì tiêu điểm vào ô
  * nhập đầu tiên trong hộp; đóng thì trả về nút.
  *
+ * `anchor`: hộp KHÔNG vẽ nút riêng mà neo vào phần tử đã cho — hộp mở từ một mục của menu ⋮ trên
+ * thanh mảnh (Q-18, Q-23: thanh chỉ giữ việc chính, phần còn lại vào menu); mục menu biến mất khi
+ * menu đóng nên không neo vào nó được. Esc trả tiêu điểm về nút trong điểm neo.
+ *
  * Không dùng cho việc cần xác nhận/nhập form nhiều bước — đó là `Dialog`.
  */
 export function Popover({
@@ -21,6 +25,7 @@ export function Popover({
   onOpenChange,
   disabled,
   buttonClassName = 'btn',
+  anchor,
   children,
 }: {
   /** Chữ trên nút mở. */
@@ -31,6 +36,8 @@ export function Popover({
   onOpenChange: (open: boolean) => void;
   disabled?: boolean;
   buttonClassName?: string;
+  /** Có (kể cả `null` lúc điểm neo chưa gắn) = không vẽ nút; hộp neo vào phần tử này. */
+  anchor?: HTMLElement | null;
   children: ReactNode;
 }) {
   const id = useId();
@@ -45,6 +52,10 @@ export function Popover({
   useEffect(() => {
     latest.current = onOpenChange;
   });
+  const anchored = anchor !== undefined;
+  useEffect(() => {
+    if (anchored) refs.setReference(anchor ?? null);
+  }, [anchored, anchor, refs]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -61,7 +72,9 @@ export function Popover({
       if (event.key !== 'Escape') return;
       event.stopPropagation();
       close();
-      (refs.domReference.current as HTMLElement | null)?.focus();
+      const reference = refs.domReference.current as HTMLElement | null;
+      const back = reference?.matches('button, [tabindex]') ? reference : reference?.querySelector<HTMLElement>('button');
+      back?.focus();
     };
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
@@ -75,18 +88,20 @@ export function Popover({
 
   return (
     <>
-      <button
-        ref={refs.setReference}
-        type="button"
-        className={buttonClassName}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? id : undefined}
-        disabled={disabled}
-        onClick={() => onOpenChange(!open)}
-      >
-        {label}
-      </button>
+      {anchored ? null : (
+        <button
+          ref={refs.setReference}
+          type="button"
+          className={buttonClassName}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={open ? id : undefined}
+          disabled={disabled}
+          onClick={() => onOpenChange(!open)}
+        >
+          {label}
+        </button>
+      )}
       {open
         ? createPortal(
             <div id={id} ref={refs.setFloating} role="dialog" aria-label={title} className="popover-panel" style={floatingStyles}>

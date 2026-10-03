@@ -12,6 +12,9 @@ import {
   uniqueStamp,
   waitForMail,
   writeHeaders,
+  diagramBarAction,
+  diagramBarSpread,
+  horizontalOverflow,
 } from './helpers';
 
 /*
@@ -132,8 +135,11 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await submit.getByRole('button', { name: 'Gửi duyệt' }).click();
     await expect(member.getByText('Đã gửi duyệt kèm 1 cảnh báo vàng cho người duyệt xem.')).toBeVisible();
     // Người gửi không tự duyệt: chỉ có nút Rút; gọi thẳng API duyệt → 403.
-    await expect(member.getByRole('button', { name: 'Rút yêu cầu' })).toBeVisible();
     await expect(member.getByRole('button', { name: 'Duyệt…' })).toHaveCount(0);
+    await member.getByRole('button', { name: /^Thao tác với / }).click();
+    await expect(member.getByRole('menuitem', { name: 'Rút yêu cầu' })).toBeVisible();
+    await expect(member.getByRole('menuitem', { name: 'Duyệt…' })).toHaveCount(0);
+    await member.keyboard.press('Escape');
     const approvalId = await pendingApprovalOf(member, id);
     const forbidden = await member.request.post(`/api/v1/diagrams/${id}/review/${approvalId}/approve`, {
       headers: await writeHeaders(member),
@@ -215,7 +221,8 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
 
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
-    await page.getByRole('button', { name: 'Gửi duyệt' }).click();
+    // Admin/SA: Phát hành đứng ngoài thanh, Gửi duyệt nằm trong menu ⋮.
+    await diagramBarAction(page, 'Gửi duyệt');
     const submit = page.getByRole('dialog', { name: /cho Admin duyệt/ });
     await submit.getByLabel(/Lý do/).fill('Thử gửi E2E');
     await submit.getByRole('button', { name: 'Gửi duyệt' }).click();
@@ -242,8 +249,20 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     const v1 = await save(page, id, page_(''));
     await expect((await treeRow(page, name)).getByText('Bản nháp')).toBeVisible();
 
+    // Thanh mảnh MỘT dòng ở 1280px cho SA (Q-23), cả Xem lẫn Sửa; 390px (chỉ xem) xuống dòng, không tràn ngang.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho' })).toBeVisible();
+    expect(await diagramBarSpread(page)).toBeLessThan(12);
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Phát hành' })).toBeVisible();
+    expect(await diagramBarSpread(page)).toBeLessThan(12);
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect(page.getByRole('button', { name: 'Phát hành' })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole('button', { name: 'Phát hành' }).click();
     await page.getByRole('dialog', { name: `Phát hành phiên bản #${v1.seq} thành bản chính thức?` }).getByRole('button', { name: 'Phát hành' }).click();
     await expect(page.getByText(`Phiên bản #${v1.seq} đã là bản chính thức.`)).toBeVisible();
@@ -255,7 +274,7 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
 
     // Lùi về bản chính thức cũ: tạo phiên bản MỚI (v3) chép v1 rồi phát hành, không xoá gì.
     await page.goto(`/diagrams/${id}`);
-    await page.getByRole('button', { name: 'Phiên bản' }).click();
+    await diagramBarAction(page, 'Phiên bản');
     const versions = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
     await expect(versions.getByText('Từng chính thức')).toBeVisible();
     await versions.getByRole('button', { name: `Khôi phục phiên bản #${v1.seq} làm bản chính thức` }).click();

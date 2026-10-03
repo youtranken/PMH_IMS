@@ -15,6 +15,7 @@ import {
   stepUpViaApi,
   uniqueStamp,
   writeHeaders,
+  diagramBarAction,
 } from './helpers';
 
 /*
@@ -167,16 +168,15 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     expect(seeded.status(), await seeded.text()).toBe(201);
 
     await page.goto(`/diagrams/${root}?mode=edit`);
-    const insertCabinet = page.getByRole('button', { name: 'Chèn tủ' });
-    await expect(insertCabinet).toBeEnabled({ timeout: 60_000 });
-    await insertCabinet.click();
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await diagramBarAction(page, 'Chèn tủ');
     const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
     await box.getByRole('button', { name: 'Tủ mạng' }).click();
     await page.getByRole('option', { name: `${siteCode} · E2E-R${stamp}` }).click();
     await box.getByRole('button', { name: 'Chèn tủ' }).click();
     await expect(page.getByText(`Đã chèn khung tủ E2E-R${stamp} (1 thiết bị).`)).toBeVisible();
 
-    await page.getByRole('button', { name: 'Gắn khung' }).click();
+    await diagramBarAction(page, 'Gắn khung');
     const bind = page.getByRole('dialog', { name: 'Gắn khung với bản vẽ con hoặc dải IP' });
     await bind.getByRole('button', { name: 'Khung' }).click();
     await page.getByRole('option', { name: 'E2E Tầng' }).click();

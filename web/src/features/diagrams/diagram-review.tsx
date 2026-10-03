@@ -11,9 +11,9 @@ import { Dialog, DialogCancel } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { Popover } from '@/ui/popover';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
+import { BarPopover, type BarAction } from './diagram-bar';
 import {
   TREE_KEY,
   commentsKey,
@@ -80,8 +80,9 @@ export function FindingList({ title, items, onGoTo }: { title: string; items: Fi
 /**
  * Gửi duyệt / Phát hành / Duyệt / Trả về / Rút và bình luận ghim của MỘT bản vẽ (Q-23).
  *
- * Màn bản vẽ đặt `actions` lên thanh mảnh (cả chế độ Xem lẫn Sửa), `dialogs` vào cây JSX, và
- * trải `viewer` lên `DiagramViewer` ở chế độ Xem (ghim, chế độ ghim, bay tới ô).
+ * Màn bản vẽ xếp `primary` (việc theo trạng thái: Gửi duyệt / Phát hành / Duyệt…) và `menu` lên
+ * thanh mảnh (`diagram-bar`), `popovers` + `dialogs` vào cây JSX, và trải `viewer` lên
+ * `DiagramViewer` ở chế độ Xem (ghim, chế độ ghim, bay tới ô).
  */
 export function useDiagramReview({
   me,
@@ -104,7 +105,14 @@ export function useDiagramReview({
   /** "Xem so sánh với bản chính thức": mở trình xem so sánh `from` → `to`. */
   onCompare: (fromVersionId: string, toVersionId: string) => void;
 }): {
-  actions: ReactNode;
+  /** Việc theo trạng thái — chế độ Xem để ngoài thanh, chế độ Sửa cho vào menu (việc chính ở đó là Lưu). */
+  primary: BarAction[];
+  /** Việc phụ, luôn trong menu ⋮. */
+  menu: BarAction[];
+  /** Hộp "Ghim (N)" mở từ menu. */
+  popovers: ReactNode;
+  /** Thẻ "Chờ duyệt" cho vùng trạng thái của thanh. */
+  badge: ReactNode;
   dialogs: ReactNode;
   status: ReactNode;
   review: ReviewPage | null;
@@ -218,50 +226,42 @@ export function useDiagramReview({
 
   const canSend = Boolean(diagram?.latestVersion) && !pendingId && diagram?.status !== 'official' && diagram?.kind === 'official';
   const sendReason = dirty ? t('diagrams.review.saveFirst') : null;
-  const sendHint = useDisabledReason(sendReason);
 
-  const actions = !diagram ? null : (
-    <>
-      {pendingId ? <span className="badge warn">{t('diagrams.status.pending')}</span> : null}
-      {canSend ? (
-        <button type="button" className="btn" disabled={Boolean(sendReason)} {...sendHint.buttonProps} onClick={() => setSubmitOpen(true)}>
-          {t('diagrams.review.submit')}
-        </button>
-      ) : null}
-      {canSend && manager ? (
-        <button type="button" className="btn" disabled={Boolean(sendReason)} {...sendHint.buttonProps} onClick={() => void publish()}>
-          {t('diagrams.review.publish')}
-        </button>
-      ) : null}
-      {sendHint.hint}
-      {pendingId && page && own ? (
-        <button type="button" className="btn" onClick={() => void withdraw()}>
-          {t('diagrams.review.withdraw')}
-        </button>
-      ) : null}
-      {pendingId && page && manager && !own ? (
-        <button type="button" className="btn primary" onClick={() => setDecideOpen(true)}>
-          {t('diagrams.review.decide')}
-        </button>
-      ) : null}
-      <Popover label={t('diagrams.review.pins', { count: threads.length })} title={t('diagrams.review.pinsTitle')} open={pinsOpen} onOpenChange={setPinsOpen}>
-        <PinList
-          threads={threads}
-          loading={comments.isPending && versionId !== null}
-          onOpen={(thread) => {
-            setPinsOpen(false);
-            setOpenThread(thread.id);
-            if (thread.cellId) onGoToCell(thread.cellId);
-          }}
-          onAddGeneral={() => {
-            setPinsOpen(false);
-            setDraftPin({ cellId: null, anchor: null });
-          }}
-          canAdd={versionId !== null}
-        />
-      </Popover>
-    </>
-  );
+  const primary: BarAction[] = [];
+  const menu: BarAction[] = [];
+  if (diagram) {
+    if (canSend && manager) {
+      // Admin/SA tự phát hành là việc chính; gửi người khác duyệt vẫn còn trong menu.
+      primary.push({ key: 'publish', label: t('diagrams.review.publish'), disabledReason: sendReason, onSelect: () => void publish() });
+      menu.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: () => setSubmitOpen(true) });
+    } else if (canSend) {
+      primary.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: () => setSubmitOpen(true) });
+    }
+    if (pendingId && page && manager && !own) {
+      primary.push({ key: 'decide', label: t('diagrams.review.decide'), primary: true, onSelect: () => setDecideOpen(true) });
+    }
+    if (pendingId && page && own) menu.push({ key: 'withdraw', label: t('diagrams.review.withdraw'), warn: true, onSelect: () => void withdraw() });
+    menu.push({ key: 'pins', label: t('diagrams.review.pins', { count: threads.length }), onSelect: () => setPinsOpen(true) });
+  }
+  const popovers = diagram ? (
+    <BarPopover title={t('diagrams.review.pinsTitle')} open={pinsOpen} onOpenChange={setPinsOpen}>
+      <PinList
+        threads={threads}
+        loading={comments.isPending && versionId !== null}
+        onOpen={(thread) => {
+          setPinsOpen(false);
+          setOpenThread(thread.id);
+          if (thread.cellId) onGoToCell(thread.cellId);
+        }}
+        onAddGeneral={() => {
+          setPinsOpen(false);
+          setDraftPin({ cellId: null, anchor: null });
+        }}
+        canAdd={versionId !== null}
+      />
+    </BarPopover>
+  ) : null;
+  const badge = diagram && pendingId ? <span className="badge warn">{t('diagrams.status.pending')}</span> : null;
 
   const status =
     pendingId && review.isError ? (
@@ -367,7 +367,10 @@ export function useDiagramReview({
   );
 
   return {
-    actions,
+    primary,
+    menu,
+    popovers,
+    badge,
     dialogs,
     status,
     review: page,

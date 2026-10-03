@@ -12,6 +12,7 @@ import {
   stepUpViaApi,
   uniqueStamp,
   writeHeaders,
+  diagramBarAction,
 } from './helpers';
 
 /*
@@ -136,7 +137,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
 
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await page.getByRole('button', { name: 'Dây chưa khai' }).click();
+    await diagramBarAction(page, 'Dây chưa khai');
     await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
     await expect(box).toBeVisible();
@@ -182,7 +183,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
 
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await page.getByRole('button', { name: 'Dây chưa khai' }).click();
+    await diagramBarAction(page, 'Dây chưa khai');
     await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
     await box.getByRole('combobox', { name: `Cổng của ${sw.code}` }).fill('gi1/0/24');

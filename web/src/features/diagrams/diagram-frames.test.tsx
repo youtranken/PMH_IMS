@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { jsonResponse, pickMenuItem, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import type { DiagramFrame, DiagramNode, SubnetSummary } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { CabinetPicker } from './cabinet-picker';
@@ -274,7 +274,7 @@ describe('Màn sửa — Chèn tủ dựng khung bằng patch', () => {
     fromDrawio({ event: 'init' });
     const messages = () => posted.mock.calls.map(([data]) => JSON.parse(String(data)) as Record<string, unknown>);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Chèn tủ' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Chèn tủ');
     await user.click(await screen.findByRole('button', { name: 'Tủ mạng' }));
     await user.click(await screen.findByRole('option', { name: 'E2E-KH · R1' }));
     const popover = screen.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });

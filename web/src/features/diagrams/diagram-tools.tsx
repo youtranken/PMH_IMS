@@ -12,20 +12,34 @@ import { Field } from '@/ui/page-header';
 import { Popover } from '@/ui/popover';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
+import { BarPopover, useBarAnchor } from './diagram-bar';
 import { publicationsKey, type DiagramNode, type Publications } from './diagram-api';
 import { dayAt, daySpan, officialOn, type PublicationEvent } from './diagram-timeline';
 
 type Run = <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
 
 /**
- * "Xuất" trên thanh mảnh: PNG/PDF của phiên bản ĐANG XEM, server dựng từ ảnh đã lưu kèm chân trang
+ * "Xuất" (mục menu ⋮ của thanh mảnh): PNG/PDF của phiên bản ĐANG XEM, server dựng từ ảnh đã lưu kèm chân trang
  * và watermark người xuất (FR-044). Đòi mã phạm vi sơ đồ — hết ân hạn thì hỏi mã tại chỗ; huỷ thì
  * không có file, không có dòng nhật ký.
  */
-export function ExportMenu({ me, diagram, versionId, run }: { me: Me; diagram: DiagramNode; versionId: string; run: Run }) {
+export function ExportMenu({
+  me,
+  diagram,
+  versionId,
+  run,
+  open,
+  onOpenChange: setOpen,
+}: {
+  me: Me;
+  diagram: DiagramNode;
+  versionId: string;
+  run: Run;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const exportAs = async (format: 'png' | 'pdf') => {
     setBusy(true);
@@ -42,7 +56,7 @@ export function ExportMenu({ me, diagram, versionId, run }: { me: Me; diagram: D
     }
   };
   return (
-    <Popover label={t('diagrams.tools.export')} title={t('diagrams.tools.exportTitle')} open={open} onOpenChange={setOpen}>
+    <BarPopover title={t('diagrams.tools.exportTitle')} open={open} onOpenChange={setOpen}>
       <p className="muted">{t('diagrams.tools.exportHint')}</p>
       <p className="row">
         <button type="button" className="btn" disabled={busy} onClick={() => void exportAs('png')}>
@@ -52,7 +66,7 @@ export function ExportMenu({ me, diagram, versionId, run }: { me: Me; diagram: D
           {t('diagrams.tools.exportPdf')}
         </button>
       </p>
-    </Popover>
+    </BarPopover>
   );
 }
 
@@ -68,6 +82,7 @@ export function TimelineMenu({
   onPick,
   open,
   onOpenChange,
+  inMenu,
 }: {
   diagram: DiagramNode;
   run: Run;
@@ -80,8 +95,11 @@ export function TimelineMenu({
    */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Mở từ menu ⋮ (neo vào nút ⋮); `false` = nút riêng — màn chỉ còn mỗi thanh trượt. */
+  inMenu: boolean;
 }) {
   const { t } = useTranslation();
+  const anchor = useBarAnchor();
   const publications = useQuery({
     queryKey: publicationsKey(diagram.id),
     queryFn: () =>
@@ -127,7 +145,13 @@ export function TimelineMenu({
     );
   }
   return (
-    <Popover label={t('diagrams.tools.timeline')} title={t('diagrams.tools.timelineTitle')} open={open} onOpenChange={onOpenChange}>
+    <Popover
+      label={t('diagrams.tools.timeline')}
+      title={t('diagrams.tools.timelineTitle')}
+      open={open}
+      onOpenChange={onOpenChange}
+      anchor={inMenu ? anchor : undefined}
+    >
       {body}
     </Popover>
   );

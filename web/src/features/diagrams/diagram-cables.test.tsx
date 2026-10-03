@@ -4,7 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within, pickMenuItem } from '@/test/test-utils';
 import type { DiagramLink, DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 
@@ -372,7 +372,7 @@ describe('Dây chưa khai — mở lại hộp khai', () => {
       ],
     }, { '/api/v1/devices/': () => jsonResponse(200, { ports: [], incoming: [] }) });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Dây chưa khai' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Dây chưa khai');
     const box = screen.getByRole('dialog', { name: 'Nét dây chưa khai vào sơ đồ cổng' });
     expect(within(box).getByRole('button', { name: 'SW-E2E-01 ↔ SRV-E2E-01' })).toBeInTheDocument();
     await user.click(within(box).getByRole('button', { name: 'SRV-E2E-01 ↔ SW-E2E-01' }));

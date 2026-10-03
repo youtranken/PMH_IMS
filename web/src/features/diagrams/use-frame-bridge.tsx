@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { DrawioCommand } from '@/ui/drawio-protocol';
-import { Popover } from '@/ui/popover';
 import { useToast } from '@/ui/toast';
 import { CabinetPicker } from './cabinet-picker';
+import { BarPopover, type BarAction } from './diagram-bar';
 import { insertPatch, lastChildId, layerIdOf, nextInsertPosition, pageIds, type Bounds } from './drawio-bridge';
 import { FrameBindDialog } from './frame-bind-dialog';
 import { bindFrameValue, cabinetFrameCells, cabinetIdsInXml, frameCandidates, type CabinetFrameLayout, type FrameCandidate } from './frame-bridge';
@@ -47,7 +47,7 @@ export function useFrameBridge({
   newId: () => string;
   /** Máy vừa chèn cùng khung tủ — màn cập nhật "đã có" của hộp Thiết bị kho và "kết nối chưa vẽ". */
   onInserted: (deviceIds: string[]) => void;
-}): { actions: ReactNode; dialogs: ReactNode } {
+}): { menu: BarAction[]; popovers: ReactNode; dialogs: ReactNode } {
   const { t } = useTranslation();
   const toast = useToast();
   const [cabinetOpen, setCabinetOpen] = useState(false);
@@ -115,18 +115,17 @@ export function useFrameBridge({
     });
   };
 
-  const actions = (
-    <>
-      <Popover label={t('diagrams.frames.cabinetButton')} title={t('diagrams.frames.cabinetTitle')} open={cabinetOpen} onOpenChange={setCabinetOpen} disabled={!ready}>
-        <CabinetPicker present={present} busy={inserting} onInsert={(id, code) => void insertCabinet(id, code)} />
-      </Popover>
-      <button type="button" className="btn" disabled={!ready} onClick={openBind}>
-        {t('diagrams.frames.bindButton')}
-      </button>
-    </>
+  const menu: BarAction[] = [
+    { key: 'cabinet', label: t('diagrams.frames.cabinetButton'), disabled: !ready, onSelect: () => setCabinetOpen(true) },
+    { key: 'bind', label: t('diagrams.frames.bindButton'), disabled: !ready, onSelect: openBind },
+  ];
+  const popovers = (
+    <BarPopover title={t('diagrams.frames.cabinetTitle')} open={cabinetOpen} onOpenChange={setCabinetOpen}>
+      <CabinetPicker present={present} busy={inserting} onInsert={(id, code) => void insertCabinet(id, code)} />
+    </BarPopover>
   );
 
   const dialogs = binding ? <FrameBindDialog diagramId={diagramId} frames={binding} onBind={bind} onClose={() => setBinding(null)} /> : null;
 
-  return { actions, dialogs };
+  return { menu, popovers, dialogs };
 }

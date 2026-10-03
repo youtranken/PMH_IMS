@@ -15,6 +15,7 @@ import {
   uniqueStamp,
   waitForMail,
   writeHeaders,
+  diagramBarAction,
 } from './helpers';
 
 /*
@@ -129,7 +130,7 @@ test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
     const cell = viewer(page).getByRole('button', { name: new RegExp(said.replace(/\./g, '\\.')) });
     await expect(cell).toBeVisible();
 
-    await page.getByRole('button', { name: 'Kiểm tra khớp' }).click();
+    await diagramBarAction(page, 'Kiểm tra khớp');
     const dialog = page.getByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' });
     const item = dialog.getByRole('listitem').filter({ hasText: said });
     await expect(item).toContainText(`Thiết bị ${sw.code}: ${said}`);
@@ -150,7 +151,7 @@ test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
     await expect(page.getByRole('button', { name: /thay đổi chưa vẽ/ })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Kiểm tra khớp' }).click();
+    await diagramBarAction(page, 'Kiểm tra khớp');
     await expect(page.getByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' })).toContainText('Bản vẽ khớp với dữ liệu kho.');
 
     // Bản vẽ thứ hai có máy bị thanh lý → lệch; vẽ lại không có máy đó + phát hành → hết dấu trên cây.

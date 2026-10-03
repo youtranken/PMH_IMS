@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within, pickMenuItem } from '@/test/test-utils';
 import type { DiagramNode, Finding } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
@@ -146,7 +146,7 @@ describe('Lệch kho trên màn xem bản vẽ', () => {
     open([]);
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
     expect(screen.queryByRole('button', { name: /thay đổi chưa vẽ/ })).toBeNull();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Kiểm tra khớp' }));
+    await pickMenuItem(userEvent.setup(), /^Thao tác với/, 'Kiểm tra khớp');
     const dialog = await screen.findByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' });
     expect(dialog).toHaveTextContent('Bản vẽ khớp với dữ liệu kho.');
   });

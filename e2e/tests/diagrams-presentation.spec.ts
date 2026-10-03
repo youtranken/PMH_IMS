@@ -11,6 +11,7 @@ import {
   stepUpViaApi,
   uniqueStamp,
   writeHeaders,
+  diagramBarAction,
 } from './helpers';
 
 /*
@@ -90,7 +91,7 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     await stepUpViaApi(member, memberSecret, 'diagram');
     await member.goto(`/diagrams/${source.id}`);
     await expect(member.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
-    await member.getByRole('button', { name: 'Tạo bản trình bày' }).click();
+    await diagramBarAction(member, 'Tạo bản trình bày');
     const dialog = member.getByRole('dialog', { name: `Tạo bản trình bày từ "${sourceName}"` });
     await dialog.getByLabel('Tên bản trình bày').fill(presName);
     const [created] = await Promise.all([
@@ -113,9 +114,8 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     // Sửa: thiết bị dự kiến + ảnh tự do, lưu.
     await member.goto(`/diagrams/${presId}?mode=edit`);
     await expect(band(member)).toBeVisible();
-    const plannedButton = member.getByRole('button', { name: 'Thiết bị dự kiến' });
-    await expect(plannedButton).toBeEnabled({ timeout: 60_000 });
-    await plannedButton.click();
+    await expect(member.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await diagramBarAction(member, 'Thiết bị dự kiến');
     const planned = member.getByRole('dialog', { name: 'Thêm thiết bị dự kiến' });
     await planned.getByLabel(/Tên thiết bị/).fill('AP tầng 3 E2E');
     await planned.getByLabel('Model').fill('U6-Pro');
@@ -219,7 +219,9 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     expect(((await fromDraft.json()) as { code: string }).code).toBe('DIAGRAM_NOT_OFFICIAL');
     await member.goto(`/diagrams/${draftId}`);
     await expect(member.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
-    await expect(member.getByRole('button', { name: 'Tạo bản trình bày' })).toHaveCount(0);
+    await member.getByRole('button', { name: /^Thao tác với / }).click();
+    await expect(member.getByRole('menuitem', { name: 'Phiên bản' })).toBeVisible();
+    await expect(member.getByRole('menuitem', { name: 'Tạo bản trình bày' })).toHaveCount(0);
   });
 
   test('Thành viên đổi tên + lưu trữ bản trình bày của mình; bản của người khác và bản chính thức → 403', async ({ browser, page }) => {

@@ -488,6 +488,49 @@
   min-height: 0;
   position: relative;
 }
+/* Màn laptop trở lên: thanh mảnh là MỘT dòng (Q-23) — việc phụ đã vào menu ⋮ (Q-18), nên chỗ
+   thiếu thì đường dẫn, tên bản vẽ và lời báo thuần chữ co lại cắt "…", nút không bao giờ bị cắt.
+   Hẹp hơn (điện thoại, chỉ xem) thì thanh xuống dòng như cũ — ở đó không có trình vẽ để che. */
+@media (min-width: 1024px) {
+  .full-bar {
+    flex-wrap: nowrap;
+  }
+  .full-bar .crumbs {
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .full-bar-title {
+    flex: 0 1 auto;
+    min-width: 4em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .full-bar .tabs,
+  .full-bar-actions {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+  .full-bar-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .full-bar-status > * {
+    flex: none;
+    white-space: nowrap;
+  }
+  .full-bar-status > .full-bar-note {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
 /* Màn sửa sơ đồ chỉ dành cho máy tính (`BREAKPOINTS.editor`): hẹp hơn thì thanh trên chỉ còn tab
    và chế độ xem, ô chọn thiết bị không cần giữ bề ngang cố định. */
 @media (max-width: 1023px) {

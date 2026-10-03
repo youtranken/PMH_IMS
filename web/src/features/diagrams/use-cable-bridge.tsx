@@ -6,12 +6,12 @@ import type { Me } from '@/lib/me';
 import { BulkLinkDialog } from '@/ui/bulk-link-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
-import { Popover } from '@/ui/popover';
 import { PortFormDialog } from '@/ui/port-form-dialog';
 import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
 import { bindEdgeValue, diffAutosave, edgeById, edgeEnds, firstDeviceCell, styleWithoutImsEdge, undeclaredEdges, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
+import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
 import { escapeXmlAttr, insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
 
@@ -54,7 +54,9 @@ export function useCableBridge({
 }): {
   onAutosave: (xml: string) => void;
   refreshUndrawn: (xml: string) => void;
-  actions: ReactNode;
+  /** Việc của dây cho menu ⋮ của thanh; hộp nổi của chúng ở `popovers`. */
+  menu: BarAction[];
+  popovers: ReactNode;
   status: ReactNode;
   dialogs: ReactNode;
 } {
@@ -229,15 +231,15 @@ export function useCableBridge({
     .flatMap((e) => edgeEnds(currentXml, e.cellId) ?? []);
   const undeclared = [...undeclaredEdges(currentXml), ...broken];
 
-  const actions = (
+  const menu: BarAction[] = [
+    { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => setDeclareOpen(true) },
+    { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => setBulkOpen(true) },
+    { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: () => setUndeclaredOpen(true) },
+    { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
+  ];
+  const popovers = (
     <>
-      <Popover
-        label={t('diagrams.cable.undeclaredButton')}
-        title={t('diagrams.cable.undeclaredTitle')}
-        open={undeclaredOpen}
-        onOpenChange={setUndeclaredOpen}
-        disabled={!ready}
-      >
+      <BarPopover title={t('diagrams.cable.undeclaredTitle')} open={undeclaredOpen} onOpenChange={setUndeclaredOpen}>
         {undeclared.length === 0 ? (
           <p className="muted">{t('diagrams.cable.undeclaredEmpty')}</p>
         ) : (
@@ -258,16 +260,10 @@ export function useCableBridge({
             ))}
           </ul>
         )}
-      </Popover>
-      <button type="button" className="btn" disabled={!ready} onClick={() => setDeclareOpen(true)}>
-        {t('diagrams.cable.declareButton')}
-      </button>
-      <button type="button" className="btn" disabled={!ready} onClick={() => setBulkOpen(true)}>
-        {t('diagrams.cable.bulkButton')}
-      </button>
-      <Popover label={t('diagrams.cable.legend')} title={t('diagrams.cable.legendTitle')} open={legendOpen} onOpenChange={setLegendOpen}>
+      </BarPopover>
+      <BarPopover title={t('diagrams.cable.legendTitle')} open={legendOpen} onOpenChange={setLegendOpen}>
         <CableLegend cableTypes={cableTypes} />
-      </Popover>
+      </BarPopover>
     </>
   );
 
@@ -341,5 +337,5 @@ export function useCableBridge({
     </>
   );
 
-  return { onAutosave, refreshUndrawn, actions, status, dialogs };
+  return { onAutosave, refreshUndrawn, menu, popovers, status, dialogs };
 }

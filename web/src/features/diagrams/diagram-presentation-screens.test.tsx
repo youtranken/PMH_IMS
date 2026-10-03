@@ -4,7 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, pickMenuItem } from '@/test/test-utils';
 import type { DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
@@ -169,7 +169,7 @@ describe('"Tạo bản trình bày" từ bản chính thức', () => {
     });
     renderAt('/diagrams/d1', MEMBER);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Tạo bản trình bày' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Tạo bản trình bày');
     const dialog = await screen.findByRole('dialog', { name: 'Tạo bản trình bày từ "Tầng 1 E2E"' });
     expect(dialog).toHaveTextContent('bản chính thức giữ nguyên');
     await user.type(screen.getByLabelText('Tên bản trình bày'), 'E2E Đề xuất AP');
@@ -229,7 +229,7 @@ describe('Sửa bản trình bày — thiết bị dự kiến và ảnh tự do
     expect(screen.getByRole('note', { name: 'BẢN TRÌNH BÀY — không phải sơ đồ chính thức' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Gửi duyệt' })).toBeNull();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Thiết bị dự kiến' }));
+    await pickMenuItem(user, /^Thao tác với/, 'Thiết bị dự kiến');
     await user.click(screen.getByRole('button', { name: 'Chèn vào bản vẽ' }));
     expect(await screen.findByText('Nhập tên thiết bị.')).toBeInTheDocument();
     await user.type(screen.getByLabelText(/Tên thiết bị/), 'AP tầng 3');

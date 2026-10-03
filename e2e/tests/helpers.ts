@@ -1101,6 +1101,35 @@ export async function rowAction(
   await page.getByRole('menuitem', { name: action }).click();
 }
 
+/**
+ * Việc trong menu ⋮ của thanh mảnh màn sơ đồ (Q-18, Q-23): ngoài thanh chỉ còn tab, đường dẫn và
+ * việc chính (Phát hành / Gửi duyệt / Duyệt…, Thiết bị kho, Lưu); mọi việc khác sau nút
+ * "Thao tác với <tên bản vẽ>". Màn sơ đồ chỉ có một nút như thế.
+ */
+export async function diagramBarAction(page: Page, action: string | RegExp): Promise<void> {
+  await page.getByRole('button', { name: /^Thao tác với / }).click();
+  await page.getByRole('menuitem', { name: action }).click();
+}
+
+/**
+ * Độ lệch dọc (px) giữa tâm các phần của thanh mảnh màn sơ đồ (đường dẫn, tên, tab, nút, lời báo).
+ * Một dòng thì gần 0; xuống dòng thì lệch cả một hàng nút (~40px).
+ */
+export async function diagramBarSpread(page: Page): Promise<number> {
+  const title = page.getByRole('heading', { level: 1 });
+  await expect(title).toBeVisible();
+  return title.evaluate((h1) => {
+    const parts = Array.from(h1.parentElement?.children ?? []).flatMap((part) =>
+      getComputedStyle(part).display === 'flex' && part.tagName !== 'NAV' ? Array.from(part.children) : [part],
+    );
+    const centers = parts
+      .map((part) => part.getBoundingClientRect())
+      .filter((rect) => rect.height > 2)
+      .map((rect) => rect.top + rect.height / 2);
+    return Math.max(...centers) - Math.min(...centers);
+  });
+}
+
 /** Tên nút chính của một dòng: bắt đầu bằng việc, chứa định danh dòng ("Sửa cổng Gi1/0/2"). */
 function primaryName(subject: string | RegExp, action: string | RegExp): RegExp {
   const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
