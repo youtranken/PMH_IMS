@@ -17,7 +17,7 @@ import type { UserRole } from '../auth/types';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService, type PortLink } from '../devices/devices.api';
-import { IpamApiService } from '../ipam/ipam.api';
+import { IpamApiService, type SubnetSummary } from '../ipam/ipam.api';
 import { UsersApiService } from '../users/users.api';
 import {
   buildCellIndex,
@@ -29,6 +29,7 @@ import {
 } from './diagram-cells';
 import { cableEdgeStates, externalLinks, undrawnLinks, type CableEdge } from './diagram-checks';
 import { buildDraftXml } from './diagram-draft';
+import { cabinetFrameLayout, childLinkReason, frameRefs, introducedRefs, type CabinetFrameLayout, type FrameRef } from './diagram-frames';
 import type { CheckLink } from './diagram-finding';
 import { checkDiagramXml, sanitizeDiagramSvg } from './diagram-gate';
 import {
@@ -169,7 +170,26 @@ export interface DiagramContent {
   /** Kết nối có một đầu ngoài bản vẽ — trình xem chỉ "→ máy kia (bản vẽ khác)". */
   externalLinkIds: string[];
   cableTypes: CableTypeInfo[];
+  /** Khung mang bản vẽ con / dải IP / tủ (AD-18) — trình xem bấm khung để xuống bản vẽ con, mở thẻ VLAN. */
+  frames: DiagramFrame[];
 }
+
+/**
+ * Một khung của phiên bản. `child` = bản vẽ con như cây thấy nó lúc mở (kể cả đã lưu trữ — trình
+ * xem hiện dấu); `null` khi khung trỏ id bản vẽ không còn.
+ */
+export interface DiagramFrame extends FrameRef {
+  child: { id: string; name: string; archived: boolean; kind: 'official' | 'presentation' } | null;
+}
+
+/** Khung tủ dựng sẵn để chèn (`GET /diagrams/cabinet-frame/:cabinetId`). */
+export interface CabinetFrame {
+  cabinet: { id: string; code: string; siteCode: string; uHeight: number | null; active: boolean };
+  layout: CabinetFrameLayout;
+}
+
+/** Số IP trống đầu tiên hiện trên thẻ khung VLAN — chỉ để người xem thấy "còn chỗ ở đâu", không phải danh sách cấp. */
+export const SUBNET_FREE_PREVIEW = 5;
 
 /** Trần số máy một lần hỏi `device-info` — hơn thế là gọi nhầm, không phải một bản vẽ. */
 export const DEVICE_INFO_MAX_IDS = 500;
@@ -485,15 +505,17 @@ export class DiagramsService {
         undrawnLinkIds: [],
         externalLinkIds: [],
         cableTypes: await this.cableTypeInfos(),
+        frames: [],
       };
     }
     const [item] = await this.toItems(diagramId, [row]);
     const deviceCells = row.cellIndex.cells
       .filter((cell) => cell.kind === 'device' && cell.deviceId)
       .map((cell) => ({ cellId: cell.id, deviceId: cell.deviceId!, code: cell.ims.ims_device_code ?? '' }));
-    const [{ infos: devices, sources }, cables] = await Promise.all([
+    const [{ infos: devices, sources }, cables, frames] = await Promise.all([
       this.deviceData(deviceCells.map((c) => c.deviceId)),
       this.cableData(row.cellIndex),
+      this.framesOf(row.cellIndex),
     ]);
     // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại, nhãn cổng + ô màu dây
     // theo sơ đồ cổng hiện tại — AD-18). Xem: ảnh SVG chụp lúc lưu, XML để nguyên; màu dây và nét
@@ -509,7 +531,107 @@ export class DiagramsService {
       undrawnLinkIds: cables.undrawn,
       externalLinkIds: cables.external,
       cableTypes: cables.cableTypes,
+      frames,
     };
+  }
+
+  /* ------------------------------------------------------------------ khung --- */
+
+  /** Khung của một chỉ mục ô + bản vẽ con của chúng, đọc MỘT lượt (kể cả bản vẽ đã lưu trữ). */
+  private async framesOf(index: CellIndex): Promise<DiagramFrame[]> {
+    const refs = frameRefs(index);
+    const childIds = [...new Set(refs.map((r) => r.childDiagramId).filter((id): id is string => Boolean(id && UUID_RE.test(id))))];
+    const children =
+      childIds.length === 0
+        ? []
+        : await this.db
+            .select({ id: diagramTable.id, name: diagramTable.name, archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
+            .from(diagramTable)
+            .where(inArray(diagramTable.id, childIds));
+    const byId = new Map(children.map((c) => [c.id, { id: c.id, name: c.name, archived: c.archivedAt !== null, kind: c.kind }]));
+    return refs.map((ref) => ({ ...ref, child: ref.childDiagramId ? (byId.get(ref.childDiagramId) ?? null) : null }));
+  }
+
+  /**
+   * Khung GẮN MỚI ở lần lưu này phải trỏ vào thứ dùng được (AD-17: XML là dữ liệu không tin cậy —
+   * web chỉ mời chọn thứ đúng, server mới là cổng). Bản vẽ con: nằm dưới bản vẽ này trên cây, chưa
+   * lưu trữ, không phải bản trình bày; dải IP / tủ: có thật và chưa ngừng dùng (Q-14 — không chọn
+   * MỚI một mục ngừng dùng). Khung đã có từ bản trước thì không kiểm lại (`introducedRefs`).
+   */
+  private async assertFrames(diagramId: string, index: CellIndex): Promise<void> {
+    const [latest] = await this.db
+      .select({ cellIndex: diagramVersionTable.cellIndex })
+      .from(diagramVersionTable)
+      .where(eq(diagramVersionTable.diagramId, diagramId))
+      .orderBy(desc(diagramVersionTable.seq))
+      .limit(1);
+    const fresh = introducedRefs(latest?.cellIndex ?? null, index);
+    const reasons: string[] = [];
+    if (fresh.childDiagramIds.length > 0) {
+      const valid = fresh.childDiagramIds.filter((id) => UUID_RE.test(id));
+      const [rows, below] = await Promise.all([
+        valid.length === 0
+          ? Promise.resolve([])
+          : this.db
+              .select({ id: diagramTable.id, name: diagramTable.name, archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
+              .from(diagramTable)
+              .where(inArray(diagramTable.id, valid)),
+        this.descendantIds(diagramId),
+      ]);
+      const inBranch = new Set(below);
+      const byId = new Map(rows.map((r) => [r.id, { id: r.id, name: r.name, archived: r.archivedAt !== null, kind: r.kind, inBranch: inBranch.has(r.id) }]));
+      for (const id of fresh.childDiagramIds) {
+        const reason = childLinkReason(id, byId.get(id));
+        if (reason) reasons.push(reason);
+      }
+    }
+    if (fresh.subnetIds.length > 0) {
+      const subnets = await this.ipam.subnetsByIds(fresh.subnetIds.filter((id) => UUID_RE.test(id)));
+      for (const id of fresh.subnetIds) {
+        const subnet = subnets.get(id);
+        if (!subnet) reasons.push(`Dải IP gắn trên khung (${id}) không tồn tại.`);
+        else if (subnet.voidedAt) reasons.push(`Dải ${subnet.cidr} đã ngừng dùng — không gắn khung mới vào nó.`);
+      }
+    }
+    if (fresh.cabinetIds.length > 0) {
+      const { cabinets } = await this.catalog.lists({ includeInactive: true });
+      for (const id of fresh.cabinetIds) {
+        const cabinet = cabinets.find((c) => c.id === id);
+        if (!cabinet) reasons.push(`Tủ gắn trên khung (${id}) không tồn tại.`);
+        else if (!cabinet.active) reasons.push(`Tủ ${cabinet.code} đã ngừng dùng — không gắn khung mới vào nó.`);
+      }
+    }
+    if (reasons.length > 0) throw new BadRequestException({ code: 'DIAGRAM_FRAME_INVALID', message: reasons.join(' ') });
+  }
+
+  /**
+   * Khung tủ dựng sẵn để chèn: mọi máy còn dùng đang gắn tủ (qua `devices.api`, bỏ máy thanh lý),
+   * ô máy cùng luật với hộp "Thiết bị kho". Máy gắn thêm vào tủ SAU khi chèn không tự vào bản vẽ —
+   * đó là việc của cảnh báo lệch kho.
+   */
+  async cabinetFrame(cabinetId: string): Promise<CabinetFrame> {
+    const { cabinets } = await this.catalog.lists({ includeInactive: true });
+    const cabinet = cabinets.find((c) => c.id === cabinetId);
+    if (!cabinet) throw new NotFoundException({ code: 'CABINET_NOT_FOUND', message: 'Không tìm thấy tủ này.' });
+    const page = await this.devices.listUsableIn({ cabinetId }, DEVICE_INFO_MAX_IDS + 1);
+    if (page.total > DEVICE_INFO_MAX_IDS) {
+      throw new BadRequestException({ code: 'DIAGRAM_CABINET_TOO_MANY', message: `Tủ có ${page.total} thiết bị — quá nhiều để dựng một khung tủ.` });
+    }
+    const { infos } = await this.deviceData(page.items.map((d) => d.id));
+    const devices = infos
+      .filter((info) => info.found && info.status !== 'retired' && info.code)
+      .map((info) => ({ id: info.id, code: info.code!, u: info.u, uSize: null, cell: info.cell }));
+    return {
+      cabinet: { id: cabinet.id, code: cabinet.code, siteCode: cabinet.siteCode, uHeight: cabinet.uHeight, active: cabinet.active },
+      layout: cabinetFrameLayout({ cabinet: { id: cabinet.id, code: cabinet.code, uHeight: cabinet.uHeight }, devices }),
+    };
+  }
+
+  /** Thẻ khung VLAN: đọc qua `ipam.api`, kể cả dải đã ngừng dùng. */
+  async subnetInfo(subnetId: string): Promise<SubnetSummary> {
+    const summary = await this.ipam.subnetSummary(subnetId, SUBNET_FREE_PREVIEW);
+    if (!summary) throw new NotFoundException({ code: 'SUBNET_NOT_FOUND', message: 'Không tìm thấy dải này.' });
+    return summary;
   }
 
   /* -------------------------------------------------- dây ↔ sơ đồ cổng --- */
@@ -739,6 +861,7 @@ export class DiagramsService {
     const index = buildCellIndex(xml);
     const secret = secretLabelReason(index);
     if (secret) throw new BadRequestException({ code: 'DIAGRAM_LABEL_SECRET', message: secret });
+    await this.assertFrames(diagramId, index);
     const snapshot = await this.snapshot(index);
 
     const id = await this.db.transaction(async (tx) => {
