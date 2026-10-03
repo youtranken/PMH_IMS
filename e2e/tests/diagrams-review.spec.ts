@@ -313,5 +313,18 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     await expect(viewer(member)).toBeVisible();
     await expect(member.getByRole('button', { name: 'Phát hành', exact: true })).toHaveCount(0);
     await member.context().close();
+
+    // Phát hành thì yêu cầu còn chờ tự đóng: để nó mở thì duyệt về sau sẽ kéo bản chính thức lùi.
+    const latest = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: {} });
+    expect(latest.status(), await latest.text()).toBe(201);
+    expect(sql(`SELECT state FROM approval WHERE id = '${approvalId}'`)).toBe('withdrawn');
+    // Gửi duyệt một phiên bản cũ hơn bản chính thức → 409, không tạo yêu cầu.
+    const stale = await page.request.post(`/api/v1/diagrams/${id}/submit`, {
+      headers: await writeHeaders(page),
+      data: { reason: 'Gửi bản cũ E2E', versionId: v1.id },
+      failOnStatusCode: false,
+    });
+    expect(stale.status()).toBe(409);
+    expect(((await stale.json()) as { code: string }).code).toBe('DIAGRAM_VERSION_STALE');
   });
 });
