@@ -1050,6 +1050,14 @@ button.btn-x.danger:hover:not(:disabled) {
 .diagram-viewer-canvas [data-ims-dim] {
   opacity: 0.18;
 }
+/* Lớp đang tắt (nút "Lớp" của trình xem): ẩn hẳn ô, không chỉ mờ — tắt lớp là để bớt rối. */
+.diagram-viewer-canvas [data-ims-hidden] {
+  display: none;
+}
+/* Mức chi tiết: thu nhỏ dưới ngưỡng thì nhãn cổng trên nét dây ẩn đi (chữ quá nhỏ chỉ thành vệt). */
+.diagram-viewer-canvas[data-lod='far'] [data-ims-paint] text {
+  display: none;
+}
 .cable-swatch {
   display: inline-block;
   flex: none;

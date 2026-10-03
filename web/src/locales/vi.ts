@@ -683,6 +683,11 @@ export default {
     diffRemoved: 'Bỏ {{count}}',
     diffChanged: 'Đổi {{count}}',
     diffGhost: 'Đã bỏ: {{label}}',
+    layers: 'Lớp',
+    layersTitle: 'Bật/tắt lớp',
+    layerGroupDrawio: 'Lớp bản vẽ',
+    layerGroupDeviceType: 'Loại thiết bị',
+    layerGroupCableType: 'Loại dây',
   },
   diagrams: {
     title: 'Sơ đồ mạng',
