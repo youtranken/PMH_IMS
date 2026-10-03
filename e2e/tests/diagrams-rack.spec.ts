@@ -164,7 +164,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await expect(first.getByRole('radio', { name: /Ảnh mặt sau/ })).toBeDisabled();
     await expect(first).toContainText('Máy chưa có ảnh mặt sau');
     await first.getByRole('radio', { name: /Biểu tượng/ }).check();
-    await box.getByRole('button', { name: 'Đóng' }).click();
+    await box.getByRole('button', { name: 'Đóng', exact: true }).click();
 
     const [saved] = await Promise.all([
       page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),

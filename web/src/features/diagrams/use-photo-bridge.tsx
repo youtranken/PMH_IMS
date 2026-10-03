@@ -79,7 +79,13 @@ export function usePhotoBridge({
       patch: { u: { [state.pageId]: { cells: { u: { [cell.id]: update } } } } },
     });
     markDirty();
-    // Đọc lại tệp: lượt đổi kế tiếp của cùng ô phải dựa trên style vừa đặt.
+    /*
+     * Đánh dấu lựa chọn mới ngay: lượt đọc lại tệp đi vòng qua draw.io (postMessage), chờ nó thì
+     * nút radio vừa bấm trông như không ăn. Lượt đọc vẫn chạy để lần đổi kế tiếp của cùng ô dựa
+     * trên đúng style draw.io đang giữ.
+     */
+    const photo = choice === 'icon' ? null : choice;
+    setState({ ...state, cells: state.cells.map((c) => (c.id === cell.id ? { ...c, photo, style: update.style } : c)) });
     read();
   };
 

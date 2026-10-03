@@ -27,10 +27,10 @@ const LOOKS = {
   ],
 };
 
-function Harness({ sent }: { sent: DrawioCommand[] }) {
+function Harness({ sent, withFile = (fn) => fn(XML) }: { sent: DrawioCommand[]; withFile?: (fn: (xml: string) => void) => void }) {
   const bridge = usePhotoBridge({
     ready: true,
-    withFile: (fn) => fn(XML),
+    withFile,
     send: (command) => sent.push(command),
     page: () => 0,
     markDirty: () => undefined,
@@ -80,5 +80,22 @@ describe('usePhotoBridge — công tắc Biểu tượng / Ảnh thật', () => 
     const update = command.patch.u.p1.cells.u.c1;
     expect(update.style).toBe('fillColor=none;shape=image;image=data:image/png,AAAA;imageAspect=1;html=0;');
     expect(update.xmlValue).toContain('ims_photo="front"');
+  });
+
+  it('chọn xong là hộp đánh dấu ngay lựa chọn mới, không chờ trình vẽ trả lại tệp', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, LOOKS))));
+    // Lượt đọc tệp sau khi đổi đi vòng qua draw.io (postMessage): ở đây nó chưa về.
+    let reads = 0;
+    const withFile = (fn: (xml: string) => void) => {
+      reads += 1;
+      if (reads === 1) fn(XML);
+    };
+    renderWithI18n(<Harness sent={[]} withFile={withFile} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Ảnh thật…' }));
+    await screen.findByRole('radiogroup', { name: 'Hình của SW-E2E-01' });
+    await user.click(screen.getByRole('radio', { name: /Ảnh mặt trước/ }));
+    expect(screen.getByRole('radio', { name: /Ảnh mặt trước/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Biểu tượng/ })).not.toBeChecked();
   });
 });
