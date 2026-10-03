@@ -54,6 +54,9 @@ import {
   type VendorRecord,
 } from './catalog.types';
 
+/** Id lấy từ dữ liệu không tin cậy (ô bản vẽ) — so với cột uuid mà không phải uuid thì Postgres ném. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface CatalogLists {
   sites: SiteRecord[];
   cabinets: CabinetRecord[];
@@ -281,6 +284,26 @@ export class CatalogService {
   }
 
   // ─────────────────────── Hình trên sơ đồ mạng ───────────────────────
+
+  /** Tủ theo id, kể cả tủ đã ngừng dùng, kèm mã site — một câu hỏi, không đọc cả danh mục. */
+  async cabinetsByIds(ids: string[]): Promise<Map<string, CabinetRecord>> {
+    const unique = [...new Set(ids)].filter((id) => UUID_RE.test(id));
+    if (unique.length === 0) return new Map();
+    const rows = await this.db
+      .select({ cabinet: cabinetTable, siteCode: siteTable.code })
+      .from(cabinetTable)
+      .innerJoin(siteTable, eq(cabinetTable.siteId, siteTable.id))
+      .where(inArray(cabinetTable.id, unique));
+    return new Map(rows.map((r) => [r.cabinet.id, { ...r.cabinet, siteCode: r.siteCode }]));
+  }
+
+  /** Nhà cung cấp theo id, kể cả mục đã ngừng dùng. */
+  async vendorsByIds(ids: string[]): Promise<Map<string, VendorRecord>> {
+    const unique = [...new Set(ids)].filter((id) => UUID_RE.test(id));
+    if (unique.length === 0) return new Map();
+    const rows = await this.db.select().from(vendorTable).where(inArray(vendorTable.id, unique));
+    return new Map(rows.map((r) => [r.id, r]));
+  }
 
   /** Hình + biểu tượng riêng của nhiều loại một lượt — mở một bản vẽ hỏi đúng một câu. */
   async diagramLooks(typeIds: string[]): Promise<Map<string, DeviceTypeDiagramLook>> {

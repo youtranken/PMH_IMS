@@ -3,7 +3,7 @@ import { CatalogService, type CatalogLists, type DeviceTypeDiagramLook } from '.
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 export { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { normalizeKey } from '../../common/import-plan';
-import type { CableTypeRecord, CatalogSnapshot, IspProviderRecord } from './catalog.types';
+import type { CableTypeRecord, CabinetRecord, CatalogSnapshot, IspProviderRecord, VendorRecord } from './catalog.types';
 export type { CableTypeRecord } from './catalog.types';
 export type { DeviceTypeDiagramLook } from './catalog.service';
 export { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef, type DiagramShapeDef } from './diagram-shapes';
@@ -103,6 +103,19 @@ export class CatalogApiService {
   async ispProvider(id: string): Promise<IspProviderRecord | null> {
     const lists = await this.catalog.lists({ includeInactive: true });
     return lists.ispProviders.find((provider) => provider.id === id) ?? null;
+  }
+
+  /**
+   * Tủ theo id, KỂ CẢ tủ đã ngừng dùng, kèm mã site — nơi cần vài tủ (khung tủ, U vượt tủ, thẻ máy
+   * trên sơ đồ) dùng cái này thay vì đọc cả tám danh mục qua `lists()`. Id lạ thì vắng mặt.
+   */
+  cabinetsByIds(ids: string[]): Promise<Map<string, CabinetRecord>> {
+    return this.catalog.cabinetsByIds(ids);
+  }
+
+  /** Nhà cung cấp theo id, kể cả mục đã ngừng dùng (tên + hotline trên thẻ máy). */
+  vendorsByIds(ids: string[]): Promise<Map<string, VendorRecord>> {
+    return this.catalog.vendorsByIds(ids);
   }
 
   /** Hình trên sơ đồ mạng của nhiều loại một lượt — `diagrams` hydrate ô thiết bị (AD-18). */

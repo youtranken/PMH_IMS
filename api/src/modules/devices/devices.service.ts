@@ -563,7 +563,7 @@ export class DevicesService {
     const start = effective<number | null>('rackUStart', current?.rackUStart ?? null);
     const size = effective<number | null>('rackUSize', current?.rackUSize ?? null);
     if (start === null && size === null) return;
-    const cabinet = cabinetId ? (await this.catalog.lists({ includeInactive: true })).cabinets.find((c) => c.id === cabinetId) : undefined;
+    const cabinet = cabinetId ? (await this.catalog.cabinetsByIds([cabinetId])).get(cabinetId) : undefined;
     const reason = rackUnitsReason({
       start,
       size,
