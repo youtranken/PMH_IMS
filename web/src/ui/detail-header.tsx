@@ -19,6 +19,32 @@ export interface Crumb {
   to?: string;
 }
 
+/**
+ * Hàng breadcrumb: mục đầu có `to` trông như nút quay lại, các mục sau là link chữ, mục không
+ * `to` là chữ thường (trang đang đứng). `label` của `<nav>` mặc định "breadcrumb".
+ */
+export function Crumbs({ crumbs, label = 'breadcrumb' }: { crumbs: Crumb[]; label?: string }) {
+  return (
+    <nav className="crumbs" aria-label={label}>
+      {crumbs.map((crumb, index) => (
+        <span key={`${crumb.label}-${index}`} className="crumb">
+          {index > 0 ? (
+            <Chevron direction="right" className="crumb-sep" />
+          ) : null}
+          {crumb.to ? (
+            <Link className={index === 0 ? 'crumb-back' : undefined} to={crumb.to}>
+              {index === 0 ? <Chevron direction="left" className="crumb-arrow" /> : null}
+              {crumb.label}
+            </Link>
+          ) : (
+            <span>{crumb.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
 export function DetailHeader({
   crumbs,
   code,
@@ -51,23 +77,7 @@ export function DetailHeader({
         là "mất nút quay về danh sách" — đúng, vì một cái link không trông giống link
         thì nó không tồn tại.
       */}
-      <nav className="crumbs" aria-label="breadcrumb">
-        {crumbs.map((crumb, index) => (
-          <span key={`${crumb.label}-${index}`} className="crumb">
-            {index > 0 ? (
-              <Chevron direction="right" className="crumb-sep" />
-            ) : null}
-            {crumb.to ? (
-              <Link className={index === 0 ? 'crumb-back' : undefined} to={crumb.to}>
-                {index === 0 ? <Chevron direction="left" className="crumb-arrow" /> : null}
-                {crumb.label}
-              </Link>
-            ) : (
-              <span>{crumb.label}</span>
-            )}
-          </span>
-        ))}
-      </nav>
+      <Crumbs crumbs={crumbs} />
 
       <div className="detail-title-row">
         <div className="detail-title-main">

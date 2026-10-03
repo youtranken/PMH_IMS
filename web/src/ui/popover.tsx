@@ -1,6 +1,6 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { useDialogPortal } from '@/ui/dialog';
+import { DialogPortalContext, useDialogPortal } from '@/ui/dialog';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
 /**
@@ -35,6 +35,11 @@ export function Popover({
 }) {
   const id = useId();
   const portal = useDialogPortal();
+  /*
+   * Menu của ô chọn trong hộp (lọc site, chọn tủ) portal vào điểm neo NẰM TRONG hộp: portal ra
+   * `document.body` thì cú bấm chọn mục là "bấm ra ngoài" và hộp đóng mất giữa chừng.
+   */
+  const [menuAnchor, setMenuAnchor] = useState<HTMLDivElement | null>(null);
   const { refs, floatingStyles } = useAnchoredMenu(open, { placement: 'bottom-start', maxHeight: 520 });
   const latest = useRef(onOpenChange);
   useEffect(() => {
@@ -85,7 +90,8 @@ export function Popover({
       {open
         ? createPortal(
             <div id={id} ref={refs.setFloating} role="dialog" aria-label={title} className="popover-panel" style={floatingStyles}>
-              {children}
+              <DialogPortalContext.Provider value={menuAnchor}>{children}</DialogPortalContext.Provider>
+              <div ref={setMenuAnchor} />
             </div>,
             portal ?? document.body,
           )

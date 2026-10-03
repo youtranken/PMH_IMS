@@ -65,6 +65,16 @@ class SaveVersionDto {
   @ValidateIf((_o, v) => v !== null) @IsUUID(undefined, { message: 'Phiên bản gốc không hợp lệ.' }) basedOnVersionId!: string | null;
 }
 
+class CabinetParamDto {
+  @IsUUID(undefined, { message: 'Mã tủ không hợp lệ.' })
+  cabinetId!: string;
+}
+
+class SubnetParamDto {
+  @IsUUID(undefined, { message: 'Mã dải không hợp lệ.' })
+  subnetId!: string;
+}
+
 class LinksQueryDto {
   @MaxLength(DEVICE_INFO_MAX_IDS * 38, { message: 'Quá nhiều kết nối trong một lần hỏi.' })
   @OptionalUuidListQuery('Danh sách kết nối không hợp lệ.')
@@ -180,6 +190,23 @@ export class DiagramsController {
   @Post('cable-status')
   cableStatus(@Body() dto: CableStatusDto) {
     return this.diagrams.cableStatus(dto.xml);
+  }
+
+  /**
+   * Khung tủ dựng sẵn để chèn ("Chèn tủ"): máy còn dùng trong tủ + bố cục theo U. Không cần mã sơ
+   * đồ: đây là danh mục tủ + hồ sơ thiết bị mọi vai vốn đọc được, không phải nội dung bản vẽ.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('cabinet-frame/:cabinetId')
+  cabinetFrame(@Param() params: CabinetParamDto) {
+    return this.diagrams.cabinetFrame(params.cabinetId);
+  }
+
+  /** Thẻ khung VLAN: CIDR, VLAN, site, IP đã cấp / còn trống — dữ liệu IPAM mọi vai đọc được. */
+  @Roles('sa', 'admin', 'member')
+  @Get('subnet-info/:subnetId')
+  subnetInfo(@Param() params: SubnetParamDto) {
+    return this.diagrams.subnetInfo(params.subnetId);
   }
 
   /** Bản vẽ có máy này ở phiên bản mới nhất — chỉ tên + id (thông tin của cây, không cần mã). */

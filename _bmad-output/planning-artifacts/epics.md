@@ -992,18 +992,18 @@ So that đi từ bản vẽ tổng xuống tận tủ bằng vài cú bấm, kh�
 
 **Acceptance Criteria:**
 
-**Given** người vẽ chọn một khung đã vẽ và bấm "Gắn bản vẽ con" trên thanh IMS phía trên trình vẽ (chọn từ cây; khung nhận diện qua id ô trong XML `autosave`)
+**Given** người vẽ bấm "Gắn khung" trên thanh IMS phía trên trình vẽ, chọn một hình đã vẽ theo chữ trên hình (giao thức nhúng không báo ô đang chọn — danh sách đọc từ XML cả tệp xin bằng `export` xml, nối bằng id ô), chọn "Bản vẽ con" rồi chọn từ cây (chỉ mời bản vẽ NẰM DƯỚI bản vẽ này, chưa lưu trữ, không phải bản trình bày) và bấm Gắn — IMS đặt thuộc tính bằng `patch` cập nhật giá trị ô; "Bỏ gắn" gỡ nó
 **When** lưu
-**Then** khung mang `ims_child_diagram_id`; ở chế độ xem bấm/nháy đúp khung mở bản vẽ con, thanh đường dẫn "Tổng > Tower > Tầng 3 > Phòng server" bấm lên được từng cấp, trong ân hạn không hỏi lại mã
-**And** gắn với bản vẽ không cùng nhánh cây, đã lưu trữ hoặc là bản trình bày → từ chối kèm lý do; bản vẽ con bị lưu trữ sau đó → khung hiện dấu, không vỡ trang
+**Then** khung mang `ims_child_diagram_id`; ở chế độ xem bấm (hay nháy đúp) khung mở bản vẽ con, thanh đường dẫn theo cây "Cây bản vẽ > Tổng > Tower > Tầng 3" trên thanh mảnh bấm lên được từng cấp, trong ân hạn không hỏi lại mã. Màn SỬA không mở bản vẽ con (draw.io nhúng không báo nháy đúp) — sang Xem rồi bấm khung
+**And** khung GẮN MỚI ở lần lưu trỏ bản vẽ không nằm dưới bản vẽ này (khác nhánh, chính nó, bản vẽ cha), đã lưu trữ, là bản trình bày hoặc không tồn tại → server từ chối 400 `DIAGRAM_FRAME_INVALID` kèm lý do (khung đã có ở bản trước không kiểm lại); bản vẽ con bị lưu trữ sau đó → khung hiện dấu vàng "(đã lưu trữ)", bấm chỉ báo, không vỡ trang
 
 **Given** khung VLAN
-**When** gắn với một dải IP (chọn qua `ipam.api`)
-**Then** khung mang `ims_subnet_id`; ở chế độ xem bấm khung hiện CIDR, VLAN, site, số IP đã cấp / còn trống và vài IP trống đầu tiên; dải ngừng dùng hiện "(ngừng dùng)"
+**When** gắn với một dải IP (cùng hộp "Gắn khung", kiểu "Dải IP (khung VLAN)"; dải gắn mới phải có thật và chưa ngừng dùng — server kiểm lúc lưu)
+**Then** khung mang `ims_subnet_id`; ở chế độ xem bấm khung hiện thẻ: CIDR, VLAN, site, gateway, số IP đã cấp / còn trống và 5 IP trống đầu tiên (`GET /diagrams/subnet-info/:id` → `ipam.api.subnetSummary`); dải ngừng dùng hiện "(ngừng dùng)"
 
-**Given** người vẽ chọn "Tủ R1" trong hộp tìm gọn mở từ thanh trên và bấm Chèn tủ
-**When** IMS dựng khung
-**Then** chèn bằng `merge` một khung tủ dùng hình rack của draw.io (cao theo `cabinet.u_height`) mang `ims_cabinet_id`, chứa sẵn mọi máy đang gắn tủ đó (qua `devices.api`, bỏ máy thanh lý) — máy có U xếp đúng U (Story 10.11), máy chưa khai U xếp ở cột "Chưa khai U" bên cạnh
+**Given** người vẽ chọn "Tủ R1" trong hộp gọn "Chèn tủ" mở từ thanh trên (lọc site, chọn tủ; tủ đã có khung trên bản vẽ thì nút tắt kèm lý do) và bấm Chèn tủ
+**When** IMS dựng khung (`GET /diagrams/cabinet-frame/:cabinetId`, bố cục là hàm thuần `cabinetFrameLayout`)
+**Then** chèn bằng MỘT lệnh `patch` (không `merge` — như Story 10.4) một khung tủ dùng hình rack của draw.io (`mxgraph.rackGeneral.rackCabinet3`, cao theo `cabinet.u_height`, tủ chưa khai số U dựng 42U) mang `ims_cabinet_id`, chứa sẵn mọi máy đang gắn tủ đó (qua `devices.api`, bỏ máy thanh lý) làm ô CON của khung — máy có U xếp đúng U (U1 ở đáy; kho chưa có cột U tới Story 10.11 nên hiện mọi máy vào cột bên), máy chưa khai U (hoặc U vượt tủ / trùng U) xếp ở cột "Chưa khai U" bên cạnh — cột này cũng mang `ims_cabinet_id` và tự nới khi kéo thêm máy vào (`stackLayout`)
 **And** máy sau này được gắn thêm vào tủ trong kho KHÔNG tự chui vào bản vẽ — hiện thành cảnh báo lệch kho (Story 10.9)
 **And** hình tự do (khung, đám mây ISP, chữ, mũi tên, đường nối site) là đồ hoạ thuần của draw.io, không ghi bảng kho nào
 
