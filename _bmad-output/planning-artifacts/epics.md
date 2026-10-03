@@ -904,22 +904,23 @@ So that không gõ lại tên/IP/model và bản vẽ luôn trỏ đúng hồ s�
 
 **Acceptance Criteria:**
 
-**Given** `device_type` thêm `diagram_shape` (chọn từ danh sách hình draw.io có sẵn mà IMS cho phép, vd `mxgraph.cisco.switches.workgroup_switch`) và `diagram_icon_file_id?` (SVG riêng) — migration, chủ `catalog`
+**Given** `device_type` thêm `diagram_shape` (chọn từ danh sách hình draw.io có sẵn mà IMS cho phép, vd `mxgraph.cisco.switches.workgroup_switch`; CHECK giữ dạng tên stencil) và bảng `device_type_icon` (SVG riêng ĐÃ LỌC, cất dạng chữ — không qua `files`: tệp `files` nằm trên volume phải đọc lại từ đĩa mỗi lần mở bản vẽ, còn biểu tượng nhỏ và cần đi cùng một câu SELECT; bảng riêng để danh sách danh mục không kéo SVG theo) — migration `0047`, chủ `catalog`; loại có sẵn từ đầu được gán hình hợp tên
 **When** người sửa được danh mục (Q-12) chọn hình cho một loại ở màn Danh mục loại thiết bị, hoặc SA tải SVG riêng
 **Then** loại chưa chọn gì dùng hình "Thiết bị khác"; không có ô nhập style tự do (chặn chèn `image=` ra ngoài); chỉ SA tải SVG, vai khác gọi API → 403
-**And** SVG tải lên lọc phía server (bỏ `<script>`, `<foreignObject>`, `on*`, `href` ngoài/`javascript:`, thực thể ngoài), quá `diagram.icon_svg_max_kb` (mặc định 100) hoặc không hợp lệ → từ chối; bài kiểm dựng lại SVG có script đỏ khi gỡ bộ lọc
+**And** SVG tải lên lọc phía server (`common/svg-sanitize.ts`, dùng chung với cổng bản vẽ): `<script>`, `on*`, `href`/`url()` ra ngoài, `javascript:`, DOCTYPE/thực thể ngoài → TỪ CHỐI cả tệp kèm lý do; `<foreignObject>`, `<style>`, metadata bị gỡ; quá `diagram.icon_svg_max_kb` (mặc định 100) hoặc không hợp lệ → từ chối; bài kiểm dựng lại SVG có script đỏ khi gỡ bộ lọc
 
 **Given** trình vẽ đang mở
 **When** người vẽ bấm nút **"Thiết bị kho"** trên thanh IMS phía trên trình vẽ — mở một hộp tìm gọn (popover neo vào nút, KHÔNG chiếm cột cố định, đóng bằng Esc/bấm ra ngoài, không che toàn trình vẽ — Q-23 góp ý bản thử 03/10/2026) — tìm thiết bị (theo mã/tên/IP, lọc site/tủ/loại — dùng lại `DeviceCombobox`/popover dùng chung sẵn có, thiếu thì thêm vào `web/src/ui` và khai registry) và bấm Chèn (một hoặc nhiều máy)
-**Then** cầu nối gửi `merge` chèn `UserObject` mang `ims_device_id` + `ims_device_code`, nhãn mã/tên và nhãn vị trí "Site · Tủ · U", hình theo loại (hydrate thành data URI); máy đã thanh lý không chèn được; máy đã có trên bản vẽ (đọc từ XML `autosave`) hiện "đã có" thay vì chèn lần hai
-**And** đổi hình của một loại ở Danh mục thì lần mở sau mọi bản vẽ hiện hình mới (XML lưu "khô" — AD-18)
+**Then** cầu nối gửi `patch` (không `merge`: `merge` so cả tệp với mốc draw.io đang giữ nên xoá được phần người vẽ chưa lưu — kết quả bản thử) chèn `UserObject` mang `ims_device_id` + `ims_device_code`, nhãn "mã · IP · Site · Tủ · U" (tên máy ở thẻ thông tin), hình theo loại (stencil draw.io; SVG riêng thành data URI) — ô chèn do server dựng (`GET /diagrams/device-info?ids=`, một lượt cho cả lô, cùng luật hydrate); máy đã thanh lý hiện nhưng không chèn được (kèm lý do); máy đã có trên bản vẽ (đọc từ XML `autosave`/`getDiff` + máy vừa chèn) hiện "đã có" thay vì chèn lần hai
+**And** đổi hình của một loại ở Danh mục thì lần mở SỬA sau mọi bản vẽ hiện hình mới (XML lưu "khô" — AD-18: lưu gỡ hình/nhãn IMS, mở sửa hydrate lại từ kho); ảnh xem (chế độ Xem) là SVG chụp lúc lưu nên đổi theo từ lần lưu kế tiếp
 
 **Given** chế độ xem
 **When** bấm một thiết bị
-**Then** thẻ thông tin hiện mã, tên, loại, model, serial, IP (qua `ipam.api`), site/tủ/U, NCC + hotline, bảo hành bằng `ExpiryBadge`, "Có mặt trong các bản vẽ" (bấm nhảy sang); link "Mở hồ sơ"
-**And** nút "Mở két" chuyển sang luồng két sẵn có: VẪN đòi mã phạm vi két (đang trong ân hạn sơ đồ không đủ), Thành viên theo 3 tầng quyền (Epic 6); thẻ không chứa giá trị két, `diagrams` không gọi `vault` (AD-4, AD-18)
+**Then** thẻ thông tin hiện mã, tên, loại, model, serial, IP (qua `ipam.api`), site/tủ/U (U `null` tới Story 10.11), NCC + hotline, bảo hành bằng `ExpiryBadge`, "Có mặt trong các bản vẽ" (bấm nhảy sang — `GET /diagrams/by-device/:id`, phiên bản mới nhất, bỏ bản đã lưu trữ); link "Mở hồ sơ"
+**And** nút "Mở két" mở `VaultPanel` dùng chung (như popup Két tổng) cho máy đó: VẪN đòi mã phạm vi két (đang trong ân hạn sơ đồ không đủ), Thành viên theo 3 tầng quyền (Epic 6); thẻ không chứa giá trị két, `diagrams` không gọi `vault` (AD-4, AD-18)
 **And** ô có `ims_device_id` không còn tồn tại hiện dấu đỏ "Không tìm thấy trong kho" thay vì lỗi trang
-**And** E2E: bấm "Thiết bị kho" → hộp tìm gọn hiện, trình vẽ vẫn rộng như trước (không có cột chen vào); chèn một thiết bị `E2E`, hộp đóng, lưu, mở chế độ xem, bấm thấy thẻ đúng (desktop + 390px); đường hỏng: tìm máy đã thanh lý → hiện nhưng nút Chèn tắt kèm lý do
+**And** tóm tắt phiên bản đếm thiết bị theo `ims_device_id` (xoá ô rồi chèn lại đúng máy, hay nhân bản ô của một máy, không là "thêm thiết bị")
+**And** E2E (`diagrams-stock.spec.ts`): bấm "Thiết bị kho" → hộp tìm gọn hiện, trình vẽ vẫn rộng như trước (không có cột chen vào); tìm + bàn phím chèn một thiết bị `E2E`, hộp đóng, lưu (kho giữ XML khô), mở chế độ xem, bấm thấy thẻ đúng (desktop + 390px); Mở két hỏi mã phạm vi két; đường hỏng: tìm máy đã thanh lý → hiện nhưng ô chọn tắt kèm lý do; ô trỏ máy không còn trong kho → dấu đỏ; SVG có script bị từ chối, Thành viên tải biểu tượng → 403
 
 ### Story 10.5: Dây gắn sơ đồ cổng — loại dây, màu, tô sáng
 
