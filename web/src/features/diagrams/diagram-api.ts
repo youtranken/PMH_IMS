@@ -104,7 +104,39 @@ export interface DiagramContent {
   undrawnLinkIds?: string[];
   externalLinkIds?: string[];
   cableTypes?: CableTypeInfo[];
+  /** Khung mang bản vẽ con / dải IP / tủ (AD-18). Thiếu → coi như rỗng. */
+  frames?: DiagramFrame[];
 }
+
+/**
+ * Một khung của phiên bản (`api/src/modules/diagrams/diagram-frames.ts`). `child` = bản vẽ con
+ * lúc mở (kể cả đã lưu trữ); `null` khi id trỏ bản vẽ không còn.
+ */
+export interface DiagramFrame {
+  cellId: string;
+  label: string;
+  childDiagramId: string | null;
+  subnetId: string | null;
+  cabinetId: string | null;
+  child: { id: string; name: string; archived: boolean; kind: 'official' | 'presentation' } | null;
+}
+
+/** `GET /diagrams/subnet-info/:id` — thẻ khung VLAN. */
+export interface SubnetSummary {
+  id: string;
+  name: string;
+  cidr: string;
+  vlan: number | null;
+  siteCode: string | null;
+  gateway: string | null;
+  voided: boolean;
+  total: number;
+  used: number;
+  free: number;
+  firstFree: string[];
+}
+
+export const subnetInfoKey = (id: string) => ['diagram-subnet-info', id] as const;
 
 export const deviceInfoKey = (ids: string[]) => ['diagram-device-info', ...ids] as const;
 export const byDeviceKey = (deviceId: string) => ['diagrams-by-device', deviceId] as const;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
@@ -30,6 +30,7 @@ import {
   type DiagramContent,
   type CableEdge,
   type DiagramDeviceInfo,
+  type DiagramFrame,
   type DiagramLink,
   type DiagramNode,
   type EditorSettings,
@@ -37,11 +38,14 @@ import {
 } from './diagram-api';
 import { CableLegend } from './cable-legend';
 import { DeviceConnections, DiagramCableCard } from './diagram-cable-card';
+import { DiagramBreadcrumb } from './diagram-breadcrumb';
 import { DiagramDeviceCard } from './diagram-device-card';
+import { DiagramSubnetCard } from './diagram-subnet-card';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
 import {
   deviceIdsInXml,
+  growBounds,
   insertPatch,
   lastChildId,
   layerIdOf,
@@ -53,6 +57,7 @@ import {
 import { DraftFromPortMapDialog } from './draft-from-port-map-dialog';
 import { StockDevicePicker } from './stock-device-picker';
 import { useCableBridge } from './use-cable-bridge';
+import { useFrameBridge } from './use-frame-bridge';
 
 type Mode = 'view' | 'edit';
 
@@ -87,6 +92,9 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [dirty, setDirty] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [cardCellId, setCardCellId] = useState<string | null>(null);
+  const [subnetFrame, setSubnetFrame] = useState<(DiagramFrame & { subnetId: string }) | null>(null);
+  const navigate = useNavigate();
+  const toast = useToast();
   /*
    * Tô sáng ở chế độ xem: máy đang được "bấm" (dây của nó + máy đầu kia sáng). Mở từ mũi tên "→ máy
    * (bản vẽ khác)" thì `?focus=<id máy>` chọn sẵn máy đó và bay tới.
@@ -301,6 +309,19 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       </>
     );
     const edgeCard = cardCellId ? view.byEdge.get(cardCellId) : undefined;
+    /*
+     * Khung bản vẽ con: bấm (hay nháy đúp) là xuống bản vẽ con — trong ân hạn mã sơ đồ thì không hỏi
+     * lại. Bản vẽ con đã lưu trữ / không còn: chỉ báo, không mở trang lỗi. Khung VLAN: thẻ dải IP.
+     */
+    const openFrame = (frame: DiagramFrame) => {
+      if (frame.childDiagramId) {
+        if (frame.child && !frame.child.archived) navigate(PATHS.diagram(frame.child.id));
+        else if (frame.child) toast({ tone: 'warn', message: t('diagrams.frames.childArchivedToast', { name: frame.child.name }) });
+        else toast({ tone: 'warn', message: t('diagrams.frames.childMissingToast') });
+        return;
+      }
+      if (frame.subnetId) setSubnetFrame({ ...frame, subnetId: frame.subnetId });
+    };
     const focus = focusDeviceId ? focusCells(content.data, focusDeviceId) : null;
     const focusCode = focusDeviceId ? ((content.data.deviceCells ?? []).find((c) => c.deviceId === focusDeviceId)?.code ?? '') : '';
     body = (
@@ -315,6 +336,11 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
             review.pinMode
               ? review.viewer.onPickCell
               : (cellId) => {
+                  const frame = view.byFrame.get(cellId);
+                  if (frame) {
+                    openFrame(frame);
+                    return;
+                  }
                   setCardCellId(cellId);
                   const deviceId = view.byCell.get(cellId)?.device?.id ?? (content.data.deviceCells ?? []).find((c) => c.cellId === cellId)?.deviceId;
                   if (deviceId) setFocusDeviceId(deviceId);
@@ -339,6 +365,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
             ) : null}
           </DiagramDeviceCard>
         ) : null}
+        {subnetFrame ? <DiagramSubnetCard frame={subnetFrame} onClose={() => setSubnetFrame(null)} /> : null}
         {edgeCard ? (
           <DiagramCableCard edge={edgeCard.edge} link={edgeCard.link} cableTypes={content.data.cableTypes ?? []} onClose={() => setCardCellId(null)} />
         ) : null}
@@ -383,11 +410,12 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     }
   }
 
-  return <ScreenFrame title={title} tabs={tabs} actions={actions} status={status} body={body} dialogs={dialogs} />;
+  return <ScreenFrame diagramId={id} title={title} tabs={tabs} actions={actions} status={status} body={body} dialogs={dialogs} />;
 }
 
 /** Thanh mảnh + vùng trình vẽ/trình xem. Không cột panel (Q-23). */
 function ScreenFrame({
+  diagramId,
   title,
   tabs,
   actions,
@@ -395,6 +423,7 @@ function ScreenFrame({
   body,
   dialogs,
 }: {
+  diagramId: string;
   title: string;
   tabs: ReactNode;
   actions?: ReactNode;
@@ -402,13 +431,10 @@ function ScreenFrame({
   body: ReactNode;
   dialogs?: ReactNode;
 }) {
-  const { t } = useTranslation();
   return (
     <>
       <div className="full-bar">
-        <Link to={PATHS.diagrams} className="linkbtn sm">
-          {t('diagrams.screen.backToTree')}
-        </Link>
+        <DiagramBreadcrumb diagramId={diagramId} />
         <h1 className="full-bar-title">{title}</h1>
         {tabs}
         {actions ? <div className="full-bar-actions">{actions}</div> : null}
@@ -500,6 +526,27 @@ function DiagramEditor({
     setDirtyState(value);
     onDirtyChange(value);
   };
+
+  const frames = useFrameBridge({
+    diagramId,
+    ready,
+    xml: frameXml,
+    withFile,
+    send: (command) => frame.current?.send(command),
+    page: () => frameState.current.page,
+    bounds: {
+      get: () => frameState.current.bounds,
+      grow: (rect) => {
+        frameState.current.bounds = growBounds(frameState.current.bounds, rect);
+      },
+    },
+    markDirty: () => setDirty(true),
+    newId: newCellId,
+    onInserted: (deviceIds) => {
+      setJustInserted((current) => [...current, ...deviceIds]);
+      withFile((file) => cables.refreshUndrawn(file));
+    },
+  });
 
   const cables = useCableBridge({
     me,
@@ -691,6 +738,7 @@ function DiagramEditor({
 
   return (
     <ScreenFrame
+      diagramId={diagramId}
       title={title}
       tabs={tabs}
       dialogs={dialogs}
@@ -699,6 +747,7 @@ function DiagramEditor({
           <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
             <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
           </Popover>
+          {frames.actions}
           {cables.actions}
           <button type="button" className="btn" disabled={!ready} onClick={() => setDraftOpen(true)}>
             {t('diagrams.cable.draftButton')}
@@ -723,6 +772,7 @@ function DiagramEditor({
             onEvent={onEvent}
           />
           {cables.dialogs}
+          {frames.dialogs}
           {draftOpen ? (
             <DraftFromPortMapDialog
               diagramId={diagramId}
@@ -765,11 +815,12 @@ function DiagramEditor({
  */
 function viewerCells(
   content: DiagramContent,
-  t: (key: string) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): {
   cells: ViewerCell[];
   byCell: Map<string, { device: DiagramDeviceInfo | null; code: string }>;
   byEdge: Map<string, { edge: CableEdge; link: DiagramLink | null }>;
+  byFrame: Map<string, DiagramFrame>;
 } {
   const devices = new Map((content.devices ?? []).map((d) => [d.id, d]));
   const cells: ViewerCell[] = [];
@@ -800,7 +851,23 @@ function viewerCells(
       cells.push({ id: edge.cellId, label: t('diagrams.cable.cardRemoved'), paint: 'danger', mark: 'danger' });
     }
   }
-  return { cells, byCell, byEdge };
+  /*
+   * Khung bản vẽ con / khung VLAN bấm được (FR-039). Bản vẽ con đã lưu trữ hay không còn: dấu vàng,
+   * bấm chỉ báo — không vỡ trang. Khung tủ không có bản vẽ con thì là hình thường.
+   */
+  const byFrame = new Map<string, DiagramFrame>();
+  for (const frame of content.frames ?? []) {
+    if (!frame.childDiagramId && !frame.subnetId) continue;
+    byFrame.set(frame.cellId, frame);
+    if (frame.childDiagramId) {
+      if (!frame.child) cells.push({ id: frame.cellId, label: t('diagrams.frames.childMissing'), mark: 'warn' });
+      else if (frame.child.archived) cells.push({ id: frame.cellId, label: t('diagrams.frames.childArchived', { name: frame.child.name }), mark: 'warn' });
+      else cells.push({ id: frame.cellId, label: t('diagrams.frames.openChild', { name: frame.child.name }) });
+    } else {
+      cells.push({ id: frame.cellId, label: t('diagrams.frames.vlanCell', { name: frame.label }) });
+    }
+  }
+  return { cells, byCell, byEdge, byFrame };
 }
 
 /** Ô sáng khi bấm một máy: ô của máy, mọi nét dây chạm nó, ô của máy đầu kia (AD-18). */
