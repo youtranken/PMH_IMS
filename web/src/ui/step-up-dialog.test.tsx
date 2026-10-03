@@ -41,7 +41,7 @@ afterEach(() => {
 
 describe('StepUpDialog — câu trên ô mã', () => {
   it('không truyền `purpose` → câu TRUNG TÍNH, không nói "xem thông tin bí mật" (Q-20)', () => {
-    renderWithI18n(<StepUpDialog csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />);
+    renderWithI18n(<StepUpDialog csrfToken="t" scope="vault" onClose={vi.fn()} onDone={vi.fn()} />);
     expect(screen.getByText('Nhập mã 6 số trên điện thoại để xác nhận thao tác này.')).toBeInTheDocument();
     expect(screen.queryByText(/xem thông tin bí mật/)).toBeNull();
   });
@@ -50,7 +50,7 @@ describe('StepUpDialog — câu trên ô mã', () => {
 describe('StepUpDialog — cảnh báo sắp hết lượt', () => {
   it('server trả `attemptsLeft` nhỏ → ghép thêm câu "còn mấy lần nữa"', async () => {
     mockStepUp(401, { code: 'STEP_UP_INVALID', message: 'Mã không đúng.', attemptsLeft: 1 });
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={vi.fn()} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={vi.fn()} />);
 
     await typeCodeAndSubmit();
 
@@ -61,7 +61,7 @@ describe('StepUpDialog — cảnh báo sắp hết lượt', () => {
     // Cảnh báo phải HIẾM mới có nghĩa. Bắn nó ở lần sai đầu tiên thì tới lần thứ ba người ta
     // đã thôi đọc — đúng lúc nó bắt đầu đúng.
     mockStepUp(401, { code: 'STEP_UP_INVALID', message: 'Mã không đúng.', attemptsLeft: 9 });
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={vi.fn()} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={vi.fn()} />);
 
     await typeCodeAndSubmit();
 
@@ -71,10 +71,55 @@ describe('StepUpDialog — cảnh báo sắp hết lượt', () => {
 
   it('server KHÔNG trả `attemptsLeft` → vẫn hiện câu lỗi, không bịa thêm gì', async () => {
     mockStepUp(401, { code: 'STEP_UP_INVALID', message: 'Mã không đúng.' });
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={vi.fn()} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={vi.fn()} />);
 
     await typeCodeAndSubmit();
 
     expect(await screen.findByText('Mã không đúng.')).toBeInTheDocument();
+  });
+});
+
+/**
+ * AD-17: hộp nhập mã nói rõ đang mở PHẠM VI nào và gửi đúng phạm vi đó. Gửi thiếu `scope` thì
+ * server trả 400; gửi nhầm `vault` khi đang mở sơ đồ thì mã sơ đồ thành mã mở két.
+ */
+describe('StepUpDialog — phạm vi két / sơ đồ', () => {
+  function captureFetch() {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(200, { status: 'stepped-up', graceMinutes: 10 })));
+    vi.stubGlobal('fetch', fetchMock);
+    return () => {
+      const call = (fetchMock.mock.calls as unknown as [string, RequestInit][]).find(([url]) =>
+        String(url).includes('/api/v1/auth/step-up'),
+      );
+      return call ? (JSON.parse(String(call[1].body)) as Record<string, unknown>) : null;
+    };
+  }
+
+  it.each(['vault', 'diagram'] as const)('gửi `scope: %s` kèm mã', async (scope) => {
+    const sent = captureFetch();
+    const onDone = vi.fn();
+    renderWithI18n(<StepUpDialog csrfToken="c" scope={scope} onClose={vi.fn()} onDone={onDone} />);
+    await typeCodeAndSubmit();
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sent()).toEqual({ token: '123456', scope });
+  });
+
+  it('phạm vi sơ đồ không truyền `purpose` → câu nói "xem sơ đồ", không nói két', () => {
+    renderWithI18n(<StepUpDialog csrfToken="t" scope="diagram" onClose={vi.fn()} onDone={vi.fn()} />);
+    expect(screen.getByText('Nhập mã 6 số trên điện thoại để xem sơ đồ.')).toBeInTheDocument();
+    expect(screen.getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeInTheDocument();
+  });
+
+  it('phạm vi két nói rõ mã không mở sơ đồ', () => {
+    renderWithI18n(<StepUpDialog csrfToken="t" scope="vault" onClose={vi.fn()} onDone={vi.fn()} />);
+    expect(screen.getByText('Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.')).toBeInTheDocument();
+  });
+
+  it('ân hạn sơ đồ nói "mở bản vẽ khác", không nói "mở ngăn khác"', () => {
+    renderWithI18n(
+      <StepUpDialog csrfToken="t" scope="diagram" graceMinutes={7} onClose={vi.fn()} onDone={vi.fn()} />,
+    );
+    expect(screen.getByText('Xác nhận xong thì 7 phút tới mở bản vẽ khác không phải gõ lại.')).toBeInTheDocument();
+    expect(screen.queryByText(/mở ngăn khác/)).toBeNull();
   });
 });

@@ -71,6 +71,7 @@ const TEXT: Record<string, [string, string]> = {
   authSupportContact: ['settings.authSupportContactLabel', 'settings.authSupportContactDesc'],
   secretRevealSeconds: ['settings.secretRevealSecondsLabel', 'settings.secretRevealSecondsDesc'],
   secretStepUpGraceMinutes: ['settings.secretStepUpGraceMinutesLabel', 'settings.secretStepUpGraceMinutesDesc'],
+  diagramStepUpGraceMinutes: ['settings.diagramStepUpGraceMinutesLabel', 'settings.diagramStepUpGraceMinutesDesc'],
   secretStepUpMaxFailures: ['settings.secretStepUpMaxFailuresLabel', 'settings.secretStepUpMaxFailuresDesc'],
   secretProbeAlertThreshold: [
     'settings.secretProbeAlertThresholdLabel',
