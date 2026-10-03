@@ -1,6 +1,7 @@
 import { buildCellIndex } from './diagram-cells';
 import {
   PRESENTATION_BAND,
+  canManageNode,
   isPlannedCell,
   newerOfficialSeq,
   plannedNotAllowedReason,
@@ -103,5 +104,21 @@ describe('presentationName — tên mặc định không đụng tên đã có',
     const name = presentationName('X'.repeat(120), 12);
     expect(name.length).toBeLessThanOrEqual(120);
     expect(name.endsWith('— trình bày (12)')).toBe(true);
+  });
+});
+
+describe('canManageNode — ai đổi tên / lưu trữ được một bản vẽ', () => {
+  const pres = { kind: 'presentation' as const, ownerEmail: 'b@x.vn', createdBy: 'a@x.vn' };
+  const official = { kind: 'official' as const, ownerEmail: 'a@x.vn', createdBy: 'a@x.vn' };
+  it.each([
+    ['Admin, bản chính thức', official, { email: 'z@x.vn', role: 'admin' as const }, true],
+    ['SA, bản trình bày của người khác', pres, { email: 'z@x.vn', role: 'sa' as const }, true],
+    ['Thành viên tạo bản trình bày', pres, { email: 'A@X.vn', role: 'member' as const }, true],
+    ['Thành viên phụ trách bản trình bày', pres, { email: 'b@x.vn', role: 'member' as const }, true],
+    ['Thành viên khác', pres, { email: 'c@x.vn', role: 'member' as const }, false],
+    ['Thành viên với bản chính thức do mình tạo', official, { email: 'a@x.vn', role: 'member' as const }, false],
+    ['Thành viên, bản trình bày không người phụ trách', { ...pres, ownerEmail: null }, { email: 'c@x.vn', role: 'member' as const }, false],
+  ])('%s', (_label, node, actor, expected) => {
+    expect(canManageNode(node, actor)).toBe(expected);
   });
 });

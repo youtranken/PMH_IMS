@@ -211,18 +211,20 @@ export class DiagramsController {
     return reviewed;
   }
 
-  @Roles('sa', 'admin')
+  /** Thành viên vào được để đổi tên bản trình bày của mình; service chặn mọi việc khác (403). */
+  @Roles('sa', 'admin', 'member')
   @Patch(':id')
   @Audited('diagram.updated', 'diagram', { writtenByService: true })
   update(@Param() params: IdParamDto, @Body() dto: UpdateNodeDto, @Req() req: AuthedRequest) {
-    return this.diagrams.update(req.user!.email, params.id, dto);
+    return this.diagrams.update({ email: req.user!.email, role: req.user!.role }, params.id, dto);
   }
 
-  @Roles('sa', 'admin')
+  /** Thành viên chỉ lưu trữ được bản trình bày của mình — service kiểm (403). */
+  @Roles('sa', 'admin', 'member')
   @Post(':id/archive')
   @Audited('diagram.archived', 'diagram', { writtenByService: true })
   async archive(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
-    await this.diagrams.archive(req.user!.email, params.id);
+    await this.diagrams.archive({ email: req.user!.email, role: req.user!.role }, params.id);
     return { ok: true };
   }
 

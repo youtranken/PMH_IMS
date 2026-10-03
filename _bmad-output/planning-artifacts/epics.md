@@ -1064,6 +1064,7 @@ So that trình nội bộ thoải mái mà không đụng tới bản chính th�
 **Given** XML có `ims_planned` gửi vào bản `official` qua API
 **When** lưu
 **Then** 400 `DIAGRAM_PLANNED_NOT_ALLOWED` — chỉ hợp lệ trong `kind = 'presentation'`, không ghi phiên bản
+**And** đổi tên / lưu trữ bản trình bày: Admin/SA mọi bản; Thành viên chỉ bản mình tạo hoặc phụ trách, chỉ đổi tên (`canManageNode`, 403 `DIAGRAM_MANAGE_FORBIDDEN`; Q-23)
 **And** test: `diagram-presentation.spec.ts` (jest, hàm thuần), `diagram-selfcheck.spec.ts`, `api/test/diagram-presentation.spec.ts` (DB, kể cả lượt dọn E2E theo `source_diagram_id`), vitest `diagram-presentation.test.ts` + `diagram-presentation-screens.test.tsx`, E2E `diagrams-presentation.spec.ts`
 
 ### Story 10.9: Cảnh báo lệch kho và kiểm tra khớp

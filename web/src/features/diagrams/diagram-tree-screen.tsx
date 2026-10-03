@@ -14,7 +14,7 @@ import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
 import { NODE_TYPE_KEY, TREE_KEY, statusLabel, type DiagramNode, type DiagramStatus } from './diagram-api';
 import { DiagramNodeDialog } from './diagram-node-dialog';
-import { newerOfficialSeq } from './diagram-presentation';
+import { canManageNode, newerOfficialSeq } from './diagram-presentation';
 import { flattenTree } from './diagram-tree';
 
 const STATUS_TONE: Record<DiagramStatus, string> = {
@@ -29,7 +29,8 @@ type Editing = { parent: DiagramNode | null } | { node: DiagramNode } | null;
 
 /**
  * Cây bản vẽ (Q-23): CHỈ tên + loại + trạng thái, không ảnh thu nhỏ, không cần mã 2 lớp — mở
- * nội dung mới hỏi mã. Mọi vai tạo được bản vẽ con; đổi tên, chuyển nhánh, lưu trữ chỉ Admin/SA.
+ * nội dung mới hỏi mã. Mọi vai tạo được bản vẽ con; đổi tên, chuyển nhánh, lưu trữ chỉ Admin/SA —
+ * riêng bản trình bày thì người tạo / phụ trách cũng đổi tên, lưu trữ được.
  */
 export function DiagramTreeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -132,6 +133,12 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
           <ul className="tree-list" aria-label={t('diagrams.presentation.section')}>
             {presentations.map((node) => {
               const newer = newerOfficialSeq(node.source);
+              const actions: RowAction[] = canManageNode(node, me)
+                ? [
+                    { key: 'rename', label: t('diagrams.presentation.rename'), onSelect: () => setEditing({ node }) },
+                    { key: 'archive', label: t('diagrams.archive'), warn: true, onSelect: () => void archive(node) },
+                  ]
+                : [];
               return (
                 <li key={node.id} className="tree-row">
                   <Link className="tree-name" to={PATHS.diagram(node.id)}>
@@ -144,12 +151,9 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
                       : t('diagrams.presentation.fromSourceGone')}
                   </span>
                   {newer ? <span className="badge warn">{t('diagrams.presentation.newer', { seq: newer })}</span> : null}
-                  {manager ? (
+                  {actions.length > 0 ? (
                     <span className="tree-actions">
-                      <RowActions
-                        label={t('diagrams.actionsOf', { name: node.name })}
-                        items={[{ key: 'archive', label: t('diagrams.archive'), warn: true, onSelect: () => void archive(node) }]}
-                      />
+                      <RowActions label={t('diagrams.actionsOf', { name: node.name })} items={actions} />
                     </span>
                   ) : null}
                 </li>

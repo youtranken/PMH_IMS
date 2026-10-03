@@ -73,3 +73,18 @@ export function presentationName(sourceName: string, attempt: number): string {
   const suffix = attempt > 1 ? ` — trình bày (${attempt})` : ' — trình bày';
   return `${sourceName.trim().slice(0, NAME_MAX - suffix.length)}${suffix}`;
 }
+
+/**
+ * Ai đổi tên / lưu trữ được bản vẽ: Admin/SA mọi bản; Thành viên chỉ bản trình bày mình tạo hoặc
+ * đang phụ trách. Bản trình bày là bản nháp riêng để xin mua sắm, không qua duyệt (Q-23), nên
+ * chủ của nó tự dọn được; bản chính thức là hồ sơ chung, giữ cho Admin/SA.
+ */
+export function canManageNode(
+  node: { kind: 'official' | 'presentation'; ownerEmail: string | null; createdBy: string },
+  actor: { email: string; role: 'sa' | 'admin' | 'member' },
+): boolean {
+  if (actor.role === 'sa' || actor.role === 'admin') return true;
+  if (node.kind !== 'presentation') return false;
+  const me = actor.email.toLowerCase();
+  return node.createdBy.toLowerCase() === me || (node.ownerEmail ?? '').toLowerCase() === me;
+}

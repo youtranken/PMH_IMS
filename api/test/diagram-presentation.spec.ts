@@ -187,7 +187,7 @@ describe('Sơ đồ mạng · bản trình bày (Q-23, FR-045)', () => {
     const pres = await diagrams.createPresentation(SA.email, src.diagramId, {});
     await expect(diagrams.createPresentation(SA.email, pres.id, {})).rejects.toMatchObject({ status: 409, response: { code: 'DIAGRAM_NOT_OFFICIAL' } });
 
-    await diagrams.archive(SA.email, src.diagramId);
+    await diagrams.archive(SA, src.diagramId);
     await expect(diagrams.createPresentation(SA.email, src.diagramId, {})).rejects.toMatchObject({ status: 409 });
     expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE kind = 'presentation'`)).toBe(before + 1);
   });
@@ -271,19 +271,54 @@ describe('Sơ đồ mạng · bản trình bày (Q-23, FR-045)', () => {
       status: 400,
       response: { code: 'DIAGRAM_PARENT_INVALID' },
     });
-    await expect(diagrams.update(SA.email, pres.id, { parentId: src.diagramId })).rejects.toMatchObject({
+    await expect(diagrams.update(SA, pres.id, { parentId: src.diagramId })).rejects.toMatchObject({
       status: 400,
       response: { code: 'DIAGRAM_PRESENTATION_NO_PARENT' },
     });
-    await expect(diagrams.update(SA.email, src.diagramId, { parentId: pres.id })).rejects.toMatchObject({
+    await expect(diagrams.update(SA, src.diagramId, { parentId: pres.id })).rejects.toMatchObject({
       status: 400,
       response: { code: 'DIAGRAM_PARENT_INVALID' },
     });
     // Đổi tên thì được.
-    await expect(diagrams.update(SA.email, pres.id, { name: `E2E Đổi tên trình bày ${seq}` })).resolves.toMatchObject({ kind: 'presentation' });
+    await expect(diagrams.update(SA, pres.id, { name: `E2E Đổi tên trình bày ${seq}` })).resolves.toMatchObject({ kind: 'presentation' });
 
     const listed = await diagrams.diagramsWithDevice(dev);
     expect(listed.map((d) => d.id)).toEqual([src.diagramId]);
+  });
+
+  it('Thành viên đổi tên + lưu trữ bản trình bày CỦA MÌNH; bản của người khác / bản chính thức → 403; Admin/SA được mọi bản', async () => {
+    const OTHER = { email: 'e2e-pres-other@qa.test', role: 'member' as const };
+    await scratch.pool.query(`INSERT INTO users (email, full_name, role, password_hash) VALUES ($1, 'E2E Thành viên khác', 'member', 'x') ON CONFLICT DO NOTHING`, [
+      OTHER.email,
+    ]);
+    const src = await official('Quyền', '');
+    const mine = await diagrams.createPresentation(MEMBER.email, src.diagramId, {});
+
+    const renamed = await diagrams.update(MEMBER, mine.id, { name: `E2E Của tôi ${seq}` });
+    expect(renamed.name).toBe(`E2E Của tôi ${seq}`);
+    expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.updated' AND object_id = $1 AND actor = $2`, [mine.id, MEMBER.email])).toBe(1);
+
+    // Người khác: không đổi tên, không lưu trữ, không ghi gì.
+    await expect(diagrams.update(OTHER, mine.id, { name: 'E2E Chiếm' })).rejects.toMatchObject({ status: 403, response: { code: 'DIAGRAM_MANAGE_FORBIDDEN' } });
+    await expect(diagrams.archive(OTHER, mine.id)).rejects.toMatchObject({ status: 403, response: { code: 'DIAGRAM_MANAGE_FORBIDDEN' } });
+    // Chủ bản trình bày cũng chỉ đổi TÊN: loại nút, người phụ trách vẫn của Admin.
+    await expect(diagrams.update(MEMBER, mine.id, { ownerEmail: OTHER.email })).rejects.toMatchObject({ status: 403 });
+    await expect(diagrams.update(MEMBER, mine.id, { nodeType: 'room' })).rejects.toMatchObject({ status: 403 });
+    // Bản chính thức giữ luật cũ: Thành viên không đổi tên, không lưu trữ.
+    await expect(diagrams.update(MEMBER, src.diagramId, { name: 'E2E Đổi gốc' })).rejects.toMatchObject({ status: 403 });
+    await expect(diagrams.archive(MEMBER, src.diagramId)).rejects.toMatchObject({ status: 403 });
+    expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = $1 AND archived_at IS NULL`, [src.diagramId])).toBe(1);
+
+    // Người phụ trách (owner_email) cũng quản được, kể cả khi không phải người tạo.
+    await scratch.pool.query(`UPDATE diagram SET owner_email = $1 WHERE id = $2`, [OTHER.email, mine.id]);
+    await expect(diagrams.update(OTHER, mine.id, { name: `E2E Phụ trách ${seq}` })).resolves.toMatchObject({ name: `E2E Phụ trách ${seq}` });
+
+    await diagrams.archive(MEMBER, mine.id);
+    expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.archived' AND object_id = $1 AND actor = $2`, [mine.id, MEMBER.email])).toBe(1);
+
+    const theirs = await diagrams.createPresentation(OTHER.email, src.diagramId, {});
+    await expect(diagrams.update(ADMIN, theirs.id, { name: `E2E Admin đổi ${seq}` })).resolves.toMatchObject({ name: `E2E Admin đổi ${seq}` });
+    await diagrams.archive(ADMIN, theirs.id);
   });
 
   it('DB chặn bản chính thức mang nguồn, và bản trình bày có cha', async () => {
@@ -305,7 +340,7 @@ describe('Sơ đồ mạng · bản trình bày (Q-23, FR-045)', () => {
   it('lượt dọn E2E dọn cả bản trình bày của bản vẽ E2E, kể cả bản đã đổi tên', async () => {
     const src = await official('Dọn', '');
     const pres = await diagrams.createPresentation(MEMBER.email, src.diagramId, {});
-    await diagrams.update(SA.email, pres.id, { name: 'Bản trình bày đã đổi tên' });
+    await diagrams.update(SA, pres.id, { name: 'Bản trình bày đã đổi tên' });
     const real = await diagrams.create(SA.email, { name: 'Bản vẽ thật', nodeType: 'company' });
 
     const script = readFileSync(join(__dirname, '..', 'scripts', 'reset-e2e.mjs'), 'utf8');

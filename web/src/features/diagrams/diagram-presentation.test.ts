@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canManageNode,
   fitImageSize,
   imageCellSpec,
   imageDataUrlReason,
@@ -88,5 +89,19 @@ describe('placeFreeCells — chèn bên phải khối hình đang có, chuỗi p
     expect(placed.cells[1].geometry).not.toContain('x="140"');
     expect(placed.cells[0].xmlValue).toContain('ims_planned="1"');
     expect(placed.cells[0].xmlValue).toContain('label="AP&#xa;Dự kiến"');
+  });
+});
+
+describe('canManageNode — nút Đổi tên / Lưu trữ', () => {
+  const pres = { kind: 'presentation' as const, ownerEmail: 'b@x.vn', createdBy: 'a@x.vn' };
+  it.each([
+    ['Admin, bản chính thức', { kind: 'official' as const, ownerEmail: null }, { email: 'z@x.vn', role: 'admin' }, true],
+    ['Thành viên tạo', pres, { email: 'A@x.vn', role: 'member' }, true],
+    ['Thành viên phụ trách', pres, { email: 'b@x.vn', role: 'member' }, true],
+    ['Thành viên khác', pres, { email: 'c@x.vn', role: 'member' }, false],
+    ['Thành viên, bản chính thức mình tạo', { kind: 'official' as const, ownerEmail: 'a@x.vn', createdBy: 'a@x.vn' }, { email: 'a@x.vn', role: 'member' }, false],
+    ['Thành viên, server chưa gửi createdBy', { kind: 'presentation' as const, ownerEmail: null }, { email: 'a@x.vn', role: 'member' }, false],
+  ])('%s', (_label, node, me, expected) => {
+    expect(canManageNode(node, me)).toBe(expected);
   });
 });

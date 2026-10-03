@@ -18,6 +18,8 @@ export interface DiagramNode {
   siteId: string | null;
   cabinetId: string | null;
   ownerEmail: string | null;
+  /** Người tạo — Thành viên quản được bản trình bày mình tạo. Thiếu → coi như không phải của ai. */
+  createdBy?: string;
   kind: 'official' | 'presentation';
   archivedAt: string | null;
   status: DiagramStatus;

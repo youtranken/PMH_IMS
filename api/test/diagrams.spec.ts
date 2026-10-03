@@ -133,8 +133,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     it('đổi tên + chuyển nhánh ghi lịch sử; chuyển vào chính nhánh con của nó → 400', async () => {
       const a = await service.create(SA.email, { name: 'E2E A', nodeType: 'company' });
       const b = await service.create(SA.email, { name: 'E2E B', nodeType: 'floor', parentId: a.id });
-      await expect(service.update(SA.email, a.id, { parentId: b.id })).rejects.toMatchObject({ status: 400 });
-      const renamed = await service.update(SA.email, b.id, { name: 'E2E B mới', parentId: null });
+      await expect(service.update(SA, a.id, { parentId: b.id })).rejects.toMatchObject({ status: 400 });
+      const renamed = await service.update(SA, b.id, { name: 'E2E B mới', parentId: null });
       expect(renamed).toMatchObject({ name: 'E2E B mới', parentId: null });
       const { rows } = await scratch.pool.query<{ changes: Record<string, { before: unknown; after: unknown }> }>(
         `SELECT changes FROM diagram_history WHERE diagram_id = $1 AND action = 'updated'`,
@@ -147,8 +147,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     it('lưu trữ: còn nút con sống → 409; nút lá thì rời cây, không xoá hàng', async () => {
       const a = await service.create(SA.email, { name: 'E2E Lưu trữ', nodeType: 'company' });
       const b = await service.create(SA.email, { name: 'E2E Lá', nodeType: 'room', parentId: a.id });
-      await expect(service.archive(SA.email, a.id)).rejects.toMatchObject({ status: 409 });
-      await service.archive(SA.email, b.id);
+      await expect(service.archive(SA, a.id)).rejects.toMatchObject({ status: 409 });
+      await service.archive(SA, b.id);
       expect((await service.tree()).some((n) => n.id === b.id)).toBe(false);
       expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = $1 AND archived_at IS NOT NULL`, [b.id])).toBe(1);
       await expect(service.save(SA.email, b.id, { xml: page(''), svg: SVG, basedOnVersionId: null })).rejects.toMatchObject({ status: 409 });
@@ -392,7 +392,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       await service.save(SA.email, gone.id, { xml: page(shape('s1', 'x')), svg: SVG, basedOnVersionId: null });
       const archivedOne = await service.create(SA.email, { name: 'E2E Lưu trữ có máy', nodeType: 'other' });
       await service.save(SA.email, archivedOne.id, { xml: page(deviceCell('d1', deviceId, 'SW-E2E-SD')), svg: SVG, basedOnVersionId: null });
-      await service.archive(SA.email, archivedOne.id);
+      await service.archive(SA, archivedOne.id);
       const names = (await service.diagramsWithDevice(deviceId)).map((d) => d.name);
       expect(names).toContain('E2E Thiết bị kho');
       expect(names).not.toContain('E2E Đã bỏ máy');

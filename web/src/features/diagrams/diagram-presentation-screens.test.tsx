@@ -91,6 +91,41 @@ describe('Cây bản vẽ — mục "Bản trình bày" riêng (Q-23)', () => {
   });
 });
 
+describe('Cây bản vẽ — Thành viên quản bản trình bày của mình', () => {
+  const MINE = { ...PRES, id: 'p-mine', name: 'E2E Của tôi', createdBy: 'sa@e2e.local' };
+  const THEIRS = { ...PRES, id: 'p-theirs', name: 'E2E Của người khác', createdBy: 'other@e2e.local', ownerEmail: 'other@e2e.local' };
+
+  it('bản mình tạo: Đổi tên + Lưu trữ; bản người khác: không có thao tác', async () => {
+    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE, THEIRS]) });
+    renderAt('/diagrams', MEMBER);
+    await screen.findByRole('list', { name: 'Bản trình bày' });
+    expect(screen.queryByRole('button', { name: 'Thao tác với E2E Của người khác' })).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với E2E Của tôi' }));
+    expect((await screen.findAllByRole('menuitem')).map((el) => el.textContent)).toEqual(['Đổi tên', 'Lưu trữ']);
+  });
+
+  it('Đổi tên: hộp chỉ có ô tên, PATCH chỉ gửi tên', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/p-mine': () => jsonResponse(200, { ...MINE, name: 'E2E Tên mới' }),
+      '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE]),
+    });
+    renderAt('/diagrams', MEMBER);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Thao tác với E2E Của tôi' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Đổi tên' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Đổi tên "E2E Của tôi"' });
+    expect(screen.queryByRole('combobox', { name: 'Loại nút' })).toBeNull();
+    const name = screen.getByRole('textbox', { name: /Tên bản vẽ/ });
+    await user.clear(name);
+    await user.type(name, 'E2E Tên mới');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await screen.findByText('Đã lưu "E2E Tên mới".');
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH');
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ name: 'E2E Tên mới' });
+    expect(dialog).not.toBeInTheDocument();
+  });
+});
+
 describe('Màn xem bản trình bày', () => {
   function openView(diagram: DiagramNode) {
     return routeFetch({

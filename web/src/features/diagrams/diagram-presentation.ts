@@ -23,6 +23,20 @@ export function newerOfficialSeq(source: PresentationSource | null | undefined):
   return source.officialSeq > source.seq ? source.officialSeq : null;
 }
 
+/**
+ * Cùng luật với `canManageNode` của server: Admin/SA đổi tên / lưu trữ mọi bản; Thành viên chỉ
+ * bản trình bày mình tạo hoặc phụ trách. Server vẫn là chốt chặn (403) — web chỉ ẩn nút.
+ */
+export function canManageNode(
+  node: { kind: 'official' | 'presentation'; ownerEmail: string | null; createdBy?: string },
+  me: { email: string; role: string },
+): boolean {
+  if (me.role === 'sa' || me.role === 'admin') return true;
+  if (node.kind !== 'presentation') return false;
+  const email = me.email.toLowerCase();
+  return (node.createdBy ?? '').toLowerCase() === email || (node.ownerEmail ?? '').toLowerCase() === email;
+}
+
 /** Một ô tự do để chèn: thuộc tính dữ liệu + style + cỡ. */
 export interface FreeCellSpec {
   label: string;

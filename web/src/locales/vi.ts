@@ -967,6 +967,8 @@ export default {
       createConfirm: 'Tạo',
       stepUp: 'Nhập mã 6 số để nhân bản "{{name}}" thành bản trình bày.',
       created: 'Đã tạo bản trình bày "{{name}}".',
+      rename: 'Đổi tên',
+      renameOf: 'Đổi tên "{{name}}"',
       planned: 'Thiết bị dự kiến',
       plannedTitle: 'Thêm thiết bị dự kiến',
       plannedIntro: 'Thiết bị chưa có trong kho: hiện viền đứt, nhãn "Dự kiến"; không bao giờ vào kho hay bản chính thức.',

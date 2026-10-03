@@ -16,7 +16,8 @@ const NONE = '__none__';
 
 /**
  * Tạo bản vẽ (con của `parent`, hoặc gốc cây) hoặc sửa một nút (`node`). Chuyển nhánh chỉ có ở
- * chế độ sửa — vai được sửa do nơi mở hộp quyết, API vẫn chặn theo `@Roles`.
+ * chế độ sửa — vai được sửa do nơi mở hộp quyết, API vẫn chặn (`@Roles` + quyền theo bản vẽ).
+ * Bản trình bày chỉ đổi tên: nó đứng ngoài cây, và Thành viên chủ của nó chỉ được đổi tên.
  */
 export function DiagramNodeDialog({
   me,
@@ -36,6 +37,7 @@ export function DiagramNodeDialog({
   const queryClient = useQueryClient();
   const lists = useCatalogLists();
   const editing = Boolean(node);
+  const renameOnly = node?.kind === 'presentation';
   const [form, setForm] = useState({
     name: node?.name ?? '',
     nodeType: (node?.nodeType ?? (parent ? 'floor' : 'company')) as DiagramNodeType,
@@ -51,7 +53,9 @@ export function DiagramNodeDialog({
     refreshMe: false,
     body: (input) =>
       editing
-        ? input
+        ? renameOnly
+          ? { name: input.name }
+          : input
         : Object.fromEntries(Object.entries(input).filter(([, value]) => value !== null && value !== '')),
   });
 
@@ -93,7 +97,7 @@ export function DiagramNodeDialog({
       initialFocus="first-field"
       title={
         node
-          ? t('diagrams.editOf', { name: node.name })
+          ? t(renameOnly ? 'diagrams.presentation.renameOf' : 'diagrams.editOf', { name: node.name })
           : parent
             ? t('diagrams.addChildOf', { name: parent.name })
             : t('diagrams.add')
@@ -129,46 +133,50 @@ export function DiagramNodeDialog({
             }}
           />
         </Field>
-        <Field label={t('diagrams.form.nodeType')}>
-          <Select
-            value={form.nodeType}
-            ariaLabel={t('diagrams.form.nodeType')}
-            options={NODE_TYPES.map((type) => ({ value: type, label: t(NODE_TYPE_KEY[type]) }))}
-            onChange={(value) => setForm({ ...form, nodeType: value as DiagramNodeType })}
-          />
-        </Field>
-        {editing ? (
-          <Field label={t('diagrams.form.parent')}>
-            <Select
-              value={form.parentId ?? ROOT}
-              ariaLabel={t('diagrams.form.parent')}
-              searchable
-              options={parentOptions}
-              onChange={(value) => setForm({ ...form, parentId: value === ROOT ? null : value })}
-            />
-          </Field>
-        ) : null}
-        <Field label={t('diagrams.form.site')}>
-          <Select
-            value={form.siteId ?? NONE}
-            ariaLabel={t('diagrams.form.site')}
-            failed={lists.isError}
-            options={[
-              { value: NONE, label: t('diagrams.form.none') },
-              ...activeOptions(lists.data?.sites, node?.siteId, (site) => `${site.code} — ${site.name}`),
-            ]}
-            onChange={(value) => setForm({ ...form, siteId: value === NONE ? null : value, cabinetId: null })}
-          />
-        </Field>
-        <Field label={t('diagrams.form.cabinet')}>
-          <Select
-            value={form.cabinetId ?? NONE}
-            ariaLabel={t('diagrams.form.cabinet')}
-            failed={lists.isError}
-            options={[{ value: NONE, label: t('diagrams.form.none') }, ...activeOptions(cabinets, node?.cabinetId, (cab) => cab.code)]}
-            onChange={(value) => setForm({ ...form, cabinetId: value === NONE ? null : value })}
-          />
-        </Field>
+        {renameOnly ? null : (
+          <>
+            <Field label={t('diagrams.form.nodeType')}>
+              <Select
+                value={form.nodeType}
+                ariaLabel={t('diagrams.form.nodeType')}
+                options={NODE_TYPES.map((type) => ({ value: type, label: t(NODE_TYPE_KEY[type]) }))}
+                onChange={(value) => setForm({ ...form, nodeType: value as DiagramNodeType })}
+              />
+            </Field>
+            {editing ? (
+              <Field label={t('diagrams.form.parent')}>
+                <Select
+                  value={form.parentId ?? ROOT}
+                  ariaLabel={t('diagrams.form.parent')}
+                  searchable
+                  options={parentOptions}
+                  onChange={(value) => setForm({ ...form, parentId: value === ROOT ? null : value })}
+                />
+              </Field>
+            ) : null}
+            <Field label={t('diagrams.form.site')}>
+              <Select
+                value={form.siteId ?? NONE}
+                ariaLabel={t('diagrams.form.site')}
+                failed={lists.isError}
+                options={[
+                  { value: NONE, label: t('diagrams.form.none') },
+                  ...activeOptions(lists.data?.sites, node?.siteId, (site) => `${site.code} — ${site.name}`),
+                ]}
+                onChange={(value) => setForm({ ...form, siteId: value === NONE ? null : value, cabinetId: null })}
+              />
+            </Field>
+            <Field label={t('diagrams.form.cabinet')}>
+              <Select
+                value={form.cabinetId ?? NONE}
+                ariaLabel={t('diagrams.form.cabinet')}
+                failed={lists.isError}
+                options={[{ value: NONE, label: t('diagrams.form.none') }, ...activeOptions(cabinets, node?.cabinetId, (cab) => cab.code)]}
+                onChange={(value) => setForm({ ...form, cabinetId: value === NONE ? null : value })}
+              />
+            </Field>
+          </>
+        )}
       </form>
     </Dialog>
   );

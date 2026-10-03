@@ -39,7 +39,7 @@ import {
   linkLabelFrom,
   type DeviceCellSource,
 } from './diagram-hydrate';
-import { plannedNotAllowedReason, presentationName, type PresentationSource } from './diagram-presentation';
+import { canManageNode, plannedNotAllowedReason, presentationName, type PresentationSource } from './diagram-presentation';
 import {
   diagramHistoryTable,
   diagramPresenceTable,
@@ -68,6 +68,7 @@ export interface DiagramNode {
   siteId: string | null;
   cabinetId: string | null;
   ownerEmail: string | null;
+  createdBy: string;
   kind: 'official' | 'presentation';
   archivedAt: string | null;
   status: DiagramStatus;
@@ -240,6 +241,7 @@ export class DiagramsService {
       site_id: string | null;
       cabinet_id: string | null;
       owner_email: string | null;
+      created_by: string;
       kind: 'official' | 'presentation';
       archived_at: Date | string | null;
       official_version_id: string | null;
@@ -254,7 +256,7 @@ export class DiagramsService {
       s_official_id: string | null;
       s_official_seq: number | null;
     }>(sql`
-      SELECT d.id, d.parent_id, d.name, d.node_type, d.site_id, d.cabinet_id, d.owner_email, d.kind,
+      SELECT d.id, d.parent_id, d.name, d.node_type, d.site_id, d.cabinet_id, d.owner_email, d.created_by, d.kind,
              d.archived_at, d.official_version_id, lv.id AS v_id, lv.seq AS v_seq, lv.created_at AS v_at,
              lv.saved_by AS v_by, d.source_diagram_id, d.source_version_id, sd.name AS s_name,
              sv.seq AS s_seq, sd.official_version_id AS s_official_id, so.seq AS s_official_seq
@@ -281,6 +283,7 @@ export class DiagramsService {
         siteId: row.site_id,
         cabinetId: row.cabinet_id,
         ownerEmail: row.owner_email,
+        createdBy: row.created_by,
         kind: row.kind,
         archivedAt: iso(row.archived_at),
         status: statusOf(latest?.id ?? null, row.official_version_id),
@@ -326,8 +329,12 @@ export class DiagramsService {
     return this.node(id);
   }
 
-  async update(actor: string, id: string, input: NodeInput): Promise<DiagramNode> {
+  async update(by: { email: string; role: UserRole }, id: string, input: NodeInput): Promise<DiagramNode> {
+    const actor = by.email;
     const current = await this.node(id);
+    assertCanManage(current, by);
+    // Thành viên chủ bản trình bày chỉ đổi TÊN: người phụ trách, loại nút vẫn do Admin/SA.
+    if (by.role === 'member' && Object.entries(input).some(([key, value]) => key !== 'name' && value !== undefined)) throw manageForbidden();
     if (current.archivedAt) throw archived();
     if (current.kind === 'presentation' && input.parentId) {
       throw new BadRequestException({
@@ -362,8 +369,10 @@ export class DiagramsService {
     return this.node(id);
   }
 
-  async archive(actor: string, id: string): Promise<void> {
+  async archive(by: { email: string; role: UserRole }, id: string): Promise<void> {
+    const actor = by.email;
     const current = await this.node(id);
+    assertCanManage(current, by);
     if (current.archivedAt) return;
     await this.db.transaction(async (tx) => {
       const [child] = await tx
@@ -1226,6 +1235,17 @@ function statusOf(latestId: string | null, officialId: string | null): DiagramSt
 function iso(value: Date | string | null): string | null {
   if (value === null) return null;
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function manageForbidden(): ForbiddenException {
+  return new ForbiddenException({
+    code: 'DIAGRAM_MANAGE_FORBIDDEN',
+    message: 'Thành viên chỉ đổi tên hoặc lưu trữ bản trình bày do mình tạo hoặc phụ trách — việc khác cần Admin/SA.',
+  });
+}
+
+function assertCanManage(node: DiagramNode, actor: { email: string; role: UserRole }): void {
+  if (!canManageNode(node, actor)) throw manageForbidden();
 }
 
 function archived(): ConflictException {
