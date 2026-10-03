@@ -1,4 +1,19 @@
-import { useCallback, useRef, type Ref } from 'react';
+import { useCallback, useLayoutEffect, useRef, type KeyboardEvent, type MutableRefObject, type Ref } from 'react';
+import { useTranslation } from 'react-i18next';
+
+const OTP_LENGTH = 6;
+
+/**
+ * Đặt các số vừa gõ/dán vào mã, bắt đầu từ ô `box`. Đủ 6 số trở lên là cả mã (dán, tự điền) — thay
+ * hết, bất kể dán vào ô nào. Ít hơn thì ghi đè từ ô đó, nhưng không bắt đầu sau ô trống đầu
+ * tiên: mã là chuỗi liền. `focusAt` là ô con trỏ đi tới tiếp theo.
+ */
+export function placeOtpDigits(value: string, box: number, digits: string): { next: string; focusAt: number } {
+  if (digits.length >= OTP_LENGTH) return { next: digits.slice(0, OTP_LENGTH), focusAt: OTP_LENGTH - 1 };
+  const start = Math.min(box, value.length);
+  const next = (value.slice(0, start) + digits + value.slice(start + digits.length)).slice(0, OTP_LENGTH);
+  return { next, focusAt: Math.min(start + digits.length, OTP_LENGTH - 1) };
+}
 
 /** Lượt gõ này vừa làm ô ĐỦ 6 số (trước đó chưa đủ) — mốc duy nhất được tự gửi. */
 export function otpJustCompleted(prev: string, next: string): boolean {
@@ -38,8 +53,9 @@ export function useOtpSubmit(send: (code: string) => Promise<unknown>) {
 
 /**
  * Ô nhập mã 6 số dùng chung (AD-15) — dùng ở: nhập TOTP lúc đăng nhập, xác nhận enroll,
- * và step-up xem bí mật (FR-022). Chỉ nhận chữ số, tự cắt còn 6, hỗ trợ dán từ clipboard.
- * `onComplete` gọi đúng lúc ô vừa đủ 6 số — nơi gọi gửi qua `useOtpSubmit` để không gửi đúp.
+ * và step-up xem bí mật (FR-022). Sáu ô riêng, mỗi ô một số (Q-21); `value` vẫn là MỘT chuỗi
+ * số liền (không có lỗ hổng giữa các ô) để nơi gọi không phải biết có bao nhiêu ô.
+ * `onComplete` gọi đúng lúc mã vừa đủ 6 số — nơi gọi gửi qua `useOtpSubmit` để không gửi đúp.
  */
 export function OtpInput({
   value,
@@ -65,41 +81,142 @@ export function OtpInput({
    */
   error?: string | null;
   hint?: string;
-  /** Để nơi gọi đưa con trỏ về ô sau một lượt sai — giữ bàn phím số trên điện thoại mở. */
+  /**
+   * Trỏ vào ô sẽ nhận số kế tiếp (ô trống đầu tiên) — nơi gọi `focus()` sau một lượt sai hoặc
+   * thiếu số để giữ bàn phím số trên điện thoại mở, đúng ô cần gõ.
+   */
   inputRef?: Ref<HTMLInputElement>;
   /** Đang gửi mã: khoá ô để lượt gõ thêm không đè lên mã đang được kiểm. */
   readOnly?: boolean;
 }) {
+  const { t } = useTranslation();
+  const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const errorId = error ? `${id}-error` : undefined;
   const hintId = hint ? `${id}-hint` : undefined;
+  const labelId = `${id}-label`;
+  // Ô nhận số kế tiếp. Con trỏ không đứng sau nó: mã là chuỗi liền, ô trống ở giữa không có nghĩa.
+  const active = Math.min(value.length, OTP_LENGTH - 1);
+
+  const focusBox = (i: number) => boxes.current[Math.max(0, Math.min(i, active))]?.focus();
+
+  const commit = (next: string, focusAt: number) => {
+    if (next !== value) {
+      onChange(next);
+      if (onComplete && otpJustCompleted(value, next)) onComplete(next);
+    }
+    // Đi tới ô kế ngay, không chờ nơi gọi render lại: số kế tiếp có thể đã tới trong cùng nhịp.
+    boxes.current[Math.max(0, Math.min(focusAt, OTP_LENGTH - 1))]?.focus();
+  };
+
+  // Mã bị rút ngắn từ bên ngoài (nơi gọi xoá trắng sau lượt sai) mà con trỏ còn ở ô phía sau
+  // → kéo về ô trống đầu tiên, để số gõ tiếp vào đúng chỗ.
+  useLayoutEffect(() => {
+    const at = boxes.current.indexOf(document.activeElement as HTMLInputElement);
+    if (at > active) boxes.current[active]?.focus();
+  }, [active]);
+
+  const onBoxChange = (i: number, raw: string) => {
+    if (readOnly) return;
+    let digits = raw.replace(/\D/g, '');
+    const current = value[i] ?? '';
+    if (!digits) {
+      if (current) commit(value.slice(0, i) + value.slice(i + 1), i);
+      return;
+    }
+    // Ô đang có số mà chữ trong ô chưa được chọn sẵn: chuỗi mới là số cũ + số vừa gõ — giữ số vừa gõ.
+    if (current && digits.length === 2 && digits.includes(current)) {
+      digits = digits[0] === current ? digits[1] : digits[0];
+    }
+    const { next, focusAt } = placeOtpDigits(value, i, digits);
+    commit(next, focusAt);
+  };
+
+  const onKeyDown = (i: number, e: KeyboardEvent<HTMLInputElement>) => {
+    switch (e.key) {
+      case 'Backspace':
+      case 'Delete':
+        e.preventDefault();
+        if (readOnly) return;
+        if (value[i]) commit(value.slice(0, i) + value.slice(i + 1), i);
+        else if (e.key === 'Backspace' && i > 0) commit(value.slice(0, i - 1) + value.slice(i), i - 1);
+        return;
+      case 'ArrowLeft':
+        e.preventDefault();
+        focusBox(i - 1);
+        return;
+      case 'ArrowRight':
+        e.preventDefault();
+        focusBox(i + 1);
+        return;
+      case 'Home':
+        e.preventDefault();
+        focusBox(0);
+        return;
+      case 'End':
+        e.preventDefault();
+        focusBox(active);
+        return;
+      default:
+    }
+  };
+
   return (
     <div className="field">
-      <label className="lbl-t" htmlFor={id}>
+      <span className="lbl-t" id={labelId}>
         {label}
-      </label>
-      <input
-        id={id}
-        ref={inputRef}
-        className="inp auth-otp"
-        aria-invalid={error ? true : undefined}
+      </span>
+      {/* Bấm vào khe giữa các ô, hay vào ô trống phía sau → về ô trống đầu tiên. Chuột thôi: bàn
+          phím đã có Tab/←/→ trên từng ô. */}
+      <div
+        className="otp-boxes"
+        role="group"
+        aria-labelledby={labelId}
         aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
-        readOnly={readOnly}
-        // inputMode numeric: điện thoại bật bàn phím số; autocomplete để iOS/Android
-        // gợi ý mã từ tin nhắn/keychain.
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        /* Không `maxLength`: mã dán kèm khoảng trắng ("123 456") bị trình duyệt cắt còn
-           "123 45" trước khi kịp lọc số — ô tự cắt còn 6 số ở `onChange`. */
-        pattern="[0-9]{6}"
-        autoFocus={autoFocus}
-        required
-        value={value}
-        onChange={(e) => {
-          const next = e.target.value.replace(/\D/g, '').slice(0, 6);
-          onChange(next);
-          if (onComplete && otpJustCompleted(value, next)) onComplete(next);
+        aria-invalid={error ? true : undefined}
+        onMouseDown={(e) => {
+          const at = boxes.current.indexOf(e.target as HTMLInputElement);
+          if (at >= 0 && at <= active) return;
+          e.preventDefault();
+          boxes.current[active]?.focus();
         }}
-      />
+      >
+        {Array.from({ length: OTP_LENGTH }, (_, i) => (
+          <input
+            key={i}
+            id={i === 0 ? id : `${id}-${i + 1}`}
+            ref={(el) => {
+              boxes.current[i] = el;
+              if (i === active) assignRef(inputRef, el);
+            }}
+            className="inp otp-box"
+            aria-label={t('auth.otpDigit', { n: i + 1, total: OTP_LENGTH })}
+            aria-invalid={error ? true : undefined}
+            readOnly={readOnly}
+            // Bàn phím số trên điện thoại cho mọi ô. Gợi ý mã từ tin nhắn/keychain chỉ ở ô đầu: trình
+            // duyệt đổ cả mã vào ô đó, `onBoxChange` chia ra 6 ô.
+            inputMode="numeric"
+            autoComplete={i === 0 ? 'one-time-code' : 'off'}
+            /* Không `maxLength`: tự điền / dán đổ cả mã (kể cả "123 456") vào MỘT ô — cắt còn 1 ký tự
+               thì mất 5 số còn lại. */
+            pattern="[0-9]*"
+            autoFocus={autoFocus && i === 0}
+            // Tab chỉ dừng ở các ô tới ô trống đầu tiên, không dừng ở ô trống phía sau.
+            tabIndex={i <= active ? 0 : -1}
+            value={value[i] ?? ''}
+            onFocus={(e) => e.currentTarget.select()}
+            onChange={(e) => onBoxChange(i, e.target.value)}
+            onKeyDown={(e) => onKeyDown(i, e)}
+            onPaste={(e) => {
+              e.preventDefault();
+              if (readOnly) return;
+              const digits = e.clipboardData.getData('text').replace(/\D/g, '');
+              if (!digits) return;
+              const { next, focusAt } = placeOtpDigits(value, i, digits);
+              commit(next, focusAt);
+            }}
+          />
+        ))}
+      </div>
       {error ? (
         <span className="field-error" role="alert" id={errorId}>
           {error}
@@ -112,4 +229,10 @@ export function OtpInput({
       ) : null}
     </div>
   );
+}
+
+function assignRef<T>(ref: Ref<T> | undefined, el: T | null) {
+  if (!ref) return;
+  if (typeof ref === 'function') ref(el);
+  else (ref as MutableRefObject<T | null>).current = el;
 }

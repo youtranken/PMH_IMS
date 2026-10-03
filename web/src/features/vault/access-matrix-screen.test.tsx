@@ -244,7 +244,8 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     return writes;
   }
 
-  const codeInput = () => screen.getByLabelText(/mã/i, { selector: 'input' });
+  // Ô mã là 6 ô trong một nhóm mang tên nhãn — gõ vào nhóm là gõ từ ô đầu.
+  const codeInput = () => screen.getByRole('group', { name: 'Mã xác thực' });
 
   it('gán một ô: hỏi mã 6 số với câu cấp quyền, gõ xong thì gửi lại và đóng hộp', async () => {
     const writes = stubStepUp();

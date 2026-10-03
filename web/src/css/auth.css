@@ -198,13 +198,6 @@
   z-index: 1;
 }
 .auth-inp-icon .inp { width: 100%; padding-left: 40px; }
-/* Ô nhập mã TOTP — 6 số, mono, giãn chữ */
-.auth-otp {
-  font-family: var(--mono);
-  font-size: var(--fs-xl);
-  letter-spacing: 0.4em;
-  text-align: center;
-}
 .auth-error {
   color: var(--auth-danger-ink);
   background: var(--auth-danger-bg);

@@ -149,6 +149,20 @@ body:has(.auth) .toast-stack {
 .fsel-trigger[aria-invalid='true'],
 .dp-trigger[aria-invalid='true'] { border-color: var(--danger); }
 
+/* Ô mã 2 lớp (ui/otp-input.tsx): 6 ô chia đều bề ngang. Ở 390px card đăng nhập còn ~320px nên
+   mỗi ô vẫn ≥44px; cao 48px cho đủ vùng chạm. Màu lấy từ `.inp` (và `.auth-form .inp` trên kính). */
+.otp-boxes { display: flex; gap: var(--space-3); max-width: 22rem; }
+.otp-box {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-xl);
+  text-align: center;
+  caret-color: transparent;
+}
+
 /* Ô có đơn vị cố định bên phải (ui/money-input.tsx): đơn vị nằm TRONG khung ô cho gọn, nhưng
    ngoài chữ của ô để giá trị không lẫn đơn vị. */
 .input-affix { position: relative; display: block; }
