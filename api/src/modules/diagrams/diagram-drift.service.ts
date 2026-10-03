@@ -156,9 +156,24 @@ export class DiagramDriftService implements OnModuleInit {
         await this.sweepOne(row.id, row.official_version_id, startOfDay, now);
       } catch (error) {
         // Một bản vẽ hỏng không được chặn các bản vẽ xếp sau (SweepService chỉ bắt ở mức handler).
-        this.logger.error(`Quét lệch kho bản vẽ ${row.id} lỗi: ${redactMessage(error)}`);
+        this.logger.error(`Quét lệch kho bản vẽ ${row.id} lỗi, để tới lượt quét ngày mai: ${redactMessage(error)}`);
+        await this.markSweepFailed(row.id, now).catch((markError: unknown) => {
+          this.logger.error(`Không ghi được lượt quét hỏng của bản vẽ ${row.id}: ${redactMessage(markError)}`);
+        });
       }
     }
+  }
+
+  /**
+   * Lượt quét hỏng vẫn chốt `swept_at` (giữ nguyên số lệch và mốc báo): không chốt thì sweep mỗi
+   * phút lại quét đúng bản vẽ hỏng đó cả ngày — tốn kho và ngập log. Lỗi thoáng qua thì lượt quét
+   * ngày mai làm lại; số lệch trên cây vẫn được làm mới mỗi lần có người mở bản chính thức.
+   */
+  private async markSweepFailed(diagramId: string, now: Date): Promise<void> {
+    await this.db
+      .insert(diagramDriftTable)
+      .values({ diagramId, sweptAt: now })
+      .onConflictDoUpdate({ target: diagramDriftTable.diagramId, set: { sweptAt: now } });
   }
 
   /**

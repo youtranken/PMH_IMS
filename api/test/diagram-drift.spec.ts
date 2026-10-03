@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { runMigrations } from '../src/database/migration-runner';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { DeviceSearchRegistry } from '../src/common/device-search.registry';
@@ -256,6 +257,45 @@ describe('Sơ đồ mạng · cảnh báo lệch kho (Q-23)', () => {
       expect(await count(`SELECT drift_count AS n FROM diagram_drift WHERE diagram_id = $1`, [diagramId])).toBe(1);
     } finally {
       await scratch.pool.query(`UPDATE system_config SET value = '1' WHERE key = 'diagram.drift_notify_enabled'`);
+    }
+  });
+
+  it('quét một bản vẽ lỗi → ghi nhận lượt hỏng, log MỘT lần, không thử lại mỗi phút; hôm sau thử lại', async () => {
+    const dev = await newDevice('SW-E2E-DR-FAIL');
+    const { diagramId } = await official('Hỏng', deviceCell('d1', dev, 'SW-E2E-DR-FAIL'));
+    let calls = 0;
+    const broken = Object.create(deps.devices) as DevicesApiService;
+    broken.getByIds = (ids: string[]) => {
+      if (ids.includes(dev)) {
+        calls += 1;
+        return Promise.reject(new Error('kho tạm hỏng E2E'));
+      }
+      return deps.devices.getByIds(ids);
+    };
+    const failing = new DiagramDriftService(
+      scratch.db,
+      deps.audit,
+      new SystemConfigService(scratch.db),
+      broken,
+      deps.ipam,
+      new OutboxService(scratch.db, new SystemConfigService(scratch.db), noopSweep),
+      deps.users,
+      mails,
+      noopSweep,
+    );
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    try {
+      const day = new Date('2026-10-11T02:00:00Z');
+      for (let minute = 0; minute < 5; minute += 1) await failing.sweepDue(new Date(day.getTime() + minute * 60_000));
+      expect(calls).toBe(1);
+      expect(logged.mock.calls.filter(([message]) => String(message).includes(diagramId))).toHaveLength(1);
+      expect(await count(`SELECT count(*)::int AS n FROM diagram_drift WHERE diagram_id = $1 AND swept_at IS NOT NULL`, [diagramId])).toBe(1);
+      expect(await driftMails(diagramId)).toBe(0);
+
+      await failing.sweepDue(new Date(day.getTime() + 86_400_000));
+      expect(calls).toBe(2);
+    } finally {
+      logged.mockRestore();
     }
   });
 
