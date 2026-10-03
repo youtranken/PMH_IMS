@@ -384,3 +384,97 @@
 .nav-group-toggle[aria-expanded='true'] .nav-group-chev {
   transform: none;
 }
+
+/* Sidebar thu gọn (màn sơ đồ — `isCompactShellPath`): còn cột biểu tượng. Chữ của mục, nhãn nhóm,
+   badge, tên người dùng chỉ ẩn THỊ GIÁC (kiểu `.sr-only`) — mục vẫn giữ tên trợ năng, và
+   `title` trên mục cho người dùng chuột. */
+.sidebar.is-compact {
+  width: 64px;
+  padding: var(--space-6) var(--space-2);
+}
+.sidebar.is-compact .brand {
+  justify-content: center;
+  padding: 0 0 var(--space-5);
+}
+.sidebar.is-compact .brand > span,
+.sidebar.is-compact .nav-label,
+.sidebar.is-compact .nav-item .lbl,
+.sidebar.is-compact .nav-badge,
+.sidebar.is-compact .sb-who {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.sidebar.is-compact .nav-item {
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+.sidebar.is-compact .nav-item:hover {
+  transform: none;
+}
+.sidebar.is-compact .sb-foot {
+  padding: var(--space-2);
+}
+.sidebar.is-compact .sb-userbtn {
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+.sidebar.is-compact .sb-actions.open {
+  left: 0;
+  right: auto;
+  width: 220px;
+}
+
+/* Nội dung tràn hết phần còn lại dưới topbar 56px (màn sơ đồ): không đệm, không trần bề ngang.
+   Màn tự xếp thanh trên + khung vẽ trong khối cao đúng bằng phần màn hình còn lại. */
+.page[data-layout='full'] {
+  max-width: none;
+  padding: 0;
+  height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Khung của màn tràn (`data-layout='full'`): MỘT thanh mảnh phía trên (tiêu đề nhỏ, tab, nút IMS,
+   trạng thái) và vùng dưới chiếm hết phần còn lại. Không cột panel cố định (Q-23). */
+.full-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.full-bar-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+.full-bar .tabs {
+  border-bottom: 0;
+}
+.full-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.full-bar-search {
+  width: 260px;
+}
+.full-bar-status {
+  margin-left: auto;
+}
+.full-bar-status p {
+  margin: 0;
+}
+.full-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}

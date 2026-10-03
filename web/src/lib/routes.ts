@@ -161,10 +161,21 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
   [PATHS.vault]: ['sa', 'admin'],
-  // `diagram-spike.controller.ts` — `@Roles('sa', 'admin')` cho cả đọc lẫn lưu.
-  [PATHS.diagramSpike]: ['sa', 'admin'],
+  // `diagram-spike.controller.ts` — mọi vai (Thành viên cũng vẽ, Q-23).
+  [PATHS.diagramSpike]: ['sa', 'admin', 'member'],
   [PATHS.devComponents]: ['sa'],
 };
+
+/**
+ * Đường mà shell thu sidebar còn biểu tượng và để nội dung tràn hết phần còn lại (Q-23: màn sơ
+ * đồ — trình vẽ cần bề ngang). Rời đường này thì shell tự mở lại, vì trạng thái suy từ đường dẫn
+ * chứ không phải cờ màn tự bật rồi quên tắt.
+ */
+const COMPACT_SHELL_PATHS: readonly string[] = [PATHS.diagramSpike];
+
+export function isCompactShellPath(pathname: string): boolean {
+  return COMPACT_SHELL_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
 
 /** Vai này vào được đường kia không. Đường không khai trong bảng = mở cho mọi vai. */
 export function canSeeRoute(path: string, role: UserRole): boolean {

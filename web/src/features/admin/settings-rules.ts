@@ -2,7 +2,7 @@
 export interface SettingRow {
   name: string;
   key: string;
-  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam' | 'files';
+  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam' | 'files' | 'diagram';
   type: 'int' | 'text' | 'int_list';
   unit?:
     | 'seconds'
@@ -15,7 +15,9 @@ export interface SettingRow {
     | 'ports'
     | 'rows'
     | 'mb'
-    | 'files';
+    | 'kb'
+    | 'files'
+    | 'cells';
   min?: number;
   max?: number;
   maxLength?: number;

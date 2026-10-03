@@ -813,14 +813,51 @@ button.btn-x.danger:hover:not(:disabled) {
   color: var(--danger-strong);
 }
 
-/* Khung nhúng một ứng dụng tĩnh cùng máy (draw.io ở /drawio/): cao bằng phần màn còn lại dưới
-   đầu trang + thanh tab, để thanh cuộn là của khung vẽ chứ không phải của cả trang. */
-.embed-frame {
+/* Cầu nối draw.io (`ui/drawio-frame.tsx`): khung lấp đầy khối chứa; màn đặt chiều cao cho khối. */
+.drawio-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.drawio-frame-iframe {
   display: block;
   width: 100%;
-  height: calc(100vh - 220px);
-  min-height: 480px;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
+  height: 100%;
+  border: 0;
+}
+/* Watermark người xem (AD-17): lớp phủ không nhận chuột nên không chặn thao tác vẽ, và không
+   có điều khiển nào tắt nó. Xoay chéo để không trùng hướng chữ của bản vẽ. */
+.drawio-watermark {
+  position: absolute;
+  inset: -25%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  pointer-events: none;
+  user-select: none;
+  transform: rotate(-24deg);
+  color: var(--diagram-watermark);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+.drawio-watermark span {
+  display: block;
+  text-align: center;
+  word-spacing: 0.4em;
+}
+.drawio-frame-stalled {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
   background: var(--surface);
 }
