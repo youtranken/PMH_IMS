@@ -941,8 +941,8 @@ So that vẽ xong là sơ đồ cổng cũng đúng mà không phải khai hai l
 
 **Given** người vẽ kéo một nét dây nối hai thiết bị kho (đường hạnh phúc)
 **When** cầu nối phát hiện cạnh mới
-**Then** IMS mở hộp dùng chung "Khai kết nối này vào sơ đồ cổng?" (không `window.confirm`): tên hai máy, ô chọn cổng hai đầu chỉ liệt kê **cổng còn trống** (đọc qua endpoint đọc của `devices`), ô chọn loại dây (mặc định loại dùng gần nhất), nút **"Khai"**, **"Chỉ vẽ"**
-**And** bấm "Khai": **web** gọi endpoint ghi sơ đồ cổng của `devices` (`@Audited` + `@Roles` + `tx`, luật một cổng một cáp hai chiều không phân biệt hoa/thường — Q-20); thành công thì gắn `ims_link_id` + `ims_cable_type_id` vào nét bằng `merge`, nhãn cổng "Gi0/24 ↔ Te1/0/1" và màu hydrate ngay; trang thiết bị của hai máy thấy kết nối mới (E2E)
+**Then** IMS mở hộp dùng chung "Khai kết nối này vào sơ đồ cổng?" (không `window.confirm`): tên hai máy, ô cổng hai đầu chỉ GỢI Ý **cổng còn trống** (đọc qua endpoint đọc của `devices`; sơ đồ cổng không có danh sách cổng vật lý của máy nên gõ tên cổng mới vẫn được — server giữ luật một cổng một cáp), ô chọn loại dây (mặc định loại dùng gần nhất), nút **"Khai"**, **"Chỉ vẽ"**
+**And** bấm "Khai": **web** gọi endpoint ghi sơ đồ cổng của `devices` (`POST /devices/:id/ports/link` — nối luôn dòng cổng "trống" nếu đã khai; `@Audited` + `@Roles` + `tx`, luật một cổng một cáp hai chiều không phân biệt hoa/thường — Q-20); thành công thì gắn `ims_link_id` + `ims_cable_type_id` vào nét bằng lệnh `patch` của draw.io (không `merge`: `merge` có thể xoá phần chưa lưu), nhãn cổng "Gi0/24 ↔ Te1/0/1" và màu hydrate ngay; trang thiết bị của hai máy thấy kết nối mới (E2E)
 **And** module `diagrams` không có đường nào ghi `device_port` và không gọi endpoint ghi của `devices` (depcruise + bài kiểm bề mặt route: `diagrams` không có route ghi cổng); lưu/phát hành bản vẽ không ghi gì vào sơ đồ cổng (AD-18)
 
 **Given** cổng đã chọn vừa bị người khác chiếm (hoặc người dùng không có quyền sửa sơ đồ cổng)
@@ -957,21 +957,21 @@ So that vẽ xong là sơ đồ cổng cũng đúng mà không phải khai hai l
 **Given** người vẽ xoá một nét đã có `ims_link_id`
 **When** cầu nối phát hiện cạnh có link vừa biến mất
 **Then** IMS hỏi bằng hộp dùng chung: **"Chỉ xoá nét vẽ"** (nút mặc định — Enter/đóng hộp chọn nó) / **"Gỡ luôn kết nối"**
-**And** "Chỉ xoá nét vẽ" (và đóng hộp): KHÔNG gọi gì, kết nối trong sơ đồ cổng giữ nguyên (E2E: trang thiết bị vẫn thấy kết nối); "Gỡ luôn kết nối": web gọi endpoint gỡ của `devices` (`@Audited`), lỗi thì báo và không gỡ
+**And** "Chỉ xoá nét vẽ" (và đóng hộp): KHÔNG gọi gì, kết nối trong sơ đồ cổng giữ nguyên (E2E: trang thiết bị vẫn thấy kết nối); "Gỡ luôn kết nối": web gọi endpoint gỡ của `devices` (`POST /devices/:id/ports/:portId/unlink`, `@Audited` — dòng còn VLAN/người dùng/ghi chú thì chỉ bỏ đầu kia + loại dây, không còn gì thì xoá dòng), lỗi thì báo và không gỡ
 **And** xoá nhiều nét một lần → một hộp liệt kê đủ các kết nối, cùng hai lựa chọn
 
 **Given** bản vẽ được mở (chiều ngược lại — sơ đồ cổng đổi ngoài bản vẽ)
 **When** IMS hydrate XML trước khi nạp vào trình vẽ / trình xem
-**Then** nhãn cổng và màu dây đọc từ `device_port` hiện tại (đổi cổng / loại dây ở trang thiết bị hiện ngay, không cần sửa bản vẽ)
-**And** nét có `ims_link_id` mà kết nối đã bị gỡ → nét chuyển **đỏ** + chú "Kết nối đã bị gỡ khỏi sơ đồ cổng" (không tự xoá nét); bấm nét ở chế độ sửa cho chọn xoá nét hoặc khai lại
-**And** kết nối trong sơ đồ cổng giữa hai máy cùng có mặt trên bản vẽ mà chưa có nét → thanh trên hiện "Có N kết nối mới chưa vẽ" + nút **"Vẽ vào"**: chèn các nét bằng `merge`, đã gắn `ims_link_id` + `ims_cable_type_id`, không ghi gì vào kho; người vẽ tự đi dây/xếp bằng công cụ draw.io
+**Then** nhãn cổng và màu dây đọc từ `device_port` hiện tại (đổi cổng / loại dây ở trang thiết bị hiện ngay, không cần sửa bản vẽ). Trình xem SVG: màu dây và nét đỏ/vàng tô lại lúc mở theo token của theme đang dùng; chữ nhãn trên ảnh xem là chữ lúc lưu — thẻ dây (bấm nét) đọc cổng hiện tại
+**And** nét có `ims_link_id` mà kết nối đã bị gỡ → nét chuyển **đỏ** + chú "Kết nối đã bị gỡ khỏi sơ đồ cổng" (không tự xoá nét); ở chế độ sửa người vẽ xoá nét bằng draw.io, hoặc chọn nét đó trong danh sách "Dây chưa khai" để khai lại (giao thức nhúng không báo cú bấm vào nét)
+**And** kết nối trong sơ đồ cổng giữa hai máy cùng có mặt trên bản vẽ mà chưa có nét → thanh trên hiện "Có N kết nối mới chưa vẽ" + nút **"Vẽ vào"**: chèn các nét bằng lệnh `patch`, đã gắn `ims_link_id` + `ims_cable_type_id`, không ghi gì vào kho; người vẽ tự đi dây/xếp bằng công cụ draw.io
 **And** dữ liệu so (link còn/mất, kết nối mới) là bộ hàm thuần dùng chung với Story 10.9 (một bộ luật)
 **And** E2E: gỡ kết nối ở trang thiết bị → mở bản vẽ thấy nét đỏ; thêm kết nối giữa hai máy `E2E` đã có trên bản vẽ → thấy "Có 1 kết nối mới chưa vẽ", bấm "Vẽ vào" → nét xuất hiện đúng nhãn cổng
 
 **Given** cần khai kết nối không bắt đầu từ nét vẽ
 **When** bấm "Khai kết nối" hoặc "Nối hàng loạt" (một switch + N máy, cổng bắt đầu, loại dây) trên thanh trên
 **Then** mở hộp sơ đồ cổng DÙNG CHUNG với trang thiết bị (dời sang `web/src/ui` nếu đang ở `features/`, khai registry); ghi NGAY qua endpoint của `devices` như trên
-**And** nối hàng loạt hiện bảng xem trước "máy → cổng" theo thứ tự, bỏ qua cổng đã chiếm; cổng không đủ → lỗi đỏ, không ghi gì (một transaction)
+**And** nối hàng loạt hiện bảng xem trước "máy → cổng" theo thứ tự, bỏ qua cổng đã chiếm (server chia cổng: `GET /devices/:id/ports/bulk-plan`, ghi `POST /devices/:id/ports/bulk-link`); có "cổng cuối" mà dải không đủ cổng trống, hay một máy vướng luật một cổng một cáp → lỗi đỏ, không ghi máy nào (một transaction)
 **And** ghi xong thì dây tương ứng được chèn vào bản vẽ đã gắn link (máy chưa có trên bản vẽ thì chỉ ghi kho)
 
 **Given** chế độ xem
