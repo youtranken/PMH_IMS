@@ -99,4 +99,24 @@ describe('cabinetFrameCells — khung tủ thành ô chèn', () => {
     expect(devices[0].geometry).toBe('<mxGeometry x="50" y="38" width="60" height="40" as="geometry"/>');
     expect(devices[0].xmlValue).toBe(`<UserObject label="SW-01&#xa;10.0.0.1" ims_device_id="dev-1" ims_device_code="SW-01" id="${devices[0].id}"/>`);
   });
+
+  it('mặt trước / mặt sau: máy ở mặt có ảnh thật mang ims_photo của mặt đó', () => {
+    let k = 0;
+    const twoFaces: CabinetFrameLayout = {
+      uHeight: 12,
+      frames: [
+        { key: 'rack', label: 'Tủ R1 · Mặt trước', style: 'shape=rack;', attrs: { ims_cabinet_id: CAB }, x: 0, y: 0, width: 204, height: 220 },
+        { key: 'rack-back', label: 'Tủ R1 · Mặt sau', style: 'shape=rack;', attrs: { ims_cabinet_id: CAB }, x: 244, y: 0, width: 204, height: 220 },
+      ],
+      devices: [
+        { frame: 'rack', id: 'dev-1', code: 'SW-01', style: 'shape=image;', label: 'SW-01', attrs: { ims_photo: 'front' }, x: 33, y: 180, width: 162, height: 14.8 },
+        { frame: 'rack-back', id: 'dev-1', code: 'SW-01', style: 'shape=sw;', label: 'SW-01', attrs: {}, x: 33, y: 180, width: 162, height: 14.8 },
+      ],
+    };
+    const [, back, front, rear] = cabinetFrameCells(twoFaces, { parent: '1', previous: null, x: 0, y: 0, newId: () => `f-${(k += 1)}` });
+    expect(front.parent).toBe('f-1');
+    expect(front.xmlValue).toContain('ims_photo="front"');
+    expect(rear.parent).toBe(back.id);
+    expect(rear.xmlValue).not.toContain('ims_photo');
+  });
 });

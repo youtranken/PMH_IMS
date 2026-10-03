@@ -30,13 +30,16 @@ const LISTS = {
   servicePorts: [],
 };
 
-function mockFetch() {
-  const calls: { url: string; method: string }[] = [];
+function mockFetch(lists: typeof LISTS = LISTS) {
+  const calls: { url: string; method: string; body?: string }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string, init?: RequestInit) => {
-      calls.push({ url, method: init?.method ?? 'GET' });
-      if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, LISTS));
+      calls.push({ url, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? init.body : undefined });
+      if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, lists));
+      if (init?.method === 'PATCH' || init?.method === 'POST') {
+        return Promise.resolve(jsonResponse(200, { device: { id: 'd1', code: 'SW-01' }, warnings: [] }));
+      }
       return Promise.resolve(jsonResponse(200, []));
     }),
   );
@@ -129,6 +132,70 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(
       await screen.findByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
     ).toBeInTheDocument();
+  });
+
+  /* Vị trí U trong tủ (Story 10.11): hai ô chỉ hiện khi đã chọn tủ; bỏ tủ thì gửi U rỗng. */
+  describe('U bắt đầu / Số U', () => {
+    const WITH_CABINET = {
+      ...LISTS,
+      cabinets: [{ id: 'c-1', siteId: 's-on', siteCode: 'HCM', code: 'R1', description: null, uHeight: 42, active: true }],
+    } as unknown as typeof LISTS;
+    const inRack = {
+      id: 'd1',
+      code: 'SW-01',
+      name: 'Switch',
+      deviceTypeId: 't-on',
+      siteId: 's-on',
+      cabinetId: 'c-1',
+      rackUStart: 5,
+      rackUSize: 2,
+      status: 'in_use',
+    } as DeviceRow;
+
+    it('không có tủ thì không có ô U', () => {
+      mockFetch(WITH_CABINET);
+      renderForm({ ...inRack, cabinetId: null, rackUStart: null, rackUSize: null });
+      expect(screen.queryByRole('spinbutton', { name: 'U bắt đầu' })).toBeNull();
+      expect(screen.queryByRole('spinbutton', { name: 'Số U' })).toBeNull();
+    });
+
+    it('có tủ: hiện U đang khai, sửa rồi Lưu gửi số', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const start = await screen.findByRole('spinbutton', { name: 'U bắt đầu' });
+      expect(start).toHaveValue(5);
+      expect(screen.getByRole('spinbutton', { name: 'Số U' })).toHaveValue(2);
+      const user = userEvent.setup();
+      await user.clear(start);
+      await user.type(start, '7');
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+      const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
+      expect(body).toMatchObject({ cabinetId: 'c-1', rackUStart: 7, rackUSize: 2 });
+    });
+
+    it('xoá trống cả hai ô → gửi null (bỏ U)', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const user = userEvent.setup();
+      await user.clear(await screen.findByRole('spinbutton', { name: 'U bắt đầu' }));
+      await user.clear(screen.getByRole('spinbutton', { name: 'Số U' }));
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+      const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
+      expect(body).toMatchObject({ rackUStart: null, rackUSize: null });
+    });
+
+    it('chỉ điền một ô → báo tại ô, không gửi', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const user = userEvent.setup();
+      await user.clear(screen.getByRole('spinbutton', { name: 'Số U' }));
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      const size = screen.getByRole('spinbutton', { name: 'Số U' });
+      await waitFor(() => expect(size).toHaveAttribute('aria-invalid', 'true'));
+      expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+    });
   });
 
   it('Vị trí và Mua sắm & bảo hành xếp 4 cột; ghi chú 2 dòng', () => {

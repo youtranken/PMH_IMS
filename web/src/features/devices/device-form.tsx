@@ -36,6 +36,9 @@ interface FormState {
   warrantyEnd: string;
   status: DeviceStatus;
   note: string;
+  /** Vị trí U trong tủ, dạng chữ của ô số — rỗng = chưa khai. */
+  rackUStart: string;
+  rackUSize: string;
 }
 
 /**
@@ -51,12 +54,15 @@ function cloneState(source: DeviceRow): FormState {
     assignedTo: '',
     note: '',
     status: 'in_use',
+    // Máy mới cùng lô không thể nằm đúng chỗ U của máy gốc (chồng U bị chặn — Q-23).
+    rackUStart: '',
+    rackUSize: '',
   };
 }
 
 /** Sau "Lưu và nhân bản": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
 function nextState(saved: FormState): FormState {
-  return { ...saved, code: '', serial: '', assignedTo: '', note: '' };
+  return { ...saved, code: '', serial: '', assignedTo: '', note: '', rackUStart: '', rackUSize: '' };
 }
 
 /** Các ô chọn trạng thái trong form SỬA. "Đã thanh lý" không có ở đây: API luôn từ chối đi
@@ -80,6 +86,8 @@ function initialState(device: DeviceRow | null): FormState {
     warrantyEnd: device?.warrantyEnd ?? '',
     status: device?.status ?? 'in_use',
     note: device?.note ?? '',
+    rackUStart: device?.rackUStart != null ? String(device.rackUStart) : '',
+    rackUSize: device?.rackUSize != null ? String(device.rackUSize) : '',
   };
 }
 
@@ -158,7 +166,11 @@ export function DeviceForm({
       // Đổi site thì tủ đang chọn có thể thuộc site khác → bỏ chọn, đỡ lưu ra dữ liệu
       // "tủ R01 của nhà máy nằm ở văn phòng".
       if (key === 'siteId' && value !== current.siteId) {
-        return { ...current, siteId: value as string, cabinetId: '' };
+        return { ...current, siteId: value as string, cabinetId: '', rackUStart: '', rackUSize: '' };
+      }
+      // Bỏ tủ thì máy không còn chỗ U nào.
+      if (key === 'cabinetId' && !value) {
+        return { ...current, cabinetId: '', rackUStart: '', rackUSize: '' };
       }
       return { ...current, [key]: value };
     });
@@ -173,6 +185,8 @@ export function DeviceForm({
     name: !form.name.trim() && t('formErrors.required'),
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
     note: secretTextRule(t, form.note),
+    rackUStart: rackRule(t, form, form.rackUStart),
+    rackUSize: rackRule(t, form, form.rackUSize),
   });
 
   // Mốc tính "+n năm": bảo hành từ, không có thì ngày mua.
@@ -393,6 +407,34 @@ export function DeviceForm({
               onChange={(value) => set('cabinetId', value)}
             />
           </Field>
+          {/* U chỉ có nghĩa khi máy nằm trong tủ (U1 ở đáy tủ). Server chặn vượt chiều cao tủ và
+              chồng U với máy khác, báo tên máy đang chiếm. */}
+          {form.cabinetId ? (
+            <>
+              <Field label={t('devices.rackUStart')} hint={t('devices.rackUStartHint')} htmlFor="device-rack-u-start" error={check.error('rackUStart')}>
+                <input
+                  id="device-rack-u-start"
+                  className="inp mono"
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={form.rackUStart}
+                  onChange={(e) => set('rackUStart', e.target.value)}
+                />
+              </Field>
+              <Field label={t('devices.rackUSize')} htmlFor="device-rack-u-size" error={check.error('rackUSize')}>
+                <input
+                  id="device-rack-u-size"
+                  className="inp mono"
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={form.rackUSize}
+                  onChange={(e) => set('rackUSize', e.target.value)}
+                />
+              </Field>
+            </>
+          ) : null}
           <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
             <input
               id="device-assigned"
@@ -525,5 +567,18 @@ function buildBody(form: FormState): Record<string, unknown> {
     warrantyEnd: form.warrantyEnd,
     status: form.status,
     note: form.note.trim(),
+    rackUStart: form.cabinetId && form.rackUStart.trim() ? Number(form.rackUStart) : null,
+    rackUSize: form.cabinetId && form.rackUSize.trim() ? Number(form.rackUSize) : null,
   };
+}
+
+/** Một ô U: số nguyên 1–60, và hai ô cùng có hoặc cùng trống (cùng luật với API). */
+function rackRule(t: (key: string) => string, form: FormState, value: string): string | false {
+  if (!form.cabinetId) return false;
+  const start = form.rackUStart.trim();
+  const size = form.rackUSize.trim();
+  if (!start && !size) return false;
+  if (!value.trim()) return t('devices.rackUPair');
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 60 ? false : t('devices.rackURange');
 }

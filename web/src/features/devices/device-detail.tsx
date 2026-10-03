@@ -8,6 +8,7 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
+import { DevicePhotosPanel } from "./device-photos-panel";
 import { Chevron } from "@/ui/chevron";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -964,13 +965,17 @@ export function DeviceDetail({ me }: { me: Me }) {
             locked={retired}
           />
         ) : safeTab === "attachments" ? (
-          <AttachmentPanel
-            ownerType="device"
-            ownerId={item.id}
-            csrfToken={me.csrfToken}
-            /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
-            canEdit={!retired}
-          />
+          <>
+            <AttachmentPanel
+              ownerType="device"
+              ownerId={item.id}
+              csrfToken={me.csrfToken}
+              /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
+              canEdit={!retired}
+            />
+            {/* Ảnh thật cho sơ đồ chọn TỪ chính các giấy tờ ở trên — cùng tab để thấy ngay ảnh vừa tải. */}
+            <DevicePhotosPanel deviceId={item.id} csrfToken={me.csrfToken} canEdit={!retired} />
+          </>
         ) : history.isLoading || timeline.isLoading ? (
           <Loading />
         ) : history.isError ? (

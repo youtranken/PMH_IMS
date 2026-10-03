@@ -72,8 +72,10 @@ export function bindFrameValue(frame: FrameCandidate, set: Record<string, string
 /** Hình dạng `GET /diagrams/cabinet-frame/:id` → `layout` (bố cục ở `diagram-frames.ts` của server). */
 export interface CabinetFrameLayout {
   uHeight: number;
-  frames: { key: 'rack' | 'unplaced'; label: string; style: string; attrs: Record<string, string>; x: number; y: number; width: number; height: number }[];
-  devices: { frame: 'rack' | 'unplaced'; id: string; code: string; style: string; label: string; x: number; y: number; width: number; height: number }[];
+  /** `rack` = mặt trước, `rack-back` = mặt sau, `unplaced` = cột "Chưa khai U". */
+  frames: { key: string; label: string; style: string; attrs: Record<string, string>; x: number; y: number; width: number; height: number }[];
+  /** `attrs`: `ims_photo` khi ô hiện ảnh thật của mặt đó (vắng ở dữ liệu cũ). */
+  devices: { frame: string; id: string; code: string; style: string; label: string; attrs?: Record<string, string>; x: number; y: number; width: number; height: number }[];
 }
 
 function geometry(x: number, y: number, width: number, height: number): string {
@@ -116,6 +118,9 @@ export function cabinetFrameCells(
     if (!parent) continue;
     const id = at.newId();
     const before = lastIn.get(parent);
+    const extra = Object.entries(device.attrs ?? {})
+      .map(([k, v]) => ` ${k}="${escapeXmlAttr(v)}"`)
+      .join('');
     cells.push({
       id,
       vertex: 1,
@@ -123,7 +128,7 @@ export function cabinetFrameCells(
       ...(before ? { previous: before } : {}),
       style: device.style,
       geometry: geometry(device.x, device.y, device.width, device.height),
-      xmlValue: `<UserObject label="${escapeXmlAttr(device.label)}" ims_device_id="${escapeXmlAttr(device.id)}" ims_device_code="${escapeXmlAttr(device.code)}" id="${escapeXmlAttr(id)}"/>`,
+      xmlValue: `<UserObject label="${escapeXmlAttr(device.label)}" ims_device_id="${escapeXmlAttr(device.id)}" ims_device_code="${escapeXmlAttr(device.code)}"${extra} id="${escapeXmlAttr(id)}"/>`,
     });
     lastIn.set(parent, id);
   }

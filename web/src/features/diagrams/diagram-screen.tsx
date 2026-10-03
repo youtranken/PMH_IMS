@@ -66,6 +66,7 @@ import { DraftFromPortMapDialog } from './draft-from-port-map-dialog';
 import { StockDevicePicker } from './stock-device-picker';
 import { useCableBridge } from './use-cable-bridge';
 import { useFrameBridge } from './use-frame-bridge';
+import { usePhotoBridge } from './use-photo-bridge';
 
 type Mode = 'view' | 'edit';
 
@@ -777,6 +778,46 @@ function DiagramEditor({
     newId: newCellId,
   });
 
+  const photos = usePhotoBridge({
+    ready,
+    withFile,
+    send: (command) => frame.current?.send(command),
+    page: () => frameState.current.page,
+    markDirty: () => setDirty(true),
+  });
+
+  /*
+   * "Dựng lại mặt tủ" (bản vẽ loại tủ): server dựng một phiên bản nháp MỚI từ kho rồi nạp lại khung —
+   * lượt vẽ dở chưa lưu sẽ mất, nên hỏi trước bằng hộp dùng chung. Phiên bản cũ còn nguyên để khôi phục.
+   */
+  const ask = useConfirm();
+  const [rebuilding, setRebuilding] = useState(false);
+  const rebuildRack = async () => {
+    const ok = await ask({
+      title: t('diagrams.rack.rebuildTitle'),
+      message: dirty ? `${t('diagrams.rack.rebuildMessage')} ${t('diagrams.screen.leaveMessage')}` : t('diagrams.rack.rebuildMessage'),
+      confirmLabel: t('diagrams.rack.rebuildConfirm'),
+    });
+    if (!ok) return;
+    setRebuilding(true);
+    try {
+      const version = await run(
+        () => apiFetch<VersionItem>(`/api/v1/diagrams/${diagramId}/versions/rebuild-rack`, { method: 'POST', csrfToken: me.csrfToken }),
+        t('diagrams.rack.rebuildStepUp', { name: title }),
+      );
+      setDirty(false);
+      toast({ tone: 'ok', message: t('diagrams.rack.rebuildDone', { seq: version.seq }) });
+      void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
+      void queryClient.invalidateQueries({ queryKey: TREE_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['diagram-content', diagramId] });
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+    } finally {
+      setRebuilding(false);
+    }
+  };
+  const isRack = content.diagram.nodeType === 'cabinet' && Boolean(content.diagram.cabinetId);
+
   // Nhịp "đang mở sửa" (Q-23): nửa thời gian giữ một lần, để một nhịp lỡ không làm tên biến mất.
   // Hết ân hạn sơ đồ thì nhịp nhận 401 và im lặng: không bật hộp nhập mã chỉ vì một nhịp nền.
   useEffect(() => {
@@ -997,6 +1038,8 @@ function DiagramEditor({
       menu={[
         ...(content.diagram.kind === 'presentation' ? presentationTools.menu : []),
         ...frames.menu,
+        ...photos.menu,
+        ...(isRack ? [{ key: 'rebuild-rack', label: t('diagrams.rack.rebuildButton'), disabled: !ready || rebuilding, onSelect: () => void rebuildRack() }] : []),
         ...cables.menu,
         { key: 'draft', label: t('diagrams.cable.draftButton'), disabled: !ready, onSelect: () => setDraftOpen(true) },
         ...reviewMenu,
@@ -1023,6 +1066,7 @@ function DiagramEditor({
           />
           {cables.dialogs}
           {frames.dialogs}
+          {photos.dialogs}
           {content.diagram.kind === 'presentation' ? presentationTools.elements : null}
           {draftOpen ? (
             <DraftFromPortMapDialog

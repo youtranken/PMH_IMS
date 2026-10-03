@@ -131,6 +131,7 @@ const TEXT: Record<string, [string, string]> = {
   diagramExportTimeoutSeconds: ['settings.diagramExportTimeoutSecondsLabel', 'settings.diagramExportTimeoutSecondsDesc'],
   diagramDriftNotifyEnabled: ['settings.diagramDriftNotifyEnabledLabel', 'settings.diagramDriftNotifyEnabledDesc'],
   diagramDriftSweepHour: ['settings.diagramDriftSweepHourLabel', 'settings.diagramDriftSweepHourDesc'],
+  diagramPhotoMaxPx: ['settings.diagramPhotoMaxPxLabel', 'settings.diagramPhotoMaxPxDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;
