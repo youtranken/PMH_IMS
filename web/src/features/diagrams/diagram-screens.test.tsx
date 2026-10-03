@@ -95,16 +95,23 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content?mode=view'))).toBe(true);
   });
 
-  it('màn hẹp (< 1024px) ở chế độ sửa: báo "chỉ làm trên máy tính", không tải nội dung, có lối sang xem', async () => {
+  it('màn hẹp (< 1024px) mở đường dẫn sửa: thành chế độ XEM kèm "chỉ làm trên máy tính"; không draw.io, không công cụ sửa / gửi duyệt', async () => {
     narrow(true);
+    const version = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
     const fetchMock = routeFetch({
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...version, xml: '<mxfile/>', svg: SVG } }),
       '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
     });
     renderScreen('/diagrams/d1?mode=edit');
-    expect(await screen.findByText('Sửa sơ đồ chỉ làm trên máy tính')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sang chế độ xem' })).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content'))).toBe(false);
+    expect(await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' })).toHaveTextContent('Core E2E');
+    expect(screen.getByText('Sửa sơ đồ chỉ làm trên máy tính')).toBeInTheDocument();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Sửa' })).toBeNull();
+    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận', 'Tạo bản trình bày']) expect(screen.queryByRole('button', { name })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Tìm' })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content?mode=view'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/presence'))).toBe(false);
   });
 });
 
@@ -125,8 +132,8 @@ describe('Cây bản vẽ', () => {
   });
 
   it.each([
-    ['Thành viên chỉ thêm bản vẽ con', MEMBER, ['Thêm bản vẽ con']],
-    ['SA đổi tên / chuyển nhánh / lưu trữ được', ME, ['Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ']],
+    ['Thành viên trình chiếu + thêm bản vẽ con', MEMBER, ['Trình chiếu', 'Thêm bản vẽ con']],
+    ['SA đổi tên / chuyển nhánh / lưu trữ được', ME, ['Trình chiếu', 'Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ']],
   ])('%s', async (_name, me, expected) => {
     routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [ROOT]) });
     renderScreen('/diagrams', me);

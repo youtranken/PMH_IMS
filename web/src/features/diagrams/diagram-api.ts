@@ -26,6 +26,8 @@ export interface DiagramNode {
   latestVersion: { id: string; seq: number; savedAt: string; savedBy: string } | null;
   /** Số phiên bản chính thức ("chính thức v3"); `null` = chưa phát hành. Thiếu → coi như `null`. */
   officialSeq?: number | null;
+  /** Phiên bản chính thức hiện hành — trình chiếu mở đúng bản này. Thiếu → coi như `null`. */
+  officialVersionId?: string | null;
   /** Yêu cầu duyệt đang chờ của bản vẽ. */
   pendingApprovalId?: string | null;
   /** Bản trình bày: chép từ đâu, bản gốc giờ chính thức ở phiên bản nào. Thiếu → coi như `null`. */
@@ -116,6 +118,31 @@ export interface DiagramContent {
   frames?: DiagramFrame[];
   /** Lệch kho của phiên bản đang mở so với kho hiện tại (Q-23) — chỉ báo, không sửa. */
   drift?: Finding[];
+  /** Lớp draw.io theo thứ tự trong XML (`name: ''` = lớp mặc định không tên). Thiếu → coi như rỗng. */
+  layers?: { id: string; name: string }[];
+  /** Mọi ô của phiên bản (chỉ mục ô): lớp + khung bao mô hình. Thiếu → coi như rỗng. */
+  cells?: { id: string; kind: 'device' | 'edge' | 'shape'; layer: string | null; bounds: { x: number; y: number; width: number; height: number } | null }[];
+}
+
+/** Bản vẽ chỉ tên + id (thông tin của cây). */
+export interface DiagramRef {
+  id: string;
+  name: string;
+}
+
+/** `GET /diagrams/find?q=` — máy khớp mã/tên/IP + bản vẽ chính thức chứa nó. */
+export interface FoundDevice {
+  id: string;
+  code: string;
+  name: string | null;
+  diagrams: DiagramRef[];
+}
+
+/** `GET /diagrams/path?from=&to=` — đường ít dây nhất trên sơ đồ cổng; `path: null` = không có. */
+export interface PathResult {
+  from: { id: string; code: string };
+  to: { id: string; code: string };
+  path: { hops: { deviceId: string; code: string; diagrams: DiagramRef[] }[]; linkIds: string[] } | null;
 }
 
 /**

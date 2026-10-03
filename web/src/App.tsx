@@ -46,6 +46,7 @@ import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
 import { DiagramScreen } from '@/features/diagrams/diagram-screen';
+import { DiagramSlideshow } from '@/features/diagrams/diagram-slideshow';
 import { DiagramTreeScreen } from '@/features/diagrams/diagram-tree-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
 import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
@@ -282,6 +283,7 @@ function AppRoutes() {
         {/* Mọi vai — Thành viên cũng vẽ (Q-23), khớp `@Roles` của `diagrams.controller.ts`. */}
         <Route path={PATHS.diagrams} element={<DiagramTreeScreen me={me} />} />
         <Route path={`${PATHS.diagrams}/:id`} element={<DiagramScreen me={me} />} />
+        <Route path={`${PATHS.diagrams}/:id/present`} element={<DiagramSlideshow me={me} />} />
         <Route path={PATHS.serviceAccounts} element={<ServiceAccountsScreen me={me} />} />
         <Route
           path={`${PATHS.serviceAccounts}/:id`}

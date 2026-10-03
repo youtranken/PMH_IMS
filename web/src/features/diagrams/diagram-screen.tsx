@@ -36,6 +36,7 @@ import {
   type DiagramLink,
   type DiagramNode,
   type EditorSettings,
+  type PathResult,
   type VersionItem,
 } from './diagram-api';
 import { CableLegend } from './cable-legend';
@@ -47,6 +48,9 @@ import { CreatePresentationButton, PresentationBand, PresentationTools } from '.
 import { DiagramSubnetCard } from './diagram-subnet-card';
 import { DriftCheckDialog, withDriftMarks } from './diagram-drift';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
+import { buildLayers, pathOnDrawing } from './diagram-navigation';
+import { DiagramPathTool } from './diagram-path-tool';
+import { DiagramSearch } from './diagram-search';
 import type { PublicationEvent } from './diagram-timeline';
 import { ExportMenu, TimelineMenu } from './diagram-tools';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
@@ -90,14 +94,19 @@ export function DiagramScreen({ me }: { me: Me }) {
 function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
-  const mode: Mode = params.get('mode') === 'edit' ? 'edit' : 'view';
+  /*
+   * Màn hẹp (điện thoại, máy tính bảng dọc) chỉ XEM (Q-23): đường dẫn sửa mở thành chế độ xem kèm
+   * lời nhắn — không nạp draw.io, không có công cụ sửa / gửi duyệt.
+   */
+  const narrow = useMediaQuery(BREAKPOINTS.editor);
+  const editRequested = params.get('mode') === 'edit';
+  const mode: Mode = editRequested && !narrow ? 'edit' : 'view';
   const versionId = mode === 'view' ? params.get('version') : null;
   /* `?compare=<phiên bản trước>` = so sánh tô màu với bản đang xem; `?at=YYYY-MM-DD` = bản chính
      thức hiệu lực ngày đó (thanh trượt thời gian) — không kèm `version` nghĩa là ngày đó chưa có. */
   const compareFrom = mode === 'view' ? params.get('compare') : null;
   const atDay = mode === 'view' ? params.get('at') : null;
   const noOfficialAt = Boolean(atDay) && !versionId;
-  const narrow = useMediaQuery(BREAKPOINTS.editor);
   const ask = useConfirm();
   const queryClient = useQueryClient();
   const stepUp = useStepUpRetry(me.csrfToken);
@@ -114,6 +123,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    */
   const [focusDeviceId, setFocusDeviceId] = useState<string | null>(() => params.get('focus'));
   const [timelineOpen, setTimelineOpen] = useState(false);
+  /* "Chỉ đường": kết quả server (sơ đồ cổng); có đường thì tô sáng đè lên tô sáng của máy đang chọn. */
+  const [path, setPath] = useState<PathResult | null>(null);
+  /* Bay tới từ ô tìm (hay từ bản vẽ khác qua `?focus=`): phóng tới mức đọc được, không chỉ dời khung. */
+  const [flyClose, setFlyClose] = useState(() => Boolean(params.get('focus')));
 
   const node = useQuery({ queryKey: nodeKey(id), queryFn: () => apiFetch<DiagramNode>(`/api/v1/diagrams/${id}`) });
   const settings = useQuery({
@@ -121,7 +134,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     queryFn: () => apiFetch<EditorSettings>('/api/v1/diagrams/editor-settings'),
     staleTime: 60_000,
   });
-  const editBlocked = mode === 'edit' && narrow;
   const content = useQuery({
     queryKey: contentKey(id, mode, versionId),
     queryFn: () => {
@@ -132,7 +144,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         t('diagrams.screen.stepUpPurpose', { name: node.data?.name ?? '' }),
       );
     },
-    enabled: node.isSuccess && !editBlocked && !compareFrom && !noOfficialAt,
+    enabled: node.isSuccess && !compareFrom && !noOfficialAt,
     // Mỗi lần tải nội dung là một dòng `diagram.viewed`: không tự tải lại khi quay lại tab trình duyệt.
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -242,7 +254,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     onCompare: (from, to) => void goView({ version: to, compare: from }),
   });
 
-  const tabs = (
+  const tabs = narrow ? null : (
     <Tabs
       ariaLabel={t('diagrams.screen.tabsLabel')}
       value={mode}
@@ -291,7 +303,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    * Bản trình bày không qua duyệt (Q-23): không Gửi duyệt / Phát hành / ghim — server cũng từ chối
    * (`DIAGRAM_NOT_REVIEWABLE`), ẩn nút để không ai bấm vào một đường cụt.
    */
-  const reviewActions = node.data?.kind === 'presentation' ? null : review.actions;
+  const reviewActions = node.data?.kind === 'presentation' || narrow ? null : review.actions;
   /*
    * Thanh nút dựng MỘT lần ở cuối với cùng thứ tự con ở mọi trạng thái tải: bọc thêm một lớp khi
    * nội dung về là dựng lại các nút, mất trạng thái của nút đang mở hộp.
@@ -299,10 +311,19 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   let pinToggle: ReactNode = null;
   let exportMenu: ReactNode = null;
   let driftButton: ReactNode = null;
-  let showActions = true;
+  let navTools: ReactNode = null;
   /* So sánh chỉ còn nút Phiên bản; ngày chưa có bản chính thức chỉ còn thanh trượt để kéo đi ngày khác. */
   let toolbar: 'full' | 'compare' | 'timeline' = 'full';
-  let status: ReactNode = review.status;
+  let status: ReactNode = (
+    <>
+      {editRequested && narrow ? (
+        <p className="muted" role="status">
+          {t('diagrams.screen.desktopOnly')}
+        </p>
+      ) : null}
+      {review.status}
+    </>
+  );
   const band = node.data ? <PresentationBand diagram={node.data} /> : null;
   if (node.isPending || settings.isPending) body = <Loading />;
   else if (node.isError || settings.isError) {
@@ -315,19 +336,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         }}
       />
     );
-  } else if (editBlocked) {
-    body = (
-      <EmptyState
-        title={t('diagrams.screen.desktopOnly')}
-        hint={t('diagrams.screen.desktopOnlyHint')}
-        action={
-          <button type="button" className="btn primary" onClick={() => setParams({})}>
-            {t('diagrams.screen.goView')}
-          </button>
-        }
-      />
-    );
-    showActions = false;
   } else if (compareFrom) {
     toolbar = 'compare';
     status = (
@@ -396,6 +404,35 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     const drift = content.data.drift ?? [];
     const card = cardCellId ? view.byCell.get(cardCellId) : undefined;
     if (reviewActions) pinToggle = <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />;
+    const data = content.data;
+    const route = path ? pathOnDrawing(data, path, id) : null;
+    const lit = route && route.cellIds.length > 0 ? route.cellIds : null;
+    const layers = buildLayers(data, {
+      baseLayer: t('diagrams.nav.baseLayer'),
+      noDeviceType: t('diagrams.nav.noDeviceType'),
+      noCableType: t('diagrams.nav.noCableType'),
+    });
+    const cellBounds = (data.cells ?? []).flatMap((cell) => (cell.bounds ? [{ id: cell.id, bounds: cell.bounds }] : []));
+    const selectedCode = focusDeviceId ? ((data.deviceCells ?? []).find((c) => c.deviceId === focusDeviceId)?.code ?? '') : '';
+    navTools = (
+      <>
+        <DiagramSearch
+          content={data}
+          diagramId={id}
+          onFly={(match) => {
+            setPath(null);
+            setCardCellId(null);
+            setFocusDeviceId(match.deviceId);
+            setFlyClose(true);
+            goToCell(match.cellId);
+          }}
+        />
+        <DiagramPathTool
+          initialFrom={focusDeviceId ? { deviceId: focusDeviceId, term: selectedCode } : null}
+          onResult={(result) => setPath(result.path ? result : null)}
+        />
+      </>
+    );
     if (node.data) exportMenu = <ExportMenu me={me} diagram={node.data} versionId={version.id} run={stepUp.run} />;
     driftButton = (
       <button type="button" className="btn" onClick={() => setDriftOpen(true)}>
@@ -444,7 +481,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           pins={review.viewer.pins}
           onPinClick={review.viewer.onPinClick}
           focusCellId={focusCell ?? (focus && params.get('focus') ? focus[0] : null)}
-          highlightCellIds={focus}
+          focusScale={flyClose ? 1 : undefined}
+          highlightCellIds={lit ?? focus}
+          layers={layers}
+          cellBounds={cellBounds}
         />
         {(content.data.cableEdges ?? []).length > 0 ? <CableLegend cableTypes={content.data.cableTypes ?? []} floating /> : null}
         {card ? (
@@ -487,7 +527,31 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         </>
       );
     }
-    if (focusDeviceId && focus) {
+    if (path?.path) {
+      const elsewhere = route?.elsewhere ?? [];
+      status = (
+        <>
+          {status}
+          <p className="muted" role="status">
+            {t('diagrams.nav.pathFound', { from: path.from.code, to: path.to.code, count: path.path.linkIds.length })}{' '}
+            {elsewhere.map((hop) =>
+              hop.diagrams[0] ? (
+                <Link key={hop.deviceId} className="linkbtn sm" to={`${PATHS.diagram(hop.diagrams[0].id)}?${new URLSearchParams({ focus: hop.deviceId }).toString()}`}>
+                  {t('diagrams.nav.pathJump', { code: hop.code, diagram: hop.diagrams[0].name })}
+                </Link>
+              ) : (
+                <span key={hop.deviceId} className="badge outline">
+                  {t('diagrams.nav.pathOffDrawing', { code: hop.code })}
+                </span>
+              ),
+            )}{' '}
+            <button type="button" className="btn sm" onClick={() => setPath(null)}>
+              {t('diagrams.nav.pathClear')}
+            </button>
+          </p>
+        </>
+      );
+    } else if (focusDeviceId && focus) {
       status = (
         <>
           {status}
@@ -521,17 +585,18 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     node.data && toolbar !== 'compare' && mode === 'view' && (toolbar === 'timeline' || content.isSuccess) ? (
       <TimelineMenu diagram={node.data} run={stepUp.run} day={atDay} onPick={pickDay} open={timelineOpen} onOpenChange={setTimelineOpen} />
     ) : null;
-  const actions = showActions ? (
+  const actions = (
     <>
+      {navTools}
       {pinToggle}
       {driftButton}
       {exportMenu}
       {timelineMenu}
       {toolbar === 'full' ? reviewActions : null}
-      {toolbar === 'full' && node.data ? <CreatePresentationButton me={me} diagram={node.data} run={stepUp.run} /> : null}
-      {toolbar !== 'timeline' ? versionsButton : null}
+      {toolbar === 'full' && node.data && !narrow ? <CreatePresentationButton me={me} diagram={node.data} run={stepUp.run} /> : null}
+      {toolbar !== 'timeline' && !narrow ? versionsButton : null}
     </>
-  ) : null;
+  );
   return <ScreenFrame diagramId={id} title={title} tabs={tabs} actions={actions} status={status} band={band} body={body} dialogs={dialogs} />;
 }
 

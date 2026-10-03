@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
@@ -14,6 +14,7 @@ import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
 import { NODE_TYPE_KEY, TREE_KEY, statusLabel, type DiagramNode, type DiagramStatus } from './diagram-api';
 import { DiagramNodeDialog } from './diagram-node-dialog';
+import { enterFullscreen } from './diagram-slideshow';
 import { canManageNode, newerOfficialSeq } from './diagram-presentation';
 import { flattenTree } from './diagram-tree';
 
@@ -37,6 +38,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const toast = useToast();
   const ask = useConfirm();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Editing>(null);
   const tree = useQuery({ queryKey: TREE_KEY, queryFn: () => apiFetch<DiagramNode[]>('/api/v1/diagrams') });
@@ -79,7 +81,18 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
     body = (
       <ul className="tree-list" aria-label={t('diagrams.treeLabel')}>
         {flattenTree(nodes, collapsed).map(({ node, depth, hasChildren }) => {
-          const items: RowAction[] = [{ key: 'child', label: t('diagrams.addChild'), onSelect: () => setEditing({ parent: node }) }];
+          const items: RowAction[] = [
+            {
+              key: 'present',
+              label: t('diagrams.slideshow.start'),
+              // Toàn màn hình phải xin ngay trong cú bấm (trình duyệt chặn nếu xin sau khi chuyển trang).
+              onSelect: () => {
+                enterFullscreen();
+                navigate(PATHS.diagramPresent(node.id));
+              },
+            },
+            { key: 'child', label: t('diagrams.addChild'), onSelect: () => setEditing({ parent: node }) },
+          ];
           if (manager) {
             items.push({ key: 'edit', label: t('diagrams.edit'), onSelect: () => setEditing({ node }) });
             items.push({ key: 'archive', label: t('diagrams.archive'), warn: true, onSelect: () => void archive(node) });
