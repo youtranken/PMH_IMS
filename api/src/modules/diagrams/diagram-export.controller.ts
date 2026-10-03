@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { IsIn, IsUUID } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
@@ -56,6 +56,8 @@ export class DiagramExportController {
   @Roles('sa', 'admin', 'member')
   @RequiresStepUp('diagram')
   @Post(':id/versions/:versionId/exports')
+  // Trả file, không tạo tài nguyên nào: 200 chứ không phải 201 mặc định của POST.
+  @HttpCode(200)
   @Audited('diagram.exported', 'diagram', { writtenByService: true })
   async export(@Param() params: VersionParamDto, @Body() dto: ExportDto, @Req() req: AuthedRequest, @Res() res: Response): Promise<void> {
     const file = await this.exports.export({ email: req.user!.email, fullName: req.user!.fullName }, params.id, params.versionId, dto.format);
