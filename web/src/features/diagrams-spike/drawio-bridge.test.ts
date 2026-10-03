@@ -4,7 +4,6 @@ import {
   deviceIdFromLink,
   deviceShape,
   driftReasons,
-  drawioUrl,
   insertPatch,
   isCompressed,
   growBounds,
@@ -13,7 +12,6 @@ import {
   nextInsertPosition,
   pageIds,
   parseDeviceRefs,
-  parseDrawioMessage,
   withViewerMarks,
 } from './drawio-bridge';
 
@@ -27,38 +25,6 @@ const DEV = {
 
 const fileWith = (cells: string, extraPage = '') =>
   `<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells}</root></mxGraphModel></diagram>${extraPage}</mxfile>`;
-
-describe('drawioUrl', () => {
-  it('chế độ sửa: nhúng JSON, tiếng Việt, tắt mọi dịch vụ ngoài, không nút thoát', () => {
-    const url = new URL(drawioUrl('edit'), 'https://ims.local');
-    expect(url.pathname).toBe('/drawio/');
-    const p = url.searchParams;
-    expect([p.get('embed'), p.get('proto'), p.get('lang'), p.get('stealth')]).toEqual(['1', 'json', 'vi', '1']);
-    for (const service of ['gapi', 'od', 'db', 'gh', 'tr', 'gl', 'plugins']) expect(p.get(service)).toBe('0');
-    expect(p.get('noExitBtn')).toBe('1');
-    expect(p.get('chrome')).toBeNull();
-  });
-
-  it('chế độ xem: không khung sửa (chrome=0)', () => {
-    expect(new URL(drawioUrl('view'), 'https://ims.local').searchParams.get('chrome')).toBe('0');
-  });
-});
-
-describe('parseDrawioMessage', () => {
-  it.each([
-    ['{"event":"init"}', 'init'],
-    ['{"event":"save","xml":"<mxfile/>"}', 'save'],
-  ])('%s → event %s', (raw, event) => {
-    expect(parseDrawioMessage(raw)?.event).toBe(event);
-  });
-
-  it.each([['không phải JSON'], ['{"action":"load"}'], ['[1,2]'], [42], [null], ['{"event":5}']])(
-    'bỏ qua tin lạ: %s',
-    (raw) => {
-      expect(parseDrawioMessage(raw)).toBeNull();
-    },
-  );
-});
 
 describe('deviceShape — loại thiết bị → hình mạng có sẵn của draw.io', () => {
   it.each([

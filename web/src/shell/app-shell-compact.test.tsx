@@ -1,0 +1,80 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import type { Me } from '@/lib/me';
+import { PATHS, isCompactShellPath } from '@/lib/routes';
+import { AppShell } from '@/shell/app-shell';
+import { ToastProvider } from '@/ui/toast';
+import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
+
+const ME: Me = {
+  id: 'u-1',
+  email: 'it@pmh.com.vn',
+  fullName: 'Nguyễn Văn A',
+  role: 'member',
+  mustChangePassword: false,
+  totpPending: false,
+  totpEnrolled: true,
+  steppedUpAt: null,
+  csrfToken: 'tok',
+  config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30, fileMaxSizeMb: 25, fileMaxFilesPerBatch: 6 },
+};
+
+function renderShell(path: string) {
+  return renderWithI18n(
+    <ToastProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <AppShell me={ME}>
+                <p>Nội dung</p>
+              </AppShell>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    </ToastProvider>,
+  );
+}
+
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"count":0}', { status: 200 })));
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
+
+const nav = () => screen.getByRole('navigation', { name: 'Điều hướng chính' });
+
+describe('Sidebar tự thu trên màn sơ đồ (Q-23)', () => {
+  it('đường sơ đồ là đường thu gọn; đường khác thì không', () => {
+    expect(isCompactShellPath(PATHS.diagramSpike)).toBe(true);
+    expect(isCompactShellPath(PATHS.devices)).toBe(false);
+    expect(isCompactShellPath('/')).toBe(false);
+  });
+
+  it('vào màn sơ đồ: sidebar thu còn biểu tượng, mục vẫn có tên trợ năng + tooltip; nội dung tràn phần còn lại', () => {
+    renderShell(PATHS.diagramSpike);
+    expect(nav()).toHaveAttribute('data-compact', 'true');
+    const devices = screen.getByRole('link', { name: 'Thiết bị' });
+    expect(devices).toHaveAttribute('title', 'Thiết bị');
+    expect(screen.getByTestId('page-main')).toHaveAttribute('data-layout', 'full');
+  });
+
+  it('rời màn sơ đồ sang menu khác: sidebar mở rộng lại như bình thường', async () => {
+    renderShell(PATHS.diagramSpike);
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Thiết bị' }));
+    expect(nav()).not.toHaveAttribute('data-compact');
+    expect(screen.getByRole('link', { name: 'Thiết bị' })).not.toHaveAttribute('title');
+    expect(screen.getByTestId('page-main')).not.toHaveAttribute('data-layout');
+  });
+
+  it('màn thường không thu', () => {
+    renderShell(PATHS.devices);
+    expect(nav()).not.toHaveAttribute('data-compact');
+  });
+});

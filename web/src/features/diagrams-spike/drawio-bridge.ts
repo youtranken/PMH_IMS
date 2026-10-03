@@ -1,79 +1,13 @@
 import { foldSearch } from '@/lib/search-fold';
 
 /**
- * Cầu nối IMS ↔ draw.io nhúng (bản thử sơ đồ mạng, Q-23) — toàn hàm THUẦN, kiểm bằng bảng dữ liệu.
+ * Hàm THUẦN của màn sơ đồ bản thử (Q-23): dựng ô thiết bị, đọc tệp draw.io, lệch kho. Giao thức
+ * nhúng (URL, sandbox, tin `event`/`action`) nằm ở cầu nối dùng chung `@/ui/drawio-frame`.
  *
- * Giao thức: draw.io chạy ở `/drawio/` trong `<iframe sandbox>` (nguồn gốc mờ), hai bên chỉ nói
- * chuyện bằng `postMessage` chuỗi JSON (`proto=json`). draw.io gửi `event`, IMS gửi `action`.
- *
- * Chèn thiết bị dùng action `patch` (khuôn diff của draw.io: `u → trang → cells → i`), không dùng
+ * Chèn thiết bị dùng lệnh `patch` (khuôn diff của draw.io: `u → trang → cells → i`), không dùng
  * `merge`: `merge` so cả tệp với bản draw.io đang giữ làm mốc rồi áp phần chênh, nên chèn một hình
  * bằng `merge` có thể xoá luôn những gì người vẽ chưa lưu.
  */
-
-export const DRAWIO_PATH = '/drawio/';
-
-/** Tham số chung: nhúng JSON, tiếng Việt, tắt mọi dịch vụ ngoài (chạy offline trong LAN). */
-const COMMON_PARAMS: Record<string, string> = {
-  embed: '1',
-  proto: 'json',
-  spin: '1',
-  lang: 'vi',
-  stealth: '1',
-  offline: '1',
-  configure: '1',
-  gapi: '0',
-  od: '0',
-  db: '0',
-  gh: '0',
-  tr: '0',
-  gl: '0',
-  plugins: '0',
-  pwa: '0',
-};
-
-export function drawioUrl(mode: 'edit' | 'view'): string {
-  const params = new URLSearchParams(COMMON_PARAMS);
-  if (mode === 'edit') {
-    params.set('noExitBtn', '1');
-    params.set('saveAndExit', '0');
-  } else {
-    params.set('chrome', '0');
-  }
-  return `${DRAWIO_PATH}?${params.toString()}`;
-}
-
-/**
- * Trả lời cho `event: 'configure'`. `compressXml: false` để XML lưu xuống là chữ đọc được —
- * IMS phải tìm hình thiết bị trong đó (cảnh báo lệch kho, thẻ thông tin).
- */
-export const DRAWIO_CONFIG = {
-  compressXml: false,
-  defaultLibraries: 'general;networks',
-};
-
-export interface DrawioMessage {
-  event: string;
-  xml?: string;
-  href?: string;
-  error?: unknown;
-  currentPage?: number;
-  modelBounds?: Bounds;
-}
-
-/** Tin từ khung draw.io → object có `event`, hoặc `null` cho mọi thứ khác (không ném). */
-export function parseDrawioMessage(data: unknown): DrawioMessage | null {
-  if (typeof data !== 'string') return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(data);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-  const msg = parsed as Record<string, unknown>;
-  return typeof msg.event === 'string' ? (msg as unknown as DrawioMessage) : null;
-}
 
 /*
  * Thứ tự là luật: tên khớp nhiều mục thì mục ĐẦU thắng. "Firewall" đứng trước "router" vì loại

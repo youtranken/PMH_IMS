@@ -221,34 +221,6 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
-  # draw.io tự host (bản thử sơ đồ mạng, Q-23). Không mở cổng ra host: chỉ `web` gọi tới, và
-  # nginx của `web` chỉ cho tệp tĩnh đi qua (`web/nginx.conf`, mục /drawio/) — servlet `/proxy`
-  # của ảnh này tải hộ URL bất kỳ, không được để lộ.
-  #
-  # Ghim tag + digest: ảnh `latest` đổi mỗi tuần, và giao thức nhúng (postMessage) đổi theo. Nâng
-  # cấp theo RUNBOOK mục "draw.io". Chạy offline: không gọi ra Internet khi khung vẽ mở.
-  #
-  # rootfs chỉ đọc nên entrypoint không ghi được PreConfig.js và in một dòng WARNING lúc khởi
-  # động — chủ ý: cấu hình chạy là bản đóng sẵn trong ảnh, còn các tham số tắt dịch vụ ngoài
-  # (Google Drive, OneDrive, plugin…) đi qua URL nhúng (`drawio-bridge.ts`).
-  drawio:
-    image: jgraph/drawio:31.6.1@sha256:54a3a3e6e8f9ff9bf5ee3a722d8ebe3f497da3addbcf14ef62938d07854b2561
-    restart: unless-stopped
-    <<: *node_hardening
-    # Tomcat ghi vào temp/work/logs — đưa ra tmpfs, rootfs giữ chỉ đọc.
-    tmpfs: ['/tmp', '/usr/local/tomcat/temp', '/usr/local/tomcat/work', '/usr/local/tomcat/logs']
-    logging: *logging
-    mem_limit: 512m
-    environment:
-      CATALINA_OPTS: -Xmx256m
-      TZ: Asia/Ho_Chi_Minh
-    healthcheck:
-      test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:8080/']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
   # Dev only: hộp thư giả. Prod dùng SMTP thật (SMTP_HOST/.env) và không bật service này.
   mailpit:
     image: axllent/mailpit:latest

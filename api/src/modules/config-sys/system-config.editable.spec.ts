@@ -34,6 +34,19 @@ describe('Danh sách tham số sửa được trên màn (Q-14)', () => {
     expect(editableByKey('nat.wide_port_range')?.group).toBe('ipam');
   });
 
+  it('sơ đồ mạng (AD-17): hạn chờ trình vẽ và trần cổng kiểm sửa được, có khoảng', () => {
+    const timeout = editableByKey('diagram.editor_init_timeout_seconds')!;
+    const xml = editableByKey('diagram.xml_max_kb')!;
+    const svg = editableByKey('diagram.svg_max_kb')!;
+    const cells = editableByKey('diagram.max_cells')!;
+    for (const spec of [timeout, xml, svg, cells]) expect(spec.group).toBe('diagram');
+    expect(validateSetting(timeout, 20)).toEqual({ value: 20, reason: null });
+    expect(validateSetting(timeout, 0).reason).not.toBeNull();
+    // Trần trên phải nằm dưới trần body 5 MB của route lưu, không thì nới tham số cũng vô ích.
+    for (const spec of [xml, svg]) expect(spec.max! * 1024).toBeLessThan(5 * 1024 * 1024);
+    expect(validateSetting(cells, 100).reason).not.toBeNull();
+  });
+
   it('giấy tờ đính kèm (Q-18): ba khoá sửa được, có khoảng', () => {
     const size = editableByKey('file.max_size_mb')!;
     const batch = editableByKey('file.max_files_per_batch')!;

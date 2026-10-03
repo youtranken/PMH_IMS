@@ -182,6 +182,11 @@
     /* Nền hover/chip trên sidebar tối (sidebar tối ở cả hai theme). */
     --sidebar-hover:rgba(255,255,255,.06); --sidebar-chip:rgba(255,255,255,.1);
     --sidebar-chip-strong:rgba(255,255,255,.14);
+    /* Sơ đồ mạng (AD-17/AD-18). Watermark phủ trình vẽ: đủ đọc khi chụp màn hình, đủ nhạt để vẽ.
+       Màu dây: bảng màu đẩy vào draw.io lúc chạy (`ui/drawio-frame.tsx`), mã nguồn không chứa mã màu. */
+    --diagram-watermark:rgba(31,35,28,.13);
+    --diagram-wire-1:#0e9f6e; --diagram-wire-2:#1d5f9e; --diagram-wire-3:#ea580c;
+    --diagram-wire-4:#c0392b; --diagram-wire-5:#7c3aed; --diagram-wire-6:#5f665f;
 }
 
 /* Dark mode — chỉ override token, các component dùng var() tự đổi theo. Đây là giao diện MẶC
@@ -266,6 +271,9 @@ html[data-theme='dark'] {
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
     --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.12) 0%,rgba(12,16,30,.18) 60%,rgba(12,16,30,.45) 100%);
+    --diagram-watermark:rgba(233,237,231,.13);
+    --diagram-wire-1:#34d399; --diagram-wire-2:#7fb6ea; --diagram-wire-3:#f59e0b;
+    --diagram-wire-4:#f27e72; --diagram-wire-5:#a78bfa; --diagram-wire-6:#a7b0a5;
 }
 
 * {

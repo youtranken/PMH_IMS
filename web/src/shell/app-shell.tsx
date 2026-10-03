@@ -4,7 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { BrandEmblem } from '@/ui/brand-logo';
 import { Chevron } from '@/ui/chevron';
 import { type Me } from '@/lib/me';
-import { titleKeyOf } from '@/lib/routes';
+import { isCompactShellPath, titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
@@ -37,6 +37,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showSidebar = !narrow || drawerOpen;
+  /*
+   * Màn cần trọn bề ngang (trình vẽ sơ đồ): sidebar thu còn biểu tượng, nội dung tràn hết phần
+   * còn lại. Suy từ đường dẫn nên rời màn là tự mở lại. Màn hẹp đã có drawer, không thu thêm.
+   */
+  const compact = !narrow && isCompactShellPath(pathname);
   /*
    * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở.
    *
@@ -97,8 +102,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
         {showSidebar ? (
         <DrawerShell narrow={narrow} label={t('app.mainNav')} trapRef={drawerRef}>
         <nav
-          className={narrow ? 'sidebar is-drawer' : 'sidebar'}
+          className={narrow ? 'sidebar is-drawer' : compact ? 'sidebar is-compact' : 'sidebar'}
           aria-label={t('app.mainNav')}
+          data-compact={compact ? 'true' : undefined}
         >
           <div className="brand">
             <BrandEmblem alt="" className="brand-emblem" />
@@ -142,11 +148,13 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               khối tài khoản ở đáy luôn đứng yên và có mép mờ báo còn mục bên dưới. */}
           <div className="sb-scroll">
           {groups.map((group) => (
-            <NavSection key={group.labelKey} group={group} pathname={pathname}>
+            <NavSection key={group.labelKey} group={group} pathname={pathname} compact={compact}>
               {group.items.map((item) => (
                 <NavLink
                   key={item.key}
                   to={item.to}
+                  /* Thu gọn thì chữ chỉ còn cho trình đọc màn hình; người dùng chuột cần tooltip. */
+                  title={compact ? t(me.role === 'member' && item.memberKey ? item.memberKey : item.key) : undefined}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                   end={item.to === '/'}
                   aria-describedby={
@@ -293,6 +301,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             className="page"
             id="noi-dung"
             data-testid="page-main"
+            data-layout={compact ? 'full' : undefined}
             tabIndex={-1}
             inert={narrow && drawerOpen}
           >
@@ -411,10 +420,13 @@ function writeGroupOpen(labelKey: string, open: boolean): void {
 function NavSection({
   group,
   pathname,
+  compact,
   children,
 }: {
   group: NavGroup;
   pathname: string;
+  /** Sidebar thu gọn: mọi mục hiện thành biểu tượng, không còn tiêu đề nhóm để bấm khép/mở. */
+  compact: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -426,7 +438,7 @@ function NavSection({
     if (holdsRoute) setOpen(true);
   }, [holdsRoute, pathname]);
 
-  if (!group.collapsible) {
+  if (!group.collapsible || compact) {
     return (
       <div>
         <p className="nav-label">{t(group.labelKey)}</p>

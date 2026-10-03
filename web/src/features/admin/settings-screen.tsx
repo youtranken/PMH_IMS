@@ -29,6 +29,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'software', label: 'settings.groupSoftware' },
   { key: 'ipam', label: 'settings.groupIpam' },
   { key: 'files', label: 'settings.groupFiles' },
+  { key: 'diagram', label: 'settings.groupDiagram' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -42,7 +43,9 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   ports: 'settings.unitPorts',
   rows: 'settings.unitRows',
   mb: 'settings.unitMb',
+  kb: 'settings.unitKb',
   files: 'settings.unitFiles',
+  cells: 'settings.unitCells',
 };
 
 /*
@@ -111,6 +114,13 @@ const TEXT: Record<string, [string, string]> = {
   fileMaxSizeMb: ['settings.fileMaxSizeMbLabel', 'settings.fileMaxSizeMbDesc'],
   fileMaxFilesPerBatch: ['settings.fileMaxFilesPerBatchLabel', 'settings.fileMaxFilesPerBatchDesc'],
   filePurgeAfterDays: ['settings.filePurgeAfterDaysLabel', 'settings.filePurgeAfterDaysDesc'],
+  diagramEditorInitTimeoutSeconds: [
+    'settings.diagramEditorInitTimeoutSecondsLabel',
+    'settings.diagramEditorInitTimeoutSecondsDesc',
+  ],
+  diagramXmlMaxKb: ['settings.diagramXmlMaxKbLabel', 'settings.diagramXmlMaxKbDesc'],
+  diagramSvgMaxKb: ['settings.diagramSvgMaxKbLabel', 'settings.diagramSvgMaxKbDesc'],
+  diagramMaxCells: ['settings.diagramMaxCellsLabel', 'settings.diagramMaxCellsDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;
