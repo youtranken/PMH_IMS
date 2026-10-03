@@ -104,8 +104,8 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     // Màn bản trình bày: dải + phiên bản đã chép; không có đường duyệt.
     await expect(member.getByRole('heading', { level: 1, name: presName })).toBeVisible();
     await expect(band(member)).toContainText('Dựa trên bản chính thức phiên bản 1');
-    await expect(member.getByRole('button', { name: 'Gửi duyệt' })).toHaveCount(0);
-    await expect(member.getByRole('button', { name: 'Phát hành' })).toHaveCount(0);
+    await expect(member.getByRole('button', { name: 'Gửi duyệt', exact: true })).toHaveCount(0);
+    await expect(member.getByRole('button', { name: 'Phát hành', exact: true })).toHaveCount(0);
     // Bản gốc nguyên vẹn; nhân bản ghi nhật ký riêng.
     expect(sql(`SELECT official_version_id FROM diagram WHERE id = '${source.id}'`)).toBe(source.versionId);
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${source.id}'`)).toBe('1');
@@ -275,7 +275,7 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     await rename.getByRole('textbox', { name: /Tên bản vẽ/ }).fill(`E2E Bản đổi tên ${stamp}`);
     await Promise.all([
       member.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${mineId}`) && r.request().method() === 'PATCH' && r.status() === 200),
-      rename.getByRole('button', { name: 'Lưu' }).click(),
+      rename.getByRole('button', { name: 'Lưu', exact: true }).click(),
     ]);
     await expect(section.getByRole('link', { name: `E2E Bản đổi tên ${stamp}` })).toBeVisible();
 

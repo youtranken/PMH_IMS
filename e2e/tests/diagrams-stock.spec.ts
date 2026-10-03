@@ -90,7 +90,7 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await stepUpViaApi(page, secret, 'diagram');
 
     await page.goto(`/diagrams/${id}?mode=edit`);
-    const stock = page.getByRole('button', { name: 'Thiết bị kho' });
+    const stock = page.getByRole('button', { name: 'Thiết bị kho', exact: true });
     await expect(stock).toBeEnabled({ timeout: 60_000 });
     const frame = page.locator('iframe[title="Khung vẽ draw.io"]');
     const before = (await frame.boundingBox())!;
@@ -226,8 +226,8 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await stepUpViaApi(page, secret, 'diagram');
 
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Thiết bị kho' })).toBeEnabled({ timeout: 60_000 });
-    await page.getByRole('button', { name: 'Thiết bị kho' }).click();
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await page.getByRole('button', { name: 'Thiết bị kho', exact: true }).click();
     await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(dead);
     const pick = stockBox(page).getByRole('checkbox', { name: `Chọn ${dead} để chèn` });
     await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);

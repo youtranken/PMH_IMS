@@ -88,6 +88,8 @@ const NO_CREATED_AT: Record<string, string> = {
     'Dọn theo `user_id` trong vùng `users`, và có sweeper tự dọn hàng nguội. Đo 11/09: 0 hàng.',
   device_type_icon:
     'Tối đa một hàng mỗi loại (khoá chính = `device_type_id`), dọn theo khoá ngoại ON DELETE CASCADE khi vùng `catalog` xoá loại có "E2E" trong tên. Đo 03/10: 0 hàng.',
+  diagram_drift:
+    'Bộ đệm số lệch kho, tối đa một hàng mỗi bản vẽ (khoá chính = `diagram_id`), ghi đè mỗi lần tính; dọn theo khoá ngoại ON DELETE CASCADE khi lượt dọn xoá bản vẽ có "E2E" trong tên.',
 };
 
 export function markRunStart(): void {

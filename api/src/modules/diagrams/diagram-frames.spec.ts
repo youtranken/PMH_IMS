@@ -109,6 +109,9 @@ describe('cabinetFrameLayout — khung tủ dựng từ kho', () => {
     expect(rack.attrs).toEqual({ ims_cabinet_id: CAB });
     expect(rack.style).toContain('shape=mxgraph.rackGeneral.rackCabinet3');
     expect(rack.style).toContain('container=1');
+    // Hình rackCabinet3 của draw.io (mxRackRackCabinet3.sideText): `descend` đánh số từ ĐÁY lên (U1 ở
+    // đáy, khớp cách xếp máy ở đây); `ascend` thì U1 ở đỉnh và mọi máy lệch số U.
+    expect(rack.style).toContain('numDisp=descend');
     expect(rack.style).not.toMatch(/#[0-9a-f]{3,6}/i);
     expect(rack.width).toBe(RACK_WIDTH);
     expect(rack.height).toBeCloseTo(RACK_MARGIN.top + RACK_MARGIN.bottom + 12 * RACK_UNIT_PX);

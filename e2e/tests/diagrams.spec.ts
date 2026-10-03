@@ -87,7 +87,7 @@ function outsideHost(urls: string[], baseURL: string): string[] {
 
 /** Chèn một máy kho qua hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23). */
 async function insertDevice(page: Page, code: string) {
-  await page.getByRole('button', { name: 'Thiết bị kho' }).click();
+  await page.getByRole('button', { name: 'Thiết bị kho', exact: true }).click();
   const box = page.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
   await box.getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(code);
   // Chờ danh sách đã lọc theo mã (ô tìm có debounce) rồi mới tick — trước đó là danh sách chưa lọc.
@@ -103,7 +103,7 @@ async function insertDevice(page: Page, code: string) {
  * cách màn quyết định bật Lưu, không phải vào việc trình vẽ đã sẵn sàng.
  */
 async function waitEditorReady(page: Page) {
-  await expect(page.getByRole('button', { name: 'Thiết bị kho' })).toBeEnabled({ timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
 }
 
 async function saveInEditor(page: Page, id: string): Promise<{ seq: number; summary: string }> {
@@ -133,7 +133,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.getByRole('button', { name: 'Thêm bản vẽ' }).click();
     const form = page.getByRole('dialog', { name: 'Thêm bản vẽ' });
     await form.getByLabel('Tên bản vẽ').fill(name);
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText(`Đã tạo bản vẽ "${name}".`)).toBeVisible();
     const link = page.getByRole('link', { name });
     await expect(link).toBeVisible();
@@ -235,7 +235,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await rowAction(page, name, 'Thêm bản vẽ con');
     const form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${name}"` });
     await form.getByLabel('Tên bản vẽ').fill(`E2E Tầng con ${uniqueStamp()}`);
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText(/Đã tạo bản vẽ "E2E Tầng con/)).toBeVisible();
 
     // Danh sách phiên bản lọc "chỉ có tên".

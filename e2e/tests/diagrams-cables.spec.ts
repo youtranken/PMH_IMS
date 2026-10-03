@@ -120,7 +120,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await form.getByRole('textbox', { name: /^Tên/ }).fill(`E2E Cáp đồng trục ${stamp}`);
     await expect(form.getByRole('radio')).toHaveCount(8);
     await form.getByRole('radio', { name: 'Ô màu 5' }).check();
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form).toHaveCount(0);
     expect(sql(`SELECT color_slot FROM cable_type WHERE name = 'E2E Cáp đồng trục ${stamp}'`)).toBe('5');
   });

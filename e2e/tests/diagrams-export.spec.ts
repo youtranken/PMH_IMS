@@ -139,7 +139,7 @@ test.describe('Sơ đồ mạng — xuất PNG/PDF', () => {
     expect(pdfBytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(pdfBytes.length).toBeGreaterThan(5_000);
     expect(exportedCount(id)).toBe(2);
-    expect(sql(`SELECT detail->>'format' FROM audit_log WHERE object_id = '${id}' AND action = 'diagram.exported' ORDER BY id`).split('\n')).toEqual(['png', 'pdf']);
+    expect(sql(`SELECT detail->>'format' FROM audit_log WHERE object_id = '${id}' AND action = 'diagram.exported' ORDER BY created_at`).split('\n')).toEqual(['png', 'pdf']);
   });
 
   test('chưa nhập mã sơ đồ: API xuất → 401 phạm vi sơ đồ; hết ân hạn trên màn → hỏi mã, huỷ thì không có file, không có dòng nhật ký', async ({ page }) => {

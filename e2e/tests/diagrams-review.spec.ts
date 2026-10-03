@@ -129,13 +129,13 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
 
     await member.goto(`/diagrams/${id}`);
     await expect(viewer(member)).toBeVisible();
-    await member.getByRole('button', { name: 'Gửi duyệt' }).click();
+    await member.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
     const submit = member.getByRole('dialog', { name: `Gửi bản vẽ "${name}" cho Admin duyệt` });
     await submit.getByLabel(/Lý do/).fill('Vẽ xong tầng 3 E2E');
-    await submit.getByRole('button', { name: 'Gửi duyệt' }).click();
+    await submit.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
     await expect(member.getByText('Đã gửi duyệt kèm 1 cảnh báo vàng cho người duyệt xem.')).toBeVisible();
     // Người gửi không tự duyệt: chỉ có nút Rút; gọi thẳng API duyệt → 403.
-    await expect(member.getByRole('button', { name: 'Duyệt…' })).toHaveCount(0);
+    await expect(member.getByRole('button', { name: 'Duyệt…', exact: true })).toHaveCount(0);
     await member.getByRole('button', { name: /^Thao tác với / }).click();
     await expect(member.getByRole('menuitem', { name: 'Rút yêu cầu' })).toBeVisible();
     await expect(member.getByRole('menuitem', { name: 'Duyệt…' })).toHaveCount(0);
@@ -154,7 +154,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await stepUpViaApi(page, saSecret, 'diagram');
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
-    await page.getByRole('button', { name: 'Duyệt…' }).click();
+    await page.getByRole('button', { name: 'Duyệt…', exact: true }).click();
     let decide = page.getByRole('dialog', { name: `Duyệt phiên bản #${v1.seq}` });
     await expect(decide).toContainText('Thay đổi (chưa có bản chính thức)');
     await expect(decide).toContainText('nằm trong khung');
@@ -165,7 +165,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await pin.getByLabel(/Bình luận/).fill('Sai tên phòng E2E');
     await pin.getByRole('button', { name: 'Ghim' }).click();
     await expect(page.getByText('Đã ghim bình luận.')).toBeVisible();
-    await page.getByRole('button', { name: 'Duyệt…' }).click();
+    await page.getByRole('button', { name: 'Duyệt…', exact: true }).click();
     decide = page.getByRole('dialog', { name: `Duyệt phiên bản #${v1.seq}` });
     await expect(decide).toContainText('Đã ghim 1 bình luận cho lượt duyệt này.');
     await decide.getByRole('button', { name: 'Trả về' }).click();
@@ -200,7 +200,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     // SA duyệt → bản chính thức v2; cây ghi "Chính thức v2"; thư báo người gửi.
     await page.reload();
     await expect(viewer(page)).toBeVisible();
-    await page.getByRole('button', { name: 'Duyệt…' }).click();
+    await page.getByRole('button', { name: 'Duyệt…', exact: true }).click();
     await page.getByRole('dialog', { name: `Duyệt phiên bản #${v2.seq}` }).getByRole('button', { name: 'Duyệt', exact: true }).click();
     await expect(page.getByText(`Đã duyệt — phiên bản #${v2.seq} là bản chính thức.`)).toBeVisible();
     await expect((await treeRow(page, name)).getByText(`Chính thức v${v2.seq}`)).toBeVisible();
@@ -225,7 +225,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await diagramBarAction(page, 'Gửi duyệt');
     const submit = page.getByRole('dialog', { name: /cho Admin duyệt/ });
     await submit.getByLabel(/Lý do/).fill('Thử gửi E2E');
-    await submit.getByRole('button', { name: 'Gửi duyệt' }).click();
+    await submit.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
     const found = page.getByRole('dialog', { name: 'Tự kiểm còn lỗi đỏ' });
     await expect(found).toContainText(`Thiết bị ${code} đã thanh lý`);
     await expect(found.getByRole('button', { name: 'Xem trên bản vẽ' })).toBeVisible();
@@ -253,18 +253,18 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await expect(page.getByRole('button', { name: 'Thiết bị kho' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeVisible();
     expect(await diagramBarSpread(page)).toBeLessThan(12);
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Phát hành' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Phát hành', exact: true })).toBeVisible();
     expect(await diagramBarSpread(page)).toBeLessThan(12);
     await page.setViewportSize({ width: 390, height: 800 });
-    await expect(page.getByRole('button', { name: 'Phát hành' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Phát hành', exact: true })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.getByRole('button', { name: 'Phát hành' }).click();
-    await page.getByRole('dialog', { name: `Phát hành phiên bản #${v1.seq} thành bản chính thức?` }).getByRole('button', { name: 'Phát hành' }).click();
+    await page.getByRole('button', { name: 'Phát hành', exact: true }).click();
+    await page.getByRole('dialog', { name: `Phát hành phiên bản #${v1.seq} thành bản chính thức?` }).getByRole('button', { name: 'Phát hành', exact: true }).click();
     await expect(page.getByText(`Phiên bản #${v1.seq} đã là bản chính thức.`)).toBeVisible();
 
     const v2 = await save(page, id, page_('<mxCell id="s2" value="Phòng mới E2E" vertex="1" parent="1"><mxGeometry x="300" y="100" width="80" height="40" as="geometry"/></mxCell>'), v1.id);
@@ -308,7 +308,7 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     expect(memberPublish.status()).toBe(403);
     await member.goto(`/diagrams/${id}`);
     await expect(viewer(member)).toBeVisible();
-    await expect(member.getByRole('button', { name: 'Phát hành' })).toHaveCount(0);
+    await expect(member.getByRole('button', { name: 'Phát hành', exact: true })).toHaveCount(0);
     await member.context().close();
   });
 });
