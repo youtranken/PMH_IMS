@@ -166,6 +166,18 @@ describe('diffCellIndex + summarizeDiff — tóm tắt một dòng (hàm thuần
     expect(diffCellIndex(null, next).devices.added).toEqual([{ id: DEV_C, label: 'SW-03' }]);
   });
 
+  it('cùng ô, chỉ khác THỨ TỰ thuộc tính XML (draw.io xuất lại theo thứ tự riêng) → không đổi gì', () => {
+    const before = page(
+      `<UserObject label="SW-01" ims_device_id="${DEV_A}" ims_device_code="SW-01" id="d1"><mxCell style="rounded=1;" vertex="1" parent="1"><mxGeometry x="20" y="20" width="120" height="50" as="geometry"/></mxCell></UserObject>` +
+        `<mxCell id="s1" value="Tầng 3" style="rounded=1;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="80" height="40" as="geometry"/></mxCell>`,
+    );
+    const after = page(
+      `<UserObject ims_device_code="SW-01" label="SW-01" id="d1" ims_device_id="${DEV_A}"><mxCell parent="1" style="rounded=1;" vertex="1"><mxGeometry height="50" width="120" x="20" y="20" as="geometry"/></mxCell></UserObject>` +
+        `<mxCell parent="1" id="s1" style="rounded=1;" value="Tầng 3" vertex="1"><mxGeometry as="geometry" height="40" width="80" x="0" y="0"/></mxCell>`,
+    );
+    expect(summarizeDiff(diffCellIndex(buildCellIndex(before), buildCellIndex(after)))).toBe('Không đổi gì');
+  });
+
   it('đổi một ô từ hình thường sang ô thiết bị: bỏ hình, thêm thiết bị', () => {
     const prev = buildCellIndex(page(shape('x1', 'SW-01')));
     const next = buildCellIndex(page(device('x1', DEV_A, 'SW-01')));

@@ -92,8 +92,18 @@ function number(value: string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Khoá đối tượng xếp theo bảng chữ trước khi băm: draw.io xuất lại thuộc tính XML theo thứ tự riêng
+ * của nó, nên cùng một ô mà băm theo thứ tự đọc được sẽ thành "đổi" dù không ai sửa gì.
+ */
 function fingerprint(parts: unknown): string {
-  return createHash('sha1').update(JSON.stringify(parts)).digest('hex').slice(0, 16);
+  return createHash('sha1').update(JSON.stringify(parts, sortedKeys)).digest('hex').slice(0, 16);
+}
+
+function sortedKeys(_key: string, value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(Object.keys(record).sort().map((key) => [key, record[key]]));
 }
 
 function imsAttrs(...sources: (Record<string, string> | null)[]): Record<string, string> {
