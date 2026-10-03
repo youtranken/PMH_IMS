@@ -458,6 +458,11 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
 - **Sửa cũng hỏi mã sơ đồ (03/10/2026):** lưu, đặt tên, khôi phục phiên bản đều cần mã phạm vi sơ
   đồ như khi xem; hết ân hạn giữa lúc vẽ thì hỏi mã tại chỗ rồi lưu lại đúng bản đang vẽ. Xem cây
   bản vẽ (tên, trạng thái) không hỏi mã.
+- **Thành viên quản bản trình bày của mình (03/10/2026, chủ dự án duyệt):** Thành viên đổi tên và
+  lưu trữ được bản trình bày do mình tạo hoặc đang phụ trách (`created_by` / `owner_email`); bản của
+  người khác và mọi bản chính thức vẫn chỉ Admin/SA (403 `DIAGRAM_MANAGE_FORBIDDEN`). Chủ bản trình
+  bày chỉ đổi TÊN, không đổi người phụ trách hay loại nút. Lý do: bản trình bày là bản nháp riêng để
+  xin mua sắm, không qua duyệt — bắt Admin dọn hộ là thừa; bản chính thức là hồ sơ chung.
 - **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
   draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
 
