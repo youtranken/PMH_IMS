@@ -84,11 +84,23 @@ function outsideHost(urls: string[], baseURL: string): string[] {
   return urls.filter((url) => !url.startsWith(`${origin}/`) && !url.startsWith('data:') && !url.startsWith('blob:'));
 }
 
+/** Chèn một máy kho qua hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23). */
 async function insertDevice(page: Page, code: string) {
-  await page.getByRole('combobox', { name: 'Chọn thiết bị' }).fill(code);
-  await page.getByRole('option', { name: new RegExp(code) }).click();
-  await page.getByRole('button', { name: 'Chèn vào bản vẽ' }).click();
+  await page.getByRole('button', { name: 'Thiết bị kho' }).click();
+  const box = page.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
+  await box.getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(code);
+  await box.getByRole('checkbox', { name: `Chọn ${code} để chèn` }).check();
+  await box.getByRole('button', { name: 'Chèn 1 thiết bị' }).click();
   await expect(page.getByText(`Đã chèn ${code} vào bản vẽ.`)).toBeVisible();
+  await expect(box).toHaveCount(0);
+}
+
+/**
+ * Trình vẽ đã nhận lệnh nạp: nút "Thiết bị kho" bật. KHÔNG chờ nút Lưu — chờ nó là gắn bài vào
+ * cách màn quyết định bật Lưu, không phải vào việc trình vẽ đã sẵn sàng.
+ */
+async function waitEditorReady(page: Page) {
+  await expect(page.getByRole('button', { name: 'Thiết bị kho' })).toBeEnabled({ timeout: 60_000 });
 }
 
 async function saveInEditor(page: Page, id: string): Promise<{ seq: number; summary: string }> {
@@ -134,7 +146,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
 
     // Sửa: vẽ (chèn máy kho qua cầu nối) rồi lưu → phiên bản #1 có tóm tắt.
     await page.getByRole('tab', { name: 'Sửa' }).click();
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await waitEditorReady(page);
     await expect(page.getByText(new RegExp(`${E2E_SA.email} · \\d{2}:\\d{2}`)).first()).toBeAttached();
     await insertDevice(page, codeA);
     const v1 = await saveInEditor(page, id);
@@ -270,7 +282,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const id = await createDiagram(page, `E2E Hết ân hạn ${uniqueStamp()}`);
     await stepUpViaApi(page, secret, 'diagram');
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await waitEditorReady(page);
     await insertDevice(page, code);
 
     expireStepUp(E2E_SA.email);
@@ -297,7 +309,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const id = await createDiagram(page, `E2E Có mặt ${uniqueStamp()}`);
     await stepUpViaApi(page, saSecret, 'diagram');
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await waitEditorReady(page);
 
     const other = await (await browser.newContext()).newPage();
     const memberSecret = await firstLogin(other, E2E_MEMBER);
@@ -325,8 +337,10 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const frame = page.locator('iframe[title="Khung vẽ draw.io"]');
     await expect(frame).toBeVisible();
     const box = (await frame.boundingBox())!;
+    // Bề ngang thật của khung nhìn (trừ thanh cuộn) — không giả định cỡ cửa sổ của project.
+    const viewWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(box.x).toBeLessThanOrEqual(slim + 2);
-    expect(box.x + box.width).toBeGreaterThanOrEqual(1440 - 2);
+    expect(box.x + box.width).toBeGreaterThanOrEqual(viewWidth - 2);
 
     await nav.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Thiết bị' })).toBeVisible();

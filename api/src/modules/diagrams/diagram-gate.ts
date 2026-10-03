@@ -1,4 +1,17 @@
-import { SaxesParser, type SaxesTagPlain } from 'saxes';
+import type { SaxesTagPlain } from 'saxes';
+import {
+  BAD_SCHEME,
+  DATA_IMAGE,
+  DATA_SVG,
+  XmlRejected as Rejected,
+  hasDoctype,
+  sanitizeSvg,
+  sizeReason,
+  squash,
+  svgTextHasUrl,
+  walkXml as walk,
+  type SanitizeResult,
+} from '../../common/svg-sanitize';
 
 /**
  * Cổng kiểm XML/SVG bản vẽ (AD-17) — hàm THUẦN, test bảng dữ liệu ở `diagram-gate.spec.ts`.
@@ -11,7 +24,7 @@ import { SaxesParser, type SaxesTagPlain } from 'saxes';
  * Vì vậy cổng chọn ALLOWLIST (thẻ, thuộc tính nhãn, nguồn ảnh) chứ không denylist, và từ chối cả
  * tệp thay vì sửa lặng lẽ: người vẽ cần biết bản của mình có thứ không được lưu.
  *
- * Parser là `saxes`: không đọc DTD, không mở thực thể ngoài; gặp DOCTYPE là từ chối luôn.
+ * Parser và allowlist SVG dùng chung với biểu tượng loại thiết bị: `common/svg-sanitize.ts`.
  */
 
 export interface DiagramXmlLimits {
@@ -31,10 +44,7 @@ export interface GateResult {
   reason: string | null;
 }
 
-export interface SanitizeResult {
-  value: string | null;
-  reason: string | null;
-}
+export type { SanitizeResult };
 
 /** Thẻ có trong tệp draw.io không nén. Thẻ nào khác (script, iframe, svg…) là từ chối. */
 const XML_ELEMENTS = new Set([
@@ -57,62 +67,6 @@ const XML_ELEMENTS = new Set([
  * thì MỌI thuộc tính — `placeholders=1` cho nhãn chèn `%tên%` của thuộc tính bất kỳ vào HTML.
  */
 const DATA_ELEMENTS = new Set(['UserObject', 'object']);
-
-const BAD_SCHEME = /(?:java|vb)script:|data:text\/html/i;
-
-/** Bỏ khoảng trắng/ký tự điều khiển mà trình duyệt cũng bỏ khi đọc URL (`java\tscript:`). */
-function squash(value: string): string {
-  // eslint-disable-next-line no-control-regex
-  return value.replace(/[\s\u0000-\u001f]+/g, '');
-}
-
-function sizeReason(text: string, maxKb: number, what: string): string | null {
-  return Buffer.byteLength(text, 'utf8') > maxKb * 1024 ? `${what} vượt trần ${maxKb} KB.` : null;
-}
-
-function hasDoctype(text: string): boolean {
-  return /<!DOCTYPE|<!ENTITY/i.test(text);
-}
-
-class Rejected extends Error {}
-
-/**
- * Chạy parser, gọi `onOpen`/`onClose`/`onText` theo thứ tự tài liệu. Ném `Rejected` từ callback
- * để dừng với lý do; lỗi cú pháp thành `syntaxReason`.
- */
-function walk(
-  text: string,
-  syntaxReason: string,
-  handlers: {
-    onOpen: (tag: SaxesTagPlain) => void;
-    onClose?: (tag: SaxesTagPlain) => void;
-    onText?: (text: string) => void;
-  },
-): string | null {
-  const parser = new SaxesParser({ xmlns: false });
-  let failure: string | null = null;
-  parser.on('error', () => {
-    throw new Rejected(syntaxReason);
-  });
-  parser.on('doctype', () => {
-    throw new Rejected('Tệp có khai báo DOCTYPE/thực thể — không nhận.');
-  });
-  parser.on('processinginstruction', (pi) => {
-    if (pi.target.toLowerCase() !== 'xml') throw new Rejected(syntaxReason);
-  });
-  parser.on('opentag', (tag) => handlers.onOpen(tag));
-  if (handlers.onClose) parser.on('closetag', handlers.onClose);
-  if (handlers.onText) {
-    parser.on('text', handlers.onText);
-    parser.on('cdata', handlers.onText);
-  }
-  try {
-    parser.write(text).close();
-  } catch (error) {
-    failure = error instanceof Rejected ? error.message : syntaxReason;
-  }
-  return failure;
-}
 
 /* ----------------------------------------------------------------- nhãn HTML -- */
 
@@ -197,16 +151,15 @@ function checkLabelAttrs(tagName: string, rest: string, closing: boolean): strin
  * đối như `img/lib/...`, trình vẽ tải từ `/drawio/`). URL tuyệt đối, `//host`, `..` đều là trỏ ra
  * ngoài: trình vẽ/trình xem sẽ tải nó bằng máy người xem.
  */
-const DATA_IMAGE = /^data:image\/(?:png|jpeg|webp|gif)[;,]/i;
-const DATA_SVG = /^data:image\/svg\+xml[;,]/i;
 const BUILTIN_IMAGE = /^(?:img|images|stencils|shapes|mxgraph)\/[A-Za-z0-9_./%-]+$/;
 
 function imageSourceOk(src: string): boolean {
   const value = squash(src);
   if (value === '') return true;
   if (DATA_IMAGE.test(value)) return true;
-  // SVG nhúng làm ẢNH (thẻ <image>) không chạy script được; vẫn cấm SVG mang URL ngoài.
-  if (DATA_SVG.test(value)) return !/https?:|\/\//i.test(decodeURIComponentSafe(value));
+  // SVG nhúng làm ẢNH (thẻ <image>) không chạy script được; vẫn cấm SVG mang URL ngoài
+  // (khai báo `xmlns` là định danh, không phải URL — biểu tượng loại thiết bị nào cũng có).
+  if (DATA_SVG.test(value)) return !svgTextHasUrl(decodeURIComponentSafe(value));
   return BUILTIN_IMAGE.test(value) && !value.includes('..');
 }
 
@@ -313,90 +266,11 @@ function backgroundImageReason(value: string): string | null {
 
 /* -------------------------------------------------------------- SVG để xem --- */
 
-/*
- * Phần tử SVG giữ lại. `foreignObject` bị bỏ: draw.io xuất nhãn HTML dạng
- * `<switch><foreignObject>…</foreignObject><text>chữ thuần</text></switch>`, nên bỏ nó thì nhãn
- * còn ở `<text>` (đã kiểm trên draw.io 31.6.1, ghi ở AD-17). `a` bị bỏ cả cây: draw.io chỉ dùng
- * nó cho dòng "Text is not SVG" trỏ về drawio.com. `style`, `script`, `animate`/`set` bỏ cả cây.
- */
-const SVG_ELEMENTS = new Set([
-  'svg', 'g', 'defs', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text',
-  'tspan', 'title', 'desc', 'image', 'linearGradient', 'radialGradient', 'stop', 'clipPath',
-  'mask', 'pattern', 'marker', 'symbol', 'use', 'switch', 'filter', 'feGaussianBlur', 'feOffset',
-  'feFlood', 'feComposite', 'feMerge', 'feMergeNode', 'feBlend', 'feColorMatrix', 'feDropShadow',
-]);
-
-/** Thuộc tính bỏ hẳn: `content` là bản sao nén của bản vẽ draw.io gắn vào SVG; không ai đọc nó. */
-const SVG_DROP_ATTRS = new Set(['content', 'requiredfeatures', 'requiredextensions', 'systemlanguage']);
-
-function svgAttrKept(element: string, name: string, value: string): boolean {
-  const lower = name.toLowerCase();
-  if (lower.startsWith('on') || SVG_DROP_ATTRS.has(lower)) return false;
-  const flat = squash(value);
-  if (BAD_SCHEME.test(flat)) return false;
-  if (lower === 'href' || lower === 'xlink:href') {
-    if (element === 'image') return DATA_IMAGE.test(flat);
-    return flat.startsWith('#');
-  }
-  // url(#id) trỏ gradient/marker trong tệp thì giữ; url() khác là tải ra ngoài.
-  if (/url\s*\(/i.test(value) && /url\s*\(\s*['"]?(?!#)/i.test(value)) return false;
-  if (/@import|expression\s*\(/i.test(value)) return false;
-  return true;
-}
-
-function escapeText(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function escapeAttr(text: string): string {
-  return escapeText(text).replace(/"/g, '&quot;');
-}
-
 /**
- * SVG do trình vẽ xuất lúc lưu → bản đã làm sạch để chèn vào DOM trình xem. Dựng LẠI từ đầu
- * theo allowlist (không sửa tại chỗ chuỗi gốc), nên thứ không nhận ra không lọt qua được.
+ * SVG do trình vẽ xuất lúc lưu → bản đã làm sạch để chèn vào DOM trình xem (allowlist dùng chung
+ * `common/svg-sanitize.ts`). `<image>` nhận cả `data:image/svg+xml`: biểu tượng SVG của loại
+ * thiết bị nằm trong ảnh xem dưới dạng đó, và SVG nạp làm ảnh không chạy script.
  */
 export function sanitizeDiagramSvg(svg: string, limits: DiagramSvgLimits): SanitizeResult {
-  const tooBig = sizeReason(svg, limits.svgMaxKb, 'Ảnh SVG bản vẽ');
-  if (tooBig) return { value: null, reason: tooBig };
-  if (hasDoctype(svg)) return { value: null, reason: 'SVG có khai báo DOCTYPE/thực thể — không nhận.' };
-
-  const out: string[] = [];
-  const open: { name: string; kept: boolean }[] = [];
-  let skipDepth = 0;
-  let rootSeen = false;
-
-  const failure = walk(svg, 'Nội dung không phải SVG hợp lệ.', {
-    onOpen: (tag) => {
-      if (!rootSeen) {
-        rootSeen = true;
-        if (tag.name !== 'svg') throw new Rejected('Nội dung không phải SVG.');
-      }
-      const kept = skipDepth === 0 && SVG_ELEMENTS.has(tag.name);
-      if (!kept) {
-        if (!tag.isSelfClosing) skipDepth += 1;
-        if (!tag.isSelfClosing) open.push({ name: tag.name, kept: false });
-        return;
-      }
-      const attrs = Object.entries(tag.attributes)
-        .filter(([name, value]) => svgAttrKept(tag.name, name, value))
-        .map(([name, value]) => ` ${name}="${escapeAttr(value)}"`)
-        .join('');
-      out.push(`<${tag.name}${attrs}${tag.isSelfClosing ? '/>' : '>'}`);
-      if (!tag.isSelfClosing) open.push({ name: tag.name, kept: true });
-    },
-    onClose: (tag) => {
-      if (tag.isSelfClosing) return;
-      const top = open.pop();
-      if (!top) return;
-      if (top.kept) out.push(`</${top.name}>`);
-      else skipDepth -= 1;
-    },
-    onText: (text) => {
-      if (skipDepth === 0) out.push(escapeText(text));
-    },
-  });
-  if (failure) return { value: null, reason: failure };
-  if (!rootSeen) return { value: null, reason: 'Nội dung không phải SVG.' };
-  return { value: out.join(''), reason: null };
+  return sanitizeSvg(svg, { maxKb: limits.svgMaxKb, what: 'Ảnh SVG bản vẽ', svgImages: true });
 }

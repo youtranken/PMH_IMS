@@ -61,3 +61,49 @@ describe('DiagramViewer', () => {
     expect(document.querySelector('script')).toBeNull();
   });
 });
+
+describe('DiagramViewer — ô bấm được và dấu theo ô', () => {
+  const TWO =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><g data-cell-id="0"><g data-cell-id="1">' +
+    '<g data-cell-id="d1"><rect width="10" height="10"/><text>SW-E2E-01</text></g>' +
+    '<g data-cell-id="d2"><rect width="10" height="10"/></g>' +
+    '<g data-cell-id="s1"><text>Tầng 3</text></g></g></g></svg>';
+
+  it('ô khai bấm được thành nút có tên (bàn phím + chuột); bấm trúng phần con vẫn ra đúng ô', async () => {
+    const clicked: string[] = [];
+    renderWithI18n(
+      <DiagramViewer
+        svg={TWO}
+        viewer={VIEWER}
+        title="Bản vẽ"
+        cells={[
+          { id: 'd1', label: 'SW-E2E-01' },
+          { id: 'd2', label: 'SW-E2E-GONE', mark: 'danger' },
+        ]}
+        onCellClick={(id) => clicked.push(id)}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByText('SW-E2E-01'));
+    const gone = screen.getByRole('button', { name: 'SW-E2E-GONE' });
+    gone.focus();
+    await user.keyboard('{Enter}');
+    expect(clicked).toEqual(['d1', 'd2']);
+    expect(gone.getAttribute('data-ims-mark')).toBe('danger');
+    // Hình tự do không thành nút.
+    expect(screen.queryByRole('button', { name: 'Tầng 3' })).toBeNull();
+  });
+
+  it('kéo để dời khung không tính là bấm ô', async () => {
+    const clicked: string[] = [];
+    renderWithI18n(<DiagramViewer svg={TWO} viewer={VIEWER} title="Bản vẽ" cells={[{ id: 'd1', label: 'SW-E2E-01' }]} onCellClick={(id) => clicked.push(id)} />);
+    const user = userEvent.setup();
+    const target = screen.getByText('SW-E2E-01');
+    await user.pointer([
+      { keys: '[MouseLeft>]', target, coords: { x: 10, y: 10 } },
+      { target, coords: { x: 60, y: 40 } },
+      { keys: '[/MouseLeft]', target, coords: { x: 60, y: 40 } },
+    ]);
+    expect(clicked).toEqual([]);
+  });
+});

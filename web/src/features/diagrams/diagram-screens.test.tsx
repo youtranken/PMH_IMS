@@ -5,7 +5,7 @@ import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import type { DiagramNode } from './diagram-api';
+import type { DiagramDeviceInfo, DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
 
@@ -186,5 +186,185 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
     expect(bodies[1]).toMatchObject({ xml: '<mxfile>NÉT ĐANG VẼ</mxfile>', basedOnVersionId: 'v1' });
     const exports = posted.mock.calls.filter(([data]) => String(data).includes('"action":"export"'));
     expect(exports).toHaveLength(1);
+  });
+});
+
+const VERSION = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+const CATALOG = { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [], ispProviders: [], servicePorts: [] };
+const HAVE_XML =
+  '<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>' +
+  '<UserObject label="SW-E2E-HAVE" ims_device_id="dev-have" ims_device_code="SW-E2E-HAVE" id="c1"><mxCell vertex="1" parent="1"><mxGeometry x="0" y="0" width="60" height="60" as="geometry"/></mxCell></UserObject>' +
+  '</root></mxGraphModel></diagram></mxfile>';
+
+function info(id: string, code: string, extra: Partial<DiagramDeviceInfo> = {}): DiagramDeviceInfo {
+  return {
+    id,
+    found: true,
+    code,
+    name: 'Switch lõi E2E',
+    deviceTypeName: 'Switch',
+    model: 'C9300',
+    serial: 'FOC-E2E',
+    status: 'in_use',
+    ips: ['10.0.0.5'],
+    siteCode: 'HQ',
+    cabinetCode: 'R1',
+    u: null,
+    vendorName: 'NCC E2E',
+    vendorPhone: '19001234',
+    warrantyEnd: '2027-01-31',
+    cell: { style: 'align=center;shape=mxgraph.networks.switch;html=0;', label: `${code}\n10.0.0.5\nHQ · R1`, width: 100, height: 30 },
+    ...extra,
+  };
+}
+
+async function openEditor() {
+  const fetchMock = routeFetch({
+    '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+    '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: HAVE_XML, svg: null }, deviceCells: [], devices: [] }),
+    '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+    '/api/v1/diagrams/device-info': () => jsonResponse(200, [info('dev-ok', 'SW-E2E-OK')]),
+    '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    '/api/v1/catalog': () => jsonResponse(200, CATALOG),
+    '/api/v1/devices?': () =>
+      jsonResponse(200, {
+        items: [
+          { id: 'dev-ok', code: 'SW-E2E-OK', name: 'Switch E2E', status: 'in_use', deviceTypeName: 'Switch', siteCode: 'HQ', cabinetCode: null },
+          { id: 'dev-old', code: 'SW-E2E-OLD', name: 'Switch cũ E2E', status: 'retired', deviceTypeName: 'Switch', siteCode: 'HQ', cabinetCode: null },
+          { id: 'dev-have', code: 'SW-E2E-HAVE', name: 'Switch có rồi E2E', status: 'in_use', deviceTypeName: 'Switch', siteCode: 'HQ', cabinetCode: null },
+        ],
+        total: 3,
+      }),
+  });
+  const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], { initialEntries: ['/diagrams/d1?mode=edit'] });
+  renderWithI18n(
+    <ToastProvider>
+      <ConfirmProvider>
+        <RouterProvider router={router} />
+      </ConfirmProvider>
+    </ToastProvider>,
+  );
+  const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+  const posted = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+  const fromDrawio = (data: Record<string, unknown>) =>
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frame.contentWindow }));
+    });
+  fromDrawio({ event: 'init' });
+  return { fetchMock, frame, posted, fromDrawio };
+}
+
+describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => {
+  it('nút mở hộp tìm gọn — không cột cố định; máy đã thanh lý / đã có trên bản vẽ hiện nhưng tắt kèm lý do; chèn bằng patch, hộp đóng', async () => {
+    const { frame, posted, fromDrawio } = await openEditor();
+    const user = userEvent.setup();
+    // Sẵn sàng ngay từ `init` (lệnh load đã gửi trước mọi lệnh sau) — không chờ tin `load`.
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Thiết bị kho' }));
+    const box = screen.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
+    expect(frame).toBeInTheDocument();
+    expect(box.contains(frame)).toBe(false);
+
+    const old = await screen.findByRole('checkbox', { name: 'Chọn SW-E2E-OLD để chèn' });
+    expect(old).toBeDisabled();
+    expect(old).toHaveAccessibleDescription('Đã thanh lý — không chèn được');
+    expect(screen.getByRole('checkbox', { name: 'Chọn SW-E2E-HAVE để chèn' })).toHaveAccessibleDescription('Đã có trên bản vẽ');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' }));
+    await user.click(screen.getByRole('button', { name: 'Chèn 1 thiết bị' }));
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"getDiff"'))).toBe(true));
+    fromDrawio({ event: 'getDiff', xml: HAVE_XML, currentPage: 0, modelBounds: { x: 0, y: 0, width: 60, height: 60 } });
+
+    const patch = posted.mock.calls.map(([data]) => JSON.parse(String(data)) as { action: string; patch?: { u: Record<string, { cells: { i: { style: string; xmlValue: string; previous?: string }[] } }> } }).find((m) => m.action === 'patch');
+    const cell = patch!.patch!.u.p1.cells.i[0];
+    expect(cell.style).toBe('align=center;shape=mxgraph.networks.switch;html=0;');
+    expect(cell.xmlValue).toContain('ims_device_id="dev-ok"');
+    expect(cell.previous).toBe('c1');
+    expect(await screen.findByText('Đã chèn SW-E2E-OK vào bản vẽ.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Chèn thiết bị có trong kho' })).toBeNull();
+
+    // Mở lại: máy vừa chèn đã là "đã có" (patch không làm draw.io gửi autosave).
+    await user.click(screen.getByRole('button', { name: 'Thiết bị kho' }));
+    expect(await screen.findByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' })).toBeDisabled();
+  });
+
+  it('bàn phím: gõ tìm, ↓ xuống danh sách, Space chọn, Enter chèn; Esc đóng hộp', async () => {
+    const { fetchMock, posted } = await openEditor();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Thiết bị kho' }));
+    const search = screen.getByRole('searchbox', { name: 'Tìm thiết bị' });
+    expect(search).toHaveFocus();
+    await user.type(search, 'E2E-OK');
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('search=E2E-OK'))).toBe(true));
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' })).toHaveFocus();
+    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/diagrams/device-info?ids=dev-ok'))).toBe(true));
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"getDiff"'))).toBe(true));
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Chèn thiết bị có trong kho' })).toBeNull();
+  });
+});
+
+describe('Chế độ xem — bấm thiết bị ra thẻ thông tin', () => {
+  const SVG_TWO =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"><g data-cell-id="d1"><rect width="10" height="10"/><text>SW-E2E-OK</text></g>' +
+    '<g data-cell-id="d2"><rect width="10" height="10"/><text>SW-E2E-GONE</text></g></svg>';
+
+  function openViewer() {
+    return routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () =>
+        jsonResponse(200, {
+          diagram: ROOT,
+          version: { ...VERSION, xml: '<mxfile/>', svg: SVG_TWO },
+          deviceCells: [
+            { cellId: 'd1', deviceId: 'dev-ok', code: 'SW-E2E-OK' },
+            { cellId: 'd2', deviceId: 'dev-gone', code: 'SW-E2E-GONE' },
+          ],
+          devices: [info('dev-ok', 'SW-E2E-OK'), { ...info('dev-gone', ''), found: false, code: null }],
+        }),
+      '/api/v1/diagrams/by-device/dev-ok': () => jsonResponse(200, [ROOT, { id: 'd9', name: 'Phòng server E2E' }]),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    });
+  }
+
+  it('thẻ: mã, tên, loại, model, serial, IP, Site · Tủ, NCC + hotline, bảo hành, bản vẽ khác có máy, Mở hồ sơ', async () => {
+    openViewer();
+    renderScreen('/diagrams/d1');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'SW-E2E-OK' }));
+    const card = await screen.findByRole('dialog', { name: 'SW-E2E-OK' });
+    for (const text of ['Switch lõi E2E', 'Switch', 'C9300', 'FOC-E2E', '10.0.0.5', 'HQ · R1', 'NCC E2E']) {
+      expect(card).toHaveTextContent(text);
+    }
+    expect(card.querySelector('a[href^="tel:"]')).not.toBeNull();
+    expect(await screen.findByRole('link', { name: 'Phòng server E2E' })).toHaveAttribute('href', '/diagrams/d9');
+    expect(screen.getByRole('link', { name: 'Mở hồ sơ' })).toHaveAttribute('href', '/devices/dev-ok');
+  });
+
+  it('Mở két mở đúng khung két dùng chung (két tự hỏi mã PHẠM VI KÉT), thẻ không chứa giá trị két', async () => {
+    const fetchMock = openViewer();
+    renderScreen('/diagrams/d1');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'SW-E2E-OK' }));
+    await user.click(await screen.findByRole('button', { name: 'Mở két' }));
+    const vault = await screen.findByRole('dialog', { name: 'Két của SW-E2E-OK' });
+    expect(vault).toHaveTextContent('mã vừa nhập để xem sơ đồ không mở két');
+    // Thẻ sơ đồ không gọi API giải mã nào — chỉ khung két (VaultPanel) đọc két theo luồng của nó.
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/reveal'))).toBe(false);
+  });
+
+  it('ô trỏ máy không còn trong kho: dấu đỏ, thẻ báo "Không tìm thấy trong kho" — không lỗi trang', async () => {
+    openViewer();
+    renderScreen('/diagrams/d1');
+    const user = userEvent.setup();
+    const gone = await screen.findByRole('button', { name: 'SW-E2E-GONE — Không tìm thấy trong kho' });
+    expect(gone).toHaveAttribute('data-ims-mark', 'danger');
+    await user.click(gone);
+    const card = await screen.findByRole('dialog', { name: 'Thiết bị SW-E2E-GONE' });
+    expect(card).toHaveTextContent('Không tìm thấy trong kho');
   });
 });

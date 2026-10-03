@@ -1,5 +1,3 @@
-import { foldSearch } from '@/lib/search-fold';
-
 /**
  * Hàm THUẦN của màn sửa sơ đồ: dựng ô thiết bị kho và chèn nó vào bản vẽ đang mở. Giao thức
  * nhúng (URL, sandbox, tin `event`/`action`) nằm ở cầu nối dùng chung `@/ui/drawio-frame`.
@@ -7,38 +5,17 @@ import { foldSearch } from '@/lib/search-fold';
  * Chèn thiết bị dùng lệnh `patch` (khuôn diff của draw.io: `u → trang → cells → i`), không dùng
  * `merge`: `merge` so cả tệp với bản draw.io đang giữ làm mốc rồi áp phần chênh, nên chèn một hình
  * bằng `merge` có thể xoá luôn những gì người vẽ chưa lưu.
+ *
+ * Hình, nhãn và cỡ của ô do SERVER dựng (`GET /diagrams/device-info`, cùng bộ luật hydrate lúc mở
+ * bản vẽ — AD-18): web không tự đoán hình theo tên loại, nên hình chèn vào và hình hiện lần mở
+ * sau luôn là một.
  */
 
-/*
- * Thứ tự là luật: tên khớp nhiều mục thì mục ĐẦU thắng. "Firewall" đứng trước "router" vì loại
- * "Router/Firewall" của PMH là tường lửa biên; "server" đứng sau "nas" để "NAS server" ra NAS.
- */
-const SHAPE_RULES: [RegExp, string][] = [
-  [/firewall|tuong lua/, 'mxgraph.networks.firewall'],
-  [/router|dinh tuyen/, 'mxgraph.networks.router'],
-  [/switch|chuyen mach/, 'mxgraph.networks.switch'],
-  [/access point|wi-?fi|\bap\b|diem phat/, 'mxgraph.networks.wireless_hub'],
-  [/\bnas\b|storage|luu tru/, 'mxgraph.networks.nas_filer'],
-  [/server|may chu/, 'mxgraph.networks.server'],
-  [/\bups\b|luu dien/, 'mxgraph.networks.ups_small'],
-  [/laptop|xach tay/, 'mxgraph.networks.laptop'],
-  [/\bpc\b|may tram|desktop/, 'mxgraph.networks.pc'],
-  [/printer|may in/, 'mxgraph.networks.printer'],
-  [/camera/, 'mxgraph.networks.security_camera'],
-];
-
-/** Loại thiết bị (tên trong danh mục) → hình mạng có sẵn của draw.io; `null` = khối chữ nhật. */
-export function deviceShape(typeName: string): string | null {
-  const folded = foldSearch(typeName);
-  return SHAPE_RULES.find(([pattern]) => pattern.test(folded))?.[1] ?? null;
-}
-
-export interface DeviceForDiagram {
+/** Một máy để chèn: id + mã (hợp đồng `ims_*`) và ô server dựng sẵn theo loại. */
+export interface DeviceCellSpec {
   id: string;
   code: string;
-  name: string;
-  deviceTypeName: string;
-  ip: string | null;
+  cell: { style: string; label: string; width: number; height: number };
 }
 
 /** Một ô (cell) theo khuôn JSON mà action `patch` của draw.io nhận. */
@@ -62,36 +39,18 @@ export function escapeXmlAttr(value: string): string {
     .replace(/\n/g, '&#xa;');
 }
 
-/*
- * Không đặt màu: hình dùng màu mặc định của draw.io, nên đổi giao diện sáng/tối trong draw.io vẫn
- * đúng, và IMS không phải chép mã màu ra ngoài `tokens.css`.
+/**
+ * Ô `UserObject` mang ĐÚNG hợp đồng AD-18: `ims_device_id` + `ims_device_code`. IP, loại, vị trí
+ * không ghi vào ô — chúng là nhãn hydrate từ kho mỗi lần mở, ghi vào ô là đóng băng chúng.
  */
-const LABEL_STYLE = 'html=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;';
-
-/** Cỡ hình theo loại: switch dẹt như thiết bị rack, hình mạng vuông, khối chữ nhật rộng cho đủ mã. */
-export function deviceCellSize(typeName: string): { width: number; height: number } {
-  const shape = deviceShape(typeName);
-  if (shape === 'mxgraph.networks.switch') return { width: 100, height: 30 };
-  return shape ? { width: 60, height: 60 } : { width: 120, height: 50 };
-}
-
 export function deviceCellJson(
-  device: DeviceForDiagram,
+  device: DeviceCellSpec,
   at: { cellId: string; parent: string; previous?: string | null; x: number; y: number },
 ): DrawioCellJson {
-  const shape = deviceShape(device.deviceTypeName);
-  const { width, height } = deviceCellSize(device.deviceTypeName);
-  const style = shape
-    ? `shape=${shape};${LABEL_STYLE}outlineConnect=0;`
-    : 'rounded=1;html=0;whiteSpace=wrap;align=center;verticalAlign=middle;';
-  const ip = device.ip ?? '';
-  const label = ip ? `${device.code}\n${ip}` : device.code;
   const attrs: [string, string][] = [
-    ['label', label],
+    ['label', device.cell.label],
     ['ims_device_id', device.id],
     ['ims_device_code', device.code],
-    ['ims_device_ip', ip],
-    ['ims_device_type', device.deviceTypeName],
     ['id', at.cellId],
   ];
   return {
@@ -99,14 +58,35 @@ export function deviceCellJson(
     vertex: 1,
     parent: at.parent,
     ...(at.previous ? { previous: at.previous } : {}),
-    style,
-    geometry: `<mxGeometry x="${Math.round(at.x)}" y="${Math.round(at.y)}" width="${width}" height="${height}" as="geometry"/>`,
+    style: device.cell.style,
+    geometry: `<mxGeometry x="${Math.round(at.x)}" y="${Math.round(at.y)}" width="${device.cell.width}" height="${device.cell.height}" as="geometry"/>`,
     xmlValue: `<UserObject ${attrs.map(([k, v]) => `${k}="${escapeXmlAttr(v)}"`).join(' ')}/>`,
   };
 }
 
-export function insertPatch(pageId: string, cell: DrawioCellJson) {
-  return { u: { [pageId]: { cells: { i: [cell] } } } };
+export function insertPatch(pageId: string, cells: DrawioCellJson[]) {
+  return { u: { [pageId]: { cells: { i: cells } } } };
+}
+
+/**
+ * Xếp nhiều máy chèn một lượt thành một hàng bên phải khối hình đang có; `previous` nối chuỗi để
+ * ô sau nằm trên ô trước (và trên mọi hình cũ). Trả khối hình mới để lượt chèn kế tiếp không đè.
+ */
+export function placeCells(
+  devices: DeviceCellSpec[],
+  opts: { bounds: Bounds | null; parent: string; previous: string | null; newId: () => string },
+): { cells: DrawioCellJson[]; bounds: Bounds | null } {
+  let bounds = opts.bounds;
+  let previous = opts.previous;
+  const cells: DrawioCellJson[] = [];
+  for (const device of devices) {
+    const at = nextInsertPosition(bounds);
+    const cell = deviceCellJson(device, { cellId: opts.newId(), parent: opts.parent, previous, ...at });
+    cells.push(cell);
+    previous = cell.id;
+    bounds = growBounds(bounds, { ...at, width: device.cell.width, height: device.cell.height });
+  }
+  return { cells, bounds };
 }
 
 function parseXml(xml: string): Document | null {
@@ -184,4 +164,18 @@ export function growBounds(bounds: Bounds | null, rect: Bounds): Bounds {
     width: Math.max(bounds.x + bounds.width, rect.x + rect.width) - x,
     height: Math.max(bounds.y + bounds.height, rect.y + rect.height) - y,
   };
+}
+
+/** Máy đã có ô trên bản vẽ (mọi trang) — hộp "Thiết bị kho" hiện "đã có" thay vì chèn lần hai. */
+export function deviceIdsInXml(xml: string): Set<string> {
+  const doc = parseXml(xml);
+  const ids = new Set<string>();
+  if (!doc) return ids;
+  for (const tag of ['UserObject', 'object']) {
+    for (const el of Array.from(doc.getElementsByTagName(tag))) {
+      const id = el.getAttribute('ims_device_id');
+      if (id) ids.add(id);
+    }
+  }
+  return ids;
 }

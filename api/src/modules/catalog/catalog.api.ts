@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CatalogService, type CatalogLists } from './catalog.service';
+import { CatalogService, type CatalogLists, type DeviceTypeDiagramLook } from './catalog.service';
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 export { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { normalizeKey } from '../../common/import-plan';
 import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
+export type { DeviceTypeDiagramLook } from './catalog.service';
+export { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef, type DiagramShapeDef } from './diagram-shapes';
 
 /**
  * Câu từ chối cho "gắn tủ mà không khai site" — MỘT bản chữ cho CẢ HAI cửa (AD-15).
@@ -98,6 +100,11 @@ export class CatalogApiService {
   async ispProvider(id: string): Promise<IspProviderRecord | null> {
     const lists = await this.catalog.lists({ includeInactive: true });
     return lists.ispProviders.find((provider) => provider.id === id) ?? null;
+  }
+
+  /** Hình trên sơ đồ mạng của nhiều loại một lượt — `diagrams` hydrate ô thiết bị (AD-18). */
+  diagramLooks(deviceTypeIds: string[]): Promise<Map<string, DeviceTypeDiagramLook>> {
+    return this.catalog.diagramLooks(deviceTypeIds);
   }
 
   /** Loại này có bảng port map không (FR-006) — trang chi tiết thiết bị hỏi cái này. */

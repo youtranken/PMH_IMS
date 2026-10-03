@@ -49,6 +49,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
   let service: DiagramsService;
   let deviceId: string;
   let siteId: string;
+  let typeId: string;
+  let catalogService: CatalogService;
 
   async function count(sql: string, params: unknown[] = []): Promise<number> {
     const { rows } = await scratch.pool.query<{ n: number }>(sql, params);
@@ -60,7 +62,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     const db = scratch.db;
     const audit = new AuditWriterService(db);
-    const catalog = new CatalogApiService(new CatalogService(db, audit));
+    catalogService = new CatalogService(db, audit);
+    const catalog = new CatalogApiService(catalogService);
     const devices = new DevicesApiService(new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry()));
     const ipam = {
       heldAddressesOf: (ids: string[]) => Promise.resolve(new Map(ids.map((id) => [id, ['10.20.0.5']]))),
@@ -75,10 +78,11 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     }
     siteId = (await scratch.pool.query<{ id: string }>(`INSERT INTO site (code, name) VALUES ('E2E-SD', 'Site sơ đồ') RETURNING id`)).rows[0].id;
     const type = await scratch.pool.query<{ id: string }>(`INSERT INTO device_type (name) VALUES ('Switch E2E SD') RETURNING id`);
+    typeId = type.rows[0].id;
     deviceId = (
       await scratch.pool.query<{ id: string }>(
         `INSERT INTO device (code, name, device_type_id, site_id, model, serial) VALUES ('SW-E2E-SD', 'Switch lõi', $1, $2, 'C9300', 'FOC123') RETURNING id`,
-        [type.rows[0].id, siteId],
+        [typeId, siteId],
       )
     ).rows[0].id;
   }, TEST_TIMEOUT);
@@ -291,12 +295,134 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       const versions = await service.versions(diagramId);
       const v1 = versions[versions.length - 1];
       const detail = await service.changes(diagramId, v1.id);
-      expect(detail.devices.added).toEqual([{ id: 'd1', label: 'SW-E2E-SD' }]);
+      expect(detail.devices.added).toEqual([{ id: deviceId, label: 'SW-E2E-SD' }]);
     });
 
     it('lịch sử đọc diagram_history, mới trước, kèm họ tên', async () => {
       const rows = await service.history(diagramId);
       expect(rows[0]).toMatchObject({ action: 'version.restored', actorName: SA.fullName });
+    });
+  });
+
+  describe('Thiết bị kho — XML khô, hydrate từ kho, thông tin máy (AD-18)', () => {
+    const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4"/></svg>';
+    const GONE = '7b0c1c1e-0000-4000-8000-0000000000ee';
+    let diagramId: string;
+
+    beforeAll(async () => {
+      const vendorId = (await scratch.pool.query<{ id: string }>(`INSERT INTO vendor (name, phone) VALUES ('NCC E2E SD', '1900 1234') RETURNING id`)).rows[0].id;
+      await scratch.pool.query(`UPDATE device SET vendor_id = $1, warranty_end = '2027-01-31' WHERE id = $2`, [vendorId, deviceId]);
+      await scratch.pool.query(`UPDATE device_type SET diagram_shape = 'mxgraph.networks.switch' WHERE id = $1`, [typeId]);
+      diagramId = (await service.create(SA.email, { name: 'E2E Thiết bị kho', nodeType: 'room' })).id;
+    });
+
+    it('lưu XML ướt → kho giữ XML khô (không hình, nhãn là mã); mở sửa → hydrate hình + nhãn từ kho', async () => {
+      const wet = page(
+        `<UserObject label="SW-E2E-SD&#xa;10.20.0.5" ims_device_id="${deviceId}" ims_device_code="SW-E2E-SD" ims_device_ip="10.20.0.5" id="d1">` +
+          '<mxCell style="shape=mxgraph.networks.switch;outlineConnect=0;html=0;fontSize=14;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="100" height="30" as="geometry"/></mxCell></UserObject>',
+      );
+      await service.save(MEMBER.email, diagramId, { xml: wet, svg: SVG, basedOnVersionId: null });
+      const { rows } = await scratch.pool.query<{ xml: string }>(
+        `SELECT xml FROM diagram_version WHERE diagram_id = $1 ORDER BY seq DESC LIMIT 1`,
+        [diagramId],
+      );
+      expect(rows[0].xml).toContain('label="SW-E2E-SD"');
+      expect(rows[0].xml).toContain('style="fontSize=14;"');
+      expect(rows[0].xml).not.toContain('ims_device_ip');
+
+      const opened = await service.content(MEMBER.email, diagramId, { mode: 'edit' });
+      expect(opened.version?.xml).toContain('shape=mxgraph.networks.switch;');
+      expect(opened.version?.xml).toContain('label="SW-E2E-SD&#xa;10.20.0.5&#xa;E2E-SD"');
+      expect(opened.deviceCells).toEqual([{ cellId: 'd1', deviceId, code: 'SW-E2E-SD' }]);
+      expect(opened.devices[0]).toMatchObject({
+        id: deviceId,
+        found: true,
+        code: 'SW-E2E-SD',
+        name: 'Switch lõi',
+        model: 'C9300',
+        serial: 'FOC123',
+        ips: ['10.20.0.5'],
+        siteCode: 'E2E-SD',
+        vendorName: 'NCC E2E SD',
+        vendorPhone: '1900 1234',
+        warrantyEnd: '2027-01-31',
+      });
+    });
+
+    it('đổi hình của loại ở Danh mục (kể cả tải SVG riêng) → lần mở sau hiện hình mới, không sửa bản vẽ', async () => {
+      await catalogService.update(MEMBER.email, 'device_type', typeId, { diagramShape: 'mxgraph.cisco.switches.workgroup_switch' });
+      const reopened = await service.content(SA.email, diagramId, { mode: 'edit' });
+      expect(reopened.version?.xml).toContain('shape=mxgraph.cisco.switches.workgroup_switch;');
+
+      await catalogService.setDiagramIcon(SA.email, typeId, ICON, 100);
+      const withIcon = await service.content(SA.email, diagramId, { mode: 'edit' });
+      expect(withIcon.version?.xml).toContain('shape=image;image=data:image/svg+xml,%3Csvg');
+      await catalogService.removeDiagramIcon(SA.email, typeId);
+      expect((await service.content(SA.email, diagramId, { mode: 'edit' })).version?.xml).not.toContain('data:image/svg+xml');
+    });
+
+    it('ims_device_id không còn trong kho → ô "Không tìm thấy trong kho", không lỗi trang', async () => {
+      const d = await service.create(SA.email, { name: 'E2E Máy mất', nodeType: 'other' });
+      await service.save(SA.email, d.id, { xml: page(deviceCell('g1', GONE, 'SW-E2E-GONE')), svg: SVG, basedOnVersionId: null });
+      const opened = await service.content(SA.email, d.id, { mode: 'edit' });
+      expect(opened.version?.xml).toContain('label="SW-E2E-GONE&#xa;⚠ Không tìm thấy trong kho"');
+      expect(opened.devices).toEqual([expect.objectContaining({ id: GONE, found: false })]);
+    });
+
+    it('thông tin máy theo lô: một lượt cho nhiều id, id rác/không còn thành found=false; ô chèn theo hình của loại', async () => {
+      const infos = await service.deviceInfos([deviceId, GONE, 'không-phải-uuid', deviceId]);
+      expect(infos.map((i) => [i.id, i.found])).toEqual([
+        [deviceId, true],
+        [GONE, false],
+        ['không-phải-uuid', false],
+      ]);
+      expect(infos[0].cell).toMatchObject({ width: 64, height: 32 });
+      expect(infos[0].cell.style).toContain('shape=mxgraph.cisco.switches.workgroup_switch;');
+    });
+
+    it('"Có mặt trong các bản vẽ": chỉ bản vẽ có máy ở phiên bản MỚI NHẤT, bỏ bản vẽ đã lưu trữ', async () => {
+      const gone = await service.create(SA.email, { name: 'E2E Đã bỏ máy', nodeType: 'other' });
+      await service.save(SA.email, gone.id, { xml: page(deviceCell('d1', deviceId, 'SW-E2E-SD')), svg: SVG, basedOnVersionId: null });
+      await service.save(SA.email, gone.id, { xml: page(shape('s1', 'x')), svg: SVG, basedOnVersionId: null });
+      const archivedOne = await service.create(SA.email, { name: 'E2E Lưu trữ có máy', nodeType: 'other' });
+      await service.save(SA.email, archivedOne.id, { xml: page(deviceCell('d1', deviceId, 'SW-E2E-SD')), svg: SVG, basedOnVersionId: null });
+      await service.archive(SA.email, archivedOne.id);
+      const names = (await service.diagramsWithDevice(deviceId)).map((d) => d.name);
+      expect(names).toContain('E2E Thiết bị kho');
+      expect(names).not.toContain('E2E Đã bỏ máy');
+      expect(names).not.toContain('E2E Lưu trữ có máy');
+    });
+
+    it('biểu tượng SVG có script → từ chối, không ghi gì; SVG sạch → cất bản đã lọc + lịch sử danh mục', async () => {
+      await expect(
+        catalogService.setDiagramIcon(SA.email, typeId, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><rect/></svg>', 100),
+      ).rejects.toMatchObject({ response: { code: 'DIAGRAM_ICON_INVALID' } });
+      expect(await count(`SELECT count(*)::int AS n FROM device_type_icon WHERE device_type_id = $1`, [typeId])).toBe(0);
+      await catalogService.setDiagramIcon(SA.email, typeId, ICON.replace('</svg>', '<foreignObject><div>x</div></foreignObject></svg>'), 100);
+      expect(await catalogService.diagramIcon(typeId)).toBe(ICON);
+      expect(await count(`SELECT count(*)::int AS n FROM catalog_history WHERE entity_id = $1 AND action = 'diagram_icon_set'`, [typeId])).toBe(2);
+      const listed = await catalogService.list('device_type', { page: 1, limit: 50 }, 'Switch E2E SD');
+      expect(listed.items[0]).toMatchObject({ diagramShape: 'mxgraph.cisco.switches.workgroup_switch', hasDiagramIcon: true });
+      await catalogService.removeDiagramIcon(SA.email, typeId);
+    });
+
+    it('hình ngoài danh sách đóng → 400 ở tầng service; CHECK của DB chặn chuỗi style', async () => {
+      await expect(catalogService.update(SA.email, 'device_type', typeId, { diagramShape: 'shape=image;image=https://x' })).rejects.toMatchObject({
+        response: { code: 'DIAGRAM_SHAPE_INVALID' },
+      });
+      await expect(scratch.pool.query(`UPDATE device_type SET diagram_shape = 'x;image=https://x' WHERE id = $1`, [typeId])).rejects.toThrow(
+        /device_type_diagram_shape_check/,
+      );
+    });
+
+    it('migration gán sẵn hình cho loại có từ đầu', async () => {
+      const { rows } = await scratch.pool.query<{ name: string; diagram_shape: string | null }>(
+        `SELECT name::text, diagram_shape FROM device_type WHERE name IN ('Switch', 'Thiết bị khác') ORDER BY name`,
+      );
+      expect(rows).toEqual([
+        { name: 'Switch', diagram_shape: 'mxgraph.networks.switch' },
+        { name: 'Thiết bị khác', diagram_shape: null },
+      ]);
     });
   });
 

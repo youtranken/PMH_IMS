@@ -815,6 +815,7 @@ export function CatalogScreen({ me }: { me: Me }) {
           entity={entity}
           row={editing.row}
           csrfToken={csrfToken}
+          canUploadIcon={me.role === 'sa'}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);

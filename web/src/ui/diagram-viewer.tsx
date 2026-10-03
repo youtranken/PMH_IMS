@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiagramWatermark } from './diagram-watermark';
 
@@ -14,7 +14,11 @@ export interface ViewTransform {
 }
 
 const BLOCKED = new Set(['script', 'foreignobject', 'iframe', 'object', 'embed', 'style', 'a', 'animate', 'set', 'handler', 'listener']);
-const SAFE_IMAGE = /^data:image\/(?:png|jpeg|webp|gif);/i;
+/* SVG nạp làm ẢNH (`<image>`) chạy chế độ tĩnh — không script, không tải ngoài: biểu tượng SVG
+   riêng của loại thiết bị nằm trong ảnh xem dưới dạng này. */
+const SAFE_IMAGE = /^data:image\/(?:png|jpeg|webp|gif|svg\+xml)[;,]/i;
+/** Dời con trỏ quá ngần này (px) giữa lúc nhấn và thả là kéo khung, không phải bấm ô. */
+const CLICK_SLOP = 5;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
 const ZOOM_STEP = 1.25;
@@ -74,18 +78,41 @@ function zoomAround(view: ViewTransform, factor: number, at: { x: number; y: num
   return { scale, x: at.x - (at.x - view.x) * ratio, y: at.y - (at.y - view.y) * ratio };
 }
 
+/** Một ô bấm được của bản vẽ: id ô (`data-cell-id`), tên đọc cho trợ năng, dấu (nếu có). */
+export interface ViewerCell {
+  id: string;
+  label: string;
+  mark?: 'danger' | 'warn' | null;
+}
+
 /**
  * Trình xem sơ đồ dùng chung (AD-15, AD-17): SVG ĐÃ LÀM SẠCH chèn vào DOM của IMS — không chạy
  * draw.io — kèm watermark người xem, thu phóng (nút, Ctrl + lăn chuột) và kéo để dời. Tương tác
- * theo ô (bấm thiết bị, tô sáng) bám `data-cell-id` của SVG.
+ * theo ô bám `data-cell-id` của SVG: ô khai trong `cells` thành nút (chuột + bàn phím), mang dấu
+ * `mark` (viền đỏ/vàng) — màn quyết định ô nào bấm được và bấm thì làm gì (`onCellClick`).
  */
-export function DiagramViewer({ svg, viewer, title }: { svg: string; viewer: { fullName: string; email: string }; title: string }) {
+export function DiagramViewer({
+  svg,
+  viewer,
+  title,
+  cells,
+  onCellClick,
+  selectedCellId,
+}: {
+  svg: string;
+  viewer: { fullName: string; email: string };
+  title: string;
+  cells?: ViewerCell[];
+  onCellClick?: (cellId: string) => void;
+  selectedCellId?: string | null;
+}) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const parsed = useMemo(() => parseSafeSvg(svg), [svg]);
   const [view, setView] = useState<ViewTransform>({ scale: 1, x: 0, y: 0 });
-  const drag = useRef<{ x: number; y: number; view: ViewTransform } | null>(null);
+  const drag = useRef<{ x: number; y: number; view: ViewTransform; target: EventTarget | null; moved: boolean } | null>(null);
+  const clickable = useMemo(() => new Map((cells ?? []).map((cell) => [cell.id, cell])), [cells]);
 
   const fit = useCallback(() => {
     const stage = stageRef.current;
@@ -99,6 +126,37 @@ export function DiagramViewer({ svg, viewer, title }: { svg: string; viewer: { f
     canvas.replaceChildren(...(parsed.value ? [parsed.value] : []));
     fit();
   }, [parsed, fit]);
+
+  /*
+   * Gắn vai trò nút + dấu lên đúng `<g data-cell-id>` của SVG. Chạy lại khi danh sách ô, dấu hay ô
+   * đang chọn đổi; SVG mới (đổi phiên bản) cũng dựng lại vì `parsed` đổi kéo theo nhánh trên.
+   */
+  useLayoutEffect(() => {
+    const root = parsed.value;
+    if (!root) return;
+    for (const el of Array.from(root.querySelectorAll('[data-cell-id]'))) {
+      const cell = clickable.get(el.getAttribute('data-cell-id') ?? '');
+      for (const name of ['data-ims-clickable', 'data-ims-mark', 'data-ims-selected', 'role', 'tabindex', 'aria-label']) el.removeAttribute(name);
+      if (!cell) continue;
+      el.setAttribute('data-ims-clickable', '');
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', cell.label);
+      if (cell.mark) el.setAttribute('data-ims-mark', cell.mark);
+      if (cell.id === selectedCellId) el.setAttribute('data-ims-selected', '');
+    }
+  }, [parsed, clickable, selectedCellId]);
+
+  /** Ô bấm được gần nhất chứa phần tử (ô con của nhóm thuộc về ô ngoài cùng được khai). */
+  const cellAt = (target: EventTarget | null): string | null => {
+    let el = target instanceof Element ? target : null;
+    while (el && el !== canvasRef.current) {
+      const id = el.getAttribute('data-cell-id');
+      if (id && clickable.has(id)) return id;
+      el = el.parentElement;
+    }
+    return null;
+  };
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -121,16 +179,34 @@ export function DiagramViewer({ svg, viewer, title }: { svg: string; viewer: { f
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    drag.current = { x: event.clientX, y: event.clientY, view };
+    // Giữ phần tử bị nhấn: sau `setPointerCapture`, `pointerup` báo chính khung chứ không báo ô.
+    drag.current = { x: event.clientX, y: event.clientY, view, target: event.target, moved: false };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const start = drag.current;
     if (!start) return;
-    setView({ ...start.view, x: start.view.x + event.clientX - start.x, y: start.view.y + event.clientY - start.y });
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) > CLICK_SLOP || Math.abs(dy) > CLICK_SLOP) start.moved = true;
+    setView({ ...start.view, x: start.view.x + dx, y: start.view.y + dy });
+  };
+  const onPointerUp = () => {
+    const start = drag.current;
+    drag.current = null;
+    if (!start || start.moved || !onCellClick) return;
+    const id = cellAt(start.target);
+    if (id) onCellClick(id);
   };
   const endDrag = () => {
     drag.current = null;
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const id = cellAt(event.target);
+    if (!id || !onCellClick) return;
+    event.preventDefault();
+    onCellClick(id);
   };
 
   return (
@@ -160,8 +236,9 @@ export function DiagramViewer({ svg, viewer, title }: { svg: string; viewer: { f
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
+        onPointerUp={onPointerUp}
         onPointerCancel={endDrag}
+        onKeyDown={onKeyDown}
       >
         <div
           ref={canvasRef}

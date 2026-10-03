@@ -1,80 +1,47 @@
 import { describe, expect, it } from 'vitest';
 import {
   deviceCellJson,
-  deviceShape,
+  deviceIdsInXml,
   insertPatch,
   growBounds,
   lastChildId,
   layerIdOf,
   nextInsertPosition,
   pageIds,
+  placeCells,
 } from './drawio-bridge';
 
+/** Ô dựng sẵn do server trả (`GET /diagrams/device-info`) — style đã hydrate theo loại. */
 const DEV = {
   id: '11111111-2222-3333-4444-555555555555',
   code: 'SW-CORE-01',
-  name: 'Switch lõi',
-  deviceTypeName: 'Switch',
-  ip: '10.0.0.2',
+  cell: { style: 'align=center;shape=mxgraph.networks.switch;html=0;', label: 'SW-CORE-01\n10.0.0.2\nHQ · R1', width: 100, height: 30 },
 };
 
 const fileWith = (cells: string, extraPage = '') =>
   `<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells}</root></mxGraphModel></diagram>${extraPage}</mxfile>`;
 
-describe('deviceShape — loại thiết bị → hình mạng có sẵn của draw.io', () => {
-  it.each([
-    ['Firewall', 'mxgraph.networks.firewall'],
-    ['Router biên', 'mxgraph.networks.router'],
-    ['Switch', 'mxgraph.networks.switch'],
-    ['Server', 'mxgraph.networks.server'],
-    ['Máy chủ ảo', 'mxgraph.networks.server'],
-    ['Access Point', 'mxgraph.networks.wireless_hub'],
-    ['Điểm phát WiFi', 'mxgraph.networks.wireless_hub'],
-    ['NAS', 'mxgraph.networks.nas_filer'],
-    ['UPS', 'mxgraph.networks.ups_small'],
-    ['PC', 'mxgraph.networks.pc'],
-    ['Laptop', 'mxgraph.networks.laptop'],
-    ['Printer', 'mxgraph.networks.printer'],
-    ['Camera', 'mxgraph.networks.security_camera'],
-    ['Thiết bị khác', null],
-    ['', null],
-  ])('%s → %s', (typeName, shape) => {
-    expect(deviceShape(typeName)).toBe(shape);
-  });
-
-  it('"Firewall" thắng "router" khi tên chứa cả hai — tường lửa là thứ người đọc cần nhận ra', () => {
-    expect(deviceShape('Router/Firewall biên')).toBe('mxgraph.networks.firewall');
-  });
-});
-
 describe('deviceCellJson + insertPatch', () => {
-  it('hình mang mã + IP hai dòng và thuộc tính ims_* để tra lại kho', () => {
+  it('ô UserObject mang đúng hợp đồng AD-18 (ims_device_id + ims_device_code), style + nhãn + cỡ của server', () => {
     const cell = deviceCellJson(DEV, { cellId: 'ims-a', parent: '1', x: 40, y: 60 });
-    expect(cell).toMatchObject({ id: 'ims-a', vertex: 1, parent: '1' });
-    expect(cell.style).toContain('shape=mxgraph.networks.switch');
-    // Nhãn chữ thường (html=0): mã thiết bị có ký tự lạ cũng không thành HTML trong bản vẽ.
-    expect(cell.style).toContain('html=0');
-    expect(cell.geometry).toMatch(/^<mxGeometry x="40" y="60" width="\d+" height="\d+" as="geometry"\/>$/);
+    expect(cell).toMatchObject({ id: 'ims-a', vertex: 1, parent: '1', style: DEV.cell.style });
+    expect(cell.geometry).toBe('<mxGeometry x="40" y="60" width="100" height="30" as="geometry"/>');
     const value = new DOMParser().parseFromString(cell.xmlValue, 'application/xml').documentElement;
     expect(value.nodeName).toBe('UserObject');
-    expect(value.getAttribute('label')).toBe('SW-CORE-01\n10.0.0.2');
+    expect(value.getAttribute('label')).toBe('SW-CORE-01\n10.0.0.2\nHQ · R1');
     expect(value.getAttribute('ims_device_id')).toBe(DEV.id);
     expect(value.getAttribute('ims_device_code')).toBe('SW-CORE-01');
-    expect(value.getAttribute('ims_device_ip')).toBe('10.0.0.2');
+    // Thuộc tính ngoài hợp đồng không còn ghi vào ô (IP, loại hydrate từ kho mỗi lần mở).
+    expect(value.hasAttribute('ims_device_ip')).toBe(false);
+    expect(value.hasAttribute('ims_device_type')).toBe(false);
   });
 
   it('ký tự đặc biệt trong mã được thoát — không phá được XML của bản vẽ', () => {
-    const cell = deviceCellJson({ ...DEV, code: 'A"<b>&\'x', ip: null }, { cellId: 'c', parent: '1', x: 0, y: 0 });
+    const odd = 'A"<b>&\'x';
+    const cell = deviceCellJson({ ...DEV, code: odd, cell: { ...DEV.cell, label: odd } }, { cellId: 'c', parent: '1', x: 0, y: 0 });
     const value = new DOMParser().parseFromString(cell.xmlValue, 'application/xml').documentElement;
-    expect(value.getAttribute('ims_device_code')).toBe('A"<b>&\'x');
-    expect(value.getAttribute('label')).toBe('A"<b>&\'x');
-    expect(value.getAttribute('ims_device_ip')).toBe('');
-  });
-
-  it('loại không có hình riêng → khối chữ nhật bo góc', () => {
-    expect(deviceCellJson({ ...DEV, deviceTypeName: 'Thiết bị khác' }, { cellId: 'c', parent: '1', x: 0, y: 0 }).style).toContain(
-      'rounded=1',
-    );
+    expect(value.getAttribute('ims_device_code')).toBe(odd);
+    expect(value.getAttribute('label')).toBe(odd);
   });
 
   it('previous chỉ có mặt khi biết ô đứng trước', () => {
@@ -82,9 +49,40 @@ describe('deviceCellJson + insertPatch', () => {
     expect(deviceCellJson(DEV, { cellId: 'c', parent: '1', previous: 'x9', x: 0, y: 0 }).previous).toBe('x9');
   });
 
-  it('patch theo đúng khuôn draw.io: u → trang → cells → i', () => {
-    const cell = deviceCellJson(DEV, { cellId: 'c', parent: '1', x: 0, y: 0 });
-    expect(insertPatch('p1', cell)).toEqual({ u: { p1: { cells: { i: [cell] } } } });
+  it('patch theo đúng khuôn draw.io: u → trang → cells → i, nhiều ô một lượt', () => {
+    const a = deviceCellJson(DEV, { cellId: 'a', parent: '1', x: 0, y: 0 });
+    const b = deviceCellJson(DEV, { cellId: 'b', parent: '1', previous: 'a', x: 0, y: 0 });
+    expect(insertPatch('p1', [a, b])).toEqual({ u: { p1: { cells: { i: [a, b] } } } });
+  });
+});
+
+describe('deviceIdsInXml — máy đã có trên bản vẽ (hộp Thiết bị kho hiện "đã có")', () => {
+  it('đọc ims_device_id của UserObject và object, bỏ hình tự do; XML hỏng → rỗng', () => {
+    const xml = fileWith(
+      '<UserObject label="a" ims_device_id="d1" ims_device_code="SW-1" id="c1"><mxCell vertex="1" parent="1"/></UserObject>' +
+        '<object label="b" ims_device_id="d2" id="c2"><mxCell vertex="1" parent="1"/></object>' +
+        '<UserObject label="khung" id="c3"><mxCell vertex="1" parent="1"/></UserObject>' +
+        '<mxCell id="t" value="chữ" vertex="1" parent="1"/>',
+    );
+    expect([...deviceIdsInXml(xml)].sort()).toEqual(['d1', 'd2']);
+    expect(deviceIdsInXml('<mxfile><diagram').size).toBe(0);
+  });
+});
+
+describe('placeCells — chèn nhiều máy một lượt', () => {
+  it('mỗi ô đứng bên phải ô trước, previous nối chuỗi để ô sau nằm trên', () => {
+    let n = 0;
+    const placed = placeCells([DEV, { ...DEV, id: 'x2', code: 'SW-2' }], {
+      bounds: { x: 0, y: 0, width: 100, height: 50 },
+      parent: '1',
+      previous: 'last',
+      newId: () => `ims-${(n += 1)}`,
+    });
+    expect(placed.cells.map((c) => [c.id, c.previous, c.geometry])).toEqual([
+      ['ims-1', 'last', '<mxGeometry x="140" y="0" width="100" height="30" as="geometry"/>'],
+      ['ims-2', 'ims-1', '<mxGeometry x="280" y="0" width="100" height="30" as="geometry"/>'],
+    ]);
+    expect(placed.bounds).toEqual({ x: 0, y: 0, width: 380, height: 50 });
   });
 });
 

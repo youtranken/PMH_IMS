@@ -102,6 +102,10 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     // `@NoSecretText` không đọc được nó. Service soi chữ TỪNG hình khi lưu (`secretLabelReason`).
     'diagrams/diagrams.controller.ts#xml',
     'diagrams/diagrams.controller.ts#svg',
+    // Biểu tượng SVG của loại thiết bị: hình vẽ, lọc theo allowlist ở `sanitizeIconSvg`.
+    'catalog/catalog.controller.ts#svg',
+    // Danh sách id máy ngăn bằng dấu phẩy (ô đọc của hộp Thiết bị kho).
+    'diagrams/diagrams.controller.ts#ids',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',

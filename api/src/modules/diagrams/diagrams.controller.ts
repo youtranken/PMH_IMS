@@ -1,13 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength, ValidateIf } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
+import { OptionalUuidListQuery, splitUuidList } from '../../common/query-uuid';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
-import { DiagramsService } from './diagrams.service';
+import { DEVICE_INFO_MAX_IDS, DiagramsService } from './diagrams.service';
 
 /** Trần thô của DTO; trần thật (`diagram.xml_max_kb`, `diagram.svg_max_kb`) do cổng kiểm áp. */
 const RAW_MAX_BYTES = 6 * 1024 * 1024;
@@ -39,6 +40,17 @@ class UpdateNodeDto {
   @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID(undefined, { message: 'Site không hợp lệ.' }) siteId?: string | null;
   @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID(undefined, { message: 'Tủ mạng không hợp lệ.' }) cabinetId?: string | null;
   @ValidateIf((_o, v) => v !== null) @IsOptional() @IsEmail({}, { message: 'Người phụ trách không hợp lệ.' }) ownerEmail?: string | null;
+}
+
+class DeviceInfoQueryDto {
+  @MaxLength(DEVICE_INFO_MAX_IDS * 38, { message: 'Quá nhiều thiết bị trong một lần hỏi.' })
+  @OptionalUuidListQuery('Danh sách thiết bị không hợp lệ.')
+  ids?: string;
+}
+
+class DeviceParamDto {
+  @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
+  deviceId!: string;
 }
 
 class ContentQueryDto {
@@ -93,6 +105,28 @@ export class DiagramsController {
       this.config.getNumber('diagramPresenceTtlSeconds'),
     ]);
     return { initTimeoutSeconds, presenceTtlSeconds };
+  }
+
+  /**
+   * Thông tin hiện tại của các máy (theo id, ngăn bằng dấu phẩy) — hộp "Thiết bị kho" dựng ô
+   * chèn, thẻ thông tin đọc lại. Một lượt cho cả lô (không N+1). Không cần mã sơ đồ: đây là hồ sơ
+   * thiết bị mọi vai vốn đọc được ở trang thiết bị, không phải nội dung bản vẽ.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('device-info')
+  deviceInfo(@Query() query: DeviceInfoQueryDto) {
+    const ids = splitUuidList(query.ids) ?? [];
+    if (ids.length > DEVICE_INFO_MAX_IDS) {
+      throw new BadRequestException({ code: 'DIAGRAM_DEVICE_INFO_TOO_MANY', message: 'Quá nhiều thiết bị trong một lần hỏi.' });
+    }
+    return this.diagrams.deviceInfos(ids);
+  }
+
+  /** Bản vẽ có máy này ở phiên bản mới nhất — chỉ tên + id (thông tin của cây, không cần mã). */
+  @Roles('sa', 'admin', 'member')
+  @Get('by-device/:deviceId')
+  byDevice(@Param() params: DeviceParamDto) {
+    return this.diagrams.diagramsWithDevice(params.deviceId);
   }
 
   @Roles('sa', 'admin', 'member')

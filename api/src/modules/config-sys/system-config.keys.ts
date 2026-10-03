@@ -197,6 +197,11 @@ export const CONFIG_KEYS = {
    * quá khoảng này coi như đã rời. Ngắn quá thì mạng chập chờn làm thông báo nhấp nháy.
    */
   diagramPresenceTtlSeconds: { key: 'diagram.presence_ttl_seconds', fallback: 60 },
+  /*
+   * Biểu tượng SVG riêng của một loại thiết bị nhúng vào MỌI ô thiết bị loại đó mỗi lần mở bản
+   * vẽ (hydrate), nên một biểu tượng to nhân lên theo số máy và đè lên trần `diagram.xml_max_kb`.
+   */
+  diagramIconSvgMaxKb: { key: 'diagram.icon_svg_max_kb', fallback: 100 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

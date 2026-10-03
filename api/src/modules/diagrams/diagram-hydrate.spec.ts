@@ -1,0 +1,195 @@
+import { buildCellIndex } from './diagram-cells';
+import { checkDiagramXml } from './diagram-gate';
+import {
+  IMS_STYLE_KEYS,
+  deviceCellLabel,
+  deviceInsertCell,
+  deviceLookStyle,
+  dehydrateDiagramXml,
+  hydrateDiagramXml,
+  type DeviceCellSource,
+} from './diagram-hydrate';
+
+const DEV = '7b0c1c1e-0000-4000-8000-000000000001';
+const GONE = '7b0c1c1e-0000-4000-8000-0000000000ff';
+const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4"/></svg>';
+
+function page(body: string): string {
+  return `<mxfile host="drawio"><diagram id="p1" name="Trang 1"><mxGraphModel dx="800"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${body}</root></mxGraphModel></diagram></mxfile>`;
+}
+
+function deviceCell(opts: { id?: string; deviceId?: string; code?: string; label?: string; style?: string; extra?: string } = {}): string {
+  const { id = 'd1', deviceId = DEV, code = 'SW-E2E-01', label = code, style = 'rounded=1;fillColor=none;', extra = '' } = opts;
+  return `<UserObject label="${label}" ims_device_id="${deviceId}" ims_device_code="${code}"${extra} id="${id}"><mxCell style="${style}" vertex="1" parent="1"><mxGeometry x="10" y="20" width="100" height="30" as="geometry"/></mxCell></UserObject>`;
+}
+
+function source(over: Partial<DeviceCellSource> = {}): DeviceCellSource {
+  return {
+    found: true,
+    code: 'SW-E2E-01',
+    status: 'in_use',
+    ips: ['10.0.0.5'],
+    siteCode: 'HQ',
+    cabinetCode: 'R1',
+    u: null,
+    shape: 'mxgraph.networks.switch',
+    iconSvg: null,
+    ...over,
+  };
+}
+
+function styleOf(xml: string, cellId: string): Record<string, string> {
+  const index = buildCellIndex(xml);
+  const cell = index.cells.find((c) => c.id === cellId);
+  if (!cell) throw new Error(`không thấy ô ${cellId}`);
+  const match = new RegExp(`id="${cellId}"[^>]*>\\s*<mxCell style="([^"]*)"`).exec(xml);
+  const out: Record<string, string> = {};
+  for (const token of (match?.[1] ?? '').split(';')) {
+    const at = token.indexOf('=');
+    if (at > 0) out[token.slice(0, at)] = token.slice(at + 1);
+  }
+  return out;
+}
+
+describe('deviceCellLabel — nhãn ô thiết bị hydrate từ kho', () => {
+  it.each<[string, Partial<DeviceCellSource>, string]>([
+    ['mã + IP + vị trí', {}, 'SW-E2E-01\n10.0.0.5\nHQ · R1'],
+    ['nhiều IP thì ghi IP đầu + số còn lại', { ips: ['10.0.0.5', '10.0.0.6'] }, 'SW-E2E-01\n10.0.0.5 (+1)\nHQ · R1'],
+    ['không IP, không tủ', { ips: [], cabinetCode: null }, 'SW-E2E-01\nHQ'],
+    ['có U', { u: 12 }, 'SW-E2E-01\n10.0.0.5\nHQ · R1 · U12'],
+    ['đã thanh lý → dấu cảnh báo', { status: 'retired' }, 'SW-E2E-01\n10.0.0.5\nHQ · R1\n⚠ Đã thanh lý'],
+    ['không còn trong kho → dấu đỏ, giữ mã đọc được', { found: false, ips: [], siteCode: null, cabinetCode: null }, 'SW-E2E-01\n⚠ Không tìm thấy trong kho'],
+  ])('%s', (_name, over, expected) => {
+    expect(deviceCellLabel(source(over))).toBe(expected);
+  });
+});
+
+describe('deviceLookStyle — phần style IMS giữ (hình theo loại)', () => {
+  it('hình draw.io của loại', () => {
+    expect(deviceLookStyle({ shape: 'mxgraph.networks.switch', iconSvg: null, found: true })).toBe(
+      'shape=mxgraph.networks.switch;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;html=0;',
+    );
+  });
+  it('SVG riêng thắng hình: ảnh data: mã hoá URL (không base64, không dấu ; trong giá trị)', () => {
+    const style = deviceLookStyle({ shape: 'mxgraph.networks.switch', iconSvg: ICON, found: true });
+    expect(style).toMatch(/^shape=image;image=data:image\/svg\+xml,%3Csvg/);
+    expect(style.split(';').filter((t) => t.startsWith('image=')).length).toBe(1);
+    expect(style).toContain('aspect=fixed;');
+  });
+  it('loại chưa chọn hình → "Thiết bị khác" (khối chữ nhật, không khoá shape)', () => {
+    expect(deviceLookStyle({ shape: null, iconSvg: null, found: true })).toBe('verticalLabelPosition=middle;verticalAlign=middle;html=0;');
+  });
+  it('máy không còn trong kho → "Thiết bị khác" dù XML từng mang hình gì', () => {
+    expect(deviceLookStyle({ shape: 'mxgraph.networks.switch', iconSvg: null, found: false })).toBe(
+      'verticalLabelPosition=middle;verticalAlign=middle;html=0;',
+    );
+  });
+  it('mọi khoá nó đặt đều nằm trong IMS_STYLE_KEYS (dehydrate gỡ được hết)', () => {
+    for (const look of [
+      { shape: 'mxgraph.networks.switch', iconSvg: null, found: true },
+      { shape: null, iconSvg: ICON, found: true },
+      { shape: null, iconSvg: null, found: true },
+    ]) {
+      for (const token of deviceLookStyle(look).split(';').filter(Boolean)) {
+        expect(IMS_STYLE_KEYS).toContain(token.split('=')[0]);
+      }
+    }
+  });
+});
+
+describe('dehydrateDiagramXml — XML lưu "khô" (AD-18)', () => {
+  it('ô thiết bị: bỏ phần style IMS + nhãn hydrate, nhãn khô là mã máy; giữ style người vẽ', () => {
+    const wet = page(
+      deviceCell({
+        label: 'SW-E2E-01&#xa;10.0.0.5&#xa;HQ · R1',
+        style: 'rounded=1;shape=image;image=data:image/svg+xml,%3Csvg%3E;imageAspect=0;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;fillColor=none;fontSize=14;',
+      }),
+    );
+    const dry = dehydrateDiagramXml(wet);
+    expect(dry).toContain('label="SW-E2E-01"');
+    expect(styleOf(dry, 'd1')).toEqual({ rounded: '1', fillColor: 'none', fontSize: '14' });
+    expect(dry).not.toContain('data:image/svg+xml');
+  });
+
+  it('bỏ thuộc tính dữ liệu cũ không thuộc hợp đồng (ims_device_ip, ims_device_type), giữ ims_device_id/code và dữ liệu tuỳ ý', () => {
+    const dry = dehydrateDiagramXml(page(deviceCell({ extra: ' ims_device_ip="10.0.0.5" ims_device_type="Switch" owner="IT"' })));
+    expect(dry).not.toContain('ims_device_ip');
+    expect(dry).not.toContain('ims_device_type');
+    expect(dry).toContain(`ims_device_id="${DEV}"`);
+    expect(dry).toContain('ims_device_code="SW-E2E-01"');
+    expect(dry).toContain('owner="IT"');
+  });
+
+  it('ảnh data: base64 kiểu cũ (`image=data:image/png;base64,...`) gỡ trọn, không để mẩu "base64,..." mồ côi', () => {
+    const dry = dehydrateDiagramXml(page(deviceCell({ style: 'shape=image;image=data:image/png;base64,iVBOR==;fontSize=9;' })));
+    expect(styleOf(dry, 'd1')).toEqual({ fontSize: '9' });
+    expect(dry).not.toContain('base64');
+  });
+
+  it('không đụng hình tự do, dây, chữ — kể cả khi chúng có shape/html', () => {
+    const free =
+      '<mxCell id="s1" value="&lt;b&gt;Tầng 3&lt;/b&gt;" style="shape=mxgraph.networks.cloud;html=1;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="80" height="40" as="geometry"/></mxCell>' +
+      '<mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="d1" target="s1"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="6"/></Array></mxGeometry></mxCell>';
+    const xml = page(deviceCell() + free);
+    const dry = dehydrateDiagramXml(xml);
+    expect(dry).toContain('style="shape=mxgraph.networks.cloud;html=1;"');
+    expect(dry).toContain('value="&lt;b&gt;Tầng 3&lt;/b&gt;"');
+    expect(dry).toContain('<mxPoint x="5" y="6"/>');
+    expect(buildCellIndex(dry).cells.map((c) => c.id)).toEqual(['d1', 's1', 'e1']);
+  });
+
+  it('dehydrate hai lần = một lần; kết quả vẫn qua cổng kiểm', () => {
+    const once = dehydrateDiagramXml(page(deviceCell({ style: 'shape=mxgraph.networks.switch;html=0;' })));
+    expect(dehydrateDiagramXml(once)).toBe(once);
+    expect(checkDiagramXml(once, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+  });
+});
+
+describe('hydrateDiagramXml — nạp hình/nhãn từ kho trước khi mở', () => {
+  it('đổi hình của loại ở Danh mục → lần mở sau ô hiện hình mới (XML khô không giữ hình)', () => {
+    const dry = dehydrateDiagramXml(page(deviceCell({ style: 'shape=mxgraph.networks.switch;rounded=1;' })));
+    const before = hydrateDiagramXml(dry, new Map([[DEV, source()]]));
+    const after = hydrateDiagramXml(dry, new Map([[DEV, source({ shape: 'mxgraph.cisco.switches.workgroup_switch' })]]));
+    expect(styleOf(before, 'd1').shape).toBe('mxgraph.networks.switch');
+    expect(styleOf(after, 'd1').shape).toBe('mxgraph.cisco.switches.workgroup_switch');
+    expect(styleOf(after, 'd1').rounded).toBe('1');
+  });
+
+  it('nhãn = mã + IP + vị trí hiện tại; đổi IP trong kho thì nhãn đổi theo', () => {
+    const dry = page(deviceCell());
+    expect(hydrateDiagramXml(dry, new Map([[DEV, source({ ips: ['10.9.9.9'] })]]))).toContain('label="SW-E2E-01&#xa;10.9.9.9&#xa;HQ · R1"');
+  });
+
+  it('ims_device_id không còn trong kho (hoặc không phải UUID) → nhãn dấu đỏ, không lỗi', () => {
+    const xml = page(deviceCell({ deviceId: GONE, code: 'SW-E2E-OLD' }) + deviceCell({ id: 'd2', deviceId: 'không-phải-uuid', code: 'X' }));
+    const out = hydrateDiagramXml(xml, new Map());
+    expect(out).toContain('label="SW-E2E-OLD&#xa;⚠ Không tìm thấy trong kho"');
+    expect(out).toContain('label="X&#xa;⚠ Không tìm thấy trong kho"');
+  });
+
+  it('khứ hồi: hydrate rồi dehydrate trả lại đúng XML khô', () => {
+    const dry = dehydrateDiagramXml(page(deviceCell({ style: 'fontSize=14;' }) + '<mxCell id="s1" value="x" vertex="1" parent="1"/>'));
+    const wet = hydrateDiagramXml(dry, new Map([[DEV, source({ iconSvg: ICON })]]));
+    expect(wet).toContain('data:image/svg+xml');
+    expect(dehydrateDiagramXml(wet)).toBe(dry);
+  });
+
+  it('XML đã hydrate (kể cả biểu tượng SVG riêng) vẫn qua cổng kiểm — lưu được', () => {
+    const wet = hydrateDiagramXml(page(deviceCell()), new Map([[DEV, source({ iconSvg: ICON, status: 'retired' })]]));
+    expect(checkDiagramXml(wet, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+  });
+});
+
+describe('deviceInsertCell — ô mới khi chèn từ hộp "Thiết bị kho"', () => {
+  it('cỡ theo hình của loại, style = mặc định người vẽ + phần IMS', () => {
+    const cell = deviceInsertCell(source());
+    expect(cell).toMatchObject({ width: 100, height: 30, label: 'SW-E2E-01\n10.0.0.5\nHQ · R1' });
+    expect(cell.style).toContain('shape=mxgraph.networks.switch;');
+  });
+  it('biểu tượng riêng → ô vuông; loại chưa chọn hình → khối "Thiết bị khác" bo góc', () => {
+    expect(deviceInsertCell(source({ iconSvg: ICON }))).toMatchObject({ width: 60, height: 60 });
+    const other = deviceInsertCell(source({ shape: null }));
+    expect(other).toMatchObject({ width: 120, height: 50 });
+    expect(other.style).toContain('rounded=1;');
+  });
+});

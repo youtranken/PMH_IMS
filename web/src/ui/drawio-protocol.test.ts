@@ -54,6 +54,8 @@ describe('parseDrawioEvent — chỉ nhận đúng hình dạng giao thức', ()
     ['exit', '{"event":"exit","modified":true}', { event: 'exit', modified: true }],
     ['openLink', '{"event":"openLink","href":"https://ims.local/devices/1"}', { event: 'openLink', href: 'https://ims.local/devices/1' }],
     ['getDiff mang xml', '{"event":"getDiff","xml":"<mxfile/>"}', { event: 'getDiff', xml: '<mxfile/>' }],
+    // Bản vẽ trống: draw.io trả `load` với `xml: null` — vẫn là tin `load` (màn mới biết trình vẽ đã nạp).
+    ['load của bản vẽ trống (xml null)', '{"event":"load","xml":null,"currentPage":0}', { event: 'load', currentPage: 0 }],
     [
       'giữ khung hình + trang',
       '{"event":"autosave","xml":"<x/>","currentPage":1,"modelBounds":{"x":1,"y":2,"width":3,"height":4}}',
@@ -71,6 +73,7 @@ describe('parseDrawioEvent — chỉ nhận đúng hình dạng giao thức', ()
     ['thiếu event', '{"xml":"<x/>"}'],
     ['event lạ', '{"event":"eval","code":"alert(1)"}'],
     ['autosave thiếu xml', '{"event":"autosave"}'],
+    ['autosave xml null', '{"event":"autosave","xml":null}'],
     ['save xml sai kiểu', '{"event":"save","xml":42}'],
     ['export thiếu data', '{"event":"export","format":"svg"}'],
     ['openLink thiếu href', '{"event":"openLink"}'],
