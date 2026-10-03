@@ -4,6 +4,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noSweep } from './sweep-stub';
 
 /**
  * OLD-SEC-01: thời gian nghỉ chống ngập hộp thư, nhưng không được biến thành tấm chăn cho kẻ dò
@@ -40,7 +41,7 @@ describe('Cảnh báo dò két leo thang một lần trong thời gian nghỉ (O
     new SecurityProbeService(
       scratch.db,
       configWith(multiplier),
-      new OutboxService(scratch.db),
+      new OutboxService(scratch.db, configWith(multiplier), noSweep),
       new AuditWriterService(scratch.db),
     );
 

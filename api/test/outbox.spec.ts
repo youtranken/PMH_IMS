@@ -4,6 +4,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { runMigrations } from '../src/database/migration-runner';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noSweep } from './sweep-stub';
 
 /**
  * `OutboxService` — thứ AD-5 bắt MỌI lượt ghi đi qua — có ĐÚNG 0 test cho tới 08/09.
@@ -47,7 +48,7 @@ describe('OutboxService trên Postgres thật', () => {
   beforeAll(async () => {
     scratch = await createScratchDb('ims_outbox');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-    outbox = new OutboxService(scratch.db, new SystemConfigService(scratch.db));
+    outbox = new OutboxService(scratch.db, new SystemConfigService(scratch.db), noSweep);
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -291,7 +292,7 @@ describe('OutboxService trên Postgres thật', () => {
           `UPDATE system_config SET value = '3'::jsonb WHERE key = 'outbox.max_relay_attempts'`,
         );
         try {
-          const relay = new OutboxService(scratch.db, new SystemConfigService(scratch.db));
+          const relay = new OutboxService(scratch.db, new SystemConfigService(scratch.db), noSweep);
           await scratch.db.transaction((tx) => relay.enqueueWithin(tx, 'mail.tran-thap'));
           const id = (await rows())[0].id;
           for (let i = 0; i < 2; i += 1) await relay.markFailed(id, 'x');

@@ -79,7 +79,7 @@ describe('Q-20 · mật khẩu tạm có hạn', () => {
       audit,
       outbox,
       config,
-      new KnownDeviceService(db),
+      new KnownDeviceService(db, config, noopSweep),
       loginFailures,
       new AuditApiService(new SecurityProbeService(db, config, outbox, audit)),
     );

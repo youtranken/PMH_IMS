@@ -44,6 +44,7 @@ describe('UsersService — tầng DB', () => {
         role,
         passwordHash: 'hash',
         totpLoginRequired: true,
+        tempPasswordExpiresAt: new Date(Date.now() + 86_400_000),
       }),
     );
   }

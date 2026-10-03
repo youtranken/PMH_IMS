@@ -3,6 +3,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { runMigrations } from '../src/database/migration-runner';
 import { createScratchDb, migrationsDir, testRedisConnection, type ScratchDb } from './db';
+import { noSweep } from './sweep-stub';
 
 /**
  * Vế còn thiếu của `outbox.spec.ts`: BullMQ THẬT trên Redis THẬT.
@@ -28,7 +29,7 @@ describe('Relay outbox trên BullMQ + Redis thật', () => {
   beforeAll(async () => {
     scratch = await createScratchDb('ims_relay');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-    outbox = new OutboxService(scratch.db, new SystemConfigService(scratch.db));
+    outbox = new OutboxService(scratch.db, new SystemConfigService(scratch.db), noSweep);
     // Hàng đợi riêng theo tên DB tạm → không giẫm lên hàng đợi thật của stack đang chạy.
     queue = new Queue(`e2e-${scratch.name}`, { connection: testRedisConnection() });
     await queue.waitUntilReady();

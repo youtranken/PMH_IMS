@@ -61,7 +61,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
     expect(errors[0]).toContain('Site');
   });
 
-  it.each([
+  it.each<[string | null | undefined, string]>([
     ['', 'ô site bị XOÁ — đúng hình dạng đã lọt'],
     [null, 'gửi null tường minh'],
     [undefined, 'không gửi khoá site lên'],

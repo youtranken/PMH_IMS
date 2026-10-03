@@ -8,6 +8,7 @@ import {
   exportWatermark,
   type ExportMeta,
 } from './diagram-export';
+import type { CellIndex } from './diagram-cells';
 
 const TZ = 'Asia/Ho_Chi_Minh';
 
@@ -142,13 +143,13 @@ describe('exportFileName', () => {
 describe('cableLegend — chú giải màu dây đọc từ ảnh xem đã lưu', () => {
   const CT_1 = '7b0c1c1e-0000-4000-8000-0000000000c1';
   const CT_2 = '7b0c1c1e-0000-4000-8000-0000000000c2';
-  const index = {
+  const index: CellIndex = {
     layers: ['1'],
     cells: [
-      { id: 'e1', kind: 'edge' as const, parent: '1', layer: '1', ims: { ims_link_id: 'l1', ims_cable_type_id: CT_1 }, label: '', fp: 'a' },
-      { id: 'e2', kind: 'edge' as const, parent: '1', layer: '1', ims: { ims_link_id: 'l2', ims_cable_type_id: CT_1 }, label: '', fp: 'b' },
-      { id: 'e3', kind: 'edge' as const, parent: '1', layer: '1', ims: { ims_link_id: 'l3', ims_cable_type_id: CT_2 }, label: '', fp: 'c' },
-      { id: 'e4', kind: 'edge' as const, parent: '1', layer: '1', ims: {}, label: '', fp: 'd' },
+      { id: 'e1', kind: 'edge', parent: '1', layer: '1', ims: { ims_link_id: 'l1', ims_cable_type_id: CT_1 }, label: '', fp: 'a' },
+      { id: 'e2', kind: 'edge', parent: '1', layer: '1', ims: { ims_link_id: 'l2', ims_cable_type_id: CT_1 }, label: '', fp: 'b' },
+      { id: 'e3', kind: 'edge', parent: '1', layer: '1', ims: { ims_link_id: 'l3', ims_cable_type_id: CT_2 }, label: '', fp: 'c' },
+      { id: 'e4', kind: 'edge', parent: '1', layer: '1', ims: {}, label: '', fp: 'd' },
     ],
   };
   const svg =
