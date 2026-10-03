@@ -429,7 +429,16 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     kết nối có mặt ở nhiều bản vẽ, nên xoá dây trên một bản vẽ không thể nghĩa là xoá kết nối. Thành
     viên vốn được sửa sơ đồ cổng trực tiếp, nên bắt nó chờ duyệt bản vẽ là không nhất quán. Tự kiểm
     và cảnh báo lệch kho vẫn so dây với sơ đồ cổng (ARCHITECTURE-SPINE AD-17, AD-18).
+- **Góp ý sau khi vẽ thử bản spike (03/10/2026, chủ dự án):** vào màn sơ đồ thì sidebar tự thu nhỏ
+  (chỉ còn biểu tượng); trình vẽ chiếm toàn bộ phần còn lại; tab Sửa / Xem và các nút của IMS đưa
+  lên một thanh mảnh phía trên trình vẽ; panel "Thiết bị kho" thiết kế lại gọn (không chiếm một cột
+  cố định). Phiên bản, tô sáng đường dây của một thiết bị và ảnh thật thuộc các story của Epic 10;
+  spike chỉ để xem draw.io chạy thế nào.
+- **Mã 2 lớp lúc đăng nhập KHÔNG mở két hay sơ đồ (03/10/2026, chủ dự án xác nhận):** xem két và
+  mở sơ đồ mỗi bên phải nhập mã riêng, mỗi bên có ân hạn riêng (két đổi hành vi so với trước: lần xem
+  secret đầu tiên sau đăng nhập cũng hỏi mã).
 
+### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
   gom phần còn mở vào checklist; lịch sử nằm trong git.
