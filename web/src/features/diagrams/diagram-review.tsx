@@ -51,7 +51,8 @@ export function viewerPins(threads: CommentThread[]): ViewerPin[] {
     }));
 }
 
-function FindingList({ title, items, onGoTo }: { title: string; items: Finding[]; onGoTo?: (cellId: string) => void }) {
+/** Danh sách lời báo đỏ/vàng, mỗi mục có ô thì có nút bay tới ô — tự kiểm và "Kiểm tra khớp dữ liệu". */
+export function FindingList({ title, items, onGoTo }: { title: string; items: Finding[]; onGoTo?: (cellId: string) => void }) {
   const { t } = useTranslation();
   if (items.length === 0) return null;
   return (

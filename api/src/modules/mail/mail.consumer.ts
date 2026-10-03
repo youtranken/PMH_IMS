@@ -9,6 +9,7 @@ import { MailTransportService } from './mail-transport.service';
 import { UI_PATHS } from '../../common/ui-paths';
 import { viDate } from '../../common/today';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
+import { MailContentRegistry } from '../../common/mail-content.registry';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
 
@@ -52,6 +53,7 @@ export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
   'account.password.reset',
   'account.mfa.reset',
   'auth.totp.reenrolled',
+  'diagram.drift',
 ]);
 
 @Injectable()
@@ -67,6 +69,7 @@ export class MailConsumer {
     private readonly expiry: ExpiryApiService,
     private readonly approvals: ApprovalsApiService,
     private readonly approvalKinds: ApprovalKindRegistry,
+    private readonly contents: MailContentRegistry = new MailContentRegistry(),
   ) {}
 
   async handle(topic: string, outboxId: string): Promise<void> {
@@ -382,6 +385,23 @@ export class MailConsumer {
     });
   }
 
+  /** Thư do module chủ dựng qua `MailContentRegistry`; chưa ai đăng ký topic thì như "không có mẫu". */
+  private async buildRegisteredMail(topic: string, payload: Record<string, unknown>) {
+    const builder = this.contents.find(topic);
+    const content = builder ? await builder(payload) : null;
+    if (!content || content.to.length === 0) return null;
+    const { html, text } = renderMail({
+      title: content.title,
+      intro: content.intro,
+      rows: content.rows,
+      ctaLabel: content.ctaLabel,
+      ctaUrl: `${APP_URL()}${content.ctaPath}`,
+      ctaWide: true,
+      footnote: content.footnote,
+    });
+    return { to: content.to, subject: content.subject, html, text };
+  }
+
   /** Họ tên thay cho email — tiêu đề thư đọc trên màn khoá, email dài thì bị cắt mất phần tên máy. */
   private async personName(email: string): Promise<string> {
     const names = await this.users.namesByEmails([email]);
@@ -455,6 +475,12 @@ export class MailConsumer {
       if (!payload.approvalId) return null;
       return this.buildDecidedMail(payload.approvalId, payload.state, time.at);
     }
+
+    /*
+     * Lệch kho bản vẽ: người nhận (người phụ trách) và tên bản vẽ nằm trong bảng của `diagrams`,
+     * mà `mail` không import được — module chủ dựng nội dung qua sổ, outbox chỉ giữ id + số.
+     */
+    if (topic === 'diagram.drift') return this.buildRegisteredMail(topic, payload);
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
     const sa = await this.users.recipientsByRole(['sa']);

@@ -128,6 +128,8 @@ const TEXT: Record<string, [string, string]> = {
   diagramAutolayoutMaxNodes: ['settings.diagramAutolayoutMaxNodesLabel', 'settings.diagramAutolayoutMaxNodesDesc'],
   diagramExportMaxMegapixels: ['settings.diagramExportMaxMegapixelsLabel', 'settings.diagramExportMaxMegapixelsDesc'],
   diagramExportTimeoutSeconds: ['settings.diagramExportTimeoutSecondsLabel', 'settings.diagramExportTimeoutSecondsDesc'],
+  diagramDriftNotifyEnabled: ['settings.diagramDriftNotifyEnabledLabel', 'settings.diagramDriftNotifyEnabledDesc'],
+  diagramDriftSweepHour: ['settings.diagramDriftSweepHourLabel', 'settings.diagramDriftSweepHourDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

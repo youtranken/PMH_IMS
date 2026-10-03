@@ -41,6 +41,11 @@ export interface DeviceSnapshotEntry {
   /** Vị trí U trong tủ — chưa có trong kho; giữ chỗ để bản chụp không đổi hình dạng về sau. */
   u?: number | null;
   status?: string;
+  /**
+   * Cổng của CHÍNH máy này trên từng dây có trên bản vẽ (`ims_link_id` → tên cổng; `''` = chưa ghi)
+   * — cảnh báo lệch kho biết "đổi cổng từ lúc vẽ". Phiên bản lưu trước khi có trường này thì vắng.
+   */
+  ports?: Record<string, string>;
 }
 
 export const diagramVersionTable = pgTable('diagram_version', {
@@ -108,4 +113,14 @@ export const diagramCommentTable = pgTable('diagram_comment', {
   body: text('body'),
   author: text('author').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Migration 0053_diagram_drift.sql — bộ đệm số lệch kho của bản chính thức (không phải lịch sử). */
+export const diagramDriftTable = pgTable('diagram_drift', {
+  diagramId: uuid('diagram_id').primaryKey(),
+  versionId: uuid('version_id'),
+  driftCount: integer('drift_count').notNull().default(0),
+  notifiedCount: integer('notified_count').notNull().default(0),
+  checkedAt: timestamp('checked_at', { withTimezone: true }),
+  sweptAt: timestamp('swept_at', { withTimezone: true }),
 });

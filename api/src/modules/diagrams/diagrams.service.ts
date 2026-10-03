@@ -1201,7 +1201,17 @@ export class DiagramsService {
     const ids = [...new Set(index.cells.map((c) => c.deviceId).filter((id): id is string => Boolean(id)))];
     if (ids.length === 0) return [];
     const valid = ids.filter((id) => UUID_RE.test(id));
-    const [devices, ips] = await Promise.all([this.devices.getByIds(valid), this.ipam.heldAddressesOf(valid)]);
+    const [devices, ips, links] = await Promise.all([
+      this.devices.getByIds(valid),
+      this.ipam.heldAddressesOf(valid),
+      this.devices.portLinks(linkIdsOf(index)),
+    ]);
+    // Cổng của từng máy trên các dây đã vẽ: lệch kho so lại để báo "đổi cổng từ lúc vẽ".
+    const ports = new Map<string, Record<string, string>>();
+    for (const link of links.values()) {
+      ports.set(link.deviceId, { ...ports.get(link.deviceId), [link.id]: link.portLabel ?? '' });
+      ports.set(link.peerDeviceId, { ...ports.get(link.peerDeviceId), [link.id]: link.peerPort ?? '' });
+    }
     return ids.map((id) => {
       const device = devices.get(id);
       if (!device) return { id, missing: true };
@@ -1217,6 +1227,7 @@ export class DiagramsService {
         cabinet: device.cabinetCode,
         u: null,
         status: device.status,
+        ...(ports.has(id) ? { ports: ports.get(id) } : {}),
       };
     });
   }
@@ -1276,7 +1287,7 @@ export class DiagramsService {
   }
 }
 
-function linkIdsOf(index: CellIndex): string[] {
+export function linkIdsOf(index: CellIndex): string[] {
   return [
     ...new Set(
       index.cells
@@ -1286,7 +1297,7 @@ function linkIdsOf(index: CellIndex): string[] {
   ];
 }
 
-function toCheckLink(link: PortLink): CheckLink {
+export function toCheckLink(link: PortLink): CheckLink {
   return {
     id: link.id,
     deviceA: link.deviceId,

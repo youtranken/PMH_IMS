@@ -116,6 +116,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramAutolayoutMaxNodes', group: 'diagram', type: 'int', unit: 'devices', min: 10, max: 2000, warnAbove: 500 },
   { name: 'diagramExportMaxMegapixels', group: 'diagram', type: 'int', unit: 'megapixels', min: 4, max: 100, warnAbove: 60 },
   { name: 'diagramExportTimeoutSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 5, max: 120 },
+  { name: 'diagramDriftNotifyEnabled', group: 'diagram', type: 'int', min: 0, max: 1, warnZero: true },
+  { name: 'diagramDriftSweepHour', group: 'diagram', type: 'int', unit: 'hours', min: 0, max: 23 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

@@ -45,6 +45,7 @@ import { DiagramDeviceCard } from './diagram-device-card';
 import { placeFreeCells, type FreeCellSpec } from './diagram-presentation';
 import { CreatePresentationButton, PresentationBand, PresentationTools } from './diagram-presentation-tools';
 import { DiagramSubnetCard } from './diagram-subnet-card';
+import { DriftCheckDialog, withDriftMarks } from './diagram-drift';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
 import type { PublicationEvent } from './diagram-timeline';
 import { ExportMenu, TimelineMenu } from './diagram-tools';
@@ -106,6 +107,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [subnetFrame, setSubnetFrame] = useState<(DiagramFrame & { subnetId: string }) | null>(null);
   const navigate = useNavigate();
   const toast = useToast();
+  const [driftOpen, setDriftOpen] = useState(false);
   /*
    * Tô sáng ở chế độ xem: máy đang được "bấm" (dây của nó + máy đầu kia sáng). Mở từ mũi tên "→ máy
    * (bản vẽ khác)" thì `?focus=<id máy>` chọn sẵn máy đó và bay tới.
@@ -296,6 +298,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    */
   let pinToggle: ReactNode = null;
   let exportMenu: ReactNode = null;
+  let driftButton: ReactNode = null;
   let showActions = true;
   /* So sánh chỉ còn nút Phiên bản; ngày chưa có bản chính thức chỉ còn thanh trượt để kéo đi ngày khác. */
   let toolbar: 'full' | 'compare' | 'timeline' = 'full';
@@ -389,9 +392,16 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   } else {
     const version = content.data.version;
     const view = viewerCells(content.data, t);
+    // Lệch kho (Q-23): chỉ báo — dấu trên ô, lời báo trên thanh, hộp liệt kê; không nút nào sửa.
+    const drift = content.data.drift ?? [];
     const card = cardCellId ? view.byCell.get(cardCellId) : undefined;
     if (reviewActions) pinToggle = <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />;
     if (node.data) exportMenu = <ExportMenu me={me} diagram={node.data} versionId={version.id} run={stepUp.run} />;
+    driftButton = (
+      <button type="button" className="btn" onClick={() => setDriftOpen(true)}>
+        {t('diagrams.drift.check')}
+      </button>
+    );
     const edgeCard = cardCellId ? view.byEdge.get(cardCellId) : undefined;
     /*
      * Khung bản vẽ con: bấm (hay nháy đúp) là xuống bản vẽ con — trong ân hạn mã sơ đồ thì không hỏi
@@ -414,7 +424,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           svg={version.svg ?? ''}
           viewer={me}
           title={t('diagrams.screen.viewerTitle')}
-          cells={view.cells}
+          cells={withDriftMarks(view.cells, drift)}
           selectedCellId={cardCellId ?? focusCell}
           onCellClick={
             review.pinMode
@@ -453,8 +463,19 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         {edgeCard ? (
           <DiagramCableCard edge={edgeCard.edge} link={edgeCard.link} cableTypes={content.data.cableTypes ?? []} onClose={() => setCardCellId(null)} />
         ) : null}
+        {driftOpen ? <DriftCheckDialog drift={drift} onGoTo={goToCell} onClose={() => setDriftOpen(false)} /> : null}
       </>
     );
+    if (drift.length > 0) {
+      status = (
+        <>
+          {status}
+          <button type="button" className="btn sm" onClick={() => setDriftOpen(true)}>
+            {t('diagrams.drift.changes', { count: drift.length })}
+          </button>
+        </>
+      );
+    }
     const pendingVersion = review.review?.versionId ?? null;
     if (pendingVersion && pendingVersion !== version.id) {
       status = (
@@ -503,6 +524,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const actions = showActions ? (
     <>
       {pinToggle}
+      {driftButton}
       {exportMenu}
       {timelineMenu}
       {toolbar === 'full' ? reviewActions : null}

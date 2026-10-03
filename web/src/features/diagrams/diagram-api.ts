@@ -30,6 +30,8 @@ export interface DiagramNode {
   pendingApprovalId?: string | null;
   /** Bản trình bày: chép từ đâu, bản gốc giờ chính thức ở phiên bản nào. Thiếu → coi như `null`. */
   source?: PresentationSource | null;
+  /** Số mục lệch kho của bản chính thức hiện hành (Q-23); 0/thiếu = không hiện dấu. */
+  driftCount?: number;
 }
 
 export interface VersionItem {
@@ -112,6 +114,8 @@ export interface DiagramContent {
   cableTypes?: CableTypeInfo[];
   /** Khung mang bản vẽ con / dải IP / tủ (AD-18). Thiếu → coi như rỗng. */
   frames?: DiagramFrame[];
+  /** Lệch kho của phiên bản đang mở so với kho hiện tại (Q-23) — chỉ báo, không sửa. */
+  drift?: Finding[];
 }
 
 /**
