@@ -1073,6 +1073,7 @@ export default {
       submitted: 'Gửi duyệt phiên bản #{{seq}}',
       returned: 'Trả về kèm ghi chú',
       withdrawn: 'Rút yêu cầu duyệt',
+      superseded: 'Yêu cầu duyệt tự đóng — đã phát hành phiên bản #{{seq}}',
       published: 'Phát hành phiên bản #{{seq}} thành bản chính thức',
       presentationCreated: 'Nhân bản từ bản chính thức phiên bản #{{seq}} thành bản trình bày',
     },
