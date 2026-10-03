@@ -69,7 +69,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       .map((text) => text.trim())
       .sort();
     const expected = [
-      // 13 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
+      // 14 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
@@ -80,6 +80,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'Đường truyền',
       'Sắp hết hạn',
       'Địa chỉ IP',
+      // Thành viên cũng vẽ sơ đồ (Q-23).
+      'Sơ đồ mạng',
       'Sổ NAT',
       'Tài khoản dịch vụ',
       // Member chỉ xin, không duyệt — nên cửa này mang tên việc của họ (VLT-026), cùng
@@ -91,7 +93,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     ].sort();
     expect(
       seen,
-      'Thành viên phải thấy đúng 14 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
+      'Thành viên phải thấy đúng 15 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
     ).toEqual(expected);
 
     // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
