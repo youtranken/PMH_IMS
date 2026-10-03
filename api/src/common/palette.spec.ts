@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PALETTE } from './palette.generated';
-import { paletteModule, PALETTE_TOKENS, tokenValues } from './palette-source';
+import { paletteModule, PALETTE_TOKENS, tokenValues } from '../../scripts/palette-source';
 
 const REPO = join(__dirname, '../../..');
 const TOKENS_CSS = readFileSync(join(REPO, 'web/src/css/tokens.css'), 'utf8');
