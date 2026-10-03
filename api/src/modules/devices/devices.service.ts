@@ -404,6 +404,17 @@ export class DevicesService {
     });
   }
 
+  /**
+   * Gỡ U của các máy sắp ĐỔI chỗ trong tủ, trong transaction của lượt ghi hàng loạt — pha một của
+   * dời chỗ hai pha (import): hoán đổi hai máy, hay A dời vào chỗ B mà B dời đi ở dòng sau, chỉ
+   * ghi được khi chỗ cũ đã trống trước lúc đặt chỗ mới. Nơi gọi PHẢI đặt lại U cho từng máy trong
+   * cùng transaction; không ghi lịch sử (trạng thái trung gian, không ai thấy).
+   */
+  async vacateRackWithin(tx: Tx, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await tx.update(deviceTable).set({ rackUStart: null, rackUSize: null }).where(inArray(deviceTable.id, ids));
+  }
+
   /** Dùng chung cho import hàng loạt — đã có transaction bao ngoài. */
   async insertWithin(tx: Tx, values: Record<string, unknown>): Promise<DeviceRecord> {
     try {
