@@ -38,6 +38,7 @@ import {
 import { CableLegend } from './cable-legend';
 import { DeviceConnections, DiagramCableCard } from './diagram-cable-card';
 import { DiagramDeviceCard } from './diagram-device-card';
+import { DriftCheckDialog, withDriftMarks } from './diagram-drift';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
 import {
@@ -87,6 +88,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [dirty, setDirty] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [cardCellId, setCardCellId] = useState<string | null>(null);
+  const [driftOpen, setDriftOpen] = useState(false);
   /*
    * Tô sáng ở chế độ xem: máy đang được "bấm" (dây của nó + máy đầu kia sáng). Mở từ mũi tên "→ máy
    * (bản vẽ khác)" thì `?focus=<id máy>` chọn sẵn máy đó và bay tới.
@@ -293,10 +295,15 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   } else {
     const version = content.data.version;
     const view = viewerCells(content.data, t);
+    // Lệch kho (Q-23): chỉ báo — dấu trên ô, lời báo trên thanh, hộp liệt kê; không nút nào sửa.
+    const drift = content.data.drift ?? [];
     const card = cardCellId ? view.byCell.get(cardCellId) : undefined;
     actions = (
       <>
         <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />
+        <button type="button" className="btn" onClick={() => setDriftOpen(true)}>
+          {t('diagrams.drift.check')}
+        </button>
         {actions}
       </>
     );
@@ -309,7 +316,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           svg={version.svg ?? ''}
           viewer={me}
           title={t('diagrams.screen.viewerTitle')}
-          cells={view.cells}
+          cells={withDriftMarks(view.cells, drift)}
           selectedCellId={cardCellId ?? focusCell}
           onCellClick={
             review.pinMode
@@ -342,8 +349,19 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         {edgeCard ? (
           <DiagramCableCard edge={edgeCard.edge} link={edgeCard.link} cableTypes={content.data.cableTypes ?? []} onClose={() => setCardCellId(null)} />
         ) : null}
+        {driftOpen ? <DriftCheckDialog drift={drift} onGoTo={goToCell} onClose={() => setDriftOpen(false)} /> : null}
       </>
     );
+    if (drift.length > 0) {
+      status = (
+        <>
+          {status}
+          <button type="button" className="btn sm" onClick={() => setDriftOpen(true)}>
+            {t('diagrams.drift.changes', { count: drift.length })}
+          </button>
+        </>
+      );
+    }
     const pendingVersion = review.review?.versionId ?? null;
     if (pendingVersion && pendingVersion !== version.id) {
       status = (

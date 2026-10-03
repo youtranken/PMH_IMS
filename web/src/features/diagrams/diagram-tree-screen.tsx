@@ -99,6 +99,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
               </Link>
               <span className="badge outline">{t(NODE_TYPE_KEY[node.nodeType])}</span>
               <span className={STATUS_TONE[node.status]}>{statusLabel(node, t)}</span>
+              {node.driftCount ? <span className="badge warn">{t('diagrams.drift.treeBadge', { count: node.driftCount })}</span> : null}
               <span className="tree-actions">
                 <RowActions label={t('diagrams.actionsOf', { name: node.name })} items={items} />
               </span>

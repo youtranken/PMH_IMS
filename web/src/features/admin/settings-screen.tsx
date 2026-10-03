@@ -125,6 +125,8 @@ const TEXT: Record<string, [string, string]> = {
   diagramPresenceTtlSeconds: ['settings.diagramPresenceTtlSecondsLabel', 'settings.diagramPresenceTtlSecondsDesc'],
   diagramIconSvgMaxKb: ['settings.diagramIconSvgMaxKbLabel', 'settings.diagramIconSvgMaxKbDesc'],
   diagramAutolayoutMaxNodes: ['settings.diagramAutolayoutMaxNodesLabel', 'settings.diagramAutolayoutMaxNodesDesc'],
+  diagramDriftNotifyEnabled: ['settings.diagramDriftNotifyEnabledLabel', 'settings.diagramDriftNotifyEnabledDesc'],
+  diagramDriftSweepHour: ['settings.diagramDriftSweepHourLabel', 'settings.diagramDriftSweepHourDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

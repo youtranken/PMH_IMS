@@ -24,6 +24,8 @@ export interface DiagramNode {
   officialSeq?: number | null;
   /** Yêu cầu duyệt đang chờ của bản vẽ. */
   pendingApprovalId?: string | null;
+  /** Số mục lệch kho của bản chính thức hiện hành (Q-23); 0/thiếu = không hiện dấu. */
+  driftCount?: number;
 }
 
 export interface VersionItem {
@@ -104,6 +106,8 @@ export interface DiagramContent {
   undrawnLinkIds?: string[];
   externalLinkIds?: string[];
   cableTypes?: CableTypeInfo[];
+  /** Lệch kho của phiên bản đang mở so với kho hiện tại (Q-23) — chỉ báo, không sửa. */
+  drift?: Finding[];
 }
 
 export const deviceInfoKey = (ids: string[]) => ['diagram-device-info', ...ids] as const;
