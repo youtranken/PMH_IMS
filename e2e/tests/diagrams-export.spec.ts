@@ -296,8 +296,13 @@ test.describe('Sơ đồ mạng — thanh trượt thời gian', () => {
     const id = await createDiagram(page, `E2E Dòng thời gian ${stamp}`);
     const v1 = await save(page, id, V1);
     await publish(page, id, v1.id);
-    // Lần phát hành đầu lùi 10 ngày (bảng lịch sử chỉ chặn xoá; role chủ sở hữu sửa được mốc).
-    sql(`UPDATE diagram_history SET created_at = created_at - interval '10 days' WHERE diagram_id = '${id}' AND action = 'version.published'`);
+    /*
+     * Lần phát hành đầu lùi 10 ngày. `diagram_history` chỉ-thêm: trigger chặn mọi UPDATE (AD-13),
+     * kể cả với superuser — chỉ bài kiểm mới được tắt trigger trong đúng phiên lệnh này để giả mốc.
+     */
+    sql(
+      `SET session_replication_role = replica; UPDATE diagram_history SET created_at = created_at - interval '10 days' WHERE diagram_id = '${id}' AND action = 'version.published'`,
+    );
     const v2 = await save(page, id, V2, v1.id);
     await publish(page, id, v2.id);
 
