@@ -527,6 +527,13 @@
   margin-bottom: -3px;
 }
 /*
+ * Trong hộp thoại, khung cuộn là `.sheet-body`, không phải trang: `top: 56px` (chừa topbar) làm thanh
+ * tab dính lơ lửng giữa thân hộp và che mất dòng nội dung cuộn dưới nó (ô chọn phiên bản để so sánh).
+ */
+.sheet-body .tabs {
+  top: 0;
+}
+/*
  * Khoảng thở giữa thanh tab và nội dung tab.
  *
  * Thanh tab là một ĐƯỜNG ĐIỀU HƯỚNG, thẻ ngay dưới nó là NỘI DUNG — hai vai trò khác nhau mà
