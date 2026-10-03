@@ -87,6 +87,8 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'supplies',
     'catalog/catalog.controller.ts#address',
     'diagrams/diagrams.controller.ts#label',
+    // Bình luận ghim trên bản vẽ (FR-035, Q-19).
+    'diagrams/diagram-review.controller.ts#body',
   ]);
 
   /** Chữ có cấu trúc / ô lọc / chính là bí mật — luật ô chữ tự do không áp. */
@@ -106,6 +108,8 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'catalog/catalog.controller.ts#svg',
     // Danh sách id máy ngăn bằng dấu phẩy (ô đọc của hộp Thiết bị kho).
     'diagrams/diagrams.controller.ts#ids',
+    // Id ô draw.io mà bình luận ghim vào.
+    'diagrams/diagram-review.controller.ts#cellId',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',

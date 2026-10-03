@@ -579,33 +579,40 @@ export class DiagramsService {
 
   /** Khôi phục = phiên bản MỚI chép XML của bản được chọn (không xoá, không sửa gì). */
   async restore(actor: string, diagramId: string, versionId: string): Promise<VersionItem> {
-    const [source] = await this.db
+    const id = await this.db.transaction((tx) => this.restoreWithin(tx, actor, diagramId, versionId));
+    return this.versionItem(diagramId, id);
+  }
+
+  /**
+   * Khôi phục trong `tx` của nơi gọi — "khôi phục bản chính thức cũ" khôi phục rồi phát hành
+   * trong CÙNG transaction, để không bao giờ còn lại một phiên bản khôi phục mà chưa phát hành.
+   * Trả id phiên bản mới.
+   */
+  async restoreWithin(tx: Tx, actor: string, diagramId: string, versionId: string): Promise<string> {
+    const [source] = await tx
       .select()
       .from(diagramVersionTable)
       .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
     if (!source) throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
     // Chụp lại thông tin thiết bị BÂY GIỜ: bản khôi phục là một lần lưu mới (AD-14).
     const snapshot = await this.snapshot(source.cellIndex);
-    const id = await this.db.transaction(async (tx) => {
-      await this.lockLive(tx, diagramId);
-      const latest = await this.latestWithin(tx, diagramId);
-      const diff = diffCellIndex(latest?.cellIndex ?? null, source.cellIndex);
-      return this.insertVersion(tx, actor, diagramId, {
-        seq: (latest?.seq ?? 0) + 1,
-        xml: source.xml,
-        svg: source.svg,
-        index: source.cellIndex,
-        snapshot,
-        summary: `Khôi phục từ phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
-        diff,
-        basedOnVersionId: latest?.id ?? null,
-        restoredFromVersionId: source.id,
-        history: 'version.restored',
-        auditAction: 'diagram.version_restored',
-        bytes: Buffer.byteLength(source.xml),
-      });
+    await this.lockLive(tx, diagramId);
+    const latest = await this.latestWithin(tx, diagramId);
+    const diff = diffCellIndex(latest?.cellIndex ?? null, source.cellIndex);
+    return this.insertVersion(tx, actor, diagramId, {
+      seq: (latest?.seq ?? 0) + 1,
+      xml: source.xml,
+      svg: source.svg,
+      index: source.cellIndex,
+      snapshot,
+      summary: `Khôi phục từ phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
+      diff,
+      basedOnVersionId: latest?.id ?? null,
+      restoredFromVersionId: source.id,
+      history: 'version.restored',
+      auditAction: 'diagram.version_restored',
+      bytes: Buffer.byteLength(source.xml),
     });
-    return this.versionItem(diagramId, id);
   }
 
   /** Tên phiên bản: người lưu phiên bản đó, hoặc Admin/SA. Tên mới nhất thắng; `null` = bỏ tên. */

@@ -122,6 +122,8 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     'diagram_history',
     'diagram_version',
     'diagram_version_label',
+    // Bình luận ghim: "Đã xử lý" là hàng sự kiện, nội dung không sửa/xoá (AD-18).
+    'diagram_comment',
   ];
 
   it.each(APPEND_ONLY_HISTORY)(

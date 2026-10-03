@@ -7,6 +7,7 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { DiagramReviewService } from './diagram-review.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
 import { DEVICE_INFO_MAX_IDS, DiagramsService } from './diagrams.service';
 
@@ -94,6 +95,7 @@ export class DiagramsController {
   constructor(
     private readonly diagrams: DiagramsService,
     private readonly config: SystemConfigService,
+    private readonly review: DiagramReviewService,
   ) {}
 
   /** Khai TRƯỚC `:id` để không bị đọc thành một mã bản vẽ. */
@@ -131,8 +133,9 @@ export class DiagramsController {
 
   @Roles('sa', 'admin', 'member')
   @Get()
-  tree() {
-    return this.diagrams.tree();
+  async tree() {
+    // Trạng thái "chờ duyệt" + số phiên bản chính thức (Q-23) — vẫn chỉ là thông tin của cây.
+    return this.review.overlay(await this.diagrams.tree());
   }
 
   @Roles('sa', 'admin', 'member')
@@ -145,8 +148,9 @@ export class DiagramsController {
   /** Tên + loại + trạng thái của một nút — màn mở bản vẽ hiện tên trước khi hỏi mã. */
   @Roles('sa', 'admin', 'member')
   @Get(':id')
-  node(@Param() params: IdParamDto) {
-    return this.diagrams.node(params.id);
+  async node(@Param() params: IdParamDto) {
+    const [reviewed] = await this.review.overlay([await this.diagrams.node(params.id)]);
+    return reviewed;
   }
 
   @Roles('sa', 'admin')

@@ -208,6 +208,32 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
   });
 
+  /** Duyệt + bình luận ghim: trang duyệt nêu mã thiết bị, bình luận nêu id ô — cùng hàng rào. */
+  it.each([
+    "@Get(':id/review')",
+    "@Get(':id/publications')",
+    "@Post(':id/submit')",
+    "@Post(':id/review/:approvalId/withdraw')",
+    "@Post(':id/review/:approvalId/approve')",
+    "@Post(':id/review/:approvalId/return')",
+    "@Post(':id/publish')",
+    "@Post(':id/versions/:versionId/restore-official')",
+    "@Get(':id/comments')",
+    "@Post(':id/comments')",
+    "@Post(':id/comments/:commentId/resolve')",
+  ])('diagram-review.controller %s đòi step-up phạm vi sơ đồ', (route) => {
+    const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagram-review.controller.ts'), 'utf8');
+    const at = src.indexOf(route);
+    expect(at).toBeGreaterThan(-1);
+    const prevRoute = Math.max(
+      ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+        .map((m) => src.lastIndexOf(m, at - 1))
+        .filter((i) => i >= 0),
+      0,
+    );
+    expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+  });
+
   /**
    * AD-17/AD-18: phạm vi đi theo MODULE. Sơ đồ khai `'diagram'`; mọi chỗ khác (két, tài khoản,
    * tham số, quyền két) giữ nghĩa két. Một route két lỡ khai `'diagram'` thì mã nhập để xem sơ
