@@ -473,6 +473,14 @@
 .full-bar-status p {
   margin: 0;
 }
+/* Dải sát dưới thanh trên (bản trình bày): khung báo `.alert` nhưng trải hết bề ngang, không bo
+   góc, không chừa lề dưới — nó là một phần của khung màn, không phải ghi chú giữa nội dung. */
+.full-band {
+  margin: 0;
+  border-radius: 0;
+  border-width: 0 0 1px;
+  padding: var(--space-2) var(--space-5);
+}
 .full-stage {
   flex: 1;
   min-height: 0;

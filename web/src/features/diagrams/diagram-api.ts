@@ -1,3 +1,5 @@
+import type { PresentationSource } from './diagram-presentation';
+
 /** Hình dạng trả về của `api/v1/diagrams` (module `diagrams`, AD-18). */
 
 export type DiagramNodeType = 'company' | 'site' | 'floor' | 'room' | 'cabinet' | 'other';
@@ -22,6 +24,8 @@ export interface DiagramNode {
   officialSeq?: number | null;
   /** Yêu cầu duyệt đang chờ của bản vẽ. */
   pendingApprovalId?: string | null;
+  /** Bản trình bày: chép từ đâu, bản gốc giờ chính thức ở phiên bản nào. Thiếu → coi như `null`. */
+  source?: PresentationSource | null;
 }
 
 export interface VersionItem {
@@ -100,6 +104,8 @@ export interface DiagramHistoryRow {
 export interface EditorSettings {
   initTimeoutSeconds: number;
   presenceTtlSeconds: number;
+  /** `diagram.xml_max_kb` — trần cỡ ảnh tự do nhúng vào bản trình bày. Thiếu → không chặn sớm. */
+  xmlMaxKb?: number;
 }
 
 /*

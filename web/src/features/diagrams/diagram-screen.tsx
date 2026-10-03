@@ -34,6 +34,8 @@ import {
   type VersionItem,
 } from './diagram-api';
 import { DiagramDeviceCard } from './diagram-device-card';
+import { placeFreeCells, type FreeCellSpec } from './diagram-presentation';
+import { CreatePresentationButton, PresentationBand, PresentationTools } from './diagram-presentation-tools';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
 import {
@@ -213,13 +215,19 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   );
 
   let body: ReactNode;
-  let actions: ReactNode = (
-    <>
-      {review.actions}
-      {versionsButton}
-    </>
-  );
+  /*
+   * Bản trình bày không qua duyệt (Q-23): không Gửi duyệt / Phát hành / ghim — server cũng từ chối
+   * (`DIAGRAM_NOT_REVIEWABLE`), ẩn nút để không ai bấm vào một đường cụt.
+   */
+  const reviewActions = node.data?.kind === 'presentation' ? null : review.actions;
+  /*
+   * Thanh nút dựng MỘT lần ở cuối với cùng thứ tự con ở mọi trạng thái tải: bọc thêm một lớp khi
+   * nội dung về là dựng lại các nút, mất trạng thái của nút đang mở hộp.
+   */
+  let pinToggle: ReactNode = null;
+  let showActions = true;
   let status: ReactNode = review.status;
+  const band = node.data ? <PresentationBand diagram={node.data} /> : null;
   if (node.isPending || settings.isPending) body = <Loading />;
   else if (node.isError || settings.isError) {
     body = (
@@ -243,7 +251,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         }
       />
     );
-    actions = null;
+    showActions = false;
   } else if (content.isPending) body = <Loading />;
   else if (content.isError) {
     body = isStepUpCancelled(content.error) ? (
@@ -268,8 +276,9 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         title={title}
         tabs={tabs}
         versionsButton={versionsButton}
-        reviewActions={review.actions}
+        reviewActions={reviewActions}
         dialogs={dialogs}
+        band={band}
         content={content.data}
         settings={settings.data}
         run={stepUp.run}
@@ -282,12 +291,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     const version = content.data.version;
     const view = viewerCells(content.data, t);
     const card = cardCellId ? view.byCell.get(cardCellId) : undefined;
-    actions = (
-      <>
-        <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />
-        {actions}
-      </>
-    );
+    if (reviewActions) pinToggle = <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />;
     body = (
       <>
         <DiagramViewer
@@ -333,7 +337,15 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     }
   }
 
-  return <ScreenFrame title={title} tabs={tabs} actions={actions} status={status} body={body} dialogs={dialogs} />;
+  const actions = showActions ? (
+    <>
+      {pinToggle}
+      {reviewActions}
+      {node.data ? <CreatePresentationButton me={me} diagram={node.data} run={stepUp.run} /> : null}
+      {versionsButton}
+    </>
+  ) : null;
+  return <ScreenFrame title={title} tabs={tabs} actions={actions} status={status} band={band} body={body} dialogs={dialogs} />;
 }
 
 /** Thanh mảnh + vùng trình vẽ/trình xem. Không cột panel (Q-23). */
@@ -342,6 +354,7 @@ function ScreenFrame({
   tabs,
   actions,
   status,
+  band,
   body,
   dialogs,
 }: {
@@ -349,6 +362,8 @@ function ScreenFrame({
   tabs: ReactNode;
   actions?: ReactNode;
   status?: ReactNode;
+  /** Dải ngay dưới thanh trên (bản trình bày) — nằm ngoài trình vẽ/trình xem nên luôn thấy. */
+  band?: ReactNode;
   body: ReactNode;
   dialogs?: ReactNode;
 }) {
@@ -364,6 +379,7 @@ function ScreenFrame({
         {actions ? <div className="full-bar-actions">{actions}</div> : null}
         {status ? <div className="full-bar-status">{status}</div> : null}
       </div>
+      {band}
       <div className="full-stage">{body}</div>
       {dialogs}
     </>
@@ -378,6 +394,7 @@ function DiagramEditor({
   versionsButton,
   reviewActions,
   dialogs,
+  band,
   content,
   settings,
   run,
@@ -391,6 +408,7 @@ function DiagramEditor({
   /** Gửi duyệt / Phát hành / Ghim của `useDiagramReview` — cùng nút với chế độ Xem. */
   reviewActions: ReactNode;
   dialogs: ReactNode;
+  band: ReactNode;
   content: DiagramContent;
   settings: EditorSettings;
   /** `useStepUpRetry().run` của màn: lưu đòi mã sơ đồ, hết ân hạn giữa lúc vẽ thì hỏi tại chỗ. */
@@ -438,10 +456,20 @@ function DiagramEditor({
     fileWaiters.current.push(purpose);
     frame.current?.send({ action: 'export', format: 'xml' });
   };
-  const frameState = useRef<{ page: number; bounds: Bounds | null; pending: DeviceCellSpec[] | null }>({
+  /*
+   * `pendingFree`: ô tự do của bản trình bày (thiết bị dự kiến, ảnh) chờ cùng tin `export` xml như
+   * máy kho — cần trang, lớp và ô trên cùng để chèn bằng `patch`.
+   */
+  const frameState = useRef<{
+    page: number;
+    bounds: Bounds | null;
+    pending: DeviceCellSpec[] | null;
+    pendingFree: { specs: FreeCellSpec[]; message: string } | null;
+  }>({
     page: 0,
     bounds: null,
     pending: null,
+    pendingFree: null,
   });
 
   const setDirty = (value: boolean) => {
@@ -518,6 +546,22 @@ function DiagramEditor({
     toast({ tone: 'ok', message: t('diagrams.screen.inserted', { codes: devices.map((d) => d.code).join(', ') }) });
   };
 
+  const insertFreeInto = (xml: string, free: { specs: FreeCellSpec[]; message: string }) => {
+    const state = frameState.current;
+    const pages = pageIds(xml);
+    const pageId = pages[Math.min(state.page, pages.length - 1)];
+    if (!pageId) {
+      toast({ tone: 'error', message: t('diagrams.screen.insertFailed', { reason: 'page' }) });
+      return;
+    }
+    const parent = layerIdOf(xml, pageId) ?? '1';
+    const placed = placeFreeCells(free.specs, { bounds: state.bounds, parent, previous: lastChildId(xml, pageId, parent), newId: newCellId });
+    frame.current?.send({ action: 'patch', patch: insertPatch(pageId, placed.cells) });
+    state.bounds = placed.bounds;
+    setDirty(true);
+    toast({ tone: 'ok', message: free.message });
+  };
+
   const onEvent = (message: DrawioEvent) => {
     const state = frameState.current;
     if (typeof message.currentPage === 'number') state.page = message.currentPage;
@@ -555,9 +599,12 @@ function DiagramEditor({
             break;
           }
           const devices = state.pending;
+          const free = state.pendingFree;
           state.pending = null;
+          state.pendingFree = null;
           if (message.xml) setFrameXml(message.xml);
           if (devices && message.xml) insertInto(message.xml, devices);
+          if (free && message.xml) insertFreeInto(message.xml, free);
           setInserting(false);
           break;
         }
@@ -626,8 +673,19 @@ function DiagramEditor({
       title={title}
       tabs={tabs}
       dialogs={dialogs}
+      band={band}
       actions={
         <>
+          {content.diagram.kind === 'presentation' ? (
+            <PresentationTools
+              disabled={!ready}
+              xmlMaxKb={settings.xmlMaxKb}
+              onInsert={(specs, message) => {
+                frameState.current.pendingFree = { specs, message };
+                requestFile('insert');
+              }}
+            />
+          ) : null}
           <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
             <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
           </Popover>

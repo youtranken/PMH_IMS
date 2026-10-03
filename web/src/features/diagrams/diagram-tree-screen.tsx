@@ -14,6 +14,7 @@ import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
 import { NODE_TYPE_KEY, TREE_KEY, statusLabel, type DiagramNode, type DiagramStatus } from './diagram-api';
 import { DiagramNodeDialog } from './diagram-node-dialog';
+import { newerOfficialSeq } from './diagram-presentation';
 import { flattenTree } from './diagram-tree';
 
 const STATUS_TONE: Record<DiagramStatus, string> = {
@@ -65,7 +66,10 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       return next;
     });
 
-  const nodes = tree.data ?? [];
+  // Bản trình bày đứng riêng (Q-23): không nằm trong cây chính thức, không làm cha được.
+  const all = tree.data ?? [];
+  const nodes = all.filter((n) => n.kind !== 'presentation');
+  const presentations = all.filter((n) => n.kind === 'presentation');
   let body;
   if (tree.isPending) body = <Loading />;
   else if (tree.isError) body = <LoadError error={tree.error} onRetry={() => void tree.refetch()} />;
@@ -121,6 +125,39 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
         }
       />
       <div className="card">{body}</div>
+      {presentations.length > 0 ? (
+        <section className="card" aria-labelledby="diagram-presentations-title">
+          <h2 id="diagram-presentations-title">{t('diagrams.presentation.section')}</h2>
+          <p className="muted">{t('diagrams.presentation.sectionHint')}</p>
+          <ul className="tree-list" aria-label={t('diagrams.presentation.section')}>
+            {presentations.map((node) => {
+              const newer = newerOfficialSeq(node.source);
+              return (
+                <li key={node.id} className="tree-row">
+                  <Link className="tree-name" to={PATHS.diagram(node.id)}>
+                    {node.name}
+                  </Link>
+                  <span className="badge brand">{t('diagrams.presentation.badge')}</span>
+                  <span className="muted">
+                    {node.source?.name && node.source.seq
+                      ? t('diagrams.presentation.fromSource', { name: node.source.name, seq: node.source.seq })
+                      : t('diagrams.presentation.fromSourceGone')}
+                  </span>
+                  {newer ? <span className="badge warn">{t('diagrams.presentation.newer', { seq: newer })}</span> : null}
+                  {manager ? (
+                    <span className="tree-actions">
+                      <RowActions
+                        label={t('diagrams.actionsOf', { name: node.name })}
+                        items={[{ key: 'archive', label: t('diagrams.archive'), warn: true, onSelect: () => void archive(node) }]}
+                      />
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
       {editing ? (
         <DiagramNodeDialog
           me={me}
