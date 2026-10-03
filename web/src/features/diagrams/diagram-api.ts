@@ -1,3 +1,5 @@
+import type { PublicationEvent } from './diagram-timeline';
+
 /** Hình dạng trả về của `api/v1/diagrams` (module `diagrams`, AD-18). */
 
 export type DiagramNodeType = 'company' | 'site' | 'floor' | 'room' | 'cabinet' | 'other';
@@ -162,6 +164,8 @@ export interface ReviewPage {
   versionId: string | null;
   seq: number | null;
   officialSeq: number | null;
+  /** Bản chính thức hiện hành — nút so sánh trên trang duyệt. Thiếu → coi như `null`. */
+  officialVersionId?: string | null;
   summary: string | null;
   errors: Finding[];
   warnings: Finding[];
@@ -196,7 +200,24 @@ export interface CommentThread extends CommentRow {
 export interface Publications {
   officialVersionId: string | null;
   publishedVersionIds: string[];
+  /** Mỗi lần phát hành, cũ trước — thanh trượt thời gian. Thiếu → coi như rỗng. */
+  events?: PublicationEvent[];
 }
+
+/** `GET /diagrams/:id/compare?from=&to=` — tô màu theo ô trên ảnh xem của bản `to`. */
+export interface CompareView {
+  from: { id: string; seq: number };
+  to: { id: string; seq: number; savedAt: string; svg: string | null };
+  result: {
+    added: { id: string; label: string }[];
+    removed: { id: string; label: string; bounds: { x: number; y: number; width: number; height: number } | null }[];
+    changed: { id: string; label: string; reasons: string[] }[];
+    anchors: { id: string; bounds: { x: number; y: number; width: number; height: number } }[];
+  };
+  counts: { added: number; removed: number; changed: number };
+}
+
+export const compareKey = (id: string, from: string, to: string) => ['diagram-compare', id, from, to] as const;
 
 export const reviewKey = (id: string) => ['diagram-review', id] as const;
 export const commentsKey = (id: string) => ['diagram-comments', id] as const;

@@ -928,6 +928,58 @@ button.btn-x.danger:hover:not(:disabled) {
 .diagram-viewer-canvas [data-ims-mark='warn'] {
   filter: drop-shadow(0 0 3px var(--warn)) drop-shadow(0 0 1px var(--warn));
 }
+/* Thanh trượt (`<input type="range">`) dùng chung — thanh trượt thời gian của sơ đồ. */
+.inp-range {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+/* So sánh hai phiên bản: thêm xanh, đổi vàng (ô của bản sau); ô bỏ là khung đứt đỏ trên lớp phủ
+   cùng phép thu phóng với ảnh xem. Token trạng thái có sẵn cặp dark. */
+.diagram-viewer-canvas [data-ims-diff='added'] {
+  filter: drop-shadow(0 0 4px var(--ok)) drop-shadow(0 0 2px var(--ok));
+}
+.diagram-viewer-canvas [data-ims-diff='changed'] {
+  filter: drop-shadow(0 0 4px var(--warn)) drop-shadow(0 0 2px var(--warn));
+}
+.diagram-ghost {
+  position: absolute;
+  border: 2px dashed var(--danger);
+  border-radius: var(--r-sm);
+}
+.diagram-viewer-legend {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+}
+.diagram-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.diagram-legend-item::before {
+  content: '';
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 2px;
+  background: var(--ok);
+}
+.diagram-legend-item[data-diff='changed']::before {
+  background: var(--warn);
+}
+.diagram-legend-item[data-diff='removed']::before {
+  background: transparent;
+  border: 2px dashed var(--danger);
+}
 .diagram-viewer-canvas [data-ims-selected] {
   filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 1px var(--primary));
 }

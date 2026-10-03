@@ -8,6 +8,7 @@ import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { useDisabledReason } from '@/ui/disabled-reason';
 import { HistoryPanel, type HistoryEntry } from '@/ui/history-panel';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
@@ -76,6 +77,7 @@ export function DiagramVersionsDialog({
   diagram,
   run,
   onView,
+  onCompare,
   onRestored,
   onClose,
 }: {
@@ -83,6 +85,8 @@ export function DiagramVersionsDialog({
   diagram: DiagramNode;
   run: Run;
   onView: (version: VersionItem) => void;
+  /** So sánh tô màu hai phiên bản bất kỳ: `from` là bản cũ hơn. */
+  onCompare: (from: VersionItem, to: VersionItem) => void;
   onRestored: () => void;
   onClose: () => void;
 }) {
@@ -94,6 +98,11 @@ export function DiagramVersionsDialog({
   const [onlyNamed, setOnlyNamed] = useState(false);
   const [labeling, setLabeling] = useState<VersionItem | null>(null);
   const [details, setDetails] = useState<VersionItem | null>(null);
+  /** Hai phiên bản đánh dấu để so sánh; đánh dấu cái thứ ba thì bỏ cái chọn trước nhất. */
+  const [picked, setPicked] = useState<VersionItem[]>([]);
+  const togglePick = (version: VersionItem) =>
+    setPicked((prev) => (prev.some((v) => v.id === version.id) ? prev.filter((v) => v.id !== version.id) : [...prev, version].slice(-2)));
+  const compareReason = useDisabledReason(picked.length === 2 ? null : t('diagrams.versions.compareNeedTwo'));
   const manager = me.role === 'sa' || me.role === 'admin';
   const purpose = t('diagrams.screen.stepUpPurpose', { name: diagram.name });
   const editPurpose = t('diagrams.screen.stepUpEdit', { name: diagram.name });
@@ -190,6 +199,12 @@ export function DiagramVersionsDialog({
           const canLabel = manager || version.savedBy.toLowerCase() === me.email.toLowerCase();
           return (
             <li key={version.id} className="tree-row">
+              <input
+                type="checkbox"
+                aria-label={t('diagrams.versions.compareOf', { seq: version.seq })}
+                checked={picked.some((v) => v.id === version.id)}
+                onChange={() => togglePick(version)}
+              />
               <strong>{t('diagrams.versions.seq', { seq: version.seq })}</strong>
               {version.label ? <span className="badge info">{version.label}</span> : null}
               {version.id === latestId ? <span className="badge ok">{t('diagrams.versions.latest')}</span> : null}
@@ -258,10 +273,25 @@ export function DiagramVersionsDialog({
         />
         {tab === 'versions' ? (
           <>
-            <label className="row">
-              <input type="checkbox" checked={onlyNamed} onChange={(event) => setOnlyNamed(event.target.checked)} />
-              {t('diagrams.versions.onlyNamed')}
-            </label>
+            <p className="row">
+              <label className="row">
+                <input type="checkbox" checked={onlyNamed} onChange={(event) => setOnlyNamed(event.target.checked)} />
+                {t('diagrams.versions.onlyNamed')}
+              </label>
+              <button
+                type="button"
+                className="btn sm"
+                disabled={picked.length !== 2}
+                {...compareReason.buttonProps}
+                onClick={() => {
+                  const [a, b] = [...picked].sort((x, y) => x.seq - y.seq);
+                  onCompare(a, b);
+                }}
+              >
+                {t('diagrams.versions.comparePicked')}
+              </button>
+              {compareReason.hint}
+            </p>
             {versionsBody}
           </>
         ) : (

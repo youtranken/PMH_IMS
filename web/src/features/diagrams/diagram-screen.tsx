@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useConfirm } from '@/ui/confirm-provider';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
-import { DiagramViewer, type ViewerCell } from '@/ui/diagram-viewer';
+import { DiagramViewer, type ViewerCell, type ViewerDiff } from '@/ui/diagram-viewer';
 import { DrawioFrame, type DrawioFrameHandle } from '@/ui/drawio-frame';
 import { exportedSvgText, type DrawioEvent } from '@/ui/drawio-protocol';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -23,10 +23,12 @@ import { useUnsavedGuard } from '@/ui/use-unsaved-guard';
 import {
   SETTINGS_KEY,
   TREE_KEY,
+  compareKey,
   contentKey,
   historyKey,
   nodeKey,
   versionsKey,
+  type CompareView,
   type DiagramContent,
   type DiagramDeviceInfo,
   type DiagramNode,
@@ -35,6 +37,8 @@ import {
 } from './diagram-api';
 import { DiagramDeviceCard } from './diagram-device-card';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
+import type { PublicationEvent } from './diagram-timeline';
+import { ExportMenu, TimelineMenu } from './diagram-tools';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
 import {
   deviceIdsInXml,
@@ -74,6 +78,11 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [params, setParams] = useSearchParams();
   const mode: Mode = params.get('mode') === 'edit' ? 'edit' : 'view';
   const versionId = mode === 'view' ? params.get('version') : null;
+  /* `?compare=<phiên bản trước>` = so sánh tô màu với bản đang xem; `?at=YYYY-MM-DD` = bản chính
+     thức hiệu lực ngày đó (thanh trượt thời gian) — không kèm `version` nghĩa là ngày đó chưa có. */
+  const compareFrom = mode === 'view' ? params.get('compare') : null;
+  const atDay = mode === 'view' ? params.get('at') : null;
+  const noOfficialAt = Boolean(atDay) && !versionId;
   const narrow = useMediaQuery(BREAKPOINTS.editor);
   const ask = useConfirm();
   const queryClient = useQueryClient();
@@ -81,6 +90,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [dirty, setDirty] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [cardCellId, setCardCellId] = useState<string | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
 
   const node = useQuery({ queryKey: nodeKey(id), queryFn: () => apiFetch<DiagramNode>(`/api/v1/diagrams/${id}`) });
   const settings = useQuery({
@@ -99,13 +109,57 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         t('diagrams.screen.stepUpPurpose', { name: node.data?.name ?? '' }),
       );
     },
-    enabled: node.isSuccess && !editBlocked,
+    enabled: node.isSuccess && !editBlocked && !compareFrom && !noOfficialAt,
     // Mỗi lần tải nội dung là một dòng `diagram.viewed`: không tự tải lại khi quay lại tab trình duyệt.
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,
   });
+
+  const compareTo = compareFrom ? (versionId ?? node.data?.latestVersion?.id ?? null) : null;
+  const compare = useQuery({
+    queryKey: compareKey(id, compareFrom ?? '', compareTo ?? ''),
+    queryFn: () =>
+      stepUp.run(
+        () => apiFetch<CompareView>(`/api/v1/diagrams/${id}/compare?${new URLSearchParams({ from: compareFrom ?? '', to: compareTo ?? '' }).toString()}`),
+        t('diagrams.screen.stepUpPurpose', { name: node.data?.name ?? '' }),
+      ),
+    enabled: node.isSuccess && Boolean(compareFrom && compareTo),
+    // Cùng lý do với nội dung: mỗi lần tải là một dòng `diagram.viewed`.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
+  const diff = useMemo<ViewerDiff | null>(
+    () =>
+      compare.data
+        ? {
+            added: compare.data.result.added.map((c) => c.id),
+            changed: compare.data.result.changed.map((c) => c.id),
+            removed: compare.data.result.removed,
+            anchors: compare.data.result.anchors,
+          }
+        : null,
+    [compare.data],
+  );
+
+  /** Sang một trạng thái xem khác (phiên bản, so sánh); đang vẽ dở thì hỏi trước. */
+  const goView = async (next: Record<string, string>) => {
+    if (mode === 'edit' && dirty) {
+      const ok = await ask({
+        title: t('diagrams.screen.leaveTitle'),
+        message: t('diagrams.screen.leaveMessage'),
+        confirmLabel: t('diagrams.screen.leaveDiscard'),
+        cancelLabel: t('diagrams.screen.leaveStay'),
+        danger: true,
+      });
+      if (!ok) return;
+      setDirty(false);
+    }
+    setParams(next);
+  };
 
   const switchMode = async (next: Mode) => {
     if (next === mode) return;
@@ -150,6 +204,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       setParams({ focus: cellId });
     })();
   };
+  /* Kéo thanh trượt: thay chứ không chồng lịch sử trình duyệt — mỗi nấc kéo không thành một bước "Back". */
+  const pickDay = (day: string, official: PublicationEvent | null) =>
+    setParams(official ? { version: official.versionId, at: day } : { at: day }, { replace: true });
+
   const review = useDiagramReview({
     me,
     diagram: node.data ?? null,
@@ -157,6 +215,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     versionId: content.data?.version?.id ?? null,
     dirty,
     onGoToCell: goToCell,
+    onCompare: (from, to) => void goView({ version: to, compare: from }),
   });
 
   const tabs = (
@@ -191,20 +250,11 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           }
           onView={(version) => {
             setVersionsOpen(false);
-            void (async () => {
-              if (mode === 'edit' && dirty) {
-                const ok = await ask({
-                  title: t('diagrams.screen.leaveTitle'),
-                  message: t('diagrams.screen.leaveMessage'),
-                  confirmLabel: t('diagrams.screen.leaveDiscard'),
-                  cancelLabel: t('diagrams.screen.leaveStay'),
-                  danger: true,
-                });
-                if (!ok) return;
-                setDirty(false);
-              }
-              setParams({ version: version.id });
-            })();
+            void goView({ version: version.id });
+          }}
+          onCompare={(from, to) => {
+            setVersionsOpen(false);
+            void goView({ version: to.id, compare: from.id });
           }}
           onClose={() => setVersionsOpen(false)}
         />
@@ -244,6 +294,32 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       />
     );
     actions = null;
+  } else if (compareFrom) {
+    actions = versionsButton;
+    status = (
+      <p className="muted" role="status">
+        {compare.data ? t('diagrams.screen.compareStatus', { from: compare.data.from.seq, to: compare.data.to.seq }) : null}{' '}
+        <button type="button" className="btn sm" onClick={() => setParams(compareTo ? { version: compareTo } : {})}>
+          {t('diagrams.screen.compareExit')}
+        </button>
+      </p>
+    );
+    if (compare.isPending) body = <Loading />;
+    else if (compare.isError) body = <LoadError error={compare.error} onRetry={() => void compare.refetch()} />;
+    else if (!compare.data.to.svg) body = <EmptyState title={t('diagrams.screen.compareNoImage')} />;
+    else body = <DiagramViewer svg={compare.data.to.svg} viewer={me} title={t('diagrams.screen.compareTitle')} diff={diff} />;
+  } else if (noOfficialAt && node.data) {
+    actions = <TimelineMenu diagram={node.data} run={stepUp.run} day={atDay} onPick={pickDay} open={timelineOpen} onOpenChange={setTimelineOpen} />;
+    body = (
+      <EmptyState
+        title={t('diagrams.tools.timelineNone')}
+        action={
+          <button type="button" className="btn primary" onClick={() => setParams({})}>
+            {t('diagrams.screen.backToLatest')}
+          </button>
+        }
+      />
+    );
   } else if (content.isPending) body = <Loading />;
   else if (content.isError) {
     body = isStepUpCancelled(content.error) ? (
@@ -285,6 +361,8 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     actions = (
       <>
         <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />
+        {node.data ? <ExportMenu me={me} diagram={node.data} versionId={version.id} run={stepUp.run} /> : null}
+        {node.data ? <TimelineMenu diagram={node.data} run={stepUp.run} day={atDay} onPick={pickDay} open={timelineOpen} onOpenChange={setTimelineOpen} /> : null}
         {actions}
       </>
     );
@@ -323,7 +401,9 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         <>
           {status}
           <p className="muted" role="status">
-            {t('diagrams.screen.viewingOld', { seq: version.seq, at: formatDateTime(version.savedAt) })}{' '}
+            {atDay
+              ? t('diagrams.tools.timelineHit', { date: formatDate(atDay), seq: version.seq })
+              : t('diagrams.screen.viewingOld', { seq: version.seq, at: formatDateTime(version.savedAt) })}{' '}
             <button type="button" className="btn sm" onClick={() => setParams({})}>
               {t('diagrams.screen.backToLatest')}
             </button>

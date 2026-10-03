@@ -156,13 +156,14 @@ describe('Yêu cầu đang chờ', () => {
     versionId: 'v2',
     seq: 2,
     officialSeq: 1,
+    officialVersionId: 'v1',
     summary: 'Thêm 1 thiết bị',
     errors: [],
     warnings: [{ level: 'warning', code: 'DEVICE_CABINET_MISMATCH', cellId: 'd1', message: 'Thiết bị SW-E2E-01 nằm trong khung tủ khác.' }],
   };
   const PENDING = diagram({ status: 'pending', pendingApprovalId: 'a1', officialSeq: 1 });
 
-  it('Admin mở trang duyệt: tóm tắt một dòng + cảnh báo + nút so sánh (để sau); Trả về kèm ghi chú', async () => {
+  it('Admin mở trang duyệt: tóm tắt một dòng + cảnh báo + nút so sánh (bấm được khi có bản chính thức); Trả về kèm ghi chú', async () => {
     const fetchMock = routeFetch([['/api/v1/diagrams/g1/review/a1/return', () => jsonResponse(200, { state: 'returned' })], ...base(PENDING, [], REVIEW)]);
     renderScreen('/diagrams/g1', SA);
     const user = userEvent.setup();
@@ -172,7 +173,7 @@ describe('Yêu cầu đang chờ', () => {
     expect(dialog).toHaveTextContent('Thay đổi so với bản chính thức v1');
     expect(dialog).toHaveTextContent('Thêm 1 thiết bị');
     expect(dialog).toHaveTextContent('nằm trong khung tủ khác');
-    expect(within(dialog).getByRole('button', { name: 'Xem so sánh với bản chính thức' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Xem so sánh với bản chính thức' })).toBeEnabled();
     await user.type(within(dialog).getByLabelText('Ghi chú chung'), 'Thiếu dây uplink');
     await user.click(within(dialog).getByRole('button', { name: 'Trả về' }));
     expect(await screen.findByText('Đã trả về. Người gửi nhận email kèm ghi chú.')).toBeInTheDocument();
