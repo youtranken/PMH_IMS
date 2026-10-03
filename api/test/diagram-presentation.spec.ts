@@ -294,8 +294,9 @@ describe('Sơ đồ mạng · bản trình bày (Q-23, FR-045)', () => {
     const src = await official('Quyền', '');
     const mine = await diagrams.createPresentation(MEMBER.email, src.diagramId, {});
 
-    const renamed = await diagrams.update(MEMBER, mine.id, { name: `E2E Của tôi ${seq}` });
-    expect(renamed.name).toBe(`E2E Của tôi ${seq}`);
+    // Thân PATCH qua ValidationPipe mang các khoá không gửi dưới dạng `undefined`: không được thành "xoá trường".
+    const renamed = await diagrams.update(MEMBER, mine.id, { name: `E2E Của tôi ${seq}`, nodeType: undefined, ownerEmail: undefined });
+    expect(renamed).toMatchObject({ name: `E2E Của tôi ${seq}`, nodeType: 'floor', ownerEmail: MEMBER.email });
     expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.updated' AND object_id = $1 AND actor = $2`, [mine.id, MEMBER.email])).toBe(1);
 
     // Người khác: không đổi tên, không lưu trữ, không ghi gì.

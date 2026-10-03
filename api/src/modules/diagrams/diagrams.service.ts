@@ -329,12 +329,17 @@ export class DiagramsService {
     return this.node(id);
   }
 
-  async update(by: { email: string; role: UserRole }, id: string, input: NodeInput): Promise<DiagramNode> {
+  async update(by: { email: string; role: UserRole }, id: string, patch: NodeInput): Promise<DiagramNode> {
     const actor = by.email;
+    /*
+     * DTO qua ValidationPipe giữ mọi khoá của lớp, khoá không gửi mang `undefined`: bỏ chúng trước
+     * khi so, nếu không `diffRecord` coi là "đổi thành rỗng" và ghi NULL vào cột không được rỗng.
+     */
+    const input = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)) as NodeInput;
     const current = await this.node(id);
     assertCanManage(current, by);
     // Thành viên chủ bản trình bày chỉ đổi TÊN: người phụ trách, loại nút vẫn do Admin/SA.
-    if (by.role === 'member' && Object.entries(input).some(([key, value]) => key !== 'name' && value !== undefined)) throw manageForbidden();
+    if (by.role === 'member' && Object.keys(input).some((key) => key !== 'name')) throw manageForbidden();
     if (current.archivedAt) throw archived();
     if (current.kind === 'presentation' && input.parentId) {
       throw new BadRequestException({
