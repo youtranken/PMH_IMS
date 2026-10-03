@@ -1048,20 +1048,23 @@ So that trình nội bộ thoải mái mà không đụng tới bản chính th�
 
 **Given** một bản chính thức
 **When** bất kỳ vai bấm "Tạo bản trình bày"
-**Then** tạo `diagram` mới `kind = 'presentation'` ghi `source_diagram_id` + `source_version_id`, chép XML phiên bản đó; không có Gửi duyệt/Phát hành; nhiều bản trình bày cho một bản chính thức; xem vẫn đòi mã phạm vi sơ đồ và ghi `diagram.viewed`
+**Then** tạo `diagram` mới `kind = 'presentation'` ghi `source_diagram_id` + `source_version_id` (migration `0050_diagram_presentation.sql`), chép XML phiên bản chính thức hiện hành thành phiên bản #1 của bản mới — bản gốc không thêm phiên bản, cờ chính thức nguyên; `POST /diagrams/:id/presentations` (`@RequiresStepUp('diagram')` vì nó chép nội dung, `@Audited` `diagram.presentation_created`), tên tuỳ chọn, mặc định "<tên gốc> — trình bày (n)"; bản chưa phát hành / bản trình bày / đã lưu trữ → 409 `DIAGRAM_NOT_OFFICIAL`
+**And** không có Gửi duyệt/Phát hành/ghim (web ẩn nút; server: tự kiểm đỏ `PLANNED_DEVICE` hoặc 409 `DIAGRAM_NOT_REVIEWABLE`); nhiều bản trình bày cho một bản chính thức; xem/sửa vẫn đòi mã phạm vi sơ đồ và ghi `diagram.viewed`
+**And** bản trình bày đứng ngoài cây chính thức (CHECK `parent_id IS NULL`, không làm cha, không chuyển nhánh — 400 `DIAGRAM_PRESENTATION_NO_PARENT`), hiện ở mục "Bản trình bày" riêng dưới cây kèm nguồn; không tính vào "Có mặt trong các bản vẽ"
 
 **Given** đang sửa bản trình bày
-**When** thêm "thiết bị dự kiến" từ thanh trên trình vẽ (tên, model, giá, NCC — không cần có trong kho) hoặc ảnh tự do (tải qua `files`, chỉ jpeg/png/webp theo kiểm nội dung sẵn có)
-**Then** thiết bị dự kiến mang `ims_planned="1"`, viền đứt, nhãn "Dự kiến"; không bao giờ lọt vào kho hay bản chính thức
-**And** file xuất có dải "BẢN TRÌNH BÀY — không phải sơ đồ chính thức" + "Dựa trên bản chính thức phiên bản N" (Story 10.10)
+**When** thêm "thiết bị dự kiến" từ thanh trên trình vẽ (tên, model, giá, NCC — không cần có trong kho) hoặc ảnh tự do (chỉ jpeg/png/webp, nhận theo byte đầu; ảnh NHÚNG `data:image/...` vào XML, không đi qua `files` — cổng XML của server vốn chỉ nhận ảnh nhúng, trần cỡ là `diagram.xml_max_kb`, web chặn sớm ảnh vượt trần)
+**Then** thiết bị dự kiến mang `ims_planned="1"` (+ `ims_planned_model/_price/_vendor`), viền đứt, nhãn "Dự kiến", không có `ims_device_id`; không bao giờ lọt vào kho hay bản chính thức — luật `checkPlanned` (đỏ `PLANNED_DEVICE`) nằm trong `runDiagramChecks` của tự kiểm, mọi khoá `ims_planned*` đều tính bất kể giá trị
+**And** màn xem và màn sửa có dải "BẢN TRÌNH BÀY — không phải sơ đồ chính thức" + "Dựa trên bản chính thức phiên bản N"; file xuất (Story 10.10) ghép cùng hai dòng từ hàm thuần `presentationBand()` của `diagram-presentation.ts`
 
 **Given** bản gốc có phiên bản chính thức mới sau khi nhân bản
 **When** mở bản trình bày
-**Then** hiện "Bản gốc đã có phiên bản mới (N+k)" kèm link; không tự cập nhật
+**Then** hiện "Bản gốc đã có phiên bản mới (N+k)" kèm link (trên dải và trên mục "Bản trình bày" của cây; so id phiên bản chính thức chứ không chỉ so số — khôi phục làm chính thức cũng là bản mới); không tự cập nhật
 
 **Given** XML có `ims_planned` gửi vào bản `official` qua API
 **When** lưu
-**Then** 400 — chỉ hợp lệ trong `kind = 'presentation'`
+**Then** 400 `DIAGRAM_PLANNED_NOT_ALLOWED` — chỉ hợp lệ trong `kind = 'presentation'`, không ghi phiên bản
+**And** test: `diagram-presentation.spec.ts` (jest, hàm thuần), `diagram-selfcheck.spec.ts`, `api/test/diagram-presentation.spec.ts` (DB, kể cả lượt dọn E2E theo `source_diagram_id`), vitest `diagram-presentation.test.ts` + `diagram-presentation-screens.test.tsx`, E2E `diagrams-presentation.spec.ts`
 
 ### Story 10.9: Cảnh báo lệch kho và kiểm tra khớp
 
