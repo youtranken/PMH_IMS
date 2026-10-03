@@ -475,7 +475,7 @@ tĩnh của draw.io từ image `jgraph/drawio` (stage `drawio-src`) vào `/usr/s
 Ghim cả digest vì một tag có thể bị đẩy lại, và giao thức nhúng (postMessage) đổi theo phiên bản.
 
 **Chạy offline.** Trình vẽ không gọi ra Internet khi mở (CSP của `/drawio/` chỉ cho `'self'`; E2E
-`diagrams-spike.spec.ts` bắt mọi request của màn sửa và khẳng định không request nào ra ngoài host
+`diagrams.spec.ts` bắt mọi request của màn sửa và khẳng định không request nào ra ngoài host
 IMS). Stage `drawio-src` cũng không cần Internet nếu máy dựng đã có sẵn image nguồn đúng digest —
 mang sang bằng `docker save`/`docker load`:
 
@@ -510,7 +510,7 @@ curl -skI https://localhost/drawio/ | grep -i content-security-policy           
 3. Sửa dòng `FROM jgraph/drawio:…@sha256:… AS drawio-src` trong `web/Dockerfile` (tag + digest),
    commit trên một nhánh riêng.
 4. Trên stack dev/E2E (KHÔNG phải prod): dựng lại `web`, rồi chạy E2E sơ đồ
-   (`cd e2e && npx playwright test tests/diagrams-spike.spec.ts --reporter=line`). Đỏ ở bước nạp,
+   (`cd e2e && npx playwright test tests/diagrams.spec.ts --reporter=line`). Đỏ ở bước nạp,
    chèn hay lưu = giao thức nhúng đã đổi → giữ tag cũ, ghi vào checklist.
 5. Xanh thì lên prod: `docker compose up -d --build web`.
 6. Lùi: trả dòng `FROM` cũ (giữ image tag cũ trên máy, đừng `docker image prune` nó), dựng lại

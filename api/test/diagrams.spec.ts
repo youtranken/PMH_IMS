@@ -300,6 +300,22 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     });
   });
 
+  it('bản vẽ 300 hình + 600 dây: lưu được, API trả nội dung dưới 1 giây (NFR-05, NFR-07)', async () => {
+    const d = await service.create(SA.email, { name: 'E2E Bản vẽ lớn', nodeType: 'other' });
+    const shapes = Array.from({ length: 300 }, (_, i) => shape(`v${i}`, `Máy ${i}`)).join('');
+    const edges = Array.from(
+      { length: 600 },
+      (_, i) =>
+        `<mxCell id="e${i}" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="v${i % 300}" target="v${(i * 7 + 1) % 300}"><mxGeometry relative="1" as="geometry"/></mxCell>`,
+    ).join('');
+    const saved = await service.save(SA.email, d.id, { xml: page(shapes + edges), svg: SVG, basedOnVersionId: null });
+    expect(saved.summary).toBe('Thêm 600 dây, 300 hình tự do');
+    const started = performance.now();
+    const content = await service.content(SA.email, d.id, { mode: 'edit' });
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(content.version?.seq).toBe(1);
+  });
+
   describe('đang có người mở sửa', () => {
     it('B thấy A trong thời gian giữ; A im lặng quá thì thôi; nhật ký chỉ ghi lúc vào, không mỗi nhịp', async () => {
       const d = await service.create(SA.email, { name: 'E2E Có mặt', nodeType: 'other' });

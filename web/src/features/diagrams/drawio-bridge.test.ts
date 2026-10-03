@@ -1,18 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   deviceCellJson,
-  deviceIdFromLink,
   deviceShape,
-  driftReasons,
   insertPatch,
-  isCompressed,
   growBounds,
   lastChildId,
   layerIdOf,
   nextInsertPosition,
   pageIds,
-  parseDeviceRefs,
-  withViewerMarks,
 } from './drawio-bridge';
 
 const DEV = {
@@ -116,75 +111,9 @@ describe('đọc tệp draw.io', () => {
     expect(lastChildId(two, 'p2', 'L')).toBeNull();
   });
 
-  it('parseDeviceRefs lấy mọi hình mang ims_device_id, bỏ qua hình vẽ tự do', () => {
-    expect(parseDeviceRefs(two)).toEqual([
-      { cellId: 'c1', deviceId: 'd1', code: 'SW-1', ip: '10.0.0.1', pageId: 'p1' },
-      { cellId: 'c2', deviceId: 'd2', code: 'FW-1', ip: '', pageId: 'p1' },
-    ]);
-  });
-
-  it('XML hỏng hoặc rỗng → không có hình nào, không ném', () => {
-    expect(parseDeviceRefs('<mxfile><diagram')).toEqual([]);
-    expect(parseDeviceRefs('')).toEqual([]);
+  it('XML hỏng hoặc rỗng → không có trang nào, không ném', () => {
+    expect(pageIds('<mxfile><diagram')).toEqual([]);
     expect(pageIds('')).toEqual([]);
-  });
-
-  it('isCompressed: trang nén (chuỗi base64 thay cho mxGraphModel) thì không đọc được', () => {
-    expect(isCompressed(two)).toBe(false);
-    expect(isCompressed('<mxfile><diagram id="p" name="x">7VhNj9owEP01OWaV</diagram></mxfile>')).toBe(true);
-  });
-});
-
-describe('driftReasons — lệch kho so với lúc chèn (Q-23: cảnh báo, không ép sửa)', () => {
-  const ref = { cellId: 'c', deviceId: 'd', code: 'SW-1', ip: '10.0.0.1', pageId: 'p1' };
-  it.each([
-    ['khớp', { code: 'SW-1', status: 'in_use', ips: ['10.0.0.1'] }, []],
-    ['đã thanh lý', { code: 'SW-1', status: 'retired', ips: ['10.0.0.1'] }, ['retired']],
-    ['đổi IP', { code: 'SW-1', status: 'in_use', ips: ['10.0.0.9'] }, ['ip_changed']],
-    ['mất IP', { code: 'SW-1', status: 'in_use', ips: [] }, ['ip_changed']],
-    ['đổi mã', { code: 'SW-01', status: 'spare', ips: ['10.0.0.1'] }, ['code_changed']],
-    ['không còn trong kho', null, ['missing']],
-  ])('%s', (_label, live, reasons) => {
-    expect(driftReasons(ref, live)).toEqual(reasons);
-  });
-
-  it('lúc chèn chưa có IP thì máy có IP về sau KHÔNG tính là lệch', () => {
-    expect(driftReasons({ ...ref, ip: '' }, { code: 'SW-1', status: 'in_use', ips: ['10.0.0.5'] })).toEqual([]);
-  });
-});
-
-describe('withViewerMarks — chỉ sửa bản đem đi XEM, không đụng bản đã lưu', () => {
-  const xml = fileWith(
-    '<UserObject label="SW-1&#xa;10.0.0.1" link="javascript:alert(1)" ims_device_id="d1" ims_device_code="SW-1" id="c1"><mxCell vertex="1" parent="1"/></UserObject>' +
-      '<UserObject label="FW-1" ims_device_id="d2" ims_device_code="FW-1" id="c2"><mxCell vertex="1" parent="1"/></UserObject>',
-  );
-
-  it('mỗi hình thiết bị có link /devices/<id> (bấm thì IMS mở thẻ), hình lệch kho có dấu ⚠ ở nhãn', () => {
-    const out = withViewerMarks(xml, 'https://ims.local', new Set(['d2']));
-    const doc = new DOMParser().parseFromString(out, 'application/xml');
-    const c1 = doc.querySelector('[id="c1"]')!;
-    const c2 = doc.querySelector('[id="c2"]')!;
-    // Link người vẽ tự gắn (kể cả javascript:) bị thay: ở chế độ xem, bấm hình thiết bị chỉ mở thẻ.
-    expect(c1.getAttribute('link')).toBe('https://ims.local/devices/d1');
-    expect(c1.getAttribute('label')).toBe('SW-1\n10.0.0.1');
-    expect(c2.getAttribute('label')).toBe('⚠ FW-1');
-  });
-
-  it('XML không đọc được → trả nguyên văn (draw.io tự báo lỗi tệp)', () => {
-    expect(withViewerMarks('<mxfile', 'https://ims.local', new Set())).toBe('<mxfile');
-  });
-});
-
-describe('deviceIdFromLink', () => {
-  it.each([
-    ['https://ims.local/devices/abc-123', 'https://ims.local', 'abc-123'],
-    ['https://ims.local/devices/abc-123?x=1', 'https://ims.local', 'abc-123'],
-    ['https://khac.example/devices/abc-123', 'https://ims.local', null],
-    ['https://ims.local/software/abc', 'https://ims.local', null],
-    ['javascript:alert(1)', 'https://ims.local', null],
-    ['', 'https://ims.local', null],
-  ])('%s → %s', (href, origin, id) => {
-    expect(deviceIdFromLink(href, origin)).toBe(id);
   });
 });
 

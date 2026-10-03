@@ -2,7 +2,8 @@ import { formatDateTime } from '@/lib/format';
 
 /**
  * Giao thức nhúng draw.io (AD-17) — hàm THUẦN, test bảng dữ liệu ở `drawio-protocol.test.ts`.
- * Chỉ `drawio-frame.tsx` dùng file này; màn nào cũng đi qua component đó, không tự postMessage.
+ * Màn nào cũng gửi/nhận qua `drawio-frame.tsx`, không tự postMessage; màn chỉ dùng kiểu sự kiện/
+ * lệnh và hàm đọc dữ liệu sự kiện (`exportedSvgText`) ở đây.
  *
  * draw.io chạy ở `/drawio/` trong iframe sandbox nguồn gốc mờ; hai bên chỉ nói chuyện bằng
  * postMessage chuỗi JSON (`proto=json`): draw.io gửi `event`, IMS gửi `action`.
@@ -223,4 +224,32 @@ export function buildDrawioConfig(wireColors: string[]): DrawioConfig {
 /** Dòng watermark "tên · email · giờ:phút" (giờ Việt Nam). */
 export function watermarkText(viewer: { fullName: string; email: string }, now: Date): string {
   return `${viewer.fullName} · ${viewer.email} · ${formatDateTime(now).slice(-5)}`;
+}
+
+/** DOCTYPE SVG 1.1 chuẩn (không khai báo thực thể) mà draw.io gắn đầu ảnh xuất. */
+const STANDARD_SVG_HEAD = /^\s*(?:<\?xml[^>]*\?>\s*)?(?:<!DOCTYPE svg PUBLIC "[^"[\]]*" "[^"[\]]*">\s*)?/;
+
+/**
+ * Dữ liệu sự kiện `export` (định dạng `svg`) → chữ SVG để gửi server cùng XML khi lưu.
+ *
+ * Chỉ bỏ phần đầu tệp CHUẨN (khai báo XML + DOCTYPE SVG 1.1 không có thực thể): cổng server từ
+ * chối mọi DOCTYPE, và bỏ rộng hơn ở đây là giấu một DOCTYPE lạ khỏi cổng đó. Kết quả vẫn là dữ
+ * liệu KHÔNG tin cậy — server làm sạch nó trước khi lưu (AD-17).
+ */
+export function exportedSvgText(data: string): { value: string | null; reason: string | null } {
+  let text = data;
+  if (data.startsWith('data:')) {
+    const match = /^data:image\/svg\+xml(;base64)?,([\s\S]*)$/.exec(data);
+    if (!match) return { value: null, reason: 'not-svg' };
+    try {
+      text = match[1]
+        ? new TextDecoder().decode(Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0)))
+        : decodeURIComponent(match[2]);
+    } catch {
+      return { value: null, reason: 'decode' };
+    }
+  }
+  const body = text.replace(STANDARD_SVG_HEAD, '');
+  if (!body.trim()) return { value: null, reason: 'empty' };
+  return { value: body, reason: null };
 }

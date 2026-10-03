@@ -43,8 +43,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Sắp hết hạn', path: '/expiry', heading: /^Sắp hết hạn$/ },
     { link: 'Địa chỉ IP', path: '/ip-addresses', heading: /^Địa chỉ IP$/ },
     { link: 'Sổ NAT', path: '/nat', heading: /^Sổ NAT$/ },
-    // Màn sơ đồ thu sidebar (Q-23); mục kế tiếp vẫn bấm được vì mục giữ tên trợ năng.
-    { link: 'Sơ đồ mạng (thử)', path: '/diagrams-spike', heading: /^Sơ đồ mạng \(bản thử\)$/ },
+    { link: 'Sơ đồ mạng', path: '/diagrams', heading: /^Sơ đồ mạng$/ },
     { link: 'Tài khoản dịch vụ', path: '/service-accounts', heading: /^Tài khoản dịch vụ$/ },
     { link: 'Duyệt mở két', path: '/approvals', heading: /^Duyệt mở két$/ },
     { link: 'Két sắt', path: '/vault', heading: /^Két sắt$/ },

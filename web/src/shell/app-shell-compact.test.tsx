@@ -52,13 +52,15 @@ const nav = () => screen.getByRole('navigation', { name: 'Điều hướng chín
 
 describe('Sidebar tự thu trên màn sơ đồ (Q-23)', () => {
   it('đường sơ đồ là đường thu gọn; đường khác thì không', () => {
-    expect(isCompactShellPath(PATHS.diagramSpike)).toBe(true);
+    expect(isCompactShellPath(PATHS.diagram('7b0c1c1e-0000-4000-8000-000000000001'))).toBe(true);
+    // Cây bản vẽ là màn danh sách bình thường; chỉ màn mở MỘT bản vẽ mới cần bề ngang.
+    expect(isCompactShellPath(PATHS.diagrams)).toBe(false);
     expect(isCompactShellPath(PATHS.devices)).toBe(false);
     expect(isCompactShellPath('/')).toBe(false);
   });
 
   it('vào màn sơ đồ: sidebar thu còn biểu tượng, mục vẫn có tên trợ năng + tooltip; nội dung tràn phần còn lại', () => {
-    renderShell(PATHS.diagramSpike);
+    renderShell(PATHS.diagram('7b0c1c1e-0000-4000-8000-000000000001'));
     expect(nav()).toHaveAttribute('data-compact', 'true');
     const devices = screen.getByRole('link', { name: 'Thiết bị' });
     expect(devices).toHaveAttribute('title', 'Thiết bị');
@@ -66,7 +68,7 @@ describe('Sidebar tự thu trên màn sơ đồ (Q-23)', () => {
   });
 
   it('rời màn sơ đồ sang menu khác: sidebar mở rộng lại như bình thường', async () => {
-    renderShell(PATHS.diagramSpike);
+    renderShell(PATHS.diagram('7b0c1c1e-0000-4000-8000-000000000001'));
     await userEvent.setup().click(screen.getByRole('link', { name: 'Thiết bị' }));
     expect(nav()).not.toHaveAttribute('data-compact');
     expect(screen.getByRole('link', { name: 'Thiết bị' })).not.toHaveAttribute('title');

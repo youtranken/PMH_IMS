@@ -861,3 +861,95 @@ button.btn-x.danger:hover:not(:disabled) {
   text-align: center;
   background: var(--surface);
 }
+
+/* Trình xem sơ đồ (`ui/diagram-viewer.tsx`): SVG đã làm sạch trong khung kéo/thu phóng được, watermark
+   dùng chung lớp `.drawio-watermark`. Màn đặt chiều cao cho khối chứa, như `.drawio-frame`. */
+.diagram-viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.diagram-viewer-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.diagram-viewer-stage:active {
+  cursor: grabbing;
+}
+.diagram-viewer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+.diagram-viewer-canvas > svg {
+  display: block;
+}
+.diagram-viewer-toolbar {
+  position: absolute;
+  z-index: 2;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.diagram-viewer-zoom {
+  min-width: 3.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.diagram-viewer-error {
+  position: absolute;
+  z-index: 2;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  margin: 0;
+}
+
+/* Danh sách dạng cây thư mục (`.tree-list > .tree-row`): mỗi dòng mang `--depth` để thụt lề; nút
+   gập/mở một cột cố định để tên các dòng cùng cấp thẳng hàng dù dòng có con hay không. */
+.tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tree-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-5));
+  border-bottom: 1px solid var(--border);
+}
+.tree-row:last-child {
+  border-bottom: 0;
+}
+.tree-toggle {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.tree-name {
+  font-weight: var(--fw-medium);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tree-actions {
+  margin-left: auto;
+}
+.tree-summary {
+  flex-basis: 100%;
+}

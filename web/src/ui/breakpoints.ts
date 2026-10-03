@@ -14,4 +14,6 @@ export const BREAKPOINTS = {
   railCollapse: '(max-width: 680px)',
   /** Sidebar thành drawer, trang chi tiết / két chuyển bố cục một cột. */
   narrow: '(max-width: 900px)',
+  /** Dưới bề ngang này màn sửa sơ đồ thay trình vẽ bằng lời nhắn "chỉ làm trên máy tính" (Q-23). */
+  editor: '(max-width: 1023px)',
 } as const;
