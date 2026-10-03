@@ -399,6 +399,16 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       expect(names).toContain('E2E Thiết bị kho');
       expect(names).not.toContain('E2E Đã bỏ máy');
       expect(names).not.toContain('E2E Lưu trữ có máy');
+
+      // Một luật, một câu cho cả thẻ thông tin (một máy) lẫn tìm/chỉ đường (nhiều máy).
+      const lower = await service.create(SA.email, { name: 'a E2E chữ thường', nodeType: 'other' });
+      await service.save(SA.email, lower.id, { xml: page(deviceCell('d1', deviceId, 'SW-E2E-SD')), svg: SVG, basedOnVersionId: null });
+      const nowhere = '7b0c1c1e-0000-4000-8000-00000000abcd';
+      const batched = await service.diagramsWithDevices([deviceId, nowhere, 'không-phải-uuid', deviceId]);
+      const single = await service.diagramsWithDevice(deviceId);
+      expect(batched.get(deviceId)).toEqual(single);
+      expect([...batched.keys()]).toEqual([deviceId]);
+      expect(single[0].name).toBe('a E2E chữ thường');
     });
 
     it('biểu tượng SVG có script → từ chối, không ghi gì; SVG sạch → cất bản đã lọc + lịch sử danh mục', async () => {

@@ -22,7 +22,7 @@ import { clampWindow } from './expiry.service';
 const WARNING_DAYS_FROM_CONFIG = 60;
 
 describe('clampWindow — cửa sổ nhìn tới của màn "Sắp hết hạn"', () => {
-  it.each([
+  it.each<[number | undefined, number, string]>([
     // [người dùng gửi gì, kết quả, vì sao]
     [undefined, WARNING_DAYS_FROM_CONFIG, 'không chọn ⇒ theo `expiry.warning_days` (AD-11)'],
     [Number.NaN, WARNING_DAYS_FROM_CONFIG, '`?withinDays=abc` ⇒ cũng về mặc định, không NaN'],

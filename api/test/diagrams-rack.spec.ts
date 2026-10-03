@@ -29,7 +29,7 @@ import { UsersService } from '../src/modules/users/users.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
- * Mặt tủ và ảnh thật (Story 10.11) trên Postgres thật + kho tệp thật: khung tủ xếp máy đúng U ở
+ * Mặt tủ và ảnh thật trên Postgres thật + kho tệp thật: khung tủ xếp máy đúng U ở
  * mặt trước / mặt sau với ảnh từng mặt (ảnh riêng máy đè ảnh model), máy U vượt tủ (dữ liệu cũ) ra
  * cột bên kèm cảnh báo, ảnh chỉ nằm ở XML ướt (kho bản vẽ giữ khô), "Dựng lại mặt tủ" sinh phiên bản
  * mới, bản chụp thiết bị ghi U.
@@ -57,7 +57,7 @@ function deviceCell(id: string, deviceId: string, code: string, extra = '', styl
   return `<UserObject label="${code}" ims_device_id="${deviceId}" ims_device_code="${code}"${extra} id="${id}"><mxCell style="${style}" vertex="1" parent="1"><mxGeometry x="10" y="20" width="160" height="15" as="geometry"/></mxCell></UserObject>`;
 }
 
-describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật (Story 10.11)', () => {
+describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
   let scratch: ScratchDb;
   let service: DiagramsService;
   let devices: DevicesService;

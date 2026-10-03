@@ -285,7 +285,7 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
 });
 
 /*
- * Ảnh thật (Story 10.11, AD-18): ô thiết bị mang `ims_photo="front|back"` là lựa chọn của người
+ * Ảnh thật (AD-18): ô thiết bị mang `ims_photo="front|back"` là lựa chọn của người
  * vẽ; ảnh (data URI đã thu nhỏ) và `ims_photo_file_id` chỉ có ở XML ướt — XML lưu không chứa ảnh.
  */
 describe('ảnh thật trên ô thiết bị — hydrate nhúng, dehydrate gỡ', () => {

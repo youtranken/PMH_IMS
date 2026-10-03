@@ -11,7 +11,7 @@ import { DiagramDriftService } from './diagram-drift.service';
 import { DiagramNavigationService } from './diagram-navigation.service';
 import { DiagramReviewService, type ReviewedNode } from './diagram-review.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
-import { DEVICE_INFO_MAX_IDS, DiagramsService } from './diagrams.service';
+import { DEVICE_INFO_MAX_IDS, DEVICE_LOOKS_MAX_IDS, DiagramsService } from './diagrams.service';
 
 /** Trần thô của DTO; trần thật (`diagram.xml_max_kb`, `diagram.svg_max_kb`) do cổng kiểm áp. */
 const RAW_MAX_BYTES = 6 * 1024 * 1024;
@@ -194,8 +194,11 @@ export class DiagramsController {
   @Get('device-looks')
   deviceLooks(@Query() query: DeviceInfoQueryDto) {
     const ids = splitUuidList(query.ids) ?? [];
-    if (ids.length > DEVICE_INFO_MAX_IDS) {
-      throw new BadRequestException({ code: 'DIAGRAM_DEVICE_INFO_TOO_MANY', message: 'Quá nhiều thiết bị trong một lần hỏi.' });
+    if (ids.length > DEVICE_LOOKS_MAX_IDS) {
+      throw new BadRequestException({
+        code: 'DIAGRAM_DEVICE_INFO_TOO_MANY',
+        message: `Quá nhiều thiết bị trong một lần hỏi (tối đa ${DEVICE_LOOKS_MAX_IDS}).`,
+      });
     }
     return this.diagrams.deviceLooks(ids);
   }

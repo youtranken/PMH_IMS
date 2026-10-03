@@ -191,6 +191,10 @@
     --diagram-cable-3:#ea580c; --diagram-cable-4:#7c3aed; --diagram-cable-5:#0891b2;
     --diagram-cable-6:#be185d; --diagram-cable-7:#854d0e; --diagram-cable-8:#334155;
     --diagram-cable-warn:#ca8a04; --diagram-cable-danger:#c0392b;
+    /* Giấy in của file xuất bản vẽ (PNG/PDF): kẻ chân trang và nền dải "nháp / bản cũ / trình
+       bày". Server đọc bản SÁNG qua `api/src/common/palette.generated.ts` (sinh từ file này);
+       giấy in luôn nền sáng nên cặp dark giữ nguyên giá trị. */
+    --paper-rule:#d5d9d2; --paper-draft:#fff4e5; --paper-superseded:#fdecea; --paper-presentation:#eaf2fb;
 }
 
 /* Dark mode — chỉ override token, các component dùng var() tự đổi theo. Đây là giao diện MẶC
@@ -280,6 +284,7 @@ html[data-theme='dark'] {
     --diagram-cable-3:#f59e0b; --diagram-cable-4:#a78bfa; --diagram-cable-5:#22d3ee;
     --diagram-cable-6:#f472b6; --diagram-cable-7:#d6a35c; --diagram-cable-8:#94a3b8;
     --diagram-cable-warn:#facc15; --diagram-cable-danger:#f27e72;
+    --paper-rule:#d5d9d2; --paper-draft:#fff4e5; --paper-superseded:#fdecea; --paper-presentation:#eaf2fb;
 }
 
 * {

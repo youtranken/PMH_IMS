@@ -12,7 +12,7 @@ import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 
 /**
- * "Nối hàng loạt" (Story 10.5): một switch + N máy, cổng bắt đầu → bảng xem trước "máy → cổng"
+ * "Nối hàng loạt": một switch + N máy, cổng bắt đầu → bảng xem trước "máy → cổng"
  * do SERVER chia (bỏ qua cổng đã có cáp), rồi ghi cả lô trong MỘT transaction qua endpoint của
  * `devices` — không đủ cổng hay vướng luật một cổng một cáp thì không ghi máy nào. Dùng ở trang
  * thiết bị và màn sơ đồ mạng (AD-15).

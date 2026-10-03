@@ -14,6 +14,7 @@ import type { UsersApiService } from '../src/modules/users/users.api';
 import type { AuthApiService } from '../src/modules/auth/auth.api';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noSweep } from './sweep-stub';
 
 /**
  * Ngữ cảnh người duyệt và người xin cần để quyết nhanh trên điện thoại (VLT-FLOW) — chỉ CON SỐ
@@ -70,7 +71,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
       new ApprovalsApiService(approvals),
       access,
       config,
-      new OutboxService(scratch.db),
+      new OutboxService(scratch.db, config, noSweep),
       owners,
       vault,
       users,

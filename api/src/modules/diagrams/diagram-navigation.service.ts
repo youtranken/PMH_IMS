@@ -1,16 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { sql } from 'drizzle-orm';
-import { DRIZZLE_DB } from '../../database/database.module';
-import type { Database } from '../../database/database.module';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService, type PortLink } from '../devices/devices.api';
 import { shortestPortPath, type PathEdge } from './diagram-path';
+import { DiagramsService, type DiagramRef } from './diagrams.service';
 
-/** Bản vẽ (chỉ tên + id — thông tin của cây, không phải nội dung) có một máy ở phiên bản mới nhất. */
-export interface DiagramRef {
-  id: string;
-  name: string;
-}
+export type { DiagramRef } from './diagrams.service';
 
 export interface FoundDevice {
   id: string;
@@ -44,9 +38,9 @@ export const FIND_LIMIT = 20;
 @Injectable()
 export class DiagramNavigationService {
   constructor(
-    @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly config: SystemConfigService,
     private readonly devices: DevicesApiService,
+    private readonly diagrams: DiagramsService,
   ) {}
 
   /** Máy khớp mã/tên/IP (cùng ô tìm với trang thiết bị) + bản vẽ chính thức chứa từng máy. */
@@ -54,7 +48,7 @@ export class DiagramNavigationService {
     const q = term.trim();
     if (q.length < 2) throw new BadRequestException({ code: 'DIAGRAM_FIND_TOO_SHORT', message: 'Gõ ít nhất 2 ký tự để tìm.' });
     const devices = await this.devices.search(q, FIND_LIMIT);
-    const where = await this.diagramsWithDevices(devices.map((d) => d.id));
+    const where = await this.diagrams.diagramsWithDevices(devices.map((d) => d.id));
     return devices.map((d) => ({ id: d.id, code: d.code, name: d.name, diagrams: where.get(d.id) ?? [] }));
   }
 
@@ -93,7 +87,7 @@ export class DiagramNavigationService {
     const found = shortestPortPath(fromId, toId, [...edges.values()], maxHops);
     const ends2 = { from: { id: from.id, code: from.code }, to: { id: to.id, code: to.code } };
     if (!found) return { ...ends2, path: null };
-    const where = await this.diagramsWithDevices(found.devices);
+    const where = await this.diagrams.diagramsWithDevices(found.devices);
     return {
       ...ends2,
       path: {
@@ -101,33 +95,5 @@ export class DiagramNavigationService {
         linkIds: found.links,
       },
     };
-  }
-
-  /**
-   * Bản vẽ chính thức chưa lưu trữ có từng máy ở phiên bản MỚI NHẤT — MỘT câu cho cả danh sách
-   * (cùng luật với `DiagramsService.diagramsWithDevice` của thẻ thông tin).
-   */
-  async diagramsWithDevices(deviceIds: string[]): Promise<Map<string, DiagramRef[]>> {
-    const out = new Map<string, DiagramRef[]>();
-    const ids = [...new Set(deviceIds)];
-    if (ids.length === 0) return out;
-    const { rows } = await this.db.execute<{ device_id: string; id: string; name: string }>(sql`
-      SELECT DISTINCT c.value ->> 'deviceId' AS device_id, d.id, d.name
-        FROM diagram d
-        JOIN LATERAL (
-          SELECT v.cell_index FROM diagram_version v
-           WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
-        ) lv ON true
-        CROSS JOIN LATERAL jsonb_array_elements(lv.cell_index -> 'cells') c
-       WHERE d.archived_at IS NULL
-         AND d.kind = 'official'
-         AND c.value ->> 'deviceId' IN (${sql.join(
-           ids.map((id) => sql`${id}`),
-           sql`, `,
-         )})
-       ORDER BY d.name, d.id
-    `);
-    for (const row of rows) out.set(row.device_id, [...(out.get(row.device_id) ?? []), { id: row.id, name: row.name }]);
-    return out;
   }
 }

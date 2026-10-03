@@ -27,7 +27,7 @@ export interface DevicePhotos {
 export const devicePhotosKey = (deviceId: string) => ['device-photos', deviceId];
 
 /**
- * "Ảnh thật trên sơ đồ" (Q-23, Story 10.11): ảnh hai mặt của máy cho bản vẽ. Ảnh riêng máy chọn
+ * "Ảnh thật trên sơ đồ" (Q-23): ảnh hai mặt của máy cho bản vẽ. Ảnh riêng máy chọn
  * từ giấy tờ đính kèm của chính máy và đè ảnh theo model (loại + chuỗi model, dùng chung cho mọi máy
  * cùng model). Ảnh model tải lên ở khu riêng ngay dưới. Xem trước là ảnh server đã thu nhỏ.
  */

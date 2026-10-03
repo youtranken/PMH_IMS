@@ -1,6 +1,6 @@
 /**
- * Hình draw.io mà một loại thiết bị được chọn làm biểu tượng trên sơ đồ mạng (Story Thiết bị kho,
- * AD-18). Danh sách ĐÓNG: màn Danh mục chỉ cho chọn trong đây, không có ô gõ style tự do — một ô
+ * Hình draw.io mà một loại thiết bị được chọn làm biểu tượng trên sơ đồ mạng (AD-18).
+ * Danh sách ĐÓNG: màn Danh mục chỉ cho chọn trong đây, không có ô gõ style tự do — một ô
  * style tự do là đường chèn `image=https://…` (trình vẽ/trình xem tải ảnh ngoài bằng máy người xem).
  *
  * Tên hình là tên stencil có sẵn trong draw.io tự host (thư mục `stencils/` của bản ghim ở

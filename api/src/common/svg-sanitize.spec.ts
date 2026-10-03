@@ -1,4 +1,4 @@
-import { sanitizeIconSvg, svgTextHasUrl } from './svg-sanitize';
+import { sanitizeIconSvg, sanitizeSvg, svgRenderReason, svgTextHasUrl } from './svg-sanitize';
 
 const LIM = { maxKb: 100 };
 const NS = 'xmlns="http://www.w3.org/2000/svg"';
@@ -62,5 +62,77 @@ describe('svgTextHasUrl — SVG nhúng làm ảnh có trỏ ra ngoài không', (
     ['//host', `<svg ${NS}><image href="//evil.example/a.png"/></svg>`, true],
   ])('%s', (_name, text, expected) => {
     expect(svgTextHasUrl(text)).toBe(expected);
+  });
+});
+
+const XL = 'http://www.w3.org/1999/xlink';
+
+/*
+ * `href` nằm ở không gian tên nào cũng là `href`: trình duyệt (và resvg) tra thuộc tính theo URI
+ * không gian tên + tên cục bộ, không theo chữ tiền tố. So chuỗi "href"/"xlink:href" là để lọt
+ * `x:href` với `xmlns:x` trỏ về xlink.
+ */
+const NAMESPACE_BYPASS: [string, string][] = [
+  ['image x:href ra ngoài (xmlns:x = xlink)', `<svg ${NS} xmlns:x="${XL}"><image x:href="https://evil.example/a.png"/><rect/></svg>`],
+  ['use x:href sang tệp khác', `<svg ${NS} xmlns:x="${XL}"><use x:href="/file.svg#a"/><rect/></svg>`],
+  ['tiền tố khai ở phần tử con', `<svg ${NS}><g xmlns:q="${XL}"><image q:href="//evil.example/a.png"/></g><rect/></svg>`],
+  ['XLINK:HREF viết hoa (bộ đọc HTML hạ chữ rồi gán vào xlink)', `<svg ${NS}><image XLINK:HREF="https://evil.example/a.png"/><rect/></svg>`],
+  ['xml:base đổi gốc đường dẫn', `<svg ${NS} xml:base="https://evil.example/"><use href="#a"/><rect/></svg>`],
+  ['url() viết thoát ký tự CSS', `<svg ${NS}><rect style="fill:u\\72l(https://evil.example/x)"/></svg>`],
+  ['image-set() trong style', `<svg ${NS}><rect style="fill:image-set('https://evil.example/x' 1x)"/></svg>`],
+];
+
+describe('sanitizeSvg — href theo không gian tên, không theo chữ tiền tố', () => {
+  it.each(NAMESPACE_BYPASS)('ảnh xem bản vẽ không còn trỏ ra ngoài: %s', (_name, svg) => {
+    const out = sanitizeSvg(svg, { maxKb: 100, what: 'Ảnh SVG bản vẽ', svgImages: true });
+    expect(out.reason).toBeNull();
+    expect(out.value).not.toMatch(/evil\.example|\/file\.svg|xml:base|\\72/i);
+    // Không còn tiền tố lạ: chỉ giữ xlink:href đã soi, xml:space/xml:lang và khai báo xmlns.
+    for (const [, prefix] of out.value!.matchAll(/\s([A-Za-z_][\w.-]*):[\w.-]+=/g)) {
+      expect(['xlink', 'xml', 'xmlns']).toContain(prefix);
+    }
+    expect(svgRenderReason(out.value!)).toBeNull();
+  });
+
+  it('khai báo lại xmlns:xlink sang URI khác thì bỏ khai báo đó', () => {
+    const out = sanitizeSvg(`<svg ${NS} xmlns:xlink="urn:evil"><rect/></svg>`, { maxKb: 100, what: 'x' });
+    expect(out.value).not.toContain('urn:evil');
+  });
+
+  it('giữ nguyên SVG draw.io bình thường (xlink:href nội bộ, ảnh data:)', () => {
+    const svg = `<svg ${NS} xmlns:xlink="${XL}"><defs><path id="p" d="M0 0"/></defs><use xlink:href="#p"/><image xlink:href="data:image/png;base64,iVBOR"/></svg>`;
+    expect(sanitizeSvg(svg, { maxKb: 100, what: 'x', svgImages: true }).value).toBe(svg);
+  });
+
+  it.each(NAMESPACE_BYPASS.filter(([name]) => !name.startsWith('url()') && !name.startsWith('image-set')))(
+    'biểu tượng tải lên bị TỪ CHỐI: %s',
+    (_name, svg) => {
+      const out = sanitizeIconSvg(svg, LIM);
+      expect(out.value).toBeNull();
+      expect(out.reason).toMatch(/ra ngoài|xml:base/);
+    },
+  );
+});
+
+describe('svgRenderReason — chặn cuối trước resvg (resvg TỰ ĐỌC tệp cục bộ theo đường tuyệt đối)', () => {
+  const nested = (inner: string) => `data:image/svg+xml;base64,${Buffer.from(inner).toString('base64')}`;
+  it.each([
+    ['href đường tuyệt đối', `<svg ${NS}><image href="/etc/hostname"/></svg>`],
+    ['x:href theo xlink', `<svg ${NS} xmlns:x="${XL}"><image x:href="/etc/hostname"/></svg>`],
+    ['file://', `<svg ${NS}><image href="file:///etc/hostname"/></svg>`],
+    ['đường tương đối', `<svg ${NS}><image href="secret.png"/></svg>`],
+    ['xml:base', `<svg ${NS} xml:base="/etc/"><rect/></svg>`],
+    ['SVG lồng trong data: trỏ tệp cục bộ', `<svg ${NS}><image href="${nested(`<svg ${NS}><image href="/etc/hostname"/></svg>`)}"/></svg>`],
+    ['SVG lồng dạng %-mã hoá', `<svg ${NS}><image href="data:image/svg+xml,${encodeURIComponent(`<svg ${NS}><image href="/x.png"/></svg>`)}"/></svg>`],
+    ['tiền tố chưa khai báo', `<svg ${NS}><image x:href="/etc/hostname"/></svg>`],
+  ])('từ chối: %s', (_name, svg) => {
+    expect(svgRenderReason(svg)).not.toBeNull();
+  });
+
+  it.each([
+    ['href nội bộ + ảnh png', `<svg ${NS} xmlns:xlink="${XL}"><use xlink:href="#p"/><image href="data:image/png;base64,iVBOR"/></svg>`],
+    ['SVG lồng sạch', `<svg ${NS}><image href="${nested(`<svg ${NS}><rect/></svg>`)}"/></svg>`],
+  ])('nhận: %s', (_name, svg) => {
+    expect(svgRenderReason(svg)).toBeNull();
   });
 });

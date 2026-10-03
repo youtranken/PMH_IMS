@@ -256,6 +256,63 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     await scratch.pool.query(`UPDATE device SET status = 'in_use' WHERE id = $1`, [dev]);
   });
 
+  describe('yêu cầu cũ không được lùi bản chính thức', () => {
+    async function submittedThenNewer(label: string) {
+      const dev = await newDevice(`SW-E2E-RV-${label}`);
+      const { diagramId, versionId: v1 } = await drawn(label, deviceCell('d1', dev, `SW-E2E-RV-${label}`));
+      const { approval } = await review.submit(MEMBER, diagramId, { reason: 'Gửi bản 1' });
+      const v2 = await diagrams.save(SA.email, diagramId, { xml: page(deviceCell('d1', dev, `SW-E2E-RV-${label}`, { x: 77 })), svg: SVG, basedOnVersionId: v1 });
+      return { diagramId, v1, v2: v2.id, approval };
+    }
+    const official = async (diagramId: string) =>
+      (await scratch.pool.query<{ id: string }>(`SELECT official_version_id AS id FROM diagram WHERE id = $1`, [diagramId])).rows[0].id;
+
+    it('Admin phát hành bản mới hơn → yêu cầu đang chờ tự đóng (có lịch sử + nhật ký); duyệt yêu cầu cũ sau đó → 409, chính thức giữ bản mới', async () => {
+      const { diagramId, v2, approval } = await submittedThenNewer('STALE');
+      await review.publish(SA, diagramId, { versionId: v2 });
+      expect(await count(`SELECT count(*)::int AS n FROM approval WHERE id = $1 AND state = 'withdrawn'`, [approval.id])).toBe(1);
+      expect(await count(`SELECT count(*)::int AS n FROM diagram_history WHERE diagram_id = $1 AND action = 'review.superseded'`, [diagramId])).toBe(1);
+      expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE object_id = $1 AND action = 'diagram_publish.withdrawn'`, [approval.id])).toBe(1);
+      expect((await review.overlay([await diagrams.node(diagramId)]))[0]).toMatchObject({ status: 'official', pendingApprovalId: null });
+
+      await expect(review.approve(ADMIN, diagramId, approval.id)).rejects.toMatchObject({ status: 409 });
+      expect(await official(diagramId)).toBe(v2);
+    });
+
+    it('duyệt yêu cầu trỏ phiên bản CŨ hơn bản chính thức (chính thức đổi ngoài luồng) → 409 DIAGRAM_VERSION_STALE, không lùi', async () => {
+      const { diagramId, v2, approval } = await submittedThenNewer('STALE2');
+      await scratch.pool.query(`UPDATE diagram SET official_version_id = $2 WHERE id = $1`, [diagramId, v2]);
+      await expect(review.approve(ADMIN, diagramId, approval.id)).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'DIAGRAM_VERSION_STALE', message: expect.stringMatching(/cũ hơn bản chính thức/) },
+      });
+      expect(await official(diagramId)).toBe(v2);
+    });
+
+    it('gửi duyệt / phát hành phiên bản cũ hơn bản chính thức → 409 DIAGRAM_VERSION_STALE', async () => {
+      const { diagramId, v1, v2, approval } = await submittedThenNewer('STALE3');
+      await review.withdraw(MEMBER, diagramId, approval.id);
+      await review.publish(SA, diagramId, { versionId: v2 });
+      await expect(review.submit(MEMBER, diagramId, { reason: 'Gửi lại bản 1', versionId: v1 })).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'DIAGRAM_VERSION_STALE' },
+      });
+      await expect(review.publish(ADMIN, diagramId, { versionId: v1 })).rejects.toMatchObject({ status: 409, response: { code: 'DIAGRAM_VERSION_STALE' } });
+      expect(await official(diagramId)).toBe(v2);
+    });
+
+    it('duyệt bản cũ và phát hành bản mới CÙNG LÚC: thứ tự nào thì bản chính thức cuối cũng là bản mới, không còn yêu cầu chờ', async () => {
+      for (let round = 0; round < 4; round += 1) {
+        const { diagramId, v2, approval } = await submittedThenNewer(`RACE${round}`);
+        const approve = () => review.approve(ADMIN, diagramId, approval.id);
+        const publish = () => review.publish(SA, diagramId, { versionId: v2 });
+        await Promise.allSettled(round % 2 === 1 ? [publish(), approve()] : [approve(), publish()]);
+        expect(await official(diagramId)).toBe(v2);
+        expect(await count(`SELECT count(*)::int AS n FROM approval WHERE id = $1 AND state = 'pending'`, [approval.id])).toBe(0);
+      }
+    });
+  });
+
   it('khôi phục bản chính thức cũ một cú bấm: phiên bản MỚI chép bản cũ và thành chính thức, không xoá gì', async () => {
     const dev = await newDevice('SW-E2E-RV-RST');
     const { diagramId, versionId: v1 } = await drawn('Khôi phục', deviceCell('d1', dev, 'SW-E2E-RV-RST'), SA.email);

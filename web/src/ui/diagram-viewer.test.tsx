@@ -13,12 +13,26 @@ describe('parseSafeSvg — lưới thứ hai sau cổng server (AD-17)', () => {
     expect(result.value?.querySelector('[data-cell-id="s1"]')).not.toBeNull();
   });
 
+  it('nhận href nội bộ, ảnh data:, url(#id), xml:space — thứ cổng server giữ lại', () => {
+    const markup =
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><linearGradient id="g"/><path id="p" d="M0 0"/></defs>' +
+      '<use xlink:href="#p"/><image href="data:image/png;base64,iVBOR"/><rect fill="url(#g)"/><text xml:space="preserve">a</text></svg>';
+    expect(parseSafeSvg(markup).reason).toBeNull();
+  });
+
   it.each([
     ['script', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'],
     ['foreignObject', '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div>x</div></foreignObject></svg>'],
     ['thuộc tính on*', '<svg xmlns="http://www.w3.org/2000/svg"><rect onload="alert(1)"/></svg>'],
     ['href javascript:', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="javascript:alert(1)"><text>x</text></a></svg>'],
     ['ảnh trỏ ra ngoài', '<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.example/x.png"/></svg>'],
+    ['image x:href ra ngoài (xmlns:x = xlink)', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:x="http://www.w3.org/1999/xlink"><image x:href="https://evil.example/a.png"/></svg>'],
+    ['use x:href sang tệp khác', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:x="http://www.w3.org/1999/xlink"><use x:href="/file.svg#a"/></svg>'],
+    ['href ở không gian tên lạ', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:q="urn:q"><use q:href="/file.svg#a"/></svg>'],
+    ['thuộc tính không gian tên lạ', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:q="urn:q"><rect q:x="1"/></svg>'],
+    ['xml:base', '<svg xmlns="http://www.w3.org/2000/svg" xml:base="https://evil.example/"><use href="#a"/></svg>'],
+    ['url() ra ngoài', '<svg xmlns="http://www.w3.org/2000/svg"><rect style="fill:url(https://evil.example/x)"/></svg>'],
+    ['phần tử ngoài không gian tên SVG', '<svg xmlns="http://www.w3.org/2000/svg"><img xmlns="http://www.w3.org/1999/xhtml" src="https://evil.example/x.png"/></svg>'],
     ['không phải SVG', '<html><body/></html>'],
     ['XML hỏng', '<svg'],
   ])('từ chối: %s', (_name, markup) => {

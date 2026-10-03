@@ -480,6 +480,39 @@ describe('planDeviceImport — cột "U bắt đầu" / "Số U"', () => {
     expect(moved.rows[0].action).toBe('error');
   });
 
+  describe('chồng U xét theo vị trí CUỐI của cả file, không theo thứ tự dòng (bước ghi dời chỗ hai pha)', () => {
+    const a = () => existing({ id: 'dev-a', code: 'SW-A', siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 1, rackUSize: 1 });
+    const b = () => existing({ id: 'dev-b', code: 'SW-B', siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 5, rackUSize: 1 });
+    const row = (code: string, start: string) => ({ ...inRack, 'Mã thiết bị *': code, 'U bắt đầu': start, 'Số U': '1' });
+
+    it.each([
+      ['A dời vào chỗ B, B dời đi ở dòng sau', [row('SW-A', '5'), row('SW-B', '9')]],
+      ['B dời đi trước, A dời vào sau', [row('SW-B', '9'), row('SW-A', '5')]],
+      ['hoán đổi A ↔ B', [row('SW-A', '5'), row('SW-B', '1')]],
+    ])('%s → hợp lệ', (_name, rows) => {
+      const plan = planDeviceImport(sheet(rows), ctx([a(), b()]));
+      expect(plan.rows.map((r) => r.action)).toEqual(['update', 'update']);
+    });
+
+    it.each([
+      ['B đứng yên ở dòng SAU', [row('SW-A', '5'), row('SW-B', '5')]],
+      ['B đứng yên ở dòng TRƯỚC', [row('SW-B', '5'), row('SW-A', '5')]],
+    ])('A dời vào chỗ B mà %s → lỗi ở dòng của A (máy dời), nêu tên B', (_name, rows) => {
+      const plan = planDeviceImport(sheet(rows), ctx([a(), b()]));
+      const rowA = plan.rows.find((r) => r.label === 'SW-A')!;
+      const rowB = plan.rows.find((r) => r.label === 'SW-B')!;
+      expect(rowB.action).toBe('unchanged');
+      expect(rowA.action).toBe('error');
+      expect(rowA.message).toMatch(/SW-B/);
+    });
+
+    it('B dời đi nhưng dòng B lỗi (không được ghi) → B vẫn giữ chỗ, A dời vào bị lỗi', () => {
+      const plan = planDeviceImport(sheet([row('SW-A', '5'), { ...row('SW-B', '9'), 'U bắt đầu': 'abc' }]), ctx([a(), b()]));
+      expect(plan.rows.map((r) => r.action)).toEqual(['error', 'error']);
+      expect(plan.rows[0].message).toMatch(/SW-B/);
+    });
+  });
+
   it('nhập lại đúng U của chính máy đó thì không là chồng U', () => {
     const current = existing({ siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 5, rackUSize: 2 });
     const plan = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '5', 'Số U': '2' }]), ctx([current]));

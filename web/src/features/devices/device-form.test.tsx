@@ -134,7 +134,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     ).toBeInTheDocument();
   });
 
-  /* Vị trí U trong tủ (Story 10.11): hai ô chỉ hiện khi đã chọn tủ; bỏ tủ thì gửi U rỗng. */
+  /* Vị trí U trong tủ: hai ô chỉ hiện khi đã chọn tủ; bỏ tủ thì gửi U rỗng. */
   describe('U bắt đầu / Số U', () => {
     const WITH_CABINET = {
       ...LISTS,

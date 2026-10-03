@@ -263,6 +263,7 @@ export class DiagramReviewService implements OnModuleInit {
       if (diagram.officialVersionId === version.id) {
         throw new ConflictException({ code: 'DIAGRAM_ALREADY_OFFICIAL', message: 'Phiên bản này đã là bản chính thức.' });
       }
+      await assertNotOlderThanOfficial(tx, diagram.officialVersionId, version.seq);
       /*
        * Một bản vẽ một yêu cầu chờ. Khoá ngoại duy nhất của `approval` chỉ chặn theo người gửi;
        * hàng `diagram` đang khoá FOR UPDATE nên hai lượt gửi cùng lúc xếp hàng qua câu kiểm này.
@@ -407,9 +408,11 @@ export class DiagramReviewService implements OnModuleInit {
     if (diagram.officialVersionId === version.id) {
       throw new ConflictException({ code: 'DIAGRAM_ALREADY_OFFICIAL', message: 'Phiên bản này đã là bản chính thức.' });
     }
+    await assertNotOlderThanOfficial(tx, diagram.officialVersionId, version.seq);
     const result = await this.check(version.cellIndex);
     if (result.errors.length > 0) throw checkFailed(result, via.action);
     await tx.update(diagramTable).set({ officialVersionId: version.id, updatedAt: new Date() }).where(eq(diagramTable.id, diagramId));
+    await this.closeOtherPendingWithin(tx, actor, diagramId, via.approvalId, version.seq);
     const changes = {
       versionId: version.id,
       seq: version.seq,
@@ -420,6 +423,21 @@ export class DiagramReviewService implements OnModuleInit {
     await historyRow(tx, diagramId, 'version.published', actor, changes);
     await this.audit.appendWithin(tx, { actor, action: 'diagram.published', objectType: 'diagram', objectId: diagramId, detail: changes });
     return { versionId: version.id, seq: version.seq, warnings: result.warnings };
+  }
+
+  /**
+   * Phát hành xong thì yêu cầu còn chờ (trỏ phiên bản trước đó) không còn nghĩa: để nó mở thì về
+   * sau ai đó bấm Duyệt sẽ kéo bản chính thức lùi về phiên bản cũ. Đóng nó (rút thay người gửi)
+   * trong CÙNG transaction phát hành, kèm lịch sử — nhật ký do `approvals` ghi.
+   */
+  private async closeOtherPendingWithin(tx: Tx, actor: string, diagramId: string, keepApprovalId: string | null, publishedSeq: number) {
+    const open = await this.approvals.list({ kind: DIAGRAM_PUBLISH_KIND, subjectId: diagramId, state: 'pending' });
+    for (const request of open) {
+      if (request.id === keepApprovalId) continue;
+      const note = `Đã phát hành phiên bản #${publishedSeq} — yêu cầu này tự đóng.`;
+      await this.approvals.transitionWithin(tx, request.id, { to: 'withdrawn', actor, note });
+      await historyRow(tx, diagramId, 'review.superseded', actor, { approvalId: request.id, versionId: payloadVersionId(request), publishedSeq });
+    }
   }
 
   /* --------------------------------------------------------- trang duyệt --- */
@@ -656,6 +674,22 @@ export class DiagramReviewService implements OnModuleInit {
  */
 async function historyRow(tx: Tx, diagramId: string, kind: string, actor: string, changes: Record<string, unknown>): Promise<void> {
   await tx.insert(diagramHistoryTable).values({ diagramId, action: kind, actor, changes });
+}
+
+/**
+ * "Cũ hơn" theo số thứ tự phiên bản (`seq` tăng dần trong một bản vẽ). Lùi bản chính thức chỉ đi
+ * đường `restoreOfficial`, vốn chép bản cũ thành phiên bản MỚI — nên gửi duyệt, duyệt hay phát
+ * hành một phiên bản có `seq` nhỏ hơn bản chính thức luôn là yêu cầu đã lỗi thời.
+ */
+async function assertNotOlderThanOfficial(tx: Tx, officialVersionId: string | null, seq: number): Promise<void> {
+  if (!officialVersionId) return;
+  const [official] = await tx.select({ seq: diagramVersionTable.seq }).from(diagramVersionTable).where(eq(diagramVersionTable.id, officialVersionId));
+  if (official && seq < official.seq) {
+    throw new ConflictException({
+      code: 'DIAGRAM_VERSION_STALE',
+      message: `Phiên bản #${seq} cũ hơn bản chính thức hiện hành (#${official.seq}) — mở bản mới nhất rồi gửi lại. Muốn quay về bản cũ thì dùng "Khôi phục làm bản chính thức".`,
+    });
+  }
 }
 
 /** Cùng mã + câu với cổng DTO `@NoSecretText` (Q-19, FR-035): một luật, một câu. */

@@ -234,7 +234,7 @@ describe('Vòng đời hai trạng thái trên DB thật', () => {
       'IP đang dùng là tài sản đang giữ, và lượt dọn hộ đưa nó về trống',
       async () => {
         const live = await seedIp('assigned', { deviceId, usedBy: 'Phong Ke toan' });
-        expect(await retirement.holdingsOf(scratch.db, deviceId)).toEqual([
+        expect(await scratch.db.transaction((tx) => retirement.holdingsOf(tx, deviceId))).toEqual([
           `địa chỉ IP ${addressOfTest()}`,
         ]);
         await scratch.db.transaction((tx) => retirement.releaseWithin(tx, ACTOR, deviceId));
@@ -252,7 +252,7 @@ describe('Vòng đời hai trạng thái trên DB thật', () => {
       'IP trống mà còn mang device_id KHÔNG phải tài sản đang giữ',
       async () => {
         const stale = await seedIp('free', { deviceId });
-        expect(await retirement.holdingsOf(scratch.db, deviceId)).toEqual([]);
+        expect(await scratch.db.transaction((tx) => retirement.holdingsOf(tx, deviceId))).toEqual([]);
         expect(addressesAskedOfNat).toEqual([]);
         await expect(
           scratch.db.transaction((tx) => retirement.releaseWithin(tx, ACTOR, deviceId)),

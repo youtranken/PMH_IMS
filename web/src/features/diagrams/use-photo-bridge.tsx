@@ -14,6 +14,9 @@ interface LooksResponse {
   items: DeviceLook[];
 }
 
+/** Trần số máy một lần hỏi `device-looks` — trùng `DEVICE_LOOKS_MAX_IDS` của api; đổi thì đổi cả hai. */
+export const DEVICE_LOOKS_BATCH = 40;
+
 const CHOICES: PhotoChoice[] = ['icon', 'front', 'back'];
 const CHOICE_KEY: Record<PhotoChoice, string> = { icon: 'diagrams.photo.icon', front: 'diagrams.photo.front', back: 'diagrams.photo.back' };
 
@@ -63,7 +66,18 @@ export function usePhotoBridge({
         setLooks({ imsStyleKeys: [], items: [] });
         return;
       }
-      apiFetch<LooksResponse>(`/api/v1/diagrams/device-looks?ids=${ids.join(',')}`)
+      const batches: string[][] = [];
+      for (let i = 0; i < ids.length; i += DEVICE_LOOKS_BATCH) batches.push(ids.slice(i, i + DEVICE_LOOKS_BATCH));
+      // Tuần tự từng lô: mỗi lô đã bắt server đọc + thu nhỏ tới 2 ảnh mỗi máy.
+      batches
+        .reduce<Promise<LooksResponse>>(
+          (acc, batch) =>
+            acc.then(async (sofar) => {
+              const res = await apiFetch<LooksResponse>(`/api/v1/diagrams/device-looks?ids=${batch.join(',')}`);
+              return { imsStyleKeys: res.imsStyleKeys, items: [...sofar.items, ...res.items] };
+            }),
+          Promise.resolve({ imsStyleKeys: [], items: [] }),
+        )
         .then(setLooks)
         .catch((err: unknown) => setError(errorMessage(err)));
     });

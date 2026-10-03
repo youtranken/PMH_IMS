@@ -24,7 +24,7 @@ class PhotoPairDto {
 }
 
 /**
- * Ảnh thật của thiết bị (Q-23, Story 10.11): ảnh riêng máy chọn từ giấy tờ đính kèm, ảnh theo
+ * Ảnh thật của thiết bị (Q-23): ảnh riêng máy chọn từ giấy tờ đính kèm, ảnh theo
  * model tải lên cho (loại + model). Cùng quyền với sửa hồ sơ thiết bị — việc hằng ngày của cả team.
  */
 @NoStepUp()

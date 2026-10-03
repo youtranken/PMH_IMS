@@ -59,6 +59,8 @@ function historyEntry(row: DiagramHistoryRow, t: TFunction): HistoryEntry {
       return { ...base, action: t('diagrams.history.returned'), detail: typeof changes.note === 'string' ? changes.note : null, tone: 'void' };
     case 'review.withdrawn':
       return { ...base, action: t('diagrams.history.withdrawn'), tone: 'void' };
+    case 'review.superseded':
+      return { ...base, action: t('diagrams.history.superseded', { seq: typeof changes.publishedSeq === 'number' ? changes.publishedSeq : null }), tone: 'void' };
     case 'version.labeled':
       return changes.label
         ? { ...base, action: t('diagrams.history.labeled', { seq }), detail: String(changes.label) }

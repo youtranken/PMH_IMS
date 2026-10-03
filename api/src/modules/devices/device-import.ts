@@ -19,7 +19,7 @@ import { secretTextMessage } from '../../common/no-secret-text';
 import { textLooksLikeSecret } from '../../common/note-secret';
 import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
-import { rackOverlap, rackPlacementChanged, rackUnitsReason } from './rack-units';
+import { rackClaimMoved, rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 
 /**
  * Lõi ĐỐI CHIẾU file thiết bị — hàm THUẦN, không chạm DB, không chạm exceljs.
@@ -218,59 +218,67 @@ export function planDeviceImport(
   return { rows: checked, summary: summarize(checked), hasRecognizedSheet: recognized };
 }
 
-interface RackClaim {
-  cabinetId: string;
-  start: number;
-  size: number;
-}
+type RackSlot = RackClaim & { key: string; code: string; name: string };
 
-/** Chỗ máy sẽ chiếm trong tủ sau khi ghi dòng này; `null` = không chiếm (không U, không tủ, thanh lý). */
-function rackClaimOf(values: Record<string, unknown>, existing: ExistingDevice | undefined): RackClaim | null {
-  const effective = effectiveOf(values);
-  const cabinetId = effective<string | null>('cabinetId', existing?.cabinetId ?? null);
-  const start = effective<number | null>('rackUStart', existing?.rackUStart ?? null);
-  const size = effective<number | null>('rackUSize', existing?.rackUSize ?? null);
-  const status = effective<string | null>('status', existing?.status ?? null);
-  if (!cabinetId || start === null || size === null || status === 'retired') return null;
-  return { cabinetId, start, size };
-}
+const writesRow = (row: DeviceImportRow) => row.action === 'create' || row.action === 'update' || row.action === 'unchanged';
+const textOf = (value: unknown, fallback: string) => (typeof value === 'string' ? value : fallback);
+const rowKey = (row: DeviceImportRow) => normalizeKey(textOf(row.values?.code, row.label));
 
 /**
- * Chồng U (Q-23) xét cả file một lượt: máy đang trong tủ mà file không nhắc tới giữ nguyên chỗ,
- * máy có trong file thì giữ chỗ từ dòng của nó trở đi — nên hai dòng tranh một U thì dòng SAU
- * lỗi, còn máy dời đi ở dòng sau không chặn máy dời tới ở dòng trước. Bước ghi vẫn kiểm lại
- * trong transaction (`assertRackFreeWithin`) và DB chặn chót bằng `device_rack_u_no_overlap`.
+ * Chồng U (Q-23) xét VỊ TRÍ CUỐI của cả file, không theo thứ tự dòng — vì bước ghi dời chỗ hai
+ * pha (gỡ U mọi máy đổi chỗ trước, rồi mới đặt), nên đối chiếu cũng phải nhận đúng những gì bước
+ * ghi làm được: hoán đổi hai máy, hay A dời vào chỗ B mà B dời đi ở dòng sau, đều hợp lệ.
+ *
+ * Máy đứng yên (không có dòng được ghi, dòng lỗi, hay dòng giữ nguyên chỗ) chiếm chỗ hiện có;
+ * máy đổi chỗ / tạo mới xét lần lượt theo dòng trên phần còn trống — chồng U thì lỗi thuộc về
+ * MÁY DỜI TỚI (nêu tên máy đang chiếm), không thuộc máy đứng yên. Máy dời mà dòng bị lỗi thì vẫn
+ * ở chỗ cũ, nên lặp tới khi không còn dòng nào đổi thành lỗi. DB chặn chót bằng
+ * `device_rack_u_no_overlap`.
  */
 function rejectRackOverlaps(rows: DeviceImportRow[], context: DeviceImportContext): DeviceImportRow[] {
-  const inFile = new Set(rows.filter((r) => r.values?.code !== undefined).map((r) => normalizeKey(String(r.values!.code))));
-  const occupants: (RackClaim & { key: string; code: string; name: string })[] = [];
-  for (const [key, device] of context.devices) {
-    if (inFile.has(key)) continue;
-    const claim = rackClaimOf({}, device);
-    if (claim) occupants.push({ ...claim, key, code: device.code, name: device.name });
-  }
-  const textOf = (value: unknown, fallback: string) => (typeof value === 'string' ? value : fallback);
-  return rows.map((row) => {
-    if (row.action !== 'create' && row.action !== 'update' && row.action !== 'unchanged') return row;
-    const key = normalizeKey(textOf(row.values?.code, row.label));
-    const existing = context.devices.get(key);
-    const claim = rackClaimOf(row.values ?? {}, existing);
-    if (!claim) return row;
-    const taken = rackOverlap(
-      claim,
-      occupants.filter((o) => o.cabinetId === claim.cabinetId && o.key !== key),
-    );
-    if (taken) {
-      return {
+  let out = rows;
+  for (let pass = 0; pass <= rows.length; pass += 1) {
+    const written = new Set(out.filter(writesRow).map(rowKey));
+    const placed: RackSlot[] = [];
+    for (const [key, device] of context.devices) {
+      if (written.has(key)) continue;
+      const claim = rackClaimOf({}, device);
+      if (claim) placed.push({ ...claim, key, code: device.code, name: device.name });
+    }
+    const movers: { index: number; slot: RackSlot }[] = [];
+    out.forEach((row, index) => {
+      if (!writesRow(row)) return;
+      const key = rowKey(row);
+      const existing = context.devices.get(key);
+      const claim = rackClaimOf(row.values ?? {}, existing);
+      if (!claim) return;
+      const slot = { ...claim, key, code: textOf(row.values?.code, existing?.code ?? row.label), name: textOf(row.values?.name, existing?.name ?? '') };
+      const current = existing ? rackClaimOf({}, existing) : null;
+      if (current !== null && !rackClaimMoved(claim, current)) placed.push(slot);
+      else movers.push({ index, slot });
+    });
+
+    const next = [...out];
+    let changed = false;
+    for (const { index, slot } of movers) {
+      const taken = rackOverlap(slot, placed.filter((o) => o.cabinetId === slot.cabinetId && o.key !== slot.key));
+      if (!taken) {
+        placed.push(slot);
+        continue;
+      }
+      const row = out[index];
+      next[index] = {
         rowNumber: row.rowNumber,
         label: row.label,
         action: 'error',
         message: `Chỗ U này trong tủ đang có ${taken.code} (${taken.name}) chiếm — hai máy không chồng U trong cùng tủ.`,
       };
+      changed = true;
     }
-    occupants.push({ ...claim, key, code: textOf(row.values?.code, existing?.code ?? row.label), name: textOf(row.values?.name, existing?.name ?? '') });
-    return row;
-  });
+    out = next;
+    if (!changed) break;
+  }
+  return out;
 }
 
 function planRow(

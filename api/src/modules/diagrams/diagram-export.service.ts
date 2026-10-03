@@ -20,7 +20,7 @@ import {
   type ExportStatus,
   type LegendItem,
 } from './diagram-export';
-import { EXPORT_TIMEOUT_CODE, pngToPdf, renderPng } from './diagram-render';
+import { EXPORT_TIMEOUT_CODE, EXPORT_UNSAFE_CODE, pngToPdf, renderPng } from './diagram-render';
 import { diagramHistoryTable, diagramTable, diagramVersionLabelTable, diagramVersionTable } from './diagram.schema';
 
 export type ExportFormat = 'png' | 'pdf';
@@ -95,6 +95,12 @@ export class DiagramExportService {
     try {
       png = await renderPng(composed.svg, scale.value, timeoutSeconds * 1000);
     } catch (error) {
+      if ((error as Error).message === EXPORT_UNSAFE_CODE) {
+        throw new BadRequestException({
+          code: 'DIAGRAM_EXPORT_UNSAFE',
+          message: 'Ảnh xem của phiên bản này trỏ tới tài nguyên ngoài bản vẽ — không xuất. Mở bản vẽ rồi lưu lại để làm sạch.',
+        });
+      }
       if ((error as Error).message === EXPORT_TIMEOUT_CODE) {
         throw new ServiceUnavailableException({
           code: 'DIAGRAM_EXPORT_TIMEOUT',

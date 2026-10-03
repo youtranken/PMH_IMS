@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
 import type { DrawioCommand } from '@/ui/drawio-protocol';
-import { usePhotoBridge } from './use-photo-bridge';
+import { DEVICE_LOOKS_BATCH, usePhotoBridge } from './use-photo-bridge';
 
 /**
- * Công tắc "Biểu tượng / Ảnh thật" (Story 10.11): hộp liệt kê ô thiết bị của trang đang mở; lựa
+ * Công tắc "Biểu tượng / Ảnh thật": hộp liệt kê ô thiết bị của trang đang mở; lựa
  * chọn không có ảnh thì tắt kèm lý do; chọn ảnh là sửa ô bằng `patch` (không `merge`).
  */
 const DEV = '7b0c1c1e-0000-4000-8000-000000000001';
@@ -80,6 +80,36 @@ describe('usePhotoBridge — công tắc Biểu tượng / Ảnh thật', () => 
     const update = command.patch.u.p1.cells.u.c1;
     expect(update.style).toBe('fillColor=none;shape=image;image=data:image/png,AAAA;imageAspect=1;html=0;');
     expect(update.xmlValue).toContain('ims_photo="front"');
+  });
+
+  it('trang nhiều máy: hỏi theo lô DEVICE_LOOKS_BATCH (trần của server), gộp kết quả', async () => {
+    const ids = Array.from({ length: DEVICE_LOOKS_BATCH + 5 }, (_, i) => `7b0c1c1e-0000-4000-8000-${String(i).padStart(12, '0')}`);
+    const many =
+      '<mxfile><diagram id="p1" name="A"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>' +
+      ids
+        .map(
+          (id, i) =>
+            `<UserObject label="SW-E2E-${i}" ims_device_id="${id}" ims_device_code="SW-E2E-${i}" id="c${i}"><mxCell style="shape=mxgraph.cisco.switch;html=0;" vertex="1" parent="1"><mxGeometry width="10" height="10" as="geometry"/></mxCell></UserObject>`,
+        )
+        .join('') +
+      '</root></mxGraphModel></diagram></mxfile>';
+    const asked: string[][] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const batch = new URL(url, 'http://x').searchParams.get('ids')!.split(',');
+        asked.push(batch);
+        return Promise.resolve(
+          jsonResponse(200, { imsStyleKeys: LOOKS.imsStyleKeys, items: batch.map((id) => ({ id, found: true, icon: 'shape=x;', front: null, back: null })) }),
+        );
+      }),
+    );
+    renderWithI18n(<Harness sent={[]} withFile={(fn) => fn(many)} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Ảnh thật…' }));
+    await screen.findByRole('radiogroup', { name: `Hình của SW-E2E-${ids.length - 1}` });
+    expect(asked.map((b) => b.length)).toEqual([DEVICE_LOOKS_BATCH, 5]);
+    expect(screen.getAllByRole('radiogroup')).toHaveLength(ids.length);
   });
 
   it('chọn xong là hộp đánh dấu ngay lựa chọn mới, không chờ trình vẽ trả lại tệp', async () => {

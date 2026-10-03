@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path';
 import { renderAsync } from '@resvg/resvg-js';
 import { PDFDocument } from 'pdf-lib';
+import { svgRenderReason } from '../../common/svg-sanitize';
 
 /**
  * Raster hoá file xuất bản vẽ (FR-044) ngay trong api — KHÔNG gọi servlet `/export` của draw.io
@@ -20,12 +21,16 @@ const FONT_DIR = join(dirname(require.resolve('dejavu-fonts-ttf/package.json')),
 const FONT_FILES = [join(FONT_DIR, 'DejaVuSans.ttf'), join(FONT_DIR, 'DejaVuSans-Bold.ttf')];
 
 export const EXPORT_TIMEOUT_CODE = 'DIAGRAM_EXPORT_TIMEOUT';
+export const EXPORT_UNSAFE_CODE = 'DIAGRAM_EXPORT_UNSAFE';
 
 /**
  * SVG → PNG ở độ nét `scale`. Quá `timeoutMs` thì ném `DIAGRAM_EXPORT_TIMEOUT`: luồng vẽ chạy nốt
  * trong threadpool (không huỷ được) nhưng người xuất nhận lỗi thay vì treo request.
  */
 export async function renderPng(svg: string, scale: number, timeoutMs: number): Promise<Buffer> {
+  // resvg đọc thẳng tệp cục bộ theo href và không có tuỳ chọn tắt — soi lại ngay trước khi vẽ,
+  // không tin rằng SVG đã qua cổng lúc lưu (dữ liệu có thể bị sửa ngoài ứng dụng).
+  if (svgRenderReason(svg) !== null) throw new Error(EXPORT_UNSAFE_CODE);
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => reject(new Error(EXPORT_TIMEOUT_CODE)), timeoutMs);

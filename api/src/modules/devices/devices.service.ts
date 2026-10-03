@@ -30,7 +30,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
 import { deviceHistoryTable, deviceTable } from './devices.schema';
-import { rackOverlap, rackPlacementChanged, rackUnitsReason } from './rack-units';
+import { rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 import type {
   DeviceFilter,
   DeviceHistoryRecord,
@@ -58,13 +58,6 @@ export interface DeviceInput {
   note?: string | null;
   rackUStart?: number | null;
   rackUSize?: number | null;
-}
-
-/** Chỗ một máy sẽ chiếm trong tủ sau lượt ghi — kiểm chồng U trong transaction. */
-export interface RackClaim {
-  cabinetId: string;
-  start: number;
-  size: number;
 }
 
 /**
@@ -404,6 +397,17 @@ export class DevicesService {
     });
   }
 
+  /**
+   * Gỡ U của các máy sắp ĐỔI chỗ trong tủ, trong transaction của lượt ghi hàng loạt — pha một của
+   * dời chỗ hai pha (import): hoán đổi hai máy, hay A dời vào chỗ B mà B dời đi ở dòng sau, chỉ
+   * ghi được khi chỗ cũ đã trống trước lúc đặt chỗ mới. Nơi gọi PHẢI đặt lại U cho từng máy trong
+   * cùng transaction; không ghi lịch sử (trạng thái trung gian, không ai thấy).
+   */
+  async vacateRackWithin(tx: Tx, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await tx.update(deviceTable).set({ rackUStart: null, rackUSize: null }).where(inArray(deviceTable.id, ids));
+  }
+
   /** Dùng chung cho import hàng loạt — đã có transaction bao ngoài. */
   async insertWithin(tx: Tx, values: Record<string, unknown>): Promise<DeviceRecord> {
     try {
@@ -559,7 +563,7 @@ export class DevicesService {
     const start = effective<number | null>('rackUStart', current?.rackUStart ?? null);
     const size = effective<number | null>('rackUSize', current?.rackUSize ?? null);
     if (start === null && size === null) return;
-    const cabinet = cabinetId ? (await this.catalog.lists({ includeInactive: true })).cabinets.find((c) => c.id === cabinetId) : undefined;
+    const cabinet = cabinetId ? (await this.catalog.cabinetsByIds([cabinetId])).get(cabinetId) : undefined;
     const reason = rackUnitsReason({
       start,
       size,
@@ -899,20 +903,6 @@ function placementOf(
     start: effective<number | null>('rackUStart', current?.rackUStart ?? null),
     size: effective<number | null>('rackUSize', current?.rackUSize ?? null),
   };
-}
-
-/** Chỗ máy sẽ chiếm sau lượt ghi; `null` = không chiếm (không tủ, không U, đã thanh lý). */
-export function rackClaimOf(
-  values: Record<string, unknown>,
-  current: { cabinetId: string | null; rackUStart: number | null; rackUSize: number | null; status: string } | null,
-): RackClaim | null {
-  const effective = effectiveOf(values);
-  const cabinetId = effective<string | null>('cabinetId', current?.cabinetId ?? null);
-  const start = effective<number | null>('rackUStart', current?.rackUStart ?? null);
-  const size = effective<number | null>('rackUSize', current?.rackUSize ?? null);
-  const status = effective<string | null>('status', current?.status ?? null);
-  if (!cabinetId || start === null || size === null || status === 'retired') return null;
-  return { cabinetId, start, size };
 }
 
 function rackTaken(claim: RackClaim, taken: { code: string; name: string }): ConflictException {

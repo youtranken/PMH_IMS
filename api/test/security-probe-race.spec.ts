@@ -4,6 +4,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noSweep } from './sweep-stub';
 
 /**
  * CẢNH BÁO DÒ KÉT CHỈ ĐƯỢC ĐI MỘT LÁ, KỂ CẢ KHI BỊ BẮN SONG SONG.
@@ -70,7 +71,7 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
     probe = new SecurityProbeService(
       scratch.db,
       config,
-      new OutboxService(scratch.db),
+      new OutboxService(scratch.db, config, noSweep),
       new AuditWriterService(scratch.db),
     );
   }, TEST_TIMEOUT);

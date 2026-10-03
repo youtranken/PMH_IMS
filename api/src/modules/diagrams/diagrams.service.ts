@@ -60,6 +60,7 @@ import {
 } from './diagram-hydrate';
 import { rackUnitLabel } from '../../common/rack-units';
 import { sizeReason } from '../../common/svg-sanitize';
+import { mapWithLimit } from '../../common/map-limit';
 import { canManageNode, plannedNotAllowedReason, presentationName, type PresentationSource } from './diagram-presentation';
 import {
   diagramHistoryTable,
@@ -244,6 +245,24 @@ export const SUBNET_FREE_PREVIEW = 5;
 
 /** Trần số máy một lần hỏi `device-info` — hơn thế là gọi nhầm, không phải một bản vẽ. */
 export const DEVICE_INFO_MAX_IDS = 500;
+
+/** Bản vẽ (chỉ tên + id — thông tin của cây, không phải nội dung) có một máy ở phiên bản mới nhất. */
+export interface DiagramRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * Trần số máy một lần hỏi `device-looks`. Khác `device-info`: mỗi máy kéo theo tới HAI ảnh thật
+ * (đọc tệp + thu nhỏ trên threadpool) nhúng thẳng vào câu trả lời, nên 500 máy là hàng trăm MB và
+ * một request giữ CPU cả phút. Web chia danh sách máy của trang thành từng lô cỡ này
+ * (`DEVICE_LOOKS_BATCH` ở `use-photo-bridge.tsx` — đổi thì đổi cả hai). Đây là trần kỹ thuật của
+ * một request, không phải tham số nghiệp vụ.
+ */
+export const DEVICE_LOOKS_MAX_IDS = 40;
+
+/** Ảnh thật đọc + thu nhỏ song song tối đa từng này tấm một lượt (`mapWithLimit`). */
+const PHOTO_LOAD_CONCURRENCY = 4;
 
 export interface SaveInput {
   xml: string;
@@ -784,9 +803,9 @@ export class DiagramsService {
       }
     }
     if (fresh.cabinetIds.length > 0) {
-      const { cabinets } = await this.catalog.lists({ includeInactive: true });
+      const cabinets = await this.catalog.cabinetsByIds(fresh.cabinetIds);
       for (const id of fresh.cabinetIds) {
-        const cabinet = cabinets.find((c) => c.id === id);
+        const cabinet = cabinets.get(id);
         if (!cabinet) reasons.push(`Tủ gắn trên khung (${id}) không tồn tại.`);
         else if (!cabinet.active) reasons.push(`Tủ ${cabinet.code} đã ngừng dùng — không gắn khung mới vào nó.`);
       }
@@ -800,8 +819,7 @@ export class DiagramsService {
    * đó là việc của cảnh báo lệch kho.
    */
   async cabinetFrame(cabinetId: string): Promise<CabinetFrame> {
-    const { cabinets } = await this.catalog.lists({ includeInactive: true });
-    const cabinet = cabinets.find((c) => c.id === cabinetId);
+    const cabinet = (await this.catalog.cabinetsByIds([cabinetId])).get(cabinetId);
     if (!cabinet) throw new NotFoundException({ code: 'CABINET_NOT_FOUND', message: 'Không tìm thấy tủ này.' });
     const page = await this.devices.listUsableIn({ cabinetId }, DEVICE_INFO_MAX_IDS + 1);
     if (page.total > DEVICE_INFO_MAX_IDS) {
@@ -1041,16 +1059,18 @@ export class DiagramsService {
     const sources = new Map<string, DeviceCellSource>();
     if (unique.length === 0) return { infos: [], sources };
     const valid = unique.filter((id) => UUID_RE.test(id));
-    const [devices, ips, lists, photoFiles] = await Promise.all([
+    const [devices, ips, photoFiles] = await Promise.all([
       this.devices.getByIds(valid),
       this.ipam.heldAddressesOf(valid),
-      this.catalog.lists({ includeInactive: true }),
       this.devices.photoSources(valid),
     ]);
-    const looks = await this.catalog.diagramLooks([...devices.values()].map((d) => d.deviceTypeId));
-    const photos = await this.photoUris(photoFiles, photoNeeds);
-    const vendors = new Map(lists.vendors.map((v) => [v.id, v]));
-    const cabinets = new Map(lists.cabinets.map((c) => [c.id, c]));
+    const found = [...devices.values()];
+    const [looks, photos, vendors, cabinets] = await Promise.all([
+      this.catalog.diagramLooks(found.map((d) => d.deviceTypeId)),
+      this.photoUris(photoFiles, photoNeeds),
+      this.catalog.vendorsByIds(found.flatMap((d) => (d.vendorId ? [d.vendorId] : []))),
+      this.catalog.cabinetsByIds(found.flatMap((d) => (d.cabinetId ? [d.cabinetId] : []))),
+    ]);
     const infos = unique.map((id): DiagramDeviceInfo => {
       const device = devices.get(id);
       if (!device) return { ...emptyInfo(id), cell: deviceInsertCell(missingSource('')) };
@@ -1103,12 +1123,14 @@ export class DiagramsService {
       }
     }
     const out = new Map<string, Partial<Record<PhotoSide, DevicePhoto>>>();
-    for (const [fileId, targets] of wanted) {
-      const image = await this.devices.photoImage(fileId);
-      if (!image) continue;
+    const entries = [...wanted];
+    const images = await mapWithLimit(entries, PHOTO_LOAD_CONCURRENCY, ([fileId]) => this.devices.photoImage(fileId));
+    entries.forEach(([fileId, targets], i) => {
+      const image = images[i];
+      if (!image) return;
       const uri = photoDataUri(image.mime, image.bytes);
       for (const { deviceId, side } of targets) out.set(deviceId, { ...out.get(deviceId), [side]: { fileId, uri } });
-    }
+    });
     return out;
   }
 
@@ -1117,20 +1139,36 @@ export class DiagramsService {
    * để trình nội bộ, liệt kê nó chỉ làm nhiễu. Thẻ thông tin "Có mặt trong các bản vẽ" và trang thiết bị (web gọi, AD-18: không module nào import `diagrams`). Chỉ tên + id: đây
    * là thông tin của cây, không phải nội dung bản vẽ.
    */
-  async diagramsWithDevice(deviceId: string): Promise<{ id: string; name: string }[]> {
-    const { rows } = await this.db.execute<{ id: string; name: string }>(sql`
-      SELECT d.id, d.name
+  async diagramsWithDevice(deviceId: string): Promise<DiagramRef[]> {
+    return (await this.diagramsWithDevices([deviceId])).get(deviceId) ?? [];
+  }
+
+  /**
+   * `diagramsWithDevice` cho nhiều máy MỘT câu — tìm máy / chỉ đường trên sơ đồ dùng cái này. Một
+   * luật cho cả hai nơi: hai câu SQL riêng là hai thứ tự, hai cách hiểu "phiên bản mới nhất".
+   */
+  async diagramsWithDevices(deviceIds: string[]): Promise<Map<string, DiagramRef[]>> {
+    const out = new Map<string, DiagramRef[]>();
+    const ids = [...new Set(deviceIds)].filter((id) => UUID_RE.test(id));
+    if (ids.length === 0) return out;
+    const { rows } = await this.db.execute<{ device_id: string; id: string; name: string }>(sql`
+      SELECT DISTINCT c.value ->> 'deviceId' AS device_id, d.id, d.name, lower(d.name) AS sort_name
         FROM diagram d
         JOIN LATERAL (
           SELECT v.cell_index FROM diagram_version v
            WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
         ) lv ON true
+        CROSS JOIN LATERAL jsonb_array_elements(lv.cell_index -> 'cells') c
        WHERE d.archived_at IS NULL
          AND d.kind = 'official'
-         AND lv.cell_index -> 'cells' @> ${JSON.stringify([{ deviceId }])}::jsonb
-       ORDER BY lower(d.name), d.id
+         AND c.value ->> 'deviceId' IN (${sql.join(
+           ids.map((id) => sql`${id}`),
+           sql`, `,
+         )})
+       ORDER BY sort_name, d.id
     `);
-    return rows;
+    for (const row of rows) out.set(row.device_id, [...(out.get(row.device_id) ?? []), { id: row.id, name: row.name }]);
+    return out;
   }
 
   async changes(diagramId: string, versionId: string): Promise<CellDiff> {

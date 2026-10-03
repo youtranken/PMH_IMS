@@ -209,7 +209,7 @@ export function buildCellIndex(xml: string): CellIndex {
 }
 
 /**
- * Lớp draw.io và tên của nó, theo thứ tự trong XML — trình xem bật/tắt lớp (Story chỉ-xem). Tên
+ * Lớp draw.io và tên của nó, theo thứ tự trong XML — trình xem bật/tắt lớp. Tên
  * không nằm trong chỉ mục ô đã lưu, nên đọc lại từ XML lúc mở; cùng định nghĩa "lớp" với
  * `buildCellIndex` (ô có cha là ô gốc). Lớp mặc định không tên trả `name: ''`, web tự đặt nhãn.
  */

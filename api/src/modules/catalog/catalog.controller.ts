@@ -156,7 +156,7 @@ export class CatalogController {
     return { svg: await this.catalog.diagramIcon(params.id) };
   }
 
-  /** Chỉ SA tải biểu tượng riêng (Story Thiết bị kho): tệp lạ đi vào mọi bản vẽ có loại này. */
+  /** Chỉ SA tải biểu tượng riêng: tệp lạ đi vào mọi bản vẽ có loại này. */
   @Roles('sa')
   @Post('device-types/:id/diagram-icon')
   @Audited('catalog.updated', 'catalog', { writtenByService: true })
