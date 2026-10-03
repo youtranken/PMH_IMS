@@ -133,18 +133,19 @@ cd e2e && npx playwright test tests/<mảng>*.spec.ts --reporter=line
   `UPDATE system_config SET value = '20' WHERE key = 'login.rate_limit_per_ip';`
 - `--e2e-fast` (bỏ các bài `@slow`) dùng khi muốn soát rộng giữa chừng. Nó không thay được `--e2e`
   khi tầng cuối bắt buộc đầy đủ.
+- GitHub Actions chỉ chạy lint · depcruise · unit · build. **E2E và `test:db` không có ai ép ngoài
+  tầng cuối ở trên.** GitHub xanh không có nghĩa là DoD gạch 7 đã đạt.
 
 **E2E theo phạm vi** = spec của mảng mới + spec của mọi màn/luồng mà diff có chạm (đối chiếu
 `git diff --name-only master...HEAD` với spec dùng màn đó; kèm `security.spec.ts` nếu chạm API).
 
 **Bắt buộc E2E đầy đủ** khi diff chạm phần lõi dùng chung, vì lỗi ở đây hiện ra ở màn khác hẳn
-(Epic 10: đổi phạm vi step-up làm đỏ break-glass và nhật ký, không phải màn sơ đồ):
+(ví dụ Epic 10 đổi phạm vi step-up: ảnh hưởng mọi luồng két, tài khoản, break-glass chứ không
+chỉ màn sơ đồ):
 - auth / session / step-up / CSRF / throttle (`api/src/modules/auth`, `api/src/common`);
 - shell, layout, router, `web/src/ui` dùng chung, `web/src/css` dùng chung, `web/src/lib`;
 - migration sửa bảng đã có (thêm cột/ràng buộc), `system_config` dùng chung;
 - hạ tầng E2E: `e2e/tests/helpers.ts`, `global-setup.ts`, `global-teardown.ts`, `reset-e2e.mjs`.
-- GitHub Actions chỉ chạy lint · depcruise · unit · build. **E2E và `test:db` không có ai ép ngoài
-  tầng cuối ở trên.** GitHub xanh không có nghĩa là DoD gạch 7 đã đạt.
 
 ## Luật viết E2E
 
