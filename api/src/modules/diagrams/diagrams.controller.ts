@@ -8,6 +8,7 @@ import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DiagramDriftService } from './diagram-drift.service';
+import { DiagramNavigationService } from './diagram-navigation.service';
 import { DiagramReviewService, type ReviewedNode } from './diagram-review.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
 import { DEVICE_INFO_MAX_IDS, DiagramsService } from './diagrams.service';
@@ -53,6 +54,15 @@ class DeviceInfoQueryDto {
 class DeviceParamDto {
   @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
   deviceId!: string;
+}
+
+class FindQueryDto {
+  @IsString() @Length(2, 100, { message: 'Gõ từ 2 đến 100 ký tự để tìm.' }) q!: string;
+}
+
+class PathQueryDto {
+  @IsUUID(undefined, { message: 'Máy đầu không hợp lệ.' }) from!: string;
+  @IsUUID(undefined, { message: 'Máy cuối không hợp lệ.' }) to!: string;
 }
 
 class ContentQueryDto {
@@ -139,6 +149,7 @@ export class DiagramsController {
     private readonly config: SystemConfigService,
     private readonly review: DiagramReviewService,
     private readonly drift: DiagramDriftService,
+    private readonly navigation: DiagramNavigationService,
   ) {}
 
   /** Cây kèm "lệch kho (N)" của bản chính thức hiện hành — đọc bộ đệm, không đọc kho (Q-23). */
@@ -222,6 +233,26 @@ export class DiagramsController {
   @Get('by-device/:deviceId')
   byDevice(@Param() params: DeviceParamDto) {
     return this.diagrams.diagramsWithDevice(params.deviceId);
+  }
+
+  /**
+   * Ô tìm của trình xem: máy khớp mã/tên/IP + bản vẽ chính thức chứa nó (tên + id) — máy không có
+   * trên bản đang xem thì bấm mở bản vẽ kia rồi bay tới. Thông tin của cây, không cần mã sơ đồ.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('find')
+  find(@Query() query: FindQueryDto) {
+    return this.navigation.find(query.q);
+  }
+
+  /**
+   * "Chỉ đường" giữa hai máy trên sơ đồ cổng (chỉ đọc qua `devices.api`). Trả máy + dây + tên bản vẽ
+   * chứa từng máy, không trả nội dung bản vẽ: web tự tô đoạn nằm trên bản đang mở.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('path')
+  path(@Query() query: PathQueryDto) {
+    return this.navigation.path(query.from, query.to);
   }
 
   @Roles('sa', 'admin', 'member')

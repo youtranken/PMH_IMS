@@ -79,6 +79,8 @@ export type ReviewedStatus = DiagramStatus | 'pending';
 export interface ReviewedNode extends Omit<DiagramNode, 'status'> {
   status: ReviewedStatus;
   officialSeq: number | null;
+  /** Phiên bản chính thức hiện hành — trình chiếu mở đúng bản này (id phiên bản không phải nội dung). */
+  officialVersionId: string | null;
   pendingApprovalId: string | null;
 }
 
@@ -215,17 +217,18 @@ export class DiagramReviewService implements OnModuleInit {
       (await this.approvals.pending(DIAGRAM_PUBLISH_KIND)).filter((a) => ids.has(a.subjectId)).map((a) => [a.subjectId, a.id]),
     );
     const official = await this.db
-      .select({ diagramId: diagramTable.id, seq: diagramVersionTable.seq })
+      .select({ diagramId: diagramTable.id, seq: diagramVersionTable.seq, versionId: diagramVersionTable.id })
       .from(diagramTable)
       .innerJoin(diagramVersionTable, eq(diagramVersionTable.id, diagramTable.officialVersionId))
       .where(inArray(diagramTable.id, [...ids]));
-    const seqOf = new Map(official.map((r) => [r.diagramId, r.seq]));
+    const officialOf = new Map(official.map((r) => [r.diagramId, r]));
     return nodes.map((node) => {
       const pendingApprovalId = pending.get(node.id) ?? null;
       return {
         ...node,
         status: pendingApprovalId ? 'pending' : node.status,
-        officialSeq: seqOf.get(node.id) ?? null,
+        officialSeq: officialOf.get(node.id)?.seq ?? null,
+        officialVersionId: officialOf.get(node.id)?.versionId ?? null,
         pendingApprovalId,
       };
     });

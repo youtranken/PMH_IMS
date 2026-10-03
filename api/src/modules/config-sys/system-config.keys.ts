@@ -220,6 +220,12 @@ export const CONFIG_KEYS = {
    */
   diagramDriftNotifyEnabled: { key: 'diagram.drift_notify_enabled', fallback: 1 },
   diagramDriftSweepHour: { key: 'diagram.drift_sweep_hour', fallback: 7 },
+  /*
+   * "Chỉ đường" giữa hai máy dò sơ đồ cổng từng tầng một (mỗi tầng một câu đọc): đường dài hơn
+   * chừng này dây coi như không có — chặn một lượt hỏi đi lan khắp kho, và đường mạng thật trong
+   * một bệnh viện hiếm khi quá chục bước.
+   */
+  diagramPathMaxHops: { key: 'diagram.path_max_hops', fallback: 12 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

@@ -3587,6 +3587,7 @@ export default {
     unitCells: 'ô',
     unitDevices: 'thiết bị',
     unitMegapixels: 'triệu điểm ảnh',
+    unitHops: 'dây',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -3691,5 +3692,7 @@ export default {
     diagramDriftNotifyEnabledDesc: 'Lượt quét hằng ngày email người phụ trách khi số mục lệch kho của bản chính thức tăng. Tắt thì cây bản vẽ vẫn hiện "Lệch kho".',
     diagramDriftSweepHourLabel: 'Giờ quét lệch kho hằng ngày',
     diagramDriftSweepHourDesc: 'Từ giờ này (0–23, giờ Việt Nam) mỗi ngày quét một lượt mọi bản chính thức.',
+    diagramPathMaxHopsLabel: 'Số dây tối đa khi "Chỉ đường" giữa hai máy',
+    diagramPathMaxHopsDesc: 'Hai máy cách nhau nhiều dây hơn chừng này thì báo không có đường nối. Cao quá làm một lượt tìm đọc lan khắp sơ đồ cổng.',
   },
 } as const;
