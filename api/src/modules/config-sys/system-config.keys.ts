@@ -202,6 +202,12 @@ export const CONFIG_KEYS = {
    * vẽ (hydrate), nên một biểu tượng to nhân lên theo số máy và đè lên trần `diagram.xml_max_kb`.
    */
   diagramIconSvgMaxKb: { key: 'diagram.icon_svg_max_kb', fallback: 100 },
+  /*
+   * Xuất PNG/PDF bản vẽ raster hoá trong RAM của api (4 byte một điểm ảnh): trần điểm ảnh chặn một
+   * bản vẽ khổng lồ ăn hàng trăm MB, trần thời gian để người xuất nhận lỗi thay vì treo request.
+   */
+  diagramExportMaxMegapixels: { key: 'diagram.export_max_megapixels', fallback: 40 },
+  diagramExportTimeoutSeconds: { key: 'diagram.export_timeout_seconds', fallback: 30 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

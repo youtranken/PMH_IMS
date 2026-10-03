@@ -2717,6 +2717,7 @@ export default {
       diagramVersionRestored: 'Khôi phục phiên bản bản vẽ',
       diagramEditingStarted: 'Mở sửa bản vẽ sơ đồ',
       diagramPublished: 'Phát hành bản vẽ thành bản chính thức',
+      diagramExported: 'Xuất bản vẽ ra PNG/PDF',
       diagramCommented: 'Ghim bình luận trên bản vẽ',
       diagramCommentResolved: 'Đánh dấu ghim đã xử lý',
       diagramCommentReopened: 'Mở lại ghim',
@@ -3358,6 +3359,7 @@ export default {
     unitFiles: 'file',
     unitKb: 'KB',
     unitCells: 'ô',
+    unitMegapixels: 'triệu điểm ảnh',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -3451,5 +3453,10 @@ export default {
       'Người đang mở sửa một bản vẽ mà im lặng quá khoảng này thì người khác thôi thấy dòng "Đang có … mở sửa bản vẽ này".',
     diagramIconSvgMaxKbLabel: 'Dung lượng tối đa biểu tượng SVG của loại thiết bị',
     diagramIconSvgMaxKbDesc: 'Biểu tượng nằm trong mọi ô thiết bị loại đó trên bản vẽ; to quá làm bản vẽ nặng và chạm trần dung lượng bản vẽ.',
+    diagramExportMaxMegapixelsLabel: 'Cỡ ảnh tối đa khi xuất PNG/PDF bản vẽ',
+    diagramExportMaxMegapixelsDesc:
+      'Bản vẽ lớn hơn thì xuất ở độ nét thấp hơn; vượt cả ở độ nét thường thì bị từ chối. Cao quá làm máy chủ tốn nhiều bộ nhớ.',
+    diagramExportTimeoutSecondsLabel: 'Thời gian tối đa xuất PNG/PDF bản vẽ',
+    diagramExportTimeoutSecondsDesc: 'Xuất lâu hơn chừng này thì báo lỗi thay vì để người dùng chờ mãi.',
   },
 } as const;

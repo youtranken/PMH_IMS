@@ -34,7 +34,8 @@ export type SettingUnit =
   | 'mb'
   | 'kb'
   | 'files'
-  | 'cells';
+  | 'cells'
+  | 'megapixels';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -111,6 +112,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramMaxCells', group: 'diagram', type: 'int', unit: 'cells', min: 500, max: 20000, warnAbove: 10000 },
   { name: 'diagramPresenceTtlSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 20, max: 600 },
   { name: 'diagramIconSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 10, max: 500 },
+  { name: 'diagramExportMaxMegapixels', group: 'diagram', type: 'int', unit: 'megapixels', min: 4, max: 100, warnAbove: 60 },
+  { name: 'diagramExportTimeoutSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 5, max: 120 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

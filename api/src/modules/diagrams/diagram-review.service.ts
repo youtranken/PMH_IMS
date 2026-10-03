@@ -88,6 +88,20 @@ export interface SubmitInput {
   versionId?: string;
 }
 
+/** Một lần phát hành: phiên bản nào thành chính thức, lúc nào. */
+export interface PublicationEvent {
+  versionId: string;
+  seq: number;
+  at: string;
+}
+
+export interface Publications {
+  officialVersionId: string | null;
+  publishedVersionIds: string[];
+  /** Cũ trước. */
+  events: PublicationEvent[];
+}
+
 export interface PublishResult {
   versionId: string;
   seq: number;
@@ -128,6 +142,8 @@ export interface ReviewPage {
   versionId: string | null;
   seq: number | null;
   officialSeq: number | null;
+  /** Bản chính thức hiện hành — "Xem so sánh với bản chính thức" so phiên bản chờ duyệt với nó. */
+  officialVersionId: string | null;
   /** Một dòng so với bản chính thức (Q-23: không bắt bấm qua từng thay đổi). */
   summary: string | null;
   errors: Finding[];
@@ -350,16 +366,26 @@ export class DiagramReviewService implements OnModuleInit {
     });
   }
 
-  /** Phiên bản chính thức hiện tại + mọi phiên bản từng phát hành (để mở "khôi phục làm chính thức"). */
-  async publications(diagramId: string): Promise<{ officialVersionId: string | null; publishedVersionIds: string[] }> {
+  /**
+   * Phiên bản chính thức hiện tại + mọi phiên bản từng phát hành (để mở "khôi phục làm chính
+   * thức") + từng sự kiện phát hành theo thời gian — thanh trượt thời gian tìm "bản chính thức
+   * hiệu lực ngày X" trên dãy này (sự kiện phát hành là nguồn sự thật, Q-23).
+   */
+  async publications(diagramId: string): Promise<Publications> {
     const [diagram] = await this.db.select({ official: diagramTable.officialVersionId }).from(diagramTable).where(eq(diagramTable.id, diagramId));
     if (!diagram) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
     const rows = await this.db
-      .select({ changes: diagramHistoryTable.changes })
+      .select({ changes: diagramHistoryTable.changes, createdAt: diagramHistoryTable.createdAt })
       .from(diagramHistoryTable)
-      .where(and(eq(diagramHistoryTable.diagramId, diagramId), eq(diagramHistoryTable.action, 'version.published')));
-    const ids = rows.map((r) => String((r.changes as { versionId?: string } | null)?.versionId ?? '')).filter(Boolean);
-    return { officialVersionId: diagram.official, publishedVersionIds: [...new Set(ids)] };
+      .where(and(eq(diagramHistoryTable.diagramId, diagramId), eq(diagramHistoryTable.action, 'version.published')))
+      .orderBy(asc(diagramHistoryTable.createdAt), asc(diagramHistoryTable.id));
+    const events = rows
+      .map((r) => {
+        const changes = (r.changes ?? {}) as { versionId?: unknown; seq?: unknown };
+        return { versionId: typeof changes.versionId === 'string' ? changes.versionId : '', seq: Number(changes.seq ?? 0), at: r.createdAt.toISOString() };
+      })
+      .filter((e) => e.versionId);
+    return { officialVersionId: diagram.official, publishedVersionIds: [...new Set(events.map((e) => e.versionId))], events };
   }
 
   private async publishWithin(
@@ -407,7 +433,7 @@ export class DiagramReviewService implements OnModuleInit {
       ? await this.db.select({ seq: diagramVersionTable.seq, cellIndex: diagramVersionTable.cellIndex }).from(diagramVersionTable).where(eq(diagramVersionTable.id, diagram.official))
       : [];
     if (!request || !version) {
-      return { approval: null, versionId: null, seq: null, officialSeq: official?.seq ?? null, summary: null, errors: [], warnings: [], cells: [] };
+      return { approval: null, versionId: null, seq: null, officialSeq: official?.seq ?? null, officialVersionId: diagram.official, summary: null, errors: [], warnings: [], cells: [] };
     }
     const result = await this.check(version.cellIndex);
     const names = await this.users.namesByEmails([request.requester]);
@@ -416,6 +442,7 @@ export class DiagramReviewService implements OnModuleInit {
       versionId: version.id,
       seq: version.seq,
       officialSeq: official?.seq ?? null,
+      officialVersionId: diagram.official,
       summary: summarizeDiff(diffCellIndex(official?.cellIndex ?? null, version.cellIndex)),
       errors: result.errors,
       warnings: result.warnings,

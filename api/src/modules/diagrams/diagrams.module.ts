@@ -6,6 +6,8 @@ import { DevicesModule } from '../devices/devices.module';
 import { IpamModule } from '../ipam/ipam.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { UsersModule } from '../users/users.module';
+import { DiagramExportController } from './diagram-export.controller';
+import { DiagramExportService } from './diagram-export.service';
 import { DiagramReviewController } from './diagram-review.controller';
 import { DiagramReviewService } from './diagram-review.service';
 import { DiagramsController } from './diagrams.controller';
@@ -19,7 +21,7 @@ import { DiagramsService } from './diagrams.service';
  */
 @Module({
   imports: [ApprovalsModule, AuditModule, CatalogModule, DevicesModule, IpamModule, OutboxModule, UsersModule],
-  controllers: [DiagramsController, DiagramReviewController],
-  providers: [DiagramsService, DiagramReviewService],
+  controllers: [DiagramsController, DiagramReviewController, DiagramExportController],
+  providers: [DiagramsService, DiagramReviewService, DiagramExportService],
 })
 export class DiagramsModule {}

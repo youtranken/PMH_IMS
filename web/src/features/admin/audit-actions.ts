@@ -125,6 +125,7 @@ export const ACTION_KEY: Record<string, string> = {
   'diagram.version_restored': 'audit.actions.diagramVersionRestored',
   'diagram.editing_started': 'audit.actions.diagramEditingStarted',
   'diagram.published': 'audit.actions.diagramPublished',
+  'diagram.exported': 'audit.actions.diagramExported',
   'diagram.commented': 'audit.actions.diagramCommented',
   'diagram.comment_resolved': 'audit.actions.diagramCommentResolved',
   'diagram.comment_reopened': 'audit.actions.diagramCommentReopened',
