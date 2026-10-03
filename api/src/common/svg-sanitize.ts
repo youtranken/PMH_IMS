@@ -114,19 +114,46 @@ export interface SvgSanitizeOptions {
   dropElements?: ReadonlySet<string>;
 }
 
+export const SVG_NS = 'http://www.w3.org/2000/svg';
+export const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
+/**
+ * Thuộc tính có tiền tố được giữ. Trình duyệt và resvg tra thuộc tính theo URI không gian tên +
+ * tên cục bộ, KHÔNG theo chữ tiền tố: `xmlns:x="…xlink"` rồi `x:href` vẫn là xlink:href. Nên chỉ
+ * giữ đúng tiền tố `xlink`/`xml` (và chỉ khai báo `xmlns:xlink` trỏ đúng URI xlink), mọi tiền tố
+ * khác bỏ hết — `xml:base` cũng bỏ vì nó đổi gốc của mọi đường dẫn tương đối bên dưới.
+ */
+const PREFIXED_KEPT = new Set(['xlink:href', 'xml:space', 'xml:lang']);
+
+/** Tên cục bộ (sau dấu `:` cuối), chữ thường — bộ đọc HTML cũng hạ chữ tên thuộc tính SVG. */
+function localName(name: string): string {
+  return name.slice(name.lastIndexOf(':') + 1).toLowerCase();
+}
+
+/**
+ * Giá trị tải tài nguyên ngoài qua CSS: `url()` không trỏ `#id`, `image-set()`, `@import`. Dấu `\`
+ * cạnh dấu `(` là thoát ký tự CSS (`u\72l(` = `url(`) — không bản vẽ thật nào cần, coi là tấn công.
+ */
+export function cssLoadsExternal(value: string): boolean {
+  if (/url\s*\(\s*['"]?(?!#)/i.test(value)) return true;
+  if (/image-set\s*\(|@import|expression\s*\(/i.test(value)) return true;
+  return value.includes('\\') && value.includes('(');
+}
+
 function svgAttrKept(element: string, name: string, value: string, svgImages: boolean): boolean {
   const lower = name.toLowerCase();
+  if (lower === 'xmlns') return value === SVG_NS;
+  if (lower.startsWith('xmlns:')) return lower === 'xmlns:xlink' && value === XLINK_NS;
+  if (lower.includes(':') && !PREFIXED_KEPT.has(lower)) return false;
   if (lower.startsWith('on') || SVG_DROP_ATTRS.has(lower)) return false;
   const flat = squash(value);
   if (BAD_SCHEME.test(flat)) return false;
-  if (lower === 'href' || lower === 'xlink:href') {
+  if (localName(lower) === 'href') {
     if (element === 'image') return DATA_IMAGE.test(flat) || (svgImages && DATA_SVG.test(flat));
     return flat.startsWith('#');
   }
   // url(#id) trỏ gradient/marker trong tệp thì giữ; url() khác là tải ra ngoài.
-  if (/url\s*\(/i.test(value) && /url\s*\(\s*['"]?(?!#)/i.test(value)) return false;
-  if (/@import|expression\s*\(/i.test(value)) return false;
-  return true;
+  return !cssLoadsExternal(value);
 }
 
 export function escapeXmlText(text: string): string {
@@ -193,7 +220,6 @@ export function sanitizeSvg(svg: string, options: SvgSanitizeOptions): SanitizeR
 
 /* ------------------------------------------------------- biểu tượng tải lên --- */
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 /** Chữ phụ của tệp vẽ (tiêu đề, mô tả) không cần cho một biểu tượng và hay mang URL. */
 const ICON_DROP = new Set(['title', 'desc', 'image', 'foreignObject']);
 
@@ -212,10 +238,11 @@ function iconDangerReason(svg: string): string | null {
         if (lower.startsWith('on')) throw new XmlRejected(`Biểu tượng có thuộc tính sự kiện (${name}) — không nhận.`);
         const flat = squash(value);
         if (BAD_SCHEME.test(flat)) throw new XmlRejected('Biểu tượng có javascript:/vbscript: — không nhận.');
-        if ((lower === 'href' || lower === 'xlink:href') && !flat.startsWith('#') && !DATA_IMAGE.test(flat)) {
+        if (localName(lower) === 'href' && !flat.startsWith('#') && !DATA_IMAGE.test(flat)) {
           throw new XmlRejected('Biểu tượng trỏ ra ngoài (href) — chỉ nhận SVG tự chứa.');
         }
-        if (/url\s*\(\s*['"]?(?!#)/i.test(value)) throw new XmlRejected('Biểu tượng tải tài nguyên ngoài (url()) — không nhận.');
+        if (lower === 'xml:base') throw new XmlRejected('Biểu tượng có xml:base — không nhận.');
+        if (cssLoadsExternal(value)) throw new XmlRejected('Biểu tượng tải tài nguyên ngoài (url()) — không nhận.');
       }
     },
   });
@@ -246,4 +273,58 @@ export function sanitizeIconSvg(svg: string, options: { maxKb: number }): Saniti
     return { value: null, reason: 'Biểu tượng không có hình nào để vẽ.' };
   }
   return { value, reason: null };
+}
+
+/* ------------------------------------------------------- chặn cuối trước resvg --- */
+
+const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+/** SVG lồng trong `data:` cũng được resvg vẽ (và tự tải ảnh trong nó) — soi lồng tối đa từng này tầng. */
+const MAX_NESTED_SVG = 3;
+
+function decodeDataSvg(href: string): string | null {
+  const comma = href.indexOf(',');
+  if (comma < 0) return null;
+  const head = href.slice(0, comma);
+  const body = href.slice(comma + 1);
+  try {
+    return /;base64$/i.test(head) ? Buffer.from(body, 'base64').toString('utf8') : decodeURIComponent(body);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lý do KHÔNG được đưa SVG này cho resvg, hoặc `null`. resvg (2.x) không có tuỳ chọn tắt tải tài
+ * nguyên: `<image href="/đường/tuyệt/đối">` nó đọc thẳng từ đĩa của container api (đã kiểm), nên
+ * một href lọt cổng là lộ tệp vào ảnh xuất. Đây là lưới thứ hai sau `sanitizeSvg`, đọc bằng
+ * parser CÓ phân giải không gian tên (đúng cách resvg đọc): mọi thuộc tính tên cục bộ `href` ở bất
+ * kỳ không gian tên nào chỉ được trỏ `#id` hoặc ảnh `data:`; SVG lồng trong `data:` soi đệ quy.
+ */
+export function svgRenderReason(svg: string, depth = 0): string | null {
+  if (hasDoctype(svg)) return 'SVG có khai báo DOCTYPE/thực thể.';
+  const parser = new SaxesParser({ xmlns: true });
+  parser.on('error', () => {
+    throw new XmlRejected('SVG không hợp lệ (cú pháp hoặc tiền tố chưa khai báo).');
+  });
+  parser.on('opentag', (tag) => {
+    for (const attr of Object.values(tag.attributes)) {
+      if (attr.uri === XML_NS && attr.local === 'base') throw new XmlRejected('SVG có xml:base.');
+      if (attr.local.toLowerCase() !== 'href') continue;
+      const flat = squash(attr.value);
+      if (flat.startsWith('#') || DATA_IMAGE.test(flat)) continue;
+      if (DATA_SVG.test(flat) && depth < MAX_NESTED_SVG) {
+        const inner = decodeDataSvg(flat);
+        const innerReason = inner === null ? 'SVG lồng không giải mã được.' : svgRenderReason(inner, depth + 1);
+        if (innerReason) throw new XmlRejected(innerReason);
+        continue;
+      }
+      throw new XmlRejected(`SVG trỏ tài nguyên ngoài (${attr.name}).`);
+    }
+  });
+  try {
+    parser.write(svg).close();
+  } catch (error) {
+    return error instanceof XmlRejected ? error.message : 'SVG không hợp lệ.';
+  }
+  return null;
 }

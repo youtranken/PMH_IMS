@@ -76,6 +76,29 @@ export function hiddenByLayers(layers: ViewerLayer[], hidden: Set<string>): Set<
   return out;
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+const XMLNS_NS = 'http://www.w3.org/2000/xmlns/';
+
+/**
+ * Một thuộc tính có an toàn không — tra theo URI không gian tên + tên cục bộ như trình duyệt, KHÔNG
+ * theo chữ tiền tố (`xmlns:x="…xlink"` rồi `x:href` vẫn là xlink:href). Chỉ nhận: thuộc tính không
+ * không gian tên, `xlink:href`, `xml:space`/`xml:lang`, và khai báo trỏ đúng SVG/xlink — đúng tập
+ * cổng server giữ lại. `xml:base` đổi gốc đường dẫn nên bị từ chối cùng mọi không gian tên lạ.
+ */
+function attrSafe(element: string, attr: Attr): boolean {
+  const local = attr.localName.toLowerCase();
+  const ns = attr.namespaceURI;
+  if (ns === XMLNS_NS) return attr.value === SVG_NS || attr.value === XLINK_NS;
+  if (ns === XML_NS) return local === 'space' || local === 'lang';
+  if (ns !== null && !(ns === XLINK_NS && local === 'href')) return false;
+  const value = attr.value.replace(/\s+/g, '');
+  if (local.startsWith('on') || /(?:java|vb)script:/i.test(value)) return false;
+  if (local === 'href') return value.startsWith('#') || (element === 'image' && SAFE_IMAGE.test(value));
+  return !/url\(['"]?(?!#)|image-set\(|@import/i.test(value) && !(value.includes('\\') && value.includes('('));
+}
+
 /**
  * SVG bản vẽ → phần tử để chèn vào DOM trình xem, hoặc lý do từ chối.
  *
@@ -91,15 +114,9 @@ export function parseSafeSvg(markup: string): { value: SVGSVGElement | null; rea
     return { value: null, reason: 'parse' };
   }
   for (const el of [root, ...Array.from(root.getElementsByTagName('*'))]) {
-    if (BLOCKED.has(el.localName.toLowerCase())) return { value: null, reason: 'unsafe' };
+    if (el.namespaceURI !== SVG_NS || BLOCKED.has(el.localName.toLowerCase())) return { value: null, reason: 'unsafe' };
     for (const attr of Array.from(el.attributes)) {
-      const name = attr.name.toLowerCase();
-      const value = attr.value.replace(/\s+/g, '');
-      if (name.startsWith('on')) return { value: null, reason: 'unsafe' };
-      if (/(?:java|vb)script:/i.test(value)) return { value: null, reason: 'unsafe' };
-      if ((name === 'href' || name === 'xlink:href') && !value.startsWith('#') && !(el.localName === 'image' && SAFE_IMAGE.test(value))) {
-        return { value: null, reason: 'unsafe' };
-      }
+      if (!attrSafe(el.localName, attr)) return { value: null, reason: 'unsafe' };
     }
   }
   return { value: document.importNode(root, true) as unknown as SVGSVGElement, reason: null };
