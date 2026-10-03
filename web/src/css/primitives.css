@@ -917,6 +917,88 @@ button.btn-x.danger:hover:not(:disabled) {
   right: var(--space-3);
   margin: 0;
 }
+/* Ô bấm được (ô thiết bị) và dấu theo ô: `data-cell-id` của SVG do draw.io xuất. Viền sáng bằng
+   drop-shadow vì `<g>` của SVG không có outline. */
+.diagram-viewer-canvas [data-ims-clickable] {
+  cursor: pointer;
+}
+.diagram-viewer-canvas [data-ims-mark='danger'] {
+  filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 1px var(--danger));
+}
+.diagram-viewer-canvas [data-ims-mark='warn'] {
+  filter: drop-shadow(0 0 3px var(--warn)) drop-shadow(0 0 1px var(--warn));
+}
+.diagram-viewer-canvas [data-ims-selected] {
+  filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 1px var(--primary));
+}
+
+/* Hộp nổi gọn neo vào nút (`ui/popover.tsx`) — hộp tìm trên thanh mảnh của màn sơ đồ. */
+.popover-panel {
+  /* Vị trí do Floating UI (useAnchoredMenu, `position: fixed`) đặt inline. */
+  z-index: var(--z-popover);
+  pointer-events: auto;
+  width: min(30rem, calc(100vw - 2rem));
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-pop);
+  animation: rowIn 0.13s var(--ease) both;
+}
+
+/* Nội dung hộp "Thiết bị kho" (`features/diagrams/stock-device-picker.tsx`). */
+.stock-picker {
+  display: grid;
+  gap: var(--space-3);
+}
+.stock-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.stock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.stock-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+.stock-list li + li .stock-row {
+  border-top: 1px solid var(--border);
+}
+.stock-row:has(input:disabled) {
+  cursor: default;
+  color: var(--ink-3);
+}
+.stock-why {
+  display: block;
+  color: var(--warn);
+}
+
+/* Thẻ thông tin thiết bị ở chế độ xem sơ đồ (`features/diagrams/diagram-device-card.tsx`). */
+.device-card-diagrams {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+/* Xem trước biểu tượng SVG riêng của loại thiết bị (màn Danh mục) — ảnh, không chèn SVG vào DOM. */
+.diagram-icon-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
 
 /* Danh sách dạng cây thư mục (`.tree-list > .tree-row`): mỗi dòng mang `--depth` để thụt lề; nút
    gập/mở một cột cố định để tên các dòng cùng cấp thẳng hàng dù dòng có con hay không. */

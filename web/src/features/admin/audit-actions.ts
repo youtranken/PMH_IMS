@@ -151,6 +151,8 @@ export const VERB_KEY: Record<string, string> = {
   deleted: 'audit.verb.deleted',
   imported: 'audit.verb.imported',
   'imported-update': 'audit.verb.importedUpdate',
+  diagram_icon_set: 'audit.verb.diagramIconSet',
+  diagram_icon_removed: 'audit.verb.diagramIconRemoved',
   activated: 'audit.verb.activated',
   deactivated: 'audit.verb.deactivated',
   enabled: 'audit.verb.enabled',

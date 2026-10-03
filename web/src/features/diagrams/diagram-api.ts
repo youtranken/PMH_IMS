@@ -31,10 +31,40 @@ export interface VersionItem {
   restoredFromSeq: number | null;
 }
 
+/**
+ * Một máy kho như sơ đồ thấy nó bây giờ (`GET /diagrams/device-info`, và kèm theo nội dung bản
+ * vẽ). `found: false` = `ims_device_id` không còn trong kho. Không chứa gì của két (AD-18).
+ */
+export interface DiagramDeviceInfo {
+  id: string;
+  found: boolean;
+  code: string | null;
+  name: string | null;
+  deviceTypeName: string | null;
+  model: string | null;
+  serial: string | null;
+  status: string | null;
+  ips: string[];
+  siteCode: string | null;
+  cabinetCode: string | null;
+  u: number | null;
+  vendorName: string | null;
+  vendorPhone: string | null;
+  warrantyEnd: string | null;
+  /** Ô dựng sẵn cho lệnh chèn (style đã hydrate theo loại, nhãn, cỡ). */
+  cell: { style: string; label: string; width: number; height: number };
+}
+
 export interface DiagramContent {
   diagram: DiagramNode;
   version: (VersionItem & { xml: string; svg: string | null }) | null;
+  /** Ô thiết bị của phiên bản (id ô → id máy + mã ghi trên ô). Thiếu → coi như rỗng. */
+  deviceCells?: { cellId: string; deviceId: string; code: string }[];
+  devices?: DiagramDeviceInfo[];
 }
+
+export const deviceInfoKey = (ids: string[]) => ['diagram-device-info', ...ids] as const;
+export const byDeviceKey = (deviceId: string) => ['diagrams-by-device', deviceId] as const;
 
 export interface DiffItem {
   id: string;
