@@ -45,6 +45,9 @@ const E2E_USERS = [
 /** Trần đăng nhập/IP mà cả bộ E2E chạy dưới — phải khớp `E2E_LOGIN_RATE_LIMIT` bên helpers. */
 const E2E_LOGIN_RATE_LIMIT = 500;
 
+/** Trần gõ mã 2 lớp/phút trong lúc chạy E2E — phải khớp `E2E_TOTP_RATE_LIMIT` ở e2e/totp-rate-backup.ts. */
+const E2E_TOTP_RATE_LIMIT = 600;
+
 /**
  * Mỗi vùng = một danh sách câu SQL chạy TRONG MỘT transaction.
  *
@@ -68,6 +71,7 @@ const DOMAINS = {
   /** Tài khoản do bài "SA tạo tài khoản mới" đẻ ra + trần đăng nhập cho môi trường test. */
   users: [
     `UPDATE system_config SET value = '${E2E_LOGIN_RATE_LIMIT}' WHERE key = 'login.rate_limit_per_ip'`,
+    `UPDATE system_config SET value = '${E2E_TOTP_RATE_LIMIT}' WHERE key = 'rate.totp_per_minute'`,
     `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
     `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
     `DELETE FROM users WHERE email LIKE 'e2e-tao-moi-%'`,
