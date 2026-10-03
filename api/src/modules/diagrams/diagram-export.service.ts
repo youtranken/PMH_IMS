@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersApiService } from '../users/users.api';
 import type { CellIndex } from './diagram-cells';
@@ -10,11 +11,14 @@ import { compareCellIndex, compareCounts, type CellCompare } from './diagram-com
 import {
   cableLegend,
   composeExportSvg,
+  exportBand,
   exportFileName,
   exportFooterLines,
   exportScale,
+  type ExportBand,
   type ExportMeta,
   type ExportStatus,
+  type LegendItem,
 } from './diagram-export';
 import { EXPORT_TIMEOUT_CODE, pngToPdf, renderPng } from './diagram-render';
 import { diagramHistoryTable, diagramTable, diagramVersionLabelTable, diagramVersionTable } from './diagram.schema';
@@ -37,6 +41,9 @@ export interface ExportFile {
   status: ExportStatus;
   kind: 'official' | 'presentation';
   footer: string[];
+  /** Dải trên đầu file (nháp / bản cũ / trình bày); `null` = bản chính thức hiện hành. */
+  band: ExportBand | null;
+  legend: LegendItem[];
 }
 
 export interface CompareView {
@@ -61,6 +68,7 @@ export class DiagramExportService {
     private readonly audit: AuditWriterService,
     private readonly config: SystemConfigService,
     private readonly users: UsersApiService,
+    private readonly catalog: CatalogApiService,
   ) {}
 
   /**
@@ -118,6 +126,8 @@ export class DiagramExportService {
       status: meta.status,
       kind: meta.kind,
       footer,
+      band: exportBand(meta),
+      legend,
     };
   }
 
@@ -160,7 +170,7 @@ export class DiagramExportService {
   /** Mọi thứ của chân trang trừ người xuất và giờ xuất. */
   private async source(diagramId: string, versionId: string) {
     const [diagram] = await this.db
-      .select({ kind: diagramTable.kind, official: diagramTable.officialVersionId })
+      .select({ kind: diagramTable.kind, official: diagramTable.officialVersionId, sourceVersionId: diagramTable.sourceVersionId })
       .from(diagramTable)
       .where(eq(diagramTable.id, diagramId));
     if (!diagram) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
@@ -209,7 +219,7 @@ export class DiagramExportService {
       approvedBy: published ? nameOf(published.actor) : null,
       drawnBy: nameOf(version.savedBy),
       savedAt: version.createdAt,
-      presentationBaseSeq: diagram.kind === 'presentation' ? await this.presentationBaseSeq(diagramId) : null,
+      presentationBaseSeq: diagram.kind === 'presentation' ? await this.versionSeq(diagram.sourceVersionId) : null,
       supersededBySeq: status === 'superseded' ? (official?.seq ?? null) : null,
     };
     return { meta, svg: version.svg, cellIndex: version.cellIndex };
@@ -228,20 +238,23 @@ export class DiagramExportService {
   }
 
   /**
-   * Số phiên bản chính thức mà bản trình bày nhân bản từ đó — dải "Dựa trên bản chính thức phiên
-   * bản N". Bảng chưa ghi nguồn của bản trình bày thì không biết: dải chỉ còn dòng "BẢN TRÌNH BÀY".
+   * Số của phiên bản chính thức đã chép ra bản trình bày (`source_version_id`) — dải "Dựa trên bản
+   * chính thức phiên bản N" nói bản ĐÃ CHÉP, không phải bản chính thức hiện hành của bản gốc. Hàng
+   * nguồn đã bị dọn thì không biết: dải chỉ còn dòng "BẢN TRÌNH BÀY".
    */
-  private presentationBaseSeq(diagramId: string): Promise<number | null> {
-    void diagramId;
-    return Promise.resolve(null);
+  private async versionSeq(versionId: string | null): Promise<number | null> {
+    if (!versionId) return null;
+    const [row] = await this.db.select({ seq: diagramVersionTable.seq }).from(diagramVersionTable).where(eq(diagramVersionTable.id, versionId));
+    return row?.seq ?? null;
   }
 
   /**
-   * Tên loại dây theo id cho chú giải — đọc qua `devices.api` khi dây gắn sơ đồ cổng có loại dây;
-   * chưa có thì rỗng và file xuất không có chú giải.
+   * Tên loại dây theo id cho chú giải, qua `catalog.api` (chủ `cable_type`, AD-2). Lấy cả loại đã
+   * ngưng: bản cũ vẽ bằng loại dây nay đã ngưng vẫn phải có chú giải đúng tên.
    */
-  private cableTypeNames(index: CellIndex): Promise<Map<string, string>> {
-    void index;
-    return Promise.resolve(new Map<string, string>());
+  private async cableTypeNames(index: CellIndex): Promise<Map<string, string>> {
+    const used = new Set(index.cells.map((c) => (c.kind === 'edge' ? c.ims.ims_cable_type_id : undefined)).filter(Boolean));
+    if (used.size === 0) return new Map();
+    return new Map((await this.catalog.cableTypes()).filter((t) => used.has(t.id)).map((t) => [t.id, t.name]));
   }
 }

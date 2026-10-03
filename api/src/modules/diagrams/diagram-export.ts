@@ -1,6 +1,7 @@
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
 import { dateTimeInTz } from '../../common/today';
 import type { CellIndex } from './diagram-cells';
+import { presentationBand } from './diagram-presentation';
 
 /**
  * Ghép file xuất của một phiên bản bản vẽ (FR-044, AD-17) — hàm THUẦN, test ở
@@ -73,12 +74,9 @@ const WATERMARK_MAX = 400;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 export function exportBand(meta: ExportMeta): ExportBand | null {
-  if (meta.kind === 'presentation') {
-    return {
-      title: 'BẢN TRÌNH BÀY — không phải sơ đồ chính thức',
-      sub: meta.presentationBaseSeq ? `Dựa trên bản chính thức phiên bản ${meta.presentationBaseSeq}` : null,
-    };
-  }
+  // Dải trình bày: cùng câu với màn xem (`presentationBand`), một nguồn chữ cho cả hai.
+  const presentation = presentationBand({ kind: meta.kind, source: { seq: meta.presentationBaseSeq ?? null } });
+  if (presentation) return { title: presentation.title, sub: presentation.basedOn };
   if (meta.status === 'draft') return { title: 'BẢN NHÁP — chưa duyệt', sub: null };
   if (meta.status === 'superseded') {
     return {

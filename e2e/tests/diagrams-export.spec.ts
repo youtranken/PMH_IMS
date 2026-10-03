@@ -175,6 +175,33 @@ test.describe('Sơ đồ mạng — xuất PNG/PDF', () => {
     await expect(ask).toHaveCount(0);
     expect(exportedCount(id)).toBe(0);
   });
+
+  test('bản trình bày và bản cũ: dải trên file xuất nêu bản chính thức đã chép / bản hiện hành', async ({ page }) => {
+    const stamp = uniqueStamp();
+    const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret, 'diagram');
+    const id = await createDiagram(page, `E2E Xuất dải ${stamp}`);
+    const v1 = await save(page, id, V1);
+    await publish(page, id, v1.id);
+    const created = await page.request.post(`/api/v1/diagrams/${id}/presentations`, { headers: await writeHeaders(page), data: {} });
+    expect(created.status(), await created.text()).toBe(201);
+    const presId = ((await created.json()) as { id: string }).id;
+    const presVersion = sql(`SELECT id FROM diagram_version WHERE diagram_id = '${presId}'`);
+    const v2 = await save(page, id, V2, v1.id);
+    await publish(page, id, v2.id);
+
+    const bandOf = async (diagramId: string, versionId: string) => {
+      const res = await page.request.post(`/api/v1/diagrams/${diagramId}/versions/${versionId}/exports`, {
+        headers: await writeHeaders(page),
+        data: { format: 'png' },
+      });
+      expect(res.status(), await res.text()).toBe(200);
+      return decodeURIComponent(res.headers()['x-diagram-export-band'] ?? '');
+    };
+    expect(await bandOf(presId, presVersion)).toBe('BẢN TRÌNH BÀY — không phải sơ đồ chính thức\nDựa trên bản chính thức phiên bản 1');
+    expect(await bandOf(id, v1.id)).toBe('BẢN CŨ — không còn hiệu lực\nBản chính thức hiện hành là phiên bản #2');
+    expect(await bandOf(id, v2.id)).toBe('');
+  });
 });
 
 test.describe('Sơ đồ mạng — so sánh phiên bản', () => {

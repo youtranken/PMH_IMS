@@ -96,7 +96,7 @@ describe('Sơ đồ mạng · xuất PNG/PDF và so sánh phiên bản', () => {
       kinds,
     );
     review.onModuleInit();
-    exports = new DiagramExportService(db, audit, config, users);
+    exports = new DiagramExportService(db, audit, config, users, catalog);
     for (const user of [SA, MEMBER]) {
       await scratch.pool.query(`INSERT INTO users (email, full_name, role, password_hash) VALUES ($1, $2, $3, 'x')`, [user.email, user.fullName, user.role]);
     }
@@ -139,6 +139,49 @@ describe('Sơ đồ mạng · xuất PNG/PDF và so sánh phiên bản', () => {
     const old = await exports.export(MEMBER, diagramId, versionId, 'png');
     expect(old.status).toBe('superseded');
     expect(old.footer[1]).toContain('Từng là bản chính thức (đã thay)');
+  });
+
+  it('bản trình bày → dải "BẢN TRÌNH BÀY" + "Dựa trên bản chính thức phiên bản N" từ source_version_id', async () => {
+    const { diagramId, versionId } = await drawn(shape('s1', 'Tủ E2E'));
+    await diagrams.save(MEMBER.email, diagramId, { xml: page(shape('s1', 'Tủ E2E', 20)), svg: SVG, basedOnVersionId: versionId });
+    const second = await diagrams.save(MEMBER.email, diagramId, { xml: page(shape('s1', 'Tủ E2E', 30)), svg: SVG, basedOnVersionId: null });
+    await review.publish(SA, diagramId, { versionId: second.id });
+    const copy = await diagrams.createPresentation(MEMBER.email, diagramId, { name: `E2E Trình bày xuất ${n}` });
+    const { rows } = await scratch.pool.query<{ id: string }>(`SELECT id FROM diagram_version WHERE diagram_id = $1`, [copy.id]);
+    const copyVersion = rows[0].id;
+    const file = await exports.export(MEMBER, copy.id, copyVersion, 'png');
+    expect(file.kind).toBe('presentation');
+    expect(file.band).toEqual({ title: 'BẢN TRÌNH BÀY — không phải sơ đồ chính thức', sub: 'Dựa trên bản chính thức phiên bản 3' });
+
+    // Bản gốc phát hành tiếp: dải vẫn nói bản đã chép, không nói bản hiện hành.
+    const fourth = await diagrams.save(MEMBER.email, diagramId, { xml: page(shape('s1', 'Tủ E2E', 40)), svg: SVG, basedOnVersionId: second.id });
+    await review.publish(SA, diagramId, { versionId: fourth.id });
+    expect((await exports.export(MEMBER, copy.id, copyVersion, 'png')).band?.sub).toBe('Dựa trên bản chính thức phiên bản 3');
+  });
+
+  it('chú giải màu dây: tên loại dây đọc qua catalog.api theo ims_cable_type_id, màu đọc từ nét trong SVG đã lưu', async () => {
+    const { rows } = await scratch.pool.query<{ id: string }>(`SELECT id FROM cable_type WHERE name = 'Cat6'`);
+    const edge =
+      `<object id="e1" label="" ims_cable_type_id="${rows[0].id}"><mxCell style="endArrow=none;" edge="1" parent="1" source="s1" target="s2">` +
+      '<mxGeometry relative="1" as="geometry"/></mxCell></object>';
+    const svg = SVG.replace('</svg>', '<g data-cell-id="e1"><path d="M 90 30 L 200 30" fill="none" stroke="#2a7ab0"/></g></svg>');
+    const { diagramId, versionId } = await drawn(shape('s1', 'Tủ E2E') + shape('s2', 'Tủ E2E 2', 200) + edge, svg);
+    const file = await exports.export(MEMBER, diagramId, versionId, 'png');
+    expect(file.legend).toEqual([{ label: 'Cat6', color: '#2a7ab0' }]);
+    const plain = await drawn(shape('s1', 'Tủ E2E'));
+    expect((await exports.export(MEMBER, plain.diagramId, plain.versionId, 'png')).legend).toEqual([]);
+  });
+
+  it('phiên bản từng chính thức nay đã thay → dải "BẢN CŨ" chỉ bản hiện hành', async () => {
+    const { diagramId, versionId } = await drawn(shape('s1', 'Tủ E2E'));
+    await review.publish(SA, diagramId, { versionId });
+    const next = await diagrams.save(MEMBER.email, diagramId, { xml: page(shape('s1', 'Tủ E2E', 30)), svg: SVG, basedOnVersionId: versionId });
+    await review.publish(SA, diagramId, { versionId: next.id });
+    expect((await exports.export(MEMBER, diagramId, versionId, 'png')).band).toEqual({
+      title: 'BẢN CŨ — không còn hiệu lực',
+      sub: 'Bản chính thức hiện hành là phiên bản #2',
+    });
+    expect((await exports.export(MEMBER, diagramId, next.id, 'png')).band).toBeNull();
   });
 
   it('vượt trần điểm ảnh ở cả độ nét thường → 400, KHÔNG có dòng diagram.exported', async () => {

@@ -67,6 +67,7 @@ export class DiagramExportController {
     res.setHeader('X-Diagram-Export-Seq', String(file.seq));
     res.setHeader('X-Diagram-Export-Status', file.kind === 'presentation' ? 'presentation' : file.status);
     res.setHeader('X-Diagram-Export-Footer', encodeURIComponent(file.footer.join('\n')));
+    res.setHeader('X-Diagram-Export-Band', encodeURIComponent(file.band ? [file.band.title, file.band.sub].filter(Boolean).join('\n') : ''));
     res.end(file.body);
   }
 
