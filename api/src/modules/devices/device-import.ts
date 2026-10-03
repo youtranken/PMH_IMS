@@ -19,7 +19,7 @@ import { secretTextMessage } from '../../common/no-secret-text';
 import { textLooksLikeSecret } from '../../common/note-secret';
 import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
-import { rackOverlap, rackPlacementChanged, rackUnitsReason } from './rack-units';
+import { rackClaimMoved, rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 
 /**
  * Lõi ĐỐI CHIẾU file thiết bị — hàm THUẦN, không chạm DB, không chạm exceljs.
@@ -218,23 +218,6 @@ export function planDeviceImport(
   return { rows: checked, summary: summarize(checked), hasRecognizedSheet: recognized };
 }
 
-interface RackClaim {
-  cabinetId: string;
-  start: number;
-  size: number;
-}
-
-/** Chỗ máy sẽ chiếm trong tủ sau khi ghi dòng này; `null` = không chiếm (không U, không tủ, thanh lý). */
-function rackClaimOf(values: Record<string, unknown>, existing: ExistingDevice | undefined): RackClaim | null {
-  const effective = effectiveOf(values);
-  const cabinetId = effective<string | null>('cabinetId', existing?.cabinetId ?? null);
-  const start = effective<number | null>('rackUStart', existing?.rackUStart ?? null);
-  const size = effective<number | null>('rackUSize', existing?.rackUSize ?? null);
-  const status = effective<string | null>('status', existing?.status ?? null);
-  if (!cabinetId || start === null || size === null || status === 'retired') return null;
-  return { cabinetId, start, size };
-}
-
 type RackSlot = RackClaim & { key: string; code: string; name: string };
 
 const writesRow = (row: DeviceImportRow) => row.action === 'create' || row.action === 'update' || row.action === 'unchanged';
@@ -271,8 +254,7 @@ function rejectRackOverlaps(rows: DeviceImportRow[], context: DeviceImportContex
       if (!claim) return;
       const slot = { ...claim, key, code: textOf(row.values?.code, existing?.code ?? row.label), name: textOf(row.values?.name, existing?.name ?? '') };
       const current = existing ? rackClaimOf({}, existing) : null;
-      const stays = current !== null && !rackPlacementChanged({ cabinetId: claim.cabinetId, start: claim.start, size: claim.size }, { cabinetId: current.cabinetId, start: current.start, size: current.size });
-      if (stays) placed.push(slot);
+      if (current !== null && !rackClaimMoved(claim, current)) placed.push(slot);
       else movers.push({ index, slot });
     });
 

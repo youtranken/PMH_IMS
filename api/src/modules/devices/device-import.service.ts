@@ -17,10 +17,10 @@ import {
 import { diffDevice } from './device-changes';
 import { deviceExportSheets, deviceTemplateSheets } from './device-template';
 import { deviceTable } from './devices.schema';
+import { rackClaimMoved, rackClaimOf } from './rack-units';
 import {
   DEVICE_SORT_DEFAULT,
   DevicesService,
-  rackClaimOf,
   type DeviceSortKey,
 } from './devices.service';
 import type { SortQuery } from '../../common/sorting';
@@ -166,11 +166,7 @@ export class DeviceImportService {
       for (const row of writable) {
         const before = row.existingId ? befores.get(row.existingId) : undefined;
         if (!before || before.rackUStart === null) continue;
-        const next = rackClaimOf(row.values ?? {}, before);
-        const current = rackClaimOf({}, before);
-        if (!next || !current || next.cabinetId !== current.cabinetId || next.start !== current.start || next.size !== current.size) {
-          vacated.add(before.id);
-        }
+        if (rackClaimMoved(rackClaimOf(row.values ?? {}, before), rackClaimOf({}, before))) vacated.add(before.id);
       }
       await this.devices.vacateRackWithin(tx, [...vacated]);
 

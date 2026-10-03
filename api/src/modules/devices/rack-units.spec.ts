@@ -1,5 +1,5 @@
 import { rackUnitLabel } from '../../common/rack-units';
-import { rackOverlap, rackUnitsReason, type RackUnitsInput } from './rack-units';
+import { rackClaimMoved, rackClaimOf, rackOverlap, rackUnitsReason, type RackUnitsInput } from './rack-units';
 
 const base: RackUnitsInput = { start: 5, size: 2, cabinetCode: 'R1', cabinetHeight: 42, hasCabinet: true };
 
@@ -52,5 +52,29 @@ describe('rackUnitLabel', () => {
     [null, null, null],
   ])('(%s, %s) → %s', (start, size, expected) => {
     expect(rackUnitLabel(start, size)).toBe(expected);
+  });
+});
+
+describe('rackClaimOf / rackClaimMoved — một bản cho form, đối chiếu và ghi import', () => {
+  const inRack = { cabinetId: 'c1', rackUStart: 5, rackUSize: 2, status: 'in_use' };
+  it.each([
+    ['giữ nguyên', {}, { cabinetId: 'c1', start: 5, size: 2 }],
+    ['đổi U', { rackUStart: 9 }, { cabinetId: 'c1', start: 9, size: 2 }],
+    ['thanh lý thì không giữ chỗ', { status: 'retired' }, null],
+    ['bỏ tủ', { cabinetId: null }, null],
+  ])('%s', (_name, values, expected) => {
+    expect(rackClaimOf(values, inRack)).toEqual(expected);
+  });
+
+  it('hồ sơ chưa có cột U (import ảnh chụp cũ) → không chiếm chỗ', () => {
+    expect(rackClaimOf({}, { cabinetId: 'c1', status: 'in_use' })).toBeNull();
+  });
+
+  it('so hai chỗ', () => {
+    const a = { cabinetId: 'c1', start: 5, size: 2 };
+    expect(rackClaimMoved(a, { ...a })).toBe(false);
+    expect(rackClaimMoved(a, { ...a, start: 6 })).toBe(true);
+    expect(rackClaimMoved(null, a)).toBe(true);
+    expect(rackClaimMoved(null, null)).toBe(false);
   });
 });
