@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api-client';
-import { downloadFile, postForDownload } from '@/lib/download-file';
+import { downloadFile, fileNameFrom, postForDownload } from '@/lib/download-file';
 import { jsonResponse } from '@/test/test-utils';
 
 afterEach(() => {
@@ -33,5 +33,17 @@ describe('postForDownload — POST JSON kèm CSRF, nhận file về', () => {
     expect(init.method).toBe('POST');
     expect(init.body).toBe('{"format":"pdf"}');
     expect((init.headers as Record<string, string>)['X-CSRF-Token']).toBe('tok');
+  });
+});
+
+describe('fileNameFrom — tên file từ Content-Disposition', () => {
+  it.each([
+    ['ưu tiên filename* (UTF-8) hơn bản ASCII đi trước', `attachment; filename="E2E Xuat - v1.png"; filename*=UTF-8''E2E%20Xu%E1%BA%A5t%20-%20v1.png`, 'E2E Xuất - v1.png'],
+    ['chỉ filename*', `attachment; filename*=UTF-8''thi%E1%BA%BFt-b%E1%BB%8B.xlsx`, 'thiết-bị.xlsx'],
+    ['chỉ filename có ngoặc', 'attachment; filename="devices.xlsx"', 'devices.xlsx'],
+    ['chỉ filename không ngoặc', 'attachment; filename=devices.xlsx', 'devices.xlsx'],
+    ['không có gì → tên dự phòng', 'attachment', 'du-phong.xlsx'],
+  ])('%s', (_label, header, expected) => {
+    expect(fileNameFrom(header, 'du-phong.xlsx')).toBe(expected);
   });
 });
