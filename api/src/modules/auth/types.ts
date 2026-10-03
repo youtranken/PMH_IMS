@@ -10,8 +10,10 @@ export interface AuthedUser {
   fullName: string;
   role: UserRole;
   sessionId: string;
-  /** Mốc gõ TOTP gần nhất trong phiên — FR-022 tính grace từ đây. */
+  /** Mốc gõ TOTP gần nhất cho phạm vi KÉT — FR-022 tính grace từ đây. */
   steppedUpAt: Date | null;
+  /** Mốc gõ TOTP gần nhất cho phạm vi SƠ ĐỒ — tách khỏi két (AD-17). */
+  diagramSteppedUpAt: Date | null;
   mustChangePassword: boolean;
 }
 

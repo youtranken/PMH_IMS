@@ -34,6 +34,7 @@ import {
   type SessionSummary,
 } from './session.service';
 import { TotpService } from './totp.service';
+import type { StepUpScope } from './step-up.decorator';
 import { isTempPasswordExpired, TEMP_PASSWORD_EXPIRED_MESSAGE } from './temp-password-policy';
 import { KnownDeviceService } from './known-device.service';
 import { LoginFailureService } from './login-failure.service';
@@ -285,10 +286,10 @@ export class AuthService {
     /*
      * CHỈ nhận phiên ĐANG CHỜ mã.
      *
-     * Đường này kết thúc bằng `completeTotpWithin`, và hàm đó đóng dấu `stepped_up_at` — tức
-     * nó cấp một phiên ĐÃ MỞ KÉT. Với một phiên đã xác thực đủ (`totp_pending = false`), gọi
-     * lại đường này là một cửa STEP-UP THỨ HAI: cùng tác dụng với `POST /auth/step-up` nhưng
-     * không có bộ đếm sai, không thu hồi phiên, và (trước bản sửa này) không có trần riêng.
+     * Đường này cấp phiên MỚI và đốt mã. Với một phiên đã xác thực đủ (`totp_pending = false`),
+     * gọi lại đường này là một cửa đoán mã thứ hai cạnh `POST /auth/step-up` — không có bộ đếm
+     * sai của phiên đó, không thu hồi phiên. Không mở phạm vi step-up nào (AD-17) không làm nó
+     * vô hại: một cửa đoán mã không giới hạn vẫn là cửa đoán mã.
      */
     if (!session.totpPending) {
       throw new UnauthorizedException({
@@ -634,10 +635,11 @@ export class AuthService {
   }
 
   /**
-   * FR-022 step-up: gõ TOTP để mở quyền xem secret trong `grace` phút.
-   * Luôn bắt buộc, kể cả khi `totp_login_required` tắt.
+   * FR-022 step-up: gõ TOTP để mở MỘT phạm vi (`vault` | `diagram`, AD-17) trong ân hạn của nó.
+   * Luôn bắt buộc, kể cả khi `totp_login_required` tắt. Bộ đếm sai và mốc chống replay dùng
+   * chung mọi phạm vi: cùng một yếu tố thứ hai, cùng một người đoán.
    */
-  async stepUp(session: SessionRecord, token: string): Promise<void> {
+  async stepUp(session: SessionRecord, token: string, scope: StepUpScope): Promise<void> {
     const user = await this.requireUser(session.userId);
     if (user.totpEnrolledAt === null) {
       /*
@@ -666,7 +668,7 @@ export class AuthService {
         action: 'auth.stepup.failed',
         objectType: 'session',
         objectId: session.id,
-        detail: { reason: result.reason },
+        detail: { reason: result.reason, scope },
       });
       /* Đếm chung với lượt bị từ chối mở ngăn, và báo cho quản trị khi đủ đáng ngờ. Tách hai
          bộ đếm thì một kẻ khôn ngoan chỉ cần xen kẽ hai kiểu là không chạm ngưỡng nào cả. */
@@ -691,7 +693,7 @@ export class AuthService {
             action: 'auth.stepup.session_revoked',
             objectType: 'session',
             objectId: session.id,
-            detail: { failures },
+            detail: { failures, scope },
           });
         });
         throw new UnauthorizedException({
@@ -719,7 +721,7 @@ export class AuthService {
      * trong khi lượt ghi thật đằng sau đã rollback.
      */
     await this.db.transaction(async (tx) => {
-      await this.sessions.markSteppedUpWithin(tx, session.id);
+      await this.sessions.markSteppedUpWithin(tx, session.id, scope);
       const burned = await this.users.setTotpLastTimestepWithin(
         tx,
         user.id,
@@ -747,6 +749,7 @@ export class AuthService {
         action: 'auth.stepup.ok',
         objectType: 'session',
         objectId: session.id,
+        detail: { scope },
       });
     });
   }
@@ -819,6 +822,8 @@ export class AuthService {
       throw new UnauthorizedException({
         code: 'STEPUP_REQUIRED',
         message: 'Nhập mã 6 số trên ứng dụng xác thực hiện tại trước khi cài lại.',
+        // Phạm vi két (AD-17): web mở hộp nhập mã và gửi lại đúng phạm vi này.
+        scope: 'vault',
         graceMinutes,
       });
     }

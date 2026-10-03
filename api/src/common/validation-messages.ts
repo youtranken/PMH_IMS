@@ -124,6 +124,7 @@ export const FIELD_LABEL: Record<string, string> = {
   timeStyle: 'Kiểu hiển thị giờ',
   to: 'Đến',
   token: 'Mã xác thực 2 lớp',
+  scope: 'Phạm vi xác thực',
   totpLoginRequired: 'Bắt buộc 2 lớp mỗi lần đăng nhập',
   uploadedBy: 'Người tải lên',
   usable: 'Chỉ IP dùng được',

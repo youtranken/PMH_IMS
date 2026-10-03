@@ -39,6 +39,8 @@ export const CONFIG_KEYS = {
   secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 60 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
   secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
+  // Ân hạn RIÊNG của phạm vi sơ đồ (AD-17): mã nhập để xem sơ đồ không kéo dài ân hạn két.
+  diagramStepUpGraceMinutes: { key: 'diagram.stepup_grace_minutes', fallback: 10 },
   /*
    * Canh người DÒ DẪM quanh két — xem `audit/security-probe.service.ts`.
    *

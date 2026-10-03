@@ -26,13 +26,30 @@ import { SetMetadata } from '@nestjs/common';
 export const REQUIRES_STEP_UP_KEY = 'ims:requires-step-up';
 
 /**
- * FR-022: route này đòi đã gõ TOTP trong `secret.stepup_grace_minutes` phút gần nhất.
+ * Phạm vi step-up (AD-17). Mỗi phạm vi một mốc trên `sessions` và một ân hạn trong
+ * `system_config`; nhập mã ở phạm vi nào chỉ mở phạm vi đó — mã nhập để xem sơ đồ không được mở
+ * két (Q-23 "nhập ở đâu tính ở đó").
+ *
+ * `vault` không chỉ là két: nó là phạm vi của MỌI thao tác nặng đã có (tài khoản, tham số hệ
+ * thống, quyền két, cài lại 2 lớp). `diagram` chỉ dành cho route đọc nội dung bản vẽ.
+ */
+export type StepUpScope = 'vault' | 'diagram';
+
+/** Danh sách đóng — DTO của `POST /auth/step-up` và bài kiểm bề mặt đọc từ đây. */
+export const STEP_UP_SCOPES: readonly StepUpScope[] = ['vault', 'diagram'];
+
+/**
+ * FR-022: route này đòi đã gõ TOTP của `scope` trong ân hạn của phạm vi đó.
+ *
+ * Không tham số = két (`secret.stepup_grace_minutes`). Mặc định là két chứ không bắt khai, vì
+ * mọi cửa nặng đã có đều là phạm vi két; route sơ đồ khai `@RequiresStepUp('diagram')`.
  *
  * Vì sao là decorator + guard chứ không phải một câu `if` trong service: cửa mở két nhiều dần
  * (xem secret, break-glass, xuất khóa khi bàn giao). Mỗi chỗ tự viết `if` là mỗi
  * chỗ có thể quên, hoặc quên khác kiểu — và cái quên đó không làm test nào đỏ.
  */
-export const RequiresStepUp = () => SetMetadata(REQUIRES_STEP_UP_KEY, true);
+export const RequiresStepUp = (scope: StepUpScope = 'vault') =>
+  SetMetadata(REQUIRES_STEP_UP_KEY, scope);
 
 /**
  * Khai RÕ rằng route (hoặc cả controller) không đòi gõ mã.

@@ -59,8 +59,10 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'rateTotpPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 3, max: 60, warnAbove: 20 },
   { name: 'rateFileUploadPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 5, max: 300 },
   { name: 'loginAccountBackoffMinutes', group: 'auth', type: 'int_list', unit: 'minutes', min: 1, max: 1440 },
-  // Ân hạn này mở cho MỌI route `@RequiresStepUp` (tài khoản, tham số, két, cấp quyền), nên nằm nhóm đăng nhập chứ không phải két.
+  // Ân hạn phạm vi két: mở cho mọi route `@RequiresStepUp()` (tài khoản, tham số, két, cấp quyền), nên nằm nhóm đăng nhập chứ không phải két.
   { name: 'secretStepUpGraceMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
+  // Ân hạn phạm vi sơ đồ (AD-17) — đứng cạnh ân hạn két để SA thấy hai phạm vi tính riêng.
+  { name: 'diagramStepUpGraceMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
   { name: 'totpEnrollReauthMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60 },
   // Dưới 1 phút thì người gõ chậm không kịp mở ứng dụng xác thực.
   { name: 'authTotpChallengeMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 30, warnAbove: 10 },

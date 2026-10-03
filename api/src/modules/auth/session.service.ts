@@ -7,6 +7,7 @@ import type { Tx } from '../../common/tx';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { SweepService } from '../queue/sweep.service';
 import { sessionsTable } from './sessions.schema';
+import type { StepUpScope } from './step-up.decorator';
 
 export interface SessionRecord {
   id: string;
@@ -15,6 +16,7 @@ export interface SessionRecord {
   ip: string | null;
   userAgent: string | null;
   steppedUpAt: Date | null;
+  diagramSteppedUpAt: Date | null;
   stepupFailures: number;
   totpPending: boolean;
   createdAt: Date;
@@ -133,46 +135,38 @@ export class SessionService implements OnModuleInit {
   }
 
   /**
-   * Qua TOTP đăng nhập: bỏ cờ chờ + đóng dấu step-up trong CÙNG transaction (AD-5).
+   * Qua TOTP đăng nhập: bỏ cờ chờ. KHÔNG đóng dấu phạm vi step-up nào (AD-17, Q-23).
    *
-   * ===== VÌ SAO VẪN ĐÓNG DẤU `steppedUpAt` =====
-   *
-   * Lập luận để bỏ nghe hợp lý: yếu tố thứ hai nên được hỏi TẠI THỜI ĐIỂM mở bí mật, không
-   * thừa hưởng từ thao tác đăng nhập vừa xong.
-   *
-   * Nhưng bỏ đi thì va vào một ràng buộc: **chống replay TOTP**. Người dùng vừa dùng mã 6 số
-   * để đăng nhập; hệ thống từ chối chính mã đó lần thứ
-   * hai (NFR-01). Nên nếu mở két đòi step-up ngay sau khi đăng nhập, họ KHÔNG có mã hợp lệ
-   * nào để gõ — phải chờ hết chu kỳ 30 giây rồi mới mở được két. Mỗi lần. Sau mỗi lần đăng
-   * nhập.
-   *
-   * Một hàng rào bắt người dùng ngồi đợi đồng hồ là hàng rào sẽ bị tìm cách lách: người ta sẽ
-   * xin nới grace, hoặc tệ hơn, xin bỏ 2 lớp. Đổi một rủi ro nhỏ lấy một rủi ro lớn.
-   *
-   * Rủi ro còn lại (máy vừa đăng nhập bị người khác ngồi vào) được xử ở chỗ đúng của nó: độ
-   * dài grace, vốn đã nằm trong `system_config` theo FR-022 — hạ nó xuống là một dòng cấu
-   * hình, không phải một lần sửa code.
-   *
-   * ĐỪNG "sửa" lại chỗ này mà không giải quyết trước bài toán replay ở trên.
+   * Mã lúc đăng nhập chứng minh DANH TÍNH, không phải ý định mở két hay xem sơ đồ; mỗi phạm vi
+   * hỏi mã tại chỗ của nó. Cái giá đã được chủ dự án chấp nhận: chống replay (NFR-01) từ chối
+   * chính mã vừa dùng để đăng nhập, nên ai mở két ngay trong 30 giây đầu phải chờ mã kế tiếp.
+   * Đừng thêm lại dấu `stepped_up_at` ở đây để "đỡ phải chờ" — đó là mở két bằng mã đăng nhập.
    */
   async completeTotpWithin(tx: Tx, id: string): Promise<void> {
     await tx
       .update(sessionsTable)
-      .set({ totpPending: false, steppedUpAt: new Date() })
+      .set({ totpPending: false })
       .where(eq(sessionsTable.id, id));
   }
 
   /**
-   * FR-022: đóng dấu vừa gõ TOTP — grace tính từ mốc này. Gõ đúng xóa sạch bộ đếm sai.
+   * FR-022: đóng dấu vừa gõ TOTP cho ĐÚNG MỘT phạm vi — grace của phạm vi đó tính từ mốc này.
+   * Gõ đúng xóa sạch bộ đếm sai, bộ đếm dùng chung mọi phạm vi (AD-17): tách ra thì kẻ đoán
+   * mã xen kẽ hai cửa được gấp đôi số lượt trước khi phiên bị thu hồi.
    *
    * LUÔN trong transaction đang chạy (AD-5), không có bản chạy-trên-pool. Commit ngay ở đây
    * rồi mới ghi mốc chống-replay bằng một lượt ghi thứ hai thì quyền mở két đã cấp xong trong
    * khi mã 6 số vừa dùng vẫn còn hiệu lực. Xem `setTotpLastTimestepWithin`.
    */
-  async markSteppedUpWithin(tx: Tx, id: string): Promise<void> {
+  async markSteppedUpWithin(tx: Tx, id: string, scope: StepUpScope): Promise<void> {
+    const now = new Date();
     await tx
       .update(sessionsTable)
-      .set({ steppedUpAt: new Date(), stepupFailures: 0 })
+      .set(
+        scope === 'diagram'
+          ? { diagramSteppedUpAt: now, stepupFailures: 0 }
+          : { steppedUpAt: now, stepupFailures: 0 },
+      )
       .where(eq(sessionsTable.id, id));
   }
 

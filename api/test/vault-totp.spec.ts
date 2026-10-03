@@ -284,7 +284,7 @@ describe('Két: ngăn Mã 2 lớp (Q-18)', () => {
           absoluteHours: 12,
           totpPending: false,
         });
-        await sessions.markSteppedUpWithin(tx, session.id);
+        await sessions.markSteppedUpWithin(tx, session.id, 'vault');
         return session;
       });
       token = created.token;
