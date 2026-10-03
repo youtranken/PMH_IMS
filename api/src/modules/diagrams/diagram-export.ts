@@ -1,4 +1,5 @@
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
+import { PALETTE } from '../../common/palette.generated';
 import { dateTimeInTz } from '../../common/today';
 import type { CellIndex } from './diagram-cells';
 import { presentationBand } from './diagram-presentation';
@@ -47,18 +48,18 @@ export interface ExportBand {
 }
 
 /*
- * File xuất là giấy in nộp hồ sơ: luôn nền sáng, không theo theme của người xuất. Server không đọc
- * được `tokens.css`, nên bảng màu giấy in nằm ở đây — một chỗ, chỉ cho file xuất.
+ * File xuất là giấy in nộp hồ sơ: luôn nền sáng, không theo theme của người xuất — nên lấy bản
+ * SÁNG của token (`PALETTE`, sinh từ `tokens.css`; AD-15).
  */
 const PAPER = {
-  background: '#ffffff',
-  ink: '#1f231c',
-  muted: '#5f665f',
-  rule: '#d5d9d2',
-  watermark: '#1f231c',
-  draft: { fill: '#fff4e5', ink: '#a34d08' },
-  superseded: { fill: '#fdecea', ink: '#c0392b' },
-  presentation: { fill: '#eaf2fb', ink: '#1d5f9e' },
+  background: PALETTE.surface,
+  ink: PALETTE.ink,
+  muted: PALETTE.muted,
+  rule: PALETTE.paperRule,
+  watermark: PALETTE.ink,
+  draft: { fill: PALETTE.paperDraft, ink: PALETTE.warn },
+  superseded: { fill: PALETTE.paperSuperseded, ink: PALETTE.danger },
+  presentation: { fill: PALETTE.paperPresentation, ink: PALETTE.info },
 } as const;
 
 const FONT = 'DejaVu Sans';

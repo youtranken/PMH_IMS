@@ -64,3 +64,32 @@ if [ -n "$rogue" ]; then
   printf '\033[31mCó màu viết thẳng (hex / hex mã hoá URL / rgb / hsl) trong LUẬT CSS ngoài tokens.css:\033[0m\n%s' "$rogue"
   exit 1
 fi
+
+# PHÍA SERVER: thư và file xuất bản vẽ tô màu inline, nên màu cũng phải là token — đọc qua
+# `api/src/common/palette.generated.ts` (sinh từ tokens.css; `palette.spec.ts` canh lệch). Soi
+# mã chạy thật của api; bỏ bài kiểm (SVG/HTML mẫu cần màu cụ thể để so), migration (không được
+# sửa) và chính tệp sinh. Bỏ chú thích `/* */` và `//` đầu dòng/sau khoảng trắng — không đụng
+# `//` trong chuỗi URL (`https://`), vì cắt ở đó là che mất phần còn lại của dòng.
+apiRogue=""
+soApi=0
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  soApi=$((soApi + 1))
+  sach=$(perl -0777 -pe 's{/\*.*?\*/}{}gs; s{(^|\s)//[^\n]*}{$1}g' "$f") || {
+    printf '\033[31m✗ perl hỏng khi đọc %s — không coi đây là XANH.\033[0m\n' "$f"
+    exit 1
+  }
+  if printf '%s' "$sach" | grep -qiE "['\"\`(:,= ]#[0-9a-f]{3}([0-9a-f]{3})?([0-9a-f]{2})?\b|%23[0-9a-f]{3,8}\b|\b(rgba?|hsla?)\("; then
+    apiRogue="${apiRogue}${f}"$'\n'
+  fi
+done < <(find api/src -name "*.ts" ! -name "*.spec.ts" ! -path "api/src/migrations/*" ! -path "api/src/common/palette.generated.ts")
+
+if [ "$soApi" -lt 50 ]; then
+  printf '\033[31m✗ Chỉ quét được %s file .ts của api (chờ ≥50) — cổng không soi đúng cây nguồn.\033[0m\n' "$soApi"
+  exit 1
+fi
+
+if [ -n "$apiRogue" ]; then
+  printf '\033[31mCó màu viết thẳng trong mã api — dùng PALETTE (api/src/common/palette.generated.ts):\033[0m\n%s' "$apiRogue"
+  exit 1
+fi
