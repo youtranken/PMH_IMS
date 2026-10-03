@@ -461,8 +461,10 @@
 }
 .full-bar-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
 }
 .full-bar-search {
   width: 260px;
