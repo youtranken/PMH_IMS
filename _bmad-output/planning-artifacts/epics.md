@@ -1003,7 +1003,7 @@ So that đi từ bản vẽ tổng xuống tận tủ bằng vài cú bấm, kh�
 
 **Given** người vẽ chọn "Tủ R1" trong hộp gọn "Chèn tủ" mở từ thanh trên (lọc site, chọn tủ; tủ đã có khung trên bản vẽ thì nút tắt kèm lý do) và bấm Chèn tủ
 **When** IMS dựng khung (`GET /diagrams/cabinet-frame/:cabinetId`, bố cục là hàm thuần `cabinetFrameLayout`)
-**Then** chèn bằng MỘT lệnh `patch` (không `merge` — như Story 10.4) một khung tủ dùng hình rack của draw.io (`mxgraph.rackGeneral.rackCabinet3`, cao theo `cabinet.u_height`, tủ chưa khai số U dựng 42U) mang `ims_cabinet_id`, chứa sẵn mọi máy đang gắn tủ đó (qua `devices.api`, bỏ máy thanh lý) làm ô CON của khung — máy có U xếp đúng U (U1 ở đáy; kho chưa có cột U tới Story 10.11 nên hiện mọi máy vào cột bên), máy chưa khai U (hoặc U vượt tủ / trùng U) xếp ở cột "Chưa khai U" bên cạnh — cột này cũng mang `ims_cabinet_id` và tự nới khi kéo thêm máy vào (`stackLayout`)
+**Then** chèn bằng MỘT lệnh `patch` (không `merge` — như Story 10.4) một khung tủ dùng hình rack của draw.io (`mxgraph.rackGeneral.rackCabinet3`, cao theo `cabinet.u_height`, tủ chưa khai số U dựng 42U) mang `ims_cabinet_id`, chứa sẵn mọi máy đang gắn tủ đó (qua `devices.api`, bỏ máy thanh lý) làm ô CON của khung — máy có U xếp đúng U (U1 ở đáy; cột U của kho có từ Story 10.11 — từ đó khung tủ là mặt trước + mặt sau cạnh nhau), máy chưa khai U (hoặc U vượt tủ / trùng U) xếp ở cột "Chưa khai U" bên cạnh — cột này cũng mang `ims_cabinet_id` và tự nới khi kéo thêm máy vào (`stackLayout`)
 **And** máy sau này được gắn thêm vào tủ trong kho KHÔNG tự chui vào bản vẽ — hiện thành cảnh báo lệch kho (Story 10.9)
 **And** hình tự do (khung, đám mây ISP, chữ, mũi tên, đường nối site) là đồ hoạ thuần của draw.io, không ghi bảng kho nào
 
@@ -1126,20 +1126,21 @@ So that xuống tủ là nhận ra đúng máy, đúng lỗ cắm.
 
 **Acceptance Criteria:**
 
-**Given** thiết bị thêm `rack_u_start` và `rack_u_size` (cùng có hoặc cùng trống, 1–60; migration, chủ `devices`)
-**When** lưu hồ sơ có U
-**Then** API chặn U vượt `cabinet.u_height` (qua `catalog.api`) và chặn hai máy chồng U trong cùng tủ (Q-23), báo tên máy đang chiếm; lịch sử thiết bị ghi thay đổi U; nhập/xuất Excel có thêm "U bắt đầu", "Số U" (không bắt buộc)
-**And** máy có U vượt chiều cao tủ (dữ liệu cũ) hiện cảnh báo trong khung tủ, không vỡ khung
+**Given** thiết bị thêm `rack_u_start` và `rack_u_size` (cùng có hoặc cùng trống, 1–60, chỉ khi có tủ; migration `0054`, chủ `devices`)
+**When** lưu hồ sơ có U (form: hai ô "U bắt đầu" / "Số U" chỉ hiện khi đã chọn tủ; bỏ tủ thì U xoá theo)
+**Then** API chặn U vượt `cabinet.u_height` (qua `catalog.api`) và chặn hai máy chồng U trong cùng tủ (Q-23), báo tên máy đang chiếm — khoá theo tủ trong transaction + ràng buộc `EXCLUDE` (`btree_gist`, `int4range`) làm lưới cuối cho hai lượt ghi cùng lúc; máy đã thanh lý không giữ chỗ; lịch sử thiết bị ghi thay đổi U; nhập/xuất Excel có thêm "U bắt đầu", "Số U" (không bắt buộc, chồng U xét cả file)
+**And** máy có U vượt chiều cao tủ (dữ liệu cũ — tủ bị hạ chiều cao sau khi khai) xếp ở cột "Chưa khai U" kèm dòng "⚠ U… vượt tủ …" trên nhãn ô, không vỡ khung; sửa ô khác của hồ sơ đó vẫn được
+**And** bản chụp thiết bị lúc lưu (Story 10.3) ghi U; lời báo lệch kho "vị trí … · U5–U6" (Story 10.9); bản chụp lưu trước khi kho có U không bị báo đổi vị trí chỉ vì máy vừa được khai U
 
 **Given** ảnh thật hai mức
 **When** chọn ảnh mặt trước/mặt sau từ giấy tờ đính kèm của thiết bị (mức máy) hoặc tải ảnh cho model (mức model = loại thiết bị + chuỗi model, Q-23; `files.owner_type` thêm `device_model` — migration)
-**Then** ảnh mức máy đè ảnh mức model; chỉ jpeg/png/webp theo kiểm nội dung của `files`; ảnh vào bản vẽ qua `ims_photo_file_id` + hydrate, không lưu cứng trong XML
-**And** thanh trên có công tắc Biểu tượng / Ảnh thật cho ô đang chọn trong danh sách; không có ảnh thì công tắc tắt kèm lý do (`useDisabledReason`)
-**And** ghim cổng trên ảnh mặt sau = điểm nối draw.io đặt tại vị trí cổng, dây gắn link nối vào đó — IMS không lưu ghim riêng
+**Then** ảnh mức máy đè ảnh mức model; chỉ jpeg/png/webp theo kiểm nội dung của `files`; ảnh vào bản vẽ qua hydrate, không lưu cứng trong XML: ô mang `ims_photo="front|back"` (XML khô), hydrate đặt `ims_photo_file_id` + ảnh data URI đã thu nhỏ (`diagram.photo_max_px`, mặc định 480), dehydrate gỡ (AD-18 — data URI vì iframe draw.io sandbox không mang cookie phiên); trang thiết bị (tab Giấy tờ) có khu "Ảnh thật trên sơ đồ" để chọn ảnh riêng máy / tải và chọn ảnh model
+**And** menu ⋮ của thanh trên có "Ảnh thật…": hộp liệt kê ô thiết bị của trang đang mở (giao thức nhúng không báo ô đang chọn), mỗi ô một công tắc Biểu tượng / Ảnh mặt trước / Ảnh mặt sau; không có ảnh thì lựa chọn tắt kèm lý do (`useDisabledReason`)
+**And** ghim cổng trên ảnh mặt sau = điểm nối draw.io đặt tại vị trí cổng, dây gắn link nối vào đó — IMS không lưu ghim riêng (hộp "Ảnh thật…" ghi cách làm)
 
-**Given** bản vẽ loại tủ
-**When** bấm "Dựng lại mặt tủ"
-**Then** sinh phiên bản nháp mới với khung rack đúng U từ kho (mặt trước / mặt sau là hai khung cạnh nhau), máy chưa khai U ở cột "Chưa khai U"; E2E có trường hợp chồng U bị chặn
+**Given** bản vẽ loại tủ (nút "Tủ rack" có gắn tủ)
+**When** bấm "Dựng lại mặt tủ" (menu ⋮, hỏi qua `useConfirm`, cần mã sơ đồ như lưu)
+**Then** sinh phiên bản nháp mới với khung rack đúng U từ kho (mặt trước / mặt sau là hai khung cạnh nhau, mỗi mặt ảnh thật của mặt đó nếu có), máy chưa khai U ở cột "Chưa khai U"; "Chèn tủ" (Story 10.6) dựng cùng bố cục; E2E (`diagrams-rack.spec.ts`) có trường hợp chồng U bị chặn, khung đúng U, công tắc ảnh, 390px
 
 ### Story 10.12: Xem trên điện thoại, tìm, lớp, chỉ đường và trình chiếu
 
