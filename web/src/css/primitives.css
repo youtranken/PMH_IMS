@@ -932,6 +932,47 @@ button.btn-x.danger:hover:not(:disabled) {
   filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 1px var(--primary));
 }
 
+/* Chế độ ghim: mọi ô bấm được. Ghim bình luận nằm trên một lớp cùng phép thu phóng với ảnh xem;
+   nút ghim tự co lại theo nghịch đảo mức thu phóng để giữ cỡ chữ đọc được. */
+.diagram-viewer-canvas[data-pick-any] [data-cell-id] {
+  cursor: crosshair;
+}
+.diagram-viewer-pins {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.diagram-pin {
+  position: absolute;
+  pointer-events: auto;
+  transform-origin: 0 100%;
+  translate: 0 -100%;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 var(--space-1);
+  border: 2px solid var(--surface);
+  border-radius: var(--radius-pill) var(--radius-pill) var(--radius-pill) 0;
+  background: var(--warn);
+  color: var(--on-accent);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.diagram-pin[data-resolved='true'] {
+  background: var(--ok);
+}
+.diagram-pin[data-removed='true'] {
+  border-style: dashed;
+  opacity: 0.75;
+}
+.diagram-pin:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* Hộp nổi gọn neo vào nút (`ui/popover.tsx`) — hộp tìm trên thanh mảnh của màn sơ đồ. */
 .popover-panel {
   /* Vị trí do Floating UI (useAnchoredMenu, `position: fixed`) đặt inline. */

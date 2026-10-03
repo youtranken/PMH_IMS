@@ -260,11 +260,12 @@ export class DiagramReviewService implements OnModuleInit {
         reason,
         payload: { versionId: version.id, seq: version.seq, warnings: result.warnings.length },
       });
-      await tx.insert(diagramHistoryTable).values({
-        diagramId,
-        action: 'review.submitted',
-        actor: actor.email,
-        changes: { approvalId: created.id, versionId: version.id, seq: version.seq, reason, warnings: result.warnings.length },
+      await historyRow(tx, diagramId, 'review.submitted', actor.email, {
+        approvalId: created.id,
+        versionId: version.id,
+        seq: version.seq,
+        reason,
+        warnings: result.warnings.length,
       });
       // Outbox chỉ mang id tham chiếu, không PII (AD-11/NFR-04).
       await this.outbox.enqueueWithin(tx, 'approval.requested', { approvalId: created.id });
@@ -280,7 +281,7 @@ export class DiagramReviewService implements OnModuleInit {
     }
     return this.db.transaction(async (tx) => {
       const done = await this.approvals.transitionWithin(tx, approvalId, { to: 'withdrawn', actor: actor.email });
-      await tx.insert(diagramHistoryTable).values({ diagramId, action: 'review.withdrawn', actor: actor.email, changes: { approvalId } });
+      await historyRow(tx, diagramId, 'review.withdrawn', actor.email, { approvalId });
       return done;
     });
   }
@@ -322,7 +323,7 @@ export class DiagramReviewService implements OnModuleInit {
     }
     return this.db.transaction(async (tx) => {
       const done = await this.approvals.transitionWithin(tx, approvalId, { to: 'returned', actor: actor.email, note });
-      await tx.insert(diagramHistoryTable).values({ diagramId, action: 'review.returned', actor: actor.email, changes: { approvalId, note } });
+      await historyRow(tx, diagramId, 'review.returned', actor.email, { approvalId, note });
       await this.outbox.enqueueWithin(tx, 'approval.decided', { approvalId, state: 'returned' });
       return done;
     });
@@ -387,7 +388,7 @@ export class DiagramReviewService implements OnModuleInit {
       approvalId: via.approvalId,
       warnings: result.warnings.length,
     };
-    await tx.insert(diagramHistoryTable).values({ diagramId, action: 'version.published', actor, changes });
+    await historyRow(tx, diagramId, 'version.published', actor, changes);
     await this.audit.appendWithin(tx, { actor, action: 'diagram.published', objectType: 'diagram', objectId: diagramId, detail: changes });
     return { versionId: version.id, seq: version.seq, warnings: result.warnings };
   }
@@ -617,6 +618,14 @@ export class DiagramReviewService implements OnModuleInit {
       });
     }
   }
+}
+
+/**
+ * Một hàng `diagram_history` (AD-13) trong `tx` của lượt ghi. Mã lịch sử (`review.submitted`…)
+ * là sổ của bản vẽ, không phải mã nhật ký — nhật ký ghi qua `audit`/`approvals` riêng.
+ */
+async function historyRow(tx: Tx, diagramId: string, kind: string, actor: string, changes: Record<string, unknown>): Promise<void> {
+  await tx.insert(diagramHistoryTable).values({ diagramId, action: kind, actor, changes });
 }
 
 /** Cùng mã + câu với cổng DTO `@NoSecretText` (Q-19, FR-035): một luật, một câu. */

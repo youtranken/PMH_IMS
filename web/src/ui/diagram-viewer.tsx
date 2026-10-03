@@ -72,10 +72,47 @@ export function fitTransform(content: Size, box: Size): ViewTransform {
   };
 }
 
+/** Phần tử `data-cell-id` đúng id (so thuộc tính, không ghép selector từ dữ liệu bản vẽ). */
+function cellElement(root: Element, id: string): Element | null {
+  for (const el of Array.from(root.querySelectorAll('[data-cell-id]'))) if (el.getAttribute('data-cell-id') === id) return el;
+  return null;
+}
+
+/**
+ * Góc trên-phải của ô trên khung chưa thu phóng: hộp bao SVG trừ gốc `viewBox`. Môi trường không
+ * đo được (không `getBBox`) → `null`, nơi gọi lùi về toạ độ đã lưu.
+ */
+export function cellPoint(svg: SVGSVGElement, el: Element): ViewerPoint | null {
+  const measurable = el as unknown as { getBBox?: () => { x: number; y: number; width: number; height: number } };
+  if (typeof measurable.getBBox !== 'function') return null;
+  const box = measurable.getBBox();
+  const view = (svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
+  const [vx, vy] = view.length === 4 && view.every(Number.isFinite) ? view : [0, 0];
+  return { x: box.x - vx + box.width, y: box.y - vy };
+}
+
 function zoomAround(view: ViewTransform, factor: number, at: { x: number; y: number }): ViewTransform {
   const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale * factor));
   const ratio = scale / view.scale;
   return { scale, x: at.x - (at.x - view.x) * ratio, y: at.y - (at.y - view.y) * ratio };
+}
+
+/** Toạ độ trên khung vẽ chưa thu phóng (px của ảnh xem). */
+export interface ViewerPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * Một ghim bình luận: bám ô `cellId` nếu ô có trong ảnh xem này; ô đã bỏ (hoặc ghi chú không gắn
+ * ô) thì đứng ở `anchor` — vị trí lúc ghim — kèm "(hình đã bỏ)".
+ */
+export interface ViewerPin {
+  id: string;
+  cellId: string | null;
+  anchor: ViewerPoint | null;
+  label: string;
+  resolved: boolean;
 }
 
 /** Một ô bấm được của bản vẽ: id ô (`data-cell-id`), tên đọc cho trợ năng, dấu (nếu có). */
@@ -98,13 +135,24 @@ export function DiagramViewer({
   cells,
   onCellClick,
   selectedCellId,
+  pickAnyCell = false,
+  pins,
+  onPinClick,
+  focusCellId,
 }: {
   svg: string;
   viewer: { fullName: string; email: string };
   title: string;
   cells?: ViewerCell[];
-  onCellClick?: (cellId: string) => void;
+  /** `at` = toạ độ ô trên khung chưa thu phóng (để ghim nhớ vị trí); `null` khi không đo được. */
+  onCellClick?: (cellId: string, at?: ViewerPoint | null) => void;
   selectedCellId?: string | null;
+  /** Chế độ ghim: MỌI ô của SVG bấm được (hình tự do, dây…), không chỉ ô khai trong `cells`. */
+  pickAnyCell?: boolean;
+  pins?: ViewerPin[];
+  onPinClick?: (pinId: string) => void;
+  /** Đổi giá trị = bay tới ô này (giữ mức thu phóng). */
+  focusCellId?: string | null;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -113,6 +161,7 @@ export function DiagramViewer({
   const [view, setView] = useState<ViewTransform>({ scale: 1, x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; view: ViewTransform; target: EventTarget | null; moved: boolean } | null>(null);
   const clickable = useMemo(() => new Map((cells ?? []).map((cell) => [cell.id, cell])), [cells]);
+  const [pinAt, setPinAt] = useState<Map<string, { point: ViewerPoint; removed: boolean }>>(new Map());
 
   const fit = useCallback(() => {
     const stage = stageRef.current;
@@ -147,16 +196,53 @@ export function DiagramViewer({
     }
   }, [parsed, clickable, selectedCellId]);
 
+  /*
+   * Vị trí ghim: đo ô trong ảnh xem đang hiện; ô không có ở phiên bản này (đã bỏ) hay không đo
+   * được thì dùng toạ độ lưu lúc ghim. Ghim không gắn ô và không toạ độ thì không vẽ (chỉ ở danh sách).
+   */
+  useLayoutEffect(() => {
+    const root = parsed.value;
+    const next = new Map<string, { point: ViewerPoint; removed: boolean }>();
+    for (const pin of pins ?? []) {
+      const el = root && pin.cellId ? cellElement(root, pin.cellId) : null;
+      const measured = el && root ? cellPoint(root, el) : null;
+      const point = measured ?? pin.anchor;
+      if (point) next.set(pin.id, { point, removed: Boolean(pin.cellId) && !el });
+    }
+    setPinAt(next);
+  }, [parsed, pins]);
+
   /** Ô bấm được gần nhất chứa phần tử (ô con của nhóm thuộc về ô ngoài cùng được khai). */
   const cellAt = (target: EventTarget | null): string | null => {
     let el = target instanceof Element ? target : null;
     while (el && el !== canvasRef.current) {
       const id = el.getAttribute('data-cell-id');
-      if (id && clickable.has(id)) return id;
+      if (id && (pickAnyCell || clickable.has(id))) return id;
       el = el.parentElement;
     }
     return null;
   };
+
+  const pointOf = (id: string): ViewerPoint | null => {
+    const root = parsed.value;
+    const el = root ? cellElement(root, id) : null;
+    return root && el ? cellPoint(root, el) : null;
+  };
+
+  const pinAtTarget = (target: EventTarget | null): string | null => {
+    const el = target instanceof Element ? target.closest('[data-pin-id]') : null;
+    return el?.getAttribute('data-pin-id') ?? null;
+  };
+
+  /* Bay tới ô: đặt ô vào giữa khung, giữ mức thu phóng. */
+  useEffect(() => {
+    if (!focusCellId) return;
+    const stage = stageRef.current;
+    const point = pointOf(focusCellId) ?? (pins ?? []).map((p) => (p.cellId === focusCellId ? pinAt.get(p.id)?.point : undefined)).find(Boolean);
+    if (!stage || !point) return;
+    setView((v) => ({ ...v, x: stage.clientWidth / 2 - point.x * v.scale, y: stage.clientHeight / 2 - point.y * v.scale }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ bay khi đổi ô đích, không bay lại mỗi lần ghim đổi
+  }, [focusCellId]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -196,17 +282,18 @@ export function DiagramViewer({
     drag.current = null;
     if (!start || start.moved || !onCellClick) return;
     const id = cellAt(start.target);
-    if (id) onCellClick(id);
+    if (id) onCellClick(id, pointOf(id));
   };
   const endDrag = () => {
     drag.current = null;
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (pinAtTarget(event.target)) return;
     const id = cellAt(event.target);
     if (!id || !onCellClick) return;
     event.preventDefault();
-    onCellClick(id);
+    onCellClick(id, pointOf(id));
   };
 
   return (
@@ -243,8 +330,36 @@ export function DiagramViewer({
         <div
           ref={canvasRef}
           className="diagram-viewer-canvas"
+          data-pick-any={pickAnyCell ? '' : undefined}
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
         />
+        {pins && pins.length > 0 ? (
+          <div className="diagram-viewer-pins" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
+            {pins.map((pin, index) => {
+              const at = pinAt.get(pin.id);
+              if (!at) return null;
+              const name = t('diagramViewer.pin', { n: index + 1, label: pin.label }) + (at.removed ? ` ${t('diagramViewer.pinRemoved')}` : '');
+              return (
+                <button
+                  key={pin.id}
+                  type="button"
+                  className="diagram-pin"
+                  data-pin-id={pin.id}
+                  data-resolved={pin.resolved ? 'true' : 'false'}
+                  data-removed={at.removed ? 'true' : undefined}
+                  aria-label={name}
+                  title={name}
+                  style={{ left: `${at.point.x}px`, top: `${at.point.y}px`, transform: `scale(${1 / view.scale})` }}
+                  // Không để khung bắt con trỏ (kéo/`setPointerCapture`): cú bấm phải tới chính nút ghim.
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => onPinClick?.(pin.id)}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
       <DiagramWatermark viewer={viewer} />
     </div>

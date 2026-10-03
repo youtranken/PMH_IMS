@@ -34,6 +34,7 @@ import {
   type VersionItem,
 } from './diagram-api';
 import { DiagramDeviceCard } from './diagram-device-card';
+import { PinModeToggle, useDiagramReview } from './diagram-review';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
 import {
   deviceIdsInXml,
@@ -122,6 +123,42 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     setParams(next === 'edit' ? { mode: 'edit' } : {});
   };
 
+  /*
+   * Bay tới một ô (ghim, lời báo tự kiểm). Trình vẽ draw.io không nhận lệnh "bay tới", nên ở chế
+   * độ Sửa thì sang chế độ Xem với `?focus=` (hỏi trước nếu đang vẽ dở).
+   */
+  const [focusCell, setFocusCell] = useState<string | null>(params.get('focus'));
+  const goToCell = (cellId: string) => {
+    if (mode === 'view') {
+      setFocusCell(null);
+      window.setTimeout(() => setFocusCell(cellId), 0);
+      return;
+    }
+    void (async () => {
+      if (dirty) {
+        const ok = await ask({
+          title: t('diagrams.screen.leaveTitle'),
+          message: t('diagrams.screen.leaveMessage'),
+          confirmLabel: t('diagrams.screen.leaveDiscard'),
+          cancelLabel: t('diagrams.screen.leaveStay'),
+          danger: true,
+        });
+        if (!ok) return;
+        setDirty(false);
+      }
+      setFocusCell(cellId);
+      setParams({ focus: cellId });
+    })();
+  };
+  const review = useDiagramReview({
+    me,
+    diagram: node.data ?? null,
+    run: stepUp.run,
+    versionId: content.data?.version?.id ?? null,
+    dirty,
+    onGoToCell: goToCell,
+  });
+
   const tabs = (
     <Tabs
       ariaLabel={t('diagrams.screen.tabsLabel')}
@@ -142,6 +179,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const dialogs = (
     <>
       {stepUp.dialog}
+      {review.dialogs}
       {versionsOpen && node.data ? (
         <DiagramVersionsDialog
           me={me}
@@ -175,8 +213,13 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   );
 
   let body: ReactNode;
-  let actions: ReactNode = versionsButton;
-  let status: ReactNode = null;
+  let actions: ReactNode = (
+    <>
+      {review.actions}
+      {versionsButton}
+    </>
+  );
+  let status: ReactNode = review.status;
   if (node.isPending || settings.isPending) body = <Loading />;
   else if (node.isError || settings.isError) {
     body = (
@@ -225,6 +268,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         title={title}
         tabs={tabs}
         versionsButton={versionsButton}
+        reviewActions={review.actions}
         dialogs={dialogs}
         content={content.data}
         settings={settings.data}
@@ -238,6 +282,12 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     const version = content.data.version;
     const view = viewerCells(content.data, t);
     const card = cardCellId ? view.byCell.get(cardCellId) : undefined;
+    actions = (
+      <>
+        <PinModeToggle active={review.pinMode} onToggle={review.togglePinMode} />
+        {actions}
+      </>
+    );
     body = (
       <>
         <DiagramViewer
@@ -245,22 +295,40 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           viewer={me}
           title={t('diagrams.screen.viewerTitle')}
           cells={view.cells}
-          selectedCellId={cardCellId}
-          onCellClick={setCardCellId}
+          selectedCellId={cardCellId ?? focusCell}
+          onCellClick={review.pinMode ? review.viewer.onPickCell : setCardCellId}
+          pickAnyCell={review.viewer.pickAnyCell}
+          pins={review.viewer.pins}
+          onPinClick={review.viewer.onPinClick}
+          focusCellId={focusCell}
         />
         {card ? (
           <DiagramDeviceCard me={me} device={card.device} code={card.code} diagramId={id} onClose={() => setCardCellId(null)} />
         ) : null}
       </>
     );
+    const pendingVersion = review.review?.versionId ?? null;
+    if (pendingVersion && pendingVersion !== version.id) {
+      status = (
+        <>
+          {status}
+          <button type="button" className="btn sm" onClick={() => setParams({ version: pendingVersion })}>
+            {t('diagrams.review.viewPending')}
+          </button>
+        </>
+      );
+    }
     if (versionId) {
       status = (
-        <p className="muted" role="status">
-          {t('diagrams.screen.viewingOld', { seq: version.seq, at: formatDateTime(version.savedAt) })}{' '}
-          <button type="button" className="btn sm" onClick={() => setParams({})}>
-            {t('diagrams.screen.backToLatest')}
-          </button>
-        </p>
+        <>
+          {status}
+          <p className="muted" role="status">
+            {t('diagrams.screen.viewingOld', { seq: version.seq, at: formatDateTime(version.savedAt) })}{' '}
+            <button type="button" className="btn sm" onClick={() => setParams({})}>
+              {t('diagrams.screen.backToLatest')}
+            </button>
+          </p>
+        </>
       );
     }
   }
@@ -308,6 +376,7 @@ function DiagramEditor({
   title,
   tabs,
   versionsButton,
+  reviewActions,
   dialogs,
   content,
   settings,
@@ -319,6 +388,8 @@ function DiagramEditor({
   title: string;
   tabs: ReactNode;
   versionsButton: ReactNode;
+  /** Gửi duyệt / Phát hành / Ghim của `useDiagramReview` — cùng nút với chế độ Xem. */
+  reviewActions: ReactNode;
   dialogs: ReactNode;
   content: DiagramContent;
   settings: EditorSettings;
@@ -563,6 +634,7 @@ function DiagramEditor({
           <button type="button" className="btn primary" disabled={!ready || busy} onClick={() => frame.current?.send({ action: 'save' })}>
             {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
           </button>
+          {reviewActions}
           {versionsButton}
         </>
       }

@@ -107,3 +107,39 @@ describe('DiagramViewer — ô bấm được và dấu theo ô', () => {
     expect(clicked).toEqual([]);
   });
 });
+
+describe('DiagramViewer — ghim bình luận (Q-23)', () => {
+  const PINNED =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><g data-cell-id="1">' +
+    '<g data-cell-id="d1"><rect width="10" height="10"/><text>SW-E2E-01</text></g>' +
+    '<g data-cell-id="s1"><text>Tầng 3</text></g></g></svg>';
+
+  it('ghim hiện thành nút đánh số; ô đã bỏ ở phiên bản này hiện ở vị trí cũ kèm "(hình đã bỏ)"', async () => {
+    const opened: string[] = [];
+    renderWithI18n(
+      <DiagramViewer
+        svg={PINNED}
+        viewer={VIEWER}
+        title="Bản vẽ"
+        pins={[
+          { id: 'p1', cellId: 'd1', anchor: { x: 5, y: 5 }, label: 'Sai cổng uplink', resolved: false },
+          { id: 'p2', cellId: 'gone', anchor: { x: 50, y: 60 }, label: 'Bỏ máy này', resolved: true },
+        ]}
+        onPinClick={(id) => opened.push(id)}
+      />,
+    );
+    const first = screen.getByRole('button', { name: /Ghim 1: Sai cổng uplink/ });
+    const removed = screen.getByRole('button', { name: /Ghim 2: Bỏ máy này.*\(hình đã bỏ\)/ });
+    expect(removed.getAttribute('data-resolved')).toBe('true');
+    expect(removed.style.left).toBe('50px');
+    await userEvent.setup().click(first);
+    expect(opened).toEqual(['p1']);
+  });
+
+  it('chế độ ghim: mọi ô bấm được (kể cả hình tự do), báo kèm toạ độ ô', async () => {
+    const picked: [string, { x: number; y: number } | null][] = [];
+    renderWithI18n(<DiagramViewer svg={PINNED} viewer={VIEWER} title="Bản vẽ" pickAnyCell onCellClick={(id, at) => picked.push([id, at ?? null])} />);
+    await userEvent.setup().click(screen.getByText('Tầng 3'));
+    expect(picked.map(([id]) => id)).toEqual(['s1']);
+  });
+});
