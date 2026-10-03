@@ -285,7 +285,10 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
 
     await page.goto(`/diagrams/${id}`);
     await expect(page.getByRole('list', { name: 'Chú giải màu dây' })).toBeVisible();
-    await page.getByRole('region', { name: 'Bản vẽ, chỉ xem' }).getByRole('button', { name: 'Gi1/0/9 ↔ eth0' }).click();
+    // Nét ngang có hộp bao cao 0 (Playwright coi là "không hiện" dù nét vẫn vẽ): mở thẻ bằng bàn phím.
+    const cable = page.getByRole('region', { name: 'Bản vẽ, chỉ xem' }).getByRole('button', { name: 'Gi1/0/9 ↔ eth0' });
+    await cable.focus();
+    await cable.press('Enter');
     const card = page.getByRole('dialog', { name: /^Dây / });
     await expect(card).toContainText(`${sw.code} Gi1/0/9`);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
