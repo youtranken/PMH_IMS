@@ -109,13 +109,15 @@ chỉ có references (`"files": []`), nên `tsc --noEmit` ở đó xanh mà khô
 
 ## Kiểm theo 3 tầng — chạy đúng mức, không chạy thừa
 
-E2E đầy đủ tốn khoảng 30 phút và nhiều RAM. Không chạy nó sau mỗi lần sửa nhỏ.
+E2E đầy đủ nay tốn hơn 1 giờ và nhiều RAM. Không chạy nó sau mỗi lần sửa nhỏ, và không chạy cho
+một tính năng mới chỉ nằm trong module riêng — tính năng cũ đã có E2E xanh từ trước.
 
 | Khi nào | Chạy gì | Thời gian |
 | --- | --- | --- |
 | **Mỗi lần sửa** | Unit + `test:db` của phần bị chạm. Trước khi commit: `bash ops/ci-local.sh` (lint, depcruise, unit, DB, build) | 1–4 phút |
 | **Xong một mục / một story** | Chỉ dựng lại service bị đổi, rồi chỉ chạy spec E2E của mảng đó (xem bên dưới) | 3–5 phút |
-| **Trước khi merge nhánh vào `master`, trước release, khi đóng epic** | `bash ops/ci-local.sh --e2e`: E2E đầy đủ, **một lần** | ~30 phút |
+| **Trước khi merge nhánh vào `master`, khi đóng epic** | `bash ops/ci-local.sh` + **E2E theo phạm vi** (xem dưới) | 10–30 phút |
+| **Trước release lên prod, hoặc nhánh đụng phần lõi dùng chung** | `bash ops/ci-local.sh --e2e`: E2E đầy đủ, **một lần** | >1 giờ |
 
 Tầng giữa:
 
@@ -129,8 +131,18 @@ cd e2e && npx playwright test tests/<mảng>*.spec.ts --reporter=line
   code chưa hề được nạp.
 - Chạy lẻ spec mà thấy cảnh báo `login.rate_limit_per_ip đang là 500`, thì trả lại trên DB dev:
   `UPDATE system_config SET value = '20' WHERE key = 'login.rate_limit_per_ip';`
-- `--e2e-fast` (~24 phút, bỏ các bài `@slow`) dùng khi muốn soát rộng giữa chừng. Nó không thay
-  được `--e2e` ở tầng cuối.
+- `--e2e-fast` (bỏ các bài `@slow`) dùng khi muốn soát rộng giữa chừng. Nó không thay được `--e2e`
+  khi tầng cuối bắt buộc đầy đủ.
+
+**E2E theo phạm vi** = spec của mảng mới + spec của mọi màn/luồng mà diff có chạm (đối chiếu
+`git diff --name-only master...HEAD` với spec dùng màn đó; kèm `security.spec.ts` nếu chạm API).
+
+**Bắt buộc E2E đầy đủ** khi diff chạm phần lõi dùng chung, vì lỗi ở đây hiện ra ở màn khác hẳn
+(Epic 10: đổi phạm vi step-up làm đỏ break-glass và nhật ký, không phải màn sơ đồ):
+- auth / session / step-up / CSRF / throttle (`api/src/modules/auth`, `api/src/common`);
+- shell, layout, router, `web/src/ui` dùng chung, `web/src/css` dùng chung, `web/src/lib`;
+- migration sửa bảng đã có (thêm cột/ràng buộc), `system_config` dùng chung;
+- hạ tầng E2E: `e2e/tests/helpers.ts`, `global-setup.ts`, `global-teardown.ts`, `reset-e2e.mjs`.
 - GitHub Actions chỉ chạy lint · depcruise · unit · build. **E2E và `test:db` không có ai ép ngoài
   tầng cuối ở trên.** GitHub xanh không có nghĩa là DoD gạch 7 đã đạt.
 
@@ -199,13 +211,15 @@ Playwright (`e2e/`), chạy trên compose thật, không mock API.
 4. Thứ dùng chung mới đã khai vào `docs/SHARED-REGISTRY.md` (AD-15).
 5. Migration đúng mục "Migration & DB" ở trên.
 6. UI tiếng Việt qua `lib/i18n`, không chuỗi cứng; màn đọc pass 390px.
-7. E2E của mảng xanh ở tầng giữa; E2E đầy đủ xanh trước khi merge `master`.
+7. E2E của mảng xanh ở tầng giữa; E2E theo phạm vi (hoặc đầy đủ nếu chạm lõi — xem trên) xanh
+   trước khi merge `master`.
 8. Không hardcode tham số nghiệp vụ, đưa vào `system_config` (AD-11).
 
 ## Kết thúc epic — chạy đủ, đúng thứ tự
 
 ```bash
-bash ops/ci-local.sh --e2e                 # 1. toàn bộ cổng + E2E đầy đủ
+bash ops/ci-local.sh                       # 1. toàn bộ cổng; rồi E2E theo phạm vi
+                                           #    (đầy đủ `--e2e` nếu epic chạm lõi dùng chung)
 /code-review high                          # 2. soi toàn bộ thay đổi của epic, sửa hết finding
 graphify update . && graphify cluster-only .   # 3. cập nhật bản đồ
 graphify label . --missing-only            #    đặt tên community mới (cần API key)
