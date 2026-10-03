@@ -3037,6 +3037,7 @@ export default {
       diagramCommentResolved: 'Đánh dấu ghim đã xử lý',
       diagramCommentReopened: 'Mở lại ghim',
       diagramPresentationCreated: 'Tạo bản trình bày từ bản vẽ chính thức',
+      diagramSpikeSaved: 'Lưu bản vẽ thử (draw.io)',
       diagramPublishRequested: 'Gửi duyệt bản vẽ',
       diagramPublishApproved: 'Duyệt bản vẽ',
       diagramPublishReturned: 'Trả về bản vẽ kèm ghi chú',
@@ -3116,6 +3117,7 @@ export default {
       file: 'Tệp',
       systemConfig: 'Tham số hệ thống',
       diagram: 'Bản vẽ sơ đồ mạng',
+      diagramSpike: 'Bản vẽ thử (draw.io)',
     },
   },
   access: {

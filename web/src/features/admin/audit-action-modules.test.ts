@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTION_KEY, auditActionModule, MODULE_KEY } from './audit-actions';
+import { ACTION_KEY, auditActionModule, MODULE_KEY, OBJECT_TYPE_KEY } from './audit-actions';
 
 /*
  * Ô "Hành động" của Nhật ký có vài chục mã: chia theo module để người rà tìm "mọi việc về két"
@@ -38,6 +38,19 @@ describe('auditActionModule — mã hành động thuộc module nào', () => {
     const orphans = Object.keys(ACTION_KEY).filter((code) => auditActionModule(code) === 'other');
     expect(orphans).toEqual([]);
   });
+
+  /*
+   * `audit_log` chỉ-thêm: mã mà API đã thôi sinh vẫn còn trong nhật ký của DB từng chạy nó, nên
+   * bài điểm danh đọc mã nguồn không thấy mà ô "Hành động" vẫn liệt kê.
+   */
+  it.each([['diagram_spike.saved', 'diagram_spike', 'network']])(
+    'mã đã thôi sinh %s vẫn có nhãn, loại đối tượng và module',
+    (code, objectType, module) => {
+      expect(ACTION_KEY[code]).toMatch(/^audit\.actions\./);
+      expect(OBJECT_TYPE_KEY[objectType]).toMatch(/^audit\.objectType\./);
+      expect(auditActionModule(code)).toBe(module);
+    },
+  );
 
   it('mỗi module có khóa nhãn', () => {
     for (const code of Object.keys(ACTION_KEY)) {

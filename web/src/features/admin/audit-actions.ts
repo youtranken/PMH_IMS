@@ -135,6 +135,8 @@ export const ACTION_KEY: Record<string, string> = {
   'diagram_publish.approved': 'audit.actions.diagramPublishApproved',
   'diagram_publish.returned': 'audit.actions.diagramPublishReturned',
   'diagram_publish.withdrawn': 'audit.actions.diagramPublishWithdrawn',
+  // API thôi sinh mã này nhưng audit_log chỉ-thêm vẫn giữ dòng cũ của nó.
+  'diagram_spike.saved': 'audit.actions.diagramSpikeSaved',
   'crypto.rewrapped': 'audit.actions.cryptoRewrapped',
 };
 
@@ -297,6 +299,7 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   nat: 'network',
   diagram: 'network',
   diagram_publish: 'network',
+  diagram_spike: 'network',
   expiry: 'expiry',
   disposal: 'disposal',
   file: 'file',
@@ -348,6 +351,7 @@ export const OBJECT_TYPE_KEY: Record<string, string> = {
   file: 'audit.objectType.file',
   system_config: 'audit.objectType.systemConfig',
   diagram: 'audit.objectType.diagram',
+  diagram_spike: 'audit.objectType.diagramSpike',
 };
 
 export function objectTypeLabel(type: string | null, t: TFunction): string | null {
