@@ -859,7 +859,7 @@ export default {
     photo: {
       menuButton: 'Ảnh thật…',
       title: 'Biểu tượng / Ảnh thật',
-      hint: 'Chọn hình cho từng thiết bị trên trang đang mở. Ảnh lấy ở trang thiết bị (tab Giấy tờ → Ảnh thật trên sơ đồ); ảnh riêng của máy đè ảnh theo model. Đổi xong bấm Lưu.',
+      hint: 'Chọn hình cho từng thiết bị trên trang đang mở. Ảnh lấy ở trang thiết bị (tab Giấy tờ → Ảnh thật trên sơ đồ); ảnh riêng của máy đè ảnh theo model. Đổi xong bấm Lưu. Ghim cổng trên ảnh mặt sau: dùng điểm nối của draw.io (chuột phải hình → Edit Connection Points) đặt đúng chỗ cổng rồi nối dây vào đó — IMS không lưu ghim riêng.',
       device: 'Thiết bị',
       look: 'Hình trên bản vẽ',
       icon: 'Biểu tượng',
