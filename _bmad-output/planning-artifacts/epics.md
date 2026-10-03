@@ -833,7 +833,7 @@ So that có trình vẽ mạng chuyên nghiệp mà không mở đường ra Int
 
 **Given** người dùng vào màn sơ đồ trên desktop (bố cục theo góp ý bản thử — Q-23, 03/10/2026)
 **When** màn mở
-**Then** sidebar của shell tự thu còn biểu tượng (rời màn thì trả lại trạng thái người dùng chọn trước đó); trình vẽ/trình xem chiếm toàn bộ phần còn lại của màn hình; tab **Sửa / Xem** và các nút của IMS nằm trên MỘT thanh mảnh phía trên trình vẽ; không có cột panel cố định
+**Then** sidebar của shell tự thu còn biểu tượng (rời màn sang menu khác thì sidebar mở rộng lại như bình thường — Q-23 03/10); trình vẽ/trình xem chiếm toàn bộ phần còn lại của màn hình; tab **Sửa / Xem** và các nút của IMS nằm trên MỘT thanh mảnh phía trên trình vẽ; không có cột panel cố định
 **And** thu sidebar làm bằng prop/trạng thái của shell dùng chung (khai `SHARED-REGISTRY.md`), không tự dựng sidebar riêng trong `features/` (AD-15, UX-DR1)
 **And** E2E (desktop): sau khi mở màn, sidebar ở dạng thu gọn, iframe trình vẽ rộng bằng phần còn lại của khung (không có cột bên cạnh), thanh trên có tab Sửa/Xem (`getByRole('tab')`)
 

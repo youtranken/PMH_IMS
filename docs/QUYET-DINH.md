@@ -446,6 +446,10 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   Gạch này bổ sung gạch 02/10 ("bản vẽ không ghi sơ đồ cổng"): LƯU hay PHÁT HÀNH bản vẽ vẫn không
   ghi gì vào sơ đồ cổng; chỉ khi người dùng bấm "Khai" (hoặc "Gỡ luôn kết nối") thì web mới gọi API
   của `devices`.
+- **Chốt chi tiết (03/10/2026, chủ dự án):** xoá bản vẽ thử (bảng `diagram_spike` bỏ bằng migration
+  mới ở story 10.3); rời màn sơ đồ sang menu khác thì sidebar mở rộng lại; đóng hộp Khai (✕/Esc) =
+  "Chỉ vẽ"; nhân bản nét dây đã khai thì bản sao chỉ là nét vẽ (như copy-paste). Chủ dự án cho chạy
+  liền Epic 10 tới hết, kể cả E2E đầy đủ và code review.
 - **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
   draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
 
