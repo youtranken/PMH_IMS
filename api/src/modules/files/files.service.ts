@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ReadStream } from 'node:fs';
 import { and, asc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
@@ -42,6 +42,8 @@ export const FILE_OWNER_TYPES = [
   'service_account',
   'subnet',
   'nat_rule',
+  // Ảnh thật theo model thiết bị (loại + chuỗi model, Q-23) — chủ thể là hàng `device_model` của `devices`.
+  'device_model',
 ] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 
@@ -295,6 +297,39 @@ export class FilesService implements OnModuleInit {
       objectId: ownerId,
       detail: { fileId: id, originalName },
     });
+  }
+
+  /**
+   * Ảnh còn sống theo id (bỏ tệp đã xoá và tệp không phải ảnh) — một câu cho cả lô. Nơi gọi tự
+   * xét `ownerType`/`ownerId`: chọn ảnh thật cho máy chỉ nhận ảnh đính kèm của CHÍNH máy đó.
+   */
+  async imagesByIds(ids: string[]): Promise<Map<string, FileRecord>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.db
+      .select()
+      .from(filesTable)
+      .where(and(inArray(filesTable.id, unique), isNull(filesTable.deletedAt)));
+    return new Map(rows.filter((row) => kindOfMime(row.mimeType) === 'image').map((row) => [row.id, toRecord(row)]));
+  }
+
+  /**
+   * Nội dung một ảnh còn sống, đọc từ đĩa — để server thu nhỏ rồi nhúng vào bản vẽ / ảnh xem
+   * trước. Không ghi `file.downloaded`: ảnh không rời server nguyên bản, và mỗi lần mở bản vẽ ghi
+   * một dòng cho mỗi máy là ngập nhật ký (lần mở bản vẽ đã có `diagram.viewed`). Blob mất trên
+   * đĩa thì `null`, không ném — một ảnh hỏng không được làm hỏng cả bản vẽ.
+   */
+  async readImage(id: string): Promise<{ mime: string; bytes: Buffer } | null> {
+    const [row] = await this.db
+      .select()
+      .from(filesTable)
+      .where(and(eq(filesTable.id, id), isNull(filesTable.deletedAt)));
+    if (!row || kindOfMime(row.mimeType) !== 'image') return null;
+    try {
+      return { mime: row.mimeType, bytes: await readFile(join(storageDir(), row.storedName)) };
+    } catch {
+      return null;
+    }
   }
 
   /**

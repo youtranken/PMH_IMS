@@ -284,6 +284,60 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
   });
 });
 
+/*
+ * Ảnh thật (Story 10.11, AD-18): ô thiết bị mang `ims_photo="front|back"` là lựa chọn của người
+ * vẽ; ảnh (data URI đã thu nhỏ) và `ims_photo_file_id` chỉ có ở XML ướt — XML lưu không chứa ảnh.
+ */
+describe('ảnh thật trên ô thiết bị — hydrate nhúng, dehydrate gỡ', () => {
+  const FILE = '7b0c1c1e-0000-4000-8000-0000000000aa';
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const photo = { fileId: FILE, uri: `data:image/png,${PNG}` };
+  const withPhoto = source({ photos: { front: photo } });
+
+  it('deviceLookStyle mặt có ảnh → shape=image, ảnh dạng data:image/png,<base64> (không dấu ; trong giá trị), giữ tỉ lệ ảnh', () => {
+    const style = deviceLookStyle(withPhoto, 'front');
+    expect(style).toBe(`shape=image;image=data:image/png,${PNG};imageAspect=1;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;`);
+  });
+
+  it('mặt không có ảnh → rơi về biểu tượng loại', () => {
+    expect(deviceLookStyle(withPhoto, 'back')).toBe(deviceLookStyle(withPhoto));
+  });
+
+  it('hydrate: ô chọn ảnh mặt trước nhận ảnh + ims_photo_file_id; ô không chọn ảnh vẫn là biểu tượng', () => {
+    const dry = page(deviceCell({ id: 'a', extra: ' ims_photo="front"' }) + deviceCell({ id: 'b' }));
+    const wet = hydrateDiagramXml(dry, new Map([[DEV, withPhoto]]));
+    expect(styleOf(wet, 'a')).toMatchObject({ shape: 'image', image: `data:image/png,${PNG}`, imageAspect: '1' });
+    expect(wet).toMatch(new RegExp(`ims_photo="front"[^>]*ims_photo_file_id="${FILE}"|ims_photo_file_id="${FILE}"[^>]*ims_photo="front"`));
+    expect(styleOf(wet, 'b')).toMatchObject({ shape: 'mxgraph.networks.switch' });
+    expect(checkDiagramXml(wet, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+  });
+
+  it('ảnh đã bị gỡ khỏi máy/model → ô về biểu tượng, giữ lựa chọn ims_photo để ảnh quay lại khi có', () => {
+    const dry = page(deviceCell({ id: 'a', extra: ` ims_photo="front" ims_photo_file_id="${FILE}"` }));
+    const wet = hydrateDiagramXml(dry, new Map([[DEV, source()]]));
+    expect(styleOf(wet, 'a')).toMatchObject({ shape: 'mxgraph.networks.switch' });
+    expect(wet).toContain('ims_photo="front"');
+    expect(wet).not.toContain('ims_photo_file_id');
+  });
+
+  it('dehydrate gỡ ảnh nhúng và ims_photo_file_id, giữ ims_photo; hydrate lại ra đúng bản ướt', () => {
+    const dry = page(deviceCell({ id: 'a', extra: ' ims_photo="front"' }));
+    const wet = hydrateDiagramXml(dry, new Map([[DEV, withPhoto]]));
+    const again = dehydrateDiagramXml(wet);
+    expect(again).not.toContain('data:image/png');
+    expect(again).not.toContain('ims_photo_file_id');
+    expect(again).toContain('ims_photo="front"');
+    expect(hydrateDiagramXml(again, new Map([[DEV, withPhoto]]))).toBe(wet);
+  });
+
+  it('nhãn có vị trí nhiều U và cảnh báo U vượt tủ', () => {
+    expect(deviceCellLabel(source({ u: 5, uSize: 2 }))).toBe('SW-E2E-01\n10.0.0.5\nHQ · R1 · U5–U6');
+    expect(deviceCellLabel(source({ u: 41, uSize: 2, rackWarning: '⚠ U41–U42 vượt tủ R1 (40U)' }))).toBe(
+      'SW-E2E-01\n10.0.0.5\nHQ · R1 · U41–U42\n⚠ U41–U42 vượt tủ R1 (40U)',
+    );
+  });
+});
+
 /** Style của một `<mxCell>` trần (không bọc `UserObject`). */
 function bareStyleOf(xml: string, cellId: string): Record<string, string> {
   const match = new RegExp(`<mxCell id="${cellId}"[^>]*style="([^"]*)"`).exec(xml);

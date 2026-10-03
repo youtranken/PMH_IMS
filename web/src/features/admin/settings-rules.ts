@@ -20,7 +20,8 @@ export interface SettingRow {
     | 'cells'
     | 'devices'
     | 'megapixels'
-    | 'hops';
+    | 'hops'
+    | 'px';
   min?: number;
   max?: number;
   maxLength?: number;

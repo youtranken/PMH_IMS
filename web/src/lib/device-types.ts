@@ -24,6 +24,9 @@ export interface DeviceRow {
   warrantyEnd: string | null;
   status: DeviceStatus;
   note: string | null;
+  /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U; vắng ở dữ liệu giả của bài kiểm cũ. */
+  rackUStart?: number | null;
+  rackUSize?: number | null;
   createdAt: string;
   updatedAt: string;
 }

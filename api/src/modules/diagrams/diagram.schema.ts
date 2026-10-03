@@ -38,8 +38,9 @@ export interface DeviceSnapshotEntry {
   ips?: string[];
   site?: string | null;
   cabinet?: string | null;
-  /** Vị trí U trong tủ — chưa có trong kho; giữ chỗ để bản chụp không đổi hình dạng về sau. */
+  /** U thấp nhất máy chiếm trong tủ lúc lưu (U1 = đáy) và số U; bản lưu trước khi kho có U ghi `null`. */
   u?: number | null;
+  uSize?: number | null;
   status?: string;
   /**
    * Cổng của CHÍNH máy này trên từng dây có trên bản vẽ (`ims_link_id` → tên cổng; `''` = chưa ghi)

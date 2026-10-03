@@ -185,6 +185,16 @@ function styleImages(style: string): string[] {
  * Cổng của mọi lần lưu: cỡ, cú pháp, đúng MỘT trang không nén, allowlist thẻ, không `on*`/`link`/
  * `javascript:`, nhãn HTML theo allowlist, ảnh không trỏ ra ngoài, số ô trong trần.
  */
+/**
+ * Trần cỡ XML ĐANG VẼ (ướt) gửi lên — khác trần XML lưu (khô, `diagram.xml_max_kb`). Ảnh thật
+ * thiết bị nhúng lúc hydrate làm XML ướt to hơn bản lưu, nhưng cùng những ảnh đó phải nằm trong
+ * ảnh xem SVG (trần `diagram.svg_max_kb`), nên phần ảnh không bao giờ vượt trần SVG: trần ướt =
+ * trần khô + trần SVG. Bản khô sau dehydrate vẫn phải dưới `diagram.xml_max_kb`.
+ */
+export function wetXmlLimitKb(xmlMaxKb: number, svgMaxKb: number): number {
+  return xmlMaxKb + svgMaxKb;
+}
+
 export function checkDiagramXml(xml: string, limits: DiagramXmlLimits): GateResult {
   const tooBig = sizeReason(xml, limits.xmlMaxKb, 'Bản vẽ');
   if (tooBig) return { reason: tooBig };

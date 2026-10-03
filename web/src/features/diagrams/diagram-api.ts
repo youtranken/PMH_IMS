@@ -64,7 +64,11 @@ export interface DiagramDeviceInfo {
   ips: string[];
   siteCode: string | null;
   cabinetCode: string | null;
+  /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U. */
   u: number | null;
+  uSize?: number | null;
+  /** Có ảnh thật mặt trước / mặt sau không (ảnh riêng máy hoặc theo model). */
+  photos?: { front: boolean; back: boolean };
   vendorName: string | null;
   vendorPhone: string | null;
   warrantyEnd: string | null;

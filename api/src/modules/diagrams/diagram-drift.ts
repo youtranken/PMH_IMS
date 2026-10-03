@@ -1,6 +1,7 @@
 import type { CellIndex, IndexedCell } from './diagram-cells';
 import { checkCables, undrawnLinks } from './diagram-checks';
 import type { CheckLink, Finding } from './diagram-finding';
+import { rackUnitLabel } from '../../common/rack-units';
 import { linkLabelFrom } from './diagram-hydrate';
 import { checkDevices, type CheckDevice } from './diagram-selfcheck';
 import type { DeviceSnapshotEntry } from './diagram.schema';
@@ -23,6 +24,7 @@ export interface DriftDevice extends CheckDevice {
   siteCode: string | null;
   cabinetCode: string | null;
   u: number | null;
+  uSize?: number | null;
 }
 
 export interface DriftInput {
@@ -52,8 +54,8 @@ function sameSet(a: string[], b: string[]): boolean {
   return [...a].sort().every((value, i) => value === sorted[i]);
 }
 
-function place(site: string | null | undefined, cabinet: string | null | undefined, u: number | null | undefined): string {
-  return [site, cabinet, u !== null && u !== undefined ? `U${u}` : null].filter(Boolean).join(' · ') || UNPLACED;
+function place(site: string | null | undefined, cabinet: string | null | undefined, u: number | null | undefined, uSize: number | null | undefined): string {
+  return [site, cabinet, rackUnitLabel(u, uSize)].filter(Boolean).join(' · ') || UNPLACED;
 }
 
 function warning(code: (typeof OWN_CODES)[number], cellId: string, message: string): Finding {
@@ -75,8 +77,10 @@ function deviceDrift(cells: IndexedCell[], snapshot: Map<string, DeviceSnapshotE
         warning('DRIFT_IP', cell.id, `Thiết bị ${current.code}: IP ${before.join(', ') || NONE} → ${current.ips.join(', ') || NONE}`),
       );
     }
-    const was = place(then.site, then.cabinet, then.u);
-    const now = place(current.siteCode, current.cabinetCode, current.u);
+    // Bản chụp lưu trước khi kho có cột U không mang `uSize`: không biết U lúc đó, chỉ so site · tủ.
+    const knowsU = then.uSize !== undefined;
+    const was = place(then.site, then.cabinet, knowsU ? then.u : null, then.uSize);
+    const now = place(current.siteCode, current.cabinetCode, knowsU ? current.u : null, current.uSize);
     if (was !== now) out.push(warning('DRIFT_LOCATION', cell.id, `Thiết bị ${current.code}: vị trí ${was} → ${now}`));
   }
   return out;

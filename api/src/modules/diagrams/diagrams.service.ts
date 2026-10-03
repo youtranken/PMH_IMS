@@ -32,17 +32,34 @@ import {
 } from './diagram-cells';
 import { cableEdgeStates, externalLinks, undrawnLinks, type CableEdge } from './diagram-checks';
 import { buildDraftXml } from './diagram-draft';
-import { cabinetFrameLayout, childLinkReason, frameRefs, introducedRefs, type CabinetFrameLayout, type FrameRef } from './diagram-frames';
-import type { CheckLink } from './diagram-finding';
-import { checkDiagramXml, sanitizeDiagramSvg } from './diagram-gate';
 import {
+  buildRackXml,
+  cabinetFrameLayout,
+  childLinkReason,
+  frameRefs,
+  introducedRefs,
+  type CabinetFrameDevice,
+  type CabinetFrameLayout,
+  type FrameRef,
+} from './diagram-frames';
+import type { CheckLink } from './diagram-finding';
+import { checkDiagramXml, sanitizeDiagramSvg, wetXmlLimitKb } from './diagram-gate';
+import {
+  IMS_STYLE_KEYS,
+  PHOTO_SIDE_ATTR,
   dehydrateDiagramXml,
   deviceInsertCell,
+  deviceLookStyle,
   hydrateDiagramXml,
   linkEdgeCell,
   linkLabelFrom,
+  photoDataUri,
   type DeviceCellSource,
+  type DevicePhoto,
+  type PhotoSide,
 } from './diagram-hydrate';
+import { rackUnitLabel } from '../../common/rack-units';
+import { sizeReason } from '../../common/svg-sanitize';
 import { canManageNode, plannedNotAllowedReason, presentationName, type PresentationSource } from './diagram-presentation';
 import {
   diagramHistoryTable,
@@ -119,12 +136,28 @@ export interface DiagramDeviceInfo {
   ips: string[];
   siteCode: string | null;
   cabinetCode: string | null;
+  /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U; `null` = chưa khai. */
   u: number | null;
+  uSize: number | null;
   vendorName: string | null;
   vendorPhone: string | null;
   warrantyEnd: string | null;
+  /** Máy có ảnh thật mặt trước / mặt sau không (ảnh riêng máy hoặc ảnh model) — công tắc Ảnh thật. */
+  photos: { front: boolean; back: boolean };
   /** Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn, cỡ theo hình của loại). */
   cell: { style: string; label: string; width: number; height: number };
+}
+
+/**
+ * Hình của một máy cho công tắc "Biểu tượng / Ảnh thật": phần style IMS của từng lựa chọn (cùng
+ * luật hydrate). Web gỡ `imsStyleKeys` khỏi style đang có của ô rồi nối phần này — không tự ghép.
+ */
+export interface DeviceLook {
+  id: string;
+  found: boolean;
+  icon: string;
+  front: { style: string; fileId: string } | null;
+  back: { style: string; fileId: string } | null;
 }
 
 /**
@@ -661,8 +694,14 @@ export class DiagramsService {
     const deviceCells = row.cellIndex.cells
       .filter((cell) => cell.kind === 'device' && cell.deviceId)
       .map((cell) => ({ cellId: cell.id, deviceId: cell.deviceId!, code: cell.ims.ims_device_code ?? '' }));
+    // Ảnh thật chỉ nhúng vào XML nạp trình vẽ (chế độ Xem dùng ảnh SVG chụp lúc lưu), và chỉ mặt
+    // nào có ô chọn hiện nó — không đọc ảnh của mọi máy mỗi lần mở.
+    const photoNeeds = options.mode === 'edit' ? photoNeedsOf(row.cellIndex) : new Map<string, Set<PhotoSide>>();
     const [{ infos: devices, sources }, cables, frames] = await Promise.all([
-      this.deviceData(deviceCells.map((c) => c.deviceId)),
+      this.deviceData(
+        deviceCells.map((c) => c.deviceId),
+        photoNeeds,
+      ),
       this.cableData(row.cellIndex),
       this.framesOf(row.cellIndex),
     ]);
@@ -768,14 +807,81 @@ export class DiagramsService {
     if (page.total > DEVICE_INFO_MAX_IDS) {
       throw new BadRequestException({ code: 'DIAGRAM_CABINET_TOO_MANY', message: `Tủ có ${page.total} thiết bị — quá nhiều để dựng một khung tủ.` });
     }
-    const { infos } = await this.deviceData(page.items.map((d) => d.id));
+    const ids = page.items.map((d) => d.id);
+    const { infos, sources } = await this.deviceData(ids, new Map(ids.map((id) => [id, new Set<PhotoSide>(['front', 'back'])])));
     const devices = infos
       .filter((info) => info.found && info.status !== 'retired' && info.code)
-      .map((info) => ({ id: info.id, code: info.code!, u: info.u, uSize: null, cell: info.cell }));
+      .map((info): CabinetFrameDevice => {
+        const source = sources.get(info.id)!;
+        const faces: CabinetFrameDevice['faces'] = {};
+        for (const side of ['front', 'back'] as const) {
+          if (source.photos?.[side]) faces[side] = { style: `align=center;${deviceLookStyle(source, side)}` };
+        }
+        return { id: info.id, code: info.code!, u: info.u, uSize: info.uSize, cell: info.cell, faces };
+      });
+    // Mặt trước / mặt sau là hai khung cạnh nhau: máy xếp đúng U ở cả hai, mỗi mặt ảnh của mặt đó.
     return {
       cabinet: { id: cabinet.id, code: cabinet.code, siteCode: cabinet.siteCode, uHeight: cabinet.uHeight, active: cabinet.active },
-      layout: cabinetFrameLayout({ cabinet: { id: cabinet.id, code: cabinet.code, uHeight: cabinet.uHeight }, devices }),
+      layout: cabinetFrameLayout({ cabinet: { id: cabinet.id, code: cabinet.code, uHeight: cabinet.uHeight }, devices }, { sides: ['front', 'back'] }),
     };
+  }
+
+  /**
+   * "Dựng lại mặt tủ" (bản vẽ loại tủ): một phiên bản nháp MỚI chỉ gồm khung tủ dựng từ kho — mặt
+   * trước + mặt sau xếp đúng U, máy chưa khai U ở cột "Chưa khai U". Không xoá gì: phiên bản cũ còn
+   * nguyên để khôi phục; không ghi gì vào kho.
+   */
+  async rebuildRack(actor: string, diagramId: string): Promise<VersionItem> {
+    const node = await this.node(diagramId);
+    if (node.nodeType !== 'cabinet' || !node.cabinetId) {
+      throw new BadRequestException({
+        code: 'DIAGRAM_NOT_CABINET',
+        message: 'Chỉ bản vẽ loại "Tủ rack" có gắn tủ mới dựng lại mặt tủ được — gắn tủ cho bản vẽ ở cây bản vẽ trước.',
+      });
+    }
+    const frame = await this.cabinetFrame(node.cabinetId);
+    const xml = dehydrateDiagramXml(buildRackXml(frame.layout));
+    const index = buildCellIndex(xml);
+    const snapshot = await this.snapshot(index);
+    const id = await this.db.transaction(async (tx) => {
+      await this.lockLive(tx, diagramId);
+      const latest = await this.latestWithin(tx, diagramId);
+      const diff = diffCellIndex(latest?.cellIndex ?? null, index);
+      return this.insertVersion(tx, actor, diagramId, {
+        seq: (latest?.seq ?? 0) + 1,
+        xml,
+        svg: null,
+        index,
+        snapshot,
+        summary: `Dựng lại mặt tủ ${frame.cabinet.code} · ${summarizeDiff(diff)}`,
+        diff,
+        basedOnVersionId: latest?.id ?? null,
+        restoredFromVersionId: null,
+        history: 'version.saved',
+        auditAction: 'diagram.saved',
+        bytes: Buffer.byteLength(xml),
+      });
+    });
+    return this.versionItem(diagramId, id);
+  }
+
+  /**
+   * Phần style IMS của "Biểu tượng" và "Ảnh thật" (từng mặt) cho nhiều máy — công tắc trên màn sửa.
+   * Ảnh nhúng sẵn (data URI đã thu nhỏ) vì trình vẽ chạy trong iframe sandbox không có cookie phiên:
+   * đường dẫn ảnh cần đăng nhập không tải được ở đó.
+   */
+  async deviceLooks(ids: string[]): Promise<{ imsStyleKeys: string[]; items: DeviceLook[] }> {
+    const unique = [...new Set(ids)];
+    const { infos, sources } = await this.deviceData(unique, new Map(unique.map((id) => [id, new Set<PhotoSide>(['front', 'back'])])));
+    const items = infos.map((info): DeviceLook => {
+      const source = sources.get(info.id) ?? missingSource('');
+      const face = (side: PhotoSide) => {
+        const photo = source.photos?.[side];
+        return photo ? { style: deviceLookStyle(source, side), fileId: photo.fileId } : null;
+      };
+      return { id: info.id, found: info.found, icon: deviceLookStyle(source), front: face('front'), back: face('back') };
+    });
+    return { imsStyleKeys: [...IMS_STYLE_KEYS], items };
   }
 
   /** Thẻ khung VLAN: đọc qua `ipam.api`, kể cả dải đã ngừng dùng. */
@@ -812,8 +918,12 @@ export class DiagramsService {
    * không tin cậy: qua cổng kiểm như lúc lưu.
    */
   async cableStatus(xml: string): Promise<{ edges: CableEdge[]; undrawn: DiagramLink[] }> {
-    const [xmlMaxKb, maxCells] = await Promise.all([this.config.getNumber('diagramXmlMaxKb'), this.config.getNumber('diagramMaxCells')]);
-    const gate = checkDiagramXml(xml, { xmlMaxKb, maxCells });
+    const [xmlMaxKb, maxCells, svgMaxKb] = await Promise.all([
+      this.config.getNumber('diagramXmlMaxKb'),
+      this.config.getNumber('diagramMaxCells'),
+      this.config.getNumber('diagramSvgMaxKb'),
+    ]);
+    const gate = checkDiagramXml(xml, { xmlMaxKb: wetXmlLimitKb(xmlMaxKb, svgMaxKb), maxCells });
     if (gate.reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: gate.reason });
     const cables = await this.cableData(buildCellIndex(xml));
     const undrawn = new Set(cables.undrawn);
@@ -922,18 +1032,25 @@ export class DiagramsService {
    * Thông tin máy + nguồn hydrate cùng một lượt đọc. Máy không còn trong kho KHÔNG vào `sources`:
    * hydrate tự dựng ô "Không tìm thấy trong kho" từ `ims_device_code` của chính ô đó.
    */
-  private async deviceData(ids: string[]): Promise<{ infos: DiagramDeviceInfo[]; sources: Map<string, DeviceCellSource> }> {
+  private async deviceData(
+    ids: string[],
+    /** Mặt ảnh thật cần nhúng của từng máy (hydrate / khung tủ / công tắc); vắng = không đọc ảnh. */
+    photoNeeds: Map<string, Set<PhotoSide>> = new Map(),
+  ): Promise<{ infos: DiagramDeviceInfo[]; sources: Map<string, DeviceCellSource> }> {
     const unique = [...new Set(ids)];
     const sources = new Map<string, DeviceCellSource>();
     if (unique.length === 0) return { infos: [], sources };
     const valid = unique.filter((id) => UUID_RE.test(id));
-    const [devices, ips, lists] = await Promise.all([
+    const [devices, ips, lists, photoFiles] = await Promise.all([
       this.devices.getByIds(valid),
       this.ipam.heldAddressesOf(valid),
       this.catalog.lists({ includeInactive: true }),
+      this.devices.photoSources(valid),
     ]);
     const looks = await this.catalog.diagramLooks([...devices.values()].map((d) => d.deviceTypeId));
+    const photos = await this.photoUris(photoFiles, photoNeeds);
     const vendors = new Map(lists.vendors.map((v) => [v.id, v]));
+    const cabinets = new Map(lists.cabinets.map((c) => [c.id, c]));
     const infos = unique.map((id): DiagramDeviceInfo => {
       const device = devices.get(id);
       if (!device) return { ...emptyInfo(id), cell: deviceInsertCell(missingSource('')) };
@@ -951,16 +1068,48 @@ export class DiagramsService {
         ips: ips.get(id) ?? [],
         siteCode: device.siteCode,
         cabinetCode: device.cabinetCode,
-        u: null,
+        u: device.rackUStart,
+        uSize: device.rackUSize,
         vendorName: vendor?.name ?? device.vendorName,
         vendorPhone: vendor?.phone ?? null,
         warrantyEnd: device.warrantyEnd,
+        photos: { front: Boolean(photoFiles.get(id)?.front), back: Boolean(photoFiles.get(id)?.back) },
       };
-      const source = sourceOf(info, look ?? null);
+      const height = device.cabinetId ? (cabinets.get(device.cabinetId)?.uHeight ?? null) : null;
+      const source: DeviceCellSource = {
+        ...sourceOf(info, look ?? null),
+        rackWarning: rackOverflow(device.rackUStart, device.rackUSize, device.cabinetCode, height),
+        photos: photos.get(id),
+      };
       sources.set(id, source);
       return { ...info, cell: deviceInsertCell(source) };
     });
     return { infos, sources };
+  }
+
+  /**
+   * Ảnh thật cần nhúng → data URI (đã thu nhỏ qua `devices.api`). Ảnh hỏng/mất thì vắng mặt: ô đó
+   * rơi về biểu tượng loại, không làm hỏng cả bản vẽ.
+   */
+  private async photoUris(
+    files: Map<string, { front: string | null; back: string | null }>,
+    needs: Map<string, Set<PhotoSide>>,
+  ): Promise<Map<string, Partial<Record<PhotoSide, DevicePhoto>>>> {
+    const wanted = new Map<string, { deviceId: string; side: PhotoSide }[]>();
+    for (const [deviceId, sides] of needs) {
+      for (const side of sides) {
+        const fileId = files.get(deviceId)?.[side];
+        if (fileId) wanted.set(fileId, [...(wanted.get(fileId) ?? []), { deviceId, side }]);
+      }
+    }
+    const out = new Map<string, Partial<Record<PhotoSide, DevicePhoto>>>();
+    for (const [fileId, targets] of wanted) {
+      const image = await this.devices.photoImage(fileId);
+      if (!image) continue;
+      const uri = photoDataUri(image.mime, image.bytes);
+      for (const { deviceId, side } of targets) out.set(deviceId, { ...out.get(deviceId), [side]: { fileId, uri } });
+    }
+    return out;
   }
 
   /**
@@ -1004,12 +1153,14 @@ export class DiagramsService {
       this.config.getNumber('diagramMaxCells'),
       this.config.getNumber('diagramSvgMaxKb'),
     ]);
-    const gate = checkDiagramXml(input.xml, { xmlMaxKb, maxCells });
+    const gate = checkDiagramXml(input.xml, { xmlMaxKb: wetXmlLimitKb(xmlMaxKb, svgMaxKb), maxCells });
     if (gate.reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: gate.reason });
     const svg = sanitizeDiagramSvg(input.svg, { svgMaxKb });
     if (svg.reason) throw new BadRequestException({ code: 'DIAGRAM_SVG_INVALID', message: svg.reason });
-    // Lưu "khô" (AD-18): hình/nhãn/dấu IMS dựng lại từ kho mỗi lần mở, không đóng băng vào phiên bản.
+    // Lưu "khô" (AD-18): hình/nhãn/dấu/ảnh IMS dựng lại từ kho mỗi lần mở, không đóng băng vào phiên bản.
     const xml = dehydrateDiagramXml(input.xml);
+    const dryTooBig = sizeReason(xml, xmlMaxKb, 'Bản vẽ');
+    if (dryTooBig) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: dryTooBig });
     const index = buildCellIndex(xml);
     const secret = secretLabelReason(index);
     if (secret) throw new BadRequestException({ code: 'DIAGRAM_LABEL_SECRET', message: secret });
@@ -1243,7 +1394,8 @@ export class DiagramsService {
         ips: ips.get(id) ?? [],
         site: device.siteCode,
         cabinet: device.cabinetCode,
-        u: null,
+        u: device.rackUStart,
+        uSize: device.rackUSize,
         status: device.status,
         ...(ports.has(id) ? { ports: ports.get(id) } : {}),
       };
@@ -1359,10 +1511,30 @@ function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell'> {
     siteCode: null,
     cabinetCode: null,
     u: null,
+    uSize: null,
     vendorName: null,
     vendorPhone: null,
     warrantyEnd: null,
+    photos: { front: false, back: false },
   };
+}
+
+/** Mặt ảnh thật mà các ô thiết bị của phiên bản chọn hiện (`ims_photo`). */
+function photoNeedsOf(index: CellIndex): Map<string, Set<PhotoSide>> {
+  const needs = new Map<string, Set<PhotoSide>>();
+  for (const cell of index.cells) {
+    const side = cell.ims[PHOTO_SIDE_ATTR];
+    if (cell.kind !== 'device' || !cell.deviceId || (side !== 'front' && side !== 'back')) continue;
+    needs.set(cell.deviceId, (needs.get(cell.deviceId) ?? new Set<PhotoSide>()).add(side));
+  }
+  return needs;
+}
+
+/** Cảnh báo cho máy khai U vượt chiều cao tủ (tủ bị hạ chiều cao sau khi khai — dữ liệu cũ). */
+function rackOverflow(start: number | null, size: number | null, cabinetCode: string | null, height: number | null): string | null {
+  if (start === null || !height || start + (size ?? 1) - 1 <= height) return null;
+  const where = [`tủ`, cabinetCode].filter(Boolean).join(' ');
+  return `⚠ ${rackUnitLabel(start, size)} vượt ${where} (${height}U)`;
 }
 
 function missingSource(code: string): DeviceCellSource {
@@ -1378,6 +1550,7 @@ function sourceOf(info: Omit<DiagramDeviceInfo, 'cell'>, look: { shape: string |
     siteCode: info.siteCode,
     cabinetCode: info.cabinetCode,
     u: info.u,
+    uSize: info.uSize,
     shape: look?.shape ?? null,
     iconSvg: look?.iconSvg ?? null,
   };

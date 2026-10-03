@@ -404,3 +404,85 @@ describe('planDeviceImport — cột phòng ban (Q-18)', () => {
     expect(plan.rows[0]).toMatchObject({ action: 'create', values: { department: 'Kế toán' } });
   });
 });
+
+/* Vị trí U trong tủ nhập/xuất Excel, không bắt buộc; cùng luật với form (1–60, không vượt tủ, không chồng U — Q-23). */
+describe('planDeviceImport — cột "U bắt đầu" / "Số U"', () => {
+  const R12 = { ...CABINET_R01, uHeight: 12 };
+  const inRack = { ...MINIMAL, Site: 'PMH-HO', 'Tủ mạng': 'R01' };
+  const ctx = (devices: ExistingDevice[] = []) =>
+    context({
+      catalog: { ...context().catalog, cabinets: new Map([['pmh-ho r01', R12]]) },
+      devices: new Map(devices.map((d) => [d.code.toLowerCase(), d])),
+    });
+
+  it('file mẫu/export có hai cột U', () => {
+    const headers = deviceExportSheets([])[0].columns.map((c) => c.header);
+    expect(headers).toEqual(expect.arrayContaining(['U bắt đầu', 'Số U']));
+  });
+
+  it('nhập U hợp lệ', () => {
+    const plan = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '5', 'Số U': '2' }]), ctx());
+    expect(plan.rows[0]).toMatchObject({ action: 'create', values: { rackUStart: 5, rackUSize: 2 } });
+  });
+
+  it.each([
+    [{ 'U bắt đầu': 'abc', 'Số U': '1' }, /số nguyên/],
+    [{ 'U bắt đầu': '5', 'Số U': '' }, /cùng có hoặc cùng trống/],
+    [{ 'U bắt đầu': '11', 'Số U': '3' }, /vượt tủ R01 \(12U\)/],
+  ])('dòng lỗi %o', (cells, message) => {
+    const plan = planDeviceImport(sheet([{ ...inRack, ...cells }]), ctx());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toMatch(message);
+  });
+
+  it('U mà không có tủ → lỗi', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, 'U bắt đầu': '5', 'Số U': '1' }]), ctx());
+    expect(plan.rows[0]).toMatchObject({ action: 'error' });
+    expect(plan.rows[0].message).toMatch(/chọn tủ/);
+  });
+
+  it('chồng U với máy đang có trong tủ → lỗi nêu tên máy đang chiếm', () => {
+    const other = existing({ id: 'dev-2', code: 'SW-OTHER', name: 'Switch khác', siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 6, rackUSize: 1 });
+    const plan = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '5', 'Số U': '2' }]), ctx([other]));
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toMatch(/SW-OTHER/);
+  });
+
+  it('chồng U giữa hai dòng trong cùng file → lỗi ở dòng sau', () => {
+    const plan = planDeviceImport(
+      sheet([
+        { ...inRack, 'U bắt đầu': '1', 'Số U': '2' },
+        { ...inRack, 'Mã thiết bị *': 'SW-CORE-02', 'U bắt đầu': '2', 'Số U': '1' },
+      ]),
+      ctx(),
+    );
+    expect(plan.rows.map((r) => r.action)).toEqual(['create', 'error']);
+    expect(plan.rows[1].message).toMatch(/SW-CORE-01/);
+  });
+
+  it('máy đã thanh lý không giữ chỗ', () => {
+    const gone = existing({ id: 'dev-2', code: 'SW-OLD', siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 5, rackUSize: 1, status: 'retired' });
+    const plan = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '5', 'Số U': '1' }]), ctx([gone]));
+    expect(plan.rows[0].action).toBe('create');
+  });
+
+  it('bỏ tủ mà file không có cột U → U của máy được xoá theo', () => {
+    const current = existing({ siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 5, rackUSize: 1 });
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, Site: 'PMH-HO', 'Tủ mạng': '' }]), ctx([current]));
+    expect(plan.rows[0]).toMatchObject({ action: 'update', values: { cabinetId: null, rackUStart: null, rackUSize: null } });
+  });
+
+  it('máy U vượt tủ (tủ bị hạ chiều cao sau khi khai — dữ liệu cũ): nhập lại nguyên U vẫn qua, đổi U thì báo', () => {
+    const legacy = existing({ siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 11, rackUSize: 3, note: null });
+    const same = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '11', 'Số U': '3', 'Ghi chú': 'E2E sửa' }]), ctx([legacy]));
+    expect(same.rows[0].action).toBe('update');
+    const moved = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '12', 'Số U': '3' }]), ctx([legacy]));
+    expect(moved.rows[0].action).toBe('error');
+  });
+
+  it('nhập lại đúng U của chính máy đó thì không là chồng U', () => {
+    const current = existing({ siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 5, rackUSize: 2 });
+    const plan = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '5', 'Số U': '2' }]), ctx([current]));
+    expect(plan.rows[0].action).toBe('unchanged');
+  });
+});

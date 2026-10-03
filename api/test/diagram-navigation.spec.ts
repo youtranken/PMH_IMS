@@ -14,6 +14,7 @@ import type { IpamApiService } from '../src/modules/ipam/ipam.api';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 
 /**
  * Tìm, lớp và chỉ đường của trình xem sơ đồ trên Postgres thật: đường đi dò sơ đồ cổng THẬT
@@ -49,7 +50,7 @@ describe('Sơ đồ mạng · tìm, lớp, chỉ đường', () => {
     const catalog = new CatalogApiService(new CatalogService(db, audit));
     const devicesService = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
     ports = new DevicePortsService(db, devicesService);
-    const devices = new DevicesApiService(devicesService, ports);
+    const devices = new DevicesApiService(devicesService, ports, noPhotos);
     const ipam = { heldAddressesOf: (list: string[]) => Promise.resolve(new Map(list.map((id) => [id, []]))) } as unknown as IpamApiService;
     config = new SystemConfigService(db);
     service = new DiagramsService(db, audit, config, catalog, devices, ipam, new UsersApiService(new UsersService(db)));

@@ -78,6 +78,12 @@ const DOMAINS = {
   ],
 
   devices: [
+    // Gỡ chọn ảnh thật trước khi xoá tệp (không để id trỏ vào tệp đã mất). Ảnh model của bài kiểm
+    // nhận ra bằng model hoặc loại thiết bị mang chữ E2E.
+    `UPDATE device SET photo_front_file_id = NULL, photo_back_file_id = NULL WHERE code ILIKE '%E2E%'`,
+    `UPDATE device_model SET photo_front_file_id = NULL, photo_back_file_id = NULL WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM file WHERE owner_type = 'device_model' AND owner_id IN (SELECT id FROM device_model WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%'))`,
+    `DELETE FROM device_model WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%')`,
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `DELETE FROM file WHERE owner_type = 'nat_rule' AND owner_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,

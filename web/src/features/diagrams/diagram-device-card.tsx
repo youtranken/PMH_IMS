@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import type { Me } from '@/lib/me';
+import { rackUnitLabel } from '@/lib/rack-units';
 import { PATHS } from '@/lib/routes';
 import { DataItemIfSet } from '@/ui/detail-header';
 import { Dialog } from '@/ui/dialog';
@@ -60,7 +61,7 @@ export function DiagramDeviceCard({
   }
 
   const retired = device.status === 'retired';
-  const where = [device.siteCode, device.cabinetCode, device.u !== null ? `U${device.u}` : null].filter(Boolean).join(' · ');
+  const where = [device.siteCode, device.cabinetCode, rackUnitLabel(device.u, device.uSize)].filter(Boolean).join(' · ');
   const others = (diagrams.data ?? []).filter((d) => d.id !== diagramId);
 
   return (

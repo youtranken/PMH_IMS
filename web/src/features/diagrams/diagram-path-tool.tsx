@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { apiFetch } from "@/lib/api-client";
-import { errorMessage } from "@/lib/api";
-import { DeviceCombobox } from "@/ui/device-combobox";
-import { Dialog, DialogCancel } from "@/ui/dialog";
-import { Field } from "@/ui/page-header";
-import type { PathResult } from "./diagram-api";
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { apiFetch } from '@/lib/api-client';
+import { errorMessage } from '@/lib/api';
+import { DeviceCombobox } from '@/ui/device-combobox';
+import { Dialog, DialogCancel } from '@/ui/dialog';
+import { Field } from '@/ui/page-header';
+import type { PathResult } from './diagram-api';
 
 type Pick = { deviceId: string; term: string };
 
-const EMPTY: Pick = { deviceId: "", term: "" };
+const EMPTY: Pick = { deviceId: '', term: '' };
 
 /**
  * "Chỉ đường" giữa hai máy: chọn A và B (A điền sẵn máy đang chọn trên bản vẽ), server tìm đường
@@ -37,24 +37,16 @@ export function DiagramPathTool({
   const submit = async () => {
     if (!from.deviceId || !to.deviceId) return;
     if (from.deviceId === to.deviceId) {
-      setError(t("diagrams.nav.pathSame"));
+      setError(t('diagrams.nav.pathSame'));
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const result = await apiFetch<PathResult>(
-        `/api/v1/diagrams/path?${new URLSearchParams({ from: from.deviceId, to: to.deviceId }).toString()}`,
-      );
+      const result = await apiFetch<PathResult>(`/api/v1/diagrams/path?${new URLSearchParams({ from: from.deviceId, to: to.deviceId }).toString()}`);
       onResult(result);
       if (result.path) onClose();
-      else
-        setError(
-          t("diagrams.nav.pathNone", {
-            from: result.from.code,
-            to: result.to.code,
-          }),
-        );
+      else setError(t('diagrams.nav.pathNone', { from: result.from.code, to: result.to.code }));
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {
@@ -70,17 +62,12 @@ export function DiagramPathTool({
       }}
       dismissible={!busy}
       maxWidth={520}
-      title={t("diagrams.nav.pathTitle")}
+      title={t('diagrams.nav.pathTitle')}
       footer={
         <>
-          <DialogCancel>{t("common.cancel")}</DialogCancel>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={busy || !from.deviceId || !to.deviceId}
-            onClick={() => void submit()}
-          >
-            {t("diagrams.nav.pathSubmit")}
+          <DialogCancel>{t('common.cancel')}</DialogCancel>
+          <button type="button" className="btn primary" disabled={busy || !from.deviceId || !to.deviceId} onClick={() => void submit()}>
+            {t('diagrams.nav.pathSubmit')}
           </button>
         </>
       }
@@ -91,24 +78,20 @@ export function DiagramPathTool({
             {error}
           </p>
         ) : null}
-        <Field label={t("diagrams.nav.pathFrom")}>
+        <Field label={t('diagrams.nav.pathFrom')}>
           <DeviceCombobox
             value={from}
-            onChange={(next) =>
-              setFrom({ deviceId: next.deviceId, term: next.term })
-            }
-            ariaLabel={t("diagrams.nav.pathFrom")}
-            placeholder={t("diagrams.nav.pathPick")}
+            onChange={(next) => setFrom({ deviceId: next.deviceId, term: next.term })}
+            ariaLabel={t('diagrams.nav.pathFrom')}
+            placeholder={t('diagrams.nav.pathPick')}
           />
         </Field>
-        <Field label={t("diagrams.nav.pathTo")}>
+        <Field label={t('diagrams.nav.pathTo')}>
           <DeviceCombobox
             value={to}
-            onChange={(next) =>
-              setTo({ deviceId: next.deviceId, term: next.term })
-            }
-            ariaLabel={t("diagrams.nav.pathTo")}
-            placeholder={t("diagrams.nav.pathPick")}
+            onChange={(next) => setTo({ deviceId: next.deviceId, term: next.term })}
+            ariaLabel={t('diagrams.nav.pathTo')}
+            placeholder={t('diagrams.nav.pathPick')}
           />
         </Field>
       </div>

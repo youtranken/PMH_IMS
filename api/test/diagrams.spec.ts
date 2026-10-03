@@ -16,6 +16,7 @@ import type { IpamApiService } from '../src/modules/ipam/ipam.api';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 
 /**
  * Cây bản vẽ + phiên bản (AD-18, Q-23) trên Postgres thật: lời hứa ở đây là phiên bản chỉ-thêm,
@@ -69,7 +70,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     catalogService = new CatalogService(db, audit);
     const catalog = new CatalogApiService(catalogService);
     devicesService = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
-    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService));
+    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService), noPhotos);
     const ipam = {
       heldAddressesOf: (ids: string[]) => Promise.resolve(new Map(ids.map((id) => [id, ['10.20.0.5']]))),
     } as unknown as IpamApiService;
@@ -187,6 +188,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
           site: 'E2E-SD',
           cabinet: null,
           u: null,
+          uSize: null,
           status: 'in_use',
         },
       ]);

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FilesService, type FileOwnerType, type FileRecord } from './files.service';
+export type { FileRecord } from './files.service';
 
 /**
  * AD-2: public api DUY NHẤT của module `files`.
@@ -12,6 +13,16 @@ export class FilesApiService {
 
   listFor(ownerType: FileOwnerType, ownerId: string): Promise<FileRecord[]> {
     return this.files.listFor(ownerType, ownerId);
+  }
+
+  /** Ảnh còn sống theo id — vắng mặt = không có, đã xoá, hoặc không phải ảnh. */
+  imagesByIds(ids: string[]): Promise<Map<string, FileRecord>> {
+    return this.files.imagesByIds(ids);
+  }
+
+  /** Nội dung ảnh còn sống (server tự thu nhỏ/nhúng, không trả nguyên bản cho trình duyệt). */
+  readImage(id: string): Promise<{ mime: string; bytes: Buffer } | null> {
+    return this.files.readImage(id);
   }
 
   /** Đếm nhanh để trang chi tiết hiện số trên nhãn tab mà không cần tải cả danh sách. */

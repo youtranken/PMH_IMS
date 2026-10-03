@@ -20,6 +20,7 @@ import { deviceTable } from './devices.schema';
 import {
   DEVICE_SORT_DEFAULT,
   DevicesService,
+  rackClaimOf,
   type DeviceSortKey,
 } from './devices.service';
 import type { SortQuery } from '../../common/sorting';
@@ -145,6 +146,8 @@ export class DeviceImportService {
       for (const row of writable) {
         const values = row.values ?? {};
         if (row.action === 'create') {
+          // Đối chiếu đã xét chồng U trên ảnh chụp; kiểm lại trong tx vì kho có thể đổi từ lúc đó.
+          await this.devices.assertRackFreeWithin(tx, null, rackClaimOf(values, null));
           const device = await this.devices.insertWithin(tx, values);
           created += 1;
           await this.devices.recordWithin(tx, actor, device.id, 'imported', {
@@ -168,6 +171,7 @@ export class DeviceImportService {
            */
           const before = await this.devices.requireRowWithin(tx, row.existingId!, 'update');
           this.devices.assertNotRetired(before);
+          await this.devices.assertRackFreeWithin(tx, row.existingId!, rackClaimOf(values, before));
           await this.devices.updateWithin(tx, row.existingId!, values);
           updated += 1;
           // FR-007: tab Lịch sử phải trả lời "ai ĐỔI GÌ". Ghi `mã: SW-01 → SW-01` thì

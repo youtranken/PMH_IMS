@@ -1,3 +1,4 @@
+import { escapeXmlAttr } from '../../common/svg-sanitize';
 import type { CellIndex } from './diagram-cells';
 
 /**
@@ -116,6 +117,8 @@ function columnStyle(marginLeft: number): string {
   );
 }
 
+export type RackSide = 'front' | 'back';
+
 export interface CabinetFrameDevice {
   id: string;
   code: string;
@@ -125,6 +128,8 @@ export interface CabinetFrameDevice {
   uSize: number | null;
   /** Ô dựng sẵn theo loại (cùng luật hydrate với hộp "Thiết bị kho"). */
   cell: { style: string; label: string; width: number; height: number };
+  /** Style ảnh thật của từng mặt (cùng luật hydrate); mặt vắng thì dùng biểu tượng `cell`. */
+  faces?: Partial<Record<RackSide, { style: string }>>;
 }
 
 export interface CabinetFrameInput {
@@ -132,9 +137,12 @@ export interface CabinetFrameInput {
   devices: CabinetFrameDevice[];
 }
 
+/** Khung của khung tủ: mặt trước (`rack`), mặt sau (`rack-back`), cột "Chưa khai U". */
+export type FrameKey = 'rack' | 'rack-back' | 'unplaced';
+
 /** Một khung của khung tủ; toạ độ tương đối so với góc trên trái của cả cụm. */
 export interface FrameCellSpec {
-  key: 'rack' | 'unplaced';
+  key: FrameKey;
   label: string;
   style: string;
   attrs: Record<string, string>;
@@ -146,11 +154,13 @@ export interface FrameCellSpec {
 
 /** Một máy trong khung; toạ độ tương đối so với khung chứa nó (`frame`) — ô con của khung. */
 export interface FrameDeviceSpec {
-  frame: 'rack' | 'unplaced';
+  frame: FrameKey;
   id: string;
   code: string;
   style: string;
   label: string;
+  /** Thuộc tính thêm của ô máy — `ims_photo` khi ô hiện ảnh thật của mặt đó (AD-18). */
+  attrs: Record<string, string>;
   x: number;
   y: number;
   width: number;
@@ -163,28 +173,41 @@ export interface CabinetFrameLayout {
   devices: FrameDeviceSpec[];
 }
 
+/** Khoảng cách giữa hai mặt tủ và giữa mặt tủ với cột "Chưa khai U". */
+const FRAME_GAP = 40;
+
+/** Ô máy trên một mặt: ảnh thật của mặt đó nếu có (kèm `ims_photo`), không thì biểu tượng loại. */
+function faceOf(device: CabinetFrameDevice, side: RackSide): { style: string; attrs: Record<string, string> } {
+  const face = device.faces?.[side];
+  return face ? { style: face.style, attrs: { ims_photo: side } } : { style: device.cell.style, attrs: {} };
+}
+
 /**
  * Khung tủ chèn MỘT lượt: hình rack cao theo `cabinet.u_height`, máy có U xếp đúng U, máy chưa
- * khai U (hoặc U vượt tủ / trùng U máy khác) ở cột "Chưa khai U" bên phải. Cả hai khung mang
- * `ims_cabinet_id` và máy là ô CON của khung — luật "máy trong khung tủ khác tủ trong kho" của tự
- * kiểm nhận ra cả hai chỗ.
+ * khai U (hoặc U vượt tủ / trùng U máy khác — dữ liệu cũ) ở cột "Chưa khai U" bên phải. Mọi khung
+ * mang `ims_cabinet_id` và máy là ô CON của khung — luật "máy trong khung tủ khác tủ trong kho" của
+ * tự kiểm nhận ra mọi chỗ. `sides` = hai mặt thì mặt trước / mặt sau là hai khung cạnh nhau, máy có
+ * U có mặt ở cả hai (cùng độ cao), mỗi mặt hiện ảnh thật của mặt đó nếu có.
  */
-export function cabinetFrameLayout(input: CabinetFrameInput): CabinetFrameLayout {
+export function cabinetFrameLayout(input: CabinetFrameInput, options: { sides?: readonly RackSide[] } = {}): CabinetFrameLayout {
+  const sides = options.sides && options.sides.length > 0 ? options.sides : (['front'] as const);
+  const twoFaces = sides.length > 1;
   const uHeight = input.cabinet.uHeight && input.cabinet.uHeight > 0 ? input.cabinet.uHeight : RACK_DEFAULT_U;
   const attrs = { ims_cabinet_id: input.cabinet.id };
-  const rack: FrameCellSpec = {
-    key: 'rack',
-    label: `Tủ ${input.cabinet.code}`,
+  const rackHeight = RACK_MARGIN.top + RACK_MARGIN.bottom + uHeight * RACK_UNIT_PX;
+  const racks: FrameCellSpec[] = sides.map((side, i) => ({
+    key: side === 'back' ? 'rack-back' : 'rack',
+    label: twoFaces ? `Tủ ${input.cabinet.code} · ${side === 'back' ? 'Mặt sau' : 'Mặt trước'}` : `Tủ ${input.cabinet.code}`,
     style: RACK_STYLE,
     attrs,
-    x: 0,
+    x: i * (RACK_WIDTH + FRAME_GAP),
     y: 0,
     width: RACK_WIDTH,
-    height: RACK_MARGIN.top + RACK_MARGIN.bottom + uHeight * RACK_UNIT_PX,
-  };
+    height: rackHeight,
+  }));
   const sorted = [...input.devices].sort((a, b) => a.code.localeCompare(b.code, 'vi'));
   const taken = new Set<number>();
-  const placed = new Map<string, FrameDeviceSpec>();
+  const placed = new Map<string, FrameDeviceSpec[]>();
   const unplaced: CabinetFrameDevice[] = [];
   const innerWidth = RACK_WIDTH - RACK_MARGIN.left - RACK_MARGIN.right;
   for (const device of sorted) {
@@ -197,37 +220,43 @@ export function cabinetFrameLayout(input: CabinetFrameInput): CabinetFrameLayout
     }
     units.forEach((u) => taken.add(u));
     const top = uHeight - units[units.length - 1];
-    placed.set(device.id, {
-      frame: 'rack',
-      id: device.id,
-      code: device.code,
-      style: device.cell.style,
-      label: device.cell.label,
-      x: RACK_MARGIN.left,
-      y: RACK_MARGIN.top + top * RACK_UNIT_PX,
-      width: innerWidth,
-      height: size * RACK_UNIT_PX,
-    });
+    placed.set(
+      device.id,
+      sides.map((side) => ({
+        frame: side === 'back' ? 'rack-back' : 'rack',
+        id: device.id,
+        code: device.code,
+        ...faceOf(device, side),
+        label: device.cell.label,
+        x: RACK_MARGIN.left,
+        y: RACK_MARGIN.top + top * RACK_UNIT_PX,
+        width: innerWidth,
+        height: size * RACK_UNIT_PX,
+      })),
+    );
   }
 
-  const frames: FrameCellSpec[] = [rack];
+  const frames: FrameCellSpec[] = [...racks];
+  const columnX = racks.length * RACK_WIDTH + (racks.length - 1) * FRAME_GAP + FRAME_GAP;
   if (unplaced.length > 0) {
     const widest = Math.max(...unplaced.map((d) => d.cell.width));
     const width = Math.max(COLUMN_MIN_WIDTH, widest + 2 * COLUMN_PAD);
     const marginLeft = Math.round((width - widest) / 2);
     let y = COLUMN_HEADER + COLUMN_PAD;
     for (const device of unplaced) {
-      placed.set(device.id, {
-        frame: 'unplaced',
-        id: device.id,
-        code: device.code,
-        style: device.cell.style,
-        label: device.cell.label,
-        x: marginLeft,
-        y,
-        width: device.cell.width,
-        height: device.cell.height,
-      });
+      placed.set(device.id, [
+        {
+          frame: 'unplaced',
+          id: device.id,
+          code: device.code,
+          ...faceOf(device, sides[0]),
+          label: device.cell.label,
+          x: marginLeft,
+          y,
+          width: device.cell.width,
+          height: device.cell.height,
+        },
+      ]);
       y += device.cell.height + COLUMN_GAP + COLUMN_LABEL_ROOM;
     }
     frames.push({
@@ -235,11 +264,47 @@ export function cabinetFrameLayout(input: CabinetFrameInput): CabinetFrameLayout
       label: `Tủ ${input.cabinet.code} · Chưa khai U`,
       style: columnStyle(marginLeft),
       attrs,
-      x: RACK_WIDTH + 40,
+      x: columnX,
       y: 0,
       width,
       height: y - COLUMN_GAP,
     });
   }
-  return { uHeight, frames, devices: sorted.map((d) => placed.get(d.id)!) };
+  return { uHeight, frames, devices: sorted.flatMap((d) => placed.get(d.id)!) };
+}
+
+/**
+ * "Dựng lại mặt tủ": cả bản vẽ chỉ gồm khung tủ dựng từ kho — một trang, khung trên lớp mặc định,
+ * máy là ô CON của khung (cùng quan hệ như khi chèn bằng `patch`). Nơi gọi dehydrate trước khi lưu
+ * (ảnh nhúng không vào kho bản vẽ — AD-18).
+ */
+export function buildRackXml(layout: CabinetFrameLayout): string {
+  const attrText = (attrs: Record<string, string>) =>
+    Object.entries(attrs)
+      .map(([k, v]) => ` ${k}="${escapeXmlAttr(v)}"`)
+      .join('');
+  const geometry = (x: number, y: number, width: number, height: number) => {
+    const r = (n: number) => Math.round(n * 10) / 10;
+    return `<mxGeometry x="${r(x)}" y="${r(y)}" width="${r(width)}" height="${r(height)}" as="geometry"/>`;
+  };
+  const origin = 40;
+  const parts: string[] = [];
+  const frameIds = new Map<string, string>();
+  layout.frames.forEach((frame, i) => {
+    const id = `ims-f${i + 1}`;
+    frameIds.set(frame.key, id);
+    parts.push(
+      `<UserObject label="${escapeXmlAttr(frame.label)}"${attrText(frame.attrs)} id="${id}">` +
+        `<mxCell style="${escapeXmlAttr(frame.style)}" vertex="1" parent="1">${geometry(origin + frame.x, origin + frame.y, frame.width, frame.height)}</mxCell></UserObject>`,
+    );
+  });
+  layout.devices.forEach((device, i) => {
+    const parent = frameIds.get(device.frame);
+    if (!parent) return;
+    parts.push(
+      `<UserObject label="${escapeXmlAttr(device.label)}" ims_device_id="${escapeXmlAttr(device.id)}" ims_device_code="${escapeXmlAttr(device.code)}"${attrText(device.attrs)} id="ims-d${i + 1}">` +
+        `<mxCell style="${escapeXmlAttr(device.style)}" vertex="1" parent="${parent}">${geometry(device.x, device.y, device.width, device.height)}</mxCell></UserObject>`,
+    );
+  });
+  return `<mxfile><diagram id="ims-p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${parts.join('')}</root></mxGraphModel></diagram></mxfile>`;
 }

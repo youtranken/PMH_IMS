@@ -21,11 +21,14 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   Matches,
+  Max,
+  Min,
   Validate,
   ValidateIf,
 } from 'class-validator';
@@ -86,6 +89,10 @@ export class DeviceBodyDto {
   status?: DeviceStatus;
 
   @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
+
+  // Vị trí trong tủ: `null` = bỏ U. Luật cặp / vượt tủ / chồng U ở service (`rack-units.ts`).
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'U bắt đầu phải là số nguyên.' }) @Min(1) @Max(60) rackUStart?: number | null;
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'Số U phải là số nguyên.' }) @Min(1) @Max(60) rackUSize?: number | null;
 }
 
 class StatusDto {
