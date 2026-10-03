@@ -35,6 +35,22 @@ export function rackUnitsReason(input: RackUnitsInput): string | null {
   return null;
 }
 
+export interface RackPlacement {
+  cabinetId: string | null;
+  start: number | null;
+  size: number | null;
+}
+
+/**
+ * Lượt ghi có ĐỔI chỗ của máy trong tủ không. Luật U (vượt tủ, chồng U) chỉ xét khi đổi: form và
+ * file Excel luôn gửi lại đủ mọi ô, và một máy khai U trước khi tủ bị hạ chiều cao (dữ liệu cũ)
+ * không được vì thế mà hết sửa được ghi chú — khung tủ hiện cảnh báo cho máy đó.
+ */
+export function rackPlacementChanged(next: RackPlacement, current: RackPlacement | null): boolean {
+  if (!current) return true;
+  return next.cabinetId !== current.cabinetId || next.start !== current.start || next.size !== current.size;
+}
+
 export interface RackOccupant {
   code: string;
   name: string;

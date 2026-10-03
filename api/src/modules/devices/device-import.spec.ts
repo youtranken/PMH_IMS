@@ -472,6 +472,14 @@ describe('planDeviceImport — cột "U bắt đầu" / "Số U"', () => {
     expect(plan.rows[0]).toMatchObject({ action: 'update', values: { cabinetId: null, rackUStart: null, rackUSize: null } });
   });
 
+  it('máy U vượt tủ (tủ bị hạ chiều cao sau khi khai — dữ liệu cũ): nhập lại nguyên U vẫn qua, đổi U thì báo', () => {
+    const legacy = existing({ siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 11, rackUSize: 3, note: null });
+    const same = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '11', 'Số U': '3', 'Ghi chú': 'E2E sửa' }]), ctx([legacy]));
+    expect(same.rows[0].action).toBe('update');
+    const moved = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '12', 'Số U': '3' }]), ctx([legacy]));
+    expect(moved.rows[0].action).toBe('error');
+  });
+
   it('nhập lại đúng U của chính máy đó thì không là chồng U', () => {
     const current = existing({ siteId: SITE_HO.id, cabinetId: R12.id, rackUStart: 5, rackUSize: 2 });
     const plan = planDeviceImport(sheet([{ ...inRack, 'U bắt đầu': '5', 'Số U': '2' }]), ctx([current]));

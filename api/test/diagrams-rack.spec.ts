@@ -232,8 +232,16 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật (Story 10.11)', (
       expect(srvCells.map((d) => d.frame)).toEqual(['unplaced']);
       expect(srvCells[0].label).toContain('⚠ U5–U6 vượt tủ E2E-MT-R1 (4U)');
       expect(frame.layout.frames.find((f) => f.key === 'rack')!.height).toBeLessThan(200);
-      // Sửa ô khác của hồ sơ cũ vẫn được (luật vượt tủ chỉ xét khi đổi U/tủ).
+      // Sửa ô khác của hồ sơ cũ vẫn được (luật vượt tủ chỉ xét khi đổi U/tủ) — kể cả khi form gửi
+      // lại đủ mọi ô như web làm (tủ, U, trạng thái không đổi).
       await expect(devices.update(SA.email, srv, { note: 'E2E sửa ghi chú' })).resolves.toBeTruthy();
+      await expect(
+        devices.update(SA.email, srv, { note: 'E2E sửa lần hai', cabinetId, siteId, rackUStart: 5, rackUSize: 2, status: 'in_use' }),
+      ).resolves.toBeTruthy();
+      // Đổi U thì luật áp lại.
+      await expect(devices.update(SA.email, srv, { cabinetId, siteId, rackUStart: 6, rackUSize: 2 })).rejects.toMatchObject({
+        response: { code: 'DEVICE_RACK_U_INVALID' },
+      });
     } finally {
       await scratch.pool.query(`UPDATE cabinet SET u_height = 12 WHERE id = $1`, [cabinetId]);
     }

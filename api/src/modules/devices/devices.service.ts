@@ -30,7 +30,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
 import { deviceHistoryTable, deviceTable } from './devices.schema';
-import { rackOverlap, rackUnitsReason } from './rack-units';
+import { rackOverlap, rackPlacementChanged, rackUnitsReason } from './rack-units';
 import type {
   DeviceFilter,
   DeviceHistoryRecord,
@@ -281,7 +281,9 @@ export class DevicesService {
         code: 'DEVICE_ALREADY_CHANGED',
         message: 'Hồ sơ thiết bị vừa được người khác sửa — tải lại rồi thử lại. Chưa ghi gì cả.',
       });
-      if (touchesRack(values)) await this.assertRackFreeWithin(tx, id, rackClaimOf(values, before));
+      if (rackPlacementChanged(placementOf(values, before), placementOf({}, before))) {
+        await this.assertRackFreeWithin(tx, id, rackClaimOf(values, before));
+      }
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
       return updated;
@@ -543,9 +545,8 @@ export class DevicesService {
 
   /**
    * U trong tủ: bỏ tủ thì xoá U theo (máy không còn chỗ nào trong tủ nào); có U thì phải hợp lệ và
-   * không vượt chiều cao tủ (đọc `cabinet.u_height` qua catalog.api). Chỉ xét khi lượt ghi đụng
-   * tới U hoặc tủ — tủ bị hạ chiều cao SAU khi khai U không được làm hồ sơ cũ hết sửa được ô khác;
-   * khung tủ trên bản vẽ hiện cảnh báo cho máy đó.
+   * không vượt chiều cao tủ (đọc `cabinet.u_height` qua catalog.api). Chỉ xét khi lượt ghi ĐỔI chỗ
+   * của máy (`rackPlacementChanged`).
    */
   private async prepareRack(values: Record<string, unknown>, current: typeof deviceTable.$inferSelect | null): Promise<void> {
     const effective = effectiveOf(values);
@@ -554,7 +555,7 @@ export class DevicesService {
       values.rackUStart = null;
       values.rackUSize = null;
     }
-    if (current && !touchesRack(values)) return;
+    if (!rackPlacementChanged(placementOf(values, current), current ? placementOf({}, current) : null)) return;
     const start = effective<number | null>('rackUStart', current?.rackUStart ?? null);
     const size = effective<number | null>('rackUSize', current?.rackUSize ?? null);
     if (start === null && size === null) return;
@@ -887,9 +888,17 @@ function sameText(column: SQLWrapper, value: string): SQL {
   return sql`ims_norm(btrim(${column})) = ims_norm(${value})`;
 }
 
-/** Lượt ghi có đụng tới vị trí trong tủ không (U, tủ, hay trạng thái — máy thanh lý nhả chỗ). */
-function touchesRack(values: Record<string, unknown>): boolean {
-  return values.rackUStart !== undefined || values.rackUSize !== undefined || values.cabinetId !== undefined || values.status !== undefined;
+/** Chỗ trong tủ sau lượt ghi (giá trị gửi lên ghép với hồ sơ đang có). */
+function placementOf(
+  values: Record<string, unknown>,
+  current: { cabinetId: string | null; rackUStart: number | null; rackUSize: number | null } | null,
+): { cabinetId: string | null; start: number | null; size: number | null } {
+  const effective = effectiveOf(values);
+  return {
+    cabinetId: effective<string | null>('cabinetId', current?.cabinetId ?? null),
+    start: effective<number | null>('rackUStart', current?.rackUStart ?? null),
+    size: effective<number | null>('rackUSize', current?.rackUSize ?? null),
+  };
 }
 
 /** Chỗ máy sẽ chiếm sau lượt ghi; `null` = không chiếm (không tủ, không U, đã thanh lý). */

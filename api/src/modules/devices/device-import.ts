@@ -19,7 +19,7 @@ import { secretTextMessage } from '../../common/no-secret-text';
 import { textLooksLikeSecret } from '../../common/note-secret';
 import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
-import { rackOverlap, rackUnitsReason } from './rack-units';
+import { rackOverlap, rackPlacementChanged, rackUnitsReason } from './rack-units';
 
 /**
  * Lõi ĐỐI CHIẾU file thiết bị — hàm THUẦN, không chạm DB, không chạm exceljs.
@@ -510,11 +510,17 @@ function planRow(
     values.rackUStart = null;
     values.rackUSize = null;
   }
-  if (!existing || 'rackUStart' in values || 'rackUSize' in values || 'cabinetId' in values) {
+  const placement = {
+    cabinetId,
+    start: effective<number | null>('rackUStart', existing?.rackUStart ?? null),
+    size: effective<number | null>('rackUSize', existing?.rackUSize ?? null),
+  };
+  const before = existing ? { cabinetId: existing.cabinetId, start: existing.rackUStart ?? null, size: existing.rackUSize ?? null } : null;
+  if (rackPlacementChanged(placement, before)) {
     const cabinet = cabinetId ? [...context.catalog.cabinets.values()].find((item) => item.id === cabinetId) : undefined;
     const rackReason = rackUnitsReason({
-      start: effective<number | null>('rackUStart', existing?.rackUStart ?? null),
-      size: effective<number | null>('rackUSize', existing?.rackUSize ?? null),
+      start: placement.start,
+      size: placement.size,
       hasCabinet: Boolean(cabinetId),
       cabinetCode: cabinet?.code ?? null,
       cabinetHeight: cabinet?.uHeight ?? null,
