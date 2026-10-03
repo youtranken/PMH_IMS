@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -21,11 +21,13 @@ import {
   pgErrorCode,
   viOrder,
 } from '../../common/sql';
+import { sanitizeIconSvg } from '../../common/svg-sanitize';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   cabinetTable,
   catalogHistoryTable,
   departmentTable,
+  deviceTypeIconTable,
   deviceTypeTable,
   ispProviderTable,
   servicePortTable,
@@ -34,6 +36,7 @@ import {
 } from './catalog.schema';
 import { normalizeKey } from '../../common/import-plan';
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
+import { diagramShapeDef } from './diagram-shapes';
 import {
   type CabinetRecord,
   type CatalogEntity,
@@ -58,6 +61,13 @@ export interface CatalogLists {
   servicePorts: ServicePortRecord[];
 }
 
+/** Hình của một loại thiết bị trên sơ đồ mạng — module `diagrams` hydrate ô thiết bị từ đây (AD-18). */
+export interface DeviceTypeDiagramLook {
+  shape: string | null;
+  /** SVG riêng đã lọc lúc tải lên; có thì thắng `shape`. */
+  iconSvg: string | null;
+}
+
 export interface CatalogInput {
   code?: string;
   name?: string;
@@ -67,6 +77,8 @@ export interface CatalogInput {
   uHeight?: number | null;
   hasPortMap?: boolean;
   isRouter?: boolean;
+  /** `null` = bỏ hình, về "Thiết bị khác". */
+  diagramShape?: string | null;
   supplies?: string | null;
   phone?: string | null;
   contact?: string | null;
@@ -231,10 +243,83 @@ export class CatalogService {
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(table).where(where),
     ]);
+    const items = rows as unknown as CatalogRecord[];
+    if (entity === 'device_type') {
+      // Màn Danh mục cần biết loại nào đã có biểu tượng riêng (xem trước, nút Gỡ) — không cần chính SVG.
+      const withIcon = await this.iconOwners(items.map((item) => item.id));
+      return {
+        items: items.map((item) => ({ ...item, hasDiagramIcon: withIcon.has(item.id) })) as unknown as CatalogRecord[],
+        total: Number(totalRows[0]?.value ?? 0),
+      };
+    }
     return {
-      items: rows as unknown as CatalogRecord[],
+      items,
       total: Number(totalRows[0]?.value ?? 0),
     };
+  }
+
+  private async iconOwners(ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const rows = await this.db
+      .select({ id: deviceTypeIconTable.deviceTypeId })
+      .from(deviceTypeIconTable)
+      .where(inArray(deviceTypeIconTable.deviceTypeId, ids));
+    return new Set(rows.map((r) => r.id));
+  }
+
+  // ─────────────────────── Hình trên sơ đồ mạng ───────────────────────
+
+  /** Hình + biểu tượng riêng của nhiều loại một lượt — mở một bản vẽ hỏi đúng một câu. */
+  async diagramLooks(typeIds: string[]): Promise<Map<string, DeviceTypeDiagramLook>> {
+    const unique = [...new Set(typeIds)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: deviceTypeTable.id, shape: deviceTypeTable.diagramShape, svg: deviceTypeIconTable.svg })
+      .from(deviceTypeTable)
+      .leftJoin(deviceTypeIconTable, eq(deviceTypeIconTable.deviceTypeId, deviceTypeTable.id))
+      .where(inArray(deviceTypeTable.id, unique));
+    return new Map(rows.map((r) => [r.id, { shape: r.shape, iconSvg: r.svg }]));
+  }
+
+  async diagramIcon(id: string): Promise<string | null> {
+    await this.requireOne('device_type', id);
+    const [row] = await this.db
+      .select({ svg: deviceTypeIconTable.svg })
+      .from(deviceTypeIconTable)
+      .where(eq(deviceTypeIconTable.deviceTypeId, id));
+    return row?.svg ?? null;
+  }
+
+  /**
+   * Cất biểu tượng SVG riêng. Lọc phía server (`sanitizeIconSvg`): SVG đi thẳng vào mọi bản vẽ có
+   * loại này rồi vào ảnh xem chèn trong DOM của IMS, nên thứ chạy được mã bị TỪ CHỐI cả tệp.
+   */
+  async setDiagramIcon(actor: string, id: string, svg: string, maxKb: number): Promise<void> {
+    await this.requireOne('device_type', id);
+    const clean = sanitizeIconSvg(svg, { maxKb });
+    if (clean.reason || !clean.value) {
+      throw new BadRequestException({ code: 'DIAGRAM_ICON_INVALID', message: clean.reason ?? 'Biểu tượng SVG không hợp lệ.' });
+    }
+    const value = clean.value;
+    await this.db.transaction(async (tx) => {
+      await tx
+        .insert(deviceTypeIconTable)
+        .values({ deviceTypeId: id, svg: value, updatedBy: actor })
+        .onConflictDoUpdate({ target: deviceTypeIconTable.deviceTypeId, set: { svg: value, updatedBy: actor, updatedAt: new Date() } });
+      // Lịch sử ghi CỠ, không chép SVG: catalog_history không xoá được.
+      await this.recordWithin(tx, actor, 'device_type', id, 'diagram_icon_set', { bytes: Buffer.byteLength(value) });
+    });
+  }
+
+  async removeDiagramIcon(actor: string, id: string): Promise<void> {
+    await this.requireOne('device_type', id);
+    await this.db.transaction(async (tx) => {
+      const gone = await tx
+        .delete(deviceTypeIconTable)
+        .where(eq(deviceTypeIconTable.deviceTypeId, id))
+        .returning({ id: deviceTypeIconTable.deviceTypeId });
+      if (gone.length > 0) await this.recordWithin(tx, actor, 'device_type', id, 'diagram_icon_removed', {});
+    });
   }
 
   /** Ảnh chụp để đối chiếu file import — khóa đã chuẩn hóa (`normalizeKey`). */
@@ -552,6 +637,7 @@ export class CatalogService {
           ...(input.hasPortMap !== undefined ? { hasPortMap: input.hasPortMap } : {}),
           ...(input.isRouter !== undefined ? { isRouter: input.isRouter } : {}),
           ...(input.description !== undefined ? { description: text(input.description) } : {}),
+          ...(input.diagramShape !== undefined ? { diagramShape: diagramShapeOf(input.diagramShape) } : {}),
         };
       case 'vendor':
         return {
@@ -820,6 +906,15 @@ function nameColumn(entity: Exclude<CatalogEntity, 'site' | 'cabinet'>) {
 function labelOf(entity: CatalogEntity, row: Record<string, unknown>): string {
   const value = entity === 'site' || entity === 'cabinet' ? row.code : row.name;
   return typeof value === 'string' ? value : '';
+}
+
+/** Hình phải nằm trong danh sách ĐÓNG — không có đường nào ghi một chuỗi style tự do (AD-18). */
+function diagramShapeOf(value: string | null): string | null {
+  if (value === null || value === '') return null;
+  if (!diagramShapeDef(value)) {
+    throw new BadRequestException({ code: 'DIAGRAM_SHAPE_INVALID', message: 'Hình trên sơ đồ không có trong danh sách cho phép.' });
+  }
+  return value;
 }
 
 function isPort(value: number | undefined): value is number {

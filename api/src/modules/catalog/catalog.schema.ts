@@ -43,8 +43,17 @@ export const deviceTypeTable = pgTable('device_type', {
   hasPortMap: boolean('has_port_map').notNull().default(false),
   isRouter: boolean('is_router').notNull().default(false),
   description: text('description'),
+  diagramShape: text('diagram_shape'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Biểu tượng SVG riêng (đã lọc) của một loại — migration 0047, bảng riêng để danh sách danh mục không kéo SVG theo. */
+export const deviceTypeIconTable = pgTable('device_type_icon', {
+  deviceTypeId: uuid('device_type_id').primaryKey(),
+  svg: text('svg').notNull(),
+  updatedBy: text('updated_by').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

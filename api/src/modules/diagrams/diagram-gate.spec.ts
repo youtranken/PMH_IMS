@@ -33,6 +33,10 @@ describe('checkDiagramXml — cổng XML bản vẽ (AD-17)', () => {
     ['ảnh nhúng base64 JPEG', file(page(cell('a', '', 'shape=image;image=data:image/jpeg;base64,/9j/4AAQ;')))],
     ['ảnh có sẵn của draw.io (đường tương đối)', file(page(cell('a', '', 'shape=image;image=img/lib/clip_art/networking/Router_128x128.png;')))],
     ['hình stencil mạng', file(page(cell('a', '', 'shape=mxgraph.cisco.routers.router;')))],
+    [
+      'biểu tượng SVG nhúng có xmlns (hydrate từ Danh mục loại thiết bị)',
+      file(page(cell('a', '', `shape=image;image=data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><rect width="4" height="4"/></svg>')};`))),
+    ],
     ['chữ có "on" trong tên thuộc tính tuỳ ý không phải on*', file(page('<UserObject label="x" owner="IT" id="u1"><mxCell vertex="1" parent="1"/></UserObject>'))],
   ];
   it.each(ok)('nhận: %s', (_name, xml) => {
@@ -65,6 +69,11 @@ describe('checkDiagramXml — cổng XML bản vẽ (AD-17)', () => {
     ['ảnh URL ngoài', file(page(cell('a', '', 'shape=image;image=https://evil.example/x.png;'))), /Ảnh/],
     ['ảnh URL không giao thức', file(page(cell('a', '', 'shape=image;image=//evil.example/x.png;'))), /Ảnh/],
     ['ảnh đi lùi thư mục', file(page(cell('a', '', 'shape=image;image=img/../../api/v1/me;'))), /Ảnh/],
+    [
+      'ảnh SVG nhúng trỏ ra ngoài',
+      file(page(cell('a', '', `shape=image;image=data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.example/x.png"/></svg>')};`))),
+      /Ảnh/,
+    ],
     ['ảnh data:text/html', file(page(cell('a', '', 'shape=image;image=data:text/html,x;'))), /Ảnh|javascript/],
     ['ảnh nền trang trỏ ra ngoài', file(page('', 'id="p1" name="P"').replace('<mxGraphModel>', '<mxGraphModel backgroundImage="{&quot;src&quot;:&quot;https://evil.example/bg.png&quot;}">')), /Ảnh/],
     ['hai trang', file(page('', 'id="p1"'), page('', 'id="p2"')), /một trang/],
@@ -151,7 +160,7 @@ describe('sanitizeDiagramSvg — làm sạch SVG để xem', () => {
     }
   });
 
-  it('use chỉ trỏ trong tệp; image chỉ nhận data:image raster', () => {
+  it('use chỉ trỏ trong tệp; image chỉ nhận data:image (raster, hoặc SVG — biểu tượng loại thiết bị)', () => {
     const svg = wrap(
       '<defs><path id="p" d="M0 0"/></defs><use href="#p"/><use xlink:href="https://evil.example/s.svg#x"/>' +
         '<image href="data:image/png;base64,iVBOR" width="1" height="1"/><image xlink:href="https://evil.example/a.png"/>' +
@@ -161,7 +170,7 @@ describe('sanitizeDiagramSvg — làm sạch SVG để xem', () => {
     expect(clean).toContain('<use href="#p"');
     expect(clean).toContain('data:image/png;base64,iVBOR');
     expect(clean).not.toContain('evil.example');
-    expect(clean).not.toContain('svg+xml');
+    expect(clean).toContain('data:image/svg+xml;base64,PHN2Zz4=');
   });
 
   it('bỏ style/thuộc tính trỏ url() ra ngoài, giữ url(#id)', () => {

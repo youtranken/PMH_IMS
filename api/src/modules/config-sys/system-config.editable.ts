@@ -110,6 +110,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 256, max: 4096 },
   { name: 'diagramMaxCells', group: 'diagram', type: 'int', unit: 'cells', min: 500, max: 20000, warnAbove: 10000 },
   { name: 'diagramPresenceTtlSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 20, max: 600 },
+  { name: 'diagramIconSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 10, max: 500 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {
