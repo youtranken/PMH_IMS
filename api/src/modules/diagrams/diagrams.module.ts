@@ -6,6 +6,7 @@ import { DevicesModule } from '../devices/devices.module';
 import { IpamModule } from '../ipam/ipam.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { UsersModule } from '../users/users.module';
+import { DiagramDriftService } from './diagram-drift.service';
 import { DiagramReviewController } from './diagram-review.controller';
 import { DiagramReviewService } from './diagram-review.service';
 import { DiagramsController } from './diagrams.controller';
@@ -13,13 +14,14 @@ import { DiagramsService } from './diagrams.service';
 
 /**
  * Chủ sở hữu `diagram`, `diagram_version`, `diagram_version_label`, `diagram_history`,
- * `diagram_presence`, `diagram_comment` (AD-3, AD-18); duyệt bản vẽ đi qua `approvals.api` (AD-6).
+ * `diagram_presence`, `diagram_comment`, `diagram_drift` (AD-3, AD-18); duyệt bản vẽ đi qua
+ * `approvals.api` (AD-6).
  * Không xuất gì: không module nào import `diagrams` — trang khác muốn biết thiết bị có mặt trong
  * bản vẽ nào thì web gọi endpoint của `diagrams`.
  */
 @Module({
   imports: [ApprovalsModule, AuditModule, CatalogModule, DevicesModule, IpamModule, OutboxModule, UsersModule],
   controllers: [DiagramsController, DiagramReviewController],
-  providers: [DiagramsService, DiagramReviewService],
+  providers: [DiagramsService, DiagramReviewService, DiagramDriftService],
 })
 export class DiagramsModule {}

@@ -113,6 +113,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramPresenceTtlSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 20, max: 600 },
   { name: 'diagramIconSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 10, max: 500 },
   { name: 'diagramAutolayoutMaxNodes', group: 'diagram', type: 'int', unit: 'devices', min: 10, max: 2000, warnAbove: 500 },
+  { name: 'diagramDriftNotifyEnabled', group: 'diagram', type: 'int', min: 0, max: 1, warnZero: true },
+  { name: 'diagramDriftSweepHour', group: 'diagram', type: 'int', unit: 'hours', min: 0, max: 23 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

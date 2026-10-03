@@ -7,7 +7,8 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { DiagramReviewService } from './diagram-review.service';
+import { DiagramDriftService } from './diagram-drift.service';
+import { DiagramReviewService, type ReviewedNode } from './diagram-review.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
 import { DEVICE_INFO_MAX_IDS, DiagramsService } from './diagrams.service';
 
@@ -117,7 +118,14 @@ export class DiagramsController {
     private readonly diagrams: DiagramsService,
     private readonly config: SystemConfigService,
     private readonly review: DiagramReviewService,
+    private readonly drift: DiagramDriftService,
   ) {}
+
+  /** Cây kèm "lệch kho (N)" của bản chính thức hiện hành — đọc bộ đệm, không đọc kho (Q-23). */
+  private async withDrift(nodes: ReviewedNode[]): Promise<(ReviewedNode & { driftCount: number })[]> {
+    const counts = await this.drift.counts(nodes.map((n) => n.id));
+    return nodes.map((node) => ({ ...node, driftCount: counts.get(node.id) ?? 0 }));
+  }
 
   /** Khai TRƯỚC `:id` để không bị đọc thành một mã bản vẽ. */
   @Roles('sa', 'admin', 'member')
@@ -182,7 +190,7 @@ export class DiagramsController {
   @Get()
   async tree() {
     // Trạng thái "chờ duyệt" + số phiên bản chính thức (Q-23) — vẫn chỉ là thông tin của cây.
-    return this.review.overlay(await this.diagrams.tree());
+    return this.withDrift(await this.review.overlay(await this.diagrams.tree()));
   }
 
   @Roles('sa', 'admin', 'member')
@@ -196,7 +204,7 @@ export class DiagramsController {
   @Roles('sa', 'admin', 'member')
   @Get(':id')
   async node(@Param() params: IdParamDto) {
-    const [reviewed] = await this.review.overlay([await this.diagrams.node(params.id)]);
+    const [reviewed] = await this.withDrift(await this.review.overlay([await this.diagrams.node(params.id)]));
     return reviewed;
   }
 
@@ -218,8 +226,11 @@ export class DiagramsController {
   @Roles('sa', 'admin', 'member')
   @RequiresStepUp('diagram')
   @Get(':id/content')
-  content(@Param() params: IdParamDto, @Query() query: ContentQueryDto, @Req() req: AuthedRequest) {
-    return this.diagrams.content(req.user!.email, params.id, { mode: query.mode ?? 'view', versionId: query.versionId });
+  async content(@Param() params: IdParamDto, @Query() query: ContentQueryDto, @Req() req: AuthedRequest) {
+    const content = await this.diagrams.content(req.user!.email, params.id, { mode: query.mode ?? 'view', versionId: query.versionId });
+    // Lệch kho so với bản chụp của CHÍNH phiên bản đang mở (Q-23): chỉ báo, không sửa gì.
+    const drift = content.version ? await this.drift.forVersion(params.id, content.version.id) : [];
+    return { ...content, drift };
   }
 
   @Roles('sa', 'admin', 'member')

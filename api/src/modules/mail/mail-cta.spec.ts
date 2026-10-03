@@ -45,9 +45,18 @@ describe('CTA trong email', () => {
   it('mọi `ctaUrl` còn lại đều ghép từ `UI_PATHS` hoặc là trang chủ', () => {
     // Sau B-07, đường dẫn trong api chỉ được lấy từ `UI_PATHS`. Một chuỗi gõ tay lọt vào đây
     // là bản sao thứ ba của cùng một sự thật — đúng thứ vừa dọn.
+    // `content.ctaPath`: thư do module chủ dựng qua `MailContentRegistry` — đường do module đó lấy
+    // từ `UI_PATHS` (bài dưới canh phía module chủ).
     const handGrafted = ctaUrls().filter(
-      (url) => !url.includes('UI_PATHS') && !/^APP_URL\(\),?$/.test(url),
+      (url) => !url.includes('UI_PATHS') && !/^APP_URL\(\),?$/.test(url) && url !== '`${APP_URL()}${content.ctaPath}`,',
     );
     expect(handGrafted).toEqual([]);
+  });
+
+  it('module đăng ký thư qua `MailContentRegistry` dựng `ctaPath` từ `UI_PATHS`', () => {
+    const src = join(__dirname, '..', 'diagrams', 'diagram-drift.service.ts');
+    const paths = [...stripComments(readFileSync(src, 'utf8')).matchAll(/ctaPath:\s*([^\n]+)/g)].map((m) => m[1].trim());
+    expect(paths.length).toBeGreaterThan(0);
+    for (const path of paths) expect(path).toContain('UI_PATHS');
   });
 });

@@ -207,6 +207,13 @@ export const CONFIG_KEYS = {
    * bản vẽ không đọc được — người dùng nên thu hẹp về một tủ / một danh sách máy.
    */
   diagramAutolayoutMaxNodes: { key: 'diagram.autolayout_max_nodes', fallback: 300 },
+  /*
+   * Cảnh báo lệch kho (Q-23): lượt quét hằng ngày tính số lệch của mọi bản chính thức từ giờ
+   * `diagram.drift_sweep_hour` (múi giờ ứng dụng) và email người phụ trách khi số TĂNG. 0 = tắt thư,
+   * vẫn tính số cho cây bản vẽ.
+   */
+  diagramDriftNotifyEnabled: { key: 'diagram.drift_notify_enabled', fallback: 1 },
+  diagramDriftSweepHour: { key: 'diagram.drift_sweep_hour', fallback: 7 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;
