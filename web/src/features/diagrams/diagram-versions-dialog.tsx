@@ -18,11 +18,13 @@ import {
   TREE_KEY,
   historyKey,
   nodeKey,
+  publicationsKey,
   versionsKey,
   type CellDiff,
   type DiagramHistoryRow,
   type DiagramNode,
   type GroupDiff,
+  type Publications,
   type VersionItem,
 } from './diagram-api';
 
@@ -41,6 +43,14 @@ function historyEntry(row: DiagramHistoryRow, t: TFunction): HistoryEntry {
       return { ...base, action: t('diagrams.history.saved', { seq }), detail: String(changes.summary ?? '') };
     case 'version.restored':
       return { ...base, action: t('diagrams.history.restored', { seq }), detail: String(changes.summary ?? ''), tone: 'status' };
+    case 'version.published':
+      return { ...base, action: t('diagrams.history.published', { seq }), tone: 'status' };
+    case 'review.submitted':
+      return { ...base, action: t('diagrams.history.submitted', { seq }), detail: typeof changes.reason === 'string' ? changes.reason : null };
+    case 'review.returned':
+      return { ...base, action: t('diagrams.history.returned'), detail: typeof changes.note === 'string' ? changes.note : null, tone: 'void' };
+    case 'review.withdrawn':
+      return { ...base, action: t('diagrams.history.withdrawn'), tone: 'void' };
     case 'version.labeled':
       return changes.label
         ? { ...base, action: t('diagrams.history.labeled', { seq }), detail: String(changes.label) }
@@ -93,6 +103,11 @@ export function DiagramVersionsDialog({
     queryFn: () => run(() => apiFetch<VersionItem[]>(`/api/v1/diagrams/${diagram.id}/versions`), purpose),
     retry: false,
   });
+  const publications = useQuery({
+    queryKey: publicationsKey(diagram.id),
+    queryFn: () => run(() => apiFetch<Publications>(`/api/v1/diagrams/${diagram.id}/publications`), purpose),
+    retry: false,
+  });
   const history = useQuery({
     queryKey: historyKey(diagram.id),
     queryFn: () => run(() => apiFetch<DiagramHistoryRow[]>(`/api/v1/diagrams/${diagram.id}/history`), purpose),
@@ -106,7 +121,33 @@ export function DiagramVersionsDialog({
       queryClient.invalidateQueries({ queryKey: historyKey(diagram.id) }),
       queryClient.invalidateQueries({ queryKey: TREE_KEY }),
       queryClient.invalidateQueries({ queryKey: nodeKey(diagram.id) }),
+      queryClient.invalidateQueries({ queryKey: publicationsKey(diagram.id) }),
     ]);
+  };
+
+  /** Lùi bản chính thức một cú bấm: phiên bản MỚI chép bản cũ rồi phát hành nó (Q-23). */
+  const restoreOfficial = async (version: VersionItem) => {
+    const ok = await ask({
+      title: t('diagrams.review.restoreOfficialTitle', { seq: version.seq }),
+      message: t('diagrams.review.restoreOfficialMessage', { seq: version.seq }),
+      confirmLabel: t('diagrams.review.restoreOfficial'),
+    });
+    if (!ok) return;
+    try {
+      const created = await run(
+        () =>
+          apiFetch<{ seq: number }>(`/api/v1/diagrams/${diagram.id}/versions/${version.id}/restore-official`, {
+            method: 'POST',
+            csrfToken: me.csrfToken,
+          }),
+        editPurpose,
+      );
+      await refresh();
+      onRestored();
+      toast({ tone: 'ok', message: t('diagrams.review.restoredOfficial', { seq: created.seq }) });
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+    }
   };
 
   const restore = async (version: VersionItem) => {
@@ -135,6 +176,8 @@ export function DiagramVersionsDialog({
 
   const list = (versions.data ?? []).filter((v) => !onlyNamed || v.label);
   const latestId = versions.data?.[0]?.id;
+  const officialId = publications.data?.officialVersionId ?? null;
+  const published = new Set(publications.data?.publishedVersionIds ?? []);
 
   let versionsBody;
   if (versions.isPending) versionsBody = <Loading />;
@@ -150,6 +193,10 @@ export function DiagramVersionsDialog({
               <strong>{t('diagrams.versions.seq', { seq: version.seq })}</strong>
               {version.label ? <span className="badge info">{version.label}</span> : null}
               {version.id === latestId ? <span className="badge ok">{t('diagrams.versions.latest')}</span> : null}
+              {version.id === officialId ? <span className="badge brand">{t('diagrams.review.official')}</span> : null}
+              {version.id !== officialId && published.has(version.id) ? (
+                <span className="badge outline">{t('diagrams.review.wasOfficial')}</span>
+              ) : null}
               {version.restoredFromSeq ? (
                 <span className="badge outline">{t('diagrams.versions.restoredFrom', { seq: version.restoredFromSeq })}</span>
               ) : null}
@@ -172,6 +219,16 @@ export function DiagramVersionsDialog({
                 {manager && version.id !== latestId ? (
                   <button type="button" className="btn sm" aria-label={t('diagrams.versions.restoreOf', { seq: version.seq })} onClick={() => void restore(version)}>
                     {t('diagrams.versions.restore')}
+                  </button>
+                ) : null}
+                {manager && version.id !== officialId && published.has(version.id) ? (
+                  <button
+                    type="button"
+                    className="btn sm"
+                    aria-label={t('diagrams.review.restoreOfficialOf', { seq: version.seq })}
+                    onClick={() => void restoreOfficial(version)}
+                  >
+                    {t('diagrams.review.restoreOfficial')}
                   </button>
                 ) : null}
               </span>

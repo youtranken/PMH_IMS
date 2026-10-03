@@ -12,7 +12,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
-import { NODE_TYPE_KEY, STATUS_KEY, TREE_KEY, type DiagramNode, type DiagramStatus } from './diagram-api';
+import { NODE_TYPE_KEY, TREE_KEY, statusLabel, type DiagramNode, type DiagramStatus } from './diagram-api';
 import { DiagramNodeDialog } from './diagram-node-dialog';
 import { flattenTree } from './diagram-tree';
 
@@ -21,6 +21,7 @@ const STATUS_TONE: Record<DiagramStatus, string> = {
   draft: 'badge warn',
   official: 'badge ok',
   official_draft: 'badge info',
+  pending: 'badge brand',
 };
 
 type Editing = { parent: DiagramNode | null } | { node: DiagramNode } | null;
@@ -97,7 +98,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
                 {node.name}
               </Link>
               <span className="badge outline">{t(NODE_TYPE_KEY[node.nodeType])}</span>
-              <span className={STATUS_TONE[node.status]}>{t(STATUS_KEY[node.status])}</span>
+              <span className={STATUS_TONE[node.status]}>{statusLabel(node, t)}</span>
               <span className="tree-actions">
                 <RowActions label={t('diagrams.actionsOf', { name: node.name })} items={items} />
               </span>

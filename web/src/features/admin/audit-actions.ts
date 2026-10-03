@@ -124,6 +124,14 @@ export const ACTION_KEY: Record<string, string> = {
   'diagram.version_labeled': 'audit.actions.diagramVersionLabeled',
   'diagram.version_restored': 'audit.actions.diagramVersionRestored',
   'diagram.editing_started': 'audit.actions.diagramEditingStarted',
+  'diagram.published': 'audit.actions.diagramPublished',
+  'diagram.commented': 'audit.actions.diagramCommented',
+  'diagram.comment_resolved': 'audit.actions.diagramCommentResolved',
+  'diagram.comment_reopened': 'audit.actions.diagramCommentReopened',
+  'diagram_publish.requested': 'audit.actions.diagramPublishRequested',
+  'diagram_publish.approved': 'audit.actions.diagramPublishApproved',
+  'diagram_publish.returned': 'audit.actions.diagramPublishReturned',
+  'diagram_publish.withdrawn': 'audit.actions.diagramPublishWithdrawn',
   'crypto.rewrapped': 'audit.actions.cryptoRewrapped',
 };
 
@@ -281,6 +289,7 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   subnet: 'network',
   nat: 'network',
   diagram: 'network',
+  diagram_publish: 'network',
   expiry: 'expiry',
   disposal: 'disposal',
   file: 'file',

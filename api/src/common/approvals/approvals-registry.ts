@@ -15,6 +15,11 @@ export interface ApprovalSubject {
   label: string;
   /** Đường UI (tương đối, không host) tới chỗ dùng quyền vừa cấp. */
   path: string;
+  /**
+   * Trang quyết yêu cầu, khi loại này không dùng trang duyệt chung `/approvals/:id` (vd duyệt bản
+   * vẽ nằm ngay trên bản vẽ). Bỏ trống = trang duyệt chung.
+   */
+  detailPath?: string;
 }
 
 export type ApprovalSubjectDescriber = (

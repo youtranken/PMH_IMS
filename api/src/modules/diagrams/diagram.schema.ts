@@ -82,3 +82,27 @@ export const diagramPresenceTable = pgTable('diagram_presence', {
   seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Migration 0049_diagram_comment.sql — chỉ-thêm; "Đã xử lý"/"Mở lại" là hàng sự kiện. */
+export const DIAGRAM_COMMENT_KINDS = ['note', 'resolved', 'reopened'] as const;
+export type DiagramCommentKind = (typeof DIAGRAM_COMMENT_KINDS)[number];
+
+/** Toạ độ ô trong ảnh xem lúc ghim — ô bị xoá ở phiên bản sau thì ghim hiện ở đây. */
+export interface CommentAnchor {
+  x: number;
+  y: number;
+}
+
+export const diagramCommentTable = pgTable('diagram_comment', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  diagramId: uuid('diagram_id').notNull(),
+  versionId: uuid('version_id').notNull(),
+  approvalId: uuid('approval_id'),
+  parentId: uuid('parent_id'),
+  kind: text('kind').$type<DiagramCommentKind>().notNull().default('note'),
+  cellId: text('cell_id'),
+  anchor: jsonb('anchor').$type<CommentAnchor>(),
+  body: text('body'),
+  author: text('author').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

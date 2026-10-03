@@ -3,7 +3,8 @@
 export type DiagramNodeType = 'company' | 'site' | 'floor' | 'room' | 'cabinet' | 'other';
 export const NODE_TYPES: DiagramNodeType[] = ['company', 'site', 'floor', 'room', 'cabinet', 'other'];
 
-export type DiagramStatus = 'empty' | 'draft' | 'official' | 'official_draft';
+/** `pending` = có yêu cầu duyệt đang chờ (Q-23). */
+export type DiagramStatus = 'empty' | 'draft' | 'official' | 'official_draft' | 'pending';
 
 export interface DiagramNode {
   id: string;
@@ -17,6 +18,10 @@ export interface DiagramNode {
   archivedAt: string | null;
   status: DiagramStatus;
   latestVersion: { id: string; seq: number; savedAt: string; savedBy: string } | null;
+  /** Số phiên bản chính thức ("chính thức v3"); `null` = chưa phát hành. Thiếu → coi như `null`. */
+  officialSeq?: number | null;
+  /** Yêu cầu duyệt đang chờ của bản vẽ. */
+  pendingApprovalId?: string | null;
 }
 
 export interface VersionItem {
@@ -124,4 +129,75 @@ export const STATUS_KEY: Record<DiagramStatus, string> = {
   draft: 'diagrams.status.draft',
   official: 'diagrams.status.official',
   official_draft: 'diagrams.status.official_draft',
+  pending: 'diagrams.status.pending',
 };
+
+/** "Chính thức v3" khi biết số phiên bản chính thức (Q-23); không thì nhãn trạng thái thường. */
+export function statusLabel(node: DiagramNode, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (node.officialSeq && node.status === 'official') return t('diagrams.status.officialSeq', { seq: node.officialSeq });
+  if (node.officialSeq && node.status === 'official_draft') return t('diagrams.status.officialDraftSeq', { seq: node.officialSeq });
+  return t(STATUS_KEY[node.status]);
+}
+
+/** Một lời báo của tự kiểm (AD-18): đỏ chặn, vàng cho qua; `cellId` để bay tới ô. */
+export interface Finding {
+  level: 'error' | 'warning';
+  code: string;
+  cellId: string | null;
+  message: string;
+}
+
+export interface ApprovalInfo {
+  id: string;
+  state: string;
+  requester: string;
+  requesterName: string;
+  reason: string;
+  createdAt: string;
+}
+
+/** `GET /diagrams/:id/review` — trang duyệt: một dòng tóm tắt + cảnh báo (Q-23). */
+export interface ReviewPage {
+  approval: ApprovalInfo | null;
+  versionId: string | null;
+  seq: number | null;
+  officialSeq: number | null;
+  summary: string | null;
+  errors: Finding[];
+  warnings: Finding[];
+}
+
+export interface CommentAnchor {
+  x: number;
+  y: number;
+}
+
+export interface CommentRow {
+  id: string;
+  versionId: string;
+  approvalId: string | null;
+  parentId: string | null;
+  kind: 'note' | 'resolved' | 'reopened';
+  cellId: string | null;
+  anchor: CommentAnchor | null;
+  body: string | null;
+  author: string;
+  authorName: string | null;
+  createdAt: string;
+}
+
+/** Một luồng ghim: hàng gốc + trả lời; "Đã xử lý" là hàng sự kiện phía server. */
+export interface CommentThread extends CommentRow {
+  versionSeq: number | null;
+  resolved: boolean;
+  replies: CommentRow[];
+}
+
+export interface Publications {
+  officialVersionId: string | null;
+  publishedVersionIds: string[];
+}
+
+export const reviewKey = (id: string) => ['diagram-review', id] as const;
+export const commentsKey = (id: string) => ['diagram-comments', id] as const;
+export const publicationsKey = (id: string) => ['diagram-publications', id] as const;

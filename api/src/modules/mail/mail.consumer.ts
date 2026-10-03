@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { ApprovalsApiService } from '../approvals/approvals.api';
+import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
@@ -11,6 +11,12 @@ import { viDate } from '../../common/today';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
+
+/**
+ * Loại yêu cầu duyệt bản vẽ — chép chữ thay vì import: `mail` là tầng nền, không import được
+ * `diagrams` (AD-2, AD-18). Lệch chữ thì `mail-diagram-review.spec.ts` đỏ.
+ */
+const DIAGRAM_PUBLISH_KIND = 'diagram_publish';
 
 /**
  * Consumer outbox → email (chạy trong process worker).
@@ -137,6 +143,7 @@ export class MailConsumer {
      */
     const request = await this.findApproval(approvalId);
     if (!request || request.state !== 'pending') return null;
+    if (request.kind === DIAGRAM_PUBLISH_KIND) return this.buildDiagramReviewMail(request, isReminder, at);
 
     /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
        gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
@@ -193,6 +200,10 @@ export class MailConsumer {
     state: string | undefined,
     at: (date: Date) => string,
   ) {
+    if (state === 'returned' || state === 'approved') {
+      const decided = await this.findApproval(approvalId);
+      if (decided?.kind === DIAGRAM_PUBLISH_KIND) return this.buildDiagramDecidedMail(decided, state);
+    }
     if (
       state !== 'approved' &&
       state !== 'denied' &&
@@ -286,6 +297,79 @@ export class MailConsumer {
       subject: denied
         ? `[IMS] Bị từ chối: mở két${code}`
         : `[IMS] Đã thu hồi sớm: quyền mở két${code}`,
+      html,
+      text,
+    };
+  }
+
+  /**
+   * Thư báo có bản vẽ chờ duyệt (Q-23). Cùng luật người nhận với thư mở két: Admin/SA trừ chính
+   * người gửi (không tự duyệt bản mình gửi). Nút dẫn thẳng tới bản vẽ — trang duyệt nằm trên đó.
+   */
+  private async buildDiagramReviewMail(request: ApprovalRecord, isReminder: boolean, at: (date: Date) => string) {
+    const requester = request.requester.toLowerCase();
+    const approvers = (await this.users.recipientsByRole(['sa', 'admin'])).filter((a) => a.email.toLowerCase() !== requester);
+    if (approvers.length === 0) return null;
+    const [who, subject] = await Promise.all([
+      this.personName(request.requester),
+      this.approvalKinds.describe(request.kind, request.subjectType, request.subjectId),
+    ]);
+    const name = subject?.code ?? 'không rõ tên';
+    const seq = Number(request.payload?.seq);
+    const warnings = Number(request.payload?.warnings ?? 0);
+    const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
+    const { html, text } = renderMail({
+      title: isReminder ? 'Bản vẽ vẫn chờ duyệt' : 'Có bản vẽ cần duyệt',
+      intro: isReminder
+        ? `Bản vẽ dưới đây đã chờ ${waited} phút mà chưa ai duyệt.`
+        : `${who} vừa gửi một bản vẽ sơ đồ mạng để duyệt thành bản chính thức.`,
+      rows: [
+        { label: 'Người gửi', value: `${who} (${request.requester})` },
+        { label: 'Bản vẽ', value: subject?.label ?? 'Không xác định — mở bản vẽ để xem' },
+        { label: 'Phiên bản', value: Number.isFinite(seq) ? `#${seq}` : '—' },
+        { label: 'Lý do', value: request.reason },
+        { label: 'Tự kiểm', value: warnings > 0 ? `${warnings} cảnh báo vàng (không chặn)` : 'Không có cảnh báo' },
+        { label: 'Lúc', value: at(request.createdAt) },
+      ],
+      ctaLabel: 'Mở bản vẽ để duyệt',
+      ctaUrl: `${APP_URL()}${subject?.detailPath ?? UI_PATHS.diagram(request.subjectId)}`,
+      ctaWide: true,
+      footnote: 'Trang duyệt có tóm tắt thay đổi và cảnh báo; trả về thì ghim ghi chú ngay trên hình.',
+    });
+    const ask = `"${name}"${Number.isFinite(seq) ? ` (phiên bản #${seq})` : ''}`;
+    return {
+      to: approvers.map((r) => r.email),
+      subject: isReminder
+        ? `[IMS] Nhắc: duyệt bản vẽ ${ask} — chờ ${waited} phút`
+        : `[IMS] Duyệt bản vẽ: ${who} gửi ${ask}`,
+      html,
+      text,
+    };
+  }
+
+  /** Kết quả duyệt bản vẽ cho người gửi: thành chính thức, hoặc trả về kèm ghi chú ghim. */
+  private async buildDiagramDecidedMail(request: ApprovalRecord, state: 'approved' | 'returned') {
+    const subject = await this.approvalKinds.describe(request.kind, request.subjectType, request.subjectId);
+    const name = subject?.code ?? 'không rõ tên';
+    const rows = [
+      { label: 'Bản vẽ', value: subject?.label ?? 'Không xác định' },
+      { label: 'Người quyết', value: request.decidedBy ?? '—' },
+      ...(request.decisionNote ? [{ label: 'Ghi chú của người duyệt', value: request.decisionNote }] : []),
+    ];
+    const returned = state === 'returned';
+    const { html, text } = renderMail({
+      title: returned ? 'Bản vẽ bị trả về' : 'Bản vẽ đã được duyệt',
+      intro: returned
+        ? 'Người duyệt đã trả bản vẽ về kèm ghi chú ghim trên hình. Mở bản vẽ, xem danh sách ghim, sửa rồi gửi duyệt lại.'
+        : 'Bản vẽ của bạn đã thành bản chính thức.',
+      rows,
+      ctaLabel: 'Mở bản vẽ',
+      ctaUrl: `${APP_URL()}${subject?.detailPath ?? UI_PATHS.diagram(request.subjectId)}`,
+      ctaWide: true,
+    });
+    return {
+      to: [request.requester],
+      subject: returned ? `[IMS] Trả về: bản vẽ "${name}" cần sửa` : `[IMS] Đã duyệt: bản vẽ "${name}" thành bản chính thức`,
       html,
       text,
     };
