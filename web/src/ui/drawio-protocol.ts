@@ -69,7 +69,6 @@ export type DrawioEventName =
   | 'export'
   | 'exit'
   | 'openLink'
-  | 'getDiff'
   | 'patch';
 
 /**
@@ -100,9 +99,13 @@ const REQUIRED: Record<DrawioEventName, (keyof DrawioEvent)[]> = {
   export: ['data'],
   exit: [],
   openLink: ['href'],
-  getDiff: [],
   patch: [],
 };
+
+/** Xuất định dạng `xml` trả cả tệp ở `xml` chứ không ở `data` — mọi định dạng khác bắt buộc `data`. */
+function requiredOf(event: DrawioEvent): (keyof DrawioEvent)[] {
+  return event.event === 'export' && event.format === 'xml' ? ['xml'] : REQUIRED[event.event];
+}
 
 const STRING_FIELDS = ['xml', 'data', 'format', 'href', 'error'] as const;
 const BOOL_FIELDS = ['exit', 'modified'] as const;
@@ -149,7 +152,7 @@ export function parseDrawioEvent(data: unknown): DrawioEvent | null {
     const b = raw.modelBounds;
     out.modelBounds = { x: b.x, y: b.y, width: b.width, height: b.height };
   }
-  if (REQUIRED[out.event].some((key) => out[key] === undefined)) return null;
+  if (requiredOf(out).some((key) => out[key] === undefined)) return null;
   return out;
 }
 
@@ -157,11 +160,15 @@ export interface DrawioConfig {
   [key: string]: unknown;
 }
 
-export type DrawioExportFormat = 'xmlsvg' | 'svg' | 'xmlpng' | 'png';
+export type DrawioExportFormat = 'xmlsvg' | 'svg' | 'xmlpng' | 'png' | 'xml';
 
 /**
- * Lệnh IMS gửi trình vẽ. `merge` cho việc chèn của các màn sau; `patch`/`getDiff` để chèn một hình
- * mà không đụng phần người vẽ chưa lưu; `save` bấm nút Lưu của draw.io (nó trả `event: save`).
+ * Lệnh IMS gửi trình vẽ. `merge` cho việc chèn của các màn sau; `export` định dạng `xml` + `patch`
+ * để chèn một hình mà không đụng phần người vẽ chưa lưu; `save` bấm nút Lưu của draw.io (nó trả
+ * `event: save`).
+ *
+ * Không có `getDiff`: bản vẽ một trang thì draw.io trả mô hình trần (`<mxGraphModel>`) không kèm
+ * `<diagram id>`, nên không biết trang nào để `patch`. `export` `xml` luôn trả cả tệp.
  */
 export type DrawioCommand =
   | { action: 'load'; xml: string; autosave?: boolean; title?: string }
@@ -169,7 +176,6 @@ export type DrawioCommand =
   | { action: 'export'; format: DrawioExportFormat }
   | { action: 'configure'; config: DrawioConfig }
   | { action: 'patch'; patch: unknown }
-  | { action: 'getDiff' }
   | { action: 'save' };
 
 export function serializeDrawioCommand(command: DrawioCommand): string {

@@ -338,7 +338,7 @@ function DiagramEditor({
   const [stockOpen, setStockOpen] = useState(false);
   const [inserting, setInserting] = useState(false);
   /*
-   * Máy đã có trên bản vẽ: XML trình vẽ gửi gần nhất (`autosave`/`getDiff`) cộng những máy vừa
+   * Máy đã có trên bản vẽ: XML trình vẽ gửi gần nhất (`autosave`/`export` xml) cộng những máy vừa
    * chèn bằng `patch` — `patch` không làm draw.io gửi lại `autosave`, nên chỉ trông vào XML thì
    * chèn xong mở lại hộp vẫn mời chèn lần hai.
    */
@@ -354,6 +354,19 @@ function DiagramEditor({
   const [initialXml] = useState(content.version?.xml ?? '');
   const basedOn = useRef<string | null>(content.version?.id ?? null);
   const pendingXml = useRef<string | null>(null);
+  /*
+   * Ai đang chờ tin `export` xml (cả tệp): chèn máy kho hay lượt lưu. draw.io trả lời theo đúng
+   * thứ tự nhận lệnh, nên một hàng đợi đủ để ghép câu trả lời với người hỏi.
+   *
+   * Vì sao phải xin tệp riêng: với `pages=0` (AD-17), bản một trang thì tin `save`/`autosave` chỉ
+   * mang mô hình trần `<mxGraphModel>` không có `<diagram id>` (server từ chối, `patch` không biết
+   * trang), còn XML đi kèm `export` svg lại bị nén. Chỉ `export` xml trả cả tệp không nén.
+   */
+  const fileWaiters = useRef<('insert' | 'save')[]>([]);
+  const requestFile = (purpose: 'insert' | 'save') => {
+    fileWaiters.current.push(purpose);
+    frame.current?.send({ action: 'export', format: 'xml' });
+  };
   const frameState = useRef<{ page: number; bounds: Bounds | null; pending: DeviceCellSpec[] | null }>({
     page: 0,
     bounds: null,
@@ -441,7 +454,7 @@ function DiagramEditor({
     switch (message.event) {
       /*
        * Sẵn sàng từ `init`: cầu nối gửi lệnh `load` NGAY khi nhận `init`, và draw.io xử lý tin
-       * theo thứ tự, nên mọi lệnh sau (`getDiff`, `save`) chạy trên bản đã nạp. Không bắt buộc
+       * theo thứ tự, nên mọi lệnh sau (`export`, `save`) chạy trên bản đã nạp. Không bắt buộc
        * chờ tin `load` trả về: trên stack thật đã gặp nút Lưu tắt mãi vì tin đó không tới màn.
        */
       case 'init':
@@ -455,24 +468,28 @@ function DiagramEditor({
           setJustInserted([]);
         }
         break;
-      case 'getDiff': {
-        const devices = state.pending;
-        state.pending = null;
-        if (message.xml) setFrameXml(message.xml);
-        if (devices && message.xml) insertInto(message.xml, devices);
-        setInserting(false);
-        break;
-      }
       case 'patch':
         if (message.error) toast({ tone: 'error', message: t('diagrams.screen.insertFailed', { reason: message.error }) });
         break;
       case 'save':
-        // Lưu = XML + ảnh SVG để xem: xin trình vẽ xuất SVG, gửi cả hai khi `export` về.
-        pendingXml.current = message.xml ?? '';
+        // Lưu = cả tệp XML + ảnh SVG để xem: xin tệp, rồi xin SVG, gửi cả hai khi SVG về.
         setSaving(true);
-        frame.current?.send({ action: 'export', format: 'svg' });
+        requestFile('save');
         break;
       case 'export': {
+        if (message.format === 'xml') {
+          if (fileWaiters.current.shift() === 'save') {
+            pendingXml.current = message.xml ?? '';
+            frame.current?.send({ action: 'export', format: 'svg' });
+            break;
+          }
+          const devices = state.pending;
+          state.pending = null;
+          if (message.xml) setFrameXml(message.xml);
+          if (devices && message.xml) insertInto(message.xml, devices);
+          setInserting(false);
+          break;
+        }
         const xml = pendingXml.current;
         pendingXml.current = null;
         if (xml === null) break;
@@ -503,8 +520,8 @@ function DiagramEditor({
         return;
       }
       frameState.current.pending = usable.map((info) => ({ id: info.id, code: info.code ?? '', cell: info.cell }));
-      // Hỏi draw.io bản đang mở (có cả phần chưa lưu) để biết trang và lớp đích; trả lời về ở `getDiff`.
-      frame.current?.send({ action: 'getDiff' });
+      // Hỏi draw.io cả tệp đang mở (có phần chưa lưu, có id trang) để biết trang và lớp đích.
+      requestFile('insert');
     } catch (error) {
       setInserting(false);
       toast({ tone: 'error', message: errorMessage(error) });

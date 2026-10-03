@@ -53,7 +53,8 @@ describe('parseDrawioEvent — chỉ nhận đúng hình dạng giao thức', ()
     ['export', '{"event":"export","format":"xmlsvg","data":"data:image/svg+xml;base64,AA","xml":"<mxfile/>"}', { event: 'export', format: 'xmlsvg', data: 'data:image/svg+xml;base64,AA', xml: '<mxfile/>' }],
     ['exit', '{"event":"exit","modified":true}', { event: 'exit', modified: true }],
     ['openLink', '{"event":"openLink","href":"https://ims.local/devices/1"}', { event: 'openLink', href: 'https://ims.local/devices/1' }],
-    ['getDiff mang xml', '{"event":"getDiff","xml":"<mxfile/>"}', { event: 'getDiff', xml: '<mxfile/>' }],
+    // Xuất định dạng `xml` trả cả tệp (có `<diagram id>`) ở `xml`, không có `data`.
+    ['export xml mang xml', '{"event":"export","format":"xml","xml":"<mxfile/>"}', { event: 'export', format: 'xml', xml: '<mxfile/>' }],
     // Bản vẽ trống: draw.io trả `load` với `xml: null` — vẫn là tin `load` (màn mới biết trình vẽ đã nạp).
     ['load của bản vẽ trống (xml null)', '{"event":"load","xml":null,"currentPage":0}', { event: 'load', currentPage: 0 }],
     [
@@ -76,6 +77,8 @@ describe('parseDrawioEvent — chỉ nhận đúng hình dạng giao thức', ()
     ['autosave xml null', '{"event":"autosave","xml":null}'],
     ['save xml sai kiểu', '{"event":"save","xml":42}'],
     ['export thiếu data', '{"event":"export","format":"svg"}'],
+    ['export xml thiếu xml', '{"event":"export","format":"xml"}'],
+    ['getDiff (không dùng: một trang thì draw.io trả mô hình trần, mất id trang)', '{"event":"getDiff","xml":"<mxGraphModel/>"}'],
     ['openLink thiếu href', '{"event":"openLink"}'],
     ['modelBounds sai hình', '{"event":"load","modelBounds":{"x":"1"}}'],
   ];
@@ -96,7 +99,7 @@ describe('serializeDrawioCommand — lệnh có kiểu → tin draw.io', () => {
     ['export', { action: 'export', format: 'xmlsvg' }, { action: 'export', format: 'xmlsvg' }],
     ['configure', { action: 'configure', config: { compressXml: false } }, { action: 'configure', config: { compressXml: false } }],
     ['save', { action: 'save' }, { action: 'invokeAction', actionName: 'save' }],
-    ['getDiff', { action: 'getDiff' }, { action: 'getDiff' }],
+    ['export xml', { action: 'export', format: 'xml' }, { action: 'export', format: 'xml' }],
     ['patch', { action: 'patch', patch: { u: {} } }, { action: 'patch', patch: { u: {} } }],
   ];
   it.each(cases)('%s', (_name, command, expected) => {

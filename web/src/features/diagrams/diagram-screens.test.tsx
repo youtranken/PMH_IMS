@@ -170,8 +170,20 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
       });
     fromDrawio({ event: 'init' });
     fromDrawio({ event: 'load' });
-    fromDrawio({ event: 'save', xml: '<mxfile>NÉT ĐANG VẼ</mxfile>' });
-    fromDrawio({ event: 'export', data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}` });
+    /*
+     * Bản một trang: tin `save` chỉ mang mô hình trần (`pages=0`), còn XML đi kèm `export` svg thì
+     * bị nén — màn xin `export` xml (cả tệp, không nén) trước, rồi mới xin svg.
+     */
+    fromDrawio({ event: 'save', xml: '<mxGraphModel>NÉT ĐANG VẼ</mxGraphModel>' });
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"xml"'))).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', xml: '<mxfile>NÉT ĐANG VẼ</mxfile>' });
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"svg"'))).toBe(true));
+    fromDrawio({
+      event: 'export',
+      format: 'svg',
+      xml: '<mxfile><diagram>NÉN</diagram></mxfile>',
+      data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}`,
+    });
 
     const dialog = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
     expect(dialog).toHaveTextContent('Mã này chỉ mở phần xem sơ đồ, không mở két.');
@@ -184,8 +196,9 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toEqual(bodies[0]);
     expect(bodies[1]).toMatchObject({ xml: '<mxfile>NÉT ĐANG VẼ</mxfile>', basedOnVersionId: 'v1' });
+    // Một lượt xin tệp + một lượt xin svg; nhập mã xong KHÔNG xin trình vẽ xuất lại.
     const exports = posted.mock.calls.filter(([data]) => String(data).includes('"action":"export"'));
-    expect(exports).toHaveLength(1);
+    expect(exports).toHaveLength(2);
   });
 });
 
@@ -272,8 +285,9 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
 
     await user.click(screen.getByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' }));
     await user.click(screen.getByRole('button', { name: 'Chèn 1 thiết bị' }));
-    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"getDiff"'))).toBe(true));
-    fromDrawio({ event: 'getDiff', xml: HAVE_XML, currentPage: 0, modelBounds: { x: 0, y: 0, width: 60, height: 60 } });
+    // Hỏi cả TỆP (export xml), không `getDiff`: bản một trang thì `getDiff` trả mô hình trần, không có id trang để patch.
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"xml"'))).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', xml: HAVE_XML, currentPage: 0, modelBounds: { x: 0, y: 0, width: 60, height: 60 } });
 
     const patch = posted.mock.calls.map(([data]) => JSON.parse(String(data)) as { action: string; patch?: { u: Record<string, { cells: { i: { style: string; xmlValue: string; previous?: string }[] } }> } }).find((m) => m.action === 'patch');
     const cell = patch!.patch!.u.p1.cells.i[0];
@@ -301,7 +315,7 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
     await user.keyboard(' ');
     await user.keyboard('{Enter}');
     await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/diagrams/device-info?ids=dev-ok'))).toBe(true));
-    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"getDiff"'))).toBe(true));
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"xml"'))).toBe(true));
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Chèn thiết bị có trong kho' })).toBeNull();
