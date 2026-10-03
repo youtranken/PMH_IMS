@@ -22,10 +22,13 @@ import { UsersApiService } from '../users/users.api';
 import {
   buildCellIndex,
   diffCellIndex,
+  layerNames,
   secretLabelReason,
   summarizeDiff,
+  type CellBounds,
   type CellDiff,
   type CellIndex,
+  type CellKind,
 } from './diagram-cells';
 import { cableEdgeStates, externalLinks, undrawnLinks, type CableEdge } from './diagram-checks';
 import { buildDraftXml } from './diagram-draft';
@@ -176,6 +179,17 @@ export interface DiagramContent {
   cableTypes: CableTypeInfo[];
   /** Khung mang bản vẽ con / dải IP / tủ (AD-18) — trình xem bấm khung để xuống bản vẽ con, mở thẻ VLAN. */
   frames: DiagramFrame[];
+  /** Lớp draw.io theo thứ tự trong XML (tên đọc lại từ XML) — trình xem bật/tắt lớp. */
+  layers: { id: string; name: string }[];
+  /** Mọi ô của phiên bản (từ chỉ mục ô): lớp chứa nó + khung bao — bật/tắt lớp, bay tới khi tìm. */
+  cells: ViewCell[];
+}
+
+export interface ViewCell {
+  id: string;
+  kind: CellKind;
+  layer: string | null;
+  bounds: CellBounds | null;
 }
 
 /**
@@ -639,6 +653,8 @@ export class DiagramsService {
         externalLinkIds: [],
         cableTypes: await this.cableTypeInfos(),
         frames: [],
+        layers: [],
+        cells: [],
       };
     }
     const [item] = await this.toItems(diagramId, [row]);
@@ -665,6 +681,8 @@ export class DiagramsService {
       externalLinkIds: cables.external,
       cableTypes: cables.cableTypes,
       frames,
+      layers: layerNames(row.xml),
+      cells: row.cellIndex.cells.map((cell) => ({ id: cell.id, kind: cell.kind, layer: cell.layer, bounds: cell.bounds ?? null })),
     };
   }
 

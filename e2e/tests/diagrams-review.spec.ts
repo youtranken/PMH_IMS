@@ -249,7 +249,7 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     const v1 = await save(page, id, page_(''));
     await expect((await treeRow(page, name)).getByText('Bản nháp')).toBeVisible();
 
-    // Thanh mảnh MỘT dòng ở 1280px cho SA (Q-23), cả Xem lẫn Sửa; 390px (chỉ xem) xuống dòng, không tràn ngang.
+    // Thanh mảnh MỘT dòng ở 1280px cho SA (Q-23), cả Xem lẫn Sửa; 390px chỉ xem, xuống dòng, không tràn ngang.
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
@@ -258,9 +258,12 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Phát hành', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tìm', exact: true })).toBeVisible();
     expect(await diagramBarSpread(page)).toBeLessThan(12);
+    // Điện thoại chỉ xem (Q-23): không Phát hành, còn "Tìm".
     await page.setViewportSize({ width: 390, height: 800 });
-    await expect(page.getByRole('button', { name: 'Phát hành', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tìm', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Phát hành', exact: true })).toBeHidden();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole('button', { name: 'Phát hành', exact: true }).click();

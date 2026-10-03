@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flattenTree, pathOf, subtreeIds } from './diagram-tree';
+import { flattenTree, pathOf, slideOrder, subtreeIds } from './diagram-tree';
 
 const N = (id: string, parentId: string | null, name = id) => ({ id, parentId, name });
 
@@ -32,5 +32,37 @@ describe('subtreeIds / pathOf', () => {
 
   it('đường dẫn từ gốc tới nút', () => {
     expect(pathOf(NODES, 'f1').map((n) => n.id)).toEqual(['root', 's1', 'f1']);
+  });
+});
+
+describe('slideOrder — trình chiếu từ tổng xuống chi tiết', () => {
+  const S = (id: string, parentId: string | null, officialVersionId: string | null, kind: 'official' | 'presentation' = 'official') => ({
+    id,
+    parentId,
+    name: id,
+    officialVersionId,
+    kind,
+  });
+  const TREE = [
+    S('root', null, 'v-root'),
+    S('s1', 'root', 'v-s1'),
+    S('f1', 's1', null),
+    S('r1', 'f1', 'v-r1'),
+    S('s2', 'root', 'v-s2'),
+    S('p1', 'root', 'v-p1', 'presentation'),
+    S('other', null, 'v-other'),
+  ];
+
+  it.each([
+    ['từ gốc: cha trước con, bỏ bản chưa phát hành (nhưng vẫn đi xuống con của nó), bỏ bản trình bày, không lan sang cây khác', 'root', ['root', 's1', 'r1', 's2']],
+    ['từ một nhánh: chỉ cây con của nhánh đó', 's1', ['s1', 'r1']],
+    ['nút chưa phát hành: bắt đầu từ con đã phát hành', 'f1', ['r1']],
+    ['nút không có trong cây: rỗng', 'khong-co', []],
+  ])('%s', (_name, rootId, expected) => {
+    expect(slideOrder(TREE, rootId).map((n) => n.id)).toEqual(expected);
+  });
+
+  it('mỗi trang mang đúng phiên bản chính thức để mở', () => {
+    expect(slideOrder(TREE, 's1').map((n) => n.officialVersionId)).toEqual(['v-s1', 'v-r1']);
   });
 });

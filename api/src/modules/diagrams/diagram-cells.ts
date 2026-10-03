@@ -208,6 +208,22 @@ export function buildCellIndex(xml: string): CellIndex {
   return { layers, cells };
 }
 
+/**
+ * Lớp draw.io và tên của nó, theo thứ tự trong XML — trình xem bật/tắt lớp (Story chỉ-xem). Tên
+ * không nằm trong chỉ mục ô đã lưu, nên đọc lại từ XML lúc mở; cùng định nghĩa "lớp" với
+ * `buildCellIndex` (ô có cha là ô gốc). Lớp mặc định không tên trả `name: ''`, web tự đặt nhãn.
+ */
+export function layerNames(xml: string): { id: string; name: string }[] {
+  const raw = readRawCells(xml);
+  const rootIds = new Set(raw.filter((c) => !c.attrs.parent).map((c) => c.id));
+  return raw
+    .filter((c) => c.attrs.parent && rootIds.has(c.attrs.parent))
+    .map((c) => ({
+      id: c.id,
+      name: plainLabel(c.data ? (c.data.label ?? '') : (c.attrs.value ?? ''), /(?:^|;)html=1/.test(c.attrs.style ?? '')),
+    }));
+}
+
 function itemOf(cell: IndexedCell): DiffItem {
   return { id: cell.id, label: cell.ims.ims_device_code || cell.label || cell.id };
 }

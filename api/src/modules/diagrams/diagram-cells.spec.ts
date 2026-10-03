@@ -1,6 +1,7 @@
 import {
   buildCellIndex,
   diffCellIndex,
+  layerNames,
   secretLabelReason,
   summarizeDiff,
   type CellDiff,
@@ -201,5 +202,27 @@ describe('secretLabelReason — chữ trên hình trông như mật khẩu', () 
     expect(reason).toMatch(/mật khẩu/);
     expect(reason).toContain('s9');
     expect(reason).not.toContain('Xk9#mQ2!vLp7');
+  });
+});
+
+describe('layerNames — tên lớp draw.io cho trình xem bật/tắt', () => {
+  it.each([
+    ['một lớp mặc định không tên', page(''), [{ id: '1', name: '' }]],
+    [
+      'nhiều lớp: đúng thứ tự trong XML, tên lấy từ value (nhãn HTML bỏ thẻ)',
+      `<mxfile><diagram id="p1" name="T"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="L2" value="&lt;b&gt;Wi-Fi&lt;/b&gt;" style="html=1;" parent="0"/><UserObject label="Camera" id="L3"><mxCell parent="0"/></UserObject>${'<mxCell id="s" value="x" vertex="1" parent="L2"><mxGeometry x="0" y="0" width="1" height="1" as="geometry"/></mxCell>'}</root></mxGraphModel></diagram></mxfile>`,
+      [
+        { id: '1', name: '' },
+        { id: 'L2', name: 'Wi-Fi' },
+        { id: 'L3', name: 'Camera' },
+      ],
+    ],
+  ])('%s', (_name, xml, expected) => {
+    expect(layerNames(xml)).toEqual(expected);
+  });
+
+  it('khớp `layers` của chỉ mục ô (cùng một định nghĩa "lớp")', () => {
+    const xml = `<mxfile><diagram id="p1" name="T"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="L2" value="Wi-Fi" parent="0"/></root></mxGraphModel></diagram></mxfile>`;
+    expect(layerNames(xml).map((l) => l.id)).toEqual(buildCellIndex(xml).layers);
   });
 });

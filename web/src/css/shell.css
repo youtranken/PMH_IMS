@@ -531,6 +531,16 @@
     text-overflow: ellipsis;
   }
 }
+/* Trình chiếu sơ đồ: phủ cả khung nhìn, đè lên shell nhưng nằm DƯỚI lớp hộp thoại — hộp nhập mã
+   khi hết ân hạn giữa chừng phải nổi lên trên trang đang chiếu. */
+.slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal-backdrop) - 1);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
 /* Màn sửa sơ đồ chỉ dành cho máy tính (`BREAKPOINTS.editor`): hẹp hơn thì thanh trên chỉ còn tab
    và chế độ xem, ô chọn thiết bị không cần giữ bề ngang cố định. */
 @media (max-width: 1023px) {

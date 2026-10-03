@@ -48,6 +48,7 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   cells: 'settings.unitCells',
   devices: 'settings.unitDevices',
   megapixels: 'settings.unitMegapixels',
+  hops: 'settings.unitHops',
 };
 
 /*
@@ -130,6 +131,7 @@ const TEXT: Record<string, [string, string]> = {
   diagramExportTimeoutSeconds: ['settings.diagramExportTimeoutSecondsLabel', 'settings.diagramExportTimeoutSecondsDesc'],
   diagramDriftNotifyEnabled: ['settings.diagramDriftNotifyEnabledLabel', 'settings.diagramDriftNotifyEnabledDesc'],
   diagramDriftSweepHour: ['settings.diagramDriftSweepHourLabel', 'settings.diagramDriftSweepHourDesc'],
+  diagramPathMaxHops: ['settings.diagramPathMaxHopsLabel', 'settings.diagramPathMaxHopsDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

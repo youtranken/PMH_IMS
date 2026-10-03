@@ -218,7 +218,7 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
         second.approval.id,
       ]),
     ).toBe(1);
-    expect((await review.overlay([await diagrams.node(diagramId)]))[0]).toMatchObject({ status: 'official', officialSeq: 2 });
+    expect((await review.overlay([await diagrams.node(diagramId)]))[0]).toMatchObject({ status: 'official', officialSeq: 2, officialVersionId: fixed.id });
   });
 
   it('duyệt chạy lại tự kiểm: máy vừa thanh lý sau khi gửi → không duyệt được, yêu cầu vẫn chờ, cờ chính thức không đổi', async () => {
@@ -243,7 +243,7 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
   it('Admin/SA tự phát hành (lưu vẫn là nháp); tự kiểm đỏ cũng chặn phát hành', async () => {
     const dev = await newDevice('SW-E2E-RV-PUB');
     const { diagramId, versionId } = await drawn('Phát hành', deviceCell('d1', dev, 'SW-E2E-RV-PUB'), SA.email);
-    expect((await review.overlay([await diagrams.node(diagramId)]))[0].status).toBe('draft');
+    expect((await review.overlay([await diagrams.node(diagramId)]))[0]).toMatchObject({ status: 'draft', officialVersionId: null });
     const published = await review.publish(SA, diagramId, {});
     expect(published).toMatchObject({ versionId, seq: 1 });
     expect((await review.overlay([await diagrams.node(diagramId)]))[0]).toMatchObject({ status: 'official', officialSeq: 1 });

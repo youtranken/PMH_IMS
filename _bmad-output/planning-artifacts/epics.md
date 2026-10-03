@@ -1149,25 +1149,26 @@ So that lúc sự cố 2 giờ sáng thấy ngay đường đi từ máy hỏng 
 
 **Acceptance Criteria:**
 
-**Given** điện thoại 390px
+**Given** điện thoại 390px (màn hẹp hơn `BREAKPOINTS.editor` = 1024px)
 **When** mở cây bản vẽ và một bản chính thức
-**Then** trình xem SVG chạy được: phóng hai ngón, bấm thiết bị ra thẻ, tô sáng dây, tìm; KHÔNG nạp draw.io, không có công cụ sửa/gửi duyệt; mở đường dẫn sửa trên điện thoại → chế độ xem kèm "Sửa sơ đồ chỉ làm trên máy tính"; E2E có assertion 390px
+**Then** trình xem SVG chạy được: phóng hai ngón, bấm thiết bị ra thẻ, tô sáng dây, nút "Tìm" đứng ngoài thanh mảnh, "Chỉ đường" trong menu ⋮; KHÔNG nạp draw.io, không tab Sửa, không Gửi duyệt / Phát hành / Duyệt / Ghim bình luận / Phiên bản / Tạo bản trình bày (thẻ trạng thái duyệt vẫn hiện); mở đường dẫn sửa (`?mode=edit`) trên điện thoại → chế độ xem kèm lời "Sửa sơ đồ chỉ làm trên máy tính"; mức chi tiết theo thu phóng (xa thì ẩn nhãn cổng, `data-lod`); E2E có assertion 390px
+**And** ở 1280px thanh mảnh vẫn MỘT dòng (Q-23) dù thêm nút "Tìm"
 
-**Given** ô tìm trên trình xem
-**When** gõ mã/tên/IP
-**Then** có trong bản vẽ thì bay tới và tô sáng (khung bao từ `cell_index`); không có thì liệt kê bản vẽ khác chứa nó (bấm mở rồi bay tới)
+**Given** nút "Tìm" trên thanh màn bản vẽ
+**When** gõ mã/tên/IP (từ 2 ký tự)
+**Then** có trong bản vẽ đang xem thì bay tới (phóng tới mức đọc được theo khung bao của ô trong `cell_index`) và tô sáng máy + dây của nó, không hỏi server; không có thì gọi `GET /api/v1/diagrams/find?q=` (tối đa 20 máy, mỗi máy kèm tên + id bản vẽ chính thức chưa lưu trữ chứa nó ở phiên bản mới nhất — không trả nội dung nên không đòi mã sơ đồ) và liệt kê bản vẽ khác — bấm mở `/diagrams/<id>?focus=<máy>` rồi bay tới; không có ở đâu → "Không tìm thấy … trên bản vẽ này hay trong kho."
 
-**Given** bản vẽ có nhiều lớp draw.io
-**When** bật/tắt lớp ở trình xem
-**Then** ẩn/hiện các ô thuộc lớp đó (theo `cell_index`); watermark KHÔNG nằm trong danh sách lớp
+**Given** bản vẽ đang xem
+**When** bấm nút "Lớp" trên thanh thu phóng của trình xem
+**Then** bật/tắt được: lớp draw.io (chỉ khi bản vẽ có từ hai lớp; lớp không tên là "Lớp nền"), nhóm theo loại thiết bị, nhóm theo loại dây của dòng sơ đồ cổng; tắt thì ẩn các ô thuộc lớp/nhóm đó (theo `cell_index`); watermark KHÔNG nằm trong danh sách lớp
 
-**Given** chọn thiết bị A và B rồi bấm "Chỉ đường"
-**When** server tìm đường ngắn nhất trên đồ thị sơ đồ cổng (qua `devices.api`, hàm thuần test bảng dữ liệu)
-**Then** tô sáng đoạn nằm trên bản vẽ hiện tại, đoạn ở bản vẽ khác hiện mũi tên nhảy sang; không có đường → "Không có đường nối giữa A và B trong sơ đồ cổng"
+**Given** "Chỉ đường" trong menu ⋮ của thanh (Q-18), ô "Từ máy" điền sẵn máy đang chọn
+**When** chọn máy A và B rồi bấm "Tìm đường" — `GET /api/v1/diagrams/path?from=&to=`; server dò sơ đồ cổng từng tầng qua `devices.api` (chỉ đọc) và hàm thuần `shortestPortPath` (BFS ít dây nhất, láng giềng theo id dây tăng dần để hai lần hỏi ra cùng đường; test bảng dữ liệu) tối đa `diagram.path_max_hops` dây (`system_config`, mặc định 12, migration `0055`)
+**Then** có đường: hộp đóng, tô sáng các ô/nét nằm trên bản vẽ hiện tại, lời báo "Đường A → B: N dây." kèm mũi tên "→ máy (bản vẽ)" nhảy sang bản vẽ khác chứa đoạn còn lại và nút "Bỏ chỉ đường"; không có đường (hay xa hơn trần) → báo trong hộp "Không có đường nối giữa A và B trong sơ đồ cổng"; A trùng B → báo ngay, không hỏi server
 
 **Given** chế độ trình chiếu
-**When** chọn một nút cây và bấm "Trình chiếu"
-**Then** đi lần lượt bản chính thức từ tổng xuống chi tiết, toàn màn hình, phím ← → / Esc; hết ân hạn giữa chừng hỏi lại mã tại chỗ, không thoát; mỗi trang ghi `diagram.viewed`
+**When** chọn một nút cây, menu ⋮ của dòng → "Trình chiếu" (mở `/diagrams/<id>/present`)
+**Then** đi lần lượt bản chính thức từ nút đó xuống các bản vẽ con (tổng → chi tiết), toàn màn hình, phím ← → / Esc; hết ân hạn giữa chừng hỏi lại mã tại chỗ trên trang đang chiếu, không thoát; mỗi trang ghi `diagram.viewed`
 
 **Given** chừa chỗ trạng thái sống (FR-049 — CHỈ thiết kế)
 **When** story đóng

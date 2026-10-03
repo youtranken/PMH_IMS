@@ -52,6 +52,28 @@ export function subtreeIds<T extends TreeNodeInput>(nodes: T[], id: string): Set
   return out;
 }
 
+/**
+ * Thứ tự trình chiếu từ một nút: cha trước con (tổng xuống chi tiết), cùng cấp giữ thứ tự cây.
+ * Chỉ bản CHÍNH THỨC đã phát hành vào trang; nút chưa phát hành vẫn đi xuống con của nó (tầng
+ * chưa vẽ xong không được giấu mất các phòng bên dưới). Bản trình bày đứng ngoài cây chính thức.
+ */
+export function slideOrder<T extends TreeNodeInput & { officialVersionId?: string | null; kind?: string }>(nodes: T[], rootId: string): T[] {
+  const official = nodes.filter((n) => n.kind !== 'presentation');
+  const root = official.find((n) => n.id === rootId);
+  if (!root) return [];
+  const children = childrenOf(official);
+  const out: T[] = [];
+  const seen = new Set<string>();
+  const walk = (node: T) => {
+    if (seen.has(node.id)) return;
+    seen.add(node.id);
+    if (node.officialVersionId) out.push(node);
+    for (const child of children.get(node.id) ?? []) walk(child);
+  };
+  walk(root);
+  return out;
+}
+
 /** Các nút từ gốc tới `id` (kể cả nó) — dòng "Tổng công ty / Site A / Tầng 1". */
 export function pathOf<T extends TreeNodeInput>(nodes: T[], id: string): T[] {
   const byId = new Map(nodes.map((n) => [n.id, n]));

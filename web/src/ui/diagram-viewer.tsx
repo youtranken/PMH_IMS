@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiagramWatermark } from './diagram-watermark';
+import { Popover } from './popover';
 
 export interface Size {
   width: number;
@@ -22,6 +23,58 @@ const CLICK_SLOP = 5;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
 const ZOOM_STEP = 1.25;
+/**
+ * Dưới mức thu phóng này nhãn cổng trên nét dây bị ẩn: chữ 11px thu còn dưới 7px chỉ thành vệt
+ * xám chồng lên nhau, che máy và dây — nhất là trên điện thoại khi cả bản vẽ vừa một màn. Đây là
+ * ngưỡng hiển thị của trình xem (đọc được hay không), không phải tham số nghiệp vụ.
+ */
+const LOD_NEAR_SCALE = 0.6;
+
+/** Mức chi tiết theo mức thu phóng: `far` ẩn nhãn cổng (CSS theo `data-lod`). */
+export function detailLevel(scale: number): 'near' | 'far' {
+  return scale < LOD_NEAR_SCALE ? 'far' : 'near';
+}
+
+/**
+ * Phóng hai ngón: điểm nội dung nằm dưới trung điểm hai ngón lúc chạm (`a0`, `b0`) đi theo trung
+ * điểm hiện tại (`a1`, `b1`), mức thu phóng nhân theo tỉ lệ khoảng cách hai ngón — cảm giác "nắm
+ * lấy bản vẽ" như xem ảnh trên điện thoại.
+ */
+export function pinchView(start: ViewTransform, a0: ViewerPoint, b0: ViewerPoint, a1: ViewerPoint, b1: ViewerPoint): ViewTransform {
+  const d0 = Math.hypot(b0.x - a0.x, b0.y - a0.y);
+  const d1 = Math.hypot(b1.x - a1.x, b1.y - a1.y);
+  const scale = d0 > 0 ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, (start.scale * d1) / d0)) : start.scale;
+  const m0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
+  const m1 = { x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 };
+  const content = { x: (m0.x - start.x) / start.scale, y: (m0.y - start.y) / start.scale };
+  return { scale, x: m1.x - content.x * scale, y: m1.y - content.y * scale };
+}
+
+/**
+ * Một lớp bật/tắt được của trình xem: lớp draw.io, nhóm theo loại thiết bị, nhóm theo loại dây.
+ * Màn dựng danh sách ô của mỗi lớp (từ chỉ mục ô, AD-18); trình xem chỉ ẩn/hiện theo `data-cell-id`.
+ * Lớp "trạng thái sống" (FR-049) sẽ là một `group` nữa — xem `docs/THIET-KE-TRANG-THAI-SONG.md`.
+ */
+export interface ViewerLayer {
+  key: string;
+  label: string;
+  group: 'drawio' | 'deviceType' | 'cableType';
+  cellIds: string[];
+}
+
+const LAYER_GROUPS: ViewerLayer['group'][] = ['drawio', 'deviceType', 'cableType'];
+const LAYER_GROUP_KEY: Record<ViewerLayer['group'], string> = {
+  drawio: 'diagramViewer.layerGroupDrawio',
+  deviceType: 'diagramViewer.layerGroupDeviceType',
+  cableType: 'diagramViewer.layerGroupCableType',
+};
+
+/** Ô bị ẩn = ô thuộc ít nhất một lớp đang tắt. */
+export function hiddenByLayers(layers: ViewerLayer[], hidden: Set<string>): Set<string> {
+  const out = new Set<string>();
+  for (const layer of layers) if (hidden.has(layer.key)) for (const id of layer.cellIds) out.add(id);
+  return out;
+}
 
 /**
  * SVG bản vẽ → phần tử để chèn vào DOM trình xem, hoặc lý do từ chối.
@@ -184,6 +237,9 @@ export function DiagramViewer({
   focusCellId,
   highlightCellIds,
   diff,
+  layers,
+  focusScale,
+  cellBounds,
 }: {
   svg: string;
   viewer: { fullName: string; email: string };
@@ -202,6 +258,15 @@ export function DiagramViewer({
   highlightCellIds?: string[] | null;
   /** Chế độ so sánh: tô ô thêm/đổi, vẽ khung đứt ô bỏ, hiện chú giải + bộ đếm. */
   diff?: ViewerDiff | null;
+  /** Lớp bật/tắt được (nút "Lớp" trên thanh thu phóng). Vắng/rỗng = không có nút. */
+  layers?: ViewerLayer[];
+  /** Bay tới thì phóng ít nhất tới mức này (tìm thiết bị trên điện thoại: ô phải đọc được). */
+  focusScale?: number;
+  /**
+   * Khung bao ô theo chỉ mục ô (toạ độ mô hình draw.io) — bay tới ô khi không đo được trên SVG,
+   * dời theo độ lệch ảnh như khung đứt của so sánh.
+   */
+  cellBounds?: { id: string; bounds: ViewerBounds }[];
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -211,6 +276,11 @@ export function DiagramViewer({
   const drag = useRef<{ x: number; y: number; view: ViewTransform; target: EventTarget | null; moved: boolean } | null>(null);
   const clickable = useMemo(() => new Map((cells ?? []).map((cell) => [cell.id, cell])), [cells]);
   const [pinAt, setPinAt] = useState<Map<string, { point: ViewerPoint; removed: boolean }>>(new Map());
+  const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
+  const [layersOpen, setLayersOpen] = useState(false);
+  /* Ngón đang chạm khung (pointerId → toạ độ trong khung) + mốc lúc bắt đầu phóng hai ngón. */
+  const touches = useRef(new Map<number, ViewerPoint>());
+  const pinch = useRef<{ view: ViewTransform; a: ViewerPoint; b: ViewerPoint; ids: [number, number] } | null>(null);
 
   const fit = useCallback(() => {
     const stage = stageRef.current;
@@ -313,6 +383,17 @@ export function DiagramViewer({
     }
   }, [parsed, highlightCellIds]);
 
+  /* Ẩn ô của lớp đang tắt. Ô không còn trong lớp tắt nào (bật lại, đổi phiên bản) được gỡ dấu. */
+  useLayoutEffect(() => {
+    const root = parsed.value;
+    if (!root) return;
+    const hidden = hiddenByLayers(layers ?? [], hiddenLayers);
+    for (const el of Array.from(root.querySelectorAll('[data-cell-id]'))) {
+      if (hidden.has(el.getAttribute('data-cell-id') ?? '')) el.setAttribute('data-ims-hidden', '');
+      else el.removeAttribute('data-ims-hidden');
+    }
+  }, [parsed, layers, hiddenLayers]);
+
   /** Ô bấm được gần nhất chứa phần tử (ô con của nhóm thuộc về ô ngoài cùng được khai). */
   const cellAt = (target: EventTarget | null): string | null => {
     let el = target instanceof Element ? target : null;
@@ -335,13 +416,40 @@ export function DiagramViewer({
     return el?.getAttribute('data-pin-id') ?? null;
   };
 
-  /* Bay tới ô: đặt ô vào giữa khung, giữ mức thu phóng. */
+  /*
+   * Tâm ô trên khung chưa thu phóng: đo trên SVG; không đo được thì khung bao của chỉ mục ô dời
+   * theo độ lệch ảnh (đo trên các ô mốc khác, như khung đứt của so sánh).
+   */
+  const centerOf = (id: string): ViewerPoint | null => {
+    const root = parsed.value;
+    if (!root) return null;
+    const el = cellElement(root, id);
+    const box = el ? cellBox(root, el) : null;
+    if (box) return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const anchors = cellBounds ?? [];
+    const hint = anchors.find((c) => c.id === id);
+    if (!hint) return null;
+    const shift = ghostOffset(
+      anchors.map((anchor) => {
+        const at = cellElement(root, anchor.id);
+        const measured = at ? cellBox(root, at) : null;
+        return measured ? { x: measured.x, y: measured.y } : null;
+      }),
+      anchors,
+    );
+    return { x: hint.bounds.x + shift.x + hint.bounds.width / 2, y: hint.bounds.y + shift.y + hint.bounds.height / 2 };
+  };
+
+  /* Bay tới ô: đặt tâm ô vào giữa khung, giữ mức thu phóng (phóng tới `focusScale` nếu đang xa hơn). */
   useEffect(() => {
     if (!focusCellId) return;
     const stage = stageRef.current;
-    const point = pointOf(focusCellId) ?? (pins ?? []).map((p) => (p.cellId === focusCellId ? pinAt.get(p.id)?.point : undefined)).find(Boolean);
+    const point = centerOf(focusCellId) ?? (pins ?? []).map((p) => (p.cellId === focusCellId ? pinAt.get(p.id)?.point : undefined)).find(Boolean);
     if (!stage || !point) return;
-    setView((v) => ({ ...v, x: stage.clientWidth / 2 - point.x * v.scale, y: stage.clientHeight / 2 - point.y * v.scale }));
+    setView((v) => {
+      const scale = Math.max(v.scale, focusScale ?? 0);
+      return { scale, x: stage.clientWidth / 2 - point.x * scale, y: stage.clientHeight / 2 - point.y * scale };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ bay khi đổi ô đích, không bay lại mỗi lần ghim đổi
   }, [focusCellId]);
 
@@ -365,12 +473,31 @@ export function DiagramViewer({
     setView((v) => zoomAround(v, event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, { x: event.clientX - rect.left, y: event.clientY - rect.top }));
   };
 
+  const stagePoint = (event: PointerEvent<HTMLDivElement>): ViewerPoint => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    touches.current.set(event.pointerId, stagePoint(event));
     // Giữ phần tử bị nhấn: sau `setPointerCapture`, `pointerup` báo chính khung chứ không báo ô.
     drag.current = { x: event.clientX, y: event.clientY, view, target: event.target, moved: false };
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (touches.current.size === 2) {
+      // Ngón thứ hai chạm: chuyển từ kéo sang phóng; cú chạm này không còn là bấm ô.
+      const [[ia, a], [ib, b]] = [...touches.current.entries()];
+      pinch.current = { view, a, b, ids: [ia, ib] };
+      drag.current = null;
+    }
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (touches.current.has(event.pointerId)) touches.current.set(event.pointerId, stagePoint(event));
+    const two = pinch.current;
+    if (two) {
+      const a = touches.current.get(two.ids[0]);
+      const b = touches.current.get(two.ids[1]);
+      if (a && b) setView(pinchView(two.view, two.a, two.b, a, b));
+      return;
+    }
     const start = drag.current;
     if (!start) return;
     const dx = event.clientX - start.x;
@@ -378,14 +505,20 @@ export function DiagramViewer({
     if (Math.abs(dx) > CLICK_SLOP || Math.abs(dy) > CLICK_SLOP) start.moved = true;
     setView({ ...start.view, x: start.view.x + dx, y: start.view.y + dy });
   };
-  const onPointerUp = () => {
+  const liftFinger = (event: PointerEvent<HTMLDivElement>) => {
+    touches.current.delete(event.pointerId);
+    if (pinch.current && touches.current.size < 2) pinch.current = null;
+  };
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    liftFinger(event);
     const start = drag.current;
     drag.current = null;
     if (!start || start.moved || !onCellClick) return;
     const id = cellAt(start.target);
     if (id) onCellClick(id, pointOf(id));
   };
-  const endDrag = () => {
+  const endDrag = (event: PointerEvent<HTMLDivElement>) => {
+    liftFinger(event);
     drag.current = null;
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -417,6 +550,36 @@ export function DiagramViewer({
         <button type="button" className="btn sm" onClick={fit}>
           {t('diagramViewer.fit')}
         </button>
+        {layers && layers.length > 0 ? (
+          <Popover label={t('diagramViewer.layers')} title={t('diagramViewer.layersTitle')} open={layersOpen} onOpenChange={setLayersOpen} buttonClassName="btn sm">
+            {LAYER_GROUPS.map((group) => {
+              const inGroup = layers.filter((layer) => layer.group === group);
+              if (inGroup.length === 0) return null;
+              return (
+                <fieldset key={group} className="check-list">
+                  <legend className="muted">{t(LAYER_GROUP_KEY[group])}</legend>
+                  {inGroup.map((layer) => (
+                    <label key={layer.key} className="row confirm-check">
+                      <input
+                        type="checkbox"
+                        checked={!hiddenLayers.has(layer.key)}
+                        onChange={() =>
+                          setHiddenLayers((current) => {
+                            const next = new Set(current);
+                            if (next.has(layer.key)) next.delete(layer.key);
+                            else next.add(layer.key);
+                            return next;
+                          })
+                        }
+                      />
+                      <span>{layer.label}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              );
+            })}
+          </Popover>
+        ) : null}
       </div>
       <div
         ref={stageRef}
@@ -432,6 +595,7 @@ export function DiagramViewer({
           ref={canvasRef}
           className="diagram-viewer-canvas"
           data-pick-any={pickAnyCell ? '' : undefined}
+          data-lod={detailLevel(view.scale)}
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
         />
         {pins && pins.length > 0 ? (

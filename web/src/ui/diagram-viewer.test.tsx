@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import { DiagramViewer, fitTransform, ghostOffset, parseSafeSvg, svgSize } from './diagram-viewer';
+import { DiagramViewer, detailLevel, fitTransform, ghostOffset, hiddenByLayers, parseSafeSvg, pinchView, svgSize } from './diagram-viewer';
 
 const VIEWER = { fullName: 'SA E2E', email: 'sa@e2e.local' };
 const SVG =
@@ -244,5 +244,101 @@ describe('ghostOffset — độ lệch ảnh SVG so với toạ độ mô hình'
 
   it('không đo được ô nào: không dời', () => {
     expect(ghostOffset([null], [{ id: 'a', bounds: { x: 5, y: 5, width: 1, height: 1 } }])).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('pinchView — phóng hai ngón trên điện thoại', () => {
+  const START = { scale: 1, x: 0, y: 0 };
+  it.each([
+    ['hai ngón dãn gấp đôi quanh điểm giữa: phóng ×2, điểm giữa đứng yên', START, [100, 100], [200, 100], [50, 100], [250, 100], { scale: 2, x: -150, y: -100 }],
+    ['hai ngón cùng dời: chỉ kéo khung', START, [100, 100], [200, 100], [120, 130], [220, 130], { scale: 1, x: 20, y: 30 }],
+    ['chụm quá mức: dừng ở mức nhỏ nhất', START, [0, 0], [1000, 0], [500, 0], [501, 0], { scale: 0.1, x: 450.5, y: 0 }],
+  ])('%s', (_name, start, a0, b0, a1, b1, expected) => {
+    const pt = ([x, y]: number[]) => ({ x, y });
+    const got = pinchView(start, pt(a0), pt(b0), pt(a1), pt(b1));
+    expect({ scale: +got.scale.toFixed(3), x: +got.x.toFixed(1), y: +got.y.toFixed(1) }).toEqual(expected);
+  });
+});
+
+describe('detailLevel — nhãn cổng chỉ hiện khi phóng đủ gần', () => {
+  it.each([
+    [0.2, 'far'],
+    [0.59, 'far'],
+    [0.6, 'near'],
+    [2, 'near'],
+  ])('mức %s → %s', (scale, level) => {
+    expect(detailLevel(scale)).toBe(level);
+  });
+});
+
+describe('hiddenByLayers — ô của lớp đang tắt', () => {
+  const LAYERS = [
+    { key: 'drawio:1', label: 'Nền', group: 'drawio' as const, cellIds: ['a', 'b'] },
+    { key: 'drawio:L2', label: 'Camera', group: 'drawio' as const, cellIds: ['c'] },
+    { key: 'type:ap', label: 'Access point', group: 'deviceType' as const, cellIds: ['b'] },
+  ];
+  it.each([
+    ['không tắt lớp nào', [], []],
+    ['tắt một lớp draw.io', ['drawio:L2'], ['c']],
+    ['tắt chồng hai nhóm: ô nằm ở cả hai chỉ đếm một lần', ['drawio:1', 'type:ap'], ['a', 'b']],
+    ['khoá lạ bị bỏ qua', ['khong-co'], []],
+  ])('%s', (_name, hidden, expected) => {
+    expect([...hiddenByLayers(LAYERS, new Set(hidden))].sort()).toEqual(expected);
+  });
+});
+
+describe('DiagramViewer — lớp, mức chi tiết, bay tới', () => {
+  const LAYERED =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><g data-cell-id="0"><g data-cell-id="1">' +
+    '<g data-cell-id="a"><rect width="10" height="10"/><text>SW-E2E-01</text></g></g>' +
+    '<g data-cell-id="L2"><g data-cell-id="c"><text>Cam E2E</text></g></g></g></svg>';
+  const LAYERS = [
+    { key: 'drawio:1', label: 'Lớp nền', group: 'drawio' as const, cellIds: ['a'] },
+    { key: 'drawio:L2', label: 'Camera', group: 'drawio' as const, cellIds: ['c'] },
+  ];
+
+  it('bật/tắt lớp: ô của lớp tắt bị ẩn, bật lại thì hiện; watermark không phải một lớp, luôn còn', async () => {
+    renderWithI18n(<DiagramViewer svg={LAYERED} viewer={VIEWER} title="Bản vẽ" layers={LAYERS} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Lớp' }));
+    const panel = screen.getByRole('dialog', { name: 'Bật/tắt lớp' });
+    const boxes = Array.from(panel.querySelectorAll('input[type="checkbox"]')).map((el) => el.closest('label')?.textContent);
+    expect(boxes).toEqual(['Lớp nền', 'Camera']);
+    await user.click(screen.getByRole('checkbox', { name: 'Camera' }));
+    expect(document.querySelector('[data-cell-id="c"]')?.hasAttribute('data-ims-hidden')).toBe(true);
+    expect(document.querySelector('[data-cell-id="a"]')?.hasAttribute('data-ims-hidden')).toBe(false);
+    expect(screen.getAllByText(/SA E2E · sa@e2e\.local/).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('checkbox', { name: 'Camera' }));
+    expect(document.querySelector('[data-cell-id="c"]')?.hasAttribute('data-ims-hidden')).toBe(false);
+  });
+
+  it('không có lớp nào: không có nút "Lớp"', () => {
+    renderWithI18n(<DiagramViewer svg={LAYERED} viewer={VIEWER} title="Bản vẽ" />);
+    expect(screen.queryByRole('button', { name: 'Lớp' })).toBeNull();
+  });
+
+  it('mức chi tiết theo thu phóng: thu nhỏ dưới ngưỡng → "far", phóng lại → "near"', async () => {
+    const { container } = renderWithI18n(<DiagramViewer svg={LAYERED} viewer={VIEWER} title="Bản vẽ" />);
+    const canvas = () => container.querySelector('[data-lod]');
+    expect(canvas()?.getAttribute('data-lod')).toBe('near');
+    const user = userEvent.setup();
+    for (let i = 0; i < 3; i += 1) await user.click(screen.getByRole('button', { name: 'Thu nhỏ' }));
+    expect(canvas()?.getAttribute('data-lod')).toBe('far');
+  });
+
+  it('bay tới ô theo khung bao của chỉ mục ô khi không đo được SVG; phóng tối thiểu tới focusScale', () => {
+    const { container } = renderWithI18n(
+      <DiagramViewer
+        svg={LAYERED}
+        viewer={VIEWER}
+        title="Bản vẽ"
+        focusCellId="c"
+        focusScale={2}
+        cellBounds={[{ id: 'c', bounds: { x: 100, y: 50, width: 20, height: 10 } }]}
+      />,
+    );
+    const canvas = container.querySelector('[data-lod]') as HTMLElement;
+    // Khung jsdom rộng 0: tâm ô (110, 55) ở mức 2 về gốc khung.
+    expect(canvas.style.transform).toBe('translate(-220px, -110px) scale(2)');
   });
 });

@@ -352,7 +352,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect.poll(async () => (await nav.boundingBox())!.width).toBeGreaterThan(wide - 2);
   });
 
-  test('390px: cây đọc được, trình xem hiện bản vẽ; màn sửa báo "chỉ làm trên máy tính" kèm lối sang xem', async ({ page }) => {
+  test('390px: cây đọc được, trình xem hiện bản vẽ; đường dẫn sửa mở thành chế độ xem kèm "chỉ làm trên máy tính"', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const secret = await firstLogin(page, E2E_SA);
     const name = `E2E Điện thoại ${uniqueStamp()}`;
@@ -370,11 +370,12 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(viewer.getByText('Tầng 3 E2E')).toBeVisible();
     await expect(viewer.getByRole('button', { name: 'Phóng to' })).toBeVisible();
 
-    await page.getByRole('tab', { name: 'Sửa' }).click();
+    // Màn hẹp không có tab Sửa; mở thẳng đường dẫn sửa thì vẫn là chế độ xem, kèm lời nhắn.
+    await expect(page.getByRole('tab', { name: 'Sửa' })).toHaveCount(0);
+    await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByText('Sửa sơ đồ chỉ làm trên máy tính')).toBeVisible();
-    await expect(page.locator('iframe')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Sang chế độ xem' }).click();
     await expect(viewer.getByText('Tầng 3 E2E')).toBeVisible();
+    await expect(page.locator('iframe')).toHaveCount(0);
   });
 
   test('draw.io tự host: chỉ tệp tĩnh, servlet không tồn tại, header khoá hộp cát', async ({ page }) => {
