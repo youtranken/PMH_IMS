@@ -83,7 +83,7 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M20 17H4" />
     </>
   ),
-  'nav.diagramSpike': (
+  'nav.diagrams': (
     <>
       {/* Hai khối nối nhau bằng một đường gấp — một bản vẽ sơ đồ. */}
       <rect x="2" y="3" width="8" height="6" rx="1" />

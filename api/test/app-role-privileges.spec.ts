@@ -117,6 +117,11 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     'approval_history',
     'nat_rule_history',
     'service_account_history',
+    // Sơ đồ mạng (AD-18): phiên bản và tên phiên bản cũng chỉ-thêm, dù tên bảng không đuôi
+    // `_history` nên lượt quét động bên dưới không thấy chúng — danh sách này là cổng của hai bảng ấy.
+    'diagram_history',
+    'diagram_version',
+    'diagram_version_label',
   ];
 
   it.each(APPEND_ONLY_HISTORY)(
@@ -167,11 +172,13 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
            AND c.relkind IN ('r', 'p')
            AND (c.relname LIKE '%\\_history'
                 OR c.relname = 'audit_log'
+                OR c.relname = ANY($1::text[])
                 -- Ngăn năm của audit_log: ALTER DEFAULT PRIVILEGES cấp cho mọi bảng mới,
                 -- kể cả ngăn, nên ngăn cũng phải bị quét.
                 OR c.oid IN (SELECT inhrelid FROM pg_inherits
                               WHERE inhparent = 'public.audit_log'::regclass))
          ORDER BY c.relname`,
+      [APPEND_ONLY_HISTORY],
     );
 
     // Tiền đề: nếu câu truy vấn không tìm thấy bảng nào thì bài dưới vô nghĩa, không phải đạt.

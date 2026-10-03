@@ -1,0 +1,711 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { HISTORY_PAGE_LIMIT, withActorNames } from '../../common/history';
+import { diffRecord, hasChanges } from '../../common/record-diff';
+import type { Tx } from '../../common/tx';
+import { DRIZZLE_DB } from '../../database/database.module';
+import type { Database } from '../../database/database.module';
+import { AuditWriterService } from '../audit/audit-writer.service';
+import type { UserRole } from '../auth/types';
+import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { DevicesApiService } from '../devices/devices.api';
+import { IpamApiService } from '../ipam/ipam.api';
+import { UsersApiService } from '../users/users.api';
+import {
+  buildCellIndex,
+  diffCellIndex,
+  secretLabelReason,
+  summarizeDiff,
+  type CellDiff,
+  type CellIndex,
+} from './diagram-cells';
+import { checkDiagramXml, sanitizeDiagramSvg } from './diagram-gate';
+import {
+  diagramHistoryTable,
+  diagramPresenceTable,
+  diagramTable,
+  diagramVersionLabelTable,
+  diagramVersionTable,
+  type DeviceSnapshotEntry,
+  type DiagramNodeType,
+} from './diagram.schema';
+
+/** Trạng thái trên cây. "Chờ duyệt" và "lệch kho" thêm khi có duyệt và cảnh báo lệch kho. */
+export type DiagramStatus = 'empty' | 'draft' | 'official' | 'official_draft';
+
+export interface VersionRef {
+  id: string;
+  seq: number;
+  savedAt: string;
+  savedBy: string;
+}
+
+export interface DiagramNode {
+  id: string;
+  parentId: string | null;
+  name: string;
+  nodeType: DiagramNodeType;
+  siteId: string | null;
+  cabinetId: string | null;
+  ownerEmail: string | null;
+  kind: 'official' | 'presentation';
+  archivedAt: string | null;
+  status: DiagramStatus;
+  latestVersion: VersionRef | null;
+}
+
+export interface NodeInput {
+  name?: string;
+  nodeType?: DiagramNodeType;
+  parentId?: string | null;
+  siteId?: string | null;
+  cabinetId?: string | null;
+  ownerEmail?: string | null;
+}
+
+export interface VersionItem {
+  id: string;
+  seq: number;
+  summary: string;
+  label: string | null;
+  savedBy: string;
+  savedByName: string | null;
+  savedAt: string;
+  basedOnVersionId: string | null;
+  restoredFromSeq: number | null;
+}
+
+export interface DiagramContent {
+  diagram: DiagramNode;
+  /** `null` = bản vẽ chưa lưu lần nào: màn sửa mở khung trống, màn xem báo "chưa có bản vẽ". */
+  version: (VersionItem & { xml: string; svg: string | null; deviceSnapshot: DeviceSnapshotEntry[] }) | null;
+}
+
+export interface SaveInput {
+  xml: string;
+  svg: string;
+  /** Phiên bản màn sửa đã nạp; khác bản mới nhất lúc lưu = người này lưu đè lên bản của người khác. */
+  basedOnVersionId: string | null;
+}
+
+export interface Presence {
+  email: string;
+  fullName: string;
+}
+
+const TRACKED = ['name', 'nodeType', 'parentId', 'siteId', 'cabinetId', 'ownerEmail'] as const;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Module `diagrams` (AD-18): chủ duy nhất cây bản vẽ và phiên bản. Đọc kho chỉ qua public api
+ * của `devices` / `ipam` / `catalog`; không gọi `vault`, không ghi `device_port`.
+ *
+ * XML là dữ liệu không tin cậy (AD-17): mọi lần lưu đi qua cổng `diagram-gate.ts` trước khi chạm
+ * DB, và SVG cho trình xem lưu bản đã làm sạch — trình xem chèn thẳng nó vào DOM.
+ */
+@Injectable()
+export class DiagramsService {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly audit: AuditWriterService,
+    private readonly config: SystemConfigService,
+    private readonly catalog: CatalogApiService,
+    private readonly devices: DevicesApiService,
+    private readonly ipam: IpamApiService,
+    private readonly users: UsersApiService,
+  ) {}
+
+  /* ------------------------------------------------------------------ cây --- */
+
+  async tree(): Promise<DiagramNode[]> {
+    return this.nodes(sql`d.archived_at IS NULL`);
+  }
+
+  async node(id: string): Promise<DiagramNode> {
+    const [found] = await this.nodes(sql`d.id = ${id}`);
+    if (!found) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
+    return found;
+  }
+
+  private async nodes(where: ReturnType<typeof sql>): Promise<DiagramNode[]> {
+    const { rows } = await this.db.execute<{
+      id: string;
+      parent_id: string | null;
+      name: string;
+      node_type: DiagramNodeType;
+      site_id: string | null;
+      cabinet_id: string | null;
+      owner_email: string | null;
+      kind: 'official' | 'presentation';
+      archived_at: Date | string | null;
+      official_version_id: string | null;
+      v_id: string | null;
+      v_seq: number | null;
+      v_at: Date | string | null;
+      v_by: string | null;
+    }>(sql`
+      SELECT d.id, d.parent_id, d.name, d.node_type, d.site_id, d.cabinet_id, d.owner_email, d.kind,
+             d.archived_at, d.official_version_id, lv.id AS v_id, lv.seq AS v_seq, lv.created_at AS v_at,
+             lv.saved_by AS v_by
+        FROM diagram d
+        LEFT JOIN LATERAL (
+          SELECT v.id, v.seq, v.created_at, v.saved_by FROM diagram_version v
+           WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
+        ) lv ON true
+       WHERE ${where}
+       ORDER BY lower(d.name), d.id
+    `);
+    return rows.map((row) => {
+      const latest: VersionRef | null = row.v_id
+        ? { id: row.v_id, seq: Number(row.v_seq), savedAt: iso(row.v_at)!, savedBy: row.v_by ?? '' }
+        : null;
+      return {
+        id: row.id,
+        parentId: row.parent_id,
+        name: row.name,
+        nodeType: row.node_type,
+        siteId: row.site_id,
+        cabinetId: row.cabinet_id,
+        ownerEmail: row.owner_email,
+        kind: row.kind,
+        archivedAt: iso(row.archived_at),
+        status: statusOf(latest?.id ?? null, row.official_version_id),
+        latestVersion: latest,
+      };
+    });
+  }
+
+  async create(actor: string, input: NodeInput): Promise<DiagramNode> {
+    const name = (input.name ?? '').trim();
+    if (input.parentId) await this.assertLiveParent(input.parentId);
+    await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
+    if (input.ownerEmail) await this.assertUser(input.ownerEmail);
+    const id = await this.uniqueName(() =>
+      this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(diagramTable)
+          .values({
+            parentId: input.parentId ?? null,
+            name,
+            nodeType: input.nodeType ?? 'other',
+            siteId: input.siteId ?? null,
+            cabinetId: input.cabinetId ?? null,
+            ownerEmail: input.ownerEmail ?? null,
+            createdBy: actor,
+          })
+          .returning({ id: diagramTable.id });
+        await this.record(tx, actor, row.id, 'created', 'diagram.created', { name, parentId: input.parentId ?? null });
+        return row.id;
+      }),
+    );
+    return this.node(id);
+  }
+
+  async update(actor: string, id: string, input: NodeInput): Promise<DiagramNode> {
+    const current = await this.node(id);
+    if (current.archivedAt) throw archived();
+    if (input.parentId) {
+      if (input.parentId === id || (await this.descendantIds(id)).includes(input.parentId)) {
+        throw new BadRequestException({ code: 'DIAGRAM_MOVE_CYCLE', message: 'Không chuyển được bản vẽ vào chính nhánh con của nó.' });
+      }
+      await this.assertLiveParent(input.parentId);
+    }
+    const next = { ...input, ...(input.name !== undefined ? { name: input.name.trim() } : {}) };
+    await this.catalog.assertRefs(
+      { siteId: next.siteId === undefined ? current.siteId : next.siteId, cabinetId: next.cabinetId === undefined ? current.cabinetId : next.cabinetId },
+      { siteId: current.siteId, cabinetId: current.cabinetId },
+    );
+    if (next.ownerEmail) await this.assertUser(next.ownerEmail);
+    const changes = diffRecord(TRACKED, current as unknown as Record<string, unknown>, next);
+    if (!hasChanges(changes)) return current;
+    await this.uniqueName(() =>
+      this.db.transaction(async (tx) => {
+        const set: Partial<typeof diagramTable.$inferInsert> = { updatedAt: new Date() };
+        for (const field of TRACKED) {
+          if (field in changes) (set as Record<string, unknown>)[field] = changes[field].after;
+        }
+        await tx.update(diagramTable).set(set).where(eq(diagramTable.id, id));
+        await this.record(tx, actor, id, 'updated', 'diagram.updated', changes);
+      }),
+    );
+    return this.node(id);
+  }
+
+  async archive(actor: string, id: string): Promise<void> {
+    const current = await this.node(id);
+    if (current.archivedAt) return;
+    await this.db.transaction(async (tx) => {
+      const [child] = await tx
+        .select({ id: diagramTable.id })
+        .from(diagramTable)
+        .where(and(eq(diagramTable.parentId, id), isNull(diagramTable.archivedAt)))
+        .limit(1);
+      if (child) {
+        throw new ConflictException({ code: 'DIAGRAM_HAS_CHILDREN', message: 'Bản vẽ còn bản vẽ con — lưu trữ các bản vẽ con trước.' });
+      }
+      await tx.update(diagramTable).set({ archivedAt: new Date(), archivedBy: actor, updatedAt: new Date() }).where(eq(diagramTable.id, id));
+      await this.record(tx, actor, id, 'archived', 'diagram.archived', null);
+    });
+  }
+
+  private async assertLiveParent(parentId: string): Promise<void> {
+    const [parent] = await this.db
+      .select({ archivedAt: diagramTable.archivedAt })
+      .from(diagramTable)
+      .where(eq(diagramTable.id, parentId));
+    if (!parent || parent.archivedAt) {
+      throw new BadRequestException({ code: 'DIAGRAM_PARENT_INVALID', message: 'Bản vẽ cha không tồn tại hoặc đã lưu trữ.' });
+    }
+  }
+
+  private async assertUser(email: string): Promise<void> {
+    if (!(await this.users.roleByEmail(email))) {
+      throw new BadRequestException({ code: 'DIAGRAM_OWNER_INVALID', message: 'Người phụ trách không phải tài khoản IMS.' });
+    }
+  }
+
+  private async descendantIds(id: string): Promise<string[]> {
+    const { rows } = await this.db.execute<{ id: string }>(sql`
+      WITH RECURSIVE sub AS (
+        SELECT id FROM diagram WHERE parent_id = ${id}
+        UNION SELECT d.id FROM diagram d JOIN sub ON d.parent_id = sub.id
+      ) SELECT id FROM sub
+    `);
+    return rows.map((r) => r.id);
+  }
+
+  /** Khoá duy nhất "tên anh em" của DB là trọng tài (hai người tạo cùng lúc), lỗi 23505 thành 409. */
+  private async uniqueName<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      if (pgCode(error) === '23505') {
+        throw new ConflictException({ code: 'DIAGRAM_NAME_TAKEN', message: 'Cùng nhánh đã có bản vẽ tên này.' });
+      }
+      throw error;
+    }
+  }
+
+  /* ------------------------------------------------------------- phiên bản --- */
+
+  async versions(diagramId: string): Promise<VersionItem[]> {
+    const rows = await this.db
+      .select({
+        id: diagramVersionTable.id,
+        seq: diagramVersionTable.seq,
+        summary: diagramVersionTable.summary,
+        savedBy: diagramVersionTable.savedBy,
+        createdAt: diagramVersionTable.createdAt,
+        basedOnVersionId: diagramVersionTable.basedOnVersionId,
+        restoredFromVersionId: diagramVersionTable.restoredFromVersionId,
+      })
+      .from(diagramVersionTable)
+      .where(eq(diagramVersionTable.diagramId, diagramId))
+      .orderBy(desc(diagramVersionTable.seq))
+      .limit(HISTORY_PAGE_LIMIT);
+    return this.toItems(diagramId, rows);
+  }
+
+  private async toItems(
+    diagramId: string,
+    rows: {
+      id: string;
+      seq: number;
+      summary: string;
+      savedBy: string;
+      createdAt: Date;
+      basedOnVersionId: string | null;
+      restoredFromVersionId: string | null;
+    }[],
+  ): Promise<VersionItem[]> {
+    if (rows.length === 0) return [];
+    const labels = await this.latestLabels(rows.map((r) => r.id));
+    const names = await this.users.namesByEmails([...new Set(rows.map((r) => r.savedBy.toLowerCase()))]);
+    const sourceIds = rows.map((r) => r.restoredFromVersionId).filter((v): v is string => v !== null);
+    const seqOf = new Map<string, number>();
+    if (sourceIds.length > 0) {
+      const sources = await this.db
+        .select({ id: diagramVersionTable.id, seq: diagramVersionTable.seq })
+        .from(diagramVersionTable)
+        .where(and(eq(diagramVersionTable.diagramId, diagramId), inArray(diagramVersionTable.id, sourceIds)));
+      for (const s of sources) seqOf.set(s.id, s.seq);
+    }
+    return rows.map((row) => ({
+      id: row.id,
+      seq: row.seq,
+      summary: row.summary,
+      label: labels.get(row.id) ?? null,
+      savedBy: row.savedBy,
+      savedByName: names.get(row.savedBy.toLowerCase()) ?? null,
+      savedAt: row.createdAt.toISOString(),
+      basedOnVersionId: row.basedOnVersionId,
+      restoredFromSeq: row.restoredFromVersionId ? (seqOf.get(row.restoredFromVersionId) ?? null) : null,
+    }));
+  }
+
+  private async latestLabels(versionIds: string[]): Promise<Map<string, string | null>> {
+    const rows = await this.db
+      .selectDistinctOn([diagramVersionLabelTable.versionId], {
+        versionId: diagramVersionLabelTable.versionId,
+        label: diagramVersionLabelTable.label,
+      })
+      .from(diagramVersionLabelTable)
+      .where(inArray(diagramVersionLabelTable.versionId, versionIds))
+      .orderBy(diagramVersionLabelTable.versionId, desc(diagramVersionLabelTable.createdAt), desc(diagramVersionLabelTable.id));
+    return new Map(rows.map((r) => [r.versionId, r.label]));
+  }
+
+  /**
+   * Nội dung để xem hoặc sửa. MỖI lần gọi ghi một dòng `diagram.viewed` (NFR-03): đây là ngoại lệ
+   * có chủ ý của nếp "chỉ audit thao tác ghi", cùng loại với audit giải mã két (AD-17).
+   */
+  async content(actor: string, diagramId: string, options: { mode: 'view' | 'edit'; versionId?: string }): Promise<DiagramContent> {
+    const diagram = await this.node(diagramId);
+    const conditions = [eq(diagramVersionTable.diagramId, diagramId)];
+    if (options.versionId) conditions.push(eq(diagramVersionTable.id, options.versionId));
+    const [row] = await this.db
+      .select()
+      .from(diagramVersionTable)
+      .where(and(...conditions))
+      .orderBy(desc(diagramVersionTable.seq))
+      .limit(1);
+    if (options.versionId && !row) {
+      throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
+    }
+    await this.db.transaction((tx) =>
+      this.audit.appendWithin(tx, {
+        actor,
+        action: 'diagram.viewed',
+        objectType: 'diagram',
+        objectId: diagramId,
+        detail: { versionId: row?.id ?? null, seq: row?.seq ?? null, mode: options.mode },
+      }),
+    );
+    if (!row) return { diagram, version: null };
+    const [item] = await this.toItems(diagramId, [row]);
+    return { diagram, version: { ...item, xml: row.xml, svg: row.svg, deviceSnapshot: row.deviceSnapshot } };
+  }
+
+  async changes(diagramId: string, versionId: string): Promise<CellDiff> {
+    const [row] = await this.db
+      .select({ detail: diagramVersionTable.summaryDetail })
+      .from(diagramVersionTable)
+      .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
+    if (!row) throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
+    return row.detail;
+  }
+
+  /**
+   * Lưu = một phiên bản MỚI (Q-23: hai người cùng sửa thì bản lưu sau thắng). Khoá hàng `diagram`
+   * trong tx để các lượt lưu cùng lúc xếp hàng: số thứ tự đọc-rồi-cộng không đâm khoá duy nhất,
+   * và tóm tắt luôn so với đúng bản đứng ngay trước nó.
+   */
+  async save(actor: string, diagramId: string, input: SaveInput): Promise<VersionItem> {
+    const [xmlMaxKb, maxCells, svgMaxKb] = await Promise.all([
+      this.config.getNumber('diagramXmlMaxKb'),
+      this.config.getNumber('diagramMaxCells'),
+      this.config.getNumber('diagramSvgMaxKb'),
+    ]);
+    const gate = checkDiagramXml(input.xml, { xmlMaxKb, maxCells });
+    if (gate.reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: gate.reason });
+    const svg = sanitizeDiagramSvg(input.svg, { svgMaxKb });
+    if (svg.reason) throw new BadRequestException({ code: 'DIAGRAM_SVG_INVALID', message: svg.reason });
+    const index = buildCellIndex(input.xml);
+    const secret = secretLabelReason(index);
+    if (secret) throw new BadRequestException({ code: 'DIAGRAM_LABEL_SECRET', message: secret });
+    const snapshot = await this.snapshot(index);
+
+    const id = await this.db.transaction(async (tx) => {
+      await this.lockLive(tx, diagramId);
+      const latest = await this.latestWithin(tx, diagramId);
+      if (input.basedOnVersionId && !(await this.belongs(tx, diagramId, input.basedOnVersionId))) {
+        throw new BadRequestException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Phiên bản gốc không thuộc bản vẽ này.' });
+      }
+      const diff = diffCellIndex(latest?.cellIndex ?? null, index);
+      let summary = summarizeDiff(diff);
+      if (latest && input.basedOnVersionId !== latest.id) {
+        const names = await this.users.namesByEmails([latest.savedBy.toLowerCase()]);
+        summary += ` · lưu đè lên bản của ${names.get(latest.savedBy.toLowerCase()) ?? latest.savedBy}`;
+      }
+      return this.insertVersion(tx, actor, diagramId, {
+        seq: (latest?.seq ?? 0) + 1,
+        xml: input.xml,
+        svg: svg.value,
+        index,
+        snapshot,
+        summary,
+        diff,
+        basedOnVersionId: input.basedOnVersionId,
+        restoredFromVersionId: null,
+        history: 'version.saved',
+        auditAction: 'diagram.saved',
+        bytes: Buffer.byteLength(input.xml),
+      });
+    });
+    return this.versionItem(diagramId, id);
+  }
+
+  /** Khôi phục = phiên bản MỚI chép XML của bản được chọn (không xoá, không sửa gì). */
+  async restore(actor: string, diagramId: string, versionId: string): Promise<VersionItem> {
+    const [source] = await this.db
+      .select()
+      .from(diagramVersionTable)
+      .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
+    if (!source) throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
+    // Chụp lại thông tin thiết bị BÂY GIỜ: bản khôi phục là một lần lưu mới (AD-14).
+    const snapshot = await this.snapshot(source.cellIndex);
+    const id = await this.db.transaction(async (tx) => {
+      await this.lockLive(tx, diagramId);
+      const latest = await this.latestWithin(tx, diagramId);
+      const diff = diffCellIndex(latest?.cellIndex ?? null, source.cellIndex);
+      return this.insertVersion(tx, actor, diagramId, {
+        seq: (latest?.seq ?? 0) + 1,
+        xml: source.xml,
+        svg: source.svg,
+        index: source.cellIndex,
+        snapshot,
+        summary: `Khôi phục từ phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
+        diff,
+        basedOnVersionId: latest?.id ?? null,
+        restoredFromVersionId: source.id,
+        history: 'version.restored',
+        auditAction: 'diagram.version_restored',
+        bytes: Buffer.byteLength(source.xml),
+      });
+    });
+    return this.versionItem(diagramId, id);
+  }
+
+  /** Tên phiên bản: người lưu phiên bản đó, hoặc Admin/SA. Tên mới nhất thắng; `null` = bỏ tên. */
+  async label(actor: { email: string; role: UserRole }, diagramId: string, versionId: string, label: string | null): Promise<void> {
+    const [version] = await this.db
+      .select({ savedBy: diagramVersionTable.savedBy, seq: diagramVersionTable.seq })
+      .from(diagramVersionTable)
+      .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
+    if (!version) throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
+    if (actor.role === 'member' && version.savedBy.toLowerCase() !== actor.email.toLowerCase()) {
+      throw new ForbiddenException({ code: 'DIAGRAM_LABEL_FORBIDDEN', message: 'Chỉ người lưu phiên bản này hoặc Admin đặt tên được.' });
+    }
+    const text = label?.trim() ? label.trim() : null;
+    await this.db.transaction(async (tx) => {
+      await tx.insert(diagramVersionLabelTable).values({ diagramId, versionId, label: text, actor: actor.email });
+      await this.record(tx, actor.email, diagramId, 'version.labeled', 'diagram.version_labeled', { versionId, seq: version.seq, label: text });
+    });
+  }
+
+  async history(diagramId: string) {
+    const rows = await this.db
+      .select()
+      .from(diagramHistoryTable)
+      .where(eq(diagramHistoryTable.diagramId, diagramId))
+      .orderBy(desc(diagramHistoryTable.createdAt), desc(diagramHistoryTable.id))
+      .limit(HISTORY_PAGE_LIMIT);
+    return withActorNames(rows, (emails) => this.users.namesByEmails(emails));
+  }
+
+  private async lockLive(tx: Tx, diagramId: string): Promise<void> {
+    const [row] = await tx
+      .select({ archivedAt: diagramTable.archivedAt })
+      .from(diagramTable)
+      .where(eq(diagramTable.id, diagramId))
+      .for('update');
+    if (!row) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
+    if (row.archivedAt) throw archived();
+  }
+
+  private async latestWithin(tx: Tx, diagramId: string) {
+    const [row] = await tx
+      .select({
+        id: diagramVersionTable.id,
+        seq: diagramVersionTable.seq,
+        cellIndex: diagramVersionTable.cellIndex,
+        savedBy: diagramVersionTable.savedBy,
+      })
+      .from(diagramVersionTable)
+      .where(eq(diagramVersionTable.diagramId, diagramId))
+      .orderBy(desc(diagramVersionTable.seq))
+      .limit(1);
+    return row ?? null;
+  }
+
+  private async belongs(tx: Tx, diagramId: string, versionId: string): Promise<boolean> {
+    const [row] = await tx
+      .select({ id: diagramVersionTable.id })
+      .from(diagramVersionTable)
+      .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
+    return Boolean(row);
+  }
+
+  private async insertVersion(
+    tx: Tx,
+    actor: string,
+    diagramId: string,
+    v: {
+      seq: number;
+      xml: string;
+      svg: string | null;
+      index: CellIndex;
+      snapshot: DeviceSnapshotEntry[];
+      summary: string;
+      diff: CellDiff;
+      basedOnVersionId: string | null;
+      restoredFromVersionId: string | null;
+      history: string;
+      auditAction: string;
+      bytes: number;
+    },
+  ): Promise<string> {
+    const [row] = await tx
+      .insert(diagramVersionTable)
+      .values({
+        diagramId,
+        seq: v.seq,
+        xml: v.xml,
+        svg: v.svg,
+        cellIndex: v.index,
+        deviceSnapshot: v.snapshot,
+        summary: v.summary,
+        summaryDetail: v.diff,
+        basedOnVersionId: v.basedOnVersionId,
+        restoredFromVersionId: v.restoredFromVersionId,
+        savedBy: actor,
+      })
+      .returning({ id: diagramVersionTable.id });
+    await tx.update(diagramTable).set({ updatedAt: new Date() }).where(eq(diagramTable.id, diagramId));
+    // Nhật ký ghi KÍCH THƯỚC + tóm tắt, không chép XML: audit_log không xoá được.
+    await this.record(tx, actor, diagramId, v.history, v.auditAction, {
+      versionId: row.id,
+      seq: v.seq,
+      summary: v.summary,
+      bytes: v.bytes,
+    });
+    return row.id;
+  }
+
+  private async versionItem(diagramId: string, versionId: string): Promise<VersionItem> {
+    const rows = await this.db
+      .select({
+        id: diagramVersionTable.id,
+        seq: diagramVersionTable.seq,
+        summary: diagramVersionTable.summary,
+        savedBy: diagramVersionTable.savedBy,
+        createdAt: diagramVersionTable.createdAt,
+        basedOnVersionId: diagramVersionTable.basedOnVersionId,
+        restoredFromVersionId: diagramVersionTable.restoredFromVersionId,
+      })
+      .from(diagramVersionTable)
+      .where(eq(diagramVersionTable.id, versionId));
+    const [item] = await this.toItems(diagramId, rows);
+    return item;
+  }
+
+  /**
+   * Thông tin thiết bị lúc lưu cho mọi `ims_device_id` trên bản vẽ (AD-14): 1–2 năm sau máy đã
+   * đổi IP, đổi tủ hay thanh lý thì phiên bản cũ vẫn nói đúng lúc đó nó là gì.
+   */
+  private async snapshot(index: CellIndex): Promise<DeviceSnapshotEntry[]> {
+    const ids = [...new Set(index.cells.map((c) => c.deviceId).filter((id): id is string => Boolean(id)))];
+    if (ids.length === 0) return [];
+    const valid = ids.filter((id) => UUID_RE.test(id));
+    const [devices, ips] = await Promise.all([this.devices.getByIds(valid), this.ipam.heldAddressesOf(valid)]);
+    return ids.map((id) => {
+      const device = devices.get(id);
+      if (!device) return { id, missing: true };
+      return {
+        id,
+        code: device.code,
+        name: device.name,
+        type: device.deviceTypeName,
+        model: device.model,
+        serial: device.serial,
+        ips: ips.get(id) ?? [],
+        site: device.siteCode,
+        cabinet: device.cabinetCode,
+        u: null,
+        status: device.status,
+      };
+    });
+  }
+
+  /* -------------------------------------------------------- người đang sửa --- */
+
+  /**
+   * Nhịp "đang mở sửa" (Q-23). Nhật ký chỉ ghi lúc VÀO (chưa có hàng, hoặc hàng đã nguội quá
+   * `diagram.presence_ttl_seconds`), không ghi mỗi nhịp — nhịp nào cũng ghi là ngập audit_log.
+   */
+  async heartbeat(actor: Presence, diagramId: string): Promise<{ others: Presence[] }> {
+    const ttl = await this.config.getNumber('diagramPresenceTtlSeconds');
+    const cutoff = new Date(Date.now() - ttl * 1000);
+    await this.db.transaction(async (tx) => {
+      await this.lockLive(tx, diagramId);
+      const [existing] = await tx
+        .select({ seenAt: diagramPresenceTable.seenAt })
+        .from(diagramPresenceTable)
+        .where(and(eq(diagramPresenceTable.diagramId, diagramId), eq(diagramPresenceTable.userEmail, actor.email)));
+      await tx
+        .insert(diagramPresenceTable)
+        .values({ diagramId, userEmail: actor.email, fullName: actor.fullName })
+        .onConflictDoUpdate({
+          target: [diagramPresenceTable.diagramId, diagramPresenceTable.userEmail],
+          set: { seenAt: sql`now()`, fullName: actor.fullName },
+        });
+      if (!existing || existing.seenAt < cutoff) {
+        await this.audit.appendWithin(tx, { actor: actor.email, action: 'diagram.editing_started', objectType: 'diagram', objectId: diagramId });
+      }
+    });
+    const others = await this.db
+      .select({ email: diagramPresenceTable.userEmail, fullName: diagramPresenceTable.fullName })
+      .from(diagramPresenceTable)
+      .where(
+        and(
+          eq(diagramPresenceTable.diagramId, diagramId),
+          ne(diagramPresenceTable.userEmail, actor.email),
+          gt(diagramPresenceTable.seenAt, cutoff),
+        ),
+      )
+      .orderBy(asc(diagramPresenceTable.seenAt));
+    return { others };
+  }
+
+  /* ----------------------------------------------------------------- chung --- */
+
+  /** Lịch sử (AD-13) + nhật ký (AD-5) trong CÙNG transaction với thay đổi. */
+  private async record(tx: Tx, actor: string, diagramId: string, action: string, auditAction: string, changes: unknown): Promise<void> {
+    await tx.insert(diagramHistoryTable).values({ diagramId, action, actor, changes: changes ?? null });
+    await this.audit.appendWithin(tx, {
+      actor,
+      action: auditAction,
+      objectType: 'diagram',
+      objectId: diagramId,
+      detail: (changes ?? undefined) as Record<string, unknown> | undefined,
+    });
+  }
+}
+
+function statusOf(latestId: string | null, officialId: string | null): DiagramStatus {
+  if (!latestId) return 'empty';
+  if (!officialId) return 'draft';
+  return officialId === latestId ? 'official' : 'official_draft';
+}
+
+function iso(value: Date | string | null): string | null {
+  if (value === null) return null;
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function archived(): ConflictException {
+  return new ConflictException({ code: 'DIAGRAM_ARCHIVED', message: 'Bản vẽ đã lưu trữ — không sửa được nữa.' });
+}
+
+function pgCode(error: unknown): string | undefined {
+  const e = error as { code?: string; cause?: { code?: string } };
+  return e?.code ?? e?.cause?.code;
+}

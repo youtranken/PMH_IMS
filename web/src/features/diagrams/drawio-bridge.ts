@@ -1,7 +1,7 @@
 import { foldSearch } from '@/lib/search-fold';
 
 /**
- * Hàm THUẦN của màn sơ đồ bản thử (Q-23): dựng ô thiết bị, đọc tệp draw.io, lệch kho. Giao thức
+ * Hàm THUẦN của màn sửa sơ đồ: dựng ô thiết bị kho và chèn nó vào bản vẽ đang mở. Giao thức
  * nhúng (URL, sandbox, tin `event`/`action`) nằm ở cầu nối dùng chung `@/ui/drawio-frame`.
  *
  * Chèn thiết bị dùng lệnh `patch` (khuôn diff của draw.io: `u → trang → cells → i`), không dùng
@@ -155,93 +155,6 @@ export function lastChildId(xml: string, pageId: string, parentId: string): stri
   if (!page) return null;
   const children = cellsOf(page).filter((c) => c.parent === parentId);
   return children.length > 0 ? children[children.length - 1].id : null;
-}
-
-export interface DeviceRef {
-  cellId: string;
-  deviceId: string;
-  code: string;
-  ip: string;
-  pageId: string;
-}
-
-/** Mọi hình mang `ims_device_id` (thứ tự trong tệp); hình vẽ tự do bị bỏ qua. */
-export function parseDeviceRefs(xml: string): DeviceRef[] {
-  const doc = parseXml(xml);
-  if (!doc) return [];
-  return Array.from(doc.getElementsByTagName('diagram')).flatMap((page) =>
-    cellsOf(page)
-      .filter((c) => c.node.hasAttribute('ims_device_id'))
-      .map((c) => ({
-        cellId: c.id,
-        deviceId: c.node.getAttribute('ims_device_id') ?? '',
-        code: c.node.getAttribute('ims_device_code') ?? '',
-        ip: c.node.getAttribute('ims_device_ip') ?? '',
-        pageId: page.getAttribute('id') ?? '',
-      })),
-  );
-}
-
-/** Trang lưu dạng nén (base64) thì IMS không đọc được hình nào bên trong. */
-export function isCompressed(xml: string): boolean {
-  const doc = parseXml(xml);
-  if (!doc) return false;
-  return Array.from(doc.getElementsByTagName('diagram')).some(
-    (d) => d.getElementsByTagName('mxGraphModel').length === 0 && (d.textContent ?? '').trim() !== '',
-  );
-}
-
-export type DriftReason = 'missing' | 'retired' | 'ip_changed' | 'code_changed';
-
-export interface DeviceLive {
-  code: string;
-  status: string;
-  ips: string[];
-}
-
-/**
- * Lệch kho so với lúc chèn hình (Q-23: cảnh báo, không ép sửa). `live = null` = máy không còn
- * tra được. Lúc chèn chưa có IP thì máy có IP về sau không tính là lệch: bản vẽ không hứa gì về IP.
- */
-export function driftReasons(ref: DeviceRef, live: DeviceLive | null): DriftReason[] {
-  if (!live) return ['missing'];
-  const reasons: DriftReason[] = [];
-  if (live.status === 'retired') reasons.push('retired');
-  if (ref.ip && !live.ips.includes(ref.ip)) reasons.push('ip_changed');
-  if (ref.code && live.code !== ref.code) reasons.push('code_changed');
-  return reasons;
-}
-
-/**
- * Bản đem đi XEM: mỗi hình thiết bị có `link` về `/devices/<id>` (draw.io báo `openLink` khi bấm,
- * IMS mở thẻ thông tin thay vì điều hướng), hình lệch kho có "⚠ " đầu nhãn. Link người vẽ tự gắn
- * trên hình thiết bị bị thay hẳn. Bản đã lưu không đổi.
- */
-export function withViewerMarks(xml: string, origin: string, warned: Set<string>): string {
-  const doc = parseXml(xml);
-  if (!doc) return xml;
-  for (const page of Array.from(doc.getElementsByTagName('diagram'))) {
-    for (const { node } of cellsOf(page)) {
-      const deviceId = node.getAttribute('ims_device_id');
-      if (!deviceId) continue;
-      node.setAttribute('link', `${origin}/devices/${encodeURIComponent(deviceId)}`);
-      if (warned.has(deviceId)) node.setAttribute('label', `⚠ ${node.getAttribute('label') ?? ''}`);
-    }
-  }
-  return new XMLSerializer().serializeToString(doc);
-}
-
-/** Link draw.io báo về → id thiết bị, chỉ khi đúng origin IMS và đúng đường `/devices/<id>`. */
-export function deviceIdFromLink(href: string, origin: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(href);
-  } catch {
-    return null;
-  }
-  if (url.origin !== origin) return null;
-  const match = /^\/devices\/([^/]+)$/.exec(url.pathname);
-  return match ? decodeURIComponent(match[1]) : null;
 }
 
 export interface Bounds {

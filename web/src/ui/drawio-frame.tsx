@@ -1,12 +1,12 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DiagramWatermark } from './diagram-watermark';
 import {
   DRAWIO_SANDBOX,
   buildDrawioConfig,
   drawioUrl,
   parseDrawioEvent,
   serializeDrawioCommand,
-  watermarkText,
   type DrawioCommand,
   type DrawioEvent,
   type DrawioMode,
@@ -14,9 +14,6 @@ import {
 
 /** Token màu dây trong `tokens.css` (có cặp dark) — đọc lúc chạy, đẩy cho draw.io làm bảng màu. */
 const WIRE_TOKENS = ['--diagram-wire-1', '--diagram-wire-2', '--diagram-wire-3', '--diagram-wire-4', '--diagram-wire-5', '--diagram-wire-6'];
-
-/** Số dòng watermark lặp trên khung: đủ phủ một màn lớn mà không phải đo kích thước. */
-const WATERMARK_ROWS = 8;
 
 export interface DrawioFrameHandle {
   send: (command: DrawioCommand) => void;
@@ -98,13 +95,6 @@ export const DrawioFrame = forwardRef<DrawioFrameHandle, DrawioFrameProps>(funct
     return () => window.clearTimeout(timer);
   }, [initialised, initTimeoutSeconds, attempt]);
 
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const mark = watermarkText(viewer, now);
-
   return (
     <div className="drawio-frame">
       <iframe
@@ -115,11 +105,7 @@ export const DrawioFrame = forwardRef<DrawioFrameHandle, DrawioFrameProps>(funct
         src={drawioUrl(mode)}
         sandbox={DRAWIO_SANDBOX}
       />
-      <div className="drawio-watermark" aria-hidden="true">
-        {Array.from({ length: WATERMARK_ROWS }, (_, i) => (
-          <span key={i}>{mark}</span>
-        ))}
-      </div>
+      <DiagramWatermark viewer={viewer} />
       {stalled ? (
         <div className="drawio-frame-stalled" role="alert">
           <p>

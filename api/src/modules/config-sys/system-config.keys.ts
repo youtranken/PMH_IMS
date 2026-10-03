@@ -192,6 +192,11 @@ export const CONFIG_KEYS = {
   diagramXmlMaxKb: { key: 'diagram.xml_max_kb', fallback: 2048 },
   diagramSvgMaxKb: { key: 'diagram.svg_max_kb', fallback: 4096 },
   diagramMaxCells: { key: 'diagram.max_cells', fallback: 5000 },
+  /*
+   * "Đang có … mở sửa bản vẽ này" (Q-23): màn sửa đập nhịp nửa khoảng này một lần, người im lặng
+   * quá khoảng này coi như đã rời. Ngắn quá thì mạng chập chờn làm thông báo nhấp nháy.
+   */
+  diagramPresenceTtlSeconds: { key: 'diagram.presence_ttl_seconds', fallback: 60 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

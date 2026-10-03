@@ -45,7 +45,8 @@ import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
-import { DiagramsSpikeScreen } from '@/features/diagrams-spike/diagrams-spike-screen';
+import { DiagramScreen } from '@/features/diagrams/diagram-screen';
+import { DiagramTreeScreen } from '@/features/diagrams/diagram-tree-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
 import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
 import { IpamScreen } from '@/features/ipam/ipam-screen';
@@ -278,11 +279,9 @@ function AppRoutes() {
         <Route path={PATHS.ipAddresses} element={<IpamScreen me={me} />} />
         <Route path={`${PATHS.ipAddresses}/:id`} element={<IpamScreen me={me} />} />
         <Route path={PATHS.nat} element={<NatScreen me={me} />} />
-        {canSeeRoute(PATHS.diagramSpike, me.role) ? (
-          <Route path={PATHS.diagramSpike} element={<DiagramsSpikeScreen me={me} />} />
-        ) : (
-          <Route path={PATHS.diagramSpike} element={<Forbidden roles={ROUTE_ROLES[PATHS.diagramSpike]} />} />
-        )}
+        {/* Mọi vai — Thành viên cũng vẽ (Q-23), khớp `@Roles` của `diagrams.controller.ts`. */}
+        <Route path={PATHS.diagrams} element={<DiagramTreeScreen me={me} />} />
+        <Route path={`${PATHS.diagrams}/:id`} element={<DiagramScreen me={me} />} />
         <Route path={PATHS.serviceAccounts} element={<ServiceAccountsScreen me={me} />} />
         <Route
           path={`${PATHS.serviceAccounts}/:id`}

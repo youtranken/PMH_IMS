@@ -67,7 +67,7 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.ipam', to: PATHS.ipAddresses },
       { key: 'nav.nat', to: PATHS.nat },
       // Mọi vai — Thành viên cũng vẽ (Q-23), khớp `@Roles` của API.
-      { key: 'nav.diagramSpike', to: PATHS.diagramSpike },
+      { key: 'nav.diagrams', to: PATHS.diagrams },
     ],
   },
   {

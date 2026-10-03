@@ -4,6 +4,7 @@ import {
   buildDrawioConfig,
   cssColorToDrawio,
   drawioUrl,
+  exportedSvgText,
   parseDrawioEvent,
   serializeDrawioCommand,
   watermarkText,
@@ -133,5 +134,38 @@ describe('watermarkText', () => {
     expect(watermarkText({ fullName: 'Nguyễn Văn A', email: 'a@pmh.com.vn' }, new Date('2026-10-03T02:05:00Z'))).toBe(
       'Nguyễn Văn A · a@pmh.com.vn · 09:05',
     );
+  });
+});
+
+describe('exportedSvgText — dữ liệu sự kiện export → chữ SVG gửi server', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><text>Tầng 3 · Core</text></svg>';
+  const b64 = (text: string) => btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+
+  it.each([
+    ['data URI base64 (có chữ có dấu)', `data:image/svg+xml;base64,${b64(svg)}`, svg],
+    ['data URI mã hoá URL', `data:image/svg+xml,${encodeURIComponent(svg)}`, svg],
+    ['chữ SVG trần', svg, svg],
+    [
+      'bỏ khai báo XML và DOCTYPE SVG chuẩn mà draw.io gắn đầu tệp',
+      `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n${svg}`,
+      svg,
+    ],
+  ])('%s', (_name, data, expected) => {
+    expect(exportedSvgText(data)).toEqual({ value: expected, reason: null });
+  });
+
+  it.each([
+    ['ảnh PNG thay vì SVG', 'data:image/png;base64,iVBORw0KGgo='],
+    ['base64 hỏng', 'data:image/svg+xml;base64,@@@'],
+    ['rỗng', ''],
+  ])('từ chối: %s', (_name, data) => {
+    const result = exportedSvgText(data);
+    expect(result.value).toBeNull();
+    expect(result.reason).toBeTruthy();
+  });
+
+  it('DOCTYPE có khai báo thực thể KHÔNG bị bỏ — để cổng server từ chối', () => {
+    const evil = `<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]>${svg}`;
+    expect(exportedSvgText(evil).value).toContain('<!DOCTYPE');
   });
 });

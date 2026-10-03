@@ -1,0 +1,63 @@
+import { describe, expect, it } from 'vitest';
+import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { DiagramViewer, fitTransform, parseSafeSvg, svgSize } from './diagram-viewer';
+
+const VIEWER = { fullName: 'SA E2E', email: 'sa@e2e.local' };
+const SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400px" height="200px" viewBox="-0.5 -0.5 400 200"><g data-cell-id="s1"><rect width="10" height="10"/><text>Tầng 3</text></g></svg>';
+
+describe('parseSafeSvg — lưới thứ hai sau cổng server (AD-17)', () => {
+  it('SVG đã làm sạch: nhận, giữ data-cell-id', () => {
+    const result = parseSafeSvg(SVG);
+    expect(result.reason).toBeNull();
+    expect(result.value?.querySelector('[data-cell-id="s1"]')).not.toBeNull();
+  });
+
+  it.each([
+    ['script', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'],
+    ['foreignObject', '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div>x</div></foreignObject></svg>'],
+    ['thuộc tính on*', '<svg xmlns="http://www.w3.org/2000/svg"><rect onload="alert(1)"/></svg>'],
+    ['href javascript:', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="javascript:alert(1)"><text>x</text></a></svg>'],
+    ['ảnh trỏ ra ngoài', '<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.example/x.png"/></svg>'],
+    ['không phải SVG', '<html><body/></html>'],
+    ['XML hỏng', '<svg'],
+  ])('từ chối: %s', (_name, markup) => {
+    const result = parseSafeSvg(markup);
+    expect(result.value).toBeNull();
+    expect(result.reason).toBeTruthy();
+  });
+});
+
+describe('svgSize + fitTransform — vừa khung', () => {
+  it('đọc kích thước từ viewBox, lùi về width/height', () => {
+    expect(svgSize(parseSafeSvg(SVG).value!)).toEqual({ width: 400, height: 200 });
+    expect(svgSize(parseSafeSvg('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"/>').value!)).toEqual({ width: 80, height: 40 });
+  });
+
+  it.each([
+    ['bản vẽ lớn hơn khung: thu nhỏ, căn giữa', { width: 800, height: 400 }, { width: 400, height: 400 }, { scale: 0.5, x: 0, y: 100 }],
+    ['bản vẽ nhỏ: không phóng quá 100%', { width: 100, height: 50 }, { width: 400, height: 400 }, { scale: 1, x: 150, y: 175 }],
+    ['kích thước 0: giữ nguyên', { width: 0, height: 0 }, { width: 400, height: 400 }, { scale: 1, x: 0, y: 0 }],
+  ])('%s', (_name, content, box, expected) => {
+    expect(fitTransform(content, box)).toEqual(expected);
+  });
+});
+
+describe('DiagramViewer', () => {
+  it('hiện bản vẽ, watermark người xem, thanh thu phóng', async () => {
+    renderWithI18n(<DiagramViewer svg={SVG} viewer={VIEWER} title="Bản vẽ, chỉ xem" />);
+    const region = screen.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
+    expect(region.querySelector('[data-cell-id="s1"]')).not.toBeNull();
+    expect(screen.getAllByText(/SA E2E · sa@e2e\.local · \d{2}:\d{2}/).length).toBeGreaterThan(0);
+    const zoom = screen.getByRole('status', { name: 'Mức thu phóng' });
+    const before = zoom.textContent;
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Phóng to' }));
+    expect(zoom.textContent).not.toBe(before);
+  });
+
+  it('SVG không an toàn: không chèn gì, báo lỗi', () => {
+    renderWithI18n(<DiagramViewer svg='<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>' viewer={VIEWER} title="Bản vẽ" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('không an toàn');
+    expect(document.querySelector('script')).toBeNull();
+  });
+});

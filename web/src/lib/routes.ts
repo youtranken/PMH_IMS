@@ -46,8 +46,10 @@ export const PATHS = {
   /** Sổ NAT lọc sẵn theo một router (bộ lọc nằm trên URL — gửi được link cho nhau). */
   natOf: (deviceId: string) => `/nat?deviceId=${encodeURIComponent(deviceId)}`,
 
-  /** Bản thử nhúng draw.io (Q-23) — Epic 10 thay bằng cây bản vẽ thật. */
-  diagramSpike: '/diagrams-spike',
+  /** Cây bản vẽ sơ đồ mạng (Q-23) — xem tên/trạng thái không cần mã. */
+  diagrams: '/diagrams',
+  /** Mở MỘT bản vẽ — nội dung hỏi mã phạm vi sơ đồ (AD-17). `?mode=edit` mở thẳng màn sửa. */
+  diagram: (id: string) => `/diagrams/${id}`,
 
   serviceAccounts: '/service-accounts',
   serviceAccount: (id: string) => `/service-accounts/${id}`,
@@ -161,20 +163,18 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
   [PATHS.vault]: ['sa', 'admin'],
-  // `diagram-spike.controller.ts` — mọi vai (Thành viên cũng vẽ, Q-23).
-  [PATHS.diagramSpike]: ['sa', 'admin', 'member'],
   [PATHS.devComponents]: ['sa'],
 };
 
 /**
- * Đường mà shell thu sidebar còn biểu tượng và để nội dung tràn hết phần còn lại (Q-23: màn sơ
- * đồ — trình vẽ cần bề ngang). Rời đường này thì shell tự mở lại, vì trạng thái suy từ đường dẫn
- * chứ không phải cờ màn tự bật rồi quên tắt.
+ * Đường mà shell thu sidebar còn biểu tượng và để nội dung tràn hết phần còn lại (Q-23: màn mở
+ * một bản vẽ — trình vẽ cần bề ngang; cây bản vẽ là màn danh sách bình thường). Rời đường này thì
+ * shell tự mở lại, vì trạng thái suy từ đường dẫn chứ không phải cờ màn tự bật rồi quên tắt.
  */
-const COMPACT_SHELL_PATHS: readonly string[] = [PATHS.diagramSpike];
+const COMPACT_SHELL_PREFIXES: readonly string[] = [`${PATHS.diagrams}/`];
 
 export function isCompactShellPath(pathname: string): boolean {
-  return COMPACT_SHELL_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return COMPACT_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix) && pathname.length > prefix.length);
 }
 
 /** Vai này vào được đường kia không. Đường không khai trong bảng = mở cho mọi vai. */
@@ -205,7 +205,7 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.expiry]: 'nav.expiry',
   [PATHS.ipAddresses]: 'nav.ipam',
   [PATHS.nat]: 'nav.nat',
-  [PATHS.diagramSpike]: 'nav.diagramSpike',
+  [PATHS.diagrams]: 'nav.diagrams',
   [PATHS.serviceAccounts]: 'nav.serviceAccounts',
   [PATHS.approvals]: 'nav.approvals',
   [PATHS.vault]: 'nav.vault',

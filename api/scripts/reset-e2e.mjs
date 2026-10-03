@@ -160,8 +160,28 @@ const DOMAINS = {
     `DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'`,
   ],
 
-  /** Bản thử draw.io: bài E2E lưu dưới tên có chữ E2E, không bao giờ đè bản vẽ thật. */
-  diagrams: [`DELETE FROM diagram_spike WHERE name ILIKE '%E2E%'`],
+  /*
+   * Cây bản vẽ (AD-18). Bài E2E đặt tên bản vẽ có chữ E2E; mọi bản vẽ con của nó cũng bị dọn theo
+   * (cả cây con, kể cả nút con lỡ đặt tên khác), vì `parent_id` trỏ lên cha.
+   *
+   * Thứ tự: hàng con trước hàng cha — tên phiên bản và lịch sử trỏ vào phiên bản/bản vẽ, phiên bản
+   * trỏ vào bản vẽ, và `diagram.official_version_id` trỏ ngược vào phiên bản nên gỡ nó trước.
+   * Phải đứng TRƯỚC `catalog`: bản vẽ trỏ vào site/tủ.
+   */
+  diagrams: [
+    `ALTER TABLE diagram_version_label DISABLE TRIGGER diagram_version_label_no_delete`,
+    `DELETE FROM diagram_version_label WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_version_label ENABLE TRIGGER diagram_version_label_no_delete`,
+    `ALTER TABLE diagram_history DISABLE TRIGGER diagram_history_no_delete`,
+    `DELETE FROM diagram_history WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_history ENABLE TRIGGER diagram_history_no_delete`,
+    `DELETE FROM diagram_presence WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `UPDATE diagram SET official_version_id = NULL WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_version DISABLE TRIGGER diagram_version_no_delete`,
+    `DELETE FROM diagram_version WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_version ENABLE TRIGGER diagram_version_no_delete`,
+    `DELETE FROM diagram WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+  ],
 
   isp: [
     /*

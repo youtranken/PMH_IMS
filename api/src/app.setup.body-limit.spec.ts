@@ -4,7 +4,8 @@ import type { AddressInfo } from 'node:net';
 import { setupApp } from './app.setup';
 
 /*
- * Trần body: route bản vẽ nhận tới 5 MB, mọi route khác giữ trần mặc định 100 KB.
+ * Trần body: route LƯU phiên bản bản vẽ nhận tới 12 MB (XML + SVG), mọi route khác — kể cả route
+ * khác của chính module sơ đồ — giữ trần mặc định 100 KB.
  *
  * Kiểm bằng HTTP thật vì điều cần chứng minh là THỨ TỰ middleware: parser riêng phải chạy trước
  * parser mặc định Nest gắn lúc `listen`. Đảo thứ tự thì parser mặc định từ chối body 1 MB trước
@@ -12,8 +13,13 @@ import { setupApp } from './app.setup';
  */
 @Controller()
 class EchoController {
-  @Post('api/v1/diagram-spike/E2E')
+  @Post('api/v1/diagrams/7b0c1c1e-0000-4000-8000-000000000001/versions')
   diagram(@Body() body: { xml: string }) {
+    return { bytes: body.xml.length };
+  }
+
+  @Post('api/v1/diagrams')
+  createNode(@Body() body: { xml: string }) {
     return { bytes: body.xml.length };
   }
 
@@ -50,8 +56,9 @@ describe('setupApp · trần body JSON', () => {
     });
 
   it.each([
-    ['route bản vẽ, 1 MB', '/api/v1/diagram-spike/E2E', 1024 * 1024, 201],
-    ['route bản vẽ, quá 5 MB', '/api/v1/diagram-spike/E2E', 5 * 1024 * 1024 + 10, 413],
+    ['route lưu bản vẽ, 9 MB', '/api/v1/diagrams/7b0c1c1e-0000-4000-8000-000000000001/versions', 9 * 1024 * 1024, 201],
+    ['route lưu bản vẽ, quá 12 MB', '/api/v1/diagrams/7b0c1c1e-0000-4000-8000-000000000001/versions', 12 * 1024 * 1024 + 10, 413],
+    ['route tạo nút cây sơ đồ, 1 MB', '/api/v1/diagrams', 1024 * 1024, 413],
     ['route khác, 1 MB', '/api/v1/other', 1024 * 1024, 413],
     ['route khác, 50 KB', '/api/v1/other', 50 * 1024, 201],
   ])('%s → %i', async (_label, path, size, status) => {

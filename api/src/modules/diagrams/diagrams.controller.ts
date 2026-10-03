@@ -1,0 +1,194 @@
+import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength, ValidateIf } from 'class-validator';
+import { NoSecretText } from '../../common/no-secret-text';
+import { Audited } from '../audit/audited.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
+import type { AuthedRequest } from '../auth/types';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
+import { DiagramsService } from './diagrams.service';
+
+/** Trần thô của DTO; trần thật (`diagram.xml_max_kb`, `diagram.svg_max_kb`) do cổng kiểm áp. */
+const RAW_MAX_BYTES = 6 * 1024 * 1024;
+
+class IdParamDto {
+  @IsUUID(undefined, { message: 'Mã bản vẽ không hợp lệ.' })
+  id!: string;
+}
+
+class VersionParamDto extends IdParamDto {
+  @IsUUID(undefined, { message: 'Mã phiên bản không hợp lệ.' })
+  versionId!: string;
+}
+
+class CreateNodeDto {
+  @IsString() @Length(1, 120, { message: 'Tên bản vẽ từ 1 đến 120 ký tự.' }) name!: string;
+  @IsIn(DIAGRAM_NODE_TYPES, { message: 'Loại nút không hợp lệ.' }) nodeType!: DiagramNodeType;
+  @IsOptional() @IsUUID(undefined, { message: 'Bản vẽ cha không hợp lệ.' }) parentId?: string;
+  @IsOptional() @IsUUID(undefined, { message: 'Site không hợp lệ.' }) siteId?: string;
+  @IsOptional() @IsUUID(undefined, { message: 'Tủ mạng không hợp lệ.' }) cabinetId?: string;
+  @IsOptional() @IsEmail({}, { message: 'Người phụ trách không hợp lệ.' }) ownerEmail?: string;
+}
+
+/** `null` ở parentId = đưa lên gốc cây; ở site/tủ/người phụ trách = bỏ gắn. */
+class UpdateNodeDto {
+  @IsOptional() @IsString() @Length(1, 120, { message: 'Tên bản vẽ từ 1 đến 120 ký tự.' }) name?: string;
+  @IsOptional() @IsIn(DIAGRAM_NODE_TYPES, { message: 'Loại nút không hợp lệ.' }) nodeType?: DiagramNodeType;
+  @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID(undefined, { message: 'Bản vẽ cha không hợp lệ.' }) parentId?: string | null;
+  @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID(undefined, { message: 'Site không hợp lệ.' }) siteId?: string | null;
+  @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID(undefined, { message: 'Tủ mạng không hợp lệ.' }) cabinetId?: string | null;
+  @ValidateIf((_o, v) => v !== null) @IsOptional() @IsEmail({}, { message: 'Người phụ trách không hợp lệ.' }) ownerEmail?: string | null;
+}
+
+class ContentQueryDto {
+  @IsOptional() @IsIn(['view', 'edit'], { message: 'Chế độ mở không hợp lệ.' }) mode?: 'view' | 'edit';
+  @IsOptional() @IsUUID(undefined, { message: 'Mã phiên bản không hợp lệ.' }) versionId?: string;
+}
+
+class SaveVersionDto {
+  @IsString() @MaxLength(RAW_MAX_BYTES, { message: 'Bản vẽ quá lớn.' }) xml!: string;
+  @IsString() @MaxLength(RAW_MAX_BYTES, { message: 'Ảnh xem của bản vẽ quá lớn.' }) svg!: string;
+  @ValidateIf((_o, v) => v !== null) @IsUUID(undefined, { message: 'Phiên bản gốc không hợp lệ.' }) basedOnVersionId!: string | null;
+}
+
+class LabelDto {
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(120, { message: 'Tên phiên bản tối đa 120 ký tự.' })
+  @NoSecretText('Tên phiên bản')
+  label!: string | null;
+}
+
+export interface DiagramEditorSettings {
+  /** `diagram.editor_init_timeout_seconds` */
+  initTimeoutSeconds: number;
+  /** `diagram.presence_ttl_seconds` */
+  presenceTtlSeconds: number;
+}
+
+/**
+ * Sơ đồ mạng (AD-17, AD-18, Q-23). Mọi vai đọc cây và vẽ (Thành viên cũng vẽ); đổi tên, chuyển
+ * nhánh, lưu trữ, khôi phục chỉ Admin/SA. Không có xoá cứng.
+ *
+ * Lớp `@NoStepUp()`: cây (tên, trạng thái, tạo nút, đổi tên, lưu trữ) không cần mã. Mọi route
+ * XEM hoặc SỬA một bản vẽ có sẵn — nội dung, phiên bản, lịch sử, lưu, đặt tên, khôi phục, nhịp
+ * "đang sửa" — khai `@RequiresStepUp('diagram')` từng cái (Q-23: xem và sửa bản vẽ đều hỏi mã;
+ * một phiên bị chiếm không ghi đè được bản vẽ khi chưa gõ mã).
+ */
+@NoStepUp()
+@Controller('api/v1/diagrams')
+export class DiagramsController {
+  constructor(
+    private readonly diagrams: DiagramsService,
+    private readonly config: SystemConfigService,
+  ) {}
+
+  /** Khai TRƯỚC `:id` để không bị đọc thành một mã bản vẽ. */
+  @Roles('sa', 'admin', 'member')
+  @Get('editor-settings')
+  async editorSettings(): Promise<DiagramEditorSettings> {
+    const [initTimeoutSeconds, presenceTtlSeconds] = await Promise.all([
+      this.config.getNumber('diagramEditorInitTimeoutSeconds'),
+      this.config.getNumber('diagramPresenceTtlSeconds'),
+    ]);
+    return { initTimeoutSeconds, presenceTtlSeconds };
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Get()
+  tree() {
+    return this.diagrams.tree();
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post()
+  @Audited('diagram.created', 'diagram', { writtenByService: true })
+  create(@Body() dto: CreateNodeDto, @Req() req: AuthedRequest) {
+    return this.diagrams.create(req.user!.email, dto);
+  }
+
+  /** Tên + loại + trạng thái của một nút — màn mở bản vẽ hiện tên trước khi hỏi mã. */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id')
+  node(@Param() params: IdParamDto) {
+    return this.diagrams.node(params.id);
+  }
+
+  @Roles('sa', 'admin')
+  @Patch(':id')
+  @Audited('diagram.updated', 'diagram', { writtenByService: true })
+  update(@Param() params: IdParamDto, @Body() dto: UpdateNodeDto, @Req() req: AuthedRequest) {
+    return this.diagrams.update(req.user!.email, params.id, dto);
+  }
+
+  @Roles('sa', 'admin')
+  @Post(':id/archive')
+  @Audited('diagram.archived', 'diagram', { writtenByService: true })
+  async archive(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    await this.diagrams.archive(req.user!.email, params.id);
+    return { ok: true };
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Get(':id/content')
+  content(@Param() params: IdParamDto, @Query() query: ContentQueryDto, @Req() req: AuthedRequest) {
+    return this.diagrams.content(req.user!.email, params.id, { mode: query.mode ?? 'view', versionId: query.versionId });
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Get(':id/versions')
+  versions(@Param() params: IdParamDto) {
+    return this.diagrams.versions(params.id);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Get(':id/versions/:versionId/changes')
+  changes(@Param() params: VersionParamDto) {
+    return this.diagrams.changes(params.id, params.versionId);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Get(':id/history')
+  history(@Param() params: IdParamDto) {
+    return this.diagrams.history(params.id);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/versions')
+  @Audited('diagram.saved', 'diagram', { writtenByService: true })
+  save(@Param() params: IdParamDto, @Body() dto: SaveVersionDto, @Req() req: AuthedRequest) {
+    return this.diagrams.save(req.user!.email, params.id, dto);
+  }
+
+  /** Mọi vai gọi được; service chỉ cho Thành viên đặt tên phiên bản do chính họ lưu. */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/versions/:versionId/label')
+  @Audited('diagram.version_labeled', 'diagram', { writtenByService: true })
+  async label(@Param() params: VersionParamDto, @Body() dto: LabelDto, @Req() req: AuthedRequest) {
+    await this.diagrams.label({ email: req.user!.email, role: req.user!.role }, params.id, params.versionId, dto.label);
+    return { ok: true };
+  }
+
+  @Roles('sa', 'admin')
+  @RequiresStepUp('diagram')
+  @Post(':id/versions/:versionId/restore')
+  @Audited('diagram.version_restored', 'diagram', { writtenByService: true })
+  restore(@Param() params: VersionParamDto, @Req() req: AuthedRequest) {
+    return this.diagrams.restore(req.user!.email, params.id, params.versionId);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/presence')
+  @Audited('diagram.editing_started', 'diagram', { writtenByService: true })
+  presence(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.diagrams.heartbeat({ email: req.user!.email, fullName: req.user!.fullName }, params.id);
+  }
+}

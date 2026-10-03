@@ -116,7 +116,14 @@ export const ACTION_KEY: Record<string, string> = {
   'nat.updated': 'audit.actions.natUpdated',
   'nat.voided': 'audit.actions.natVoided',
   'system_config.updated': 'audit.actions.systemConfigUpdated',
-  'diagram_spike.saved': 'audit.actions.diagramSpikeSaved',
+  'diagram.created': 'audit.actions.diagramCreated',
+  'diagram.updated': 'audit.actions.diagramUpdated',
+  'diagram.archived': 'audit.actions.diagramArchived',
+  'diagram.viewed': 'audit.actions.diagramViewed',
+  'diagram.saved': 'audit.actions.diagramSaved',
+  'diagram.version_labeled': 'audit.actions.diagramVersionLabeled',
+  'diagram.version_restored': 'audit.actions.diagramVersionRestored',
+  'diagram.editing_started': 'audit.actions.diagramEditingStarted',
   'crypto.rewrapped': 'audit.actions.cryptoRewrapped',
 };
 
@@ -271,7 +278,7 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   ip: 'network',
   subnet: 'network',
   nat: 'network',
-  diagram_spike: 'network',
+  diagram: 'network',
   expiry: 'expiry',
   disposal: 'disposal',
   file: 'file',
@@ -322,7 +329,7 @@ export const OBJECT_TYPE_KEY: Record<string, string> = {
   disposal: 'audit.objectType.disposal',
   file: 'audit.objectType.file',
   system_config: 'audit.objectType.systemConfig',
-  diagram_spike: 'audit.objectType.diagramSpike',
+  diagram: 'audit.objectType.diagram',
 };
 
 export function objectTypeLabel(type: string | null, t: TFunction): string | null {
