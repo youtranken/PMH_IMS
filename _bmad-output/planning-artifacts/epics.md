@@ -854,13 +854,13 @@ So that sơ đồ mạng có nhà trong IMS thay file Visio rải rác, và 1–
 
 **Acceptance Criteria:**
 
-**Given** module `diagrams` với `diagram` (id, `parent_id`, tên, loại nút: `company`/`site`/`floor`/`room`/`cabinet`/`other`, `site_id?`, `cabinet_id?`, người phụ trách, `kind` = `official`/`presentation`, `official_version_id?`, `archived_at?`), `diagram_version` chỉ-thêm (id, `diagram_id`, số thứ tự, `xml text`, `svg text`, `cell_index jsonb`, `device_snapshot jsonb`, `based_on_version_id`, người lưu, lúc lưu), `diagram_version_label` và `diagram_history` chỉ-thêm
+**Given** module `diagrams` với `diagram` (id, `parent_id`, tên, loại nút: `company`/`site`/`floor`/`room`/`cabinet`/`other`, `site_id?`, `cabinet_id?`, người phụ trách (`owner_email`, API nhận; form chưa có ô — thêm khi cần), `kind` = `official`/`presentation`, `official_version_id?` (cờ "chính thức" nằm ở cây vì phiên bản không UPDATE được — Story 10.7 đổi cột này), `archived_at?`), `diagram_version` chỉ-thêm (id, `diagram_id`, số thứ tự, `xml text`, `svg text`, `cell_index jsonb`, `device_snapshot jsonb`, `summary` + `summary_detail`, `based_on_version_id`, `restored_from_version_id`, người lưu, lúc lưu), `diagram_version_label` và `diagram_history` chỉ-thêm, cộng `diagram_presence` (nhịp "đang mở sửa", bảng thường) — migration `0046_diagram.sql`
 **When** migration chạy trên DB trắng
 **Then** ba bảng chỉ-thêm không UPDATE/DELETE/TRUNCATE được bằng `ims_app` (có trong `app-role-privileges.spec.ts`); tầng/phòng chỉ là tên bản vẽ — KHÔNG thêm danh mục vị trí (Q-23); `site_id`/`cabinet_id` kiểm qua `catalog.api` (mục ngừng dùng không chọn mới được, Q-14)
 
 **Given** người dùng bất kỳ vai
-**When** mở màn "Sơ đồ mạng" (menu nhóm Tài sản)
-**Then** thấy cây dạng thư mục: CHỈ tên + loại + trạng thái (chính thức / có bản nháp / chờ duyệt / lệch kho), không ảnh thu nhỏ, không cần mã 2 lớp
+**When** mở màn "Sơ đồ mạng" (menu nhóm Mạng, thay mục "Sơ đồ mạng (thử)")
+**Then** thấy cây dạng thư mục: CHỈ tên + loại + trạng thái (chưa vẽ / bản nháp / chính thức / chính thức · có bản nháp; "chờ duyệt" thêm ở Story 10.7, "lệch kho" ở Story 10.9), không ảnh thu nhỏ, không cần mã 2 lớp
 **And** mọi vai tạo được bản vẽ con và vẽ; đổi tên, chuyển nhánh, lưu trữ chỉ Admin/SA (`@Roles`), Thành viên gọi API → 403; không có xoá cứng
 
 **Given** bản thử để lại bảng `diagram_spike` (migration `0043_diagram_spike.sql`), API/màn `/diagrams-spike` và E2E `diagrams-spike.spec.ts`
@@ -877,7 +877,7 @@ So that sơ đồ mạng có nhà trong IMS thay file Visio rải rác, và 1–
 
 **Given** người vẽ bấm Lưu trong trình vẽ
 **When** cầu nối nhận `save`, xin trình vẽ xuất SVG rồi gửi XML + SVG lên server
-**Then** server chạy cổng kiểm (Story 10.2), dehydrate (AD-18), dựng `cell_index`, chụp `device_snapshot` (mã, tên, loại, model, serial, IP, site, tủ, U, trạng thái của mọi `ims_device_id`) và tạo MỘT hàng `diagram_version` + `diagram_history` + audit trong cùng transaction; bản lưu sau thắng (Q-23)
+**Then** server chạy cổng kiểm (Story 10.2) + soi chữ từng hình trông như mật khẩu (`textLooksLikeSecret`, Q-19), dựng `cell_index`, chụp `device_snapshot` (mã, tên, loại, model, serial, IP, site, tủ, U — `null` tới Story 10.11, trạng thái của mọi `ims_device_id`; id không còn trong kho ghi `missing`). Dehydrate (AD-18) bắt đầu ở Story 10.4 — story này chưa hydrate gì nên XML lưu nguyên như trình vẽ gửi và tạo MỘT hàng `diagram_version` + `diagram_history` + audit trong cùng transaction; bản lưu sau thắng (Q-23)
 **And** tóm tắt MỘT dòng so với phiên bản trước tính phía server từ `cell_index` ("Thêm 3 thiết bị, bỏ 1, đổi 37 dây, 5 hình tự do"); bấm xem chi tiết nhóm theo loại — hàm thuần dùng chung với so sánh (Story 10.10) và tự kiểm (Story 10.7), test bảng dữ liệu
 **And** lịch sử hiển thị bằng `HistoryPanel` trục dọc (Q-20), đọc `diagram_history` (AD-13), không đọc `audit_log`
 **And** rời màn khi còn thay đổi chưa lưu thì hỏi qua bộ hỏi dùng chung (không `window.confirm`)
