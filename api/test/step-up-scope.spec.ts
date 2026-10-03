@@ -43,7 +43,10 @@ const MASTER_KEY = `1=${'c'.repeat(64)}`;
 const noopSweep = { register: () => undefined } as unknown as SweepService;
 const ctx: LoginContext = { ip: '198.51.100.7', userAgent: 'jest' };
 
-/** Đứng thay cho route nội dung bản vẽ chưa có (Story 10.3) — cùng khai báo mà route thật sẽ mang. */
+/**
+ * Cùng khai báo với route nội dung thật (`diagrams.controller.ts`), nhưng không kéo theo cả module
+ * sơ đồ: bài này kiểm guard + `sessions`, không kiểm bản vẽ.
+ */
 @NoStepUp()
 @Controller('api/v1/e2e-diagram-probe')
 class DiagramProbeController {

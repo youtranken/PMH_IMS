@@ -86,6 +86,7 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'connectedLabel',
     'supplies',
     'catalog/catalog.controller.ts#address',
+    'diagrams/diagrams.controller.ts#label',
   ]);
 
   /** Chữ có cấu trúc / ô lọc / chính là bí mật — luật ô chữ tự do không áp. */
@@ -97,9 +98,10 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     // Mạng.
     'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',
-    // Tệp draw.io nguyên khối (bản thử): chữ trong hình nằm lẫn trong XML, luật một-ô-một-câu
-    // của `@NoSecretText` không đọc được nó. Bản thật của Epic 10 soi chữ từng hình khi lưu.
-    'diagrams/diagram-spike.controller.ts#xml',
+    // Tệp draw.io nguyên khối: chữ trong hình nằm lẫn trong XML, luật một-ô-một-câu của
+    // `@NoSecretText` không đọc được nó. Service soi chữ TỪNG hình khi lưu (`secretLabelReason`).
+    'diagrams/diagrams.controller.ts#xml',
+    'diagrams/diagrams.controller.ts#svg',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',

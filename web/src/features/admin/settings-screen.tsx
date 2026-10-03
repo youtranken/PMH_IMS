@@ -121,6 +121,7 @@ const TEXT: Record<string, [string, string]> = {
   diagramXmlMaxKb: ['settings.diagramXmlMaxKbLabel', 'settings.diagramXmlMaxKbDesc'],
   diagramSvgMaxKb: ['settings.diagramSvgMaxKbLabel', 'settings.diagramSvgMaxKbDesc'],
   diagramMaxCells: ['settings.diagramMaxCellsLabel', 'settings.diagramMaxCellsDesc'],
+  diagramPresenceTtlSeconds: ['settings.diagramPresenceTtlSecondsLabel', 'settings.diagramPresenceTtlSecondsDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

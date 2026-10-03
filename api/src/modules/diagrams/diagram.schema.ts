@@ -1,0 +1,84 @@
+import { integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import type { CellDiff, CellIndex } from './diagram-cells';
+
+/** Migration 0046_diagram.sql. Chủ sở hữu: module `diagrams` (AD-3, AD-18). */
+
+export const DIAGRAM_NODE_TYPES = ['company', 'site', 'floor', 'room', 'cabinet', 'other'] as const;
+export type DiagramNodeType = (typeof DIAGRAM_NODE_TYPES)[number];
+
+export const diagramTable = pgTable('diagram', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  parentId: uuid('parent_id'),
+  name: text('name').notNull(),
+  nodeType: text('node_type').$type<DiagramNodeType>().notNull(),
+  siteId: uuid('site_id'),
+  cabinetId: uuid('cabinet_id'),
+  ownerEmail: text('owner_email'),
+  kind: text('kind').$type<'official' | 'presentation'>().notNull().default('official'),
+  officialVersionId: uuid('official_version_id'),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
+  archivedBy: text('archived_by'),
+  createdBy: text('created_by').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Thông tin một thiết bị lúc lưu (AD-14). `missing` = id trên bản vẽ không còn trong kho. */
+export interface DeviceSnapshotEntry {
+  id: string;
+  missing?: boolean;
+  code?: string;
+  name?: string;
+  type?: string;
+  model?: string | null;
+  serial?: string | null;
+  ips?: string[];
+  site?: string | null;
+  cabinet?: string | null;
+  /** Vị trí U trong tủ — chưa có trong kho; giữ chỗ để bản chụp không đổi hình dạng về sau. */
+  u?: number | null;
+  status?: string;
+}
+
+export const diagramVersionTable = pgTable('diagram_version', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  diagramId: uuid('diagram_id').notNull(),
+  seq: integer('seq').notNull(),
+  xml: text('xml').notNull(),
+  svg: text('svg'),
+  cellIndex: jsonb('cell_index').$type<CellIndex>().notNull(),
+  deviceSnapshot: jsonb('device_snapshot').$type<DeviceSnapshotEntry[]>().notNull(),
+  summary: text('summary').notNull(),
+  summaryDetail: jsonb('summary_detail').$type<CellDiff>().notNull(),
+  basedOnVersionId: uuid('based_on_version_id'),
+  restoredFromVersionId: uuid('restored_from_version_id'),
+  savedBy: text('saved_by').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const diagramVersionLabelTable = pgTable('diagram_version_label', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  diagramId: uuid('diagram_id').notNull(),
+  versionId: uuid('version_id').notNull(),
+  label: text('label'),
+  actor: text('actor').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const diagramHistoryTable = pgTable('diagram_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  diagramId: uuid('diagram_id').notNull(),
+  action: text('action').notNull(),
+  actor: text('actor').notNull(),
+  changes: jsonb('changes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const diagramPresenceTable = pgTable('diagram_presence', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  diagramId: uuid('diagram_id').notNull(),
+  userEmail: text('user_email').notNull(),
+  fullName: text('full_name').notNull(),
+  seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

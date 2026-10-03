@@ -45,6 +45,14 @@ export class IpamApiService {
     return pattern ? this.addresses.deviceIdsByAddress(pattern) : Promise.resolve([]);
   }
 
+  /**
+   * IP đang giữ của nhiều máy một lượt (`deviceId → địa chỉ`), cùng luật với cột IP của danh sách
+   * thiết bị. Sơ đồ mạng chụp nó vào phiên bản bản vẽ (AD-14).
+   */
+  heldAddressesOf(deviceIds: string[]): Promise<Map<string, string[]>> {
+    return this.addresses.heldAddressesOf(deviceIds);
+  }
+
   /** Hồ sơ IP theo id — sổ NAT (5.3) cần để hiện IP trong kèm chủ. */
   findOne(id: string): Promise<IpAddressRecord> {
     return this.addresses.findOne(id);

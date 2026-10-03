@@ -31,15 +31,18 @@ export function setupApp(app: INestApplication): void {
 
   /*
    * Body JSON mặc định của Nest trần 100 KB — vừa cho mọi form, quá nhỏ cho một bản vẽ draw.io
-   * vài trăm hình. Nới RIÊNG route bản vẽ, không nới toàn cục: một trần 5 MB cho mọi route là
-   * mời gửi body khổng lồ vào những cửa chưa từng cần. Đăng ký ở đây chạy TRƯỚC parser mặc định
-   * (Nest gắn nó lúc `listen`), và parser mặc định bỏ qua body đã đọc.
+   * vài trăm hình. Nới RIÊNG route lưu phiên bản bản vẽ, không nới toàn cục (kể cả các route khác
+   * của module sơ đồ): một trần lớn cho mọi route là mời gửi body khổng lồ vào những cửa chưa từng
+   * cần. 12 MB = trần trên của `diagram.xml_max_kb` + `diagram.svg_max_kb` (4 MB mỗi thứ) cộng phần
+   * JSON phình ra khi thoát dấu nháy; cổng kiểm của server vẫn chặn theo tham số đang đặt. Đăng ký
+   * ở đây chạy TRƯỚC parser mặc định (Nest gắn nó lúc `listen`), và parser mặc định bỏ qua body
+   * đã đọc.
    *
    * Bọc trong một hàm tên khác: Nest thấy trong stack đã có layer tên `jsonParser` (tên hàm
    * `json()` trả về) thì KHÔNG gắn parser mặc định nữa, và mọi route khác mất body JSON.
    */
-  const diagramJson = json({ limit: '5mb' });
-  app.use('/api/v1/diagram-spike', function diagramSpikeBody(req: Request, res: Response, next: NextFunction) {
+  const diagramJson = json({ limit: '12mb' });
+  app.use(/^\/api\/v1\/diagrams\/[^/]+\/versions$/, function diagramVersionBody(req: Request, res: Response, next: NextFunction) {
     diagramJson(req, res, next);
   });
 

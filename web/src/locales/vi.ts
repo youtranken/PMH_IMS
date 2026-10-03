@@ -3195,5 +3195,8 @@ export default {
     diagramSvgMaxKbDesc: 'Ảnh SVG dùng ở chế độ xem; lớn hơn mức này bị từ chối khi lưu.',
     diagramMaxCellsLabel: 'Số hình + dây tối đa một bản vẽ',
     diagramMaxCellsDesc: 'Bản vẽ quá lớn làm máy người xem chậm. Cần nhiều hơn thì tách bản vẽ con.',
+    diagramPresenceTtlSecondsLabel: 'Thời gian giữ "đang có người mở sửa"',
+    diagramPresenceTtlSecondsDesc:
+      'Người đang mở sửa một bản vẽ mà im lặng quá khoảng này thì người khác thôi thấy dòng "Đang có … mở sửa bản vẽ này".',
   },
 } as const;

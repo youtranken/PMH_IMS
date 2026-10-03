@@ -181,6 +181,30 @@ describe('Step-up mặc định đóng (FR-022)', () => {
   });
 
   /**
+   * Q-23: mở NỘI DUNG bản vẽ (mọi phiên bản), danh sách phiên bản và lịch sử đều hỏi mã phạm vi
+   * sơ đồ. Lớp `DiagramsController` mang `@NoStepUp()` (cây xem không cần mã), nên dòng khai ở
+   * từng route là thứ DUY NHẤT giữ hàng rào — gỡ một dòng là nội dung bản vẽ mở cho phiên chưa
+   * từng gõ mã.
+   */
+  it.each([
+    "@Get(':id/content')",
+    "@Get(':id/versions')",
+    "@Get(':id/versions/:versionId/changes')",
+    "@Get(':id/history')",
+  ])('diagrams.controller %s đòi step-up phạm vi sơ đồ', (route) => {
+    const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagrams.controller.ts'), 'utf8');
+    const at = src.indexOf(route);
+    expect(at).toBeGreaterThan(-1);
+    const prevRoute = Math.max(
+      ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+        .map((m) => src.lastIndexOf(m, at - 1))
+        .filter((i) => i >= 0),
+      0,
+    );
+    expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+  });
+
+  /**
    * AD-17/AD-18: phạm vi đi theo MODULE. Sơ đồ khai `'diagram'`; mọi chỗ khác (két, tài khoản,
    * tham số, quyền két) giữ nghĩa két. Một route két lỡ khai `'diagram'` thì mã nhập để xem sơ
    * đồ mở luôn cửa két — đúng đòn mà phạm vi sinh ra để chặn.
