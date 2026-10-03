@@ -1,9 +1,11 @@
 import { buildCellIndex } from './diagram-cells';
+import { checkDiagramXml } from './diagram-gate';
 import {
   RACK_DEFAULT_U,
   RACK_MARGIN,
   RACK_UNIT_PX,
   RACK_WIDTH,
+  buildRackXml,
   cabinetFrameLayout,
   childLinkReason,
   frameRefs,
@@ -15,6 +17,8 @@ const CHILD = '7b0c1c1e-0000-4000-8000-0000000000d1';
 const CHILD_2 = '7b0c1c1e-0000-4000-8000-0000000000d2';
 const SUBNET = '7b0c1c1e-0000-4000-8000-0000000000e1';
 const CAB = '7b0c1c1e-0000-4000-8000-0000000000c1';
+const DEV_1 = '7b0c1c1e-0000-4000-8000-0000000000a1';
+const DEV_2 = '7b0c1c1e-0000-4000-8000-0000000000a2';
 
 function page(body: string): string {
   return `<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${body}</root></mxGraphModel></diagram></mxfile>`;
@@ -162,5 +166,80 @@ describe('cabinetFrameLayout — khung tủ dựng từ kho', () => {
       ['C', 'unplaced'],
       ['D', 'unplaced'],
     ]);
+  });
+});
+
+/* Mặt tủ (Story 10.11): mặt trước / mặt sau là hai khung cạnh nhau, máy xếp đúng U, ảnh thật từng mặt. */
+describe('cabinetFrameLayout — mặt trước + mặt sau, ảnh thật', () => {
+  const icon = { style: 'shape=icon;', label: 'L', width: 60, height: 40 };
+  const both = { sides: ['front', 'back'] as const };
+
+  it('hai khung rack cạnh nhau cùng mang ims_cabinet_id, cột "Chưa khai U" đứng sau cả hai', () => {
+    const layout = cabinetFrameLayout(
+      { cabinet: { id: CAB, code: 'R1', uHeight: 10 }, devices: [{ id: 'a', code: 'SW-01', u: 1, uSize: 1, cell: icon }, { id: 'b', code: 'PC-01', u: null, uSize: null, cell: icon }] },
+      both,
+    );
+    expect(layout.frames.map((f) => [f.key, f.label])).toEqual([
+      ['rack', 'Tủ R1 · Mặt trước'],
+      ['rack-back', 'Tủ R1 · Mặt sau'],
+      ['unplaced', 'Tủ R1 · Chưa khai U'],
+    ]);
+    const [front, back, column] = layout.frames;
+    expect(front.attrs).toEqual({ ims_cabinet_id: CAB });
+    expect(back.attrs).toEqual({ ims_cabinet_id: CAB });
+    expect(back.x).toBeGreaterThanOrEqual(front.x + front.width);
+    expect(back.height).toBe(front.height);
+    expect(column.x).toBeGreaterThanOrEqual(back.x + back.width);
+    // Máy có U có mặt ở cả hai mặt, cùng độ cao; máy chưa khai U chỉ một lần ở cột bên.
+    expect(layout.devices.map((d) => [d.code, d.frame])).toEqual([
+      ['PC-01', 'unplaced'],
+      ['SW-01', 'rack'],
+      ['SW-01', 'rack-back'],
+    ]);
+    const [, sw, swBack] = layout.devices;
+    expect(swBack.y).toBe(sw.y);
+  });
+
+  it('mặt có ảnh thật dùng ảnh và ghi ims_photo của mặt đó; mặt không có ảnh giữ biểu tượng', () => {
+    const layout = cabinetFrameLayout(
+      {
+        cabinet: { id: CAB, code: 'R1', uHeight: 10 },
+        devices: [{ id: 'a', code: 'SW-01', u: 2, uSize: 1, cell: icon, faces: { front: { style: 'shape=image;image=data:image/png,AAA;' } } }],
+      },
+      both,
+    );
+    const [front, back] = layout.devices;
+    expect(front).toMatchObject({ frame: 'rack', style: 'shape=image;image=data:image/png,AAA;', attrs: { ims_photo: 'front' } });
+    expect(back).toMatchObject({ frame: 'rack-back', style: 'shape=icon;', attrs: {} });
+  });
+
+  it('buildRackXml ("Dựng lại mặt tủ"): XML một trang qua cổng kiểm, máy là ô con của đúng khung, giữ ims_photo', () => {
+    const layout = cabinetFrameLayout(
+      {
+        cabinet: { id: CAB, code: 'R1', uHeight: 10 },
+        devices: [
+          { id: DEV_1, code: 'SW-01', u: 2, uSize: 1, cell: icon, faces: { back: { style: 'shape=image;image=data:image/png,AAA;' } } },
+          { id: DEV_2, code: 'PC-01', u: null, uSize: null, cell: icon },
+        ],
+      },
+      both,
+    );
+    const xml = buildRackXml(layout);
+    expect(checkDiagramXml(xml, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+    const index = buildCellIndex(xml);
+    const frameIds = new Map(index.cells.filter((c) => c.ims.ims_cabinet_id).map((c) => [c.label, c.id]));
+    expect([...frameIds.keys()]).toEqual(['Tủ R1 · Mặt trước', 'Tủ R1 · Mặt sau', 'Tủ R1 · Chưa khai U']);
+    const devices = index.cells.filter((c) => c.kind === 'device');
+    expect(devices.map((c) => [c.ims.ims_device_code, c.parent, c.ims.ims_photo ?? null])).toEqual([
+      ['PC-01', frameIds.get('Tủ R1 · Chưa khai U'), null],
+      ['SW-01', frameIds.get('Tủ R1 · Mặt trước'), null],
+      ['SW-01', frameIds.get('Tủ R1 · Mặt sau'), 'back'],
+    ]);
+  });
+
+  it('mặc định (chèn khung kiểu cũ) chỉ một mặt — giữ nguyên bố cục', () => {
+    const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'R1', uHeight: 10 }, devices: [{ id: 'a', code: 'SW-01', u: 2, uSize: 1, cell: icon }] });
+    expect(layout.frames.map((f) => f.key)).toEqual(['rack']);
+    expect(layout.devices[0].attrs).toEqual({});
   });
 });

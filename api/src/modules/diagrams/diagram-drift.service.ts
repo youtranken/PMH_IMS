@@ -78,8 +78,8 @@ export class DiagramDriftService implements OnModuleInit {
           ips: ips.get(d.id) ?? [],
           siteCode: d.siteCode,
           cabinetCode: d.cabinetCode,
-          // Kho chưa có cột U (vị trí U thuộc phần mặt tủ) — cùng giá trị với bản chụp lúc lưu.
-          u: null,
+          u: d.rackUStart,
+          uSize: d.rackUSize,
         },
       ]),
     );

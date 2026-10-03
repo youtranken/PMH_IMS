@@ -175,6 +175,21 @@ export class DiagramsController {
   }
 
   /**
+   * Hình "Biểu tượng" / "Ảnh thật" (từng mặt) của các máy — công tắc Ảnh thật trên màn sửa. Ảnh
+   * nhúng dạng data URI đã thu nhỏ. Không cần mã sơ đồ: ảnh và biểu tượng là hồ sơ thiết bị mọi vai
+   * vốn xem được ở trang thiết bị, không phải nội dung bản vẽ.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('device-looks')
+  deviceLooks(@Query() query: DeviceInfoQueryDto) {
+    const ids = splitUuidList(query.ids) ?? [];
+    if (ids.length > DEVICE_INFO_MAX_IDS) {
+      throw new BadRequestException({ code: 'DIAGRAM_DEVICE_INFO_TOO_MANY', message: 'Quá nhiều thiết bị trong một lần hỏi.' });
+    }
+    return this.diagrams.deviceLooks(ids);
+  }
+
+  /**
    * Dòng sơ đồ cổng theo id (= `ims_link_id`) — thẻ dây, nét vừa khai. Không cần mã sơ đồ: đây là
    * sơ đồ cổng mọi vai vốn đọc được ở trang thiết bị. CHỈ ĐỌC: `diagrams` không có route nào ghi
    * sơ đồ cổng (AD-18) — "Khai"/"Gỡ" là web gọi thẳng endpoint của `devices`.
@@ -309,6 +324,15 @@ export class DiagramsController {
   @Audited('diagram.saved', 'diagram', { writtenByService: true })
   draftFromPortMap(@Param() params: IdParamDto, @Body() dto: DraftFromPortMapDto, @Req() req: AuthedRequest) {
     return this.diagrams.draftFromPortMap(req.user!.email, params.id, dto);
+  }
+
+  /** "Dựng lại mặt tủ" (bản vẽ loại tủ): một phiên bản nháp mới từ kho — sửa bản vẽ nên hỏi mã như lưu. */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/versions/rebuild-rack')
+  @Audited('diagram.saved', 'diagram', { writtenByService: true })
+  rebuildRack(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.diagrams.rebuildRack(req.user!.email, params.id);
   }
 
   /** Mọi vai gọi được; service chỉ cho Thành viên đặt tên phiên bản do chính họ lưu. */

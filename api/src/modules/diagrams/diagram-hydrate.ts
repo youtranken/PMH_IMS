@@ -1,4 +1,5 @@
 import { SaxesParser, type SaxesTagPlain } from 'saxes';
+import { rackUnitLabel } from '../../common/rack-units';
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
 import { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef } from '../catalog/catalog.api';
 import { buildCellIndex } from './diagram-cells';
@@ -27,6 +28,33 @@ export const IMS_STYLE_KEYS = ['shape', 'image', 'imageAspect', 'aspect', 'outli
 /** Thuộc tính dữ liệu của ô thiết bị ngoài hợp đồng mà bản chèn cũ từng ghi — dehydrate gỡ. */
 const LEGACY_DATA_ATTRS = new Set(['ims_device_ip', 'ims_device_type']);
 
+/**
+ * Ảnh thật (AD-18): `ims_photo` = mặt người vẽ chọn hiện (`front` | `back`), lưu trong XML khô;
+ * `ims_photo_file_id` = ảnh đang dùng lúc mở (ảnh riêng máy đè ảnh model) — hydrate đặt cùng ảnh
+ * nhúng, dehydrate gỡ, để đổi ảnh ở trang thiết bị hiện trên mọi bản vẽ từ lần mở sau.
+ */
+export const PHOTO_SIDE_ATTR = 'ims_photo';
+export const PHOTO_FILE_ATTR = 'ims_photo_file_id';
+export type PhotoSide = 'front' | 'back';
+
+/** Ảnh một mặt đã thu nhỏ: id tệp + data URI dạng draw.io (`data:image/png,<base64>`). */
+export interface DevicePhoto {
+  fileId: string;
+  uri: string;
+}
+
+/**
+ * Ảnh dạng draw.io nhận trong style: `data:<mime>,<base64>` — bỏ chữ `;base64` vì `;` là dấu tách
+ * khoá của chuỗi style; draw.io tự thêm lại lúc vẽ (cổng kiểm nhận cả hai dạng).
+ */
+export function photoDataUri(mime: string, bytes: Buffer): string {
+  return `data:${mime},${bytes.toString('base64')}`;
+}
+
+function photoSideOf(value: string | undefined): PhotoSide | null {
+  return value === 'front' || value === 'back' ? value : null;
+}
+
 const WARN_MISSING = '⚠ Không tìm thấy trong kho';
 const WARN_RETIRED = '⚠ Đã thanh lý';
 
@@ -39,8 +67,14 @@ export interface DeviceCellSource {
   ips: string[];
   siteCode: string | null;
   cabinetCode: string | null;
-  /** Vị trí U trong tủ — `null` tới khi kho có cột U (Story 10.11). */
+  /** U thấp nhất máy chiếm trong tủ (U1 = đáy); `null` = chưa khai. */
   u: number | null;
+  /** Số U máy chiếm; vắng/`null` = 1. */
+  uSize?: number | null;
+  /** Cảnh báo vị trí (vd U vượt chiều cao tủ — dữ liệu cũ) — thêm một dòng ở nhãn. */
+  rackWarning?: string | null;
+  /** Ảnh thật đã thu nhỏ của từng mặt — chỉ mặt nào ô trên bản vẽ cần mới có. */
+  photos?: Partial<Record<PhotoSide, DevicePhoto>>;
   /** Hình của loại (`device_type.diagram_shape`); `null` = "Thiết bị khác". */
   shape: string | null;
   /** SVG riêng của loại, đã lọc lúc tải lên; có thì thắng `shape`. */
@@ -51,8 +85,9 @@ export interface DeviceCellSource {
 export function deviceCellLabel(device: DeviceCellSource): string {
   if (!device.found) return [device.code, WARN_MISSING].join('\n');
   const ip = device.ips.length === 0 ? null : device.ips.length === 1 ? device.ips[0] : `${device.ips[0]} (+${device.ips.length - 1})`;
-  const where = [device.siteCode, device.cabinetCode, device.u !== null ? `U${device.u}` : null].filter(Boolean).join(' · ');
+  const where = [device.siteCode, device.cabinetCode, rackUnitLabel(device.u, device.uSize)].filter(Boolean).join(' · ');
   const lines = [device.code, ip, where || null];
+  if (device.rackWarning) lines.push(device.rackWarning);
   if (device.status === 'retired') lines.push(WARN_RETIRED);
   return lines.filter((line): line is string => Boolean(line)).join('\n');
 }
@@ -61,7 +96,13 @@ export function deviceCellLabel(device: DeviceCellSource): string {
  * Phần style IMS đặt cho ô thiết bị. Ảnh SVG mã hoá URL (`%3Csvg…`), không base64: giá trị
  * không chứa `;` nên không cắt nhầm chuỗi style `k=v;`, và cổng kiểm đọc được chữ bên trong.
  */
-export function deviceLookStyle(look: { shape: string | null; iconSvg: string | null; found: boolean }): string {
+export function deviceLookStyle(
+  look: { shape: string | null; iconSvg: string | null; found: boolean; photos?: Partial<Record<PhotoSide, DevicePhoto>> },
+  side: PhotoSide | null = null,
+): string {
+  // Ảnh thật giữ tỉ lệ ảnh trong khung ô (`imageAspect=1`): ô của máy trong khung tủ cao đúng số U.
+  const photo = side && look.found ? look.photos?.[side] : undefined;
+  if (photo) return `shape=image;image=${photo.uri};imageAspect=1;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;`;
   if (look.found && look.iconSvg) {
     const uri = `data:image/svg+xml,${encodeURIComponent(look.iconSvg)}`;
     return `shape=image;image=${uri};imageAspect=0;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;`;
@@ -162,6 +203,7 @@ type Attrs = Record<string, string>;
 interface DeviceContext {
   id: string;
   code: string;
+  photo: PhotoSide | null;
 }
 
 /** Ô dây "của kho" và trạng thái của nó (luật ở `diagram-checks.ts`). */
@@ -191,7 +233,7 @@ function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEd
     let edge: EdgeContext | null = null;
     const parent = stack[stack.length - 1];
     if ((tag.name === 'UserObject' || tag.name === 'object') && attrs.ims_device_id) {
-      device = { id: attrs.ims_device_id, code: attrs.ims_device_code ?? '' };
+      device = { id: attrs.ims_device_id, code: attrs.ims_device_code ?? '', photo: photoSideOf(attrs[PHOTO_SIDE_ATTR]) };
       attrs = edit.device.data(attrs, device);
     } else if ((tag.name === 'UserObject' || tag.name === 'object') && edges.has(attrs.id ?? '')) {
       edge = edges.get(attrs.id)!;
@@ -262,7 +304,7 @@ export function dehydrateDiagramXml(xml: string): string {
   return rewriteCells(xml, edgesOf(xml, new Map()), {
     device: {
       data: (attrs, device) => {
-        const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name)));
+        const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name) && name !== PHOTO_FILE_ATTR));
         return withAttr(kept, 'label', device.code);
       },
       cell: (attrs) => (attrs.style === undefined ? attrs : withAttr(attrs, 'style', styleWithoutIms(attrs.style))),
@@ -304,10 +346,13 @@ export function hydrateDiagramXml(
   return rewriteCells(xml, edgesOf(xml, cables.links), {
     device: {
       data: (attrs, device) => {
-        const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name)));
-        return withAttr(kept, 'label', deviceCellLabel(sourceOf(device)));
+        const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name) && name !== PHOTO_FILE_ATTR));
+        const source = sourceOf(device);
+        const labeled = withAttr(kept, 'label', deviceCellLabel(source));
+        const photo = device.photo && source.found ? source.photos?.[device.photo] : undefined;
+        return photo ? withAttr(labeled, PHOTO_FILE_ATTR, photo.fileId) : labeled;
       },
-      cell: (attrs, device) => withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '')}${deviceLookStyle(sourceOf(device))}`),
+      cell: (attrs, device) => withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '')}${deviceLookStyle(sourceOf(device), device.photo)}`),
     },
     edge: {
       data: (attrs, edge) => {

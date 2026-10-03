@@ -236,6 +236,33 @@ describe('checkDrift — lệch kho của một phiên bản (Q-23, AD-18)', () 
     expect(port.message).toBe('Dây SW-01 ↔ SRV-01: cổng Gi0/1 ↔ eth0 → Gi0/2 ↔ eth0');
   });
 
+  it('lời báo vị trí ghi cả U (nhiều U đọc "U5–U6"); đổi số U cũng là đổi vị trí', () => {
+    const [moved] = checkDrift(
+      input(device('d1', DEV_A, 'SW-01'), {
+        snapshot: [snap(DEV_A, 'SW-01', { cabinet: 'R1', u: 5, uSize: 2 })],
+        devices: new Map([now(DEV_A, 'SW-01', { cabinetCode: 'R1', u: 7, uSize: 2 })]),
+      }),
+    );
+    expect(moved.message).toBe('Thiết bị SW-01: vị trí HCM · R1 · U5–U6 → HCM · R1 · U7–U8');
+    const [resized] = checkDrift(
+      input(device('d1', DEV_A, 'SW-01'), {
+        snapshot: [snap(DEV_A, 'SW-01', { cabinet: 'R1', u: 5, uSize: 1 })],
+        devices: new Map([now(DEV_A, 'SW-01', { cabinetCode: 'R1', u: 5, uSize: 2 })]),
+      }),
+    );
+    expect(resized.code).toBe('DRIFT_LOCATION');
+  });
+
+  it('bản chụp lưu trước khi kho có U (không có uSize) → không báo đổi vị trí chỉ vì máy vừa được khai U', () => {
+    const found = checkDrift(
+      input(device('d1', DEV_A, 'SW-01'), {
+        snapshot: [snap(DEV_A, 'SW-01', { cabinet: 'R1', u: null })],
+        devices: new Map([now(DEV_A, 'SW-01', { cabinetCode: 'R1', u: 5, uSize: 1 })]),
+      }),
+    );
+    expect(found).toEqual([]);
+  });
+
   it('IP rỗng hai phía đọc thành "(không có)"', () => {
     const [finding] = checkDrift(
       input(device('d1', DEV_A, 'SW-01'), {

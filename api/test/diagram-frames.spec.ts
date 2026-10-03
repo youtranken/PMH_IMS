@@ -15,6 +15,7 @@ import { SubnetService } from '../src/modules/ipam/subnet.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 
 /**
  * Khung bản vẽ con, khung VLAN, khung tủ (AD-18) trên Postgres thật: lưu từ chối gắn MỚI sai
@@ -61,7 +62,7 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
     const audit = new AuditWriterService(db);
     const catalog = new CatalogApiService(new CatalogService(db, audit));
     const devicesService = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
-    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService));
+    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService), noPhotos);
     const config = new SystemConfigService(db);
     const subnets = new SubnetService(db, audit, catalog, config);
     const ipam = new IpamApiService(new IpAddressService(db, audit, devices, subnets, config), subnets);
@@ -200,8 +201,10 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
       const frame = await service.cabinetFrame(cabinetId);
       expect(frame.cabinet).toMatchObject({ id: cabinetId, code: 'E2E-R1', uHeight: 12 });
       expect(frame.layout.uHeight).toBe(12);
+      // Mặt trước + mặt sau cạnh nhau, cột "Chưa khai U" sau cùng — mọi khung mang ims_cabinet_id.
       expect(frame.layout.frames.map((f) => [f.key, f.attrs.ims_cabinet_id])).toEqual([
         ['rack', cabinetId],
+        ['rack-back', cabinetId],
         ['unplaced', cabinetId],
       ]);
       expect(frame.layout.devices.map((d) => [d.code, d.frame])).toEqual([
