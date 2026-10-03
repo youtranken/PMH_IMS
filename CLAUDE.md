@@ -43,6 +43,9 @@ Hệ màu "Sunset Grove" chỉ định nghĩa ở **một chỗ**: `web/src/css/
   `var(--danger)`… Đổi màu toàn hệ thống = sửa duy nhất `tokens.css`.
 - `ops/gate-hex.sh` chặn hex, `%23hex` trong data-URI và `rgb()/rgba()/hsl()/hsla()` ngoài
   `tokens.css` (bỏ qua chú thích). Cần màu trong suốt thì tạo token có cặp dark.
+- Gate đó quét cả `api/src/**/*.ts` (trừ spec, migration và `api/src/common/palette.generated.ts`).
+  Màu phía server (xuất PNG/PDF, mail) lấy từ `PALETTE`; đổi `tokens.css` xong thì chạy
+  `npm --prefix api run gen:palette` (`palette.spec.ts` đỏ khi hai bên lệch).
 - Mỗi token light phải có cặp dark trong `html[data-theme='dark']`. **Không phải `.dark`**: selector
   đó không tồn tại trong repo, viết theo nó sẽ ra CSS hợp lệ mà không bao giờ chạy.
 - Không tạo style riêng cho màn mới (UX-DR1): dùng lại `web/src/ui` và shell.
