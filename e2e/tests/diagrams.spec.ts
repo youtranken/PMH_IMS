@@ -229,7 +229,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect(label.status()).toBe(201);
 
     await page.goto('/diagrams');
-    expect(await rowActionNames(page, name)).toEqual(['Thêm bản vẽ con']);
+    expect(await rowActionNames(page, name)).toEqual(['Trình chiếu', 'Thêm bản vẽ con']);
 
     // Thành viên tạo được bản vẽ con qua giao diện.
     await rowAction(page, name, 'Thêm bản vẽ con');

@@ -532,7 +532,12 @@
   }
 }
 /* Trình chiếu sơ đồ: phủ cả khung nhìn, đè lên shell nhưng nằm DƯỚI lớp hộp thoại — hộp nhập mã
-   khi hết ân hạn giữa chừng phải nổi lên trên trang đang chiếu. */
+   khi hết ân hạn giữa chừng phải nổi lên trên trang đang chiếu. Hoạt ảnh mờ-hiện của `.page` giữ
+   trạng thái cuối nên biến `.page` thành ngữ cảnh xếp lớp riêng: còn nó thì `z-index` của khung
+   chiếu không vượt được thanh trên của shell (thanh đó đè lên tên trang đang chiếu). */
+.page:has(.slideshow) {
+  animation: none;
+}
 .slideshow {
   position: fixed;
   inset: 0;

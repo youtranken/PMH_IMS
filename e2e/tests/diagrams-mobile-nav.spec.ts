@@ -245,6 +245,8 @@ test.describe('Sơ đồ mạng — điện thoại, tìm, lớp, chỉ đườn
     await rowAction(page, net.coreName, 'Trình chiếu');
     const show = page.getByRole('region', { name: 'Trình chiếu sơ đồ' });
     await expect(show.getByRole('heading', { level: 1, name: net.coreName })).toBeVisible();
+    // Khung chiếu đè lên cả thanh trên của shell: bấm thử vào tên trang không bị phần tử khác chặn.
+    await show.getByRole('heading', { level: 1, name: net.coreName }).click({ trial: true, timeout: 5_000 });
     await expect(show.getByRole('status', { name: 'Trang đang chiếu' })).toHaveText('Trang 1/2');
     await expect(show.getByText(net.core.code)).toBeVisible();
 
@@ -252,7 +254,8 @@ test.describe('Sơ đồ mạng — điện thoại, tìm, lớp, chỉ đườn
     await page.keyboard.press('ArrowRight');
     const unlock = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
     await expect(unlock).toBeVisible();
-    await expect(show).toBeVisible();
+    // Hộp modal ẩn phần còn lại khỏi cây trợ năng, nên "không thoát" kiểm bằng đường dẫn.
+    await expect(page).toHaveURL(new RegExp(`/diagrams/${net.coreId}/present$`));
     await fillOtp(unlock, await freshTotpCode(secret));
     await expect(show.getByRole('heading', { level: 1, name: net.floorName })).toBeVisible();
     await expect(show.getByText(net.pc.code)).toBeVisible();
