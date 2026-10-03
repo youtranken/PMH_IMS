@@ -16,7 +16,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import type { UserRole } from '../auth/types';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { DevicesApiService } from '../devices/devices.api';
+import { DevicesApiService, type PortLink } from '../devices/devices.api';
 import { IpamApiService } from '../ipam/ipam.api';
 import { UsersApiService } from '../users/users.api';
 import {
@@ -27,8 +27,18 @@ import {
   type CellDiff,
   type CellIndex,
 } from './diagram-cells';
+import { cableEdgeStates, externalLinks, undrawnLinks, type CableEdge } from './diagram-checks';
+import { buildDraftXml } from './diagram-draft';
+import type { CheckLink } from './diagram-finding';
 import { checkDiagramXml, sanitizeDiagramSvg } from './diagram-gate';
-import { dehydrateDiagramXml, deviceInsertCell, hydrateDiagramXml, type DeviceCellSource } from './diagram-hydrate';
+import {
+  dehydrateDiagramXml,
+  deviceInsertCell,
+  hydrateDiagramXml,
+  linkEdgeCell,
+  linkLabelFrom,
+  type DeviceCellSource,
+} from './diagram-hydrate';
 import {
   diagramHistoryTable,
   diagramPresenceTable,
@@ -109,6 +119,36 @@ export interface DiagramDeviceInfo {
   cell: { style: string; label: string; width: number; height: number };
 }
 
+/**
+ * Một dòng sơ đồ cổng như sơ đồ thấy nó (đọc qua `devices.api`, AD-18): `id` = `ims_link_id`.
+ * Nhãn cổng hai chiều + style ô dây do server dựng — web chèn nét (Vẽ vào, sau Khai) bằng đúng
+ * luật hydrate, không tự ghép chuỗi.
+ */
+export interface DiagramLink extends PortLink {
+  /** `cable_type.color_slot`; `null` = chưa khai loại dây. */
+  colorSlot: number | null;
+  /** Nhãn khi nét đi từ máy giữ bản ghi (`deviceId`) / từ máy đầu kia (`peerDeviceId`). */
+  labelFromA: string;
+  labelFromB: string;
+  /** Style cho ô dây mới (có ô màu `imsPaint`). */
+  edgeStyle: string;
+}
+
+/** Loại dây cho chú giải màu và ô chọn (kể cả loại ngừng dùng: dây cũ vẫn giữ màu — Q-14). */
+export interface CableTypeInfo {
+  id: string;
+  name: string;
+  colorSlot: number;
+  active: boolean;
+}
+
+/** Phạm vi "Dựng nháp từ sơ đồ cổng": danh sách máy, hoặc một tủ, hoặc một site. */
+export interface DraftScope {
+  deviceIds?: string[];
+  cabinetId?: string;
+  siteId?: string;
+}
+
 export interface DiagramContent {
   diagram: DiagramNode;
   /** `null` = bản vẽ chưa lưu lần nào: màn sửa mở khung trống, màn xem báo "chưa có bản vẽ". */
@@ -120,6 +160,15 @@ export interface DiagramContent {
   deviceCells: { cellId: string; deviceId: string; code: string }[];
   /** Mọi máy có ô trên phiên bản, đọc MỘT lượt (không N+1). */
   devices: DiagramDeviceInfo[];
+  /** Nét dây "của kho" và trạng thái (đã khai / đã gỡ / chưa khai …) — luật ở `diagram-checks.ts`. */
+  cableEdges: CableEdge[];
+  /** Dòng sơ đồ cổng của mọi nét + mọi dòng chạm máy có trên bản vẽ. */
+  links: DiagramLink[];
+  /** Kết nối giữa hai máy cùng có trên bản vẽ mà chưa nét nào mang — "Có N kết nối mới chưa vẽ". */
+  undrawnLinkIds: string[];
+  /** Kết nối có một đầu ngoài bản vẽ — trình xem chỉ "→ máy kia (bản vẽ khác)". */
+  externalLinkIds: string[];
+  cableTypes: CableTypeInfo[];
 }
 
 /** Trần số máy một lần hỏi `device-info` — hơn thế là gọi nhầm, không phải một bản vẽ. */
@@ -425,21 +474,166 @@ export class DiagramsService {
         detail: { versionId: row?.id ?? null, seq: row?.seq ?? null, mode: options.mode },
       }),
     );
-    if (!row) return { diagram, version: null, deviceCells: [], devices: [] };
+    if (!row) {
+      return {
+        diagram,
+        version: null,
+        deviceCells: [],
+        devices: [],
+        cableEdges: [],
+        links: [],
+        undrawnLinkIds: [],
+        externalLinkIds: [],
+        cableTypes: await this.cableTypeInfos(),
+      };
+    }
     const [item] = await this.toItems(diagramId, [row]);
     const deviceCells = row.cellIndex.cells
       .filter((cell) => cell.kind === 'device' && cell.deviceId)
       .map((cell) => ({ cellId: cell.id, deviceId: cell.deviceId!, code: cell.ims.ims_device_code ?? '' }));
-    const { infos: devices, sources } = await this.deviceData(deviceCells.map((c) => c.deviceId));
-    // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại — AD-18). Xem: ảnh SVG
-    // chụp lúc lưu, XML để nguyên.
-    const xml = options.mode === 'edit' ? hydrateDiagramXml(row.xml, sources) : row.xml;
+    const [{ infos: devices, sources }, cables] = await Promise.all([
+      this.deviceData(deviceCells.map((c) => c.deviceId)),
+      this.cableData(row.cellIndex),
+    ]);
+    // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại, nhãn cổng + ô màu dây
+    // theo sơ đồ cổng hiện tại — AD-18). Xem: ảnh SVG chụp lúc lưu, XML để nguyên; màu dây và nét
+    // đỏ/vàng trình xem tô lại theo `cableEdges` + `links`.
+    const xml = options.mode === 'edit' ? hydrateDiagramXml(row.xml, sources, { links: cables.check, slots: cables.slots }) : row.xml;
     return {
       diagram,
       version: { ...item, xml, svg: row.svg, deviceSnapshot: row.deviceSnapshot },
       deviceCells,
       devices,
+      cableEdges: cables.edges,
+      links: cables.links,
+      undrawnLinkIds: cables.undrawn,
+      externalLinkIds: cables.external,
+      cableTypes: cables.cableTypes,
     };
+  }
+
+  /* -------------------------------------------------- dây ↔ sơ đồ cổng --- */
+
+  /**
+   * Dòng sơ đồ cổng của mọi nét mang `ims_link_id` — bộ tự kiểm (gửi duyệt/phát hành, lệch kho)
+   * gọi cái này rồi chạy `checkCables`. Dòng đã gỡ thì vắng mặt. CHỈ ĐỌC qua `devices.api`.
+   */
+  async loadCheckLinks(index: CellIndex): Promise<Map<string, CheckLink>> {
+    const links = await this.devices.portLinks(linkIdsOf(index));
+    return new Map([...links].map(([id, link]) => [id, toCheckLink(link)]));
+  }
+
+  /** Dòng sơ đồ cổng theo id (thẻ dây, nét vừa khai, kết nối vừa nối hàng loạt). Dòng đã gỡ thì vắng. */
+  async links(ids: string[]): Promise<DiagramLink[]> {
+    const valid = [...new Set(ids)].filter((id) => UUID_RE.test(id));
+    const [found, slots] = await Promise.all([this.devices.portLinks(valid), this.cableSlots()]);
+    return valid.flatMap((id) => {
+      const link = found.get(id);
+      return link ? [toDiagramLink(link, slots)] : [];
+    });
+  }
+
+  /**
+   * Trạng thái dây trên XML ĐANG VẼ (màn sửa gửi lên sau khi chèn máy): cùng luật với lúc mở,
+   * nên "Có N kết nối mới chưa vẽ" tính cả máy vừa chèn. Chỉ đọc, không lưu gì. XML vẫn là dữ liệu
+   * không tin cậy: qua cổng kiểm như lúc lưu.
+   */
+  async cableStatus(xml: string): Promise<{ edges: CableEdge[]; undrawn: DiagramLink[] }> {
+    const [xmlMaxKb, maxCells] = await Promise.all([this.config.getNumber('diagramXmlMaxKb'), this.config.getNumber('diagramMaxCells')]);
+    const gate = checkDiagramXml(xml, { xmlMaxKb, maxCells });
+    if (gate.reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: gate.reason });
+    const cables = await this.cableData(buildCellIndex(xml));
+    const undrawn = new Set(cables.undrawn);
+    return { edges: cables.edges, undrawn: cables.links.filter((l) => undrawn.has(l.id)) };
+  }
+
+  /**
+   * "Dựng nháp từ sơ đồ cổng" (FR-048): một phiên bản MỚI chỉ có máy (lưới) + dây đã gắn kết nối.
+   * Không ghi sơ đồ cổng; không có ảnh xem tới khi người vẽ mở Sửa, xếp gọn và lưu.
+   */
+  async draftFromPortMap(actor: string, diagramId: string, scope: DraftScope): Promise<VersionItem> {
+    const max = await this.config.getNumber('diagramAutolayoutMaxNodes');
+    let ids: string[];
+    if (scope.deviceIds && scope.deviceIds.length > 0) {
+      ids = [...new Set(scope.deviceIds)].filter((id) => UUID_RE.test(id));
+    } else if (scope.cabinetId || scope.siteId) {
+      const page = await this.devices.listUsableIn({ siteId: scope.siteId, cabinetId: scope.cabinetId }, max + 1);
+      if (page.total > max) throw tooMany(page.total, max);
+      ids = page.items.map((d) => d.id);
+    } else {
+      throw new BadRequestException({ code: 'DIAGRAM_AUTOLAYOUT_SCOPE', message: 'Chọn một site, một tủ hoặc danh sách máy để dựng nháp.' });
+    }
+    if (ids.length > max) throw tooMany(ids.length, max);
+    const { infos } = await this.deviceData(ids);
+    const usable = infos.filter((info) => info.found && info.status !== 'retired' && info.code);
+    if (usable.length === 0) {
+      throw new BadRequestException({ code: 'DIAGRAM_AUTOLAYOUT_EMPTY', message: 'Phạm vi đã chọn không có thiết bị nào còn dùng.' });
+    }
+    const [touching, slots] = await Promise.all([this.devices.portLinksTouching(usable.map((d) => d.id)), this.cableSlots()]);
+    const xml = dehydrateDiagramXml(
+      buildDraftXml(
+        usable.map((d) => ({ id: d.id, code: d.code!, cell: d.cell })),
+        touching.map(toCheckLink),
+        slots,
+      ),
+    );
+    const index = buildCellIndex(xml);
+    const snapshot = await this.snapshot(index);
+    const id = await this.db.transaction(async (tx) => {
+      await this.lockLive(tx, diagramId);
+      const latest = await this.latestWithin(tx, diagramId);
+      const diff = diffCellIndex(latest?.cellIndex ?? null, index);
+      return this.insertVersion(tx, actor, diagramId, {
+        seq: (latest?.seq ?? 0) + 1,
+        xml,
+        svg: null,
+        index,
+        snapshot,
+        summary: `Dựng nháp từ sơ đồ cổng · ${summarizeDiff(diff)}`,
+        diff,
+        basedOnVersionId: latest?.id ?? null,
+        restoredFromVersionId: null,
+        history: 'version.saved',
+        auditAction: 'diagram.saved',
+        bytes: Buffer.byteLength(xml),
+      });
+    });
+    return this.versionItem(diagramId, id);
+  }
+
+  /**
+   * Dữ liệu dây của một chỉ mục ô, MỘT lượt: dòng của mọi nét + mọi dòng chạm máy có trên bản vẽ
+   * (đọc qua `devices.api`), ô màu loại dây (`catalog.api`), rồi chạy bộ luật `diagram-checks.ts`.
+   */
+  private async cableData(index: CellIndex) {
+    const deviceIds = [...new Set(index.cells.map((c) => c.deviceId).filter((id): id is string => Boolean(id && UUID_RE.test(id))))];
+    const [byId, touching, types] = await Promise.all([
+      this.devices.portLinks(linkIdsOf(index)),
+      this.devices.portLinksTouching(deviceIds),
+      this.catalog.cableTypes(),
+    ]);
+    const all = new Map(byId);
+    for (const link of touching) all.set(link.id, link);
+    const slots = new Map(types.map((t) => [t.id, t.colorSlot]));
+    const check = new Map([...all].map(([id, link]) => [id, toCheckLink(link)]));
+    const checkList = [...check.values()];
+    return {
+      check,
+      slots,
+      links: [...all.values()].map((link) => toDiagramLink(link, slots)),
+      edges: cableEdgeStates(index.cells, check),
+      undrawn: undrawnLinks(index.cells, checkList).map((l) => l.id),
+      external: externalLinks(index.cells, checkList).map((l) => l.id),
+      cableTypes: types.map((t) => ({ id: t.id, name: t.name, colorSlot: t.colorSlot, active: t.active })),
+    };
+  }
+
+  private async cableSlots(): Promise<Map<string, number>> {
+    return new Map((await this.catalog.cableTypes()).map((t) => [t.id, t.colorSlot]));
+  }
+
+  private async cableTypeInfos(): Promise<CableTypeInfo[]> {
+    return (await this.catalog.cableTypes()).map((t) => ({ id: t.id, name: t.name, colorSlot: t.colorSlot, active: t.active }));
   }
 
   /**
@@ -812,6 +1006,46 @@ export class DiagramsService {
       detail: (changes ?? undefined) as Record<string, unknown> | undefined,
     });
   }
+}
+
+function linkIdsOf(index: CellIndex): string[] {
+  return [
+    ...new Set(
+      index.cells
+        .filter((c) => c.kind === 'edge' && c.ims.ims_link_id && UUID_RE.test(c.ims.ims_link_id))
+        .map((c) => c.ims.ims_link_id),
+    ),
+  ];
+}
+
+function toCheckLink(link: PortLink): CheckLink {
+  return {
+    id: link.id,
+    deviceA: link.deviceId,
+    deviceB: link.peerDeviceId,
+    cableTypeId: link.cableTypeId,
+    portA: link.portLabel,
+    portB: link.peerPort,
+  };
+}
+
+function toDiagramLink(link: PortLink, slots: Map<string, number>): DiagramLink {
+  const check = toCheckLink(link);
+  const colorSlot = link.cableTypeId ? (slots.get(link.cableTypeId) ?? null) : null;
+  return {
+    ...link,
+    colorSlot,
+    labelFromA: linkLabelFrom(check, link.deviceId),
+    labelFromB: linkLabelFrom(check, link.peerDeviceId),
+    edgeStyle: linkEdgeCell(check, { sourceDeviceId: link.deviceId, slot: colorSlot }).style,
+  };
+}
+
+function tooMany(count: number, max: number): BadRequestException {
+  return new BadRequestException({
+    code: 'DIAGRAM_AUTOLAYOUT_TOO_MANY',
+    message: `Phạm vi có ${count} thiết bị, vượt trần ${max} của một lần dựng nháp — chọn một tủ hoặc danh sách máy nhỏ hơn.`,
+  });
 }
 
 function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell'> {

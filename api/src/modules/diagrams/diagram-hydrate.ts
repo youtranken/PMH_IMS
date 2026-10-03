@@ -1,6 +1,9 @@
 import { SaxesParser, type SaxesTagPlain } from 'saxes';
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
 import { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef } from '../catalog/catalog.api';
+import { buildCellIndex } from './diagram-cells';
+import { cableEdgeStates, type CableEdge } from './diagram-checks';
+import type { CheckLink } from './diagram-finding';
 
 /**
  * XML bản vẽ "khô" ↔ "ướt" (AD-18) — hàm THUẦN, test bảng dữ liệu ở `diagram-hydrate.spec.ts`.
@@ -86,15 +89,15 @@ export function deviceInsertCell(device: DeviceCellSource): { style: string; lab
 
 /* ------------------------------------------------------------- chuỗi style --- */
 
-/** Bỏ các khoá IMS khỏi style draw.io (`k=v;k=v;` có thể mở đầu bằng tên style không có `=`). */
-export function styleWithoutIms(style: string): string {
+/** Bỏ các khoá IMS (mặc định: của ô thiết bị) khỏi style draw.io (`k=v;k=v;` có thể mở đầu bằng tên style không có `=`). */
+export function styleWithoutIms(style: string, keys: readonly string[] = IMS_STYLE_KEYS): string {
   const tokens = style.split(';');
   const kept: string[] = [];
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
     if (token === '') continue;
     const key = token.includes('=') ? token.slice(0, token.indexOf('=')).trim() : null;
-    if (key !== null && IMS_STYLE_KEYS.includes(key)) {
+    if (key !== null && keys.includes(key)) {
       // `image=data:image/png;base64,AAA` bị `;` cắt làm hai mẩu: gỡ cả mẩu đuôi.
       if (key === 'image' && tokens[i + 1]?.startsWith('base64,')) i += 1;
       continue;
@@ -102,6 +105,54 @@ export function styleWithoutIms(style: string): string {
     kept.push(token);
   }
   return kept.length > 0 ? `${kept.join(';')};` : '';
+}
+
+/* ------------------------------------------------------------- dây của kho --- */
+
+/**
+ * Khoá style của nét dây "của kho" (mang `ims_link_id`, hoặc nối hai máy kho) do IMS làm chủ.
+ * `imsPaint` là ô màu IMS (`cable-<n>` theo `cable_type.color_slot`, `warn`, `danger`): server
+ * không biết theme, nên web đổi nó thành `strokeColor` đọc từ token lúc nạp trình vẽ — màu dây
+ * không bao giờ đọc từ `strokeColor` lưu trong XML.
+ */
+export const IMS_EDGE_STYLE_KEYS = ['strokeColor', 'fontColor', 'dashed', 'html', 'imsPaint'];
+
+const EDGE_REMOVED = '⚠ Kết nối đã bị gỡ khỏi sơ đồ cổng';
+const EDGE_UNDECLARED = '⚠ Chưa khai vào sơ đồ cổng';
+const EDGE_MISMATCH = '⚠ Kết nối không khớp hai máy ở hai đầu dây';
+const EDGE_DUPLICATE = '⚠ Hai dây cùng một kết nối';
+
+/** Dòng sơ đồ cổng hydrate cần biết (đọc qua `devices.api`) + ô màu của từng loại dây (`catalog.api`). */
+export interface CableHydration {
+  links: Map<string, CheckLink>;
+  /** `cable_type.id` → `color_slot`. */
+  slots: Map<string, number>;
+}
+
+/** Nhãn cổng đọc từ đầu nguồn của nét: "Gi0/24 ↔ Te1/0/1". Cổng đầu kia chưa ghi thì "—". */
+export function linkLabelFrom(link: CheckLink, sourceDeviceId: string | null): string {
+  const a = link.portA ?? '—';
+  const b = link.portB ?? '—';
+  return sourceDeviceId === link.deviceB ? `${b} ↔ ${a}` : `${a} ↔ ${b}`;
+}
+
+function paintOf(slot: number | null | undefined): string {
+  return `cable-${slot ?? 0}`;
+}
+
+/**
+ * Ô dây mới cho "Vẽ vào" / chèn sau "Khai kết nối": đã gắn `ims_link_id` + `ims_cable_type_id`,
+ * nhãn và ô màu như lúc hydrate — cùng một luật nên nét chèn vào và nét hiện lần mở sau là một.
+ */
+export function linkEdgeCell(
+  link: CheckLink,
+  at: { sourceDeviceId: string; slot: number | null },
+): { label: string; style: string; attrs: Record<string, string> } {
+  return {
+    label: linkLabelFrom(link, at.sourceDeviceId),
+    style: `edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;imsPaint=${paintOf(at.slot)};html=0;`,
+    attrs: { ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '' },
+  };
 }
 
 /* ------------------------------------------------------------- viết lại XML --- */
@@ -113,20 +164,23 @@ interface DeviceContext {
   code: string;
 }
 
+/** Ô dây "của kho" và trạng thái của nó (luật ở `diagram-checks.ts`). */
+type EdgeContext = CableEdge;
+
+interface CellEdit {
+  device: { data: (attrs: Attrs, device: DeviceContext) => Attrs; cell: (attrs: Attrs, device: DeviceContext) => Attrs };
+  /** `wrapped` = nét bọc trong `UserObject` (nhãn ở thuộc tính `label`), không thì nhãn ở `value` của `mxCell`. */
+  edge: { data: (attrs: Attrs, edge: EdgeContext) => Attrs; cell: (attrs: Attrs, edge: EdgeContext, wrapped: boolean) => Attrs };
+}
+
 /**
- * Đọc XML rồi ghi lại y nguyên, cho phép sửa thuộc tính của `UserObject`/`object` mang
- * `ims_device_id` và của `mxCell` ngay bên trong nó. Ghi chú và khai báo XML không giữ: draw.io
- * không đọc chúng, cổng kiểm không cần chúng.
+ * Đọc XML rồi ghi lại y nguyên, cho phép sửa thuộc tính ô thiết bị (`UserObject`/`object` mang
+ * `ims_device_id` + `mxCell` bên trong) và ô dây của kho (`edges`, theo id ô). Ghi chú và khai báo
+ * XML không giữ: draw.io không đọc chúng, cổng kiểm không cần chúng.
  */
-function rewriteDeviceCells(
-  xml: string,
-  edit: {
-    data: (attrs: Attrs, device: DeviceContext) => Attrs;
-    cell: (attrs: Attrs, device: DeviceContext) => Attrs;
-  },
-): string {
+function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEdit): string {
   const out: string[] = [];
-  const stack: { name: string; device: DeviceContext | null }[] = [];
+  const stack: { device: DeviceContext | null; edge: EdgeContext | null }[] = [];
   const parser = new SaxesParser({ xmlns: false });
   parser.on('error', (error) => {
     throw error;
@@ -134,17 +188,26 @@ function rewriteDeviceCells(
   parser.on('opentag', (tag: SaxesTagPlain) => {
     let attrs: Attrs = { ...tag.attributes };
     let device: DeviceContext | null = null;
+    let edge: EdgeContext | null = null;
+    const parent = stack[stack.length - 1];
     if ((tag.name === 'UserObject' || tag.name === 'object') && attrs.ims_device_id) {
       device = { id: attrs.ims_device_id, code: attrs.ims_device_code ?? '' };
-      attrs = edit.data(attrs, device);
-    } else if (tag.name === 'mxCell' && stack[stack.length - 1]?.device) {
-      attrs = edit.cell(attrs, stack[stack.length - 1].device!);
+      attrs = edit.device.data(attrs, device);
+    } else if ((tag.name === 'UserObject' || tag.name === 'object') && edges.has(attrs.id ?? '')) {
+      edge = edges.get(attrs.id)!;
+      attrs = edit.edge.data(attrs, edge);
+    } else if (tag.name === 'mxCell' && parent?.device) {
+      attrs = edit.device.cell(attrs, parent.device);
+    } else if (tag.name === 'mxCell' && parent?.edge) {
+      attrs = edit.edge.cell(attrs, parent.edge, true);
+    } else if (tag.name === 'mxCell' && edges.has(attrs.id ?? '')) {
+      attrs = edit.edge.cell(attrs, edges.get(attrs.id)!, false);
     }
     const text = Object.entries(attrs)
       .map(([name, value]) => ` ${name}="${escapeXmlAttr(value)}"`)
       .join('');
     out.push(`<${tag.name}${text}${tag.isSelfClosing ? '/>' : '>'}`);
-    if (!tag.isSelfClosing) stack.push({ name: tag.name, device });
+    if (!tag.isSelfClosing) stack.push({ device, edge });
   });
   parser.on('closetag', (tag: SaxesTagPlain) => {
     if (tag.isSelfClosing) return;
@@ -162,27 +225,70 @@ function withAttr(attrs: Attrs, name: string, value: string): Attrs {
   return { ...attrs, [name]: value };
 }
 
+/** Nét dây của kho theo id ô. `links` vắng (dehydrate) thì chỉ cần biết nét nào là của kho. */
+function edgesOf(xml: string, links: Map<string, CheckLink>): Map<string, EdgeContext> {
+  return new Map(cableEdgeStates(buildCellIndex(xml).cells, links).map((edge) => [edge.cellId, edge]));
+}
+
+function edgeLabel(edge: EdgeContext, links: Map<string, CheckLink>): string {
+  switch (edge.state) {
+    case 'linked':
+      return linkLabelFrom(links.get(edge.linkId!)!, edge.sourceDeviceId);
+    case 'removed':
+      return EDGE_REMOVED;
+    case 'mismatch':
+      return EDGE_MISMATCH;
+    case 'duplicate':
+      return EDGE_DUPLICATE;
+    default:
+      return EDGE_UNDECLARED;
+  }
+}
+
+function edgePaint(edge: EdgeContext, cables: CableHydration): string {
+  if (edge.state === 'linked') {
+    const link = cables.links.get(edge.linkId!)!;
+    return `imsPaint=${paintOf(link.cableTypeId ? cables.slots.get(link.cableTypeId) : null)};html=0;`;
+  }
+  return `imsPaint=${edge.state === 'undeclared' ? 'warn' : 'danger'};dashed=1;html=0;`;
+}
+
 /**
  * XML ướt (từ trình vẽ) → XML khô để lưu: nhãn ô thiết bị về đúng mã máy (đọc được khi mất kết
- * nối kho), gỡ khoá style IMS và thuộc tính dữ liệu cũ ngoài hợp đồng. Hình tự do, dây, chữ
- * không bị đụng.
+ * nối kho), gỡ khoá style IMS và thuộc tính dữ liệu cũ ngoài hợp đồng; nét dây của kho về nhãn
+ * rỗng, gỡ khoá màu IMS (`IMS_EDGE_STYLE_KEYS`). Hình tự do, dây nối hình tự do, chữ không bị đụng.
  */
 export function dehydrateDiagramXml(xml: string): string {
-  return rewriteDeviceCells(xml, {
-    data: (attrs, device) => {
-      const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name)));
-      return withAttr(kept, 'label', device.code);
+  return rewriteCells(xml, edgesOf(xml, new Map()), {
+    device: {
+      data: (attrs, device) => {
+        const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name)));
+        return withAttr(kept, 'label', device.code);
+      },
+      cell: (attrs) => (attrs.style === undefined ? attrs : withAttr(attrs, 'style', styleWithoutIms(attrs.style))),
     },
-    cell: (attrs) => (attrs.style === undefined ? attrs : withAttr(attrs, 'style', styleWithoutIms(attrs.style))),
+    edge: {
+      data: (attrs) => withAttr(attrs, 'label', ''),
+      cell: (attrs, _edge, wrapped) => {
+        const styled = attrs.style === undefined ? attrs : withAttr(attrs, 'style', styleWithoutIms(attrs.style, IMS_EDGE_STYLE_KEYS));
+        return wrapped ? styled : withAttr(styled, 'value', '');
+      },
+    },
   });
 }
 
 /**
  * XML khô (từ kho) → XML ướt để nạp trình vẽ: hình theo loại, nhãn từ kho hiện tại, dấu cảnh
- * báo. `devices` thiếu một id (máy đã xoá, id rác) thì ô đó hiện "Không tìm thấy trong kho" —
- * không bao giờ làm hỏng cả bản vẽ.
+ * báo; nét dây của kho mang nhãn cổng + ô màu theo dòng sơ đồ cổng HIỆN TẠI (đổi cổng/loại dây ở
+ * trang thiết bị hiện ngay), nét có kết nối đã gỡ thì đỏ, nét chưa khai thì vàng. `devices` thiếu
+ * một id (máy đã xoá, id rác) thì ô đó hiện "Không tìm thấy trong kho" — không bao giờ làm hỏng
+ * cả bản vẽ.
  */
-export function hydrateDiagramXml(xml: string, devices: Map<string, DeviceCellSource>): string {
+export function hydrateDiagramXml(
+  xml: string,
+  devices: Map<string, DeviceCellSource>,
+  cables: CableHydration = { links: new Map(), slots: new Map() },
+): string {
   const sourceOf = (device: DeviceContext): DeviceCellSource =>
     devices.get(device.id) ?? {
       found: false,
@@ -195,11 +301,24 @@ export function hydrateDiagramXml(xml: string, devices: Map<string, DeviceCellSo
       shape: null,
       iconSvg: null,
     };
-  return rewriteDeviceCells(xml, {
-    data: (attrs, device) => {
-      const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name)));
-      return withAttr(kept, 'label', deviceCellLabel(sourceOf(device)));
+  return rewriteCells(xml, edgesOf(xml, cables.links), {
+    device: {
+      data: (attrs, device) => {
+        const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name)));
+        return withAttr(kept, 'label', deviceCellLabel(sourceOf(device)));
+      },
+      cell: (attrs, device) => withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '')}${deviceLookStyle(sourceOf(device))}`),
     },
-    cell: (attrs, device) => withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '')}${deviceLookStyle(sourceOf(device))}`),
+    edge: {
+      data: (attrs, edge) => {
+        const labeled = withAttr(attrs, 'label', edgeLabel(edge, cables.links));
+        if (edge.state !== 'linked') return labeled;
+        return withAttr(labeled, 'ims_cable_type_id', cables.links.get(edge.linkId!)!.cableTypeId ?? '');
+      },
+      cell: (attrs, edge, wrapped) => {
+        const styled = withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '', IMS_EDGE_STYLE_KEYS)}${edgePaint(edge, cables)}`);
+        return wrapped ? styled : withAttr(styled, 'value', edgeLabel(edge, cables.links));
+      },
+    },
   });
 }

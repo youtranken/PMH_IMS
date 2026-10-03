@@ -8,7 +8,9 @@ import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { DevicesApiService } from '../src/modules/devices/devices.api';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import { DevicesService } from '../src/modules/devices/devices.service';
+import { buildCellIndex } from '../src/modules/diagrams/diagram-cells';
 import { DiagramsService } from '../src/modules/diagrams/diagrams.service';
 import type { IpamApiService } from '../src/modules/ipam/ipam.api';
 import { UsersApiService } from '../src/modules/users/users.api';
@@ -51,6 +53,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
   let siteId: string;
   let typeId: string;
   let catalogService: CatalogService;
+  let devicesService: DevicesService;
+  let config: SystemConfigService;
 
   async function count(sql: string, params: unknown[] = []): Promise<number> {
     const { rows } = await scratch.pool.query<{ n: number }>(sql, params);
@@ -64,11 +68,13 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
     const audit = new AuditWriterService(db);
     catalogService = new CatalogService(db, audit);
     const catalog = new CatalogApiService(catalogService);
-    const devices = new DevicesApiService(new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry()));
+    devicesService = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
+    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService));
     const ipam = {
       heldAddressesOf: (ids: string[]) => Promise.resolve(new Map(ids.map((id) => [id, ['10.20.0.5']]))),
     } as unknown as IpamApiService;
-    service = new DiagramsService(db, audit, new SystemConfigService(db), catalog, devices, ipam, new UsersApiService(new UsersService(db)));
+    config = new SystemConfigService(db);
+    service = new DiagramsService(db, audit, config, catalog, devices, ipam, new UsersApiService(new UsersService(db)));
 
     for (const user of [SA, MEMBER]) {
       await scratch.pool.query(
@@ -423,6 +429,145 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
         { name: 'Switch', diagram_shape: 'mxgraph.networks.switch' },
         { name: 'Thiết bị khác', diagram_shape: null },
       ]);
+    });
+  });
+
+  describe('Dây gắn sơ đồ cổng — loại dây, nhãn cổng, nét đỏ/vàng, kết nối chưa vẽ (Q-23, AD-18)', () => {
+    let diagramId: string;
+    let swId: string;
+    let srvId: string;
+    let apId: string;
+    let farId: string;
+    let fiber: string;
+    let ports: DevicePortsService;
+
+    function linkedEdge(id: string, source: string, target: string, linkId: string): string {
+      return `<UserObject label="" ims_link_id="${linkId}" id="${id}"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="${source}" target="${target}"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject>`;
+    }
+
+    function bareEdge(id: string, source: string, target: string): string {
+      return `<mxCell id="${id}" style="" edge="1" parent="1" source="${source}" target="${target}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+    }
+
+    async function newDevice(code: string): Promise<string> {
+      return (
+        await scratch.pool.query<{ id: string }>(
+          `INSERT INTO device (code, name, device_type_id, site_id) VALUES ($1::text, $1::text, $2, $3) RETURNING id`,
+          [code, typeId, siteId],
+        )
+      ).rows[0].id;
+    }
+
+    beforeAll(async () => {
+      ports = new DevicePortsService(scratch.db, devicesService);
+      swId = await newDevice('SW-E2E-CB');
+      srvId = await newDevice('SRV-E2E-CB');
+      apId = await newDevice('AP-E2E-CB');
+      farId = await newDevice('CORE-E2E-CB');
+      fiber = (await scratch.pool.query<{ id: string }>(`SELECT id FROM cable_type WHERE name = 'Fiber'`)).rows[0].id;
+      diagramId = (await service.create(SA.email, { name: 'E2E Dây', nodeType: 'room' })).id;
+    });
+
+    it('lưu: dây đã khai về khô; mở sửa: nhãn cổng + ô màu theo loại dây hiện tại; tóm tắt đếm dây theo kết nối', async () => {
+      const link = await ports.link(SA.email, swId, { portLabel: 'Gi1/0/24', connectedDeviceId: srvId, connectedPort: 'eth0', cableTypeId: fiber });
+      const xml = page(
+        deviceCell('d1', swId, 'SW-E2E-CB') +
+          deviceCell('d2', srvId, 'SRV-E2E-CB') +
+          `<UserObject label="Gi1/0/24 ↔ eth0" ims_link_id="${link.id}" ims_cable_type_id="${fiber}" id="e1"><mxCell style="edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;strokeColor=#FF0000;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject>`,
+      );
+      const saved = await service.save(MEMBER.email, diagramId, { xml, svg: SVG, basedOnVersionId: null });
+      expect(saved.summary).toBe('Thêm 2 thiết bị, thêm 1 dây');
+      const { rows } = await scratch.pool.query<{ xml: string }>(`SELECT xml FROM diagram_version WHERE diagram_id = $1 ORDER BY seq DESC LIMIT 1`, [diagramId]);
+      expect(rows[0].xml).not.toContain('Gi1/0/24');
+      expect(rows[0].xml).not.toContain('strokeColor');
+      // Lưu bản vẽ KHÔNG ghi sơ đồ cổng (AD-18).
+      expect(await count(`SELECT count(*)::int AS n FROM device_port WHERE device_id = $1 OR connected_device_id = $1`, [swId])).toBe(1);
+
+      // Đổi cổng + loại dây ở trang thiết bị → lần mở sau hiện ngay.
+      await ports.update(SA.email, swId, link.id, { portLabel: 'Gi1/0/23' });
+      const opened = await service.content(MEMBER.email, diagramId, { mode: 'edit' });
+      expect(opened.version?.xml).toContain('label="Gi1/0/23 ↔ eth0"');
+      expect(opened.version?.xml).toContain('imsPaint=cable-2;');
+      expect(opened.cableEdges).toEqual([{ cellId: 'e1', linkId: link.id, state: 'linked', sourceDeviceId: swId, targetDeviceId: srvId }]);
+      expect(opened.links.find((l) => l.id === link.id)).toMatchObject({ portLabel: 'Gi1/0/23', peerPort: 'eth0', colorSlot: 2, labelFromA: 'Gi1/0/23 ↔ eth0', labelFromB: 'eth0 ↔ Gi1/0/23' });
+      expect(opened.cableTypes.map((c) => c.name)).toEqual(expect.arrayContaining(['Cat6', 'Fiber', 'DAC']));
+    });
+
+    it('kết nối mới giữa hai máy đã có trên bản vẽ → "chưa vẽ"; kết nối ra máy ngoài bản vẽ → "ra ngoài"', async () => {
+      const fresh = await ports.link(SA.email, swId, { portLabel: 'Gi1/0/2', connectedDeviceId: srvId, connectedPort: 'eth1' });
+      const out = await ports.link(SA.email, swId, { portLabel: 'Te1/0/1', connectedDeviceId: farId, connectedPort: 'Te1/0/48', cableTypeId: fiber });
+      const opened = await service.content(MEMBER.email, diagramId, { mode: 'view' });
+      expect(opened.undrawnLinkIds).toEqual([fresh.id]);
+      expect(opened.externalLinkIds).toEqual([out.id]);
+      expect(opened.links.find((l) => l.id === out.id)).toMatchObject({ deviceCode: 'SW-E2E-CB', peerDeviceCode: 'CORE-E2E-CB' });
+    });
+
+    it('cable-status trên XML đang vẽ: cùng luật với lúc mở (máy vừa chèn cũng được tính)', async () => {
+      const apLink = await ports.link(SA.email, apId, { portLabel: 'eth0', connectedDeviceId: swId, connectedPort: 'Gi1/0/10' });
+      const working = page(deviceCell('d1', swId, 'SW-E2E-CB') + deviceCell('d3', apId, 'AP-E2E-CB') + bareEdge('e5', 'd1', 'd3'));
+      const status = await service.cableStatus(working);
+      expect(status.undrawn.map((l) => l.id)).toContain(apLink.id);
+      expect(status.edges).toEqual([{ cellId: 'e5', linkId: null, state: 'undeclared', sourceDeviceId: swId, targetDeviceId: apId }]);
+    });
+
+    it('gỡ kết nối ở trang thiết bị → mở bản vẽ thấy nét đỏ (không tự xoá nét)', async () => {
+      const link = await ports.link(SA.email, apId, { portLabel: 'eth9', connectedDeviceId: srvId, connectedPort: 'eth9' });
+      const d = await service.create(SA.email, { name: 'E2E Dây gỡ', nodeType: 'other' });
+      await service.save(SA.email, d.id, {
+        xml: page(deviceCell('a', apId, 'AP-E2E-CB') + deviceCell('b', srvId, 'SRV-E2E-CB') + linkedEdge('e1', 'a', 'b', link.id)),
+        svg: SVG,
+        basedOnVersionId: null,
+      });
+      await ports.unlink(SA.email, apId, link.id);
+      const opened = await service.content(SA.email, d.id, { mode: 'edit' });
+      expect(opened.version?.xml).toContain('label="⚠ Kết nối đã bị gỡ khỏi sơ đồ cổng"');
+      expect(opened.version?.xml).toContain('imsPaint=danger;');
+      expect(opened.cableEdges[0]).toMatchObject({ cellId: 'e1', state: 'removed' });
+      expect((await service.loadCheckLinks(buildCellIndex(opened.version!.xml))).size).toBe(0);
+    });
+
+    it('loadCheckLinks: dòng sơ đồ cổng của mọi nét mang ims_link_id (cho tự kiểm)', async () => {
+      const link = await ports.link(SA.email, apId, { portLabel: 'eth5', connectedDeviceId: farId });
+      const index = buildCellIndex(page(deviceCell('a', apId, 'AP-E2E-CB') + deviceCell('f', farId, 'CORE-E2E-CB') + linkedEdge('e1', 'a', 'f', link.id)));
+      const links = await service.loadCheckLinks(index);
+      expect(links.get(link.id)).toMatchObject({ id: link.id, deviceA: apId, deviceB: farId, portA: 'eth5', portB: null });
+    });
+
+    it('links theo id: dòng còn thì trả, dòng đã gỡ thì vắng', async () => {
+      const link = await ports.link(SA.email, srvId, { portLabel: 'eth7', connectedDeviceId: farId });
+      expect((await service.links([link.id, '00000000-0000-4000-8000-000000000000'])).map((l) => l.id)).toEqual([link.id]);
+    });
+
+    it('dựng nháp từ sơ đồ cổng: phiên bản MỚI có máy + dây đã gắn kết nối; vượt trần → 400, không ghi', async () => {
+      const d = await service.create(SA.email, { name: 'E2E Dựng nháp', nodeType: 'room' });
+      const version = await service.draftFromPortMap(MEMBER.email, d.id, { deviceIds: [swId, srvId, farId] });
+      expect(version.seq).toBe(1);
+      expect(version.summary).toMatch(/^Dựng nháp từ sơ đồ cổng · Thêm 3 thiết bị, thêm \d+ dây$/);
+      const opened = await service.content(MEMBER.email, d.id, { mode: 'edit' });
+      expect(opened.deviceCells.map((c) => c.deviceId).sort()).toEqual([swId, srvId, farId].sort());
+      expect(opened.cableEdges.length).toBeGreaterThan(0);
+      expect(opened.cableEdges.every((e) => e.state === 'linked')).toBe(true);
+      expect(opened.undrawnLinkIds).toEqual([]);
+
+      await scratch.pool.query(`UPDATE system_config SET value = '2' WHERE key = 'diagram.autolayout_max_nodes'`);
+      config.forget('diagram.autolayout_max_nodes');
+      try {
+        await expect(service.draftFromPortMap(MEMBER.email, d.id, { deviceIds: [swId, srvId, farId] })).rejects.toMatchObject({
+          response: { code: 'DIAGRAM_AUTOLAYOUT_TOO_MANY' },
+        });
+      } finally {
+        await scratch.pool.query(`UPDATE system_config SET value = '300' WHERE key = 'diagram.autolayout_max_nodes'`);
+        config.forget('diagram.autolayout_max_nodes');
+      }
+      expect((await service.versions(d.id)).length).toBe(1);
+    });
+
+    it('dựng nháp theo site: lấy máy của site (bỏ máy thanh lý)', async () => {
+      const d = await service.create(SA.email, { name: 'E2E Dựng nháp site', nodeType: 'site' });
+      const version = await service.draftFromPortMap(MEMBER.email, d.id, { siteId });
+      expect(version.summary).toContain('Dựng nháp từ sơ đồ cổng');
+      const opened = await service.content(MEMBER.email, d.id, { mode: 'edit' });
+      expect(opened.deviceCells.map((c) => c.deviceId)).toEqual(expect.arrayContaining([swId, srvId, apId, farId]));
     });
   });
 

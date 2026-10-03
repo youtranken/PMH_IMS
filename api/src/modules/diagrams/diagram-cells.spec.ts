@@ -23,6 +23,12 @@ function shape(id: string, value: string, x = 0, style = 'rounded=1;'): string {
   return `<mxCell id="${id}" value="${value}" style="${style}" vertex="1" parent="1"><mxGeometry x="${x}" y="0" width="80" height="40" as="geometry"/></mxCell>`;
 }
 
+function linkedEdge(id: string, source: string, target: string, linkId: string): string {
+  return `<UserObject label="" ims_link_id="${linkId}" id="${id}"><mxCell style="" edge="1" parent="1" source="${source}" target="${target}"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject>`;
+}
+
+const LINK_1 = '11111111-0000-4000-8000-000000000001';
+
 function edge(id: string, source: string, target: string, extra = ''): string {
   return `<mxCell id="${id}" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="${source}" target="${target}"><mxGeometry relative="1" as="geometry">${extra}</mxGeometry></mxCell>`;
 }
@@ -120,6 +126,25 @@ describe('diffCellIndex + summarizeDiff — tóm tắt một dòng (hàm thuần
       'Bỏ 1 dây, 2 hình tự do',
     ],
   ];
+
+  const devicesOnly = device('d1', DEV_A, 'SW-01') + device('d2', DEV_B, 'SW-02', 200);
+  const withLink = page(devicesOnly + linkedEdge('e1', 'd1', 'd2', LINK_1));
+  cases.push(
+    [
+      'dây đếm theo ims_link_id: xoá nét đã khai rồi vẽ lại đúng kết nối đó (nét mới) — không thêm/bỏ dây',
+      withLink,
+      page(devicesOnly + linkedEdge('e9', 'd2', 'd1', LINK_1)),
+      'Đổi 1 dây',
+    ],
+    [
+      'gắn kết nối vào nét vừa vẽ ("Khai") — cùng một dây, không phải bỏ một thêm một',
+      page(devicesOnly + edge('e1', 'd1', 'd2')),
+      withLink,
+      'Đổi 1 dây',
+    ],
+    ['vẽ thêm một dây đã khai', page(devicesOnly), withLink, 'Thêm 1 dây'],
+    ['xoá nét đã khai', withLink, page(devicesOnly), 'Bỏ 1 dây'],
+  );
 
   it.each(cases)('%s', (_name, before, after, line) => {
     const prev: CellIndex | null = before === null ? null : buildCellIndex(before);

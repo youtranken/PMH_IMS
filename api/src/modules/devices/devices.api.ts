@@ -135,6 +135,14 @@ export class DevicesApiService {
     return this.ports.linksTouching(deviceIds);
   }
 
+  /**
+   * Máy còn dùng được (bỏ máy thanh lý) của một site / một tủ — `total` thật để nơi gọi biết
+   * phạm vi có vượt trần của nó không (sơ đồ: "Dựng nháp từ sơ đồ cổng").
+   */
+  listUsableIn(scope: { siteId?: string; cabinetId?: string }, limit: number): Promise<Page<DeviceListItem>> {
+    return this.devices.list({ page: 1, limit }, { siteId: scope.siteId, cabinetId: scope.cabinetId, usableOnly: true });
+  }
+
   /** Gợi ý cho ô chọn thiết bị ở màn khác (port map, IP, secret). */
   async search(term: string, limit = 20): Promise<DeviceListItem[]> {
     const page = await this.devices.list({ page: 1, limit }, { search: term });

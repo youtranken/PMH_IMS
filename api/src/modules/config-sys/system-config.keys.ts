@@ -202,6 +202,11 @@ export const CONFIG_KEYS = {
    * vẽ (hydrate), nên một biểu tượng to nhân lên theo số máy và đè lên trần `diagram.xml_max_kb`.
    */
   diagramIconSvgMaxKb: { key: 'diagram.icon_svg_max_kb', fallback: 100 },
+  /*
+   * Trần một lượt "Dựng nháp từ sơ đồ cổng" (FR-048): lưới quá đông thì draw.io xếp gọn chậm và
+   * bản vẽ không đọc được — người dùng nên thu hẹp về một tủ / một danh sách máy.
+   */
+  diagramAutolayoutMaxNodes: { key: 'diagram.autolayout_max_nodes', fallback: 300 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

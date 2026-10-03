@@ -55,6 +55,7 @@ export const FIELD_LABEL: Record<string, string> = {
   dateStyle: 'Kiểu hiển thị ngày',
   description: 'Mô tả',
   deviceId: 'Thiết bị',
+  deviceIds: 'Danh sách thiết bị',
   deviceTypeId: 'Loại thiết bị',
   diagramShape: 'Hình trên sơ đồ',
   dir: 'Chiều sắp xếp',
