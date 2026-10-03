@@ -1,3 +1,5 @@
+import type { StepUpScope } from './step-up.decorator';
+
 /**
  * Luật sống/chết của phiên (NFR-01): idle 30 phút HOẶC absolute 12 giờ — cái nào đến trước.
  * Hàm thuần, tách khỏi DB để test được mọi biên.
@@ -24,8 +26,27 @@ export function evaluateSession(
 }
 
 /**
+ * AD-17: mỗi phạm vi step-up một mốc trên phiên và một khoá ân hạn. Gom vào MỘT bảng để guard,
+ * `stepUp()` và cửa cài lại 2 lớp không thể mỗi nơi tự chọn cột — đọc nhầm cột là mã sơ đồ
+ * mở két.
+ */
+export const STEP_UP_GRACE_KEY = {
+  vault: 'secretStepUpGraceMinutes',
+  diagram: 'diagramStepUpGraceMinutes',
+} as const satisfies Record<StepUpScope, string>;
+
+export interface StepUpMarks {
+  steppedUpAt: Date | null;
+  diagramSteppedUpAt: Date | null;
+}
+
+export function stepUpMarkOf(marks: StepUpMarks, scope: StepUpScope): Date | null {
+  return scope === 'diagram' ? marks.diagramSteppedUpAt : marks.steppedUpAt;
+}
+
+/**
  * FR-022: gõ TOTP một lần dùng được `graceMinutes`; hết thì phải gõ lại.
- * `steppedUpAt === null` nghĩa là chưa từng step-up trong phiên này.
+ * `steppedUpAt === null` nghĩa là chưa từng step-up phạm vi đó trong phiên này.
  */
 export function isStepUpValid(
   steppedUpAt: Date | null,

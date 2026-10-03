@@ -17,6 +17,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -152,7 +153,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const codeA = `ISP-E2E-PHONG-${stamp}-A`;
@@ -305,7 +306,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const itemCode = `ISP-E2E-HOP-${stamp}`;
@@ -458,7 +459,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const itemCode = `ISP-E2E-TAB-${stamp}`;
@@ -688,7 +689,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    */
   test('Esc khi đang mở ô chọn chỉ đóng ô chọn, KHÔNG đóng cả hộp Sửa', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const itemCode = `ISP-E2E-ESC-${stamp}`;
@@ -794,7 +795,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const activeCode = `TK-E2E-PHONG-${stamp}-A`;
@@ -955,7 +956,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * chấm chỉ dẫn tới hai việc đều bị chặn.
      */
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/service-accounts');
     await page
       .getByRole('searchbox', { name: 'Tìm theo mã, tên, đăng nhập, phòng ban…' })
@@ -1013,7 +1014,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const itemCode = `TK-E2E-HOP-${stamp}`;
@@ -1253,7 +1254,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = timestamp();
     const headers = await writeHeaders(page);

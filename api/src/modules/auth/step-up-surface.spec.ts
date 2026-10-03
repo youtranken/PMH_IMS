@@ -4,7 +4,7 @@ import { join } from 'node:path';
  * `allControllers` và `classDecoratorsOf` nằm ở `src/test/source-text.ts`: `roles-surface.spec.ts`
  * cần đúng hai hàm ấy, và chép sang là dựng bản thứ hai của cùng một bộ quét (AD-15).
  */
-import { allControllers, classDecoratorsOf } from '../../test/source-text';
+import { allControllers, classDecoratorsOf, stripComments } from '../../test/source-text';
 
 const SRC = join(__dirname, '..', '..');
 
@@ -36,7 +36,10 @@ describe('Step-up mặc định đóng (FR-022)', () => {
 
   it('MỌI controller khai lập trường step-up ở cấp lớp', () => {
     const missing = CONTROLLERS.filter(
-      (file) => !/@NoStepUp\(\)|@RequiresStepUp\(\)/.test(classDecoratorsOf(readFileSync(file, 'utf8'))),
+      (file) =>
+        !/@NoStepUp\(\)|@RequiresStepUp\((?:'vault'|'diagram')?\)/.test(
+          classDecoratorsOf(readFileSync(file, 'utf8')),
+        ),
     ).map((file) => file.slice(SRC.length + 1));
 
     expect(missing).toEqual([]);
@@ -175,5 +178,26 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     const devices = readFileSync(join(SRC, 'modules', 'devices', 'devices.controller.ts'), 'utf8');
     expect(classDecoratorsOf(devices)).toContain('@NoStepUp()');
     expect(devices).not.toContain('@RequiresStepUp()');
+  });
+
+  /**
+   * AD-17/AD-18: phạm vi đi theo MODULE. Sơ đồ khai `'diagram'`; mọi chỗ khác (két, tài khoản,
+   * tham số, quyền két) giữ nghĩa két. Một route két lỡ khai `'diagram'` thì mã nhập để xem sơ
+   * đồ mở luôn cửa két — đúng đòn mà phạm vi sinh ra để chặn.
+   */
+  it('chỉ module `diagrams` khai phạm vi diagram, và nó không khai phạm vi két', () => {
+    const misplaced: string[] = [];
+    for (const file of CONTROLLERS) {
+      const src = stripComments(readFileSync(file, 'utf8'));
+      const rel = file.slice(SRC.length + 1).split('\\').join('/');
+      const inDiagrams = rel.startsWith('modules/diagrams/');
+      for (const m of src.matchAll(/@RequiresStepUp\(([^)]*)\)/g)) {
+        const scope = m[1].trim() === '' ? "'vault'" : m[1].trim();
+        if (!["'vault'", "'diagram'"].includes(scope)) misplaced.push(`${rel}: phạm vi lạ ${scope}`);
+        if (scope === "'diagram'" && !inDiagrams) misplaced.push(`${rel}: route ngoài sơ đồ khai 'diagram'`);
+        if (scope === "'vault'" && inDiagrams) misplaced.push(`${rel}: route sơ đồ khai phạm vi két`);
+      }
+    }
+    expect(misplaced).toEqual([]);
   });
 });

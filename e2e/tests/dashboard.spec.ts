@@ -16,6 +16,7 @@ import {
   resetSoftware,
   resetUsers,
   sql,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -44,7 +45,7 @@ async function csrfOf(page: Page): Promise<string> {
  */
 test.describe('Bảng điều khiển', () => {
   test('đường hạnh phúc: ba khối hiện đủ, sắp-hết-hạn xếp gấp nhất lên đầu', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -120,7 +121,7 @@ test.describe('Bảng điều khiển', () => {
    * nhầm câu thứ hai thì tưởng mọi thứ đang yên — trong khi hệ thống chưa hề theo dõi mục đó.
    */
   test('khối chưa mở nói rõ là CHƯA THEO DÕI, không phải "không có gì"', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/');
 
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
@@ -130,6 +131,7 @@ test.describe('Bảng điều khiển', () => {
 
   test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page, browser }) => {
     const saTotp = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, saTotp);
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -155,7 +157,7 @@ test.describe('Bảng điều khiển', () => {
     });
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
@@ -185,6 +187,7 @@ test.describe('Bảng điều khiển', () => {
     const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const sa = await saCtx.newPage();
     await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(sa, saTotp);
     await sa.goto('/');
     const block = sa.locator('section').filter({ hasText: 'Yêu cầu mở két tuần qua' });
     // DASH-006: TÊN người xin (email nằm trong `title`), không phải email trần.
@@ -201,7 +204,7 @@ test.describe('Bảng điều khiển', () => {
    * và dashboard vẫn dựng được khi một module không có dữ liệu nào.
    */
   test('dashboard trống vẫn dựng được, không lỗi', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
@@ -233,7 +236,7 @@ test.describe('Bảng điều khiển', () => {
   test('dải mạng chạm ngưỡng thì lên bảng, kèm số chỗ CÒN LẠI chứ không chỉ phần trăm', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const octet = (Number(stamp) % 200) + 30;
@@ -279,6 +282,7 @@ test.describe('Bảng điều khiển', () => {
     page,
   }) => {
     const saTotp = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, saTotp);
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -331,7 +335,7 @@ test.describe('Bảng điều khiển', () => {
     await logout(page);
 
     // Member: khối KHÔNG có trên màn, và cũng không có trong dữ liệu server trả về.
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toHaveCount(0);
     const asMember = (await (await page.request.get('/api/v1/dashboard')).json()) as {
@@ -343,13 +347,14 @@ test.describe('Bảng điều khiển', () => {
 
     // SA quay lại: `loginWithTotp` chứ không phải `firstLogin` — tài khoản đã cài 2 lớp.
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toBeVisible();
   });
 
   /** Khối "Tổng hợp kho thanh lý" — đọc qua `disposal.api`, không tự gộp ba module lại lần nữa. */
   test('thiết bị vừa thanh lý hiện ngay ở khối kho thanh lý', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -443,7 +448,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
   }
 
   test('bảng có đủ cột; gia hạn ngay trên dòng; làn phụ xếp chồng sát nhau', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     await seedLoudBoard(page, stamp);
 
@@ -498,7 +503,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
   test('đường hỏng: bảo hành thiết bị không có nút Gia hạn; chưa chọn ngày thì hộp ở lại', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { headers, typeId } = await seedLoudBoard(page, stamp);
     const warranty = await page.request.post('/api/v1/devices', {

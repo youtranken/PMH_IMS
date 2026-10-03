@@ -13,6 +13,7 @@ import {
   resetUsers,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -52,7 +53,7 @@ async function createDeviceWithSecret(page: Page, code: string, label: string): 
 }
 
 test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng vậy', async ({ page }) => {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   const stamp = uniqueStamp();
   const code = `PC-E2E-VM390-${stamp}`;
   await createDeviceWithSecret(page, code, `admin-E2E-${stamp}`);
@@ -81,7 +82,7 @@ test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng v�
 test('quyền két ở 390px: danh sách thành viên → thẻ quyền của một người, không tràn ngang', async ({
   page,
 }) => {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   const headers = await writeHeaders(page);
   const scopeList = await page.request.get('/api/v1/vault/access/scopes');
   const scope = ((await scopeList.json()) as { scopeType: string; scopeRef: string; label: string }[])[0];
@@ -129,6 +130,7 @@ test('popup két ở 390px: Xem → mã → giá trị trong CÙNG một hộp, 
   page,
 }) => {
   const totpSecret = await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, totpSecret);
   const stamp = uniqueStamp();
   const code = `PC-E2E-VM1H-${stamp}`;
   const label = `admin-E2E-${stamp}`;
@@ -157,7 +159,7 @@ test('popup két ở 390px: Xem → mã → giá trị trong CÙNG một hộp, 
 });
 
 test('popup két ở 390px: bước mã có Quay lại — về danh sách, không gửi mã', async ({ page }) => {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   const stamp = uniqueStamp();
   const code = `PC-E2E-VM1B-${stamp}`;
   const label = `admin-E2E-${stamp}`;

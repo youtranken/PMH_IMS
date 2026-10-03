@@ -11,6 +11,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -225,7 +226,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
@@ -371,7 +372,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    */
   test('Bảng thiết bị: đủ cột, đúng cột sắp được, và phân trang ăn thật', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
@@ -580,7 +581,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     await page.goto('/devices');
@@ -778,7 +779,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const code = `TB-E2E-SUA-${stamp}`;
@@ -949,7 +950,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    */
   test('Hồ sơ một cái máy: năm tab, mỗi tab bày đúng thứ của nó', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const code = `TB-E2E-HOSO-${stamp}`;

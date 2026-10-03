@@ -11,6 +11,7 @@ import {
   resetUsers,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -44,11 +45,11 @@ async function createServiceAccount(page: Page, code: string): Promise<string> {
 
 test.describe('C2 — ghi vào két cũng phải step-up', () => {
   test('hết grace thì XOAY và THU HỒI bị chặn, gõ mã xong mới làm được', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const ownerId = await createServiceAccount(page, `E2E-SU-${stamp}`);
 
-    // Cất một bí mật lúc còn trong grace (vừa đăng nhập bằng TOTP).
+    // Cất một bí mật lúc còn trong grace (vừa nhập mã cho két bằng `stepUpViaApi`).
     const created = await page.request.post('/api/v1/vault/secrets', {
       headers: await writeHeaders(page),
       data: {
@@ -116,7 +117,7 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     page,
     browser,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const ownerId = await createServiceAccount(page, `E2E-FILE-${stamp}`);
 
@@ -149,7 +150,7 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     });
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
 
       const listed = await memberPage.request.get(
         `/api/v1/files?ownerType=service_account&ownerId=${ownerId}`,
@@ -187,7 +188,7 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     page,
     browser,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {
@@ -220,7 +221,7 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     const memberCtx = await browser.newContext({ baseURL: APP_ORIGIN, ignoreHTTPSErrors: true });
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
 
       const listed = await memberPage.request.get(
         `/api/v1/files?ownerType=device&ownerId=${deviceId}`,

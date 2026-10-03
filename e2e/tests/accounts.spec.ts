@@ -14,6 +14,7 @@ import {
   writeHeaders,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
@@ -27,7 +28,7 @@ test.beforeEach(() => resetUsers());
  */
 test.describe('Quản trị tài khoản', () => {
   test('SA tạo tài khoản mới và nhận mật khẩu tạm', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
@@ -75,7 +76,7 @@ test.describe('Quản trị tài khoản', () => {
   });
 
   test('member không thấy mục Tài khoản và bị chặn khi gõ thẳng URL', async ({ page }) => {
-    await firstLogin(page, { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' });
+    await stepUpViaApi(page, await firstLogin(page, { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' }));
 
     await openNavGroup(page);
     await expect(page.getByRole('link', { name: 'Người dùng IMS', exact: true })).toHaveCount(0);
@@ -85,7 +86,7 @@ test.describe('Quản trị tài khoản', () => {
   });
 
   test('SA xem và đá được phiên đang mở', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
@@ -95,7 +96,7 @@ test.describe('Quản trị tài khoản', () => {
   });
 
   test('khóa rồi mở lại tài khoản (hồi quy: body chỉ được chứa field của DTO)', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
@@ -130,7 +131,7 @@ test.describe('Quản trị tài khoản', () => {
   test('vô hiệu hóa rồi kích hoạt lại — và tài khoản đã vô hiệu hóa KHÔNG được mời "Mở khóa"', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
@@ -180,7 +181,7 @@ test.describe('Quản trị tài khoản', () => {
   test('tìm kiếm chạy phía server: tìm được cả người không nằm ở trang đang xem', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
@@ -212,10 +213,10 @@ test.describe('Quản trị tài khoản', () => {
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
 
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
       await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       const row = page.getByRole('row', { name: /E2E Thành viên/ });
@@ -248,10 +249,10 @@ test.describe('Quản trị tài khoản', () => {
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
 
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
       await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
@@ -282,10 +283,12 @@ test.describe('Quản trị tài khoản', () => {
     const saCtx = await browser.newContext(SECOND_BROWSER);
     const saOther = await saCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       // Cùng một SA ở hai máy: máy thứ hai đăng nhập lại bằng mật khẩu mới + TOTP đã cài.
       const saSecret = await firstLogin(saOther, E2E_SA);
+      await stepUpViaApi(saOther, saSecret);
       await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saSecret);
+      await stepUpViaApi(page, saSecret);
       await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
@@ -323,7 +326,7 @@ test.describe('Quản trị tài khoản', () => {
    * `resetUsers()` tự dọn — không cần script xóa riêng cho bài này.
    */
   test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút (tài khoản)', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
 
@@ -376,7 +379,7 @@ test.describe('Quản trị tài khoản', () => {
  * TRANG. Cùng một phản xạ, hai kết quả khác nhau — và người dùng học phản xạ từ sáu màn kia.
  */
 test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ được, reload giữ nguyên', async ({ page }) => {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   await openNavGroup(page);
   await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/accounts$/);

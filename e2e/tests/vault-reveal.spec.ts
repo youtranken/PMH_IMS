@@ -21,6 +21,7 @@ import {
   resetAccessList,
   resetUsers,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -80,18 +81,24 @@ async function setUpDeviceWithSecrets(
 
 /** FR-022: mở két phải gõ TOTP, hiện rồi tự ẩn, mỗi lần một dòng audit. */
 test.describe('Mở két với TOTP step-up', () => {
-  test('đường hạnh phúc: hết grace → gõ mã → giá trị hiện → xem tiếp secret khác không phải gõ lại', async ({
+  /*
+   * AD-17, Q-23: mã 2 lớp lúc ĐĂNG NHẬP không mở két. Đăng nhập lại bằng mật khẩu + mã (phiên
+   * mới, không ân hạn nào) rồi bấm Xem lần đầu thì PHẢI hỏi mã — không đẩy mốc bằng SQL, để bài
+   * đỏ ngay nếu đường đăng nhập lại đóng dấu `stepped_up_at`.
+   */
+  test('đường hạnh phúc: vừa đăng nhập có mã → Xem vẫn hỏi mã → giá trị hiện → xem tiếp secret khác không phải gõ lại', async ({
     page,
   }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
     const stamp = uniqueStamp();
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
       { label: `SSH root E2E ${stamp}`, value: `Ssh#Pass#${stamp}` },
     ]);
 
-    // Enroll TOTP vừa xong đã tính là step-up — đẩy mốc lùi để đúng cảnh "đã quá grace".
-    expireStepUp(E2E_SA.email);
+    await logout(page);
+    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, totpSecret);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
@@ -135,7 +142,7 @@ test.describe('Mở két với TOTP step-up', () => {
   test('đường hỏng: gõ sai mã thì không mở, ô nhập bị xóa để không bấm lại mã cũ', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -156,7 +163,7 @@ test.describe('Mở két với TOTP step-up', () => {
   test('phiên hết grace không phải phiên chết: bị hỏi mã chứ không bị đá về đăng nhập', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -171,7 +178,7 @@ test.describe('Mở két với TOTP step-up', () => {
   });
 
   test('mỗi lần giải mã = một dòng audit, và response không được lưu đệm', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -231,13 +238,14 @@ test.describe('Mở két với TOTP step-up', () => {
    */
   test('mã 6 số đã dùng để mở két không dùng lại được', async ({ page }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
     const code = await freshTotpCode(totpSecret);
 
     // Về trạng thái "cần gõ mã" rồi mới gõ — nếu không, lượt đầu đã nằm trong thời gian ân hạn.
     expireStepUp(E2E_SA.email);
     const first = await page.request.post('/api/v1/auth/step-up', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
-      data: { token: code },
+      data: { token: code, scope: 'vault' },
     });
     expect(first.status(), 'vế đối chứng: mã còn hạn phải qua được bước xác thực').toBe(200);
 
@@ -245,7 +253,7 @@ test.describe('Mở két với TOTP step-up', () => {
     expireStepUp(E2E_SA.email);
     const replay = await page.request.post('/api/v1/auth/step-up', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
-      data: { token: code },
+      data: { token: code, scope: 'vault' },
     });
     expect(
       replay.status(),
@@ -254,7 +262,7 @@ test.describe('Mở két với TOTP step-up', () => {
   });
 
   test('thu hồi rồi thì id cũ KHÔNG mở ra giá trị nữa', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -277,14 +285,14 @@ test.describe('Mở két với TOTP step-up', () => {
   });
 
   test('Member gọi đường mở két nhận 403, không phải lời mời gõ mã', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const denied = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
@@ -297,7 +305,7 @@ test.describe('Mở két với TOTP step-up', () => {
    * viết cứng 30 ở đây thì đổi cấu hình xong test vẫn xanh trong khi màn hình đã sai (AD-11).
    */
   test('giá trị tự ẩn sau đúng số giây trong system_config @slow', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -331,6 +339,7 @@ test.describe('Mở két với TOTP step-up', () => {
     page,
   }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
     const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -345,7 +354,7 @@ test.describe('Mở két với TOTP step-up', () => {
     for (let i = 0; i < 5; i += 1) {
       const res = await page.request.post('/api/v1/auth/step-up', {
         headers,
-        data: { token: '000000' },
+        data: { token: '000000', scope: 'vault' },
       });
       lastStatus = res.status();
       lastBody = (await res.json()) as { code?: string };
@@ -361,6 +370,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
     // Tài khoản KHÔNG bị khóa — đăng nhập lại là dùng được ngay.
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, totpSecret);
+    await stepUpViaApi(page, totpSecret);
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   });
 
@@ -380,7 +390,7 @@ test.describe('Mở két với TOTP step-up', () => {
   }) => {
     test.setTimeout(240_000);
     const testStart = Date.now();
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { ids, typeId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
@@ -424,7 +434,7 @@ test.describe('Mở két với TOTP step-up', () => {
       const memberCtx = await browser.newContext(SECOND_BROWSER);
       const memberPage = await memberCtx.newPage();
       try {
-        await firstLogin(memberPage, E2E_MEMBER);
+        await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
         const byMember = await memberPage.request.post(
           `/api/v1/vault/secrets/${ids[0]}/reveal`,
           { headers: { 'X-CSRF-Token': await csrfOf(memberPage), Origin: APP_ORIGIN } },
@@ -459,7 +469,7 @@ test.describe('Mở két với TOTP step-up', () => {
    */
   test('mở két xong thì log của api không chứa giá trị secret', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const secretValue = `LogRedact#${stamp}`;
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [

@@ -10,6 +10,7 @@ import {
   resetDevices,
   resetSecrets,
   resetUsers,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -36,7 +37,7 @@ async function csrfOf(page: Page): Promise<string> {
  */
 test.describe('Duyệt break-glass ở 390px', () => {
   test('Admin đọc được lý do và duyệt được trên điện thoại', async ({ page, browser }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -64,7 +65,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
     // cảnh riêng và giữ phiên: quyền chỉ dùng được trong phiên đã xin (Q-15).
     const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const member = await memberCtx.newPage();
-    await firstLogin(member, E2E_MEMBER);
+    await stepUpViaApi(member, await firstLogin(member, E2E_MEMBER));
     const longReason =
       'Switch tầng 3 mất kết nối từ 1h45 sáng, khách sạn báo mạng phòng họp chết, cần vào ' +
       'cấu hình VLAN để khôi phục trước giờ làm việc';

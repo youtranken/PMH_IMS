@@ -348,6 +348,12 @@ export default {
        2 lớp, đặt lại mật khẩu…, nói "xem thông tin bí mật" là sai với mọi việc khác. */
     stepUpSub: 'Nhập mã 6 số trên điện thoại để xác nhận thao tác này.',
     stepUpFor: 'Nhập mã 6 số trên điện thoại để xác nhận: {{action}}.',
+    /* Phạm vi step-up (AD-17): mã nhập ở két không mở sơ đồ và ngược lại — câu trên hộp phải nói
+       rõ mã này mở cái gì, để người dùng không bất ngờ khi bị hỏi lại ở phạm vi kia. */
+    stepUpSubDiagram: 'Nhập mã 6 số trên điện thoại để xem sơ đồ.',
+    stepUpScopeNote_vault: 'Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.',
+    stepUpScopeNote_diagram: 'Mã này chỉ mở phần xem sơ đồ, không mở két.',
+    stepUpGraceDiagram: 'Xác nhận xong thì {{minutes}} phút tới mở bản vẽ khác không phải gõ lại.',
     lostTotp: 'Không lấy được mã?',
     lostTotpHelp:
       'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
@@ -3128,7 +3134,9 @@ export default {
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',
     secretRevealSecondsDesc: 'Hết giờ thì hộp tự ẩn giá trị. Cũng là thời gian hộp mật khẩu tạm (tạo, đặt lại tài khoản) tự che.',
     secretStepUpGraceMinutesLabel: 'Ân hạn sau khi xác thực lại',
-    secretStepUpGraceMinutesDesc: 'Trong khoảng này mọi thao tác cần mã 6 số (két, cấp quyền, người dùng IMS, tham số) không phải gõ lại.',
+    secretStepUpGraceMinutesDesc: 'Trong khoảng này mọi thao tác cần mã 6 số (két, cấp quyền, người dùng IMS, tham số) không phải gõ lại. Không gồm xem sơ đồ — sơ đồ có ân hạn riêng.',
+    diagramStepUpGraceMinutesLabel: 'Ân hạn xem sơ đồ',
+    diagramStepUpGraceMinutesDesc: 'Nhập mã 6 số để xem sơ đồ xong thì trong khoảng này mở bản vẽ khác không phải gõ lại. Tính riêng với ân hạn của két: mã nhập cho sơ đồ không mở két và ngược lại.',
     secretStepUpMaxFailuresLabel: 'Số lần gõ sai mã xác thực lại trước khi đóng phiên',
     secretStepUpMaxFailuresDesc: 'Nhập sai quá số này thì phiên bị đóng.',
     secretProbeAlertThresholdLabel: 'Ngưỡng cảnh báo dò két',

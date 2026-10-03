@@ -11,6 +11,7 @@ import {
   resetUsers,
   waitForMail,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -89,7 +90,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
   test('phiên đã đăng nhập nhưng chưa cài 2 lớp: không có mật khẩu thì không có secret', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const victim = await accountWithoutTotp(page);
     await loginAs(page, victim);
 
@@ -144,7 +145,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
      * Bài đi hết năm lượt nên nó vượt qua cả hai ngưỡng (cảnh báo 3, thu hồi 5) trong một
      * mạch — đúng thứ tự mà một kẻ tấn công thật sẽ chạm vào.
      */
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const victim = await accountWithoutTotp(page);
     await loginAs(page, victim);
     await clearMailbox();
@@ -206,7 +207,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
   test('gõ đúng mật khẩu thì bộ đếm về 0 — "liên tiếp" phải đúng nghĩa liên tiếp', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const victim = await accountWithoutTotp(page);
     await loginAs(page, victim);
 
@@ -258,7 +259,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
   test('phiên chờ bị bỏ quên hết quyền miễn — cửa sổ có HẠN, không phải mở vĩnh viễn', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     // Mặc định `totpLoginRequired: true` → đăng nhập xong là một phiên CÒN CHỜ, đúng hình
     // dạng người đang đứng giữa luồng cài 2 lớp bắt buộc.
     const pending = await accountWithoutTotp(page, { totpLoginRequired: true });
@@ -303,6 +304,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
      * ở dòng đầu tiên — cùng chỗ mà 400+ bài E2E khác sẽ đỏ.
      */
     const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret);
     expect(secret.length).toBeGreaterThan(15);
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   });

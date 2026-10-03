@@ -7,6 +7,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -61,13 +62,13 @@ test.describe('SA bật/tắt bắt buộc TOTP lúc đăng nhập', () => {
     // Member phải qua lần đăng nhập đầu (đổi mật khẩu + cài TOTP) thì mới có mật khẩu ổn định.
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const password = sql(
       `SELECT must_change_password FROM users WHERE email = '${E2E_MEMBER.email}'`,
     );
     expect(password, 'firstLogin phải đổi xong mật khẩu, nếu không bài này đo nhầm').toBe('f');
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const id = memberId();
     expect(requiredFlag(), 'mặc định của tài khoản E2E phải là BẬT').toBe('t');
     const auditBefore = auditCount(id);
@@ -123,7 +124,7 @@ test.describe('SA bật/tắt bắt buộc TOTP lúc đăng nhập', () => {
   test('đường hỏng: chỉ SA gạt được — member tự tắt lớp bảo vệ của mình thì bị chặn', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const id = memberId();
     const res = await page.request.patch(`/api/v1/accounts/${id}/totp-login-required`, {
       headers: await writeHeaders(page),

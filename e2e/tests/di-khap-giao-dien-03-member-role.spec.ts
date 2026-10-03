@@ -11,6 +11,7 @@ import {
   resetUsers,
   writeHeaders,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 /* ===========================================================================================
@@ -52,7 +53,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    * menu.
    */
   test('Thanh điều hướng của Thành viên thiếu đúng những thứ phải thiếu', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     await expect(nav).toBeVisible();
@@ -155,7 +156,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    * chưa có tài khoản nào", một câu nói dối trắng trợn với người vừa bị từ chối quyền.
    */
   test('Gõ thẳng URL không mở được cửa mà menu đã đóng', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
 
     for (const [path, why, heading] of [
       ['/vault', 'trang tổng Két sắt gác vai ngay ở route', 'Bạn không có quyền xem trang này'],
@@ -223,7 +224,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     test.setTimeout(150_000);
 
     // --- SA dựng: một thiết bị + một secret, rồi gán Member tầng "cần được duyệt".
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = await writeHeaders(page);
 
@@ -270,7 +271,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     await logout(page);
 
     // --- Member: nhìn thấy két, đọc được mình đang ở đâu, và không có nút ghi nào.
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
 

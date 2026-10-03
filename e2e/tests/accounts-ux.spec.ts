@@ -12,11 +12,12 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
-/** Tạo một tài khoản `e2e-tao-moi-…` qua API (SA vừa đăng nhập bằng 2 lớp nên còn ân hạn step-up). */
+/** Tạo một tài khoản `e2e-tao-moi-…` qua API (SA đã nhập mã cho két ngay sau đăng nhập — `stepUpViaApi` — nên còn ân hạn). */
 async function createAccount(
   page: Page,
   totpLoginRequired: boolean,
@@ -35,7 +36,7 @@ async function createAccount(
 
 test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () => {
   test('Mở khóa hỏi lại, có toast, và xoá sạch bộ đếm sai + giãn chậm theo IP', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const acc = await createAccount(page, true);
     sql(
       `UPDATE users SET status = 'locked', failed_attempts = 6, locked_until = now() + interval '1 hour' WHERE id = '${acc.id}'`,
@@ -64,7 +65,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
   test('cột "2 lớp" ba trạng thái + bật/tắt "Bắt buộc 2 lớp khi đăng nhập" từ menu', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const acc = await createAccount(page, true);
     await page.goto('/admin/accounts');
     await searchAndWaitForFilter(page, acc.email);
@@ -86,10 +87,10 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
   test('TẤN CÔNG: Thành viên gọi thẳng PATCH totp-login-required → 403, cờ giữ nguyên', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const acc = await createAccount(page, true);
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const res = await page.request.patch(`/api/v1/accounts/${acc.id}/totp-login-required`, {
       headers: await writeHeaders(page),
       data: { required: false },
@@ -101,7 +102,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
   test('tạo tài khoản: mật khẩu tạm có Ẩn/Hiện + Chép, "Gán quyền két sắt" mở sẵn đúng người', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/accounts');
     const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
@@ -161,7 +162,7 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
     );
 
   test('người mới nhận đúng nhóm + tầng của đồng nghiệp', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const scope = await firstScope(page);
     const source = await createAccount(page, false);
     const target = await createAccount(page, false);
@@ -186,7 +187,7 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
   test('đường hỏng: nhóm người nhận đã có thì KHÔNG bị ghi đè tầng; hết nhóm thì báo, không ghi', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const scope = await firstScope(page);
     const source = await createAccount(page, false);
     const target = await createAccount(page, false);
@@ -210,7 +211,7 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
   });
 
   test('"Gán thiết bị" mở danh sách thiết bị tìm sẵn theo tên người mới', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/accounts');
     const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;

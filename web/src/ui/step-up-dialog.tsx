@@ -5,8 +5,20 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { Dialog } from '@/ui/dialog';
 import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
 
+/**
+ * Phạm vi step-up (AD-17) — khớp `StepUpScope` của api. Mỗi phạm vi một mốc, một ân hạn: mã
+ * nhập để xem sơ đồ không mở két và ngược lại.
+ */
+export type StepUpScope = 'vault' | 'diagram';
+
 interface StepUpProps {
   csrfToken: string;
+  /**
+   * BẮT BUỘC, không mặc định: server từ chối `/auth/step-up` thiếu phạm vi, và nơi gọi đoán
+   * nhầm phạm vi thì mã nhập để xem sơ đồ thành mã mở két. Lấy từ lỗi `STEPUP_REQUIRED`
+   * (`useStepUpRetry` làm sẵn) hoặc từ đúng cửa nơi gọi đang mở.
+   */
+  scope: StepUpScope;
   /** Đang xác nhận để làm GÌ ("Xem enable của SW-CORE-01") — thiếu thì dùng câu chung. */
   purpose?: string;
   /**
@@ -21,13 +33,17 @@ interface StepUpProps {
  * Ô mã + lượt gọi `/auth/step-up` — MỘT bản cho cả hộp riêng (`StepUpDialog`) lẫn bước trong
  * hộp đang mở (`StepUpStep`), để hai nơi không thể lệch nhau về cách gửi mã và xử lỗi.
  */
-function useStepUpForm(csrfToken: string, onDone: (graceMinutes: number) => void) {
+function useStepUpForm(
+  csrfToken: string,
+  scope: StepUpScope,
+  onDone: (graceMinutes: number) => void,
+) {
   const { t } = useTranslation();
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const stepUp = useApiMutation<{ token: string }, { graceMinutes: number }>(
+  const stepUp = useApiMutation<{ token: string; scope: StepUpScope }, { graceMinutes: number }>(
     '/api/v1/auth/step-up',
     { csrfToken },
   );
@@ -35,7 +51,7 @@ function useStepUpForm(csrfToken: string, onDone: (graceMinutes: number) => void
   const submit = useOtpSubmit(async (code) => {
     setError(null);
     try {
-      const result = await stepUp.mutateAsync({ token: code });
+      const result = await stepUp.mutateAsync({ token: code, scope });
       setToken('');
       onDone(result.graceMinutes);
     } catch (err) {
@@ -53,12 +69,14 @@ function useStepUpForm(csrfToken: string, onDone: (graceMinutes: number) => void
 
 function StepUpFields({
   formId,
+  scope,
   purpose,
   graceMinutes,
   form,
   autoFocus,
 }: {
   formId: string;
+  scope: StepUpScope;
   purpose?: string;
   graceMinutes?: number;
   form: ReturnType<typeof useStepUpForm>;
@@ -76,7 +94,10 @@ function StepUpFields({
         void form.submit(form.token);
       }}
     >
-      <p className="muted">{purpose ?? t('auth.stepUpSub')}</p>
+      <p className="muted">
+        {purpose ?? (scope === 'diagram' ? t('auth.stepUpSubDiagram') : t('auth.stepUpSub'))}
+      </p>
+      <p className="muted">{t(`auth.stepUpScopeNote_${scope}`)}</p>
       {/* Đủ 6 số là tự gửi (`onComplete`) — trên điện thoại bàn phím số che mất nút Xác nhận. */}
       <OtpInput
         value={form.token}
@@ -89,7 +110,13 @@ function StepUpFields({
         /* Lỗi NGAY DƯỚI ô (viền đỏ + aria-invalid) — ô bị xoá trắng mà lỗi nằm chỗ khác thì
            người gõ không biết vì sao. */
         error={form.error}
-        hint={graceMinutes ? t('vault.stepUpGrace', { minutes: graceMinutes }) : undefined}
+        hint={
+          graceMinutes
+            ? t(scope === 'diagram' ? 'auth.stepUpGraceDiagram' : 'vault.stepUpGrace', {
+                minutes: graceMinutes,
+              })
+            : undefined
+        }
       />
     </form>
   );
@@ -110,11 +137,11 @@ function ConfirmButton({ formId, form }: { formId: string; form: ReturnType<type
 }
 
 /**
- * Gõ TOTP để mở quyền xem bí mật (FR-022) — dùng chung (AD-15).
+ * Gõ TOTP để mở MỘT phạm vi step-up (FR-022, AD-17) — dùng chung (AD-15).
  *
- * Không nhận `graceMinutes` từ nơi gọi: API trả về nó sau khi step-up thành công, và API mới
- * là nơi biết `secret.stepup_grace_minutes` đang đặt bao nhiêu (AD-11). Nơi gọi tự đoán 10
- * phút thì đổi cấu hình xong màn hình nói một đằng, hệ thống làm một nẻo.
+ * `graceMinutes` chỉ để nói trước, và phải là số SERVER đưa (lỗi `STEPUP_REQUIRED` hoặc
+ * `me.config`) — API mới là nơi biết ân hạn của từng phạm vi đang đặt bao nhiêu (AD-11). Nơi
+ * gọi tự đoán 10 phút thì đổi cấu hình xong màn hình nói một đằng, hệ thống làm một nẻo.
  *
  * Nơi gọi KHÔNG tự tính "còn trong grace hay chưa": cứ gọi việc mình cần, gặp
  * `STEPUP_REQUIRED` thì mở hộp này rồi thử lại. Đồng hồ máy người dùng lệch cũng không sai —
@@ -122,13 +149,14 @@ function ConfirmButton({ formId, form }: { formId: string; form: ReturnType<type
  */
 export function StepUpDialog({
   csrfToken,
+  scope,
   purpose,
   graceMinutes,
   onClose,
   onDone,
 }: StepUpProps & { onClose: () => void }) {
   const { t } = useTranslation();
-  const form = useStepUpForm(csrfToken, onDone);
+  const form = useStepUpForm(csrfToken, scope, onDone);
 
   return (
     <Dialog
@@ -145,7 +173,13 @@ export function StepUpDialog({
         </>
       }
     >
-      <StepUpFields formId="stepup-form" purpose={purpose} graceMinutes={graceMinutes} form={form} />
+      <StepUpFields
+        formId="stepup-form"
+        scope={scope}
+        purpose={purpose}
+        graceMinutes={graceMinutes}
+        form={form}
+      />
     </Dialog>
   );
 }
@@ -159,6 +193,7 @@ export function StepUpDialog({
  */
 export function StepUpStep({
   csrfToken,
+  scope,
   purpose,
   graceMinutes,
   onBack,
@@ -166,12 +201,13 @@ export function StepUpStep({
   backLabel,
 }: StepUpProps & { onBack: () => void; backLabel: ReactNode }) {
   const { t } = useTranslation();
-  const form = useStepUpForm(csrfToken, onDone);
+  const form = useStepUpForm(csrfToken, scope, onDone);
   return (
     <section className="form-grid" data-columns={1} aria-label={t('auth.stepUpTitle')}>
       <h3>{t('auth.stepUpTitle')}</h3>
       <StepUpFields
         formId="stepup-step-form"
+        scope={scope}
         purpose={purpose}
         graceMinutes={graceMinutes}
         form={form}

@@ -125,6 +125,7 @@ export function TotpEnrollDialog({
       ) : needStepUp ? (
         <StepUpStep
           csrfToken={csrfToken}
+          scope="vault"
           purpose={t('profile.totpReEnrollStepUp')}
           backLabel={t('profile.totpReEnrollBack')}
           onBack={() => setNeedStepUp(false)}

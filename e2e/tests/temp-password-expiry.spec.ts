@@ -8,6 +8,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -40,7 +41,7 @@ function expire(email: string): void {
 
 test.describe('Mật khẩu tạm có hạn (Q-20)', () => {
   test('mới cấp: có hạn khoảng 24 giờ và đăng nhập được tới bước đổi mật khẩu', async ({ page, browser }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const who = await makeMember(page);
     const hours = Number(
       sql(
@@ -57,7 +58,7 @@ test.describe('Mật khẩu tạm có hạn (Q-20)', () => {
   });
 
   test('quá hạn → màn đăng nhập báo nhờ SA đặt lại, không vào được', async ({ page, browser }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const who = await makeMember(page);
     expire(who.email);
 
@@ -77,7 +78,7 @@ test.describe('Mật khẩu tạm có hạn (Q-20)', () => {
     page,
     browser,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const who = await makeMember(page);
 
     const ctx = await browser.newContext({ ignoreHTTPSErrors: true });

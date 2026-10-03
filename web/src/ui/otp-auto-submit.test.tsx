@@ -70,7 +70,7 @@ describe('StepUpDialog tự gửi — không bao giờ hai lượt cho một mã
     );
     vi.stubGlobal('fetch', fetchMock);
     const onDone = vi.fn();
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={onDone} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={onDone} />);
 
     const input = screen.getByLabelText('Mã xác thực');
     await userEvent.type(input, '123456');
@@ -93,7 +93,7 @@ describe('StepUpDialog tự gửi — không bao giờ hai lượt cho một mã
       .mockResolvedValueOnce(jsonResponse(200, { graceMinutes: 10 }));
     vi.stubGlobal('fetch', fetchMock);
     const onDone = vi.fn();
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={onDone} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={onDone} />);
 
     const input = screen.getByLabelText('Mã xác thực');
     await userEvent.type(input, '111111');
@@ -104,6 +104,9 @@ describe('StepUpDialog tự gửi — không bao giờ hai lượt cho một mã
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith(10));
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse((init as RequestInit).body as string));
-    expect(bodies).toEqual([{ token: '111111' }, { token: '222222' }]);
+    expect(bodies).toEqual([
+      { token: '111111', scope: 'vault' },
+      { token: '222222', scope: 'vault' },
+    ]);
   });
 });

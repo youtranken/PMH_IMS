@@ -11,6 +11,7 @@ import {
   sql,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -71,7 +72,7 @@ function seedPendingBreakGlass(requester: string, deviceId: string): string {
 
 test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
   test('hết grace: TẠO TÀI KHOẢN bị chặn — mắt xích số 2 của chuỗi leo thang', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
 
@@ -102,13 +103,14 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
 
   test('VẾ ĐỐI CHỨNG: gõ mã xong thì SA vẫn tạo được tài khoản', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret);
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
     const stepUp = await page.request.post('/api/v1/auth/step-up', {
       headers,
-      data: { token: await freshTotpCode(secret) },
+      data: { token: await freshTotpCode(secret), scope: 'vault' },
     });
     expect(stepUp.status(), 'gõ mã phải được chấp nhận').toBeLessThan(300);
 
@@ -130,13 +132,14 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
    */
   test('hết grace: XOÁ 2FA của người khác bị chặn', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret);
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
     await page.request.post('/api/v1/auth/step-up', {
       headers,
-      data: { token: await freshTotpCode(secret) },
+      data: { token: await freshTotpCode(secret), scope: 'vault' },
     });
     const victim = await page.request.post('/api/v1/accounts', {
       headers,
@@ -169,13 +172,14 @@ test.describe('Bắt đổi mật khẩu tạm là hàng rào của SERVER, khô
    */
   test('tài khoản chưa đổi mật khẩu tạm không gọi được API nghiệp vụ', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret);
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
     await page.request.post('/api/v1/auth/step-up', {
       headers,
-      data: { token: await freshTotpCode(secret) },
+      data: { token: await freshTotpCode(secret), scope: 'vault' },
     });
     const email = `e2e-tao-moi-tam-${stamp}@pmh.com.vn`;
     const created = await page.request.post('/api/v1/accounts', {
@@ -233,6 +237,7 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
    */
   test('người xin không tự duyệt cho chính mình được', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret);
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
 
@@ -258,7 +263,7 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
     expireStepUp(E2E_SA.email);
     await page.request.post('/api/v1/auth/step-up', {
       headers,
-      data: { token: await freshTotpCode(secret) },
+      data: { token: await freshTotpCode(secret), scope: 'vault' },
     });
 
     const selfApprove = await page.request.post(
@@ -283,6 +288,7 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
    */
   test('người khác duyệt thì phiếu sang `approved`', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret);
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
 
@@ -305,7 +311,7 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
     expireStepUp(E2E_SA.email);
     await page.request.post('/api/v1/auth/step-up', {
       headers,
-      data: { token: await freshTotpCode(secret) },
+      data: { token: await freshTotpCode(secret), scope: 'vault' },
     });
 
     const approved = await page.request.post(

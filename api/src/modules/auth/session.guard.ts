@@ -116,6 +116,7 @@ export class SessionGuard implements CanActivate {
       role: user.role,
       sessionId: session.id,
       steppedUpAt: session.steppedUpAt,
+      diagramSteppedUpAt: session.diagramSteppedUpAt,
       mustChangePassword: user.mustChangePassword,
     };
 

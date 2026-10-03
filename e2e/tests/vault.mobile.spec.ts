@@ -12,6 +12,7 @@ import {
   resetSecrets,
   resetUsers,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -33,7 +34,7 @@ async function csrfOf(page: Page): Promise<string> {
  */
 test.describe('Két sắt ở 390px', () => {
   test('bảng secret xếp dọc, đọc được, không tràn ngang', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const csrf = await csrfOf(page);
@@ -96,6 +97,7 @@ test.describe('Két sắt ở 390px', () => {
    */
   test('hộp nhập mã và hộp hiện giá trị đọc được ở 390px, không tràn ngang', async ({ page }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
     const stamp = uniqueStamp();
     const { deviceId } = await createDeviceWithSecret(page, stamp, {
       label: `mat khau rat dai E2E ${stamp}`,

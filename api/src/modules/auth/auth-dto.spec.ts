@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import { ChangePasswordDto, TotpEnrollStartDto } from './auth.dto';
+import { ChangePasswordDto, StepUpDto, TotpEnrollStartDto } from './auth.dto';
 
 /**
  * HAI LỖI TRONG BỐN DÒNG DTO (§18 #9 và #11).
@@ -9,8 +9,8 @@ import { ChangePasswordDto, TotpEnrollStartDto } from './auth.dto';
  * mà request rơi vào — chứ không chỉ đổi câu chữ.
  */
 
-function errorsOf(cls: typeof TotpEnrollStartDto | typeof ChangePasswordDto, body: unknown) {
-  return validateSync(plainToInstance(cls, body) as object, { whitelist: true });
+function errorsOf(cls: new () => object, body: unknown) {
+  return validateSync(plainToInstance(cls, body), { whitelist: true });
 }
 
 describe('TotpEnrollStartDto — `null` không được giả làm "có gửi"', () => {
@@ -72,5 +72,28 @@ describe('Câu lỗi `@Length` phải đúng cho CẢ HAI biên (§18 #11)', () 
       newPassword: 'mat-khau-moi-du-dai',
     });
     expect(JSON.stringify(errors.map((e) => e.constraints))).toContain('Chưa nhập');
+  });
+});
+
+/**
+ * AD-17: `POST /auth/step-up` BẮT BUỘC nói phạm vi. Mặc định ngầm về két thì một client sơ đồ
+ * quên gửi `scope` sẽ lặng lẽ mở két — đúng thứ phạm vi sinh ra để chặn.
+ */
+describe('StepUpDto — phạm vi bắt buộc', () => {
+  it.each(['vault', 'diagram'])('nhận phạm vi %s', (scope) => {
+    expect(errorsOf(StepUpDto, { token: '123456', scope })).toEqual([]);
+  });
+
+  it.each([
+    ['thiếu scope', { token: '123456' }],
+    ['scope rỗng', { token: '123456', scope: '' }],
+    ['scope lạ', { token: '123456', scope: 'all' }],
+    ['scope null', { token: '123456', scope: null }],
+  ])('%s → bị từ chối', (_label, body) => {
+    expect(errorsOf(StepUpDto, body)).not.toEqual([]);
+  });
+
+  it('mã vẫn phải đúng 6 chữ số', () => {
+    expect(errorsOf(StepUpDto, { token: '12345', scope: 'vault' })).not.toEqual([]);
   });
 });

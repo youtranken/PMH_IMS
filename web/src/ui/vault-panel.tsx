@@ -395,6 +395,7 @@ export function VaultPanel({
         ) : pendingStepUp ? (
           <StepUpStep
             csrfToken={me.csrfToken}
+            scope="vault"
             purpose={stepUpPurpose}
             graceMinutes={me.config?.stepUpGraceMinutes}
             backLabel={t('vault.stepBack')}
@@ -752,6 +753,7 @@ export function VaultPanel({
       {pendingStepUp && !stepsInline ? (
         <StepUpDialog
           csrfToken={me.csrfToken}
+          scope="vault"
           purpose={stepUpPurpose}
           graceMinutes={me.config?.stepUpGraceMinutes}
           onClose={() => setPendingStepUp(null)}

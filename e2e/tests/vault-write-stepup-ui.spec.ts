@@ -12,6 +12,7 @@ import {
   sql,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -22,7 +23,7 @@ import {
  *
  * `vault-write-guard.spec.ts` gọi API trực tiếp, nên nó chỉ chứng minh SERVER biết từ chối.
  * Nó KHÔNG chạm tới `useStepUpRetry` — cái hook tôi vừa dựng để web hỏi mã rồi thử lại. Và
- * `vault.spec.ts` thì xoay/thu hồi ngay sau khi đăng nhập, tức luôn còn trong grace 10 phút,
+ * `vault.spec.ts` thì xoay/thu hồi ngay sau khi đăng nhập + nhập mã (`stepUpViaApi`), tức luôn còn trong grace 10 phút,
  * nên hộp hỏi mã ở đó không bao giờ hiện.
  *
  * Nghĩa là trước bài này, nhánh `STEPUP_REQUIRED → hộp hỏi mã → thử lại` của web CHƯA TỪNG
@@ -42,6 +43,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     test.setTimeout(150_000);
 
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
     const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {
@@ -123,7 +125,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
   }) => {
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {

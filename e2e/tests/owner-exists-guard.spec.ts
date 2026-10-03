@@ -11,6 +11,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -72,7 +73,7 @@ async function uploadTo(page: Page, ownerType: string, ownerId: string) {
 
 test.describe('Chủ thể phải có thật mới gắn được đồ vào', () => {
   test('kho file: cả SÁU loại chủ thể đều từ chối ownerId bịa ra', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const before = Number(sql('SELECT count(*) FROM file'));
 
@@ -96,7 +97,7 @@ test.describe('Chủ thể phải có thật mới gắn được đồ vào', (
   });
 
   test('két sắt: cả BỐN loại chủ thể đều từ chối ownerId bịa ra', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const before = Number(sql('SELECT count(*) FROM secret'));
 
     for (const ownerType of SECRET_OWNER_TYPES) {
@@ -128,7 +129,7 @@ test.describe('Chủ thể phải có thật mới gắn được đồ vào', (
    * đợt A với ma trận quyền đính kèm.
    */
   test('chủ thể CÓ THẬT thì đính kèm và cất két vẫn chạy bình thường', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-4);
 
     const catalog = await page.evaluate(async () => {
@@ -173,7 +174,7 @@ test.describe('Chủ thể phải có thật mới gắn được đồ vào', (
   test('máy đã thanh lý: giấy tờ cũ vẫn xem được — sổ này chỉ hỏi "có thật không"', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-4);
 
     const catalog = await page.evaluate(async () => {

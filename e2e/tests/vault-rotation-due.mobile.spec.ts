@@ -9,6 +9,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -22,7 +23,7 @@ test.beforeEach(() => {
  * ngược, và quá hạn thì "Quá N ngày — cần đổi", không tràn ngang.
  */
 test('thẻ tài khoản dịch vụ ở 390px mang hạn đổi mật khẩu trong két', async ({ page }) => {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const code = `VPN-E2E-HAN390-${stamp}`;
