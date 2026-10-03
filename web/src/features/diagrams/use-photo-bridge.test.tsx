@@ -5,7 +5,7 @@ import type { DrawioCommand } from '@/ui/drawio-protocol';
 import { DEVICE_LOOKS_BATCH, usePhotoBridge } from './use-photo-bridge';
 
 /**
- * Công tắc "Biểu tượng / Ảnh thật" (Story 10.11): hộp liệt kê ô thiết bị của trang đang mở; lựa
+ * Công tắc "Biểu tượng / Ảnh thật": hộp liệt kê ô thiết bị của trang đang mở; lựa
  * chọn không có ảnh thì tắt kèm lý do; chọn ảnh là sửa ô bằng `patch` (không `merge`).
  */
 const DEV = '7b0c1c1e-0000-4000-8000-000000000001';

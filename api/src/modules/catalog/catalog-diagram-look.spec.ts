@@ -6,7 +6,7 @@ import { CatalogBodyDto, CatalogController } from './catalog.controller';
 import { DIAGRAM_SHAPES } from './diagram-shapes';
 
 /**
- * Hình của loại thiết bị trên sơ đồ (Story Thiết bị kho): chỉ chọn trong danh sách đóng, không ô
+ * Hình của loại thiết bị trên sơ đồ: chỉ chọn trong danh sách đóng, không ô
  * style tự do; chỉ SA tải/gỡ biểu tượng SVG riêng.
  */
 describe('Danh mục loại thiết bị — hình trên sơ đồ mạng', () => {

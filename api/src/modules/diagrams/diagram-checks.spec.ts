@@ -47,7 +47,7 @@ function cells(body: string) {
 
 /**
  * Bộ luật dây (AD-18) — MỘT bản dùng chung cho hydrate, tự kiểm khi gửi duyệt/phát hành
- * (Story 10.7) và cảnh báo lệch kho (Story 10.9).
+ * và cảnh báo lệch kho.
  */
 describe('checkCables — tự kiểm dây', () => {
   const cases: [string, string, Map<string, string | null> | undefined, [string, string, string | null][]][] = [

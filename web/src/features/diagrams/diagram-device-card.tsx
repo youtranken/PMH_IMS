@@ -14,7 +14,7 @@ import { VaultPanel } from '@/ui/vault-panel';
 import { byDeviceKey, type DiagramDeviceInfo } from './diagram-api';
 
 /**
- * Thẻ thông tin của một ô thiết bị ở chế độ xem (Story Thiết bị kho): đọc từ kho HIỆN TẠI qua
+ * Thẻ thông tin của một ô thiết bị ở chế độ xem: đọc từ kho HIỆN TẠI qua
  * `devices`/`ipam`/`catalog` (server gom một lượt), không từ XML bản vẽ.
  *
  * "Mở két" mở đúng `VaultPanel` dùng ở trang thiết bị và Két tổng (AD-15): luật 3 tầng quyền,

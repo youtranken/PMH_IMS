@@ -1,5 +1,5 @@
 /**
- * Chia cổng cho "Nối hàng loạt" (Story 10.5) — hàm THUẦN, test bảng dữ liệu ở `port-plan.spec.ts`.
+ * Chia cổng cho "Nối hàng loạt" — hàm THUẦN, test bảng dữ liệu ở `port-plan.spec.ts`.
  * Màn xem trước và lượt ghi cùng gọi hàm này (qua route `bulk-plan` và trong `tx` của
  * `bulk-link`), nên bảng "máy → cổng" người dùng duyệt là đúng bảng được ghi.
  */

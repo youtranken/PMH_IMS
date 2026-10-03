@@ -14,7 +14,7 @@ describe('nextPortLabel — tăng số cuối của nhãn cổng', () => {
 });
 
 /**
- * Nối hàng loạt (Story 10.5): một switch + N máy, cổng bắt đầu (và cổng cuối nếu có) → cổng cho
+ * Nối hàng loạt: một switch + N máy, cổng bắt đầu (và cổng cuối nếu có) → cổng cho
  * từng máy theo thứ tự, BỎ QUA cổng đã chiếm; không đủ cổng thì không chia gì cả.
  */
 describe('planBulkPorts', () => {

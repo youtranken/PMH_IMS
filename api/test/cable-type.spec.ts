@@ -11,7 +11,7 @@ import type { DeviceRetirementRegistry } from '../src/common/device-retirement.r
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
- * Loại dây (Q-23, Story 10.5): danh mục `cable_type` của `catalog` seed đúng Cat6/Fiber/DAC, màu là
+ * Loại dây (Q-23): danh mục `cable_type` của `catalog` seed đúng Cat6/Fiber/DAC, màu là
  * một ô màu token (1..8) chứ không phải mã hex; `device_port.cable_type_id` của `devices` trỏ vào
  * đó, loại đã ngừng dùng không chọn MỚI được nhưng dòng cũ vẫn sửa được (Q-14).
  */
@@ -24,7 +24,7 @@ const noRetirement = {
   releaseAllWithin: () => Promise.resolve(),
 } as unknown as DeviceRetirementRegistry;
 
-describe('Story 10.5 · loại dây', () => {
+describe('loại dây', () => {
   let scratch: ScratchDb;
   let catalog: CatalogService;
   let ports: DevicePortsService;

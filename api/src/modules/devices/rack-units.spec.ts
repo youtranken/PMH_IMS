@@ -3,7 +3,7 @@ import { rackClaimMoved, rackClaimOf, rackOverlap, rackUnitsReason, type RackUni
 
 const base: RackUnitsInput = { start: 5, size: 2, cabinetCode: 'R1', cabinetHeight: 42, hasCabinet: true };
 
-describe('rackUnitsReason — U bắt đầu / Số U (Story 10.11, 1–60, không vượt tủ)', () => {
+describe('rackUnitsReason — U bắt đầu / Số U (1–60, không vượt tủ)', () => {
   const cases: [string, Partial<RackUnitsInput>, RegExp | null][] = [
     ['hợp lệ', {}, null],
     ['cùng trống', { start: null, size: null }, null],

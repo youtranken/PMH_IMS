@@ -16,7 +16,7 @@ import {
 } from './helpers';
 
 /*
- * Ảnh thật, vị trí U và mặt tủ (Story 10.11, Q-23 "chồng U trong cùng tủ thì chặn"): khai U trên
+ * Ảnh thật, vị trí U và mặt tủ (Q-23 "chồng U trong cùng tủ thì chặn"): khai U trên
  * form thiết bị, chồng U bị từ chối bằng câu tiếng Việt nêu tên máy đang chiếm; "Dựng lại mặt tủ"
  * xếp máy đúng U ở mặt trước + mặt sau với ảnh thật; công tắc Biểu tượng / Ảnh thật trên màn sửa
  * (mặt không có ảnh tắt kèm lý do); trang thiết bị đọc được vị trí U ở 390px. Luật U, ảnh, bố cục

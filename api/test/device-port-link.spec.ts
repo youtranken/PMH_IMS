@@ -19,7 +19,7 @@ const TEST_TIMEOUT = 120_000;
 const actor = 'port-link@test';
 const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
 
-describe('Story 10.5 · khai / gỡ / nối hàng loạt sợi dây', () => {
+describe('khai / gỡ / nối hàng loạt sợi dây', () => {
   let scratch: ScratchDb;
   let devices: DevicesService;
   let ports: DevicePortsService;

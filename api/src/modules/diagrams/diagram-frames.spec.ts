@@ -172,7 +172,7 @@ describe('cabinetFrameLayout — khung tủ dựng từ kho', () => {
   });
 });
 
-/* Mặt tủ (Story 10.11): mặt trước / mặt sau là hai khung cạnh nhau, máy xếp đúng U, ảnh thật từng mặt. */
+/* Mặt tủ: mặt trước / mặt sau là hai khung cạnh nhau, máy xếp đúng U, ảnh thật từng mặt. */
 describe('cabinetFrameLayout — mặt trước + mặt sau, ảnh thật', () => {
   const icon = { style: 'shape=icon;', label: 'L', width: 60, height: 40 };
   const both = { sides: ['front', 'back'] as const };

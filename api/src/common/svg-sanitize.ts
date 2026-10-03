@@ -2,9 +2,9 @@ import { SaxesParser, type SaxesTagPlain } from 'saxes';
 
 /**
  * Bộ đọc XML an toàn + làm sạch SVG theo allowlist — hàm THUẦN, dùng chung cho cổng bản vẽ
- * (`diagrams/diagram-gate.ts`, AD-17) và biểu tượng SVG của loại thiết bị (`catalog`, Story sơ đồ
- * Thiết bị kho). Một bộ luật cho cả hai: biểu tượng tải lên đi thẳng vào bản vẽ (hydrate) rồi vào
- * ảnh xem chèn trong DOM của IMS, nên lọc lỏng hơn ở một cửa là mở lại lỗ đã vá ở cửa kia.
+ * (`diagrams/diagram-gate.ts`, AD-17) và biểu tượng SVG của loại thiết bị (`catalog`). Một bộ
+ * luật cho cả hai: biểu tượng tải lên đi thẳng vào bản vẽ (hydrate) rồi vào ảnh xem chèn trong
+ * DOM của IMS, nên lọc lỏng hơn ở một cửa là mở lại lỗ đã vá ở cửa kia.
  *
  * Parser là `saxes`: không đọc DTD, không mở thực thể ngoài; gặp DOCTYPE là từ chối luôn.
  */
