@@ -271,7 +271,7 @@ describe('Sơ đồ mạng · cảnh báo lệch kho (Q-23)', () => {
     const dev = await newDevice('SW-E2E-DR-ARCH');
     const { diagramId } = await official('Lưu trữ', deviceCell('d1', dev, 'SW-E2E-DR-ARCH'));
     await scratch.pool.query(`UPDATE device SET status = 'retired' WHERE id = $1`, [dev]);
-    await diagrams.archive(MAKER.email, diagramId);
+    await diagrams.archive({ email: MAKER.email, role: 'sa' }, diagramId);
     await drift.sweepDue(new Date('2026-10-10T02:00:00Z'));
     expect(await driftMails(diagramId)).toBe(0);
     expect(await mails.find('diagram.drift')!({ diagramId, count: 1, previous: 0 })).toBeNull();

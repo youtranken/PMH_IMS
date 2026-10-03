@@ -105,8 +105,9 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
       const floor = await service.create(SA.email, { name: 'E2E Tầng 3', nodeType: 'floor', parentId: tower.id });
       const other = await service.create(SA.email, { name: 'E2E Nhánh khác', nodeType: 'company' });
       const shelved = await service.create(SA.email, { name: 'E2E Đã cất', nodeType: 'floor', parentId: tower.id });
-      await service.archive(SA.email, shelved.id);
-      const deck = await service.create(SA.email, { name: 'E2E Trình bày', nodeType: 'other', parentId: tower.id });
+      await service.archive(SA, shelved.id);
+      // Bản trình bày luôn đứng ở gốc (ràng buộc diagram_presentation_root_check).
+      const deck = await service.create(SA.email, { name: 'E2E Trình bày', nodeType: 'other' });
       await scratch.pool.query(`UPDATE diagram SET kind = 'presentation' WHERE id = $1`, [deck.id]);
 
       // Cháu (không chỉ con trực tiếp) cũng là "dưới bản vẽ này".
@@ -132,7 +133,7 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
       const root = await service.create(SA.email, { name: 'E2E Gốc KH 2', nodeType: 'company' });
       const child = await service.create(SA.email, { name: 'E2E Phòng server', nodeType: 'room', parentId: root.id });
       const v1 = await save(root.id, frame('f1', 'Phòng server', { ims_child_diagram_id: child.id }));
-      await service.archive(SA.email, child.id);
+      await service.archive(SA, child.id);
       await expect(save(root.id, frame('f1', 'Phòng server (cũ)', { ims_child_diagram_id: child.id }), v1.id)).resolves.toMatchObject({ seq: 2 });
 
       const content = await service.content(SA.email, root.id, { mode: 'view' });
