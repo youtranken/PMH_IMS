@@ -9,7 +9,7 @@ import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
 import { PortFormDialog } from '@/ui/port-form-dialog';
 import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
-import { bindEdgeValue, diffAutosave, edgeById, edgeEnds, firstDeviceCell, styleWithoutImsEdge, undeclaredEdges, type NewEdge } from './cable-diff';
+import { bindEdgeValue, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
@@ -222,14 +222,9 @@ export function useCableBridge({
 
   const current = queue[0] ?? null;
   const dequeue = () => setQueue((q) => q.slice(1));
-  /*
-   * "Dây chưa khai" gồm nét không có `ims_link_id`, cộng nét có kết nối đã gỡ / gắn sai (đỏ) lúc
-   * mở — chọn nó là khai lại: kết nối mới thay `ims_link_id` cũ trên đúng nét đó.
-   */
-  const broken = (content.cableEdges ?? [])
-    .filter((e) => e.state !== 'linked' && e.linkId)
-    .flatMap((e) => edgeEnds(currentXml, e.cellId) ?? []);
-  const undeclared = [...undeclaredEdges(currentXml), ...broken];
+  // Chọn nét đỏ là khai lại: kết nối mới thay `ims_link_id` cũ trên đúng nét đó, và lần autosave
+  // kế tiếp đưa nó ra khỏi danh sách.
+  const undeclared = pendingEdges(currentXml, content.cableEdges ?? []);
 
   const menu: BarAction[] = [
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => setDeclareOpen(true) },

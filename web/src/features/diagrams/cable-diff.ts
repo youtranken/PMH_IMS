@@ -139,12 +139,20 @@ export function undeclaredEdges(xml: string): NewEdge[] {
   return parsed.edges.filter((e) => !e.linkId).flatMap((e) => asNew(e, parsed.devices) ?? []);
 }
 
-/** Hai đầu máy kho của một nét (bỏ qua `ims_link_id`) — khai lại nét có kết nối đã gỡ. */
-export function edgeEnds(xml: string, id: string): NewEdge | null {
+/**
+ * Danh sách "Dây chưa khai": nét không có `ims_link_id`, cộng nét mà lúc mở server báo kết nối đã
+ * gỡ / gắn sai (đỏ) và trên XML ĐANG vẽ vẫn mang đúng kết nối cũ đó. Tính lại từ XML mỗi lần —
+ * không từ trạng thái lúc mở — để nét vừa khai lại (đã có `ims_link_id` mới) ra khỏi danh sách,
+ * không khai trùng được lần hai.
+ */
+export function pendingEdges(xml: string, opened: { cellId: string; linkId: string | null; state: string }[]): NewEdge[] {
   const parsed = parse(xml);
-  const edge = parsed.edges.find((e) => e.id === id);
-  return edge ? asNew(edge, parsed.devices) : null;
+  const stale = new Map(opened.filter((e) => e.state !== 'linked' && e.linkId).map((e) => [e.cellId, e.linkId]));
+  return parsed.edges
+    .filter((e) => !e.linkId || stale.get(e.id) === e.linkId)
+    .flatMap((e) => asNew(e, parsed.devices) ?? []);
 }
+
 
 export function edgeById(xml: string, id: string): ParsedEdge | null {
   return parse(xml).edges.find((e) => e.id === id) ?? null;
