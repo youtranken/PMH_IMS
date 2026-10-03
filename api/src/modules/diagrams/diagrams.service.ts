@@ -246,6 +246,12 @@ export const SUBNET_FREE_PREVIEW = 5;
 /** Trần số máy một lần hỏi `device-info` — hơn thế là gọi nhầm, không phải một bản vẽ. */
 export const DEVICE_INFO_MAX_IDS = 500;
 
+/** Bản vẽ (chỉ tên + id — thông tin của cây, không phải nội dung) có một máy ở phiên bản mới nhất. */
+export interface DiagramRef {
+  id: string;
+  name: string;
+}
+
 /**
  * Trần số máy một lần hỏi `device-looks`. Khác `device-info`: mỗi máy kéo theo tới HAI ảnh thật
  * (đọc tệp + thu nhỏ trên threadpool) nhúng thẳng vào câu trả lời, nên 500 máy là hàng trăm MB và
@@ -1133,20 +1139,36 @@ export class DiagramsService {
    * để trình nội bộ, liệt kê nó chỉ làm nhiễu. Thẻ thông tin "Có mặt trong các bản vẽ" và trang thiết bị (web gọi, AD-18: không module nào import `diagrams`). Chỉ tên + id: đây
    * là thông tin của cây, không phải nội dung bản vẽ.
    */
-  async diagramsWithDevice(deviceId: string): Promise<{ id: string; name: string }[]> {
-    const { rows } = await this.db.execute<{ id: string; name: string }>(sql`
-      SELECT d.id, d.name
+  async diagramsWithDevice(deviceId: string): Promise<DiagramRef[]> {
+    return (await this.diagramsWithDevices([deviceId])).get(deviceId) ?? [];
+  }
+
+  /**
+   * `diagramsWithDevice` cho nhiều máy MỘT câu — tìm máy / chỉ đường trên sơ đồ dùng cái này. Một
+   * luật cho cả hai nơi: hai câu SQL riêng là hai thứ tự, hai cách hiểu "phiên bản mới nhất".
+   */
+  async diagramsWithDevices(deviceIds: string[]): Promise<Map<string, DiagramRef[]>> {
+    const out = new Map<string, DiagramRef[]>();
+    const ids = [...new Set(deviceIds)].filter((id) => UUID_RE.test(id));
+    if (ids.length === 0) return out;
+    const { rows } = await this.db.execute<{ device_id: string; id: string; name: string }>(sql`
+      SELECT DISTINCT c.value ->> 'deviceId' AS device_id, d.id, d.name, lower(d.name) AS sort_name
         FROM diagram d
         JOIN LATERAL (
           SELECT v.cell_index FROM diagram_version v
            WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
         ) lv ON true
+        CROSS JOIN LATERAL jsonb_array_elements(lv.cell_index -> 'cells') c
        WHERE d.archived_at IS NULL
          AND d.kind = 'official'
-         AND lv.cell_index -> 'cells' @> ${JSON.stringify([{ deviceId }])}::jsonb
-       ORDER BY lower(d.name), d.id
+         AND c.value ->> 'deviceId' IN (${sql.join(
+           ids.map((id) => sql`${id}`),
+           sql`, `,
+         )})
+       ORDER BY sort_name, d.id
     `);
-    return rows;
+    for (const row of rows) out.set(row.device_id, [...(out.get(row.device_id) ?? []), { id: row.id, name: row.name }]);
+    return out;
   }
 
   async changes(diagramId: string, versionId: string): Promise<CellDiff> {

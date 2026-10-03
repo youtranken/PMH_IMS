@@ -54,7 +54,7 @@ describe('Sơ đồ mạng · tìm, lớp, chỉ đường', () => {
     const ipam = { heldAddressesOf: (list: string[]) => Promise.resolve(new Map(list.map((id) => [id, []]))) } as unknown as IpamApiService;
     config = new SystemConfigService(db);
     service = new DiagramsService(db, audit, config, catalog, devices, ipam, new UsersApiService(new UsersService(db)));
-    navigation = new DiagramNavigationService(db, config, devices);
+    navigation = new DiagramNavigationService(config, devices, service);
 
     await scratch.pool.query(`INSERT INTO users (email, full_name, role, password_hash) VALUES ($1, 'E2E Trực đêm', 'sa', 'x')`, [SA]);
     const typeId = (await scratch.pool.query<{ id: string }>(`INSERT INTO device_type (name) VALUES ('Switch E2E NAV') RETURNING id`)).rows[0].id;
