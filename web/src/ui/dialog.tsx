@@ -76,7 +76,12 @@ export function useAnyDialogOpen(): boolean {
   return useSyncExternalStore(subscribeToDialogs, isAnyDialogOpen, () => false);
 }
 
-const DialogPortalContext = createContext<HTMLElement | null>(null);
+/**
+ * Điểm neo cho menu (`Select`, `Combobox`…) mở BÊN TRONG một lớp nổi: menu portal vào đây thay
+ * vì `document.body`, để cú bấm vào menu vẫn tính là bấm trong lớp — lớp không tự đóng. `Dialog`
+ * và `Popover` cấp điểm neo này.
+ */
+export const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
 
 /** Lối đóng "có chủ ý" của hộp gần nhất — đi qua cửa canh dữ liệu chưa lưu nếu hộp bật nó. */
