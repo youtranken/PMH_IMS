@@ -1018,23 +1018,25 @@ So that bản chính thức luôn qua người có thẩm quyền mà không ai 
 **Given** loại yêu cầu `diagram_publish` đăng ký vào `approvals` (AD-6): `pending → approved | returned | withdrawn`, đổi trạng thái chỉ qua `transition()`
 **When** Thành viên bấm "Gửi duyệt" (bắt ghi lý do)
 **Then** server chạy tự kiểm (bộ hàm thuần AD-18, test bảng dữ liệu): LỖI ĐỎ chặn — `ims_device_id`/`ims_link_id` không tồn tại, máy đã thanh lý, dây gắn link mà hai đầu link khác hai máy ở hai đầu dây, hai dây gắn cùng một link; CẢNH BÁO VÀNG cho qua — dây giữa hai máy kho chưa gắn link, máy đặt trong khung tủ khác tủ trong kho, dây giữa hai site không có đường nối site
-**And** gửi được thì tạo `approval` + email Admin/SA qua outbox, nhắc theo `approval.reminder_hours`; một bản vẽ chỉ một yêu cầu chờ; người gửi tự rút được
+**And** gửi được thì tạo `approval` (payload ghim đúng phiên bản được gửi — mặc định bản đã lưu mới nhất) + email Admin/SA trừ người gửi qua outbox (`approval.requested`), nhắc theo `approval.reminder_hours` (sweep chung); một bản vẽ chỉ một yêu cầu chờ (khoá hàng `diagram`, kể cả người gửi khác → 409); người gửi tự rút được
+**And** khung tự kiểm ở `diagram-selfcheck.ts` (luật thiết bị: máy không còn/thanh lý = đỏ, máy trong khung tủ — ô con hoặc nằm gọn trong khung — khác tủ trong kho = vàng); luật dây là `checkCables` của `diagram-checks.ts` (Story 10.5), kiểu chung ở `diagram-finding.ts`; lỗi chặn trả 400 `DIAGRAM_CHECK_FAILED` kèm danh sách đỏ/vàng, web liệt kê và bay tới ô
 
 **Given** Admin/SA mở yêu cầu chờ
 **When** xem trang duyệt
-**Then** thấy tóm tắt một dòng + cảnh báo vàng + nút "Xem so sánh với bản chính thức" (tuỳ chọn, Story 10.10) — KHÔNG bắt bấm qua từng thay đổi (Q-23)
+**Then** thấy tóm tắt một dòng (so với bản chính thức hiện hành) + cảnh báo vàng + nút "Xem so sánh với bản chính thức" (tuỳ chọn; tắt kèm lý do tới Story 10.10) — KHÔNG bắt bấm qua từng thay đổi (Q-23). Trang duyệt nằm ngay trên bản vẽ (`/diagrams/:id`, nút "Duyệt…"), thư duyệt và nhãn nhật ký trỏ về đó (`ApprovalSubject.detailPath`)
 **And** bấm Duyệt: trong MỘT transaction tự kiểm chạy lại, phiên bản thành chính thức (`official_version_id` + `diagram_history` sự kiện phát hành), `approval` → `approved`, audit, email báo người gửi — **không ghi gì vào `device_port`** (AD-18); có lỗi đỏ mới phát sinh (vd máy vừa thanh lý) thì không duyệt được và báo rõ
 **And** Thành viên gọi API duyệt hay phát hành → 403; Admin không duyệt được bản do chính mình gửi (đi đường Phát hành)
 
 **Given** Admin/SA tự vẽ
 **When** lưu
-**Then** vẫn là bản nháp; bấm "Phát hành" mới thành chính thức, chạy cùng bộ tự kiểm (đỏ chặn, vàng cho qua), không qua `approvals` (Q-23); "Khôi phục phiên bản" (Story 10.3) + Phát hành = lùi bản chính thức, không xoá lịch sử
+**Then** vẫn là bản nháp; bấm "Phát hành" mới thành chính thức, chạy cùng bộ tự kiểm (đỏ chặn, vàng cho qua), không qua `approvals` (Q-23); "Khôi phục phiên bản" (Story 10.3) + Phát hành = lùi bản chính thức, không xoá lịch sử — hộp phiên bản có thêm "Khôi phục làm chính thức" trên phiên bản từng chính thức: khôi phục + phát hành trong MỘT transaction
 
 **Given** Admin trả về
 **When** ghim bình luận lên hình/dây (theo id ô; draw.io tự host không có bình luận nên IMS tự lưu) hoặc ghi chú chung rồi bấm "Trả về"
 **Then** phải có ít nhất một bình luận/ghi chú; `approval` → `returned`, email người gửi; người gửi thấy ghim trên trình xem và danh sách ghim mở từ thanh trên trình vẽ (bấm ghim → trình xem bay tới ô), sửa rồi gửi lại
-**And** `diagram_comment` gắn phiên bản + id ô, `parent_id` để trả lời thành luồng; không sửa/xoá nội dung, "Đã xử lý" là hàng sự kiện (audit); ô bị xoá ở phiên bản sau → ghim hiện ở vị trí cũ kèm "(hình đã bỏ)"
+**And** `diagram_comment` (migration `0049_diagram_comment.sql`, chỉ-thêm: trigger + REVOKE, có trong `app-role-privileges.spec.ts`) gắn phiên bản + id ô + toạ độ ô trên ảnh xem lúc ghim + lượt duyệt đang chờ, `parent_id` để trả lời thành luồng; không sửa/xoá nội dung, "Đã xử lý"/"Mở lại" là hàng sự kiện (`kind`) + audit; ô bị xoá ở phiên bản sau → ghim hiện ở vị trí cũ kèm "(hình đã bỏ)"
 **And** ghi chú trông như mật khẩu bị chặn (FR-035, Q-19)
+**And** cây hiện "Chờ duyệt" và "Chính thức vN"; test: `api/test/diagram-review.spec.ts` (DB), `diagram-selfcheck.spec.ts`, `mail-diagram-review.spec.ts`, vitest `diagram-review.test.tsx` + `diagram-viewer.test.tsx`, E2E `diagrams-review.spec.ts`
 
 ### Story 10.8: Bản trình bày
 
