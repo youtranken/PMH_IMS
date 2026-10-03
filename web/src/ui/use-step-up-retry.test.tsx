@@ -37,7 +37,7 @@ describe('useStepUpRetry — phạm vi lấy từ server', () => {
     const [result, setResult] = useState('');
     return (
       <>
-        <button type="button" onClick={() => void stepUp.run(action, 'Mở bản vẽ E2E').then(setResult)}>
+        <button type="button" onClick={() => void stepUp.run(action, 'Mở bản vẽ E2E').then(setResult, () => undefined)}>
           Chạy
         </button>
         <output>{result}</output>
