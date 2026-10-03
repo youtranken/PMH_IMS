@@ -229,6 +229,14 @@ export class DevicePhotosService {
       const id = input[side] || null;
       if (id) {
         const file = images.get(id);
+        // `files` nhận WebP, nhưng bộ vẽ ảnh của server (`@resvg/resvg-js` 2.x) không giải mã được: ô sẽ
+        // lặng lẽ về biểu tượng và file xuất PNG/PDF mất ảnh — chặn ngay lúc chọn, nói rõ cách làm.
+        if (file && file.mimeType === 'image/webp') {
+          throw new BadRequestException({
+            code: 'DEVICE_PHOTO_FORMAT',
+            message: 'Ảnh WebP chưa đưa lên sơ đồ được — chọn ảnh JPG hoặc PNG (chụp màn hình hay lưu lại ảnh dạng JPG rồi đính kèm).',
+          });
+        }
         if (!file || file.ownerType !== ownerType || file.ownerId !== ownerId) {
           throw new BadRequestException({
             code: 'DEVICE_PHOTO_INVALID',

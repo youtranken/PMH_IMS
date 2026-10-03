@@ -131,8 +131,9 @@ export function DevicePhotosPanel({ deviceId, csrfToken, canEdit }: { deviceId: 
   );
 }
 
-function imageOptions(files: { id: string; originalName: string; kind: string }[] | undefined) {
-  return (files ?? []).filter((f) => f.kind === 'image').map((f) => ({ value: f.id, label: f.originalName }));
+/** Ảnh JPG/PNG — server từ chối WebP cho sơ đồ (bộ vẽ ảnh không giải mã được), nên không mời chọn. */
+function imageOptions(files: { id: string; originalName: string; kind: string; mimeType: string }[] | undefined) {
+  return (files ?? []).filter((f) => f.kind === 'image' && f.mimeType !== 'image/webp').map((f) => ({ value: f.id, label: f.originalName }));
 }
 
 /** Ảnh theo model: chọn mặt từ ảnh đã tải cho model, khu tải ảnh model ngay dưới (cùng cache giấy tờ). */

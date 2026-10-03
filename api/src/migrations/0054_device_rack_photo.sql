@@ -9,6 +9,11 @@
 -- `device_rack_u_no_overlap` là lưới cuối của luật chồng U: service khoá theo tủ rồi kiểm để báo tên
 -- máy đang chiếm, còn hai lượt ghi lọt qua cùng lúc thì ràng buộc này chặn lượt sau. Máy đã thanh
 -- lý không giữ chỗ trong tủ (đã rời tủ thật).
+--
+-- Cột ảnh (`photo_*_file_id`) KHÔNG có khoá ngoại sang `file`: service chỉ nhận ảnh còn sống của
+-- đúng chủ thể (qua files.api) và coi ảnh đã xoá như chưa chọn; `file` chỉ xoá mềm. Khoá ngoại ở
+-- đây nối `users` → `file` → `device` → `device_history`, nên một lệnh TRUNCATE … CASCADE trên
+-- bảng người dùng (bài kiểm, dọn dữ liệu) đụng vào bảng lịch sử chỉ-thêm.
 ALTER TABLE device
     ADD COLUMN rack_u_start smallint,
     ADD COLUMN rack_u_size smallint,
@@ -17,9 +22,7 @@ ALTER TABLE device
     ADD CONSTRAINT device_rack_u_pair_check CHECK (((rack_u_start IS NULL) = (rack_u_size IS NULL))),
     ADD CONSTRAINT device_rack_u_range_check CHECK (((rack_u_start IS NULL) OR ((rack_u_start BETWEEN 1 AND 60) AND (rack_u_size BETWEEN 1 AND 60) AND ((rack_u_start + rack_u_size - 1) <= 60)))),
     ADD CONSTRAINT device_rack_u_cabinet_check CHECK (((rack_u_start IS NULL) OR (cabinet_id IS NOT NULL))),
-    ADD CONSTRAINT device_rack_u_no_overlap EXCLUDE USING gist (cabinet_id WITH =, int4range((rack_u_start)::integer, ((rack_u_start + rack_u_size))::integer) WITH &&) WHERE (((rack_u_start IS NOT NULL) AND (status <> 'retired'::text))),
-    ADD CONSTRAINT device_photo_front_file_id_fkey FOREIGN KEY (photo_front_file_id) REFERENCES file(id) ON DELETE RESTRICT,
-    ADD CONSTRAINT device_photo_back_file_id_fkey FOREIGN KEY (photo_back_file_id) REFERENCES file(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT device_rack_u_no_overlap EXCLUDE USING gist (cabinet_id WITH =, int4range((rack_u_start)::integer, ((rack_u_start + rack_u_size))::integer) WITH &&) WHERE (((rack_u_start IS NOT NULL) AND (status <> 'retired'::text)));
 
 -- device_model — ảnh thật mức model: một hàng cho mỗi (loại thiết bị, chuỗi model), so model không
 -- phân biệt hoa thường và khoảng trắng hai đầu. Ảnh tải lên là tệp `files` mang
@@ -35,9 +38,7 @@ CREATE TABLE device_model (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT device_model_pkey PRIMARY KEY (id),
     CONSTRAINT device_model_model_check CHECK ((char_length(btrim(model)) BETWEEN 1 AND 120)),
-    CONSTRAINT device_model_device_type_id_fkey FOREIGN KEY (device_type_id) REFERENCES device_type(id) ON DELETE RESTRICT,
-    CONSTRAINT device_model_photo_front_file_id_fkey FOREIGN KEY (photo_front_file_id) REFERENCES file(id) ON DELETE RESTRICT,
-    CONSTRAINT device_model_photo_back_file_id_fkey FOREIGN KEY (photo_back_file_id) REFERENCES file(id) ON DELETE RESTRICT
+    CONSTRAINT device_model_device_type_id_fkey FOREIGN KEY (device_type_id) REFERENCES device_type(id) ON DELETE RESTRICT
 );
 CREATE UNIQUE INDEX device_model_type_model_key ON device_model USING btree (device_type_id, lower(btrim(model)));
 

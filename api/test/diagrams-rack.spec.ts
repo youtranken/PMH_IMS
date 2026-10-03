@@ -141,6 +141,12 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật (Story 10.11)', (
     const own = await upload('device', sw, png(1600, 160, 'red'), 'sw-front.png');
     const other = await upload('device', srv, png(100, 20, 'blue'));
     await expect(photos.setDevicePhotos(SA.email, sw, { front: other.id })).rejects.toMatchObject({ response: { code: 'DEVICE_PHOTO_INVALID' } });
+    // WebP: `files` nhận, nhưng bộ vẽ ảnh của server (resvg) không giải mã được — chặn ngay lúc chọn
+    // thay vì để ô lặng lẽ hiện biểu tượng và file xuất PNG/PDF mất ảnh.
+    const webp = await upload('device', sw, Buffer.concat([Buffer.from('RIFF'), Buffer.from([30, 0, 0, 0]), Buffer.from('WEBPVP8 '), Buffer.alloc(22)]), 'anh.webp');
+    await expect(photos.setDevicePhotos(SA.email, sw, { front: webp.id })).rejects.toMatchObject({
+      response: { code: 'DEVICE_PHOTO_FORMAT', message: expect.stringContaining('JPG hoặc PNG') },
+    });
     await photos.setDevicePhotos(SA.email, sw, { front: own.id });
     const model = await photos.ensureModel(SA.email, sw);
     expect(model.label).toBe('C9300-E2E');

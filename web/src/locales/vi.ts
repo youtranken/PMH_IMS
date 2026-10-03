@@ -1211,7 +1211,7 @@ export default {
     rackURange: 'Số nguyên từ 1 tới 60.',
     photosTitle: 'Ảnh thật trên sơ đồ',
     photosHint:
-      'Ảnh mặt trước / mặt sau hiện trên bản vẽ khi người vẽ bật "Ảnh thật", và trong khung tủ. Ảnh riêng của máy (chọn từ giấy tờ đính kèm bên dưới) đè ảnh theo model.',
+      'Ảnh mặt trước / mặt sau hiện trên bản vẽ khi người vẽ bật "Ảnh thật", và trong khung tủ. Ảnh riêng của máy (chọn từ giấy tờ đính kèm ở trên, ảnh JPG/PNG) đè ảnh theo model.',
     photoFront: 'Mặt trước',
     photoBack: 'Mặt sau',
     photoNone: 'Chưa có ảnh.',

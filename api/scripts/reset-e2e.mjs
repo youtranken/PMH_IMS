@@ -78,7 +78,7 @@ const DOMAINS = {
   ],
 
   devices: [
-    // Ảnh thật trỏ khoá ngoại vào bảng file: gỡ chọn ảnh trước khi xoá tệp. Ảnh model của bài kiểm
+    // Gỡ chọn ảnh thật trước khi xoá tệp (không để id trỏ vào tệp đã mất). Ảnh model của bài kiểm
     // nhận ra bằng model hoặc loại thiết bị mang chữ E2E.
     `UPDATE device SET photo_front_file_id = NULL, photo_back_file_id = NULL WHERE code ILIKE '%E2E%'`,
     `UPDATE device_model SET photo_front_file_id = NULL, photo_back_file_id = NULL WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%')`,
