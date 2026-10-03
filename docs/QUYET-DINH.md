@@ -437,6 +437,14 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
 - **Mã 2 lớp lúc đăng nhập KHÔNG mở két hay sơ đồ (03/10/2026, chủ dự án xác nhận):** xem két và
   mở sơ đồ mỗi bên phải nhập mã riêng, mỗi bên có ân hạn riêng (két đổi hành vi so với trước: lần xem
   secret đầu tiên sau đăng nhập cũng hỏi mã).
+- **Dây: "vẽ là khai, có hỏi" (03/10/2026, chủ dự án chốt).** Sơ đồ cổng vẫn là nguồn duy nhất.
+  Kéo nét dây nối hai thiết bị kho → IMS hỏi "Khai kết nối này vào sơ đồ cổng?" (cổng còn trống hai
+  đầu + loại dây) → "Khai" ghi thẳng sơ đồ cổng qua API của `devices`, "Chỉ vẽ" để nét vẽ kèm cảnh báo
+  vàng. Xoá nét đã khai thì hỏi "Chỉ xoá nét vẽ" (mặc định) / "Gỡ luôn kết nối". Chiều ngược lại: đổi
+  cổng / loại dây hiện ngay khi mở bản vẽ; kết nối bị gỡ thì nét chuyển đỏ; kết nối mới giữa hai máy
+  đã có trên bản vẽ thì báo "Có N kết nối mới chưa vẽ" + nút "Vẽ vào". Nút "Khai kết nối" vẫn giữ.
+- **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
+  draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
 
 ### Q-09 · Tài liệu
 
