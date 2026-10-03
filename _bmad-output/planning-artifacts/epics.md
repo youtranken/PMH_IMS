@@ -797,12 +797,12 @@ So that mở sơ đồ không vô tình mở luôn két, và ngược lại (Q-2
 **Then** hộp nhập mã hiện ra (phạm vi két / phạm vi sơ đồ tương ứng); không phạm vi nào được mở sẵn bởi mã đăng nhập
 **And** bài kiểm đơn vị/`test:db`: ngay sau đăng nhập có TOTP, `stepped_up_at` và `diagram_stepped_up_at` đều `NULL`; đỏ khi gieo lại đột biến "đăng nhập đóng dấu `stepped_up_at`"
 **And** E2E két: đăng nhập (có mã) → bấm xem secret → THẤY hộp hỏi mã (bài cũ đi thẳng tới giá trị phải sửa theo); nhập mã → hiện; trong ân hạn xem secret khác không hỏi lại
-**And** E2E sơ đồ: vừa nhập mã cho két xong, mở bản vẽ vẫn hỏi mã phạm vi sơ đồ
+**And** E2E sơ đồ (vừa nhập mã cho két xong, mở bản vẽ vẫn hỏi mã phạm vi sơ đồ) làm ở Story 10.3 — story này chưa có route/màn nội dung bản vẽ thật; chiều đó được dựng lại ở `api/test/step-up-scope.spec.ts` bằng một route thử khai `@RequiresStepUp('diagram')` qua guard + `sessions` thật
 
 **Given** phiên vừa nhập mã cho két (còn trong ân hạn két)
 **When** gọi một route khai `@RequiresStepUp('diagram')`
 **Then** 401 `STEPUP_REQUIRED` kèm `scope: 'diagram'` và `graceMinutes` của sơ đồ; chiều ngược lại (mới nhập cho sơ đồ, gọi route két) cũng 401 với `scope: 'vault'`
-**And** bài kiểm guard dạng bảng dữ liệu (phạm vi × mốc × ân hạn) đỏ khi gieo đột biến "đọc nhầm cột"; `step-up-surface.spec.ts` biết phạm vi mới; E2E `security.spec.ts` dựng lại đúng đòn: phiên chỉ có ân hạn két gọi thẳng API nội dung sơ đồ → bị chặn
+**And** bài kiểm guard dạng bảng dữ liệu (phạm vi × mốc × ân hạn) đỏ khi gieo đột biến "đọc nhầm cột"; `step-up-surface.spec.ts` biết phạm vi mới; `test:db` `step-up-scope.spec.ts` dựng lại đúng đòn: phiên chỉ có ân hạn két gọi route khai `@RequiresStepUp('diagram')` → bị chặn (và ngược lại); E2E `security.spec.ts` dựng lại chiều có route thật: mã đăng nhập không mở két, phiên chỉ có ân hạn sơ đồ gọi thẳng API két → 401 `scope: 'vault'` (chiều gọi API nội dung sơ đồ thêm vào `security.spec.ts` ở Story 10.3)
 
 **Given** web gặp `STEPUP_REQUIRED`
 **When** `StepUpDialog` / `StepUpStep` / `useStepUpRetry` mở hộp nhập mã
@@ -871,6 +871,7 @@ So that sơ đồ mạng có nhà trong IMS thay file Visio rải rác, và 1–
 **Given** người dùng mở NỘI DUNG một bản vẽ (xem hoặc sửa, bất kỳ phiên bản)
 **When** chưa trong ân hạn sơ đồ
 **Then** hộp mã 2 lớp phạm vi sơ đồ hiện (Story 10.1); trong ân hạn thì chuyển giữa các bản vẽ không hỏi lại
+**And** E2E (chuyển từ Story 10.1): vừa nhập mã cho két xong, mở bản vẽ vẫn hỏi mã phạm vi sơ đồ; `security.spec.ts` thêm đòn phiên chỉ có ân hạn két gọi thẳng API nội dung bản vẽ → 401 `scope: 'diagram'`
 **And** MỖI lần tải nội dung ghi một dòng audit `diagram.viewed` (ai, bản vẽ, phiên bản, chế độ xem/sửa) — NFR-03
 **And** chế độ xem dùng `web/src/ui/diagram-viewer` hiện SVG đã làm sạch (không nạp draw.io), có watermark như Story 10.2, zoom/pan; chế độ sửa dùng `drawio-frame`; màn sửa ở bề ngang < 1024px hiện "Sửa sơ đồ chỉ làm trên máy tính" kèm lối sang chế độ xem
 
