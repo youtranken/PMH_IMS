@@ -45,6 +45,13 @@ function historyEntry(row: DiagramHistoryRow, t: TFunction): HistoryEntry {
       return { ...base, action: t('diagrams.history.restored', { seq }), detail: String(changes.summary ?? ''), tone: 'status' };
     case 'version.published':
       return { ...base, action: t('diagrams.history.published', { seq }), tone: 'status' };
+    case 'presentation.created':
+      return {
+        ...base,
+        action: t('diagrams.history.presentationCreated', { seq: typeof changes.sourceSeq === 'number' ? changes.sourceSeq : null }),
+        detail: typeof changes.name === 'string' ? changes.name : null,
+        tone: 'create',
+      };
     case 'review.submitted':
       return { ...base, action: t('diagrams.history.submitted', { seq }), detail: typeof changes.reason === 'string' ? changes.reason : null };
     case 'review.returned':

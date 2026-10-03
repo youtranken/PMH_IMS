@@ -1,6 +1,6 @@
 import { buildCellIndex } from './diagram-cells';
 import { checkCables } from './diagram-checks';
-import { checkDevices, runDiagramChecks, type CheckDevice } from './diagram-selfcheck';
+import { checkDevices, checkPlanned, runDiagramChecks, type CheckDevice } from './diagram-selfcheck';
 
 // Luật dây có bài riêng; ở đây chỉ canh khung gọi nó đúng (kèm trạng thái máy) và gộp kết quả.
 jest.mock('./diagram-checks', () => ({ checkCables: jest.fn(() => []) }));
@@ -149,5 +149,33 @@ describe('runDiagramChecks — gọi luật dây', () => {
     expect(mocked).toHaveBeenLastCalledWith(index.cells, links, new Map([[DEV_A, 'broken']]));
     expect(result.errors.map((f) => f.code)).toEqual(['CABLE_LINK_MISSING']);
     expect(result.warnings.map((f) => f.code)).toEqual(['CABLE_UNDECLARED']);
+  });
+});
+
+describe('checkPlanned — thiết bị dự kiến không được vào bản chính thức (Q-23)', () => {
+  function planned(id: string, attrs = 'ims_planned="1"'): string {
+    return `<UserObject label="AP mới" ${attrs} id="${id}"><mxCell style="rounded=1;dashed=1;" vertex="1" parent="1"><mxGeometry x="500" y="0" width="100" height="40" as="geometry"/></mxCell></UserObject>`;
+  }
+
+  it('mỗi ô dự kiến một lỗi ĐỎ, nêu nhãn ô', () => {
+    const findings = checkPlanned(buildCellIndex(page(device('d1', DEV_A, 'SW-01') + planned('p1') + planned('p2', 'ims_planned_price="9"'))).cells);
+    expect(findings.map(({ level, code, cellId }) => ({ level, code, cellId }))).toEqual([
+      { level: 'error', code: 'PLANNED_DEVICE', cellId: 'p1' },
+      { level: 'error', code: 'PLANNED_DEVICE', cellId: 'p2' },
+    ]);
+    expect(findings[0].message).toContain('AP mới');
+  });
+
+  it('không có ô dự kiến → không gì', () => {
+    expect(checkPlanned(buildCellIndex(page(device('d1', DEV_A, 'SW-01'))).cells)).toEqual([]);
+  });
+
+  it('runDiagramChecks chặn bản có ô dự kiến (gửi duyệt / duyệt / phát hành cùng chạy bộ này)', () => {
+    const result = runDiagramChecks({
+      index: buildCellIndex(page(device('d1', DEV_A, 'SW-01') + planned('p1'))),
+      devices: new Map([dev(DEV_A, 'SW-01')]),
+      links: new Map(),
+    });
+    expect(result.errors.map((f) => f.code)).toEqual(['PLANNED_DEVICE']);
   });
 });

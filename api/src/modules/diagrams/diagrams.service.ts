@@ -39,6 +39,7 @@ import {
   linkLabelFrom,
   type DeviceCellSource,
 } from './diagram-hydrate';
+import { plannedNotAllowedReason, presentationName, type PresentationSource } from './diagram-presentation';
 import {
   diagramHistoryTable,
   diagramPresenceTable,
@@ -71,6 +72,8 @@ export interface DiagramNode {
   archivedAt: string | null;
   status: DiagramStatus;
   latestVersion: VersionRef | null;
+  /** Bản trình bày: chép từ đâu + bản gốc giờ chính thức ở phiên bản nào. Bản chính thức: `null`. */
+  source: PresentationSource | null;
 }
 
 export interface NodeInput {
@@ -181,6 +184,14 @@ export interface SaveInput {
   basedOnVersionId: string | null;
 }
 
+export interface PresentationInput {
+  /** Bỏ trống = "<tên bản gốc> — trình bày", thêm số khi trùng. */
+  name?: string;
+}
+
+/** Số lần thử tên mặc định trước khi chịu 409 — quá chừng ấy bản trình bày cùng tên là gọi nhầm. */
+const PRESENTATION_NAME_ATTEMPTS = 50;
+
 export interface Presence {
   email: string;
   fullName: string;
@@ -236,15 +247,25 @@ export class DiagramsService {
       v_seq: number | null;
       v_at: Date | string | null;
       v_by: string | null;
+      source_diagram_id: string | null;
+      source_version_id: string | null;
+      s_name: string | null;
+      s_seq: number | null;
+      s_official_id: string | null;
+      s_official_seq: number | null;
     }>(sql`
       SELECT d.id, d.parent_id, d.name, d.node_type, d.site_id, d.cabinet_id, d.owner_email, d.kind,
              d.archived_at, d.official_version_id, lv.id AS v_id, lv.seq AS v_seq, lv.created_at AS v_at,
-             lv.saved_by AS v_by
+             lv.saved_by AS v_by, d.source_diagram_id, d.source_version_id, sd.name AS s_name,
+             sv.seq AS s_seq, sd.official_version_id AS s_official_id, so.seq AS s_official_seq
         FROM diagram d
         LEFT JOIN LATERAL (
           SELECT v.id, v.seq, v.created_at, v.saved_by FROM diagram_version v
            WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
         ) lv ON true
+        LEFT JOIN diagram sd ON sd.id = d.source_diagram_id
+        LEFT JOIN diagram_version sv ON sv.id = d.source_version_id
+        LEFT JOIN diagram_version so ON so.id = sd.official_version_id
        WHERE ${where}
        ORDER BY lower(d.name), d.id
     `);
@@ -264,6 +285,17 @@ export class DiagramsService {
         archivedAt: iso(row.archived_at),
         status: statusOf(latest?.id ?? null, row.official_version_id),
         latestVersion: latest,
+        source:
+          row.kind === 'presentation'
+            ? {
+                diagramId: row.source_diagram_id,
+                name: row.s_name,
+                versionId: row.source_version_id,
+                seq: row.s_seq === null ? null : Number(row.s_seq),
+                officialVersionId: row.s_official_id,
+                officialSeq: row.s_official_seq === null ? null : Number(row.s_official_seq),
+              }
+            : null,
       };
     });
   }
@@ -297,6 +329,12 @@ export class DiagramsService {
   async update(actor: string, id: string, input: NodeInput): Promise<DiagramNode> {
     const current = await this.node(id);
     if (current.archivedAt) throw archived();
+    if (current.kind === 'presentation' && input.parentId) {
+      throw new BadRequestException({
+        code: 'DIAGRAM_PRESENTATION_NO_PARENT',
+        message: 'Bản trình bày đứng riêng ngoài cây bản vẽ chính thức — không chuyển vào nhánh nào được.',
+      });
+    }
     if (input.parentId) {
       if (input.parentId === id || (await this.descendantIds(id)).includes(input.parentId)) {
         throw new BadRequestException({ code: 'DIAGRAM_MOVE_CYCLE', message: 'Không chuyển được bản vẽ vào chính nhánh con của nó.' });
@@ -343,10 +381,11 @@ export class DiagramsService {
 
   private async assertLiveParent(parentId: string): Promise<void> {
     const [parent] = await this.db
-      .select({ archivedAt: diagramTable.archivedAt })
+      .select({ archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
       .from(diagramTable)
       .where(eq(diagramTable.id, parentId));
-    if (!parent || parent.archivedAt) {
+    // Bản trình bày không có nhánh con: cây chính thức không treo dưới một bản không duyệt.
+    if (!parent || parent.archivedAt || parent.kind !== 'official') {
       throw new BadRequestException({ code: 'DIAGRAM_PARENT_INVALID', message: 'Bản vẽ cha không tồn tại hoặc đã lưu trữ.' });
     }
   }
@@ -376,6 +415,86 @@ export class DiagramsService {
         throw new ConflictException({ code: 'DIAGRAM_NAME_TAKEN', message: 'Cùng nhánh đã có bản vẽ tên này.' });
       }
       throw error;
+    }
+  }
+
+  /* ------------------------------------------------------------ trình bày --- */
+
+  /**
+   * "Tạo bản trình bày" (Q-23, FR-045): một hàng `diagram` MỚI chép XML phiên bản chính thức hiện
+   * hành của bản gốc — bản gốc không đổi gì, không có phiên bản mới. Mọi vai tạo được; bản trình
+   * bày không duyệt, nên nó không ảnh hưởng gì tới bản chính thức.
+   */
+  async createPresentation(actor: string, sourceId: string, input: PresentationInput): Promise<DiagramNode> {
+    const [source] = await this.db
+      .select({
+        name: diagramTable.name,
+        nodeType: diagramTable.nodeType,
+        kind: diagramTable.kind,
+        archivedAt: diagramTable.archivedAt,
+        officialVersionId: diagramTable.officialVersionId,
+      })
+      .from(diagramTable)
+      .where(eq(diagramTable.id, sourceId));
+    if (!source) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
+    if (source.archivedAt) throw archived();
+    if (source.kind !== 'official' || !source.officialVersionId) {
+      throw new ConflictException({
+        code: 'DIAGRAM_NOT_OFFICIAL',
+        message: 'Chỉ nhân bản được từ bản vẽ đã có bản chính thức.',
+      });
+    }
+    const [version] = await this.db.select().from(diagramVersionTable).where(eq(diagramVersionTable.id, source.officialVersionId));
+    // Chụp thông tin thiết bị BÂY GIỜ: phiên bản đầu của bản trình bày là một lần lưu mới (AD-14).
+    const snapshot = await this.snapshot(version.cellIndex);
+    const named = input.name?.trim();
+    for (let attempt = 1; ; attempt += 1) {
+      const name = named || presentationName(source.name, attempt);
+      try {
+        const id = await this.db.transaction(async (tx) => {
+          const [row] = await tx
+            .insert(diagramTable)
+            .values({
+              parentId: null,
+              name,
+              nodeType: source.nodeType,
+              kind: 'presentation',
+              sourceDiagramId: sourceId,
+              sourceVersionId: version.id,
+              ownerEmail: actor,
+              createdBy: actor,
+            })
+            .returning({ id: diagramTable.id });
+          await this.record(tx, actor, row.id, 'presentation.created', 'diagram.presentation_created', {
+            name,
+            sourceDiagramId: sourceId,
+            sourceVersionId: version.id,
+            sourceSeq: version.seq,
+          });
+          const diff = diffCellIndex(null, version.cellIndex);
+          await this.insertVersion(tx, actor, row.id, {
+            seq: 1,
+            xml: version.xml,
+            svg: version.svg,
+            index: version.cellIndex,
+            snapshot,
+            summary: `Nhân bản từ "${source.name}" bản chính thức phiên bản #${version.seq} · ${summarizeDiff(diff)}`,
+            diff,
+            basedOnVersionId: null,
+            restoredFromVersionId: null,
+            history: 'version.saved',
+            auditAction: 'diagram.saved',
+            bytes: Buffer.byteLength(version.xml),
+          });
+          return row.id;
+        });
+        return this.node(id);
+      } catch (error) {
+        const taken = pgCode(error) === '23505';
+        if (taken && !named && attempt < PRESENTATION_NAME_ATTEMPTS) continue;
+        if (taken) throw new ConflictException({ code: 'DIAGRAM_NAME_TAKEN', message: 'Đã có bản vẽ tên này.' });
+        throw error;
+      }
     }
   }
 
@@ -691,8 +810,8 @@ export class DiagramsService {
   }
 
   /**
-   * Bản vẽ (chưa lưu trữ) có máy này ở phiên bản MỚI NHẤT — thẻ thông tin "Có mặt trong các bản
-   * vẽ" và trang thiết bị (web gọi, AD-18: không module nào import `diagrams`). Chỉ tên + id: đây
+   * Bản vẽ chính thức (chưa lưu trữ) có máy này ở phiên bản MỚI NHẤT — bản trình bày là bản sao
+   * để trình nội bộ, liệt kê nó chỉ làm nhiễu. Thẻ thông tin "Có mặt trong các bản vẽ" và trang thiết bị (web gọi, AD-18: không module nào import `diagrams`). Chỉ tên + id: đây
    * là thông tin của cây, không phải nội dung bản vẽ.
    */
   async diagramsWithDevice(deviceId: string): Promise<{ id: string; name: string }[]> {
@@ -704,6 +823,7 @@ export class DiagramsService {
            WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
         ) lv ON true
        WHERE d.archived_at IS NULL
+         AND d.kind = 'official'
          AND lv.cell_index -> 'cells' @> ${JSON.stringify([{ deviceId }])}::jsonb
        ORDER BY lower(d.name), d.id
     `);
@@ -742,7 +862,9 @@ export class DiagramsService {
     const snapshot = await this.snapshot(index);
 
     const id = await this.db.transaction(async (tx) => {
-      await this.lockLive(tx, diagramId);
+      const kind = await this.lockLive(tx, diagramId);
+      const planned = plannedNotAllowedReason(index, kind);
+      if (planned) throw new BadRequestException({ code: 'DIAGRAM_PLANNED_NOT_ALLOWED', message: planned });
       const latest = await this.latestWithin(tx, diagramId);
       if (input.basedOnVersionId && !(await this.belongs(tx, diagramId, input.basedOnVersionId))) {
         throw new BadRequestException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Phiên bản gốc không thuộc bản vẽ này.' });
@@ -836,14 +958,16 @@ export class DiagramsService {
     return withActorNames(rows, (emails) => this.users.namesByEmails(emails));
   }
 
-  private async lockLive(tx: Tx, diagramId: string): Promise<void> {
+  /** Khoá hàng `diagram` (bản sống) trong `tx`; trả loại bản vẽ cho luật phụ thuộc loại. */
+  private async lockLive(tx: Tx, diagramId: string): Promise<'official' | 'presentation'> {
     const [row] = await tx
-      .select({ archivedAt: diagramTable.archivedAt })
+      .select({ archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
       .from(diagramTable)
       .where(eq(diagramTable.id, diagramId))
       .for('update');
     if (!row) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
     if (row.archivedAt) throw archived();
+    return row.kind;
   }
 
   private async latestWithin(tx: Tx, diagramId: string) {

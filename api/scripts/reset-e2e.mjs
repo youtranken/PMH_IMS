@@ -162,7 +162,8 @@ const DOMAINS = {
 
   /*
    * Cây bản vẽ (AD-18). Bài E2E đặt tên bản vẽ có chữ E2E; mọi bản vẽ con của nó cũng bị dọn theo
-   * (cả cây con, kể cả nút con lỡ đặt tên khác), vì `parent_id` trỏ lên cha.
+   * (cả cây con, kể cả nút con lỡ đặt tên khác), vì `parent_id` trỏ lên cha; bản trình bày chép
+   * từ một bản vẽ E2E cũng vậy (`source_diagram_id`), kể cả khi bài kiểm đã đổi tên nó.
    *
    * Thứ tự: hàng con trước hàng cha — tên phiên bản và lịch sử trỏ vào phiên bản/bản vẽ, phiên bản
    * trỏ vào bản vẽ, và `diagram.official_version_id` trỏ ngược vào phiên bản nên gỡ nó trước.
@@ -175,25 +176,25 @@ const DOMAINS = {
      * dấu backtick trong chú thích của vùng này: bài kiểm đọc câu SQL theo dấu backtick.
      */
     `ALTER TABLE approval_history DISABLE TRIGGER approval_history_no_delete`,
-    `DELETE FROM approval_history WHERE approval_id IN (SELECT id FROM approval WHERE kind = 'diagram_publish' AND subject_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t))`,
+    `DELETE FROM approval_history WHERE approval_id IN (SELECT id FROM approval WHERE kind = 'diagram_publish' AND subject_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t))`,
     `ALTER TABLE approval_history ENABLE TRIGGER approval_history_no_delete`,
-    `DELETE FROM approval WHERE kind = 'diagram_publish' AND subject_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM approval WHERE kind = 'diagram_publish' AND subject_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_comment DISABLE TRIGGER diagram_comment_no_delete`,
-    `DELETE FROM diagram_comment WHERE parent_id IS NOT NULL AND diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
-    `DELETE FROM diagram_comment WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_comment WHERE parent_id IS NOT NULL AND diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_comment WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_comment ENABLE TRIGGER diagram_comment_no_delete`,
     `ALTER TABLE diagram_version_label DISABLE TRIGGER diagram_version_label_no_delete`,
-    `DELETE FROM diagram_version_label WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_version_label WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_version_label ENABLE TRIGGER diagram_version_label_no_delete`,
     `ALTER TABLE diagram_history DISABLE TRIGGER diagram_history_no_delete`,
-    `DELETE FROM diagram_history WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_history WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_history ENABLE TRIGGER diagram_history_no_delete`,
-    `DELETE FROM diagram_presence WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
-    `UPDATE diagram SET official_version_id = NULL WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_presence WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `UPDATE diagram SET official_version_id = NULL WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_version DISABLE TRIGGER diagram_version_no_delete`,
-    `DELETE FROM diagram_version WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_version WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_version ENABLE TRIGGER diagram_version_no_delete`,
-    `DELETE FROM diagram WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
   ],
 
   isp: [

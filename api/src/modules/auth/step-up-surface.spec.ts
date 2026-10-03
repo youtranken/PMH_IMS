@@ -195,6 +195,8 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     "@Post(':id/versions/:versionId/label')",
     "@Post(':id/versions/:versionId/restore')",
     "@Post(':id/presence')",
+    // Nhân bản chép nội dung bản chính thức sang bản mới — là một lần đọc nội dung.
+    "@Post(':id/presentations')",
   ])('diagrams.controller %s đòi step-up phạm vi sơ đồ', (route) => {
     const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagrams.controller.ts'), 'utf8');
     const at = src.indexOf(route);
