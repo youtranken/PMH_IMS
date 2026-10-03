@@ -372,6 +372,11 @@ nếu chủ dự án không đồng ý.
 - **Người dùng IMS:** "Bắt buộc – chưa kích hoạt" thay "Bắt buộc – chưa cài"; dòng chỉ để nút chính,
   còn lại vào ⋮ (Q-18).
 - Chữ mô tả dài trên màn rộng chạy một hàng (không ép xuống dòng khi còn chỗ).
+- **Ô nhập mã 2 lớp là 6 ô riêng (03/10/2026, chủ dự án):** mỗi ô một số, áp cho mọi chỗ nhập mã
+  (bước "Xác thực 2 lớp" lúc đăng nhập, cài/cài lại 2 lớp, hộp xác thực lại để xem két). Gõ một
+  số tự sang ô kế; Backspace ở ô trống lùi về ô trước và xoá nó; ←/→/Home/End di chuyển; dán
+  hoặc tự điền cả mã (kể cả "123 456") vào ô nào cũng đổ đủ 6 ô. Đủ 6 số vẫn tự gửi, đúng một
+  lượt như trước. Lý do: người dùng chép từng số từ ứng dụng xác thực và soát được từng số.
 
 ### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
 
