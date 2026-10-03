@@ -65,6 +65,14 @@ class SaveVersionDto {
   @ValidateIf((_o, v) => v !== null) @IsUUID(undefined, { message: 'Phiên bản gốc không hợp lệ.' }) basedOnVersionId!: string | null;
 }
 
+class PresentationDto {
+  @IsOptional()
+  @IsString()
+  @Length(1, 120, { message: 'Tên bản vẽ từ 1 đến 120 ký tự.' })
+  @NoSecretText('Tên bản trình bày')
+  name?: string;
+}
+
 class LabelDto {
   @ValidateIf((_o, v) => v !== null)
   @IsString()
@@ -78,6 +86,8 @@ export interface DiagramEditorSettings {
   initTimeoutSeconds: number;
   /** `diagram.presence_ttl_seconds` */
   presenceTtlSeconds: number;
+  /** `diagram.xml_max_kb` — ảnh tự do nhúng vào XML, web chặn sớm ảnh không thể lưu được. */
+  xmlMaxKb: number;
 }
 
 /**
@@ -102,11 +112,12 @@ export class DiagramsController {
   @Roles('sa', 'admin', 'member')
   @Get('editor-settings')
   async editorSettings(): Promise<DiagramEditorSettings> {
-    const [initTimeoutSeconds, presenceTtlSeconds] = await Promise.all([
+    const [initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb] = await Promise.all([
       this.config.getNumber('diagramEditorInitTimeoutSeconds'),
       this.config.getNumber('diagramPresenceTtlSeconds'),
+      this.config.getNumber('diagramXmlMaxKb'),
     ]);
-    return { initTimeoutSeconds, presenceTtlSeconds };
+    return { initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb };
   }
 
   /**
@@ -220,6 +231,19 @@ export class DiagramsController {
   @Audited('diagram.version_restored', 'diagram', { writtenByService: true })
   restore(@Param() params: VersionParamDto, @Req() req: AuthedRequest) {
     return this.diagrams.restore(req.user!.email, params.id, params.versionId);
+  }
+
+  /**
+   * "Tạo bản trình bày" từ bản chính thức (Q-23): mọi vai. Đòi mã sơ đồ vì nó chép NỘI DUNG bản
+   * chính thức sang một bản người gọi mở được.
+   */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/presentations')
+  @Audited('diagram.presentation_created', 'diagram', { writtenByService: true })
+  async createPresentation(@Param() params: IdParamDto, @Body() dto: PresentationDto, @Req() req: AuthedRequest) {
+    const [reviewed] = await this.review.overlay([await this.diagrams.createPresentation(req.user!.email, params.id, dto)]);
+    return reviewed;
   }
 
   @Roles('sa', 'admin', 'member')

@@ -1,6 +1,7 @@
 import type { CellIndex, IndexedCell } from './diagram-cells';
 import { checkCables } from './diagram-checks';
 import type { CheckLink, Finding } from './diagram-finding';
+import { isPlannedCell } from './diagram-presentation';
 
 export type { Finding, FindingLevel } from './diagram-finding';
 
@@ -101,11 +102,29 @@ export function checkDevices(cells: IndexedCell[], devices: Map<string, CheckDev
   return findings;
 }
 
-/** Mọi bộ luật, tách đỏ/vàng. Thứ tự: thiết bị trước, dây sau — người sửa đi từ máy ra dây. */
+/**
+ * Thiết bị dự kiến (`ims_planned*`) = ĐỎ: nó không có trong kho, chỉ hợp lệ trong bản trình bày.
+ * Cổng lưu đã chặn nó ở bản chính thức; luật này là lớp thứ hai cho mọi đường gửi duyệt / duyệt /
+ * phát hành, kể cả khi một bản trình bày bị gọi nhầm vào các đường đó.
+ */
+export function checkPlanned(cells: IndexedCell[]): Finding[] {
+  return cells.filter(isPlannedCell).map((cell) => ({
+    level: 'error' as const,
+    code: 'PLANNED_DEVICE',
+    cellId: cell.id,
+    message: `"${cell.label || cell.id}" là thiết bị dự kiến (chưa có trong kho) — chỉ bản trình bày được có, gỡ hình này khỏi bản chính thức.`,
+  }));
+}
+
+/** Mọi bộ luật, tách đỏ/vàng. Thứ tự: hình (dự kiến, thiết bị) trước, dây sau — người sửa đi từ máy ra dây. */
 export function runDiagramChecks(input: CheckInput): CheckResult {
   // Trạng thái máy cho luật dây (dây tới máy đã thanh lý) — cùng một lượt đọc kho với luật thiết bị.
   const deviceStatus = new Map([...input.devices.values()].map((d) => [d.id, d.status]));
-  const all = [...checkDevices(input.index.cells, input.devices), ...checkCables(input.index.cells, input.links, deviceStatus)];
+  const all = [
+    ...checkPlanned(input.index.cells),
+    ...checkDevices(input.index.cells, input.devices),
+    ...checkCables(input.index.cells, input.links, deviceStatus),
+  ];
   return {
     errors: all.filter((f) => f.level === 'error'),
     warnings: all.filter((f) => f.level === 'warning'),
