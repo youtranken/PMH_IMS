@@ -2,7 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { StatusEvent } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import type { Tx } from '../../common/tx';
+import { DevicePortsService, type PortLink } from './device-ports.service';
 import { DevicesService } from './devices.service';
+export type { PortLink } from './device-ports.service';
 import type { DeviceListItem } from './devices.types';
 
 /**
@@ -14,7 +16,10 @@ import type { DeviceListItem } from './devices.types';
  */
 @Injectable()
 export class DevicesApiService {
-  constructor(private readonly devices: DevicesService) {}
+  constructor(
+    private readonly devices: DevicesService,
+    private readonly ports: DevicePortsService,
+  ) {}
 
   /** Hồ sơ đầy đủ kèm tên danh mục đã tra sẵn. Ném NotFound nếu không có. */
   getById(id: string): Promise<DeviceListItem> {
@@ -115,6 +120,19 @@ export class DevicesApiService {
   /** Ai thanh lý, khi nào — kho thanh lý hỏi theo mẻ id (đọc `device_history`). */
   retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
     return this.devices.statusEvents(ids, 'retired');
+  }
+
+  /**
+   * Sợi dây theo id dòng sơ đồ cổng (= `ims_link_id` trên nét vẽ). Dòng đã gỡ hay không còn nối
+   * tới máy có hồ sơ thì VẮNG MẶT. CHỈ ĐỌC: sơ đồ mạng không có đường ghi sơ đồ cổng (AD-18).
+   */
+  portLinks(ids: string[]): Promise<Map<string, PortLink>> {
+    return this.ports.linksByIds(ids);
+  }
+
+  /** Mọi sợi dây chạm ít nhất một máy trong danh sách — sơ đồ tìm kết nối chưa vẽ. CHỈ ĐỌC. */
+  portLinksTouching(deviceIds: string[]): Promise<PortLink[]> {
+    return this.ports.linksTouching(deviceIds);
   }
 
   /** Gợi ý cho ô chọn thiết bị ở màn khác (port map, IP, secret). */

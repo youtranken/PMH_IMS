@@ -54,6 +54,7 @@ export const COLUMN_SCANS: readonly ColumnScan[] = [
   { table: 'vendor', ref: 'name::text', columns: ['supplies'], rule: text },
   { table: 'department', ref: 'name::text', columns: ['description'], rule: text },
   { table: 'service_port', ref: 'name::text', columns: ['description'], rule: text },
+  { table: 'cable_type', ref: 'name::text', columns: ['description'], rule: text },
   { table: 'approval', ref: 'id::text', columns: ['reason', 'decision_note'], rule: text },
   { table: 'access_list', ref: 'member_email', columns: ['note'], rule: text },
   { table: 'secret', ref: 'label', columns: ['note'], rule: noteLooksLikeSecret },

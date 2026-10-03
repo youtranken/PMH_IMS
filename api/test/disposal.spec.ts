@@ -1,4 +1,5 @@
 import { runMigrations } from '../src/database/migration-runner';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
@@ -54,11 +55,11 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
     const isp = new IspLineService(
       db,
       catalog,
-      new DevicesApiService(devices),
+      new DevicesApiService(devices, new DevicePortsService(db, devices)),
       audit,
     );
     disposal = new DisposalService(
-      new DevicesApiService(devices),
+      new DevicesApiService(devices, new DevicePortsService(db, devices)),
       new SoftwareApiService(software, isp),
       new ServiceAccountsApiService(new ServiceAccountService(db, audit, {} as ExpiryApiService)),
       {

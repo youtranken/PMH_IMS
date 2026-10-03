@@ -521,6 +521,20 @@ export class DevicesService {
     return values;
   }
 
+  /**
+   * Loại dây của một dòng sơ đồ cổng: phải có thật, và không chọn MỚI một loại đã ngừng dùng
+   * (Q-14) — dòng VỐN mang loại đó (`current`) vẫn gửi lại nó được khi sửa ô khác.
+   */
+  async assertCableTypeChoice(next: string | null, current: string | null): Promise<void> {
+    if (!next) return;
+    await this.catalog.assertRefs({ cableTypeId: next }, { cableTypeId: current });
+  }
+
+  /** Tên loại dây theo id (kể cả loại đã ngừng dùng) — lịch sử cổng ghi TÊN, không ghi uuid. */
+  async cableTypeNames(): Promise<Map<string, string>> {
+    return new Map((await this.catalog.cableTypes()).map((c) => [c.id, c.name]));
+  }
+
   /** Serial trùng chỉ CẢNH BÁO, không chặn (AC 2.2). */
   private async serialWarnings(serial: string | null, excludeId: string | null): Promise<string[]> {
     if (!serial) return [];

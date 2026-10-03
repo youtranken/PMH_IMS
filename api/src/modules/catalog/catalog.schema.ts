@@ -106,6 +106,20 @@ export const servicePortTable = pgTable('service_port', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Loại dây (0048, Q-23). Màu là MỘT Ô màu token (`--diagram-cable-<n>`), không phải mã màu: đổi
+ * theme hay bảng màu không phải sửa dữ liệu, và không ai gõ được hex vào danh mục.
+ */
+export const cableTypeTable = pgTable('cable_type', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: citext('name').notNull(),
+  colorSlot: integer('color_slot').notNull(),
+  description: text('description'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** AD-13: append-only (trigger `history_append_only` chặn UPDATE/DELETE ở tầng DB). */
 export const catalogHistoryTable = pgTable('catalog_history', {
   id: uuid('id').primaryKey().defaultRandom(),
