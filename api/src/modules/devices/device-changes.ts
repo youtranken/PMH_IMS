@@ -22,6 +22,10 @@ const TRACKED_FIELDS = [
   'warrantyEnd',
   'status',
   'note',
+  'rackUStart',
+  'rackUSize',
+  'photoFrontFileId',
+  'photoBackFileId',
 ] as const;
 
 export type { RecordChanges as DeviceChanges } from '../../common/record-diff';

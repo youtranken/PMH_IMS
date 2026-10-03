@@ -36,7 +36,8 @@ export type SettingUnit =
   | 'files'
   | 'cells'
   | 'devices'
-  | 'megapixels';
+  | 'megapixels'
+  | 'px';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -118,6 +119,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramExportTimeoutSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 5, max: 120 },
   { name: 'diagramDriftNotifyEnabled', group: 'diagram', type: 'int', min: 0, max: 1, warnZero: true },
   { name: 'diagramDriftSweepHour', group: 'diagram', type: 'int', unit: 'hours', min: 0, max: 23 },
+  { name: 'diagramPhotoMaxPx', group: 'diagram', type: 'int', unit: 'px', min: 120, max: 1600, warnAbove: 960 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

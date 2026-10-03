@@ -19,7 +19,8 @@ export interface SettingRow {
     | 'files'
     | 'cells'
     | 'devices'
-    | 'megapixels';
+    | 'megapixels'
+    | 'px';
   min?: number;
   max?: number;
   maxLength?: number;

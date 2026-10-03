@@ -17,6 +17,7 @@ import type { AuditWriterService } from '../src/modules/audit/audit-writer.servi
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 
 /**
  * Trang tổng két và khối "Két lâu không đổi" của bảng điều khiển đọc chung `VaultOwnersService`.
@@ -54,7 +55,7 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
       {} as ExpiryApiService,
       {} as SystemConfigService,
     );
-    const isp = new IspLineService(db, catalog, new DevicesApiService(devices, new DevicePortsService(db, devices)), audit);
+    const isp = new IspLineService(db, catalog, new DevicesApiService(devices, new DevicePortsService(db, devices), noPhotos), audit);
 
     const pool = scratch.pool;
     const providers = await seedIspProviders(pool, ['VNPT', 'FPT']);
@@ -115,7 +116,7 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
     } as unknown as VaultService;
     owners = new VaultOwnersService(
       vault,
-      new DevicesApiService(devices, new DevicePortsService(db, devices)),
+      new DevicesApiService(devices, new DevicePortsService(db, devices), noPhotos),
       new SoftwareApiService(software, isp),
       new ServiceAccountsApiService(new ServiceAccountService(db, audit, {} as ExpiryApiService)),
     );

@@ -37,6 +37,12 @@ export interface DeviceRecord {
   warrantyEnd: string | null;
   status: DeviceStatus;
   note: string | null;
+  /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U; cùng có hoặc cùng trống. */
+  rackUStart: number | null;
+  rackUSize: number | null;
+  /** Ảnh thật chọn riêng cho máy này (đè ảnh mức model). */
+  photoFrontFileId: string | null;
+  photoBackFileId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

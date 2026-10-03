@@ -220,6 +220,11 @@ export const CONFIG_KEYS = {
    */
   diagramDriftNotifyEnabled: { key: 'diagram.drift_notify_enabled', fallback: 1 },
   diagramDriftSweepHour: { key: 'diagram.drift_sweep_hour', fallback: 7 },
+  /*
+   * Ảnh thật thiết bị nhúng vào bản vẽ (data URI) nhân theo số máy và hai mặt tủ, và nằm cả trong
+   * XML lúc vẽ lẫn ảnh xem SVG: thu về cạnh dài này để bản vẽ một tủ không chạm trần dung lượng.
+   */
+  diagramPhotoMaxPx: { key: 'diagram.photo_max_px', fallback: 480 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

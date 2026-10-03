@@ -48,6 +48,7 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   cells: 'settings.unitCells',
   devices: 'settings.unitDevices',
   megapixels: 'settings.unitMegapixels',
+  px: 'settings.unitPx',
 };
 
 /*

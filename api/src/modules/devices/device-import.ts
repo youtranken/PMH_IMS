@@ -19,6 +19,7 @@ import { secretTextMessage } from '../../common/no-secret-text';
 import { textLooksLikeSecret } from '../../common/note-secret';
 import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
+import { rackOverlap, rackUnitsReason } from './rack-units';
 
 /**
  * Lõi ĐỐI CHIẾU file thiết bị — hàm THUẦN, không chạm DB, không chạm exceljs.
@@ -29,7 +30,7 @@ import type { DeviceStatus } from './devices.types';
 interface DeviceImportCatalog {
   sites: Map<string, { id: string; code: string }>;
   /** Khóa: `${siteKey} ${cabinetKey}` — mã tủ chỉ duy nhất trong một site. */
-  cabinets: Map<string, { id: string; code: string; siteId: string; siteCode?: string }>;
+  cabinets: Map<string, { id: string; code: string; siteId: string; siteCode?: string; uHeight?: number | null }>;
   deviceTypes: Map<string, { id: string; name: string }>;
   vendors: Map<string, { id: string; name: string }>;
 }
@@ -51,6 +52,8 @@ export interface ExistingDevice {
   warrantyEnd: string | null;
   status: string;
   note: string | null;
+  rackUStart?: number | null;
+  rackUSize?: number | null;
 }
 
 export interface DeviceImportContext {
@@ -101,7 +104,7 @@ interface FieldSpec {
   label: string;
   aliases: string[];
   required?: boolean;
-  kind: 'text' | 'date' | 'status' | 'siteCode' | 'cabinetCode' | 'typeName' | 'vendorName';
+  kind: 'text' | 'date' | 'status' | 'siteCode' | 'cabinetCode' | 'typeName' | 'vendorName' | 'rackU';
   /** Ô chữ tự do — cùng luật `@NoSecretText` với form (Q-19), file không là cửa sau. */
   noSecret?: boolean;
 }
@@ -138,6 +141,8 @@ const FIELDS: FieldSpec[] = [
     aliases: ['tủ mạng', 'tu mang', 'tủ', 'mã tủ'],
     kind: 'cabinetCode',
   },
+  { key: 'rackUStart', label: 'U bắt đầu', aliases: ['u bắt đầu', 'u bat dau'], kind: 'rackU' },
+  { key: 'rackUSize', label: 'Số U', aliases: ['số u', 'so u'], kind: 'rackU' },
   {
     key: 'vendorId',
     label: 'Nhà cung cấp',
@@ -208,8 +213,64 @@ export function planDeviceImport(
     if (isBlankRow(row.cells)) continue;
     rows.push(planRow(row, context, seen));
   }
+  const checked = rejectRackOverlaps(rows, context);
 
-  return { rows, summary: summarize(rows), hasRecognizedSheet: recognized };
+  return { rows: checked, summary: summarize(checked), hasRecognizedSheet: recognized };
+}
+
+interface RackClaim {
+  cabinetId: string;
+  start: number;
+  size: number;
+}
+
+/** Chỗ máy sẽ chiếm trong tủ sau khi ghi dòng này; `null` = không chiếm (không U, không tủ, thanh lý). */
+function rackClaimOf(values: Record<string, unknown>, existing: ExistingDevice | undefined): RackClaim | null {
+  const effective = effectiveOf(values);
+  const cabinetId = effective<string | null>('cabinetId', existing?.cabinetId ?? null);
+  const start = effective<number | null>('rackUStart', existing?.rackUStart ?? null);
+  const size = effective<number | null>('rackUSize', existing?.rackUSize ?? null);
+  const status = effective<string | null>('status', existing?.status ?? null);
+  if (!cabinetId || start === null || size === null || status === 'retired') return null;
+  return { cabinetId, start, size };
+}
+
+/**
+ * Chồng U (Q-23) xét cả file một lượt: máy đang trong tủ mà file không nhắc tới giữ nguyên chỗ,
+ * máy có trong file thì giữ chỗ từ dòng của nó trở đi — nên hai dòng tranh một U thì dòng SAU
+ * lỗi, còn máy dời đi ở dòng sau không chặn máy dời tới ở dòng trước. Bước ghi vẫn kiểm lại
+ * trong transaction (`assertRackFreeWithin`) và DB chặn chót bằng `device_rack_u_no_overlap`.
+ */
+function rejectRackOverlaps(rows: DeviceImportRow[], context: DeviceImportContext): DeviceImportRow[] {
+  const inFile = new Set(rows.filter((r) => r.values?.code !== undefined).map((r) => normalizeKey(String(r.values!.code))));
+  const occupants: (RackClaim & { key: string; code: string; name: string })[] = [];
+  for (const [key, device] of context.devices) {
+    if (inFile.has(key)) continue;
+    const claim = rackClaimOf({}, device);
+    if (claim) occupants.push({ ...claim, key, code: device.code, name: device.name });
+  }
+  const textOf = (value: unknown, fallback: string) => (typeof value === 'string' ? value : fallback);
+  return rows.map((row) => {
+    if (row.action !== 'create' && row.action !== 'update' && row.action !== 'unchanged') return row;
+    const key = normalizeKey(textOf(row.values?.code, row.label));
+    const existing = context.devices.get(key);
+    const claim = rackClaimOf(row.values ?? {}, existing);
+    if (!claim) return row;
+    const taken = rackOverlap(
+      claim,
+      occupants.filter((o) => o.cabinetId === claim.cabinetId && o.key !== key),
+    );
+    if (taken) {
+      return {
+        rowNumber: row.rowNumber,
+        label: row.label,
+        action: 'error',
+        message: `Chỗ U này trong tủ đang có ${taken.code} (${taken.name}) chiếm — hai máy không chồng U trong cùng tủ.`,
+      };
+    }
+    occupants.push({ ...claim, key, code: textOf(row.values?.code, existing?.code ?? row.label), name: textOf(row.values?.name, existing?.name ?? '') });
+    return row;
+  });
 }
 
 function planRow(
@@ -363,6 +424,18 @@ function planRow(
         values.vendorId = vendor.id;
         break;
       }
+
+      case 'rackU': {
+        if (text === '') {
+          values[field.key] = null;
+          break;
+        }
+        if (!/^\d{1,3}$/.test(text)) {
+          return { ...base, action: 'error', label, message: `Cột "${field.label}" phải là số nguyên (vd 5).` };
+        }
+        values[field.key] = Number(text);
+        break;
+      }
     }
   }
 
@@ -430,6 +503,23 @@ function planRow(
         message: `Tủ "${cabinet.code}" không thuộc site đã ghi. Sửa cột Site hoặc cột Tủ mạng cho khớp nhau.`,
       };
     }
+  }
+
+  // Bỏ tủ thì máy không còn chỗ U nào; file không có cột U thì xoá U theo, như form.
+  if (!cabinetId && values.rackUStart === undefined && values.rackUSize === undefined && (existing?.rackUStart ?? null) !== null) {
+    values.rackUStart = null;
+    values.rackUSize = null;
+  }
+  if (!existing || 'rackUStart' in values || 'rackUSize' in values || 'cabinetId' in values) {
+    const cabinet = cabinetId ? [...context.catalog.cabinets.values()].find((item) => item.id === cabinetId) : undefined;
+    const rackReason = rackUnitsReason({
+      start: effective<number | null>('rackUStart', existing?.rackUStart ?? null),
+      size: effective<number | null>('rackUSize', existing?.rackUSize ?? null),
+      hasCabinet: Boolean(cabinetId),
+      cabinetCode: cabinet?.code ?? null,
+      cabinetHeight: cabinet?.uHeight ?? null,
+    });
+    if (rackReason) return { ...base, action: 'error', label, message: rackReason };
   }
 
   const start = effective<string | null>('warrantyStart', existing?.warrantyStart ?? null);

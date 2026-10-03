@@ -21,6 +21,7 @@ import type { SweepService } from '../src/modules/queue/sweep.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 
 /**
  * Gửi duyệt / duyệt / trả về / phát hành bản vẽ (Q-23, AD-6, AD-18) trên Postgres thật: tự kiểm
@@ -91,7 +92,7 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     const config = new SystemConfigService(db);
     const catalog = new CatalogApiService(new CatalogService(db, audit));
     const devicesService = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
-    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService));
+    const devices = new DevicesApiService(devicesService, new DevicePortsService(db, devicesService), noPhotos);
     const ipam = { heldAddressesOf: (ids: string[]) => Promise.resolve(new Map(ids.map((id) => [id, []]))) } as unknown as IpamApiService;
     const users = new UsersApiService(new UsersService(db));
     const kinds = new ApprovalKindRegistry();
