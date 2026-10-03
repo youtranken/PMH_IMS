@@ -14,6 +14,7 @@ import {
   writeHeaders,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
@@ -55,7 +56,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
        * định cuối bài trở thành luôn-xanh — `resetUsers()` ở `beforeEach` đã để sẵn
        * `must_change_password = true` và `totp_secret_ct = NULL` rồi.
        */
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       expect(
         (await memberPage.request.get('/api/v1/auth/me')).status(),
         'phiên của Member phải sống trước khi SA ra tay — không thì "phiên chết" chẳng chứng minh gì',
@@ -80,7 +81,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       expect(liveSessions(), 'Member đang có ít nhất một phiên mở').toBeGreaterThan(0);
 
       // --- SA vào màn Tài khoản và bấm nút, đúng như người thật.
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
       await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
@@ -176,7 +177,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
     // Một lượt đăng nhập đầy đủ của SA + hai lượt thử đăng nhập của người bị khóa.
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     /*

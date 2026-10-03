@@ -10,6 +10,7 @@ import {
   writeHeaders,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 test.describe('SA đi một vòng cả hệ thống', () => {
@@ -69,7 +70,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
     // Mỗi mục menu một lượt điều hướng + một luồng đăng nhập lần đầu: 60 giây mặc định không đủ.
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
 
@@ -113,7 +114,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    */
   test('SA bấm từ danh sách sang hồ sơ rồi đi hết các tab', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const code = `SW-E2E-TOUR-${stamp}`;
@@ -214,7 +215,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    */
   test('Bảng điều khiển là bàn đạp, không phải ảnh tĩnh', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const soon = isoInDays(3);
@@ -292,7 +293,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
   test('Đổi sáng/tối trên máy bàn và nó dính lại sau khi đổi trang', async ({ page }) => {
     // Máy để tối mà người chưa chọn vẫn phải thấy sáng: mặc định không theo hệ điều hành (Q-21).
     await page.emulateMedia({ colorScheme: 'dark' });
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const topbar = page.getByRole('banner');
     const themeOf = () => page.evaluate(() => document.documentElement.dataset.theme ?? '');
@@ -358,7 +359,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * Kiểm luôn nó ĐI TỚI ĐÂU: một skip-link trỏ vào hư không còn tệ hơn không có.
    */
   test('Tab lần đầu chạm ngay "Bỏ qua menu", và nó trỏ vào vùng nội dung', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/devices');
     await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
 
@@ -372,7 +373,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
 
   test('Bàn phím một mình cũng đi được: Tab tới nút, Enter mở, Esc đóng', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     await page
       .getByRole('navigation', { name: 'Điều hướng chính' })

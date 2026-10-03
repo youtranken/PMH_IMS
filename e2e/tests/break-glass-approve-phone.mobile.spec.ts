@@ -19,6 +19,7 @@ import {
   resetSecrets,
   resetUsers,
   waitForMail,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -96,12 +97,14 @@ async function seedDevice(page: Page, stamp: string): Promise<{ deviceId: string
 async function pendingRequest(page: Page, hours = 4) {
   const stamp = Date.now().toString().slice(-6);
   const saTotp = await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, saTotp);
   const { deviceId, code } = await seedDevice(page, stamp);
   await logout(page);
 
   const memberCtx = await page.context().browser()!.newContext({ ignoreHTTPSErrors: true });
   const member = await memberCtx.newPage();
   const memberTotp = await firstLogin(member, E2E_MEMBER);
+  await stepUpViaApi(member, memberTotp);
   const asked = await member.request.post('/api/v1/vault/break-glass', {
     headers: await headersOf(member),
     data: {
@@ -134,6 +137,7 @@ test.describe('Duyệt break-glass từ trang chi tiết, 390px', () => {
     expect(askingBody, 'thư KHÔNG được có tên ngăn két').not.toContain('enable E2E');
 
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     await clearMailbox();
     await page.goto(`/approvals/${approvalId}`);
 
@@ -166,6 +170,7 @@ test.describe('Duyệt break-glass từ trang chi tiết, 390px', () => {
   }) => {
     const { saTotp, approvalId } = await pendingRequest(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     expireStepUp(E2E_SA.email);
 
     await page.goto(`/approvals/${approvalId}`);
@@ -183,6 +188,7 @@ test.describe('Duyệt break-glass từ trang chi tiết, 390px', () => {
   test('từ chối phải ghi lý do; người xin nhận đúng lý do trong thư', async ({ page }) => {
     const { saTotp, code, approvalId } = await pendingRequest(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     await clearMailbox();
     await page.goto(`/approvals/${approvalId}`);
 
@@ -213,11 +219,11 @@ test.describe('Phía người xin, 390px', () => {
     page,
   }) => {
     const stamp = Date.now().toString().slice(-6);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const { deviceId } = await seedDevice(page, stamp);
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto(`/devices/${deviceId}?tab=vault`);
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
@@ -254,6 +260,7 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
   }) => {
     const { saTotp, code, stamp } = await pendingRequest(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
 
@@ -279,6 +286,7 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
   }) => {
     const { saTotp, approvalId } = await pendingRequest(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
@@ -297,6 +305,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
   test('người duyệt: đầu trang "Gửi … trước", khối người xin có vai và số lần xin', async ({ page }) => {
     const { saTotp, approvalId } = await pendingRequest(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(page, saTotp);
     await page.goto(`/approvals/${approvalId}`);
 
     const ago = page.getByText(/^Gửi (vừa xong|\d+ phút trước)$/);
@@ -315,6 +324,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
   test('người xin tự đọc phiếu mình: không nhận ngữ cảnh của người duyệt', async ({ page }) => {
     const { memberTotp, approvalId } = await pendingRequest(page);
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
+    await stepUpViaApi(page, memberTotp);
     const own = await page.request.get(`/api/v1/vault/break-glass/${approvalId}`);
     const body = (await own.json()) as { recentCount: unknown; requesterRole: unknown };
     expect(body.recentCount).toBeNull();
@@ -336,10 +346,10 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     const stamp = Date.now().toString().slice(-6);
     const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const sa = await saCtx.newPage();
-    await firstLogin(sa, E2E_SA);
+    await stepUpViaApi(sa, await firstLogin(sa, E2E_SA));
     const { deviceId } = await seedDevice(sa, stamp);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto(`/devices/${deviceId}?tab=vault`);
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
@@ -352,7 +362,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await expect(page.getByText(/Giữ trang này mở/)).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-    // SA vừa đăng nhập bằng mã 2 lớp = vừa step-up, duyệt qua API được ngay.
+    // SA đã nhập mã cho két ngay sau đăng nhập (`stepUpViaApi`), duyệt qua API được ngay.
     const pending = (await (await sa.request.get('/api/v1/vault/break-glass/pending')).json()) as {
       id: string;
       subjectId: string;

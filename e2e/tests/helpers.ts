@@ -1,4 +1,8 @@
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, request, type Locator, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
 import { APP_TIMEZONE } from '../app-timezone';
@@ -178,7 +182,7 @@ export function setLoginRateLimit(value: number): void {
 }
 
 /**
- * Đẩy mốc step-up của mọi phiên lùi 1 giờ — giả lập "hết grace 10 phút" mà không phải chờ.
+ * Đẩy mốc step-up (cả két lẫn sơ đồ) của mọi phiên lùi 1 giờ — giả lập "hết grace 10 phút" mà không phải chờ.
  *
  * Cách khác là hạ `secret.stepup_grace_minutes` xuống 0, nhưng SystemConfigService cache 30
  * giây nên test sẽ phải ngồi chờ cache hết hạn, và grace 0 thì gõ mã xong cũng vẫn hết hạn
@@ -198,7 +202,7 @@ export function expireStepUp(email: string): void {
    * lặng lẽ quét cả DB lần nữa.
    */
   dockerExec(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour', diagram_stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
     'Hết hạn step-up',
   );
 }
@@ -497,24 +501,61 @@ export async function totpCode(secret: string): Promise<string> {
   return totp.generate({ secret });
 }
 
-const usedCodes = new Set<string>();
+/*
+ * Chu kỳ 30 giây đã dùng gần nhất của từng secret — ghi ra tệp chứ không chỉ giữ trong bộ nhớ:
+ * worker Playwright khởi động lại sau một bài đỏ thì bộ nhớ mất, mà server vẫn nhớ chu kỳ đã đốt.
+ * Khoá bằng băm của secret, không ghi secret ra đĩa.
+ */
+const TOTP_STEP_FILE = join(tmpdir(), 'ims-e2e-totp-steps.json');
+
+function usedSteps(): Record<string, number> {
+  try {
+    return JSON.parse(readFileSync(TOTP_STEP_FILE, 'utf8')) as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Mã CHƯA từng dùng trong lần chạy test này.
  *
- * Chống replay (NFR-01) từ chối mã đã dùng — nên hai lần đăng nhập cách nhau vài giây
- * sẽ nhận cùng một mã và lần thứ hai bị chặn ĐÚNG THEO THIẾT KẾ. Test phải chờ sang
- * chu kỳ 30 giây kế tiếp thay vì coi đó là lỗi.
+ * Chống replay (NFR-01) từ chối mọi mã có chu kỳ <= chu kỳ đã dùng. Từ khi mã đăng nhập không
+ * mở phạm vi step-up nào (AD-17), gần như mọi bài két là đăng nhập rồi nhập mã NGAY — hai mã
+ * trong cùng chu kỳ. Server nhận lệch ±30 giây, nên mã thứ hai lấy của chu kỳ KẾ TIẾP (người thật
+ * thì chờ mã mới); chỉ khi chu kỳ kế tiếp cũng đã dùng mới ngồi chờ.
  */
 export async function freshTotpCode(secret: string): Promise<string> {
-  let code = await totpCode(secret);
-  while (usedCodes.has(code)) {
+  const id = createHash('sha256').update(secret).digest('hex').slice(0, 16);
+  for (;;) {
+    const nowStep = Math.floor(Date.now() / 30_000);
+    const steps = usedSteps();
+    const step = Math.max(nowStep, (steps[id] ?? -1) + 1);
+    if (step <= nowStep + 1) {
+      steps[id] = step;
+      writeFileSync(TOTP_STEP_FILE, JSON.stringify(steps));
+      return totp.generate({ secret, epoch: step * 30 });
+    }
     const msToNextWindow = 30_000 - (Date.now() % 30_000) + 1_000;
     await new Promise((resolve) => setTimeout(resolve, msToNextWindow));
-    code = await totpCode(secret);
   }
-  usedCodes.add(code);
-  return code;
+}
+
+/**
+ * Nhập mã cho một phạm vi step-up qua API (AD-17) — cho bài kiểm cần két/tài khoản/tham số mà
+ * KHÔNG kiểm chính hộp nhập mã. Mã đăng nhập không mở phạm vi nào, nên bài nào làm việc cần mã
+ * ngay sau đăng nhập phải gọi hàm này (hoặc gõ mã vào hộp nếu đang kiểm hộp).
+ */
+export async function stepUpViaApi(
+  page: Page,
+  secret: string,
+  scope: 'vault' | 'diagram' = 'vault',
+): Promise<void> {
+  const res = await page.request.post('/api/v1/auth/step-up', {
+    headers: await writeHeaders(page),
+    data: { token: await freshTotpCode(secret), scope },
+    failOnStatusCode: false,
+  });
+  expect(res.status(), `step-up ${scope}: ${await res.text()}`).toBe(200);
 }
 
 /**

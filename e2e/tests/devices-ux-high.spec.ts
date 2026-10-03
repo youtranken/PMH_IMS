@@ -12,6 +12,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -66,7 +67,7 @@ async function assignIp(page: Page, deviceId: string, stamp: string): Promise<st
 
 test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, phòng ban', () => {
   test('đường hạnh phúc: gõ IP hoặc tên người dùng ra đúng máy', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-TIM-${stamp}`;
     const deviceId = await createDevice(page, {
@@ -95,7 +96,7 @@ test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, phòn
   test('đường hỏng: IP chưa cấp cho máy nào thì nói không khớp, không chỉ bừa', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-TIM-${stamp}`;
     const deviceId = await createDevice(page, { code, name: 'Máy trạm' });
@@ -181,7 +182,7 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
   test('nút Sửa của mọi dòng nằm trong khung, cột Tên đủ rộng, Loại là dòng phụ', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-RONG-${stamp}`;
     await createDevice(page, {
@@ -210,7 +211,7 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
     page,
   }) => {
     await page.setViewportSize({ width: 1000, height: 800 });
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-HEP-${stamp}`;
     await createDevice(page, { code, name: 'Máy trạm', assignedTo: 'Chị Lan' });
@@ -228,7 +229,7 @@ test.describe('DEV-043/044 · bản đồ quan hệ không chồng, mã không n
   test.use({ viewport: DESKTOP });
 
   test('nút không đè hạch hay đè nhau; số đếm không bị cắt; hạch một dòng', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-CORE-${stamp}`;
     const deviceId = await createDevice(page, { code, name: 'Switch lõi', type: 'Switch' });
@@ -288,7 +289,7 @@ test.describe('DEV-043/044 · bản đồ quan hệ không chồng, mã không n
   test('đường hỏng: máy đã thanh lý không giữ gì — chỉ có câu, không có hạch bị câu đè (sáng + tối)', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-RONG-${stamp}`;
     const deviceId = await createDevice(page, { code, name: 'Máy cũ' });
@@ -313,7 +314,7 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
   test('không còn nút "Xem lượt thanh lý cắt gì" rời rạc; hộp liệt kê IP sẽ gỡ và thứ giữ nguyên', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-TL-${stamp}`;
     const deviceId = await createDevice(page, { code, name: 'Máy sắp thanh lý' });
@@ -334,7 +335,7 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
   test('đường hỏng: bị chặn 409 lần thứ hai thì hộp vẫn dựng lại, không giữ chữ đã gõ lượt trước', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-TL2-${stamp}`;
     const deviceId = await createDevice(page, { code, name: 'Máy bị chặn hai lần' });
@@ -376,7 +377,7 @@ test.describe('DEV-047 · VLT-040 · két trong trang thiết bị', () => {
   test('nút Xem luôn trong khung; menu ⋯ nêu tên ngăn và không làm trôi cột Tên gọi', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, {
       code: `SW-E2E-KET-${stamp}`,
@@ -409,7 +410,7 @@ test.describe('DEV-048 · bảng port map', () => {
   test('cột Cổng dính trái, thao tác dính phải; mở ⋯ không cuộn bảng và nêu tên cổng', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, {
       code: `RT-E2E-PM-${stamp}`,
@@ -445,7 +446,7 @@ test.describe('DEV-068 · khu License đang cài không tràn card', () => {
 
   test('một tiêu đề duy nhất, mã license một dòng, không đè sang cột phải', async ({ page }) => {
     resetSoftware();
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, { code: `LT-E2E-LIC-${stamp}`, name: 'Laptop' });
     const licenseCode = `LIC-E2E-M365-${stamp}`;

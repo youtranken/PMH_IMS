@@ -14,6 +14,7 @@ import {
   resetUsers,
   sql,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -73,7 +74,7 @@ test.describe('Trang tổng Két sắt', () => {
   test('mục Két sắt vào được, liệt kê hồ sơ đang giữ két và mở xem ngay trong popup', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `PC-E2E-VH-${stamp}`;
     const deviceId = await createDevice(page, code);
@@ -101,7 +102,7 @@ test.describe('Trang tổng Két sắt', () => {
   });
 
   test('lọc theo loại chọn được nhiều cùng lúc, và tìm theo mã', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-VF-${stamp}`;
     const deviceId = await createDevice(page, deviceCode);
@@ -155,7 +156,7 @@ test.describe('Trang tổng Két sắt', () => {
   test('đường truyền cũng là chủ két: hiện đúng loại, lọc được, và link mở đúng hồ sơ', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const ispCode = `ISP-E2E-VK-${stamp}`;
@@ -215,7 +216,7 @@ test.describe('Trang tổng Két sắt', () => {
    * và thế là bản đồ bí mật của công ty ra đời mà không bài kiểm nghiệp vụ nào đỏ.
    */
   test('trang tổng chỉ nói CHỦ THỂ, không nói trong két có gì', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `PC-E2E-VS-${stamp}`);
     const label = `ten-ngan-bi-mat-${stamp}`;
@@ -241,14 +242,14 @@ test.describe('Trang tổng Két sắt', () => {
   test('Member không vào được trang tổng — bản đồ két không mở cho mọi người', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.request.get('/api/v1/auth/me');
     // Đường API phải chặn theo VAI, không chỉ giấu mục menu đi.
     const asSa = await page.request.get('/api/v1/vault/owners');
     expect(asSa.status()).toBe(200);
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     expect((await page.request.get('/api/v1/vault/owners')).status()).toBe(403);
   });
 });
@@ -257,7 +258,7 @@ test.describe('Trang tổng Két sắt — sửa từ code review', () => {
   test('Member không thấy mục Két sắt trên menu, và gõ thẳng URL cũng chỉ ra 404', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     /*
      * `GET /vault/owners` chặn theo vai, nên nếu vẫn bày mục menu ra thì Member bấm vào và
      * nhận một màn lỗi "thử lại" — bày một cánh cửa khóa còn tệ hơn không bày.
@@ -281,7 +282,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
    * người kia vẫn gán được — đúng tình huống "thành công một phần".
    */
   test('gán hàng loạt hỏng một phần: vẫn báo rõ ai không gán được', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const doomed = `e2e-tao-moi-${stamp}@pmh.com.vn`;
@@ -330,7 +331,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
   test('gán một nhóm cho nhiều người, rồi xem lại được ai đang có quyền trên nhóm đó', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/vault-access?view=matrix');
 
     const scopes = await page.request.get('/api/v1/vault/access/scopes');
@@ -361,14 +362,14 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
   });
 
   test('dòng tổng nói rõ còn bao nhiêu nhóm chưa gán cho ai', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/vault-access?view=matrix');
     // Chỗ hổng của ma trận là những nhóm chưa ai được gán — rà từng thẻ thì không thấy ra.
     await expect(page.getByText(/nhóm chưa gán cho ai/)).toBeVisible();
   });
 
   test('gỡ quyền ngay trên thẻ nhóm, không phải quay về chiều theo người', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const scopeList = await page.request.get('/api/v1/vault/access/scopes');
     const first = ((await scopeList.json()) as {

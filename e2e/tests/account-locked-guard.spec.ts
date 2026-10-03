@@ -7,6 +7,7 @@ import {
   sql,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -61,7 +62,7 @@ async function tryLogin(page: import('@playwright/test').Page, email: string, pa
 
 test.describe('Tài khoản bị SA khóa thì không đăng nhập được', () => {
   test('status = locked → login bị từ chối, và KHÔNG ghi auth.login.ok', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const who = await makeMember(page, stamp);
 
@@ -100,7 +101,7 @@ test.describe('Tài khoản bị SA khóa thì không đăng nhập được', (
   });
 
   test('status = disabled vẫn bị chặn như cũ, và bằng MÃ LỖI RIÊNG', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const who = await makeMember(page, stamp);
 
@@ -121,7 +122,7 @@ test.describe('Tài khoản bị SA khóa thì không đăng nhập được', (
    * thêm về sau sẽ mặc định bị cấm. Bài này chốt rằng mở khóa là mở thật.
    */
   test('mở khóa (về active) thì đăng nhập lại được ngay', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const who = await makeMember(page, stamp);
 

@@ -17,6 +17,7 @@ import {
   resetDevices,
   resetSecrets,
   resetUsers,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -100,7 +101,7 @@ test.describe('Break-glass', () => {
      * Trần 150 giây: hai lượt cài 2 lớp + một lượt chờ mã TOTP mới cho hộp xác nhận danh tính.
      */
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId, secretId, secretValue } = await setUpAs(page, stamp, 'needs_approval');
 
@@ -108,6 +109,7 @@ test.describe('Break-glass', () => {
     const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const member = await memberCtx.newPage();
     const totpSecret = await firstLogin(member, E2E_MEMBER);
+    await stepUpViaApi(member, totpSecret);
     const memberHeaders = { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN };
 
     const blocked = await member.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
@@ -200,13 +202,13 @@ test.describe('Break-glass', () => {
      * kiểm gì.
      */
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { secretId, deviceId } = await setUpAs(page, stamp, 'needs_approval');
 
     const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const member = await memberCtx.newPage();
-    await firstLogin(member, E2E_MEMBER);
+    await stepUpViaApi(member, await firstLogin(member, E2E_MEMBER));
     const memberHeaders = { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN };
     const asked = await member.request.post('/api/v1/vault/break-glass', {
       headers: memberHeaders,
@@ -254,12 +256,12 @@ test.describe('Break-glass', () => {
 
   /** Whitelist: xem thẳng, không phải xin — nhưng vẫn phải gõ mã mỗi lần (cơ chế 4.2). */
   test('whitelist thì xem thẳng, không hiện nút xin', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { secretId, secretValue, deviceId } = await setUpAs(page, stamp, 'whitelist');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const opened = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
@@ -282,12 +284,12 @@ test.describe('Break-glass', () => {
 
   /** Tầng CẤM: không xem, và cũng KHÔNG XIN được (AC 6.2). */
   test('không được gán gì thì không xem và cũng không xin được', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { secretId, deviceId } = await setUpAs(page, stamp, null);
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const reveal = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, { headers });
@@ -309,12 +311,12 @@ test.describe('Break-glass', () => {
   });
 
   test('trần thời hạn kẹp theo system_config, không từ chối', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       // Xin 100 giờ; trần mặc định là 24. Phải được CHẤP NHẬN và kẹp xuống, không bị từ chối.
@@ -330,11 +332,12 @@ test.describe('Break-glass', () => {
    */
   test('không hủy được yêu cầu của người khác', async ({ page, browser }) => {
     const saTotp = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, saTotp);
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
@@ -346,6 +349,7 @@ test.describe('Break-glass', () => {
     const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const sa = await saCtx.newPage();
     await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await stepUpViaApi(sa, saTotp);
     // SA cũng KHÔNG hủy hộ được — muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc.
     const stolen = await sa.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
       headers: { 'X-CSRF-Token': await csrfOf(sa), Origin: APP_ORIGIN },
@@ -364,12 +368,12 @@ test.describe('Break-glass', () => {
    * bấm cùng lúc là lọt cả hai.
    */
   test('bắn hai yêu cầu cùng lúc thì chỉ một cái lọt', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const body = {
       ownerType: 'device',
@@ -401,12 +405,12 @@ test.describe('Break-glass', () => {
    * Member mở được tab Két sắt, nên UI không được bày ra nút GHI — bấm vào chỉ nhận 403.
    */
   test('Member được cấp quyền xem vẫn KHÔNG thấy nút ghi vào két', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'whitelist');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByRole('button', { name: 'Xem' })).toBeVisible();
@@ -430,12 +434,12 @@ test.describe('Break-glass', () => {
   test('Member mở màn duyệt thấy ngay yêu cầu của mình, không phải bấm lại tab', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: 'lý do của tôi', hours: 2 },
@@ -448,12 +452,12 @@ test.describe('Break-glass', () => {
   });
 
   test('Member không duyệt được yêu cầu của chính mình', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers,

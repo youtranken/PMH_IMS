@@ -86,16 +86,16 @@ test.describe('Siết cửa xác thực', () => {
   });
 
   /**
-   * `POST /auth/login/totp` là cửa step-up THỨ HAI, phải được canh như cửa thứ nhất.
+   * `POST /auth/login/totp` là cửa đoán mã THỨ HAI, phải được canh như cửa step-up.
    *
    * `POST /auth/step-up` có `@Throttle 10/phút`, có bộ đếm sai, và thu hồi phiên khi quá
    * ngưỡng. Nếu `/auth/login/totp` không có gì cả thì trần duy nhất là throttler chung
    * 300/phút, và vì `req.user` đã tồn tại ở route này nên 300 lượt đó đổ hết vào đúng một tài
    * khoản.
    *
-   * Nặng hơn nữa: `completeTotpWithin` đóng dấu `stepped_up_at`, nên đoán trúng ở đây là được
-   * cấp một phiên ĐÃ MỞ KÉT. Kẻ đã có mật khẩu (dùng lại từ nơi khác, phishing) nhưng không có
-   * điện thoại chỉ cần bắn liên tục vào cửa này.
+   * Đoán trúng ở đây là được cấp một phiên đã xác thực đủ (chưa mở két hay sơ đồ — AD-17, nhưng
+   * là bàn đạp tới mọi thứ khác). Kẻ đã có mật khẩu (dùng lại từ nơi khác, phishing) nhưng không
+   * có điện thoại chỉ cần bắn liên tục vào cửa này.
    */
   test('cửa 2FA lúc đăng nhập phải có trần riêng, không chỉ trần chung 300/phút', async ({
     page,

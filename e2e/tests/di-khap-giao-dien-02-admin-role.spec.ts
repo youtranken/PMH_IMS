@@ -18,6 +18,7 @@ import {
   writeHeaders,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -117,7 +118,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // dùng — vượt xa trần 60 giây mặc định.
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     /*
      * `exact: true`: menu có cả "Tài khoản" (tài khoản đăng nhập IMS) lẫn "Tài khoản dịch vụ"
@@ -162,7 +163,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await logout(page);
 
     // ===== Người mới vào làm việc =====
-    await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
+    await stepUpViaApi(page, await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword }));
 
     const menu = page.getByRole('navigation', { name: 'Điều hướng chính' });
     // Nhóm "Hệ thống" mặc định khép — mở ra thì các vế "không có" bên dưới mới có nghĩa.
@@ -243,11 +244,11 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
   }) => {
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const tempPassword = await createAdminAccount(page);
     await logout(page);
 
-    await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
+    await stepUpViaApi(page, await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword }));
 
     // --- Trang có thật nhưng không dành cho vai này → 403 nói rõ thiếu quyền (MISC-001);
     //     trang chưa có route → 404.
@@ -315,11 +316,12 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
   test('Quản trị viên làm được việc két sắt: cất, xem, xoay', async ({ page }) => {
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const tempPassword = await createAdminAccount(page);
     await logout(page);
 
     const adminTotp = await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
+    await stepUpViaApi(page, adminTotp);
 
     const stamp = uniqueStamp();
     const code = `SW-E2E-ADMIN-${stamp}`;
@@ -410,7 +412,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     const reasonB = `E2E xin xem switch B ${stamp}`;
 
     // ===== SA: dựng người, dựng máy, mở tầng "cần duyệt" cho Member =====
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const tempPassword = await createAdminAccount(page);
 
     const typeId = await switchType(page);
@@ -435,7 +437,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // đăng xuất đều không làm mất phiếu admin cần xử.
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const memberHeaders = await writeHeaders(memberPage);
     for (const [ownerId, reason] of [
       [deviceA, reasonA],
@@ -450,7 +452,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await memberCtx.close();
 
     // ===== Quản trị viên: xử phiếu bằng tay =====
-    await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword });
+    await stepUpViaApi(page, await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword }));
     await page.goto('/approvals');
 
     // Ba tab của người duyệt — Member chỉ có một, nên đây cũng là một khẳng định về vai.

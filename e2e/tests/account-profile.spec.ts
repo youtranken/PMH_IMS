@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, searchAndWaitForFilter, uniqueStamp } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, searchAndWaitForFilter, uniqueStamp, stepUpViaApi } from './helpers';
 
 /**
  * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh.
@@ -22,7 +22,7 @@ test.describe('Hồ sơ tài khoản', () => {
   test('đường hạnh phúc: sửa SĐT + mã NV + ngày sinh, danh sách hiện ra ngay', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     await page.goto('/admin/accounts');
@@ -64,7 +64,7 @@ test.describe('Hồ sơ tài khoản', () => {
   test('tìm được theo số điện thoại và theo mã nhân viên, không chỉ theo tên', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const phone = `097${stamp}`;
 
@@ -88,7 +88,7 @@ test.describe('Hồ sơ tài khoản', () => {
   });
 
   test('đường hỏng: mã nhân viên trùng bị chặn kèm lời giải thích', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -118,7 +118,7 @@ test.describe('Hồ sơ tài khoản', () => {
   });
 
   test('đường hỏng: SĐT gõ chữ bị từ chối; để trống thì xoá được giá trị cũ', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const users = await page.request.get('/api/v1/accounts?limit=200');
     const target = ((await users.json()) as { items: { id: string; fullName: string }[] }).items[0];

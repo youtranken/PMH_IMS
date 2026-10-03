@@ -13,6 +13,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -194,7 +195,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   }) => {
     // Một luồng đăng nhập lần đầu + bảy lượt đổi tab, mỗi lượt một lượt gọi API.
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     /*
@@ -329,7 +330,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       },
     ];
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     for (const [index, dialog] of ADD_DIALOGS.entries()) {
@@ -397,7 +398,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   test('Hộp Tủ mạng từ chối lưu khi thiếu site hoặc số U sai, và hộp KHÔNG đóng', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     // Ô "Thuộc site" cần ít nhất một site; máy chủ mới dựng thì danh mục còn trắng.
     await catalogItem(page, 'site', { code: `S-E2E-TU-${uniqueStamp()}`, name: 'Site E2E hộp tủ' });
     await mockCatalog(page);
@@ -473,7 +474,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     /*
@@ -584,7 +585,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   test('Nút "Tải file mẫu" · "Nhập từ Excel" chỉ có ở danh mục có sheet, và hộp nhập có ba bước khóa nhau', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     for (const section of SEVEN_SECTIONS) {
@@ -671,7 +672,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     // `exact`: menu có cả "Tài khoản" lẫn "Tài khoản dịch vụ".
     await openNavGroup(page);
@@ -791,7 +792,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
@@ -941,7 +942,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * "gọn" là làm yếu phép so tập hợp.
    */
   test('Phòng Bộ giao diện liệt kê đủ mọi khu, đúng thứ tự', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     // Trang nội bộ không có trên menu (Q-20) — vào bằng URL.
     await page.goto('/dev/components');

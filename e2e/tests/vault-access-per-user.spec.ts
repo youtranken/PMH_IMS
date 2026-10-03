@@ -10,6 +10,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -25,7 +26,7 @@ test.describe('Quyền két sắt — theo người', () => {
   test('?user= mở sẵn người đó; thêm HAI nhóm một lượt; chip hiện ngay, số quyền cập nhật', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const memberId = sql(`SELECT id FROM users WHERE email = '${E2E_MEMBER.email}'`);
     const fullName = sql(`SELECT full_name FROM users WHERE email = '${E2E_MEMBER.email}'`);
 
@@ -52,7 +53,7 @@ test.describe('Quyền két sắt — theo người', () => {
   });
 
   test('đường hỏng: Lưu mà chưa chọn nhóm nào → báo lỗi, không ghi gì', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const memberId = sql(`SELECT id FROM users WHERE email = '${E2E_MEMBER.email}'`);
     await page.goto(`/admin/vault-access?user=${memberId}`);
     await page.getByRole('button', { name: '+ Gán quyền' }).click();
@@ -66,7 +67,7 @@ test.describe('Quyền két sắt — theo người', () => {
   test('SA/Admin không nằm trong danh sách thành viên mà ở khối "Có toàn quyền theo vai"', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/vault-access');
     const list = page.getByRole('navigation', { name: 'Danh sách thành viên' });
     await expect(list.getByText(E2E_MEMBER.email)).toBeVisible();
@@ -76,7 +77,7 @@ test.describe('Quyền két sắt — theo người', () => {
   });
 
   test('tab "Ma trận" vẫn còn cho rà soát tổng (màn rộng), địa chỉ nhớ tab', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/vault-access');
     await page.getByRole('tab', { name: 'Ma trận' }).click();
     await expect(page).toHaveURL(/view=matrix/);
@@ -94,7 +95,7 @@ test.describe('Quyền két sắt — theo người', () => {
     test.setTimeout(150_000);
     const adminEmail = 'e2e-tao-moi-admin-quyen-ket@pmh.com.vn';
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const created = await page.request.post('/api/v1/accounts', {
       headers: await writeHeaders(page),
       data: {
@@ -111,7 +112,7 @@ test.describe('Quyền két sắt — theo người', () => {
     const { temporaryPassword } = (await created.json()) as { temporaryPassword: string };
     await logout(page);
 
-    await firstLogin(page, { email: adminEmail, password: temporaryPassword });
+    await stepUpViaApi(page, await firstLogin(page, { email: adminEmail, password: temporaryPassword }));
     const memberName = sql(`SELECT full_name FROM users WHERE email = '${E2E_MEMBER.email}'`);
 
     await page.goto('/admin/vault-access');
@@ -137,7 +138,7 @@ test.describe('Quyền két sắt — theo người', () => {
   });
 
   test('Member không đọc được danh bạ của màn Quyền két', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const res = await page.request.get('/api/v1/vault/access/people');
     expect(res.status()).toBe(403);
     expect(await res.json()).toMatchObject({ code: 'FORBIDDEN_ROLE' });

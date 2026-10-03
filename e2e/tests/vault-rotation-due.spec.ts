@@ -10,6 +10,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -53,7 +54,7 @@ test.describe('Két — hạn đổi mật khẩu (Q-15)', () => {
   test('đường hạnh phúc: quá hạn hiện "Quá N ngày — cần đổi"; Đổi mật khẩu xong đếm lại 180 ngày', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const kit = await accountWithSecret(page, stamp);
     backdate(kit.secretId, 200);
@@ -82,12 +83,12 @@ test.describe('Két — hạn đổi mật khẩu (Q-15)', () => {
   });
 
   test('đường hỏng: Member không thấy cột hạn két, API bản đồ hạn chặn Member', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const kit = await accountWithSecret(page, stamp);
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/service-accounts');
     await expect(page.getByRole('link', { name: kit.code })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Đổi lần cuối' })).toHaveCount(0);

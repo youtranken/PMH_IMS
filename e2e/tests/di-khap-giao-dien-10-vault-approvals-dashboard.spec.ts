@@ -17,6 +17,7 @@ import {
   rowAction,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -202,7 +203,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-KS-${stamp}`;
@@ -392,7 +393,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     // Lưới là tab "Ma trận" (màn rộng); tab mặc định là "Theo người".
     await page.goto('/admin/vault-access?view=matrix');
@@ -512,7 +513,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   }) => {
     // Hai luồng đăng nhập lần đầu (SA ở đây, Member ở trình duyệt thứ hai).
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
@@ -536,7 +537,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       const asked = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: await writeHeaders(memberPage),
         data: { ownerType: 'device', ownerId: deviceId, reason, hours: 4 },
@@ -677,7 +678,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     // Hai luồng đăng nhập lần đầu đầy đủ (SA rồi Member) trong cùng một bài.
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
@@ -722,7 +723,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---- Đổi người: cùng một màn, ít khối hơn ---- */
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
     // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
@@ -786,6 +787,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   test('Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
 
     const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-HOP-${stamp}`;
@@ -1079,7 +1081,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   test('Bên trong hộp Duyệt, hộp Từ chối và hộp gán quyền hàng loạt', async ({ page, browser }) => {
     // Hai luồng đăng nhập lần đầu (SA ở đây, Member ở trình duyệt thứ hai).
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
@@ -1098,7 +1100,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       const asked = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: await writeHeaders(memberPage),
         data: {
@@ -1295,7 +1297,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     'Esc lúc menu ô chọn đang mở chỉ đóng MENU, không đóng cả hộp thoại',
     async ({ page }) => {
       test.setTimeout(150_000);
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
       const stamp = uniqueStamp();
       const deviceCode = `PC-E2E-ESC-${stamp}`;

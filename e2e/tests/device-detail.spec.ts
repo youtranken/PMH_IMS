@@ -10,6 +10,7 @@ import {
   resetIpam,
   resetUsers,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -51,7 +52,7 @@ test.describe('Trang chi tiết thiết bị', () => {
   test('gom đủ hồ sơ · bảo hành · port map · giấy tờ · lịch sử trong một trang', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-ALL-${stamp}`;
     const deviceId = await createSwitch(page, code);
@@ -112,7 +113,7 @@ test.describe('Trang chi tiết thiết bị', () => {
   test('khu mở rộng chưa có module nào đăng ký → API trả rỗng, trang không hiện khối trống', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-EXT-${stamp}`);
 
@@ -134,7 +135,7 @@ test.describe('Trang chi tiết thiết bị', () => {
   test('?tab=ports trên máy KHÔNG có port map → rơi về Hồ sơ, không vẽ bảng port', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
@@ -166,7 +167,7 @@ test.describe('Trang chi tiết thiết bị', () => {
   });
 
   test('mở thiết bị không tồn tại → khối "không tìm thấy hồ sơ" có đường về danh sách', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/devices/00000000-0000-4000-8000-000000000000');
     await expect(page.getByRole('heading', { name: 'Không tìm thấy hồ sơ' })).toBeVisible();
     // MISC-007: không có nút Thử lại (thử lại cũng vẫn 404), có lối về đúng danh sách.
@@ -186,7 +187,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
   test('thanh bảo hành hiện quãng đường và mốc hôm nay, không chỉ một nhãn chữ', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-WT-${stamp}`;
     const csrf = await csrfOf(page);
@@ -235,7 +236,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
 
   /* Không có hạn thì KHÔNG vẽ thanh — thanh rỗng chỉ làm người đọc tưởng dữ liệu bị mất. */
   test('máy không khai bảo hành thì không có thanh nào', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
@@ -277,7 +278,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
    * thể nói hai con số khác nhau.
    */
   test('nhãn tab mang sẵn số — không phải bấm vào mới biết trong đó có gì', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-CNT-${stamp}`);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -322,7 +323,7 @@ test.describe('Cấp IP từ trang thiết bị', () => {
     page,
   }) => {
     resetIpam();
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-IP-${stamp}`;
     const deviceId = await createSwitch(page, code);
@@ -374,7 +375,7 @@ test.describe('Cấp IP từ trang thiết bị', () => {
   });
 
   test('đường hỏng: bấm Tiếp tục khi chưa chọn dải thì báo lỗi dưới ô', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-IP0-${stamp}`;
     const deviceId = await createSwitch(page, code);
@@ -392,7 +393,7 @@ test.describe('Cấp IP từ trang thiết bị', () => {
  */
 test.describe('Lịch sử hợp nhất của thiết bị', () => {
   test('ghế license gán rồi gỡ hiện trong Lịch sử; chip lọc tách nguồn', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-TL-${stamp}`;
     const deviceId = await createSwitch(page, code);

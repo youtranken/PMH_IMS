@@ -12,6 +12,7 @@ import {
   resetSecrets,
   resetUsers,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -83,7 +84,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
   test('đường hạnh phúc: cất khóa qua form, Xem hiện QR + mã 6 số đúng, không hỏi mã lần hai', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, stamp);
     const label = `VPN E2E ${stamp}`;
@@ -100,7 +101,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
       .getByRole('textbox', { name: 'Giá trị', exact: true })
       .fill(SEED.toLowerCase().replace(/(.{4})/g, '$1 '));
     await form.getByRole('button', { name: 'Lưu' }).click();
-    // Vừa đăng nhập bằng mã 6 số = còn trong grace: cất không bị hỏi mã (Q-18).
+    // Vừa nhập mã cho két (`stepUpViaApi`) = còn trong grace: cất không bị hỏi mã (Q-18).
     await expect(page.getByText('Đã lưu vào két.')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toHaveCount(0);
 
@@ -133,7 +134,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
   });
 
   test('mở qua API: no-store, một dòng audit, nhật ký không mang khóa hay ảnh QR', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, stamp);
     const created = await storeTotpByApi(
@@ -163,7 +164,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
   });
 
   test('đường hỏng: khóa sai base32 bị từ chối, thân lỗi không nhắc lại khóa', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, stamp);
     const bad = 'GEZDGNBVGY3TQOJ0GEZDGNBVGY3TQOJ1';
@@ -176,7 +177,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
   test('TẤN CÔNG: Member không có quyền gọi thẳng đường mở két — 403, không QR, không mã', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, stamp);
     const created = await storeTotpByApi(page, deviceId, `Chặn mã 2 lớp E2E ${stamp}`, SEED);
@@ -184,7 +185,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
     const id = ((await created.json()) as { id: string }).id;
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const denied = await page.request.post(`/api/v1/vault/secrets/${id}/reveal`, {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });

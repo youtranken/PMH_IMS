@@ -13,6 +13,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -131,7 +132,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const prefix = `PHONG-E2E-${stamp}`;
@@ -319,7 +320,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const code = `HOP-E2E-${stamp}-LIC`;
@@ -559,7 +560,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
    */
   test('Bên trong hộp "Gán vào máy" — chế độ gán mới và chế độ sửa ghế', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const licenseCode = `GAN-E2E-${stamp}-LIC`;
@@ -738,7 +739,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const licenseCode = `TAB-E2E-${stamp}-LIC`;
@@ -931,7 +932,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const licenseCode = `HAN-E2E-${stamp}-LIC`;
@@ -1138,7 +1139,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const ruleName = `E2E luật phòng ${stamp}`;
@@ -1410,7 +1411,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     'Link sâu ?tab=devices phải mở đúng tab "Máy đang dùng", không rơi về tab Hồ sơ',
     async ({ page }) => {
       test.setTimeout(150_000);
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
       const stamp = stampOf();
       const licenseCode = `LINK-E2E-${stamp}-LIC`;

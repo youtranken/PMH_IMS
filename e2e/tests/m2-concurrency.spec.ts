@@ -10,6 +10,7 @@ import {
   sql,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -84,7 +85,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   test('seat: sáu lượt gán đồng thời vào license 1 ghế → đúng MỘT lượt vào được', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const created = await page.request.post('/api/v1/software', {
@@ -145,7 +146,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   test('gỡ ghế: sáu lượt gỡ đồng thời → đúng MỘT lượt, và lịch sử chỉ có MỘT dòng', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const created = await page.request.post('/api/v1/software', {
@@ -202,7 +203,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
    * vĩnh viễn và bảng thì chỉ-thêm.
    */
   test('trạng thái IP: sáu lượt chuyển đồng thời → đúng MỘT dòng lịch sử', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-4);
     const octet = 100 + (Number(stamp) % 100);
 
@@ -266,7 +267,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   test('SA cuối cùng: hai lệnh khóa đồng thời không được đưa hệ thống xuống dưới 2 SA @slow', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     /*
