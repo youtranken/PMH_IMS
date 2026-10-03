@@ -22,7 +22,7 @@ import { DevicesApiService } from '../devices/devices.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
 import { diffCellIndex, summarizeDiff, type CellIndex, type CellKind } from './diagram-cells';
-import type { CheckLink, Finding } from './diagram-finding';
+import type { Finding } from './diagram-finding';
 import { runDiagramChecks, type CheckDevice, type CheckResult } from './diagram-selfcheck';
 import {
   diagramCommentTable,
@@ -224,16 +224,7 @@ export class DiagramReviewService implements OnModuleInit {
     const devices = new Map<string, CheckDevice>(
       [...found.values()].map((d) => [d.id, { id: d.id, code: d.code, status: d.status, cabinetId: d.cabinetId }]),
     );
-    return runDiagramChecks({ index, devices, links: await this.loadCheckLinks(index) });
-  }
-
-  /**
-   * Dòng sơ đồ cổng theo `ims_link_id` của các dây trên bản vẽ, cho luật dây (`checkCables`).
-   * Đọc qua endpoint đọc của `devices` khi phần dây gắn sơ đồ cổng có; chưa có thì rỗng.
-   */
-  private loadCheckLinks(index: CellIndex): Promise<Map<string, CheckLink>> {
-    void index;
-    return Promise.resolve(new Map<string, CheckLink>());
+    return runDiagramChecks({ index, devices, links: await this.diagrams.loadCheckLinks(index) });
   }
 
   /* ----------------------------------------------------------- gửi duyệt --- */

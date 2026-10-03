@@ -23,4 +23,6 @@ export interface CheckLink {
   deviceA: string;
   deviceB: string;
   cableTypeId: string | null;
+  portA?: string;
+  portB?: string | null;
 }

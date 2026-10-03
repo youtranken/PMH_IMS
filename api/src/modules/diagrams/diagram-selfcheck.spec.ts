@@ -1,5 +1,9 @@
 import { buildCellIndex } from './diagram-cells';
+import { checkCables } from './diagram-checks';
 import { checkDevices, runDiagramChecks, type CheckDevice } from './diagram-selfcheck';
+
+// Luật dây có bài riêng; ở đây chỉ canh khung gọi nó đúng (kèm trạng thái máy) và gộp kết quả.
+jest.mock('./diagram-checks', () => ({ checkCables: jest.fn(() => []) }));
 
 const DEV_A = '7b0c1c1e-0000-4000-8000-00000000000a';
 const DEV_B = '7b0c1c1e-0000-4000-8000-00000000000b';
@@ -129,5 +133,21 @@ describe('runDiagramChecks — tách đỏ chặn / vàng cho qua', () => {
   it('bản vẽ sạch → không lỗi, không cảnh báo', () => {
     const result = runDiagramChecks({ index: buildCellIndex(page(device('d1', DEV_A, 'SW-01'))), devices: new Map([dev(DEV_A, 'SW-01')]), links: new Map() });
     expect(result).toEqual({ errors: [], warnings: [] });
+  });
+});
+
+describe('runDiagramChecks — gọi luật dây', () => {
+  it('chuyền chỉ mục ô, dòng sơ đồ cổng và trạng thái máy; lời báo dây gộp vào đỏ/vàng', () => {
+    const mocked = jest.mocked(checkCables);
+    mocked.mockReturnValueOnce([
+      { level: 'error', code: 'CABLE_LINK_MISSING', cellId: 'e1', message: 'Dây trỏ kết nối không còn.' },
+      { level: 'warning', code: 'CABLE_UNDECLARED', cellId: 'e2', message: 'Dây chưa khai.' },
+    ]);
+    const index = buildCellIndex(page(device('d1', DEV_A, 'SW-01')));
+    const links = new Map([['l1', { id: 'l1', deviceA: DEV_A, deviceB: DEV_B, cableTypeId: null }]]);
+    const result = runDiagramChecks({ index, devices: new Map([dev(DEV_A, 'SW-01', { status: 'broken' })]), links });
+    expect(mocked).toHaveBeenLastCalledWith(index.cells, links, new Map([[DEV_A, 'broken']]));
+    expect(result.errors.map((f) => f.code)).toEqual(['CABLE_LINK_MISSING']);
+    expect(result.warnings.map((f) => f.code)).toEqual(['CABLE_UNDECLARED']);
   });
 });

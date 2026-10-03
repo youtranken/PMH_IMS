@@ -27,6 +27,7 @@ import {
   type CellDiff,
   type CellIndex,
 } from './diagram-cells';
+import type { CheckLink } from './diagram-finding';
 import { checkDiagramXml, sanitizeDiagramSvg } from './diagram-gate';
 import { dehydrateDiagramXml, deviceInsertCell, hydrateDiagramXml, type DeviceCellSource } from './diagram-hydrate';
 import {
@@ -764,6 +765,15 @@ export class DiagramsService {
         status: device.status,
       };
     });
+  }
+
+  /**
+   * Dòng sơ đồ cổng theo `ims_link_id` của các dây trên bản vẽ, cho luật dây của tự kiểm
+   * (`checkCables`) — đọc qua `devices.api` khi phần dây gắn sơ đồ cổng có; chưa có thì rỗng.
+   */
+  loadCheckLinks(index: CellIndex): Promise<Map<string, CheckLink>> {
+    void index;
+    return Promise.resolve(new Map<string, CheckLink>());
   }
 
   /* -------------------------------------------------------- người đang sửa --- */

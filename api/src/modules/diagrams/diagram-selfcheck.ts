@@ -103,7 +103,9 @@ export function checkDevices(cells: IndexedCell[], devices: Map<string, CheckDev
 
 /** Mọi bộ luật, tách đỏ/vàng. Thứ tự: thiết bị trước, dây sau — người sửa đi từ máy ra dây. */
 export function runDiagramChecks(input: CheckInput): CheckResult {
-  const all = [...checkDevices(input.index.cells, input.devices), ...checkCables(input.index.cells, input.links)];
+  // Trạng thái máy cho luật dây (dây tới máy đã thanh lý) — cùng một lượt đọc kho với luật thiết bị.
+  const deviceStatus = new Map([...input.devices.values()].map((d) => [d.id, d.status]));
+  const all = [...checkDevices(input.index.cells, input.devices), ...checkCables(input.index.cells, input.links, deviceStatus)];
   return {
     errors: all.filter((f) => f.level === 'error'),
     warnings: all.filter((f) => f.level === 'warning'),
