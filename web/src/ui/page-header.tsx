@@ -140,7 +140,7 @@ export function Field({
    * giá trị của dấu `*` đến từ việc nó tách ô bắt buộc khỏi ô không bắt buộc. Form nghiệp vụ
    * thì có trộn thật (Mã* Tên* Loại* cạnh Model, Serial, Ghi chú), và đó là chỗ nó đáng có.
    *
-   * Cùng lý do đã bỏ dấu ở hai màn dùng `OtpInput`: một ô duy nhất, bắt buộc hiển nhiên.
+   * Cùng lý do đã bỏ dấu ở hai màn dùng `OtpInput`: một mã duy nhất, bắt buộc hiển nhiên.
    */
   required?: boolean;
   hint?: string;

@@ -391,6 +391,7 @@ export default {
     tempPasswordExpired: 'Mật khẩu tạm đã hết hạn. Liên hệ Super Admin để được đặt lại mật khẩu.',
     totpEmpty: 'Vui lòng nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
+    otpDigit: 'Số thứ {{n}} trên {{total}}',
     /* "Quay lại" ở màn nhập mã: phiên chờ phải đóng thật, không chỉ đổi màn. */
     totpBack: 'Quay lại',
     totpBacking: 'Đang quay lại…',

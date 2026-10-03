@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   APP_ORIGIN,
   confirmAction,
   E2E_MEMBER,
@@ -106,7 +107,7 @@ test.describe('Ma trận quyền két sắt', () => {
     const ask = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
     await expect(ask).toBeVisible();
     await expect(ask).toContainText('Nhập mã 6 số để xác nhận cấp quyền két.');
-    await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(ask, await freshTotpCode(totpSecret));
     const granted = row.getByRole('button', { name: /Thiết bị loại Switch: Cần duyệt/ });
     await expect(granted, 'gõ mã xong thì lượt gán chạy lại và ô đổi ngay').toBeVisible();
     await expect(page.getByText(/để xác nhận thao tác này/), 'không được còn câu lỗi đỏ bảo nhập mã').toHaveCount(0);
@@ -117,7 +118,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await confirmAction(page);
     await expect(ask).toBeVisible();
     await expect(ask).toContainText('Nhập mã 6 số để xác nhận gỡ quyền két.');
-    await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(ask, await freshTotpCode(totpSecret));
     await expect(row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ })).toBeVisible();
   });
 

@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import {
+  fillOtp,
   E2E_SA,
   NEW_PASSWORD,
   SECOND_BROWSER,
@@ -118,13 +119,13 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   await expect(
     stepUp.getByText('Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.'),
   ).toBeVisible();
-  await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(person.secret));
+  await fillOtp(stepUp, await freshTotpCode(person.secret));
 
   const newSecret = (await dialog.getByTestId('totp-secret').innerText()).trim();
   expect(newSecret).not.toBe(person.secret);
   // Bước hỏi mã cũng có ô "Mã xác thực" — đợi nó rời hẳn để nhãn chỉ còn trỏ một ô.
   await expect(stepUp).toHaveCount(0);
-  await dialog.getByLabel('Mã xác thực').fill(await freshTotpCode(newSecret));
+  await fillOtp(dialog, await freshTotpCode(newSecret));
   await dialog.getByRole('button', { name: 'Xác nhận' }).click();
   await expect(own.getByText('Đã chuyển xác thực 2 lớp sang điện thoại mới.')).toBeVisible();
 

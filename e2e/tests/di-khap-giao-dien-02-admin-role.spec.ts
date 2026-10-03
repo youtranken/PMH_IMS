@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   E2E_MEMBER,
   E2E_SA,
   SECOND_BROWSER,
@@ -364,7 +365,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // --- XEM (đi qua bước xác thực bằng mã TOTP thật).
     await page.getByRole('button', { name: 'Xem' }).click();
     await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toBeVisible();
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(adminTotp));
+    await fillOtp(page, await freshTotpCode(adminTotp));
     await expect(
       page.getByTestId('secret-value'),
       'sau khi xác thực, admin phải đọc được đúng giá trị đã cất',
