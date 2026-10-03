@@ -932,6 +932,69 @@ button.btn-x.danger:hover:not(:disabled) {
   filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 1px var(--primary));
 }
 
+/* Ô màu dây IMS (`imsPaint` / `data-ims-paint`, AD-18) → token theo theme ĐANG dùng. Trình xem tô
+   lại nét bằng biến này thay vì tin màu đã chụp trong SVG lúc lưu; chú giải và ô chọn màu ở Danh
+   mục dùng cùng biến nên ba nơi luôn một màu. */
+[data-ims-paint='cable-0'] { --ims-paint: var(--diagram-cable-0); }
+[data-ims-paint='cable-1'] { --ims-paint: var(--diagram-cable-1); }
+[data-ims-paint='cable-2'] { --ims-paint: var(--diagram-cable-2); }
+[data-ims-paint='cable-3'] { --ims-paint: var(--diagram-cable-3); }
+[data-ims-paint='cable-4'] { --ims-paint: var(--diagram-cable-4); }
+[data-ims-paint='cable-5'] { --ims-paint: var(--diagram-cable-5); }
+[data-ims-paint='cable-6'] { --ims-paint: var(--diagram-cable-6); }
+[data-ims-paint='cable-7'] { --ims-paint: var(--diagram-cable-7); }
+[data-ims-paint='cable-8'] { --ims-paint: var(--diagram-cable-8); }
+[data-ims-paint='warn'] { --ims-paint: var(--diagram-cable-warn); }
+[data-ims-paint='danger'] { --ims-paint: var(--diagram-cable-danger); }
+.diagram-viewer-canvas [data-ims-paint] path {
+  stroke: var(--ims-paint);
+}
+.diagram-viewer-canvas [data-ims-paint='warn'] path,
+.diagram-viewer-canvas [data-ims-paint='danger'] path {
+  stroke-dasharray: 6 4;
+}
+/* Bấm một thiết bị: dây của nó + máy đầu kia sáng, phần còn lại mờ đi (trình xem đặt `data-ims-dim`). */
+.diagram-viewer-canvas [data-ims-dim] {
+  opacity: 0.18;
+}
+.cable-swatch {
+  display: inline-block;
+  flex: none;
+  width: 1.75rem;
+  height: 0.375rem;
+  border-radius: var(--r-sm);
+  background: var(--ims-paint);
+  vertical-align: middle;
+}
+.cable-legend {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+.cable-legend-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cable-legend li,
+.cable-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* Hộp nổi gọn neo vào nút (`ui/popover.tsx`) — hộp tìm trên thanh mảnh của màn sơ đồ. */
 .popover-panel {
   /* Vị trí do Floating UI (useAnchoredMenu, `position: fixed`) đặt inline. */

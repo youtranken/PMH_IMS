@@ -48,7 +48,9 @@ import {
   type ServicePortRow,
   type SiteRow,
   type VendorRow,
+  type CableTypeRow,
 } from '@/lib/catalog-types';
+import { CableSwatch } from '@/ui/cable-swatch';
 
 const DEFAULT_LIMIT = 20;
 
@@ -60,6 +62,7 @@ const TAB_KEYS: { key: CatalogEntity; labelKey: string; searchKey: string }[] = 
   { key: 'department', labelKey: 'catalog.tabDepartment', searchKey: 'catalog.searchDepartment' },
   { key: 'isp_provider', labelKey: 'catalog.tabIspProvider', searchKey: 'catalog.searchIspProvider' },
   { key: 'service_port', labelKey: 'catalog.tabServicePort', searchKey: 'catalog.searchServicePort' },
+  { key: 'cable_type', labelKey: 'catalog.tabCableType', searchKey: 'catalog.searchCableType' },
 ];
 
 /**
@@ -75,6 +78,7 @@ const ENTITY_DEFAULT_SORT: Record<CatalogEntity, SortingState> = {
   department: [{ id: 'name', desc: false }],
   isp_provider: [{ id: 'name', desc: false }],
   service_port: [{ id: 'name', desc: false }],
+  cable_type: [{ id: 'name', desc: false }],
 };
 
 /*
@@ -304,6 +308,23 @@ const ENTITY_COLUMNS: Record<
       cell: ({ row }) => note((row.original as ServicePortRow).description),
     },
   ],
+  cable_type: (t) => [
+    {
+      accessorKey: 'name',
+      header: t('catalog.name'),
+      cell: ({ row }) => (row.original as CableTypeRow).name,
+    },
+    {
+      accessorKey: 'colorSlot',
+      header: t('catalog.colorSlot'),
+      cell: ({ row }) => <CableSwatch slot={(row.original as CableTypeRow).colorSlot} />,
+    },
+    {
+      accessorKey: 'description',
+      header: t('catalog.description'),
+      cell: ({ row }) => note((row.original as CableTypeRow).description),
+    },
+  ],
 };
 
 /**
@@ -336,6 +357,8 @@ function mobileMeta(entity: CatalogEntity, row: CatalogRow, t: TFunction): strin
         return [(row as DepartmentRow).description];
       case 'isp_provider':
         return [formatPhone((row as IspProviderRow).hotline), (row as IspProviderRow).contact];
+      case 'cable_type':
+        return [(row as CableTypeRow).description];
       case 'service_port': {
         const port = row as ServicePortRow;
         return [
@@ -897,6 +920,7 @@ const LIST_OF: Record<CatalogEntity, keyof CatalogLists> = {
   department: 'departments',
   isp_provider: 'ispProviders',
   service_port: 'servicePorts',
+  cable_type: 'cableTypes',
 };
 
 const TAB_SUFFIX: Record<CatalogEntity, string> = {
@@ -907,6 +931,7 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
   department: 'Department',
   isp_provider: 'IspProvider',
   service_port: 'ServicePort',
+  cable_type: 'CableType',
 };
 
 /** Tham số của file xuất — cùng bộ lọc với bảng, không phân trang. */

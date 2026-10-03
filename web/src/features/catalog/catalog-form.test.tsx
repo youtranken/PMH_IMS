@@ -212,3 +212,25 @@ describe('CatalogForm — loại thiết bị: hình trên sơ đồ mạng', ()
     expect(await screen.findByText('Biểu tượng có <script> — không nhận.')).toBeInTheDocument();
   });
 });
+
+/** Loại dây (Q-23): màu chọn từ bảng ô màu token — không có ô nhập mã màu. */
+describe('CatalogForm — loại dây', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('chọn màu bằng ô màu, gửi colorSlot; không có ô nhập hex', async () => {
+    let body: unknown = null;
+    stubFetch((_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return jsonResponse(201, { id: 'ct-1', name: 'E2E Cat5e', colorSlot: 4, description: null, active: true });
+    });
+    const user = userEvent.setup();
+    renderForm('cable_type');
+    await user.type(await screen.findByRole('textbox', { name: /^Tên/ }), 'E2E Cat5e');
+    const slots = screen.getAllByRole('radio');
+    expect(slots).toHaveLength(8);
+    expect(screen.queryByRole('textbox', { name: /màu|hex/i })).toBeNull();
+    await user.click(screen.getByRole('radio', { name: 'Ô màu 4' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(body).toEqual({ name: 'E2E Cat5e', colorSlot: 4, description: '' }));
+  });
+});

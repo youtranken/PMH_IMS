@@ -2,6 +2,8 @@ import { runMigrations } from '../src/database/migration-runner';
 import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { CatalogUsageRegistry } from '../src/common/catalog-usage.registry';
+import { DeviceCatalogUsage } from '../src/modules/devices/device-catalog-usage';
 import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import { DevicesService } from '../src/modules/devices/devices.service';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
@@ -124,5 +126,9 @@ describe('Story 10.5 · loại dây', () => {
     const used = await catalog.create(actor, 'cable_type', { name: 'E2E Đang dùng', colorSlot: 6 });
     await ports.create(actor, sw, { portLabel: 'Gi1', cableTypeId: used.id });
     await expect(catalog.remove(actor, 'cable_type', used.id)).rejects.toMatchObject({ response: { code: 'CATALOG_IN_USE' } });
+    // Màn Danh mục báo trước "Đang dùng ở N dây" thay vì để bấm Xoá rồi mới nhận 409.
+    const registry = new CatalogUsageRegistry();
+    new DeviceCatalogUsage(scratch.db, registry).onModuleInit();
+    expect((await registry.usageOf('cable_type', [{ id: used.id, name: 'E2E Đang dùng' }])).get(used.id)).toEqual([{ kind: 'port', count: 1 }]);
   });
 });
