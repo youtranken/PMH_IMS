@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
@@ -291,5 +293,31 @@ describe('Sơ đồ mạng · bản trình bày (Q-23, FR-045)', () => {
     await expect(scratch.pool.query(`UPDATE diagram SET parent_id = $1 WHERE id = $2`, [src.diagramId, pres.id])).rejects.toMatchObject({
       code: '23514',
     });
+  });
+
+  /*
+   * Lượt dọn E2E (`api/scripts/reset-e2e.mjs`, vùng `diagrams`) chạy đúng câu SQL của script: bản
+   * trình bày của một bản vẽ E2E bị dọn theo dù người kiểm đã đổi tên nó (không còn chữ E2E), và
+   * khoá ngoại nguồn không chặn lượt xoá.
+   */
+  it('lượt dọn E2E dọn cả bản trình bày của bản vẽ E2E, kể cả bản đã đổi tên', async () => {
+    const src = await official('Dọn', '');
+    const pres = await diagrams.createPresentation(MEMBER.email, src.diagramId, {});
+    await diagrams.update(SA.email, pres.id, { name: 'Bản trình bày đã đổi tên' });
+    const real = await diagrams.create(SA.email, { name: 'Bản vẽ thật', nodeType: 'company' });
+
+    const script = readFileSync(join(__dirname, '..', 'scripts', 'reset-e2e.mjs'), 'utf8');
+    const block = /\n {2}diagrams: \[([\s\S]*?)\n {2}\],/.exec(script);
+    if (!block) throw new Error('Không tìm thấy vùng diagrams trong reset-e2e.mjs');
+    const client = await scratch.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const [, statement] of block[1].matchAll(/`([^`]+)`/g)) await client.query(statement);
+      await client.query('COMMIT');
+    } finally {
+      client.release();
+    }
+    expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = ANY($1)`, [[src.diagramId, pres.id]])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = $1`, [real.id])).toBe(1);
   });
 });
