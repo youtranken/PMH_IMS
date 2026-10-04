@@ -800,8 +800,8 @@ export class DiagramsService {
       this.framesOf(row.cellIndex),
     ]);
     // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại, nhãn cổng + ô màu dây
-    // theo sơ đồ cổng hiện tại — AD-18). Xem: ảnh SVG chụp lúc lưu, XML để nguyên; màu dây và nét
-    // đỏ/vàng trình xem tô lại theo `cableEdges` + `links`.
+    // theo sơ đồ cổng hiện tại — AD-18). Xem: ảnh SVG chụp lúc lưu, XML chỉ được ghép ảnh; màu dây
+    // và nét đỏ/vàng trình xem tô lại theo `cableEdges` + `links`.
     // Ảnh lưu một lần (Q-23): ghép `ims-img:` thành `data:` URI trước khi trình vẽ / trình xem thấy.
     const [storedXml, svg] = await hydrateTexts(this.db, [row.xml, row.svg]);
     const xml = options.mode === 'edit' ? hydrateDiagramXml(storedXml, sources, { links: cables.check, slots: cables.slots }) : storedXml;
