@@ -62,6 +62,8 @@ describe('runMigrations — DB dựng từ bộ migration trước lượt gộp
     await expect(runMigrations(pool, dir, { log: () => undefined })).rejects.toThrow(
       /trước lượt gộp migration \(Q-17\)[\s\S]*0001_system_config\.sql[\s\S]*dựng lại/,
     );
+    // Số đếm giữa câu viết thường như mọi câu khác (Q-24), khớp chữ trong RUNBOOK.
+    await expect(runMigrations(pool, dir, { log: () => undefined })).rejects.toThrow(/có 1 file không còn trong thư mục/);
     expect(queries).not.toContain('BEGIN');
     expect(queries.some((q) => q.includes('INSERT INTO _migrations'))).toBe(false);
     // Khoá advisory vẫn được trả dù runner ném giữa chừng.
