@@ -10,7 +10,7 @@ import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
 
 /*
- * Q-23 góp ý 04/10: màn sơ đồ phải "nhìn vào là biết dùng" — mỗi việc trên thanh có (i) giải thích
+ * Q-23: màn sơ đồ phải "nhìn vào là biết dùng" — mỗi việc trên thanh có (i) giải thích
  * một dòng, mỗi mục ⋮ có dòng mô tả, có mục "Hướng dẫn", màn trống có các bước gợi ý.
  */
 

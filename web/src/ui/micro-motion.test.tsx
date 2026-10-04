@@ -12,7 +12,7 @@ import { DROP_FLASH_MS, FilePicker } from '@/ui/file-picker';
 import { Dialog } from '@/ui/dialog';
 
 /**
- * Vi chuyển động dùng chung (Q-21, 04/10/2026). Mỗi hiệu ứng có hai vế phải giữ: bật thì chạy
+ * Vi chuyển động dùng chung (Q-21). Mỗi hiệu ứng có hai vế phải giữ: bật thì chạy
  * đúng nhịp, "Tắt" / máy báo giảm chuyển động thì ra NGAY trạng thái cuối — không ai phải chờ
  * một con số đếm hay một dấu tích để làm tiếp.
  */

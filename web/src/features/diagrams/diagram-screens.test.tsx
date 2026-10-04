@@ -147,7 +147,7 @@ describe('Cây bản vẽ', () => {
     expect((await screen.findAllByRole('menuitem')).map((el) => el.textContent)).toEqual(expected);
   });
 
-  /* Q-23 góp ý 04/10: bản vẽ tầng/phòng vẽ tiếp từ bản cha, nên "Thêm bản vẽ con" mặc định nhân
+  /* Q-23: bản vẽ tầng/phòng vẽ tiếp từ bản cha, nên "Thêm bản vẽ con" mặc định nhân
      bản; chép nội dung thì hỏi mã sơ đồ như mở xem. */
   it('Thêm bản vẽ con: mặc định nhân bản nội dung mới nhất của bản cha (qua mã sơ đồ); chọn "Bản trống" thì tạo rỗng', async () => {
     const parent = node('d1', null, 'Tổng công ty E2E', {
@@ -349,7 +349,7 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
     expect(frame).toBeInTheDocument();
     expect(box.contains(frame)).toBe(false);
 
-    // Máy đã thanh lý không có mặt trong hộp (Q-23 góp ý 04/10): hỏi kho bằng `usable=true`, và
+    // Máy đã thanh lý không có mặt trong hộp (Q-23): hỏi kho bằng `usable=true`, và
     // lỡ server vẫn trả về thì cũng không hiện — chèn máy đã thanh lý là vô lý.
     expect(await screen.findByRole('checkbox', { name: 'Chọn SW-E2E-HAVE để chèn' })).toHaveAccessibleDescription('Đã có trên bản vẽ');
     expect(screen.queryByRole('checkbox', { name: 'Chọn SW-E2E-OLD để chèn' })).toBeNull();

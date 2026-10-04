@@ -198,7 +198,7 @@ test.describe('Trang tổng Két sắt', () => {
     await page.getByRole('button', { name: /^Đường truyền \d+$/ }).click();
     await expect(
       ispRow,
-      'ĐÂY LÀ LỖI ĐÃ VÁ: trước 12/09 không có nút này, nên bật lọc là đường truyền mất hẳn',
+      'thiếu nút này thì bật lọc là đường truyền mất hẳn',
     ).toBeVisible();
 
     // (c) "Mở hồ sơ đầy đủ" phải dẫn về hồ sơ ĐƯỜNG TRUYỀN, không phải phần mềm.

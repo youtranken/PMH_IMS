@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/ui/dialog';
 import { StepList } from '@/ui/step-list';
 
-/** Hộp "Hướng dẫn" mở từ menu ⋮ của thanh sơ đồ: mỗi khái niệm một đoạn ngắn (Q-23 góp ý 04/10). */
+/** Hộp "Hướng dẫn" mở từ menu ⋮ của thanh sơ đồ: mỗi khái niệm một đoạn ngắn (Q-23). */
 export function DiagramGuideDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const parts = [

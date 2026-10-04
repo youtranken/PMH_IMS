@@ -203,7 +203,7 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     expect(threads.find((t) => t.id === pin.id)).toMatchObject({
       resolved: true,
       replies: [{ body: 'Đã đổi sang Gi0/48', author: MEMBER.email }],
-      // Ghim nói tên hình người đọc được (mã máy), không id ô (Q-23 góp ý 04/10).
+      // Ghim nói tên hình người đọc được (mã máy), không id ô (Q-23).
       cellKind: 'device',
       cellLabel: 'SW-E2E-RV-FLOW',
     });

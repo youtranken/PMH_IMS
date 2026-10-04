@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cssRules, declValue, readCss } from '@/test/css-test-kit';
 
 /**
- * Vi chuyển động dùng chung (Q-21, 04/10/2026): mọi khung hình chỉ được đổi `transform`,
+ * Vi chuyển động dùng chung (Q-21): mọi khung hình chỉ được đổi `transform`,
  * `opacity` (và `background-position` cho vệt sáng khung chờ) — thứ trình duyệt dựng trên GPU,
  * không bắt cả trang tính lại bố cục. Và mọi chỗ bật animation phải có luật tắt theo
  * `data-motion` (máy báo giảm chuyển động / "Tắt" trong Hồ sơ).

@@ -423,7 +423,7 @@ export class MailConsumer {
       count?: number;
       windowMinutes?: number;
       /* Thời gian nghỉ THẬT của cảnh báo dò két, đọc từ `system_config` lúc đẩy outbox. Tùy
-         chọn vì hàng outbox ghi trước 18/09/2026 không có trường này. */
+         chọn vì hàng outbox đẩy trước khi có trường này vẫn có thể còn trong hàng đợi. */
       cooldownMinutes?: number;
       /** Lá thứ hai trong thời gian nghỉ vì kẻ dò đã vượt hệ số × ngưỡng (OLD-SEC-01). */
       escalated?: boolean;
