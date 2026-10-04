@@ -123,6 +123,7 @@ export function FrameBindDialog({
             />
           </Field>
           <SegmentedRadio<Kind>
+            className="fill"
             label={t('diagrams.frames.kind')}
             value={kind}
             options={[

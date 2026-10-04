@@ -1292,7 +1292,7 @@ function BreakGlassDialog({
           })}
         </p>
 
-        <div className="segmented" role="group" aria-label={t('vault.requestHoursQuick')}>
+        <div className="segmented fill" role="group" aria-label={t('vault.requestHoursQuick')}>
           {hourSteps(maxGrantHours).map((h) => (
             <button
               key={h}

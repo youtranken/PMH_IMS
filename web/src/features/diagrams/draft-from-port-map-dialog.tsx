@@ -90,7 +90,7 @@ export function DraftFromPortMapDialog({
             {t('diagrams.screen.leaveMessage')}
           </p>
         ) : null}
-        <div className="segmented" role="radiogroup" aria-label={t('diagrams.cable.draftScope')}>
+        <div className="segmented fill" role="radiogroup" aria-label={t('diagrams.cable.draftScope')}>
           {(['cabinet', 'site'] as const).map((value) => (
             <label key={value}>
               <input type="radio" name="draft-scope" value={value} checked={by === value} onChange={() => setBy(value)} />
