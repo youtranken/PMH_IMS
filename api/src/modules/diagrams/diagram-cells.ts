@@ -231,8 +231,20 @@ export function layerNames(xml: string): { id: string; name: string }[] {
  * trả id kỹ thuật: người duyệt không đọc được nó.
  */
 export function cellCaption(index: CellIndex, id: string): { kind: CellKind | null; label: string | null } {
-  const cell = index.cells.find((c) => c.id === id);
-  return cell ? { kind: cell.kind, label: cellLabels(index).get(cell.id) ?? null } : { kind: null, label: null };
+  return cellCaptioner(index)(id);
+}
+
+/**
+ * Bộ tra `cellCaption` dựng MỘT lần cho cả phiên bản: tên mọi ô tính chung một lượt, nên đọc
+ * nhiều ghim trên cùng phiên bản không quét lại cả bản vẽ cho từng ghim.
+ */
+export function cellCaptioner(index: CellIndex): (id: string) => { kind: CellKind | null; label: string | null } {
+  const byId = new Map(index.cells.map((c) => [c.id, c]));
+  const labels = cellLabels(index);
+  return (id) => {
+    const cell = byId.get(id);
+    return cell ? { kind: cell.kind, label: labels.get(cell.id) ?? null } : { kind: null, label: null };
+  };
 }
 
 /** Tên của mọi ô có chữ trong phiên bản (luật như `cellCaption`), một lượt cho cả bản vẽ. */

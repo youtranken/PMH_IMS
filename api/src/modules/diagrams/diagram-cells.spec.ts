@@ -1,6 +1,7 @@
 import {
   buildCellIndex,
   cellCaption,
+  cellCaptioner,
   diffCellIndex,
   layerNames,
   secretLabelReason,
@@ -247,5 +248,10 @@ describe('cellCaption — tên người đọc được của một ô (ghim bì
     ['ô không có trong phiên bản → null cả hai', 'khong-co', { kind: null, label: null }],
   ])('%s', (_name, id, expected) => {
     expect(cellCaption(index, id)).toEqual(expected);
+  });
+
+  it('một bộ tra cho cả phiên bản trả đúng như từng lượt cellCaption (luồng ghim đọc nhiều ô)', () => {
+    const captionOf = cellCaptioner(index);
+    for (const id of ['d1', 's1', 's2', 'e1', 'e2', 'khong-co']) expect(captionOf(id)).toEqual(cellCaption(index, id));
   });
 });

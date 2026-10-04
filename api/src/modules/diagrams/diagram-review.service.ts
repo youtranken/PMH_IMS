@@ -21,7 +21,7 @@ import type { UserRole } from '../auth/types';
 import { DevicesApiService } from '../devices/devices.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
-import { cellCaption, diffCellIndex, summarizeDiff, type CellIndex, type CellKind } from './diagram-cells';
+import { cellCaptioner, diffCellIndex, summarizeDiff, type CellIndex, type CellKind } from './diagram-cells';
 import type { Finding } from './diagram-finding';
 import { runDiagramChecks, type CheckDevice, type CheckResult } from './diagram-selfcheck';
 import {
@@ -508,10 +508,20 @@ export class DiagramReviewService implements OnModuleInit {
       createdAt: r.createdAt.toISOString(),
     });
     const threads = new Map<string, CommentThread>();
+    // Một bộ tra tên ô cho mỗi phiên bản, dựng lúc cần: mọi ghim trên cùng phiên bản dùng chung.
+    const captioners = new Map<string, ReturnType<typeof cellCaptioner>>();
+    const captionOf = (version: { id: string; cellIndex: CellIndex }, cellId: string) => {
+      let captioner = captioners.get(version.id);
+      if (!captioner) {
+        captioner = cellCaptioner(version.cellIndex);
+        captioners.set(version.id, captioner);
+      }
+      return captioner(cellId);
+    };
     for (const r of rows) {
       if (r.parentId) continue;
       const version = versions.get(r.versionId);
-      const caption = r.cellId && version ? cellCaption(version.cellIndex, r.cellId) : { kind: null, label: null };
+      const caption = r.cellId && version ? captionOf(version, r.cellId) : { kind: null, label: null };
       threads.set(r.id, {
         ...toRow(r),
         versionSeq: version?.seq ?? null,
