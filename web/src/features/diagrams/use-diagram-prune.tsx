@@ -6,7 +6,8 @@ import type { Me } from '@/lib/me';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
-import { TREE_KEY, nodeKey, type DiagramNode } from './diagram-api';
+import type { DiagramNode } from './diagram-api';
+import { refreshDiagram } from './diagram-review';
 
 type Run = <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
 
@@ -20,7 +21,7 @@ interface DraftPreview {
 }
 
 /**
- * "Bỏ bản nháp" và "Xoá hẳn" (Q-23) cho thẻ bản vẽ. Cả hai đòi mã sơ đồ (`run` của
+ * "Bỏ bản nháp" và "Xoá hẳn" (Q-23) cho panel bản vẽ của /diagrams. Cả hai đòi mã sơ đồ (`run` của
  * `useStepUpRetry` trên màn); hộp xác nhận lấy số từ SERVER, không tự đếm phiên bản ở web.
  */
 export function useDiagramPrune(me: Me, run: Run, onPurged?: (node: DiagramNode) => void) {
@@ -29,23 +30,27 @@ export function useDiagramPrune(me: Me, run: Run, onPurged?: (node: DiagramNode)
   const ask = useConfirm();
   const queryClient = useQueryClient();
 
-  const refresh = async (node: DiagramNode) => {
-    await queryClient.invalidateQueries({ queryKey: TREE_KEY });
-    await queryClient.invalidateQueries({ queryKey: nodeKey(node.id) });
-  };
+  const refresh = (node: DiagramNode) => refreshDiagram(queryClient, node.id);
 
-  const discard = async (node: DiagramNode) => {
+  /**
+   * `fromSeq` = chỉ bỏ từ bản nháp đó trở về sau (panel tick một bản); thiếu = mọi bản nháp.
+   * Trả `true` khi đã xoá — nơi gọi bỏ dấu tick.
+   */
+  const discard = async (node: DiagramNode, fromSeq?: number): Promise<boolean> => {
+    const query = fromSeq === undefined ? '' : `?${new URLSearchParams({ fromSeq: String(fromSeq) }).toString()}`;
     try {
-      const preview = await run(() => apiFetch<DraftPreview>(`/api/v1/diagrams/${node.id}/drafts`), t('diagrams.prune.discardStepUp', { name: node.name }));
+      const preview = await run(() => apiFetch<DraftPreview>(`/api/v1/diagrams/${node.id}/drafts${query}`), t('diagrams.prune.discardStepUp', { name: node.name }));
       if (preview.blockedByApprovalId) {
         toast({ tone: 'error', message: t('diagrams.prune.blocked') });
-        return;
+        return false;
       }
       if (preview.count === 0) {
         toast({ tone: 'warn', message: t('diagrams.prune.nothing') });
-        return;
+        return false;
       }
-      const keep = node.officialVersionId ? t('diagrams.prune.keepOfficial', { seq: preview.keepSeq }) : t('diagrams.prune.keepFirst', { seq: preview.keepSeq });
+      const mark = node.officialVersionId ? t('diagrams.prune.keepOfficial', { seq: preview.keepSeq }) : t('diagrams.prune.keepFirst', { seq: preview.keepSeq });
+      // Bỏ từ giữa dải nháp: nói rõ các lần lưu cũ hơn bản chọn vẫn còn.
+      const keep = fromSeq !== undefined && preview.keepSeq !== null && fromSeq > preview.keepSeq + 1 ? t('diagrams.prune.keepBefore', { keep: mark, seq: fromSeq }) : mark;
       const kept = preview.keptDrafts > 0 ? ` ${t('diagrams.prune.kept', { count: preview.keptDrafts })}` : '';
       const ok = await ask({
         title: t('diagrams.prune.discardTitle', { count: preview.count, name: node.name }),
@@ -53,21 +58,23 @@ export function useDiagramPrune(me: Me, run: Run, onPurged?: (node: DiagramNode)
         confirmLabel: t('diagrams.prune.discard'),
         danger: true,
       });
-      if (!ok) return;
+      if (!ok) return false;
       const done = await run(
         () =>
           apiFetch<{ count: number; ranges: string }>(`/api/v1/diagrams/${node.id}/drafts/discard`, {
             method: 'POST',
             csrfToken: me.csrfToken,
             // Dải đã hiện trong hộp: có người lưu thêm giữa chừng thì server từ chối, không xoá lố.
-            body: JSON.stringify({ ranges: preview.ranges }),
+            body: JSON.stringify({ ranges: preview.ranges, fromSeq }),
           }),
         t('diagrams.prune.discardStepUp', { name: node.name }),
       );
       await refresh(node);
       toast({ tone: 'ok', message: t('diagrams.prune.discarded', { count: done.count, ranges: done.ranges, name: node.name }) });
+      return true;
     } catch (error) {
       if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+      return false;
     }
   };
 

@@ -213,6 +213,9 @@
     /* Giấy của trình xem sơ đồ: trình vẽ draw.io nhúng luôn chạy giấy sáng, nên trình xem cũng sáng
        ở cả hai theme — bản vẽ trông y hệt lúc Sửa (nét đen draw.io không chìm vào nền tối). */
     --diagram-paper:#ffffff;
+    /* Băng bản vẽ gốc của màn /diagrams: khối tối nổi trên nền trang ở CẢ hai theme. Bản dark
+       sáng hơn nền trang tối một bậc — dùng lại nền sidebar thì băng chìm vào nền. */
+    --map-banner:#16231b; --map-banner-ink:#eaf3ee; --map-banner-ink-2:#9fb0a5;
 }
 
 /* Dark mode — chỉ override token, các component dùng var() tự đổi theo. Đây là giao diện MẶC
@@ -315,6 +318,7 @@ html[data-theme='dark'] {
     --diagram-cable-warn:#facc15; --diagram-cable-danger:#f27e72;
     --paper-rule:#d5d9d2; --paper-draft:#fff4e5; --paper-superseded:#fdecea; --paper-presentation:#eaf2fb;
     --diagram-paper:#ffffff;
+    --map-banner:#24382c; --map-banner-ink:#eaf3ee; --map-banner-ink-2:#a9bbaf;
 }
 
 * {

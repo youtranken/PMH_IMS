@@ -4,13 +4,11 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import type { DiagramDeviceInfo, DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
-import { DiagramTreeScreen } from './diagram-tree-screen';
 
 const ME = { id: 'u1', email: 'sa@e2e.local', fullName: 'SA E2E', role: 'sa', csrfToken: 'c' } as unknown as Me;
-const MEMBER = { ...ME, role: 'member' } as Me;
 
 function node(id: string, parentId: string | null, name: string, extra: Partial<DiagramNode> = {}): DiagramNode {
   return {
@@ -52,7 +50,6 @@ function renderScreen(path: string, me: Me = ME) {
       <ToastProvider>
         <ConfirmProvider>
           <Routes>
-            <Route path="/diagrams" element={<DiagramTreeScreen me={me} />} />
             <Route path="/diagrams/:id" element={<DiagramScreen me={me} />} />
           </Routes>
         </ConfirmProvider>
@@ -118,214 +115,6 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
     }
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content?mode=view'))).toBe(true);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/presence'))).toBe(false);
-  });
-});
-
-describe('Cây bản vẽ', () => {
-  const TREE = [ROOT, node('d2', 'd1', 'Tầng 1 E2E', { status: 'draft' })];
-
-  it('cây bên trái (cha trước con, thu/mở bằng bàn phím); bên phải thẻ "Bản vẽ này" + thẻ con', async () => {
-    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, TREE) });
-    renderScreen('/diagrams');
-    const tree = await screen.findByRole('tree', { name: 'Cây bản vẽ' });
-    const items = within(tree).getAllByRole('treeitem');
-    expect(items.map((li) => li.textContent)).toEqual(['Tổng công ty E2E', 'Tầng 1 E2E']);
-    expect(items[0]).toHaveAttribute('aria-selected', 'true');
-    const cards = within(screen.getByRole('list', { name: 'Bản vẽ trong "Tổng công ty E2E"' })).getAllByRole('listitem');
-    expect(cards[0]).toHaveTextContent('Bản vẽ này');
-    expect(cards[1]).toHaveTextContent('Tầng 1 E2E');
-    expect(cards[1]).toHaveTextContent('Bản nháp');
-    const user = userEvent.setup();
-    items[0].focus();
-    await user.keyboard('{ArrowLeft}');
-    expect(within(tree).queryByRole('treeitem', { name: 'Tầng 1 E2E' })).toBeNull();
-    await user.keyboard('{ArrowRight}{ArrowDown}{Enter}');
-    expect(await screen.findByRole('list', { name: 'Bản vẽ trong "Tầng 1 E2E"' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Vị trí trên cây bản vẽ' })).toHaveTextContent('Tổng công ty E2E');
-  });
-
-  it('lọc trạng thái chỉ áp cho thẻ con; không khớp thì nói rõ', async () => {
-    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, TREE) });
-    renderScreen('/diagrams?node=d1');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Lọc theo trạng thái' }));
-    await user.click(await screen.findByRole('option', { name: 'Chính thức' }));
-    const cards = within(screen.getByRole('list', { name: 'Bản vẽ trong "Tổng công ty E2E"' })).getAllByRole('listitem');
-    expect(cards).toHaveLength(1);
-    expect(screen.getByText('Không bản vẽ con nào khớp bộ lọc.')).toBeInTheDocument();
-  });
-
-  it('thẻ: "v2 · tên người lưu · N giờ trước", Mở / Sửa', async () => {
-    const saved = new Date(Date.now() - 2 * 3600_000).toISOString();
-    routeFetch({
-      '/api/v1/diagrams': () =>
-        jsonResponse(200, [node('d1', null, 'Tổng công ty E2E', { status: 'draft', latestVersion: { id: 'v2', seq: 2, savedAt: saved, savedBy: 'thuan@x', savedByName: 'Thuận' } })]),
-    });
-    renderScreen('/diagrams');
-    const card = within(await screen.findByRole('list', { name: 'Bản vẽ trong "Tổng công ty E2E"' })).getByRole('listitem');
-    expect(card).toHaveTextContent('v2 · Thuận · 2 giờ trước');
-    expect(within(card).getByRole('link', { name: 'Tổng công ty E2E' })).toHaveAttribute('href', '/diagrams/d1');
-    expect(within(card).getByRole('button', { name: 'Mở Tổng công ty E2E' })).toBeInTheDocument();
-    expect(within(card).getByRole('button', { name: 'Sửa Tổng công ty E2E' })).toBeInTheDocument();
-  });
-
-  it('390px: cây thành ô chọn phía trên, không có nút Sửa', async () => {
-    narrow(true);
-    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, TREE) });
-    renderScreen('/diagrams');
-    expect(await screen.findByRole('button', { name: 'Chọn bản vẽ' })).toBeInTheDocument();
-    expect(screen.queryByRole('tree')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Sửa / })).toBeNull();
-  });
-
-  /** Tên mục menu, bỏ dòng mô tả `aria-hidden` (không thuộc tên). */
-  const menuNames = async () =>
-    (await screen.findAllByRole('menuitem')).map((el) => {
-      const copy = el.cloneNode(true) as HTMLElement;
-      copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
-      return copy.textContent;
-    });
-
-  it.each([
-    ['Thành viên trình chiếu + thêm bản vẽ con', MEMBER, ['Trình chiếu', 'Thêm bản vẽ con']],
-    ['SA đổi tên / chuyển nhánh / lưu trữ; bản chưa phát hành thì Xóa hẳn', ME, ['Trình chiếu', 'Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ', 'Xóa hẳn']],
-  ])('%s', async (_name, me, expected) => {
-    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [ROOT]) });
-    renderScreen('/diagrams', me);
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    expect(await menuNames()).toEqual(expected);
-  });
-
-  it('Bỏ bản nháp: hỏi mã, hộp xác nhận nói số lần lưu server trả, rồi xóa', async () => {
-    const official = node('d1', null, 'Tổng công ty E2E', {
-      status: 'official_draft',
-      officialSeq: 12,
-      officialVersionId: 'v12',
-      latestVersion: { id: 'v17', seq: 17, savedAt: '2026-10-04T01:00:00Z', savedBy: 'sa@e2e.local', savedByName: 'SA' },
-    });
-    const calls: string[] = [];
-    const fetchMock = routeFetch({
-      '/api/v1/diagrams/d1/drafts/discard': () => {
-        calls.push('discard');
-        return jsonResponse(201, { count: 5, ranges: '#13–#17' });
-      },
-      '/api/v1/diagrams/d1/drafts': () => {
-        calls.push('preview');
-        return jsonResponse(200, { count: 5, ranges: '#13–#17', keepSeq: 12, keptDrafts: 0, blockedByApprovalId: null });
-      },
-      '/api/v1/diagrams': () => jsonResponse(200, [official]),
-    });
-    renderScreen('/diagrams');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Bỏ bản nháp' }));
-    const confirm = await screen.findByRole('dialog', { name: 'Bỏ 5 bản nháp của "Tổng công ty E2E"?' });
-    expect(confirm).toHaveTextContent('Xóa vĩnh viễn 5 lần lưu #13–#17, giữ bản chính thức v12.');
-    expect(calls).toEqual(['preview']);
-    await user.click(within(confirm).getByRole('button', { name: 'Bỏ bản nháp' }));
-    expect(await screen.findByText('Đã bỏ 5 bản nháp (#13–#17) của "Tổng công ty E2E".')).toBeInTheDocument();
-    expect(calls).toEqual(['preview', 'discard']);
-    const discard = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).find(([url]) => String(url).endsWith('/drafts/discard'));
-    expect(JSON.parse(String(discard?.[1]?.body))).toEqual({ ranges: '#13–#17' });
-  });
-
-  it('Bỏ bản nháp bị chặn vì yêu cầu chờ duyệt: báo rút trước, không hỏi xác nhận', async () => {
-    const official = node('d1', null, 'Tổng công ty E2E', {
-      status: 'pending',
-      officialSeq: 1,
-      officialVersionId: 'v1',
-      latestVersion: { id: 'v2', seq: 2, savedAt: '2026-10-04T01:00:00Z', savedBy: 'm@x' },
-    });
-    routeFetch({
-      '/api/v1/diagrams/d1/drafts': () => jsonResponse(200, { count: 1, ranges: '#2', keepSeq: 1, keptDrafts: 0, blockedByApprovalId: 'a1' }),
-      '/api/v1/diagrams': () => jsonResponse(200, [official]),
-    });
-    renderScreen('/diagrams');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Bỏ bản nháp' }));
-    expect(await screen.findByText(/người gửi rút yêu cầu trước/)).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: /^Bỏ \d+ bản nháp/ })).toBeNull();
-  });
-
-  it('Xóa hẳn: gõ đúng tên mới bật nút; gửi tên lên server', async () => {
-    let body: unknown = null;
-    const fetchMock = routeFetch({
-      '/api/v1/diagrams/d1/purge': () => jsonResponse(201, { versions: 1 }),
-      '/api/v1/diagrams': () => jsonResponse(200, [ROOT]),
-    });
-    renderScreen('/diagrams');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Xóa hẳn' }));
-    const confirm = await screen.findByRole('dialog', { name: 'Xóa hẳn "Tổng công ty E2E"?' });
-    const go = within(confirm).getByRole('button', { name: 'Xóa hẳn' });
-    expect(go).toBeDisabled();
-    await user.type(within(confirm).getByLabelText('Gõ lại tên bản vẽ để xác nhận'), 'Tổng công ty E2E');
-    await user.click(go);
-    expect(await screen.findByText('Đã xóa hẳn "Tổng công ty E2E".')).toBeInTheDocument();
-    const call = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).find(([url]) => String(url).includes('/purge'));
-    body = JSON.parse(String(call?.[1]?.body));
-    expect(body).toEqual({ name: 'Tổng công ty E2E' });
-  });
-
-  /* Q-23: bản vẽ tầng/phòng vẽ tiếp từ bản cha, nên "Thêm bản vẽ con" mặc định nhân
-     bản; chép nội dung thì hỏi mã sơ đồ như mở xem. */
-  it('Thêm bản vẽ con: mặc định nhân bản nội dung mới nhất của bản cha (qua mã sơ đồ); chọn "Bản trống" thì tạo rỗng', async () => {
-    const parent = node('d1', null, 'Tổng công ty E2E', {
-      status: 'official',
-      latestVersion: { id: 'v3', seq: 3, savedAt: '2026-10-03T01:00:00Z', savedBy: 'sa@e2e.local' },
-    });
-    const calls: string[] = [];
-    let copies = 0;
-    const fetchMock = routeFetch({
-      '/api/v1/diagrams/d1/copied-children': () => {
-        calls.push('copy');
-        copies += 1;
-        return copies === 1
-          ? jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })
-          : // Có người lưu bản cha (#4) sau khi cây được tải: server nhân bản #4, không phải #3.
-            jsonResponse(201, { ...node('c1', 'd1', 'Tầng 2 E2E'), copiedFromSeq: 4 });
-      },
-      '/api/v1/auth/step-up': () => jsonResponse(200, { status: 'stepped-up', scope: 'diagram', graceMinutes: 10 }),
-      '/api/v1/diagrams': () => jsonResponse(200, [parent]),
-    });
-    renderScreen('/diagrams', MEMBER);
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Thêm bản vẽ con' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Tổng công ty E2E"' });
-    const copy = screen.getByRole('radio', { name: 'Nhân bản từ bản cha (phiên bản #3)' });
-    expect(copy).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Bản trống' })).not.toBeChecked();
-    await user.type(screen.getByRole('textbox', { name: /Tên bản vẽ/ }), 'Tầng 2 E2E');
-    await user.click(screen.getByRole('button', { name: 'Lưu' }));
-    const step = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
-    expect(step).toBeInTheDocument();
-    expect(calls).toEqual(['copy']);
-    await user.type(within(step).getAllByRole('textbox')[0], '123456');
-    // Mã đủ 6 số là tự gửi; lượt sau gọi lại đúng yêu cầu nhân bản. Số phiên bản theo server.
-    expect(await screen.findByText('Đã tạo bản vẽ "Tầng 2 E2E" — nhân bản từ "Tổng công ty E2E" phiên bản #4.')).toBeInTheDocument();
-    expect(dialog).not.toBeInTheDocument();
-    const body = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][])
-      .filter(([url]) => String(url).includes('/copied-children'))
-      .map(([, init]) => JSON.parse(String(init?.body)) as unknown);
-    expect(body.at(-1)).toEqual({ name: 'Tầng 2 E2E', nodeType: 'floor' });
-  });
-
-  it('Thêm bản vẽ con dưới bản cha chưa có nội dung: chỉ "Bản trống", không hỏi mã', async () => {
-    const fetchMock = routeFetch({
-      '/api/v1/diagrams': () => jsonResponse(201, node('c1', 'd1', 'Tầng 2 E2E')),
-    });
-    fetchMock.mockImplementationOnce(() => Promise.resolve(jsonResponse(200, [ROOT])));
-    renderScreen('/diagrams', MEMBER);
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Thêm bản vẽ con' }));
-    await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Tổng công ty E2E"' });
-    expect(screen.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeDisabled();
-    expect(screen.getByRole('radio', { name: 'Bản trống' })).toBeChecked();
-    expect(screen.getByText('Bản cha chưa có nội dung nên con bắt đầu từ bản trống.')).toBeInTheDocument();
   });
 });
 

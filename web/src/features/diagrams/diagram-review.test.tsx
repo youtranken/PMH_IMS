@@ -278,9 +278,11 @@ describe('Ghim bình luận', () => {
   });
 });
 
-describe('Cây bản vẽ — trạng thái duyệt', () => {
-  it('"Chờ duyệt" và "Chính thức v3"', async () => {
+describe('Bản đồ — trạng thái duyệt', () => {
+  it('"Chờ duyệt" và "Chính thức v3" (chữ, không chỉ màu)', async () => {
     routeFetch([
+      ['/versions', () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })],
+      ['/publications', () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })],
       [
         '/api/v1/diagrams',
         () =>
@@ -293,10 +295,10 @@ describe('Cây bản vẽ — trạng thái duyệt', () => {
       ],
     ]);
     renderScreen('/diagrams?node=g0', SA);
-    const cards = within(await screen.findByRole('list', { name: 'Bản vẽ trong "Gốc E2E"' })).getAllByRole('listitem');
-    expect(cards[1]).toHaveTextContent('Chờ duyệt');
-    expect(cards[2]).toHaveTextContent('Chính thức v3');
-    expect(cards[3]).toHaveTextContent('Chính thức v3 · có bản nháp');
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(within(map).getByRole('button', { name: /^A E2E/ })).toHaveTextContent('Chờ duyệt');
+    expect(within(map).getByRole('button', { name: /^B E2E/ })).toHaveTextContent('Chính thức v3');
+    expect(within(map).getByRole('button', { name: /^C E2E/ })).toHaveTextContent('Chính thức v3 · có bản nháp');
   });
 });
 

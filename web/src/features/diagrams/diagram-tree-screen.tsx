@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
@@ -9,46 +9,42 @@ import { PATHS } from '@/lib/routes';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Crumbs, type Crumb } from '@/ui/detail-header';
+import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import type { RowAction } from '@/ui/row-actions';
-import { Select } from '@/ui/select';
+import { ScrollX } from '@/ui/scroll-x';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { StepList } from '@/ui/step-list';
 import { useToast } from '@/ui/toast';
+import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { useNow } from '@/ui/use-now';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
-import { STATUS_KEY, TREE_KEY, type DiagramNode } from './diagram-api';
-import {
-  PRESENTATIONS_NODE,
-  STATUS_FILTERS,
-  boardCards,
-  boardRows,
-  canDiscardDrafts,
-  canPurge,
-  expandedFor,
-  resolveSelection,
-  type StatusFilter,
-} from './diagram-board';
-import { DiagramBoardTree } from './diagram-board-tree';
-import { DiagramCard } from './diagram-card';
+import { TREE_KEY, type DiagramNode, type FoundDevice } from './diagram-api';
+import { buildMap, canPurge, filterActive, nodeMatches, resolveSelection, TODO_KINDS, todoCounts, type MapFilter, type TodoKind } from './diagram-map';
+import { DiagramListView, DiagramMapView } from './diagram-map-view';
 import { DiagramNodeDialog } from './diagram-node-dialog';
+import { DiagramPanel } from './diagram-panel';
 import { canManageNode } from './diagram-presentation';
 import { enterFullscreen } from './diagram-slideshow';
-import { pathOf } from './diagram-tree';
 import { useDiagramPrune } from './use-diagram-prune';
 
 type Editing = { parent: DiagramNode | null } | { node: DiagramNode } | null;
 
-/** Nhịp làm mới chữ "2 giờ trước" của thẻ. */
+/** Nhịp làm mới chữ "2 giờ trước". */
 const AGO_TICK_MS = 60_000;
+/** Ô tìm hỏi server "máy này nằm ở bản vẽ nào" từ 2 ký tự — như ô tìm trên trình xem. */
+const DEVICE_SEARCH_MIN = 2;
+
+const TODO_TONE: Record<TodoKind, string> = { drafts: 'warn', pending: 'info', drift: 'danger' };
 
 /**
- * Cây bản vẽ (Q-23) hai cột: cây bên trái, thẻ của nút đang chọn + bản vẽ con bên phải. CHỈ tên,
- * loại, trạng thái, lần lưu cuối — không ảnh thu nhỏ, không cần mã 2 lớp; mở nội dung mới hỏi mã.
- * Nút đang chọn nằm ở `?node=` (mở lại link vẫn đúng chỗ). Màn hẹp: cây thành ô chọn phía trên,
- * thẻ xếp một cột.
+ * Màn /diagrams — "bản đồ không gian" (Q-23): bản vẽ gốc là băng tối, con là khu, cháu là ô; dải
+ * "Cần làm" lọc theo việc; bấm ô mở panel (desktop bên phải, màn hẹp thành hộp toàn màn). Mọi
+ * trạng thái nằm trong URL — `?node=` chọn, `?root=` đi sâu, `?todo=` / `?q=` lọc, `?view=list` —
+ * nên mở lại link vẫn đúng chỗ. Chỉ tên / trạng thái / số đếm: xem bản đồ không cần mã.
  */
 export function DiagramTreeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -61,55 +57,61 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const noEditor = useMediaQuery(BREAKPOINTS.editor);
   const now = useNow(AGO_TICK_MS);
   const [editing, setEditing] = useState<Editing>(null);
-  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [sheetOpen, setSheetOpen] = useState(false);
   const stepUp = useStepUpRetry(me.csrfToken);
   const tree = useQuery({ queryKey: TREE_KEY, queryFn: () => apiFetch<DiagramNode[]>('/api/v1/diagrams') });
   const all = useMemo(() => tree.data ?? [], [tree.data]);
 
+  const rawTodo = params.get('todo');
+  const filter: MapFilter = {
+    todo: TODO_KINDS.includes(rawTodo as TodoKind) ? (rawTodo as TodoKind) : null,
+    q: params.get('q') ?? '',
+  };
+  const view = params.get('view') === 'list' ? 'list' : 'map';
   const selected = resolveSelection(all, params.get('node'));
-  const [opened, setOpened] = useState<Set<string>>(new Set());
-  const [closed, setClosed] = useState<Set<string>>(new Set());
-  // Mở sẵn gốc + đường tới nút chọn; người dùng thu/mở tay thì nhớ lựa chọn đó.
-  const expanded = useMemo(() => {
-    const roots = all.filter((n) => n.kind !== 'presentation' && !n.parentId).map((n) => n.id);
-    const next = expandedFor(all, selected, new Set([...roots, ...opened]));
-    for (const id of closed) next.delete(id);
-    return next;
-  }, [all, selected, opened, closed]);
+  const selectedNode = all.find((n) => n.id === selected) ?? null;
+  const map = useMemo(() => buildMap(all, params.get('root')), [all, params]);
+  const counts = todoCounts(all);
 
-  const select = (id: string | null) => {
-    // Nhánh chứa nút vừa chọn phải mở, kể cả khi người dùng đã thu tay nhánh đó trước đây.
-    const path = expandedFor(all, id, new Set());
-    setClosed((current) => new Set([...current].filter((closedId) => !path.has(closedId))));
+  const update = (changes: Record<string, string | null>, replace = true) =>
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
-        if (id) next.set('node', id);
-        else next.delete('node');
+        for (const [key, value] of Object.entries(changes)) {
+          if (value) next.set(key, value);
+          else next.delete(key);
+        }
         return next;
       },
-      { replace: true },
+      { replace },
     );
+  const hrefWith = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    const text = next.toString();
+    return text ? `?${text}` : '?';
   };
 
-  const toggle = (id: string) => {
-    const open = !expanded.has(id);
-    setOpened((current) => {
-      const next = new Set(current);
-      if (open) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-    setClosed((current) => {
-      const next = new Set(current);
-      if (open) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const select = (id: string | null) => {
+    update({ node: id });
+    if (narrow && id) setSheetOpen(true);
   };
+  // Đi sâu là một bước "Back" được: trình duyệt quay lại đúng tầng trước.
+  const drill = (id: string) => update({ root: id, node: id }, false);
+
+  const debouncedQ = useDebouncedValue(filter.q.trim());
+  const devices = useQuery({
+    queryKey: ['diagrams-find', debouncedQ],
+    queryFn: () => apiFetch<FoundDevice[]>(`/api/v1/diagrams/find?${new URLSearchParams({ q: debouncedQ }).toString()}`),
+    enabled: debouncedQ.length >= DEVICE_SEARCH_MIN,
+    retry: false,
+  });
 
   const prune = useDiagramPrune(me, stepUp.run, (node) => {
-    if (node.id === selected) select(node.parentId);
+    if (node.id === selected) update({ node: node.parentId });
   });
 
   const archive = async (node: DiagramNode) => {
@@ -124,7 +126,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       await apiFetch(`/api/v1/diagrams/${node.id}/archive`, { method: 'POST', csrfToken: me.csrfToken });
       await queryClient.invalidateQueries({ queryKey: TREE_KEY });
       toast({ tone: 'ok', message: t('diagrams.archived', { name: node.name }) });
-      if (node.id === selected) select(node.parentId);
+      if (node.id === selected) update({ node: node.parentId });
     } catch (error) {
       toast({ tone: 'error', message: errorMessage(error) });
     }
@@ -152,44 +154,30 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       });
       items.push({ key: 'archive', label: t('diagrams.archive'), warn: true, onSelect: () => void archive(node) });
     }
-    if (canDiscardDrafts(node, me)) {
-      items.push({ key: 'discard', label: t('diagrams.prune.discard'), hint: t('diagrams.prune.discardHint'), danger: true, onSelect: () => void prune.discard(node) });
-    }
     if (canPurge(node, all, me)) {
       items.push({ key: 'purge', label: t('diagrams.prune.purge'), hint: t('diagrams.prune.purgeHint'), danger: true, onSelect: () => void prune.purge(node) });
     }
     return items;
   };
 
-  const official = all.filter((n) => n.kind !== 'presentation');
-  const presentationCount = all.length - official.length;
-  const rows = boardRows(all, expanded);
-  const cards = boardCards(all, selected, filter);
-  const selectedNode = all.find((n) => n.id === selected) ?? null;
-
-  const crumbs: Crumb[] =
-    selected === PRESENTATIONS_NODE
-      ? [{ label: t('diagrams.board.presentationsCrumb') }]
-      : selectedNode?.kind === 'presentation'
-        ? [{ label: t('diagrams.board.presentationsCrumb'), to: `?node=${PRESENTATIONS_NODE}` }, { label: selectedNode.name }]
-        : pathOf(official, selected ?? '').map((n, index, path) => (index === path.length - 1 ? { label: n.name } : { label: n.name, to: `?node=${n.id}` }));
-
-  const pickerOptions = [
-    ...boardRows(all, new Set([...official.map((n) => n.id), PRESENTATIONS_NODE])).map((row) => ({
-      value: row.id,
-      label: row.node
-        ? row.node.kind === 'presentation'
-          ? `${t('diagrams.board.presentationsCrumb')} / ${row.node.name}`
-          : pathOf(official, row.id).map((p) => p.name).join(' / ')
-        : t('diagrams.board.presentationsGroup', { count: presentationCount }),
-    })),
-  ];
+  const panel = selectedNode ? (
+    <DiagramPanel
+      me={me}
+      node={selectedNode}
+      nodes={all}
+      run={stepUp.run}
+      canEdit={!noEditor}
+      actions={actionsOf(selectedNode)}
+      onSelect={(id) => update({ node: id })}
+      discard={prune.discard}
+    />
+  ) : null;
 
   let body;
   if (tree.isPending) body = <Loading />;
   else if (tree.isError) body = <LoadError error={tree.error} onRetry={() => void tree.refetch()} />;
   else if (all.length === 0) {
-    // Màn trống nói luôn cả lộ trình, không chỉ bước đầu: người mới mở không biết cây dùng thế nào.
+    // Màn trống nói luôn cả lộ trình, không chỉ bước đầu: người mới mở không biết bản đồ dùng thế nào.
     body = (
       <div className="card">
         <EmptyState title={t('diagrams.emptyTitle')} hint={t('diagrams.emptyHint')} />
@@ -200,63 +188,95 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       </div>
     );
   } else {
-    const listLabel =
-      selected === PRESENTATIONS_NODE
-        ? t('diagrams.board.presentationsCards')
-        : t('diagrams.board.cardsOf', { name: selectedNode?.name ?? '' });
-    const showChildren = selected === PRESENTATIONS_NODE || selectedNode?.kind === 'official';
+    const crumbs: Crumb[] =
+      map.path.length > 0
+        ? [
+            { label: t('diagrams.map.allRoots'), to: hrefWith({ root: null }) },
+            ...map.path.map((n, index) => (index === map.path.length - 1 ? { label: n.name } : { label: n.name, to: hrefWith({ root: n.id }) })),
+          ]
+        : [];
+    const filtering = filterActive(filter);
+    const matched = filtering ? all.filter((n) => nodeMatches(n, filter)).length : 0;
+    const q = filter.q.trim();
     body = (
-      <div className="board-split">
-        {narrow ? (
-          <Select
-            value={selected ?? ''}
-            onChange={(id) => select(id)}
-            options={pickerOptions}
-            ariaLabel={t('diagrams.board.pickLabel')}
-            searchable
-          />
-        ) : (
-          <nav className="card board-rail" aria-label={t('diagrams.board.treeTitle')}>
-            <h2 className="form-section-title">{t('diagrams.board.treeTitle')}</h2>
-            <DiagramBoardTree rows={rows} selected={selected} presentationCount={presentationCount} onSelect={select} onToggle={toggle} />
-          </nav>
-        )}
-        <div className="board-main">
-          <Crumbs crumbs={crumbs} label={t('diagrams.board.breadcrumb')} />
-          {showChildren ? (
-            <div className="toolbar board-toolbar">
-              {selectedNode?.kind === 'official' ? (
-                <button type="button" className="btn sm primary" onClick={() => setEditing({ parent: selectedNode })}>
-                  {t('diagrams.board.addChild')}
-                </button>
-              ) : null}
-              <Select
-                className="board-filter"
-                value={filter}
-                onChange={(value) => setFilter(value as StatusFilter)}
-                ariaLabel={t('diagrams.board.filter')}
-                options={STATUS_FILTERS.map((s) => ({
-                  value: s,
-                  label: s === 'all' ? t('diagrams.board.filterAll') : t(STATUS_KEY[s]),
-                }))}
+      <>
+        <ScrollX ariaLabel={t('diagrams.map.todoLabel')} className="dmap-todo">
+          {TODO_KINDS.some((kind) => counts[kind] > 0) ? (
+            TODO_KINDS.filter((kind) => counts[kind] > 0).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                className="dmap-todo-chip"
+                data-tone={TODO_TONE[kind]}
+                aria-pressed={filter.todo === kind}
+                onClick={() => update({ todo: filter.todo === kind ? null : kind })}
+              >
+                <span className="dmap-dot" aria-hidden="true" />
+                {t(`diagrams.map.todo_${kind}`, { count: counts[kind] })}
+              </button>
+            ))
+          ) : (
+            <span className="muted">{t('diagrams.map.todoNone')}</span>
+          )}
+        </ScrollX>
+        {filtering ? (
+          <p className="dmap-filtering" role="status">
+            {t('diagrams.map.filtering', { count: matched })}{' '}
+            <button type="button" className="linkbtn" onClick={() => update({ todo: null, q: null })}>
+              {t('diagrams.map.clearFilter')}
+            </button>
+          </p>
+        ) : null}
+        {q.length >= DEVICE_SEARCH_MIN && devices.data ? (
+          <section className="dmap-found" aria-label={t('diagrams.map.devicesFound', { q })}>
+            {devices.data.length === 0 ? (
+              <p className="muted">{t('diagrams.map.devicesNone', { q })}</p>
+            ) : (
+              <ul className="dmap-chips">
+                {devices.data.flatMap((device) =>
+                  device.diagrams.length === 0
+                    ? [
+                        <li key={device.id} className="muted">
+                          {t('diagrams.map.deviceNotDrawn', { code: device.code })}
+                        </li>,
+                      ]
+                    : device.diagrams.map((diagram) => (
+                        <li key={`${device.id}-${diagram.id}`}>
+                          <Link className="dmap-chip" to={`${PATHS.diagram(diagram.id)}?${new URLSearchParams({ focus: device.id }).toString()}`}>
+                            {t('diagrams.map.deviceIn', { code: device.code, diagram: diagram.name })}
+                          </Link>
+                        </li>
+                      )),
+                )}
+              </ul>
+            )}
+          </section>
+        ) : null}
+        <div className="dmap-layout">
+          <div className="dmap-main">
+            {crumbs.length > 0 ? <Crumbs crumbs={crumbs} label={t('diagrams.map.breadcrumb')} /> : null}
+            {view === 'list' ? (
+              <DiagramListView nodes={all} selected={selected} filter={filter} onSelect={select} />
+            ) : (
+              <DiagramMapView
+                map={map}
+                nodes={all}
+                selected={selected}
+                filter={filter}
+                now={now}
+                onSelect={select}
+                onDrill={drill}
+                onAddChild={(parent) => setEditing({ parent })}
               />
-            </div>
-          ) : null}
-          <ul className="board-cards" aria-label={listLabel}>
-            {cards.self ? <DiagramCard node={cards.self} self now={now} canEdit={!noEditor} items={actionsOf(cards.self)} /> : null}
-            {cards.children.map((node) => (
-              <DiagramCard key={node.id} node={node} now={now} canEdit={!noEditor} items={actionsOf(node)} />
-            ))}
-          </ul>
-          {showChildren && cards.children.length === 0 ? (
-            cards.total > 0 ? (
-              <p className="muted">{t('diagrams.board.noMatch')}</p>
-            ) : selected === PRESENTATIONS_NODE ? null : (
-              <EmptyState title={t('diagrams.board.noChildren')} hint={t('diagrams.board.noChildrenHint')} />
-            )
+            )}
+          </div>
+          {!narrow && panel ? (
+            <aside className="card dpanel-wrap" aria-label={t('diagrams.panel.label')}>
+              {panel}
+            </aside>
           ) : null}
         </div>
-      </div>
+      </>
     );
   }
 
@@ -267,23 +287,47 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
         titleTip={t('diagrams.titleTip')}
         subtitle={t('diagrams.subtitle')}
         actions={
-          <button type="button" className="btn primary" onClick={() => setEditing({ parent: null })}>
-            {t('diagrams.add')}
-          </button>
+          <div className="dmap-header-tools">
+            <input
+              className="inp search dmap-search"
+              type="search"
+              aria-label={t('diagrams.map.searchLabel')}
+              placeholder={t('diagrams.map.searchPlaceholder')}
+              value={filter.q}
+              onChange={(event) => update({ q: event.target.value || null })}
+            />
+            <SegmentedRadio
+              label={t('diagrams.map.viewLabel')}
+              value={view}
+              onChange={(next) => update({ view: next === 'list' ? 'list' : null })}
+              options={[
+                { value: 'map', label: t('diagrams.map.viewMap') },
+                { value: 'list', label: t('diagrams.map.viewList') },
+              ]}
+            />
+            <button type="button" className="btn primary" onClick={() => setEditing({ parent: null })}>
+              {t('diagrams.add')}
+            </button>
+          </div>
         }
       />
       {body}
+      {narrow && sheetOpen && panel && selectedNode ? (
+        <Dialog open onOpenChange={() => setSheetOpen(false)} title={t('diagrams.panel.label')} maxWidth={560} initialFocus="title">
+          {panel}
+        </Dialog>
+      ) : null}
       {editing ? (
         <DiagramNodeDialog
           me={me}
-          nodes={official}
+          nodes={all.filter((n) => n.kind !== 'presentation')}
           parent={'parent' in editing ? editing.parent : null}
           node={'node' in editing ? editing.node : null}
           run={stepUp.run}
           onClose={() => setEditing(null)}
           onSaved={(saved, created) => {
-            // Gốc mới: chọn nó. Con mới: chọn cha của nó — thẻ con hiện ngay bên phải.
-            if (created) select(saved.parentId ?? saved.id);
+            // Bản vừa tạo được chọn ngay: panel của nó hiện ra, ô sáng lên trên bản đồ.
+            if (created) update({ node: saved.id });
           }}
         />
       ) : null}

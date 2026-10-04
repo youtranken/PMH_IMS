@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -84,60 +84,36 @@ function historyEntry(row: DiagramHistoryRow, t: TFunction): HistoryEntry {
 }
 
 /**
- * Phiên bản (mới trước) + lịch sử của một bản vẽ. Danh sách và lịch sử cũng là nội dung bản vẽ
- * (tóm tắt nêu mã thiết bị) nên đi qua `run` — hết ân hạn sơ đồ thì hỏi mã tại chỗ.
+ * Đặt tên / Khôi phục / Khôi phục làm bản chính thức một phiên bản — dùng chung cho hộp "Phiên
+ * bản" của màn bản vẽ và panel bản đồ /diagrams (AD-15). Mọi việc đi qua `run` (hỏi mã sơ đồ).
+ * `canLabel`/`canRestore` chỉ để ẩn nút — server chặn (403).
  */
-export function DiagramVersionsDialog({
+export function useVersionActions({
   me,
   diagram,
   run,
-  onView,
-  onCompare,
   onRestored,
-  onClose,
 }: {
   me: Me;
   diagram: DiagramNode;
   run: Run;
-  onView: (version: VersionItem) => void;
-  /** So sánh tô màu hai phiên bản bất kỳ: `from` là bản cũ hơn. */
-  onCompare: (from: VersionItem, to: VersionItem) => void;
   onRestored: () => void;
-  onClose: () => void;
-}) {
+}): {
+  canLabel: (version: VersionItem) => boolean;
+  canRestore: boolean;
+  restore: (version: VersionItem) => Promise<void>;
+  restoreOfficial: (version: VersionItem) => Promise<void>;
+  startLabel: (version: VersionItem) => void;
+  refresh: () => Promise<void>;
+  dialogs: ReactNode;
+} {
   const { t } = useTranslation();
   const toast = useToast();
   const ask = useConfirm();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'versions' | 'history'>('versions');
-  const [onlyNamed, setOnlyNamed] = useState(false);
   const [labeling, setLabeling] = useState<VersionItem | null>(null);
-  const [details, setDetails] = useState<VersionItem | null>(null);
-  /** Hai phiên bản đánh dấu để so sánh; đánh dấu cái thứ ba thì bỏ cái chọn trước nhất. */
-  const [picked, setPicked] = useState<VersionItem[]>([]);
-  const togglePick = (version: VersionItem) =>
-    setPicked((prev) => (prev.some((v) => v.id === version.id) ? prev.filter((v) => v.id !== version.id) : [...prev, version].slice(-2)));
-  const compareReason = useDisabledReason(picked.length === 2 ? null : t('diagrams.versions.compareNeedTwo'));
   const manager = me.role === 'sa' || me.role === 'admin';
-  const purpose = t('diagrams.screen.stepUpPurpose', { name: diagram.name });
   const editPurpose = t('diagrams.screen.stepUpEdit', { name: diagram.name });
-
-  const versions = useQuery({
-    queryKey: versionsKey(diagram.id),
-    queryFn: () => run(() => apiFetch<VersionItem[]>(`/api/v1/diagrams/${diagram.id}/versions`), purpose),
-    retry: false,
-  });
-  const publications = useQuery({
-    queryKey: publicationsKey(diagram.id),
-    queryFn: () => run(() => apiFetch<Publications>(`/api/v1/diagrams/${diagram.id}/publications`), purpose),
-    retry: false,
-  });
-  const history = useQuery({
-    queryKey: historyKey(diagram.id),
-    queryFn: () => run(() => apiFetch<DiagramHistoryRow[]>(`/api/v1/diagrams/${diagram.id}/history`), purpose),
-    enabled: tab === 'history',
-    retry: false,
-  });
 
   const refresh = async () => {
     await Promise.all([
@@ -198,6 +174,85 @@ export function DiagramVersionsDialog({
     }
   };
 
+  const dialogs = labeling ? (
+    <LabelDialog
+      me={me}
+      diagramId={diagram.id}
+      version={labeling}
+      run={run}
+      purpose={editPurpose}
+      onSaved={async () => {
+        await refresh();
+        toast({ tone: 'ok', message: t('diagrams.versions.labelSaved', { seq: labeling.seq }) });
+        setLabeling(null);
+      }}
+      onClose={() => setLabeling(null)}
+    />
+  ) : null;
+
+  return {
+    canLabel: (version) => manager || version.savedBy.toLowerCase() === me.email.toLowerCase(),
+    canRestore: manager,
+    restore,
+    restoreOfficial,
+    startLabel: setLabeling,
+    refresh,
+    dialogs,
+  };
+}
+
+/**
+ * Phiên bản (mới trước) + lịch sử của một bản vẽ. Danh sách và lịch sử cũng là nội dung bản vẽ
+ * (tóm tắt nêu mã thiết bị) nên đi qua `run` — hết ân hạn sơ đồ thì hỏi mã tại chỗ.
+ */
+export function DiagramVersionsDialog({
+  me,
+  diagram,
+  run,
+  onView,
+  onCompare,
+  onRestored,
+  onClose,
+}: {
+  me: Me;
+  diagram: DiagramNode;
+  run: Run;
+  onView: (version: VersionItem) => void;
+  /** So sánh tô màu hai phiên bản bất kỳ: `from` là bản cũ hơn. */
+  onCompare: (from: VersionItem, to: VersionItem) => void;
+  onRestored: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const actions = useVersionActions({ me, diagram, run, onRestored });
+  const [tab, setTab] = useState<'versions' | 'history'>('versions');
+  const [onlyNamed, setOnlyNamed] = useState(false);
+  const [details, setDetails] = useState<VersionItem | null>(null);
+  /** Hai phiên bản đánh dấu để so sánh; đánh dấu cái thứ ba thì bỏ cái chọn trước nhất. */
+  const [picked, setPicked] = useState<VersionItem[]>([]);
+  const togglePick = (version: VersionItem) =>
+    setPicked((prev) => (prev.some((v) => v.id === version.id) ? prev.filter((v) => v.id !== version.id) : [...prev, version].slice(-2)));
+  const compareReason = useDisabledReason(picked.length === 2 ? null : t('diagrams.versions.compareNeedTwo'));
+  const manager = actions.canRestore;
+  const purpose = t('diagrams.screen.stepUpPurpose', { name: diagram.name });
+
+  const versions = useQuery({
+    queryKey: versionsKey(diagram.id),
+    queryFn: () => run(() => apiFetch<VersionItem[]>(`/api/v1/diagrams/${diagram.id}/versions`), purpose),
+    retry: false,
+  });
+  const publications = useQuery({
+    queryKey: publicationsKey(diagram.id),
+    queryFn: () => run(() => apiFetch<Publications>(`/api/v1/diagrams/${diagram.id}/publications`), purpose),
+    retry: false,
+  });
+  const history = useQuery({
+    queryKey: historyKey(diagram.id),
+    queryFn: () => run(() => apiFetch<DiagramHistoryRow[]>(`/api/v1/diagrams/${diagram.id}/history`), purpose),
+    enabled: tab === 'history',
+    retry: false,
+  });
+
   const list = (versions.data ?? []).filter((v) => !onlyNamed || v.label);
   const latestId = versions.data?.[0]?.id;
   const officialId = publications.data?.officialVersionId ?? null;
@@ -211,7 +266,7 @@ export function DiagramVersionsDialog({
     versionsBody = (
       <ul className="tree-list" aria-label={t('diagrams.versions.tabVersions')}>
         {list.map((version) => {
-          const canLabel = manager || version.savedBy.toLowerCase() === me.email.toLowerCase();
+          const canLabel = actions.canLabel(version);
           return (
             <li key={version.id} className="tree-row">
               <input
@@ -242,12 +297,12 @@ export function DiagramVersionsDialog({
                   {t('diagrams.versions.details')}
                 </button>
                 {canLabel ? (
-                  <button type="button" className="btn sm" aria-label={t('diagrams.versions.nameOf', { seq: version.seq })} onClick={() => setLabeling(version)}>
+                  <button type="button" className="btn sm" aria-label={t('diagrams.versions.nameOf', { seq: version.seq })} onClick={() => actions.startLabel(version)}>
                     {t('diagrams.versions.name')}
                   </button>
                 ) : null}
                 {manager && version.id !== latestId ? (
-                  <button type="button" className="btn sm" aria-label={t('diagrams.versions.restoreOf', { seq: version.seq })} onClick={() => void restore(version)}>
+                  <button type="button" className="btn sm" aria-label={t('diagrams.versions.restoreOf', { seq: version.seq })} onClick={() => void actions.restore(version)}>
                     {t('diagrams.versions.restore')}
                   </button>
                 ) : null}
@@ -256,7 +311,7 @@ export function DiagramVersionsDialog({
                     type="button"
                     className="btn sm"
                     aria-label={t('diagrams.review.restoreOfficialOf', { seq: version.seq })}
-                    onClick={() => void restoreOfficial(version)}
+                    onClick={() => void actions.restoreOfficial(version)}
                   >
                     {t('diagrams.review.restoreOfficial')}
                   </button>
@@ -313,21 +368,7 @@ export function DiagramVersionsDialog({
           historyBody
         )}
       </Dialog>
-      {labeling ? (
-        <LabelDialog
-          me={me}
-          diagramId={diagram.id}
-          version={labeling}
-          run={run}
-          purpose={editPurpose}
-          onSaved={async () => {
-            await refresh();
-            toast({ tone: 'ok', message: t('diagrams.versions.labelSaved', { seq: labeling.seq }) });
-            setLabeling(null);
-          }}
-          onClose={() => setLabeling(null)}
-        />
-      ) : null}
+      {actions.dialogs}
       {details ? <ChangesDialog diagramId={diagram.id} version={details} run={run} purpose={purpose} onClose={() => setDetails(null)} /> : null}
     </>
   );

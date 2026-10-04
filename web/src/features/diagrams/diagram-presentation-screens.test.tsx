@@ -76,32 +76,39 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-describe('Cây bản vẽ — mục "Bản trình bày" riêng (Q-23)', () => {
-  it('bản trình bày không nằm trong cây chính thức; hiện nguồn và báo bản gốc có bản mới', async () => {
-    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, PRES_NEWER]) });
-    renderAt('/diagrams?node=presentations');
-    // Cây chính thức không chứa bản trình bày: chúng nằm dưới nhóm "Trình bày (n)" ở cuối cây.
-    const tree = await screen.findByRole('tree', { name: 'Cây bản vẽ' });
-    expect(within(tree).getAllByRole('treeitem').map((el) => el.textContent)).toEqual(['Tầng 1 E2E', 'Trình bày (1)', 'Tầng 1 E2E — trình bày']);
-    expect(within(tree).getByRole('treeitem', { name: 'Trình bày (1)' })).toHaveAttribute('aria-selected', 'true');
-    const section = screen.getByRole('list', { name: 'Các bản trình bày' });
-    expect(section).toHaveTextContent('Tầng 1 E2E — trình bày');
-    expect(section).toHaveTextContent('Từ "Tầng 1 E2E" · chính thức v1');
-    expect(section).toHaveTextContent('Bản gốc đã có phiên bản mới (4)');
-    expect(screen.getByRole('link', { name: 'Tầng 1 E2E — trình bày' })).toHaveAttribute('href', '/diagrams/p1');
+/** Danh sách phiên bản là nội dung bản vẽ: bài cây cho server đòi mã, panel chỉ hiện nút nhập mã. */
+const LOCKED = {
+  '/versions': () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 }),
+  '/publications': () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 }),
+};
+
+describe('Bản đồ — bản trình bày đứng riêng (Q-23)', () => {
+  it('bản trình bày không nằm trên bản đồ chính thức mà ở dải "Bản trình bày (n)"; panel hiện nguồn và báo bản gốc có bản mới', async () => {
+    routeFetch({ ...LOCKED, '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, PRES_NEWER]) });
+    renderAt('/diagrams?node=p1');
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    const chips = within(map).getByRole('heading', { name: 'Bản trình bày (1)' }).parentElement as HTMLElement;
+    expect(within(chips).getByRole('button', { name: 'Tầng 1 E2E — trình bày' })).toHaveAttribute('aria-current', 'true');
+    expect(map.querySelectorAll('.dmap-banner')).toHaveLength(1);
+    const panel = screen.getByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    expect(panel).toHaveTextContent('Từ "Tầng 1 E2E" · chính thức v1');
+    expect(panel).toHaveTextContent('Bản gốc đã có phiên bản mới (4)');
+    // Bản trình bày không qua duyệt: không Phát hành / Gửi duyệt.
+    expect(within(panel).queryByRole('button', { name: /^(Phát hành|Gửi duyệt)/ })).toBeNull();
   });
 });
 
-describe('Cây bản vẽ — Thành viên quản bản trình bày của mình', () => {
+describe('Bản đồ — Thành viên quản bản trình bày của mình', () => {
   const MINE = { ...PRES, id: 'p-mine', name: 'E2E Của tôi', createdBy: 'sa@e2e.local' };
   const THEIRS = { ...PRES, id: 'p-theirs', name: 'E2E Của người khác', createdBy: 'other@e2e.local', ownerEmail: 'other@e2e.local' };
 
   it('bản mình tạo: Đổi tên + Lưu trữ; bản người khác: không có thao tác', async () => {
-    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE, THEIRS]) });
-    renderAt('/diagrams?node=presentations', MEMBER);
-    await screen.findByRole('list', { name: 'Các bản trình bày' });
+    routeFetch({ ...LOCKED, '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE, THEIRS]) });
+    renderAt('/diagrams?node=p-theirs', MEMBER);
+    await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
     expect(screen.queryByRole('button', { name: 'Thao tác với E2E Của người khác' })).toBeNull();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với E2E Của tôi' }));
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'E2E Của tôi' }));
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Thao tác với E2E Của tôi' }));
     // Bản trình bày chưa bao giờ phát hành: người tạo xóa hẳn được (Q-23).
     const names = (await screen.findAllByRole('menuitem')).map((el) => {
       const copy = el.cloneNode(true) as HTMLElement;
@@ -113,6 +120,7 @@ describe('Cây bản vẽ — Thành viên quản bản trình bày của mình'
 
   it('Đổi tên: hộp chỉ có ô tên, PATCH chỉ gửi tên', async () => {
     const fetchMock = routeFetch({
+      ...LOCKED,
       '/api/v1/diagrams/p-mine': () => jsonResponse(200, { ...MINE, name: 'E2E Tên mới' }),
       '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE]),
     });

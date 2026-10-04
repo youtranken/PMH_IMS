@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage } from '@/lib/api';
@@ -101,6 +101,133 @@ export function FindingList({ title, items, onGoTo }: { title: string; items: Fi
   );
 }
 
+/** Làm mới mọi thứ một lượt gửi duyệt / phát hành / duyệt / bình luận có thể đổi. */
+export async function refreshDiagram(queryClient: QueryClient, id: string): Promise<void> {
+  await Promise.all(
+    [TREE_KEY, nodeKey(id), reviewKey(id), commentsKey(id), versionsKey(id), historyKey(id), publicationsKey(id)].map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey }),
+    ),
+  );
+}
+
+/**
+ * Phát hành (Admin/SA) và Gửi duyệt phiên bản MỚI NHẤT của một bản vẽ, kèm hộp lý do và hộp lỗi
+ * tự kiểm. Một luồng cho cả thanh màn bản vẽ (`useDiagramReview`) lẫn panel bản đồ /diagrams —
+ * hai bản sao sẽ trôi khỏi nhau (AD-15). `fail` = lỗi chung: tự kiểm đỏ mở hộp danh sách lỗi,
+ * huỷ hộp mã thì im lặng.
+ */
+export function usePublishFlow({
+  me,
+  diagram,
+  run,
+  onGoToCell,
+}: {
+  me: Me;
+  diagram: DiagramNode | null;
+  run: Run;
+  /** "Xem trên bản vẽ" ở hộp lỗi tự kiểm. Thiếu → hộp không có nút đó. */
+  onGoToCell?: (cellId: string) => void;
+}): {
+  publish: () => Promise<void>;
+  openSubmit: () => void;
+  fail: (error: unknown) => void;
+  post: <T>(path: string, body?: unknown) => Promise<T>;
+  dialogs: ReactNode;
+} {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const ask = useConfirm();
+  const queryClient = useQueryClient();
+  const id = diagram?.id ?? '';
+  const editPurpose = t('diagrams.screen.stepUpEdit', { name: diagram?.name ?? '' });
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [findings, setFindings] = useState<{ errors: Finding[]; warnings: Finding[] } | null>(null);
+
+  const fail = (error: unknown) => {
+    const found = checkFindings(error);
+    if (found) setFindings(found);
+    else if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+  };
+
+  const post = <T,>(path: string, body?: unknown) =>
+    run(
+      () =>
+        apiFetch<T>(`/api/v1/diagrams/${id}${path}`, {
+          method: 'POST',
+          csrfToken: me.csrfToken,
+          body: body === undefined ? undefined : JSON.stringify(body),
+        }),
+      editPurpose,
+    );
+
+  const publish = async () => {
+    const seq = diagram?.latestVersion?.seq ?? 0;
+    const ok = await ask({
+      title: t('diagrams.review.publishTitle', { seq }),
+      message: t('diagrams.review.publishMessage'),
+      confirmLabel: t('diagrams.review.publish'),
+    });
+    if (!ok) return;
+    try {
+      const result = await post<{ seq: number; warnings: Finding[] }>('/publish', {});
+      await refreshDiagram(queryClient, id);
+      toast({
+        tone: 'ok',
+        burst: true,
+        message: result.warnings.length
+          ? t('diagrams.review.publishedWarnings', { seq: result.seq, count: result.warnings.length })
+          : t('diagrams.review.published', { seq: result.seq }),
+      });
+    } catch (error) {
+      fail(error);
+    }
+  };
+
+  const dialogs = (
+    <>
+      {submitOpen && diagram ? (
+        <SubmitDialog
+          diagram={diagram}
+          post={post}
+          onDone={async (warnings) => {
+            setSubmitOpen(false);
+            await refreshDiagram(queryClient, id);
+            toast({
+              tone: 'ok',
+              message: warnings.length ? t('diagrams.review.submittedWarnings', { count: warnings.length }) : t('diagrams.review.submitted'),
+            });
+          }}
+          onFindings={(found) => {
+            setSubmitOpen(false);
+            setFindings(found);
+          }}
+          onClose={() => setSubmitOpen(false)}
+        />
+      ) : null}
+      {findings ? (
+        <Dialog open onOpenChange={() => setFindings(null)} maxWidth={620} initialFocus="title" title={t('diagrams.review.checkFailedTitle')}>
+          <p>{t('diagrams.review.checkFailedHint')}</p>
+          <FindingList
+            title={t('diagrams.review.errors')}
+            items={findings.errors}
+            onGoTo={
+              onGoToCell
+                ? (cellId) => {
+                    setFindings(null);
+                    onGoToCell(cellId);
+                  }
+                : undefined
+            }
+          />
+          <FindingList title={t('diagrams.review.warnings')} items={findings.warnings} />
+        </Dialog>
+      ) : null}
+    </>
+  );
+
+  return { publish, openSubmit: () => setSubmitOpen(true), fail, post, dialogs };
+}
+
 /**
  * Gửi duyệt / Phát hành / Duyệt / Trả về / Rút và bình luận ghim của MỘT bản vẽ (Q-23).
  *
@@ -160,10 +287,9 @@ export function useDiagramReview({
   const id = diagram?.id ?? '';
   const name = diagram?.name ?? '';
   const purpose = t('diagrams.screen.stepUpPurpose', { name });
-  const editPurpose = t('diagrams.screen.stepUpEdit', { name });
-  const [submitOpen, setSubmitOpen] = useState(false);
+  const flow = usePublishFlow({ me, diagram, run, onGoToCell });
+  const { fail, post } = flow;
   const [decideOpen, setDecideOpen] = useState(false);
-  const [findings, setFindings] = useState<{ errors: Finding[]; warnings: Finding[] } | null>(null);
   const [pinMode, setPinMode] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [draftPin, setDraftPin] = useState<{ cellId: string | null; anchor: ViewerPoint | null } | null>(null);
@@ -186,54 +312,7 @@ export function useDiagramReview({
   const page = pendingId ? (review.data ?? null) : null;
   const own = Boolean(page?.approval && page.approval.requester.toLowerCase() === me.email.toLowerCase());
 
-  const refresh = async () => {
-    await Promise.all(
-      [TREE_KEY, nodeKey(id), reviewKey(id), commentsKey(id), versionsKey(id), historyKey(id), publicationsKey(id)].map(
-        (queryKey) => queryClient.invalidateQueries({ queryKey }),
-      ),
-    );
-  };
-
-  /** Lỗi chung: tự kiểm đỏ mở hộp danh sách lỗi; huỷ hộp mã thì im lặng. */
-  const fail = (error: unknown) => {
-    const found = checkFindings(error);
-    if (found) setFindings(found);
-    else if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
-  };
-
-  const post = <T,>(path: string, body?: unknown) =>
-    run(
-      () =>
-        apiFetch<T>(`/api/v1/diagrams/${id}${path}`, {
-          method: 'POST',
-          csrfToken: me.csrfToken,
-          body: body === undefined ? undefined : JSON.stringify(body),
-        }),
-      editPurpose,
-    );
-
-  const publish = async () => {
-    const seq = diagram?.latestVersion?.seq ?? 0;
-    const ok = await ask({
-      title: t('diagrams.review.publishTitle', { seq }),
-      message: t('diagrams.review.publishMessage'),
-      confirmLabel: t('diagrams.review.publish'),
-    });
-    if (!ok) return;
-    try {
-      const result = await post<{ seq: number; warnings: Finding[] }>('/publish', {});
-      await refresh();
-      toast({
-        tone: 'ok',
-        burst: true,
-        message: result.warnings.length
-          ? t('diagrams.review.publishedWarnings', { seq: result.seq, count: result.warnings.length })
-          : t('diagrams.review.published', { seq: result.seq }),
-      });
-    } catch (error) {
-      fail(error);
-    }
-  };
+  const refresh = () => refreshDiagram(queryClient, id);
 
   const withdraw = async () => {
     if (!pendingId) return;
@@ -260,10 +339,10 @@ export function useDiagramReview({
   if (diagram) {
     if (canSend && manager) {
       // Admin/SA tự phát hành là việc chính; gửi người khác duyệt vẫn còn trong menu.
-      primary.push({ key: 'publish', label: t('diagrams.review.publish'), disabledReason: sendReason, onSelect: () => void publish() });
-      menu.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: () => setSubmitOpen(true) });
+      primary.push({ key: 'publish', label: t('diagrams.review.publish'), disabledReason: sendReason, onSelect: () => void flow.publish() });
+      menu.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: flow.openSubmit });
     } else if (canSend) {
-      primary.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: () => setSubmitOpen(true) });
+      primary.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: flow.openSubmit });
     }
     if (pendingId && page && manager && !own) {
       primary.push({ key: 'decide', label: t('diagrams.review.decide'), primary: true, onSelect: () => setDecideOpen(true) });
@@ -302,25 +381,7 @@ export function useDiagramReview({
   const draftCell = draftPin?.cellId ? cells?.find((c) => c.id === draftPin.cellId) : undefined;
   const dialogs = (
     <>
-      {submitOpen && diagram ? (
-        <SubmitDialog
-          diagram={diagram}
-          post={post}
-          onDone={async (warnings) => {
-            setSubmitOpen(false);
-            await refresh();
-            toast({
-              tone: 'ok',
-              message: warnings.length ? t('diagrams.review.submittedWarnings', { count: warnings.length }) : t('diagrams.review.submitted'),
-            });
-          }}
-          onFindings={(found) => {
-            setSubmitOpen(false);
-            setFindings(found);
-          }}
-          onClose={() => setSubmitOpen(false)}
-        />
-      ) : null}
+      {flow.dialogs}
       {decideOpen && page?.approval ? (
         <DecideDialog
           page={page}
@@ -351,20 +412,6 @@ export function useDiagramReview({
           }}
           onClose={() => setDecideOpen(false)}
         />
-      ) : null}
-      {findings ? (
-        <Dialog open onOpenChange={() => setFindings(null)} maxWidth={620} initialFocus="title" title={t('diagrams.review.checkFailedTitle')}>
-          <p>{t('diagrams.review.checkFailedHint')}</p>
-          <FindingList
-            title={t('diagrams.review.errors')}
-            items={findings.errors}
-            onGoTo={(cellId) => {
-              setFindings(null);
-              onGoToCell(cellId);
-            }}
-          />
-          <FindingList title={t('diagrams.review.warnings')} items={findings.warnings} />
-        </Dialog>
       ) : null}
       {draftPin && versionId ? (
         <NewPinDialog

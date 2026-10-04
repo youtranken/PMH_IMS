@@ -155,6 +155,8 @@ describe('Lệch kho trên màn xem bản vẽ', () => {
 describe('Cây bản vẽ — dấu lệch kho', () => {
   it('bản chính thức có lệch hiện "Lệch kho (N)", bản không lệch thì không', async () => {
     routeFetch({
+      '/versions': () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 }),
+      '/publications': () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 }),
       '/api/v1/diagrams': () =>
         jsonResponse(200, [
           { ...NODE, driftCount: 2 },
@@ -172,9 +174,11 @@ describe('Cây bản vẽ — dấu lệch kho', () => {
         </ToastProvider>
       </MemoryRouter>,
     );
-    // Thẻ "Bản vẽ này" (gốc đang chọn) rồi thẻ con.
-    const items = within(await screen.findByRole('list', { name: /^Bản vẽ trong/ })).getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Lệch kho (2)');
-    expect(items[1]).not.toHaveTextContent('Lệch kho');
+    // Băng gốc (lệch) rồi khu con (không lệch) trên bản đồ.
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    const [banner, area] = Array.from(map.querySelectorAll<HTMLElement>('.dmap-banner, .dmap-area-head'));
+    expect(banner).toHaveTextContent('Lệch kho (2)');
+    expect(area).toHaveTextContent('Tầng 1 E2E');
+    expect(area).not.toHaveTextContent('Lệch kho');
   });
 });

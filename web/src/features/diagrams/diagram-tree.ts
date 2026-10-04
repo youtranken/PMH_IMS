@@ -10,7 +10,8 @@ export interface TreeRow<T> {
   hasChildren: boolean;
 }
 
-function childrenOf<T extends TreeNodeInput>(nodes: T[]): Map<string | null, T[]> {
+/** Con trực tiếp theo cha; khoá `null` = các gốc. Thứ tự giữ như danh sách vào. */
+export function childrenOf<T extends TreeNodeInput>(nodes: T[]): Map<string | null, T[]> {
   const ids = new Set(nodes.map((n) => n.id));
   const out = new Map<string | null, T[]>();
   for (const node of nodes) {

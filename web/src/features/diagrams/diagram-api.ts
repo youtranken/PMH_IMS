@@ -35,6 +35,12 @@ export interface DiagramNode {
   source?: PresentationSource | null;
   /** Số mục lệch kho của bản chính thức hiện hành (Q-23); 0/thiếu = không hiện dấu. */
   driftCount?: number;
+  /** Số phiên bản còn giữ — nút chuyển bản vẽ trong panel. Thiếu → coi như 0. */
+  versionCount?: number;
+  /** Lần lưu sau bản chính thức (chưa phát hành thì mọi lần lưu). Thiếu → coi như 0. */
+  draftCount?: number;
+  /** Số máy / dây đã khai / tủ trên lần lưu mới nhất — chỉ là số, xem không cần mã. Thiếu → không hiện. */
+  stats?: { devices: number; cables: number; cabinets: number };
 }
 
 export interface VersionItem {
