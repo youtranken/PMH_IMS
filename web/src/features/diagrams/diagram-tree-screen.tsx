@@ -12,6 +12,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
+import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { NODE_TYPE_KEY, TREE_KEY, statusLabel, type DiagramNode, type DiagramStatus } from './diagram-api';
 import { DiagramNodeDialog } from './diagram-node-dialog';
 import { enterFullscreen } from './diagram-slideshow';
@@ -41,6 +42,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Editing>(null);
+  const stepUp = useStepUpRetry(me.csrfToken);
   const tree = useQuery({ queryKey: TREE_KEY, queryFn: () => apiFetch<DiagramNode[]>('/api/v1/diagrams') });
   const manager = me.role === 'sa' || me.role === 'admin';
 
@@ -182,9 +184,11 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
           nodes={nodes}
           parent={'parent' in editing ? editing.parent : null}
           node={'node' in editing ? editing.node : null}
+          run={stepUp.run}
           onClose={() => setEditing(null)}
         />
       ) : null}
+      {stepUp.dialog}
     </>
   );
 }

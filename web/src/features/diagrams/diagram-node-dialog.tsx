@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { apiFetch } from '@/lib/api-client';
 import type { Me } from '@/lib/me';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select, type SelectOption } from '@/ui/select';
 import { useToast } from '@/ui/toast';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { NODE_TYPES, NODE_TYPE_KEY, TREE_KEY, nodeKey, type DiagramNode, type DiagramNodeType } from './diagram-api';
 import { pathOf, subtreeIds } from './diagram-tree';
@@ -18,18 +20,24 @@ const NONE = '__none__';
  * Tạo bản vẽ (con của `parent`, hoặc gốc cây) hoặc sửa một nút (`node`). Chuyển nhánh chỉ có ở
  * chế độ sửa — vai được sửa do nơi mở hộp quyết, API vẫn chặn (`@Roles` + quyền theo bản vẽ).
  * Bản trình bày chỉ đổi tên: nó đứng ngoài cây, và Thành viên chủ của nó chỉ được đổi tên.
+ *
+ * Bản vẽ con mặc định NHÂN BẢN nội dung mới nhất của bản cha (Q-23): tầng/phòng thường vẽ tiếp từ
+ * bản cha. Nhân bản đi `run` vì nó chép nội dung bản vẽ (đòi mã sơ đồ như khi xem).
  */
 export function DiagramNodeDialog({
   me,
   nodes,
   parent,
   node,
+  run,
   onClose,
 }: {
   me: Me;
   nodes: DiagramNode[];
   parent?: DiagramNode | null;
   node?: DiagramNode | null;
+  /** `useStepUpRetry().run` của màn — chỉ cần khi tạo bản vẽ con kiểu nhân bản. */
+  run?: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -46,6 +54,9 @@ export function DiagramNodeDialog({
     cabinetId: node?.cabinetId ?? null,
   });
   const [nameError, setNameError] = useState<string | null>(null);
+  const copySeq = !node && parent ? (parent.latestVersion?.seq ?? null) : null;
+  const [start, setStart] = useState<'copy' | 'blank'>(copySeq ? 'copy' : 'blank');
+  const [copying, setCopying] = useState(false);
 
   const save = useApiMutation<typeof form, DiagramNode>(node ? `/api/v1/diagrams/${node.id}` : '/api/v1/diagrams', {
     method: editing ? 'PATCH' : 'POST',
@@ -59,6 +70,8 @@ export function DiagramNodeDialog({
         : Object.fromEntries(Object.entries(input).filter(([, value]) => value !== null && value !== '')),
   });
 
+  const busy = save.isPending || copying;
+
   const parentOptions = useMemo<SelectOption[]>(() => {
     const blocked = node ? subtreeIds(nodes, node.id) : new Set<string>();
     return [
@@ -69,18 +82,41 @@ export function DiagramNodeDialog({
     ];
   }, [nodes, node, t]);
 
+  const done = async (saved: DiagramNode, message: string) => {
+    await queryClient.invalidateQueries({ queryKey: TREE_KEY });
+    await queryClient.invalidateQueries({ queryKey: nodeKey(saved.id) });
+    toast({ tone: 'ok', message });
+    onClose();
+  };
+
+  const copyChild = async (from: DiagramNode, seq: number) => {
+    setCopying(true);
+    try {
+      const { parentId: _parent, ...rest } = form;
+      const body = JSON.stringify(Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== null && value !== '')));
+      const saved = await (run ?? ((action) => action()))(
+        () => apiFetch<DiagramNode>(`/api/v1/diagrams/${from.id}/copied-children`, { method: 'POST', csrfToken: me.csrfToken, body }),
+        t('diagrams.form.copyStepUp', { name: from.name }),
+      );
+      await done(saved, t('diagrams.form.createdCopy', { name: saved.name, parent: from.name, seq }));
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const submit = () => {
     if (!form.name.trim()) {
       setNameError(t('diagrams.form.nameRequired'));
       return;
     }
+    if (parent && copySeq && start === 'copy') {
+      void copyChild(parent, copySeq);
+      return;
+    }
     save.mutate(form, {
-      onSuccess: async (saved) => {
-        await queryClient.invalidateQueries({ queryKey: TREE_KEY });
-        await queryClient.invalidateQueries({ queryKey: nodeKey(saved.id) });
-        toast({ tone: 'ok', message: t(editing ? 'diagrams.updated' : 'diagrams.created', { name: saved.name }) });
-        onClose();
-      },
+      onSuccess: (saved) => done(saved, t(editing ? 'diagrams.updated' : 'diagrams.created', { name: saved.name })),
       onError: (error) => toast({ tone: 'error', message: errorMessage(error) }),
     });
   };
@@ -91,7 +127,7 @@ export function DiagramNodeDialog({
     <Dialog
       open
       onOpenChange={onClose}
-      dismissible={!save.isPending}
+      dismissible={!busy}
       guardUnsaved
       maxWidth={520}
       initialFocus="first-field"
@@ -105,7 +141,7 @@ export function DiagramNodeDialog({
       footer={
         <>
           <DialogCancel>{t('diagrams.form.cancel')}</DialogCancel>
-          <button type="submit" form="diagram-node-form" className="btn primary" disabled={save.isPending}>
+          <button type="submit" form="diagram-node-form" className="btn primary" disabled={busy}>
             {t('diagrams.form.save')}
           </button>
         </>
@@ -133,6 +169,20 @@ export function DiagramNodeDialog({
             }}
           />
         </Field>
+        {parent && !node ? (
+          <Field label={t('diagrams.form.start')} hint={copySeq ? t('diagrams.form.startCopyHint') : t('diagrams.form.startParentEmpty')}>
+            <div className="segmented" role="radiogroup" aria-label={t('diagrams.form.start')}>
+              <label>
+                <input type="radio" name="diagram-start" value="copy" disabled={!copySeq} checked={start === 'copy'} onChange={() => setStart('copy')} />
+                {copySeq ? t('diagrams.form.startCopyOf', { seq: copySeq }) : t('diagrams.form.startCopy')}
+              </label>
+              <label>
+                <input type="radio" name="diagram-start" value="blank" checked={start === 'blank'} onChange={() => setStart('blank')} />
+                {t('diagrams.form.startBlank')}
+              </label>
+            </div>
+          </Field>
+        ) : null}
         {renameOnly ? null : (
           <>
             <Field label={t('diagrams.form.nodeType')}>

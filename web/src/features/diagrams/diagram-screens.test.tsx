@@ -4,7 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import type { DiagramDeviceInfo, DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
@@ -143,6 +143,62 @@ describe('Cây bản vẽ', () => {
     renderScreen('/diagrams', me);
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
     expect((await screen.findAllByRole('menuitem')).map((el) => el.textContent)).toEqual(expected);
+  });
+
+  /* Q-23 góp ý 04/10: bản vẽ tầng/phòng vẽ tiếp từ bản cha, nên "Thêm bản vẽ con" mặc định nhân
+     bản; chép nội dung thì hỏi mã sơ đồ như mở xem. */
+  it('Thêm bản vẽ con: mặc định nhân bản nội dung mới nhất của bản cha (qua mã sơ đồ); chọn "Bản trống" thì tạo rỗng', async () => {
+    const parent = node('d1', null, 'Tổng công ty E2E', {
+      status: 'official',
+      latestVersion: { id: 'v3', seq: 3, savedAt: '2026-10-03T01:00:00Z', savedBy: 'sa@e2e.local' },
+    });
+    const calls: string[] = [];
+    let copies = 0;
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/d1/copied-children': () => {
+        calls.push('copy');
+        copies += 1;
+        return copies === 1
+          ? jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })
+          : jsonResponse(201, node('c1', 'd1', 'Tầng 2 E2E'));
+      },
+      '/api/v1/auth/step-up': () => jsonResponse(200, { status: 'stepped-up', scope: 'diagram', graceMinutes: 10 }),
+      '/api/v1/diagrams': () => jsonResponse(200, [parent]),
+    });
+    renderScreen('/diagrams', MEMBER);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Thêm bản vẽ con' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Tổng công ty E2E"' });
+    const copy = screen.getByRole('radio', { name: 'Nhân bản từ bản cha (phiên bản #3)' });
+    expect(copy).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Bản trống' })).not.toBeChecked();
+    await user.type(screen.getByRole('textbox', { name: /Tên bản vẽ/ }), 'Tầng 2 E2E');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    const step = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    expect(step).toBeInTheDocument();
+    expect(calls).toEqual(['copy']);
+    await user.type(within(step).getAllByRole('textbox')[0], '123456');
+    // Mã đủ 6 số là tự gửi; lượt sau gọi lại đúng yêu cầu nhân bản.
+    expect(await screen.findByText('Đã tạo bản vẽ "Tầng 2 E2E" — nhân bản từ "Tổng công ty E2E" phiên bản #3.')).toBeInTheDocument();
+    expect(dialog).not.toBeInTheDocument();
+    const body = fetchMock.mock.calls.filter(([url]) => String(url).includes('/copied-children')).map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+    expect(body.at(-1)).toEqual({ name: 'Tầng 2 E2E', nodeType: 'floor' });
+  });
+
+  it('Thêm bản vẽ con dưới bản cha chưa có nội dung: chỉ "Bản trống", không hỏi mã', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams': () => jsonResponse(201, node('c1', 'd1', 'Tầng 2 E2E')),
+    });
+    fetchMock.mockImplementationOnce(() => Promise.resolve(jsonResponse(200, [ROOT])));
+    renderScreen('/diagrams', MEMBER);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Thêm bản vẽ con' }));
+    await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Tổng công ty E2E"' });
+    expect(screen.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Bản trống' })).toBeChecked();
+    expect(screen.getByText('Bản cha chưa có nội dung nên con bắt đầu từ bản trống.')).toBeInTheDocument();
   });
 });
 

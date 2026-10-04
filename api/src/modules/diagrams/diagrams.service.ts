@@ -397,25 +397,74 @@ export class DiagramsService {
     if (input.parentId) await this.assertLiveParent(input.parentId);
     await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
     if (input.ownerEmail) await this.assertUser(input.ownerEmail);
+    const id = await this.uniqueName(() => this.db.transaction((tx) => this.insertNode(tx, actor, { ...input, name })));
+    return this.node(id);
+  }
+
+  /**
+   * "Thêm bản vẽ con" mặc định NHÂN BẢN nội dung phiên bản mới nhất của bản cha làm phiên bản đầu
+   * của con (Q-23 góp ý 04/10): bản vẽ tầng/phòng thường vẽ tiếp từ bản cha chứ không từ trang
+   * trắng. Phiên bản đầu là một lần lưu mới của người tạo (chụp lại thông tin thiết bị BÂY GIỜ,
+   * AD-14) và là bản nháp — duyệt/phát hành như mọi lần lưu. Bản cha không đổi gì.
+   */
+  async createCopiedChild(actor: string, parentId: string, input: NodeInput): Promise<DiagramNode> {
+    const name = (input.name ?? '').trim();
+    await this.assertLiveParent(parentId);
+    await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
+    if (input.ownerEmail) await this.assertUser(input.ownerEmail);
+    const [parent] = await this.db.select({ name: diagramTable.name }).from(diagramTable).where(eq(diagramTable.id, parentId));
+    const [source] = await this.db
+      .select()
+      .from(diagramVersionTable)
+      .where(eq(diagramVersionTable.diagramId, parentId))
+      .orderBy(desc(diagramVersionTable.seq))
+      .limit(1);
+    if (!source) {
+      throw new ConflictException({
+        code: 'DIAGRAM_PARENT_EMPTY',
+        message: 'Bản vẽ cha chưa có nội dung để nhân bản — chọn "Bản trống".',
+      });
+    }
+    const snapshot = await this.snapshot(source.cellIndex);
+    const diff = diffCellIndex(null, source.cellIndex);
     const id = await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
-        const [row] = await tx
-          .insert(diagramTable)
-          .values({
-            parentId: input.parentId ?? null,
-            name,
-            nodeType: input.nodeType ?? 'other',
-            siteId: input.siteId ?? null,
-            cabinetId: input.cabinetId ?? null,
-            ownerEmail: input.ownerEmail ?? null,
-            createdBy: actor,
-          })
-          .returning({ id: diagramTable.id });
-        await this.record(tx, actor, row.id, 'created', 'diagram.created', { name, parentId: input.parentId ?? null });
-        return row.id;
+        const childId = await this.insertNode(tx, actor, { ...input, name, parentId });
+        await this.insertVersion(tx, actor, childId, {
+          seq: 1,
+          xml: source.xml,
+          svg: source.svg,
+          index: source.cellIndex,
+          snapshot,
+          summary: `Nhân bản từ "${parent.name}" phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
+          diff,
+          basedOnVersionId: null,
+          restoredFromVersionId: null,
+          history: 'version.saved',
+          auditAction: 'diagram.saved',
+          bytes: Buffer.byteLength(source.xml),
+        });
+        return childId;
       }),
     );
     return this.node(id);
+  }
+
+  private async insertNode(tx: Tx, actor: string, input: NodeInput & { name: string }): Promise<string> {
+    const [row] = await tx
+      .insert(diagramTable)
+      .values({
+        parentId: input.parentId ?? null,
+        name: input.name,
+        nodeType: input.nodeType ?? 'other',
+        siteId: input.siteId ?? null,
+        cabinetId: input.cabinetId ?? null,
+        ownerEmail: input.ownerEmail ?? null,
+        createdBy: actor,
+      })
+      .returning({ id: diagramTable.id });
+    await this.record(tx, actor, row.id, 'created', 'diagram.created', { name: input.name, parentId: input.parentId ?? null });
+    return row.id;
   }
 
   async update(by: { email: string; role: UserRole }, id: string, patch: NodeInput): Promise<DiagramNode> {

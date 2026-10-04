@@ -35,6 +35,15 @@ class CreateNodeDto {
   @IsOptional() @IsEmail({}, { message: 'Người phụ trách không hợp lệ.' }) ownerEmail?: string;
 }
 
+/** Bản vẽ con nhân bản: cha nằm ở đường dẫn, không nhận `parentId` trong thân. */
+class CopiedChildDto {
+  @IsString() @Length(1, 120, { message: 'Tên bản vẽ từ 1 đến 120 ký tự.' }) name!: string;
+  @IsIn(DIAGRAM_NODE_TYPES, { message: 'Loại nút không hợp lệ.' }) nodeType!: DiagramNodeType;
+  @IsOptional() @IsUUID(undefined, { message: 'Site không hợp lệ.' }) siteId?: string;
+  @IsOptional() @IsUUID(undefined, { message: 'Tủ mạng không hợp lệ.' }) cabinetId?: string;
+  @IsOptional() @IsEmail({}, { message: 'Người phụ trách không hợp lệ.' }) ownerEmail?: string;
+}
+
 /** `null` ở parentId = đưa lên gốc cây; ở site/tủ/người phụ trách = bỏ gắn. */
 class UpdateNodeDto {
   @IsOptional() @IsString() @Length(1, 120, { message: 'Tên bản vẽ từ 1 đến 120 ký tự.' }) name?: string;
@@ -285,6 +294,18 @@ export class DiagramsController {
   @Audited('diagram.created', 'diagram', { writtenByService: true })
   create(@Body() dto: CreateNodeDto, @Req() req: AuthedRequest) {
     return this.diagrams.create(req.user!.email, dto);
+  }
+
+  /**
+   * "Thêm bản vẽ con" kiểu nhân bản: con mang sẵn nội dung mới nhất của bản cha. Đòi mã sơ đồ vì
+   * nó chép NỘI DUNG bản cha (như tạo bản trình bày); "Bản trống" vẫn đi `POST /diagrams`.
+   */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/copied-children')
+  @Audited(['diagram.created', 'diagram.saved'], 'diagram', { writtenByService: true })
+  createCopiedChild(@Param() params: IdParamDto, @Body() dto: CopiedChildDto, @Req() req: AuthedRequest) {
+    return this.diagrams.createCopiedChild(req.user!.email, params.id, dto);
   }
 
   /** Tên + loại + trạng thái của một nút — màn mở bản vẽ hiện tên trước khi hỏi mã. */

@@ -154,6 +154,33 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = $1 AND archived_at IS NOT NULL`, [b.id])).toBe(1);
       await expect(service.save(SA.email, b.id, { xml: page(''), svg: SVG, basedOnVersionId: null })).rejects.toMatchObject({ status: 409 });
     });
+
+    it('bản vẽ con nhân bản nội dung MỚI NHẤT của bản cha làm bản nháp đầu, lịch sử ghi "Nhân bản từ"; cha trống → 409', async () => {
+      const parent = await service.create(SA.email, { name: 'E2E Cha nhân bản', nodeType: 'site' });
+      await expect(service.createCopiedChild(MEMBER.email, parent.id, { name: 'E2E Con sớm', nodeType: 'floor' })).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'DIAGRAM_PARENT_EMPTY' },
+      });
+      await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Phòng cũ')), svg: SVG, basedOnVersionId: null });
+      const v2 = await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Phòng mới') + shape('s2', 'Kho')), svg: SVG, basedOnVersionId: null });
+
+      const child = await service.createCopiedChild(MEMBER.email, parent.id, { name: 'E2E Tầng nhân bản', nodeType: 'floor', siteId });
+      expect(child).toMatchObject({ parentId: parent.id, name: 'E2E Tầng nhân bản', nodeType: 'floor', siteId, status: 'draft' });
+      const versions = await service.versions(child.id);
+      expect(versions).toHaveLength(1);
+      expect(versions[0]).toMatchObject({ seq: 1, savedBy: MEMBER.email });
+      expect(versions[0].summary).toMatch(new RegExp(`^Nhân bản từ "E2E Cha nhân bản" phiên bản #${v2.seq}`));
+      const content = await service.content(MEMBER.email, child.id, { mode: 'edit' });
+      expect(content.version?.xml).toContain('Phòng mới');
+      expect(content.version?.xml).toContain('Kho');
+      // Bản cha không đổi gì.
+      expect((await service.versions(parent.id)).map((v) => v.seq)).toEqual([v2.seq, v2.seq - 1]);
+      expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.created' AND object_id = $1`, [child.id])).toBe(1);
+      expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.saved' AND object_id = $1`, [child.id])).toBe(1);
+      await expect(service.createCopiedChild(MEMBER.email, parent.id, { name: 'E2E Tầng nhân bản', nodeType: 'floor' })).rejects.toMatchObject({
+        status: 409,
+      });
+    });
   });
 
   describe('phiên bản', () => {

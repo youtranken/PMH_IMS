@@ -205,6 +205,47 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(stepUpDialog(page)).toHaveCount(0);
   });
 
+  test('Thêm bản vẽ con mặc định nhân bản bản cha (hỏi mã sơ đồ), lịch sử ghi "Nhân bản từ"; cha trống chỉ có "Bản trống"', async ({ page }) => {
+    test.setTimeout(120_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const parentName = `E2E Cha ${stamp}`;
+    const parent = await createDiagram(page, parentName);
+    const empty = await createDiagram(page, `E2E Cha trống ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    expect((await saveViaApi(page, parent)).status()).toBe(201);
+    expireStepUp(E2E_SA.email);
+
+    await page.goto('/diagrams');
+    await rowAction(page, parentName, 'Thêm bản vẽ con');
+    let form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
+    await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha (phiên bản #1)' })).toBeChecked();
+    await form.getByLabel('Tên bản vẽ').fill(`E2E Tầng con ${stamp}`);
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
+    // Chép NỘI DUNG bản cha nên hỏi mã sơ đồ (ân hạn vừa bị cắt).
+    await fillOtp(stepUpDialog(page), await freshTotpCode(secret));
+    await expect(page.getByText(`Đã tạo bản vẽ "E2E Tầng con ${stamp}" — nhân bản từ "${parentName}" phiên bản #1.`)).toBeVisible();
+
+    await page.getByRole('link', { name: `E2E Tầng con ${stamp}` }).click();
+    await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toContainText('Tầng 3 E2E');
+    await diagramBarAction(page, 'Phiên bản');
+    await expect(page.getByRole('dialog', { name: 'Phiên bản và lịch sử' }).getByText(new RegExp(`^Nhân bản từ "${parentName}" phiên bản #1`))).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Đường hỏng: cha chưa có nội dung → không nhân bản được, chỉ bản trống.
+    await page.goto('/diagrams');
+    await rowAction(page, `E2E Cha trống ${stamp}`, 'Thêm bản vẽ con');
+    form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "E2E Cha trống ${stamp}"` });
+    await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeDisabled();
+    await expect(form.getByRole('radio', { name: 'Bản trống' })).toBeChecked();
+    const direct = await page.request.post(`/api/v1/diagrams/${empty}/copied-children`, {
+      headers: await writeHeaders(page),
+      data: { name: `E2E Con lạc ${stamp}`, nodeType: 'floor' },
+      failOnStatusCode: false,
+    });
+    expect(direct.status()).toBe(409);
+  });
+
   test('Thành viên vẽ được (tạo bản vẽ, lưu, đặt tên bản của mình); đổi tên / lưu trữ / khôi phục → 403, menu không bày', async ({ page }) => {
     const secret = await firstLogin(page, E2E_MEMBER);
     const name = `E2E Thành viên ${uniqueStamp()}`;
