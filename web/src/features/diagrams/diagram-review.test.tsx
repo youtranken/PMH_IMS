@@ -285,17 +285,18 @@ describe('Cây bản vẽ — trạng thái duyệt', () => {
         '/api/v1/diagrams',
         () =>
           jsonResponse(200, [
-            diagram({ id: 'g1', name: 'A E2E', status: 'pending', pendingApprovalId: 'a1' }),
-            diagram({ id: 'g2', name: 'B E2E', status: 'official', officialSeq: 3 }),
-            diagram({ id: 'g3', name: 'C E2E', status: 'official_draft', officialSeq: 3 }),
+            diagram({ id: 'g0', name: 'Gốc E2E', status: 'empty', latestVersion: null }),
+            diagram({ id: 'g1', parentId: 'g0', name: 'A E2E', status: 'pending', pendingApprovalId: 'a1' }),
+            diagram({ id: 'g2', parentId: 'g0', name: 'B E2E', status: 'official', officialSeq: 3 }),
+            diagram({ id: 'g3', parentId: 'g0', name: 'C E2E', status: 'official_draft', officialSeq: 3 }),
           ]),
       ],
     ]);
-    renderScreen('/diagrams', SA);
-    const items = await screen.findAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Chờ duyệt');
-    expect(items[1]).toHaveTextContent('Chính thức v3');
-    expect(items[2]).toHaveTextContent('Chính thức v3 · có bản nháp');
+    renderScreen('/diagrams?node=g0', SA);
+    const cards = within(await screen.findByRole('list', { name: 'Bản vẽ trong "Gốc E2E"' })).getAllByRole('listitem');
+    expect(cards[1]).toHaveTextContent('Chờ duyệt');
+    expect(cards[2]).toHaveTextContent('Chính thức v3');
+    expect(cards[3]).toHaveTextContent('Chính thức v3 · có bản nháp');
   });
 });
 

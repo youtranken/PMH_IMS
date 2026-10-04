@@ -158,7 +158,7 @@ describe('Cây bản vẽ — dấu lệch kho', () => {
       '/api/v1/diagrams': () =>
         jsonResponse(200, [
           { ...NODE, driftCount: 2 },
-          { ...NODE, id: 'd2', name: 'Tầng 1 E2E', driftCount: 0 },
+          { ...NODE, id: 'd2', parentId: NODE.id, name: 'Tầng 1 E2E', driftCount: 0 },
         ]),
     });
     renderWithI18n(
@@ -172,7 +172,8 @@ describe('Cây bản vẽ — dấu lệch kho', () => {
         </ToastProvider>
       </MemoryRouter>,
     );
-    const items = await screen.findAllByRole('listitem');
+    // Thẻ "Bản vẽ này" (gốc đang chọn) rồi thẻ con.
+    const items = within(await screen.findByRole('list', { name: /^Bản vẽ trong/ })).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Lệch kho (2)');
     expect(items[1]).not.toHaveTextContent('Lệch kho');
   });

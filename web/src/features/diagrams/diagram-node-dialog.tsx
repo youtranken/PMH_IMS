@@ -31,6 +31,7 @@ export function DiagramNodeDialog({
   node,
   run,
   onClose,
+  onSaved,
 }: {
   me: Me;
   nodes: DiagramNode[];
@@ -39,6 +40,8 @@ export function DiagramNodeDialog({
   /** `useStepUpRetry().run` của màn — chỉ cần khi tạo bản vẽ con kiểu nhân bản. */
   run?: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   onClose: () => void;
+  /** Sau khi lưu xong (`created` = vừa tạo mới) — màn cây chọn nút vừa tạo để thẻ của nó hiện ra. */
+  onSaved?: (saved: DiagramNode, created: boolean) => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -86,6 +89,7 @@ export function DiagramNodeDialog({
     await queryClient.invalidateQueries({ queryKey: TREE_KEY });
     await queryClient.invalidateQueries({ queryKey: nodeKey(saved.id) });
     toast({ tone: 'ok', message });
+    onSaved?.(saved, !editing);
     onClose();
   };
 

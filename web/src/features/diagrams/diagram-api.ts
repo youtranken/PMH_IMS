@@ -23,7 +23,8 @@ export interface DiagramNode {
   kind: 'official' | 'presentation';
   archivedAt: string | null;
   status: DiagramStatus;
-  latestVersion: { id: string; seq: number; savedAt: string; savedBy: string } | null;
+  /** `savedByName` = tên người lưu cho thẻ "v12 · Thuận"; thiếu/`null` thì hiện email. */
+  latestVersion: { id: string; seq: number; savedAt: string; savedBy: string; savedByName?: string | null } | null;
   /** Số phiên bản chính thức ("chính thức v3"); `null` = chưa phát hành. Thiếu → coi như `null`. */
   officialSeq?: number | null;
   /** Phiên bản chính thức hiện hành — trình chiếu mở đúng bản này. Thiếu → coi như `null`. */

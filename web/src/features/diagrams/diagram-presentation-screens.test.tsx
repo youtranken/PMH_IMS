@@ -4,7 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, pickMenuItem } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within, pickMenuItem } from '@/test/test-utils';
 import type { DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
@@ -79,11 +79,12 @@ afterEach(() => vi.unstubAllGlobals());
 describe('Cây bản vẽ — mục "Bản trình bày" riêng (Q-23)', () => {
   it('bản trình bày không nằm trong cây chính thức; hiện nguồn và báo bản gốc có bản mới', async () => {
     routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, PRES_NEWER]) });
-    renderAt('/diagrams');
-    const tree = await screen.findByRole('list', { name: 'Cây bản vẽ' });
-    expect(tree).toHaveTextContent('Tầng 1 E2E');
-    expect(tree).not.toHaveTextContent('trình bày');
-    const section = screen.getByRole('list', { name: 'Bản trình bày' });
+    renderAt('/diagrams?node=presentations');
+    // Cây chính thức không chứa bản trình bày: chúng nằm dưới nhóm "Trình bày (n)" ở cuối cây.
+    const tree = await screen.findByRole('tree', { name: 'Cây bản vẽ' });
+    expect(within(tree).getAllByRole('treeitem').map((el) => el.textContent)).toEqual(['Tầng 1 E2E', 'Trình bày (1)', 'Tầng 1 E2E — trình bày']);
+    expect(within(tree).getByRole('treeitem', { name: 'Trình bày (1)' })).toHaveAttribute('aria-selected', 'true');
+    const section = screen.getByRole('list', { name: 'Các bản trình bày' });
     expect(section).toHaveTextContent('Tầng 1 E2E — trình bày');
     expect(section).toHaveTextContent('Từ "Tầng 1 E2E" · chính thức v1');
     expect(section).toHaveTextContent('Bản gốc đã có phiên bản mới (4)');
@@ -97,11 +98,17 @@ describe('Cây bản vẽ — Thành viên quản bản trình bày của mình'
 
   it('bản mình tạo: Đổi tên + Lưu trữ; bản người khác: không có thao tác', async () => {
     routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE, THEIRS]) });
-    renderAt('/diagrams', MEMBER);
-    await screen.findByRole('list', { name: 'Bản trình bày' });
+    renderAt('/diagrams?node=presentations', MEMBER);
+    await screen.findByRole('list', { name: 'Các bản trình bày' });
     expect(screen.queryByRole('button', { name: 'Thao tác với E2E Của người khác' })).toBeNull();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với E2E Của tôi' }));
-    expect((await screen.findAllByRole('menuitem')).map((el) => el.textContent)).toEqual(['Đổi tên', 'Lưu trữ']);
+    // Bản trình bày chưa bao giờ phát hành: người tạo xóa hẳn được (Q-23).
+    const names = (await screen.findAllByRole('menuitem')).map((el) => {
+      const copy = el.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+      return copy.textContent;
+    });
+    expect(names).toEqual(['Đổi tên', 'Lưu trữ', 'Xóa hẳn']);
   });
 
   it('Đổi tên: hộp chỉ có ô tên, PATCH chỉ gửi tên', async () => {
@@ -109,7 +116,7 @@ describe('Cây bản vẽ — Thành viên quản bản trình bày của mình'
       '/api/v1/diagrams/p-mine': () => jsonResponse(200, { ...MINE, name: 'E2E Tên mới' }),
       '/api/v1/diagrams': () => jsonResponse(200, [OFFICIAL, MINE]),
     });
-    renderAt('/diagrams', MEMBER);
+    renderAt('/diagrams?node=p-mine', MEMBER);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với E2E Của tôi' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Đổi tên' }));

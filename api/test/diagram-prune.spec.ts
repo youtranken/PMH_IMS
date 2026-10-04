@@ -184,7 +184,10 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
       );
       expect(rows.map((r) => r.detail)).toEqual([expect.objectContaining({ count: 3, ranges: '#3–#5' })]);
       // Cây trở lại "chính thức", lưu tiếp lấy số kế tiếp sau #2.
-      expect((await diagrams.node(d.id)).status).toBe('official');
+      const node = await diagrams.node(d.id);
+      expect(node.status).toBe('official');
+      // Thẻ cây "v2 · <tên>": tên người lưu đi kèm cây, không phải tra riêng.
+      expect(node.latestVersion).toMatchObject({ seq: 2, savedBy: SA.email, savedByName: SA.fullName });
       const next = await diagrams.save(SA.email, d.id, { xml: page(shape('z', 'Sau dọn')), svg: SVG, basedOnVersionId: d.versions[1] });
       expect(next.seq).toBe(3);
     });

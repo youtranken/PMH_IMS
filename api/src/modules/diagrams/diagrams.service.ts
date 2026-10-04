@@ -84,6 +84,8 @@ export interface VersionRef {
   seq: number;
   savedAt: string;
   savedBy: string;
+  /** Tên người lưu cho thẻ "v12 · Thuận" của cây — một lượt tra cho cả cây. */
+  savedByName: string | null;
 }
 
 export interface DiagramNode {
@@ -364,9 +366,17 @@ export class DiagramsService {
        WHERE ${where}
        ORDER BY lower(d.name), d.id
     `);
+    const savers = [...new Set(rows.map((r) => r.v_by?.toLowerCase()).filter((e): e is string => Boolean(e)))];
+    const names = savers.length > 0 ? await this.users.namesByEmails(savers) : new Map<string, string>();
     return rows.map((row) => {
       const latest: VersionRef | null = row.v_id
-        ? { id: row.v_id, seq: Number(row.v_seq), savedAt: iso(row.v_at)!, savedBy: row.v_by ?? '' }
+        ? {
+            id: row.v_id,
+            seq: Number(row.v_seq),
+            savedAt: iso(row.v_at)!,
+            savedBy: row.v_by ?? '',
+            savedByName: row.v_by ? (names.get(row.v_by.toLowerCase()) ?? null) : null,
+          }
         : null;
       return {
         id: row.id,
@@ -1278,7 +1288,7 @@ export class DiagramsService {
     const svg = sanitizeDiagramSvg(input.svg, { svgMaxKb });
     if (svg.reason) throw new BadRequestException({ code: 'DIAGRAM_SVG_INVALID', message: svg.reason });
     if (hasReservedImageRef(input.xml) || hasReservedImageRef(svg.value ?? '')) {
-      throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: 'Bản vẽ chứa chuỗi "ims-img:" dành riêng cho IMS — xoá chữ đó rồi lưu lại.' });
+      throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: 'Bản vẽ chứa chuỗi "ims-img:" dành riêng cho IMS — xóa chữ đó rồi lưu lại.' });
     }
     // Lưu "khô" (AD-18): hình/nhãn/dấu/ảnh IMS dựng lại từ kho mỗi lần mở, không đóng băng vào phiên bản.
     const xml = dehydrateDiagramXml(input.xml);

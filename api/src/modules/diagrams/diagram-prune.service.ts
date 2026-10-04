@@ -88,7 +88,7 @@ export class DiagramPruneService {
       const diagram = await this.lock(tx, diagramId, true);
       const creator = diagram.createdBy.toLowerCase() === actor.email.toLowerCase();
       if (!creator && !canManageNode(diagram, actor)) {
-        throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Admin/SA hoặc người tạo bản vẽ này mới xoá hẳn được.' });
+        throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Admin/SA hoặc người tạo bản vẽ này mới xóa hẳn được.' });
       }
       if (confirmName.trim() !== diagram.name.trim()) {
         throw new BadRequestException({ code: 'DIAGRAM_CONFIRM_NAME', message: 'Tên gõ lại không khớp tên bản vẽ.' });
@@ -101,7 +101,7 @@ export class DiagramPruneService {
       if (diagram.officialVersionId || published.length > 0) {
         throw new ConflictException({
           code: 'DIAGRAM_PUBLISHED',
-          message: 'Bản vẽ đã từng phát hành là hồ sơ — không xoá hẳn được. Dùng "Lưu trữ", hoặc "Bỏ bản nháp" để dọn các lần lưu dở.',
+          message: 'Bản vẽ đã từng phát hành là hồ sơ — không xóa hẳn được. Dùng "Lưu trữ", hoặc "Bỏ bản nháp" để dọn các lần lưu dở.',
         });
       }
       const [child] = await tx
@@ -110,11 +110,11 @@ export class DiagramPruneService {
         .where(and(or(eq(diagramTable.parentId, diagramId), eq(diagramTable.sourceDiagramId, diagramId)), isNull(diagramTable.deletedAt)))
         .limit(1);
       if (child) {
-        throw new ConflictException({ code: 'DIAGRAM_HAS_CHILDREN', message: 'Bản vẽ còn bản vẽ con (kể cả đã lưu trữ) — xoá hoặc chuyển chúng trước.' });
+        throw new ConflictException({ code: 'DIAGRAM_HAS_CHILDREN', message: 'Bản vẽ còn bản vẽ con (kể cả đã lưu trữ) — xóa hoặc chuyển chúng trước.' });
       }
       const pending = await this.approvals.list({ kind: PUBLISH_KIND, subjectId: diagramId, state: 'pending' });
       if (pending.length > 0) {
-        throw new ConflictException({ code: 'DIAGRAM_REVIEW_PENDING', message: 'Bản vẽ đang có yêu cầu chờ duyệt — rút yêu cầu trước rồi mới xoá.' });
+        throw new ConflictException({ code: 'DIAGRAM_REVIEW_PENDING', message: 'Bản vẽ đang có yêu cầu chờ duyệt — rút yêu cầu trước rồi mới xóa.' });
       }
       const now = new Date();
       await tx

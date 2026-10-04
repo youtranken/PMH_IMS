@@ -1260,3 +1260,136 @@ button.btn-x.danger:hover:not(:disabled) {
 .tree-summary {
   flex-basis: 100%;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Màn cây bản vẽ hai cột (Q-23): cây bên trái (`.board-rail` + `.board-tree`), thẻ bản vẽ bên
+   phải (`.board-cards > .board-card`). Cột cây cố định như cột dải của màn IP: cây là thứ để
+   CHỌN, thẻ mới là thứ để đọc — cột co theo tên dài thì thẻ nhảy chỗ mỗi lần chọn.
+   ───────────────────────────────────────────────────────────────────────────── */
+.board-split {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+/* Cây CUỘN RIÊNG, dính dưới topbar (56px): cây dài không kéo cả trang theo. */
+.board-rail {
+  position: sticky;
+  top: calc(56px + var(--space-7));
+  max-height: calc(100vh - 56px - var(--space-7) * 2);
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+.board-rail > .form-section-title {
+  margin: 0 0 var(--space-3);
+}
+.board-tree .tree-row {
+  flex-wrap: nowrap;
+  border-bottom: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.board-tree .tree-row:hover {
+  background: var(--surface-2);
+}
+.board-tree .tree-row[aria-selected='true'] {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+.board-tree .tree-row:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.board-tree .tree-row[data-group] .tree-name {
+  color: var(--ink-2);
+}
+.board-tree .tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.board-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.board-toolbar {
+  margin: 0;
+}
+.board-filter {
+  min-width: 200px;
+}
+.board-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-5);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+/* Thẻ "Bản vẽ này" (nút đang chọn) đứng đầu: viền thương hiệu để không lẫn với thẻ con. */
+.board-card[data-self] {
+  border-color: var(--primary);
+}
+.board-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.board-card-title {
+  min-width: 0;
+}
+.board-card-title h3 {
+  margin: 0;
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+.board-card-title a {
+  color: inherit;
+}
+.board-card-kicker {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--primary-ink);
+}
+.board-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.board-card-meta {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.board-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+/* Màn hẹp: cây thành ô chọn phía trên (màn tự đổi), thẻ xếp một cột. */
+@media (max-width: 900px) {
+  .board-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+  .board-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .board-filter {
+    min-width: 0;
+  }
+}
