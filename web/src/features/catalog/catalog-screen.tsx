@@ -51,6 +51,7 @@ import {
   type CableTypeRow,
 } from '@/lib/catalog-types';
 import { CableSwatch } from '@/ui/cable-swatch';
+import { lowerFirstAfterNumber } from '@/lib/count-label';
 
 const DEFAULT_LIMIT = 20;
 
@@ -615,7 +616,7 @@ export function CatalogScreen({ me }: { me: Me }) {
                 }) +
                 (catalogRow.active && usageTotal(catalogRow) > 0
                   ? ' ' +
-                    t('catalog.deactivateInUse', { usage: usageSummary(entity, catalogRow, t) })
+                    t('catalog.deactivateInUse', { usage: lowerFirstAfterNumber(usageSummary(entity, catalogRow, t)) })
                   : ''),
               danger: catalogRow.active,
               confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
@@ -647,7 +648,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         disabled: usageTotal(catalogRow) > 0,
         hint:
           usageTotal(catalogRow) > 0
-            ? t('catalog.deleteInUse', { usage: usageSummary(entity, catalogRow, t) })
+            ? t('catalog.deleteInUse', { usage: lowerFirstAfterNumber(usageSummary(entity, catalogRow, t)) })
             : undefined,
         onSelect: () => {
           void (async () => {

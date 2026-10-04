@@ -713,10 +713,11 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
         : `${viDate(item.end)} — còn ${item.daysLeft} ngày`,
   }));
 
-  // Số đứng đầu cụm thì danh từ viết hoa (Q-24): "3 Mục sắp hết hạn".
+  // Số đứng ĐẦU cụm thì danh từ viết hoa, số giữa câu thì không (Q-24): "3 Mục sắp hết hạn",
+  // "1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn".
   const headline =
     digest.expired > 0
-      ? `${digest.expired} Mục ĐÃ QUÁ HẠN, ${digest.upcoming} Mục sắp hết hạn`
+      ? `${digest.expired} Mục ĐÃ QUÁ HẠN, ${digest.upcoming} mục sắp hết hạn`
       : `${digest.upcoming} Mục sắp hết hạn`;
 
   const { html, text } = renderMail({

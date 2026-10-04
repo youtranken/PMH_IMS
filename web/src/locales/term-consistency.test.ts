@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import vi from './vi';
+import { lowerFirstAfterNumber } from '@/lib/count-label';
 
 /**
  * ĐIỂM DANH: một khái niệm chỉ được mang MỘT tên trên toàn giao diện.
@@ -458,8 +459,9 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
 describe('Q-24: số đứng đầu cụm thì danh từ theo sau viết hoa', () => {
   const UNITS = ['giờ', 'phút', 'giây', 'ngày', 'tuần', 'tháng', 'năm', 'lần', 'host'];
   const NOT_NOUNS = ['đã', 'còn', 'có', 'chưa', 'hoặc', 'nghĩa', 'trên', 'gửi', 'đăng', 'sẽ', 'bị', 'chỉ'];
-  /** Mảnh chỉ ghép vào GIỮA câu ("Mở rộng PC-01 — 2 license"), không bao giờ đứng đầu cụm. */
-  const MID_PHRASE_KEYS = ['devices.licenseCount'];
+  /** Mảnh chỉ ghép vào GIỮA câu ("Mở rộng PC-01 — 2 license", "…, trong đó 1 nhóm chưa gán cho
+      ai"), không bao giờ đứng đầu cụm. */
+  const MID_PHRASE_KEYS = ['devices.licenseCount', 'access.summaryEmpty'];
 
   function raw(node: unknown = vi, path = ''): Array<[string, string]> {
     if (typeof node === 'string') return [[path, node]];
@@ -495,3 +497,56 @@ describe('Q-24: số đứng đầu cụm thì danh từ theo sau viết hoa', (
   });
 });
 
+/**
+ * Q-24, vế ngược: luật viết hoa chỉ áp ở ĐẦU cụm. Nhãn đếm ghép vào giữa câu ("Đang dùng ở
+ * {{usage}}") phải đi qua `lowerFirstAfterNumber`, và không chuỗi nào tự viết hoa danh từ sau số
+ * ở giữa câu.
+ */
+describe('Q-24: số giữa câu thì danh từ theo sau viết thường', () => {
+  function strings(node: unknown = vi, path = ''): Array<[string, string]> {
+    if (typeof node === 'string') return [[path, node]];
+    if (node && typeof node === 'object') {
+      return Object.entries(node as Dict).flatMap(([k, v]) => strings(v, path ? `${path}.${k}` : k));
+    }
+    return [];
+  }
+
+  /** Số / {{biến}} KHÔNG đứng đầu chuỗi hay sau "·", theo sau là từ viết hoa (không phải viết tắt). */
+  function midCapitalised(text: string): string[] {
+    const re = /(?<!^|·\s*|·)(?<=\S\s+)(\{\{\w+\}\}|\d+)\s+(\p{Lu}\p{Ll}[\p{L}\p{M}]*)/gu;
+    return [...text.matchAll(re)].map((m) => m[2]);
+  }
+
+  it('bộ dò bắt đúng mẫu (đối chứng)', () => {
+    expect(midCapitalised('Đang dùng ở 1 Tủ mạng')).toEqual(['Tủ']);
+    expect(midCapitalised('{{count}} Tủ mạng · {{n}} Dây')).toEqual([]);
+    expect(midCapitalised('Đã thêm {{count}} máy · cổng {{n}} IP')).toEqual([]);
+  });
+
+  /** Đơn vị đo viết hoa theo chuẩn, không phải danh từ đếm. */
+  const UNITS = ['Mbps', 'Gbps'];
+  /** Biến ở đây là cả một câu ("{{reason}} Sửa rồi…"), chữ hoa sau nó là đầu câu mới. */
+  const SENTENCE_VARS = ['license.assignPartial'];
+
+  it('không chuỗi nào viết hoa danh từ sau số ở giữa câu', () => {
+    const bad = strings()
+      .filter(([key]) => !SENTENCE_VARS.includes(key))
+      .flatMap(([key, text]) => midCapitalised(text).map((word) => [key, word] as const))
+      .filter(([, word]) => !UNITS.includes(word))
+      .map(([key, word]) => `${key}: "${word}"`);
+    expect(bad).toEqual([]);
+  });
+
+  it('khoá "Đang dùng ở" của danh mục: nhãn đếm ghép vào giữa câu thành chữ thường', () => {
+    const fill = (template: string, values: Record<string, string | number>) =>
+      template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values[name]));
+    const usage = [
+      fill(vi.catalog.usage_cabinet, { count: 1 }),
+      fill(vi.catalog.usage_subnet, { count: 2 }),
+    ].join(' · ');
+    expect(usage).toBe('1 Tủ mạng · 2 Dải IP');
+    expect(fill(vi.catalog.deleteInUse, { usage: lowerFirstAfterNumber(usage) })).toBe(
+      'Đang dùng ở 1 tủ mạng · 2 dải IP — hãy Ngừng dùng',
+    );
+  });
+});

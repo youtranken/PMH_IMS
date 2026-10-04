@@ -529,6 +529,9 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   "12 Tài khoản · 30 Dòng quyền". Áp cho nhãn đếm / chip / dòng tóm tắt ở đầu câu hoặc đầu một
   cụm ngăn bằng "·". KHÔNG áp cho đơn vị đo (giờ, phút, giây, ngày, tháng, năm, lần, %, MB…):
   "5 ngày trước", "2 giờ" giữ nguyên — đó là lượng, không phải danh từ đếm hồ sơ.
+  **Chỉ ở ĐẦU cụm** (bổ sung 04/10, chủ dự án): cùng nhãn đếm ghép vào GIỮA câu thì danh từ viết
+  thường — "Đang dùng ở 1 tủ mạng — hãy Ngừng dùng", "…, trong đó 1 nhóm chưa gán cho ai",
+  "1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn".
 
 ### Q-09 · Tài liệu
 

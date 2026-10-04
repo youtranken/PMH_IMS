@@ -218,7 +218,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-HCM/ }));
     const blocked = screen.getByRole('menuitem', { name: 'Xóa' });
     expect(blocked).toBeDisabled();
-    expect(screen.getByText('Đang dùng ở 3 Thiết bị — hãy Ngừng dùng')).toBeInTheDocument();
+    expect(screen.getByText('Đang dùng ở 3 thiết bị — hãy Ngừng dùng')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-DN/ }));
     expect(screen.getByRole('menuitem', { name: 'Xóa' })).toBeEnabled();

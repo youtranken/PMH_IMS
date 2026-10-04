@@ -123,7 +123,7 @@ test.describe('Danh mục', () => {
     await expect(siteRow.getByRole('link', { name: '1 Tủ mạng' })).toBeVisible();
     await page.getByRole('button', { name: `Thao tác với ${siteCode}` }).click();
     await expect(page.getByRole('menuitem', { name: 'Xóa' })).toBeDisabled();
-    await expect(page.getByText('Đang dùng ở 1 Tủ mạng — hãy Ngừng dùng')).toBeVisible();
+    await expect(page.getByText('Đang dùng ở 1 tủ mạng — hãy Ngừng dùng')).toBeVisible();
     await page.keyboard.press('Escape');
 
     // Nút bị khóa chỉ là lời báo trước; hàng rào thật vẫn là khóa ngoại ở API.

@@ -3252,7 +3252,7 @@ export default {
     addPeopleTo: 'Gán "{{scope}}" cho nhiều người',
     grantedByLine: 'Người gán: {{actor}}',
     summaryMain: '{{people}} Tài khoản · {{rules}} Dòng quyền · {{scopes}} Nhóm đối tượng, trong đó',
-    summaryEmpty: '{{count}} Nhóm chưa gán cho ai',
+    summaryEmpty: '{{count}} nhóm chưa gán cho ai',
     onlyEmpty: 'Chỉ nhóm chưa ai được gán',
     noScopes: 'Không có nhóm đối tượng nào khớp',
     grantScopeTitle: 'Gán "{{scope}}" cho người dùng',
