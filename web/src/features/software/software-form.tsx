@@ -8,6 +8,7 @@ import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
+import { SubmitButton } from '@/ui/submit-button';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
@@ -172,9 +173,7 @@ export function SoftwareForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="software-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="software-form" busy={busy} succeeded={save.isSuccess} />
         </>
       }
     >

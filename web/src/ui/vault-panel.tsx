@@ -15,6 +15,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
+import { SubmitButton } from '@/ui/submit-button';
 import type { TotpReveal } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
@@ -839,9 +840,7 @@ function SecretForm({
           <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="secret-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="secret-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >

@@ -1817,21 +1817,6 @@ html[data-motion='off'] .countdown-num.urgent { animation: none; }
   color: var(--ink-3);
 }
 .reveal-username { margin: 0; }
-/* Thanh mỏng "còn hiện bao lâu" — màu theo cùng `countdownTone` với con số. */
-.reveal-progress {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border-2);
-  overflow: hidden;
-}
-.reveal-progress > span {
-  display: block;
-  height: 100%;
-  background: var(--ok);
-  transition: width 0.25s linear;
-}
-.reveal-progress > span.warn { background: var(--warn); }
-.reveal-progress > span.urgent { background: var(--danger); }
 /* Ô giá trị của két + nút Hiện/Ẩn + Tạo ngẫu nhiên trên một hàng. */
 .secret-input {
   display: flex;
