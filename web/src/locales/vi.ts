@@ -82,6 +82,10 @@ export default {
     /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
     retiredOption: '(ngừng dùng)',
   },
+  stepper: {
+    dec: 'Giảm {{subject}}',
+    inc: 'Tăng {{subject}}',
+  },
   datePicker: {
     choose: 'Chọn ngày',
     clear: 'Xóa ngày',
@@ -1332,6 +1336,8 @@ export default {
     rackUStart: 'U bắt đầu',
     rackUStartHint: 'U thấp nhất máy chiếm, U1 ở đáy tủ.',
     rackUSize: 'Số U',
+    rackUSizeNoun: 'số U',
+    rackUStartNoun: 'U bắt đầu',
     rackUPair: 'Ghi cả "U bắt đầu" và "Số U", hoặc bỏ trống cả hai.',
     rackURange: 'Số nguyên từ 1 tới 60.',
     photosTitle: 'Ảnh thật trên sơ đồ',
@@ -1610,6 +1616,7 @@ export default {
     /* 'Ghế', không phải 'Seat' — `seatsNote` ngay dưới cột này đã nói "ghế đã gán". */
     seats: 'Ghế',
     seatTotal: 'Số ghế',
+    seatStepperNoun: 'số ghế',
     licenseModel: 'Kỳ hạn',
     /* Bong bóng (i) của ô Kỳ hạn: nói cả hai lựa chọn để đọc được TRƯỚC khi chọn. */
     licenseModelTip:

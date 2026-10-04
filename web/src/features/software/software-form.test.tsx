@@ -89,6 +89,28 @@ describe('Form hồ sơ phần mềm', () => {
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toBeInTheDocument();
   });
 
+  it('Số ghế có nút − / +; − dừng ở số máy đang dùng, lưu đúng số đã bấm (Q-24)', async () => {
+    const writes = mockFetch();
+    render({ ...ROW, seatTotal: 4, seatUsed: 3 });
+    const seat = screen.getByRole('textbox', { name: 'Số ghế' });
+    await userEvent.click(screen.getByRole('button', { name: 'Giảm số ghế' }));
+    expect(seat).toHaveValue('3');
+    expect(screen.getByRole('button', { name: 'Giảm số ghế' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Tăng số ghế' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Tăng số ghế' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ seatTotal: 5 });
+  });
+
+  it('Thời hạn (Thuê bao / Vĩnh viễn) là dải nút nằm thẳng trong ô form — CSS trải đều (Q-24)', () => {
+    mockFetch();
+    render(null);
+    const group = screen.getByRole('radiogroup', { name: 'Kỳ hạn' });
+    expect(group.parentElement).toHaveClass('field');
+    expect(group).toHaveClass('segmented');
+  });
+
   it('SỬA: lời nhắc "lưu ngay" của giấy tờ nằm sau nút (i) cạnh tiêu đề khu', async () => {
     mockFetch();
     render(ROW);

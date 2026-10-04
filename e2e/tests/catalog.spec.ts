@@ -62,7 +62,7 @@ test.describe('Danh mục', () => {
     await expect(cabinetForm.getByRole('textbox', { name: 'Vị trí / mô tả' })).toHaveAccessibleDescription(
       /vd P\.server tầng 2/,
     );
-    await cabinetForm.getByLabel('Số U').fill('42');
+    await cabinetForm.getByRole('textbox', { name: 'Số U' }).fill('42');
     await cabinetForm.getByRole('button', { name: 'Lưu' }).click();
 
     const cabinetRow = page.getByRole('row', { name: new RegExp(cabinetCode) });

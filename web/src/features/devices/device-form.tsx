@@ -4,6 +4,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
+import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
@@ -412,25 +413,23 @@ export function DeviceForm({
           {form.cabinetId ? (
             <>
               <Field label={t('devices.rackUStart')} hint={t('devices.rackUStartHint')} htmlFor="device-rack-u-start" error={check.error('rackUStart')}>
-                <input
+                <NumberStepper
                   id="device-rack-u-start"
-                  className="inp mono"
-                  type="number"
+                  label={t('devices.rackUStartNoun')}
                   min={1}
                   max={60}
                   value={form.rackUStart}
-                  onChange={(e) => set('rackUStart', e.target.value)}
+                  onChange={(value) => set('rackUStart', value)}
                 />
               </Field>
               <Field label={t('devices.rackUSize')} htmlFor="device-rack-u-size" error={check.error('rackUSize')}>
-                <input
+                <NumberStepper
                   id="device-rack-u-size"
-                  className="inp mono"
-                  type="number"
+                  label={t('devices.rackUSizeNoun')}
                   min={1}
                   max={60}
                   value={form.rackUSize}
-                  onChange={(e) => set('rackUSize', e.target.value)}
+                  onChange={(value) => set('rackUSize', value)}
                 />
               </Field>
             </>

@@ -7,6 +7,7 @@ import { foldSearch } from '@/lib/search-fold';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { NumberStepper } from '@/ui/number-stepper';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
@@ -436,15 +437,13 @@ export function CatalogForm({
               hint={t('catalog.uHeightHint')}
               error={check.error('uHeight')}
             >
-              <input
+              <NumberStepper
                 id="catalog-uheight"
-                className="inp"
-                type="number"
+                label={t('devices.rackUSizeNoun')}
                 min={1}
                 max={60}
-                inputMode="numeric"
                 value={form.uHeight}
-                onChange={(e) => set('uHeight', e.target.value)}
+                onChange={(value) => set('uHeight', value)}
               />
             </Field>
           </>
