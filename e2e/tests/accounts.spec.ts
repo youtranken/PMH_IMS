@@ -278,6 +278,9 @@ test.describe('Quản trị tài khoản', () => {
     page,
     browser,
   }) => {
+    // Cùng một khoá TOTP của SA dùng bốn lần (cài, step-up, đăng nhập máy hai, step-up): mỗi
+    // mã phải ở cửa sổ 30 giây mới (chống replay), nên riêng phần chờ đã có thể vượt 60 giây.
+    test.setTimeout(150_000);
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     const saCtx = await browser.newContext(SECOND_BROWSER);

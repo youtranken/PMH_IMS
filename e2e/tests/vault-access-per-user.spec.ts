@@ -47,7 +47,7 @@ test.describe('Quyền két sắt — theo người', () => {
     await expect(page.getByRole('button', { name: /Chứng chỉ SSL: Cần duyệt/ })).toBeVisible();
     await expect(
       page.getByRole('navigation', { name: 'Danh sách thành viên' }).getByRole('button', {
-        name: new RegExp(`${E2E_MEMBER.email}.*2 quyền`),
+        name: new RegExp(`${E2E_MEMBER.email}.*2 Quyền`),
       }),
     ).toBeVisible();
   });
