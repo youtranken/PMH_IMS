@@ -201,6 +201,10 @@ const DOMAINS = {
     `DELETE FROM diagram_version WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
     `ALTER TABLE diagram_version ENABLE TRIGGER diagram_version_no_delete`,
     `DELETE FROM diagram WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    // Ảnh bản vẽ không có tên để lọc: phiên bản E2E đi rồi thì ảnh không còn hàng nối nào là rác
+    // (cùng luật lượt dọn ảnh của ứng dụng, collectUnusedImagesWithin). Chú thích trong vùng này
+    // không dùng dấu huyền: bài test:db đọc từng câu SQL theo cặp dấu đó.
+    `DELETE FROM diagram_image i WHERE NOT EXISTS (SELECT 1 FROM diagram_version_image l WHERE l.sha = i.sha)`,
   ],
 
   isp: [

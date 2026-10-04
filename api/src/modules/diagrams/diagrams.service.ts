@@ -47,6 +47,7 @@ import {
 } from './diagram-frames';
 import type { CheckLink } from './diagram-finding';
 import { checkDiagramXml, sanitizeDiagramSvg, wetXmlLimitKb } from './diagram-gate';
+import { dryImages, hasReservedImageRef, hydrateTexts, linkImagesWithin } from './diagram-images';
 import {
   IMS_STYLE_KEYS,
   PHOTO_SIDE_ATTR,
@@ -791,10 +792,12 @@ export class DiagramsService {
     // Sửa: nạp trình vẽ XML đã hydrate (hình theo loại, nhãn từ kho hiện tại, nhãn cổng + ô màu dây
     // theo sơ đồ cổng hiện tại — AD-18). Xem: ảnh SVG chụp lúc lưu, XML để nguyên; màu dây và nét
     // đỏ/vàng trình xem tô lại theo `cableEdges` + `links`.
-    const xml = options.mode === 'edit' ? hydrateDiagramXml(row.xml, sources, { links: cables.check, slots: cables.slots }) : row.xml;
+    // Ảnh lưu một lần (Q-23): ghép `ims-img:` thành `data:` URI trước khi trình vẽ / trình xem thấy.
+    const [storedXml, svg] = await hydrateTexts(this.db, [row.xml, row.svg]);
+    const xml = options.mode === 'edit' ? hydrateDiagramXml(storedXml, sources, { links: cables.check, slots: cables.slots }) : storedXml;
     return {
       diagram,
-      version: { ...item, xml, svg: row.svg, deviceSnapshot: row.deviceSnapshot },
+      version: { ...item, xml, svg, deviceSnapshot: row.deviceSnapshot },
       deviceCells,
       devices,
       cableEdges: cables.edges,
@@ -1274,9 +1277,14 @@ export class DiagramsService {
     if (gate.reason) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: gate.reason });
     const svg = sanitizeDiagramSvg(input.svg, { svgMaxKb });
     if (svg.reason) throw new BadRequestException({ code: 'DIAGRAM_SVG_INVALID', message: svg.reason });
+    if (hasReservedImageRef(input.xml) || hasReservedImageRef(svg.value ?? '')) {
+      throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: 'Bản vẽ chứa chuỗi "ims-img:" dành riêng cho IMS — xoá chữ đó rồi lưu lại.' });
+    }
     // Lưu "khô" (AD-18): hình/nhãn/dấu/ảnh IMS dựng lại từ kho mỗi lần mở, không đóng băng vào phiên bản.
     const xml = dehydrateDiagramXml(input.xml);
-    const dryTooBig = sizeReason(xml, xmlMaxKb, 'Bản vẽ');
+    // Trần `diagram.xml_max_kb` đo phần NÉT VẼ: ảnh nhúng lưu riêng một lần (Q-23); tổng kể cả ảnh
+    // đã bị trần XML ướt chặn ở cổng phía trên.
+    const dryTooBig = sizeReason(dryImages(xml).text, xmlMaxKb, 'Bản vẽ');
     if (dryTooBig) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: dryTooBig });
     const index = buildCellIndex(xml);
     const secret = secretLabelReason(index);
@@ -1435,13 +1443,17 @@ export class DiagramsService {
       bytes: number;
     },
   ): Promise<string> {
+    // Ảnh nhúng lưu một lần (Q-23): phiên bản chỉ giữ tham chiếu. XML đã khô (bản sao, khôi phục)
+    // đi qua nguyên và chỉ được nối lại với ảnh nó trỏ tới.
+    const xml = dryImages(v.xml);
+    const svg = v.svg === null ? null : dryImages(v.svg);
     const [row] = await tx
       .insert(diagramVersionTable)
       .values({
         diagramId,
         seq: v.seq,
-        xml: v.xml,
-        svg: v.svg,
+        xml: xml.text,
+        svg: svg?.text ?? null,
         cellIndex: v.index,
         deviceSnapshot: v.snapshot,
         summary: v.summary,
@@ -1451,6 +1463,10 @@ export class DiagramsService {
         savedBy: actor,
       })
       .returning({ id: diagramVersionTable.id });
+    await linkImagesWithin(tx, row.id, actor, {
+      images: new Map([...xml.images, ...(svg?.images ?? [])]),
+      refs: new Set([...xml.refs, ...(svg?.refs ?? [])]),
+    });
     await tx.update(diagramTable).set({ updatedAt: new Date() }).where(eq(diagramTable.id, diagramId));
     // Nhật ký ghi KÍCH THƯỚC + tóm tắt, không chép XML: audit_log không xoá được.
     await this.record(tx, actor, diagramId, v.history, v.auditAction, {

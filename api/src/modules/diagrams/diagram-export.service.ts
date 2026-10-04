@@ -21,6 +21,7 @@ import {
   type LegendItem,
 } from './diagram-export';
 import { EXPORT_TIMEOUT_CODE, EXPORT_UNSAFE_CODE, pngToPdf, renderPng } from './diagram-render';
+import { hydrateTexts } from './diagram-images';
 import { diagramHistoryTable, diagramTable, diagramVersionLabelTable, diagramVersionTable } from './diagram.schema';
 
 export type ExportFormat = 'png' | 'pdf';
@@ -167,7 +168,7 @@ export class DiagramExportService {
     const result = compareCellIndex(from.cellIndex, to.cellIndex);
     return {
       from: { id: from.id, seq: from.seq },
-      to: { id: to.id, seq: to.seq, savedAt: to.createdAt.toISOString(), svg: to.svg },
+      to: { id: to.id, seq: to.seq, savedAt: to.createdAt.toISOString(), svg: (await hydrateTexts(this.db, [to.svg]))[0] },
       result,
       counts: compareCounts(result),
     };
@@ -228,7 +229,10 @@ export class DiagramExportService {
       presentationBaseSeq: diagram.kind === 'presentation' ? await this.versionSeq(diagram.sourceVersionId) : null,
       supersededBySeq: status === 'superseded' ? (official?.seq ?? null) : null,
     };
-    return { meta, svg: version.svg, cellIndex: version.cellIndex };
+    // Ảnh lưu một lần (Q-23): ghép lại thành `data:` URI TRƯỚC khi dựng ảnh — resvg không bao giờ
+    // được tải URL, và `renderPng` vẫn kiểm lại SVG đã ghép.
+    const [svg] = await hydrateTexts(this.db, [version.svg]);
+    return { meta, svg, cellIndex: version.cellIndex };
   }
 
   /** Tên các nút từ gốc cây tới bản vẽ này (đường dẫn trên chân trang). */

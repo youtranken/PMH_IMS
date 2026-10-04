@@ -143,7 +143,10 @@ export interface DiagramEditorSettings {
   initTimeoutSeconds: number;
   /** `diagram.presence_ttl_seconds` */
   presenceTtlSeconds: number;
-  /** `diagram.xml_max_kb` — ảnh tự do nhúng vào XML, web chặn sớm ảnh không thể lưu được. */
+  /**
+   * `diagram.xml_max_kb` — web chặn sớm MỘT ảnh tự do lớn hơn trần này. Ảnh lưu riêng một lần
+   * (Q-23) nên trần đo XML khô không tính ảnh; tổng kể cả ảnh do trần XML ướt của cổng chặn.
+   */
   xmlMaxKb: number;
 }
 

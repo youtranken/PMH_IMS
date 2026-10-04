@@ -6,6 +6,7 @@ import type { Database } from '../../database/database.module';
 import { ApprovalsApiService } from '../approvals/approvals.api';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import type { UserRole } from '../auth/types';
+import { collectUnusedImagesWithin } from './diagram-images';
 import { planDraftDiscard, seqRanges, type DraftPlan, type PruneVersion } from './diagram-prune';
 import { canManageNode } from './diagram-presentation';
 import { diagramDriftTable, diagramHistoryTable, diagramPresenceTable, diagramTable } from './diagram.schema';
@@ -70,6 +71,7 @@ export class DiagramPruneService {
         });
       }
       const deleted = await deleteVersions(tx, diagramId, plan.discard.map((v) => v.id), 'drafts');
+      await collectUnusedImagesWithin(tx);
       const changes = { count: deleted, ranges: preview.ranges, seqs: plan.discard.map((v) => v.seq), keepSeq: plan.keepSeq };
       await this.record(tx, actor.email, diagramId, 'versions.discarded', 'diagram.drafts_discarded', changes);
       return { count: deleted, ranges: preview.ranges };
@@ -123,6 +125,7 @@ export class DiagramPruneService {
       const versions = await deleteVersions(tx, diagramId, rows.map((r) => r.id), 'purge');
       await tx.delete(diagramPresenceTable).where(eq(diagramPresenceTable.diagramId, diagramId));
       await tx.delete(diagramDriftTable).where(eq(diagramDriftTable.diagramId, diagramId));
+      await collectUnusedImagesWithin(tx);
       await this.record(tx, actor.email, diagramId, 'deleted', 'diagram.deleted', { name: diagram.name, versions });
       return { versions };
     });

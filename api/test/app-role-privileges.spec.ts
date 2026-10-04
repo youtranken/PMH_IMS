@@ -177,6 +177,20 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     expect(rows[0].n).toBe(1);
   });
 
+  it('ảnh bản vẽ: ảnh theo khoá băm không sửa được; hàng nối phiên bản–ảnh chỉ thêm (0057)', async () => {
+    // Ảnh mồ côi do ứng dụng dọn (DELETE) nhưng nội dung không bao giờ đổi; hàng nối chỉ mất theo
+    // phiên bản (khoá ngoại CASCADE chạy bằng quyền chủ bảng), nên ims_app không cần sửa/xoá nó.
+    const { rows } = await scratch.pool.query<Record<string, boolean>>(
+      `SELECT has_table_privilege('ims_app', 'diagram_image', 'INSERT') AS img_ins,
+              has_table_privilege('ims_app', 'diagram_image', 'DELETE') AS img_del,
+              has_table_privilege('ims_app', 'diagram_image', 'UPDATE') AS img_upd,
+              has_table_privilege('ims_app', 'diagram_version_image', 'INSERT') AS link_ins,
+              has_table_privilege('ims_app', 'diagram_version_image', 'UPDATE') AS link_upd,
+              has_table_privilege('ims_app', 'diagram_version_image', 'DELETE') AS link_del`,
+    );
+    expect(rows[0]).toEqual({ img_ins: true, img_del: true, img_upd: false, link_ins: true, link_upd: false, link_del: false });
+  });
+
   it('QUÉT ĐỘNG: không bảng `%_history` nào còn UPDATE/DELETE cho ims_app', async () => {
     /*
      * Danh sách cứng ở trên là TÀI LIỆU — đọc nó biết chín bảng nào đang được canh. Bài này

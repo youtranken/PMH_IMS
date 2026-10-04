@@ -134,7 +134,8 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     expect(xml).toContain('ims_planned="1"');
     expect(xml).toContain('ims_planned_vendor="NCC E2E"');
     expect(xml).toContain('dashed=1');
-    expect(xml).toMatch(/image=data:image\/png/);
+    // Ảnh lưu một lần (Q-23): ảnh đủ lớn thành tham chiếu `ims-img:`, ảnh nhỏ để nguyên `data:`.
+    expect(xml).toMatch(/image=(?:data:image\/png|ims-img:[bn]:[0-9a-f]{64})/);
     // Bản chính thức không bị đụng.
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${source.id}'`)).toBe('1');
 
