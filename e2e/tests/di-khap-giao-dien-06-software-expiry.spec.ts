@@ -857,8 +857,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBeVisible();
     expect(
       await columnTexts(page),
-      'Bảng ghế license phải có đủ 5 cột này — mất cột Chi phí hay Hợp đồng là mất chỗ đối chiếu lúc quyết toán',
-    ).toEqual(['Máy', 'Chi phí', 'Kỳ hạn', 'Hợp đồng · Ghi chú', 'Thao tác']);
+      'Bảng ghế license phải có đủ 5 cột này — mất cột Chi phí là mất chỗ đối chiếu lúc quyết toán; Hợp đồng là dòng phụ của Kỳ hạn, Ghi chú có cột riêng (Q-24)',
+    ).toEqual(['Máy', 'Chi phí', 'Kỳ hạn', 'Ghi chú', 'Thao tác']);
 
     // ===== TAB KÉT SẮT =====
     await page.getByRole('tab', { name: /^Két sắt/ }).click();

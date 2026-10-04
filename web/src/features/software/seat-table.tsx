@@ -6,6 +6,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
 import { PATHS } from '@/lib/routes';
 import { useConfirm } from '@/ui/confirm-provider';
+import { CellNote } from '@/ui/cell-note';
 import { TableWrap } from '@/ui/data-table';
 import { RowActions } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
@@ -24,8 +25,8 @@ export interface SeatRow extends LicenseSeat {
  * Bảng ghế của MỘT license — dùng chung cho khu bung dòng ở danh sách và tab Máy đang dùng,
  * để hai chỗ trả lời "máy nào dùng license này" bằng cùng một bảng (AD-15).
  *
- * `compact` (khu bung): bỏ dòng "gán lúc · ai gán", và cột nào mọi ghế đều trống (chi phí, hợp
- * đồng/ghi chú) thì không vẽ — cột toàn "—" chỉ đẩy nút thao tác ra ngoài khung. Cột thao tác
+ * `compact` (khu bung): bỏ dòng "gán lúc · ai gán", và cột Chi phí mà mọi ghế đều trống thì không
+ * vẽ — cột toàn "—" chỉ đẩy nút thao tác ra ngoài khung. Cột Ghi chú luôn vẽ (Q-24). Cột thao tác
  * dính mép phải khi bảng phải cuộn ngang. Mang kiểu bảng con `table-sub` như mọi bảng trong
  * khu bung dòng (Q-20).
  *
@@ -55,9 +56,9 @@ export function SeatTable({
   // Làm mới cả danh sách (cột Ghế) lẫn khu bung / tab.
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
 
-  // Chỉ khu bung mới giấu cột trống; tab đầy đủ luôn có chỗ cho chi phí/hợp đồng để đối chiếu.
+  // Chỉ khu bung mới giấu cột Chi phí khi trống; tab đầy đủ luôn có chỗ để đối chiếu. Cột Ghi
+  // chú thì LUÔN có (Q-24): ghi chú là thứ người ta đọc lướt cả bảng, giấu đi là mất.
   const showCost = !compact || rows.some((row) => row.cost !== null);
-  const showNotes = !compact || rows.some((row) => row.contract || row.note || row.overSeatReason);
   const active = rows.filter((row) => !row.releasedAt);
   const totalCost = active.reduce((sum, row) => sum + (row.cost ?? 0), 0);
 
@@ -90,7 +91,7 @@ export function SeatTable({
               <th>{t('license.device')}</th>
               {showCost ? <th className="num">{t('license.cost')}</th> : null}
               <th>{t('license.term')}</th>
-              {showNotes ? <th>{t('license.contractNote')}</th> : null}
+              <th>{t('license.note')}</th>
               <th className="col-center col-sticky-end">
                 <span className="sr-only">{t('common.actions')}</span>
               </th>
@@ -137,18 +138,26 @@ export function SeatTable({
                       {t('license.termFrom', { date: formatDate(row.startDate) })}
                     </span>
                   ) : null}
+                  {/* Hợp đồng là dòng phụ của Kỳ hạn — hai thứ đi cùng lúc đối chiếu quyết toán,
+                      và nhường cột cho Ghi chú để bảng vẫn vừa 1366px. */}
+                  {row.contract ? (
+                    <span className="cell-sub">
+                      {t('license.contract')}: <span className="mono">{row.contract}</span>
+                    </span>
+                  ) : null}
                 </td>
-                {showNotes ? (
-                  <td data-label={t('license.contractNote')}>
-                    {row.contract ? <span className="mono">{row.contract}</span> : null}
-                    {row.note ? <span className="cell-sub">{row.note}</span> : null}
-                    {row.overSeatReason ? (
-                      <span className="cell-sub">
-                        {t('license.overSeatReason')}: {row.overSeatReason}
-                      </span>
-                    ) : null}
-                  </td>
-                ) : null}
+                <td
+                  data-label={t('license.note')}
+                  data-empty={row.note || row.overSeatReason ? undefined : true}
+                >
+                  {row.note ? <CellNote text={row.note} /> : null}
+                  {row.overSeatReason ? (
+                    <span className="cell-sub">
+                      {t('license.overSeatReason')}: {row.overSeatReason}
+                    </span>
+                  ) : null}
+                  {row.note || row.overSeatReason ? null : <span className="muted">—</span>}
+                </td>
                 <td className="col-center col-sticky-end" data-label={t('common.actions')}>
                   {/* "Gỡ" nằm trong menu, không đứng cạnh "Sửa": hai nút sát nhau thì trượt tay
                       một ô là thu license khỏi một máy đang dùng. */}

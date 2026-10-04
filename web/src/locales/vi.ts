@@ -1797,7 +1797,6 @@ export default {
     overSeatRequired: 'Ghi lý do vượt số ghế.',
     expiredWarning: 'License này đã hết hạn. Vẫn gán được, nhưng máy sẽ dùng license chưa gia hạn.',
     /* Bảng ghế dùng chung (`seat-table.tsx`). */
-    contractNote: 'Hợp đồng · Ghi chú',
     releasedOn: 'Đã gỡ {{date}} · {{by}}',
     termFrom: 'từ {{date}}',
     termFromProfileOn: 'theo hồ sơ · đến {{date}}',
