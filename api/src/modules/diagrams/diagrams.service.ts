@@ -39,9 +39,11 @@ import {
   childLinkReason,
   frameRefs,
   introducedRefs,
+  unbindFrames,
   type CabinetFrameDevice,
   type CabinetFrameLayout,
   type FrameRef,
+  type IntroducedRefs,
 } from './diagram-frames';
 import type { CheckLink } from './diagram-finding';
 import { checkDiagramXml, sanitizeDiagramSvg, wetXmlLimitKb } from './diagram-gate';
@@ -403,9 +405,13 @@ export class DiagramsService {
 
   /**
    * "Thêm bản vẽ con" mặc định NHÂN BẢN nội dung phiên bản mới nhất của bản cha làm phiên bản đầu
-   * của con (Q-23 góp ý 04/10): bản vẽ tầng/phòng thường vẽ tiếp từ bản cha chứ không từ trang
-   * trắng. Phiên bản đầu là một lần lưu mới của người tạo (chụp lại thông tin thiết bị BÂY GIỜ,
-   * AD-14) và là bản nháp — duyệt/phát hành như mọi lần lưu. Bản cha không đổi gì.
+   * của con (Q-23): bản vẽ tầng/phòng thường vẽ tiếp từ bản cha chứ không từ trang trắng. Phiên
+   * bản đầu là một lần lưu mới của người tạo (chụp lại thông tin thiết bị BÂY GIỜ, AD-14) và là
+   * bản nháp — duyệt/phát hành như mọi lần lưu. Bản cha không đổi gì.
+   *
+   * Khung trong bản sao qua đúng luật gắn khung của lần lưu (`frameProblems`). Khung hỏng — trỏ
+   * bản vẽ không nằm dưới bản con mới (mọi bản vẽ con của bản cha), dải/tủ đã ngừng dùng — bị gỡ
+   * gắn chứ không làm hỏng lượt tạo: hình và chữ vẫn còn, người vẽ gắn lại nếu cần (Q-23).
    */
   async createCopiedChild(actor: string, parentId: string, input: NodeInput): Promise<DiagramNode> {
     const name = (input.name ?? '').trim();
@@ -425,16 +431,20 @@ export class DiagramsService {
         message: 'Bản vẽ cha chưa có nội dung để nhân bản — chọn "Bản trống".',
       });
     }
-    const snapshot = await this.snapshot(source.cellIndex);
-    const diff = diffCellIndex(null, source.cellIndex);
+    // Bản con mới chưa có gì nằm dưới nó: mọi khung trỏ bản vẽ con đều hỏng.
+    const { bad } = await this.frameProblems(introducedRefs(null, source.cellIndex), new Set());
+    const xml = unbindFrames(source.xml, bad);
+    const index = xml === source.xml ? source.cellIndex : buildCellIndex(xml);
+    const snapshot = await this.snapshot(index);
+    const diff = diffCellIndex(null, index);
     const id = await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
         const childId = await this.insertNode(tx, actor, { ...input, name, parentId });
         await this.insertVersion(tx, actor, childId, {
           seq: 1,
-          xml: source.xml,
+          xml,
           svg: source.svg,
-          index: source.cellIndex,
+          index,
           snapshot,
           summary: `Nhân bản từ "${parent.name}" phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
           diff,
@@ -442,7 +452,7 @@ export class DiagramsService {
           restoredFromVersionId: null,
           history: 'version.saved',
           auditAction: 'diagram.saved',
-          bytes: Buffer.byteLength(source.xml),
+          bytes: Buffer.byteLength(xml),
         });
         return childId;
       }),
@@ -827,23 +837,34 @@ export class DiagramsService {
       .orderBy(desc(diagramVersionTable.seq))
       .limit(1);
     const fresh = introducedRefs(latest?.cellIndex ?? null, index);
+    const below = fresh.childDiagramIds.length > 0 ? new Set(await this.descendantIds(diagramId)) : new Set<string>();
+    const { reasons } = await this.frameProblems(fresh, below);
+    if (reasons.length > 0) throw new BadRequestException({ code: 'DIAGRAM_FRAME_INVALID', message: reasons.join(' ') });
+  }
+
+  /**
+   * Luật gắn khung của `assertFrames`, tách ra để lượt nhân bản dùng đúng luật đó: lý do từ chối
+   * từng id và các id hỏng theo loại. `below` = những bản vẽ nằm dưới bản vẽ đang lưu.
+   */
+  private async frameProblems(fresh: IntroducedRefs, below: ReadonlySet<string>): Promise<{ reasons: string[]; bad: IntroducedRefs }> {
     const reasons: string[] = [];
+    const bad: IntroducedRefs = { childDiagramIds: [], subnetIds: [], cabinetIds: [] };
     if (fresh.childDiagramIds.length > 0) {
       const valid = fresh.childDiagramIds.filter((id) => UUID_RE.test(id));
-      const [rows, below] = await Promise.all([
+      const rows =
         valid.length === 0
-          ? Promise.resolve([])
-          : this.db
+          ? []
+          : await this.db
               .select({ id: diagramTable.id, name: diagramTable.name, archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
               .from(diagramTable)
-              .where(inArray(diagramTable.id, valid)),
-        this.descendantIds(diagramId),
-      ]);
-      const inBranch = new Set(below);
-      const byId = new Map(rows.map((r) => [r.id, { id: r.id, name: r.name, archived: r.archivedAt !== null, kind: r.kind, inBranch: inBranch.has(r.id) }]));
+              .where(inArray(diagramTable.id, valid));
+      const byId = new Map(rows.map((r) => [r.id, { id: r.id, name: r.name, archived: r.archivedAt !== null, kind: r.kind, inBranch: below.has(r.id) }]));
       for (const id of fresh.childDiagramIds) {
         const reason = childLinkReason(id, byId.get(id));
-        if (reason) reasons.push(reason);
+        if (reason) {
+          reasons.push(reason);
+          bad.childDiagramIds.push(id);
+        }
       }
     }
     if (fresh.subnetIds.length > 0) {
@@ -852,6 +873,8 @@ export class DiagramsService {
         const subnet = subnets.get(id);
         if (!subnet) reasons.push(`Dải IP gắn trên khung (${id}) không tồn tại.`);
         else if (subnet.voidedAt) reasons.push(`Dải ${subnet.cidr} đã ngừng dùng — không gắn khung mới vào nó.`);
+        else continue;
+        bad.subnetIds.push(id);
       }
     }
     if (fresh.cabinetIds.length > 0) {
@@ -860,9 +883,11 @@ export class DiagramsService {
         const cabinet = cabinets.get(id);
         if (!cabinet) reasons.push(`Tủ gắn trên khung (${id}) không tồn tại.`);
         else if (!cabinet.active) reasons.push(`Tủ ${cabinet.code} đã ngừng dùng — không gắn khung mới vào nó.`);
+        else continue;
+        bad.cabinetIds.push(id);
       }
     }
-    if (reasons.length > 0) throw new BadRequestException({ code: 'DIAGRAM_FRAME_INVALID', message: reasons.join(' ') });
+    return { reasons, bad };
   }
 
   /**

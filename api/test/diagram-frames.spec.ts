@@ -167,6 +167,43 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
     });
   });
 
+  describe('nhân bản bản cha làm bản vẽ con (Q-23)', () => {
+    it('khung trỏ bản vẽ không nằm dưới bản vẽ con mới / dải đã ngừng dùng → gỡ gắn (giữ hình + chữ), không làm hỏng lượt tạo; khung còn hợp lệ giữ nguyên', async () => {
+      const root = await service.create(SA.email, { name: 'E2E Gốc nhân bản KH', nodeType: 'company' });
+      const sibling = await service.create(SA.email, { name: 'E2E Tầng anh', nodeType: 'floor', parentId: root.id });
+      const later = (
+        await scratch.pool.query<{ id: string }>(
+          `INSERT INTO subnet (name, cidr, created_by) VALUES ('E2E VLAN sắp ngừng', '10.97.0.0/29', 'x') RETURNING id`,
+        )
+      ).rows[0].id;
+      await save(
+        root.id,
+        frame('f1', 'Tầng anh', { ims_child_diagram_id: sibling.id }) +
+          frame('v1', 'VLAN 10', { ims_subnet_id: subnetId }) +
+          frame('v2', 'VLAN sắp ngừng', { ims_subnet_id: later }) +
+          frame('r1', 'Tủ R1', { ims_cabinet_id: cabinetId }),
+      );
+      await scratch.pool.query(`UPDATE subnet SET voided_at = now(), voided_by = 'x', void_reason = 'thử' WHERE id = $1`, [later]);
+
+      const child = await service.createCopiedChild(SA.email, root.id, { name: 'E2E Tầng nhân bản KH', nodeType: 'floor' });
+      const content = await service.content(SA.email, child.id, { mode: 'edit' });
+      const xml = content.version!.xml;
+      expect(xml).not.toContain(sibling.id);
+      expect(xml).not.toContain(later);
+      expect(xml).toContain(`ims_subnet_id="${subnetId}"`);
+      expect(xml).toContain(`ims_cabinet_id="${cabinetId}"`);
+      expect(xml).toContain('Tầng anh');
+      expect(xml).toContain('VLAN sắp ngừng');
+      // Bản đầu của con qua được đúng cổng của lần lưu: lưu lại y nguyên thì không bị từ chối.
+      await expect(
+        service.save(SA.email, child.id, { xml, svg: SVG, basedOnVersionId: content.version!.id }),
+      ).resolves.toMatchObject({ seq: 2 });
+      // Bản cha không đổi gì.
+      const parent = await service.content(SA.email, root.id, { mode: 'edit' });
+      expect(parent.version!.xml).toContain(sibling.id);
+    });
+  });
+
   describe('khung VLAN và khung tủ: gắn mới phải trỏ vào thứ còn dùng', () => {
     it('dải có thật → lưu được; dải không có / đã ngừng dùng → 400', async () => {
       const node = await service.create(SA.email, { name: 'E2E VLAN KH', nodeType: 'floor' });

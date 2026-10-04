@@ -54,6 +54,38 @@ export function introducedRefs(prev: CellIndex | null, next: CellIndex): Introdu
   };
 }
 
+const FRAME_ATTRS = {
+  ims_child_diagram_id: 'childDiagramIds',
+  ims_subnet_id: 'subnetIds',
+  ims_cabinet_id: 'cabinetIds',
+} as const satisfies Record<string, keyof IntroducedRefs>;
+
+/**
+ * Gỡ thuộc tính gắn khỏi những khung trỏ vào id trong `drop`; hình, chữ, vị trí giữ nguyên. Khớp
+ * theo dạng ` tên="giá trị"` có dấu nháy thật: trong giá trị của một thuộc tính khác (nhãn), dấu
+ * nháy luôn bị thoát thành `&quot;`, nên không bao giờ đụng nhầm chữ người vẽ gõ.
+ */
+export function unbindFrames(xml: string, drop: IntroducedRefs): string {
+  const sets = {
+    childDiagramIds: new Set(drop.childDiagramIds),
+    subnetIds: new Set(drop.subnetIds),
+    cabinetIds: new Set(drop.cabinetIds),
+  };
+  if (sets.childDiagramIds.size + sets.subnetIds.size + sets.cabinetIds.size === 0) return xml;
+  return xml.replace(/\s(ims_child_diagram_id|ims_subnet_id|ims_cabinet_id)="([^"]*)"/g, (whole, name: keyof typeof FRAME_ATTRS, value: string) =>
+    sets[FRAME_ATTRS[name]].has(decodeAttr(value)) ? '' : whole,
+  );
+}
+
+/** `drop` mang id như chỉ mục đọc ra (đã giải thực thể); giá trị thô trong XML thì chưa. */
+function decodeAttr(raw: string): string {
+  return raw.replace(/&(?:#(\d+)|#x([0-9a-f]+)|(amp|lt|gt|quot|apos));/gi, (_m, dec: string, hex: string, name: string) => {
+    if (dec) return String.fromCodePoint(Number(dec));
+    if (hex) return String.fromCodePoint(parseInt(hex, 16));
+    return ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" } as Record<string, string>)[name.toLowerCase()];
+  });
+}
+
 /** Bản vẽ được chọn làm bản vẽ con, như cây thấy nó. `inBranch` = nằm dưới bản vẽ đang lưu. */
 export interface ChildCandidate {
   id: string;

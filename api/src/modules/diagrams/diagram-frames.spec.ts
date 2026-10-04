@@ -10,6 +10,7 @@ import {
   childLinkReason,
   frameRefs,
   introducedRefs,
+  unbindFrames,
   type ChildCandidate,
 } from './diagram-frames';
 
@@ -98,6 +99,47 @@ describe('childLinkReason — gắn bản vẽ con', () => {
 
   it('câu lý do nêu tên bản vẽ để người vẽ biết khung nào sai', () => {
     expect(childLinkReason(CHILD, { ...ok, archived: true })).toContain('Tầng 3');
+  });
+});
+
+describe('unbindFrames — gỡ gắn khung (giữ hình, giữ chữ)', () => {
+  const none = { childDiagramIds: [], subnetIds: [], cabinetIds: [] };
+  const xml = page(
+    frame('f1', 'Tầng 3', { ims_child_diagram_id: CHILD }) +
+      frame('f2', 'Tầng 4', { ims_child_diagram_id: CHILD_2 }) +
+      frame('v1', 'VLAN 10', { ims_subnet_id: SUBNET, ims_cabinet_id: CAB }),
+  );
+
+  it.each([
+    ['không gỡ gì → XML y nguyên', none, [CHILD, CHILD_2, SUBNET, CAB], []],
+    ['gỡ một bản vẽ con → khung kia giữ', { ...none, childDiagramIds: [CHILD] }, [CHILD_2, SUBNET, CAB], [CHILD]],
+    ['gỡ dải, giữ tủ trên cùng khung', { ...none, subnetIds: [SUBNET] }, [CHILD, CHILD_2, CAB], [SUBNET]],
+    ['gỡ tủ', { ...none, cabinetIds: [CAB] }, [CHILD, CHILD_2, SUBNET], [CAB]],
+  ])('%s', (_name, drop, kept, gone) => {
+    const out = unbindFrames(xml, drop);
+    for (const id of kept) expect(out).toContain(id);
+    for (const id of gone) expect(out).not.toContain(id);
+    // Hình và chữ còn nguyên: chỉ mất thuộc tính gắn.
+    const cells = buildCellIndex(out).cells;
+    expect(cells.map((c) => [c.id, c.label])).toEqual([
+      ['f1', 'Tầng 3'],
+      ['f2', 'Tầng 4'],
+      ['v1', 'VLAN 10'],
+    ]);
+    expect(checkDiagramXml(out, { xmlMaxKb: 1024, maxCells: 100 }).reason).toBeNull();
+  });
+
+  it('giá trị rác có thực thể XML (id như chỉ mục đọc ra) → vẫn gỡ được', () => {
+    const junk = page(frame('f1', 'Rác', { ims_child_diagram_id: 'a&amp;b' }));
+    const out = unbindFrames(junk, { ...none, childDiagramIds: ['a&b'] });
+    expect(frameRefs(buildCellIndex(out))).toEqual([]);
+  });
+
+  it('id trùng nằm ở thuộc tính KHÁC (nhãn) thì không bị đụng', () => {
+    const tricky = page(frame('f1', CHILD, { ims_child_diagram_id: CHILD }));
+    const out = unbindFrames(tricky, { ...none, childDiagramIds: [CHILD] });
+    expect(frameRefs(buildCellIndex(out))).toEqual([]);
+    expect(buildCellIndex(out).cells[0].label).toBe(CHILD);
   });
 });
 
