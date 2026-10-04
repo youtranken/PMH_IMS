@@ -165,7 +165,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       const v2 = await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Phòng mới') + shape('s2', 'Kho')), svg: SVG, basedOnVersionId: null });
 
       const child = await service.createCopiedChild(MEMBER.email, parent.id, { name: 'E2E Tầng nhân bản', nodeType: 'floor', siteId });
-      expect(child).toMatchObject({ parentId: parent.id, name: 'E2E Tầng nhân bản', nodeType: 'floor', siteId, status: 'draft' });
+      expect(child).toMatchObject({ parentId: parent.id, name: 'E2E Tầng nhân bản', nodeType: 'floor', siteId, status: 'draft', copiedFromSeq: v2.seq });
       const versions = await service.versions(child.id);
       expect(versions).toHaveLength(1);
       expect(versions[0]).toMatchObject({ seq: 1, savedBy: MEMBER.email });

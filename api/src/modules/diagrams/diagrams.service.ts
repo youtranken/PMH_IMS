@@ -413,7 +413,7 @@ export class DiagramsService {
    * bản vẽ không nằm dưới bản con mới (mọi bản vẽ con của bản cha), dải/tủ đã ngừng dùng — bị gỡ
    * gắn chứ không làm hỏng lượt tạo: hình và chữ vẫn còn, người vẽ gắn lại nếu cần (Q-23).
    */
-  async createCopiedChild(actor: string, parentId: string, input: NodeInput): Promise<DiagramNode> {
+  async createCopiedChild(actor: string, parentId: string, input: NodeInput): Promise<DiagramNode & { copiedFromSeq: number }> {
     const name = (input.name ?? '').trim();
     await this.assertLiveParent(parentId);
     await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
@@ -457,7 +457,8 @@ export class DiagramsService {
         return childId;
       }),
     );
-    return this.node(id);
+    // Số phiên bản THẬT đã chép: cây web đang giữ có thể cũ hơn (có người vừa lưu bản cha).
+    return { ...(await this.node(id)), copiedFromSeq: source.seq };
   }
 
   private async insertNode(tx: Tx, actor: string, input: NodeInput & { name: string }): Promise<string> {

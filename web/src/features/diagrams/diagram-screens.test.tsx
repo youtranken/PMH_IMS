@@ -162,7 +162,8 @@ describe('Cây bản vẽ', () => {
         copies += 1;
         return copies === 1
           ? jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })
-          : jsonResponse(201, node('c1', 'd1', 'Tầng 2 E2E'));
+          : // Có người lưu bản cha (#4) sau khi cây được tải: server nhân bản #4, không phải #3.
+            jsonResponse(201, { ...node('c1', 'd1', 'Tầng 2 E2E'), copiedFromSeq: 4 });
       },
       '/api/v1/auth/step-up': () => jsonResponse(200, { status: 'stepped-up', scope: 'diagram', graceMinutes: 10 }),
       '/api/v1/diagrams': () => jsonResponse(200, [parent]),
@@ -181,8 +182,8 @@ describe('Cây bản vẽ', () => {
     expect(step).toBeInTheDocument();
     expect(calls).toEqual(['copy']);
     await user.type(within(step).getAllByRole('textbox')[0], '123456');
-    // Mã đủ 6 số là tự gửi; lượt sau gọi lại đúng yêu cầu nhân bản.
-    expect(await screen.findByText('Đã tạo bản vẽ "Tầng 2 E2E" — nhân bản từ "Tổng công ty E2E" phiên bản #3.')).toBeInTheDocument();
+    // Mã đủ 6 số là tự gửi; lượt sau gọi lại đúng yêu cầu nhân bản. Số phiên bản theo server.
+    expect(await screen.findByText('Đã tạo bản vẽ "Tầng 2 E2E" — nhân bản từ "Tổng công ty E2E" phiên bản #4.')).toBeInTheDocument();
     expect(dialog).not.toBeInTheDocument();
     const body = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][])
       .filter(([url]) => String(url).includes('/copied-children'))

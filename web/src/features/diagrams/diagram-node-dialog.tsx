@@ -89,16 +89,22 @@ export function DiagramNodeDialog({
     onClose();
   };
 
-  const copyChild = async (from: DiagramNode, seq: number) => {
+  const copyChild = async (from: DiagramNode) => {
     setCopying(true);
     try {
       const { parentId: _parent, ...rest } = form;
       const body = JSON.stringify(Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== null && value !== '')));
       const saved = await (run ?? ((action) => action()))(
-        () => apiFetch<DiagramNode>(`/api/v1/diagrams/${from.id}/copied-children`, { method: 'POST', csrfToken: me.csrfToken, body }),
+        () =>
+          apiFetch<DiagramNode & { copiedFromSeq: number }>(`/api/v1/diagrams/${from.id}/copied-children`, {
+            method: 'POST',
+            csrfToken: me.csrfToken,
+            body,
+          }),
         t('diagrams.form.copyStepUp', { name: from.name }),
       );
-      await done(saved, t('diagrams.form.createdCopy', { name: saved.name, parent: from.name, seq }));
+      // Số phiên bản theo server: cây đang giữ có thể cũ hơn bản cha thật lúc nhân bản.
+      await done(saved, t('diagrams.form.createdCopy', { name: saved.name, parent: from.name, seq: saved.copiedFromSeq }));
     } catch (error) {
       if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
     } finally {
@@ -112,7 +118,7 @@ export function DiagramNodeDialog({
       return;
     }
     if (parent && copySeq && start === 'copy') {
-      void copyChild(parent, copySeq);
+      void copyChild(parent);
       return;
     }
     save.mutate(form, {
