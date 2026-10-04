@@ -18,7 +18,7 @@ function ruleBody(selector: string): string {
 
 describe('dải nút chọn một trong form trải đều', () => {
   it('`.field > .segmented` và `.segmented.fill` chiếm hết bề ngang', () => {
-    for (const selector of ['.field > .segmented', '.segmented.fill']) {
+    for (const selector of ['.field > .segmented:not(.wrap)', '.segmented.fill']) {
       const body = ruleBody(selector);
       expect(body, selector).toMatch(/display:\s*flex/);
       expect(body, selector).toMatch(/width:\s*100%/);
@@ -26,7 +26,7 @@ describe('dải nút chọn một trong form trải đều', () => {
   });
 
   it('các nút con chia đều (flex 1 1 0) và chữ nằm giữa', () => {
-    for (const selector of ['.field > .segmented > label', '.segmented.fill > button']) {
+    for (const selector of ['.field > .segmented:not(.wrap) > label', '.segmented.fill > button']) {
       const body = ruleBody(selector);
       expect(body, selector).toMatch(/flex:\s*1 1 0/);
       expect(body, selector).toMatch(/justify-content:\s*center/);

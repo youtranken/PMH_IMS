@@ -67,16 +67,17 @@
  * Trong ô FORM, dải nút trải hết bề ngang ô và các nút chia đều (Q-24): cỡ-theo-chữ làm hai nút
  * "Thuê bao | Vĩnh viễn" dồn về góc trái của một ô rộng, lệch hẳn với các ô nhập cạnh nó. Dải
  * nằm trong hộp form mà không qua `Field` thì tự mang `fill`. Dải LỌC trên thanh công cụ không
- * đụng tới — chúng đứng cạnh nút khác, kéo dài ra là chiếm chỗ của ô tìm kiếm.
+ * đụng tới — chúng đứng cạnh nút khác, kéo dài ra là chiếm chỗ của ô tìm kiếm. Chip chọn nhiều
+ * xuống dòng (`.wrap`, lọc loại thiết bị) cũng không: kéo giãn từng hàng chip là vỡ hàng.
  * `min-width: max-content` giữ chữ không bị bóp; dải hẹp hơn tổng chữ thì cuộn ngang như cũ.
  */
-.field > .segmented,
+.field > .segmented:not(.wrap),
 .segmented.fill {
   display: flex;
   width: 100%;
 }
-.field > .segmented > label,
-.field > .segmented > button,
+.field > .segmented:not(.wrap) > label,
+.field > .segmented:not(.wrap) > button,
 .segmented.fill > label,
 .segmented.fill > button {
   flex: 1 1 0;
