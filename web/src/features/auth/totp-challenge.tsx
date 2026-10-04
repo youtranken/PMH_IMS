@@ -7,7 +7,7 @@ import { AuthCard } from './auth-card';
 import { SignOutLink, useSignOutMidFlow } from './sign-out-link';
 import { SupportHelp } from './support-help';
 import { totpChallengeStartedAt } from './totp-challenge-clock';
-import { OtpInput, otpMissingText, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
+import { OtpInput, OtpSubmitButton, otpMissingText, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
 
 /**
  * Bước 2 của đăng nhập: nhập mã 6 số từ ứng dụng Authenticator. Đủ 6 số là tự gửi — người mở
@@ -84,8 +84,9 @@ export function TotpChallenge() {
 
   return (
     <AuthCard
-      title={t('auth.totpTitle')}
-      subtitle={t('auth.totpSub')}
+      title={otp.confirmed ? t('auth.otpVerifiedTitle') : t('auth.totpTitle')}
+      subtitle={otp.confirmed ? t('auth.otpVerifiedSub') : t('auth.totpSub')}
+      verified={otp.confirmed}
       signedInAs={me}
       footer={<SupportHelp />}
     >
@@ -115,10 +116,9 @@ export function TotpChallenge() {
           readOnly={verify.isPending}
           status={otp.status}
           onSuccessShown={otp.onShown}
+          onConfirmed={otp.onConfirmed}
         />
-        <button type="submit" className="btn primary" disabled={verify.isPending}>
-          {verify.isPending ? t('auth.totpChecking') : t('auth.totpVerify')}
-        </button>
+        <OtpSubmitButton pending={verify.isPending} otp={otp} />
         {me ? <SignOutLink account={me} variant="back" /> : null}
       </form>
     </AuthCard>

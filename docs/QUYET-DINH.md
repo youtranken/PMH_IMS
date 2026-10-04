@@ -384,6 +384,18 @@ nếu chủ dự án không đồng ý.
   thành 1 ô có dấu tích xanh, giữ một nhịp rồi mới vào (thêm ≤ ~0,9 giây); sai mã thì về 6 ô, cả
   hàng lắc + đỏ. "Giảm chuyển động": không xoay/gộp/lắc, hiện dấu tích và đi tiếp ngay. Lý do:
   góp ý "ô không đều", và chủ dự án muốn hiệu ứng như ứng dụng hiện đại (mẫu chủ dự án gửi).
+- **Mã đúng theo mẫu "Glassy OTP" + công tắc chuyển động (04/10/2026, chủ dự án):** thay bullet
+  trên ở phần đang kiểm/thành công. Đủ 6 số đang kiểm: 6 ô rời hàng, xếp lên một VÒNG TRÒN quanh
+  tâm hàng ô rồi cả vòng quay theo chiều kim đồng hồ (ô nghiêng theo vòng, viền sáng ấm), tối
+  thiểu trọn một vòng, lặp tới khi server trả lời và chỉ dừng ở mốc trọn vòng. Mã đúng: các ô
+  đứng thẳng lại, hội tụ vào tâm thành MỘT ô trống, viền ô đổi màu nhấn, một vòng xanh loang ra
+  quanh ô rồi hiện dấu tích; cùng lúc tiêu đề đổi thành "Đã xác thực thành công" (kèm dòng phụ)
+  và nút chính chuyển xanh "Đã xác thực" — cả chuỗi ~2,5–3 giây rồi mới vào. Sai mã: bỏ vòng,
+  ô bay về hàng, lắc + đỏ như cũ. Hộp xác thực lại (nhỏ hơn) dùng cùng hiệu ứng thu nhỏ.
+  Thêm lựa chọn "Hiệu ứng chuyển động" trong Hồ sơ của tôi (cạnh Giao diện): Theo hệ thống
+  (mặc định) / Luôn bật / Tắt, lưu ở trình duyệt như lựa chọn theme. "Luôn bật" thắng báo "giảm
+  chuyển động" của máy; "Tắt" bỏ chuyển động kể cả khi máy cho phép. Lý do: máy của chủ dự án qua
+  phiên từ xa / máy ảo luôn báo "giảm chuyển động" nên không bao giờ thấy hiệu ứng.
 
 ### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
 

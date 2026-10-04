@@ -783,12 +783,19 @@ input.search {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion='on']) *,
+  html:not([data-motion='on']) *::before,
+  html:not([data-motion='on']) *::after {
     animation: none !important;
     transition: none !important;
   }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 /* Đổi theme: màu đổi ngay một lần, không mờ dần qua transition của từng ô (lib/theme.ts). */
@@ -804,10 +811,15 @@ html[data-theme-switching] *::after {
   animation: rowFlash 2.5s ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-  .table tr.row-flash > td {
+  html:not([data-motion='on']) .table tr.row-flash > td {
     animation: none;
     background: var(--warn-hi);
   }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .table tr.row-flash > td {
+  animation: none;
+  background: var(--warn-hi);
 }
 @keyframes rowFlash {
   0% {
@@ -839,8 +851,12 @@ html[data-theme-switching] *::after {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .skeleton {
+  html:not([data-motion='on']) .skeleton {
     animation: none;
   }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .skeleton {
+  animation: none;
 }
 

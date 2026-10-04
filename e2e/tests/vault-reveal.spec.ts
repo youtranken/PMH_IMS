@@ -338,6 +338,10 @@ test.describe('Mở két với TOTP step-up', () => {
   test('gõ sai mã liên tiếp đủ ngưỡng thì THU HỒI PHIÊN, nhưng không khóa tài khoản @slow', async ({
     page,
   }) => {
+    // Bốn mã TOTP liền nhau (cài, step-up, đăng nhập lại, step-up) — chống replay bắt mã thứ
+    // ba, thứ tư chờ sang chu kỳ 30 giây kế tiếp, cộng hai lượt hiệu ứng mã đúng (~3 giây mỗi
+    // lượt) là vượt 60 giây mặc định.
+    test.setTimeout(120_000);
     const totpSecret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, totpSecret);
     const stamp = uniqueStamp();

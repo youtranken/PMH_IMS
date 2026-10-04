@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useScrollEdges } from '@/ui/scroll-x';
+import { motionReduced } from '@/lib/motion';
 
 export interface TabItem {
   key: string;
@@ -87,9 +88,7 @@ export function Tabs({
     });
     // Lần đầu nhảy thẳng (trang vừa mở, không có gì để "đi theo"); người dùng tắt chuyển
     // động thì cũng nhảy thẳng.
-    const reduced =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = motionReduced();
     const behavior: ScrollBehavior = mounted.current && !reduced ? 'smooth' : 'auto';
     mounted.current = true;
     if (left === bar.scrollLeft) return;

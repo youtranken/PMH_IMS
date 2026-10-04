@@ -9,28 +9,54 @@ import {
   type Ref,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motionReduced } from '@/lib/motion';
+import { CheckIcon } from '@/ui/glyph-icons';
 
 const OTP_LENGTH = 6;
 
 /**
- * Trạng thái quanh lượt gửi mã. `verifying`: 6 ô xoay lần lượt (chỉ báo đang kiểm). `success`:
- * 6 ô gộp thành 1 ô có dấu tích, rồi mới gọi `onSuccessShown`. `error`: về 6 ô, lắc + đỏ.
+ * Trạng thái quanh lượt gửi mã. `verifying`: 6 ô rời hàng lên một vòng tròn và cả vòng quay (chỉ
+ * báo đang kiểm). `success`: vòng dừng ở mốc trọn vòng, ô hội tụ thành 1 ô, vòng xanh + dấu tích,
+ * rồi mới gọi `onSuccessShown`. `error`: ô bay về hàng, lắc + đỏ.
  */
 export type OtpStatus = 'idle' | 'verifying' | 'success' | 'error';
 
+/** Ô rời hàng lên vòng (khớp `--otp-ring-in` trong shared-kit.css). */
+export const OTP_RING_IN_MS = 350;
+/** Một vòng quay (khớp `--otp-orbit`). */
+export const OTP_ORBIT_MS = 1100;
 /**
- * Hiệu ứng thành công không được giữ người dùng lâu hơn mức này dù `animationend` không tới
- * (tab bị ẩn, trình duyệt bỏ animation): gộp ô + vẽ dấu tích + giữ ~0,9 giây, dư một nhịp.
+ * Mốc dừng sớm nhất của vòng: lên vòng + trọn một vòng. Server trả lời nhanh cỡ nào người dùng
+ * vẫn thấy trọn một vòng (Q-21).
  */
-export const OTP_SUCCESS_FALLBACK_MS = 1800;
-/** Một vòng xoay của ô (khớp `otp-spin` trong shared-kit.css): thời gian xoay tối thiểu trước khi gộp. */
-export const OTP_MIN_SPIN_MS = 1200;
+export const OTP_MIN_SPIN_MS = OTP_RING_IN_MS + OTP_ORBIT_MS;
+/**
+ * Từ lúc dừng vòng tới khi vòng xanh hiện (khớp nhịp trễ của `.otp-check::before` trong
+ * shared-kit.css): mốc nơi gọi đổi tiêu đề + nút sang "Đã xác thực" — đổi sớm hơn thì chữ báo
+ * xong trước khi ô kịp hội tụ.
+ */
+export const OTP_CONFIRM_AT_MS = 650;
+/**
+ * Chuỗi thành công không được giữ người dùng lâu hơn mức này dù `animationend` không tới (tab bị
+ * ẩn, trình duyệt bỏ animation): hội tụ + vòng xanh + dấu tích + nhịp giữ (~1,4 giây), dư một nhịp.
+ */
+export const OTP_SUCCESS_FALLBACK_MS = 2000;
 
 /**
- * Dấu tích đứng yên được giữ bấy lâu khi máy báo "giảm chuyển động": không có `animationend` nào
- * để chờ, mà đi tiếp ngay thì người dùng không kịp thấy mã đã được nhận.
+ * Dấu tích đứng yên được giữ bấy lâu khi bỏ chuyển động: không có `animationend` nào để chờ,
+ * mà đi tiếp ngay thì người dùng không kịp thấy mã đã được nhận.
  */
 export const OTP_STILL_HOLD_MS = 900;
+
+/**
+ * Còn chờ bao lâu tới mốc dừng vòng, khi vòng đã chạy `elapsed` ms. Chỉ dừng ở mốc TRỌN vòng:
+ * dừng giữa chừng thì các ô đang nghiêng giật về tư thế đứng thẳng trước khi hội tụ.
+ */
+export function otpSealDelay(elapsed: number): number {
+  if (elapsed < OTP_MIN_SPIN_MS) return OTP_MIN_SPIN_MS - elapsed;
+  const into = (elapsed - OTP_RING_IN_MS) % OTP_ORBIT_MS;
+  return into === 0 ? 0 : OTP_ORBIT_MS - into;
+}
 
 /** Môi trường không chạy animation CSS (không có `AnimationEvent`): không có gì để xem, đi tiếp ngay. */
 function noCssAnimation(): boolean {
@@ -38,47 +64,78 @@ function noCssAnimation(): boolean {
 }
 
 /**
- * Máy báo "giảm chuyển động". Không chỉ do người dùng tự bật: GNOME trong phiên từ xa / máy ảo
- * báo `EnableAnimations=false` cho Firefox. Khi đó bỏ xoay/trượt (CSS) nhưng vẫn giữ nhịp
- * "đang kiểm" → dấu tích đứng yên, để vẫn thấy mã đã được nhận trước khi chuyển màn.
- */
-function reducedMotion(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-/**
  * Cửa chờ hiệu ứng thành công cho nơi gọi `OtpInput`: `await show()` sau khi server nhận mã,
  * rồi mới điều hướng / đóng hộp. Promise luôn xong — `onShown` (ô báo vẽ xong) hoặc hẹn giờ
  * dự phòng của chính hook, để một sự kiện bị lỡ không bao giờ chặn đăng nhập.
+ *
+ * Nhịp vòng quay do `OtpInput` giữ (nó biết vòng bắt đầu từ lúc nào); `confirmed` bật khi ô báo
+ * vòng xanh đã hiện (`onConfirmed`) — nơi gọi dùng nó để đổi tiêu đề và nút sang "Đã xác thực".
  */
 export function useOtpSuccess() {
-  const [phase, setPhase] = useState<'idle' | 'spinning' | 'shown'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'success' | 'confirmed'>('idle');
   const finish = useRef<(() => void) | null>(null);
   const show = useCallback(
     () =>
       new Promise<void>((resolve) => {
-        // Server thường trả lời trong vài trăm ms — gộp ngay thì không ai kịp thấy vòng xoay.
-        // Giữ trạng thái xoay trọn một vòng rồi mới gộp; môi trường không chạy animation thì bỏ qua.
-        const spinMs = noCssAnimation() ? 0 : OTP_MIN_SPIN_MS;
-        const timer = window.setTimeout(() => done(), spinMs + OTP_SUCCESS_FALLBACK_MS + 300);
+        if (noCssAnimation()) {
+          setPhase('confirmed');
+          resolve();
+          return;
+        }
+        // Dự phòng: chờ mốc trọn vòng (≤ OTP_MIN_SPIN_MS) + cả chuỗi thành công, dư một nhịp.
+        const timer = window.setTimeout(() => done(), OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 300);
         const done = () => {
           window.clearTimeout(timer);
           finish.current = null;
           resolve();
         };
         finish.current = done;
-        if (spinMs === 0) {
-          setPhase('shown');
-          return;
-        }
-        setPhase('spinning');
-        window.setTimeout(() => setPhase('shown'), spinMs);
+        setPhase('success');
       }),
     [],
   );
   const onShown = useCallback(() => finish.current?.(), []);
-  const status = phase === 'shown' ? ('success' as const) : phase === 'spinning' ? ('verifying' as const) : undefined;
-  return { status, show, onShown };
+  const onConfirmed = useCallback(() => setPhase((p) => (p === 'success' ? 'confirmed' : p)), []);
+  const status = phase === 'idle' ? undefined : ('success' as const);
+  return { status, show, onShown, onConfirmed, confirmed: phase === 'confirmed' };
+}
+
+/**
+ * Nút gửi mã đi cùng `OtpInput` + `useOtpSuccess` (card đăng nhập, cài 2 lớp). Server đã nhận mã
+ * mà vòng còn quay tới mốc trọn vòng thì nút vẫn "đang kiểm" chứ không quay về "Xác nhận"; vòng
+ * xanh hiện mới đổi sang "Đã xác thực" (Q-21 mẫu "Glassy OTP").
+ */
+export function OtpSubmitButton({
+  pending,
+  otp,
+}: {
+  /** Lượt gửi mã đang chờ server. */
+  pending: boolean;
+  otp: Pick<ReturnType<typeof useOtpSuccess>, 'status' | 'confirmed'>;
+}) {
+  const { t } = useTranslation();
+  const checking = pending || (otp.status === 'success' && !otp.confirmed);
+  return (
+    <button
+      type="submit"
+      className={otp.confirmed ? 'btn primary is-ok' : checking ? 'btn primary is-busy' : 'btn primary'}
+      disabled={checking || otp.confirmed}
+    >
+      {otp.confirmed ? (
+        <>
+          <CheckIcon />
+          {t('auth.otpVerified')}
+        </>
+      ) : checking ? (
+        <>
+          <span className="spinner" aria-hidden="true" />
+          {t('auth.totpChecking')}
+        </>
+      ) : (
+        t('auth.totpVerify')
+      )}
+    </button>
+  );
 }
 
 /**
@@ -148,6 +205,7 @@ export function OtpInput({
   readOnly,
   status,
   onSuccessShown,
+  onConfirmed,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -173,8 +231,13 @@ export function OtpInput({
    * `useOtpSuccess().status`; lỗi luôn thắng verifying (thôi xoay khi server từ chối).
    */
   status?: OtpStatus;
-  /** Gọi MỘT lần khi hiệu ứng thành công xong (máy "giảm chuyển động": sau khi giữ dấu tích đứng yên). */
+  /**
+   * Gọi MỘT lần khi hiệu ứng thành công xong (bỏ chuyển động: sau khi giữ dấu tích đứng yên).
+   * Có prop này = nơi gọi muốn hiệu ứng vòng → hàng ô chừa chỗ cho vòng (`has-ring`).
+   */
   onSuccessShown?: () => void;
+  /** Vòng xanh vừa hiện — `useOtpSuccess().onConfirmed`, để nơi gọi đổi tiêu đề/nút đúng nhịp. */
+  onConfirmed?: () => void;
 }) {
   const { t } = useTranslation();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
@@ -195,8 +258,43 @@ export function OtpInput({
   // Đang chạy hiệu ứng thành công thì ô cũng khoá: mã đã được nhận, gõ thêm không còn nghĩa.
   const locked = readOnly || state === 'success';
 
+  // Server nhận mã rồi nhưng vòng vẫn quay tới mốc trọn vòng (`otpSealDelay`) mới hội tụ: vòng
+  // chạy bằng CSS, chỉ JS biết nó bắt đầu từ lúc nào.
+  const [sealed, setSealed] = useState(false);
+  const visual: OtpStatus = state === 'success' && !sealed ? 'verifying' : state;
+  const busySince = useRef<number | null>(null);
+  const prevVisual = useRef<OtpStatus>(visual);
+  const [returning, setReturning] = useState(false);
+  useLayoutEffect(() => {
+    if (visual === 'verifying') busySince.current ??= Date.now();
+    else busySince.current = null;
+    // Sai mã giữa vòng: ô bay về hàng. Lỗi lúc không có vòng (bấm khi thiếu số) chỉ lắc.
+    if (visual === 'error') {
+      if (prevVisual.current === 'verifying') setReturning(true);
+    } else setReturning(false);
+    prevVisual.current = visual;
+  }, [visual]);
+
+  useEffect(() => {
+    if (state !== 'success') {
+      setSealed(false);
+      return undefined;
+    }
+    if (noCssAnimation()) {
+      setSealed(true);
+      return undefined;
+    }
+    const timer = window.setTimeout(
+      () => setSealed(true),
+      otpSealDelay(Date.now() - (busySince.current ?? Date.now())),
+    );
+    return () => window.clearTimeout(timer);
+  }, [state]);
+
   const shownCb = useRef(onSuccessShown);
   shownCb.current = onSuccessShown;
+  const confirmedCb = useRef(onConfirmed);
+  confirmedCb.current = onConfirmed;
   const shownOnce = useRef(false);
   const reportShown = useCallback(() => {
     if (shownOnce.current) return;
@@ -204,30 +302,36 @@ export function OtpInput({
     shownCb.current?.();
   }, []);
   useEffect(() => {
-    if (state !== 'success') {
+    if (visual !== 'success') {
       shownOnce.current = false;
       return undefined;
     }
     if (noCssAnimation()) {
+      confirmedCb.current?.();
       reportShown();
       return undefined;
     }
-    const timer = window.setTimeout(reportShown, reducedMotion() ? OTP_STILL_HOLD_MS : OTP_SUCCESS_FALLBACK_MS);
-    return () => window.clearTimeout(timer);
-  }, [state, reportShown]);
-  // Dấu tích vẽ xong (animation cuối của chuỗi, đã gồm nhịp giữ) mới cho nơi gọi đi tiếp.
+    const still = motionReduced();
+    const confirm = window.setTimeout(() => confirmedCb.current?.(), still ? 0 : OTP_CONFIRM_AT_MS);
+    const timer = window.setTimeout(reportShown, still ? OTP_STILL_HOLD_MS : OTP_SUCCESS_FALLBACK_MS);
+    return () => {
+      window.clearTimeout(confirm);
+      window.clearTimeout(timer);
+    };
+  }, [visual, reportShown]);
+  // Dấu tích hiện xong (animation cuối của chuỗi, đã gồm nhịp giữ) mới cho nơi gọi đi tiếp.
   // Nghe sự kiện gốc chứ không qua `onAnimationEnd` của React: React đoán tên sự kiện theo tiền tố
   // của trình duyệt, đoán sai là lỡ mất và người dùng phải chờ tới hẹn giờ dự phòng.
   const groupRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = groupRef.current;
-    if (state !== 'success' || !el) return undefined;
+    if (visual !== 'success' || !el) return undefined;
     const onEnd = (e: Event) => {
       if ((e.target as Element).classList?.contains('otp-check-mark')) reportShown();
     };
     el.addEventListener('animationend', onEnd);
     return () => el.removeEventListener('animationend', onEnd);
-  }, [state, reportShown]);
+  }, [visual, reportShown]);
 
   const focusBox = (i: number) => boxes.current[Math.max(0, Math.min(i, active))]?.focus();
 
@@ -302,13 +406,16 @@ export function OtpInput({
       {/* Lớp trạng thái chỉ để vẽ chuyển động (shared-kit.css): `is-error` bật lại mỗi lượt sai vì
           nơi gọi xoá lỗi lúc gửi rồi mới đặt lỗi mới — animation lắc chạy lại. */}
       <div
-        className={
-          state === 'idle'
-            ? 'otp-boxes'
-            : `otp-boxes ${{ verifying: 'is-busy', success: 'is-success', error: 'is-error' }[state]}`
-        }
+        className={[
+          'otp-boxes',
+          onSuccessShown ? 'has-ring' : '',
+          { idle: '', verifying: 'is-busy', success: 'is-success', error: 'is-error' }[visual],
+          returning ? 'is-return' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         role="group"
-        aria-busy={state === 'verifying' ? true : undefined}
+        aria-busy={visual === 'verifying' ? true : undefined}
         ref={groupRef}
         aria-labelledby={labelId}
         aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
@@ -329,7 +436,7 @@ export function OtpInput({
               if (i === active) assignRef(inputRef, el);
             }}
             className={value[i] ? 'inp otp-box is-filled' : 'inp otp-box'}
-            // Thứ tự ô: nhịp lệch của vòng xoay "đang kiểm" (trái → phải) và đích trượt khi gộp ô.
+            // Thứ tự ô: vị trí trên vòng (góc = thứ tự × 60°) và quãng trượt từ hàng vào tâm.
             style={{ '--otp-i': i } as CSSProperties}
             aria-label={t('auth.otpDigit', { n: i + 1, total: OTP_LENGTH })}
             aria-invalid={error ? true : undefined}
@@ -358,10 +465,10 @@ export function OtpInput({
             }}
           />
         ))}
-        {state === 'success' ? (
+        {visual === 'success' ? (
           <div className="otp-check">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path className="otp-check-mark" d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} />
+            <svg className="otp-check-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
             </svg>
             <span className="sr-only" role="status">
               {t('auth.otpVerified')}

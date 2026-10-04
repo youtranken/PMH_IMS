@@ -29,9 +29,9 @@ function mockStepUp(status: number, body: unknown) {
   );
 }
 
+/** Đủ 6 số là ô tự gửi — bấm thêm nút là lượt thứ hai (bị chặn), và nút lúc đó đã thành "Đã xác thực". */
 async function typeCodeAndSubmit(): Promise<void> {
   await userEvent.type(screen.getByLabelText(/mã/i), '123456');
-  await userEvent.click(screen.getByRole('button', { name: /xác nhận|gửi|mở/i }));
 }
 
 afterEach(() => {

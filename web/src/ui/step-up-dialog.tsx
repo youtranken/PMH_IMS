@@ -114,6 +114,7 @@ function StepUpFields({
         readOnly={form.pending}
         status={form.otp.status}
         onSuccessShown={form.otp.onShown}
+        onConfirmed={form.otp.onConfirmed}
         /* Lỗi NGAY DƯỚI ô (viền đỏ + aria-invalid) — ô bị xoá trắng mà lỗi nằm chỗ khác thì
            người gõ không biết vì sao. */
         error={form.error}
@@ -131,14 +132,16 @@ function StepUpFields({
 
 function ConfirmButton({ formId, form }: { formId: string; form: ReturnType<typeof useStepUpForm> }) {
   const { t } = useTranslation();
+  // Server đã nhận mã nhưng vòng ô còn quay tới mốc trọn vòng: vẫn "đang xử lý", không bấm lại.
+  const working = form.pending || form.otp.status === 'success';
   return (
     <button
       type="submit"
       form={formId}
       className="btn primary"
-      disabled={form.pending || form.token.length !== 6}
+      disabled={working || form.token.length !== 6}
     >
-      {form.pending ? t('common.working') : t('common.confirm')}
+      {form.otp.confirmed ? t('auth.otpVerified') : working ? t('common.working') : t('common.confirm')}
     </button>
   );
 }

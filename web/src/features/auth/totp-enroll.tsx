@@ -8,7 +8,7 @@ import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { AuthCard } from './auth-card';
-import { OtpInput, otpMissingText, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
+import { OtpInput, OtpSubmitButton, otpMissingText, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
 import { TotpSetup, type TotpSetupData } from './totp-setup';
 
 type EnrollStart = TotpSetupData;
@@ -152,8 +152,9 @@ export function TotpEnroll() {
 
   return (
     <AuthCard
-      title={t('auth.enrollTitle')}
-      subtitle={t('auth.enrollSub')}
+      title={otp.confirmed ? t('auth.otpVerifiedTitle') : t('auth.enrollTitle')}
+      subtitle={otp.confirmed ? t('auth.otpVerifiedSub') : t('auth.enrollSub')}
+      verified={otp.confirmed}
       error={error}
       signedInAs={me}
       setupFor={me}
@@ -197,10 +198,9 @@ export function TotpEnroll() {
               readOnly={confirm.isPending}
               status={otp.status}
               onSuccessShown={otp.onShown}
+              onConfirmed={otp.onConfirmed}
             />
-            <button type="submit" className="btn primary" disabled={confirm.isPending}>
-              {confirm.isPending ? t('auth.totpChecking') : t('auth.totpVerify')}
-            </button>
+            <OtpSubmitButton pending={confirm.isPending} otp={otp} />
           </form>
         </>
       ) : (

@@ -252,5 +252,7 @@
   .rmap-card { padding: var(--space-8); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sec-flash { animation: none; }
+  html:not([data-motion='on']) .sec-flash { animation: none; }
 }
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .sec-flash { animation: none; }

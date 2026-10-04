@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import {
+  OTP_CONFIRM_AT_MS,
   OTP_MIN_SPIN_MS,
+  OTP_ORBIT_MS,
+  OTP_RING_IN_MS,
   OTP_STILL_HOLD_MS,
   OTP_SUCCESS_FALLBACK_MS,
   OtpInput,
+  otpSealDelay,
   useOtpSuccess,
   type OtpStatus,
 } from '@/ui/otp-input';
@@ -194,7 +198,9 @@ function SuccessHarness({ proceed, error, status }: { proceed: () => void; error
         error={error}
         status={otp.status ?? status}
         onSuccessShown={otp.onShown}
+        onConfirmed={otp.onConfirmed}
       />
+      <span data-testid="confirmed">{otp.confirmed ? 'yes' : 'no'}</span>
       <button type="button" onClick={() => void otp.show().then(proceed)}>
         ok
       </button>
@@ -204,10 +210,132 @@ function SuccessHarness({ proceed, error, status }: { proceed: () => void; error
 
 const checkMark = () => document.querySelector('.otp-check-mark') as Element;
 
+/*
+ * Vòng ô chỉ dừng ở mốc TRỌN vòng: dừng giữa chừng thì các ô đang nghiêng giật về tư thế đứng
+ * thẳng trước khi hội tụ. Mốc đầu tiên là sau khi vào vòng + một vòng (tối thiểu thấy trọn một vòng).
+ */
+describe('otpSealDelay — chờ tới mốc trọn vòng', () => {
+  const T = OTP_ORBIT_MS;
+  const IN = OTP_RING_IN_MS;
+  it.each([
+    // [đã quay bao lâu khi server trả lời, còn chờ bao lâu]
+    [0, IN + T],
+    [200, IN + T - 200],
+    [IN + T, 0],
+    [IN + T + 1, T - 1],
+    [IN + 2 * T - 100, 100],
+    [IN + 2 * T, 0],
+  ])('đã quay %ims → chờ %ims', (elapsed, wait) => {
+    expect(otpSealDelay(elapsed)).toBe(wait);
+  });
+
+  it('OTP_MIN_SPIN_MS = vào vòng + trọn một vòng', () => {
+    expect(OTP_MIN_SPIN_MS).toBe(IN + T);
+  });
+});
+
 describe('OtpInput — đang kiểm / thành công / sai', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    delete document.documentElement.dataset.motion;
+  });
+
+  /** Đổi prop mà không dựng lại cây (rerender của test-utils bỏ provider → ô bị gắn lại từ đầu). */
+  let setLive: (p: { readOnly?: boolean; status?: OtpStatus; error?: string }) => void = () => undefined;
+  function Live(initial: { readOnly?: boolean; status?: OtpStatus; error?: string }) {
+    const [p, setP] = useState(initial);
+    setLive = setP;
+    return (
+      <OtpInput
+        value={p.error ? '' : '123456'}
+        onChange={() => undefined}
+        label="Mã xác thực"
+        readOnly={p.readOnly}
+        status={p.status}
+        error={p.error}
+        onSuccessShown={() => undefined}
+      />
+    );
+  }
+
+  it('server trả lời giữa vòng thứ hai → vẫn quay tới hết vòng đó rồi mới hội tụ', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    renderWithI18n(<Live readOnly />);
+    expect(group()).toHaveClass('is-busy');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS + 300);
+    });
+    act(() => setLive({ status: 'success' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_ORBIT_MS - 300 - 1);
+    });
+    expect(group()).toHaveClass('is-busy');
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(group()).toHaveClass('is-success');
+    expect(group()).not.toHaveClass('is-busy');
+  });
+
+  it('sai mã giữa vòng → bỏ vòng ngay: ô bay về hàng (is-return) + lắc đỏ', () => {
+    renderWithI18n(<Live readOnly />);
+    expect(group()).toHaveClass('is-busy');
+    act(() => setLive({ error: 'Sai mã' }));
+    expect(group()).toHaveClass('is-error');
+    expect(group()).toHaveClass('is-return');
+    expect(group()).not.toHaveClass('is-busy');
+  });
+
+  it('lỗi không qua vòng (bấm khi thiếu số) → chỉ lắc, không có cú bay về', () => {
+    renderWithI18n(<Live error="Còn thiếu 2 số." />);
+    expect(group()).toHaveClass('is-error');
+    expect(group()).not.toHaveClass('is-return');
+  });
+
+  it('nơi gọi muốn hiệu ứng (có onSuccessShown) → hàng ô chừa chỗ cho vòng (has-ring)', () => {
+    const { unmount } = renderWithI18n(<Live />);
+    expect(group()).toHaveClass('has-ring');
+    unmount();
+    renderWithI18n(<Harness />);
+    expect(group()).not.toHaveClass('has-ring');
+  });
+
+  it('"đã xác thực" (đổi tiêu đề/nút ở nơi gọi) chỉ bật khi vòng xanh hiện, không sớm hơn', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    renderWithI18n(<SuccessHarness proceed={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_CONFIRM_AT_MS - 1);
+    });
+    expect(screen.getByTestId('confirmed')).toHaveTextContent('no');
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByTestId('confirmed')).toHaveTextContent('yes');
+  });
+
+  it('máy báo "giảm chuyển động" nhưng người dùng chọn Luôn bật → chạy đủ hiệu ứng (không giữ dấu tích tĩnh)', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
+    document.documentElement.dataset.motion = 'on';
+    vi.useFakeTimers();
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_STILL_HOLD_MS + 100);
+    });
+    expect(proceed).not.toHaveBeenCalled();
+    expect(screen.getByTestId('confirmed')).toHaveTextContent('yes');
   });
 
   it('status verifying → is-busy + aria-busy', () => {
