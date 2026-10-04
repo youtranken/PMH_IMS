@@ -533,6 +533,23 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     `diagram.xml_max_kb` nay đo trên XML khô SAU khi tách ảnh; tổng cỡ kể cả ảnh vẫn bị trần XML
     ướt lúc nhận chặn như trước. Ảnh không còn phiên bản nào dùng bị xoá ngay trong transaction
     Bỏ bản nháp / Xoá hẳn.
+- **Màn /diagrams là "bản đồ không gian" + bỏ nháp từ một bản chọn (04/10/2026, chủ dự án chốt
+  sau khi xem mẫu; thay bố cục cây hai cột).** Bản vẽ gốc là băng tối trên cùng, bản vẽ con của
+  nó là các KHU (tầng/site), con của khu là các Ô; ô có con thì bấm "▸ n bản vẽ con" để đi sâu
+  (bản đồ lấy ô đó làm gốc, có đường dẫn quay lại). Dải "Cần làm" đếm bản có nháp chưa phát
+  hành / chờ duyệt / lệch kho, bấm để lọc. Bấm một ô mở panel bên phải: chuyển nhanh giữa các
+  bản vẽ cùng khu, nút Mở bản chính thức / Sửa, khu "Nháp chưa phát hành" và khu "Đã phát hành".
+  Trạng thái luôn có CHỮ, không chỉ màu. Kiểu "Danh sách" (cây thụt lề) vẫn giữ cho người đọc
+  màn hình và ai quen danh sách.
+  - **Bỏ nháp TỪ một bản chọn trở về sau:** tick một bản nháp thì mọi bản nháp MỚI hơn được tick
+    theo; "Xóa n bản nháp" xoá các lần lưu có số ≥ bản chọn (cùng loại trừ như "Bỏ bản nháp":
+    bản đã đặt tên, từng phát hành, hay bị bản giữ lại trỏ tới thì giữ; có yêu cầu chờ duyệt trỏ
+    vào bản sẽ xoá thì chặn). Số bắt đầu phải SAU mốc giữ, không thì từ chối. Không cho xoá riêng
+    một bản nháp ở GIỮA: các lần lưu sau vẽ tiếp trên nó, xoá giữa chừng làm chuỗi lịch sử
+    hụt một khúc mà bản sau vẫn mang dấu của nó.
+  - Danh sách phiên bản trong panel vẫn là nội dung bản vẽ nên vẫn hỏi mã sơ đồ: panel hiện nút
+    "Nhập mã để xem lịch sử" tại chỗ, không tự bật hộp hỏi mã khi chỉ bấm chọn một ô. Tên, trạng
+    thái, số phiên bản / số nháp / số thiết bị trên bản đồ là thông tin của cây, không hỏi mã.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
