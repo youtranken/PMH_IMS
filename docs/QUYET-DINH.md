@@ -504,6 +504,35 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   bị GỠ GẮN, giữ hình và chữ, chứ không làm hỏng lượt tạo. Lý do: lỗi do dữ liệu bản cha, người tạo
   bản con không sửa được nó; để nguyên thì bản con lưu được một khung trỏ ngược lên nhánh khác); màn sơ đồ phải dùng được ngay không cần học — mỗi thao tác có (i) hướng dẫn, màn
   trống có các bước gợi ý.
+- **Bỏ bản nháp, Xoá hẳn, ảnh lưu một lần (04/10/2026, chủ dự án chốt).** Sửa luật "phiên bản
+  chỉ-thêm mãi mãi" của gạch Phiên bản ở trên. Lý do: mỗi lần lưu chép lại toàn bộ XML + ảnh xem,
+  kể cả ảnh thật nhúng, nên kho phình theo số lần bấm Lưu; còn các lần lưu nháp sau bản chính thức
+  phần lớn là bản vẽ dở, bỏ đi không mất gì của hồ sơ. Thứ phải giữ mãi vẫn giữ: bản chính thức,
+  mọi phiên bản từng phát hành, phiên bản đã đặt tên; và `diagram_history` + `audit_log` ghi một
+  dòng cho mỗi lần xoá (xoá từ số mấy tới số mấy, bao nhiêu lần lưu, ai xoá).
+  - **"Bỏ bản nháp":** xoá mọi phiên bản có số SAU mốc giữ mà chưa đặt tên, chưa từng phát hành.
+    Mốc giữ = bản chính thức; bản chưa có bản chính thức (bản trình bày, bản chưa phát hành) giữ
+    phiên bản đầu tiên. Phiên bản giữ lại mà còn trỏ tới một bản nháp (`based_on` / khôi phục từ)
+    thì bản nháp đó cũng giữ. Đang có yêu cầu phát hành chờ duyệt trỏ vào một bản sẽ xoá thì chặn,
+    bảo người gửi rút yêu cầu trước. Bình luận ghim trên các bản bị xoá đi cùng. Ai được: Admin/SA;
+    bản trình bày thì cả người tạo / phụ trách (cùng luật đổi tên, lưu trữ). Hỏi mã sơ đồ; hộp xác
+    nhận nói rõ sẽ xoá bao nhiêu lần lưu.
+  - **"Xoá hẳn":** chỉ bản vẽ CHƯA phát hành lần nào, không còn bản vẽ con (kể cả con đã lưu trữ),
+    không có yêu cầu chờ duyệt. Admin/SA hoặc người tạo; hỏi mã sơ đồ; gõ đúng tên để xác nhận.
+    Phiên bản, tên phiên bản, bình luận, lệch kho, người đang sửa bị xoá; riêng hàng `diagram` còn
+    lại làm **bia mộ** (`deleted_at`, ẩn khỏi mọi màn, 404 khi mở) vì `diagram_history` chỉ-thêm trỏ
+    khoá ngoại vào nó — lịch sử và nhật ký vẫn tra được bản vẽ tên gì, ai xoá.
+  - DB vẫn chặn sửa/xoá phiên bản như cũ; chỉ hàm `diagram_delete_versions` (SECURITY DEFINER)
+    mở được trong đúng transaction của nó, và trigger vẫn từ chối xoá bản chính thức, bản đã đặt
+    tên, bản từng phát hành. `ims_app` vẫn không có quyền DELETE trên các bảng chỉ-thêm.
+  - **Ảnh lưu một lần:** ảnh nhúng (`data:image/…;base64`) trong XML và ảnh xem SVG được tách ra bảng
+    `diagram_image`, khoá bằng SHA-256 của chính ảnh; phiên bản chỉ giữ tham chiếu
+    `ims-img:<dạng>:<sha>`. Mở bản vẽ, so sánh, xuất PNG/PDF đều ghép ảnh trở lại thành `data:` URI
+    trước (xuất vẫn qua cổng kiểm lại trước resvg, không bao giờ tải URL). Phiên bản cũ không chuyển
+    đổi gì, đọc được cả hai dạng. Ảnh nhỏ hơn 512 byte hoặc base64 không chuẩn để nguyên trong XML.
+    `diagram.xml_max_kb` nay đo trên XML khô SAU khi tách ảnh; tổng cỡ kể cả ảnh vẫn bị trần XML
+    ướt lúc nhận chặn như trước. Ảnh không còn phiên bản nào dùng bị xoá ngay trong transaction
+    Bỏ bản nháp / Xoá hẳn.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
