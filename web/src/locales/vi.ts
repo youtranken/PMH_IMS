@@ -2279,7 +2279,6 @@ export default {
     valueShow: 'Hiện',
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
-    stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
     stepUpSave: 'Nhập mã 6 số để cất "{{label}}" vào két.',
     stepUpEdit: 'Nhập mã 6 số để lưu thay đổi của "{{label}}".',
     stepUpRotate_password: 'Nhập mã 6 số để lưu mật khẩu mới vào két.',
@@ -2360,7 +2359,10 @@ export default {
     /* Cảnh báo, KHÔNG chặn: phần lớn secret là mật khẩu của thiết bị ngoài đã có sẵn — chặn
        cứng chỉ đẩy người dùng ghi mật khẩu thật vào ô Ghi chú, chỗ không mã hóa. */
     strengthWeak: 'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
-    autoHideShort: 'còn lại trước khi tự ẩn',
+    autoHideShort: 'Còn lại trước khi tự ẩn',
+    /* Hộp nhỏ của nút Xem (Q-24): bước mã rồi bước giá trị trong cùng một hộp. */
+    revealOtpTitle: 'Nhập mã 6 số để xem',
+    copyValue: 'Sao chép giá trị',
     revealLogged: 'Lượt xem này đã được ghi nhật ký.',
     hideNow: 'Ẩn ngay',
     request: 'Xin mở két',
@@ -2411,8 +2413,6 @@ export default {
     release: 'Trả quyền',
     releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
-    /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
-    stepBack: 'Quay lại',
   },
   ipam: {
     title: 'Địa chỉ IP',

@@ -366,7 +366,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     // --- XEM (đi qua bước xác thực bằng mã TOTP thật).
     await page.getByRole('button', { name: 'Xem' }).click();
-    await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' })).toBeVisible();
     await fillOtp(page, await freshTotpCode(adminTotp));
     await expect(
       page.getByTestId('secret-value'),

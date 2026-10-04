@@ -110,7 +110,7 @@ test.describe('Két sắt ở 390px', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' })).toBeVisible();
     await expect(otpGroup(page)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 

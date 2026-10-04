@@ -203,12 +203,12 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     const vault = page.getByRole('dialog', { name: `Két của ${code}` });
     await expect(vault).toBeVisible();
     await vault.getByRole('row', { name: new RegExp(label) }).getByRole('button', { name: 'Xem' }).click();
-    // Ân hạn sơ đồ không mở két (AD-17): bước hỏi mã phạm vi KÉT hiện ngay trong hộp két.
-    const step = vault.getByRole('region', { name: 'Xác nhận danh tính' });
+    // Ân hạn sơ đồ không mở két (AD-17): Xem vẫn hỏi mã phạm vi KÉT, bằng hộp nhỏ chồng lên hộp két (Q-24).
+    const step = page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' });
     await expect(step).toBeVisible();
-    await expect(step.getByText('Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.')).toBeVisible();
+    await expect(step.getByText(label, { exact: true })).toBeVisible();
     await fillOtp(step, await freshTotpCode(secret));
-    await expect(vault.getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
+    await expect(page.getByRole('dialog', { name: label, exact: true }).getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
   });
 
   test('đường hỏng: máy đã thanh lý không hiện trong hộp Thiết bị kho; ô trỏ máy không còn trong kho → dấu đỏ, thẻ báo "Không tìm thấy trong kho"', async ({ page }) => {

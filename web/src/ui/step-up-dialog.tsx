@@ -195,10 +195,49 @@ export function StepUpDialog({
 }
 
 /**
- * Cùng bước gõ mã, nhưng nằm TRONG hộp đang mở thay cho một hộp chồng lên (VLT-062).
+ * Chỉ 6 ô mã (+ lỗi ngay dưới ô), không câu giải thích, không nút Xác nhận — đủ 6 số là tự gửi,
+ * Enter cũng gửi. Cho hộp nhỏ "Nhập mã 6 số để xem" của két (Q-24): nơi gọi tự đặt tiêu đề, tên
+ * thứ đang mở và nút Hủy. Cùng hook gửi mã + hiệu ứng vòng với `StepUpDialog`.
+ */
+export function StepUpOtp({
+  csrfToken,
+  scope,
+  onDone,
+  formId,
+}: Pick<StepUpProps, 'csrfToken' | 'scope' | 'onDone'> & { formId: string }) {
+  const { t } = useTranslation();
+  const form = useStepUpForm(csrfToken, scope, onDone);
+  return (
+    <form
+      id={formId}
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.submit(form.token);
+      }}
+    >
+      <OtpInput
+        value={form.token}
+        onChange={form.setToken}
+        onComplete={(code) => void form.submit(code)}
+        label={t('auth.totpCode')}
+        id={`${formId}-otp`}
+        inputRef={form.inputRef}
+        readOnly={form.pending}
+        status={form.otp.status}
+        onSuccessShown={form.otp.onShown}
+        onConfirmed={form.otp.onConfirmed}
+        error={form.error}
+      />
+    </form>
+  );
+}
+
+/**
+ * Cùng bước gõ mã, nhưng nằm TRONG hộp đang mở thay cho một hộp chồng lên.
  *
- * Dùng khi nơi gọi đã ở trong một hộp (vd khung két mở từ trang Két tổng): chồng thêm hộp mã
- * rồi hộp giá trị là ba lớp trên điện thoại, người dùng không biết mình đang ở lớp nào. Bảo
+ * Dùng khi nơi gọi đã ở trong một hộp có nội dung riêng của nó (vd hộp Cài lại 2 lớp): chồng
+ * thêm hộp mã là hai lớp trên điện thoại, người dùng không biết mình đang ở lớp nào. Bảo
  * mật không đổi: mã vẫn đi đúng `/auth/step-up`, và bước này không giữ gì sau khi rời đi.
  */
 export function StepUpStep({

@@ -137,7 +137,7 @@ export function DiagramDeviceCard({
           title={t('diagrams.card.vaultTitle', { code: device.code ?? code })}
         >
           <p className="muted">{t('diagrams.card.vaultHint')}</p>
-          <VaultPanel ownerType="device" ownerId={device.id} ownerLabel={device.code ?? code} me={me} canEdit={false} locked={retired} stepsInline />
+          <VaultPanel ownerType="device" ownerId={device.id} ownerLabel={device.code ?? code} me={me} canEdit={false} locked={retired} />
         </Dialog>
       ) : null}
     </>

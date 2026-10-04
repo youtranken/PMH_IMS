@@ -15,10 +15,10 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
-import { RevealDialog, RevealStep, type TotpReveal } from '@/ui/reveal-dialog';
+import type { TotpReveal } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
-import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
+import { VaultRevealPopup, type RevealedSecret } from '@/ui/vault-reveal-popup';
 import { hourSteps } from '@/ui/grant-hours';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
@@ -162,7 +162,6 @@ export function VaultPanel({
   ownerId,
   me,
   canEdit = true,
-  stepsInline = false,
   ownerLabel,
   locked = false,
 }: {
@@ -176,12 +175,6 @@ export function VaultPanel({
    * Hồ sơ đã khóa (thanh lý): két chỉ còn để đọc, câu rỗng không mời "cất vào đây" nữa (DEV-057).
    */
   locked?: boolean;
-  /**
-   * Khung này đang nằm TRONG một hộp (vd popup của trang Két tổng): bước gõ mã 6 số và bước
-   * hiện giá trị thay chỗ danh sách ngăn ngay trong hộp đó, không mở hộp chồng lên (VLT-062).
-   * Trên trang hồ sơ (không có hộp bao ngoài) thì để mặc định — mỗi lúc chỉ có một hộp.
-   */
-  stepsInline?: boolean;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -189,23 +182,19 @@ export function VaultPanel({
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<{ secret: SecretMeta | null } | null>(null);
   const [rotating, setRotating] = useState<SecretMeta | null>(null);
-  const [pendingStepUp, setPendingStepUp] = useState<SecretMeta | null>(null);
+  /**
+   * Hộp nhỏ của nút Xem (Q-24): ngăn đang mở + bước. Một state cho cả hai bước để hộp KHÔNG
+   * đóng-mở lại giữa lúc gõ mã xong và lúc giá trị về — người dùng thấy cùng một hộp đổi nội dung.
+   */
+  const [popup, setPopup] = useState<
+    { secret: SecretMeta; step: 'otp' | 'opening' | 'value'; revealed: RevealedSecret | null } | null
+  >(null);
   /** Secret đang mở dở — chặn bấm đúp đẻ ra hai lần giải mã, hai dòng audit. */
   const [opening, setOpening] = useState<string | null>(null);
   /* Mở MỘT ngăn là mọi nút "Xem" khác xám hết, và không gì nói vì sao — người dùng đọc ra
      "mình không có quyền". Một câu dùng chung cho cả bảng, gắn vào từng nút đang xám. */
   const busyReason = useDisabledReason(opening !== null ? t('vault.revealBusy') : null);
   const [requesting, setRequesting] = useState(false);
-  const [revealed, setRevealed] = useState<
-    {
-      label: string;
-      username: string | null;
-      value: string;
-      totp?: TotpReveal;
-      seconds: number;
-      stepUpSecondsLeft: number;
-    } | null
-  >(null);
   const openingRef = useRef<string | null>(null);
 
   const queryKey = secretsKey(ownerType, ownerId);
@@ -287,13 +276,16 @@ export function VaultPanel({
           `/api/v1/vault/secrets/${secret.id}/reveal`,
           { method: 'POST', csrfToken: me.csrfToken },
         );
-        setRevealed({
-          label: secret.label,
-          username: secret.username,
-          value: opened.value,
-          totp: opened.totp,
-          seconds: opened.revealSeconds,
-          stepUpSecondsLeft: opened.stepUpSecondsLeft,
+        setPopup({
+          secret,
+          step: 'value',
+          revealed: {
+            username: secret.username,
+            value: opened.value,
+            totp: opened.totp,
+            seconds: opened.revealSeconds,
+            stepUpSecondsLeft: opened.stepUpSecondsLeft,
+          },
         });
         /* Lần xem đầu sau khi được duyệt vừa gắn quyền vào phiên này (Q-15): hỏi lại verdict để
            khung "Đã được duyệt" chuyển sang khung quyền đang chạy, và tải lại danh sách — ghi
@@ -305,9 +297,10 @@ export function VaultPanel({
       } catch (error) {
         const code = errorCode(error);
         if (!afterStepUp && code === 'STEPUP_REQUIRED') {
-          setPendingStepUp(secret);
+          setPopup({ secret, step: 'otp', revealed: null });
           return;
         }
+        setPopup(null);
         toast({ message: errorMessage(error), tone: 'error' });
         // Quyền vừa bị phiên khác giữ / vừa hết: khung phải nói đúng trạng thái mới.
         if (code === 'BREAK_GLASS_OTHER_SESSION' || code === 'BREAK_GLASS_REQUIRED') {
@@ -364,48 +357,17 @@ export function VaultPanel({
 
   const rows = secrets.data ?? [];
 
-  const stepUpPurpose = pendingStepUp
-    ? t('vault.stepUpPurpose', { label: pendingStepUp.label })
-    : undefined;
   const afterStepUp = () => {
-    const secret = pendingStepUp;
-    setPendingStepUp(null);
+    const secret = popup?.secret;
+    if (!secret) return;
+    setPopup({ secret, step: 'opening', revealed: null });
     // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
     // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.
-    if (secret) void openSecret(secret, true);
+    void openSecret(secret, true);
   };
   /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
      lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
   const onRevealExpire = () => toast({ message: t('vault.autoHidden') });
-
-  if (stepsInline && (pendingStepUp || revealed)) {
-    return (
-      <div className="attachment-panel">
-        {revealed ? (
-          <RevealStep
-            label={revealed.label}
-            username={revealed.username}
-            value={revealed.value}
-            totp={revealed.totp}
-            seconds={revealed.seconds}
-            stepUpSecondsLeft={revealed.stepUpSecondsLeft}
-            onClose={() => setRevealed(null)}
-            onExpire={onRevealExpire}
-          />
-        ) : pendingStepUp ? (
-          <StepUpStep
-            csrfToken={me.csrfToken}
-            scope="vault"
-            purpose={stepUpPurpose}
-            graceMinutes={me.config?.stepUpGraceMinutes}
-            backLabel={t('vault.stepBack')}
-            onBack={() => setPendingStepUp(null)}
-            onDone={afterStepUp}
-          />
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <div className="attachment-panel">
@@ -750,26 +712,14 @@ export function VaultPanel({
 
       {writeStepUp.dialog}
 
-      {pendingStepUp && !stepsInline ? (
-        <StepUpDialog
+      {popup ? (
+        <VaultRevealPopup
           csrfToken={me.csrfToken}
-          scope="vault"
-          purpose={stepUpPurpose}
-          graceMinutes={me.config?.stepUpGraceMinutes}
-          onClose={() => setPendingStepUp(null)}
-          onDone={afterStepUp}
-        />
-      ) : null}
-
-      {revealed && !stepsInline ? (
-        <RevealDialog
-          label={revealed.label}
-          username={revealed.username}
-          value={revealed.value}
-          totp={revealed.totp}
-          seconds={revealed.seconds}
-          stepUpSecondsLeft={revealed.stepUpSecondsLeft}
-          onClose={() => setRevealed(null)}
+          label={popup.secret.label}
+          step={popup.step}
+          revealed={popup.revealed}
+          onClose={() => setPopup(null)}
+          onVerified={afterStepUp}
           onExpire={onRevealExpire}
         />
       ) : null}
