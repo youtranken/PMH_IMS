@@ -377,6 +377,12 @@ nếu chủ dự án không đồng ý.
   số tự sang ô kế; Backspace ở ô trống lùi về ô trước và xoá nó; ←/→/Home/End di chuyển; dán
   hoặc tự điền cả mã (kể cả "123 456") vào ô nào cũng đổ đủ 6 ô. Đủ 6 số vẫn tự gửi, đúng một
   lượt như trước. Lý do: người dùng chép từng số từ ứng dụng xác thực và soát được từng số.
+- **6 ô mã chia đều + chuyển động (04/10/2026, chủ dự án):** 6 ô trải đều hết bề ngang khung (không
+  dồn trái), ô đang gõ sáng viền + nhấc nhẹ + con trỏ nháy, gõ số thì ô "nảy". Đủ 6 số đang kiểm
+  thì từng ô xoay một vòng lần lượt trái → phải (lặp tới khi server trả lời); mã đúng thì 6 ô gộp
+  thành 1 ô có dấu tích xanh, giữ một nhịp rồi mới vào (thêm ≤ ~0,9 giây); sai mã thì về 6 ô, cả
+  hàng lắc + đỏ. "Giảm chuyển động": không xoay/gộp/lắc, hiện dấu tích và đi tiếp ngay. Lý do:
+  góp ý "ô không đều", và chủ dự án muốn hiệu ứng như ứng dụng hiện đại (mẫu chủ dự án gửi).
 
 ### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
 

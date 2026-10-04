@@ -177,6 +177,13 @@
        được ngoài trời trên điện thoại. */
     --auth-warn-bg:rgba(251,191,36,.14); --auth-warn-border:rgba(251,191,36,.42);
     --auth-warn-ink:#ffd68a; --auth-label:#c9d6cd; --auth-ok-ink:#8fe3bf;
+    /* Ô mã 6 số (ui/otp-input.tsx): quầng sáng quanh ô đang gõ = vòng sát viền + bóng loang nhẹ
+       bên dưới (ô "nhấc" lên). Bản lỗi cùng hình, sắc đỏ. Trên card đăng nhập (luôn tối) dùng bộ
+       --auth-otp-*: sắc lục sáng mới nổi trên kính tối, nên cặp dark giữ nguyên giá trị. */
+    --otp-glow:0 0 0 4px rgba(14,159,110,.18),0 6px 14px -6px rgba(14,159,110,.45);
+    --otp-glow-danger:0 0 0 4px rgba(192,57,43,.16);
+    --auth-otp-focus:#34d399; --auth-otp-filled:rgba(52,211,153,.12);
+    --auth-otp-glow:0 0 0 4px rgba(52,211,153,.24),0 6px 16px -6px rgba(52,211,153,.55);
     /* Nền quanh mã QR: app xác thực cần viền trắng để đọc được, ở CẢ hai theme. */
     --qr-bg:#ffffff;
     /* Nền hover/chip trên sidebar tối (sidebar tối ở cả hai theme). */
@@ -270,6 +277,10 @@ html[data-theme='dark'] {
     --auth-danger-ink:#ffb4ab; --auth-hint:#9fb0a5;
     --auth-warn-bg:rgba(251,191,36,.14); --auth-warn-border:rgba(251,191,36,.42);
     --auth-warn-ink:#ffd68a; --auth-label:#c9d6cd; --auth-ok-ink:#8fe3bf;
+    --otp-glow:0 0 0 4px rgba(52,211,153,.22),0 6px 14px -6px rgba(52,211,153,.5);
+    --otp-glow-danger:0 0 0 4px rgba(242,126,114,.22);
+    --auth-otp-focus:#34d399; --auth-otp-filled:rgba(52,211,153,.12);
+    --auth-otp-glow:0 0 0 4px rgba(52,211,153,.24),0 6px 16px -6px rgba(52,211,153,.55);
     --qr-bg:#ffffff;
     --sidebar-hover:rgba(255,255,255,.06); --sidebar-chip:rgba(255,255,255,.1);
     --sidebar-chip-strong:rgba(255,255,255,.14);

@@ -1,7 +1,63 @@
-import { useCallback, useLayoutEffect, useRef, type KeyboardEvent, type MutableRefObject, type Ref } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,   type KeyboardEvent,
+  type MutableRefObject,
+  type Ref,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 const OTP_LENGTH = 6;
+
+/**
+ * Trạng thái quanh lượt gửi mã. `verifying`: 6 ô xoay lần lượt (chỉ báo đang kiểm). `success`:
+ * 6 ô gộp thành 1 ô có dấu tích, rồi mới gọi `onSuccessShown`. `error`: về 6 ô, lắc + đỏ.
+ */
+export type OtpStatus = 'idle' | 'verifying' | 'success' | 'error';
+
+/**
+ * Hiệu ứng thành công không được giữ người dùng lâu hơn mức này dù `animationend` không tới
+ * (tab bị ẩn, trình duyệt bỏ animation): gộp ô + vẽ dấu tích + giữ ~0,9 giây, dư một nhịp.
+ */
+export const OTP_SUCCESS_FALLBACK_MS = 1200;
+
+/**
+ * Không có hiệu ứng nào để chờ: người dùng bật "giảm chuyển động", hoặc môi trường không chạy
+ * animation CSS (không có `AnimationEvent`) — chờ ở đó chỉ là đứng yên tới hẹn giờ dự phòng.
+ */
+function noMotion(): boolean {
+  if (typeof window.AnimationEvent === 'undefined') return true;
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Cửa chờ hiệu ứng thành công cho nơi gọi `OtpInput`: `await show()` sau khi server nhận mã,
+ * rồi mới điều hướng / đóng hộp. Promise luôn xong — `onShown` (ô báo vẽ xong) hoặc hẹn giờ
+ * dự phòng của chính hook, để một sự kiện bị lỡ không bao giờ chặn đăng nhập.
+ */
+export function useOtpSuccess() {
+  const [shown, setShown] = useState(false);
+  const finish = useRef<(() => void) | null>(null);
+  const show = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const timer = window.setTimeout(() => done(), OTP_SUCCESS_FALLBACK_MS + 300);
+        const done = () => {
+          window.clearTimeout(timer);
+          finish.current = null;
+          resolve();
+        };
+        finish.current = done;
+        setShown(true);
+      }),
+    [],
+  );
+  const onShown = useCallback(() => finish.current?.(), []);
+  return { status: shown ? ('success' as const) : undefined, show, onShown };
+}
 
 /**
  * Đặt các số vừa gõ/dán vào mã, bắt đầu từ ô `box`. Đủ 6 số trở lên là cả mã (dán, tự điền) — thay
@@ -68,6 +124,8 @@ export function OtpInput({
   hint,
   inputRef,
   readOnly,
+  status,
+  onSuccessShown,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -88,6 +146,13 @@ export function OtpInput({
   inputRef?: Ref<HTMLInputElement>;
   /** Đang gửi mã: khoá ô để lượt gõ thêm không đè lên mã đang được kiểm. */
   readOnly?: boolean;
+  /**
+   * Thiếu thì tự suy: có `error` → error; `readOnly` + đủ 6 số → verifying. `success` lấy từ
+   * `useOtpSuccess().status`; lỗi luôn thắng verifying (thôi xoay khi server từ chối).
+   */
+  status?: OtpStatus;
+  /** Gọi MỘT lần khi hiệu ứng thành công xong (hoặc ngay, nếu máy bật "giảm chuyển động"). */
+  onSuccessShown?: () => void;
 }) {
   const { t } = useTranslation();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
@@ -96,6 +161,51 @@ export function OtpInput({
   const labelId = `${id}-label`;
   // Ô nhận số kế tiếp. Con trỏ không đứng sau nó: mã là chuỗi liền, ô trống ở giữa không có nghĩa.
   const active = Math.min(value.length, OTP_LENGTH - 1);
+
+  const state: OtpStatus =
+    status === 'success'
+      ? 'success'
+      : error || status === 'error'
+        ? 'error'
+        : status === 'verifying' || (readOnly && value.length === OTP_LENGTH)
+          ? 'verifying'
+          : 'idle';
+  // Đang chạy hiệu ứng thành công thì ô cũng khoá: mã đã được nhận, gõ thêm không còn nghĩa.
+  const locked = readOnly || state === 'success';
+
+  const shownCb = useRef(onSuccessShown);
+  shownCb.current = onSuccessShown;
+  const shownOnce = useRef(false);
+  const reportShown = useCallback(() => {
+    if (shownOnce.current) return;
+    shownOnce.current = true;
+    shownCb.current?.();
+  }, []);
+  useEffect(() => {
+    if (state !== 'success') {
+      shownOnce.current = false;
+      return undefined;
+    }
+    if (noMotion()) {
+      reportShown();
+      return undefined;
+    }
+    const timer = window.setTimeout(reportShown, OTP_SUCCESS_FALLBACK_MS);
+    return () => window.clearTimeout(timer);
+  }, [state, reportShown]);
+  // Dấu tích vẽ xong (animation cuối của chuỗi, đã gồm nhịp giữ) mới cho nơi gọi đi tiếp.
+  // Nghe sự kiện gốc chứ không qua `onAnimationEnd` của React: React đoán tên sự kiện theo tiền tố
+  // của trình duyệt, đoán sai là lỡ mất và người dùng phải chờ tới hẹn giờ dự phòng.
+  const groupRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = groupRef.current;
+    if (state !== 'success' || !el) return undefined;
+    const onEnd = (e: Event) => {
+      if ((e.target as Element).classList?.contains('otp-check-mark')) reportShown();
+    };
+    el.addEventListener('animationend', onEnd);
+    return () => el.removeEventListener('animationend', onEnd);
+  }, [state, reportShown]);
 
   const focusBox = (i: number) => boxes.current[Math.max(0, Math.min(i, active))]?.focus();
 
@@ -116,7 +226,7 @@ export function OtpInput({
   }, [active]);
 
   const onBoxChange = (i: number, raw: string) => {
-    if (readOnly) return;
+    if (locked) return;
     let digits = raw.replace(/\D/g, '');
     const current = value[i] ?? '';
     if (!digits) {
@@ -136,7 +246,7 @@ export function OtpInput({
       case 'Backspace':
       case 'Delete':
         e.preventDefault();
-        if (readOnly) return;
+        if (locked) return;
         if (value[i]) commit(value.slice(0, i) + value.slice(i + 1), i);
         else if (e.key === 'Backspace' && i > 0) commit(value.slice(0, i - 1) + value.slice(i), i - 1);
         return;
@@ -167,9 +277,17 @@ export function OtpInput({
       </span>
       {/* Bấm vào khe giữa các ô, hay vào ô trống phía sau → về ô trống đầu tiên. Chuột thôi: bàn
           phím đã có Tab/←/→ trên từng ô. */}
+      {/* Lớp trạng thái chỉ để vẽ chuyển động (shared-kit.css): `is-error` bật lại mỗi lượt sai vì
+          nơi gọi xoá lỗi lúc gửi rồi mới đặt lỗi mới — animation lắc chạy lại. */}
       <div
-        className="otp-boxes"
+        className={
+          state === 'idle'
+            ? 'otp-boxes'
+            : `otp-boxes ${{ verifying: 'is-busy', success: 'is-success', error: 'is-error' }[state]}`
+        }
         role="group"
+        aria-busy={state === 'verifying' ? true : undefined}
+        ref={groupRef}
         aria-labelledby={labelId}
         aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
         aria-invalid={error ? true : undefined}
@@ -188,10 +306,12 @@ export function OtpInput({
               boxes.current[i] = el;
               if (i === active) assignRef(inputRef, el);
             }}
-            className="inp otp-box"
+            className={value[i] ? 'inp otp-box is-filled' : 'inp otp-box'}
+            // Thứ tự ô: nhịp lệch của vòng xoay "đang kiểm" (trái → phải) và đích trượt khi gộp ô.
+            style={{ '--otp-i': i } as CSSProperties}
             aria-label={t('auth.otpDigit', { n: i + 1, total: OTP_LENGTH })}
             aria-invalid={error ? true : undefined}
-            readOnly={readOnly}
+            readOnly={locked}
             // Bàn phím số trên điện thoại cho mọi ô. Gợi ý mã từ tin nhắn/keychain chỉ ở ô đầu: trình
             // duyệt đổ cả mã vào ô đó, `onBoxChange` chia ra 6 ô.
             inputMode="numeric"
@@ -208,7 +328,7 @@ export function OtpInput({
             onKeyDown={(e) => onKeyDown(i, e)}
             onPaste={(e) => {
               e.preventDefault();
-              if (readOnly) return;
+              if (locked) return;
               const digits = e.clipboardData.getData('text').replace(/\D/g, '');
               if (!digits) return;
               const { next, focusAt } = placeOtpDigits(value, i, digits);
@@ -216,6 +336,16 @@ export function OtpInput({
             }}
           />
         ))}
+        {state === 'success' ? (
+          <div className="otp-check">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path className="otp-check-mark" d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} />
+            </svg>
+            <span className="sr-only" role="status">
+              {t('auth.otpVerified')}
+            </span>
+          </div>
+        ) : null}
       </div>
       {error ? (
         <span className="field-error" role="alert" id={errorId}>

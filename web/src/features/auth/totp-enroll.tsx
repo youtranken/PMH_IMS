@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { errorCode, errorMessage, useApiMutation, useMe } from '@/lib/api';
+import { ME_KEY, errorCode, errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { Field } from '@/ui/page-header';
 import { PasswordInput } from '@/ui/password-input';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { AuthCard } from './auth-card';
-import { OtpInput, otpMissingText, useOtpSubmit } from '@/ui/otp-input';
+import { OtpInput, otpMissingText, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
 import { TotpSetup, type TotpSetupData } from './totp-setup';
 
 type EnrollStart = TotpSetupData;
@@ -50,8 +51,11 @@ export function TotpEnroll() {
   );
   const confirm = useApiMutation<{ token: string }, { status: string }>(
     '/api/v1/auth/totp/enroll/confirm',
-    { csrfToken: me?.csrfToken ?? null },
+    // Nạp lại `me` SAU hiệu ứng thành công — nạp ngay thì router chuyển bước trước khi thấy dấu tích.
+    { csrfToken: me?.csrfToken ?? null, refreshMe: false },
   );
+  const queryClient = useQueryClient();
+  const otp = useOtpSuccess();
 
   const startMutate = start.mutate;
   useEffect(() => {
@@ -78,13 +82,16 @@ export function TotpEnroll() {
     setCodeError(null);
     try {
       await confirm.mutateAsync({ token: code });
-      // Toast sống ngoài router: vẫn hiện sau khi `me` nạp lại và router chuyển sang bước kế.
-      toast({ message: t('auth.enrollDone'), tone: 'ok', durationMs: 8000 });
     } catch (err) {
       setToken('');
       setCodeError(errorMessage(err, t('auth.totpInvalid')));
       codeRef.current?.focus();
+      return;
     }
+    await otp.show();
+    // Toast sống ngoài router: vẫn hiện sau khi `me` nạp lại và router chuyển sang bước kế.
+    toast({ message: t('auth.enrollDone'), tone: 'ok', durationMs: 8000 });
+    await queryClient.invalidateQueries({ queryKey: ME_KEY });
   });
 
   if (needPassword && !enroll) {
@@ -188,6 +195,8 @@ export function TotpEnroll() {
               error={otpMissingText(t, missing) ?? codeError}
               inputRef={codeRef}
               readOnly={confirm.isPending}
+              status={otp.status}
+              onSuccessShown={otp.onShown}
             />
             <button type="submit" className="btn primary" disabled={confirm.isPending}>
               {confirm.isPending ? t('auth.totpChecking') : t('auth.totpVerify')}

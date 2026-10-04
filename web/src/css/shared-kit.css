@@ -149,18 +149,130 @@ body:has(.auth) .toast-stack {
 .fsel-trigger[aria-invalid='true'],
 .dp-trigger[aria-invalid='true'] { border-color: var(--danger); }
 
-/* Ô mã 2 lớp (ui/otp-input.tsx): 6 ô chia đều bề ngang. Ở 390px card đăng nhập còn ~320px nên
-   mỗi ô vẫn ≥44px; cao 48px cho đủ vùng chạm. Màu lấy từ `.inp` (và `.auth-form .inp` trên kính). */
-.otp-boxes { display: flex; gap: var(--space-3); max-width: 22rem; }
+/* Ô mã 2 lớp (ui/otp-input.tsx): lưới 6 cột bằng nhau trải hết bề ngang khung — không chặn
+   max-width, chặn thì khung rộng (hộp xác thực lại) còn chỗ trống bên phải và các ô trông dồn
+   trái. Ở 390px card đăng nhập còn ~320px nên mỗi ô vẫn ≥44px; cao 52px cho đủ vùng chạm. Màu
+   nền/viền gốc lấy từ `.inp` (và `.auth-form .inp` trên kính). */
+.otp-boxes {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+  perspective: 600px;
+}
 .otp-box {
-  flex: 1 1 0;
+  width: 100%;
   min-width: 0;
-  min-height: 48px;
+  min-height: 52px;
   padding: 0;
   font-family: var(--mono);
   font-size: var(--fs-xl);
   text-align: center;
+  /* Ô đã có số: chữ được chọn sẵn lúc vào ô, con trỏ nháy cạnh vùng chọn chỉ gây rối. */
   caret-color: transparent;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    background var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+/* Ô trống đang gõ: con trỏ nháy (của trình duyệt) giữa ô báo "gõ vào đây". */
+.otp-box:not(.is-filled):focus { caret-color: var(--primary); }
+.otp-box.is-filled {
+  background: var(--primary-soft);
+  animation: otp-pop var(--dur) var(--ease);
+}
+.otp-box:focus {
+  border-color: var(--primary);
+  box-shadow: var(--otp-glow);
+  transform: translateY(-2px) scale(1.04);
+}
+.otp-boxes.is-error { animation: otp-shake 300ms var(--ease); }
+.otp-boxes.is-error .otp-box { border-color: var(--danger); background: var(--danger-soft); }
+.otp-boxes.is-error .otp-box:focus { box-shadow: var(--otp-glow-danger); }
+/* Đủ 6 số, đang kiểm: từng ô lật một vòng, lệch nhịp trái → phải theo `--otp-i`; lặp tới khi
+   server trả lời (lớp `is-busy` mất là dừng). */
+.otp-boxes.is-busy .otp-box {
+  animation: otp-spin 760ms var(--ease) infinite;
+  animation-delay: calc(var(--otp-i, 0) * 60ms);
+}
+/* Thành công: 6 ô trượt vào giữa rồi tan, nhường chỗ cho MỘT ô có dấu tích. Trạng thái cuối khai
+   tĩnh (ô ẩn, nét tích đầy) để khi "giảm chuyển động" tắt animation vẫn thấy đúng dấu tích. */
+.otp-boxes.is-success .otp-box {
+  opacity: 0;
+  animation: otp-merge 220ms var(--ease);
+}
+.otp-check {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: calc((100% - 5 * var(--space-3)) / 6);
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ok);
+  border-radius: var(--r);
+  background: var(--ok-soft);
+  animation: otp-check-in 220ms var(--ease) both;
+}
+.otp-check svg {
+  width: 60%;
+  height: 60%;
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Nét tích tự vẽ rồi GIỮ: nhịp giữ nằm trong chính keyframe, nên `animationend` của nét này là
+   mốc duy nhất ô báo "xong" cho nơi gọi đi tiếp (ui/otp-input.tsx). */
+.otp-check-mark {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: otp-check-draw 660ms var(--ease) 220ms both;
+}
+/* Card đăng nhập luôn tối: đổi sang bộ --auth-otp-* (xem tokens.css). */
+.auth-form .otp-box:not(.is-filled):focus { caret-color: var(--auth-otp-focus); }
+.auth-form .otp-box.is-filled { background: var(--auth-otp-filled); }
+.auth-form .otp-box:focus { border-color: var(--auth-otp-focus); box-shadow: var(--auth-otp-glow); }
+.auth-form .otp-boxes.is-error .otp-box { border-color: var(--auth-danger-border); background: var(--auth-danger-bg); }
+.auth-form .otp-check { border-color: var(--auth-ok-ink); background: var(--auth-otp-filled); }
+.auth-form .otp-check svg { stroke: var(--auth-ok-ink); }
+@keyframes otp-pop {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes otp-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+@keyframes otp-spin {
+  0% { transform: rotateY(0); }
+  70%, 100% { transform: rotateY(360deg); }
+}
+@keyframes otp-merge {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(calc((2.5 - var(--otp-i, 0)) * (100% + var(--space-3)))) scale(0.9); }
+}
+@keyframes otp-check-in {
+  from { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+@keyframes otp-check-draw {
+  0% { stroke-dashoffset: 1; }
+  40%, 100% { stroke-dashoffset: 0; }
+}
+/* `!important`: các luật bật animation ở trên có class trạng thái nên ưu tiên cao hơn. */
+@media (prefers-reduced-motion: reduce) {
+  .otp-boxes,
+  .otp-box,
+  .otp-check,
+  .otp-check-mark {
+    animation: none !important;
+    transition: none !important;
+  }
+  .otp-box:focus { transform: none; }
 }
 
 /* Ô có đơn vị cố định bên phải (ui/money-input.tsx): đơn vị nằm TRONG khung ô cho gọn, nhưng

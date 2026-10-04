@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
-import { OtpInput } from '@/ui/otp-input';
-import { fireEvent, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { OtpInput, useOtpSuccess, type OtpStatus } from '@/ui/otp-input';
+import { act, fireEvent, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 /**
  * Ô mã 2 lớp là 6 ô riêng, mỗi ô một số (Q-21). Người dùng chép từng số từ ứng dụng xác thực,
@@ -144,5 +144,128 @@ describe('OtpInput — 6 ô riêng', () => {
     await userEvent.keyboard('3{Backspace}');
     await userEvent.paste('999999');
     expect(shown()).toBe('12');
+  });
+});
+
+describe('OtpInput — lớp trạng thái cho chuyển động', () => {
+  it('có lỗi → hàng ô mang is-error (lắc + đỏ); hết lỗi → bỏ, để lượt sai sau lắc lại', () => {
+    const { rerender } = renderWithI18n(<Harness error="Mã không đúng" />);
+    expect(group()).toHaveClass('is-error');
+    rerender(<Harness />);
+    expect(group()).not.toHaveClass('is-error');
+  });
+
+  it('ô đã có số mang is-filled, ô trống thì không', () => {
+    renderWithI18n(<Harness initial="12" />);
+    const all = boxes();
+    expect(all[0]).toHaveClass('is-filled');
+    expect(all[1]).toHaveClass('is-filled');
+    expect(all[2]).not.toHaveClass('is-filled');
+  });
+
+  it('đủ 6 số và đang gửi (readOnly) → is-busy; chưa đủ số thì không', () => {
+    const { unmount } = renderWithI18n(<Harness initial="123456" readOnly />);
+    expect(group()).toHaveClass('is-busy');
+    unmount();
+    renderWithI18n(<Harness initial="123" readOnly />);
+    expect(group()).not.toHaveClass('is-busy');
+  });
+});
+
+/**
+ * Trạng thái quanh lượt gửi: đang kiểm (6 ô xoay), thành công (gộp thành 1 ô có dấu tích, nơi gọi
+ * chỉ đi tiếp sau khi hiệu ứng xong), sai (về 6 ô, lắc + đỏ).
+ */
+function SuccessHarness({ proceed, error, status }: { proceed: () => void; error?: string; status?: OtpStatus }) {
+  const otp = useOtpSuccess();
+  return (
+    <>
+      <OtpInput
+        value="123456"
+        onChange={() => undefined}
+        label="Mã xác thực"
+        error={error}
+        status={otp.status ?? status}
+        onSuccessShown={otp.onShown}
+      />
+      <button type="button" onClick={() => void otp.show().then(proceed)}>
+        ok
+      </button>
+    </>
+  );
+}
+
+const checkMark = () => document.querySelector('.otp-check-mark') as Element;
+
+describe('OtpInput — đang kiểm / thành công / sai', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('status verifying → is-busy + aria-busy', () => {
+    renderWithI18n(<SuccessHarness proceed={() => undefined} status="verifying" />);
+    expect(group()).toHaveClass('is-busy');
+    expect(group()).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('có lỗi thì thôi xoay: is-error, không is-busy', () => {
+    renderWithI18n(<SuccessHarness proceed={() => undefined} status="verifying" error="Sai mã" />);
+    expect(group()).toHaveClass('is-error');
+    expect(group()).not.toHaveClass('is-busy');
+    expect(group()).not.toHaveAttribute('aria-busy');
+  });
+
+  it('thành công → gộp 1 ô + báo "Đã xác thực"; nơi gọi đi tiếp chỉ SAU khi vẽ xong dấu tích', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    expect(group()).toHaveClass('is-success');
+    expect(screen.getByRole('status')).toHaveTextContent('Đã xác thực');
+    await act(async () => {});
+    expect(proceed).not.toHaveBeenCalled();
+    await act(async () => {
+      // `AnimationEvent` đang là bản giả nên dựng sự kiện gốc.
+      checkMark().dispatchEvent(new Event('animationend', { bubbles: true }));
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+
+  it('không nhận được animationend → vẫn đi tiếp nhờ hẹn giờ dự phòng (không kẹt đăng nhập)', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(proceed).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+
+  it('không có animation CSS (AnimationEvent) → đi tiếp ngay', async () => {
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+
+  it('"giảm chuyển động" → hiện dấu tích và đi tiếp ngay, không chờ hiệu ứng', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    });
+    expect(group()).toHaveClass('is-success');
+    expect(proceed).toHaveBeenCalledTimes(1);
   });
 });

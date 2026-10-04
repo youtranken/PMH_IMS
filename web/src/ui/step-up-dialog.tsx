@@ -3,7 +3,7 @@ import { Chevron } from '@/ui/chevron';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Dialog } from '@/ui/dialog';
-import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
+import { OtpInput, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
 
 /**
  * Phạm vi step-up (AD-17) — khớp `StepUpScope` của api. Mỗi phạm vi một mốc, một ân hạn: mã
@@ -42,6 +42,7 @@ function useStepUpForm(
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const otp = useOtpSuccess();
 
   const stepUp = useApiMutation<{ token: string; scope: StepUpScope }, { graceMinutes: number }>(
     '/api/v1/auth/step-up',
@@ -52,6 +53,8 @@ function useStepUpForm(
     setError(null);
     try {
       const result = await stepUp.mutateAsync({ token: code, scope });
+      // Đóng hộp / thử lại việc vừa bị chặn chỉ sau khi người dùng thấy dấu tích.
+      await otp.show();
       setToken('');
       onDone(result.graceMinutes);
     } catch (err) {
@@ -64,7 +67,7 @@ function useStepUpForm(
     }
   });
 
-  return { token, setToken, error, inputRef, submit, pending: stepUp.isPending };
+  return { token, setToken, error, inputRef, submit, pending: stepUp.isPending, otp };
 }
 
 function StepUpFields({
@@ -107,6 +110,10 @@ function StepUpFields({
         id={`${formId}-otp`}
         inputRef={form.inputRef}
         autoFocus={autoFocus}
+        // Đang kiểm mã: khoá ô (số gõ thêm không đè lên mã đang gửi) và cho hàng ô nhấp nháy.
+        readOnly={form.pending}
+        status={form.otp.status}
+        onSuccessShown={form.otp.onShown}
         /* Lỗi NGAY DƯỚI ô (viền đỏ + aria-invalid) — ô bị xoá trắng mà lỗi nằm chỗ khác thì
            người gõ không biết vì sao. */
         error={form.error}

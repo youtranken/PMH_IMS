@@ -398,6 +398,7 @@ export default {
     totpEmpty: 'Vui lòng nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
     otpDigit: 'Số thứ {{n}} trên {{total}}',
+    otpVerified: 'Đã xác thực',
     /* "Quay lại" ở màn nhập mã: phiên chờ phải đóng thật, không chỉ đổi màn. */
     totpBack: 'Quay lại',
     totpBacking: 'Đang quay lại…',

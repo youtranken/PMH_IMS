@@ -443,3 +443,34 @@ describe('không còn CSS/token chết', () => {
     expect(readCss('tokens.css')).not.toContain(token);
   });
 });
+
+describe('ô mã 6 số (ui/otp-input.tsx)', () => {
+  it('hàng ô là lưới 6 cột bằng nhau, trải hết bề ngang — không dồn về trái', () => {
+    const body = rule('shared-kit.css', '.otp-boxes')!.body;
+    expect(declValue(body, 'display')).toBe('grid');
+    expect(declValue(body, 'grid-template-columns')).toBe('repeat(6, minmax(0, 1fr))');
+    expect(declValue(body, 'width')).toBe('100%');
+    expect(declValue(body, 'max-width')).toBeUndefined();
+  });
+
+  it('ô cao ≥ 44px (vùng chạm)', () => {
+    const h = declValue(rule('shared-kit.css', '.otp-box')!.body, 'min-height')!;
+    expect(parseInt(h, 10)).toBeGreaterThanOrEqual(44);
+  });
+
+  it('"giảm chuyển động" tắt mọi animation/transition/transform của ô mã', () => {
+    const media = '(prefers-reduced-motion: reduce)';
+    for (const sel of ['.otp-boxes', '.otp-box', '.otp-check', '.otp-check-mark']) {
+      const body = rule('shared-kit.css', sel, media)?.body ?? '';
+      // Phải thắng cả luật có class trạng thái (is-filled, is-busy, is-error) → cần !important.
+      expect(declValue(body, 'animation'), sel).toBe('none !important');
+      expect(declValue(body, 'transition'), sel).toBe('none !important');
+    }
+    expect(declValue(rule('shared-kit.css', '.otp-box:focus', media)?.body ?? '', 'transform')).toBe('none');
+  });
+
+  it('trạng thái cuối của "thành công" khai tĩnh — tắt animation vẫn thấy đúng 1 ô có dấu tích', () => {
+    expect(declValue(rule('shared-kit.css', '.otp-boxes.is-success .otp-box')!.body, 'opacity')).toBe('0');
+    expect(declValue(rule('shared-kit.css', '.otp-check-mark')!.body, 'stroke-dashoffset')).toBe('0');
+  });
+});
