@@ -201,6 +201,18 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
       expect(await seqs(d.id)).toEqual([1, 2, 3, 4]);
     });
 
+    it('có người lưu thêm sau khi hộp xác nhận mở → 409, không xoá gì; xác nhận lại dải mới thì được', async () => {
+      const d = await drawn(3);
+      await review.publish(SA, d.id, { versionId: d.versions[0] });
+      const seen = (await prune.draftPreview(SA, d.id)).ranges;
+      expect(seen).toBe('#2–#3');
+      await diagrams.save(SA.email, d.id, { xml: page(shape('n', 'Mới')), svg: SVG, basedOnVersionId: d.versions[2] });
+      await expect(prune.discardDrafts(SA, d.id, seen)).rejects.toMatchObject({ status: 409, response: { code: 'DIAGRAM_DRAFTS_CHANGED' } });
+      expect(await seqs(d.id)).toEqual([1, 2, 3, 4]);
+      await prune.discardDrafts(SA, d.id, '#2–#4');
+      expect(await seqs(d.id)).toEqual([1]);
+    });
+
     it('chưa có bản chính thức: giữ phiên bản đầu', async () => {
       const d = await drawn(3);
       await prune.discardDrafts(SA, d.id);

@@ -55,7 +55,13 @@ export function useDiagramPrune(me: Me, run: Run, onPurged?: (node: DiagramNode)
       });
       if (!ok) return;
       const done = await run(
-        () => apiFetch<{ count: number; ranges: string }>(`/api/v1/diagrams/${node.id}/drafts/discard`, { method: 'POST', csrfToken: me.csrfToken }),
+        () =>
+          apiFetch<{ count: number; ranges: string }>(`/api/v1/diagrams/${node.id}/drafts/discard`, {
+            method: 'POST',
+            csrfToken: me.csrfToken,
+            // Dải đã hiện trong hộp: có người lưu thêm giữa chừng thì server từ chối, không xoá lố.
+            body: JSON.stringify({ ranges: preview.ranges }),
+          }),
         t('diagrams.prune.discardStepUp', { name: node.name }),
       );
       await refresh(node);

@@ -54,7 +54,11 @@ export class DiagramPruneService {
     });
   }
 
-  async discardDrafts(actor: PruneActor, diagramId: string): Promise<{ count: number; ranges: string }> {
+  /**
+   * `expectRanges` = dải người dùng đã thấy trong hộp xác nhận. Có người lưu thêm giữa lúc hộp mở
+   * thì dải đổi: từ chối (409) thay vì xoá luôn lần lưu người bấm chưa hề thấy.
+   */
+  async discardDrafts(actor: PruneActor, diagramId: string, expectRanges?: string): Promise<{ count: number; ranges: string }> {
     return this.db.transaction(async (tx) => {
       const diagram = await this.lock(tx, diagramId, true);
       assertCanDiscard(diagram, actor);
@@ -63,6 +67,12 @@ export class DiagramPruneService {
       const preview = await this.preview(diagramId, plan);
       if (preview.count === 0) {
         throw new ConflictException({ code: 'DIAGRAM_NO_DRAFTS', message: 'Không có bản nháp nào để bỏ — các lần lưu sau mốc giữ đều đã đặt tên hoặc từng phát hành.' });
+      }
+      if (expectRanges !== undefined && expectRanges !== preview.ranges) {
+        throw new ConflictException({
+          code: 'DIAGRAM_DRAFTS_CHANGED',
+          message: `Bản vẽ vừa có thay đổi: nay sẽ bỏ ${preview.count} lần lưu ${preview.ranges}. Bấm "Bỏ bản nháp" lại để xác nhận số mới.`,
+        });
       }
       if (preview.blockedByApprovalId) {
         throw new ConflictException({

@@ -77,7 +77,10 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
     return next;
   }, [all, selected, opened, closed]);
 
-  const select = (id: string | null) =>
+  const select = (id: string | null) => {
+    // Nhánh chứa nút vừa chọn phải mở, kể cả khi người dùng đã thu tay nhánh đó trước đây.
+    const path = expandedFor(all, id, new Set());
+    setClosed((current) => new Set([...current].filter((closedId) => !path.has(closedId))));
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
@@ -87,6 +90,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       },
       { replace: true },
     );
+  };
 
   const toggle = (id: string) => {
     const open = !expanded.has(id);

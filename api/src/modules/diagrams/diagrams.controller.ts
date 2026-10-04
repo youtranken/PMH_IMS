@@ -133,6 +133,11 @@ class LabelDto {
   label!: string | null;
 }
 
+/** Dải phiên bản người dùng đã thấy trong hộp xác nhận ("#13–#17") — service so với dải thật. */
+class DiscardDraftsDto {
+  @IsOptional() @IsString() @MaxLength(2000, { message: 'Dải phiên bản không hợp lệ.' }) ranges?: string;
+}
+
 /** Tên gõ lại để xác nhận "Xoá hẳn" — service so với tên thật. */
 class PurgeDto {
   @IsString() @Length(1, 120, { message: 'Gõ lại đúng tên bản vẽ để xác nhận.' }) name!: string;
@@ -360,8 +365,8 @@ export class DiagramsController {
   @RequiresStepUp('diagram')
   @Post(':id/drafts/discard')
   @Audited('diagram.drafts_discarded', 'diagram', { writtenByService: true })
-  discardDrafts(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
-    return this.prune.discardDrafts({ email: req.user!.email, role: req.user!.role }, params.id);
+  discardDrafts(@Param() params: IdParamDto, @Body() dto: DiscardDraftsDto, @Req() req: AuthedRequest) {
+    return this.prune.discardDrafts({ email: req.user!.email, role: req.user!.role }, params.id, dto.ranges);
   }
 
   /** "Xoá hẳn" bản vẽ chưa phát hành lần nào (Q-23): Admin/SA hoặc người tạo — service kiểm. */

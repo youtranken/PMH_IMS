@@ -204,7 +204,7 @@ describe('Cây bản vẽ', () => {
       latestVersion: { id: 'v17', seq: 17, savedAt: '2026-10-04T01:00:00Z', savedBy: 'sa@e2e.local', savedByName: 'SA' },
     });
     const calls: string[] = [];
-    routeFetch({
+    const fetchMock = routeFetch({
       '/api/v1/diagrams/d1/drafts/discard': () => {
         calls.push('discard');
         return jsonResponse(201, { count: 5, ranges: '#13–#17' });
@@ -225,6 +225,8 @@ describe('Cây bản vẽ', () => {
     await user.click(within(confirm).getByRole('button', { name: 'Bỏ bản nháp' }));
     expect(await screen.findByText('Đã bỏ 5 bản nháp (#13–#17) của "Tổng công ty E2E".')).toBeInTheDocument();
     expect(calls).toEqual(['preview', 'discard']);
+    const discard = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).find(([url]) => String(url).endsWith('/drafts/discard'));
+    expect(JSON.parse(String(discard?.[1]?.body))).toEqual({ ranges: '#13–#17' });
   });
 
   it('Bỏ bản nháp bị chặn vì yêu cầu chờ duyệt: báo rút trước, không hỏi xác nhận', async () => {
