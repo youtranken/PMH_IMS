@@ -66,7 +66,7 @@ describe('PortFormDialog — dấu tích ở đúng nút vừa bấm', () => {
     await user.type(portInput(), 'Gi1/0/1');
     await user.click(screen.getByRole('button', { name: 'Ghi rồi khai cổng kế tiếp' }));
     await waitFor(() => expect(portInput()).toHaveValue('Gi1/0/2'));
-    expect(screen.getByRole('button', { name: 'Lưu', exact: true })).not.toHaveAttribute('data-done');
+    expect(screen.getByRole('button', { name: /^Lưu$/ })).not.toHaveAttribute('data-done');
   });
 
   it('vế đối chứng: bấm Lưu → nút Lưu hiện dấu tích', async () => {
@@ -75,7 +75,7 @@ describe('PortFormDialog — dấu tích ở đúng nút vừa bấm', () => {
     renderDialog();
     const user = userEvent.setup();
     await user.type(portInput(), 'Gi1/0/1');
-    await user.click(screen.getByRole('button', { name: 'Lưu', exact: true }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Lưu', exact: true })).toHaveAttribute('data-done', 'true'));
+    await user.click(screen.getByRole('button', { name: /^Lưu$/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Lưu$/ })).toHaveAttribute('data-done', 'true'));
   });
 });

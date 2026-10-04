@@ -246,7 +246,7 @@ describe('Form thiết bị — dấu tích ở đúng nút vừa bấm', () => 
     await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).not.toHaveValue('SW-E2E-01'));
     expect(calls.some((c) => c.method === 'POST')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Lưu', exact: true })).not.toHaveAttribute('data-done');
+    expect(screen.getByRole('button', { name: /^Lưu$/ })).not.toHaveAttribute('data-done');
   });
 
   it('vế đối chứng: bấm Lưu → nút Lưu hiện dấu tích', async () => {
@@ -255,7 +255,7 @@ describe('Form thiết bị — dấu tích ở đúng nút vừa bấm', () => 
     renderForm(null);
     const user = userEvent.setup();
     await fillRequired(user);
-    await user.click(screen.getByRole('button', { name: 'Lưu', exact: true }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Lưu', exact: true })).toHaveAttribute('data-done', 'true'));
+    await user.click(screen.getByRole('button', { name: /^Lưu$/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Lưu$/ })).toHaveAttribute('data-done', 'true'));
   });
 });
