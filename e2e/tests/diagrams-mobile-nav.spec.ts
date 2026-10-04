@@ -241,7 +241,7 @@ test.describe('Sơ đồ mạng — điện thoại, tìm, lớp, chỉ đườn
     const net = await network(page, secret);
     const viewedFloor = countAudit('diagram.viewed', net.floorId);
 
-    await page.goto('/diagrams');
+    await page.goto(`/diagrams?node=${net.coreId}`);
     await rowAction(page, net.coreName, 'Trình chiếu');
     const show = page.getByRole('region', { name: 'Trình chiếu sơ đồ' });
     await expect(show.getByRole('heading', { level: 1, name: net.coreName })).toBeVisible();

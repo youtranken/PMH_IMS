@@ -104,9 +104,11 @@ function viewer(page: Page) {
   return page.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
 }
 
+/** Thẻ của bản vẽ trên màn cây hai cột: chọn nó trên cây (`?node=`) để thẻ "Bản vẽ này" hiện ra. */
 async function treeRow(page: Page, name: string) {
-  await page.goto('/diagrams');
-  return page.getByRole('listitem').filter({ has: page.getByRole('link', { name }) });
+  const id = sql(`SELECT id FROM diagram WHERE name = '${name}' AND deleted_at IS NULL`);
+  await page.goto(`/diagrams?node=${id}`);
+  return page.getByRole('listitem').filter({ has: page.getByRole('link', { name, exact: true }) });
 }
 
 test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt', () => {

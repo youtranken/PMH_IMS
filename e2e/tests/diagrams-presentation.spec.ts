@@ -149,12 +149,13 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     await expect(member.getByRole('link', { name: 'Mở bản gốc' })).toHaveAttribute('href', `/diagrams/${source.id}`);
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${presId}'`)).toBe('2');
 
-    // Cây: mục "Bản trình bày" riêng, kèm dấu bản gốc có bản mới.
-    await member.goto('/diagrams');
-    const section = member.getByRole('list', { name: 'Bản trình bày' });
+    // Cây: bản trình bày gom dưới nhóm "Trình bày (n)", thẻ kèm dấu bản gốc có bản mới.
+    await member.goto('/diagrams?node=presentations');
+    const section = member.getByRole('list', { name: 'Các bản trình bày' });
     await expect(section.getByRole('link', { name: presName })).toBeVisible();
     await expect(section).toContainText('Bản gốc đã có phiên bản mới (2)');
-    await expect(member.getByRole('list', { name: 'Cây bản vẽ' }).getByRole('link', { name: presName })).toHaveCount(0);
+    const tree = member.getByRole('tree', { name: 'Cây bản vẽ' });
+    await expect(tree.getByRole('treeitem', { name: /^Trình bày \(\d+\)$/ })).toHaveAttribute('aria-expanded', 'true');
 
     // Màn xem (màn đọc) ở 390px: dải vẫn đọc được, không tràn ngang.
     await member.setViewportSize({ width: 390, height: 844 });
@@ -265,8 +266,8 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     expect(sql(`SELECT name FROM diagram WHERE id = '${saCopyId}'`)).toBe(`E2E Bản SA ${stamp}`);
 
     // Trên cây: bản của SA không có thao tác; bản của mình đổi tên rồi lưu trữ được.
-    await member.goto('/diagrams');
-    const section = member.getByRole('list', { name: 'Bản trình bày' });
+    await member.goto('/diagrams?node=presentations');
+    const section = member.getByRole('list', { name: 'Các bản trình bày' });
     await expect(section.getByRole('link', { name: `E2E Bản SA ${stamp}` })).toBeVisible();
     await expect(member.getByRole('button', { name: `Thao tác với E2E Bản SA ${stamp}` })).toHaveCount(0);
     await member.getByRole('button', { name: `Thao tác với E2E Bản của tôi ${stamp}` }).click();

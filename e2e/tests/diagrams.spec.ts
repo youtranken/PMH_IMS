@@ -178,8 +178,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
 
     // Mỗi lần tải nội dung một dòng nhật ký (NFR-03).
     expect(Number(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.viewed' AND object_id = '${id}'`))).toBeGreaterThanOrEqual(3);
-    // Cây hiện trạng thái bản nháp.
-    await page.goto('/diagrams');
+    // Cây hiện trạng thái bản nháp (thẻ "Bản vẽ này" của nút đang chọn).
+    await page.goto(`/diagrams?node=${id}`);
     await expect(page.getByRole('listitem').filter({ hasText: name }).getByText('Bản nháp')).toBeVisible();
 
     expect(outsideHost(requests, baseURL!)).toEqual([]);
@@ -216,7 +216,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect((await saveViaApi(page, parent)).status()).toBe(201);
     expireStepUp(E2E_SA.email);
 
-    await page.goto('/diagrams');
+    await page.goto(`/diagrams?node=${parent}`);
     await rowAction(page, parentName, 'Thêm bản vẽ con');
     let form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
     await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha (phiên bản #1)' })).toBeChecked();
@@ -233,7 +233,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.keyboard.press('Escape');
 
     // Đường hỏng: cha chưa có nội dung → không nhân bản được, chỉ bản trống.
-    await page.goto('/diagrams');
+    await page.goto(`/diagrams?node=${empty}`);
     await rowAction(page, `E2E Cha trống ${stamp}`, 'Thêm bản vẽ con');
     form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "E2E Cha trống ${stamp}"` });
     await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeDisabled();
@@ -269,8 +269,9 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     });
     expect(label.status()).toBe(201);
 
-    await page.goto('/diagrams');
-    expect(await rowActionNames(page, name)).toEqual(['Trình chiếu', 'Thêm bản vẽ con']);
+    await page.goto(`/diagrams?node=${id}`);
+    // Bản do chính Thành viên tạo, chưa phát hành lần nào: người tạo xóa hẳn được (Q-23).
+    expect(await rowActionNames(page, name)).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Xóa hẳn']);
 
     // Thành viên tạo được bản vẽ con qua giao diện.
     await rowAction(page, name, 'Thêm bản vẽ con');
@@ -401,7 +402,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await stepUpViaApi(page, secret, 'diagram');
     expect((await saveViaApi(page, id)).status()).toBe(201);
 
-    await page.goto('/diagrams');
+    await page.goto(`/diagrams?node=${id}`);
     await expect(page.getByRole('link', { name })).toBeVisible();
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(390);

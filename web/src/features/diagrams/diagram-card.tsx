@@ -48,7 +48,7 @@ export function DiagramCard({
             <Link to={PATHS.diagram(node.id)}>{node.name}</Link>
           </h3>
         </div>
-        <RowActions label={t('diagrams.actionsOf', { name: node.name })} items={items} />
+        {items.length > 0 ? <RowActions label={t('diagrams.actionsOf', { name: node.name })} items={items} /> : null}
       </div>
       <div className="board-card-badges">
         {node.kind === 'presentation' ? (
