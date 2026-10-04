@@ -257,6 +257,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     dirty,
     onGoToCell: goToCell,
     onCompare: (from, to) => void goView({ version: to, compare: from }),
+    cells: content.data?.cells,
   });
 
   const tabs = narrow ? null : (

@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type WheelEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiagramWatermark } from './diagram-watermark';
 import { Popover } from './popover';
@@ -219,8 +230,13 @@ export interface ViewerPin {
   id: string;
   cellId: string | null;
   anchor: ViewerPoint | null;
+  /** Chữ bình luận (đã cắt ngắn) — hiện ngay trên dấu ghim, không phải bấm mới thấy. */
   label: string;
   resolved: boolean;
+  /** Tên ô người đọc được (mã máy / nhãn / "hình không tên") cho tên trợ năng; thiếu thì chỉ đọc chữ. */
+  target?: string;
+  /** Số bình luận trong luồng (gốc + trả lời), hiện trên dấu. */
+  count?: number;
 }
 
 /** Một ô bấm được của bản vẽ: id ô (`data-cell-id`), tên đọc cho trợ năng, dấu (nếu có). */
@@ -620,7 +636,13 @@ export function DiagramViewer({
             {pins.map((pin, index) => {
               const at = pinAt.get(pin.id);
               if (!at) return null;
-              const name = t('diagramViewer.pin', { n: index + 1, label: pin.label }) + (at.removed ? ` ${t('diagramViewer.pinRemoved')}` : '');
+              const count = pin.count ?? 1;
+              const name =
+                (pin.target ? t('diagramViewer.pinOn', { n: index + 1, target: pin.target, label: pin.label }) : t('diagramViewer.pin', { n: index + 1, label: pin.label })) +
+                (at.removed ? ` ${t('diagramViewer.pinRemoved')}` : '') +
+                (count > 1 ? ` · ${t('diagramViewer.pinCount', { count })}` : '');
+              // Nhiều ghim cùng một ô xếp chồng lên trên nhau thay vì đè lên nhau.
+              const stack = pins.slice(0, index).filter((p) => p.cellId && p.cellId === pin.cellId).length;
               return (
                 <button
                   key={pin.id}
@@ -631,12 +653,17 @@ export function DiagramViewer({
                   data-removed={at.removed ? 'true' : undefined}
                   aria-label={name}
                   title={name}
-                  style={{ left: `${at.point.x}px`, top: `${at.point.y}px`, transform: `scale(${1 / view.scale})` }}
+                  style={{ left: `${at.point.x}px`, top: `${at.point.y}px`, transform: `scale(${1 / view.scale})`, '--pin-stack': stack } as CSSProperties}
                   // Không để khung bắt con trỏ (kéo/`setPointerCapture`): cú bấm phải tới chính nút ghim.
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => onPinClick?.(pin.id)}
                 >
-                  {index + 1}
+                  <span className="diagram-pin-count" aria-hidden="true">
+                    {count}
+                  </span>
+                  <span className="diagram-pin-text" aria-hidden="true">
+                    {pin.label}
+                  </span>
                 </button>
               );
             })}

@@ -125,7 +125,14 @@ export interface DiagramContent {
   /** Lớp draw.io theo thứ tự trong XML (`name: ''` = lớp mặc định không tên). Thiếu → coi như rỗng. */
   layers?: { id: string; name: string }[];
   /** Mọi ô của phiên bản (chỉ mục ô): lớp + khung bao mô hình. Thiếu → coi như rỗng. */
-  cells?: { id: string; kind: 'device' | 'edge' | 'shape'; layer: string | null; bounds: { x: number; y: number; width: number; height: number } | null }[];
+  cells?: {
+    id: string;
+    kind: 'device' | 'edge' | 'shape';
+    layer: string | null;
+    bounds: { x: number; y: number; width: number; height: number } | null;
+    /** Mã máy / nhãn (`null` = ô không có chữ) — tên ô trong hộp ghim bình luận. */
+    label?: string | null;
+  }[];
 }
 
 /** Bản vẽ chỉ tên + id (thông tin của cây). */
@@ -304,6 +311,10 @@ export interface CommentRow {
 /** Một luồng ghim: hàng gốc + trả lời; "Đã xử lý" là hàng sự kiện phía server. */
 export interface CommentThread extends CommentRow {
   versionSeq: number | null;
+  /** Loại ô ghim trong phiên bản của ghim; `null` = ghi chú chung hoặc ô không còn trong phiên bản đó. */
+  cellKind?: 'device' | 'edge' | 'shape' | null;
+  /** Mã máy / nhãn của ô ghim; `null` khi ô không có chữ. */
+  cellLabel?: string | null;
   resolved: boolean;
   replies: CommentRow[];
 }

@@ -1003,25 +1003,52 @@ button.btn-x.danger:hover:not(:disabled) {
   transform-origin: 0 0;
   pointer-events: none;
 }
+/* Dấu ghim = số bình luận + chữ bình luận cắt ngắn: người xem đọc được ý chính ngay trên bản vẽ,
+   bấm mới mở cả luồng. Nhiều ghim cùng một ô xếp chồng lên trên (`--pin-stack`). */
 .diagram-pin {
   position: absolute;
   pointer-events: auto;
   transform-origin: 0 100%;
-  translate: 0 -100%;
-  min-width: 1.6rem;
-  height: 1.6rem;
-  padding: 0 var(--space-1);
-  border: 2px solid var(--surface);
+  translate: 0 calc(-100% - var(--pin-stack, 0) * (1.75rem + var(--space-1)));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 16rem;
+  height: 1.75rem;
+  padding: 0 var(--space-2) 0 2px;
+  border: 2px solid var(--warn);
   border-radius: var(--radius-pill) var(--radius-pill) var(--radius-pill) 0;
-  background: var(--warn);
-  color: var(--on-accent);
+  background: var(--surface);
+  color: var(--ink);
   font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
 }
+.diagram-pin-count {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--warn);
+  color: var(--on-accent);
+  font-weight: var(--fw-bold);
+}
+.diagram-pin-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .diagram-pin[data-resolved='true'] {
+  border-color: var(--ok);
+}
+.diagram-pin[data-resolved='true'] .diagram-pin-count {
   background: var(--ok);
+}
+.diagram-pin[data-resolved='true'] .diagram-pin-text {
+  color: var(--muted);
 }
 .diagram-pin[data-removed='true'] {
   border-style: dashed;

@@ -21,6 +21,7 @@ import { IpamApiService, type SubnetSummary } from '../ipam/ipam.api';
 import { UsersApiService } from '../users/users.api';
 import {
   buildCellIndex,
+  cellLabel,
   diffCellIndex,
   layerNames,
   secretLabelReason,
@@ -224,6 +225,8 @@ export interface ViewCell {
   kind: CellKind;
   layer: string | null;
   bounds: CellBounds | null;
+  /** Mã máy / nhãn (`null` = ô không có chữ) — hộp ghim bình luận gọi ô bằng tên này, không bằng id. */
+  label: string | null;
 }
 
 /**
@@ -740,7 +743,13 @@ export class DiagramsService {
       cableTypes: cables.cableTypes,
       frames,
       layers: layerNames(row.xml),
-      cells: row.cellIndex.cells.map((cell) => ({ id: cell.id, kind: cell.kind, layer: cell.layer, bounds: cell.bounds ?? null })),
+      cells: row.cellIndex.cells.map((cell) => ({
+        id: cell.id,
+        kind: cell.kind,
+        layer: cell.layer,
+        bounds: cell.bounds ?? null,
+        label: cellLabel(cell),
+      })),
     };
   }
 

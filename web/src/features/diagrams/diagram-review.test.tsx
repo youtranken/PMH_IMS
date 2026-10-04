@@ -52,7 +52,20 @@ function routeFetch(routes: [string, Handler][]) {
 function base(node: DiagramNode, comments: CommentThread[] = [], review?: ReviewPage): [string, Handler][] {
   return [
     ['/api/v1/diagrams/editor-settings', () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 })],
-    ['/api/v1/diagrams/g1/content', () => jsonResponse(200, { diagram: node, version: { ...VERSION, xml: '<mxfile/>', svg: SVG }, deviceCells: [], devices: [] })],
+    [
+      '/api/v1/diagrams/g1/content',
+      () =>
+        jsonResponse(200, {
+          diagram: node,
+          version: { ...VERSION, xml: '<mxfile/>', svg: SVG },
+          deviceCells: [],
+          devices: [],
+          cells: [
+            { id: 'd1', kind: 'device', layer: '1', bounds: null, label: 'SW-E2E-01' },
+            { id: 's1', kind: 'shape', layer: '1', bounds: null, label: 'Tầng 3' },
+          ],
+        }),
+    ],
     ['/api/v1/diagrams/g1/comments', () => jsonResponse(200, comments)],
     ['/api/v1/diagrams/g1/review', () => jsonResponse(200, review ?? null)],
     ['/api/v1/diagrams/g1', () => jsonResponse(200, node)],
@@ -204,17 +217,28 @@ describe('Ghim bình luận', () => {
     authorName: 'SA E2E',
     createdAt: '2026-10-03T03:00:00Z',
     versionSeq: 1,
+    cellKind: null,
+    cellLabel: null,
     resolved: false,
     replies: [],
+  };
+  const ON_DEVICE: CommentThread = {
+    ...THREAD,
+    id: 'c2',
+    cellId: 'd1',
+    cellKind: 'device',
+    cellLabel: 'SW-E2E-01',
+    body: 'Cổng uplink cắm nhầm sang Gi1/0/48, đổi lại giúp',
+    replies: [{ ...THREAD, id: 'r1', parentId: 'c2', cellId: 'd1', body: 'Đã đổi' }],
   };
 
   it('ghim hiện trên trình xem (ô đã bỏ → "(hình đã bỏ)"); bấm mở luồng, Đã xử lý ghi sự kiện', async () => {
     const fetchMock = routeFetch([['/api/v1/diagrams/g1/comments/c1/resolve', () => jsonResponse(200, { ok: true })], ...base(diagram(), [THREAD])]);
     renderScreen('/diagrams/g1', MEMBER);
     const user = userEvent.setup();
-    const pin = await screen.findByRole('button', { name: /Ghim 1: Sai cổng uplink \(hình đã bỏ\)/ });
+    const pin = await screen.findByRole('button', { name: /Ghim 1 trên hình đã bỏ: Sai cổng uplink \(hình đã bỏ\)/ });
     await user.click(pin);
-    const dialog = await screen.findByRole('dialog', { name: 'Ghim trên ô gone' });
+    const dialog = await screen.findByRole('dialog', { name: 'Ghim trên hình đã bỏ' });
     expect(dialog).toHaveTextContent('Sai cổng uplink');
     await user.click(within(dialog).getByRole('button', { name: 'Đã xử lý' }));
     expect(posted(fetchMock, '/comments/c1/resolve')).toEqual([{ resolved: true }]);
@@ -225,15 +249,32 @@ describe('Ghim bình luận', () => {
     renderScreen('/diagrams/g1', SA);
     const user = userEvent.setup();
     await pickMenuItem(user, /^Thao tác với/, 'Ghim (1)');
-    expect(await screen.findByRole('list', { name: 'Ghim bình luận trên bản vẽ' })).toHaveTextContent('Sai cổng uplink');
+    const list = await screen.findByRole('list', { name: 'Ghim bình luận trên bản vẽ' });
+    expect(list).toHaveTextContent('Sai cổng uplink');
+    expect(list).toHaveTextContent('trên hình đã bỏ');
+    expect(list).not.toHaveTextContent('gone');
     await user.keyboard('{Escape}');
     await pickMenuItem(user, /^Thao tác với/, 'Ghim bình luận');
     await user.click(screen.getByText('Tầng 3'));
-    const dialog = await screen.findByRole('dialog', { name: 'Ghim bình luận lên ô s1' });
+    const dialog = await screen.findByRole('dialog', { name: 'Ghim bình luận lên Tầng 3' });
     await user.type(within(dialog).getByLabelText(/Bình luận/), 'Đặt tên phòng');
     await user.click(within(dialog).getByRole('button', { name: 'Ghim' }));
     expect(await screen.findByText('Đã ghim bình luận.')).toBeInTheDocument();
     expect(posted(fetchMock, '/g1/comments')).toEqual([{ versionId: 'v2', cellId: 's1', anchor: null, body: 'Đặt tên phòng' }]);
+  });
+
+  it('ghim trên máy: dấu trên bản vẽ hiện số bình luận + chữ bình luận, gọi máy bằng mã chứ không id ô', async () => {
+    routeFetch([...base(diagram(), [ON_DEVICE])]);
+    renderScreen('/diagrams/g1', MEMBER);
+    const user = userEvent.setup();
+    const pin = await screen.findByRole('button', { name: /^Ghim 1 trên SW-E2E-01: Cổng uplink cắm nhầm.* · 2 bình luận$/ });
+    // Chữ hiện ngay trên bản vẽ, không phải bấm mới thấy (Q-23 góp ý 04/10).
+    expect(pin).toHaveTextContent('2');
+    expect(pin).toHaveTextContent('Cổng uplink cắm nhầm');
+    await user.click(pin);
+    const dialog = await screen.findByRole('dialog', { name: 'Ghim trên SW-E2E-01' });
+    expect(dialog).toHaveTextContent('Cổng uplink cắm nhầm sang Gi1/0/48, đổi lại giúp');
+    expect(dialog).toHaveTextContent('Đã đổi');
   });
 });
 

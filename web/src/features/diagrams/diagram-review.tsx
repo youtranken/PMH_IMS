@@ -38,15 +38,39 @@ export function checkFindings(error: unknown): { errors: Finding[]; warnings: Fi
   return { errors: body?.errors ?? [], warnings: body?.warnings ?? [] };
 }
 
-/** Luồng ghim → ghim của trình xem (nhãn = lời bình đầu, cắt ngắn cho tên trợ năng). */
-export function viewerPins(threads: CommentThread[]): ViewerPin[] {
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** Chữ bình luận hiện ngay trên dấu ghim: đủ đọc ý chính, không che bản vẽ. */
+const PIN_EXCERPT = 40;
+
+/**
+ * Tên ô người duyệt đọc được: mã máy / nhãn; ô không chữ thì gọi theo loại; ô không còn trong
+ * phiên bản của ghim → "hình đã bỏ". Không bao giờ là id ô draw.io — người đọc không hiểu nó.
+ */
+export function cellTargetName(t: Translate, kind: 'device' | 'edge' | 'shape' | null | undefined, label: string | null | undefined): string {
+  if (label) return label;
+  if (kind === 'device') return t('diagrams.review.unnamedDevice');
+  if (kind === 'edge') return t('diagrams.review.unnamedEdge');
+  if (kind === 'shape') return t('diagrams.review.unnamedShape');
+  return t('diagrams.review.removedCell');
+}
+
+function excerpt(text: string | null, max: number): string {
+  const flat = (text ?? '').replace(/\s+/g, ' ').trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/** Luồng ghim → dấu ghim của trình xem: chữ bình luận (cắt ngắn), tên ô, số bình luận của luồng. */
+export function viewerPins(threads: CommentThread[], t: Translate): ViewerPin[] {
   return threads
     .filter((thread) => thread.cellId || thread.anchor)
     .map((thread) => ({
       id: thread.id,
       cellId: thread.cellId,
       anchor: thread.anchor,
-      label: (thread.body ?? '').slice(0, 80),
+      label: excerpt(thread.body, PIN_EXCERPT),
+      target: thread.cellId ? cellTargetName(t, thread.cellKind, thread.cellLabel) : undefined,
+      count: 1 + thread.replies.length,
       resolved: thread.resolved,
     }));
 }
@@ -92,6 +116,7 @@ export function useDiagramReview({
   dirty,
   onGoToCell,
   onCompare,
+  cells,
 }: {
   me: Me;
   /** `null` khi tên bản vẽ chưa tải xong — mọi truy vấn tắt, không nút nào. */
@@ -104,6 +129,8 @@ export function useDiagramReview({
   onGoToCell: (cellId: string) => void;
   /** "Xem so sánh với bản chính thức": mở trình xem so sánh `from` → `to`. */
   onCompare: (fromVersionId: string, toVersionId: string) => void;
+  /** Ô của phiên bản đang hiện (loại + tên) — hộp ghim mới gọi ô bằng tên, không bằng id. */
+  cells?: { id: string; kind: 'device' | 'edge' | 'shape'; label?: string | null }[];
 }): {
   /** Việc theo trạng thái — chế độ Xem để ngoài thanh, chế độ Sửa cho vào menu (việc chính ở đó là Lưu). */
   primary: BarAction[];
@@ -271,6 +298,7 @@ export function useDiagramReview({
     ) : null;
 
   const thread = openThread ? threads.find((x) => x.id === openThread) : undefined;
+  const draftCell = draftPin?.cellId ? cells?.find((c) => c.id === draftPin.cellId) : undefined;
   const dialogs = (
     <>
       {submitOpen && diagram ? (
@@ -338,7 +366,7 @@ export function useDiagramReview({
       ) : null}
       {draftPin && versionId ? (
         <NewPinDialog
-          cellId={draftPin.cellId}
+          target={draftPin.cellId ? cellTargetName(t, draftCell?.kind ?? 'shape', draftCell?.label) : null}
           onSubmit={async (body) => {
             await post('/comments', { versionId, cellId: draftPin.cellId, anchor: draftPin.anchor, body });
             setDraftPin(null);
@@ -377,7 +405,7 @@ export function useDiagramReview({
     pinMode,
     togglePinMode: () => setPinMode((on) => !on),
     viewer: {
-      pins: viewerPins(threads),
+      pins: viewerPins(threads, t),
       pickAnyCell: pinMode,
       onPinClick: (pinId) => setOpenThread(pinId),
       onPickCell: (cellId, at) => setDraftPin({ cellId, anchor: at ?? null }),
@@ -418,11 +446,13 @@ function PinList({
           {threads.map((thread, index) => (
             <li key={thread.id} className="tree-row">
               <button type="button" className="btn sm" onClick={() => onOpen(thread)}>
-                {t('diagrams.review.pinItem', { n: index + 1, body: (thread.body ?? '').slice(0, 60) })}
+                {t('diagrams.review.pinItem', { n: index + 1, body: excerpt(thread.body, 60) })}
               </button>{' '}
               {thread.resolved ? <span className="badge ok">{t('diagrams.review.resolved')}</span> : null}{' '}
               <span className="muted">
-                {thread.cellId ? t('diagrams.review.onCell', { cell: thread.cellId }) : t('diagrams.review.general')}
+                {thread.cellId
+                  ? t('diagrams.review.onCell', { target: cellTargetName(t, thread.cellKind, thread.cellLabel) })
+                  : t('diagrams.review.general')}
                 {thread.versionSeq ? ` · ${t('diagrams.versions.seq', { seq: thread.versionSeq })}` : ''}
               </span>
             </li>
@@ -663,18 +693,19 @@ function DecideDialog({
 }
 
 function NewPinDialog({
-  cellId,
+  target,
   onSubmit,
   onClose,
 }: {
-  cellId: string | null;
+  /** Tên ô đang ghim; `null` = ghi chú chung. */
+  target: string | null;
   onSubmit: (body: string) => Promise<void>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <TextDialog
-      title={cellId ? t('diagrams.review.pinTitle', { cell: cellId }) : t('diagrams.review.generalTitle')}
+      title={target ? t('diagrams.review.pinTitle', { target }) : t('diagrams.review.generalTitle')}
       label={t('diagrams.review.comment')}
       submitLabel={t('diagrams.review.pinPost')}
       maxLength={2000}
@@ -733,7 +764,11 @@ function ThreadDialog({
       dismissible={!busy}
       maxWidth={560}
       initialFocus="title"
-      title={thread.cellId ? t('diagrams.review.threadTitle', { cell: thread.cellId }) : t('diagrams.review.general')}
+      title={
+        thread.cellId
+          ? t('diagrams.review.threadTitle', { target: cellTargetName(t, thread.cellKind, thread.cellLabel) })
+          : t('diagrams.review.general')
+      }
       footer={
         <>
           <button type="button" className="btn" disabled={busy} onClick={() => void toggle()}>

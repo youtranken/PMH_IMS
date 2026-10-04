@@ -1,5 +1,6 @@
 import {
   buildCellIndex,
+  cellCaption,
   diffCellIndex,
   layerNames,
   secretLabelReason,
@@ -224,5 +225,20 @@ describe('layerNames — tên lớp draw.io cho trình xem bật/tắt', () => {
   it('khớp `layers` của chỉ mục ô (cùng một định nghĩa "lớp")', () => {
     const xml = `<mxfile><diagram id="p1" name="T"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="L2" value="Wi-Fi" parent="0"/></root></mxGraphModel></diagram></mxfile>`;
     expect(layerNames(xml).map((l) => l.id)).toEqual(buildCellIndex(xml).layers);
+  });
+});
+
+describe('cellCaption — tên người đọc được của một ô (ghim bình luận không hiện id kỹ thuật)', () => {
+  const index = buildCellIndex(
+    page(device('d1', DEV_A, 'SW-E2E-01') + shape('s1', 'Phòng &lt;b&gt;máy&lt;/b&gt;', 0, 'html=1;') + shape('s2', '') + linkedEdge('e1', 'd1', 's1', LINK_1)),
+  );
+  it.each([
+    ['ô thiết bị → mã máy', 'd1', { kind: 'device', label: 'SW-E2E-01' }],
+    ['hình tự do → nhãn (nhãn HTML bỏ thẻ)', 's1', { kind: 'shape', label: 'Phòng máy' }],
+    ['hình không nhãn → kind, label null (web tự gọi "hình không tên")', 's2', { kind: 'shape', label: null }],
+    ['dây không nhãn → kind edge, label null', 'e1', { kind: 'edge', label: null }],
+    ['ô không có trong phiên bản → null cả hai', 'khong-co', { kind: null, label: null }],
+  ])('%s', (_name, id, expected) => {
+    expect(cellCaption(index, id)).toEqual(expected);
   });
 });

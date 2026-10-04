@@ -161,7 +161,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await expect(decide.getByRole('button', { name: 'Xem so sánh với bản chính thức' })).toBeDisabled();
     await decide.getByRole('button', { name: 'Ghim bình luận' }).click();
     await viewer(page).getByText('Tầng 3 E2E').click();
-    const pin = page.getByRole('dialog', { name: 'Ghim bình luận lên ô s1' });
+    const pin = page.getByRole('dialog', { name: 'Ghim bình luận lên Tầng 3 E2E' });
     await pin.getByLabel(/Bình luận/).fill('Sai tên phòng E2E');
     await pin.getByRole('button', { name: 'Ghim' }).click();
     await expect(page.getByText('Đã ghim bình luận.')).toBeVisible();
@@ -175,19 +175,21 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     // Người gửi thấy ghim trên trình xem (cả 390px), trả lời, đánh dấu đã xử lý, sửa rồi gửi lại.
     await member.goto(`/diagrams/${id}`);
     await expect(viewer(member)).toBeVisible();
-    const marker = member.getByRole('button', { name: /Ghim 1: Sai tên phòng E2E/ });
+    const marker = member.getByRole('button', { name: /Ghim 1 trên Tầng 3 E2E: Sai tên phòng E2E/ });
     await expect(marker).toBeVisible();
+    // Chữ bình luận đọc được ngay trên bản vẽ, không phải bấm mới thấy.
+    await expect(marker).toContainText('Sai tên phòng E2E');
     await member.setViewportSize({ width: 390, height: 800 });
     await expect(marker).toBeVisible();
     await member.setViewportSize({ width: 1280, height: 800 });
     await marker.click();
-    const thread = member.getByRole('dialog', { name: 'Ghim trên ô s1' });
+    const thread = member.getByRole('dialog', { name: 'Ghim trên Tầng 3 E2E' });
     await thread.getByRole('button', { name: 'Trả lời' }).click();
     const reply = member.getByRole('dialog', { name: 'Trả lời ghim' });
     await reply.getByLabel(/Bình luận/).fill('Đã đổi tên phòng E2E');
     await reply.getByRole('button', { name: 'Trả lời' }).click();
-    await member.getByRole('dialog', { name: 'Ghim trên ô s1' }).getByRole('button', { name: 'Đã xử lý' }).click();
-    await expect(member.getByRole('dialog', { name: 'Ghim trên ô s1' })).toContainText('Đã đổi tên phòng E2E');
+    await member.getByRole('dialog', { name: 'Ghim trên Tầng 3 E2E' }).getByRole('button', { name: 'Đã xử lý' }).click();
+    await expect(member.getByRole('dialog', { name: 'Ghim trên Tầng 3 E2E' })).toContainText('Đã đổi tên phòng E2E');
     await member.keyboard.press('Escape');
 
     const v2 = await save(member, id, page_(cabinetFrame(cabinetId) + deviceCell(deviceId, `SW-E2E-RV${stamp}`, { parent: 'f1', x: 40 })), v1.id);

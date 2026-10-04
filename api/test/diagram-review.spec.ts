@@ -203,6 +203,9 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     expect(threads.find((t) => t.id === pin.id)).toMatchObject({
       resolved: true,
       replies: [{ body: 'Đã đổi sang Gi0/48', author: MEMBER.email }],
+      // Ghim nói tên hình người đọc được (mã máy), không id ô (Q-23 góp ý 04/10).
+      cellKind: 'device',
+      cellLabel: 'SW-E2E-RV-FLOW',
     });
     const fixed = await diagrams.save(MEMBER.email, diagramId, { xml: page(deviceCell('d1', dev, 'SW-E2E-RV-FLOW', { x: 50 })), svg: SVG, basedOnVersionId: versionId });
     const second = await review.submit(MEMBER, diagramId, { reason: 'Lần 2 đã sửa' });
@@ -344,6 +347,7 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     await expect(review.addComment(SA, diagramId, { versionId: other.versionId, body: 'x' })).rejects.toMatchObject({ status: 404 });
     const root = await review.addComment(SA, other.diagramId, { versionId: other.versionId, body: 'Ghi chú chung' });
     expect(root).toMatchObject({ cellId: null, approvalId: null });
+    expect((await review.comments(other.diagramId)).find((t) => t.id === root.id)).toMatchObject({ cellKind: null, cellLabel: null });
     await expect(review.addComment(SA, diagramId, { versionId, parentId: root.id, body: 'trả lời lạc' })).rejects.toMatchObject({ status: 404 });
     expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.commented' AND object_id = $1`, [other.diagramId])).toBe(1);
   });

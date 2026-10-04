@@ -224,6 +224,21 @@ export function layerNames(xml: string): { id: string; name: string }[] {
     }));
 }
 
+/**
+ * Tên người đọc được của ô `id` trong một phiên bản: mã máy, không thì nhãn. `label: null` khi ô
+ * không có chữ — nơi hiện tự gọi theo `kind` ("hình không tên"); `kind: null` khi phiên bản không
+ * có ô đó (hình đã bỏ). Không bao giờ trả id kỹ thuật: người duyệt không đọc được nó.
+ */
+export function cellCaption(index: CellIndex, id: string): { kind: CellKind | null; label: string | null } {
+  const cell = index.cells.find((c) => c.id === id);
+  return cell ? { kind: cell.kind, label: cellLabel(cell) } : { kind: null, label: null };
+}
+
+/** Mã máy, không thì nhãn chữ thuần; ô không có chữ → `null`. */
+export function cellLabel(cell: IndexedCell): string | null {
+  return cell.ims.ims_device_code || cell.label || null;
+}
+
 function itemOf(cell: IndexedCell): DiffItem {
   return { id: cell.id, label: cell.ims.ims_device_code || cell.label || cell.id };
 }

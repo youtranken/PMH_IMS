@@ -116,7 +116,7 @@ describe('Sơ đồ mạng · tìm, lớp, chỉ đường', () => {
     await expect(navigation.find(' x ')).rejects.toMatchObject({ status: 400 });
   });
 
-  it('nội dung trả lớp draw.io (tên từ XML) + ô kèm lớp và khung bao', async () => {
+  it('nội dung trả lớp draw.io (tên từ XML) + ô kèm lớp, khung bao và tên đọc được (ghim bình luận)', async () => {
     const node = await service.create(SA, { name: 'E2E Lớp', nodeType: 'room' });
     await service.save(SA, node.id, {
       xml: `<mxfile><diagram id="p1" name="T"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="L2" value="Camera" parent="0"/>${deviceCell('a', ids['PC-E2E-NAV'], 'PC-E2E-NAV', 0)}<mxCell id="cam" value="Cam 1" vertex="1" parent="L2"><mxGeometry x="300" y="10" width="40" height="40" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>`,
@@ -129,8 +129,8 @@ describe('Sơ đồ mạng · tìm, lớp, chỉ đường', () => {
       { id: 'L2', name: 'Camera' },
     ]);
     expect(content.cells).toEqual([
-      { id: 'a', kind: 'device', layer: '1', bounds: { x: 0, y: 10, width: 100, height: 40 } },
-      { id: 'cam', kind: 'shape', layer: 'L2', bounds: { x: 300, y: 10, width: 40, height: 40 } },
+      { id: 'a', kind: 'device', layer: '1', bounds: { x: 0, y: 10, width: 100, height: 40 }, label: 'PC-E2E-NAV' },
+      { id: 'cam', kind: 'shape', layer: 'L2', bounds: { x: 300, y: 10, width: 40, height: 40 }, label: 'Cam 1' },
     ]);
   });
 });

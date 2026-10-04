@@ -21,7 +21,7 @@ import type { UserRole } from '../auth/types';
 import { DevicesApiService } from '../devices/devices.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
-import { diffCellIndex, summarizeDiff, type CellIndex, type CellKind } from './diagram-cells';
+import { cellCaption, diffCellIndex, summarizeDiff, type CellIndex, type CellKind } from './diagram-cells';
 import type { Finding } from './diagram-finding';
 import { runDiagramChecks, type CheckDevice, type CheckResult } from './diagram-selfcheck';
 import {
@@ -135,6 +135,10 @@ export interface CommentRow {
 export interface CommentThread extends CommentRow {
   /** Phiên bản của ghim — web so với phiên bản đang xem để biết "(hình đã bỏ)". */
   versionSeq: number | null;
+  /** Loại ô ghim trong phiên bản của ghim; `null` = ghi chú chung hoặc ô không còn trong phiên bản đó. */
+  cellKind: CellKind | null;
+  /** Mã máy / nhãn của ô ghim — `null` khi ô không có chữ (web tự gọi "hình không tên"). */
+  cellLabel: string | null;
   resolved: boolean;
   replies: CommentRow[];
 }
@@ -482,13 +486,13 @@ export class DiagramReviewService implements OnModuleInit {
     if (rows.length === 0) return [];
     const names = await this.users.namesByEmails([...new Set(rows.map((r) => r.author))]);
     const versionIds = [...new Set(rows.map((r) => r.versionId))];
-    const seqs = new Map(
+    const versions = new Map(
       (
         await this.db
-          .select({ id: diagramVersionTable.id, seq: diagramVersionTable.seq })
+          .select({ id: diagramVersionTable.id, seq: diagramVersionTable.seq, cellIndex: diagramVersionTable.cellIndex })
           .from(diagramVersionTable)
           .where(inArray(diagramVersionTable.id, versionIds))
-      ).map((v) => [v.id, v.seq]),
+      ).map((v) => [v.id, v]),
     );
     const toRow = (r: (typeof rows)[number]): CommentRow => ({
       id: r.id,
@@ -506,7 +510,16 @@ export class DiagramReviewService implements OnModuleInit {
     const threads = new Map<string, CommentThread>();
     for (const r of rows) {
       if (r.parentId) continue;
-      threads.set(r.id, { ...toRow(r), versionSeq: seqs.get(r.versionId) ?? null, resolved: false, replies: [] });
+      const version = versions.get(r.versionId);
+      const caption = r.cellId && version ? cellCaption(version.cellIndex, r.cellId) : { kind: null, label: null };
+      threads.set(r.id, {
+        ...toRow(r),
+        versionSeq: version?.seq ?? null,
+        cellKind: caption.kind,
+        cellLabel: caption.label,
+        resolved: false,
+        replies: [],
+      });
     }
     for (const r of rows) {
       const thread = r.parentId ? threads.get(r.parentId) : undefined;
