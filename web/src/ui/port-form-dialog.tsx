@@ -62,6 +62,8 @@ export function PortFormDialog({
   const [note, setNote] = useState(port?.note ?? '');
   const [error, setError] = useSubmitError([holder, portLabel, mode, peer, connectedLabel, connectedPort, cableTypeId, usedBy, vlan, note]);
   const keepOpen = useRef(false);
+  // Nút nào gửi lượt ghi gần nhất: dấu tích "đã lưu" chỉ hiện trên nút Lưu khi chính nó được bấm.
+  const [sentByNext, setSentByNext] = useState(false);
   const labelRef = useRef<HTMLInputElement>(null);
   const check = useFormErrors({
     holder: !holder && t('ports.holderRequired'),
@@ -125,7 +127,7 @@ export function PortFormDialog({
           <SubmitButton
             form="port-form"
             busy={save.isPending}
-            succeeded={save.isSuccess}
+            succeeded={save.isSuccess && !sentByNext}
             onClick={() => {
               keepOpen.current = false;
             }}
@@ -145,6 +147,7 @@ export function PortFormDialog({
           if (!check.check() || !holder) return;
           const label = portLabel.trim();
           const next = keepOpen.current;
+          setSentByNext(next);
           const owner = holder.id;
           save.mutate(
             {

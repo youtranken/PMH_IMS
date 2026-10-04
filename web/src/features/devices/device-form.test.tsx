@@ -219,3 +219,43 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
   });
 });
+
+/*
+ * Dấu tích "đã lưu" trên nút Lưu chỉ thuộc về lượt bấm chính nút đó: "Lưu và nhân bản" giữ hộp
+ * mở để khai máy kế, dấu tích nhảy lên nút Lưu đọc ra là đã lưu và đóng.
+ */
+describe('Form thiết bị — dấu tích ở đúng nút vừa bấm', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.motion;
+  });
+
+  async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'SW-E2E-01');
+    await user.type(document.getElementById('device-name') as HTMLInputElement, 'Switch E2E');
+    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(await screen.findByRole('option', { name: 'PC' }));
+  }
+
+  it('"Lưu và nhân bản" → nút Lưu KHÔNG hiện dấu tích', async () => {
+    document.documentElement.dataset.motion = 'on';
+    const calls = mockFetch();
+    renderForm(null);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).not.toHaveValue('SW-E2E-01'));
+    expect(calls.some((c) => c.method === 'POST')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Lưu', exact: true })).not.toHaveAttribute('data-done');
+  });
+
+  it('vế đối chứng: bấm Lưu → nút Lưu hiện dấu tích', async () => {
+    document.documentElement.dataset.motion = 'on';
+    mockFetch();
+    renderForm(null);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: 'Lưu', exact: true }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Lưu', exact: true })).toHaveAttribute('data-done', 'true'));
+  });
+});

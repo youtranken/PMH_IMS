@@ -158,6 +158,8 @@ export function DeviceForm({
   // Đẩy giấy tờ chạy SAU khi lưu xong, lúc `isPending` đã tắt — không khoá thêm thì nút Lưu
   // mở lại và bấm thêm phát nữa là khai trùng một cái máy.
   const busy = save.isPending || uploading;
+  // Nút nào gửi lượt ghi gần nhất: dấu tích "đã lưu" chỉ hiện trên nút Lưu khi chính nó được bấm.
+  const [sentByNext, setSentByNext] = useState(false);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
@@ -198,6 +200,7 @@ export function DeviceForm({
     setError(null);
     if (!check.check()) return;
     const sent = form;
+    setSentByNext(keepOpen);
     save.mutate(buildBody(form), {
       onSuccess: (result) => {
         void (async () => {
@@ -282,7 +285,7 @@ export function DeviceForm({
               {t('devices.saveAndNext')}
             </button>
           )}
-          <SubmitButton form="device-form" busy={busy} succeeded={save.isSuccess} />
+          <SubmitButton form="device-form" busy={busy} succeeded={save.isSuccess && !sentByNext} />
         </>
       }
     >
