@@ -7,6 +7,7 @@ import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draf
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
@@ -145,9 +146,7 @@ export function ServiceAccountForm({
           <DialogCancel disabled={busy}>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="sa-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="sa-form" busy={busy} succeeded={save.isSuccess} />
         </>
       }
     >

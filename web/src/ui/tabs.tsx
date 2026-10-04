@@ -1,6 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { motionReduced } from '@/lib/motion';
+
+/** Nội dung tab mờ dần vào — bằng `--dur` của tokens.css (Web Animations không đọc biến CSS). */
+const TAB_FADE_MS = 200;
 
 export interface TabItem {
   key: string;
@@ -64,6 +67,9 @@ export function Tabs({
   const barRef = useRef<HTMLDivElement>(null);
   const edges = useScrollEdges(barRef);
   const mounted = useRef(false);
+  // Khoá theo nhãn + số đếm: mảng `items` nơi gọi dựng lại mỗi lượt render, không dùng làm phụ thuộc được.
+  const layoutKey = items.map((item) => `${item.key}:${item.count ?? ''}`).join('|');
+  const ink = useTabInk(barRef, refs, value, layoutKey);
 
   /*
    * Tab đang chọn phải NẰM TRONG khung. Trên điện thoại thanh tab cuộn ngang và giấu thanh
@@ -112,6 +118,8 @@ export function Tabs({
       // Mép còn tab khuất — CSS làm mờ mép đó để báo "còn nữa" (thanh cuộn đã bị giấu).
       data-more-start={edges.start ? 'true' : undefined}
       data-more-end={edges.end ? 'true' : undefined}
+      // Có vạch trượt thì CSS bỏ gạch chân riêng của tab đang chọn (không vẽ hai vạch).
+      data-ink={ink ? 'true' : undefined}
     >
       {items.map((item) => (
         <button
@@ -182,14 +190,77 @@ export function Tabs({
           ) : null}
         </button>
       ))}
+      {ink ? (
+        <span
+          className="tab-ink"
+          aria-hidden="true"
+          style={{ transform: `translate(${ink.x}px, ${ink.y}px) scaleX(${ink.w})` }}
+        />
+      ) : null}
     </div>
   );
 }
 
+type Ink = { x: number; y: number; w: number };
+
+/**
+ * Vị trí vạch dưới của tab đang chọn, đo từ chính nút tab (Q-21: vạch TRƯỢT sang tab mới thay
+ * vì tắt chỗ này bật chỗ kia). Vạch rộng 1px rồi `scaleX` theo bề ngang tab, nên chuyển động chỉ
+ * là `transform` — không đổi `left`/`width` (đổi bố cục mỗi khung hình).
+ *
+ * Chưa đo được (bề ngang 0: chưa vẽ, môi trường không có bố cục) thì trả `null` và gạch chân CSS
+ * của `.tab.active` vẫn đứng đó — không bao giờ mất dấu tab đang chọn.
+ */
+function useTabInk(
+  barRef: RefObject<HTMLDivElement | null>,
+  refs: RefObject<Record<string, HTMLButtonElement | null>>,
+  value: string,
+  layoutKey: string,
+): Ink | null {
+  const [ink, setInk] = useState<Ink | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const tab = refs.current?.[value];
+      if (!tab || tab.offsetWidth === 0) {
+        setInk(null);
+        return;
+      }
+      // Vạch 2px nằm ở đáy nút tab — đúng chỗ gạch chân CSS của tab đang chọn.
+      const next = { x: tab.offsetLeft, y: tab.offsetTop + tab.offsetHeight - 2, w: tab.offsetWidth };
+      setInk((prev) => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w ? prev : next));
+    };
+    measure();
+    // Nhãn đổi bề ngang (số đếm về, cửa sổ co giãn) thì đo lại, kẻo vạch lệch khỏi chữ.
+    const bar = barRef.current;
+    if (!bar || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(bar);
+    for (const el of Object.values(refs.current ?? {})) if (el) observer.observe(el);
+    return () => observer.disconnect();
+  }, [barRef, refs, value, layoutKey]);
+  return ink;
+}
+
 /** Vùng nội dung của một tab — gắn aria đúng cặp với `Tabs`. */
 export function TabPanel({ tabKey, children }: { tabKey: string; children: ReactNode }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const shownKey = useRef(tabKey);
+  /*
+   * Đổi tab thì nội dung mờ dần vào. Chạy bằng Web Animations trên chính node, KHÔNG đổi `key`
+   * để CSS chạy lại animation: đổi `key` là tháo cả cây con, mất trạng thái (bộ lọc, trang)
+   * của những tab dùng chung một component. Lần hiện đầu không mờ — trang vừa mở đã có hiệu
+   * ứng vào trang riêng.
+   */
+  useEffect(() => {
+    if (shownKey.current === tabKey) return;
+    shownKey.current = tabKey;
+    const el = panelRef.current;
+    if (!el || typeof el.animate !== 'function' || motionReduced()) return;
+    el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: TAB_FADE_MS, easing: 'ease-out' });
+  }, [tabKey]);
   return (
     <div
+      ref={panelRef}
       className="tab-panel"
       role="tabpanel"
       id={`tabpanel-${tabKey}`}

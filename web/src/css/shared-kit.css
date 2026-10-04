@@ -487,7 +487,7 @@ html[data-motion='off'] .otp-boxes.is-busy .otp-box { opacity: 0.55; }
   border: 1px dashed var(--border-2);
   border-radius: var(--r);
   background: var(--surface-2);
-  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), transform var(--dur) var(--ease);
 }
 .file-picker.dragging {
   border-color: var(--primary);
@@ -2298,3 +2298,216 @@ html[data-motion='off'] .spinner {
   .settings-nav ul { flex-direction: row; overflow-x: auto; }
   .settings-nav button { width: auto; }
 }
+
+/* --- Vi chuyển động dùng chung (Q-21) -----------------------------------------------------
+   Chỉ `transform` / `opacity`: hai thuộc tính trình duyệt dựng thẳng trên GPU, không bắt cả
+   trang tính lại bố cục mỗi khung hình. Thời lượng theo `--dur*`. Mọi animation ở đây có luật
+   tắt riêng ở cuối khối (theo `data-motion`, như ô mã 2 lớp) ngoài luật tắt chung của
+   detail-tabs.css — để trạng thái CUỐI vẫn đúng khi không có chuyển động. */
+
+/* Nút Lưu vừa lưu xong (ui/submit-button.tsx): một lớp xanh có dấu tích phủ lên nút rồi tan.
+   Phủ bằng lớp riêng chứ không đổi `background` của nút: chữ "Lưu" vẫn nằm dưới, nút không
+   đổi bề ngang, và chuyển động chỉ là độ mờ của lớp phủ. */
+.submit-btn { position: relative; }
+.submit-btn[data-done='true'] .submit-label { opacity: 0; }
+.submit-check {
+  position: absolute;
+  inset: -1px;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: var(--ok);
+  color: var(--on-accent);
+  font-size: 1.15em;
+  pointer-events: none;
+  animation: submit-done 700ms var(--ease) both;
+}
+.submit-check .glyph { animation: otp-check-pop 450ms var(--ease) both; }
+@keyframes submit-done {
+  0% { opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Duyệt / phát hành thành công (ui/success-burst.tsx): ô xanh giữa màn, vòng loang, dấu tích —
+   dùng lại `otp-seal-in` / `otp-ripple` / `otp-check-pop` của ô mã 2 lớp. Tổng nhịp khớp
+   SUCCESS_BURST_MS. Không bắt chuột: người dùng làm tiếp được ngay. */
+.success-burst {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  animation: burst-out 250ms var(--ease) 850ms both;
+}
+.success-burst-seal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--ok);
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 34px;
+  box-shadow: var(--shadow-pop);
+  animation: otp-seal-in 200ms var(--ease) both;
+}
+.success-burst-seal::after {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  border: 2px solid var(--ok);
+  border-radius: 50%;
+  box-shadow: var(--otp-ok-glow);
+  opacity: 0;
+  animation: otp-ripple 650ms var(--ease) 120ms both;
+}
+.success-burst-mark { animation: otp-check-pop 650ms var(--ease) 150ms both; }
+@keyframes burst-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Hộp thoại (ui/dialog.tsx): mở thì mờ dần vào + nhích lên; đóng thì ngược lại rồi mới gỡ.
+   `backwards`, KHÔNG `both`: hộp không được giữ `transform` sau khi mở xong — transform biến
+   hộp thành khung chứa của popover `position: fixed` (ô ngày, combobox) và cắt chúng
+   (xem `.sheet` ở form-layout.css). Lớp canh giữa chỉ "giữ nhịp" lúc đóng (độ mờ 1 → 1) để
+   Presence của Radix chờ hộp con chạy xong hiệu ứng đóng rồi mới gỡ cả cụm. */
+.dialog-viewport > [data-state='open'] { animation: dialog-in var(--dur) var(--ease) backwards; }
+.dialog-viewport[data-state='closed'] {
+  pointer-events: none;
+  animation: dialog-hold var(--dur-fast) linear forwards;
+}
+.dialog-viewport > [data-state='closed'] { animation: dialog-out var(--dur-fast) var(--ease) forwards; }
+.modal-backdrop[data-state='closed'] {
+  pointer-events: none;
+  animation: dialog-fade-out var(--dur-fast) var(--ease) forwards;
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+@keyframes dialog-out {
+  to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+@keyframes dialog-hold {
+  from { opacity: 1; }
+  to { opacity: 1; }
+}
+@keyframes dialog-fade-out {
+  to { opacity: 0; }
+}
+
+/* Tab (ui/tabs.tsx): vạch dưới là MỘT phần tử trượt giữa các tab. Rộng 1px, `scaleX` theo bề
+   ngang tab do JS đo; đứng trong khung cuộn của `.tabs` nên cuộn theo tab. Có vạch thì gạch
+   chân riêng của tab đang chọn ẩn đi (không vẽ hai vạch chồng). */
+.tab-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--primary);
+  transform-origin: 0 0;
+  pointer-events: none;
+  transition: transform var(--dur) var(--ease);
+}
+.tabs[data-ink='true'] .tab.active { border-bottom-color: transparent; }
+
+/* Vùng thả tệp (ui/file-picker.tsx): kéo tệp vào thì vùng nhấc lên, viền nhịp, biểu tượng
+   nảy; thả xong thì loé xanh một nhịp. Viền "nhịp" là một lớp viền riêng phóng ra và mờ đi —
+   không đổi độ dày viền (đổi bố cục). */
+.file-picker { position: relative; }
+.file-picker-icon {
+  font-size: 22px;
+  color: var(--ink-3);
+  transition: transform var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.file-picker.dragging { transform: translateY(-2px); }
+.file-picker.dragging .file-picker-icon {
+  color: var(--primary-ink);
+  animation: fp-bounce 700ms var(--ease) infinite;
+}
+.file-picker.dragging::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 2px dashed var(--primary);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: fp-pulse 1100ms var(--ease) infinite;
+}
+.file-picker.dropped::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ok-soft);
+  box-shadow: inset 0 0 0 2px var(--ok);
+  pointer-events: none;
+  animation: fp-drop 600ms var(--ease) both;
+}
+@keyframes fp-bounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+  60% { transform: translateY(-2px); }
+}
+@keyframes fp-pulse {
+  0% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.03); }
+}
+@keyframes fp-drop {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Tắt chuyển động: không hiện lớp chuyển động nào; vùng thả vẫn đổi màu khi kéo vào nhưng
+   không nhấc (trạng thái là màu, không phải vị trí). */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='on']) .submit-check,
+  html:not([data-motion='on']) .submit-check .glyph,
+  html:not([data-motion='on']) .success-burst,
+  html:not([data-motion='on']) .success-burst-seal,
+  html:not([data-motion='on']) .success-burst-seal::after,
+  html:not([data-motion='on']) .success-burst-mark,
+  html:not([data-motion='on']) .dialog-viewport > [data-state='open'],
+  html:not([data-motion='on']) .dialog-viewport[data-state='closed'],
+  html:not([data-motion='on']) .dialog-viewport > [data-state='closed'],
+  html:not([data-motion='on']) .modal-backdrop[data-state='closed'],
+  html:not([data-motion='on']) .file-picker.dragging .file-picker-icon {
+    animation: none !important;
+  }
+  html:not([data-motion='on']) .file-picker.dragging::before,
+  html:not([data-motion='on']) .file-picker.dropped::after {
+    animation: none !important;
+    display: none;
+  }
+  html:not([data-motion='on']) .tab-ink { transition: none; }
+  html:not([data-motion='on']) .file-picker.dragging { transform: none; }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .submit-check,
+html[data-motion='off'] .submit-check .glyph,
+html[data-motion='off'] .success-burst,
+html[data-motion='off'] .success-burst-seal,
+html[data-motion='off'] .success-burst-seal::after,
+html[data-motion='off'] .success-burst-mark,
+html[data-motion='off'] .dialog-viewport > [data-state='open'],
+html[data-motion='off'] .dialog-viewport[data-state='closed'],
+html[data-motion='off'] .dialog-viewport > [data-state='closed'],
+html[data-motion='off'] .modal-backdrop[data-state='closed'],
+html[data-motion='off'] .file-picker.dragging .file-picker-icon {
+  animation: none !important;
+}
+html[data-motion='off'] .file-picker.dragging::before,
+html[data-motion='off'] .file-picker.dropped::after {
+  animation: none !important;
+  display: none;
+}
+html[data-motion='off'] .tab-ink { transition: none; }
+html[data-motion='off'] .file-picker.dragging { transform: none; }

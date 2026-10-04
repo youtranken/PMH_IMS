@@ -13,6 +13,7 @@ import {
   useDeviceTypeFilter,
 } from '@/ui/device-type-filter';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
@@ -175,9 +176,7 @@ export function IspForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="isp-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="isp-form" busy={busy} succeeded={save.isSuccess} />
         </>
       }
     >

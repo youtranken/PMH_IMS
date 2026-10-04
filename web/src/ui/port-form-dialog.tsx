@@ -5,6 +5,7 @@ import { nextPortLabel } from '@/lib/port-label';
 import type { PortRow } from '@/lib/port-types';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
@@ -121,17 +122,14 @@ export function PortFormDialog({
               {t('ports.saveAndNext')}
             </button>
           )}
-          <button
-            type="submit"
+          <SubmitButton
             form="port-form"
-            className="btn primary"
-            disabled={save.isPending}
+            busy={save.isPending}
+            succeeded={save.isSuccess}
             onClick={() => {
               keepOpen.current = false;
             }}
-          >
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          />
         </>
       }
     >

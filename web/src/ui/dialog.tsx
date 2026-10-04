@@ -433,7 +433,12 @@ export function Dialog({
             overlayClassName ?? (isNested ? 'modal-backdrop bare' : 'modal-backdrop')
           }
         />
-        <div className="dialog-viewport">
+        {/*
+          `data-state` tự đặt: Radix chỉ gắn nó lên Overlay/Content, mà Presence của Portal canh
+          animation trên CHÍNH node này — không có animation đóng ở đây thì cả hộp bị gỡ ngay,
+          hiệu ứng đóng của con không kịp chạy (Q-21, overlays.css).
+        */}
+        <div className="dialog-viewport" data-state={open ? 'open' : 'closed'}>
           <RD.Content
             className={className}
             style={maxWidth ? { maxWidth } : undefined}

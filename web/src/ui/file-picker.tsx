@@ -1,5 +1,9 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { UploadIcon } from '@/ui/glyph-icons';
+
+/** Loé xác nhận sau khi thả tệp — khớp `fp-drop` trong shared-kit.css. */
+export const DROP_FLASH_MS = 600;
 
 /**
  * Ô chọn file dùng chung (AD-15): kéo-thả hoặc bấm chọn, hiện tên + dung lượng file đã chọn.
@@ -34,6 +38,17 @@ export function FilePicker({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  /*
+   * Đếm lượt vào/ra thay cho một cờ: rê tệp qua chữ hay nút bên trong vùng bắn `dragleave` của
+   * vùng ngoài dù tệp chưa rời vùng — với một cờ, vùng nhấp nháy tắt/bật theo từng chữ.
+   */
+  const depth = useRef(0);
+  const [dropped, setDropped] = useState(0);
+  useEffect(() => {
+    if (dropped === 0) return;
+    const timer = window.setTimeout(() => setDropped(0), DROP_FLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [dropped]);
 
   const pick = (list: FileList | null) => {
     if (onPickFiles) {
@@ -48,20 +63,33 @@ export function FilePicker({
 
   return (
     <div
-      className={`file-picker${dragging ? ' dragging' : ''}${disabled ? ' disabled' : ''}`}
+      className={`file-picker${dragging ? ' dragging' : ''}${dropped ? ' dropped' : ''}${disabled ? ' disabled' : ''}`}
+      onDragEnter={(e) => {
+        if (disabled) return;
+        e.preventDefault();
+        depth.current += 1;
+        setDragging(true);
+      }}
       onDragOver={(e) => {
         if (disabled) return;
         e.preventDefault();
         setDragging(true);
       }}
-      onDragLeave={() => setDragging(false)}
+      onDragLeave={() => {
+        depth.current = Math.max(0, depth.current - 1);
+        if (depth.current === 0) setDragging(false);
+      }}
       onDrop={(e) => {
         if (disabled) return;
         e.preventDefault();
+        depth.current = 0;
         setDragging(false);
+        // Loé xác nhận "đã nhận tệp" (Q-21); khoá theo lượt để thả liền hai lần vẫn loé lại.
+        if (e.dataTransfer.files.length > 0) setDropped((n) => n + 1);
         pick(e.dataTransfer.files);
       }}
     >
+      <UploadIcon className="file-picker-icon" />
       <input
         ref={inputRef}
         id={inputId}

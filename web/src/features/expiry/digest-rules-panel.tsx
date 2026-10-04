@@ -8,6 +8,7 @@ import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { parseRecipients, recipientSuggestions } from './digest-recipients';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
@@ -414,9 +415,7 @@ function RuleForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="rule-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="rule-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >

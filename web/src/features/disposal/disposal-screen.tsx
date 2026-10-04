@@ -266,7 +266,7 @@ export function DisposalScreen() {
       ) : null}
 
       {inventory.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : inventory.isError ? (
         <LoadError error={inventory.error} onRetry={() => void inventory.refetch()} />
       ) : rows.length === 0 ? (

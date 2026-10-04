@@ -225,6 +225,7 @@ export function useDiagramReview({
       await refresh();
       toast({
         tone: 'ok',
+        burst: true,
         message: result.warnings.length
           ? t('diagrams.review.publishedWarnings', { seq: result.seq, count: result.warnings.length })
           : t('diagrams.review.published', { seq: result.seq }),
@@ -338,10 +339,11 @@ export function useDiagramReview({
             setDecideOpen(false);
             onCompare(from, to);
           }}
-          onDone={async (message) => {
+          onDone={async (message, approved) => {
             setDecideOpen(false);
             await refresh();
-            toast({ tone: 'ok', message });
+            // Vòng xanh chỉ khi DUYỆT (Q-21); trả về là toast thường.
+            toast({ tone: 'ok', message, burst: approved });
           }}
           onFail={(error) => {
             setDecideOpen(false);
@@ -611,7 +613,7 @@ function DecideDialog({
   onGoTo: (cellId: string) => void;
   onStartPinning: () => void;
   onCompare: (fromVersionId: string, toVersionId: string) => void;
-  onDone: (message: string) => Promise<void>;
+  onDone: (message: string, approved: boolean) => Promise<void>;
   onFail: (error: unknown) => void;
   onClose: () => void;
 }) {
@@ -624,7 +626,10 @@ function DecideDialog({
     setBusy(true);
     try {
       await post(`/review/${approval.id}/${to}`, { note: note.trim() || null });
-      await onDone(to === 'approve' ? t('diagrams.review.approved', { seq: page.seq }) : t('diagrams.review.returned'));
+      await onDone(
+        to === 'approve' ? t('diagrams.review.approved', { seq: page.seq }) : t('diagrams.review.returned'),
+        to === 'approve',
+      );
     } catch (error) {
       onFail(error);
     } finally {

@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloseIcon } from '@/ui/glyph-icons';
+import { motionReduced } from '@/lib/motion';
+import { SUCCESS_BURST_MS, SuccessBurst } from '@/ui/success-burst';
 
 type ToastTone = 'ok' | 'error' | 'warn';
 
@@ -15,9 +17,14 @@ export interface ToastOptions {
    * Chỉ là lối tắt: việc đó phải làm được bằng đường khác, vì toast tự biến mất.
    */
   action?: { label: string; onClick: () => void };
+  /**
+   * Vẽ thêm vòng xanh + dấu tích giữa màn (`SuccessBurst`) — CHỈ cho quyết định đáng ăn mừng:
+   * duyệt két, duyệt / phát hành bản vẽ. Mọi "Đã lưu" thường mà cũng loé thì vòng mất nghĩa.
+   */
+  burst?: boolean;
 }
 
-interface ToastItem extends Required<Omit<ToastOptions, 'durationMs' | 'action'>> {
+interface ToastItem extends Required<Omit<ToastOptions, 'durationMs' | 'action' | 'burst'>> {
   id: number;
   durationMs: number;
   action?: ToastOptions['action'];
@@ -81,6 +88,9 @@ function ToastIcon({ tone }: { tone: ToastTone }) {
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  // Khoá theo lượt: hai quyết định liền nhau thì vòng thứ hai vẽ lại từ đầu, không nối đuôi.
+  const [burstKey, setBurstKey] = useState<number | null>(null);
+  const burstTimer = useRef<number | undefined>(undefined);
   const nextId = useRef(1);
   const timers = useRef(new Map<number, ToastTimer>());
 
@@ -103,6 +113,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       action: options.action,
     };
     setItems((prev) => [...prev, item]);
+    if (options.burst && !motionReduced()) {
+      setBurstKey(item.id);
+      window.clearTimeout(burstTimer.current);
+      burstTimer.current = window.setTimeout(() => setBurstKey(null), SUCCESS_BURST_MS);
+    }
     timers.current.set(item.id, {
       timeoutId: window.setTimeout(() => remove(item.id), item.durationMs),
       remainingMs: item.durationMs,
@@ -154,6 +169,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <ToastRow key={item.id} item={item} onPause={pause} onResume={resume} onClose={remove} />
         ))}
       </div>
+      {/* Ngoài vùng `status`: vòng chỉ để nhìn, không được lọt vào câu trình đọc màn hình đọc. */}
+      {burstKey !== null ? <SuccessBurst key={burstKey} /> : null}
     </ToastContext.Provider>
   );
 }

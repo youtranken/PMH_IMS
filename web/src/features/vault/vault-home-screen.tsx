@@ -274,7 +274,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {owners.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : owners.isError ? (
         <LoadError error={owners.error} onRetry={() => void owners.refetch()} />
       ) : all.length === 0 ? (

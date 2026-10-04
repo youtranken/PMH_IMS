@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from '@/lib/api-client';
 import { foldSearch } from '@/lib/search-fold';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
@@ -287,9 +288,7 @@ export function CatalogForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="catalog-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="catalog-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >

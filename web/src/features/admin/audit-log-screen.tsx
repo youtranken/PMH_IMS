@@ -395,7 +395,7 @@ export function AuditLogScreen() {
       </FilterBar>
 
       {list.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : list.isError ? (
         <LoadError error={list.error} onRetry={() => void list.refetch()} />
       ) : rows.length === 0 ? (

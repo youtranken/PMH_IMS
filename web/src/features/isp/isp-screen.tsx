@@ -295,7 +295,7 @@ export function IspScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {lines.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : lines.isError ? (
         <LoadError error={lines.error} onRetry={() => void lines.refetch()} />
       ) : rows.length === 0 ? (
