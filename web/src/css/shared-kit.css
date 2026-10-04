@@ -188,17 +188,17 @@ body:has(.auth) .toast-stack {
 .otp-boxes.is-error { animation: otp-shake 300ms var(--ease); }
 .otp-boxes.is-error .otp-box { border-color: var(--danger); background: var(--danger-soft); }
 .otp-boxes.is-error .otp-box:focus { box-shadow: var(--otp-glow-danger); }
-/* Đủ 6 số, đang kiểm: từng ô lật một vòng, lệch nhịp trái → phải theo `--otp-i`; lặp tới khi
-   server trả lời (lớp `is-busy` mất là dừng). */
+/* Đủ 6 số, đang kiểm: cả 6 ô CÙNG xoay theo chiều kim đồng hồ, đều tốc; lặp tới khi hết
+   `is-busy`. Một vòng = OTP_MIN_SPIN_MS (ui/otp-input.tsx): server trả lời nhanh cỡ nào, người
+   dùng vẫn thấy trọn một vòng rồi mới gộp. */
 .otp-boxes.is-busy .otp-box {
-  animation: otp-spin 760ms var(--ease) infinite;
-  animation-delay: calc(var(--otp-i, 0) * 60ms);
+  animation: otp-spin 1200ms linear infinite;
 }
 /* Thành công: 6 ô trượt vào giữa rồi tan, nhường chỗ cho MỘT ô có dấu tích. Trạng thái cuối khai
    tĩnh (ô ẩn, nét tích đầy) để khi "giảm chuyển động" tắt animation vẫn thấy đúng dấu tích. */
 .otp-boxes.is-success .otp-box {
   opacity: 0;
-  animation: otp-merge 220ms var(--ease);
+  animation: otp-merge 450ms var(--ease);
 }
 .otp-check {
   position: absolute;
@@ -212,7 +212,7 @@ body:has(.auth) .toast-stack {
   border: 1px solid var(--ok);
   border-radius: var(--r);
   background: var(--ok-soft);
-  animation: otp-check-in 220ms var(--ease) both;
+  animation: otp-check-in 450ms var(--ease) both;
 }
 .otp-check svg {
   width: 60%;
@@ -228,7 +228,7 @@ body:has(.auth) .toast-stack {
 .otp-check-mark {
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
-  animation: otp-check-draw 660ms var(--ease) 220ms both;
+  animation: otp-check-draw 900ms var(--ease) 450ms both;
 }
 /* Card đăng nhập luôn tối: đổi sang bộ --auth-otp-* (xem tokens.css). */
 .auth-form .otp-box:not(.is-filled):focus { caret-color: var(--auth-otp-focus); }
@@ -248,8 +248,8 @@ body:has(.auth) .toast-stack {
   40%, 80% { transform: translateX(6px); }
 }
 @keyframes otp-spin {
-  0% { transform: rotateY(0); }
-  70%, 100% { transform: rotateY(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 @keyframes otp-merge {
   from { opacity: 1; transform: none; }

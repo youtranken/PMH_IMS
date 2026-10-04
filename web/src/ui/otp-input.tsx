@@ -22,7 +22,9 @@ export type OtpStatus = 'idle' | 'verifying' | 'success' | 'error';
  * Hiệu ứng thành công không được giữ người dùng lâu hơn mức này dù `animationend` không tới
  * (tab bị ẩn, trình duyệt bỏ animation): gộp ô + vẽ dấu tích + giữ ~0,9 giây, dư một nhịp.
  */
-export const OTP_SUCCESS_FALLBACK_MS = 1200;
+export const OTP_SUCCESS_FALLBACK_MS = 1800;
+/** Một vòng xoay của ô (khớp `otp-spin` trong shared-kit.css): thời gian xoay tối thiểu trước khi gộp. */
+export const OTP_MIN_SPIN_MS = 1200;
 
 /**
  * Không có hiệu ứng nào để chờ: người dùng bật "giảm chuyển động", hoặc môi trường không chạy
@@ -39,24 +41,33 @@ function noMotion(): boolean {
  * dự phòng của chính hook, để một sự kiện bị lỡ không bao giờ chặn đăng nhập.
  */
 export function useOtpSuccess() {
-  const [shown, setShown] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'spinning' | 'shown'>('idle');
   const finish = useRef<(() => void) | null>(null);
   const show = useCallback(
     () =>
       new Promise<void>((resolve) => {
-        const timer = window.setTimeout(() => done(), OTP_SUCCESS_FALLBACK_MS + 300);
+        // Server thường trả lời trong vài trăm ms — gộp ngay thì không ai kịp thấy vòng xoay.
+        // Giữ trạng thái xoay trọn một vòng rồi mới gộp; máy không có chuyển động thì bỏ qua.
+        const spinMs = noMotion() ? 0 : OTP_MIN_SPIN_MS;
+        const timer = window.setTimeout(() => done(), spinMs + OTP_SUCCESS_FALLBACK_MS + 300);
         const done = () => {
           window.clearTimeout(timer);
           finish.current = null;
           resolve();
         };
         finish.current = done;
-        setShown(true);
+        if (spinMs === 0) {
+          setPhase('shown');
+          return;
+        }
+        setPhase('spinning');
+        window.setTimeout(() => setPhase('shown'), spinMs);
       }),
     [],
   );
   const onShown = useCallback(() => finish.current?.(), []);
-  return { status: shown ? ('success' as const) : undefined, show, onShown };
+  const status = phase === 'shown' ? ('success' as const) : phase === 'spinning' ? ('verifying' as const) : undefined;
+  return { status, show, onShown };
 }
 
 /**

@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
-import { OtpInput, useOtpSuccess, type OtpStatus } from '@/ui/otp-input';
+import {
+  OTP_MIN_SPIN_MS,
+  OTP_SUCCESS_FALLBACK_MS,
+  OtpInput,
+  useOtpSuccess,
+  type OtpStatus,
+} from '@/ui/otp-input';
 import { act, fireEvent, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 /**
@@ -216,11 +222,19 @@ describe('OtpInput — đang kiểm / thành công / sai', () => {
     expect(group()).not.toHaveAttribute('aria-busy');
   });
 
-  it('thành công → gộp 1 ô + báo "Đã xác thực"; nơi gọi đi tiếp chỉ SAU khi vẽ xong dấu tích', async () => {
+  it('thành công → xoay trọn một vòng, rồi gộp 1 ô + báo "Đã xác thực"; đi tiếp chỉ SAU khi vẽ xong dấu tích', async () => {
     vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
     const proceed = vi.fn();
     renderWithI18n(<SuccessHarness proceed={proceed} />);
     fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    // Server đã nhận mã nhưng ô vẫn xoay đủ một vòng rồi mới gộp — kẻo không ai kịp thấy.
+    expect(group()).toHaveClass('is-busy');
+    expect(group()).not.toHaveClass('is-success');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    vi.useRealTimers();
     expect(group()).toHaveClass('is-success');
     expect(screen.getByRole('status')).toHaveTextContent('Đã xác thực');
     await act(async () => {});
@@ -239,11 +253,11 @@ describe('OtpInput — đang kiểm / thành công / sai', () => {
     renderWithI18n(<SuccessHarness proceed={proceed} />);
     fireEvent.click(screen.getByRole('button', { name: 'ok' }));
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS + 500);
     });
     expect(proceed).not.toHaveBeenCalled();
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(OTP_SUCCESS_FALLBACK_MS);
     });
     expect(proceed).toHaveBeenCalledTimes(1);
   });
