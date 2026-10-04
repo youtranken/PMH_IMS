@@ -82,6 +82,10 @@ export default {
     /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
     retiredOption: '(ngừng dùng)',
   },
+  stepper: {
+    dec: 'Giảm {{subject}}',
+    inc: 'Tăng {{subject}}',
+  },
   datePicker: {
     choose: 'Chọn ngày',
     clear: 'Xóa ngày',
@@ -638,14 +642,14 @@ export default {
     viewDevices: 'Xem thiết bị dùng mục này',
     usageColumn: 'Đang dùng ở',
     usageNone: 'Chưa dùng',
-    usage_device: '{{count}} thiết bị',
-    usage_software: '{{count}} phần mềm',
-    usage_cabinet: '{{count}} tủ mạng',
-    usage_isp_line: '{{count}} đường truyền',
-    usage_subnet: '{{count}} dải IP',
-    usage_service_account: '{{count}} tài khoản dịch vụ',
-    usage_port: '{{count}} dây',
-    usage_other: '{{count}} hồ sơ',
+    usage_device: '{{count}} Thiết bị',
+    usage_software: '{{count}} Phần mềm',
+    usage_cabinet: '{{count}} Tủ mạng',
+    usage_isp_line: '{{count}} Đường truyền',
+    usage_subnet: '{{count}} Dải IP',
+    usage_service_account: '{{count}} Tài khoản dịch vụ',
+    usage_port: '{{count}} Dây',
+    usage_other: '{{count}} Hồ sơ',
     deleteInUse: 'Đang dùng ở {{usage}} — hãy Ngừng dùng',
     deactivateInUse: 'Hiện đang dùng ở {{usage}}.',
     confirmHidePortMapCount:
@@ -686,7 +690,7 @@ export default {
     unsafe: 'Ảnh xem của bản vẽ có nội dung không an toàn nên không hiển thị. Báo SA kiểm bản vẽ này.',
     pin: 'Ghim {{n}}: {{label}}',
     pinOn: 'Ghim {{n}} trên {{target}}: {{label}}',
-    pinCount: '{{count}} bình luận',
+    pinCount: '{{count}} Bình luận',
     pinRemoved: '(hình đã bỏ)',
     diffLegend: 'Chú giải so sánh',
     diffAdded: 'Thêm {{count}}',
@@ -1332,6 +1336,8 @@ export default {
     rackUStart: 'U bắt đầu',
     rackUStartHint: 'U thấp nhất máy chiếm, U1 ở đáy tủ.',
     rackUSize: 'Số U',
+    rackUSizeNoun: 'số U',
+    rackUStartNoun: 'U bắt đầu',
     rackUPair: 'Ghi cả "U bắt đầu" và "Số U", hoặc bỏ trống cả hai.',
     rackURange: 'Số nguyên từ 1 tới 60.',
     photosTitle: 'Ảnh thật trên sơ đồ',
@@ -1469,12 +1475,12 @@ export default {
     heldLabel: 'Đang giữ:',
     held: {
       ipam: '{{count}} IP',
-      ports: '{{count}} cổng',
-      nat: '{{count}} luật NAT',
-      isp: '{{count}} đường truyền',
-      software: '{{count}} license',
-      vault: '{{count}} mục két',
-      attachments: '{{count}} giấy tờ',
+      ports: '{{count}} Cổng',
+      nat: '{{count}} Luật NAT',
+      isp: '{{count}} Đường truyền',
+      software: '{{count}} License',
+      vault: '{{count}} Mục két',
+      attachments: '{{count}} Giấy tờ',
     },
   },
   attachments: {
@@ -1610,6 +1616,7 @@ export default {
     /* 'Ghế', không phải 'Seat' — `seatsNote` ngay dưới cột này đã nói "ghế đã gán". */
     seats: 'Ghế',
     seatTotal: 'Số ghế',
+    seatStepperNoun: 'số ghế',
     licenseModel: 'Kỳ hạn',
     /* Bong bóng (i) của ô Kỳ hạn: nói cả hai lựa chọn để đọc được TRƯỚC khi chọn. */
     licenseModelTip:
@@ -1666,7 +1673,7 @@ export default {
     autoRetireNext: 'tự thanh lý ở lượt quét tới',
     /* Băng cảnh báo trên trang chi tiết hồ sơ Hết hạn (Q-13). */
     autoRetireWarn: 'Tự thanh lý sau {{count}} ngày ({{date}}) nếu chưa gia hạn.',
-    autoRetireSeats: '{{count}} máy đang dùng sẽ bị gỡ license.',
+    autoRetireSeats: '{{count}} Máy đang dùng sẽ bị gỡ license.',
     /* Chip lọc tab Lịch sử. */
     historyFilter: 'Lọc lịch sử',
     historyAll: 'Tất cả',
@@ -1790,11 +1797,10 @@ export default {
     overSeatRequired: 'Ghi lý do vượt số ghế.',
     expiredWarning: 'License này đã hết hạn. Vẫn gán được, nhưng máy sẽ dùng license chưa gia hạn.',
     /* Bảng ghế dùng chung (`seat-table.tsx`). */
-    contractNote: 'Hợp đồng · Ghi chú',
     releasedOn: 'Đã gỡ {{date}} · {{by}}',
     termFrom: 'từ {{date}}',
     termFromProfileOn: 'theo hồ sơ · đến {{date}}',
-    totalCost: '{{count}} máy đang dùng · tổng chi phí {{total}}',
+    totalCost: '{{count}} Máy đang dùng · tổng chi phí {{total}}',
     filterState: 'Lọc ghế theo tình trạng',
     tabActive: 'Đang dùng',
     tabReleased: 'Đã gỡ',
@@ -1810,7 +1816,7 @@ export default {
     quickPickHint: 'Thêm mọi máy đang dùng khớp đúng tên này. Bỏ bớt bằng nút ✕.',
     quickPickNeedValue: 'Gõ tên phòng ban hoặc người sử dụng.',
     quickPickAdded: 'Đã thêm {{count}} máy của {{who}}.',
-    quickPickHeld: '{{count}} máy đã có license này, bỏ qua.',
+    quickPickHeld: '{{count}} Máy đã có license này, bỏ qua.',
     quickPickNone: 'Không có máy đang dùng nào của {{who}}.',
     quickPickAllHeld: 'Mọi máy đang dùng của {{who}} đã có license này.',
     quickPickTruncated: 'Chỉ lấy {{count}} máy đầu — gõ tên cụ thể hơn.',
@@ -1905,7 +1911,7 @@ export default {
     labelNoneTitle: 'Chưa khai báo ngày hết hạn',
     notCountedRetired: 'Không tính hạn (không còn dùng)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
-    navBadge: '{{count}} mục đã quá hạn',
+    navBadge: '{{count}} Mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
     labelNone: 'Không có hạn',
     labelOverdue: 'Quá hạn {{count}} ngày',
@@ -1971,7 +1977,7 @@ export default {
     /* Gia hạn theo lô (chọn nhiều dòng). */
     bulkLabel: 'Gia hạn các mục đã chọn',
     bulkSelected: 'Đã chọn {{count}} mục.',
-    bulkSkipped: '{{count}} mục đã chọn không gia hạn tại đây được — sẽ bỏ qua.',
+    bulkSkipped: '{{count}} Mục đã chọn không gia hạn tại đây được — sẽ bỏ qua.',
     bulkRenew: 'Gia hạn {{count}} mục +1 năm',
     bulkTitle: 'Gia hạn {{count}} mục',
     bulkConfirm: 'Gia hạn +1 năm cho {{count}} mục (tính từ hạn hiện tại, hoặc từ hôm nay nếu đã quá hạn): {{items}}.',
@@ -2138,7 +2144,7 @@ export default {
     toastUnlocked: 'Đã mở khóa {{name}}.',
     toastDisabled: 'Đã vô hiệu hóa {{name}}.',
     toastReactivated: 'Đã bật lại {{name}}.',
-    totpColumn: '2 lớp',
+    totpColumn: '2 Lớp',
     totpStateEnrolled: 'Đã kích hoạt',
     totpStateMissing: 'Bắt buộc – chưa kích hoạt',
     totpStateOptional: 'Không bắt buộc',
@@ -2180,12 +2186,12 @@ export default {
     auditBy: 'Việc người này đã làm',
     auditAbout: 'Nhật ký về tài khoản này',
     footprintCounting: 'Đang đếm…',
-    footprintVault: '{{count}} dòng quyền két sắt',
+    footprintVault: '{{count}} Dòng quyền két sắt',
     footprintVaultFailed: 'Quyền két sắt (không đếm được)',
     footprintVaultRole: 'Xem mọi két theo vai — không có dòng quyền riêng.',
-    footprintRequests: '{{count}} yêu cầu mở két đang chờ duyệt',
+    footprintRequests: '{{count}} Yêu cầu mở két đang chờ duyệt',
     footprintRequestsFailed: 'Yêu cầu mở két (không đếm được)',
-    footprintDevices: '{{count}} thiết bị đang ghi người này sử dụng',
+    footprintDevices: '{{count}} Thiết bị đang ghi người này sử dụng',
     footprintDevicesFailed: 'Thiết bị đang ghi người này sử dụng (không đếm được)',
     changeRole: 'Đổi vai trò…',
     changeRoleSubmit: 'Đổi vai trò',
@@ -2273,7 +2279,6 @@ export default {
     valueShow: 'Hiện',
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
-    stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
     stepUpSave: 'Nhập mã 6 số để cất "{{label}}" vào két.',
     stepUpEdit: 'Nhập mã 6 số để lưu thay đổi của "{{label}}".',
     stepUpRotate_password: 'Nhập mã 6 số để lưu mật khẩu mới vào két.',
@@ -2354,7 +2359,10 @@ export default {
     /* Cảnh báo, KHÔNG chặn: phần lớn secret là mật khẩu của thiết bị ngoài đã có sẵn — chặn
        cứng chỉ đẩy người dùng ghi mật khẩu thật vào ô Ghi chú, chỗ không mã hóa. */
     strengthWeak: 'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
-    autoHideShort: 'còn lại trước khi tự ẩn',
+    autoHideShort: 'Còn lại trước khi tự ẩn',
+    /* Hộp nhỏ của nút Xem (Q-24): bước mã rồi bước giá trị trong cùng một hộp. */
+    revealOtpTitle: 'Nhập mã 6 số để xem',
+    copyValue: 'Sao chép giá trị',
     revealLogged: 'Lượt xem này đã được ghi nhật ký.',
     hideNow: 'Ẩn ngay',
     request: 'Xin mở két',
@@ -2405,8 +2413,6 @@ export default {
     release: 'Trả quyền',
     releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
-    /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
-    stepBack: 'Quay lại',
   },
   ipam: {
     title: 'Địa chỉ IP',
@@ -2576,7 +2582,7 @@ export default {
     gatewayUse: 'Dùng {{gateway}}',
     hideImpactUsed: '{{count}} IP đang dùng vẫn hiện để tra cứu, nhưng không cấp hay sửa được.',
     hideImpactHistory: 'Lịch sử "IP nào từng của máy nào" giữ nguyên.',
-    hideImpactNat: '{{count}} luật NAT còn trỏ vào IP của dải này — gỡ các luật đó trước mới ngừng dùng được dải.',
+    hideImpactNat: '{{count}} Luật NAT còn trỏ vào IP của dải này — gỡ các luật đó trước mới ngừng dùng được dải.',
     hideImpactRestore: 'Dùng lại được bất cứ lúc nào.',
   },
   nat: {
@@ -2677,7 +2683,7 @@ export default {
     sortRouter: 'Sắp theo router',
     sortInternal: 'Sắp theo IP trong',
     sortNewest: 'Mở gần nhất trước',
-    countLine: '{{count}} luật đang hiện',
+    countLine: '{{count}} Luật đang hiện',
     openedBy: 'Mở {{date}} bởi {{by}}',
     disableRule: 'Ngừng dùng',
     enableRule: 'Dùng lại',
@@ -2823,11 +2829,11 @@ export default {
     orphan: '(hồ sơ đã xóa, còn ngăn treo)',
     orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋮.',
     site: 'Site',
-    secretChip: '{{count}} ngăn',
+    secretChip: '{{count}} Ngăn',
     clearSearch: 'Xóa tìm kiếm',
     filterKind: 'Lọc theo loại hồ sơ',
     clearKinds: 'Xóa bộ lọc',
-    summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
+    summary: '{{owners}} Hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
     /* Bảng chỉ liệt kê hồ sơ ĐANG có ngăn, nên lúc trống không có nút "Mở két" nào để bấm:
        chỉ đường tới tab Két sắt của hồ sơ. */
@@ -2896,9 +2902,9 @@ export default {
        ghép từ ba câu dưới ở `software-dispose-message.ts`. */
     confirmSoftware: 'Đưa hồ sơ {{code}} vào kho thanh lý?',
     confirmSoftwareSeats:
-      '{{count}} máy đang dùng sẽ bị gỡ license (vẫn xem được trong lịch sử): {{codes}}.',
+      '{{count}} Máy đang dùng sẽ bị gỡ license (vẫn xem được trong lịch sử): {{codes}}.',
     confirmSoftwareSeatsMany:
-      '{{count}} máy đang dùng sẽ bị gỡ license (vẫn xem được trong lịch sử).',
+      '{{count}} Máy đang dùng sẽ bị gỡ license (vẫn xem được trong lịch sử).',
     confirmSoftwareTail: 'Hồ sơ không còn được tính hạn và không vào email nhắc gia hạn.',
     done: 'Đã đưa vào kho thanh lý.',
     empty: 'Kho thanh lý đang trống',
@@ -3245,8 +3251,8 @@ export default {
     cellLabel: '{{member}} — {{scope}}: {{tier}}',
     addPeopleTo: 'Gán "{{scope}}" cho nhiều người',
     grantedByLine: 'Người gán: {{actor}}',
-    summaryMain: '{{people}} tài khoản · {{rules}} dòng quyền · {{scopes}} nhóm đối tượng, trong đó',
-    summaryEmpty: '{{count}} nhóm chưa gán cho ai',
+    summaryMain: '{{people}} Tài khoản · {{rules}} Dòng quyền · {{scopes}} Nhóm đối tượng, trong đó',
+    summaryEmpty: '{{count}} Nhóm chưa gán cho ai',
     onlyEmpty: 'Chỉ nhóm chưa ai được gán',
     noScopes: 'Không có nhóm đối tượng nào khớp',
     grantScopeTitle: 'Gán "{{scope}}" cho người dùng',
@@ -3258,7 +3264,7 @@ export default {
     viewPeople: 'Theo người',
     viewMatrix: 'Ma trận',
     memberList: 'Danh sách thành viên',
-    ruleCount: '{{count}} quyền',
+    ruleCount: '{{count}} Quyền',
     backToList: 'Danh sách thành viên',
     addRules: '+ Gán quyền',
     /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
@@ -3401,7 +3407,7 @@ export default {
       'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
     /* Đối tượng đọc được thay cho uuid: người duyệt lúc 2 giờ sáng phải biết "máy nào". */
     subjectGone: 'Hồ sơ đã bị xóa',
-    secretCount: '{{count}} ngăn két',
+    secretCount: '{{count}} Ngăn két',
     openDetail: 'Xem chi tiết',
     detailTitle: 'Yêu cầu mở két',
     sentAgo_now: 'Gửi vừa xong',
@@ -3443,7 +3449,7 @@ export default {
     denyQuickHours: 'Xin quá nhiều giờ, gửi lại với thời hạn ngắn hơn',
     denyQuickNotNeeded: 'Việc này không cần mở két',
     denyQuickPick: 'Chọn nhanh lý do',
-    navBadge: '{{count}} yêu cầu chờ duyệt',
+    navBadge: '{{count}} Yêu cầu chờ duyệt',
   },
   /**
    * SỔ LỊCH SỬ — mọi nhãn của tab "Lịch sử" trên sáu trang chi tiết.
@@ -3671,7 +3677,7 @@ export default {
     kpiBreakGlass: 'Yêu cầu mở két · 7 ngày',
     kpiDisposed: 'Vừa thanh lý · 7 ngày',
     kpiCalm: 'Không có việc gì gấp.',
-    itemsCount: '{{count}} mục',
+    itemsCount: '{{count}} Mục',
     showMore: 'Xem thêm {{count}}',
     expiring: 'Tổng hợp hết hạn cần xử lý',
     expiringOverdue: 'Đã quá hạn ({{count}})',
@@ -3708,8 +3714,8 @@ export default {
     // Q-15: cùng hạn đổi (`dashboard.secret_stale_days`) với cột "Đổi lần cuối" ở két.
     staleSecretsEmpty: 'Không có ngăn nào quá hạn đổi mật khẩu.',
     seeAllVault: 'Xem toàn bộ két sắt',
-    secretCount: '{{count}} ngăn',
-    staleSince: 'đổi lần cuối {{date}} · {{days}} ngày trước',
+    secretCount: '{{count}} Ngăn',
+    staleSince: 'Đổi lần cuối {{date}} · {{days}} ngày trước',
 
     disposed: 'Tổng hợp kho thanh lý (7 ngày)',
     disposedEmpty: 'Tuần qua không thanh lý gì.',

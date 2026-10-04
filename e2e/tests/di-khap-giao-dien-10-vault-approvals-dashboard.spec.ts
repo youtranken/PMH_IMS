@@ -781,7 +781,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    *   - Thanh đo độ khó ĐỔI TỪ CẢNH BÁO THÀNH CHẶN. Đây là thứ `docs/SHARED-REGISTRY.md` nói
    *     thẳng là không được làm: chặn cứng không làm mật khẩu cái camera mạnh lên, nó chỉ đẩy
    *     người dùng ghi mật khẩu thật vào ô "Ghi chú" — chỗ KHÔNG mã hóa.
-   *   - Hộp "Xác nhận danh tính" ĐÓNG khi gõ sai mã. Đây là hàng rào cuối trước khi lộ một bí
+   *   - Hộp nhập mã của nút Xem ĐÓNG khi gõ sai mã. Đây là hàng rào cuối trước khi lộ một bí
    *     mật; một hộp đóng nhầm ở đây là một lần lộ.
    *
    * Đi vào bằng popup của `/vault` chứ không bằng tab của trang chi tiết: đó là cửa của phòng
@@ -971,21 +971,22 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .getByRole('button', { name: 'Xem' })
       .click();
     /*
-     * VLT-062: popup két đã là một hộp, nên bước gõ mã và bước hiện giá trị chạy NGAY TRONG
-     * hộp đó — không chồng thêm hộp nào. Luôn chỉ MỘT hộp đang mở.
+     * Q-24: bấm Xem mở MỘT hộp nhỏ chồng lên popup két — bước gõ mã rồi bước hiện giá trị trong
+     * CÙNG hộp nhỏ đó. Popup (danh sách ngăn) vẫn nằm sau lưng.
      */
-    const stepUp = popup.getByRole('region', { name: 'Xác nhận danh tính' });
+    const stepUp = page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' });
     await expect(
       stepUp,
       'hết grace mà bấm Xem thì phải được HỎI MÃ, không phải một toast lỗi rồi bỏ mặc',
     ).toBeVisible();
-    await expect(page.getByRole('dialog'), 'bước mã nằm trong popup, không chồng hộp').toHaveCount(1);
+    // Radix đánh aria-hidden lên popup khi hộp nhỏ mở — đếm cả hai.
+    await expect(page.getByRole('dialog', { includeHidden: true }), 'hộp nhỏ chồng lên popup').toHaveCount(2);
     // Hộp nêu ĐÚNG ngăn đang mở (VLT-047) — người ta biết mình gõ mã để xem cái gì.
-    await expect(stepUp.getByText(`Nhập mã 6 số để xem "${label}".`)).toBeVisible();
+    await expect(stepUp.getByText(label, { exact: true })).toBeVisible();
 
     expect(
       await textboxLabels(stepUp),
-      'hộp xác nhận danh tính chỉ có ô mã 6 số (6 ô, mỗi ô một số). Thêm ô nào ở đây cũng là ' +
+      'hộp nhập mã chỉ có ô mã 6 số (6 ô, mỗi ô một số). Thêm ô nào ở đây cũng là ' +
         'thêm một đường đi vòng qua hàng rào cuối',
     ).toEqual(Array.from({ length: 6 }, (_, i) => `Số thứ ${i + 1} trên 6`));
     await expect(otpGroup(stepUp)).toHaveCount(1);
@@ -994,10 +995,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await fillOtp(stepUp, '12 34 5x');
     await expect.poll(() => otpValue(stepUp), { message: 'ô mã chỉ giữ chữ số ngay tại chỗ gõ' }).toBe('12345');
     await fillOtp(stepUp, '');
-    expect(
-      await stepUp.getByRole('button').allTextContents(),
-      'bước mã phải có đúng cặp Quay lại / Xác nhận',
-    ).toEqual(['Quay lại', 'Xác nhận']);
+    await expect(stepUp.getByRole('button'), 'hộp nhỏ chỉ có ✕ và Hủy — đủ 6 số là tự gửi').toHaveCount(2);
+    await expect(stepUp.getByRole('button', { name: 'Hủy', exact: true })).toHaveCount(1);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
@@ -1020,24 +1019,24 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'chưa qua được hàng rào thì tuyệt đối chưa được thấy giá trị',
     ).toHaveCount(0);
 
-    /* ---- Gõ ĐÚNG mã: sang hộp hiện secret ---- */
+    /* ---- Gõ ĐÚNG mã: CHÍNH hộp nhỏ chuyển sang hiện giá trị ---- */
 
     await fillOtp(stepUp, await freshTotpCode(totpSecret));
-    await expect(stepUp).toBeHidden();
 
-    /* ---------- HỘP "HIỆN SECRET": đủ bộ ba, và một nút ẩn ngay ---------- */
+    /* ---------- BƯỚC "HIỆN SECRET": đủ bộ ba, nút chép và một nút ẩn ngay ---------- */
 
-    const reveal = popup.getByRole('region', { name: label });
+    const reveal = page.getByRole('dialog', { name: label, exact: true });
     await expect(reveal).toBeVisible();
-    await expect(page.getByRole('dialog'), 'bước giá trị cũng nằm trong popup').toHaveCount(1);
+    await expect(stepUp, 'tiêu đề hộp đổi sang tên ngăn — không còn hộp nhập mã nào').toHaveCount(0);
+    await expect(page.getByRole('dialog', { includeHidden: true }), 'vẫn chỉ hộp nhỏ trên popup').toHaveCount(2);
     await expect(
       reveal.getByTestId('secret-value'),
       'gõ đúng mã rồi thì phải thấy đúng giá trị vừa cất',
     ).toHaveText(weakValue);
     await expect(
       reveal.getByTestId('reveal-countdown'),
-      'phải có đồng hồ "còn hiện bao lâu" — không có thì giá trị biến mất đột ngột giữa lúc đang chép',
-    ).toBeVisible();
+      'phải có vòng đếm "còn hiện bao lâu" — không có thì giá trị biến mất đột ngột giữa lúc đang chép',
+    ).toContainText(/^\d+s/);
     await expect(
       reveal.getByTestId('stepup-countdown'),
       'phải có đồng hồ thứ hai "còn mở két được bao lâu" — thiếu nó thì mở ngăn kế tiếp bị hỏi ' +
@@ -1047,10 +1046,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       reveal.getByText('Lượt xem này đã được ghi nhật ký.'),
       'người xem phải BIẾT là lượt xem này có vết — đó là nửa sức răn đe của cơ chế',
     ).toBeVisible();
-    expect(
-      await reveal.getByRole('button').allTextContents(),
-      'bước hiện giá trị chỉ có nút đổi cách hiện và "Ẩn ngay" — không nút sao chép, FR-026',
-    ).toEqual(['Hiện từng ký tự', 'Ẩn ngay']);
+    // ✕ · Hiện từng ký tự · Sao chép giá trị (chỉ chép khi bấm, Q-24) · Ẩn ngay — không gì khác.
+    await expect(reveal.getByRole('button')).toHaveCount(4);
+    for (const name of ['Hiện từng ký tự', 'Sao chép giá trị', 'Ẩn ngay']) {
+      await expect(reveal.getByRole('button', { name, exact: true })).toHaveCount(1);
+    }
 
     await reveal.getByRole('button', { name: 'Ẩn ngay' }).click();
     await expect(reveal, 'bấm "Ẩn ngay" phải giấu giá trị đi ngay lập tức').toBeHidden();

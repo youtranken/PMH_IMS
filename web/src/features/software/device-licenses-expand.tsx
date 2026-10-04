@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, formatMoney } from '@/lib/format';
+import { CellNote } from '@/ui/cell-note';
 import { TableWrap } from '@/ui/data-table';
 import { PerpetualBadge } from '@/ui/perpetual-badge';
 import { SeatEndCell } from './seat-cells';
@@ -19,9 +20,9 @@ import { PATHS } from '@/lib/routes';
  * module software, `devices` không cần biết license là gì.
  *
  * Là `<table>` thật kiểu bảng con (`table-sub`), cùng kiểu với bảng ghế ở khu bung /software
- * (Q-20): trình đọc màn hình gắn được tiêu đề cột, và hai khu bung trông như một. Cột nào mọi
- * dòng đều trống (chi phí, bắt đầu, hợp đồng/ghi chú) thì không vẽ — cột toàn "—" chỉ làm bảng
- * rộng ra trong khu hẹp của trang chi tiết.
+ * (Q-20): trình đọc màn hình gắn được tiêu đề cột, và hai khu bung trông như một. Cột chi phí,
+ * bắt đầu mà mọi dòng đều trống thì không vẽ — cột toàn "—" chỉ làm bảng rộng ra trong khu hẹp
+ * của trang chi tiết. Cột Ghi chú thì LUÔN có (Q-24); hợp đồng là dòng phụ của cột Kết thúc.
  */
 export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
   const { t } = useTranslation();
@@ -34,7 +35,6 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
   const rows = installed.data ?? [];
   const hasCost = rows.some((item) => item.cost !== null);
   const hasStart = rows.some((item) => item.startDate);
-  const hasNotes = rows.some((item) => item.contract || item.note);
 
   if (installed.isLoading) return <p className="muted">{t('app.loading')}</p>;
   if (installed.isError) return <p className="muted">{t('app.loadError')}</p>;
@@ -50,7 +50,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
             {hasCost ? <th className="num">{t('license.cost')}</th> : null}
             {hasStart ? <th>{t('license.startDate')}</th> : null}
             <th>{t('license.endDate')}</th>
-            {hasNotes ? <th>{t('license.contractNote')}</th> : null}
+            <th>{t('license.note')}</th>
           </tr>
         </thead>
         <tbody>
@@ -90,7 +90,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
               {/* Mua đứt: cột Kỳ hạn đã nói "Vĩnh viễn" — nói lần hai ở cột Kết thúc là nhiễu. */}
               <td
                 data-label={t('license.endDate')}
-                data-empty={item.licenseModel === 'perpetual' ? true : undefined}
+                data-empty={item.licenseModel === 'perpetual' && !item.contract ? true : undefined}
               >
                 {item.licenseModel === 'perpetual' ? (
                   <span className="muted">—</span>
@@ -101,17 +101,15 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
                     fallbackEnd={item.softwareEndDate}
                   />
                 )}
+                {item.contract ? (
+                  <span className="cell-sub">
+                    {t('license.contract')}: <span className="mono">{item.contract}</span>
+                  </span>
+                ) : null}
               </td>
-              {hasNotes ? (
-                <td
-                  data-label={t('license.contractNote')}
-                  data-empty={item.contract || item.note ? undefined : true}
-                >
-                  {item.contract ? <span className="mono">{item.contract}</span> : null}
-                  {item.note ? <span className="cell-sub">{item.note}</span> : null}
-                  {item.contract || item.note ? null : '—'}
-                </td>
-              ) : null}
+              <td data-label={t('license.note')} data-empty={item.note ? undefined : true}>
+                {item.note ? <CellNote text={item.note} /> : <span className="muted">—</span>}
+              </td>
             </tr>
           ))}
         </tbody>

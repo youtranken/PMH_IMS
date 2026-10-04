@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { LicenseSeatsExpand } from './license-seats-expand';
 import type { SoftwareRow } from './software-types';
 
@@ -100,5 +100,55 @@ describe('Khu bung dòng license — khung chung + bảng con', () => {
     const table = await screen.findByRole('table');
     expect(table).toHaveClass('table-sub');
     expect(screen.getByTestId('expand-header').closest('.exp-panel')).toBe(table.closest('.exp-panel'));
+  });
+});
+
+describe('Khu bung dòng license — cột Ghi chú (Q-24)', () => {
+  const seat = (over: Record<string, unknown>) => ({
+    id: 'seat1',
+    deviceId: 'd1',
+    deviceCode: 'PC-01',
+    deviceName: 'Máy kế toán',
+    deviceAssignedTo: null,
+    assignedBy: 'sa@pmh.com.vn',
+    assignedAt: '2026-01-01T00:00:00Z',
+    startDate: null,
+    endDate: null,
+    cost: null,
+    contract: null,
+    note: null,
+    ...over,
+  });
+
+  function renderSeats(rows: Record<string, unknown>[]) {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, rows))));
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <MemoryRouter>
+            <LicenseSeatsExpand software={LICENSE} csrfToken="t" />
+          </MemoryRouter>
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+  }
+
+  it('Ghi chú là cột riêng, hiện thẳng trên dòng (rút một dòng, bấm/rê để đọc đủ); Hợp đồng nằm dưới Kỳ hạn', async () => {
+    const note = 'Cài cho chị Lan phòng kế toán, đổi máy mới thì chuyển key sang';
+    renderSeats([seat({ note, contract: 'HD-01' })]);
+    const table = await screen.findByRole('table');
+    const headers = within(table).getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers).toEqual(['Máy', 'Kỳ hạn', 'Ghi chú', 'Thao tác']);
+    const cell = within(table).getByText(note);
+    expect(cell).toHaveClass('cell-note');
+    expect(cell.closest('td')).toHaveAttribute('data-label', 'Ghi chú');
+    const contract = within(table).getByText('HD-01');
+    expect(contract.closest('td')).toHaveAttribute('data-label', 'Kỳ hạn');
+  });
+
+  it('không ghế nào có ghi chú: cột vẫn có, ô là "—"', async () => {
+    renderSeats([seat({})]);
+    const table = await screen.findByRole('table');
+    expect(within(table).getByRole('columnheader', { name: 'Ghi chú' })).toBeInTheDocument();
   });
 });

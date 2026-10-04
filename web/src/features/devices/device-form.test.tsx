@@ -155,16 +155,16 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     it('không có tủ thì không có ô U', () => {
       mockFetch(WITH_CABINET);
       renderForm({ ...inRack, cabinetId: null, rackUStart: null, rackUSize: null });
-      expect(screen.queryByRole('spinbutton', { name: 'U bắt đầu' })).toBeNull();
-      expect(screen.queryByRole('spinbutton', { name: 'Số U' })).toBeNull();
+      expect(screen.queryByRole('textbox', { name: 'U bắt đầu' })).toBeNull();
+      expect(screen.queryByRole('textbox', { name: 'Số U' })).toBeNull();
     });
 
     it('có tủ: hiện U đang khai, sửa rồi Lưu gửi số', async () => {
       const calls = mockFetch(WITH_CABINET);
       renderForm(inRack);
-      const start = await screen.findByRole('spinbutton', { name: 'U bắt đầu' });
-      expect(start).toHaveValue(5);
-      expect(screen.getByRole('spinbutton', { name: 'Số U' })).toHaveValue(2);
+      const start = await screen.findByRole('textbox', { name: 'U bắt đầu' });
+      expect(start).toHaveValue('5');
+      expect(screen.getByRole('textbox', { name: 'Số U' })).toHaveValue('2');
       const user = userEvent.setup();
       await user.clear(start);
       await user.type(start, '7');
@@ -174,12 +174,23 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
       expect(body).toMatchObject({ cabinetId: 'c-1', rackUStart: 7, rackUSize: 2 });
     });
 
+    it('Số U có nút − / + (Q-24): bấm + rồi Lưu gửi số mới', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Tăng số U' }));
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+      const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
+      expect(body).toMatchObject({ rackUStart: 5, rackUSize: 3 });
+    });
+
     it('xoá trống cả hai ô → gửi null (bỏ U)', async () => {
       const calls = mockFetch(WITH_CABINET);
       renderForm(inRack);
       const user = userEvent.setup();
-      await user.clear(await screen.findByRole('spinbutton', { name: 'U bắt đầu' }));
-      await user.clear(screen.getByRole('spinbutton', { name: 'Số U' }));
+      await user.clear(await screen.findByRole('textbox', { name: 'U bắt đầu' }));
+      await user.clear(screen.getByRole('textbox', { name: 'Số U' }));
       await user.click(screen.getByRole('button', { name: 'Lưu' }));
       await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
       const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
@@ -190,9 +201,9 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
       const calls = mockFetch(WITH_CABINET);
       renderForm(inRack);
       const user = userEvent.setup();
-      await user.clear(screen.getByRole('spinbutton', { name: 'Số U' }));
+      await user.clear(screen.getByRole('textbox', { name: 'Số U' }));
       await user.click(screen.getByRole('button', { name: 'Lưu' }));
-      const size = screen.getByRole('spinbutton', { name: 'Số U' });
+      const size = screen.getByRole('textbox', { name: 'Số U' });
       await waitFor(() => expect(size).toHaveAttribute('aria-invalid', 'true'));
       expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
     });

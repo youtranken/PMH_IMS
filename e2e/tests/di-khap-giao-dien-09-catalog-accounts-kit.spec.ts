@@ -281,6 +281,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       selectField: string[];
       /** Công tắc bật/tắt — vai `checkbox`. */
       toggles: string[];
+      /** Nút − / + của ô số (`NumberStepper`). */
+      stepperButtons?: string[];
     }
 
     const ADD_DIALOGS: AddDialogSpec[] = [
@@ -294,9 +296,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       {
         tab: 'Tủ mạng',
         title: 'Thêm tủ mạng',
-        // "Số U" là ô SỐ (1–60) — vai `spinbutton`, không nằm trong bộ ô gõ chữ.
-        textFields: ['Mã', 'Vị trí / mô tả'],
+        // "Số U" là ô chữ có nút − / + (`NumberStepper`, Q-24).
+        textFields: ['Mã', 'Vị trí / mô tả', 'Số U'],
         selectField: ['Thuộc site'],
+        stepperButtons: ['Giảm số U', 'Tăng số U'],
         toggles: [],
       },
       {
@@ -371,7 +374,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       expect(
         await handleNames(dialogBox.getByRole('button')),
         `bộ NÚT của hộp ${dialog.title} sai — ô chọn phải là button (Select dùng chung), và chân hộp chỉ được có Hủy + Lưu`,
-      ).toEqual(sortOrder(['Đóng hộp thoại', 'Hủy', 'Lưu', ...dialog.selectField]));
+      ).toEqual(sortOrder(['Đóng hộp thoại', 'Hủy', 'Lưu', ...dialog.selectField, ...(dialog.stepperButtons ?? [])]));
 
       expect(
         await handleNames(dialogBox.getByRole('checkbox')),
@@ -708,7 +711,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Họ tên',
       'Vai trò',
       'Trạng thái',
-      '2 lớp',
+      '2 Lớp',
       'Đăng nhập gần nhất',
       'Thao tác',
     ]);

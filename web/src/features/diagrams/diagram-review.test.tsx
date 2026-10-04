@@ -267,7 +267,7 @@ describe('Ghim bình luận', () => {
     routeFetch([...base(diagram(), [ON_DEVICE])]);
     renderScreen('/diagrams/g1', MEMBER);
     const user = userEvent.setup();
-    const pin = await screen.findByRole('button', { name: /^Ghim 1 trên SW-E2E-01: Cổng uplink cắm nhầm.* · 2 bình luận$/ });
+    const pin = await screen.findByRole('button', { name: /^Ghim 1 trên SW-E2E-01: Cổng uplink cắm nhầm.* · 2 Bình luận$/ });
     // Chữ hiện ngay trên bản vẽ, không phải bấm mới thấy (Q-23 góp ý 04/10).
     expect(pin).toHaveTextContent('2');
     expect(pin).toHaveTextContent('Cổng uplink cắm nhầm');

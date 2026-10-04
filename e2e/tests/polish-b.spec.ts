@@ -102,7 +102,7 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
     const dialog = page.getByRole('dialog', { name: user.fullName });
     await expect(dialog.getByRole('cell', { name: '203.0.113.77' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Gỡ tạm chặn' })).toBeVisible();
-    await expect(dialog.getByRole('link', { name: /dòng quyền két sắt/ })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /Dòng quyền két sắt/ })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Việc người này đã làm' })).toHaveAttribute(
       'href',
       new RegExp(`q=${encodeURIComponent(user.email)}`),

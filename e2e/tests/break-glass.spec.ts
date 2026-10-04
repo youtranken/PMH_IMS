@@ -155,7 +155,7 @@ test.describe('Break-glass', () => {
     await expect(member.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
 
     await member.getByRole('button', { name: 'Xem' }).click();
-    await expect(member.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
+    await expect(member.getByRole('dialog', { name: 'Nhập mã 6 số để xem' })).toBeVisible();
     await fillOtp(member, await freshTotpCode(totpSecret));
     await expect(member.getByTestId('secret-value')).toHaveText(secretValue);
     // Lần xem đầu vừa gắn quyền vào phiên này: khung chuyển sang quyền đang chạy.

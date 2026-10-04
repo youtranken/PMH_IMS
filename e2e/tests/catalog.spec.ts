@@ -62,7 +62,7 @@ test.describe('Danh mục', () => {
     await expect(cabinetForm.getByRole('textbox', { name: 'Vị trí / mô tả' })).toHaveAccessibleDescription(
       /vd P\.server tầng 2/,
     );
-    await cabinetForm.getByLabel('Số U').fill('42');
+    await cabinetForm.getByRole('textbox', { name: 'Số U' }).fill('42');
     await cabinetForm.getByRole('button', { name: 'Lưu' }).click();
 
     const cabinetRow = page.getByRole('row', { name: new RegExp(cabinetCode) });
@@ -91,7 +91,7 @@ test.describe('Danh mục', () => {
     await expect(createdSite).toHaveCount(0);
   });
 
-  test('đường hỏng: site đang có tủ hiện "1 tủ mạng", Xóa bị khóa kèm lý do; API vẫn chặn 409', async ({
+  test('đường hỏng: site đang có tủ hiện "1 Tủ mạng", Xóa bị khóa kèm lý do; API vẫn chặn 409', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -120,10 +120,10 @@ test.describe('Danh mục', () => {
     await page.getByRole('tab', { name: 'Site' }).click();
     const siteRow = page.getByRole('row', { name: new RegExp(siteCode) });
     // Q-15: biết trước mục đang được dùng ở đâu, thay vì bấm Xóa rồi mới nhận lỗi.
-    await expect(siteRow.getByRole('link', { name: '1 tủ mạng' })).toBeVisible();
+    await expect(siteRow.getByRole('link', { name: '1 Tủ mạng' })).toBeVisible();
     await page.getByRole('button', { name: `Thao tác với ${siteCode}` }).click();
     await expect(page.getByRole('menuitem', { name: 'Xóa' })).toBeDisabled();
-    await expect(page.getByText('Đang dùng ở 1 tủ mạng — hãy Ngừng dùng')).toBeVisible();
+    await expect(page.getByText('Đang dùng ở 1 Tủ mạng — hãy Ngừng dùng')).toBeVisible();
     await page.keyboard.press('Escape');
 
     // Nút bị khóa chỉ là lời báo trước; hàng rào thật vẫn là khóa ngoại ở API.
@@ -140,7 +140,7 @@ test.describe('Danh mục', () => {
     await expect(siteRow).toBeVisible();
 
     // Bấm con số → danh sách tủ đã lọc sẵn theo site đó.
-    await siteRow.getByRole('link', { name: '1 tủ mạng' }).click();
+    await siteRow.getByRole('link', { name: '1 Tủ mạng' }).click();
     await expect(page.getByRole('tab', { name: 'Tủ mạng' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('row', { name: new RegExp(cabinetCode) })).toBeVisible();
   });

@@ -100,14 +100,14 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
   await page.goto('/admin/vault-access');
   await expect(page.getByRole('heading', { name: 'Quyền két sắt' })).toBeVisible();
   // Dòng tổng là câu ghép bốn con số — ở 390px nó phải xuống dòng chứ không đẩy trang rộng ra.
-  await expect(page.getByText(/tài khoản · .* dòng quyền/)).toBeVisible();
+  await expect(page.getByText(/Tài khoản · .* Dòng quyền/)).toBeVisible();
   /*
    * Lưới vài chục cột KHÔNG có ở màn hẹp — tab "Ma trận" chỉ dành cho màn rộng. Ở điện thoại
    * là danh sách người (kèm số quyền) rồi tới thẻ quyền của một người.
    */
   await expect(page.getByRole('tab', { name: 'Ma trận' })).toHaveCount(0);
   await expect(page.getByTestId('access-grid')).toHaveCount(0);
-  const member = page.getByRole('button', { name: new RegExp(`${E2E_MEMBER.email}.*1 quyền`) });
+  const member = page.getByRole('button', { name: new RegExp(`${E2E_MEMBER.email}.*1 Quyền`) });
   await expect(member).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
@@ -122,11 +122,10 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
 });
 
 /**
- * VLT-062 — mở xem giá trị từ popup két: bước mã và bước giá trị chạy TRONG popup, không chồng
- * hộp. Trên điện thoại ba lớp hộp chồng nhau là người dùng không biết mình đang ở đâu, và nút
- * đóng của lớp nào đóng cái gì.
+ * Q-24 — Xem từ popup két: một hộp NHỎ chồng lên popup, bước mã rồi bước giá trị trong CÙNG hộp
+ * nhỏ đó. Danh sách ngăn vẫn nằm sau lưng; Ẩn ngay / Hủy chỉ đóng hộp nhỏ.
  */
-test('popup két ở 390px: Xem → mã → giá trị trong CÙNG một hộp, Ẩn ngay về danh sách', async ({
+test('popup két ở 390px: Xem mở hộp nhỏ — mã → giá trị trong CÙNG hộp nhỏ, Ẩn ngay về popup', async ({
   page,
 }) => {
   const totpSecret = await firstLogin(page, E2E_SA);
@@ -139,26 +138,31 @@ test('popup két ở 390px: Xem → mã → giá trị trong CÙNG một hộp, 
 
   await page.goto('/vault');
   await page.getByRole('listitem').filter({ hasText: code }).getByRole('button', { name: code }).click();
-  const popup = page.getByRole('dialog');
+  const popup = page.getByRole('dialog', { name: new RegExp(code) });
   await popup.getByRole('button', { name: 'Xem' }).click();
 
-  const step = popup.getByRole('region', { name: 'Xác nhận danh tính' });
-  await expect(step).toBeVisible();
-  await expect(page.getByRole('dialog')).toHaveCount(1);
+  const small = page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+  await expect(small).toBeVisible();
+  await expect(small.getByText(label, { exact: true })).toBeVisible();
+  // Hộp nhỏ CHỒNG lên popup (popup bị Radix đánh aria-hidden khi hộp nhỏ mở — đếm cả hai).
+  await expect(page.getByRole('dialog', { includeHidden: true })).toHaveCount(2);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await fillOtp(step, await freshTotpCode(totpSecret));
-  await expect(popup.getByTestId('secret-value')).toHaveText('Mat-Khau#2026');
-  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await fillOtp(small, await freshTotpCode(totpSecret));
+  const shown = page.getByRole('dialog', { name: label, exact: true });
+  await expect(shown.getByTestId('secret-value')).toHaveText('Mat-Khau#2026');
+  await expect(shown.getByTestId('reveal-countdown')).toContainText(/^\d+s/);
+  // Hộp nhỏ CHỒNG lên popup (popup bị Radix đánh aria-hidden khi hộp nhỏ mở — đếm cả hai).
+  await expect(page.getByRole('dialog', { includeHidden: true })).toHaveCount(2);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await popup.getByRole('button', { name: 'Ẩn ngay' }).click();
+  await shown.getByRole('button', { name: 'Ẩn ngay' }).click();
   await expect(page.getByTestId('secret-value')).toHaveCount(0);
   await expect(popup.getByText(label)).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(1);
 });
 
-test('popup két ở 390px: bước mã có Quay lại — về danh sách, không gửi mã', async ({ page }) => {
+test('popup két ở 390px: hộp nhỏ có Hủy — về danh sách, không gửi mã', async ({ page }) => {
   await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   const stamp = uniqueStamp();
   const code = `PC-E2E-VM1B-${stamp}`;
@@ -168,9 +172,11 @@ test('popup két ở 390px: bước mã có Quay lại — về danh sách, khô
 
   await page.goto('/vault');
   await page.getByRole('listitem').filter({ hasText: code }).getByRole('button', { name: code }).click();
-  const popup = page.getByRole('dialog');
+  const popup = page.getByRole('dialog', { name: new RegExp(code) });
   await popup.getByRole('button', { name: 'Xem' }).click();
-  await popup.getByRole('button', { name: 'Quay lại', exact: true }).click();
+  const small = page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+  await small.getByRole('button', { name: 'Hủy', exact: true }).click();
+  await expect(small).toHaveCount(0);
   await expect(popup.getByText(label)).toBeVisible();
   await expect(popup.getByRole('button', { name: 'Xem' })).toBeVisible();
   await expect(page.getByTestId('secret-value')).toHaveCount(0);

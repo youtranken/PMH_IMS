@@ -298,6 +298,7 @@ export function AssignDialog({
           <>
             <div className="span-2">
               <SegmentedRadio
+                className="fill"
                 label={t('license.quickPickBy')}
                 value={pickBy}
                 options={[

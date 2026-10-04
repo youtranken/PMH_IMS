@@ -393,7 +393,9 @@ export function summarizeDiff(diff: CellDiff): string {
   if (shapes) parts.push(`${shapes} hình tự do`);
   if (parts.length === 0) return 'Không đổi gì';
   const line = parts.join(', ');
-  return line[0].toUpperCase() + line.slice(1);
+  // Viết hoa CHỮ CÁI đầu, không phải ký tự đầu: câu mở bằng số ("1 hình tự do") thì danh từ sau
+  // số mới là chữ đầu cụm (Q-24).
+  return line.replace(/\p{L}/u, (ch) => ch.toUpperCase());
 }
 
 /**

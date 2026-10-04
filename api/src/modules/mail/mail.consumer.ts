@@ -331,7 +331,7 @@ export class MailConsumer {
         { label: 'Bản vẽ', value: subject?.label ?? 'Không xác định — mở bản vẽ để xem' },
         { label: 'Phiên bản', value: Number.isFinite(seq) ? `#${seq}` : '—' },
         { label: 'Lý do', value: request.reason },
-        { label: 'Tự kiểm', value: warnings > 0 ? `${warnings} cảnh báo vàng (không chặn)` : 'Không có cảnh báo' },
+        { label: 'Tự kiểm', value: warnings > 0 ? `${warnings} Cảnh báo vàng (không chặn)` : 'Không có cảnh báo' },
         { label: 'Lúc', value: at(request.createdAt) },
       ],
       ctaLabel: 'Mở bản vẽ để duyệt',
@@ -713,10 +713,11 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
         : `${viDate(item.end)} — còn ${item.daysLeft} ngày`,
   }));
 
+  // Số đứng đầu cụm thì danh từ viết hoa (Q-24): "3 Mục sắp hết hạn".
   const headline =
     digest.expired > 0
-      ? `${digest.expired} mục ĐÃ QUÁ HẠN, ${digest.upcoming} mục sắp hết hạn`
-      : `${digest.upcoming} mục sắp hết hạn`;
+      ? `${digest.expired} Mục ĐÃ QUÁ HẠN, ${digest.upcoming} Mục sắp hết hạn`
+      : `${digest.upcoming} Mục sắp hết hạn`;
 
   const { html, text } = renderMail({
     title: `${isTest ? '[Gửi thử] ' : ''}${headline}`,

@@ -1,0 +1,79 @@
+/* --- Hộp nhỏ Xem két (ui/vault-reveal-popup.tsx, Q-24) ---------------------------------------
+ * Bước mã: tên ngăn + 6 ô. Bước giá trị: chữ hiện dần từ mờ sang nét, vòng tròn đếm ngược tự ẩn.
+ * Màu chỉ lấy token (tokens.css đã có cặp dark).
+ * ------------------------------------------------------------------------------------------- */
+.reveal-popup-subject {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--fw-semibold);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.reveal-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Giá trị hiện dần từ mờ sang nét: mắt bắt được "đây là thứ vừa mở" mà không phải dò. */
+.reveal-sharpen {
+  animation: reveal-sharpen 0.7s var(--ease) both;
+}
+@keyframes reveal-sharpen {
+  from {
+    filter: blur(10px);
+    opacity: 0;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+.reveal-ring-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.reveal-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+}
+/* Vòng bắt đầu từ đỉnh (xoay -90°) và rút dần theo chiều kim đồng hồ. */
+.reveal-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.reveal-ring .countdown-num {
+  position: relative;
+  font-size: var(--fs-sm);
+}
+.reveal-ring-track {
+  fill: none;
+  stroke: var(--border-2);
+  stroke-width: 4;
+}
+.reveal-ring-bar {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear, stroke 0.3s var(--ease);
+}
+.reveal-ring-bar.warn { stroke: var(--warn); }
+.reveal-ring-bar.urgent { stroke: var(--danger); }
+
+/* "Giảm chuyển động" (máy) và "Tắt" (Hồ sơ, lib/motion.ts): giá trị hiện ngay, vòng nhảy theo giây. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='on']) .reveal-sharpen { animation: none; }
+  html:not([data-motion='on']) .reveal-ring-bar { transition: none; }
+}
+html[data-motion='off'] .reveal-sharpen { animation: none; }
+html[data-motion='off'] .reveal-ring-bar { transition: none; }

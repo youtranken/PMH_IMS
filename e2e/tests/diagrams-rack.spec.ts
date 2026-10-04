@@ -73,12 +73,12 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await page.goto(`/devices/${mover}`);
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
-    await form.getByRole('spinbutton', { name: 'U bắt đầu' }).fill('6');
-    await form.getByRole('spinbutton', { name: 'Số U' }).fill('1');
+    await form.getByRole('textbox', { name: 'U bắt đầu' }).fill('6');
+    await form.getByRole('textbox', { name: 'Số U' }).fill('1');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form.getByRole('alert')).toContainText(`U6 trong tủ đang có ${holder} (Switch ${holder}) chiếm`);
 
-    await form.getByRole('spinbutton', { name: 'U bắt đầu' }).fill('9');
+    await form.getByRole('textbox', { name: 'U bắt đầu' }).fill('9');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form).toBeHidden();
     await expect(page.getByText(`${rack.siteCode} · ${rack.cabinetCode} · U9`).first()).toBeVisible();

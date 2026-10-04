@@ -192,10 +192,10 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderAt('/admin/catalog');
-    const devices = await screen.findByRole('link', { name: '12 thiết bị' });
+    const devices = await screen.findByRole('link', { name: '12 Thiết bị' });
     expect(devices).toHaveAttribute('href', '/devices?siteId=s-hcm');
-    expect(screen.getByText('1 dải IP')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '1 dải IP' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 Dải IP')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '1 Dải IP' })).not.toBeInTheDocument();
     expect(screen.getByText('Chưa dùng')).toBeInTheDocument();
   });
 
@@ -218,7 +218,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-HCM/ }));
     const blocked = screen.getByRole('menuitem', { name: 'Xóa' });
     expect(blocked).toBeDisabled();
-    expect(screen.getByText('Đang dùng ở 3 thiết bị — hãy Ngừng dùng')).toBeInTheDocument();
+    expect(screen.getByText('Đang dùng ở 3 Thiết bị — hãy Ngừng dùng')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-DN/ }));
     expect(screen.getByRole('menuitem', { name: 'Xóa' })).toBeEnabled();

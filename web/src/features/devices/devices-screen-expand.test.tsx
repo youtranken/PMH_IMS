@@ -152,7 +152,9 @@ describe('/devices — bung dòng license theo mẫu chuẩn', () => {
       table.closest('.exp-panel'),
     );
     const headers = within(table).getAllByRole('columnheader').map((th) => th.textContent);
-    expect(headers).toEqual(['Phần mềm', 'Kỳ hạn', 'Chi phí', 'Kết thúc', 'Hợp đồng · Ghi chú']);
+    expect(headers).toEqual(['Phần mềm', 'Kỳ hạn', 'Chi phí', 'Kết thúc', 'Ghi chú']);
+    // Hợp đồng là dòng phụ của cột Kết thúc — Ghi chú mới đáng một cột riêng (Q-24).
+    expect(within(table).getByText('HD-01').closest('td')).toHaveAttribute('data-label', 'Kết thúc');
     expect(within(table).getByRole('link', { name: 'LIC-OFFICE' })).toBeInTheDocument();
     expect(within(table).getByText('Office 365')).toBeInTheDocument();
     expect(within(table).getByText('HD-01')).toBeInTheDocument();

@@ -401,9 +401,6 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             ownerLabel={opened.code}
             me={me}
             canEdit={canEdit && !opened.orphan}
-            /* Khung két đã nằm trong hộp này: bước mã và bước giá trị chạy ngay trong hộp,
-               không chồng thêm hai hộp nữa lên trên (VLT-062). */
-            stepsInline
           />
         </Dialog>
       ) : null}

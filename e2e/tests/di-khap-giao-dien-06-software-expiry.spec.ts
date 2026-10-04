@@ -372,15 +372,15 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, ô chọn file, và hai nút chân hộp =====
+     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, − / + của Số ghế, ô chọn file, và hai nút chân hộp =====
      *
      * `<input type="file">` được trình duyệt phơi ra như một NÚT mang tên của nhãn — nên nó
      * nằm trong phép đếm này chứ không nằm trong phép đếm ô gõ chữ ở trên.
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 11 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(11);
+      'Hộp thêm hồ sơ có đúng 13 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(13);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
@@ -390,6 +390,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       '+1 năm',
       '+2 năm',
       '+3 năm',
+      'Giảm số ghế',
+      'Tăng số ghế',
       'Chọn file để đính kèm',
       'Hủy',
       'Lưu',
@@ -855,8 +857,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBeVisible();
     expect(
       await columnTexts(page),
-      'Bảng ghế license phải có đủ 5 cột này — mất cột Chi phí hay Hợp đồng là mất chỗ đối chiếu lúc quyết toán',
-    ).toEqual(['Máy', 'Chi phí', 'Kỳ hạn', 'Hợp đồng · Ghi chú', 'Thao tác']);
+      'Bảng ghế license phải có đủ 5 cột này — mất cột Chi phí là mất chỗ đối chiếu lúc quyết toán; Hợp đồng là dòng phụ của Kỳ hạn, Ghi chú có cột riêng (Q-24)',
+    ).toEqual(['Máy', 'Chi phí', 'Kỳ hạn', 'Ghi chú', 'Thao tác']);
 
     // ===== TAB KÉT SẮT =====
     await page.getByRole('tab', { name: /^Két sắt/ }).click();

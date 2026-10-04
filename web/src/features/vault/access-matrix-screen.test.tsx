@@ -64,7 +64,7 @@ describe('Quyền xem két sắt — theo người', () => {
       'Chứng chỉ SSL · Xem thẳng',
     );
     // Danh sách bên trái có số quyền của từng người.
-    expect(screen.getByRole('button', { name: /Trần Bình.*1 quyền/ })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /Trần Bình.*1 Quyền/ })).toHaveAttribute(
       'aria-current',
       'true',
     );

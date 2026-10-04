@@ -502,6 +502,34 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   để sửa tiếp; màn sơ đồ phải dùng được ngay không cần học — mỗi thao tác có (i) hướng dẫn, màn
   trống có các bước gợi ý.
 
+### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
+
+- **Dải nút chọn một (Thuê bao / Vĩnh viễn…) trong FORM trải hết bề ngang ô, các nút chia
+  đều** — không dồn bên trái. Áp cho mọi dải nút nằm trong một ô form (Loại & Thời hạn phần
+  mềm, màu dây, giao thức NAT, đầu bên kia của sơ đồ cổng, bản vẽ con, chọn máy theo…). Dải
+  nút LỌC trên thanh công cụ của danh sách giữ cỡ theo chữ như cũ.
+- **Ô số nguyên nhỏ có nút − / +** (bước 1, gõ tay vẫn được, mũi tên ↑/↓ trên bàn phím cũng
+  tăng/giảm). Số ghế: nút − dừng ở max(1, số ghế đang dùng) — không bấm xuống dưới số máy đang
+  cài; ô trống vẫn nghĩa là "không giới hạn", bấm + từ ô trống ra số nhỏ nhất hợp lệ; muốn về
+  "không giới hạn" thì xoá tay. Áp cả ô "Số U" của thiết bị/tủ khi đặt vừa.
+- **Ghi chú là một CỘT riêng luôn hiện** ở bảng ghế license (trang phần mềm, khu bung dòng) và
+  bảng license đang cài của thiết bị; chữ dài rút một dòng, rê chuột thấy đủ, bấm để mở. Hợp
+  đồng chuyển xuống dòng phụ của cột Kỳ hạn để bảng vẫn vừa 1366px; ở 390px thẻ vẫn có dòng
+  Ghi chú.
+- **Xem két = một hộp NHỎ duy nhất**: tiêu đề "Nhập mã 6 số để xem", tên ngăn, 6 ô mã, nút Hủy
+  (bỏ đoạn giải thích dài của hộp xác thực lại). Mã đúng → chạy hiệu ứng vòng như mọi ô mã rồi
+  CHÍNH hộp đó chuyển sang hiện giá trị: chữ hiện dần từ mờ sang nét, vòng tròn đếm ngược thời
+  gian tự ẩn (`secret.reveal_seconds`), có **nút sao chép** (đảo luật cũ "không nút chép" — chủ
+  dự án cần dán vào phiên SSH/console; chỉ chép khi bấm, không tự vào clipboard; FR-026 chỉ cấm
+  xuất HÀNG LOẠT). Còn trong ân hạn thì bấm Xem mở thẳng hộp ở bước giá trị. Áp ở mọi chỗ có
+  nút Xem, kể cả popup Két tổng và thẻ thiết bị trên sơ đồ: hộp nhỏ chồng lên popup (thay cho
+  bước thay chỗ danh sách của VLT-062 — hộp nhỏ không che mất danh sách). Phạm vi mã vẫn là
+  `vault`, mỗi lần xem vẫn một dòng nhật ký.
+- **Chữ số đứng đầu cụm thì danh từ theo sau viết HOA chữ đầu:** "1 Tủ mạng", "3 Phần mềm",
+  "12 Tài khoản · 30 Dòng quyền". Áp cho nhãn đếm / chip / dòng tóm tắt ở đầu câu hoặc đầu một
+  cụm ngăn bằng "·". KHÔNG áp cho đơn vị đo (giờ, phút, giây, ngày, tháng, năm, lần, %, MB…):
+  "5 ngày trước", "2 giờ" giữ nguyên — đó là lượng, không phải danh từ đếm hồ sơ.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

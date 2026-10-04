@@ -116,7 +116,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     const messages = await waitForMail('sắp hết hạn');
     // ĐÚNG MỘT thư cho cả ba mục — đây là điểm chính của FR-013.
     expect(messages).toHaveLength(1);
-    expect(messages[0].Subject).toContain('3 mục sắp hết hạn');
+    expect(messages[0].Subject).toContain('3 Mục sắp hết hạn');
     expect(messages[0].To.map((to) => to.Address).sort()).toEqual([
       'it@pmh.com.vn',
       'sep@pmh.com.vn',

@@ -204,7 +204,7 @@ export function PortFormDialog({
           />
         </Field>
 
-        <div className="segmented" role="radiogroup" aria-label={t('ports.peerKind')}>
+        <div className="segmented fill" role="radiogroup" aria-label={t('ports.peerKind')}>
           {(['device', 'free'] as const).map((value) => (
             <label key={value}>
               <input type="radio" name="peer-kind" value={value} checked={mode === value} onChange={() => setMode(value)} />

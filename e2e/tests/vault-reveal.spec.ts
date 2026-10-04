@@ -109,7 +109,7 @@ test.describe('Mở két với TOTP step-up', () => {
       .click();
 
     // Phải hỏi mã, KHÔNG được hiện giá trị và cũng không được đá về màn đăng nhập.
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/devices/${deviceId}`));
 
     await fillOtp(page, await freshTotpCode(totpSecret));
@@ -136,7 +136,7 @@ test.describe('Mở két với TOTP step-up', () => {
       .getByRole('button', { name: 'Xem' })
       .click();
     await expect(page.getByTestId('secret-value')).toHaveText(`Ssh#Pass#${stamp}`);
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' })).toHaveCount(0);
   });
 
   test('đường hỏng: gõ sai mã thì không mở, ô nhập bị xóa để không bấm lại mã cũ', async ({

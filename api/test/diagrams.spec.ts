@@ -251,7 +251,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
         svg: SVG,
         basedOnVersionId: latest.id,
       });
-      expect(mine.summary).toBe('1 hình tự do');
+      expect(mine.summary).toBe('1 Hình tự do');
       expect(theirs.summary).toBe(`Bỏ 1 thiết bị, 1 hình tự do · lưu đè lên bản của ${SA.fullName}`);
       expect(theirs.seq).toBe(mine.seq + 1);
     });

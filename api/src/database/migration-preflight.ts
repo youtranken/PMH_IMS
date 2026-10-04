@@ -26,7 +26,7 @@ const PREFLIGHTS: Record<string, Preflight> = {
     if ((dup.rowCount ?? 0) === 0) return null;
     const list = dup.rows.map((r) => `${r.code}: ${r.ips}`).join('; ');
     return (
-      `${dup.rowCount} thiết bị đang giữ hơn một IP đang cấp (${list}). ` +
+      `${dup.rowCount} Thiết bị đang giữ hơn một IP đang cấp (${list}). ` +
       'Mỗi máy chỉ giữ một IP (Q-20): thu hồi bớt IP thừa rồi khởi động lại — ' +
       'xem docs/RUNBOOK-4.3-dong-dot-1.md.'
     );

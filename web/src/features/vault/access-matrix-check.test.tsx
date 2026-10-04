@@ -78,7 +78,7 @@ describe('Quyền két sắt — số trong dòng tổng là lối lọc, Kiểm
 
   it('"1 nhóm chưa gán cho ai" bấm được: sang Ma trận, chỉ còn đúng cột trống', async () => {
     renderAt('/admin/vault-access');
-    await userEvent.click(await screen.findByRole('button', { name: '1 nhóm chưa gán cho ai' }));
+    await userEvent.click(await screen.findByRole('button', { name: '1 Nhóm chưa gán cho ai' }));
     expect(await screen.findByRole('checkbox', { name: 'Chỉ nhóm chưa ai được gán' })).toBeChecked();
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
     expect(headers.some((text) => text.includes('Chứng chỉ SSL'))).toBe(true);
