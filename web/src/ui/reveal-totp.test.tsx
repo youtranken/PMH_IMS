@@ -1,6 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
-import { RevealDialog, type TotpReveal } from '@/ui/reveal-dialog';
+import type { RevealProps, TotpReveal } from '@/ui/reveal-dialog';
+import { VaultRevealPopup } from '@/ui/vault-reveal-popup';
+
+/** Bước giá trị của hộp Xem két — nơi duy nhất hiện secret (FR-022, Q-24). */
+function RevealPopup({ label, username, value, totp, seconds, stepUpSecondsLeft, onClose, onExpire }: RevealProps) {
+  return (
+    <VaultRevealPopup
+      csrfToken="csrf-test"
+      label={label}
+      step="value"
+      revealed={{ username: username ?? null, value, totp, seconds, stepUpSecondsLeft: stepUpSecondsLeft ?? 0 }}
+      onClose={onClose}
+      onVerified={() => undefined}
+      onExpire={onExpire}
+    />
+  );
+}
 
 /**
  * Mở ngăn "Mã 2 lớp" (Q-18): khóa (che sẵn), QR sinh lại, mã hiện tại chạy theo chu kỳ.
@@ -29,7 +45,7 @@ function advance(seconds: number) {
 
 function renderTotp(onClose = () => {}) {
   return renderWithI18n(
-    <RevealDialog
+    <RevealPopup
       label="VPN FortiGate"
       value="otpauth://totp/FortiGate:admin?secret=JBSWY3DPEHPK3PXP"
       seconds={60}
@@ -39,7 +55,7 @@ function renderTotp(onClose = () => {}) {
   );
 }
 
-describe('RevealDialog — ngăn Mã 2 lớp', () => {
+describe('Hộp Xem két, bước giá trị — ngăn Mã 2 lớp', () => {
   it('hiện QR, mã hiện tại và giây còn lại của mã', () => {
     renderTotp();
     const qr = screen.getByRole('img', { name: /Mã QR/ });

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@/ui/dialog';
 import { CopyButton } from '@/ui/copy-button';
 import { countdownTone } from '@/ui/countdown-tone';
 import { useNow } from '@/ui/use-now';
@@ -23,43 +22,6 @@ const RING_C = 2 * Math.PI * RING_R;
 export function formatMinSec(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-/**
- * Hiện giá trị đúng `seconds` giây rồi tự đóng (FR-022).
- *
- * Đồng hồ đếm ngược tính từ MỘT mốc thời gian chụp lúc mở, không phải trừ dần mỗi giây:
- * trình duyệt ở tab nền bị hãm `setInterval` xuống 1 lần/phút, trừ dần thì cái hộp chứa mật
- * khẩu nằm mở hàng phút trên màn hình đã khóa. Tính từ mốc thì tab quay lại là đóng ngay.
- *
- * Giá trị KHÔNG tự vào clipboard; chỉ chép khi người dùng bấm nút chép (Q-24 — dán vào phiên
- * SSH/console là việc hằng ngày). Giá trị tô màu theo lớp ký tự, và có chế độ "từng ký tự" (ô
- * đánh số) để gõ tay không nhầm.
- *
- * HAI đồng hồ, trả lời hai câu khác nhau, nên nằm ở hai dòng riêng:
- *   `42s` trong vòng tròn đếm ngược — giá trị này còn hiện bao lâu nữa
- *   `9:12` — còn mở ngăn khác được bao lâu mà không phải gõ lại mã 6 số
- * Thiếu số thứ hai thì người dùng mở ngăn thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
- * hiểu vì sao, dù cái mốc đó vốn đoán trước được.
- */
-export function RevealDialog(props: RevealProps) {
-  const { t } = useTranslation();
-  return (
-    <Dialog
-      open
-      onOpenChange={props.onClose}
-      maxWidth={480}
-      title={props.label}
-      footer={
-        /* Nút thường, không `primary`: lối ra không được là thứ sáng nhất hộp — nội dung mới là. */
-        <button type="button" className="btn" onClick={props.onClose}>
-          {t('vault.hideNow')}
-        </button>
-      }
-    >
-      <RevealContent {...props} />
-    </Dialog>
-  );
 }
 
 /** Khối `totp` trong phản hồi mở két của ngăn "Mã 2 lớp" — server tính hết (Q-18). */
@@ -94,7 +56,24 @@ export interface RevealProps {
   onExpire?: () => void;
 }
 
-/** Thân hộp hiện giá trị — dùng chung cho `RevealDialog` và hộp nhỏ Xem két (`VaultRevealPopup`). */
+/**
+ * Thân bước giá trị của hộp Xem két (`VaultRevealPopup`): hiện giá trị đúng `seconds` giây rồi
+ * gọi `onClose` (FR-022).
+ *
+ * Đồng hồ đếm ngược tính từ MỘT mốc thời gian chụp lúc mở, không phải trừ dần mỗi giây:
+ * trình duyệt ở tab nền bị hãm `setInterval` xuống 1 lần/phút, trừ dần thì cái hộp chứa mật
+ * khẩu nằm mở hàng phút trên màn hình đã khóa. Tính từ mốc thì tab quay lại là đóng ngay.
+ *
+ * Giá trị KHÔNG tự vào clipboard; chỉ chép khi người dùng bấm nút chép (Q-24 — dán vào phiên
+ * SSH/console là việc hằng ngày). Giá trị tô màu theo lớp ký tự, và có chế độ "từng ký tự" (ô
+ * đánh số) để gõ tay không nhầm.
+ *
+ * HAI đồng hồ, trả lời hai câu khác nhau, nên nằm ở hai dòng riêng:
+ *   `42s` trong vòng tròn đếm ngược — giá trị này còn hiện bao lâu nữa
+ *   `9:12` — còn mở ngăn khác được bao lâu mà không phải gõ lại mã 6 số
+ * Thiếu số thứ hai thì người dùng mở ngăn thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
+ * hiểu vì sao, dù cái mốc đó vốn đoán trước được.
+ */
 export function RevealContent({
   label,
   username,
