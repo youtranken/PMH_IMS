@@ -213,6 +213,58 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
       expect(await seqs(d.id)).toEqual([1]);
     });
 
+    it('bỏ TỪ một bản chọn: chính thức #12, nháp #13–#15, từ #14 → giữ #13, xoá #14–#15; lịch sử ghi đúng dải', async () => {
+      const d = await drawn(15);
+      await review.publish(SA, d.id, { versionId: d.versions[11] });
+      expect(await prune.draftPreview(SA, d.id, 14)).toMatchObject({ count: 2, ranges: '#14–#15', keepSeq: 12, keptDrafts: 0 });
+      // Dải người dùng đã thấy là dải của CHÍNH lựa chọn đó, không phải dải mặc định #13–#15.
+      expect(await prune.discardDrafts(SA, d.id, '#14–#15', 14)).toMatchObject({ count: 2, ranges: '#14–#15' });
+      expect((await seqs(d.id)).slice(-2)).toEqual([12, 13]);
+      const { rows } = await scratch.pool.query<{ changes: { ranges: string; fromSeq: number } }>(
+        `SELECT changes FROM diagram_history WHERE diagram_id = $1 AND action = 'versions.discarded'`,
+        [d.id],
+      );
+      expect(rows.map((r) => r.changes)).toEqual([expect.objectContaining({ ranges: '#14–#15', fromSeq: 14 })]);
+    });
+
+    it('bỏ từ một bản chọn: bản đặt tên trong dải vẫn giữ', async () => {
+      const d = await drawn(5);
+      await review.publish(SA, d.id, { versionId: d.versions[0] });
+      // Lưu mới không dựa trên bản đặt tên, để chỉ riêng nhãn giữ nó lại.
+      await diagrams.label(SA, d.id, d.versions[4], 'Mốc E2E');
+      const extra = await diagrams.save(SA.email, d.id, { xml: page(shape('x', 'Rẽ nhánh')), svg: SVG, basedOnVersionId: d.versions[0] });
+      expect(extra.seq).toBe(6);
+      await prune.discardDrafts(SA, d.id, undefined, 4);
+      // #4 bị #5 (đặt tên, dựa trên #4) kéo lại; #6 không ai trỏ tới → xoá.
+      expect(await seqs(d.id)).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('cây mang số phiên bản + số nháp + số máy/dây/tủ của lần lưu mới nhất (bản đồ không hỏi mã)', async () => {
+      const d = await drawn(4);
+      await review.publish(SA, d.id, { versionId: d.versions[1] });
+      const dev = (id: string, uuid: string) =>
+        `<UserObject label="SW-E2E-${id}" ims_device_id="${uuid}" ims_device_code="SW-E2E-${id}" id="${id}"><mxCell style="rounded=1;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="80" height="40" as="geometry"/></mxCell></UserObject>`;
+      const [a, b] = ['00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000b2'];
+      const cable = `<UserObject label="" ims_link_id="00000000-0000-4000-8000-0000000000c3" id="e1"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject>`;
+      const { rows: site } = await scratch.pool.query<{ id: string }>(`INSERT INTO site (code, name) VALUES ('E2E-PRUNE', 'Site E2E') RETURNING id`);
+      const { rows: cab } = await scratch.pool.query<{ id: string }>(`INSERT INTO cabinet (site_id, code) VALUES ($1, 'E2E-R1') RETURNING id`, [site[0].id]);
+      const rack = `<UserObject label="Tủ E2E" ims_cabinet_id="${cab[0].id}" id="r1"><mxCell style="rounded=0;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="300" as="geometry"/></mxCell></UserObject>`;
+      await diagrams.save(SA.email, d.id, { xml: page(dev('d1', a) + dev('d2', b) + dev('d3', a) + cable + rack), svg: SVG, basedOnVersionId: d.versions[3] });
+      const node = (await diagrams.tree()).find((x) => x.id === d.id);
+      // Hai ô cùng một máy vẫn là MỘT máy; nháp = lần lưu sau bản chính thức (#3–#5).
+      expect(node).toMatchObject({ versionCount: 5, draftCount: 3, stats: { devices: 2, cables: 1, cabinets: 1 } });
+      await prune.discardDrafts(SA, d.id, undefined, 4);
+      expect((await diagrams.node(d.id)) as unknown).toMatchObject({ versionCount: 3, draftCount: 1, stats: { devices: 0, cables: 0, cabinets: 0 } });
+    });
+
+    it('số bắt đầu không nằm sau bản chính thức → 400, không xoá gì', async () => {
+      const d = await drawn(3);
+      await review.publish(SA, d.id, { versionId: d.versions[1] });
+      await expect(prune.draftPreview(SA, d.id, 2)).rejects.toMatchObject({ status: 400, response: { code: 'DIAGRAM_DRAFT_FROM_INVALID' } });
+      await expect(prune.discardDrafts(SA, d.id, undefined, 1)).rejects.toMatchObject({ status: 400, response: { code: 'DIAGRAM_DRAFT_FROM_INVALID' } });
+      expect(await seqs(d.id)).toEqual([1, 2, 3]);
+    });
+
     it('chưa có bản chính thức: giữ phiên bản đầu', async () => {
       const d = await drawn(3);
       await prune.discardDrafts(SA, d.id);

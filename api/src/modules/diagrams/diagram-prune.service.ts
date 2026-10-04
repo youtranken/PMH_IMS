@@ -45,25 +45,27 @@ export class DiagramPruneService {
     private readonly approvals: ApprovalsApiService,
   ) {}
 
-  async draftPreview(actor: PruneActor, diagramId: string): Promise<DraftPreview> {
+  /** `fromSeq` = chỉ xem trước dải từ số đó trở về sau (panel tick một bản nháp); thiếu = mọi bản nháp. */
+  async draftPreview(actor: PruneActor, diagramId: string, fromSeq?: number): Promise<DraftPreview> {
     return this.db.transaction(async (tx) => {
       const diagram = await this.lock(tx, diagramId, false);
       assertCanDiscard(diagram, actor);
-      const plan = await this.plan(tx, diagramId, diagram.officialVersionId);
+      const plan = await this.plan(tx, diagramId, diagram.officialVersionId, fromSeq);
       return this.preview(diagramId, plan);
     });
   }
 
   /**
    * `expectRanges` = dải người dùng đã thấy trong hộp xác nhận. Có người lưu thêm giữa lúc hộp mở
-   * thì dải đổi: từ chối (409) thay vì xoá luôn lần lưu người bấm chưa hề thấy.
+   * thì dải đổi: từ chối (409) thay vì xoá luôn lần lưu người bấm chưa hề thấy. `fromSeq` như
+   * `draftPreview` — dải chỉ là ĐUÔI từ số đó, không bao giờ một bản lẻ ở giữa (Q-23).
    */
-  async discardDrafts(actor: PruneActor, diagramId: string, expectRanges?: string): Promise<{ count: number; ranges: string }> {
+  async discardDrafts(actor: PruneActor, diagramId: string, expectRanges?: string, fromSeq?: number): Promise<{ count: number; ranges: string }> {
     return this.db.transaction(async (tx) => {
       const diagram = await this.lock(tx, diagramId, true);
       assertCanDiscard(diagram, actor);
       if (diagram.archivedAt) throw archived();
-      const plan = await this.plan(tx, diagramId, diagram.officialVersionId);
+      const plan = await this.plan(tx, diagramId, diagram.officialVersionId, fromSeq);
       const preview = await this.preview(diagramId, plan);
       if (preview.count === 0) {
         throw new ConflictException({ code: 'DIAGRAM_NO_DRAFTS', message: 'Không có bản nháp nào để bỏ — các lần lưu sau mốc giữ đều đã đặt tên hoặc từng phát hành.' });
@@ -82,7 +84,13 @@ export class DiagramPruneService {
       }
       const deleted = await deleteVersions(tx, diagramId, plan.discard.map((v) => v.id), 'drafts');
       await collectUnusedImagesWithin(tx);
-      const changes = { count: deleted, ranges: preview.ranges, seqs: plan.discard.map((v) => v.seq), keepSeq: plan.keepSeq };
+      const changes = {
+        count: deleted,
+        ranges: preview.ranges,
+        seqs: plan.discard.map((v) => v.seq),
+        keepSeq: plan.keepSeq,
+        ...(fromSeq === undefined ? {} : { fromSeq }),
+      };
       await this.record(tx, actor.email, diagramId, 'versions.discarded', 'diagram.drafts_discarded', changes);
       return { count: deleted, ranges: preview.ranges };
     });
@@ -159,7 +167,7 @@ export class DiagramPruneService {
     return row;
   }
 
-  private async plan(tx: Tx, diagramId: string, officialVersionId: string | null): Promise<DraftPlan> {
+  private async plan(tx: Tx, diagramId: string, officialVersionId: string | null, fromSeq?: number): Promise<DraftPlan> {
     const { rows } = await tx.execute<{
       id: string;
       seq: number;
@@ -185,7 +193,14 @@ export class DiagramPruneService {
       named: r.named,
       published: r.published,
     }));
-    return planDraftDiscard(versions, officialVersionId);
+    const plan = planDraftDiscard(versions, officialVersionId, fromSeq);
+    if (plan.fromInvalid) {
+      throw new BadRequestException({
+        code: 'DIAGRAM_DRAFT_FROM_INVALID',
+        message: `Chỉ bỏ được bản nháp SAU bản ${plan.keepSeq === null ? 'giữ lại' : `#${plan.keepSeq}`} — chọn lại bản nháp bắt đầu.`,
+      });
+    }
+    return plan;
   }
 
   private async preview(diagramId: string, plan: DraftPlan): Promise<DraftPreview> {

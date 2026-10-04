@@ -72,6 +72,7 @@ export const FIELD_LABEL: Record<string, string> = {
   format: 'Định dạng',
   frequency: 'Kỳ gửi',
   from: 'Từ',
+  fromSeq: 'Bản nháp bắt đầu',
   fullName: 'Họ tên',
   gateway: 'Gateway',
   group: 'Gộp sự kiện lặp',

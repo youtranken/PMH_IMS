@@ -19,20 +19,28 @@ export interface DraftPlan {
   keepSeq: number | null;
   /** Phiên bản sẽ xoá, theo `seq` tăng dần. */
   discard: PruneVersion[];
-  /** Bản nháp phải giữ vì đã đặt tên hoặc vì một phiên bản giữ lại trỏ tới nó. */
+  /** Bản nháp TRONG dải chọn phải giữ vì đã đặt tên hoặc vì một phiên bản giữ lại trỏ tới nó. */
   keptDrafts: number;
+  /** Số bắt đầu không nằm SAU mốc giữ — người gọi từ chối, không bỏ gì. */
+  fromInvalid?: boolean;
 }
 
 /**
  * Bản nháp = phiên bản có số SAU mốc giữ, chưa đặt tên, chưa từng phát hành. Phiên bản giữ lại mà
  * trỏ tới một bản nháp (`based_on` / khôi phục từ) kéo bản nháp đó vào nhóm giữ — lặp tới khi
  * đứng yên, vì bản vừa được giữ có thể lại trỏ tới một bản nháp khác (chuỗi khôi phục).
+ *
+ * `fromSeq` = chỉ bỏ từ số này trở về sau. Không có kiểu "xoá một bản ở giữa": các lần lưu sau
+ * vẽ tiếp trên nó, nên dải luôn là ĐUÔI (Q-23).
  */
-export function planDraftDiscard(versions: PruneVersion[], officialVersionId: string | null): DraftPlan {
+export function planDraftDiscard(versions: PruneVersion[], officialVersionId: string | null, fromSeq?: number): DraftPlan {
   if (versions.length === 0) return { keepSeq: null, discard: [], keptDrafts: 0 };
   const official = officialVersionId ? versions.find((v) => v.id === officialVersionId) : undefined;
   const keepSeq = official ? official.seq : Math.min(...versions.map((v) => v.seq));
-  const after = versions.filter((v) => v.seq > keepSeq);
+  if (fromSeq !== undefined && (!Number.isInteger(fromSeq) || fromSeq <= keepSeq)) {
+    return { keepSeq, discard: [], keptDrafts: 0, fromInvalid: true };
+  }
+  const after = versions.filter((v) => v.seq > keepSeq && (fromSeq === undefined || v.seq >= fromSeq));
   const doomed = new Set(after.filter((v) => !v.named && !v.published).map((v) => v.id));
   for (let changed = true; changed; ) {
     changed = false;

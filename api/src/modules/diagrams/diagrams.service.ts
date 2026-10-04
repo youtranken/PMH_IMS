@@ -101,6 +101,15 @@ export interface DiagramNode {
   archivedAt: string | null;
   status: DiagramStatus;
   latestVersion: VersionRef | null;
+  /** Số phiên bản còn giữ — nút chuyển bản vẽ trong panel ghi "Phòng server 15". */
+  versionCount: number;
+  /** Lần lưu sau bản chính thức (chưa phát hành thì mọi lần lưu) — "v12 · 3 nháp", dải "Cần làm". */
+  draftCount: number;
+  /**
+   * Số máy / dây đã khai / tủ trên lần lưu mới nhất, đếm từ chỉ mục ô. Chỉ là SỐ, không mã hay
+   * nhãn nào, nên vẫn là thông tin của cây (xem không cần mã sơ đồ, Q-23).
+   */
+  stats: { devices: number; cables: number; cabinets: number };
   /** Bản trình bày: chép từ đâu + bản gốc giờ chính thức ở phiên bản nào. Bản chính thức: `null`. */
   source: PresentationSource | null;
 }
@@ -350,16 +359,34 @@ export class DiagramsService {
       s_seq: number | null;
       s_official_id: string | null;
       s_official_seq: number | null;
+      version_count: number;
+      draft_count: number;
+      st_devices: number | null;
+      st_cables: number | null;
+      st_cabinets: number | null;
     }>(sql`
       SELECT d.id, d.parent_id, d.name, d.node_type, d.site_id, d.cabinet_id, d.owner_email, d.created_by, d.kind,
              d.archived_at, d.official_version_id, lv.id AS v_id, lv.seq AS v_seq, lv.created_at AS v_at,
              lv.saved_by AS v_by, d.source_diagram_id, d.source_version_id, sd.name AS s_name,
-             sv.seq AS s_seq, sd.official_version_id AS s_official_id, so.seq AS s_official_seq
+             sv.seq AS s_seq, sd.official_version_id AS s_official_id, so.seq AS s_official_seq,
+             vc.n AS version_count, vc.drafts AS draft_count,
+             st.devices AS st_devices, st.cables AS st_cables, st.cabinets AS st_cabinets
         FROM diagram d
         LEFT JOIN LATERAL (
-          SELECT v.id, v.seq, v.created_at, v.saved_by FROM diagram_version v
+          SELECT v.id, v.seq, v.created_at, v.saved_by, v.cell_index FROM diagram_version v
            WHERE v.diagram_id = d.id ORDER BY v.seq DESC LIMIT 1
         ) lv ON true
+        LEFT JOIN diagram_version ov ON ov.id = d.official_version_id
+        LEFT JOIN LATERAL (
+          SELECT count(*)::int AS n, count(*) FILTER (WHERE ov.seq IS NULL OR v.seq > ov.seq)::int AS drafts
+            FROM diagram_version v WHERE v.diagram_id = d.id
+        ) vc ON true
+        LEFT JOIN LATERAL (
+          SELECT count(DISTINCT c ->> 'deviceId') FILTER (WHERE c ->> 'kind' = 'device')::int AS devices,
+                 count(DISTINCT c -> 'ims' ->> 'ims_link_id') FILTER (WHERE c ->> 'kind' = 'edge')::int AS cables,
+                 count(DISTINCT c -> 'ims' ->> 'ims_cabinet_id')::int AS cabinets
+            FROM jsonb_array_elements(COALESCE(lv.cell_index -> 'cells', '[]'::jsonb)) c
+        ) st ON true
         LEFT JOIN diagram sd ON sd.id = d.source_diagram_id
         LEFT JOIN diagram_version sv ON sv.id = d.source_version_id
         LEFT JOIN diagram_version so ON so.id = sd.official_version_id
@@ -391,6 +418,9 @@ export class DiagramsService {
         archivedAt: iso(row.archived_at),
         status: statusOf(latest?.id ?? null, row.official_version_id),
         latestVersion: latest,
+        versionCount: Number(row.version_count ?? 0),
+        draftCount: Number(row.draft_count ?? 0),
+        stats: { devices: Number(row.st_devices ?? 0), cables: Number(row.st_cables ?? 0), cabinets: Number(row.st_cabinets ?? 0) },
         source:
           row.kind === 'presentation'
             ? {

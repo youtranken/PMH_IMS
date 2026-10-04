@@ -41,6 +41,39 @@ describe('planDraftDiscard — chọn bản nháp để bỏ (Q-23)', () => {
   });
 });
 
+describe('planDraftDiscard — bỏ nháp TỪ một bản chọn trở về sau (Q-23)', () => {
+  it.each([
+    ['từ #3: giữ #2, bỏ #3–#4', [v(1), v(2), v(3), v(4)], 'v1', 3, ['v3', 'v4']],
+    ['từ bản nháp đầu = bỏ hết như mặc định', [v(1), v(2), v(3)], 'v1', 2, ['v2', 'v3']],
+    ['từ bản mới nhất: chỉ bỏ bản đó', [v(1), v(2), v(3)], 'v1', 3, ['v3']],
+    ['bản đặt tên trong dải vẫn giữ', [v(1), v(2), v(3, { named: true }), v(4)], 'v1', 2, ['v2', 'v4']],
+    ['số lớn hơn mọi phiên bản: không bỏ gì', [v(1), v(2)], 'v1', 9, []],
+    ['chưa có bản chính thức: từ #3 giữ #1–#2', [v(1), v(2), v(3)], null, 3, ['v3']],
+  ] as const)('%s', (_name, versions, official, fromSeq, expected) => {
+    expect(ids(planDraftDiscard([...versions], official, fromSeq))).toEqual(expected);
+  });
+
+  it('bản đặt tên SAU dải trỏ vào bản nháp trong dải → bản nháp đó giữ', () => {
+    const plan = planDraftDiscard([v(1), v(2), v(3), v(4, { named: true, basedOnVersionId: 'v3' }), v(5)], 'v1', 3);
+    expect(ids(plan)).toEqual(['v5']);
+    expect(plan.keptDrafts).toBe(2);
+  });
+
+  it('bản nháp TRƯỚC dải không tính vào "giữ lại" — người dùng không chọn chúng', () => {
+    expect(planDraftDiscard([v(1), v(2), v(3), v(4)], 'v1', 4).keptDrafts).toBe(0);
+  });
+
+  it.each([
+    ['bằng mốc giữ', 2],
+    ['trước mốc giữ', 1],
+    ['không phải số nguyên dương', 0],
+  ])('số bắt đầu %s → cờ fromInvalid, không bỏ gì', (_name, fromSeq) => {
+    const plan = planDraftDiscard([v(1), v(2), v(3)], 'v2', fromSeq);
+    expect(plan.fromInvalid).toBe(true);
+    expect(plan.discard).toEqual([]);
+  });
+});
+
 describe('seqRanges', () => {
   it.each([
     [[13], '#13'],

@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { ArrayMaxSize, IsArray, IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { OptionalUuidListQuery, splitUuidList } from '../../common/query-uuid';
 import { Audited } from '../audit/audited.decorator';
@@ -134,7 +135,19 @@ class LabelDto {
 }
 
 /** Dải phiên bản người dùng đã thấy trong hộp xác nhận ("#13–#17") — service so với dải thật. */
-class DiscardDraftsDto {
+/** Số phiên bản tối đa của một bản vẽ (cột `seq` là `integer`). */
+const SEQ_MAX = 2_147_483_647;
+
+class DraftsQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Số bản nháp bắt đầu không hợp lệ.' })
+  @Min(1, { message: 'Số bản nháp bắt đầu không hợp lệ.' })
+  @Max(SEQ_MAX, { message: 'Số bản nháp bắt đầu không hợp lệ.' })
+  fromSeq?: number;
+}
+
+class DiscardDraftsDto extends DraftsQueryDto {
   @IsOptional() @IsString() @MaxLength(2000, { message: 'Dải phiên bản không hợp lệ.' }) ranges?: string;
 }
 
@@ -352,13 +365,13 @@ export class DiagramsController {
   /**
    * "Bỏ bản nháp" (Q-23): xem trước sẽ xoá bao nhiêu lần lưu (hộp xác nhận nói số này), rồi xoá.
    * Số và dải phiên bản là nội dung bản vẽ nên hỏi mã như xem phiên bản. Thành viên chỉ dọn bản
-   * trình bày của mình — service kiểm (403).
+   * trình bày của mình — service kiểm (403). `fromSeq` = chỉ bỏ từ bản nháp đó trở về sau.
    */
   @Roles('sa', 'admin', 'member')
   @RequiresStepUp('diagram')
   @Get(':id/drafts')
-  drafts(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
-    return this.prune.draftPreview({ email: req.user!.email, role: req.user!.role }, params.id);
+  drafts(@Param() params: IdParamDto, @Query() query: DraftsQueryDto, @Req() req: AuthedRequest) {
+    return this.prune.draftPreview({ email: req.user!.email, role: req.user!.role }, params.id, query.fromSeq);
   }
 
   @Roles('sa', 'admin', 'member')
@@ -366,7 +379,7 @@ export class DiagramsController {
   @Post(':id/drafts/discard')
   @Audited('diagram.drafts_discarded', 'diagram', { writtenByService: true })
   discardDrafts(@Param() params: IdParamDto, @Body() dto: DiscardDraftsDto, @Req() req: AuthedRequest) {
-    return this.prune.discardDrafts({ email: req.user!.email, role: req.user!.role }, params.id, dto.ranges);
+    return this.prune.discardDrafts({ email: req.user!.email, role: req.user!.role }, params.id, dto.ranges, dto.fromSeq);
   }
 
   /** "Xoá hẳn" bản vẽ chưa phát hành lần nào (Q-23): Admin/SA hoặc người tạo — service kiểm. */
