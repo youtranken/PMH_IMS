@@ -230,13 +230,14 @@ describe('layerNames — tên lớp draw.io cho trình xem bật/tắt', () => {
 
 describe('cellCaption — tên người đọc được của một ô (ghim bình luận không hiện id kỹ thuật)', () => {
   const index = buildCellIndex(
-    page(device('d1', DEV_A, 'SW-E2E-01') + shape('s1', 'Phòng &lt;b&gt;máy&lt;/b&gt;', 0, 'html=1;') + shape('s2', '') + linkedEdge('e1', 'd1', 's1', LINK_1)),
+    page(device('d1', DEV_A, 'SW-E2E-01') + shape('s1', 'Phòng &lt;b&gt;máy&lt;/b&gt;', 0, 'html=1;') + shape('s2', '') + linkedEdge('e1', 'd1', 's1', LINK_1) + edge('e2', 'd1', 's2')),
   );
   it.each([
     ['ô thiết bị → mã máy', 'd1', { kind: 'device', label: 'SW-E2E-01' }],
     ['hình tự do → nhãn (nhãn HTML bỏ thẻ)', 's1', { kind: 'shape', label: 'Phòng máy' }],
     ['hình không nhãn → kind, label null (web tự gọi "hình không tên")', 's2', { kind: 'shape', label: null }],
-    ['dây không nhãn → kind edge, label null', 'e1', { kind: 'edge', label: null }],
+    ['dây không nhãn giữa hai ô có tên → "đầu ↔ đầu"', 'e1', { kind: 'edge', label: 'SW-E2E-01 ↔ Phòng máy' }],
+    ['dây không nhãn, một đầu không tên → label null', 'e2', { kind: 'edge', label: null }],
     ['ô không có trong phiên bản → null cả hai', 'khong-co', { kind: null, label: null }],
   ])('%s', (_name, id, expected) => {
     expect(cellCaption(index, id)).toEqual(expected);

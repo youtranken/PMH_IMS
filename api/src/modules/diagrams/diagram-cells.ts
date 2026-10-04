@@ -225,18 +225,31 @@ export function layerNames(xml: string): { id: string; name: string }[] {
 }
 
 /**
- * Tên người đọc được của ô `id` trong một phiên bản: mã máy, không thì nhãn. `label: null` khi ô
- * không có chữ — nơi hiện tự gọi theo `kind` ("hình không tên"); `kind: null` khi phiên bản không
- * có ô đó (hình đã bỏ). Không bao giờ trả id kỹ thuật: người duyệt không đọc được nó.
+ * Tên người đọc được của ô `id` trong một phiên bản: mã máy, không thì nhãn; dây không nhãn thì
+ * "đầu ↔ đầu" theo tên hai ô nó nối. `label: null` khi vẫn không có chữ — nơi hiện tự gọi theo
+ * `kind` ("hình không tên"); `kind: null` khi phiên bản không có ô đó (hình đã bỏ). Không bao giờ
+ * trả id kỹ thuật: người duyệt không đọc được nó.
  */
 export function cellCaption(index: CellIndex, id: string): { kind: CellKind | null; label: string | null } {
   const cell = index.cells.find((c) => c.id === id);
-  return cell ? { kind: cell.kind, label: cellLabel(cell) } : { kind: null, label: null };
+  return cell ? { kind: cell.kind, label: cellLabels(index).get(cell.id) ?? null } : { kind: null, label: null };
 }
 
-/** Mã máy, không thì nhãn chữ thuần; ô không có chữ → `null`. */
-export function cellLabel(cell: IndexedCell): string | null {
-  return cell.ims.ims_device_code || cell.label || null;
+/** Tên của mọi ô có chữ trong phiên bản (luật như `cellCaption`), một lượt cho cả bản vẽ. */
+export function cellLabels(index: CellIndex): Map<string, string> {
+  const own = new Map<string, string>();
+  for (const cell of index.cells) {
+    const text = cell.ims.ims_device_code || cell.label;
+    if (text) own.set(cell.id, text);
+  }
+  const out = new Map(own);
+  for (const cell of index.cells) {
+    if (cell.kind !== 'edge' || own.has(cell.id)) continue;
+    const a = cell.source ? own.get(cell.source) : undefined;
+    const b = cell.target ? own.get(cell.target) : undefined;
+    if (a && b) out.set(cell.id, `${a} ↔ ${b}`);
+  }
+  return out;
 }
 
 function itemOf(cell: IndexedCell): DiffItem {

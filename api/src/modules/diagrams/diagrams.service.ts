@@ -21,7 +21,7 @@ import { IpamApiService, type SubnetSummary } from '../ipam/ipam.api';
 import { UsersApiService } from '../users/users.api';
 import {
   buildCellIndex,
-  cellLabel,
+  cellLabels,
   diffCellIndex,
   layerNames,
   secretLabelReason,
@@ -792,13 +792,7 @@ export class DiagramsService {
       cableTypes: cables.cableTypes,
       frames,
       layers: layerNames(row.xml),
-      cells: row.cellIndex.cells.map((cell) => ({
-        id: cell.id,
-        kind: cell.kind,
-        layer: cell.layer,
-        bounds: cell.bounds ?? null,
-        label: cellLabel(cell),
-      })),
+      cells: viewCells(row.cellIndex),
     };
   }
 
@@ -1681,4 +1675,10 @@ function archived(): ConflictException {
 function pgCode(error: unknown): string | undefined {
   const e = error as { code?: string; cause?: { code?: string } };
   return e?.code ?? e?.cause?.code;
+}
+
+/** Ô của phiên bản cho trình xem: lớp, khung bao, và tên người đọc được (hộp ghim bình luận). */
+function viewCells(index: CellIndex): ViewCell[] {
+  const labels = cellLabels(index);
+  return index.cells.map((cell) => ({ id: cell.id, kind: cell.kind, layer: cell.layer, bounds: cell.bounds ?? null, label: labels.get(cell.id) ?? null }));
 }
