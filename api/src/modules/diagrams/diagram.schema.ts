@@ -1,7 +1,7 @@
 import { integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { CellDiff, CellIndex } from './diagram-cells';
 
-/** Migration 0046_diagram.sql + 0050_diagram_presentation.sql. Chủ sở hữu: module `diagrams` (AD-3, AD-18). */
+/** Migration 0046_diagram.sql + 0050_diagram_presentation.sql + 0056_diagram_prune.sql. Chủ sở hữu: module `diagrams` (AD-3, AD-18). */
 
 export const DIAGRAM_NODE_TYPES = ['company', 'site', 'floor', 'room', 'cabinet', 'other'] as const;
 export type DiagramNodeType = (typeof DIAGRAM_NODE_TYPES)[number];
@@ -21,6 +21,9 @@ export const diagramTable = pgTable('diagram', {
   sourceVersionId: uuid('source_version_id'),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
   archivedBy: text('archived_by'),
+  /** Bia mộ của "Xoá hẳn" (0056): hàng ở lại vì `diagram_history` trỏ vào nó; mọi màn coi như không có. */
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  deletedBy: text('deleted_by'),
   createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

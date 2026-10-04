@@ -9,6 +9,7 @@ import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DiagramDriftService } from './diagram-drift.service';
 import { DiagramNavigationService } from './diagram-navigation.service';
+import { DiagramPruneService } from './diagram-prune.service';
 import { DiagramReviewService, type ReviewedNode } from './diagram-review.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
 import { DEVICE_INFO_MAX_IDS, DEVICE_LOOKS_MAX_IDS, DiagramsService } from './diagrams.service';
@@ -132,6 +133,11 @@ class LabelDto {
   label!: string | null;
 }
 
+/** Tên gõ lại để xác nhận "Xoá hẳn" — service so với tên thật. */
+class PurgeDto {
+  @IsString() @Length(1, 120, { message: 'Gõ lại đúng tên bản vẽ để xác nhận.' }) name!: string;
+}
+
 export interface DiagramEditorSettings {
   /** `diagram.editor_init_timeout_seconds` */
   initTimeoutSeconds: number;
@@ -143,7 +149,8 @@ export interface DiagramEditorSettings {
 
 /**
  * Sơ đồ mạng (AD-17, AD-18, Q-23). Mọi vai đọc cây và vẽ (Thành viên cũng vẽ); đổi tên, chuyển
- * nhánh, lưu trữ, khôi phục chỉ Admin/SA. Không có xoá cứng.
+ * nhánh, lưu trữ, khôi phục chỉ Admin/SA. Xoá cứng chỉ có "Bỏ bản nháp" và "Xoá hẳn" bản chưa
+ * phát hành (Q-23), qua `DiagramPruneService`.
  *
  * Lớp `@NoStepUp()`: cây (tên, trạng thái, tạo nút, đổi tên, lưu trữ) không cần mã. Mọi route
  * XEM hoặc SỬA một bản vẽ có sẵn — nội dung, phiên bản, lịch sử, lưu, đặt tên, khôi phục, nhịp
@@ -159,6 +166,7 @@ export class DiagramsController {
     private readonly review: DiagramReviewService,
     private readonly drift: DiagramDriftService,
     private readonly navigation: DiagramNavigationService,
+    private readonly prune: DiagramPruneService,
   ) {}
 
   /** Cây kèm "lệch kho (N)" của bản chính thức hiện hành — đọc bộ đệm, không đọc kho (Q-23). */
@@ -331,6 +339,35 @@ export class DiagramsController {
   async archive(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     await this.diagrams.archive({ email: req.user!.email, role: req.user!.role }, params.id);
     return { ok: true };
+  }
+
+  /**
+   * "Bỏ bản nháp" (Q-23): xem trước sẽ xoá bao nhiêu lần lưu (hộp xác nhận nói số này), rồi xoá.
+   * Số và dải phiên bản là nội dung bản vẽ nên hỏi mã như xem phiên bản. Thành viên chỉ dọn bản
+   * trình bày của mình — service kiểm (403).
+   */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Get(':id/drafts')
+  drafts(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.prune.draftPreview({ email: req.user!.email, role: req.user!.role }, params.id);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/drafts/discard')
+  @Audited('diagram.drafts_discarded', 'diagram', { writtenByService: true })
+  discardDrafts(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.prune.discardDrafts({ email: req.user!.email, role: req.user!.role }, params.id);
+  }
+
+  /** "Xoá hẳn" bản vẽ chưa phát hành lần nào (Q-23): Admin/SA hoặc người tạo — service kiểm. */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/purge')
+  @Audited('diagram.deleted', 'diagram', { writtenByService: true })
+  purge(@Param() params: IdParamDto, @Body() dto: PurgeDto, @Req() req: AuthedRequest) {
+    return this.prune.purge({ email: req.user!.email, role: req.user!.role }, params.id, dto.name);
   }
 
   @Roles('sa', 'admin', 'member')

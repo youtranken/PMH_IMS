@@ -318,7 +318,8 @@ export class DiagramsService {
   }
 
   async node(id: string): Promise<DiagramNode> {
-    const [found] = await this.nodes(sql`d.id = ${id}`);
+    // Bia mộ của "Xoá hẳn" (Q-23) coi như không có: mở bằng link cũ cũng 404.
+    const [found] = await this.nodes(sql`d.id = ${id} AND d.deleted_at IS NULL`);
     if (!found) throw new NotFoundException({ code: 'DIAGRAM_NOT_FOUND', message: 'Không tìm thấy bản vẽ.' });
     return found;
   }
@@ -819,7 +820,7 @@ export class DiagramsService {
         : await this.db
             .select({ id: diagramTable.id, name: diagramTable.name, archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
             .from(diagramTable)
-            .where(inArray(diagramTable.id, childIds));
+            .where(and(inArray(diagramTable.id, childIds), isNull(diagramTable.deletedAt)));
     const byId = new Map(children.map((c) => [c.id, { id: c.id, name: c.name, archived: c.archivedAt !== null, kind: c.kind }]));
     return refs.map((ref) => ({ ...ref, child: ref.childDiagramId ? (byId.get(ref.childDiagramId) ?? null) : null }));
   }

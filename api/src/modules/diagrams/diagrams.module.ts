@@ -10,6 +10,7 @@ import { DiagramDriftService } from './diagram-drift.service';
 import { DiagramExportController } from './diagram-export.controller';
 import { DiagramExportService } from './diagram-export.service';
 import { DiagramNavigationService } from './diagram-navigation.service';
+import { DiagramPruneService } from './diagram-prune.service';
 import { DiagramReviewController } from './diagram-review.controller';
 import { DiagramReviewService } from './diagram-review.service';
 import { DiagramsController } from './diagrams.controller';
@@ -25,6 +26,6 @@ import { DiagramsService } from './diagrams.service';
 @Module({
   imports: [ApprovalsModule, AuditModule, CatalogModule, DevicesModule, IpamModule, OutboxModule, UsersModule],
   controllers: [DiagramsController, DiagramReviewController, DiagramExportController],
-  providers: [DiagramsService, DiagramReviewService, DiagramExportService, DiagramDriftService, DiagramNavigationService],
+  providers: [DiagramsService, DiagramReviewService, DiagramExportService, DiagramDriftService, DiagramNavigationService, DiagramPruneService],
 })
 export class DiagramsModule {}

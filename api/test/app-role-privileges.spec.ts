@@ -151,6 +151,32 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     expect(rows[0].ok).toBe(true);
   });
 
+  it('phiên bản bản vẽ: ims_app chỉ xoá qua `diagram_delete_versions`, và hàm vẫn giữ bản chính thức (Q-23)', async () => {
+    /*
+     * "Bỏ bản nháp" cần xoá phiên bản mà KHÔNG trả DELETE cho ims_app: hàm SECURITY DEFINER là
+     * cửa duy nhất, và trigger (không phải ACL) giữ bản chính thức — nên vế dưới chốt `P0001`.
+     */
+    const owner = scratch.pool;
+    const diagram = await owner.query<{ id: string }>(
+      `INSERT INTO diagram (name, node_type, created_by) VALUES ('E2E quyền xoá', 'floor', 'd01@test') RETURNING id`,
+    );
+    const id = diagram.rows[0].id;
+    const insert = (seq: number) =>
+      owner.query<{ id: string }>(
+        `INSERT INTO diagram_version (diagram_id, seq, xml, cell_index, summary, summary_detail, saved_by)
+         VALUES ($1, $2, '<mxfile/>', '{"cells":[]}', 'x', '{}', 'd01@test') RETURNING id`,
+        [id, seq],
+      );
+    const official = (await insert(1)).rows[0].id;
+    const draft = (await insert(2)).rows[0].id;
+    await owner.query(`UPDATE diagram SET official_version_id = $2 WHERE id = $1`, [id, official]);
+
+    expect(await sqlStateOf(app, `DELETE FROM diagram_version WHERE id = '${draft}'`)).toBe('42501');
+    expect(await sqlStateOf(app, `SELECT diagram_delete_versions('${id}', ARRAY['${official}']::uuid[], 'drafts')`)).toBe('P0001');
+    const { rows } = await app.query<{ n: number }>(`SELECT diagram_delete_versions($1, ARRAY[$2]::uuid[], 'drafts') AS n`, [id, draft]);
+    expect(rows[0].n).toBe(1);
+  });
+
   it('QUÉT ĐỘNG: không bảng `%_history` nào còn UPDATE/DELETE cho ims_app', async () => {
     /*
      * Danh sách cứng ở trên là TÀI LIỆU — đọc nó biết chín bảng nào đang được canh. Bài này

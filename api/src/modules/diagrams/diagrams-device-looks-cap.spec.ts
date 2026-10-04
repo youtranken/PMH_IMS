@@ -10,7 +10,7 @@ import { DEVICE_LOOKS_MAX_IDS, type DiagramsService } from './diagrams.service';
  */
 describe('GET /diagrams/device-looks — trần số máy một lần hỏi', () => {
   const looks = jest.fn().mockResolvedValue({ imsStyleKeys: [], items: [] });
-  const controller = new DiagramsController({ deviceLooks: looks } as unknown as DiagramsService, ...([null, null, null, null] as unknown as [never, never, never, never]));
+  const controller = new DiagramsController({ deviceLooks: looks } as unknown as DiagramsService, ...([null, null, null, null, null] as unknown as [never, never, never, never, never]));
   const ids = (n: number) => Array.from({ length: n }, () => randomUUID()).join(',');
 
   it('đúng trần thì qua', async () => {
