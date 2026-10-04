@@ -111,6 +111,8 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'diagrams/diagrams.controller.ts#ids',
     // Ô tìm thiết bị của trình xem sơ đồ: chỉ đọc, không lưu.
     'diagrams/diagrams.controller.ts#q',
+    // Dải số phiên bản ("#13–#17") hộp Bỏ bản nháp đã hiện — server chỉ so, không lưu.
+    'diagrams/diagrams.controller.ts#ranges',
     // Id ô draw.io mà bình luận ghim vào.
     'diagrams/diagram-review.controller.ts#cellId',
     // Id, ngày, email.
