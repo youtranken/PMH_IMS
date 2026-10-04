@@ -472,6 +472,12 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   xin mua sắm, không qua duyệt — bắt Admin dọn hộ là thừa; bản chính thức là hồ sơ chung.
 - **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
   draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
+- **Góp ý sau khi test tay Epic 10 (04/10/2026, chủ dự án):** hộp "Thiết bị kho" KHÔNG liệt kê máy
+  đã thanh lý (chèn vào là vô lý); chế độ Xem phải hiện ĐÚNG như lúc Sửa (mọi nét/hình draw.io, kể
+  cả dây nối tới hình tự do); ghim bình luận phải hiện tên hình (mã máy/nhãn) và nội dung bình luận
+  ngay trên bản vẽ, không hiện id kỹ thuật; tạo bản vẽ con mặc định NHÂN BẢN nội dung từ bản cha
+  để sửa tiếp; màn sơ đồ phải dùng được ngay không cần học — mỗi thao tác có (i) hướng dẫn, màn
+  trống có các bước gợi ý.
 
 ### Q-09 · Tài liệu
 
