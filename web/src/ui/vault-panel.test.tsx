@@ -4,7 +4,7 @@ import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { VaultPanel, type AccessVerdict, type SecretMeta } from '@/ui/vault-panel';
 import { MemoryRouter } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
+import { act, fireEvent, jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 
 /**
  * BA HỘP CỦA KÉT SẮT PHẢI KHÓA LẠI KHI LƯỢT GHI ĐANG BAY.
@@ -737,6 +737,47 @@ describe('VaultPanel — Xem két: MỘT hộp nhỏ, mã rồi giá trị (Q-24
     expect(within(popup).queryByTestId('secret-value')).toBeNull();
     await userEvent.type(within(popup).getByLabelText('Mã xác thực'), '123456');
     expect(await within(popup).findByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
+  });
+
+  /*
+   * Mã đúng, hiệu ứng đang chạy: giá trị chỉ được mở khi hộp còn đó. Hủy / Esc lúc này bị khoá;
+   * và nếu panel bị tháo (người dùng rời trang) thì không có lượt mở ngăn nào chạy sau lưng họ —
+   * mỗi lượt mở là một dòng nhật ký két.
+   */
+  describe('mã đúng, đang chạy hiệu ứng', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function codeAccepted() {
+      const calls = mockReveal();
+      const view = renderPanel();
+      await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+      const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+      vi.stubGlobal('AnimationEvent', class {});
+      vi.useFakeTimers();
+      await act(async () => {
+        fireEvent.change(within(popup).getByLabelText('Số thứ 1 trên 6'), { target: { value: '123456' } });
+        await vi.advanceTimersByTimeAsync(50);
+      });
+      const reveals = () => calls.filter((c) => c.method === 'POST' && c.url.includes('/reveal')).length;
+      return { popup, view, reveals };
+    }
+
+    it('Hủy mờ và Esc không đóng hộp', async () => {
+      const { popup } = await codeAccepted();
+      expect(within(popup).getByRole('button', { name: 'Hủy' })).toBeDisabled();
+      fireEvent.keyDown(popup, { key: 'Escape' });
+      expect(screen.getByRole('dialog')).toBe(popup);
+    });
+
+    it('panel bị tháo giữa hiệu ứng → KHÔNG mở ngăn', async () => {
+      const { view, reveals } = await codeAccepted();
+      expect(reveals()).toBe(1);
+      view.unmount();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(reveals()).toBe(1);
+    });
   });
 
   it('còn trong ân hạn: bấm Xem mở thẳng hộp ở bước giá trị (tiêu đề là tên ngăn)', async () => {

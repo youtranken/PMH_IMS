@@ -201,8 +201,11 @@ function SuccessHarness({ proceed, error, status }: { proceed: () => void; error
         onConfirmed={otp.onConfirmed}
       />
       <span data-testid="confirmed">{otp.confirmed ? 'yes' : 'no'}</span>
-      <button type="button" onClick={() => void otp.show().then(proceed)}>
+      <button type="button" onClick={() => void otp.show().then((shown) => shown && proceed())}>
         ok
+      </button>
+      <button type="button" onClick={otp.cancel}>
+        hủy
       </button>
     </>
   );
@@ -425,5 +428,94 @@ describe('OtpInput — đang kiểm / thành công / sai', () => {
       vi.advanceTimersByTime(200);
     });
     expect(proceed).toHaveBeenCalledTimes(1);
+  });
+});
+
+/*
+ * Hủy / tháo giữa chừng hiệu ứng: nơi gọi KHÔNG được đi tiếp. `show()` treo trong lúc hiệu ứng
+ * chạy, và nơi gọi `await` nó rồi mới làm việc vừa được xác nhận (ghi két, mở ngăn). Hẹn giờ dự
+ * phòng mà sống sót qua lượt hủy thì việc đó chạy sau khi người dùng đã bấm Hủy.
+ */
+describe('useOtpSuccess — hủy giữa hiệu ứng', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  function Probe({ onResult }: { onResult: (shown: boolean) => void }) {
+    const otp = useOtpSuccess();
+    return (
+      <>
+        <OtpInput
+          value="123456"
+          onChange={() => undefined}
+          label="Mã xác thực"
+          status={otp.status}
+          onSuccessShown={otp.onShown}
+          onConfirmed={otp.onConfirmed}
+        />
+        <span data-testid="busy">{otp.status ?? 'idle'}</span>
+        <button type="button" onClick={() => void otp.show().then(onResult)}>
+          ok
+        </button>
+        <button type="button" onClick={otp.cancel}>
+          hủy
+        </button>
+      </>
+    );
+  }
+
+  it('xem trọn hiệu ứng → show() báo true', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const onResult = vi.fn();
+    renderWithI18n(<Probe onResult={onResult} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 500);
+    });
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(true);
+  });
+
+  it('tháo component giữa hiệu ứng → show() báo false, hẹn giờ dự phòng không còn gì để chạy', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const onResult = vi.fn();
+    const { unmount } = renderWithI18n(<Probe onResult={onResult} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS);
+    });
+    unmount();
+    await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 1000);
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('cancel() giữa hiệu ứng → show() báo false, ô về trạng thái thường', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const onResult = vi.fn();
+    renderWithI18n(<Probe onResult={onResult} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    expect(screen.getByTestId('busy')).toHaveTextContent('success');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'hủy' }));
+      await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 1000);
+    });
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(false);
+    expect(screen.getByTestId('busy')).toHaveTextContent('idle');
+  });
+
+  it('show() gọi SAU khi đã tháo (server trả lời muộn) → báo false ngay, không đi tiếp', async () => {
+    let late: (() => Promise<boolean>) | null = null;
+    function Late() {
+      const otp = useOtpSuccess();
+      late = otp.show;
+      return null;
+    }
+    const { unmount } = renderWithI18n(<Late />);
+    unmount();
+    await expect(late!()).resolves.toBe(false);
   });
 });

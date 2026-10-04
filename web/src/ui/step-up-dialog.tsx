@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Chevron } from '@/ui/chevron';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
@@ -37,6 +37,7 @@ function useStepUpForm(
   csrfToken: string,
   scope: StepUpScope,
   onDone: (graceMinutes: number) => void,
+  onBusyChange?: (busy: boolean) => void,
 ) {
   const { t } = useTranslation();
   const [token, setToken] = useState('');
@@ -53,8 +54,9 @@ function useStepUpForm(
     setError(null);
     try {
       const result = await stepUp.mutateAsync({ token: code, scope });
-      // Đóng hộp / thử lại việc vừa bị chặn chỉ sau khi người dùng thấy dấu tích.
-      await otp.show();
+      // Đóng hộp / thử lại việc vừa bị chặn chỉ sau khi người dùng thấy dấu tích. Bị hủy giữa
+      // chừng (hộp tháo) thì việc đó là việc người dùng đã bỏ — không chạy hộ.
+      if (!(await otp.show())) return;
       setToken('');
       onDone(result.graceMinutes);
     } catch (err) {
@@ -67,7 +69,19 @@ function useStepUpForm(
     }
   });
 
-  return { token, setToken, error, inputRef, submit, pending: stepUp.isPending, otp };
+  /*
+   * Đang kiểm mã hoặc đang chạy hiệu ứng thành công: hộp chứa bước này không được đóng. Đóng lúc
+   * đó thì server đã mở ân hạn mà màn hình nói là đã hủy.
+   */
+  const busy = stepUp.isPending || otp.status === 'success';
+  const busyCb = useRef(onBusyChange);
+  busyCb.current = onBusyChange;
+  useEffect(() => {
+    busyCb.current?.(busy);
+  }, [busy]);
+  useEffect(() => () => busyCb.current?.(false), []);
+
+  return { token, setToken, error, inputRef, submit, pending: stepUp.isPending, busy, otp };
 }
 
 function StepUpFields({
@@ -133,7 +147,7 @@ function StepUpFields({
 function ConfirmButton({ formId, form }: { formId: string; form: ReturnType<typeof useStepUpForm> }) {
   const { t } = useTranslation();
   // Server đã nhận mã nhưng vòng ô còn quay tới mốc trọn vòng: vẫn "đang xử lý", không bấm lại.
-  const working = form.pending || form.otp.status === 'success';
+  const working = form.busy;
   return (
     <button
       type="submit"
@@ -172,11 +186,12 @@ export function StepUpDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      dismissible={!form.busy}
       maxWidth={420}
       title={t('auth.stepUpTitle')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="btn" onClick={onClose} disabled={form.busy}>
             {t('common.cancel')}
           </button>
           <ConfirmButton formId="stepup-form" form={form} />
@@ -198,15 +213,22 @@ export function StepUpDialog({
  * Chỉ 6 ô mã (+ lỗi ngay dưới ô), không câu giải thích, không nút Xác nhận — đủ 6 số là tự gửi,
  * Enter cũng gửi. Cho hộp nhỏ "Nhập mã 6 số để xem" của két (Q-24): nơi gọi tự đặt tiêu đề, tên
  * thứ đang mở và nút Hủy. Cùng hook gửi mã + hiệu ứng vòng với `StepUpDialog`.
+ *
+ * Nút Hủy nằm ở nơi gọi nên nơi gọi phải nghe `onBusyChange` để khoá Hủy / Esc trong lúc kiểm mã
+ * và chạy hiệu ứng.
  */
 export function StepUpOtp({
   csrfToken,
   scope,
   onDone,
   formId,
-}: Pick<StepUpProps, 'csrfToken' | 'scope' | 'onDone'> & { formId: string }) {
+  onBusyChange,
+}: Pick<StepUpProps, 'csrfToken' | 'scope' | 'onDone'> & {
+  formId: string;
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const { t } = useTranslation();
-  const form = useStepUpForm(csrfToken, scope, onDone);
+  const form = useStepUpForm(csrfToken, scope, onDone, onBusyChange);
   return (
     <form
       id={formId}
@@ -248,9 +270,15 @@ export function StepUpStep({
   onBack,
   onDone,
   backLabel,
-}: StepUpProps & { onBack: () => void; backLabel: ReactNode }) {
+  onBusyChange,
+}: StepUpProps & {
+  onBack: () => void;
+  backLabel: ReactNode;
+  /** Hộp chứa bước này nghe để khoá Esc / nền / ✕ trong lúc kiểm mã và chạy hiệu ứng. */
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const { t } = useTranslation();
-  const form = useStepUpForm(csrfToken, scope, onDone);
+  const form = useStepUpForm(csrfToken, scope, onDone, onBusyChange);
   return (
     <section className="form-grid" data-columns={1} aria-label={t('auth.stepUpTitle')}>
       <h3>{t('auth.stepUpTitle')}</h3>
@@ -263,7 +291,7 @@ export function StepUpStep({
         autoFocus
       />
       <div className="row" style={{ gap: 'var(--space-4)', justifyContent: 'space-between' }}>
-        <button type="button" className="btn with-icon" onClick={onBack}>
+        <button type="button" className="btn with-icon" onClick={onBack} disabled={form.busy}>
           <Chevron direction="left" />
           {backLabel}
         </button>

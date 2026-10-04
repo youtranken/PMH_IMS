@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { StepUpDialog } from '@/ui/step-up-dialog';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { act, fireEvent, jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 /**
  * CỬA KÉT PHẢI NÓI "CÒN MẤY LẦN NỮA".
@@ -121,5 +121,52 @@ describe('StepUpDialog — phạm vi két / sơ đồ', () => {
     );
     expect(screen.getByText('Xác nhận xong thì 7 phút tới mở bản vẽ khác không phải gõ lại.')).toBeInTheDocument();
     expect(screen.queryByText(/mở ngăn khác/)).toBeNull();
+  });
+});
+
+/*
+ * Mã đúng, hiệu ứng thành công đang chạy: `onDone` là việc vừa bị chặn (ghi két, cài lại 2 lớp).
+ * Người dùng không được đóng hộp lúc này, và nếu hộp vẫn bị tháo (màn đổi) thì việc đó không
+ * được chạy hộ sau lưng họ.
+ */
+describe('StepUpDialog — không đi tiếp sau khi hộp đã đóng', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function codeAccepted() {
+    vi.stubGlobal('AnimationEvent', class {});
+    mockStepUp(200, { graceMinutes: 10 });
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    const onClose = vi.fn();
+    const view = renderWithI18n(<StepUpDialog csrfToken="t" scope="vault" onClose={onClose} onDone={onDone} />);
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Số thứ 1 trên 6'), { target: { value: '123456' } });
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    return { onDone, onClose, view };
+  }
+
+  it('đang chạy hiệu ứng: Hủy mờ, Esc không đóng', async () => {
+    const { onClose } = await codeAccepted();
+    expect(screen.getByRole('button', { name: 'Hủy' })).toBeDisabled();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('hộp bị tháo giữa hiệu ứng → onDone KHÔNG chạy', async () => {
+    const { onDone, view } = await codeAccepted();
+    view.unmount();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('vế đối chứng: để hiệu ứng chạy hết → onDone chạy đúng một lần', async () => {
+    const { onDone } = await codeAccepted();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(onDone).toHaveBeenCalledExactlyOnceWith(10);
   });
 });

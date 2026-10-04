@@ -77,7 +77,8 @@ export function TotpChallenge() {
       inputRef.current?.focus();
       return;
     }
-    await otp.show();
+    // Màn đã rời đi giữa hiệu ứng (đăng xuất, điều hướng) thì không làm mới phiên hộ nữa.
+    if (!(await otp.show())) return;
     // `me` mới (hết `totpPending`) là thứ đưa router sang màn kế.
     await queryClient.invalidateQueries({ queryKey: ME_KEY });
   });

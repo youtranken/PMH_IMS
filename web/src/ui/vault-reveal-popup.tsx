@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/ui/dialog';
 import { RevealContent, type TotpReveal } from '@/ui/reveal-dialog';
@@ -47,6 +48,9 @@ export function VaultRevealPopup({
 }) {
   const { t } = useTranslation();
   const showValue = step === 'value' && revealed !== null;
+  // Mã đang được kiểm / hiệu ứng thành công đang chạy: đóng lúc này là mở ân hạn rồi bỏ đó.
+  const [otpBusy, setOtpBusy] = useState(false);
+  const locked = step === 'opening' || (step === 'otp' && otpBusy);
   return (
     <Dialog
       open
@@ -56,10 +60,10 @@ export function VaultRevealPopup({
       title={showValue ? label : t('vault.revealOtpTitle')}
       // Đang giải mã thì đừng cho đóng giữa chừng: lượt mở đã ghi nhật ký, đóng ngang là mất
       // giá trị người dùng vừa gõ mã để xem.
-      dismissible={step !== 'opening'}
+      dismissible={!locked}
       footer={
         /* Nút thường, không `primary`: lối ra không được là thứ sáng nhất hộp. */
-        <button type="button" className="btn" onClick={onClose} disabled={step === 'opening'}>
+        <button type="button" className="btn" onClick={onClose} disabled={locked}>
           {showValue ? t('vault.hideNow') : t('common.cancel')}
         </button>
       }
@@ -83,6 +87,7 @@ export function VaultRevealPopup({
             scope="vault"
             formId="vault-reveal-otp"
             onDone={() => onVerified()}
+            onBusyChange={setOtpBusy}
           />
         </div>
       )}

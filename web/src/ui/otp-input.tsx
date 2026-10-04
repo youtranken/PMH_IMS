@@ -64,40 +64,62 @@ function noCssAnimation(): boolean {
 }
 
 /**
- * Cửa chờ hiệu ứng thành công cho nơi gọi `OtpInput`: `await show()` sau khi server nhận mã,
- * rồi mới điều hướng / đóng hộp. Promise luôn xong — `onShown` (ô báo vẽ xong) hoặc hẹn giờ
- * dự phòng của chính hook, để một sự kiện bị lỡ không bao giờ chặn đăng nhập.
+ * Cửa chờ hiệu ứng thành công cho nơi gọi `OtpInput`: `if (!(await show())) return;` sau khi
+ * server nhận mã, rồi mới điều hướng / đóng hộp / làm việc vừa được xác nhận.
+ *
+ * `show()` báo `true` khi hiệu ứng xong — `onShown` (ô báo vẽ xong) hoặc hẹn giờ dự phòng, để
+ * một sự kiện bị lỡ không bao giờ chặn đăng nhập. Báo `false` khi bị hủy giữa chừng (`cancel()`,
+ * component tháo, hoặc server trả lời sau khi đã tháo): việc chờ sau `show()` là việc người dùng
+ * vừa bỏ — ghi két, mở ngăn — nên nơi gọi PHẢI dừng khi nhận `false`. Mọi hẹn giờ của hook bị dọn
+ * cùng lượt hủy, không còn gì chạy hộ sau đó.
  *
  * Nhịp vòng quay do `OtpInput` giữ (nó biết vòng bắt đầu từ lúc nào); `confirmed` bật khi ô báo
  * vòng xanh đã hiện (`onConfirmed`) — nơi gọi dùng nó để đổi tiêu đề và nút sang "Đã xác thực".
  */
 export function useOtpSuccess() {
   const [phase, setPhase] = useState<'idle' | 'success' | 'confirmed'>('idle');
-  const finish = useRef<(() => void) | null>(null);
+  const finish = useRef<((shown: boolean) => void) | null>(null);
+  const alive = useRef(true);
+  const cancel = useCallback(() => {
+    finish.current?.(false);
+    if (alive.current) setPhase('idle');
+  }, []);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      finish.current?.(false);
+    };
+  }, []);
   const show = useCallback(
     () =>
-      new Promise<void>((resolve) => {
+      new Promise<boolean>((resolve) => {
+        if (!alive.current) {
+          resolve(false);
+          return;
+        }
+        finish.current?.(false);
         if (noCssAnimation()) {
           setPhase('confirmed');
-          resolve();
+          resolve(true);
           return;
         }
         // Dự phòng: chờ mốc trọn vòng (≤ OTP_MIN_SPIN_MS) + cả chuỗi thành công, dư một nhịp.
-        const timer = window.setTimeout(() => done(), OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 300);
-        const done = () => {
+        const timer = window.setTimeout(() => done(true), OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 300);
+        const done = (shown: boolean) => {
           window.clearTimeout(timer);
-          finish.current = null;
-          resolve();
+          if (finish.current === done) finish.current = null;
+          resolve(shown && alive.current);
         };
         finish.current = done;
         setPhase('success');
       }),
     [],
   );
-  const onShown = useCallback(() => finish.current?.(), []);
+  const onShown = useCallback(() => finish.current?.(true), []);
   const onConfirmed = useCallback(() => setPhase((p) => (p === 'success' ? 'confirmed' : p)), []);
   const status = phase === 'idle' ? undefined : ('success' as const);
-  return { status, show, onShown, onConfirmed, confirmed: phase === 'confirmed' };
+  return { status, show, cancel, onShown, onConfirmed, confirmed: phase === 'confirmed' };
 }
 
 /**

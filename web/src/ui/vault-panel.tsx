@@ -190,6 +190,8 @@ export function VaultPanel({
   const [popup, setPopup] = useState<
     { secret: SecretMeta; step: 'otp' | 'opening' | 'value'; revealed: RevealedSecret | null } | null
   >(null);
+  const popupRef = useRef(popup);
+  popupRef.current = popup;
   /** Secret đang mở dở — chặn bấm đúp đẻ ra hai lần giải mã, hai dòng audit. */
   const [opening, setOpening] = useState<string | null>(null);
   /* Mở MỘT ngăn là mọi nút "Xem" khác xám hết, và không gì nói vì sao — người dùng đọc ra
@@ -359,8 +361,11 @@ export function VaultPanel({
   const rows = secrets.data ?? [];
 
   const afterStepUp = () => {
-    const secret = popup?.secret;
-    if (!secret) return;
+    // Đọc hộp HIỆN TẠI qua ref, không qua closure: hộp đã đóng (hoặc đã sang ngăn khác) thì
+    // lượt mã này không còn mở gì nữa.
+    const current = popupRef.current;
+    if (!current || current.step !== 'otp') return;
+    const { secret } = current;
     setPopup({ secret, step: 'opening', revealed: null });
     // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
     // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.

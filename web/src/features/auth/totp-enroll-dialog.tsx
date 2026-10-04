@@ -41,6 +41,7 @@ export function TotpEnrollDialog({
   const [started, setStarted] = useState<Started | null>(null);
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
+  const [stepUpBusy, setStepUpBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const post = <T,>(path: string, body: unknown) =>
@@ -98,7 +99,7 @@ export function TotpEnrollDialog({
     <Dialog
       open
       onOpenChange={onClose}
-      dismissible={!busy}
+      dismissible={!busy && !(needStepUp && stepUpBusy)}
       maxWidth={480}
       title={mode === 'reenroll' ? t('profile.totpReEnroll') : t('auth.enrollTitle')}
     >
@@ -129,6 +130,7 @@ export function TotpEnrollDialog({
           purpose={t('profile.totpReEnrollStepUp')}
           backLabel={t('profile.totpReEnrollBack')}
           onBack={() => setNeedStepUp(false)}
+          onBusyChange={setStepUpBusy}
           onDone={() => {
             setNeedStepUp(false);
             void start();

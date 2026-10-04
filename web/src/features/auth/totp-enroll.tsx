@@ -88,7 +88,7 @@ export function TotpEnroll() {
       codeRef.current?.focus();
       return;
     }
-    await otp.show();
+    if (!(await otp.show())) return;
     // Toast sống ngoài router: vẫn hiện sau khi `me` nạp lại và router chuyển sang bước kế.
     toast({ message: t('auth.enrollDone'), tone: 'ok', durationMs: 8000 });
     await queryClient.invalidateQueries({ queryKey: ME_KEY });
