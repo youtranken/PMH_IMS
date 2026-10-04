@@ -11,6 +11,7 @@ import { AttachmentPanel, useOwnerAttachments } from "@/ui/attachment-panel";
 import { CellNote } from "@/ui/cell-note";
 import { CopyButton } from "@/ui/copy-button";
 import { Dialog } from "@/ui/dialog";
+import { SubmitButton } from "@/ui/submit-button";
 import { DatePicker } from "@/ui/date-picker";
 import { EmptyState, LoadError, Loading } from "@/ui/load-state";
 import { Field } from "@/ui/page-header";
@@ -860,14 +861,7 @@ export function IpForm({
           <button type="button" className="btn" onClick={onClose}>
             {t("common.cancel")}
           </button>
-          <button
-            type="submit"
-            form="ip-form"
-            className="btn primary"
-            disabled={save.isPending}
-          >
-            {save.isPending ? t("common.saving") : t("common.save")}
-          </button>
+          <SubmitButton form="ip-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >

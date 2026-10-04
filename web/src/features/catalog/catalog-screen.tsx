@@ -780,7 +780,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         {canManage ? null : <p className="muted catalog-member-hint">{t('catalog.memberHint')}</p>}
 
         {rows.isLoading ? (
-          <Loading />
+          <Loading variant="table" />
         ) : rows.isError ? (
           <LoadError error={rows.error} onRetry={() => void rows.refetch()} />
         ) : items.length === 0 && activeCount > 0 ? (

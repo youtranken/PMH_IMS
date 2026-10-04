@@ -376,7 +376,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
           </section>
         ) : null}
         {active.isLoading ? (
-          <Loading />
+          <Loading variant="table" />
         ) : active.isError ? (
           <LoadError
             error={active.error}
@@ -615,6 +615,8 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     ? "approvals.approved"
                     : "approvals.denied",
               ),
+              // Vòng xanh chỉ cho quyết định DUYỆT (Q-21).
+              burst: deciding.approve && !deciding.revoke,
             });
           }}
         />

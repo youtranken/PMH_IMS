@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Chevron } from '@/ui/chevron';
+import { useCountUp } from '@/ui/use-count-up';
 
 /**
  * Hàng số ở đầu màn — MỘT CON SỐ TO, ĐỌC ĐƯỢC TỪ XA, VÀ BẤM ĐƯỢC.
@@ -24,9 +25,28 @@ export type KpiTone = 'warn' | 'danger';
  * `dense`: trên điện thoại giữ cả hàng trên MỘT dòng (ô nhỏ, số nhỏ hơn). Dùng khi hàng chỉ có
  * vài ô lọc ngang hàng — ô lẻ rơi xuống dòng riêng trông như một khối khác nghĩa.
  */
-export function KpiStrip({ children, dense = false }: { children: ReactNode; dense?: boolean }) {
-  return <div className={dense ? 'dash-kpis kpi-dense' : 'dash-kpis'}>{children}</div>;
+export function KpiStrip({
+  children,
+  dense = false,
+  countUp = false,
+}: {
+  children: ReactNode;
+  dense?: boolean;
+  /**
+   * Số đếm từ 0 lên lúc hàng hiện lần đầu (Q-21). Chỉ bật ở Bảng điều khiển — màn mở ra để
+   * NHÌN số. Ô lọc (màn Sắp hết hạn, Người dùng) đổi số theo mỗi cú bấm; đếm ở đó là bắt người
+   * dùng chờ.
+   */
+  countUp?: boolean;
+}) {
+  return (
+    <CountUpContext.Provider value={countUp}>
+      <div className={dense ? 'dash-kpis kpi-dense' : 'dash-kpis'}>{children}</div>
+    </CountUpContext.Provider>
+  );
 }
+
+const CountUpContext = createContext(false);
 
 export function KpiTile({
   value,
@@ -67,10 +87,11 @@ export function KpiTile({
     .filter(Boolean)
     .join(' ');
 
+  const shown = useCountUp(value, { enabled: useContext(CountUpContext) });
   const inner = (
     <>
       <span className="kpi-n">
-        {value}
+        {shown}
         {incomplete ? '+' : null}
       </span>
       <span className="kpi-l">{label}</span>

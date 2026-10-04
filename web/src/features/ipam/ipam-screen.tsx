@@ -222,7 +222,7 @@ export function IpamScreen({ me }: { me: Me }) {
       />
 
       {subnets.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : subnets.isError ? (
         <LoadError error={subnets.error} onRetry={() => void subnets.refetch()} />
       ) : rows.length === 0 ? (

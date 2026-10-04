@@ -525,7 +525,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {expiry.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : expiry.isError ? (
         <LoadError error={expiry.error} onRetry={() => void expiry.refetch()} />
       ) : rows.length === 0 ? (

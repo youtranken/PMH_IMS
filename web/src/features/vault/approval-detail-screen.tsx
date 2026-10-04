@@ -98,7 +98,8 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
     setBusy(true);
     try {
       await work();
-      toast({ message: t(done) });
+      // Vòng xanh chỉ cho quyết định DUYỆT (Q-21); hủy / từ chối thì toast thường.
+      toast({ message: t(done), burst: done === 'approvals.approved' });
       void actions.refresh();
     } catch (error) {
       if (!isStepUpCancelled(error)) toast({ message: errorMessage(error), tone: 'error' });

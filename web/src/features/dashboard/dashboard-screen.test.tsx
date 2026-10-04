@@ -118,7 +118,8 @@ describe('Bảng điều khiển', () => {
     renderBoard();
     const overdue = await screen.findByRole('link', { name: /^3\s*Đã quá hạn/ });
     expect(overdue).toHaveAttribute('href', '/expiry?state=expired');
-    expect(screen.getByRole('link', { name: /^16\s*Sắp hết hạn/ })).toBeInTheDocument();
+    // Số KPI đếm từ 0 lên lúc hiện lần đầu (Q-21) — chờ nó đậu vào giá trị thật.
+    expect(await screen.findByRole('link', { name: /^16\s*Sắp hết hạn/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Đã quá hạn (3)' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sắp tới (16)' })).toBeInTheDocument();

@@ -423,7 +423,7 @@ export function DevicesScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {devices.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : devices.isError ? (
         <LoadError error={devices.error} onRetry={() => void devices.refetch()} />
       ) : rows.length === 0 ? (

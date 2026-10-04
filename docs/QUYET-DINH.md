@@ -396,6 +396,17 @@ nếu chủ dự án không đồng ý.
   (mặc định) / Luôn bật / Tắt, lưu ở trình duyệt như lựa chọn theme. "Luôn bật" thắng báo "giảm
   chuyển động" của máy; "Tắt" bỏ chuyển động kể cả khi máy cho phép. Lý do: máy của chủ dự án qua
   phiên từ xa / máy ảo luôn báo "giảm chuyển động" nên không bao giờ thấy hiệu ứng.
+- **Vi chuyển động dùng chung (04/10/2026, chủ dự án):** làm một lần trong `web/src/ui` để mọi màn
+  hưởng, chỉ dùng `transform`/`opacity` (và `background-position` cho vệt sáng khung chờ), màu qua
+  token có cặp tối, thời lượng qua `--dur-*`: (1) nút Lưu chính của hộp thoại: lưu xong hiện dấu
+  tích ~0,7 giây rồi trở lại; (2) duyệt / phát hành thành công (két, sơ đồ): vòng xanh loang + dấu
+  tích, dùng lại kiểu vòng xanh của ô mã 2 lớp; (3) số KPI trên bảng điều khiển đếm từ 0 lên khi
+  hiện lần đầu (~0,6 giây); (4) bảng đang tải hiện các dòng khung chờ có vệt sáng quét thay chữ
+  "Đang tải…" (trình đọc màn hình vẫn đọc "Đang tải"); (5) hộp thoại mở/đóng mờ dần + phóng nhẹ;
+  tab: vạch dưới trượt sang tab mới, nội dung tab mờ dần vào; (6) vùng thả tệp: kéo tệp vào thì
+  viền nhấc + nhịp, biểu tượng nảy; thả xong loé xác nhận. Tất cả tắt khi "Hiệu ứng chuyển động"
+  là Tắt hoặc máy báo giảm chuyển động (trừ khi chọn Luôn bật). Lý do: chủ dự án muốn giao diện
+  "sống" như ứng dụng hiện đại nhưng không được làm chậm thao tác.
 
 ### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
 

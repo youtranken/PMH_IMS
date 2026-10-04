@@ -10,6 +10,7 @@ import { PATHS } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import type { Me } from '@/lib/me';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { InfoTip } from '@/ui/info-tip';
 import { PlusIcon } from '@/ui/glyph-icons';
@@ -946,14 +947,7 @@ function CellDialog({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button
-            type="submit"
-            form="access-cell-form"
-            className="btn primary"
-            disabled={save.isPending}
-          >
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="access-cell-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >

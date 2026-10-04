@@ -754,7 +754,7 @@ export function AccountsScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {accounts.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : accounts.isError ? (
         <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : (

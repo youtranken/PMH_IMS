@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { cidrContains, cidrOverlaps, parseIpv4, previewCidr } from '@/lib/ipv4';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
@@ -127,9 +128,7 @@ export function SubnetForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="subnet-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="subnet-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >
