@@ -204,7 +204,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     const onDone = render();
     await quickPick('Phòng ban', 'Kế toán');
     expect(await screen.findByText(/Đã thêm 2 máy của Kế toán\./)).toBeInTheDocument();
-    expect(screen.getByText(/1 máy đã có license này, bỏ qua\./)).toBeInTheDocument();
+    expect(screen.getByText(/1 Máy đã có license này, bỏ qua\./)).toBeInTheDocument();
     expect(chipCodes()).toEqual(['PC-E2E-02', 'PC-E2E-03']);
     const query = calls.gets.find((url) => url.includes('department='))!;
     expect(query).toContain(`department=${encodeURIComponent('Kế toán')}`);

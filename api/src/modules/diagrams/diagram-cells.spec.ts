@@ -127,6 +127,12 @@ describe('diffCellIndex + summarizeDiff — tóm tắt một dòng (hàm thuần
       page(device('d1', DEV_A, 'SW-01') + device('d2', DEV_B, 'SW-02', 200) + shape('s1', 'Tầng 3') + shape('s2', 'ISP') + shape('s3', 'VLAN 10')),
       'Bỏ 1 dây, 2 hình tự do',
     ],
+    [
+      'chỉ sửa hình tự do: câu mở đầu bằng số thì danh từ viết hoa (Q-24)',
+      base,
+      page(device('d1', DEV_A, 'SW-01') + device('d2', DEV_B, 'SW-02', 200) + edge('e1', 'd1', 'd2') + shape('s1', 'Tầng 4')),
+      '1 Hình tự do',
+    ],
   ];
 
   const devicesOnly = device('d1', DEV_A, 'SW-01') + device('d2', DEV_B, 'SW-02', 200);

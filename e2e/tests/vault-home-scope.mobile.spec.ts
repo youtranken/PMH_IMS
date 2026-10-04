@@ -100,14 +100,14 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
   await page.goto('/admin/vault-access');
   await expect(page.getByRole('heading', { name: 'Quyền két sắt' })).toBeVisible();
   // Dòng tổng là câu ghép bốn con số — ở 390px nó phải xuống dòng chứ không đẩy trang rộng ra.
-  await expect(page.getByText(/tài khoản · .* dòng quyền/)).toBeVisible();
+  await expect(page.getByText(/Tài khoản · .* Dòng quyền/)).toBeVisible();
   /*
    * Lưới vài chục cột KHÔNG có ở màn hẹp — tab "Ma trận" chỉ dành cho màn rộng. Ở điện thoại
    * là danh sách người (kèm số quyền) rồi tới thẻ quyền của một người.
    */
   await expect(page.getByRole('tab', { name: 'Ma trận' })).toHaveCount(0);
   await expect(page.getByTestId('access-grid')).toHaveCount(0);
-  const member = page.getByRole('button', { name: new RegExp(`${E2E_MEMBER.email}.*1 quyền`) });
+  const member = page.getByRole('button', { name: new RegExp(`${E2E_MEMBER.email}.*1 Quyền`) });
   await expect(member).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 

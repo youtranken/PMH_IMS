@@ -172,7 +172,7 @@ async function assertNotPreSquash(
   const sample = unknown.slice(0, 5).join(', ') + (unknown.length > 5 ? ', …' : '');
   throw new Error(
     `DB này dựng từ bộ migration trước lượt gộp migration (Q-17): journal _migrations có ` +
-      `${unknown.length} file không còn trong thư mục (${sample}). Không áp bộ mới lên trên ` +
+      `${unknown.length} File không còn trong thư mục (${sample}). Không áp bộ mới lên trên ` +
       'được. DB dev/thử nghiệm: xoá database (hoặc volume postgres) rồi dựng lại từ đầu — ' +
       'xem docs/RUNBOOK-4.3-dong-dot-1.md.',
   );

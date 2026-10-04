@@ -330,7 +330,7 @@ test.describe('Bảng điều khiển', () => {
      * của công ty ra đời.
      */
     await expect(block.getByText(`Mat khau admin E2E ${stamp}`)).toHaveCount(0);
-    await expect(block.getByText('1 ngăn')).toBeVisible();
+    await expect(block.getByText('1 Ngăn')).toBeVisible();
 
     await logout(page);
 

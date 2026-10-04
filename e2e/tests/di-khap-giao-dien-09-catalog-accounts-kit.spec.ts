@@ -711,7 +711,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Họ tên',
       'Vai trò',
       'Trạng thái',
-      '2 lớp',
+      '2 Lớp',
       'Đăng nhập gần nhất',
       'Thao tác',
     ]);

@@ -446,3 +446,52 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
   });
 });
 
+/**
+ * Q-24: chữ số đứng đầu một cụm (đầu chuỗi, hoặc sau "·" của dải chip/tóm tắt) thì danh từ theo
+ * sau viết HOA chữ đầu — "1 Tủ mạng", "12 Tài khoản · 30 Dòng quyền".
+ *
+ * Không áp cho ĐƠN VỊ ĐO ("5 ngày trước", "2 giờ", "254 host"): đó là lượng, không phải danh từ
+ * đếm hồ sơ. Từ theo sau là động từ/liên từ ("{{used}} đã cấp", "8080 hoặc …", "24 nghĩa là …")
+ * cũng không phải danh từ. Chuỗi mới gặp đơn vị khác thì thêm vào danh sách, đừng viết thường
+ * danh từ.
+ */
+describe('Q-24: số đứng đầu cụm thì danh từ theo sau viết hoa', () => {
+  const UNITS = ['giờ', 'phút', 'giây', 'ngày', 'tuần', 'tháng', 'năm', 'lần', 'host'];
+  const NOT_NOUNS = ['đã', 'còn', 'có', 'chưa', 'hoặc', 'nghĩa', 'trên', 'gửi', 'đăng', 'sẽ', 'bị', 'chỉ'];
+  /** Mảnh chỉ ghép vào GIỮA câu ("Mở rộng PC-01 — 2 license"), không bao giờ đứng đầu cụm. */
+  const MID_PHRASE_KEYS = ['devices.licenseCount'];
+
+  function raw(node: unknown = vi, path = ''): Array<[string, string]> {
+    if (typeof node === 'string') return [[path, node]];
+    if (node && typeof node === 'object') {
+      return Object.entries(node as Dict).flatMap(([k, v]) => raw(v, path ? `${path}.${k}` : k));
+    }
+    return [];
+  }
+
+  /** "{{count}} tủ mạng" / "2 lớp" ở đầu chuỗi hoặc sau "·" → [số, từ kế]. */
+  function countPrefixed(text: string): Array<[string, string]> {
+    const re = /(?:^|·\s*)(\{\{\w+\}\}|\d+)\s+(\p{L}[\p{L}\p{M}]*)/gu;
+    return [...text.matchAll(re)].map((m) => [m[1], m[2]]);
+  }
+
+  it('bộ dò bắt đúng mẫu (đối chứng)', () => {
+    expect(countPrefixed('{{count}} tủ mạng')).toEqual([['{{count}}', 'tủ']]);
+    expect(countPrefixed('{{a}} Tài khoản · {{b}} dòng quyền')).toEqual([
+      ['{{a}}', 'Tài'],
+      ['{{b}}', 'dòng'],
+    ]);
+    expect(countPrefixed('Xin mở két ({{count}} ngăn)')).toEqual([]);
+  });
+
+  it('không chuỗi nào bắt đầu bằng số + danh từ viết thường', () => {
+    const bad = raw()
+      .filter(([key]) => !MID_PHRASE_KEYS.includes(key))
+      .flatMap(([key, text]) => countPrefixed(text).map(([, word]) => [key, word] as const))
+      .filter(([, word]) => /^\p{Ll}/u.test(word))
+      .filter(([, word]) => !UNITS.includes(word) && !NOT_NOUNS.includes(word))
+      .map(([key, word]) => `${key}: "${word}"`);
+    expect(bad).toEqual([]);
+  });
+});
+

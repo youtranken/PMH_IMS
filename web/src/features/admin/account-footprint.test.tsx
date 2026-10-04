@@ -49,15 +49,15 @@ describe('AccountFootprint — người này còn giữ gì', () => {
         <AccountFootprint account={MEMBER} />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('link', { name: '3 dòng quyền két sắt' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '3 Dòng quyền két sắt' })).toHaveAttribute(
       'href',
       '/admin/vault-access?user=u-1',
     );
-    expect(await screen.findByRole('link', { name: '1 yêu cầu mở két đang chờ duyệt' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '1 Yêu cầu mở két đang chờ duyệt' })).toHaveAttribute(
       'href',
       '/approvals',
     );
-    expect(await screen.findByRole('link', { name: '2 thiết bị đang ghi người này sử dụng' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '2 Thiết bị đang ghi người này sử dụng' })).toHaveAttribute(
       'href',
       `/devices?q=${encodeURIComponent('Nguyễn An')}`,
     );

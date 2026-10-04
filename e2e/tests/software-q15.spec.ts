@@ -195,7 +195,7 @@ test.describe('SW-053 · Gán license chọn nhanh theo phòng ban / người s�
     await dialog.getByRole('button', { name: 'Thêm các máy' }).click();
 
     await expect(dialog.getByRole('status').filter({ hasText: 'Đã thêm 2 máy' })).toContainText(
-      '1 máy đã có license này, bỏ qua.',
+      '1 Máy đã có license này, bỏ qua.',
     );
     const chips = dialog.getByRole('list', { name: 'Máy sẽ gán' });
     await expect(chips.getByRole('listitem')).toHaveCount(2);

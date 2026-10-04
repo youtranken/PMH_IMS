@@ -14,7 +14,7 @@ describe('softwareDisposeMessage — câu hỏi lại khi thanh lý phần mềm
 
   it('≤10 máy: nói đúng là sẽ BỊ GỠ và liệt kê mã máy', () => {
     const text = softwareDisposeMessage(t, 'LIC-M365', 2, ['PC-01', 'PC-02']);
-    expect(text).toContain('2 máy đang dùng sẽ bị gỡ license');
+    expect(text).toContain('2 Máy đang dùng sẽ bị gỡ license');
     expect(text).toContain('PC-01, PC-02');
     expect(text).not.toMatch(/giữ nguyên/);
   });
@@ -22,12 +22,12 @@ describe('softwareDisposeMessage — câu hỏi lại khi thanh lý phần mềm
   it('>10 máy: chỉ nói số, không kéo dài câu hỏi bằng 11 mã', () => {
     const codes = Array.from({ length: 11 }, (_, i) => `PC-${i}`);
     const text = softwareDisposeMessage(t, 'LIC-M365', 11, codes);
-    expect(text).toContain('11 máy đang dùng sẽ bị gỡ license');
+    expect(text).toContain('11 Máy đang dùng sẽ bị gỡ license');
     expect(text).not.toContain('PC-0');
   });
 
   it('chưa đọc được danh sách máy: vẫn nói số ghế từ hồ sơ', () => {
     const text = softwareDisposeMessage(t, 'LIC-M365', 3, null);
-    expect(text).toContain('3 máy đang dùng sẽ bị gỡ license');
+    expect(text).toContain('3 Máy đang dùng sẽ bị gỡ license');
   });
 });
