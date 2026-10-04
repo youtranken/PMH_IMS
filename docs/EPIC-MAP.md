@@ -948,7 +948,7 @@ tập và UAT, thuộc ngày go-live). Bảy nhánh song song gộp qua `golive/
 
 ## Epic 10 đã đóng góp gì — Sơ đồ mạng thay Visio (đóng 2026-10-03)
 
-Quyết định nghiệp vụ: `docs/QUYET-DINH.md` Q-23. Migration của epic: `0043`–`0055` (`0043_diagram_spike`
+Quyết định nghiệp vụ: `docs/QUYET-DINH.md` Q-23. Migration của epic: `0043`–`0057` (`0043_diagram_spike`
 là bảng thử, bị `0046_diagram` xoá; không có `0052`).
 
 ### Bảng mới và ai sở hữu (AD-3)
@@ -956,12 +956,13 @@ là bảng thử, bị `0046_diagram` xoá; không có `0052`).
 | Bảng | Module chủ | Ghi chú cho epic sau |
 | --- | --- | --- |
 | `diagram` | `diagrams` | Một bản vẽ trong cây (`kind` = `official` / `presentation`). `official_version_id` là cờ "chính thức" của cây, vì phiên bản chỉ-thêm không UPDATE được. Bản trình bày trỏ nguồn qua `source_diagram_id` + `source_version_id` (0050) |
-| `diagram_version` | `diagrams` | Chỉ-thêm (REVOKE UPDATE/DELETE/TRUNCATE + trigger chặn TRUNCATE). Giữ XML + SVG đã làm sạch + chụp thiết bị lúc lưu |
+| `diagram_version` | `diagrams` | Chỉ-thêm với `ims_app` (REVOKE UPDATE/DELETE/TRUNCATE). Từ 0056 chỉ hàm `diagram_delete_versions` (SECURITY DEFINER) xoá được bản nháp / bản vẽ chưa phát hành; trigger `diagram_prune_guard` vẫn giữ bản chính thức, bản đặt tên, bản từng phát hành (Q-23). Giữ XML + SVG đã làm sạch (ảnh nhúng thành `ims-img:`, 0057) + chụp thiết bị lúc lưu |
 | `diagram_version_label` | `diagrams` | Chỉ-thêm. Nhãn đặt cho phiên bản |
 | `diagram_history` | `diagrams` | Chỉ-thêm. Nhật ký mở/lưu/gửi duyệt/phát hành của bản vẽ |
 | `diagram_presence` | `diagrams` | "Đang có … mở sửa" — bảng chứ không Redis; hàng quá `diagram.presence_ttl_seconds` coi như đã rời |
 | `diagram_comment` | `diagrams` | Chỉ-thêm (0049). Bình luận + ghim neo vào ô (`cellId` + `anchor`) |
 | `diagram_drift` | `diagrams` | Bộ đệm số lệch kho, tối đa một hàng mỗi bản vẽ, ghi đè mỗi lượt quét (0053) |
+| `diagram_image`, `diagram_version_image` | `diagrams` | Ảnh nhúng lưu một lần theo SHA-256 + hàng nối phiên bản–ảnh (0057). Đọc nội dung cho người dùng phải qua `hydrateTexts`; ảnh mồ côi dọn trong tx Bỏ bản nháp / Xóa hẳn và trong `reset-e2e.mjs` |
 | `cable_type` | `catalog` | Danh mục loại dây (0048), `catalog_history` nhận thêm entity này |
 | `device_type_icon` | `catalog` | Biểu tượng SVG riêng của loại thiết bị (0047) |
 | `device_model` | `devices` | Ảnh thật mặt trước/sau theo model (0054); `file.owner_type` nhận thêm `device_model` |
@@ -980,6 +981,10 @@ Khoá `system_config` mới (AD-11): `diagram.stepup_grace_minutes`, `diagram.ed
 `diagram.icon_svg_max_kb`, `diagram.autolayout_max_nodes`, `diagram.export_max_megapixels`,
 `diagram.export_timeout_seconds`, `diagram.drift_notify_enabled`, `diagram.drift_sweep_hour`,
 `diagram.photo_max_px`, `diagram.path_max_hops`.
+
+Cột mới sau khi đóng epic (Q-23, 04/10): `diagram.deleted_at`, `diagram.deleted_by` (0056) — bia mộ của
+"Xóa hẳn", luôn kèm `archived_at`; `node()` và khung bản vẽ con coi hàng này như không có. Tên phiên bản
+và bình luận nay `ON DELETE CASCADE` theo phiên bản (chỉ hàm xoá chạm tới được).
 
 ### Hợp đồng epic sau sẽ dùng
 
