@@ -273,6 +273,8 @@ body:has(.auth) .toast-stack {
     transition: none !important;
   }
   .otp-box:focus { transform: none; }
+  /* Không xoay nhưng vẫn phải thấy "đang kiểm" trong nhịp chờ (ui/otp-input.tsx giữ đủ một vòng). */
+  .otp-boxes.is-busy .otp-box { opacity: 0.55; }
 }
 
 /* Ô có đơn vị cố định bên phải (ui/money-input.tsx): đơn vị nằm TRONG khung ô cho gọn, nhưng

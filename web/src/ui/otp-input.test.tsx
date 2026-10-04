@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import {
   OTP_MIN_SPIN_MS,
+  OTP_STILL_HOLD_MS,
   OTP_SUCCESS_FALLBACK_MS,
   OtpInput,
   useOtpSuccess,
@@ -271,15 +272,30 @@ describe('OtpInput — đang kiểm / thành công / sai', () => {
     expect(proceed).toHaveBeenCalledTimes(1);
   });
 
-  it('"giảm chuyển động" → hiện dấu tích và đi tiếp ngay, không chờ hiệu ứng', async () => {
+  /*
+   * "Giảm chuyển động" không chỉ do người dùng tự bật: GNOME qua phiên từ xa / máy ảo báo
+   * `EnableAnimations=false` cho Firefox, nên máy đó không bao giờ thấy xoay. Vẫn phải thấy
+   * "đang kiểm" → một ô có dấu tích đứng yên đủ lâu, chỉ bỏ phần chuyển động.
+   */
+  it('"giảm chuyển động" → vẫn qua đang kiểm rồi dấu tích (không xoay), giữ dấu tích đủ lâu mới đi tiếp', async () => {
     vi.stubGlobal('AnimationEvent', class {});
     vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
+    vi.useFakeTimers();
     const proceed = vi.fn();
     renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    expect(group()).toHaveClass('is-busy');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
     });
     expect(group()).toHaveClass('is-success');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_STILL_HOLD_MS - 100);
+    });
+    expect(proceed).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
     expect(proceed).toHaveBeenCalledTimes(1);
   });
 });

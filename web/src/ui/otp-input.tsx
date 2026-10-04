@@ -27,11 +27,22 @@ export const OTP_SUCCESS_FALLBACK_MS = 1800;
 export const OTP_MIN_SPIN_MS = 1200;
 
 /**
- * Không có hiệu ứng nào để chờ: người dùng bật "giảm chuyển động", hoặc môi trường không chạy
- * animation CSS (không có `AnimationEvent`) — chờ ở đó chỉ là đứng yên tới hẹn giờ dự phòng.
+ * Dấu tích đứng yên được giữ bấy lâu khi máy báo "giảm chuyển động": không có `animationend` nào
+ * để chờ, mà đi tiếp ngay thì người dùng không kịp thấy mã đã được nhận.
  */
-function noMotion(): boolean {
-  if (typeof window.AnimationEvent === 'undefined') return true;
+export const OTP_STILL_HOLD_MS = 900;
+
+/** Môi trường không chạy animation CSS (không có `AnimationEvent`): không có gì để xem, đi tiếp ngay. */
+function noCssAnimation(): boolean {
+  return typeof window.AnimationEvent === 'undefined';
+}
+
+/**
+ * Máy báo "giảm chuyển động". Không chỉ do người dùng tự bật: GNOME trong phiên từ xa / máy ảo
+ * báo `EnableAnimations=false` cho Firefox. Khi đó bỏ xoay/trượt (CSS) nhưng vẫn giữ nhịp
+ * "đang kiểm" → dấu tích đứng yên, để vẫn thấy mã đã được nhận trước khi chuyển màn.
+ */
+function reducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
@@ -47,8 +58,8 @@ export function useOtpSuccess() {
     () =>
       new Promise<void>((resolve) => {
         // Server thường trả lời trong vài trăm ms — gộp ngay thì không ai kịp thấy vòng xoay.
-        // Giữ trạng thái xoay trọn một vòng rồi mới gộp; máy không có chuyển động thì bỏ qua.
-        const spinMs = noMotion() ? 0 : OTP_MIN_SPIN_MS;
+        // Giữ trạng thái xoay trọn một vòng rồi mới gộp; môi trường không chạy animation thì bỏ qua.
+        const spinMs = noCssAnimation() ? 0 : OTP_MIN_SPIN_MS;
         const timer = window.setTimeout(() => done(), spinMs + OTP_SUCCESS_FALLBACK_MS + 300);
         const done = () => {
           window.clearTimeout(timer);
@@ -162,7 +173,7 @@ export function OtpInput({
    * `useOtpSuccess().status`; lỗi luôn thắng verifying (thôi xoay khi server từ chối).
    */
   status?: OtpStatus;
-  /** Gọi MỘT lần khi hiệu ứng thành công xong (hoặc ngay, nếu máy bật "giảm chuyển động"). */
+  /** Gọi MỘT lần khi hiệu ứng thành công xong (máy "giảm chuyển động": sau khi giữ dấu tích đứng yên). */
   onSuccessShown?: () => void;
 }) {
   const { t } = useTranslation();
@@ -197,11 +208,11 @@ export function OtpInput({
       shownOnce.current = false;
       return undefined;
     }
-    if (noMotion()) {
+    if (noCssAnimation()) {
       reportShown();
       return undefined;
     }
-    const timer = window.setTimeout(reportShown, OTP_SUCCESS_FALLBACK_MS);
+    const timer = window.setTimeout(reportShown, reducedMotion() ? OTP_STILL_HOLD_MS : OTP_SUCCESS_FALLBACK_MS);
     return () => window.clearTimeout(timer);
   }, [state, reportShown]);
   // Dấu tích vẽ xong (animation cuối của chuỗi, đã gồm nhịp giữ) mới cho nơi gọi đi tiếp.
