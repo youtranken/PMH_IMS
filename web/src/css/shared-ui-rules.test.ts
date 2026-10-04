@@ -474,3 +474,23 @@ describe('ô mã 6 số (ui/otp-input.tsx)', () => {
     expect(declValue(rule('shared-kit.css', '.otp-check-mark')!.body, 'stroke-dashoffset')).toBe('0');
   });
 });
+
+/*
+ * draw.io xuất SVG "màu tự đổi": `color-scheme: light dark` + `light-dark(đen, trắng)`. Trình vẽ
+ * nhúng (embed) luôn chạy giấy SÁNG, còn trình xem nếu để nguyên thì theo máy: máy/trình duyệt ưu
+ * tiên tối → nét và hình tự do thành trắng trên nền trắng, chỉ còn máy kho + dây IMS tô màu.
+ */
+describe('trình xem sơ đồ vẽ trên giấy sáng như trình vẽ (ui/diagram-viewer.tsx)', () => {
+  it('SVG bản vẽ ghim color-scheme sáng, thắng style nội tuyến của draw.io', () => {
+    expect(declValue(rule('primitives.css', '.diagram-viewer-canvas > svg')!.body, 'color-scheme')).toBe('light !important');
+  });
+
+  it('nền khung xem và nền "tự đổi" của draw.io là token giấy, cả hai theme cùng màu sáng', () => {
+    expect(declValue(rule('primitives.css', '.diagram-viewer')!.body, 'background')).toBe('var(--diagram-paper)');
+    expect(declValue(rule('primitives.css', '.diagram-viewer-canvas')!.body, '--ge-adaptive-bg')).toBe('var(--diagram-paper)');
+    expect(hex('dark', '--diagram-paper')).toBe(hex('light', '--diagram-paper'));
+    expect(luminance(hex('light', '--diagram-paper'))).toBeGreaterThan(0.9);
+    // Watermark nằm trên giấy đó: theme tối mà dùng mực sáng thì chìm mất.
+    expect(tokenBlock('dark').get('--diagram-watermark')).toBe(tokenBlock('light').get('--diagram-watermark'));
+  });
+});

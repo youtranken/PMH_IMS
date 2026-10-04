@@ -870,7 +870,7 @@ button.btn-x.danger:hover:not(:disabled) {
   height: 100%;
   min-height: 320px;
   overflow: hidden;
-  background: var(--surface);
+  background: var(--diagram-paper);
 }
 .diagram-viewer-stage {
   position: absolute;
@@ -887,9 +887,16 @@ button.btn-x.danger:hover:not(:disabled) {
   top: 0;
   left: 0;
   transform-origin: 0 0;
+  /* Nền "tự đổi" của hình draw.io (`fill: var(--ge-adaptive-bg, …)`): khối <style> khai nó bị cổng
+     SVG gỡ, nên khai lại ở đây cho khớp giấy. */
+  --ge-adaptive-bg: var(--diagram-paper);
 }
+/* draw.io ghi `color-scheme: light dark` nội tuyến và tô nét bằng `light-dark()`: để nguyên thì máy
+   ưu tiên tối vẽ nét trắng trên giấy trắng. Trình vẽ nhúng luôn sáng — trình xem ghim sáng theo,
+   `!important` để thắng style nội tuyến. */
 .diagram-viewer-canvas > svg {
   display: block;
+  color-scheme: light !important;
 }
 .diagram-viewer-toolbar {
   position: absolute;
