@@ -279,8 +279,8 @@ async function openEditor() {
 }
 
 describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => {
-  it('nút mở hộp tìm gọn — không cột cố định; máy đã thanh lý / đã có trên bản vẽ hiện nhưng tắt kèm lý do; chèn bằng patch, hộp đóng', async () => {
-    const { frame, posted, fromDrawio } = await openEditor();
+  it('nút mở hộp tìm gọn — không cột cố định; máy đã thanh lý không hiện; máy đã có trên bản vẽ hiện nhưng tắt kèm lý do; chèn bằng patch, hộp đóng', async () => {
+    const { fetchMock, frame, posted, fromDrawio } = await openEditor();
     const user = userEvent.setup();
     // Sẵn sàng ngay từ `init` (lệnh load đã gửi trước mọi lệnh sau) — không chờ tin `load`.
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
@@ -289,10 +289,11 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
     expect(frame).toBeInTheDocument();
     expect(box.contains(frame)).toBe(false);
 
-    const old = await screen.findByRole('checkbox', { name: 'Chọn SW-E2E-OLD để chèn' });
-    expect(old).toBeDisabled();
-    expect(old).toHaveAccessibleDescription('Đã thanh lý — không chèn được');
-    expect(screen.getByRole('checkbox', { name: 'Chọn SW-E2E-HAVE để chèn' })).toHaveAccessibleDescription('Đã có trên bản vẽ');
+    // Máy đã thanh lý không có mặt trong hộp (Q-23 góp ý 04/10): hỏi kho bằng `usable=true`, và
+    // lỡ server vẫn trả về thì cũng không hiện — chèn máy đã thanh lý là vô lý.
+    expect(await screen.findByRole('checkbox', { name: 'Chọn SW-E2E-HAVE để chèn' })).toHaveAccessibleDescription('Đã có trên bản vẽ');
+    expect(screen.queryByRole('checkbox', { name: 'Chọn SW-E2E-OLD để chèn' })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/devices?') && String(url).includes('usable=true'))).toBe(true);
 
     await user.click(screen.getByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' }));
     await user.click(screen.getByRole('button', { name: 'Chèn 1 thiết bị' }));

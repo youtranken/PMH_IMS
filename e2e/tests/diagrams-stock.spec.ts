@@ -211,7 +211,7 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(vault.getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
   });
 
-  test('đường hỏng: máy đã thanh lý hiện nhưng không chèn được (kèm lý do); ô trỏ máy không còn trong kho → dấu đỏ, thẻ báo "Không tìm thấy trong kho"', async ({ page }) => {
+  test('đường hỏng: máy đã thanh lý không hiện trong hộp Thiết bị kho; ô trỏ máy không còn trong kho → dấu đỏ, thẻ báo "Không tìm thấy trong kho"', async ({ page }) => {
     test.setTimeout(150_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -229,10 +229,9 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await page.getByRole('button', { name: 'Thiết bị kho', exact: true }).click();
     await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(dead);
-    const pick = stockBox(page).getByRole('checkbox', { name: `Chọn ${dead} để chèn` });
-    await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
-    await expect(pick).toBeDisabled();
-    await expect(pick).toHaveAccessibleDescription('Đã thanh lý — không chèn được');
+    // Máy đã thanh lý không có mặt trong hộp (Q-23): tìm đúng mã cũng chỉ ra câu "không khớp".
+    await expect(stockBox(page).getByText('Không có thiết bị nào khớp. Máy đã thanh lý không hiện ở đây.')).toBeVisible();
+    await expect(stockBox(page).getByRole('checkbox', { name: `Chọn ${dead} để chèn` })).toHaveCount(0);
     await expect(stockBox(page).getByRole('button', { name: 'Chèn', exact: true })).toBeDisabled();
     await page.keyboard.press('Escape');
 

@@ -830,7 +830,7 @@ export default {
       type: 'Lọc theo loại',
       allTypes: 'Mọi loại',
       results: 'Thiết bị trong kho',
-      empty: 'Không có thiết bị nào khớp.',
+      empty: 'Không có thiết bị nào khớp. Máy đã thanh lý không hiện ở đây.',
       loadFailed: 'Không tải được danh sách thiết bị.',
       pickOf: 'Chọn {{code}} để chèn',
       already: 'Đã có trên bản vẽ',

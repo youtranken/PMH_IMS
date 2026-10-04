@@ -21,9 +21,12 @@ interface StockDevice {
 /** Số máy mỗi lượt tìm — gõ thêm hoặc lọc để thu hẹp; một hộp gọn không cuộn qua cả kho. */
 const STOCK_LIMIT = 20;
 
-/** Phần query của `GET /devices` cho hộp Thiết bị kho — KHÔNG `usable=true`: máy đã thanh lý phải hiện (tắt, kèm lý do). */
+/**
+ * Phần query của `GET /devices` cho hộp Thiết bị kho. `usable=true`: máy đã thanh lý không bao giờ
+ * được chèn (Q-23), lọc ở server để chúng không chiếm chỗ trong `STOCK_LIMIT` dòng.
+ */
 export function stockQuery(filter: { term: string; siteId: string; cabinetId: string; deviceTypeId: string }): string {
-  const params = new URLSearchParams({ limit: String(STOCK_LIMIT) });
+  const params = new URLSearchParams({ limit: String(STOCK_LIMIT), usable: 'true' });
   if (filter.term.trim()) params.set('search', filter.term.trim());
   if (filter.siteId) params.set('siteId', filter.siteId);
   if (filter.cabinetId) params.set('cabinetId', filter.cabinetId);
@@ -33,8 +36,8 @@ export function stockQuery(filter: { term: string; siteId: string; cabinetId: st
 
 /**
  * Nội dung hộp "Thiết bị kho" của màn sửa sơ đồ: tìm theo mã/tên/IP, lọc site/tủ/loại, tick một
- * hoặc nhiều máy rồi Chèn. Máy đã thanh lý và máy đã có trên bản vẽ vẫn HIỆN nhưng ô tick tắt,
- * kèm lý do — ẩn chúng đi thì người vẽ tưởng kho không có máy đó.
+ * hoặc nhiều máy rồi Chèn. Máy đã thanh lý không hiện. Máy đã có trên bản vẽ vẫn HIỆN nhưng ô tick
+ * tắt, kèm lý do — ẩn nó đi thì người vẽ tưởng kho không có máy đó.
  *
  * Bàn phím: ↓ từ ô tìm sang danh sách, ↑/↓ giữa các dòng, Space tick, Enter chèn.
  */
@@ -62,9 +65,9 @@ export function StockDevicePicker({
     queryFn: () => apiFetch<{ items: StockDevice[] }>(`/api/v1/devices?${query}`),
   });
 
-  const reasonOf = (device: StockDevice): string | null =>
-    device.status === 'retired' ? t('diagrams.stock.retired') : present.has(device.id) ? t('diagrams.stock.already') : null;
-  const items = devices.data?.items ?? [];
+  const reasonOf = (device: StockDevice): string | null => (present.has(device.id) ? t('diagrams.stock.already') : null);
+  // Lớp chặn thứ hai: đổi ngữ nghĩa `usable` phía server cũng không được làm máy thanh lý hiện lại.
+  const items = (devices.data?.items ?? []).filter((d) => d.status !== 'retired');
   const insertable = picked.filter((id) => items.some((d) => d.id === id && !reasonOf(d)));
 
   const toggle = (id: string) => setPicked((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
