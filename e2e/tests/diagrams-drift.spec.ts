@@ -79,11 +79,15 @@ function viewer(page: Page) {
   return page.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
 }
 
-/** Thẻ của bản vẽ trên màn cây hai cột: chọn nó trên cây (`?node=`) để thẻ "Bản vẽ này" hiện ra. */
+/** Ô / băng của bản vẽ trên bản đồ /diagrams (`?node=` chọn nó): mang tên + CHỮ trạng thái. */
 async function treeRow(page: Page, name: string) {
   const id = sql(`SELECT id FROM diagram WHERE name = '${name}' AND deleted_at IS NULL`);
   await page.goto(`/diagrams?node=${id}`);
-  return page.getByRole('listitem').filter({ has: page.getByRole('link', { name, exact: true }) });
+  return page
+    .getByRole('region', { name: 'Bản đồ bản vẽ' })
+    .getByRole('button')
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .first();
 }
 
 test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {

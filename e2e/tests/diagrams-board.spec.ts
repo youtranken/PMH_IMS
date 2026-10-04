@@ -14,13 +14,14 @@ import {
   rowActionNames,
   sql,
   stepUpViaApi,
+  switchTheme,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
 
 /*
- * Màn cây bản vẽ hai cột, "Bỏ bản nháp", "Xóa hẳn" và ảnh lưu một lần (Q-23). Luật xoá và ảnh đã
- * có bài DB thật (`api/test/diagram-prune.spec.ts`, `diagram-images.spec.ts`); ở đây chỉ đi đúng
+ * Màn /diagrams "bản đồ không gian", bỏ nháp từ một bản chọn, "Xóa hẳn" và ảnh lưu một lần
+ * (Q-23). Luật xoá và ảnh đã có bài DB thật (`api/test/diagram-prune.spec.ts`, `diagram-images.spec.ts`); ở đây chỉ đi đúng
  * đường người dùng bấm, cộng một bài đọc thẳng DB để chắc ảnh không bị chép mỗi lần lưu.
  */
 
@@ -86,63 +87,164 @@ function seqsOf(id: string): string {
   return sql(`SELECT string_agg(seq::text, ',' ORDER BY seq) FROM diagram_version WHERE diagram_id = '${id}'`);
 }
 
-test.describe('Sơ đồ mạng — màn cây hai cột', () => {
-  test('cây bên trái chọn nút (chuột + bàn phím, nhớ ở ?node=); bên phải đường dẫn + thẻ "Bản vẽ này" + thẻ con', async ({ page }) => {
+/** Ô / băng / đầu khu mang đúng tên này trên bản đồ (tên nằm trong một phần tử riêng). */
+function mapItem(page: Page, name: string) {
+  return page.getByRole('region', { name: 'Bản đồ bản vẽ' }).getByRole('button').filter({ has: page.getByText(name, { exact: true }) }).first();
+}
+
+function panel(page: Page) {
+  return page.getByRole('complementary', { name: 'Bản vẽ đang chọn' });
+}
+
+/** Màu tính ra của một token trên `<html>` theo theme đang bật — so với màu thật của phần tử. */
+async function tokenColor(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+}
+
+test.describe('Sơ đồ mạng — bản đồ không gian (Q-23)', () => {
+  test('gốc là băng, con là khu, cháu là ô; chữ trạng thái; đi sâu bằng "▸ n Bản vẽ con" + đường dẫn quay lại; panel chuyển bản vẽ cùng khu', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const root = await createDiagram(page, `E2E Gốc ${stamp}`);
     const floor = await createDiagram(page, `E2E Tầng 2 ${stamp}`, root);
-    await createDiagram(page, `E2E Phòng server ${stamp}`, floor);
+    const server = await createDiagram(page, `E2E Phòng server ${stamp}`, floor);
+    await createDiagram(page, `E2E Kế toán ${stamp}`, floor);
+    await createDiagram(page, `E2E Tủ R1 ${stamp}`, server);
     await stepUpViaApi(page, secret, 'diagram');
-    await save(page, floor, 'Tầng 2 E2E');
+    const v1 = await save(page, server, 'Phòng E2E');
+    await publish(page, server, v1.id);
+    await save(page, server, 'Phòng E2E nháp');
 
-    await page.goto(`/diagrams?node=${floor}`);
-    const tree = page.getByRole('tree', { name: 'Cây bản vẽ' });
-    const floorItem = tree.getByRole('treeitem', { name: `E2E Tầng 2 ${stamp}` });
-    await expect(floorItem).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('navigation', { name: 'Vị trí trên cây bản vẽ' })).toContainText(`E2E Gốc ${stamp}`);
-    const cards = page.getByRole('list', { name: `Bản vẽ trong "E2E Tầng 2 ${stamp}"` }).getByRole('listitem');
-    await expect(cards).toHaveCount(2);
-    await expect(cards.first()).toContainText('Bản vẽ này');
-    await expect(cards.first()).toContainText('Bản nháp');
-    await expect(cards.first()).toContainText('v1 ·');
-    await expect(cards.nth(1)).toContainText(`E2E Phòng server ${stamp}`);
-    await expect(cards.nth(1)).toContainText('Chưa vẽ');
+    await page.goto('/diagrams');
+    const map = page.getByRole('region', { name: 'Bản đồ bản vẽ' });
+    await expect(mapItem(page, `E2E Gốc ${stamp}`)).toContainText('4 Bản vẽ bên trong');
+    const tiles = map.getByRole('list', { name: `Bản vẽ trong "E2E Tầng 2 ${stamp}"` });
+    const serverTile = mapItem(page, `E2E Phòng server ${stamp}`);
+    await expect(serverTile).toContainText('Chính thức · có bản nháp');
+    await expect(serverTile).toContainText('v1 · 1 Bản nháp');
+    await expect(mapItem(page, `E2E Kế toán ${stamp}`)).toContainText('Chưa vẽ');
+    await expect(tiles.getByRole('button', { name: `Thêm bản vẽ con vào "E2E Tầng 2 ${stamp}"` })).toBeVisible();
 
-    // Bàn phím: ← lên cha (nút đang thu thì ← đi lên), Enter chọn — thẻ và đường dẫn đổi theo.
-    await floorItem.focus();
-    await page.keyboard.press('ArrowLeft');
-    await page.keyboard.press('Enter');
-    await expect(tree.getByRole('treeitem', { name: `E2E Gốc ${stamp}` })).toHaveAttribute('aria-selected', 'true');
-    await expect(page).toHaveURL(new RegExp(`node=${root}`));
-    await expect(page.getByRole('list', { name: `Bản vẽ trong "E2E Gốc ${stamp}"` })).toContainText(`E2E Tầng 2 ${stamp}`);
+    // Chọn ô → panel: dải chuyển bản vẽ cùng khu, Sửa tiếp nháp.
+    await serverTile.click();
+    await expect(page).toHaveURL(new RegExp(`node=${server}`));
+    const siblings = panel(page).getByRole('tablist', { name: `Bản vẽ trong "E2E Tầng 2 ${stamp}"` });
+    await expect(siblings.getByRole('tab', { name: new RegExp(`^E2E Phòng server ${stamp} 2$`) })).toHaveAttribute('aria-selected', 'true');
+    await expect(panel(page).getByRole('button', { name: 'Sửa tiếp nháp #2' })).toBeVisible();
+    await siblings.getByRole('tab', { name: `E2E Kế toán ${stamp}` }).click();
+    await expect(panel(page).getByRole('heading', { level: 2, name: `E2E Kế toán ${stamp}` })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`node=`));
 
-    // Mở từ thẻ vào màn bản vẽ.
-    await page.getByRole('button', { name: `Mở E2E Tầng 2 ${stamp}` }).click();
-    await expect(page).toHaveURL(new RegExp(`/diagrams/${floor}$`));
+    // Đi sâu: ô "Phòng server" có con → bản đồ lấy nó làm gốc; đường dẫn quay về.
+    await page.getByRole('button', { name: `Xem 1 bản vẽ con của "E2E Phòng server ${stamp}"` }).click();
+    await expect(page).toHaveURL(new RegExp(`root=${server}`));
+    await expect(mapItem(page, `E2E Tủ R1 ${stamp}`)).toBeVisible();
+    await expect(mapItem(page, `E2E Kế toán ${stamp}`)).toHaveCount(0);
+    const crumbs = page.getByRole('navigation', { name: 'Vị trí trên bản đồ' });
+    await crumbs.getByRole('link', { name: 'Tất cả bản vẽ' }).click();
+    await expect(mapItem(page, `E2E Kế toán ${stamp}`)).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`root=${server}`));
+
+    // Mở từ panel vào màn bản vẽ.
+    await page.goto(`/diagrams?node=${server}`);
+    await panel(page).getByRole('button', { name: 'Mở bản chính thức' }).click();
+    await expect(page).toHaveURL(new RegExp(`/diagrams/${server}$`));
   });
 
-  test('390px: cây thành ô chọn phía trên, thẻ một cột, không tràn ngang, không nút Sửa', async ({ page }) => {
+  test('"Cần làm": chip đếm, bấm thì nút không khớp mờ đi (?todo=); kiểu Danh sách là cây thụt lề', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const root = await createDiagram(page, `E2E Gốc lọc ${stamp}`);
+    const drafty = await createDiagram(page, `E2E Có nháp ${stamp}`, root);
+    await createDiagram(page, `E2E Trống ${stamp}`, root);
+    await stepUpViaApi(page, secret, 'diagram');
+    await save(page, drafty, 'Nháp E2E');
+
+    await page.goto('/diagrams');
+    const strip = page.getByRole('region', { name: 'Cần làm' });
+    const chip = strip.getByRole('button', { name: /Bản nháp chưa phát hành$/ });
+    await chip.click();
+    await expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await expect(page).toHaveURL(/todo=drafts/);
+    await expect(page.getByText(/^Đang lọc: \d+ bản vẽ khớp\./)).toBeVisible();
+    await expect(mapItem(page, `E2E Trống ${stamp}`)).toHaveAttribute('data-dim', 'true');
+    await expect(mapItem(page, `E2E Có nháp ${stamp}`)).not.toHaveAttribute('data-dim', 'true');
+
+    await page.getByRole('radio', { name: 'Danh sách' }).click();
+    await expect(page).toHaveURL(/view=list/);
+    const list = page.getByRole('list', { name: 'Cây bản vẽ' });
+    await list.getByRole('button', { name: `E2E Có nháp ${stamp}`, exact: true }).click();
+    await expect(panel(page).getByRole('heading', { level: 2, name: `E2E Có nháp ${stamp}` })).toBeVisible();
+  });
+
+  test('sáng / tối: viền ô theo token của theme đang bật, chữ trạng thái vẫn có (không chỉ màu)', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const root = await createDiagram(page, `E2E Theme gốc ${stamp}`);
+    const floor = await createDiagram(page, `E2E Theme tầng ${stamp}`, root);
+    const room = await createDiagram(page, `E2E Theme phòng ${stamp}`, floor);
+    await stepUpViaApi(page, secret, 'diagram');
+    await save(page, room, 'Nháp theme E2E');
+
+    await page.goto('/diagrams');
+    const tile = page.getByRole('listitem').filter({ has: page.getByText(`E2E Theme phòng ${stamp}`, { exact: true }) }).last();
+    for (const theme of ['light', 'dark'] as const) {
+      await switchTheme(page, theme);
+      await expect(tile).toContainText('Bản nháp');
+      const border = await tile.evaluate((el) => getComputedStyle(el).borderTopColor);
+      expect(border).toBe(await tokenColor(page, '--warn'));
+      const bg = await tile.evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(bg).toBe(await page.evaluate(() => {
+        const probe = document.createElement('span');
+        probe.style.backgroundColor = 'var(--surface)';
+        document.body.appendChild(probe);
+        const value = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return value;
+      }));
+    }
+    await switchTheme(page, 'light');
+  });
+
+  test('390px: chip cuộn ngang, khu xếp dọc, ô 2 cột; bấm ô mở panel thành hộp; không tràn ngang, không nút Sửa', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const root = await createDiagram(page, `E2E Điện thoại gốc ${stamp}`);
-    await createDiagram(page, `E2E Điện thoại con ${stamp}`, root);
+    const floorA = await createDiagram(page, `E2E ĐT tầng A ${stamp}`, root);
+    await createDiagram(page, `E2E ĐT tầng B ${stamp}`, root);
+    await createDiagram(page, `E2E ĐT phòng 1 ${stamp}`, floorA);
+    await createDiagram(page, `E2E ĐT phòng 2 ${stamp}`, floorA);
 
-    await page.goto(`/diagrams?node=${root}`);
-    await expect(page.getByRole('button', { name: 'Chọn bản vẽ' })).toBeVisible();
-    await expect(page.getByRole('tree')).toHaveCount(0);
-    const cards = page.getByRole('list', { name: `Bản vẽ trong "E2E Điện thoại gốc ${stamp}"` }).getByRole('listitem');
-    await expect(cards).toHaveCount(2);
-    const [first, second] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
-    expect(second!.y).toBeGreaterThan(first!.y + first!.height - 1);
-    await expect(page.getByRole('button', { name: /^Sửa E2E/ })).toHaveCount(0);
+    await page.goto('/diagrams');
+    const [a, b] = [mapItem(page, `E2E ĐT tầng A ${stamp}`), mapItem(page, `E2E ĐT tầng B ${stamp}`)];
+    await expect(a).toBeVisible();
+    const [boxA, boxB] = [await a.boundingBox(), await b.boundingBox()];
+    expect(boxB!.y).toBeGreaterThan(boxA!.y + boxA!.height - 1);
+    const [r1, r2] = [await mapItem(page, `E2E ĐT phòng 1 ${stamp}`).boundingBox(), await mapItem(page, `E2E ĐT phòng 2 ${stamp}`).boundingBox()];
+    expect(Math.abs(r1!.y - r2!.y)).toBeLessThan(2);
+    expect(r2!.x).toBeGreaterThan(r1!.x);
+    await expect(panel(page)).toHaveCount(0);
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+
+    await mapItem(page, `E2E ĐT phòng 1 ${stamp}`).click();
+    const sheet = page.getByRole('dialog', { name: 'Bản vẽ đang chọn' });
+    await expect(sheet.getByRole('heading', { level: 2, name: `E2E ĐT phòng 1 ${stamp}` })).toBeVisible();
+    await expect(sheet.getByRole('button', { name: /^Sửa/ })).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
 });
 
-test.describe('Sơ đồ mạng — Bỏ bản nháp, Xóa hẳn (Q-23)', () => {
-  test('Bỏ bản nháp: hộp xác nhận nói số lần lưu, xoá các lần lưu sau bản chính thức, lịch sử ghi một dòng', async ({ page }) => {
+test.describe('Sơ đồ mạng — Bỏ nháp từ một bản chọn, Xóa hẳn (Q-23)', () => {
+  test('chính thức #1, nháp #2–#4: tick #3 → #4 theo; xoá #3–#4, giữ #2; lịch sử + nhật ký ghi dải', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const name = `E2E Bỏ nháp ${uniqueStamp()}`;
     const id = await createDiagram(page, name);
@@ -151,20 +253,48 @@ test.describe('Sơ đồ mạng — Bỏ bản nháp, Xóa hẳn (Q-23)', () => 
     await publish(page, id, v1.id);
     await save(page, id, 'Bản 2 E2E');
     await save(page, id, 'Bản 3 E2E');
+    await save(page, id, 'Bản 4 E2E');
 
     await page.goto(`/diagrams?node=${id}`);
-    await rowAction(page, name, 'Bỏ bản nháp');
+    const drafts = panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 3' });
+    await drafts.getByRole('checkbox', { name: 'Chọn nháp #3' }).check();
+    await expect(drafts.getByRole('checkbox', { name: 'Chọn nháp #4' })).toBeChecked();
+    await expect(drafts.getByRole('checkbox', { name: 'Chọn nháp #2' })).not.toBeChecked();
+    await expect(drafts.getByText('Đã chọn #3–#4')).toBeVisible();
+    await drafts.getByRole('button', { name: 'Xóa 2 bản nháp' }).click();
     const confirm = page.getByRole('dialog', { name: `Bỏ 2 bản nháp của "${name}"?` });
-    await expect(confirm).toContainText('Xóa vĩnh viễn 2 lần lưu #2–#3, giữ bản chính thức v1.');
+    await expect(confirm).toContainText('Xóa vĩnh viễn 2 lần lưu #3–#4, giữ bản chính thức v1, cùng các lần lưu trước #3.');
     await confirm.getByRole('button', { name: 'Bỏ bản nháp' }).click();
-    await expect(page.getByText(`Đã bỏ 2 bản nháp (#2–#3) của "${name}".`)).toBeVisible();
-    await expect(page.getByRole('listitem').filter({ hasText: name }).getByText('Chính thức v1')).toBeVisible();
-    expect(seqsOf(id)).toBe('1');
-    expect(sql(`SELECT changes->>'ranges' FROM diagram_history WHERE diagram_id = '${id}' AND action = 'versions.discarded'`)).toBe('#2–#3');
+    await expect(page.getByText(`Đã bỏ 2 bản nháp (#3–#4) của "${name}".`)).toBeVisible();
+    await expect(panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 1' })).toBeVisible();
+    expect(seqsOf(id)).toBe('1,2');
+    expect(sql(`SELECT changes->>'ranges' || '|' || (changes->>'fromSeq') FROM diagram_history WHERE diagram_id = '${id}' AND action = 'versions.discarded'`)).toBe('#3–#4|3');
     expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.drafts_discarded' AND object_id = '${id}'`)).toBe('1');
+    // Gọi thẳng API với số không nằm sau bản chính thức → 400, không xoá gì.
+    const bad = await page.request.post(`/api/v1/diagrams/${id}/drafts/discard`, { headers: await writeHeaders(page), data: { fromSeq: 1 }, failOnStatusCode: false });
+    expect(bad.status()).toBe(400);
+    expect(((await bad.json()) as { code: string }).code).toBe('DIAGRAM_DRAFT_FROM_INVALID');
+    expect(seqsOf(id)).toBe('1,2');
   });
 
-  test('Bỏ bản nháp bị chặn khi có yêu cầu phát hành chờ duyệt trỏ vào bản nháp; không xoá gì', async ({ browser, page }) => {
+  test('hết ân hạn: panel không tự hỏi mã; "Nhập mã để xem lịch sử" hỏi mã rồi hiện khu nháp', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const name = `E2E Khoá lịch sử ${uniqueStamp()}`;
+    const id = await createDiagram(page, name);
+    await stepUpViaApi(page, secret, 'diagram');
+    await save(page, id, 'Bản 1 E2E');
+    expireStepUp(E2E_SA.email);
+
+    await page.goto(`/diagrams?node=${id}`);
+    const unlock = panel(page).getByRole('button', { name: 'Nhập mã để xem lịch sử' });
+    await expect(unlock).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toHaveCount(0);
+    await unlock.click();
+    await fillOtp(page.getByRole('dialog', { name: 'Xác nhận danh tính' }), await freshTotpCode(secret));
+    await expect(panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 1' })).toBeVisible();
+  });
+
+  test('Bỏ nháp bị chặn khi có yêu cầu phát hành chờ duyệt trỏ vào bản nháp; không xoá gì', async ({ browser, page }) => {
     const saSecret = await firstLogin(page, E2E_SA);
     const name = `E2E Nháp chờ duyệt ${uniqueStamp()}`;
     const id = await createDiagram(page, name);
@@ -180,7 +310,9 @@ test.describe('Sơ đồ mạng — Bỏ bản nháp, Xóa hẳn (Q-23)', () => 
     expect(submitted.status(), await submitted.text()).toBe(201);
 
     await page.goto(`/diagrams?node=${id}`);
-    await rowAction(page, name, 'Bỏ bản nháp');
+    const drafts = panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 1' });
+    await drafts.getByRole('checkbox', { name: 'Chọn nháp #2' }).check();
+    await drafts.getByRole('button', { name: 'Xóa 1 bản nháp' }).click();
     await expect(page.getByText(/người gửi rút yêu cầu trước rồi mới bỏ bản nháp/)).toBeVisible();
     await expect(page.getByRole('dialog', { name: /^Bỏ \d+ bản nháp/ })).toHaveCount(0);
     // Gọi thẳng API cũng bị chặn (409), không phiên bản nào mất.
@@ -188,9 +320,10 @@ test.describe('Sơ đồ mạng — Bỏ bản nháp, Xóa hẳn (Q-23)', () => 
     expect(direct.status()).toBe(409);
     expect(((await direct.json()) as { code: string }).code).toBe('DIAGRAM_DISCARD_PENDING');
     expect(seqsOf(id)).toBe('1,2');
+    await member.context().close();
   });
 
-  test('Xóa hẳn bản chưa phát hành: hỏi mã, gõ lại tên, thẻ biến mất, còn bia mộ + nhật ký', async ({ page }) => {
+  test('Xóa hẳn bản chưa phát hành: hỏi mã, gõ lại tên, ô biến mất, còn bia mộ + nhật ký', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const root = await createDiagram(page, `E2E Gốc xóa ${stamp}`);
@@ -201,7 +334,7 @@ test.describe('Sơ đồ mạng — Bỏ bản nháp, Xóa hẳn (Q-23)', () => 
     // Hết ân hạn: Xóa hẳn phải hỏi mã sơ đồ tại chỗ.
     expireStepUp(E2E_SA.email);
 
-    await page.goto(`/diagrams?node=${root}`);
+    await page.goto(`/diagrams?node=${id}`);
     await rowAction(page, name, 'Xóa hẳn');
     const confirm = page.getByRole('dialog', { name: `Xóa hẳn "${name}"?` });
     const go = confirm.getByRole('button', { name: 'Xóa hẳn' });
@@ -211,7 +344,7 @@ test.describe('Sơ đồ mạng — Bỏ bản nháp, Xóa hẳn (Q-23)', () => 
     const stepUp = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
     await fillOtp(stepUp, await freshTotpCode(secret));
     await expect(page.getByText(`Đã xóa hẳn "${name}".`)).toBeVisible();
-    await expect(page.getByRole('link', { name, exact: true })).toHaveCount(0);
+    await expect(mapItem(page, name)).toHaveCount(0);
     expect(sql(`SELECT deleted_by FROM diagram WHERE id = '${id}'`)).toBe(E2E_SA.email);
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${id}'`)).toBe('0');
     expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.deleted' AND object_id = '${id}'`)).toBe('1');

@@ -149,13 +149,12 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     await expect(member.getByRole('link', { name: 'Mở bản gốc' })).toHaveAttribute('href', `/diagrams/${source.id}`);
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${presId}'`)).toBe('2');
 
-    // Cây: bản trình bày gom dưới nhóm "Trình bày (n)", thẻ kèm dấu bản gốc có bản mới.
-    await member.goto('/diagrams?node=presentations');
-    const section = member.getByRole('list', { name: 'Các bản trình bày' });
-    await expect(section.getByRole('link', { name: presName })).toBeVisible();
-    await expect(section).toContainText('Bản gốc đã có phiên bản mới (2)');
-    const tree = member.getByRole('tree', { name: 'Cây bản vẽ' });
-    await expect(tree.getByRole('treeitem', { name: /^Trình bày \(\d+\)$/ })).toHaveAttribute('aria-expanded', 'true');
+    // Bản đồ: bản trình bày đứng ngoài, ở dải "Bản trình bày (n)"; panel báo bản gốc có bản mới.
+    await member.goto(`/diagrams?node=${presId}`);
+    const map = member.getByRole('region', { name: 'Bản đồ bản vẽ' });
+    await expect(map.getByRole('heading', { name: /^Bản trình bày \(\d+\)$/ })).toBeVisible();
+    await expect(map.getByRole('button', { name: presName, exact: true })).toHaveAttribute('aria-current', 'true');
+    await expect(member.getByRole('complementary', { name: 'Bản vẽ đang chọn' })).toContainText('Bản gốc đã có phiên bản mới (2)');
 
     // Màn xem (màn đọc) ở 390px: dải vẫn đọc được, không tràn ngang.
     await member.setViewportSize({ width: 390, height: 844 });
@@ -265,11 +264,13 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     expect(sql(`SELECT count(*) FROM diagram WHERE id IN ('${saCopyId}', '${source.id}') AND archived_at IS NULL`)).toBe('2');
     expect(sql(`SELECT name FROM diagram WHERE id = '${saCopyId}'`)).toBe(`E2E Bản SA ${stamp}`);
 
-    // Trên cây: bản của SA không có thao tác; bản của mình đổi tên rồi lưu trữ được.
-    await member.goto('/diagrams?node=presentations');
-    const section = member.getByRole('list', { name: 'Các bản trình bày' });
-    await expect(section.getByRole('link', { name: `E2E Bản SA ${stamp}` })).toBeVisible();
+    // Trên bản đồ: bản của SA không có thao tác; bản của mình đổi tên rồi lưu trữ được.
+    await member.goto(`/diagrams?node=${saCopyId}`);
+    const section = member.getByRole('region', { name: 'Bản đồ bản vẽ' });
+    await expect(section.getByRole('button', { name: `E2E Bản SA ${stamp}`, exact: true })).toBeVisible();
+    await expect(member.getByRole('complementary', { name: 'Bản vẽ đang chọn' }).getByRole('heading', { level: 2, name: `E2E Bản SA ${stamp}` })).toBeVisible();
     await expect(member.getByRole('button', { name: `Thao tác với E2E Bản SA ${stamp}` })).toHaveCount(0);
+    await section.getByRole('button', { name: `E2E Bản của tôi ${stamp}`, exact: true }).click();
     await member.getByRole('button', { name: `Thao tác với E2E Bản của tôi ${stamp}` }).click();
     await member.getByRole('menuitem', { name: 'Đổi tên' }).click();
     const rename = member.getByRole('dialog', { name: `Đổi tên "E2E Bản của tôi ${stamp}"` });
@@ -279,7 +280,7 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
       member.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${mineId}`) && r.request().method() === 'PATCH' && r.status() === 200),
       rename.getByRole('button', { name: 'Lưu', exact: true }).click(),
     ]);
-    await expect(section.getByRole('link', { name: `E2E Bản đổi tên ${stamp}` })).toBeVisible();
+    await expect(section.getByRole('button', { name: `E2E Bản đổi tên ${stamp}`, exact: true })).toBeVisible();
 
     await member.getByRole('button', { name: `Thao tác với E2E Bản đổi tên ${stamp}` }).click();
     await member.getByRole('menuitem', { name: 'Lưu trữ' }).click();
@@ -288,7 +289,7 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
       member.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${mineId}/archive`) && r.status() === 201),
       confirm.getByRole('button', { name: 'Lưu trữ' }).click(),
     ]);
-    await expect(section.getByRole('link', { name: `E2E Bản đổi tên ${stamp}` })).toHaveCount(0);
+    await expect(section.getByRole('button', { name: `E2E Bản đổi tên ${stamp}`, exact: true })).toHaveCount(0);
     expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.archived' AND object_id = '${mineId}' AND actor = '${E2E_MEMBER.email}'`)).toBe('1');
   });
 });

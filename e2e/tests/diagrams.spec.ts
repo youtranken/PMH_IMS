@@ -127,20 +127,20 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await createSwitch(page, codeB);
     const name = `E2E Tổng công ty ${stamp}`;
 
-    // Cây: xem không cần mã; tạo gốc bằng giao diện.
+    // Bản đồ: xem không cần mã; tạo gốc bằng giao diện — bản vừa tạo được chọn, panel hiện ra.
     await page.goto('/diagrams');
     await expect(page.getByRole('heading', { level: 1, name: 'Sơ đồ mạng' })).toBeVisible();
-    await page.getByRole('button', { name: 'Thêm bản vẽ' }).click();
+    await page.getByRole('button', { name: 'Thêm bản vẽ', exact: true }).click();
     const form = page.getByRole('dialog', { name: 'Thêm bản vẽ' });
     await form.getByLabel('Tên bản vẽ').fill(name);
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByText(`Đã tạo bản vẽ "${name}".`)).toBeVisible();
-    const link = page.getByRole('link', { name });
-    await expect(link).toBeVisible();
+    const panel = page.getByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    await expect(panel.getByRole('heading', { level: 2, name })).toBeVisible();
     await expect(page.getByText('Chưa vẽ').first()).toBeVisible();
 
     // Mở: nội dung hỏi mã PHẠM VI SƠ ĐỒ (mã đăng nhập không mở phạm vi nào — AD-17).
-    await link.click();
+    await panel.getByRole('button', { name: 'Mở xem' }).click();
     await expect(stepUpDialog(page)).toBeVisible();
     await expect(stepUpDialog(page).getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeVisible();
     await fillOtp(stepUpDialog(page), await freshTotpCode(secret));
@@ -178,9 +178,9 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
 
     // Mỗi lần tải nội dung một dòng nhật ký (NFR-03).
     expect(Number(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.viewed' AND object_id = '${id}'`))).toBeGreaterThanOrEqual(3);
-    // Cây hiện trạng thái bản nháp (thẻ "Bản vẽ này" của nút đang chọn).
+    // Bản đồ hiện trạng thái bản nháp (chữ trên panel của bản vẽ đang chọn).
     await page.goto(`/diagrams?node=${id}`);
-    await expect(page.getByRole('listitem').filter({ hasText: name }).getByText('Bản nháp')).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Bản vẽ đang chọn' }).getByText('Bản nháp', { exact: true })).toBeVisible();
 
     expect(outsideHost(requests, baseURL!)).toEqual([]);
   });
@@ -226,7 +226,10 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await fillOtp(stepUpDialog(page), await freshTotpCode(secret));
     await expect(page.getByText(`Đã tạo bản vẽ "E2E Tầng con ${stamp}" — nhân bản từ "${parentName}" phiên bản #1.`)).toBeVisible();
 
-    await page.getByRole('link', { name: `E2E Tầng con ${stamp}` }).click();
+    // Bản con vừa tạo được chọn: mở từ panel.
+    const panel = page.getByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    await expect(panel.getByRole('heading', { level: 2, name: `E2E Tầng con ${stamp}` })).toBeVisible();
+    await panel.getByRole('button', { name: 'Mở xem' }).click();
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toContainText('Tầng 3 E2E');
     await diagramBarAction(page, 'Phiên bản');
     await expect(page.getByRole('dialog', { name: 'Phiên bản và lịch sử' }).getByText(new RegExp(`^Nhân bản từ "${parentName}" phiên bản #1`))).toBeVisible();
@@ -403,7 +406,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect((await saveViaApi(page, id)).status()).toBe(201);
 
     await page.goto(`/diagrams?node=${id}`);
-    await expect(page.getByRole('link', { name })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Bản đồ bản vẽ' }).getByRole('button').filter({ has: page.getByText(name, { exact: true }) }).first()).toBeVisible();
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(390);
 
