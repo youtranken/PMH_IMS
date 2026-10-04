@@ -1890,6 +1890,38 @@ table.access-grid thead tr:last-child th {
   justify-content: center;
   gap: var(--space-4);
 }
+/* Danh sách bước đánh số (ui/step-list.tsx): số tròn vẽ bằng counter để không lọt vào chữ bước. */
+.step-list {
+  counter-reset: step;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+}
+.step-list li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.step-list li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xs);
+}
 .error-state {
   min-height: 60vh;
   display: flex;

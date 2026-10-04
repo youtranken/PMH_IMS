@@ -466,6 +466,10 @@
   gap: var(--space-3);
   min-width: 0;
 }
+/* Nút (i) giải thích đứng sát việc nó giải thích, không cách một khoảng như hai nút khác nhau. */
+.full-bar-actions > .info-tip {
+  margin-left: calc(-1 * var(--space-2));
+}
 .full-bar-search {
   width: 260px;
 }

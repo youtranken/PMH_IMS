@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/ui/confirm-dialog';
 import { DiagramViewer, type ViewerCell, type ViewerDiff } from '@/ui/diagram-viewer';
 import { DrawioFrame, readCablePalette, type DrawioFrameHandle } from '@/ui/drawio-frame';
 import { exportedSvgText, paintImsXml, type DrawioEvent } from '@/ui/drawio-protocol';
+import { InfoTip } from '@/ui/info-tip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Popover } from '@/ui/popover';
 import { Tabs } from '@/ui/tabs';
@@ -46,6 +47,7 @@ import { DiagramDeviceCard } from './diagram-device-card';
 import { placeFreeCells, type FreeCellSpec } from './diagram-presentation';
 import { canCreatePresentation, CreatePresentationDialog, PresentationBand, usePresentationTools } from './diagram-presentation-tools';
 import { BarAnchorProvider, BarButton, BarMenu, type BarAction } from './diagram-bar';
+import { DiagramGuideDialog, EditStartCard } from './diagram-guide';
 import { DiagramSubnetCard } from './diagram-subnet-card';
 import { DriftCheckDialog, withDriftMarks } from './diagram-drift';
 import { PinModeToggle, useDiagramReview } from './diagram-review';
@@ -623,6 +625,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const primary = (
     <>
       {inView ? searchTool : null}
+      {inView && searchTool ? <InfoTip subject={t('diagrams.nav.search')}>{t('diagrams.help.search')}</InfoTip> : null}
       {inView && reviewActs && review.pinMode ? <PinModeToggle active onToggle={review.togglePinMode} /> : null}
       {inView ? reviewPrimary.map((action) => <BarButton key={action.key} action={action} />) : null}
       {toolbar === 'timeline' ? timelineMenu : null}
@@ -703,6 +706,9 @@ function ScreenFrame({
 }) {
   const { t } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  // "Hướng dẫn" luôn ở cuối menu, ở mọi chế độ (Q-23: màn dùng được ngay không cần học).
+  const items: BarAction[] = [...menu, { key: 'guide', label: t('diagrams.guide.menu'), onSelect: () => setGuideOpen(true) }];
   return (
     <>
       <div className="full-bar">
@@ -713,7 +719,7 @@ function ScreenFrame({
           <div className="full-bar-actions">
             {primary}
             <span ref={setAnchor} className="full-bar-more">
-              <BarMenu label={t('diagrams.actionsOf', { name: title })} subject={title} items={menu} />
+              <BarMenu label={t('diagrams.actionsOf', { name: title })} subject={title} items={items} />
             </span>
             {popovers}
           </div>
@@ -723,6 +729,7 @@ function ScreenFrame({
       {band}
       <div className="full-stage">{body}</div>
       {dialogs}
+      {guideOpen ? <DiagramGuideDialog onClose={() => setGuideOpen(false)} /> : null}
     </>
   );
 }
@@ -770,6 +777,7 @@ function DiagramEditor({
   const frame = useRef<DrawioFrameHandle>(null);
   const [ready, setReady] = useState(false);
   const [dirty, setDirtyState] = useState(false);
+  const [startDismissed, setStartDismissed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<VersionItem | null>(content.version);
   const [others, setOthers] = useState<{ fullName: string }[]>([]);
@@ -1103,9 +1111,11 @@ function DiagramEditor({
           <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
             <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
           </Popover>
+          <InfoTip subject={t('diagrams.stock.button')}>{t('diagrams.help.stock')}</InfoTip>
           <button type="button" className="btn primary" disabled={!ready || busy} onClick={() => frame.current?.send({ action: 'save' })}>
             {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
           </button>
+          <InfoTip subject={t('diagrams.screen.save')}>{t('diagrams.help.save')}</InfoTip>
         </>
       }
       menu={[
@@ -1139,6 +1149,7 @@ function DiagramEditor({
             initTimeoutSeconds={settings.initTimeoutSeconds}
             onEvent={onEvent}
           />
+          {!content.version && !dirty && !startDismissed ? <EditStartCard onDismiss={() => setStartDismissed(true)} /> : null}
           {cables.dialogs}
           {frames.dialogs}
           {photos.dialogs}

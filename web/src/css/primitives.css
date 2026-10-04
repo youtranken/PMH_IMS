@@ -862,6 +862,33 @@ button.btn-x.danger:hover:not(:disabled) {
   background: var(--surface);
 }
 
+/* Bản vẽ trống ở chế độ Sửa: thẻ các bước bắt đầu nổi trên trình vẽ, giữa khung, dưới thanh menu +
+   thanh công cụ của draw.io (~4.5rem) để không che chúng — không chặn cú bấm ra ngoài thẻ (người
+   dùng vẫn vẽ được ngay), ẩn khi bắt đầu vẽ hoặc bấm "Ẩn". */
+.diagram-start-card {
+  position: absolute;
+  top: 6rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 2;
+  width: min(30rem, calc(100% - 2 * var(--space-5)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+.diagram-start-card h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.diagram-start-card .btn {
+  align-self: flex-end;
+}
+
 /* Trình xem sơ đồ (`ui/diagram-viewer.tsx`): SVG đã làm sạch trong khung kéo/thu phóng được, watermark
    dùng chung lớp `.drawio-watermark`. Màn đặt chiều cao cho khối chứa, như `.drawio-frame`. */
 .diagram-viewer {

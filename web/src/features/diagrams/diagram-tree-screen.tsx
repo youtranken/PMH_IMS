@@ -11,6 +11,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { RowActions, type RowAction } from '@/ui/row-actions';
+import { StepList } from '@/ui/step-list';
 import { useToast } from '@/ui/toast';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { NODE_TYPE_KEY, TREE_KEY, statusLabel, type DiagramNode, type DiagramStatus } from './diagram-api';
@@ -78,7 +79,18 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   let body;
   if (tree.isPending) body = <Loading />;
   else if (tree.isError) body = <LoadError error={tree.error} onRetry={() => void tree.refetch()} />;
-  else if (nodes.length === 0) body = <EmptyState title={t('diagrams.emptyTitle')} hint={t('diagrams.emptyHint')} />;
+  else if (nodes.length === 0) {
+    // Màn trống nói luôn cả lộ trình, không chỉ bước đầu: người mới mở không biết cây dùng thế nào.
+    body = (
+      <>
+        <EmptyState title={t('diagrams.emptyTitle')} hint={t('diagrams.emptyHint')} />
+        <StepList
+          label={t('diagrams.stepsLabel')}
+          steps={[t('diagrams.treeSteps.root'), t('diagrams.treeSteps.child'), t('diagrams.treeSteps.open'), t('diagrams.treeSteps.publish')]}
+        />
+      </>
+    );
+  }
   else {
     body = (
       <ul className="tree-list" aria-label={t('diagrams.treeLabel')}>
@@ -134,6 +146,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('diagrams.title')}
+        titleTip={t('diagrams.titleTip')}
         subtitle={t('diagrams.subtitle')}
         actions={
           <button type="button" className="btn primary" onClick={() => setEditing({ parent: null })}>

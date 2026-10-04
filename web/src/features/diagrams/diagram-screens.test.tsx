@@ -111,9 +111,11 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
     for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận', 'Tạo bản trình bày']) expect(screen.queryByRole('button', { name })).toBeNull();
     expect(screen.getByRole('button', { name: 'Tìm' })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
-    const items = (await screen.findAllByRole('menuitem')).map((el) => el.textContent);
-    expect(items).toContain('Chỉ đường');
-    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận', 'Tạo bản trình bày']) expect(items).not.toContain(name);
+    // Tên mục, không phải textContent: mục menu có thêm dòng mô tả (aria-hidden) dưới tên.
+    expect(await screen.findByRole('menuitem', { name: 'Chỉ đường' })).toBeInTheDocument();
+    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận', 'Tạo bản trình bày']) {
+      expect(screen.queryByRole('menuitem', { name })).toBeNull();
+    }
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content?mode=view'))).toBe(true);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/presence'))).toBe(false);
   });
@@ -182,7 +184,9 @@ describe('Cây bản vẽ', () => {
     // Mã đủ 6 số là tự gửi; lượt sau gọi lại đúng yêu cầu nhân bản.
     expect(await screen.findByText('Đã tạo bản vẽ "Tầng 2 E2E" — nhân bản từ "Tổng công ty E2E" phiên bản #3.')).toBeInTheDocument();
     expect(dialog).not.toBeInTheDocument();
-    const body = fetchMock.mock.calls.filter(([url]) => String(url).includes('/copied-children')).map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+    const body = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][])
+      .filter(([url]) => String(url).includes('/copied-children'))
+      .map(([, init]) => JSON.parse(String(init?.body)) as unknown);
     expect(body.at(-1)).toEqual({ name: 'Tầng 2 E2E', nodeType: 'floor' });
   });
 
