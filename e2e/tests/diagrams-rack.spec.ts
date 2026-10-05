@@ -75,9 +75,33 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'U bắt đầu' }).fill('6');
     await form.getByRole('textbox', { name: 'Số U' }).fill('1');
-    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await expect(form.getByRole('alert')).toContainText(`U6 trong tủ đang có ${holder} (Switch ${holder}) chiếm`);
+    // Chồng U báo NGAY tại ô (trước khi lưu), không gửi gì; câu dưới ô nói máy nằm ở đâu.
+    await expect(form.getByRole('alert')).toContainText(`U6 đang có ${holder}`);
+    await form.getByRole('textbox', { name: 'Số U' }).fill('2');
+    await expect(form.getByRole('alert')).toContainText(`U6–U7 đang có ${holder}`);
+    await form.getByRole('textbox', { name: 'Số U' }).fill('1');
 
+    // "Xem tủ": mặt đứng 12U, máy 2U chiếm U5 và U6; bấm U9 trống thì điền "U bắt đầu".
+    await form.getByRole('button', { name: 'Xem tủ' }).click();
+    const view = page.getByRole('dialog', { name: `Tủ ${rack.siteCode} · ${rack.cabinetCode} (12U)` });
+    const units = view.getByRole('list', { name: `Các U của tủ ${rack.siteCode} · ${rack.cabinetCode}` });
+    await expect(units.getByRole('listitem')).toHaveCount(12);
+    await expect(units.getByRole('listitem').nth(6)).toContainText(`U6${holder}`);
+    await expect(units.getByRole('listitem').nth(7)).toContainText(`U5${holder}`);
+    await units.getByRole('button', { name: 'Đặt máy ở U9' }).click();
+    await expect(view).toHaveCount(0);
+    await expect(form.getByRole('textbox', { name: 'U bắt đầu' })).toHaveValue('9');
+    await expect(form.getByText('Thiết bị nằm ở U9.')).toBeVisible();
+
+    // Server vẫn là trọng tài: chiếm chỗ qua API ngay trước khi lưu → lỗi server gắn vào ô U.
+    const sneak = await createDevice(page, rack, `SW-E2E-UE${rack.stamp}`, { rackUStart: 9, rackUSize: 1 });
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(form.getByRole('alert')).toContainText(`U9 trong tủ đang có SW-E2E-UE${rack.stamp}`);
+    const freed = await page.request.patch(`/api/v1/devices/${sneak}`, {
+      headers: await writeHeaders(page),
+      data: { rackUStart: null, rackUSize: null, cabinetId: null },
+    });
+    expect(freed.status(), await freed.text()).toBe(200);
     await form.getByRole('textbox', { name: 'U bắt đầu' }).fill('9');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form).toBeHidden();

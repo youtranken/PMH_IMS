@@ -1825,3 +1825,46 @@ button.btn-x.danger:hover:not(:disabled) {
     border-radius: var(--r);
   }
 }
+
+/* Mặt đứng tủ rack (ui/rack-elevation.tsx): mỗi U một dòng, U cao nhất ở trên; dòng có máy tô
+   nền nhạt, dòng của máy đang sửa tô màu chính — trạng thái có CHỮ (mã máy / "Trống"), không chỉ màu. */
+.rack-el {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.rack-el-row {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+.rack-el-row:last-child {
+  border-bottom: none;
+}
+.rack-el-u {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rack-el-row[data-state='taken'] {
+  background: var(--surface-2);
+}
+.rack-el-row[data-state='self'] {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: var(--fw-semibold);
+}
+.rack-el-device {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+.rack-view-cell {
+  justify-content: flex-end;
+}

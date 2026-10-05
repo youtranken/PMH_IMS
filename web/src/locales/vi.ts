@@ -82,6 +82,12 @@ export default {
     /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
     retiredOption: '(ngừng dùng)',
   },
+  rack: {
+    unitsOf: 'Các U của tủ {{name}}',
+    free: 'Trống',
+    pick: 'Đặt máy ở U{{u}}',
+    self: '{{code}} (máy này)',
+  },
   stepper: {
     dec: 'Giảm {{subject}}',
     inc: 'Tăng {{subject}}',
@@ -1480,6 +1486,13 @@ export default {
     rackUStartNoun: 'U bắt đầu',
     rackUPair: 'Ghi cả "U bắt đầu" và "Số U", hoặc bỏ trống cả hai.',
     rackURange: 'Số nguyên từ 1 tới 60.',
+    rackAtOne: 'Thiết bị nằm ở {{unit}}.',
+    rackAtMany: 'Chiếm {{unit}} (U1 ở đáy tủ, máy chiếm dần lên trên).',
+    rackTaken: '{{unit}} đang có {{code}} — chọn U khác (bấm "Xem tủ" để thấy chỗ trống).',
+    rackView: 'Xem tủ',
+    rackViewTitle: 'Tủ {{name}} ({{height}}U)',
+    rackViewHint: 'U1 ở đáy tủ. Bấm một U trống để đặt máy vào đó.',
+    rackViewHintReadOnly: 'U1 ở đáy tủ. Sửa vị trí trên máy tính.',
     photosTitle: 'Ảnh thật trên sơ đồ',
     photosHint:
       'Ảnh mặt trước / mặt sau hiện trên bản vẽ khi người vẽ bật "Ảnh thật", và trong khung tủ. Ảnh riêng của máy (chọn từ giấy tờ đính kèm ở trên, ảnh JPG/PNG) đè ảnh theo model.',

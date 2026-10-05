@@ -1,6 +1,11 @@
 import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { errorMessage, useApiMutation } from '@/lib/api';
+import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
+import { apiFetch } from '@/lib/api-client';
+import { rackClash, rackPlacement, rackUnitLabel, type RackOccupant } from '@/lib/rack-units';
+import { RackElevation } from '@/ui/rack-elevation';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
@@ -173,6 +178,7 @@ export function DeviceForm({
         return { ...current, siteId: value as string, cabinetId: '', rackUStart: '', rackUSize: '' };
       }
       // Bỏ tủ thì máy không còn chỗ U nào.
+      if (key === 'cabinetId' || key === 'rackUStart' || key === 'rackUSize') setRackServerError(null);
       if (key === 'cabinetId' && !value) {
         return { ...current, cabinetId: '', rackUStart: '', rackUSize: '' };
       }
@@ -183,13 +189,40 @@ export function DeviceForm({
   const cabinets = (lists.data?.cabinets ?? []).filter(
     (cabinet) => !form.siteId || cabinet.siteId === form.siteId,
   );
+  const cabinet = (lists.data?.cabinets ?? []).find((c) => c.id === form.cabinetId) ?? null;
+  const cabinetLabel = cabinet ? `${cabinet.siteCode} · ${cabinet.code}` : '';
+  /*
+   * Máy đang ở tủ đã chọn (danh sách mặc định đã trừ máy thanh lý — máy đó rời tủ thật): form báo
+   * chồng U tại ô TRƯỚC khi lưu. Server vẫn là trọng tài (khoá theo tủ + ràng buộc EXCLUDE).
+   */
+  const occupants = useQuery({
+    queryKey: ['devices', 'cabinet-occupants', form.cabinetId],
+    queryFn: () =>
+      apiFetch<{ items: DeviceRow[] }>(`/api/v1/devices?${new URLSearchParams({ cabinetId: form.cabinetId, limit: '200' }).toString()}`),
+    enabled: Boolean(form.cabinetId),
+    select: (page): RackOccupant[] =>
+      (page.items ?? [])
+        .filter((row) => row.rackUStart != null && row.rackUSize != null)
+        .map((row) => ({ id: row.id, code: row.code, start: Number(row.rackUStart), size: Number(row.rackUSize) })),
+  });
+  const placement = form.cabinetId ? rackPlacement(form.rackUStart, form.rackUSize) : null;
+  const clash = placement
+    ? rackClash({ start: Number(form.rackUStart), size: Number(form.rackUSize) }, occupants.data ?? [], device?.id ?? null)
+    : null;
+  const clashText = clash
+    ? t('devices.rackTaken', { unit: rackUnitLabel(Number(form.rackUStart), Number(form.rackUSize)), code: clash.code })
+    : null;
+  /** Lỗi chồng U của server — gắn vào ô "U bắt đầu"; đổi tủ / U thì bỏ. */
+  const [rackServerError, setRackServerError] = useState<string | null>(null);
+  const [rackOpen, setRackOpen] = useState(false);
+  const narrow = useIsNarrow();
 
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
     name: !form.name.trim() && t('formErrors.required'),
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
     note: secretTextRule(t, form.note),
-    rackUStart: rackRule(t, form, form.rackUStart),
+    rackUStart: rackRule(t, form, form.rackUStart) || clashText || false,
     rackUSize: rackRule(t, form, form.rackUSize),
   });
 
@@ -236,7 +269,10 @@ export function DeviceForm({
           onSaved(result, { keepOpen });
         })();
       },
-      onError: (err) => setError(errorMessage(err)),
+      onError: (err) => {
+        if (errorCode(err) === 'DEVICE_RACK_U_TAKEN') setRackServerError(errorMessage(err));
+        else setError(errorMessage(err));
+      },
     });
   };
 
@@ -414,7 +450,12 @@ export function DeviceForm({
               chồng U với máy khác, báo tên máy đang chiếm. */}
           {form.cabinetId ? (
             <>
-              <Field label={t('devices.rackUStart')} hint={t('devices.rackUStartHint')} htmlFor="device-rack-u-start" error={check.error('rackUStart')}>
+              <Field
+                label={t('devices.rackUStart')}
+                hint={placement ? t(placement.key, { unit: placement.unit }) : t('devices.rackUStartHint')}
+                htmlFor="device-rack-u-start"
+                error={check.error('rackUStart') || clashText || rackServerError}
+              >
                 <NumberStepper
                   id="device-rack-u-start"
                   label={t('devices.rackUStartNoun')}
@@ -434,6 +475,11 @@ export function DeviceForm({
                   onChange={(value) => set('rackUSize', value)}
                 />
               </Field>
+              <div className="field rack-view-cell">
+                <button type="button" className="btn" onClick={() => setRackOpen(true)}>
+                  {t('devices.rackView')}
+                </button>
+              </div>
             </>
           ) : null}
           <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
@@ -541,6 +587,32 @@ export function DeviceForm({
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}
+
+        {rackOpen && form.cabinetId ? (
+          <Dialog
+            open
+            onOpenChange={() => setRackOpen(false)}
+            maxWidth={420}
+            title={t('devices.rackViewTitle', { name: cabinetLabel, height: cabinet?.uHeight ?? '?' })}
+          >
+            <p className="muted small">{t(narrow ? 'devices.rackViewHintReadOnly' : 'devices.rackViewHint')}</p>
+            <RackElevation
+              label={cabinetLabel}
+              height={cabinet?.uHeight ?? null}
+              occupants={occupants.data ?? []}
+              selfId={device?.id ?? null}
+              onPick={
+                narrow
+                  ? undefined
+                  : (u) => {
+                      set('rackUStart', String(u));
+                      if (!form.rackUSize.trim()) set('rackUSize', '1');
+                      setRackOpen(false);
+                    }
+              }
+            />
+          </Dialog>
+        ) : null}
 
       </form>
     </Dialog>
