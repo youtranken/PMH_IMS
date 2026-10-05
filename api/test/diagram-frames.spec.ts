@@ -194,10 +194,11 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
       expect(xml).toContain(`ims_cabinet_id="${cabinetId}"`);
       expect(xml).toContain('Tầng anh');
       expect(xml).toContain('VLAN sắp ngừng');
-      // Bản đầu của con qua được đúng cổng của lần lưu: lưu lại y nguyên thì không bị từ chối.
+      // Bản đầu của con qua được đúng cổng của lần lưu: lưu lại y nguyên thì không bị từ chối (cổng
+      // khung chạy trước; y nguyên nên không thêm phiên bản — Q-23).
       await expect(
         service.save(SA.email, child.id, { xml, svg: SVG, basedOnVersionId: content.version!.id }),
-      ).resolves.toMatchObject({ seq: 2 });
+      ).resolves.toMatchObject({ seq: 1, unchanged: true });
       // Bản cha không đổi gì.
       const parent = await service.content(SA.email, root.id, { mode: 'edit' });
       expect(parent.version!.xml).toContain(sibling.id);
