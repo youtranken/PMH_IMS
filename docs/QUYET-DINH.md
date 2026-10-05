@@ -663,6 +663,45 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   - **Biểu tượng loại có màu như bảng hình của draw.io** (V-10): hình thư viện mạng chèn kèm tô
     + viền (màu từ token qua `PALETTE`) thay cho nét đen trên nền trắng; loại chưa chọn hình là
     khối "thiết bị chung" in tên loại. Màn Danh mục đánh dấu loại chưa có hình trên sơ đồ.
+- **Góp ý "Lỗi Sơ đồ mạng" (05/10/2026, chủ dự án; Claude chốt phương án an toàn ở các điểm còn
+  mở, ghi rõ bên dưới để chủ dự án xác nhận):**
+  - **Bẻ dây bằng điểm uốn của chính dây, không vẽ thêm nét nối.** Bản vẽ "PMH Tower" cho thấy
+    nguyên nhân lỗi đỏ "Dây 3-AA-IT-001 ↔ ?": người vẽ kéo một đầu dây đã khai ra chỗ trống rồi vẽ
+    thêm vài nét tự do cho vuông góc — dây mang kết nối nay một đầu thả nổi. Dây của kho là nét
+    vuông góc (`orthogonalEdgeStyle`); muốn đi đường khác thì kéo điểm uốn trên chính dây. Khai
+    từ một nét người vẽ cũng đổi nét đó sang vuông góc. Menu "Dây & kết nối" có **"Bẻ dây vuông
+    góc"** (mọi dây của kho trên trang sang kiểu vuông góc, giữ điểm uốn người vẽ đã kéo) và **"Tự
+    đi lại dây"** (bỏ điểm uốn, nối lại đầu dây lệch / thả nổi về đúng máy của kết nối khi máy đó
+    có trên trang). Hai việc áp cho MỌI dây của kho trên trang đang mở: giao thức nhúng draw.io
+    không báo đang chọn nét nào.
+  - **Bản sao nét đã khai là nét tự do** (nhân bản, dán — kể cả dán từ bản vẽ khác: nét mới mang
+    một kết nối không có ở lượt trước và IMS không biết tới thì gỡ gắn). Nét tự do chạm máy KHÔNG
+    phải lỗi. Chỉ nét mang kết nối mà hai đầu không đúng hai máy của kết nối mới đỏ; câu báo nêu
+    đủ hai máy + cổng của kết nối, đầu nào thả nổi / đang nối máy nào, và cách sửa: kéo đầu dây về
+    đúng máy, "Tự đi lại dây", hoặc xoá nét (chọn "Chỉ xoá nét vẽ") rồi "Vẽ vào".
+  - **Lưu mà không đổi gì không tạo phiên bản.** XML khô (sau dehydrate + tách ảnh) trùng phiên
+    bản mới nhất thì server không thêm phiên bản, không ghi lịch sử / nhật ký, trả phiên bản mới
+    nhất kèm `unchanged: true`. Web tắt nút Lưu khi chưa sửa gì; lượt lưu trùng báo "Không có thay
+    đổi để lưu".
+  - **"Xóa vĩnh viễn" bản vẽ đã lưu trữ — sửa luật 04/10 "bản chính thức, bản từng phát hành, bản
+    đặt tên giữ mãi" CHỈ cho bản đã lưu trữ.** Ai: Admin/SA (Thành viên không — bản chưa phát hành
+    của họ vẫn có "Xoá hẳn"). Ở khu "Đã lưu trữ". Điều kiện: bản vẽ đã được lưu trữ TRƯỚC đó (không
+    lưu trữ và xoá trong một bước), hỏi mã sơ đồ, gõ đúng tên, không còn bản vẽ con nào chưa xoá
+    vĩnh viễn (kể cả con đã lưu trữ — con treo dưới một bia mộ thì không bao giờ bỏ lưu trữ được),
+    không có yêu cầu chờ duyệt. Xoá phiên bản, tên phiên bản, bình luận, lệch kho, người đang sửa,
+    ảnh không còn ai dùng; giữ bia mộ + `diagram_history` + `audit_log` (`diagram.erased`: tên, số
+    phiên bản đã xoá, từng phát hành không). Bản trình bày nhân bản từ nó không chặn (bản tách rời)
+    — chỉ mất liên kết tới phiên bản nguồn. DB (0058): chế độ `erase` của `diagram_delete_versions`
+    chỉ chạy khi bản vẽ là bia mộ VÀ đã lưu trữ trước lượt xoá; bản chính thức / đặt tên / từng phát
+    hành của bản vẽ chưa lưu trữ vẫn không xoá được bằng bất kỳ đường nào.
+  - **Tủ mạng.** Ô máy trong khung tủ cao đúng Số U × 1U và nằm theo U trong kho (U1 ở đáy) — ảnh
+    thật nằm gọn trong ô U, tỉ lệ ảnh không đổi chiều cao. Kéo máy vào khung tủ thì IMS đặt lại
+    ngay đúng U (máy mà kho ghi cùng tủ với khung). **Máy kho ghi tủ KHÁC (hay chưa gắn tủ) thì
+    không đặt theo U, chỉ cảnh báo — IMS không bao giờ tự đổi tủ của máy trong kho** (câu hỏi cho
+    chủ dự án: có cần nút "Chuyển máy sang tủ này" ghi vào kho không? Hiện phải sửa ở trang thiết
+    bị). Nhãn máy trong khung tủ nằm bên PHẢI, một dòng (mã · IP), không đè lên U khác. "Chèn tủ
+    mạng" mà máy của tủ đã có trên trang thì dời chính ô đó vào khung (giữ id — dây vẫn gắn).
+    "Dựng lại mặt tủ" giữ id ô máy và giữ dây nối giữa các máy còn trên mặt tủ.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
