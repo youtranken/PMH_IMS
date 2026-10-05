@@ -265,6 +265,20 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     cells: content.data?.cells,
   });
 
+  /*
+   * Lưu xong mời bước kế tiếp ngay trên lời báo (E-06): Admin/SA "Phát hành #n", Thành viên
+   * "Gửi duyệt #n" (nháp của chính mình — vừa lưu). Bản trình bày không qua duyệt; đang có yêu cầu
+   * chờ thì không mời gửi thêm.
+   */
+  const manager = me.role === 'sa' || me.role === 'admin';
+  const nextStep =
+    node.data && node.data.kind === 'official' && !shelved && !node.data.pendingApprovalId
+      ? (saved: VersionItem) => ({
+          label: t(manager ? 'diagrams.panel.publish' : 'diagrams.panel.submit', { seq: saved.seq }),
+          onClick: () => (manager ? review.next.publish : review.next.submit)({ versionId: saved.id, seq: saved.seq }),
+        })
+      : null;
+
   const tabs = narrow || shelved ? null : (
     <Tabs
       ariaLabel={t('diagrams.screen.tabsLabel')}
@@ -415,6 +429,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         reviewMenu={[...reviewPrimary, ...reviewMenu]}
         reviewPopovers={reviewable ? review.popovers : null}
         reviewStatus={status}
+        nextStep={nextStep}
         dialogs={dialogs}
         band={band}
         content={content.data}
@@ -781,6 +796,7 @@ function DiagramEditor({
   reviewMenu,
   reviewPopovers,
   reviewStatus,
+  nextStep,
   dialogs,
   band,
   content,
@@ -801,6 +817,8 @@ function DiagramEditor({
   reviewPopovers: ReactNode;
   /** Thẻ "Chờ duyệt" / lỗi tải trang duyệt cho vùng trạng thái. */
   reviewStatus: ReactNode;
+  /** Nút bước kế tiếp gắn vào lời báo lưu xong (E-06); `null` = không mời gì. */
+  nextStep: ((saved: VersionItem) => { label: string; onClick: () => void }) | null;
   dialogs: ReactNode;
   band: ReactNode;
   content: DiagramContent;
@@ -980,7 +998,7 @@ function DiagramEditor({
        * nhưng không tải ngay — tải ngay là nạp lại khung đang vẽ.
        */
       void queryClient.invalidateQueries({ queryKey: ['diagram-content', diagramId], refetchType: 'none' });
-      toast({ tone: 'ok', message: t('diagrams.screen.saved', { seq: version.seq, summary: version.summary }) });
+      toast({ tone: 'ok', message: t('diagrams.screen.saved', { seq: version.seq, summary: version.summary }), action: nextStep?.(version) });
     } catch (error) {
       if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
     } finally {

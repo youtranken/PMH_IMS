@@ -4,7 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import type { DiagramDeviceInfo, DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 
@@ -133,6 +133,7 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
           : jsonResponse(201, { ...version, id: 'v2', seq: 2, summary: 'Thêm 1 thiết bị' });
       },
       '/api/v1/auth/step-up': () => jsonResponse(200, { status: 'stepped-up', scope: 'diagram', graceMinutes: 10 }),
+      '/api/v1/diagrams/d1/publish': () => jsonResponse(201, { versionId: 'v2', seq: 2, warnings: [] }),
       '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
     });
     const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], {
@@ -185,6 +186,19 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
     // Một lượt xin tệp + một lượt xin svg; nhập mã xong KHÔNG xin trình vẽ xuất lại.
     const exports = posted.mock.calls.filter(([data]) => String(data).includes('"action":"export"'));
     expect(exports).toHaveLength(2);
+
+    // E-06: lưu xong, lời báo mời bước kế tiếp — Admin/SA "Phát hành #2" phát hành ĐÚNG bản vừa lưu.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Phát hành #2' }));
+    const confirm = await screen.findByRole('dialog', { name: /#2/ });
+    await user.click(within(confirm).getByRole('button', { name: 'Phát hành' }));
+    await vi.waitFor(() =>
+      expect(
+        (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).some(
+          ([url, init]) => String(url).endsWith('/api/v1/diagrams/d1/publish') && JSON.parse(String(init?.body)).versionId === 'v2',
+        ),
+      ).toBe(true),
+    );
   });
 });
 

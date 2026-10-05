@@ -112,6 +112,12 @@ export async function refreshDiagram(queryClient: QueryClient, id: string): Prom
   );
 }
 
+/** Một phiên bản cụ thể để phát hành / gửi duyệt. */
+export interface VersionTarget {
+  versionId: string;
+  seq: number;
+}
+
 /**
  * Phát hành (Admin/SA) và Gửi duyệt phiên bản MỚI NHẤT của một bản vẽ, kèm hộp lý do và hộp lỗi
  * tự kiểm. Một luồng cho cả thanh màn bản vẽ (`useDiagramReview`) lẫn panel bản đồ /diagrams —
@@ -130,8 +136,9 @@ export function usePublishFlow({
   /** "Xem trên bản vẽ" ở hộp lỗi tự kiểm. Thiếu → hộp không có nút đó. */
   onGoToCell?: (cellId: string) => void;
 }): {
-  publish: () => Promise<void>;
-  openSubmit: () => void;
+  /** `target` = phiên bản cụ thể (lời báo "Lưu xong" — E-06); thiếu = phiên bản mới nhất. */
+  publish: (target?: VersionTarget) => Promise<void>;
+  openSubmit: (target?: VersionTarget) => void;
   fail: (error: unknown) => void;
   post: <T>(path: string, body?: unknown) => Promise<T>;
   dialogs: ReactNode;
@@ -142,7 +149,7 @@ export function usePublishFlow({
   const queryClient = useQueryClient();
   const id = diagram?.id ?? '';
   const editPurpose = t('diagrams.screen.stepUpEdit', { name: diagram?.name ?? '' });
-  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState<{ target: VersionTarget | null } | null>(null);
   const [findings, setFindings] = useState<{ errors: Finding[]; warnings: Finding[] } | null>(null);
 
   const fail = (error: unknown) => {
@@ -162,8 +169,8 @@ export function usePublishFlow({
       editPurpose,
     );
 
-  const publish = async () => {
-    const seq = diagram?.latestVersion?.seq ?? 0;
+  const publish = async (target?: VersionTarget) => {
+    const seq = target?.seq ?? diagram?.latestVersion?.seq ?? 0;
     const ok = await ask({
       title: t('diagrams.review.publishTitle', { seq }),
       message: t('diagrams.review.publishMessage'),
@@ -171,7 +178,7 @@ export function usePublishFlow({
     });
     if (!ok) return;
     try {
-      const result = await post<{ seq: number; warnings: Finding[] }>('/publish', {});
+      const result = await post<{ seq: number; warnings: Finding[] }>('/publish', target ? { versionId: target.versionId } : {});
       await refreshDiagram(queryClient, id);
       toast({
         tone: 'ok',
@@ -190,9 +197,10 @@ export function usePublishFlow({
       {submitOpen && diagram ? (
         <SubmitDialog
           diagram={diagram}
+          target={submitOpen.target}
           post={post}
           onDone={async (warnings) => {
-            setSubmitOpen(false);
+            setSubmitOpen(null);
             await refreshDiagram(queryClient, id);
             toast({
               tone: 'ok',
@@ -200,10 +208,10 @@ export function usePublishFlow({
             });
           }}
           onFindings={(found) => {
-            setSubmitOpen(false);
+            setSubmitOpen(null);
             setFindings(found);
           }}
-          onClose={() => setSubmitOpen(false)}
+          onClose={() => setSubmitOpen(null)}
         />
       ) : null}
       {findings ? (
@@ -227,7 +235,7 @@ export function usePublishFlow({
     </>
   );
 
-  return { publish, openSubmit: () => setSubmitOpen(true), fail, post, dialogs };
+  return { publish, openSubmit: (target) => setSubmitOpen({ target: target ?? null }), fail, post, dialogs };
 }
 
 /**
@@ -274,6 +282,8 @@ export function useDiagramReview({
   review: ReviewPage | null;
   pinMode: boolean;
   togglePinMode: () => void;
+  /** Phát hành / gửi duyệt ĐÚNG một phiên bản — nút trên lời báo "Lưu xong" của trình vẽ (E-06). */
+  next: { publish: (target: VersionTarget) => void; submit: (target: VersionTarget) => void };
   viewer: {
     pins: ViewerPin[];
     pickAnyCell: boolean;
@@ -347,9 +357,9 @@ export function useDiagramReview({
     if (canSend && manager) {
       // Admin/SA tự phát hành là việc chính; gửi người khác duyệt vẫn còn trong menu.
       primary.push({ key: 'publish', label: t('diagrams.review.publish'), disabledReason: sendReason, onSelect: () => void flow.publish() });
-      menu.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: flow.openSubmit });
+      menu.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: () => flow.openSubmit() });
     } else if (canSend) {
-      primary.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: flow.openSubmit });
+      primary.push({ key: 'submit', label: t('diagrams.review.submit'), disabledReason: sendReason, onSelect: () => flow.openSubmit() });
     }
     if (pendingId && page && manager && !own) {
       primary.push({ key: 'decide', label: t('diagrams.review.decide'), primary: true, onSelect: () => setDecideOpen(true) });
@@ -460,6 +470,7 @@ export function useDiagramReview({
     review: page,
     pinMode,
     togglePinMode: () => setPinMode((on) => !on),
+    next: { publish: (target) => void flow.publish(target), submit: (target) => flow.openSubmit(target) },
     viewer: {
       pins: viewerPins(threads, t),
       pickAnyCell: pinMode,
@@ -614,12 +625,14 @@ function TextDialog({
 
 function SubmitDialog({
   diagram,
+  target,
   post,
   onDone,
   onFindings,
   onClose,
 }: {
   diagram: DiagramNode;
+  target: VersionTarget | null;
   post: <T>(path: string, body?: unknown) => Promise<T>;
   onDone: (warnings: Finding[]) => Promise<void>;
   onFindings: (found: { errors: Finding[]; warnings: Finding[] }) => void;
@@ -629,13 +642,13 @@ function SubmitDialog({
   return (
     <TextDialog
       title={t('diagrams.review.submitTitle', { name: diagram.name })}
-      intro={<p>{t('diagrams.review.submitIntro', { seq: diagram.latestVersion?.seq ?? 0 })}</p>}
+      intro={<p>{t('diagrams.review.submitIntro', { seq: target?.seq ?? diagram.latestVersion?.seq ?? 0 })}</p>}
       label={t('diagrams.review.reason')}
       submitLabel={t('diagrams.review.send')}
       maxLength={500}
       onSubmit={async (reason) => {
         try {
-          const result = await post<{ warnings: Finding[] }>('/submit', { reason });
+          const result = await post<{ warnings: Finding[] }>('/submit', target ? { reason, versionId: target.versionId } : { reason });
           await onDone(result.warnings);
         } catch (error) {
           const found = checkFindings(error);

@@ -811,7 +811,7 @@ export default {
       stock: 'Bấm "Thiết bị kho" trên thanh, tick máy cần đặt rồi Chèn — hình, mã, IP lấy từ kho.',
       cable: 'Rê chuột vào một máy, kéo dây sang máy kia: IMS hỏi khai kết nối vào sơ đồ cổng (vẽ là khai). Hình, chữ, khung tự do vẽ bằng thư viện bên trái.',
       save: 'Bấm Lưu: mỗi lần lưu là một phiên bản nháp, không ghi gì vào sơ đồ cổng.',
-      publish: 'Mở menu ba chấm: Phát hành (Admin/SA) để thành bản chính thức, hoặc Gửi duyệt cho Admin (Thành viên).',
+      publish: 'Lưu xong, bấm nút trên lời báo: "Phát hành" (Admin/SA) để thành bản chính thức, hoặc "Gửi duyệt" cho Admin (Thành viên). Hai việc này cũng có trong menu ba chấm.',
       dismiss: 'Ẩn hướng dẫn',
       title: 'Bản vẽ đang trống — bắt đầu như sau',
     },
