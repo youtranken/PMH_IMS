@@ -176,7 +176,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
     () => [
       {
         accessorKey: 'code',
-        header: t('software.code'),
+        header: t('software.colCode'),
         cell: ({ row }) => {
           const matched = matchedDevicesText(row.original.matchedDevices);
           return (
@@ -201,15 +201,21 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         /* Loại là dòng phụ dưới tên, không phải một cột riêng: bảng phải vừa 1280px với cột
            Thao tác còn trong khung. Màn một loại thì dòng phụ chỉ lặp lại tên màn — bỏ. */
         accessorKey: 'name',
-        header: t('software.name'),
-        cell: ({ row }) => (
-          <>
-            {row.original.name}
-            {manyKinds ? (
-              <span className="cell-sub">{t(KIND_KEY[row.original.kind])}</span>
-            ) : null}
-          </>
-        ),
+        // Màn Phần mềm gọi đúng tên thứ trong cột; ba màn còn lại (tên miền, hợp đồng, dịch vụ) "Tên".
+        header: t(spec.key === 'software' ? 'software.colNameLicense' : 'software.colName'),
+        cell: ({ row }) => {
+          // Dòng phụ: loại (màn nhiều loại) + kỳ hạn của license (Thuê bao / Vĩnh viễn) — P-01.
+          const sub = [
+            manyKinds ? t(KIND_KEY[row.original.kind]) : null,
+            row.original.kind === 'license' ? t(`software.${row.original.licenseModel}`) : null,
+          ].filter(Boolean);
+          return (
+            <>
+              {row.original.name}
+              {sub.length > 0 ? <span className="cell-sub">{sub.join(' · ')}</span> : null}
+            </>
+          );
+        },
       },
       ...(hasDomains
         ? [
@@ -230,7 +236,9 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
       ...(hasSeats
         ? [
             {
-              id: 'seats',
+              // Id = khoá sắp `seatTotal` của API: bấm tiêu đề là sắp theo số ghế.
+              id: 'seatTotal',
+              accessorKey: 'seatTotal',
               header: t('software.seats'),
               cell: ({ row }: { row: { original: SoftwareRow } }) => <SeatUsage item={row.original} />,
             } satisfies ColumnDef<SoftwareRow, unknown>,
@@ -260,7 +268,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         ),
       },
     ],
-    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats],
+    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats, spec.key],
   );
 
   return (

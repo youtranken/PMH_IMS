@@ -1876,6 +1876,10 @@ export default {
   software: {
     title: 'Phần mềm',
     subtitle: 'License phần mềm, số ghế và máy đang cài',
+    colCode: 'Mã',
+    colNameLicense: 'Tên phần mềm',
+    colName: 'Tên',
+    endsOn: 'đến {{date}}',
     add: 'Thêm phần mềm',
     /* Mục menu: cùng chữ với `isp.terminateMenu`. Hộp hỏi lại vẫn nói rõ "vào kho thanh lý". */
     disposeMenu: 'Thanh lý…',
