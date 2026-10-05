@@ -230,6 +230,8 @@ export function buildDrawioConfig(wireColors: string[]): DrawioConfig {
   return {
     compressXml: false,
     defaultLibraries: DRAWIO_LIBRARIES,
+    // Mặc định của draw.io cộng "Mũi tên liên kết": cáp mạng hai chiều, mũi tên bị đọc thành chiều dữ liệu.
+    defaultEdgeStyle: { edgeStyle: 'orthogonalEdgeStyle', rounded: '0', jettySize: 'auto', orthogonalLoop: '1', endArrow: 'none', startArrow: 'none' },
     enableCustomLibraries: false,
     enableExportUrl: false,
     suppressNewWindows: true,
@@ -241,7 +243,7 @@ export function buildDrawioConfig(wireColors: string[]): DrawioConfig {
  * Ô màu IMS trên nét dây của kho (`imsPaint=cable-<n>|warn|danger`, server đặt lúc hydrate — AD-18)
  * → `strokeColor`/`fontColor` theo bảng màu đọc từ token lúc chạy (`palette`: ô màu → mã draw.io
  * viết hoa không `#`). Màu cũ trong style bị thay chứ không cộng dồn; ô màu lạ thì để nguyên —
- * không đoán màu.
+ * không đoán màu. Dây của kho không có mũi tên ở đầu nào: một kết nối sơ đồ cổng không có chiều.
  */
 export function paintImsStyle(style: string, palette: Record<string, string>): string {
   const match = /(?:^|;)imsPaint=([a-z0-9-]+)/.exec(style);
@@ -249,8 +251,8 @@ export function paintImsStyle(style: string, palette: Record<string, string>): s
   if (!color) return style;
   const kept = style
     .split(';')
-    .filter((token) => token !== '' && !/^(strokeColor|fontColor)=/.test(token));
-  return `${kept.join(';')};strokeColor=#${color};fontColor=#${color};`;
+    .filter((token) => token !== '' && !/^(strokeColor|fontColor|endArrow|startArrow)=/.test(token));
+  return `${kept.join(';')};endArrow=none;startArrow=none;strokeColor=#${color};fontColor=#${color};`;
 }
 
 /** `paintImsStyle` trên mọi thuộc tính `style="…"` của một XML (chỉ đụng style có ô màu IMS). */

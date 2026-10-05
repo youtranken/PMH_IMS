@@ -281,7 +281,11 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     ]);
     expect(saved.status(), await saved.text()).toBe(201);
     expect(((await saved.json()) as { summary: string }).summary).toBe('Thêm 1 dây');
-    expect(sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${id}' ORDER BY seq DESC LIMIT 1`)).toContain(`ims_link_id="${fresh}"`);
+    const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${id}' ORDER BY seq DESC LIMIT 1`);
+    expect(xml).toContain(`ims_link_id="${fresh}"`);
+    // Dây không có mũi tên ở đầu nào (V-04): trình vẽ bỏ cả hai đầu khi tô màu dây của kho.
+    expect(xml).toMatch(/endArrow=none;startArrow=none;/);
+    expect(xml).not.toMatch(/(end|start)Arrow=classic/);
   });
 
   test('390px: chế độ xem — chú giải màu dây và thẻ dây không tràn ngang', async ({ page }) => {
@@ -296,6 +300,11 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await saveDrawing(page, id, [sw, srv], [{ cell: 'e1', from: 'a', to: 'b', linkId }]);
 
     await page.goto(`/diagrams/${id}`);
+    // Ở 390px chú giải thu sau nút, mặc định đóng — mở sẵn thì nó che bản vẽ và nút thu phóng (V-02).
+    const legendToggle = page.getByRole('button', { name: 'Chú giải dây' });
+    await expect(legendToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('list', { name: 'Chú giải màu dây' })).toHaveCount(0);
+    await legendToggle.click();
     await expect(page.getByRole('list', { name: 'Chú giải màu dây' })).toBeVisible();
     // Nét ngang có hộp bao cao 0 (Playwright coi là "không hiện" dù nét vẫn vẽ): mở thẻ bằng bàn phím.
     const cable = page.getByRole('region', { name: 'Bản vẽ, chỉ xem' }).getByRole('button', { name: 'Gi1/0/9 ↔ eth0' });

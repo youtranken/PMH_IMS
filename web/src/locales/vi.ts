@@ -1193,6 +1193,7 @@ export default {
       legend: 'Chú giải',
       legendTitle: 'Chú giải màu dây',
       legendToggle: 'Chú giải dây',
+      legendFree: 'Nét vẽ tự do (không phải dây)',
       legendNone: 'Chưa khai loại dây',
       legendUndeclared: 'Chưa khai vào sơ đồ cổng',
       legendRemoved: 'Kết nối đã bị gỡ',

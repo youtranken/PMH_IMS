@@ -27,7 +27,8 @@ describe('Chú giải dây nổi trên trình xem', () => {
     renderWithI18n(<CableLegend cableTypes={TYPES} floating />);
     const toggle = screen.getByRole('button', { name: 'Chú giải dây' });
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('list', { name: 'Chú giải màu dây' })).toBeInTheDocument();
+    // Nét draw.io không nối hai máy kho là hình vẽ — có dòng riêng để người xem không đoán nó là dây gì.
+    expect(screen.getByRole('list', { name: 'Chú giải màu dây' })).toHaveTextContent('Nét vẽ tự do (không phải dây)');
     await userEvent.setup().click(toggle);
     expect(screen.queryByRole('list', { name: 'Chú giải màu dây' })).toBeNull();
   });

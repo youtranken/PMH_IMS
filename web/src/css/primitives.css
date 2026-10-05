@@ -1100,8 +1100,15 @@ button.btn-x.danger:hover:not(:disabled) {
 [data-ims-paint='cable-8'] { --ims-paint: var(--diagram-cable-8); }
 [data-ims-paint='warn'] { --ims-paint: var(--diagram-cable-warn); }
 [data-ims-paint='danger'] { --ims-paint: var(--diagram-cable-danger); }
+/* Chỉ cho vạch chú giải "nét vẽ tự do": nét draw.io thường là màu chữ mặc định, không phải ô màu dây. */
+.cable-swatch[data-ims-paint='free'] { --ims-paint: var(--ink); }
 .diagram-viewer-canvas [data-ims-paint] path {
   stroke: var(--ims-paint);
+}
+/* Đầu mũi tên của dây (ảnh lưu trước khi trình vẽ bỏ mũi tên cho dây): là `path` có tô, còn nét dây
+   là `path` không tô. Dây không có chiều nên ẩn đi thay vì tô lại màu. */
+.diagram-viewer-canvas [data-ims-paint] path:not([fill='none']) {
+  display: none;
 }
 .diagram-viewer-canvas [data-ims-paint='warn'] path,
 .diagram-viewer-canvas [data-ims-paint='danger'] path {

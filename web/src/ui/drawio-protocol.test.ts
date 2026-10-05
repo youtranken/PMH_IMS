@@ -136,6 +136,10 @@ describe('buildDrawioConfig — cấu hình đẩy qua sự kiện configure', (
     expect(JSON.stringify(config)).not.toMatch(/https?:/);
   });
 
+  it('nét mới vẽ mặc định không có mũi tên (cáp mạng hai chiều), vẫn đi dây vuông góc', () => {
+    expect(buildDrawioConfig([]).defaultEdgeStyle).toMatchObject({ edgeStyle: 'orthogonalEdgeStyle', endArrow: 'none', startArrow: 'none' });
+  });
+
   it('thư viện hình mở sẵn: Chung, Mạng, Rack — đúng id của draw.io 31.6.1 ("network", không phải "networks")', () => {
     expect(buildDrawioConfig([]).defaultLibraries).toBe('general;network;rack');
     // Gửi cả qua URL: configure chỉ đổi giá trị mặc định, còn lựa chọn cũ trong cài đặt draw.io thì thắng nó.
@@ -192,8 +196,10 @@ describe('paintImsStyle / paintImsXml — ô màu IMS → strokeColor theo token
   const palette = { 'cable-0': '5F665F', 'cable-2': '1D5F9E', warn: 'D97706', danger: 'C0392B' };
 
   it.each([
-    ['ô màu loại dây', 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;', 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;strokeColor=#1D5F9E;fontColor=#1D5F9E;'],
-    ['màu cũ trong style bị thay, không cộng dồn', 'imsPaint=warn;strokeColor=#000000;fontColor=#111111;dashed=1;', 'imsPaint=warn;dashed=1;strokeColor=#D97706;fontColor=#D97706;'],
+    ['ô màu loại dây', 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;', 'edgeStyle=orthogonalEdgeStyle;imsPaint=cable-2;html=0;endArrow=none;startArrow=none;strokeColor=#1D5F9E;fontColor=#1D5F9E;'],
+    ['màu cũ trong style bị thay, không cộng dồn', 'imsPaint=warn;strokeColor=#000000;fontColor=#111111;dashed=1;', 'imsPaint=warn;dashed=1;endArrow=none;startArrow=none;strokeColor=#D97706;fontColor=#D97706;'],
+    // Cáp mạng hai chiều: mũi tên (mặc định "Mũi tên liên kết" của draw.io) bị đọc thành chiều dữ liệu.
+    ['dây có mũi tên → bỏ cả hai đầu', 'endArrow=classic;startArrow=classic;rounded=0;imsPaint=cable-0;', 'rounded=0;imsPaint=cable-0;endArrow=none;startArrow=none;strokeColor=#5F665F;fontColor=#5F665F;'],
     ['không có ô màu IMS → giữ nguyên', 'rounded=1;strokeColor=#000000;', 'rounded=1;strokeColor=#000000;'],
     ['ô màu lạ (không có trong bảng) → giữ nguyên, không đoán', 'imsPaint=cable-9;', 'imsPaint=cable-9;'],
   ])('%s', (_name, style, expected) => {
@@ -203,7 +209,7 @@ describe('paintImsStyle / paintImsXml — ô màu IMS → strokeColor theo token
   it('cả tệp: chỉ đụng thuộc tính style có ô màu IMS', () => {
     const xml = '<root><mxCell id="e1" style="imsPaint=danger;" edge="1"/><mxCell id="s1" style="fillColor=#fff;"/></root>';
     expect(paintImsXml(xml, palette)).toBe(
-      '<root><mxCell id="e1" style="imsPaint=danger;strokeColor=#C0392B;fontColor=#C0392B;" edge="1"/><mxCell id="s1" style="fillColor=#fff;"/></root>',
+      '<root><mxCell id="e1" style="imsPaint=danger;endArrow=none;startArrow=none;strokeColor=#C0392B;fontColor=#C0392B;" edge="1"/><mxCell id="s1" style="fillColor=#fff;"/></root>',
     );
   });
 });
