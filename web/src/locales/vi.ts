@@ -969,11 +969,12 @@ export default {
     form: {
       name: 'Tên bản vẽ',
       nameHint: 'Tầng, phòng chỉ là tên bản vẽ — không thêm danh mục vị trí.',
-      nodeType: 'Loại nút',
+      nodeType: 'Cấp bản vẽ',
       parent: 'Nằm trong',
       root: '(Gốc cây)',
       site: 'Site',
       cabinet: 'Tủ rack',
+      cabinetHint: 'Gắn tủ để dựng mặt tủ từ kho: máy trong tủ và vị trí U của chúng.',
       none: '(Không gắn)',
       save: 'Lưu',
       cancel: 'Hủy',

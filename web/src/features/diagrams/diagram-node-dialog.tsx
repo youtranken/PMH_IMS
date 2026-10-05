@@ -55,9 +55,12 @@ export function DiagramNodeDialog({
     name: node?.name ?? '',
     nodeType: (node?.nodeType ?? (parent ? 'floor' : 'company')) as DiagramNodeType,
     parentId: node?.parentId ?? parent?.id ?? null,
-    siteId: node?.siteId ?? null,
+    // Bản vẽ con thường cùng site với bản cha (D-03): điền sẵn, người vẽ đổi được.
+    siteId: node ? node.siteId : (parent?.siteId ?? null),
     cabinetId: node?.cabinetId ?? null,
   });
+  // Tủ chỉ gắn vào bản vẽ cấp tủ (D-03, server cũng chặn): cấp khác thì không hỏi, không gửi.
+  const cabinetLevel = form.nodeType === 'cabinet';
   const [nameError, setNameError] = useState<string | null>(null);
   const copySeq = !node && parent ? (parent.latestVersion?.seq ?? null) : null;
   const [start, setStart] = useState<'copy' | 'blank'>(copySeq ? 'copy' : 'blank');
@@ -128,7 +131,7 @@ export function DiagramNodeDialog({
   const copyChild = async (from: DiagramNode) => {
     setCopying(true);
     try {
-      const { parentId: _parent, ...rest } = form;
+      const { parentId: _parent, ...rest } = cabinetLevel ? form : { ...form, cabinetId: null };
       const body = JSON.stringify({
         ...Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== null && value !== '')),
         ...(sourceId ? { versionId: sourceId } : {}),
@@ -160,7 +163,7 @@ export function DiagramNodeDialog({
       void copyChild(parent);
       return;
     }
-    save.mutate(form, {
+    save.mutate(cabinetLevel ? form : { ...form, cabinetId: null }, {
       onSuccess: (saved) => done(saved, t(editing ? 'diagrams.updated' : 'diagrams.created', { name: saved.name })),
       onError: (error) => toast({ tone: 'error', message: errorMessage(error) }),
     });
@@ -250,7 +253,7 @@ export function DiagramNodeDialog({
                 value={form.nodeType}
                 ariaLabel={t('diagrams.form.nodeType')}
                 options={NODE_TYPES.map((type) => ({ value: type, label: t(NODE_TYPE_KEY[type]) }))}
-                onChange={(value) => setForm({ ...form, nodeType: value as DiagramNodeType })}
+                onChange={(value) => setForm({ ...form, nodeType: value as DiagramNodeType, cabinetId: value === 'cabinet' ? form.cabinetId : null })}
               />
             </Field>
             {editing ? (
@@ -276,15 +279,17 @@ export function DiagramNodeDialog({
                 onChange={(value) => setForm({ ...form, siteId: value === NONE ? null : value, cabinetId: null })}
               />
             </Field>
-            <Field label={t('diagrams.form.cabinet')}>
-              <Select
-                value={form.cabinetId ?? NONE}
-                ariaLabel={t('diagrams.form.cabinet')}
-                failed={lists.isError}
-                options={[{ value: NONE, label: t('diagrams.form.none') }, ...activeOptions(cabinets, node?.cabinetId, (cab) => cab.code)]}
-                onChange={(value) => setForm({ ...form, cabinetId: value === NONE ? null : value })}
-              />
-            </Field>
+            {cabinetLevel ? (
+              <Field label={t('diagrams.form.cabinet')} hint={t('diagrams.form.cabinetHint')}>
+                <Select
+                  value={form.cabinetId ?? NONE}
+                  ariaLabel={t('diagrams.form.cabinet')}
+                  failed={lists.isError}
+                  options={[{ value: NONE, label: t('diagrams.form.none') }, ...activeOptions(cabinets, node?.cabinetId, (cab) => cab.code)]}
+                  onChange={(value) => setForm({ ...form, cabinetId: value === NONE ? null : value })}
+                />
+              </Field>
+            ) : null}
           </>
         )}
       </form>

@@ -274,7 +274,7 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     await member.getByRole('button', { name: `Thao tác với E2E Bản của tôi ${stamp}` }).click();
     await member.getByRole('menuitem', { name: 'Đổi tên' }).click();
     const rename = member.getByRole('dialog', { name: `Đổi tên "E2E Bản của tôi ${stamp}"` });
-    await expect(rename.getByRole('combobox', { name: 'Loại nút' })).toHaveCount(0);
+    await expect(rename.getByRole('combobox', { name: 'Cấp bản vẽ' })).toHaveCount(0);
     await rename.getByRole('textbox', { name: /Tên bản vẽ/ }).fill(`E2E Bản đổi tên ${stamp}`);
     await Promise.all([
       member.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${mineId}`) && r.request().method() === 'PATCH' && r.status() === 200),

@@ -131,6 +131,31 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       expect(await count(`SELECT count(*)::int AS n FROM diagram`)).toBe(before);
     });
 
+    it('chỉ bản vẽ cấp tủ gắn được tủ (D-03); đổi cấp khỏi tủ thì tủ bỏ gắn cùng lượt; sửa tên không đụng dữ liệu cũ', async () => {
+      const cab = (await scratch.pool.query<{ id: string }>(`INSERT INTO cabinet (site_id, code) VALUES ($1, 'E2E-SD-TU') RETURNING id`, [siteId])).rows[0].id;
+      const before = await count(`SELECT count(*)::int AS n FROM diagram`);
+      await expect(service.create(SA.email, { name: 'E2E Gốc gắn tủ', nodeType: 'company', siteId, cabinetId: cab })).rejects.toMatchObject({
+        status: 400,
+        response: { code: 'DIAGRAM_CABINET_NEEDS_CABINET_LEVEL' },
+      });
+      expect(await count(`SELECT count(*)::int AS n FROM diagram`)).toBe(before);
+
+      const rack = await service.create(SA.email, { name: 'E2E Tủ gắn đúng', nodeType: 'cabinet', siteId, cabinetId: cab });
+      expect(rack.cabinetId).toBe(cab);
+      const moved = await service.update(SA, rack.id, { nodeType: 'room' });
+      expect(moved).toMatchObject({ nodeType: 'room', cabinetId: null });
+      await expect(service.update(SA, rack.id, { cabinetId: cab })).rejects.toMatchObject({
+        status: 400,
+        response: { code: 'DIAGRAM_CABINET_NEEDS_CABINET_LEVEL' },
+      });
+
+      // Dữ liệu cũ (gắn tủ ở cấp không phải tủ): đổi tên thôi thì không bị chặn và không bị sửa ngầm.
+      const legacy = await service.create(SA.email, { name: 'E2E Gốc dữ liệu cũ', nodeType: 'company', siteId });
+      await scratch.pool.query(`UPDATE diagram SET cabinet_id = $1 WHERE id = $2`, [cab, legacy.id]);
+      const renamed = await service.update(SA, legacy.id, { name: 'E2E Gốc dữ liệu cũ 2' });
+      expect(renamed).toMatchObject({ name: 'E2E Gốc dữ liệu cũ 2', cabinetId: cab });
+    });
+
     it('đổi tên + chuyển nhánh ghi lịch sử; chuyển vào chính nhánh con của nó → 400', async () => {
       const a = await service.create(SA.email, { name: 'E2E A', nodeType: 'company' });
       const b = await service.create(SA.email, { name: 'E2E B', nodeType: 'floor', parentId: a.id });

@@ -464,6 +464,7 @@ export class DiagramsService {
 
   async create(actor: string, input: NodeInput): Promise<DiagramNode> {
     const name = (input.name ?? '').trim();
+    assertCabinetLevel(input.nodeType ?? 'other', input.cabinetId ?? null);
     if (input.parentId) await this.assertLiveParent(input.parentId);
     await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
     if (input.ownerEmail) await this.assertUser(input.ownerEmail);
@@ -484,6 +485,7 @@ export class DiagramsService {
   async createCopiedChild(actor: string, parentId: string, input: CopiedChildInput): Promise<DiagramNode & { copiedFromSeq: number }> {
     const { versionId, ...node } = input;
     const name = (node.name ?? '').trim();
+    assertCabinetLevel(node.nodeType ?? 'other', node.cabinetId ?? null);
     await this.assertLiveParent(parentId);
     await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
     if (input.ownerEmail) await this.assertUser(input.ownerEmail);
@@ -576,6 +578,13 @@ export class DiagramsService {
       await this.assertLiveParent(input.parentId);
     }
     const next = { ...input, ...(input.name !== undefined ? { name: input.name.trim() } : {}) };
+    if (next.nodeType !== undefined || next.cabinetId !== undefined) {
+      const level = next.nodeType ?? current.nodeType;
+      if (next.cabinetId) assertCabinetLevel(level, next.cabinetId);
+      // Lượt đổi cấp/tủ để lại bản vẽ không phải cấp tủ thì bỏ gắn tủ cũ luôn — dữ liệu cũ sạch dần
+      // khi có người sửa, còn lượt chỉ đổi tên thì không đụng tới (D-03).
+      else if (level !== 'cabinet' && (next.cabinetId === undefined ? current.cabinetId : null)) next.cabinetId = null;
+    }
     await this.catalog.assertRefs(
       { siteId: next.siteId === undefined ? current.siteId : next.siteId, cabinetId: next.cabinetId === undefined ? current.cabinetId : next.cabinetId },
       { siteId: current.siteId, cabinetId: current.cabinetId },
@@ -1722,6 +1731,19 @@ function toDiagramLink(link: PortLink, slots: Map<string, number>): DiagramLink 
     labelFromB: linkLabelFrom(check, link.peerDeviceId),
     edgeStyle: linkEdgeCell(check, { sourceDeviceId: link.deviceId, slot: colorSlot }).style,
   };
+}
+
+/**
+ * Tủ chỉ gắn vào bản vẽ cấp tủ (D-03): "Dựng lại mặt tủ" và khung tủ đọc tủ gắn ở đây, nên một
+ * bản vẽ tầng/công ty mang tủ là dữ liệu sai mà không ai thấy cho tới lúc dựng hỏng.
+ */
+function assertCabinetLevel(nodeType: DiagramNodeType, cabinetId: string | null): void {
+  if (cabinetId && nodeType !== 'cabinet') {
+    throw new BadRequestException({
+      code: 'DIAGRAM_CABINET_NEEDS_CABINET_LEVEL',
+      message: 'Chỉ bản vẽ cấp tủ mới gắn được tủ — đổi "Cấp bản vẽ" thành tủ hoặc bỏ gắn tủ.',
+    });
+  }
 }
 
 function tooMany(count: number, max: number): BadRequestException {
