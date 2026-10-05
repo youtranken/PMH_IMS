@@ -550,6 +550,42 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   - Danh sách phiên bản trong panel vẫn là nội dung bản vẽ nên vẫn hỏi mã sơ đồ: panel hiện nút
     "Nhập mã để xem lịch sử" tại chỗ, không tự bật hộp hỏi mã khi chỉ bấm chọn một ô. Tên, trạng
     thái, số phiên bản / số nháp / số thiết bị trên bản đồ là thông tin của cây, không hỏi mã.
+- **Góp ý sau khi test màn bản đồ (05/10/2026, chủ dự án):**
+  - **Xem lại bản đã lưu trữ:** /diagrams có nút "Đã lưu trữ (n)" (cả kiểu Bản đồ lẫn Danh sách);
+    bấm thì hiện khu liệt kê bản vẽ đã lưu trữ (tên, nằm dưới bản nào, ai lưu trữ, khi nào). Mở ra
+    là CHỈ XEM — vẫn hỏi mã sơ đồ như mọi lần xem, không có Sửa. **"Bỏ lưu trữ"** cùng người được
+    lưu trữ (Admin/SA; bản trình bày thì cả người tạo / phụ trách), ghi `diagram_history` +
+    `audit_log` (`diagram.unarchived`). Chặn khi bản cha còn đang lưu trữ (bỏ lưu trữ bản cha
+    trước — không để bản con treo dưới một bản đã cất), hay khi cùng nhánh đã có bản đang dùng
+    trùng tên. Bia mộ của "Xoá hẳn" không bao giờ hiện ở khu này.
+  - **Vị trí U của thiết bị tự giải thích:** dưới ô U hiện ngay câu "Thiết bị nằm ở U30" / "Chiếm
+    U30–U31". Quy ước giữ như khung tủ và ràng buộc chồng U: U1 ở ĐÁY tủ, "U bắt đầu" là U thấp
+    nhất, máy chiếm dần LÊN trên (U30 + 2U = U30–U31). Form kiểm chồng U với các máy đang ở tủ đó
+    (trừ máy thanh lý và chính nó) TRƯỚC khi lưu, báo tại ô "U30 đang có SW-01"; server vẫn là
+    trọng tài — lỗi chồng U của server cũng gắn vào ô đó. Nút **"Xem tủ"** cạnh ô Tủ mạng mở hình
+    mặt đứng của tủ (mỗi U một dòng, mã máy đang chiếm); bấm một U trống thì điền "U bắt đầu".
+    Màn 390px xem được, chỉ đọc.
+  - **"Hình dùng trên sơ đồ" thấy ngay ở trang thiết bị:** khu riêng ở tab Tổng quan (ảnh đang
+    dùng + nguồn của nó) và khu đầy đủ ở tab Giấy tờ; tải ảnh THẲNG cho từng mặt (JPG/PNG, cùng giới
+    hạn cỡ của giấy tờ) chứ không bắt tải giấy tờ rồi mới chọn. Ảnh theo model dùng cho MỌI máy cùng
+    loại + model (nói rõ ngay tại chỗ); ảnh riêng của máy đè ảnh model. Không có ảnh thì sơ đồ vẽ
+    máy bằng biểu tượng của Loại thiết bị (SA đổi ở Danh mục).
+  - **Menu ⋮ của trình vẽ chia nhóm có tiêu đề** (Dây & kết nối · Khung, tủ & ảnh · Phiên bản &
+    duyệt · Trợ giúp), mỗi mục có một dòng mô tả; "Hướng dẫn" đứng ĐẦU menu để không phải cuộn.
+    Khai kết nối xong, lời báo có nút "Xem ở sơ đồ cổng của <máy>" (mở tab mới — không bỏ bản vẽ
+    đang dở). Hướng dẫn (i) nói rõ dây nằm ở sơ đồ cổng của máy, và nhắc các nhóm trong menu.
+  - **Nối thêm máy vào máy đã có dây — không cần khai số cổng:** gõ tên cổng mới là cổng được tạo
+    khi bấm Khai. Lỗi chủ dự án gặp là gõ lại đúng cổng đã có cáp (luật một cổng một cáp) mà hộp
+    chỉ báo một câu chung. Hộp Khai nay hiện cổng ĐANG DÙNG của từng máy, báo ngay tại ô khi gõ
+    trùng ("Cổng 1 của SW-01 đã nối PC-01") kèm nút dùng cổng kế tiếp còn trống; lỗi 409 của server
+    cũng gắn vào đúng ô.
+  - **Nhân bản bản vẽ con chọn được phiên bản của bản cha:** mặc định bản chính thức (chưa phát
+    hành thì bản mới nhất); chọn được bản nháp mới nhất ngay, các bản khác (đã phát hành, đã đặt
+    tên) qua "Chọn phiên bản khác…" — danh sách phiên bản là nội dung nên hỏi mã sơ đồ. API nhận
+    `versionId`, phải thuộc đúng bản cha; luật gỡ khung hỏng giữ nguyên.
+  - **Bản đồ gọn hơn:** dòng nháp trong panel là "#15 · tóm tắt ngắn", người lưu / giờ ở dòng
+    thứ hai, "lưu đè lên bản của …" là nhãn nhỏ; dải chuyển nhanh bản vẽ cùng khu cuộn được và
+    luôn thấy tab đầu; bản vẽ gốc chưa có con là một băng một dòng kèm "+ Bản vẽ con".
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
