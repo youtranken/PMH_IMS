@@ -340,6 +340,11 @@ table.table tbody tr.row-suspended td:first-child {
   white-space: nowrap;
   border-color: transparent;
 }
+/* Nhãn mục là chữ ĐẬM màu mực, không xám: chữ xám là quy ước của mục tắt (V-07). Mục cảnh báo /
+   nguy hiểm / hiếm bên dưới tự đè màu của chúng. */
+.row-actions-menu button.ghost {
+  color: var(--ink);
+}
 /* Tên dòng ở đầu menu (prop `subject`) — nhỏ, xám, tách khỏi các mục bằng một đường kẻ. */
 .row-actions-subject {
   max-width: 16rem;

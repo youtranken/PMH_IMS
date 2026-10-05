@@ -165,7 +165,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await expect(decide).toContainText('Thay đổi (chưa có bản chính thức)');
     await expect(decide).toContainText('nằm trong khung');
     await expect(decide.getByRole('button', { name: 'Xem so sánh với bản chính thức' })).toBeDisabled();
-    await decide.getByRole('button', { name: 'Ghim bình luận' }).click();
+    await decide.getByRole('button', { name: 'Ghim bình luận mới' }).click();
     await viewer(page).getByText('Tầng 3 E2E').click();
     const pin = page.getByRole('dialog', { name: 'Ghim bình luận lên Tầng 3 E2E' });
     await pin.getByLabel(/Bình luận/).fill('Sai tên phòng E2E');

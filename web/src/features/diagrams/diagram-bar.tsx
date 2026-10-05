@@ -84,8 +84,13 @@ const GROUP: Record<string, string> = {
   presentation: 'diagrams.menuGroup.review',
 };
 
-/** Menu ⋮ của thanh cao hơn menu một dòng bảng — đủ chỗ cho các nhóm mà ít phải cuộn. */
-const BAR_MENU_MAX_PX = 600;
+/**
+ * Menu ⋮ của thanh cao theo nội dung tới 70% chiều cao màn (V-07): mục nằm dưới một vùng cuộn
+ * không dấu hiệu thì coi như không có. `useAnchoredMenu` vẫn chặn theo chỗ trống thật.
+ */
+const BAR_MENU_SHARE = 0.7;
+const BAR_MENU_MIN_PX = 320;
+const barMenuMaxPx = () => Math.max(BAR_MENU_MIN_PX, Math.round((typeof window === 'undefined' ? 0 : window.innerHeight) * BAR_MENU_SHARE));
 
 export function actionHelp(t: Translate, action: BarAction): string | undefined {
   const key = HELP[action.key];
@@ -161,7 +166,7 @@ export function BarMenu({ label, subject, items }: { label: string; subject: str
     <RowActions
       label={label}
       subject={subject}
-      maxHeight={BAR_MENU_MAX_PX}
+      maxHeight={barMenuMaxPx()}
       items={items.map((item) => ({
         ...toMenuItem({ ...item, help: actionHelp(t, item) }),
         group: t(GROUP[item.key] ?? 'diagrams.menuGroup.other'),

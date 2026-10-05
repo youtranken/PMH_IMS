@@ -256,13 +256,13 @@ describe('Ghim bình luận', () => {
     const fetchMock = routeFetch([...base(diagram(), [THREAD])]);
     renderScreen('/diagrams/g1', SA);
     const user = userEvent.setup();
-    await pickMenuItem(user, /^Thao tác với/, 'Ghim (1)');
-    const list = await screen.findByRole('list', { name: 'Ghim bình luận trên bản vẽ' });
+    await pickMenuItem(user, /^Thao tác với/, 'Bình luận đã ghim (1)');
+    const list = await screen.findByRole('list', { name: 'Bình luận đã ghim trên bản vẽ' });
     expect(list).toHaveTextContent('Sai cổng uplink');
     expect(list).toHaveTextContent('trên hình đã bỏ');
     expect(list).not.toHaveTextContent('gone');
     await user.keyboard('{Escape}');
-    await pickMenuItem(user, /^Thao tác với/, 'Ghim bình luận');
+    await pickMenuItem(user, /^Thao tác với/, 'Ghim bình luận mới');
     await user.click(screen.getByText('Tầng 3'));
     const dialog = await screen.findByRole('dialog', { name: 'Ghim bình luận lên Tầng 3' });
     await user.type(within(dialog).getByLabelText(/Bình luận/), 'Đặt tên phòng');
@@ -316,12 +316,12 @@ describe('Thanh mảnh (Q-23 một dòng, Q-18 việc chính ngoài, còn lại 
     renderScreen('/diagrams/g1', SA);
     await viewerReady();
     expect(await screen.findByRole('button', { name: 'Phát hành' })).toBeInTheDocument();
-    for (const name of ['Gửi duyệt', 'Xuất', 'Dòng thời gian', 'Phiên bản', 'Kiểm tra khớp', 'Ghim bình luận']) {
+    for (const name of ['Gửi duyệt', 'Xuất', 'Dòng thời gian', 'Phiên bản', 'Kiểm tra khớp', 'Ghim bình luận mới']) {
       expect(screen.queryByRole('button', { name })).toBeNull();
     }
     await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với Tầng 3 E2E' }));
     const items = screen.getAllByRole('menuitem').map((item) => item.getAttribute('aria-label') ?? item.textContent);
-    for (const name of ['Gửi duyệt', 'Ghim bình luận', 'Ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Dòng thời gian', 'Phiên bản']) {
+    for (const name of ['Gửi duyệt', 'Ghim bình luận mới', 'Bình luận đã ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Dòng thời gian', 'Phiên bản']) {
       expect(items.some((label) => label?.startsWith(name))).toBe(true);
     }
   });

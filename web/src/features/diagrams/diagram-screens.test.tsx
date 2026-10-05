@@ -105,12 +105,12 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
     expect(screen.getByText('Sửa sơ đồ chỉ làm trên máy tính')).toBeInTheDocument();
     expect(document.querySelector('iframe')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Sửa' })).toBeNull();
-    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận', 'Tạo bản trình bày']) expect(screen.queryByRole('button', { name })).toBeNull();
+    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận mới', 'Tạo bản trình bày']) expect(screen.queryByRole('button', { name })).toBeNull();
     expect(screen.getByRole('button', { name: 'Tìm' })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với Tổng công ty E2E' }));
     // Tên mục, không phải textContent: mục menu có thêm dòng mô tả (aria-hidden) dưới tên.
     expect(await screen.findByRole('menuitem', { name: 'Chỉ đường' })).toBeInTheDocument();
-    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận', 'Tạo bản trình bày']) {
+    for (const name of ['Gửi duyệt', 'Phát hành', 'Phiên bản', 'Ghim bình luận mới', 'Tạo bản trình bày']) {
       expect(screen.queryByRole('menuitem', { name })).toBeNull();
     }
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content?mode=view'))).toBe(true);
