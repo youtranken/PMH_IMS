@@ -569,7 +569,10 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     dùng + nguồn của nó) và khu đầy đủ ở tab Giấy tờ; tải ảnh THẲNG cho từng mặt (JPG/PNG, cùng giới
     hạn cỡ của giấy tờ) chứ không bắt tải giấy tờ rồi mới chọn. Ảnh theo model dùng cho MỌI máy cùng
     loại + model (nói rõ ngay tại chỗ); ảnh riêng của máy đè ảnh model. Không có ảnh thì sơ đồ vẽ
-    máy bằng biểu tượng của Loại thiết bị (SA đổi ở Danh mục).
+    máy bằng biểu tượng của Loại thiết bị (SA đổi ở Danh mục). **Bản đồ quan hệ** của trang thiết
+    bị dùng ĐÚNG ảnh đó cho nút của máy (và các máy cùng loại + model hiện trên đó): một nguồn — cùng
+    đường tra ảnh của sơ đồ, không chép ảnh; hiện bằng `<img>` trỏ endpoint ảnh đã thu nhỏ của
+    server (không nhúng nội dung người dùng tải lên); không có ảnh thì giữ biểu tượng như cũ.
   - **Menu ⋮ của trình vẽ chia nhóm có tiêu đề** (Dây & kết nối · Khung, tủ & ảnh · Phiên bản &
     duyệt · Trợ giúp), mỗi mục có một dòng mô tả; "Hướng dẫn" đứng ĐẦU menu để không phải cuộn.
     Khai kết nối xong, lời báo có nút "Xem ở sơ đồ cổng của <máy>" (mở tab mới — không bỏ bản vẽ
