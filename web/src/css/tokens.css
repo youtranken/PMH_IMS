@@ -210,6 +210,12 @@
        bày". Server đọc bản SÁNG qua `api/src/common/palette.generated.ts` (sinh từ file này);
        giấy in luôn nền sáng nên cặp dark giữ nguyên giá trị. */
     --paper-rule:#d5d9d2; --paper-draft:#fff4e5; --paper-superseded:#fdecea; --paper-presentation:#eaf2fb;
+    /* Màu dây và mực trên GIẤY bản vẽ (luôn sáng ở cả hai theme): trình vẽ, trình xem và chú giải
+       nổi trên trình xem cùng dùng bộ này để chú giải khớp nét — cặp dark giữ nguyên giá trị sáng. */
+    --paper-cable-0:#5f665f; --paper-cable-1:#0e9f6e; --paper-cable-2:#1d5f9e;
+    --paper-cable-3:#ea580c; --paper-cable-4:#7c3aed; --paper-cable-5:#0891b2;
+    --paper-cable-6:#be185d; --paper-cable-7:#854d0e; --paper-cable-8:#334155;
+    --paper-cable-warn:#ca8a04; --paper-cable-danger:#c0392b; --paper-ink:#1f231c;
     /* Giấy của trình xem sơ đồ: trình vẽ draw.io nhúng luôn chạy giấy sáng, nên trình xem cũng sáng
        ở cả hai theme — bản vẽ trông y hệt lúc Sửa (nét đen draw.io không chìm vào nền tối). */
     --diagram-paper:#ffffff;
@@ -317,6 +323,10 @@ html[data-theme='dark'] {
     --diagram-cable-6:#f472b6; --diagram-cable-7:#d6a35c; --diagram-cable-8:#94a3b8;
     --diagram-cable-warn:#facc15; --diagram-cable-danger:#f27e72;
     --paper-rule:#d5d9d2; --paper-draft:#fff4e5; --paper-superseded:#fdecea; --paper-presentation:#eaf2fb;
+    --paper-cable-0:#5f665f; --paper-cable-1:#0e9f6e; --paper-cable-2:#1d5f9e;
+    --paper-cable-3:#ea580c; --paper-cable-4:#7c3aed; --paper-cable-5:#0891b2;
+    --paper-cable-6:#be185d; --paper-cable-7:#854d0e; --paper-cable-8:#334155;
+    --paper-cable-warn:#ca8a04; --paper-cable-danger:#c0392b; --paper-ink:#1f231c;
     --diagram-paper:#ffffff;
     --map-banner:#24382c; --map-banner-ink:#eaf3ee; --map-banner-ink-2:#a9bbaf;
 }

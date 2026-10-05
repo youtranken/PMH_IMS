@@ -1089,6 +1089,22 @@ button.btn-x.danger:hover:not(:disabled) {
 /* Ô màu dây IMS (`imsPaint` / `data-ims-paint`, AD-18) → token theo theme ĐANG dùng. Trình xem tô
    lại nét bằng biến này thay vì tin màu đã chụp trong SVG lúc lưu; chú giải và ô chọn màu ở Danh
    mục dùng cùng biến nên ba nơi luôn một màu. */
+/* Trên GIẤY bản vẽ (luôn sáng): ô màu dây đọc bộ màu của giấy, không bộ màu của theme (V-05) —
+   nét trên trình xem và chú giải nổi trên nó luôn cùng một màu với thứ trình vẽ đã vẽ. */
+.diagram-viewer-canvas,
+.cable-legend {
+  --diagram-cable-0: var(--paper-cable-0);
+  --diagram-cable-1: var(--paper-cable-1);
+  --diagram-cable-2: var(--paper-cable-2);
+  --diagram-cable-3: var(--paper-cable-3);
+  --diagram-cable-4: var(--paper-cable-4);
+  --diagram-cable-5: var(--paper-cable-5);
+  --diagram-cable-6: var(--paper-cable-6);
+  --diagram-cable-7: var(--paper-cable-7);
+  --diagram-cable-8: var(--paper-cable-8);
+  --diagram-cable-warn: var(--paper-cable-warn);
+  --diagram-cable-danger: var(--paper-cable-danger);
+}
 [data-ims-paint='cable-0'] { --ims-paint: var(--diagram-cable-0); }
 [data-ims-paint='cable-1'] { --ims-paint: var(--diagram-cable-1); }
 [data-ims-paint='cable-2'] { --ims-paint: var(--diagram-cable-2); }
@@ -1102,6 +1118,7 @@ button.btn-x.danger:hover:not(:disabled) {
 [data-ims-paint='danger'] { --ims-paint: var(--diagram-cable-danger); }
 /* Chỉ cho vạch chú giải "nét vẽ tự do": nét draw.io thường là màu chữ mặc định, không phải ô màu dây. */
 .cable-swatch[data-ims-paint='free'] { --ims-paint: var(--ink); }
+.cable-legend .cable-swatch[data-ims-paint='free'] { --ims-paint: var(--paper-ink); }
 .diagram-viewer-canvas [data-ims-paint] path {
   stroke: var(--ims-paint);
 }
@@ -1145,9 +1162,11 @@ button.btn-x.danger:hover:not(:disabled) {
   gap: var(--space-1);
   margin: 0;
   padding: var(--space-1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--paper-rule);
   border-radius: var(--r-sm);
-  background: var(--surface);
+  /* Chú giải nổi trên giấy bản vẽ: nền giấy + mực giấy ở cả hai theme, như thứ nó chú thích. */
+  background: var(--diagram-paper);
+  color: var(--paper-ink);
   font-size: var(--fs-sm);
 }
 .cable-legend-list {

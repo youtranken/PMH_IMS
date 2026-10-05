@@ -88,7 +88,7 @@ async function saveDrawing(page: Page, diagramId: string, devices: Dev[], edges:
   expect(res.status(), await res.text()).toBe(201);
 }
 
-/** Màu nét đang hiện (computed) và màu của token ô màu theo theme đang dùng. */
+/** Màu nét đang hiện (computed) và màu của token ô màu giấy (giấy luôn sáng ở cả hai theme — V-05). */
 async function strokeVsToken(page: Page, cellId: string, token: string): Promise<[string, string]> {
   return page.evaluate(
     ([id, name]) => {
@@ -240,11 +240,11 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
 
     for (const theme of ['light', 'dark'] as const) {
       await setTheme(page, theme);
-      const [fiberStroke, fiberToken] = await strokeVsToken(page, 'e1', '--diagram-cable-2');
+      const [fiberStroke, fiberToken] = await strokeVsToken(page, 'e1', '--paper-cable-2');
       expect(fiberStroke).toBe(fiberToken);
-      const [warnStroke, warnToken] = await strokeVsToken(page, 'e3', '--diagram-cable-warn');
+      const [warnStroke, warnToken] = await strokeVsToken(page, 'e3', '--paper-cable-warn');
       expect(warnStroke).toBe(warnToken);
-      const [redStroke, redToken] = await strokeVsToken(page, 'e2', '--diagram-cable-danger');
+      const [redStroke, redToken] = await strokeVsToken(page, 'e2', '--paper-cable-danger');
       expect(redStroke).toBe(redToken);
     }
 

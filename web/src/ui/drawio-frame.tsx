@@ -13,24 +13,28 @@ import {
   type DrawioMode,
 } from './drawio-protocol';
 
-/** Ô màu dây IMS (`imsPaint`) → token trong `tokens.css` (có cặp dark). */
+/**
+ * Ô màu dây IMS (`imsPaint`) → token màu dây của GIẤY trong `tokens.css`. Giấy trình vẽ luôn sáng
+ * ở cả hai theme, nên nét dây dùng bộ màu của giấy chứ không bộ màu của theme (V-05) — trình xem và
+ * chú giải đọc cùng bộ đó.
+ */
 const CABLE_PAINTS: Record<string, string> = {
-  'cable-0': '--diagram-cable-0',
-  'cable-1': '--diagram-cable-1',
-  'cable-2': '--diagram-cable-2',
-  'cable-3': '--diagram-cable-3',
-  'cable-4': '--diagram-cable-4',
-  'cable-5': '--diagram-cable-5',
-  'cable-6': '--diagram-cable-6',
-  'cable-7': '--diagram-cable-7',
-  'cable-8': '--diagram-cable-8',
-  warn: '--diagram-cable-warn',
-  danger: '--diagram-cable-danger',
+  'cable-0': '--paper-cable-0',
+  'cable-1': '--paper-cable-1',
+  'cable-2': '--paper-cable-2',
+  'cable-3': '--paper-cable-3',
+  'cable-4': '--paper-cable-4',
+  'cable-5': '--paper-cable-5',
+  'cable-6': '--paper-cable-6',
+  'cable-7': '--paper-cable-7',
+  'cable-8': '--paper-cable-8',
+  warn: '--paper-cable-warn',
+  danger: '--paper-cable-danger',
 };
 
 /**
- * Bảng ô màu dây → mã màu draw.io, đọc từ token theo theme ĐANG dùng (lúc nạp trình vẽ). Mã nguồn
- * không chứa mã màu nào; đổi màu là sửa `tokens.css`.
+ * Bảng ô màu dây → mã màu draw.io, đọc từ token lúc nạp trình vẽ. Mã nguồn không chứa mã màu nào;
+ * đổi màu là sửa `tokens.css`.
  */
 export function readCablePalette(): Record<string, string> {
   const style = getComputedStyle(document.documentElement);
