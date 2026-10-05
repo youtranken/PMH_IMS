@@ -161,3 +161,40 @@ describe('Gia hạn từ màn Sắp hết hạn — MỘT toast', () => {
     expect(screen.queryByText(/Lượt gia hạn đã ghi vào tab/)).toBeNull();
   });
 });
+
+/** P-03: tuỳ chọn ẩn mục đã quá hạn — danh sách và file xuất cùng một bộ lọc. */
+describe('Sắp hết hạn — "Ẩn mục đã quá hạn"', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('bật thì hỏi includeExpired=false, nút đổi trạng thái nhấn, lưu trên URL', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        urls.push(url);
+        if (url.includes('/api/v1/expiry?')) {
+          return Promise.resolve(
+            jsonResponse(200, { items: [], total: 0, summary: { expired: 2, critical: 0, warning: 0 }, thresholds: { criticalDays: 7, warningDays: 30 }, failedKinds: [] }),
+          );
+        }
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/expiry']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <ExpiryScreen me={me} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const toggle = await screen.findByRole('button', { name: 'Ẩn mục đã quá hạn' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(urls.some((u) => u.includes('includeExpired=false'))).toBe(false);
+    await userEvent.setup().click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await vi.waitFor(() => expect(urls.some((u) => u.includes('/api/v1/expiry?') && u.includes('includeExpired=false'))).toBe(true));
+  });
+});

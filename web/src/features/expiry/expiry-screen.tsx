@@ -156,8 +156,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
     state: string;
     period: string;
     until: string;
+    hideExpired: string;
   }>({
-    emptyFilters: { withinDays: '', kinds: '', state: '', period: '', until: '' },
+    emptyFilters: { withinDays: '', kinds: '', state: '', period: '', until: '', hideExpired: '' },
     defaultSort: { key: 'end', desc: false },
   });
   const today = todayIso();
@@ -177,7 +178,10 @@ export function ExpiryScreen({ me }: { me: Me }) {
       : 30;
   const sortKey = (SORTABLE as readonly string[]).includes(url.sorting.key) ? url.sorting.key : 'end';
   const sorting: SortingState = [{ id: sortKey, desc: url.sorting.desc }];
-  const sortParams = `&sort=${sortKey}&dir=${url.sorting.desc ? 'desc' : 'asc'}`;
+  /* "Ẩn mục đã quá hạn" (P-03): API mặc định kèm mục quá hạn; bật thì gửi includeExpired=false —
+     chung cho danh sách và file xuất nên file khớp đúng cái đang xem. */
+  const hideExpired = url.filters.hideExpired === '1';
+  const sortParams = `&sort=${sortKey}&dir=${url.sorting.desc ? 'desc' : 'asc'}${hideExpired ? '&includeExpired=false' : ''}`;
   const kind = url.filters.kinds;
   /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở SERVER — xem chú thích dưới. */
   const state = (['expired', 'critical', 'warning', 'autoRetire'] as const).includes(
@@ -527,6 +531,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
           value={kind ? kind.split(',') : []}
           onChange={(next) => setKind(next.join(','))}
         />
+        <button
+          type="button"
+          className="btn sm"
+          aria-pressed={hideExpired}
+          onClick={() => url.setFilter('hideExpired', hideExpired ? '' : '1')}
+        >
+          {t('expiry.hideExpired')}
+        </button>
       </FilterBar>
 
       {expiry.isLoading ? (

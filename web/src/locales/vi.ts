@@ -2264,6 +2264,7 @@ export default {
     tabRenewals: 'Đã gia hạn',
     renewedAt: 'Lúc',
     renewedBy: 'Người gia hạn',
+    hideExpired: 'Ẩn mục đã quá hạn',
     renewalCost: 'Chi phí',
     renewalContract: 'Hợp đồng',
     renewalsTotalCost: 'Tổng chi phí {{count}} lượt gia hạn: {{total}}',
