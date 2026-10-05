@@ -4178,6 +4178,10 @@ export default {
       '24 nghĩa là /24 (254 máy). Chỉ siết được (số lớn hơn là dải hẹp hơn), không nới rộng hơn /24. Dải đã khai không bị ảnh hưởng.',
     natWidePortRangeLabel: 'Cảnh báo luật NAT mở dải cổng rộng hơn',
     natWidePortRangeDesc: 'Chỉ cảnh báo trước khi lưu, không chặn.',
+    natSensitivePortsLabel: 'Cổng nhạy cảm khi mở ra Internet',
+    natSensitivePortsDesc: 'Luật NAT mở các cổng này ra ngoài thì sổ NAT cảnh báo. Gõ số cổng cách nhau dấu phẩy, ví dụ 22,3389,8291.',
+    breakGlassRecentWindowDaysLabel: 'Đếm yêu cầu mở két gần đây trong',
+    breakGlassRecentWindowDaysDesc: 'Người duyệt thấy người xin đã mở két bao nhiêu lần trong chừng này ngày gần nhất.',
     fileMaxSizeMbLabel: 'Dung lượng tối đa mỗi file',
     fileMaxSizeMbDesc:
       'Áp cho mọi loại giấy tờ (ảnh, PDF, Word, Excel, PowerPoint). Không đặt quá 25 MB: máy chủ chặn cứng ở mức đó.',

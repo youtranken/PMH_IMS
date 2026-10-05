@@ -115,6 +115,8 @@ const TEXT: Record<string, [string, string]> = {
   dashboardMaxItems: ['settings.dashboardMaxItemsLabel', 'settings.dashboardMaxItemsDesc'],
   ipamSubnetMinPrefix: ['settings.ipamSubnetMinPrefixLabel', 'settings.ipamSubnetMinPrefixDesc'],
   natWidePortRange: ['settings.natWidePortRangeLabel', 'settings.natWidePortRangeDesc'],
+  natSensitivePorts: ['settings.natSensitivePortsLabel', 'settings.natSensitivePortsDesc'],
+  breakGlassRecentWindowDays: ['settings.breakGlassRecentWindowDaysLabel', 'settings.breakGlassRecentWindowDaysDesc'],
   fileMaxSizeMb: ['settings.fileMaxSizeMbLabel', 'settings.fileMaxSizeMbDesc'],
   fileMaxFilesPerBatch: ['settings.fileMaxFilesPerBatchLabel', 'settings.fileMaxFilesPerBatchDesc'],
   filePurgeAfterDays: ['settings.filePurgeAfterDaysLabel', 'settings.filePurgeAfterDaysDesc'],

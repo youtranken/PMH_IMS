@@ -34,6 +34,23 @@ describe('Danh sách tham số sửa được trên màn (Q-14)', () => {
     expect(editableByKey('nat.wide_port_range')?.group).toBe('ipam');
   });
 
+  it('X-02: danh sách cổng nhạy cảm của NAT sửa được — cổng 1..65535, không trùng, KHÔNG bắt tăng dần', () => {
+    const ports = editableByKey('nat.sensitive_ports')!;
+    expect(ports.group).toBe('ipam');
+    expect(validateSetting(ports, '3389, 22,8291')).toEqual({ value: '3389,22,8291', reason: null });
+    expect(validateSetting(ports, '22,22').reason).toMatch(/trùng/);
+    expect(validateSetting(ports, '0,22').reason).not.toBeNull();
+    expect(validateSetting(ports, '70000').reason).not.toBeNull();
+    expect(validateSetting(ports, Array.from({ length: 51 }, (_, i) => i + 1).join(',')).reason).not.toBeNull();
+  });
+
+  it('X-02: cửa sổ "break-glass gần đây" sửa được, 1..365 ngày', () => {
+    const window = editableByKey('breakglass.recent_window_days')!;
+    expect(window.group).toBe('approval');
+    expect(validateSetting(window, 0).reason).not.toBeNull();
+    expect(validateSetting(window, 90)).toEqual({ value: 90, reason: null });
+  });
+
   it('sơ đồ mạng (AD-17): hạn chờ trình vẽ và trần cổng kiểm sửa được, có khoảng', () => {
     const timeout = editableByKey('diagram.editor_init_timeout_seconds')!;
     const xml = editableByKey('diagram.xml_max_kb')!;
