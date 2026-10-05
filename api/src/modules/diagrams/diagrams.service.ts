@@ -54,11 +54,13 @@ import {
   IMS_STYLE_KEYS,
   PHOTO_SIDE_ATTR,
   dehydrateDiagramXml,
+  deviceIconAspect,
   deviceInsertCell,
   deviceLookStyle,
   hydrateDiagramXml,
   linkEdgeCell,
   linkLabelFrom,
+  photoAspect,
   photoDataUri,
   type DeviceCellSource,
   type DevicePhoto,
@@ -185,8 +187,11 @@ export interface DeviceLook {
   id: string;
   found: boolean;
   icon: string;
-  front: { style: string; fileId: string } | null;
-  back: { style: string; fileId: string } | null;
+  /** Cao/rộng của ô biểu tượng — web giữ rộng của ô, đổi cao theo tỉ lệ này. */
+  iconAspect: number;
+  /** `aspect` = cao/rộng của ô ảnh (đã chặn, `photoAspect`). */
+  front: { style: string; fileId: string; aspect: number } | null;
+  back: { style: string; fileId: string; aspect: number } | null;
 }
 
 /**
@@ -1072,9 +1077,9 @@ export class DiagramsService {
       const source = sources.get(info.id) ?? missingSource('');
       const face = (side: PhotoSide) => {
         const photo = source.photos?.[side];
-        return photo ? { style: deviceLookStyle(source, side), fileId: photo.fileId } : null;
+        return photo ? { style: deviceLookStyle(source, side), fileId: photo.fileId, aspect: photoAspect(photo) } : null;
       };
-      return { id: info.id, found: info.found, icon: deviceLookStyle(source), front: face('front'), back: face('back') };
+      return { id: info.id, found: info.found, icon: deviceLookStyle(source), iconAspect: deviceIconAspect(source), front: face('front'), back: face('back') };
     });
     return { imsStyleKeys: [...IMS_STYLE_KEYS], items };
   }
@@ -1307,7 +1312,7 @@ export class DiagramsService {
       const image = images[i];
       if (!image) return;
       const uri = photoDataUri(image.mime, image.bytes);
-      for (const { deviceId, side } of targets) out.set(deviceId, { ...out.get(deviceId), [side]: { fileId, uri } });
+      for (const { deviceId, side } of targets) out.set(deviceId, { ...out.get(deviceId), [side]: { fileId, uri, width: image.width, height: image.height } });
     });
     return out;
   }

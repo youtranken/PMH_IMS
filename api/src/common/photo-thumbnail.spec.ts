@@ -19,6 +19,8 @@ describe('photoThumbnail — ảnh thật thiết bị thu về cạnh dài tố
     const out = await photoThumbnail(png(1200, 300), 'image/png', 480);
     expect(out?.mime).toBe('image/png');
     expect(sizeOf(out!.bytes)).toEqual({ width: 480, height: 120 });
+    // Cỡ đi kèm ảnh: ô trên bản vẽ lấy tỉ lệ ảnh từ đây, không giải mã lại.
+    expect({ width: out!.width, height: out!.height }).toEqual({ width: 480, height: 120 });
   });
 
   it('ảnh dọc lớn → cao đúng trần', async () => {
@@ -30,6 +32,7 @@ describe('photoThumbnail — ảnh thật thiết bị thu về cạnh dài tố
     const source = png(200, 50);
     const out = await photoThumbnail(source, 'image/png', 480);
     expect(out?.bytes.equals(source)).toBe(true);
+    expect({ width: out!.width, height: out!.height }).toEqual({ width: 200, height: 50 });
   });
 
   it('không phải ảnh png/jpeg/webp → null', async () => {

@@ -3,11 +3,13 @@ import { checkDiagramXml } from './diagram-gate';
 import {
   IMS_STYLE_KEYS,
   deviceCellLabel,
+  deviceIconAspect,
   deviceInsertCell,
   deviceLookStyle,
   dehydrateDiagramXml,
   hydrateDiagramXml,
   linkEdgeCell,
+  photoAspect,
   type CableHydration,
   type DeviceCellSource,
 } from './diagram-hydrate';
@@ -195,13 +197,48 @@ describe('deviceInsertCell — ô mới khi chèn từ hộp "Thiết bị kho"'
     expect(other.style).toContain('rounded=1;');
   });
   it('máy có ảnh mặt trước (riêng máy hay theo model — cùng một nguồn tra) → ô mới hiện ảnh, mang ims_photo + id ảnh; không ảnh → biểu tượng, không thuộc tính ảnh', () => {
-    const photo = { fileId: 'f-own', uri: 'data:image/png;base64,AAAA' };
+    const photo = { fileId: 'f-own', uri: 'data:image/png;base64,AAAA', width: 400, height: 400 };
     const withPhoto = deviceInsertCell(source({ photos: { front: photo } }));
     expect(withPhoto.style).toContain('shape=image;image=data:image/png;base64,AAAA;');
     expect(withPhoto.attrs).toEqual({ ims_photo: 'front', ims_photo_file_id: 'f-own' });
     const plain = deviceInsertCell(source());
     expect(plain.attrs).toEqual({});
     expect(plain.style).toContain('shape=mxgraph.networks.switch;');
+  });
+});
+
+describe('photoAspect — tỉ lệ cao/rộng của ô ảnh thật (Q-23)', () => {
+  it.each([
+    [{ width: 400, height: 100 }, 0.25],
+    [{ width: 300, height: 200 }, 0.6667],
+    [{ width: 100, height: 100 }, 1],
+    // Máy 1U chụp thẳng (~10:1) — chặn dưới để ô 60px rộng còn cao được ~9px, không thành một vạch.
+    [{ width: 1000, height: 50 }, 0.15],
+    // Ảnh dọc rất cao: chặn trên, ô không cao vọt khỏi trang.
+    [{ width: 100, height: 900 }, 2],
+    // Không biết cỡ → ô vuông như biểu tượng.
+    [{ width: 0, height: 0 }, 1],
+  ])('%o → %d', (size, want) => {
+    expect(photoAspect(size)).toBeCloseTo(want, 4);
+  });
+});
+
+describe('deviceIconAspect — tỉ lệ ô khi đổi về biểu tượng', () => {
+  it('hình của loại (switch 100×30) → 0.3; SVG riêng → vuông; loại chưa chọn hình → khối 120×50', () => {
+    expect(deviceIconAspect(source())).toBeCloseTo(0.3, 4);
+    expect(deviceIconAspect(source({ iconSvg: ICON }))).toBe(1);
+    expect(deviceIconAspect(source({ shape: null }))).toBeCloseTo(50 / 120, 4);
+  });
+});
+
+describe('deviceInsertCell — ô ảnh mang tỉ lệ của ảnh', () => {
+  it('ảnh ngang 1U (400×100): giữ rộng như biểu tượng, cao = rộng × tỉ lệ ảnh', () => {
+    const photo = { fileId: 'f-fw', uri: 'data:image/png,AAAA', width: 400, height: 100 };
+    expect(deviceInsertCell(source({ photos: { front: photo } }))).toMatchObject({ width: 60, height: 15 });
+  });
+  it('ảnh vuông → ô vuông như trước', () => {
+    const photo = { fileId: 'f-sq', uri: 'data:image/png,AAAA', width: 300, height: 300 };
+    expect(deviceInsertCell(source({ photos: { front: photo } }))).toMatchObject({ width: 60, height: 60 });
   });
 });
 
@@ -300,7 +337,7 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
 describe('ảnh thật trên ô thiết bị — hydrate nhúng, dehydrate gỡ', () => {
   const FILE = '7b0c1c1e-0000-4000-8000-0000000000aa';
   const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-  const photo = { fileId: FILE, uri: `data:image/png,${PNG}` };
+  const photo = { fileId: FILE, uri: `data:image/png,${PNG}`, width: 1, height: 1 };
   const withPhoto = source({ photos: { front: photo } });
 
   it('deviceLookStyle mặt có ảnh → shape=image, ảnh dạng data:image/png,<base64> (không dấu ; trong giá trị), giữ tỉ lệ ảnh', () => {

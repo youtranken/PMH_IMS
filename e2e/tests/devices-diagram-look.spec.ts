@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, devicesPageButton, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_SA, devicesPageButton, diagramBarAction, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
 
 /*
  * "Hình dùng trên sơ đồ" (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
@@ -17,6 +17,22 @@ test.beforeEach(() => {
 /** PNG 1×1 hợp lệ (đỏ) và một PNG 1×1 khác (xanh) — `files` kiểm theo nội dung. */
 const PNG_OWN = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
 const PNG_MODEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+
+/** PNG 400×100 (tỉ lệ 1U nằm ngang) — ô ảnh trên bản vẽ phải mang đúng tỉ lệ 1:4 này. */
+const PNG_WIDE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAZAAAABkCAYAAACoy2Z3AAABh0lEQVR4nO3VsRGAMBDAsLD5bw4z4EsRDmkCd75m5l4A8JKBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkGwfyMysk83hfQBfYSAAJAYCQGIgACQGAkBiIAAkBgJAYiAAJAYCQGIgACQGAkBiIAAkBgJAYiAAJAYCQGIgACQGAkBiIAAkBgJAYiAAJAYCQGIgACQGAkBiIAAkBgJAYiAAJAYCQGIgACQGAkBiIAAkBgJAYiAAJAYCQGIgACQGAkBiIAAkBgJAYiAAJAYCQGIgACTbBwLAPxgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAiYEAkBgIAImBAJAYCACJgQCQGAgAyQO/8HIQnZC86gAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** Cỡ (rộng, cao) trong XML đã lưu của ô máy `deviceId`. */
+function savedSize(diagramId: string, deviceId: string): { width: number; height: number } {
+  const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
+  // XML lưu khô xếp thuộc tính theo bảng chữ cái (height trước width): đọc từng thuộc tính riêng.
+  const geo = new RegExp(`ims_device_id="${deviceId}"[\\s\\S]*?(<mxGeometry[^>]*>)`).exec(xml)?.[1] ?? '';
+  const attr = (name: string) => Number(new RegExp(`\\s${name}="([\\d.]+)"`).exec(geo)?.[1]);
+  expect(geo, xml.slice(Math.max(0, xml.indexOf(deviceId) - 300), xml.indexOf(deviceId) + 900)).not.toBe('');
+  return { width: attr('width'), height: attr('height') };
+}
 
 async function device(page: Page, code: string, typeId: string, model: string): Promise<string> {
   const res = await page.request.post('/api/v1/devices', { headers: await writeHeaders(page), data: { code, name: `Máy ${code}`, deviceTypeId: typeId, model } });
@@ -62,6 +78,7 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   // Bản đồ quan hệ dùng đúng ảnh đó (cùng endpoint ảnh đã thu nhỏ).
   const hubImg = page.getByTestId('rmap-hub').getByRole('img');
   await expect(hubImg).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${ownFile}`);
+  await expect(page.getByTestId('rmap-hub')).not.toContainText('Ảnh chung của model');
   expect(await hubImg.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
 
   // Trang máy B (cùng model): vẫn ảnh model.
@@ -102,6 +119,8 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   await page.getByRole('group', { name: 'Mặt trước' }).getByRole('button', { name: 'Bỏ ảnh riêng — Mặt trước' }).click();
   await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText(`Ảnh chung của model ${model}`)).toBeVisible();
   await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${modelFile}`);
+  // Ảnh model có thể trông y hệt ảnh riêng vừa bỏ: hạch nói rõ đây là ảnh chung của model.
+  await expect(page.getByTestId('rmap-hub')).toContainText(`Ảnh chung của model ${model}`);
 });
 
 test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang ảnh riêng (trang thiết bị + bản đồ quan hệ); Thay ảnh; Bỏ ảnh riêng → về biểu tượng, bản đồ hết ảnh', async ({ page }) => {
@@ -155,4 +174,63 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
   expect(sql(`SELECT coalesce(photo_front_file_id::text, '') FROM device WHERE id = '${id}'`)).toBe('');
   // Ảnh cũ không còn được phục vụ cho mặt này (server không rơi về giấy tờ còn nằm đó).
   expect((await page.request.get(`/api/v1/devices/${id}/photo/front?v=${replaced}`)).status()).toBe(404);
+});
+
+test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (không ô vuông trống trên dưới); đổi về Biểu tượng rồi lại Ảnh thì ô ôm lại theo hình', async ({ page }) => {
+  test.setTimeout(240_000);
+  const secret = await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const typeId = ((await (await page.request.get('/api/v1/catalog')).json()) as { deviceTypes: { id: string; name: string }[] }).deviceTypes.find((t) => t.name === 'Switch')!.id;
+  const code = `SW-E2E-HW${stamp}`;
+  const id = await device(page, code, typeId, `E2E-MDL-HW${stamp}`);
+  const up = await page.request.post('/api/v1/files', {
+    headers: await writeHeaders(page),
+    multipart: { ownerType: 'device', ownerId: id, file: { name: `ngang-${stamp}.png`, mimeType: 'image/png', buffer: PNG_WIDE } },
+  });
+  expect(up.status(), await up.text()).toBe(201);
+  const fileId = ((await up.json()) as { id: string }).id;
+  expect((await page.request.patch(`/api/v1/devices/${id}/photos`, { headers: await writeHeaders(page), data: { front: fileId } })).status()).toBe(200);
+  const look = ((await (await page.request.get(`/api/v1/diagrams/device-looks?ids=${id}`)).json()) as { items: { iconAspect: number; front: { aspect: number } }[] }).items[0];
+  expect(look.front.aspect).toBeCloseTo(0.25, 3);
+
+  const created = await page.request.post('/api/v1/diagrams', { headers: await writeHeaders(page), data: { name: `E2E Ảnh ngang ${stamp}`, nodeType: 'room' } });
+  const diagramId = ((await created.json()) as { id: string }).id;
+  await stepUpViaApi(page, secret, 'diagram');
+  await page.goto(`/diagrams/${diagramId}?mode=edit`);
+  const stock = page.getByRole('button', { name: 'Thiết bị kho', exact: true });
+  await expect(stock).toBeEnabled({ timeout: 60_000 });
+  await stock.click();
+  const box = page.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
+  await box.getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(code);
+  await box.getByRole('checkbox', { name: `Chọn ${code} để chèn` }).check();
+  await box.getByRole('button', { name: /^Chèn/ }).click();
+  await expect(page.getByText(`Đã chèn ${code} vào bản vẽ.`)).toBeVisible();
+
+  const save = async () => {
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+  };
+  await save();
+  const inserted = savedSize(diagramId, id);
+  // Rộng như biểu tượng hôm nay, cao = rộng × 100/400.
+  expect(inserted.width).toBe(60);
+  expect(inserted.height).toBe(15);
+
+  // Công tắc Biểu tượng / Ảnh thật: về biểu tượng → cao theo tỉ lệ biểu tượng; lại ảnh → ôm ảnh.
+  const pick = async (choice: RegExp) => {
+    await diagramBarAction(page, 'Ảnh thật…');
+    const dialog = page.getByRole('dialog', { name: 'Biểu tượng / Ảnh thật' });
+    await dialog.getByRole('radiogroup', { name: `Hình của ${code}` }).getByRole('radio', { name: choice }).check();
+    await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
+  };
+  await pick(/Biểu tượng/);
+  await save();
+  expect(savedSize(diagramId, id)).toEqual({ width: 60, height: Math.round(60 * look.iconAspect) });
+  await pick(/Ảnh mặt trước/);
+  await save();
+  const back = savedSize(diagramId, id);
+  expect(back.height / back.width).toBeCloseTo(0.25, 2);
 });

@@ -41,6 +41,23 @@ export type PhotoSide = 'front' | 'back';
 export interface DevicePhoto {
   fileId: string;
   uri: string;
+  /** Cỡ ảnh đã thu nhỏ (cùng tỉ lệ ảnh gốc) — ô ảnh lấy tỉ lệ cao/rộng từ đây. */
+  width: number;
+  height: number;
+}
+
+/** Chặn tỉ lệ cao/rộng của ô ảnh: máy 1U (~10:1) vẫn còn thấy được, ảnh dọc không cao vọt khỏi trang. */
+const PHOTO_ASPECT_MIN = 0.15;
+const PHOTO_ASPECT_MAX = 2;
+
+/**
+ * Tỉ lệ cao/rộng của ô hiện ảnh thật (Q-23): ô ôm sát ảnh thay vì ảnh nằm giữa một ô vuông với hai
+ * dải trống trên dưới (nhãn rơi xa khỏi ảnh). Một chỗ tính cho ô chèn mới và công tắc đổi hình
+ * (web nhân `rộng × tỉ lệ`); không biết cỡ thì vuông như biểu tượng.
+ */
+export function photoAspect(size: { width: number; height: number }): number {
+  if (!(size.width > 0 && size.height > 0)) return 1;
+  return Math.min(PHOTO_ASPECT_MAX, Math.max(PHOTO_ASPECT_MIN, size.height / size.width));
 }
 
 /**
@@ -125,19 +142,27 @@ export function deviceInsertCell(device: DeviceCellSource): {
   const label = deviceCellLabel(device);
   /*
    * Máy có ảnh (riêng của máy, không có thì của model — `photos` đã tra theo thứ tự đó ở `devices`)
-   * thì ô mới hiện ảnh mặt trước; người vẽ đổi về biểu tượng ở "Ảnh thật…". Ô vuông như biểu tượng.
+   * thì ô mới hiện ảnh mặt trước; người vẽ đổi về biểu tượng ở "Ảnh thật…". Rộng như biểu tượng,
+   * cao theo tỉ lệ ảnh.
    */
   const front = device.found ? device.photos?.front : undefined;
   if (front) {
     return {
       style: `align=center;${deviceLookStyle(device, 'front')}`,
       label,
-      ...DIAGRAM_ICON_SIZE,
+      width: DIAGRAM_ICON_SIZE.width,
+      height: Math.round(DIAGRAM_ICON_SIZE.width * photoAspect(front)),
       attrs: { [PHOTO_SIDE_ATTR]: 'front', [PHOTO_FILE_ATTR]: front.fileId },
     };
   }
   const cell = deviceIconCell(device, label);
   return { ...cell, attrs: {} };
+}
+
+/** Tỉ lệ cao/rộng của ô biểu tượng — công tắc "Ảnh thật" đổi ô ảnh về biểu tượng giữ rộng, cao theo đây. */
+export function deviceIconAspect(device: DeviceCellSource): number {
+  const cell = deviceIconCell(device, '');
+  return cell.height / cell.width;
 }
 
 function deviceIconCell(device: DeviceCellSource, label: string): { style: string; label: string; width: number; height: number } {

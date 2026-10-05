@@ -11,17 +11,19 @@ function file(body: string, second = ''): string {
   );
 }
 
-function cell(id: string, extra = '', style = 'fillColor=none;shape=mxgraph.cisco.switch;html=0;'): string {
-  return `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01"${extra} id="${id}"><mxCell style="${style}" vertex="1" parent="1"><mxGeometry width="10" height="10" as="geometry"/></mxCell></UserObject>`;
+function cell(id: string, extra = '', style = 'fillColor=none;shape=mxgraph.cisco.switch;html=0;', geometry = '<mxGeometry width="10" height="10" as="geometry"/>'): string {
+  return `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01"${extra} id="${id}"><mxCell style="${style}" vertex="1" parent="1">${geometry}</mxCell></UserObject>`;
 }
 
 const LOOK: DeviceLook = {
   id: DEV,
   found: true,
   icon: 'shape=mxgraph.cisco.switch;html=0;',
+  iconAspect: 0.3,
   front: {
     style: 'shape=image;image=data:image/png,AAAA;imageAspect=1;html=0;',
     fileId: 'f-front',
+    aspect: 0.25,
   },
   back: null,
 };
@@ -74,5 +76,37 @@ describe('photoCellUpdate — đổi ô giữa Biểu tượng và Ảnh thật'
   it('styleWithoutKeys giữ khoá lạ, bỏ khoá IMS', () => {
     expect(styleWithoutKeys('rounded=1;shape=x;html=1;', KEYS)).toBe('rounded=1;');
     expect(styleWithoutKeys('', KEYS)).toBe('');
+  });
+});
+
+describe('photoCellUpdate — ô ôm theo tỉ lệ ảnh khi đổi hình (Q-23)', () => {
+  const placed = (extra = '', style?: string) =>
+    deviceCellsOnPage(file(cell('a', extra, style, '<mxGeometry x="40" y="50" width="120" height="120" as="geometry"/>')), 'p1')[0];
+
+  it('đọc vị trí + cỡ của ô (x/y vắng = 0)', () => {
+    expect(placed().geometry).toEqual({ x: 40, y: 50, width: 120, height: 120 });
+    expect(deviceCellsOnPage(file(cell('b')), 'p1')[0].geometry).toEqual({ x: 0, y: 0, width: 10, height: 10 });
+  });
+
+  it.each([
+    ['front', '', 30],
+    ['icon', ' ims_photo="front"', 36],
+  ] as const)('sang %s: giữ vị trí và rộng, cao = rộng × tỉ lệ', (choice, extra, height) => {
+    const update = photoCellUpdate(placed(extra), LOOK, choice, KEYS);
+    expect(update.geometry).toBe(`<mxGeometry x="40" y="50" width="120" height="${height}" as="geometry"/>`);
+  });
+
+  it('máy nằm trong khung tủ (cao = số U) → đổi hình không đụng cỡ', () => {
+    const frame = '<UserObject label="Tủ" ims_cabinet_id="cab-1" id="fr"><mxCell style="" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="400" as="geometry"/></mxCell></UserObject>';
+    const inRack = `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01" id="r1"><mxCell style="" vertex="1" parent="fr"><mxGeometry x="10" y="40" width="180" height="40" as="geometry"/></mxCell></UserObject>`;
+    const [c] = deviceCellsOnPage(file(frame + inRack), 'p1');
+    expect(c.geometry).toBeNull();
+    expect(photoCellUpdate(c, LOOK, 'front', KEYS).geometry).toBeUndefined();
+  });
+
+  it('ô không đọc được cỡ → không gửi geometry (không đoán)', () => {
+    const [c] = deviceCellsOnPage(file(cell('a', '', undefined, '')), 'p1');
+    expect(c.geometry).toBeNull();
+    expect(photoCellUpdate(c, LOOK, 'front', KEYS).geometry).toBeUndefined();
   });
 });

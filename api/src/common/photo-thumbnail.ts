@@ -6,6 +6,9 @@ const PHOTO_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 export interface PhotoImage {
   mime: string;
   bytes: Buffer;
+  /** Cỡ điểm ảnh của `bytes` — ô ảnh trên bản vẽ lấy tỉ lệ từ đây thay vì giải mã lại. */
+  width: number;
+  height: number;
 }
 
 /**
@@ -35,10 +38,10 @@ export async function photoThumbnail(bytes: Buffer, mime: string, maxPx: number)
     return null;
   }
   if (!(width > 0 && height > 0)) return null;
-  if (Math.max(width, height) <= maxPx) return { mime, bytes };
+  if (Math.max(width, height) <= maxPx) return { mime, bytes, width, height };
   try {
     const rendered = await renderAsync(svg, { fitTo: { mode: width >= height ? 'width' : 'height', value: maxPx } });
-    return { mime: 'image/png', bytes: rendered.asPng() };
+    return { mime: 'image/png', bytes: rendered.asPng(), width: rendered.width, height: rendered.height };
   } catch {
     return null;
   }

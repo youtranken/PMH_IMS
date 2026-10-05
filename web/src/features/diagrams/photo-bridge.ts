@@ -20,6 +20,11 @@ export interface DeviceCellOnPage {
   style: string;
   /** Thuộc tính dữ liệu hiện có của ô (trừ `id`) — giữ nguyên khi đổi hình. */
   attrs: Record<string, string>;
+  /**
+   * Vị trí + cỡ hiện tại; `null` = không đọc được, hoặc ô nằm trong khung tủ (cao = số U, đúng
+   * thật — đổi hình không được kéo nó lệch khỏi U).
+   */
+  geometry: { x: number; y: number; width: number; height: number } | null;
 }
 
 /** `GET /diagrams/device-looks` — một máy. */
@@ -27,8 +32,11 @@ export interface DeviceLook {
   id: string;
   found: boolean;
   icon: string;
-  front: { style: string; fileId: string } | null;
-  back: { style: string; fileId: string } | null;
+  /** Cao/rộng của ô biểu tượng (server tính). */
+  iconAspect: number;
+  /** `aspect` = cao/rộng của ô ảnh, server đã chặn (`photoAspect` của api). */
+  front: { style: string; fileId: string; aspect: number } | null;
+  back: { style: string; fileId: string; aspect: number } | null;
 }
 
 function parse(xml: string): Document | null {
@@ -43,6 +51,13 @@ export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage
   const page = doc ? Array.from(doc.getElementsByTagName('diagram')).find((d) => d.getAttribute('id') === pageId) : undefined;
   if (!page) return [];
   const out: DeviceCellOnPage[] = [];
+  const rackFrames = new Set(
+    ['UserObject', 'object'].flatMap((tag) =>
+      Array.from(page.getElementsByTagName(tag))
+        .filter((el) => el.getAttribute('ims_cabinet_id'))
+        .map((el) => el.getAttribute('id') ?? ''),
+    ),
+  );
   for (const tag of ['UserObject', 'object']) {
     for (const el of Array.from(page.getElementsByTagName(tag))) {
       const deviceId = el.getAttribute('ims_device_id');
@@ -58,10 +73,29 @@ export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage
         photo,
         style: cell.getAttribute('style') ?? '',
         attrs,
+        geometry: rackFrames.has(cell.getAttribute('parent') ?? '') ? null : geometryOf(cell),
       });
     }
   }
   return out;
+}
+
+function geometryOf(cell: Element): DeviceCellOnPage['geometry'] {
+  const geo = Array.from(cell.children).find((child) => child.tagName === 'mxGeometry');
+  if (!geo) return null;
+  const width = Number(geo.getAttribute('width'));
+  const height = Number(geo.getAttribute('height'));
+  if (!(width > 0 && height > 0)) return null;
+  return { x: Number(geo.getAttribute('x') ?? 0) || 0, y: Number(geo.getAttribute('y') ?? 0) || 0, width, height };
+}
+
+/**
+ * Ô ôm theo hình mới (Q-23): giữ vị trí và RỘNG người vẽ đã đặt, cao = rộng × tỉ lệ của hình — ảnh 1U
+ * nằm sát nhãn thay vì giữa một ô vuông. Chỉ chạy khi người vẽ đổi hình, không sửa ô lúc mở bản vẽ.
+ */
+function fittedGeometry(geometry: NonNullable<DeviceCellOnPage['geometry']>, aspect: number): string {
+  const r = (n: number) => Math.round(n);
+  return `<mxGeometry x="${r(geometry.x)}" y="${r(geometry.y)}" width="${r(geometry.width)}" height="${r(geometry.width * aspect)}" as="geometry"/>`;
 }
 
 /** Bỏ các khoá style IMS làm chủ (`k=v;`). Ảnh `data:…;base64,…` bị `;` cắt làm hai mẩu: gỡ cả mẩu đuôi. */
@@ -99,16 +133,20 @@ export function photoCellUpdate(
   look: DeviceLook,
   choice: PhotoChoice,
   imsStyleKeys: readonly string[],
-): { style: string; xmlValue: string } {
+): { style: string; xmlValue: string; geometry?: string } {
   const face = choice === 'icon' ? null : look[choice];
   const base = styleWithoutKeys(cell.style, imsStyleKeys);
+  const aspect = face ? face.aspect : look.iconAspect;
+  const geometry = cell.geometry && aspect > 0 ? { geometry: fittedGeometry(cell.geometry, aspect) } : {};
   if (!face) {
     return {
       style: `${base}${look.icon}`,
       xmlValue: bindEdgeValue(cell.id, cell.attrs, {}, ['ims_photo', 'ims_photo_file_id']),
+      ...geometry,
     };
   }
   return {
+    ...geometry,
     style: `${base}${face.style}`,
     xmlValue: bindEdgeValue(cell.id, cell.attrs, {
       ims_photo: choice,

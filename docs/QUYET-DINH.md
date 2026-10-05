@@ -599,6 +599,13 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
       ghi thẳng như trang thiết bị. Thêm mới: ảnh chọn được giữ ở trình duyệt (xem trước ngay),
       máy lưu xong mới tải lên rồi đặt làm ảnh riêng. Bước ảnh hỏng thì máy VẪN được tạo; người
       dùng thấy câu báo rõ kèm nút mở hồ sơ để đặt lại ảnh — không mất ảnh trong im lặng.
+    - **Ô ảnh trên bản vẽ ôm theo tỉ lệ ảnh** (chủ dự án 05/10: firewall 1U nằm giữa một ô vuông, trống
+      trên dưới, nhãn rơi xa). Giữ bề rộng như hôm nay, cao = rộng × (cao/rộng của ảnh), tỉ lệ chặn
+      trong 0,15…2. Cỡ ảnh lấy từ ảnh SERVER đã giải mã + thu nhỏ khi dựng ô (cùng lượt, có bộ nhớ
+      đệm) — không thêm cột, không migration, và không tin cỡ do trình duyệt báo. Áp khi chèn từ
+      "Thiết bị kho" và khi người vẽ đổi Biểu tượng ↔ Ảnh mặt trước/sau (về biểu tượng thì cao theo
+      tỉ lệ của biểu tượng loại). Ô đã lưu KHÔNG bị sửa cỡ lúc mở bản vẽ — chỉ chỉnh khi người vẽ đổi
+      hình lần nữa. Máy trong khung tủ ("Dựng lại mặt tủ") giữ cao đúng số U, đổi hình không đụng cỡ.
   - **Menu ⋮ của trình vẽ chia nhóm có tiêu đề** (Dây & kết nối · Khung, tủ & ảnh · Phiên bản &
     duyệt · Trợ giúp), mỗi mục có một dòng mô tả; "Hướng dẫn" đứng ĐẦU menu để không phải cuộn.
     Khai kết nối xong, lời báo có nút "Xem ở sơ đồ cổng của <máy>" (mở tab mới — không bỏ bản vẽ
