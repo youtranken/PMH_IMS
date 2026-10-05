@@ -444,4 +444,86 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect(spaCsp).toContain("frame-src 'self'");
     expect(spaCsp).toContain("frame-ancestors 'none'");
   });
+
+  test('đã lưu trữ: "Đã lưu trữ (n)" liệt kê bản đã cất, mở chỉ xem (không tab Sửa), Bỏ lưu trữ đưa về bản đồ; bản cha còn cất thì chặn', async ({ page }) => {
+    test.setTimeout(120_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const parentName = `E2E Cha cất ${stamp}`;
+    const childName = `E2E Con cất ${stamp}`;
+    const parent = await createDiagram(page, parentName);
+    const child = await createDiagram(page, childName, parent);
+    await stepUpViaApi(page, secret, 'diagram');
+    expect((await saveViaApi(page, child)).status()).toBe(201);
+    const headers = await writeHeaders(page);
+    expect((await page.request.post(`/api/v1/diagrams/${child}/archive`, { headers })).status()).toBe(201);
+    expect((await page.request.post(`/api/v1/diagrams/${parent}/archive`, { headers })).status()).toBe(201);
+
+    await page.goto('/diagrams');
+    await page.getByRole('button', { name: /^Đã lưu trữ \(\d+\)$/ }).click();
+    const section = page.getByRole('region', { name: /^Bản vẽ đã lưu trữ/ });
+    await expect(section.getByText(childName)).toBeVisible();
+    await expect(section.getByText(`Trong "${parentName}"`)).toBeVisible();
+
+    // Bản cha còn cất → Bỏ lưu trữ bản con bị chặn, câu tiếng Việt nói phải bỏ bản cha trước.
+    await section.getByRole('button', { name: `Bỏ lưu trữ "${childName}"` }).click();
+    await page.getByRole('dialog', { name: `Bỏ lưu trữ "${childName}"?` }).getByRole('button', { name: 'Bỏ lưu trữ' }).click();
+    await expect(page.getByText('Bản vẽ cha đang lưu trữ — bỏ lưu trữ bản vẽ cha trước.')).toBeVisible();
+
+    // Mở xem bản con: chỉ xem — có dải báo, không có tab Sửa, nội dung vẫn hiện.
+    await section.getByRole('link', { name: `Mở xem "${childName}"` }).click();
+    await expect(page.getByRole('note', { name: 'Bản vẽ đã lưu trữ' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toContainText('Tầng 3 E2E');
+    await expect(page.getByRole('tab', { name: 'Sửa' })).toHaveCount(0);
+
+    // Bỏ lưu trữ bản cha rồi bản con → cả hai về bản đồ; nhật ký có diagram.unarchived.
+    await page.goto('/diagrams?archived=1');
+    for (const name of [parentName, childName]) {
+      await page.getByRole('region', { name: /^Bản vẽ đã lưu trữ/ }).getByRole('button', { name: `Bỏ lưu trữ "${name}"` }).click();
+      await page.getByRole('dialog', { name: `Bỏ lưu trữ "${name}"?` }).getByRole('button', { name: 'Bỏ lưu trữ' }).click();
+      await expect(page.getByText(`Đã bỏ lưu trữ "${name}" — bản vẽ trở lại bản đồ.`)).toBeVisible();
+    }
+    await expect(page.getByRole('region', { name: 'Bản đồ bản vẽ' }).getByRole('button', { name: new RegExp(childName) }).first()).toBeVisible();
+    expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.unarchived' AND object_id IN ('${parent}', '${child}')`)).toBe('2');
+    expect(sql(`SELECT count(*) FROM diagram WHERE id IN ('${parent}', '${child}') AND archived_at IS NULL`)).toBe('2');
+  });
+
+  test('Thêm bản vẽ con — nhân bản từ phiên bản chọn của bản cha (bản đã đặt tên qua "Chọn phiên bản khác…")', async ({ page }) => {
+    test.setTimeout(120_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const parentName = `E2E Cha nhiều bản ${stamp}`;
+    const parent = await createDiagram(page, parentName);
+    await stepUpViaApi(page, secret, 'diagram');
+    const first = (await (await saveViaApi(page, parent)).json()) as { id: string };
+    const second = await saveViaApi(page, parent, XML_EMPTY.replace('Tầng 3 E2E', 'Tầng 4 E2E'), SVG_SIMPLE.replace('Tầng 3 E2E', 'Tầng 4 E2E'));
+    expect(second.status()).toBe(201);
+    const label = await page.request.post(`/api/v1/diagrams/${parent}/versions/${first.id}/label`, { headers: await writeHeaders(page), data: { label: `Bản đầu E2E ${stamp}` } });
+    expect(label.status()).toBe(201);
+
+    await page.goto(`/diagrams?node=${parent}`);
+    await rowAction(page, parentName, 'Thêm bản vẽ con');
+    const form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
+    const picker = form.getByRole('button', { name: 'Phiên bản của bản cha' });
+    await expect(picker).toContainText('#2 · bản mới nhất');
+    await form.getByRole('button', { name: 'Chọn phiên bản khác…' }).click();
+    await picker.click();
+    await page.getByRole('option', { name: new RegExp(`^#1 · Bản đầu E2E ${stamp}`) }).click();
+    await form.getByLabel('Tên bản vẽ').fill(`E2E Con từ #1 ${stamp}`);
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(page.getByText(`Đã tạo bản vẽ "E2E Con từ #1 ${stamp}" — nhân bản từ "${parentName}" phiên bản #1.`)).toBeVisible();
+    const childXml = sql(`SELECT v.xml FROM diagram_version v JOIN diagram d ON d.id = v.diagram_id WHERE d.name = 'E2E Con từ #1 ${stamp}'`);
+    expect(childXml).toContain('Tầng 3 E2E');
+    expect(childXml).not.toContain('Tầng 4 E2E');
+
+    // Đường hỏng: phiên bản của bản vẽ khác → 404, không tạo con.
+    const other = await createDiagram(page, `E2E Bản lạ ${stamp}`);
+    const foreign = (await (await saveViaApi(page, other)).json()) as { id: string };
+    const res = await page.request.post(`/api/v1/diagrams/${parent}/copied-children`, {
+      headers: await writeHeaders(page),
+      data: { name: `E2E Con lạc ${stamp}`, nodeType: 'floor', versionId: foreign.id },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(404);
+  });
 });
