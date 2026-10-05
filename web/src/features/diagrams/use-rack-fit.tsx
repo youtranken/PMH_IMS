@@ -48,19 +48,20 @@ export function useRackFit({
         })
         .catch(() => undefined);
     }
-    for (const item of result.cabinetMismatch) {
-      if (warned.current.has(`cab:${item.cellId}`)) continue;
-      warned.current.add(`cab:${item.cellId}`);
-      toast({
-        tone: 'warn',
-        message: t('diagrams.rack.cabinetMismatch', { code: item.code, cabinet: item.deviceCabinet ?? t('diagrams.rack.noCabinet'), frame: item.frameLabel }),
-      });
+    // Mở một bản vẽ cũ có cả loạt máy lệch: MỘT lời báo liệt kê, không một chuỗi lời báo.
+    const mismatch = result.cabinetMismatch.filter((item) => !warned.current.has(`cab:${item.cellId}`));
+    for (const item of mismatch) warned.current.add(`cab:${item.cellId}`);
+    const cabinetOf = (item: (typeof mismatch)[number]) => item.deviceCabinet ?? t('diagrams.rack.noCabinet');
+    if (mismatch.length === 1) {
+      const [item] = mismatch;
+      toast({ tone: 'warn', message: t('diagrams.rack.cabinetMismatch', { code: item.code, cabinet: cabinetOf(item), frame: item.frameLabel }) });
+    } else if (mismatch.length > 1) {
+      const list = mismatch.map((item) => `${item.code} (${cabinetOf(item)})`).join(', ');
+      toast({ tone: 'warn', message: t('diagrams.rack.cabinetMismatchMany', { count: mismatch.length, list }) });
     }
-    for (const item of result.noU) {
-      if (warned.current.has(`u:${item.cellId}`)) continue;
-      warned.current.add(`u:${item.cellId}`);
-      toast({ tone: 'warn', message: t('diagrams.rack.noU', { code: item.code }) });
-    }
+    const noU = result.noU.filter((item) => !warned.current.has(`u:${item.cellId}`));
+    for (const item of noU) warned.current.add(`u:${item.cellId}`);
+    if (noU.length > 0) toast({ tone: 'warn', message: t('diagrams.rack.noU', { code: noU.map((item) => item.code).join(', ') }) });
     if (Object.keys(result.updates).length === 0) return;
     // Ô "nhảy" về U của kho ngay sau khi thả: nói một lần vì sao, và muốn dời thì sửa ở đâu.
     if (!warned.current.has('snap') && Object.values(result.updates).some((u) => u.geometry)) {
