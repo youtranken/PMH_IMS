@@ -129,6 +129,21 @@ interface SubnetHit {
   voidedAt: string | null;
 }
 
+/** Một bản vẽ của cây `GET /diagrams` — chỉ tên/loại, không nội dung (xem bản đồ không cần mã). */
+interface DiagramTreeHit {
+  id: string;
+  name: string;
+  nodeType: string;
+  archivedAt: string | null;
+}
+
+/** `GET /diagrams/find?q=` — máy khớp + bản vẽ chính thức chứa nó (tên + id). */
+interface DiagramFoundHit {
+  id: string;
+  code: string;
+  diagrams: { id: string; name: string }[];
+}
+
 /** Nhận "vlan 20", "VLAN20" hay chỉ "20" — ở PMH người ta gọi dải theo VLAN. */
 function vlanOf(q: string): number | null {
   const match = /^(?:vlan\s*)?(\d{1,4})$/i.exec(q.trim());
@@ -313,6 +328,49 @@ export function CommandPalette({ me }: { me: Me }) {
   });
   const ipFirst = looksLikeIp(q);
 
+  /*
+   * Sơ đồ (D-08): "bản vẽ tên X" và "máy X nằm ở bản vẽ nào". Cả hai là thông tin của CÂY (tên,
+   * không nội dung) nên không đòi mã sơ đồ; mở bản vẽ thì trình xem tự hỏi mã như mọi lần.
+   */
+  const diagramTree = useQuery({
+    queryKey: ['palette', 'diagrams'],
+    queryFn: () => apiFetch<DiagramTreeHit[]>('/api/v1/diagrams'),
+    enabled,
+    staleTime: 60_000,
+  });
+  const diagramFind = useQuery({
+    queryKey: ['palette', 'diagram-find', q],
+    queryFn: () => apiFetch<DiagramFoundHit[]>(`/api/v1/diagrams/find?q=${encodeURIComponent(q)}`),
+    enabled,
+  });
+  const diagramHits = useMemo<Hit[]>(() => {
+    if (!enabled) return [];
+    const group = t('nav.diagrams');
+    const needle = foldSearch(q);
+    const named = asArray<DiagramTreeHit>(diagramTree.data)
+      .filter((d) => d.archivedAt === null && foldSearch(d.name).includes(needle))
+      .slice(0, 4)
+      .map((d) => ({
+        group,
+        title: d.name,
+        sub: t(`diagrams.nodeType.${d.nodeType}`, { defaultValue: '' }),
+        to: PATHS.diagram(d.id),
+        navKey: 'nav.diagrams',
+      }));
+    const placed = asArray<DiagramFoundHit>(diagramFind.data)
+      .flatMap((device) =>
+        device.diagrams.map((diagram) => ({
+          group,
+          title: t('palette.deviceOnDiagram', { code: device.code, diagram: diagram.name }),
+          sub: t('palette.deviceOnDiagramSub'),
+          to: `${PATHS.diagram(diagram.id)}?${new URLSearchParams({ focus: device.id }).toString()}`,
+          navKey: 'nav.diagrams',
+        })),
+      )
+      .slice(0, 4);
+    return [...named, ...placed];
+  }, [enabled, diagramTree.data, diagramFind.data, q, t]);
+
   const ipHits = useMemo<Hit[]>(() => {
     if (!enabled) return [];
     const group = t('palette.groupIp');
@@ -483,6 +541,7 @@ export function CommandPalette({ me }: { me: Me }) {
         PATHS.serviceAccounts,
         'nav.serviceAccounts',
       ),
+      ...diagramHits,
       ...(ipFirst ? [] : network),
       ...navHits,
     ];
@@ -494,6 +553,7 @@ export function CommandPalette({ me }: { me: Me }) {
     accounts.data,
     ipHits,
     subnetHits,
+    diagramHits,
     ipFirst,
     navHits,
     q,
@@ -507,14 +567,18 @@ export function CommandPalette({ me }: { me: Me }) {
       isp.isFetching ||
       accounts.isFetching ||
       ipAddresses.isFetching ||
-      subnets.isFetching);
+      subnets.isFetching ||
+      diagramTree.isFetching ||
+      diagramFind.isFetching);
   const anyFailed =
     devices.isError ||
     software.isError ||
     isp.isError ||
     accounts.isError ||
     ipAddresses.isError ||
-    subnets.isError;
+    subnets.isError ||
+    diagramTree.isError ||
+    diagramFind.isError;
 
   /*
    * Ba cảnh của danh sách, và cả ba đều CHỌN ĐƯỢC bằng mũi tên:

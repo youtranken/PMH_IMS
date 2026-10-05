@@ -213,6 +213,8 @@ export default {
     emptyHint: 'Thử mã, serial, hoặc một phần tên.',
     seeAll: 'Xem tất cả {{count}} kết quả trong {{group}}',
     groupIp: 'Địa chỉ IP',
+    deviceOnDiagram: '{{code}} trên {{diagram}}',
+    deviceOnDiagramSub: 'Mở bản vẽ, bay tới máy',
     groupSubnet: 'Dải mạng',
     ipTitle: 'IP {{address}}',
     ipSub: '{{owner}} · {{subnet}}',
