@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
+import { PATHS } from '@/lib/routes';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import type { DrawioCommand } from '@/ui/drawio-protocol';
@@ -19,6 +20,12 @@ export const DEVICE_LOOKS_BATCH = 40;
 
 const CHOICES: PhotoChoice[] = ['icon', 'front', 'back'];
 const CHOICE_KEY: Record<PhotoChoice, string> = { icon: 'diagrams.photo.icon', front: 'diagrams.photo.front', back: 'diagrams.photo.back' };
+
+/** Ảnh (data URI đã thu nhỏ của server) nằm trong style ô ảnh — dùng làm ảnh xem trước trong hộp. */
+function imageOfStyle(style: string): string | null {
+  const match = /(?:^|;)image=([^;]+)/.exec(style);
+  return match && match[1].startsWith('data:image/') ? match[1] : null;
+}
 
 /**
  * Công tắc "Biểu tượng / Ảnh thật" của màn sửa (mục ⋮ "Ảnh thật…"): hộp liệt kê ô thiết bị của
@@ -163,9 +170,21 @@ function PhotoRow({ cell, look, onChoose }: { cell: DeviceCellOnPage; look: Devi
   const back = useDisabledReason(reasonText('back'));
   const reasons: Record<PhotoChoice, ReturnType<typeof useDisabledReason> | null> = { icon: null, front, back };
   const chosen = currentChoice(cell);
+  // Máy thiếu ảnh một mặt: lối sang trang thiết bị để tải (tab mới — rời màn sửa là mất nét đang vẽ).
+  const missingSide = look?.found && (!look.front || !look.back);
   return (
     <tr>
-      <td className="mono">{cell.code}</td>
+      <td>
+        <span className="mono">{cell.code}</span>
+        {missingSide ? (
+          <>
+            <br />
+            <a className="small" href={PATHS.device(cell.deviceId)} target="_blank" rel="noopener noreferrer">
+              {t('diagrams.photo.addPhoto', { code: cell.code })}
+            </a>
+          </>
+        ) : null}
+      </td>
       <td>
         <div className="segmented" role="radiogroup" aria-label={t('diagrams.photo.choiceOf', { code: cell.code })}>
           {CHOICES.map((choice) => {
@@ -181,6 +200,13 @@ function PhotoRow({ cell, look, onChoose }: { cell: DeviceCellOnPage; look: Devi
                   disabled={disabled}
                   onChange={() => onChoose(choice)}
                 />
+                {choice !== 'icon' && look?.[choice] && imageOfStyle(look[choice].style) ? (
+                  <img
+                    className="photo-thumb"
+                    src={imageOfStyle(look[choice].style) ?? ''}
+                    alt={t('diagrams.photo.thumbOf', { side: t(CHOICE_KEY[choice]), code: cell.code })}
+                  />
+                ) : null}
                 {t(CHOICE_KEY[choice])}
                 {reason?.hint}
               </label>

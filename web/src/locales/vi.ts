@@ -1201,7 +1201,7 @@ export default {
     photo: {
       menuButton: 'Ảnh thật…',
       title: 'Biểu tượng / Ảnh thật',
-      hint: 'Chọn hình cho từng thiết bị trên trang đang mở. Ảnh lấy ở trang thiết bị (tab Tổng quan → Hình dùng trên sơ đồ); ảnh riêng của máy đè ảnh theo model. Ô ảnh giữ bề rộng, cao theo tỉ lệ ảnh. Đổi xong bấm Lưu. Ghim cổng trên ảnh mặt sau: dùng điểm nối của draw.io (chuột phải hình → Edit Connection Points) đặt đúng chỗ cổng rồi nối dây vào đó — IMS không lưu ghim riêng.',
+      hint: 'Chọn hình cho từng thiết bị trên trang đang mở. Ảnh lấy ở trang thiết bị (tab Tổng quan → Hình dùng trên sơ đồ); ảnh riêng của máy đè ảnh theo model. Ô ảnh giữ bề rộng, cao theo tỉ lệ ảnh. Đổi xong bấm Lưu. Ghim cổng trên ảnh mặt sau: dùng điểm nối của draw.io (chuột phải hình → Chỉnh sửa điểm kết nối) đặt đúng chỗ cổng rồi nối dây vào đó — IMS không lưu ghim riêng.',
       device: 'Thiết bị',
       look: 'Hình trên bản vẽ',
       icon: 'Biểu tượng',
@@ -1212,6 +1212,8 @@ export default {
       noBack: 'Máy chưa có ảnh mặt sau — tải ở trang thiết bị, khu "Hình dùng trên sơ đồ".',
       missing: 'Không tìm thấy máy này trong kho.',
       empty: 'Trang này chưa có thiết bị kho nào.',
+      thumbOf: '{{side}} của {{code}}',
+      addPhoto: 'Thêm ảnh cho {{code}} ở trang thiết bị',
     },
     rack: {
       rebuildButton: 'Dựng lại mặt tủ',

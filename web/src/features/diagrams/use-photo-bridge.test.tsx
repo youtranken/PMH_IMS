@@ -82,6 +82,19 @@ describe('usePhotoBridge — công tắc Biểu tượng / Ảnh thật', () => 
     expect(update.xmlValue).toContain('ims_photo="front"');
   });
 
+  it('ảnh có thì hiện ảnh thu nhỏ; thiếu ảnh có link mở trang thiết bị (tab mới); hướng dẫn dùng tên menu tiếng Việt của draw.io (E-07)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, LOOKS))));
+    renderWithI18n(<Harness sent={[]} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Ảnh thật…' }));
+    await screen.findByRole('radiogroup', { name: 'Hình của SW-E2E-01' });
+    expect(screen.getByRole('img', { name: 'Ảnh mặt trước của SW-E2E-01' })).toHaveAttribute('src', 'data:image/png,AAAA');
+    const add = screen.getByRole('link', { name: 'Thêm ảnh cho SW-E2E-01 ở trang thiết bị' });
+    expect(add).toHaveAttribute('href', `/devices/${DEV}`);
+    expect(add).toHaveAttribute('target', '_blank');
+    expect(screen.getByText(/Chỉnh sửa điểm kết nối/)).toBeInTheDocument();
+    expect(screen.queryByText(/Edit Connection Points/)).toBeNull();
+  });
+
   it('trang nhiều máy: hỏi theo lô DEVICE_LOOKS_BATCH (trần của server), gộp kết quả', async () => {
     const ids = Array.from({ length: DEVICE_LOOKS_BATCH + 5 }, (_, i) => `7b0c1c1e-0000-4000-8000-${String(i).padStart(12, '0')}`);
     const many =
