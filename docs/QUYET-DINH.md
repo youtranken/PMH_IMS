@@ -726,6 +726,17 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   một dòng `audit_log` `outbox.requeued`. Không hỏi mã 2 lớp: gửi lại chỉ gửi đúng thư hệ thống đã
   định gửi, không mở thêm gì. Thư đã gửi xong (hoặc đã dọn) thì báo "không còn để gửi lại".
 - Có thư lỗi thì mục menu đó mang badge số (chỉ SA thấy mục và số).
+- **Soát UX đợt 2 — Hệ thống (05/10/2026, chủ dự án duyệt):**
+  - **Hai tham số nghiệp vụ lên màn Tham số** (X-02, AD-11): `nat.sensitive_ports` (danh sách cổng
+    1–65535, cách nhau dấu phẩy, không trùng, không bắt tăng dần, tối đa 50 cổng) và
+    `breakglass.recent_window_days` (1–365 ngày). Không còn phải sửa bằng SQL tay.
+  - **SA xem "thiết bị đã biết" và IP đang tạm chặn** (X-04) — CHỈ ĐỌC: hộp Chi tiết tài khoản có
+    khu "Thiết bị đã biết" (nhãn trình duyệt, thấy lần đầu / gần nhất — không lộ dấu vân tay máy) và
+    cột "Lần sai gần nhất" ở bảng tạm chặn; màn Tài khoản có khối "Đang tạm chặn · n" cho toàn hệ
+    thống. Gỡ chặn vẫn là "Gỡ tạm chặn" sẵn có (step-up + nhật ký). Chưa làm nút "Quên máy" ở Hồ sơ
+    của tôi: cần một đường ghi mới, để đợt sau nếu chủ dự án muốn.
+  - **Link thẳng tới một luật NAT** (X-05): `/nat?rule=<id>` mở sổ NAT, tô sáng dòng đó (kể cả khi
+    nó nằm ở trang khác / bị bộ lọc ẩn — mở theo id), và menu dòng có "Sao chép link".
 
 ### Q-09 · Tài liệu
 
