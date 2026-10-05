@@ -374,6 +374,20 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
     expect(await screen.findByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' })).toBeDisabled();
   });
 
+  it('đếm kết quả; "Chọn tất cả (n)" chỉ chọn máy chèn được; máy đã có mang nhãn "Đã có trên bản vẽ" (E-08)', async () => {
+    await openEditor();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Thiết bị kho' }));
+    const box = screen.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
+    expect(await within(box).findByText('2 Thiết bị khớp')).toBeInTheDocument();
+    expect(within(box).getByText('Đã có trên bản vẽ')).toHaveClass('badge');
+    await user.click(within(box).getByRole('button', { name: 'Chọn tất cả (1)' }));
+    expect(within(box).getByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' })).toBeChecked();
+    expect(within(box).getByRole('button', { name: 'Chèn 1 thiết bị' })).toBeEnabled();
+    await user.click(within(box).getByRole('button', { name: 'Bỏ chọn tất cả' }));
+    expect(within(box).getByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' })).not.toBeChecked();
+  });
+
   it('bàn phím: gõ tìm, ↓ xuống danh sách, Space chọn, Enter chèn; Esc đóng hộp', async () => {
     const { fetchMock, posted } = await openEditor();
     const user = userEvent.setup();

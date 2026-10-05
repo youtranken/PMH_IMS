@@ -1243,6 +1243,16 @@ button.btn-x.danger:hover:not(:disabled) {
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   cursor: pointer;
+  /* Cỡ chữ của bảng dùng chung (E-08): dòng kết quả là thứ đọc nhiều nhất của hộp. */
+  font-size: var(--fs-sm);
+}
+.stock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-sm);
 }
 .stock-list li + li .stock-row {
   border-top: 1px solid var(--border);
@@ -1252,8 +1262,7 @@ button.btn-x.danger:hover:not(:disabled) {
   color: var(--ink-3);
 }
 .stock-why {
-  display: block;
-  color: var(--warn);
+  margin-left: var(--space-2);
 }
 
 /* Thẻ thông tin thiết bị ở chế độ xem sơ đồ (`features/diagrams/diagram-device-card.tsx`). */

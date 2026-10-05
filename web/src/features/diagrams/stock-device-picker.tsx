@@ -69,6 +69,9 @@ export function StockDevicePicker({
   // Lớp chặn thứ hai: đổi ngữ nghĩa `usable` phía server cũng không được làm máy thanh lý hiện lại.
   const items = (devices.data?.items ?? []).filter((d) => d.status !== 'retired');
   const insertable = picked.filter((id) => items.some((d) => d.id === id && !reasonOf(d)));
+  // "Chọn tất cả" chỉ lấy máy chèn được: máy đã có trên bản vẽ chèn lần hai là sinh lệch (E-08).
+  const choosable = items.filter((d) => !reasonOf(d)).map((d) => d.id);
+  const allPicked = choosable.length > 0 && choosable.every((id) => picked.includes(id));
 
   const toggle = (id: string) => setPicked((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
   const insert = () => {
@@ -142,6 +145,23 @@ export function StockDevicePicker({
       ) : devices.isSuccess && items.length === 0 ? (
         <p className="muted">{t('diagrams.stock.empty')}</p>
       ) : (
+        <>
+        {devices.isSuccess ? (
+          <div className="stock-head">
+            <span className="muted" role="status">
+              {items.length >= STOCK_LIMIT ? t('diagrams.stock.countCapped', { count: items.length }) : t('diagrams.stock.count', { count: items.length })}
+            </span>
+            {choosable.length > 0 ? (
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => setPicked(allPicked ? picked.filter((id) => !choosable.includes(id)) : [...new Set([...picked, ...choosable])])}
+              >
+                {allPicked ? t('diagrams.stock.unpickAll') : t('diagrams.stock.pickAll', { count: choosable.length })}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <ul className="stock-list" aria-label={t('diagrams.stock.results')} aria-busy={devices.isFetching}>
           {items.map((device) => {
             const reason = reasonOf(device);
@@ -165,9 +185,9 @@ export function StockDevicePicker({
                         .join(' · ')}
                     </small>
                     {reason ? (
-                      <small id={reasonId} className="stock-why">
+                      <span id={reasonId} className="badge muted stock-why">
                         {reason}
-                      </small>
+                      </span>
                     ) : null}
                   </span>
                 </label>
@@ -175,6 +195,7 @@ export function StockDevicePicker({
             );
           })}
         </ul>
+        </>
       )}
       <div className="row" style={{ justifyContent: 'flex-end' }}>
         <button type="button" className="btn primary" disabled={insertable.length === 0 || busy} onClick={insert}>
