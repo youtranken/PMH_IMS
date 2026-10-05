@@ -53,6 +53,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền két sắt$/ },
     { link: 'Nhật ký hệ thống', path: '/admin/audit-log', heading: /^Nhật ký hệ thống$/ },
     { link: 'Tham số hệ thống', path: '/admin/settings', heading: /^Tham số hệ thống$/ },
+    { link: 'Thư gửi lỗi', path: '/admin/failed-mail', heading: /^Thư gửi lỗi$/ },
   ];
 
   /*
