@@ -33,6 +33,10 @@
   background: var(--warm);
   color: var(--ink);
 }
+.nav-badge.danger {
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+}
 
 /* Vùng cuộn riêng của danh sách mục: brand ở trên và khối tài khoản ở đáy đứng yên. Mép dưới
    có một dải mờ DÍNH đáy — còn mục khuất phía dưới thì chúng mờ dần vào đó; không còn gì thì

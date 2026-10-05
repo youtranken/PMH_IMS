@@ -10,7 +10,7 @@ interface NavItem {
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
   /** Mục mang số việc đang chờ — shell tự hỏi số và vẽ `.nav-badge`. */
-  badge?: 'approvals' | 'overdue';
+  badge?: 'approvals' | 'overdue' | 'failedMail';
 }
 
 export interface NavGroup {
@@ -97,6 +97,8 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'] },
       // Nới/siết mọi hàng rào đăng nhập và két — chỉ SA (Q-14), khớp gác ở App.tsx và API.
       { key: 'nav.settings', to: PATHS.adminSettings, roles: ['sa'] },
+      // Thư hệ thống hết lượt gửi tự động (Q-25) — SA xem và gửi lại; số trên mục là thư còn lỗi.
+      { key: 'nav.failedMail', to: PATHS.adminFailedMail, roles: ['sa'], badge: 'failedMail' },
     ],
   },
 ];

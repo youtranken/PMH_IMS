@@ -69,6 +69,7 @@ export const PATHS = {
   adminVaultAccess: '/admin/vault-access',
   adminAuditLog: '/admin/audit-log',
   adminSettings: '/admin/settings',
+  adminFailedMail: '/admin/failed-mail',
 
   devComponents: '/dev/components',
 
@@ -162,6 +163,8 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   [PATHS.adminAuditLog]: ['sa', 'admin'],
   // `system-settings.controller.ts` — `@Roles('sa')` cho cả đọc lẫn sửa.
   [PATHS.adminSettings]: ['sa'],
+  // `outbox-admin.controller.ts` — `@Roles('sa')` cho cả đọc lẫn gửi lại (Q-25).
+  [PATHS.adminFailedMail]: ['sa'],
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
   [PATHS.vault]: ['sa', 'admin'],
@@ -218,6 +221,7 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.adminVaultAccess]: 'nav.vaultAccess',
   [PATHS.adminAuditLog]: 'nav.auditLog',
   [PATHS.adminSettings]: 'nav.settings',
+  [PATHS.adminFailedMail]: 'nav.failedMail',
   [PATHS.devComponents]: 'nav.components',
   [PATHS.profile]: 'profile.title',
 };

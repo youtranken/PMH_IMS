@@ -16,6 +16,7 @@ export interface OutboxConsumerRow {
 export interface FailedNotification {
   id: string;
   topic: string;
+  createdAt: Date;
   failCount: number;
   lastError: string | null;
   lastFailedAt: Date | null;
@@ -210,27 +211,26 @@ export class OutboxService implements OnModuleInit {
    * để đếm badge; items giới hạn để hiển thị danh sách.
    */
   async listFailed(): Promise<{ total: number; items: FailedNotification[] }> {
-    const count = await this.db.execute<{ n: number }>(sql`
-      SELECT count(*)::int AS n FROM outbox
-      WHERE fail_count > 0 AND processed_at IS NULL
-    `);
+    const total = await this.countFailed();
     const r = await this.db.execute<{
       id: string;
       topic: string;
       fail_count: number;
       last_error: string | null;
       last_failed_at: Date | null;
+      created_at: Date;
     }>(sql`
-      SELECT id, topic, fail_count, last_error, last_failed_at FROM outbox
+      SELECT id, topic, fail_count, last_error, last_failed_at, created_at FROM outbox
       WHERE fail_count > 0 AND processed_at IS NULL
       ORDER BY last_failed_at DESC NULLS LAST
       LIMIT 200
     `);
     return {
-      total: count.rows[0]?.n ?? 0,
+      total,
       items: r.rows.map((row) => ({
         id: row.id,
         topic: row.topic,
+        createdAt: new Date(row.created_at),
         failCount: row.fail_count,
         lastError: row.last_error,
         lastFailedAt: row.last_failed_at ? new Date(row.last_failed_at) : null,
@@ -238,14 +238,29 @@ export class OutboxService implements OnModuleInit {
     };
   }
 
-  /** Requeue tay (AC3): reset marker lỗi + lease → relay re-drive event chưa xử. Trả true nếu có. */
-  async requeue(eventId: string): Promise<boolean> {
-    const r = await this.db.execute<{ id: string }>(sql`
-      UPDATE outbox
-      SET claimed_at = NULL, fail_count = 0, last_error = NULL, last_failed_at = NULL
-      WHERE id = ${eventId} AND processed_at IS NULL
-      RETURNING id
+  /** Số event gửi lỗi chưa xử — badge menu của SA hỏi định kỳ, không cần kéo cả danh sách. */
+  async countFailed(): Promise<number> {
+    const count = await this.db.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM outbox
+      WHERE fail_count > 0 AND processed_at IS NULL
     `);
-    return r.rows.length === 1;
+    return count.rows[0]?.n ?? 0;
+  }
+
+  /**
+   * Requeue tay (AC3): reset marker lỗi + lease → relay re-drive event chưa xử. Trả topic + số lần
+   * lỗi TRƯỚC khi xoá (cho dòng nhật ký), `null` nếu không còn event chưa xử đó. `tx` để nơi gọi
+   * ghi nhật ký cùng transaction (AD-5).
+   */
+  async requeue(eventId: string, tx: Pick<Database, 'execute'> = this.db): Promise<{ topic: string; failCount: number } | null> {
+    const r = await tx.execute<{ topic: string; fail_count: number }>(sql`
+      UPDATE outbox o
+      SET claimed_at = NULL, fail_count = 0, last_error = NULL, last_failed_at = NULL
+      FROM (SELECT id, fail_count FROM outbox WHERE id = ${eventId} AND processed_at IS NULL FOR UPDATE) old
+      WHERE o.id = old.id
+      RETURNING o.topic, old.fail_count
+    `);
+    const row = r.rows[0];
+    return row ? { topic: row.topic, failCount: row.fail_count } : null;
   }
 }

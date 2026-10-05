@@ -1,4 +1,6 @@
 import { Global, Module } from '@nestjs/common';
+import { OutboxAdminController } from './outbox-admin.controller';
+import { OutboxAdminService } from './outbox-admin';
 import { OutboxService } from './outbox.service';
 
 /**
@@ -7,7 +9,8 @@ import { OutboxService } from './outbox.service';
  */
 @Global()
 @Module({
-  providers: [OutboxService],
+  controllers: [OutboxAdminController],
+  providers: [OutboxService, OutboxAdminService],
   exports: [OutboxService],
 })
 export class OutboxModule {}

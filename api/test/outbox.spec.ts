@@ -317,12 +317,12 @@ describe('OutboxService trên Postgres thật', () => {
         const id = (await rows())[0].id;
         for (let i = 0; i < 14; i += 1) await outbox.markFailed(id, 'x');
 
-        expect(await outbox.requeue(id)).toBe(true);
+        expect(await outbox.requeue(id)).toEqual({ topic: 'mail.revive', failCount: 14 });
         expect(await outbox.relayBatch(fakeQueue().queue)).toBe(1);
 
         // Đã xử xong rồi thì không được requeue — làm vậy là gửi lại một email đã gửi.
         await outbox.markProcessed(id);
-        expect(await outbox.requeue(id)).toBe(false);
+        expect(await outbox.requeue(id)).toBeNull();
       },
       TEST_TIMEOUT,
     );

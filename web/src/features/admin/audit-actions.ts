@@ -116,6 +116,7 @@ export const ACTION_KEY: Record<string, string> = {
   'nat.updated': 'audit.actions.natUpdated',
   'nat.voided': 'audit.actions.natVoided',
   'system_config.updated': 'audit.actions.systemConfigUpdated',
+  'outbox.requeued': 'audit.actions.outboxRequeued',
   'diagram.created': 'audit.actions.diagramCreated',
   'diagram.updated': 'audit.actions.diagramUpdated',
   'diagram.archived': 'audit.actions.diagramArchived',
@@ -307,6 +308,7 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   disposal: 'disposal',
   file: 'file',
   system_config: 'system',
+  outbox: 'system',
   crypto: 'system',
   audit: 'system',
 };
@@ -353,6 +355,7 @@ export const OBJECT_TYPE_KEY: Record<string, string> = {
   disposal: 'audit.objectType.disposal',
   file: 'audit.objectType.file',
   system_config: 'audit.objectType.systemConfig',
+  outbox: 'audit.objectType.outbox',
   diagram: 'audit.objectType.diagram',
   diagram_spike: 'audit.objectType.diagramSpike',
 };

@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
+import { useFailedMailCount } from '@/shell/use-failed-mail-count';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette, paletteShortcut } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
@@ -20,6 +21,7 @@ import { AccountMenu } from '@/shell/account-menu';
 const PENDING_APPROVALS_ID = 'nav-pending-approvals';
 /** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
 const OVERDUE_ID = 'nav-overdue';
+const FAILED_MAIL_ID = 'nav-failed-mail';
 
 /**
  * Khung ứng dụng dùng chung (AD-15/UX-DR1): sidebar + topbar. Mọi màn nghiệp vụ
@@ -53,6 +55,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
   const pendingApprovals = usePendingApprovalCount(me);
   const overdue = useOverdueExpiryCount();
+  const failedMail = useFailedMailCount(me);
   const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
@@ -150,7 +153,14 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               khối tài khoản ở đáy luôn đứng yên và có mép mờ báo còn mục bên dưới. */}
           <div className="sb-scroll">
           {groups.map((group) => (
-            <NavSection key={group.labelKey} group={group} pathname={pathname} compact={compact}>
+            <NavSection
+              key={group.labelKey}
+              group={group}
+              pathname={pathname}
+              compact={compact}
+              alert={group.items.some((item) => item.badge === 'failedMail') ? failedMail : 0}
+              alertDescribedBy={FAILED_MAIL_ID}
+            >
               {group.items.map((item) => (
                 <NavLink
                   key={item.key}
@@ -164,7 +174,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                       ? PENDING_APPROVALS_ID
                       : item.badge === 'overdue' && overdue > 0
                         ? OVERDUE_ID
-                        : undefined
+                        : item.badge === 'failedMail' && failedMail > 0
+                          ? FAILED_MAIL_ID
+                          : undefined
                   }
                   // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
                   onClick={() => setDrawerOpen(false)}
@@ -184,6 +196,12 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
                     <span className="nav-badge" aria-hidden="true">
                       {overdue}
+                    </span>
+                  ) : null}
+                  {item.badge === 'failedMail' && failedMail > 0 ? (
+                    /* Đỏ: thư không tới người nhận là một sự cố đang diễn ra, không phải việc chờ. */
+                    <span className="nav-badge danger" aria-hidden="true">
+                      {failedMail}
                     </span>
                   ) : null}
                 </NavLink>
@@ -278,6 +296,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           {overdue > 0 ? (
             <span id={OVERDUE_ID} className="sr-only">
               {t('expiry.navBadge', { count: overdue })}
+            </span>
+          ) : null}
+          {failedMail > 0 ? (
+            <span id={FAILED_MAIL_ID} className="sr-only">
+              {t('failedMail.navBadge', { count: failedMail })}
             </span>
           ) : null}
           {/*
@@ -423,12 +446,20 @@ function NavSection({
   group,
   pathname,
   compact,
+  alert = 0,
+  alertDescribedBy,
   children,
 }: {
   group: NavGroup;
   pathname: string;
   /** Sidebar thu gọn: mọi mục hiện thành biểu tượng, không còn tiêu đề nhóm để bấm khép/mở. */
   compact: boolean;
+  /**
+   * Số sự cố của một mục bên trong (thư gửi lỗi). Nhóm đang khép thì số đứng trên tiêu đề nhóm:
+   * badge nằm khuất sau nhóm khép thì không ai thấy — đúng thứ badge sinh ra để chống.
+   */
+  alert?: number;
+  alertDescribedBy?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -456,6 +487,7 @@ function NavSection({
         className="nav-label nav-group-toggle"
         aria-expanded={open}
         aria-controls={regionId}
+        aria-describedby={!open && alert > 0 ? alertDescribedBy : undefined}
         onClick={() => {
           const next = !open;
           setOpen(next);
@@ -463,6 +495,11 @@ function NavSection({
         }}
       >
         <span>{t(group.labelKey)}</span>
+        {!open && alert > 0 ? (
+          <span className="nav-badge danger" aria-hidden="true">
+            {alert}
+          </span>
+        ) : null}
         <Chevron className="nav-group-chev" />
       </button>
       <div id={regionId} hidden={!open}>

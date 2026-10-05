@@ -40,6 +40,7 @@ import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { SettingsScreen } from '@/features/admin/settings-screen';
+import { FailedMailScreen } from '@/features/admin/failed-mail-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
@@ -239,6 +240,11 @@ function AppRoutes() {
           <Route path={PATHS.adminSettings} element={<SettingsScreen me={me} />} />
         ) : (
           <Route path={PATHS.adminSettings} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminSettings]} />} />
+        )}
+        {canSeeRoute(PATHS.adminFailedMail, me.role) ? (
+          <Route path={PATHS.adminFailedMail} element={<FailedMailScreen me={me} />} />
+        ) : (
+          <Route path={PATHS.adminFailedMail} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminFailedMail]} />} />
         )}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Mọi vai: đường vào tự đổi mật khẩu / cài lại 2 lớp / đóng phiên của chính mình. */}

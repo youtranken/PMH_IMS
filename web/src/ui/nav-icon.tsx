@@ -155,6 +155,14 @@ const ICONS: Record<string, React.ReactNode> = {
       <circle cx="18" cy="18" r="2" />
     </>
   ),
+  'nav.failedMail': (
+    <>
+      {/* Phong thư có dấu chấm than — thư hệ thống chưa tới được người nhận. */}
+      <rect x="2" y="5" width="16" height="13" rx="2" />
+      <path d="m2 7 8 6 8-6" />
+      <path d="M21 8v6M21 18h0" />
+    </>
+  ),
   'nav.disposal': (
     <>
       {/* Hộp lưu trữ — hồ sơ đã ngừng dùng được cất vào kho, không bị xoá. */}

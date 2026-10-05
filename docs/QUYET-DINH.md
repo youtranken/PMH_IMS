@@ -635,6 +635,19 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   thường — "Đang dùng ở 1 tủ mạng — hãy Ngừng dùng", "…, trong đó 1 nhóm chưa gán cho ai",
   "1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn".
 
+### Q-25 · Thư gửi lỗi phải có người thấy và gửi lại được (05/10/2026, chủ dự án duyệt top 10 soát UX)
+
+- Thư đã hết lượt gửi lại tự động (`outbox.max_relay_attempts`) trước nay nằm im trong `outbox`:
+  không màn nào liệt kê, không ai gửi lại được. Thư duyệt break-glass, thư khoá tài khoản, bản tin
+  hạn đều có thể mất như thế. Lý do chốt: break-glass trên điện thoại sống nhờ thư.
+- Màn **Quản trị › Thư gửi lỗi** (CHỈ SA, cùng phạm vi với Tham số hệ thống): mỗi dòng là một thư
+  chưa gửi được — loại thư, tạo lúc, số lần thử, lần lỗi cuối, lỗi cuối. Lỗi SMTP có thể chứa địa
+  chỉ người nhận nên API che phần trước `@` (`a***@pmh.com.vn`). Không hiện payload của sự kiện.
+- **"Gửi lại"**: xoá dấu lỗi + lượt thử để relay đẩy lại thư đó (`requeue`), trong transaction có
+  một dòng `audit_log` `outbox.requeued`. Không hỏi mã 2 lớp: gửi lại chỉ gửi đúng thư hệ thống đã
+  định gửi, không mở thêm gì. Thư đã gửi xong (hoặc đã dọn) thì báo "không còn để gửi lại".
+- Có thư lỗi thì mục menu đó mang badge số (chỉ SA thấy mục và số).
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
