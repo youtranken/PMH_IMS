@@ -1080,6 +1080,8 @@ function DiagramEditor({
        */
       case 'init':
       case 'load':
+        // Máy đã lưu nằm sai khung tủ: báo ngay khi mở, không đợi người vẽ sửa gì.
+        if (!ready) fitRacks(content.version?.xml ?? '', { warnOnly: true });
         setReady(true);
         break;
       case 'autosave':

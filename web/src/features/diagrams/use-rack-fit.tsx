@@ -27,7 +27,7 @@ export function useRackFit({
   withFile: (fn: (xml: string) => void) => void;
   send: (command: DrawioCommand) => void;
   page: () => number;
-}): (xml: string) => void {
+}): (xml: string, options?: { warnOnly?: boolean }) => void {
   const { t } = useTranslation();
   const toast = useToast();
   const known = useRef(new Map(devices.filter((d) => d.found).map((d) => [d.id, toFit(d)])));
@@ -35,7 +35,7 @@ export function useRackFit({
   const warned = useRef(new Set<string>());
   const latest = useRef('');
 
-  const fit = (xml: string) => {
+  const fit = (xml: string, options: { warnOnly?: boolean } = {}) => {
     latest.current = xml;
     const result = rackFit(xml, known.current);
     const missing = result.unknown.filter((id) => !asked.current.has(id));
@@ -44,7 +44,7 @@ export function useRackFit({
       void apiFetch<DiagramDeviceInfo[]>(`/api/v1/diagrams/device-info?ids=${missing.map(encodeURIComponent).join(',')}`)
         .then((infos) => {
           for (const info of infos) if (info.found) known.current.set(info.id, toFit(info));
-          fit(latest.current);
+          fit(latest.current, options);
         })
         .catch(() => undefined);
     }
@@ -62,7 +62,9 @@ export function useRackFit({
     const noU = result.noU.filter((item) => !warned.current.has(`u:${item.cellId}`));
     for (const item of noU) warned.current.add(`u:${item.cellId}`);
     if (noU.length > 0) toast({ tone: 'warn', message: t('diagrams.rack.noU', { code: noU.map((item) => item.code).join(', ') }) });
-    if (Object.keys(result.updates).length === 0) return;
+    // Lúc mở chỉ báo: bản vẽ không bị sửa khi người vẽ chưa đụng gì (sửa lúc đó là thay đổi chưa
+    // lưu mà nút Lưu không biết).
+    if (options.warnOnly || Object.keys(result.updates).length === 0) return;
     // Ô "nhảy" về U của kho ngay sau khi thả: nói một lần vì sao, và muốn dời thì sửa ở đâu.
     if (!warned.current.has('snap') && Object.values(result.updates).some((u) => u.geometry)) {
       warned.current.add('snap');

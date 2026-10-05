@@ -327,11 +327,11 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     cell: { style: '', label: code, width: 60, height: 60, attrs: {} },
   });
 
-  async function open(devices: unknown[]) {
+  async function open(devices: unknown[], saved = '') {
     routeFetch({
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
       '/api/v1/diagrams/d1/content': () =>
-        jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: `<mxfile><diagram id="p1">${wrap('')}</diagram></mxfile>`, svg: null }, devices }),
+        jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: `<mxfile><diagram id="p1">${wrap(saved)}</diagram></mxfile>`, svg: '<svg/>' }, devices }),
       '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
       '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
       '/api/v1/diagrams': () => jsonResponse(200, TREE),
@@ -370,6 +370,13 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
     const writes = (vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][]).filter(([, init]) => init?.method && init.method !== 'GET' && !String(init.method).includes('GET'));
     expect(writes.every(([url]) => String(url).includes('/presence'))).toBe(true);
+  });
+
+  it('mở bản vẽ đã lưu có máy nằm sai khung tủ → báo ngay khi mở (chưa cần sửa gì), không tự sửa bản vẽ lúc mở', async () => {
+    const { messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')], body('dev-ups', 'UPS-E2E-03'));
+    expect(await screen.findByText(/UPS-E2E-03 trong kho thuộc tủ TU-01/)).toBeInTheDocument();
+    expect(messages().some((m) => m.action === 'patch')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
   });
 
   it('nhiều máy tủ khác cùng lúc (mở bản vẽ cũ) → MỘT lời báo liệt kê, không một chuỗi lời báo', async () => {
