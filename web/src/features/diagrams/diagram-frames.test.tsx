@@ -365,7 +365,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')]);
     fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
     fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
-    const warnings = await screen.findAllByText(/UPS-E2E-03 trong kho thuộc tủ TU-01, không phải tủ của khung "Tủ TU-04 · Mặt trước"/);
+    const warnings = await screen.findAllByText(/Máy UPS-E2E-03 trong kho thuộc tủ TU-01, không phải tủ của khung "Tủ TU-04 · Mặt trước"/);
     expect(warnings).toHaveLength(1);
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
     const writes = (vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][]).filter(([, init]) => init?.method && init.method !== 'GET' && !String(init.method).includes('GET'));
@@ -374,7 +374,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
 
   it('mở bản vẽ đã lưu có máy nằm sai khung tủ → báo ngay khi mở (chưa cần sửa gì), không tự sửa bản vẽ lúc mở', async () => {
     const { messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')], body('dev-ups', 'UPS-E2E-03'));
-    expect(await screen.findByText(/UPS-E2E-03 trong kho thuộc tủ TU-01/)).toBeInTheDocument();
+    expect(await screen.findByText(/Máy UPS-E2E-03 trong kho thuộc tủ TU-01/)).toBeInTheDocument();
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
   });
@@ -383,7 +383,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     const second = `<UserObject label="FW-E2E-01" ims_device_id="dev-fw" ims_device_code="FW-E2E-01" id="d2"><mxCell style="" vertex="1" parent="f4"><mxGeometry x="33" y="35.8" width="162" height="133.2" as="geometry"/></mxCell></UserObject>`;
     const { fromDrawio } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01'), info('dev-fw', 'FW-E2E-01', 'cab-1', 'TU-01')]);
     fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03') + second) });
-    expect(await screen.findByText(/2 máy trong kho thuộc tủ khác khung tủ chúng nằm: UPS-E2E-03 \(TU-01\), FW-E2E-01 \(TU-01\)/)).toBeInTheDocument();
-    expect(screen.queryByText(/UPS-E2E-03 trong kho thuộc tủ TU-01/)).toBeNull();
+    expect(await screen.findByText(/2 Máy trong kho thuộc tủ khác khung tủ chúng nằm: UPS-E2E-03 \(TU-01\), FW-E2E-01 \(TU-01\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Máy UPS-E2E-03 trong kho thuộc tủ TU-01/)).toBeNull();
   });
 });

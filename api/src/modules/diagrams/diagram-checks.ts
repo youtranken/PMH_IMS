@@ -133,7 +133,7 @@ function mismatchMessage(edge: CableEdge, link: CheckLink, codeOf: (deviceId: st
     : `đang nối ${codeOf(edge.sourceDeviceId)} ↔ ${codeOf(edge.targetDeviceId)}`;
   return (
     `${what} ${state} — kéo đầu dây về đúng máy ${missing.join(' và ')}, dùng ⋮ › "Tự đi lại dây", ` +
-    'hoặc xoá nét này (chọn "Chỉ xoá nét vẽ") rồi bấm "Vẽ vào".'
+    'hoặc xóa nét này (chọn "Chỉ xóa nét vẽ") rồi bấm "Vẽ vào".'
   );
 }
 

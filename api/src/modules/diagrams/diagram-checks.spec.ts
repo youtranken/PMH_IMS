@@ -104,7 +104,7 @@ describe('checkCables — câu báo dây lệch nói đủ hai máy của kết 
     expect(message).toContain('đầu thả nổi');
     expect(message).toContain('kéo đầu dây về đúng máy SRV-01');
     expect(message).toContain('Tự đi lại dây');
-    expect(message).toContain('Chỉ xoá nét vẽ');
+    expect(message).toContain('Chỉ xóa nét vẽ');
     expect(message).not.toContain('?');
   });
 
