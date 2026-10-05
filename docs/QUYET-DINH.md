@@ -622,6 +622,40 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   - **Bản đồ gọn hơn:** dòng nháp trong panel là "#15 · tóm tắt ngắn", người lưu / giờ ở dòng
     thứ hai, "lưu đè lên bản của …" là nhãn nhỏ; dải chuyển nhanh bản vẽ cùng khu cuộn được và
     luôn thấy tab đầu; bản vẽ gốc chưa có con là một băng một dòng kèm "+ Bản vẽ con".
+- **Soát UX đợt 2 — Sơ đồ mạng (05/10/2026, chủ dự án duyệt toàn bộ danh sách soát):**
+  - **Thuỷ vân GIỮ, chỉ nhẹ hơn ở tab Sửa** (V-06, chính sách bảo mật): thuỷ vân "tên · email ·
+    giờ" vẫn bắt buộc ở mọi chế độ (AD-17), không có nút tắt. Ở tab Sửa: thưa còn 3 hàng, màu nhạt
+    hơn (token riêng có cặp dark), chừa dải thanh menu + công cụ của trình vẽ ở trên cùng để vẽ
+    không vướng. Tab Xem và mọi file xuất giữ nguyên như cũ.
+  - **Thành viên chỉ gửi duyệt nháp do CHÍNH MÌNH lưu** (D-04): nháp mới nhất do người khác lưu
+    thì Thành viên không thấy nút "Gửi duyệt", và server từ chối (403
+    `DIAGRAM_SUBMIT_NOT_OWN_DRAFT`) — trước đây server cho Thành viên gửi duyệt bản vẽ dở của bất
+    kỳ ai. Sửa tiếp nháp của người khác vẫn được (luật "bản lưu sau thắng" giữ nguyên) nhưng nút
+    ghi rõ "Sửa tiếp nháp #n (của <tên>)". Admin/SA không đổi.
+  - **Bản vẽ con lấy Site của bản cha; chỉ bản vẽ cấp tủ mới gắn tủ** (D-03): "Loại nút" đổi tên
+    "Cấp bản vẽ". Ô Tủ chỉ hiện khi cấp là tủ, kèm một dòng nói gắn tủ để làm gì (dựng mặt tủ từ
+    kho). Server từ chối (400 `DIAGRAM_CABINET_NEEDS_CABINET_LEVEL`) lượt gắn tủ cho bản vẽ không
+    phải cấp tủ; lượt sửa cấp/tủ để lại bản vẽ không phải cấp tủ mà còn gắn tủ cũ thì tủ được bỏ
+    gắn trong cùng lượt (dữ liệu cũ tự sạch khi có người sửa, không sửa ngầm lúc chưa ai đụng).
+  - **Bản vẽ chờ duyệt phải có chỗ cho người duyệt thấy** (D-07): mục "Sơ đồ mạng" trên menu mang
+    số bản vẽ đang chờ Admin/SA này duyệt (không tính yêu cầu do chính họ gửi — bốn mắt); màn
+    "Duyệt" có khối "Bản vẽ chờ duyệt" (tên bản vẽ, người gửi, lúc gửi, bấm là mở). Bản đồ /diagrams
+    giữ chip "Chờ duyệt" sẵn có. Chỉ tên / trạng thái — không nội dung, không hỏi mã sơ đồ (cùng
+    mức với bản đồ).
+  - **Tìm nhanh (Ctrl+K) có nhóm Sơ đồ** (D-08): tên bản vẽ khớp, và "mã máy → bản vẽ có máy đó"
+    (mở bản vẽ, bay tới máy). Chỉ tên và trạng thái; mở nội dung vẫn hỏi mã như mọi lần xem.
+  - **Tab Sửa trả chỗ cho trình vẽ** (E-04): ở tab Sửa thanh trên cùng của IMS (tên nhóm, nút tìm,
+    đổi theme) ẩn đi — Ctrl+K vẫn mở Tìm nhanh; dòng "đã lưu" rút còn "Đã lưu #n · giờ", đủ chi
+    tiết khi rê chuột.
+  - **Lưu xong mời bước kế tiếp** (E-06): lời báo lưu xong có nút "Gửi duyệt #n" (Thành viên, nháp
+    của chính mình) hoặc "Phát hành #n" (Admin/SA).
+  - **Giấy bản vẽ luôn sáng thì màu dây trên giấy cũng là bộ màu sáng** (V-05): trình vẽ, trình
+    xem và chú giải nổi trên trình xem dùng bộ màu dây của GIẤY (token `--paper-cable-*`, cặp dark
+    giữ giá trị sáng), chú giải nổi nằm trên nền giấy. Danh mục, sơ đồ cổng (nền giao diện) vẫn
+    theo theme.
+  - **Biểu tượng loại có màu như bảng hình của draw.io** (V-10): hình thư viện mạng chèn kèm tô
+    + viền (màu từ token qua `PALETTE`) thay cho nét đen trên nền trắng; loại chưa chọn hình là
+    khối "thiết bị chung" in tên loại. Màn Danh mục đánh dấu loại chưa có hình trên sơ đồ.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
