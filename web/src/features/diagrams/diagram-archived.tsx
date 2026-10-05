@@ -79,7 +79,7 @@ export function DiagramArchivedSection({ me, live, archived }: { me: Me; live: D
                     .join(' · ')}
                 </span>
               </span>
-              <Link className="btn sm ghost" to={PATHS.diagram(node.id)} aria-label={t('diagrams.archivedList.openOf', { name: node.name })}>
+              <Link className="linkbtn sm" to={PATHS.diagram(node.id)} aria-label={t('diagrams.archivedList.openOf', { name: node.name })}>
                 {t('diagrams.archivedList.open')}
               </Link>
               {canManageNode(node, me) ? (

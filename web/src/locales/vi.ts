@@ -1488,7 +1488,7 @@ export default {
     rackURange: 'Số nguyên từ 1 tới 60.',
     rackAtOne: 'Thiết bị nằm ở {{unit}}.',
     rackAtMany: 'Chiếm {{unit}} (U1 ở đáy tủ, máy chiếm dần lên trên).',
-    rackTaken: '{{unit}} đang có {{code}} — chọn U khác (bấm "Xem tủ" để thấy chỗ trống).',
+    rackTaken: 'Chỗ {{unit}} đang có {{code}} — chọn U khác (bấm "Xem tủ" để thấy chỗ trống).',
     rackView: 'Xem tủ',
     rackViewTitle: 'Tủ {{name}} ({{height}}U)',
     rackViewHint: 'U1 ở đáy tủ. Bấm một U trống để đặt máy vào đó.',

@@ -83,7 +83,7 @@ describe('Vị trí U tự giải thích', () => {
     const start = await screen.findByRole('textbox', { name: 'U bắt đầu' });
     await user.clear(start);
     await user.type(start, '10');
-    expect(await screen.findByText('U10 đang có SW-E2E-01 — chọn U khác (bấm "Xem tủ" để thấy chỗ trống).')).toBeInTheDocument();
+    expect(await screen.findByText('Chỗ U10 đang có SW-E2E-01 — chọn U khác (bấm "Xem tủ" để thấy chỗ trống).')).toBeInTheDocument();
     expect(start).toHaveAttribute('aria-invalid', 'true');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     expect(calls.some((c) => c.method === 'PATCH')).toBe(false);

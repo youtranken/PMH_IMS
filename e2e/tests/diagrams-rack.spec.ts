@@ -76,9 +76,9 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await form.getByRole('textbox', { name: 'U bắt đầu' }).fill('6');
     await form.getByRole('textbox', { name: 'Số U' }).fill('1');
     // Chồng U báo NGAY tại ô (trước khi lưu), không gửi gì; câu dưới ô nói máy nằm ở đâu.
-    await expect(form.getByRole('alert')).toContainText(`U6 đang có ${holder}`);
+    await expect(form.getByRole('alert')).toContainText(`Chỗ U6 đang có ${holder}`);
     await form.getByRole('textbox', { name: 'Số U' }).fill('2');
-    await expect(form.getByRole('alert')).toContainText(`U6–U7 đang có ${holder}`);
+    await expect(form.getByRole('alert')).toContainText(`Chỗ U6–U7 đang có ${holder}`);
     await form.getByRole('textbox', { name: 'Số U' }).fill('1');
 
     // "Xem tủ": mặt đứng 12U, máy 2U chiếm U5 và U6; bấm U9 trống thì điền "U bắt đầu".
