@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { errorCode } from '@/lib/api';
 import { ApiError } from '@/lib/api-client';
-import { StepUpDialog, type StepUpScope } from '@/ui/step-up-dialog';
+import { StepUpCompactDialog, StepUpDialog, type StepUpScope } from '@/ui/step-up-dialog';
 
 const STEPUP_CANCELLED = 'STEPUP_CANCELLED';
 
@@ -64,6 +65,7 @@ export function useStepUpRetry(csrfToken: string): {
   /** Đặt vào cây JSX của màn — hộp hỏi mã chỉ hiện khi cần. */
   dialog: ReactNode;
 } {
+  const { t } = useTranslation();
   type Pending = {
     action: () => Promise<unknown>;
     purpose: string;
@@ -120,30 +122,49 @@ export function useStepUpRetry(csrfToken: string): {
     [settle],
   );
 
-  const dialog = pending ? (
-    <StepUpDialog
-      csrfToken={csrfToken}
-      scope={pending.scope}
-      graceMinutes={pending.graceMinutes}
-      purpose={pending.purpose}
-      onClose={() => {
-        // Đóng hộp = HỦY việc. `settle(null)` lo phần `reject` — xem chú thích ở trên.
-        settle(null);
-      }}
-      onDone={() => {
-        const current = pending;
-        // Gỡ khỏi ref TRƯỚC khi xóa state, để `settle` không reject chính lời hứa sắp thành công.
-        pendingRef.current = null;
-        setPending(null);
-        /*
-         * Thử lại ĐÚNG MỘT lần. Gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật, không
-         * phải chuyện để hỏi vòng hai — nếu không sẽ thành vòng lặp hộp thoại không thoát được
-         * (đúng cái bẫy mà `vault-panel.tsx` đã ghi lại bằng cờ `afterStepUp`).
-         */
-        current.action().then(current.resolve, current.reject);
-      }}
-    />
-  ) : null;
+  const onClose = () => {
+    // Đóng hộp = HỦY việc. `settle(null)` lo phần `reject` — xem chú thích ở trên.
+    settle(null);
+  };
+  const retry = () => {
+    if (!pending) return;
+    const current = pending;
+    // Gỡ khỏi ref TRƯỚC khi xóa state, để `settle` không reject chính lời hứa sắp thành công.
+    pendingRef.current = null;
+    setPending(null);
+    /*
+     * Thử lại ĐÚNG MỘT lần. Gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật, không
+     * phải chuyện để hỏi vòng hai — nếu không sẽ thành vòng lặp hộp thoại không thoát được
+     * (đúng cái bẫy mà `vault-panel.tsx` đã ghi lại bằng cờ `afterStepUp`).
+     */
+    current.action().then(current.resolve, current.reject);
+  };
+  /* Phạm vi sơ đồ dùng hộp NHỎ như hộp mã két (K-04); phạm vi két giữ hộp xác thực đầy đủ —
+     nó mở cả thao tác ghi két, tài khoản, tham số nên câu giải thích phạm vi còn cần. */
+  let dialog: ReactNode = null;
+  if (pending?.scope === 'diagram') {
+    dialog = (
+      <StepUpCompactDialog
+        csrfToken={csrfToken}
+        scope="diagram"
+        title={t('auth.stepUpDiagramTitle')}
+        subject={pending.purpose}
+        onClose={onClose}
+        onDone={retry}
+      />
+    );
+  } else if (pending) {
+    dialog = (
+      <StepUpDialog
+        csrfToken={csrfToken}
+        scope={pending.scope}
+        graceMinutes={pending.graceMinutes}
+        purpose={pending.purpose}
+        onClose={onClose}
+        onDone={retry}
+      />
+    );
+  }
 
   return { run, dialog };
 }

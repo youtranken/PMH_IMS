@@ -69,8 +69,9 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
       '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
     });
     renderScreen('/diagrams/d1');
-    const dialog = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
-    expect(dialog).toHaveTextContent('Mã này chỉ mở phần xem sơ đồ, không mở két.');
+    const dialog = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
+    // Hộp NHỎ (K-04): nói đang mở gì, không đoạn giải thích phạm vi.
+    expect(dialog).toHaveTextContent('Nhập mã 6 số để mở bản vẽ "Tổng công ty E2E".');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hủy' }));
     expect(await screen.findByText('Nội dung bản vẽ cần mã 2 lớp')).toBeInTheDocument();
     // Tên bản vẽ đọc không cần mã — hiện cả khi nội dung còn khoá.
@@ -169,9 +170,9 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
       data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}`,
     });
 
-    const dialog = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
-    expect(dialog).toHaveTextContent('Mã này chỉ mở phần xem sơ đồ, không mở két.');
-    await userEvent.setup().type(screen.getByLabelText(/mã/i), '654321');
+    const dialog = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
+    expect(dialog).toHaveTextContent('Nhập mã 6 số để lưu bản vẽ');
+    await userEvent.setup().type(within(dialog).getAllByLabelText(/mã/i)[0], '654321');
 
     expect(await screen.findByText('Đã lưu phiên bản #2: Thêm 1 thiết bị')).toBeInTheDocument();
     // E-04: dòng trạng thái lưu gọn "Đã lưu #n · giờ", đủ chi tiết khi rê chuột.

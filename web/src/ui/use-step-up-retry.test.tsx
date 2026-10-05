@@ -46,8 +46,10 @@ describe('useStepUpRetry — phạm vi lấy từ server', () => {
     );
   }
 
+  /* K-04: phạm vi sơ đồ là hộp NHỎ như hộp mã két (tiêu đề "Nhập mã 6 số để mở sơ đồ" + đang mở gì
+     + 6 ô + Hủy); phạm vi két giữ hộp xác thực đầy đủ. */
   it.each([
-    ['diagram', 'Mã này chỉ mở phần xem sơ đồ, không mở két.'],
+    ['diagram', 'Mở bản vẽ E2E'],
     ['vault', 'Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.'],
   ] as const)('server đòi phạm vi %s → hộp hỏi đúng phạm vi, gửi đúng phạm vi, chạy lại', async (scope, note) => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(200, { status: 'stepped-up', scope, graceMinutes: 4 })));
@@ -61,7 +63,14 @@ describe('useStepUpRetry — phạm vi lấy từ server', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Chạy' }));
 
     expect(await screen.findByText(note)).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText(/mã/i), '654321');
+    if (scope === 'diagram') {
+      const box = screen.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
+      expect(box).not.toHaveTextContent('Mã này chỉ mở phần xem sơ đồ');
+      expect(screen.getByRole('button', { name: 'Hủy' })).toBeInTheDocument();
+    }
+    // Tiêu đề hộp nhỏ cũng có chữ "mã" — lấy ô mã, không lấy chính hộp.
+    const otp = screen.getAllByLabelText(/mã/i).find((el) => el.getAttribute('role') !== 'dialog')!;
+    await userEvent.type(otp, '654321');
 
     expect(await screen.findByText('đã mở')).toBeInTheDocument();
     expect(action).toHaveBeenCalledTimes(2);

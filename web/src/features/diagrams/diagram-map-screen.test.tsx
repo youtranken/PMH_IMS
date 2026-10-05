@@ -405,7 +405,7 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(panel()).toHaveTextContent('15 Phiên bản');
     const user = userEvent.setup();
     await user.click(unlock);
-    const step = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    const step = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
     await user.type(within(step).getAllByRole('textbox')[0], '123456');
     expect(await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' })).toBeInTheDocument();
   });

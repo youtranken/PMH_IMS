@@ -300,3 +300,47 @@ export function StepUpStep({
     </section>
   );
 }
+
+/**
+ * Hộp NHỎ hỏi mã (K-04, cùng dáng hộp "Nhập mã 6 số để xem" của két — Q-24): tiêu đề, một dòng
+ * nói đang mở gì, 6 ô mã, nút Hủy. Không đoạn giải thích: người vừa bấm mở sơ đồ đã biết mình
+ * định làm gì. Phạm vi mã do nơi gọi truyền, như `StepUpDialog`.
+ */
+export function StepUpCompactDialog({
+  csrfToken,
+  scope,
+  title,
+  subject,
+  onClose,
+  onDone,
+}: Pick<StepUpProps, 'csrfToken' | 'scope' | 'onDone'> & {
+  title: string;
+  subject: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  // Mã đang được kiểm / hiệu ứng thành công đang chạy: đóng lúc này là mở ân hạn rồi bỏ đó.
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog
+      open
+      onOpenChange={() => {
+        if (!busy) onClose();
+      }}
+      maxWidth={380}
+      className="sheet reveal-popup"
+      title={title}
+      dismissible={!busy}
+      footer={
+        <button type="button" className="btn" onClick={onClose} disabled={busy}>
+          {t('common.cancel')}
+        </button>
+      }
+    >
+      <div className="reveal-popup-otp">
+        <p className="reveal-popup-subject">{subject}</p>
+        <StepUpOtp csrfToken={csrfToken} scope={scope} formId={`stepup-compact-${scope}`} onDone={onDone} onBusyChange={setBusy} />
+      </div>
+    </Dialog>
+  );
+}

@@ -385,6 +385,7 @@ export default {
     confirmPassword: 'Nhập lại mật khẩu mới',
     passwordMismatch: 'Hai mật khẩu nhập không khớp.',
     stepUpTitle: 'Xác nhận danh tính',
+    stepUpDiagramTitle: 'Nhập mã 6 số để mở sơ đồ',
     /* Câu chung khi nơi gọi không nói việc gì — trung tính: hộp này dùng cho cả két lẫn cài lại
        2 lớp, đặt lại mật khẩu…, nói "xem thông tin bí mật" là sai với mọi việc khác. */
     stepUpSub: 'Nhập mã 6 số trên điện thoại để xác nhận thao tác này.',

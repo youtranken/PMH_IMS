@@ -285,7 +285,7 @@ describe('Trình chiếu', () => {
     expect(await screen.findByText('Cam E2E')).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Tiếp →' }));
-    expect(await screen.findByRole('dialog', { name: 'Xác nhận danh tính' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(await screen.findByText('Nội dung bản vẽ cần mã 2 lớp')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/diagrams/d1/present');

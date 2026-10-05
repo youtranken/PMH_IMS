@@ -156,7 +156,7 @@ describe('Xuất PNG/PDF (FR-044)', () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
     await pickMenuItem(user, /^Thao tác với/, 'Xuất');
     await user.click(await screen.findByRole('button', { name: 'Xuất PNG' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    const dialog = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
     expect(dialog).toHaveTextContent('Nhập mã 6 số để xuất bản vẽ "Tầng 3 E2E".');
     await user.click(within(dialog).getByRole('button', { name: 'Hủy' }));
     expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/exports'))).toHaveLength(1);
