@@ -26,17 +26,22 @@ export interface VaultOwnerSummary {
    * nhưng gắn nhãn; bảng điều khiển không nhắc "lâu không đổi" cho chủ đã bỏ.
    */
   retired: boolean;
+  /**
+   * Loại HỒ SƠ phần mềm (license / ssl / domain / maintenance / other) — trang tổng chia chủ thể
+   * phần mềm theo bốn màn của Q-22 (K-01). Chủ thể khác: null. Không nói gì về nội dung két.
+   */
+  softwareType: string | null;
 }
 
 /** Chủ thể gọi bằng tên — `orphan` khi hồ sơ chủ đã bị xoá. */
 export type OwnerIdentity = Pick<
   VaultOwnerSummary,
-  'code' | 'name' | 'siteCode' | 'orphan' | 'retired'
+  'code' | 'name' | 'siteCode' | 'orphan' | 'retired' | 'softwareType'
 >;
 
 type DeviceMap = Awaited<ReturnType<DevicesApiService['getByIds']>>;
 
-const ORPHAN: OwnerIdentity = { code: '—', name: '', siteCode: null, orphan: true, retired: false };
+const ORPHAN: OwnerIdentity = { code: '—', name: '', siteCode: null, orphan: true, retired: false, softwareType: null };
 
 /**
  * Trang tổng của Két sắt (`/vault`).
@@ -105,6 +110,7 @@ export class VaultOwnersService {
             siteCode: null,
             orphan: false,
             retired: account.status === 'disabled',
+            softwareType: null,
           };
         }
         case 'isp': {
@@ -115,6 +121,7 @@ export class VaultOwnersService {
             siteCode: line.siteCode,
             orphan: false,
             retired: line.status === 'terminated',
+            softwareType: null,
           };
         }
         case 'software': {
@@ -125,6 +132,7 @@ export class VaultOwnersService {
             siteCode: null,
             orphan: false,
             retired: software.status === 'retired',
+            softwareType: software.kind,
           };
         }
         default: {
@@ -158,5 +166,6 @@ function deviceIdentity(device: {
     orphan: false,
     // "Hỏng" / "Dự phòng" chỉ là nhãn (Q-20): két của chúng vẫn cần đổi như thường.
     retired: device.status === 'retired',
+    softwareType: null,
   };
 }

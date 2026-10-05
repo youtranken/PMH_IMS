@@ -7,9 +7,9 @@ import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { OWNER_PATH } from '@/lib/routes';
+import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS, screenOfKind, type SoftwareScreenKey } from '@/lib/software-screens';
 import {
   SECRET_OWNER_KIND_KEY,
-  SECRET_OWNER_TYPES,
   type SecretOwnerType,
 } from '@/lib/secret-owner-kinds';
 import { DataTable } from '@/ui/data-table';
@@ -32,6 +32,30 @@ interface VaultOwner {
   orphan: boolean;
   /** Hồ sơ chủ đã thanh lý / ngừng dùng — két còn treo, cần dọn. */
   retired: boolean;
+  /** Loại hồ sơ phần mềm (license / ssl / domain…) — chia chủ thể phần mềm theo màn của Q-22. */
+  softwareType?: string | null;
+}
+
+/**
+ * Nhóm lọc của trang tổng (K-01): ba loại chủ thể không phải phần mềm, cộng BỐN màn phần mềm của
+ * Q-22 — người tìm két của chứng chỉ SSL không nghĩ tới việc bấm "Phần mềm".
+ */
+type OwnerGroup = Exclude<SecretOwnerType, 'software'> | SoftwareScreenKey;
+const OWNER_GROUPS: OwnerGroup[] = ['device', ...SOFTWARE_SCREEN_KEYS, 'service_account', 'isp'];
+
+function groupOf(row: VaultOwner): OwnerGroup {
+  return row.ownerType === 'software' ? screenOfKind(row.softwareType ?? 'license').key : row.ownerType;
+}
+
+function groupLabelKey(group: OwnerGroup): string {
+  return (SOFTWARE_SCREEN_KEYS as readonly string[]).includes(group)
+    ? SOFTWARE_SCREENS[group as SoftwareScreenKey].navKey
+    : SECRET_OWNER_KIND_KEY[group as SecretOwnerType];
+}
+
+/** Trang của chính hồ sơ — phần mềm vào đúng màn của loại nó, không vào màn Phần mềm chung. */
+function recordPath(row: VaultOwner): string {
+  return row.ownerType === 'software' ? screenOfKind(row.softwareType ?? 'license').item(row.ownerId) : OWNER_PATH[row.ownerType](row.ownerId);
 }
 
 /** Tên trạng thái giữ theo module chủ, như Kho thanh lý. */
@@ -88,13 +112,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
     emptyFilters: { kinds: '' },
   });
   const search = url.search;
-  const kinds = useMemo<SecretOwnerType[]>(
-    () =>
-      url.filters.kinds
-        .split(',')
-        .filter((item): item is SecretOwnerType =>
-          (SECRET_OWNER_TYPES as readonly string[]).includes(item),
-        ),
+  const kinds = useMemo<OwnerGroup[]>(
+    () => url.filters.kinds.split(',').filter((item): item is OwnerGroup => (OWNER_GROUPS as readonly string[]).includes(item)),
     [url.filters.kinds],
   );
   const [opened, setOpened] = useState<VaultOwner | null>(null);
@@ -113,7 +132,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
     // tiếng Việt có dấu.
     const term = foldSearch(search.trim());
     return (owners.data ?? []).filter((row) => {
-      if (kinds.length > 0 && !kinds.includes(row.ownerType)) return false;
+      if (kinds.length > 0 && !kinds.includes(groupOf(row))) return false;
       if (!term) return true;
       return (
         foldSearch(row.code).includes(term) ||
@@ -140,7 +159,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   };
 
   const all = owners.data ?? [];
-  const toggle = (kind: SecretOwnerType) =>
+  const toggle = (kind: OwnerGroup) =>
     url.setFilter(
       'kinds',
       (kinds.includes(kind) ? kinds.filter((item) => item !== kind) : [...kinds, kind]).join(','),
@@ -151,8 +170,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
    * Con số trên nút trả lời "có bao nhiêu thứ thuộc loại này", nên nó không được nhảy theo
    * chính cái nút vừa bấm; nếu không, tắt một bộ lọc rồi là không còn cách nào biết để bật lại.
    */
-  const countOf = (kind: SecretOwnerType) =>
-    all.filter((row) => row.ownerType === kind).length;
+  const countOf = (kind: OwnerGroup) => all.filter((row) => groupOf(row) === kind).length;
 
   /* Con số của tập ĐANG XEM thì nằm ở dòng tổng kết ngay trên bảng — xem chú thích ở đó. */
   const shownSecrets = rows.reduce((sum, row) => sum + row.secretCount, 0);
@@ -170,7 +188,14 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         header: t('vaultHome.owner'),
         cell: ({ row }) => (
           <>
-            <span className="mono">{row.original.code}</span>
+            {/* Mã là link sang hồ sơ như mọi bảng khác (K-02); nút "Mở két" vẫn riêng. */}
+            {row.original.orphan ? (
+              <span className="mono">{row.original.code}</span>
+            ) : (
+              <Link className="mono" to={recordPath(row.original)} onClick={(event) => event.stopPropagation()}>
+                {row.original.code}
+              </Link>
+            )}
             {row.original.retired ? (
               <>
                 {' '}
@@ -185,11 +210,9 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       },
       {
         id: 'kind',
-        accessorFn: (row) => row.ownerType,
+        accessorFn: (row) => groupOf(row),
         header: t('vaultHome.ownerKind'),
-        cell: ({ row }) => (
-          <span className="badge plain">{t(SECRET_OWNER_KIND_KEY[row.original.ownerType])}</span>
-        ),
+        cell: ({ row }) => <span className="badge outline">{t(groupLabelKey(groupOf(row.original)))}</span>,
       },
       {
         id: 'site',
@@ -250,7 +273,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         {/* Nút bật/tắt độc lập (`.segmented` + `aria-pressed`) như ba chip trạng thái của Sổ NAT —
             không phải nút `primary`: chip đang bật mà mang màu nút chính thì lẫn với CTA. */}
         <div role="group" aria-label={t('vaultHome.filterKind')} className="segmented">
-          {SECRET_OWNER_TYPES.map((kind) => (
+          {OWNER_GROUPS.map((kind) => (
             <button
               key={kind}
               type="button"
@@ -260,7 +283,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {/* Số đếm đi kèm nhãn: "có đường truyền nào giữ két không" là câu hỏi màn này
                   sinh ra để trả lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc — và
                   bấm ra bảng trống thì không phân biệt được "không có" với "mình lọc sai". */}
-              {t(SECRET_OWNER_KIND_KEY[kind])}{' '}
+              {t(groupLabelKey(kind))}{' '}
               <span className="seg-count">{countOf(kind)}</span>
             </button>
           ))}
@@ -369,7 +392,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                   /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: chuỗi `if`
                      kết bằng một nhánh vét như `return PATHS.softwareItem(...)` thì một đường
                      truyền rơi vào đó và cái nút này mở trang PHẦN MỀM với id đường truyền. */
-                  to={OWNER_PATH[opened.ownerType](opened.ownerId)}
+                  to={recordPath(opened)}
                 >
                   {t('vaultHome.openRecord')}
                 </Link>

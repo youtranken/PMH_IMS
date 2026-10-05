@@ -110,7 +110,7 @@ describe('Trang tổng Két sắt', () => {
     renderHome();
     expect(
       await screen.findByText(
-        'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+        'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tên miền & SSL, hợp đồng bảo trì, dịch vụ có hạn khác, tài khoản dịch vụ, đường truyền',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Luật của két' })).not.toBeInTheDocument();
@@ -122,5 +122,45 @@ describe('Trang tổng Két sắt', () => {
     expect(dialog).toHaveTextContent(/Trang này chỉ liệt kê hồ sơ và số ngăn/);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Đóng' }));
     expect(screen.queryByRole('dialog', { name: 'Luật của két' })).not.toBeInTheDocument();
+  });
+});
+
+/** K-01 + K-02: chip lọc theo bốn màn của Q-22; mã hồ sơ là link về đúng màn; Loại là badge viền. */
+describe('Trang tổng Két sắt — theo màn của hồ sơ (K-01, K-02)', () => {
+  const MIXED = [
+    { ...OWNERS[1], ownerId: 'lic', code: 'LIC-E2E-01', softwareType: 'license' },
+    { ...OWNERS[1], ownerId: 'ssl', code: 'SSL-E2E-01', name: 'Chứng chỉ web', softwareType: 'ssl' },
+    { ...OWNERS[0], softwareType: null },
+  ];
+
+  function renderMixed(entry = '/vault') {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, MIXED))));
+    return renderWithI18n(
+      <MemoryRouter initialEntries={[entry]}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <VaultHomeScreen me={SA} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('chip "Tên miền & SSL" riêng, không gom vào "Phần mềm"; cột Loại ghi đúng màn', async () => {
+    renderMixed();
+    const group = await screen.findByRole('group', { name: 'Lọc theo loại hồ sơ' });
+    const chip = await within(group).findByRole('button', { name: 'Tên miền & SSL 1' });
+    expect(within(group).getByRole('button', { name: /^Phần mềm/ })).toHaveTextContent('1');
+    await userEvent.setup().click(chip);
+    const table = screen.getByRole('table');
+    expect(within(table).queryByText('LIC-E2E-01')).toBeNull();
+    const ssl = within(table).getByRole('link', { name: 'SSL-E2E-01' });
+    expect(ssl).toHaveAttribute('href', '/domains/ssl');
+    expect(within(ssl.closest('tr') as HTMLElement).getByText('Tên miền & SSL')).toHaveClass('badge', 'outline');
+  });
+
+  it('mã thiết bị là link về hồ sơ máy', async () => {
+    renderMixed();
+    expect(await screen.findByRole('link', { name: 'SW-E2E-01' })).toHaveAttribute('href', '/devices/d1');
   });
 });

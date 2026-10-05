@@ -3094,7 +3094,7 @@ export default {
   },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+    subtitle: 'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tên miền & SSL, hợp đồng bảo trì, dịch vụ có hạn khác, tài khoản dịch vụ, đường truyền',
     whereItLives:
       'Trang này chỉ liệt kê hồ sơ và số ngăn, không hiện tên hay giá trị từng ngăn. Bấm "Mở két" để xem từng ngăn.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',

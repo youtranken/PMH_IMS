@@ -147,6 +147,18 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
   );
 
   it(
+    'hồ sơ phần mềm mang loại hồ sơ (license / ssl / domain…) để trang tổng chia theo bốn màn của Q-22 (K-01); chủ khác null',
+    async () => {
+      const list = await owners.list();
+      const typeOf = Object.fromEntries(list.map((row) => [row.code, row.softwareType]));
+      expect(typeOf['E2E-KET-SW-LIVE']).toBe('license');
+      expect(typeOf['E2E-KET-DEV-LIVE']).toBeNull();
+      expect(typeOf['E2E-KET-ISP-LIVE']).toBeNull();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'describe() — một chủ thể lẻ (phiếu break-glass) cũng mang cờ',
     async () => {
       expect(await owners.describe('device', ids['E2E-KET-DEV-OLD'])).toMatchObject({
