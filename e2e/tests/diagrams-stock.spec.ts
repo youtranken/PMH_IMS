@@ -152,7 +152,7 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(card.getByRole('link', { name: 'Mở hồ sơ' })).toHaveAttribute('href', `/devices/${deviceId}`);
   });
 
-  test('chèn 3 máy một lượt: xếp lưới không đè nhãn; lưu lần đầu xong thẻ "Bản vẽ đang trống" không hiện lại (E-01, E-02)', async ({ page }) => {
+  test('chèn 3 máy một lượt: xếp lưới không đè nhãn; lưu lần đầu xong thẻ "Bản vẽ đang trống" không hiện lại; hồ sơ máy liệt kê bản vẽ (E-01, E-02, T-01)', async ({ page }) => {
     test.setTimeout(180_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -191,6 +191,13 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     // Nhãn 3 dòng rộng ~180px nằm dưới hình: hai máy phải cách nhau đủ một nhãn ngang hoặc một hàng dọc.
     for (let i = 0; i < at.length; i += 1)
       for (let j = i + 1; j < at.length; j += 1) expect(Math.abs(at[i][0] - at[j][0]) >= 180 || Math.abs(at[i][1] - at[j][1]) >= 140).toBe(true);
+
+    // Hồ sơ thiết bị nói máy có trên bản vẽ nào (T-01) — tên + trạng thái, link mở bản vẽ bay tới máy.
+    await page.goto(`/devices/${ids[0]}`);
+    const onDiagrams = page.getByRole('region', { name: 'Có trên sơ đồ (1)' });
+    await expect(onDiagrams).toBeVisible();
+    await expect(onDiagrams).toContainText('Bản nháp');
+    await expect(onDiagrams.getByRole('link', { name: `E2E Lưới chèn ${stamp}` })).toHaveAttribute('href', `/diagrams/${id}?focus=${ids[0]}`);
   });
 
   test('đổi hình của loại ở Danh mục → lần mở sau bản vẽ hiện hình mới (XML khô, không sửa bản vẽ)', async ({ page }) => {

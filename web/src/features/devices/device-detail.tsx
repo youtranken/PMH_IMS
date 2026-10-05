@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { DevicePhotosPanel, devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
+import { DeviceOnDiagrams } from "./device-on-diagrams";
 import { DeviceDiagramLook } from "./device-diagram-look";
 import { Chevron } from "@/ui/chevron";
 import { CopyButton } from "@/ui/copy-button";
@@ -919,6 +920,8 @@ export function DeviceDetail({ me }: { me: Me }) {
               canEdit={!retired}
               canEditModel={canVaultWrite}
             />
+
+            <DeviceOnDiagrams deviceId={item.id} />
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
-import { diagramVersionLabel, diagramVersionStanding } from './diagram-version';
+import { diagramStatusLabel, diagramVersionLabel, diagramVersionStanding } from './diagram-version';
 
 const t = i18n.t.bind(i18n) as (key: string, options?: Record<string, unknown>) => string;
 
@@ -25,5 +25,15 @@ describe('Nhãn phiên bản bản vẽ — một cách gọi ở mọi nơi', (
     [2, 3, 'long', 'Phiên bản #2'],
   ] as const)('phiên bản %s, chính thức %s, dạng %s → "%s"', (seq, officialSeq, form, text) => {
     expect(diagramVersionLabel(t, seq, officialSeq, form)).toBe(text);
+  });
+
+  it.each([
+    ['official', 3, 'Chính thức v3'],
+    ['official_draft', 3, 'Chính thức v3 · có bản nháp'],
+    ['draft', null, 'Bản nháp'],
+    ['pending', null, 'Chờ duyệt'],
+    ['empty', null, 'Chưa vẽ'],
+  ] as const)('trạng thái %s (chính thức %s) → "%s"', (status, officialSeq, text) => {
+    expect(diagramStatusLabel(t, status, officialSeq)).toBe(text);
   });
 });

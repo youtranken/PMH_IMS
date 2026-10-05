@@ -22,3 +22,16 @@ export function diagramVersionLabel(t: Translate, seq: number, officialSeq: numb
   if (standing === 'official') return t(form === 'short' ? 'diagramVersion.officialShort' : 'diagramVersion.official', { seq });
   return t(standing === 'draft' ? 'diagramVersion.draft' : 'diagramVersion.older', { seq });
 }
+
+/** Trạng thái của một bản vẽ trên cây (`GET /diagrams`). */
+export type DiagramTreeStatus = 'empty' | 'draft' | 'official' | 'official_draft' | 'pending';
+
+/**
+ * Chữ trạng thái của một bản vẽ — bản đồ /diagrams và hồ sơ thiết bị nói cùng một câu: "Chính thức
+ * v3" khi biết số bản chính thức, không thì nhãn trạng thái thường. Trạng thái luôn có CHỮ (Q-23).
+ */
+export function diagramStatusLabel(t: Translate, status: DiagramTreeStatus, officialSeq: number | null | undefined): string {
+  if (officialSeq && status === 'official') return t('diagrams.status.officialSeq', { seq: officialSeq });
+  if (officialSeq && status === 'official_draft') return t('diagrams.status.officialDraftSeq', { seq: officialSeq });
+  return t(`diagrams.status.${status}`);
+}

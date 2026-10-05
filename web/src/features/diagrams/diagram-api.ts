@@ -1,4 +1,5 @@
 import type { PortLink } from '@/lib/port-types';
+import { diagramStatusLabel } from '@/ui/diagram-version';
 import type { PresentationSource } from './diagram-presentation';
 import type { PublicationEvent } from './diagram-timeline';
 
@@ -267,9 +268,7 @@ export const STATUS_KEY: Record<DiagramStatus, string> = {
 
 /** "Chính thức v3" khi biết số phiên bản chính thức (Q-23); không thì nhãn trạng thái thường. */
 export function statusLabel(node: DiagramNode, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (node.officialSeq && node.status === 'official') return t('diagrams.status.officialSeq', { seq: node.officialSeq });
-  if (node.officialSeq && node.status === 'official_draft') return t('diagrams.status.officialDraftSeq', { seq: node.officialSeq });
-  return t(STATUS_KEY[node.status]);
+  return diagramStatusLabel(t, node.status, node.officialSeq);
 }
 
 /** Một lời báo của tự kiểm (AD-18): đỏ chặn, vàng cho qua; `cellId` để bay tới ô. */
