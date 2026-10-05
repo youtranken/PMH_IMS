@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { E2E_MEMBER, E2E_SA, firstLogin, sql, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_MEMBER, E2E_SA, firstLogin, resetUsers, sql, uniqueStamp, writeHeaders } from './helpers';
+
+test.beforeEach(() => {
+  resetUsers();
+});
 
 /**
  * Thư gửi lỗi (Q-25): thư hết lượt gửi tự động trước nay nằm im trong outbox. SA thấy số trên menu,
