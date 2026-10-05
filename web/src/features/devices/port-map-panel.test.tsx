@@ -134,3 +134,47 @@ describe('PortMapPanel — cổng đã có cáp', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(message);
   });
 });
+
+/* T-02: gỡ dây mà GIỮ dòng cổng (VLAN, người dùng, ghi chú) — trước chỉ có Xóa dòng. */
+describe('PortMapPanel — Gỡ dây (giữ cổng)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('dòng có dây: ⋮ có "Gỡ dây (giữ cổng)" → hỏi xác nhận → POST …/unlink; dòng không dây thì không có', async () => {
+    const ports = {
+      ports: [
+        { ...PORTS.ports[0], vlan: '20', note: 'Giữ E2E' },
+        { ...PORTS.ports[0], id: 'p-2', portLabel: 'LAN9', connectedLabel: null },
+      ],
+      incoming: [],
+    };
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) =>
+      Promise.resolve(init?.method === 'POST' ? jsonResponse(200, { ...ports.ports[0], connectedLabel: null }) : jsonResponse(200, ports)),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <I18nextProvider i18n={i18n}>
+          <ToastProvider>
+            <ConfirmProvider>
+              <PortMapPanel device={DEVICE} csrfToken="t" canEdit />
+            </ConfirmProvider>
+          </ToastProvider>
+        </I18nextProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Thao tác với LAN9/ }));
+    expect(screen.queryByRole('menuitem', { name: 'Gỡ dây (giữ cổng)' })).toBeNull();
+    await user.keyboard('{Escape}');
+    await user.click(await screen.findByRole('button', { name: /^Thao tác với WAN1/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Gỡ dây (giữ cổng)' }));
+    const ask = await screen.findByRole('dialog');
+    expect(ask).toHaveTextContent('VLAN, người dùng và ghi chú của cổng WAN1 được giữ');
+    await user.click(within(within(ask).getByTestId('dialog-footer')).getByRole('button', { name: 'Gỡ dây' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/v1/devices/d-1/ports/p-1/unlink' && init?.method === 'POST')).toBe(true),
+    );
+    expect(await screen.findByText('Đã gỡ dây khỏi cổng WAN1.')).toBeInTheDocument();
+  });
+});

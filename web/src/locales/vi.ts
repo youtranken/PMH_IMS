@@ -1848,6 +1848,11 @@ export default {
     saved: 'Đã lưu cổng {{port}}.',
     editOf: 'Sửa cổng {{port}}',
     removeOf: 'Xóa cổng {{port}}',
+    unlink: 'Gỡ dây (giữ cổng)',
+    unlinkOf: 'Gỡ dây khỏi cổng {{port}}',
+    unlinkConfirm: 'Gỡ dây',
+    confirmUnlink: 'Sợi dây ở cổng {{port}} bị gỡ khỏi sơ đồ cổng (bỏ đầu kia). VLAN, người dùng và ghi chú của cổng {{port}} được giữ. Việc gỡ được ghi vào lịch sử thiết bị.',
+    unlinked: 'Đã gỡ dây khỏi cổng {{port}}.',
     // KHÔNG chứa "Lưu" hay "Thêm cổng": Playwright khớp tên nút theo chuỗi con.
     saveAndNext: 'Ghi rồi khai cổng kế tiếp',
     filter: 'Lọc cổng, thiết bị, VLAN…',

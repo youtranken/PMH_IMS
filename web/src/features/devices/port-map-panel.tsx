@@ -81,6 +81,13 @@ export function PortMapPanel({
     { method: 'DELETE', csrfToken, refreshMe: false, body: () => undefined },
   );
 
+  /* Gỡ dây mà giữ dòng cổng (T-02): endpoint `unlink` của devices bỏ đầu kia, giữ VLAN / người
+     dùng / ghi chú — Xóa dòng thì mất luôn những thứ đó. */
+  const unlink = useApiMutation<{ id: string }, unknown>(
+    (input) => `/api/v1/devices/${device.id}/ports/${input.id}/unlink`,
+    { method: 'POST', csrfToken, refreshMe: false, body: () => undefined },
+  );
+
   /* Cả cây `['devices', id]`, không chỉ bảng cổng: lượt thêm/sửa/xóa cổng ghi vào lịch sử máy,
      mà trang chi tiết nạp lịch sử ngay khi mở hồ sơ — chỉ làm cũ bảng cổng thì tab Lịch sử
      hiện bản chụp trước lượt sửa. */
@@ -114,6 +121,36 @@ export function PortMapPanel({
   });
 
   const actionsFor = (port: PortRow): RowAction[] => [
+    ...(port.connectedDeviceId || port.connectedLabel
+      ? [
+          {
+            key: 'unlink',
+            label: t('ports.unlink'),
+            warn: true,
+            disabled: unlink.isPending,
+            onSelect: () => {
+              void (async () => {
+                const ok = await askConfirm({
+                  title: t('common.titleOf', { action: t('ports.unlinkOf', { port: port.portLabel }), subject: device.code }),
+                  message: t('ports.confirmUnlink', { port: port.portLabel }),
+                  confirmLabel: t('ports.unlinkConfirm'),
+                });
+                if (!ok) return;
+                unlink.mutate(
+                  { id: port.id },
+                  {
+                    onSuccess: () => {
+                      toast({ message: t('ports.unlinked', { port: port.portLabel }) });
+                      void refresh();
+                    },
+                    onError: (error) => toast({ message: errorMessage(error), tone: 'error' }),
+                  },
+                );
+              })();
+            },
+          } satisfies RowAction,
+        ]
+      : []),
     {
       key: 'remove',
       label: t('ports.remove'),
