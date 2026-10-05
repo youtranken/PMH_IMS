@@ -458,7 +458,7 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
  */
 describe('Q-24: số đứng đầu cụm thì danh từ theo sau viết hoa', () => {
   const UNITS = ['giờ', 'phút', 'giây', 'ngày', 'tuần', 'tháng', 'năm', 'lần', 'host'];
-  const NOT_NOUNS = ['đã', 'còn', 'có', 'chưa', 'hoặc', 'nghĩa', 'trên', 'gửi', 'đăng', 'sẽ', 'bị', 'chỉ'];
+  const NOT_NOUNS = ['đã', 'còn', 'có', 'chưa', 'hoặc', 'nghĩa', 'trên', 'gửi', 'đăng', 'sẽ', 'bị', 'chỉ', 'của'];
   /** Mảnh chỉ ghép vào GIỮA câu ("Mở rộng PC-01 — 2 license", "…, trong đó 1 nhóm chưa gán cho
       ai"), không bao giờ đứng đầu cụm. */
   const MID_PHRASE_KEYS = ['devices.licenseCount', 'access.summaryEmpty'];
