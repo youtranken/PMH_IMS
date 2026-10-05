@@ -60,6 +60,8 @@ export interface VersionItem {
   savedAt: string;
   basedOnVersionId: string | null;
   restoredFromSeq: number | null;
+  /** Lượt lưu trùng y nguyên bản mới nhất: server không tạo phiên bản, trả lại bản mới nhất. */
+  unchanged?: boolean;
 }
 
 /**

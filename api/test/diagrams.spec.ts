@@ -281,6 +281,31 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       expect(theirs.seq).toBe(mine.seq + 1);
     });
 
+    it('lưu lại y nguyên bản mới nhất (kể cả XML ướt, chỉ khác vị trí cuộn dx/dy): không phiên bản, không lịch sử, không nhật ký — trả bản mới nhất kèm unchanged', async () => {
+      const d = await service.create(SA.email, { name: 'E2E Lưu không đổi', nodeType: 'floor' });
+      const body = deviceCell('d1', deviceId, 'SW-E2E-SD') + shape('s1', 'Tầng 3');
+      const first = await service.save(SA.email, d.id, { xml: page(body), svg: SVG, basedOnVersionId: null });
+      const counts = async () => [
+        await count(`SELECT count(*)::int AS n FROM diagram_version WHERE diagram_id = $1`, [d.id]),
+        await count(`SELECT count(*)::int AS n FROM diagram_history WHERE diagram_id = $1`, [d.id]),
+        await count(`SELECT count(*)::int AS n FROM audit_log WHERE object_id = $1`, [d.id]),
+      ];
+      const before = await counts();
+      // Trình vẽ gửi lại XML ướt (nhãn hydrate từ kho, style IMS) và vị trí cuộn khác — vẫn là cùng bản vẽ.
+      const wet = page(body)
+        .replace('<mxGraphModel>', '<mxGraphModel dx="1563" dy="818">')
+        .replace('label="SW-E2E-SD"', 'label="SW-E2E-SD&#xa;10.20.0.5"');
+      const again = await service.save(SA.email, d.id, { xml: wet, svg: SVG, basedOnVersionId: first.id });
+      expect(again).toMatchObject({ id: first.id, seq: 1, unchanged: true });
+      expect(await counts()).toEqual(before);
+      // Người khác lưu đè đúng nội dung đó trên bản cũ hơn: vẫn không có gì để lưu.
+      expect(await service.save(MEMBER.email, d.id, { xml: page(body), svg: SVG, basedOnVersionId: null })).toMatchObject({ id: first.id, unchanged: true });
+      // Đổi thật thì vẫn là một phiên bản mới, không mang cờ unchanged.
+      const changed = await service.save(SA.email, d.id, { xml: page(body + shape('s2', 'ISP')), svg: SVG, basedOnVersionId: first.id });
+      expect(changed.seq).toBe(2);
+      expect(changed.unchanged).toBeUndefined();
+    });
+
     it('hai lượt lưu cùng lúc: mỗi lượt một số thứ tự, không lượt nào chết vì trùng', async () => {
       const results = await Promise.all(
         [1, 2, 3].map((n) => service.save(SA.email, diagramId, { xml: page(shape(`c${n}`, `Khung ${n}`)), svg: SVG, basedOnVersionId: null })),

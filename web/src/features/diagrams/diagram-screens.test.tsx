@@ -159,6 +159,7 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
      * Bản một trang: tin `save` chỉ mang mô hình trần (`pages=0`), còn XML đi kèm `export` svg thì
      * bị nén — màn xin `export` xml (cả tệp, không nén) trước, rồi mới xin svg.
      */
+    fromDrawio({ event: 'autosave', xml: '<mxGraphModel>NÉT ĐANG VẼ</mxGraphModel>' });
     fromDrawio({ event: 'save', xml: '<mxGraphModel>NÉT ĐANG VẼ</mxGraphModel>' });
     await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"xml"'))).toBe(true));
     fromDrawio({ event: 'export', format: 'xml', xml: '<mxfile>NÉT ĐANG VẼ</mxfile>' });
@@ -200,6 +201,63 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
         ),
       ).toBe(true),
     );
+  });
+});
+
+describe('Lưu khi không có gì đổi (Q-23 05/10)', () => {
+  const version = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+
+  async function openEditor(saveResponse: () => Response) {
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...version, xml: '<mxfile/>', svg: null } }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1/versions': saveResponse,
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    });
+    const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], { initialEntries: ['/diagrams/d1?mode=edit'] });
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    const posted = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    const fromDrawio = (data: Record<string, unknown>) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frame.contentWindow }));
+      });
+    fromDrawio({ event: 'init' });
+    const saves = () => (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).filter(([url, init]) => String(url).endsWith('/versions') && init?.method === 'POST');
+    return { posted, fromDrawio, saves };
+  }
+
+  it('chưa sửa gì: nút Lưu tắt; Ctrl+S trong trình vẽ (tin save) chỉ báo "Không có thay đổi để lưu", không gọi API', async () => {
+    const { posted, fromDrawio, saves } = await openEditor(() => jsonResponse(201, { ...version, id: 'v2', seq: 2 }));
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
+    fromDrawio({ event: 'save', xml: '<mxGraphModel/>' });
+    expect(await screen.findByText('Không có thay đổi để lưu.')).toBeInTheDocument();
+    expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export"'))).toBe(false);
+    expect(saves()).toHaveLength(0);
+    // Sửa một nét: nút bật lại.
+    fromDrawio({ event: 'autosave', xml: '<mxGraphModel>ĐỔI</mxGraphModel>' });
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
+  });
+
+  it('server báo trùng bản mới nhất (unchanged): báo "Không có thay đổi để lưu", không báo "Đã lưu phiên bản", hết dấu chưa lưu', async () => {
+    const { posted, fromDrawio, saves } = await openEditor(() => jsonResponse(201, { ...version, unchanged: true }));
+    fromDrawio({ event: 'autosave', xml: '<mxGraphModel>KÉO RỒI KÉO LẠI</mxGraphModel>' });
+    fromDrawio({ event: 'save', xml: '<mxGraphModel/>' });
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"format":"xml"'))).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', xml: '<mxfile>Y NGUYÊN</mxfile>' });
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"format":"svg"'))).toBe(true));
+    fromDrawio({ event: 'export', format: 'svg', data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}` });
+    expect(await screen.findByText('Không có thay đổi để lưu.')).toBeInTheDocument();
+    expect(saves()).toHaveLength(1);
+    expect(screen.queryByText(/Đã lưu phiên bản/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
   });
 });
 
@@ -263,6 +321,7 @@ describe('Thẻ "Bản vẽ đang trống" của chế độ Sửa', () => {
     fromDrawio({ event: 'init' });
     expect(screen.getByRole('heading', { name: 'Bản vẽ đang trống — bắt đầu như sau' })).toBeInTheDocument();
 
+    fromDrawio({ event: 'autosave', xml: '<mxGraphModel>3 MÁY</mxGraphModel>' });
     fromDrawio({ event: 'save', xml: '<mxGraphModel/>' });
     await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"format":"xml"'))).toBe(true));
     fromDrawio({ event: 'export', format: 'xml', xml: '<mxfile>3 MÁY</mxfile>' });
@@ -343,8 +402,10 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
   it('nút mở hộp tìm gọn — không cột cố định; máy đã thanh lý không hiện; máy đã có trên bản vẽ hiện nhưng tắt kèm lý do; chèn bằng patch, hộp đóng', async () => {
     const { fetchMock, frame, posted, fromDrawio } = await openEditor();
     const user = userEvent.setup();
-    // Sẵn sàng ngay từ `init` (lệnh load đã gửi trước mọi lệnh sau) — không chờ tin `load`.
-    expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
+    // Sẵn sàng ngay từ `init` (lệnh load đã gửi trước mọi lệnh sau) — không chờ tin `load`. Lưu
+    // vẫn tắt tới khi có gì đó đổi (Q-23).
+    expect(screen.getByRole('button', { name: 'Thiết bị kho' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Thiết bị kho' }));
     const box = screen.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
     expect(frame).toBeInTheDocument();

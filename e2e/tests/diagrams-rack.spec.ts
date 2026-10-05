@@ -167,7 +167,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await stepUpViaApi(page, secret, 'diagram');
 
     await page.goto(`/diagrams/${diagramId}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Dựng lại mặt tủ');
     const confirm = page.getByRole('dialog', { name: 'Dựng lại mặt tủ từ kho?' });
     await confirm.getByRole('button', { name: 'Dựng lại' }).click();
@@ -180,7 +180,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     expect(xml).not.toContain('data:image');
 
     // Công tắc: mặt sau không có ảnh → tắt kèm lý do; đổi ô mặt trước về Biểu tượng rồi lưu.
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Ảnh thật…');
     const box = page.getByRole('dialog', { name: 'Biểu tượng / Ảnh thật' });
     const first = box.getByRole('radiogroup', { name: `Hình của ${withPhoto}` }).first();

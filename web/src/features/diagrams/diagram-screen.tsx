@@ -987,8 +987,13 @@ function DiagramEditor({
         t('diagrams.screen.stepUpSave', { name: title }),
       );
       basedOn.current = version.id;
-      setLastSaved(version);
       setDirty(false);
+      // Trùng y nguyên bản mới nhất: server không tạo phiên bản nào (Q-23) — không có gì mới để báo.
+      if (version.unchanged) {
+        toast({ tone: 'warn', message: t('diagrams.screen.nothingToSave') });
+        return;
+      }
+      setLastSaved(version);
       void queryClient.invalidateQueries({ queryKey: TREE_KEY });
       void queryClient.invalidateQueries({ queryKey: nodeKey(diagramId) });
       void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
@@ -1068,6 +1073,14 @@ function DiagramEditor({
         if (message.error) toast({ tone: 'error', message: t('diagrams.screen.insertFailed', { reason: message.error }) });
         break;
       case 'save':
+        /*
+         * Ctrl+S trong trình vẽ cũng tới đây, kể cả khi nút Lưu đang tắt: chưa sửa gì thì chỉ báo,
+         * không xin trình vẽ xuất, không gọi server (Q-23 — mỗi lần lưu là một phiên bản).
+         */
+        if (!dirty) {
+          toast({ tone: 'warn', message: t('diagrams.screen.nothingToSave') });
+          break;
+        }
         // Lưu = cả tệp XML + ảnh SVG để xem: xin tệp, rồi xin SVG, gửi cả hai khi SVG về.
         setSaving(true);
         withFile((xml) => {
@@ -1175,7 +1188,13 @@ function DiagramEditor({
             <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
           </Popover>
           <InfoTip subject={t('diagrams.stock.button')}>{t('diagrams.help.stock')}</InfoTip>
-          <button type="button" className="btn primary" disabled={!ready || busy} onClick={() => frame.current?.send({ action: 'save' })}>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!ready || busy || !dirty}
+            title={ready && !busy && !dirty ? t('diagrams.screen.nothingToSave') : undefined}
+            onClick={() => frame.current?.send({ action: 'save' })}
+          >
             {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
           </button>
           <InfoTip subject={t('diagrams.screen.save')}>{t('diagrams.help.save')}</InfoTip>

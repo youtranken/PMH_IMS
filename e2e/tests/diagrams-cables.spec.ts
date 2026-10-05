@@ -136,7 +136,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await saveDrawing(page, id, [sw, srv], [{ cell: 'e1', from: 'a', to: 'b' }]);
 
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Dây chưa khai');
     await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
@@ -182,7 +182,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await saveDrawing(page, id, [sw, srv], [{ cell: 'e1', from: 'a', to: 'b' }]);
 
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Dây chưa khai');
     await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
@@ -271,7 +271,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     const fresh = await link(page, sw.id, 'Gi1/0/5', srv.id, 'eth1');
 
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await expect(page.getByText('Có 1 kết nối mới chưa vẽ')).toBeVisible();
     await page.getByRole('button', { name: 'Vẽ vào' }).click();
     await expect(page.getByText('Đã vẽ 1 dây vào bản vẽ.')).toBeVisible();
@@ -331,7 +331,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     ]);
 
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Dây chưa khai');
     await page.getByRole('button', { name: `${pcC.code} ↔ ${sw.code}` }).click();
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });

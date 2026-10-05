@@ -168,7 +168,7 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     expect(seeded.status(), await seeded.text()).toBe(201);
 
     await page.goto(`/diagrams/${root}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Chèn tủ mạng');
     const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
     await box.getByRole('button', { name: 'Tủ mạng', exact: true }).click();

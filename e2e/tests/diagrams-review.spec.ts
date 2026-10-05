@@ -260,7 +260,7 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     // Thanh mảnh MỘT dòng ở 1280px cho SA (Q-23), cả Xem lẫn Sửa; 390px chỉ xem, xuống dòng, không tràn ngang.
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/diagrams/${id}?mode=edit`);
-    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeVisible();
     expect(await diagramBarSpread(page)).toBeLessThan(12);
     await page.goto(`/diagrams/${id}`);

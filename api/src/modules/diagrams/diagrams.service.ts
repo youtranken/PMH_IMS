@@ -23,6 +23,7 @@ import {
   buildCellIndex,
   cellLabels,
   diffCellIndex,
+  drawingKey,
   layerNames,
   secretLabelReason,
   summarizeDiff,
@@ -148,6 +149,8 @@ export interface VersionItem {
   savedAt: string;
   basedOnVersionId: string | null;
   restoredFromSeq: number | null;
+  /** Lượt lưu trùng y nguyên bản mới nhất: không tạo phiên bản, đây là bản mới nhất đó. */
+  unchanged?: boolean;
 }
 
 /**
@@ -1394,7 +1397,8 @@ export class DiagramsService {
     const xml = dehydrateDiagramXml(input.xml);
     // Trần `diagram.xml_max_kb` đo phần NÉT VẼ: ảnh nhúng lưu riêng một lần (Q-23); tổng kể cả ảnh
     // đã bị trần XML ướt chặn ở cổng phía trên.
-    const dryTooBig = sizeReason(dryImages(xml).text, xmlMaxKb, 'Bản vẽ');
+    const dryText = dryImages(xml).text;
+    const dryTooBig = sizeReason(dryText, xmlMaxKb, 'Bản vẽ');
     if (dryTooBig) throw new BadRequestException({ code: 'DIAGRAM_XML_INVALID', message: dryTooBig });
     const index = buildCellIndex(xml);
     const secret = secretLabelReason(index);
@@ -1402,7 +1406,8 @@ export class DiagramsService {
     await this.assertFrames(diagramId, index);
     const snapshot = await this.snapshot(index);
 
-    const id = await this.db.transaction(async (tx) => {
+    const dryKey = drawingKey(dryText);
+    const saved = await this.db.transaction(async (tx) => {
       const kind = await this.lockLive(tx, diagramId);
       const planned = plannedNotAllowedReason(index, kind);
       if (planned) throw new BadRequestException({ code: 'DIAGRAM_PLANNED_NOT_ALLOWED', message: planned });
@@ -1410,13 +1415,16 @@ export class DiagramsService {
       if (input.basedOnVersionId && !(await this.belongs(tx, diagramId, input.basedOnVersionId))) {
         throw new BadRequestException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Phiên bản gốc không thuộc bản vẽ này.' });
       }
+      // Bấm Lưu mà không sửa gì (Q-23): không thêm phiên bản "Không đổi gì" vào chuỗi lịch sử, không
+      // ghi nhật ký — chưa có gì được ghi. So trong khoá hàng để không lỡ một lượt lưu vừa chen vào.
+      if (latest && drawingKey(latest.xml) === dryKey) return { id: latest.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
       let summary = summarizeDiff(diff);
       if (latest && input.basedOnVersionId !== latest.id) {
         const names = await this.users.namesByEmails([latest.savedBy.toLowerCase()]);
         summary += ` · ${overwriteNote(names.get(latest.savedBy.toLowerCase()) ?? latest.savedBy)}`;
       }
-      return this.insertVersion(tx, actor, diagramId, {
+      const id = await this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
         xml,
         svg: svg.value,
@@ -1430,8 +1438,10 @@ export class DiagramsService {
         auditAction: 'diagram.saved',
         bytes: Buffer.byteLength(xml),
       });
+      return { id, unchanged: false };
     });
-    return this.versionItem(diagramId, id);
+    const item = await this.versionItem(diagramId, saved.id);
+    return saved.unchanged ? { ...item, unchanged: true } : item;
   }
 
   /** Khôi phục = phiên bản MỚI chép XML của bản được chọn (không xoá, không sửa gì). */
@@ -1516,6 +1526,7 @@ export class DiagramsService {
       .select({
         id: diagramVersionTable.id,
         seq: diagramVersionTable.seq,
+        xml: diagramVersionTable.xml,
         cellIndex: diagramVersionTable.cellIndex,
         savedBy: diagramVersionTable.savedBy,
       })

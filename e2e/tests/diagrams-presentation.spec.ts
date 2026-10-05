@@ -114,7 +114,7 @@ test.describe('Sơ đồ mạng — bản trình bày', () => {
     // Sửa: thiết bị dự kiến + ảnh tự do, lưu.
     await member.goto(`/diagrams/${presId}?mode=edit`);
     await expect(band(member)).toBeVisible();
-    await expect(member.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(member.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(member, 'Thiết bị dự kiến');
     const planned = member.getByRole('dialog', { name: 'Thêm thiết bị dự kiến' });
     await planned.getByLabel(/Tên thiết bị/).fill('AP tầng 3 E2E');

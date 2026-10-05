@@ -159,6 +159,14 @@ function readRawCells(xml: string): RawCell[] {
   return cells;
 }
 
+/**
+ * Khoá so "có gì để lưu không" của XML khô: bỏ `dx`/`dy` của `<mxGraphModel>` — đó là chỗ người vẽ
+ * đang cuộn tới, draw.io ghi vào mỗi lần xuất, kéo khung nhìn không phải là sửa bản vẽ.
+ */
+export function drawingKey(xml: string): string {
+  return xml.replace(/<mxGraphModel\b[^>]*>/g, (tag) => tag.replace(/\s(?:dx|dy)="[^"]*"/g, ''));
+}
+
 /** XML (đã qua cổng) → chỉ mục ô. Ô gốc và ô lớp không vào `cells`, lớp nằm ở `layers`. */
 export function buildCellIndex(xml: string): CellIndex {
   const raw = readRawCells(xml);

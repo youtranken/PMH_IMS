@@ -3,6 +3,7 @@ import {
   cellCaption,
   cellCaptioner,
   diffCellIndex,
+  drawingKey,
   layerNames,
   secretLabelReason,
   summarizeDiff,
@@ -267,5 +268,23 @@ describe('overwriteNote + splitSummary — dòng nháp gọn của panel (Q-23 0
   ])('%j', (raw, brief, overwrote) => {
     const summary = raw.replace(/OVR:(.+)$/, (_m, name: string) => overwriteNote(name));
     expect(splitSummary(summary)).toEqual({ brief, overwrote });
+  });
+});
+
+describe('drawingKey — lưu không đổi gì thì không tạo phiên bản (Q-23 05/10)', () => {
+  const base = page(device('d1', DEV_A, 'SW-01') + shape('s1', 'Tầng 3'));
+  it.each([
+    ['giống hệt', base, true],
+    ['chỉ khác vị trí cuộn dx/dy của khung nhìn', base.replace('<mxGraphModel>', '<mxGraphModel dx="1563" dy="818">'), true],
+    ['vị trí cuộn khác và bật lưới', base.replace('<mxGraphModel>', '<mxGraphModel dy="10" grid="1" dx="20">'), false],
+    ['dời một hình', page(device('d1', DEV_A, 'SW-01', 40) + shape('s1', 'Tầng 3')), false],
+    ['đổi chữ', page(device('d1', DEV_A, 'SW-01') + shape('s1', 'Tầng 4')), false],
+  ])('%s', (_name, other, identical) => {
+    expect(drawingKey(other) === drawingKey(base)).toBe(identical);
+  });
+  it('vị trí cuộn không tính là thay đổi; lưới thì có', () => {
+    const scrolled = (dx: number) => base.replace('<mxGraphModel>', `<mxGraphModel dx="${dx}" dy="5" grid="1">`);
+    expect(drawingKey(scrolled(100))).toBe(drawingKey(scrolled(900)));
+    expect(drawingKey(scrolled(100))).not.toBe(drawingKey(base));
   });
 });
