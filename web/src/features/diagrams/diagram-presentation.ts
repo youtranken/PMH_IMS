@@ -37,6 +37,21 @@ export function canManageNode(
   return (node.createdBy ?? '').toLowerCase() === email || (node.ownerEmail ?? '').toLowerCase() === email;
 }
 
+/**
+ * Cùng luật với server (`DIAGRAM_SUBMIT_NOT_OWN_DRAFT`, D-04): Thành viên chỉ gửi duyệt phiên bản
+ * do chính mình lưu; Admin/SA gửi được mọi bản. Web ẩn nút, server vẫn là chốt chặn.
+ */
+export function canSubmitVersion(version: { savedBy: string } | null | undefined, me: { email: string; role: string }): boolean {
+  if (!version) return false;
+  if (me.role === 'sa' || me.role === 'admin') return true;
+  return version.savedBy.toLowerCase() === me.email.toLowerCase();
+}
+
+/** Lần lưu là của người khác — nút "Sửa tiếp nháp" ghi tên người đó để biết đang động vào việc của ai. */
+export function savedByOther(version: { savedBy: string } | null | undefined, me: { email: string }): boolean {
+  return Boolean(version) && version!.savedBy.toLowerCase() !== me.email.toLowerCase();
+}
+
 /** Một ô tự do để chèn: thuộc tính dữ liệu + style + cỡ. */
 export interface FreeCellSpec {
   label: string;

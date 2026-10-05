@@ -121,6 +121,14 @@ describe('Gửi duyệt (Thành viên) và tự kiểm', () => {
     expect(posted(fetchMock, '/g1/submit')).toEqual([{ reason: 'Vẽ xong tầng 3' }]);
   });
 
+  it('nháp mới nhất do người khác lưu: Thành viên không có "Gửi duyệt" (D-04)', async () => {
+    const node = diagram({ latestVersion: { id: 'v2', seq: 2, savedAt: '2026-10-03T01:00:00Z', savedBy: 'sa@e2e.local' } });
+    routeFetch(base(node));
+    renderScreen('/diagrams/g1', MEMBER);
+    await viewerReady();
+    expect(screen.queryByRole('button', { name: 'Gửi duyệt' })).toBeNull();
+  });
+
   it('lỗi đỏ chặn: hộp liệt kê lỗi + cảnh báo, có nút xem trên bản vẽ', async () => {
     routeFetch([
       [

@@ -14,6 +14,7 @@ import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { BarPopover, type BarAction } from './diagram-bar';
+import { canSubmitVersion } from './diagram-presentation';
 import {
   TREE_KEY,
   commentsKey,
@@ -331,7 +332,12 @@ export function useDiagramReview({
     }
   };
 
-  const canSend = Boolean(diagram?.latestVersion) && !pendingId && diagram?.status !== 'official' && diagram?.kind === 'official';
+  const canSend =
+    Boolean(diagram?.latestVersion) &&
+    !pendingId &&
+    diagram?.status !== 'official' &&
+    diagram?.kind === 'official' &&
+    canSubmitVersion(diagram?.latestVersion, me);
   const sendReason = dirty ? t('diagrams.review.saveFirst') : null;
 
   const primary: BarAction[] = [];

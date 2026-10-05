@@ -250,7 +250,8 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(aside).toHaveTextContent('15 Phiên bản · 24 Thiết bị · 41 Dây · 2 Tủ mạng · Phụ trách: thuan@x');
     expect(aside).toHaveTextContent('Toàn công ty E2E › Tầng 2 E2E › Phòng server E2E');
     const user = userEvent.setup();
-    await user.click(within(aside).getByRole('button', { name: 'Sửa tiếp nháp #15' }));
+    // Nháp của người khác: nút nói rõ đang động vào việc của ai (D-04).
+    await user.click(within(aside).getByRole('button', { name: 'Sửa tiếp nháp #15 (của Thuận)' }));
     expect(location).toBe('/diagrams/sv?mode=edit');
   });
 
@@ -323,13 +324,23 @@ describe('Panel bản vẽ đang chọn', () => {
     await waitFor(() => expect((fetchMock.mock.calls as unknown as Calls).some(([url, init]) => String(url).endsWith('/sv/publish') && init?.method === 'POST')).toBe(true));
   });
 
-  it('Thành viên: "Gửi duyệt #15" (không "Phát hành"); không tick bỏ nháp bản chính thức', async () => {
+  it('Thành viên lưu nháp mới nhất: "Gửi duyệt #15" (không "Phát hành"); không tick bỏ nháp bản chính thức', async () => {
     routeFetch({});
-    renderScreen('/diagrams?node=sv', MEMBER);
+    renderScreen('/diagrams?node=sv', { ...MEMBER, email: 'Thuan@x' } as Me);
     const drafts = await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' });
     expect(within(drafts).getByRole('button', { name: 'Gửi duyệt #15' })).toBeInTheDocument();
     expect(within(drafts).queryByRole('button', { name: /^Phát hành/ })).toBeNull();
     expect(within(drafts).queryByRole('checkbox')).toBeNull();
+    expect(panel()).toHaveTextContent('Sửa tiếp nháp #15');
+    expect(panel()).not.toHaveTextContent('(của Thuận)');
+  });
+
+  it('Thành viên không thấy "Gửi duyệt" trên nháp người khác lưu (D-04) — server cũng chặn', async () => {
+    routeFetch({});
+    renderScreen('/diagrams?node=sv', MEMBER);
+    const drafts = await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' });
+    expect(within(drafts).queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+    expect(within(panel()).getByRole('button', { name: 'Sửa tiếp nháp #15 (của Thuận)' })).toBeInTheDocument();
   });
 
   it('khu Đã phát hành: mới trước, bản đang dùng có nhãn; Xem / So sánh / ⋮; "Xem thêm 2 phiên bản cũ"', async () => {

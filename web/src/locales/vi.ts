@@ -914,6 +914,7 @@ export default {
       open: 'Mở xem',
       edit: 'Sửa',
       editDraft: 'Sửa tiếp nháp #{{seq}}',
+      editDraftOf: 'Sửa tiếp nháp #{{seq}} (của {{name}})',
       locked: 'Danh sách phiên bản là nội dung bản vẽ — cần mã 2 lớp sơ đồ.',
       unlock: 'Nhập mã để xem lịch sử',
       unlockPurpose: 'Nhập mã 6 số để xem lịch sử "{{name}}".',

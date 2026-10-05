@@ -235,6 +235,24 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = $1 AND official_version_id IS NULL`, [diagramId])).toBe(1);
   });
 
+  it('Thành viên chỉ gửi duyệt nháp do chính mình lưu (D-04); Admin gửi được nháp của người khác', async () => {
+    const dev = await newDevice('SW-E2E-RV-OWN');
+    const { diagramId, versionId } = await drawn('Nháp của SA', deviceCell('d1', dev, 'SW-E2E-RV-OWN'), SA.email);
+    await expect(review.submit(MEMBER, diagramId, { reason: 'Gửi hộ' })).rejects.toMatchObject({
+      status: 403,
+      response: { code: 'DIAGRAM_SUBMIT_NOT_OWN_DRAFT' },
+    });
+    await expect(review.submit(MEMBER, diagramId, { reason: 'Gửi hộ', versionId })).rejects.toMatchObject({ status: 403 });
+    expect(await count(`SELECT count(*)::int AS n FROM approval WHERE subject_id = $1`, [diagramId])).toBe(0);
+    // Thành viên vẽ tiếp lên nháp đó: bản mới là của họ — gửi được.
+    await diagrams.save(MEMBER.email, diagramId, { xml: page(deviceCell('d1', dev, 'SW-E2E-RV-OWN', { x: 50 })), svg: SVG, basedOnVersionId: versionId });
+    const { approval } = await review.submit(MEMBER, diagramId, { reason: 'Vẽ tiếp xong' });
+    expect(approval.state).toBe('pending');
+    await review.withdraw(MEMBER, diagramId, approval.id);
+    const other = await drawn('Nháp TV', deviceCell('d1', dev, 'SW-E2E-RV-OWN'));
+    await expect(review.submit(ADMIN, other.diagramId, { reason: 'Admin gửi hộ' })).resolves.toBeDefined();
+  });
+
   it('người gửi tự rút; người khác rút → 403', async () => {
     const dev = await newDevice('SW-E2E-RV-WD');
     const { diagramId } = await drawn('Rút', deviceCell('d1', dev, 'SW-E2E-RV-WD'));

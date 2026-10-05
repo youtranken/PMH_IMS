@@ -14,7 +14,7 @@ import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { publicationsKey, statusLabel, versionsKey, type DiagramNode, type Publications, type VersionItem } from './diagram-api';
 import { draftSelection, seqRangeText, siblingsOf, tickDraft, tileTone, versionSections } from './diagram-map';
-import { canManageNode, newerOfficialSeq } from './diagram-presentation';
+import { canManageNode, canSubmitVersion, newerOfficialSeq, savedByOther } from './diagram-presentation';
 import { usePublishFlow } from './diagram-review';
 import { pathOf } from './diagram-tree';
 import { DiagramVersionsDialog, useVersionActions } from './diagram-versions-dialog';
@@ -120,7 +120,7 @@ export function DiagramPanel({
   const hasDraft = Boolean(latest) && (node.draftCount ?? 0) > 0;
   const manager = me.role === 'sa' || me.role === 'admin';
   const reviewable = node.kind === 'official';
-  const canSend = canEdit && reviewable && hasDraft && !node.pendingApprovalId && node.status !== 'pending';
+  const canSend = canEdit && reviewable && hasDraft && !node.pendingApprovalId && node.status !== 'pending' && canSubmitVersion(latest, me);
 
   const sections =
     versions.data && publications.data ? versionSections(versions.data, publications.data.officialVersionId, publications.data.publishedVersionIds) : null;
@@ -316,7 +316,11 @@ export function DiagramPanel({
           </button>
           {canEdit ? (
             <button type="button" className="btn" onClick={() => navigate(`${PATHS.diagram(node.id)}?mode=edit`)}>
-              {hasDraft && latest ? t('diagrams.panel.editDraft', { seq: latest.seq }) : t('diagrams.panel.edit')}
+              {hasDraft && latest
+                ? savedByOther(latest, me)
+                  ? t('diagrams.panel.editDraftOf', { seq: latest.seq, name: latest.savedByName ?? latest.savedBy })
+                  : t('diagrams.panel.editDraft', { seq: latest.seq })
+                : t('diagrams.panel.edit')}
             </button>
           ) : null}
         </div>

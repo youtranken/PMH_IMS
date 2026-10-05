@@ -259,6 +259,16 @@ export class DiagramReviewService implements OnModuleInit {
     }
     if (textLooksLikeSecret(reason)) throw secretText('Lý do gửi duyệt');
     const version = await this.versionOf(diagramId, input.versionId);
+    /*
+     * Thành viên chỉ gửi duyệt bản do CHÍNH MÌNH lưu (D-04): gửi hộ bản vẽ dở của người khác là
+     * đẩy việc chưa xong của họ lên người duyệt. Muốn gửi thì vẽ tiếp rồi lưu — bản mới là của mình.
+     */
+    if (actor.role === 'member' && version.savedBy.toLowerCase() !== actor.email.toLowerCase()) {
+      throw new ForbiddenException({
+        code: 'DIAGRAM_SUBMIT_NOT_OWN_DRAFT',
+        message: 'Phiên bản này do người khác lưu — Thành viên chỉ gửi duyệt phiên bản do chính mình lưu.',
+      });
+    }
     const result = await this.check(version.cellIndex);
     if (result.errors.length > 0) throw checkFailed(result, 'gửi duyệt');
 
@@ -636,7 +646,7 @@ export class DiagramReviewService implements OnModuleInit {
     const conditions = [eq(diagramVersionTable.diagramId, diagramId)];
     if (versionId) conditions.push(eq(diagramVersionTable.id, versionId));
     const [row] = await this.db
-      .select({ id: diagramVersionTable.id, seq: diagramVersionTable.seq, cellIndex: diagramVersionTable.cellIndex })
+      .select({ id: diagramVersionTable.id, seq: diagramVersionTable.seq, cellIndex: diagramVersionTable.cellIndex, savedBy: diagramVersionTable.savedBy })
       .from(diagramVersionTable)
       .where(and(...conditions))
       .orderBy(desc(diagramVersionTable.seq))
