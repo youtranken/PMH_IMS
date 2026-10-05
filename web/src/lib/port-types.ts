@@ -1,3 +1,5 @@
+import { nextPortLabel, sortByPortLabel } from './port-label';
+
 /** Hình dạng sơ đồ cổng (`api/v1/devices/:id/ports`, AD-14) — trang thiết bị và màn sơ đồ mạng cùng đọc. */
 
 export interface PortRow {
@@ -94,4 +96,41 @@ export function linksBetween(map: PortMap | undefined, self: { id: string; code:
       note: row.note,
     }));
   return [...own, ...incoming];
+}
+
+/**
+ * Cổng ĐÃ có cáp của một máy, kèm đầu kia (mã máy hoặc chữ ghi tay): dòng của chính máy đã nối đi,
+ * cộng cổng mà dòng của máy khác đang cắm vào. Hộp "Khai" hiện danh sách này để người vẽ không gõ
+ * lại một cổng đã chiếm (luật một cổng một cáp) — server vẫn là bên kiểm cuối.
+ */
+export function usedPorts(map: PortMap | undefined): { label: string; peer: string }[] {
+  if (!map) return [];
+  const own = map.ports
+    .filter((row) => row.connectedDeviceId || row.connectedLabel)
+    .map((row) => ({ portLabel: row.portLabel, peer: row.connectedDeviceCode ?? row.connectedLabel ?? '' }));
+  const incoming = map.incoming.filter((row) => row.connectedPort).map((row) => ({ portLabel: row.connectedPort ?? '', peer: row.deviceCode }));
+  return sortByPortLabel([...own, ...incoming]).map((row) => ({ label: row.portLabel, peer: row.peer }));
+}
+
+/** Đầu kia đang giữ cổng `label` (không phân biệt hoa/thường), `null` = cổng chưa có cáp. */
+export function portTakenBy(map: PortMap | undefined, label: string): string | null {
+  const key = label.trim().toLowerCase();
+  if (!key) return null;
+  return usedPorts(map).find((row) => row.label.toLowerCase() === key)?.peer ?? null;
+}
+
+/** Trần số bước dò cổng trống — switch lớn nhất cũng dưới chừng này cổng. */
+const NEXT_FREE_STEPS = 512;
+
+/**
+ * Cổng trống gần nhất tính từ `label` (chính nó nếu còn trống), tăng số cuối của nhãn. Nhãn không
+ * có số cuối thì không đoán — `''`.
+ */
+export function nextFreePort(map: PortMap | undefined, label: string): string {
+  let candidate = label.trim();
+  for (let step = 0; step < NEXT_FREE_STEPS && candidate; step += 1) {
+    if (!portTakenBy(map, candidate)) return candidate;
+    candidate = nextPortLabel(candidate);
+  }
+  return '';
 }

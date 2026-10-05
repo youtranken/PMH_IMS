@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freePorts, linksBetween, type PortMap, type PortRow } from './port-types';
+import { freePorts, linksBetween, nextFreePort, portTakenBy, usedPorts, type PortMap, type PortRow } from './port-types';
 
 function port(over: Partial<PortRow>): PortRow {
   return {
@@ -52,5 +52,39 @@ describe('linksBetween — dây có sẵn giữa đúng hai máy', () => {
       ['2', 'SW', 'Gi2', 'eth0'],
       ['9', 'SRV', 'eth1', 'gi4'],
     ]);
+  });
+});
+
+describe('usedPorts / portTakenBy / nextFreePort — hộp Khai báo trùng cổng ngay tại ô (Q-23 05/10)', () => {
+  it('cổng đã có cáp: dòng của máy nối đi (máy hoặc chữ) + dòng máy khác cắm vào; sắp tự nhiên', () => {
+    expect(usedPorts(MAP)).toEqual([
+      { label: 'Gi2', peer: 'SRV' },
+      { label: 'Gi3', peer: 'Uplink FPT' },
+      { label: 'gi4', peer: 'SRV' },
+    ]);
+    expect(usedPorts(undefined)).toEqual([]);
+  });
+
+  it.each([
+    ['Gi2', 'SRV'],
+    ['GI4', 'SRV'],
+    [' gi3 ', 'Uplink FPT'],
+    ['Gi1', null],
+    ['Gi9', null],
+    ['', null],
+  ])('portTakenBy(%j) = %j', (label, want) => {
+    expect(portTakenBy(MAP, label)).toBe(want);
+  });
+
+  it.each([
+    ['Gi2', 'Gi5'],
+    ['Gi3', 'Gi5'],
+    ['Gi1', 'Gi1'],
+  ])('nextFreePort(%j) = %j — tăng số cuối tới cổng chưa có cáp', (label, want) => {
+    expect(nextFreePort(MAP, label)).toBe(want);
+  });
+
+  it('nhãn đã chiếm mà không có số cuối thì không đoán', () => {
+    expect(nextFreePort({ ports: [port({ portLabel: 'WAN', connectedLabel: 'ISP' })], incoming: [] }, 'wan')).toBe('');
   });
 });

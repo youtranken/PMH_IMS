@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage } from '@/lib/api';
+import { errorCode, errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
-import { freePorts, linksBetween, type PortLink, type PortMap } from '@/lib/port-types';
+import { freePorts, linksBetween, nextFreePort, portTakenBy, usedPorts, type PortLink, type PortMap } from '@/lib/port-types';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
@@ -75,9 +75,33 @@ export function CableDeclareDialog({
   const [targetPort, setTargetPort] = useState('');
   const [cableTypeId, setCableTypeId] = useState(active.some((c) => c.id === remembered) ? remembered : '');
   const [error, setError] = useState<string | null>(null);
+  /** Lỗi 409 của server gắn vào ô của máy mà nó nói tới — gõ lại ô đó thì lỗi đi. */
+  const [serverError, setServerError] = useState<{ side: 'source' | 'target'; message: string } | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const existing = linksBetween(sourcePorts.data, source, target.id);
+
+  /*
+   * Luật một cổng một cáp báo NGAY tại ô (server vẫn là bên kiểm cuối): gõ lại cổng đã có cáp là lỗi
+   * hay gặp nhất khi nối máy thứ ba vào một máy đã có dây.
+   */
+  const takenText = (code: string, map: PortMap | undefined, port: string) => {
+    const peer = portTakenBy(map, port);
+    return peer ? t('diagrams.cable.portTaken', { port: port.trim(), code, peer }) : null;
+  };
+  const sourceTaken = takenText(source.code, sourcePorts.data, sourcePort);
+  const targetTaken = takenText(target.code, targetPorts.data, targetPort);
+  const portStatus = (code: string, map: PortMap | undefined) => {
+    if (!map) return undefined;
+    const used = usedPorts(map);
+    if (map.ports.length === 0 && used.length === 0) return t('diagrams.cable.noPortsYet', { code });
+    if (used.length === 0) return t('diagrams.cable.freePortsHint');
+    return t('diagrams.cable.usedPorts', { code, ports: used.map((u) => `${u.label} → ${u.peer}`).join(', ') });
+  };
+  const fixes = [
+    sourceTaken ? { side: 'source' as const, code: source.code, next: nextFreePort(sourcePorts.data, sourcePort) } : null,
+    targetTaken ? { side: 'target' as const, code: target.code, next: nextFreePort(targetPorts.data, targetPort) } : null,
+  ].filter((fix): fix is { side: 'source' | 'target'; code: string; next: string } => Boolean(fix?.next));
 
   const reloadPorts = () => {
     void queryClient.invalidateQueries({ queryKey: portsKey(source.id) });
@@ -90,6 +114,7 @@ export function CableDeclareDialog({
       setMissing(true);
       return;
     }
+    if (sourceTaken || targetTaken) return;
     setBusy(true);
     try {
       const link = await apiFetch<PortLink>(`/api/v1/devices/${source.id}/ports/link`, {
@@ -108,7 +133,13 @@ export function CableDeclareDialog({
       if (info) onDeclared(info);
     } catch (err) {
       // Không ghi gì, không gắn gì vào nét: chọn cổng khác hoặc bấm "Chỉ vẽ".
-      setError(errorMessage(err));
+      const code = errorCode(err);
+      const message = errorMessage(err);
+      if (code === 'PORT_PEER_TAKEN' || code === 'PORT_ALREADY_LINKED') {
+        // Câu 409 nêu mã máy đang giữ cổng; chỉ nêu máy đầu kia (không nêu máy này) là cổng đầu kia.
+        const side = code === 'PORT_PEER_TAKEN' || (message.includes(target.code) && !message.includes(source.code)) ? 'target' : 'source';
+        setServerError({ side, message });
+      } else setError(message);
       reloadPorts();
     } finally {
       setBusy(false);
@@ -169,28 +200,56 @@ export function CableDeclareDialog({
         <Field
           label={t('diagrams.cable.portOf', { code: source.code })}
           required
-          hint={t('diagrams.cable.freePortsHint')}
-          error={missing && !sourcePort.trim() ? t('diagrams.cable.portRequired', { code: source.code }) : undefined}
+          hint={portStatus(source.code, sourcePorts.data)}
+          error={
+            missing && !sourcePort.trim()
+              ? t('diagrams.cable.portRequired', { code: source.code })
+              : (sourceTaken ?? (serverError?.side === 'source' ? serverError.message : undefined))
+          }
         >
           <SuggestInput
             value={sourcePort}
-            onChange={setSourcePort}
+            onChange={(value) => {
+              setSourcePort(value);
+              if (serverError?.side === 'source') setServerError(null);
+            }}
             options={freePorts(sourcePorts.data)}
             failed={sourcePorts.isError}
             placeholder={t('ports.phPort')}
             ariaLabel={t('diagrams.cable.portOf', { code: source.code })}
           />
         </Field>
-        <Field label={t('diagrams.cable.portOf', { code: target.code })}>
+        <Field
+          label={t('diagrams.cable.portOf', { code: target.code })}
+          hint={portStatus(target.code, targetPorts.data)}
+          error={targetTaken ?? (serverError?.side === 'target' ? serverError.message : undefined)}
+        >
           <SuggestInput
             value={targetPort}
-            onChange={setTargetPort}
+            onChange={(value) => {
+              setTargetPort(value);
+              if (serverError?.side === 'target') setServerError(null);
+            }}
             options={freePorts(targetPorts.data)}
             failed={targetPorts.isError}
             placeholder={t('ports.phPort')}
             ariaLabel={t('diagrams.cable.portOf', { code: target.code })}
           />
         </Field>
+        {fixes.length > 0 ? (
+          <p className="cable-port-fixes" style={{ gridColumn: '1 / -1' }}>
+            {fixes.map((fix) => (
+              <button
+                key={fix.side}
+                type="button"
+                className="btn sm"
+                onClick={() => (fix.side === 'source' ? setSourcePort(fix.next) : setTargetPort(fix.next))}
+              >
+                {t('diagrams.cable.useNext', { port: fix.next, code: fix.code })}
+              </button>
+            ))}
+          </p>
+        ) : null}
         <Field label={t('diagrams.cable.cableType')}>
           <Select
             value={cableTypeId}

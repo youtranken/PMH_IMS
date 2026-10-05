@@ -19,6 +19,9 @@ export function SuggestInput({
   failed,
   placeholder,
   ariaLabel,
+  id,
+  'aria-describedby': describedBy,
+  'aria-invalid': invalid,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -31,6 +34,10 @@ export function SuggestInput({
   failed?: boolean;
   placeholder: string;
   ariaLabel: string;
+  /** `<Field>` truyền xuống để lỗi / gợi ý của ô gắn đúng vào ô gõ (viền đỏ, trình đọc màn hình). */
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
 }) {
   // Gấp dấu cả hai vế: danh sách gợi ý là tên phòng ban, nhà cung cấp… toàn tiếng
   // Việt có dấu, nên gõ `ke toan` phải ra `Kế toán`.
@@ -53,6 +60,9 @@ export function SuggestInput({
       onQuery={onChange}
       options={filtered}
       failed={failed}
+      id={id}
+      aria-describedby={describedBy}
+      aria-invalid={invalid}
       caret="suggest"
       getKey={(option) => option}
       renderOption={(option) => <span>{option}</span>}

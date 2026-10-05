@@ -294,4 +294,46 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await expect(card).toContainText(`${sw.code} Gi1/0/9`);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
+
+  test('máy thứ ba nối vào máy đã có dây: không cần khai số cổng; gõ trùng cổng báo tại ô, "Dùng cổng 2" rồi Khai; lời báo chỉ sơ đồ cổng', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const sw = { cell: 'a', id: await createDevice(page, `SW-E2E-BA${stamp}`), code: `SW-E2E-BA${stamp}` };
+    const pcB = { cell: 'b', id: await createDevice(page, `PC-E2E-BB${stamp}`), code: `PC-E2E-BB${stamp}` };
+    const pcC = { cell: 'c', id: await createDevice(page, `PC-E2E-BC${stamp}`), code: `PC-E2E-BC${stamp}` };
+    const first = await link(page, sw.id, '1', pcB.id, '1');
+    const id = await createDiagram(page, `E2E Máy thứ ba ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    await saveDrawing(page, id, [sw, pcB, pcC], [
+      { cell: 'e1', from: 'a', to: 'b', linkId: first },
+      { cell: 'e2', from: 'c', to: 'a' },
+    ]);
+
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await diagramBarAction(page, 'Dây chưa khai');
+    await page.getByRole('button', { name: `${pcC.code} ↔ ${sw.code}` }).click();
+    const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
+    await expect(box.getByText(`${pcC.code} chưa khai cổng nào — gõ tên cổng mới`)).toBeVisible();
+    await expect(box.getByText(`Cổng đang dùng của ${sw.code}: 1 → ${pcB.code}`)).toBeVisible();
+    await box.getByRole('combobox', { name: `Cổng của ${pcC.code}` }).fill('1');
+    await box.getByRole('combobox', { name: `Cổng của ${sw.code}` }).fill('1');
+    await expect(box.getByRole('alert')).toContainText(`Cổng 1 của ${sw.code} đã nối ${pcB.code}`);
+    await box.getByRole('button', { name: `Dùng cổng 2 cho ${sw.code}` }).click();
+    await expect(box.getByRole('combobox', { name: `Cổng của ${sw.code}` })).toHaveValue('2');
+    const [declared] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/devices/${pcC.id}/ports/link`) && r.request().method() === 'POST'),
+      box.getByRole('button', { name: 'Khai', exact: true }).click(),
+    ]);
+    expect(declared.status(), await declared.text()).toBe(201);
+    await expect(box).toHaveCount(0);
+    expect(sql(`SELECT count(*) FROM device_port WHERE connected_device_id = '${sw.id}' AND connected_port = '2'`)).toBe('1');
+    // Lời báo chỉ chỗ kết nối nằm; mở trong tab mới.
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('button', { name: `Xem ở sơ đồ cổng của ${pcC.code}` }).click()]);
+    await tab.waitForLoadState();
+    expect(tab.url()).toContain(`/devices/${pcC.id}?tab=ports`);
+    await expect(tab.getByRole('link', { name: sw.code, exact: true })).toBeVisible();
+    await tab.close();
+  });
 });
