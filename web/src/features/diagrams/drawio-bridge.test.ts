@@ -81,19 +81,38 @@ describe('deviceIdsInXml — máy đã có trên bản vẽ (hộp Thiết bị 
 });
 
 describe('placeCells — chèn nhiều máy một lượt', () => {
-  it('mỗi ô đứng bên phải ô trước, previous nối chuỗi để ô sau nằm trên', () => {
+  const ids = () => {
     let n = 0;
-    const placed = placeCells([DEV, { ...DEV, id: 'x2', code: 'SW-2' }], {
-      bounds: { x: 0, y: 0, width: 100, height: 50 },
-      parent: '1',
-      previous: 'last',
-      newId: () => `ims-${(n += 1)}`,
-    });
-    expect(placed.cells.map((c) => [c.id, c.previous, c.geometry])).toEqual([
-      ['ims-1', 'last', '<mxGeometry x="140" y="0" width="100" height="30" as="geometry"/>'],
-      ['ims-2', 'ims-1', '<mxGeometry x="280" y="0" width="100" height="30" as="geometry"/>'],
+    return () => `ims-${(n += 1)}`;
+  };
+  const xy = (cells: { geometry: string }[]) => cells.map((c) => /x="(-?\d+)" y="(-?\d+)"/.exec(c.geometry)!.slice(1).map(Number));
+  const many = (count: number, width = 60) => Array.from({ length: count }, (_, i) => ({ ...DEV, id: `x${i}`, code: `SW-${i}`, cell: { ...DEV.cell, width, height: 60 } }));
+
+  it('ô sau bên phải ô trước, cách nhau đủ bề ngang nhãn 3 dòng (≥ 180px tâm-tâm); previous nối chuỗi', () => {
+    const placed = placeCells([DEV, { ...DEV, id: 'x2', code: 'SW-2' }], { bounds: { x: 0, y: 0, width: 100, height: 50 }, parent: '1', previous: 'last', newId: ids() });
+    expect(placed.cells.map((c) => [c.id, c.previous])).toEqual([
+      ['ims-1', 'last'],
+      ['ims-2', 'ims-1'],
     ]);
-    expect(placed.bounds).toEqual({ x: 0, y: 0, width: 380, height: 50 });
+    // Nhãn "mã / IP / site · tủ · U" rộng hơn hình: cách 40px như trước thì nhãn hai máy dính nhau.
+    expect(xy(placed.cells)).toEqual([
+      [180, 0],
+      [360, 0],
+    ]);
+  });
+
+  it.each([
+    // số máy, khối hình đang có, toạ độ mong đợi
+    ['trang trống: lưới bắt đầu ở góc trên trái', 3, null, [[40, 40], [220, 40], [400, 40]]],
+    ['quá 5 máy: xuống hàng, hàng sau dưới hàng trước đủ chỗ cho nhãn', 7, null, [[40, 40], [220, 40], [400, 40], [580, 40], [760, 40], [40, 180], [220, 180]]],
+    ['khối hình đã rộng: lượt chèn xuống dưới khối, không kéo dài mãi sang phải', 2, { x: 0, y: 0, width: 1000, height: 100 }, [[0, 180], [180, 180]]],
+  ] as const)('%s', (_name, count, bounds, expected) => {
+    const placed = placeCells(many(count), { bounds, parent: '1', previous: null, newId: ids() });
+    expect(xy(placed.cells)).toEqual(expected);
+    // Không hai ô nào chồng nhau (kể cả phần nhãn ngang 180px).
+    const points = xy(placed.cells);
+    for (let i = 0; i < points.length; i += 1)
+      for (let j = i + 1; j < points.length; j += 1) expect(Math.abs(points[i][0] - points[j][0]) >= 180 || Math.abs(points[i][1] - points[j][1]) >= 140).toBe(true);
   });
 });
 

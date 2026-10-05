@@ -152,6 +152,47 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(card.getByRole('link', { name: 'Mở hồ sơ' })).toHaveAttribute('href', `/devices/${deviceId}`);
   });
 
+  test('chèn 3 máy một lượt: xếp lưới không đè nhãn; lưu lần đầu xong thẻ "Bản vẽ đang trống" không hiện lại (E-01, E-02)', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const codes = ['A', 'B', 'C'].map((k) => `SW-E2E-LUOI${k}${stamp}`);
+    const ids = [];
+    for (const code of codes) ids.push(await createDevice(page, code));
+    const id = await createDiagram(page, `E2E Lưới chèn ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    const stock = page.getByRole('button', { name: 'Thiết bị kho', exact: true });
+    await expect(stock).toBeEnabled({ timeout: 60_000 });
+    const startCard = page.getByRole('heading', { name: 'Bản vẽ đang trống — bắt đầu như sau' });
+    await expect(startCard).toBeVisible();
+
+    await stock.click();
+    await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`LUOI`);
+    for (const code of codes) await stockBox(page).getByRole('checkbox', { name: `Chọn ${code} để chèn` }).check();
+    await stockBox(page).getByRole('button', { name: 'Chèn 3 thiết bị' }).click();
+    await expect(page.getByText(/^Đã chèn .* vào bản vẽ\.$/)).toBeVisible();
+
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    await expect(page.getByText(/^Đã lưu phiên bản #1/)).toBeVisible();
+    await expect(startCard).toHaveCount(0);
+
+    const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${id}' ORDER BY seq DESC LIMIT 1`);
+    const at = ids.map((deviceId) => {
+      const cell = new RegExp(`ims_device_id="${deviceId}"[\\s\\S]*?<mxGeometry[^>]*?x="(-?[\\d.]+)"[^>]*?y="(-?[\\d.]+)"`).exec(xml);
+      expect(cell, `ô của ${deviceId}`).not.toBeNull();
+      return [Number(cell![1]), Number(cell![2])];
+    });
+    // Nhãn 3 dòng rộng ~180px nằm dưới hình: hai máy phải cách nhau đủ một nhãn ngang hoặc một hàng dọc.
+    for (let i = 0; i < at.length; i += 1)
+      for (let j = i + 1; j < at.length; j += 1) expect(Math.abs(at[i][0] - at[j][0]) >= 180 || Math.abs(at[i][1] - at[j][1]) >= 140).toBe(true);
+  });
+
   test('đổi hình của loại ở Danh mục → lần mở sau bản vẽ hiện hình mới (XML khô, không sửa bản vẽ)', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();

@@ -73,9 +73,21 @@ export function insertPatch(pageId: string, cells: object[]) {
   return { u: { [pageId]: { cells: { i: cells } } } };
 }
 
+/*
+ * Lưới chèn máy kho. Nhãn ô (mã / IP / site · tủ · U) nằm DƯỚI hình và rộng hơn hình, mà khối hình
+ * draw.io báo về không tính phần nhãn tràn — nên khoảng cách tính theo nhãn: tâm hai ô cách nhau
+ * ít nhất `PITCH_X`, hàng sau chừa `ROW_GAP` cho ba dòng nhãn. Một hàng tối đa `COLUMNS` máy và
+ * không vượt `ROW_LIMIT` tính từ mép trái khối hình, để chèn nhiều lần không kéo bản vẽ mãi sang phải.
+ */
+const PITCH_X = 180;
+const ROW_GAP = 80;
+const COLUMNS = 5;
+const ROW_LIMIT = 900;
+
 /**
- * Xếp nhiều máy chèn một lượt thành một hàng bên phải khối hình đang có; `previous` nối chuỗi để
- * ô sau nằm trên ô trước (và trên mọi hình cũ). Trả khối hình mới để lượt chèn kế tiếp không đè.
+ * Xếp các máy chèn một lượt thành lưới không chồng nhau, đặt sau khối hình đang có (bên phải nếu
+ * hàng còn chỗ, không thì xuống dưới khối); `previous` nối chuỗi để ô sau nằm trên ô trước (và trên
+ * mọi hình cũ). Trả khối hình mới để lượt chèn kế tiếp không đè.
  */
 export function placeCells(
   devices: DeviceCellSpec[],
@@ -84,8 +96,19 @@ export function placeCells(
   let bounds = opts.bounds;
   let previous = opts.previous;
   const cells: DrawioCellJson[] = [];
-  for (const device of devices) {
-    const at = nextInsertPosition(bounds);
+  const width = Math.max(0, ...devices.map((d) => d.cell.width));
+  const height = Math.max(0, ...devices.map((d) => d.cell.height));
+  const pitchX = Math.max(width + 40, PITCH_X);
+  const pitchY = height + ROW_GAP;
+  const columns = Math.min(COLUMNS, Math.max(1, devices.length));
+  const rowWidth = (columns - 1) * pitchX + width;
+  let origin = { x: 40, y: 40 };
+  if (bounds && bounds.width > 0 && bounds.height > 0) {
+    const right = bounds.x + bounds.width + (pitchX - width);
+    origin = right + rowWidth - bounds.x <= ROW_LIMIT ? { x: right, y: bounds.y } : { x: bounds.x, y: bounds.y + bounds.height + ROW_GAP };
+  }
+  for (const [index, device] of devices.entries()) {
+    const at = { x: origin.x + (index % columns) * pitchX, y: origin.y + Math.floor(index / columns) * pitchY };
     const cell = deviceCellJson(device, { cellId: opts.newId(), parent: opts.parent, previous, ...at });
     cells.push(cell);
     previous = cell.id;
