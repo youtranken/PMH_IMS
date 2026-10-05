@@ -767,10 +767,18 @@ export function DeviceDetail({ me }: { me: Me }) {
             <p className="rail-foot">
               {t("devices.createdAt", { date: formatDate(item.createdAt) })}
               {lastEdit
-                ? ` · ${t("devices.lastEditBy", {
-                    date: formatDate(lastEdit.createdAt),
-                    actor: lastEdit.actor,
-                  })}`
+                ? (
+                    <>
+                      {" · "}
+                      {/* Tên người như mọi chỗ khác (sơ đồ, lịch sử, phiên bản); email để khi rê chuột (T-09). */}
+                      <span title={lastEdit.actor}>
+                        {t("devices.lastEditBy", {
+                          date: formatDate(lastEdit.createdAt),
+                          actor: lastEdit.actorName ?? lastEdit.actor,
+                        })}
+                      </span>
+                    </>
+                  )
                 : null}
             </p>
           </RailCard>
