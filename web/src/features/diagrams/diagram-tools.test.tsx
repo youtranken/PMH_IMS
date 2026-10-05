@@ -186,11 +186,16 @@ describe('So sánh hai phiên bản (Q-23)', () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
     await pickMenuItem(user, /^Thao tác với/, 'Phiên bản');
     const dialog = await screen.findByRole('dialog', { name: 'Phiên bản và lịch sử' });
-    const go = within(dialog).getByRole('button', { name: 'So sánh 2 phiên bản đã chọn' });
-    expect(go).toBeDisabled();
+    // Ô tick có lời dặn để làm gì; nút đếm số đã chọn (D-05).
+    expect(within(dialog).getByText('Tick 2 phiên bản rồi bấm So sánh.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'So sánh (0/2)' })).toBeDisabled();
     await user.click(await within(dialog).findByRole('checkbox', { name: 'Chọn phiên bản #3 để so sánh' }));
+    expect(within(dialog).getByRole('button', { name: 'So sánh (1/2)' })).toBeDisabled();
     await user.click(within(dialog).getByRole('checkbox', { name: 'Chọn phiên bản #1 để so sánh' }));
-    await user.click(go);
+    // Một dòng một nút "Xem"; chi tiết thay đổi mở bằng chính dòng tóm tắt — không còn nút "Chi tiết".
+    expect(within(dialog).queryByRole('button', { name: /^Chi tiết/ })).toBeNull();
+    expect(within(dialog).getAllByRole('button', { name: /xem chi tiết thay đổi$/ }).length).toBeGreaterThan(0);
+    await user.click(within(dialog).getByRole('button', { name: 'So sánh (2/2)' }));
     expect(where).toBe('/diagrams/g1?version=v3&compare=v1');
   });
 

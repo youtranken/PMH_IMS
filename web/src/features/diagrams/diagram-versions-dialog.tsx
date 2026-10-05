@@ -290,13 +290,14 @@ export function DiagramVersionsDialog({
               <span className="muted">
                 {t('diagrams.versions.by', { at: formatDateTime(version.savedAt), by: version.savedByName ?? version.savedBy })}
               </span>
-              <span className="tree-summary">{version.summary}</span>
+              {/* Dòng tóm tắt mở chi tiết thay đổi: một dòng một nút "Xem", không thêm nút "Chi tiết" cạnh nó (D-05). */}
+              <button type="button" className="linkbtn tree-summary" onClick={() => setDetails(version)}>
+                {version.summary}
+                <span className="sr-only"> — {t('diagrams.versions.detailsHint')}</span>
+              </button>
               <span className="tree-actions row">
                 <button type="button" className="btn sm" aria-label={t('diagrams.versions.viewOf', { seq: version.seq })} onClick={() => onView(version)}>
                   {t('diagrams.versions.view')}
-                </button>
-                <button type="button" className="btn sm" aria-label={t('diagrams.versions.detailsOf', { seq: version.seq })} onClick={() => setDetails(version)}>
-                  {t('diagrams.versions.details')}
                 </button>
                 {canLabel ? (
                   <button type="button" className="btn sm" aria-label={t('diagrams.versions.nameOf', { seq: version.seq })} onClick={() => actions.startLabel(version)}>
@@ -345,11 +346,12 @@ export function DiagramVersionsDialog({
         />
         {tab === 'versions' ? (
           <>
-            <p className="row">
+            <div className="toolbar dialog-toolbar">
               <label className="row">
                 <input type="checkbox" checked={onlyNamed} onChange={(event) => setOnlyNamed(event.target.checked)} />
                 {t('diagrams.versions.onlyNamed')}
               </label>
+              <span className="grow muted">{t('diagrams.versions.compareHint')}</span>
               <button
                 type="button"
                 className="btn sm"
@@ -360,10 +362,10 @@ export function DiagramVersionsDialog({
                   onCompare(a, b);
                 }}
               >
-                {t('diagrams.versions.comparePicked')}
+                {t('diagrams.versions.comparePicked', { count: picked.length })}
               </button>
               {compareReason.hint}
-            </p>
+            </div>
             {versionsBody}
           </>
         ) : (

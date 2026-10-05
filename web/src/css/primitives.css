@@ -1276,6 +1276,27 @@ button.btn-x.danger:hover:not(:disabled) {
 .tree-summary {
   flex-basis: 100%;
 }
+/* Dòng tóm tắt bấm được (mở chi tiết thay đổi): đọc như chữ, gạch chân chấm báo là bấm được. */
+button.tree-summary {
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  white-space: normal;
+  font-weight: 400;
+  color: var(--ink-2);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+button.tree-summary:hover:not(:disabled) {
+  background: none;
+  color: var(--ink);
+}
+/* Thanh lọc ngay dưới thanh tab của hộp thoại: cách tab một nhịp, không dính sát như dòng chữ. */
+.dialog-toolbar {
+  margin: var(--space-4) 0;
+}
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Màn /diagrams "bản đồ không gian" (Q-23): bản vẽ gốc là băng tối (`.dmap-banner`), con là

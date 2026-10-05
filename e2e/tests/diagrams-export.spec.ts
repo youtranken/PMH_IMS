@@ -221,7 +221,7 @@ test.describe('Sơ đồ mạng — so sánh phiên bản', () => {
     const box = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
     await box.getByRole('checkbox', { name: 'Chọn phiên bản #2 để so sánh' }).check();
     await box.getByRole('checkbox', { name: 'Chọn phiên bản #1 để so sánh' }).check();
-    await box.getByRole('button', { name: 'So sánh 2 phiên bản đã chọn' }).click();
+    await box.getByRole('button', { name: 'So sánh (2/2)' }).click();
 
     const viewer = page.getByRole('region', { name: 'Bản vẽ, so sánh hai phiên bản' });
     await expect(viewer).toBeVisible();
