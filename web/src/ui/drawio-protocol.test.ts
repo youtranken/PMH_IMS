@@ -135,6 +135,12 @@ describe('buildDrawioConfig — cấu hình đẩy qua sự kiện configure', (
     });
     expect(JSON.stringify(config)).not.toMatch(/https?:/);
   });
+
+  it('thư viện hình mở sẵn: Chung, Mạng, Rack — đúng id của draw.io 31.6.1 ("network", không phải "networks")', () => {
+    expect(buildDrawioConfig([]).defaultLibraries).toBe('general;network;rack');
+    // Gửi cả qua URL: configure chỉ đổi giá trị mặc định, còn lựa chọn cũ trong cài đặt draw.io thì thắng nó.
+    expect(new URL(drawioUrl('edit'), 'https://ims.local').searchParams.get('libs')).toBe('general;network;rack');
+  });
 });
 
 describe('watermarkText', () => {

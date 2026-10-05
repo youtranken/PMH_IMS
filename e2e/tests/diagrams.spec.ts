@@ -391,6 +391,10 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const viewWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(box.x).toBeLessThanOrEqual(slim + 2);
     expect(box.x + box.width).toBeGreaterThanOrEqual(viewWidth - 2);
+    // Thư viện hình Mạng và Rack mở sẵn trong bảng hình (Q-23 chọn draw.io vì có chúng), không phải tìm ở "Xem thêm hình".
+    const shapes = page.frameLocator('iframe[title="Khung vẽ draw.io"]').locator('.geSidebarContainer');
+    await expect(shapes.getByText('Network 2018', { exact: true })).toBeVisible();
+    await expect(shapes.getByText('Rack / General', { exact: true })).toBeVisible();
 
     await nav.getByRole('link', { name: 'Thiết bị', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Thiết bị' })).toBeVisible();
@@ -415,6 +419,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const viewer = page.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
     await expect(viewer.getByText('Tầng 3 E2E')).toBeVisible();
     await expect(viewer.getByRole('button', { name: 'Phóng to' })).toBeVisible();
+    // Trình xem dùng trọn phần màn hình dưới thanh trên, không phải một khung 320px giữa trang.
+    expect((await viewer.boundingBox())!.height).toBeGreaterThan(844 / 2);
 
     // Màn hẹp không có tab Sửa; mở thẳng đường dẫn sửa thì vẫn là chế độ xem, kèm lời nhắn.
     await expect(page.getByRole('tab', { name: 'Sửa' })).toHaveCount(0);

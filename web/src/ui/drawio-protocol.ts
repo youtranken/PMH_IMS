@@ -42,11 +42,19 @@ const COMMON_PARAMS: Record<string, string> = {
 
 export type DrawioMode = 'edit' | 'view';
 
+/*
+ * Thư viện hình mở sẵn ở bảng hình bên trái — id theo `Sidebar.prototype.configuration` của draw.io
+ * 31.6.1 (id lạ thì draw.io lặng lẽ bỏ qua). Gửi cả qua URL `libs`: `defaultLibraries` của
+ * configure chỉ là mặc định khi draw.io chưa có lựa chọn lưu sẵn, còn `libs` luôn được cộng vào.
+ */
+const DRAWIO_LIBRARIES = 'general;network;rack';
+
 export function drawioUrl(mode: DrawioMode): string {
   const params = new URLSearchParams(COMMON_PARAMS);
   if (mode === 'edit') {
     params.set('noExitBtn', '1');
     params.set('saveAndExit', '0');
+    params.set('libs', DRAWIO_LIBRARIES);
   } else {
     params.set('chrome', '0');
   }
@@ -221,7 +229,7 @@ export function cssColorToDrawio(value: string): string | null {
 export function buildDrawioConfig(wireColors: string[]): DrawioConfig {
   return {
     compressXml: false,
-    defaultLibraries: 'general;networks;rack',
+    defaultLibraries: DRAWIO_LIBRARIES,
     enableCustomLibraries: false,
     enableExportUrl: false,
     suppressNewWindows: true,
