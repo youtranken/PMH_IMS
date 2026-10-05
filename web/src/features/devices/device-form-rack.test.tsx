@@ -106,7 +106,7 @@ describe('Vị trí U tự giải thích', () => {
     renderForm();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Xem tủ' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Tủ HCM · R1 (12U)' });
+    const dialog = await screen.findByRole('dialog', { name: 'Tủ mạng HCM · R1 (12U)' });
     const rack = within(dialog).getByRole('list', { name: 'Các U của tủ HCM · R1' });
     const rows = within(rack).getAllByRole('listitem');
     expect(rows).toHaveLength(12);
@@ -116,7 +116,7 @@ describe('Vị trí U tự giải thích', () => {
     expect(rows[9]).toHaveTextContent('U3SRV-E2E-01');
     expect(rows[6]).toHaveTextContent('U6PC-E2E-01 (máy này)');
     await user.click(within(rack).getByRole('button', { name: 'Đặt máy ở U8' }));
-    expect(screen.queryByRole('dialog', { name: 'Tủ HCM · R1 (12U)' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Tủ mạng HCM · R1 (12U)' })).toBeNull();
     expect(screen.getByRole('textbox', { name: 'U bắt đầu' })).toHaveValue('8');
   });
 });

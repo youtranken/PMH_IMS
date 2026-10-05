@@ -550,3 +550,28 @@ describe('Q-24: số giữa câu thì danh từ theo sau viết thường', () =
     );
   });
 });
+
+/** Một chuỗi lá của `vi` kèm khoá — cho các luật quét cả cây chữ. */
+function leaves(node: unknown = vi, path = ''): Array<[string, string]> {
+  if (typeof node === 'string') return [[path, node]];
+  if (node && typeof node === 'object') {
+    return Object.entries(node as Dict).flatMap(([k, v]) => leaves(v, path ? `${path}.${k}` : k));
+  }
+  return [];
+}
+
+/**
+ * T-03 (Q-24 05/10): cùng một cái tủ từng mang ba tên — "Tủ mạng" ở form thiết bị, "Tủ rack" ở
+ * cấp bản vẽ, "Tủ" ở nút chèn. Một tên: "Tủ mạng".
+ */
+describe('T-03: tủ chỉ có một tên — "Tủ mạng"', () => {
+  it('không chuỗi nào còn chữ "tủ rack"', () => {
+    expect(leaves().filter(([, text]) => /tủ rack/i.test(text)).map(([key]) => key)).toEqual([]);
+  });
+  it('nhãn tủ ở form thiết bị, cấp bản vẽ, form bản vẽ, panel và nút chèn cùng một chữ', () => {
+    for (const key of ['devices.cabinet', 'diagrams.nodeType.cabinet', 'diagrams.form.cabinet', 'catalog.tabCabinet']) {
+      expect(lookup(key), key).toBe('Tủ mạng');
+    }
+    expect(lookup('diagrams.frames.cabinetButton')).toBe('Chèn tủ mạng');
+  });
+});

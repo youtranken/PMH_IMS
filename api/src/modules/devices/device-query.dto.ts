@@ -5,7 +5,7 @@ import { OptionalUuidListQuery, OptionalUuidQuery } from '../../common/query-uui
 export class DeviceExportQueryDto {
   @IsOptional() @IsString() search?: string;
   @OptionalUuidQuery('Mã site không hợp lệ.') siteId?: string;
-  @OptionalUuidQuery('Mã tủ rack không hợp lệ.') cabinetId?: string;
+  @OptionalUuidQuery('Mã tủ mạng không hợp lệ.') cabinetId?: string;
   @OptionalUuidQuery('Mã loại thiết bị không hợp lệ.') deviceTypeId?: string;
   /**
    * `live` = trừ máy đã thanh lý (Q-20). Không kiểm ở đây: chữ lạ hay mảng (`?status=a&status=b`)

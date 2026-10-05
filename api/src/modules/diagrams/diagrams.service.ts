@@ -1045,7 +1045,7 @@ export class DiagramsService {
     if (node.nodeType !== 'cabinet' || !node.cabinetId) {
       throw new BadRequestException({
         code: 'DIAGRAM_NOT_CABINET',
-        message: 'Chỉ bản vẽ loại "Tủ rack" có gắn tủ mới dựng lại mặt tủ được — gắn tủ cho bản vẽ ở cây bản vẽ trước.',
+        message: 'Chỉ bản vẽ cấp "Tủ mạng" có gắn tủ mới dựng lại mặt tủ được — gắn tủ cho bản vẽ ở cây bản vẽ trước.',
       });
     }
     const frame = await this.cabinetFrame(node.cabinetId);

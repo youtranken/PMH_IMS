@@ -109,7 +109,7 @@ describe('Form bản vẽ: Site theo bản cha, ô Tủ chỉ ở cấp tủ (D-
     const level = within(dialog).getByRole('button', { name: 'Cấp bản vẽ' });
     expect(within(dialog).queryByRole('button', { name: /^Tủ/ })).toBeNull();
     await user.click(level);
-    await user.click(screen.getByRole('option', { name: 'Tủ rack' }));
+    await user.click(screen.getByRole('option', { name: 'Tủ mạng' }));
     expect(within(dialog).getByRole('button', { name: /^Tủ/ })).toBeInTheDocument();
     expect(within(dialog).getByText(/dựng mặt tủ từ kho/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: /^Tủ/ }));

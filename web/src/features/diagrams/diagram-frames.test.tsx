@@ -236,10 +236,10 @@ describe('Hộp "Chèn tủ"', () => {
     await user.click(await screen.findByRole('button', { name: 'Tủ mạng' }));
     await user.click(await screen.findByRole('option', { name: 'E2E-KH · R1' }));
     expect(await screen.findByText('Tủ này đã có khung trên bản vẽ.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Chèn tủ' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Chèn tủ mạng' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Tủ mạng' }));
     await user.click(await screen.findByRole('option', { name: 'E2E-KH · R2' }));
-    await user.click(screen.getByRole('button', { name: 'Chèn tủ' }));
+    await user.click(screen.getByRole('button', { name: 'Chèn tủ mạng' }));
     expect(onInsert).toHaveBeenCalledWith('cab-2', 'R2');
   });
 });
@@ -274,11 +274,11 @@ describe('Màn sửa — Chèn tủ dựng khung bằng patch', () => {
     fromDrawio({ event: 'init' });
     const messages = () => posted.mock.calls.map(([data]) => JSON.parse(String(data)) as Record<string, unknown>);
     const user = userEvent.setup();
-    await pickMenuItem(user, /^Thao tác với/, 'Chèn tủ');
+    await pickMenuItem(user, /^Thao tác với/, 'Chèn tủ mạng');
     await user.click(await screen.findByRole('button', { name: 'Tủ mạng' }));
     await user.click(await screen.findByRole('option', { name: 'E2E-KH · R1' }));
     const popover = screen.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
-    await user.click(within(popover).getByRole('button', { name: 'Chèn tủ' }));
+    await user.click(within(popover).getByRole('button', { name: 'Chèn tủ mạng' }));
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'export' && m.format === 'xml')).toBe(true));
     fromDrawio({
       event: 'export',
