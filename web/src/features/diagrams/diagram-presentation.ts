@@ -49,7 +49,7 @@ export function canSubmitVersion(version: { savedBy: string } | null | undefined
 
 /** Lần lưu là của người khác — nút "Sửa tiếp nháp" ghi tên người đó để biết đang động vào việc của ai. */
 export function savedByOther(version: { savedBy: string } | null | undefined, me: { email: string }): boolean {
-  return Boolean(version) && version!.savedBy.toLowerCase() !== me.email.toLowerCase();
+  return version ? version.savedBy.toLowerCase() !== me.email.toLowerCase() : false;
 }
 
 /** Một ô tự do để chèn: thuộc tính dữ liệu + style + cỡ. */
