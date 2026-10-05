@@ -46,7 +46,11 @@ afterEach(() => vi.unstubAllGlobals());
 describe('Thêm bản vẽ con — nhân bản từ phiên bản chọn (Q-23 05/10)', () => {
   it('mặc định bản chính thức #3; chọn được bản mới nhất #5; "Chọn phiên bản khác…" thêm bản đã phát hành / đã đặt tên; gửi versionId', async () => {
     const fetchMock = mockFetch();
-    const run = vi.fn(<T,>(action: () => Promise<T>) => action());
+    const calls: string[] = [];
+    const run = <T,>(action: () => Promise<T>, purpose: string): Promise<T> => {
+      calls.push(purpose);
+      return action();
+    };
     renderWithI18n(
       <ToastProvider>
         <DiagramNodeDialog me={ME} nodes={[PARENT]} parent={PARENT} run={run} onClose={() => undefined} />
@@ -61,7 +65,7 @@ describe('Thêm bản vẽ con — nhân bản từ phiên bản chọn (Q-23 05
     expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['#3 · bản chính thức', '#5 · bản mới nhất']);
     await user.keyboard('{Escape}');
     await user.click(within(dialog).getByRole('button', { name: 'Chọn phiên bản khác…' }));
-    expect(run).toHaveBeenCalled();
+    expect(calls).toEqual(['Nhập mã 6 số để nhân bản nội dung "Cha E2E" sang bản vẽ con.']);
     await user.click(within(dialog).getByRole('button', { name: 'Phiên bản của bản cha' }));
     const options = screen.getAllByRole('option').map((o) => o.textContent ?? '');
     expect(options.map((o) => o.split(' · ').slice(0, 2).join(' · '))).toEqual(['#3 · bản chính thức', '#5 · bản mới nhất', '#2 · Trước đổi ISP', '#1 · từng phát hành']);
