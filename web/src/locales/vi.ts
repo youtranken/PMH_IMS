@@ -2880,6 +2880,11 @@ export default {
     hideImpactRestore: 'Dùng lại được bất cứ lúc nào.',
   },
   nat: {
+    copyLink: 'Sao chép link',
+    linkCopied: 'Đã chép link tới luật NAT này.',
+    linkCopyFailed: 'Không chép được — trình duyệt chặn bộ nhớ tạm.',
+    linkedMissing: 'Luật NAT trong link không nằm trong bảng đang xem (bộ lọc, ô tìm hoặc chip đang ẩn nó).',
+    linkedShow: 'Bỏ lọc để thấy luật này',
     title: 'Sổ NAT',
     subtitle: 'Mọi luật chuyển cổng: cổng nào mở, dẫn tới máy nào, cho ai, vì sao.',
     add: 'Thêm luật NAT',
