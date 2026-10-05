@@ -173,6 +173,9 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
 
     expect(await sqlStateOf(app, `DELETE FROM diagram_version WHERE id = '${draft}'`)).toBe('42501');
     expect(await sqlStateOf(app, `SELECT diagram_delete_versions('${id}', ARRAY['${official}']::uuid[], 'drafts')`)).toBe('P0001');
+    // "Xóa vĩnh viễn" (0058) chỉ mở cho bia mộ đã lưu trữ từ trước: ims_app gọi chế độ erase trên
+    // bản vẽ đang dùng thì trigger vẫn giữ bản chính thức.
+    expect(await sqlStateOf(app, `SELECT diagram_delete_versions('${id}', ARRAY['${official}']::uuid[], 'erase')`)).toBe('P0001');
     const { rows } = await app.query<{ n: number }>(`SELECT diagram_delete_versions($1, ARRAY[$2]::uuid[], 'drafts') AS n`, [id, draft]);
     expect(rows[0].n).toBe(1);
   });

@@ -368,6 +368,78 @@ test.describe('Sơ đồ mạng — Bỏ nháp từ một bản chọn, Xóa h�
   });
 });
 
+test.describe('Sơ đồ mạng — Xóa vĩnh viễn bản đã lưu trữ (Q-23 05/10)', () => {
+  async function archive(page: Page, id: string) {
+    const res = await page.request.post(`/api/v1/diagrams/${id}/archive`, { headers: await writeHeaders(page) });
+    expect(res.status(), await res.text()).toBeLessThan(300);
+  }
+
+  test('bản TỪNG PHÁT HÀNH đã lưu trữ: SA bấm Xóa vĩnh viễn, gõ lại tên, hỏi mã tại chỗ; hàng biến mất, còn bia mộ + lịch sử + nhật ký', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const name = `E2E Vĩnh viễn ${uniqueStamp()}`;
+    const id = await createDiagram(page, name);
+    await stepUpViaApi(page, secret, 'diagram');
+    const v1 = await save(page, id, 'Bản 1 E2E');
+    await publish(page, id, v1.id);
+    await save(page, id, 'Bản 2 E2E');
+    await archive(page, id);
+    expireStepUp(E2E_SA.email);
+
+    await page.goto('/diagrams?archived=1');
+    const section = page.getByRole('region', { name: /Bản vẽ đã lưu trữ/ });
+    await section.getByRole('button', { name: `Xóa vĩnh viễn "${name}"` }).click();
+    const confirm = page.getByRole('dialog', { name: `Xóa vĩnh viễn "${name}"?` });
+    await expect(confirm).toContainText('kể cả bản chính thức');
+    const go = confirm.getByRole('button', { name: 'Xóa vĩnh viễn' });
+    await expect(go).toBeDisabled();
+    await confirm.getByLabel('Gõ lại tên bản vẽ để xác nhận').fill(name);
+    await go.click();
+    await fillOtp(page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' }), await freshTotpCode(secret));
+    await expect(page.getByText(`Đã xóa vĩnh viễn "${name}".`)).toBeVisible();
+    await expect(section.getByText(name, { exact: true })).toHaveCount(0);
+    expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${id}'`)).toBe('0');
+    expect(sql(`SELECT deleted_by FROM diagram WHERE id = '${id}' AND official_version_id IS NULL`)).toBe(E2E_SA.email);
+    expect(sql(`SELECT count(*) FROM diagram_history WHERE diagram_id = '${id}' AND action IN ('version.published', 'erased')`)).toBe('2');
+    expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.erased' AND object_id = '${id}'`)).toBe('1');
+    expect((await page.request.get(`/api/v1/diagrams/${id}`, { failOnStatusCode: false })).status()).toBe(404);
+  });
+
+  test('đường hỏng: Thành viên không thấy nút và API trả 403; bản chưa lưu trữ → 409; còn bản vẽ con đã lưu trữ → 409 nêu tên con; không xoá gì', async ({ browser, page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const parentName = `E2E Cha VV ${stamp}`;
+    const parent = await createDiagram(page, parentName);
+    const childName = `E2E Con VV ${stamp}`;
+    const child = await createDiagram(page, childName, parent);
+    await stepUpViaApi(page, secret, 'diagram');
+    const v1 = await save(page, parent, 'Bản cha E2E');
+    await publish(page, parent, v1.id);
+
+    const live = await page.request.post(`/api/v1/diagrams/${parent}/erase`, { headers: await writeHeaders(page), data: { name: parentName }, failOnStatusCode: false });
+    expect(live.status()).toBe(409);
+    expect(((await live.json()) as { code: string }).code).toBe('DIAGRAM_NOT_ARCHIVED');
+
+    await archive(page, child);
+    await archive(page, parent);
+    const blocked = await page.request.post(`/api/v1/diagrams/${parent}/erase`, { headers: await writeHeaders(page), data: { name: parentName }, failOnStatusCode: false });
+    expect(blocked.status()).toBe(409);
+    expect(((await blocked.json()) as { message: string }).message).toContain(childName);
+    expect(seqsOf(parent)).toBe('1');
+
+    const member = await (await browser.newContext()).newPage();
+    const memberSecret = await firstLogin(member, E2E_MEMBER);
+    await stepUpViaApi(member, memberSecret, 'diagram');
+    await member.goto('/diagrams?archived=1');
+    const section = member.getByRole('region', { name: /Bản vẽ đã lưu trữ/ });
+    await expect(section.getByText(parentName, { exact: true })).toBeVisible();
+    await expect(section.getByRole('button', { name: /Xóa vĩnh viễn/ })).toHaveCount(0);
+    const forbidden = await member.request.post(`/api/v1/diagrams/${child}/erase`, { headers: await writeHeaders(member), data: { name: childName }, failOnStatusCode: false });
+    expect(forbidden.status()).toBe(403);
+    expect(sql(`SELECT count(*) FROM diagram WHERE id IN ('${parent}', '${child}') AND deleted_at IS NULL`)).toBe('2');
+    await member.context().close();
+  });
+});
+
 test.describe('Sơ đồ mạng — ảnh lưu một lần (Q-23)', () => {
   test('lưu hai lần cùng ảnh: một hàng ảnh, hai phiên bản trỏ tới; mở lại vẫn thấy ảnh', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);

@@ -33,7 +33,7 @@ export interface DraftPreview {
 }
 
 /**
- * "Bỏ bản nháp" và "Xoá hẳn" (Q-23). Mọi lượt xoá đi qua `diagram_delete_versions` (0056) trong
+ * "Bỏ bản nháp", "Xoá hẳn" và "Xóa vĩnh viễn" (Q-23). Mọi lượt xoá đi qua `diagram_delete_versions` (0056, 0058) trong
  * CÙNG transaction với dòng lịch sử + nhật ký (AD-5), sau khi khoá hàng `diagram` FOR UPDATE —
  * lưu, gửi duyệt, phát hành cùng lúc xếp hàng sau nó và thấy kết quả đã xoá.
  */
@@ -149,6 +149,64 @@ export class DiagramPruneService {
     });
   }
 
+  /**
+   * "Xóa vĩnh viễn" bản vẽ ĐÃ LƯU TRỮ, kể cả bản từng phát hành (Q-23 05/10): chỉ Admin/SA, gõ đúng
+   * tên. Bản vẽ phải được lưu trữ từ một lượt trước — DB (0058) cũng từ chối bản vừa lưu trữ trong
+   * chính lượt này. Còn bản vẽ con chưa xoá vĩnh viễn (kể cả con đã lưu trữ) thì chặn: con treo dưới
+   * một bia mộ thì không bao giờ bỏ lưu trữ được.
+   */
+  async erase(actor: PruneActor, diagramId: string, confirmName: string): Promise<{ versions: number }> {
+    if (actor.role !== 'sa' && actor.role !== 'admin') {
+      throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Admin/SA mới xóa vĩnh viễn bản vẽ đã lưu trữ được.' });
+    }
+    return this.db.transaction(async (tx) => {
+      const diagram = await this.lock(tx, diagramId, true);
+      if (!diagram.archivedAt) {
+        throw new ConflictException({ code: 'DIAGRAM_NOT_ARCHIVED', message: 'Chỉ xóa vĩnh viễn được bản vẽ đã lưu trữ — lưu trữ bản vẽ trước.' });
+      }
+      if (confirmName.trim() !== diagram.name.trim()) {
+        throw new BadRequestException({ code: 'DIAGRAM_CONFIRM_NAME', message: 'Tên gõ lại không khớp tên bản vẽ.' });
+      }
+      const children = await tx
+        .select({ name: diagramTable.name })
+        .from(diagramTable)
+        .where(and(eq(diagramTable.parentId, diagramId), isNull(diagramTable.deletedAt)))
+        .orderBy(diagramTable.name);
+      if (children.length > 0) {
+        throw new ConflictException({
+          code: 'DIAGRAM_HAS_CHILDREN',
+          message: `Bản vẽ còn bản vẽ con: ${children.map((c) => `"${c.name}"`).join(', ')} — xóa vĩnh viễn các bản vẽ con trước.`,
+        });
+      }
+      const pending = await this.approvals.list({ kind: PUBLISH_KIND, subjectId: diagramId, state: 'pending' });
+      if (pending.length > 0) {
+        throw new ConflictException({ code: 'DIAGRAM_REVIEW_PENDING', message: 'Bản vẽ đang có yêu cầu chờ duyệt — từ chối hoặc rút yêu cầu trước rồi mới xóa.' });
+      }
+      const published = await tx
+        .select({ id: diagramHistoryTable.id })
+        .from(diagramHistoryTable)
+        .where(and(eq(diagramHistoryTable.diagramId, diagramId), eq(diagramHistoryTable.action, 'version.published')))
+        .limit(1);
+      const now = new Date();
+      // Bỏ trỏ bản chính thức trước: khoá ngoại vào phiên bản, và bia mộ không có bản chính thức.
+      await tx
+        .update(diagramTable)
+        .set({ officialVersionId: null, deletedAt: now, deletedBy: actor.email, updatedAt: now })
+        .where(eq(diagramTable.id, diagramId));
+      const { rows } = await tx.execute<{ id: string }>(sql`SELECT id FROM diagram_version WHERE diagram_id = ${diagramId}`);
+      const versions = await deleteVersions(tx, diagramId, rows.map((r) => r.id), 'erase');
+      await tx.delete(diagramPresenceTable).where(eq(diagramPresenceTable.diagramId, diagramId));
+      await tx.delete(diagramDriftTable).where(eq(diagramDriftTable.diagramId, diagramId));
+      await collectUnusedImagesWithin(tx);
+      await this.record(tx, actor.email, diagramId, 'erased', 'diagram.erased', {
+        name: diagram.name,
+        versions,
+        published: Boolean(diagram.officialVersionId) || published.length > 0,
+      });
+      return { versions };
+    });
+  }
+
   private async lock(tx: Tx, diagramId: string, forUpdate: boolean) {
     const query = tx
       .select({
@@ -225,7 +283,7 @@ export class DiagramPruneService {
   }
 }
 
-async function deleteVersions(tx: Tx, diagramId: string, ids: string[], mode: 'drafts' | 'purge'): Promise<number> {
+async function deleteVersions(tx: Tx, diagramId: string, ids: string[], mode: 'drafts' | 'purge' | 'erase'): Promise<number> {
   if (ids.length === 0) return 0;
   const { rows } = await tx.execute<{ n: number }>(
     sql`SELECT diagram_delete_versions(${diagramId}::uuid, ${`{${ids.join(',')}}`}::uuid[], ${mode}) AS n`,

@@ -44,6 +44,7 @@ function mockFetch(archived: DiagramNode[]) {
     const url = String(input);
     if (url.endsWith('/api/v1/diagrams/archived')) return Promise.resolve(jsonResponse(200, archived));
     if (url.endsWith('/unarchive') && init?.method === 'POST') return Promise.resolve(jsonResponse(200, { ...OLD_FLOOR, archivedAt: null }));
+    if (url.endsWith('/erase') && init?.method === 'POST') return Promise.resolve(jsonResponse(201, { versions: 3 }));
     if (url.endsWith('/api/v1/diagrams')) return Promise.resolve(jsonResponse(200, [ROOT]));
     return Promise.resolve(jsonResponse(404, { code: 'NOT_FOUND' }));
   });
@@ -111,6 +112,30 @@ describe('Khu "Đã lưu trữ" của /diagrams (Q-23, 05/10)', () => {
     const section = await screen.findByRole('region', { name: 'Bản vẽ đã lưu trữ (2)' });
     expect(within(section).queryByRole('button', { name: 'Bỏ lưu trữ "Tầng cũ E2E"' })).toBeNull();
     expect(within(section).getByRole('button', { name: 'Bỏ lưu trữ "Trình bày cũ E2E"' })).toBeInTheDocument();
+  });
+
+  it('SA "Xóa vĩnh viễn": hộp xác nhận nói rõ mất cả bản chính thức, bắt gõ đúng tên; gõ đúng mới gọi API với tên', async () => {
+    const fetchMock = mockFetch([OLD_FLOOR]);
+    renderScreen('/diagrams?archived=1');
+    const user = userEvent.setup();
+    const section = await screen.findByRole('region', { name: 'Bản vẽ đã lưu trữ (1)' });
+    await user.click(within(section).getByRole('button', { name: 'Xóa vĩnh viễn "Tầng cũ E2E"' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Xóa vĩnh viễn "Tầng cũ E2E"?' });
+    expect(confirm).toHaveTextContent('kể cả bản chính thức');
+    const go = within(confirm).getByRole('button', { name: 'Xóa vĩnh viễn' });
+    expect(go).toBeDisabled();
+    await user.type(within(confirm).getByLabelText('Gõ lại tên bản vẽ để xác nhận'), 'Tầng cũ E2E');
+    await user.click(go);
+    expect(await screen.findByText('Đã xóa vĩnh viễn "Tầng cũ E2E".')).toBeInTheDocument();
+    const call = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).find(([url]) => String(url).endsWith('/api/v1/diagrams/f9/erase'));
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Tầng cũ E2E' });
+  });
+
+  it('Thành viên không thấy "Xóa vĩnh viễn", kể cả bản trình bày của mình', async () => {
+    mockFetch([OLD_FLOOR, MY_PRES]);
+    renderScreen('/diagrams?archived=1', MEMBER);
+    const section = await screen.findByRole('region', { name: 'Bản vẽ đã lưu trữ (2)' });
+    expect(within(section).queryByRole('button', { name: /Xóa vĩnh viễn/ })).toBeNull();
   });
 
   it('không có bản nào lưu trữ → không có nút', async () => {

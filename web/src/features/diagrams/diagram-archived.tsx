@@ -9,6 +9,7 @@ import { PATHS } from '@/lib/routes';
 import { useConfirm } from '@/ui/confirm-provider';
 import { LoadError, Loading } from '@/ui/load-state';
 import { useToast } from '@/ui/toast';
+import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { NODE_TYPE_KEY, TREE_KEY, type DiagramNode } from './diagram-api';
 import { canManageNode } from './diagram-presentation';
 
@@ -19,12 +20,25 @@ export function useArchivedDiagrams() {
   return useQuery({ queryKey: ARCHIVED_KEY, queryFn: () => apiFetch<DiagramNode[]>('/api/v1/diagrams/archived') });
 }
 
+type Run = <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
+
 /**
  * Khu "Đã lưu trữ" của /diagrams (Q-23): bản đã cất rời bản đồ, nhưng vẫn phải xem lại được. Mở
  * là CHỈ XEM (màn bản vẽ tự khoá Sửa cho bản đã cất, vẫn hỏi mã như mọi lần xem). "Bỏ lưu trữ"
- * chỉ hiện cho người được lưu trữ — cùng `canManageNode` với server.
+ * chỉ hiện cho người được lưu trữ — cùng `canManageNode` với server. "Xóa vĩnh viễn" chỉ Admin/SA
+ * (server kiểm lại), hỏi mã sơ đồ qua `run` của màn và bắt gõ lại tên.
  */
-export function DiagramArchivedSection({ me, live, archived }: { me: Me; live: DiagramNode[]; archived: ReturnType<typeof useArchivedDiagrams> }) {
+export function DiagramArchivedSection({
+  me,
+  live,
+  archived,
+  run,
+}: {
+  me: Me;
+  live: DiagramNode[];
+  archived: ReturnType<typeof useArchivedDiagrams>;
+  run: Run;
+}) {
   const { t } = useTranslation();
   const ask = useConfirm();
   const toast = useToast();
@@ -45,6 +59,28 @@ export function DiagramArchivedSection({ me, live, archived }: { me: Me; live: D
       toast({ tone: 'ok', message: t('diagrams.archivedList.restored', { name: node.name }) });
     } catch (error) {
       toast({ tone: 'error', message: errorMessage(error) });
+    }
+  };
+
+  const canErase = me.role === 'sa' || me.role === 'admin';
+  const erase = async (node: DiagramNode) => {
+    const ok = await ask({
+      title: t('diagrams.archivedList.eraseTitle', { name: node.name }),
+      message: t('diagrams.archivedList.eraseMessage'),
+      confirmLabel: t('diagrams.archivedList.erase'),
+      danger: true,
+      typeToConfirm: { expected: node.name, label: t('diagrams.archivedList.eraseType') },
+    });
+    if (!ok) return;
+    try {
+      await run(
+        () => apiFetch(`/api/v1/diagrams/${node.id}/erase`, { method: 'POST', csrfToken: me.csrfToken, body: JSON.stringify({ name: node.name }) }),
+        t('diagrams.archivedList.eraseStepUp', { name: node.name }),
+      );
+      await Promise.all([queryClient.invalidateQueries({ queryKey: TREE_KEY }), queryClient.invalidateQueries({ queryKey: ARCHIVED_KEY })]);
+      toast({ tone: 'ok', message: t('diagrams.archivedList.erased', { name: node.name }) });
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
     }
   };
 
@@ -90,6 +126,16 @@ export function DiagramArchivedSection({ me, live, archived }: { me: Me; live: D
                   onClick={() => void restore(node)}
                 >
                   {t('diagrams.archivedList.restore')}
+                </button>
+              ) : null}
+              {canErase ? (
+                <button
+                  type="button"
+                  className="btn sm danger-ghost"
+                  aria-label={t('diagrams.archivedList.eraseOf', { name: node.name })}
+                  onClick={() => void erase(node)}
+                >
+                  {t('diagrams.archivedList.erase')}
                 </button>
               ) : null}
             </li>

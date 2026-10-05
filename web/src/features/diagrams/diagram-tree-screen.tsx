@@ -197,7 +197,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
           />
         </div>
         {/* Mọi bản đều đã cất thì cây trống, nhưng bản đã cất vẫn phải tìm lại được. */}
-        {archivedCount > 0 ? <DiagramArchivedSection me={me} live={all} archived={archived} /> : null}
+        {archivedCount > 0 ? <DiagramArchivedSection me={me} live={all} archived={archived} run={stepUp.run} /> : null}
       </>
     );
   } else {
@@ -295,7 +295,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
                 onAddChild={(parent) => setEditing({ parent })}
               />
             )}
-            {showArchived ? <DiagramArchivedSection me={me} live={all} archived={archived} /> : null}
+            {showArchived ? <DiagramArchivedSection me={me} live={all} archived={archived} run={stepUp.run} /> : null}
           </div>
           {!narrow && panel ? (
             <aside className="card dpanel-wrap" aria-label={t('diagrams.panel.label')}>

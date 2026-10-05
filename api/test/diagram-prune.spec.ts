@@ -376,6 +376,135 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
     });
   });
 
+  describe('Xóa vĩnh viễn bản đã lưu trữ (Q-23 05/10)', () => {
+    /** Ảnh "PNG" đủ lớn để được tách ra `diagram_image`; mỗi `seed` một nội dung. */
+    const photo = (seed: number) => Buffer.alloc(3000, seed).toString('base64');
+    const imageCell = (id: string, b64: string) =>
+      `<mxCell id="${id}" value="" style="shape=image;aspect=fixed;image=data:image/png,${b64};" vertex="1" parent="1"><mxGeometry x="0" y="0" width="80" height="80" as="geometry"/></mxCell>`;
+
+    /** Bản vẽ từng phát hành (#1 chính thức, #2 đặt tên, #3 nháp + bình luận) rồi được lưu trữ. */
+    async function publishedThenArchived(name: string) {
+      const d = await drawn(3, SA.email, name);
+      await review.publish(SA, d.id, { versionId: d.versions[0] });
+      await diagrams.label(SA, d.id, d.versions[1], 'Mốc E2E');
+      await review.addComment(SA, d.id, { versionId: d.versions[2], body: 'Ghi chú E2E' });
+      await diagrams.archive(SA, d.id);
+      return { ...d, name: (await scratch.pool.query<{ name: string }>(`SELECT name FROM diagram WHERE id = $1`, [d.id])).rows[0].name };
+    }
+
+    it('bản từng phát hành, có tên phiên bản, bình luận, ảnh: mất hết nội dung; còn bia mộ + lịch sử + nhật ký; ảnh dùng chung với bản khác vẫn giữ', async () => {
+      const shared = photo(41);
+      const own = photo(42);
+      const d = await publishedThenArchived('Vĩnh viễn');
+      const other = await drawn(1, SA.email, 'Giữ ảnh');
+      await diagrams.save(SA.email, other.id, { xml: page(imageCell('i1', shared)), svg: SVG, basedOnVersionId: other.versions[0] });
+      const doomed = await drawn(1, SA.email, 'Ảnh riêng');
+      await diagrams.save(SA.email, doomed.id, { xml: page(imageCell('i1', shared) + imageCell('i2', own)), svg: SVG, basedOnVersionId: doomed.versions[0] });
+      await review.publish(SA, doomed.id, { versionId: doomed.versions[0] });
+      await diagrams.archive(SA, doomed.id);
+      const doomedName = (await diagrams.archivedList()).find((x) => x.id === doomed.id)!.name;
+      const images = async () => count(`SELECT count(*)::int AS n FROM diagram_image`);
+      const before = await images();
+
+      const result = await prune.erase(SA, d.id, d.name);
+      expect(result).toEqual({ versions: 3 });
+      for (const table of ['diagram_version', 'diagram_version_label', 'diagram_comment', 'diagram_presence', 'diagram_drift']) {
+        expect(await count(`SELECT count(*)::int AS n FROM ${table} WHERE diagram_id = $1`, [d.id])).toBe(0);
+      }
+      expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE id = $1 AND deleted_at IS NOT NULL AND deleted_by = $2 AND official_version_id IS NULL`, [d.id, SA.email])).toBe(1);
+      expect(await count(`SELECT count(*)::int AS n FROM diagram_history WHERE diagram_id = $1 AND action = 'version.published'`, [d.id])).toBe(1);
+      const { rows: erased } = await scratch.pool.query<{ changes: Record<string, unknown> }>(
+        `SELECT changes FROM diagram_history WHERE diagram_id = $1 AND action = 'erased'`,
+        [d.id],
+      );
+      expect(erased).toHaveLength(1);
+      expect(erased[0].changes).toMatchObject({ name: d.name, versions: 3, published: true });
+      expect(await count(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'diagram.erased' AND object_id = $1`, [d.id])).toBe(1);
+      expect((await diagrams.archivedList()).some((x) => x.id === d.id)).toBe(false);
+      await expect(diagrams.node(d.id)).rejects.toMatchObject({ status: 404 });
+
+      await prune.erase(ADMIN, doomed.id, doomedName);
+      // Ảnh riêng của bản bị xoá mất; ảnh bản khác còn dùng thì giữ.
+      expect(await images()).toBe(before - 1);
+      expect(await count(`SELECT count(*)::int AS n FROM diagram_version_image vi JOIN diagram_version v ON v.id = vi.version_id WHERE v.diagram_id = $1`, [other.id])).toBe(1);
+    });
+
+    it('chưa lưu trữ → 409 DIAGRAM_NOT_ARCHIVED; Thành viên → 403; gõ sai tên → 400; không xoá gì', async () => {
+      const live = await drawn(2, SA.email, 'Đang dùng');
+      const liveName = (await diagrams.node(live.id)).name;
+      await review.publish(SA, live.id, { versionId: live.versions[0] });
+      await expect(prune.erase(SA, live.id, liveName)).rejects.toMatchObject({ status: 409, response: { code: 'DIAGRAM_NOT_ARCHIVED' } });
+      const d = await publishedThenArchived('Quyền');
+      await expect(prune.erase(MEMBER, d.id, d.name)).rejects.toMatchObject({ status: 403 });
+      await expect(prune.erase(SA, d.id, 'tên sai')).rejects.toMatchObject({ status: 400, response: { code: 'DIAGRAM_CONFIRM_NAME' } });
+      expect(await seqs(d.id)).toEqual([1, 2, 3]);
+      expect(await seqs(live.id)).toEqual([1, 2]);
+    });
+
+    it('còn bản vẽ con chưa xoá vĩnh viễn (kể cả đã lưu trữ) → 409 nêu tên con; xoá con trước thì xoá được cha', async () => {
+      const p = await drawn(1, SA.email, 'Cha VV');
+      const child = await diagrams.create(SA.email, { name: `E2E Con VV ${n}`, nodeType: 'room', parentId: p.id });
+      await diagrams.archive(SA, child.id);
+      await diagrams.archive(SA, p.id);
+      const pName = (await diagrams.archivedList()).find((x) => x.id === p.id)!.name;
+      await expect(prune.erase(SA, p.id, pName)).rejects.toMatchObject({ status: 409, response: { code: 'DIAGRAM_HAS_CHILDREN', message: expect.stringContaining(child.name) } });
+      await prune.erase(SA, child.id, child.name);
+      await expect(prune.erase(SA, p.id, pName)).resolves.toEqual({ versions: 1 });
+    });
+
+    it('bản trình bày nhân bản từ nó không chặn — chỉ mất liên kết tới phiên bản nguồn', async () => {
+      const s2 = await drawn(1, SA.email, 'Nguồn TB');
+      await review.publish(SA, s2.id, { versionId: s2.versions[0] });
+      const pres = await diagrams.createPresentation(SA.email, s2.id, {});
+      await diagrams.archive(SA, s2.id);
+      const name = (await diagrams.archivedList()).find((x) => x.id === s2.id)!.name;
+      await prune.erase(SA, s2.id, name);
+      const { rows } = await scratch.pool.query<{ sv: string | null; deleted: string | null }>(`SELECT source_version_id AS sv, deleted_at AS deleted FROM diagram WHERE id = $1`, [pres.id]);
+      expect(rows[0]).toEqual({ sv: null, deleted: null });
+      expect(await count(`SELECT count(*)::int AS n FROM diagram_version WHERE diagram_id = $1`, [pres.id])).toBe(1);
+    });
+
+    describe('hàng rào ở DB (0058)', () => {
+      it('chế độ erase trên bản vẽ chưa là bia mộ (kể cả đã lưu trữ) → P0001', async () => {
+        const d = await publishedThenArchived('Rào 1');
+        expect(await sqlStateOf(() => scratch.pool.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'erase')`, [d.id, d.versions]))).toBe('P0001');
+        expect(await seqs(d.id)).toEqual([1, 2, 3]);
+      });
+
+      it('bia mộ lưu trữ và xoá trong CÙNG một lượt (không lưu trữ trước) → P0001 với bản từng phát hành', async () => {
+        const d = await drawn(2, SA.email, 'Rào 2');
+        await review.publish(SA, d.id, { versionId: d.versions[0] });
+        const client = await scratch.pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(`UPDATE diagram SET official_version_id = NULL, archived_at = now(), archived_by = 'x', deleted_at = now(), deleted_by = 'x' WHERE id = $1`, [d.id]);
+          expect(await sqlStateOf(() => client.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'erase')`, [d.id, d.versions]))).toBe('P0001');
+        } finally {
+          await client.query('ROLLBACK');
+          client.release();
+        }
+        expect(await seqs(d.id)).toEqual([1, 2]);
+      });
+
+      it('cờ erase đặt tay cho bản vẽ KHÁC không mở được bản vẽ này; chế độ drafts vẫn giữ bản chính thức', async () => {
+        const d = await drawn(2, SA.email, 'Rào 3');
+        await review.publish(SA, d.id, { versionId: d.versions[0] });
+        const other = await publishedThenArchived('Rào 3 khác');
+        const client = await scratch.pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(`SELECT set_config('ims.diagram_prune', $1, true)`, [`erase:${other.id}`]);
+          expect(await sqlStateOf(() => client.query(`DELETE FROM diagram_version WHERE id = $1`, [d.versions[0]]))).toBe('P0001');
+        } finally {
+          await client.query('ROLLBACK');
+          client.release();
+        }
+        expect(await sqlStateOf(() => scratch.pool.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'drafts')`, [d.id, [d.versions[0]]]))).toBe('P0001');
+        expect(await seqs(d.id)).toEqual([1, 2]);
+      });
+    });
+  });
+
   describe('quyền của ims_app', () => {
     it('ims_app gọi được hàm xoá; PUBLIC thì không', async () => {
       const { rows } = await scratch.pool.query<{ exec: boolean; pub: boolean }>(

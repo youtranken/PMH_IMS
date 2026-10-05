@@ -153,7 +153,7 @@ class DiscardDraftsDto extends DraftsQueryDto {
   @IsOptional() @IsString() @MaxLength(2000, { message: 'Dải phiên bản không hợp lệ.' }) ranges?: string;
 }
 
-/** Tên gõ lại để xác nhận "Xoá hẳn" — service so với tên thật. */
+/** Tên gõ lại để xác nhận "Xoá hẳn" / "Xóa vĩnh viễn" — service so với tên thật. */
 class PurgeDto {
   @IsString() @Length(1, 120, { message: 'Gõ lại đúng tên bản vẽ để xác nhận.' }) name!: string;
 }
@@ -406,6 +406,18 @@ export class DiagramsController {
   @Audited('diagram.deleted', 'diagram', { writtenByService: true })
   purge(@Param() params: IdParamDto, @Body() dto: PurgeDto, @Req() req: AuthedRequest) {
     return this.prune.purge({ email: req.user!.email, role: req.user!.role }, params.id, dto.name);
+  }
+
+  /**
+   * "Xóa vĩnh viễn" bản vẽ đã lưu trữ, kể cả bản từng phát hành (Q-23): chỉ Admin/SA, gõ lại tên —
+   * service kiểm thêm đã lưu trữ, không còn con, không chờ duyệt.
+   */
+  @Roles('sa', 'admin')
+  @RequiresStepUp('diagram')
+  @Post(':id/erase')
+  @Audited('diagram.erased', 'diagram', { writtenByService: true })
+  erase(@Param() params: IdParamDto, @Body() dto: PurgeDto, @Req() req: AuthedRequest) {
+    return this.prune.erase({ email: req.user!.email, role: req.user!.role }, params.id, dto.name);
   }
 
   @Roles('sa', 'admin', 'member')
