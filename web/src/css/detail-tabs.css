@@ -443,6 +443,16 @@
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* Tab xuống dòng (`wrap`): không cuộn ngang, không mép mờ — mọi tab thấy được, quá ba hàng thì
+   cuộn dọc trong khung. */
+.tabs[data-wrap='true'] {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  max-height: 7.5rem;
+  overflow-y: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
 .tabs::-webkit-scrollbar {
   display: none;
 }

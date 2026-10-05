@@ -1868,3 +1868,32 @@ button.btn-x.danger:hover:not(:disabled) {
 .rack-view-cell {
   justify-content: flex-end;
 }
+
+/* Bản vẽ gốc chưa có con: băng một dòng (đệm mỏng) + nút "+ Bản vẽ con" ngay bên phải. */
+.dmap-root-compact {
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+.dmap-root-compact .dmap-banner {
+  flex: 1 1 auto;
+  padding: var(--space-3) var(--space-6);
+}
+.dmap-root-compact .dmap-banner-text {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+}
+.dmap-root-compact .dmap-banner-name {
+  font-size: var(--fs-md);
+}
+.dmap-add-inline {
+  flex: none;
+  display: flex;
+}
+.dmap-add-inline > button {
+  width: auto;
+  min-height: 0;
+  padding: 0 var(--space-6);
+}

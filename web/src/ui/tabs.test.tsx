@@ -223,3 +223,14 @@ describe('Tabs trên màn hẹp — tab đang chọn luôn nằm trong khung', (
     expect(bar).not.toHaveAttribute('data-more-end');
   });
 });
+
+describe('Tabs — kiểu xuống dòng (dải chuyển nhanh bản vẽ cùng khu, Q-23 05/10)', () => {
+  it('`wrap`: thanh mang data-wrap, KHÔNG tự cuộn ngang tới tab đang chọn (tab đầu luôn thấy)', () => {
+    const items = Array.from({ length: 6 }, (_, i) => ({ key: `k${i}`, label: `Phòng số ${i} dài` }));
+    renderWithI18n(<Tabs ariaLabel="Bản vẽ cùng khu" items={items} value="k5" onChange={() => undefined} wrap />);
+    const bar = screen.getByRole('tablist', { name: 'Bản vẽ cùng khu' });
+    expect(bar).toHaveAttribute('data-wrap', 'true');
+    expect(bar.scrollLeft).toBe(0);
+    expect(screen.getAllByRole('tab')[0]).toHaveTextContent('Phòng số 0 dài');
+  });
+});

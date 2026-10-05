@@ -57,11 +57,17 @@ export function Tabs({
   value,
   onChange,
   ariaLabel,
+  wrap = false,
 }: {
   items: TabItem[];
   value: string;
   onChange: (key: string) => void;
   ariaLabel: string;
+  /**
+   * Tab xuống dòng thay vì cuộn ngang: khung hẹp (panel bên phải của /diagrams) mà tên dài thì
+   * cuộn ngang giấu mất tab đầu sau một mép mờ, và chuột không có cách nào cuộn ngang.
+   */
+  wrap?: boolean;
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const barRef = useRef<HTMLDivElement>(null);
@@ -82,7 +88,7 @@ export function Tabs({
   useLayoutEffect(() => {
     const bar = barRef.current;
     const tab = refs.current[value];
-    if (!bar || !tab) return;
+    if (!bar || !tab || wrap) return;
     const barRect = bar.getBoundingClientRect();
     const tabRect = tab.getBoundingClientRect();
     const left = tabScrollLeft({
@@ -100,7 +106,7 @@ export function Tabs({
     if (left === bar.scrollLeft) return;
     if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior });
     else bar.scrollLeft = left;
-  }, [value]);
+  }, [value, wrap]);
 
   const move = (delta: number) => {
     const index = items.findIndex((item) => item.key === value);
@@ -120,6 +126,7 @@ export function Tabs({
       data-more-end={edges.end ? 'true' : undefined}
       // Có vạch trượt thì CSS bỏ gạch chân riêng của tab đang chọn (không vẽ hai vạch).
       data-ink={ink ? 'true' : undefined}
+      data-wrap={wrap ? 'true' : undefined}
     >
       {items.map((item) => (
         <button

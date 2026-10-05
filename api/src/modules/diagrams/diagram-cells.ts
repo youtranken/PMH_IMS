@@ -410,6 +410,23 @@ export function summarizeDiff(diff: CellDiff): string {
   return line.replace(/\p{L}/u, (ch) => ch.toUpperCase());
 }
 
+const OVERWRITE_PREFIX = 'lưu đè lên bản của ';
+
+/** Đuôi tóm tắt khi một người lưu đè lên bản người khác vừa lưu — ghi vào `summary` lúc lưu. */
+export function overwriteNote(name: string): string {
+  return `${OVERWRITE_PREFIX}${name}`;
+}
+
+/**
+ * Tách đuôi "lưu đè lên bản của …" khỏi tóm tắt (nó luôn là cụm CUỐI) để panel hiện tiêu đề gọn
+ * và nhãn nhỏ riêng. Server tách vì server ghép chữ đó; tóm tắt cũ không có đuôi thì để nguyên.
+ */
+export function splitSummary(summary: string): { brief: string; overwrote: string | null } {
+  const at = summary.lastIndexOf(` · ${OVERWRITE_PREFIX}`);
+  if (at < 0) return { brief: summary, overwrote: null };
+  return { brief: summary.slice(0, at), overwrote: summary.slice(at + 3 + OVERWRITE_PREFIX.length) };
+}
+
 /**
  * Chữ trên một hình trông như mật khẩu (Q-19, SEC-21): bản vẽ không mã hoá, đi vào lịch sử
  * phiên bản không xoá được và ảnh xuất — mật khẩu ghi lên hình là đi vòng qua két. Câu lỗi chỉ

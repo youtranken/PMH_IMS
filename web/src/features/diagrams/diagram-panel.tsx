@@ -173,11 +173,12 @@ export function DiagramPanel({
                     />
                   ) : null}
                   <span className="dpanel-row-text">
-                    <strong>{t('diagrams.panel.draftTitle', { seq, summary: draft.version.label ?? draft.version.summary })}</strong>
+                    <strong>{t('diagrams.panel.draftTitle', { seq, summary: draft.version.label ?? draft.version.brief ?? draft.version.summary })}</strong>
                     <span className="muted">
                       {t('diagrams.panel.savedMeta', { by: draft.version.savedByName ?? draft.version.savedBy, at: formatDateTime(draft.version.savedAt) })}
                       {draft.keptBecause ? ` · ${t(draft.keptBecause === 'named' ? 'diagrams.panel.keptNamed' : 'diagrams.panel.keptFirst')}` : ''}
                     </span>
+                    {draft.version.overwrote ? <span className="badge muted dpanel-tag">{t('diagrams.panel.overwrote', { name: draft.version.overwrote })}</span> : null}
                   </span>
                   <button type="button" className="btn sm ghost" aria-label={t('diagrams.panel.viewOf', { seq })} onClick={() => viewVersion(draft.version)}>
                     {t('diagrams.panel.view')}
@@ -284,6 +285,7 @@ export function DiagramPanel({
         {path.length > 1 ? <span className="muted dpanel-path">{path.map((n) => n.name).join(' › ')}</span> : null}
         {siblings.length > 1 ? (
           <Tabs
+            wrap
             ariaLabel={siblingsLabel}
             value={node.id}
             onChange={onSelect}

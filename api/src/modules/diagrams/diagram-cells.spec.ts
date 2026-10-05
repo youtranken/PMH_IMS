@@ -6,6 +6,8 @@ import {
   layerNames,
   secretLabelReason,
   summarizeDiff,
+  overwriteNote,
+  splitSummary,
   type CellDiff,
   type CellIndex,
 } from './diagram-cells';
@@ -253,5 +255,17 @@ describe('cellCaption — tên người đọc được của một ô (ghim bì
   it('một bộ tra cho cả phiên bản trả đúng như từng lượt cellCaption (luồng ghim đọc nhiều ô)', () => {
     const captionOf = cellCaptioner(index);
     for (const id of ['d1', 's1', 's2', 'e1', 'e2', 'khong-co']) expect(captionOf(id)).toEqual(cellCaption(index, id));
+  });
+});
+
+describe('overwriteNote + splitSummary — dòng nháp gọn của panel (Q-23 05/10)', () => {
+  it.each([
+    ['1 Hình tự do · OVR:E2E Super Admin', '1 Hình tự do', 'E2E Super Admin'],
+    ['Thêm 2 thiết bị, đổi 1 dây · OVR:An', 'Thêm 2 thiết bị, đổi 1 dây', 'An'],
+    ['Thêm 1 thiết bị', 'Thêm 1 thiết bị', null],
+    ['Nhân bản từ "Cha · phụ" phiên bản #2 · Thêm 1 thiết bị', 'Nhân bản từ "Cha · phụ" phiên bản #2 · Thêm 1 thiết bị', null],
+  ])('%j', (raw, brief, overwrote) => {
+    const summary = raw.replace(/OVR:(.+)$/, (_m, name: string) => overwriteNote(name));
+    expect(splitSummary(summary)).toEqual({ brief, overwrote });
   });
 });

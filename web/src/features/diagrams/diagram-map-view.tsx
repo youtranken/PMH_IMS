@@ -64,7 +64,13 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
   return (
     <div className="dmap" aria-label={t('diagrams.map.mapLabel')} role="region">
       {map.roots.map((root) => (
-        <section key={root.node.id} className="dmap-root" aria-labelledby={`dmap-root-${root.node.id}`}>
+        <section
+          key={root.node.id}
+          // Gốc chưa có con chỉ là một băng một dòng kèm "+ Bản vẽ con": khối gợi ý trống chiếm chỗ
+          // của các gốc có nội dung bên dưới.
+          className={root.areas.length === 0 ? 'dmap-root dmap-root-compact' : 'dmap-root'}
+          aria-labelledby={`dmap-root-${root.node.id}`}
+        >
           <button
             type="button"
             className="dmap-banner"
@@ -83,71 +89,78 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
             </span>{' '}
             <span className={BADGE_OF[tileTone(root.node)]}>{statusText(root.node, t, true)}</span>
           </button>
-          <ul className="dmap-areas">
-            {root.areas.map((area) => (
-              <li key={area.node.id} className="dmap-area" data-dim={dim(area.node) && area.tiles.every((tile) => !nodeMatches(tile.node, filter)) ? 'true' : undefined}>
-                <button
-                  type="button"
-                  className="dmap-area-head"
-                  aria-current={current(area.node)}
-                  data-dim={dim(area.node)}
-                  onClick={() => onSelect(area.node.id)}
-                >
-                  <span className="dmap-area-title">
-                    <strong>{area.node.name}</strong>{' '}
-                    <span className={BADGE_OF[tileTone(area.node)]}>{statusText(area.node, t, true)}</span>
-                  </span>{' '}
-                  <span className="dmap-meta">{savedLine(area.node, t, now)}</span>
-                </button>
-                <ul className="dmap-tiles" aria-label={t('diagrams.panel.siblingsOf', { name: area.node.name })}>
-                  {area.tiles.map((tile) => {
-                    const inside = filtering && tile.children > 0 ? matchCountInside(nodes, tile.node.id, filter) : 0;
-                    return (
-                      <li
-                        key={tile.node.id}
-                        className="dmap-tile"
-                        data-tone={tileTone(tile.node)}
-                        data-selected={current(tile.node) ? 'true' : undefined}
-                        data-dim={dim(tile.node) && inside === 0 ? 'true' : undefined}
-                      >
-                        <button type="button" className="dmap-tile-main" aria-current={current(tile.node)} onClick={() => onSelect(tile.node.id)}>
-                          <span className="dmap-tile-name">{tile.node.name}</span>{' '}
-                          <span className="dmap-status">
-                            <span className="dmap-dot" aria-hidden="true" />
-                            {statusText(tile.node, t, false)}
-                          </span>{' '}
-                          <span className="dmap-meta">{tileLine(tile.node, t)}</span>
-                        </button>
-                        {tile.children > 0 ? (
-                          <button
-                            type="button"
-                            className="dmap-drill"
-                            aria-label={t('diagrams.map.drillOf', { count: tile.children, name: tile.node.name })}
-                            onClick={() => onDrill(tile.node.id)}
-                          >
-                            <span aria-hidden="true">▸</span>
-                            {t('diagrams.map.drill', { count: tile.children })}
-                            {inside > 0 ? <span className="badge info">{t('diagrams.map.drillMatches', { count: inside })}</span> : null}
-                          </button>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                  <li className="dmap-add">
-                    <button type="button" aria-label={t('diagrams.addChildOf', { name: area.node.name })} onClick={() => onAddChild(area.node)}>
-                      {t('diagrams.map.addChild')}
-                    </button>
-                  </li>
-                </ul>
-              </li>
-            ))}
-            <li className="dmap-add dmap-add-area">
+          {root.areas.length === 0 ? (
+            <div className="dmap-add dmap-add-inline">
               <button type="button" aria-label={t('diagrams.addChildOf', { name: root.node.name })} onClick={() => onAddChild(root.node)}>
                 {t('diagrams.map.addChild')}
               </button>
-              {root.areas.length === 0 ? <p className="muted">{t('diagrams.map.noChildren')}</p> : null}
-            </li>
-          </ul>
+            </div>
+          ) : (
+            <ul className="dmap-areas">
+              {root.areas.map((area) => (
+                <li key={area.node.id} className="dmap-area" data-dim={dim(area.node) && area.tiles.every((tile) => !nodeMatches(tile.node, filter)) ? 'true' : undefined}>
+                  <button
+                    type="button"
+                    className="dmap-area-head"
+                    aria-current={current(area.node)}
+                    data-dim={dim(area.node)}
+                    onClick={() => onSelect(area.node.id)}
+                  >
+                    <span className="dmap-area-title">
+                      <strong>{area.node.name}</strong>{' '}
+                      <span className={BADGE_OF[tileTone(area.node)]}>{statusText(area.node, t, true)}</span>
+                    </span>{' '}
+                    <span className="dmap-meta">{savedLine(area.node, t, now)}</span>
+                  </button>
+                  <ul className="dmap-tiles" aria-label={t('diagrams.panel.siblingsOf', { name: area.node.name })}>
+                    {area.tiles.map((tile) => {
+                      const inside = filtering && tile.children > 0 ? matchCountInside(nodes, tile.node.id, filter) : 0;
+                      return (
+                        <li
+                          key={tile.node.id}
+                          className="dmap-tile"
+                          data-tone={tileTone(tile.node)}
+                          data-selected={current(tile.node) ? 'true' : undefined}
+                          data-dim={dim(tile.node) && inside === 0 ? 'true' : undefined}
+                        >
+                          <button type="button" className="dmap-tile-main" aria-current={current(tile.node)} onClick={() => onSelect(tile.node.id)}>
+                            <span className="dmap-tile-name">{tile.node.name}</span>{' '}
+                            <span className="dmap-status">
+                              <span className="dmap-dot" aria-hidden="true" />
+                              {statusText(tile.node, t, false)}
+                            </span>{' '}
+                            <span className="dmap-meta">{tileLine(tile.node, t)}</span>
+                          </button>
+                          {tile.children > 0 ? (
+                            <button
+                              type="button"
+                              className="dmap-drill"
+                              aria-label={t('diagrams.map.drillOf', { count: tile.children, name: tile.node.name })}
+                              onClick={() => onDrill(tile.node.id)}
+                            >
+                              <span aria-hidden="true">▸</span>
+                              {t('diagrams.map.drill', { count: tile.children })}
+                              {inside > 0 ? <span className="badge info">{t('diagrams.map.drillMatches', { count: inside })}</span> : null}
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                    <li className="dmap-add">
+                      <button type="button" aria-label={t('diagrams.addChildOf', { name: area.node.name })} onClick={() => onAddChild(area.node)}>
+                        {t('diagrams.map.addChild')}
+                      </button>
+                    </li>
+                  </ul>
+                </li>
+              ))}
+              <li className="dmap-add dmap-add-area">
+                <button type="button" aria-label={t('diagrams.addChildOf', { name: root.node.name })} onClick={() => onAddChild(root.node)}>
+                  {t('diagrams.map.addChild')}
+                </button>
+              </li>
+            </ul>
+          )}
         </section>
       ))}
       {map.presentations.length > 0 ? (

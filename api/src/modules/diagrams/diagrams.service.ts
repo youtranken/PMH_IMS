@@ -26,6 +26,8 @@ import {
   layerNames,
   secretLabelReason,
   summarizeDiff,
+  overwriteNote,
+  splitSummary,
   type CellBounds,
   type CellDiff,
   type CellIndex,
@@ -135,6 +137,9 @@ export interface VersionItem {
   id: string;
   seq: number;
   summary: string;
+  /** Tóm tắt bỏ đuôi "lưu đè lên bản của …" — tiêu đề dòng nháp; `overwrote` = tên người bị đè. */
+  brief: string;
+  overwrote: string | null;
   label: string | null;
   savedBy: string;
   savedByName: string | null;
@@ -800,6 +805,7 @@ export class DiagramsService {
       id: row.id,
       seq: row.seq,
       summary: row.summary,
+      ...splitSummary(row.summary),
       label: labels.get(row.id) ?? null,
       savedBy: row.savedBy,
       savedByName: names.get(row.savedBy.toLowerCase()) ?? null,
@@ -1393,7 +1399,7 @@ export class DiagramsService {
       let summary = summarizeDiff(diff);
       if (latest && input.basedOnVersionId !== latest.id) {
         const names = await this.users.namesByEmails([latest.savedBy.toLowerCase()]);
-        summary += ` · lưu đè lên bản của ${names.get(latest.savedBy.toLowerCase()) ?? latest.savedBy}`;
+        summary += ` · ${overwriteNote(names.get(latest.savedBy.toLowerCase()) ?? latest.savedBy)}`;
       }
       return this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,

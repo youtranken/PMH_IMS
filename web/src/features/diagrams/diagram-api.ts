@@ -50,6 +50,9 @@ export interface VersionItem {
   id: string;
   seq: number;
   summary: string;
+  /** Tóm tắt bỏ đuôi "lưu đè lên bản của …" (server tách); `overwrote` = tên người bị đè. Thiếu → dùng `summary`. */
+  brief?: string;
+  overwrote?: string | null;
   label: string | null;
   savedBy: string;
   savedByName: string | null;

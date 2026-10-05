@@ -66,7 +66,16 @@ function version(seq: number, extra: Partial<VersionItem> = {}): VersionItem {
   };
 }
 
-const SV_VERSIONS = [15, 14, 13, 12, 11, 10, 9, 8, 7].map((seq) => version(seq, seq === 10 ? { label: 'Trước khi đổi ISP' } : {}));
+const SV_VERSIONS = [15, 14, 13, 12, 11, 10, 9, 8, 7].map((seq) =>
+  version(
+    seq,
+    seq === 10
+      ? { label: 'Trước khi đổi ISP' }
+      : seq === 15
+        ? { summary: '1 Hình tự do · lưu đè lên bản của E2E Super Admin', brief: '1 Hình tự do', overwrote: 'E2E Super Admin' }
+        : {},
+  ),
+);
 const SV_PUBLISHED = { officialVersionId: 'v12', publishedVersionIds: ['v7', 'v8', 'v9', 'v10', 'v11', 'v12'] };
 
 type Calls = [string, RequestInit | undefined][];
@@ -425,5 +434,36 @@ describe('390px', () => {
     expect(within(sheet).getByRole('button', { name: 'Mở bản chính thức' })).toBeInTheDocument();
     expect(within(sheet).queryByRole('button', { name: /^Sửa/ })).toBeNull();
     expect(within(sheet).queryByRole('button', { name: /^Phát hành/ })).toBeNull();
+  });
+});
+
+describe('Panel gọn (Q-23 05/10)', () => {
+  it('dòng nháp: tiêu đề "#15 · tóm tắt ngắn", người lưu / giờ dòng hai, "lưu đè" thành nhãn nhỏ', async () => {
+    routeFetch({});
+    renderScreen('/diagrams?node=sv');
+    const drafts = await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' });
+    const row = within(drafts).getAllByRole('listitem')[0];
+    expect(row.querySelector('strong')).toHaveTextContent(/^#15 · 1 Hình tự do$/);
+    expect(row).toHaveTextContent('An');
+    expect(row.querySelector('.dpanel-tag')).toHaveTextContent('Lưu đè bản của E2E Super Admin');
+  });
+
+  it('bản vẽ gốc chưa có con: băng một dòng kèm "+ Bản vẽ con", không có khối gợi ý lớn', async () => {
+    routeFetch({ '/api/v1/diagrams/archived': () => jsonResponse(200, []) });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/api/v1/diagrams')) return Promise.resolve(jsonResponse(200, [...TREE, node('lone', null, 'Chi nhánh lẻ E2E')]));
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    renderScreen('/diagrams');
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    const lone = within(map).getByRole('button', { name: /^Tổng công ty Chi nhánh lẻ E2E/ }).closest('section');
+    expect(lone).toHaveClass('dmap-root-compact');
+    expect(within(lone as HTMLElement).getByRole('button', { name: 'Thêm bản vẽ con vào "Chi nhánh lẻ E2E"' })).toBeInTheDocument();
+    expect(within(lone as HTMLElement).queryByText(/Chưa có bản vẽ con/)).toBeNull();
+    expect((lone as HTMLElement).querySelector('.dmap-areas')).toBeNull();
   });
 });
