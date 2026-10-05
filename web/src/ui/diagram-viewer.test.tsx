@@ -64,6 +64,9 @@ describe('DiagramViewer', () => {
     const region = screen.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
     expect(region.querySelector('[data-cell-id="s1"]')).not.toBeNull();
     expect(screen.getAllByText(/SA E2E · sa@e2e\.local · \d{2}:\d{2}/).length).toBeGreaterThan(0);
+    // Tab Xem giữ watermark dày như cũ (V-06 chỉ làm thưa ở trình vẽ).
+    expect(region.querySelector('.drawio-watermark')?.querySelectorAll('span')).toHaveLength(8);
+    expect(region.querySelector('.drawio-watermark')).not.toHaveAttribute('data-density');
     const zoom = screen.getByRole('status', { name: 'Mức thu phóng' });
     const before = zoom.textContent;
     await userEvent.setup().click(screen.getByRole('button', { name: 'Phóng to' }));

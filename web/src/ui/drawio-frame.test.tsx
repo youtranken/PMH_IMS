@@ -105,4 +105,11 @@ describe('DrawioFrame — cầu nối nhúng draw.io (AD-17)', () => {
     expect(marks.length).toBeGreaterThan(0);
     expect(marks[0].closest('.drawio-watermark')).not.toBeNull();
   });
+
+  it('trình vẽ: watermark VẪN có (V-06) nhưng thưa — 3 hàng, lớp riêng nhạt hơn, chừa dải công cụ', () => {
+    setup();
+    const layer = document.querySelector('.drawio-watermark') as HTMLElement;
+    expect(layer).toHaveAttribute('data-density', 'edit');
+    expect(layer.querySelectorAll('span')).toHaveLength(3);
+  });
 });

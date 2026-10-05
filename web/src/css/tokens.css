@@ -202,6 +202,7 @@
        để tô nét trong trình vẽ (`ui/drawio-frame.tsx`) và trình xem; không ô nào là đỏ/vàng vì đỏ
        = "kết nối đã gỡ", vàng = "chưa khai vào sơ đồ cổng". */
     --diagram-watermark:rgba(31,35,28,.13);
+    --diagram-watermark-edit:rgba(31,35,28,.07);
     --diagram-cable-0:#5f665f; --diagram-cable-1:#0e9f6e; --diagram-cable-2:#1d5f9e;
     --diagram-cable-3:#ea580c; --diagram-cable-4:#7c3aed; --diagram-cable-5:#0891b2;
     --diagram-cable-6:#be185d; --diagram-cable-7:#854d0e; --diagram-cable-8:#334155;
@@ -318,6 +319,7 @@ html[data-theme='dark'] {
     --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.12) 0%,rgba(12,16,30,.18) 60%,rgba(12,16,30,.45) 100%);
     /* Watermark chỉ nằm trên giấy sáng (trình vẽ + trình xem) ở cả hai theme: giữ màu mực tối. */
     --diagram-watermark:rgba(31,35,28,.13);
+    --diagram-watermark-edit:rgba(31,35,28,.07);
     --diagram-cable-0:#a7b0a5; --diagram-cable-1:#34d399; --diagram-cable-2:#7fb6ea;
     --diagram-cable-3:#f59e0b; --diagram-cable-4:#a78bfa; --diagram-cable-5:#22d3ee;
     --diagram-cable-6:#f472b6; --diagram-cable-7:#d6a35c; --diagram-cable-8:#94a3b8;

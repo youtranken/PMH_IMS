@@ -137,7 +137,7 @@ export const DrawioFrame = forwardRef<DrawioFrameHandle, DrawioFrameProps>(funct
         src={drawioUrl(mode)}
         sandbox={DRAWIO_SANDBOX}
       />
-      <DiagramWatermark viewer={viewer} />
+      <DiagramWatermark viewer={viewer} density={mode === 'edit' ? 'edit' : undefined} />
       {stalled ? (
         <div className="drawio-frame-stalled" role="alert">
           <p>

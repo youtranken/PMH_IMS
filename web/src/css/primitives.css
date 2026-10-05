@@ -849,6 +849,17 @@ button.btn-x.danger:hover:not(:disabled) {
   text-align: center;
   word-spacing: 0.4em;
 }
+/* Trình vẽ (V-06): vùng cắt bắt đầu dưới dải menu + công cụ của draw.io (≈72px ở giao diện
+   "kennedy" của bản ghim), chữ nhạt hơn. */
+.drawio-watermark-zone {
+  position: absolute;
+  inset: 72px 0 0 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.drawio-watermark[data-density='edit'] {
+  color: var(--diagram-watermark-edit);
+}
 .drawio-frame-stalled {
   position: absolute;
   inset: 0;
