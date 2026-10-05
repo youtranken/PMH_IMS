@@ -718,8 +718,8 @@ function ScreenFrame({
   const { t } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
-  // "Hướng dẫn" luôn ở cuối menu, ở mọi chế độ (Q-23: màn dùng được ngay không cần học).
-  const items: BarAction[] = [...menu, { key: 'guide', label: t('diagrams.guide.menu'), onSelect: () => setGuideOpen(true) }];
+  // "Hướng dẫn" ĐẦU menu, ở mọi chế độ (Q-23): menu của màn sửa dài, để cuối là phải cuộn mới thấy.
+  const items: BarAction[] = [{ key: 'guide', label: t('diagrams.guide.menu'), onSelect: () => setGuideOpen(true) }, ...menu];
   return (
     <>
       <div className="full-bar">

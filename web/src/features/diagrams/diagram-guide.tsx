@@ -10,6 +10,7 @@ export function DiagramGuideDialog({ onClose }: { onClose: () => void }) {
     ['diagrams.guide.cablesTitle', 'diagrams.guide.cables'],
     ['diagrams.guide.framesTitle', 'diagrams.guide.frames'],
     ['diagrams.guide.versionsTitle', 'diagrams.guide.versions'],
+    ['diagrams.guide.menuTitle', 'diagrams.guide.menu_'],
     ['diagrams.guide.codeTitle', 'diagrams.guide.code'],
   ];
   return (

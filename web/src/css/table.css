@@ -392,6 +392,23 @@ table.table tbody tr.row-suspended td:first-child {
   margin: var(--space-1) 0;
   background: var(--border);
 }
+/* Tiêu đề nhóm (RowAction `group`) — chữ nhỏ in đậm, kẻ trên tách nhóm trước; không bấm được. */
+.row-actions-menu .ra-group {
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.row-actions-menu .ra-group + button,
+.row-actions-menu .ra-group:first-child {
+  margin-top: 0;
+}
+.row-actions-menu .ra-group:not(:first-child) {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-1);
+}
 /* Dòng mô tả dưới nhãn (RowAction `hint`) — xuống dòng được, menu không phình ngang. */
 .row-actions-menu .ra-text {
   display: flex;

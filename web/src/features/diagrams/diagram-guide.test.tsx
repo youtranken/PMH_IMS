@@ -86,11 +86,16 @@ describe('màn sơ đồ tự giải thích', () => {
 
     await user.click(screen.getByRole('button', { name: /^Thao tác với/ }));
     expect(await screen.findByRole('menuitem', { name: 'Kiểm tra khớp' })).toHaveTextContent('So bản vẽ với dữ liệu kho');
+    // "Hướng dẫn" đứng đầu menu; menu chia nhóm có tiêu đề.
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getAllByRole('menuitem')[0]).toHaveAccessibleName('Hướng dẫn');
+    expect(within(menu).getByText('Trợ giúp')).toHaveClass('ra-group');
     await user.click(screen.getByRole('menuitem', { name: 'Hướng dẫn' }));
     const guide = await screen.findByRole('dialog', { name: 'Hướng dẫn dùng sơ đồ mạng' });
-    for (const part of ['Xem và Sửa', 'Vẽ dây là khai kết nối', 'Khung', 'Phiên bản và duyệt']) {
+    for (const part of ['Xem và Sửa', 'Vẽ dây là khai kết nối', 'Khung', 'Phiên bản và duyệt', 'Menu ba chấm (⋮)']) {
       expect(within(guide).getByRole('heading', { name: part })).toBeInTheDocument();
     }
+    expect(guide).toHaveTextContent('kết nối nằm ở tab "Sơ đồ cổng" của trang thiết bị');
   });
 
   it('chế độ Sửa, bản vẽ chưa có gì: các bước bắt đầu đánh số; vẽ nét đầu tiên thì ẩn', async () => {

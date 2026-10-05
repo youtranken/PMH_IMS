@@ -35,6 +35,12 @@ export interface RowAction {
    * đọc (`aria-hidden`): tên của mục vẫn đúng là `label`, bài kiểm và trình đọc màn hình không đổi.
    */
   hint?: string;
+  /**
+   * Tên nhóm có tiêu đề trong menu dài (thanh của màn sơ đồ: "Dây & kết nối", "Phiên bản & duyệt").
+   * Có nhóm thì menu xếp theo nhóm — nhóm đứng theo lần đầu xuất hiện, trong nhóm vẫn đẩy việc
+   * nguy hiểm xuống cuối. Tiêu đề chỉ để đọc, phím mũi tên đi qua mục chứ không dừng ở tiêu đề.
+   */
+  group?: string;
 }
 
 /**
@@ -95,6 +101,8 @@ export function RowActions({
    * (`ExportXlsxButton` có `allUrl`). Bàn phím, thứ tự, vạch ngăn giữ nguyên như menu dòng.
    */
   triggerText?: string;
+  /** Trần chiều cao menu (px) — menu dài của thanh trên cao hơn menu một dòng bảng. */
+  maxHeight?: number;
 }) {
   const reason = useDisabledReason(primary?.disabledReason);
   if (!primary) return <RowActionsMenu {...menu} />;
@@ -125,6 +133,7 @@ function RowActionsMenu({
   items,
   subject,
   triggerText,
+  maxHeight = 320,
 }: {
   /** Tên khả truy cập của nút ba chấm — PHẢI nói rõ nó thuộc dòng nào ("Thao tác với LIC-01"). */
   label: string;
@@ -135,6 +144,7 @@ function RowActionsMenu({
    */
   subject?: string;
   triggerText?: string;
+  maxHeight?: number;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -142,7 +152,7 @@ function RowActionsMenu({
   const portal = useDialogPortal();
   const { refs, floatingStyles } = useAnchoredMenu(open, {
     placement: 'bottom-end',
-    maxHeight: 320,
+    maxHeight,
   });
 
   /*
@@ -153,7 +163,9 @@ function RowActionsMenu({
    * bắp dùng lại được — mục cuối cùng luôn là mục phải nghĩ trước khi bấm.
    */
   const rank = (item: RowAction) => (item.muted ? 3 : item.danger ? 2 : item.warn ? 1 : 0);
-  const ordered = [...items].sort((a, b) => rank(a) - rank(b));
+  const groups = [...new Set(items.map((item) => item.group ?? ''))];
+  const ordered = [...items].sort((a, b) => groups.indexOf(a.group ?? '') - groups.indexOf(b.group ?? '') || rank(a) - rank(b));
+  const grouped = items.some((item) => item.group);
 
   const close = (refocus: boolean) => {
     setOpen(false);
@@ -288,10 +300,16 @@ function RowActionsMenu({
               </div>
             ) : null}
             {ordered.map((item, index) => [
+              grouped && (index === 0 || ordered[index - 1].group !== item.group) && item.group ? (
+                // Tiêu đề nhóm: chữ để đọc, không phải mục bấm.
+                <div key={`group-${item.key}`} role="presentation" className="ra-group">
+                  {item.group}
+                </div>
+              ) : null,
               /* Vạch ngăn giữa hai NHÓM mức độ (thường · cảnh báo · nguy hiểm · hiếm): hai việc
                  khác hẳn hệ quả đứng sát nhau là chỗ ngón tay trượt nhầm trên điện thoại. Là
                  `role="separator"` để trình đọc màn hình cũng nghe ra ranh giới nhóm. */
-              index > 0 && rank(ordered[index - 1]) !== rank(item) ? (
+              index > 0 && !grouped && rank(ordered[index - 1]) !== rank(item) ? (
                 <div key={`sep-${item.key}`} role="separator" className="ra-sep" />
               ) : null,
               <button

@@ -156,6 +156,11 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     expect(update.xmlValue).toContain('label="Gi1/0/24 ↔ eth0"');
     expect(update.style).toContain('imsPaint=cable-2');
     expect(screen.queryByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' })).toBeNull();
+    // Lời báo chỉ chỗ kết nối nằm: sơ đồ cổng của máy giữ dòng, mở tab mới (không bỏ bản vẽ dở).
+    const opened = vi.fn();
+    vi.stubGlobal('open', opened);
+    await user.click(screen.getByRole('button', { name: 'Xem ở sơ đồ cổng của SW-E2E-01' }));
+    expect(opened).toHaveBeenCalledWith('/devices/dev-sw?tab=ports', '_blank', 'noopener');
   });
 
   it('cổng vừa bị chiếm → 409 hiện đỏ TRONG hộp, không gắn gì vào nét; "Chỉ vẽ" để nét vàng', async () => {

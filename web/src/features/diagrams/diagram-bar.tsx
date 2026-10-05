@@ -53,6 +53,40 @@ const HELP: Record<string, string> = {
   guide: 'diagrams.help.guide',
 };
 
+/**
+ * Nhóm của việc trong menu ⋮ (Q-23 05/10): menu của màn sửa dài tới mức phải cuộn mới thấy
+ * "Hướng dẫn", và một dãy mục phẳng không nói mục nào thuộc việc gì. Khoá i18n viết đủ.
+ */
+const GROUP: Record<string, string> = {
+  guide: 'diagrams.menuGroup.help',
+  declare: 'diagrams.menuGroup.cables',
+  bulk: 'diagrams.menuGroup.cables',
+  undeclared: 'diagrams.menuGroup.cables',
+  legend: 'diagrams.menuGroup.cables',
+  draft: 'diagrams.menuGroup.cables',
+  path: 'diagrams.menuGroup.view',
+  drift: 'diagrams.menuGroup.view',
+  export: 'diagrams.menuGroup.view',
+  cabinet: 'diagrams.menuGroup.frames',
+  bind: 'diagrams.menuGroup.frames',
+  photos: 'diagrams.menuGroup.frames',
+  'rebuild-rack': 'diagrams.menuGroup.frames',
+  planned: 'diagrams.menuGroup.frames',
+  image: 'diagrams.menuGroup.frames',
+  publish: 'diagrams.menuGroup.review',
+  submit: 'diagrams.menuGroup.review',
+  decide: 'diagrams.menuGroup.review',
+  withdraw: 'diagrams.menuGroup.review',
+  pins: 'diagrams.menuGroup.review',
+  'pin-mode': 'diagrams.menuGroup.review',
+  versions: 'diagrams.menuGroup.review',
+  timeline: 'diagrams.menuGroup.review',
+  presentation: 'diagrams.menuGroup.review',
+};
+
+/** Menu ⋮ của thanh cao hơn menu một dòng bảng — đủ chỗ cho các nhóm mà ít phải cuộn. */
+const BAR_MENU_MAX_PX = 600;
+
 export function actionHelp(t: Translate, action: BarAction): string | undefined {
   const key = HELP[action.key];
   return action.help ?? (key ? t(key) : undefined);
@@ -123,5 +157,15 @@ export function BarMenu({ label, subject, items }: { label: string; subject: str
   const { t } = useTranslation();
   if (items.length === 0) return null;
   if (items.length === 1) return <BarButton action={{ ...items[0], primary: false }} />;
-  return <RowActions label={label} subject={subject} items={items.map((item) => toMenuItem({ ...item, help: actionHelp(t, item) }))} />;
+  return (
+    <RowActions
+      label={label}
+      subject={subject}
+      maxHeight={BAR_MENU_MAX_PX}
+      items={items.map((item) => ({
+        ...toMenuItem({ ...item, help: actionHelp(t, item) }),
+        group: t(GROUP[item.key] ?? 'diagrams.menuGroup.other'),
+      }))}
+    />
+  );
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
+import { PATHS } from '@/lib/routes';
 import { BulkLinkDialog } from '@/ui/bulk-link-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
@@ -14,6 +15,9 @@ import { CableLegend } from './cable-legend';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
 import { escapeXmlAttr, insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
+
+/** Lời báo "đã khai" có nút chỉ chỗ — để lâu hơn mặc định cho người kịp bấm. */
+const DECLARED_TOAST_MS = 8000;
 
 /** Ô màu IMS trong style server dựng (`imsPaint=cable-2`) — giữ nguyên khi gắn nét. */
 function paintTokenOf(style: string): string {
@@ -76,6 +80,15 @@ export function useCableBridge({
   const [legendOpen, setLegendOpen] = useState(false);
   const [declareOpen, setDeclareOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+
+  /*
+   * Kết nối vừa khai NẰM Ở sơ đồ cổng của máy giữ dòng (Q-23): lời báo chỉ chỗ. Mở tab mới — rời
+   * màn sửa là bỏ dở bản vẽ chưa lưu.
+   */
+  const portMapAction = (link: { deviceId: string; deviceCode: string }) => ({
+    label: t('diagrams.cable.openPortMap', { code: link.deviceCode }),
+    onClick: () => window.open(`${PATHS.device(link.deviceId)}?tab=ports`, '_blank', 'noopener'),
+  });
 
   const remember = (list: DiagramLink[]) => {
     for (const link of list) links.current.set(link.id, link);
@@ -290,7 +303,12 @@ export function useCableBridge({
           cableTypes={cableTypes}
           onDeclared={(link) => {
             bindEdge(current, link);
-            toast({ tone: 'ok', message: t('diagrams.cable.declared', { label: `${link.deviceCode} ${link.portLabel} ↔ ${link.peerDeviceCode} ${link.peerPort ?? '—'}` }) });
+            toast({
+              tone: 'ok',
+              message: t('diagrams.cable.declared', { label: `${link.deviceCode} ${link.portLabel} ↔ ${link.peerDeviceCode} ${link.peerPort ?? '—'}` }),
+              durationMs: DECLARED_TOAST_MS,
+              action: portMapAction(link),
+            });
             dequeue();
           }}
           onBind={(link) => {
@@ -313,7 +331,13 @@ export function useCableBridge({
           onSaved={(keepOpen, saved) => {
             if (!keepOpen) setDeclareOpen(false);
             if (!saved.connectedDeviceId) return;
-            void fetchDiagramLinks([saved.id]).then(drawLinks).catch(() => undefined);
+            void fetchDiagramLinks([saved.id])
+              .then((list) => {
+                drawLinks(list);
+                const [link] = list;
+                if (link) toast({ tone: 'ok', message: t('diagrams.cable.declaredWhere', { code: link.deviceCode }), durationMs: DECLARED_TOAST_MS, action: portMapAction(link) });
+              })
+              .catch(() => undefined);
           }}
         />
       ) : null}

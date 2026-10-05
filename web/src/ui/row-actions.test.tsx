@@ -320,3 +320,27 @@ describe('RowActions — menu ba chấm dùng chung', () => {
     });
   });
 });
+
+describe('RowActions — nhóm có tiêu đề (menu dài của thanh sơ đồ)', () => {
+  it('mục mang `group`: xếp theo nhóm (thứ tự nhóm = lần đầu xuất hiện), tiêu đề nhóm hiện trước nhóm, phím ↓ chỉ đi qua mục', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <RowActions
+        label="Thao tác với bản vẽ"
+        items={[
+          { key: 'guide', label: 'Hướng dẫn', group: 'Trợ giúp', onSelect: vi.fn() },
+          { key: 'declare', label: 'Khai kết nối', group: 'Dây & kết nối', onSelect: vi.fn() },
+          { key: 'versions', label: 'Phiên bản', group: 'Phiên bản & duyệt', onSelect: vi.fn() },
+          { key: 'bulk', label: 'Nối hàng loạt', group: 'Dây & kết nối', onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Thao tác với bản vẽ' }));
+    const menu = screen.getByRole('menu');
+    const order = Array.from(menu.querySelectorAll('.ra-group, [role="menuitem"]')).map((el) => el.textContent);
+    expect(order).toEqual(['Trợ giúp', 'Hướng dẫn', 'Dây & kết nối', 'Khai kết nối', 'Nối hàng loạt', 'Phiên bản & duyệt', 'Phiên bản']);
+    expect(screen.getByRole('menuitem', { name: 'Hướng dẫn' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Khai kết nối' })).toHaveFocus();
+  });
+});
