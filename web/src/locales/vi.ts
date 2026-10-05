@@ -687,6 +687,12 @@ export default {
     notReadyHint: 'Trình vẽ draw.io chưa phản hồi. Bấm Thử lại; vẫn không được thì báo SA kiểm mục draw.io trong RUNBOOK.',
     retry: 'Thử lại',
   },
+  diagramVersion: {
+    official: 'Chính thức v{{seq}}',
+    officialShort: 'v{{seq}}',
+    draft: 'Nháp #{{seq}}',
+    older: 'Phiên bản #{{seq}}',
+  },
   diagramViewer: {
     toolbar: 'Thu phóng bản vẽ',
     zoomIn: 'Phóng to',
@@ -847,7 +853,6 @@ export default {
       breadcrumb: 'Vị trí trên bản đồ',
       allRoots: 'Tất cả bản vẽ',
       inside: '{{count}} Bản vẽ bên trong',
-      version: 'v{{seq}}',
       drafts: '{{count}} Bản nháp',
       never: 'Chưa lưu lần nào',
       ago_now: 'vừa xong',
@@ -986,7 +991,7 @@ export default {
       saved: 'Đã lưu phiên bản #{{seq}}: {{summary}}',
       saveFailed: 'Không lưu được: trình vẽ không xuất được ảnh xem.',
       unsaved: 'Có thay đổi chưa lưu.',
-      savedAt: 'Phiên bản #{{seq}} · {{at}} · {{by}}',
+      savedAt: '{{version}} · {{at}} · {{by}}',
       neverSaved: 'Chưa lưu lần nào.',
       leaveTitle: 'Bản vẽ chưa lưu',
       leaveMessage: 'Rời màn bây giờ thì mất những gì vừa vẽ mà chưa lưu.',
@@ -1143,7 +1148,7 @@ export default {
         'Tạo một phiên bản nháp MỚI chỉ gồm khung tủ mặt trước + mặt sau xếp đúng U theo kho (máy chưa khai U ở cột bên). Phiên bản cũ vẫn còn để khôi phục.',
       rebuildConfirm: 'Dựng lại',
       rebuildStepUp: 'dựng lại mặt tủ "{{name}}"',
-      rebuildDone: 'Đã dựng lại mặt tủ thành phiên bản v{{seq}} (nháp).',
+      rebuildDone: 'Đã dựng lại mặt tủ thành nháp #{{seq}}.',
     },
     cable: {
       declareTitle: 'Khai kết nối này vào sơ đồ cổng?',

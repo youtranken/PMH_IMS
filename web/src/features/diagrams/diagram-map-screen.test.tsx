@@ -413,6 +413,17 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Tủ R1 E2E' });
   });
 
+  it('lần lưu mới nhất là nháp thì ghi "Nháp #n", không ghi "vn" như bản chính thức', async () => {
+    routeFetch({});
+    renderScreen('/diagrams');
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    const t2 = within(map).getByRole('button', { name: /^Tầng 2 E2E/ });
+    expect(t2).toHaveTextContent('Nháp #10 · Thuận');
+    expect(t2).not.toHaveTextContent('v10');
+    const kt = within(within(map).getByRole('list', { name: 'Bản vẽ trong "Tầng 2 E2E"' })).getAllByRole('listitem')[1];
+    expect(kt).toHaveTextContent('4 Bản nháp');
+  });
+
   it('hai nút thêm cạnh nhau nói rõ đích: "+ Bản vẽ con vào <khu>" và "+ Khu mới trong <gốc>"', async () => {
     routeFetch({});
     renderScreen('/diagrams');

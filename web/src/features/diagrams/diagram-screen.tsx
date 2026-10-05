@@ -10,6 +10,7 @@ import { PATHS } from '@/lib/routes';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useConfirm } from '@/ui/confirm-provider';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
+import { diagramVersionLabel } from '@/ui/diagram-version';
 import { DiagramViewer, type ViewerCell, type ViewerDiff } from '@/ui/diagram-viewer';
 import { DrawioFrame, readCablePalette, type DrawioFrameHandle } from '@/ui/drawio-frame';
 import { exportedSvgText, paintImsXml, type DrawioEvent } from '@/ui/drawio-protocol';
@@ -1093,7 +1094,11 @@ function DiagramEditor({
   const savedNote = dirty
     ? t('diagrams.screen.unsaved')
     : lastSaved
-      ? t('diagrams.screen.savedAt', { seq: lastSaved.seq, at: formatDateTime(lastSaved.savedAt), by: lastSaved.savedByName ?? lastSaved.savedBy })
+      ? t('diagrams.screen.savedAt', {
+          version: diagramVersionLabel(t, lastSaved.seq, content.diagram.officialSeq),
+          at: formatDateTime(lastSaved.savedAt),
+          by: lastSaved.savedByName ?? lastSaved.savedBy,
+        })
       : t('diagrams.screen.neverSaved');
   const status = (
     <>

@@ -1,0 +1,24 @@
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Vị thế của một lần lưu so với bản chính thức hiện hành. Mọi lần lưu chung MỘT dãy số, nên chỉ
+ * cần số chính thức để biết: bằng nó là chính thức, lớn hơn (hoặc chưa phát hành lần nào) là
+ * nháp, nhỏ hơn là bản cũ.
+ */
+export type DiagramVersionStanding = 'official' | 'draft' | 'older';
+
+export function diagramVersionStanding(seq: number, officialSeq: number | null | undefined): DiagramVersionStanding {
+  if (!officialSeq || seq > officialSeq) return 'draft';
+  return seq === officialSeq ? 'official' : 'older';
+}
+
+/**
+ * Nhãn phiên bản dùng ở mọi màn (bản đồ, thanh trình xem, trình sửa, hồ sơ thiết bị): "v" CHỈ cho
+ * bản chính thức, mọi lần lưu khác là "#n". Ghi "v2" cho một bản nháp làm người đọc tưởng đã có
+ * bản chính thức thứ 2. `short` bỏ chữ "Chính thức" khi trạng thái đã có chữ riêng bên cạnh.
+ */
+export function diagramVersionLabel(t: Translate, seq: number, officialSeq: number | null | undefined, form: 'long' | 'short' = 'long'): string {
+  const standing = diagramVersionStanding(seq, officialSeq);
+  if (standing === 'official') return t(form === 'short' ? 'diagramVersion.officialShort' : 'diagramVersion.official', { seq });
+  return t(standing === 'draft' ? 'diagramVersion.draft' : 'diagramVersion.older', { seq });
+}

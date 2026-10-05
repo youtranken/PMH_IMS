@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { agoParts, formatDateTime } from '@/lib/format';
+import { diagramVersionLabel } from '@/ui/diagram-version';
 import { NODE_TYPE_KEY, STATUS_KEY, statusLabel, type DiagramNode } from './diagram-api';
 import { filterActive, matchCountInside, nodeMatches, tileTone, type DiagramMap, type MapFilter, type TileTone } from './diagram-map';
 import { flattenTree } from './diagram-tree';
@@ -15,22 +16,22 @@ const BADGE_OF: Record<TileTone, string> = {
   muted: 'badge muted',
 };
 
-/** "v8 · Thuận · 3 ngày trước" — lần lưu mới nhất; cũ hơn 30 ngày thì ghi ngày giờ. */
+/** "v8 · Thuận · 3 ngày trước" (hay "Nháp #9 · …") — lần lưu mới nhất; cũ hơn 30 ngày thì ghi ngày giờ. */
 function savedLine(node: DiagramNode, t: Translate, now: number): string {
   const latest = node.latestVersion;
   if (!latest) return t('diagrams.map.never');
   const ago = agoParts(latest.savedAt, now);
   const when = !ago ? '' : ago.unit === 'days' && ago.count > 30 ? formatDateTime(latest.savedAt) : t(`diagrams.map.ago_${ago.unit}`, { count: ago.count });
-  return [t('diagrams.map.version', { seq: latest.seq }), latest.savedByName ?? latest.savedBy, when].filter(Boolean).join(' · ');
+  return [diagramVersionLabel(t, latest.seq, node.officialSeq, 'short'), latest.savedByName ?? latest.savedBy, when].filter(Boolean).join(' · ');
 }
 
 /** "v12 · 3 Bản nháp" — bản chính thức + số lần lưu chưa phát hành (ô nhỏ không đủ chỗ cho tên người). */
 function tileLine(node: DiagramNode, t: Translate): string {
   if (!node.latestVersion) return t('diagrams.map.never');
   const parts: string[] = [];
-  if (node.officialSeq) parts.push(t('diagrams.map.version', { seq: node.officialSeq }));
+  if (node.officialSeq) parts.push(diagramVersionLabel(t, node.officialSeq, node.officialSeq, 'short'));
   if (node.draftCount) parts.push(t('diagrams.map.drafts', { count: node.draftCount }));
-  return parts.join(' · ') || t('diagrams.map.version', { seq: node.latestVersion.seq });
+  return parts.join(' · ') || diagramVersionLabel(t, node.latestVersion.seq, node.officialSeq, 'short');
 }
 
 /** Chữ trạng thái (luôn có — màu chỉ đi kèm) + lệch kho nếu có. */

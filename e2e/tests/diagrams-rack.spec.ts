@@ -171,7 +171,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await diagramBarAction(page, 'Dựng lại mặt tủ');
     const confirm = page.getByRole('dialog', { name: 'Dựng lại mặt tủ từ kho?' });
     await confirm.getByRole('button', { name: 'Dựng lại' }).click();
-    await expect(page.getByText('Đã dựng lại mặt tủ thành phiên bản v1 (nháp).')).toBeVisible();
+    await expect(page.getByText('Đã dựng lại mặt tủ thành nháp #1.')).toBeVisible();
     const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
     expect(xml).toContain(`Tủ ${rack.cabinetCode} · Mặt trước`);
     expect(xml).toContain(`Tủ ${rack.cabinetCode} · Mặt sau`);
