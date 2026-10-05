@@ -185,6 +185,39 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
   });
 });
 
+describe('Thanh trình xem nói đang xem bản nào', () => {
+  const saved = (id: string, seq: number) => ({ id, seq, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null });
+
+  it('bản nháp mới hơn bản chính thức: "Nháp #2 · chưa phát hành" + nút xem bản chính thức', async () => {
+    const node = { ...ROOT, status: 'official_draft' as const, officialSeq: 1, officialVersionId: 'v1', latestVersion: { id: 'v2', seq: 2, savedAt: '2026-10-03T01:00:00Z', savedBy: 'a' } };
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content?mode=view&versionId=v1': () => jsonResponse(200, { diagram: node, version: { ...saved('v1', 1), xml: '<mxfile/>', svg: SVG } }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: node, version: { ...saved('v2', 2), xml: '<mxfile/>', svg: SVG } }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, node),
+    });
+    renderScreen('/diagrams/d1');
+    await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
+    expect(screen.getByText('Nháp #2 · chưa phát hành')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Xem bản chính thức v1' }));
+    expect(await screen.findByText('Chính thức v1')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('versionId=v1'))).toBe(true);
+  });
+
+  it('chưa phát hành lần nào: chỉ "Nháp #n · chưa phát hành", không có nút xem bản chính thức', async () => {
+    const node = { ...ROOT, status: 'draft' as const, latestVersion: { id: 'v3', seq: 3, savedAt: '2026-10-03T01:00:00Z', savedBy: 'a' } };
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: node, version: { ...saved('v3', 3), xml: '<mxfile/>', svg: SVG } }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, node),
+    });
+    renderScreen('/diagrams/d1');
+    await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
+    expect(screen.getByText('Nháp #3 · chưa phát hành')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Xem bản chính thức/ })).toBeNull();
+  });
+});
+
 describe('Thẻ "Bản vẽ đang trống" của chế độ Sửa', () => {
   it('lưu lần đầu xong thẻ KHÔNG hiện lại che bản vẽ vừa lưu (nội dung đã cache vẫn là "chưa có phiên bản")', async () => {
     const saved = { id: 'v1', seq: 1, summary: 'Thêm 3 thiết bị', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };

@@ -10,7 +10,7 @@ import { PATHS } from '@/lib/routes';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useConfirm } from '@/ui/confirm-provider';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
-import { diagramVersionLabel } from '@/ui/diagram-version';
+import { diagramVersionLabel, diagramVersionStanding } from '@/ui/diagram-version';
 import { DiagramViewer, type ViewerCell, type ViewerDiff } from '@/ui/diagram-viewer';
 import { DrawioFrame, readCablePalette, type DrawioFrameHandle } from '@/ui/drawio-frame';
 import { exportedSvgText, paintImsXml, type DrawioEvent } from '@/ui/drawio-protocol';
@@ -427,6 +427,29 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     body = <EmptyState title={t('diagrams.screen.noVersionTitle')} hint={t('diagrams.screen.noVersionHint')} />;
   } else {
     const version = content.data.version;
+    /*
+     * Luôn nói đang xem bản nào (V-01): người được gửi link tin mình đang thấy sơ đồ chính thức, nên
+     * một bản nháp chưa duyệt phải tự xưng là nháp. Bản trình bày không có bản chính thức để so.
+     */
+    const officialSeq = content.data.diagram.officialSeq ?? null;
+    const officialId = content.data.diagram.officialVersionId ?? null;
+    if (content.data.diagram.kind !== 'presentation') {
+      const standing = diagramVersionStanding(version.seq, officialSeq);
+      const label = diagramVersionLabel(t, version.seq, officialSeq);
+      status = (
+        <>
+          <span className={standing === 'official' ? 'badge ok' : 'badge warn'} role="status">
+            {standing === 'official' ? label : t(standing === 'draft' ? 'diagrams.screen.viewingDraft' : 'diagrams.screen.viewingOlder', { version: label })}
+          </span>
+          {standing !== 'official' && officialId && officialSeq ? (
+            <button type="button" className="btn sm" onClick={() => setParams({ version: officialId })}>
+              {t('diagrams.screen.viewOfficial', { version: diagramVersionLabel(t, officialSeq, officialSeq, 'short') })}
+            </button>
+          ) : null}
+          {status}
+        </>
+      );
+    }
     const view = viewerCells(content.data, t);
     // Lệch kho (Q-23): chỉ báo — dấu trên ô, lời báo trên thanh, hộp liệt kê; không nút nào sửa.
     const drift = content.data.drift ?? [];
