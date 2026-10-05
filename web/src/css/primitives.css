@@ -1692,7 +1692,30 @@ button.tree-summary:hover:not(:disabled) {
   padding: var(--space-5) var(--space-6) 0;
 }
 .dpanel-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.dpanel-path-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* Cấp trên trong đường dẫn: link chữ (bấm chọn bản vẽ đó), không mang dáng nút. */
+.dpanel-path-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  font-weight: var(--fw-medium);
+  color: var(--primary);
+}
+.dpanel-path-link:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
 }
 .dpanel-head {
   display: flex;

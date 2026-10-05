@@ -248,11 +248,35 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(items[0]).toHaveAttribute('aria-selected', 'true');
     expect(within(aside).getByRole('heading', { level: 2, name: 'Phòng server E2E' })).toBeInTheDocument();
     expect(aside).toHaveTextContent('15 Phiên bản · 24 Thiết bị · 41 Dây · 2 Tủ mạng · Phụ trách: thuan@x');
-    expect(aside).toHaveTextContent('Toàn công ty E2E › Tầng 2 E2E › Phòng server E2E');
+    expect(within(aside).getByRole('navigation', { name: 'Đường dẫn bản vẽ' })).toHaveTextContent('Toàn công ty E2ETầng 2 E2EPhòng server E2E');
     const user = userEvent.setup();
     // Nháp của người khác: nút nói rõ đang động vào việc của ai (D-04).
     await user.click(within(aside).getByRole('button', { name: 'Sửa tiếp nháp #15 (của Thuận)' }));
     expect(location).toBe('/diagrams/sv?mode=edit');
+  });
+
+  it('đường dẫn trong panel bấm được: chọn bản vẽ cấp trên (D-06)', async () => {
+    routeFetch({});
+    renderScreen('/diagrams?node=sv');
+    const aside = await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    const trail = within(aside).getByRole('navigation', { name: 'Đường dẫn bản vẽ' });
+    expect(within(trail).queryByRole('button', { name: 'Phòng server E2E' })).toBeNull();
+    await userEvent.setup().click(within(trail).getByRole('button', { name: 'Tầng 2 E2E' }));
+    expect(location).toBe('/diagrams?node=t2');
+  });
+
+  it('bản vẽ gốc đứng một mình: panel không chừa khối trống trên tên (D-06)', async () => {
+    const LONE = node('lone', null, 'Một mình E2E');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(String(input).endsWith('/api/v1/diagrams') ? jsonResponse(200, [LONE]) : jsonResponse(404, { code: 'NOT_FOUND' })),
+      ),
+    );
+    renderScreen('/diagrams?node=lone');
+    const aside = await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    await within(aside).findByRole('heading', { level: 2, name: 'Một mình E2E' });
+    expect(aside.querySelector('.dpanel-top')).toBeNull();
   });
 
   it('bấm tab bản vẽ khác: panel đổi sang nó, ?node= đổi theo', async () => {
@@ -397,11 +421,15 @@ describe('Panel bản vẽ đang chọn', () => {
     const view = renderScreen('/diagrams?node=r1', MEMBER);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));
+    // Nhánh chưa có bản chính thức nào: "Trình chiếu" tắt kèm lý do, không mời bấm ra màn trống (D-06).
     expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Xóa hẳn']);
+    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toBeDisabled();
+    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toHaveTextContent('Nhánh chưa có bản chính thức nào');
     view.unmount();
     renderScreen('/diagrams?node=lt', MEMBER);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Lễ tân E2E' }));
     expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con']);
+    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toBeEnabled();
     await user.keyboard('{Escape}');
     renderScreen('/diagrams?node=r1', ME);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));

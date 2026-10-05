@@ -901,6 +901,7 @@ export default {
       devicesNone: 'Không thiết bị nào khớp "{{q}}".',
     },
     panel: {
+      pathLabel: 'Đường dẫn bản vẽ',
       label: 'Bản vẽ đang chọn',
       siblingsOf: 'Bản vẽ trong "{{name}}"',
       siblingsRoots: 'Các bản vẽ gốc',
@@ -1069,6 +1070,7 @@ export default {
     },
     slideshow: {
       start: 'Trình chiếu',
+      nothing: 'Nhánh chưa có bản chính thức nào',
       label: 'Trình chiếu sơ đồ',
       viewerTitle: 'Trình chiếu: {{name}}',
       progressLabel: 'Trang đang chiếu',

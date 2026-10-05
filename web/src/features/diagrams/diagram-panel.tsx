@@ -8,6 +8,7 @@ import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { LoadError, Loading } from '@/ui/load-state';
+import { Chevron } from '@/ui/chevron';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
@@ -281,18 +282,37 @@ export function DiagramPanel({
 
   return (
     <div className="dpanel">
-      <div className="dpanel-top">
-        {path.length > 1 ? <span className="muted dpanel-path">{path.map((n) => n.name).join(' › ')}</span> : null}
-        {siblings.length > 1 ? (
-          <Tabs
-            wrap
-            ariaLabel={siblingsLabel}
-            value={node.id}
-            onChange={onSelect}
-            items={siblings.map((s) => ({ key: s.id, label: s.name, count: s.versionCount }))}
-          />
-        ) : null}
-      </div>
+      {/* Không có đường dẫn lẫn dải cùng khu thì không chừa khối trống trên tên (D-06). */}
+      {path.length > 1 || siblings.length > 1 ? (
+        <div className="dpanel-top">
+          {path.length > 1 ? (
+            // Mỗi cấp trên là một nút chọn bản vẽ đó — trông như breadcrumb thì phải đi được (D-06).
+            <nav className="dpanel-path" aria-label={t('diagrams.panel.pathLabel')}>
+              {path.map((n, index) => (
+                <span key={n.id} className="dpanel-path-step">
+                  {index > 0 ? <Chevron direction="right" className="crumb-sep" /> : null}
+                  {index < path.length - 1 ? (
+                    <button type="button" className="dpanel-path-link" onClick={() => onSelect(n.id)}>
+                      {n.name}
+                    </button>
+                  ) : (
+                    <span>{n.name}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          ) : null}
+          {siblings.length > 1 ? (
+            <Tabs
+              wrap
+              ariaLabel={siblingsLabel}
+              value={node.id}
+              onChange={onSelect}
+              items={siblings.map((s) => ({ key: s.id, label: s.name, count: s.versionCount }))}
+            />
+          ) : null}
+        </div>
+      ) : null}
       <TabPanel tabKey={node.id}>
         <div className="dpanel-head">
           <div className="dpanel-title">

@@ -23,6 +23,7 @@ import { useIsNarrow } from '@/ui/use-narrow';
 import { useNow } from '@/ui/use-now';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { TREE_KEY, type DiagramNode, type FoundDevice } from './diagram-api';
+import { slideOrder } from './diagram-tree';
 import { buildMap, canPurge, filterActive, nodeMatches, resolveSelection, TODO_KINDS, todoCounts, type MapFilter, type TodoKind } from './diagram-map';
 import { DiagramArchivedSection, useArchivedDiagrams } from './diagram-archived';
 import { DiagramListView, DiagramMapView } from './diagram-map-view';
@@ -139,9 +140,13 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const actionsOf = (node: DiagramNode): RowAction[] => {
     const items: RowAction[] = [];
     if (node.kind !== 'presentation') {
+      // Nhánh chưa phát hành bản nào thì trình chiếu chỉ ra màn trống: tắt kèm lý do (D-06).
+      const nothingToShow = slideOrder(all, node.id).length === 0;
       items.push({
         key: 'present',
         label: t('diagrams.slideshow.start'),
+        disabled: nothingToShow,
+        hint: nothingToShow ? t('diagrams.slideshow.nothing') : undefined,
         // Toàn màn hình phải xin ngay trong cú bấm (trình duyệt chặn nếu xin sau khi chuyển trang).
         onSelect: () => {
           enterFullscreen();
