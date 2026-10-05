@@ -171,3 +171,38 @@ describe('Màn Thiết bị — thẻ điện thoại', () => {
     expect(await screen.findByText(/TOWER · TU-01 · U30/)).toBeInTheDocument();
   });
 });
+
+/* K-03: hạn đổi mật khẩu trong két hiện ở danh sách thiết bị (Admin/SA), như Tài khoản dịch vụ. */
+describe('Màn Thiết bị — hạn đổi mật khẩu két', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('máy có két quá hạn đổi: dòng phụ "Quá 5 ngày — cần đổi"; hỏi due theo ownerType=device', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        urls.push(url);
+        if (url.startsWith('/api/v1/vault/owners/due')) {
+          return Promise.resolve(jsonResponse(200, [{ ownerId: 'd1', valueChangedAt: '2025-01-01T00:00:00Z', dueInDays: -5 }]));
+        }
+        if (url.startsWith('/api/v1/devices?')) {
+          return Promise.resolve(
+            jsonResponse(200, { items: [{ id: 'd1', code: 'SW-E2E-K3', name: 'Switch', status: 'in_use', siteCode: null, cabinetCode: null, assignedTo: null, warrantyEnd: null }], total: 1 }),
+          );
+        }
+        return Promise.resolve(jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [] }));
+      }),
+    );
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/devices']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <DevicesScreen me={ME} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Quá 5 ngày — cần đổi')).toBeInTheDocument();
+    expect(urls.some((u) => u === '/api/v1/vault/owners/due?ownerType=device')).toBe(true);
+  });
+});

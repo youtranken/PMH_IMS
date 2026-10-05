@@ -19,6 +19,8 @@ import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { rackUnitLabel } from '@/lib/rack-units';
 import { useDepartments } from '@/ui/use-departments';
+import { SecretDueSub } from '@/ui/secret-due';
+import { useSecretDue } from '@/ui/use-secret-due';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
@@ -184,6 +186,8 @@ export function DevicesScreen({ me }: { me: Me }) {
       ),
   });
   const ipsOf = heldIps.data;
+  /* Hạn đổi mật khẩu két của máy (K-03) — chỉ Admin/SA, như Tài khoản dịch vụ. */
+  const dueOf = useSecretDue('device', me.role === 'sa' || me.role === 'admin');
 
   /**
    * `id` của cột PHẢI khớp whitelist `DEVICE_SORT_KEYS` phía API — đó là tên cột gửi lên
@@ -204,6 +208,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             {/* IP là dòng phụ dưới mã, không phải cột riêng: ở 1280px thêm một cột là cột Tên
                 bị ép. Nhiều IP thì hiện cái đầu + số còn lại. */}
             <IpSub ips={ipsOf?.[row.original.id]} />
+            <SecretDueSub entry={dueOf.get(row.original.id)} />
           </>
         ),
       },
@@ -306,7 +311,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         ),
       },
     ],
-    [t, ipsOf, navigate, openStatus],
+    [t, ipsOf, navigate, openStatus, dueOf],
   );
 
   /* Điện thoại: thẻ gọn ~96px thay cho bảng xếp chồng 8 dòng/máy. Không có nút Sửa — form

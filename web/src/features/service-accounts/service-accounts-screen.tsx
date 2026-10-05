@@ -1,3 +1,4 @@
+import { useSecretDue } from '@/ui/use-secret-due';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -119,18 +120,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
    * module `service-accounts`: `vault` đã phụ thuộc `service-accounts`, gọi ngược là vòng (AD-2).
    * Chỉ SA/Admin — bản đồ két không mở cho Member.
    */
-  const due = useQuery({
-    queryKey: ['vault', 'owners', 'due', 'service_account'],
-    enabled: canEdit,
-    queryFn: () =>
-      apiFetch<{ ownerId: string; valueChangedAt: string; dueInDays: number }[]>(
-        '/api/v1/vault/owners/due?ownerType=service_account',
-      ),
-  });
-  const dueByOwner = useMemo(
-    () => new Map((due.data ?? []).map((item) => [item.ownerId, item])),
-    [due.data],
-  );
+  const dueByOwner = useSecretDue('service_account', canEdit);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
 

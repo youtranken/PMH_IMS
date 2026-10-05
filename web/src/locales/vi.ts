@@ -2552,6 +2552,7 @@ export default {
     /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
        ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
     changedCol: 'Đổi lần cuối',
+    dueSubLabel: 'Két đổi lần cuối',
     changedBy: 'Người đổi: {{who}}',
     dueLeft: 'còn {{count}} ngày',
     dueToday: 'Đến hạn đổi hôm nay — cần đổi',

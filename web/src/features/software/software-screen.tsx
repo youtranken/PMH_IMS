@@ -1,3 +1,5 @@
+import { SecretDueSub } from '@/ui/secret-due';
+import { useSecretDue } from '@/ui/use-secret-due';
 import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -172,6 +174,8 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
    * join sang bảng của module khác, vi phạm AD-2. Cột "Seat" là số đã dùng/tổng, số đã dùng
    * tính từ bảng license_assignment nên không có cột thật để sắp.
    */
+  /* Hạn đổi mật khẩu trong két của hồ sơ (K-03) — Admin/SA. */
+  const dueOf = useSecretDue('software', me.role === 'sa' || me.role === 'admin');
   const columns = useMemo<ColumnDef<SoftwareRow, unknown>[]>(
     () => [
       {
@@ -184,6 +188,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
               <Link className="mono" to={softwareItemPath(row.original.kind, row.original.id)}>
                 {row.original.code}
               </Link>
+              <SecretDueSub entry={dueOf.get(row.original.id)} />
               {/* Hồ sơ hiện ra vì MÁY đang giữ ghế khớp ô tìm — nói ra, không thì người tìm
                   "LT-05" thấy một hồ sơ không có chữ đó và tưởng ô tìm hỏng (SW-010). */}
               {matched ? (
@@ -268,7 +273,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         ),
       },
     ],
-    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats, spec.key],
+    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats, spec.key, dueOf],
   );
 
   return (
