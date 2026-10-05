@@ -440,7 +440,13 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       />
     );
   } else if (!content.data.version?.svg) {
-    body = <EmptyState title={t('diagrams.screen.noVersionTitle')} hint={t('diagrams.screen.noVersionHint')} />;
+    // Phiên bản dựng tự động (dựng lại mặt tủ / dựng nháp) có nội dung nhưng chưa có ảnh xem.
+    const seq = content.data.version?.seq;
+    body = seq ? (
+      <EmptyState title={t('diagrams.screen.noPreviewTitle', { seq })} hint={t('diagrams.screen.noPreviewHint')} />
+    ) : (
+      <EmptyState title={t('diagrams.screen.noVersionTitle')} hint={t('diagrams.screen.noVersionHint')} />
+    );
   } else {
     const version = content.data.version;
     /*
@@ -837,6 +843,11 @@ function DiagramEditor({
   const [startDismissed, setStartDismissed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<VersionItem | null>(content.version);
+  /*
+   * Phiên bản dựng tự động (dựng lại mặt tủ, dựng nháp) chưa có ảnh xem: Lưu bật ngay dù chưa sửa gì
+   * — lưu chính là cách tạo ảnh xem cho tab Xem (server cũng nhận đó là một phiên bản).
+   */
+  const [needsPreview, setNeedsPreview] = useState(Boolean(content.version && !content.version.svg));
   const [others, setOthers] = useState<{ fullName: string }[]>([]);
   const [stockOpen, setStockOpen] = useState(false);
   const [inserting, setInserting] = useState(false);
@@ -996,6 +1007,7 @@ function DiagramEditor({
       );
       basedOn.current = version.id;
       setDirty(false);
+      setNeedsPreview(false);
       // Bản mới nhất có thể là của người khác lưu trùng nội dung: dòng "Đã lưu #n" theo đúng bản đó.
       setLastSaved(version);
       // Trùng y nguyên bản mới nhất: server không tạo phiên bản nào (Q-23) — không có gì mới để báo.
@@ -1087,7 +1099,7 @@ function DiagramEditor({
          * Ctrl+S trong trình vẽ cũng tới đây, kể cả khi nút Lưu đang tắt: chưa sửa gì thì chỉ báo,
          * không xin trình vẽ xuất, không gọi server (Q-23 — mỗi lần lưu là một phiên bản).
          */
-        if (!dirty) {
+        if (!dirty && !needsPreview) {
           toast({ tone: 'warn', message: t('diagrams.screen.nothingToSave') });
           break;
         }
@@ -1201,8 +1213,8 @@ function DiagramEditor({
           <button
             type="button"
             className="btn primary"
-            disabled={!ready || busy || !dirty}
-            title={ready && !busy && !dirty ? t('diagrams.screen.nothingToSave') : undefined}
+            disabled={!ready || busy || (!dirty && !needsPreview)}
+            title={ready && !busy && !dirty && !needsPreview ? t('diagrams.screen.nothingToSave') : undefined}
             onClick={() => frame.current?.send({ action: 'save' })}
           >
             {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}

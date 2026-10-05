@@ -1425,10 +1425,12 @@ export class DiagramsService {
       // Bấm Lưu mà không sửa gì (Q-23): không thêm phiên bản "Không đổi gì" vào chuỗi lịch sử, không
       // ghi nhật ký — chưa có gì được ghi. So trong khoá hàng để không lỡ một lượt lưu vừa chen vào.
       const sameDrawing = latest !== null && drawingKey(latest.xml) === dryKey;
-      if (sameDrawing && sameSnapshot(latest.deviceSnapshot, snapshot)) return { id: latest.id, unchanged: true };
+      // Bản dựng tự động (dựng lại mặt tủ, dựng nháp từ sơ đồ cổng) chưa có ảnh xem: lưu lại y nguyên
+      // chính là cách tạo ảnh xem, nên vẫn là một phiên bản.
+      if (sameDrawing && latest.hasSvg && sameSnapshot(latest.deviceSnapshot, snapshot)) return { id: latest.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
       // Nét vẽ y nguyên, kho đã đổi: lần lưu này chỉ để chụp lại máy (lệch kho tính từ bản chụp).
-      let summary = sameDrawing ? SNAPSHOT_ONLY_SUMMARY : summarizeDiff(diff);
+      let summary = !sameDrawing ? summarizeDiff(diff) : latest.hasSvg ? SNAPSHOT_ONLY_SUMMARY : PREVIEW_ONLY_SUMMARY;
       if (latest && input.basedOnVersionId !== latest.id) {
         const names = await this.users.namesByEmails([latest.savedBy.toLowerCase()]);
         summary += ` · ${overwriteNote(names.get(latest.savedBy.toLowerCase()) ?? latest.savedBy)}`;
@@ -1538,6 +1540,7 @@ export class DiagramsService {
         xml: diagramVersionTable.xml,
         cellIndex: diagramVersionTable.cellIndex,
         deviceSnapshot: diagramVersionTable.deviceSnapshot,
+        hasSvg: sql<boolean>`${diagramVersionTable.svg} IS NOT NULL`,
         savedBy: diagramVersionTable.savedBy,
       })
       .from(diagramVersionTable)
@@ -1757,6 +1760,7 @@ function toDiagramLink(link: PortLink, slots: Map<string, number>): DiagramLink 
 }
 
 const SNAPSHOT_ONLY_SUMMARY = 'Chụp lại thông tin thiết bị theo kho';
+const PREVIEW_ONLY_SUMMARY = 'Tạo ảnh xem cho bản dựng tự động';
 
 /**
  * Hai bản chụp thiết bị như nhau? So sau khi xếp khoá: jsonb trả object theo thứ tự khoá của nó,

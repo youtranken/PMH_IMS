@@ -210,7 +210,7 @@ describe('Lưu khi không có gì đổi (Q-23 05/10)', () => {
   async function openEditor(saveResponse: () => Response) {
     const fetchMock = routeFetch({
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
-      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...version, xml: '<mxfile/>', svg: null } }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...version, xml: '<mxfile/>', svg: SVG } }),
       '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
       '/api/v1/diagrams/d1/versions': saveResponse,
       '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
@@ -258,6 +258,46 @@ describe('Lưu khi không có gì đổi (Q-23 05/10)', () => {
     expect(saves()).toHaveLength(1);
     expect(screen.queryByText(/Đã lưu phiên bản/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
+  });
+});
+
+describe('Phiên bản dựng tự động chưa có ảnh xem (Dựng lại mặt tủ / Dựng nháp từ sơ đồ cổng)', () => {
+  const built = { id: 'v4', seq: 4, summary: 'Dựng lại mặt tủ R1', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+
+  it('Xem: nói rõ phiên bản chưa có ảnh xem và cách tạo — không nói "chưa có nội dung"', async () => {
+    const node = { ...ROOT, status: 'draft' as const, latestVersion: { id: 'v4', seq: 4, savedAt: '2026-10-03T01:00:00Z', savedBy: 'a' } };
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: node, version: { ...built, xml: '<mxfile/>', svg: null } }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, node),
+    });
+    renderScreen('/diagrams/d1');
+    expect(await screen.findByText('Phiên bản #4 chưa có ảnh xem')).toBeInTheDocument();
+    expect(screen.getByText(/mở tab Sửa rồi bấm Lưu/)).toBeInTheDocument();
+    expect(screen.queryByText('Bản vẽ chưa có nội dung')).toBeNull();
+  });
+
+  it('Sửa: nút Lưu bật ngay dù chưa sửa gì — lưu là cách tạo ảnh xem', async () => {
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...built, xml: '<mxfile/>', svg: null } }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    });
+    const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], { initialEntries: ['/diagrams/d1?mode=edit'] });
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ event: 'init' }), source: frame.contentWindow }));
+    });
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
   });
 });
 
@@ -410,7 +450,7 @@ function info(id: string, code: string, extra: Partial<DiagramDeviceInfo> = {}):
 async function openEditor() {
   const fetchMock = routeFetch({
     '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
-    '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: HAVE_XML, svg: null }, deviceCells: [], devices: [] }),
+    '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: HAVE_XML, svg: SVG }, deviceCells: [], devices: [] }),
     '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
     '/api/v1/diagrams/device-info': () => jsonResponse(200, [info('dev-ok', 'SW-E2E-OK')]),
     '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),

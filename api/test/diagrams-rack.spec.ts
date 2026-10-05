@@ -262,6 +262,12 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     const content = await service.content(SA.email, rack.id, { mode: 'view', versionId: rebuilt.id });
     expect(content.cableEdges?.find((e) => e.cellId === 'cap-1')).toMatchObject({ state: 'linked' });
     expect(saved.seq).toBe(2);
+    // Bản dựng lại chưa có ảnh xem: lưu lại y nguyên vẫn tạo phiên bản (để có ảnh xem); lần sau mới là "không đổi gì".
+    const same = xml2;
+    const preview = await service.save(SA.email, rack.id, { xml: same, svg: SVG, basedOnVersionId: rebuilt.id });
+    expect(preview).toMatchObject({ seq: 4, summary: 'Tạo ảnh xem cho bản dựng tự động' });
+    expect(preview.unchanged).toBeUndefined();
+    expect(await service.save(SA.email, rack.id, { xml: same, svg: SVG, basedOnVersionId: preview.id })).toMatchObject({ id: preview.id, unchanged: true });
     await scratch.pool.query(`DELETE FROM device_port WHERE id = $1`, [linkId]);
   });
 
