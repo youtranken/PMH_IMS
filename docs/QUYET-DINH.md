@@ -420,6 +420,13 @@ nếu chủ dự án không đồng ý.
   theo dõi hạn.
 - Lưu trữ giữ một bảng `software` với cột `kind` (không tách bảng): nhắc hạn, gia hạn, két, lịch sử,
   thanh lý dùng nguyên như cũ; chỉ tách màn và menu.
+- **Két sắt theo bốn màn của Q-22** (soát UX đợt 2, 05/10/2026, K-01/K-02): trang tổng Két có
+  chip lọc riêng cho từng màn — Phần mềm · Tên miền & SSL · Hợp đồng bảo trì · Dịch vụ khác —
+  thay cho một chip "Phần mềm" gom cả bốn; cột Loại ghi đúng màn. API trang tổng trả thêm màn của
+  hồ sơ phần mềm (`softwareKind`, chỉ loại hồ sơ — không gì về nội dung két). Mã hồ sơ là link sang
+  trang của chính màn đó (nút "Mở két" vẫn riêng).
+- **Hạn đổi mật khẩu hiện ở mọi danh sách có két** (K-03): Thiết bị, bốn màn phần mềm, Đường
+  truyền hiện dòng phụ "Đổi mật khẩu …" như Tài khoản dịch vụ (Admin/SA — Member không có bản đồ két).
 
 ### Q-23 · Epic 10 — Sơ đồ mạng thay Visio (02/10/2026, chủ dự án chốt qua buổi brainstorm)
 
@@ -703,6 +710,9 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     kia, giữ VLAN / người dùng / ghi chú (endpoint `unlink` sẵn có, có nhật ký); hỏi xác nhận.
   - **Lọc danh sách thiết bị theo Phòng ban** (T-08), file xuất khớp bộ lọc (thêm `department`
     vào bộ lọc xuất).
+- **Hộp mã sơ đồ cũng là hộp NHỎ như hộp mã két** (soát UX đợt 2, K-04, 05/10/2026): tiêu đề
+  "Nhập mã 6 số để mở sơ đồ", một dòng nói đang mở gì, 6 ô mã, nút Hủy — bỏ đoạn giải thích dài.
+  Phạm vi mã vẫn là `diagram` (mã két không mở sơ đồ), ân hạn và nhật ký như cũ.
 
 ### Q-25 · Thư gửi lỗi phải có người thấy và gửi lại được (05/10/2026, chủ dự án duyệt top 10 soát UX)
 
