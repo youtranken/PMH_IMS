@@ -96,7 +96,7 @@ describe('Nhật ký — lọc nhanh theo ngày, nhóm theo ngày, chọn hành 
     expect(titles).toEqual(['Đăng nhập & phiên', 'Két sắt']);
     const list = screen.getByRole('listbox');
     expect(within(list).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Mọi hành động',
+      'Tất cả hành động',
       'Đăng nhập',
       'Đăng xuất',
       'Xem mật khẩu trong két',

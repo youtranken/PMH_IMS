@@ -8,7 +8,7 @@ import { DevicesScreen } from './devices-screen';
 
 /**
  * Q-20 — màn Thiết bị mặc định ẨN máy đã thanh lý (Kho thanh lý là nơi xem chúng): bộ lọc trống
- * gửi `status=live`. Chọn đích danh "Đã thanh lý" vẫn ra; "Mọi trạng thái" thì không lọc.
+ * gửi `status=live`. Chọn đích danh "Đã thanh lý" vẫn ra; "Tất cả trạng thái" thì không lọc.
  */
 
 const ME = { role: 'sa', csrfToken: 't', email: 'sa@pmh.com.vn' } as unknown as Me;

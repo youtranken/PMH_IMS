@@ -575,3 +575,14 @@ describe('T-03: tủ chỉ có một tên — "Tủ mạng"', () => {
     expect(lookup('diagrams.frames.cabinetButton')).toBe('Chèn tủ mạng');
   });
 });
+
+/** T-07 (Q-24 05/10): mục "bỏ lọc" đầu mỗi ô lọc viết "Tất cả …", không lẫn "Mọi …". */
+describe('T-07: mục bỏ lọc viết "Tất cả …"', () => {
+  it('không khoá `all*` / `statusAll` / `filterStateAll` nào mở đầu bằng "Mọi"', () => {
+    const bad = leaves()
+      .filter(([key]) => /(^|\.)(all[A-Z]\w*|statusAll|filterStateAll)$/.test(key))
+      .filter(([, text]) => /^Mọi\b/.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+});
