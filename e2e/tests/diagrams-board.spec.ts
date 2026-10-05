@@ -387,6 +387,7 @@ test.describe('Sơ đồ mạng — Xóa vĩnh viễn bản đã lưu trữ (Q-2
 
     await page.goto('/diagrams?archived=1');
     const section = page.getByRole('region', { name: /Bản vẽ đã lưu trữ/ });
+    await expect(section.getByRole('listitem').filter({ hasText: name })).toBeVisible();
     await section.getByRole('button', { name: `Xóa vĩnh viễn "${name}"` }).click();
     const confirm = page.getByRole('dialog', { name: `Xóa vĩnh viễn "${name}"?` });
     await expect(confirm).toContainText('kể cả bản chính thức');
@@ -396,7 +397,7 @@ test.describe('Sơ đồ mạng — Xóa vĩnh viễn bản đã lưu trữ (Q-2
     await go.click();
     await fillOtp(page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' }), await freshTotpCode(secret));
     await expect(page.getByText(`Đã xóa vĩnh viễn "${name}".`)).toBeVisible();
-    await expect(section.getByText(name, { exact: true })).toHaveCount(0);
+    await expect(section.getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${id}'`)).toBe('0');
     expect(sql(`SELECT deleted_by FROM diagram WHERE id = '${id}' AND official_version_id IS NULL`)).toBe(E2E_SA.email);
     expect(sql(`SELECT count(*) FROM diagram_history WHERE diagram_id = '${id}' AND action IN ('version.published', 'erased')`)).toBe('2');
@@ -431,7 +432,8 @@ test.describe('Sơ đồ mạng — Xóa vĩnh viễn bản đã lưu trữ (Q-2
     await stepUpViaApi(member, memberSecret, 'diagram');
     await member.goto('/diagrams?archived=1');
     const section = member.getByRole('region', { name: /Bản vẽ đã lưu trữ/ });
-    await expect(section.getByText(parentName, { exact: true })).toBeVisible();
+    // Dòng của bản vẽ con cũng chứa tên cha ("Trong …"): lấy dòng BẮT ĐẦU bằng tên cha.
+    await expect(section.getByRole('listitem').filter({ hasText: new RegExp(`^${parentName}`) })).toBeVisible();
     await expect(section.getByRole('button', { name: /Xóa vĩnh viễn/ })).toHaveCount(0);
     const forbidden = await member.request.post(`/api/v1/diagrams/${child}/erase`, { headers: await writeHeaders(member), data: { name: childName }, failOnStatusCode: false });
     expect(forbidden.status()).toBe(403);

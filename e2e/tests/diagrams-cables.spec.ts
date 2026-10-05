@@ -405,7 +405,8 @@ test.describe('Đi dây — bẻ dây bằng điểm uốn, không vẽ thêm n�
     const v2 = (await saved.json()) as { id: string; unchanged?: boolean };
     expect(v2.unchanged).toBeUndefined();
     const stored = sql(`SELECT xml FROM diagram_version WHERE id = '${v2.id}'`);
-    expect(stored).toMatch(/id="e1"><mxCell[^>]*source="a"[^>]*target="b"|id="e1"><mxCell[^>]*target="b"[^>]*source="a"/);
+    // XML lưu do draw.io xuất có xuống dòng giữa thẻ.
+    expect(stored).toMatch(/id="e1">\s*<mxCell[^>]*source="a"[^>]*target="b"/);
     expect(stored).not.toContain('exitX=0');
     const ok = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: { versionId: v2.id } });
     expect(ok.status(), await ok.text()).toBe(201);

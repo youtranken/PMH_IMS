@@ -36,10 +36,11 @@ async function createDiagram(page: Page, data: Record<string, unknown>): Promise
   return ((await res.json()) as { id: string }).id;
 }
 
-async function save(page: Page, id: string): Promise<{ id: string; seq: number }> {
+/** `label` khác nhau = nét vẽ khác nhau: lưu y nguyên bản mới nhất không tạo phiên bản (Q-23). */
+async function save(page: Page, id: string, label = 'Phòng E2E'): Promise<{ id: string; seq: number }> {
   const res = await page.request.post(`/api/v1/diagrams/${id}/versions`, {
     headers: await writeHeaders(page),
-    data: { xml: XML, svg: SVG, basedOnVersionId: null },
+    data: { xml: XML.replace('Phòng E2E', label), svg: SVG, basedOnVersionId: null },
   });
   expect(res.status(), await res.text()).toBe(201);
   return (await res.json()) as { id: string; seq: number };
@@ -104,7 +105,7 @@ test.describe('Sơ đồ mạng — soát UX đợt 2', () => {
     expect(await hijack.json()).toMatchObject({ code: 'DIAGRAM_SUBMIT_NOT_OWN_DRAFT' });
 
     // Vẽ tiếp rồi lưu — bản mới là của Thành viên, gửi được.
-    await save(member, id);
+    await save(member, id, 'Phòng E2E vẽ tiếp');
     const sent = await member.request.post(`/api/v1/diagrams/${id}/submit`, { headers: await writeHeaders(member), data: { reason: 'Vẽ xong E2E' } });
     expect(sent.status(), await sent.text()).toBe(201);
     await member.context().close();

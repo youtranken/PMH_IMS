@@ -269,9 +269,9 @@ test.describe('Sơ đồ mạng — mặt tủ không đè U, dây không đứt
     const v2 = ((await saved.json()) as { id: string }).id;
     const stored = sql(`SELECT xml FROM diagram_version WHERE id = '${v2}'`);
     // Ô cũ được dời (không có ô thứ hai cho mặt trước), cao đúng 1U, dây vẫn nối hai ô cũ.
-    const upsCell = new RegExp(`id="cell-ups"><mxCell[^>]*>\\s*<mxGeometry[^>]*height="14.8"`);
-    expect(stored).toMatch(upsCell);
-    expect(stored).toMatch(/id="cap"><mxCell[^>]*source="cell-fw"[^>]*target="cell-ups"/);
+    // XML lưu do draw.io xuất có xuống dòng giữa thẻ, thuộc tính xếp theo tên.
+    expect(stored).toMatch(/id="cell-ups">\s*<mxCell[^>]*>\s*<mxGeometry height="14.8"/);
+    expect(stored).toMatch(/id="cap">\s*<mxCell[^>]*source="cell-fw"[^>]*target="cell-ups"/);
     const view = (await (await page.request.get(`/api/v1/diagrams/${diagramId}/content?mode=view&versionId=${v2}`)).json()) as {
       cableEdges: { cellId: string; state: string }[];
     };
@@ -286,6 +286,13 @@ test.describe('Sơ đồ mạng — mặt tủ không đè U, dây không đứt
     expect(rebuilt).toContain(`ims_link_id="${linkId}"`);
     const latest = (await (await page.request.get(`/api/v1/diagrams/${diagramId}/content?mode=view`)).json()) as { cableEdges: { cellId: string; state: string }[] };
     expect(latest.cableEdges.map((e) => e.state)).toEqual(['linked']);
+    // Bản dựng lại chưa có ảnh xem: Lưu bật ngay dù chưa sửa gì — lưu là cách tạo ảnh xem.
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    const [preview] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(preview.status(), await preview.text()).toBe(201);
     await page.goto(`/diagrams/${diagramId}`);
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
     if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-dung-lai-xem.png` });
