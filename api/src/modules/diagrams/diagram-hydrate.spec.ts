@@ -13,6 +13,7 @@ import {
   type CableHydration,
   type DeviceCellSource,
 } from './diagram-hydrate';
+import { PALETTE } from '../../common/palette.generated';
 
 const DEV = '7b0c1c1e-0000-4000-8000-000000000001';
 const GONE = '7b0c1c1e-0000-4000-8000-0000000000ff';
@@ -204,6 +205,34 @@ describe('deviceInsertCell — ô mới khi chèn từ hộp "Thiết bị kho"'
     const plain = deviceInsertCell(source());
     expect(plain.attrs).toEqual({});
     expect(plain.style).toContain('shape=mxgraph.networks.switch;');
+  });
+});
+
+describe('deviceInsertCell — biểu tượng có màu như bảng hình draw.io (V-10)', () => {
+  const fill = PALETTE.diagramIconFill;
+  const stroke = PALETTE.diagramIconStroke;
+  it('hình thư viện mạng: tô + viền (màu từ token), không còn nét đen trên nền trắng', () => {
+    const style = deviceInsertCell(source({ shape: 'mxgraph.networks.ups_small' })).style;
+    expect(style).toContain(`fillColor=${fill};`);
+    expect(style).toContain(`strokeColor=${stroke};`);
+    expect(style).toContain('gradientColor=none;');
+  });
+  it('hình Cisco: khối tô màu viền, nét trắng — như bảng hình Cisco của draw.io', () => {
+    const style = deviceInsertCell(source({ shape: 'mxgraph.cisco.switches.workgroup_switch' })).style;
+    expect(style).toContain(`fillColor=${stroke};`);
+    expect(style).toContain(`strokeColor=${PALETTE.surface};`);
+  });
+  it('loại chưa chọn hình: khối "thiết bị chung" có tô, không phải khung trắng trống', () => {
+    const style = deviceInsertCell(source({ shape: null })).style;
+    expect(style).toContain(`fillColor=${fill};`);
+    expect(style).toContain('rounded=1;');
+  });
+  it('màu là mặc định của người vẽ, không phải khoá IMS: hydrate không ghi đè màu người vẽ đổi', () => {
+    expect(IMS_STYLE_KEYS).not.toContain('fillColor');
+    expect(IMS_STYLE_KEYS).not.toContain('strokeColor');
+  });
+  it('biểu tượng SVG riêng / ảnh thật: không tô thêm', () => {
+    expect(deviceInsertCell(source({ iconSvg: ICON })).style).not.toContain('fillColor=');
   });
 });
 

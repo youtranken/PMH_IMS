@@ -45,6 +45,10 @@ export interface DeviceTypeRow {
   isRouter: boolean;
   description: string | null;
   active: boolean;
+  /** Hình trên sơ đồ mạng (`null` = khối "Thiết bị khác"); danh sách quản trị mới trả. */
+  diagramShape?: string | null;
+  /** Có biểu tượng SVG riêng; danh sách quản trị mới trả. */
+  hasDiagramIcon?: boolean;
 }
 
 export interface VendorRow {

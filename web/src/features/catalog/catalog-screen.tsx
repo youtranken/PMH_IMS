@@ -199,7 +199,17 @@ const ENTITY_COLUMNS: Record<
     {
       accessorKey: 'name',
       header: t('catalog.name'),
-      cell: ({ row }) => (row.original as DeviceTypeRow).name,
+      cell: ({ row }) => {
+        const type = row.original as DeviceTypeRow;
+        // Loại chưa có hình nào hiện thành khối chữ nhật trên sơ đồ — nhắc người quản trị chọn (V-10).
+        const noLook = type.diagramShape === null && type.hasDiagramIcon === false;
+        return (
+          <>
+            {type.name}
+            {noLook ? <> <span className="badge warn">{t('catalog.noDiagramLook')}</span></> : null}
+          </>
+        );
+      },
     },
     {
       accessorKey: 'hasPortMap',

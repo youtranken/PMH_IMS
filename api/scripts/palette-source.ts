@@ -23,6 +23,8 @@ export const PALETTE_TOKENS = {
   paperDraft: '--paper-draft',
   paperSuperseded: '--paper-superseded',
   paperPresentation: '--paper-presentation',
+  diagramIconFill: '--diagram-icon-fill',
+  diagramIconStroke: '--diagram-icon-stroke',
 } as const;
 
 const HEX = /^#[0-9a-f]{6}$/i;

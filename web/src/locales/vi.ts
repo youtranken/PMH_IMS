@@ -598,6 +598,7 @@ export default {
     isRouterHint: 'Thiết bị loại này hiện trong ô chọn Router của sổ NAT.',
     diagramShape: 'Hình trên sơ đồ mạng',
     diagramShapeOther: 'Thiết bị khác (khối chữ nhật)',
+    noDiagramLook: 'Chưa có hình trên sơ đồ',
     diagramShapeHint: 'Đổi hình thì lần mở sau mọi bản vẽ hiện hình mới.',
     diagramShapesFailed: 'Không tải được danh sách hình.',
     diagramIcon: 'Biểu tượng SVG riêng',

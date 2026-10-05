@@ -16,4 +16,6 @@ export const PALETTE = {
   paperDraft: '#fff4e5',
   paperSuperseded: '#fdecea',
   paperPresentation: '#eaf2fb',
+  diagramIconFill: '#cfd6dd',
+  diagramIconStroke: '#4f6f9f',
 } as const;

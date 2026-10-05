@@ -1,6 +1,7 @@
 import { SaxesParser, type SaxesTagPlain } from 'saxes';
 import { rackUnitLabel } from '../../common/rack-units';
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
+import { PALETTE } from '../../common/palette.generated';
 import { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef } from '../catalog/catalog.api';
 import { buildCellIndex } from './diagram-cells';
 import { cableEdgeStates, type CableEdge } from './diagram-checks';
@@ -165,13 +166,23 @@ export function deviceIconAspect(device: DeviceCellSource): number {
   return cell.height / cell.width;
 }
 
+/**
+ * Màu mặc định của biểu tượng khi CHÈN (V-10), như bảng hình của draw.io: thư viện mạng tô xám +
+ * viền xanh, thư viện Cisco khối màu viền + nét trắng. Không phải khoá IMS — người vẽ đổi màu thì
+ * hydrate giữ nguyên. Màu đọc từ token qua `PALETTE`, không viết tay.
+ */
+function iconColors(shapeKey: string | null): string {
+  if (shapeKey?.startsWith('mxgraph.cisco.')) return `fillColor=${PALETTE.diagramIconStroke};strokeColor=${PALETTE.surface};gradientColor=none;`;
+  return `fillColor=${PALETTE.diagramIconFill};strokeColor=${PALETTE.diagramIconStroke};gradientColor=none;strokeWidth=2;`;
+}
+
 function deviceIconCell(device: DeviceCellSource, label: string): { style: string; label: string; width: number; height: number } {
   const look = deviceLookStyle(device);
   if (device.found && device.iconSvg) return { style: `align=center;${look}`, label, ...DIAGRAM_ICON_SIZE };
   const shape = device.found ? diagramShapeDef(device.shape) : null;
-  if (shape) return { style: `align=center;${look}`, label, width: shape.width, height: shape.height };
+  if (shape) return { style: `align=center;${iconColors(shape.key)}${look}`, label, width: shape.width, height: shape.height };
   return {
-    style: `rounded=1;whiteSpace=wrap;align=center;${look}`,
+    style: `rounded=1;whiteSpace=wrap;align=center;${iconColors(null)}${look}`,
     label,
     width: DIAGRAM_SHAPE_OTHER.width,
     height: DIAGRAM_SHAPE_OTHER.height,
