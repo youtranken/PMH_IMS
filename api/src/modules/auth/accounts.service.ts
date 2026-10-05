@@ -22,6 +22,7 @@ import {
   type UserSortKey,
 } from "../users/users.service";
 import type { UserRecord } from "../users/users.types";
+import { KnownDeviceService } from "./known-device.service";
 import { LoginFailureService } from "./login-failure.service";
 import { PasswordService } from "./password.service";
 import { SessionService, type SessionSummary } from "./session.service";
@@ -60,6 +61,7 @@ export class AccountsService {
     private readonly loginFailures: LoginFailureService,
     private readonly approvals: ApprovalsApiService,
     private readonly config: SystemConfigService,
+    private readonly knownDevices: KnownDeviceService,
   ) {}
 
   list(
@@ -429,6 +431,22 @@ export class AccountsService {
 
   listSessions(userId: string): Promise<SessionSummary[]> {
     return this.sessions.listActive(userId);
+  }
+
+  /**
+   * Mọi IP đang tạm chặn trên toàn hệ thống, kèm tài khoản bị chặn (X-04) — SA nhìn chung lúc
+   * bị dò mật khẩu. Chỉ đọc; tên + email tra một lượt.
+   */
+  async listBlockedNow() {
+    const rows = await this.loginFailures.listBlockedNow();
+    const ids = [...new Set(rows.map((row) => row.userId))];
+    const [emails, names] = await Promise.all([this.users.emailsByIds(ids), this.users.namesByIds(ids)]);
+    return rows.map((row) => ({ ...row, email: emails.get(row.userId) ?? null, fullName: names.get(row.userId) ?? null }));
+  }
+
+  /** Máy đã biết của một tài khoản (X-04) — chỉ đọc, không dấu vân tay máy. */
+  listKnownDevices(userId: string) {
+    return this.knownDevices.listForUser(userId);
   }
 
   /** Nơi (IP) đang tạm chặn / đang đếm sai của người này — SA đọc khi người dùng báo không vào được. */

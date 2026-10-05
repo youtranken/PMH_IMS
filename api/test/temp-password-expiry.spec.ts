@@ -93,6 +93,7 @@ describe('Q-20 · mật khẩu tạm có hạn', () => {
       loginFailures,
       new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())),
       config,
+      new KnownDeviceService(db, config, noopSweep),
     );
     guard = new SessionGuard(new Reflector(), sessions, users, config, db, audit);
   }, TEST_TIMEOUT);

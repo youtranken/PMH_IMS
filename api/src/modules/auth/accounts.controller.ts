@@ -320,6 +320,23 @@ export class AccountsController {
   }
 
   /**
+   * Mọi IP đang tạm chặn trên toàn hệ thống (X-04) — chỉ đọc, như `:id/lockouts`; gỡ vẫn là
+   * "Gỡ tạm chặn" của từng tài khoản (step-up + nhật ký).
+   */
+  @Roles('sa')
+  @Get('lockouts')
+  listBlockedNow() {
+    return this.accounts.listBlockedNow();
+  }
+
+  /** Máy đã biết của một tài khoản (X-04, báo thư "máy mới") — chỉ đọc, không dấu vân tay máy. */
+  @Roles('sa')
+  @Get(':id/known-devices')
+  listKnownDevices(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.accounts.listKnownDevices(id);
+  }
+
+  /**
    * Tạm chặn theo từng IP (giãn chậm khi gõ sai) — chỉ đọc. Gỡ vẫn là "Gỡ tạm chặn" qua
    * `:id/status` (có step-up, có ghi vết): một nút xoá từng IP là thêm một cửa hạ rào thứ hai.
    */

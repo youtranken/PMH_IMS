@@ -1,3 +1,4 @@
+import { KnownDeviceService } from '../src/modules/auth/known-device.service';
 import { randomUUID } from 'node:crypto';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
@@ -110,6 +111,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       new LoginFailureService(scratch.db, config, noopSweep),
       approvalsApi,
       config,
+      new KnownDeviceService(scratch.db, config, noopSweep),
     );
     const rows = await scratch.pool.query<{ id: string }>(
       `INSERT INTO users (email, full_name, role, password_hash, must_change_password)

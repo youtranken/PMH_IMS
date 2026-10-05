@@ -97,7 +97,9 @@ describe('Màn Tài khoản', () => {
     const fetchMock = stubFetch();
     renderAt('/admin/accounts?role=member&status=locked&totp=none');
     await screen.findByText('E2E Thành viên');
-    const url = new URL(String(fetchMock.mock.calls[0][0]), 'http://x');
+    // Lượt hỏi DANH SÁCH (màn còn hỏi khối "Đang tạm chặn" ở /accounts/lockouts).
+    const listCall = fetchMock.mock.calls.map(([input]) => String(input)).find((u) => u.startsWith('/api/v1/accounts?'));
+    const url = new URL(String(listCall), 'http://x');
     expect(url.searchParams.get('role')).toBe('member');
     expect(url.searchParams.get('status')).toBe('locked');
     expect(url.searchParams.get('totp')).toBe('none');
@@ -186,6 +188,26 @@ describe('Màn Tài khoản', () => {
     expect(fresh).toHaveTextContent('Chờ đổi MK tạm · hết hạn 07/10/2030');
     const stale = screen.getByText('E2E Quá hạn').closest('tr') as HTMLElement;
     expect(stale).toHaveTextContent('Mật khẩu tạm đã hết hạn — đặt lại');
+  });
+
+  it('X-04: khối "Đang tạm chặn · n" liệt kê mọi IP đang chặn trên toàn hệ thống, kèm lần sai gần nhất', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).includes('/api/v1/accounts/lockouts')
+            ? jsonResponse(200, [
+                { userId: 'u-tv', email: 'tv@pmh.com.vn', fullName: 'E2E Thành viên', ip: '203.0.113.9', failedAttempts: 7, lockedUntil: IN_AN_HOUR, updatedAt: '2026-10-05T01:00:00Z' },
+              ])
+            : jsonResponse(200, { items: ROWS, total: 2 }),
+        ),
+      ),
+    );
+    renderAt('/admin/accounts');
+    const block = (await screen.findByRole('heading', { name: 'Đang tạm chặn · 1' })).closest('section') as HTMLElement;
+    expect(block).toHaveTextContent('203.0.113.9');
+    expect(block).toHaveTextContent('E2E Thành viên');
+    expect(block).toHaveTextContent('05/10/2026');
   });
 
   it('Khóa bắt ghi lý do trước khi gửi', async () => {

@@ -10,6 +10,14 @@ import { LoadError } from '@/ui/load-state';
 import type { AccountRef } from './account-dialogs';
 import { AccountFootprint } from './account-footprint';
 
+/** Máy đã biết của một tài khoản — nhãn trình duyệt + mốc, không dấu vân tay máy. */
+interface KnownDevice {
+  id: string;
+  label: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
 export interface AccountLockout {
   ip: string;
   failedAttempts: number;
@@ -54,6 +62,11 @@ export function AccountDetailDialog({
     queryFn: () => apiFetch<AccountLockout[]>(`/api/v1/accounts/${account.id}/lockouts`),
   });
   const rows = lockouts.data ?? [];
+  /* Máy đã biết (X-04, chỉ đọc): bảng quyết định có gửi thư "đăng nhập từ máy mới" không. */
+  const known = useQuery({
+    queryKey: ['accounts', account.id, 'known-devices'],
+    queryFn: () => apiFetch<KnownDevice[]>(`/api/v1/accounts/${account.id}/known-devices`),
+  });
   const blocked = rows.some((row) => row.lockedUntil !== null);
 
   return (
@@ -102,6 +115,7 @@ export function AccountDetailDialog({
                     <th>{t('accounts.lockoutIp')}</th>
                     <th>{t('accounts.lockoutAttempts')}</th>
                     <th>{t('accounts.lockoutUntil')}</th>
+                    <th>{t('accounts.lockoutLastFail')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -116,6 +130,7 @@ export function AccountDetailDialog({
                           <span className="muted">{t('accounts.lockoutNotBlocked')}</span>
                         )}
                       </td>
+                      <td>{formatDateTime(row.updatedAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -127,6 +142,40 @@ export function AccountDetailDialog({
               </button>
             ) : null}
           </>
+        )}
+      </section>
+
+      <section aria-labelledby="account-known-devices" className="account-detail-block">
+        <h3 id="account-known-devices" className="lbl-t">
+          {t('accounts.knownDevicesTitle')}
+        </h3>
+        {known.isLoading ? (
+          <p className="muted">{t('common.loading')}</p>
+        ) : known.isError ? (
+          <LoadError error={known.error} onRetry={() => void known.refetch()} />
+        ) : (known.data ?? []).length === 0 ? (
+          <p className="muted">{t('accounts.knownDevicesNone')}</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('accounts.knownDeviceLabel')}</th>
+                  <th>{t('accounts.knownDeviceFirst')}</th>
+                  <th>{t('accounts.knownDeviceLast')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(known.data ?? []).map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.label ?? t('accounts.knownDeviceUnnamed')}</td>
+                    <td>{formatDateTime(row.firstSeenAt)}</td>
+                    <td>{formatDateTime(row.lastSeenAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

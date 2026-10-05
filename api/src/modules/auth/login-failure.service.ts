@@ -120,6 +120,25 @@ export class LoginFailureService implements OnModuleInit {
    * nói sai với SA đang nghe điện thoại người dùng. Hàng về 0 lần sai và hết chặn thì bỏ hẳn.
    * Đang chặn đứng trước, mốc xa nhất trước — đó là nơi đáng hỏi nhất.
    */
+  /**
+   * Mọi cặp (người dùng, IP) ĐANG tạm chặn trên toàn hệ thống (X-04): SA nhìn chung lúc bị dò mật
+   * khẩu từ nhiều nơi. Chỉ đọc — gỡ vẫn qua "Gỡ tạm chặn" của từng tài khoản (step-up + nhật ký).
+   */
+  async listBlockedNow(): Promise<{ userId: string; ip: string; failedAttempts: number; lockedUntil: Date; updatedAt: Date }[]> {
+    const rows = await this.db
+      .select({
+        userId: loginFailureTable.userId,
+        ip: loginFailureTable.ip,
+        failedAttempts: loginFailureTable.failedAttempts,
+        lockedUntil: loginFailureTable.lockedUntil,
+        updatedAt: loginFailureTable.updatedAt,
+      })
+      .from(loginFailureTable)
+      .where(sql`${loginFailureTable.lockedUntil} > now()`)
+      .orderBy(desc(loginFailureTable.lockedUntil));
+    return rows.map((row) => ({ ...row, lockedUntil: new Date(row.lockedUntil as Date) }));
+  }
+
   async listForUser(userId: string): Promise<
     { ip: string; failedAttempts: number; lockedUntil: Date | null; updatedAt: Date }[]
   > {

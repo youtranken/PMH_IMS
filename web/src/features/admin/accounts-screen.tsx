@@ -700,6 +700,7 @@ export function AccountsScreen({ me }: { me: Me }) {
           </>
         }
       />
+      <BlockedNow />
 
       {countAll.data !== undefined ? (
         <KpiStrip dense>
@@ -1242,5 +1243,64 @@ function SessionsDialog({
 function roleLabel(role: Me['role'], t: (key: string) => string): string {
   return t(
     role === 'sa' ? 'accounts.roleSa' : role === 'admin' ? 'accounts.roleAdmin' : 'accounts.roleMember',
+  );
+}
+
+/** Một cặp (tài khoản, IP) đang tạm chặn — `GET /accounts/lockouts`. */
+interface BlockedRow {
+  userId: string;
+  email: string | null;
+  fullName: string | null;
+  ip: string;
+  failedAttempts: number;
+  lockedUntil: string;
+  updatedAt: string;
+}
+
+/**
+ * Mọi IP đang tạm chặn đăng nhập trên toàn hệ thống (X-04): lúc bị dò mật khẩu từ nhiều nơi, SA
+ * cần một cái nhìn chung chứ không mở từng tài khoản. Chỉ đọc — gỡ vẫn ở hộp Chi tiết của từng
+ * tài khoản (step-up + nhật ký). Không có gì đang chặn thì không bày khối.
+ */
+function BlockedNow() {
+  const { t } = useTranslation();
+  const blocked = useQuery({
+    queryKey: ['accounts', 'lockouts', 'now'],
+    queryFn: () => apiFetch<BlockedRow[]>('/api/v1/accounts/lockouts'),
+    refetchInterval: 60_000,
+  });
+  const rows = Array.isArray(blocked.data) ? blocked.data : [];
+  if (rows.length === 0) return null;
+  return (
+    <section className="card account-blocked">
+      <h2 className="form-section-title">{t('accounts.blockedNowTitle', { count: rows.length })}</h2>
+      <p className="muted small">{t('accounts.blockedNowHint')}</p>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t('accounts.blockedAccount')}</th>
+              <th>{t('accounts.lockoutIp')}</th>
+              <th>{t('accounts.lockoutAttempts')}</th>
+              <th>{t('accounts.lockoutUntil')}</th>
+              <th>{t('accounts.lockoutLastFail')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={`${row.userId}-${row.ip}`}>
+                <td title={row.email ?? undefined}>{row.fullName ?? row.email ?? row.userId}</td>
+                <td className="mono">{row.ip}</td>
+                <td>{row.failedAttempts}</td>
+                <td>
+                  <span className="badge warn">{formatDateTime(row.lockedUntil)}</span>
+                </td>
+                <td>{formatDateTime(row.updatedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
