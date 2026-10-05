@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -91,6 +91,7 @@ export function DevicePhotoSlots({
   const [rejected, setRejected] = useState<Partial<Record<PhotoSide, string | null>>>({});
   // Đổi `key` sau mỗi lượt chọn: `<input>` giữ giá trị cũ thì chọn lại đúng tệp đó không bắn onChange.
   const [picks, setPicks] = useState(0);
+  const modelInputs = useRef<Partial<Record<PhotoSide, HTMLInputElement | null>>>({});
   const busy = busySide !== null;
 
   const sideLabel = (side: PhotoSide) => t(side === 'front' ? 'photoSlots.front' : 'photoSlots.back');
@@ -217,10 +218,16 @@ export function DevicePhotoSlots({
                     {t('photoSlots.modelCopy')}
                   </button>
                 ) : (
-                  <label className={`btn sm${busy ? ' disabled' : ''}`}>
-                    {t('photoSlots.modelUpload')}
+                  <>
+                    {/* Nút thật (không phải <label>): nút của app chỉ có kiểu trên phần tử <button>. */}
+                    <button type="button" className="btn sm" disabled={busy} aria-hidden="true" tabIndex={-1} onClick={() => modelInputs.current[side]?.click()}>
+                      {t('photoSlots.modelUpload')}
+                    </button>
                     <input
                       key={`model-${side}-${picks}`}
+                      ref={(el) => {
+                        modelInputs.current[side] = el;
+                      }}
                       type="file"
                       accept={PHOTO_ACCEPT}
                       className="file-picker-input"
@@ -231,7 +238,7 @@ export function DevicePhotoSlots({
                         if (accepted) model.onUpload(side, accepted);
                       }}
                     />
-                  </label>
+                  </>
                 )}
               </div>
             ) : null}

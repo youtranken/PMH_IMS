@@ -691,15 +691,12 @@ html[data-motion='off'] .otp-boxes.is-busy .otp-box { opacity: 0.55; }
 .photo-slot-model p {
   margin: 0;
 }
-.photo-slot-model label.btn {
+.photo-slot-model {
   position: relative;
 }
-.photo-slot-model label.btn:focus-within {
+/* Ô chọn thật bị giấu (giữ trong cây a11y); Tab tới nó thì vòng tiêu điểm vẽ lên nút nhìn thấy. */
+.photo-slot-model .btn:has(+ .file-picker-input:focus-visible) {
   box-shadow: var(--ring);
-}
-.photo-slot-model label.btn.disabled {
-  opacity: 0.6;
-  pointer-events: none;
 }
 
 /* --- Ô nhập nhiều port dạng chip (features/ipam/port-chips-field.tsx) ----- */
