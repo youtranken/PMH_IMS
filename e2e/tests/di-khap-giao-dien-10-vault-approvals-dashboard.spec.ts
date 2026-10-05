@@ -240,11 +240,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(table, 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
     expect(
       await toggleButtons(main),
-      'trang tổng phải có ĐÚNG bốn nút lọc loại — một cho mỗi loại chủ thể cất được secret — ' +
-        'và lúc mới vào cả bốn đều đang TẮT',
+      'trang tổng phải có ĐÚNG bảy nút lọc — ba loại chủ thể không phải phần mềm + bốn màn phần mềm ' +
+        'của Q-22 (K-01) — và lúc mới vào đều đang TẮT',
     ).toEqual([
       { toggleName: 'Thiết bị', enabled: false },
       { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tên miền & SSL', enabled: false },
+      { toggleName: 'Hợp đồng bảo trì', enabled: false },
+      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
       { toggleName: 'Tài khoản dịch vụ', enabled: false },
       { toggleName: 'Đường truyền', enabled: false },
     ]);
@@ -275,6 +278,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toEqual([
       { toggleName: 'Thiết bị', enabled: true },
       { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tên miền & SSL', enabled: false },
+      { toggleName: 'Hợp đồng bảo trì', enabled: false },
+      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
       { toggleName: 'Tài khoản dịch vụ', enabled: false },
       { toggleName: 'Đường truyền', enabled: false },
     ]);

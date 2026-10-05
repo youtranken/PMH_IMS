@@ -278,6 +278,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Site',
         'Tủ mạng',
         'Loại',
+        'Phòng ban',
         'Trạng thái',
         'Xóa lọc (1)',
         'Xóa bộ lọc',
@@ -605,6 +606,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Hồ sơ',
         'Vị trí và người giữ',
         'Mua sắm và bảo hành',
+        'Ảnh thiết bị',
         'Giấy tờ đính kèm',
       ]);
 
@@ -665,6 +667,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        // Khu "Ảnh thiết bị" (Q-23 05/10): ô tải ảnh hai mặt.
+        'Tải ảnh lên — Mặt trước',
+        'Tải ảnh lên — Mặt sau',
         'Chọn file để đính kèm',
         'Hủy',
         'Lưu và nhân bản',
@@ -831,7 +836,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
     ]) {
       await expect(
-        editDialog.getByLabel(label),
+        editDialog.getByRole('textbox', { name: label, exact: true }),
         `Ô "${label}" của form SỬA phải mang sẵn giá trị cũ — form gửi đủ mọi trường lên API, ô trống nghĩa là XÓA`,
       ).toHaveValue(value);
     }
@@ -873,6 +878,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        // Khu "Ảnh thiết bị" (Q-23 05/10): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
+        'Giải thích: Ảnh thiết bị',
+        'Tải ảnh lên — Mặt trước',
+        'Tải ảnh chung cho mọi máy cùng model — Mặt trước',
+        'Tải ảnh lên — Mặt sau',
+        'Tải ảnh chung cho mọi máy cùng model — Mặt sau',
         'Giải thích: Giấy tờ đính kèm',
         'Chọn file để đính kèm',
         // Câu "chỉ tải về, không mở trong trình duyệt" nằm trong nút (i) (Q-20).
@@ -1008,6 +1019,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         `Thao tác với ${code}`,
         'Cấp IP',
         'Bổ sung 6 ô còn thiếu',
+        // Ô ảnh hai mặt của khu "Hình dùng trên sơ đồ" (Q-23 05/10).
+        'Tải ảnh lên — Mặt trước',
+        'Tải ảnh lên — Mặt sau',
       ]);
     await expect(panel.getByText('Chưa có IP', { exact: true })).toBeVisible();
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
