@@ -565,14 +565,28 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     trọng tài — lỗi chồng U của server cũng gắn vào ô đó. Nút **"Xem tủ"** cạnh ô Tủ mạng mở hình
     mặt đứng của tủ (mỗi U một dòng, mã máy đang chiếm); bấm một U trống thì điền "U bắt đầu".
     Màn 390px xem được, chỉ đọc.
-  - **"Hình dùng trên sơ đồ" thấy ngay ở trang thiết bị:** khu riêng ở tab Tổng quan (ảnh đang
-    dùng + nguồn của nó) và khu đầy đủ ở tab Giấy tờ; tải ảnh THẲNG cho từng mặt (JPG/PNG, cùng giới
-    hạn cỡ của giấy tờ) chứ không bắt tải giấy tờ rồi mới chọn. Ảnh theo model dùng cho MỌI máy cùng
-    loại + model (nói rõ ngay tại chỗ); ảnh riêng của máy đè ảnh model. Không có ảnh thì sơ đồ vẽ
-    máy bằng biểu tượng của Loại thiết bị (SA đổi ở Danh mục). **Bản đồ quan hệ** của trang thiết
-    bị dùng ĐÚNG ảnh đó cho nút của máy (và các máy cùng loại + model hiện trên đó): một nguồn — cùng
-    đường tra ảnh của sơ đồ, không chép ảnh; hiện bằng `<img>` trỏ endpoint ảnh đã thu nhỏ của
-    server (không nhúng nội dung người dùng tải lên); không có ảnh thì giữ biểu tượng như cũ.
+  - **"Hình dùng trên sơ đồ" — MỖI máy đổi được ảnh của riêng nó (chủ dự án chốt lại 05/10):**
+    - Thứ tự tra một nơi duy nhất (`DevicePhotosService.effectivePhotos` của `devices`): ảnh riêng
+      của máy → ảnh chung của loại + model → biểu tượng của Loại thiết bị (SA đổi ở Danh mục). Dùng
+      cho chèn từ "Thiết bị kho", hydrate lúc mở / xem / xuất, thẻ ảnh của trang thiết bị và **Bản đồ
+      quan hệ** (nút của máy và các máy khác hiện trên đó) — không nơi nào chép ảnh ra bản riêng.
+      Bản đồ quan hệ và hộp Thiết bị kho hiện ảnh bằng `<img>` trỏ endpoint ảnh đã thu nhỏ / đã vẽ
+      lại của server, không nhúng nội dung người dùng tải lên.
+    - Lưu trữ: KHÔNG thêm bảng. Ảnh riêng của máy vốn đã có chỗ — cột `device.photo_*_file_id`
+      (migration 0054, chủ `devices`, AD-3) trỏ tệp `files` của chính máy; ảnh model ở
+      `device_model`. Thiếu chỉ là giao diện: trước nay phải tải giấy tờ rồi chọn trong ô thả xuống
+      ở cuối tab Giấy tờ.
+    - Trang thiết bị có khu "Hình dùng trên sơ đồ" ở tab Tổng quan, nói rõ mức đang dùng ("Ảnh
+      riêng của máy này" / "Ảnh chung của model X" / "Biểu tượng loại"). Việc: **Tải / thay ảnh
+      riêng** cho từng mặt (tải thẳng, JPG/PNG, cùng giới hạn cỡ của giấy tờ — ảnh được giải mã và
+      vẽ lại khi đưa vào sơ đồ như cũ), **Bỏ ảnh riêng** (về ảnh model / biểu tượng). Ai sửa được hồ
+      sơ máy thì đổi được ảnh riêng (SA/Admin/Thành viên, máy chưa thanh lý). Ảnh model giữ dưới
+      nhãn "Dùng cho mọi máy cùng model" và chỉ SA/Admin đổi (API `POST :id/model`, `PATCH
+      :id/model-photos` thu về SA/Admin) — một lần đổi ở đây đổi hình của cả loạt máy.
+    - Chèn máy từ "Thiết bị kho": máy có ảnh (riêng hay model) thì ô mới hiện ảnh mặt trước; không
+      có thì biểu tượng. Ô đã đặt trên bản vẽ giữ lựa chọn của người vẽ (biểu tượng / mặt trước /
+      mặt sau, `ims_photo`) nhưng ẢNH thì luôn là ảnh hiện hành: XML lưu khô (chỉ `ims_photo`), mở lại
+      bản vẽ — kể cả phiên bản cũ — là thấy ảnh mới, đúng như ảnh model đang chạy hôm nay.
   - **Menu ⋮ của trình vẽ chia nhóm có tiêu đề** (Dây & kết nối · Khung, tủ & ảnh · Phiên bản &
     duyệt · Trợ giúp), mỗi mục có một dòng mô tả; "Hướng dẫn" đứng ĐẦU menu để không phải cuộn.
     Khai kết nối xong, lời báo có nút "Xem ở sơ đồ cổng của <máy>" (mở tab mới — không bỏ bản vẽ
