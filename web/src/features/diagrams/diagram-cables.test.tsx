@@ -252,7 +252,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
   });
 
   it('⋮ › "Tự đi lại dây": dây đã khai bị kéo đầu ra chỗ trống được nối lại về đúng máy, bỏ điểm uốn; nét tự do không đụng (Q-23 05/10)', async () => {
-    const loose = `<UserObject label="" ims_link_id="link-1" id="e1"><mxCell style="rounded=0;exitX=1;exitY=0.5;endArrow=none;" edge="1" parent="1" source="a"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>`;
+    const loose = `<UserObject label="⚠ Dây Gi1/0/24 ↔ eth0 phải nối SW-E2E-01 ↔ SRV-E2E-01 — kéo đầu dây về đúng máy" ims_link_id="link-1" id="e1"><mxCell style="rounded=0;exitX=1;exitY=0.5;endArrow=none;imsPaint=danger;dashed=1;html=0;" edge="1" parent="1" source="a"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>`;
     const helper = `<mxCell id="f1" value="" style="endArrow=none;" edge="1" parent="1" source="b"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell>`;
     const { messages, answerFile } = await openEditor(file(DEVICES + loose + helper), { links: [LINK] });
     const user = userEvent.setup();
@@ -260,9 +260,15 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     await answerFile(DEVICES + loose + helper);
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
     const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, Record<string, string>> } } } } };
-    expect(patch.patch.u.p1.cells.u).toEqual({
-      e1: { style: 'rounded=0;endArrow=none;edgeStyle=orthogonalEdgeStyle;', geometry: '<mxGeometry relative="1" as="geometry"/>', source: 'a', target: 'b' },
-    });
+    const update = patch.patch.u.p1.cells.u.e1;
+    expect(Object.keys(patch.patch.u.p1.cells.u)).toEqual(['e1']);
+    expect(update).toMatchObject({ geometry: '<mxGeometry relative="1" as="geometry"/>', source: 'a', target: 'b' });
+    // Nối đúng rồi thì nhãn + màu theo kết nối NGAY (không chờ mở lại): hết nhãn đỏ "phải nối …".
+    expect(update.style).toContain('edgeStyle=orthogonalEdgeStyle');
+    expect(update.style).toContain('imsPaint=cable-2');
+    expect(update.style).not.toContain('exitX');
+    expect(update.xmlValue).toContain('label="Gi1/0/24 ↔ eth0"');
+    expect(update.xmlValue).toContain('ims_link_id="link-1"');
     expect(await screen.findByText('Đã đi lại 1 dây, nối lại 1 đầu dây về đúng máy. Bấm Lưu để giữ.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
   });

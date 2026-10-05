@@ -684,6 +684,8 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     server không thêm phiên bản, không ghi lịch sử / nhật ký, trả phiên bản mới nhất kèm
     `unchanged: true`. Nét vẽ y nguyên mà kho đã đổi (IP, tủ, serial…) thì VẪN là một phiên bản
     "Chụp lại thông tin thiết bị theo kho" — lệch kho tính từ bản chụp, nên đó là cách xoá dấu lệch.
+    Bản mới nhất chưa có ảnh xem (bản dựng tự động: dựng lại mặt tủ, dựng nháp từ sơ đồ cổng) thì
+    lưu y nguyên cũng là một phiên bản "Tạo ảnh xem cho bản dựng tự động", và nút Lưu bật ngay.
     Web tắt nút Lưu khi chưa sửa gì; lượt lưu trùng báo "Không có thay đổi để lưu".
   - **"Xóa vĩnh viễn" bản vẽ đã lưu trữ — sửa luật 04/10 "bản chính thức, bản từng phát hành, bản
     đặt tên giữ mãi" CHỈ cho bản đã lưu trữ.** Ai: Admin/SA (Thành viên không — bản chưa phát hành

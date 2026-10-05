@@ -10,7 +10,7 @@ import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
 import { PortFormDialog } from '@/ui/port-form-dialog';
 import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
-import { bindEdgeValue, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
+import { bindEdgeValue, deviceOfCell, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
 import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
@@ -205,7 +205,26 @@ export function useCableBridge({
         toast({ tone: 'warn', message: t(mode === 'orthogonal' ? 'diagrams.cable.orthogonalNothing' : 'diagrams.cable.rerouteNothing') });
         return;
       }
-      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: result.updates } } } } });
+      /*
+       * Dây vừa nối lại đúng hai máy: nhãn cổng + màu theo kết nối NGAY (như lúc gắn nét) — không thì
+       * nhãn đỏ "phải nối …" lúc mở còn nguyên trên hình và vào cả ảnh xem của lần lưu này.
+       */
+      const updates: Record<string, Record<string, string>> = {};
+      for (const [id, update] of Object.entries(result.updates)) {
+        const edge = edgeById(file, id);
+        const link = edge?.linkId ? links.current.get(edge.linkId) : undefined;
+        if (!edge || !link || !update.source || !update.target) {
+          updates[id] = { ...update };
+          continue;
+        }
+        const fromA = deviceOfCell(file, update.source) === link.deviceId;
+        updates[id] = {
+          ...update,
+          style: paintImsStyle(`${styleWithoutImsEdge(update.style)}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
+          xmlValue: bindEdgeValue(id, edge.attrs, { label: fromA ? link.labelFromA : link.labelFromB, ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '' }),
+        };
+      }
+      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: updates } } } } });
       markDirty();
       if (mode === 'orthogonal') {
         toast({ tone: 'ok', message: t('diagrams.cable.orthogonalDone', { count: result.count }) });

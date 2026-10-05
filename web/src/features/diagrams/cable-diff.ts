@@ -171,6 +171,11 @@ export function edgeById(xml: string, id: string): ParsedEdge | null {
   return parse(xml).edges.find((e) => e.id === id) ?? null;
 }
 
+/** Máy kho của một ô (id ô → `ims_device_id`); `null` = không phải ô thiết bị kho. */
+export function deviceOfCell(xml: string, cellId: string): string | null {
+  return parse(xml).devices.get(cellId)?.deviceId ?? null;
+}
+
 /** Ô đầu tiên của một máy trên bản vẽ — đầu nét khi "Vẽ vào". */
 export function firstDeviceCell(xml: string, deviceId: string): string | null {
   for (const [cellId, device] of parse(xml).devices) if (device.deviceId === deviceId) return cellId;
