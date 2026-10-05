@@ -237,7 +237,9 @@ export function Dialog({
     return JSON.stringify(
       // `Array.from` chứ không phải spread: `tsconfig.app.json` nhắm bản ES cũ hơn nên
       // `NodeListOf` chưa có `[Symbol.iterator]`.
-      Array.from(root.querySelectorAll('input, textarea, select')).map((el) => {
+      // Ô chọn file KHÔNG tính: nó không giữ chữ gõ dở (chọn là tải / giữ ở state của nơi gọi), và
+      // khu ảnh dựng ô chọn file SAU khi dữ liệu về — tính vào là hộp chưa sửa gì vẫn bị hỏi lại.
+      Array.from(root.querySelectorAll('input:not([type="file"]), textarea, select')).map((el) => {
         const field = el as HTMLInputElement;
         // Ô tự định dạng lại chữ (ô số điện thoại tách nhóm khi rời ô) khai `data-guard-value`
         // là dạng chuẩn hoá: so chữ thô thì chỉ cần Tab ngang qua là hộp tưởng đã bị sửa.
