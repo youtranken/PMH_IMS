@@ -3916,7 +3916,7 @@ export default {
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   failedMail: {
     title: 'Thư gửi lỗi',
-    subtitle: 'Thư hệ thống đã hết lượt gửi tự động mà vẫn chưa tới người nhận (thư xin duyệt break-glass, khoá tài khoản, bản tin hạn…). Sửa cấu hình thư nếu cần rồi bấm Gửi lại.',
+    subtitle: 'Thư hệ thống đã hết lượt gửi tự động mà vẫn chưa tới người nhận (thư xin mở két, khóa tài khoản, bản tin hạn…). Sửa cấu hình thư nếu cần rồi bấm Gửi lại.',
     empty: 'Không có thư nào gửi lỗi.',
     colTopic: 'Loại thư',
     colCreated: 'Tạo lúc',
@@ -3932,7 +3932,7 @@ export default {
       approvalRequested: 'Thư xin duyệt',
       approvalReminder: 'Thư nhắc duyệt',
       approvalDecided: 'Thư báo kết quả duyệt',
-      accountLocked: 'Thư báo khoá tài khoản',
+      accountLocked: 'Thư báo khóa tài khoản',
       securityProbe: 'Cảnh báo dò két',
       newDevice: 'Thư báo đăng nhập thiết bị mới',
       accountCreated: 'Thư tạo tài khoản',
