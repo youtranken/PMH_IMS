@@ -139,3 +139,35 @@ describe('Màn Thiết bị — lọc theo Phòng ban', () => {
     expect(screen.getByRole('button', { name: 'Phòng ban' })).toHaveTextContent('Kế toán');
   });
 });
+
+/* T-04: thẻ 390px giữ vị trí U như bản desktop. */
+describe('Màn Thiết bị — thẻ điện thoại', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('thẻ máy trong tủ ghi "site · tủ · U"', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          url.startsWith('/api/v1/devices?')
+            ? jsonResponse(200, {
+                items: [{ id: 'd1', code: 'UPS-E2E-03', name: 'UPS', status: 'in_use', siteCode: 'TOWER', cabinetCode: 'TU-01', rackUStart: 30, rackUSize: 1, assignedTo: null, warrantyEnd: null }],
+                total: 1,
+              })
+            : jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [] }),
+        ),
+      ),
+    );
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/devices']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <DevicesScreen me={ME} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText(/TOWER · TU-01 · U30/)).toBeInTheDocument();
+  });
+});

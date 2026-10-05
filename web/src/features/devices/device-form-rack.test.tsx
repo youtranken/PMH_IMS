@@ -120,3 +120,11 @@ describe('Vị trí U tự giải thích', () => {
     expect(screen.getByRole('textbox', { name: 'U bắt đầu' })).toHaveValue('8');
   });
 });
+
+describe('T-04: form nói tủ cao bao nhiêu U và U nào đã có máy', () => {
+  it('dưới ô U: "Tủ mạng HCM · R1 cao 12U · đã dùng: U3–U4 (SRV-E2E-01), U10 (SW-E2E-01)" — không tính chính máy này', async () => {
+    mockFetch();
+    renderForm();
+    expect(await screen.findByText('Tủ mạng HCM · R1 cao 12U · đã dùng: U3–U4 (SRV-E2E-01), U10 (SW-E2E-01)')).toBeInTheDocument();
+  });
+});

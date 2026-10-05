@@ -499,6 +499,11 @@ textarea.mono {
 .port-end > legend {
   margin-bottom: var(--space-3);
 }
+/* Dòng "Tủ … cao nU · đã dùng: …" dưới hai ô U của form thiết bị (T-04): trải hết bề ngang lưới. */
+.rack-summary {
+  grid-column: 1 / -1;
+  margin: 0;
+}
 /* "Tùy chọn thêm" của Nối hàng loạt: ô ít dùng gập lại, trải hết bề ngang lưới form. */
 .bulk-advanced {
   grid-column: 1 / -1;

@@ -1580,6 +1580,8 @@ export default {
     rackTaken: 'Chỗ {{unit}} đang có {{code}} — chọn U khác (bấm "Xem tủ" để thấy chỗ trống).',
     rackView: 'Xem tủ',
     rackViewTitle: 'Tủ mạng {{name}} ({{height}}U)',
+    rackSummary: 'Tủ mạng {{name}} cao {{height}}U · đã dùng: {{used}}',
+    rackSummaryEmpty: 'Tủ mạng {{name}} cao {{height}}U · chưa máy nào khai U',
     rackViewHint: 'U1 ở đáy tủ. Bấm một U trống để đặt máy vào đó.',
     rackViewHintReadOnly: 'U1 ở đáy tủ. Sửa vị trí trên máy tính.',
     photosTitle: 'Hình dùng trên sơ đồ — chọn từ giấy tờ',

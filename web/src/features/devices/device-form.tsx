@@ -220,6 +220,10 @@ export function DeviceForm({
   const clashText = clash
     ? t('devices.rackTaken', { unit: rackUnitLabel(Number(form.rackUStart), Number(form.rackUSize)), code: clash.code })
     : null;
+  const rackUsed = (occupants.data ?? [])
+    .filter((o) => o.id !== device?.id)
+    .sort((a, b) => a.start - b.start)
+    .map((o) => `${rackUnitLabel(o.start, o.size)} (${o.code})`);
   /** Lỗi chồng U của server — gắn vào ô "U bắt đầu"; đổi tủ / U thì bỏ. */
   const [rackServerError, setRackServerError] = useState<string | null>(null);
   const [rackOpen, setRackOpen] = useState(false);
@@ -507,6 +511,17 @@ export function DeviceForm({
                   {t('devices.rackView')}
                 </button>
               </div>
+              {/* Tủ cao bao nhiêu U và U nào đã có máy (T-04): nhập U theo cảm tính thì chỉ biết chồng
+                  U lúc bấm Lưu. Không tính chính máy đang sửa. */}
+              {cabinet ? (
+                <p className="field-hint muted rack-summary">
+                  {t(rackUsed.length > 0 ? 'devices.rackSummary' : 'devices.rackSummaryEmpty', {
+                    name: cabinetLabel,
+                    height: cabinet.uHeight ?? '?',
+                    used: rackUsed.join(', '),
+                  })}
+                </p>
+              ) : null}
             </>
           ) : null}
           <Field label={t('devices.assignedTo')} htmlFor="device-assigned">

@@ -17,6 +17,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
+import { rackUnitLabel } from '@/lib/rack-units';
 import { useDepartments } from '@/ui/use-departments';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
@@ -320,7 +321,12 @@ export function DevicesScreen({ me }: { me: Me }) {
       ),
       subtitle: (item) => item.name,
       meta: (item) =>
-        [ipsOf?.[item.id]?.[0], item.siteCode ? locationLabel(item) : null, item.assignedTo]
+        [
+          ipsOf?.[item.id]?.[0],
+          // Vị trí đủ như desktop, kể cả U trong tủ (T-04): người đi kiểm tủ đọc thẻ này.
+          item.siteCode ? [locationLabel(item), rackUnitLabel(item.rackUStart, item.rackUSize)].filter(Boolean).join(' · ') : null,
+          item.assignedTo,
+        ]
           .filter(Boolean)
           .join(' · ') || null,
       aside: (item) => (
