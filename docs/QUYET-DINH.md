@@ -679,10 +679,12 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     phải lỗi. Chỉ nét mang kết nối mà hai đầu không đúng hai máy của kết nối mới đỏ; câu báo nêu
     đủ hai máy + cổng của kết nối, đầu nào thả nổi / đang nối máy nào, và cách sửa: kéo đầu dây về
     đúng máy, "Tự đi lại dây", hoặc xoá nét (chọn "Chỉ xoá nét vẽ") rồi "Vẽ vào".
-  - **Lưu mà không đổi gì không tạo phiên bản.** XML khô (sau dehydrate + tách ảnh) trùng phiên
-    bản mới nhất thì server không thêm phiên bản, không ghi lịch sử / nhật ký, trả phiên bản mới
-    nhất kèm `unchanged: true`. Web tắt nút Lưu khi chưa sửa gì; lượt lưu trùng báo "Không có thay
-    đổi để lưu".
+  - **Lưu mà không đổi gì không tạo phiên bản.** XML khô (sau dehydrate + tách ảnh, bỏ vị trí
+    cuộn `dx`/`dy`) trùng phiên bản mới nhất VÀ thông tin thiết bị chụp lúc lưu cũng như cũ thì
+    server không thêm phiên bản, không ghi lịch sử / nhật ký, trả phiên bản mới nhất kèm
+    `unchanged: true`. Nét vẽ y nguyên mà kho đã đổi (IP, tủ, serial…) thì VẪN là một phiên bản
+    "Chụp lại thông tin thiết bị theo kho" — lệch kho tính từ bản chụp, nên đó là cách xoá dấu lệch.
+    Web tắt nút Lưu khi chưa sửa gì; lượt lưu trùng báo "Không có thay đổi để lưu".
   - **"Xóa vĩnh viễn" bản vẽ đã lưu trữ — sửa luật 04/10 "bản chính thức, bản từng phát hành, bản
     đặt tên giữ mãi" CHỈ cho bản đã lưu trữ.** Ai: Admin/SA (Thành viên không — bản chưa phát hành
     của họ vẫn có "Xoá hẳn"). Ở khu "Đã lưu trữ". Điều kiện: bản vẽ đã được lưu trữ TRƯỚC đó (không

@@ -306,6 +306,21 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       expect(changed.unchanged).toBeUndefined();
     });
 
+    it('nét vẽ y nguyên nhưng kho đã đổi (IP, tủ…): vẫn là một phiên bản mới chụp lại thông tin thiết bị — lệch kho xoá được bằng lưu lại', async () => {
+      const d = await service.create(SA.email, { name: 'E2E Lưu chụp lại kho', nodeType: 'floor' });
+      const xml = page(deviceCell('d1', deviceId, 'SW-E2E-SD'));
+      const first = await service.save(SA.email, d.id, { xml, svg: SVG, basedOnVersionId: null });
+      await scratch.pool.query(`UPDATE device SET serial = 'FOC-E2E-MOI' WHERE id = $1`, [deviceId]);
+      try {
+        const again = await service.save(SA.email, d.id, { xml, svg: SVG, basedOnVersionId: first.id });
+        expect(again).toMatchObject({ seq: 2, summary: 'Chụp lại thông tin thiết bị theo kho' });
+        expect(again.unchanged).toBeUndefined();
+        expect(await service.save(SA.email, d.id, { xml, svg: SVG, basedOnVersionId: again.id })).toMatchObject({ id: again.id, unchanged: true });
+      } finally {
+        await scratch.pool.query(`UPDATE device SET serial = 'FOC123' WHERE id = $1`, [deviceId]);
+      }
+    });
+
     it('hai lượt lưu cùng lúc: mỗi lượt một số thứ tự, không lượt nào chết vì trùng', async () => {
       const results = await Promise.all(
         [1, 2, 3].map((n) => service.save(SA.email, diagramId, { xml: page(shape(`c${n}`, `Khung ${n}`)), svg: SVG, basedOnVersionId: null })),

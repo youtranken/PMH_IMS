@@ -1417,9 +1417,11 @@ export class DiagramsService {
       }
       // Bấm Lưu mà không sửa gì (Q-23): không thêm phiên bản "Không đổi gì" vào chuỗi lịch sử, không
       // ghi nhật ký — chưa có gì được ghi. So trong khoá hàng để không lỡ một lượt lưu vừa chen vào.
-      if (latest && drawingKey(latest.xml) === dryKey) return { id: latest.id, unchanged: true };
+      const sameDrawing = latest !== null && drawingKey(latest.xml) === dryKey;
+      if (sameDrawing && sameSnapshot(latest.deviceSnapshot, snapshot)) return { id: latest.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
-      let summary = summarizeDiff(diff);
+      // Nét vẽ y nguyên, kho đã đổi: lần lưu này chỉ để chụp lại máy (lệch kho tính từ bản chụp).
+      let summary = sameDrawing ? SNAPSHOT_ONLY_SUMMARY : summarizeDiff(diff);
       if (latest && input.basedOnVersionId !== latest.id) {
         const names = await this.users.namesByEmails([latest.savedBy.toLowerCase()]);
         summary += ` · ${overwriteNote(names.get(latest.savedBy.toLowerCase()) ?? latest.savedBy)}`;
@@ -1528,6 +1530,7 @@ export class DiagramsService {
         seq: diagramVersionTable.seq,
         xml: diagramVersionTable.xml,
         cellIndex: diagramVersionTable.cellIndex,
+        deviceSnapshot: diagramVersionTable.deviceSnapshot,
         savedBy: diagramVersionTable.savedBy,
       })
       .from(diagramVersionTable)
@@ -1742,6 +1745,20 @@ function toDiagramLink(link: PortLink, slots: Map<string, number>): DiagramLink 
     labelFromB: linkLabelFrom(check, link.peerDeviceId),
     edgeStyle: linkEdgeCell(check, { sourceDeviceId: link.deviceId, slot: colorSlot }).style,
   };
+}
+
+const SNAPSHOT_ONLY_SUMMARY = 'Chụp lại thông tin thiết bị theo kho';
+
+/**
+ * Hai bản chụp thiết bị như nhau? So sau khi xếp khoá: jsonb trả object theo thứ tự khoá của nó,
+ * không theo thứ tự lúc ghi.
+ */
+function sameSnapshot(a: DeviceSnapshotEntry[], b: DeviceSnapshotEntry[]): boolean {
+  const canonical = (value: unknown): string =>
+    JSON.stringify(value, (_key, v: unknown) =>
+      v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))) : v,
+    );
+  return canonical(a) === canonical(b);
 }
 
 /**
