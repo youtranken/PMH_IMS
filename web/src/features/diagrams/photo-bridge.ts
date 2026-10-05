@@ -61,6 +61,16 @@ export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage
         .map((el) => el.getAttribute('id') ?? ''),
     ),
   );
+  // Mặt tủ = hình xếp con theo vạch U (`childLayout=rack`), kể cả tủ lấy từ thư viện — cột "Chưa
+  // khai U" cũng mang ims_cabinet_id nhưng là cột xếp chồng, nhãn ở dưới hình.
+  const rackFaces = new Set(
+    Array.from(page.getElementsByTagName('mxCell'))
+      .filter((cell) => /(?:^|;)childLayout=rack(?:;|$)/.test(cell.getAttribute('style') ?? ''))
+      .map((cell) => {
+        const wrapper = cell.parentElement && (cell.parentElement.nodeName === 'UserObject' || cell.parentElement.nodeName === 'object') ? cell.parentElement : null;
+        return (wrapper ?? cell).getAttribute('id') ?? '';
+      }),
+  );
   for (const tag of ['UserObject', 'object']) {
     for (const el of Array.from(page.getElementsByTagName(tag))) {
       const deviceId = el.getAttribute('ims_device_id');
@@ -77,7 +87,7 @@ export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage
         style: cell.getAttribute('style') ?? '',
         attrs,
         geometry: rackFrames.has(cell.getAttribute('parent') ?? '') ? null : geometryOf(cell),
-        inRack: rackFrames.has(cell.getAttribute('parent') ?? ''),
+        inRack: rackFaces.has(cell.getAttribute('parent') ?? ''),
       });
     }
   }

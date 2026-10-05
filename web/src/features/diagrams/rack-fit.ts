@@ -90,14 +90,18 @@ function readCells(xml: string): Cell[] {
 export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackFitResult {
   const result: RackFitResult = { updates: {}, cabinetMismatch: [], noU: [], unknown: [] };
   const cells = readCells(xml);
+  // Mọi hình rack (kể cả tủ người vẽ lấy từ thư viện) đặt nhãn bên phải — cùng luật hydrate; chỉ
+  // khung gắn tủ kho (`ims_cabinet_id`) mới đặt máy theo U.
+  const anyRack = new Set(cells.filter((c) => /(?:^|;)childLayout=rack(?:;|$)/.test(c.style)).map((c) => c.id));
   const racks = new Map<string, Cell & { geo: NonNullable<Cell['geo']> }>();
-  for (const c of cells) if (c.cabinetId && c.geo && /(?:^|;)childLayout=rack(?:;|$)/.test(c.style)) racks.set(c.id, { ...c, geo: c.geo });
+  for (const c of cells) if (c.cabinetId && c.geo && anyRack.has(c.id)) racks.set(c.id, { ...c, geo: c.geo });
   for (const cell of cells) {
     if (!cell.deviceId) continue;
     const frame = cell.parent ? racks.get(cell.parent) : undefined;
     if (!frame) {
       // Kéo ra khỏi khung tủ: nhãn bên phải không còn đúng chỗ.
-      if (styleMap(cell.style).get('labelPosition') === 'right') result.updates[cell.id] = { style: withLabelPlacement(cell.style, BELOW_STYLE) };
+      const outside = !cell.parent || !anyRack.has(cell.parent);
+      if (outside && styleMap(cell.style).get('labelPosition') === 'right') result.updates[cell.id] = { style: withLabelPlacement(cell.style, BELOW_STYLE) };
       continue;
     }
     const info = devices.get(cell.deviceId);

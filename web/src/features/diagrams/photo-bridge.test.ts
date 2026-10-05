@@ -106,7 +106,7 @@ describe('photoCellUpdate — ô ôm theo tỉ lệ ảnh khi đổi hình (Q-23
 
   it('máy trong khung tủ đổi hình vẫn giữ nhãn bên phải (Q-23 05/10)', () => {
     const side = 'labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=14;';
-    const frame = '<UserObject label="Tủ" ims_cabinet_id="cab-1" id="fr"><mxCell style="" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="400" as="geometry"/></mxCell></UserObject>';
+    const frame = '<UserObject label="Tủ" ims_cabinet_id="cab-1" id="fr"><mxCell style="container=1;childLayout=rack;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="400" as="geometry"/></mxCell></UserObject>';
     const inRack = `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01" id="r1"><mxCell style="shape=x;${side}" vertex="1" parent="fr"><mxGeometry x="10" y="40" width="180" height="40" as="geometry"/></mxCell></UserObject>`;
     const [c] = deviceCellsOnPage(file(frame + inRack), 'p1');
     expect(c.inRack).toBe(true);
@@ -116,6 +116,18 @@ describe('photoCellUpdate — ô ôm theo tỉ lệ ảnh khi đổi hình (Q-23
     const [out] = deviceCellsOnPage(file(cell('a')), 'p1');
     expect(out.inRack).toBe(false);
     expect(photoCellUpdate(out, LOOK, 'front', KEYS, side).style).not.toContain('labelPosition');
+  });
+
+  it('máy ở cột "Chưa khai U" (khung tủ dạng cột, không phải mặt tủ) → không phải "trong tủ", nhãn giữ dưới hình', () => {
+    const column = '<UserObject label="Tủ · Chưa khai U" ims_cabinet_id="cab-1" id="col"><mxCell style="swimlane;childLayout=stackLayout;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="400" as="geometry"/></mxCell></UserObject>';
+    const inColumn = `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01" id="c1"><mxCell style="" vertex="1" parent="col"><mxGeometry x="10" y="40" width="60" height="40" as="geometry"/></mxCell></UserObject>`;
+    const rackFrame = '<mxCell id="rk" style="shape=rack;childLayout=rack;container=1;" vertex="1" parent="1"><mxGeometry x="300" y="0" width="200" height="400" as="geometry"/></mxCell>';
+    const inLibraryRack = `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01" id="c2"><mxCell style="" vertex="1" parent="rk"><mxGeometry x="10" y="40" width="180" height="15" as="geometry"/></mxCell></UserObject>`;
+    const cells = deviceCellsOnPage(file(column + inColumn + rackFrame + inLibraryRack), 'p1');
+    expect(cells.map((c) => [c.id, c.inRack])).toEqual([
+      ['c1', false],
+      ['c2', true],
+    ]);
   });
 
   it('ô không đọc được cỡ → không gửi geometry (không đoán)', () => {

@@ -62,6 +62,11 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
     expect(rackFit(model(frame('f4', CAB_04) + out), INFO).updates).toEqual({ d1: { style: 'shape=image;verticalLabelPosition=bottom;verticalAlign=top;' } });
   });
 
+  it('máy trong tủ người vẽ lấy từ thư viện rack (không gắn tủ kho): không đặt theo U, nhưng KHÔNG bị đổi nhãn về dưới hình (hydrate đặt nhãn bên phải cho mọi khung rack)', () => {
+    const plain = `<mxCell id="f9" style="${RACK_STYLE}" vertex="1" parent="1"><mxGeometry x="0" y="0" width="204" height="664.6" as="geometry"/></mxCell>`;
+    expect(rackFit(model(plain + device('d1', 'SW-01', 'f9', { y: 10, h: 14.8 }, `shape=image;${SIDE}`)), INFO).updates).toEqual({});
+  });
+
   it('máy kho chưa biết (vừa chèn, chưa có thông tin) → hỏi thêm, không sửa', () => {
     const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'MOI-01', 'f4', { y: 10, h: 40 })), INFO);
     expect(result.updates).toEqual({});
