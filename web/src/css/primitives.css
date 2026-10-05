@@ -1893,11 +1893,13 @@ button.btn-x.danger:hover:not(:disabled) {
 /* Bản vẽ gốc chưa có con: băng một dòng (đệm mỏng) + nút "+ Bản vẽ con" ngay bên phải. */
 .dmap-root-compact {
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: var(--space-3);
 }
 .dmap-root-compact .dmap-banner {
-  flex: 1 1 auto;
+  flex: 1 1 20rem;
+  min-width: 0;
   padding: var(--space-3) var(--space-6);
 }
 .dmap-root-compact .dmap-banner-text {
@@ -1909,8 +1911,10 @@ button.btn-x.danger:hover:not(:disabled) {
 .dmap-root-compact .dmap-banner-name {
   font-size: var(--fs-md);
 }
+/* Nút thêm mang tên bản vẽ đích nên có thể dài: co lại và xuống dòng, ở 390px thì xuống dưới băng. */
 .dmap-add-inline {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 100%;
   display: flex;
 }
 .dmap-add-inline > button {
