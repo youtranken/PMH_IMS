@@ -123,18 +123,19 @@ function attach(
   pick: (deviceId: string, near: string | null) => string | null,
 ): { source: string; target: string } | null {
   const other = (deviceId: string) => (deviceId === link.a ? link.b : link.a);
-  const from = deviceOf(edge.source);
-  const to = deviceOf(edge.target);
-  if (from && to && from !== to && [from, to].every((d) => d === link.a || d === link.b)) {
-    return { source: edge.source!, target: edge.target! };
+  const { source: fromCell, target: toCell } = edge;
+  const from = deviceOf(fromCell);
+  const to = deviceOf(toCell);
+  if (fromCell && toCell && from && to && from !== to && [from, to].every((d) => d === link.a || d === link.b)) {
+    return { source: fromCell, target: toCell };
   }
-  if (from === link.a || from === link.b) {
-    const target = pick(other(from), edge.source);
-    return target ? { source: edge.source!, target } : null;
+  if (fromCell && from && (from === link.a || from === link.b)) {
+    const target = pick(other(from), fromCell);
+    return target ? { source: fromCell, target } : null;
   }
-  if (to === link.a || to === link.b) {
-    const source = pick(other(to), edge.target);
-    return source ? { source, target: edge.target! } : null;
+  if (toCell && to && (to === link.a || to === link.b)) {
+    const source = pick(other(to), toCell);
+    return source ? { source, target: toCell } : null;
   }
   const source = pick(link.a, null);
   const target = source ? pick(link.b, source) : null;

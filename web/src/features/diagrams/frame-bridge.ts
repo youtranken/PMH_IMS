@@ -164,7 +164,8 @@ export function cabinetFramePatch(
   const update: Record<string, { parent: string; previous: string; geometry: string; style: string }> = {};
   const lastIn = new Map<string, string>();
   for (const { device, cell } of moves) {
-    const parent = frameIds.get(device.frame)!;
+    const parent = frameIds.get(device.frame);
+    if (!parent) continue;
     update[cell.id] = {
       parent,
       previous: lastIn.get(parent) ?? '',

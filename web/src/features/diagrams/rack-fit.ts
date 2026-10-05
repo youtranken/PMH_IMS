@@ -90,7 +90,8 @@ function readCells(xml: string): Cell[] {
 export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackFitResult {
   const result: RackFitResult = { updates: {}, cabinetMismatch: [], noU: [], unknown: [] };
   const cells = readCells(xml);
-  const racks = new Map(cells.filter((c) => c.cabinetId && /(?:^|;)childLayout=rack(?:;|$)/.test(c.style) && c.geo).map((c) => [c.id, c]));
+  const racks = new Map<string, Cell & { geo: NonNullable<Cell['geo']> }>();
+  for (const c of cells) if (c.cabinetId && c.geo && /(?:^|;)childLayout=rack(?:;|$)/.test(c.style)) racks.set(c.id, { ...c, geo: c.geo });
   for (const cell of cells) {
     if (!cell.deviceId) continue;
     const frame = cell.parent ? racks.get(cell.parent) : undefined;
@@ -114,7 +115,7 @@ export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackF
     const right = Number(s.get('marginRight')) || 0;
     const top = Number(s.get('marginTop')) || 0;
     const bottom = Number(s.get('marginBottom')) || 0;
-    const fg = frame.geo!;
+    const fg = frame.geo;
     const height = Math.round((fg.height - top - bottom) / unit);
     const size = info.uSize && info.uSize > 0 ? info.uSize : 1;
     const place = { x: left, width: r1(fg.width - left - right), height: r1(size * unit), y: cell.geo?.y ?? top };
