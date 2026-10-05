@@ -7,7 +7,7 @@ import { Chevron } from '@/ui/chevron';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
-import { formatDate, formatDateTime, orDash, todayIso } from '@/lib/format';
+import { formatDate, formatDateTime, formatMoney, orDash, todayIso } from '@/lib/format';
 import { daysBetweenIso, periodRange } from '@/lib/period-range';
 import type { Me } from '@/lib/me';
 import { renewPreset } from '@/lib/renew-dates';
@@ -64,6 +64,11 @@ interface RenewalRow {
   /** Họ tên người gia hạn — API tra; vắng thì hiện email. */
   actorName?: string | null;
   createdAt: string;
+  /** Hợp đồng + chi phí của RIÊNG lượt gia hạn này (Q-15); null = chưa khai. */
+  contract?: string | null;
+  cost?: number | null;
+  /** Website của kỳ này (SSL / tên miền). */
+  websites?: string[] | null;
 }
 
 /** Tham số khoảng ngày của tab "Đã gia hạn" — tên khoá theo `RenewalsQueryDto` bên API. */
@@ -796,6 +801,27 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
           `${orDash(formatDate(row.original.oldEnd))} → ${formatDate(row.original.newEnd)}`,
       },
       {
+        // Chi phí + hợp đồng của lượt gia hạn (P-02): "quý này chi bao nhiêu cho gia hạn".
+        accessorKey: 'cost',
+        enableSorting: false,
+        header: t('expiry.renewalCost'),
+        meta: { className: 'num col-right' },
+        cell: ({ row }) => formatMoney(row.original.cost),
+      },
+      {
+        accessorKey: 'contract',
+        enableSorting: false,
+        header: t('expiry.renewalContract'),
+        cell: ({ row }) => (
+          <>
+            {orDash(row.original.contract)}
+            {row.original.websites && row.original.websites.length > 0 ? (
+              <span className="cell-sub">{row.original.websites.join(', ')}</span>
+            ) : null}
+          </>
+        ),
+      },
+      {
         accessorKey: 'actor',
         enableSorting: false,
         header: t('expiry.renewedBy'),
@@ -840,6 +866,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
     return <LoadError error={renewals.error} onRetry={() => void renewals.refetch()} />;
   }
   const rows = renewals.data ?? [];
+  const totalCost = rows.reduce((sum, row) => sum + (row.cost ?? 0), 0);
   if (rows.length === 0) {
     return (
       <>
@@ -867,6 +894,11 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
           aside: (row) => formatDate(row.createdAt),
         }}
       />
+      {totalCost > 0 ? (
+        <p className="muted seat-total">
+          {t('expiry.renewalsTotalCost', { count: rows.filter((r) => r.cost != null).length, total: formatMoney(totalCost) })}
+        </p>
+      ) : null}
     </>
   );
 }

@@ -68,6 +68,42 @@ describe('Tab "Đã gia hạn"', () => {
     expect((await screen.findAllByText('Lê Minh'))[0]).toHaveAttribute('title', 'le.minh@pmh.com.vn');
     expect(screen.getByRole('group', { name: 'Khoảng ngày gia hạn' })).toBeInTheDocument();
   });
+
+  it('P-02: cột Chi phí + Hợp đồng của từng lượt gia hạn; dòng tổng chi phí dưới bảng', async () => {
+    const rows = [
+      { ...RENEWAL, contract: 'HĐ-E2E-01', cost: 12000000, websites: null },
+      { ...RENEWAL, id: 'r2', label: 'SSL E2E', objectKind: 'ssl', contract: null, cost: 3000000, websites: ['pmh.com.vn'] },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/expiry/renewals')) return Promise.resolve(jsonResponse(200, rows));
+        if (url.includes('/api/v1/expiry?')) {
+          return Promise.resolve(
+            jsonResponse(200, { items: [], total: 0, summary: { expired: 0, critical: 0, warning: 0 }, thresholds: { criticalDays: 7, warningDays: 30 }, failedKinds: [] }),
+          );
+        }
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <ConfirmProvider>
+            <ExpiryScreen me={me} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    await userEvent.setup().click(await screen.findByRole('tab', { name: 'Đã gia hạn' }));
+    const table = await screen.findByRole('table');
+    const headers = within(table).getAllByRole('columnheader').map((h) => h.textContent);
+    expect(headers).toEqual(expect.arrayContaining(['Chi phí', 'Hợp đồng']));
+    expect(table).toHaveTextContent('HĐ-E2E-01');
+    expect(table).toHaveTextContent('pmh.com.vn');
+    expect(screen.getByText(/Tổng chi phí 2 lượt gia hạn: 15\.000\.000/)).toBeInTheDocument();
+  });
 });
 
 describe('Gia hạn từ màn Sắp hết hạn — MỘT toast', () => {
