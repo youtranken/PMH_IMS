@@ -66,7 +66,7 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
       {map.roots.map((root) => (
         <section
           key={root.node.id}
-          // Gốc chưa có con chỉ là một băng một dòng kèm "+ Bản vẽ con": khối gợi ý trống chiếm chỗ
+          // Gốc chưa có con chỉ là một băng một dòng kèm nút thêm bản vẽ con: khối gợi ý trống chiếm chỗ
           // của các gốc có nội dung bên dưới.
           className={root.areas.length === 0 ? 'dmap-root dmap-root-compact' : 'dmap-root'}
           aria-labelledby={`dmap-root-${root.node.id}`}
@@ -92,7 +92,7 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
           {root.areas.length === 0 ? (
             <div className="dmap-add dmap-add-inline">
               <button type="button" aria-label={t('diagrams.addChildOf', { name: root.node.name })} onClick={() => onAddChild(root.node)}>
-                {t('diagrams.map.addChild')}
+                {t('diagrams.map.addInto', { name: root.node.name })}
               </button>
             </div>
           ) : (
@@ -148,15 +148,17 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
                     })}
                     <li className="dmap-add">
                       <button type="button" aria-label={t('diagrams.addChildOf', { name: area.node.name })} onClick={() => onAddChild(area.node)}>
-                        {t('diagrams.map.addChild')}
+                        {t('diagrams.map.addInto', { name: area.node.name })}
                       </button>
                     </li>
                   </ul>
                 </li>
               ))}
+              {/* Nút này đứng cạnh nút thêm của khu cuối: chữ phải nói ĐÍCH, không thì bấm nhầm là bản vẽ
+                  nằm sai nhánh. */}
               <li className="dmap-add dmap-add-area">
                 <button type="button" aria-label={t('diagrams.addChildOf', { name: root.node.name })} onClick={() => onAddChild(root.node)}>
-                  {t('diagrams.map.addChild')}
+                  {t('diagrams.map.addArea', { name: root.node.name })}
                 </button>
               </li>
             </ul>

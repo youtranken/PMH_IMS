@@ -1590,6 +1590,10 @@ button.btn-x.danger:hover:not(:disabled) {
   color: var(--ink-2);
   font-size: var(--fs-xs);
 }
+/* Thêm KHU (con của gốc) khác thêm ô trong khu: viền dày hơn để hai nút cạnh nhau không trông như một. */
+.dmap-add-area > button {
+  border-width: 2px;
+}
 .dmap-add-area {
   display: flex;
   flex-direction: column;
