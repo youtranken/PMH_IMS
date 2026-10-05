@@ -84,6 +84,17 @@ export interface ReviewedNode extends Omit<DiagramNode, 'status'> {
   pendingApprovalId: string | null;
 }
 
+/** Một dòng hàng chờ duyệt bản vẽ của người duyệt — chỉ tên / người gửi / số phiên bản, không nội dung. */
+export interface PendingReview {
+  approvalId: string;
+  diagramId: string;
+  name: string;
+  requester: string;
+  requesterName: string;
+  seq: number | null;
+  submittedAt: Date;
+}
+
 export interface SubmitInput {
   reason: string;
   /** Mặc định phiên bản mới nhất. */
@@ -236,6 +247,35 @@ export class DiagramReviewService implements OnModuleInit {
         pendingApprovalId,
       };
     });
+  }
+
+  /**
+   * Bản vẽ đang chờ NGƯỜI NÀY duyệt (D-07): badge menu "Sơ đồ mạng" và khối trên màn Duyệt. Bỏ
+   * yêu cầu do chính họ gửi (bốn mắt — họ không duyệt được). Chỉ tên/trạng thái như bản đồ, nên
+   * không đòi mã sơ đồ; lý do gửi KHÔNG trả vì có thể nêu mã thiết bị (nội dung).
+   */
+  async pendingReviews(actor: { email: string }): Promise<PendingReview[]> {
+    const me = actor.email.toLowerCase();
+    const pending = (await this.approvals.pending(DIAGRAM_PUBLISH_KIND)).filter((a) => a.requester.toLowerCase() !== me);
+    if (pending.length === 0) return [];
+    const rows = await this.db
+      .select({ id: diagramTable.id, name: diagramTable.name })
+      .from(diagramTable)
+      .where(and(inArray(diagramTable.id, [...new Set(pending.map((a) => a.subjectId))]), isNull(diagramTable.archivedAt)));
+    const names = new Map(rows.map((r) => [r.id, r.name]));
+    const people = await this.users.namesByEmails([...new Set(pending.map((a) => a.requester))]);
+    return pending
+      .filter((a) => names.has(a.subjectId))
+      .map((a) => ({
+        approvalId: a.id,
+        diagramId: a.subjectId,
+        name: names.get(a.subjectId) ?? '',
+        requester: a.requester,
+        requesterName: people.get(a.requester) ?? a.requester,
+        seq: typeof a.payload?.seq === 'number' ? a.payload.seq : null,
+        submittedAt: a.createdAt,
+      }))
+      .sort((x, y) => x.submittedAt.getTime() - y.submittedAt.getTime());
   }
 
   /* ------------------------------------------------------------ tự kiểm --- */

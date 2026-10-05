@@ -766,6 +766,14 @@ export default {
       review: 'Phiên bản & duyệt',
       other: 'Khác',
     },
+    reviewQueue: {
+      navBadge: '{{count}} Bản vẽ chờ duyệt',
+      title: 'Bản vẽ chờ duyệt · {{count}}',
+      hint: 'Thành viên gửi bản vẽ để thành bản chính thức. Mở bản vẽ rồi bấm "Duyệt…".',
+      version: 'Phiên bản #{{seq}}',
+      sentBy: '{{name}} gửi lúc {{at}}',
+      open: 'Mở {{name}}',
+    },
     archivedList: {
       toggle: 'Đã lưu trữ ({{count}})',
       title: 'Bản vẽ đã lưu trữ ({{count}})',

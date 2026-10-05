@@ -8,6 +8,7 @@ import { isCompactShellPath, titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
+import { usePendingDiagramReviews } from '@/shell/use-pending-diagram-reviews';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { useFailedMailCount } from '@/shell/use-failed-mail-count';
 import { NavIcon } from '@/ui/nav-icon';
@@ -19,6 +20,7 @@ import { AccountMenu } from '@/shell/account-menu';
 
 /** Câu "N yêu cầu chờ duyệt" dùng chung cho mục menu và nút mở menu (aria-describedby). */
 const PENDING_APPROVALS_ID = 'nav-pending-approvals';
+const DIAGRAM_REVIEWS_ID = 'nav-diagram-reviews';
 /** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
 const OVERDUE_ID = 'nav-overdue';
 const FAILED_MAIL_ID = 'nav-failed-mail';
@@ -54,6 +56,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
    */
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
   const pendingApprovals = usePendingApprovalCount(me);
+  const diagramReviews = usePendingDiagramReviews(me).rows.length;
   const overdue = useOverdueExpiryCount();
   const failedMail = useFailedMailCount(me);
   const [shortcut] = useState(paletteShortcut);
@@ -176,7 +179,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                         ? OVERDUE_ID
                         : item.badge === 'failedMail' && failedMail > 0
                           ? FAILED_MAIL_ID
-                          : undefined
+                          : item.badge === 'diagramReviews' && diagramReviews > 0
+                            ? DIAGRAM_REVIEWS_ID
+                            : undefined
                   }
                   // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
                   onClick={() => setDrawerOpen(false)}
@@ -196,6 +201,12 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
                     <span className="nav-badge" aria-hidden="true">
                       {overdue}
+                    </span>
+                  ) : null}
+                  {item.badge === 'diagramReviews' && diagramReviews > 0 ? (
+                    /* Cam như badge duyệt mở két: một bản vẽ đang chờ chính người này quyết. */
+                    <span className="nav-badge warn" aria-hidden="true">
+                      {diagramReviews}
                     </span>
                   ) : null}
                   {item.badge === 'failedMail' && failedMail > 0 ? (
@@ -296,6 +307,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           {overdue > 0 ? (
             <span id={OVERDUE_ID} className="sr-only">
               {t('expiry.navBadge', { count: overdue })}
+            </span>
+          ) : null}
+          {diagramReviews > 0 ? (
+            <span id={DIAGRAM_REVIEWS_ID} className="sr-only">
+              {t('diagrams.reviewQueue.navBadge', { count: diagramReviews })}
             </span>
           ) : null}
           {failedMail > 0 ? (

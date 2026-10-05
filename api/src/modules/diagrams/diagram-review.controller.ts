@@ -73,6 +73,13 @@ class ResolveDto {
 export class DiagramReviewController {
   constructor(private readonly review: DiagramReviewService) {}
 
+  /** Hàng chờ duyệt bản vẽ của người đang xem (D-07): tên / người gửi — không nội dung nên không hỏi mã. */
+  @Roles('sa', 'admin')
+  @Get('reviews/pending')
+  pending(@Req() req: AuthedRequest) {
+    return this.review.pendingReviews(req.user!);
+  }
+
   @Roles('sa', 'admin', 'member')
   @RequiresStepUp('diagram')
   @Get(':id/review')

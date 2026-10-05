@@ -253,6 +253,32 @@ describe('Sơ đồ mạng · gửi duyệt, duyệt, trả về, phát hành (Q
     await expect(review.submit(ADMIN, other.diagramId, { reason: 'Admin gửi hộ' })).resolves.toBeDefined();
   });
 
+  it('hàng chờ duyệt bản vẽ của một người duyệt (D-07): chỉ tên/người gửi/số phiên bản, không tính yêu cầu của chính họ', async () => {
+    const dev = await newDevice('SW-E2E-RV-Q');
+    const mine = await drawn('Hàng chờ TV', deviceCell('d1', dev, 'SW-E2E-RV-Q'));
+    const { approval } = await review.submit(MEMBER, mine.diagramId, { reason: 'Nhờ duyệt SW-E2E-RV-Q' });
+    const adminOwn = await drawn('Hàng chờ Admin', deviceCell('d1', dev, 'SW-E2E-RV-Q'), ADMIN.email);
+    const own = await review.submit(ADMIN, adminOwn.diagramId, { reason: 'Admin gửi' });
+
+    const forAdmin = await review.pendingReviews(ADMIN);
+    const row = forAdmin.find((r) => r.approvalId === approval.id);
+    expect(row).toEqual({
+      approvalId: approval.id,
+      diagramId: mine.diagramId,
+      name: expect.stringMatching(/^E2E Hàng chờ TV/),
+      requester: MEMBER.email,
+      requesterName: MEMBER.fullName,
+      seq: 1,
+      submittedAt: expect.any(Date),
+    });
+    // Bốn mắt: Admin không duyệt bản mình gửi — hàng chờ của Admin không có nó, của SA thì có.
+    expect(forAdmin.some((r) => r.approvalId === own.approval.id)).toBe(false);
+    expect((await review.pendingReviews(SA)).map((r) => r.approvalId)).toEqual(expect.arrayContaining([approval.id, own.approval.id]));
+    await review.withdraw(MEMBER, mine.diagramId, approval.id);
+    await review.withdraw(ADMIN, adminOwn.diagramId, own.approval.id);
+    expect((await review.pendingReviews(SA)).some((r) => r.approvalId === approval.id)).toBe(false);
+  });
+
   it('người gửi tự rút; người khác rút → 403', async () => {
     const dev = await newDevice('SW-E2E-RV-WD');
     const { diagramId } = await drawn('Rút', deviceCell('d1', dev, 'SW-E2E-RV-WD'));

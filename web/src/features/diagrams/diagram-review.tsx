@@ -14,6 +14,7 @@ import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { BarPopover, type BarAction } from './diagram-bar';
+import { DIAGRAM_REVIEWS_KEY } from '@/shell/use-pending-diagram-reviews';
 import { canSubmitVersion } from './diagram-presentation';
 import {
   TREE_KEY,
@@ -105,7 +106,7 @@ export function FindingList({ title, items, onGoTo }: { title: string; items: Fi
 /** Làm mới mọi thứ một lượt gửi duyệt / phát hành / duyệt / bình luận có thể đổi. */
 export async function refreshDiagram(queryClient: QueryClient, id: string): Promise<void> {
   await Promise.all(
-    [TREE_KEY, nodeKey(id), reviewKey(id), commentsKey(id), versionsKey(id), historyKey(id), publicationsKey(id)].map((queryKey) =>
+    [TREE_KEY, nodeKey(id), reviewKey(id), commentsKey(id), versionsKey(id), historyKey(id), publicationsKey(id), DIAGRAM_REVIEWS_KEY].map((queryKey) =>
       queryClient.invalidateQueries({ queryKey }),
     ),
   );
