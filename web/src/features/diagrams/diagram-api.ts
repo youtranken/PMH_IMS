@@ -79,6 +79,8 @@ export interface DiagramDeviceInfo {
   status: string | null;
   ips: string[];
   siteCode: string | null;
+  /** Tủ trong kho — màn sửa so với khung tủ máy được thả vào (vắng ở dữ liệu cũ). */
+  cabinetId?: string | null;
   cabinetCode: string | null;
   /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U. */
   u: number | null;

@@ -24,7 +24,31 @@ import type { CheckLink } from './diagram-finding';
  * trong draw.io thì lần mở sau bị đặt lại — hình, cách đọc nhãn (`html=0`: tên máy không bao giờ
  * được đọc như HTML) và chỗ đặt nhãn so với hình đi theo loại thiết bị, không theo từng bản vẽ.
  */
-export const IMS_STYLE_KEYS = ['shape', 'image', 'imageAspect', 'aspect', 'outlineConnect', 'html', 'verticalLabelPosition', 'verticalAlign'];
+export const IMS_STYLE_KEYS = [
+  'shape',
+  'image',
+  'imageAspect',
+  'aspect',
+  'outlineConnect',
+  'html',
+  'verticalLabelPosition',
+  'verticalAlign',
+  'labelPosition',
+  'align',
+  'spacingLeft',
+];
+
+/**
+ * Nhãn máy trong khung tủ (Q-23 05/10): bên PHẢI ô, giữa theo chiều cao — nhãn dưới hình của một
+ * máy 1U rơi xuống đè lên các U bên dưới. `spacingLeft` đẩy chữ qua thanh ray phải của hình tủ.
+ */
+export const RACK_LABEL_STYLE = 'labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=14;';
+const LABEL_PLACEMENT_KEYS = ['labelPosition', 'verticalLabelPosition', 'align', 'verticalAlign', 'spacingLeft'];
+
+/** Style ô máy nằm trong khung tủ: bỏ chỗ đặt nhãn cũ, nhãn bên phải. */
+export function rackDeviceStyle(style: string): string {
+  return `${styleWithoutIms(style, LABEL_PLACEMENT_KEYS)}${RACK_LABEL_STYLE}`;
+}
 
 /** Thuộc tính dữ liệu của ô thiết bị ngoài hợp đồng mà bản chèn cũ từng ghi — dehydrate gỡ. */
 const LEGACY_DATA_ATTRS = new Set(['ims_device_ip', 'ims_device_type']);
@@ -108,6 +132,17 @@ export function deviceCellLabel(device: DeviceCellSource): string {
   if (device.rackWarning) lines.push(device.rackWarning);
   if (device.status === 'retired') lines.push(WARN_RETIRED);
   return lines.filter((line): line is string => Boolean(line)).join('\n');
+}
+
+/**
+ * Nhãn MỘT dòng của máy trong khung tủ: mã · IP (+ dấu cảnh báo). Vị trí (site · tủ · U) đã là
+ * chính khung tủ — nhãn ba dòng cạnh một máy 1U chồng lên nhãn của máy trên dưới.
+ */
+export function deviceRackLabel(device: DeviceCellSource): string {
+  if (!device.found) return [device.code, WARN_MISSING].join(' · ');
+  const ip = device.ips.length === 0 ? null : device.ips.length === 1 ? device.ips[0] : `${device.ips[0]} (+${device.ips.length - 1})`;
+  const parts = [device.code, ip, device.rackWarning ?? null, device.status === 'retired' ? WARN_RETIRED : null];
+  return parts.filter((part): part is string => Boolean(part)).join(' · ');
 }
 
 /**
@@ -271,6 +306,8 @@ interface DeviceContext {
   id: string;
   code: string;
   photo: PhotoSide | null;
+  /** Ô là con của một khung tủ (`childLayout=rack`) — nhãn bên phải, một dòng. */
+  inRack: boolean;
 }
 
 /** Ô dây "của kho" và trạng thái của nó (luật ở `diagram-checks.ts`). */
@@ -288,6 +325,7 @@ interface CellEdit {
  * XML không giữ: draw.io không đọc chúng, cổng kiểm không cần chúng.
  */
 function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEdit): string {
+  const inRack = rackChildIds(xml);
   const out: string[] = [];
   const stack: { device: DeviceContext | null; edge: EdgeContext | null }[] = [];
   const parser = new SaxesParser({ xmlns: false });
@@ -300,7 +338,7 @@ function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEd
     let edge: EdgeContext | null = null;
     const parent = stack[stack.length - 1];
     if ((tag.name === 'UserObject' || tag.name === 'object') && attrs.ims_device_id) {
-      device = { id: attrs.ims_device_id, code: attrs.ims_device_code ?? '', photo: photoSideOf(attrs[PHOTO_SIDE_ATTR]) };
+      device = { id: attrs.ims_device_id, code: attrs.ims_device_code ?? '', photo: photoSideOf(attrs[PHOTO_SIDE_ATTR]), inRack: inRack.has(attrs.id ?? '') };
       attrs = edit.device.data(attrs, device);
     } else if ((tag.name === 'UserObject' || tag.name === 'object') && edges.has(attrs.id ?? '')) {
       edge = edges.get(attrs.id)!;
@@ -327,6 +365,32 @@ function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEd
   parser.on('cdata', (text) => out.push(escapeXmlText(text)));
   parser.write(xml).close();
   return out.join('');
+}
+
+/**
+ * Id các ô là con trực tiếp của một khung tủ (hình có `childLayout=rack` — khung tủ IMS dựng hay
+ * người vẽ lấy từ thư viện rack). Đọc một lượt trước khi viết lại: `parent` nằm trên `mxCell`,
+ * còn nhãn nằm trên `UserObject` bọc nó, đọc trước.
+ */
+function rackChildIds(xml: string): Set<string> {
+  const racks = new Set<string>();
+  const parentOf = new Map<string, string>();
+  let wrapperId: string | null = null;
+  const parser = new SaxesParser({ xmlns: false });
+  parser.on('opentag', (tag: SaxesTagPlain) => {
+    const attrs = tag.attributes as Record<string, string>;
+    if (tag.name === 'UserObject' || tag.name === 'object') wrapperId = attrs.id ?? null;
+    else if (tag.name === 'mxCell') {
+      const id = attrs.id ?? wrapperId ?? '';
+      if (attrs.parent) parentOf.set(id, attrs.parent);
+      if (/(?:^|;)childLayout=rack(?:;|$)/.test(attrs.style ?? '')) racks.add(id);
+    }
+  });
+  parser.on('closetag', (tag: SaxesTagPlain) => {
+    if (tag.name === 'UserObject' || tag.name === 'object') wrapperId = null;
+  });
+  parser.write(xml).close();
+  return new Set([...parentOf].filter(([, parent]) => racks.has(parent)).map(([id]) => id));
 }
 
 /** Giữ thứ tự thuộc tính, chỉ thay giá trị (hoặc thêm cuối) — diff XML giữa hai lần lưu gọn. */
@@ -415,11 +479,14 @@ export function hydrateDiagramXml(
       data: (attrs, device) => {
         const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name) && name !== PHOTO_FILE_ATTR));
         const source = sourceOf(device);
-        const labeled = withAttr(kept, 'label', deviceCellLabel(source));
+        const labeled = withAttr(kept, 'label', device.inRack ? deviceRackLabel(source) : deviceCellLabel(source));
         const photo = device.photo && source.found ? source.photos?.[device.photo] : undefined;
         return photo ? withAttr(labeled, PHOTO_FILE_ATTR, photo.fileId) : labeled;
       },
-      cell: (attrs, device) => withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '')}${deviceLookStyle(sourceOf(device), device.photo)}`),
+      cell: (attrs, device) => {
+        const look = `${styleWithoutIms(attrs.style ?? '')}${deviceLookStyle(sourceOf(device), device.photo)}`;
+        return withAttr(attrs, 'style', device.inRack ? rackDeviceStyle(look) : look);
+      },
     },
     edge: {
       data: (attrs, edge) => {

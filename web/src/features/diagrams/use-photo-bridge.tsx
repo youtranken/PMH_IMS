@@ -12,6 +12,8 @@ import { currentChoice, deviceCellsOnPage, photoCellUpdate, photoChoiceReason, t
 
 interface LooksResponse {
   imsStyleKeys: string[];
+  /** Chỗ đặt nhãn của máy trong khung tủ (server) — vắng ở server cũ. */
+  rackLabelStyle?: string;
   items: DeviceLook[];
 }
 
@@ -81,7 +83,7 @@ export function usePhotoBridge({
           (acc, batch) =>
             acc.then(async (sofar) => {
               const res = await apiFetch<LooksResponse>(`/api/v1/diagrams/device-looks?ids=${batch.join(',')}`);
-              return { imsStyleKeys: res.imsStyleKeys, items: [...sofar.items, ...res.items] };
+              return { imsStyleKeys: res.imsStyleKeys, rackLabelStyle: res.rackLabelStyle, items: [...sofar.items, ...res.items] };
             }),
           Promise.resolve({ imsStyleKeys: [], items: [] }),
         )
@@ -94,7 +96,7 @@ export function usePhotoBridge({
     if (!state || !looks) return;
     const look = looks.items.find((l) => l.id === cell.deviceId);
     if (!look || photoChoiceReason(look, choice)) return;
-    const update = photoCellUpdate(cell, look, choice, looks.imsStyleKeys);
+    const update = photoCellUpdate(cell, look, choice, looks.imsStyleKeys, looks.rackLabelStyle);
     send({
       action: 'patch',
       patch: { u: { [state.pageId]: { cells: { u: { [cell.id]: update } } } } },

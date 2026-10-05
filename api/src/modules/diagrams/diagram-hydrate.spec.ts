@@ -10,6 +10,9 @@ import {
   hydrateDiagramXml,
   linkEdgeCell,
   photoAspect,
+  RACK_LABEL_STYLE,
+  deviceRackLabel,
+  rackDeviceStyle,
   type CableHydration,
   type DeviceCellSource,
 } from './diagram-hydrate';
@@ -430,3 +433,41 @@ function bareStyleOf(xml: string, cellId: string): Record<string, string> {
   }
   return out;
 }
+
+/* Máy trong khung tủ (Q-23 05/10): nhãn nằm bên phải ô, một dòng — không đè lên U khác. */
+describe('máy trong khung tủ — nhãn bên phải, một dòng', () => {
+  const rack = (id: string, children: string) =>
+    `<UserObject label="Tủ R1 · Mặt trước" ims_cabinet_id="cab-1" id="${id}"><mxCell style="shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=14.8;container=1;childLayout=rack;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="204" height="221" as="geometry"/></mxCell></UserObject>${children}`;
+  const inRack = (id: string, parent: string) =>
+    `<UserObject label="SW-E2E-01" ims_device_id="${DEV}" ims_device_code="SW-E2E-01" id="${id}"><mxCell style="align=center;" vertex="1" parent="${parent}"><mxGeometry x="33" y="21" width="162" height="14.8" as="geometry"/></mxCell></UserObject>`;
+  const devices = new Map([[DEV, source({ u: 30, uSize: 1 })]]);
+
+  it.each<[string, Partial<DeviceCellSource>, string]>([
+    ['mã · IP', {}, 'SW-E2E-01 · 10.0.0.5'],
+    ['không IP', { ips: [] }, 'SW-E2E-01'],
+    ['thanh lý', { status: 'retired' }, 'SW-E2E-01 · 10.0.0.5 · ⚠ Đã thanh lý'],
+    ['U vượt tủ', { rackWarning: '⚠ U41 vượt tủ R1 (40U)' }, 'SW-E2E-01 · 10.0.0.5 · ⚠ U41 vượt tủ R1 (40U)'],
+    ['không còn trong kho', { found: false }, 'SW-E2E-01 · ⚠ Không tìm thấy trong kho'],
+  ])('deviceRackLabel: %s', (_name, over, expected) => {
+    expect(deviceRackLabel(source(over))).toBe(expected);
+  });
+
+  it('rackDeviceStyle: bỏ chỗ đặt nhãn cũ, nhãn bên phải; mọi khoá nó đặt đều là khoá IMS (dehydrate gỡ được)', () => {
+    const style = rackDeviceStyle('align=center;shape=image;verticalLabelPosition=bottom;verticalAlign=top;html=0;');
+    expect(style).toBe(`shape=image;html=0;${RACK_LABEL_STYLE}`);
+    for (const token of RACK_LABEL_STYLE.split(';').filter(Boolean)) expect(IMS_STYLE_KEYS).toContain(token.split('=')[0]);
+  });
+
+  it('hydrate: ô con của khung tủ (childLayout=rack) nhãn một dòng bên phải; ô ngoài khung giữ nhãn ba dòng dưới hình', () => {
+    const wet = hydrateDiagramXml(page(rack('f1', inRack('r1', 'f1')) + deviceCell({ id: 'd9' })), devices);
+    expect(wet).toContain('id="r1"');
+    expect(wet).toMatch(/label="SW-E2E-01 · 10\.0\.0\.5"[^>]*id="r1"/);
+    expect(styleOf(wet, 'r1')).toMatchObject({ labelPosition: 'right', verticalLabelPosition: 'middle', align: 'left', verticalAlign: 'middle' });
+    expect(styleOf(wet, 'd9')).toMatchObject({ verticalLabelPosition: 'bottom' });
+    expect(styleOf(wet, 'd9').labelPosition).toBeUndefined();
+    // Lưu khô gỡ hết, mở lại ra y như cũ.
+    const dry = dehydrateDiagramXml(wet);
+    expect(dry).not.toContain('labelPosition');
+    expect(dehydrateDiagramXml(hydrateDiagramXml(dry, devices))).toBe(dry);
+  });
+});

@@ -1,4 +1,5 @@
 import { bindEdgeValue } from './cable-diff';
+import { withLabelPlacement } from './rack-fit';
 
 /**
  * Công tắc "Biểu tượng / Ảnh thật" của màn SỬA (AD-18) — hàm THUẦN, test bảng dữ liệu ở
@@ -25,6 +26,8 @@ export interface DeviceCellOnPage {
    * thật — đổi hình không được kéo nó lệch khỏi U).
    */
   geometry: { x: number; y: number; width: number; height: number } | null;
+  /** Ô là con của một khung tủ — đổi hình giữ nhãn bên phải. */
+  inRack: boolean;
 }
 
 /** `GET /diagrams/device-looks` — một máy. */
@@ -74,6 +77,7 @@ export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage
         style: cell.getAttribute('style') ?? '',
         attrs,
         geometry: rackFrames.has(cell.getAttribute('parent') ?? '') ? null : geometryOf(cell),
+        inRack: rackFrames.has(cell.getAttribute('parent') ?? ''),
       });
     }
   }
@@ -133,7 +137,14 @@ export function photoCellUpdate(
   look: DeviceLook,
   choice: PhotoChoice,
   imsStyleKeys: readonly string[],
+  /** `rackLabelStyle` của server — ô trong khung tủ giữ nhãn bên phải sau khi đổi hình. */
+  rackLabelStyle = '',
 ): { style: string; xmlValue: string; geometry?: string } {
+  const update = photoCellLook(cell, look, choice, imsStyleKeys);
+  return cell.inRack && rackLabelStyle ? { ...update, style: withLabelPlacement(update.style, rackLabelStyle) } : update;
+}
+
+function photoCellLook(cell: DeviceCellOnPage, look: DeviceLook, choice: PhotoChoice, imsStyleKeys: readonly string[]): { style: string; xmlValue: string; geometry?: string } {
   const face = choice === 'icon' ? null : look[choice];
   const base = styleWithoutKeys(cell.style, imsStyleKeys);
   const aspect = face ? face.aspect : look.iconAspect;

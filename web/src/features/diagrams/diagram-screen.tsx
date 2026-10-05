@@ -74,6 +74,7 @@ import { StockDevicePicker } from './stock-device-picker';
 import { useCableBridge } from './use-cable-bridge';
 import { useFrameBridge } from './use-frame-bridge';
 import { usePhotoBridge } from './use-photo-bridge';
+import { useRackFit } from './use-rack-fit';
 
 type Mode = 'view' | 'edit';
 
@@ -915,6 +916,13 @@ function DiagramEditor({
     newId: newCellId,
   });
 
+  const fitRacks = useRackFit({
+    devices: content.devices ?? [],
+    withFile,
+    send: (command) => frame.current?.send(command),
+    page: () => frameState.current.page,
+  });
+
   const photos = usePhotoBridge({
     ready,
     withFile,
@@ -1067,6 +1075,7 @@ function DiagramEditor({
           setFrameXml(message.xml);
           setJustInserted([]);
           cables.onAutosave(message.xml);
+          fitRacks(message.xml);
         }
         break;
       case 'patch':

@@ -6,9 +6,10 @@ import type { DrawioCommand } from '@/ui/drawio-protocol';
 import { useToast } from '@/ui/toast';
 import { CabinetPicker } from './cabinet-picker';
 import { BarPopover, type BarAction } from './diagram-bar';
-import { insertPatch, lastChildId, layerIdOf, nextInsertPosition, pageIds, type Bounds } from './drawio-bridge';
+import { lastChildId, layerIdOf, nextInsertPosition, pageIds, type Bounds } from './drawio-bridge';
 import { FrameBindDialog } from './frame-bind-dialog';
-import { bindFrameValue, cabinetFrameCells, cabinetIdsInXml, frameCandidates, type CabinetFrameLayout, type FrameCandidate } from './frame-bridge';
+import { bindFrameValue, cabinetFramePatch, cabinetIdsInXml, frameCandidates, type CabinetFrameLayout, type FrameCandidate } from './frame-bridge';
+import { deviceCellsOnPage } from './photo-bridge';
 
 /** `GET /diagrams/cabinet-frame/:id`. */
 interface CabinetFrameResponse {
@@ -78,8 +79,11 @@ export function useFrameBridge({
         }
         const parent = layerIdOf(file, pageId) ?? '1';
         const at = nextInsertPosition(bounds.get());
-        const cells = cabinetFrameCells(frame.layout, { parent, previous: lastChildId(file, pageId, parent), ...at, newId });
-        send({ action: 'patch', patch: insertPatch(pageId, cells) });
+        // Máy của tủ đã có trên trang: dời chính ô đó vào khung (giữ id — dây đã gắn vẫn nối đúng máy).
+        const existing = new Map<string, { id: string; style: string }>();
+        for (const cell of deviceCellsOnPage(file, pageId)) if (!existing.has(cell.deviceId)) existing.set(cell.deviceId, { id: cell.id, style: cell.style });
+        const patch = cabinetFramePatch(frame.layout, { parent, previous: lastChildId(file, pageId, parent), ...at, newId }, existing);
+        send({ action: 'patch', patch: { u: { [pageId]: { cells: { i: patch.insert, ...(patch.moved > 0 ? { u: patch.update } : {}) } } } } });
         const right = Math.max(...frame.layout.frames.map((f) => f.x + f.width));
         const bottom = Math.max(...frame.layout.frames.map((f) => f.y + f.height));
         bounds.grow({ ...at, width: right, height: bottom });
@@ -89,7 +93,13 @@ export function useFrameBridge({
         // Máy có U có mặt ở cả mặt trước lẫn mặt sau: đếm theo máy, không theo ô.
         const deviceIds = [...new Set(frame.layout.devices.map((d) => d.id))];
         onInserted(deviceIds);
-        toast({ tone: 'ok', message: t('diagrams.frames.cabinetInserted', { code, count: deviceIds.length }) });
+        toast({
+          tone: 'ok',
+          message:
+            patch.moved > 0
+              ? t('diagrams.frames.cabinetInsertedMoved', { code, count: deviceIds.length, moved: patch.moved })
+              : t('diagrams.frames.cabinetInserted', { code, count: deviceIds.length }),
+        });
       });
     } catch (error) {
       setInserting(false);

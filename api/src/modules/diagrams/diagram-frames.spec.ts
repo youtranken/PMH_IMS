@@ -1,5 +1,6 @@
 import { buildCellIndex } from './diagram-cells';
 import { checkDiagramXml } from './diagram-gate';
+import { RACK_LABEL_STYLE } from './diagram-hydrate';
 import {
   RACK_DEFAULT_U,
   RACK_MARGIN,
@@ -254,8 +255,8 @@ describe('cabinetFrameLayout — mặt trước + mặt sau, ảnh thật', () =
       both,
     );
     const [front, back] = layout.devices;
-    expect(front).toMatchObject({ frame: 'rack', style: 'shape=image;image=data:image/png,AAA;', attrs: { ims_photo: 'front' } });
-    expect(back).toMatchObject({ frame: 'rack-back', style: 'shape=icon;', attrs: {} });
+    expect(front).toMatchObject({ frame: 'rack', style: `shape=image;image=data:image/png,AAA;${RACK_LABEL_STYLE}`, attrs: { ims_photo: 'front' } });
+    expect(back).toMatchObject({ frame: 'rack-back', style: `shape=icon;${RACK_LABEL_STYLE}`, attrs: {} });
   });
 
   it('buildRackXml ("Dựng lại mặt tủ"): XML một trang qua cổng kiểm, máy là ô con của đúng khung, giữ ims_photo', () => {
@@ -286,5 +287,87 @@ describe('cabinetFrameLayout — mặt trước + mặt sau, ảnh thật', () =
     const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'R1', uHeight: 10 }, devices: [{ id: 'a', code: 'SW-01', u: 2, uSize: 1, cell: icon }] });
     expect(layout.frames.map((f) => f.key)).toEqual(['rack']);
     expect(layout.devices[0].attrs).toEqual({});
+  });
+});
+
+/* Mặt tủ không đè U (Q-23 05/10): ô cao đúng số U, nhãn bên phải một dòng, hai mặt cách đủ chỗ cho nhãn. */
+describe('cabinetFrameLayout — máy chiếm đúng số U, nhãn không đè U khác', () => {
+  const photo = { style: 'align=center;shape=image;image=data:image/png,AAA;imageAspect=1;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;' };
+  /** Ảnh ngang 4:1 — ô chèn tự do cao 120 cho rộng 480; trong tủ vẫn phải đúng 1U. */
+  const tall = { style: photo.style, label: 'UPS-03\n172.16.110.5\nTower · TU-01 · U30', width: 480, height: 120 };
+
+  it('máy 1U ở U30 tủ 42U: cao đúng 1U, nằm đúng U30 (U1 ở đáy) — tỉ lệ ảnh không đổi chiều cao', () => {
+    const layout = cabinetFrameLayout(
+      { cabinet: { id: CAB, code: 'TU-01', uHeight: 42 }, devices: [{ id: 'u', code: 'UPS-03', u: 30, uSize: 1, cell: tall, faces: { front: photo }, rackLabel: 'UPS-03 · 172.16.110.5' }] },
+      { sides: ['front', 'back'] },
+    );
+    const [front, back] = layout.devices;
+    expect(front.height).toBeCloseTo(RACK_UNIT_PX);
+    expect(front.y).toBeCloseTo(RACK_MARGIN.top + (42 - 30) * RACK_UNIT_PX);
+    expect(back.y).toBe(front.y);
+    expect(front.label).toBe('UPS-03 · 172.16.110.5');
+    expect(front.style.endsWith(RACK_LABEL_STYLE)).toBe(true);
+    expect(front.style).not.toContain('verticalLabelPosition=bottom');
+  });
+
+  it('hai mặt cách nhau đủ chỗ cho nhãn bên phải mặt trước', () => {
+    const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'TU-01', uHeight: 10 }, devices: [] }, { sides: ['front', 'back'] });
+    const [front, back] = layout.frames;
+    expect(back.x - (front.x + front.width)).toBeGreaterThanOrEqual(160);
+  });
+
+  it('máy ở cột "Chưa khai U" giữ nhãn ba dòng dưới hình', () => {
+    const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'TU-01', uHeight: 10 }, devices: [{ id: 'u', code: 'UPS-03', u: null, uSize: null, cell: tall, rackLabel: 'một dòng' }] });
+    expect(layout.devices[0]).toMatchObject({ frame: 'unplaced', label: tall.label, style: tall.style });
+  });
+});
+
+describe('buildRackXml + bản trước — "Dựng lại mặt tủ" giữ id ô máy và dây', () => {
+  const icon = { style: 'shape=icon;', label: 'L', width: 60, height: 40 };
+  const layout = () =>
+    cabinetFrameLayout(
+      {
+        cabinet: { id: CAB, code: 'R1', uHeight: 10 },
+        devices: [
+          { id: DEV_1, code: 'SW-01', u: 2, uSize: 1, cell: icon },
+          { id: DEV_2, code: 'PC-01', u: 5, uSize: 2, cell: icon },
+        ],
+      },
+      { sides: ['front', 'back'] },
+    );
+  const old =
+    page(
+      `<UserObject label="Tủ R1 · Mặt trước" ims_cabinet_id="${CAB}" id="fA"><mxCell style="childLayout=rack;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="204" height="191" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="Tủ R1 · Mặt sau" ims_cabinet_id="${CAB}" id="fB"><mxCell style="childLayout=rack;" vertex="1" parent="1"><mxGeometry x="300" y="0" width="204" height="191" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="SW-01" ims_device_id="${DEV_1}" ims_device_code="SW-01" id="swFront"><mxCell style="" vertex="1" parent="fA"><mxGeometry x="33" y="0" width="162" height="133" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="SW-01" ims_device_id="${DEV_1}" ims_device_code="SW-01" id="swBack"><mxCell style="" vertex="1" parent="fB"><mxGeometry x="33" y="0" width="162" height="133" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="PC-01" ims_device_id="${DEV_2}" ims_device_code="PC-01" id="pcLoose"><mxCell style="" vertex="1" parent="1"><mxGeometry x="700" y="0" width="60" height="40" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="X" ims_device_id="7b0c1c1e-0000-4000-8000-0000000000a9" ims_device_code="GONE-01" id="gone"><mxCell style="" vertex="1" parent="1"><mxGeometry x="900" y="0" width="60" height="40" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="" ims_link_id="L1" id="eKept"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="fA" source="swFront" target="pcLoose"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="5"/></Array></mxGeometry></mxCell></UserObject>` +
+        `<mxCell id="eGone" style="" edge="1" parent="1" source="swFront" target="gone"><mxGeometry relative="1" as="geometry"/></mxCell>` +
+        `<mxCell id="note" value="Ghi chú" style="text;" vertex="1" parent="1"><mxGeometry x="0" y="400" width="80" height="20" as="geometry"/></mxCell>`,
+    );
+
+  it('ô máy cũ giữ id theo mặt (trước / sau); máy mới trên mặt khác nhận id mới không trùng', () => {
+    const index = buildCellIndex(buildRackXml(layout(), old));
+    const devices = index.cells.filter((c) => c.kind === 'device').map((c) => [c.ims.ims_device_code, c.id]);
+    expect(devices).toEqual(expect.arrayContaining([['SW-01', 'swFront'], ['SW-01', 'swBack'], ['PC-01', 'pcLoose']]));
+    const ids = index.cells.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('dây giữa hai máy còn trên mặt tủ được giữ (kể cả dây đã khai), đi lại đường; dây tới máy không còn thì bỏ; hình tự do bỏ', () => {
+    const xml = buildRackXml(layout(), old);
+    expect(checkDiagramXml(xml, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+    const index = buildCellIndex(xml);
+    const kept = index.cells.find((c) => c.id === 'eKept')!;
+    expect(kept).toMatchObject({ kind: 'edge', source: 'swFront', target: 'pcLoose', parent: '1', ims: { ims_link_id: 'L1' } });
+    expect(xml).not.toContain('<mxPoint x="5" y="5"/>');
+    expect(index.cells.some((c) => c.id === 'eGone' || c.id === 'note' || c.id === 'gone')).toBe(false);
+  });
+
+  it('không có bản trước: như cũ (id ims-f*/ims-d*)', () => {
+    const index = buildCellIndex(buildRackXml(layout()));
+    expect(index.cells.filter((c) => c.kind === 'device').every((c) => c.id.startsWith('ims-d'))).toBe(true);
   });
 });

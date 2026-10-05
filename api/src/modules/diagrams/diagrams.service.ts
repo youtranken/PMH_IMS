@@ -58,11 +58,13 @@ import {
   deviceIconAspect,
   deviceInsertCell,
   deviceLookStyle,
+  deviceRackLabel,
   hydrateDiagramXml,
   linkEdgeCell,
   linkLabelFrom,
   photoAspect,
   photoDataUri,
+  RACK_LABEL_STYLE,
   type DeviceCellSource,
   type DevicePhoto,
   type PhotoSide,
@@ -169,6 +171,8 @@ export interface DiagramDeviceInfo {
   status: string | null;
   ips: string[];
   siteCode: string | null;
+  /** Tủ trong kho — màn sửa so với `ims_cabinet_id` của khung tủ máy được thả vào. */
+  cabinetId: string | null;
   cabinetCode: string | null;
   /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U; `null` = chưa khai. */
   u: number | null;
@@ -1029,7 +1033,7 @@ export class DiagramsService {
         for (const side of ['front', 'back'] as const) {
           if (source.photos?.[side]) faces[side] = { style: `align=center;${deviceLookStyle(source, side)}` };
         }
-        return { id: info.id, code: info.code!, u: info.u, uSize: info.uSize, cell: info.cell, faces };
+        return { id: info.id, code: info.code!, u: info.u, uSize: info.uSize, cell: info.cell, faces, rackLabel: deviceRackLabel(source) };
       });
     // Mặt trước / mặt sau là hai khung cạnh nhau: máy xếp đúng U ở cả hai, mỗi mặt ảnh của mặt đó.
     return {
@@ -1052,12 +1056,13 @@ export class DiagramsService {
       });
     }
     const frame = await this.cabinetFrame(node.cabinetId);
-    const xml = dehydrateDiagramXml(buildRackXml(frame.layout));
-    const index = buildCellIndex(xml);
-    const snapshot = await this.snapshot(index);
     const id = await this.db.transaction(async (tx) => {
       await this.lockLive(tx, diagramId);
       const latest = await this.latestWithin(tx, diagramId);
+      // Dựng trên phiên bản đang có: ô máy giữ id, dây giữa các máy còn trên mặt tủ vẫn gắn (Q-23).
+      const xml = dehydrateDiagramXml(buildRackXml(frame.layout, latest?.xml));
+      const index = buildCellIndex(xml);
+      const snapshot = await this.snapshot(index);
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
       return this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
@@ -1082,7 +1087,7 @@ export class DiagramsService {
    * Ảnh nhúng sẵn (data URI đã thu nhỏ) vì trình vẽ chạy trong iframe sandbox không có cookie phiên:
    * đường dẫn ảnh cần đăng nhập không tải được ở đó.
    */
-  async deviceLooks(ids: string[]): Promise<{ imsStyleKeys: string[]; items: DeviceLook[] }> {
+  async deviceLooks(ids: string[]): Promise<{ imsStyleKeys: string[]; rackLabelStyle: string; items: DeviceLook[] }> {
     const unique = [...new Set(ids)];
     const { infos, sources } = await this.deviceData(unique, new Map(unique.map((id) => [id, new Set<PhotoSide>(['front', 'back'])])));
     const items = infos.map((info): DeviceLook => {
@@ -1093,7 +1098,8 @@ export class DiagramsService {
       };
       return { id: info.id, found: info.found, icon: deviceLookStyle(source), iconAspect: deviceIconAspect(source), front: face('front'), back: face('back') };
     });
-    return { imsStyleKeys: [...IMS_STYLE_KEYS], items };
+    // Ô trong khung tủ giữ nhãn bên phải khi đổi hình (cùng luật hydrate).
+    return { imsStyleKeys: [...IMS_STYLE_KEYS], rackLabelStyle: RACK_LABEL_STYLE, items };
   }
 
   /** Thẻ khung VLAN: đọc qua `ipam.api`, kể cả dải đã ngừng dùng. */
@@ -1282,6 +1288,7 @@ export class DiagramsService {
         status: device.status,
         ips: ips.get(id) ?? [],
         siteCode: device.siteCode,
+        cabinetId: device.cabinetId,
         cabinetCode: device.cabinetCode,
         u: device.rackUStart,
         uSize: device.rackUSize,
@@ -1795,6 +1802,7 @@ function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell'> {
     status: null,
     ips: [],
     siteCode: null,
+    cabinetId: null,
     cabinetCode: null,
     u: null,
     uSize: null,

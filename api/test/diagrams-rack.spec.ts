@@ -133,8 +133,10 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     expect(srvFront.height).toBeCloseTo(swFront.height * 2);
     expect(at('SW-E2E-MT-01').map(([f]) => f)).toEqual(['rack', 'rack-back']);
     expect(at('PC-E2E-MT-01')).toEqual([['unplaced', expect.any(Number), expect.any(Number)]]);
-    // Nhãn ô ghi U theo kho.
-    expect(srvFront.label).toContain('U5–U6');
+    // Trên mặt tủ nhãn một dòng bên phải (Q-23 05/10) — vị trí đã là chính khung tủ; máy 2U cao đúng 2U.
+    expect(srvFront.label).toBe('SRV-E2E-MT-01');
+    expect(srvFront.style).toContain('labelPosition=right');
+    expect(srvFront.height).toBeCloseTo(2 * 14.8);
   });
 
   it('ảnh thật: ảnh riêng máy (mặt trước) đè ảnh model; mặt sau lấy ảnh model; chỉ nhận ảnh đính kèm của chính máy', async () => {
@@ -228,6 +230,39 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
 
     const room = await service.create(SA.email, { name: 'E2E Phòng', nodeType: 'room' });
     await expect(service.rebuildRack(SA.email, room.id)).rejects.toMatchObject({ response: { code: 'DIAGRAM_NOT_CABINET' } });
+  });
+
+  it('"Dựng lại mặt tủ" giữ id ô máy và dây đã khai giữa hai máy trên mặt tủ — dây không thành "không khớp" (Q-23 05/10)', async () => {
+    const linkId = (
+      await scratch.pool.query<{ id: string }>(
+        `INSERT INTO device_port (device_id, port_label, connected_device_id, connected_port) VALUES ($1, 'Gi1/0/1', $2, 'eth0') RETURNING id`,
+        [sw, srv],
+      )
+    ).rows[0].id;
+    const rack = await service.create(SA.email, { name: 'E2E Tủ giữ dây', nodeType: 'cabinet', siteId, cabinetId });
+    const first = await service.rebuildRack(SA.email, rack.id);
+    const xml1 = (await scratch.pool.query<{ xml: string }>(`SELECT xml FROM diagram_version WHERE id = $1`, [first.id])).rows[0].xml;
+    const idOf = (xml: string, deviceId: string) => [...xml.matchAll(new RegExp(`ims_device_id="${deviceId}"[^>]*id="([^"]+)"`, 'g'))].map((m) => m[1]);
+    const [swFront] = idOf(xml1, sw);
+    const [srvFront] = idOf(xml1, srv);
+    // Người vẽ nối dây đã khai giữa hai máy trên mặt trước rồi lưu.
+    const withCable = xml1.replace(
+      '</root>',
+      `<UserObject label="" ims_link_id="${linkId}" id="cap-1"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="${swFront}" target="${srvFront}"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject></root>`,
+    );
+    const saved = await service.save(SA.email, rack.id, { xml: withCable, svg: SVG, basedOnVersionId: first.id });
+
+    const rebuilt = await service.rebuildRack(SA.email, rack.id);
+    const xml2 = (await scratch.pool.query<{ xml: string }>(`SELECT xml FROM diagram_version WHERE id = $1`, [rebuilt.id])).rows[0].xml;
+    expect(idOf(xml2, sw)).toEqual(idOf(xml1, sw));
+    expect(idOf(xml2, srv)).toEqual(idOf(xml1, srv));
+    expect(xml2).toContain(`ims_link_id="${linkId}"`);
+    expect(xml2).toMatch(new RegExp(`source="${swFront}"`));
+    expect(rebuilt.summary).not.toContain('dây');
+    const content = await service.content(SA.email, rack.id, { mode: 'view', versionId: rebuilt.id });
+    expect(content.cableEdges?.find((e) => e.cellId === 'cap-1')).toMatchObject({ state: 'linked' });
+    expect(saved.seq).toBe(2);
+    await scratch.pool.query(`DELETE FROM device_port WHERE id = $1`, [linkId]);
   });
 
   it('máy có U vượt chiều cao tủ (tủ bị hạ chiều cao sau khi khai — dữ liệu cũ): sang cột bên kèm cảnh báo, không vỡ khung', async () => {

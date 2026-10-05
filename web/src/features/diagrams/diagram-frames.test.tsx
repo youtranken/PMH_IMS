@@ -297,3 +297,76 @@ describe('Màn sửa — Chèn tủ dựng khung bằng patch', () => {
     expect(await screen.findByText('Đã chèn khung tủ R1 (1 thiết bị).')).toBeInTheDocument();
   });
 });
+
+describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng U (Q-23 05/10)', () => {
+  const RACK =
+    'shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=14.8;container=1;childLayout=rack;marginLeft=33;marginRight=9;marginTop=21;marginBottom=22;';
+  const body = (deviceId: string, code: string) =>
+    `<UserObject label="Tủ TU-04 · Mặt trước" ims_cabinet_id="cab-4" id="f4"><mxCell style="${RACK}" vertex="1" parent="1"><mxGeometry x="250" y="20" width="204" height="664.6" as="geometry"/></mxCell></UserObject>` +
+    `<UserObject label="${code}" ims_device_id="${deviceId}" ims_device_code="${code}" id="d1"><mxCell style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="f4"><mxGeometry x="33" y="228.2" width="162" height="59.2" as="geometry"/></mxCell></UserObject>`;
+  const wrap = (inner: string) => `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${inner}</root></mxGraphModel>`;
+  const info = (id: string, code: string, cabinetId: string, cabinetCode: string) => ({
+    id,
+    found: true,
+    code,
+    name: code,
+    deviceTypeName: 'UPS',
+    model: null,
+    serial: null,
+    status: 'in_use',
+    ips: [],
+    siteCode: 'T',
+    cabinetId,
+    cabinetCode,
+    u: 30,
+    uSize: 1,
+    vendorName: null,
+    vendorPhone: null,
+    warrantyEnd: null,
+    photos: { front: false, back: false },
+    cell: { style: '', label: code, width: 60, height: 60, attrs: {} },
+  });
+
+  async function open(devices: unknown[]) {
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () =>
+        jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: `<mxfile><diagram id="p1">${wrap('')}</diagram></mxfile>`, svg: null }, devices }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+      '/api/v1/diagrams': () => jsonResponse(200, TREE),
+    });
+    renderAt('/diagrams/d1?mode=edit');
+    const frameEl = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    const posted = vi.spyOn(frameEl.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    const fromDrawio = (data: Record<string, unknown>) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frameEl.contentWindow }));
+      });
+    fromDrawio({ event: 'init' });
+    const messages = () => posted.mock.calls.map(([data]) => JSON.parse(String(data)) as Record<string, unknown>);
+    return { fromDrawio, messages };
+  }
+
+  it('máy cùng tủ ở U30, draw.io bắt thành 4U → patch đặt lại 1U đúng U30, nhãn bên phải', async () => {
+    const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-4', 'TU-04')]);
+    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'export' && m.format === 'xml')).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', currentPage: 0, xml: `<mxfile><diagram id="p1">${wrap(body('dev-ups', 'UPS-E2E-03'))}</diagram></mxfile>` });
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { geometry: string; style: string }> } } } } };
+    expect(patch.patch.u.p1.cells.u.d1.geometry).toBe('<mxGeometry x="33" y="198.6" width="162" height="14.8" as="geometry"/>');
+    expect(patch.patch.u.p1.cells.u.d1.style).toContain('labelPosition=right');
+  });
+
+  it('máy kho ghi tủ KHÁC (TU-01 thả vào khung TU-04) → không patch, báo một lần, không gọi API ghi nào', async () => {
+    const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')]);
+    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
+    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
+    const warnings = await screen.findAllByText(/UPS-E2E-03 trong kho thuộc tủ TU-01, không phải tủ của khung "Tủ TU-04 · Mặt trước"/);
+    expect(warnings).toHaveLength(1);
+    expect(messages().some((m) => m.action === 'patch')).toBe(false);
+    const writes = (vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][]).filter(([, init]) => init?.method && init.method !== 'GET' && !String(init.method).includes('GET'));
+    expect(writes.every(([url]) => String(url).includes('/presence'))).toBe(true);
+  });
+});

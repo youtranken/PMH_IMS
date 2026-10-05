@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bindFrameValue, cabinetFrameCells, frameCandidates, type CabinetFrameLayout } from './frame-bridge';
+import { bindFrameValue, cabinetFrameCells, cabinetFramePatch, frameCandidates, type CabinetFrameLayout } from './frame-bridge';
 
 const CHILD = '7b0c1c1e-0000-4000-8000-0000000000d1';
 const SUBNET = '7b0c1c1e-0000-4000-8000-0000000000e1';
@@ -118,5 +118,49 @@ describe('cabinetFrameCells — khung tủ thành ô chèn', () => {
     expect(front.xmlValue).toContain('ims_photo="front"');
     expect(rear.parent).toBe(back.id);
     expect(rear.xmlValue).not.toContain('ims_photo');
+  });
+});
+
+describe('cabinetFramePatch — "Chèn tủ mạng" khi máy của tủ đã có trên trang (Q-23 05/10)', () => {
+  const layout: CabinetFrameLayout = {
+    uHeight: 12,
+    frames: [
+      { key: 'rack', label: 'Tủ R1 · Mặt trước', style: 'shape=rack;childLayout=rack;', attrs: { ims_cabinet_id: CAB }, x: 0, y: 0, width: 204, height: 220 },
+      { key: 'rack-back', label: 'Tủ R1 · Mặt sau', style: 'shape=rack;childLayout=rack;', attrs: { ims_cabinet_id: CAB }, x: 400, y: 0, width: 204, height: 220 },
+    ],
+    devices: [
+      { frame: 'rack', id: 'dev-1', code: 'SW-01', style: 'shape=image;labelPosition=right;', label: 'SW-01', attrs: { ims_photo: 'front' }, x: 33, y: 180, width: 162, height: 14.8 },
+      { frame: 'rack-back', id: 'dev-1', code: 'SW-01', style: 'shape=sw;labelPosition=right;', label: 'SW-01', attrs: {}, x: 33, y: 180, width: 162, height: 14.8 },
+      { frame: 'rack', id: 'dev-2', code: 'SRV-02', style: 'shape=sv;labelPosition=right;', label: 'SRV-02', attrs: {}, x: 33, y: 150, width: 162, height: 29.6 },
+    ],
+  };
+
+  it('ô cũ của máy (đang có dây gắn) được DỜI vào mặt trước — giữ id, giữ hình người vẽ chọn, nhãn sang phải; mặt sau và máy chưa có thì chèn mới', () => {
+    let k = 0;
+    const existing = new Map([['dev-1', { id: 'old-sw', style: 'align=center;shape=mxgraph.cisco.switch;verticalLabelPosition=bottom;verticalAlign=top;' }]]);
+    const patch = cabinetFramePatch(layout, { parent: '1', previous: 'last', x: 0, y: 0, newId: () => `n-${(k += 1)}` }, existing);
+    const [front, back] = patch.insert;
+    expect(patch.update).toEqual({
+      'old-sw': {
+        parent: front.id,
+        previous: '',
+        geometry: '<mxGeometry x="33" y="180" width="162" height="14.8" as="geometry"/>',
+        style: 'shape=mxgraph.cisco.switch;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=14;',
+      },
+    });
+    const devices = patch.insert.slice(2);
+    expect(devices.map((c) => [c.parent, c.xmlValue.includes('dev-1') ? 'SW' : 'SRV', c.previous ?? null])).toEqual([
+      [back.id, 'SW', null],
+      [front.id, 'SRV', 'old-sw'],
+    ]);
+    expect(patch.moved).toBe(1);
+  });
+
+  it('không có ô cũ → y như cabinetFrameCells', () => {
+    let a = 0;
+    let b = 0;
+    const patch = cabinetFramePatch(layout, { parent: '1', previous: null, x: 0, y: 0, newId: () => `x-${(a += 1)}` }, new Map());
+    expect(patch.insert).toEqual(cabinetFrameCells(layout, { parent: '1', previous: null, x: 0, y: 0, newId: () => `x-${(b += 1)}` }));
+    expect(patch.update).toEqual({});
   });
 });

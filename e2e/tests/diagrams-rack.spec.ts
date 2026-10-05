@@ -214,3 +214,81 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
 });
+
+test.describe('Sơ đồ mạng — mặt tủ không đè U, dây không đứt khi dựng tủ (Q-23 05/10)', () => {
+  test('máy 1U ở U30 đã có dây trên bản vẽ: "Chèn tủ mạng" dời chính ô đó vào khung (cao 1U, nhãn bên phải), "Dựng lại mặt tủ" giữ id + dây đã khai', async ({ page }) => {
+    test.setTimeout(240_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const siteId = await catalogItem(page, 'site', { code: `E2E-T${stamp}`, name: `Site tủ E2E ${stamp}` });
+    const cabinetCode = `E2E-T42${stamp}`;
+    const cabinetId = await catalogItem(page, 'cabinet', { siteId, code: cabinetCode, uHeight: 42 });
+    const typeId = ((await (await page.request.get('/api/v1/catalog')).json()) as { deviceTypes: { id: string; name: string }[] }).deviceTypes.find((t) => t.name === 'Switch')!.id;
+    const make = async (code: string, extra: Record<string, unknown>) => {
+      const res = await page.request.post('/api/v1/devices', { headers: await writeHeaders(page), data: { code, name: code, deviceTypeId: typeId, siteId, cabinetId, ...extra } });
+      expect(res.status(), await res.text()).toBe(201);
+      return ((await res.json()) as { device: { id: string } }).device.id;
+    };
+    const ups = { id: await make(`UPS-E2E-30${stamp}`, { rackUStart: 30, rackUSize: 1 }), code: `UPS-E2E-30${stamp}` };
+    const fw = { id: await make(`FW-E2E-37${stamp}`, { rackUStart: 37, rackUSize: 1 }), code: `FW-E2E-37${stamp}` };
+    const linked = await page.request.post(`/api/v1/devices/${fw.id}/ports/link`, {
+      headers: await writeHeaders(page),
+      data: { portLabel: 'Gi1/0/1', connectedDeviceId: ups.id, connectedPort: 'Gi1/0/1', cableTypeId: '' },
+    });
+    expect(linked.status(), await linked.text()).toBe(201);
+    const linkId = ((await linked.json()) as { id: string }).id;
+    const created = await page.request.post('/api/v1/diagrams', { headers: await writeHeaders(page), data: { name: `E2E Tủ 42U ${stamp}`, nodeType: 'cabinet', siteId, cabinetId } });
+    expect(created.status(), await created.text()).toBe(201);
+    const diagramId = ((await created.json()) as { id: string }).id;
+    await stepUpViaApi(page, secret, 'diagram');
+    // Bản vẽ như của chủ dự án: hai máy đứng tự do (ô ảnh cao 60–120) nối một dây đã khai.
+    const xml =
+      '<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>' +
+      `<UserObject label="${fw.code}" ims_device_id="${fw.id}" ims_device_code="${fw.code}" id="cell-fw"><mxCell style="align=center;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="300" height="120" as="geometry"/></mxCell></UserObject>` +
+      `<UserObject label="${ups.code}" ims_device_id="${ups.id}" ims_device_code="${ups.code}" id="cell-ups"><mxCell style="align=center;" vertex="1" parent="1"><mxGeometry x="400" y="300" width="45" height="60" as="geometry"/></mxCell></UserObject>` +
+      `<UserObject label="" ims_link_id="${linkId}" id="cap"><mxCell style="edgeStyle=orthogonalEdgeStyle;endArrow=none;" edge="1" parent="1" source="cell-fw" target="cell-ups"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject>` +
+      '</root></mxGraphModel></diagram></mxfile>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="500px" height="400px" viewBox="0 0 500 400"><g data-cell-id="cell-fw"><rect x="40" y="40" width="300" height="120"/></g></svg>';
+    const seeded = await page.request.post(`/api/v1/diagrams/${diagramId}/versions`, { headers: await writeHeaders(page), data: { xml, svg, basedOnVersionId: null } });
+    expect(seeded.status(), await seeded.text()).toBe(201);
+
+    await page.goto(`/diagrams/${diagramId}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await diagramBarAction(page, 'Chèn tủ mạng');
+    const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
+    await box.getByRole('button', { name: 'Tủ mạng', exact: true }).click();
+    await page.getByRole('option', { name: `E2E-T${stamp} · ${cabinetCode}` }).click();
+    await box.getByRole('button', { name: 'Chèn tủ mạng' }).click();
+    await expect(page.getByText(`Đã chèn khung tủ ${cabinetCode} (2 thiết bị) — 2 máy đã có trên bản vẽ được dời vào khung, dây giữ nguyên.`)).toBeVisible();
+    if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-chen-giu-day.png` });
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    const v2 = ((await saved.json()) as { id: string }).id;
+    const stored = sql(`SELECT xml FROM diagram_version WHERE id = '${v2}'`);
+    // Ô cũ được dời (không có ô thứ hai cho mặt trước), cao đúng 1U, dây vẫn nối hai ô cũ.
+    const upsCell = new RegExp(`id="cell-ups"><mxCell[^>]*>\\s*<mxGeometry[^>]*height="14.8"`);
+    expect(stored).toMatch(upsCell);
+    expect(stored).toMatch(/id="cap"><mxCell[^>]*source="cell-fw"[^>]*target="cell-ups"/);
+    const view = (await (await page.request.get(`/api/v1/diagrams/${diagramId}/content?mode=view&versionId=${v2}`)).json()) as {
+      cableEdges: { cellId: string; state: string }[];
+    };
+    expect(view.cableEdges.find((e) => e.cellId === 'cap')?.state).toBe('linked');
+
+    // Dựng lại mặt tủ từ kho: id ô máy và dây giữ nguyên, dây không thành "không khớp".
+    await diagramBarAction(page, 'Dựng lại mặt tủ');
+    await page.getByRole('dialog', { name: 'Dựng lại mặt tủ từ kho?' }).getByRole('button', { name: 'Dựng lại' }).click();
+    await expect(page.getByText(/^Đã dựng lại mặt tủ thành nháp #3\./)).toBeVisible();
+    const rebuilt = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
+    expect(rebuilt).toContain('id="cell-ups"');
+    expect(rebuilt).toContain(`ims_link_id="${linkId}"`);
+    const latest = (await (await page.request.get(`/api/v1/diagrams/${diagramId}/content?mode=view`)).json()) as { cableEdges: { cellId: string; state: string }[] };
+    expect(latest.cableEdges.map((e) => e.state)).toEqual(['linked']);
+    await page.goto(`/diagrams/${diagramId}`);
+    await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
+    if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-dung-lai-xem.png` });
+    await expect(page.getByText('Kết nối không khớp hai máy ở hai đầu dây')).toHaveCount(0);
+  });
+});

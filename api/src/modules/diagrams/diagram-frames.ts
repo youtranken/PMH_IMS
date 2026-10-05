@@ -1,5 +1,7 @@
+import { SaxesParser, type SaxesTagPlain } from 'saxes';
 import { escapeXmlAttr } from '../../common/svg-sanitize';
 import type { CellIndex } from './diagram-cells';
+import { rackDeviceStyle } from './diagram-hydrate';
 
 /**
  * Khung mang dữ liệu (AD-18): khung bản vẽ con (`ims_child_diagram_id`), khung VLAN
@@ -162,6 +164,8 @@ export interface CabinetFrameDevice {
   cell: { style: string; label: string; width: number; height: number };
   /** Style ảnh thật của từng mặt (cùng luật hydrate); mặt vắng thì dùng biểu tượng `cell`. */
   faces?: Partial<Record<RackSide, { style: string }>>;
+  /** Nhãn một dòng khi máy nằm trên mặt tủ (cùng luật hydrate); vắng thì dùng `cell.label`. */
+  rackLabel?: string;
 }
 
 export interface CabinetFrameInput {
@@ -205,13 +209,22 @@ export interface CabinetFrameLayout {
   devices: FrameDeviceSpec[];
 }
 
-/** Khoảng cách giữa hai mặt tủ và giữa mặt tủ với cột "Chưa khai U". */
-const FRAME_GAP = 40;
+/**
+ * Khoảng cách giữa hai mặt tủ và giữa mặt tủ với cột "Chưa khai U": nhãn máy trên mặt tủ nằm bên
+ * PHẢI (một dòng mã · IP), nên phải chừa chỗ cho nó — không thì nhãn mặt trước đè lên mặt sau.
+ */
+const FRAME_GAP = 200;
 
 /** Ô máy trên một mặt: ảnh thật của mặt đó nếu có (kèm `ims_photo`), không thì biểu tượng loại. */
 function faceOf(device: CabinetFrameDevice, side: RackSide): { style: string; attrs: Record<string, string> } {
   const face = device.faces?.[side];
   return face ? { style: face.style, attrs: { ims_photo: side } } : { style: device.cell.style, attrs: {} };
+}
+
+/** Ô máy trên mặt tủ: hình của mặt đó, nhãn bên phải (cao đúng số U — nhãn dưới hình đè U khác). */
+function rackFace(device: CabinetFrameDevice, side: RackSide): { style: string; attrs: Record<string, string> } {
+  const face = faceOf(device, side);
+  return { ...face, style: rackDeviceStyle(face.style) };
 }
 
 /**
@@ -258,8 +271,8 @@ export function cabinetFrameLayout(input: CabinetFrameInput, options: { sides?: 
         frame: side === 'back' ? 'rack-back' : 'rack',
         id: device.id,
         code: device.code,
-        ...faceOf(device, side),
-        label: device.cell.label,
+        ...rackFace(device, side),
+        label: device.rackLabel ?? device.cell.label,
         x: RACK_MARGIN.left,
         y: RACK_MARGIN.top + top * RACK_UNIT_PX,
         width: innerWidth,
@@ -305,12 +318,56 @@ export function cabinetFrameLayout(input: CabinetFrameInput, options: { sides?: 
   return { uHeight, frames, devices: sorted.flatMap((d) => placed.get(d.id)!) };
 }
 
+interface PreviousRack {
+  /** Ô máy của bản trước theo máy, thứ tự trong bản vẽ; `back` = nằm trong khung mặt sau. */
+  devices: Map<string, { id: string; back: boolean }[]>;
+  /** Nét của bản trước: thuộc tính `UserObject` bọc (nếu có) + của `mxCell`. */
+  edges: { id: string; wrapper: Record<string, string> | null; cell: Record<string, string> }[];
+}
+
+const BACK_FACE_LABEL = 'Mặt sau';
+
+function readPrevious(xml: string): PreviousRack {
+  const frames = new Map<string, string>();
+  const cells: { id: string; deviceId: string | null; parent: string | null }[] = [];
+  const edges: PreviousRack['edges'] = [];
+  let wrapper: Record<string, string> | null = null;
+  const parser = new SaxesParser({ xmlns: false });
+  parser.on('opentag', (tag: SaxesTagPlain) => {
+    const attrs = tag.attributes as Record<string, string>;
+    if (tag.name === 'UserObject' || tag.name === 'object') {
+      wrapper = attrs;
+      return;
+    }
+    if (tag.name !== 'mxCell') return;
+    const id = attrs.id ?? wrapper?.id ?? '';
+    if (attrs.edge === '1') edges.push({ id, wrapper, cell: attrs });
+    else if (wrapper?.ims_cabinet_id) frames.set(id, wrapper.label ?? '');
+    else cells.push({ id, deviceId: wrapper?.ims_device_id ?? null, parent: attrs.parent ?? null });
+  });
+  parser.on('closetag', (tag: SaxesTagPlain) => {
+    if (tag.name === 'UserObject' || tag.name === 'object') wrapper = null;
+  });
+  parser.write(xml).close();
+  const devices = new Map<string, { id: string; back: boolean }[]>();
+  for (const cell of cells) {
+    if (!cell.deviceId) continue;
+    const back = (frames.get(cell.parent ?? '') ?? '').includes(BACK_FACE_LABEL);
+    devices.set(cell.deviceId, [...(devices.get(cell.deviceId) ?? []), { id: cell.id, back }]);
+  }
+  return { devices, edges };
+}
+
 /**
  * "Dựng lại mặt tủ": cả bản vẽ chỉ gồm khung tủ dựng từ kho — một trang, khung trên lớp mặc định,
  * máy là ô CON của khung (cùng quan hệ như khi chèn bằng `patch`). Nơi gọi dehydrate trước khi lưu
  * (ảnh nhúng không vào kho bản vẽ — AD-18).
+ *
+ * `previousXml` = phiên bản đang có: ô máy GIỮ id cũ (theo mặt trước / mặt sau), và mọi nét có hai
+ * đầu là ô còn lại được giữ — dây đã khai vẫn gắn đúng máy thay vì mất hết sau khi dựng lại. Nét
+ * giữ lại bỏ điểm uốn (khung đã dời chỗ) và nằm trên lớp mặc định; hình tự do khác bị bỏ.
  */
-export function buildRackXml(layout: CabinetFrameLayout): string {
+export function buildRackXml(layout: CabinetFrameLayout, previousXml?: string): string {
   const attrText = (attrs: Record<string, string>) =>
     Object.entries(attrs)
       .map(([k, v]) => ` ${k}="${escapeXmlAttr(v)}"`)
@@ -322,21 +379,56 @@ export function buildRackXml(layout: CabinetFrameLayout): string {
   const origin = 40;
   const parts: string[] = [];
   const frameIds = new Map<string, string>();
-  layout.frames.forEach((frame, i) => {
-    const id = `ims-f${i + 1}`;
+  const previous: PreviousRack = previousXml ? readPrevious(previousXml) : { devices: new Map(), edges: [] };
+  const deviceIds = layout.devices.map((device) => {
+    const old: { id: string; back: boolean }[] = previous.devices.get(device.id) ?? [];
+    const back = device.frame === 'rack-back';
+    const pick = old.find((c) => c.back === back) ?? old[0];
+    if (!pick) return null;
+    previous.devices.set(device.id, old.filter((c) => c !== pick));
+    return pick.id;
+  });
+  const taken = new Set(deviceIds.filter((id): id is string => id !== null));
+  const keptEdges = previous.edges.filter((e) => taken.has(e.cell.source ?? '') && taken.has(e.cell.target ?? ''));
+  for (const edge of keptEdges) taken.add(edge.id);
+  let counter = 0;
+  const fresh = (prefix: string) => {
+    let id: string;
+    do {
+      counter += 1;
+      id = `${prefix}${counter}`;
+    } while (taken.has(id));
+    taken.add(id);
+    return id;
+  };
+  layout.frames.forEach((frame) => {
+    const id = fresh('ims-f');
     frameIds.set(frame.key, id);
     parts.push(
       `<UserObject label="${escapeXmlAttr(frame.label)}"${attrText(frame.attrs)} id="${id}">` +
         `<mxCell style="${escapeXmlAttr(frame.style)}" vertex="1" parent="1">${geometry(origin + frame.x, origin + frame.y, frame.width, frame.height)}</mxCell></UserObject>`,
     );
   });
+  counter = 0;
   layout.devices.forEach((device, i) => {
     const parent = frameIds.get(device.frame);
     if (!parent) return;
+    const id = deviceIds[i] ?? fresh('ims-d');
     parts.push(
-      `<UserObject label="${escapeXmlAttr(device.label)}" ims_device_id="${escapeXmlAttr(device.id)}" ims_device_code="${escapeXmlAttr(device.code)}"${attrText(device.attrs)} id="ims-d${i + 1}">` +
+      `<UserObject label="${escapeXmlAttr(device.label)}" ims_device_id="${escapeXmlAttr(device.id)}" ims_device_code="${escapeXmlAttr(device.code)}"${attrText(device.attrs)} id="${escapeXmlAttr(id)}">` +
         `<mxCell style="${escapeXmlAttr(device.style)}" vertex="1" parent="${parent}">${geometry(device.x, device.y, device.width, device.height)}</mxCell></UserObject>`,
     );
   });
+  for (const edge of keptEdges) {
+    const cell = Object.entries(edge.cell).filter(([k]) => k !== 'parent' && k !== 'id');
+    const cellAttrs = `${edge.wrapper ? '' : ` id="${escapeXmlAttr(edge.id)}"`}${cell.map(([k, v]) => ` ${k}="${escapeXmlAttr(v)}"`).join('')} parent="1"`;
+    const body = `<mxCell${cellAttrs}><mxGeometry relative="1" as="geometry"/></mxCell>`;
+    if (!edge.wrapper) {
+      parts.push(body);
+      continue;
+    }
+    const wrapperAttrs = Object.entries(edge.wrapper).filter(([k]) => k !== 'id');
+    parts.push(`<UserObject${wrapperAttrs.map(([k, v]) => ` ${k}="${escapeXmlAttr(v)}"`).join('')} id="${escapeXmlAttr(edge.id)}">${body}</UserObject>`);
+  }
   return `<mxfile><diagram id="ims-p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${parts.join('')}</root></mxGraphModel></diagram></mxfile>`;
 }

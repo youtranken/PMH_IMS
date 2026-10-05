@@ -104,6 +104,20 @@ describe('photoCellUpdate — ô ôm theo tỉ lệ ảnh khi đổi hình (Q-23
     expect(photoCellUpdate(c, LOOK, 'front', KEYS).geometry).toBeUndefined();
   });
 
+  it('máy trong khung tủ đổi hình vẫn giữ nhãn bên phải (Q-23 05/10)', () => {
+    const side = 'labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=14;';
+    const frame = '<UserObject label="Tủ" ims_cabinet_id="cab-1" id="fr"><mxCell style="" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="400" as="geometry"/></mxCell></UserObject>';
+    const inRack = `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01" id="r1"><mxCell style="shape=x;${side}" vertex="1" parent="fr"><mxGeometry x="10" y="40" width="180" height="40" as="geometry"/></mxCell></UserObject>`;
+    const [c] = deviceCellsOnPage(file(frame + inRack), 'p1');
+    expect(c.inRack).toBe(true);
+    const update = photoCellUpdate(c, { ...LOOK, front: { ...LOOK.front!, style: 'shape=image;image=data:image/png,AAAA;verticalLabelPosition=bottom;verticalAlign=top;html=0;' } }, 'front', KEYS, side);
+    expect(update.style).toBe(`shape=image;image=data:image/png,AAAA;html=0;${side}`);
+    // Ô ngoài khung: không đụng chỗ đặt nhãn.
+    const [out] = deviceCellsOnPage(file(cell('a')), 'p1');
+    expect(out.inRack).toBe(false);
+    expect(photoCellUpdate(out, LOOK, 'front', KEYS, side).style).not.toContain('labelPosition');
+  });
+
   it('ô không đọc được cỡ → không gửi geometry (không đoán)', () => {
     const [c] = deviceCellsOnPage(file(cell('a', '', undefined, '')), 'p1');
     expect(c.geometry).toBeNull();
