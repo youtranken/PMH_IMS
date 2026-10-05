@@ -75,6 +75,12 @@ describe('Sidebar tự thu trên màn sơ đồ (Q-23)', () => {
     expect(screen.getByTestId('page-main')).not.toHaveAttribute('data-layout');
   });
 
+  it('màn hẹp (điện thoại) mở một bản vẽ: sidebar là drawer như thường nhưng nội dung vẫn tràn hết chiều cao còn lại', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    renderShell(PATHS.diagram('7b0c1c1e-0000-4000-8000-000000000001'));
+    expect(screen.getByTestId('page-main')).toHaveAttribute('data-layout', 'full');
+  });
+
   it('màn thường không thu', () => {
     renderShell(PATHS.devices);
     expect(nav()).not.toHaveAttribute('data-compact');

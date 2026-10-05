@@ -1192,6 +1192,7 @@ export default {
       bulkButton: 'Nối hàng loạt',
       legend: 'Chú giải',
       legendTitle: 'Chú giải màu dây',
+      legendToggle: 'Chú giải dây',
       legendNone: 'Chưa khai loại dây',
       legendUndeclared: 'Chưa khai vào sơ đồ cổng',
       legendRemoved: 'Kết nối đã bị gỡ',

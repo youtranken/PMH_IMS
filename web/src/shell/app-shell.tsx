@@ -39,9 +39,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const showSidebar = !narrow || drawerOpen;
   /*
    * Màn cần trọn bề ngang (trình vẽ sơ đồ): sidebar thu còn biểu tượng, nội dung tràn hết phần
-   * còn lại. Suy từ đường dẫn nên rời màn là tự mở lại. Màn hẹp đã có drawer, không thu thêm.
+   * còn lại. Suy từ đường dẫn nên rời màn là tự mở lại. Màn hẹp đã có drawer, không thu thêm —
+   * nhưng nội dung vẫn tràn (UX-DR2: người đi kiểm tủ xem sơ đồ trên điện thoại cần cả màn).
    */
   const compact = !narrow && isCompactShellPath(pathname);
+  const fullLayout = isCompactShellPath(pathname);
   /*
    * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở.
    *
@@ -301,7 +303,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             className="page"
             id="noi-dung"
             data-testid="page-main"
-            data-layout={compact ? 'full' : undefined}
+            data-layout={fullLayout ? 'full' : undefined}
             tabIndex={-1}
             inert={narrow && drawerOpen}
           >

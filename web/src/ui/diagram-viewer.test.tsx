@@ -49,7 +49,8 @@ describe('svgSize + fitTransform — vừa khung', () => {
   });
 
   it.each([
-    ['bản vẽ lớn hơn khung: thu nhỏ, căn giữa', { width: 800, height: 400 }, { width: 400, height: 400 }, { scale: 0.5, x: 0, y: 100 }],
+    // Chừa lề 16px mỗi bên: nhãn dưới hình draw.io tràn ra ngoài viewBox, vừa khít là cắt chữ ở mép.
+    ['bản vẽ lớn hơn khung: thu nhỏ, chừa lề, căn giữa', { width: 736, height: 400 }, { width: 400, height: 400 }, { scale: 0.5, x: 16, y: 100 }],
     ['bản vẽ nhỏ: không phóng quá 100%', { width: 100, height: 50 }, { width: 400, height: 400 }, { scale: 1, x: 150, y: 175 }],
     ['kích thước 0: giữ nguyên', { width: 0, height: 0 }, { width: 400, height: 400 }, { scale: 1, x: 0, y: 0 }],
   ])('%s', (_name, content, box, expected) => {

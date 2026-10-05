@@ -435,6 +435,8 @@
   max-width: none;
   padding: 0;
   height: calc(100vh - 56px);
+  /* `dvh`: trên điện thoại thanh địa chỉ co giãn, `vh` tính theo lúc nó ẩn nên đáy khung bị che. */
+  height: calc(100dvh - 56px);
   display: flex;
   flex-direction: column;
   min-height: 0;

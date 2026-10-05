@@ -142,10 +142,17 @@ export function svgSize(svg: Element): Size {
   return { width: Number.isFinite(width) ? width : 0, height: Number.isFinite(height) ? height : 0 };
 }
 
+/*
+ * Lề quanh bản vẽ khi vừa khung: `viewBox` draw.io tính theo hình, còn nhãn dưới hình rộng hơn hình
+ * thì tràn ra ngoài — vừa khít là cắt chữ ở mép, nhất là ở 390px.
+ */
+const FIT_MARGIN = 16;
+
 /** Thu phóng + dời để cả bản vẽ nằm giữa khung; không phóng quá 100% (chữ nhỏ không vỡ hạt). */
 export function fitTransform(content: Size, box: Size): ViewTransform {
   if (content.width <= 0 || content.height <= 0 || box.width <= 0 || box.height <= 0) return { scale: 1, x: 0, y: 0 };
-  const scale = Math.min(box.width / content.width, box.height / content.height, 1);
+  const room = { width: Math.max(box.width - 2 * FIT_MARGIN, box.width / 2), height: Math.max(box.height - 2 * FIT_MARGIN, box.height / 2) };
+  const scale = Math.min(room.width / content.width, room.height / content.height, 1);
   return {
     scale,
     x: (box.width - content.width * scale) / 2,

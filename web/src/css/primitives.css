@@ -1134,10 +1134,10 @@ button.btn-x.danger:hover:not(:disabled) {
   left: var(--space-3);
   bottom: var(--space-3);
   display: grid;
+  justify-items: start;
   gap: var(--space-1);
   margin: 0;
-  padding: var(--space-2) var(--space-3);
-  list-style: none;
+  padding: var(--space-1);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--surface);
@@ -1150,7 +1150,16 @@ button.btn-x.danger:hover:not(:disabled) {
   padding: 0;
   list-style: none;
 }
-.cable-legend li,
+.cable-legend > .cable-legend-list {
+  padding: 0 var(--space-2) var(--space-1);
+}
+/* Màn hẹp: thanh thu phóng chiếm đáy, chú giải đứng ngay trên nó để không đè nút nào. */
+@media (max-width: 1023px) {
+  .cable-legend {
+    bottom: calc(var(--space-3) + 3rem);
+    max-width: calc(100% - 2 * var(--space-3));
+  }
+}
 .cable-legend-list li {
   display: flex;
   align-items: center;
