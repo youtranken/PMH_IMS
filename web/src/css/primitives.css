@@ -1922,28 +1922,3 @@ button.btn-x.danger:hover:not(:disabled) {
   min-height: 0;
   padding: 0 var(--space-6);
 }
-
-/* "Hình dùng trên sơ đồ" (trang thiết bị): hai mặt cạnh nhau, mỗi mặt ảnh + mức đang dùng + nút. */
-.device-look {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-5);
-}
-.device-look-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-.device-look-img {
-  max-width: 100%;
-  max-height: 96px;
-  height: auto;
-  border-radius: var(--r);
-  border: 1px solid var(--border);
-}
-.device-look-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}

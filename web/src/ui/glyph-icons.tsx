@@ -85,6 +85,19 @@ export function UploadIcon({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Hộp thiết bị (thân máy + đèn + khe) — hình thay ảnh trong ô ảnh thiết bị khi loại chưa có biểu
+ * tượng SVG riêng. Nét mảnh vì hình này vẽ to (~64px), không nằm trên nút.
+ */
+export function DeviceIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={1.4}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M3 12h18M6.5 9h.01M6.5 15h.01M10 9h7M10 15h7" />
+    </Glyph>
+  );
+}
+
 /** Vô cực — kỳ hạn "Vĩnh viễn" (`PerpetualBadge`). */
 export function InfinityIcon({ className }: { className?: string }) {
   return (

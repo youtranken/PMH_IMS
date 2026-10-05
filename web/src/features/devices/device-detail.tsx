@@ -915,6 +915,7 @@ export function DeviceDetail({ me }: { me: Me }) {
 
             <DeviceDiagramLook
               deviceId={item.id}
+              deviceTypeId={item.deviceTypeId}
               deviceTypeName={item.deviceTypeName}
               csrfToken={me.csrfToken}
               canEdit={!retired}

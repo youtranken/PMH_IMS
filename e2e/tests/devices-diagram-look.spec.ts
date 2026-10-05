@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_SA, devicesPageButton, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
 
 /*
  * "Hình dùng trên sơ đồ" (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
@@ -53,7 +53,7 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
   const front = page.getByRole('group', { name: 'Mặt trước' });
   await expect(front.getByText(`Ảnh chung của model ${model}`)).toBeVisible();
-  await front.getByLabel('Tải ảnh riêng — Mặt trước').setInputFiles({ name: `rieng-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
+  await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `rieng-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
   await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
   const ownFile = sql(`SELECT photo_front_file_id FROM device WHERE id = '${a}'`);
   expect(ownFile).not.toBe('');
@@ -102,4 +102,57 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   await page.getByRole('group', { name: 'Mặt trước' }).getByRole('button', { name: 'Bỏ ảnh riêng — Mặt trước' }).click();
   await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText(`Ảnh chung của model ${model}`)).toBeVisible();
   await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${modelFile}`);
+});
+
+test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang ảnh riêng (trang thiết bị + bản đồ quan hệ); Thay ảnh; Bỏ ảnh riêng → về biểu tượng, bản đồ hết ảnh', async ({ page }) => {
+  test.setTimeout(120_000);
+  await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const code = `SW-E2E-PF${stamp}`;
+  const typeId = ((await (await page.request.get('/api/v1/catalog')).json()) as { deviceTypes: { id: string; name: string }[] }).deviceTypes.find((t) => t.name === 'Switch')!.id;
+
+  await page.goto('/devices');
+  await devicesPageButton(page, 'Thêm thiết bị').click();
+  const form = page.getByRole('dialog');
+  await form.getByLabel('Mã thiết bị').fill(code);
+  await form.getByLabel('Tên thiết bị').fill('Switch E2E có ảnh');
+  await form.getByRole('button', { name: 'Loại' }).click();
+  await page.getByRole('option', { name: 'Switch', exact: true }).click();
+  const draft = form.getByRole('group', { name: 'Mặt trước' });
+  await expect(draft.getByText('Biểu tượng loại Switch').or(draft.getByText(/Chưa chọn ảnh/))).toBeVisible();
+  await draft.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `form-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
+  await expect(draft.getByText('Ảnh riêng — tải lên khi lưu máy')).toBeVisible();
+  await expect(draft.getByRole('img', { name: 'Ảnh Mặt trước đã chọn' })).toBeVisible();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await expect(page.getByText(`Đã đặt ảnh cho máy ${code}.`)).toBeVisible();
+
+  const id = sql(`SELECT id FROM device WHERE code = '${code}'`);
+  const own = sql(`SELECT photo_front_file_id FROM device WHERE id = '${id}'`);
+  expect(own).not.toBe('');
+  // Một sợi dây để bản đồ quan hệ có hạch.
+  const other = await device(page, `SW-E2E-PG${stamp}`, typeId, `E2E-MDL-PG${stamp}`);
+  const linked = await page.request.post(`/api/v1/devices/${id}/ports/link`, { headers: await writeHeaders(page), data: { portLabel: '1', connectedDeviceId: other, connectedPort: '1', cableTypeId: '' } });
+  expect(linked.status(), await linked.text()).toBe(201);
+
+  await page.goto(`/devices/${id}`);
+  const front = page.getByRole('group', { name: 'Mặt trước' });
+  await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
+  await expect(front.getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toHaveAttribute('src', `/api/v1/devices/${id}/photo/front?v=${own}`);
+  const hubImg = page.getByTestId('rmap-hub').getByRole('img');
+  await expect(hubImg).toHaveAttribute('src', `/api/v1/devices/${id}/photo/front?v=${own}`);
+
+  // Thay ảnh: ô và bản đồ cùng đổi sang tệp mới, không cần tải lại trang.
+  await front.getByLabel('Thay ảnh — Mặt trước').setInputFiles({ name: `thay-${stamp}.png`, mimeType: 'image/png', buffer: PNG_MODEL });
+  await expect.poll(() => sql(`SELECT photo_front_file_id FROM device WHERE id = '${id}'`)).not.toBe(own);
+  const replaced = sql(`SELECT photo_front_file_id FROM device WHERE id = '${id}'`);
+  await expect(hubImg).toHaveAttribute('src', `/api/v1/devices/${id}/photo/front?v=${replaced}`);
+  expect(await hubImg.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+
+  // Bỏ ảnh riêng, máy không có ảnh model → về biểu tượng; bản đồ quan hệ HẾT ảnh ngay (không tải lại trang).
+  await front.getByRole('button', { name: 'Bỏ ảnh riêng — Mặt trước' }).click();
+  await expect(front.getByText('Biểu tượng loại Switch')).toBeVisible();
+  await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveCount(0);
+  expect(sql(`SELECT coalesce(photo_front_file_id::text, '') FROM device WHERE id = '${id}'`)).toBe('');
+  // Ảnh cũ không còn được phục vụ cho mặt này (server không rơi về giấy tờ còn nằm đó).
+  expect((await page.request.get(`/api/v1/devices/${id}/photo/front?v=${replaced}`)).status()).toBe(404);
 });

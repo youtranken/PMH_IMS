@@ -13,6 +13,8 @@ import { Field, FormSection } from '@/ui/page-header';
 import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
+import { DevicePhotoSlots, useDeviceTypeIconSrc } from '@/ui/device-photo-slots';
+import { ME_KEY, type Me } from '@/lib/me';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -26,6 +28,7 @@ import {
   type DeviceStatus,
   type DeviceWriteResult,
 } from '@/lib/device-types';
+import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
 
 interface FormState {
   code: string;
@@ -141,7 +144,12 @@ export function DeviceForm({
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();
+  // Ảnh hai mặt chọn lúc khai máy mới (Q-23): cùng lối "giữ ở trình duyệt, có id rồi mới đẩy".
+  const photoDraft = useDevicePhotoDraft();
   const [uploading, setUploading] = useState(false);
+  // Đọc `me` từ cache (shell đã nạp): chỉ để biết có hiện việc "ảnh chung của model" không — API vẫn chặn.
+  const { data: me } = useQuery<Me | null>({ queryKey: ME_KEY, enabled: false });
+  const canEditModel = me?.role === 'sa' || me?.role === 'admin';
   /*
    * Form TỰ hỏi danh mục thay vì nhận qua props.
    *
@@ -216,6 +224,8 @@ export function DeviceForm({
   const [rackServerError, setRackServerError] = useState<string | null>(null);
   const [rackOpen, setRackOpen] = useState(false);
   const narrow = useIsNarrow();
+  const typeName = (lists.data?.deviceTypes ?? []).find((type) => type.id === form.deviceTypeId)?.name ?? null;
+  const typeIconSrc = useDeviceTypeIconSrc(device ? null : form.deviceTypeId);
 
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
@@ -261,6 +271,23 @@ export function DeviceForm({
               });
             }
             for (const message of failures) toast({ message, tone: 'warn' });
+          }
+          if (!device && (photoDraft.files.front || photoDraft.files.back)) {
+            setUploading(true);
+            const failure = await photoDraft.upload(result.device.id, csrfToken);
+            setUploading(false);
+            if (failure) {
+              // Máy đã tạo: báo rõ ảnh CHƯA vào, kèm đường đặt lại — không để ảnh rơi mất trong im lặng.
+              toast({
+                tone: 'warn',
+                message: t('devices.photoDraftFailed', { code: result.device.code, reason: failure }),
+                action: onOpenCreated
+                  ? { label: t('devices.photoRetry'), onClick: () => onOpenCreated(result.device) }
+                  : undefined,
+              });
+            } else {
+              toast({ tone: 'ok', message: t('devices.photoDraftSaved', { code: result.device.code }) });
+            }
           }
           if (keepOpen) {
             setForm(nextState(sent));
@@ -560,6 +587,39 @@ export function DeviceForm({
               onChange={(e) => set('note', e.target.value)}
             />
           </Field>
+        </FormSection>
+
+        {/* Ảnh thiết bị (không bắt buộc): SỬA ghi thẳng như trang thiết bị; THÊM MỚI giữ ảnh ở
+            trình duyệt tới lúc máy có id. Cùng một ô ảnh dùng chung ở cả hai chế độ. */}
+        <FormSection
+          title={t('devices.photoSectionTitle')}
+          titleTip={device ? t('devices.photoLiveTip') : undefined}
+          columns={1}
+        >
+          <p className="muted small">{t('devices.photoSectionHint')}</p>
+          {device ? (
+            <DevicePhotoEditor
+              deviceId={device.id}
+              deviceTypeId={device.deviceTypeId}
+              deviceTypeName={device.deviceTypeName}
+              csrfToken={csrfToken}
+              canEdit={device.status !== 'retired'}
+              canEditModel={canEditModel}
+            />
+          ) : (
+            <DevicePhotoSlots
+              slots={{
+                front: { src: photoDraft.previews.front ?? null, level: photoDraft.files.front ? 'draft' : 'unset' },
+                back: { src: photoDraft.previews.back ?? null, level: photoDraft.files.back ? 'draft' : 'unset' },
+              }}
+              typeName={typeName}
+              typeIconSrc={typeIconSrc}
+              modelLabel={null}
+              readOnly={busy}
+              onPick={photoDraft.set}
+              onRemove={(side) => photoDraft.set(side, null)}
+            />
+          )}
         </FormSection>
 
         {/*

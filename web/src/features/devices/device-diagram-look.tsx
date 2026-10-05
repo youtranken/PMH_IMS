@@ -1,42 +1,64 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import { uploadFile } from '@/lib/upload';
-import { rejectionText, screenAttachments, useAttachmentLimits } from '@/ui/attachment-limits';
 import { DetailSection } from '@/ui/detail-layout';
+import {
+  DevicePhotoSlots,
+  PHOTO_SIDES,
+  useDeviceTypeIconSrc,
+  type PhotoSide,
+  type PhotoSlot,
+} from '@/ui/device-photo-slots';
 import { useToast } from '@/ui/toast';
 import { devicePhotosKey, type DevicePhotos } from './device-photos-panel';
-
-type Side = 'front' | 'back';
-const SIDES: Side[] = ['front', 'back'];
-/** Ảnh cho sơ đồ: JPG/PNG — bộ vẽ ảnh của server không giải mã WebP. */
-const PHOTO_ACCEPT = '.jpg,.jpeg,.png';
 
 /**
  * Mức ảnh đang dùng của một mặt. Thứ tự tra (riêng của máy → chung của model → biểu tượng loại)
  * là của SERVER (`effective` của `GET /devices/:id/photos`); web chỉ nói ra mức nào đang thắng.
  */
-export function lookLevel(photos: DevicePhotos | undefined, side: Side): 'own' | 'model' | 'icon' {
+export function lookLevel(photos: DevicePhotos | undefined, side: PhotoSide): 'own' | 'model' | 'icon' {
   const effective = photos?.effective[side];
   if (!effective) return 'icon';
   return photos?.device[side]?.id === effective.id ? 'own' : 'model';
 }
 
+export const devicePhotoSrc = (deviceId: string, side: PhotoSide, fileId: string) =>
+  `/api/v1/devices/${deviceId}/photo/${side}?v=${fileId}`;
+
+/** Tải ảnh lên giấy tờ của máy rồi chọn làm ảnh riêng — một đường cho trang thiết bị và form. */
+export async function setOwnPhotos(
+  deviceId: string,
+  files: Partial<Record<PhotoSide, File>>,
+  csrfToken: string,
+): Promise<DevicePhotos> {
+  const chosen: Partial<Record<PhotoSide, string>> = {};
+  for (const side of PHOTO_SIDES) {
+    const file = files[side];
+    if (!file) continue;
+    const saved = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device', ownerId: deviceId });
+    chosen[side] = saved.id;
+  }
+  return apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/photos`, { method: 'PATCH', csrfToken, body: JSON.stringify(chosen) });
+}
+
 /**
- * Khu "Hình dùng trên sơ đồ" ở tab Tổng quan (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó, tải
- * THẲNG từng mặt (ảnh lên giấy tờ của máy rồi chọn làm ảnh riêng — cùng đường, cùng giới hạn cỡ và
- * cùng lượt kiểm nội dung của giấy tờ). Ảnh model đổi hình của cả loạt máy nên chỉ SA/Admin.
+ * Ô ảnh hai mặt của một máy ĐÃ CÓ id, ghi thẳng (Q-23): ảnh riêng tải lên giấy tờ của máy rồi chọn
+ * làm ảnh riêng (cùng đường, cùng giới hạn cỡ và cùng lượt kiểm nội dung của giấy tờ). Ảnh model
+ * đổi hình của cả loạt máy nên chỉ SA/Admin. Trang thiết bị và form Sửa dùng chung.
  */
-export function DeviceDiagramLook({
+export function DevicePhotoEditor({
   deviceId,
+  deviceTypeId,
   deviceTypeName,
   csrfToken,
   canEdit,
   canEditModel,
 }: {
   deviceId: string;
+  deviceTypeId: string | null;
   deviceTypeName: string | null;
   csrfToken: string;
   /** Hồ sơ còn sửa được (chưa thanh lý). */
@@ -47,131 +69,161 @@ export function DeviceDiagramLook({
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const limits = useAttachmentLimits();
+  const typeIconSrc = useDeviceTypeIconSrc(deviceTypeId);
   const photos = useQuery({ queryKey: devicePhotosKey(deviceId), queryFn: () => apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/photos`) });
-  const [busy, setBusy] = useState(false);
-  const data = photos.data;
+  const [busySide, setBusySide] = useState<PhotoSide | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<PhotoSide, string | null>>>({});
+  const [savedKey, setSavedKey] = useState<Partial<Record<PhotoSide, number>>>({});
+  // Chỉ dùng câu trả lời đúng hình: ô ảnh vỡ cả form nếu đọc `effective` của một câu trả lời lạ.
+  const data = photos.data?.effective ? photos.data : undefined;
   const modelLabel = data?.model?.label ?? null;
-  const sideLabel = (side: Side) => t(side === 'front' ? 'devices.photoFront' : 'devices.photoBack');
+  const sideLabel = (side: PhotoSide) => t(side === 'front' ? 'photoSlots.front' : 'photoSlots.back');
 
-  const run = async (work: () => Promise<DevicePhotos>, message: string) => {
-    setBusy(true);
+  const run = async (side: PhotoSide, work: () => Promise<DevicePhotos>, message: string) => {
+    setBusySide(side);
+    setErrors((current) => ({ ...current, [side]: null }));
     try {
       queryClient.setQueryData(devicePhotosKey(deviceId), await work());
-      // Ảnh chọn từ giấy tờ: danh sách giấy tờ của máy / model đổi theo.
+      // Ảnh tải lên là giấy tờ của máy / model: danh sách giấy tờ đổi theo.
       void queryClient.invalidateQueries({ queryKey: ['files'] });
+      setSavedKey((current) => ({ ...current, [side]: (current[side] ?? 0) + 1 }));
       toast({ tone: 'ok', message });
     } catch (error) {
-      toast({ tone: 'error', message: errorMessage(error) });
+      setErrors((current) => ({ ...current, [side]: errorMessage(error) }));
     } finally {
-      setBusy(false);
+      setBusySide(null);
     }
   };
 
-  const screened = (file: File | undefined): File | null => {
-    if (!file) return null;
-    const result = screenAttachments([file], limits);
-    const rejected = rejectionText(t, result, limits);
-    if (rejected) toast({ tone: 'error', message: rejected });
-    return result.accepted[0] ?? null;
-  };
-
-  const uploadOwn = (side: Side, file: File) =>
-    run(async () => {
-      const saved = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device', ownerId: deviceId });
-      return apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/photos`, { method: 'PATCH', csrfToken, body: JSON.stringify({ [side]: saved.id }) });
-    }, t('devices.lookOwnSaved', { side: sideLabel(side) }));
-
-  const removeOwn = (side: Side) =>
-    run(
-      () => apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/photos`, { method: 'PATCH', csrfToken, body: JSON.stringify({ [side]: null }) }),
-      t('devices.lookOwnRemoved', { side: sideLabel(side) }),
-    );
-
-  const uploadModel = (side: Side, file: File) =>
-    run(async () => {
+  const uploadModel = (side: PhotoSide, file: File) =>
+    run(side, async () => {
       const model = await apiFetch<{ id: string }>(`/api/v1/devices/${deviceId}/model`, { method: 'POST', csrfToken });
       const saved = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_model', ownerId: model.id });
       return apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/model-photos`, { method: 'PATCH', csrfToken, body: JSON.stringify({ [side]: saved.id }) });
     }, t('devices.lookModelSaved', { model: modelLabel ?? '' }));
 
-  const levelText = (side: Side) => {
-    const level = lookLevel(data, side);
-    if (level === 'own') return t('devices.lookOwn');
-    if (level === 'model') return t('devices.lookModel', { model: modelLabel ?? '' });
-    return t('devices.lookIcon', { type: deviceTypeName ?? '' });
+  /*
+   * Ảnh model phải là tệp CỦA model (server kiểm chủ tệp), nên "dùng ảnh này" là tải lại đúng
+   * tệp ảnh riêng làm tệp của model — server kiểm nội dung lần nữa như mọi lượt tải lên.
+   */
+  const copyOwnToModel = (side: PhotoSide) => {
+    const own = data?.device[side];
+    if (!own) return;
+    void run(side, async () => {
+      const response = await fetch(`/api/v1/files/${own.id}/download`, { credentials: 'include' });
+      if (!response.ok) throw new Error(t('devices.lookCopyFailed'));
+      const blob = await response.blob();
+      const file = new File([blob], own.name, { type: /\.png$/i.test(own.name) ? 'image/png' : 'image/jpeg' });
+      const model = await apiFetch<{ id: string }>(`/api/v1/devices/${deviceId}/model`, { method: 'POST', csrfToken });
+      const saved = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_model', ownerId: model.id });
+      return apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/model-photos`, { method: 'PATCH', csrfToken, body: JSON.stringify({ [side]: saved.id }) });
+    }, t('devices.lookModelSaved', { model: modelLabel ?? '' }));
+  };
+
+  const slot = (side: PhotoSide): PhotoSlot => {
+    const effective = data?.effective[side];
+    return { src: effective ? devicePhotoSrc(deviceId, side, effective.id) : null, level: lookLevel(data, side) };
   };
 
   return (
-    <DetailSection title={t('devices.lookTitle')} compact>
-      <p className="muted small">{t('devices.lookHint')}</p>
+    <>
       {photos.isError ? (
         <p className="alert error" role="alert">
           {errorMessage(photos.error)}
         </p>
       ) : null}
-      <div className="device-look">
-        {SIDES.map((side) => {
-          const effective = data?.effective[side] ?? null;
-          const own = Boolean(data?.device[side]);
-          const label = sideLabel(side);
-          return (
-            <div key={side} className="device-look-side" role="group" aria-label={label}>
-              <strong>{label}</strong>
-              {effective ? (
-                <img
-                  src={`/api/v1/devices/${deviceId}/photo/${side}?v=${effective.id}`}
-                  alt={t('devices.photoAlt', { side: label })}
-                  className="device-look-img"
-                />
-              ) : null}
-              <span className="muted small">{data ? levelText(side) : '…'}</span>
-              {canEdit && data ? (
-                <span className="device-look-actions">
-                  <label className="btn sm">
-                    {t(own ? 'devices.lookReplaceOwn' : 'devices.lookUploadOwn')}
-                    <input
-                      type="file"
-                      accept={PHOTO_ACCEPT}
-                      hidden
-                      disabled={busy}
-                      aria-label={t('devices.lookUploadOwnOf', { side: label })}
-                      onChange={(event) => {
-                        const file = screened(event.target.files?.[0]);
-                        event.target.value = '';
-                        if (file) void uploadOwn(side, file);
-                      }}
-                    />
-                  </label>
-                  {own ? (
-                    <button type="button" className="btn sm ghost" disabled={busy} aria-label={t('devices.lookRemoveOwnOf', { side: label })} onClick={() => void removeOwn(side)}>
-                      {t('devices.lookRemoveOwn')}
-                    </button>
-                  ) : null}
-                  {canEditModel && modelLabel ? (
-                    <label className="btn sm ghost">
-                      {t('devices.lookUploadModel')}
-                      <input
-                        type="file"
-                        accept={PHOTO_ACCEPT}
-                        hidden
-                        disabled={busy}
-                        aria-label={t('devices.lookUploadModelOf', { side: label })}
-                        onChange={(event) => {
-                          const file = screened(event.target.files?.[0]);
-                          event.target.value = '';
-                          if (file) void uploadModel(side, file);
-                        }}
-                      />
-                    </label>
-                  ) : null}
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+      <DevicePhotoSlots
+        slots={{ front: slot('front'), back: slot('back') }}
+        typeName={deviceTypeName}
+        typeIconSrc={typeIconSrc}
+        modelLabel={modelLabel}
+        readOnly={!canEdit || !data}
+        busySide={busySide}
+        savedKey={savedKey}
+        errors={errors}
+        onPick={(side, file) => void run(side, () => setOwnPhotos(deviceId, { [side]: file }, csrfToken), t('devices.lookOwnSaved', { side: sideLabel(side) }))}
+        onRemove={(side) =>
+          void run(
+            side,
+            () => apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/photos`, { method: 'PATCH', csrfToken, body: JSON.stringify({ [side]: null }) }),
+            t('devices.lookOwnRemoved', { side: sideLabel(side) }),
+          )
+        }
+        model={canEditModel ? { onUpload: (side, file) => void uploadModel(side, file), onCopyOwn: copyOwnToModel } : null}
+      />
       {data && !data.model ? <p className="muted small">{t('devices.photoNoModel')}</p> : null}
+    </>
+  );
+}
+
+/** Khu "Hình dùng trên sơ đồ" ở tab Tổng quan của trang thiết bị. */
+export function DeviceDiagramLook(props: Parameters<typeof DevicePhotoEditor>[0]) {
+  const { t } = useTranslation();
+  return (
+    <DetailSection title={t('devices.lookTitle')} compact>
+      <p className="muted small">{t('devices.lookHint')}</p>
+      <DevicePhotoEditor {...props} />
     </DetailSection>
   );
+}
+
+export interface DevicePhotoDraft {
+  files: Partial<Record<PhotoSide, File>>;
+  previews: Partial<Record<PhotoSide, string>>;
+  set: (side: PhotoSide, file: File | null) => void;
+  /**
+   * Tải ảnh đang giữ lên máy VỪA TẠO rồi đặt làm ảnh riêng. KHÔNG ném lỗi (cùng hợp đồng với
+   * `useAttachmentDraft`): máy đã ghi xuống DB, ném ra là màn hình báo "lưu thất bại" trong khi
+   * máy vẫn nằm đó. Trả câu lỗi (hoặc `null`) để nơi gọi báo riêng kèm đường đặt lại.
+   */
+  upload: (deviceId: string, csrfToken: string) => Promise<string | null>;
+}
+
+/** Ảnh chọn trong form THÊM MỚI, khi máy chưa có id: giữ `File` + ảnh xem trước ở trình duyệt. */
+export function useDevicePhotoDraft(): DevicePhotoDraft {
+  const [files, setFiles] = useState<Partial<Record<PhotoSide, File>>>({});
+  const [previews, setPreviews] = useState<Partial<Record<PhotoSide, string>>>({});
+  // `upload` chạy trong `onSuccess` của lượt lưu — closure của lượt render trước; ref luôn mới nhất.
+  const latest = useRef(files);
+  latest.current = files;
+  const urls = useRef(previews);
+  urls.current = previews;
+  useEffect(() => () => Object.values(urls.current).forEach((url) => url && URL.revokeObjectURL(url)), []);
+
+  const set = (side: PhotoSide, file: File | null) => {
+    const old = urls.current[side];
+    if (old) URL.revokeObjectURL(old);
+    const nextFiles = { ...latest.current };
+    const nextPreviews = { ...urls.current };
+    if (file) {
+      nextFiles[side] = file;
+      nextPreviews[side] = URL.createObjectURL(file);
+    } else {
+      delete nextFiles[side];
+      delete nextPreviews[side];
+    }
+    latest.current = nextFiles;
+    urls.current = nextPreviews;
+    setFiles(nextFiles);
+    setPreviews(nextPreviews);
+  };
+
+  return {
+    files,
+    previews,
+    set,
+    upload: async (deviceId, csrfToken) => {
+      const held = latest.current;
+      if (!held.front && !held.back) return null;
+      try {
+        await setOwnPhotos(deviceId, held, csrfToken);
+        return null;
+      } catch (error) {
+        return errorMessage(error);
+      } finally {
+        // Ảnh thuộc về máy vừa tạo; "Lưu và nhân bản" không được mang nó sang máy kế tiếp.
+        PHOTO_SIDES.forEach((side) => set(side, null));
+      }
+    },
+  };
 }
