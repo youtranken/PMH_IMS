@@ -604,32 +604,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         /* Không có dòng định danh: loại đã ở breadcrumb, model và serial (kèm nút chép) ở
            Thông tin nhanh (Q-20). Mã không có nút chép: nó là tiêu đề trang, bôi đen chép được. */
         actions={
-          narrow ? (
-            /* Điện thoại: đứng trước tủ, việc cần là két (mật khẩu) — không phải Sửa/Thanh lý.
-               Nút chính đưa thẳng tới tab Két sắt; mọi việc sửa hồ sơ vào menu ⋯. Máy đã
-               thanh lý thì "Đổi trạng thái" (mở lại) vẫn là nút chính như trên máy tính. */
-            <>
-              {retired ? (
-                <button type="button" className="btn primary" onClick={openStatus}>
-                  {t("devices.reopen")}
-                </button>
-              ) : (
-                <button type="button" className="btn primary" onClick={() => goTab("vault")}>
-                  {t("devices.openVault")}
-                </button>
-              )}
-              <RowActions
-                label={t("common.actionsOf", { subject: item.code })}
-                subject={item.code}
-                items={deviceMenuItems(t, retired, {
-                  onEdit: () => setEditing(true),
-                  onStatus: openStatus,
-                  onClone: () => setCloning(true),
-                  onRetire: openRetire,
-                })}
-              />
-            </>
-          ) : retired ? (
+          /* Cùng MỘT nút chính ở mọi cỡ màn (T-05): "Sửa hồ sơ"; Két sắt là một tab của trang. */
+          retired ? (
             /* Hồ sơ đã khoá: việc làm được DUY NHẤT là mở lại, nên nó là nút chính. Nút "Sửa hồ
                sơ" xám ở chỗ mắt tìm nút chính chỉ là một lời hứa không bấm được. */
             <>
@@ -1191,7 +1167,9 @@ function ExtensionPanels({
             <p className="muted">{panel.emptyText ?? "—"}</p>
           ) : (
             <div className="table-wrap">
-              <table className="table table-stack">
+              {/* Hai cột nhãn | giá trị ở mọi cỡ màn — không gập thẻ: thẻ gập của bảng hai cột ra dòng
+                  trống nhãn và đường kẻ cụt ở 390px (T-05). */}
+              <table className="table kv-table">
                 <tbody>
                   {panel.items.map((entry, index) => (
                     <tr key={`${panel.key}-${index}`}>

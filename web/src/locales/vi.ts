@@ -1730,7 +1730,6 @@ export default {
     managementIp: 'IP quản trị',
     noIpYet: 'Chưa có IP',
     fillBlanks: 'Bổ sung {{count}} ô còn thiếu',
-    openVault: 'Két sắt',
     warrantyNudge: 'Máy hỏng nhưng còn bảo hành tới {{date}} — liên hệ nhà cung cấp.',
     heldLabel: 'Đang giữ:',
     held: {

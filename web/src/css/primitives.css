@@ -108,6 +108,9 @@ table.table.table-sub td .mono {
 
 /* Ô TÊN DÒNG của bảng khu mở rộng (trang chi tiết thiết bị): là <th scope="row">, nên phải
    tự bỏ dáng tiêu đề cột — căn trái, không viết hoa, và hẹp lại để cột giá trị được rộng. */
+.table.kv-table td {
+  overflow-wrap: anywhere;
+}
 .table th.panel-key {
   width: 38%;
   text-align: left;
