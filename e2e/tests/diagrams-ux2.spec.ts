@@ -125,9 +125,12 @@ test.describe('Sơ đồ mạng — soát UX đợt 2', () => {
     const name = `E2E Tìm nhanh UX2 ${stamp}`;
     const id = await createDiagram(page, { name, nodeType: 'company' });
     await page.goto('/');
+    // Ctrl+K do listener gắn lên `document` sau khi app dựng xong — gõ sớm là phím rơi mất.
+    await expect(page.getByRole('navigation', { name: /Điều hướng/ })).toBeVisible();
     await page.keyboard.press('Control+k');
-    await page.getByRole('combobox', { name: /tìm nhanh/i }).fill(`Tìm nhanh UX2 ${stamp}`);
-    const group = page.getByRole('group', { name: 'Sơ đồ mạng' });
+    const palette = page.getByRole('dialog', { name: 'Tìm nhanh' });
+    await palette.getByRole('combobox').fill(`Tìm nhanh UX2 ${stamp}`);
+    const group = palette.getByRole('group', { name: 'Sơ đồ mạng' });
     await group.getByRole('option', { name: new RegExp(name) }).click();
     await expect(page).toHaveURL(new RegExp(`/diagrams/${id}$`));
   });

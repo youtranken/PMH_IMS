@@ -252,7 +252,7 @@ test.describe('Sơ đồ mạng — điện thoại, tìm, lớp, chỉ đườn
 
     expireStepUp(E2E_SA.email);
     await page.keyboard.press('ArrowRight');
-    const unlock = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    const unlock = page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
     await expect(unlock).toBeVisible();
     // Hộp modal ẩn phần còn lại khỏi cây trợ năng, nên "không thoát" kiểm bằng đường dẫn.
     await expect(page).toHaveURL(new RegExp(`/diagrams/${net.coreId}/present$`));

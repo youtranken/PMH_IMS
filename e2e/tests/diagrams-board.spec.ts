@@ -288,9 +288,9 @@ test.describe('Sơ đồ mạng — Bỏ nháp từ một bản chọn, Xóa h�
     await page.goto(`/diagrams?node=${id}`);
     const unlock = panel(page).getByRole('button', { name: 'Nhập mã để xem lịch sử' });
     await expect(unlock).toBeVisible();
-    await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' })).toHaveCount(0);
     await unlock.click();
-    await fillOtp(page.getByRole('dialog', { name: 'Xác nhận danh tính' }), await freshTotpCode(secret));
+    await fillOtp(page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' }), await freshTotpCode(secret));
     await expect(panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 1' })).toBeVisible();
   });
 
@@ -341,7 +341,7 @@ test.describe('Sơ đồ mạng — Bỏ nháp từ một bản chọn, Xóa h�
     await expect(go).toBeDisabled();
     await confirm.getByLabel('Gõ lại tên bản vẽ để xác nhận').fill(name);
     await go.click();
-    const stepUp = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    const stepUp = page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
     await fillOtp(stepUp, await freshTotpCode(secret));
     await expect(page.getByText(`Đã xóa hẳn "${name}".`)).toBeVisible();
     await expect(mapItem(page, name)).toHaveCount(0);

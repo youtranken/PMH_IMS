@@ -225,13 +225,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
          1280px với cột Thao tác trong khung. */
       'Bảng phần mềm phải có đúng 6 cột này, đúng thứ tự này',
-    ).toEqual(['Mã hồ sơ', 'Tên hồ sơ', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
+    ).toEqual(['Mã', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
 
     // ===== SẮP XẾP: aria-sort phải lật, VÀ thứ tự dòng phải đảo theo =====
-    const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ' });
+    const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã', exact: true });
     const codeHeader = page
       .getByRole('columnheader')
-      .filter({ has: page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ' }) });
+      .filter({ has: page.getByRole('button', { name: 'Sắp xếp theo Mã', exact: true }) });
 
     await expect(
       codeHeader,

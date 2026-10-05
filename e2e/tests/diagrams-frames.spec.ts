@@ -100,7 +100,7 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     await expect(page).toHaveURL(new RegExp(`/diagrams/${tower}$`));
     await expect(page.getByRole('heading', { level: 1, name: towerName })).toBeVisible();
     // Trong ân hạn mã sơ đồ: không bật hộp hỏi mã khi xuống bản vẽ con.
-    await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' })).toHaveCount(0);
 
     const crumbs = page.getByRole('navigation', { name: 'Đường dẫn bản vẽ' });
     await crumbs.getByRole('link', { name: rootName }).click();
@@ -171,7 +171,7 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
     await diagramBarAction(page, 'Chèn tủ mạng');
     const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
-    await box.getByRole('button', { name: 'Tủ mạng' }).click();
+    await box.getByRole('button', { name: 'Tủ mạng', exact: true }).click();
     await page.getByRole('option', { name: `${siteCode} · E2E-R${stamp}` }).click();
     await box.getByRole('button', { name: 'Chèn tủ mạng' }).click();
     await expect(page.getByText(`Đã chèn khung tủ E2E-R${stamp} (1 thiết bị).`)).toBeVisible();

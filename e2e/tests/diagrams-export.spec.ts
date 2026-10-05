@@ -161,7 +161,7 @@ test.describe('Sơ đồ mạng — xuất PNG/PDF', () => {
 
     // Mở màn (nhập mã để xem), rồi để ân hạn hết giữa chừng và bấm xuất.
     await page.goto(`/diagrams/${id}`);
-    const unlock = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    const unlock = page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
     await expect(unlock).toBeVisible();
     await stepUpViaApi(page, secret, 'diagram');
     await unlock.getByRole('button', { name: 'Hủy' }).click();
@@ -170,7 +170,7 @@ test.describe('Sơ đồ mạng — xuất PNG/PDF', () => {
     expireStepUp(E2E_SA.email);
     await diagramBarAction(page, 'Xuất');
     await page.getByRole('button', { name: 'Xuất PNG' }).click();
-    const ask = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    const ask = page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
     await expect(ask).toContainText(`Nhập mã 6 số để xuất bản vẽ "E2E Xuất khoá ${stamp}".`);
     await ask.getByRole('button', { name: 'Hủy' }).click();
     await expect(ask).toHaveCount(0);

@@ -70,7 +70,7 @@ async function createSwitch(page: Page, code: string): Promise<string> {
 }
 
 function stepUpDialog(page: Page): Locator {
-  return page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+  return page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
 }
 
 /** Ghi mọi request của trang (kể cả của iframe draw.io) để khẳng định không gì ra ngoài host IMS. */
@@ -142,7 +142,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     // Mở: nội dung hỏi mã PHẠM VI SƠ ĐỒ (mã đăng nhập không mở phạm vi nào — AD-17).
     await panel.getByRole('button', { name: 'Mở xem' }).click();
     await expect(stepUpDialog(page)).toBeVisible();
-    await expect(stepUpDialog(page).getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeVisible();
+    // K-04: hộp NHỎ — tiêu đề + đang mở gì, không đoạn giải thích phạm vi.
+    await expect(stepUpDialog(page)).toContainText('Nhập mã 6 số để');
     await fillOtp(stepUpDialog(page), await freshTotpCode(secret));
     await expect(page.getByText('Bản vẽ chưa có nội dung')).toBeVisible();
     const id = new URL(page.url()).pathname.split('/').pop()!;
@@ -341,7 +342,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     ]);
     expect(first.status()).toBe(401);
     await expect(stepUpDialog(page)).toBeVisible();
-    await expect(stepUpDialog(page).getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeVisible();
+    // K-04: hộp NHỎ — tiêu đề + đang mở gì, không đoạn giải thích phạm vi.
+    await expect(stepUpDialog(page)).toContainText('Nhập mã 6 số để');
     const [retried] = await Promise.all([
       page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
       fillOtp(stepUpDialog(page), await freshTotpCode(secret)),

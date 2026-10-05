@@ -211,12 +211,12 @@ test.describe('Hồ sơ phần mềm', () => {
     const firstDataRow = () => page.getByRole('row').nth(1);
     await expect(firstDataRow()).toContainText(`SORT-E2E-${stamp}-A`); // mặc định: theo mã tăng
 
-    // Phải bám vào ĐẦU BẢNG: ngoài kia thanh lọc cũng có nút tên "Tên hồ sơ".
+    // Phải bám vào ĐẦU BẢNG. Màn Hợp đồng bảo trì gọi cột tên là "Tên" (P-01).
     const head = page.locator('thead');
-    await head.getByRole('button', { name: 'Tên hồ sơ' }).click();
+    await head.getByRole('button', { name: 'Sắp xếp theo Tên', exact: true }).click();
     await expect(firstDataRow()).toContainText('Alpha hồ sơ đầu bảng');
 
-    await head.getByRole('button', { name: 'Tên hồ sơ' }).click();
+    await head.getByRole('button', { name: 'Sắp xếp theo Tên', exact: true }).click();
     await expect(firstDataRow()).toContainText('Zulu hồ sơ cuối bảng');
 
     // Cột dựa vào danh mục: hiện chữ, nhưng KHÔNG phải nút bấm được.
