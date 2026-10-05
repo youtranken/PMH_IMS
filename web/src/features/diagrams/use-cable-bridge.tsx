@@ -15,6 +15,7 @@ import { CableLegend } from './cable-legend';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
 import { escapeXmlAttr, insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
+import { deviceCellsOnPage } from './photo-bridge';
 
 /** Lời báo "đã khai" có nút chỉ chỗ — để lâu hơn mặc định cho người kịp bấm. */
 const DECLARED_TOAST_MS = 8000;
@@ -80,6 +81,19 @@ export function useCableBridge({
   const [legendOpen, setLegendOpen] = useState(false);
   const [declareOpen, setDeclareOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  /* Máy trên trang đang vẽ — hộp Khai kết nối / Nối hàng loạt mời chọn nhanh (E-05, E-09). */
+  const [onDrawing, setOnDrawing] = useState<{ id: string; code: string }[]>([]);
+  const openWithDrawing = (open: () => void) =>
+    withFile((file) => {
+      const pages = pageIds(file);
+      const pageId = pages[Math.min(page(), pages.length - 1)];
+      const seen = new Map<string, { id: string; code: string }>();
+      for (const cell of pageId ? deviceCellsOnPage(file, pageId) : []) {
+        if (!seen.has(cell.deviceId)) seen.set(cell.deviceId, { id: cell.deviceId, code: cell.code });
+      }
+      setOnDrawing([...seen.values()]);
+      open();
+    });
 
   /*
    * Kết nối vừa khai NẰM Ở sơ đồ cổng của máy giữ dòng (Q-23): lời báo chỉ chỗ. Mở tab mới — rời
@@ -240,7 +254,7 @@ export function useCableBridge({
   const undeclared = pendingEdges(currentXml, content.cableEdges ?? []);
 
   const menu: BarAction[] = [
-    { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => setDeclareOpen(true) },
+    { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
     { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => setBulkOpen(true) },
     { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: () => setUndeclaredOpen(true) },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
@@ -327,6 +341,7 @@ export function useCableBridge({
           device={null}
           port={null}
           csrfToken={me.csrfToken}
+          onDrawing={onDrawing}
           onClose={() => setDeclareOpen(false)}
           onSaved={(keepOpen, saved) => {
             if (!keepOpen) setDeclareOpen(false);

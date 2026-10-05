@@ -491,6 +491,28 @@ textarea.mono {
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
+/* Hộp khai dây ở màn sơ đồ (E-05): hai đầu của sợi dây là hai khối `fieldset.form-section` gọn. */
+.port-end {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  margin: 0;
+}
+.port-end > legend {
+  margin-bottom: var(--space-3);
+}
+/* Nhãn của một nhóm điều khiển không phải ô nhập (dải nút chọn một): cùng dáng nhãn ô. */
+.field-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+/* Báo ngay dưới ô (không phải lỗi chặn): cổng đã có dây, kèm nút dùng cổng kế tiếp. */
+.field-warn {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--warn);
+}
 /* `.chip-row` làm danh sách (`<ul>`): chip người nhận đọc lại từ ô tự do (luật gửi báo cáo). */
 ul.chip-row {
   list-style: none;
