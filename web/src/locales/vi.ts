@@ -1544,6 +1544,8 @@ export default {
     vendor: 'Nhà cung cấp',
     assignedTo: 'Người sử dụng',
     department: 'Phòng ban sử dụng',
+    filterDepartment: 'Phòng ban',
+    allDepartments: 'Tất cả phòng ban',
     departmentPlaceholder: 'Gõ hoặc chọn…',
     // Một dòng: hint hai dòng đẩy hàng lưới lệch nhau.
     departmentHint: 'Chọn từ danh mục hoặc gõ tên mới.',

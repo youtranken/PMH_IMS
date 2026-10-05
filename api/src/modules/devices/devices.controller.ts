@@ -241,6 +241,8 @@ export class DevicesController {
         siteId: query.siteId,
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
+        department: query.department,
+        assignedTo: query.assignedTo,
         // Cùng cách đọc với danh sách: file xuất khớp đúng cái đang xem (FR-028).
         status: deviceStatusQuery(query.status),
       },

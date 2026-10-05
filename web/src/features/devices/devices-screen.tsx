@@ -17,6 +17,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
+import { useDepartments } from '@/ui/use-departments';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
@@ -47,6 +48,8 @@ interface Filters extends Record<string, string> {
   siteId: string;
   cabinetId: string;
   deviceTypeId: string;
+  /** Tên phòng ban (khớp đúng, API `department`) — T-08. */
+  department: string;
   /** '' = mặc định "trừ Đã thanh lý" (API `live`, Q-20); 'all' = không lọc trạng thái. */
   status: '' | 'all' | DeviceStatus;
 }
@@ -56,6 +59,7 @@ const EMPTY_FILTERS: Filters = {
   siteId: '',
   cabinetId: '',
   deviceTypeId: '',
+  department: '',
   status: '',
 };
 
@@ -123,6 +127,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   }, [flashId]);
 
   const lists = useCatalogLists();
+  const departments = useDepartments();
 
   const devices = useQuery({
     queryKey: ['devices', page, limit, filters, sorting],
@@ -414,6 +419,22 @@ export function DevicesScreen({ me }: { me: Me }) {
           onChange={(value) => setFilter('deviceTypeId', value)}
         />
         <Select
+          value={filters.department}
+          ariaLabel={t('devices.filterDepartment')}
+          placeholder={t('devices.allDepartments')}
+          searchable
+          options={[
+            { value: '', label: t('devices.allDepartments') },
+            // Phòng ban đang lọc mà đã ngừng dùng (link cũ) vẫn phải hiện đúng tên trong ô.
+            ...[...new Set([...departments.names, ...(filters.department ? [filters.department] : [])])].map((name) => ({
+              value: name,
+              label: name,
+            })),
+          ]}
+          failed={departments.failed}
+          onChange={(value) => setFilter('department', value)}
+        />
+        <Select
           value={filters.status}
           ariaLabel={t('devices.status')}
           placeholder={statusOptions[0].label}
@@ -646,6 +667,7 @@ function buildFilterQuery(filters: Filters): string {
   if (filters.siteId) params.set('siteId', filters.siteId);
   if (filters.cabinetId) params.set('cabinetId', filters.cabinetId);
   if (filters.deviceTypeId) params.set('deviceTypeId', filters.deviceTypeId);
+  if (filters.department) params.set('department', filters.department);
   // Mặc định ẩn máy đã thanh lý (Q-20): Kho thanh lý là nơi xem chúng. ⌘K không đi qua đây
   // nên vẫn tìm ra máy đã thanh lý.
   if (filters.status !== 'all') params.set('status', filters.status || 'live');

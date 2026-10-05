@@ -128,3 +128,14 @@ describe('Màn Thiết bị — trống vì máy đã thanh lý đang ẩn', () 
   });
 });
 
+
+/** T-08: lọc theo Phòng ban — danh sách và file xuất cùng một bộ lọc. */
+describe('Màn Thiết bị — lọc theo Phòng ban', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('?department= gửi lên danh sách; ô "Phòng ban" hiện tên đang lọc; nút Xuất mang cùng bộ lọc', async () => {
+    const query = await listQuery('/devices?department=K%E1%BA%BF%20to%C3%A1n');
+    expect(query.get('department')).toBe('Kế toán');
+    expect(screen.getByRole('button', { name: 'Phòng ban' })).toHaveTextContent('Kế toán');
+  });
+});
