@@ -175,6 +175,19 @@ describe('Màn Tài khoản', () => {
     expect(screen.getByText(/Chưa đăng nhập · tạo/)).toBeInTheDocument();
   });
 
+  it('K-05: tài khoản còn mật khẩu tạm chưa đổi: badge "Chờ đổi MK tạm · hết hạn dd/mm/yyyy"; quá hạn thì nói đã hết hạn', async () => {
+    const rows = [
+      { ...ROWS[1], id: 'u-new', fullName: 'E2E Người mới', lockedUntil: null, failedAttempts: 0, mustChangePassword: true, tempPasswordExpiresAt: '2030-10-07T03:00:00Z' },
+      { ...ROWS[1], id: 'u-old', fullName: 'E2E Quá hạn', lockedUntil: null, failedAttempts: 0, mustChangePassword: true, tempPasswordExpiresAt: '2020-01-01T03:00:00Z' },
+    ];
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, { items: rows, total: 2 }))));
+    renderAt('/admin/accounts');
+    const fresh = (await screen.findByText('E2E Người mới')).closest('tr') as HTMLElement;
+    expect(fresh).toHaveTextContent('Chờ đổi MK tạm · hết hạn 07/10/2030');
+    const stale = screen.getByText('E2E Quá hạn').closest('tr') as HTMLElement;
+    expect(stale).toHaveTextContent('Mật khẩu tạm đã hết hạn — đặt lại');
+  });
+
   it('Khóa bắt ghi lý do trước khi gửi', async () => {
     const fetchMock = stubFetch();
     const user = userEvent.setup();

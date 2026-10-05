@@ -2487,6 +2487,8 @@ export default {
     toastClearLockout: 'Đã gỡ tạm chặn cho {{name}}.',
     you: 'Bạn',
     tempLocked: 'Tạm chặn tới {{time}} ({{count}} lần sai)',
+    tempPasswordPending: 'Chờ đổi MK tạm · hết hạn {{date}}',
+    tempPasswordExpired: 'Mật khẩu tạm đã hết hạn — đặt lại',
     tempLockedShort: 'Đang tạm chặn',
     noTotpShort: 'Chưa kích hoạt 2 lớp',
     neverLoggedIn: 'Chưa đăng nhập',

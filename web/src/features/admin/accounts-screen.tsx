@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { agoParts, formatDateTime, orDash } from '@/lib/format';
+import { agoParts, formatDate, formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { sortQuery } from '@/lib/sort-query';
 import { DataTable, type MobileCard } from '@/ui/data-table';
@@ -47,6 +47,9 @@ interface AccountRow {
   failedAttempts?: number;
   lockedUntil?: string | null;
   createdAt?: string;
+  /** Đang dùng mật khẩu tạm chưa đổi (K-05) + hạn của mật khẩu tạm — quá hạn là bị chặn đăng nhập (Q-20). */
+  mustChangePassword?: boolean;
+  tempPasswordExpiresAt?: string | null;
 }
 
 type AccountStatus = AccountRow['status'];
@@ -539,6 +542,18 @@ export function AccountsScreen({ me }: { me: Me }) {
               count: temp.attempts,
             })}
           </span>
+        ) : null}
+        {/* Mật khẩu tạm chưa đổi (K-05): SA thấy ai sắp hết hạn để đặt lại trước khi người đó bị chặn. */}
+        {account.mustChangePassword && account.tempPasswordExpiresAt ? (
+          Date.parse(account.tempPasswordExpiresAt) > now ? (
+            <span className="badge info plain" title={formatDateTime(account.tempPasswordExpiresAt)}>
+              {t('accounts.tempPasswordPending', { date: formatDate(account.tempPasswordExpiresAt) })}
+            </span>
+          ) : (
+            <span className="badge danger plain" title={formatDateTime(account.tempPasswordExpiresAt)}>
+              {t('accounts.tempPasswordExpired')}
+            </span>
+          )
         ) : null}
       </>
     );
