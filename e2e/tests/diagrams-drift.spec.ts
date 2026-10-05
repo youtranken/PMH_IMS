@@ -22,7 +22,7 @@ import {
  * Cảnh báo lệch kho (Q-23 "không ép sửa", AD-18). Luật lệch là hàm thuần có bài bảng dữ liệu
  * (`diagram-drift.spec.ts`), bộ đệm + lượt quét hằng ngày + khử thư đúp có bài DB
  * (`api/test/diagram-drift.spec.ts`); bài này đi đường thật: đổi kho SAU khi phát hành → dấu trên
- * ô, "Có N thay đổi chưa vẽ", hộp "Kiểm tra khớp dữ liệu" bay tới ô, cây "Lệch kho (N)", và lượt
+ * ô, "Có N thay đổi so với kho", hộp "Kiểm tra khớp dữ liệu" bay tới ô, cây "Lệch kho (N)", và lượt
  * quét của worker gửi đúng một thư qua Mailpit. Bản vẽ lưu bằng API (không lái draw.io).
  */
 
@@ -91,7 +91,7 @@ async function treeRow(page: Page, name: string) {
 }
 
 test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
-  test('thanh lý một máy SAU khi phát hành → dấu trên ô, "Có 1 thay đổi chưa vẽ", cây "Lệch kho (1)"; không sửa gì', async ({ page }) => {
+  test('thanh lý một máy SAU khi phát hành → dấu trên ô, "Có 1 thay đổi so với kho", cây "Lệch kho (1)"; không sửa gì', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, secret, 'diagram');
     const stamp = uniqueStamp();
@@ -104,7 +104,7 @@ test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
     await retire(page, srv.id);
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Có 1 thay đổi chưa vẽ' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Có 1 thay đổi so với kho' })).toBeVisible();
     await expect(viewer(page).getByRole('button', { name: new RegExp(`${srv.code}.*đã thanh lý`) })).toBeVisible();
 
     await expect((await treeRow(page, name)).getByText('Lệch kho (1)')).toBeVisible();
@@ -156,7 +156,7 @@ test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
 
     await page.goto(`/diagrams/${id}`);
     await expect(viewer(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: /thay đổi chưa vẽ/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /thay đổi so với kho|kết nối mới chưa vẽ/ })).toHaveCount(0);
     await diagramBarAction(page, 'Kiểm tra khớp');
     await expect(page.getByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' })).toContainText('Bản vẽ khớp với dữ liệu kho.');
 
@@ -164,7 +164,7 @@ test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
     const second = await publishedDrawing(page, `${name} B`, [sw, old]);
     await retire(page, old.id);
     await page.goto(`/diagrams/${second}`);
-    await expect(page.getByRole('button', { name: 'Có 1 thay đổi chưa vẽ' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Có 1 thay đổi so với kho' })).toBeVisible();
     await expect((await treeRow(page, `${name} B`)).getByText('Lệch kho (1)')).toBeVisible();
     const headers = await writeHeaders(page);
     const fixed = await page.request.post(`/api/v1/diagrams/${second}/versions`, {
@@ -189,7 +189,7 @@ test.describe('Sơ đồ mạng — cảnh báo lệch kho', () => {
     const id = await publishedDrawing(page, `E2E Lệch điện thoại ${stamp}`, [sw]);
     await retire(page, sw.id);
     await page.goto(`/diagrams/${id}`);
-    await page.getByRole('button', { name: 'Có 1 thay đổi chưa vẽ' }).click();
+    await page.getByRole('button', { name: 'Có 1 thay đổi so với kho' }).click();
     await expect(page.getByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' })).toContainText(sw.code);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });

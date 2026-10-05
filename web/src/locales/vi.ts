@@ -1500,7 +1500,8 @@ export default {
     },
     drift: {
       check: 'Kiểm tra khớp',
-      changes: 'Có {{count}} thay đổi chưa vẽ',
+      changes: 'Có {{count}} thay đổi so với kho',
+      drawInEdit: ' — sang tab Sửa để vẽ vào',
       title: 'Kiểm tra khớp dữ liệu',
       hint: 'So bản vẽ với dữ liệu kho hiện tại. IMS không tự sửa bản vẽ hay sơ đồ cổng — sửa ở chế độ Sửa rồi lưu.',
       none: 'Bản vẽ khớp với dữ liệu kho.',

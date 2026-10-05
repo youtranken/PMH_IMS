@@ -563,7 +563,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         <>
           {status}
           <button type="button" className="btn sm" onClick={() => setDriftOpen(true)}>
-            {t('diagrams.drift.changes', { count: drift.length })}
+            {/* Chỉ có kết nối mới chưa vẽ: CÙNG câu với tab Sửa (V-09), kèm lối đi tiếp. */}
+            {drift.every((f) => f.code === 'DRIFT_UNDRAWN_LINK')
+              ? `${t('diagrams.cable.undrawn', { n: drift.length })}${t('diagrams.drift.drawInEdit')}`
+              : t('diagrams.drift.changes', { count: drift.length })}
           </button>
         </>
       );

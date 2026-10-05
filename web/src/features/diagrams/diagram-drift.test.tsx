@@ -9,7 +9,7 @@ import { DiagramScreen } from './diagram-screen';
 import { DiagramTreeScreen } from './diagram-tree-screen';
 
 /**
- * Cảnh báo lệch kho (Q-23 "không ép sửa"): dấu trên ô kèm cái đã đổi, "Có N thay đổi chưa vẽ" +
+ * Cảnh báo lệch kho (Q-23 "không ép sửa"): dấu trên ô kèm cái đã đổi, "Có N thay đổi so với kho" +
  * hộp "Kiểm tra khớp dữ liệu" bấm mục bay tới ô, cây hiện "Lệch kho (N)". Không nút nào sửa gì.
  */
 
@@ -116,19 +116,25 @@ beforeEach(() => vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Lệch kho trên màn xem bản vẽ', () => {
-  it('ô lệch mang dấu + tên trợ năng nói cái đã đổi; thanh trên báo "Có N thay đổi chưa vẽ"', async () => {
+  it('ô lệch mang dấu + tên trợ năng nói cái đã đổi; thanh trên báo "Có N thay đổi so với kho"', async () => {
     open(DRIFT);
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
-    expect(await screen.findByRole('button', { name: 'Có 2 thay đổi chưa vẽ' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Có 2 thay đổi so với kho' })).toBeInTheDocument();
     await waitFor(() => expect(cell('c1')).toHaveAttribute('data-ims-mark', 'warn'));
     expect(cell('c1').getAttribute('aria-label')).toContain('IP 10.0.1.5 → 10.0.1.9');
     expect(cell('c2')).toHaveAttribute('data-ims-mark', 'danger');
   });
 
+  it('chỉ có kết nối mới chưa vẽ: cùng câu với tab Sửa, kèm lối sang tab Sửa (V-09)', async () => {
+    open([{ level: 'warning', code: 'DRIFT_UNDRAWN_LINK', cellId: 'c1', message: 'Kết nối SW-E2E-01 ↔ SRV-E2E-01 chưa vẽ' }]);
+    await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
+    expect(await screen.findByRole('button', { name: 'Có 1 kết nối mới chưa vẽ — sang tab Sửa để vẽ vào' })).toBeInTheDocument();
+  });
+
   it('"Kiểm tra khớp dữ liệu" liệt kê từng mục; bấm một mục thì đóng hộp và bay tới đúng ô', async () => {
     const fetchMock = open(DRIFT);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Có 2 thay đổi chưa vẽ' }));
+    await user.click(await screen.findByRole('button', { name: 'Có 2 thay đổi so với kho' }));
     const dialog = await screen.findByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' });
     expect(dialog).toHaveTextContent('Thiết bị SW-E2E-01: IP 10.0.1.5 → 10.0.1.9');
     expect(dialog).toHaveTextContent('SRV-E2E-01 đã thanh lý');
@@ -145,7 +151,7 @@ describe('Lệch kho trên màn xem bản vẽ', () => {
   it('không lệch: không có lời báo trên thanh, nút "Kiểm tra khớp" vẫn mở hộp và nói khớp', async () => {
     open([]);
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
-    expect(screen.queryByRole('button', { name: /thay đổi chưa vẽ/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /thay đổi so với kho|kết nối mới chưa vẽ/ })).toBeNull();
     await pickMenuItem(userEvent.setup(), /^Thao tác với/, 'Kiểm tra khớp');
     const dialog = await screen.findByRole('dialog', { name: 'Kiểm tra khớp dữ liệu' });
     expect(dialog).toHaveTextContent('Bản vẽ khớp với dữ liệu kho.');
