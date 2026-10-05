@@ -587,6 +587,18 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
       có thì biểu tượng. Ô đã đặt trên bản vẽ giữ lựa chọn của người vẽ (biểu tượng / mặt trước /
       mặt sau, `ims_photo`) nhưng ẢNH thì luôn là ảnh hiện hành: XML lưu khô (chỉ `ims_photo`), mở lại
       bản vẽ — kể cả phiên bản cũ — là thấy ảnh mới, đúng như ảnh model đang chạy hôm nay.
+    - **Khu ảnh phải TRÔNG như chỗ tải ảnh, không phải một dòng chữ** (chủ dự án 05/10: "Biểu
+      tượng loại Firewall / Tải ảnh riêng / Dùng cho mọi máy cùng model — chỉ là 1 dòng text, nhìn
+      không nhận ra"). Mỗi mặt là một ô lớn "Mặt trước" / "Mặt sau" hiện đúng hình đang dùng (ảnh
+      đã thu nhỏ của server, hoặc biểu tượng loại phóng to trên nền nhạt), kèm nhãn mức đang dùng.
+      Cả ô là vùng thả ảnh + nút "Tải ảnh lên" / "Thay ảnh" (cùng vùng thả và giới hạn của giấy
+      tờ); "Bỏ ảnh riêng" khi máy có ảnh riêng; SA/Admin có thêm, tách riêng bên dưới kèm một
+      dòng giải thích, việc "Dùng ảnh này cho mọi máy cùng model". Máy thanh lý chỉ xem. 390px
+      xếp hai ô chồng nhau.
+    - **Form Thêm / Sửa thiết bị có khu "Ảnh thiết bị"** (không bắt buộc), cùng ô ảnh đó. Sửa:
+      ghi thẳng như trang thiết bị. Thêm mới: ảnh chọn được giữ ở trình duyệt (xem trước ngay),
+      máy lưu xong mới tải lên rồi đặt làm ảnh riêng. Bước ảnh hỏng thì máy VẪN được tạo; người
+      dùng thấy câu báo rõ kèm nút mở hồ sơ để đặt lại ảnh — không mất ảnh trong im lặng.
   - **Menu ⋮ của trình vẽ chia nhóm có tiêu đề** (Dây & kết nối · Khung, tủ & ảnh · Phiên bản &
     duyệt · Trợ giúp), mỗi mục có một dòng mô tả; "Hướng dẫn" đứng ĐẦU menu để không phải cuộn.
     Khai kết nối xong, lời báo có nút "Xem ở sơ đồ cổng của <máy>" (mở tab mới — không bỏ bản vẽ
