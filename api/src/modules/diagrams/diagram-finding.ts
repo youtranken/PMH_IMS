@@ -25,4 +25,7 @@ export type CheckLink = {
   cableTypeId: string | null;
   portA?: string;
   portB?: string | null;
+  /** Mã hai máy — câu báo dây lệch nêu được máy đúng kể cả khi máy đó không có trên bản vẽ. */
+  codeA?: string;
+  codeB?: string;
 };

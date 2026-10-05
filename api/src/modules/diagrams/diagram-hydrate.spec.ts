@@ -325,6 +325,13 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
     expect(styleOf(wet, 'e1')).toMatchObject({ imsPaint: 'danger', dashed: '1' });
   });
 
+  it('nét mang kết nối mà một đầu thả nổi / nối sai máy → đỏ, chú thích nêu hai máy phải nối (Q-23 05/10)', () => {
+    const named: CableHydration = { ...cables, links: new Map([[LINK, { ...cables.links.get(LINK)!, codeA: 'SW-E2E-01', codeB: 'SRV-E2E-01' }]]) };
+    const wet = hydrateDiagramXml(page(two + linkedEdge({ target: '' })), devices, named);
+    expect(wet).toContain('label="⚠ Dây Gi1/0/24 ↔ eth0 phải nối SW-E2E-01 ↔ SRV-E2E-01 — kéo đầu dây về đúng máy"');
+    expect(styleOf(wet, 'e1')).toMatchObject({ imsPaint: 'danger', dashed: '1' });
+  });
+
   it('nét giữa hai máy kho chưa khai → vàng + "Chưa khai vào sơ đồ cổng"', () => {
     const wet = hydrateDiagramXml(page(two + bareEdge()), devices, cables);
     expect(wet).toContain('value="⚠ Chưa khai vào sơ đồ cổng"');

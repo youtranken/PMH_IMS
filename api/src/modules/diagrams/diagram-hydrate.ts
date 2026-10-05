@@ -222,6 +222,12 @@ export const IMS_EDGE_STYLE_KEYS = ['strokeColor', 'fontColor', 'dashed', 'html'
 const EDGE_REMOVED = '⚠ Kết nối đã bị gỡ khỏi sơ đồ cổng';
 const EDGE_UNDECLARED = '⚠ Chưa khai vào sơ đồ cổng';
 const EDGE_MISMATCH = '⚠ Kết nối không khớp hai máy ở hai đầu dây';
+
+/** Nét lệch nói ngay trên bản vẽ phải nối máy nào (Q-23) — dữ liệu cũ thiếu mã máy thì câu chung. */
+function mismatchLabel(link: CheckLink | undefined): string {
+  if (!link?.codeA || !link.codeB) return EDGE_MISMATCH;
+  return `⚠ Dây ${link.portA ?? '—'} ↔ ${link.portB ?? '—'} phải nối ${link.codeA} ↔ ${link.codeB} — kéo đầu dây về đúng máy`;
+}
 const EDGE_DUPLICATE = '⚠ Hai dây cùng một kết nối';
 
 /** Dòng sơ đồ cổng hydrate cần biết (đọc qua `devices.api`) + ô màu của từng loại dây (`catalog.api`). */
@@ -340,7 +346,7 @@ function edgeLabel(edge: EdgeContext, links: Map<string, CheckLink>): string {
     case 'removed':
       return EDGE_REMOVED;
     case 'mismatch':
-      return EDGE_MISMATCH;
+      return mismatchLabel(links.get(edge.linkId!));
     case 'duplicate':
       return EDGE_DUPLICATE;
     default:

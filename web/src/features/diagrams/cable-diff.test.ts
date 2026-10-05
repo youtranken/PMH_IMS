@@ -78,6 +78,20 @@ describe('diffAutosave', () => {
     }).toEqual(expected);
   });
 
+  describe('dán từ bản vẽ KHÁC (Q-23 05/10): nét mới mang kết nối không có ở lượt trước và IMS không biết → bỏ link', () => {
+    const L9 = '99999999-0000-4000-8000-000000000009';
+    const known = new Set([L1]);
+    it.each([
+      ['dán dây lạ nối hai máy → bỏ link rồi hỏi khai', DEVICES, DEVICES + linked('e9', 'a', 'b', L9), { added: ['e9'], removed: [], strip: ['e9'] }],
+      ['dán dây lạ lơ lửng → chỉ bỏ link', DEVICES, DEVICES + linked('e9', '', '', L9), { added: [], removed: [], strip: ['e9'] }],
+      ['hoàn tác xoá dây đã khai (IMS biết kết nối) → giữ link', DEVICES, DEVICES + linked('e1', 'a', 'b'), { added: [], removed: [], strip: [] }],
+      ['nét đã có ở lượt trước giữ link lạ của nó (dữ liệu cũ) → không đụng', DEVICES + linked('e9', 'a', 'b', L9), DEVICES + linked('e9', 'a', 'c', L9), { added: [], removed: [], strip: [] }],
+    ])('%s', (_name, before, after, expected) => {
+      const diff = diffAutosave(model(before), model(after), known);
+      expect({ added: diff.added.map((e) => e.id), removed: diff.removed.map((e) => e.id), strip: diff.strip }).toEqual(expected);
+    });
+  });
+
   it('nét mới mang id máy + mã hai đầu; nét xoá mang ims_link_id', () => {
     expect(diffAutosave(model(DEVICES), model(DEVICES + edge('e1', 'b', 'a'))).added[0]).toMatchObject({
       id: 'e1',

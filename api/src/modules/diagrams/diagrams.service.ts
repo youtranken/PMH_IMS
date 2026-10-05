@@ -1732,6 +1732,8 @@ export function toCheckLink(link: PortLink): CheckLink {
     cableTypeId: link.cableTypeId,
     portA: link.portLabel,
     portB: link.peerPort,
+    codeA: link.deviceCode,
+    codeB: link.peerDeviceCode,
   };
 }
 

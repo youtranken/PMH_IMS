@@ -92,16 +92,29 @@ function asNew(edge: ParsedEdge, devices: Map<string, ParsedDevice>): NewEdge | 
  *   sao, để không có hai nét cùng một kết nối. Nét giữ link là nét đã mang nó từ lượt trước.
  *
  * Nét đã khai bị kéo sang máy khác không sinh câu hỏi: tự kiểm báo đỏ "hai đầu khác".
+ *
+ * `known` = kết nối màn đang biết (lúc mở + vừa khai / vẽ vào). Có thì thêm luật dán từ bản vẽ
+ * KHÁC: nét MỚI mang một kết nối không có ở lượt trước và không nằm trong `known` cũng bị bỏ link
+ * — bản sao của một dây ở bản vẽ khác không được kéo kết nối đó sang đây (Q-23 05/10).
  */
-export function diffAutosave(prevXml: string, nextXml: string): { added: NewEdge[]; removed: { id: string; linkId: string }[]; strip: string[] } {
+export function diffAutosave(
+  prevXml: string,
+  nextXml: string,
+  known?: ReadonlySet<string>,
+): { added: NewEdge[]; removed: { id: string; linkId: string }[]; strip: string[] } {
   const prev = parse(prevXml);
   const next = parse(nextXml);
   const prevById = new Map(prev.edges.map((e) => [e.id, e]));
+  const prevLinks = new Set(prev.edges.map((e) => e.linkId).filter(Boolean));
 
   const strip = new Set<string>();
   const owner = new Map<string, string>();
   for (const edge of next.edges) {
     if (!edge.linkId) continue;
+    if (known && !prevById.has(edge.id) && !prevLinks.has(edge.linkId) && !known.has(edge.linkId)) {
+      strip.add(edge.id);
+      continue;
+    }
     const had = prevById.get(edge.id)?.linkId === edge.linkId;
     const current = owner.get(edge.linkId);
     if (current === undefined) owner.set(edge.linkId, edge.id);

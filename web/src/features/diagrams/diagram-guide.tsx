@@ -10,6 +10,7 @@ const SECTIONS: [string, string[]][] = [
   ['diagrams.guide.modesTitle', ['diagrams.guide.modes1', 'diagrams.guide.modes2']],
   ['diagrams.guide.stockTitle', ['diagrams.guide.stock1', 'diagrams.guide.stock2']],
   ['diagrams.guide.cablesTitle', ['diagrams.guide.cables1', 'diagrams.guide.cables2', 'diagrams.guide.cables3']],
+  ['diagrams.guide.routeTitle', ['diagrams.guide.route1', 'diagrams.guide.route2', 'diagrams.guide.route3']],
   ['diagrams.guide.bulkTitle', ['diagrams.guide.bulk1', 'diagrams.guide.bulk2']],
   ['diagrams.guide.framesTitle', ['diagrams.guide.frames1', 'diagrams.guide.frames2']],
   ['diagrams.guide.photosTitle', ['diagrams.guide.photos1', 'diagrams.guide.photos2']],

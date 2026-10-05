@@ -89,7 +89,7 @@ export function checkCables(
         findings.push(error('CABLE_LINK_MISSING', edge.cellId, `Dây ${between} gắn một kết nối không còn trong sơ đồ cổng.`));
         break;
       case 'mismatch':
-        findings.push(error('CABLE_LINK_ENDS_MISMATCH', edge.cellId, `Dây ${between} gắn một kết nối của hai máy khác trong sơ đồ cổng.`));
+        findings.push(error('CABLE_LINK_ENDS_MISMATCH', edge.cellId, mismatchMessage(edge, linksById.get(edge.linkId!)!, codeOf)));
         break;
       case 'duplicate':
         findings.push(error('CABLE_LINK_DUPLICATE', edge.cellId, `Dây ${between} gắn cùng một kết nối với một dây khác trên bản vẽ.`));
@@ -106,6 +106,35 @@ export function checkCables(
     }
   }
   return findings;
+}
+
+/**
+ * Câu báo nét mang kết nối mà hai đầu không đúng hai máy của kết nối (Q-23): nêu kết nối (máy +
+ * cổng hai đầu), đầu nào thả nổi / đang nối máy nào, máy nào phải kéo đầu dây về, và hai cách sửa
+ * có sẵn trên màn sửa — người vẽ không phải đoán "hai máy khác" là máy nào.
+ */
+function mismatchMessage(edge: CableEdge, link: CheckLink, codeOf: (deviceId: string | null) => string): string {
+  const nameA = link.codeA || codeOf(link.deviceA);
+  const nameB = link.codeB || codeOf(link.deviceB);
+  const what = `Dây của kết nối ${nameA} ${link.portA ?? '—'} ↔ ${nameB} ${link.portB ?? '—'}`;
+  const have = [edge.sourceDeviceId, edge.targetDeviceId].filter((id): id is string => Boolean(id));
+  const missing: string[] = [];
+  for (const [id, name] of [
+    [link.deviceA, nameA],
+    [link.deviceB, nameB],
+  ] as const) {
+    const at = have.indexOf(id);
+    if (at >= 0) have.splice(at, 1);
+    else missing.push(name);
+  }
+  const loose = !edge.sourceDeviceId || !edge.targetDeviceId;
+  const state = loose
+    ? `có đầu thả nổi (không nối vào máy nào)${have.length > 0 ? `, đầu kia đang nối ${codeOf(have[0])}` : ''}`
+    : `đang nối ${codeOf(edge.sourceDeviceId)} ↔ ${codeOf(edge.targetDeviceId)}`;
+  return (
+    `${what} ${state} — kéo đầu dây về đúng máy ${missing.join(' và ')}, dùng ⋮ › "Tự đi lại dây", ` +
+    'hoặc xoá nét này (chọn "Chỉ xoá nét vẽ") rồi bấm "Vẽ vào".'
+  );
 }
 
 function onDrawing(cells: IndexedCell[]): Set<string> {

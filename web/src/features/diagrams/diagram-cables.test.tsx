@@ -155,6 +155,8 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     expect(update.xmlValue).toContain('ims_cable_type_id="ct-fiber"');
     expect(update.xmlValue).toContain('label="Gi1/0/24 ↔ eth0"');
     expect(update.style).toContain('imsPaint=cable-2');
+    // Nét vẽ bằng công cụ nét thẳng cũng thành dây vuông góc khi khai (Q-23 05/10).
+    expect(update.style).toContain('edgeStyle=orthogonalEdgeStyle');
     expect(screen.queryByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' })).toBeNull();
     // Lời báo chỉ chỗ kết nối nằm: sơ đồ cổng của máy giữ dòng, mở tab mới (không bỏ bản vẽ dở).
     const opened = vi.fn();
@@ -233,6 +235,47 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     expect(Object.keys(patch.patch.u.p1.cells.u)).toEqual(['e2']);
     expect(patch.patch.u.p1.cells.u.e2.xmlValue).not.toContain('ims_link_id');
     expect(await screen.findByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' })).toBeInTheDocument();
+  });
+
+  it('"Chỉ xoá nét vẽ" một dây đã khai → dải "Có 1 kết nối mới chưa vẽ" hiện lại để vẽ vào được (tính lại từ XML đang vẽ)', async () => {
+    const { fromDrawio, answerFile, fetchMock } = await openEditor(file(DEVICES + linked('e1', 'a', 'b', 'link-1')), { links: [LINK] }, {
+      '/api/v1/diagrams/cable-status': () => jsonResponse(200, { edges: [], undrawn: [LINK] }),
+    });
+    const user = userEvent.setup();
+    expect(screen.queryByText('Có 1 kết nối mới chưa vẽ')).toBeNull();
+    fromDrawio({ event: 'autosave', xml: model(DEVICES + linked('e1', 'a', 'b', 'link-1')) });
+    fromDrawio({ event: 'autosave', xml: model(DEVICES) });
+    await user.click(within(await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' })).getAllByRole('button', { name: 'Chỉ xóa nét vẽ' })[1]);
+    await answerFile(DEVICES);
+    await vi.waitFor(() => expect(calls(fetchMock, '/api/v1/diagrams/cable-status')).toHaveLength(1));
+    expect(await screen.findByText('Có 1 kết nối mới chưa vẽ')).toBeInTheDocument();
+  });
+
+  it('⋮ › "Tự đi lại dây": dây đã khai bị kéo đầu ra chỗ trống được nối lại về đúng máy, bỏ điểm uốn; nét tự do không đụng (Q-23 05/10)', async () => {
+    const loose = `<UserObject label="" ims_link_id="link-1" id="e1"><mxCell style="rounded=0;exitX=1;exitY=0.5;endArrow=none;" edge="1" parent="1" source="a"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>`;
+    const helper = `<mxCell id="f1" value="" style="endArrow=none;" edge="1" parent="1" source="b"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell>`;
+    const { messages, answerFile } = await openEditor(file(DEVICES + loose + helper), { links: [LINK] });
+    const user = userEvent.setup();
+    await pickMenuItem(user, /^Thao tác với/, 'Tự đi lại dây');
+    await answerFile(DEVICES + loose + helper);
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, Record<string, string>> } } } } };
+    expect(patch.patch.u.p1.cells.u).toEqual({
+      e1: { style: 'rounded=0;endArrow=none;edgeStyle=orthogonalEdgeStyle;', geometry: '<mxGeometry relative="1" as="geometry"/>', source: 'a', target: 'b' },
+    });
+    expect(await screen.findByText('Đã đi lại 1 dây, nối lại 1 đầu dây về đúng máy. Bấm Lưu để giữ.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
+  });
+
+  it('dán một dây đã khai từ bản vẽ KHÁC (kết nối màn không biết) → bản dán bỏ ims_link_id, thành nét tự do', async () => {
+    const { fromDrawio, messages, answerFile } = await openEditor(file(DEVICES), { links: [LINK] });
+    const pasted = linked('e9', 'a', '', 'link-khac');
+    fromDrawio({ event: 'autosave', xml: model(DEVICES) });
+    fromDrawio({ event: 'autosave', xml: model(DEVICES + pasted) });
+    await answerFile(DEVICES + pasted);
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { xmlValue: string }> } } } } };
+    expect(patch.patch.u.p1.cells.u.e9.xmlValue).not.toContain('ims_link_id');
   });
 
   it('kết nối mới chưa vẽ → "Có 1 kết nối mới chưa vẽ" + "Vẽ vào" chèn nét đã gắn link, không ghi kho', async () => {

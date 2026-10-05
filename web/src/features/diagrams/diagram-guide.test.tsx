@@ -97,6 +97,7 @@ describe('màn sơ đồ tự giải thích', () => {
       'Xem và Sửa',
       'Đưa máy từ kho lên bản vẽ',
       'Vẽ dây là khai kết nối',
+      'Bẻ dây cho vuông góc',
       'Nối hàng loạt',
       'Khung, tủ và vị trí U',
       'Ảnh thật',
@@ -115,6 +116,8 @@ describe('màn sơ đồ tự giải thích', () => {
       expect(items.length, part).toBeLessThanOrEqual(3);
     }
     expect(guide).toHaveTextContent('kết nối nằm ở tab "Sơ đồ cổng" của trang thiết bị');
+    // Cách bẻ dây (Q-23 05/10): kéo điểm uốn trên chính dây, không vẽ thêm nét nối.
+    expect(guide).toHaveTextContent('kéo các chấm nhỏ trên chính dây (điểm uốn)');
     await user.click(within(guide).getByRole('button', { name: 'Đóng' }));
     expect(screen.queryByRole('dialog', { name: 'Hướng dẫn dùng sơ đồ mạng' })).toBeNull();
   });

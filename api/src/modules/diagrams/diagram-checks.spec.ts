@@ -86,6 +86,49 @@ describe('checkCables — tự kiểm dây', () => {
   });
 });
 
+describe('checkCables — câu báo dây lệch nói đủ hai máy của kết nối và cách sửa (Q-23 05/10)', () => {
+  const NAMED = new Map([[L1, { ...link(L1, DEV_A, DEV_B), codeA: 'SW-01', codeB: 'SRV-01' }]]);
+  /** Nét mang kết nối, chỉ nối một đầu (đầu kia người vẽ kéo ra chỗ trống). */
+  const half = (id: string, source: string) =>
+    `<UserObject label="" ims_link_id="${L1}" id="${id}"><mxCell style="" edge="1" parent="1" source="${source}"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>`;
+  const free = (id: string, source: string) =>
+    `<mxCell id="${id}" style="endArrow=none;" edge="1" parent="1" source="${source}"><mxGeometry relative="1" as="geometry"><mxPoint x="530" y="450" as="targetPoint"/></mxGeometry></mxCell>`;
+  const loose = (id: string) =>
+    `<mxCell id="${id}" style="endArrow=none;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="557" as="sourcePoint"/><mxPoint x="530" y="560" as="targetPoint"/></mxGeometry></mxCell>`;
+
+  it('bản vẽ "PMH Tower": dây đã khai một đầu thả nổi + vài nét tự do nối thêm → MỘT lỗi, ở nét mang kết nối; nét tự do (kể cả chạm máy) không lỗi', () => {
+    const findings = checkCables(cells(half('e1', 'a') + loose('f1') + free('f2', 'b')), NAMED);
+    expect(findings.map((f) => [f.level, f.code, f.cellId])).toEqual([['error', 'CABLE_LINK_ENDS_MISMATCH', 'e1']]);
+    const message = findings[0].message;
+    expect(message).toContain('SW-01 Gi1 ↔ SRV-01 eth0');
+    expect(message).toContain('đầu thả nổi');
+    expect(message).toContain('kéo đầu dây về đúng máy SRV-01');
+    expect(message).toContain('Tự đi lại dây');
+    expect(message).toContain('Chỉ xoá nét vẽ');
+    expect(message).not.toContain('?');
+  });
+
+  it('hai đầu nối sai máy: nêu máy đang nối và hai máy đúng', () => {
+    const [finding] = checkCables(cells(linked('e1', 'a', 'c', L1)), NAMED);
+    expect(finding.message).toContain('SW-01 Gi1 ↔ SRV-01 eth0');
+    expect(finding.message).toContain('đang nối SW-01 ↔ AP-01');
+    expect(finding.message).toContain('kéo đầu dây về đúng máy SRV-01');
+  });
+
+  it('cả hai đầu thả nổi: bảo kéo về cả hai máy', () => {
+    const both = `<UserObject label="" ims_link_id="${L1}" id="e1"><mxCell style="" edge="1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell></UserObject>`;
+    const [finding] = checkCables(cells(both), NAMED);
+    expect(finding.message).toContain('kéo đầu dây về đúng máy SW-01 và SRV-01');
+  });
+
+  it('dữ liệu cũ không có mã máy trong kết nối: vẫn nêu mã máy đọc từ bản vẽ, không lộ uuid', () => {
+    const [finding] = checkCables(cells(half('e1', 'a')), LINKS);
+    expect(finding.message).toContain('SW-01');
+    expect(finding.message).toContain('SRV-01');
+    expect(finding.message).not.toContain(DEV_B);
+  });
+});
+
 describe('cableEdgeStates — trạng thái từng nét dây của kho (hydrate + trình xem)', () => {
   it('linked / removed / undeclared; nét nối hình tự do không có mặt', () => {
     const states = cableEdgeStates(

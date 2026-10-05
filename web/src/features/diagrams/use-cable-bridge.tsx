@@ -12,6 +12,7 @@ import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
 import { bindEdgeValue, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
+import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
 import { escapeXmlAttr, insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
@@ -127,7 +128,9 @@ export function useCableBridge({
           ims_link_id: link.id,
           ims_cable_type_id: link.cableTypeId ?? '',
         }),
-        style: paintImsStyle(`${styleWithoutImsEdge(current.style)}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
+        // Dây của kho là nét vuông góc (Q-23): người vẽ bẻ bằng điểm uốn của chính nét, kể cả nét
+        // vừa vẽ bằng công cụ nét thẳng rồi bấm Khai.
+        style: paintImsStyle(`${orthogonalStyle(styleWithoutImsEdge(current.style))}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
       })),
     );
   };
@@ -169,7 +172,11 @@ export function useCableBridge({
       confirmLabel: t('diagrams.cable.removeLink'),
       danger: true,
     });
-    if (!remove) return;
+    if (!remove) {
+      // Chỉ xoá nét: kết nối vẫn còn, giờ là "chưa vẽ" — dải "Vẽ vào" phải thấy nó ngay.
+      withFile((file) => refreshUndrawn(file));
+      return;
+    }
     let done = 0;
     for (const [i, link] of known.entries()) {
       try {
@@ -183,8 +190,33 @@ export function useCableBridge({
     if (done > 0) toast({ tone: 'ok', message: t('diagrams.cable.removed', { count: done }) });
   };
 
+  /**
+   * "Bẻ dây vuông góc" / "Tự đi lại dây" (Q-23): một lệnh `patch` cho mọi dây của kho trên trang
+   * đang mở — giao thức nhúng không cho biết đang chọn nét nào.
+   */
+  const route = (mode: CableRouteMode) =>
+    withFile((file) => {
+      const pages = pageIds(file);
+      const pageId = pages[Math.min(page(), pages.length - 1)];
+      if (!pageId) return;
+      const ends = new Map([...links.current.values()].map((l) => [l.id, { a: l.deviceId, b: l.peerDeviceId }]));
+      const result = cableRoutePatch(file, pageId, ends, mode);
+      if (result.count === 0) {
+        toast({ tone: 'warn', message: t(mode === 'orthogonal' ? 'diagrams.cable.orthogonalNothing' : 'diagrams.cable.rerouteNothing') });
+        return;
+      }
+      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: result.updates } } } } });
+      markDirty();
+      if (mode === 'orthogonal') {
+        toast({ tone: 'ok', message: t('diagrams.cable.orthogonalDone', { count: result.count }) });
+        return;
+      }
+      toast({ tone: 'ok', message: t('diagrams.cable.rerouteDone', { count: result.count, reattached: result.reattached }) });
+      if (result.stuck.length > 0) toast({ tone: 'warn', message: t('diagrams.cable.rerouteStuck', { count: result.stuck.length }) });
+    });
+
   const onAutosave = (xml: string) => {
-    const diff = diffAutosave(lastXml.current, xml);
+    const diff = diffAutosave(lastXml.current, xml, new Set(links.current.keys()));
     lastXml.current = xml;
     setCurrentXml(xml);
     if (diff.strip.length > 0) stripLinks(diff.strip);
@@ -257,6 +289,8 @@ export function useCableBridge({
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
     { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setBulkOpen(true)) },
     { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: () => setUndeclaredOpen(true) },
+    { key: 'cable-orthogonal', label: t('diagrams.cable.orthogonalButton'), disabled: !ready, onSelect: () => route('orthogonal') },
+    { key: 'cable-reroute', label: t('diagrams.cable.rerouteButton'), disabled: !ready, onSelect: () => route('reroute') },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
   ];
   const popovers = (

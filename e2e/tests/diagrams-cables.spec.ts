@@ -357,3 +357,61 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await tab.close();
   });
 });
+
+test.describe('Đi dây — bẻ dây bằng điểm uốn, không vẽ thêm nét (Q-23 05/10)', () => {
+  test('bản vẽ kiểu "PMH Tower": dây đã khai bị kéo một đầu ra chỗ trống + nét tự do nối thêm → MỘT lỗi nêu đúng hai máy; "Tự đi lại dây" nối lại, lưu, phát hành được', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const sw = { id: await createDevice(page, `SW-E2E-DI${stamp}`), code: `SW-E2E-DI${stamp}` };
+    const srv = { id: await createDevice(page, `SRV-E2E-DI${stamp}`), code: `SRV-E2E-DI${stamp}` };
+    const linkId = await link(page, sw.id, 'Gi1/0/2', srv.id, 'Gi1/0/2');
+    const id = await createDiagram(page, `E2E Đi dây ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    const xml =
+      '<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>' +
+      `<UserObject label="${sw.code}" ims_device_id="${sw.id}" ims_device_code="${sw.code}" id="a"><mxCell style="rounded=1;" vertex="1" parent="1"><mxGeometry x="230" y="110" width="160" height="50" as="geometry"/></mxCell></UserObject>` +
+      `<UserObject label="${srv.code}" ims_device_id="${srv.id}" ims_device_code="${srv.code}" id="b"><mxCell style="rounded=1;" vertex="1" parent="1"><mxGeometry x="240" y="370" width="160" height="50" as="geometry"/></mxCell></UserObject>` +
+      // Dây đã khai: đầu đích bị kéo ra chỗ trống (90,560) như bản vẽ thật của chủ dự án.
+      `<UserObject label="" ims_link_id="${linkId}" id="e1"><mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;exitX=0;exitY=0.5;" edge="1" parent="1" source="a"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>` +
+      // Hai nét tự do người vẽ thêm cho "vuông góc": một nét chạm máy — không phải lỗi.
+      '<mxCell id="f1" value="" style="endArrow=none;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="sourcePoint"/><mxPoint x="320" y="560" as="targetPoint"/></mxGeometry></mxCell>' +
+      '<mxCell id="f2" value="" style="endArrow=none;" edge="1" parent="1" target="b"><mxGeometry relative="1" as="geometry"><mxPoint x="320" y="560" as="sourcePoint"/></mxGeometry></mxCell>' +
+      '</root></mxGraphModel></diagram></mxfile>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="500px" height="600px" viewBox="0 0 500 600"><g data-cell-id="a"><rect x="230" y="110" width="160" height="50"/></g></svg>';
+    const seeded = await page.request.post(`/api/v1/diagrams/${id}/versions`, { headers: await writeHeaders(page), data: { xml, svg, basedOnVersionId: null } });
+    expect(seeded.status(), await seeded.text()).toBe(201);
+    const v1 = ((await seeded.json()) as { id: string }).id;
+
+    const blocked = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: { versionId: v1 }, failOnStatusCode: false });
+    expect(blocked.status()).toBe(400);
+    const body = (await blocked.json()) as { code: string; errors: { cellId: string; message: string }[] };
+    expect(body.code).toBe('DIAGRAM_CHECK_FAILED');
+    expect(body.errors.map((e) => e.cellId)).toEqual(['e1']);
+    expect(body.errors[0].message).toContain(`${sw.code} Gi1/0/2 ↔ ${srv.code} Gi1/0/2`);
+    expect(body.errors[0].message).toContain(`kéo đầu dây về đúng máy ${srv.code}`);
+
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
+    await diagramBarAction(page, 'Tự đi lại dây');
+    await expect(page.getByText('Đã đi lại 1 dây, nối lại 1 đầu dây về đúng máy. Bấm Lưu để giữ.')).toBeVisible();
+    await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/day-tu-di-lai.png` : test.info().outputPath('day-tu-di-lai.png') });
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    const v2 = (await saved.json()) as { id: string; unchanged?: boolean };
+    expect(v2.unchanged).toBeUndefined();
+    const stored = sql(`SELECT xml FROM diagram_version WHERE id = '${v2.id}'`);
+    expect(stored).toMatch(/id="e1"><mxCell[^>]*source="a"[^>]*target="b"|id="e1"><mxCell[^>]*target="b"[^>]*source="a"/);
+    expect(stored).not.toContain('exitX=0');
+    const ok = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: { versionId: v2.id } });
+    expect(ok.status(), await ok.text()).toBe(201);
+
+    // Bấm Lưu lần nữa khi không đổi gì: nút đã tắt, không có phiên bản "Không đổi gì".
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
+    expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${id}'`)).toBe('2');
+  });
+});
