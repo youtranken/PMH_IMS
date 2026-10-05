@@ -996,12 +996,13 @@ function DiagramEditor({
       );
       basedOn.current = version.id;
       setDirty(false);
+      // Bản mới nhất có thể là của người khác lưu trùng nội dung: dòng "Đã lưu #n" theo đúng bản đó.
+      setLastSaved(version);
       // Trùng y nguyên bản mới nhất: server không tạo phiên bản nào (Q-23) — không có gì mới để báo.
       if (version.unchanged) {
         toast({ tone: 'warn', message: t('diagrams.screen.nothingToSave') });
         return;
       }
-      setLastSaved(version);
       void queryClient.invalidateQueries({ queryKey: TREE_KEY });
       void queryClient.invalidateQueries({ queryKey: nodeKey(diagramId) });
       void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });

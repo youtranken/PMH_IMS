@@ -357,6 +357,8 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { geometry: string; style: string }> } } } } };
     expect(patch.patch.u.p1.cells.u.d1.geometry).toBe('<mxGeometry x="33" y="198.6" width="162" height="14.8" as="geometry"/>');
     expect(patch.patch.u.p1.cells.u.d1.style).toContain('labelPosition=right');
+    // Người vẽ biết vì sao ô "nhảy": U lấy từ kho, muốn dời thì sửa ở trang thiết bị.
+    expect(await screen.findByText(/IMS đặt máy trong khung tủ theo U của kho/)).toBeInTheDocument();
   });
 
   it('máy kho ghi tủ KHÁC (TU-01 thả vào khung TU-04) → không patch, báo một lần, không gọi API ghi nào', async () => {

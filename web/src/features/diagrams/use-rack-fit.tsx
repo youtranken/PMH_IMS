@@ -62,6 +62,11 @@ export function useRackFit({
       toast({ tone: 'warn', message: t('diagrams.rack.noU', { code: item.code }) });
     }
     if (Object.keys(result.updates).length === 0) return;
+    // Ô "nhảy" về U của kho ngay sau khi thả: nói một lần vì sao, và muốn dời thì sửa ở đâu.
+    if (!warned.current.has('snap') && Object.values(result.updates).some((u) => u.geometry)) {
+      warned.current.add('snap');
+      toast({ tone: 'ok', message: t('diagrams.rack.snapped') });
+    }
     withFile((file) => {
       const pages = pageIds(file);
       const pageId = pages[Math.min(page(), pages.length - 1)];

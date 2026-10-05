@@ -261,6 +261,51 @@ describe('Lưu khi không có gì đổi (Q-23 05/10)', () => {
   });
 });
 
+describe('Lưu trùng bản mới nhất của người khác (Q-23 05/10)', () => {
+  it('server trả bản mới nhất #3 (unchanged) → dòng trạng thái nói "Đã lưu #3", lượt sau dựa trên #3', async () => {
+    const v1 = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...v1, xml: '<mxfile/>', svg: null } }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1/versions': () => jsonResponse(201, { ...v1, id: 'v3', seq: 3, savedBy: 'b', savedAt: '2026-10-03T02:00:00Z', unchanged: true }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    });
+    const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], { initialEntries: ['/diagrams/d1?mode=edit'] });
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    const posted = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    const fromDrawio = (data: Record<string, unknown>) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frame.contentWindow }));
+      });
+    fromDrawio({ event: 'init' });
+    const save = async () => {
+      fromDrawio({ event: 'autosave', xml: '<mxGraphModel>X</mxGraphModel>' });
+      fromDrawio({ event: 'save', xml: '<mxGraphModel/>' });
+      await vi.waitFor(() => expect(posted.mock.calls.filter(([d]) => String(d).includes('"format":"xml"')).length).toBeGreaterThan(0));
+      fromDrawio({ event: 'export', format: 'xml', xml: '<mxfile>GIỐNG #3</mxfile>' });
+      await vi.waitFor(() => expect(posted.mock.calls.filter(([d]) => String(d).includes('"format":"svg"')).length).toBeGreaterThan(0));
+      fromDrawio({ event: 'export', format: 'svg', data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}` });
+    };
+    await save();
+    expect(await screen.findByText(/^Đã lưu #3 · /)).toBeInTheDocument();
+    posted.mockClear();
+    await save();
+    await vi.waitFor(() => expect((fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).filter(([u, i]) => String(u).endsWith('/versions') && i?.method === 'POST')).toHaveLength(2));
+    const bodies = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][])
+      .filter(([u, i]) => String(u).endsWith('/versions') && i?.method === 'POST')
+      .map(([, i]) => JSON.parse(String(i?.body)) as { basedOnVersionId: string });
+    expect(bodies.map((b) => b.basedOnVersionId)).toEqual(['v1', 'v3']);
+  });
+});
+
 describe('Thanh trình xem nói đang xem bản nào', () => {
   const saved = (id: string, seq: number) => ({ id, seq, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null });
 

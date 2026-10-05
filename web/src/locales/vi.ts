@@ -1245,6 +1245,7 @@ export default {
       rebuildDone: 'Đã dựng lại mặt tủ thành nháp #{{seq}}.',
       cabinetMismatch: '{{code}} trong kho thuộc tủ {{cabinet}}, không phải tủ của khung "{{frame}}" — IMS không đặt máy này theo U và không đổi tủ trong kho. Kéo máy ra khỏi khung, hoặc sửa tủ ở trang thiết bị.',
       noCabinet: '(chưa gắn tủ)',
+      snapped: 'IMS đặt máy trong khung tủ theo U của kho (cao đúng Số U). Muốn dời máy sang U khác thì sửa "U bắt đầu" ở trang thiết bị.',
       noU: '{{code}} chưa khai U trong kho — ô giữ chỗ bạn thả, cao theo Số U. Khai "U bắt đầu" ở trang thiết bị để IMS đặt đúng chỗ.',
     },
     cable: {
