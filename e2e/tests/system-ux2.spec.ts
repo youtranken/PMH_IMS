@@ -63,8 +63,8 @@ test.describe('Hệ thống — soát UX đợt 2', () => {
   test('X-02: màn Tham số có "Cổng nhạy cảm khi mở ra Internet" và cửa sổ break-glass gần đây', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/admin/settings?group=ipam');
-    await expect(page.getByLabel('Cổng nhạy cảm khi mở ra Internet')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Cổng nhạy cảm khi mở ra Internet' })).toBeVisible();
     await page.goto('/admin/settings?group=approval');
-    await expect(page.getByLabel('Đếm yêu cầu mở két gần đây trong')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Đếm yêu cầu mở két gần đây trong' })).toBeVisible();
   });
 });

@@ -106,7 +106,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await chips.getByRole('button', { name: /^Đã gỡ/ }).click();
     await expect(row).toBeVisible();
     await expect(row.getByText(/Đã gỡ \d{2}\/\d{2}\/\d{4} · bởi .* · dịch vụ đã ngừng E2E/)).toBeVisible();
-    expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử']);
+    expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử', 'Sao chép link']);
     // Rule đã gỡ chỉ còn để tra: không có nút Sửa đứng ngoài.
     await expect(row.getByRole('button', { name: /^Sửa / })).toHaveCount(0);
 
@@ -123,7 +123,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await page.goto('/nat');
     // Q-18: "Sửa" đứng ngoài menu.
     await expect(page.getByRole('button', { name: `Sửa ${f.ports}` })).toBeVisible();
-    expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử', 'Ngừng dùng', 'Gỡ']);
+    expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử', 'Sao chép link', 'Ngừng dùng', 'Gỡ']);
 
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
     await chips.getByRole('button', { name: /^Đang mở/ }).click();

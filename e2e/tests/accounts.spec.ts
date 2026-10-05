@@ -388,14 +388,17 @@ test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ đư�
   await expect(page).toHaveURL(/\/admin\/accounts$/);
 
   await searchAndWaitForFilter(page, 'e2e-thanh-vien');
+  // Đếm dòng của BẢNG TÀI KHOẢN (cột "Họ tên"), không đếm khối "Đang tạm chặn" (X-04) — khối đó
+  // tải riêng và có hay không tuỳ bài khác vừa để lại IP bị chặn.
+  const accountsTable = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: /Họ tên/ }) });
   // Đếm khi bảng đã vẽ xong; đếm sớm ra 0 rồi so với bảng sau reload là đỏ chập chờn.
-  await expect(page.getByRole('row').first()).toBeVisible();
-  const rowCount = await page.getByRole('row').count();
+  await expect(accountsTable.getByRole('row').first()).toBeVisible();
+  const rowCount = await accountsTable.getByRole('row').count();
 
   // 1. Reload giữ nguyên kết quả — tức link chia sẻ được.
   await page.reload();
   await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('e2e-thanh-vien');
-  await expect(page.getByRole('row')).toHaveCount(rowCount);
+  await expect(accountsTable.getByRole('row')).toHaveCount(rowCount);
 
   // 2. Sắp xếp cũng đi vào URL.
   await page.getByRole('button', { name: 'Họ tên' }).click();

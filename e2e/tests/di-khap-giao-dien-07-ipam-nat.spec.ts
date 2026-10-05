@@ -842,7 +842,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     expect(
       await rowActionNames(page, 'TCP 8080'),
       'SA gỡ được rule; "Gỡ" là việc lấy đi nên phải xếp CUỐI; Lịch sử và Tắt rule ngay từ bảng; Sửa đứng ngoài (Q-18)',
-    ).toEqual(['Lịch sử', 'Ngừng dùng', 'Gỡ']);
+    ).toEqual(['Lịch sử', 'Sao chép link', 'Ngừng dùng', 'Gỡ']);
     await expect(page.getByRole('button', { name: 'Sửa TCP 8080' })).toBeVisible();
 
     /* ----- Bộ lọc site: bấm là bảng đổi THẬT ----- */
