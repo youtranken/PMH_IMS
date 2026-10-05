@@ -1280,6 +1280,7 @@ button.btn-x.danger:hover:not(:disabled) {
 }
 .dmap-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-5);

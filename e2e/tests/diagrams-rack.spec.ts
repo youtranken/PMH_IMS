@@ -207,8 +207,10 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     const deviceId = await createDevice(page, rack, `SW-E2E-UM${rack.stamp}`, { rackUStart: 3, rackUSize: 2 });
     await page.goto(`/devices/${deviceId}`);
     await expect(page.getByText(`${rack.siteCode} · ${rack.cabinetCode} · U3–U4`).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
-    await expect(page.getByRole('heading', { name: 'Ảnh thật trên sơ đồ' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ — chọn từ giấy tờ' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
 });

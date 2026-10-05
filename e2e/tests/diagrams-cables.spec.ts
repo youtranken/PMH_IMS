@@ -186,13 +186,24 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await diagramBarAction(page, 'Dây chưa khai');
     await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
+    // Cổng đã có cáp báo NGAY tại ô (không hoa/thường), Khai không gửi gì.
     await box.getByRole('combobox', { name: `Cổng của ${sw.code}` }).fill('gi1/0/24');
-    const [rejected] = await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith(`/api/v1/devices/${sw.id}/ports/link`)),
-      box.getByRole('button', { name: 'Khai', exact: true }).click(),
-    ]);
-    expect(rejected.status()).toBe(409);
-    await expect(box.getByRole('alert')).toContainText('đã có cáp');
+    await expect(box.getByRole('alert')).toContainText(`Cổng gi1/0/24 của ${sw.code} đã nối AP-E2E-CHIEM${stamp}`);
+    let posted = false;
+    page.on('request', (r) => {
+      if (r.url().endsWith(`/api/v1/devices/${sw.id}/ports/link`)) posted = true;
+    });
+    await box.getByRole('button', { name: 'Khai', exact: true }).click();
+    await expect(box.getByRole('alert')).toBeVisible();
+    expect(posted).toBe(false);
+    // Server vẫn là trọng tài: gọi thẳng endpoint với cổng đó → 409, câu tiếng Việt.
+    const direct = await page.request.post(`/api/v1/devices/${sw.id}/ports/link`, {
+      headers: await writeHeaders(page),
+      data: { portLabel: 'gi1/0/24', connectedDeviceId: srv.id, connectedPort: '', cableTypeId: '' },
+      failOnStatusCode: false,
+    });
+    expect(direct.status()).toBe(409);
+    expect(await direct.text()).toContain('đã có cáp');
     expect(sql(`SELECT count(*) FROM device_port WHERE device_id IN ('${sw.id}', '${srv.id}')`)).toBe(before);
     await box.getByRole('button', { name: 'Chỉ vẽ' }).click();
     await expect(box).toHaveCount(0);
