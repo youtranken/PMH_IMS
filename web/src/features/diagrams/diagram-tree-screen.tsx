@@ -24,6 +24,7 @@ import { useNow } from '@/ui/use-now';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { TREE_KEY, type DiagramNode, type FoundDevice } from './diagram-api';
 import { buildMap, canPurge, filterActive, nodeMatches, resolveSelection, TODO_KINDS, todoCounts, type MapFilter, type TodoKind } from './diagram-map';
+import { DiagramArchivedSection, useArchivedDiagrams } from './diagram-archived';
 import { DiagramListView, DiagramMapView } from './diagram-map-view';
 import { DiagramNodeDialog } from './diagram-node-dialog';
 import { DiagramPanel } from './diagram-panel';
@@ -61,6 +62,9 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const stepUp = useStepUpRetry(me.csrfToken);
   const tree = useQuery({ queryKey: TREE_KEY, queryFn: () => apiFetch<DiagramNode[]>('/api/v1/diagrams') });
   const all = useMemo(() => tree.data ?? [], [tree.data]);
+  const archived = useArchivedDiagrams();
+  const archivedCount = archived.data?.length ?? 0;
+  const showArchived = params.get('archived') === '1';
 
   const rawTodo = params.get('todo');
   const filter: MapFilter = {
@@ -179,13 +183,17 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   else if (all.length === 0) {
     // Màn trống nói luôn cả lộ trình, không chỉ bước đầu: người mới mở không biết bản đồ dùng thế nào.
     body = (
-      <div className="card">
-        <EmptyState title={t('diagrams.emptyTitle')} hint={t('diagrams.emptyHint')} />
-        <StepList
-          label={t('diagrams.stepsLabel')}
-          steps={[t('diagrams.treeSteps.root'), t('diagrams.treeSteps.child'), t('diagrams.treeSteps.open'), t('diagrams.treeSteps.publish')]}
-        />
-      </div>
+      <>
+        <div className="card">
+          <EmptyState title={t('diagrams.emptyTitle')} hint={t('diagrams.emptyHint')} />
+          <StepList
+            label={t('diagrams.stepsLabel')}
+            steps={[t('diagrams.treeSteps.root'), t('diagrams.treeSteps.child'), t('diagrams.treeSteps.open'), t('diagrams.treeSteps.publish')]}
+          />
+        </div>
+        {/* Mọi bản đều đã cất thì cây trống, nhưng bản đã cất vẫn phải tìm lại được. */}
+        {archivedCount > 0 ? <DiagramArchivedSection me={me} live={all} archived={archived} /> : null}
+      </>
     );
   } else {
     const crumbs: Crumb[] =
@@ -200,25 +208,38 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
     const q = filter.q.trim();
     body = (
       <>
-        <ScrollX ariaLabel={t('diagrams.map.todoLabel')} className="dmap-todo">
-          {TODO_KINDS.some((kind) => counts[kind] > 0) ? (
-            TODO_KINDS.filter((kind) => counts[kind] > 0).map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                className="dmap-todo-chip"
-                data-tone={TODO_TONE[kind]}
-                aria-pressed={filter.todo === kind}
-                onClick={() => update({ todo: filter.todo === kind ? null : kind })}
-              >
-                <span className="dmap-dot" aria-hidden="true" />
-                {t(`diagrams.map.todo_${kind}`, { count: counts[kind] })}
-              </button>
-            ))
-          ) : (
-            <span className="muted">{t('diagrams.map.todoNone')}</span>
-          )}
-        </ScrollX>
+        <div className="dmap-toolbar">
+          <ScrollX ariaLabel={t('diagrams.map.todoLabel')} className="dmap-todo">
+            {TODO_KINDS.some((kind) => counts[kind] > 0) ? (
+              TODO_KINDS.filter((kind) => counts[kind] > 0).map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  className="dmap-todo-chip"
+                  data-tone={TODO_TONE[kind]}
+                  aria-pressed={filter.todo === kind}
+                  onClick={() => update({ todo: filter.todo === kind ? null : kind })}
+                >
+                  <span className="dmap-dot" aria-hidden="true" />
+                  {t(`diagrams.map.todo_${kind}`, { count: counts[kind] })}
+                </button>
+              ))
+            ) : (
+              <span className="muted">{t('diagrams.map.todoNone')}</span>
+            )}
+          </ScrollX>
+          {/* Bản đã cất rời bản đồ nhưng phải xem lại được (Q-23); không có bản nào thì không bày nút. */}
+          {archivedCount > 0 || showArchived ? (
+            <button
+              type="button"
+              className="dmap-todo-chip dmap-archived-toggle"
+              aria-pressed={showArchived}
+              onClick={() => update({ archived: showArchived ? null : '1' })}
+            >
+              {t('diagrams.archivedList.toggle', { count: archivedCount })}
+            </button>
+          ) : null}
+        </div>
         {filtering ? (
           <p className="dmap-filtering" role="status">
             {t('diagrams.map.filtering', { count: matched })}{' '}
@@ -269,6 +290,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
                 onAddChild={(parent) => setEditing({ parent })}
               />
             )}
+            {showArchived ? <DiagramArchivedSection me={me} live={all} archived={archived} /> : null}
           </div>
           {!narrow && panel ? (
             <aside className="card dpanel-wrap" aria-label={t('diagrams.panel.label')}>

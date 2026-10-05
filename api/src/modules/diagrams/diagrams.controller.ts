@@ -318,6 +318,13 @@ export class DiagramsController {
     return this.withDrift(await this.review.overlay(await this.diagrams.tree()));
   }
 
+  /** Khu "Đã lưu trữ" (Q-23): chỉ tên / trạng thái / ai cất — như cây, không cần mã. ĐẶT TRƯỚC `:id`. */
+  @Roles('sa', 'admin', 'member')
+  @Get('archived')
+  archivedList() {
+    return this.diagrams.archivedList();
+  }
+
   @Roles('sa', 'admin', 'member')
   @Post()
   @Audited('diagram.created', 'diagram', { writtenByService: true })
@@ -360,6 +367,14 @@ export class DiagramsController {
   async archive(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     await this.diagrams.archive({ email: req.user!.email, role: req.user!.role }, params.id);
     return { ok: true };
+  }
+
+  /** "Bỏ lưu trữ": cùng luật người được lưu trữ — service kiểm (403), bản cha còn cất thì 409. */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/unarchive')
+  @Audited('diagram.unarchived', 'diagram', { writtenByService: true })
+  unarchive(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.diagrams.unarchive({ email: req.user!.email, role: req.user!.role }, params.id);
   }
 
   /**

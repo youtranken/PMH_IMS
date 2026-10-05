@@ -366,3 +366,21 @@ describe('Chế độ xem — bấm thiết bị ra thẻ thông tin', () => {
     expect(card).toHaveTextContent('Không tìm thấy trong kho');
   });
 });
+
+describe('Bản vẽ đã lưu trữ — chỉ xem (Q-23, 05/10)', () => {
+  it('?mode=edit vẫn mở chế độ xem, không có tab Sửa, có dải "Bản vẽ đã lưu trữ — chỉ xem"', async () => {
+    const shelved = node('d9', null, 'Tầng cũ E2E', { archivedAt: '2026-10-01T03:00:00Z' });
+    const version = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d9/content': () => jsonResponse(200, { diagram: shelved, version: { ...version, xml: '<mxfile/>', svg: SVG } }),
+      '/api/v1/diagrams/d9': () => jsonResponse(200, shelved),
+    });
+    renderScreen('/diagrams/d9?mode=edit');
+    expect(await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeInTheDocument();
+    expect(screen.getByRole('note', { name: 'Bản vẽ đã lưu trữ' })).toHaveTextContent('Bản vẽ đã lưu trữ — chỉ xem.');
+    expect(screen.queryByRole('tab', { name: 'Sửa' })).toBeNull();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(fetchMock.mock.calls.every(([url]) => !String(url).includes('mode=edit'))).toBe(true);
+  });
+});

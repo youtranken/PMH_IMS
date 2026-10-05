@@ -103,8 +103,11 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    * lời nhắn — không nạp draw.io, không có công cụ sửa / gửi duyệt.
    */
   const narrow = useMediaQuery(BREAKPOINTS.editor);
+  const node = useQuery({ queryKey: nodeKey(id), queryFn: () => apiFetch<DiagramNode>(`/api/v1/diagrams/${id}`) });
+  // Bản đã lưu trữ chỉ xem (Q-23): server cũng chặn mọi lượt ghi, không mở trình vẽ cho một đường cụt.
+  const shelved = Boolean(node.data?.archivedAt);
   const editRequested = params.get('mode') === 'edit';
-  const mode: Mode = editRequested && !narrow ? 'edit' : 'view';
+  const mode: Mode = editRequested && !narrow && !shelved ? 'edit' : 'view';
   const versionId = mode === 'view' ? params.get('version') : null;
   /* `?compare=<phiên bản trước>` = so sánh tô màu với bản đang xem; `?at=YYYY-MM-DD` = bản chính
      thức hiệu lực ngày đó (thanh trượt thời gian) — không kèm `version` nghĩa là ngày đó chưa có. */
@@ -135,7 +138,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const [flyClose, setFlyClose] = useState(() => Boolean(params.get('focus')));
   const [pathOpen, setPathOpen] = useState(false);
 
-  const node = useQuery({ queryKey: nodeKey(id), queryFn: () => apiFetch<DiagramNode>(`/api/v1/diagrams/${id}`) });
   const settings = useQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => apiFetch<EditorSettings>('/api/v1/diagrams/editor-settings'),
@@ -262,7 +264,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     cells: content.data?.cells,
   });
 
-  const tabs = narrow ? null : (
+  const tabs = narrow || shelved ? null : (
     <Tabs
       ariaLabel={t('diagrams.screen.tabsLabel')}
       value={mode}
@@ -314,7 +316,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    */
   const reviewable = node.data ? node.data.kind !== 'presentation' : false;
   /* Màn hẹp chỉ xem (Q-23): không Gửi duyệt / Phát hành / Duyệt / ghim — thẻ trạng thái duyệt vẫn hiện. */
-  const reviewActs = reviewable && !narrow;
+  const reviewActs = reviewable && !narrow && !shelved;
   const reviewPrimary = reviewActs ? review.primary : [];
   const reviewMenu = reviewActs ? review.menu : [];
   /*
@@ -338,7 +340,16 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       {review.status}
     </>
   );
-  const band = node.data ? <PresentationBand diagram={node.data} /> : null;
+  const band = node.data ? (
+    <>
+      {shelved ? (
+        <div className="alert warn full-band" role="note" aria-label={t('diagrams.archivedList.bandLabel')}>
+          {t('diagrams.archivedList.band')}
+        </div>
+      ) : null}
+      <PresentationBand diagram={node.data} />
+    </>
+  ) : null;
   if (node.isPending || settings.isPending) body = <Loading />;
   else if (node.isError || settings.isError) {
     body = (
@@ -638,7 +649,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         ...viewMenu,
         ...(timelineMenu ? [{ key: 'timeline', label: t('diagrams.tools.timeline'), onSelect: () => setTimelineOpen(true) }] : []),
         ...(narrow ? [] : [versionsAction]),
-        ...(!narrow && canCreatePresentation(node.data)
+        ...(!narrow && !shelved && canCreatePresentation(node.data)
           ? [{ key: 'presentation', label: t('diagrams.presentation.create'), onSelect: () => setPresentationOpen(true) }]
           : []),
       ]

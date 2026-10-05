@@ -99,6 +99,9 @@ export interface DiagramNode {
   createdBy: string;
   kind: 'official' | 'presentation';
   archivedAt: string | null;
+  /** Ai lưu trữ — khu "Đã lưu trữ" của /diagrams; bản đang dùng: `null`. */
+  archivedBy: string | null;
+  archivedByName: string | null;
   status: DiagramStatus;
   latestVersion: VersionRef | null;
   /** Số phiên bản còn giữ — nút chuyển bản vẽ trong panel ghi "Phòng server 15". */
@@ -329,6 +332,11 @@ export class DiagramsService {
     return this.nodes(sql`d.archived_at IS NULL`);
   }
 
+  /** Khu "Đã lưu trữ" (Q-23): bia mộ của "Xoá hẳn" cũng mang `archived_at` nhưng không bao giờ hiện. */
+  async archivedList(): Promise<DiagramNode[]> {
+    return this.nodes(sql`d.archived_at IS NOT NULL AND d.deleted_at IS NULL`);
+  }
+
   async node(id: string): Promise<DiagramNode> {
     // Bia mộ của "Xoá hẳn" (Q-23) coi như không có: mở bằng link cũ cũng 404.
     const [found] = await this.nodes(sql`d.id = ${id} AND d.deleted_at IS NULL`);
@@ -348,6 +356,7 @@ export class DiagramsService {
       created_by: string;
       kind: 'official' | 'presentation';
       archived_at: Date | string | null;
+      archived_by: string | null;
       official_version_id: string | null;
       v_id: string | null;
       v_seq: number | null;
@@ -366,7 +375,7 @@ export class DiagramsService {
       st_cabinets: number | null;
     }>(sql`
       SELECT d.id, d.parent_id, d.name, d.node_type, d.site_id, d.cabinet_id, d.owner_email, d.created_by, d.kind,
-             d.archived_at, d.official_version_id, lv.id AS v_id, lv.seq AS v_seq, lv.created_at AS v_at,
+             d.archived_at, d.archived_by, d.official_version_id, lv.id AS v_id, lv.seq AS v_seq, lv.created_at AS v_at,
              lv.saved_by AS v_by, d.source_diagram_id, d.source_version_id, sd.name AS s_name,
              sv.seq AS s_seq, sd.official_version_id AS s_official_id, so.seq AS s_official_seq,
              vc.n AS version_count, vc.drafts AS draft_count,
@@ -393,7 +402,7 @@ export class DiagramsService {
        WHERE ${where}
        ORDER BY lower(d.name), d.id
     `);
-    const savers = [...new Set(rows.map((r) => r.v_by?.toLowerCase()).filter((e): e is string => Boolean(e)))];
+    const savers = [...new Set(rows.flatMap((r) => [r.v_by, r.archived_by]).map((e) => e?.toLowerCase()).filter((e): e is string => Boolean(e)))];
     const names = savers.length > 0 ? await this.users.namesByEmails(savers) : new Map<string, string>();
     return rows.map((row) => {
       const latest: VersionRef | null = row.v_id
@@ -416,6 +425,8 @@ export class DiagramsService {
         createdBy: row.created_by,
         kind: row.kind,
         archivedAt: iso(row.archived_at),
+        archivedBy: row.archived_by,
+        archivedByName: row.archived_by ? (names.get(row.archived_by.toLowerCase()) ?? null) : null,
         status: statusOf(latest?.id ?? null, row.official_version_id),
         latestVersion: latest,
         versionCount: Number(row.version_count ?? 0),
@@ -571,6 +582,8 @@ export class DiagramsService {
     assertCanManage(current, by);
     if (current.archivedAt) return;
     await this.db.transaction(async (tx) => {
+      // Khoá chính hàng này trước khi đếm con sống — cặp với khoá bản cha của `unarchive`.
+      await tx.select({ id: diagramTable.id }).from(diagramTable).where(eq(diagramTable.id, id)).for('update');
       const [child] = await tx
         .select({ id: diagramTable.id })
         .from(diagramTable)
@@ -582,6 +595,32 @@ export class DiagramsService {
       await tx.update(diagramTable).set({ archivedAt: new Date(), archivedBy: actor, updatedAt: new Date() }).where(eq(diagramTable.id, id));
       await this.record(tx, actor, id, 'archived', 'diagram.archived', null);
     });
+  }
+
+  /**
+   * "Bỏ lưu trữ" (Q-23): cùng người được lưu trữ. Bản cha còn đang cất thì chặn — bản con không
+   * treo dưới một bản đã cất; tên trùng bản đang dùng cùng nhánh thì khoá duy nhất của DB chặn.
+   */
+  async unarchive(by: { email: string; role: UserRole }, id: string): Promise<DiagramNode> {
+    const current = await this.node(id);
+    assertCanManage(current, by);
+    if (!current.archivedAt) return current;
+    const parentId = current.parentId;
+    await this.uniqueName(() =>
+      this.db.transaction(async (tx) => {
+        // Khoá hàng bản cha: `archive` khoá cùng hàng trước khi đếm con sống, nên hai lượt không
+        // lọt qua nhau thành một bản con sống dưới bản cha vừa cất.
+        if (parentId) {
+          const [parent] = await tx.select({ archivedAt: diagramTable.archivedAt }).from(diagramTable).where(eq(diagramTable.id, parentId)).for('update');
+          if (parent?.archivedAt) {
+            throw new ConflictException({ code: 'DIAGRAM_PARENT_ARCHIVED', message: 'Bản vẽ cha đang lưu trữ — bỏ lưu trữ bản vẽ cha trước.' });
+          }
+        }
+        await tx.update(diagramTable).set({ archivedAt: null, archivedBy: null, updatedAt: new Date() }).where(eq(diagramTable.id, id));
+        await this.record(tx, by.email, id, 'unarchived', 'diagram.unarchived', null);
+      }),
+    );
+    return this.node(id);
   }
 
   private async assertLiveParent(parentId: string): Promise<void> {

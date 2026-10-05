@@ -22,6 +22,9 @@ export interface DiagramNode {
   createdBy?: string;
   kind: 'official' | 'presentation';
   archivedAt: string | null;
+  /** Ai lưu trữ — chỉ có ở khu "Đã lưu trữ". Thiếu → không hiện. */
+  archivedBy?: string | null;
+  archivedByName?: string | null;
   status: DiagramStatus;
   /** `savedByName` = tên người lưu cho thẻ "v12 · Thuận"; thiếu/`null` thì hiện email. */
   latestVersion: { id: string; seq: number; savedAt: string; savedBy: string; savedByName?: string | null } | null;

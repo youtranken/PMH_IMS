@@ -40,6 +40,8 @@ function historyEntry(row: DiagramHistoryRow, t: TFunction): HistoryEntry {
       return { ...base, action: t('diagrams.history.created'), detail: typeof changes.name === 'string' ? changes.name : null, tone: 'create' };
     case 'archived':
       return { ...base, action: t('diagrams.history.archived'), tone: 'void' };
+    case 'unarchived':
+      return { ...base, action: t('diagrams.history.unarchived'), tone: 'status' };
     case 'version.saved':
       return { ...base, action: t('diagrams.history.saved', { seq }), detail: String(changes.summary ?? '') };
     case 'version.restored':

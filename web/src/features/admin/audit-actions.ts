@@ -119,6 +119,7 @@ export const ACTION_KEY: Record<string, string> = {
   'diagram.created': 'audit.actions.diagramCreated',
   'diagram.updated': 'audit.actions.diagramUpdated',
   'diagram.archived': 'audit.actions.diagramArchived',
+  'diagram.unarchived': 'audit.actions.diagramUnarchived',
   'diagram.viewed': 'audit.actions.diagramViewed',
   'diagram.saved': 'audit.actions.diagramSaved',
   'diagram.version_labeled': 'audit.actions.diagramVersionLabeled',
