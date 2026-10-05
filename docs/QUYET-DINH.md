@@ -687,6 +687,22 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   **Chỉ ở ĐẦU cụm** (bổ sung 04/10, chủ dự án): cùng nhãn đếm ghép vào GIỮA câu thì danh từ viết
   thường — "Đang dùng ở 1 tủ mạng — hãy Ngừng dùng", "…, trong đó 1 nhóm chưa gán cho ai",
   "1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn".
+- **Soát UX đợt 2 — chữ và bộ lọc dùng chung (05/10/2026, chủ dự án duyệt):**
+  - **Một tên cho tủ: "Tủ mạng"** (T-03) — ở mọi màn: form thiết bị, cấp bản vẽ, panel sơ đồ,
+    bộ lọc, lệnh "Chèn tủ mạng", câu lỗi của API. Không còn "Tủ rack" hay "Tủ" đứng một mình làm
+    nhãn. Bài `term-consistency.test.ts` khoá điều này.
+  - **Ô "bỏ lọc" của mọi bộ lọc viết "Tất cả …"** (T-07): "Tất cả site / Tất cả tủ mạng / Tất cả
+    loại / Tất cả nhà cung cấp / Tất cả kỳ hạn / Tất cả trạng thái…". Câu văn thường ("Mọi phiên
+    khác của bạn…") không đổi — luật chỉ cho mục đầu của ô lọc.
+- **Soát UX đợt 2 — Thiết bị (05/10/2026, chủ dự án duyệt):**
+  - **Trang thiết bị giữ CÙNG một nút chính ở mọi cỡ màn: "Sửa hồ sơ"** (T-05). Trên điện thoại
+    nút "Két sắt" thôi là nút chính — két đã là một tab của trang. Bảng phụ trong hồ sơ (Địa chỉ
+    IP, Đường truyền ISP, NAT…) ở 390px là danh sách nhãn–giá trị hai cột, không gập thành thẻ
+    có dòng trống nhãn.
+  - **Gỡ dây giữ cổng** (T-02): bảng cổng có "Gỡ dây (giữ cổng)" trong ⋮ của dòng có dây — bỏ đầu
+    kia, giữ VLAN / người dùng / ghi chú (endpoint `unlink` sẵn có, có nhật ký); hỏi xác nhận.
+  - **Lọc danh sách thiết bị theo Phòng ban** (T-08), file xuất khớp bộ lọc (thêm `department`
+    vào bộ lọc xuất).
 
 ### Q-25 · Thư gửi lỗi phải có người thấy và gửi lại được (05/10/2026, chủ dự án duyệt top 10 soát UX)
 
