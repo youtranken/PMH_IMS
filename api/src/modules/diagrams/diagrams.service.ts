@@ -126,6 +126,11 @@ export interface NodeInput {
   ownerEmail?: string | null;
 }
 
+/** "Thêm bản vẽ con" kiểu nhân bản: `versionId` = phiên bản của bản cha để chép (thiếu = mới nhất). */
+export interface CopiedChildInput extends NodeInput {
+  versionId?: string;
+}
+
 export interface VersionItem {
   id: string;
   seq: number;
@@ -466,18 +471,23 @@ export class DiagramsService {
    * bản vẽ không nằm dưới bản con mới (mọi bản vẽ con của bản cha), dải/tủ đã ngừng dùng — bị gỡ
    * gắn chứ không làm hỏng lượt tạo: hình và chữ vẫn còn, người vẽ gắn lại nếu cần (Q-23).
    */
-  async createCopiedChild(actor: string, parentId: string, input: NodeInput): Promise<DiagramNode & { copiedFromSeq: number }> {
-    const name = (input.name ?? '').trim();
+  async createCopiedChild(actor: string, parentId: string, input: CopiedChildInput): Promise<DiagramNode & { copiedFromSeq: number }> {
+    const { versionId, ...node } = input;
+    const name = (node.name ?? '').trim();
     await this.assertLiveParent(parentId);
     await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
     if (input.ownerEmail) await this.assertUser(input.ownerEmail);
     const [parent] = await this.db.select({ name: diagramTable.name }).from(diagramTable).where(eq(diagramTable.id, parentId));
+    // Phiên bản chọn phải thuộc ĐÚNG bản cha: id của bản vẽ khác là chép nội dung nhánh khác vào đây.
     const [source] = await this.db
       .select()
       .from(diagramVersionTable)
-      .where(eq(diagramVersionTable.diagramId, parentId))
+      .where(and(eq(diagramVersionTable.diagramId, parentId), versionId ? eq(diagramVersionTable.id, versionId) : undefined))
       .orderBy(desc(diagramVersionTable.seq))
       .limit(1);
+    if (!source && versionId) {
+      throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ cha.' });
+    }
     if (!source) {
       throw new ConflictException({
         code: 'DIAGRAM_PARENT_EMPTY',
@@ -492,7 +502,7 @@ export class DiagramsService {
     const diff = diffCellIndex(null, index);
     const id = await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
-        const childId = await this.insertNode(tx, actor, { ...input, name, parentId });
+        const childId = await this.insertNode(tx, actor, { ...node, name, parentId });
         await this.insertVersion(tx, actor, childId, {
           seq: 1,
           xml,

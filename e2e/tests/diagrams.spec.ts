@@ -219,7 +219,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.goto(`/diagrams?node=${parent}`);
     await rowAction(page, parentName, 'Thêm bản vẽ con');
     let form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
-    await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha (phiên bản #1)' })).toBeChecked();
+    await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeChecked();
+    await expect(form.getByRole('button', { name: 'Phiên bản của bản cha' })).toContainText('#1 · bản mới nhất');
     await form.getByLabel('Tên bản vẽ').fill(`E2E Tầng con ${stamp}`);
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     // Chép NỘI DUNG bản cha nên hỏi mã sơ đồ (ân hạn vừa bị cắt).

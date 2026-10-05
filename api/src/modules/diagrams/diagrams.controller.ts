@@ -44,6 +44,8 @@ class CopiedChildDto {
   @IsOptional() @IsUUID(undefined, { message: 'Site không hợp lệ.' }) siteId?: string;
   @IsOptional() @IsUUID(undefined, { message: 'Tủ mạng không hợp lệ.' }) cabinetId?: string;
   @IsOptional() @IsEmail({}, { message: 'Người phụ trách không hợp lệ.' }) ownerEmail?: string;
+  /** Phiên bản của bản cha để chép; thiếu = bản mới nhất. Service kiểm nó thuộc đúng bản cha. */
+  @IsOptional() @IsUUID(undefined, { message: 'Phiên bản không hợp lệ.' }) versionId?: string;
 }
 
 /** `null` ở parentId = đưa lên gốc cây; ở site/tủ/người phụ trách = bỏ gắn. */

@@ -142,4 +142,38 @@ describe('Sơ đồ mạng · bản đã lưu trữ + nhân bản theo phiên b�
       expect(await count(`SELECT count(*)::int AS n FROM diagram_history WHERE diagram_id = $1 AND action = 'unarchived'`, [live.id])).toBe(0);
     });
   });
+
+  describe('nhân bản bản vẽ con theo phiên bản chọn', () => {
+    it('versionId của bản cha → con mang đúng nội dung phiên bản đó, tóm tắt nói số phiên bản', async () => {
+      const parent = await service.create(SA.email, { name: 'E2E Cha nhiều bản', nodeType: 'site' });
+      const v1 = await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Bản một')), svg: SVG, basedOnVersionId: null });
+      await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Bản hai')), svg: SVG, basedOnVersionId: v1.id });
+      const child = await service.createCopiedChild(SA.email, parent.id, { name: 'E2E Con từ #1', nodeType: 'floor', versionId: v1.id });
+      expect(child.copiedFromSeq).toBe(1);
+      const { rows } = await scratch.pool.query<{ xml: string; summary: string }>(`SELECT xml, summary FROM diagram_version WHERE diagram_id = $1`, [child.id]);
+      expect(rows[0].xml).toContain('Bản một');
+      expect(rows[0].xml).not.toContain('Bản hai');
+      expect(rows[0].summary).toContain('phiên bản #1');
+    });
+
+    it('không gửi versionId → vẫn bản mới nhất như trước', async () => {
+      const parent = await service.create(SA.email, { name: 'E2E Cha mặc định', nodeType: 'site' });
+      const v1 = await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Cũ')), svg: SVG, basedOnVersionId: null });
+      await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Mới')), svg: SVG, basedOnVersionId: v1.id });
+      const child = await service.createCopiedChild(SA.email, parent.id, { name: 'E2E Con mặc định', nodeType: 'floor' });
+      expect(child.copiedFromSeq).toBe(2);
+    });
+
+    it('versionId của bản vẽ KHÁC → 404, không tạo con', async () => {
+      const parent = await service.create(SA.email, { name: 'E2E Cha thật', nodeType: 'site' });
+      await service.save(SA.email, parent.id, { xml: page(shape('s1', 'Cha')), svg: SVG, basedOnVersionId: null });
+      const other = await service.create(SA.email, { name: 'E2E Bản lạ', nodeType: 'site' });
+      const foreign = await service.save(SA.email, other.id, { xml: page(shape('s1', 'Lạ')), svg: SVG, basedOnVersionId: null });
+      const before = await count(`SELECT count(*)::int AS n FROM diagram WHERE parent_id = $1`, [parent.id]);
+      await expect(
+        service.createCopiedChild(SA.email, parent.id, { name: 'E2E Con lạc', nodeType: 'floor', versionId: foreign.id }),
+      ).rejects.toMatchObject({ status: 404, response: { code: 'DIAGRAM_VERSION_NOT_FOUND' } });
+      expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE parent_id = $1`, [parent.id])).toBe(before);
+    });
+  });
 });
