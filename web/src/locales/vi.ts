@@ -1812,6 +1812,8 @@ export default {
     bulkStart: 'Cổng bắt đầu',
     bulkEnd: 'Cổng cuối (tùy chọn)',
     bulkPeerPort: 'Cổng phía các máy (tùy chọn)',
+    bulkAdvanced: 'Tùy chọn thêm',
+    bulkAddAllOnDrawing: 'Thêm mọi máy trên bản vẽ ({{count}})',
     bulkPreview: 'Xem trước: máy → cổng',
     bulkPreviewEmpty: 'Chọn switch, cổng bắt đầu và ít nhất một máy để xem trước.',
     bulkSubmit: 'Nối {{count}} máy',

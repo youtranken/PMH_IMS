@@ -255,7 +255,7 @@ export function useCableBridge({
 
   const menu: BarAction[] = [
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
-    { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => setBulkOpen(true) },
+    { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setBulkOpen(true)) },
     { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: () => setUndeclaredOpen(true) },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
   ];
@@ -360,6 +360,7 @@ export function useCableBridge({
         <BulkLinkDialog
           device={null}
           csrfToken={me.csrfToken}
+          onDrawing={onDrawing}
           onClose={() => setBulkOpen(false)}
           onDone={(created, code) => {
             setBulkOpen(false);

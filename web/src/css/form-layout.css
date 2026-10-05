@@ -499,6 +499,17 @@ textarea.mono {
 .port-end > legend {
   margin-bottom: var(--space-3);
 }
+/* "Tùy chọn thêm" của Nối hàng loạt: ô ít dùng gập lại, trải hết bề ngang lưới form. */
+.bulk-advanced {
+  grid-column: 1 / -1;
+}
+.bulk-advanced > summary {
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+  margin-bottom: var(--space-3);
+}
 /* Nhãn của một nhóm điều khiển không phải ô nhập (dải nút chọn một): cùng dáng nhãn ô. */
 .field-label {
   display: block;

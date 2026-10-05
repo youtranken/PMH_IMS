@@ -20,11 +20,17 @@ import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 export function BulkLinkDialog({
   device,
   csrfToken,
+  onDrawing = [],
   onClose,
   onDone,
 }: {
   /** Switch cố định (trang thiết bị); `null` = cho chọn (màn sơ đồ). */
   device: { id: string; code: string } | null;
+  /**
+   * Máy đang có trên bản vẽ (màn sơ đồ, E-09): chọn nhanh switch, và "Thêm mọi máy trên bản vẽ" —
+   * nối hàng loạt thường là "switch này nối mọi máy trong phòng", tức chính các máy đang vẽ.
+   */
+  onDrawing?: { id: string; code: string }[];
   csrfToken: string;
   onClose: () => void;
   onDone: (links: PortLink[], switchCode: string) => void;
@@ -55,6 +61,7 @@ export function BulkLinkDialog({
     },
   });
   const canSubmit = ready && plan.data && !plan.data.reason && !busy;
+  const addable = onDrawing.filter((d) => d.id !== sw?.id && !targets.some((x) => x.id === d.id));
 
   const submit = async () => {
     if (!sw || !canSubmit) return;
@@ -104,28 +111,70 @@ export function BulkLinkDialog({
           </p>
         ) : null}
         {device ? null : (
-          <Field label={t('ports.bulkSwitch')} required>
-            <DeviceCombobox
-              placeholder={t('ports.peerSearch')}
-              ariaLabel={t('ports.bulkSwitch')}
-              value={{ deviceId: sw?.id ?? '', term: swTerm }}
-              onChange={(next) => {
-                setSwTerm(next.term);
-                setSw(next.device ? { id: next.device.id, code: next.device.code } : null);
-              }}
-              minChars={2}
-            />
-          </Field>
+          <div>
+            <Field label={t('ports.bulkSwitch')} required>
+              <DeviceCombobox
+                placeholder={t('ports.peerSearch')}
+                ariaLabel={t('ports.bulkSwitch')}
+                value={{ deviceId: sw?.id ?? '', term: swTerm }}
+                onChange={(next) => {
+                  setSwTerm(next.term);
+                  setSw(next.device ? { id: next.device.id, code: next.device.code } : null);
+                }}
+                minChars={2}
+              />
+            </Field>
+            {onDrawing.length > 0 ? (
+              <div className="chip-row" role="group" aria-label={t('ports.onDrawing')}>
+                <span className="muted small">{t('ports.onDrawing')}:</span>
+                {onDrawing
+                  .filter((d) => d.id !== sw?.id)
+                  .map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      className="btn sm"
+                      onClick={() => {
+                        setSw(d);
+                        setSwTerm(d.code);
+                        setTargets((list) => list.filter((x) => x.id !== d.id));
+                      }}
+                    >
+                      {d.code}
+                    </button>
+                  ))}
+              </div>
+            ) : null}
+          </div>
         )}
         <Field label={t('ports.bulkStart')} required htmlFor="bulk-start">
           <input id="bulk-start" className="inp mono" placeholder={t('ports.phPort')} value={startPort} onChange={(e) => setStartPort(e.target.value)} />
         </Field>
-        <Field label={t('ports.bulkEnd')} htmlFor="bulk-end">
-          <input id="bulk-end" className="inp mono" value={endPort} onChange={(e) => setEndPort(e.target.value)} />
-        </Field>
-        <Field label={t('ports.bulkPeerPort')} htmlFor="bulk-peer">
-          <input id="bulk-peer" className="inp mono" value={peerPort} onChange={(e) => setPeerPort(e.target.value)} />
-        </Field>
+        <div>
+          <Field label={t('ports.bulkAddTarget')}>
+            <DeviceCombobox
+              placeholder={t('ports.peerSearch')}
+              ariaLabel={t('ports.bulkAddTarget')}
+              value={{ deviceId: '', term: targetTerm }}
+              onChange={(next) => {
+                if (next.device) {
+                  const picked = { id: next.device.id, code: next.device.code };
+                  setTargets((list) => [...list, picked]);
+                  setTargetTerm('');
+                } else setTargetTerm(next.term);
+              }}
+              minChars={2}
+              exclude={[...(sw ? [sw.id] : []), ...targets.map((d) => d.id)]}
+            />
+          </Field>
+          {addable.length > 0 ? (
+            <div className="chip-row">
+              <button type="button" className="btn sm" onClick={() => setTargets((list) => [...list, ...addable])}>
+                {t('ports.bulkAddAllOnDrawing', { count: addable.length })}
+              </button>
+            </div>
+          ) : null}
+        </div>
         <Field label={t('ports.cableType')}>
           <Select
             value={cableTypeId}
@@ -134,22 +183,18 @@ export function BulkLinkDialog({
             options={[{ value: '', label: t('ports.cableTypeNone') }, ...activeOptions(lists.data?.cableTypes, null, (row) => row.name)]}
           />
         </Field>
-        <Field label={t('ports.bulkAddTarget')}>
-          <DeviceCombobox
-            placeholder={t('ports.peerSearch')}
-            ariaLabel={t('ports.bulkAddTarget')}
-            value={{ deviceId: '', term: targetTerm }}
-            onChange={(next) => {
-              if (next.device) {
-                const picked = { id: next.device.id, code: next.device.code };
-                setTargets((list) => [...list, picked]);
-                setTargetTerm('');
-              } else setTargetTerm(next.term);
-            }}
-            minChars={2}
-            exclude={[...(sw ? [sw.id] : []), ...targets.map((d) => d.id)]}
-          />
-        </Field>
+        {/* Ít dùng: để trong khối mở rộng, không đứng trước danh sách máy (E-09). */}
+        <details className="bulk-advanced">
+          <summary>{t('ports.bulkAdvanced')}</summary>
+          <div className="form-grid" data-columns={2}>
+            <Field label={t('ports.bulkEnd')} htmlFor="bulk-end">
+              <input id="bulk-end" className="inp mono" value={endPort} onChange={(e) => setEndPort(e.target.value)} />
+            </Field>
+            <Field label={t('ports.bulkPeerPort')} htmlFor="bulk-peer">
+              <input id="bulk-peer" className="inp mono" value={peerPort} onChange={(e) => setPeerPort(e.target.value)} />
+            </Field>
+          </div>
+        </details>
       </div>
       <section aria-label={t('ports.bulkPreview')}>
         <h3 className="form-section-title">{t('ports.bulkPreview')}</h3>
