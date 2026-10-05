@@ -173,6 +173,9 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
     await userEvent.setup().type(screen.getByLabelText(/mã/i), '654321');
 
     expect(await screen.findByText('Đã lưu phiên bản #2: Thêm 1 thiết bị')).toBeInTheDocument();
+    // E-04: dòng trạng thái lưu gọn "Đã lưu #n · giờ", đủ chi tiết khi rê chuột.
+    const note = screen.getByText(/^Đã lưu #2 · /);
+    expect(note).toHaveAttribute('title', 'Nháp #2 · 03/10/2026 08:00 · a');
     const bodies = (fetchMock.mock.calls as unknown as [string, RequestInit | undefined][])
       .filter(([url, init]) => String(url).endsWith('/api/v1/diagrams/d1/versions') && init?.method === 'POST')
       .map(([, init]) => JSON.parse(String(init?.body)) as { xml: string; basedOnVersionId: string });

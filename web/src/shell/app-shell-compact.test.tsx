@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Me } from '@/lib/me';
-import { PATHS, isCompactShellPath } from '@/lib/routes';
+import { PATHS, isCompactShellPath, isEditorFocusPath } from '@/lib/routes';
 import { AppShell } from '@/shell/app-shell';
 import { ToastProvider } from '@/ui/toast';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
@@ -84,5 +84,29 @@ describe('Sidebar tự thu trên màn sơ đồ (Q-23)', () => {
   it('màn thường không thu', () => {
     renderShell(PATHS.devices);
     expect(nav()).not.toHaveAttribute('data-compact');
+  });
+});
+
+describe('Tab Sửa của bản vẽ trả chỗ cho trình vẽ (E-04)', () => {
+  const EDIT = `${PATHS.diagram('7b0c1c1e-0000-4000-8000-000000000001')}?mode=edit`;
+
+  it('đường sửa bản vẽ là đường "trần": chỉ khi đúng màn một bản vẽ + ?mode=edit', () => {
+    expect(isEditorFocusPath(PATHS.diagram('x1'), '?mode=edit')).toBe(true);
+    expect(isEditorFocusPath(PATHS.diagram('x1'), '')).toBe(false);
+    expect(isEditorFocusPath(PATHS.diagrams, '?mode=edit')).toBe(false);
+    expect(isEditorFocusPath(PATHS.devices, '?mode=edit')).toBe(false);
+  });
+
+  it('ở tab Sửa thanh trên cùng (nhóm, nút tìm, theme) ẩn; Ctrl+K vẫn mở Tìm nhanh', async () => {
+    renderShell(EDIT);
+    expect(screen.queryByRole('banner')).toBeNull();
+    expect(screen.getByTestId('page-main')).toHaveAttribute('data-chrome', 'bare');
+    await userEvent.setup().keyboard('{Control>}k{/Control}');
+    expect(screen.getByRole('combobox', { name: /tìm nhanh/i })).toBeInTheDocument();
+  });
+
+  it('tab Xem vẫn có thanh trên cùng', () => {
+    renderShell(PATHS.diagram('7b0c1c1e-0000-4000-8000-000000000001'));
+    expect(screen.getByRole('banner')).toBeInTheDocument();
   });
 });

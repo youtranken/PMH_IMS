@@ -182,6 +182,14 @@ export function isCompactShellPath(pathname: string): boolean {
   return COMPACT_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix) && pathname.length > prefix.length);
 }
 
+/**
+ * Tab Sửa của một bản vẽ (E-04): shell bỏ luôn thanh trên cùng để trình vẽ chiếm phần còn lại —
+ * bốn tầng thanh chồng nhau ăn gần 1/4 màn 768px. Tìm nhanh vẫn mở bằng Ctrl+K.
+ */
+export function isEditorFocusPath(pathname: string, search: string): boolean {
+  return isCompactShellPath(pathname) && new URLSearchParams(search).get('mode') === 'edit';
+}
+
 /** Vai này vào được đường kia không. Đường không khai trong bảng = mở cho mọi vai. */
 export function canSeeRoute(path: string, role: UserRole): boolean {
   const allowed = ROUTE_ROLES[path];

@@ -1117,7 +1117,9 @@ function DiagramEditor({
         insertFreeInto(xml, { specs, message });
       }),
   });
-  const savedNote = dirty
+  /* Thanh mảnh là MỘT dòng (E-04): dòng trạng thái gọn "Đã lưu #n · giờ", đủ phiên bản / người lưu
+     trong chú thích khi rê chuột — chữ dài bị cắt "…" thì người dùng không đọc được gì. */
+  const savedFull = dirty
     ? t('diagrams.screen.unsaved')
     : lastSaved
       ? t('diagrams.screen.savedAt', {
@@ -1126,6 +1128,7 @@ function DiagramEditor({
           by: lastSaved.savedByName ?? lastSaved.savedBy,
         })
       : t('diagrams.screen.neverSaved');
+  const savedNote = !dirty && lastSaved ? t('diagrams.screen.savedShort', { seq: lastSaved.seq, at: formatDateTime(lastSaved.savedAt) }) : savedFull;
   const status = (
     <>
       {reviewStatus}
@@ -1135,7 +1138,7 @@ function DiagramEditor({
         </p>
       ) : null}
       {cables.status}
-      <p className="muted full-bar-note" role="status" title={savedNote}>
+      <p className="muted full-bar-note" role="status" title={savedFull}>
         {savedNote}
       </p>
     </>

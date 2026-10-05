@@ -1059,6 +1059,7 @@ export default {
       saveFailed: 'Không lưu được: trình vẽ không xuất được ảnh xem.',
       unsaved: 'Có thay đổi chưa lưu.',
       savedAt: '{{version}} · {{at}} · {{by}}',
+      savedShort: 'Đã lưu #{{seq}} · {{at}}',
       viewingDraft: '{{version}} · chưa phát hành',
       viewingOlder: '{{version}} · bản cũ',
       viewOfficial: 'Xem bản chính thức {{version}}',

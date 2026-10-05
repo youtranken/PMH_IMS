@@ -4,7 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { BrandEmblem } from '@/ui/brand-logo';
 import { Chevron } from '@/ui/chevron';
 import { type Me } from '@/lib/me';
-import { isCompactShellPath, titleKeyOf } from '@/lib/routes';
+import { isCompactShellPath, isEditorFocusPath, titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
@@ -38,7 +38,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const { t } = useTranslation();
   const groups = visibleGroups(me);
   const narrow = useIsNarrow();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showSidebar = !narrow || drawerOpen;
   /*
@@ -48,6 +48,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
    */
   const compact = !narrow && isCompactShellPath(pathname);
   const fullLayout = isCompactShellPath(pathname);
+  // Tab Sửa của bản vẽ: không thanh trên cùng (E-04) — màn hẹp không có trình vẽ nên không áp.
+  const bare = !narrow && isEditorFocusPath(pathname, search);
   /*
    * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở.
    *
@@ -235,7 +237,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
         <div className="content">
           {/* `banner` là landmark có sẵn của `<header>` khi nó không nằm trong main/article —
               đủ để E2E bám vào mà không cần selector CSS. */}
-          <header className="topbar">
+          <header className="topbar" hidden={bare}>
             {narrow ? (
               <button
                 type="button"
@@ -343,6 +345,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             id="noi-dung"
             data-testid="page-main"
             data-layout={fullLayout ? 'full' : undefined}
+            data-chrome={bare ? 'bare' : undefined}
             tabIndex={-1}
             inert={narrow && drawerOpen}
           >

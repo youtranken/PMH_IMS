@@ -445,6 +445,14 @@
   flex-direction: column;
   min-height: 0;
 }
+/* Tab Sửa của bản vẽ (E-04): thanh trên cùng ẩn, trình vẽ lấy cả chiều cao. */
+.topbar[hidden] {
+  display: none;
+}
+.page[data-layout='full'][data-chrome='bare'] {
+  height: 100vh;
+  height: 100dvh;
+}
 /* Khung của màn tràn (`data-layout='full'`): MỘT thanh mảnh phía trên (tiêu đề nhỏ, tab, nút IMS,
    trạng thái) và vùng dưới chiếm hết phần còn lại. Không cột panel cố định (Q-23). */
 .full-bar {
