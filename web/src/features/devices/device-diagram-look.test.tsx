@@ -161,4 +161,12 @@ describe('Bản đồ quan hệ dùng cùng ảnh', () => {
     renderWithI18n(<RelationMap hubCode="SW-E2E-01" nodes={[node]} missing={[]} />);
     expect(within(screen.getByTestId('rmap-hub')).queryByRole('img')).toBeNull();
   });
+
+  it('hạch đang dùng ảnh CHUNG của model → nói ra ngay dưới ảnh (bỏ ảnh riêng mà ảnh model trông y hệt thì không tưởng là ảnh cũ còn kẹt)', () => {
+    const node = { key: 'p', title: 'Cổng', count: 1, icon: 'port' as const, lines: [], cut: false, onOpen: () => undefined };
+    renderWithI18n(
+      <RelationMap hubCode="FW-E2E-01" nodes={[node]} missing={[]} hubImage={{ src: '/p?v=m', alt: 'Ảnh FW-E2E-01', note: 'Ảnh chung của model A3800' }} />,
+    );
+    expect(screen.getByTestId('rmap-hub')).toHaveTextContent('Ảnh chung của model A3800');
+  });
 });

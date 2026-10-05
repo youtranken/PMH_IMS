@@ -10,7 +10,7 @@ import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { DevicePhotosPanel, devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
 import { DeviceOnDiagrams } from "./device-on-diagrams";
-import { DeviceDiagramLook } from "./device-diagram-look";
+import { DeviceDiagramLook, lookLevel } from "./device-diagram-look";
 import { Chevron } from "@/ui/chevron";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -895,7 +895,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             <RelationMap
               retired={retired}
               hubCode={item.code}
-              hubImage={hubPhoto ? { src: `/api/v1/devices/${item.id}/photo/front?v=${hubPhoto.id}`, alt: t("devices.lookHubAlt", { code: item.code }) } : null}
+              hubImage={hubPhoto ? { src: `/api/v1/devices/${item.id}/photo/front?v=${hubPhoto.id}`, alt: t("devices.lookHubAlt", { code: item.code }), note: lookLevel(photos.data, "front") === "model" ? t("photoSlots.levelModel", { model: photos.data?.model?.label ?? "" }) : null } : null}
               nodes={relationNodes}
               missing={relationMissing}
               /* Hai nguồn nuôi bản đồ: khu mở rộng (`/panels`) và cổng (`/ports`). Bất kỳ cái

@@ -112,6 +112,12 @@
   border-radius: var(--r);
   background: var(--surface);
 }
+.rmap-hub-note {
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: normal;
+}
 .rmap-hub.sm { font-size: var(--fs-md); }
 .rmap-hub.xs { font-size: var(--fs-xs); }
 
