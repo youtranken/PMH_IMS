@@ -185,6 +185,44 @@ describe('Lưu bản vẽ khi ân hạn sơ đồ đã hết giữa lúc vẽ (Q
   });
 });
 
+describe('Thẻ "Bản vẽ đang trống" của chế độ Sửa', () => {
+  it('lưu lần đầu xong thẻ KHÔNG hiện lại che bản vẽ vừa lưu (nội dung đã cache vẫn là "chưa có phiên bản")', async () => {
+    const saved = { id: 'v1', seq: 1, summary: 'Thêm 3 thiết bị', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: null }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1/versions': () => jsonResponse(201, saved),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+    });
+    const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], { initialEntries: ['/diagrams/d1?mode=edit'] });
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    const posted = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    const fromDrawio = (data: Record<string, unknown>) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frame.contentWindow }));
+      });
+    fromDrawio({ event: 'init' });
+    expect(screen.getByRole('heading', { name: 'Bản vẽ đang trống — bắt đầu như sau' })).toBeInTheDocument();
+
+    fromDrawio({ event: 'save', xml: '<mxGraphModel/>' });
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"format":"xml"'))).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', xml: '<mxfile>3 MÁY</mxfile>' });
+    await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"format":"svg"'))).toBe(true));
+    fromDrawio({ event: 'export', format: 'svg', data: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}` });
+
+    expect(await screen.findByText('Đã lưu phiên bản #1: Thêm 3 thiết bị')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Bản vẽ đang trống — bắt đầu như sau' })).toBeNull();
+  });
+});
+
 const VERSION = { id: 'v1', seq: 1, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
 const CATALOG = { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [], ispProviders: [], servicePorts: [] };
 const HAVE_XML =

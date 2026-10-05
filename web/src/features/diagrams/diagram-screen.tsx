@@ -1160,7 +1160,9 @@ function DiagramEditor({
             initTimeoutSeconds={settings.initTimeoutSeconds}
             onEvent={onEvent}
           />
-          {!content.version && !dirty && !startDismissed ? <EditStartCard onDismiss={() => setStartDismissed(true)} /> : null}
+          {/* `content` là bản đã cache lúc mở và không tải lại sau khi lưu (tải lại = nạp lại khung đang
+              vẽ), nên "trống" phải xét cả `lastSaved`. */}
+          {!lastSaved && !dirty && !startDismissed ?<EditStartCard onDismiss={() => setStartDismissed(true)} /> : null}
           {cables.dialogs}
           {frames.dialogs}
           {photos.dialogs}
