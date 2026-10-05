@@ -174,7 +174,7 @@ export interface DiagramDeviceInfo {
   /** Máy có ảnh thật mặt trước / mặt sau không (ảnh riêng máy hoặc ảnh model) — công tắc Ảnh thật. */
   photos: { front: boolean; back: boolean };
   /** Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn, cỡ theo hình của loại). */
-  cell: { style: string; label: string; width: number; height: number };
+  cell: { style: string; label: string; width: number; height: number; attrs: Record<string, string> };
 }
 
 /**
@@ -1220,7 +1220,8 @@ export class DiagramsService {
    * `found: false` thay vì lỗi, vì bản vẽ là dữ liệu không tin cậy và máy có thể đã bị xoá.
    */
   async deviceInfos(ids: string[]): Promise<DiagramDeviceInfo[]> {
-    return (await this.deviceData(ids)).infos;
+    // Ô chèn hiện ảnh mặt trước nếu máy có (Q-23 05/10) — nên đọc ảnh đó ngay ở đây.
+    return (await this.deviceData(ids, new Map(ids.map((id) => [id, new Set<PhotoSide>(['front'])])))).infos;
   }
 
   /**

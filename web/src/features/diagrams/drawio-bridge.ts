@@ -15,7 +15,8 @@
 export interface DeviceCellSpec {
   id: string;
   code: string;
-  cell: { style: string; label: string; width: number; height: number };
+  /** `attrs`: thuộc tính `ims_*` thêm (ảnh thật của ô mới) — server quyết, web chỉ chép vào ô. */
+  cell: { style: string; label: string; width: number; height: number; attrs?: Record<string, string> };
 }
 
 /** Một ô (cell) theo khuôn JSON mà action `patch` của draw.io nhận. */
@@ -47,10 +48,13 @@ export function deviceCellJson(
   device: DeviceCellSpec,
   at: { cellId: string; parent: string; previous?: string | null; x: number; y: number },
 ): DrawioCellJson {
+  const own = new Set(['label', 'ims_device_id', 'ims_device_code', 'id']);
+  const extra = Object.entries(device.cell.attrs ?? {}).filter(([k]) => !own.has(k));
   const attrs: [string, string][] = [
     ['label', device.cell.label],
     ['ims_device_id', device.id],
     ['ims_device_code', device.code],
+    ...extra,
     ['id', at.cellId],
   ];
   return {

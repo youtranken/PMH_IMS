@@ -31,7 +31,18 @@ export const devicePhotosKey = (deviceId: string) => ['device-photos', deviceId]
  * từ giấy tờ đính kèm của chính máy và đè ảnh theo model (loại + chuỗi model, dùng chung cho mọi máy
  * cùng model). Ảnh model tải lên ở khu riêng ngay dưới. Xem trước là ảnh server đã thu nhỏ.
  */
-export function DevicePhotosPanel({ deviceId, csrfToken, canEdit }: { deviceId: string; csrfToken: string; canEdit: boolean }) {
+export function DevicePhotosPanel({
+  deviceId,
+  csrfToken,
+  canEdit,
+  canEditModel = false,
+}: {
+  deviceId: string;
+  csrfToken: string;
+  canEdit: boolean;
+  /** Ảnh model đổi hình của mọi máy cùng loại + model — chỉ SA/Admin (API chặn vai khác). */
+  canEditModel?: boolean;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -113,12 +124,12 @@ export function DevicePhotosPanel({ deviceId, csrfToken, canEdit }: { deviceId: 
               modelId={modelId}
               chosen={{ front: data.model.front?.id ?? '', back: data.model.back?.id ?? '' }}
               csrfToken={csrfToken}
-              disabled={!canEdit || busy}
-              canEdit={canEdit}
+              disabled={!canEdit || !canEditModel || busy}
+              canEdit={canEdit && canEditModel}
               sideLabel={sideLabel}
               onChoose={(side, value) => choose('model', side, value)}
             />
-          ) : canEdit ? (
+          ) : canEdit && canEditModel ? (
             <button type="button" className="btn" disabled={busy} onClick={() => void write(`/api/v1/devices/${deviceId}/model`, { method: 'POST' })}>
               {t('devices.photoModelStart')}
             </button>

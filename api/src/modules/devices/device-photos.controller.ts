@@ -45,15 +45,19 @@ export class DevicePhotosController {
     return this.photos.setDevicePhotos(req.user!.email, params.id, body);
   }
 
-  /** Hàng model của máy để tải ảnh model lên (`files` với `owner_type = 'device_model'`). */
-  @Roles('sa', 'admin', 'member')
+  /**
+   * Hàng model của máy để tải ảnh model lên (`files` với `owner_type = 'device_model'`). Ảnh model
+   * đổi hình của MỌI máy cùng loại + model, nên chỉ SA/Admin (Q-23 05/10); ảnh riêng từng máy thì
+   * ai sửa được hồ sơ máy cũng đổi được (`PATCH :id/photos`).
+   */
+  @Roles('sa', 'admin')
   @Post(':id/model')
   @Audited('device.model-created', 'device_model', { writtenByService: true })
   ensureModel(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     return this.photos.ensureModel(req.user!.email, params.id);
   }
 
-  @Roles('sa', 'admin', 'member')
+  @Roles('sa', 'admin')
   @Patch(':id/model-photos')
   @Audited('device.model-photos-changed', 'device_model', { writtenByService: true })
   setModelPhotos(@Param() params: IdParamDto, @Body() body: PhotoPairDto, @Req() req: AuthedRequest) {

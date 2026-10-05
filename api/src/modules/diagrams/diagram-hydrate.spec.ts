@@ -194,6 +194,15 @@ describe('deviceInsertCell — ô mới khi chèn từ hộp "Thiết bị kho"'
     expect(other).toMatchObject({ width: 120, height: 50 });
     expect(other.style).toContain('rounded=1;');
   });
+  it('máy có ảnh mặt trước (riêng máy hay theo model — cùng một nguồn tra) → ô mới hiện ảnh, mang ims_photo + id ảnh; không ảnh → biểu tượng, không thuộc tính ảnh', () => {
+    const photo = { fileId: 'f-own', uri: 'data:image/png;base64,AAAA' };
+    const withPhoto = deviceInsertCell(source({ photos: { front: photo } }));
+    expect(withPhoto.style).toContain('shape=image;image=data:image/png;base64,AAAA;');
+    expect(withPhoto.attrs).toEqual({ ims_photo: 'front', ims_photo_file_id: 'f-own' });
+    const plain = deviceInsertCell(source());
+    expect(plain.attrs).toEqual({});
+    expect(plain.style).toContain('shape=mxgraph.networks.switch;');
+  });
 });
 
 describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, lưu khô (AD-18)', () => {

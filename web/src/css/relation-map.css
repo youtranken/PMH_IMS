@@ -98,6 +98,20 @@
      chữ (lớp `sm`/`xs` do `hubSize()` gắn), không bao giờ ngắt. */
   white-space: nowrap;
 }
+/* Hạch có ảnh của máy (cùng ảnh trên sơ đồ): ảnh trên, mã dưới. Nền trắng-trên-nền-thương-hiệu
+   để ảnh chụp máy không lẫn vào dải màu. */
+.rmap-hub.with-image {
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.rmap-hub-img {
+  max-width: 100%;
+  max-height: 4.5rem;
+  object-fit: contain;
+  padding: var(--space-2);
+  border-radius: var(--r);
+  background: var(--surface);
+}
 .rmap-hub.sm { font-size: var(--fs-md); }
 .rmap-hub.xs { font-size: var(--fs-xs); }
 

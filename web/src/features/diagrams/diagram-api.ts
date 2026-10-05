@@ -86,7 +86,7 @@ export interface DiagramDeviceInfo {
   vendorPhone: string | null;
   warrantyEnd: string | null;
   /** Ô dựng sẵn cho lệnh chèn (style đã hydrate theo loại, nhãn, cỡ). */
-  cell: { style: string; label: string; width: number; height: number };
+  cell: { style: string; label: string; width: number; height: number; attrs?: Record<string, string> };
 }
 
 /**

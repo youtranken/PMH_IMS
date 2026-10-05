@@ -44,6 +44,17 @@ describe('deviceCellJson + insertPatch', () => {
     expect(value.getAttribute('label')).toBe(odd);
   });
 
+  it('ô server dựng sẵn có ảnh thật (ims_photo + id ảnh) → thuộc tính đi vào UserObject; không ghi đè hợp đồng ims_device_*', () => {
+    const cell = deviceCellJson(
+      { ...DEV, cell: { ...DEV.cell, attrs: { ims_photo: 'front', ims_photo_file_id: 'f-1', ims_device_id: 'giả' } } },
+      { cellId: 'c', parent: '1', x: 0, y: 0 },
+    );
+    const value = new DOMParser().parseFromString(cell.xmlValue, 'application/xml').documentElement;
+    expect(value.getAttribute('ims_photo')).toBe('front');
+    expect(value.getAttribute('ims_photo_file_id')).toBe('f-1');
+    expect(value.getAttribute('ims_device_id')).toBe(DEV.id);
+  });
+
   it('previous chỉ có mặt khi biết ô đứng trước', () => {
     expect(deviceCellJson(DEV, { cellId: 'c', parent: '1', x: 0, y: 0 })).not.toHaveProperty('previous');
     expect(deviceCellJson(DEV, { cellId: 'c', parent: '1', previous: 'x9', x: 0, y: 0 }).previous).toBe('x9');

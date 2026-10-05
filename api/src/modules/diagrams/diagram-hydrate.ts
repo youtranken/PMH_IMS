@@ -114,9 +114,34 @@ export function deviceLookStyle(
 }
 
 /** Ô mới để chèn: cỡ theo hình, style = mặc định của người vẽ (sửa được) + phần IMS. */
-export function deviceInsertCell(device: DeviceCellSource): { style: string; label: string; width: number; height: number } {
-  const look = deviceLookStyle(device);
+export function deviceInsertCell(device: DeviceCellSource): {
+  style: string;
+  label: string;
+  width: number;
+  height: number;
+  /** Thuộc tính `ims_*` thêm vào ô mới — ô có ảnh thật mang mặt đang hiện + id ảnh. */
+  attrs: Record<string, string>;
+} {
   const label = deviceCellLabel(device);
+  /*
+   * Máy có ảnh (riêng của máy, không có thì của model — `photos` đã tra theo thứ tự đó ở `devices`)
+   * thì ô mới hiện ảnh mặt trước; người vẽ đổi về biểu tượng ở "Ảnh thật…". Ô vuông như biểu tượng.
+   */
+  const front = device.found ? device.photos?.front : undefined;
+  if (front) {
+    return {
+      style: `align=center;${deviceLookStyle(device, 'front')}`,
+      label,
+      ...DIAGRAM_ICON_SIZE,
+      attrs: { [PHOTO_SIDE_ATTR]: 'front', [PHOTO_FILE_ATTR]: front.fileId },
+    };
+  }
+  const cell = deviceIconCell(device, label);
+  return { ...cell, attrs: {} };
+}
+
+function deviceIconCell(device: DeviceCellSource, label: string): { style: string; label: string; width: number; height: number } {
+  const look = deviceLookStyle(device);
   if (device.found && device.iconSvg) return { style: `align=center;${look}`, label, ...DIAGRAM_ICON_SIZE };
   const shape = device.found ? diagramShapeDef(device.shape) : null;
   if (shape) return { style: `align=center;${look}`, label, width: shape.width, height: shape.height };

@@ -8,7 +8,8 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
-import { DevicePhotosPanel } from "./device-photos-panel";
+import { DevicePhotosPanel, devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
+import { DeviceDiagramLook } from "./device-diagram-look";
 import { Chevron } from "@/ui/chevron";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -138,6 +139,14 @@ export function DeviceDetail({ me }: { me: Me }) {
     queryFn: () => apiFetch<DeviceRow>(`/api/v1/devices/${id}`),
     retry: false,
   });
+  /* Ảnh của máy cho bản đồ quan hệ: CÙNG truy vấn với khu "Hình dùng trên sơ đồ", nên tải / thay
+     ảnh ở đó là bản đồ đổi theo ngay — một nguồn, không chép ảnh. */
+  const photos = useQuery({
+    queryKey: devicePhotosKey(id),
+    queryFn: () => apiFetch<DevicePhotos>(`/api/v1/devices/${id}/photos`),
+    enabled: Boolean(id),
+  });
+  const hubPhoto = photos.data?.effective.front ?? null;
 
   const panels = useQuery({
     queryKey: ["devices", id, "panels"],
@@ -885,6 +894,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             <RelationMap
               retired={retired}
               hubCode={item.code}
+              hubImage={hubPhoto ? { src: `/api/v1/devices/${item.id}/photo/front?v=${hubPhoto.id}`, alt: t("devices.lookHubAlt", { code: item.code }) } : null}
               nodes={relationNodes}
               missing={relationMissing}
               /* Hai nguồn nuôi bản đồ: khu mở rộng (`/panels`) và cổng (`/ports`). Bất kỳ cái
@@ -901,6 +911,14 @@ export function DeviceDetail({ me }: { me: Me }) {
               }
             />
             )}
+
+            <DeviceDiagramLook
+              deviceId={item.id}
+              deviceTypeName={item.deviceTypeName}
+              csrfToken={me.csrfToken}
+              canEdit={!retired}
+              canEditModel={canVaultWrite}
+            />
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách
@@ -974,7 +992,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               canEdit={!retired}
             />
             {/* Ảnh thật cho sơ đồ chọn TỪ chính các giấy tờ ở trên — cùng tab để thấy ngay ảnh vừa tải. */}
-            <DevicePhotosPanel deviceId={item.id} csrfToken={me.csrfToken} canEdit={!retired} />
+            <DevicePhotosPanel deviceId={item.id} csrfToken={me.csrfToken} canEdit={!retired} canEditModel={canVaultWrite} />
           </>
         ) : history.isLoading || timeline.isLoading ? (
           <Loading />
