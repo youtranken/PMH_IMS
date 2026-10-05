@@ -167,7 +167,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.getByRole('dialog', { name: 'Khôi phục phiên bản #1?' }).getByRole('button', { name: 'Khôi phục' }).click();
     await expect(page.getByText('Đã khôi phục thành phiên bản #3.')).toBeVisible();
     await expect(versions.getByText('khôi phục từ #1')).toBeVisible();
-    await expect(versions.getByText(/^Khôi phục từ phiên bản #1 · Bỏ 1 thiết bị$/)).toBeVisible();
+    await expect(versions.getByRole('button', { name: /^Khôi phục từ phiên bản #1 · Bỏ 1 thiết bị — xem chi tiết thay đổi$/ })).toBeVisible();
     await page.keyboard.press('Escape');
 
     // Xem: SVG đã làm sạch trong trình xem IMS (không nạp draw.io).

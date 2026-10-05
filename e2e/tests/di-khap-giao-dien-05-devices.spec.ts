@@ -332,7 +332,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ]);
 
     const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại', exact: true }));
-    expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Mọi loại');
+    expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Tất cả loại');
     // So theo TẬP HỢP đã sắp, không theo thứ tự: API sắp theo `name` bằng collation của
     // Postgres, mà thứ tự của "Điện thoại IP" trong bảng chữ cái phụ thuộc collation ấy —
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
@@ -349,7 +349,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     expect(
       (await optionsOf(page, main.getByRole('button', { name: 'Tủ mạng', exact: true })))[0],
       'Ô lọc Tủ mạng phải mở đầu bằng mục bỏ lọc',
-    ).toBe('Mọi tủ');
+    ).toBe('Tất cả tủ mạng');
   });
 
   /*
@@ -688,7 +688,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('button', { name: 'Tháng sau' })).toHaveCount(0);
 
     /*
-     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Mọi loại" —
+     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Tất cả loại" —
      * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
@@ -698,7 +698,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       [...typeInForm].sort(),
-      'Ô "Loại" trong form phải bày đúng các loại đang dùng của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
+      'Ô "Loại" trong form phải bày đúng các loại đang dùng của danh mục, KHÔNG kèm mục "Tất cả loại" của thanh lọc',
     ).toEqual(await catalogDeviceTypes(page, true));
 
     /*

@@ -20,7 +20,7 @@ import {
 
 /*
  * Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ (FR-039, AD-18): khung gắn bản vẽ con bấm xuống,
- * thanh đường dẫn bấm lên (trong ân hạn không hỏi lại mã); khung VLAN ra thẻ dải; "Chèn tủ" dựng
+ * thanh đường dẫn bấm lên (trong ân hạn không hỏi lại mã); khung VLAN ra thẻ dải; "Chèn tủ mạng" dựng
  * khung tủ chứa máy của tủ; "Gắn khung" gắn hình đã vẽ với bản vẽ con. Luật kiểm lúc lưu + bố cục
  * khung tủ dồn ở `api/test/diagram-frames.spec.ts` và `diagram-frames.spec.ts`; bài này giữ mức
  * khói trên stack thật.
@@ -139,7 +139,7 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     await expect(page).toHaveURL(new RegExp(`/diagrams/${root}$`));
   });
 
-  test('màn sửa: "Chèn tủ" dựng khung tủ chứa máy của tủ; "Gắn khung" gắn hình đã vẽ với bản vẽ con; lưu giữ cả hai', async ({ page }) => {
+  test('màn sửa: "Chèn tủ mạng" dựng khung tủ chứa máy của tủ; "Gắn khung" gắn hình đã vẽ với bản vẽ con; lưu giữ cả hai', async ({ page }) => {
     test.setTimeout(240_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -169,11 +169,11 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
 
     await page.goto(`/diagrams/${root}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await diagramBarAction(page, 'Chèn tủ');
+    await diagramBarAction(page, 'Chèn tủ mạng');
     const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
     await box.getByRole('button', { name: 'Tủ mạng' }).click();
     await page.getByRole('option', { name: `${siteCode} · E2E-R${stamp}` }).click();
-    await box.getByRole('button', { name: 'Chèn tủ' }).click();
+    await box.getByRole('button', { name: 'Chèn tủ mạng' }).click();
     await expect(page.getByText(`Đã chèn khung tủ E2E-R${stamp} (1 thiết bị).`)).toBeVisible();
 
     await diagramBarAction(page, 'Gắn khung');

@@ -1024,7 +1024,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Bộ lọc loại phải bày đủ 7 nguồn hạn đang đăng ký (cả "Khác" — Q-14, "Tài khoản dịch vụ" — Q-20), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
-        'Mọi loại',
+        'Tất cả loại',
         'License phần mềm',
         'Chứng chỉ SSL',
         'Tên miền',
@@ -1035,8 +1035,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       ].sort(),
     );
     await expect(
-      kindGroup.getByRole('button', { name: 'Mọi loại', exact: true }),
-      'Chưa chọn loại nào thì nút "Mọi loại" đang bật',
+      kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }),
+      'Chưa chọn loại nào thì nút "Tất cả loại" đang bật',
     ).toHaveAttribute('aria-pressed', 'true');
 
     // ===== BẢNG (chờ dòng có thật rồi mới đọc cột — đọc cột không biết chờ lại) =====

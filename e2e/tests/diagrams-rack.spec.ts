@@ -83,7 +83,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
 
     // "Xem tủ": mặt đứng 12U, máy 2U chiếm U5 và U6; bấm U9 trống thì điền "U bắt đầu".
     await form.getByRole('button', { name: 'Xem tủ' }).click();
-    const view = page.getByRole('dialog', { name: `Tủ ${rack.siteCode} · ${rack.cabinetCode} (12U)` });
+    const view = page.getByRole('dialog', { name: `Tủ mạng ${rack.siteCode} · ${rack.cabinetCode} (12U)` });
     const units = view.getByRole('list', { name: `Các U của tủ ${rack.siteCode} · ${rack.cabinetCode}` });
     await expect(units.getByRole('listitem')).toHaveCount(12);
     await expect(units.getByRole('listitem').nth(6)).toContainText(`U6${holder}`);

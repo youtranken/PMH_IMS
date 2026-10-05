@@ -7,7 +7,7 @@ test.beforeEach(() => resetUsers());
 const ACTION_CODE_PATTERN = /^[a-z_]+(\.[a-z0-9_-]+)+$/;
 
 test.describe('Nhật ký — nhãn hành động và đối tượng người đọc được', () => {
-  test('ô "Mọi hành động" liệt kê nhãn tiếng Việt cho MỌI mã đang có trong nhật ký', async ({ page }) => {
+  test('ô "Tất cả hành động" liệt kê nhãn tiếng Việt cho MỌI mã đang có trong nhật ký', async ({ page }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto(`/admin/audit-log?q=${encodeURIComponent(E2E_SA.email)}`);
     // Dòng đăng nhập: nhãn tiếng Việt ở trên, mã ở dòng phụ.
