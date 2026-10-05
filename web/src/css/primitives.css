@@ -1323,6 +1323,23 @@ button.tree-summary:hover:not(:disabled) {
   background: none;
   color: var(--ink);
 }
+/* Hộp "Hướng dẫn" của màn sơ đồ: mỗi mục một tiêu đề nhỏ + vài gạch, giữa các mục có khoảng thở. */
+.diagram-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.diagram-guide h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-md);
+}
+.diagram-guide ul {
+  margin: 0;
+  padding-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 /* Khối "Bản vẽ chờ duyệt" trên màn Duyệt (D-07): mỗi dòng tên bản vẽ (link) · phiên bản · ai gửi. */
 .diagram-review-queue {
   margin-bottom: var(--space-6);

@@ -92,10 +92,31 @@ describe('màn sơ đồ tự giải thích', () => {
     expect(within(menu).getByText('Trợ giúp')).toHaveClass('ra-group');
     await user.click(screen.getByRole('menuitem', { name: 'Hướng dẫn' }));
     const guide = await screen.findByRole('dialog', { name: 'Hướng dẫn dùng sơ đồ mạng' });
-    for (const part of ['Xem và Sửa', 'Vẽ dây là khai kết nối', 'Khung', 'Phiên bản và duyệt', 'Menu ba chấm (⋮)']) {
-      expect(within(guide).getByRole('heading', { name: part })).toBeInTheDocument();
+    // V-08: mỗi việc một mục có tiêu đề + vài gạch đầu dòng; đủ các việc của màn; có nút Đóng ở chân.
+    const parts = [
+      'Xem và Sửa',
+      'Đưa máy từ kho lên bản vẽ',
+      'Vẽ dây là khai kết nối',
+      'Nối hàng loạt',
+      'Khung, tủ và vị trí U',
+      'Ảnh thật',
+      'Tìm, chỉ đường, kiểm tra khớp',
+      'Phiên bản và duyệt',
+      'Bản trình bày',
+      'Xem trên điện thoại',
+      'Menu ba chấm (⋮)',
+      'Mã 2 lớp',
+    ];
+    expect(within(guide).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(parts);
+    for (const part of parts) {
+      const section = within(guide).getByRole('heading', { name: part }).closest('section') as HTMLElement;
+      const items = within(section).getAllByRole('listitem');
+      expect(items.length, part).toBeGreaterThanOrEqual(1);
+      expect(items.length, part).toBeLessThanOrEqual(3);
     }
     expect(guide).toHaveTextContent('kết nối nằm ở tab "Sơ đồ cổng" của trang thiết bị');
+    await user.click(within(guide).getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByRole('dialog', { name: 'Hướng dẫn dùng sơ đồ mạng' })).toBeNull();
   });
 
   it('chế độ Sửa, bản vẽ chưa có gì: các bước bắt đầu đánh số; vẽ nét đầu tiên thì ẩn', async () => {

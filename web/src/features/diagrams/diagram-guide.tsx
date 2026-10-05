@@ -1,26 +1,50 @@
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@/ui/dialog';
+import { Dialog, DialogCancel } from '@/ui/dialog';
 import { StepList } from '@/ui/step-list';
 
-/** Hộp "Hướng dẫn" mở từ menu ⋮ của thanh sơ đồ: mỗi khái niệm một đoạn ngắn (Q-23). */
+/**
+ * Mục của hướng dẫn: tiêu đề + 1–3 gạch (V-08 — năm đoạn chữ liền không ai đọc, và thiếu nửa số
+ * việc của màn). Khoá i18n viết đủ để bài điểm danh khoá chết thấy nơi dùng.
+ */
+const SECTIONS: [string, string[]][] = [
+  ['diagrams.guide.modesTitle', ['diagrams.guide.modes1', 'diagrams.guide.modes2']],
+  ['diagrams.guide.stockTitle', ['diagrams.guide.stock1', 'diagrams.guide.stock2']],
+  ['diagrams.guide.cablesTitle', ['diagrams.guide.cables1', 'diagrams.guide.cables2', 'diagrams.guide.cables3']],
+  ['diagrams.guide.bulkTitle', ['diagrams.guide.bulk1', 'diagrams.guide.bulk2']],
+  ['diagrams.guide.framesTitle', ['diagrams.guide.frames1', 'diagrams.guide.frames2']],
+  ['diagrams.guide.photosTitle', ['diagrams.guide.photos1', 'diagrams.guide.photos2']],
+  ['diagrams.guide.navTitle', ['diagrams.guide.nav1', 'diagrams.guide.nav2', 'diagrams.guide.nav3']],
+  ['diagrams.guide.versionsTitle', ['diagrams.guide.versions1', 'diagrams.guide.versions2']],
+  ['diagrams.guide.presentationTitle', ['diagrams.guide.presentation1', 'diagrams.guide.presentation2']],
+  ['diagrams.guide.mobileTitle', ['diagrams.guide.mobile1']],
+  ['diagrams.guide.menuTitle', ['diagrams.guide.menu1']],
+  ['diagrams.guide.codeTitle', ['diagrams.guide.code1']],
+];
+
+/** Hộp "Hướng dẫn" mở từ menu ⋮ của thanh sơ đồ: mỗi việc một mục ngắn (Q-23). */
 export function DiagramGuideDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
-  const parts = [
-    ['diagrams.guide.modesTitle', 'diagrams.guide.modes'],
-    ['diagrams.guide.cablesTitle', 'diagrams.guide.cables'],
-    ['diagrams.guide.framesTitle', 'diagrams.guide.frames'],
-    ['diagrams.guide.versionsTitle', 'diagrams.guide.versions'],
-    ['diagrams.guide.menuTitle', 'diagrams.guide.menu_'],
-    ['diagrams.guide.codeTitle', 'diagrams.guide.code'],
-  ];
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={620} initialFocus="title" title={t('diagrams.guide.title')}>
-      {parts.map(([title, text]) => (
-        <section key={title}>
-          <h3>{t(title)}</h3>
-          <p>{t(text)}</p>
-        </section>
-      ))}
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={620}
+      initialFocus="title"
+      title={t('diagrams.guide.title')}
+      footer={<DialogCancel>{t('common.close')}</DialogCancel>}
+    >
+      <div className="diagram-guide">
+        {SECTIONS.map(([title, items]) => (
+          <section key={title}>
+            <h3>{t(title)}</h3>
+            <ul>
+              {items.map((item) => (
+                <li key={item}>{t(item)}</li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
     </Dialog>
   );
 }
