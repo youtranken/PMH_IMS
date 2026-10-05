@@ -797,6 +797,12 @@ export function DeviceDetail({ me }: { me: Me }) {
                 <DataItemIfSet label={t("devices.managementIp")} value={firstIp}>
                   <span className="mono">{firstIp}</span>
                   {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} inline /> : null}
+                  {/* "Đổi IP" nằm ngay trong ô IP quản trị, cạnh nút chép (T-06) — không lơ lửng dưới Ghi chú. */}
+                  {firstIp && !retired ? (
+                    <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
+                      {t("devices.changeIp")}
+                    </button>
+                  ) : null}
                 </DataItemIfSet>
                 {/* Máy CHẮC CHẮN chưa có IP (khu mở rộng đã về): ô IP quản trị nói thẳng "chưa có"
                     và nút Cấp IP là nút chính ngay tại đó — đây là việc còn thiếu đầu tiên của
@@ -855,12 +861,12 @@ export function DeviceDetail({ me }: { me: Me }) {
                   ) : null}
                   {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
                       trang tìm ô trống rồi gõ lại mã máy này. Chắc chắn chưa có IP thì nút là
-                      nút chính trong ô "IP quản trị" phía trên. Máy đã có IP thì là "Đổi IP"
-                      (Q-20 — một máy một IP); chưa đọc được khu IP thì vẫn "Cấp IP", API chặn
-                      nếu máy thật ra đã có IP. */}
-                  {ipKnownEmpty ? null : (
+                      nút chính trong ô "IP quản trị" phía trên; máy đã có IP thì "Đổi IP" (Q-20 — một
+                      máy một IP) nằm trong chính ô đó. Chưa đọc được khu IP thì vẫn "Cấp IP" ở
+                      đây, API chặn nếu máy thật ra đã có IP. */}
+                  {ipKnownEmpty || firstIp ? null : (
                     <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                      {t(firstIp ? "devices.changeIp" : "devices.assignIp")}
+                      {t("devices.assignIp")}
                     </button>
                   )}
                 </div>
