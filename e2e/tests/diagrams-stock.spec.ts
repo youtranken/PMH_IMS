@@ -76,6 +76,9 @@ async function saveWithDevice(page: Page, diagramId: string, deviceId: string, c
   expect(res.status(), await res.text()).toBe(201);
 }
 
+/** Ảnh PNG 1×1 hợp lệ — `files` kiểm theo nội dung. */
+const PHOTO = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+
 function stockBox(page: Page) {
   return page.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
 }
@@ -432,7 +435,18 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     const missing = `SW-E2E-SSA${stamp}`;
     const missingId = await createDevice(page, missing, { siteId, cabinetId });
     const placed = `SW-E2E-SSB${stamp}`;
-    await createDevice(page, placed, { siteId, cabinetId, rackUStart: 3, rackUSize: 1 });
+    const placedId = await createDevice(page, placed, { siteId, cabinetId, rackUStart: 3, rackUSize: 1 });
+    // Máy có ảnh riêng: không được báo "Chưa có ảnh" (style ảnh server gửi là dạng draw.io, không ;base64).
+    const upload = await page.request.post('/api/v1/files', {
+      headers: await writeHeaders(page),
+      multipart: { ownerType: 'device', ownerId: placedId, file: { name: `mat-truoc-${stamp}.png`, mimeType: 'image/png', buffer: PHOTO } },
+    });
+    expect(upload.status(), await upload.text()).toBe(201);
+    const chosen = await page.request.patch(`/api/v1/devices/${placedId}/photos`, {
+      headers: await writeHeaders(page),
+      data: { front: ((await upload.json()) as { id: string }).id },
+    });
+    expect(chosen.status(), await chosen.text()).toBe(200);
     const id = await createDiagram(page, `E2E Sẵn sàng ${stamp}`);
     await stepUpViaApi(page, secret, 'diagram');
 
@@ -444,12 +458,15 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
     const row = stockBox(page).getByRole('listitem').filter({ hasText: missing });
     await expect(row.getByText('Thiếu U', { exact: true })).toBeVisible();
+    await expect(row.getByText('Chưa có ảnh', { exact: true })).toBeVisible();
     await expect(row.getByRole('link', { name: `Mở hồ sơ ${missing}` })).toHaveAttribute('href', `/devices/${missingId}`);
     // Chỉ báo, không chặn chèn.
     await expect(row.getByRole('checkbox', { name: `Chọn ${missing} để chèn` })).toBeEnabled();
     await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`SSB${stamp}`);
     await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
-    await expect(stockBox(page).getByRole('listitem').filter({ hasText: placed }).getByText('Thiếu U', { exact: true })).toHaveCount(0);
+    const placedRow = stockBox(page).getByRole('listitem').filter({ hasText: placed });
+    await expect(placedRow.getByText('Thiếu U', { exact: true })).toHaveCount(0);
+    await expect(placedRow.getByText('Chưa có ảnh', { exact: true })).toHaveCount(0);
     await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`E2E-SS`);
     await stockBox(page).getByRole('checkbox', { name: 'Chỉ máy cần xử lý' }).check();
     await expect(stockBox(page).getByRole('listitem').filter({ hasText: missing })).toBeVisible();

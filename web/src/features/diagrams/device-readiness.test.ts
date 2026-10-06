@@ -21,8 +21,10 @@ describe('deviceReadiness — huy hiệu sẵn sàng ở panel "Thiết bị kho
 
 describe('lookPhotoUri — ảnh thật trong style ô của `device-looks`', () => {
   it.each([
-    ['ảnh png', 'shape=image;image=data:image/png;base64,iVBOR+/=;imageAspect=1;aspect=fixed;', 'data:image/png;base64,iVBOR+/='],
-    ['ảnh jpeg', 'align=center;shape=image;image=data:image/jpeg;base64,/9j/4AA;imageAspect=1;', 'data:image/jpeg;base64,/9j/4AA'],
+    // Dạng server thật gửi (`deviceLookStyle`): draw.io bỏ `;base64` vì `;` là dấu tách khoá style.
+    ['ảnh png dạng draw.io', 'shape=image;image=data:image/png,iVBOR+/=;imageAspect=1;aspect=fixed;', 'data:image/png;base64,iVBOR+/='],
+    ['ảnh jpeg dạng draw.io', 'align=center;shape=image;image=data:image/jpeg,/9j/4AA;imageAspect=1;', 'data:image/jpeg;base64,/9j/4AA'],
+    ['ảnh có ;base64 (style gõ tay)', 'shape=image;image=data:image/png;base64,iVBOR+/=;imageAspect=1;', 'data:image/png;base64,iVBOR+/='],
     ['biểu tượng SVG không phải ảnh thật', 'shape=image;image=data:image/svg+xml,%3Csvg%3E;imageAspect=0;', null],
     ['hình draw.io', 'shape=mxgraph.cisco.switch;outlineConnect=0;', null],
   ])('%s', (_name, style, expected) => {

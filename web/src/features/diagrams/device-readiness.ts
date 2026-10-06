@@ -22,10 +22,17 @@ export function deviceReadiness(input: {
   return flags;
 }
 
-/** Cùng luật `PHOTO_IMAGE_RE` của server: ảnh thật là `data:image/…` không phải SVG. */
-const PHOTO_URI_RE = /(?:^|;)image=(data:image\/(?!svg)[a-z]+;base64,[A-Za-z0-9+/=]+)/;
+/**
+ * Cùng luật `PHOTO_IMAGE_RE` của server: ảnh thật là `data:image/…` không phải SVG. Server gửi dạng
+ * draw.io `data:<mime>,<base64>` (bỏ `;base64` vì `;` là dấu tách khoá style); nhận cả dạng đủ.
+ */
+const PHOTO_URI_RE = /(?:^|;)image=data:(image\/(?!svg)[a-z]+)(?:;base64)?,([A-Za-z0-9+/=]+)/;
 
-/** Ảnh thật trong style ô do `device-looks` dựng; biểu tượng / hình draw.io → `null`. */
+/**
+ * Ảnh thật trong style ô do `device-looks` dựng, viết lại thành data URI có `;base64` — dạng thiếu nó
+ * thì `<img>` đọc phần sau dấu phẩy như chữ thường, không ra ảnh. Biểu tượng / hình draw.io → `null`.
+ */
 export function lookPhotoUri(style: string): string | null {
-  return PHOTO_URI_RE.exec(style)?.[1] ?? null;
+  const match = PHOTO_URI_RE.exec(style);
+  return match ? `data:${match[1]};base64,${match[2]}` : null;
 }

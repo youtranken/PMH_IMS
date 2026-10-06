@@ -21,7 +21,7 @@ const look = (id: string, photo: boolean) => ({
   found: true,
   icon: 'shape=mxgraph.cisco.switch;',
   iconAspect: 0.5,
-  front: photo ? { style: 'shape=image;image=data:image/png;base64,iVBOR;imageAspect=1;', fileId: `f-${id}`, aspect: 0.1 } : null,
+  front: photo ? { style: 'shape=image;image=data:image/png,iVBOR;imageAspect=1;', fileId: `f-${id}`, aspect: 0.1 } : null,
   back: null,
 });
 
