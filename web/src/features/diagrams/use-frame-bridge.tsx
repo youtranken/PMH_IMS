@@ -90,7 +90,7 @@ export function useFrameBridge({
         setJustInserted((current) => ({ xml, ids: current.xml === xml ? [...current.ids, cabinetId] : [cabinetId] }));
         markDirty();
         setCabinetOpen(false);
-        // Máy có U có mặt ở cả mặt trước lẫn mặt sau: đếm theo máy, không theo ô.
+        // Đếm theo máy, không theo ô.
         const deviceIds = [...new Set(frame.layout.devices.map((d) => d.id))];
         onInserted(deviceIds);
         toast({

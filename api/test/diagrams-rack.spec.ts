@@ -122,16 +122,16 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     await scratch?.drop();
   }, TEST_TIMEOUT);
 
-  it('khung tủ: mặt trước + mặt sau, máy đúng U (U1 ở đáy), máy chưa khai U ở cột bên', async () => {
+  it('khung tủ: chỉ mặt trước, máy đúng U (U1 ở đáy), máy chưa khai U ở cột bên', async () => {
     const frame = await service.cabinetFrame(cabinetId);
-    expect(frame.layout.frames.map((f) => f.key)).toEqual(['rack', 'rack-back', 'unplaced']);
+    expect(frame.layout.frames.map((f) => f.key)).toEqual(['rack', 'unplaced']);
     const at = (code: string) => frame.layout.devices.filter((d) => d.code === code).map((d) => [d.frame, Math.round(d.y), Math.round(d.height)]);
     // Tủ 12U: U1 ở đáy (y lớn nhất), máy 2U cao gấp đôi.
     const swFront = frame.layout.devices.find((d) => d.code === 'SW-E2E-MT-01' && d.frame === 'rack')!;
     const srvFront = frame.layout.devices.find((d) => d.code === 'SRV-E2E-MT-01' && d.frame === 'rack')!;
     expect(swFront.y).toBeGreaterThan(srvFront.y);
     expect(srvFront.height).toBeCloseTo(swFront.height * 2);
-    expect(at('SW-E2E-MT-01').map(([f]) => f)).toEqual(['rack', 'rack-back']);
+    expect(at('SW-E2E-MT-01').map(([f]) => f)).toEqual(['rack']);
     expect(at('PC-E2E-MT-01')).toEqual([['unplaced', expect.any(Number), expect.any(Number)]]);
     // Trên mặt tủ nhãn một dòng bên phải (Q-23 05/10) — vị trí đã là chính khung tủ; máy 2U cao đúng 2U.
     expect(srvFront.label).toBe('SRV-E2E-MT-01');
@@ -139,7 +139,7 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     expect(srvFront.height).toBeCloseTo(2 * 14.8);
   });
 
-  it('ảnh thật: ảnh riêng máy (mặt trước) đè ảnh model; mặt sau lấy ảnh model; chỉ nhận ảnh đính kèm của chính máy', async () => {
+  it('ảnh thật: ảnh riêng máy (mặt trước) đè ảnh model; mặt sau lấy ảnh model; khung tủ dùng ảnh mặt trước; chỉ nhận ảnh đính kèm của chính máy', async () => {
     const own = await upload('device', sw, png(1600, 160, 'red'), 'sw-front.png');
     const other = await upload('device', srv, png(100, 20, 'blue'));
     await expect(photos.setDevicePhotos(SA.email, sw, { front: other.id })).rejects.toMatchObject({ response: { code: 'DEVICE_PHOTO_INVALID' } });
@@ -162,10 +162,9 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
 
     const frame = await service.cabinetFrame(cabinetId);
     const front = frame.layout.devices.find((d) => d.code === 'SW-E2E-MT-01' && d.frame === 'rack')!;
-    const back = frame.layout.devices.find((d) => d.code === 'SW-E2E-MT-01' && d.frame === 'rack-back')!;
+    expect(frame.layout.devices.filter((d) => d.code === 'SW-E2E-MT-01')).toHaveLength(1);
     expect(front.attrs).toEqual({ ims_photo: 'front' });
     expect(front.style).toMatch(/shape=image;image=data:image\/png,[A-Za-z0-9+/=]+;/);
-    expect(back.attrs).toEqual({ ims_photo: 'back' });
     // Ảnh 1600px được thu về `diagram.photo_max_px` (480) trước khi nhúng.
     const b64 = /image=data:image\/png,([^;]+);/.exec(front.style)![1];
     expect(Buffer.from(b64, 'base64').readUInt32BE(16)).toBe(480);
@@ -219,8 +218,8 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
       `SELECT xml, device_snapshot FROM diagram_version WHERE id = $1`,
       [version.id],
     );
-    expect(rows[0].xml).toContain('Tủ E2E-MT-R1 · Mặt trước');
-    expect(rows[0].xml).toContain('Tủ E2E-MT-R1 · Mặt sau');
+    expect(rows[0].xml).toContain('label="Tủ E2E-MT-R1"');
+    expect(rows[0].xml).not.toContain('Mặt sau');
     expect(rows[0].xml).toContain('ims_photo="front"');
     expect(rows[0].xml).not.toContain('data:image');
     // Bản chụp thiết bị lúc lưu có U (lệch kho so "vị trí … · U5–U6").

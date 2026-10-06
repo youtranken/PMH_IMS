@@ -1,6 +1,7 @@
 import type { CellIndex, IndexedCell } from './diagram-cells';
 import { checkCables } from './diagram-checks';
 import type { CheckLink, Finding } from './diagram-finding';
+import { isRearFrameLabel } from './diagram-frames';
 import { isPlannedCell } from './diagram-presentation';
 
 export type { Finding, FindingLevel } from './diagram-finding';
@@ -90,7 +91,8 @@ export function checkDevices(cells: IndexedCell[], devices: Map<string, CheckDev
       continue;
     }
     const frame = cabinetFrameOf(cell, byId, frames);
-    if (frame && frame.ims.ims_cabinet_id !== device.cabinetId) {
+    // Ô ở khung mặt sau cũ là bản sao của ô mặt trước: báo một lần ở mặt trước là đủ.
+    if (frame && !isRearFrameLabel(frame.label) && frame.ims.ims_cabinet_id !== device.cabinetId) {
       findings.push({
         level: 'warning',
         code: 'DEVICE_CABINET_MISMATCH',

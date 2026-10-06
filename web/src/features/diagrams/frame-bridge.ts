@@ -73,7 +73,7 @@ export function bindFrameValue(frame: FrameCandidate, set: Record<string, string
 /** Hình dạng `GET /diagrams/cabinet-frame/:id` → `layout` (bố cục ở `diagram-frames.ts` của server). */
 export interface CabinetFrameLayout {
   uHeight: number;
-  /** `rack` = mặt trước, `rack-back` = mặt sau, `unplaced` = cột "Chưa khai U". */
+  /** `rack` = mặt tủ (chỉ mặt trước), `unplaced` = cột "Chưa khai U". */
   frames: { key: string; label: string; style: string; attrs: Record<string, string>; x: number; y: number; width: number; height: number }[];
   /** `attrs`: `ims_photo` khi ô hiện ảnh thật của mặt đó (vắng ở dữ liệu cũ). */
   devices: { frame: string; id: string; code: string; style: string; label: string; attrs?: Record<string, string>; x: number; y: number; width: number; height: number }[];

@@ -202,6 +202,15 @@ describe('checkDrift — lệch kho của một phiên bản (Q-23, AD-18)', () 
       }),
       expected: [{ code: 'DRIFT_CABINET_NEW_DEVICE', cellId: 'f1', level: 'warning' }],
     },
+    {
+      name: 'khung mặt sau của bản vẽ cũ không báo trùng lần hai máy mới gắn vào tủ — chỉ khung mặt trước',
+      input: input(cabinetFrame('f1', CAB_1, 'Tủ R1 · Mặt trước') + cabinetFrame('f2', CAB_1, 'Tủ R1 · Mặt sau') + device('d1', DEV_A, 'SW-01', 'f1'), {
+        snapshot: [snap(DEV_A, 'SW-01')],
+        devices: new Map([now(DEV_A, 'SW-01', { cabinetId: CAB_1 })]),
+        cabinetDevices: new Map([[CAB_1, [{ id: DEV_A, code: 'SW-01' }, { id: DEV_C, code: 'SRV-09' }]]]),
+      }),
+      expected: [{ code: 'DRIFT_CABINET_NEW_DEVICE', cellId: 'f1', level: 'warning' }],
+    },
   ];
 
   it.each(cases)('$name', ({ input: given, expected }) => {

@@ -15,6 +15,13 @@ const LABEL_KEYS = ['labelPosition', 'verticalLabelPosition', 'align', 'vertical
 const BELOW_STYLE = 'verticalLabelPosition=bottom;verticalAlign=top;';
 /** Số đo mặc định của hình tủ IMS dựng (`diagram-frames.ts` của server) khi style thiếu khoá. */
 const DEFAULT_UNIT = 14.8;
+/**
+ * Khung mặt sau của bản vẽ cũ (tủ nay chỉ vẽ mặt trước): nội dung đã lưu giữ nguyên nên khung đó
+ * còn, nhưng máy trong nó là bản sao của ô mặt trước — không đặt theo U, không báo lần hai. Cùng
+ * chuỗi `REAR_FRAME_LABEL` của server (`diagram-frames.ts`); viết bằng mã \u để chữ giao diện
+ * chỉ nằm ở `vi.ts` — đây là chữ để NHẬN RA khung cũ, không hiển thị.
+ */
+const REAR_FRAME = /·\s*M\u1eb7t sau\s*$/u;
 
 export interface RackFitDevice {
   code: string;
@@ -95,6 +102,7 @@ export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackF
   const anyRack = new Set(cells.filter((c) => /(?:^|;)childLayout=rack(?:;|$)/.test(c.style)).map((c) => c.id));
   const racks = new Map<string, Cell & { geo: NonNullable<Cell['geo']> }>();
   for (const c of cells) if (c.cabinetId && c.geo && anyRack.has(c.id)) racks.set(c.id, { ...c, geo: c.geo });
+  const rear = new Set([...racks.values()].filter((f) => REAR_FRAME.test(f.label)).map((f) => f.id));
   for (const cell of cells) {
     if (!cell.deviceId) continue;
     const frame = cell.parent ? racks.get(cell.parent) : undefined;
@@ -104,6 +112,7 @@ export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackF
       if (outside && styleMap(cell.style).get('labelPosition') === 'right') result.updates[cell.id] = { style: withLabelPlacement(cell.style, BELOW_STYLE) };
       continue;
     }
+    if (rear.has(frame.id)) continue;
     const info = devices.get(cell.deviceId);
     if (!info) {
       if (!result.unknown.includes(cell.deviceId)) result.unknown.push(cell.deviceId);

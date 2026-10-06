@@ -1168,7 +1168,7 @@ export default {
       cabinetLabel: 'Tủ mạng',
       cabinetPlaceholder: 'Chọn tủ…',
       cabinetHint:
-        'Dựng khung tủ mặt trước + mặt sau (hình rack) chứa mọi máy đang gắn tủ trong kho, trừ máy đã thanh lý, xếp đúng U (U1 ở đáy); mặt nào máy có ảnh thật thì hiện ảnh. Máy chưa khai U xếp ở cột "Chưa khai U" bên cạnh. Máy gắn thêm vào tủ sau này không tự vào bản vẽ.',
+        'Dựng khung tủ mặt trước (hình rack) chứa mọi máy đang gắn tủ trong kho, trừ máy đã thanh lý, xếp đúng U (U1 ở đáy); máy có ảnh mặt trước thì hiện ảnh. Máy chưa khai U xếp ở cột "Chưa khai U" bên cạnh. Máy gắn thêm vào tủ sau này không tự vào bản vẽ.',
       cabinetAlready: 'Tủ này đã có khung trên bản vẽ.',
       cabinetInsert: 'Chèn tủ mạng',
       cabinetInserting: 'Đang dựng khung…',
@@ -1241,7 +1241,7 @@ export default {
       rebuildButton: 'Dựng lại mặt tủ',
       rebuildTitle: 'Dựng lại mặt tủ từ kho?',
       rebuildMessage:
-        'Tạo một phiên bản nháp MỚI chỉ gồm khung tủ mặt trước + mặt sau xếp đúng U theo kho (máy chưa khai U ở cột bên). Dây giữa các máy trong tủ được giữ; hình tự do khác bị bỏ. Phiên bản cũ vẫn còn để khôi phục.',
+        'Tạo một phiên bản nháp MỚI chỉ gồm khung tủ mặt trước xếp đúng U theo kho (máy chưa khai U ở cột bên). Dây giữa các máy trong tủ được giữ; hình tự do khác (kể cả khung mặt sau của bản cũ) bị bỏ. Phiên bản cũ vẫn còn để khôi phục.',
       rebuildConfirm: 'Dựng lại',
       rebuildStepUp: 'dựng lại mặt tủ "{{name}}"',
       rebuildDone: 'Đã dựng lại mặt tủ thành nháp #{{seq}}.',

@@ -82,6 +82,16 @@ describe('checkDevices — luật thiết bị của tự kiểm (AD-18, Q-23)',
       expected: [{ level: 'warning', code: 'DEVICE_CABINET_MISMATCH', cellId: 'd1' }],
     },
     {
+      name: 'khung mặt sau của bản vẽ cũ (tủ nay chỉ vẽ mặt trước): ô trong đó không báo lệch tủ — ô mặt trước đã báo',
+      body:
+        cabinetFrame('f1', CAB_1, 'Tủ R1 · Mặt trước') +
+        cabinetFrame('f2', CAB_1, 'Tủ R1 · Mặt sau', { x: 600, y: 0, width: 400, height: 600 }) +
+        device('d1', DEV_A, 'SW-01', { parent: 'f1' }) +
+        device('d2', DEV_A, 'SW-01', { parent: 'f2' }),
+      devices: [dev(DEV_A, 'SW-01', { cabinetId: CAB_2 })],
+      expected: [{ level: 'warning', code: 'DEVICE_CABINET_MISMATCH', cellId: 'd1' }],
+    },
+    {
       name: 'máy nằm ngoài khung tủ → không gì',
       body: cabinetFrame('f1', CAB_1, 'Tủ R1') + device('d1', DEV_A, 'SW-01', { x: 900, y: 50 }),
       devices: [dev(DEV_A, 'SW-01', { cabinetId: CAB_2 })],

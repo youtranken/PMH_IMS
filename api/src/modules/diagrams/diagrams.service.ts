@@ -1024,28 +1024,25 @@ export class DiagramsService {
       throw new BadRequestException({ code: 'DIAGRAM_CABINET_TOO_MANY', message: `Tủ có ${page.total} thiết bị — quá nhiều để dựng một khung tủ.` });
     }
     const ids = page.items.map((d) => d.id);
-    const { infos, sources } = await this.deviceData(ids, new Map(ids.map((id) => [id, new Set<PhotoSide>(['front', 'back'])])));
+    // Tủ chỉ vẽ mặt trước (Q-23 06/10): chỉ cần ảnh mặt trước.
+    const { infos, sources } = await this.deviceData(ids, new Map(ids.map((id) => [id, new Set<PhotoSide>(['front'])])));
     const devices = infos
       .filter((info) => info.found && info.status !== 'retired' && info.code)
       .map((info): CabinetFrameDevice => {
         const source = sources.get(info.id)!;
-        const faces: CabinetFrameDevice['faces'] = {};
-        for (const side of ['front', 'back'] as const) {
-          if (source.photos?.[side]) faces[side] = { style: `align=center;${deviceLookStyle(source, side)}` };
-        }
-        return { id: info.id, code: info.code!, u: info.u, uSize: info.uSize, cell: info.cell, faces, rackLabel: deviceRackLabel(source) };
+        const front = source.photos?.front ? { style: `align=center;${deviceLookStyle(source, 'front')}` } : undefined;
+        return { id: info.id, code: info.code!, u: info.u, uSize: info.uSize, cell: info.cell, front, rackLabel: deviceRackLabel(source) };
       });
-    // Mặt trước / mặt sau là hai khung cạnh nhau: máy xếp đúng U ở cả hai, mỗi mặt ảnh của mặt đó.
     return {
       cabinet: { id: cabinet.id, code: cabinet.code, siteCode: cabinet.siteCode, uHeight: cabinet.uHeight, active: cabinet.active },
-      layout: cabinetFrameLayout({ cabinet: { id: cabinet.id, code: cabinet.code, uHeight: cabinet.uHeight }, devices }, { sides: ['front', 'back'] }),
+      layout: cabinetFrameLayout({ cabinet: { id: cabinet.id, code: cabinet.code, uHeight: cabinet.uHeight }, devices }),
     };
   }
 
   /**
    * "Dựng lại mặt tủ" (bản vẽ loại tủ): một phiên bản nháp MỚI chỉ gồm khung tủ dựng từ kho — mặt
-   * trước + mặt sau xếp đúng U, máy chưa khai U ở cột "Chưa khai U". Không xoá gì: phiên bản cũ còn
-   * nguyên để khôi phục; không ghi gì vào kho.
+   * trước xếp đúng U, máy chưa khai U ở cột "Chưa khai U"; khung mặt sau của bản cũ không dựng lại.
+   * Không xoá gì: phiên bản cũ còn nguyên để khôi phục; không ghi gì vào kho.
    */
   async rebuildRack(actor: string, diagramId: string): Promise<VersionItem> {
     const node = await this.node(diagramId);

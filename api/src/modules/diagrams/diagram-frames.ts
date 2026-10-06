@@ -151,8 +151,6 @@ function columnStyle(marginLeft: number): string {
   );
 }
 
-export type RackSide = 'front' | 'back';
-
 export interface CabinetFrameDevice {
   id: string;
   code: string;
@@ -162,8 +160,8 @@ export interface CabinetFrameDevice {
   uSize: number | null;
   /** Ô dựng sẵn theo loại (cùng luật hydrate với hộp "Thiết bị kho"). */
   cell: { style: string; label: string; width: number; height: number };
-  /** Style ảnh thật của từng mặt (cùng luật hydrate); mặt vắng thì dùng biểu tượng `cell`. */
-  faces?: Partial<Record<RackSide, { style: string }>>;
+  /** Style ảnh thật mặt trước (cùng luật hydrate); vắng thì dùng biểu tượng `cell`. */
+  front?: { style: string };
   /** Nhãn một dòng khi máy nằm trên mặt tủ (cùng luật hydrate); vắng thì dùng `cell.label`. */
   rackLabel?: string;
 }
@@ -173,8 +171,8 @@ export interface CabinetFrameInput {
   devices: CabinetFrameDevice[];
 }
 
-/** Khung của khung tủ: mặt trước (`rack`), mặt sau (`rack-back`), cột "Chưa khai U". */
-export type FrameKey = 'rack' | 'rack-back' | 'unplaced';
+/** Khung của khung tủ: mặt trước (`rack`) và cột "Chưa khai U". */
+export type FrameKey = 'rack' | 'unplaced';
 
 /** Một khung của khung tủ; toạ độ tương đối so với góc trên trái của cả cụm. */
 export interface FrameCellSpec {
@@ -210,49 +208,36 @@ export interface CabinetFrameLayout {
 }
 
 /**
- * Khoảng cách giữa hai mặt tủ và giữa mặt tủ với cột "Chưa khai U": nhãn máy trên mặt tủ nằm bên
- * PHẢI (một dòng mã · IP), nên phải chừa chỗ cho nó — không thì nhãn mặt trước đè lên mặt sau.
+ * Khoảng cách giữa mặt tủ và cột "Chưa khai U": nhãn máy trên mặt tủ nằm bên PHẢI (một dòng
+ * mã · IP), nên phải chừa chỗ cho nó — không thì nhãn đè lên cột.
  */
 const FRAME_GAP = 200;
 
-/** Ô máy trên một mặt: ảnh thật của mặt đó nếu có (kèm `ims_photo`), không thì biểu tượng loại. */
-function faceOf(device: CabinetFrameDevice, side: RackSide): { style: string; attrs: Record<string, string> } {
-  const face = device.faces?.[side];
-  return face ? { style: face.style, attrs: { ims_photo: side } } : { style: device.cell.style, attrs: {} };
+/** Ô máy: ảnh thật mặt trước nếu có (kèm `ims_photo`), không thì biểu tượng loại. */
+function faceOf(device: CabinetFrameDevice): { style: string; attrs: Record<string, string> } {
+  return device.front ? { style: device.front.style, attrs: { ims_photo: 'front' } } : { style: device.cell.style, attrs: {} };
 }
 
-/** Ô máy trên mặt tủ: hình của mặt đó, nhãn bên phải (cao đúng số U — nhãn dưới hình đè U khác). */
-function rackFace(device: CabinetFrameDevice, side: RackSide): { style: string; attrs: Record<string, string> } {
-  const face = faceOf(device, side);
+/** Ô máy trên mặt tủ: nhãn bên phải (cao đúng số U — nhãn dưới hình đè U khác). */
+function rackFace(device: CabinetFrameDevice): { style: string; attrs: Record<string, string> } {
+  const face = faceOf(device);
   return { ...face, style: rackDeviceStyle(face.style) };
 }
 
 /**
- * Khung tủ chèn MỘT lượt: hình rack cao theo `cabinet.u_height`, máy có U xếp đúng U, máy chưa
- * khai U (hoặc U vượt tủ / trùng U máy khác — dữ liệu cũ) ở cột "Chưa khai U" bên phải. Mọi khung
- * mang `ims_cabinet_id` và máy là ô CON của khung — luật "máy trong khung tủ khác tủ trong kho" của
- * tự kiểm nhận ra mọi chỗ. `sides` = hai mặt thì mặt trước / mặt sau là hai khung cạnh nhau, máy có
- * U có mặt ở cả hai (cùng độ cao), mỗi mặt hiện ảnh thật của mặt đó nếu có.
+ * Khung tủ chèn MỘT lượt: hình rack (mặt trước — Q-23 06/10 chỉ vẽ mặt trước) cao theo
+ * `cabinet.u_height`, máy có U xếp đúng U, máy chưa khai U (hoặc U vượt tủ / trùng U máy khác — dữ
+ * liệu cũ) ở cột "Chưa khai U" bên phải. Mọi khung mang `ims_cabinet_id` và máy là ô CON của khung —
+ * luật "máy trong khung tủ khác tủ trong kho" của tự kiểm nhận ra mọi chỗ.
  */
-export function cabinetFrameLayout(input: CabinetFrameInput, options: { sides?: readonly RackSide[] } = {}): CabinetFrameLayout {
-  const sides = options.sides && options.sides.length > 0 ? options.sides : (['front'] as const);
-  const twoFaces = sides.length > 1;
+export function cabinetFrameLayout(input: CabinetFrameInput): CabinetFrameLayout {
   const uHeight = input.cabinet.uHeight && input.cabinet.uHeight > 0 ? input.cabinet.uHeight : RACK_DEFAULT_U;
   const attrs = { ims_cabinet_id: input.cabinet.id };
   const rackHeight = RACK_MARGIN.top + RACK_MARGIN.bottom + uHeight * RACK_UNIT_PX;
-  const racks: FrameCellSpec[] = sides.map((side, i) => ({
-    key: side === 'back' ? 'rack-back' : 'rack',
-    label: twoFaces ? `Tủ ${input.cabinet.code} · ${side === 'back' ? 'Mặt sau' : 'Mặt trước'}` : `Tủ ${input.cabinet.code}`,
-    style: RACK_STYLE,
-    attrs,
-    x: i * (RACK_WIDTH + FRAME_GAP),
-    y: 0,
-    width: RACK_WIDTH,
-    height: rackHeight,
-  }));
+  const rack: FrameCellSpec = { key: 'rack', label: `Tủ ${input.cabinet.code}`, style: RACK_STYLE, attrs, x: 0, y: 0, width: RACK_WIDTH, height: rackHeight };
   const sorted = [...input.devices].sort((a, b) => a.code.localeCompare(b.code, 'vi'));
   const taken = new Set<number>();
-  const placed = new Map<string, FrameDeviceSpec[]>();
+  const placed = new Map<string, FrameDeviceSpec>();
   const unplaced: CabinetFrameDevice[] = [];
   const innerWidth = RACK_WIDTH - RACK_MARGIN.left - RACK_MARGIN.right;
   for (const device of sorted) {
@@ -265,43 +250,38 @@ export function cabinetFrameLayout(input: CabinetFrameInput, options: { sides?: 
     }
     units.forEach((u) => taken.add(u));
     const top = uHeight - units[units.length - 1];
-    placed.set(
-      device.id,
-      sides.map((side) => ({
-        frame: side === 'back' ? 'rack-back' : 'rack',
-        id: device.id,
-        code: device.code,
-        ...rackFace(device, side),
-        label: device.rackLabel ?? device.cell.label,
-        x: RACK_MARGIN.left,
-        y: RACK_MARGIN.top + top * RACK_UNIT_PX,
-        width: innerWidth,
-        height: size * RACK_UNIT_PX,
-      })),
-    );
+    placed.set(device.id, {
+      frame: 'rack',
+      id: device.id,
+      code: device.code,
+      ...rackFace(device),
+      label: device.rackLabel ?? device.cell.label,
+      x: RACK_MARGIN.left,
+      y: RACK_MARGIN.top + top * RACK_UNIT_PX,
+      width: innerWidth,
+      height: size * RACK_UNIT_PX,
+    });
   }
 
-  const frames: FrameCellSpec[] = [...racks];
-  const columnX = racks.length * RACK_WIDTH + (racks.length - 1) * FRAME_GAP + FRAME_GAP;
+  const frames: FrameCellSpec[] = [rack];
+  const columnX = RACK_WIDTH + FRAME_GAP;
   if (unplaced.length > 0) {
     const widest = Math.max(...unplaced.map((d) => d.cell.width));
     const width = Math.max(COLUMN_MIN_WIDTH, widest + 2 * COLUMN_PAD);
     const marginLeft = Math.round((width - widest) / 2);
     let y = COLUMN_HEADER + COLUMN_PAD;
     for (const device of unplaced) {
-      placed.set(device.id, [
-        {
-          frame: 'unplaced',
-          id: device.id,
-          code: device.code,
-          ...faceOf(device, sides[0]),
-          label: device.cell.label,
-          x: marginLeft,
-          y,
-          width: device.cell.width,
-          height: device.cell.height,
-        },
-      ]);
+      placed.set(device.id, {
+        frame: 'unplaced',
+        id: device.id,
+        code: device.code,
+        ...faceOf(device),
+        label: device.cell.label,
+        x: marginLeft,
+        y,
+        width: device.cell.width,
+        height: device.cell.height,
+      });
       y += device.cell.height + COLUMN_GAP + COLUMN_LABEL_ROOM;
     }
     frames.push({
@@ -315,17 +295,27 @@ export function cabinetFrameLayout(input: CabinetFrameInput, options: { sides?: 
       height: y - COLUMN_GAP,
     });
   }
-  return { uHeight, frames, devices: sorted.flatMap((d) => placed.get(d.id)!) };
+  return { uHeight, frames, devices: sorted.map((d) => placed.get(d.id)!) };
 }
 
 interface PreviousRack {
-  /** Ô máy của bản trước theo máy, thứ tự trong bản vẽ; `back` = nằm trong khung mặt sau. */
+  /** Ô máy của bản trước theo máy, thứ tự trong bản vẽ; `back` = nằm trong khung mặt sau (dữ liệu cũ). */
   devices: Map<string, { id: string; back: boolean }[]>;
   /** Nét của bản trước: thuộc tính `UserObject` bọc (nếu có) + của `mxCell`. */
   edges: { id: string; wrapper: Record<string, string> | null; cell: Record<string, string> }[];
 }
 
-const BACK_FACE_LABEL = 'Mặt sau';
+/**
+ * Đuôi nhãn khung mặt sau mà bản vẽ cũ còn giữ (trước khi tủ chỉ vẽ mặt trước). Nội dung đã lưu
+ * không bị sửa, nên đặt máy theo U, tự kiểm và lệch kho phải nhận ra rồi bỏ qua khung đó — cùng một
+ * máy đã có ô ở mặt trước. Web giữ cùng chuỗi ở `rack-fit.ts`.
+ */
+export const REAR_FRAME_LABEL = 'Mặt sau';
+
+/** Khung mặt sau của bản vẽ cũ (xem `REAR_FRAME_LABEL`). */
+export function isRearFrameLabel(label: string): boolean {
+  return label.trim().endsWith(`· ${REAR_FRAME_LABEL}`);
+}
 
 function readPrevious(xml: string): PreviousRack {
   const frames = new Map<string, string>();
@@ -352,7 +342,7 @@ function readPrevious(xml: string): PreviousRack {
   const devices = new Map<string, { id: string; back: boolean }[]>();
   for (const cell of cells) {
     if (!cell.deviceId) continue;
-    const back = (frames.get(cell.parent ?? '') ?? '').includes(BACK_FACE_LABEL);
+    const back = isRearFrameLabel(frames.get(cell.parent ?? '') ?? '');
     devices.set(cell.deviceId, [...(devices.get(cell.deviceId) ?? []), { id: cell.id, back }]);
   }
   return { devices, edges };
@@ -363,7 +353,7 @@ function readPrevious(xml: string): PreviousRack {
  * máy là ô CON của khung (cùng quan hệ như khi chèn bằng `patch`). Nơi gọi dehydrate trước khi lưu
  * (ảnh nhúng không vào kho bản vẽ — AD-18).
  *
- * `previousXml` = phiên bản đang có: ô máy GIỮ id cũ (theo mặt trước / mặt sau), và mọi nét có hai
+ * `previousXml` = phiên bản đang có: ô máy GIỮ id cũ (ô ngoài khung mặt sau cũ), và mọi nét có hai
  * đầu là ô còn lại được giữ — dây đã khai vẫn gắn đúng máy thay vì mất hết sau khi dựng lại. Nét
  * giữ lại bỏ điểm uốn (khung đã dời chỗ) và nằm trên lớp mặc định; hình tự do khác bị bỏ.
  */
@@ -381,9 +371,9 @@ export function buildRackXml(layout: CabinetFrameLayout, previousXml?: string): 
   const frameIds = new Map<string, string>();
   const previous: PreviousRack = previousXml ? readPrevious(previousXml) : { devices: new Map(), edges: [] };
   const deviceIds = layout.devices.map((device) => {
+    // Ô ở khung mặt sau cũ chỉ là bản sao của máy: giữ id ô ngoài mặt sau để dây vẫn gắn.
     const old: { id: string; back: boolean }[] = previous.devices.get(device.id) ?? [];
-    const back = device.frame === 'rack-back';
-    const pick = old.find((c) => c.back === back) ?? old[0];
+    const pick = old.find((c) => !c.back) ?? old[0];
     if (!pick) return null;
     previous.devices.set(device.id, old.filter((c) => c !== pick));
     return pick.id;

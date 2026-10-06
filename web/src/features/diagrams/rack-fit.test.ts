@@ -51,6 +51,14 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
     expect(result.cabinetMismatch).toEqual([{ cellId: 'd1', code: 'UPS-03', deviceCabinet: 'TU-TOWER-01', frameLabel: 'Tủ TU-TOWER-04 · Mặt trước' }]);
   });
 
+  it('khung MẶT SAU của bản vẽ cũ (tủ nay chỉ vẽ mặt trước): không đặt theo U, không báo lệch tủ', () => {
+    const rear = frame('f5', CAB_04, 'Tủ TU-TOWER-04 · Mặt sau');
+    const result = rackFit(model(rear + device('d1', 'UPS-03', 'f5', { y: 228.2, h: 59.2 }) + device('d2', 'SW-01', 'f5', { y: 10, h: 59.2 })), INFO);
+    expect(result.cabinetMismatch).toEqual([]);
+    expect(result.updates).toEqual({});
+    expect(result.noU).toEqual([]);
+  });
+
   it('máy cùng tủ nhưng chưa khai U → cao 1U ở chỗ thả (draw.io đã bắt vạch), báo chưa khai U', () => {
     const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'PC-09', 'f4', { y: 287.4, h: 59.2 })), INFO);
     expect(result.updates.d1.geometry).toBe('<mxGeometry x="33" y="287.4" width="162" height="14.8" as="geometry"/>');

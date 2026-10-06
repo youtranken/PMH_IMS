@@ -1,6 +1,7 @@
 import type { CellIndex, IndexedCell } from './diagram-cells';
 import { checkCables, undrawnLinks } from './diagram-checks';
 import type { CheckLink, Finding } from './diagram-finding';
+import { isRearFrameLabel } from './diagram-frames';
 import { rackUnitLabel } from '../../common/rack-units';
 import { linkLabelFrom } from './diagram-hydrate';
 import { checkDevices, type CheckDevice } from './diagram-selfcheck';
@@ -138,7 +139,8 @@ function cabinetDrift(cells: IndexedCell[], input: DriftInput): Finding[] {
   const out: Finding[] = [];
   for (const frame of cells) {
     const cabinetId = frame.kind !== 'edge' ? frame.ims.ims_cabinet_id : undefined;
-    if (!cabinetId) continue;
+    // Khung mặt sau cũ cùng tủ với khung mặt trước: một lời báo cho mỗi máy là đủ.
+    if (!cabinetId || isRearFrameLabel(frame.label)) continue;
     for (const device of input.cabinetDevices.get(cabinetId) ?? []) {
       if (present.has(device.id)) continue;
       out.push(

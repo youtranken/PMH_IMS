@@ -215,78 +215,61 @@ describe('cabinetFrameLayout — khung tủ dựng từ kho', () => {
   });
 });
 
-/* Mặt tủ: mặt trước / mặt sau là hai khung cạnh nhau, máy xếp đúng U, ảnh thật từng mặt. */
-describe('cabinetFrameLayout — mặt trước + mặt sau, ảnh thật', () => {
+/* Tủ mạng chỉ vẽ MẶT TRƯỚC (Q-23 06/10): một khung rack, máy xếp đúng U, ảnh thật mặt trước. */
+describe('cabinetFrameLayout — chỉ mặt trước, ảnh thật', () => {
   const icon = { style: 'shape=icon;', label: 'L', width: 60, height: 40 };
-  const both = { sides: ['front', 'back'] as const };
 
-  it('hai khung rack cạnh nhau cùng mang ims_cabinet_id, cột "Chưa khai U" đứng sau cả hai', () => {
-    const layout = cabinetFrameLayout(
-      { cabinet: { id: CAB, code: 'R1', uHeight: 10 }, devices: [{ id: 'a', code: 'SW-01', u: 1, uSize: 1, cell: icon }, { id: 'b', code: 'PC-01', u: null, uSize: null, cell: icon }] },
-      both,
-    );
+  it('một khung rack mặt trước + cột "Chưa khai U", cùng mang ims_cabinet_id; máy có U chỉ MỘT ô', () => {
+    const layout = cabinetFrameLayout({
+      cabinet: { id: CAB, code: 'R1', uHeight: 10 },
+      devices: [{ id: 'a', code: 'SW-01', u: 1, uSize: 1, cell: icon }, { id: 'b', code: 'PC-01', u: null, uSize: null, cell: icon }],
+    });
     expect(layout.frames.map((f) => [f.key, f.label])).toEqual([
-      ['rack', 'Tủ R1 · Mặt trước'],
-      ['rack-back', 'Tủ R1 · Mặt sau'],
+      ['rack', 'Tủ R1'],
       ['unplaced', 'Tủ R1 · Chưa khai U'],
     ]);
-    const [front, back, column] = layout.frames;
+    const [front, column] = layout.frames;
     expect(front.attrs).toEqual({ ims_cabinet_id: CAB });
-    expect(back.attrs).toEqual({ ims_cabinet_id: CAB });
-    expect(back.x).toBeGreaterThanOrEqual(front.x + front.width);
-    expect(back.height).toBe(front.height);
-    expect(column.x).toBeGreaterThanOrEqual(back.x + back.width);
-    // Máy có U có mặt ở cả hai mặt, cùng độ cao; máy chưa khai U chỉ một lần ở cột bên.
+    expect(column.attrs).toEqual({ ims_cabinet_id: CAB });
+    expect(column.x).toBeGreaterThanOrEqual(front.x + front.width);
     expect(layout.devices.map((d) => [d.code, d.frame])).toEqual([
       ['PC-01', 'unplaced'],
       ['SW-01', 'rack'],
-      ['SW-01', 'rack-back'],
     ]);
-    const [, sw, swBack] = layout.devices;
-    expect(swBack.y).toBe(sw.y);
   });
 
-  it('mặt có ảnh thật dùng ảnh và ghi ims_photo của mặt đó; mặt không có ảnh giữ biểu tượng', () => {
-    const layout = cabinetFrameLayout(
-      {
-        cabinet: { id: CAB, code: 'R1', uHeight: 10 },
-        devices: [{ id: 'a', code: 'SW-01', u: 2, uSize: 1, cell: icon, faces: { front: { style: 'shape=image;image=data:image/png,AAA;' } } }],
-      },
-      both,
-    );
-    const [front, back] = layout.devices;
-    expect(front).toMatchObject({ frame: 'rack', style: `shape=image;image=data:image/png,AAA;${RACK_LABEL_STYLE}`, attrs: { ims_photo: 'front' } });
-    expect(back).toMatchObject({ frame: 'rack-back', style: `shape=icon;${RACK_LABEL_STYLE}`, attrs: {} });
+  it('máy có ảnh mặt trước thì ô dùng ảnh và ghi ims_photo="front"; không có thì giữ biểu tượng', () => {
+    const layout = cabinetFrameLayout({
+      cabinet: { id: CAB, code: 'R1', uHeight: 10 },
+      devices: [
+        { id: 'a', code: 'SW-01', u: 2, uSize: 1, cell: icon, front: { style: 'shape=image;image=data:image/png,AAA;' } },
+        { id: 'b', code: 'SW-02', u: 4, uSize: 1, cell: icon },
+      ],
+    });
+    const [withPhoto, plain] = layout.devices;
+    expect(withPhoto).toMatchObject({ frame: 'rack', style: `shape=image;image=data:image/png,AAA;${RACK_LABEL_STYLE}`, attrs: { ims_photo: 'front' } });
+    expect(plain).toMatchObject({ frame: 'rack', style: `shape=icon;${RACK_LABEL_STYLE}`, attrs: {} });
   });
 
-  it('buildRackXml ("Dựng lại mặt tủ"): XML một trang qua cổng kiểm, máy là ô con của đúng khung, giữ ims_photo', () => {
-    const layout = cabinetFrameLayout(
-      {
-        cabinet: { id: CAB, code: 'R1', uHeight: 10 },
-        devices: [
-          { id: DEV_1, code: 'SW-01', u: 2, uSize: 1, cell: icon, faces: { back: { style: 'shape=image;image=data:image/png,AAA;' } } },
-          { id: DEV_2, code: 'PC-01', u: null, uSize: null, cell: icon },
-        ],
-      },
-      both,
-    );
+  it('buildRackXml ("Dựng lại mặt tủ"): XML một trang qua cổng kiểm, máy là ô con của đúng khung, không có mặt sau', () => {
+    const layout = cabinetFrameLayout({
+      cabinet: { id: CAB, code: 'R1', uHeight: 10 },
+      devices: [
+        { id: DEV_1, code: 'SW-01', u: 2, uSize: 1, cell: icon, front: { style: 'shape=image;image=data:image/png,AAA;' } },
+        { id: DEV_2, code: 'PC-01', u: null, uSize: null, cell: icon },
+      ],
+    });
     const xml = buildRackXml(layout);
     expect(checkDiagramXml(xml, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+    expect(xml).not.toContain('Mặt sau');
     const index = buildCellIndex(xml);
     const frameIds = new Map(index.cells.filter((c) => c.ims.ims_cabinet_id).map((c) => [c.label, c.id]));
-    expect([...frameIds.keys()]).toEqual(['Tủ R1 · Mặt trước', 'Tủ R1 · Mặt sau', 'Tủ R1 · Chưa khai U']);
+    expect([...frameIds.keys()]).toEqual(['Tủ R1', 'Tủ R1 · Chưa khai U']);
     const devices = index.cells.filter((c) => c.kind === 'device');
     expect(devices.map((c) => [c.ims.ims_device_code, c.parent, c.ims.ims_photo ?? null])).toEqual([
       ['PC-01', frameIds.get('Tủ R1 · Chưa khai U'), null],
-      ['SW-01', frameIds.get('Tủ R1 · Mặt trước'), null],
-      ['SW-01', frameIds.get('Tủ R1 · Mặt sau'), 'back'],
+      ['SW-01', frameIds.get('Tủ R1'), 'front'],
     ]);
-  });
-
-  it('mặc định (chèn khung kiểu cũ) chỉ một mặt — giữ nguyên bố cục', () => {
-    const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'R1', uHeight: 10 }, devices: [{ id: 'a', code: 'SW-01', u: 2, uSize: 1, cell: icon }] });
-    expect(layout.frames.map((f) => f.key)).toEqual(['rack']);
-    expect(layout.devices[0].attrs).toEqual({});
   });
 });
 
@@ -298,22 +281,22 @@ describe('cabinetFrameLayout — máy chiếm đúng số U, nhãn không đè U
 
   it('máy 1U ở U30 tủ 42U: cao đúng 1U, nằm đúng U30 (U1 ở đáy) — tỉ lệ ảnh không đổi chiều cao', () => {
     const layout = cabinetFrameLayout(
-      { cabinet: { id: CAB, code: 'TU-01', uHeight: 42 }, devices: [{ id: 'u', code: 'UPS-03', u: 30, uSize: 1, cell: tall, faces: { front: photo }, rackLabel: 'UPS-03 · 172.16.110.5' }] },
-      { sides: ['front', 'back'] },
+      { cabinet: { id: CAB, code: 'TU-01', uHeight: 42 }, devices: [{ id: 'u', code: 'UPS-03', u: 30, uSize: 1, cell: tall, front: photo, rackLabel: 'UPS-03 · 172.16.110.5' }] },
     );
-    const [front, back] = layout.devices;
+    expect(layout.devices).toHaveLength(1);
+    const [front] = layout.devices;
     expect(front.height).toBeCloseTo(RACK_UNIT_PX);
     expect(front.y).toBeCloseTo(RACK_MARGIN.top + (42 - 30) * RACK_UNIT_PX);
-    expect(back.y).toBe(front.y);
     expect(front.label).toBe('UPS-03 · 172.16.110.5');
     expect(front.style.endsWith(RACK_LABEL_STYLE)).toBe(true);
     expect(front.style).not.toContain('verticalLabelPosition=bottom');
   });
 
-  it('hai mặt cách nhau đủ chỗ cho nhãn bên phải mặt trước', () => {
-    const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'TU-01', uHeight: 10 }, devices: [] }, { sides: ['front', 'back'] });
-    const [front, back] = layout.frames;
-    expect(back.x - (front.x + front.width)).toBeGreaterThanOrEqual(160);
+  it('cột "Chưa khai U" cách mặt tủ đủ chỗ cho nhãn bên phải', () => {
+    const icon = { style: 'shape=icon;', label: 'L', width: 60, height: 40 };
+    const layout = cabinetFrameLayout({ cabinet: { id: CAB, code: 'TU-01', uHeight: 10 }, devices: [{ id: 'u', code: 'UPS-03', u: null, uSize: null, cell: icon }] });
+    const [front, column] = layout.frames;
+    expect(column.x - (front.x + front.width)).toBeGreaterThanOrEqual(160);
   });
 
   it('máy ở cột "Chưa khai U" giữ nhãn ba dòng dưới hình', () => {
@@ -333,7 +316,6 @@ describe('buildRackXml + bản trước — "Dựng lại mặt tủ" giữ id �
           { id: DEV_2, code: 'PC-01', u: 5, uSize: 2, cell: icon },
         ],
       },
-      { sides: ['front', 'back'] },
     );
   const old =
     page(
@@ -348,12 +330,26 @@ describe('buildRackXml + bản trước — "Dựng lại mặt tủ" giữ id �
         `<mxCell id="note" value="Ghi chú" style="text;" vertex="1" parent="1"><mxGeometry x="0" y="400" width="80" height="20" as="geometry"/></mxCell>`,
     );
 
-  it('ô máy cũ giữ id theo mặt (trước / sau); máy mới trên mặt khác nhận id mới không trùng', () => {
+  it('ô máy cũ giữ id; bản trước có khung mặt sau (dữ liệu cũ) thì giữ ô mặt TRƯỚC, khung mặt sau và ô của nó bỏ', () => {
     const index = buildCellIndex(buildRackXml(layout(), old));
     const devices = index.cells.filter((c) => c.kind === 'device').map((c) => [c.ims.ims_device_code, c.id]);
-    expect(devices).toEqual(expect.arrayContaining([['SW-01', 'swFront'], ['SW-01', 'swBack'], ['PC-01', 'pcLoose']]));
+    expect(devices).toEqual([
+      ['PC-01', 'pcLoose'],
+      ['SW-01', 'swFront'],
+    ]);
+    expect(index.cells.some((c) => c.label.includes('Mặt sau'))).toBe(false);
     const ids = index.cells.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('ô mặt sau đứng TRƯỚC ô mặt trước trong XML cũ: vẫn giữ id ô mặt trước', () => {
+    const swapped = old.replace(
+      /(<UserObject label="SW-01"[^>]*id="swFront">.*?<\/UserObject>)(<UserObject label="SW-01"[^>]*id="swBack">.*?<\/UserObject>)/,
+      '$2$1',
+    );
+    expect(swapped.indexOf('swBack')).toBeLessThan(swapped.indexOf('swFront'));
+    const index = buildCellIndex(buildRackXml(layout(), swapped));
+    expect(index.cells.find((c) => c.kind === 'device' && c.ims.ims_device_code === 'SW-01')?.id).toBe('swFront');
   });
 
   it('dây giữa hai máy còn trên mặt tủ được giữ (kể cả dây đã khai), đi lại đường; dây tới máy không còn thì bỏ; hình tự do bỏ', () => {

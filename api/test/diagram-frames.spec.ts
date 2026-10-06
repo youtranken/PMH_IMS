@@ -239,10 +239,9 @@ describe('Sơ đồ mạng · khung bản vẽ con / VLAN / tủ (AD-18)', () =>
       const frame = await service.cabinetFrame(cabinetId);
       expect(frame.cabinet).toMatchObject({ id: cabinetId, code: 'E2E-R1', uHeight: 12 });
       expect(frame.layout.uHeight).toBe(12);
-      // Mặt trước + mặt sau cạnh nhau, cột "Chưa khai U" sau cùng — mọi khung mang ims_cabinet_id.
+      // Chỉ mặt trước (Q-23 06/10), cột "Chưa khai U" bên cạnh — mọi khung mang ims_cabinet_id.
       expect(frame.layout.frames.map((f) => [f.key, f.attrs.ims_cabinet_id])).toEqual([
         ['rack', cabinetId],
-        ['rack-back', cabinetId],
         ['unplaced', cabinetId],
       ]);
       expect(frame.layout.devices.map((d) => [d.code, d.frame])).toEqual([

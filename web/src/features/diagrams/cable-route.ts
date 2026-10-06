@@ -74,8 +74,8 @@ function readPage(xml: string, pageId: string): { edges: PageEdge[]; devices: Ma
 /**
  * "Bẻ dây vuông góc" (`orthogonal`): đổi kiểu nét, GIỮ điểm uốn người vẽ đã kéo. "Tự đi lại dây"
  * (`reroute`): vuông góc, bỏ điểm uốn và ràng buộc cạnh ra/vào, và nối lại đầu dây lệch / thả nổi
- * về đúng hai máy của kết nối (`links`: id kết nối → hai máy) khi máy đó có trên trang. Máy có hai
- * ô (mặt trước / mặt sau tủ) thì chọn ô cùng khung với đầu đang đúng.
+ * về đúng hai máy của kết nối (`links`: id kết nối → hai máy) khi máy đó có trên trang. Máy có nhiều
+ * ô (vd. khung mặt sau của bản vẽ cũ) thì chọn ô cùng khung với đầu đang đúng.
  */
 export function cableRoutePatch(xml: string, pageId: string, links: Map<string, { a: string; b: string }>, mode: CableRouteMode): CableRouteResult {
   const page = readPage(xml, pageId);
