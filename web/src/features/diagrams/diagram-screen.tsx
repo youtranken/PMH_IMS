@@ -927,11 +927,15 @@ function DiagramEditor({
     newId: newCellId,
   });
 
-  const fitRacks = useRackFit({
+  const racks = useRackFit({
     devices: content.devices ?? [],
+    initialXml: content.version?.xml ?? '',
+    csrfToken: me.csrfToken,
+    ready,
     withFile,
     send: (command) => frame.current?.send(command),
     page: () => frameState.current.page,
+    markDirty: () => setDirty(true),
   });
 
   const photos = usePhotoBridge({
@@ -1086,7 +1090,7 @@ function DiagramEditor({
       case 'init':
       case 'load':
         // Máy đã lưu nằm sai khung tủ: báo ngay khi mở, không đợi người vẽ sửa gì.
-        if (!ready) fitRacks(content.version?.xml ?? '', { warnOnly: true });
+        if (!ready) racks.fit(content.version?.xml ?? '', { warnOnly: true });
         setReady(true);
         break;
       case 'autosave':
@@ -1095,7 +1099,7 @@ function DiagramEditor({
           setFrameXml(message.xml);
           setJustInserted([]);
           cables.onAutosave(message.xml);
-          fitRacks(message.xml);
+          racks.fit(message.xml);
         }
         break;
       case 'patch':
@@ -1232,6 +1236,7 @@ function DiagramEditor({
       menu={[
         ...(content.diagram.kind === 'presentation' ? presentationTools.menu : []),
         ...frames.menu,
+        ...racks.menu,
         ...photos.menu,
         ...(isRack
           ? [{ key: 'rebuild-rack', label: t('diagrams.rack.rebuildButton'), disabled: !ready || rebuilding, onSelect: () => void rebuildRack() }]
@@ -1266,6 +1271,7 @@ function DiagramEditor({
           {cables.dialogs}
           {frames.dialogs}
           {photos.dialogs}
+          {racks.dialogs}
           {content.diagram.kind === 'presentation' ? presentationTools.elements : null}
           {draftOpen ? (
             <DraftFromPortMapDialog

@@ -1,11 +1,12 @@
 /**
- * Máy trong khung tủ trên màn SỬA (Q-23 05/10) — hàm THUẦN, test bảng dữ liệu ở `rack-fit.test.ts`.
+ * Máy trong khung tủ trên màn SỬA (Q-23 05/10, 06/10) — hàm THUẦN, test bảng dữ liệu ở
+ * `rack-fit.test.ts`.
  *
  * Kéo một máy vào khung tủ thì `childLayout=rack` của draw.io bắt ô theo vạch U nhưng làm tròn CHIỀU
  * CAO của ô (ảnh 120px thành 8U, ảnh 60px thành 4U) — máy 1U chiếm nhiều U trên hình. Sau mỗi
  * `autosave`, màn đặt lại ô: cao = Số U × 1U, đáy ở "U bắt đầu" trong kho (U1 ở đáy tủ), rộng hết
- * lòng tủ, nhãn bên phải. Chỉ máy mà KHO ghi cùng tủ với khung; máy tủ khác thì báo, không đặt
- * theo U và không bao giờ đổi tủ trong kho.
+ * lòng tủ, nhãn bên phải. Chỉ máy mà KHO ghi cùng tủ với khung; máy tủ khác thì báo kèm U nơi thả
+ * — màn hỏi người vẽ có chuyển máy sang tủ đó trong kho không, KHÔNG bao giờ tự đổi.
  */
 
 /** Chỗ đặt nhãn máy trên mặt tủ — cùng chuỗi `RACK_LABEL_STYLE` của server (hydrate dựng lại khi mở). */
@@ -31,11 +32,28 @@ export interface RackFitDevice {
   uSize: number | null;
 }
 
+export interface RackMismatch {
+  cellId: string;
+  deviceId: string;
+  code: string;
+  /** Mã tủ kho đang ghi (`null` = chưa gắn tủ). */
+  deviceCabinet: string | null;
+  frameId: string;
+  frameCabinetId: string;
+  frameLabel: string;
+  /** U bắt đầu theo chỗ thả (hàng trên cùng của ô − Số U + 1, kẹp trong tủ); `null` = ô thiếu hình học. */
+  dropU: number | null;
+  /** Chiều cao lòng khung tính theo U. */
+  rackU: number;
+  /** Số U máy chiếm trong kho (vắng = 1). */
+  uSize: number;
+}
+
 export interface RackFitResult {
   /** Mục `u` của lệnh `patch` (theo id ô). */
   updates: Record<string, { geometry?: string; style?: string }>;
-  /** Máy kho ghi tủ khác khung — không đặt theo U, màn báo người vẽ. */
-  cabinetMismatch: { cellId: string; code: string; deviceCabinet: string | null; frameLabel: string }[];
+  /** Máy kho ghi tủ khác khung — không đặt theo U, màn hỏi người vẽ có chuyển máy sang tủ đó không. */
+  cabinetMismatch: RackMismatch[];
   /** Máy cùng tủ nhưng kho chưa khai U — giữ chỗ thả, cao theo Số U (vắng = 1U). */
   noU: { cellId: string; code: string }[];
   /** Máy trong khung tủ mà màn chưa có thông tin kho — hỏi server rồi chạy lại. */
@@ -68,6 +86,7 @@ interface Cell {
   cabinetId: string | null;
   label: string;
   geo: { x: number; y: number; width: number; height: number } | null;
+  geometryXml: string | null;
 }
 
 function readCells(xml: string): Cell[] {
@@ -86,8 +105,32 @@ function readCells(xml: string): Cell[] {
       cabinetId: wrapper?.getAttribute('ims_cabinet_id') || null,
       label: wrapper?.getAttribute('label') ?? cell.getAttribute('value') ?? '',
       geo: g ? { x: num('x'), y: num('y'), width: num('width'), height: num('height') } : null,
+      geometryXml: g ? new XMLSerializer().serializeToString(g).replace(/\s+xmlns="[^"]*"/, '') : null,
     };
   });
+}
+
+/**
+ * Chỗ của một ô trong XML (cha, ô đứng ngay trước trong cùng cha, hình học nguyên chuỗi) — đủ để
+ * một lệnh `patch` đưa ô về đúng chỗ đó (`parent` + `previous` là cách draw.io dời ô giữa các cha).
+ */
+export function cellPlacement(xml: string, cellId: string): { parent: string; previous: string; geometry: string } | null {
+  const cells = readCells(xml);
+  const cell = cells.find((c) => c.id === cellId);
+  if (!cell || !cell.parent || !cell.geometryXml) return null;
+  const siblings = cells.filter((c) => c.parent === cell.parent);
+  const at = siblings.indexOf(cell);
+  return { parent: cell.parent, previous: at > 0 ? siblings[at - 1].id : '', geometry: cell.geometryXml };
+}
+
+function frameMetrics(frame: Cell & { geo: NonNullable<Cell['geo']> }) {
+  const s = styleMap(frame.style);
+  const unit = Number(s.get('rackUnitSize')) || DEFAULT_UNIT;
+  const left = Number(s.get('marginLeft')) || 0;
+  const right = Number(s.get('marginRight')) || 0;
+  const top = Number(s.get('marginTop')) || 0;
+  const bottom = Number(s.get('marginBottom')) || 0;
+  return { unit, left, right, top, height: Math.round((frame.geo.height - top - bottom) / unit) };
 }
 
 /**
@@ -118,19 +161,25 @@ export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackF
       if (!result.unknown.includes(cell.deviceId)) result.unknown.push(cell.deviceId);
       continue;
     }
+    const { unit, left, right, top, height } = frameMetrics(frame);
+    const size = info.uSize && info.uSize > 0 ? info.uSize : 1;
     if (info.cabinetId !== frame.cabinetId) {
-      result.cabinetMismatch.push({ cellId: cell.id, code: info.code, deviceCabinet: info.cabinetCode, frameLabel: frame.label });
+      const topU = cell.geo ? height - Math.max(0, Math.round((cell.geo.y - top) / unit)) : null;
+      result.cabinetMismatch.push({
+        cellId: cell.id,
+        deviceId: cell.deviceId,
+        code: info.code,
+        deviceCabinet: info.cabinetCode,
+        frameId: frame.id,
+        frameCabinetId: frame.cabinetId ?? '',
+        frameLabel: frame.label,
+        dropU: topU === null ? null : Math.min(Math.max(topU - size + 1, 1), Math.max(height - size + 1, 1)),
+        rackU: height,
+        uSize: size,
+      });
       continue;
     }
-    const s = styleMap(frame.style);
-    const unit = Number(s.get('rackUnitSize')) || DEFAULT_UNIT;
-    const left = Number(s.get('marginLeft')) || 0;
-    const right = Number(s.get('marginRight')) || 0;
-    const top = Number(s.get('marginTop')) || 0;
-    const bottom = Number(s.get('marginBottom')) || 0;
     const fg = frame.geo;
-    const height = Math.round((fg.height - top - bottom) / unit);
-    const size = info.uSize && info.uSize > 0 ? info.uSize : 1;
     const place = { x: left, width: r1(fg.width - left - right), height: r1(size * unit), y: cell.geo?.y ?? top };
     if (info.u === null) {
       result.noU.push({ cellId: cell.id, code: info.code });

@@ -327,8 +327,9 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     cell: { style: '', label: code, width: 60, height: 60, attrs: {} },
   });
 
-  async function open(devices: unknown[], saved = '') {
+  async function open(devices: unknown[], saved = '', extra: Record<string, () => Response> = {}) {
     routeFetch({
+      ...extra,
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
       '/api/v1/diagrams/d1/content': () =>
         jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: `<mxfile><diagram id="p1">${wrap(saved)}</diagram></mxfile>`, svg: '<svg/>' }, devices }),
@@ -361,12 +362,14 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(await screen.findByText(/IMS đặt máy trong khung tủ theo U của kho/)).toBeInTheDocument();
   });
 
-  it('máy kho ghi tủ KHÁC (TU-01 thả vào khung TU-04) → không patch, báo một lần, không gọi API ghi nào', async () => {
-    const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')]);
+  it('máy kho ghi tủ KHÁC (TU-01 thả vào khung TU-04) → không đặt theo U, hỏi MỘT lần (hai lượt autosave), không gọi API ghi nào', async () => {
+    const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')], '', {
+      '/api/v1/catalog': () => jsonResponse(200, CATALOG),
+      '/api/v1/devices': () => jsonResponse(200, { items: [], total: 0 }),
+    });
     fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
     fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
-    const warnings = await screen.findAllByText(/Máy UPS-E2E-03 trong kho thuộc tủ TU-01, không phải tủ của khung "Tủ TU-04 · Mặt trước"/);
-    expect(warnings).toHaveLength(1);
+    expect(await screen.findAllByRole('dialog', { name: 'Chuyển máy sang tủ này?' })).toHaveLength(1);
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
     const writes = (vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][]).filter(([, init]) => init?.method && init.method !== 'GET' && !String(init.method).includes('GET'));
     expect(writes.every(([url]) => String(url).includes('/presence'))).toBe(true);
@@ -381,9 +384,109 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
 
   it('nhiều máy tủ khác cùng lúc (mở bản vẽ cũ) → MỘT lời báo liệt kê, không một chuỗi lời báo', async () => {
     const second = `<UserObject label="FW-E2E-01" ims_device_id="dev-fw" ims_device_code="FW-E2E-01" id="d2"><mxCell style="" vertex="1" parent="f4"><mxGeometry x="33" y="35.8" width="162" height="133.2" as="geometry"/></mxCell></UserObject>`;
-    const { fromDrawio } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01'), info('dev-fw', 'FW-E2E-01', 'cab-1', 'TU-01')]);
-    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03') + second) });
+    await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01'), info('dev-fw', 'FW-E2E-01', 'cab-1', 'TU-01')], body('dev-ups', 'UPS-E2E-03') + second, {
+      '/api/v1/catalog': () => jsonResponse(200, CATALOG),
+      '/api/v1/devices': () => jsonResponse(200, { items: [], total: 0 }),
+    });
     expect(await screen.findByText(/2 Máy trong kho thuộc tủ khác khung tủ chúng nằm: UPS-E2E-03 \(TU-01\), FW-E2E-01 \(TU-01\)/)).toBeInTheDocument();
     expect(screen.queryByText(/Máy UPS-E2E-03 trong kho thuộc tủ TU-01/)).toBeNull();
+    // Nút trên lời báo mở danh sách; chọn một máy là mở hộp chuyển của máy đó.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Chuyển máy sang tủ…' }));
+    const list = await screen.findByRole('dialog', { name: 'Máy nằm trong khung tủ khác tủ trong kho' });
+    await user.click(within(list).getByRole('button', { name: 'Chuyển máy sang tủ này — FW-E2E-01' }));
+    expect(await screen.findByText(/Chuyển FW-E2E-01 từ TU-01 sang TU-04/)).toBeInTheDocument();
+  });
+
+  /* Q-23 06/10: kéo máy vào khung tủ KHÁC tủ trong kho → hỏi trước "Chuyển máy sang tủ này", không ghi ngầm. */
+  const CATALOG = {
+    sites: [],
+    cabinets: [
+      { id: 'cab-1', siteId: 's1', siteCode: 'T', code: 'TU-01', description: null, uHeight: 42, active: true },
+      { id: 'cab-4', siteId: 's1', siteCode: 'T', code: 'TU-04', description: null, uHeight: 42, active: true },
+    ],
+    deviceTypes: [],
+    vendors: [],
+    departments: [],
+    ispProviders: [],
+    servicePorts: [],
+  };
+  const outside = (deviceId: string, code: string) =>
+    `<UserObject label="Tủ TU-04 · Mặt trước" ims_cabinet_id="cab-4" id="f4"><mxCell style="${RACK}" vertex="1" parent="1"><mxGeometry x="250" y="20" width="204" height="664.6" as="geometry"/></mxCell></UserObject>` +
+    `<mxCell id="note" value="Ghi chú" style="text;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="80" height="20" as="geometry"/></mxCell>` +
+    `<UserObject label="${code}" ims_device_id="${deviceId}" ims_device_code="${code}" id="d1"><mxCell style="shape=image;" vertex="1" parent="1"><mxGeometry x="700" y="300" width="60" height="60" as="geometry"/></mxCell></UserObject>`;
+  const moveRoutes = (patched: { body: unknown }[], occupants: unknown[] = [{ id: 'dev-sw', code: 'SW-E2E-28', rackUStart: 28, rackUSize: 1 }]) => ({
+    '/api/v1/catalog': () => jsonResponse(200, CATALOG),
+    '/api/v1/devices': () => jsonResponse(200, { items: occupants, total: occupants.length }),
+    '/api/v1/devices/dev-ups': () => {
+      patched.push({ body: null });
+      return jsonResponse(200, { device: { id: 'dev-ups' }, warnings: [] });
+    },
+  });
+  const deviceWrites = () =>
+    (vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][]).filter(([url, init]) => String(url).includes('/api/v1/devices/') && init?.method === 'PATCH');
+
+  it('kéo máy tủ TU-01 vào khung TU-04 → hộp xác nhận nêu đủ tủ cũ, tủ mới, U (U trống gần chỗ thả), Số U; Huỷ → ô về chỗ cũ, không ghi kho', async () => {
+    const patched: { body: unknown }[] = [];
+    const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')], outside('dev-ups', 'UPS-E2E-03'), moveRoutes(patched));
+    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
+    const dialog = await screen.findByRole('dialog', { name: 'Chuyển máy sang tủ này?' });
+    // Thả ở U28 nhưng U28 đã có SW-E2E-28 → đề xuất U trống gần nhất.
+    expect(await within(dialog).findByText('Chuyển UPS-E2E-03 từ TU-01 sang TU-04, U bắt đầu = 27, Số U = 1.')).toBeInTheDocument();
+    expect(deviceWrites()).toHaveLength(0);
+    const user = userEvent.setup();
+    await user.click(within(dialog).getByRole('button', { name: 'Huỷ, đưa máy về chỗ cũ' }));
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'export' && m.format === 'xml')).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', currentPage: 0, xml: `<mxfile><diagram id="p1">${wrap(body('dev-ups', 'UPS-E2E-03'))}</diagram></mxfile>` });
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { parent: string; previous: string; geometry: string }> } } } } };
+    expect(patch.patch.u.p1.cells.u.d1).toEqual({ parent: '1', previous: 'note', geometry: '<mxGeometry x="700" y="300" width="60" height="60" as="geometry"/>' });
+    expect(deviceWrites()).toHaveLength(0);
+  });
+
+  it('U nhập đã có máy → báo tại ô, nút Chuyển tắt; đổi U trống → Chuyển gọi PATCH thiết bị (tủ + site + U) rồi đặt lại ô đúng U mới', async () => {
+    const patched: { body: unknown }[] = [];
+    const { fromDrawio, messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')], outside('dev-ups', 'UPS-E2E-03'), moveRoutes(patched));
+    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
+    const dialog = await screen.findByRole('dialog', { name: 'Chuyển máy sang tủ này?' });
+    const field = await within(dialog).findByRole('textbox', { name: 'U bắt đầu' });
+    const user = userEvent.setup();
+    await user.clear(field);
+    await user.type(field, '28');
+    expect(await within(dialog).findByText(/Chỗ U28 đang có SW-E2E-28/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Chuyển máy' })).toBeDisabled();
+    await user.clear(field);
+    await user.type(field, '30');
+    expect(within(dialog).getByText('Chuyển UPS-E2E-03 từ TU-01 sang TU-04, U bắt đầu = 30, Số U = 1.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Chuyển máy' }));
+    await vi.waitFor(() => expect(deviceWrites()).toHaveLength(1));
+    const [, init] = deviceWrites()[0];
+    expect(JSON.parse(String(init!.body))).toEqual({ siteId: 's1', cabinetId: 'cab-4', rackUStart: 30, rackUSize: 1 });
+    expect(await screen.findByText('Đã chuyển UPS-E2E-03 sang tủ TU-04 ở U30 trong kho.')).toBeInTheDocument();
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'export' && m.format === 'xml')).toBe(true));
+    fromDrawio({ event: 'export', format: 'xml', currentPage: 0, xml: `<mxfile><diagram id="p1">${wrap(body('dev-ups', 'UPS-E2E-03'))}</diagram></mxfile>` });
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { geometry: string }> } } } } };
+    // U30 của tủ 42U: cách đỉnh lòng tủ 12U.
+    expect(patch.patch.u.p1.cells.u.d1.geometry).toBe('<mxGeometry x="33" y="198.6" width="162" height="14.8" as="geometry"/>');
+  });
+
+  it('mở bản vẽ có máy nằm sai khung → lời báo có nút "Chuyển máy sang tủ này" mở cùng hộp (Huỷ thì không dời ô)', async () => {
+    const patched: { body: unknown }[] = [];
+    const { messages } = await open([info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01')], body('dev-ups', 'UPS-E2E-03'), moveRoutes(patched));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Chuyển máy sang tủ này' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chuyển máy sang tủ này?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Huỷ' }));
+    expect(messages().some((m) => m.action === 'patch')).toBe(false);
+    expect(deviceWrites()).toHaveLength(0);
+  });
+
+  it('máy đã thanh lý trong khung tủ khác → không mời chuyển', async () => {
+    const retired = { ...info('dev-ups', 'UPS-E2E-03', 'cab-1', 'TU-01'), status: 'retired' };
+    const { fromDrawio } = await open([retired], outside('dev-ups', 'UPS-E2E-03'), moveRoutes([]));
+    fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
+    expect(await screen.findByText('UPS-E2E-03 đã thanh lý — không chuyển tủ được.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Chuyển máy sang tủ này?' })).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rackFit, type RackFitDevice } from './rack-fit';
+import { cellPlacement, rackFit, type RackFitDevice } from './rack-fit';
 
 const CAB_01 = 'cab-01';
 const CAB_04 = 'cab-04';
@@ -48,7 +48,29 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
   it('kho ghi TỦ KHÁC (máy TU-TOWER-01 thả vào khung TU-TOWER-04) → không đặt theo U, không đổi kho, báo lại', () => {
     const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'UPS-03', 'f4', { y: 228.2, h: 59.2 })), INFO);
     expect(result.updates).toEqual({});
-    expect(result.cabinetMismatch).toEqual([{ cellId: 'd1', code: 'UPS-03', deviceCabinet: 'TU-TOWER-01', frameLabel: 'Tủ TU-TOWER-04 · Mặt trước' }]);
+    expect(result.cabinetMismatch).toEqual([
+      {
+        cellId: 'd1',
+        deviceId: 'UPS-03',
+        code: 'UPS-03',
+        deviceCabinet: 'TU-TOWER-01',
+        frameId: 'f4',
+        frameCabinetId: CAB_04,
+        frameLabel: 'Tủ TU-TOWER-04 · Mặt trước',
+        // Đỉnh ô ở y 228.2 = cách đỉnh lòng tủ 14U → hàng trên cùng là U28; máy 1U bắt đầu ở U28.
+        dropU: 28,
+        rackU: 42,
+        uSize: 1,
+      },
+    ]);
+  });
+
+  it('U nơi thả của máy nhiều U: hàng trên cùng ở chỗ thả, U bắt đầu = hàng đó − (Số U − 1); chạm đáy thì kẹp về U1', () => {
+    const info = new Map([...INFO, ['BIG-01', { code: 'BIG-01', cabinetId: CAB_01, cabinetCode: 'TU-TOWER-01', u: 9, uSize: 3 }]]);
+    const top = rackFit(model(frame('f4', CAB_04) + device('d1', 'BIG-01', 'f4', { y: 21, h: 44.4 })), info);
+    expect(top.cabinetMismatch[0]).toMatchObject({ dropU: 40, uSize: 3 });
+    const bottom = rackFit(model(frame('f4', CAB_04) + device('d1', 'BIG-01', 'f4', { y: 21 + 41 * 14.8, h: 14.8 })), info);
+    expect(bottom.cabinetMismatch[0]).toMatchObject({ dropU: 1 });
   });
 
   it('khung MẶT SAU của bản vẽ cũ (tủ nay chỉ vẽ mặt trước): không đặt theo U, không báo lệch tủ', () => {
@@ -86,5 +108,18 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
     const column = `<UserObject label="Tủ · Chưa khai U" ims_cabinet_id="${CAB_04}" id="col"><mxCell style="swimlane;container=1;childLayout=stackLayout;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="300" as="geometry"/></mxCell></UserObject>`;
     const xml = model(plain + column + device('d1', 'SW-01', 'f9', { y: 10, h: 59.2 }) + device('d2', 'SRV-02', 'col', { y: 38, h: 60 }));
     expect(rackFit(xml, INFO).updates).toEqual({});
+  });
+});
+
+describe('cellPlacement — chỗ cũ của một ô để đưa về khi người vẽ huỷ chuyển tủ', () => {
+  it('cha, ô đứng trước trong cùng cha, hình học nguyên chuỗi', () => {
+    const xml = model(frame('f4', CAB_04) + device('d0', 'SW-01', 'f4', { y: 10, h: 14.8 }) + device('d1', 'SRV-02', 'f4', { y: 40, h: 29.6 }));
+    expect(cellPlacement(xml, 'd1')).toEqual({
+      parent: 'f4',
+      previous: 'd0',
+      geometry: '<mxGeometry x="33" y="40" width="162" height="29.6" as="geometry"/>',
+    });
+    expect(cellPlacement(xml, 'd0')).toMatchObject({ parent: 'f4', previous: '' });
+    expect(cellPlacement(xml, 'khong-co')).toBeNull();
   });
 });

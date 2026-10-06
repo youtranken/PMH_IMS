@@ -45,3 +45,20 @@ export function rackPlacement(start: string, size: string): { key: string; unit:
   if (!start.trim() || !size.trim() || !Number.isInteger(s) || !Number.isInteger(n) || s < 1 || n < 1) return null;
   return { key: n === 1 ? 'devices.rackAtOne' : 'devices.rackAtMany', unit: rackUnitLabel(s, n) ?? '' };
 }
+
+/**
+ * U bắt đầu còn trống gần `want` nhất cho một máy `size` U trong tủ cao `height` (bỏ qua chính máy
+ * `selfId`); cách đều hai phía thì lấy phía dưới. `null` = không còn khe nào vừa. Server vẫn là
+ * trọng tài chồng U — đây chỉ để đề xuất sẵn một U hợp lệ.
+ */
+export function nearestFreeU(want: number, size: number, height: number, occupants: readonly RackOccupant[], selfId: string | null): number | null {
+  const highest = height - size + 1;
+  if (highest < 1) return null;
+  const from = Math.min(Math.max(want, 1), highest);
+  const fits = (start: number) => start >= 1 && start <= highest && !rackClash({ start, size }, occupants, selfId);
+  for (let d = 0; d < height; d += 1) {
+    if (fits(from - d)) return from - d;
+    if (fits(from + d)) return from + d;
+  }
+  return null;
+}

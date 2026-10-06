@@ -2,9 +2,9 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
-import { apiFetch } from '@/lib/api-client';
-import { rackClash, rackPlacement, rackUnitLabel, type RackOccupant } from '@/lib/rack-units';
+import { rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
 import { RackElevation } from '@/ui/rack-elevation';
+import { useCabinetOccupants } from '@/ui/use-cabinet-occupants';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -199,20 +199,8 @@ export function DeviceForm({
   );
   const cabinet = (lists.data?.cabinets ?? []).find((c) => c.id === form.cabinetId) ?? null;
   const cabinetLabel = cabinet ? `${cabinet.siteCode} · ${cabinet.code}` : '';
-  /*
-   * Máy đang ở tủ đã chọn (danh sách mặc định đã trừ máy thanh lý — máy đó rời tủ thật): form báo
-   * chồng U tại ô TRƯỚC khi lưu. Server vẫn là trọng tài (khoá theo tủ + ràng buộc EXCLUDE).
-   */
-  const occupants = useQuery({
-    queryKey: ['devices', 'cabinet-occupants', form.cabinetId],
-    queryFn: () =>
-      apiFetch<{ items: DeviceRow[] }>(`/api/v1/devices?${new URLSearchParams({ cabinetId: form.cabinetId, limit: '200' }).toString()}`),
-    enabled: Boolean(form.cabinetId),
-    select: (page): RackOccupant[] =>
-      (page.items ?? [])
-        .filter((row) => row.rackUStart != null && row.rackUSize != null)
-        .map((row) => ({ id: row.id, code: row.code, start: Number(row.rackUStart), size: Number(row.rackUSize) })),
-  });
+  // Máy đang ở tủ đã chọn: form báo chồng U tại ô TRƯỚC khi lưu.
+  const occupants = useCabinetOccupants(form.cabinetId || null);
   const placement = form.cabinetId ? rackPlacement(form.rackUStart, form.rackUSize) : null;
   const clash = placement
     ? rackClash({ start: Number(form.rackUStart), size: Number(form.rackUSize) }, occupants.data ?? [], device?.id ?? null)
