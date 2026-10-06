@@ -14,7 +14,7 @@ import { SystemConfigService } from '../src/modules/config-sys/system-config.ser
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
- * Danh mục Model thiết bị (Q-26, migration 0061) trên Postgres thật: khoá chuẩn hoá chống model tách
+ * Danh mục Model thiết bị (Q-26, migration 0062) trên Postgres thật: khoá chuẩn hoá chống model tách
  * đôi (kể cả hai lượt tạo cùng lúc), Gắn tủ ↔ Số U, số máy dùng, chặn xoá model còn máy, máy gán model
  * lấy loại + chuỗi model + Số U từ model, đổi Số U của model kiểm chồng U cho cả loạt máy.
  */
@@ -26,7 +26,7 @@ const noRetirement = {
   releaseAllWithin: () => Promise.resolve(),
 } as unknown as DeviceRetirementRegistry;
 
-describe('Model thiết bị · danh mục (0061, Q-26)', () => {
+describe('Model thiết bị · danh mục (0062, Q-26)', () => {
   let scratch: ScratchDb;
   let devices: DevicesService;
   let models: DeviceModelsService;

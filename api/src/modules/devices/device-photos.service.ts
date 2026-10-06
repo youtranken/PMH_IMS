@@ -43,7 +43,7 @@ const THUMB_CACHE_MAX = 200;
 
 const COLUMN: Record<PhotoSide, 'photoFrontFileId' | 'photoBackFileId'> = { front: 'photoFrontFileId', back: 'photoBackFileId' };
 
-/** Cùng phép chuẩn hoá với cột sinh `device_model.model_key` (0061) — để so với chuỗi model của máy. */
+/** Cùng phép chuẩn hoá với cột sinh `device_model.model_key` (0062) — để so với chuỗi model của máy. */
 const MODEL_KEY_SQL = (column: unknown) => sql`upper(regexp_replace(${column}, '[[:space:]_.-]', '', 'g'))`;
 
 /**
