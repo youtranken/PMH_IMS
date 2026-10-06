@@ -1,3 +1,5 @@
+import { cellIdOf, cellWrapper, parseDrawioXml } from './drawio-bridge';
+
 /**
  * Đi dây của kho trên màn SỬA (Q-23 05/10) — hàm THUẦN, test bảng dữ liệu ở `cable-route.test.ts`.
  *
@@ -52,16 +54,15 @@ interface PageEdge {
 const EMPTY: CableRouteResult = { updates: {}, count: 0, reattached: 0, stuck: [] };
 
 function readPage(xml: string, pageId: string): { edges: PageEdge[]; devices: Map<string, { deviceId: string; parent: string | null }> } | null {
-  if (!xml || !xml.trim()) return null;
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) return null;
+  const doc = parseDrawioXml(xml);
+  if (!doc) return null;
   const page = Array.from(doc.getElementsByTagName('diagram')).find((d) => d.getAttribute('id') === pageId);
   if (!page) return null;
   const edges: PageEdge[] = [];
   const devices = new Map<string, { deviceId: string; parent: string | null }>();
   for (const cell of Array.from(page.getElementsByTagName('mxCell'))) {
-    const wrapper = cell.parentElement && (cell.parentElement.nodeName === 'UserObject' || cell.parentElement.nodeName === 'object') ? cell.parentElement : null;
-    const id = (wrapper ?? cell).getAttribute('id') ?? '';
+    const wrapper = cellWrapper(cell);
+    const id = cellIdOf(cell);
     const deviceId = wrapper?.getAttribute('ims_device_id');
     if (deviceId) devices.set(id, { deviceId, parent: cell.getAttribute('parent') });
     const linkId = wrapper?.getAttribute('ims_link_id');

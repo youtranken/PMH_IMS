@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cellIdOf,
+  cellWrapper,
   deviceCellJson,
   deviceIdsInXml,
   insertPatch,
@@ -8,6 +10,7 @@ import {
   layerIdOf,
   nextInsertPosition,
   pageIds,
+  parseDrawioXml,
   placeCells,
 } from './drawio-bridge';
 
@@ -161,5 +164,42 @@ describe('nextInsertPosition + growBounds', () => {
     expect(bounds).toEqual({ x: 40, y: 40, width: 60, height: 60 });
     expect(nextInsertPosition(bounds)).toEqual({ x: 140, y: 40 });
     expect(growBounds(bounds, { x: 140, y: 30, width: 100, height: 30 })).toEqual({ x: 40, y: 30, width: 200, height: 70 });
+  });
+});
+
+/*
+ * Một chỗ đọc XML draw.io cho mọi cầu nối của màn sơ đồ: XML rỗng / hỏng là "không có gì", và ô
+ * bọc chỉ là `<UserObject>` / `<object>` — phần tử lạ khác bọc `<mxCell>` không mượn được id.
+ */
+describe('parseDrawioXml', () => {
+  it.each([
+    ['rỗng', '', false],
+    ['toàn khoảng trắng', '   \n', false],
+    ['hỏng (thẻ không đóng)', '<mxfile><diagram id="p1">', false],
+    ['hợp lệ', '<mxfile><diagram id="p1"/></mxfile>', true],
+  ])('%s → %s', (_label, xml, ok) => {
+    expect(parseDrawioXml(xml) !== null).toBe(ok);
+  });
+});
+
+describe('cellWrapper / cellIdOf', () => {
+  const doc = parseDrawioXml(
+    '<root>' +
+      '<mxCell id="bare" parent="1"/>' +
+      '<UserObject id="uo" label="A"><mxCell parent="1"/></UserObject>' +
+      '<object id="ob" label="B"><mxCell parent="1"/></object>' +
+      '<Array as="points" id="arr"><mxCell id="inner" parent="1"/></Array>' +
+      '</root>',
+  )!;
+  const cells = Array.from(doc.getElementsByTagName('mxCell'));
+
+  it.each([
+    [0, null, 'bare'],
+    [1, 'UserObject', 'uo'],
+    [2, 'object', 'ob'],
+    [3, null, 'inner'],
+  ])('ô thứ %i: bọc %s, id %s', (index, wrapper, id) => {
+    expect(cellWrapper(cells[index])?.nodeName ?? null).toBe(wrapper);
+    expect(cellIdOf(cells[index])).toBe(id);
   });
 });

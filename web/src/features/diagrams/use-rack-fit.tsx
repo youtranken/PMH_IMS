@@ -6,7 +6,7 @@ import { useToast } from '@/ui/toast';
 import type { DiagramDeviceInfo } from './diagram-api';
 import type { BarAction } from './diagram-bar';
 import { escapeXmlAttr, pageIds } from './drawio-bridge';
-import { columnPlacement, outsidePlacement, rackFit, type CellMove, type RackFitDevice, type RackMismatch } from './rack-fit';
+import { cellBox, columnPlacement, outsidePlacement, rackFit, type CellMove, type RackFitDevice, type RackMismatch } from './rack-fit';
 import { RackMoveDialog, RackMoveListDialog, type RackMoved } from './rack-move-dialog';
 
 function toFit(info: DiagramDeviceInfo): RackFitDevice & { retired: boolean } {
@@ -54,17 +54,6 @@ export interface RackColumnSpec {
  * nút mở cùng hộp; menu có "Chuyển máy sang tủ…" liệt kê mọi máy như thế. Máy cùng tủ chưa khai U
  * vừa kéo vào khung thì hỏi khai U (cùng hộp); Hủy đưa ô vào cột "Chưa khai U" của tủ.
  */
-/** Vị trí + bề rộng của ô `id` trong XML (x/y vắng = 0); `null` = không có ô / không có hình học. */
-function boxOf(xml: string, id: string): { x: number; y: number; width: number } | null {
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  const el = Array.from(doc.querySelectorAll('UserObject, object, mxCell')).find((e) => e.getAttribute('id') === id);
-  const cell = el?.nodeName === 'mxCell' ? el : el?.querySelector('mxCell');
-  const geo = cell ? Array.from(cell.children).find((c) => c.tagName === 'mxGeometry') : null;
-  if (!geo) return null;
-  const num = (name: string) => Number(geo.getAttribute(name) ?? 0) || 0;
-  return { x: num('x'), y: num('y'), width: num('width') };
-}
-
 export function useRackFit({
   devices,
   initialXml,
@@ -199,7 +188,7 @@ export function useRackFit({
     if (!rackColumn || !frame) return false;
     const info = known.current.get(item.deviceId);
     const size = info?.freeSize ?? { width: 60, height: 60 };
-    const frameBox = boxOf(file, item.frameId);
+    const frameBox = cellBox(file, item.frameId);
     if (!frameBox) return false;
     const columnId = `ims-col-${item.frameCabinetId}-${Date.now().toString(36)}`;
     const label = t('diagrams.rack.columnLabel', { code: info?.cabinetCode ?? '' });

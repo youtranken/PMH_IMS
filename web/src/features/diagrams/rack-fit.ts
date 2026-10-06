@@ -1,5 +1,6 @@
 import { nearestFreeU, type RackOccupant } from '@/lib/rack-units';
 import { bindEdgeValue } from './cable-diff';
+import { cellIdOf, cellWrapper, parseDrawioXml, wrapperAttrs } from './drawio-bridge';
 
 /**
  * Máy trong khung tủ trên màn SỬA (Q-23 05/10, 06/10) — hàm THUẦN, test bảng dữ liệu ở
@@ -135,18 +136,15 @@ interface Cell {
 }
 
 function readCells(xml: string): Cell[] {
-  if (!xml || !xml.trim()) return [];
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) return [];
+  const doc = parseDrawioXml(xml);
+  if (!doc) return [];
   return Array.from(doc.getElementsByTagName('mxCell')).map((cell) => {
-    const wrapper = cell.parentElement && (cell.parentElement.nodeName === 'UserObject' || cell.parentElement.nodeName === 'object') ? cell.parentElement : null;
+    const wrapper = cellWrapper(cell);
     const g = Array.from(cell.children).find((c) => c.tagName === 'mxGeometry');
     const num = (name: string) => Number(g?.getAttribute(name) ?? 0) || 0;
-    const attrs: Record<string, string> = {};
-    if (wrapper) for (const attr of Array.from(wrapper.attributes)) if (attr.name !== 'id') attrs[attr.name] = attr.value;
     return {
-      id: (wrapper ?? cell).getAttribute('id') ?? '',
-      attrs,
+      id: cellIdOf(cell),
+      attrs: wrapperAttrs(wrapper),
       parent: cell.getAttribute('parent'),
       style: cell.getAttribute('style') ?? '',
       deviceId: wrapper?.getAttribute('ims_device_id') || null,
@@ -156,6 +154,12 @@ function readCells(xml: string): Cell[] {
       geometryXml: g ? new XMLSerializer().serializeToString(g).replace(/\s+xmlns="[^"]*"/, '') : null,
     };
   });
+}
+
+/** Vị trí + bề rộng của ô `id` (x/y vắng = 0); `null` = không có ô, không có hình học, XML hỏng. */
+export function cellBox(xml: string, id: string): { x: number; y: number; width: number } | null {
+  const geo = readCells(xml).find((c) => c.id === id)?.geo;
+  return geo ? { x: geo.x, y: geo.y, width: geo.width } : null;
 }
 
 /**

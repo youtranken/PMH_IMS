@@ -1,4 +1,5 @@
 import { paintImsStyle } from '@/ui/drawio-protocol';
+import { cellIdOf, parseDrawioXml } from './drawio-bridge';
 
 /**
  * Nhãn cổng ở HAI ĐẦU dây của kho (Q-23 06/10) — hàm THUẦN, test bảng ở `cable-ends.test.ts`.
@@ -39,8 +40,8 @@ export function portEndIds(edgeId: string): string[] {
 
 function existingIds(xml: string, ids: string[]): Set<string> {
   const found = new Set<string>();
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) return found;
+  const doc = parseDrawioXml(xml);
+  if (!doc) return found;
   for (const tag of ['mxCell', 'UserObject', 'object']) {
     for (const el of Array.from(doc.getElementsByTagName(tag))) {
       const id = el.getAttribute('id');
@@ -85,13 +86,12 @@ export function portEndPatch(
  * không chỉ theo id: nét nhân bản / dán mang theo bản sao nhãn với id mới do draw.io đặt.
  */
 export function portEndRemoval(xml: string, edgeId: string): string[] {
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) return [];
+  const doc = parseDrawioXml(xml);
+  if (!doc) return [];
   const out: string[] = [];
   for (const cell of Array.from(doc.getElementsByTagName('mxCell'))) {
     if (cell.getAttribute('parent') !== edgeId) continue;
-    const wrapper = cell.parentElement && cell.parentElement.nodeName !== 'root' ? cell.parentElement : null;
-    const id = (wrapper ?? cell).getAttribute('id') ?? '';
+    const id = cellIdOf(cell);
     const marked = (cell.getAttribute('style') ?? '').split(';').includes(PORT_END_MARK);
     if (id && (marked || id === edgeId + SUFFIX.source || id === edgeId + SUFFIX.target)) out.push(id);
   }

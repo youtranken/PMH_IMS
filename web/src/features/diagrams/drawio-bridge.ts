@@ -117,33 +117,57 @@ export function placeCells(
   return { cells, bounds };
 }
 
-function parseXml(xml: string): Document | null {
-  if (!xml) return null;
+/**
+ * Đọc XML draw.io — chỗ DUY NHẤT mọi cầu nối của màn sơ đồ parse XML trang (AD-15). Rỗng hoặc hỏng
+ * → `null`: Chrome trả nửa tài liệu dựng được trước chỗ lỗi kèm `<parsererror>`, đọc tiếp nửa đó là
+ * dựng lệnh `patch` trên một bản vẽ không có thật.
+ */
+export function parseDrawioXml(xml: string): Document | null {
+  if (!xml || !xml.trim()) return null;
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
   return doc.getElementsByTagName('parsererror').length > 0 ? null : doc;
 }
 
+/**
+ * Phần tử bọc của một `<mxCell>`: draw.io giữ id + thuộc tính dữ liệu (`ims_*`, `label`) trên
+ * `<UserObject>` / `<object>` bọc ngoài. Chỉ hai thẻ đó — phần tử khác chứa `<mxCell>` không phải ô
+ * bọc và không cho ô mượn id.
+ */
+export function cellWrapper(cell: Element): Element | null {
+  const parent = cell.parentElement;
+  return parent && (parent.nodeName === 'UserObject' || parent.nodeName === 'object') ? parent : null;
+}
+
+/** id của ô: của phần tử bọc nếu có, không thì của chính `<mxCell>`. */
+export function cellIdOf(cell: Element): string {
+  return (cellWrapper(cell) ?? cell).getAttribute('id') ?? '';
+}
+
+/** Thuộc tính dữ liệu của phần tử bọc (trừ `id`) — giữ nguyên khi dựng lại `xmlValue`. */
+export function wrapperAttrs(wrapper: Element | null): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  if (wrapper) for (const attr of Array.from(wrapper.attributes)) if (attr.name !== 'id') attrs[attr.name] = attr.value;
+  return attrs;
+}
+
 export function pageIds(xml: string): string[] {
-  const doc = parseXml(xml);
+  const doc = parseDrawioXml(xml);
   if (!doc) return [];
   return Array.from(doc.getElementsByTagName('diagram')).map((d) => d.getAttribute('id') ?? '');
 }
 
 /** Ô nắm id/parent: `<mxCell>` trần, hoặc `<UserObject>`/`<object>` bọc một `<mxCell>`. */
 function cellsOf(page: Element): { id: string; parent: string | null; node: Element }[] {
-  return Array.from(page.getElementsByTagName('mxCell')).map((cell) => {
-    const wrapper = cell.parentElement && cell.parentElement.nodeName !== 'root' ? cell.parentElement : null;
-    return {
-      id: (wrapper ?? cell).getAttribute('id') ?? '',
-      parent: cell.getAttribute('parent'),
-      node: wrapper ?? cell,
-    };
-  });
+  return Array.from(page.getElementsByTagName('mxCell')).map((cell) => ({
+    id: cellIdOf(cell),
+    parent: cell.getAttribute('parent'),
+    node: cellWrapper(cell) ?? cell,
+  }));
 }
 
 /** Lớp đầu tiên của trang (con trực tiếp của ô gốc) — chỗ draw.io đặt hình mới. */
 export function layerIdOf(xml: string, pageId: string): string | null {
-  const doc = parseXml(xml);
+  const doc = parseDrawioXml(xml);
   if (!doc) return null;
   const page = Array.from(doc.getElementsByTagName('diagram')).find((d) => d.getAttribute('id') === pageId);
   if (!page) return null;
@@ -157,7 +181,7 @@ export function layerIdOf(xml: string, pageId: string): string | null {
  * thì draw.io chèn hình làm con đầu tiên, tức nằm dưới mọi hình đã vẽ.
  */
 export function lastChildId(xml: string, pageId: string, parentId: string): string | null {
-  const doc = parseXml(xml);
+  const doc = parseDrawioXml(xml);
   if (!doc) return null;
   const page = Array.from(doc.getElementsByTagName('diagram')).find((d) => d.getAttribute('id') === pageId);
   if (!page) return null;
@@ -196,7 +220,7 @@ export function growBounds(bounds: Bounds | null, rect: Bounds): Bounds {
 
 /** Máy đã có ô trên bản vẽ (mọi trang) — hộp "Thiết bị kho" hiện "đã có" thay vì chèn lần hai. */
 export function deviceIdsInXml(xml: string): Set<string> {
-  const doc = parseXml(xml);
+  const doc = parseDrawioXml(xml);
   const ids = new Set<string>();
   if (!doc) return ids;
   for (const tag of ['UserObject', 'object']) {

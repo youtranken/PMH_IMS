@@ -1,5 +1,5 @@
 import { bindEdgeValue } from './cable-diff';
-import { escapeXmlAttr, type DrawioCellJson } from './drawio-bridge';
+import { cellIdOf, cellWrapper, escapeXmlAttr, parseDrawioXml, wrapperAttrs, type DrawioCellJson } from './drawio-bridge';
 import { RACK_LABEL_STYLE, withLabelPlacement } from './rack-fit';
 
 /**
@@ -22,33 +22,22 @@ export interface FrameCandidate {
   attrs: Record<string, string>;
 }
 
-function parse(xml: string): Document | null {
-  if (!xml || !xml.trim()) return null;
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  return doc.getElementsByTagName('parsererror').length > 0 ? null : doc;
-}
-
 function plain(value: string): string {
   return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** Mọi hình (không phải ô thiết bị, nét dây, ô gốc hay lớp) trên các trang của tệp. */
 export function frameCandidates(xml: string): FrameCandidate[] {
-  const doc = parse(xml);
+  const doc = parseDrawioXml(xml);
   if (!doc) return [];
   const out: FrameCandidate[] = [];
   for (const cell of Array.from(doc.getElementsByTagName('mxCell'))) {
     if (cell.getAttribute('vertex') !== '1') continue;
-    const wrapper = cell.parentElement && (cell.parentElement.nodeName === 'UserObject' || cell.parentElement.nodeName === 'object') ? cell.parentElement : null;
+    const wrapper = cellWrapper(cell);
     if (wrapper?.getAttribute('ims_device_id')) continue;
-    const attrs: Record<string, string> = {};
-    if (wrapper) {
-      for (const attr of Array.from(wrapper.attributes)) if (attr.name !== 'id') attrs[attr.name] = attr.value;
-    } else {
-      attrs.label = cell.getAttribute('value') ?? '';
-    }
+    const attrs = wrapper ? wrapperAttrs(wrapper) : { label: cell.getAttribute('value') ?? '' };
     out.push({
-      id: (wrapper ?? cell).getAttribute('id') ?? '',
+      id: cellIdOf(cell),
       label: plain(attrs.label ?? ''),
       childDiagramId: attrs.ims_child_diagram_id || null,
       subnetId: attrs.ims_subnet_id || null,

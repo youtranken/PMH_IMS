@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellPlacement, columnPlacement, outsidePlacement, rackFit, type RackFitDevice } from './rack-fit';
+import { cellBox, cellPlacement, columnPlacement, outsidePlacement, rackFit, type RackFitDevice } from './rack-fit';
 
 const CAB_01 = 'cab-01';
 const CAB_04 = 'cab-04';
@@ -204,5 +204,24 @@ describe('cellPlacement — chỗ cũ của một ô để đưa về khi ngư�
     });
     expect(cellPlacement(xml, 'd0')).toMatchObject({ parent: 'f4', previous: '' });
     expect(cellPlacement(xml, 'khong-co')).toBeNull();
+  });
+});
+
+describe('cellBox — vị trí + bề rộng một ô (khung tủ khi đưa máy ra / vào cột)', () => {
+  it('ô trần, ô bọc UserObject; x/y vắng = 0; không có ô / không có hình học → null', () => {
+    const xml = model(
+      '<mxCell id="f1" vertex="1" parent="1"><mxGeometry x="10" y="20" width="160" height="600" as="geometry"/></mxCell>' +
+        '<UserObject id="u1" label="A"><mxCell vertex="1" parent="1"><mxGeometry width="80" height="40" as="geometry"/></mxCell></UserObject>' +
+        '<mxCell id="n1" vertex="1" parent="1"/>',
+    );
+    expect(cellBox(xml, 'f1')).toEqual({ x: 10, y: 20, width: 160 });
+    expect(cellBox(xml, 'u1')).toEqual({ x: 0, y: 0, width: 80 });
+    expect(cellBox(xml, 'n1')).toBeNull();
+    expect(cellBox(xml, 'khong-co')).toBeNull();
+  });
+
+  it('XML hỏng → null, không đọc nửa tài liệu trình duyệt kịp dựng trước chỗ lỗi', () => {
+    const broken = model('<mxCell id="f1" vertex="1" parent="1"><mxGeometry x="10" y="20" width="160" as="geometry"/></mxCell>').replace('</root>', '<mxCell id="x">');
+    expect(cellBox(broken, 'f1')).toBeNull();
   });
 });

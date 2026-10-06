@@ -75,4 +75,9 @@ describe('portEndRemoval — nét thôi mang kết nối (bản sao, "Chỉ vẽ
     const own = '<mxCell id="t1" value="ghi chú" style="edgeLabel;" vertex="1" connectable="0" parent="e1"><mxGeometry relative="1" as="geometry"/></mxCell>';
     expect(portEndRemoval(file(edge + copy + own), 'e1')).toEqual(['k9']);
   });
+
+  it('ô nằm trong phần tử lạ (không phải UserObject/object) giữ id của chính nó, không mượn id phần tử bọc', () => {
+    const odd = `<Array as="extra" id="arr1">${endCell('e1-ims-ps', 'x')}</Array>`;
+    expect(portEndRemoval(file(edge + odd), 'e1')).toEqual(['e1-ims-ps']);
+  });
 });

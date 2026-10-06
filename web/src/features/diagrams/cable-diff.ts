@@ -1,4 +1,4 @@
-import { escapeXmlAttr } from './drawio-bridge';
+import { cellIdOf, cellWrapper, escapeXmlAttr, parseDrawioXml, wrapperAttrs } from './drawio-bridge';
 
 /**
  * Phát hiện nét dây mới / nét đã khai vừa bị xoá trên màn SỬA (AD-18, Q-23 "vẽ là khai, có hỏi")
@@ -42,20 +42,18 @@ export interface NewEdge {
 
 function parse(xml: string): Parsed {
   const empty: Parsed = { devices: new Map(), edges: [] };
-  if (!xml || !xml.trim()) return empty;
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) return empty;
+  const doc = parseDrawioXml(xml);
+  if (!doc) return empty;
   const devices = new Map<string, ParsedDevice>();
   const edges: ParsedEdge[] = [];
   for (const cell of Array.from(doc.getElementsByTagName('mxCell'))) {
-    const wrapper = cell.parentElement && (cell.parentElement.nodeName === 'UserObject' || cell.parentElement.nodeName === 'object') ? cell.parentElement : null;
-    const id = (wrapper ?? cell).getAttribute('id') ?? '';
+    const wrapper = cellWrapper(cell);
+    const id = cellIdOf(cell);
     if (wrapper?.getAttribute('ims_device_id')) {
       devices.set(id, { deviceId: wrapper.getAttribute('ims_device_id') ?? '', code: wrapper.getAttribute('ims_device_code') ?? '' });
     }
     if (cell.getAttribute('edge') !== '1') continue;
-    const attrs: Record<string, string> = {};
-    if (wrapper) for (const attr of Array.from(wrapper.attributes)) if (attr.name !== 'id') attrs[attr.name] = attr.value;
+    const attrs = wrapperAttrs(wrapper);
     edges.push({
       id,
       source: cell.getAttribute('source') || null,

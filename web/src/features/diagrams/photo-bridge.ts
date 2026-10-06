@@ -1,4 +1,5 @@
 import { bindEdgeValue } from './cable-diff';
+import { cellIdOf, parseDrawioXml, wrapperAttrs } from './drawio-bridge';
 import { rackCellStyle } from './rack-fit';
 
 /**
@@ -42,15 +43,9 @@ export interface DeviceLook {
   back: { style: string; fileId: string; aspect: number } | null;
 }
 
-function parse(xml: string): Document | null {
-  if (!xml || !xml.trim()) return null;
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  return doc.getElementsByTagName('parsererror').length > 0 ? null : doc;
-}
-
 /** Ô thiết bị kho trên MỘT trang (lệnh `patch` sửa theo trang). */
 export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage[] {
-  const doc = parse(xml);
+  const doc = parseDrawioXml(xml);
   const page = doc ? Array.from(doc.getElementsByTagName('diagram')).find((d) => d.getAttribute('id') === pageId) : undefined;
   if (!page) return [];
   const out: DeviceCellOnPage[] = [];
@@ -66,18 +61,14 @@ export function deviceCellsOnPage(xml: string, pageId: string): DeviceCellOnPage
   const rackFaces = new Set(
     Array.from(page.getElementsByTagName('mxCell'))
       .filter((cell) => /(?:^|;)childLayout=rack(?:;|$)/.test(cell.getAttribute('style') ?? ''))
-      .map((cell) => {
-        const wrapper = cell.parentElement && (cell.parentElement.nodeName === 'UserObject' || cell.parentElement.nodeName === 'object') ? cell.parentElement : null;
-        return (wrapper ?? cell).getAttribute('id') ?? '';
-      }),
+      .map(cellIdOf),
   );
   for (const tag of ['UserObject', 'object']) {
     for (const el of Array.from(page.getElementsByTagName(tag))) {
       const deviceId = el.getAttribute('ims_device_id');
       const cell = el.getElementsByTagName('mxCell')[0];
       if (!deviceId || !cell) continue;
-      const attrs: Record<string, string> = {};
-      for (const attr of Array.from(el.attributes)) if (attr.name !== 'id') attrs[attr.name] = attr.value;
+      const attrs = wrapperAttrs(el);
       const photo = attrs.ims_photo === 'front' || attrs.ims_photo === 'back' ? attrs.ims_photo : null;
       out.push({
         id: el.getAttribute('id') ?? '',
