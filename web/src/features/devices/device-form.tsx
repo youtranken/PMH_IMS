@@ -32,6 +32,7 @@ import {
 } from '@/lib/device-types';
 import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
 import { DeviceModelField } from './device-model-field';
+import { ACCESS_KINDS, type AccessPoint } from './device-access';
 
 interface FormState {
   code: string;
@@ -40,6 +41,8 @@ interface FormState {
   model: string;
   /** Model danh mục đã chọn (Q-26); rỗng = máy "chưa có Model", chữ ở `model` lưu như cũ. */
   deviceModelId: string;
+  /** Truy cập quản trị; cổng giữ dạng chữ của ô nhập, đổi số lúc gửi. */
+  accessPoints: { kind: AccessPoint['kind']; address: string; port: string }[];
   serial: string;
   siteId: string;
   cabinetId: string;
@@ -72,12 +75,14 @@ function cloneState(source: DeviceRow): FormState {
     // Máy mới cùng lô không thể nằm đúng chỗ U của máy gốc (chồng U bị chặn — Q-23).
     rackUStart: '',
     rackUSize: '',
+    // Đường truy cập trỏ IP / tên của RIÊNG máy gốc.
+    accessPoints: [],
   };
 }
 
 /** Sau "Lưu và nhân bản": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
 function nextState(saved: FormState): FormState {
-  return { ...saved, code: '', serial: '', assignedTo: '', note: '', rackUStart: '', rackUSize: '' };
+  return { ...saved, code: '', serial: '', assignedTo: '', note: '', rackUStart: '', rackUSize: '', accessPoints: [] };
 }
 
 /** Các ô chọn trạng thái trong form SỬA. "Đã thanh lý" không có ở đây: API luôn từ chối đi
@@ -91,6 +96,7 @@ function initialState(device: DeviceRow | null): FormState {
     deviceTypeId: device?.deviceTypeId ?? '',
     model: device?.model ?? '',
     deviceModelId: device?.deviceModelId ?? '',
+    accessPoints: (device?.accessPoints ?? []).map((p) => ({ kind: p.kind, address: p.address, port: p.port ? String(p.port) : '' })),
     serial: device?.serial ?? '',
     siteId: device?.siteId ?? '',
     cabinetId: device?.cabinetId ?? '',
@@ -228,6 +234,8 @@ export function DeviceForm({
         : { cabinetId: '', rackUStart: '', rackUSize: '' }),
     }));
   };
+  const setAccess = (index: number, patch: Partial<FormState['accessPoints'][number]>) =>
+    set('accessPoints', form.accessPoints.map((point, i) => (i === index ? { ...point, ...patch } : point)));
   /** Gõ lại ô Model là bỏ model đã chọn — máy về "chưa có Model" với chữ đang gõ. */
   const typeModel = (term: string) => {
     setPicked(null);
@@ -609,6 +617,48 @@ export function DeviceForm({
           </Field>
         </FormSection>
 
+        <FormSection title={t('devices.access')} columns={1}>
+          <p className="field-hint muted">{t('devices.accessHint')}</p>
+          {form.accessPoints.map((point, index) => (
+            <div key={index} className="row" role="group" aria-label={`${t('devices.access')} ${index + 1}`}>
+              <Select
+                value={point.kind}
+                ariaLabel={`${t('devices.accessKind')} ${index + 1}`}
+                options={ACCESS_KINDS.map((kind) => ({ value: kind, label: t(`devices.accessKind_${kind}`) }))}
+                onChange={(value) => setAccess(index, { kind: value as AccessPoint['kind'] })}
+              />
+              <input
+                className="inp mono"
+                aria-label={`${t('devices.accessAddress')} ${index + 1}`}
+                placeholder="10.0.1.1"
+                maxLength={200}
+                value={point.address}
+                onChange={(e) => setAccess(index, { address: e.target.value })}
+              />
+              <input
+                className="inp"
+                aria-label={`${t('devices.accessPort')} ${index + 1}`}
+                inputMode="numeric"
+                placeholder={t('devices.accessPort')}
+                value={point.port}
+                onChange={(e) => setAccess(index, { port: e.target.value.replace(/\D/g, '') })}
+              />
+              <button type="button" className="btn sm ghost" onClick={() => set('accessPoints', form.accessPoints.filter((_, i) => i !== index))}>
+                {t('devices.accessRemove', { n: index + 1 })}
+              </button>
+            </div>
+          ))}
+          <div>
+            <button
+              type="button"
+              className="btn sm"
+              onClick={() => set('accessPoints', [...form.accessPoints, { kind: form.accessPoints.length === 0 ? 'web' : 'ssh', address: '', port: '' }])}
+            >
+              {t('devices.accessAdd')}
+            </button>
+          </div>
+        </FormSection>
+
         {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
             bao giờ" là MỘT câu chuyện, nên bốn ô đứng chung một hàng; hộp 1080px đủ chỗ cho 4
             cột mà không phải cuộn dọc qua hai hàng ngày tháng. */}
@@ -774,6 +824,9 @@ function buildBody(form: FormState): Record<string, unknown> {
     deviceTypeId: form.deviceTypeId,
     model: form.model.trim(),
     deviceModelId: form.deviceModelId || null,
+    accessPoints: form.accessPoints
+      .filter((point) => point.address.trim())
+      .map((point) => ({ kind: point.kind, address: point.address.trim(), port: point.port ? Number(point.port) : null })),
     serial: form.serial.trim(),
     siteId: form.siteId,
     cabinetId: form.cabinetId,

@@ -29,6 +29,8 @@ export interface DeviceRow {
   rackUSize?: number | null;
   /** Model danh mục (Q-26); trống = "chưa có Model". */
   deviceModelId?: string | null;
+  /** Truy cập quản trị (Q-26) — vắng ở dữ liệu giả của bài kiểm cũ. */
+  accessPoints?: { kind: 'web' | 'ssh' | 'telnet' | 'rdp' | 'winbox' | 'other'; address: string; port: number | null }[];
   createdAt: string;
   updatedAt: string;
 }

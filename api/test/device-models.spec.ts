@@ -135,6 +135,24 @@ describe('Model thiết bị · danh mục (0061, Q-26)', () => {
     expect(latest.changes).toMatchObject({ rackUSize: { before: 1, after: 2 } });
   });
 
+  it('Truy cập quản trị: lưu danh sách sạch; sửa RIÊNG các dòng vẫn ghi và có lịch sử đọc được; sai → 400', async () => {
+    const { device } = await devices.create(ACTOR, {
+      code: 'SW-E2E-MD-ACC',
+      name: 'Máy truy cập',
+      deviceTypeId: switchType,
+      accessPoints: [{ kind: 'web', address: ' 10.0.1.1 ', port: 443 }, { kind: 'ssh', address: '' }],
+    });
+    expect(device.accessPoints).toEqual([{ kind: 'web', address: '10.0.1.1', port: 443 }]);
+    const updated = await devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'web', address: '10.0.1.1', port: 443 }, { kind: 'ssh', address: '10.0.1.1', port: 22 }] });
+    expect(updated.device.accessPoints).toHaveLength(2);
+    const [latest] = await devices.history(device.id);
+    expect(latest.changes).toMatchObject({ accessPoints: { before: 'Web 10.0.1.1:443', after: 'Web 10.0.1.1:443; SSH 10.0.1.1:22' } });
+    // Gửi lại y hệt: không đổi gì, không thêm dòng lịch sử.
+    await devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'web', address: '10.0.1.1', port: 443 }, { kind: 'ssh', address: '10.0.1.1', port: 22 }] });
+    expect((await devices.history(device.id)).length).toBe(2);
+    await expect(devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'ftp', address: 'x' }] })).rejects.toMatchObject({ response: { code: 'DEVICE_ACCESS_INVALID' } });
+  });
+
   it('lượt dọn E2E (vùng devices của reset-e2e.mjs) gỡ được máy trỏ model bằng khoá ngoại', async () => {
     const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-CLEAN', rackMountable: false });
     await devices.create(ACTOR, { code: 'SW-E2E-MD-CLEAN', name: 'Máy dọn', deviceTypeId: switchType, deviceModelId: model.id });

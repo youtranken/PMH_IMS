@@ -95,6 +95,8 @@ export class DeviceBodyDto {
   @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'Số U phải là số nguyên.' }) @Min(1) @Max(60) rackUSize?: number | null;
   /** Model danh mục (Q-26); `null` hay chuỗi rỗng = bỏ gán, máy về "chưa có Model". */
   @IsOptional() @ValidateIf((_o, value) => value !== null && value !== '') @IsUUID(undefined, { message: 'Model không hợp lệ.' }) deviceModelId?: string | null;
+  /** Truy cập quản trị: từng dòng do `normalizeAccessPoints` kiểm (kiểu, địa chỉ, cổng). */
+  @IsOptional() @IsArray({ message: 'Truy cập quản trị phải là danh sách.' }) accessPoints?: unknown[];
 }
 
 class StatusDto {

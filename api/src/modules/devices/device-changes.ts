@@ -1,3 +1,4 @@
+import { accessSummary, type AccessPoint } from './device-access';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 
 /**
@@ -36,5 +37,12 @@ export function diffDevice(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
 ): RecordChanges {
-  return diffRecord(TRACKED_FIELDS, before, after);
+  const changes = diffRecord(TRACKED_FIELDS, before, after);
+  // `diffRecord` không so được mảng (coi mọi object là rỗng): so riêng, ghi chuỗi đọc được vào lịch sử.
+  if ('accessPoints' in after) {
+    const from = accessSummary((before.accessPoints as AccessPoint[] | undefined) ?? []);
+    const to = accessSummary((after.accessPoints as AccessPoint[] | undefined) ?? []);
+    if (from !== to) changes.accessPoints = { before: from || null, after: to || null };
+  }
+  return changes;
 }

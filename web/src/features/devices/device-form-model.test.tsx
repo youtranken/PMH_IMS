@@ -103,4 +103,23 @@ describe('Form thiết bị — Model (Q-26)', () => {
     // Form phía sau bị hộp modal che khỏi cây trợ năng nhưng giữ nguyên chữ đang nhập.
     expect(screen.getByRole('textbox', { name: 'Mã thiết bị', hidden: true })).toHaveValue('FW-E2E-1');
   });
+
+  it('Truy cập quản trị: thêm dòng Web + cổng; dòng bỏ trống địa chỉ không gửi; không có ô mật khẩu', async () => {
+    const calls = mockFetch();
+    renderForm();
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Mã thiết bị' }), 'FW-E2E-2');
+    await user.type(screen.getByRole('textbox', { name: 'Tên thiết bị' }), 'Firewall');
+    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(await screen.findByRole('option', { name: 'Switch' }));
+    await user.click(screen.getByRole('button', { name: '+ Thêm đường truy cập' }));
+    await user.type(screen.getByRole('textbox', { name: 'Địa chỉ 1' }), '10.0.1.1');
+    await user.type(screen.getByRole('textbox', { name: 'Cổng 1' }), '84a43');
+    expect(screen.getByRole('textbox', { name: 'Cổng 1' })).toHaveValue('8443');
+    await user.click(screen.getByRole('button', { name: '+ Thêm đường truy cập' }));
+    expect(screen.queryByLabelText(/Mật khẩu/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    const post = calls.find((c) => c.url === '/api/v1/devices' && c.method === 'POST');
+    expect(JSON.parse(post?.body ?? '{}').accessPoints).toEqual([{ kind: 'web', address: '10.0.1.1', port: 8443 }]);
+  });
 });

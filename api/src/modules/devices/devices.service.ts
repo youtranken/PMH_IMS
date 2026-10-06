@@ -29,6 +29,7 @@ import { rackUnitLabel } from '../../common/rack-units';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
+import { normalizeAccessPoints } from './device-access';
 import { deviceHistoryTable, deviceModelTable, deviceTable } from './devices.schema';
 import { rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 import type {
@@ -60,6 +61,8 @@ export interface DeviceInput {
   rackUSize?: number | null;
   /** Model danh mục (Q-26): có thì loại, chuỗi model và Số U lấy từ model. */
   deviceModelId?: string | null;
+  /** Truy cập quản trị — đầu vào thô, `normalizeAccessPoints` làm sạch và kiểm. */
+  accessPoints?: unknown;
 }
 
 /**
@@ -507,6 +510,7 @@ export class DevicesService {
     put('rackUStart', input.rackUStart);
     put('rackUSize', input.rackUSize);
     put('deviceModelId', input.deviceModelId === undefined ? undefined : (input.deviceModelId || null));
+    put('accessPoints', input.accessPoints === undefined ? undefined : normalizeAccessPoints(input.accessPoints));
 
     if (id === null) {
       for (const required of ['code', 'name', 'deviceTypeId'] as const) {

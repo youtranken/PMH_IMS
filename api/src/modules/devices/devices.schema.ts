@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
+import type { AccessPoint } from './device-access';
 
 /** citext: mã thiết bị so sánh không phân biệt hoa-thường ("sw-core-01" = "SW-CORE-01"). */
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
@@ -45,6 +46,8 @@ export const deviceTable = pgTable('device', {
   photoBackFileId: uuid('photo_back_file_id'),
   /** Model danh mục (0061, Q-26); trống = máy "chưa có Model", khai Số U / ảnh trên chính máy. */
   deviceModelId: uuid('device_model_id'),
+  /** Truy cập quản trị (0062): kiểu + địa chỉ + cổng; luật ở `normalizeAccessPoints`. */
+  accessPoints: jsonb('access_points').$type<AccessPoint[]>().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -12,6 +12,7 @@ import { DevicePhotosPanel, devicePhotosKey, type DevicePhotos } from "./device-
 import { DeviceOnDiagrams } from "./device-on-diagrams";
 import { DeviceDiagramLook, lookLevel } from "./device-diagram-look";
 import { Chevron } from "@/ui/chevron";
+import { accessView } from "./device-access";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
@@ -831,6 +832,34 @@ export function DeviceDetail({ me }: { me: Me }) {
                   </div>
                 ) : null}
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
+                {/* Truy cập quản trị (Q-26): đường vào máy — mật khẩu vẫn ở Két. */}
+                {(item.accessPoints ?? []).length > 0 ? (
+                  <div className="data-item">
+                    <dt>{t("devices.access")}</dt>
+                    <dd>
+                      {(item.accessPoints ?? []).map((point, index) => {
+                        const view = accessView(point);
+                        return (
+                          <div key={index}>
+                            <span className="muted">{t(`devices.accessKind_${point.kind}`)}</span>{" "}
+                            {view.href ? (
+                              <a href={view.href} target="_blank" rel="noopener noreferrer" className="mono">
+                                {view.text}
+                              </a>
+                            ) : view.command ? (
+                              <>
+                                <code>{view.command}</code>
+                                <CopyButton value={view.command} label={t("devices.accessCopy")} inline />
+                              </>
+                            ) : (
+                              <span className="mono">{view.text}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </dd>
+                  </div>
+                ) : null}
                 <DataItemIfSet label={t("devices.serial")} value={item.serial}>
                   <span className="mono">{item.serial}</span>
                   {/* Cùng kiểu nút chép với IP quản trị ngay bên cạnh: hai ô trong một khung mà
