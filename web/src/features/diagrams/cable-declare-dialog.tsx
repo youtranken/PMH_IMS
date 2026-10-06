@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
-import { freePorts, linksBetween, nextFreePort, portTakenBy, usedPorts, type PortLink, type PortMap } from '@/lib/port-types';
+import { freePortOptions, linksBetween, nextFreePort, outsideLayout, portTakenBy, usedPorts, type PortLink, type PortMap } from '@/lib/port-types';
+import { usePortPanel } from '@/ui/use-port-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
@@ -69,6 +70,9 @@ export function CableDeclareDialog({
   const target = { id: edge.targetDeviceId, code: edge.targetCode };
   const sourcePorts = useQuery({ queryKey: portsKey(source.id), queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${source.id}/ports`) });
   const targetPorts = useQuery({ queryKey: portsKey(target.id), queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${target.id}/ports`) });
+  // Máy có danh sách cổng (Q-26): gợi ý cổng vật lý còn trống; tên ngoài danh sách thì báo trước.
+  const sourcePanel = usePortPanel(source.id);
+  const targetPanel = usePortPanel(target.id);
   const active = cableTypes.filter((c) => c.active);
   const remembered = lastCable();
   const [sourcePort, setSourcePort] = useState('');
@@ -213,7 +217,7 @@ export function CableDeclareDialog({
               setSourcePort(value);
               if (serverError?.side === 'source') setServerError(null);
             }}
-            options={freePorts(sourcePorts.data)}
+            options={freePortOptions(sourcePorts.data, sourcePanel.data)}
             failed={sourcePorts.isError}
             placeholder={t('ports.phPort')}
             ariaLabel={t('diagrams.cable.portOf', { code: source.code })}
@@ -230,12 +234,22 @@ export function CableDeclareDialog({
               setTargetPort(value);
               if (serverError?.side === 'target') setServerError(null);
             }}
-            options={freePorts(targetPorts.data)}
+            options={freePortOptions(targetPorts.data, targetPanel.data)}
             failed={targetPorts.isError}
             placeholder={t('ports.phPort')}
             ariaLabel={t('diagrams.cable.portOf', { code: target.code })}
           />
         </Field>
+        {[
+          { code: source.code, panel: sourcePanel.data, label: sourcePort },
+          { code: target.code, panel: targetPanel.data, label: targetPort },
+        ]
+          .filter((side) => outsideLayout(side.panel, side.label))
+          .map((side) => (
+            <p key={side.code} className="field-warn" role="status" style={{ gridColumn: '1 / -1' }}>
+              {t('ports.outsideLayout', { port: side.label.trim(), code: side.code })}
+            </p>
+          ))}
         {fixes.length > 0 ? (
           <p className="cable-port-fixes" style={{ gridColumn: '1 / -1' }}>
             {fixes.map((fix) => (

@@ -186,6 +186,7 @@ export const VERB_KEY: Record<string, string> = {
   'model-updated': 'audit.verb.modelUpdated',
   'model-deleted': 'audit.verb.modelDeleted',
   'model-photos-changed': 'audit.verb.modelPhotosChanged',
+  'ports-layout': 'audit.verb.portsLayout',
   'device-detached': 'audit.verb.deviceDetached',
   renewed: 'audit.verb.renewed',
   expired: 'audit.verb.expired',

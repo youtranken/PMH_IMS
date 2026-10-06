@@ -8,6 +8,9 @@ export interface DeviceModel {
   rackMountable: boolean;
   uSize: number | null;
   photoFrontFileId: string | null;
+  /** Cổng mẫu (nhóm `pattern` + `kind`) và số cổng nó sinh ra. */
+  portTemplate: { pattern: string; kind: 'rj45' | 'sfp' | 'sfp+' | 'console' | 'other' }[];
+  portCount: number;
   /** Số máy đang trỏ tới model. */
   deviceCount: number;
   updatedAt: string;

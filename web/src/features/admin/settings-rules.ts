@@ -2,7 +2,7 @@
 export interface SettingRow {
   name: string;
   key: string;
-  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam' | 'files' | 'diagram';
+  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam' | 'files' | 'diagram' | 'devices';
   type: 'int' | 'text' | 'int_list';
   unit?:
     | 'seconds'

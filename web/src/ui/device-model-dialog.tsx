@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { DEVICE_MODELS_KEY, type DeviceModel } from '@/lib/device-models';
+import { expandPortTemplate, PORT_KINDS, PORT_PRESETS, type PortKind, type PortTemplateGroup } from '@/lib/port-template';
 import { uploadFile } from '@/lib/upload';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { FilePicker } from '@/ui/file-picker';
@@ -15,6 +16,14 @@ import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 
 /** Ảnh cho sơ đồ: JPG/PNG — bộ vẽ ảnh của server không giải mã WebP. */
 const PHOTO_ACCEPT = '.jpg,.jpeg,.png';
+
+const KIND_LABEL: Record<PortKind, string> = {
+  rj45: 'deviceModels.kindRj45',
+  sfp: 'deviceModels.kindSfp',
+  'sfp+': 'deviceModels.kindSfpPlus',
+  console: 'deviceModels.kindConsole',
+  other: 'deviceModels.kindOther',
+};
 
 interface Duplicate {
   id: string;
@@ -60,8 +69,13 @@ export function DeviceModelDialog({
     manufacturer: model?.manufacturer ?? '',
     rackMountable: model ? model.rackMountable : null as boolean | null,
     uSize: model?.uSize ? String(model.uSize) : '',
+    portTemplate: (model?.portTemplate ?? []) as PortTemplateGroup[],
   });
-  const [errors, setErrors] = useState<Partial<Record<'deviceTypeId' | 'model' | 'rack' | 'uSize', string>>>({});
+  // Xem trước không biết trần `device.port_template_max` — trần do server chặn và báo.
+  const preview = expandPortTemplate(form.portTemplate, Number.MAX_SAFE_INTEGER);
+  const setGroup = (index: number, patch: Partial<PortTemplateGroup>) =>
+    setForm({ ...form, portTemplate: form.portTemplate.map((g, i) => (i === index ? { ...g, ...patch } : g)) });
+  const [errors, setErrors] = useState<Partial<Record<'deviceTypeId' | 'model' | 'rack' | 'uSize' | 'ports', string>>>({});
   const [duplicate, setDuplicate] = useState<Duplicate | null>(null);
   const [busy, setBusy] = useState(false);
   const [cropping, setCropping] = useState<File | null>(null);
@@ -93,6 +107,7 @@ export function DeviceModelDialog({
     if (form.rackMountable === null) next.rack = t('deviceModels.rackRequired');
     const units = Number(form.uSize);
     if (form.rackMountable && (!Number.isInteger(units) || units < 1 || units > 60)) next.uSize = t('deviceModels.uSizeInvalid');
+    if (preview.error) next.ports = t(`deviceModels.portErr_${preview.error.key}`, { value: preview.error.value });
     setErrors(next);
     setDuplicate(null);
     if (Object.keys(next).length > 0) return;
@@ -102,6 +117,7 @@ export function DeviceModelDialog({
       manufacturer: form.manufacturer.trim() || null,
       rackMountable: Boolean(form.rackMountable),
       uSize: form.rackMountable ? units : null,
+      portTemplate: form.portTemplate.filter((g) => g.pattern.trim()).map((g) => ({ pattern: g.pattern.trim(), kind: g.kind })),
     };
     setBusy(true);
     try {
@@ -235,6 +251,56 @@ export function DeviceModelDialog({
               />
             </Field>
           ) : null}
+          <Field
+            label={t('deviceModels.ports')}
+            hint={t('deviceModels.portsHint')}
+            error={errors.ports ?? (preview.error ? t(`deviceModels.portErr_${preview.error.key}`, { value: preview.error.value }) : undefined)}
+          >
+            <div className="row" role="group" aria-label={t('deviceModels.portPresets')}>
+              <span className="muted">{t('deviceModels.portPresets')}</span>
+              {PORT_PRESETS.map((preset) => (
+                <button key={preset.key} type="button" className="btn sm" onClick={() => setForm({ ...form, portTemplate: preset.groups })}>
+                  {t(`deviceModels.preset_${preset.key}`)}
+                </button>
+              ))}
+            </div>
+            {form.portTemplate.map((group, index) => (
+              <div key={index} className="row" role="group" aria-label={t('deviceModels.portGroup', { n: index + 1 })}>
+                <input
+                  className="inp mono"
+                  aria-label={t('deviceModels.portPattern', { n: index + 1 })}
+                  placeholder="Gi1/0/[1-48]"
+                  maxLength={60}
+                  value={group.pattern}
+                  onChange={(event) => setGroup(index, { pattern: event.target.value })}
+                />
+                <Select
+                  value={group.kind}
+                  ariaLabel={t('deviceModels.portKind', { n: index + 1 })}
+                  options={PORT_KINDS.map((kind) => ({ value: kind, label: t(KIND_LABEL[kind]) }))}
+                  onChange={(value) => setGroup(index, { kind: value as PortKind })}
+                />
+                <button type="button" className="btn sm ghost" onClick={() => setForm({ ...form, portTemplate: form.portTemplate.filter((_, i) => i !== index) })}>
+                  {t('deviceModels.portRemove', { n: index + 1 })}
+                </button>
+              </div>
+            ))}
+            <div className="row">
+              <button type="button" className="btn sm" onClick={() => setForm({ ...form, portTemplate: [...form.portTemplate, { pattern: '', kind: 'rj45' }] })}>
+                {t('deviceModels.portAdd')}
+              </button>
+              <span className="muted" role="status">
+                {preview.error
+                  ? null
+                  : preview.ports.length === 0
+                    ? t('deviceModels.portNone')
+                    : t('deviceModels.portPreview', {
+                        count: preview.ports.length,
+                        edge: preview.ports.length === 1 ? preview.ports[0].label : `${preview.ports[0].label} … ${preview.ports[preview.ports.length - 1].label}`,
+                      })}
+              </span>
+            </div>
+          </Field>
           {editing && canManage ? (
             <Field label={t('deviceModels.photo')} hint={t('deviceModels.photoHint')}>
               <FilePicker

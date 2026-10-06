@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { nextPortLabel } from '@/lib/port-label';
-import { freePorts, nextFreePort, portTakenBy, type PortMap, type PortRow } from '@/lib/port-types';
+import { freePortOptions, freePorts, nextFreePort, outsideLayout, portTakenBy, type PortMap, type PortRow } from '@/lib/port-types';
+import { usePortPanel } from '@/ui/use-port-panel';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
@@ -89,6 +90,9 @@ export function PortFormDialog({
    * NGAY khi gõ trùng cổng đã có dây (luật một cổng một cáp) — trước đây chỉ bắt lúc Lưu.
    */
   const onMap = device === null;
+  // Máy có danh sách cổng (Q-26): ô Cổng cho CHỌN cổng vật lý còn trống, tên ngoài danh sách báo trước.
+  const holderPanel = usePortPanel(holder?.id ?? null);
+  const laidOut = Array.isArray(holderPanel.data?.ports) && (holderPanel.data?.total ?? 0) > 0;
   const holderPorts = useQuery({
     queryKey: ['devices', holderId, 'ports'],
     queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${holderId}/ports`),
@@ -122,7 +126,7 @@ export function PortFormDialog({
     setConnectedLabel('');
     setConnectedPort('');
     setNote('');
-    labelRef.current?.focus();
+    (labelRef.current ?? (document.getElementById('port-label') as HTMLInputElement | null))?.focus();
   };
 
   return (
@@ -243,16 +247,32 @@ export function PortFormDialog({
           const portField = (
             <div>
             <Field label={t('ports.port')} required htmlFor="port-label" error={check.error('portLabel')}>
-              <input
-                ref={labelRef}
-                id="port-label"
-                className="inp mono"
-                required
-                placeholder={t('ports.phPort')}
-                value={portLabel}
-                onChange={(e) => setPortLabel(e.target.value)}
-              />
+              {laidOut ? (
+                <SuggestInput
+                  id="port-label"
+                  value={portLabel}
+                  onChange={setPortLabel}
+                  options={freePortOptions(holderPorts.data, holderPanel.data)}
+                  placeholder={t('ports.phPort')}
+                  ariaLabel={t('ports.port')}
+                />
+              ) : (
+                <input
+                  ref={labelRef}
+                  id="port-label"
+                  className="inp mono"
+                  required
+                  placeholder={t('ports.phPort')}
+                  value={portLabel}
+                  onChange={(e) => setPortLabel(e.target.value)}
+                />
+              )}
             </Field>
+            {outsideLayout(holderPanel.data, portLabel) && holder ? (
+              <p className="field-warn" role="status">
+                {t('ports.outsideLayout', { port: portLabel.trim(), code: holder.code })}
+              </p>
+            ) : null}
               {takenBy && holder ? (
                 <p className="field-warn" role="status">
                   {t('ports.portTakenBy', { port: portLabel.trim(), code: holder.code, peer: takenBy })}{' '}

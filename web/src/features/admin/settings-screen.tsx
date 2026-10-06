@@ -30,6 +30,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'ipam', label: 'settings.groupIpam' },
   { key: 'files', label: 'settings.groupFiles' },
   { key: 'diagram', label: 'settings.groupDiagram' },
+  { key: 'devices', label: 'settings.groupDevices' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -137,6 +138,7 @@ const TEXT: Record<string, [string, string]> = {
   diagramPathMaxHops: ['settings.diagramPathMaxHopsLabel', 'settings.diagramPathMaxHopsDesc'],
   diagramPhotoMaxPx: ['settings.diagramPhotoMaxPxLabel', 'settings.diagramPhotoMaxPxDesc'],
   diagramDeviceWidthPx: ['settings.diagramDeviceWidthPxLabel', 'settings.diagramDeviceWidthPxDesc'],
+  devicePortTemplateMax: ['settings.devicePortTemplateMaxLabel', 'settings.devicePortTemplateMaxDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

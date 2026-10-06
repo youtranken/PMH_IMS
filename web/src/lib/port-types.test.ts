@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freePorts, linksBetween, nextFreePort, portTakenBy, usedPorts, type PortMap, type PortRow } from './port-types';
+import { freePortOptions, freePorts, linksBetween, nextFreePort, outsideLayout, portTakenBy, usedPorts, type PortMap, type PortPanelData, type PortRow } from './port-types';
 
 function port(over: Partial<PortRow>): PortRow {
   return {
@@ -86,5 +86,40 @@ describe('usedPorts / portTakenBy / nextFreePort — hộp Khai báo trùng cổ
 
   it('nhãn đã chiếm mà không có số cuối thì không đoán', () => {
     expect(nextFreePort({ ports: [port({ portLabel: 'WAN', connectedLabel: 'ISP' })], incoming: [] }, 'wan')).toBe('');
+  });
+});
+
+describe('freePortOptions / outsideLayout — gợi ý cổng trống theo danh sách cổng của máy (Q-26)', () => {
+  const PANEL: PortPanelData = {
+    ports: [
+      { label: 'Gi1', kind: 'rj45', peer: null },
+      { label: 'Gi2', kind: 'rj45', peer: 'SRV · eth0' },
+      { label: 'Gi5', kind: 'rj45', peer: null },
+      { label: 'Te1', kind: 'sfp+', peer: null },
+    ],
+    unlisted: [],
+    used: 1,
+    total: 4,
+  };
+
+  it('cổng vật lý chưa có dây theo thứ tự cổng thật, rồi dòng trống ngoài danh sách; không lặp', () => {
+    // MAP: Gi1 (chỉ VLAN — trống), Gi4 (dòng trống nhưng máy khác cắm vào → đang dùng).
+    expect(freePortOptions(MAP, PANEL)).toEqual(['Gi1', 'Gi5', 'Te1']);
+  });
+
+  it('máy chưa có danh sách cổng: như freePorts cũ', () => {
+    expect(freePortOptions(MAP, undefined)).toEqual(freePorts(MAP));
+  });
+
+  it.each([
+    ['trong danh sách (khác hoa thường)', 'gi5', false],
+    ['ngoài danh sách', 'mgmt', true],
+    ['ô trống', '  ', false],
+  ])('%s', (_name, label, expected) => {
+    expect(outsideLayout(PANEL, label)).toBe(expected);
+  });
+
+  it('máy chưa có danh sách cổng thì không bao giờ là "ngoài danh sách"', () => {
+    expect(outsideLayout({ ports: [], unlisted: [], used: 0, total: 0 }, 'mgmt')).toBe(false);
   });
 });

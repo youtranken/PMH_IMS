@@ -46,7 +46,7 @@ describe('Hộp tạo model (Q-26) — dùng ở Danh mục và ngay trong form 
     await user.type(within(dialog).getByRole('spinbutton', { name: /Số U/ }), '1');
     await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
     const post = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/api/v1/device-models') && init?.method === 'POST');
-    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ deviceTypeId: 't-sw', model: 'XG-430', manufacturer: 'Sophos', rackMountable: true, uSize: 1 });
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ deviceTypeId: 't-sw', model: 'XG-430', manufacturer: 'Sophos', rackMountable: true, uSize: 1, portTemplate: [] });
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'm2', model: 'XG-430' })));
   });
 
@@ -67,5 +67,33 @@ describe('Hộp tạo model (Q-26) — dùng ở Danh mục và ngay trong form 
     expect(await within(dialog).findByText(/Đã có model "C9300-48P"/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Dùng model C9300-48P' }));
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'm1', deviceCount: 3 })));
+  });
+
+  it('Cổng mẫu: "Switch 48 + 4 uplink" → xem trước 52 cổng và gửi mẫu; dải ngược báo tại chỗ, không gửi', async () => {
+    const fetchMock = mockFetch((body) => jsonResponse(201, { ...EXISTING, id: 'm3', ...body, portCount: 52 }));
+    renderWithI18n(
+      <ToastProvider>
+        <DeviceModelDialog csrfToken="c" initial={{ model: 'C9200-48P', deviceTypeId: 't-sw' }} onClose={() => undefined} onSaved={() => undefined} />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    const dialog = await screen.findByRole('dialog', { name: 'Thêm model thiết bị' });
+    await user.click(within(dialog).getByRole('radio', { name: 'Không' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Switch 48 + 4 uplink' }));
+    expect(within(dialog).getByText('Sinh 52 cổng: Gi1/0/1 … Te1/1/4')).toBeInTheDocument();
+    const second = within(dialog).getByRole('textbox', { name: 'Mẫu tên cổng 2' });
+    await user.clear(second);
+    await user.type(second, 'Te1/1/[[4-1]');
+    expect(within(dialog).getByText('Dải [4-1] phải từ số nhỏ tới số lớn.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+    await user.clear(second);
+    await user.type(second, 'Te1/1/[[1-4]');
+    await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+    expect(JSON.parse(String(post?.[1]?.body)).portTemplate).toEqual([
+      { pattern: 'Gi1/0/[1-48]', kind: 'rj45' },
+      { pattern: 'Te1/1/[1-4]', kind: 'sfp+' },
+    ]);
   });
 });
