@@ -258,14 +258,15 @@ export class DevicePortsService {
    */
   async panel(deviceId: string): Promise<PortPanel> {
     const device = await this.devices.requireRowWithin(this.db, deviceId);
-    const map = await this.listFor(deviceId);
+    const [map, taken] = await Promise.all([this.listFor(deviceId), this.takenLabels(this.db, deviceId)]);
     const peers = new Map<string, { label: string; peer: string }>();
     for (const row of map.ports) {
       const other = row.connectedDeviceCode ?? row.connectedLabel;
       if (other) peers.set(row.portLabel.toLowerCase(), { label: row.portLabel, peer: row.connectedPort ? `${other} · ${row.connectedPort}` : other });
     }
     for (const row of map.incoming) {
-      if (row.connectedPort) peers.set(row.connectedPort.toLowerCase(), { label: row.connectedPort, peer: `${row.deviceCode} · ${row.portLabel}` });
+      // Dây của máy đã thanh lý không chiếm cổng — cùng luật `takenLabels` / `portUsage`.
+      if (row.connectedPort && taken.has(row.connectedPort.toLowerCase())) peers.set(row.connectedPort.toLowerCase(), { label: row.connectedPort, peer: `${row.deviceCode} · ${row.portLabel}` });
     }
     const layout = device.portLayout ?? [];
     const listed = new Set(layout.map((p) => p.label.toLowerCase()));
@@ -306,13 +307,39 @@ export class DevicePortsService {
   }
 
   /**
+   * Khoá hàng các máy của một lượt khai dây NGAY ĐẦU transaction, theo thứ tự id. Lượt khai có thể
+   * ghi danh sách cổng của máy (`ensureListedWithin`); khoá chia sẻ trước rồi nâng lên khoá ghi giữa
+   * chừng thì hai lượt cùng máy chờ nhau mãi (deadlock).
+   */
+  private async lockDevicesWithin(tx: Tx, ids: (string | null | undefined)[]): Promise<void> {
+    const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))].sort();
+    if (unique.length === 0) return;
+    await tx.select({ id: deviceTable.id }).from(deviceTable).where(inArray(deviceTable.id, unique)).orderBy(asc(deviceTable.id)).for('update');
+  }
+
+  private async assertInLayoutWithin(tx: Tx, deviceId: string, labels: string[]): Promise<void> {
+    const [row] = await tx.select({ code: deviceTable.code, layout: deviceTable.portLayout }).from(deviceTable).where(eq(deviceTable.id, deviceId));
+    const layout = row?.layout ?? [];
+    if (layout.length === 0) return;
+    const listed = new Set(layout.map((p) => p.label.toLowerCase()));
+    const missing = labels.filter((label) => !listed.has(label.toLowerCase()));
+    if (missing.length > 0) {
+      throw new BadRequestException({
+        code: 'PORT_NOT_IN_LAYOUT',
+        message: `${row?.code ?? ''} không có cổng ${missing.join(', ')} — chọn dải nằm trong danh sách cổng của máy, hoặc thêm cổng ở tab Sơ đồ cổng trước.`,
+      });
+    }
+  }
+
+  /**
    * Khai dây vào một cổng KHÔNG có trong danh sách cổng của máy (máy đã có danh sách): cổng được thêm
    * làm cổng riêng — web hỏi "Thêm cổng riêng …?" trước khi gửi. Máy chưa có danh sách giữ cách cũ.
    */
   private async ensureListedWithin(tx: Tx, actor: string, deviceId: string, label: string | null): Promise<void> {
     const name = label?.trim();
     if (!name) return;
-    const [row] = await tx.select({ layout: deviceTable.portLayout }).from(deviceTable).where(eq(deviceTable.id, deviceId));
+    // Khoá hàng máy: hai lượt khai dây cùng lúc vào hai cổng mới đọc cùng một danh sách rồi ghi đè nhau.
+    const [row] = await tx.select({ layout: deviceTable.portLayout }).from(deviceTable).where(eq(deviceTable.id, deviceId)).for('update');
     const layout = row?.layout ?? [];
     if (layout.length === 0 || layout.some((p) => p.label.toLowerCase() === name.toLowerCase())) return;
     const next = [...layout, { label: name, kind: 'other' as const }];
@@ -321,6 +348,7 @@ export class DevicePortsService {
   }
 
   private async insertWithin(tx: Tx, actor: string, deviceId: string, values: Record<string, unknown>): Promise<string> {
+    await this.lockDevicesWithin(tx, [deviceId, values.connectedDeviceId as string | null | undefined]);
     // Máy đã thanh lý thì sơ đồ đấu nối đóng băng — xem `DevicesService.assertNotRetired`.
     // TRONG `tx` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng
     // hở để một lượt thanh lý chen vào giữa (xem `assertUsableWithin`).
@@ -446,6 +474,7 @@ export class DevicePortsService {
     const cableTypeId = input.cableTypeId || null;
     await this.devices.assertCableTypeChoice(cableTypeId, null);
     const id = await this.db.transaction(async (tx) => {
+      await this.lockDevicesWithin(tx, [deviceId, peerId]);
       const own = await this.rowByLabelWithin(tx, deviceId, portLabel);
       if (own?.free) {
         await this.updateWithin(tx, actor, deviceId, own.id, { connectedDeviceId: peerId, connectedLabel: null, connectedPort: peerPort, cableTypeId });
@@ -512,6 +541,7 @@ export class DevicePortsService {
     await this.devices.assertCableTypeChoice(cableTypeId, null);
     const peerPort = input.peerPort?.trim() || null;
     const ids = await this.db.transaction(async (tx) => {
+      await this.lockDevicesWithin(tx, [deviceId, ...targets]);
       await this.devices.assertUsableWithin(tx, deviceId);
       const plan = planBulkPorts({
         start: input.startPort,
@@ -520,6 +550,10 @@ export class DevicePortsService {
         taken: await this.takenLabels(tx, deviceId),
       });
       if (plan.reason) throw new BadRequestException({ code: 'BULK_LINK_INVALID', message: BULK_REASON[plan.reason] });
+      // Máy có danh sách cổng: dải đánh số không được vượt cổng thật của máy (nối hàng loạt không hỏi
+      // "Thêm cổng riêng?" như hộp khai một dây).
+      await this.assertInLayoutWithin(tx, deviceId, plan.ports);
+      if (peerPort) for (const target of targets) await this.assertInLayoutWithin(tx, target, [peerPort]);
       const out: string[] = [];
       for (let i = 0; i < targets.length; i += 1) {
         const own = await this.rowByLabelWithin(tx, deviceId, plan.ports[i]);

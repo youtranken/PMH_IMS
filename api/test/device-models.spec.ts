@@ -205,6 +205,59 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     expect((await ports.portUsage([sw.id])).get(sw.id)).toEqual({ used: 3, declared: 4 });
   });
 
+  it('sửa hồ sơ máy đã gán model (gửi lại cùng deviceModelId) không chép lại cổng mẫu vào danh sách đã cố ý để trống', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-RECOPY', rackMountable: false, portTemplate: [{ pattern: 'p[1-2]', kind: 'rj45' }] });
+    const { device } = await devices.create(ACTOR, { code: 'AP-E2E-MD-RECOPY', name: 'AP', deviceTypeId: switchType, deviceModelId: model.id });
+    await ports.setLayout(ACTOR, device.id, [], 256);
+    await devices.update(ACTOR, device.id, { deviceModelId: model.id, note: 'đổi ghi chú' });
+    expect((await scratch.pool.query(`SELECT jsonb_array_length(port_layout) n FROM device WHERE id = $1`, [device.id])).rows[0].n).toBe(0);
+  });
+
+  it('chuyển model sang không gắn tủ khi còn máy nằm trong tủ (kể cả chưa khai U) → 409', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-INCAB', rackMountable: true, uSize: 1 });
+    await devices.create(ACTOR, { code: 'SW-E2E-MD-INCAB', name: 'Máy trong tủ chưa U', deviceTypeId: switchType, deviceModelId: model.id, siteId, cabinetId });
+    await expect(models.update(ACTOR, model.id, { rackMountable: false, uSize: null })).rejects.toMatchObject({ response: { code: 'DEVICE_MODEL_IN_RACK' } });
+  });
+
+  it('cổng mẫu sinh tên cổng quá 60 ký tự → 400 (không để danh sách cổng không lưu lại được)', async () => {
+    await expect(
+      models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-LONGPORT', rackMountable: false, portTemplate: [{ pattern: `${'x'.repeat(60)}/[1-2]`, kind: 'rj45' }] }),
+    ).rejects.toMatchObject({ response: { code: 'PORT_TEMPLATE_INVALID', message: expect.stringContaining('60') as unknown } });
+  });
+
+  it('nối hàng loạt trên máy có danh sách cổng: dải vượt danh sách → 400, không tự đẻ cổng', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-BULK4', rackMountable: false, portTemplate: [{ pattern: 'g[1-4]', kind: 'rj45' }] });
+    const { device: sw } = await devices.create(ACTOR, { code: 'SW-E2E-MD-BULK', name: 'Switch 4', deviceTypeId: switchType, deviceModelId: model.id });
+    const hosts = await Promise.all(
+      [1, 2, 3].map(async (n) => (await devices.create(ACTOR, { code: `PC-E2E-MD-BULK${n}`, name: `PC ${n}`, deviceTypeId: switchType })).device.id),
+    );
+    await expect(ports.bulkLink(ACTOR, sw.id, { startPort: 'g3', targets: hosts })).rejects.toMatchObject({ response: { code: 'PORT_NOT_IN_LAYOUT', message: expect.stringContaining('g5') as unknown } });
+    expect((await ports.panel(sw.id)).total).toBe(4);
+  });
+
+  it('khai dây cùng lúc vào hai cổng ngoài danh sách: cả hai đều vào danh sách (không mất lượt ghi)', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-RACE2', rackMountable: false, portTemplate: [{ pattern: 'q1', kind: 'rj45' }] });
+    const { device: sw } = await devices.create(ACTOR, { code: 'SW-E2E-MD-RACE', name: 'Switch', deviceTypeId: switchType, deviceModelId: model.id });
+    const a = (await devices.create(ACTOR, { code: 'PC-E2E-MD-RA', name: 'A', deviceTypeId: switchType })).device.id;
+    const b = (await devices.create(ACTOR, { code: 'PC-E2E-MD-RB', name: 'B', deviceTypeId: switchType })).device.id;
+    await Promise.all([
+      ports.link(ACTOR, sw.id, { portLabel: 'x9', connectedDeviceId: a, connectedPort: 'eth0' }),
+      ports.link(ACTOR, sw.id, { portLabel: 'x10', connectedDeviceId: b, connectedPort: 'eth0' }),
+    ]);
+    expect((await ports.panel(sw.id)).ports.map((p) => p.label).sort()).toEqual(['q1', 'x10', 'x9']);
+  });
+
+  it('mặt cổng không tính dây của máy đã thanh lý (cùng luật takenLabels / portUsage)', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-RETIRED', rackMountable: false, portTemplate: [{ pattern: 'r[1-2]', kind: 'rj45' }] });
+    const { device: sw } = await devices.create(ACTOR, { code: 'SW-E2E-MD-RET', name: 'Switch', deviceTypeId: switchType, deviceModelId: model.id });
+    const old = (await devices.create(ACTOR, { code: 'SRV-E2E-MD-OLD', name: 'Máy cũ', deviceTypeId: switchType })).device.id;
+    await ports.link(ACTOR, old, { portLabel: 'eth0', connectedDeviceId: sw.id, connectedPort: 'r1' });
+    await scratch.pool.query(`UPDATE device SET status = 'retired' WHERE id = $1`, [old]);
+    const panel = await ports.panel(sw.id);
+    expect(panel).toMatchObject({ used: 0, total: 2 });
+    expect(panel.ports[0]).toMatchObject({ label: 'r1', peer: null });
+  });
+
   it('lượt dọn E2E (vùng devices của reset-e2e.mjs) gỡ được máy trỏ model bằng khoá ngoại', async () => {
     const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-CLEAN', rackMountable: false });
     await devices.create(ACTOR, { code: 'SW-E2E-MD-CLEAN', name: 'Máy dọn', deviceTypeId: switchType, deviceModelId: model.id });

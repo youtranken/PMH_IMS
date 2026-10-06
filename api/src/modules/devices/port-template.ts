@@ -44,6 +44,9 @@ export function expandPortTemplate(groups: unknown, max: number): PhysicalPort[]
     }
     if (out.length > max) throw invalid(`Một máy tối đa ${max} cổng — mẫu này sinh quá nhiều.`);
   }
+  // Cùng trần với `normalizePortLayout`: tên dài hơn thì danh sách cổng của máy không lưu lại được.
+  const long = out.find((p) => p.label.length > 60);
+  if (long) throw invalid(`Tên cổng "${long.label.slice(0, 30)}…" quá 60 ký tự.`);
   assertUnique(out);
   return out;
 }

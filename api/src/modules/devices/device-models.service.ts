@@ -123,10 +123,13 @@ export class DeviceModelsService {
         await this.catalog.assertRefs({ deviceTypeId: values.deviceTypeId }, null);
       }
       const racked = members.filter((d) => d.rackUStart !== null && d.status !== 'retired');
-      if (!values.rackMountable && racked.length > 0) {
+      // Máy nằm trong tủ dù chưa khai U cũng chặn: model không gắn tủ thì mọi lượt sửa máy đó sau này
+      // đều bị `applyModel` từ chối.
+      const inCabinet = members.filter((d) => d.cabinetId !== null && d.status !== 'retired');
+      if (!values.rackMountable && inCabinet.length > 0) {
         throw new ConflictException({
           code: 'DEVICE_MODEL_IN_RACK',
-          message: `Còn ${racked.length} máy thuộc model đang đặt trong tủ (${racked.map((d) => d.code).join(', ')}) — gỡ U của các máy đó trước khi chuyển model sang không gắn tủ.`,
+          message: `Còn ${inCabinet.length} máy thuộc model đang nằm trong tủ (${inCabinet.map((d) => d.code).join(', ')}) — bỏ tủ của các máy đó trước khi chuyển model sang không gắn tủ.`,
         });
       }
       if (values.uSize !== before.uSize && racked.length > 0) await this.assertRegrowFree(tx, racked, values.uSize!);

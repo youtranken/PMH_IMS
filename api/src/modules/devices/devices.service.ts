@@ -569,8 +569,10 @@ export class DevicesService {
     if (values.deviceModelId !== undefined) {
       values.deviceTypeId = model.deviceTypeId;
       values.model = model.model;
-      // Máy chưa có danh sách cổng thì chép cổng mẫu lúc gán; đã có thì giữ — đổi mẫu không đổi ngầm máy.
-      if ((current?.portLayout ?? []).length === 0 && values.portLayout === undefined) {
+      // Chép cổng mẫu CHỈ lúc gán model mới (form gửi lại deviceModelId mỗi lần lưu) và khi máy chưa
+      // có danh sách: danh sách cố ý để trống hay mẫu sửa sau đó không được chép ngầm vào máy cũ.
+      const assigning = values.deviceModelId !== (current?.deviceModelId ?? null);
+      if (assigning && (current?.portLayout ?? []).length === 0 && values.portLayout === undefined) {
         values.portLayout = expandPortTemplate(model.portTemplate, Number.MAX_SAFE_INTEGER);
       }
     }
