@@ -23,6 +23,22 @@ ALTER TABLE device_model
     ADD CONSTRAINT device_model_u_size_check CHECK ((rack_mountable = (u_size IS NOT NULL)) AND ((u_size IS NULL) OR (u_size BETWEEN 1 AND 60))),
     ADD CONSTRAINT device_model_model_key_check CHECK ((char_length(model_key) >= 1));
 DROP INDEX device_model_type_model_key;
+-- Hàng có sẵn mà nay trùng khoá (0054 chỉ chặn trùng theo loại + lower/btrim): gộp về hàng tạo trước
+-- nhất của mỗi khoá. Ảnh còn trống của hàng giữ lấy từ hàng bị gộp, tệp ảnh chuyển chủ. Chưa có máy
+-- nào trỏ model bằng khoá ngoại (cột thêm ngay dưới) nên gộp không đụng thiết bị.
+UPDATE device_model k
+   SET photo_front_file_id = COALESCE(k.photo_front_file_id, (SELECT d.photo_front_file_id FROM device_model d
+         WHERE d.model_key = k.model_key AND d.id <> k.id AND d.photo_front_file_id IS NOT NULL ORDER BY d.created_at, d.id LIMIT 1)),
+       photo_back_file_id = COALESCE(k.photo_back_file_id, (SELECT d.photo_back_file_id FROM device_model d
+         WHERE d.model_key = k.model_key AND d.id <> k.id AND d.photo_back_file_id IS NOT NULL ORDER BY d.created_at, d.id LIMIT 1))
+ WHERE k.id = (SELECT x.id FROM device_model x WHERE x.model_key = k.model_key ORDER BY x.created_at, x.id LIMIT 1);
+UPDATE file f
+   SET owner_id = (SELECT x.id FROM device_model x WHERE x.model_key = d.model_key ORDER BY x.created_at, x.id LIMIT 1)
+  FROM device_model d
+ WHERE f.owner_type = 'device_model' AND f.owner_id = d.id
+   AND d.id <> (SELECT x.id FROM device_model x WHERE x.model_key = d.model_key ORDER BY x.created_at, x.id LIMIT 1);
+DELETE FROM device_model d
+ WHERE d.id <> (SELECT x.id FROM device_model x WHERE x.model_key = d.model_key ORDER BY x.created_at, x.id LIMIT 1);
 CREATE UNIQUE INDEX device_model_model_key_key ON device_model USING btree (model_key);
 
 ALTER TABLE device
