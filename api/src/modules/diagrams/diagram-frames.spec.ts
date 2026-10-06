@@ -216,7 +216,7 @@ describe('cabinetFrameLayout — khung tủ dựng từ kho', () => {
   });
 });
 
-/* Tủ mạng chỉ vẽ MẶT TRƯỚC (Q-23 06/10): một khung rack, máy xếp đúng U, ảnh thật mặt trước. */
+/* Tủ mạng chỉ vẽ MẶT TRƯỚC (Q-23): một khung rack, máy xếp đúng U, ảnh thật mặt trước. */
 describe('cabinetFrameLayout — chỉ mặt trước, ảnh thật', () => {
   const icon = { style: 'shape=icon;', label: 'L', width: 60, height: 40 };
 
@@ -248,7 +248,7 @@ describe('cabinetFrameLayout — chỉ mặt trước, ảnh thật', () => {
       ],
     });
     const [withPhoto, plain] = layout.devices;
-    // Ảnh thật lấp đầy ô n U (`imageAspect=0`) — Q-23 06/10 C.
+    // Ảnh thật lấp đầy ô n U (`imageAspect=0`) — Q-23 mục C.
     expect(withPhoto).toMatchObject({ frame: 'rack', style: `shape=image;image=data:image/png,AAA;imageAspect=0;${RACK_LABEL_STYLE}`, attrs: { ims_photo: 'front' } });
     expect(plain).toMatchObject({ frame: 'rack', style: `shape=icon;${RACK_LABEL_STYLE}`, attrs: {} });
   });
@@ -275,7 +275,7 @@ describe('cabinetFrameLayout — chỉ mặt trước, ảnh thật', () => {
   });
 });
 
-/* Mặt tủ không đè U (Q-23 05/10): ô cao đúng số U, nhãn bên phải một dòng, hai mặt cách đủ chỗ cho nhãn. */
+/* Mặt tủ không đè U (Q-23): ô cao đúng số U, nhãn bên phải một dòng, hai mặt cách đủ chỗ cho nhãn. */
 describe('cabinetFrameLayout — máy chiếm đúng số U, nhãn không đè U khác', () => {
   const photo = { style: 'align=center;shape=image;image=data:image/png,AAA;imageAspect=1;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;' };
   /** Ảnh ngang 4:1 — ô chèn tự do cao 120 cho rộng 480; trong tủ vẫn phải đúng 1U. */

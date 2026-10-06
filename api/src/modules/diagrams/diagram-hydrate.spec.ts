@@ -511,7 +511,7 @@ function bareStyleOf(xml: string, cellId: string): Record<string, string> {
   return out;
 }
 
-/* Máy trong khung tủ (Q-23 05/10): nhãn nằm bên phải ô, một dòng — không đè lên U khác. */
+/* Máy trong khung tủ (Q-23): nhãn nằm bên phải ô, một dòng — không đè lên U khác. */
 describe('máy trong khung tủ — nhãn bên phải, một dòng', () => {
   const rack = (id: string, children: string) =>
     `<UserObject label="Tủ R1 · Mặt trước" ims_cabinet_id="cab-1" id="${id}"><mxCell style="shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=14.8;container=1;childLayout=rack;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="204" height="221" as="geometry"/></mxCell></UserObject>${children}`;

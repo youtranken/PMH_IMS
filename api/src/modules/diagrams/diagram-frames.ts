@@ -215,7 +215,7 @@ const FRAME_GAP = 200;
 
 /**
  * Cột "Chưa khai U" cho một máy rộng `deviceWidth` — màn sửa dựng cột này khi người vẽ Hủy hộp
- * khai U mà trang chưa có cột của tủ (Q-23 06/10 D). Cùng style với cột của `cabinetFrameLayout`
+ * khai U mà trang chưa có cột của tủ (Q-23 mục D). Cùng style với cột của `cabinetFrameLayout`
  * để hai đường ra cùng một hình.
  */
 export function unplacedColumnSpec(deviceWidth: number): { style: string; width: number; top: number; bottom: number; gap: number } {
@@ -235,7 +235,7 @@ function rackFace(device: CabinetFrameDevice): { style: string; attrs: Record<st
 }
 
 /**
- * Khung tủ chèn MỘT lượt: hình rack (mặt trước — Q-23 06/10 chỉ vẽ mặt trước) cao theo
+ * Khung tủ chèn MỘT lượt: hình rack (mặt trước — Q-23 chỉ vẽ mặt trước) cao theo
  * `cabinet.u_height`, máy có U xếp đúng U, máy chưa khai U (hoặc U vượt tủ / trùng U máy khác — dữ
  * liệu cũ) ở cột "Chưa khai U" bên phải. Mọi khung mang `ims_cabinet_id` và máy là ô CON của khung —
  * luật "máy trong khung tủ khác tủ trong kho" của tự kiểm nhận ra mọi chỗ.

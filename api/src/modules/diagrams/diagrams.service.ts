@@ -184,7 +184,7 @@ export interface DiagramDeviceInfo {
   warrantyEnd: string | null;
   /** Máy có ảnh thật mặt trước / mặt sau không (ảnh riêng máy hoặc ảnh model) — công tắc Ảnh thật. */
   photos: { front: boolean; back: boolean };
-  /** Cổng đang dùng / đã khai (dòng sơ đồ cổng hai chiều) — thẻ máy trên sơ đồ (Q-23 06/10). */
+  /** Cổng đang dùng / đã khai (dòng sơ đồ cổng hai chiều) — thẻ máy trên sơ đồ (Q-23). */
   ports: { used: number; declared: number };
   /**
    * Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn ba dòng, rộng chuẩn
@@ -223,7 +223,7 @@ export interface DiagramLink extends PortLink {
   labelFromB: string;
   /** Style cho ô dây mới (có ô màu `imsPaint`). */
   edgeStyle: string;
-  /** Hai ô nhãn đầu dây web chèn kèm nét mới (Q-23 06/10): style + chỗ đặt tương đối trên nét. */
+  /** Hai ô nhãn đầu dây web chèn kèm nét mới (Q-23): style + chỗ đặt tương đối trên nét. */
   endLabel: { style: string; offset: number };
 }
 
@@ -561,7 +561,7 @@ export class DiagramsService {
   }
 
   /**
-   * "Dựng từ kho" (Q-23 06/10 chiều): bản vẽ cấp tủ ra đời cùng phiên bản nháp #1 là mặt tủ dựng
+   * "Dựng từ kho" (Q-23): bản vẽ cấp tủ ra đời cùng phiên bản nháp #1 là mặt tủ dựng
    * từ kho — cùng cách "Dựng lại mặt tủ". Kho đã biết máy nào nằm U nào, nên mồi bằng kho đúng hơn
    * mồi bằng hình tầng/phòng của bản cha. Tạo nút và phiên bản chung một transaction: dựng hỏng thì
    * không còn bản vẽ rỗng nằm lại trong cây.
@@ -1089,7 +1089,7 @@ export class DiagramsService {
       throw new BadRequestException({ code: 'DIAGRAM_CABINET_TOO_MANY', message: `Tủ có ${page.total} thiết bị — quá nhiều để dựng một khung tủ.` });
     }
     const ids = page.items.map((d) => d.id);
-    // Tủ chỉ vẽ mặt trước (Q-23 06/10): chỉ cần ảnh mặt trước.
+    // Tủ chỉ vẽ mặt trước (Q-23): chỉ cần ảnh mặt trước.
     const { infos, sources } = await this.deviceData(ids, new Map(ids.map((id) => [id, new Set<PhotoSide>(['front'])])));
     const devices = infos
       .filter((info) => info.found && info.status !== 'retired' && info.code)
@@ -1163,7 +1163,7 @@ export class DiagramsService {
       return { id: info.id, found: info.found, icon: deviceLookStyle(source), iconAspect: deviceIconAspect(source), front: face('front'), back: face('back') };
     });
     // Ô trong khung tủ giữ nhãn bên phải khi đổi hình (cùng luật hydrate); ô ngoài khung về bề rộng
-    // chuẩn (Q-23 06/10 E).
+    // chuẩn (Q-23 mục E).
     return { imsStyleKeys: [...IMS_STYLE_KEYS], rackLabelStyle: RACK_LABEL_STYLE, deviceWidth, items };
   }
 
@@ -1312,7 +1312,7 @@ export class DiagramsService {
    * `found: false` thay vì lỗi, vì bản vẽ là dữ liệu không tin cậy và máy có thể đã bị xoá.
    */
   async deviceInfos(ids: string[]): Promise<DiagramDeviceInfo[]> {
-    // Ô chèn hiện ảnh mặt trước nếu máy có (Q-23 05/10) — nên đọc ảnh đó ngay ở đây.
+    // Ô chèn hiện ảnh mặt trước nếu máy có (Q-23) — nên đọc ảnh đó ngay ở đây.
     return (await this.deviceData(ids, new Map(ids.map((id) => [id, new Set<PhotoSide>(['front'])])))).infos;
   }
 
@@ -1858,7 +1858,7 @@ const PREVIEW_ONLY_SUMMARY = 'Tạo ảnh xem cho bản dựng tự động';
  */
 /**
  * Bản dựng tự động (dựng lại mặt tủ, dựng nháp từ sơ đồ cổng) trùng hệt bản mới nhất — cùng nét vẽ
- * khô, cùng bản chụp thiết bị: bấm lại khi kho chưa đổi gì không được đẻ thêm phiên bản (Q-23 06/10).
+ * khô, cùng bản chụp thiết bị: bấm lại khi kho chưa đổi gì không được đẻ thêm phiên bản (Q-23).
  * Không xét ảnh xem: lượt dựng không tạo ảnh xem, nên một phiên bản dựng thêm cũng không có gì hơn.
  */
 function sameAsLatest(latest: { xml: string; deviceSnapshot: DeviceSnapshotEntry[] }, xml: string, snapshot: DeviceSnapshotEntry[]): boolean {

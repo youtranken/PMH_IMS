@@ -39,7 +39,7 @@ export const IMS_STYLE_KEYS = [
 ];
 
 /**
- * Nhãn máy trong khung tủ (Q-23 05/10): bên PHẢI ô, giữa theo chiều cao — nhãn dưới hình của một
+ * Nhãn máy trong khung tủ (Q-23): bên PHẢI ô, giữa theo chiều cao — nhãn dưới hình của một
  * máy 1U rơi xuống đè lên các U bên dưới. `spacingLeft` đẩy chữ qua thanh ray phải của hình tủ.
  */
 export const RACK_LABEL_STYLE = 'labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=14;';
@@ -51,7 +51,7 @@ const PHOTO_IMAGE_RE = /(?:^|;)image=data:image\/(?!svg)/;
 /**
  * Style ô máy nằm trong khung tủ: bỏ chỗ đặt nhãn cũ, nhãn bên phải. Ảnh thật lấp ĐẦY ô n U
  * (`imageAspect=0`, bỏ `aspect=fixed`) — ô cao đúng n U là sự thật của tủ, ảnh cắt theo mặt tủ thì
- * không méo, còn ảnh cũ chưa cắt (còn viền) mà giữ tỉ lệ thì co thành một vạch (Q-23 06/10 C).
+ * không méo, còn ảnh cũ chưa cắt (còn viền) mà giữ tỉ lệ thì co thành một vạch (Q-23 mục C).
  * Web giữ cùng luật ở `rackCellStyle` (`rack-fit.ts`).
  */
 export function rackDeviceStyle(style: string): string {
@@ -180,7 +180,7 @@ export function deviceLookStyle(
 
 /**
  * Ô mới để chèn: style = mặc định của người vẽ (sửa được) + phần IMS. `width` = bề rộng chuẩn
- * `diagram.device_width_px` (Q-23 06/10 E — mọi máy trên trang tự do cùng rộng, cao theo tỉ lệ
+ * `diagram.device_width_px` (Q-23 mục E — mọi máy trên trang tự do cùng rộng, cao theo tỉ lệ
  * hình); vắng thì cỡ riêng của hình.
  */
 export function deviceInsertCell(
@@ -308,7 +308,7 @@ export function linkPortEnds(link: CheckLink, sourceDeviceId: string | null): { 
 
 /**
  * Cờ trên nét dây của kho, LƯU trong XML khô: nhãn cổng đặt ở hai đầu dây (sát máy giữ cổng đó)
- * thay cho một nhãn "A ↔ B" giữa dây (Q-23 06/10). Nét cũ không có cờ giữ nhãn giữa — chỉ đổi khi
+ * thay cho một nhãn "A ↔ B" giữa dây (Q-23). Nét cũ không có cờ giữ nhãn giữa — chỉ đổi khi
  * người vẽ đụng tới nét, để mở bản vẽ không bao giờ sinh thay đổi ngầm.
  */
 export const PORT_LABELS_ATTR = 'ims_port_labels';

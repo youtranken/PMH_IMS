@@ -175,7 +175,7 @@ export interface DiagramEditorSettings {
   draftKeepHours: number;
   /** `diagram.device_width_px` — bề rộng chuẩn của ô thiết bị trên trang tự do. */
   deviceWidthPx: number;
-  /** Cột "Chưa khai U" màn sửa dựng khi Hủy hộp khai U mà trang chưa có cột của tủ (Q-23 06/10 D). */
+  /** Cột "Chưa khai U" màn sửa dựng khi Hủy hộp khai U mà trang chưa có cột của tủ (Q-23 mục D). */
   rackColumn: { style: string; width: number; top: number; bottom: number; gap: number };
 }
 
@@ -452,7 +452,7 @@ export class DiagramsController {
     const content = await this.diagrams.content(req.user!.email, params.id, { mode, versionId: query.versionId });
     // Lệch kho so với bản chụp của CHÍNH phiên bản đang mở (Q-23): chỉ báo, không sửa gì.
     const drift = content.version ? await this.drift.forVersion(params.id, content.version.id) : [];
-    // Khoá mã bản vẽ dở chỉ cho tab Sửa — tab Xem không có gì để cất (Q-23 06/10).
+    // Khoá mã bản vẽ dở chỉ cho tab Sửa — tab Xem không có gì để cất (Q-23).
     return mode === 'edit' ? { ...content, drift, draftKey: diagramDraftKey(this.crypto, req.user!.id, params.id) } : { ...content, drift };
   }
 
