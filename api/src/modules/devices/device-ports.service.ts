@@ -465,7 +465,7 @@ export class DevicePortsService {
   }
 
   /**
-   * Cổng ĐÃ KHAI / ĐANG DÙNG của từng máy (thẻ máy trên sơ đồ, Q-23 06/10). Đã khai = dòng sơ đồ
+   * Cổng ĐÃ KHAI / ĐANG DÙNG của từng máy (thẻ máy trên sơ đồ, Q-23). Đã khai = dòng sơ đồ
    * cổng của chính máy + dòng máy khác giữ mà trỏ tới nó (một kết nối là một dòng, AD-14); đang dùng =
    * dòng có đầu kia (máy kho, chữ tự do, người dùng). Kho chưa có số cổng vật lý nên "đã khai" là
    * mẫu số thật duy nhất. Dòng của máy đã thanh lý không chiếm cổng nên không đếm.

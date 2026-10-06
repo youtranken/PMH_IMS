@@ -2,7 +2,7 @@ import { ROLES_KEY } from '../auth/roles.decorator';
 import { DevicePhotosController } from './device-photos.controller';
 
 /**
- * Ai đổi được hình trên sơ đồ (Q-23 05/10): ảnh RIÊNG của một máy — ai sửa được hồ sơ máy; ảnh
+ * Ai đổi được hình trên sơ đồ (Q-23): ảnh RIÊNG của một máy — ai sửa được hồ sơ máy; ảnh
  * theo MODEL đổi hình của cả loạt máy cùng loại + model — chỉ SA/Admin.
  */
 const rolesOf = (handler: keyof DevicePhotosController) =>

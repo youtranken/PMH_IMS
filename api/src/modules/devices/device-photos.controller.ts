@@ -47,7 +47,7 @@ export class DevicePhotosController {
 
   /**
    * Hàng model của máy để tải ảnh model lên (`files` với `owner_type = 'device_model'`). Ảnh model
-   * đổi hình của MỌI máy cùng loại + model, nên chỉ SA/Admin (Q-23 05/10); ảnh riêng từng máy thì
+   * đổi hình của MỌI máy cùng loại + model, nên chỉ SA/Admin (Q-23); ảnh riêng từng máy thì
    * ai sửa được hồ sơ máy cũng đổi được (`PATCH :id/photos`).
    */
   @Roles('sa', 'admin')
