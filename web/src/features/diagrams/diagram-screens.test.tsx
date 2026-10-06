@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act } from '@testing-library/react';
+import { act, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
@@ -586,6 +586,81 @@ describe('Hộp "Thiết bị kho" trên thanh trên trình vẽ (Q-23)', () => 
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Chèn thiết bị có trong kho' })).toBeNull();
+  });
+});
+
+describe('Kéo máy từ "Thiết bị kho" thả vào trình vẽ (Q-23 06/10)', () => {
+  /** DataTransfer tối thiểu: jsdom không có. */
+  function transfer() {
+    const data = new Map<string, string>();
+    return { data, setData: (type: string, value: string) => data.set(type, value), getData: (type: string) => data.get(type) ?? '', effectAllowed: 'all', dropEffect: 'none' };
+  }
+
+  async function readyRow(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Thiết bị kho' }));
+    const box = screen.getByRole('dialog', { name: 'Chèn thiết bị có trong kho' });
+    const row = (await within(box).findByRole('checkbox', { name: 'Chọn SW-E2E-OK để chèn' })).closest('li') as HTMLLIElement;
+    // Chuột vào dòng → đọc trước ô của máy; xong thì dòng mới kéo được.
+    expect(row.getAttribute('draggable')).toBe('false');
+    await user.hover(row);
+    await vi.waitFor(() => expect(row.getAttribute('draggable')).toBe('true'));
+    return { box, row };
+  }
+
+  it('dữ liệu kéo là <mxGraphModel> một ô đúng ô server dựng — draw.io tự đặt ở chỗ thả; draw.io nhận thì báo "Đã chèn" khi autosave mang máy về', async () => {
+    const { posted, fromDrawio } = await openEditor();
+    const user = userEvent.setup();
+    const { row, box } = await readyRow(user);
+    // Máy đã có trên bản vẽ không kéo được.
+    expect(within(box).getByRole('checkbox', { name: 'Chọn SW-E2E-HAVE để chèn' }).closest('li')?.getAttribute('draggable')).toBe('false');
+    const dt = transfer();
+    fireEvent.dragStart(row, { dataTransfer: dt });
+    const xml = dt.data.get('text/plain') ?? '';
+    expect(xml.startsWith('<mxGraphModel>')).toBe(true);
+    expect(xml).toContain('ims_device_id="dev-ok"');
+    expect(xml).toContain('style="align=center;shape=mxgraph.networks.switch;html=0;"');
+    expect(dt.effectAllowed).toBe('copy');
+    // draw.io nhận cú thả (dropEffect copy) → không chèn thêm; autosave mang máy về → lời báo.
+    dt.dropEffect = 'copy';
+    fireEvent.dragEnd(row, { dataTransfer: dt });
+    fromDrawio({ event: 'autosave', xml: HAVE_XML.replace('</root>', '<UserObject label="SW-E2E-OK" ims_device_id="dev-ok" ims_device_code="SW-E2E-OK" id="n1"><mxCell vertex="1" parent="1"><mxGeometry x="300" y="200" width="100" height="30" as="geometry"/></mxCell></UserObject></root>') });
+    expect(await screen.findByText('Đã chèn SW-E2E-OK vào bản vẽ.')).toBeInTheDocument();
+    expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"patch"'))).toBe(false);
+  });
+
+  it('thả vào khung mà trình duyệt không giao cú thả (dropEffect none) → IMS chèn theo lưới, báo rõ', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { posted, fromDrawio } = await openEditor();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const { row } = await readyRow(user);
+      const dt = transfer();
+      fireEvent.dragStart(row, { dataTransfer: dt });
+      // Con trỏ rời trang IMS vào trong khung (jsdom: khung ở 0,0 cỡ 0 — điểm 0,0 nằm trong khung).
+      // jsdom không có DragEvent: MouseEvent mang đủ toạ độ + relatedTarget như trình duyệt gửi.
+      document.body.dispatchEvent(new MouseEvent('dragleave', { bubbles: true, clientX: 0, clientY: 0, relatedTarget: null }));
+      fireEvent.dragEnd(row, { dataTransfer: dt });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(700);
+      });
+      await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"xml"'))).toBe(true));
+      fromDrawio({ event: 'export', format: 'xml', xml: HAVE_XML, currentPage: 0 });
+      await vi.waitFor(() => expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"patch"'))).toBe(true));
+      expect(await screen.findByText(/Đã chèn SW-E2E-OK cạnh các hình đang có/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('kéo rồi thả lại trong hộp (không vào khung) → không chèn gì', async () => {
+    const { posted } = await openEditor();
+    const user = userEvent.setup();
+    const { row } = await readyRow(user);
+    const dt = transfer();
+    fireEvent.dragStart(row, { dataTransfer: dt });
+    fireEvent.dragEnd(row, { dataTransfer: dt });
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(posted.mock.calls.some(([data]) => String(data).includes('"action":"export","format":"xml"'))).toBe(false);
   });
 });
 

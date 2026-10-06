@@ -35,8 +35,8 @@ export function stockQuery(filter: { term: string; siteId: string; cabinetId: st
 }
 
 /**
- * Nội dung hộp "Thiết bị kho" của màn sửa sơ đồ: tìm theo mã/tên/IP, lọc site/tủ/loại, tick một
- * hoặc nhiều máy rồi Chèn. Máy đã thanh lý không hiện. Máy đã có trên bản vẽ vẫn HIỆN nhưng ô tick
+ * Nội dung hộp "Thiết bị kho" của màn sửa sơ đồ: tìm theo mã/tên/IP, lọc site/tủ/loại, kéo một
+ * máy thả thẳng vào bản vẽ, hoặc tick một hoặc nhiều máy rồi Chèn. Máy đã thanh lý không hiện. Máy đã có trên bản vẽ vẫn HIỆN nhưng ô tick
  * tắt, kèm lý do — ẩn nó đi thì người vẽ tưởng kho không có máy đó.
  *
  * Bàn phím: ↓ từ ô tìm sang danh sách, ↑/↓ giữa các dòng, Space tick, Enter chèn.
@@ -45,11 +45,23 @@ export function StockDevicePicker({
   present,
   busy,
   onInsert,
+  drag,
 }: {
   /** Id máy đã có ô trên bản vẽ (đọc từ XML trình vẽ gửi gần nhất + vừa chèn). */
   present: Set<string>;
   busy: boolean;
   onInsert: (ids: string[]) => void;
+  /**
+   * Kéo một dòng thả thẳng vào trình vẽ (Q-23 06/10). Dòng chỉ kéo được khi ô của máy đã dựng sẵn
+   * (`payload` khác `null`): dữ liệu kéo phải gắn NGAY lúc bắt đầu kéo, không chờ mạng được —
+   * `prepare` (rê chuột / tiêu điểm vào dòng) đọc trước ô của máy.
+   */
+  drag?: {
+    prepare: (id: string) => void;
+    payload: (id: string) => string | null;
+    onStart: (id: string) => void;
+    onEnd: (id: string, dropEffect: string) => void;
+  };
 }) {
   const { t } = useTranslation();
   const lists = useCatalogLists();
@@ -98,7 +110,7 @@ export function StockDevicePicker({
 
   return (
     <div className="stock-picker" onKeyDown={onKeyDown}>
-      <Field label={t('diagrams.stock.search')} htmlFor="diagram-stock-search" hint={t('diagrams.stock.keyboardHint')}>
+      <Field label={t('diagrams.stock.search')} htmlFor="diagram-stock-search" hint={drag ? t('diagrams.stock.dragHint') : t('diagrams.stock.keyboardHint')}>
         <input
           id="diagram-stock-search"
           className="inp"
@@ -166,8 +178,26 @@ export function StockDevicePicker({
           {items.map((device) => {
             const reason = reasonOf(device);
             const reasonId = `diagram-stock-why-${device.id}`;
+            const payload = !reason && drag ? drag.payload(device.id) : null;
             return (
-              <li key={device.id}>
+              <li
+                key={device.id}
+                draggable={Boolean(payload)}
+                data-drag-ready={payload ? '' : undefined}
+                title={payload ? t('diagrams.stock.dragRow') : undefined}
+                onPointerEnter={() => (!reason ? drag?.prepare(device.id) : undefined)}
+                onFocus={() => (!reason ? drag?.prepare(device.id) : undefined)}
+                onDragStart={(event) => {
+                  if (!payload || !drag) {
+                    event.preventDefault();
+                    return;
+                  }
+                  event.dataTransfer.setData('text/plain', payload);
+                  event.dataTransfer.effectAllowed = 'copy';
+                  drag.onStart(device.id);
+                }}
+                onDragEnd={(event) => drag?.onEnd(device.id, event.dataTransfer.dropEffect)}
+              >
                 <label className="stock-row">
                   <input
                     type="checkbox"

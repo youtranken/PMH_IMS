@@ -75,6 +75,7 @@ import {
 } from './drawio-bridge';
 import { DraftFromPortMapDialog } from './draft-from-port-map-dialog';
 import { StockDevicePicker } from './stock-device-picker';
+import { deviceDropXml, dragFrameState, wantsDropFallback } from './stock-drag';
 import { useCableBridge } from './use-cable-bridge';
 import { useFrameBridge } from './use-frame-bridge';
 import { usePhotoBridge } from './use-photo-bridge';
@@ -88,6 +89,12 @@ type Mode = 'view' | 'edit';
  * thuộc tính `ims_*` của ô đang chọn.
  */
 const SELECTION_POLL_MS = 700;
+
+/**
+ * Thả máy vào khung mà trình duyệt báo không ai nhận: chờ chừng này cho `autosave` của draw.io
+ * (nếu thật ra nó đã nhận) trước khi IMS chèn thay — không chèn một máy hai lần.
+ */
+const DROP_FALLBACK_WAIT_MS = 600;
 
 function newCellId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -875,6 +882,20 @@ function DiagramEditor({
   const [frameXml, setFrameXml] = useState(content.version?.xml ?? '');
   const [justInserted, setJustInserted] = useState<string[]>([]);
   const present = useMemo(() => new Set([...deviceIdsInXml(frameXml), ...justInserted]), [frameXml, justInserted]);
+  const presentNow = useRef(present);
+  useEffect(() => {
+    presentNow.current = present;
+  }, [present]);
+  /*
+   * Kéo máy từ "Thiết bị kho" thả vào trình vẽ (Q-23 06/10): ô của máy dựng sẵn khi chuột vào dòng
+   * (dữ liệu kéo phải có NGAY lúc bắt đầu kéo), `dragging` theo dõi con trỏ đã vào khung chưa, và
+   * máy vừa thả chờ `autosave` mang nó về để báo "Đã chèn".
+   */
+  const dragSpecs = useRef(new Map<string, DeviceCellSpec>());
+  const dragLoading = useRef(new Set<string>());
+  const [, setDragSpecsVersion] = useState(0);
+  const dragging = useRef<{ id: string; inFrame: boolean; stop: () => void } | null>(null);
+  const dropped = useRef<string | null>(null);
   const guard = useUnsavedGuard(dirty);
   /*
    * XML nạp lúc khung báo `init` và phiên bản gốc của lượt lưu kế tiếp. Lưu xong KHÔNG nạp lại
@@ -1072,7 +1093,7 @@ function DiagramEditor({
     }
   };
 
-  const insertInto = (xml: string, devices: DeviceCellSpec[]) => {
+  const insertInto = (xml: string, devices: DeviceCellSpec[], note?: string) => {
     const state = frameState.current;
     const pages = pageIds(xml);
     const pageId = pages[Math.min(state.page, pages.length - 1)];
@@ -1089,7 +1110,7 @@ function DiagramEditor({
     setStockOpen(false);
     // Máy vừa chèn có thể đã có dây trong sơ đồ cổng với máy đang trên bản vẽ → "Có N kết nối mới chưa vẽ".
     withFile((file) => cables.refreshUndrawn(file));
-    toast({ tone: 'ok', message: t('diagrams.screen.inserted', { codes: devices.map((d) => d.code).join(', ') }) });
+    toast({ tone: 'ok', message: note ?? t('diagrams.screen.inserted', { codes: devices.map((d) => d.code).join(', ') }) });
   };
 
   const insertFreeInto = (xml: string, free: { specs: FreeCellSpec[]; message: string }) => {
@@ -1127,6 +1148,16 @@ function DiagramEditor({
       case 'autosave':
         setDirty(true);
         if (message.xml) {
+          const arrived = [...deviceIdsInXml(message.xml)].filter((deviceId) => !presentNow.current.has(deviceId));
+          if (arrived.length > 0) {
+            // Máy mới thả / dán vào có thể đã có dây với máy trên bản vẽ → "Có N kết nối mới chưa vẽ".
+            cables.refreshUndrawn(message.xml);
+            const id = dropped.current;
+            if (id && arrived.includes(id)) {
+              dropped.current = null;
+              toast({ tone: 'ok', message: t('diagrams.screen.inserted', { codes: dragSpecs.current.get(id)?.code ?? '' }) });
+            }
+          }
           setFrameXml(message.xml);
           setJustInserted([]);
           cables.onAutosave(message.xml);
@@ -1181,7 +1212,55 @@ function DiagramEditor({
    * Ô chèn do server dựng (một lượt cho cả lô — hình theo loại, nhãn từ kho, cùng luật hydrate).
    * Máy đã thanh lý hay không còn trong kho bị bỏ ở đây lần nữa: danh sách trong hộp có thể đã cũ.
    */
-  const insert = async (ids: string[]) => {
+  const prepareDrag = (id: string) => {
+    if (dragSpecs.current.has(id) || dragLoading.current.has(id)) return;
+    dragLoading.current.add(id);
+    void apiFetch<DiagramDeviceInfo[]>(`/api/v1/diagrams/device-info?ids=${encodeURIComponent(id)}`)
+      .then((infos) => {
+        const info = infos.find((one) => one.id === id && one.found && one.status !== 'retired' && one.code);
+        if (!info) return;
+        dragSpecs.current.set(id, { id: info.id, code: info.code ?? '', cell: info.cell });
+        setDragSpecsVersion((n) => n + 1);
+      })
+      .catch(() => undefined)
+      .finally(() => dragLoading.current.delete(id));
+  };
+
+  const startDrag = (id: string) => {
+    const track = (event: DragEvent) => {
+      const at = dragging.current;
+      const rect = frame.current?.rect();
+      if (!at || !rect) return;
+      at.inFrame = dragFrameState(at.inFrame, { type: event.type === 'dragenter' ? 'dragenter' : 'dragleave', related: Boolean(event.relatedTarget), x: event.clientX, y: event.clientY }, rect);
+    };
+    document.addEventListener('dragenter', track, true);
+    document.addEventListener('dragleave', track, true);
+    // Máy đang kéo: `autosave` mang nó về (draw.io đã nhận cú thả) thì báo "Đã chèn".
+    dropped.current = id;
+    dragging.current = {
+      id,
+      inFrame: false,
+      stop: () => {
+        document.removeEventListener('dragenter', track, true);
+        document.removeEventListener('dragleave', track, true);
+      },
+    };
+  };
+
+  const endDrag = (id: string, dropEffect: string) => {
+    const at = dragging.current;
+    dragging.current = null;
+    at?.stop();
+    if (!at || at.id !== id) return;
+    if (!wantsDropFallback(at.inFrame, dropEffect)) return;
+    window.setTimeout(() => {
+      if (presentNow.current.has(id)) return;
+      dropped.current = null;
+      void insert([id], t('diagrams.stock.dropFallback', { codes: dragSpecs.current.get(id)?.code ?? '' }));
+    }, DROP_FALLBACK_WAIT_MS);
+  };
+
+  const insert = async (ids: string[], note?: string) => {
     setInserting(true);
     try {
       const infos = await apiFetch<DiagramDeviceInfo[]>(`/api/v1/diagrams/device-info?ids=${ids.map(encodeURIComponent).join(',')}`);
@@ -1196,7 +1275,7 @@ function DiagramEditor({
       withFile((xml) => {
         if (xml) {
           setFrameXml(xml);
-          insertInto(xml, devices);
+          insertInto(xml, devices, note);
         }
         setInserting(false);
       });
@@ -1254,7 +1333,20 @@ function DiagramEditor({
       primary={
         <>
           <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
-            <StockDevicePicker present={present} busy={inserting} onInsert={(ids) => void insert(ids)} />
+            <StockDevicePicker
+              present={present}
+              busy={inserting}
+              onInsert={(ids) => void insert(ids)}
+              drag={{
+                prepare: prepareDrag,
+                payload: (id) => {
+                  const spec = dragSpecs.current.get(id);
+                  return spec ? deviceDropXml(spec) : null;
+                },
+                onStart: startDrag,
+                onEnd: endDrag,
+              }}
+            />
           </Popover>
           <InfoTip subject={t('diagrams.stock.button')}>{t('diagrams.help.stock')}</InfoTip>
           <button

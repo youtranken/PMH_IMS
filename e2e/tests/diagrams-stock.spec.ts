@@ -152,6 +152,77 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(card.getByRole('link', { name: 'Mở hồ sơ' })).toHaveAttribute('href', `/devices/${deviceId}`);
   });
 
+  test('kéo máy từ "Thiết bị kho" thả vào trình vẽ: draw.io đặt ô đúng chỗ thả; trình duyệt không giao cú thả thì IMS chèn thay (Q-23 06/10)', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const first = `SW-E2E-KEO${stamp}`;
+    const second = `SW-E2E-KEP${stamp}`;
+    const firstId = await createDevice(page, first);
+    const secondId = await createDevice(page, second);
+    const id = await createDiagram(page, `E2E Kéo thả ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    const stock = page.getByRole('button', { name: 'Thiết bị kho', exact: true });
+    await expect(stock).toBeEnabled({ timeout: 60_000 });
+    await stock.click();
+    const search = stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' });
+    const rowOf = async (code: string) => {
+      await search.fill(code);
+      await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
+      const row = stockBox(page).getByRole('listitem').filter({ hasText: code });
+      // Chuột vào dòng → IMS đọc trước ô của máy; xong thì dòng kéo được (con trỏ "nắm").
+      await row.hover();
+      await expect(row).toHaveAttribute('draggable', 'true');
+      return row;
+    };
+
+    // 1) Đường draw.io nhận cú thả: dữ liệu kéo đúng như dòng gắn lúc bắt đầu kéo, thả vào khung.
+    //    Playwright không giao kéo-thả chuột cho khung khác nguồn, nên cú thả trong khung được dựng
+    //    bằng sự kiện drop của chính trình duyệt mang đúng dữ liệu đó.
+    const row = await rowOf(first);
+    const payload = await row.evaluate((li) => {
+      const dt = new DataTransfer();
+      li.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+      const text = dt.getData('text/plain');
+      li.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+      return text;
+    });
+    expect(payload.startsWith('<mxGraphModel>')).toBe(true);
+    expect(payload).toContain(`ims_device_id="${firstId}"`);
+    const drawio = page.frames().find((f) => f.url().includes('/drawio/'))!;
+    await drawio.evaluate((xml) => {
+      const target = document.querySelector('.geDiagramContainer') as HTMLElement;
+      const box = target.getBoundingClientRect();
+      const dt = new DataTransfer();
+      dt.setData('text/plain', xml);
+      const at = { clientX: box.left + 420, clientY: box.top + 260, bubbles: true, cancelable: true, dataTransfer: dt };
+      target.dispatchEvent(new DragEvent('dragenter', at));
+      target.dispatchEvent(new DragEvent('dragover', at));
+      target.dispatchEvent(new DragEvent('drop', at));
+    }, payload);
+    await expect(page.getByText(`Đã chèn ${first} vào bản vẽ.`)).toBeVisible();
+    await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/keo-tha-dung-cho.png` : test.info().outputPath('keo-tha-dung-cho.png') });
+
+    // 2) Kéo chuột thật vào khung (Playwright: khung không nhận) → IMS chèn thay theo lưới, báo rõ.
+    const secondRow = await rowOf(second);
+    await secondRow.dragTo(page.locator('iframe[title="Khung vẽ draw.io"]'), { targetPosition: { x: 500, y: 400 } });
+    await expect(page.getByText(new RegExp(`Đã chèn ${second} cạnh các hình đang có`))).toBeVisible();
+
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${id}' ORDER BY seq DESC LIMIT 1`);
+    expect(xml).toContain(`ims_device_id="${firstId}"`);
+    expect(xml).toContain(`ims_device_id="${secondId}"`);
+    // Mỗi máy đúng MỘT ô: không chèn hai lần khi draw.io đã nhận cú thả.
+    expect(xml.split(`ims_device_id="${firstId}"`)).toHaveLength(2);
+    expect(xml.split(`ims_device_id="${secondId}"`)).toHaveLength(2);
+  });
+
   test('chèn 3 máy một lượt: xếp lưới không đè nhãn; lưu lần đầu xong thẻ "Bản vẽ đang trống" không hiện lại; hồ sơ máy liệt kê bản vẽ (E-01, E-02, T-01)', async ({ page }) => {
     test.setTimeout(180_000);
     const secret = await firstLogin(page, E2E_SA);

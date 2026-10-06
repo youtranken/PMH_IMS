@@ -50,6 +50,8 @@ export interface DrawioFrameHandle {
   send: (command: DrawioCommand) => void;
   /** Tiêu điểm đang nằm trong khung trình vẽ (người dùng đang thao tác trên bản vẽ). */
   isFocused: () => boolean;
+  /** Khung trình vẽ trên trang (toạ độ client) — màn biết con trỏ kéo đã vào khung chưa. */
+  rect: () => DOMRect | null;
 }
 
 export interface DrawioFrameProps {
@@ -101,7 +103,15 @@ export const DrawioFrame = forwardRef<DrawioFrameHandle, DrawioFrameProps>(funct
   const send = useCallback((command: DrawioCommand) => {
     frameRef.current?.contentWindow?.postMessage(serializeDrawioCommand(command), '*');
   }, []);
-  useImperativeHandle(ref, () => ({ send, isFocused: () => Boolean(frameRef.current) && document.activeElement === frameRef.current }), [send]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      send,
+      isFocused: () => Boolean(frameRef.current) && document.activeElement === frameRef.current,
+      rect: () => frameRef.current?.getBoundingClientRect() ?? null,
+    }),
+    [send],
+  );
 
   useEffect(() => {
     const listen = (message: MessageEvent) => {

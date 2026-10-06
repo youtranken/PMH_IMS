@@ -1309,6 +1309,10 @@ button.btn-x.danger:hover:not(:disabled) {
 .stock-list li + li .stock-row {
   border-top: 1px solid var(--border);
 }
+/* Dòng kéo được vào trình vẽ (Q-23 06/10): con trỏ "nắm" báo trước là kéo được. */
+.stock-list li[data-drag-ready] .stock-row {
+  cursor: grab;
+}
 .stock-row:has(input:disabled) {
   cursor: default;
   color: var(--ink-3);
