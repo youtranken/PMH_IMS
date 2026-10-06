@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  catalogItem,
   catalogTab,
   expireStepUp,
   fillOtp,
@@ -420,6 +421,46 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await expect(step.getByText(label, { exact: true })).toBeVisible();
     await fillOtp(step, await freshTotpCode(secret));
     await expect(page.getByRole('dialog', { name: label, exact: true }).getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
+  });
+
+  test('huy hiệu sẵn sàng (Q-23 06/10 chiều): máy trong tủ chưa khai U hiện "Thiếu U", lọc "Chỉ máy cần xử lý" vẫn thấy nó; khai U xong mở lại hộp thì hết', async ({ page }) => {
+    test.setTimeout(150_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const siteId = await catalogItem(page, 'site', { code: `E2E-SS${stamp}`, name: `Site sẵn sàng E2E ${stamp}` });
+    const cabinetId = await catalogItem(page, 'cabinet', { siteId, code: `E2E-SSTU${stamp}`, uHeight: 12 });
+    const missing = `SW-E2E-SSA${stamp}`;
+    const missingId = await createDevice(page, missing, { siteId, cabinetId });
+    const placed = `SW-E2E-SSB${stamp}`;
+    await createDevice(page, placed, { siteId, cabinetId, rackUStart: 3, rackUSize: 1 });
+    const id = await createDiagram(page, `E2E Sẵn sàng ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    const stock = page.getByRole('button', { name: 'Thiết bị kho', exact: true });
+    await expect(stock).toBeEnabled({ timeout: 60_000 });
+    await stock.click();
+    await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`SSA${stamp}`);
+    await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
+    const row = stockBox(page).getByRole('listitem').filter({ hasText: missing });
+    await expect(row.getByText('Thiếu U', { exact: true })).toBeVisible();
+    await expect(row.getByRole('link', { name: `Mở hồ sơ ${missing}` })).toHaveAttribute('href', `/devices/${missingId}`);
+    // Chỉ báo, không chặn chèn.
+    await expect(row.getByRole('checkbox', { name: `Chọn ${missing} để chèn` })).toBeEnabled();
+    await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`SSB${stamp}`);
+    await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
+    await expect(stockBox(page).getByRole('listitem').filter({ hasText: placed }).getByText('Thiếu U', { exact: true })).toHaveCount(0);
+    await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`E2E-SS`);
+    await stockBox(page).getByRole('checkbox', { name: 'Chỉ máy cần xử lý' }).check();
+    await expect(stockBox(page).getByRole('listitem').filter({ hasText: missing })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    const declared = await page.request.patch(`/api/v1/devices/${missingId}`, { headers: await writeHeaders(page), data: { rackUStart: 5, rackUSize: 1 } });
+    expect(declared.status(), await declared.text()).toBe(200);
+    await stock.click();
+    await stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' }).fill(`SSA${stamp}`);
+    await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
+    await expect(stockBox(page).getByRole('listitem').getByText('Thiếu U', { exact: true })).toHaveCount(0);
   });
 
   test('đường hỏng: máy đã thanh lý không hiện trong hộp Thiết bị kho; ô trỏ máy không còn trong kho → dấu đỏ, thẻ báo "Không tìm thấy trong kho"', async ({ page }) => {

@@ -1,11 +1,14 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
+import { measurePhotoFit } from '@/lib/image-crop';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useDebouncedValue } from '@/ui/use-debounced-value';
+import { deviceReadiness, lookPhotoUri, type ReadinessFlag } from './device-readiness';
+import type { DeviceLook } from './photo-bridge';
 
 /** Một dòng `GET /devices` — đủ để chọn và để nói vì sao không chèn được. */
 interface StockDevice {
@@ -16,7 +19,12 @@ interface StockDevice {
   deviceTypeName: string;
   siteCode: string | null;
   cabinetCode: string | null;
+  cabinetId: string | null;
+  rackUStart: number | null;
+  rackUSize: number | null;
 }
+
+type PhotoFit = 'margins' | 'aspect' | null;
 
 /** Số máy mỗi lượt tìm — gõ thêm hoặc lọc để thu hẹp; một hộp gọn không cuộn qua cả kho. */
 const STOCK_LIMIT = 20;
@@ -38,6 +46,10 @@ export function stockQuery(filter: { term: string; siteId: string; cabinetId: st
  * Nội dung hộp "Thiết bị kho" của màn sửa sơ đồ: tìm theo mã/tên/IP, lọc site/tủ/loại, kéo một
  * máy thả thẳng vào bản vẽ, hoặc tick một hoặc nhiều máy rồi Chèn. Máy đã thanh lý không hiện. Máy đã có trên bản vẽ vẫn HIỆN nhưng ô tick
  * tắt, kèm lý do — ẩn nó đi thì người vẽ tưởng kho không có máy đó.
+ *
+ * Huy hiệu sẵn sàng (Q-23 06/10 chiều, `device-readiness.ts`): thiếu U / chưa có ảnh / ảnh cần cắt
+ * lại — báo trước khi vẽ, không chặn chèn. Ảnh lấy MỘT lượt `device-looks` cho cả trang kết quả
+ * (≤ `STOCK_LIMIT` máy) và đo bằng đúng hàm của ô ảnh trang thiết bị.
  *
  * Bàn phím: ↓ từ ô tìm sang danh sách, ↑/↓ giữa các dòng, Space tick, Enter chèn.
  */
@@ -72,14 +84,54 @@ export function StockDevicePicker({
   const [picked, setPicked] = useState<string[]>([]);
   const settled = useDebouncedValue(term);
   const query = stockQuery({ term: settled, siteId, cabinetId, deviceTypeId });
+  /*
+   * Luôn tải lại khi mở hộp và khi quay lại tab: huy hiệu mời "Mở hồ sơ" ở tab mới để sửa kho, quay
+   * lại mà còn thấy huy hiệu cũ thì người vẽ tưởng sửa chưa ăn.
+   */
+  const fresh = { staleTime: 0, refetchOnWindowFocus: true } as const;
   const devices = useQuery({
     queryKey: ['diagram-stock', query],
     queryFn: () => apiFetch<{ items: StockDevice[] }>(`/api/v1/devices?${query}`),
+    ...fresh,
   });
 
   const reasonOf = (device: StockDevice): string | null => (present.has(device.id) ? t('diagrams.stock.already') : null);
   // Lớp chặn thứ hai: đổi ngữ nghĩa `usable` phía server cũng không được làm máy thanh lý hiện lại.
-  const items = (devices.data?.items ?? []).filter((d) => d.status !== 'retired');
+  const listed = (devices.data?.items ?? []).filter((d) => d.status !== 'retired');
+  const ids = listed.map((d) => d.id).join(',');
+  const looks = useQuery({
+    queryKey: ['diagram-stock-looks', ids],
+    queryFn: () => apiFetch<{ items: DeviceLook[] }>(`/api/v1/diagrams/device-looks?ids=${ids}`),
+    enabled: ids.length > 0,
+    ...fresh,
+  });
+  const photoOf = new Map((looks.data?.items ?? []).map((look) => [look.id, look.front ? lookPhotoUri(look.front.style) : null]));
+  // Khoá đo gồm cả Số U: đổi Số U thì tỉ lệ đúng đổi theo, phải đo lại.
+  const fitKey = (device: StockDevice) => `${device.id}:${looks.data ? (photoOf.get(device.id) ?? '').length : ''}:${device.rackUSize ?? ''}`;
+  const [fits, setFits] = useState<Record<string, PhotoFit>>({});
+  useEffect(() => {
+    let alive = true;
+    for (const device of listed) {
+      const uri = photoOf.get(device.id);
+      const key = fitKey(device);
+      if (!uri || key in fits) continue;
+      const img = new Image();
+      img.onload = () => {
+        if (alive) setFits((current) => ({ ...current, [key]: measurePhotoFit(img, device.rackUSize) }));
+      };
+      img.src = uri;
+    }
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [looks.data, devices.data]);
+  const flagsOf = (device: StockDevice): ReadinessFlag[] =>
+    looks.isSuccess
+      ? deviceReadiness({ cabinetId: device.cabinetId, rackUStart: device.rackUStart, hasPhoto: Boolean(photoOf.get(device.id)), photoIssue: fits[fitKey(device)] })
+      : deviceReadiness({ cabinetId: device.cabinetId, rackUStart: device.rackUStart, hasPhoto: true, photoIssue: undefined });
+  const [onlyNeedsWork, setOnlyNeedsWork] = useState(false);
+  const items = onlyNeedsWork ? listed.filter((d) => flagsOf(d).length > 0) : listed;
   const insertable = picked.filter((id) => items.some((d) => d.id === id && !reasonOf(d)));
   // "Chọn tất cả" chỉ lấy máy chèn được: máy đã có trên bản vẽ chèn lần hai là sinh lệch (E-08).
   const choosable = items.filter((d) => !reasonOf(d)).map((d) => d.id);
@@ -93,7 +145,8 @@ export function StockDevicePicker({
 
   /** ↑/↓ đi giữa các ô tick (kể cả từ ô tìm xuống), Enter chèn. */
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const boxes = Array.from(event.currentTarget.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:not([disabled])'));
+    // Chỉ ô tick của dòng máy — ô lọc "Chỉ máy cần xử lý" cũng là checkbox nhưng không thuộc danh sách.
+    const boxes = Array.from(event.currentTarget.querySelectorAll<HTMLInputElement>('li input[type="checkbox"]:not([disabled])'));
     const at = boxes.indexOf(event.target as HTMLInputElement);
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       const next = event.key === 'ArrowDown' ? (at < 0 ? 0 : at + 1) : at - 1;
@@ -154,15 +207,19 @@ export function StockDevicePicker({
         <p className="alert error" role="alert">
           {t('diagrams.stock.loadFailed')}
         </p>
-      ) : devices.isSuccess && items.length === 0 ? (
+      ) : devices.isSuccess && listed.length === 0 ? (
         <p className="muted">{t('diagrams.stock.empty')}</p>
       ) : (
         <>
         {devices.isSuccess ? (
           <div className="stock-head">
             <span className="muted" role="status">
-              {items.length >= STOCK_LIMIT ? t('diagrams.stock.countCapped', { count: items.length }) : t('diagrams.stock.count', { count: items.length })}
+              {listed.length >= STOCK_LIMIT ? t('diagrams.stock.countCapped', { count: listed.length }) : t('diagrams.stock.count', { count: listed.length })}
             </span>
+            <label className="row">
+              <input type="checkbox" checked={onlyNeedsWork} onChange={(event) => setOnlyNeedsWork(event.target.checked)} />
+              {t('diagrams.stock.onlyNeedsWork')}
+            </label>
             {choosable.length > 0 ? (
               <button
                 type="button"
@@ -219,12 +276,23 @@ export function StockDevicePicker({
                         {reason}
                       </span>
                     ) : null}
+                    {flagsOf(device).map((flag) => (
+                      <span key={flag} className={`badge ${flag === 'noPhoto' ? 'muted' : 'warn'} stock-why`} title={t(`diagrams.stock.fix_${flag}`)}>
+                        {t(`diagrams.stock.ready_${flag}`)}
+                      </span>
+                    ))}
+                    {flagsOf(device).length > 0 ? (
+                      <a className="stock-why" href={`/devices/${device.id}`} target="_blank" rel="noopener noreferrer">
+                        {t('diagrams.stock.openProfile', { code: device.code })}
+                      </a>
+                    ) : null}
                   </span>
                 </label>
               </li>
             );
           })}
         </ul>
+        {onlyNeedsWork && devices.isSuccess && items.length === 0 ? <p className="muted">{t('diagrams.stock.needsWorkNone')}</p> : null}
         </>
       )}
       <div className="row" style={{ justifyContent: 'flex-end' }}>
