@@ -34,6 +34,7 @@ export function useFrameBridge({
   markDirty,
   newId,
   onInserted,
+  onCabinetRebound,
 }: {
   diagramId: string;
   ready: boolean;
@@ -48,6 +49,8 @@ export function useFrameBridge({
   newId: () => string;
   /** Máy vừa chèn cùng khung tủ — màn cập nhật "đã có" của hộp Thiết bị kho và "kết nối chưa vẽ". */
   onInserted: (deviceIds: string[]) => void;
+  /** Khung tủ vừa đổi sang tủ khác — màn đối chiếu lại máy trong khung với kho (chỉ báo, không hỏi dồn). */
+  onCabinetRebound?: () => void;
 }): { menu: BarAction[]; popovers: ReactNode; dialogs: ReactNode } {
   const { t } = useTranslation();
   const toast = useToast();
@@ -110,7 +113,7 @@ export function useFrameBridge({
   /** Mở hộp với XML cả tệp mới nhất: hình người vẽ vừa thêm cũng phải có trong danh sách. */
   const openBind = () => withFile((file) => setBinding(frameCandidates(file)));
 
-  const bind = (frame: FrameCandidate, attr: string, value: string | null) => {
+  const bind = (frame: FrameCandidate, attr: string, value: string | null, label?: string) => {
     // Đọc lại khung từ tệp HIỆN TẠI: giữa lúc mở hộp và lúc bấm, người vẽ có thể đã sửa chữ trên hình.
     withFile((file) => {
       const pageId = pageOf(file);
@@ -119,10 +122,16 @@ export function useFrameBridge({
         toast({ tone: 'error', message: t('diagrams.screen.insertFailed', { reason: frame.id }) });
         return;
       }
-      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: { [fresh.id]: { xmlValue: bindFrameValue(fresh, { [attr]: value }) } } } } } } });
+      const set: Record<string, string | null> = label ? { [attr]: value, label } : { [attr]: value };
+      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: { [fresh.id]: { xmlValue: bindFrameValue(fresh, set) } } } } } } });
       markDirty();
       setBinding(null);
       const name = fresh.label || fresh.id;
+      if (attr === 'ims_cabinet_id' && value !== null) {
+        toast({ tone: 'ok', message: t('diagrams.frames.rebound', { frame: label ?? name }) });
+        onCabinetRebound?.();
+        return;
+      }
       toast({ tone: 'ok', message: value === null ? t('diagrams.frames.unbound', { frame: name }) : t('diagrams.frames.bound', { frame: name }) });
     });
   };

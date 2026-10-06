@@ -205,6 +205,37 @@ describe('Hộp "Gắn khung"', () => {
     expect(onBind).toHaveBeenLastCalledWith(frames[1], 'ims_subnet_id', 'sn-1');
   });
 
+  it('khung tủ gắn nhầm tủ: "Đổi tủ của khung này" gửi ims_cabinet_id mới + nhãn đổi mã tủ (khung thường không có lựa chọn này)', async () => {
+    const rack: FrameCandidate = { id: 'f4', label: 'Tủ TU-04 · Mặt trước', childDiagramId: null, subnetId: null, cabinetId: 'cab-4', attrs: { label: 'Tủ TU-04 · Mặt trước', ims_cabinet_id: 'cab-4' } };
+    const catalog = {
+      sites: [],
+      cabinets: [
+        { id: 'cab-1', siteId: 's1', siteCode: 'T', code: 'TU-01', description: null, uHeight: 42, active: true },
+        { id: 'cab-4', siteId: 's1', siteCode: 'T', code: 'TU-04', description: null, uHeight: 42, active: true },
+      ],
+      deviceTypes: [],
+      vendors: [],
+      departments: [],
+      ispProviders: [],
+      servicePorts: [],
+    };
+    routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, tree), '/api/v1/catalog': () => jsonResponse(200, catalog) });
+    const onBind = vi.fn();
+    renderWithI18n(<FrameBindDialog diagramId="d2" frames={[frames[0], rack]} onBind={onBind} onClose={() => undefined} />);
+    const user = userEvent.setup();
+    const dialog = await screen.findByRole('dialog', { name: 'Gắn khung với bản vẽ con hoặc dải IP' });
+    expect(within(dialog).queryByRole('radio', { name: 'Tủ mạng của khung' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Khung' }));
+    await user.click(await screen.findByRole('option', { name: 'Tủ TU-04 · Mặt trước' }));
+    await user.click(within(dialog).getByRole('radio', { name: 'Tủ mạng của khung' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Tủ mạng mới' }));
+    const options = (await screen.findAllByRole('option')).map((o) => o.textContent);
+    expect(options).toEqual(['T · TU-01']);
+    await user.click(screen.getByRole('option', { name: 'T · TU-01' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Đổi tủ của khung này' }));
+    expect(onBind).toHaveBeenLastCalledWith(rack, 'ims_cabinet_id', 'cab-1', 'Tủ TU-01 · Mặt trước');
+  });
+
   it('bản vẽ chưa có hình nào → nói rõ cần vẽ khung trước, không có nút Gắn', async () => {
     routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, tree) });
     renderWithI18n(<FrameBindDialog diagramId="d2" frames={[]} onBind={vi.fn()} onClose={() => undefined} />);

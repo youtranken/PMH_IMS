@@ -913,6 +913,9 @@ function DiagramEditor({
       setJustInserted((current) => [...current, ...deviceIds]);
       withFile((file) => cables.refreshUndrawn(file));
     },
+    // Đổi tủ của khung: máy trong khung có thể thành lệch tủ — chỉ báo một lời, không bật hộp chuyển
+    // cho từng máy (người vẽ chọn máy cần chuyển từ lời báo).
+    onCabinetRebound: () => withFile((file) => racks.fit(file, { warnOnly: true })),
   });
 
   const cables = useCableBridge({
