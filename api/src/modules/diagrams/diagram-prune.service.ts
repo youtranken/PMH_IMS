@@ -151,9 +151,9 @@ export class DiagramPruneService {
 
   /**
    * "Xóa vĩnh viễn" bản vẽ ĐÃ LƯU TRỮ, kể cả bản từng phát hành (Q-23 05/10): chỉ Admin/SA, gõ đúng
-   * tên. Bản vẽ phải được lưu trữ từ một lượt trước — DB (0058) cũng từ chối bản vừa lưu trữ trong
-   * chính lượt này. Còn bản vẽ con chưa xoá vĩnh viễn (kể cả con đã lưu trữ) thì chặn: con treo dưới
-   * một bia mộ thì không bao giờ bỏ lưu trữ được.
+   * tên. Bản vẽ phải được lưu trữ từ một lượt trước — DB (0058, mốc do 0061 đóng dấu) cũng từ chối
+   * bản vừa lưu trữ trong chính lượt này. Còn bản vẽ con chưa xoá vĩnh viễn (kể cả con đã lưu trữ)
+   * thì chặn: con treo dưới một bia mộ thì không bao giờ bỏ lưu trữ được.
    */
   async erase(actor: PruneActor, diagramId: string, confirmName: string): Promise<{ versions: number }> {
     if (actor.role !== 'sa' && actor.role !== 'admin') {

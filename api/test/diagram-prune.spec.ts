@@ -1,3 +1,5 @@
+import { Pool } from 'pg';
+import { ensureAppRole } from '../src/database/app-role';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
@@ -19,7 +21,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { appDbPassword, appDbUrl, createScratchDb, migrationsDir, type ScratchDb } from './db';
 import { noPhotos } from './device-photos-stub';
 
 /**
@@ -91,6 +93,9 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_diagram_prune');
+    // Dựng role bằng đúng hàm `main.ts` gọi, với đúng mật khẩu trong `.env`: bài đòn tấn công bên
+    // dưới chạy BẰNG `ims_app`, không bằng chủ sở hữu.
+    await ensureAppRole(scratch.pool, 'ims_app', appDbPassword());
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     const db = scratch.db;
     const audit = new AuditWriterService(db);
@@ -510,6 +515,72 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
         expect(await sqlStateOf(() => scratch.pool.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'drafts')`, [d.id, [d.versions[0]]]))).toBe('P0001');
         expect(await seqs(d.id)).toEqual([1, 2]);
       });
+    });
+  });
+
+  /**
+   * Đòn: `ims_app` bị chiếm có UPDATE trên `diagram`. Nó tự đặt `archived_at` lùi về quá khứ,
+   * `deleted_at` = bây giờ, bỏ trỏ bản chính thức, rồi gọi chế độ `erase` để xoá sạch lịch sử đã
+   * phát hành của một bản vẽ ĐANG DÙNG — không qua bước lưu trữ nào. Chạy bằng chính `ims_app`.
+   */
+  describe('đòn của ims_app bị chiếm: tự viết mốc lưu trữ để xoá vĩnh viễn', () => {
+    let app: Pool;
+
+    beforeAll(() => {
+      app = new Pool({ connectionString: appDbUrl(scratch.name) });
+      app.on('error', () => undefined);
+    });
+
+    afterAll(async () => {
+      await app?.end();
+    });
+
+    it('lùi archived_at + đặt bia mộ trong một câu rồi gọi erase → P0001, mọi phiên bản còn nguyên', async () => {
+      const d = await drawn(3, SA.email, 'Đòn 1');
+      await review.publish(SA, d.id, { versionId: d.versions[0] });
+      await app.query(
+        `UPDATE diagram SET official_version_id = NULL, archived_at = now() - interval '1 day', archived_by = 'x',
+                            deleted_at = now(), deleted_by = 'x' WHERE id = $1`,
+        [d.id],
+      );
+      expect(await sqlStateOf(() => app.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'erase')`, [d.id, d.versions]))).toBe('P0001');
+      expect(await seqs(d.id)).toEqual([1, 2, 3]);
+    });
+
+    it('lùi archived_at của một bia mộ có sẵn ở lượt sau → vẫn P0001', async () => {
+      const d = await drawn(2, SA.email, 'Đòn 2');
+      await review.publish(SA, d.id, { versionId: d.versions[0] });
+      await app.query(
+        `UPDATE diagram SET official_version_id = NULL, archived_at = now(), archived_by = 'x', deleted_at = now(), deleted_by = 'x' WHERE id = $1`,
+        [d.id],
+      );
+      await app.query(`UPDATE diagram SET archived_at = '2000-01-01T00:00:00Z' WHERE id = $1`, [d.id]);
+      expect(await sqlStateOf(() => app.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'erase')`, [d.id, d.versions]))).toBe('P0001');
+      expect(await seqs(d.id)).toEqual([1, 2]);
+    });
+
+    it('bia mộ không sống lại: bỏ deleted_at → P0001', async () => {
+      const d = await drawn(1, SA.email, 'Đòn 3');
+      await diagrams.archive(SA, d.id);
+      await prune.erase(SA, d.id, (await scratch.pool.query<{ name: string }>(`SELECT name FROM diagram WHERE id = $1`, [d.id])).rows[0].name);
+      expect(await sqlStateOf(() => app.query(`UPDATE diagram SET deleted_at = NULL, deleted_by = NULL WHERE id = $1`, [d.id]))).toBe('P0001');
+    });
+
+    it('lối hợp lệ vẫn chạy bằng ims_app: lưu trữ ở một lượt, bia mộ + erase ở lượt sau', async () => {
+      const d = await drawn(2, SA.email, 'Hợp lệ');
+      await review.publish(SA, d.id, { versionId: d.versions[0] });
+      await app.query(`UPDATE diagram SET archived_at = now(), archived_by = 'x' WHERE id = $1`, [d.id]);
+      const client = await app.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(`UPDATE diagram SET official_version_id = NULL, deleted_at = now(), deleted_by = 'x' WHERE id = $1`, [d.id]);
+        const { rows } = await client.query<{ n: number }>(`SELECT diagram_delete_versions($1, $2::uuid[], 'erase') AS n`, [d.id, d.versions]);
+        expect(rows[0].n).toBe(2);
+        await client.query('COMMIT');
+      } finally {
+        client.release();
+      }
+      expect(await seqs(d.id)).toEqual([]);
     });
   });
 
