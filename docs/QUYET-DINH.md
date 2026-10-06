@@ -706,6 +706,27 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     bị). Nhãn máy trong khung tủ nằm bên PHẢI, một dòng (mã · IP), không đè lên U khác. "Chèn tủ
     mạng" mà máy của tủ đã có trên trang thì dời chính ô đó vào khung (giữ id — dây vẫn gắn).
     "Dựng lại mặt tủ" giữ id ô máy và giữ dây nối giữa các máy còn trên mặt tủ.
+- **Chủ dự án trả lời các điểm còn mở của góp ý 05/10 (06/10/2026):**
+  - **Có nút "Chuyển máy sang tủ này", ghi vào kho nhưng LUÔN hỏi trước.** Máy kho ghi tủ khác (hay
+    chưa gắn tủ) với khung tủ nó đang nằm: lời cảnh báo và mục của máy trên trình vẽ có việc
+    "Chuyển máy sang tủ này". Kéo một máy vào khung của tủ khác cũng mở hộp xác nhận (hộp dùng
+    chung, không `window.confirm`) TRƯỚC khi ghi gì: "Chuyển <mã> từ <tủ cũ> sang <tủ mới>, U bắt đầu
+    = <U nơi thả, hoặc U trống gần nhất>, Số U = n"; U sửa được, kiểm chồng U với các máy đang ở tủ
+    mới như form thiết bị. Đồng ý → web gọi đúng API sửa thiết bị của `devices` (cùng quyền, cùng
+    nhật ký như sửa ở trang thiết bị — sơ đồ không tự ghi bảng `device`, AD-3) rồi đặt lại ô theo
+    U mới. Huỷ → ô về chỗ cũ, không ghi gì. Máy thanh lý không chuyển được. Lý do: kéo máy vào tủ là
+    cách tự nhiên nhất để nói "máy này ở tủ này", nhưng đổi kho mà không hỏi là ghi ngầm.
+  - **Khung tủ gắn nhầm tủ (bản vẽ "PMH Tower" khung TU-04) không cần sửa code**, người vẽ chọn lại
+    tủ cho khung bằng "Gắn khung" / "Chèn tủ mạng" với đúng tủ.
+  - **"Xóa vĩnh viễn" giữ luật phải xoá vĩnh viễn hết bản vẽ con trước**, câu báo nêu rõ còn con nào.
+  - **Tủ mạng chỉ vẽ MẶT TRƯỚC.** "Chèn tủ mạng" và "Dựng lại mặt tủ" chỉ dựng mặt trước, bỏ mặt
+    sau. Bản vẽ đã lưu có khung mặt sau thì giữ nguyên nội dung, nhưng đặt máy theo U và cảnh báo lệch
+    tủ bỏ qua khung mặt sau.
+  - **"Khôi phục" một phiên bản trùng hệt bản mới nhất không tạo phiên bản mới** (cùng cách so như
+    lưu không đổi): giữ nguyên số, báo "Bản này trùng bản mới nhất — không tạo phiên bản mới".
+  - **Bấm Lưu khi chưa đổi gì phải giữ nguyên số phiên bản, không sinh nháp** — ở MỌI đường lưu: nút
+    Lưu, Ctrl+S, lưu lại sau khi nhập mã giữa chừng, "Vẽ vào" / các việc của IMS không đổi gì, bản
+    trình bày, và lưu ngay sau khi mở một bản nháp cũ.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
