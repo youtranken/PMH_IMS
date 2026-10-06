@@ -14,6 +14,8 @@ interface LooksResponse {
   imsStyleKeys: string[];
   /** Chỗ đặt nhãn của máy trong khung tủ (server) — vắng ở server cũ. */
   rackLabelStyle?: string;
+  /** `diagram.device_width_px` — ô ngoài khung tủ đổi hình thì về bề rộng chuẩn. */
+  deviceWidth?: number;
   items: DeviceLook[];
 }
 
@@ -83,7 +85,7 @@ export function usePhotoBridge({
           (acc, batch) =>
             acc.then(async (sofar) => {
               const res = await apiFetch<LooksResponse>(`/api/v1/diagrams/device-looks?ids=${batch.join(',')}`);
-              return { imsStyleKeys: res.imsStyleKeys, rackLabelStyle: res.rackLabelStyle, items: [...sofar.items, ...res.items] };
+              return { imsStyleKeys: res.imsStyleKeys, rackLabelStyle: res.rackLabelStyle, deviceWidth: res.deviceWidth, items: [...sofar.items, ...res.items] };
             }),
           Promise.resolve({ imsStyleKeys: [], items: [] }),
         )
@@ -96,7 +98,7 @@ export function usePhotoBridge({
     if (!state || !looks) return;
     const look = looks.items.find((l) => l.id === cell.deviceId);
     if (!look || photoChoiceReason(look, choice)) return;
-    const update = photoCellUpdate(cell, look, choice, looks.imsStyleKeys, looks.rackLabelStyle);
+    const update = photoCellUpdate(cell, look, choice, looks.imsStyleKeys, looks.rackLabelStyle, looks.deviceWidth);
     send({
       action: 'patch',
       patch: { u: { [state.pageId]: { cells: { u: { [cell.id]: update } } } } },

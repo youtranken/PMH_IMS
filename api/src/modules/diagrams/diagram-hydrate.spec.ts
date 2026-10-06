@@ -247,8 +247,10 @@ describe('photoAspect — tỉ lệ cao/rộng của ô ảnh thật (Q-23)', ()
     [{ width: 400, height: 100 }, 0.25],
     [{ width: 300, height: 200 }, 0.6667],
     [{ width: 100, height: 100 }, 1],
-    // Máy 1U chụp thẳng (~10:1) — chặn dưới để ô 60px rộng còn cao được ~9px, không thành một vạch.
-    [{ width: 1000, height: 50 }, 0.15],
+    // Mặt máy 1U cắt đúng chuẩn 19" (482,6 : 44,45) — không bị chặn: ô ra đúng một dải 1U.
+    [{ width: 482.6, height: 44.45 }, 0.0921],
+    // Ảnh còn mỏng hơn cả 1U: chặn dưới 0,08 để ô không thành một vạch.
+    [{ width: 1000, height: 50 }, 0.08],
     // Ảnh dọc rất cao: chặn trên, ô không cao vọt khỏi trang.
     [{ width: 100, height: 900 }, 2],
     // Không biết cỡ → ô vuông như biểu tượng.
@@ -274,6 +276,17 @@ describe('deviceInsertCell — ô ảnh mang tỉ lệ của ảnh', () => {
   it('ảnh vuông → ô vuông như trước', () => {
     const photo = { fileId: 'f-sq', uri: 'data:image/png,AAAA', width: 300, height: 300 };
     expect(deviceInsertCell(source({ photos: { front: photo } }))).toMatchObject({ width: 60, height: 60 });
+  });
+});
+
+describe('deviceInsertCell — bề rộng chuẩn `diagram.device_width_px` (Q-23 06/10 E)', () => {
+  it.each<[string, Partial<DeviceCellSource>, { width: number; height: number }]>([
+    ['ảnh 1U 400×100', { photos: { front: { fileId: 'f', uri: 'data:image/png,AAAA', width: 400, height: 100 } } }, { width: 160, height: 40 }],
+    ['biểu tượng switch 100×30', {}, { width: 160, height: 48 }],
+    ['SVG riêng vuông', { iconSvg: ICON }, { width: 160, height: 160 }],
+    ['loại chưa chọn hình 120×50', { shape: null }, { width: 160, height: 67 }],
+  ])('%s → rộng chuẩn, cao theo tỉ lệ hình', (_name, over, size) => {
+    expect(deviceInsertCell(source(over), 160)).toMatchObject(size);
   });
 });
 
@@ -520,6 +533,15 @@ describe('máy trong khung tủ — nhãn bên phải, một dòng', () => {
     const style = rackDeviceStyle('align=center;shape=image;verticalLabelPosition=bottom;verticalAlign=top;html=0;');
     expect(style).toBe(`shape=image;html=0;${RACK_LABEL_STYLE}`);
     for (const token of RACK_LABEL_STYLE.split(';').filter(Boolean)) expect(IMS_STYLE_KEYS).toContain(token.split('=')[0]);
+  });
+
+  it('rackDeviceStyle: ảnh thật lấp đầy ô U (kéo giãn, bỏ khoá tỉ lệ) — ảnh 1U không co thành vạch; biểu tượng SVG giữ nguyên', () => {
+    const photo = rackDeviceStyle('align=center;shape=image;image=data:image/png,AAAA;imageAspect=1;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;html=0;');
+    expect(photo).toContain('imageAspect=0;');
+    expect(photo).not.toContain('aspect=fixed');
+    expect(photo).not.toContain('imageAspect=1');
+    const icon = rackDeviceStyle('align=center;shape=image;image=data:image/svg+xml,%3Csvg%3E;imageAspect=0;aspect=fixed;html=0;');
+    expect(icon).toContain('aspect=fixed');
   });
 
   it('hydrate: ô con của khung tủ (childLayout=rack) nhãn một dòng bên phải; ô ngoài khung giữ nhãn ba dòng dưới hình', () => {

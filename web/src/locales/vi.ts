@@ -4337,5 +4337,8 @@ export default {
     diagramPhotoMaxPxLabel: 'Cỡ ảnh thật thiết bị trên bản vẽ',
     diagramPhotoMaxPxDesc:
       'Ảnh mặt trước/mặt sau đưa vào bản vẽ được thu về cạnh dài này. Lớn quá làm bản vẽ một tủ nặng và chạm trần dung lượng bản vẽ.',
+    diagramDeviceWidthPxLabel: 'Bề rộng chuẩn của ô thiết bị trên bản vẽ',
+    diagramDeviceWidthPxDesc:
+      'Máy chèn hay kéo vào bản vẽ (và khi đổi Biểu tượng ↔ Ảnh) rộng chừng này, cao theo tỉ lệ hình. 160 bằng lòng tủ rack nên máy trong và ngoài tủ cùng cỡ. Ô đã có trên bản vẽ không đổi.',
   },
 } as const;

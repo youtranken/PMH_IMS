@@ -45,9 +45,18 @@ export const IMS_STYLE_KEYS = [
 export const RACK_LABEL_STYLE = 'labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=14;';
 const LABEL_PLACEMENT_KEYS = ['labelPosition', 'verticalLabelPosition', 'align', 'verticalAlign', 'spacingLeft'];
 
-/** Style ô máy nằm trong khung tủ: bỏ chỗ đặt nhãn cũ, nhãn bên phải. */
+/** Ảnh thật (không phải biểu tượng SVG) trong style ô — `image=data:image/png|jpeg…`. */
+const PHOTO_IMAGE_RE = /(?:^|;)image=data:image\/(?!svg)/;
+
+/**
+ * Style ô máy nằm trong khung tủ: bỏ chỗ đặt nhãn cũ, nhãn bên phải. Ảnh thật lấp ĐẦY ô n U
+ * (`imageAspect=0`, bỏ `aspect=fixed`) — ô cao đúng n U là sự thật của tủ, ảnh cắt theo mặt tủ thì
+ * không méo, còn ảnh cũ chưa cắt (còn viền) mà giữ tỉ lệ thì co thành một vạch (Q-23 06/10 C).
+ * Web giữ cùng luật ở `rackCellStyle` (`rack-fit.ts`).
+ */
 export function rackDeviceStyle(style: string): string {
-  return `${styleWithoutIms(style, LABEL_PLACEMENT_KEYS)}${RACK_LABEL_STYLE}`;
+  if (!PHOTO_IMAGE_RE.test(style)) return `${styleWithoutIms(style, LABEL_PLACEMENT_KEYS)}${RACK_LABEL_STYLE}`;
+  return `${styleWithoutIms(style, [...LABEL_PLACEMENT_KEYS, 'imageAspect', 'aspect'])}imageAspect=0;${RACK_LABEL_STYLE}`;
 }
 
 /** Thuộc tính dữ liệu của ô thiết bị ngoài hợp đồng mà bản chèn cũ từng ghi — dehydrate gỡ. */
@@ -71,8 +80,11 @@ export interface DevicePhoto {
   height: number;
 }
 
-/** Chặn tỉ lệ cao/rộng của ô ảnh: máy 1U (~10:1) vẫn còn thấy được, ảnh dọc không cao vọt khỏi trang. */
-const PHOTO_ASPECT_MIN = 0.15;
+/**
+ * Chặn tỉ lệ cao/rộng của ô ảnh: mặt máy 1U cắt chuẩn (482,6 : 44,45 ≈ 0,092) phải lọt để ô ra
+ * đúng một dải 1U; mỏng hơn nữa thì thành vạch. Ảnh dọc không cao vọt khỏi trang.
+ */
+const PHOTO_ASPECT_MIN = 0.08;
 const PHOTO_ASPECT_MAX = 2;
 
 /**
@@ -166,8 +178,15 @@ export function deviceLookStyle(
   return 'verticalLabelPosition=middle;verticalAlign=middle;html=0;';
 }
 
-/** Ô mới để chèn: cỡ theo hình, style = mặc định của người vẽ (sửa được) + phần IMS. */
-export function deviceInsertCell(device: DeviceCellSource): {
+/**
+ * Ô mới để chèn: style = mặc định của người vẽ (sửa được) + phần IMS. `width` = bề rộng chuẩn
+ * `diagram.device_width_px` (Q-23 06/10 E — mọi máy trên trang tự do cùng rộng, cao theo tỉ lệ
+ * hình); vắng thì cỡ riêng của hình.
+ */
+export function deviceInsertCell(
+  device: DeviceCellSource,
+  width?: number,
+): {
   style: string;
   label: string;
   width: number;
@@ -183,15 +202,17 @@ export function deviceInsertCell(device: DeviceCellSource): {
    */
   const front = device.found ? device.photos?.front : undefined;
   if (front) {
+    const w = width ?? DIAGRAM_ICON_SIZE.width;
     return {
       style: `align=center;${deviceLookStyle(device, 'front')}`,
       label,
-      width: DIAGRAM_ICON_SIZE.width,
-      height: Math.round(DIAGRAM_ICON_SIZE.width * photoAspect(front)),
+      width: w,
+      height: Math.round(w * photoAspect(front)),
       attrs: { [PHOTO_SIDE_ATTR]: 'front', [PHOTO_FILE_ATTR]: front.fileId },
     };
   }
   const cell = deviceIconCell(device, label);
+  if (width) return { ...cell, width, height: Math.round((width * cell.height) / cell.width), attrs: {} };
   return { ...cell, attrs: {} };
 }
 

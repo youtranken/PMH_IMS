@@ -225,9 +225,10 @@ test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (kh�
   };
   await save();
   const inserted = savedSize(diagramId, id);
-  // Rộng như biểu tượng hôm nay, cao = rộng × 100/400.
-  expect(inserted.width).toBe(60);
-  expect(inserted.height).toBe(15);
+  // Rộng chuẩn `diagram.device_width_px` (Q-23 06/10 E), cao = rộng × 100/400.
+  const standard = Number(sql(`SELECT value FROM system_config WHERE key = 'diagram.device_width_px'`));
+  expect(inserted.width).toBe(standard);
+  expect(inserted.height).toBe(Math.round(standard * 0.25));
 
   // Công tắc Biểu tượng / Ảnh thật: về biểu tượng → cao theo tỉ lệ biểu tượng; lại ảnh → ôm ảnh.
   const pick = async (choice: RegExp) => {
@@ -238,7 +239,7 @@ test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (kh�
   };
   await pick(/Biểu tượng/);
   await save();
-  expect(savedSize(diagramId, id)).toEqual({ width: 60, height: Math.round(60 * look.iconAspect) });
+  expect(savedSize(diagramId, id)).toEqual({ width: standard, height: Math.round(standard * look.iconAspect) });
   await pick(/Ảnh mặt trước/);
   await save();
   const back = savedSize(diagramId, id);

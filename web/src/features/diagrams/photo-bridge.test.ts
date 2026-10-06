@@ -96,6 +96,14 @@ describe('photoCellUpdate — ô ôm theo tỉ lệ ảnh khi đổi hình (Q-23
     expect(update.geometry).toBe(`<mxGeometry x="40" y="50" width="120" height="${height}" as="geometry"/>`);
   });
 
+  it.each([
+    ['front', '', 40],
+    ['icon', ' ims_photo="front"', 48],
+  ] as const)('bề rộng chuẩn `diagram.device_width_px` (Q-23 06/10 E): sang %s → rộng 160, cao theo tỉ lệ hình', (choice, extra, height) => {
+    const update = photoCellUpdate(placed(extra), LOOK, choice, KEYS, '', 160);
+    expect(update.geometry).toBe(`<mxGeometry x="40" y="50" width="160" height="${height}" as="geometry"/>`);
+  });
+
   it('máy nằm trong khung tủ (cao = số U) → đổi hình không đụng cỡ', () => {
     const frame = '<UserObject label="Tủ" ims_cabinet_id="cab-1" id="fr"><mxCell style="" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="400" as="geometry"/></mxCell></UserObject>';
     const inRack = `<UserObject label="SW-01" ims_device_id="${DEV}" ims_device_code="SW-01" id="r1"><mxCell style="" vertex="1" parent="fr"><mxGeometry x="10" y="40" width="180" height="40" as="geometry"/></mxCell></UserObject>`;

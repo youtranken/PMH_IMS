@@ -247,7 +247,8 @@ describe('cabinetFrameLayout — chỉ mặt trước, ảnh thật', () => {
       ],
     });
     const [withPhoto, plain] = layout.devices;
-    expect(withPhoto).toMatchObject({ frame: 'rack', style: `shape=image;image=data:image/png,AAA;${RACK_LABEL_STYLE}`, attrs: { ims_photo: 'front' } });
+    // Ảnh thật lấp đầy ô n U (`imageAspect=0`) — Q-23 06/10 C.
+    expect(withPhoto).toMatchObject({ frame: 'rack', style: `shape=image;image=data:image/png,AAA;imageAspect=0;${RACK_LABEL_STYLE}`, attrs: { ims_photo: 'front' } });
     expect(plain).toMatchObject({ frame: 'rack', style: `shape=icon;${RACK_LABEL_STYLE}`, attrs: {} });
   });
 

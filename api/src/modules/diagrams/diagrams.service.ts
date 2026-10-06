@@ -186,8 +186,13 @@ export interface DiagramDeviceInfo {
   photos: { front: boolean; back: boolean };
   /** Cổng đang dùng / đã khai (dòng sơ đồ cổng hai chiều) — thẻ máy trên sơ đồ (Q-23 06/10). */
   ports: { used: number; declared: number };
-  /** Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn, cỡ theo hình của loại). */
+  /**
+   * Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn ba dòng, rộng chuẩn
+   * `diagram.device_width_px`, cao theo tỉ lệ hình) — cũng là cỡ của ô khi IMS đưa máy RA khỏi khung tủ.
+   */
   cell: { style: string; label: string; width: number; height: number; attrs: Record<string, string> };
+  /** Nhãn một dòng khi máy nằm trong khung tủ (cùng luật hydrate) — màn sửa đặt ngay khi máy vào khung. */
+  rackLabel: string;
 }
 
 /**
@@ -1094,9 +1099,12 @@ export class DiagramsService {
    * Ảnh nhúng sẵn (data URI đã thu nhỏ) vì trình vẽ chạy trong iframe sandbox không có cookie phiên:
    * đường dẫn ảnh cần đăng nhập không tải được ở đó.
    */
-  async deviceLooks(ids: string[]): Promise<{ imsStyleKeys: string[]; rackLabelStyle: string; items: DeviceLook[] }> {
+  async deviceLooks(ids: string[]): Promise<{ imsStyleKeys: string[]; rackLabelStyle: string; deviceWidth: number; items: DeviceLook[] }> {
     const unique = [...new Set(ids)];
-    const { infos, sources } = await this.deviceData(unique, new Map(unique.map((id) => [id, new Set<PhotoSide>(['front', 'back'])])));
+    const [{ infos, sources }, deviceWidth] = await Promise.all([
+      this.deviceData(unique, new Map(unique.map((id) => [id, new Set<PhotoSide>(['front', 'back'])]))),
+      this.config.getNumber('diagramDeviceWidthPx'),
+    ]);
     const items = infos.map((info): DeviceLook => {
       const source = sources.get(info.id) ?? missingSource('');
       const face = (side: PhotoSide) => {
@@ -1105,8 +1113,9 @@ export class DiagramsService {
       };
       return { id: info.id, found: info.found, icon: deviceLookStyle(source), iconAspect: deviceIconAspect(source), front: face('front'), back: face('back') };
     });
-    // Ô trong khung tủ giữ nhãn bên phải khi đổi hình (cùng luật hydrate).
-    return { imsStyleKeys: [...IMS_STYLE_KEYS], rackLabelStyle: RACK_LABEL_STYLE, items };
+    // Ô trong khung tủ giữ nhãn bên phải khi đổi hình (cùng luật hydrate); ô ngoài khung về bề rộng
+    // chuẩn (Q-23 06/10 E).
+    return { imsStyleKeys: [...IMS_STYLE_KEYS], rackLabelStyle: RACK_LABEL_STYLE, deviceWidth, items };
   }
 
   /** Thẻ khung VLAN: đọc qua `ipam.api`, kể cả dải đã ngừng dùng. */
@@ -1271,11 +1280,12 @@ export class DiagramsService {
     const sources = new Map<string, DeviceCellSource>();
     if (unique.length === 0) return { infos: [], sources };
     const valid = unique.filter((id) => UUID_RE.test(id));
-    const [devices, ips, photoFiles, portUsage] = await Promise.all([
+    const [devices, ips, photoFiles, portUsage, cellWidth] = await Promise.all([
       this.devices.getByIds(valid),
       this.ipam.heldAddressesOf(valid),
       this.devices.photoSources(valid),
       this.devices.portUsage(valid),
+      this.config.getNumber('diagramDeviceWidthPx'),
     ]);
     const found = [...devices.values()];
     const [looks, photos, vendors, cabinets] = await Promise.all([
@@ -1286,10 +1296,10 @@ export class DiagramsService {
     ]);
     const infos = unique.map((id): DiagramDeviceInfo => {
       const device = devices.get(id);
-      if (!device) return { ...emptyInfo(id), cell: deviceInsertCell(missingSource('')) };
+      if (!device) return { ...emptyInfo(id), rackLabel: '', cell: deviceInsertCell(missingSource(''), cellWidth) };
       const look = looks.get(device.deviceTypeId);
       const vendor = device.vendorId ? vendors.get(device.vendorId) : undefined;
-      const info: Omit<DiagramDeviceInfo, 'cell'> = {
+      const info: Omit<DiagramDeviceInfo, 'cell' | 'rackLabel'> = {
         id,
         found: true,
         code: device.code,
@@ -1317,7 +1327,7 @@ export class DiagramsService {
         photos: photos.get(id),
       };
       sources.set(id, source);
-      return { ...info, cell: deviceInsertCell(source) };
+      return { ...info, rackLabel: deviceRackLabel(source), cell: deviceInsertCell(source, cellWidth) };
     });
     return { infos, sources };
   }
@@ -1827,7 +1837,7 @@ function tooMany(count: number, max: number): BadRequestException {
   });
 }
 
-function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell'> {
+function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell' | 'rackLabel'> {
   return {
     id,
     found: false,
@@ -1873,7 +1883,7 @@ function missingSource(code: string): DeviceCellSource {
   return { found: false, code, status: null, ips: [], siteCode: null, cabinetCode: null, u: null, shape: null, iconSvg: null };
 }
 
-function sourceOf(info: Omit<DiagramDeviceInfo, 'cell'>, look: { shape: string | null; iconSvg: string | null } | null): DeviceCellSource {
+function sourceOf(info: Omit<DiagramDeviceInfo, 'cell' | 'rackLabel'>, look: { shape: string | null; iconSvg: string | null } | null): DeviceCellSource {
   return {
     found: true,
     code: info.code ?? '',

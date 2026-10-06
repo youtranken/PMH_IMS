@@ -136,6 +136,7 @@ const TEXT: Record<string, [string, string]> = {
   diagramDriftSweepHour: ['settings.diagramDriftSweepHourLabel', 'settings.diagramDriftSweepHourDesc'],
   diagramPathMaxHops: ['settings.diagramPathMaxHopsLabel', 'settings.diagramPathMaxHopsDesc'],
   diagramPhotoMaxPx: ['settings.diagramPhotoMaxPxLabel', 'settings.diagramPhotoMaxPxDesc'],
+  diagramDeviceWidthPx: ['settings.diagramDeviceWidthPxLabel', 'settings.diagramDeviceWidthPxDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

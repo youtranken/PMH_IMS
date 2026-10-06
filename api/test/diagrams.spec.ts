@@ -493,7 +493,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
         [GONE, false],
         ['không-phải-uuid', false],
       ]);
-      expect(infos[0].cell).toMatchObject({ width: 64, height: 32 });
+      // Rộng chuẩn `diagram.device_width_px` (160), cao theo tỉ lệ hình switch 64×32 (Q-23 06/10 E).
+      expect(infos[0].cell).toMatchObject({ width: 160, height: 80 });
       expect(infos[0].cell.style).toContain('shape=mxgraph.cisco.switches.workgroup_switch;');
     });
 

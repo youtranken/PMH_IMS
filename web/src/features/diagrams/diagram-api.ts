@@ -92,8 +92,10 @@ export interface DiagramDeviceInfo {
   vendorName: string | null;
   vendorPhone: string | null;
   warrantyEnd: string | null;
-  /** Ô dựng sẵn cho lệnh chèn (style đã hydrate theo loại, nhãn, cỡ). */
+  /** Ô dựng sẵn cho lệnh chèn (style đã hydrate theo loại, nhãn ba dòng, rộng chuẩn, cao theo hình). */
   cell: { style: string; label: string; width: number; height: number; attrs?: Record<string, string> };
+  /** Nhãn một dòng khi máy nằm trong khung tủ (vắng ở server cũ). */
+  rackLabel?: string;
 }
 
 /**
