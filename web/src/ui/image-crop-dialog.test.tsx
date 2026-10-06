@@ -42,7 +42,7 @@ describe('ImageCropDialog', () => {
   it('máy 1U: khung khoá tỉ lệ mặt tủ 1U, bấm Dùng ảnh → tệp đã cắt về nơi gọi', async () => {
     const onDone = vi.fn();
     renderWithI18n(<ImageCropDialog file={png()} units={1} onCancel={vi.fn()} onDone={onDone} />);
-    expect(await screen.findByText(/khoá theo mặt tủ 1U/i)).toBeInTheDocument();
+    expect(await screen.findByText(/khóa theo mặt tủ 1U/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Dùng ảnh đã cắt' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
     const [box] = rendered.map((r) => r.box);
@@ -82,7 +82,7 @@ describe('ImageCropDialog', () => {
     const onCancel = vi.fn();
     const onDone = vi.fn();
     renderWithI18n(<ImageCropDialog file={png()} units={1} onCancel={onCancel} onDone={onDone} />);
-    await screen.findByText(/khoá theo mặt tủ 1U/i);
+    await screen.findByText(/khóa theo mặt tủ 1U/i);
     await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
     expect(onCancel).toHaveBeenCalled();
     expect(onDone).not.toHaveBeenCalled();

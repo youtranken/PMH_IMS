@@ -115,11 +115,11 @@ describe('DevicePhotoSlots — tải ảnh', () => {
     await waitFor(() => expect(onPick).toHaveBeenCalledWith('front', expect.objectContaining({ name: 'cat-tha.png' })));
   });
 
-  it('máy có Số U → hộp cắt khoá theo mặt tủ n U; Hủy hộp cắt → không gọi onPick', async () => {
+  it('máy có Số U → hộp cắt khóa theo mặt tủ n U; Hủy hộp cắt → không gọi onPick', async () => {
     const { onPick } = setup({ rackUnits: 2 });
     const front = screen.getByRole('group', { name: 'Mặt trước' });
     await userEvent.setup().upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), png());
-    expect(await screen.findByText(/khoá theo mặt tủ 2U/)).toBeInTheDocument();
+    expect(await screen.findByText(/khóa theo mặt tủ 2U/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
     expect(onPick).not.toHaveBeenCalled();
   });

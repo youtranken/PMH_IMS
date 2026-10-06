@@ -198,7 +198,7 @@ export default {
   // Hộp cắt ảnh thiết bị (ui/image-crop-dialog.tsx, Q-23 06/10).
   imageCrop: {
     title: 'Cắt ảnh thiết bị',
-    locked: 'Khung cắt khoá theo mặt tủ {{units}}U (rộng 482,6 mm : cao {{units}} × 44,45 mm) để ảnh lấp vừa ô U trên sơ đồ. Viền trống đã được cắt sẵn.',
+    locked: 'Khung cắt khóa theo mặt tủ {{units}}U (rộng 482,6 mm : cao {{units}} × 44,45 mm) để ảnh lấp vừa ô U trên sơ đồ. Viền trống đã được cắt sẵn.',
     free: 'Máy chưa khai Số U nên cắt tự do. Viền trống đã được cắt sẵn.',
     hint: 'Kéo khung để dời, kéo góc để đổi cỡ. Bàn phím: mũi tên dời khung, Shift + mũi tên đổi cỡ.',
     frameLabel: 'Khung cắt — mũi tên để dời, Shift + mũi tên để đổi cỡ',
@@ -4346,6 +4346,6 @@ export default {
       'Ảnh mặt trước/mặt sau đưa vào bản vẽ được thu về cạnh dài này. Lớn quá làm bản vẽ một tủ nặng và chạm trần dung lượng bản vẽ.',
     diagramDeviceWidthPxLabel: 'Bề rộng chuẩn của ô thiết bị trên bản vẽ',
     diagramDeviceWidthPxDesc:
-      'Máy chèn hay kéo vào bản vẽ (và khi đổi Biểu tượng ↔ Ảnh) rộng chừng này, cao theo tỉ lệ hình. 160 bằng lòng tủ rack nên máy trong và ngoài tủ cùng cỡ. Ô đã có trên bản vẽ không đổi.',
+      'Máy chèn hay kéo vào bản vẽ (và khi đổi Biểu tượng ↔ Ảnh) rộng chừng này, cao theo tỉ lệ hình. 160 bằng lòng khung tủ mạng trên sơ đồ nên máy trong và ngoài tủ cùng cỡ. Ô đã có trên bản vẽ không đổi.',
   },
 } as const;
