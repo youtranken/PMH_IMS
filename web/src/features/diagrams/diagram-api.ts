@@ -108,7 +108,7 @@ export interface DiagramLink extends PortLink {
   labelFromA: string;
   labelFromB: string;
   edgeStyle: string;
-  /** Hai ô nhãn cổng ở đầu dây chèn kèm nét mới (Q-23 06/10): style theo loại dây + chỗ đặt trên nét. */
+  /** Hai ô nhãn cổng ở đầu dây chèn kèm nét mới (Q-23): style theo loại dây + chỗ đặt trên nét. */
   endLabel: { style: string; offset: number };
 }
 
@@ -134,7 +134,7 @@ export interface DiagramContent {
   diagram: DiagramNode;
   /**
    * Khoá AES (base64) mã bản vẽ dở trước khi cất ở trình duyệt — chỉ có ở nội dung tab Sửa, tức sau
-   * khi nhập mã sơ đồ (Q-23 06/10). Thiếu → không cất bản dở.
+   * khi nhập mã sơ đồ (Q-23). Thiếu → không cất bản dở.
    */
   draftKey?: string;
   version: (VersionItem & { xml: string; svg: string | null }) | null;

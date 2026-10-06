@@ -47,7 +47,7 @@ export function stockQuery(filter: { term: string; siteId: string; cabinetId: st
  * máy thả thẳng vào bản vẽ, hoặc tick một hoặc nhiều máy rồi Chèn. Máy đã thanh lý không hiện. Máy đã có trên bản vẽ vẫn HIỆN nhưng ô tick
  * tắt, kèm lý do — ẩn nó đi thì người vẽ tưởng kho không có máy đó.
  *
- * Huy hiệu sẵn sàng (Q-23 06/10 chiều, `device-readiness.ts`): thiếu U / chưa có ảnh / ảnh cần cắt
+ * Huy hiệu sẵn sàng (Q-23, `device-readiness.ts`): thiếu U / chưa có ảnh / ảnh cần cắt
  * lại — báo trước khi vẽ, không chặn chèn. Ảnh lấy MỘT lượt `device-looks` cho cả trang kết quả
  * (≤ `STOCK_LIMIT` máy) và đo bằng đúng hàm của ô ảnh trang thiết bị.
  *
@@ -64,7 +64,7 @@ export function StockDevicePicker({
   busy: boolean;
   onInsert: (ids: string[]) => void;
   /**
-   * Kéo một dòng thả thẳng vào trình vẽ (Q-23 06/10). Dòng chỉ kéo được khi ô của máy đã dựng sẵn
+   * Kéo một dòng thả thẳng vào trình vẽ (Q-23). Dòng chỉ kéo được khi ô của máy đã dựng sẵn
    * (`payload` khác `null`): dữ liệu kéo phải gắn NGAY lúc bắt đầu kéo, không chờ mạng được —
    * `prepare` (rê chuột / tiêu điểm vào dòng) đọc trước ô của máy.
    */

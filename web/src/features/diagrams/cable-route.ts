@@ -1,7 +1,7 @@
 import { cellIdOf, cellWrapper, parseDrawioXml } from './drawio-bridge';
 
 /**
- * Đi dây của kho trên màn SỬA (Q-23 05/10) — hàm THUẦN, test bảng dữ liệu ở `cable-route.test.ts`.
+ * Đi dây của kho trên màn SỬA (Q-23) — hàm THUẦN, test bảng dữ liệu ở `cable-route.test.ts`.
  *
  * Dây của kho là nét vuông góc: muốn đi đường khác thì kéo điểm uốn trên CHÍNH nét, không vẽ thêm
  * nét nối (nét tự do không mang kết nối, còn đầu dây kéo ra chỗ trống làm dây báo đỏ). Giao thức

@@ -119,7 +119,7 @@ describe('photoCellUpdate — ô ôm theo tỉ lệ ảnh khi đổi hình (Q-23
     const [c] = deviceCellsOnPage(file(frame + inRack), 'p1');
     expect(c.inRack).toBe(true);
     const update = photoCellUpdate(c, { ...LOOK, front: { ...LOOK.front!, style: 'shape=image;image=data:image/png,AAAA;verticalLabelPosition=bottom;verticalAlign=top;html=0;' } }, 'front', KEYS, side);
-    // Ảnh thật lấp đầy ô U (Q-23 06/10 C).
+    // Ảnh thật lấp đầy ô U (Q-23 mục C).
     expect(update.style).toBe(`shape=image;image=data:image/png,AAAA;html=0;imageAspect=0;${side}`);
     // Ô ngoài khung: không đụng chỗ đặt nhãn.
     const [out] = deviceCellsOnPage(file(cell('a')), 'p1');

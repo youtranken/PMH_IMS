@@ -156,7 +156,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     const update = patch.patch.u.p1.cells.u.e1;
     expect(update.xmlValue).toContain('ims_link_id="link-1"');
     expect(update.xmlValue).toContain('ims_cable_type_id="ct-fiber"');
-    // Nhãn cổng ở HAI ĐẦU dây (Q-23 06/10): nhãn giữa rỗng, hai ô nhãn con của nét chèn cùng lệnh.
+    // Nhãn cổng ở HAI ĐẦU dây (Q-23): nhãn giữa rỗng, hai ô nhãn con của nét chèn cùng lệnh.
     expect(update.xmlValue).toContain('label=""');
     expect(update.xmlValue).toContain('ims_port_labels="ends"');
     expect(patch.patch.u.p1.cells.i.map((c) => [c.id, c.parent, c.value])).toEqual([
@@ -164,7 +164,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
       ['e1-ims-pt', 'e1', 'eth0'],
     ]);
     expect(update.style).toContain('imsPaint=cable-2');
-    // Nét vẽ bằng công cụ nét thẳng cũng thành dây vuông góc khi khai (Q-23 05/10).
+    // Nét vẽ bằng công cụ nét thẳng cũng thành dây vuông góc khi khai (Q-23).
     expect(update.style).toContain('edgeStyle=orthogonalEdgeStyle');
     expect(screen.queryByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' })).toBeNull();
     // Lời báo chỉ chỗ kết nối nằm: sơ đồ cổng của máy giữ dòng, mở tab mới (không bỏ bản vẽ dở).
@@ -273,7 +273,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     };
     const update = patch.patch.u.p1.cells.u.e1;
     expect(Object.keys(patch.patch.u.p1.cells.u)).toEqual(['e1']);
-    // Dây người vẽ đụng tới chuyển sang nhãn cổng hai đầu (Q-23 06/10).
+    // Dây người vẽ đụng tới chuyển sang nhãn cổng hai đầu (Q-23).
     expect(patch.patch.u.p1.cells.i.map((c) => [c.id, c.value])).toEqual([
       ['e1-ims-ps', 'Gi1/0/24'],
       ['e1-ims-pt', 'eth0'],

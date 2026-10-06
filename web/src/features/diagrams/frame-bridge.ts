@@ -126,7 +126,7 @@ export function cabinetFrameCells(
 }
 
 /**
- * "Chèn tủ mạng" khi máy của tủ ĐÃ có trên trang (Q-23 05/10): ô cũ của máy (`existing`: id máy →
+ * "Chèn tủ mạng" khi máy của tủ ĐÃ có trên trang (Q-23): ô cũ của máy (`existing`: id máy →
  * ô) được DỜI vào mặt đầu tiên của nó thay vì chèn ô thứ hai — giữ id nên dây đã gắn vẫn nối đúng
  * máy, giữ hình người vẽ đã chọn, chỉ đổi cỡ theo U và nhãn sang phải. Mặt còn lại và máy chưa có
  * trên trang thì chèn mới như `cabinetFrameCells`. Một lệnh `patch`: `i` = ô mới, `u` = ô dời

@@ -43,7 +43,7 @@ export interface RackColumnSpec {
 }
 
 /**
- * Đặt lại máy trong khung tủ (Q-23 05/10, 06/10; luật ở `rack-fit.ts`): cao đúng số U, đúng U của
+ * Đặt lại máy trong khung tủ (Q-23; luật ở `rack-fit.ts`): cao đúng số U, đúng U của
  * kho (máy khác: U trống gần chỗ thả), ảnh lấp ô U, nhãn một dòng bên phải. Sửa bằng `patch` —
  * draw.io không gửi lại `autosave` cho `patch`, nên không vòng lặp. Lúc MỞ bản vẽ cũng đặt lại trên
  * trình vẽ (một máy nằm trong khung mà không theo U là hình tủ sai) nhưng không tính là thay đổi:

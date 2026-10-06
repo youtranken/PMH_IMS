@@ -1,5 +1,5 @@
 /**
- * "Bắt đầu từ" của hộp tạo bản vẽ (Q-23 06/10 chiều) — hàm THUẦN, test bảng dữ liệu ở
+ * "Bắt đầu từ" của hộp tạo bản vẽ (Q-23) — hàm THUẦN, test bảng dữ liệu ở
  * `diagram-start.test.ts`.
  *
  * Không có gì tự chép mà người dùng không bấm: cấp thường mặc định trang trắng, chép bản cha chỉ

@@ -5,7 +5,7 @@ import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/
 import { CableDeclareDialog } from './cable-declare-dialog';
 
 /**
- * Nối máy THỨ BA vào một máy đã có dây (góp ý 05/10, Q-23): không cần khai số cổng — gõ tên cổng
+ * Nối máy THỨ BA vào một máy đã có dây (góp ý chủ dự án, Q-23): không cần khai số cổng — gõ tên cổng
  * mới là tạo; gõ lại cổng đã có cáp thì báo NGAY tại ô, kèm nút dùng cổng trống kế tiếp, thay vì
  * để người vẽ bấm Khai rồi nhận một câu 409 chung chung.
  */

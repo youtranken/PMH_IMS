@@ -57,7 +57,7 @@ const HELP: Record<string, string> = {
 };
 
 /**
- * Nhóm của việc trong menu ⋮ (Q-23 05/10): menu của màn sửa dài tới mức phải cuộn mới thấy
+ * Nhóm của việc trong menu ⋮ (Q-23): menu của màn sửa dài tới mức phải cuộn mới thấy
  * "Hướng dẫn", và một dãy mục phẳng không nói mục nào thuộc việc gì. Khoá i18n viết đủ.
  */
 const GROUP: Record<string, string> = {

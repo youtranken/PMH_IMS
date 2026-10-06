@@ -58,7 +58,7 @@ describe('Thêm bản vẽ con — chép từ phiên bản chọn (Q-23 05/10, 0
     );
     const user = userEvent.setup();
     const dialog = await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Cha E2E"' });
-    // Không gì tự chép mà người dùng không bấm (Q-23 06/10 chiều).
+    // Không gì tự chép mà người dùng không bấm (Q-23).
     expect(within(dialog).getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
     expect(within(dialog).queryByRole('button', { name: 'Phiên bản của bản cha' })).toBeNull();
     await user.click(within(dialog).getByRole('radio', { name: 'Chép nội dung bản vẽ cha' }));

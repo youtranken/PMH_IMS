@@ -98,7 +98,7 @@ const SELECTION_POLL_MS = 700;
 const DROP_FALLBACK_WAIT_MS = 600;
 
 /**
- * Bản vẽ dở cất ở trình duyệt (Q-23 06/10): ghi sau khi người vẽ ngừng tay chừng này — mỗi nét
+ * Bản vẽ dở cất ở trình duyệt (Q-23): ghi sau khi người vẽ ngừng tay chừng này — mỗi nét
  * draw.io gửi một `autosave`, mã + ghi IndexedDB cho từng nét là thừa. Đóng tab thì ghi ngay.
  */
 const DRAFT_DEBOUNCE_MS = 1500;
@@ -171,7 +171,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   /* Bay tới từ ô tìm (hay từ bản vẽ khác qua `?focus=`): phóng tới mức đọc được, không chỉ dời khung. */
   const [flyClose, setFlyClose] = useState(() => Boolean(params.get('focus')));
   const [pathOpen, setPathOpen] = useState(false);
-  /* Ô chuột đang rê trong tab Xem (Q-23 06/10): thẻ máy / dây cạnh con trỏ + tô sáng tạm. */
+  /* Ô chuột đang rê trong tab Xem (Q-23): thẻ máy / dây cạnh con trỏ + tô sáng tạm. */
   const [hoverCell, setHoverCell] = useState<string | null>(null);
 
   const settings = useQuery({
@@ -904,7 +904,7 @@ function DiagramEditor({
     presentNow.current = present;
   }, [present]);
   /*
-   * Kéo máy từ "Thiết bị kho" thả vào trình vẽ (Q-23 06/10): ô của máy dựng sẵn khi chuột vào dòng
+   * Kéo máy từ "Thiết bị kho" thả vào trình vẽ (Q-23): ô của máy dựng sẵn khi chuột vào dòng
    * (dữ liệu kéo phải có NGAY lúc bắt đầu kéo), `dragging` theo dõi con trỏ đã vào khung chưa, và
    * máy vừa thả chờ `autosave` mang nó về để báo "Đã chèn".
    */
@@ -939,7 +939,7 @@ function DiagramEditor({
   };
   const [draftOpen, setDraftOpen] = useState(false);
   /*
-   * Bản vẽ dở (Q-23 06/10): mỗi lần người vẽ ngừng tay, XML đang vẽ được mã bằng khoá server cấp kèm
+   * Bản vẽ dở (Q-23): mỗi lần người vẽ ngừng tay, XML đang vẽ được mã bằng khoá server cấp kèm
    * nội dung rồi cất IndexedDB; mở lại tab Sửa mà còn bản cất thì mời "Khôi phục / Bỏ". Không bao giờ
    * tự nạp đè: khôi phục là nạp vào trình vẽ thành thay đổi CHƯA LƯU.
    */
@@ -948,7 +948,7 @@ function DiagramEditor({
   const draftText = useRef<string | null>(null);
   const draftTimer = useRef<number | null>(null);
   const [recovery, setRecovery] = useState<{ text: string; savedAt: number; basedOn: string | null } | null>(null);
-  /* Ô đang chọn trong trình vẽ (Q-23 06/10) — draw.io không báo, màn hỏi định kỳ khi khung có tiêu điểm. */
+  /* Ô đang chọn trong trình vẽ (Q-23) — draw.io không báo, màn hỏi định kỳ khi khung có tiêu điểm. */
   const [selected, setSelected] = useState<ReturnType<typeof selectedTarget>>(null);
   const frameState = useRef<{ page: number; bounds: Bounds | null }>({
     page: 0,
@@ -1608,7 +1608,7 @@ function viewerCells(
     if (edge.state === 'linked' && link) {
       const label = edge.sourceDeviceId === link.peerDeviceId ? link.labelFromB : link.labelFromA;
       cells.push({ id: edge.cellId, label, paint: `cable-${link.colorSlot ?? 0}` });
-      // Nhãn cổng ở hai đầu dây (Q-23 06/10) là ô con riêng trong ảnh xem: bấm / rê lên nó là dây đó.
+      // Nhãn cổng ở hai đầu dây (Q-23) là ô con riêng trong ảnh xem: bấm / rê lên nó là dây đó.
       for (const id of portEndIds(edge.cellId)) {
         cells.push({ id, label, paint: `cable-${link.colorSlot ?? 0}` });
         byEdge.set(id, { edge, link });

@@ -259,7 +259,7 @@ export function useCableBridge({
           updates[id] = { ...update };
           continue;
         }
-        // Dây người vẽ đụng tới thì chuyển sang nhãn cổng ở hai đầu (Q-23 06/10) — mở bản vẽ thì không.
+        // Dây người vẽ đụng tới thì chuyển sang nhãn cổng ở hai đầu (Q-23) — mở bản vẽ thì không.
         const ends = portEndPatch(present, id, linkEndTexts(link, view.deviceOfCell(update.source)), link.endLabel, palette);
         Object.assign(updates, ends.u);
         inserts.push(...ends.i);

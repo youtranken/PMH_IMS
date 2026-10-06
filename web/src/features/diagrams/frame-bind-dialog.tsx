@@ -41,7 +41,7 @@ export function rebindCabinetLabel(label: string, oldCode: string | null, newCod
  * không báo ô đang chọn), rồi gắn nó với một bản vẽ con hoặc một dải IP. Chỉ mời chọn bản vẽ NẰM
  * DƯỚI bản vẽ này, chưa lưu trữ, không phải bản trình bày — server kiểm lại lúc lưu.
  *
- * Khung tủ (đã mang `ims_cabinet_id`) có thêm "Đổi tủ của khung này" (Q-23 06/10): chèn nhầm tủ thì
+ * Khung tủ (đã mang `ims_cabinet_id`) có thêm "Đổi tủ của khung này" (Q-23): chèn nhầm tủ thì
  * chọn lại tủ cho chính khung đó, giữ nguyên hình và máy bên trong — máy kho ghi tủ khác sẽ được báo
  * như mọi máy nằm sai khung. Chỉ đổi bản vẽ, không ghi gì vào kho.
  */

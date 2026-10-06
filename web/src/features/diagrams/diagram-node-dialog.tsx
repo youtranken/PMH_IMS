@@ -35,7 +35,7 @@ const START_HINT: Record<DiagramStart, string> = {
  * chế độ sửa — vai được sửa do nơi mở hộp quyết, API vẫn chặn (`@Roles` + quyền theo bản vẽ).
  * Bản trình bày chỉ đổi tên: nó đứng ngoài cây, và Thành viên chủ của nó chỉ được đổi tên.
  *
- * "Bắt đầu từ" (Q-23 06/10 chiều, luật ở `diagram-start.ts`): không gì tự chép mà người dùng không
+ * "Bắt đầu từ" (Q-23, luật ở `diagram-start.ts`): không gì tự chép mà người dùng không
  * bấm. Chép bản cha và dựng từ kho đi `run` vì chúng đọc/ghi NỘI DUNG bản vẽ (đòi mã sơ đồ).
  */
 export function DiagramNodeDialog({

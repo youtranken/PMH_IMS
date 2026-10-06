@@ -95,8 +95,8 @@ function geometryOf(cell: Element): DeviceCellOnPage['geometry'] {
 }
 
 /**
- * Ô ôm theo hình mới (Q-23): giữ vị trí, rộng = bề rộng chuẩn `diagram.device_width_px` (Q-23 06/10
- * E; server cũ không trả thì giữ rộng người vẽ đã đặt), cao = rộng × tỉ lệ của hình — ảnh 1U nằm
+ * Ô ôm theo hình mới (Q-23): giữ vị trí, rộng = bề rộng chuẩn `diagram.device_width_px` (Q-23
+ * mục E; server cũ không trả thì giữ rộng người vẽ đã đặt), cao = rộng × tỉ lệ của hình — ảnh 1U nằm
  * sát nhãn thay vì giữa một ô vuông. Chỉ chạy khi người vẽ đổi hình, không sửa ô lúc mở bản vẽ.
  */
 function fittedGeometry(geometry: NonNullable<DeviceCellOnPage['geometry']>, aspect: number, standardWidth?: number): string {

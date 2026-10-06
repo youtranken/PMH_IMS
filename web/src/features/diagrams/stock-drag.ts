@@ -1,7 +1,7 @@
 import { escapeXmlAttr, type DeviceCellSpec } from './drawio-bridge';
 
 /**
- * Kéo máy từ hộp "Thiết bị kho" thả vào trình vẽ (Q-23 06/10) — hàm THUẦN, test bảng ở
+ * Kéo máy từ hộp "Thiết bị kho" thả vào trình vẽ (Q-23) — hàm THUẦN, test bảng ở
  * `stock-drag.test.ts`.
  *
  * Dữ liệu kéo là chữ `<mxGraphModel>` một ô: draw.io nhận cú thả như dán (cùng đường nhận tệp

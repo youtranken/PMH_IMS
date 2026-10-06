@@ -93,7 +93,7 @@ function asNew(edge: ParsedEdge, devices: Map<string, ParsedDevice>): NewEdge | 
  *
  * `known` = kết nối màn đang biết (lúc mở + vừa khai / vẽ vào). Có thì thêm luật dán từ bản vẽ
  * KHÁC: nét MỚI mang một kết nối không có ở lượt trước và không nằm trong `known` cũng bị bỏ link
- * — bản sao của một dây ở bản vẽ khác không được kéo kết nối đó sang đây (Q-23 05/10).
+ * — bản sao của một dây ở bản vẽ khác không được kéo kết nối đó sang đây (Q-23).
  */
 export function diffAutosave(
   prevXml: string,

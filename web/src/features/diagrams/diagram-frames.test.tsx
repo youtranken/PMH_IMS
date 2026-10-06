@@ -437,7 +437,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(await screen.findByText(/Chuyển FW-E2E-01 từ TU-01 sang TU-04/)).toBeInTheDocument();
   });
 
-  /* Q-23 06/10: kéo máy vào khung tủ KHÁC tủ trong kho → hỏi trước "Chuyển máy sang tủ này", không ghi ngầm. */
+  /* Q-23: kéo máy vào khung tủ KHÁC tủ trong kho → hỏi trước "Chuyển máy sang tủ này", không ghi ngầm. */
   const CATALOG = {
     sites: [],
     cabinets: [
@@ -531,7 +531,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(deviceWrites()).toHaveLength(0);
   });
 
-  /* Q-23 06/10 D: máy CÙNG tủ chưa khai U kéo vào khung → hỏi khai U; Hủy → cột "Chưa khai U". */
+  /* Q-23 mục D: máy CÙNG tủ chưa khai U kéo vào khung → hỏi khai U; Hủy → cột "Chưa khai U". */
   const noUInfo = { ...info('dev-pc', 'PC-E2E-09', 'cab-4', 'TU-04'), u: null };
   const column = `<UserObject label="Tủ TU-04 · Chưa khai U" ims_cabinet_id="cab-4" id="col"><mxCell style="swimlane;container=1;childLayout=stackLayout;startSize=26;marginTop=12;marginLeft=12;stackSpacing=78;" vertex="1" parent="1"><mxGeometry x="654" y="20" width="184" height="300" as="geometry"/></mxCell></UserObject>`;
 

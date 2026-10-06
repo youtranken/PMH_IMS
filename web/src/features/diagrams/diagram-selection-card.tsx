@@ -12,7 +12,7 @@ import { DiagramHoverCard } from './diagram-hover-card';
 type Target = NonNullable<ReturnType<typeof selectedTarget>>;
 
 /**
- * Thẻ của ô đang CHỌN ở tab Sửa (Q-23 06/10): draw.io không báo rê chuột, nên màn hỏi ô đang chọn
+ * Thẻ của ô đang CHỌN ở tab Sửa (Q-23): draw.io không báo rê chuột, nên màn hỏi ô đang chọn
  * (`export` json) và neo thẻ ở đáy trình vẽ. "Chi tiết" mở thẻ chi tiết NGAY trong màn sửa — rời
  * màn là bỏ bản vẽ dở, nên "Mở hồ sơ" của thẻ chi tiết mở tab mới.
  */

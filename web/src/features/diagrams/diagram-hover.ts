@@ -4,7 +4,7 @@ import { portEndIds } from './cable-ends';
 import type { CableEdge, CableTypeInfo, DiagramContent, DiagramDeviceInfo, DiagramLink } from './diagram-api';
 
 /**
- * Thẻ thông tin khi rê chuột (tab Xem) hoặc khi chọn ô (tab Sửa) — Q-23 06/10. Hàm THUẦN, test bảng
+ * Thẻ thông tin khi rê chuột (tab Xem) hoặc khi chọn ô (tab Sửa) — Q-23. Hàm THUẦN, test bảng
  * ở `diagram-hover.test.ts`; chữ nhãn của từng dòng do component dịch theo `key`.
  */
 

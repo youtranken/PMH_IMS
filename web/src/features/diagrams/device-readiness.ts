@@ -1,5 +1,5 @@
 /**
- * Huy hiệu sẵn sàng của panel "Thiết bị kho" (Q-23 06/10 chiều) — hàm THUẦN, test bảng dữ liệu ở
+ * Huy hiệu sẵn sàng của panel "Thiết bị kho" (Q-23) — hàm THUẦN, test bảng dữ liệu ở
  * `device-readiness.test.ts`.
  *
  * Mục đích là báo TRƯỚC khi vẽ: máy thiếu U hay ảnh chưa cắt chuẩn thì người vẽ biết ngay ở danh

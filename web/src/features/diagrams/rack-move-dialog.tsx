@@ -26,13 +26,13 @@ export interface RackMoved {
 const RACK_ERRORS = new Set(['DEVICE_RACK_U_TAKEN', 'DEVICE_RACK_U_INVALID', 'CABINET_SITE_MISMATCH']);
 
 /**
- * Hộp "Chuyển máy sang tủ này?" (Q-23 06/10): máy kho ghi tủ khác (hay chưa gắn tủ) mà nằm trong
+ * Hộp "Chuyển máy sang tủ này?" (Q-23): máy kho ghi tủ khác (hay chưa gắn tủ) mà nằm trong
  * khung tủ trên bản vẽ. Không ghi gì trước khi người vẽ bấm "Chuyển máy"; bấm thì gọi đúng API sửa
  * thiết bị của `devices` (AD-3: sơ đồ không ghi bảng `device`) — cùng quyền, cùng lịch sử thiết bị
  * như sửa ở trang thiết bị. U đề xuất = U nơi thả, chiếm rồi thì U trống gần nhất; kiểm chồng U
  * tại ô như form thiết bị, server vẫn là trọng tài.
  *
- * `kind="declare"` (Q-23 06/10 D): máy CÙNG tủ nhưng kho chưa khai U vừa được kéo vào khung — cùng
+ * `kind="declare"` (Q-23 mục D): máy CÙNG tủ nhưng kho chưa khai U vừa được kéo vào khung — cùng
  * hộp, cùng đường ghi, chỉ khác lời: "Khai U cho máy này?".
  */
 export function RackMoveDialog({

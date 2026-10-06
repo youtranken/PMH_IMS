@@ -10,7 +10,7 @@ import type { DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 
 /**
- * Bản vẽ dở (Q-23 06/10): cất mã hoá ở trình duyệt, mở lại tab Sửa thì mời "Khôi phục / Bỏ";
+ * Bản vẽ dở (Q-23): cất mã hoá ở trình duyệt, mở lại tab Sửa thì mời "Khôi phục / Bỏ";
  * khôi phục nạp vào trình vẽ thành thay đổi CHƯA LƯU, không bao giờ tự ghi server.
  */
 

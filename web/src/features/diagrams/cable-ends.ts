@@ -2,7 +2,7 @@ import { paintImsStyle } from '@/ui/drawio-protocol';
 import { cellIdOf, parseDrawioXml } from './drawio-bridge';
 
 /**
- * Nhãn cổng ở HAI ĐẦU dây của kho (Q-23 06/10) — hàm THUẦN, test bảng ở `cable-ends.test.ts`.
+ * Nhãn cổng ở HAI ĐẦU dây của kho (Q-23) — hàm THUẦN, test bảng ở `cable-ends.test.ts`.
  *
  * Nét mang cờ `ims_port_labels="ends"` (lưu trong XML khô) có hai ô nhãn con, id cố định theo nét
  * (`<nét>-ims-ps` ở đầu nguồn, `<nét>-ims-pt` ở đầu đích). Server dựng chúng mỗi lần mở và gỡ mỗi lần

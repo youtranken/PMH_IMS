@@ -21,7 +21,7 @@ const LABEL_KEY: Record<HoverRowKey, string> = {
 };
 
 /**
- * Nội dung thẻ máy / dây (Q-23 06/10): tab Xem đặt nó cạnh con trỏ (`DiagramViewer` `hoverCard`),
+ * Nội dung thẻ máy / dây (Q-23): tab Xem đặt nó cạnh con trỏ (`DiagramViewer` `hoverCard`),
  * tab Sửa neo nó ở đáy trình vẽ kèm nút "Chi tiết" (`onDetails`). Chỉ đọc dữ liệu đã có — không gọi API.
  */
 export function DiagramHoverCard({ data, onDetails }: { data: HoverCardData; onDetails?: () => void }) {

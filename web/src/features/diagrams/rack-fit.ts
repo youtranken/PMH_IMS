@@ -3,7 +3,7 @@ import { bindEdgeValue } from './cable-diff';
 import { cellIdOf, cellWrapper, parseDrawioXml, wrapperAttrs } from './drawio-bridge';
 
 /**
- * Máy trong khung tủ trên màn SỬA (Q-23 05/10, 06/10) — hàm THUẦN, test bảng dữ liệu ở
+ * Máy trong khung tủ trên màn SỬA (Q-23) — hàm THUẦN, test bảng dữ liệu ở
  * `rack-fit.test.ts`.
  *
  * Kéo một máy vào khung tủ thì `childLayout=rack` của draw.io bắt ô theo vạch U nhưng làm tròn CHIỀU
@@ -309,7 +309,7 @@ export interface CellMove {
 }
 
 /**
- * Hủy "Chuyển máy sang tủ này" (Q-23 06/10 C): đưa ô RA khỏi khung tủ, sang cạnh trái khung (cùng
+ * Hủy "Chuyển máy sang tủ này" (Q-23 mục C): đưa ô RA khỏi khung tủ, sang cạnh trái khung (cùng
  * cha với khung), cỡ trang tự do, nhãn ba dòng dưới hình. Một máy tủ khác nằm trong khung mà không
  * theo U là hình tủ sai — kể cả khi "chỗ cũ" của nó vốn đã ở trong khung.
  */
@@ -331,7 +331,7 @@ export function outsidePlacement(xml: string, cellId: string, info: RackFitDevic
 }
 
 /**
- * Hủy hộp chọn U của máy chưa khai U (Q-23 06/10 D): ô vào cuối cột "Chưa khai U" của cùng tủ.
+ * Hủy hộp chọn U của máy chưa khai U (Q-23 mục D): ô vào cuối cột "Chưa khai U" của cùng tủ.
  * `null` = trang chưa có cột của tủ đó (nơi gọi dựng cột rồi gọi lại).
  */
 export function columnPlacement(xml: string, cellId: string, cabinetId: string, info: RackFitDevice | undefined): CellMove | null {
