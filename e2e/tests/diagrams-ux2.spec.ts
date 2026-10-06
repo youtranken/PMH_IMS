@@ -69,7 +69,12 @@ test.describe('Sơ đồ mạng — soát UX đợt 2', () => {
     await dialog.getByRole('button', { name: 'Cấp bản vẽ' }).click();
     await page.getByRole('option', { name: 'Tủ mạng' }).click();
     await expect(dialog.getByRole('button', { name: /^Tủ/ })).toBeVisible();
-    await expect(dialog.getByText(/dựng mặt tủ từ kho/)).toBeVisible();
+    await expect(dialog.getByText(/Gắn tủ để dựng mặt tủ từ kho/)).toBeVisible();
+    await expect(dialog.getByText(/các cấp khác chỉ là nhãn trên bản đồ/)).toBeVisible();
+    // Đường hỏng của "Dựng từ kho" (Q-23 06/10 chiều): chưa chọn tủ thì tắt, nói rõ vì sao.
+    await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toBeDisabled();
+    await expect(dialog.getByText('Chọn tủ trước.')).toBeVisible();
+    await expect(dialog.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
 
     // Server chặn gắn tủ cho cấp khác — kể cả gọi thẳng API.
     const cabinetId = await catalogItem(page, 'cabinet', { siteId, code: `E2E-UX2-TU${stamp}` });

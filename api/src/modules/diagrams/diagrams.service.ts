@@ -521,7 +521,7 @@ export class DiagramsService {
     if (!source) {
       throw new ConflictException({
         code: 'DIAGRAM_PARENT_EMPTY',
-        message: 'Bản vẽ cha chưa có nội dung để nhân bản — chọn "Bản trống".',
+        message: 'Bản vẽ cha chưa có nội dung để chép — chọn "Trang trắng".',
       });
     }
     // Bản con mới chưa có gì nằm dưới nó: mọi khung trỏ bản vẽ con đều hỏng.
@@ -539,7 +539,7 @@ export class DiagramsService {
           svg: source.svg,
           index,
           snapshot,
-          summary: `Nhân bản từ "${parent.name}" phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
+          summary: `Chép từ "${parent.name}" phiên bản #${source.seq} · ${summarizeDiff(diff)}`,
           diff,
           basedOnVersionId: null,
           restoredFromVersionId: null,
@@ -552,6 +552,46 @@ export class DiagramsService {
     );
     // Số phiên bản THẬT đã chép: cây web đang giữ có thể cũ hơn (có người vừa lưu bản cha).
     return { ...(await this.node(id)), copiedFromSeq: source.seq };
+  }
+
+  /**
+   * "Dựng từ kho" (Q-23 06/10 chiều): bản vẽ cấp tủ ra đời cùng phiên bản nháp #1 là mặt tủ dựng
+   * từ kho — cùng cách "Dựng lại mặt tủ". Kho đã biết máy nào nằm U nào, nên mồi bằng kho đúng hơn
+   * mồi bằng hình tầng/phòng của bản cha. Tạo nút và phiên bản chung một transaction: dựng hỏng thì
+   * không còn bản vẽ rỗng nằm lại trong cây.
+   */
+  async createFromStock(actor: string, input: NodeInput): Promise<DiagramNode> {
+    const name = (input.name ?? '').trim();
+    if (input.nodeType !== 'cabinet' || !input.cabinetId) throw notCabinet();
+    if (input.parentId) await this.assertLiveParent(input.parentId);
+    await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId }, null);
+    if (input.ownerEmail) await this.assertUser(input.ownerEmail);
+    const frame = await this.cabinetFrame(input.cabinetId);
+    const xml = dehydrateDiagramXml(buildRackXml(frame.layout));
+    const index = buildCellIndex(xml);
+    const snapshot = await this.snapshot(index);
+    const diff = diffCellIndex(null, index);
+    const id = await this.uniqueName(() =>
+      this.db.transaction(async (tx) => {
+        const nodeId = await this.insertNode(tx, actor, { ...input, name });
+        await this.insertVersion(tx, actor, nodeId, {
+          seq: 1,
+          xml,
+          svg: null,
+          index,
+          snapshot,
+          summary: `Dựng từ kho ${frame.cabinet.code} · ${summarizeDiff(diff)}`,
+          diff,
+          basedOnVersionId: null,
+          restoredFromVersionId: null,
+          history: 'version.saved',
+          auditAction: 'diagram.saved',
+          bytes: Buffer.byteLength(xml),
+        });
+        return nodeId;
+      }),
+    );
+    return this.node(id);
   }
 
   private async insertNode(tx: Tx, actor: string, input: NodeInput & { name: string }): Promise<string> {
@@ -1058,12 +1098,7 @@ export class DiagramsService {
    */
   async rebuildRack(actor: string, diagramId: string): Promise<VersionItem> {
     const node = await this.node(diagramId);
-    if (node.nodeType !== 'cabinet' || !node.cabinetId) {
-      throw new BadRequestException({
-        code: 'DIAGRAM_NOT_CABINET',
-        message: 'Chỉ bản vẽ cấp "Tủ mạng" có gắn tủ mới dựng lại mặt tủ được — gắn tủ cho bản vẽ ở cây bản vẽ trước.',
-      });
-    }
+    if (node.nodeType !== 'cabinet' || !node.cabinetId) throw notCabinet();
     const frame = await this.cabinetFrame(node.cabinetId);
     const built = await this.db.transaction(async (tx) => {
       await this.lockLive(tx, diagramId);
@@ -1828,6 +1863,13 @@ function assertCabinetLevel(nodeType: DiagramNodeType, cabinetId: string | null)
       message: 'Chỉ bản vẽ cấp tủ mới gắn được tủ — đổi "Cấp bản vẽ" thành tủ hoặc bỏ gắn tủ.',
     });
   }
+}
+
+function notCabinet(): BadRequestException {
+  return new BadRequestException({
+    code: 'DIAGRAM_NOT_CABINET',
+    message: 'Chỉ bản vẽ cấp "Tủ mạng" có gắn tủ mới dựng mặt tủ từ kho được — chọn cấp Tủ mạng và tủ trước.',
+  });
 }
 
 function tooMany(count: number, max: number): BadRequestException {

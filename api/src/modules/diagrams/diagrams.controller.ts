@@ -347,6 +347,18 @@ export class DiagramsController {
   }
 
   /**
+   * "Dựng từ kho": bản vẽ cấp tủ ra đời cùng phiên bản #1 là mặt tủ từ kho. Đòi mã sơ đồ vì nó
+   * ghi NỘI DUNG bản vẽ, như "Dựng lại mặt tủ".
+   */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post('from-stock')
+  @Audited(['diagram.created', 'diagram.saved'], 'diagram', { writtenByService: true })
+  createFromStock(@Body() dto: CreateNodeDto, @Req() req: AuthedRequest) {
+    return this.diagrams.createFromStock(req.user!.email, dto);
+  }
+
+  /**
    * "Thêm bản vẽ con" kiểu nhân bản: con mang sẵn nội dung mới nhất của bản cha. Đòi mã sơ đồ vì
    * nó chép NỘI DUNG bản cha (như tạo bản trình bày); "Bản trống" vẫn đi `POST /diagrams`.
    */

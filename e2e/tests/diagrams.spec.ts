@@ -206,7 +206,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(stepUpDialog(page)).toHaveCount(0);
   });
 
-  test('Thêm bản vẽ con mặc định nhân bản bản cha (hỏi mã sơ đồ), lịch sử ghi "Nhân bản từ"; cha trống chỉ có "Bản trống"', async ({ page }) => {
+  test('Thêm bản vẽ con mặc định trang trắng; chọn "Chép nội dung bản vẽ cha" thì hỏi mã sơ đồ, lịch sử ghi "Chép từ"; cha trống thì không chép được (Q-23 06/10 chiều)', async ({ page }) => {
     test.setTimeout(120_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -220,13 +220,15 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.goto(`/diagrams?node=${parent}`);
     await rowAction(page, parentName, 'Thêm bản vẽ con');
     let form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
-    await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeChecked();
+    // Không gì tự chép mà người dùng không bấm.
+    await expect(form.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
+    await form.getByRole('radio', { name: 'Chép nội dung bản vẽ cha' }).check();
     await expect(form.getByRole('button', { name: 'Phiên bản của bản cha' })).toContainText('#1 · bản mới nhất');
     await form.getByLabel('Tên bản vẽ').fill(`E2E Tầng con ${stamp}`);
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     // Chép NỘI DUNG bản cha nên hỏi mã sơ đồ (ân hạn vừa bị cắt).
     await fillOtp(stepUpDialog(page), await freshTotpCode(secret));
-    await expect(page.getByText(`Đã tạo bản vẽ "E2E Tầng con ${stamp}" — nhân bản từ "${parentName}" phiên bản #1.`)).toBeVisible();
+    await expect(page.getByText(`Đã tạo bản vẽ "E2E Tầng con ${stamp}" — chép từ "${parentName}" phiên bản #1.`)).toBeVisible();
 
     // Bản con vừa tạo được chọn: mở từ panel.
     const panel = page.getByRole('complementary', { name: 'Bản vẽ đang chọn' });
@@ -234,15 +236,16 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await panel.getByRole('button', { name: 'Mở xem' }).click();
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toContainText('Tầng 3 E2E');
     await diagramBarAction(page, 'Phiên bản');
-    await expect(page.getByRole('dialog', { name: 'Phiên bản và lịch sử' }).getByText(new RegExp(`^Nhân bản từ "${parentName}" phiên bản #1`))).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Phiên bản và lịch sử' }).getByText(new RegExp(`^Chép từ "${parentName}" phiên bản #1`))).toBeVisible();
     await page.keyboard.press('Escape');
 
-    // Đường hỏng: cha chưa có nội dung → không nhân bản được, chỉ bản trống.
+    // Đường hỏng: cha chưa có nội dung → không chép được, chỉ trang trắng.
     await page.goto(`/diagrams?node=${empty}`);
     await rowAction(page, `E2E Cha trống ${stamp}`, 'Thêm bản vẽ con');
     form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "E2E Cha trống ${stamp}"` });
-    await expect(form.getByRole('radio', { name: 'Nhân bản từ bản cha' })).toBeDisabled();
-    await expect(form.getByRole('radio', { name: 'Bản trống' })).toBeChecked();
+    await expect(form.getByRole('radio', { name: 'Chép nội dung bản vẽ cha' })).toBeDisabled();
+    await expect(form.getByText('Bản cha chưa có nội dung để chép.')).toBeVisible();
+    await expect(form.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
     const direct = await page.request.post(`/api/v1/diagrams/${empty}/copied-children`, {
       headers: await writeHeaders(page),
       data: { name: `E2E Con lạc ${stamp}`, nodeType: 'floor' },
@@ -523,6 +526,8 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     const childName = `E2E Con cất ${stamp}`;
     const parent = await createDiagram(page, parentName);
     const child = await createDiagram(page, childName, parent);
+    // Cây còn một bản đang dùng: cây trống thì màn hiện thẳng khu lưu trữ, không có nút "Đã lưu trữ (n)".
+    await createDiagram(page, `E2E Còn dùng ${stamp}`);
     await stepUpViaApi(page, secret, 'diagram');
     expect((await saveViaApi(page, child)).status()).toBe(201);
     const headers = await writeHeaders(page);
@@ -558,7 +563,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect(sql(`SELECT count(*) FROM diagram WHERE id IN ('${parent}', '${child}') AND archived_at IS NULL`)).toBe('2');
   });
 
-  test('Thêm bản vẽ con — nhân bản từ phiên bản chọn của bản cha (bản đã đặt tên qua "Chọn phiên bản khác…")', async ({ page }) => {
+  test('Thêm bản vẽ con — chép từ phiên bản chọn của bản cha (bản đã đặt tên qua "Chọn phiên bản khác…")', async ({ page }) => {
     test.setTimeout(120_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -574,6 +579,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.goto(`/diagrams?node=${parent}`);
     await rowAction(page, parentName, 'Thêm bản vẽ con');
     const form = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
+    await form.getByRole('radio', { name: 'Chép nội dung bản vẽ cha' }).check();
     const picker = form.getByRole('button', { name: 'Phiên bản của bản cha' });
     await expect(picker).toContainText('#2 · bản mới nhất');
     await form.getByRole('button', { name: 'Chọn phiên bản khác…' }).click();
@@ -581,7 +587,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await page.getByRole('option', { name: new RegExp(`^#1 · Bản đầu E2E ${stamp}`) }).click();
     await form.getByLabel('Tên bản vẽ').fill(`E2E Con từ #1 ${stamp}`);
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await expect(page.getByText(`Đã tạo bản vẽ "E2E Con từ #1 ${stamp}" — nhân bản từ "${parentName}" phiên bản #1.`)).toBeVisible();
+    await expect(page.getByText(`Đã tạo bản vẽ "E2E Con từ #1 ${stamp}" — chép từ "${parentName}" phiên bản #1.`)).toBeVisible();
     const childXml = sql(`SELECT v.xml FROM diagram_version v JOIN diagram d ON d.id = v.diagram_id WHERE d.name = 'E2E Con từ #1 ${stamp}'`);
     expect(childXml).toContain('Tầng 3 E2E');
     expect(childXml).not.toContain('Tầng 4 E2E');

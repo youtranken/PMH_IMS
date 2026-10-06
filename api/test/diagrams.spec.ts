@@ -180,7 +180,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       await expect(service.save(SA.email, b.id, { xml: page(''), svg: SVG, basedOnVersionId: null })).rejects.toMatchObject({ status: 409 });
     });
 
-    it('bản vẽ con nhân bản nội dung MỚI NHẤT của bản cha làm bản nháp đầu, lịch sử ghi "Nhân bản từ"; cha trống → 409', async () => {
+    it('bản vẽ con nhân bản nội dung MỚI NHẤT của bản cha làm bản nháp đầu, lịch sử ghi "Chép từ"; cha trống → 409', async () => {
       const parent = await service.create(SA.email, { name: 'E2E Cha nhân bản', nodeType: 'site' });
       await expect(service.createCopiedChild(MEMBER.email, parent.id, { name: 'E2E Con sớm', nodeType: 'floor' })).rejects.toMatchObject({
         status: 409,
@@ -194,7 +194,7 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       const versions = await service.versions(child.id);
       expect(versions).toHaveLength(1);
       expect(versions[0]).toMatchObject({ seq: 1, savedBy: MEMBER.email });
-      expect(versions[0].summary).toMatch(new RegExp(`^Nhân bản từ "E2E Cha nhân bản" phiên bản #${v2.seq}`));
+      expect(versions[0].summary).toMatch(new RegExp(`^Chép từ "E2E Cha nhân bản" phiên bản #${v2.seq}`));
       const content = await service.content(MEMBER.email, child.id, { mode: 'edit' });
       expect(content.version?.xml).toContain('Phòng mới');
       expect(content.version?.xml).toContain('Kho');

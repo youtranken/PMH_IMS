@@ -238,6 +238,38 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     await expect(service.rebuildRack(SA.email, room.id)).rejects.toMatchObject({ response: { code: 'DIAGRAM_NOT_CABINET' } });
   });
 
+  it('"Dựng từ kho": tạo bản vẽ tủ kèm phiên bản nháp #1 là mặt tủ từ kho (Q-23 06/10 chiều)', async () => {
+    const parent = await service.create(SA.email, { name: 'E2E Phòng dựng từ kho', nodeType: 'room' });
+    const node = await service.createFromStock(SA.email, { name: 'E2E Tủ dựng từ kho', nodeType: 'cabinet', parentId: parent.id, siteId, cabinetId });
+    expect(node).toMatchObject({ name: 'E2E Tủ dựng từ kho', nodeType: 'cabinet', cabinetId, parentId: parent.id });
+    const { rows } = await scratch.pool.query<{ seq: number; summary: string; xml: string; svg: string | null; based_on_version_id: string | null }>(
+      `SELECT seq, summary, xml, svg, based_on_version_id FROM diagram_version WHERE diagram_id = $1`,
+      [node.id],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ seq: 1, svg: null, based_on_version_id: null, summary: expect.stringContaining('Dựng từ kho E2E-MT-R1') });
+    expect(rows[0].xml).toContain('label="Tủ E2E-MT-R1"');
+    expect(rows[0].xml).toContain(`ims_device_id="${srv}"`);
+    // Kho bản vẽ giữ XML khô (AD-18): ảnh chỉ ghép vào khi mở.
+    expect(rows[0].xml).not.toContain('data:image');
+    const history = await scratch.pool.query<{ action: string }>(`SELECT action FROM diagram_history WHERE diagram_id = $1 ORDER BY created_at, action`, [node.id]);
+    expect(history.rows.map((r) => r.action).sort()).toEqual(['created', 'version.saved']);
+  });
+
+  it('"Dựng từ kho" chỉ cho bản vẽ cấp tủ có gắn tủ — từ chối thì không để lại bản vẽ rỗng', async () => {
+    const count = async () => Number((await scratch.pool.query<{ n: string }>(`SELECT count(*) n FROM diagram WHERE name LIKE 'E2E Không tủ%'`)).rows[0].n);
+    await expect(service.createFromStock(SA.email, { name: 'E2E Không tủ phòng', nodeType: 'room' })).rejects.toMatchObject({
+      response: { code: 'DIAGRAM_NOT_CABINET' },
+    });
+    await expect(service.createFromStock(SA.email, { name: 'E2E Không tủ phòng có tủ', nodeType: 'room', siteId, cabinetId })).rejects.toMatchObject({
+      response: { code: 'DIAGRAM_NOT_CABINET' },
+    });
+    await expect(service.createFromStock(SA.email, { name: 'E2E Không tủ chưa chọn', nodeType: 'cabinet', siteId })).rejects.toMatchObject({
+      response: { code: 'DIAGRAM_NOT_CABINET' },
+    });
+    expect(await count()).toBe(0);
+  });
+
   it('"Dựng lại mặt tủ" giữ id ô máy và dây đã khai giữa hai máy trên mặt tủ — dây không thành "không khớp" (Q-23 05/10)', async () => {
     const linkId = (
       await scratch.pool.query<{ id: string }>(

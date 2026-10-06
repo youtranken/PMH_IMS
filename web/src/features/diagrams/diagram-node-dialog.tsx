@@ -5,6 +5,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import type { Me } from '@/lib/me';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { useDisabledReason } from '@/ui/disabled-reason';
 import { Field } from '@/ui/page-header';
 import { Select, type SelectOption } from '@/ui/select';
 import { useToast } from '@/ui/toast';
@@ -13,18 +14,29 @@ import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { formatDateTime } from '@/lib/format';
 import { NODE_TYPES, NODE_TYPE_KEY, TREE_KEY, nodeKey, type DiagramNode, type DiagramNodeType, type Publications, type VersionItem } from './diagram-api';
 import { copySources, type CopySource } from './diagram-copy-source';
+import { effectiveStart, startChoices, type DiagramStart } from './diagram-start';
 import { pathOf, subtreeIds } from './diagram-tree';
 
 const ROOT = '__root__';
 const NONE = '__none__';
+const START_LABEL: Record<DiagramStart, string> = {
+  stock: 'diagrams.form.startStock',
+  blank: 'diagrams.form.startBlank',
+  copy: 'diagrams.form.startCopy',
+};
+const START_HINT: Record<DiagramStart, string> = {
+  stock: 'diagrams.form.startStockHint',
+  blank: 'diagrams.form.startBlankHint',
+  copy: 'diagrams.form.startCopyHint',
+};
 
 /**
  * Tạo bản vẽ (con của `parent`, hoặc gốc cây) hoặc sửa một nút (`node`). Chuyển nhánh chỉ có ở
  * chế độ sửa — vai được sửa do nơi mở hộp quyết, API vẫn chặn (`@Roles` + quyền theo bản vẽ).
  * Bản trình bày chỉ đổi tên: nó đứng ngoài cây, và Thành viên chủ của nó chỉ được đổi tên.
  *
- * Bản vẽ con mặc định NHÂN BẢN nội dung mới nhất của bản cha (Q-23): tầng/phòng thường vẽ tiếp từ
- * bản cha. Nhân bản đi `run` vì nó chép nội dung bản vẽ (đòi mã sơ đồ như khi xem).
+ * "Bắt đầu từ" (Q-23 06/10 chiều, luật ở `diagram-start.ts`): không gì tự chép mà người dùng không
+ * bấm. Chép bản cha và dựng từ kho đi `run` vì chúng đọc/ghi NỘI DUNG bản vẽ (đòi mã sơ đồ).
  */
 export function DiagramNodeDialog({
   me,
@@ -39,7 +51,7 @@ export function DiagramNodeDialog({
   nodes: DiagramNode[];
   parent?: DiagramNode | null;
   node?: DiagramNode | null;
-  /** `useStepUpRetry().run` của màn — chỉ cần khi tạo bản vẽ con kiểu nhân bản. */
+  /** `useStepUpRetry().run` của màn — cần khi tạo kiểu chép bản cha hay dựng từ kho. */
   run?: <T>(action: () => Promise<T>, purpose: string) => Promise<T>;
   onClose: () => void;
   /** Sau khi lưu xong (`created` = vừa tạo mới) — màn cây chọn nút vừa tạo để thẻ của nó hiện ra. */
@@ -63,7 +75,17 @@ export function DiagramNodeDialog({
   const cabinetLevel = form.nodeType === 'cabinet';
   const [nameError, setNameError] = useState<string | null>(null);
   const copySeq = !node && parent ? (parent.latestVersion?.seq ?? null) : null;
-  const [start, setStart] = useState<'copy' | 'blank'>(copySeq ? 'copy' : 'blank');
+  const startState = startChoices({
+    hasParent: Boolean(parent) && !node,
+    parentHasContent: Boolean(copySeq),
+    cabinetLevel,
+    cabinetPicked: Boolean(form.cabinetId),
+  });
+  const [picked, setPicked] = useState<DiagramStart | null>(null);
+  const start = effectiveStart(picked, startState);
+  const reasonOf = (value: DiagramStart) => startState.choices.find((c) => c.value === value)?.disabledReason ?? null;
+  const stockOff = useDisabledReason(reasonOf('stock') ? t(`diagrams.form.startOff_${reasonOf('stock')}`) : null, { visible: true });
+  const copyOff = useDisabledReason(reasonOf('copy') ? t(`diagrams.form.startOff_${reasonOf('copy')}`) : null, { visible: true });
   const [copying, setCopying] = useState(false);
   /* Danh sách đầy đủ là nội dung bản vẽ (hỏi mã) — chỉ tải khi người dùng bấm "Chọn phiên bản khác…". */
   const [history, setHistory] = useState<{ versions: VersionItem[]; published: string[] } | null>(null);
@@ -154,12 +176,32 @@ export function DiagramNodeDialog({
     }
   };
 
+  const buildFromStock = async () => {
+    setCopying(true);
+    try {
+      const body = JSON.stringify(Object.fromEntries(Object.entries(form).filter(([, value]) => value !== null && value !== '')));
+      const saved = await (run ?? ((action) => action()))(
+        () => apiFetch<DiagramNode>('/api/v1/diagrams/from-stock', { method: 'POST', csrfToken: me.csrfToken, body }),
+        t('diagrams.form.stockStepUp', { name: form.name.trim() }),
+      );
+      await done(saved, t('diagrams.form.createdStock', { name: saved.name }));
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const submit = () => {
     if (!form.name.trim()) {
       setNameError(t('diagrams.form.nameRequired'));
       return;
     }
-    if (parent && copySeq && start === 'copy') {
+    if (!editing && start === 'stock') {
+      void buildFromStock();
+      return;
+    }
+    if (!editing && parent && start === 'copy') {
       void copyChild(parent);
       return;
     }
@@ -217,38 +259,9 @@ export function DiagramNodeDialog({
             }}
           />
         </Field>
-        {parent && !node ? (
-          <Field label={t('diagrams.form.start')} hint={copySeq ? t('diagrams.form.startCopyHint') : t('diagrams.form.startParentEmpty')}>
-            <div className="segmented" role="radiogroup" aria-label={t('diagrams.form.start')}>
-              <label>
-                <input type="radio" name="diagram-start" value="copy" disabled={!copySeq} checked={start === 'copy'} onChange={() => setStart('copy')} />
-                {t('diagrams.form.startCopy')}
-              </label>
-              <label>
-                <input type="radio" name="diagram-start" value="blank" checked={start === 'blank'} onChange={() => setStart('blank')} />
-                {t('diagrams.form.startBlank')}
-              </label>
-            </div>
-          </Field>
-        ) : null}
-        {parent && !node && copySeq && start === 'copy' ? (
-          <Field label={t('diagrams.form.copyVersion')} hint={history ? t('diagrams.form.copyVersionAllHint') : t('diagrams.form.copyVersionHint')}>
-            <Select
-              value={sourceId}
-              ariaLabel={t('diagrams.form.copyVersion')}
-              options={sources.map((source) => ({ value: source.id, label: sourceLabel(source) }))}
-              onChange={setSourceId}
-            />
-            {history ? null : (
-              <button type="button" className="linkbtn" disabled={loadingHistory} onClick={() => void loadHistory(parent)}>
-                {t('diagrams.form.copyVersionMore')}
-              </button>
-            )}
-          </Field>
-        ) : null}
         {renameOnly ? null : (
           <>
-            <Field label={t('diagrams.form.nodeType')}>
+            <Field label={t('diagrams.form.nodeType')} hint={t('diagrams.form.nodeTypeHint')}>
               <Select
                 value={form.nodeType}
                 ariaLabel={t('diagrams.form.nodeType')}
@@ -292,6 +305,46 @@ export function DiagramNodeDialog({
             ) : null}
           </>
         )}
+        {!node && startState.choices.length > 1 ? (
+          <Field label={t('diagrams.form.start')} hint={t(START_HINT[start])}>
+            <div className="segmented" role="radiogroup" aria-label={t('diagrams.form.start')}>
+              {startState.choices.map((choice) => {
+                const off = choice.value === 'stock' ? stockOff : choice.value === 'copy' ? copyOff : null;
+                return (
+                  <label key={choice.value}>
+                    <input
+                      type="radio"
+                      name="diagram-start"
+                      value={choice.value}
+                      disabled={Boolean(choice.disabledReason)}
+                      checked={start === choice.value}
+                      onChange={() => setPicked(choice.value)}
+                      {...(off?.buttonProps ?? {})}
+                    />
+                    {t(START_LABEL[choice.value])}
+                  </label>
+                );
+              })}
+            </div>
+            {stockOff.hint}
+            {copyOff.hint}
+          </Field>
+        ) : null}
+        {parent && !node && start === 'copy' ? (
+          <Field label={t('diagrams.form.copyVersion')} hint={history ? t('diagrams.form.copyVersionAllHint') : t('diagrams.form.copyVersionHint')}>
+            <Select
+              value={sourceId}
+              ariaLabel={t('diagrams.form.copyVersion')}
+              options={sources.map((source) => ({ value: source.id, label: sourceLabel(source) }))}
+              onChange={setSourceId}
+            />
+            {history ? null : (
+              <button type="button" className="linkbtn" disabled={loadingHistory} onClick={() => void loadHistory(parent)}>
+                {t('diagrams.form.copyVersionMore')}
+              </button>
+            )}
+          </Field>
+        ) : null}
       </form>
     </Dialog>
   );

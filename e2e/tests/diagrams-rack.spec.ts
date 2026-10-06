@@ -3,7 +3,9 @@ import {
   E2E_SA,
   catalogItem,
   diagramBarAction,
+  fillOtp,
   firstLogin,
+  freshTotpCode,
   horizontalOverflow,
   resetCatalog,
   resetDevices,
@@ -205,6 +207,48 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     const after = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
     expect(after).not.toContain('ims_photo="front"');
     expect(after).not.toContain('data:image');
+  });
+
+  test('"Dựng từ kho" (Q-23 06/10 chiều): bản vẽ con cấp tủ chọn tủ là mặc định dựng từ kho, hỏi mã sơ đồ, ra nháp #1 có máy đúng U', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const rack = await seedRack(page);
+    const deviceId = await createDevice(page, rack, `SW-E2E-DK${rack.stamp}`, { rackUStart: 5, rackUSize: 2 });
+    const parentName = `E2E Phòng dựng từ kho ${rack.stamp}`;
+    const parent = await page.request.post('/api/v1/diagrams', {
+      headers: await writeHeaders(page),
+      data: { name: parentName, nodeType: 'room', siteId: rack.siteId },
+    });
+    expect(parent.status(), await parent.text()).toBe(201);
+    const parentId = ((await parent.json()) as { id: string }).id;
+
+    await page.goto(`/diagrams?node=${parentId}`);
+    await page.getByRole('complementary', { name: 'Bản vẽ đang chọn' }).getByRole('button', { name: `Thao tác với ${parentName}` }).click();
+    await page.getByRole('menuitem', { name: 'Thêm bản vẽ con' }).click();
+    const dialog = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
+    // Cấp thường: mặc định trang trắng, không có "Dựng từ kho".
+    await expect(dialog.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
+    await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Cấp bản vẽ' }).click();
+    await page.getByRole('option', { name: 'Tủ mạng' }).click();
+    await dialog.getByRole('button', { name: /^Tủ/ }).click();
+    await page.getByRole('option', { name: rack.cabinetCode }).click();
+    await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toBeChecked();
+    const name = `E2E Tủ dựng từ kho ${rack.stamp}`;
+    await dialog.getByLabel('Tên bản vẽ').fill(name);
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+    // Ghi NỘI DUNG bản vẽ nên hỏi mã sơ đồ (mã đăng nhập không mở phạm vi sơ đồ).
+    await fillOtp(page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' }), await freshTotpCode(secret));
+    await expect(page.getByText(`Đã tạo bản vẽ "${name}" — mặt tủ dựng từ kho, đang là bản nháp #1.`)).toBeVisible();
+
+    const diagramId = sql(`SELECT id FROM diagram WHERE name = '${name}'`);
+    expect(sql(`SELECT seq || ' ' || (svg IS NULL) FROM diagram_version WHERE diagram_id = '${diagramId}'`)).toBe('1 true');
+    const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}'`);
+    expect(xml).toContain(`label="Tủ ${rack.cabinetCode}"`);
+    // Máy 2U ở U5–U6 của tủ 12U (U1 ở đáy): cao 2U, đáy ở U5 — cùng số đo của khung "Dựng lại mặt tủ".
+    expect(xml).toMatch(new RegExp(`ims_device_id="${deviceId}"[^]*?<mxGeometry x="[^"]+" y="109\\.8" width="[^"]+" height="29\\.6"`));
+    await page.goto(`/diagrams/${diagramId}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
   });
 
   test('390px: trang thiết bị đọc được vị trí U và ảnh thật, không tràn ngang', async ({ page }) => {
