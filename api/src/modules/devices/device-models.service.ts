@@ -7,6 +7,8 @@ import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { pgConstraint } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { expandPortTemplate, type PortTemplateGroup } from './port-template';
 import { modelKey } from './device-model-key';
 import { deviceModelTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
@@ -21,6 +23,9 @@ export interface DeviceModelItem {
   rackMountable: boolean;
   uSize: number | null;
   photoFrontFileId: string | null;
+  portTemplate: PortTemplateGroup[];
+  /** Số cổng cổng mẫu sinh ra. */
+  portCount: number;
   /** Số máy đang trỏ tới model (kể cả máy đã thanh lý — khoá ngoại vẫn giữ chúng). */
   deviceCount: number;
   updatedAt: Date;
@@ -32,6 +37,7 @@ export interface DeviceModelInput {
   manufacturer?: string | null;
   rackMountable?: boolean;
   uSize?: number | null;
+  portTemplate?: unknown;
 }
 
 export interface DeviceModelFilter {
@@ -56,6 +62,7 @@ export class DeviceModelsService {
     private readonly catalog: CatalogApiService,
     private readonly audit: AuditWriterService,
     private readonly devices: DevicesService,
+    private readonly config: SystemConfigService,
   ) {}
 
   async list(filter: DeviceModelFilter, query: PageQuery): Promise<Page<DeviceModelItem>> {
@@ -80,7 +87,7 @@ export class DeviceModelsService {
   }
 
   async create(actor: string, input: DeviceModelInput): Promise<DeviceModelItem> {
-    const values = this.validated(input, null);
+    const values = this.validated(input, null, await this.portMax());
     await this.catalog.assertRefs({ deviceTypeId: values.deviceTypeId }, null);
     await this.assertUnique(values.model, null);
     let id: string;
@@ -99,10 +106,11 @@ export class DeviceModelsService {
   }
 
   async update(actor: string, id: string, patch: DeviceModelInput): Promise<DeviceModelItem> {
+    const max = await this.portMax();
     await this.db.transaction(async (tx) => {
       const [before] = await tx.select().from(deviceModelTable).where(eq(deviceModelTable.id, id)).for('update');
       if (!before) throw notFound();
-      const values = this.validated({ ...before, ...stripUndefined(patch) }, before);
+      const values = this.validated({ ...before, ...stripUndefined(patch) }, before, max);
       if (values.model !== before.model) await this.assertUnique(values.model, id, tx);
       const members = await tx.select().from(deviceTable).where(eq(deviceTable.deviceModelId, id));
       if (values.deviceTypeId !== before.deviceTypeId) {
@@ -196,6 +204,8 @@ export class DeviceModelsService {
       rackMountable: row.rackMountable,
       uSize: row.uSize,
       photoFrontFileId: row.photoFrontFileId,
+      portTemplate: row.portTemplate,
+      portCount: expandPortTemplate(row.portTemplate, Number.MAX_SAFE_INTEGER).length,
       deviceCount: used.get(row.id) ?? 0,
       updatedAt: row.updatedAt,
     }));
@@ -254,8 +264,12 @@ export class DeviceModelsService {
     }
   }
 
+  private portMax(): Promise<number> {
+    return this.config.getNumber('devicePortTemplateMax');
+  }
+
   /** Đầu vào hợp lệ thành hàng ghi được; `before` = hàng đang có (sửa), `null` = tạo mới. */
-  private validated(input: DeviceModelInput, before: typeof deviceModelTable.$inferSelect | null) {
+  private validated(input: DeviceModelInput, before: typeof deviceModelTable.$inferSelect | null, portMax: number) {
     const model = (input.model ?? '').trim();
     if (!model || model.length > 120 || modelKey(model).length === 0) {
       throw bad('DEVICE_MODEL_NAME_INVALID', 'Mã model từ 1 đến 120 ký tự và phải có chữ hoặc số.');
@@ -270,12 +284,18 @@ export class DeviceModelsService {
       throw bad('DEVICE_MODEL_U_INVALID', `Model gắn tủ cần Số U từ 1 đến ${U_MAX}.`);
     }
     if (!rackMountable && uSize !== null) throw bad('DEVICE_MODEL_U_INVALID', 'Model không gắn tủ thì không có Số U.');
-    return { deviceTypeId, model, manufacturer, rackMountable, uSize };
+    const raw = input.portTemplate ?? before?.portTemplate ?? [];
+    // Kiểm bằng chính phép mở mẫu (dải, trùng tên, trần) rồi lưu các nhóm đã làm sạch.
+    expandPortTemplate(raw, portMax);
+    const portTemplate = (raw as { pattern?: unknown; kind?: unknown }[])
+      .filter((g) => typeof g?.pattern === 'string' && g.pattern.trim())
+      .map((g) => ({ pattern: (g.pattern as string).trim(), kind: g.kind as PortTemplateGroup['kind'] }));
+    return { deviceTypeId, model, manufacturer, rackMountable, uSize, portTemplate };
   }
 }
 
 function pick(row: typeof deviceModelTable.$inferSelect) {
-  return { deviceTypeId: row.deviceTypeId, model: row.model, manufacturer: row.manufacturer, rackMountable: row.rackMountable, uSize: row.uSize };
+  return { deviceTypeId: row.deviceTypeId, model: row.model, manufacturer: row.manufacturer, rackMountable: row.rackMountable, uSize: row.uSize, portTemplate: row.portTemplate };
 }
 
 function stripUndefined<T extends object>(value: T): Partial<T> {

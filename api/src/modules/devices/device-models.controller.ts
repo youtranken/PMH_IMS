@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, ValidateIf } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, ValidateIf } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
@@ -33,6 +33,8 @@ class CreateModelDto {
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsString() @Length(0, 60, { message: 'Hãng tối đa 60 ký tự.' }) manufacturer?: string | null;
   @IsBoolean({ message: 'Gắn tủ phải là có hoặc không.' }) rackMountable!: boolean;
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsInt({ message: 'Số U phải là số nguyên.' }) @Min(1) @Max(60) uSize?: number | null;
+  /** Cổng mẫu: nhóm `pattern` + `kind`, `expandPortTemplate` kiểm. */
+  @IsOptional() @IsArray({ message: 'Cổng mẫu phải là danh sách.' }) portTemplate?: unknown[];
 }
 
 class UpdateModelDto {
@@ -41,6 +43,7 @@ class UpdateModelDto {
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsString() @Length(0, 60, { message: 'Hãng tối đa 60 ký tự.' }) manufacturer?: string | null;
   @IsOptional() @IsBoolean({ message: 'Gắn tủ phải là có hoặc không.' }) rackMountable?: boolean;
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsInt({ message: 'Số U phải là số nguyên.' }) @Min(1) @Max(60) uSize?: number | null;
+  @IsOptional() @IsArray({ message: 'Cổng mẫu phải là danh sách.' }) portTemplate?: unknown[];
 }
 
 /** `null` = bỏ ảnh của mặt đó; vắng = không đụng. */

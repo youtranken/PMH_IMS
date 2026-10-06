@@ -30,6 +30,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
 import { normalizeAccessPoints } from './device-access';
+import { expandPortTemplate } from './port-template';
 import { deviceHistoryTable, deviceModelTable, deviceTable } from './devices.schema';
 import { rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 import type {
@@ -568,6 +569,10 @@ export class DevicesService {
     if (values.deviceModelId !== undefined) {
       values.deviceTypeId = model.deviceTypeId;
       values.model = model.model;
+      // Máy chưa có danh sách cổng thì chép cổng mẫu lúc gán; đã có thì giữ — đổi mẫu không đổi ngầm máy.
+      if ((current?.portLayout ?? []).length === 0 && values.portLayout === undefined) {
+        values.portLayout = expandPortTemplate(model.portTemplate, Number.MAX_SAFE_INTEGER);
+      }
     }
     const start = effectiveOf(values)<number | null>('rackUStart', current?.rackUStart ?? null);
     if (model.rackMountable && start !== null) values.rackUSize = model.uSize;

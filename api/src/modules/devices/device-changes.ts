@@ -1,4 +1,5 @@
 import { accessSummary, type AccessPoint } from './device-access';
+import { portLayoutSummary, type PhysicalPort } from './port-template';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 
 /**
@@ -43,6 +44,11 @@ export function diffDevice(
     const from = accessSummary((before.accessPoints as AccessPoint[] | undefined) ?? []);
     const to = accessSummary((after.accessPoints as AccessPoint[] | undefined) ?? []);
     if (from !== to) changes.accessPoints = { before: from || null, after: to || null };
+  }
+  if ('portLayout' in after) {
+    const from = portLayoutSummary((before.portLayout as PhysicalPort[] | undefined) ?? []);
+    const to = portLayoutSummary((after.portLayout as PhysicalPort[] | undefined) ?? []);
+    if (from !== to) changes.portLayout = { before: from || null, after: to || null };
   }
   return changes;
 }

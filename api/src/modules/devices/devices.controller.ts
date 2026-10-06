@@ -51,6 +51,7 @@ import { HISTORY_PAGE_LIMIT, withActorNames } from '../../common/history';
 import { UsersApiService } from '../users/users.api';
 import { DeviceImportService } from './device-import.service';
 import { DeviceExportQueryDto, DeviceListQueryDto } from './device-query.dto';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicePortsService } from './device-ports.service';
 import {
   DEVICE_SORT_DEFAULT,
@@ -143,6 +144,11 @@ export class PortBodyDto {
 }
 
 /** Một sợi dây giữa hai máy có hồ sơ — hộp "Khai kết nối" của sơ đồ mạng (Q-23). */
+export class PortLayoutBodyDto {
+  /** Từng cổng do `normalizePortLayout` kiểm (tên, kiểu, trùng, trần). */
+  @IsArray({ message: 'Danh sách cổng phải là một mảng.' }) ports!: unknown[];
+}
+
 export class LinkBodyDto {
   @IsString() @Length(1, 60) portLabel!: string;
   @IsUUID(undefined, { message: 'Thiết bị đầu kia không hợp lệ.' }) connectedDeviceId!: string;
@@ -190,6 +196,7 @@ export class DevicesController {
     private readonly imports: DeviceImportService,
     private readonly timelines: DeviceTimelineRegistry,
     private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -367,6 +374,21 @@ export class DevicesController {
   @Get(':id/ports')
   listPorts(@Param() params: IdParamDto) {
     return this.ports.listFor(params.id);
+  }
+
+  /** Mặt cổng (Q-26): cổng vật lý của máy, cổng nào đang có dây và đầu kia. Chỉ đọc. */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/port-panel')
+  portPanel(@Param() params: IdParamDto) {
+    return this.ports.panel(params.id);
+  }
+
+  /** Sửa danh sách cổng (thêm cổng riêng, bỏ cổng không dây) — cùng quyền với sửa sơ đồ cổng. */
+  @Roles('sa', 'admin', 'member')
+  @Patch(':id/port-layout')
+  @Audited('device.ports-layout', 'device', { writtenByService: true })
+  async setPortLayout(@Param() params: IdParamDto, @Body() body: PortLayoutBodyDto, @Req() req: AuthedRequest) {
+    return this.ports.setLayout(actor(req), params.id, body.ports, await this.config.getNumber('devicePortTemplateMax'));
   }
 
   /**

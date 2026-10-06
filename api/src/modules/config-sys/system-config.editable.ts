@@ -19,7 +19,8 @@ export type SettingGroup =
   | 'software'
   | 'ipam'
   | 'files'
-  | 'diagram';
+  | 'diagram'
+  | 'devices';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -134,6 +135,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramPathMaxHops', group: 'diagram', type: 'int', unit: 'hops', min: 2, max: 50, warnAbove: 30 },
   { name: 'diagramPhotoMaxPx', group: 'diagram', type: 'int', unit: 'px', min: 120, max: 1600, warnAbove: 960 },
   { name: 'diagramDeviceWidthPx', group: 'diagram', type: 'int', unit: 'px', min: 40, max: 480 },
+  { name: 'devicePortTemplateMax', group: 'devices', type: 'int', unit: 'ports', min: 8, max: 1024 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

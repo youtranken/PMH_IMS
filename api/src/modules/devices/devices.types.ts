@@ -1,4 +1,5 @@
 import type { AccessPoint } from './device-access';
+import type { PhysicalPort } from './port-template';
 /** Vòng đời thiết bị (FR-001). Không có "đã xóa": sổ tài sản chỉ chuyển trạng thái. */
 export const DEVICE_STATUSES = ['in_use', 'spare', 'broken', 'retired'] as const;
 export type DeviceStatus = (typeof DEVICE_STATUSES)[number];
@@ -46,6 +47,7 @@ export interface DeviceRecord {
   photoBackFileId: string | null;
   deviceModelId: string | null;
   accessPoints: AccessPoint[];
+  portLayout: PhysicalPort[];
   createdAt: Date;
   updatedAt: Date;
 }

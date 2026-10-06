@@ -10,6 +10,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import type { AccessPoint } from './device-access';
+import type { PhysicalPort, PortTemplateGroup } from './port-template';
 
 /** citext: mã thiết bị so sánh không phân biệt hoa-thường ("sw-core-01" = "SW-CORE-01"). */
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
@@ -48,6 +49,8 @@ export const deviceTable = pgTable('device', {
   deviceModelId: uuid('device_model_id'),
   /** Truy cập quản trị (0062): kiểu + địa chỉ + cổng; luật ở `normalizeAccessPoints`. */
   accessPoints: jsonb('access_points').$type<AccessPoint[]>().notNull().default([]),
+  /** Cổng vật lý của máy (0063) — KHÔNG phải dây; dây ở `device_port`. Chép từ cổng mẫu lúc gán model. */
+  portLayout: jsonb('port_layout').$type<PhysicalPort[]>().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -67,6 +70,8 @@ export const deviceModelTable = pgTable('device_model', {
   uSize: smallint('u_size'),
   /** Cột sinh của Postgres (`modelKey()`): chỉ đọc, không bao giờ ghi. */
   modelKey: text('model_key'),
+  /** Cổng mẫu (0063): nhóm `pattern` + `kind`, mở bằng `expandPortTemplate`. */
+  portTemplate: jsonb('port_template').$type<PortTemplateGroup[]>().notNull().default([]),
   photoFrontFileId: uuid('photo_front_file_id'),
   photoBackFileId: uuid('photo_back_file_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

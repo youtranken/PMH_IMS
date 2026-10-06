@@ -9,6 +9,8 @@ import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { modelKey } from '../src/modules/devices/device-model-key';
 import { DeviceModelsService } from '../src/modules/devices/device-models.service';
 import { DevicesService } from '../src/modules/devices/devices.service';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -28,6 +30,7 @@ describe('Model thiết bị · danh mục (0061, Q-26)', () => {
   let scratch: ScratchDb;
   let devices: DevicesService;
   let models: DeviceModelsService;
+  let ports: DevicePortsService;
   let siteId: string;
   let cabinetId: string;
   let switchType: string;
@@ -41,7 +44,8 @@ describe('Model thiết bị · danh mục (0061, Q-26)', () => {
     const audit = new AuditWriterService(scratch.db);
     const catalog = new CatalogApiService(new CatalogService(scratch.db, audit));
     devices = new DevicesService(scratch.db, catalog, audit, noRetirement, new DeviceSearchRegistry());
-    models = new DeviceModelsService(scratch.db, catalog, audit, devices);
+    models = new DeviceModelsService(scratch.db, catalog, audit, devices, new SystemConfigService(scratch.db));
+    ports = new DevicePortsService(scratch.db, devices);
     siteId = await one(`INSERT INTO site (code, name) VALUES ('E2E-MD', 'Site model') RETURNING id`);
     cabinetId = await one(`INSERT INTO cabinet (site_id, code, u_height) VALUES ($1, 'E2E-MD-R1', 12) RETURNING id`, [siteId]);
     switchType = await one(`INSERT INTO device_type (name) VALUES ('Switch E2E MD') RETURNING id`);
@@ -151,6 +155,54 @@ describe('Model thiết bị · danh mục (0061, Q-26)', () => {
     await devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'web', address: '10.0.1.1', port: 443 }, { kind: 'ssh', address: '10.0.1.1', port: 22 }] });
     expect((await devices.history(device.id)).length).toBe(2);
     await expect(devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'ftp', address: 'x' }] })).rejects.toMatchObject({ response: { code: 'DEVICE_ACCESS_INVALID' } });
+  });
+
+  it('cổng mẫu (11.3): model sinh 52 cổng, máy gán model nhận đủ; đổi mẫu sau đó không đổi ngầm máy đã có; mẫu sai → 400', async () => {
+    const template = [
+      { pattern: 'Gi1/0/[1-48]', kind: 'rj45' },
+      { pattern: 'Te1/1/[1-4]', kind: 'sfp+' },
+    ];
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-SW-52', rackMountable: true, uSize: 1, portTemplate: template });
+    expect(model).toMatchObject({ portCount: 52, portTemplate: template });
+    const { device } = await devices.create(ACTOR, { code: 'SW-E2E-MD-52A', name: 'Switch 52', deviceTypeId: switchType, deviceModelId: model.id });
+    expect(device.portLayout).toHaveLength(52);
+    expect(device.portLayout[48]).toEqual({ label: 'Te1/1/1', kind: 'sfp+' });
+    await models.update(ACTOR, model.id, { portTemplate: [{ pattern: 'Gi1/0/[1-24]', kind: 'rj45' }] });
+    expect((await scratch.pool.query(`SELECT jsonb_array_length(port_layout) n FROM device WHERE id = $1`, [device.id])).rows[0].n).toBe(52);
+    const { device: later } = await devices.create(ACTOR, { code: 'SW-E2E-MD-52B', name: 'Switch 24', deviceTypeId: switchType, deviceModelId: model.id });
+    expect(later.portLayout).toHaveLength(24);
+    await expect(models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-BAD-PORTS', rackMountable: false, portTemplate: [{ pattern: 'Port[8-1]', kind: 'rj45' }] })).rejects.toMatchObject({
+      response: { code: 'PORT_TEMPLATE_INVALID' },
+    });
+  });
+
+  it('mặt cổng (11.3): dây của máy này và dây máy khác cắm vào đều tính; bỏ cổng có dây bị chặn; khai dây vào cổng ngoài danh sách thì thêm làm cổng riêng; thẻ sơ đồ ra dùng/tổng', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-SW-4', rackMountable: false, portTemplate: [{ pattern: 'p[1-4]', kind: 'rj45' }] });
+    const { device: sw } = await devices.create(ACTOR, { code: 'SW-E2E-MD-P4', name: 'Switch 4', deviceTypeId: switchType, deviceModelId: model.id });
+    const { device: pc } = await devices.create(ACTOR, { code: 'PC-E2E-MD-P', name: 'PC', deviceTypeId: switchType });
+    const { device: ap } = await devices.create(ACTOR, { code: 'AP-E2E-MD-P', name: 'AP', deviceTypeId: switchType });
+    await ports.link(ACTOR, sw.id, { portLabel: 'p1', connectedDeviceId: pc.id, connectedPort: 'eth0' });
+    await ports.link(ACTOR, ap.id, { portLabel: 'lan', connectedDeviceId: sw.id, connectedPort: 'P2' });
+    const panel = await ports.panel(sw.id);
+    expect(panel).toMatchObject({ used: 2, total: 4, unlisted: [] });
+    expect(panel.ports.map((p) => [p.label, p.peer])).toEqual([
+      ['p1', 'PC-E2E-MD-P · eth0'],
+      ['p2', 'AP-E2E-MD-P · lan'],
+      ['p3', null],
+      ['p4', null],
+    ]);
+    await expect(ports.setLayout(ACTOR, sw.id, [{ label: 'p2', kind: 'rj45' }, { label: 'p3', kind: 'rj45' }], 256)).rejects.toMatchObject({
+      response: { code: 'PORT_LAYOUT_IN_USE', message: expect.stringContaining('p1') },
+    });
+    const trimmed = await ports.setLayout(ACTOR, sw.id, [{ label: 'p1', kind: 'rj45' }, { label: 'p2', kind: 'rj45' }, { label: 'p3', kind: 'rj45' }], 256);
+    expect(trimmed.total).toBe(3);
+    // Cổng ngoài danh sách: khai dây xong thì nó thành cổng riêng của máy.
+    await ports.link(ACTOR, sw.id, { portLabel: 'mgmt', connectedDeviceId: ap.id, connectedPort: 'eth9' });
+    const after = await ports.panel(sw.id);
+    expect(after.ports.map((p) => `${p.label}/${p.kind}`)).toEqual(['p1/rj45', 'p2/rj45', 'p3/rj45', 'mgmt/other']);
+    // Máy không có danh sách cổng (AP) giữ cách cũ: không tự sinh danh sách.
+    expect((await ports.panel(ap.id)).total).toBe(0);
+    expect((await ports.portUsage([sw.id])).get(sw.id)).toEqual({ used: 3, declared: 4 });
   });
 
   it('lượt dọn E2E (vùng devices của reset-e2e.mjs) gỡ được máy trỏ model bằng khoá ngoại', async () => {
