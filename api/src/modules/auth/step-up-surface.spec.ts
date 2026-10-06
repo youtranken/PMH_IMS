@@ -182,7 +182,7 @@ describe('Step-up mặc định đóng (FR-022)', () => {
 
   /**
    * Q-23: XEM và SỬA một bản vẽ có sẵn (nội dung mọi phiên bản, danh sách phiên bản, lịch sử,
-   * lưu, đặt tên, khôi phục, nhịp "đang sửa") đều hỏi mã phạm vi sơ đồ. Lớp `DiagramsController` mang `@NoStepUp()` (cây xem không cần mã), nên dòng khai ở
+   * lưu, đặt tên, khôi phục) đều hỏi mã phạm vi sơ đồ. Lớp `DiagramsController` mang `@NoStepUp()` (cây xem không cần mã), nên dòng khai ở
    * từng route là thứ DUY NHẤT giữ hàng rào — gỡ một dòng là nội dung bản vẽ mở cho phiên chưa
    * từng gõ mã.
    */
@@ -194,7 +194,6 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     "@Post(':id/versions')",
     "@Post(':id/versions/:versionId/label')",
     "@Post(':id/versions/:versionId/restore')",
-    "@Post(':id/presence')",
     // Nhân bản chép nội dung bản chính thức sang bản mới — là một lần đọc nội dung.
     "@Post(':id/presentations')",
   ])('diagrams.controller %s đòi step-up phạm vi sơ đồ', (route) => {
@@ -208,6 +207,27 @@ describe('Step-up mặc định đóng (FR-022)', () => {
       0,
     );
     expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+  });
+
+  /**
+   * Nhịp "đang mở sửa" chỉ trả tên người đang mở cùng bản vẽ — siêu dữ liệu ngang hàng với tên và
+   * trạng thái trên cây, không phải nội dung. Đòi mã ở đây thì hết ân hạn giữa lúc vẽ nhịp nhận
+   * 401 trong im lặng và người khác thôi thấy "Đang có … mở sửa" dù người này vẫn đang vẽ. Khai
+   * `@NoStepUp()` ngay trên route để lập trường này là cố ý, không phải sót.
+   */
+  it('diagrams.controller nhịp đang sửa khai rõ không đòi mã', () => {
+    const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagrams.controller.ts'), 'utf8');
+    const at = src.indexOf("@Post(':id/presence')");
+    expect(at).toBeGreaterThan(-1);
+    const prevRoute = Math.max(
+      ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+        .map((m) => src.lastIndexOf(m, at - 1))
+        .filter((i) => i >= 0),
+      0,
+    );
+    const block = src.slice(prevRoute, at);
+    expect(block).toContain('@NoStepUp()');
+    expect(block).not.toContain('@RequiresStepUp(');
   });
 
   /** Duyệt + bình luận ghim: trang duyệt nêu mã thiết bị, bình luận nêu id ô — cùng hàng rào. */

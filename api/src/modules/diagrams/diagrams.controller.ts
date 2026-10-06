@@ -185,9 +185,9 @@ export interface DiagramEditorSettings {
  * phát hành (Q-23), qua `DiagramPruneService`.
  *
  * Lớp `@NoStepUp()`: cây (tên, trạng thái, tạo nút, đổi tên, lưu trữ) không cần mã. Mọi route
- * XEM hoặc SỬA một bản vẽ có sẵn — nội dung, phiên bản, lịch sử, lưu, đặt tên, khôi phục, nhịp
- * "đang sửa" — khai `@RequiresStepUp('diagram')` từng cái (Q-23: xem và sửa bản vẽ đều hỏi mã;
- * một phiên bị chiếm không ghi đè được bản vẽ khi chưa gõ mã).
+ * XEM hoặc SỬA một bản vẽ có sẵn — nội dung, phiên bản, lịch sử, lưu, đặt tên, khôi phục — khai
+ * `@RequiresStepUp('diagram')` từng cái (Q-23: xem và sửa bản vẽ đều hỏi mã; một phiên bị chiếm
+ * không ghi đè được bản vẽ khi chưa gõ mã).
  */
 @NoStepUp()
 @Controller('api/v1/diagrams')
@@ -534,8 +534,13 @@ export class DiagramsController {
     return reviewed;
   }
 
+  /**
+   * Nhịp "đang mở sửa": chỉ trả tên người đang mở cùng bản vẽ — siêu dữ liệu như tên và trạng thái
+   * trên cây, không phải nội dung, nên không đòi mã sơ đồ. Đòi mã thì hết ân hạn giữa lúc vẽ nhịp
+   * nhận 401 và người khác thôi thấy "Đang có … mở sửa" trong khi người này vẫn đang vẽ.
+   */
   @Roles('sa', 'admin', 'member')
-  @RequiresStepUp('diagram')
+  @NoStepUp()
   @Post(':id/presence')
   @Audited('diagram.editing_started', 'diagram', { writtenByService: true })
   presence(@Param() params: IdParamDto, @Req() req: AuthedRequest) {

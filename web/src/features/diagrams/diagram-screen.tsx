@@ -1130,7 +1130,7 @@ function DiagramEditor({
   }, [ready]);
 
   // Nhịp "đang mở sửa" (Q-23): nửa thời gian giữ một lần, để một nhịp lỡ không làm tên biến mất.
-  // Hết ân hạn sơ đồ thì nhịp nhận 401 và im lặng: không bật hộp nhập mã chỉ vì một nhịp nền.
+  // Route này không đòi mã sơ đồ (chỉ là tên người đang mở), nên hết ân hạn giữa lúc vẽ nhịp vẫn đi.
   useEffect(() => {
     let alive = true;
     const beat = () =>
