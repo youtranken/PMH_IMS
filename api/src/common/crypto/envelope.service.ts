@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { MasterKeyRing } from './master-key-ring';
 import type { SealContext, SealedValue } from './envelope.types';
@@ -23,6 +23,17 @@ export class EnvelopeCryptoService {
 
   get currentKeyVersion(): number {
     return this.keyring.currentVersion;
+  }
+
+  /**
+   * Khoá 32 byte dẫn xuất (HKDF-SHA256) từ master key HIỆN HÀNH theo một mục đích (`info`), cho dữ
+   * liệu mà TRÌNH DUYỆT phải tự mã — bản vẽ dở cất ở IndexedDB (Q-23 06/10). Một chiều: biết khoá
+   * này không suy ra master key hay khoá của mục đích khác. Xoay chìa thì khoá đổi — dữ liệu mã bằng
+   * khoá cũ không giải được nữa, nên chỉ dùng cho thứ tạm, mất được.
+   */
+  deriveKey(info: string): Buffer {
+    const master = this.keyring.get(this.keyring.currentVersion);
+    return Buffer.from(hkdfSync('sha256', master, 'ims-derive-v1', info, 32));
   }
 
   /** Mã hóa bằng master key hiện hành. */

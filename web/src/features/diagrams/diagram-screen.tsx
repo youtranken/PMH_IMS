@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
+import { browserDraftBackend, deleteDraft, draftKeyOf, loadDraft, saveDraft } from '@/lib/draft-store';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
@@ -95,6 +96,19 @@ const SELECTION_POLL_MS = 700;
  * (nếu thật ra nó đã nhận) trước khi IMS chèn thay — không chèn một máy hai lần.
  */
 const DROP_FALLBACK_WAIT_MS = 600;
+
+/**
+ * Bản vẽ dở cất ở trình duyệt (Q-23 06/10): ghi sau khi người vẽ ngừng tay chừng này — mỗi nét
+ * draw.io gửi một `autosave`, mã + ghi IndexedDB cho từng nét là thừa. Đóng tab thì ghi ngay.
+ */
+const DRAFT_DEBOUNCE_MS = 1500;
+/** Mặc định của `diagram.draft_keep_hours` khi server cũ chưa trả tham số. */
+const DRAFT_KEEP_HOURS_FALLBACK = 24;
+
+/** Bỏ bản vẽ dở đã cất của người này cho bản vẽ này (chọn "Bỏ thay đổi" khi rời màn). */
+function discardStoredDraft(userId: string, diagramId: string) {
+  void deleteDraft(browserDraftBackend(), draftKeyOf(userId, diagramId));
+}
 
 function newCellId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -223,6 +237,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       });
       if (!ok) return;
       setDirty(false);
+      discardStoredDraft(me.id, id);
     }
     setParams(next);
   };
@@ -239,6 +254,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       });
       if (!ok) return;
       setDirty(false);
+      discardStoredDraft(me.id, id);
     }
     setParams(next === 'edit' ? { mode: 'edit' } : {});
   };
@@ -266,6 +282,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         });
         if (!ok) return;
         setDirty(false);
+        discardStoredDraft(me.id, id);
       }
       setFocusCell(cellId);
       setParams({ cell: cellId });
@@ -921,6 +938,16 @@ function DiagramEditor({
     frame.current?.send({ action: 'export', format: 'xml' });
   };
   const [draftOpen, setDraftOpen] = useState(false);
+  /*
+   * Bản vẽ dở (Q-23 06/10): mỗi lần người vẽ ngừng tay, XML đang vẽ được mã bằng khoá server cấp kèm
+   * nội dung rồi cất IndexedDB; mở lại tab Sửa mà còn bản cất thì mời "Khôi phục / Bỏ". Không bao giờ
+   * tự nạp đè: khôi phục là nạp vào trình vẽ thành thay đổi CHƯA LƯU.
+   */
+  const draftStore = useMemo(() => browserDraftBackend(), []);
+  const draftId = draftKeyOf(me.id, diagramId);
+  const draftText = useRef<string | null>(null);
+  const draftTimer = useRef<number | null>(null);
+  const [recovery, setRecovery] = useState<{ text: string; savedAt: number; basedOn: string | null } | null>(null);
   /* Ô đang chọn trong trình vẽ (Q-23 06/10) — draw.io không báo, màn hỏi định kỳ khi khung có tiêu điểm. */
   const [selected, setSelected] = useState<ReturnType<typeof selectedTarget>>(null);
   const frameState = useRef<{ page: number; bounds: Bounds | null }>({
@@ -932,6 +959,43 @@ function DiagramEditor({
     setDirtyState(value);
     onDirtyChange(value);
   };
+
+  const flushDraft = () => {
+    if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
+    draftTimer.current = null;
+    const text = draftText.current;
+    if (!text || !content.draftKey) return;
+    void saveDraft(draftStore, { id: draftId, owner: me.id, basedOn: basedOn.current, text, rawKey: content.draftKey });
+  };
+  const keepDraft = (text: string) => {
+    if (!content.draftKey) return;
+    draftText.current = text;
+    if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
+    draftTimer.current = window.setTimeout(flushDraft, DRAFT_DEBOUNCE_MS);
+  };
+  const dropDraft = () => {
+    if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
+    draftTimer.current = null;
+    draftText.current = null;
+    void deleteDraft(draftStore, draftId);
+  };
+  const latestFlush = useRef(flushDraft);
+  useLayoutEffect(() => {
+    latestFlush.current = flushDraft;
+  });
+  // Đóng / ẩn tab: ghi ngay phần đang chờ — không đợi hết nhịp.
+  useEffect(() => {
+    const now = () => latestFlush.current();
+    const hidden = () => {
+      if (document.visibilityState === 'hidden') now();
+    };
+    window.addEventListener('pagehide', now);
+    document.addEventListener('visibilitychange', hidden);
+    return () => {
+      window.removeEventListener('pagehide', now);
+      document.removeEventListener('visibilitychange', hidden);
+    };
+  }, []);
 
   const frames = useFrameBridge({
     diagramId,
@@ -1013,6 +1077,7 @@ function DiagramEditor({
         return;
       }
       setDirty(false);
+      dropDraft();
       toast({ tone: 'ok', message: t('diagrams.rack.rebuildDone', { seq: version.seq }) });
       void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
       void queryClient.invalidateQueries({ queryKey: TREE_KEY });
@@ -1024,6 +1089,34 @@ function DiagramEditor({
     }
   };
   const isRack = content.diagram.nodeType === 'cabinet' && Boolean(content.diagram.cabinetId);
+
+  const [recoveryChecked, setRecoveryChecked] = useState(false);
+  useEffect(() => {
+    if (!ready || recoveryChecked || !content.draftKey) return;
+    setRecoveryChecked(true);
+    void loadDraft(draftStore, {
+      id: draftId,
+      owner: me.id,
+      rawKey: content.draftKey,
+      keepHours: settings.draftKeepHours ?? DRAFT_KEEP_HOURS_FALLBACK,
+    }).then((found) => {
+      if (found.value) setRecovery(found.value);
+    });
+  }, [ready, recoveryChecked, content.draftKey, draftStore, draftId, me.id, settings.draftKeepHours]);
+
+  const restoreDraft = () => {
+    if (!recovery) return;
+    frame.current?.send({ action: 'load', xml: paintImsXml(recovery.text, palette), autosave: true });
+    // Lưu bản khôi phục là lưu TRÊN phiên bản nó được vẽ từ — server ghi "lưu đè" nếu đã có bản mới hơn.
+    if (recovery.basedOn) basedOn.current = recovery.basedOn;
+    setFrameXml(recovery.text);
+    setJustInserted([]);
+    cables.rebase(recovery.text);
+    draftText.current = recovery.text;
+    setRecovery(null);
+    setDirty(true);
+    toast({ tone: 'ok', message: t('diagrams.recovery.restored') });
+  };
 
   useEffect(() => {
     if (!ready) return undefined;
@@ -1069,6 +1162,7 @@ function DiagramEditor({
       basedOn.current = version.id;
       setDirty(false);
       setNeedsPreview(false);
+      dropDraft();
       // Bản mới nhất có thể là của người khác lưu trùng nội dung: dòng "Đã lưu #n" theo đúng bản đó.
       setLastSaved(version);
       // Trùng y nguyên bản mới nhất: server không tạo phiên bản nào (Q-23) — không có gì mới để báo.
@@ -1160,6 +1254,7 @@ function DiagramEditor({
           }
           setFrameXml(message.xml);
           setJustInserted([]);
+          keepDraft(message.xml);
           cables.onAutosave(message.xml);
           racks.fit(message.xml);
         }
@@ -1310,6 +1405,26 @@ function DiagramEditor({
   const savedNote = !dirty && lastSaved ? t('diagrams.screen.savedShort', { seq: lastSaved.seq, at: formatDateTime(lastSaved.savedAt) }) : savedFull;
   const status = (
     <>
+      {recovery ? (
+        <p className="badge warn" role="status">
+          {t('diagrams.recovery.found', { at: formatDateTime(new Date(recovery.savedAt).toISOString()) })}
+          {recovery.basedOn && recovery.basedOn !== (lastSaved?.id ?? null) ? ` ${t('diagrams.recovery.newer')}` : ''}{' '}
+          <button type="button" className="btn sm primary" disabled={!ready} onClick={restoreDraft}>
+            {t('diagrams.recovery.restore')}
+          </button>{' '}
+          <button
+            type="button"
+            className="btn sm"
+            onClick={() => {
+              dropDraft();
+              setRecovery(null);
+              toast({ tone: 'ok', message: t('diagrams.recovery.discarded') });
+            }}
+          >
+            {t('diagrams.recovery.discard')}
+          </button>
+        </p>
+      ) : null}
       {reviewStatus}
       {others.length > 0 ? (
         <p className="badge warn" role="status">
@@ -1427,6 +1542,7 @@ function DiagramEditor({
                   return;
                 }
                 setDirty(false);
+                dropDraft();
                 toast({ tone: 'ok', message: t('diagrams.cable.draftDone', { seq: version.seq }) });
                 void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
                 void queryClient.invalidateQueries({ queryKey: TREE_KEY });
@@ -1442,7 +1558,10 @@ function DiagramEditor({
               confirmLabel={t('diagrams.screen.leaveDiscard')}
               cancelLabel={t('diagrams.screen.leaveStay')}
               danger
-              onConfirm={() => guard.proceed()}
+              onConfirm={() => {
+                dropDraft();
+                guard.proceed();
+              }}
               onCancel={() => guard.stay()}
             />
           ) : null}

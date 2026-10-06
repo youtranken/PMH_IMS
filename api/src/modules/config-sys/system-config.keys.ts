@@ -231,6 +231,11 @@ export const CONFIG_KEYS = {
    * XML lúc vẽ lẫn ảnh xem SVG: thu về cạnh dài này để bản vẽ một tủ không chạm trần dung lượng.
    */
   diagramPhotoMaxPx: { key: 'diagram.photo_max_px', fallback: 480 },
+  /*
+   * Bản vẽ đang vẽ dở cất (đã mã hoá) ở trình duyệt khi tab đóng / mất mạng / hết phiên (Q-23
+   * 06/10): quá ngần này giờ thì bỏ — để lâu là một bản cũ hơn hẳn bản trên server chực đè lên.
+   */
+  diagramDraftKeepHours: { key: 'diagram.draft_keep_hours', fallback: 24 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

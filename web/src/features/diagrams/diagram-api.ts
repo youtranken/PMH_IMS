@@ -130,6 +130,11 @@ export interface CableTypeInfo {
 
 export interface DiagramContent {
   diagram: DiagramNode;
+  /**
+   * Khoá AES (base64) mã bản vẽ dở trước khi cất ở trình duyệt — chỉ có ở nội dung tab Sửa, tức sau
+   * khi nhập mã sơ đồ (Q-23 06/10). Thiếu → không cất bản dở.
+   */
+  draftKey?: string;
   version: (VersionItem & { xml: string; svg: string | null }) | null;
   /** Ô thiết bị của phiên bản (id ô → id máy + mã ghi trên ô). Thiếu → coi như rỗng. */
   deviceCells?: { cellId: string; deviceId: string; code: string }[];
@@ -242,6 +247,8 @@ export interface EditorSettings {
   presenceTtlSeconds: number;
   /** `diagram.xml_max_kb` — trần cỡ ảnh tự do nhúng vào bản trình bày. Thiếu → không chặn sớm. */
   xmlMaxKb?: number;
+  /** `diagram.draft_keep_hours` — bản vẽ dở cất ở trình duyệt quá ngần này giờ thì bỏ. Thiếu → 24. */
+  draftKeepHours?: number;
 }
 
 /*

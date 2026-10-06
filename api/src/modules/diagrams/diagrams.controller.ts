@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import { NoSecretText } from '../../common/no-secret-text';
 import { OptionalUuidListQuery, splitUuidList } from '../../common/query-uuid';
 import { Audited } from '../audit/audited.decorator';
@@ -8,6 +9,7 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { diagramDraftKey } from './diagram-draft-key';
 import { DiagramDriftService } from './diagram-drift.service';
 import { DiagramNavigationService } from './diagram-navigation.service';
 import { DiagramPruneService } from './diagram-prune.service';
@@ -168,6 +170,8 @@ export interface DiagramEditorSettings {
    * (Q-23) nên trần đo XML khô không tính ảnh; tổng kể cả ảnh do trần XML ướt của cổng chặn.
    */
   xmlMaxKb: number;
+  /** `diagram.draft_keep_hours` — bản vẽ dở cất ở trình duyệt quá ngần này giờ thì bỏ. */
+  draftKeepHours: number;
 }
 
 /**
@@ -190,6 +194,7 @@ export class DiagramsController {
     private readonly drift: DiagramDriftService,
     private readonly navigation: DiagramNavigationService,
     private readonly prune: DiagramPruneService,
+    private readonly crypto: EnvelopeCryptoService,
   ) {}
 
   /** Cây kèm "lệch kho (N)" của bản chính thức hiện hành — đọc bộ đệm, không đọc kho (Q-23). */
@@ -202,12 +207,13 @@ export class DiagramsController {
   @Roles('sa', 'admin', 'member')
   @Get('editor-settings')
   async editorSettings(): Promise<DiagramEditorSettings> {
-    const [initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb] = await Promise.all([
+    const [initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb, draftKeepHours] = await Promise.all([
       this.config.getNumber('diagramEditorInitTimeoutSeconds'),
       this.config.getNumber('diagramPresenceTtlSeconds'),
       this.config.getNumber('diagramXmlMaxKb'),
+      this.config.getNumber('diagramDraftKeepHours'),
     ]);
-    return { initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb };
+    return { initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb, draftKeepHours };
   }
 
   /**
@@ -424,10 +430,12 @@ export class DiagramsController {
   @RequiresStepUp('diagram')
   @Get(':id/content')
   async content(@Param() params: IdParamDto, @Query() query: ContentQueryDto, @Req() req: AuthedRequest) {
-    const content = await this.diagrams.content(req.user!.email, params.id, { mode: query.mode ?? 'view', versionId: query.versionId });
+    const mode = query.mode ?? 'view';
+    const content = await this.diagrams.content(req.user!.email, params.id, { mode, versionId: query.versionId });
     // Lệch kho so với bản chụp của CHÍNH phiên bản đang mở (Q-23): chỉ báo, không sửa gì.
     const drift = content.version ? await this.drift.forVersion(params.id, content.version.id) : [];
-    return { ...content, drift };
+    // Khoá mã bản vẽ dở chỉ cho tab Sửa — tab Xem không có gì để cất (Q-23 06/10).
+    return mode === 'edit' ? { ...content, drift, draftKey: diagramDraftKey(this.crypto, req.user!.id, params.id) } : { ...content, drift };
   }
 
   @Roles('sa', 'admin', 'member')

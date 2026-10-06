@@ -63,6 +63,11 @@ export function useCableBridge({
   refreshUndrawn: (xml: string) => void;
   /** Kết nối màn đang biết (lúc mở + vừa khai / vẽ vào) — thẻ của dây đang chọn đọc từ đây. */
   linkOf: (linkId: string) => DiagramLink | undefined;
+  /**
+   * Trình vẽ vừa được nạp LẠI cả bản (khôi phục bản vẽ dở): lấy bản đó làm mốc so autosave, không
+   * hỏi "Khai" lại cho những nét đã có sẵn trong bản nạp.
+   */
+  rebase: (xml: string) => void;
   /** Việc của dây cho menu ⋮ của thanh; hộp nổi của chúng ở `popovers`. */
   menu: BarAction[];
   popovers: ReactNode;
@@ -465,5 +470,11 @@ export function useCableBridge({
     </>
   );
 
-  return { onAutosave, refreshUndrawn, linkOf: (linkId) => links.current.get(linkId), menu, popovers, status, dialogs };
+  const rebase = (xml: string) => {
+    lastXml.current = xml;
+    setCurrentXml(xml);
+    setQueue([]);
+  };
+
+  return { onAutosave, refreshUndrawn, linkOf: (linkId) => links.current.get(linkId), rebase, menu, popovers, status, dialogs };
 }

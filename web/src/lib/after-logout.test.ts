@@ -1,7 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import { afterLogout, clearSignedOut, PALETTE_RECENT_PREFIX, signOutNotice } from './after-logout';
+import { clearAllDrafts } from './draft-store';
 import { clearNextPath, peekNextPath, rememberNextPath } from './next-path';
+
+vi.mock('./draft-store', () => ({ clearAllDrafts: vi.fn(() => Promise.resolve()) }));
 
 /**
  * Máy dùng chung: đăng xuất phải xoá danh sách "mở gần đây" của ô tìm nhanh (mã, tên hồ sơ
@@ -52,5 +55,21 @@ describe('afterLogout', () => {
     expect(() => afterLogout(new QueryClient(), navigate)).not.toThrow();
     expect(navigate).toHaveBeenCalledOnce();
     spy.mockRestore();
+  });
+});
+
+describe('afterLogout — bản vẽ dở cất ở trình duyệt (Q-23 06/10)', () => {
+  beforeEach(() => vi.mocked(clearAllDrafts).mockClear());
+
+  it('bấm Đăng xuất: bỏ mọi bản dở trên máy (máy dùng chung không giữ gì của người vừa ra)', () => {
+    afterLogout(new QueryClient(), vi.fn());
+    expect(clearAllDrafts).toHaveBeenCalledOnce();
+    clearSignedOut();
+  });
+
+  it.each(['back', 'totpExpired'] as const)('rời màn mã 2 lớp (%s): GIỮ bản dở — cùng người đăng nhập lại để khôi phục', (reason) => {
+    afterLogout(new QueryClient(), vi.fn(), reason);
+    expect(clearAllDrafts).not.toHaveBeenCalled();
+    clearSignedOut();
   });
 });

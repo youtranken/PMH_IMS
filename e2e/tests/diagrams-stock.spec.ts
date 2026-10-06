@@ -223,6 +223,89 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     expect(xml.split(`ims_device_id="${secondId}"`)).toHaveLength(2);
   });
 
+  test('bản vẽ dở: đóng tab giữa lúc vẽ, mở lại → "Có bản đang vẽ dở" → Khôi phục thành chưa lưu, Lưu mới ghi; khoá mã chỉ có ở tab Sửa (Q-23 06/10)', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `SW-E2E-DO${stamp}`;
+    const deviceId = await createDevice(page, code);
+    const id = await createDiagram(page, `E2E Vẽ dở ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    await saveWithDevice(page, id, deviceId, code);
+
+    // Khoá mã bản dở chỉ đi kèm nội dung tab Sửa (sau mã sơ đồ), tab Xem không có.
+    const view = (await (await page.request.get(`/api/v1/diagrams/${id}/content`)).json()) as { draftKey?: string };
+    expect(view.draftKey).toBeUndefined();
+    const edit = (await (await page.request.get(`/api/v1/diagrams/${id}/content?mode=edit`)).json()) as { draftKey?: string };
+    expect(Buffer.from(edit.draftKey ?? '', 'base64')).toHaveLength(32);
+
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    // Một nét người vẽ: dán một hình chữ vào khung (draw.io nhận như thao tác vẽ, gửi autosave).
+    const drawio = page.frames().find((f) => f.url().includes('/drawio/'))!;
+    await drawio.evaluate(() => {
+      const target = document.querySelector('.geDiagramContainer') as HTMLElement;
+      const box = target.getBoundingClientRect();
+      const dt = new DataTransfer();
+      dt.setData('text/plain', '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="t" value="Ghi chú E2E vẽ dở" style="text;html=0;" vertex="1" parent="1"><mxGeometry width="160" height="30" as="geometry"/></mxCell></root></mxGraphModel>');
+      const at = { clientX: box.left + 300, clientY: box.top + 300, bubbles: true, cancelable: true, dataTransfer: dt };
+      target.dispatchEvent(new DragEvent('dragover', at));
+      target.dispatchEvent(new DragEvent('drop', at));
+    });
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled();
+    // Trên đĩa chỉ có bản mã: đợi bản cất xuất hiện rồi soi IndexedDB.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            new Promise<string>((resolve) => {
+              const open = indexedDB.open('ims-drafts', 1);
+              open.onupgradeneeded = () => open.result.createObjectStore('drafts', { keyPath: 'id' });
+              open.onsuccess = () => {
+                const req = open.result.transaction('drafts', 'readonly').objectStore('drafts').getAll();
+                req.onsuccess = () => resolve(JSON.stringify(req.result.map((r: { data: ArrayBuffer }) => new TextDecoder().decode(r.data))));
+              };
+            }),
+        ),
+      )
+      .toMatch(/^\[".+"\]$/);
+    const raw = await page.evaluate(
+      () =>
+        new Promise<string>((resolve) => {
+          const open = indexedDB.open('ims-drafts', 1);
+          open.onsuccess = () => {
+            const req = open.result.transaction('drafts', 'readonly').objectStore('drafts').getAll();
+            req.onsuccess = () => resolve(req.result.map((r: { data: ArrayBuffer }) => new TextDecoder('latin1').decode(r.data)).join(''));
+          };
+        }),
+    );
+    expect(raw).not.toContain('Ghi chú E2E vẽ dở');
+    expect(raw).not.toContain(code);
+
+    // "Đóng tab" rồi mở lại trong tab mới cùng phiên.
+    const again = await page.context().newPage();
+    await page.close({ runBeforeUnload: false });
+    await again.goto(`/diagrams/${id}?mode=edit`);
+    const banner = again.getByText(/Có bản đang vẽ dở lúc .+ chưa lưu\./);
+    await expect(banner).toBeVisible({ timeout: 60_000 });
+    await again.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/ban-ve-do.png` : test.info().outputPath('ban-ve-do.png') });
+    // Chưa khôi phục thì không có gì để lưu — server không bị ghi ngầm.
+    await expect(again.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
+    expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${id}'`)).toBe('1');
+    await again.getByRole('button', { name: 'Khôi phục' }).click();
+    await expect(again.getByText('Đã nạp bản đang vẽ dở — chưa lưu, bấm Lưu để giữ.')).toBeVisible();
+    const [saved] = await Promise.all([
+      again.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      again.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    expect(sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${id}' ORDER BY seq DESC LIMIT 1`)).toContain('Ghi chú E2E vẽ dở');
+    // Lưu xong thì bản dở bị bỏ: mở lại không mời khôi phục nữa.
+    await again.reload();
+    await expect(again.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(again.getByText(/Có bản đang vẽ dở/)).toHaveCount(0);
+  });
+
   test('chèn 3 máy một lượt: xếp lưới không đè nhãn; lưu lần đầu xong thẻ "Bản vẽ đang trống" không hiện lại; hồ sơ máy liệt kê bản vẽ (E-01, E-02, T-01)', async ({ page }) => {
     test.setTimeout(180_000);
     const secret = await firstLogin(page, E2E_SA);

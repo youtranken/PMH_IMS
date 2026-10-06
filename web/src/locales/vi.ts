@@ -1381,6 +1381,14 @@ export default {
       vaultTitle: 'Két của {{code}}',
       vaultHint: 'Xem mật khẩu cần mã 2 lớp phạm vi két — mã vừa nhập để xem sơ đồ không mở két.',
     },
+    recovery: {
+      found: 'Có bản đang vẽ dở lúc {{at}} chưa lưu.',
+      newer: 'Bản vẽ đã có phiên bản mới hơn từ lúc đó — lưu bản dở sẽ ghi "lưu đè".',
+      restore: 'Khôi phục',
+      discard: 'Bỏ',
+      restored: 'Đã nạp bản đang vẽ dở — chưa lưu, bấm Lưu để giữ.',
+      discarded: 'Đã bỏ bản đang vẽ dở.',
+    },
     hover: {
       ip: 'IP',
       model: 'Model',
