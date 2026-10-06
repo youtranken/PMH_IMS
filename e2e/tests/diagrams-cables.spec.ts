@@ -275,6 +275,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await expect(page.getByText('Có 1 kết nối mới chưa vẽ')).toBeVisible();
     await page.getByRole('button', { name: 'Vẽ vào' }).click();
     await expect(page.getByText('Đã vẽ 1 dây vào bản vẽ.')).toBeVisible();
+    await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/nhan-cong-hai-dau.png` : test.info().outputPath('nhan-cong-hai-dau.png') });
     const [saved] = await Promise.all([
       page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
       page.getByRole('button', { name: 'Lưu', exact: true }).click(),
