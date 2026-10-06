@@ -194,6 +194,10 @@ Sự cố có hồ sơ gắn thiết bị và nâng cấp được thành RCA; p
 Bỏ Visio: bản vẽ hạ tầng vẽ bằng **draw.io tự host** nhúng trong IMS (ghim phiên bản, offline), gắn dữ liệu kho (thiết bị, sơ đồ cổng, dải IP, tủ) qua thuộc tính ô, cộng lớp vẽ tự do; cây bản vẽ Tổng công ty → site → tầng → phòng → tủ; phiên bản chỉ-thêm có duyệt, bản trình bày tách rời; mọi lần xem nhập mã 2 lớp phạm vi sơ đồ, nhật ký mở/xuất, watermark; cảnh báo lệch kho; xuất PNG/PDF nộp ISO. Lưu/phát hành bản vẽ không ghi sơ đồ cổng; vẽ dây giữa hai máy kho thì IMS hỏi có khai không, "Khai" mới ghi qua `devices` (AD-18).
 **FRs covered:** FR-037, FR-038, FR-039, FR-040, FR-041, FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-049 (chỉ thiết kế), NFR-01 (step-up có phạm vi), NFR-03, NFR-05, NFR-07, AD-17, AD-18
 
+### Epic 11: Model thiết bị — Q-26 (làm sau Story 10.13, trước khi nhập dữ liệu thật)
+Khai một lần cho mỗi loại máy: Số U, ảnh mặt trước, cổng mẫu; máy thứ hai trở đi cùng model nhập kho dưới 30 giây (chọn model + tủ/U). Model tạo ngay trong form thiết bị, không bắt sang Danh mục trước.
+**FRs covered:** FR-001 (mở rộng: model thành danh mục có đặc tính), FR-006 (port map: cổng mẫu, mặt cổng), FR-047 (ảnh/U trên sơ đồ lấy theo model), Q-26
+
 ## Epic 1: Nền tảng & Đăng nhập an toàn
 
 Team 5 người đăng nhập an toàn bằng mật khẩu + TOTP; SA quản trị account và phiên; hạ tầng dự án chạy được từ xương QLTS.
@@ -1175,3 +1179,115 @@ So that lúc sự cố 2 giờ sáng thấy ngay đường đi từ máy hỏng 
 **When** story đóng
 **Then** `docs/` có mục thiết kế theo AD-18: hợp đồng `POST /api/v1/device-status` (khoá API riêng, chỉ ghi trạng thái, không đọc), nơi lưu (module mới, không phải `diagrams`), lớp "trạng thái sống" bật/tắt trong mô hình lớp của `diagram-viewer`
 **And** mã KHÔNG có route nhận trạng thái và giao diện KHÔNG hiện lớp đó (bài kiểm bề mặt route xác nhận vắng mặt)
+
+### Story 10.13: Quy trình vẽ tủ — "Bắt đầu từ", cấp bản vẽ tự giải thích, huy hiệu sẵn sàng
+
+As a Thành viên vẽ sơ đồ,
+I want tạo bản vẽ tủ là có ngay mặt tủ từ kho và biết máy nào chưa đủ dữ liệu trước khi kéo vào,
+So that tủ 20 máy đã nhập kho đủ ra bản vẽ hoàn chỉnh dưới 2 phút, không chỉnh ô bằng tay (Q-23 06/10 chiều — "Quy trình vẽ và ba nguồn sự thật").
+
+**Acceptance Criteria:**
+
+**Given** hộp tạo bản vẽ (gốc cây hoặc bản vẽ con) — SỬA gạch Q-23 04/10 "bản vẽ con mặc định nhân bản bản cha"
+**When** mở hộp
+**Then** có nhóm chọn "Bắt đầu từ": cấp **Tủ mạng** đã chọn tủ → "Dựng từ kho" (mặc định) / "Trang trắng" / "Chép nội dung bản vẽ cha"; cấp khác → "Trang trắng" (mặc định) / "Chép nội dung bản vẽ cha"; bản vẽ gốc (không có cha) hoặc bản cha chưa có phiên bản thì không có lựa chọn chép
+**And** cấp Tủ mạng chưa chọn tủ: "Dựng từ kho" tắt kèm lý do "Chọn tủ trước" (`useDisabledReason`); đổi cấp hay bỏ chọn tủ khi đang chọn "Dựng từ kho" thì lựa chọn về mặc định của cấp mới
+**And** "Chép nội dung bản vẽ cha" giữ đủ luật cũ (chọn phiên bản bản cha — gạch 05/10, gỡ khung hỏng, hỏi mã sơ đồ) và hộp ghi một câu: chép một lần làm nội dung khởi đầu, không liên kết gì về sau
+**And** "Dựng từ kho" tạo bản vẽ + phiên bản nháp #1 dựng đúng như "Dựng lại mặt tủ" (`cabinetFrameLayout` + `buildRackXml`, mặt trước, máy có U đúng U, máy thiếu U ở cột "Chưa khai U"), hỏi mã sơ đồ như lưu, cùng MỘT transaction với lượt tạo (lỗi dựng thì không còn bản vẽ rỗng sót lại), tóm tắt phiên bản "Dựng từ kho", audit + `diagram_history` như tạo bản vẽ
+**And** "Trang trắng" không đổi hành vi hiện có (không phiên bản, không hỏi mã); E2E: tạo bản vẽ tủ "Dựng từ kho" thấy máy đúng U ngay khi mở tab Sửa; tạo bản vẽ tầng mặc định trắng; đường hỏng: tủ chưa chọn thì "Dựng từ kho" tắt
+
+**Given** ô "Cấp bản vẽ" trong hộp tạo / sửa
+**When** người dùng nhìn ô chọn
+**Then** dưới ô có câu (qua `lib/i18n`): "Chọn 'Tủ mạng' để gắn tủ kho và dựng mặt tủ từ kho; các cấp khác chỉ là nhãn trên bản đồ, không ràng buộc cây." — luật D-03 phía server giữ nguyên
+
+**Given** panel "Thiết bị kho" trên màn Sửa
+**When** liệt kê máy
+**Then** mỗi máy mang huy hiệu CHỮ (không chỉ màu, token `tokens.css` có cặp dark) theo hàm thuần `deviceReadiness` (test bảng dữ liệu): có tủ mà thiếu U → "Thiếu U"; không có ảnh riêng lẫn ảnh model → "Chưa có ảnh" (mức nhẹ — máy vẫn hiện bằng biểu tượng loại); ảnh đang dùng còn viền hoặc lệch tỉ lệ n U → "Cắt lại" (cùng luật đo của ô ảnh trang thiết bị, chỉ đo ảnh của máy đang hiện trong danh sách)
+**And** rê / bấm huy hiệu thấy cách sửa + nút "Mở hồ sơ" (tab mới — không bỏ bản vẽ dở); bộ lọc "Chỉ máy cần xử lý"; huy hiệu KHÔNG chặn kéo-thả hay "Chèn"
+**And** E2E: máy có tủ chưa khai U hiện "Thiếu U", lọc ra được; khai U xong mở lại panel thì hết huy hiệu
+
+## Epic 11: Model thiết bị (Q-26)
+
+Khai một lần cho mỗi loại máy, dùng lại cho mọi chiếc cùng loại. Nguồn: `docs/QUYET-DINH.md` Q-26, `docs/DE-XUAT-MODEL-THIET-BI.md` mục B, C, D, 29, 30. Làm sau Story 10.13, trên nhánh riêng; **xong epic này mới nhập dữ liệu thiết bị thật** (Q-26: dữ liệu thử không chuyển đổi).
+
+**Luật chung cho mọi story của epic:**
+- `devices` là chủ `device_model` (đã vậy từ 0054, AD-3) và mọi cột mới trên `device` / `device_port`. Màn Danh mục chỉ là nơi HIỆN danh sách model, gọi API của `devices`; `catalog` không ghi `device_model`. Đọc chéo qua `devices.api` (AD-2).
+- Migration mới đánh số tiếp sau file cuối (`0060_…`), mở rộng `device_model` sẵn có — không sửa file cũ, không bảng model thứ hai (AD-10).
+- Mọi endpoint ghi: `@Audited` + `@Roles` + `tx` tường minh (AD-5, AD-9). Quyền: ai tạo được thiết bị thì TẠO được model mới (ngay trong form); SỬA / XOÁ model có sẵn (đổi đặc tính cả loạt máy) chỉ Admin/SA — cùng luật ảnh model của Q-23 05/10.
+- Ba nguồn sự thật (Q-23 06/10 chiều, L3): model là nguồn Số U, ảnh, cổng mẫu; cách hiển thị trên sơ đồ / trang thiết bị không đổi. Thứ tự ảnh: ảnh riêng của máy → ảnh model → biểu tượng loại (`DevicePhotosService.effectivePhotos` — một nơi duy nhất).
+- Máy cũ "chưa có Model" vẫn chạy như hôm nay (Số U, ảnh, cổng khai tay); không chuyển đổi dữ liệu thử.
+- Tham số nghiệp vụ (trần số cổng sinh từ mẫu…) vào `system_config` (AD-11). Thứ dùng ở ≥2 màn (ô chọn model, hộp tạo model, lưới mặt cổng) vào `web/src/ui` + khai `docs/SHARED-REGISTRY.md` (AD-15).
+
+### Story 11.1: Danh mục Model thiết bị
+
+As a SA,
+I want một danh mục model có hãng, loại, gắn tủ + Số U và ảnh mặt trước,
+So that mỗi loại máy khai một lần và không bị tách đôi vì gõ khác nhau.
+
+**Acceptance Criteria:**
+
+**Given** migration mới mở rộng `device_model`
+**When** chạy trên DB trắng (`test:db`)
+**Then** `device_model` có thêm: hãng (chữ — KHÔNG dùng `vendor`, vì `vendor` là nhà cung cấp/NCC của FR-001), `rack_mountable` boolean, `u_size` 1–60 (CHECK: có khi và chỉ khi gắn tủ), khoá chuẩn hoá `model_key` sinh từ mã model (viết HOA, bỏ khoảng trắng, gạch ngang, gạch dưới, chấm) là UNIQUE trên toàn bảng — "C9300-48P" và "c9300 48p" cùng khoá; `device` thêm `device_model_id` (FK `ON DELETE RESTRICT`, được để trống)
+**And** test DB: hai lượt tạo cùng khoá chuẩn hoá chạy song song thì đúng một lượt thành công
+
+**Given** màn Danh mục → "Model thiết bị"
+**When** xem danh sách
+**Then** cột Hãng, Mã model, Loại, Gắn tủ (n U / Không), ảnh mặt trước thu nhỏ, **số máy đang dùng** (bấm ra danh sách máy lọc theo model); lọc theo loại / hãng; dùng phân trang + xuất xlsx dùng chung; 390px đọc được
+**And** Admin/SA sửa / xoá; xoá model còn máy dùng bị chặn (409, câu nêu số máy); đổi Số U của model còn máy đặt trong tủ thì kiểm chồng U cho cả loạt máy TRƯỚC khi ghi và từ chối kèm danh sách máy sẽ chồng
+**And** ảnh mặt trước tải qua hộp cắt dùng chung (`ImageCropDialog`, khoá tỉ lệ mặt tủ theo `u_size`; không gắn tủ thì cắt tự do — Q-23 06/10 A)
+
+**Given** máy có `device_model_id`
+**When** đọc Số U / ảnh của máy (form, trang thiết bị, Bản đồ quan hệ, sơ đồ, "Dựng từ kho")
+**Then** Số U lấy từ model (máy không sửa đè Số U — cùng model là cùng kích thước vật lý); ảnh theo thứ tự ảnh riêng → ảnh model → biểu tượng loại; ảnh riêng đã cắt theo U cũ mà lệch `u_size` của model thì hiện lại "Ảnh chưa cắt chuẩn — Cắt lại", không tự co kéo
+**And** E2E: tạo model 1U có ảnh → gán cho hai máy → cả hai hiện ảnh model trên trang thiết bị; xoá model khi còn máy bị chặn
+
+### Story 11.2: Form thiết bị chọn / tạo model tại chỗ, gợi ý U trống, truy cập quản trị
+
+As a Thành viên nhập kho,
+I want thêm thiết bị bằng cách chọn model rồi chỉ khai tủ + U,
+So that máy thứ hai cùng model nhập xong dưới 30 giây.
+
+**Acceptance Criteria:**
+
+**Given** form Thêm / Sửa thiết bị
+**When** gõ vào ô "Model"
+**Then** gợi ý theo khoá chuẩn hoá (gõ "c9300 48" ra "C9300-48P") kèm hãng + loại; chọn model thì Loại, Số U, ảnh tự điền (Loại khoá theo model)
+**And** không có model khớp → "+ Tạo model mới" mở hộp nhỏ ngay trong form (Hãng, Mã model, Loại, Gắn tủ? Số U?; ảnh không bắt buộc) — không rời form, không mất dữ liệu đang nhập; mã trùng khoá chuẩn hoá → hộp báo "Đã có C9300-48P" kèm nút "Dùng model này", không cho tạo bản thứ hai (server cũng chặn, 409 gắn vào ô)
+
+**Given** model GẮN TỦ
+**When** chọn Tủ
+**Then** ô "U bắt đầu" liệt kê các dải U TRỐNG đủ n U của tủ đó (hàm thuần trong `web/src/lib/rack-units.ts`, test bảng dữ liệu; trừ máy thanh lý và chính máy đang sửa); gõ tay U trùng báo ngay tại ô ("U30 đang có SW-01"); câu "Chiếm U30–U31" và nút "Xem tủ" giữ như Q-23 05/10; server vẫn là trọng tài (`device_rack_u_no_overlap`)
+
+**Given** model KHÔNG gắn tủ (máy in, camera, AP, PC, máy chấm công…)
+**When** chọn model
+**Then** ẩn Tủ / U bắt đầu; chỉ còn Site và người/bộ phận sử dụng như hiện nay (không thêm ô "phòng" — Q-23: không danh mục vị trí mới); server từ chối tủ / U cho máy thuộc model không gắn tủ (400, gắn vào ô); trên sơ đồ máy này không bao giờ vào khung tủ (Q-23 06/10 E.21)
+
+**Given** khu "Truy cập quản trị" của hồ sơ thiết bị (Q-26)
+**When** khai các dòng kiểu (Web / SSH / Telnet / RDP / Winbox / Khác) + địa chỉ + cổng
+**Then** trang thiết bị hiện Web thành liên kết bấm được (chỉ `http`/`https`), SSH thành lệnh `ssh <địa chỉ> -p <cổng>` kèm nút chép; KHÔNG có ô mật khẩu — mật khẩu vẫn ở Két; thay đổi ghi lịch sử thiết bị
+**And** E2E: tạo model mới ngay trong form rồi lưu máy; máy thứ hai chọn lại model đó + chọn U từ danh sách U trống; đường hỏng: gõ U trùng bị báo tại ô; model không gắn tủ thì không thấy ô Tủ
+
+### Story 11.3: Cổng mẫu và tab Cổng dạng lưới
+
+As a Thành viên,
+I want model sinh sẵn đúng tên cổng của hãng và tab Cổng cho thấy cổng nào đang dùng,
+So that khai dây là chọn cổng trống chứ không gõ tay sai tên.
+
+**Acceptance Criteria:**
+
+**Given** cổng mẫu của model: các nhóm, mỗi nhóm một mẫu chữ + kiểu cổng (RJ45 / SFP / SFP+ / Console / Khác)
+**When** khai mẫu
+**Then** hàm thuần mở mẫu (test bảng dữ liệu): `Gi1/0/[1-48]` → Gi1/0/1…48, `wan[1-2]` → wan1, wan2, `MGMT` → MGMT, mẫu trống → không cổng; báo lỗi khi a > b, trùng tên giữa các nhóm, hay tổng vượt trần `device.port_template_max` (`system_config`, mặc định 256); có mẫu dựng sẵn "Switch 24 cổng", "Switch 48 + 4 uplink", "1 LAN"; hộp xem trước liệt kê tên sẽ sinh
+
+**Given** máy được gán model có cổng mẫu
+**When** lưu máy (tạo mới hoặc lần đầu gán model)
+**Then** máy có đủ cổng của mẫu (chưa nối), mang kiểu cổng; máy thêm được cổng riêng (card mạng thêm); xoá cổng đang nối bị chặn; đổi cổng mẫu của model chỉ áp cho máy gán SAU — máy đã có không bị đổi ngầm
+**And** luật một cổng một cáp và mọi ghi sơ đồ cổng vẫn qua `devices` như cũ (L2)
+
+**Given** tab Cổng của trang thiết bị
+**When** mở
+**Then** hình mặt cổng dạng lưới theo nhóm: ô đang dùng / ô trống phân biệt bằng màu token + CHỮ (không chỉ màu), rê chuột (hay bấm trên điện thoại) thấy đầu kia "SW-02 · Gi1/0/5"; bảng mặc định chỉ cổng đang dùng, nút "Hiện cả cổng trống (n)"; 390px lưới tự xuống dòng, đọc được
+**And** hộp khai dây dùng chung (trang thiết bị và sơ đồ) cho CHỌN cổng trống của máy có cổng mẫu; gõ tên ngoài danh sách thì hỏi "Thêm cổng riêng …?"; máy chưa có model giữ cách gõ tên cổng như Q-23 05/10
+**And** thẻ thông tin máy trên sơ đồ hiện "cổng đang dùng / tổng" (ví dụ "cổng 12/52") khi máy có cổng mẫu
+**And** E2E: model `Gi1/0/[1-48]` + `Te1/1/[1-4]` → máy có 52 cổng; khai dây chọn Gi1/0/1 từ danh sách → lưới hiện ô đó đang dùng; đường hỏng: mẫu `Port[8-1]` bị báo lỗi
