@@ -6,7 +6,7 @@ import type { DeviceRow } from '@/lib/device-types';
 import { DeviceForm } from './device-form';
 
 /**
- * Vị trí U tự giải thích (Q-23 05/10): câu sống dưới ô U, kiểm chồng U với máy đang ở tủ TRƯỚC khi
+ * Vị trí U tự giải thích (Q-23): câu sống dưới ô U, kiểm chồng U với máy đang ở tủ TRƯỚC khi
  * lưu, lỗi chồng U của server gắn vào ô "U bắt đầu", và "Xem tủ" mở mặt đứng của tủ — bấm U trống
  * là điền "U bắt đầu".
  */

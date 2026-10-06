@@ -6,7 +6,7 @@ import type { DeviceRow } from '@/lib/device-types';
 import { DeviceForm } from './device-form';
 
 /*
- * jsdom không có canvas: hộp cắt ảnh (Q-23 06/10) được giả lập trả lại đúng tệp đã chọn, để bài này
+ * jsdom không có canvas: hộp cắt ảnh (Q-23) được giả lập trả lại đúng tệp đã chọn, để bài này
  * vẫn kiểm đường tải lên như cũ. Phép cắt có bài riêng ở `ui/image-crop-dialog.test.tsx`.
  */
 const held = vi.hoisted(() => ({ file: null as File | null }));

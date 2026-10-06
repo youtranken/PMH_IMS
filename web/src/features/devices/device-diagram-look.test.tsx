@@ -5,7 +5,7 @@ import { DeviceDiagramLook, lookLevel } from './device-diagram-look';
 import { RelationMap } from './relation-map';
 
 /*
- * jsdom không có canvas: hộp cắt ảnh (Q-23 06/10) được giả lập trả lại đúng tệp đã chọn, để bài này
+ * jsdom không có canvas: hộp cắt ảnh (Q-23) được giả lập trả lại đúng tệp đã chọn, để bài này
  * vẫn kiểm đường tải lên như cũ. Phép cắt có bài riêng ở `ui/image-crop-dialog.test.tsx`.
  */
 const held = vi.hoisted(() => ({ file: null as File | null }));
@@ -20,7 +20,7 @@ vi.mock('@/lib/image-crop', async (importOriginal) => ({
 
 
 /**
- * "Hình dùng trên sơ đồ" (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó; thứ tự tra ảnh riêng →
+ * "Hình dùng trên sơ đồ" (Q-23): mỗi máy đổi được ảnh của riêng nó; thứ tự tra ảnh riêng →
  * ảnh model → biểu tượng loại là của server (`effective`), web chỉ nói mức nào đang dùng.
  */
 
