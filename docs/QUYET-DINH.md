@@ -716,8 +716,11 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     nhật ký như sửa ở trang thiết bị — sơ đồ không tự ghi bảng `device`, AD-3) rồi đặt lại ô theo
     U mới. Huỷ → ô về chỗ cũ, không ghi gì. Máy thanh lý không chuyển được. Lý do: kéo máy vào tủ là
     cách tự nhiên nhất để nói "máy này ở tủ này", nhưng đổi kho mà không hỏi là ghi ngầm.
-  - **Khung tủ gắn nhầm tủ (bản vẽ "PMH Tower" khung TU-04) không cần sửa code**, người vẽ chọn lại
-    tủ cho khung bằng "Gắn khung" / "Chèn tủ mạng" với đúng tủ.
+  - **Khung tủ gắn nhầm tủ (bản vẽ "PMH Tower" khung TU-04):** người vẽ chọn lại tủ cho khung. Trước
+    đây không có đường nào đổi tủ của một khung đã chèn ("Gắn khung" chỉ gắn bản vẽ con / dải IP,
+    "Chèn tủ mạng" tạo khung thứ hai), nên hộp "Gắn khung" có thêm **"Đổi tủ của khung này"**: chỉ
+    đổi bản vẽ (tủ + mã trong nhãn khung), giữ hình và máy bên trong, không ghi kho; máy kho ghi tủ
+    khác thì được báo kèm "Chuyển máy sang tủ…".
   - **"Xóa vĩnh viễn" giữ luật phải xoá vĩnh viễn hết bản vẽ con trước**, câu báo nêu rõ còn con nào.
   - **Tủ mạng chỉ vẽ MẶT TRƯỚC.** "Chèn tủ mạng" và "Dựng lại mặt tủ" chỉ dựng mặt trước, bỏ mặt
     sau. Bản vẽ đã lưu có khung mặt sau thì giữ nguyên nội dung, nhưng đặt máy theo U và cảnh báo lệch
