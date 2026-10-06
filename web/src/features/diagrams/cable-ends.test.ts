@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { linkEndTexts, portEndPatch, portEndRemoval } from './cable-ends';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cellIdsIn, linkEndTexts, portEndPatch, portEndRemoval } from './cable-ends';
 
 const A = 'aaaaaaaa-0000-4000-8000-00000000000a';
 const B = 'aaaaaaaa-0000-4000-8000-00000000000b';
@@ -61,6 +61,24 @@ describe('portEndPatch — hai ô nhãn con của nét, ở -offset (đầu ngu�
     expect(Object.keys(patch.u)).toEqual(['e1-ims-ps', 'e1-ims-pt']);
     expect(patch.u['e1-ims-ps']).toMatchObject({ value: 'Te1/1' });
     expect(patch.u['e1-ims-pt'].geometry).toContain('x="0.75"');
+  });
+});
+
+describe('portEndPatch trên tập id đã đọc sẵn — vòng lặp theo dây không parse lại XML', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('cùng kết quả như truyền XML; không parse thêm lần nào', () => {
+    const xml = file(edge + endCell('e1-ims-ps', 'cũ'));
+    const fromXml = portEndPatch(xml, 'e1', { source: 'Te1/1', target: 'eth0' }, SPEC, PALETTE);
+    const present = cellIdsIn(xml);
+    const parse = vi.spyOn(DOMParser.prototype, 'parseFromString');
+    expect(portEndPatch(present, 'e1', { source: 'Te1/1', target: 'eth0' }, SPEC, PALETTE)).toEqual(fromXml);
+    expect(parse).not.toHaveBeenCalled();
+  });
+
+  it('cellIdsIn: id của mxCell trần và của phần tử bọc; XML hỏng → rỗng', () => {
+    expect([...cellIdsIn(file(edge + endCell('e1-ims-ps', 'x')))].sort()).toEqual(['0', '1', 'e1', 'e1-ims-ps']);
+    expect(cellIdsIn('<mxfile>').size).toBe(0);
   });
 });
 

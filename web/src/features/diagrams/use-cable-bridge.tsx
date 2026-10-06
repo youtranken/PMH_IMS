@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
@@ -10,9 +10,9 @@ import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
 import { PortFormDialog } from '@/ui/port-form-dialog';
 import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
-import { bindEdgeValue, deviceOfCell, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
+import { bindEdgeValue, cableView, diffAutosave, edgeById, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
-import { linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndPatch, portEndRemoval } from './cable-ends';
+import { cellIdsIn, linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndPatch, portEndRemoval } from './cable-ends';
 import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
@@ -250,15 +250,17 @@ export function useCableBridge({
        */
       const updates: Record<string, Record<string, string>> = {};
       const inserts: object[] = [];
+      const view = cableView(file);
+      const present = cellIdsIn(file);
       for (const [id, update] of Object.entries(result.updates)) {
-        const edge = edgeById(file, id);
+        const edge = view.edgeById(id);
         const link = edge?.linkId ? links.current.get(edge.linkId) : undefined;
         if (!edge || !link || !update.source || !update.target) {
           updates[id] = { ...update };
           continue;
         }
         // Dây người vẽ đụng tới thì chuyển sang nhãn cổng ở hai đầu (Q-23 06/10) — mở bản vẽ thì không.
-        const ends = portEndPatch(file, id, linkEndTexts(link, deviceOfCell(file, update.source)), link.endLabel, palette);
+        const ends = portEndPatch(present, id, linkEndTexts(link, view.deviceOfCell(update.source)), link.endLabel, palette);
         Object.assign(updates, ends.u);
         inserts.push(...ends.i);
         updates[id] = {
@@ -284,7 +286,9 @@ export function useCableBridge({
     if (diff.strip.length > 0) stripLinks(diff.strip);
     // Nét đang chờ hỏi mà người vẽ đã hoàn tác/xoá thì thôi hỏi.
     setQueue((current) => {
-      const alive = current.filter((e) => edgeById(xml, e.id));
+      if (current.length === 0) return diff.added;
+      const view = cableView(xml);
+      const alive = current.filter((e) => view.edgeById(e.id));
       const fresh = diff.added.filter((e) => !alive.some((q) => q.id === e.id));
       return [...alive, ...fresh];
     });
@@ -301,9 +305,11 @@ export function useCableBridge({
       if (!pageId) return;
       const parent = layerIdOf(file, pageId) ?? '1';
       let previous = lastChildId(file, pageId, parent);
+      const view = cableView(file);
+      const present = cellIdsIn(file);
       const cells = list.flatMap((link) => {
-        const source = firstDeviceCell(file, link.deviceId);
-        const target = firstDeviceCell(file, link.peerDeviceId);
+        const source = view.firstDeviceCell(link.deviceId);
+        const target = view.firstDeviceCell(link.peerDeviceId);
         if (!source || !target) return [];
         const id = newId();
         const cell = {
@@ -318,7 +324,7 @@ export function useCableBridge({
           xmlValue: linkedValue(id, {}, link),
         };
         previous = id;
-        return [{ cell, ends: portEndPatch(file, id, linkEndTexts(link, link.deviceId), link.endLabel, palette).i }];
+        return [{ cell, ends: portEndPatch(present, id, linkEndTexts(link, link.deviceId), link.endLabel, palette).i }];
       });
       if (cells.length === 0) return;
       send({ action: 'patch', patch: insertPatch(pageId, cells.map((c) => c.cell)) });
@@ -347,7 +353,8 @@ export function useCableBridge({
   const dequeue = () => setQueue((q) => q.slice(1));
   // Chọn nét đỏ là khai lại: kết nối mới thay `ims_link_id` cũ trên đúng nét đó, và lần autosave
   // kế tiếp đưa nó ra khỏi danh sách.
-  const undeclared = pendingEdges(currentXml, content.cableEdges ?? []);
+  // Tính lại chỉ khi XML đang vẽ đổi: parse cả tệp mỗi lần màn vẽ lại là trễ theo cỡ bản vẽ.
+  const undeclared = useMemo(() => pendingEdges(currentXml, content.cableEdges ?? []), [currentXml, content.cableEdges]);
 
   const menu: BarAction[] = [
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },

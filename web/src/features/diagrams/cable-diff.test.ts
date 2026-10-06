@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { bindEdgeValue, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, undeclaredEdges } from './cable-diff';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { bindEdgeValue, cableView, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, undeclaredEdges } from './cable-diff';
 
 const A = 'aaaaaaaa-0000-4000-8000-00000000000a';
 const B = 'aaaaaaaa-0000-4000-8000-00000000000b';
@@ -171,5 +171,27 @@ describe('styleWithoutImsEdge', () => {
     ['imsPaint=warn;', ''],
   ])('%s → %s', (style, expected) => {
     expect(styleWithoutImsEdge(style)).toBe(expected);
+  });
+});
+
+/*
+ * "Vẽ vào" / "Bẻ dây vuông góc" hỏi XML cả tệp vài câu cho MỖI dây. Một lượt parse cho cả lô: bản
+ * vẽ vài trăm hình parse lại mỗi dây là treo màn sửa vài giây.
+ */
+describe('cableView — một lượt parse cho nhiều câu hỏi', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('trả cùng kết quả như hàm lẻ, và chỉ parse một lần dù hỏi nhiều', () => {
+    const xml = model(DEVICES + dev('b2', B, 'SRV-01') + edge('e1', 'a', 'b') + linked('e2', 'a', 'c'));
+    const parse = vi.spyOn(DOMParser.prototype, 'parseFromString');
+    const view = cableView(xml);
+    expect(view.firstDeviceCell(B)).toBe('b');
+    expect(view.firstDeviceCell(C)).toBe('c');
+    expect(view.firstDeviceCell('không-có')).toBeNull();
+    expect(view.deviceOfCell('b2')).toBe(B);
+    expect(view.deviceOfCell('s')).toBeNull();
+    expect(view.edgeById('e2')).toMatchObject({ linkId: L1 });
+    expect(view.edgeById('zz')).toBeNull();
+    expect(parse).toHaveBeenCalledTimes(1);
   });
 });

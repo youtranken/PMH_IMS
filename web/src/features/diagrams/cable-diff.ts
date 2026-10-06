@@ -165,19 +165,41 @@ export function pendingEdges(xml: string, opened: { cellId: string; linkId: stri
 }
 
 
+/**
+ * Một lượt parse cho nhiều câu hỏi trên CÙNG một XML. Vòng lặp theo dây ("Vẽ vào", "Bẻ dây vuông
+ * góc") dựng một lần rồi hỏi: parse lại cả tệp cho từng dây là treo màn sửa với bản vẽ lớn.
+ */
+export interface CableView {
+  edgeById(id: string): ParsedEdge | null;
+  /** Máy kho của một ô (id ô → `ims_device_id`); `null` = không phải ô thiết bị kho. */
+  deviceOfCell(cellId: string): string | null;
+  /** Ô đầu tiên của một máy trên bản vẽ — đầu nét khi "Vẽ vào". */
+  firstDeviceCell(deviceId: string): string | null;
+}
+
+export function cableView(xml: string): CableView {
+  const parsed = parse(xml);
+  const edges = new Map<string, ParsedEdge>();
+  for (const edge of parsed.edges) if (!edges.has(edge.id)) edges.set(edge.id, edge);
+  const firstCell = new Map<string, string>();
+  for (const [cellId, device] of parsed.devices) if (!firstCell.has(device.deviceId)) firstCell.set(device.deviceId, cellId);
+  return {
+    edgeById: (id) => edges.get(id) ?? null,
+    deviceOfCell: (cellId) => parsed.devices.get(cellId)?.deviceId ?? null,
+    firstDeviceCell: (deviceId) => firstCell.get(deviceId) ?? null,
+  };
+}
+
 export function edgeById(xml: string, id: string): ParsedEdge | null {
-  return parse(xml).edges.find((e) => e.id === id) ?? null;
+  return cableView(xml).edgeById(id);
 }
 
-/** Máy kho của một ô (id ô → `ims_device_id`); `null` = không phải ô thiết bị kho. */
 export function deviceOfCell(xml: string, cellId: string): string | null {
-  return parse(xml).devices.get(cellId)?.deviceId ?? null;
+  return cableView(xml).deviceOfCell(cellId);
 }
 
-/** Ô đầu tiên của một máy trên bản vẽ — đầu nét khi "Vẽ vào". */
 export function firstDeviceCell(xml: string, deviceId: string): string | null {
-  for (const [cellId, device] of parse(xml).devices) if (device.deviceId === deviceId) return cellId;
-  return null;
+  return cableView(xml).firstDeviceCell(deviceId);
 }
 
 /**

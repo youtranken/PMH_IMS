@@ -38,14 +38,15 @@ export function portEndIds(edgeId: string): string[] {
   return [edgeId + SUFFIX.source, edgeId + SUFFIX.target];
 }
 
-function existingIds(xml: string, ids: string[]): Set<string> {
+/** Mọi id ô trong XML (`<mxCell>` trần và phần tử bọc) — đọc một lần cho cả lô dây. */
+export function cellIdsIn(xml: string): Set<string> {
   const found = new Set<string>();
   const doc = parseDrawioXml(xml);
   if (!doc) return found;
   for (const tag of ['mxCell', 'UserObject', 'object']) {
     for (const el of Array.from(doc.getElementsByTagName(tag))) {
       const id = el.getAttribute('id');
-      if (id && ids.includes(id)) found.add(id);
+      if (id) found.add(id);
     }
   }
   return found;
@@ -60,7 +61,8 @@ function geometry(x: number): string {
  * draw.io chèn trước, gỡ sau trong cùng một lệnh — gỡ cùng id là gỡ luôn ô vừa chèn).
  */
 export function portEndPatch(
-  xml: string,
+  /** XML cả tệp, hoặc `cellIdsIn(xml)` đã đọc sẵn khi gọi trong vòng lặp theo dây. */
+  xml: string | ReadonlySet<string>,
   edgeId: string,
   texts: { source: string; target: string },
   spec: EndLabelSpec,
@@ -68,7 +70,7 @@ export function portEndPatch(
 ): { i: object[]; u: Record<string, Record<string, string>> } {
   const style = paintImsStyle(spec.style, palette);
   const ids = { source: edgeId + SUFFIX.source, target: edgeId + SUFFIX.target };
-  const present = existingIds(xml, Object.values(ids));
+  const present = typeof xml === 'string' ? cellIdsIn(xml) : xml;
   const out: { i: object[]; u: Record<string, Record<string, string>> } = { i: [], u: {} };
   for (const side of ['source', 'target'] as const) {
     const at = geometry(side === 'source' ? -spec.offset : spec.offset);
