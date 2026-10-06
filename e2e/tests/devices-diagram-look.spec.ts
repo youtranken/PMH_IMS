@@ -24,6 +24,13 @@ const PNG_WIDE = Buffer.from(
   'base64',
 );
 
+/** Mọi lượt tải ảnh thiết bị mở hộp cắt (Q-23 06/10) — bài này nhận khung cắt đề xuất. */
+async function acceptCrop(page: Page) {
+  const crop = page.getByRole('dialog', { name: 'Cắt ảnh thiết bị' });
+  await crop.getByRole('button', { name: 'Dùng ảnh đã cắt' }).click();
+  await expect(crop).toBeHidden();
+}
+
 /** Cỡ (rộng, cao) trong XML đã lưu của ô máy `deviceId`. */
 function savedSize(diagramId: string, deviceId: string): { width: number; height: number } {
   const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
@@ -70,6 +77,7 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   const front = page.getByRole('group', { name: 'Mặt trước' });
   await expect(front.getByText(`Ảnh chung của model ${model}`)).toBeVisible();
   await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `rieng-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
+  await acceptCrop(page);
   await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
   const ownFile = sql(`SELECT photo_front_file_id FROM device WHERE id = '${a}'`);
   expect(ownFile).not.toBe('');
@@ -140,6 +148,7 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
   const draft = form.getByRole('group', { name: 'Mặt trước' });
   await expect(draft.getByText('Biểu tượng loại Switch').or(draft.getByText(/Chưa chọn ảnh/))).toBeVisible();
   await draft.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `form-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
+  await acceptCrop(page);
   await expect(draft.getByText('Ảnh riêng — tải lên khi lưu máy')).toBeVisible();
   await expect(draft.getByRole('img', { name: 'Ảnh Mặt trước đã chọn' })).toBeVisible();
   await form.getByRole('button', { name: 'Lưu', exact: true }).click();
@@ -162,6 +171,7 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
 
   // Thay ảnh: ô và bản đồ cùng đổi sang tệp mới, không cần tải lại trang.
   await front.getByLabel('Thay ảnh — Mặt trước').setInputFiles({ name: `thay-${stamp}.png`, mimeType: 'image/png', buffer: PNG_MODEL });
+  await acceptCrop(page);
   await expect.poll(() => sql(`SELECT photo_front_file_id FROM device WHERE id = '${id}'`)).not.toBe(own);
   const replaced = sql(`SELECT photo_front_file_id FROM device WHERE id = '${id}'`);
   await expect(hubImg).toHaveAttribute('src', `/api/v1/devices/${id}/photo/front?v=${replaced}`);

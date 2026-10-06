@@ -28,6 +28,14 @@ export function lookLevel(photos: DevicePhotos | undefined, side: PhotoSide): 'o
 export const devicePhotoSrc = (deviceId: string, side: PhotoSide, fileId: string) =>
   `/api/v1/devices/${deviceId}/photo/${side}?v=${fileId}`;
 
+/** Tệp gốc của một ảnh (giấy tờ của máy hay của model) — để cắt lại hoặc chép sang model. */
+export async function downloadPhotoFile(file: { id: string; name: string }, failText: string): Promise<File> {
+  const response = await fetch(`/api/v1/files/${file.id}/download`, { credentials: 'include' });
+  if (!response.ok) throw new Error(failText);
+  const blob = await response.blob();
+  return new File([blob], file.name, { type: /\.png$/i.test(file.name) ? 'image/png' : 'image/jpeg' });
+}
+
 /** Tải ảnh lên giấy tờ của máy rồi chọn làm ảnh riêng — một đường cho trang thiết bị và form. */
 export async function setOwnPhotos(
   deviceId: string,
@@ -56,7 +64,10 @@ export function DevicePhotoEditor({
   csrfToken,
   canEdit,
   canEditModel,
+  rackUnits = null,
 }: {
+  /** Số U của máy — hộp cắt khoá khung theo mặt tủ n U. */
+  rackUnits?: number | null;
   deviceId: string;
   deviceTypeId: string | null;
   deviceTypeName: string | null;
@@ -110,10 +121,7 @@ export function DevicePhotoEditor({
     const own = data?.device[side];
     if (!own) return;
     void run(side, async () => {
-      const response = await fetch(`/api/v1/files/${own.id}/download`, { credentials: 'include' });
-      if (!response.ok) throw new Error(t('devices.lookCopyFailed'));
-      const blob = await response.blob();
-      const file = new File([blob], own.name, { type: /\.png$/i.test(own.name) ? 'image/png' : 'image/jpeg' });
+      const file = await downloadPhotoFile(own, t('devices.lookCopyFailed'));
       const model = await apiFetch<{ id: string }>(`/api/v1/devices/${deviceId}/model`, { method: 'POST', csrfToken });
       const saved = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_model', ownerId: model.id });
       return apiFetch<DevicePhotos>(`/api/v1/devices/${deviceId}/model-photos`, { method: 'PATCH', csrfToken, body: JSON.stringify({ [side]: saved.id }) });
@@ -150,6 +158,11 @@ export function DevicePhotoEditor({
           )
         }
         model={canEditModel ? { onUpload: (side, file) => void uploadModel(side, file), onCopyOwn: copyOwnToModel } : null}
+        rackUnits={rackUnits}
+        loadOriginal={(side) => {
+          const effective = data?.effective[side];
+          return effective ? downloadPhotoFile(effective, t('photoSlots.recropFailed')) : Promise.reject(new Error('none'));
+        }}
       />
       {data && !data.model ? <p className="muted small">{t('devices.photoNoModel')}</p> : null}
     </>

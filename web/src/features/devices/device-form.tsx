@@ -202,6 +202,8 @@ export function DeviceForm({
   // Máy đang ở tủ đã chọn: form báo chồng U tại ô TRƯỚC khi lưu.
   const occupants = useCabinetOccupants(form.cabinetId || null);
   const placement = form.cabinetId ? rackPlacement(form.rackUStart, form.rackUSize) : null;
+  // Số U đang gõ trong form — hộp cắt ảnh khoá theo đó (đổi Số U thì ô ảnh báo "chưa đúng tỉ lệ").
+  const formUnits = /^\d+$/.test(form.rackUSize.trim()) ? Number(form.rackUSize.trim()) : null;
   const clash = placement
     ? rackClash({ start: Number(form.rackUStart), size: Number(form.rackUSize) }, occupants.data ?? [], device?.id ?? null)
     : null;
@@ -608,6 +610,7 @@ export function DeviceForm({
               csrfToken={csrfToken}
               canEdit={device.status !== 'retired'}
               canEditModel={canEditModel}
+              rackUnits={formUnits}
             />
           ) : (
             <DevicePhotoSlots
@@ -621,6 +624,11 @@ export function DeviceForm({
               readOnly={busy}
               onPick={photoDraft.set}
               onRemove={(side) => photoDraft.set(side, null)}
+              rackUnits={formUnits}
+              loadOriginal={(side) => {
+                const held = photoDraft.files[side];
+                return held ? Promise.resolve(held) : Promise.reject(new Error('none'));
+              }}
             />
           )}
         </FormSection>

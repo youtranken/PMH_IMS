@@ -5,6 +5,21 @@ import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from
 import type { DeviceRow } from '@/lib/device-types';
 import { DeviceForm } from './device-form';
 
+/*
+ * jsdom không có canvas: hộp cắt ảnh (Q-23 06/10) được giả lập trả lại đúng tệp đã chọn, để bài này
+ * vẫn kiểm đường tải lên như cũ. Phép cắt có bài riêng ở `ui/image-crop-dialog.test.tsx`.
+ */
+const held = vi.hoisted(() => ({ file: null as File | null }));
+vi.mock('@/lib/image-crop', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/image-crop')>()),
+  loadCropSource: vi.fn(async (file: File) => {
+    held.file = file;
+    return { url: 'blob:x', image: {} as HTMLImageElement, size: { width: 100, height: 100 }, content: { x: 0, y: 0, width: 100, height: 100 } };
+  }),
+  renderCrop: vi.fn(async () => held.file!),
+}));
+
+
 /**
  * Khu "Ảnh thiết bị" của form (Q-23): thêm mới giữ ảnh ở trình duyệt, máy lưu xong mới tải lên rồi
  * đặt làm ảnh riêng; bước ảnh hỏng thì máy VẪN được tạo và người dùng thấy câu báo + đường đặt lại.
@@ -95,6 +110,7 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     // Loại vừa chọn hiện thành biểu tượng lớn trong ô trống.
     expect(within(front).getByRole('img', { name: 'Biểu tượng loại Firewall' })).toBeInTheDocument();
     await user.upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'mat-truoc.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     expect(within(front).getByText('Ảnh riêng — tải lên khi lưu máy')).toBeInTheDocument();
     expect(within(front).getByRole('img', { name: 'Ảnh Mặt trước đã chọn' })).toHaveAttribute('src', 'blob:xem-truoc');
     expect(calls.some((c) => c.url === '/api/v1/files')).toBe(false);
@@ -118,6 +134,7 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     await fillRequired(user);
     const front = screen.getByRole('group', { name: 'Mặt trước' });
     await user.upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'a.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     await user.click(within(front).getByRole('button', { name: 'Bỏ ảnh đã chọn — Mặt trước' }));
     expect(within(front).getByText(/Chưa chọn ảnh/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
@@ -134,6 +151,7 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     const user = userEvent.setup();
     await fillRequired(user);
     await user.upload(screen.getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'a.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
 
     expect(await screen.findByText(/Đã thêm máy FW-E2E-01 nhưng chưa đặt được ảnh \(Tệp ảnh hỏng\.\)/)).toBeInTheDocument();
@@ -149,6 +167,7 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Biểu tượng loại Firewall');
     await userEvent.setup().upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'mat-truoc.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     expect(await within(front).findByText('Ảnh riêng của máy này')).toBeInTheDocument();
     expect(calls.some((c) => c.url.endsWith('/devices/d1') && c.method === 'PATCH')).toBe(false);
   });

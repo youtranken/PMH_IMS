@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
+import { measurePhotoFit } from '@/lib/image-crop';
 import { rejectionText, screenAttachments, useAttachmentLimits } from '@/ui/attachment-limits';
 import { FilePicker } from '@/ui/file-picker';
 import { DeviceIcon } from '@/ui/glyph-icons';
+import { ImageCropDialog } from '@/ui/image-crop-dialog';
 
 export type PhotoSide = 'front' | 'back';
 export const PHOTO_SIDES: PhotoSide[] = ['front', 'back'];
@@ -53,8 +55,10 @@ export function useDeviceTypeIconSrc(typeId: string | null | undefined): string 
 /**
  * Hai ô ảnh "Mặt trước" / "Mặt sau" của một thiết bị (Q-23, AD-15): trang thiết bị và form Thêm/Sửa
  * dùng chung. Mỗi ô hiện ĐÚNG hình đang dùng (ảnh, hoặc biểu tượng loại phóng to), nhãn mức đang
- * dùng, và cả ô là vùng thả. Ô KHÔNG tự gửi gì: lọc loại + cỡ (cùng trần giấy tờ, Q-18) rồi trả
- * `File` cho nơi gọi — trang chi tiết tải thẳng, form thêm mới giữ lại tới lúc máy có id.
+ * dùng, và cả ô là vùng thả. Ô KHÔNG tự gửi gì: lọc loại + cỡ (cùng trần giấy tờ, Q-18), mở hộp
+ * cắt (Q-23 06/10 — khoá theo mặt tủ khi có `rackUnits`) rồi trả `File` ĐÃ CẮT cho nơi gọi — trang
+ * chi tiết tải thẳng, form thêm mới giữ lại tới lúc máy có id. Ảnh đang hiện còn viền hay lệch tỉ lệ
+ * n U thì ô báo "Cắt lại" (cần `loadOriginal` để lấy tệp gốc).
  */
 export function DevicePhotoSlots({
   slots,
@@ -68,6 +72,8 @@ export function DevicePhotoSlots({
   onPick,
   onRemove,
   model = null,
+  rackUnits = null,
+  loadOriginal,
 }: {
   slots: Record<PhotoSide, PhotoSlot>;
   typeName: string | null;
@@ -85,6 +91,10 @@ export function DevicePhotoSlots({
   onRemove?: (side: PhotoSide) => void;
   /** Chỉ truyền cho SA/Admin và khi máy có model — ảnh chung đổi hình của cả loạt máy. */
   model?: ModelPhotoActions | null;
+  /** Số U của máy: khung cắt khoá theo mặt tủ n U; vắng/0 = cắt tự do. */
+  rackUnits?: number | null;
+  /** Tệp gốc của ảnh đang hiện ở một mặt — có thì ảnh chưa cắt chuẩn được "Cắt lại". */
+  loadOriginal?: (side: PhotoSide) => Promise<File>;
 }) {
   const { t } = useTranslation();
   const limits = useAttachmentLimits();
@@ -93,6 +103,34 @@ export function DevicePhotoSlots({
   const [picks, setPicks] = useState(0);
   const modelInputs = useRef<Partial<Record<PhotoSide, HTMLInputElement | null>>>({});
   const busy = busySide !== null;
+  // Tệp đang cắt: `to` = ảnh riêng (onPick) hay ảnh chung của model (model.onUpload).
+  const [cropping, setCropping] = useState<{ side: PhotoSide; file: File; to: 'own' | 'model' } | null>(null);
+  const [misfit, setMisfit] = useState<Partial<Record<PhotoSide, 'margins' | 'aspect' | null>>>({});
+  const images = useRef<Partial<Record<PhotoSide, HTMLImageElement | null>>>({});
+  const units = rackUnits && rackUnits > 0 ? rackUnits : null;
+
+  /** `loaded` = gọi từ `onLoad`; lượt đo lại khi đổi Số U chỉ đo ảnh đã nạp xong. */
+  const measure = (side: PhotoSide, loaded = false) => {
+    const img = images.current[side];
+    if (!img || (!loaded && !img.complete)) return;
+    const issue = measurePhotoFit(img, units);
+    setMisfit((current) => (current[side] === issue ? current : { ...current, [side]: issue }));
+  };
+  // Đổi Số U sau khi ảnh đã nạp: đo lại theo n mới.
+  useEffect(() => {
+    PHOTO_SIDES.forEach((side) => measure(side));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [units]);
+
+  const recrop = async (side: PhotoSide, level: PhotoLevel) => {
+    if (!loadOriginal) return;
+    try {
+      const file = await loadOriginal(side);
+      setCropping({ side, file, to: level === 'model' && model ? 'model' : 'own' });
+    } catch {
+      setRejected((current) => ({ ...current, [side]: t('photoSlots.recropFailed') }));
+    }
+  };
 
   const sideLabel = (side: PhotoSide) => t(side === 'front' ? 'photoSlots.front' : 'photoSlots.back');
   const typeText = typeName ? t('photoSlots.levelIcon', { type: typeName }) : t('photoSlots.levelIconNoType');
@@ -127,7 +165,15 @@ export function DevicePhotoSlots({
 
   const picture = (side: PhotoSide, slot: PhotoSlot) =>
     slot.src ? (
-      <img className="photo-slot-img" src={slot.src} alt={t(slot.level === 'draft' ? 'photoSlots.draftAlt' : 'photoSlots.imageAlt', { side: sideLabel(side) })} />
+      <img
+        ref={(el) => {
+          images.current[side] = el;
+        }}
+        className="photo-slot-img"
+        src={slot.src}
+        alt={t(slot.level === 'draft' ? 'photoSlots.draftAlt' : 'photoSlots.imageAlt', { side: sideLabel(side) })}
+        onLoad={() => measure(side, true)}
+      />
     ) : (
       <span className="photo-slot-placeholder">
         {typeIconSrc ? (
@@ -151,13 +197,14 @@ export function DevicePhotoSlots({
         const removable = slot.level === 'own' || slot.level === 'draft';
         return (
           <section key={side} className="photo-slot" role="group" aria-label={label} aria-busy={busySide === side || undefined}>
+            {/* Khung cao theo ảnh (Q-23 06/10): ảnh 1U là một dải rộng, không phải vạch giữa ô cao. */}
             <header className="photo-slot-head">
               <strong>{label}</strong>
               <span className={`badge plain photo-slot-level ${slot.level}`}>{levelText(slot)}</span>
             </header>
 
             {readOnly ? (
-              <div className="photo-slot-frame">{picture(side, slot)}</div>
+              <div className={`photo-slot-frame${slot.src ? ' has-img' : ''}`}>{picture(side, slot)}</div>
             ) : (
               <FilePicker
                 key={`${side}-${picks}`}
@@ -171,10 +218,10 @@ export function DevicePhotoSlots({
                 flashKey={savedKey?.[side]}
                 onPick={(file) => {
                   const accepted = screened(side, file);
-                  if (accepted) onPick?.(side, accepted);
+                  if (accepted) setCropping({ side, file: accepted, to: 'own' });
                 }}
               >
-                <span className="photo-slot-frame">
+                <span className={`photo-slot-frame${slot.src ? ' has-img' : ''}`}>
                   {picture(side, slot)}
                   {busySide === side ? (
                     <span className="photo-slot-busy" role="status">
@@ -189,6 +236,17 @@ export function DevicePhotoSlots({
             {error ? (
               <p className="field-error" role="alert">
                 {error}
+              </p>
+            ) : null}
+
+            {slot.src && misfit[side] ? (
+              <p className="photo-slot-misfit small">
+                <span>{misfit[side] === 'aspect' ? t('photoSlots.misfitAspect', { units }) : t('photoSlots.misfitMargins')}</span>
+                {!readOnly && loadOriginal ? (
+                  <button type="button" className="btn sm" disabled={busy} aria-label={t('photoSlots.recropOf', { side: label })} onClick={() => void recrop(side, slot.level)}>
+                    {t('photoSlots.recrop')}
+                  </button>
+                ) : null}
               </p>
             ) : null}
 
@@ -235,7 +293,7 @@ export function DevicePhotoSlots({
                       aria-label={t('photoSlots.modelUploadOf', { side: label })}
                       onChange={(event) => {
                         const accepted = screened(side, event.target.files?.[0] ?? null);
-                        if (accepted) model.onUpload(side, accepted);
+                        if (accepted) setCropping({ side, file: accepted, to: 'model' });
                       }}
                     />
                   </>
@@ -245,6 +303,19 @@ export function DevicePhotoSlots({
           </section>
         );
       })}
+      {cropping ? (
+        <ImageCropDialog
+          file={cropping.file}
+          units={units}
+          onCancel={() => setCropping(null)}
+          onDone={(file) => {
+            const { side, to } = cropping;
+            setCropping(null);
+            if (to === 'model') model?.onUpload(side, file);
+            else onPick?.(side, file);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

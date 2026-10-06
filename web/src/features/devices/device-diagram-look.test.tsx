@@ -4,6 +4,21 @@ import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from
 import { DeviceDiagramLook, lookLevel } from './device-diagram-look';
 import { RelationMap } from './relation-map';
 
+/*
+ * jsdom không có canvas: hộp cắt ảnh (Q-23 06/10) được giả lập trả lại đúng tệp đã chọn, để bài này
+ * vẫn kiểm đường tải lên như cũ. Phép cắt có bài riêng ở `ui/image-crop-dialog.test.tsx`.
+ */
+const held = vi.hoisted(() => ({ file: null as File | null }));
+vi.mock('@/lib/image-crop', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/image-crop')>()),
+  loadCropSource: vi.fn(async (file: File) => {
+    held.file = file;
+    return { url: 'blob:x', image: {} as HTMLImageElement, size: { width: 100, height: 100 }, content: { x: 0, y: 0, width: 100, height: 100 } };
+  }),
+  renderCrop: vi.fn(async () => held.file!),
+}));
+
+
 /**
  * "Hình dùng trên sơ đồ" (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó; thứ tự tra ảnh riêng →
  * ảnh model → biểu tượng loại là của server (`effective`), web chỉ nói mức nào đang dùng.
@@ -79,6 +94,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
     expect(within(front).queryByText(/mọi máy cùng model/)).toBeNull();
     const user = userEvent.setup();
     await user.upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'rieng.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith('/devices/d1/photos') && c.method === 'PATCH')).toBe(true));
     const upload = calls.find((c) => c.url.endsWith('/api/v1/files'));
     expect((upload?.body as FormData).get('ownerType')).toBe('device');
@@ -105,6 +121,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
     expect(within(front).queryByRole('img', { name: /Ảnh Mặt trước/ })).toBeNull();
     expect(within(front).getByRole('img', { name: 'Biểu tượng loại Switch' })).toBeInTheDocument();
     await userEvent.setup().upload(within(front).getByLabelText('Tải ảnh chung cho mọi máy cùng model — Mặt trước'), new File(['x'], 'model.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith('/model-photos'))).toBe(true));
     expect(calls.some((c) => c.url.endsWith('/devices/d1/model') && c.method === 'POST')).toBe(true);
     expect((calls.find((c) => c.url.endsWith('/api/v1/files'))?.body as FormData).get('ownerType')).toBe('device_model');
@@ -146,6 +163,7 @@ describe('DeviceDiagramLook — ảnh chung từ ảnh riêng, chỉ xem, lỗi'
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Biểu tượng loại Switch');
     await userEvent.setup().upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'a.png', { type: 'image/png' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
     expect(await within(front).findByRole('alert')).toHaveTextContent('Tệp ảnh hỏng.');
   });
 });

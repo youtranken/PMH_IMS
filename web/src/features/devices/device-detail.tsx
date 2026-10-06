@@ -910,6 +910,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               csrfToken={me.csrfToken}
               canEdit={!retired}
               canEditModel={canVaultWrite}
+              rackUnits={item.rackUSize ?? null}
             />
 
             <DeviceOnDiagrams deviceId={item.id} />
