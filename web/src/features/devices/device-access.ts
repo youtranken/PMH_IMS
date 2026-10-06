@@ -10,6 +10,12 @@ export const ACCESS_KINDS: AccessPoint['kind'][] = ['web', 'ssh', 'telnet', 'rdp
 const HTTPS_PORTS = new Set([443, 8443]);
 
 /**
+ * Địa chỉ được phép vào lệnh để chép ra terminal — cùng luật `HOST` của api. Server đã chặn khi lưu;
+ * đây là lớp thứ hai cho dữ liệu cũ: không an toàn thì chỉ hiện chữ, không bao giờ thành lệnh.
+ */
+const SHELL_SAFE = /^(?:[A-Za-z0-9._-]+@)?(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:.]+\])$/;
+
+/**
  * Cách hiện một dòng: Web thành link (CHỈ http/https — địa chỉ là chữ người dùng gõ, `javascript:`
  * không bao giờ thành link), SSH/Telnet thành lệnh để chép, còn lại là chữ "địa chỉ:cổng".
  */
@@ -22,7 +28,8 @@ export function accessView(point: AccessPoint): { href: string | null; command: 
     const port = point.port && point.port !== 443 && point.port !== 80 ? `:${point.port}` : '';
     return { href: `${https ? 'https' : 'http'}://${point.address}${port}`, command: null, text };
   }
-  if (point.kind === 'ssh') return { href: null, command: `ssh ${point.address}${point.port ? ` -p ${point.port}` : ''}`, text };
-  if (point.kind === 'telnet') return { href: null, command: `telnet ${point.address}${point.port ? ` ${point.port}` : ''}`, text };
+  const safe = SHELL_SAFE.test(point.address);
+  if (point.kind === 'ssh' && safe) return { href: null, command: `ssh ${point.address}${point.port ? ` -p ${point.port}` : ''}`, text };
+  if (point.kind === 'telnet' && safe) return { href: null, command: `telnet ${point.address}${point.port ? ` ${point.port}` : ''}`, text };
   return { href: null, command: null, text };
 }

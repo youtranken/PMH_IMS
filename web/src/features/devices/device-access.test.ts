@@ -11,6 +11,9 @@ describe('accessView — dòng Truy cập quản trị thành link / lệnh (Q-2
     ['SSH không cổng', { kind: 'ssh', address: 'sw01', port: null }, { href: null, command: 'ssh sw01', text: 'sw01' }],
     ['Telnet', { kind: 'telnet', address: '10.0.0.9', port: 23 }, { href: null, command: 'telnet 10.0.0.9 23', text: '10.0.0.9:23' }],
     ['RDP chỉ hiện chữ', { kind: 'rdp', address: 'srv01', port: 3389 }, { href: null, command: null, text: 'srv01:3389' }],
+    // Dữ liệu cũ lỡ lưu địa chỉ độc: không bao giờ thành lệnh để chép.
+    ['SSH chèn tuỳ chọn → không có lệnh', { kind: 'ssh', address: '-oProxyCommand=sh', port: null }, { href: null, command: null, text: '-oProxyCommand=sh' }],
+    ['SSH chèn lệnh → không có lệnh', { kind: 'ssh', address: '10.0.0.1;id', port: null }, { href: null, command: null, text: '10.0.0.1;id' }],
   ] as const)('%s', (_name, point, expected) => {
     expect(accessView(point)).toEqual(expected);
   });
