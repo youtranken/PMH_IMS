@@ -961,6 +961,11 @@ function DiagramEditor({
         () => apiFetch<VersionItem>(`/api/v1/diagrams/${diagramId}/versions/rebuild-rack`, { method: 'POST', csrfToken: me.csrfToken }),
         t('diagrams.rack.rebuildStepUp', { name: title }),
       );
+      // Kho không đổi gì từ lần dựng trước: server không tạo phiên bản, khung đang vẽ giữ nguyên.
+      if (version.unchanged) {
+        toast({ tone: 'warn', message: t('diagrams.rack.rebuildSame') });
+        return;
+      }
       setDirty(false);
       toast({ tone: 'ok', message: t('diagrams.rack.rebuildDone', { seq: version.seq }) });
       void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });
@@ -1272,6 +1277,10 @@ function DiagramEditor({
               onClose={() => setDraftOpen(false)}
               onDone={(version) => {
                 setDraftOpen(false);
+                if (version.unchanged) {
+                  toast({ tone: 'warn', message: t('diagrams.cable.draftSame') });
+                  return;
+                }
                 setDirty(false);
                 toast({ tone: 'ok', message: t('diagrams.cable.draftDone', { seq: version.seq }) });
                 void queryClient.invalidateQueries({ queryKey: versionsKey(diagramId) });

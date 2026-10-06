@@ -224,8 +224,15 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     expect(rows[0].xml).not.toContain('data:image');
     // Bản chụp thiết bị lúc lưu có U (lệch kho so "vị trí … · U5–U6").
     expect(rows[0].device_snapshot.find((d) => d.id === srv)).toMatchObject({ u: 5, uSize: 2 });
-    // Lần hai: thêm một phiên bản nữa, không xoá gì.
-    await expect(service.rebuildRack(SA.email, rack.id)).resolves.toMatchObject({ seq: 2 });
+    // Lần hai mà kho không đổi: mặt tủ dựng ra y hệt — không thêm phiên bản (Q-23 06/10), trả bản cũ.
+    await expect(service.rebuildRack(SA.email, rack.id)).resolves.toMatchObject({ id: version.id, seq: 1, unchanged: true });
+    // Kho đổi (máy đổi U) thì dựng lại là một phiên bản mới.
+    await scratch.pool.query(`UPDATE device SET rack_u_start = 3 WHERE id = $1`, [sw]);
+    try {
+      await expect(service.rebuildRack(SA.email, rack.id)).resolves.toMatchObject({ seq: 2 });
+    } finally {
+      await scratch.pool.query(`UPDATE device SET rack_u_start = 1 WHERE id = $1`, [sw]);
+    }
 
     const room = await service.create(SA.email, { name: 'E2E Phòng', nodeType: 'room' });
     await expect(service.rebuildRack(SA.email, room.id)).rejects.toMatchObject({ response: { code: 'DIAGRAM_NOT_CABINET' } });

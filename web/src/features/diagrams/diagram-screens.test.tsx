@@ -4,7 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { jsonResponse, pickMenuItem, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import type { DiagramDeviceInfo, DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
 
@@ -298,6 +298,40 @@ describe('Phiên bản dựng tự động chưa có ảnh xem (Dựng lại m�
       window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ event: 'init' }), source: frame.contentWindow }));
     });
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
+  });
+});
+
+describe('Dựng lại mặt tủ khi kho không đổi gì (Q-23 06/10)', () => {
+  it('server trả bản mới nhất kèm unchanged → báo không tạo phiên bản mới, không nạp lại khung', async () => {
+    const rack = { ...ROOT, nodeType: 'cabinet' as const, cabinetId: 'cab-1' };
+    const latest = { id: 'v4', seq: 4, summary: 'Dựng lại mặt tủ R1', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: rack, version: { ...latest, xml: '<mxfile/>', svg: '<svg/>' } }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1/versions/rebuild-rack': () => jsonResponse(201, { ...latest, unchanged: true }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, rack),
+    });
+    const router = createMemoryRouter([{ path: '/diagrams/:id', element: <DiagramScreen me={ME} /> }], { initialEntries: ['/diagrams/d1?mode=edit'] });
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const frame = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ event: 'init' }), source: frame.contentWindow }));
+    });
+    const user = userEvent.setup();
+    await pickMenuItem(user, /^Thao tác với/, /^Dựng lại mặt tủ/);
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Dựng lại' }));
+    expect(await screen.findByText('Mặt tủ dựng từ kho trùng bản mới nhất — không tạo phiên bản mới.')).toBeInTheDocument();
+    expect(screen.queryByText(/Đã dựng lại mặt tủ thành nháp/)).toBeNull();
+    const contentLoads = fetchMock.mock.calls.filter(([url]) => String(url).includes('/d1/content')).length;
+    expect(contentLoads).toBe(1);
   });
 });
 

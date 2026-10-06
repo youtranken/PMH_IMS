@@ -1042,7 +1042,8 @@ export class DiagramsService {
   /**
    * "Dựng lại mặt tủ" (bản vẽ loại tủ): một phiên bản nháp MỚI chỉ gồm khung tủ dựng từ kho — mặt
    * trước xếp đúng U, máy chưa khai U ở cột "Chưa khai U"; khung mặt sau của bản cũ không dựng lại.
-   * Không xoá gì: phiên bản cũ còn nguyên để khôi phục; không ghi gì vào kho.
+   * Không xoá gì: phiên bản cũ còn nguyên để khôi phục; không ghi gì vào kho. Dựng ra trùng hệt bản
+   * mới nhất (kho chưa đổi) thì không thêm phiên bản, trả bản mới nhất kèm `unchanged`.
    */
   async rebuildRack(actor: string, diagramId: string): Promise<VersionItem> {
     const node = await this.node(diagramId);
@@ -1053,15 +1054,16 @@ export class DiagramsService {
       });
     }
     const frame = await this.cabinetFrame(node.cabinetId);
-    const id = await this.db.transaction(async (tx) => {
+    const built = await this.db.transaction(async (tx) => {
       await this.lockLive(tx, diagramId);
       const latest = await this.latestWithin(tx, diagramId);
       // Dựng trên phiên bản đang có: ô máy giữ id, dây giữa các máy còn trên mặt tủ vẫn gắn (Q-23).
       const xml = dehydrateDiagramXml(buildRackXml(frame.layout, latest?.xml));
       const index = buildCellIndex(xml);
       const snapshot = await this.snapshot(index);
+      if (sameAsLatest(latest, xml, snapshot)) return { id: latest!.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
-      return this.insertVersion(tx, actor, diagramId, {
+      const id = await this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
         xml,
         svg: null,
@@ -1075,8 +1077,10 @@ export class DiagramsService {
         auditAction: 'diagram.saved',
         bytes: Buffer.byteLength(xml),
       });
+      return { id, unchanged: false };
     });
-    return this.versionItem(diagramId, id);
+    const item = await this.versionItem(diagramId, built.id);
+    return built.unchanged ? { ...item, unchanged: true } : item;
   }
 
   /**
@@ -1147,7 +1151,8 @@ export class DiagramsService {
 
   /**
    * "Dựng nháp từ sơ đồ cổng" (FR-048): một phiên bản MỚI chỉ có máy (lưới) + dây đã gắn kết nối.
-   * Không ghi sơ đồ cổng; không có ảnh xem tới khi người vẽ mở Sửa, xếp gọn và lưu.
+   * Không ghi sơ đồ cổng; không có ảnh xem tới khi người vẽ mở Sửa, xếp gọn và lưu. Dựng ra trùng
+   * hệt bản mới nhất thì không thêm phiên bản, trả bản mới nhất kèm `unchanged`.
    */
   async draftFromPortMap(actor: string, diagramId: string, scope: DraftScope): Promise<VersionItem> {
     const max = await this.config.getNumber('diagramAutolayoutMaxNodes');
@@ -1177,11 +1182,12 @@ export class DiagramsService {
     );
     const index = buildCellIndex(xml);
     const snapshot = await this.snapshot(index);
-    const id = await this.db.transaction(async (tx) => {
+    const built = await this.db.transaction(async (tx) => {
       await this.lockLive(tx, diagramId);
       const latest = await this.latestWithin(tx, diagramId);
+      if (sameAsLatest(latest, xml, snapshot)) return { id: latest!.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
-      return this.insertVersion(tx, actor, diagramId, {
+      const id = await this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
         xml,
         svg: null,
@@ -1195,8 +1201,10 @@ export class DiagramsService {
         auditAction: 'diagram.saved',
         bytes: Buffer.byteLength(xml),
       });
+      return { id, unchanged: false };
     });
-    return this.versionItem(diagramId, id);
+    const item = await this.versionItem(diagramId, built.id);
+    return built.unchanged ? { ...item, unchanged: true } : item;
   }
 
   /**
@@ -1773,6 +1781,15 @@ const PREVIEW_ONLY_SUMMARY = 'Tạo ảnh xem cho bản dựng tự động';
  * Hai bản chụp thiết bị như nhau? So sau khi xếp khoá: jsonb trả object theo thứ tự khoá của nó,
  * không theo thứ tự lúc ghi.
  */
+/**
+ * Bản dựng tự động (dựng lại mặt tủ, dựng nháp từ sơ đồ cổng) trùng hệt bản mới nhất — cùng nét vẽ
+ * khô, cùng bản chụp thiết bị: bấm lại khi kho chưa đổi gì không được đẻ thêm phiên bản (Q-23 06/10).
+ * Không xét ảnh xem: lượt dựng không tạo ảnh xem, nên một phiên bản dựng thêm cũng không có gì hơn.
+ */
+function sameAsLatest(latest: { xml: string; deviceSnapshot: DeviceSnapshotEntry[] } | null, xml: string, snapshot: DeviceSnapshotEntry[]): boolean {
+  return latest !== null && drawingKey(latest.xml) === drawingKey(xml) && sameSnapshot(latest.deviceSnapshot, snapshot);
+}
+
 function sameSnapshot(a: DeviceSnapshotEntry[], b: DeviceSnapshotEntry[]): boolean {
   const canonical = (value: unknown): string =>
     JSON.stringify(value, (_key, v: unknown) =>

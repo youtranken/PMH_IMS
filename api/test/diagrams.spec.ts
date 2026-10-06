@@ -669,6 +669,8 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       expect(opened.cableEdges.length).toBeGreaterThan(0);
       expect(opened.cableEdges.every((e) => e.state === 'linked')).toBe(true);
       expect(opened.undrawnLinkIds).toEqual([]);
+      // Dựng lại khi sơ đồ cổng chưa đổi gì: trùng hệt bản mới nhất — không thêm phiên bản (Q-23 06/10).
+      await expect(service.draftFromPortMap(MEMBER.email, d.id, { deviceIds: [swId, srvId, farId] })).resolves.toMatchObject({ id: version.id, unchanged: true });
 
       await scratch.pool.query(`UPDATE system_config SET value = '2' WHERE key = 'diagram.autolayout_max_nodes'`);
       config.forget('diagram.autolayout_max_nodes');
