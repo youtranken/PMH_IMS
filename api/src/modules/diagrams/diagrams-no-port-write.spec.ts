@@ -31,9 +31,9 @@ describe('diagrams không ghi sơ đồ cổng (bề mặt route + public api)',
     expect(routes.filter((r) => /port(?!-map)/i.test(r.path ?? ''))).toEqual([]);
   });
 
-  it('public api của devices chỉ cho ĐỌC dây (portLinks, portLinksTouching) — không có hàm ghi cổng', () => {
+  it('public api của devices chỉ cho ĐỌC dây (portLinks, portLinksTouching, portUsage) — không có hàm ghi cổng', () => {
     const methods = Object.getOwnPropertyNames(DevicesApiService.prototype).filter((m) => /port|link/i.test(m));
-    expect(methods.sort()).toEqual(['portLinks', 'portLinksTouching']);
+    expect(methods.sort()).toEqual(['portLinks', 'portLinksTouching', 'portUsage']);
   });
 
   it('mã nguồn diagrams không import gì của devices ngoài devices.api (và module để Nest nối DI)', () => {

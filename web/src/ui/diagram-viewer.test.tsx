@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import { DiagramViewer, detailLevel, fitTransform, ghostOffset, hiddenByLayers, parseSafeSvg, pinchView, svgSize } from './diagram-viewer';
+import { DiagramViewer, detailLevel, fitTransform, ghostOffset, hiddenByLayers, hoverCardPosition, parseSafeSvg, pinchView, svgSize } from './diagram-viewer';
 
 const VIEWER = { fullName: 'SA E2E', email: 'sa@e2e.local' };
 const SVG =
@@ -123,6 +123,49 @@ describe('DiagramViewer — ô bấm được và dấu theo ô', () => {
       { keys: '[/MouseLeft]', target, coords: { x: 60, y: 40 } },
     ]);
     expect(clicked).toEqual([]);
+  });
+});
+
+describe('DiagramViewer — rê chuột lên ô (Q-23 06/10)', () => {
+  const TWO_CELLS =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><g data-cell-id="1">' +
+    '<g data-cell-id="d1"><rect width="10" height="10"/><text>SW-E2E-01</text></g>' +
+    '<g data-cell-id="s1"><text>Tầng 3</text></g></g></svg>';
+
+  it('chuột vào ô bấm được → báo ô + hiện thẻ; sang hình tự do / rời khung → báo null, thẻ tắt', async () => {
+    const seen: (string | null)[] = [];
+    function Host() {
+      return (
+        <DiagramViewer
+          svg={TWO_CELLS}
+          viewer={VIEWER}
+          title="Bản vẽ"
+          cells={[{ id: 'd1', label: 'SW-E2E-01' }]}
+          onCellHover={(id) => seen.push(id)}
+          hoverCard={<span>Thẻ SW-E2E-01</span>}
+        />
+      );
+    }
+    renderWithI18n(<Host />);
+    const user = userEvent.setup();
+    await user.hover(screen.getByText('SW-E2E-01'));
+    expect(seen).toEqual(['d1']);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Thẻ SW-E2E-01');
+    await user.hover(screen.getByText('Tầng 3'));
+    expect(seen).toEqual(['d1', null]);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    await user.hover(screen.getByText('SW-E2E-01'));
+    await user.unhover(screen.getByRole('region', { name: 'Bản vẽ' }));
+    expect(seen).toEqual(['d1', null, 'd1', null]);
+  });
+
+  it.each([
+    ['giữa khung → phải-dưới con trỏ', { x: 100, y: 100 }, { x: 116, y: 116 }, undefined],
+    ['sát mép phải → lật sang trái', { x: 900, y: 100 }, { x: 900 - 16 - 288, y: 116 }, undefined],
+    ['sát mép dưới → lật lên trên', { x: 100, y: 580 }, { x: 116, y: 580 - 16 - 160 }, undefined],
+    ['khung hẹp hơn thẻ → không ra ngoài mép trái', { x: 100, y: 100 }, { x: 0, y: 116 }, { width: 200, height: 600 }],
+  ])('hoverCardPosition: %s', (_name, at, expected, box = { width: 1000, height: 600 }) => {
+    expect(hoverCardPosition(at, box)).toEqual(expected);
   });
 });
 

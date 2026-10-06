@@ -300,6 +300,46 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     expect(wet).toMatch(/-ims-pt" value="eth1"/);
   });
 
+  test('tab Xem: rê chuột lên máy → thẻ IP/cổng; rê lên dây → cả dây + hai máy sáng, thẻ "A:cổng ↔ B:cổng" (Q-23 06/10)', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const sw = { cell: 'a', id: await createDevice(page, `SW-E2E-HV${stamp}`), code: `SW-E2E-HV${stamp}` };
+    const srv = { cell: 'b', id: await createDevice(page, `SRV-E2E-HV${stamp}`), code: `SRV-E2E-HV${stamp}` };
+    const pc = { cell: 'c', id: await createDevice(page, `PC-E2E-HV${stamp}`), code: `PC-E2E-HV${stamp}` };
+    const fiber = (await catalog(page)).cableTypes.find((c) => c.name === 'Fiber')!.id;
+    const linkId = await link(page, sw.id, 'Gi1/0/7', srv.id, 'eth0', fiber);
+    const id = await createDiagram(page, `E2E Rê chuột ${stamp}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    await saveDrawing(page, id, [sw, srv, pc], [{ cell: 'e1', from: 'a', to: 'b', linkId }]);
+
+    await page.goto(`/diagrams/${id}`);
+    const viewer = page.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
+    await viewer.getByRole('button', { name: sw.code }).hover();
+    const tip = page.getByRole('tooltip');
+    await expect(tip).toContainText(sw.code);
+    // Máy giữ 1 dòng sơ đồ cổng đang nối: 1/1.
+    await expect(tip).toContainText('1/1');
+    await expect(tip).toContainText('Đang dùng');
+    await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/hover-may.png` : test.info().outputPath('hover-may.png') });
+
+    // Nét ngang có hộp bao cao 0: rê vào đúng tâm nét bằng toạ độ.
+    const box = await page.locator('[data-cell-id="e1"] path').first().boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await expect(tip).toContainText(`${sw.code}:Gi1/0/7 ↔ ${srv.code}:eth0`);
+    await expect(tip).toContainText('Fiber');
+    // Dây + hai máy hai đầu sáng; máy không nối (PC) mờ đi.
+    await expect(page.locator('[data-cell-id="c"]')).toHaveAttribute('data-ims-dim', '');
+    await expect(page.locator('[data-cell-id="a"]')).not.toHaveAttribute('data-ims-dim', '');
+    await expect(page.locator('[data-cell-id="b"]')).not.toHaveAttribute('data-ims-dim', '');
+    await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/hover-day.png` : test.info().outputPath('hover-day.png') });
+    // Rời bản vẽ: thẻ tắt, hết tô sáng.
+    await page.mouse.move(2, 2);
+    await expect(tip).toHaveCount(0);
+    await expect(page.locator('[data-cell-id="c"]')).not.toHaveAttribute('data-ims-dim', '');
+  });
+
   test('390px: chế độ xem — chú giải màu dây và thẻ dây không tràn ngang', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const secret = await firstLogin(page, E2E_SA);

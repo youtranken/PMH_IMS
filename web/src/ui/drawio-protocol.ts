@@ -95,6 +95,17 @@ export interface DrawioEvent {
   error?: string;
   currentPage?: number;
   modelBounds?: DrawioBounds;
+  /** Ô đang chọn — chỉ có ở tin `export` định dạng `json` (lệnh `selectionQuery`). */
+  selection?: DrawioSelected[];
+}
+
+/** Một ô đang chọn trong trình vẽ: id + loại + đúng các thuộc tính `ims_*` thẻ thông tin cần. */
+export interface DrawioSelected {
+  id: string;
+  kind: 'node' | 'edge';
+  deviceId?: string;
+  code?: string;
+  linkId?: string;
 }
 
 /** Trường bắt buộc theo sự kiện — thiếu là tin giả/hỏng, bỏ qua. */
@@ -110,9 +121,44 @@ const REQUIRED: Record<DrawioEventName, (keyof DrawioEvent)[]> = {
   patch: [],
 };
 
-/** Xuất định dạng `xml` trả cả tệp ở `xml` chứ không ở `data` — mọi định dạng khác bắt buộc `data`. */
+/**
+ * Xuất định dạng `xml` trả cả tệp ở `xml` chứ không ở `data`; định dạng `json` (ô đang chọn) trả
+ * `data` là object, đọc riêng thành `selection`. Mọi định dạng khác bắt buộc `data` chuỗi.
+ */
 function requiredOf(event: DrawioEvent): (keyof DrawioEvent)[] {
-  return event.event === 'export' && event.format === 'xml' ? ['xml'] : REQUIRED[event.event];
+  if (event.event === 'export' && event.format === 'xml') return ['xml'];
+  if (event.event === 'export' && event.format === 'json') return ['selection'];
+  return REQUIRED[event.event];
+}
+
+const SELECTED_ATTRS: [keyof DrawioSelected, string][] = [
+  ['deviceId', 'ims_device_id'],
+  ['code', 'ims_device_code'],
+  ['linkId', 'ims_link_id'],
+];
+
+/**
+ * `data` của `export` json (`{ pages: [{ cells: [...] }] }`, chỉ ô đang chọn) → danh sách ô đã
+ * kiểm kiểu. Chép từng trường biết trước: nhãn và dữ liệu tuỳ ý người vẽ gắn lên ô không đi tiếp.
+ */
+function selectionOf(data: unknown): DrawioSelected[] {
+  const pages = data && typeof data === 'object' ? (data as { pages?: unknown }).pages : undefined;
+  const cells = Array.isArray(pages) && pages[0] && typeof pages[0] === 'object' ? (pages[0] as { cells?: unknown }).cells : undefined;
+  if (!Array.isArray(cells)) return [];
+  const out: DrawioSelected[] = [];
+  for (const cell of cells) {
+    if (!cell || typeof cell !== 'object') continue;
+    const raw = cell as Record<string, unknown>;
+    if (typeof raw.id !== 'string' || (raw.type !== 'node' && raw.type !== 'edge')) continue;
+    const one: DrawioSelected = { id: raw.id, kind: raw.type };
+    const meta = raw.metadata && typeof raw.metadata === 'object' ? (raw.metadata as Record<string, unknown>) : {};
+    for (const [field, attr] of SELECTED_ATTRS) {
+      const value = meta[attr];
+      if (typeof value === 'string' && value) (one as unknown as Record<string, string>)[field] = value;
+    }
+    out.push(one);
+  }
+  return out;
 }
 
 const STRING_FIELDS = ['xml', 'data', 'format', 'href', 'error'] as const;
@@ -141,6 +187,12 @@ export function parseDrawioEvent(data: unknown): DrawioEvent | null {
   const name = raw.event;
   if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(REQUIRED, name)) return null;
   const out: DrawioEvent = { event: name as DrawioEventName };
+  const selectionReply = name === 'export' && raw.format === 'json';
+  if (selectionReply) {
+    out.format = 'json';
+    out.selection = selectionOf(raw.data);
+    return out;
+  }
   for (const key of STRING_FIELDS) {
     // `null` = vắng: draw.io gửi `load` của bản vẽ trống với `xml: null` — bỏ cả tin là màn không
     // bao giờ biết trình vẽ đã nạp. Trường bắt buộc vẫn bị kiểm ở `REQUIRED` bên dưới.
@@ -184,7 +236,9 @@ export type DrawioCommand =
   | { action: 'export'; format: DrawioExportFormat }
   | { action: 'configure'; config: DrawioConfig }
   | { action: 'patch'; patch: unknown }
-  | { action: 'save' };
+  | { action: 'save' }
+  /** Hỏi ô đang chọn: `export` json chỉ ô chọn — trả tin `export` mang `selection`. */
+  | { action: 'selectionQuery' };
 
 export function serializeDrawioCommand(command: DrawioCommand): string {
   switch (command.action) {
@@ -197,6 +251,8 @@ export function serializeDrawioCommand(command: DrawioCommand): string {
       });
     case 'save':
       return JSON.stringify({ action: 'invokeAction', actionName: 'save' });
+    case 'selectionQuery':
+      return JSON.stringify({ action: 'export', format: 'json', selection: 1, allPages: 0, includeData: 0 });
     default:
       return JSON.stringify(command);
   }

@@ -46,6 +46,9 @@ import { CableLegend } from './cable-legend';
 import { DeviceConnections, DiagramCableCard } from './diagram-cable-card';
 import { DiagramBreadcrumb } from './diagram-breadcrumb';
 import { DiagramDeviceCard } from './diagram-device-card';
+import { focusCells, hoverCardOf, hoverHighlight, selectedTarget } from './diagram-hover';
+import { DiagramHoverCard } from './diagram-hover-card';
+import { DiagramSelectionCard } from './diagram-selection-card';
 import { placeFreeCells, type FreeCellSpec } from './diagram-presentation';
 import { canCreatePresentation, CreatePresentationDialog, PresentationBand, usePresentationTools } from './diagram-presentation-tools';
 import { BarAnchorProvider, BarButton, BarMenu, type BarAction } from './diagram-bar';
@@ -78,6 +81,13 @@ import { usePhotoBridge } from './use-photo-bridge';
 import { useRackFit } from './use-rack-fit';
 
 type Mode = 'view' | 'edit';
+
+/**
+ * Nhịp hỏi ô đang chọn khi khung trình vẽ có tiêu điểm (thẻ máy / dây tab Sửa). Ngưỡng cảm nhận
+ * của giao diện ("thẻ theo kịp cú bấm"), không phải tham số nghiệp vụ; mỗi lượt hỏi chỉ trả id +
+ * thuộc tính `ims_*` của ô đang chọn.
+ */
+const SELECTION_POLL_MS = 700;
 
 function newCellId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -140,6 +150,8 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   /* Bay tới từ ô tìm (hay từ bản vẽ khác qua `?focus=`): phóng tới mức đọc được, không chỉ dời khung. */
   const [flyClose, setFlyClose] = useState(() => Boolean(params.get('focus')));
   const [pathOpen, setPathOpen] = useState(false);
+  /* Ô chuột đang rê trong tab Xem (Q-23 06/10): thẻ máy / dây cạnh con trỏ + tô sáng tạm. */
+  const [hoverCell, setHoverCell] = useState<string | null>(null);
 
   const settings = useQuery({
     queryKey: SETTINGS_KEY,
@@ -529,6 +541,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       if (frame.subnetId) setSubnetFrame({ ...frame, subnetId: frame.subnetId });
     };
     const focus = focusDeviceId ? focusCells(content.data, focusDeviceId) : null;
+    const hoverData = hoverCell && !review.pinMode ? hoverCardOf(content.data, hoverCell) : null;
     const focusCode = focusDeviceId ? ((content.data.deviceCells ?? []).find((c) => c.deviceId === focusDeviceId)?.code ?? '') : '';
     body = (
       <>
@@ -557,9 +570,11 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           onPinClick={review.viewer.onPinClick}
           focusCellId={focusCell ?? (focus && params.get('focus') ? focus[0] : null)}
           focusScale={flyClose ? 1 : undefined}
-          highlightCellIds={lit ?? focus}
+          highlightCellIds={(hoverCell ? hoverHighlight(content.data, hoverCell) : null) ?? lit ?? focus}
           layers={layers}
           cellBounds={cellBounds}
+          onCellHover={review.pinMode ? undefined : setHoverCell}
+          hoverCard={hoverData ? <DiagramHoverCard data={hoverData} /> : null}
         />
         {(content.data.cableEdges ?? []).length > 0 ? <CableLegend cableTypes={content.data.cableTypes ?? []} floating /> : null}
         {card ? (
@@ -885,6 +900,8 @@ function DiagramEditor({
     frame.current?.send({ action: 'export', format: 'xml' });
   };
   const [draftOpen, setDraftOpen] = useState(false);
+  /* Ô đang chọn trong trình vẽ (Q-23 06/10) — draw.io không báo, màn hỏi định kỳ khi khung có tiêu điểm. */
+  const [selected, setSelected] = useState<ReturnType<typeof selectedTarget>>(null);
   const frameState = useRef<{ page: number; bounds: Bounds | null }>({
     page: 0,
     bounds: null,
@@ -986,6 +1003,16 @@ function DiagramEditor({
     }
   };
   const isRack = content.diagram.nodeType === 'cabinet' && Boolean(content.diagram.cabinetId);
+
+  useEffect(() => {
+    if (!ready) return undefined;
+    const timer = window.setInterval(() => {
+      // Chỉ hỏi khi người dùng đang thao tác trong khung: rời khung thì thẻ giữ ô chọn cuối.
+      if (document.visibilityState !== 'visible' || !frame.current?.isFocused()) return;
+      frame.current.send({ action: 'selectionQuery' });
+    }, SELECTION_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [ready]);
 
   // Nhịp "đang mở sửa" (Q-23): nửa thời gian giữ một lần, để một nhịp lỡ không làm tên biến mất.
   // Hết ân hạn sơ đồ thì nhịp nhận 401 và im lặng: không bật hộp nhập mã chỉ vì một nhịp nền.
@@ -1126,6 +1153,11 @@ function DiagramEditor({
         });
         break;
       case 'export': {
+        if (message.format === 'json') {
+          const next = selectedTarget(message.selection ?? []);
+          setSelected((current) => (current && next && current.cellId === next.cellId ? current : next));
+          break;
+        }
         if (message.format === 'xml') {
           fileWaiters.current.shift()?.(message.xml ?? '');
           break;
@@ -1272,6 +1304,17 @@ function DiagramEditor({
           {/* `content` là bản đã cache lúc mở và không tải lại sau khi lưu (tải lại = nạp lại khung đang
               vẽ), nên "trống" phải xét cả `lastSaved`. */}
           {!lastSaved && !dirty && !startDismissed ?<EditStartCard onDismiss={() => setStartDismissed(true)} /> : null}
+          {selected ? (
+            <DiagramSelectionCard
+              key={selected.cellId}
+              me={me}
+              diagramId={diagramId}
+              content={content}
+              target={selected}
+              linkOf={cables.linkOf}
+              onDrawing={present}
+            />
+          ) : null}
           {cables.dialogs}
           {frames.dialogs}
           {photos.dialogs}
@@ -1381,15 +1424,4 @@ function viewerCells(
     }
   }
   return { cells, byCell, byEdge, byFrame };
-}
-
-/** Ô sáng khi bấm một máy: ô của máy, mọi nét dây chạm nó, ô của máy đầu kia (AD-18). */
-function focusCells(content: DiagramContent, deviceId: string): string[] | null {
-  const deviceCells = content.deviceCells ?? [];
-  const own = deviceCells.filter((c) => c.deviceId === deviceId).map((c) => c.cellId);
-  if (own.length === 0) return null;
-  const edges = (content.cableEdges ?? []).filter((e) => e.sourceDeviceId === deviceId || e.targetDeviceId === deviceId);
-  const far = new Set(edges.map((e) => (e.sourceDeviceId === deviceId ? e.targetDeviceId : e.sourceDeviceId)));
-  const farCells = deviceCells.filter((c) => far.has(c.deviceId)).map((c) => c.cellId);
-  return [...own, ...edges.map((e) => e.cellId), ...farCells];
 }

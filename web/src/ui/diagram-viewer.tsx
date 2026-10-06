@@ -8,6 +8,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
+  type ReactNode,
   type WheelEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +41,19 @@ const ZOOM_STEP = 1.25;
  * ngưỡng hiển thị của trình xem (đọc được hay không), không phải tham số nghiệp vụ.
  */
 const LOD_NEAR_SCALE = 0.6;
+/** Thẻ rê chuột đứng lệch con trỏ một chút (không che đúng chỗ đang trỏ) và không tràn mép khung. */
+const HOVER_OFFSET = 16;
+const HOVER_CARD_WIDTH = 288;
+
+/** Chỗ đặt thẻ rê chuột trong khung: bên phải-dưới con trỏ, gặp mép phải / mép dưới thì lật sang bên kia. */
+export function hoverCardPosition(at: ViewerPoint, box: Size, card: Size = { width: HOVER_CARD_WIDTH, height: 160 }): ViewerPoint {
+  const right = at.x + HOVER_OFFSET + card.width > box.width;
+  const below = at.y + HOVER_OFFSET + card.height > box.height;
+  return {
+    x: Math.max(0, right ? at.x - HOVER_OFFSET - card.width : at.x + HOVER_OFFSET),
+    y: Math.max(0, below ? at.y - HOVER_OFFSET - card.height : at.y + HOVER_OFFSET),
+  };
+}
 
 /** Mức chi tiết theo mức thu phóng: `far` ẩn nhãn cổng (CSS theo `data-lod`). */
 export function detailLevel(scale: number): 'near' | 'far' {
@@ -280,6 +294,8 @@ export function DiagramViewer({
   layers,
   focusScale,
   cellBounds,
+  onCellHover,
+  hoverCard,
 }: {
   svg: string;
   viewer: { fullName: string; email: string };
@@ -307,6 +323,13 @@ export function DiagramViewer({
    * dời theo độ lệch ảnh như khung đứt của so sánh.
    */
   cellBounds?: { id: string; bounds: ViewerBounds }[];
+  /**
+   * Chuột (không phải chạm) rê vào / ra một ô bấm được: `null` = rời khỏi mọi ô. Màn quyết định
+   * tô sáng gì và thẻ nào hiện (`hoverCard`).
+   */
+  onCellHover?: (cellId: string | null) => void;
+  /** Thẻ nổi cạnh con trỏ cho ô đang rê; `null` = không có thẻ. Chỉ hiện khi đang rê một ô. */
+  hoverCard?: ReactNode;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -320,6 +343,9 @@ export function DiagramViewer({
   const [layersOpen, setLayersOpen] = useState(false);
   /* Ngón đang chạm khung (pointerId → toạ độ trong khung) + mốc lúc bắt đầu phóng hai ngón. */
   const touches = useRef(new Map<number, ViewerPoint>());
+  /* Ô chuột đang rê + chỗ đặt thẻ (toạ độ trong khung, tính lúc vào ô — thẻ không chạy theo con trỏ). */
+  const hovered = useRef<string | null>(null);
+  const [hoverAt, setHoverAt] = useState<ViewerPoint | null>(null);
   const pinch = useRef<{ view: ViewTransform; a: ViewerPoint; b: ViewerPoint; ids: [number, number] } | null>(null);
 
   const fit = useCallback(() => {
@@ -529,8 +555,19 @@ export function DiagramViewer({
       drag.current = null;
     }
   };
+  const setHover = (id: string | null, at: ViewerPoint | null) => {
+    if (id === hovered.current) return;
+    hovered.current = id;
+    setHoverAt(id ? at : null);
+    onCellHover?.(id);
+  };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (touches.current.has(event.pointerId)) touches.current.set(event.pointerId, stagePoint(event));
+    if (event.pointerType === 'mouse') {
+      // Đang kéo khung thì không hiện thẻ: con trỏ lướt qua ô chứ không trỏ vào nó.
+      const dragging = Boolean(drag.current?.moved) || Boolean(pinch.current);
+      setHover(dragging ? null : cellAt(event.target), stagePoint(event));
+    }
     const two = pinch.current;
     if (two) {
       const a = touches.current.get(two.ids[0]);
@@ -629,6 +666,7 @@ export function DiagramViewer({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={endDrag}
+        onPointerLeave={() => setHover(null, null)}
         onKeyDown={onKeyDown}
       >
         <div
@@ -674,6 +712,19 @@ export function DiagramViewer({
                 </button>
               );
             })}
+          </div>
+        ) : null}
+        {hoverCard && hoverAt ? (
+          <div
+            className="diagram-hover-card"
+            role="tooltip"
+            style={(() => {
+              const stage = stageRef.current;
+              const at = hoverCardPosition(hoverAt, { width: stage?.clientWidth ?? 0, height: stage?.clientHeight ?? 0 });
+              return { left: `${at.x}px`, top: `${at.y}px` };
+            })()}
+          >
+            {hoverCard}
           </div>
         ) : null}
         {diff && diff.removed.some((cell) => cell.bounds) ? (

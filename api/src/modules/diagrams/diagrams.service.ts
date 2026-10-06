@@ -184,6 +184,8 @@ export interface DiagramDeviceInfo {
   warrantyEnd: string | null;
   /** Máy có ảnh thật mặt trước / mặt sau không (ảnh riêng máy hoặc ảnh model) — công tắc Ảnh thật. */
   photos: { front: boolean; back: boolean };
+  /** Cổng đang dùng / đã khai (dòng sơ đồ cổng hai chiều) — thẻ máy trên sơ đồ (Q-23 06/10). */
+  ports: { used: number; declared: number };
   /** Ô dựng sẵn cho lệnh chèn của trình vẽ (style đã hydrate, nhãn, cỡ theo hình của loại). */
   cell: { style: string; label: string; width: number; height: number; attrs: Record<string, string> };
 }
@@ -1269,10 +1271,11 @@ export class DiagramsService {
     const sources = new Map<string, DeviceCellSource>();
     if (unique.length === 0) return { infos: [], sources };
     const valid = unique.filter((id) => UUID_RE.test(id));
-    const [devices, ips, photoFiles] = await Promise.all([
+    const [devices, ips, photoFiles, portUsage] = await Promise.all([
       this.devices.getByIds(valid),
       this.ipam.heldAddressesOf(valid),
       this.devices.photoSources(valid),
+      this.devices.portUsage(valid),
     ]);
     const found = [...devices.values()];
     const [looks, photos, vendors, cabinets] = await Promise.all([
@@ -1305,6 +1308,7 @@ export class DiagramsService {
         vendorPhone: vendor?.phone ?? null,
         warrantyEnd: device.warrantyEnd,
         photos: { front: Boolean(photoFiles.get(id)?.front), back: Boolean(photoFiles.get(id)?.back) },
+        ports: portUsage.get(id) ?? { used: 0, declared: 0 },
       };
       const height = device.cabinetId ? (cabinets.get(device.cabinetId)?.uHeight ?? null) : null;
       const source: DeviceCellSource = {
@@ -1843,6 +1847,7 @@ function emptyInfo(id: string): Omit<DiagramDeviceInfo, 'cell'> {
     vendorPhone: null,
     warrantyEnd: null,
     photos: { front: false, back: false },
+    ports: { used: 0, declared: 0 },
   };
 }
 

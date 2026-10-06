@@ -326,6 +326,92 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
   });
 });
 
+describe('Tab Sửa — thẻ của ô đang chọn (Q-23 06/10, không plugin)', () => {
+  const SW_INFO = {
+    id: 'dev-sw',
+    found: true,
+    code: 'SW-E2E-01',
+    name: 'Switch',
+    deviceTypeName: 'Switch',
+    model: 'C9200-24T',
+    serial: null,
+    status: 'in_use',
+    ips: ['10.0.0.2'],
+    siteCode: 'HQ',
+    cabinetCode: 'TU-01',
+    u: 30,
+    uSize: 1,
+    vendorName: null,
+    vendorPhone: null,
+    warrantyEnd: null,
+    ports: { used: 12, declared: 24 },
+    cell: { style: '', label: '', width: 1, height: 1 },
+  };
+  const selection = (cells: Record<string, unknown>[]) => ({ event: 'export', format: 'json', data: { pages: [{ id: 'p1', cells }] } });
+
+  it('khung trình vẽ có tiêu điểm → hỏi ô đang chọn bằng export json; rời khung thì thôi hỏi', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { messages } = await openEditor(file(DEVICES), {});
+      const frame = screen.getByTitle('Khung vẽ draw.io');
+      const asked = () => messages().filter((m) => m.action === 'export' && m.format === 'json' && m.selection === 1).length;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      expect(asked()).toBe(0);
+      frame.focus();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500);
+      });
+      expect(asked()).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('chọn một máy → thẻ (IP, model, vị trí, cổng 12/24, trạng thái); "Chi tiết" mở thẻ chi tiết ngay tại màn sửa, "Mở hồ sơ" mở tab mới', async () => {
+    const { fromDrawio } = await openEditor(file(DEVICES), { devices: [SW_INFO], deviceCells: [{ cellId: 'a', deviceId: 'dev-sw', code: 'SW-E2E-01' }] }, {
+      '/api/v1/diagrams/by-device/dev-sw': () => jsonResponse(200, []),
+    });
+    fromDrawio(selection([{ id: 'a', type: 'node', metadata: { ims_device_id: 'dev-sw', ims_device_code: 'SW-E2E-01' } }]));
+    const card = await screen.findByRole('region', { name: 'Đang chọn trên bản vẽ' });
+    expect(card).toHaveTextContent('SW-E2E-01');
+    expect(card).toHaveTextContent('10.0.0.2');
+    expect(card).toHaveTextContent('C9200-24T');
+    expect(card).toHaveTextContent('HQ · TU-01 · U30');
+    expect(card).toHaveTextContent('12/24');
+    expect(card).toHaveTextContent('Đang dùng');
+    const user = userEvent.setup();
+    await user.click(within(card).getByRole('button', { name: 'Chi tiết' }));
+    const dialog = await screen.findByRole('dialog', { name: 'SW-E2E-01' });
+    const record = within(dialog).getByRole('link', { name: 'Mở hồ sơ' });
+    expect(record).toHaveAttribute('target', '_blank');
+    expect(record).toHaveAttribute('href', '/devices/dev-sw');
+    // Bỏ chọn trong trình vẽ → thẻ tắt.
+    fromDrawio(selection([]));
+    await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'Đang chọn trên bản vẽ' })).toBeNull());
+  });
+
+  it('máy vừa chèn (chưa có trong nội dung lúc mở) → thẻ tự đọc thông tin kho của máy đó', async () => {
+    const { fromDrawio } = await openEditor(file(DEVICES), {}, {
+      '/api/v1/diagrams/device-info': () => jsonResponse(200, [SW_INFO]),
+    });
+    fromDrawio(selection([{ id: 'a', type: 'node', metadata: { ims_device_id: 'dev-sw', ims_device_code: 'SW-E2E-01' } }]));
+    const card = await screen.findByRole('region', { name: 'Đang chọn trên bản vẽ' });
+    await vi.waitFor(() => expect(card).toHaveTextContent('12/24'));
+  });
+
+  it('chọn một dây đã khai → thẻ "A:cổng ↔ B:cổng", loại dây; hình tự do → không thẻ', async () => {
+    const { fromDrawio } = await openEditor(file(DEVICES + linked('e1', 'a', 'b', 'link-1')), { links: [LINK] });
+    fromDrawio(selection([{ id: 'e1', type: 'edge', source: 'a', target: 'b', metadata: { ims_link_id: 'link-1' } }]));
+    const card = await screen.findByRole('region', { name: 'Đang chọn trên bản vẽ' });
+    expect(card).toHaveTextContent('SW-E2E-01:Gi1/0/24 ↔ SRV-E2E-01:eth0');
+    expect(card).toHaveTextContent('Fiber');
+    fromDrawio(selection([{ id: 'shape-1', type: 'node' }]));
+    await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'Đang chọn trên bản vẽ' })).toBeNull());
+  });
+});
+
 describe('Chế độ xem — màu dây, tô sáng, thẻ dây, mũi tên sang bản vẽ khác', () => {
   const SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"><g data-cell-id="0"><g data-cell-id="1">' +

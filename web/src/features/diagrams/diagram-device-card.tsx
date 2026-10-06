@@ -28,6 +28,7 @@ export function DiagramDeviceCard({
   diagramId,
   onClose,
   children,
+  recordInNewTab = false,
 }: {
   me: Me;
   /** `null` = ô trỏ tới máy không có trong danh sách server trả (coi như không tìm thấy). */
@@ -38,6 +39,8 @@ export function DiagramDeviceCard({
   onClose: () => void;
   /** Phần thêm cuối thẻ (vd mục "Kết nối" của màn sơ đồ). */
   children?: ReactNode;
+  /** "Mở hồ sơ" mở tab mới — màn sửa không được bỏ bản vẽ đang dở để sang trang thiết bị. */
+  recordInNewTab?: boolean;
 }) {
   const { t } = useTranslation();
   const [vaultOpen, setVaultOpen] = useState(false);
@@ -73,9 +76,15 @@ export function DiagramDeviceCard({
         initialFocus="title"
         footer={
           <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <Link className="linkbtn" to={PATHS.device(device.id)}>
-              {t('diagrams.card.openRecord')}
-            </Link>
+            {recordInNewTab ? (
+              <a className="linkbtn" href={PATHS.device(device.id)} target="_blank" rel="noopener noreferrer">
+                {t('diagrams.card.openRecord')}
+              </a>
+            ) : (
+              <Link className="linkbtn" to={PATHS.device(device.id)}>
+                {t('diagrams.card.openRecord')}
+              </Link>
+            )}
             <button type="button" className="btn primary" onClick={() => setVaultOpen(true)}>
               {t('diagrams.card.openVault')}
             </button>

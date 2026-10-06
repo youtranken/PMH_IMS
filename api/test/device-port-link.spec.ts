@@ -164,4 +164,19 @@ describe('khai / gỡ / nối hàng loạt sợi dây', () => {
     expect(touching.map((l) => l.id).sort()).toEqual([l1.id, l2.id].sort());
     expect((await ports.linksTouching([a])).map((l) => l.id)).toEqual([l1.id]);
   });
+
+  it('portUsage: cổng đang dùng / đã khai của từng máy, đếm cả dòng máy đầu kia giữ (thẻ máy trên sơ đồ)', async () => {
+    const sw = await device();
+    const a = await device();
+    const quiet = await device();
+    await ports.link(actor, sw, { portLabel: 'Gi1', connectedDeviceId: a, connectedPort: 'eth0' });
+    await ports.link(actor, a, { portLabel: 'eth1', connectedDeviceId: sw, connectedPort: 'Gi2' });
+    // Dòng chỉ ghi VLAN (cổng trống) và dòng nối thiết bị ngoài kho (chữ tự do).
+    await scratch.pool.query(`INSERT INTO device_port (device_id, port_label, vlan) VALUES ($1, 'Gi3', '20')`, [sw]);
+    await scratch.pool.query(`INSERT INTO device_port (device_id, port_label, connected_label) VALUES ($1, 'Gi4', 'Modem ISP')`, [sw]);
+    const usage = await ports.portUsage([sw, a, quiet]);
+    expect(usage.get(sw)).toEqual({ used: 3, declared: 4 });
+    expect(usage.get(a)).toEqual({ used: 2, declared: 2 });
+    expect(usage.get(quiet)).toEqual({ used: 0, declared: 0 });
+  });
 });

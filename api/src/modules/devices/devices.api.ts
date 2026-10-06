@@ -134,6 +134,11 @@ export class DevicesApiService {
     return this.ports.linksByIds(ids);
   }
 
+  /** Cổng đang dùng / đã khai của nhiều máy MỘT lượt — thẻ máy trên sơ đồ. CHỈ ĐỌC. */
+  portUsage(ids: string[]): Promise<Map<string, { used: number; declared: number }>> {
+    return this.ports.portUsage(ids);
+  }
+
   /** Mọi sợi dây chạm ít nhất một máy trong danh sách — sơ đồ tìm kết nối chưa vẽ. CHỈ ĐỌC. */
   portLinksTouching(deviceIds: string[]): Promise<PortLink[]> {
     return this.ports.linksTouching(deviceIds);

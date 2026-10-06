@@ -863,6 +863,55 @@ button.btn-x.danger:hover:not(:disabled) {
 .drawio-watermark[data-density='edit'] {
   color: var(--diagram-watermark-edit);
 }
+/* Thẻ thông tin máy / dây (Q-23 06/10). Trình xem: nổi cạnh con trỏ, không bắt chuột (thẻ nằm
+   dưới con trỏ mà bắt chuột thì chuột "rời ô" và thẻ nhấp nháy). Trình vẽ: neo đáy khung, có nút. */
+.diagram-hover-card {
+  position: absolute;
+  z-index: 3;
+  width: 18rem;
+  max-width: calc(100% - 2 * var(--space-3));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm);
+  pointer-events: none;
+}
+.diagram-hover-card[data-docked] {
+  left: 50%;
+  bottom: var(--space-12);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.diagram-hover-title {
+  margin: 0 0 var(--space-1);
+  font-weight: var(--fw-bold);
+  overflow-wrap: anywhere;
+}
+.diagram-hover-rows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 var(--space-2);
+  margin: 0;
+}
+.diagram-hover-row {
+  display: contents;
+}
+.diagram-hover-rows dt {
+  color: var(--muted);
+}
+.diagram-hover-rows dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.diagram-hover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
 .drawio-frame-stalled {
   position: absolute;
   inset: 0;

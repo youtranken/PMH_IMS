@@ -87,6 +87,8 @@ export interface DiagramDeviceInfo {
   uSize?: number | null;
   /** Có ảnh thật mặt trước / mặt sau không (ảnh riêng máy hoặc theo model). */
   photos?: { front: boolean; back: boolean };
+  /** Cổng đang dùng / đã khai (dòng sơ đồ cổng hai chiều) — thẻ máy trên sơ đồ. Thiếu → 0/0. */
+  ports?: { used: number; declared: number };
   vendorName: string | null;
   vendorPhone: string | null;
   warrantyEnd: string | null;

@@ -464,6 +464,40 @@ export class DevicePortsService {
     return new Map(rows.map((link) => [link.id, link]));
   }
 
+  /**
+   * Cổng ĐÃ KHAI / ĐANG DÙNG của từng máy (thẻ máy trên sơ đồ, Q-23 06/10). Đã khai = dòng sơ đồ
+   * cổng của chính máy + dòng máy khác giữ mà trỏ tới nó (một kết nối là một dòng, AD-14); đang dùng =
+   * dòng có đầu kia (máy kho, chữ tự do, người dùng). Kho chưa có số cổng vật lý nên "đã khai" là
+   * mẫu số thật duy nhất. Dòng của máy đã thanh lý không chiếm cổng nên không đếm.
+   */
+  async portUsage(deviceIds: string[]): Promise<Map<string, { used: number; declared: number }>> {
+    const unique = [...new Set(deviceIds)];
+    const out = new Map(unique.map((id) => [id, { used: 0, declared: 0 }]));
+    if (unique.length === 0) return out;
+    const busy = sql<boolean>`(${devicePortTable.connectedDeviceId} IS NOT NULL OR ${devicePortTable.connectedLabel} IS NOT NULL OR ${devicePortTable.usedBy} IS NOT NULL)`;
+    const [own, incoming] = await Promise.all([
+      this.db
+        .select({ id: devicePortTable.deviceId, declared: sql<number>`count(*)::int`, used: sql<number>`count(*) FILTER (WHERE ${busy})::int` })
+        .from(devicePortTable)
+        .where(and(inArray(devicePortTable.deviceId, unique), NOT_OWNER_RETIRED))
+        .groupBy(devicePortTable.deviceId),
+      this.db
+        .select({ id: devicePortTable.connectedDeviceId, count: sql<number>`count(*)::int` })
+        .from(devicePortTable)
+        .where(and(inArray(devicePortTable.connectedDeviceId, unique), NOT_OWNER_RETIRED))
+        .groupBy(devicePortTable.connectedDeviceId),
+    ]);
+    for (const row of own) {
+      const at = out.get(row.id);
+      if (at) Object.assign(at, { used: at.used + row.used, declared: at.declared + row.declared });
+    }
+    for (const row of incoming) {
+      const at = row.id ? out.get(row.id) : undefined;
+      if (at) Object.assign(at, { used: at.used + row.count, declared: at.declared + row.count });
+    }
+    return out;
+  }
+
   /** Mọi dây chạm ít nhất một máy trong danh sách (dòng của máy đã thanh lý không tính). */
   async linksTouching(deviceIds: string[]): Promise<PortLink[]> {
     const unique = [...new Set(deviceIds)];

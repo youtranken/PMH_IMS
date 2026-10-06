@@ -45,6 +45,52 @@ describe('drawioUrl — tham số nhúng (AD-17)', () => {
   });
 });
 
+describe('parseDrawioEvent — ô đang chọn (export định dạng json, Q-23 06/10)', () => {
+  const message = (data: unknown) => JSON.stringify({ event: 'export', format: 'json', message: { action: 'export' }, scale: 1, data });
+
+  it('chỉ giữ id, loại ô và thuộc tính ims_* cần cho thẻ — bỏ mọi thứ khác', () => {
+    const event = parseDrawioEvent(
+      message({
+        version: '31.6.1',
+        pages: [
+          {
+            id: 'p1',
+            cells: [
+              { id: 'd1', type: 'node', parent: '1', label: 'SW-01', metadata: { ims_device_id: 'dev-1', ims_device_code: 'SW-01', ghi_chu: 'mật khẩu' } },
+              { id: 'e1', type: 'edge', source: 'd1', target: 'd2', metadata: { ims_link_id: 'link-1' } },
+              { id: 't1', type: 'node' },
+              { id: 7, type: 'node' },
+              'rác',
+            ],
+          },
+        ],
+      }),
+    );
+    expect(event).toEqual({
+      event: 'export',
+      format: 'json',
+      selection: [
+        { id: 'd1', kind: 'node', deviceId: 'dev-1', code: 'SW-01' },
+        { id: 'e1', kind: 'edge', linkId: 'link-1' },
+        { id: 't1', kind: 'node' },
+      ],
+    });
+  });
+
+  it.each([
+    ['không có trang', { version: 'x' }],
+    ['data là chuỗi', 'data'],
+    ['cells không phải mảng', { pages: [{ cells: 'x' }] }],
+  ])('%s → chọn rỗng, không vỡ', (_name, data) => {
+    expect(parseDrawioEvent(message(data))?.selection).toEqual([]);
+  });
+
+  it('thuộc tính ims_* không phải chuỗi bị bỏ', () => {
+    const event = parseDrawioEvent(message({ pages: [{ cells: [{ id: 'd1', type: 'node', metadata: { ims_device_id: { x: 1 } } }] }] }));
+    expect(event?.selection).toEqual([{ id: 'd1', kind: 'node' }]);
+  });
+});
+
 describe('parseDrawioEvent — chỉ nhận đúng hình dạng giao thức', () => {
   const ok: [string, unknown, Record<string, unknown>][] = [
     ['init', '{"event":"init"}', { event: 'init' }],
@@ -103,6 +149,8 @@ describe('serializeDrawioCommand — lệnh có kiểu → tin draw.io', () => {
     ['save', { action: 'save' }, { action: 'invokeAction', actionName: 'save' }],
     ['export xml', { action: 'export', format: 'xml' }, { action: 'export', format: 'xml' }],
     ['patch', { action: 'patch', patch: { u: {} } }, { action: 'patch', patch: { u: {} } }],
+    // Hỏi ô đang chọn bằng `export` json sẵn có của draw.io — không plugin (Q-23 06/10).
+    ['selectionQuery', { action: 'selectionQuery' }, { action: 'export', format: 'json', selection: 1, allPages: 0, includeData: 0 }],
   ];
   it.each(cases)('%s', (_name, command, expected) => {
     expect(JSON.parse(serializeDrawioCommand(command))).toEqual(expected);
