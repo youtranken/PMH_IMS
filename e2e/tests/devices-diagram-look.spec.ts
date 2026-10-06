@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, devicesPageButton, diagramBarAction, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_SA, catalogItem, devicesPageButton, diagramBarAction, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
 
 /*
  * "Hình dùng trên sơ đồ" (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
@@ -244,4 +244,95 @@ test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (kh�
   await save();
   const back = savedSize(diagramId, id);
   expect(back.height / back.width).toBeCloseTo(0.25, 2);
+});
+
+/**
+ * Ảnh máy 1U chụp kèm viền trắng lớn (1200×400, máy 1000×92 ở giữa) — đúng loại ảnh làm ô ảnh / hạch
+ * bản đồ quan hệ chỉ còn một vạch nhỏ (Q-23 06/10, ảnh 1 + 2 của chủ dự án). Vẽ bằng canvas của trình
+ * duyệt để không phải giữ tệp nhị phân trong repo.
+ */
+async function paddedPhoto(page: Page): Promise<Buffer> {
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, 1200, 400);
+    ctx.fillStyle = 'dimgray';
+    ctx.fillRect(100, 154, 1000, 92);
+    ctx.fillStyle = 'black';
+    for (let x = 140; x < 1060; x += 40) ctx.fillRect(x, 180, 24, 40);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  return Buffer.from(data, 'base64');
+}
+
+test('tải ảnh máy 1U có viền trắng: hộp cắt khoá theo mặt tủ 1U, tự bỏ viền → ô ảnh và hạch bản đồ quan hệ là một dải rộng (Q-23 06/10 A, B)', async ({ page }) => {
+  test.setTimeout(180_000);
+  await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const typeId = ((await (await page.request.get('/api/v1/catalog')).json()) as { deviceTypes: { id: string; name: string }[] }).deviceTypes.find((t) => t.name === 'Switch')!.id;
+  const siteId = await catalogItem(page, 'site', { code: `E2E-CA${stamp}`, name: `Site cắt ảnh E2E ${stamp}` });
+  const cabinetId = await catalogItem(page, 'cabinet', { siteId, code: `E2E-CT${stamp}`, uHeight: 12 });
+  const code = `SW-E2E-CAT${stamp}`;
+  const res = await page.request.post('/api/v1/devices', {
+    headers: await writeHeaders(page),
+    data: { code, name: `Switch ${code}`, deviceTypeId: typeId, siteId, cabinetId, rackUStart: 3, rackUSize: 1 },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  const id = ((await res.json()) as { device: { id: string } }).device.id;
+  const other = await device(page, `SW-E2E-CAU${stamp}`, typeId, `E2E-MDL-CA${stamp}`);
+  const linked = await page.request.post(`/api/v1/devices/${id}/ports/link`, { headers: await writeHeaders(page), data: { portLabel: '1', connectedDeviceId: other, connectedPort: '1', cableTypeId: '' } });
+  expect(linked.status(), await linked.text()).toBe(201);
+
+  await page.goto(`/devices/${id}`);
+  const front = page.getByRole('group', { name: 'Mặt trước' });
+  await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `vien-${stamp}.png`, mimeType: 'image/png', buffer: await paddedPhoto(page) });
+  const crop = page.getByRole('dialog', { name: 'Cắt ảnh thiết bị' });
+  await expect(crop.getByText(/Khung cắt khóa theo mặt tủ 1U/)).toBeVisible();
+  // Khung cắt đề xuất đã bỏ viền và theo tỉ lệ 1U (~10,86 : 1).
+  const frame = (await crop.getByRole('group', { name: /Khung cắt/ }).boundingBox())!;
+  expect(frame.width / frame.height).toBeGreaterThan(9.5);
+  expect(frame.width / frame.height).toBeLessThan(12);
+  await crop.getByRole('button', { name: 'Hủy' }).click();
+  await expect(crop).toBeHidden();
+  expect(sql(`SELECT coalesce(photo_front_file_id::text, '') FROM device WHERE id = '${id}'`)).toBe('');
+
+  // Đường hạnh phúc: tải lại, nhận khung cắt.
+  await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `vien-${stamp}.png`, mimeType: 'image/png', buffer: await paddedPhoto(page) });
+  await acceptCrop(page);
+  await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
+  const own = sql(`SELECT photo_front_file_id FROM device WHERE id = '${id}'`);
+  const img = front.getByRole('img', { name: 'Ảnh Mặt trước của máy' });
+  await expect(img).toHaveAttribute('src', `/api/v1/devices/${id}/photo/front?v=${own}`);
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  // Ảnh đã cắt đúng 1U: ô ảnh là một dải rộng hết khung (không vạch giữa ô cao 160px), không báo "Cắt lại".
+  const box = (await img.boundingBox())!;
+  const slot = (await front.locator('.photo-slot-drop').boundingBox())!;
+  expect(box.width / box.height).toBeGreaterThan(9);
+  expect(box.width).toBeGreaterThan(slot.width * 0.8);
+  await expect(front.getByRole('button', { name: 'Cắt lại ảnh — Mặt trước' })).toHaveCount(0);
+  // Hạch bản đồ quan hệ: ảnh là dải rộng hết thẻ hạch.
+  const hub = page.getByTestId('rmap-hub');
+  const hubImg = hub.getByRole('img');
+  await expect.poll(() => hubImg.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  const hubBox = (await hub.boundingBox())!;
+  const hubImgBox = (await hubImg.boundingBox())!;
+  expect(hubImgBox.width).toBeGreaterThan(hubBox.width * 0.8);
+  // Hộp ảnh tính cả viền đệm nền trắng quanh ảnh, nên tỉ lệ thấp hơn ảnh một chút.
+  expect(hubImgBox.width / hubImgBox.height).toBeGreaterThan(7);
+  if (process.env.IMS_SHOT_DIR) {
+    await hub.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/1.png` });
+    await front.scrollIntoViewIfNeeded();
+    await front.screenshot({ path: `${process.env.IMS_SHOT_DIR}/2.png` });
+  }
+
+  // Đổi Số U sang 2 → ảnh 1U không còn đúng tỉ lệ: ô báo "chưa đúng tỉ lệ 2U" + Cắt lại.
+  const patched = await page.request.patch(`/api/v1/devices/${id}`, { headers: await writeHeaders(page), data: { rackUStart: 3, rackUSize: 2 } });
+  expect(patched.status(), await patched.text()).toBe(200);
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText('Ảnh chưa đúng tỉ lệ 2U.')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Mặt trước' }).getByRole('button', { name: 'Cắt lại ảnh — Mặt trước' })).toBeVisible();
 });

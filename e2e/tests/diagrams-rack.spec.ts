@@ -379,3 +379,132 @@ test.describe('Sơ đồ mạng — "Chuyển máy sang tủ này" ghi kho có h
     expect(stored).toMatch(/id="cell-mover">\s*<mxCell[^>]*>\s*<mxGeometry[^>]*y="95"/);
   });
 });
+
+test.describe('Sơ đồ mạng — máy trong khung tủ chỉ theo U kho (Q-23 06/10 C, D)', () => {
+  const RACK_STYLE =
+    'shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=14.8;container=1;collapsible=0;childLayout=rack;allowGaps=1;marginLeft=33;marginRight=9;marginTop=21;marginBottom=22;numDisp=descend;verticalLabelPosition=bottom;verticalAlign=top;';
+
+  /** Mặt máy 1U đã cắt đúng tỉ lệ 19" (1086×100) — vẽ bằng canvas, không giữ tệp nhị phân trong repo. */
+  async function rackPhoto(page: Page): Promise<Buffer> {
+    const data = await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1086;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = 'dimgray';
+      ctx.fillRect(0, 0, 1086, 100);
+      ctx.fillStyle = 'black';
+      for (let x = 60; x < 1020; x += 40) ctx.fillRect(x, 30, 24, 40);
+      return canvas.toDataURL('image/png').split(',')[1];
+    });
+    return Buffer.from(data, 'base64');
+  }
+
+  test('ảnh 3–5 của chủ dự án: mở bản vẽ → máy tủ khác 4U được đặt 1U, ảnh lấp ô U, nhãn một dòng (Lưu vẫn tắt); Hủy chuyển → ra ngoài khung; máy chưa khai U kéo vào khung → hỏi U, Hủy → cột "Chưa khai U"', async ({ page }) => {
+    test.setTimeout(300_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const rack = await seedRack(page);
+    const cabinetB = `E2E-RB${rack.stamp}`;
+    const cabinetBId = await catalogItem(page, 'cabinet', { siteId: rack.siteId, code: cabinetB, uHeight: 12 });
+    const inB = { ...rack, cabinetId: cabinetBId };
+    const mover = `SW-E2E-KT${rack.stamp}`;
+    const moverId = await createDevice(page, rack, mover, { rackUStart: 3, rackUSize: 1 });
+    const own = `SW-E2E-KA${rack.stamp}`;
+    const ownId = await createDevice(page, inB, own, { rackUStart: 8, rackUSize: 1 });
+    const next = `SW-E2E-KB${rack.stamp}`;
+    const nextId = await createDevice(page, inB, next, { rackUStart: 9, rackUSize: 1 });
+    const loose = `SW-E2E-KU${rack.stamp}`;
+    const looseId = await createDevice(page, inB, loose);
+    const up = await page.request.post('/api/v1/files', {
+      headers: await writeHeaders(page),
+      multipart: { ownerType: 'device', ownerId: ownId, file: { name: `mat-1u-${rack.stamp}.png`, mimeType: 'image/png', buffer: await rackPhoto(page) } },
+    });
+    expect(up.status(), await up.text()).toBe(201);
+    const photoId = ((await up.json()) as { id: string }).id;
+    expect((await page.request.patch(`/api/v1/devices/${ownId}/photos`, { headers: await writeHeaders(page), data: { front: photoId } })).status()).toBe(200);
+
+    const created = await page.request.post('/api/v1/diagrams', { headers: await writeHeaders(page), data: { name: `E2E Tủ theo U ${rack.stamp}`, nodeType: 'room' } });
+    expect(created.status(), await created.text()).toBe(201);
+    const diagramId = ((await created.json()) as { id: string }).id;
+    await stepUpViaApi(page, secret, 'diagram');
+    // Như bản vẽ "PMH Tower": các ô trong khung còn cỡ trang tự do (4U), máy tủ A nằm trong khung tủ B;
+    // máy chưa khai U đứng ngoài khung.
+    const cell = (id: string, deviceId: string, code: string, parent: string, geo: string, extra = '') =>
+      `<UserObject label="${code}" ims_device_id="${deviceId}" ims_device_code="${code}"${extra} id="${id}"><mxCell style="align=center;" vertex="1" parent="${parent}">${geo}</mxCell></UserObject>`;
+    const xml =
+      '<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>' +
+      `<UserObject label="Tủ ${cabinetB}" ims_cabinet_id="${cabinetBId}" id="frame-b"><mxCell style="${RACK_STYLE}" vertex="1" parent="1"><mxGeometry x="300" y="40" width="204" height="220.6" as="geometry"/></mxCell></UserObject>` +
+      cell('cell-own', ownId, own, 'frame-b', '<mxGeometry x="33" y="35.8" width="162" height="59.2" as="geometry"/>', ' ims_photo="front"') +
+      cell('cell-next', nextId, next, 'frame-b', '<mxGeometry x="33" y="21" width="162" height="59.2" as="geometry"/>') +
+      cell('cell-mover', moverId, mover, 'frame-b', '<mxGeometry x="33" y="109.8" width="162" height="59.2" as="geometry"/>') +
+      cell('cell-loose', looseId, loose, '1', '<mxGeometry x="40" y="120" width="60" height="60" as="geometry"/>') +
+      '</root></mxGraphModel></diagram></mxfile>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600px" height="300px" viewBox="0 0 600 300"><g data-cell-id="frame-b"><rect x="300" y="40" width="204" height="220"/></g></svg>';
+    const seeded = await page.request.post(`/api/v1/diagrams/${diagramId}/versions`, { headers: await writeHeaders(page), data: { xml, svg, basedOnVersionId: null } });
+    expect(seeded.status(), await seeded.text()).toBe(201);
+
+    await page.goto(`/diagrams/${diagramId}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByText(`Máy ${mover} trong kho thuộc tủ ${rack.cabinetCode}, không phải tủ của khung "Tủ ${cabinetB}"`)).toBeVisible();
+    const drawio = page.frameLocator('iframe[title="Khung vẽ draw.io"]');
+    // Nhãn một dòng "mã · IP" (máy chưa có IP → chỉ mã) bên phải — không còn nhãn ba dòng chồng nhau.
+    await expect(drawio.getByText(own, { exact: true })).toBeVisible();
+    await expect(drawio.getByText(next, { exact: true })).toBeVisible();
+    // IMS đặt lại hình nhưng không coi là người vẽ đã sửa: Lưu vẫn tắt.
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
+    const ownLabel = (await drawio.getByText(own, { exact: true }).boundingBox())!;
+    const nextLabel = (await drawio.getByText(next, { exact: true }).boundingBox())!;
+    // U8 và U9 sát nhau: hai nhãn một dòng không chồng lên nhau.
+    expect(ownLabel.y - nextLabel.y).toBeGreaterThanOrEqual(nextLabel.height - 2);
+    const frameShot = page.locator('iframe[title="Khung vẽ draw.io"]');
+    if (process.env.IMS_SHOT_DIR) {
+      await frameShot.screenshot({ path: `${process.env.IMS_SHOT_DIR}/3.png` });
+      await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/4.png`, clip: { x: Math.max(0, ownLabel.x - 260), y: Math.max(0, ownLabel.y - 80), width: 520, height: 200 } });
+    }
+
+    // Hủy "Chuyển máy sang tủ này" → máy tủ A ra NGOÀI khung, không ghi kho.
+    await page.getByRole('button', { name: 'Chuyển máy sang tủ này' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Chuyển máy sang tủ này?' });
+    await dialog.getByRole('button', { name: 'Hủy' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled();
+    expect(sql(`SELECT cabinet_id FROM device WHERE id = '${moverId}'`)).toBe(rack.cabinetId);
+
+    // Máy chưa khai U kéo (chuột thật trong trình vẽ) vào khung tủ của nó → hỏi khai U.
+    const looseLabel = (await drawio.getByText(loose, { exact: true }).first().boundingBox())!;
+    const frameLabel = (await drawio.getByText(`Tủ ${cabinetB}`, { exact: true }).boundingBox())!;
+    await page.mouse.move(looseLabel.x + looseLabel.width / 2, looseLabel.y - 25);
+    await page.mouse.down();
+    await page.mouse.move(frameLabel.x + frameLabel.width / 2, frameLabel.y - 40, { steps: 20 });
+    await page.mouse.up();
+    const declare = page.getByRole('dialog', { name: 'Khai U cho máy này?' });
+    await expect(declare).toBeVisible();
+    await expect(declare.getByText(new RegExp(`Khai ${loose} ở tủ ${cabinetB}, U bắt đầu = \\d+, Số U = 1\\.`))).toBeVisible();
+    await declare.getByRole('button', { name: 'Hủy, để ở cột Chưa khai U' }).click();
+    await expect(declare).toHaveCount(0);
+    expect(sql(`SELECT coalesce(rack_u_start::text, '') FROM device WHERE id = '${looseId}'`)).toBe('');
+    await expect(drawio.getByText(`Tủ ${cabinetB} · Chưa khai U`)).toBeVisible();
+    if (process.env.IMS_SHOT_DIR) {
+      // Thu cả trang vào khung nhìn (Ctrl+Shift+H của draw.io) để thấy máy ra ngoài khung và cột mới.
+      await drawio.locator('.geDiagramContainer').click({ position: { x: 20, y: 20 } });
+      await page.keyboard.press('Control+Shift+H');
+      await frameShot.screenshot({ path: `${process.env.IMS_SHOT_DIR}/5.png` });
+    }
+
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    const stored = sql(`SELECT xml FROM diagram_version WHERE id = '${((await saved.json()) as { id: string }).id}'`);
+    // Máy tủ A ở ngoài khung; máy của tủ cao đúng 1U ở U kho (U8 của tủ 12U: đỉnh ô ở 21 + 4 × 14.8 = 80.2).
+    expect(stored).toMatch(/id="cell-mover">\s*<mxCell[^>]*parent="1"/);
+    expect(stored).toMatch(/id="cell-own">\s*<mxCell[^>]*>\s*<mxGeometry height="14.8"[^>]*y="80.2"/);
+    expect(stored).toMatch(/id="cell-next">\s*<mxCell[^>]*>\s*<mxGeometry height="14.8"[^>]*y="65.4"/);
+    // Máy chưa khai U nằm trong cột "Chưa khai U" (khung mang ims_cabinet_id của tủ B).
+    const column = new RegExp(`<UserObject[^>]*ims_cabinet_id="${cabinetBId}"[^>]*>\\s*<mxCell[^>]*stackLayout`).exec(stored)?.[0] ?? '';
+    const columnId = /\sid="([^"]+)"/.exec(column)?.[1];
+    expect(columnId, stored).toBeTruthy();
+    expect(stored).toMatch(new RegExp(`id="cell-loose">\\s*<mxCell[^>]*parent="${columnId}"`));
+  });
+});
