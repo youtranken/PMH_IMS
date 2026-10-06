@@ -1061,7 +1061,7 @@ export class DiagramsService {
       const xml = dehydrateDiagramXml(buildRackXml(frame.layout, latest?.xml));
       const index = buildCellIndex(xml);
       const snapshot = await this.snapshot(index);
-      if (sameAsLatest(latest, xml, snapshot)) return { id: latest!.id, unchanged: true };
+      if (latest && sameAsLatest(latest, xml, snapshot)) return { id: latest.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
       const id = await this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
@@ -1185,7 +1185,7 @@ export class DiagramsService {
     const built = await this.db.transaction(async (tx) => {
       await this.lockLive(tx, diagramId);
       const latest = await this.latestWithin(tx, diagramId);
-      if (sameAsLatest(latest, xml, snapshot)) return { id: latest!.id, unchanged: true };
+      if (latest && sameAsLatest(latest, xml, snapshot)) return { id: latest.id, unchanged: true };
       const diff = diffCellIndex(latest?.cellIndex ?? null, index);
       const id = await this.insertVersion(tx, actor, diagramId, {
         seq: (latest?.seq ?? 0) + 1,
@@ -1786,8 +1786,8 @@ const PREVIEW_ONLY_SUMMARY = 'Tạo ảnh xem cho bản dựng tự động';
  * khô, cùng bản chụp thiết bị: bấm lại khi kho chưa đổi gì không được đẻ thêm phiên bản (Q-23 06/10).
  * Không xét ảnh xem: lượt dựng không tạo ảnh xem, nên một phiên bản dựng thêm cũng không có gì hơn.
  */
-function sameAsLatest(latest: { xml: string; deviceSnapshot: DeviceSnapshotEntry[] } | null, xml: string, snapshot: DeviceSnapshotEntry[]): boolean {
-  return latest !== null && drawingKey(latest.xml) === drawingKey(xml) && sameSnapshot(latest.deviceSnapshot, snapshot);
+function sameAsLatest(latest: { xml: string; deviceSnapshot: DeviceSnapshotEntry[] }, xml: string, snapshot: DeviceSnapshotEntry[]): boolean {
+  return drawingKey(latest.xml) === drawingKey(xml) && sameSnapshot(latest.deviceSnapshot, snapshot);
 }
 
 function sameSnapshot(a: DeviceSnapshotEntry[], b: DeviceSnapshotEntry[]): boolean {
