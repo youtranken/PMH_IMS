@@ -52,7 +52,7 @@ class PhotoPairDto {
 /**
  * Danh mục Model thiết bị (Q-26). Ai thêm được thiết bị thì TẠO được model mới (ngay trong form thiết
  * bị); SỬA / XOÁ / đổi ảnh model có sẵn đổi đặc tính của cả loạt máy nên chỉ SA/Admin — cùng luật ảnh
- * model của Q-23 05/10.
+ * model của Q-23.
  */
 @NoStepUp()
 @Controller('api/v1/device-models')

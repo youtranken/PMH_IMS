@@ -78,7 +78,7 @@ describe('Form thiết bị — khai nhanh', () => {
     render({ cloneFrom: SOURCE });
     expect(screen.getByRole('dialog', { name: 'Nhân bản từ LT-01' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Tên thiết bị' })).toHaveValue('Laptop Dell');
-    expect(screen.getByRole('textbox', { name: 'Model' })).toHaveValue('Latitude 5440');
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('Latitude 5440');
     expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Serial' })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Người sử dụng' })).toHaveValue('');
@@ -97,6 +97,6 @@ describe('Form thiết bị — khai nhanh', () => {
     expect(posts[0]).toMatchObject({ code: 'LT-02', warrantyEnd: '2027-03-15', status: 'in_use' });
     expect(onSaved.mock.calls[0][1]).toEqual({ keepOpen: true });
     expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'Model' })).toHaveValue('Latitude 5440');
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('Latitude 5440');
   });
 });

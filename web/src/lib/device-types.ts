@@ -27,6 +27,8 @@ export interface DeviceRow {
   /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U; vắng ở dữ liệu giả của bài kiểm cũ. */
   rackUStart?: number | null;
   rackUSize?: number | null;
+  /** Model danh mục (Q-26); trống = "chưa có Model". */
+  deviceModelId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

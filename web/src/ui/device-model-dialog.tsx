@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { DEVICE_MODELS_KEY, type DeviceModel } from '@/lib/device-models';
-import type { Me } from '@/lib/me';
 import { uploadFile } from '@/lib/upload';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { FilePicker } from '@/ui/file-picker';
@@ -28,16 +27,19 @@ interface Duplicate {
  *
  * Trùng khoá chuẩn hoá (409 `DEVICE_MODEL_DUPLICATE`) báo tại ô Mã model và mời dùng model sẵn có —
  * không có đường tạo bản thứ hai. Ảnh mặt trước chỉ có khi SỬA một model đã có và người dùng là
- * Admin/SA: ảnh model đổi hình của cả loạt máy (Q-23 05/10).
+ * Admin/SA: ảnh model đổi hình của cả loạt máy (Q-23).
  */
 export function DeviceModelDialog({
-  me,
+  csrfToken,
+  canManage = false,
   model = null,
   initial,
   onClose,
   onSaved,
 }: {
-  me: Me;
+  csrfToken: string;
+  /** SA/Admin: được đổi ảnh model (ảnh đổi hình của cả loạt máy). */
+  canManage?: boolean;
   /** Model đang sửa; vắng = tạo mới. */
   model?: DeviceModel | null;
   /** Giá trị điền sẵn khi tạo mới (form thiết bị đưa chữ đang gõ và loại đang chọn). */
@@ -52,7 +54,6 @@ export function DeviceModelDialog({
   const editing = Boolean(model);
   const modelId = model?.id ?? '';
   const modelName = model?.model ?? '';
-  const canManage = me.role === 'sa' || me.role === 'admin';
   const [form, setForm] = useState({
     deviceTypeId: model?.deviceTypeId ?? initial?.deviceTypeId ?? '',
     model: model?.model ?? initial?.model ?? '',
@@ -106,7 +107,7 @@ export function DeviceModelDialog({
     try {
       const saved = await apiFetch<DeviceModel>(editing ? `/api/v1/device-models/${modelId}` : '/api/v1/device-models', {
         method: editing ? 'PATCH' : 'POST',
-        csrfToken: me.csrfToken,
+        csrfToken,
         body: JSON.stringify(body),
       });
       await finish(saved, t(editing ? 'deviceModels.updated' : 'deviceModels.created', { model: saved.model }));
@@ -127,10 +128,10 @@ export function DeviceModelDialog({
     setCropping(null);
     setBusy(true);
     try {
-      const uploaded = await uploadFile<{ id: string }>('/api/v1/files', file, me.csrfToken, { ownerType: 'device_model', ownerId: modelId });
+      const uploaded = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_model', ownerId: modelId });
       const saved = await apiFetch<DeviceModel>(`/api/v1/device-models/${modelId}/photos`, {
         method: 'PATCH',
-        csrfToken: me.csrfToken,
+        csrfToken,
         body: JSON.stringify({ front: uploaded.id }),
       });
       setPhotoId(saved.photoFrontFileId);

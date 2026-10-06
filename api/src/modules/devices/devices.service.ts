@@ -567,6 +567,14 @@ export class DevicesService {
     }
     const start = effectiveOf(values)<number | null>('rackUStart', current?.rackUStart ?? null);
     if (model.rackMountable && start !== null) values.rackUSize = model.uSize;
+    // Máy in, camera, AP… không bao giờ vào tủ (Q-23): chặn ở kho, sơ đồ chỉ là ảnh chiếu.
+    const cabinetId = effectiveOf(values)<string | null>('cabinetId', current?.cabinetId ?? null);
+    if (!model.rackMountable && cabinetId) {
+      throw new BadRequestException({
+        code: 'DEVICE_MODEL_NOT_RACKABLE',
+        message: `Model ${model.model} không gắn tủ — bỏ chọn tủ (máy chỉ cần Site), hoặc chọn model gắn tủ.`,
+      });
+    }
   }
 
   /**

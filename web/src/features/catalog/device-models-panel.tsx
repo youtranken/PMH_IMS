@@ -163,7 +163,8 @@ export function DeviceModelsPanel({ me, adding, onAddingChange }: { me: Me; addi
       )}
       {adding || editing ? (
         <DeviceModelDialog
-          me={me}
+          csrfToken={me.csrfToken}
+          canManage={canManage}
           model={editing}
           onClose={() => {
             setEditing(null);

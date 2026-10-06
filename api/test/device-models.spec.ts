@@ -154,6 +154,18 @@ describe('Model thiết bị · danh mục (0061, Q-26)', () => {
     expect(await left(`SELECT count(*) n FROM device_model WHERE model ILIKE '%E2E%'`)).toBe(0);
   });
 
+  it('máy thuộc model KHÔNG gắn tủ: gắn tủ hay khai U bị từ chối 400 gắn vào ô Tủ (11.2, Q-23 06/10 E.21)', async () => {
+    const printer = await models.create(ACTOR, { deviceTypeId: printerType, model: 'E2E-PRINTER', rackMountable: false });
+    await expect(
+      devices.create(ACTOR, { code: 'PR-E2E-MD-A', name: 'Máy in', deviceTypeId: printerType, deviceModelId: printer.id, siteId, cabinetId }),
+    ).rejects.toMatchObject({ response: { code: 'DEVICE_MODEL_NOT_RACKABLE' } });
+    const { device } = await devices.create(ACTOR, { code: 'PR-E2E-MD-B', name: 'Máy in', deviceTypeId: printerType, deviceModelId: printer.id, siteId });
+    expect(device).toMatchObject({ cabinetId: null, rackUStart: null });
+    // Máy đang trong tủ (chưa có Model) đổi sang model không gắn tủ cũng bị chặn.
+    const { device: racked } = await devices.create(ACTOR, { code: 'PR-E2E-MD-C', name: 'Máy in', deviceTypeId: printerType, siteId, cabinetId });
+    await expect(devices.update(ACTOR, racked.id, { deviceModelId: printer.id })).rejects.toMatchObject({ response: { code: 'DEVICE_MODEL_NOT_RACKABLE' } });
+  });
+
   it('model không gắn tủ → bỏ gắn tủ thì Số U bỏ theo; model đổi sang không gắn tủ khi còn máy trong tủ → 409', async () => {
     const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-FLIP', rackMountable: true, uSize: 1 });
     await devices.create(ACTOR, { code: 'SW-E2E-MD-FLIP', name: 'Máy lật', deviceTypeId: switchType, deviceModelId: model.id, siteId, cabinetId, rackUStart: 1 });

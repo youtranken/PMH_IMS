@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Me } from '@/lib/me';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { DeviceModelDialog } from './device-model-dialog';
 
-const ME = { id: 'u1', email: 'tv@e2e.local', fullName: 'Thành viên', role: 'member', csrfToken: 'c' } as unknown as Me;
 const LISTS = {
   sites: [],
   cabinets: [],
@@ -34,7 +32,7 @@ describe('Hộp tạo model (Q-26) — dùng ở Danh mục và ngay trong form 
     const onSaved = vi.fn();
     renderWithI18n(
       <ToastProvider>
-        <DeviceModelDialog me={ME} initial={{ model: 'XG-430' }} onClose={() => undefined} onSaved={onSaved} />
+        <DeviceModelDialog csrfToken="c" initial={{ model: 'XG-430' }} onClose={() => undefined} onSaved={onSaved} />
       </ToastProvider>,
     );
     const user = userEvent.setup();
@@ -59,7 +57,7 @@ describe('Hộp tạo model (Q-26) — dùng ở Danh mục và ngay trong form 
     const onSaved = vi.fn();
     renderWithI18n(
       <ToastProvider>
-        <DeviceModelDialog me={ME} initial={{ model: 'c9300 48p', deviceTypeId: 't-sw' }} onClose={() => undefined} onSaved={onSaved} />
+        <DeviceModelDialog csrfToken="c" initial={{ model: 'c9300 48p', deviceTypeId: 't-sw' }} onClose={() => undefined} onSaved={onSaved} />
       </ToastProvider>,
     );
     const user = userEvent.setup();
