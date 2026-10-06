@@ -466,7 +466,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(await within(dialog).findByText('Chuyển UPS-E2E-03 từ TU-01 sang TU-04, U bắt đầu = 27, Số U = 1.')).toBeInTheDocument();
     expect(deviceWrites()).toHaveLength(0);
     const user = userEvent.setup();
-    await user.click(within(dialog).getByRole('button', { name: 'Huỷ, đưa máy về chỗ cũ' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Hủy, đưa máy về chỗ cũ' }));
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'export' && m.format === 'xml')).toBe(true));
     fromDrawio({ event: 'export', format: 'xml', currentPage: 0, xml: `<mxfile><diagram id="p1">${wrap(body('dev-ups', 'UPS-E2E-03'))}</diagram></mxfile>` });
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
@@ -508,7 +508,7 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Chuyển máy sang tủ này' }));
     const dialog = await screen.findByRole('dialog', { name: 'Chuyển máy sang tủ này?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Huỷ' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Hủy' }));
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
     expect(deviceWrites()).toHaveLength(0);
   });
