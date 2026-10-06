@@ -1,4 +1,4 @@
-import { Resvg, renderAsync } from '@resvg/resvg-js';
+import { renderAsync } from '@resvg/resvg-js';
 
 /** Ảnh thật nhận vào bản vẽ — đúng tập ảnh `files` cho tải lên (kiểm theo nội dung). */
 const PHOTO_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp']);
@@ -22,27 +22,68 @@ export interface PhotoImage {
  */
 export async function photoThumbnail(bytes: Buffer, mime: string, maxPx: number): Promise<PhotoImage | null> {
   if (!PHOTO_MIMES.has(mime)) return null;
+  const size = photoSize(bytes, mime);
+  if (!size || !(size.width > 0 && size.height > 0)) return null;
+  const { width, height } = size;
+  if (Math.max(width, height) <= maxPx) return { mime, bytes, width, height };
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
     `<image xlink:href="data:${mime};base64,${bytes.toString('base64')}"/></svg>`;
-  let width = 0;
-  let height = 0;
-  try {
-    const probe = new Resvg(svg);
-    // Ảnh không giải mã được thì resvg bỏ thẻ <image> và dựng khung mặc định 100×100 — nhận ra
-    // bằng việc không còn gì để vẽ.
-    if (!probe.getBBox()) return null;
-    width = probe.width;
-    height = probe.height;
-  } catch {
-    return null;
-  }
-  if (!(width > 0 && height > 0)) return null;
-  if (Math.max(width, height) <= maxPx) return { mime, bytes, width, height };
   try {
     const rendered = await renderAsync(svg, { fitTo: { mode: width >= height ? 'width' : 'height', value: maxPx } });
     return { mime: 'image/png', bytes: rendered.asPng(), width: rendered.width, height: rendered.height };
   } catch {
     return null;
   }
+}
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Cỡ điểm ảnh đọc từ ĐẦU tệp, không giải mã. Thay lượt dò `new Resvg(svg)` đồng bộ: dựng `Resvg`
+ * nạp cả bộ phông hệ thống mỗi lần (~100 ms, chặn vòng sự kiện), chỉ để hỏi cỡ.
+ *
+ * Phải nhận ĐÚNG tập ảnh resvg nhận, vì ảnh qua được đây mà resvg không vẽ được thì bản vẽ có ô ảnh
+ * trống: nhãn `image/webp` thì resvg bỏ (null); nhãn png/jpeg thì resvg đọc theo NỘI DUNG, nên ở
+ * đây cũng vậy — PNG (24 byte đầu: chữ ký + IHDR) hoặc JPEG (đoạn SOF đầu tiên). GIF trong nhãn
+ * png/jpeg resvg cũng đọc, nhưng `files` không bao giờ nhận GIF nên không đọc ở đây.
+ */
+export function photoSize(bytes: Buffer, mime: string): { width: number; height: number } | null {
+  if (mime !== 'image/png' && mime !== 'image/jpeg') return null;
+  if (bytes.length >= 24 && bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+  }
+  if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8) return jpegSize(bytes);
+  return null;
+}
+
+/** SOF0..SOF15 trừ DHT (C4), JPG (C8), DAC (CC) — ba mã đó cùng dải nhưng không mang cỡ ảnh. */
+function isSof(marker: number): boolean {
+  return marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+}
+
+function jpegSize(bytes: Buffer): { width: number; height: number } | null {
+  let at = 2;
+  while (at + 4 <= bytes.length) {
+    if (bytes[at] !== 0xff) return null;
+    const marker = bytes[at + 1];
+    // 0xFF đệm giữa các đoạn được phép lặp.
+    if (marker === 0xff) {
+      at += 1;
+      continue;
+    }
+    // Mã đứng một mình, không có trường độ dài.
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
+      at += 2;
+      continue;
+    }
+    if (marker === 0xd9 || marker === 0xda) return null;
+    const length = bytes.readUInt16BE(at + 2);
+    if (isSof(marker)) {
+      if (at + 9 > bytes.length) return null;
+      return { width: bytes.readUInt16BE(at + 7), height: bytes.readUInt16BE(at + 5) };
+    }
+    at += 2 + length;
+  }
+  return null;
 }
