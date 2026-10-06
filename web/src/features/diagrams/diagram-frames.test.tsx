@@ -403,7 +403,8 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(await screen.findAllByRole('dialog', { name: 'Chuyển máy sang tủ này?' })).toHaveLength(1);
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
     const writes = (vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][]).filter(([, init]) => init?.method && init.method !== 'GET' && !String(init.method).includes('GET'));
-    expect(writes.every(([url]) => String(url).includes('/presence'))).toBe(true);
+    // `/cable-status` là lượt ĐỌC (POST chỉ để mang XML): máy mới xuất hiện thì hỏi dây chưa vẽ.
+    expect(writes.every(([url]) => String(url).includes('/presence') || String(url).includes('/cable-status'))).toBe(true);
   });
 
   it('mở bản vẽ đã lưu có máy nằm sai khung tủ → báo ngay khi mở (chưa cần sửa gì), không tự sửa bản vẽ lúc mở', async () => {

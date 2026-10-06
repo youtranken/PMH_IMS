@@ -40,7 +40,7 @@ const FILE = '<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCel
 const DRAFT = '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="t1" value="vẽ dở E2E" vertex="1" parent="1"><mxGeometry width="80" height="30" as="geometry"/></mxCell></root></mxGraphModel>';
 
 async function openEditor(content: Record<string, unknown> = {}) {
-  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+  const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
     const url = String(input);
     if (url.includes('/editor-settings')) return Promise.resolve(jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60, draftKeepHours: 24 }));
     if (url.includes('/d1/content')) return Promise.resolve(jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: FILE, svg: '<svg/>' }, draftKey: KEY, ...content }));
@@ -98,7 +98,8 @@ describe('Bản vẽ dở — cất và khôi phục (Q-23 06/10)', () => {
     expect(loads.at(-1)).toMatchObject({ xml: DRAFT, autosave: 1 });
     expect(await screen.findByText('Đã nạp bản đang vẽ dở — chưa lưu, bấm Lưu để giữ.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
-    expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes('/versions') && (init as RequestInit | undefined)?.method === 'POST')).toBe(false);
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit | undefined][];
+    expect(calls.some(([url, init]) => String(url).includes('/versions') && init?.method === 'POST')).toBe(false);
   });
 
   it('Bỏ → xoá bản dở, không nạp gì', async () => {
