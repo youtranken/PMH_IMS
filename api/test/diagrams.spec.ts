@@ -402,6 +402,23 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       const rows = await service.history(diagramId);
       expect(rows[0]).toMatchObject({ action: 'version.restored', actorName: SA.fullName });
     });
+
+    it('khôi phục một bản trùng hệt bản mới nhất: không phiên bản, không lịch sử, không nhật ký — trả bản mới nhất kèm unchanged', async () => {
+      const before = await service.versions(diagramId);
+      const latest = before[0];
+      const v1 = before[before.length - 1];
+      const counts = async () => [
+        await count(`SELECT count(*)::int AS n FROM diagram_version WHERE diagram_id = $1`, [diagramId]),
+        await count(`SELECT count(*)::int AS n FROM diagram_history WHERE diagram_id = $1`, [diagramId]),
+        await count(`SELECT count(*)::int AS n FROM audit_log WHERE object_id = $1`, [diagramId]),
+      ];
+      const was = await counts();
+      // Bản mới nhất là bản khôi phục từ #1 ở bài trên: khôi phục #1 lần nữa không đổi gì; khôi phục
+      // chính bản mới nhất cũng vậy.
+      expect(await service.restore(SA.email, diagramId, v1.id)).toMatchObject({ id: latest.id, seq: latest.seq, unchanged: true });
+      expect(await service.restore(SA.email, diagramId, latest.id)).toMatchObject({ id: latest.id, unchanged: true });
+      expect(await counts()).toEqual(was);
+    });
   });
 
   describe('Thiết bị kho — XML khô, hydrate từ kho, thông tin máy (AD-18)', () => {

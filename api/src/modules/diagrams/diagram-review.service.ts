@@ -419,8 +419,9 @@ export class DiagramReviewService implements OnModuleInit {
   async restoreOfficial(actor: Reviewer, diagramId: string, versionId: string): Promise<PublishResult> {
     if (actor.role === 'member') throw managerOnly();
     return this.db.transaction(async (tx) => {
-      const restoredId = await this.diagrams.restoreWithin(tx, actor.email, diagramId, versionId);
-      return this.publishWithin(tx, actor.email, diagramId, restoredId, { approvalId: null, action: 'khôi phục làm bản chính thức' });
+      // Bản chọn trùng bản mới nhất thì phát hành chính bản mới nhất — không đẻ thêm bản sao.
+      const restored = await this.diagrams.restoreWithin(tx, actor.email, diagramId, versionId);
+      return this.publishWithin(tx, actor.email, diagramId, restored.id, { approvalId: null, action: 'khôi phục làm bản chính thức' });
     });
   }
 

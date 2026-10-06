@@ -1390,6 +1390,7 @@ export default {
       restoreTitle: 'Khôi phục phiên bản #{{seq}}?',
       restoreMessage: 'IMS tạo một phiên bản MỚI chép nội dung của phiên bản #{{seq}}; không phiên bản nào bị xóa.',
       restored: 'Đã khôi phục thành phiên bản #{{seq}}.',
+      restoreSame: 'Bản này trùng bản mới nhất — không tạo phiên bản mới.',
       labelTitle: 'Tên phiên bản #{{seq}}',
       labelField: 'Tên phiên bản',
       labelHint: 'Để trống rồi Lưu để bỏ tên.',

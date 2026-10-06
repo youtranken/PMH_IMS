@@ -1455,18 +1455,22 @@ export class DiagramsService {
     return saved.unchanged ? { ...item, unchanged: true } : item;
   }
 
-  /** Khôi phục = phiên bản MỚI chép XML của bản được chọn (không xoá, không sửa gì). */
+  /**
+   * Khôi phục = phiên bản MỚI chép XML của bản được chọn (không xoá, không sửa gì). Bản chọn trùng
+   * hệt bản mới nhất thì không có gì để khôi phục: trả bản mới nhất kèm `unchanged`, như lưu không đổi.
+   */
   async restore(actor: string, diagramId: string, versionId: string): Promise<VersionItem> {
-    const id = await this.db.transaction((tx) => this.restoreWithin(tx, actor, diagramId, versionId));
-    return this.versionItem(diagramId, id);
+    const restored = await this.db.transaction((tx) => this.restoreWithin(tx, actor, diagramId, versionId));
+    const item = await this.versionItem(diagramId, restored.id);
+    return restored.unchanged ? { ...item, unchanged: true } : item;
   }
 
   /**
    * Khôi phục trong `tx` của nơi gọi — "khôi phục bản chính thức cũ" khôi phục rồi phát hành
    * trong CÙNG transaction, để không bao giờ còn lại một phiên bản khôi phục mà chưa phát hành.
-   * Trả id phiên bản mới.
+   * Trả id phiên bản mới, hoặc id bản mới nhất kèm `unchanged` khi bản chọn trùng hệt nó.
    */
-  async restoreWithin(tx: Tx, actor: string, diagramId: string, versionId: string): Promise<string> {
+  async restoreWithin(tx: Tx, actor: string, diagramId: string, versionId: string): Promise<{ id: string; unchanged: boolean }> {
     const [source] = await tx
       .select()
       .from(diagramVersionTable)
@@ -1476,8 +1480,13 @@ export class DiagramsService {
     const snapshot = await this.snapshot(source.cellIndex);
     await this.lockLive(tx, diagramId);
     const latest = await this.latestWithin(tx, diagramId);
+    // Cùng luật với lưu không đổi: một phiên bản "khôi phục" giống hệt bản đứng trước chỉ làm dài
+    // chuỗi lịch sử mà không đổi gì để quay về.
+    if (latest && drawingKey(latest.xml) === drawingKey(source.xml) && latest.hasSvg && sameSnapshot(latest.deviceSnapshot, snapshot)) {
+      return { id: latest.id, unchanged: true };
+    }
     const diff = diffCellIndex(latest?.cellIndex ?? null, source.cellIndex);
-    return this.insertVersion(tx, actor, diagramId, {
+    const id = await this.insertVersion(tx, actor, diagramId, {
       seq: (latest?.seq ?? 0) + 1,
       xml: source.xml,
       svg: source.svg,
@@ -1491,6 +1500,7 @@ export class DiagramsService {
       auditAction: 'diagram.version_restored',
       bytes: Buffer.byteLength(source.xml),
     });
+    return { id, unchanged: false };
   }
 
   /** Tên phiên bản: người lưu phiên bản đó, hoặc Admin/SA. Tên mới nhất thắng; `null` = bỏ tên. */

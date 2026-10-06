@@ -168,6 +168,11 @@ export function useVersionActions({
           }),
         editPurpose,
       );
+      // Trùng bản mới nhất thì server không tạo gì: trình vẽ không có gì để nạp lại.
+      if (created.unchanged) {
+        toast({ tone: 'warn', message: t('diagrams.versions.restoreSame') });
+        return;
+      }
       await refresh();
       onRestored();
       toast({ tone: 'ok', message: t('diagrams.versions.restored', { seq: created.seq }) });
