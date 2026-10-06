@@ -1042,6 +1042,7 @@ function DiagramEditor({
     send: (command) => frame.current?.send(command),
     page: () => frameState.current.page,
     markDirty: () => setDirty(true),
+    rackColumn: settings.rackColumn,
   });
 
   const photos = usePhotoBridge({

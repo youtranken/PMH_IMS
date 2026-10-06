@@ -251,6 +251,10 @@ export interface EditorSettings {
   xmlMaxKb?: number;
   /** `diagram.draft_keep_hours` — bản vẽ dở cất ở trình duyệt quá ngần này giờ thì bỏ. Thiếu → 24. */
   draftKeepHours?: number;
+  /** `diagram.device_width_px` — bề rộng chuẩn của ô thiết bị trên trang tự do. */
+  deviceWidthPx?: number;
+  /** Cột "Chưa khai U" để dựng khi Hủy khai U mà trang chưa có cột của tủ (vắng ở server cũ). */
+  rackColumn?: { style: string; width: number; top: number; bottom: number; gap: number };
 }
 
 /*

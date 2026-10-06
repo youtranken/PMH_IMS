@@ -10,6 +10,7 @@ import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { diagramDraftKey } from './diagram-draft-key';
+import { unplacedColumnSpec } from './diagram-frames';
 import { DiagramDriftService } from './diagram-drift.service';
 import { DiagramNavigationService } from './diagram-navigation.service';
 import { DiagramPruneService } from './diagram-prune.service';
@@ -172,6 +173,10 @@ export interface DiagramEditorSettings {
   xmlMaxKb: number;
   /** `diagram.draft_keep_hours` — bản vẽ dở cất ở trình duyệt quá ngần này giờ thì bỏ. */
   draftKeepHours: number;
+  /** `diagram.device_width_px` — bề rộng chuẩn của ô thiết bị trên trang tự do. */
+  deviceWidthPx: number;
+  /** Cột "Chưa khai U" màn sửa dựng khi Hủy hộp khai U mà trang chưa có cột của tủ (Q-23 06/10 D). */
+  rackColumn: { style: string; width: number; top: number; bottom: number; gap: number };
 }
 
 /**
@@ -207,13 +212,14 @@ export class DiagramsController {
   @Roles('sa', 'admin', 'member')
   @Get('editor-settings')
   async editorSettings(): Promise<DiagramEditorSettings> {
-    const [initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb, draftKeepHours] = await Promise.all([
+    const [initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb, draftKeepHours, deviceWidthPx] = await Promise.all([
       this.config.getNumber('diagramEditorInitTimeoutSeconds'),
       this.config.getNumber('diagramPresenceTtlSeconds'),
       this.config.getNumber('diagramXmlMaxKb'),
       this.config.getNumber('diagramDraftKeepHours'),
+      this.config.getNumber('diagramDeviceWidthPx'),
     ]);
-    return { initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb, draftKeepHours };
+    return { initTimeoutSeconds, presenceTtlSeconds, xmlMaxKb, draftKeepHours, deviceWidthPx, rackColumn: unplacedColumnSpec(deviceWidthPx) };
   }
 
   /**

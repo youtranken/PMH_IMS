@@ -31,18 +31,23 @@ const RACK_ERRORS = new Set(['DEVICE_RACK_U_TAKEN', 'DEVICE_RACK_U_INVALID', 'CA
  * thiết bị của `devices` (AD-3: sơ đồ không ghi bảng `device`) — cùng quyền, cùng lịch sử thiết bị
  * như sửa ở trang thiết bị. U đề xuất = U nơi thả, chiếm rồi thì U trống gần nhất; kiểm chồng U
  * tại ô như form thiết bị, server vẫn là trọng tài.
+ *
+ * `kind="declare"` (Q-23 06/10 D): máy CÙNG tủ nhưng kho chưa khai U vừa được kéo vào khung — cùng
+ * hộp, cùng đường ghi, chỉ khác lời: "Khai U cho máy này?".
  */
 export function RackMoveDialog({
   item,
   csrfToken,
   revert,
+  kind = 'move',
   onMoved,
   onClose,
 }: {
   item: RackMismatch;
   csrfToken: string;
-  /** Ô vừa được kéo vào khung: Huỷ đưa nó về chỗ cũ (nút ghi rõ). */
+  /** Ô vừa được kéo vào khung: Huỷ đưa ô ra khỏi khung (nút ghi rõ). */
   revert: boolean;
+  kind?: 'move' | 'declare';
   onMoved: (moved: RackMoved) => void;
   onClose: () => void;
 }) {
@@ -66,6 +71,7 @@ export function RackMoveDialog({
   const clash = valid ? rackClash({ start: u, size: item.uSize }, others, item.deviceId) : null;
   const full = occupants.isSuccess && suggested === null;
   const to = target?.code ?? item.frameLabel;
+  const declare = kind === 'declare';
   const from = item.deviceCabinet ?? t('diagrams.rack.noCabinet');
   const fieldError =
     serverError ??
@@ -86,7 +92,7 @@ export function RackMoveDialog({
         body: JSON.stringify({ siteId: target.siteId, cabinetId: target.id, rackUStart: u, rackUSize: item.uSize }),
       });
       void queryClient.invalidateQueries({ queryKey: ['devices'] });
-      toast({ tone: 'ok', message: t('diagrams.rack.moved', { code: item.code, to: target.code, unit: rackUnitLabel(u, item.uSize) }) });
+      toast({ tone: 'ok', message: t(declare ? 'diagrams.rack.declared' : 'diagrams.rack.moved', { code: item.code, to: target.code, unit: rackUnitLabel(u, item.uSize) }) });
       onMoved({ deviceId: item.deviceId, cabinetId: target.id, cabinetCode: target.code, u, uSize: item.uSize });
     } catch (error) {
       if (RACK_ERRORS.has(errorCode(error) ?? '')) setServerError(errorMessage(error));
@@ -99,19 +105,19 @@ export function RackMoveDialog({
   const footer = (
     <div className="row" style={{ justifyContent: 'flex-end' }}>
       <button type="button" className="btn" disabled={busy} onClick={onClose}>
-        {revert ? t('diagrams.rack.moveCancelRevert') : t('diagrams.rack.moveCancel')}
+        {declare ? t('diagrams.rack.declareCancel') : revert ? t('diagrams.rack.moveCancelRevert') : t('diagrams.rack.moveCancel')}
       </button>
       <button type="button" className="btn primary" disabled={busy || !target || !valid || Boolean(clash) || full} onClick={() => void move()}>
-        {t('diagrams.rack.moveConfirm')}
+        {t(declare ? 'diagrams.rack.declareConfirm' : 'diagrams.rack.moveConfirm')}
       </button>
     </div>
   );
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !busy && onClose()} title={t('diagrams.rack.moveTitle')} maxWidth={460} initialFocus="first-field" footer={footer}>
-      <p role="status">{t('diagrams.rack.moveSummary', { code: item.code, from, to, u: valid ? u : '?', size: item.uSize })}</p>
+    <Dialog open onOpenChange={(open) => !open && !busy && onClose()} title={t(declare ? 'diagrams.rack.declareTitle' : 'diagrams.rack.moveTitle')} maxWidth={460} initialFocus="first-field" footer={footer}>
+      <p role="status">{t(declare ? 'diagrams.rack.declareSummary' : 'diagrams.rack.moveSummary', { code: item.code, from, to, u: valid ? u : '?', size: item.uSize })}</p>
       <p className="muted small">
-        {t('diagrams.rack.moveHint')} {revert ? t('diagrams.rack.moveHintRevert') : null}
+        {declare ? t('diagrams.rack.declareHint', { code: item.code }) : <>{t('diagrams.rack.moveHint')} {revert ? t('diagrams.rack.moveHintRevert') : null}</>}
       </p>
       {full ? (
         <p className="alert warn" role="alert">

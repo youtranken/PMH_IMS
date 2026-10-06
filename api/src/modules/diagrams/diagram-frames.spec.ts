@@ -12,6 +12,7 @@ import {
   frameRefs,
   introducedRefs,
   unbindFrames,
+  unplacedColumnSpec,
   type ChildCandidate,
 } from './diagram-frames';
 
@@ -366,5 +367,20 @@ describe('buildRackXml + bản trước — "Dựng lại mặt tủ" giữ id �
   it('không có bản trước: như cũ (id ims-f*/ims-d*)', () => {
     const index = buildCellIndex(buildRackXml(layout()));
     expect(index.cells.filter((c) => c.kind === 'device').every((c) => c.id.startsWith('ims-d'))).toBe(true);
+  });
+});
+
+describe('unplacedColumnSpec — cột "Chưa khai U" màn sửa dựng khi chưa có (Q-23 06/10 D)', () => {
+  it('cùng style với cột của "Chèn tủ mạng", rộng vừa ô máy rộng chuẩn, máy nằm giữa cột', () => {
+    const spec = unplacedColumnSpec(160);
+    expect(spec.width).toBe(184);
+    expect(spec.style).toContain('childLayout=stackLayout;');
+    expect(spec.style).toContain('marginLeft=12;');
+    const layout = cabinetFrameLayout({
+      cabinet: { id: 'c', code: 'R1', uHeight: 42 },
+      devices: [{ id: 'd', code: 'X', u: null, uSize: 1, cell: { style: '', label: 'X', width: 160, height: 40 } }],
+    });
+    expect(layout.frames.find((f) => f.key === 'unplaced')!.style).toBe(spec.style);
+    expect(spec.top).toBe(layout.devices[0].y);
   });
 });

@@ -789,7 +789,10 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     giờ chung một U trên khung. Máy tủ khác thả vào khung: ô được đặt ngay cao n × U ở U trống gần
     chỗ thả rồi mở hộp "Chuyển máy sang tủ này" như 06/10; **Hủy → ô ra NGOÀI khung (cạnh khung)**,
     không bao giờ nằm lại trong khung với cỡ cũ — sửa gạch 06/10 "Huỷ → ô về chỗ cũ" (chỗ cũ có thể
-    chính là trong khung). Lý do: một máy nằm trong khung mà không theo U là hình tủ sai.
+    chính là trong khung). Lý do: một máy nằm trong khung mà không theo U là hình tủ sai. Bản vẽ ĐÃ
+    LƯU có máy sai cỡ trong khung (ảnh 3): mở tab Sửa là ô được đặt lại ngay trên trình vẽ nhưng không
+    tính là thay đổi của người vẽ (nút Lưu vẫn tắt, không sinh phiên bản); lần lưu sau giữ chỗ đúng.
+    Hủy hộp chuyển mở từ lời báo / menu cũng đưa ô ra ngoài khung.
   - **D. Máy chưa khai U thả vào khung tủ của chính tủ nó** → hộp chọn U trống gần chỗ thả (cùng hộp,
     cùng mặt đứng tủ và U trống gần nhất), ghi kho qua API sửa thiết bị của `devices` sau khi người
     vẽ bấm đồng ý. Hủy → ô vào cột "Chưa khai U" của tủ (chưa có cột thì IMS dựng cột cạnh khung).

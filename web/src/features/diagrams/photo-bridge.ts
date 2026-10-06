@@ -1,5 +1,5 @@
 import { bindEdgeValue } from './cable-diff';
-import { withLabelPlacement } from './rack-fit';
+import { rackCellStyle } from './rack-fit';
 
 /**
  * Công tắc "Biểu tượng / Ảnh thật" của màn SỬA (AD-18) — hàm THUẦN, test bảng dữ liệu ở
@@ -155,7 +155,8 @@ export function photoCellUpdate(
   deviceWidth?: number,
 ): { style: string; xmlValue: string; geometry?: string } {
   const update = photoCellLook(cell, look, choice, imsStyleKeys, deviceWidth);
-  return cell.inRack && rackLabelStyle ? { ...update, style: withLabelPlacement(update.style, rackLabelStyle) } : update;
+  // Trong khung tủ: nhãn bên phải và ảnh thật lấp đầy ô U (cùng luật đặt lại máy trong tủ).
+  return cell.inRack && rackLabelStyle ? { ...update, style: rackCellStyle(update.style, 0, rackLabelStyle) } : update;
 }
 
 function photoCellLook(

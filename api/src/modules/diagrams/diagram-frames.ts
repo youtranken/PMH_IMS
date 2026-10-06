@@ -213,6 +213,16 @@ export interface CabinetFrameLayout {
  */
 const FRAME_GAP = 200;
 
+/**
+ * Cột "Chưa khai U" cho một máy rộng `deviceWidth` — màn sửa dựng cột này khi người vẽ Hủy hộp
+ * khai U mà trang chưa có cột của tủ (Q-23 06/10 D). Cùng style với cột của `cabinetFrameLayout`
+ * để hai đường ra cùng một hình.
+ */
+export function unplacedColumnSpec(deviceWidth: number): { style: string; width: number; top: number; bottom: number; gap: number } {
+  const width = Math.max(COLUMN_MIN_WIDTH, deviceWidth + 2 * COLUMN_PAD);
+  return { style: columnStyle(Math.round((width - deviceWidth) / 2)), width, top: COLUMN_HEADER + COLUMN_PAD, bottom: COLUMN_LABEL_ROOM, gap: FRAME_GAP };
+}
+
 /** Ô máy: ảnh thật mặt trước nếu có (kèm `ims_photo`), không thì biểu tượng loại. */
 function faceOf(device: CabinetFrameDevice): { style: string; attrs: Record<string, string> } {
   return device.front ? { style: device.front.style, attrs: { ims_photo: 'front' } } : { style: device.cell.style, attrs: {} };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellPlacement, rackFit, type RackFitDevice } from './rack-fit';
+import { cellPlacement, columnPlacement, outsidePlacement, rackFit, type RackFitDevice } from './rack-fit';
 
 const CAB_01 = 'cab-01';
 const CAB_04 = 'cab-04';
@@ -45,9 +45,10 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
     expect(rackFit(model(frame('f4', CAB_04) + ok), INFO).updates).toEqual({});
   });
 
-  it('kho ghi TỦ KHÁC (máy TU-TOWER-01 thả vào khung TU-TOWER-04) → không đặt theo U, không đổi kho, báo lại', () => {
+  it('kho ghi TỦ KHÁC (máy TU-TOWER-01 thả vào khung TU-TOWER-04) → không đổi kho, báo lại; ô vẫn cao đúng n U ở U nơi thả (Q-23 06/10 C)', () => {
     const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'UPS-03', 'f4', { y: 228.2, h: 59.2 })), INFO);
-    expect(result.updates).toEqual({});
+    // Không bao giờ nằm trong khung với cỡ cũ (ảnh 4U chiếm U25–U28): 1U ở U28, rộng hết lòng tủ.
+    expect(result.updates.d1.geometry).toBe('<mxGeometry x="33" y="228.2" width="162" height="14.8" as="geometry"/>');
     expect(result.cabinetMismatch).toEqual([
       {
         cellId: 'd1',
@@ -84,7 +85,7 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
   it('máy cùng tủ nhưng chưa khai U → cao 1U ở chỗ thả (draw.io đã bắt vạch), báo chưa khai U', () => {
     const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'PC-09', 'f4', { y: 287.4, h: 59.2 })), INFO);
     expect(result.updates.d1.geometry).toBe('<mxGeometry x="33" y="287.4" width="162" height="14.8" as="geometry"/>');
-    expect(result.noU).toEqual([{ cellId: 'd1', code: 'PC-09' }]);
+    expect(result.noU).toEqual([expect.objectContaining({ cellId: 'd1', code: 'PC-09', deviceId: 'PC-09', frameCabinetId: CAB_04, dropU: 24 })]);
   });
 
   it('kéo máy RA khỏi khung tủ → nhãn về dưới hình (bỏ nhãn bên phải), không đụng cỡ', () => {
@@ -108,6 +109,88 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
     const column = `<UserObject label="Tủ · Chưa khai U" ims_cabinet_id="${CAB_04}" id="col"><mxCell style="swimlane;container=1;childLayout=stackLayout;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="200" height="300" as="geometry"/></mxCell></UserObject>`;
     const xml = model(plain + column + device('d1', 'SW-01', 'f9', { y: 10, h: 59.2 }) + device('d2', 'SRV-02', 'col', { y: 38, h: 60 }));
     expect(rackFit(xml, INFO).updates).toEqual({});
+  });
+});
+
+describe('rackFit — U kho là sự thật của khung tủ (Q-23 06/10 C)', () => {
+  const PHOTO = 'align=center;shape=image;image=data:image/png,AAAA;imageAspect=1;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;';
+  const LABELED = new Map<string, RackFitDevice>([
+    ...INFO,
+    ['UPS-03', { ...INFO.get('UPS-03')!, rackLabel: 'UPS-03 · 172.16.10.5', freeLabel: 'UPS-03\n172.16.10.5\nTower · TU-TOWER-01 · U30', freeSize: { width: 160, height: 40 } }],
+    ['SW-01', { ...INFO.get('SW-01')!, rackLabel: 'SW-01 · 172.16.10.1', freeLabel: 'SW-01\n172.16.10.1\nTower · TU-TOWER-04 · U30', freeSize: { width: 160, height: 15 } }],
+  ]);
+
+  it('hai máy không bao giờ chung một U: máy tủ khác thả đè lên U30 của SW-01 → dời về U trống gần nhất', () => {
+    // UPS-03 (tủ khác) thả đúng U30 nơi SW-01 (kho ghi U30) đang nằm.
+    const result = rackFit(model(frame('f4', CAB_04) + device('d0', 'SW-01', 'f4', { y: 198.6, h: 14.8 }, `shape=image;${SIDE}`) + device('d1', 'UPS-03', 'f4', { y: 198.6, h: 59.2 })), INFO);
+    // U trống gần nhất của U30 (cách đều hai phía thì lấy phía dưới): U29 → y = 21 + (42 − 29) × 14.8.
+    expect(result.updates.d1.geometry).toBe('<mxGeometry x="33" y="213.4" width="162" height="14.8" as="geometry"/>');
+    expect(result.cabinetMismatch[0]).toMatchObject({ cellId: 'd1', dropU: 29 });
+  });
+
+  it('nhãn MỘT dòng bên phải ngay khi máy vào khung (không chờ mở lại bản vẽ)', () => {
+    const three = device('d1', 'SW-01', 'f4', { y: 198.6, h: 14.8 }, `shape=image;${SIDE}`).replace('label="SW-01"', 'label="SW-01&#xa;172.16.10.1&#xa;Tower · TU-TOWER-04 · U30"');
+    const update = rackFit(model(frame('f4', CAB_04) + three), LABELED).updates.d1;
+    expect(update.xmlValue).toContain('label="SW-01 · 172.16.10.1"');
+    expect(update.xmlValue).toContain('ims_device_id="SW-01"');
+  });
+
+  it('kéo ra khỏi khung → nhãn ba dòng dưới hình trở lại', () => {
+    const out = device('d1', 'SW-01', '1', { y: 500, h: 14.8, x: 700 }, `shape=image;${SIDE}`).replace('label="SW-01"', 'label="SW-01 · 172.16.10.1"');
+    const update = rackFit(model(frame('f4', CAB_04) + out), LABELED).updates.d1;
+    expect(update.xmlValue).toContain('label="SW-01&#xa;172.16.10.1&#xa;Tower · TU-TOWER-04 · U30"');
+  });
+
+  it('ảnh thật trong khung lấp đầy ô U (imageAspect=0, bỏ aspect=fixed); ra ngoài khung thì giữ tỉ lệ lại', () => {
+    const inside = rackFit(model(frame('f4', CAB_04) + device('d1', 'SW-01', 'f4', { y: 198.6, h: 14.8 }, PHOTO)), INFO).updates.d1.style!;
+    expect(inside).toContain('imageAspect=0;');
+    expect(inside).not.toContain('aspect=fixed');
+    expect(inside).toContain(SIDE);
+    const out = rackFit(model(frame('f4', CAB_04) + device('d2', 'SW-01', '1', { y: 500, h: 15, x: 700 }, inside)), INFO).updates.d2.style!;
+    expect(out).toContain('imageAspect=1;');
+    expect(out).toContain('aspect=fixed;');
+    expect(out).not.toContain('labelPosition=right');
+  });
+
+  it('nhãn hai máy sát nhau chồng lên nhau (khung U nhỏ) → nhãn sau sang làn bên', () => {
+    const small = frame('f4', CAB_04).replace('rackUnitSize=14.8', 'rackUnitSize=8');
+    // Khung 8px/U: cao 664.6 − 43 = 621.6 → 78U. SW-01 ở U30, máy 1U kế bên (U31).
+    const info = new Map([...INFO, ['SW-02', { code: 'SW-02', cabinetId: CAB_04, cabinetCode: 'TU-TOWER-04', u: 31, uSize: 1 }]]);
+    const result = rackFit(model(small + device('d0', 'SW-01', 'f4', { y: 0, h: 8 }) + device('d1', 'SW-02', 'f4', { y: 0, h: 8 })), info);
+    const spacing = (id: string) => /spacingLeft=(\d+)/.exec(result.updates[id].style ?? '')?.[1];
+    expect(spacing('d0')).not.toBe(spacing('d1'));
+  });
+});
+
+describe('outsidePlacement / columnPlacement — Hủy đưa máy RA khỏi khung tủ (Q-23 06/10 C, D)', () => {
+  const info: RackFitDevice = { code: 'UPS-03', cabinetId: CAB_01, cabinetCode: 'TU-TOWER-01', u: 30, uSize: 1, freeLabel: 'UPS-03\nTU-TOWER-01', freeSize: { width: 160, height: 40 } };
+  const PHOTO_IN = `align=center;shape=image;image=data:image/png,AAAA;imageAspect=0;${SIDE}`;
+
+  it('ra cạnh trái khung, cùng cha với khung, cỡ trang tự do, nhãn ba dòng dưới hình, ảnh giữ tỉ lệ', () => {
+    const xml = model(frame('f4', CAB_04) + device('d1', 'UPS-03', 'f4', { y: 228.2, h: 14.8 }, PHOTO_IN));
+    const placed = outsidePlacement(xml, 'd1', info)!;
+    expect(placed.parent).toBe('1');
+    // Khung ở x 250 → ô rộng 160 đặt cách mép trái khung 40: x = 250 − 40 − 160.
+    expect(placed.geometry).toBe('<mxGeometry x="50" y="248.2" width="160" height="40" as="geometry"/>');
+    expect(placed.style).not.toContain('labelPosition=right');
+    expect(placed.style).toContain('imageAspect=1;');
+    expect(placed.xmlValue).toContain('label="UPS-03&#xa;TU-TOWER-01"');
+  });
+
+  it('ô không nằm trong khung tủ → null (không có gì để đưa ra)', () => {
+    expect(outsidePlacement(model(device('d1', 'UPS-03', '1', { y: 10, h: 14.8 })), 'd1', info)).toBeNull();
+  });
+
+  it('cột "Chưa khai U" của cùng tủ đã có → vào cuối cột', () => {
+    const column = `<UserObject label="Tủ TU-TOWER-04 · Chưa khai U" ims_cabinet_id="${CAB_04}" id="col"><mxCell style="swimlane;container=1;childLayout=stackLayout;marginLeft=20;" vertex="1" parent="1"><mxGeometry x="654" y="20" width="200" height="300" as="geometry"/></mxCell></UserObject>`;
+    const xml = model(frame('f4', CAB_04) + column + device('c0', 'SRV-02', 'col', { y: 38, h: 60, x: 20, w: 160 }) + device('d1', 'PC-09', 'f4', { y: 287.4, h: 14.8 }));
+    const placed = columnPlacement(xml, 'd1', CAB_04, { ...info, code: 'PC-09' })!;
+    expect(placed).toMatchObject({ parent: 'col', previous: 'c0' });
+    expect(placed.geometry).toBe('<mxGeometry x="20" y="176" width="160" height="40" as="geometry"/>');
+  });
+
+  it('chưa có cột → null (nơi gọi dựng cột mới)', () => {
+    expect(columnPlacement(model(frame('f4', CAB_04) + device('d1', 'PC-09', 'f4', { y: 287.4, h: 14.8 })), 'd1', CAB_04, info)).toBeNull();
   });
 });
 
