@@ -183,7 +183,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-chi-mat-truoc.png` });
 
-    // Dựng lại lần nữa khi kho chưa đổi gì: không thêm nháp, số phiên bản giữ nguyên (Q-23 06/10).
+    // Dựng lại lần nữa khi kho chưa đổi gì: không thêm nháp, số phiên bản giữ nguyên (Q-23).
     await diagramBarAction(page, 'Dựng lại mặt tủ');
     await page.getByRole('dialog', { name: 'Dựng lại mặt tủ từ kho?' }).getByRole('button', { name: 'Dựng lại' }).click();
     await expect(page.getByText('Mặt tủ dựng từ kho trùng bản mới nhất — không tạo phiên bản mới.')).toBeVisible();

@@ -287,7 +287,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     // Dây không có mũi tên ở đầu nào (V-04): trình vẽ bỏ cả hai đầu khi tô màu dây của kho.
     expect(xml).toMatch(/endArrow=none;startArrow=none;/);
     expect(xml).not.toMatch(/(end|start)Arrow=classic/);
-    // Nhãn cổng ở HAI ĐẦU dây (Q-23 06/10): XML lưu chỉ có cờ, ô nhãn đầu không lưu; ảnh xem có
+    // Nhãn cổng ở HAI ĐẦU dây (Q-23): XML lưu chỉ có cờ, ô nhãn đầu không lưu; ảnh xem có
     // hai nhãn riêng ("Gi1/0/5" sát SW, "eth1" sát SRV), không còn "Gi1/0/5 ↔ eth1" giữa dây.
     expect(xml).toContain('ims_port_labels="ends"');
     expect(xml).not.toContain('imsPortEnd');
@@ -461,7 +461,7 @@ test.describe('Đi dây — bẻ dây bằng điểm uốn, không vẽ thêm n�
     // XML lưu do draw.io xuất có xuống dòng giữa thẻ.
     expect(stored).toMatch(/id="e1">\s*<mxCell[^>]*source="a"[^>]*target="b"/);
     expect(stored).not.toContain('exitX=0');
-    // Dây người vẽ đụng tới ("Tự đi lại dây") chuyển sang nhãn cổng hai đầu (Q-23 06/10).
+    // Dây người vẽ đụng tới ("Tự đi lại dây") chuyển sang nhãn cổng hai đầu (Q-23).
     expect(stored).toMatch(/ims_port_labels="ends"[^>]*id="e1"/);
     const ok = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: { versionId: v2.id } });
     expect(ok.status(), await ok.text()).toBe(201);

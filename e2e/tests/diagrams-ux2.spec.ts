@@ -13,7 +13,7 @@ import {
 } from './helpers';
 
 /*
- * Soát UX đợt 2 — Sơ đồ mạng (Q-23, 05/10/2026): những đường người dùng THẤY trên giao diện.
+ * Soát UX đợt 2 — Sơ đồ mạng (Q-23): những đường người dùng THẤY trên giao diện.
  * Luật server đã có bài DB thật (`api/test/diagrams.spec.ts`, `diagram-review.spec.ts`); ở đây đi
  * đúng đường bấm: bản vẽ con lấy Site của bản cha (D-03), Thành viên không gửi duyệt hộ (D-04),
  * người duyệt thấy bản vẽ chờ duyệt (D-07), Ctrl+K tìm được bản vẽ (D-08).
@@ -71,7 +71,7 @@ test.describe('Sơ đồ mạng — soát UX đợt 2', () => {
     await expect(dialog.getByRole('button', { name: /^Tủ/ })).toBeVisible();
     await expect(dialog.getByText(/Gắn tủ để dựng mặt tủ từ kho/)).toBeVisible();
     await expect(dialog.getByText(/các cấp khác chỉ là nhãn trên bản đồ/)).toBeVisible();
-    // Đường hỏng của "Dựng từ kho" (Q-23 06/10 chiều): chưa chọn tủ thì tắt, nói rõ vì sao.
+    // Đường hỏng của "Dựng từ kho" (Q-23): chưa chọn tủ thì tắt, nói rõ vì sao.
     await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toBeDisabled();
     await expect(dialog.getByText('Chọn tủ trước.')).toBeVisible();
     await expect(dialog.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();

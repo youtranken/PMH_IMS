@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { E2E_MEMBER, E2E_SA, firstLogin, resetDevices, resetIpam, resetUsers, sql, uniqueStamp, writeHeaders } from './helpers';
 
 /*
- * Soát UX đợt 2 — Hệ thống (Q-25, 05/10/2026): tham số NAT/break-glass lên màn Tham số (X-02),
+ * Soát UX đợt 2 — Hệ thống (Q-25): tham số NAT/break-glass lên màn Tham số (X-02),
  * SA thấy IP đang tạm chặn (X-04, chỉ đọc), link thẳng tới một luật NAT (X-05).
  */
 

@@ -56,7 +56,7 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
   await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
   // Có dải tóm tắt nên người dùng hiện ở HAI chỗ (tóm tắt + bảng hồ sơ).
   await expect(page.getByText('chị Lan').first()).toBeVisible();
-  // T-05 (Q-24 05/10): cùng MỘT nút chính ở mọi cỡ màn — "Sửa hồ sơ"; Thanh lý vào menu ⋯; két là tab.
+  // T-05 (Q-24): cùng MỘT nút chính ở mọi cỡ màn — "Sửa hồ sơ"; Thanh lý vào menu ⋯; két là tab.
   await expect(page.getByRole('button', { name: 'Sửa hồ sơ', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Két sắt', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Thanh lý', exact: true })).toHaveCount(0);

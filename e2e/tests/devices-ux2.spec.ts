@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { E2E_SA, firstLogin, resetUsers, uniqueStamp, writeHeaders } from './helpers';
 
 /*
- * Soát UX đợt 2 — Thiết bị (Q-24, 05/10/2026): gỡ dây giữ cổng (T-02), lọc theo Phòng ban (T-08),
+ * Soát UX đợt 2 — Thiết bị (Q-24): gỡ dây giữ cổng (T-02), lọc theo Phòng ban (T-08),
  * "sửa lần cuối bởi" hiện tên người (T-09). Mọi máy tạo ra mang chữ E2E trong mã để lượt dọn bắt được.
  */
 

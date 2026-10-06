@@ -667,7 +667,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
-        // Khu "Ảnh thiết bị" (Q-23 05/10): ô tải ảnh hai mặt.
+        // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt.
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh lên — Mặt sau',
         'Chọn file để đính kèm',
@@ -878,7 +878,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
-        // Khu "Ảnh thiết bị" (Q-23 05/10): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
+        // Khu "Ảnh thiết bị" (Q-23): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
         'Giải thích: Ảnh thiết bị',
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh chung cho mọi máy cùng model — Mặt trước',
@@ -1019,7 +1019,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         `Thao tác với ${code}`,
         'Cấp IP',
         'Bổ sung 6 ô còn thiếu',
-        // Ô ảnh hai mặt của khu "Hình dùng trên sơ đồ" (Q-23 05/10).
+        // Ô ảnh hai mặt của khu "Hình dùng trên sơ đồ" (Q-23).
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh lên — Mặt sau',
       ]);

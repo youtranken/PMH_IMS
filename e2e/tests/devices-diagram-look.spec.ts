@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { E2E_SA, catalogItem, devicesPageButton, diagramBarAction, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
 
 /*
- * "Hình dùng trên sơ đồ" (Q-23 05/10): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
+ * "Hình dùng trên sơ đồ" (Q-23): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
  * (ảnh riêng → ảnh model → biểu tượng loại) dùng cho ô chèn từ "Thiết bị kho" và bản đồ quan hệ.
  * Bài này: máy A có ảnh riêng (tải ở trang thiết bị), máy B cùng model chỉ có ảnh model (SA đặt).
  */
@@ -24,7 +24,7 @@ const PNG_WIDE = Buffer.from(
   'base64',
 );
 
-/** Mọi lượt tải ảnh thiết bị mở hộp cắt (Q-23 06/10) — bài này nhận khung cắt đề xuất. */
+/** Mọi lượt tải ảnh thiết bị mở hộp cắt (Q-23) — bài này nhận khung cắt đề xuất. */
 async function acceptCrop(page: Page) {
   const crop = page.getByRole('dialog', { name: 'Cắt ảnh thiết bị' });
   await crop.getByRole('button', { name: 'Dùng ảnh đã cắt' }).click();
@@ -225,7 +225,7 @@ test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (kh�
   };
   await save();
   const inserted = savedSize(diagramId, id);
-  // Rộng chuẩn `diagram.device_width_px` (Q-23 06/10 E), cao = rộng × 100/400.
+  // Rộng chuẩn `diagram.device_width_px` (Q-23 mục E), cao = rộng × 100/400.
   const standard = Number(sql(`SELECT value FROM system_config WHERE key = 'diagram.device_width_px'`));
   expect(inserted.width).toBe(standard);
   expect(inserted.height).toBe(Math.round(standard * 0.25));
@@ -248,7 +248,7 @@ test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (kh�
 
 /**
  * Ảnh máy 1U chụp kèm viền trắng lớn (1200×400, máy 1000×92 ở giữa) — đúng loại ảnh làm ô ảnh / hạch
- * bản đồ quan hệ chỉ còn một vạch nhỏ (Q-23 06/10, ảnh 1 + 2 của chủ dự án). Vẽ bằng canvas của trình
+ * bản đồ quan hệ chỉ còn một vạch nhỏ (Q-23, ảnh 1 + 2 của chủ dự án). Vẽ bằng canvas của trình
  * duyệt để không phải giữ tệp nhị phân trong repo.
  */
 async function paddedPhoto(page: Page): Promise<Buffer> {
