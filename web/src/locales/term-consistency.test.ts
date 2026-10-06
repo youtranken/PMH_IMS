@@ -561,7 +561,7 @@ function leaves(node: unknown = vi, path = ''): Array<[string, string]> {
 }
 
 /**
- * T-03 (Q-24 05/10): cùng một cái tủ từng mang ba tên — "Tủ mạng" ở form thiết bị, "Tủ rack" ở
+ * T-03 (Q-24): cùng một cái tủ từng mang ba tên — "Tủ mạng" ở form thiết bị, "Tủ rack" ở
  * cấp bản vẽ, "Tủ" ở nút chèn. Một tên: "Tủ mạng".
  */
 describe('T-03: tủ chỉ có một tên — "Tủ mạng"', () => {
@@ -576,7 +576,7 @@ describe('T-03: tủ chỉ có một tên — "Tủ mạng"', () => {
   });
 });
 
-/** T-07 (Q-24 05/10): mục "bỏ lọc" đầu mỗi ô lọc viết "Tất cả …", không lẫn "Mọi …". */
+/** T-07 (Q-24): mục "bỏ lọc" đầu mỗi ô lọc viết "Tất cả …", không lẫn "Mọi …". */
 describe('T-07: mục bỏ lọc viết "Tất cả …"', () => {
   it('không khoá `all*` / `statusAll` / `filterStateAll` nào mở đầu bằng "Mọi"', () => {
     const bad = leaves()

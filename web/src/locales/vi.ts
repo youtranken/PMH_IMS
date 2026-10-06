@@ -195,7 +195,7 @@ export default {
     recropOf: 'Cắt lại ảnh — {{side}}',
     recropFailed: 'Không mở được ảnh gốc để cắt lại.',
   },
-  // Hộp cắt ảnh thiết bị (ui/image-crop-dialog.tsx, Q-23 06/10).
+  // Hộp cắt ảnh thiết bị (ui/image-crop-dialog.tsx, Q-23).
   imageCrop: {
     title: 'Cắt ảnh thiết bị',
     locked: 'Khung cắt khóa theo mặt tủ {{units}}U (rộng 482,6 mm : cao {{units}} × 44,45 mm) để ảnh lấp vừa ô U trên sơ đồ. Viền trống đã được cắt sẵn.',
