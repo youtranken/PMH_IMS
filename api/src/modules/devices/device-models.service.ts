@@ -4,7 +4,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
-import { pgConstraint } from '../../common/sql';
+import { escapeLike, pgConstraint } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
@@ -12,7 +12,7 @@ import { expandPortTemplate, type PortTemplateGroup } from './port-template';
 import { modelKey } from './device-model-key';
 import { deviceModelTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
-import { rackOverlap } from './rack-units';
+import { RACK_U_MAX, rackOverlap } from './rack-units';
 
 export interface DeviceModelItem {
   id: string;
@@ -45,8 +45,6 @@ export interface DeviceModelFilter {
   deviceTypeId?: string;
   manufacturer?: string;
 }
-
-const U_MAX = 60;
 
 /**
  * Danh mục Model thiết bị (Q-26) — `devices` là chủ `device_model` (AD-3). Model mang đặc tính chung
@@ -247,7 +245,7 @@ export class DeviceModelsService {
       .where(and(inArray(deviceTable.cabinetId, cabinetIds), ne(deviceTable.status, 'retired'), sql`${deviceTable.rackUStart} IS NOT NULL`));
     const clashes: string[] = [];
     for (const device of racked) {
-      const height = cabinets.get(device.cabinetId!)?.uHeight ?? U_MAX;
+      const height = cabinets.get(device.cabinetId!)?.uHeight ?? RACK_U_MAX;
       const top = device.rackUStart! + uSize - 1;
       if (top > height) {
         clashes.push(`${device.code} (U${device.rackUStart}–U${top} vượt tủ ${height}U)`);
@@ -283,8 +281,8 @@ export class DeviceModelsService {
     if (manufacturer && manufacturer.length > 60) throw bad('DEVICE_MODEL_MANUFACTURER_INVALID', 'Hãng tối đa 60 ký tự.');
     const rackMountable = Boolean(input.rackMountable);
     const uSize = input.uSize ?? null;
-    if (rackMountable && (uSize === null || !Number.isInteger(uSize) || uSize < 1 || uSize > U_MAX)) {
-      throw bad('DEVICE_MODEL_U_INVALID', `Model gắn tủ cần Số U từ 1 đến ${U_MAX}.`);
+    if (rackMountable && (uSize === null || !Number.isInteger(uSize) || uSize < 1 || uSize > RACK_U_MAX)) {
+      throw bad('DEVICE_MODEL_U_INVALID', `Model gắn tủ cần Số U từ 1 đến ${RACK_U_MAX}.`);
     }
     if (!rackMountable && uSize !== null) throw bad('DEVICE_MODEL_U_INVALID', 'Model không gắn tủ thì không có Số U.');
     const raw = input.portTemplate ?? before?.portTemplate ?? [];
@@ -303,10 +301,6 @@ function pick(row: typeof deviceModelTable.$inferSelect) {
 
 function stripUndefined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
-}
-
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
 function bad(code: string, message: string): BadRequestException {
