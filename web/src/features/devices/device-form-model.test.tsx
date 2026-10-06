@@ -4,7 +4,7 @@ import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { DeviceForm } from './device-form';
 
-/** Form thiết bị chọn / tạo model tại chỗ, U trống để chọn (Q-26, Story 11.2). */
+/** Form thiết bị chọn / tạo model tại chỗ, U trống để chọn (Q-26). */
 const LISTS = {
   sites: [{ id: 's1', code: 'HCM', name: 'Văn phòng', address: null, active: true }],
   cabinets: [{ id: 'k1', siteId: 's1', siteCode: 'HCM', code: 'R1', description: null, uHeight: 12, active: true }],

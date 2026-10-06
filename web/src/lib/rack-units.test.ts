@@ -74,7 +74,7 @@ describe('nearestFreeU — U bắt đầu còn trống gần chỗ muốn nhất
   });
 });
 
-describe('freeRuns — dải U trống đủ n U để chọn U bắt đầu (Q-26 11.2)', () => {
+describe('freeRuns — dải U trống đủ n U để chọn U bắt đầu (Q-26)', () => {
   const at = (id: string, start: number, size: number) => ({ id, code: id.toUpperCase(), start, size });
   it.each([
     { name: 'tủ trống 12U, máy 1U: cả tủ là một dải', height: 12, occ: [], size: 1, self: null, runs: [{ start: 1, end: 12 }] },

@@ -157,7 +157,7 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     await expect(devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'ftp', address: 'x' }] })).rejects.toMatchObject({ response: { code: 'DEVICE_ACCESS_INVALID' } });
   });
 
-  it('cổng mẫu (11.3): model sinh 52 cổng, máy gán model nhận đủ; đổi mẫu sau đó không đổi ngầm máy đã có; mẫu sai → 400', async () => {
+  it('cổng mẫu: model sinh 52 cổng, máy gán model nhận đủ; đổi mẫu sau đó không đổi ngầm máy đã có; mẫu sai → 400', async () => {
     const template = [
       { pattern: 'Gi1/0/[1-48]', kind: 'rj45' },
       { pattern: 'Te1/1/[1-4]', kind: 'sfp+' },
@@ -176,7 +176,7 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     });
   });
 
-  it('mặt cổng (11.3): dây của máy này và dây máy khác cắm vào đều tính; bỏ cổng có dây bị chặn; khai dây vào cổng ngoài danh sách thì thêm làm cổng riêng; thẻ sơ đồ ra dùng/tổng', async () => {
+  it('mặt cổng: dây của máy này và dây máy khác cắm vào đều tính; bỏ cổng có dây bị chặn; khai dây vào cổng ngoài danh sách thì thêm làm cổng riêng; thẻ sơ đồ ra dùng/tổng', async () => {
     const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-SW-4', rackMountable: false, portTemplate: [{ pattern: 'p[1-4]', kind: 'rj45' }] });
     const { device: sw } = await devices.create(ACTOR, { code: 'SW-E2E-MD-P4', name: 'Switch 4', deviceTypeId: switchType, deviceModelId: model.id });
     const { device: pc } = await devices.create(ACTOR, { code: 'PC-E2E-MD-P', name: 'PC', deviceTypeId: switchType });
@@ -277,7 +277,7 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     expect(await left(`SELECT count(*) n FROM device_model WHERE model ILIKE '%E2E%'`)).toBe(0);
   });
 
-  it('máy thuộc model KHÔNG gắn tủ: gắn tủ hay khai U bị từ chối 400 gắn vào ô Tủ (11.2, Q-23 06/10 E.21)', async () => {
+  it('máy thuộc model KHÔNG gắn tủ: gắn tủ hay khai U bị từ chối 400 gắn vào ô Tủ (Q-23)', async () => {
     const printer = await models.create(ACTOR, { deviceTypeId: printerType, model: 'E2E-PRINTER', rackMountable: false });
     await expect(
       devices.create(ACTOR, { code: 'PR-E2E-MD-A', name: 'Máy in', deviceTypeId: printerType, deviceModelId: printer.id, siteId, cabinetId }),

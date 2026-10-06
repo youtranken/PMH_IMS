@@ -143,12 +143,13 @@ export class PortBodyDto {
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() cableTypeId?: string;
 }
 
-/** Một sợi dây giữa hai máy có hồ sơ — hộp "Khai kết nối" của sơ đồ mạng (Q-23). */
+/** Danh sách cổng vật lý của một máy (Q-26) — `PATCH :id/port-layout`. */
 export class PortLayoutBodyDto {
   /** Từng cổng do `normalizePortLayout` kiểm (tên, kiểu, trùng, trần). */
   @IsArray({ message: 'Danh sách cổng phải là một mảng.' }) ports!: unknown[];
 }
 
+/** Một sợi dây giữa hai máy có hồ sơ — hộp "Khai kết nối" của sơ đồ mạng (Q-23). */
 export class LinkBodyDto {
   @IsString() @Length(1, 60) portLabel!: string;
   @IsUUID(undefined, { message: 'Thiết bị đầu kia không hợp lệ.' }) connectedDeviceId!: string;

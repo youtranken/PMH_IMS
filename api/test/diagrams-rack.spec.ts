@@ -254,7 +254,7 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     await expect(service.rebuildRack(SA.email, room.id)).rejects.toMatchObject({ response: { code: 'DIAGRAM_NOT_CABINET' } });
   });
 
-  it('"Dựng từ kho": tạo bản vẽ tủ kèm phiên bản nháp #1 là mặt tủ từ kho (Q-23 06/10 chiều)', async () => {
+  it('"Dựng từ kho": tạo bản vẽ tủ kèm phiên bản nháp #1 là mặt tủ từ kho (Q-23)', async () => {
     const parent = await service.create(SA.email, { name: 'E2E Phòng dựng từ kho', nodeType: 'room' });
     const node = await service.createFromStock(SA.email, { name: 'E2E Tủ dựng từ kho', nodeType: 'cabinet', parentId: parent.id, siteId, cabinetId });
     expect(node).toMatchObject({ name: 'E2E Tủ dựng từ kho', nodeType: 'cabinet', cabinetId, parentId: parent.id });
