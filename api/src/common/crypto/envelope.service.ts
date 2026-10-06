@@ -27,7 +27,7 @@ export class EnvelopeCryptoService {
 
   /**
    * Khoá 32 byte dẫn xuất (HKDF-SHA256) từ master key HIỆN HÀNH theo một mục đích (`info`), cho dữ
-   * liệu mà TRÌNH DUYỆT phải tự mã — bản vẽ dở cất ở IndexedDB (Q-23 06/10). Một chiều: biết khoá
+   * liệu mà TRÌNH DUYỆT phải tự mã — bản vẽ dở cất ở IndexedDB (Q-23). Một chiều: biết khoá
    * này không suy ra master key hay khoá của mục đích khác. Xoay chìa thì khoá đổi — dữ liệu mã bằng
    * khoá cũ không giải được nữa, nên chỉ dùng cho thứ tạm, mất được.
    */
