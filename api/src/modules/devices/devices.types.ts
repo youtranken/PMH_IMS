@@ -43,6 +43,7 @@ export interface DeviceRecord {
   /** Ảnh thật chọn riêng cho máy này (đè ảnh mức model). */
   photoFrontFileId: string | null;
   photoBackFileId: string | null;
+  deviceModelId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

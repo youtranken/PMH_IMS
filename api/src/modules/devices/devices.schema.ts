@@ -1,4 +1,5 @@
 import {
+  boolean,
   customType,
   date,
   jsonb,
@@ -42,6 +43,8 @@ export const deviceTable = pgTable('device', {
   /** Ảnh thật của RIÊNG máy này (tệp đính kèm của máy) — thắng ảnh mức model. */
   photoFrontFileId: uuid('photo_front_file_id'),
   photoBackFileId: uuid('photo_back_file_id'),
+  /** Model danh mục (0061, Q-26); trống = máy "chưa có Model", khai Số U / ảnh trên chính máy. */
+  deviceModelId: uuid('device_model_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -54,6 +57,13 @@ export const deviceModelTable = pgTable('device_model', {
   id: uuid('id').primaryKey().defaultRandom(),
   deviceTypeId: uuid('device_type_id').notNull(),
   model: text('model').notNull(),
+  /** Hãng sản xuất (chữ) — không phải `vendor` (nhà cung cấp). */
+  manufacturer: text('manufacturer'),
+  rackMountable: boolean('rack_mountable').notNull().default(false),
+  /** Có khi và chỉ khi gắn tủ (CHECK của 0061). */
+  uSize: smallint('u_size'),
+  /** Cột sinh của Postgres (`modelKey()`): chỉ đọc, không bao giờ ghi. */
+  modelKey: text('model_key'),
   photoFrontFileId: uuid('photo_front_file_id'),
   photoBackFileId: uuid('photo_back_file_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

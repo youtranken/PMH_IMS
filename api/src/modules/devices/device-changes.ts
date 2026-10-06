@@ -26,6 +26,7 @@ const TRACKED_FIELDS = [
   'rackUSize',
   'photoFrontFileId',
   'photoBackFileId',
+  'deviceModelId',
 ] as const;
 
 export type { RecordChanges as DeviceChanges } from '../../common/record-diff';

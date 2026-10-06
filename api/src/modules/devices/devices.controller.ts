@@ -93,6 +93,8 @@ export class DeviceBodyDto {
   // Vị trí trong tủ: `null` = bỏ U. Luật cặp / vượt tủ / chồng U ở service (`rack-units.ts`).
   @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'U bắt đầu phải là số nguyên.' }) @Min(1) @Max(60) rackUStart?: number | null;
   @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'Số U phải là số nguyên.' }) @Min(1) @Max(60) rackUSize?: number | null;
+  /** Model danh mục (Q-26); `null` hay chuỗi rỗng = bỏ gán, máy về "chưa có Model". */
+  @IsOptional() @ValidateIf((_o, value) => value !== null && value !== '') @IsUUID(undefined, { message: 'Model không hợp lệ.' }) deviceModelId?: string | null;
 }
 
 class StatusDto {
