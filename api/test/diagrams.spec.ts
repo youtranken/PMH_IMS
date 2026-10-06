@@ -15,7 +15,7 @@ import { DiagramsService } from '../src/modules/diagrams/diagrams.service';
 import type { IpamApiService } from '../src/modules/ipam/ipam.api';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, waitForLock, type ScratchDb } from './db';
 import { noPhotos } from './device-photos-stub';
 
 /**
@@ -168,6 +168,39 @@ describe('Sơ đồ mạng · cây bản vẽ, phiên bản, lịch sử (AD-18)
       );
       expect(rows[0].changes.name).toEqual({ before: 'E2E B', after: 'E2E B mới' });
       expect(rows[0].changes.parentId).toEqual({ before: a.id, after: null });
+    });
+
+    /*
+     * Lượt lưu trữ bản cha khoá hàng bản cha rồi đếm con sống. Chuyển một nút vào dưới bản cha (hay
+     * tạo con mới) phải khoá CÙNG hàng đó trong transaction ghi, không thì nó đọc bản cha "còn sống"
+     * trước khi lượt lưu trữ commit và để lại một bản con sống dưới bản cha đã cất.
+     */
+    it('chuyển nhánh / tạo con vào bản cha đang được lưu trữ: chờ khoá bản cha rồi 400, không con sống nào dưới bản cha đã cất', async () => {
+      const p = await service.create(SA.email, { name: 'E2E Cha đua', nodeType: 'company' });
+      const n = await service.create(SA.email, { name: 'E2E Nút đua', nodeType: 'room' });
+      for (const attempt of [
+        () => service.update(SA, n.id, { parentId: p.id }),
+        () => service.create(SA.email, { name: 'E2E Con đua', nodeType: 'room', parentId: p.id }),
+      ]) {
+        const archiver = await scratch.pool.connect();
+        let pending: Promise<unknown> | undefined;
+        try {
+          await archiver.query('BEGIN');
+          await archiver.query(`SELECT id FROM diagram WHERE id = $1 FOR UPDATE`, [p.id]);
+          pending = attempt().then(
+            () => 'ok',
+            (error: { status?: number; response?: { code?: string } }) => error.response?.code ?? String(error.status),
+          );
+          await waitForLock(scratch.pool);
+          await archiver.query(`UPDATE diagram SET archived_at = now(), archived_by = 'x' WHERE id = $1`, [p.id]);
+          await archiver.query('COMMIT');
+        } finally {
+          archiver.release();
+        }
+        expect(await pending).toBe('DIAGRAM_PARENT_INVALID');
+        await scratch.pool.query(`UPDATE diagram SET archived_at = NULL, archived_by = NULL WHERE id = $1`, [p.id]);
+      }
+      expect(await count(`SELECT count(*)::int AS n FROM diagram WHERE parent_id = $1`, [p.id])).toBe(0);
     });
 
     it('lưu trữ: còn nút con sống → 409; nút lá thì rời cây, không xoá hàng', async () => {

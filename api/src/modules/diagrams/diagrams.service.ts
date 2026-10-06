@@ -486,7 +486,12 @@ export class DiagramsService {
     if (input.parentId) await this.assertLiveParent(input.parentId);
     await this.catalog.assertRefs({ siteId: input.siteId ?? null, cabinetId: input.cabinetId ?? null }, null);
     if (input.ownerEmail) await this.assertUser(input.ownerEmail);
-    const id = await this.uniqueName(() => this.db.transaction((tx) => this.insertNode(tx, actor, { ...input, name })));
+    const id = await this.uniqueName(() =>
+      this.db.transaction(async (tx) => {
+        if (input.parentId) await this.assertLiveParent(input.parentId, tx);
+        return this.insertNode(tx, actor, { ...input, name });
+      }),
+    );
     return this.node(id);
   }
 
@@ -532,6 +537,7 @@ export class DiagramsService {
     const diff = diffCellIndex(null, index);
     const id = await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
+        await this.assertLiveParent(parentId, tx);
         const childId = await this.insertNode(tx, actor, { ...node, name, parentId });
         await this.insertVersion(tx, actor, childId, {
           seq: 1,
@@ -573,6 +579,7 @@ export class DiagramsService {
     const diff = diffCellIndex(null, index);
     const id = await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
+        if (input.parentId) await this.assertLiveParent(input.parentId, tx);
         const nodeId = await this.insertNode(tx, actor, { ...input, name });
         await this.insertVersion(tx, actor, nodeId, {
           seq: 1,
@@ -633,7 +640,6 @@ export class DiagramsService {
       if (input.parentId === id || (await this.descendantIds(id)).includes(input.parentId)) {
         throw new BadRequestException({ code: 'DIAGRAM_MOVE_CYCLE', message: 'Không chuyển được bản vẽ vào chính nhánh con của nó.' });
       }
-      await this.assertLiveParent(input.parentId);
     }
     const next = { ...input, ...(input.name !== undefined ? { name: input.name.trim() } : {}) };
     if (next.nodeType !== undefined || next.cabinetId !== undefined) {
@@ -652,6 +658,7 @@ export class DiagramsService {
     if (!hasChanges(changes)) return current;
     await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
+        if (input.parentId) await this.assertLiveParent(input.parentId, tx);
         const set: Partial<typeof diagramTable.$inferInsert> = { updatedAt: new Date() };
         for (const field of TRACKED) {
           if (field in changes) (set as Record<string, unknown>)[field] = changes[field].after;
@@ -710,11 +717,18 @@ export class DiagramsService {
     return this.node(id);
   }
 
-  private async assertLiveParent(parentId: string): Promise<void> {
-    const [parent] = await this.db
+  /**
+   * Có `tx` thì khoá hàng bản cha FOR UPDATE: `archive` khoá đúng hàng đó trước khi đếm con sống,
+   * nên lượt gắn con và lượt cất bản cha không lọt qua nhau. Thứ tự khoá — bản cha trước, hàng của
+   * mình sau — cùng chiều với `unarchive`, không thành vòng chờ. Không `tx` chỉ là lượt kiểm sớm
+   * trước việc nặng; lượt kiểm có hiệu lực là lượt trong transaction ghi.
+   */
+  private async assertLiveParent(parentId: string, tx?: Tx): Promise<void> {
+    const query = (tx ?? this.db)
       .select({ archivedAt: diagramTable.archivedAt, kind: diagramTable.kind })
       .from(diagramTable)
       .where(eq(diagramTable.id, parentId));
+    const [parent] = tx ? await query.for('update') : await query;
     // Bản trình bày không có nhánh con: cây chính thức không treo dưới một bản không duyệt.
     if (!parent || parent.archivedAt || parent.kind !== 'official') {
       throw new BadRequestException({ code: 'DIAGRAM_PARENT_INVALID', message: 'Bản vẽ cha không tồn tại hoặc đã lưu trữ.' });
