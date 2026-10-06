@@ -863,7 +863,7 @@ button.btn-x.danger:hover:not(:disabled) {
 .drawio-watermark[data-density='edit'] {
   color: var(--diagram-watermark-edit);
 }
-/* Thẻ thông tin máy / dây (Q-23 06/10). Trình xem: nổi cạnh con trỏ, không bắt chuột (thẻ nằm
+/* Thẻ thông tin máy / dây (Q-23). Trình xem: nổi cạnh con trỏ, không bắt chuột (thẻ nằm
    dưới con trỏ mà bắt chuột thì chuột "rời ô" và thẻ nhấp nháy). Trình vẽ: neo đáy khung, có nút. */
 .diagram-hover-card {
   position: absolute;
@@ -1309,7 +1309,7 @@ button.btn-x.danger:hover:not(:disabled) {
 .stock-list li + li .stock-row {
   border-top: 1px solid var(--border);
 }
-/* Dòng kéo được vào trình vẽ (Q-23 06/10): con trỏ "nắm" báo trước là kéo được. */
+/* Dòng kéo được vào trình vẽ (Q-23): con trỏ "nắm" báo trước là kéo được. */
 .stock-list li[data-drag-ready] .stock-row {
   cursor: grab;
 }
