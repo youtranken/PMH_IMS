@@ -18,7 +18,7 @@ import {
 /*
  * Ảnh thật, vị trí U và mặt tủ (Q-23 "chồng U trong cùng tủ thì chặn"): khai U trên
  * form thiết bị, chồng U bị từ chối bằng câu tiếng Việt nêu tên máy đang chiếm; "Dựng lại mặt tủ"
- * xếp máy đúng U ở mặt trước + mặt sau với ảnh thật; công tắc Biểu tượng / Ảnh thật trên màn sửa
+ * xếp máy đúng U ở mặt trước (tủ chỉ vẽ mặt trước) với ảnh thật; công tắc Biểu tượng / Ảnh thật trên màn sửa
  * (mặt không có ảnh tắt kèm lý do); trang thiết bị đọc được vị trí U ở 390px. Luật U, ảnh, bố cục
  * khung và trần dung lượng dồn ở `api/test/device-rack-u.spec.ts` + `api/test/diagrams-rack.spec.ts`;
  * bài này giữ mức khói trên stack thật.
@@ -128,7 +128,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     expect(((await noCabinet.json()) as { message: string }).message).toContain('chọn tủ');
   });
 
-  test('"Dựng lại mặt tủ": khung mặt trước + mặt sau xếp máy đúng U, ảnh thật mặt trước; công tắc Biểu tượng / Ảnh thật', async ({ page }) => {
+  test('"Dựng lại mặt tủ": chỉ khung mặt trước, máy đúng U, ảnh thật mặt trước; dựng lại khi kho chưa đổi không thêm nháp; công tắc Biểu tượng / Ảnh thật', async ({ page }) => {
     test.setTimeout(240_000);
     const secret = await firstLogin(page, E2E_SA);
     const rack = await seedRack(page);
@@ -146,17 +146,16 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     const chosen = await page.request.patch(`/api/v1/devices/${deviceId}/photos`, { headers: await writeHeaders(page), data: { front: fileId } });
     expect(chosen.status(), await chosen.text()).toBe(200);
 
-    // Khung tủ dựng từ kho: máy 2U ở U5–U6 của tủ 12U (U1 ở đáy) — có ở cả hai mặt.
+    // Khung tủ dựng từ kho: máy 2U ở U5–U6 của tủ 12U (U1 ở đáy) — chỉ mặt trước, một ô mỗi máy.
     const frame = (await (await page.request.get(`/api/v1/diagrams/cabinet-frame/${rack.cabinetId}`)).json()) as {
       layout: { frames: { key: string }[]; devices: { frame: string; code: string; y: number; height: number; attrs: Record<string, string> }[] };
     };
-    expect(frame.layout.frames.map((f) => f.key)).toEqual(['rack', 'rack-back']);
+    expect(frame.layout.frames.map((f) => f.key)).toEqual(['rack']);
     const placed = frame.layout.devices.filter((d) => d.code === withPhoto);
-    expect(placed.map((d) => d.frame)).toEqual(['rack', 'rack-back']);
+    expect(placed.map((d) => d.frame)).toEqual(['rack']);
     expect(placed[0].y).toBeCloseTo(21 + (12 - 6) * 14.8, 1);
     expect(placed[0].height).toBeCloseTo(2 * 14.8, 1);
     expect(placed[0].attrs).toEqual({ ims_photo: 'front' });
-    expect(placed[1].attrs).toEqual({});
 
     const created = await page.request.post('/api/v1/diagrams', {
       headers: await writeHeaders(page),
@@ -173,11 +172,19 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await confirm.getByRole('button', { name: 'Dựng lại' }).click();
     await expect(page.getByText('Đã dựng lại mặt tủ thành nháp #1.')).toBeVisible();
     const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
-    expect(xml).toContain(`Tủ ${rack.cabinetCode} · Mặt trước`);
-    expect(xml).toContain(`Tủ ${rack.cabinetCode} · Mặt sau`);
+    expect(xml).toContain(`label="Tủ ${rack.cabinetCode}"`);
+    expect(xml).not.toContain('Mặt sau');
     expect(xml).toContain('ims_photo="front"');
     // XML lưu "khô": ảnh chỉ nhúng lúc mở sửa (AD-18).
     expect(xml).not.toContain('data:image');
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-chi-mat-truoc.png` });
+
+    // Dựng lại lần nữa khi kho chưa đổi gì: không thêm nháp, số phiên bản giữ nguyên (Q-23 06/10).
+    await diagramBarAction(page, 'Dựng lại mặt tủ');
+    await page.getByRole('dialog', { name: 'Dựng lại mặt tủ từ kho?' }).getByRole('button', { name: 'Dựng lại' }).click();
+    await expect(page.getByText('Mặt tủ dựng từ kho trùng bản mới nhất — không tạo phiên bản mới.')).toBeVisible();
+    expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${diagramId}'`)).toBe('1');
 
     // Công tắc: mặt sau không có ảnh → tắt kèm lý do; đổi ô mặt trước về Biểu tượng rồi lưu.
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
@@ -297,5 +304,78 @@ test.describe('Sơ đồ mạng — mặt tủ không đè U, dây không đứt
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
     if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-dung-lai-xem.png` });
     await expect(page.getByText('Kết nối không khớp hai máy ở hai đầu dây')).toHaveCount(0);
+  });
+});
+
+test.describe('Sơ đồ mạng — "Chuyển máy sang tủ này" ghi kho có hỏi trước (Q-23 06/10)', () => {
+  const RACK_STYLE =
+    'shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=14.8;container=1;collapsible=0;childLayout=rack;allowGaps=1;marginLeft=33;marginRight=9;marginTop=21;marginBottom=22;numDisp=descend;';
+
+  test('máy tủ A nằm trong khung tủ B: lời báo mời chuyển → hộp nêu tủ cũ/mới, U, Số U; chồng U bị chặn (web + API); Chuyển ghi kho rồi đặt lại ô theo U mới', async ({ page }) => {
+    test.setTimeout(240_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const rack = await seedRack(page);
+    const cabinetB = `E2E-RB${rack.stamp}`;
+    const cabinetBId = await catalogItem(page, 'cabinet', { siteId: rack.siteId, code: cabinetB, uHeight: 12 });
+    const mover = `SW-E2E-CV${rack.stamp}`;
+    const moverId = await createDevice(page, rack, mover, { rackUStart: 3, rackUSize: 1 });
+    const holder = `SW-E2E-CG${rack.stamp}`;
+    await createDevice(page, { ...rack, cabinetId: cabinetBId }, holder, { rackUStart: 5, rackUSize: 1 });
+
+    const created = await page.request.post('/api/v1/diagrams', { headers: await writeHeaders(page), data: { name: `E2E Chuyển tủ ${rack.stamp}`, nodeType: 'room' } });
+    expect(created.status(), await created.text()).toBe(201);
+    const diagramId = ((await created.json()) as { id: string }).id;
+    await stepUpViaApi(page, secret, 'diagram');
+    // Máy của tủ A thả ở U5 trong khung của tủ B (tủ 12U: đỉnh ô ở 21 + (12 − 5) × 14.8).
+    const xml =
+      '<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>' +
+      `<UserObject label="Tủ ${cabinetB}" ims_cabinet_id="${cabinetBId}" id="frame-b"><mxCell style="${RACK_STYLE}" vertex="1" parent="1"><mxGeometry x="40" y="40" width="204" height="220.6" as="geometry"/></mxCell></UserObject>` +
+      `<UserObject label="${mover}" ims_device_id="${moverId}" ims_device_code="${mover}" id="cell-mover"><mxCell style="align=center;" vertex="1" parent="frame-b"><mxGeometry x="33" y="124.6" width="162" height="14.8" as="geometry"/></mxCell></UserObject>` +
+      '</root></mxGraphModel></diagram></mxfile>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300px" height="300px" viewBox="0 0 300 300"><g data-cell-id="frame-b"><rect x="40" y="40" width="204" height="220"/></g></svg>';
+    const seeded = await page.request.post(`/api/v1/diagrams/${diagramId}/versions`, { headers: await writeHeaders(page), data: { xml, svg, basedOnVersionId: null } });
+    expect(seeded.status(), await seeded.text()).toBe(201);
+
+    await page.goto(`/diagrams/${diagramId}?mode=edit`);
+    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByText(`Máy ${mover} trong kho thuộc tủ ${rack.cabinetCode}, không phải tủ của khung "Tủ ${cabinetB}"`)).toBeVisible();
+    await page.getByRole('button', { name: 'Chuyển máy sang tủ này' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Chuyển máy sang tủ này?' });
+    // U5 nơi thả đã có máy khác → đề xuất U trống gần nhất (U4).
+    await expect(dialog.getByText(`Chuyển ${mover} từ ${rack.cabinetCode} sang ${cabinetB}, U bắt đầu = 4, Số U = 1.`)).toBeVisible();
+    if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/chuyen-may-sang-tu.png` });
+    expect(sql(`SELECT cabinet_id FROM device WHERE id = '${moverId}'`)).toBe(rack.cabinetId);
+
+    // Chồng U: web chặn tại ô; API của devices cũng từ chối (server là trọng tài).
+    const u = dialog.getByRole('textbox', { name: 'U bắt đầu' });
+    await u.fill('5');
+    await expect(dialog.getByRole('alert')).toContainText(`Chỗ U5 đang có ${holder}`);
+    await expect(dialog.getByRole('button', { name: 'Chuyển máy' })).toBeDisabled();
+    const overlap = await page.request.patch(`/api/v1/devices/${moverId}`, {
+      headers: await writeHeaders(page),
+      data: { siteId: rack.siteId, cabinetId: cabinetBId, rackUStart: 5, rackUSize: 1 },
+      failOnStatusCode: false,
+    });
+    expect(overlap.status()).toBeGreaterThanOrEqual(400);
+    expect(((await overlap.json()) as { code: string }).code).toBe('DEVICE_RACK_U_TAKEN');
+    expect(sql(`SELECT cabinet_id FROM device WHERE id = '${moverId}'`)).toBe(rack.cabinetId);
+
+    await u.fill('7');
+    await expect(dialog.getByText(`Chuyển ${mover} từ ${rack.cabinetCode} sang ${cabinetB}, U bắt đầu = 7, Số U = 1.`)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Chuyển máy' }).click();
+    await expect(page.getByText(`Đã chuyển ${mover} sang tủ ${cabinetB} ở U7 trong kho.`)).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    expect(sql(`SELECT cabinet_id || ' ' || rack_u_start || ' ' || rack_u_size FROM device WHERE id = '${moverId}'`)).toBe(`${cabinetBId} 7 1`);
+    // Ghi qua API sửa thiết bị: lịch sử thiết bị + nhật ký như sửa ở trang thiết bị.
+    expect(Number(sql(`SELECT count(*) FROM audit_log WHERE action = 'device.updated' AND object_id = '${moverId}'`))).toBeGreaterThanOrEqual(1);
+
+    // Ô được đặt lại theo U mới (U7 của tủ 12U: đỉnh ô ở 21 + 5 × 14.8 = 95) — lưu để giữ.
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(201);
+    const stored = sql(`SELECT xml FROM diagram_version WHERE id = '${((await saved.json()) as { id: string }).id}'`);
+    expect(stored).toMatch(/id="cell-mover">\s*<mxCell[^>]*>\s*<mxGeometry[^>]*y="95"/);
   });
 });

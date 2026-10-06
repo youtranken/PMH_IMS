@@ -324,6 +324,68 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect(await list.json()).toEqual([]);
   });
 
+  test('không đổi gì thì không sinh phiên bản: mở → Lưu tắt; Ctrl+S; dời rồi dời lại → Lưu; khôi phục bản trùng bản mới nhất (Q-23 06/10)', async ({ page }) => {
+    test.setTimeout(180_000);
+    const secret = await firstLogin(page, E2E_SA);
+    const code = `SW-E2E-KD${uniqueStamp()}`;
+    const second = `SW-E2E-KE${uniqueStamp()}`;
+    await createSwitch(page, code);
+    await createSwitch(page, second);
+    const id = await createDiagram(page, `E2E Không đổi ${uniqueStamp()}`);
+    await stepUpViaApi(page, secret, 'diagram');
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await waitEditorReady(page);
+    await insertDevice(page, code);
+    // Bản #1 do chính draw.io xuất — phép so phải chịu được cách draw.io viết lại XML.
+    expect(await saveInEditor(page, id)).toMatchObject({ seq: 1 });
+    const versions = () => sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${id}'`);
+
+    // Mở lại: chưa sửa gì thì nút Lưu tắt.
+    await page.goto(`/diagrams/${id}?mode=edit`);
+    await waitEditorReady(page);
+    const save = page.getByRole('button', { name: 'Lưu', exact: true });
+    await expect(save).toBeDisabled();
+
+    // Ctrl+S trong trình vẽ khi chưa sửa gì: chỉ báo, không gọi server.
+    const canvas = page.frameLocator('iframe[title="Khung vẽ draw.io"]').locator('.geDiagramContainer');
+    await canvas.click({ position: { x: 600, y: 400 } });
+    await page.keyboard.press('Control+s');
+    await expect(page.getByText('Không có thay đổi để lưu.').first()).toBeVisible();
+    expect(versions()).toBe('1');
+
+    // Dời mọi hình rồi hoàn tác: trình vẽ báo đã sửa, nhưng nét vẽ y nguyên → server không tạo gì.
+    // Hoàn tác (Ctrl+Z) chứ không phải mũi tên ngược: draw.io gom phím mũi tên trong một nhịp hẹn
+    // giờ, bấm Lưu ngay sau đó thì tệp xuất còn ở vị trí đã dời.
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('ArrowRight');
+    await expect(save).toBeEnabled();
+    await page.keyboard.press('Control+z');
+    const [same] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${id}/versions`) && r.request().method() === 'POST'),
+      save.click(),
+    ]);
+    expect(same.status(), await same.text()).toBe(201);
+    expect(((await same.json()) as { seq: number; unchanged?: boolean })).toMatchObject({ seq: 1, unchanged: true });
+    expect(versions()).toBe('1');
+
+    // Khôi phục: #2 thêm máy, khôi phục #1 → #3 (trùng #1); khôi phục #1 LẦN NỮA trùng hệt bản mới
+    // nhất → không tạo phiên bản, báo rõ.
+    await insertDevice(page, second);
+    expect(await saveInEditor(page, id)).toMatchObject({ seq: 2 });
+    await diagramBarAction(page, 'Phiên bản');
+    const box = page.getByRole('dialog', { name: 'Phiên bản và lịch sử' });
+    const restoreFirst = async () => {
+      await box.getByRole('button', { name: 'Khôi phục phiên bản #1' }).click();
+      await page.getByRole('dialog', { name: 'Khôi phục phiên bản #1?' }).getByRole('button', { name: 'Khôi phục' }).click();
+    };
+    await restoreFirst();
+    await expect(page.getByText('Đã khôi phục thành phiên bản #3.')).toBeVisible();
+    await restoreFirst();
+    await expect(page.getByText('Bản này trùng bản mới nhất — không tạo phiên bản mới.')).toBeVisible();
+    expect(versions()).toBe('3');
+    expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.version_restored' AND object_id = '${id}'`)).toBe('1');
+  });
+
   test('ân hạn sơ đồ hết giữa lúc vẽ: bấm Lưu → hỏi mã tại chỗ → nhập xong lưu được, không mất nét đang vẽ', async ({ page }) => {
     test.setTimeout(150_000);
     const secret = await firstLogin(page, E2E_SA);
