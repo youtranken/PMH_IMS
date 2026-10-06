@@ -31,6 +31,7 @@ import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { CatalogForm } from './catalog-form';
+import { DeviceModelsPanel } from './device-models-panel';
 import { CatalogImportDialog } from './catalog-import-dialog';
 import { toCatalogHistory, type CatalogHistoryRow } from './catalog-history-entries';
 import { devicesFilterOf, usageLinks, usageTotal } from './catalog-usage';
@@ -95,6 +96,12 @@ interface CatalogFilters extends Record<string, string> {
 }
 
 const EMPTY_FILTERS: CatalogFilters = { tab: '', search: '', status: '', siteId: '' };
+
+/**
+ * Tab "Model thiết bị" (Q-26) đứng ngoài `CatalogEntity`: bảng `device_model` thuộc `devices` (AD-3),
+ * có API và hành vi riêng (ảnh, số máy, khoá chuẩn hoá) — thân tab là `DeviceModelsPanel`.
+ */
+const MODEL_TAB = 'device_model';
 
 function entityOf(tab: string): CatalogEntity {
   return TAB_KEYS.some((item) => item.key === tab) ? (tab as CatalogEntity) : 'site';
@@ -440,6 +447,8 @@ export function CatalogScreen({ me }: { me: Me }) {
   });
   const { page, limit, filters } = url;
   const entity = entityOf(filters.tab);
+  const modelTab = filters.tab === MODEL_TAB;
+  const [addingModel, setAddingModel] = useState(false);
   /* Không có `sort` trên URL = cột mặc định của TAB đang xem (mỗi tab một cột mặc định). */
   const sorting: SortingState = url.sorting.key
     ? [{ id: url.sorting.key, desc: url.sorting.desc }]
@@ -468,6 +477,7 @@ export function CatalogScreen({ me }: { me: Me }) {
   );
 
   const rows = useQuery({
+    enabled: !modelTab,
     queryKey: ['catalog', entity, page, limit, filters.search, filters.status, siteId, sorting],
     // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới — nhưng CHỈ trong cùng một loại
     // danh mục: sang tab khác mà giữ dòng cũ là vẽ tủ mạng dưới cột của nhà cung cấp.
@@ -697,6 +707,11 @@ export function CatalogScreen({ me }: { me: Me }) {
         title={t('catalog.title')}
         subtitle={t('catalog.subtitle')}
         actions={
+          modelTab ? (
+            <button type="button" className="btn primary catalog-add" onClick={() => setAddingModel(true)}>
+              {t('deviceModels.add')}
+            </button>
+          ) : (
           <>
             {/* Nhập Excel chỉ có nghĩa với bốn danh mục gốc, và chỉ SA/Admin (Q-12). File mẫu
                 nằm TRONG hộp nhập — nó là bước con của việc nhập, không phải nút đầu trang. */}
@@ -737,20 +752,29 @@ export function CatalogScreen({ me }: { me: Me }) {
               {t(`catalog.add${TAB_SUFFIX[entity]}`)}
             </button>
           </>
+          )
         }
       />
 
       <Tabs
-        items={TAB_KEYS.map((tab) => ({
-          key: tab.key,
-          label: t(tab.labelKey),
-          count: lists.data?.[LIST_OF[tab.key]]?.length,
-        }))}
-        value={entity}
+        items={[
+          ...TAB_KEYS.map((tab) => ({
+            key: tab.key,
+            label: t(tab.labelKey),
+            count: lists.data?.[LIST_OF[tab.key]]?.length,
+          })),
+          { key: MODEL_TAB, label: t('deviceModels.tab') },
+        ]}
+        value={modelTab ? MODEL_TAB : entity}
         onChange={switchTab}
         ariaLabel={t('catalog.title')}
       />
 
+      {modelTab ? (
+        <TabPanel tabKey={MODEL_TAB}>
+          <DeviceModelsPanel me={me} adding={addingModel} onAddingChange={setAddingModel} />
+        </TabPanel>
+      ) : (
       <TabPanel tabKey={entity}>
         <FilterBar
           search={url.searchInput}
@@ -843,6 +867,7 @@ export function CatalogScreen({ me }: { me: Me }) {
           </>
         )}
       </TabPanel>
+      )}
 
       {editing ? (
         <CatalogForm

@@ -1399,6 +1399,11 @@ button.tree-summary:hover:not(:disabled) {
   border-radius: var(--r-sm);
   background: var(--diagram-paper);
 }
+/* Ảnh mặt trước của model trong bảng Danh mục: ảnh gắn tủ dài và thấp (1U ≈ 11:1), ô hẹp thì thành vạch. */
+.photo-thumb.wide {
+  width: 7rem;
+  margin-right: 0;
+}
 /* Hộp "Hướng dẫn" của màn sơ đồ: mỗi mục một tiêu đề nhỏ + vài gạch, giữa các mục có khoảng thở. */
 .diagram-guide {
   display: flex;

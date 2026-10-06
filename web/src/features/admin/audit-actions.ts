@@ -183,6 +183,8 @@ export const VERB_KEY: Record<string, string> = {
   'port-unlinked': 'audit.verb.portUnlinked',
   'photos-changed': 'audit.verb.photosChanged',
   'model-created': 'audit.verb.modelCreated',
+  'model-updated': 'audit.verb.modelUpdated',
+  'model-deleted': 'audit.verb.modelDeleted',
   'model-photos-changed': 'audit.verb.modelPhotosChanged',
   'device-detached': 'audit.verb.deviceDetached',
   renewed: 'audit.verb.renewed',
