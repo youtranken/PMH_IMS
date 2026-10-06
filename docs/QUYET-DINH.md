@@ -803,6 +803,70 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     đúng dải 1U thay vì một ô cao có hai dải trống.
   - **Dữ liệu "PMH Tower":** khung tủ đang gắn TU-04 trong khi máy thuộc TU-TOWER-01 — người vẽ đổi
     tủ của khung qua menu ⋮ → "Gắn khung" → "Đổi tủ của khung này" (IMS không tự sửa bản vẽ đó).
+- **Quy trình vẽ và ba nguồn sự thật (06/10/2026 chiều, chủ dự án duyệt `docs/DE-XUAT-MODEL-THIET-BI.md`
+  bản viết lại).** Lý do: các gạch trước xử lý từng tình huống chuột mà chưa nói luật chung, nên chủ
+  dự án không thấy được quy trình "tủ lắp xong → bản vẽ chính thức".
+  - **Ba nguồn, không chồng nhau.** L1: kho là nguồn duy nhất về VỊ TRÍ (tủ + U bắt đầu + Số U) —
+    mặt tủ trên bản vẽ là ảnh chiếu của kho; mọi kéo-thả trong khung tủ là một thao tác kho có hộp
+    xác nhận (gạch "Ảnh thiết bị và máy trong tủ" C, D ở trên là hệ quả của luật này). L2: sơ đồ cổng
+    là nguồn duy nhất về DÂY (gạch 02–03/10 giữ nguyên). L3: Model là nguồn về đặc tính loại máy
+    (Q-26); chưa có Model thì đọc trên từng máy như hiện nay.
+  - **Thao tác kho từ màn vẽ ghi NGAY, có audit, không chờ duyệt bản vẽ** (khai U, chuyển tủ, khai
+    dây) — cùng quyền và nhật ký như sửa ở trang thiết bị. Hủy duyệt, bỏ nháp hay khôi phục phiên
+    bản bản vẽ KHÔNG hoàn tác các thao tác này. Lý do: nhất quán với gạch 02/10 (Thành viên sửa sơ
+    đồ cổng trực tiếp); hộp xác nhận nói rõ là đang ghi vào kho.
+  - **Hộp tạo bản vẽ hỏi "Bắt đầu từ" — SỬA gạch 04/10 "tạo bản vẽ con mặc định NHÂN BẢN nội dung
+    bản cha".** Bản vẽ cấp tủ (đã gắn tủ): **"Dựng từ kho"** (mặc định — cùng cách "Dựng lại mặt
+    tủ") / "Trang trắng" / "Chép nội dung bản vẽ cha". Cấp khác: **"Trang trắng"** (mặc định) /
+    "Chép nội dung bản vẽ cha". "Chép nội dung bản vẽ cha" giữ đủ luật cũ (chọn phiên bản bản cha
+    theo gạch 05/10, gỡ khung hỏng, hỏi mã sơ đồ) và hộp ghi rõ: chỉ chép một lần làm nội dung khởi
+    đầu, không liên kết gì về sau. Lý do: chủ dự án thấy tự nhân bản khó hiểu; nhu cầu "chép để sửa
+    mà không ảnh hưởng bản gốc" đã có hai cơ chế đúng việc — **nháp + Phát hành** (bản chính thức
+    không đổi tới khi phát hành) và **Bản trình bày** (bản tách rời hẳn); còn bản vẽ tủ thì kho đã
+    biết máy nào nằm U nào, nên mồi bằng kho đúng hơn mồi bằng hình tầng/phòng.
+  - **Ô "Cấp bản vẽ" tự giải thích** (bổ sung D-03): dưới ô chọn có một câu "Chọn 'Tủ mạng' để gắn
+    tủ kho và dựng mặt tủ từ kho; các cấp khác chỉ là nhãn trên bản đồ, không ràng buộc cây." Các
+    cấp giữ nguyên: "Tủ mạng" là công tắc chức năng (gắn tủ, dựng mặt tủ); cấp còn lại là nhãn định
+    hướng trên bản đồ không gian.
+  - **Huy hiệu sẵn sàng trong panel "Thiết bị kho"** (làm ngay, không chờ Model): máy gắn tủ thiếu
+    U → "thiếu U"; thiếu ảnh → "thiếu ảnh" (nhẹ, vì máy vẫn hiện bằng biểu tượng loại); ảnh chưa cắt
+    chuẩn → "cắt lại"; kèm bộ lọc. Không chặn kéo vào — chỉ báo TRƯỚC khi vẽ.
+  - **Thước đo:** tủ 20 máy đã nhập kho đủ (U + ảnh) → bản vẽ tủ hoàn chỉnh dưới 2 phút, 0 lần chỉnh
+    ảnh/ô bằng tay; máy thứ hai cùng model nhập kho dưới 30 giây.
+  - Để sau (không làm đợt này): vai trò mạng để tự xếp / tô màu; "Tự dựng sơ đồ từ kho" cho trang
+    TỰ DO (mặt tủ thì tự dựng đã có và là bước chuẩn); nhập devicetype-library của NetBox; AI nội bộ
+    chuyển sơ đồ cũ sang draw.io (không gửi dữ liệu mạng ra ngoài).
+
+### Q-26 · Model thiết bị (06/10/2026, chủ dự án duyệt `docs/DE-XUAT-MODEL-THIET-BI.md` mục B, C, D)
+
+Làm SAU các gạch 06/10 của Q-23. Cách hiển thị trên sơ đồ và trang thiết bị giữ nguyên; Model chỉ
+thay CHỖ LẤY Số U, ảnh và cổng.
+
+- **Model là đặc tính chung của một loại máy, Thiết bị là từng chiếc** (như "Vios 2024" và chiếc xe
+  biển số cụ thể). Model gồm: Hãng, Mã model, Loại thiết bị; **Gắn tủ** Có (kèm Số U) / Không;
+  **Cổng mẫu**; **Ảnh mặt trước** (cắt theo hộp cắt của Q-23 06/10 A). Dựng trên bảng `device_model`
+  sẵn có (0054) bằng migration mới — không sửa file cũ. Mỗi model hiện số máy đang dùng; không xoá
+  được khi còn máy dùng.
+- **Quy trình: thiết bị trước, model tạo tại chỗ.** Form Thêm thiết bị có ô Model gợi ý; chưa có thì
+  "+ Tạo model mới" ngay trong form (Gắn tủ? Số U? Cổng mẫu? Ảnh?), không phải sang Danh mục. Chọn
+  model là tự có Số U, ảnh, cổng sinh sẵn; từng máy vẫn sửa đè được (thêm card mạng → thêm cổng).
+  Model gắn tủ: form hỏi Tủ + U bắt đầu (câu "Chiếm U30–U31", nút "Xem tủ"). Model không gắn tủ
+  (máy in, camera, AP, PC, máy chấm công…): ẩn Tủ/U, chỉ hỏi Site/phòng, và không bao giờ vào khung
+  tủ. Lý do: máy không tủ vẫn cần model vì ảnh và cổng mẫu (máy in = 1 cổng `LAN`).
+- **Ô U bắt đầu gợi ý dải U TRỐNG đủ n U** của tủ đã chọn; gõ tay thì báo trùng ngay (cùng ràng buộc
+  `device_rack_u_no_overlap`, server vẫn là trọng tài).
+- **Chống model tách đôi:** khoá chuẩn hoá (viết hoa, bỏ khoảng trắng và gạch — "C9300-48P" và
+  "c9300 48p" cùng khoá) là UNIQUE; gõ trùng khoá thì gợi ý model có sẵn, không cho tạo bản thứ hai.
+- **Cổng mẫu** gõ theo tên của hãng, `[a-b]` sinh dải (`Gi1/0/[1-48]` + `Te1/1/[1-4]`); mỗi nhóm có
+  kiểu cổng (RJ45 / SFP / SFP+ / Console / Khác) để vẽ mặt cổng. Có mẫu dựng sẵn ("Switch 24 cổng",
+  "Switch 48 + 4 uplink", "1 LAN").
+- **Tab Cổng** có hình mặt cổng dạng lưới (đang dùng / trống, rê chuột thấy đầu kia); bảng mặc định
+  chỉ hiện cổng đang dùng, nút "Hiện cả cổng trống (n)"; khai dây CHỌN cổng trống, không gõ tay.
+- **Truy cập quản trị:** các dòng *kiểu* (Web / SSH / Telnet / RDP / Winbox / Khác) + *địa chỉ:cổng*;
+  Web thành link, SSH hiện lệnh kèm nút chép. Mật khẩu vẫn ở Két.
+- **Chuyển tiếp:** Model thành nguồn Số U; máy có ảnh cắt theo U cũ lệch U của model thì hiện lại
+  "Ảnh chưa cắt chuẩn — Cắt lại", không tự co kéo ảnh. Dữ liệu thử cũ KHÔNG chuyển đổi: máy cũ để
+  "chưa có Model", cổng khai tay cũ xoá cũng được — prod nhập dữ liệu thật từ đầu.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
