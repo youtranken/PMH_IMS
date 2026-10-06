@@ -1028,3 +1028,34 @@ và bình luận nay `ON DELETE CASCADE` theo phiên bản (chỉ hàm xoá ch�
    không bao giờ thoát. Chờ theo PID hoặc file đánh dấu.
 7. **E2E đầy đủ nay quá 1,5 giờ.** `CLAUDE.md` đổi sang "E2E theo phạm vi" ở tầng cuối; chỉ chạy đầy đủ
    khi chạm lõi.
+
+### Đợt bổ sung trước khi gộp `master` (v1.6.0) — góp ý Q-23 + Story 10.13 + rà soát mã
+
+Quyết định: `docs/QUYET-DINH.md` Q-23 (các gạch ảnh thiết bị / máy trong tủ, "Quy trình vẽ và ba nguồn
+sự thật"). Migration thêm: `0058`–`0061`.
+
+| Thứ | Ở đâu | Ghi chú cho epic sau |
+| --- | --- | --- |
+| Ba nguồn sự thật: kho = vị trí, sơ đồ cổng = dây, model = đặc tính loại máy | Q-23 | Mặt tủ trên bản vẽ là ảnh chiếu của kho; kéo-thả trong khung tủ là thao tác kho có hỏi trước, ghi ngay, không chờ duyệt |
+| `POST /diagrams/from-stock` ("Dựng từ kho") | `diagrams.service.createFromStock` | Bản vẽ cấp tủ + nháp #1 dựng bằng `cabinetFrame` + `buildRackXml`, một transaction, hỏi mã sơ đồ |
+| Hộp tạo bản vẽ "Bắt đầu từ" | `features/diagrams/diagram-start.ts` | Không gì tự chép: cấp thường mặc định Trang trắng, cấp tủ đã chọn tủ mặc định Dựng từ kho |
+| Huy hiệu sẵn sàng ở "Thiết bị kho" | `features/diagrams/device-readiness.ts` | Ảnh trong style `device-looks` là dạng draw.io `data:<mime>,<base64>` (không `;base64`) — đọc ảnh từ style phải nhận dạng đó |
+| `parseDrawioXml`, `cellWrapper`, `cellIdOf`, `wrapperAttrs`, `cableView` | `features/diagrams/drawio-bridge.ts` | MỘT chỗ đọc XML draw.io cho mọi cầu nối màn sửa (rà soát #8: các bản chép đã lệch nhau) |
+| `0061_diagram_archive_clock` | migration | `archived_at` / `deleted_at` do DB đóng dấu `now()`; ims_app không lùi mốc để mở đường "Xóa vĩnh viễn" |
+| `photoSize()` | `api/src/common/photo-thumbnail.ts` | Đọc cỡ ảnh từ đầu tệp PNG/JPEG thay lượt dò Resvg đồng bộ (tải phông chặn event loop) |
+
+Bẫy mới:
+
+1. **`diffRecord` coi mọi object / mảng là rỗng** (`common/record-diff.ts`): trường jsonb của hồ sơ phải so
+   riêng, không thì sửa riêng trường đó bị coi là "không đổi gì" và KHÔNG được lưu.
+2. **`FOR SHARE` đầu transaction rồi `FOR UPDATE` cùng hàng sau đó = deadlock** giữa hai lượt cùng máy.
+   Khoá ghi phải lấy ngay đầu transaction.
+3. **Chạy lẻ E2E trên DB dev đã xoá hết bản vẽ:** bài nào ngầm dựa vào "cây còn bản vẽ khác" sẽ đỏ
+   (màn trống hiện thẳng khu lưu trữ, không có nút "Đã lưu trữ (n)"). Bài kiểm phải tự đủ dữ liệu.
+4. **Hai bài E2E chập chờn đã biết:** `my-profile.spec.ts` "Đăng xuất các máy khác" (quá 60 giây khi máy
+   tải nặng) và `nat-guard-remaining-doors.spec.ts:428` (dải IP dựng từ `stamp % 200` có thể trùng dữ
+   liệu đang có). Chạy lại riêng thì xanh; chưa sửa gốc.
+
+Còn để ngỏ: nhịp "đang mở sửa" không đòi mã sơ đồ (nó chỉ trả tên người đang sửa, Q-23 chỉ liệt kê
+lưu / đặt tên / khôi phục); hai bước "lưu trữ → xóa vĩnh viễn" hợp lệ thì DB không phân biệt được với
+ims_app bị chiếm làm đúng hai bước đó.

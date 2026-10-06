@@ -833,6 +833,9 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     chuẩn → "cắt lại"; kèm bộ lọc. Không chặn kéo vào — chỉ báo TRƯỚC khi vẽ.
   - **Thước đo:** tủ 20 máy đã nhập kho đủ (U + ảnh) → bản vẽ tủ hoàn chỉnh dưới 2 phút, 0 lần chỉnh
     ảnh/ô bằng tay; máy thứ hai cùng model nhập kho dưới 30 giây.
+  - **Nhịp "đang mở sửa" (presence) KHÔNG đòi mã sơ đồ** (07/10/2026, chốt khi sửa rà soát mã): nó chỉ
+    trả tên người đang sửa, không phải nội dung bản vẽ; đòi mã thì hết ân hạn 10 phút giữa lúc vẽ là
+    cảnh báo hai người cùng sửa biến mất. Lưu / đặt tên / khôi phục vẫn đòi mã như gạch "Sửa cũng hỏi mã".
   - Để sau (không làm đợt này): vai trò mạng để tự xếp / tô màu; "Tự dựng sơ đồ từ kho" cho trang
     TỰ DO (mặt tủ thì tự dựng đã có và là bước chuẩn); nhập devicetype-library của NetBox; AI nội bộ
     chuyển sơ đồ cũ sang draw.io (không gửi dữ liệu mạng ra ngoài).
