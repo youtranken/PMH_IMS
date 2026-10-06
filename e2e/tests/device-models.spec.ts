@@ -210,7 +210,8 @@ test.describe('Model thiết bị (Q-26)', () => {
     expect(await attack.json()).toMatchObject({ code: 'DEVICE_ACCESS_INVALID' });
     // Dữ liệu cũ ghi thẳng vào DB (trước khi có luật): trang không dựng lệnh từ nó.
     const id = await createDevice(page, { code: `SW-E2E-INJ${stamp}`, name: 'Máy cũ', deviceTypeId: typeId });
-    sql(`UPDATE device SET access_points = '[{"kind":"ssh","address":"10.0.0.1;id","port":null}]'::jsonb WHERE id = '${id}'`);
+    // Dựng JSON bằng hàm Postgres: `sql()` đi qua shell trong dấu nháy kép.
+    sql(`UPDATE device SET access_points = jsonb_build_array(jsonb_build_object('kind', 'ssh', 'address', '10.0.0.1;id', 'port', NULL)) WHERE id = '${id}'`);
     await page.goto(`/devices/${id}`);
     await expect(page.getByText('10.0.0.1;id')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Chép lệnh' })).toHaveCount(0);
