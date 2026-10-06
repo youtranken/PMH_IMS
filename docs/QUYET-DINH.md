@@ -764,6 +764,42 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     khi lưu xong, khi bấm Bỏ, khi chọn "Bỏ thay đổi" lúc rời màn, khi bấm Đăng xuất, và tự hết hạn
     sau `diagram.draft_keep_hours` giờ (mặc định 24). Đổi master key thì bản nháp cũ không mở được
     và bị bỏ. Rời màn khi còn thay đổi chưa lưu vẫn hỏi như cũ (`useUnsavedGuard`, cả đóng tab).
+- **Ảnh thiết bị và máy trong tủ (06/10/2026, chủ dự án chốt sau 5 ảnh chụp lỗi: ảnh 1U nhỏ xíu ở
+  bản đồ quan hệ và ô ảnh, máy tủ khác thả vào khung TU-04 chiếm U33–U41, ảnh 1U thành vạch "—",
+  máy trong tủ chồng nhau với nhãn 3 dòng).** Nguyên nhân chung: ảnh tải lên còn viền trong suốt /
+  trắng và không theo tỉ lệ mặt tủ, khung hiển thị cố định vuông / cao 160px, và máy của tủ khác
+  nằm lại trong khung với cỡ của trang tự do.
+  - **A. Tải ảnh = tự cắt viền + hộp cắt.** Mọi chỗ tải ảnh thiết bị (ô ảnh của trang thiết bị,
+    form Thêm/Sửa, "Dùng cho mọi máy cùng model") mở hộp cắt dùng chung (`ImageCropDialog`, web/src/ui
+    — vẽ bằng canvas, không thêm thư viện). Viền trong suốt hoặc gần đồng màu (trắng) tự cắt trước.
+    Máy có Số U = n > 0: khung cắt khoá theo mặt tủ 19" — rộng 482,6 mm : cao n × 44,45 mm (1U ≈
+    10,86 : 1, 2U ≈ 5,43 : 1…); không có Số U thì cắt tự do. Ra PNG (giữ nền trong suốt) nếu ảnh gốc
+    là PNG, không thì JPEG; tải lên qua đúng đường giấy tờ (cùng trần cỡ, server vẫn kiểm loại, cỡ,
+    giải mã + vẽ lại). Ảnh cũ vẫn chạy; ô ảnh đo ảnh đã thu nhỏ ngay ở trình duyệt và hiện "Ảnh chưa
+    cắt chuẩn — Cắt lại" khi còn viền hoặc lệch tỉ lệ n U (đổi Số U sau này cũng hiện câu này).
+    "Cắt lại" mở cùng hộp trên tệp gốc rồi lưu như một lần tải ảnh mới cùng mức (ảnh riêng → ảnh
+    riêng; ảnh model → ảnh model nếu là SA/Admin, không thì thành ảnh riêng của máy).
+  - **B. Khung hiển thị theo tỉ lệ ảnh.** Ô ảnh ở trang thiết bị / form rộng hết ô, cao theo ảnh
+    (ảnh 1U thành dải rộng và thấp). Hạch của Bản đồ quan hệ hiện ảnh rộng thành một dải hết bề
+    rộng thẻ hạch, không nằm trong ô vuông.
+  - **C. Trong khung tủ, máy đặt theo U của kho, không gì khác.** Ô máy LUÔN cao đúng n × 1U và rộng
+    hết lòng tủ; ảnh thật lấp đầy ô U (kéo giãn — ảnh đã cắt đúng tỉ lệ thì không méo, ảnh cũ chưa cắt
+    không còn thu nhỏ thành vạch). Nhãn một dòng bên phải ("mã · IP") ngay khi máy vào khung, không
+    chờ mở lại; hai nhãn sát nhau thì nhãn sau dời sang làn bên để không chồng. Hai máy không bao
+    giờ chung một U trên khung. Máy tủ khác thả vào khung: ô được đặt ngay cao n × U ở U trống gần
+    chỗ thả rồi mở hộp "Chuyển máy sang tủ này" như 06/10; **Hủy → ô ra NGOÀI khung (cạnh khung)**,
+    không bao giờ nằm lại trong khung với cỡ cũ — sửa gạch 06/10 "Huỷ → ô về chỗ cũ" (chỗ cũ có thể
+    chính là trong khung). Lý do: một máy nằm trong khung mà không theo U là hình tủ sai.
+  - **D. Máy chưa khai U thả vào khung tủ của chính tủ nó** → hộp chọn U trống gần chỗ thả (cùng hộp,
+    cùng mặt đứng tủ và U trống gần nhất), ghi kho qua API sửa thiết bị của `devices` sau khi người
+    vẽ bấm đồng ý. Hủy → ô vào cột "Chưa khai U" của tủ (chưa có cột thì IMS dựng cột cạnh khung).
+  - **E. Trang tự do: mọi máy cùng một bề rộng chuẩn** `diagram.device_width_px` (mặc định 160 —
+    đúng lòng tủ, AD-11, màn Tham số); cao = rộng × tỉ lệ ảnh (hay tỉ lệ biểu tượng). Áp khi chèn,
+    kéo thả từ "Thiết bị kho" và đổi Biểu tượng ↔ Ảnh; người vẽ vẫn kéo cỡ tay được. Ô đã có KHÔNG bị
+    sửa lúc mở bản vẽ. Tỉ lệ cao/rộng của ô ảnh nới xuống 0,08 (gạch 05/10 chặn 0,15) để ảnh 1U ra
+    đúng dải 1U thay vì một ô cao có hai dải trống.
+  - **Dữ liệu "PMH Tower":** khung tủ đang gắn TU-04 trong khi máy thuộc TU-TOWER-01 — người vẽ đổi
+    tủ của khung qua menu ⋮ → "Gắn khung" → "Đổi tủ của khung này" (IMS không tự sửa bản vẽ đó).
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
