@@ -21,7 +21,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
-import { appDbPassword, appDbUrl, createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { appDbPassword, appDbUrl, createScratchDb, migrationsDir, waitForLock, type ScratchDb } from './db';
 import { noPhotos } from './device-photos-stub';
 
 /**
@@ -516,6 +516,34 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
         expect(await seqs(d.id)).toEqual([1, 2]);
       });
     });
+  });
+
+  /*
+   * Khôi phục đọc phiên bản nguồn trước khi khoá bản vẽ (chụp thiết bị nằm ngoài khoá). "Bỏ bản
+   * nháp" chạy xen giữa xoá mất bản nguồn: lượt khôi phục phải báo không tìm thấy phiên bản, không
+   * vỡ khoá ngoại thành lỗi 500.
+   */
+  it('"Bỏ bản nháp" xoá bản nguồn trong lúc khôi phục chờ khoá → 404 DIAGRAM_VERSION_NOT_FOUND, không phiên bản mới', async () => {
+    const d = await drawn(3, SA.email, 'Đua khôi phục');
+    await review.publish(SA, d.id, { versionId: d.versions[0] });
+    const discarder = await scratch.pool.connect();
+    let pending: Promise<string> | undefined;
+    try {
+      await discarder.query('BEGIN');
+      await discarder.query(`SELECT id FROM diagram WHERE id = $1 FOR UPDATE`, [d.id]);
+      pending = diagrams.restore(SA.email, d.id, d.versions[1]).then(
+        () => 'ok',
+        (error: { status?: number; code?: string; cause?: { code?: string }; response?: { code?: string } }) =>
+          error.response?.code ?? error.cause?.code ?? error.code ?? String(error.status),
+      );
+      await waitForLock(scratch.pool);
+      await discarder.query(`SELECT diagram_delete_versions($1, $2::uuid[], 'drafts')`, [d.id, d.versions.slice(1)]);
+      await discarder.query('COMMIT');
+    } finally {
+      discarder.release();
+    }
+    expect(await pending).toBe('DIAGRAM_VERSION_NOT_FOUND');
+    expect(await seqs(d.id)).toEqual([1]);
   });
 
   /**

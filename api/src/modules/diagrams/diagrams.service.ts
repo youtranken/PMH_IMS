@@ -1547,10 +1547,17 @@ export class DiagramsService {
       .select()
       .from(diagramVersionTable)
       .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
-    if (!source) throw new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
+    if (!source) throw versionNotFound();
     // Chụp lại thông tin thiết bị BÂY GIỜ: bản khôi phục là một lần lưu mới (AD-14).
     const snapshot = await this.snapshot(source.cellIndex);
     await this.lockLive(tx, diagramId);
+    // Đọc lại dưới khoá: "Bỏ bản nháp" khoá cùng hàng, nên nếu nó xoá bản nguồn trong lúc ta chụp
+    // thiết bị thì tới đây mới thấy — báo không tìm thấy, không vỡ khoá ngoại thành 500.
+    const [stillThere] = await tx
+      .select({ id: diagramVersionTable.id })
+      .from(diagramVersionTable)
+      .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
+    if (!stillThere) throw versionNotFound();
     const latest = await this.latestWithin(tx, diagramId);
     // Cùng luật với lưu không đổi: một phiên bản "khôi phục" giống hệt bản đứng trước chỉ làm dài
     // chuỗi lịch sử mà không đổi gì để quay về.
@@ -1978,6 +1985,10 @@ function assertCanManage(node: DiagramNode, actor: { email: string; role: UserRo
 
 function archived(): ConflictException {
   return new ConflictException({ code: 'DIAGRAM_ARCHIVED', message: 'Bản vẽ đã lưu trữ — không sửa được nữa.' });
+}
+
+function versionNotFound(): NotFoundException {
+  return new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message: 'Không tìm thấy phiên bản này của bản vẽ.' });
 }
 
 function pgCode(error: unknown): string | undefined {
