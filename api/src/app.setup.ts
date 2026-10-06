@@ -31,20 +31,29 @@ export function setupApp(app: INestApplication): void {
 
   /*
    * Body JSON mặc định của Nest trần 100 KB — vừa cho mọi form, quá nhỏ cho một bản vẽ draw.io
-   * vài trăm hình. Nới RIÊNG route lưu phiên bản bản vẽ, không nới toàn cục (kể cả các route khác
-   * của module sơ đồ): một trần lớn cho mọi route là mời gửi body khổng lồ vào những cửa chưa từng
-   * cần. 12 MB = trần trên của `diagram.xml_max_kb` + `diagram.svg_max_kb` (4 MB mỗi thứ) cộng phần
-   * JSON phình ra khi thoát dấu nháy; cổng kiểm của server vẫn chặn theo tham số đang đặt. Đăng ký
-   * ở đây chạy TRƯỚC parser mặc định (Nest gắn nó lúc `listen`), và parser mặc định bỏ qua body
-   * đã đọc.
+   * vài trăm hình. Nới RIÊNG từng route nhận bản vẽ, không nới toàn cục (kể cả các route khác của
+   * module sơ đồ): một trần lớn cho mọi route là mời gửi body khổng lồ vào những cửa chưa từng cần.
+   * - Lưu phiên bản: 12 MB = trần trên của `diagram.xml_max_kb` + `diagram.svg_max_kb` (4 MB mỗi
+   *   thứ) cộng phần JSON phình ra khi thoát dấu nháy.
+   * - Soát dây trên XML đang vẽ: nhận nguyên XML phiên sửa (DTO cho tới 6 MB) — cùng trần 12 MB.
+   * - Tải biểu tượng sơ đồ: `diagram.icon_svg_max_kb` đặt được tới 500 KB, DTO thô 1 MB — 2 MB.
+   * Cổng kiểm của server vẫn chặn theo tham số đang đặt. Đăng ký ở đây chạy TRƯỚC parser mặc định
+   * (Nest gắn nó lúc `listen`), và parser mặc định bỏ qua body đã đọc.
    *
    * Bọc trong một hàm tên khác: Nest thấy trong stack đã có layer tên `jsonParser` (tên hàm
    * `json()` trả về) thì KHÔNG gắn parser mặc định nữa, và mọi route khác mất body JSON.
    */
-  const diagramJson = json({ limit: '12mb' });
-  app.use(/^\/api\/v1\/diagrams\/[^/]+\/versions$/, function diagramVersionBody(req: Request, res: Response, next: NextFunction) {
-    diagramJson(req, res, next);
-  });
+  const largeBodyRoutes: [RegExp, string][] = [
+    [/^\/api\/v1\/diagrams\/[^/]+\/versions$/, '12mb'],
+    [/^\/api\/v1\/diagrams\/cable-status$/, '12mb'],
+    [/^\/api\/v1\/catalog\/device-types\/[^/]+\/diagram-icon$/, '2mb'],
+  ];
+  for (const [route, limit] of largeBodyRoutes) {
+    const parser = json({ limit });
+    app.use(route, function largeDiagramBody(req: Request, res: Response, next: NextFunction) {
+      parser(req, res, next);
+    });
+  }
 
   app.use(cookieParser());
   app.use(
