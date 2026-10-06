@@ -60,6 +60,7 @@ const LINK: DiagramLink = {
   labelFromA: 'Gi1/0/24 ↔ eth0',
   labelFromB: 'eth0 ↔ Gi1/0/24',
   edgeStyle: 'edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;imsPaint=cable-2;html=0;',
+  endLabel: { style: 'edgeLabel;imsPortEnd=1;imsPaint=cable-2;html=0;fontSize=10;resizable=0;', offset: 0.75 },
 };
 
 const PORTS_SW = {
@@ -149,11 +150,19 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     expect(JSON.parse(String(init?.body))).toEqual({ portLabel: 'Gi1/0/24', connectedDeviceId: 'dev-srv', connectedPort: 'eth0', cableTypeId: 'ct-fiber' });
     await answerFile(DEVICES + edge('e1', 'a', 'b'));
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
-    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { xmlValue: string; style: string }> } } } } };
+    const patch = messages().find((m) => m.action === 'patch') as {
+      patch: { u: { p1: { cells: { u: Record<string, { xmlValue: string; style: string }>; i: { id: string; parent: string; value: string }[] } } } };
+    };
     const update = patch.patch.u.p1.cells.u.e1;
     expect(update.xmlValue).toContain('ims_link_id="link-1"');
     expect(update.xmlValue).toContain('ims_cable_type_id="ct-fiber"');
-    expect(update.xmlValue).toContain('label="Gi1/0/24 ↔ eth0"');
+    // Nhãn cổng ở HAI ĐẦU dây (Q-23 06/10): nhãn giữa rỗng, hai ô nhãn con của nét chèn cùng lệnh.
+    expect(update.xmlValue).toContain('label=""');
+    expect(update.xmlValue).toContain('ims_port_labels="ends"');
+    expect(patch.patch.u.p1.cells.i.map((c) => [c.id, c.parent, c.value])).toEqual([
+      ['e1-ims-ps', 'e1', 'Gi1/0/24'],
+      ['e1-ims-pt', 'e1', 'eth0'],
+    ]);
     expect(update.style).toContain('imsPaint=cable-2');
     // Nét vẽ bằng công cụ nét thẳng cũng thành dây vuông góc khi khai (Q-23 05/10).
     expect(update.style).toContain('edgeStyle=orthogonalEdgeStyle');
@@ -259,15 +268,23 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     await pickMenuItem(user, /^Thao tác với/, 'Tự đi lại dây');
     await answerFile(DEVICES + loose + helper);
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
-    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, Record<string, string>> } } } } };
+    const patch = messages().find((m) => m.action === 'patch') as {
+      patch: { u: { p1: { cells: { u: Record<string, Record<string, string>>; i: { id: string; value: string }[] } } } };
+    };
     const update = patch.patch.u.p1.cells.u.e1;
     expect(Object.keys(patch.patch.u.p1.cells.u)).toEqual(['e1']);
+    // Dây người vẽ đụng tới chuyển sang nhãn cổng hai đầu (Q-23 06/10).
+    expect(patch.patch.u.p1.cells.i.map((c) => [c.id, c.value])).toEqual([
+      ['e1-ims-ps', 'Gi1/0/24'],
+      ['e1-ims-pt', 'eth0'],
+    ]);
     expect(update).toMatchObject({ geometry: '<mxGeometry relative="1" as="geometry"/>', source: 'a', target: 'b' });
     // Nối đúng rồi thì nhãn + màu theo kết nối NGAY (không chờ mở lại): hết nhãn đỏ "phải nối …".
     expect(update.style).toContain('edgeStyle=orthogonalEdgeStyle');
     expect(update.style).toContain('imsPaint=cable-2');
     expect(update.style).not.toContain('exitX');
-    expect(update.xmlValue).toContain('label="Gi1/0/24 ↔ eth0"');
+    expect(update.xmlValue).toContain('label=""');
+    expect(update.xmlValue).toContain('ims_port_labels="ends"');
     expect(update.xmlValue).toContain('ims_link_id="link-1"');
     expect(await screen.findByText('Đã đi lại 1 dây, nối lại 1 đầu dây về đúng máy. Bấm Lưu để giữ.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeEnabled();
@@ -294,7 +311,15 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { i: Record<string, unknown>[] } } } } };
     expect(patch.patch.u.p1.cells.i[0]).toMatchObject({ edge: 1, source: 'a', target: 'b' });
     expect(String(patch.patch.u.p1.cells.i[0].xmlValue)).toContain('ims_link_id="link-1"');
-    expect(String(patch.patch.u.p1.cells.i[0].xmlValue)).toContain('label="Gi1/0/24 ↔ eth0"');
+    expect(String(patch.patch.u.p1.cells.i[0].xmlValue)).toContain('label=""');
+    expect(String(patch.patch.u.p1.cells.i[0].xmlValue)).toContain('ims_port_labels="ends"');
+    // Hai ô nhãn đầu dây: lệnh thứ hai, khi nét đã có trong mô hình.
+    const edgeId = String(patch.patch.u.p1.cells.i[0].id);
+    const ends = messages().filter((m) => m.action === 'patch')[1] as { patch: { u: { p1: { cells: { i: { id: string; parent: string; value: string }[] } } } } };
+    expect(ends.patch.u.p1.cells.i.map((c) => [c.id, c.parent, c.value])).toEqual([
+      [`${edgeId}-ims-ps`, edgeId, 'Gi1/0/24'],
+      [`${edgeId}-ims-pt`, edgeId, 'eth0'],
+    ]);
     expect(screen.queryByText(/kết nối mới chưa vẽ/)).toBeNull();
     // Không ghi sơ đồ cổng.
     expect((fetchMock.mock.calls as unknown as [string, RequestInit | undefined][]).filter(([url, init]) => String(url).includes('/api/v1/devices/') && init?.method === 'POST')).toEqual([]);

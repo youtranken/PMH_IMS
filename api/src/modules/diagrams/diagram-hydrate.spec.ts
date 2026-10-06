@@ -10,6 +10,9 @@ import {
   hydrateDiagramXml,
   linkEdgeCell,
   photoAspect,
+  PORT_END_OFFSET,
+  PORT_END_SUFFIX,
+  portEndStyle,
   RACK_LABEL_STYLE,
   deviceRackLabel,
   rackDeviceStyle,
@@ -293,9 +296,9 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
     ]),
   };
 
-  function linkedEdge(opts: { id?: string; source?: string; target?: string; link?: string; label?: string; style?: string; cable?: string } = {}): string {
-    const { id = 'e1', source: from = 'd1', target: to = 'd2', link = LINK, label = '', style = 'edgeStyle=orthogonalEdgeStyle;', cable = CAT6 } = opts;
-    return `<UserObject label="${label}" ims_link_id="${link}" ims_cable_type_id="${cable}" id="${id}"><mxCell style="${style}" edge="1" parent="1" source="${from}" target="${to}"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="6"/></Array></mxGeometry></mxCell></UserObject>`;
+  function linkedEdge(opts: { id?: string; source?: string; target?: string; link?: string; label?: string; style?: string; cable?: string; extra?: string } = {}): string {
+    const { id = 'e1', source: from = 'd1', target: to = 'd2', link = LINK, label = '', style = 'edgeStyle=orthogonalEdgeStyle;', cable = CAT6, extra = '' } = opts;
+    return `<UserObject label="${label}" ims_link_id="${link}" ims_cable_type_id="${cable}"${extra} id="${id}"><mxCell style="${style}" edge="1" parent="1" source="${from}" target="${to}"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="6"/></Array></mxGeometry></mxCell></UserObject>`;
   }
 
   function bareEdge(id = 'e2', style = 'edgeStyle=orthogonalEdgeStyle;strokeColor=#FF0000;', value = 'tạm'): string {
@@ -359,12 +362,73 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
     expect(checkDiagramXml(wet, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
   });
 
-  it('ô dây mới cho "Vẽ vào": gắn sẵn link + loại dây, nhãn + màu như lúc hydrate', () => {
+  it('ô dây mới cho "Vẽ vào": gắn sẵn link + loại dây + cờ nhãn hai đầu, màu như lúc hydrate', () => {
     const cell = linkEdgeCell(cables.links.get(LINK)!, { sourceDeviceId: DEV_B, slot: 2 });
     expect(cell).toEqual({
-      label: 'eth0 ↔ Gi1/0/24',
+      label: '',
       style: 'edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;imsPaint=cable-2;html=0;',
-      attrs: { ims_link_id: LINK, ims_cable_type_id: FIBER },
+      attrs: { ims_link_id: LINK, ims_cable_type_id: FIBER, ims_port_labels: 'ends' },
+      ends: { source: 'eth0', target: 'Gi1/0/24' },
+    });
+  });
+
+  describe('nhãn cổng ở HAI ĐẦU dây (Q-23 06/10)', () => {
+    const ends = (xml: string) => [...xml.matchAll(/<mxCell id="([^"]+)" value="([^"]*)" style="([^"]*)" vertex="1" connectable="0" parent="([^"]+)"><mxGeometry x="([^"]+)" relative="1"/g)].map((m) => ({ id: m[1], value: m[2], style: m[3], parent: m[4], x: Number(m[5]) }));
+
+    it.each([
+      ['nét đi từ máy A', 'd1', 'd2', 'Gi1/0/24', 'eth0'],
+      ['nét vẽ ngược chiều', 'd2', 'd1', 'eth0', 'Gi1/0/24'],
+    ])('%s: nhãn giữa rỗng, mỗi đầu một ô nhãn đúng cổng của máy ở đầu đó', (_name, from, to, atSource, atTarget) => {
+      const wet = hydrateDiagramXml(page(two + linkedEdge({ source: from, target: to, extra: ' ims_port_labels="ends"' })), devices, cables);
+      expect(wet).toContain('label="" ims_link_id');
+      expect(ends(wet)).toEqual([
+        { id: `e1${PORT_END_SUFFIX.source}`, value: atSource, style: portEndStyle(2), parent: 'e1', x: -PORT_END_OFFSET },
+        { id: `e1${PORT_END_SUFFIX.target}`, value: atTarget, style: portEndStyle(2), parent: 'e1', x: PORT_END_OFFSET },
+      ]);
+    });
+
+    it('nhãn đầu dây mang màu loại dây và dấu IMS (dehydrate nhận ra)', () => {
+      expect(portEndStyle(2)).toContain('imsPortEnd=1');
+      expect(portEndStyle(2)).toContain('imsPaint=cable-2');
+      expect(portEndStyle(null)).toContain('imsPaint=cable-0');
+    });
+
+    it('dây CŨ (không cờ) giữ nhãn giữa — mở bản vẽ không tự đổi', () => {
+      const wet = hydrateDiagramXml(page(two + linkedEdge()), devices, cables);
+      expect(wet).toContain('label="Gi1/0/24 ↔ eth0"');
+      expect(ends(wet)).toEqual([]);
+    });
+
+    it('nét có cờ mà kết nối đã gỡ / lệch máy → chú thích cảnh báo giữa dây như cũ, không nhãn đầu', () => {
+      const wet = hydrateDiagramXml(page(two + linkedEdge({ link: GONE_LINK, extra: ' ims_port_labels="ends"' })), devices, cables);
+      expect(wet).toContain('label="⚠ Kết nối đã bị gỡ khỏi sơ đồ cổng"');
+      expect(ends(wet)).toEqual([]);
+    });
+
+    it('dehydrate gỡ ô nhãn đầu dây (kể cả khi bị bọc UserObject), giữ cờ; khứ hồi ổn định, qua cổng kiểm', () => {
+      const dry = page(two + linkedEdge({ extra: ' ims_port_labels="ends"' }));
+      const wet = hydrateDiagramXml(dry, devices, cables);
+      expect(checkDiagramXml(wet, { xmlMaxKb: 2048, maxCells: 5000 }).reason).toBeNull();
+      const back = dehydrateDiagramXml(wet);
+      expect(back).not.toContain('imsPortEnd');
+      expect(back).toContain('ims_port_labels="ends"');
+      expect(dehydrateDiagramXml(hydrateDiagramXml(back, devices, cables))).toBe(back);
+      const wrapped = wet.replace(
+        /<mxCell id="(e1-ims-ps)" value="([^"]*)" (style="[^"]*" vertex="1" connectable="0" parent="e1">)/,
+        '<UserObject label="$2" id="$1"><mxCell $3',
+      ).replace(/(<UserObject label="[^"]*" id="e1-ims-ps">[\s\S]*?<\/mxCell>)/, '$1</UserObject>');
+      expect(wrapped).toContain('<UserObject label="Gi1/0/24" id="e1-ims-ps">');
+      expect(dehydrateDiagramXml(wrapped)).toBe(back);
+    });
+
+    it('hydrate lại XML ướt (đã có ô nhãn đầu) không nhân đôi ô nhãn', () => {
+      const wet = hydrateDiagramXml(page(two + linkedEdge({ extra: ' ims_port_labels="ends"' })), devices, cables);
+      expect(ends(hydrateDiagramXml(wet, devices, cables))).toHaveLength(2);
+    });
+
+    it('chỉ mục ô bỏ qua ô nhãn đầu dây (không thành "hình" mới khi web gửi XML đang vẽ)', () => {
+      const wet = hydrateDiagramXml(page(two + linkedEdge({ extra: ' ims_port_labels="ends"' })), devices, cables);
+      expect(buildCellIndex(wet).cells.map((c) => c.id)).toEqual(['d1', 'd2', 'e1']);
     });
   });
 });

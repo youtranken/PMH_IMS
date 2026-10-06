@@ -249,6 +249,11 @@ export function paintImsStyle(style: string, palette: Record<string, string>): s
   const match = /(?:^|;)imsPaint=([a-z0-9-]+)/.exec(style);
   const color = match ? palette[match[1]] : undefined;
   if (!color) return style;
+  // Nhãn cổng ở đầu dây là ô chữ: chỉ tô chữ — `strokeColor` trên ô chữ là vẽ khung quanh nhãn.
+  if (style.split(';').includes('imsPortEnd=1')) {
+    const text = style.split(';').filter((token) => token !== '' && !/^fontColor=/.test(token));
+    return `${text.join(';')};fontColor=#${color};`;
+  }
   const kept = style
     .split(';')
     .filter((token) => token !== '' && !/^(strokeColor|fontColor|endArrow|startArrow)=/.test(token));

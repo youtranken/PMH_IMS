@@ -115,6 +115,18 @@ function imsAttrs(...sources: (Record<string, string> | null)[]): Record<string,
   return out;
 }
 
+/** Dấu style của ô nhãn đầu dây do IMS dựng lúc hydrate (`diagram-hydrate.ts`). */
+export const PORT_END_MARK = 'imsPortEnd=1';
+const PORT_END_ID = /-ims-p[st]$/;
+
+/**
+ * Ô nhãn đầu dây — theo style của `mxCell`, hay theo id khi draw.io bọc nó trong `UserObject`. Ô này
+ * chỉ có ở XML ướt (đang vẽ), không phải hình của người vẽ: chỉ mục ô và dehydrate bỏ qua nó.
+ */
+export function isPortEndCell(attrs: Record<string, string>): boolean {
+  return (attrs.style ?? '').split(';').includes(PORT_END_MARK) || PORT_END_ID.test(attrs.id ?? '');
+}
+
 function readRawCells(xml: string): RawCell[] {
   const cells: RawCell[] = [];
   const parser = new SaxesParser({ xmlns: false });
@@ -188,6 +200,7 @@ export function buildCellIndex(xml: string): CellIndex {
   const cells: IndexedCell[] = [];
   for (const cell of raw) {
     if (rootIds.has(cell.id) || layerSet.has(cell.id)) continue;
+    if (isPortEndCell({ ...cell.attrs, id: cell.id })) continue;
     const ims = imsAttrs(cell.data);
     const isEdge = cell.attrs.edge === '1';
     const kind: CellKind = isEdge ? 'edge' : ims.ims_device_id ? 'device' : 'shape';

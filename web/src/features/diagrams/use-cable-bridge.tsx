@@ -12,10 +12,11 @@ import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
 import { bindEdgeValue, deviceOfCell, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
+import { linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndPatch, portEndRemoval } from './cable-ends';
 import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
-import { escapeXmlAttr, insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
+import { insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
 import { deviceCellsOnPage } from './photo-bridge';
 
 /** Lời báo "đã khai" có nút chỉ chỗ — để lâu hơn mặc định cho người kịp bấm. */
@@ -109,53 +110,84 @@ export function useCableBridge({
     for (const link of list) links.current.set(link.id, link);
   };
 
-  /** Cập nhật một nét bằng `patch` (giá trị + style) trên trang đang mở. */
-  const updateEdge = (file: string, edgeId: string, change: (edge: NonNullable<ReturnType<typeof edgeById>>) => Record<string, string>) => {
+  /**
+   * Cập nhật một nét bằng `patch` (giá trị + style) trên trang đang mở; `extra` = mục chèn / sửa /
+   * gỡ thêm trong CÙNG lệnh (hai ô nhãn đầu dây của nét).
+   */
+  const updateEdge = (
+    file: string,
+    edgeId: string,
+    change: (edge: NonNullable<ReturnType<typeof edgeById>>) => Record<string, string>,
+    extra: { i?: object[]; u?: Record<string, Record<string, string>>; r?: string[] } = {},
+  ) => {
     const pages = pageIds(file);
     const pageId = pages[Math.min(page(), pages.length - 1)];
     const edge = edgeById(file, edgeId);
     if (!pageId || !edge) return;
-    send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: { [edgeId]: change(edge) } } } } } });
+    const cells = {
+      u: { [edgeId]: change(edge), ...(extra.u ?? {}) },
+      ...(extra.i && extra.i.length > 0 ? { i: extra.i } : {}),
+      ...(extra.r && extra.r.length > 0 ? { r: extra.r } : {}),
+    };
+    send({ action: 'patch', patch: { u: { [pageId]: { cells } } } });
     markDirty();
   };
+
+  /** Nét gắn kết nối: nhãn giữa rỗng + cờ nhãn hai đầu; hai ô nhãn đầu đi kèm trong cùng lệnh. */
+  const linkedValue = (id: string, attrs: Record<string, string>, link: DiagramLink) =>
+    bindEdgeValue(id, attrs, { label: '', ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '', [PORT_LABELS_ATTR]: PORT_LABELS_ENDS });
 
   const bindEdge = (edge: NewEdge, link: DiagramLink) => {
     remember([link]);
     withFile((file) =>
-      updateEdge(file, edge.id, (current) => ({
-        xmlValue: bindEdgeValue(edge.id, current.attrs, {
-          label: link.deviceId === edge.sourceDeviceId ? link.labelFromA : link.labelFromB,
-          ims_link_id: link.id,
-          ims_cable_type_id: link.cableTypeId ?? '',
+      updateEdge(
+        file,
+        edge.id,
+        (current) => ({
+          xmlValue: linkedValue(edge.id, current.attrs, link),
+          // Dây của kho là nét vuông góc (Q-23): người vẽ bẻ bằng điểm uốn của chính nét, kể cả nét
+          // vừa vẽ bằng công cụ nét thẳng rồi bấm Khai.
+          style: paintImsStyle(`${orthogonalStyle(styleWithoutImsEdge(current.style))}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
         }),
-        // Dây của kho là nét vuông góc (Q-23): người vẽ bẻ bằng điểm uốn của chính nét, kể cả nét
-        // vừa vẽ bằng công cụ nét thẳng rồi bấm Khai.
-        style: paintImsStyle(`${orthogonalStyle(styleWithoutImsEdge(current.style))}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
-      })),
+        portEndPatch(file, edge.id, linkEndTexts(link, edge.sourceDeviceId), link.endLabel, palette),
+      ),
     );
   };
 
   /** "Chỉ vẽ": nét ở lại, không `ims_link_id`, viền vàng + chú "Chưa khai vào sơ đồ cổng". */
   const markUndeclared = (edge: NewEdge) => {
     withFile((file) =>
-      updateEdge(file, edge.id, (current) => {
-        const style = paintImsStyle(`${styleWithoutImsEdge(current.style)}imsPaint=warn;dashed=1;html=0;`, palette);
-        const label = t('diagrams.cable.undeclaredMark');
-        return Object.keys(current.attrs).length > 0
-          ? { xmlValue: bindEdgeValue(edge.id, current.attrs, { label }), style }
-          : { value: label, style };
-      }),
+      updateEdge(
+        file,
+        edge.id,
+        (current) => {
+          const style = paintImsStyle(`${styleWithoutImsEdge(current.style)}imsPaint=warn;dashed=1;html=0;`, palette);
+          const label = t('diagrams.cable.undeclaredMark');
+          return Object.keys(current.attrs).length > 0
+            ? { xmlValue: bindEdgeValue(edge.id, current.attrs, { label }, [PORT_LABELS_ATTR]), style }
+            : { value: label, style };
+        },
+        { r: portEndRemoval(file, edge.id) },
+      ),
     );
   };
 
-  /** Bản sao của nét đã khai (nhân bản / dán) bỏ `ims_link_id` — không để hai nét cùng một kết nối. */
+  /**
+   * Bản sao của nét đã khai (nhân bản / dán) bỏ `ims_link_id` — không để hai nét cùng một kết nối.
+   * Nhãn đầu dây draw.io nhân bản theo nét cũng bỏ: chúng nói cổng của một kết nối nét này không mang.
+   */
   const stripLinks = (ids: string[]) => {
     withFile((file) => {
       for (const id of ids) {
-        updateEdge(file, id, (current) => ({
-          xmlValue: bindEdgeValue(id, current.attrs, { label: '' }, ['ims_link_id', 'ims_cable_type_id']),
-          style: styleWithoutImsEdge(current.style),
-        }));
+        updateEdge(
+          file,
+          id,
+          (current) => ({
+            xmlValue: bindEdgeValue(id, current.attrs, { label: '' }, ['ims_link_id', 'ims_cable_type_id', PORT_LABELS_ATTR]),
+            style: styleWithoutImsEdge(current.style),
+          }),
+          { r: portEndRemoval(file, id) },
+        );
       }
     });
   };
@@ -210,6 +242,7 @@ export function useCableBridge({
        * nhãn đỏ "phải nối …" lúc mở còn nguyên trên hình và vào cả ảnh xem của lần lưu này.
        */
       const updates: Record<string, Record<string, string>> = {};
+      const inserts: object[] = [];
       for (const [id, update] of Object.entries(result.updates)) {
         const edge = edgeById(file, id);
         const link = edge?.linkId ? links.current.get(edge.linkId) : undefined;
@@ -217,14 +250,17 @@ export function useCableBridge({
           updates[id] = { ...update };
           continue;
         }
-        const fromA = deviceOfCell(file, update.source) === link.deviceId;
+        // Dây người vẽ đụng tới thì chuyển sang nhãn cổng ở hai đầu (Q-23 06/10) — mở bản vẽ thì không.
+        const ends = portEndPatch(file, id, linkEndTexts(link, deviceOfCell(file, update.source)), link.endLabel, palette);
+        Object.assign(updates, ends.u);
+        inserts.push(...ends.i);
         updates[id] = {
           ...update,
           style: paintImsStyle(`${styleWithoutImsEdge(update.style)}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
-          xmlValue: bindEdgeValue(id, edge.attrs, { label: fromA ? link.labelFromA : link.labelFromB, ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '' }),
+          xmlValue: linkedValue(id, edge.attrs, link),
         };
       }
-      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: updates } } } } });
+      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: updates, ...(inserts.length > 0 ? { i: inserts } : {}) } } } } });
       markDirty();
       if (mode === 'orthogonal') {
         toast({ tone: 'ok', message: t('diagrams.cable.orthogonalDone', { count: result.count }) });
@@ -272,13 +308,15 @@ export function useCableBridge({
           target,
           style: paintImsStyle(link.edgeStyle, palette),
           geometry: '<mxGeometry relative="1" as="geometry"/>',
-          xmlValue: `<UserObject label="${escapeXmlAttr(link.labelFromA)}" ims_link_id="${escapeXmlAttr(link.id)}" ims_cable_type_id="${escapeXmlAttr(link.cableTypeId ?? '')}" id="${escapeXmlAttr(id)}"/>`,
+          xmlValue: linkedValue(id, {}, link),
         };
         previous = id;
-        return [cell];
+        return [{ cell, ends: portEndPatch(file, id, linkEndTexts(link, link.deviceId), link.endLabel, palette).i }];
       });
       if (cells.length === 0) return;
-      send({ action: 'patch', patch: insertPatch(pageId, cells) });
+      send({ action: 'patch', patch: insertPatch(pageId, cells.map((c) => c.cell)) });
+      // Nhãn đầu là con của nét: lệnh sau, khi nét đã có trong mô hình (draw.io xử lý lệnh theo thứ tự).
+      send({ action: 'patch', patch: insertPatch(pageId, cells.flatMap((c) => c.ends)) });
       markDirty();
       toast({ tone: 'ok', message: t('diagrams.cable.drawn', { count: cells.length }) });
     });

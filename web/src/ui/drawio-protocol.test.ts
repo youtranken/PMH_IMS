@@ -202,6 +202,8 @@ describe('paintImsStyle / paintImsXml — ô màu IMS → strokeColor theo token
     ['dây có mũi tên → bỏ cả hai đầu', 'endArrow=classic;startArrow=classic;rounded=0;imsPaint=cable-0;', 'rounded=0;imsPaint=cable-0;endArrow=none;startArrow=none;strokeColor=#5F665F;fontColor=#5F665F;'],
     ['không có ô màu IMS → giữ nguyên', 'rounded=1;strokeColor=#000000;', 'rounded=1;strokeColor=#000000;'],
     ['ô màu lạ (không có trong bảng) → giữ nguyên, không đoán', 'imsPaint=cable-9;', 'imsPaint=cable-9;'],
+    // Nhãn đầu dây là ô chữ: chỉ tô chữ — tô `strokeColor` là vẽ khung quanh nhãn.
+    ['nhãn đầu dây → chỉ màu chữ', 'edgeLabel;imsPortEnd=1;imsPaint=cable-2;html=0;fontColor=#000000;', 'edgeLabel;imsPortEnd=1;imsPaint=cable-2;html=0;fontColor=#1D5F9E;'],
   ])('%s', (_name, style, expected) => {
     expect(paintImsStyle(style, palette)).toBe(expected);
   });

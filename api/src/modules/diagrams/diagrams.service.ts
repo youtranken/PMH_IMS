@@ -62,6 +62,8 @@ import {
   hydrateDiagramXml,
   linkEdgeCell,
   linkLabelFrom,
+  PORT_END_OFFSET,
+  portEndStyle,
   photoAspect,
   photoDataUri,
   RACK_LABEL_STYLE,
@@ -214,6 +216,8 @@ export interface DiagramLink extends PortLink {
   labelFromB: string;
   /** Style cho ô dây mới (có ô màu `imsPaint`). */
   edgeStyle: string;
+  /** Hai ô nhãn đầu dây web chèn kèm nét mới (Q-23 06/10): style + chỗ đặt tương đối trên nét. */
+  endLabel: { style: string; offset: number };
 }
 
 /** Loại dây cho chú giải màu và ô chọn (kể cả loại ngừng dùng: dây cũ vẫn giữ màu — Q-14). */
@@ -1771,6 +1775,7 @@ function toDiagramLink(link: PortLink, slots: Map<string, number>): DiagramLink 
     labelFromA: linkLabelFrom(check, link.deviceId),
     labelFromB: linkLabelFrom(check, link.peerDeviceId),
     edgeStyle: linkEdgeCell(check, { sourceDeviceId: link.deviceId, slot: colorSlot }).style,
+    endLabel: { style: portEndStyle(colorSlot), offset: PORT_END_OFFSET },
   };
 }
 

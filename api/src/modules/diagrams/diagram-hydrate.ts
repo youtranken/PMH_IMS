@@ -3,7 +3,7 @@ import { rackUnitLabel } from '../../common/rack-units';
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
 import { PALETTE } from '../../common/palette.generated';
 import { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef } from '../catalog/catalog.api';
-import { buildCellIndex } from './diagram-cells';
+import { buildCellIndex, isPortEndCell, PORT_END_MARK } from './diagram-cells';
 import { cableEdgeStates, type CableEdge } from './diagram-checks';
 import type { CheckLink } from './diagram-finding';
 
@@ -274,27 +274,70 @@ export interface CableHydration {
 
 /** Nhãn cổng đọc từ đầu nguồn của nét: "Gi0/24 ↔ Te1/0/1". Cổng đầu kia chưa ghi thì "—". */
 export function linkLabelFrom(link: CheckLink, sourceDeviceId: string | null): string {
+  const ends = linkPortEnds(link, sourceDeviceId);
+  return `${ends.source} ↔ ${ends.target}`;
+}
+
+/** Cổng ở đầu nguồn / đầu đích của nét (nét vẽ từ máy B thì đầu nguồn là cổng của B). */
+export function linkPortEnds(link: CheckLink, sourceDeviceId: string | null): { source: string; target: string } {
   const a = link.portA ?? '—';
   const b = link.portB ?? '—';
-  return sourceDeviceId === link.deviceB ? `${b} ↔ ${a}` : `${a} ↔ ${b}`;
+  return sourceDeviceId === link.deviceB ? { source: b, target: a } : { source: a, target: b };
 }
+
+/**
+ * Cờ trên nét dây của kho, LƯU trong XML khô: nhãn cổng đặt ở hai đầu dây (sát máy giữ cổng đó)
+ * thay cho một nhãn "A ↔ B" giữa dây (Q-23 06/10). Nét cũ không có cờ giữ nhãn giữa — chỉ đổi khi
+ * người vẽ đụng tới nét, để mở bản vẽ không bao giờ sinh thay đổi ngầm.
+ */
+export const PORT_LABELS_ATTR = 'ims_port_labels';
+export const PORT_LABELS_ENDS = 'ends';
+
+/**
+ * Chỗ đặt nhãn đầu dây trên nét (toạ độ tương đối của draw.io: -1 = đầu nguồn, 1 = đầu đích).
+ * Không ±1: ở đúng đầu mút thì nhãn đè lên viền hình máy.
+ */
+export const PORT_END_OFFSET = 0.75;
+
+/** Đuôi id của hai ô nhãn đầu dây (con của nét): id cố định theo nét nên dựng lại không nhân đôi. */
+export const PORT_END_SUFFIX = { source: '-ims-ps', target: '-ims-pt' } as const;
+
+
+/**
+ * Style ô nhãn đầu dây: nhãn cạnh của draw.io (nền giấy che nét), chữ theo màu loại dây (`imsPaint`,
+ * web chỉ tô màu chữ cho ô có `imsPortEnd`). `imsPortEnd` là dấu để dehydrate nhận ra ô của IMS.
+ */
+export function portEndStyle(slot: number | null | undefined): string {
+  return `edgeLabel;${PORT_END_MARK};imsPaint=${paintOf(slot)};html=0;fontSize=10;resizable=0;`;
+}
+
+function portEndCellXml(edgeId: string, side: 'source' | 'target', text: string, style: string): string {
+  const x = side === 'source' ? -PORT_END_OFFSET : PORT_END_OFFSET;
+  return (
+    `<mxCell id="${escapeXmlAttr(edgeId + PORT_END_SUFFIX[side])}" value="${escapeXmlAttr(text)}" style="${escapeXmlAttr(style)}" vertex="1" connectable="0" parent="${escapeXmlAttr(edgeId)}">` +
+    `<mxGeometry x="${x}" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>`
+  );
+}
+
 
 function paintOf(slot: number | null | undefined): string {
   return `cable-${slot ?? 0}`;
 }
 
 /**
- * Ô dây mới cho "Vẽ vào" / chèn sau "Khai kết nối": đã gắn `ims_link_id` + `ims_cable_type_id`,
- * nhãn và ô màu như lúc hydrate — cùng một luật nên nét chèn vào và nét hiện lần mở sau là một.
+ * Ô dây mới cho "Vẽ vào" / chèn sau "Khai kết nối" / dựng nháp: đã gắn `ims_link_id` +
+ * `ims_cable_type_id` + cờ nhãn hai đầu, ô màu như lúc hydrate; `ends` = chữ hai ô nhãn đầu dây
+ * web chèn kèm — cùng một luật nên nét chèn vào và nét hiện lần mở sau là một.
  */
 export function linkEdgeCell(
   link: CheckLink,
   at: { sourceDeviceId: string; slot: number | null },
-): { label: string; style: string; attrs: Record<string, string> } {
+): { label: string; style: string; attrs: Record<string, string>; ends: { source: string; target: string } } {
   return {
-    label: linkLabelFrom(link, at.sourceDeviceId),
+    label: '',
     style: `edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;imsPaint=${paintOf(at.slot)};html=0;`,
-    attrs: { ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '' },
+    attrs: { ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '', [PORT_LABELS_ATTR]: PORT_LABELS_ENDS },
+    ends: linkPortEnds(link, at.sourceDeviceId),
   };
 }
 
@@ -315,24 +358,43 @@ type EdgeContext = CableEdge;
 
 interface CellEdit {
   device: { data: (attrs: Attrs, device: DeviceContext) => Attrs; cell: (attrs: Attrs, device: DeviceContext) => Attrs };
-  /** `wrapped` = nét bọc trong `UserObject` (nhãn ở thuộc tính `label`), không thì nhãn ở `value` của `mxCell`. */
-  edge: { data: (attrs: Attrs, edge: EdgeContext) => Attrs; cell: (attrs: Attrs, edge: EdgeContext, wrapped: boolean) => Attrs };
+  /**
+   * `wrapped` = nét bọc trong `UserObject` (nhãn ở thuộc tính `label`), không thì nhãn ở `value` của
+   * `mxCell`. `after`: XML chèn ngay sau nét bọc (ô nhãn đầu dây — con của nét, phải đứng sau nó).
+   */
+  edge: {
+    data: (attrs: Attrs, edge: EdgeContext) => Attrs;
+    cell: (attrs: Attrs, edge: EdgeContext, wrapped: boolean) => Attrs;
+    after?: (attrs: Attrs, edge: EdgeContext) => string;
+  };
 }
 
 /**
  * Đọc XML rồi ghi lại y nguyên, cho phép sửa thuộc tính ô thiết bị (`UserObject`/`object` mang
  * `ims_device_id` + `mxCell` bên trong) và ô dây của kho (`edges`, theo id ô). Ghi chú và khai báo
- * XML không giữ: draw.io không đọc chúng, cổng kiểm không cần chúng.
+ * XML không giữ: draw.io không đọc chúng, cổng kiểm không cần chúng. Ô nhãn đầu dây của lần hydrate
+ * trước luôn bị bỏ — hydrate dựng lại từ sơ đồ cổng hiện tại, dehydrate không lưu chúng.
  */
 function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEdit): string {
   const inRack = rackChildIds(xml);
   const out: string[] = [];
-  const stack: { device: DeviceContext | null; edge: EdgeContext | null }[] = [];
+  const stack: { device: DeviceContext | null; edge: EdgeContext | null; after: string }[] = [];
+  /** Độ sâu còn lại của cây con đang bỏ (ô nhãn đầu dây); 0 = không bỏ. */
+  let skipping = 0;
   const parser = new SaxesParser({ xmlns: false });
   parser.on('error', (error) => {
     throw error;
   });
   parser.on('opentag', (tag: SaxesTagPlain) => {
+    if (skipping > 0) {
+      if (!tag.isSelfClosing) skipping += 1;
+      return;
+    }
+    const raw: Attrs = tag.attributes;
+    if ((tag.name === 'mxCell' || tag.name === 'UserObject' || tag.name === 'object') && isPortEndCell(raw)) {
+      if (!tag.isSelfClosing) skipping = 1;
+      return;
+    }
     let attrs: Attrs = { ...tag.attributes };
     let device: DeviceContext | null = null;
     let edge: EdgeContext | null = null;
@@ -354,15 +416,26 @@ function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEd
       .map(([name, value]) => ` ${name}="${escapeXmlAttr(value)}"`)
       .join('');
     out.push(`<${tag.name}${text}${tag.isSelfClosing ? '/>' : '>'}`);
-    if (!tag.isSelfClosing) stack.push({ device, edge });
+    const after = edge && edit.edge.after ? edit.edge.after(attrs, edge) : '';
+    if (!tag.isSelfClosing) stack.push({ device, edge, after });
+    else if (after) out.push(after);
   });
   parser.on('closetag', (tag: SaxesTagPlain) => {
+    if (skipping > 0) {
+      if (!tag.isSelfClosing) skipping -= 1;
+      return;
+    }
     if (tag.isSelfClosing) return;
-    stack.pop();
+    const closed = stack.pop();
     out.push(`</${tag.name}>`);
+    if (closed?.after) out.push(closed.after);
   });
-  parser.on('text', (text) => out.push(escapeXmlText(text)));
-  parser.on('cdata', (text) => out.push(escapeXmlText(text)));
+  parser.on('text', (text) => {
+    if (skipping === 0) out.push(escapeXmlText(text));
+  });
+  parser.on('cdata', (text) => {
+    if (skipping === 0) out.push(escapeXmlText(text));
+  });
   parser.write(xml).close();
   return out.join('');
 }
@@ -403,10 +476,15 @@ function edgesOf(xml: string, links: Map<string, CheckLink>): Map<string, EdgeCo
   return new Map(cableEdgeStates(buildCellIndex(xml).cells, links).map((edge) => [edge.cellId, edge]));
 }
 
-function edgeLabel(edge: EdgeContext, links: Map<string, CheckLink>): string {
+/** Nét đã khai mang cờ nhãn hai đầu: nhãn giữa rỗng, chữ nằm ở hai ô nhãn đầu dây. */
+function endsLabelled(attrs: Attrs, edge: EdgeContext): boolean {
+  return edge.state === 'linked' && attrs[PORT_LABELS_ATTR] === PORT_LABELS_ENDS;
+}
+
+function edgeLabel(edge: EdgeContext, links: Map<string, CheckLink>, ends = false): string {
   switch (edge.state) {
     case 'linked':
-      return linkLabelFrom(links.get(edge.linkId!)!, edge.sourceDeviceId);
+      return ends ? '' : linkLabelFrom(links.get(edge.linkId!)!, edge.sourceDeviceId);
     case 'removed':
       return EDGE_REMOVED;
     case 'mismatch':
@@ -490,13 +568,20 @@ export function hydrateDiagramXml(
     },
     edge: {
       data: (attrs, edge) => {
-        const labeled = withAttr(attrs, 'label', edgeLabel(edge, cables.links));
+        const labeled = withAttr(attrs, 'label', edgeLabel(edge, cables.links, endsLabelled(attrs, edge)));
         if (edge.state !== 'linked') return labeled;
         return withAttr(labeled, 'ims_cable_type_id', cables.links.get(edge.linkId!)!.cableTypeId ?? '');
       },
       cell: (attrs, edge, wrapped) => {
         const styled = withAttr(attrs, 'style', `${styleWithoutIms(attrs.style ?? '', IMS_EDGE_STYLE_KEYS)}${edgePaint(edge, cables)}`);
         return wrapped ? styled : withAttr(styled, 'value', edgeLabel(edge, cables.links));
+      },
+      after: (attrs, edge) => {
+        if (!endsLabelled(attrs, edge)) return '';
+        const link = cables.links.get(edge.linkId!)!;
+        const ends = linkPortEnds(link, edge.sourceDeviceId);
+        const style = portEndStyle(link.cableTypeId ? cables.slots.get(link.cableTypeId) : null);
+        return portEndCellXml(edge.cellId, 'source', ends.source, style) + portEndCellXml(edge.cellId, 'target', ends.target, style);
       },
     },
   });

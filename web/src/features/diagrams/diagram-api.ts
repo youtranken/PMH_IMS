@@ -104,6 +104,8 @@ export interface DiagramLink extends PortLink {
   labelFromA: string;
   labelFromB: string;
   edgeStyle: string;
+  /** Hai ô nhãn cổng ở đầu dây chèn kèm nét mới (Q-23 06/10): style theo loại dây + chỗ đặt trên nét. */
+  endLabel: { style: string; offset: number };
 }
 
 export type CableEdgeState = 'linked' | 'removed' | 'mismatch' | 'duplicate' | 'undeclared';

@@ -41,6 +41,7 @@ import {
   type PathResult,
   type VersionItem,
 } from './diagram-api';
+import { portEndIds } from './cable-ends';
 import { CableLegend } from './cable-legend';
 import { DeviceConnections, DiagramCableCard } from './diagram-cable-card';
 import { DiagramBreadcrumb } from './diagram-breadcrumb';
@@ -1352,6 +1353,11 @@ function viewerCells(
     if (edge.state === 'linked' && link) {
       const label = edge.sourceDeviceId === link.peerDeviceId ? link.labelFromB : link.labelFromA;
       cells.push({ id: edge.cellId, label, paint: `cable-${link.colorSlot ?? 0}` });
+      // Nhãn cổng ở hai đầu dây (Q-23 06/10) là ô con riêng trong ảnh xem: bấm / rê lên nó là dây đó.
+      for (const id of portEndIds(edge.cellId)) {
+        cells.push({ id, label, paint: `cable-${link.colorSlot ?? 0}` });
+        byEdge.set(id, { edge, link });
+      }
     } else if (edge.state === 'undeclared') {
       cells.push({ id: edge.cellId, label: t('diagrams.cable.cardUndeclared'), paint: 'warn', mark: 'warn' });
     } else {
