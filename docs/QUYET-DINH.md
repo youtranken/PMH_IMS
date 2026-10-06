@@ -730,6 +730,40 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
   - **Bấm Lưu khi chưa đổi gì phải giữ nguyên số phiên bản, không sinh nháp** — ở MỌI đường lưu: nút
     Lưu, Ctrl+S, lưu lại sau khi nhập mã giữa chừng, "Vẽ vào" / các việc của IMS không đổi gì, bản
     trình bày, và lưu ngay sau khi mở một bản nháp cũ.
+- **Năm cải tiến trình vẽ (06/10/2026, chủ dự án chọn; Claude chốt cách làm, giữ nguyên tư thế bảo
+  mật của draw.io):** iframe vẫn `sandbox="allow-scripts"` nguồn gốc mờ, CSP `/drawio/` không đổi,
+  vẫn `plugins=0` — KHÔNG thêm plugin hay tệp nào vào thư mục draw.io. Lý do: plugin chạy trong khung
+  với toàn quyền trên mô hình bản vẽ; mọi việc dưới đây làm được bằng giao thức nhúng sẵn có.
+  - **Kéo máy từ "Thiết bị kho" thả thẳng vào trình vẽ.** Dòng máy trong hộp kéo được (kéo-thả HTML
+    chuẩn): dữ liệu kéo là một `<mxGraphModel>` chứa đúng ô server dựng cho máy đó (cùng ô của nút
+    "Chèn"), draw.io tự nhận như dán và đặt ô ĐÚNG chỗ thả (có hoàn tác). Không cần đổi toạ độ ở
+    IMS: giao thức nhúng không báo vị trí cuộn của khung nên toạ độ tính từ ngoài sẽ sai. Trình duyệt
+    không giao cú thả cho khung (chặn kéo vào khung khác nguồn) thì IMS chèn theo lưới như nút
+    "Chèn" — không mất máy. Tick + "Chèn" giữ nguyên làm đường thứ hai. Máy đã có trên bản vẽ không
+    kéo được. Kéo một lượt một máy.
+  - **Nhãn cổng ở HAI ĐẦU dây** ("Gi1/0/1" sát máy A, "Gi1/0/2" sát máy B) thay cho một nhãn
+    "Gi1/0/1 ↔ Gi1/0/2" giữa dây. Nhãn đầu dây là ô nhãn con của nét do IMS dựng lúc mở (như nhãn
+    giữa trước đây) và gỡ lúc lưu — XML lưu chỉ thêm cờ `ims_port_labels="ends"` trên nét. Dây mới
+    (Khai, Nối hàng loạt, Vẽ vào, Dựng nháp từ sơ đồ cổng) mang cờ ngay; dây CŨ chỉ đổi khi người vẽ
+    đụng tới nó bằng "Tự đi lại dây" — mở bản vẽ không tự đổi (không sinh phiên bản ngầm). Màu nhãn
+    theo màu loại dây. Ảnh xem / PNG / PDF lấy đúng ảnh chụp lúc lưu, nên bản cũ giữ nhãn cũ.
+  - **Thẻ thông tin máy và dây.** Tab Xem (trình xem SVG của IMS): rê chuột lên máy → thẻ nhỏ (mã,
+    IP, model, tủ/U, cổng đang dùng/đã khai, trạng thái); rê lên dây → cả dây và hai máy hai đầu
+    sáng lên + thẻ "A máy:cổng ↔ B máy:cổng · loại dây · trạng thái". Bấm vẫn mở thẻ chi tiết như cũ
+    ("Mở hồ sơ" đi kèm). Tab Sửa: draw.io không báo rê chuột; IMS hỏi ô đang CHỌN bằng lệnh `export`
+    định dạng `json` có sẵn (chỉ id + thuộc tính `ims_*`, hỏi vài lần mỗi giây khi khung đang có tiêu
+    điểm) và hiện cùng thẻ ở góc trình vẽ, nút "Chi tiết" mở thẻ chi tiết NGAY trong màn sửa ("Mở hồ
+    sơ" mở tab mới — không bỏ bản vẽ dở). Không có rê chuột trong tab Sửa (cần plugin — không làm).
+    "Cổng đã khai" là số dòng sơ đồ cổng của máy; kho chưa có số cổng vật lý của máy.
+  - **Giữ bản đang vẽ dở.** Đang sửa mà đóng tab, mất mạng hay hết phiên thì trình duyệt giữ một bản
+    nháp cục bộ (IndexedDB) theo người + bản vẽ, MÃ HOÁ AES-GCM bằng khoá server cấp kèm nội dung
+    tab Sửa (dẫn từ master key theo người + bản vẽ — tức chỉ lấy được sau khi nhập mã sơ đồ). Trên
+    đĩa chỉ có bản mã; mở lại tab Sửa (nhập mã như mọi lần) thì hiện "Có bản đang vẽ dở lúc <giờ> —
+    Khôi phục / Bỏ". Khôi phục nạp vào trình vẽ thành thay đổi CHƯA LƯU (lưu vẫn qua nút Lưu, ghi
+    "lưu đè" nếu bản vẽ đã có phiên bản mới hơn) — không bao giờ tự ghi đè server. Bản nháp bị xoá
+    khi lưu xong, khi bấm Bỏ, khi chọn "Bỏ thay đổi" lúc rời màn, khi bấm Đăng xuất, và tự hết hạn
+    sau `diagram.draft_keep_hours` giờ (mặc định 24). Đổi master key thì bản nháp cũ không mở được
+    và bị bỏ. Rời màn khi còn thay đổi chưa lưu vẫn hỏi như cũ (`useUnsavedGuard`, cả đóng tab).
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
