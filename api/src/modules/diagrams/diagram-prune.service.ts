@@ -173,9 +173,13 @@ export class DiagramPruneService {
         .where(and(eq(diagramTable.parentId, diagramId), isNull(diagramTable.deletedAt)))
         .orderBy(diagramTable.name);
       if (children.length > 0) {
+        // Bản cha chỉ lưu trữ được khi mọi con đã lưu trữ, nên con nằm ở khu "Đã lưu trữ" — không
+        // hiện trên bản đồ; câu báo chỉ đường, không thì người xoá đi tìm mãi.
         throw new ConflictException({
           code: 'DIAGRAM_HAS_CHILDREN',
-          message: `Bản vẽ còn bản vẽ con: ${children.map((c) => `"${c.name}"`).join(', ')} — xóa vĩnh viễn các bản vẽ con trước.`,
+          message:
+            `Bản vẽ còn ${children.length} bản vẽ con chưa xóa vĩnh viễn: ${children.map((c) => `"${c.name}"`).join(', ')}. ` +
+            'Mở khu "Đã lưu trữ" của /diagrams, xóa vĩnh viễn từng bản vẽ con trước rồi mới xóa được bản này.',
         });
       }
       const pending = await this.approvals.list({ kind: PUBLISH_KIND, subjectId: diagramId, state: 'pending' });

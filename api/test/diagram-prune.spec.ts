@@ -448,6 +448,14 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
       await diagrams.archive(SA, p.id);
       const pName = (await diagrams.archivedList()).find((x) => x.id === p.id)!.name;
       await expect(prune.erase(SA, p.id, pName)).rejects.toMatchObject({ status: 409, response: { code: 'DIAGRAM_HAS_CHILDREN', message: expect.stringContaining(child.name) } });
+      // Bản cha chỉ lưu trữ được khi mọi con đã lưu trữ: câu báo chỉ đường tới khu "Đã lưu trữ".
+      const message = await prune.erase(SA, p.id, pName).then(
+        () => '',
+        (error: { response: { message: string } }) => error.response.message,
+      );
+      expect(message).toBe(
+        `Bản vẽ còn 1 bản vẽ con chưa xóa vĩnh viễn: "${child.name}". Mở khu "Đã lưu trữ" của /diagrams, xóa vĩnh viễn từng bản vẽ con trước rồi mới xóa được bản này.`,
+      );
       await prune.erase(SA, child.id, child.name);
       await expect(prune.erase(SA, p.id, pName)).resolves.toEqual({ versions: 1 });
     });
