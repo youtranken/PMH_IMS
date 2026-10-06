@@ -373,6 +373,8 @@ export function DiagramViewer({
       for (const name of ['data-ims-clickable', 'data-ims-mark', 'data-ims-paint', 'data-ims-selected', 'role', 'tabindex', 'aria-label']) {
         el.removeAttribute(name);
       }
+      // Nét dây không phải nút và không có tên trợ năng: E2E cần một mốc ổn định để rê chuột vào nó.
+      el.setAttribute('data-testid', `diagram-cell-${el.getAttribute('data-cell-id') ?? ''}`);
       if (!cell) continue;
       if (cell.paint) el.setAttribute('data-ims-paint', cell.paint);
       el.setAttribute('data-ims-clickable', '');

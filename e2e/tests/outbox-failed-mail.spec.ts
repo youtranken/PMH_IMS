@@ -24,11 +24,11 @@ test.describe('Thư gửi lỗi', () => {
       await firstLogin(page, E2E_SA);
       const group = page.getByRole('button', { name: 'Hệ thống', exact: true });
       if ((await group.getAttribute('aria-expanded')) === 'false') {
-        await expect(group.locator('.nav-badge')).toBeVisible();
+        await expect(group).toHaveAccessibleDescription(/^\d+ Thư gửi lỗi$/);
         await group.click();
       }
       const item = page.getByRole('link', { name: 'Thư gửi lỗi' });
-      await expect(item.locator('.nav-badge')).toBeVisible();
+      await expect(item).toHaveAccessibleDescription(/^\d+ Thư gửi lỗi$/);
       await item.click();
       await expect(page.getByRole('heading', { level: 1, name: 'Thư gửi lỗi' })).toBeVisible();
 

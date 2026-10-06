@@ -325,20 +325,20 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/hover-may.png` : test.info().outputPath('hover-may.png') });
 
     // Nét ngang có hộp bao cao 0: rê vào đúng tâm nét bằng toạ độ.
-    const box = await page.locator('[data-cell-id="e1"] path').first().boundingBox();
+    const box = await viewer.getByTestId('diagram-cell-e1').locator('path').first().boundingBox();
     expect(box).not.toBeNull();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
     await expect(tip).toContainText(`${sw.code}:Gi1/0/7 ↔ ${srv.code}:eth0`);
     await expect(tip).toContainText('Fiber');
     // Dây + hai máy hai đầu sáng; máy không nối (PC) mờ đi.
-    await expect(page.locator('[data-cell-id="c"]')).toHaveAttribute('data-ims-dim', '');
-    await expect(page.locator('[data-cell-id="a"]')).not.toHaveAttribute('data-ims-dim', '');
-    await expect(page.locator('[data-cell-id="b"]')).not.toHaveAttribute('data-ims-dim', '');
+    await expect(viewer.getByRole('button', { name: pc.code, exact: true })).toHaveAttribute('data-ims-dim', '');
+    await expect(viewer.getByRole('button', { name: sw.code, exact: true })).not.toHaveAttribute('data-ims-dim', '');
+    await expect(viewer.getByRole('button', { name: srv.code, exact: true })).not.toHaveAttribute('data-ims-dim', '');
     await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/hover-day.png` : test.info().outputPath('hover-day.png') });
     // Rời bản vẽ: thẻ tắt, hết tô sáng.
     await page.mouse.move(2, 2);
     await expect(tip).toHaveCount(0);
-    await expect(page.locator('[data-cell-id="c"]')).not.toHaveAttribute('data-ims-dim', '');
+    await expect(viewer.getByRole('button', { name: pc.code, exact: true })).not.toHaveAttribute('data-ims-dim', '');
   });
 
   test('390px: chế độ xem — chú giải màu dây và thẻ dây không tràn ngang', async ({ page }) => {

@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_SA,
   catalogItem,
+  clickDrawioCanvas,
   diagramBarAction,
   fillOtp,
   firstLogin,
@@ -107,7 +108,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await form.getByRole('textbox', { name: 'U bắt đầu' }).fill('9');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form).toBeHidden();
-    await expect(page.getByText(`${rack.siteCode} · ${rack.cabinetCode} · U9`).first()).toBeVisible();
+    await expect(page.getByText(`${rack.siteCode}\u00A0· ${rack.cabinetCode}\u00A0· U9`).first()).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText(/U bắt đầu: \(trống\) → 9/)).toBeVisible();
@@ -257,7 +258,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     const rack = await seedRack(page);
     const deviceId = await createDevice(page, rack, `SW-E2E-UM${rack.stamp}`, { rackUStart: 3, rackUSize: 2 });
     await page.goto(`/devices/${deviceId}`);
-    await expect(page.getByText(`${rack.siteCode} · ${rack.cabinetCode} · U3–U4`).first()).toBeVisible();
+    await expect(page.getByText(`${rack.siteCode}\u00A0· ${rack.cabinetCode}\u00A0· U3–U4`).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
@@ -530,7 +531,7 @@ test.describe('Sơ đồ mạng — máy trong khung tủ chỉ theo U kho (Q-23
     await expect(drawio.getByText(`Tủ ${cabinetB} · Chưa khai U`)).toBeVisible();
     if (process.env.IMS_SHOT_DIR) {
       // Thu cả trang vào khung nhìn (Ctrl+Shift+H của draw.io) để thấy máy ra ngoài khung và cột mới.
-      await drawio.locator('.geDiagramContainer').click({ position: { x: 20, y: 20 } });
+      await clickDrawioCanvas(page, 20, 20);
       await page.keyboard.press('Control+Shift+H');
       await frameShot.screenshot({ path: `${process.env.IMS_SHOT_DIR}/5.png` });
     }

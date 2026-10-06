@@ -204,7 +204,7 @@ export function DevicePhotoSlots({
             </header>
 
             {readOnly ? (
-              <div className={`photo-slot-frame${slot.src ? ' has-img' : ''}`}>{picture(side, slot)}</div>
+              <div className={`photo-slot-frame${slot.src ? ' has-img' : ''}`} data-testid="photo-slot-frame">{picture(side, slot)}</div>
             ) : (
               <FilePicker
                 key={`${side}-${picks}`}
@@ -221,7 +221,7 @@ export function DevicePhotoSlots({
                   if (accepted) setCropping({ side, file: accepted, to: 'own' });
                 }}
               >
-                <span className={`photo-slot-frame${slot.src ? ' has-img' : ''}`}>
+                <span className={`photo-slot-frame${slot.src ? ' has-img' : ''}`} data-testid="photo-slot-frame">
                   {picture(side, slot)}
                   {busySide === side ? (
                     <span className="photo-slot-busy" role="status">

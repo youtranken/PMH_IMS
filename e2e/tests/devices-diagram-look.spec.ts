@@ -309,7 +309,7 @@ test('tải ảnh máy 1U có viền trắng: hộp cắt khoá theo mặt tủ 
   await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
   // Ảnh đã cắt đúng 1U: ô ảnh là một dải rộng hết khung (không vạch giữa ô cao 160px), không báo "Cắt lại".
   const box = (await img.boundingBox())!;
-  const slot = (await front.locator('.photo-slot-drop').boundingBox())!;
+  const slot = (await front.getByTestId('photo-slot-frame').boundingBox())!;
   expect(box.width / box.height).toBeGreaterThan(9);
   expect(box.width).toBeGreaterThan(slot.width * 0.8);
   await expect(front.getByRole('button', { name: 'Cắt lại ảnh — Mặt trước' })).toHaveCount(0);

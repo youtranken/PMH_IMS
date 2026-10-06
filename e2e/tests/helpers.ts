@@ -1273,3 +1273,18 @@ export async function createTestSubnet(
   }
   throw new Error('không tìm được dải /29 trống cho bài kiểm');
 }
+
+/**
+ * Bấm vào khung vẽ của draw.io tại toạ độ tính từ góc trên-trái vùng vẽ (không tính thanh menu,
+ * bảng hình). DOM trong khung là của draw.io, không gắn được `data-testid`: lấy vị trí vùng vẽ
+ * bằng chính DOM của nó rồi bấm lên phần tử `<iframe>` có tên trợ năng.
+ */
+export async function clickDrawioCanvas(page: Page, x: number, y: number): Promise<void> {
+  const drawio = page.frames().find((f) => f.url().includes('/drawio/'));
+  expect(drawio, 'chưa có khung draw.io').toBeTruthy();
+  const area = await drawio!.evaluate(() => {
+    const box = (document.querySelector('.geDiagramContainer') as HTMLElement).getBoundingClientRect();
+    return { left: box.left, top: box.top };
+  });
+  await page.getByTitle('Khung vẽ draw.io').click({ position: { x: area.left + x, y: area.top + y } });
+}

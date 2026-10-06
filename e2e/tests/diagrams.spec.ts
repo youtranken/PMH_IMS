@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  clickDrawioCanvas,
   expireStepUp,
   fillOtp,
   firstLogin,
@@ -350,8 +351,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(save).toBeDisabled();
 
     // Ctrl+S trong trình vẽ khi chưa sửa gì: chỉ báo, không gọi server.
-    const canvas = page.frameLocator('iframe[title="Khung vẽ draw.io"]').locator('.geDiagramContainer');
-    await canvas.click({ position: { x: 600, y: 400 } });
+    await clickDrawioCanvas(page, 600, 400);
     await page.keyboard.press('Control+s');
     await expect(page.getByText('Không có thay đổi để lưu.').first()).toBeVisible();
     expect(versions()).toBe('1');
@@ -459,7 +459,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     expect(box.x).toBeLessThanOrEqual(slim + 2);
     expect(box.x + box.width).toBeGreaterThanOrEqual(viewWidth - 2);
     // Thư viện hình Mạng và Rack mở sẵn trong bảng hình (Q-23 chọn draw.io vì có chúng), không phải tìm ở "Xem thêm hình".
-    const shapes = page.frameLocator('iframe[title="Khung vẽ draw.io"]').locator('.geSidebarContainer');
+    const shapes = page.frameLocator('iframe[title="Khung vẽ draw.io"]');
     await expect(shapes.getByText('Network 2018', { exact: true })).toBeVisible();
     await expect(shapes.getByText('Rack / General', { exact: true })).toBeVisible();
 
