@@ -1,5 +1,5 @@
 /**
- * Cắt ảnh thiết bị trước khi tải lên (Q-23 06/10, quyết định A) — phần THUẦN (test bảng dữ liệu ở
+ * Cắt ảnh thiết bị trước khi tải lên (Q-23 mục A) — phần THUẦN (test bảng dữ liệu ở
  * `image-crop.test.ts`) cộng hai hàm chạm canvas của trình duyệt (`loadCropSource`, `renderCrop`,
  * `measurePhotoFit`) mà hộp cắt và ô ảnh gọi.
  *

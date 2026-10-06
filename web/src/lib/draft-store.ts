@@ -1,5 +1,5 @@
 /**
- * Kho bản đang làm dở ở TRÌNH DUYỆT, đã mã hoá (Q-23 06/10: bản vẽ sơ đồ mạng đang vẽ dở khi tab
+ * Kho bản đang làm dở ở TRÌNH DUYỆT, đã mã hoá (Q-23: bản vẽ sơ đồ mạng đang vẽ dở khi tab
  * đóng, mất mạng hay hết phiên). Nội dung sơ đồ chỉ xem được sau khi nhập mã sơ đồ, nên KHÔNG cất
  * chữ rõ: AES-GCM bằng khoá server cấp kèm nội dung (chỉ có sau khi nhập mã), dữ liệu gắn thêm
  * (AAD) là khoá ghi — bản mã không bê được sang bản vẽ khác. Khoá không bao giờ được cất.
