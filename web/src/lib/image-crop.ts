@@ -32,10 +32,16 @@ export function rackFaceAspect(units: number | null | undefined): number | null 
 const ALPHA_CLEAR = 16;
 /** Sai khác màu (tổng ba kênh) vẫn coi là cùng màu nền — chịu được nhiễu nén JPEG. */
 const COLOR_TOLERANCE = 30;
+/**
+ * Nền đồng màu chỉ tính khi SÁNG (mỗi kênh ≥ mức này — nền trắng / xám rất nhạt của ảnh chụp sản
+ * phẩm). Ảnh đã cắt sát mặt máy cũng có bốn góc cùng màu, nhưng đó là thân máy (thường tối): coi nó
+ * là nền thì ảnh đúng bị báo "còn viền" và bị cắt lẹm vào máy.
+ */
+const LIGHT_BACKGROUND = 225;
 
 /**
  * Khối nội dung của ảnh: bỏ viền trong suốt, hoặc viền cùng màu với góc trên trái (khi cả bốn góc
- * cùng màu — ảnh chụp có nền trắng). Ảnh toàn một màu thì trả cả ảnh: cắt về 0 là mất ảnh.
+ * cùng một màu SÁNG — ảnh chụp có nền trắng). Ảnh toàn một màu thì trả cả ảnh: cắt về 0 là mất ảnh.
  */
 export function trimBox(data: Uint8ClampedArray, width: number, height: number): CropBox {
   const at = (x: number, y: number) => (y * width + x) * 4;
@@ -43,7 +49,8 @@ export function trimBox(data: Uint8ClampedArray, width: number, height: number):
   const corners = [corner(0, 0), corner(width - 1, 0), corner(0, height - 1), corner(width - 1, height - 1)];
   const same = (a: number[], b: number[]) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) <= COLOR_TOLERANCE;
   const ref = corners[0];
-  const uniform = ref[3] >= ALPHA_CLEAR && corners.every((c) => c[3] >= ALPHA_CLEAR && same(c, ref));
+  const light = ref[0] >= LIGHT_BACKGROUND && ref[1] >= LIGHT_BACKGROUND && ref[2] >= LIGHT_BACKGROUND;
+  const uniform = light && ref[3] >= ALPHA_CLEAR && corners.every((c) => c[3] >= ALPHA_CLEAR && same(c, ref));
   const isBackground = (x: number, y: number) => {
     const i = at(x, y);
     if (data[i + 3] < ALPHA_CLEAR) return true;

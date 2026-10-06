@@ -47,6 +47,10 @@ describe('trimBox — cắt viền trong suốt / gần đồng màu', () => {
   it('ảnh không có viền → cả ảnh', () => {
     expect(trimBox(pixels(20, 10, DARK, DARK, null), 20, 10)).toEqual({ x: 0, y: 0, width: 20, height: 10 });
   });
+  it('bốn góc cùng màu TỐI (thân máy đã cắt sát, không phải nền) → không cắt', () => {
+    const box = { x: 10, y: 4, width: 60, height: 12 };
+    expect(trimBox(pixels(80, 20, DARK, [0, 0, 0, 255], box), 80, 20)).toEqual({ x: 0, y: 0, width: 80, height: 20 });
+  });
   it('ảnh toàn một màu → cả ảnh (không cắt về 0)', () => {
     expect(trimBox(pixels(20, 10, WHITE, WHITE, null), 20, 10)).toEqual({ x: 0, y: 0, width: 20, height: 10 });
   });
