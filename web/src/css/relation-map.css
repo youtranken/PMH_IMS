@@ -99,16 +99,24 @@
   white-space: nowrap;
 }
 /* Hạch có ảnh của máy (cùng ảnh trên sơ đồ): ảnh trên, mã dưới. Nền trắng-trên-nền-thương-hiệu
-   để ảnh chụp máy không lẫn vào dải màu. */
+   để ảnh chụp máy không lẫn vào dải màu. Ảnh rộng hết bề ngang thẻ, cao theo ảnh: ảnh máy 1U
+   (~11 : 1) là một dải đọc được, không phải hình nhỏ giữa một ô vuông. Thẻ có ảnh rộng hơn thẻ chỉ
+   có mã để dải đó đủ dài; ảnh dọc bị chặn trần chiều cao. */
 .rmap-hub.with-image {
   flex-direction: column;
+  align-items: stretch;
   gap: var(--space-3);
+  width: 18rem;
+  max-width: 100%;
+  padding: var(--space-5);
 }
 .rmap-hub-img {
-  max-width: 100%;
-  max-height: 4.5rem;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 9rem;
   object-fit: contain;
-  padding: var(--space-2);
+  padding: var(--space-1);
   border-radius: var(--r);
   background: var(--surface);
 }
