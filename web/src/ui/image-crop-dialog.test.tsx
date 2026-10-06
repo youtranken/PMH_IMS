@@ -4,7 +4,7 @@ import type { CropBox, CropSource } from '@/lib/image-crop';
 import { ImageCropDialog } from './image-crop-dialog';
 
 /**
- * Hộp cắt ảnh thiết bị (Q-23 06/10, A): tự bỏ viền, khoá khung theo mặt tủ n U, ra tệp mới cho nơi
+ * Hộp cắt ảnh thiết bị (Q-23 mục A): tự bỏ viền, khoá khung theo mặt tủ n U, ra tệp mới cho nơi
  * gọi tải lên. jsdom không có canvas → nạp ảnh và vẽ ảnh ra tệp được giả lập; phép tính khung là
  * hàm thật của `lib/image-crop`.
  */

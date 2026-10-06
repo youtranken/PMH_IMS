@@ -4,7 +4,7 @@ import { watermarkText } from './drawio-protocol';
 /** Số dòng watermark lặp trên khung: đủ phủ một màn lớn mà không phải đo kích thước. */
 const WATERMARK_ROWS = 8;
 /**
- * Trình vẽ: thưa hơn (V-06, chủ dự án chốt 05/10) — 8 hàng chữ đè lên nhãn cổng làm vẽ khó, mà
+ * Trình vẽ: thưa hơn (V-06, chủ dự án chốt) — 8 hàng chữ đè lên nhãn cổng làm vẽ khó, mà
  * lúc vẽ thì thuỷ vân không thêm được gì; vẫn đủ để ảnh chụp màn hình mang tên người chụp.
  */
 const WATERMARK_ROWS_EDIT = 3;

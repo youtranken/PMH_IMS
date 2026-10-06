@@ -18,7 +18,7 @@ const CORNERS: CropCorner[] = ['nw', 'ne', 'sw', 'se'];
 const KEY_STEP = 0.01;
 
 /**
- * Hộp cắt ảnh thiết bị (Q-23 06/10, quyết định A; AD-15 — mọi chỗ tải ảnh thiết bị dùng chung):
+ * Hộp cắt ảnh thiết bị (Q-23 mục A; AD-15 — mọi chỗ tải ảnh thiết bị dùng chung):
  * viền trong suốt / trắng tự bỏ trước, khung khoá theo mặt tủ 19" khi máy có Số U (`units`), không
  * thì cắt tự do. Kéo khung để dời, kéo góc để đổi cỡ; phím mũi tên dời, Shift + mũi tên đổi cỡ.
  * Hộp KHÔNG tự tải lên: trả tệp đã cắt cho nơi gọi, nơi gọi đi đúng đường giấy tờ như trước

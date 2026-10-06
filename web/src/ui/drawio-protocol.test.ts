@@ -149,7 +149,7 @@ describe('serializeDrawioCommand — lệnh có kiểu → tin draw.io', () => {
     ['save', { action: 'save' }, { action: 'invokeAction', actionName: 'save' }],
     ['export xml', { action: 'export', format: 'xml' }, { action: 'export', format: 'xml' }],
     ['patch', { action: 'patch', patch: { u: {} } }, { action: 'patch', patch: { u: {} } }],
-    // Hỏi ô đang chọn bằng `export` json sẵn có của draw.io — không plugin (Q-23 06/10).
+    // Hỏi ô đang chọn bằng `export` json sẵn có của draw.io — không plugin (Q-23).
     ['selectionQuery', { action: 'selectionQuery' }, { action: 'export', format: 'json', selection: 1, allPages: 0, includeData: 0 }],
   ];
   it.each(cases)('%s', (_name, command, expected) => {

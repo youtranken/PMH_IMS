@@ -56,7 +56,7 @@ export function useDeviceTypeIconSrc(typeId: string | null | undefined): string 
  * Hai ô ảnh "Mặt trước" / "Mặt sau" của một thiết bị (Q-23, AD-15): trang thiết bị và form Thêm/Sửa
  * dùng chung. Mỗi ô hiện ĐÚNG hình đang dùng (ảnh, hoặc biểu tượng loại phóng to), nhãn mức đang
  * dùng, và cả ô là vùng thả. Ô KHÔNG tự gửi gì: lọc loại + cỡ (cùng trần giấy tờ, Q-18), mở hộp
- * cắt (Q-23 06/10 — khoá theo mặt tủ khi có `rackUnits`) rồi trả `File` ĐÃ CẮT cho nơi gọi — trang
+ * cắt (Q-23 — khoá theo mặt tủ khi có `rackUnits`) rồi trả `File` ĐÃ CẮT cho nơi gọi — trang
  * chi tiết tải thẳng, form thêm mới giữ lại tới lúc máy có id. Ảnh đang hiện còn viền hay lệch tỉ lệ
  * n U thì ô báo "Cắt lại" (cần `loadOriginal` để lấy tệp gốc).
  */
@@ -197,7 +197,7 @@ export function DevicePhotoSlots({
         const removable = slot.level === 'own' || slot.level === 'draft';
         return (
           <section key={side} className="photo-slot" role="group" aria-label={label} aria-busy={busySide === side || undefined}>
-            {/* Khung cao theo ảnh (Q-23 06/10): ảnh 1U là một dải rộng, không phải vạch giữa ô cao. */}
+            {/* Khung cao theo ảnh (Q-23): ảnh 1U là một dải rộng, không phải vạch giữa ô cao. */}
             <header className="photo-slot-head">
               <strong>{label}</strong>
               <span className={`badge plain photo-slot-level ${slot.level}`}>{levelText(slot)}</span>
