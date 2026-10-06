@@ -169,6 +169,8 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await stock.click();
     const search = stockBox(page).getByRole('searchbox', { name: 'Tìm thiết bị' });
     const rowOf = async (code: string) => {
+      // Cú thả trước đưa tiêu điểm vào khung trình vẽ → hộp nổi tự đóng (blur): mở lại.
+      if (!(await stockBox(page).isVisible())) await stock.click();
       await search.fill(code);
       await expect(stockBox(page).getByRole('listitem')).toHaveCount(1);
       const row = stockBox(page).getByRole('listitem').filter({ hasText: code });
@@ -207,7 +209,14 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
 
     // 2) Kéo chuột thật vào khung (Playwright: khung không nhận) → IMS chèn thay theo lưới, báo rõ.
     const secondRow = await rowOf(second);
-    await secondRow.dragTo(page.locator('iframe[title="Khung vẽ draw.io"]'), { targetPosition: { x: 500, y: 400 } });
+    // Kéo như tay người: nhấn trên dòng, đi qua thanh trên của IMS rồi xuống giữa khung vẽ.
+    const from = (await secondRow.boundingBox())!;
+    const canvas = (await page.locator('iframe[title="Khung vẽ draw.io"]').boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, 20, { steps: 8 });
+    await page.mouse.move(canvas.x + 300, canvas.y + 400, { steps: 15 });
+    await page.mouse.up();
     await expect(page.getByText(new RegExp(`Đã chèn ${second} cạnh các hình đang có`))).toBeVisible();
 
     const [saved] = await Promise.all([
