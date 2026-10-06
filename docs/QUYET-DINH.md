@@ -372,6 +372,41 @@ nếu chủ dự án không đồng ý.
 - **Người dùng IMS:** "Bắt buộc – chưa kích hoạt" thay "Bắt buộc – chưa cài"; dòng chỉ để nút chính,
   còn lại vào ⋮ (Q-18).
 - Chữ mô tả dài trên màn rộng chạy một hàng (không ép xuống dòng khi còn chỗ).
+- **Ô nhập mã 2 lớp là 6 ô riêng (03/10/2026, chủ dự án):** mỗi ô một số, áp cho mọi chỗ nhập mã
+  (bước "Xác thực 2 lớp" lúc đăng nhập, cài/cài lại 2 lớp, hộp xác thực lại để xem két). Gõ một
+  số tự sang ô kế; Backspace ở ô trống lùi về ô trước và xoá nó; ←/→/Home/End di chuyển; dán
+  hoặc tự điền cả mã (kể cả "123 456") vào ô nào cũng đổ đủ 6 ô. Đủ 6 số vẫn tự gửi, đúng một
+  lượt như trước. Lý do: người dùng chép từng số từ ứng dụng xác thực và soát được từng số.
+- **6 ô mã chia đều + chuyển động (04/10/2026, chủ dự án):** 6 ô trải đều hết bề ngang khung (không
+  dồn trái), ô đang gõ sáng viền + nhấc nhẹ + con trỏ nháy, gõ số thì ô "nảy". Đủ 6 số đang kiểm
+  thì cả 6 ô cùng xoay chậm theo chiều kim đồng hồ, tối thiểu trọn một vòng (~1,2 giây, lặp tới
+  khi server trả lời — chủ dự án 04/10 muốn thấy rõ vòng xoay); mã đúng thì 6 ô gộp
+  thành 1 ô có dấu tích xanh, giữ một nhịp rồi mới vào (thêm ≤ ~0,9 giây); sai mã thì về 6 ô, cả
+  hàng lắc + đỏ. "Giảm chuyển động": không xoay/gộp/lắc, hiện dấu tích và đi tiếp ngay. Lý do:
+  góp ý "ô không đều", và chủ dự án muốn hiệu ứng như ứng dụng hiện đại (mẫu chủ dự án gửi).
+- **Mã đúng theo mẫu "Glassy OTP" + công tắc chuyển động (04/10/2026, chủ dự án):** thay bullet
+  trên ở phần đang kiểm/thành công. Đủ 6 số đang kiểm: 6 ô rời hàng, xếp lên một VÒNG TRÒN quanh
+  tâm hàng ô rồi cả vòng quay theo chiều kim đồng hồ (ô nghiêng theo vòng, viền sáng ấm), tối
+  thiểu trọn một vòng, lặp tới khi server trả lời và chỉ dừng ở mốc trọn vòng. Mã đúng: các ô
+  đứng thẳng lại, hội tụ vào tâm thành MỘT ô trống, viền ô đổi màu nhấn, một vòng xanh loang ra
+  quanh ô rồi hiện dấu tích; cùng lúc tiêu đề đổi thành "Đã xác thực thành công" (kèm dòng phụ)
+  và nút chính chuyển xanh "Đã xác thực" — cả chuỗi ~2,5–3 giây rồi mới vào. Sai mã: bỏ vòng,
+  ô bay về hàng, lắc + đỏ như cũ. Hộp xác thực lại (nhỏ hơn) dùng cùng hiệu ứng thu nhỏ.
+  Thêm lựa chọn "Hiệu ứng chuyển động" trong Hồ sơ của tôi (cạnh Giao diện): Theo hệ thống
+  (mặc định) / Luôn bật / Tắt, lưu ở trình duyệt như lựa chọn theme. "Luôn bật" thắng báo "giảm
+  chuyển động" của máy; "Tắt" bỏ chuyển động kể cả khi máy cho phép. Lý do: máy của chủ dự án qua
+  phiên từ xa / máy ảo luôn báo "giảm chuyển động" nên không bao giờ thấy hiệu ứng.
+- **Vi chuyển động dùng chung (04/10/2026, chủ dự án):** làm một lần trong `web/src/ui` để mọi màn
+  hưởng, chỉ dùng `transform`/`opacity` (và `background-position` cho vệt sáng khung chờ), màu qua
+  token có cặp tối, thời lượng qua `--dur-*`: (1) nút Lưu chính của hộp thoại: lưu xong hiện dấu
+  tích ~0,7 giây rồi trở lại; (2) duyệt / phát hành thành công (két, sơ đồ): vòng xanh loang + dấu
+  tích, dùng lại kiểu vòng xanh của ô mã 2 lớp; (3) số KPI trên bảng điều khiển đếm từ 0 lên khi
+  hiện lần đầu (~0,6 giây); (4) bảng đang tải hiện các dòng khung chờ có vệt sáng quét thay chữ
+  "Đang tải…" (trình đọc màn hình vẫn đọc "Đang tải"); (5) hộp thoại mở/đóng mờ dần + phóng nhẹ;
+  tab: vạch dưới trượt sang tab mới, nội dung tab mờ dần vào; (6) vùng thả tệp: kéo tệp vào thì
+  viền nhấc + nhịp, biểu tượng nảy; thả xong loé xác nhận. Tất cả tắt khi "Hiệu ứng chuyển động"
+  là Tắt hoặc máy báo giảm chuyển động (trừ khi chọn Luôn bật). Lý do: chủ dự án muốn giao diện
+  "sống" như ứng dụng hiện đại nhưng không được làm chậm thao tác.
 
 ### Q-22 · Tách "Phần mềm" thành các màn riêng (02/10/2026, chủ dự án chốt)
 
@@ -385,6 +420,530 @@ nếu chủ dự án không đồng ý.
   theo dõi hạn.
 - Lưu trữ giữ một bảng `software` với cột `kind` (không tách bảng): nhắc hạn, gia hạn, két, lịch sử,
   thanh lý dùng nguyên như cũ; chỉ tách màn và menu.
+- **Két sắt theo bốn màn của Q-22** (soát UX đợt 2, 05/10/2026, K-01/K-02): trang tổng Két có
+  chip lọc riêng cho từng màn — Phần mềm · Tên miền & SSL · Hợp đồng bảo trì · Dịch vụ khác —
+  thay cho một chip "Phần mềm" gom cả bốn; cột Loại ghi đúng màn. API trang tổng trả thêm màn của
+  hồ sơ phần mềm (`softwareKind`, chỉ loại hồ sơ — không gì về nội dung két). Mã hồ sơ là link sang
+  trang của chính màn đó (nút "Mở két" vẫn riêng).
+- **Hạn đổi mật khẩu hiện ở mọi danh sách có két** (K-03): Thiết bị, bốn màn phần mềm, Đường
+  truyền hiện dòng phụ "Đổi mật khẩu …" như Tài khoản dịch vụ (Admin/SA — Member không có bản đồ két).
+
+### Q-23 · Epic 10 — Sơ đồ mạng thay Visio (02/10/2026, chủ dự án chốt qua buổi brainstorm)
+
+Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlog.md`.
+
+- **Làm Epic 10 trước Epic 8–9.** Vẽ mới, không nhập file Visio cũ.
+- **Sơ đồ tĩnh gắn dữ liệu:** mỗi hình thiết bị là một hồ sơ trong kho; vẽ dây = khai một dòng sơ
+  đồ cổng (luật một cổng một cáp áp nguyên). Cộng lớp vẽ tự do (khung tòa nhà/tầng/phòng/VLAN,
+  đám mây ISP, chữ, mũi tên). Không giám sát sống trong Epic 10; chừa sẵn API nhận trạng thái từ
+  máy giám sát ngoài và lớp "trạng thái sống" để cắm sau.
+- **Cây bản vẽ:** Tổng công ty → site chính → site phụ → tầng → phòng → tủ rack. Tầng/phòng chỉ là
+  tên bản vẽ, không thêm danh mục vị trí mới.
+- **Biểu tượng SVG theo Loại thiết bị** (SA chọn hoặc tải SVG, lọc mã độc); thêm **ảnh thật** theo
+  model hoặc theo từng máy (lấy từ giấy tờ đính kèm).
+- **Phiên bản:** mỗi lần lưu là một phiên bản, hai người cùng sửa thì bản lưu sau thắng; lịch sử
+  tóm tắt một dòng; đặt tên phiên bản quan trọng; phiên bản chụp lại thông tin thiết bị lúc đó;
+  khôi phục bản trước. **Bản trình bày:** nhân bản từ bản chính thức thành bản tách rời (không duyệt,
+  có thiết bị dự kiến + ảnh tự do, PDF ghi "BẢN TRÌNH BÀY"), không ảnh hưởng bản chính thức.
+- **Duyệt:** bản của Thành viên phải gửi Admin duyệt mới thành chính thức; gửi duyệt thì hệ thống
+  tự kiểm (lỗi chặn, cảnh báo cho qua); trả về kèm ghi chú ghim trên bản vẽ. Bản Admin/SA vẽ tự
+  thành chính thức. Không bắt Admin bấm qua từng thay đổi — có tóm tắt và nút xem so sánh.
+- **TOTP:** mọi lần xem bản vẽ (chính thức, phiên bản cũ, trình bày) đều phải nhập mã; nhập một lần
+  xem tiếp trong 10 phút (tham số riêng). Phạm vi tách riêng với két: nhập ở đâu tính ở đó. Mỗi lần
+  mở ghi nhật ký.
+- **Cảnh báo lệch kho, không ép sửa:** máy thanh lý / đổi IP / đổi cổng sau khi vẽ thì hiện dấu.
+- Không liên kết Epic 9 / phiếu 0213; không xuất Excel danh sách dây.
+- **Chốt thêm (02/10/2026):** dây vẽ trong bản nháp chỉ ghi vào sơ đồ cổng khi bản được phát hành;
+  xem cây bản vẽ (tên, trạng thái) không cần mã, mở nội dung mới hỏi TOTP; Admin/SA lưu là bản nháp,
+  bấm "Phát hành" mới thành chính thức; chồng U trong cùng tủ thì chặn; ảnh theo model định danh
+  bằng loại thiết bị + chuỗi model; loại dây seed sẵn **Cat6, Fiber, DAC** (SA thêm được).
+- **Trình vẽ và sơ đồ cổng (02/10/2026, chủ dự án chốt trình vẽ sau khi xem mẫu khung vẽ tự viết):**
+  - Trình vẽ là **draw.io (diagrams.net) tự host**: image `jgraph/drawio` ghim tag + digest, nhúng
+    iframe chế độ embed, phục vụ qua nginx tại `/drawio/`, chạy offline trong mạng nội bộ (không
+    đám mây, CDN, plugin). Lý do: sơ đồ mạng thật cần đi dây tự do và thư viện hình Cisco/rack, chủ
+    dự án đã quen draw.io. Thay React Flow của kế hoạch cũ.
+  - Nâng phiên bản draw.io 1–2 lần/năm hoặc khi có cảnh báo bảo mật: đổi tag → dựng lại → chạy E2E
+    sơ đồ, giữ tag cũ để lùi (RUNBOOK).
+  - **Sửa gạch "Chốt thêm" ở trên: bản vẽ KHÔNG ghi sơ đồ cổng**, kể cả lúc phát hành. Dây trên bản
+    vẽ chỉ gắn với một dòng sơ đồ cổng đã có. Kết nối mới, kể cả nối hàng loạt, khai qua hộp sơ đồ
+    cổng dùng chung và ghi ngay như ở trang thiết bị.
+  - Lý do: nét vẽ draw.io kéo rời, nhân bản, xoá được tự do, nên suy ra cổng từ nét vẽ là đoán. Một
+    kết nối có mặt ở nhiều bản vẽ, nên xoá dây trên một bản vẽ không thể nghĩa là xoá kết nối. Thành
+    viên vốn được sửa sơ đồ cổng trực tiếp, nên bắt nó chờ duyệt bản vẽ là không nhất quán. Tự kiểm
+    và cảnh báo lệch kho vẫn so dây với sơ đồ cổng (ARCHITECTURE-SPINE AD-17, AD-18).
+- **Góp ý sau khi vẽ thử bản spike (03/10/2026, chủ dự án):** vào màn sơ đồ thì sidebar tự thu nhỏ
+  (chỉ còn biểu tượng); trình vẽ chiếm toàn bộ phần còn lại; tab Sửa / Xem và các nút của IMS đưa
+  lên một thanh mảnh phía trên trình vẽ; panel "Thiết bị kho" thiết kế lại gọn (không chiếm một cột
+  cố định). Phiên bản, tô sáng đường dây của một thiết bị và ảnh thật thuộc các story của Epic 10;
+  spike chỉ để xem draw.io chạy thế nào.
+- **Mã 2 lớp lúc đăng nhập KHÔNG mở két hay sơ đồ (03/10/2026, chủ dự án xác nhận):** xem két và
+  mở sơ đồ mỗi bên phải nhập mã riêng, mỗi bên có ân hạn riêng (két đổi hành vi so với trước: lần xem
+  secret đầu tiên sau đăng nhập cũng hỏi mã).
+- **Dây: "vẽ là khai, có hỏi" (03/10/2026, chủ dự án chốt).** Sơ đồ cổng vẫn là nguồn duy nhất.
+  Kéo nét dây nối hai thiết bị kho → IMS hỏi "Khai kết nối này vào sơ đồ cổng?" (cổng còn trống hai
+  đầu + loại dây) → "Khai" ghi thẳng sơ đồ cổng qua API của `devices`, "Chỉ vẽ" để nét vẽ kèm cảnh báo
+  vàng. Xoá nét đã khai thì hỏi "Chỉ xoá nét vẽ" (mặc định) / "Gỡ luôn kết nối". Chiều ngược lại: đổi
+  cổng / loại dây hiện ngay khi mở bản vẽ; kết nối bị gỡ thì nét chuyển đỏ; kết nối mới giữa hai máy
+  đã có trên bản vẽ thì báo "Có N kết nối mới chưa vẽ" + nút "Vẽ vào". Nút "Khai kết nối" vẫn giữ.
+  Gạch này bổ sung gạch 02/10 ("bản vẽ không ghi sơ đồ cổng"): LƯU hay PHÁT HÀNH bản vẽ vẫn không
+  ghi gì vào sơ đồ cổng; chỉ khi người dùng bấm "Khai" (hoặc "Gỡ luôn kết nối") thì web mới gọi API
+  của `devices`.
+- **Chốt chi tiết (03/10/2026, chủ dự án):** xoá bản vẽ thử (bảng `diagram_spike` bỏ bằng migration
+  mới ở story 10.3); rời màn sơ đồ sang menu khác thì sidebar mở rộng lại; đóng hộp Khai (✕/Esc) =
+  "Chỉ vẽ"; nhân bản nét dây đã khai thì bản sao chỉ là nét vẽ (như copy-paste). Chủ dự án cho chạy
+  liền Epic 10 tới hết, kể cả E2E đầy đủ và code review.
+- **Sửa cũng hỏi mã sơ đồ (03/10/2026):** lưu, đặt tên, khôi phục phiên bản đều cần mã phạm vi sơ
+  đồ như khi xem; hết ân hạn giữa lúc vẽ thì hỏi mã tại chỗ rồi lưu lại đúng bản đang vẽ. Xem cây
+  bản vẽ (tên, trạng thái) không hỏi mã.
+- **Thành viên quản bản trình bày của mình (03/10/2026, chủ dự án duyệt):** Thành viên đổi tên và
+  lưu trữ được bản trình bày do mình tạo hoặc đang phụ trách (`created_by` / `owner_email`); bản của
+  người khác và mọi bản chính thức vẫn chỉ Admin/SA (403 `DIAGRAM_MANAGE_FORBIDDEN`). Chủ bản trình
+  bày chỉ đổi TÊN, không đổi người phụ trách hay loại nút. Lý do: bản trình bày là bản nháp riêng để
+  xin mua sắm, không qua duyệt — bắt Admin dọn hộ là thừa; bản chính thức là hồ sơ chung.
+- **Trình vẽ chạy tạm container `drawio` như bản thử;** khi làm Epic 10 chuyển sang phát tệp tĩnh của
+  draw.io (đúng tag đã ghim) ngay trong container `web`, bỏ Tomcat.
+- **Góp ý sau khi test tay Epic 10 (04/10/2026, chủ dự án):** hộp "Thiết bị kho" KHÔNG liệt kê máy
+  đã thanh lý (chèn vào là vô lý); chế độ Xem phải hiện ĐÚNG như lúc Sửa (mọi nét/hình draw.io, kể
+  cả dây nối tới hình tự do); ghim bình luận phải hiện tên hình (mã máy/nhãn) và nội dung bình luận
+  ngay trên bản vẽ, không hiện id kỹ thuật; tạo bản vẽ con mặc định NHÂN BẢN nội dung từ bản cha
+  để sửa tiếp (04/10/2026, rà soát mã: bản sao qua đúng luật gắn khung của lần lưu; khung hỏng —
+  trỏ bản vẽ không nằm dưới bản con mới, tức mọi bản vẽ con của bản cha, hay dải/tủ đã ngừng dùng —
+  bị GỠ GẮN, giữ hình và chữ, chứ không làm hỏng lượt tạo. Lý do: lỗi do dữ liệu bản cha, người tạo
+  bản con không sửa được nó; để nguyên thì bản con lưu được một khung trỏ ngược lên nhánh khác); màn sơ đồ phải dùng được ngay không cần học — mỗi thao tác có (i) hướng dẫn, màn
+  trống có các bước gợi ý.
+- **Bỏ bản nháp, Xoá hẳn, ảnh lưu một lần (04/10/2026, chủ dự án chốt).** Sửa luật "phiên bản
+  chỉ-thêm mãi mãi" của gạch Phiên bản ở trên. Lý do: mỗi lần lưu chép lại toàn bộ XML + ảnh xem,
+  kể cả ảnh thật nhúng, nên kho phình theo số lần bấm Lưu; còn các lần lưu nháp sau bản chính thức
+  phần lớn là bản vẽ dở, bỏ đi không mất gì của hồ sơ. Thứ phải giữ mãi vẫn giữ: bản chính thức,
+  mọi phiên bản từng phát hành, phiên bản đã đặt tên; và `diagram_history` + `audit_log` ghi một
+  dòng cho mỗi lần xoá (xoá từ số mấy tới số mấy, bao nhiêu lần lưu, ai xoá).
+  - **"Bỏ bản nháp":** xoá mọi phiên bản có số SAU mốc giữ mà chưa đặt tên, chưa từng phát hành.
+    Mốc giữ = bản chính thức; bản chưa có bản chính thức (bản trình bày, bản chưa phát hành) giữ
+    phiên bản đầu tiên. Phiên bản giữ lại mà còn trỏ tới một bản nháp (`based_on` / khôi phục từ)
+    thì bản nháp đó cũng giữ. Đang có yêu cầu phát hành chờ duyệt trỏ vào một bản sẽ xoá thì chặn,
+    bảo người gửi rút yêu cầu trước. Bình luận ghim trên các bản bị xoá đi cùng. Ai được: Admin/SA;
+    bản trình bày thì cả người tạo / phụ trách (cùng luật đổi tên, lưu trữ). Hỏi mã sơ đồ; hộp xác
+    nhận nói rõ sẽ xoá bao nhiêu lần lưu.
+  - **"Xoá hẳn":** chỉ bản vẽ CHƯA phát hành lần nào, không còn bản vẽ con (kể cả con đã lưu trữ),
+    không có yêu cầu chờ duyệt. Admin/SA hoặc người tạo; hỏi mã sơ đồ; gõ đúng tên để xác nhận.
+    Phiên bản, tên phiên bản, bình luận, lệch kho, người đang sửa bị xoá; riêng hàng `diagram` còn
+    lại làm **bia mộ** (`deleted_at`, ẩn khỏi mọi màn, 404 khi mở) vì `diagram_history` chỉ-thêm trỏ
+    khoá ngoại vào nó — lịch sử và nhật ký vẫn tra được bản vẽ tên gì, ai xoá.
+  - DB vẫn chặn sửa/xoá phiên bản như cũ; chỉ hàm `diagram_delete_versions` (SECURITY DEFINER)
+    mở được trong đúng transaction của nó, và trigger vẫn từ chối xoá bản chính thức, bản đã đặt
+    tên, bản từng phát hành. `ims_app` vẫn không có quyền DELETE trên các bảng chỉ-thêm.
+  - **Ảnh lưu một lần:** ảnh nhúng (`data:image/…;base64`) trong XML và ảnh xem SVG được tách ra bảng
+    `diagram_image`, khoá bằng SHA-256 của chính ảnh; phiên bản chỉ giữ tham chiếu
+    `ims-img:<dạng>:<sha>`. Mở bản vẽ, so sánh, xuất PNG/PDF đều ghép ảnh trở lại thành `data:` URI
+    trước (xuất vẫn qua cổng kiểm lại trước resvg, không bao giờ tải URL). Phiên bản cũ không chuyển
+    đổi gì, đọc được cả hai dạng. Ảnh nhỏ hơn 512 byte hoặc base64 không chuẩn để nguyên trong XML.
+    `diagram.xml_max_kb` nay đo trên XML khô SAU khi tách ảnh; tổng cỡ kể cả ảnh vẫn bị trần XML
+    ướt lúc nhận chặn như trước. Ảnh không còn phiên bản nào dùng bị xoá ngay trong transaction
+    Bỏ bản nháp / Xoá hẳn.
+- **Màn /diagrams là "bản đồ không gian" + bỏ nháp từ một bản chọn (04/10/2026, chủ dự án chốt
+  sau khi xem mẫu; thay bố cục cây hai cột).** Bản vẽ gốc là băng tối trên cùng, bản vẽ con của
+  nó là các KHU (tầng/site), con của khu là các Ô; ô có con thì bấm "▸ n bản vẽ con" để đi sâu
+  (bản đồ lấy ô đó làm gốc, có đường dẫn quay lại). Dải "Cần làm" đếm bản có nháp chưa phát
+  hành / chờ duyệt / lệch kho, bấm để lọc. Bấm một ô mở panel bên phải: chuyển nhanh giữa các
+  bản vẽ cùng khu, nút Mở bản chính thức / Sửa, khu "Nháp chưa phát hành" và khu "Đã phát hành".
+  Trạng thái luôn có CHỮ, không chỉ màu. Kiểu "Danh sách" (cây thụt lề) vẫn giữ cho người đọc
+  màn hình và ai quen danh sách.
+  - **Bỏ nháp TỪ một bản chọn trở về sau:** tick một bản nháp thì mọi bản nháp MỚI hơn được tick
+    theo; "Xóa n bản nháp" xoá các lần lưu có số ≥ bản chọn (cùng loại trừ như "Bỏ bản nháp":
+    bản đã đặt tên, từng phát hành, hay bị bản giữ lại trỏ tới thì giữ; có yêu cầu chờ duyệt trỏ
+    vào bản sẽ xoá thì chặn). Số bắt đầu phải SAU mốc giữ, không thì từ chối. Không cho xoá riêng
+    một bản nháp ở GIỮA: các lần lưu sau vẽ tiếp trên nó, xoá giữa chừng làm chuỗi lịch sử
+    hụt một khúc mà bản sau vẫn mang dấu của nó.
+  - Danh sách phiên bản trong panel vẫn là nội dung bản vẽ nên vẫn hỏi mã sơ đồ: panel hiện nút
+    "Nhập mã để xem lịch sử" tại chỗ, không tự bật hộp hỏi mã khi chỉ bấm chọn một ô. Tên, trạng
+    thái, số phiên bản / số nháp / số thiết bị trên bản đồ là thông tin của cây, không hỏi mã.
+- **Góp ý sau khi test màn bản đồ (05/10/2026, chủ dự án):**
+  - **Xem lại bản đã lưu trữ:** /diagrams có nút "Đã lưu trữ (n)" (cả kiểu Bản đồ lẫn Danh sách);
+    bấm thì hiện khu liệt kê bản vẽ đã lưu trữ (tên, nằm dưới bản nào, ai lưu trữ, khi nào). Mở ra
+    là CHỈ XEM — vẫn hỏi mã sơ đồ như mọi lần xem, không có Sửa. **"Bỏ lưu trữ"** cùng người được
+    lưu trữ (Admin/SA; bản trình bày thì cả người tạo / phụ trách), ghi `diagram_history` +
+    `audit_log` (`diagram.unarchived`). Chặn khi bản cha còn đang lưu trữ (bỏ lưu trữ bản cha
+    trước — không để bản con treo dưới một bản đã cất), hay khi cùng nhánh đã có bản đang dùng
+    trùng tên. Bia mộ của "Xoá hẳn" không bao giờ hiện ở khu này.
+  - **Vị trí U của thiết bị tự giải thích:** dưới ô U hiện ngay câu "Thiết bị nằm ở U30" / "Chiếm
+    U30–U31". Quy ước giữ như khung tủ và ràng buộc chồng U: U1 ở ĐÁY tủ, "U bắt đầu" là U thấp
+    nhất, máy chiếm dần LÊN trên (U30 + 2U = U30–U31). Form kiểm chồng U với các máy đang ở tủ đó
+    (trừ máy thanh lý và chính nó) TRƯỚC khi lưu, báo tại ô "U30 đang có SW-01"; server vẫn là
+    trọng tài — lỗi chồng U của server cũng gắn vào ô đó. Nút **"Xem tủ"** cạnh ô Tủ mạng mở hình
+    mặt đứng của tủ (mỗi U một dòng, mã máy đang chiếm); bấm một U trống thì điền "U bắt đầu".
+    Màn 390px xem được, chỉ đọc.
+  - **"Hình dùng trên sơ đồ" — MỖI máy đổi được ảnh của riêng nó (chủ dự án chốt lại 05/10):**
+    - Thứ tự tra một nơi duy nhất (`DevicePhotosService.effectivePhotos` của `devices`): ảnh riêng
+      của máy → ảnh chung của loại + model → biểu tượng của Loại thiết bị (SA đổi ở Danh mục). Dùng
+      cho chèn từ "Thiết bị kho", hydrate lúc mở / xem / xuất, thẻ ảnh của trang thiết bị và **Bản đồ
+      quan hệ** (nút của máy và các máy khác hiện trên đó) — không nơi nào chép ảnh ra bản riêng.
+      Bản đồ quan hệ và hộp Thiết bị kho hiện ảnh bằng `<img>` trỏ endpoint ảnh đã thu nhỏ / đã vẽ
+      lại của server, không nhúng nội dung người dùng tải lên.
+    - Lưu trữ: KHÔNG thêm bảng. Ảnh riêng của máy vốn đã có chỗ — cột `device.photo_*_file_id`
+      (migration 0054, chủ `devices`, AD-3) trỏ tệp `files` của chính máy; ảnh model ở
+      `device_model`. Thiếu chỉ là giao diện: trước nay phải tải giấy tờ rồi chọn trong ô thả xuống
+      ở cuối tab Giấy tờ.
+    - Trang thiết bị có khu "Hình dùng trên sơ đồ" ở tab Tổng quan, nói rõ mức đang dùng ("Ảnh
+      riêng của máy này" / "Ảnh chung của model X" / "Biểu tượng loại"). Việc: **Tải / thay ảnh
+      riêng** cho từng mặt (tải thẳng, JPG/PNG, cùng giới hạn cỡ của giấy tờ — ảnh được giải mã và
+      vẽ lại khi đưa vào sơ đồ như cũ), **Bỏ ảnh riêng** (về ảnh model / biểu tượng). Ai sửa được hồ
+      sơ máy thì đổi được ảnh riêng (SA/Admin/Thành viên, máy chưa thanh lý). Ảnh model giữ dưới
+      nhãn "Dùng cho mọi máy cùng model" và chỉ SA/Admin đổi (API `POST :id/model`, `PATCH
+      :id/model-photos` thu về SA/Admin) — một lần đổi ở đây đổi hình của cả loạt máy.
+    - Chèn máy từ "Thiết bị kho": máy có ảnh (riêng hay model) thì ô mới hiện ảnh mặt trước; không
+      có thì biểu tượng. Ô đã đặt trên bản vẽ giữ lựa chọn của người vẽ (biểu tượng / mặt trước /
+      mặt sau, `ims_photo`) nhưng ẢNH thì luôn là ảnh hiện hành: XML lưu khô (chỉ `ims_photo`), mở lại
+      bản vẽ — kể cả phiên bản cũ — là thấy ảnh mới, đúng như ảnh model đang chạy hôm nay.
+    - **Khu ảnh phải TRÔNG như chỗ tải ảnh, không phải một dòng chữ** (chủ dự án 05/10: "Biểu
+      tượng loại Firewall / Tải ảnh riêng / Dùng cho mọi máy cùng model — chỉ là 1 dòng text, nhìn
+      không nhận ra"). Mỗi mặt là một ô lớn "Mặt trước" / "Mặt sau" hiện đúng hình đang dùng (ảnh
+      đã thu nhỏ của server, hoặc biểu tượng loại phóng to trên nền nhạt), kèm nhãn mức đang dùng.
+      Cả ô là vùng thả ảnh + nút "Tải ảnh lên" / "Thay ảnh" (cùng vùng thả và giới hạn của giấy
+      tờ); "Bỏ ảnh riêng" khi máy có ảnh riêng; SA/Admin có thêm, tách riêng bên dưới kèm một
+      dòng giải thích, việc "Dùng ảnh này cho mọi máy cùng model". Máy thanh lý chỉ xem. 390px
+      xếp hai ô chồng nhau.
+    - **Form Thêm / Sửa thiết bị có khu "Ảnh thiết bị"** (không bắt buộc), cùng ô ảnh đó. Sửa:
+      ghi thẳng như trang thiết bị. Thêm mới: ảnh chọn được giữ ở trình duyệt (xem trước ngay),
+      máy lưu xong mới tải lên rồi đặt làm ảnh riêng. Bước ảnh hỏng thì máy VẪN được tạo; người
+      dùng thấy câu báo rõ kèm nút mở hồ sơ để đặt lại ảnh — không mất ảnh trong im lặng.
+    - **Ô ảnh trên bản vẽ ôm theo tỉ lệ ảnh** (chủ dự án 05/10: firewall 1U nằm giữa một ô vuông, trống
+      trên dưới, nhãn rơi xa). Giữ bề rộng như hôm nay, cao = rộng × (cao/rộng của ảnh), tỉ lệ chặn
+      trong 0,15…2. Cỡ ảnh lấy từ ảnh SERVER đã giải mã + thu nhỏ khi dựng ô (cùng lượt, có bộ nhớ
+      đệm) — không thêm cột, không migration, và không tin cỡ do trình duyệt báo. Áp khi chèn từ
+      "Thiết bị kho" và khi người vẽ đổi Biểu tượng ↔ Ảnh mặt trước/sau (về biểu tượng thì cao theo
+      tỉ lệ của biểu tượng loại). Ô đã lưu KHÔNG bị sửa cỡ lúc mở bản vẽ — chỉ chỉnh khi người vẽ đổi
+      hình lần nữa. Máy trong khung tủ ("Dựng lại mặt tủ") giữ cao đúng số U, đổi hình không đụng cỡ.
+  - **Menu ⋮ của trình vẽ chia nhóm có tiêu đề** (Dây & kết nối · Khung, tủ & ảnh · Phiên bản &
+    duyệt · Trợ giúp), mỗi mục có một dòng mô tả; "Hướng dẫn" đứng ĐẦU menu để không phải cuộn.
+    Khai kết nối xong, lời báo có nút "Xem ở sơ đồ cổng của <máy>" (mở tab mới — không bỏ bản vẽ
+    đang dở). Hướng dẫn (i) nói rõ dây nằm ở sơ đồ cổng của máy, và nhắc các nhóm trong menu.
+  - **Nối thêm máy vào máy đã có dây — không cần khai số cổng:** gõ tên cổng mới là cổng được tạo
+    khi bấm Khai. Lỗi chủ dự án gặp là gõ lại đúng cổng đã có cáp (luật một cổng một cáp) mà hộp
+    chỉ báo một câu chung. Hộp Khai nay hiện cổng ĐANG DÙNG của từng máy, báo ngay tại ô khi gõ
+    trùng ("Cổng 1 của SW-01 đã nối PC-01") kèm nút dùng cổng kế tiếp còn trống; lỗi 409 của server
+    cũng gắn vào đúng ô.
+  - **Nhân bản bản vẽ con chọn được phiên bản của bản cha:** mặc định bản chính thức (chưa phát
+    hành thì bản mới nhất); chọn được bản nháp mới nhất ngay, các bản khác (đã phát hành, đã đặt
+    tên) qua "Chọn phiên bản khác…" — danh sách phiên bản là nội dung nên hỏi mã sơ đồ. API nhận
+    `versionId`, phải thuộc đúng bản cha; luật gỡ khung hỏng giữ nguyên.
+  - **Bản đồ gọn hơn:** dòng nháp trong panel là "#15 · tóm tắt ngắn", người lưu / giờ ở dòng
+    thứ hai, "lưu đè lên bản của …" là nhãn nhỏ; dải chuyển nhanh bản vẽ cùng khu cuộn được và
+    luôn thấy tab đầu; bản vẽ gốc chưa có con là một băng một dòng kèm "+ Bản vẽ con".
+- **Soát UX đợt 2 — Sơ đồ mạng (05/10/2026, chủ dự án duyệt toàn bộ danh sách soát):**
+  - **Thuỷ vân GIỮ, chỉ nhẹ hơn ở tab Sửa** (V-06, chính sách bảo mật): thuỷ vân "tên · email ·
+    giờ" vẫn bắt buộc ở mọi chế độ (AD-17), không có nút tắt. Ở tab Sửa: thưa còn 3 hàng, màu nhạt
+    hơn (token riêng có cặp dark), chừa dải thanh menu + công cụ của trình vẽ ở trên cùng để vẽ
+    không vướng. Tab Xem và mọi file xuất giữ nguyên như cũ.
+  - **Thành viên chỉ gửi duyệt nháp do CHÍNH MÌNH lưu** (D-04): nháp mới nhất do người khác lưu
+    thì Thành viên không thấy nút "Gửi duyệt", và server từ chối (403
+    `DIAGRAM_SUBMIT_NOT_OWN_DRAFT`) — trước đây server cho Thành viên gửi duyệt bản vẽ dở của bất
+    kỳ ai. Sửa tiếp nháp của người khác vẫn được (luật "bản lưu sau thắng" giữ nguyên) nhưng nút
+    ghi rõ "Sửa tiếp nháp #n (của <tên>)". Admin/SA không đổi.
+  - **Bản vẽ con lấy Site của bản cha; chỉ bản vẽ cấp tủ mới gắn tủ** (D-03): "Loại nút" đổi tên
+    "Cấp bản vẽ". Ô Tủ chỉ hiện khi cấp là tủ, kèm một dòng nói gắn tủ để làm gì (dựng mặt tủ từ
+    kho). Server từ chối (400 `DIAGRAM_CABINET_NEEDS_CABINET_LEVEL`) lượt gắn tủ cho bản vẽ không
+    phải cấp tủ; lượt sửa cấp/tủ để lại bản vẽ không phải cấp tủ mà còn gắn tủ cũ thì tủ được bỏ
+    gắn trong cùng lượt (dữ liệu cũ tự sạch khi có người sửa, không sửa ngầm lúc chưa ai đụng).
+  - **Bản vẽ chờ duyệt phải có chỗ cho người duyệt thấy** (D-07): mục "Sơ đồ mạng" trên menu mang
+    số bản vẽ đang chờ Admin/SA này duyệt (không tính yêu cầu do chính họ gửi — bốn mắt); màn
+    "Duyệt" có khối "Bản vẽ chờ duyệt" (tên bản vẽ, người gửi, lúc gửi, bấm là mở). Bản đồ /diagrams
+    giữ chip "Chờ duyệt" sẵn có. Chỉ tên / trạng thái — không nội dung, không hỏi mã sơ đồ (cùng
+    mức với bản đồ).
+  - **Tìm nhanh (Ctrl+K) có nhóm Sơ đồ** (D-08): tên bản vẽ khớp, và "mã máy → bản vẽ có máy đó"
+    (mở bản vẽ, bay tới máy). Chỉ tên và trạng thái; mở nội dung vẫn hỏi mã như mọi lần xem.
+  - **Tab Sửa trả chỗ cho trình vẽ** (E-04): ở tab Sửa thanh trên cùng của IMS (tên nhóm, nút tìm,
+    đổi theme) ẩn đi — Ctrl+K vẫn mở Tìm nhanh; dòng "đã lưu" rút còn "Đã lưu #n · giờ", đủ chi
+    tiết khi rê chuột.
+  - **Lưu xong mời bước kế tiếp** (E-06): lời báo lưu xong có nút "Gửi duyệt #n" (Thành viên, nháp
+    của chính mình) hoặc "Phát hành #n" (Admin/SA).
+  - **Giấy bản vẽ luôn sáng thì màu dây trên giấy cũng là bộ màu sáng** (V-05): trình vẽ, trình
+    xem và chú giải nổi trên trình xem dùng bộ màu dây của GIẤY (token `--paper-cable-*`, cặp dark
+    giữ giá trị sáng), chú giải nổi nằm trên nền giấy. Danh mục, sơ đồ cổng (nền giao diện) vẫn
+    theo theme.
+  - **Biểu tượng loại có màu như bảng hình của draw.io** (V-10): hình thư viện mạng chèn kèm tô
+    + viền (màu từ token qua `PALETTE`) thay cho nét đen trên nền trắng; loại chưa chọn hình là
+    khối "thiết bị chung" in tên loại. Màn Danh mục đánh dấu loại chưa có hình trên sơ đồ.
+- **Góp ý "Lỗi Sơ đồ mạng" (05/10/2026, chủ dự án; Claude chốt phương án an toàn ở các điểm còn
+  mở, ghi rõ bên dưới để chủ dự án xác nhận):**
+  - **Bẻ dây bằng điểm uốn của chính dây, không vẽ thêm nét nối.** Bản vẽ "PMH Tower" cho thấy
+    nguyên nhân lỗi đỏ "Dây 3-AA-IT-001 ↔ ?": người vẽ kéo một đầu dây đã khai ra chỗ trống rồi vẽ
+    thêm vài nét tự do cho vuông góc — dây mang kết nối nay một đầu thả nổi. Dây của kho là nét
+    vuông góc (`orthogonalEdgeStyle`); muốn đi đường khác thì kéo điểm uốn trên chính dây. Khai
+    từ một nét người vẽ cũng đổi nét đó sang vuông góc. Menu "Dây & kết nối" có **"Bẻ dây vuông
+    góc"** (mọi dây của kho trên trang sang kiểu vuông góc, giữ điểm uốn người vẽ đã kéo) và **"Tự
+    đi lại dây"** (bỏ điểm uốn, nối lại đầu dây lệch / thả nổi về đúng máy của kết nối khi máy đó
+    có trên trang). Hai việc áp cho MỌI dây của kho trên trang đang mở: giao thức nhúng draw.io
+    không báo đang chọn nét nào.
+  - **Bản sao nét đã khai là nét tự do** (nhân bản, dán — kể cả dán từ bản vẽ khác: nét mới mang
+    một kết nối không có ở lượt trước và IMS không biết tới thì gỡ gắn). Nét tự do chạm máy KHÔNG
+    phải lỗi. Chỉ nét mang kết nối mà hai đầu không đúng hai máy của kết nối mới đỏ; câu báo nêu
+    đủ hai máy + cổng của kết nối, đầu nào thả nổi / đang nối máy nào, và cách sửa: kéo đầu dây về
+    đúng máy, "Tự đi lại dây", hoặc xoá nét (chọn "Chỉ xoá nét vẽ") rồi "Vẽ vào".
+  - **Lưu mà không đổi gì không tạo phiên bản.** XML khô (sau dehydrate + tách ảnh, bỏ vị trí
+    cuộn `dx`/`dy`) trùng phiên bản mới nhất VÀ thông tin thiết bị chụp lúc lưu cũng như cũ thì
+    server không thêm phiên bản, không ghi lịch sử / nhật ký, trả phiên bản mới nhất kèm
+    `unchanged: true`. Nét vẽ y nguyên mà kho đã đổi (IP, tủ, serial…) thì VẪN là một phiên bản
+    "Chụp lại thông tin thiết bị theo kho" — lệch kho tính từ bản chụp, nên đó là cách xoá dấu lệch.
+    Bản mới nhất chưa có ảnh xem (bản dựng tự động: dựng lại mặt tủ, dựng nháp từ sơ đồ cổng) thì
+    lưu y nguyên cũng là một phiên bản "Tạo ảnh xem cho bản dựng tự động", và nút Lưu bật ngay.
+    Web tắt nút Lưu khi chưa sửa gì; lượt lưu trùng báo "Không có thay đổi để lưu".
+  - **"Xóa vĩnh viễn" bản vẽ đã lưu trữ — sửa luật 04/10 "bản chính thức, bản từng phát hành, bản
+    đặt tên giữ mãi" CHỈ cho bản đã lưu trữ.** Ai: Admin/SA (Thành viên không — bản chưa phát hành
+    của họ vẫn có "Xoá hẳn"). Ở khu "Đã lưu trữ". Điều kiện: bản vẽ đã được lưu trữ TRƯỚC đó (không
+    lưu trữ và xoá trong một bước), hỏi mã sơ đồ, gõ đúng tên, không còn bản vẽ con nào chưa xoá
+    vĩnh viễn (kể cả con đã lưu trữ — con treo dưới một bia mộ thì không bao giờ bỏ lưu trữ được),
+    không có yêu cầu chờ duyệt. Xoá phiên bản, tên phiên bản, bình luận, lệch kho, người đang sửa,
+    ảnh không còn ai dùng; giữ bia mộ + `diagram_history` + `audit_log` (`diagram.erased`: tên, số
+    phiên bản đã xoá, từng phát hành không). Bản trình bày nhân bản từ nó không chặn (bản tách rời)
+    — chỉ mất liên kết tới phiên bản nguồn. DB (0058): chế độ `erase` của `diagram_delete_versions`
+    chỉ chạy khi bản vẽ là bia mộ VÀ đã lưu trữ trước lượt xoá; bản chính thức / đặt tên / từng phát
+    hành của bản vẽ chưa lưu trữ vẫn không xoá được bằng bất kỳ đường nào.
+  - **Tủ mạng.** Ô máy trong khung tủ cao đúng Số U × 1U và nằm theo U trong kho (U1 ở đáy) — ảnh
+    thật nằm gọn trong ô U, tỉ lệ ảnh không đổi chiều cao. Kéo máy vào khung tủ thì IMS đặt lại
+    ngay đúng U (máy mà kho ghi cùng tủ với khung). **Máy kho ghi tủ KHÁC (hay chưa gắn tủ) thì
+    không đặt theo U, chỉ cảnh báo — IMS không bao giờ tự đổi tủ của máy trong kho** (câu hỏi cho
+    chủ dự án: có cần nút "Chuyển máy sang tủ này" ghi vào kho không? Hiện phải sửa ở trang thiết
+    bị). Nhãn máy trong khung tủ nằm bên PHẢI, một dòng (mã · IP), không đè lên U khác. "Chèn tủ
+    mạng" mà máy của tủ đã có trên trang thì dời chính ô đó vào khung (giữ id — dây vẫn gắn).
+    "Dựng lại mặt tủ" giữ id ô máy và giữ dây nối giữa các máy còn trên mặt tủ.
+- **Chủ dự án trả lời các điểm còn mở của góp ý 05/10 (06/10/2026):**
+  - **Có nút "Chuyển máy sang tủ này", ghi vào kho nhưng LUÔN hỏi trước.** Máy kho ghi tủ khác (hay
+    chưa gắn tủ) với khung tủ nó đang nằm: lời cảnh báo và mục của máy trên trình vẽ có việc
+    "Chuyển máy sang tủ này". Kéo một máy vào khung của tủ khác cũng mở hộp xác nhận (hộp dùng
+    chung, không `window.confirm`) TRƯỚC khi ghi gì: "Chuyển <mã> từ <tủ cũ> sang <tủ mới>, U bắt đầu
+    = <U nơi thả, hoặc U trống gần nhất>, Số U = n"; U sửa được, kiểm chồng U với các máy đang ở tủ
+    mới như form thiết bị. Đồng ý → web gọi đúng API sửa thiết bị của `devices` (cùng quyền, cùng
+    nhật ký như sửa ở trang thiết bị — sơ đồ không tự ghi bảng `device`, AD-3) rồi đặt lại ô theo
+    U mới. Huỷ → ô về chỗ cũ, không ghi gì. Máy thanh lý không chuyển được. Lý do: kéo máy vào tủ là
+    cách tự nhiên nhất để nói "máy này ở tủ này", nhưng đổi kho mà không hỏi là ghi ngầm.
+  - **Khung tủ gắn nhầm tủ (bản vẽ "PMH Tower" khung TU-04):** người vẽ chọn lại tủ cho khung. Trước
+    đây không có đường nào đổi tủ của một khung đã chèn ("Gắn khung" chỉ gắn bản vẽ con / dải IP,
+    "Chèn tủ mạng" tạo khung thứ hai), nên hộp "Gắn khung" có thêm **"Đổi tủ của khung này"**: chỉ
+    đổi bản vẽ (tủ + mã trong nhãn khung), giữ hình và máy bên trong, không ghi kho; máy kho ghi tủ
+    khác thì được báo kèm "Chuyển máy sang tủ…".
+  - **"Xóa vĩnh viễn" giữ luật phải xoá vĩnh viễn hết bản vẽ con trước**, câu báo nêu rõ còn con nào.
+  - **Tủ mạng chỉ vẽ MẶT TRƯỚC.** "Chèn tủ mạng" và "Dựng lại mặt tủ" chỉ dựng mặt trước, bỏ mặt
+    sau. Bản vẽ đã lưu có khung mặt sau thì giữ nguyên nội dung, nhưng đặt máy theo U và cảnh báo lệch
+    tủ bỏ qua khung mặt sau.
+  - **"Khôi phục" một phiên bản trùng hệt bản mới nhất không tạo phiên bản mới** (cùng cách so như
+    lưu không đổi): giữ nguyên số, báo "Bản này trùng bản mới nhất — không tạo phiên bản mới".
+  - **Bấm Lưu khi chưa đổi gì phải giữ nguyên số phiên bản, không sinh nháp** — ở MỌI đường lưu: nút
+    Lưu, Ctrl+S, lưu lại sau khi nhập mã giữa chừng, "Vẽ vào" / các việc của IMS không đổi gì, bản
+    trình bày, và lưu ngay sau khi mở một bản nháp cũ.
+- **Năm cải tiến trình vẽ (06/10/2026, chủ dự án chọn; Claude chốt cách làm, giữ nguyên tư thế bảo
+  mật của draw.io):** iframe vẫn `sandbox="allow-scripts"` nguồn gốc mờ, CSP `/drawio/` không đổi,
+  vẫn `plugins=0` — KHÔNG thêm plugin hay tệp nào vào thư mục draw.io. Lý do: plugin chạy trong khung
+  với toàn quyền trên mô hình bản vẽ; mọi việc dưới đây làm được bằng giao thức nhúng sẵn có.
+  - **Kéo máy từ "Thiết bị kho" thả thẳng vào trình vẽ.** Dòng máy trong hộp kéo được (kéo-thả HTML
+    chuẩn): dữ liệu kéo là một `<mxGraphModel>` chứa đúng ô server dựng cho máy đó (cùng ô của nút
+    "Chèn"), draw.io tự nhận như dán và đặt ô ĐÚNG chỗ thả (có hoàn tác). Không cần đổi toạ độ ở
+    IMS: giao thức nhúng không báo vị trí cuộn của khung nên toạ độ tính từ ngoài sẽ sai. Trình duyệt
+    không giao cú thả cho khung (chặn kéo vào khung khác nguồn) thì IMS chèn theo lưới như nút
+    "Chèn" — không mất máy. Tick + "Chèn" giữ nguyên làm đường thứ hai. Máy đã có trên bản vẽ không
+    kéo được. Kéo một lượt một máy.
+  - **Nhãn cổng ở HAI ĐẦU dây** ("Gi1/0/1" sát máy A, "Gi1/0/2" sát máy B) thay cho một nhãn
+    "Gi1/0/1 ↔ Gi1/0/2" giữa dây. Nhãn đầu dây là ô nhãn con của nét do IMS dựng lúc mở (như nhãn
+    giữa trước đây) và gỡ lúc lưu — XML lưu chỉ thêm cờ `ims_port_labels="ends"` trên nét. Dây mới
+    (Khai, Nối hàng loạt, Vẽ vào, Dựng nháp từ sơ đồ cổng) mang cờ ngay; dây CŨ chỉ đổi khi người vẽ
+    đụng tới nó bằng "Tự đi lại dây" — mở bản vẽ không tự đổi (không sinh phiên bản ngầm). Màu nhãn
+    theo màu loại dây. Ảnh xem / PNG / PDF lấy đúng ảnh chụp lúc lưu, nên bản cũ giữ nhãn cũ.
+  - **Thẻ thông tin máy và dây.** Tab Xem (trình xem SVG của IMS): rê chuột lên máy → thẻ nhỏ (mã,
+    IP, model, tủ/U, cổng đang dùng/đã khai, trạng thái); rê lên dây → cả dây và hai máy hai đầu
+    sáng lên + thẻ "A máy:cổng ↔ B máy:cổng · loại dây · trạng thái". Bấm vẫn mở thẻ chi tiết như cũ
+    ("Mở hồ sơ" đi kèm). Tab Sửa: draw.io không báo rê chuột; IMS hỏi ô đang CHỌN bằng lệnh `export`
+    định dạng `json` có sẵn (chỉ id + thuộc tính `ims_*`, hỏi vài lần mỗi giây khi khung đang có tiêu
+    điểm) và hiện cùng thẻ ở góc trình vẽ, nút "Chi tiết" mở thẻ chi tiết NGAY trong màn sửa ("Mở hồ
+    sơ" mở tab mới — không bỏ bản vẽ dở). Không có rê chuột trong tab Sửa (cần plugin — không làm).
+    "Cổng đã khai" là số dòng sơ đồ cổng của máy; kho chưa có số cổng vật lý của máy.
+  - **Giữ bản đang vẽ dở.** Đang sửa mà đóng tab, mất mạng hay hết phiên thì trình duyệt giữ một bản
+    nháp cục bộ (IndexedDB) theo người + bản vẽ, MÃ HOÁ AES-GCM bằng khoá server cấp kèm nội dung
+    tab Sửa (dẫn từ master key theo người + bản vẽ — tức chỉ lấy được sau khi nhập mã sơ đồ). Trên
+    đĩa chỉ có bản mã; mở lại tab Sửa (nhập mã như mọi lần) thì hiện "Có bản đang vẽ dở lúc <giờ> —
+    Khôi phục / Bỏ". Khôi phục nạp vào trình vẽ thành thay đổi CHƯA LƯU (lưu vẫn qua nút Lưu, ghi
+    "lưu đè" nếu bản vẽ đã có phiên bản mới hơn) — không bao giờ tự ghi đè server. Bản nháp bị xoá
+    khi lưu xong, khi bấm Bỏ, khi chọn "Bỏ thay đổi" lúc rời màn, khi bấm Đăng xuất, và tự hết hạn
+    sau `diagram.draft_keep_hours` giờ (mặc định 24). Đổi master key thì bản nháp cũ không mở được
+    và bị bỏ. Rời màn khi còn thay đổi chưa lưu vẫn hỏi như cũ (`useUnsavedGuard`, cả đóng tab).
+- **Ảnh thiết bị và máy trong tủ (06/10/2026, chủ dự án chốt sau 5 ảnh chụp lỗi: ảnh 1U nhỏ xíu ở
+  bản đồ quan hệ và ô ảnh, máy tủ khác thả vào khung TU-04 chiếm U33–U41, ảnh 1U thành vạch "—",
+  máy trong tủ chồng nhau với nhãn 3 dòng).** Nguyên nhân chung: ảnh tải lên còn viền trong suốt /
+  trắng và không theo tỉ lệ mặt tủ, khung hiển thị cố định vuông / cao 160px, và máy của tủ khác
+  nằm lại trong khung với cỡ của trang tự do.
+  - **A. Tải ảnh = tự cắt viền + hộp cắt.** Mọi chỗ tải ảnh thiết bị (ô ảnh của trang thiết bị,
+    form Thêm/Sửa, "Dùng cho mọi máy cùng model") mở hộp cắt dùng chung (`ImageCropDialog`, web/src/ui
+    — vẽ bằng canvas, không thêm thư viện). Viền trong suốt hoặc gần đồng màu (trắng) tự cắt trước.
+    Máy có Số U = n > 0: khung cắt khoá theo mặt tủ 19" — rộng 482,6 mm : cao n × 44,45 mm (1U ≈
+    10,86 : 1, 2U ≈ 5,43 : 1…); không có Số U thì cắt tự do. Ra PNG (giữ nền trong suốt) nếu ảnh gốc
+    là PNG, không thì JPEG; tải lên qua đúng đường giấy tờ (cùng trần cỡ, server vẫn kiểm loại, cỡ,
+    giải mã + vẽ lại). Ảnh cũ vẫn chạy; ô ảnh đo ảnh đã thu nhỏ ngay ở trình duyệt và hiện "Ảnh chưa
+    cắt chuẩn — Cắt lại" khi còn viền hoặc lệch tỉ lệ n U (đổi Số U sau này cũng hiện câu này).
+    "Cắt lại" mở cùng hộp trên tệp gốc rồi lưu như một lần tải ảnh mới cùng mức (ảnh riêng → ảnh
+    riêng; ảnh model → ảnh model nếu là SA/Admin, không thì thành ảnh riêng của máy).
+  - **B. Khung hiển thị theo tỉ lệ ảnh.** Ô ảnh ở trang thiết bị / form rộng hết ô, cao theo ảnh
+    (ảnh 1U thành dải rộng và thấp). Hạch của Bản đồ quan hệ hiện ảnh rộng thành một dải hết bề
+    rộng thẻ hạch, không nằm trong ô vuông.
+  - **C. Trong khung tủ, máy đặt theo U của kho, không gì khác.** Ô máy LUÔN cao đúng n × 1U và rộng
+    hết lòng tủ; ảnh thật lấp đầy ô U (kéo giãn — ảnh đã cắt đúng tỉ lệ thì không méo, ảnh cũ chưa cắt
+    không còn thu nhỏ thành vạch). Nhãn một dòng bên phải ("mã · IP") ngay khi máy vào khung, không
+    chờ mở lại; hai nhãn sát nhau thì nhãn sau dời sang làn bên để không chồng. Hai máy không bao
+    giờ chung một U trên khung. Máy tủ khác thả vào khung: ô được đặt ngay cao n × U ở U trống gần
+    chỗ thả rồi mở hộp "Chuyển máy sang tủ này" như 06/10; **Hủy → ô ra NGOÀI khung (cạnh khung)**,
+    không bao giờ nằm lại trong khung với cỡ cũ — sửa gạch 06/10 "Huỷ → ô về chỗ cũ" (chỗ cũ có thể
+    chính là trong khung). Lý do: một máy nằm trong khung mà không theo U là hình tủ sai. Bản vẽ ĐÃ
+    LƯU có máy sai cỡ trong khung (ảnh 3): mở tab Sửa là ô được đặt lại ngay trên trình vẽ nhưng không
+    tính là thay đổi của người vẽ (nút Lưu vẫn tắt, không sinh phiên bản); lần lưu sau giữ chỗ đúng.
+    Hủy hộp chuyển mở từ lời báo / menu cũng đưa ô ra ngoài khung.
+  - **D. Máy chưa khai U thả vào khung tủ của chính tủ nó** → hộp chọn U trống gần chỗ thả (cùng hộp,
+    cùng mặt đứng tủ và U trống gần nhất), ghi kho qua API sửa thiết bị của `devices` sau khi người
+    vẽ bấm đồng ý. Hủy → ô vào cột "Chưa khai U" của tủ (chưa có cột thì IMS dựng cột cạnh khung).
+  - **E. Trang tự do: mọi máy cùng một bề rộng chuẩn** `diagram.device_width_px` (mặc định 160 —
+    đúng lòng tủ, AD-11, màn Tham số); cao = rộng × tỉ lệ ảnh (hay tỉ lệ biểu tượng). Áp khi chèn,
+    kéo thả từ "Thiết bị kho" và đổi Biểu tượng ↔ Ảnh; người vẽ vẫn kéo cỡ tay được. Ô đã có KHÔNG bị
+    sửa lúc mở bản vẽ. Tỉ lệ cao/rộng của ô ảnh nới xuống 0,08 (gạch 05/10 chặn 0,15) để ảnh 1U ra
+    đúng dải 1U thay vì một ô cao có hai dải trống.
+  - **Dữ liệu "PMH Tower":** khung tủ đang gắn TU-04 trong khi máy thuộc TU-TOWER-01 — người vẽ đổi
+    tủ của khung qua menu ⋮ → "Gắn khung" → "Đổi tủ của khung này" (IMS không tự sửa bản vẽ đó).
+- **Quy trình vẽ và ba nguồn sự thật (06/10/2026 chiều, chủ dự án duyệt `docs/DE-XUAT-MODEL-THIET-BI.md`
+  bản viết lại).** Lý do: các gạch trước xử lý từng tình huống chuột mà chưa nói luật chung, nên chủ
+  dự án không thấy được quy trình "tủ lắp xong → bản vẽ chính thức".
+  - **Ba nguồn, không chồng nhau.** L1: kho là nguồn duy nhất về VỊ TRÍ (tủ + U bắt đầu + Số U) —
+    mặt tủ trên bản vẽ là ảnh chiếu của kho; mọi kéo-thả trong khung tủ là một thao tác kho có hộp
+    xác nhận (gạch "Ảnh thiết bị và máy trong tủ" C, D ở trên là hệ quả của luật này). L2: sơ đồ cổng
+    là nguồn duy nhất về DÂY (gạch 02–03/10 giữ nguyên). L3: Model là nguồn về đặc tính loại máy
+    (Q-26); chưa có Model thì đọc trên từng máy như hiện nay.
+  - **Thao tác kho từ màn vẽ ghi NGAY, có audit, không chờ duyệt bản vẽ** (khai U, chuyển tủ, khai
+    dây) — cùng quyền và nhật ký như sửa ở trang thiết bị. Hủy duyệt, bỏ nháp hay khôi phục phiên
+    bản bản vẽ KHÔNG hoàn tác các thao tác này. Lý do: nhất quán với gạch 02/10 (Thành viên sửa sơ
+    đồ cổng trực tiếp); hộp xác nhận nói rõ là đang ghi vào kho.
+  - **Hộp tạo bản vẽ hỏi "Bắt đầu từ" — SỬA gạch 04/10 "tạo bản vẽ con mặc định NHÂN BẢN nội dung
+    bản cha".** Bản vẽ cấp tủ (đã gắn tủ): **"Dựng từ kho"** (mặc định — cùng cách "Dựng lại mặt
+    tủ") / "Trang trắng" / "Chép nội dung bản vẽ cha". Cấp khác: **"Trang trắng"** (mặc định) /
+    "Chép nội dung bản vẽ cha". "Chép nội dung bản vẽ cha" giữ đủ luật cũ (chọn phiên bản bản cha
+    theo gạch 05/10, gỡ khung hỏng, hỏi mã sơ đồ) và hộp ghi rõ: chỉ chép một lần làm nội dung khởi
+    đầu, không liên kết gì về sau. Lý do: chủ dự án thấy tự nhân bản khó hiểu; nhu cầu "chép để sửa
+    mà không ảnh hưởng bản gốc" đã có hai cơ chế đúng việc — **nháp + Phát hành** (bản chính thức
+    không đổi tới khi phát hành) và **Bản trình bày** (bản tách rời hẳn); còn bản vẽ tủ thì kho đã
+    biết máy nào nằm U nào, nên mồi bằng kho đúng hơn mồi bằng hình tầng/phòng.
+  - **Ô "Cấp bản vẽ" tự giải thích** (bổ sung D-03): dưới ô chọn có một câu "Chọn 'Tủ mạng' để gắn
+    tủ kho và dựng mặt tủ từ kho; các cấp khác chỉ là nhãn trên bản đồ, không ràng buộc cây." Các
+    cấp giữ nguyên: "Tủ mạng" là công tắc chức năng (gắn tủ, dựng mặt tủ); cấp còn lại là nhãn định
+    hướng trên bản đồ không gian.
+  - **Huy hiệu sẵn sàng trong panel "Thiết bị kho"** (làm ngay, không chờ Model): máy gắn tủ thiếu
+    U → "thiếu U"; thiếu ảnh → "thiếu ảnh" (nhẹ, vì máy vẫn hiện bằng biểu tượng loại); ảnh chưa cắt
+    chuẩn → "cắt lại"; kèm bộ lọc. Không chặn kéo vào — chỉ báo TRƯỚC khi vẽ.
+  - **Thước đo:** tủ 20 máy đã nhập kho đủ (U + ảnh) → bản vẽ tủ hoàn chỉnh dưới 2 phút, 0 lần chỉnh
+    ảnh/ô bằng tay; máy thứ hai cùng model nhập kho dưới 30 giây.
+  - **Nhịp "đang mở sửa" (presence) KHÔNG đòi mã sơ đồ** (07/10/2026, chốt khi sửa rà soát mã): nó chỉ
+    trả tên người đang sửa, không phải nội dung bản vẽ; đòi mã thì hết ân hạn 10 phút giữa lúc vẽ là
+    cảnh báo hai người cùng sửa biến mất. Lưu / đặt tên / khôi phục vẫn đòi mã như gạch "Sửa cũng hỏi mã".
+  - Để sau (không làm đợt này): vai trò mạng để tự xếp / tô màu; "Tự dựng sơ đồ từ kho" cho trang
+    TỰ DO (mặt tủ thì tự dựng đã có và là bước chuẩn); nhập devicetype-library của NetBox; AI nội bộ
+    chuyển sơ đồ cũ sang draw.io (không gửi dữ liệu mạng ra ngoài).
+
+### Q-26 · Model thiết bị (06/10/2026, chủ dự án duyệt `docs/DE-XUAT-MODEL-THIET-BI.md` mục B, C, D)
+
+Làm SAU các gạch 06/10 của Q-23. Cách hiển thị trên sơ đồ và trang thiết bị giữ nguyên; Model chỉ
+thay CHỖ LẤY Số U, ảnh và cổng.
+
+- **Model là đặc tính chung của một loại máy, Thiết bị là từng chiếc** (như "Vios 2024" và chiếc xe
+  biển số cụ thể). Model gồm: Hãng, Mã model, Loại thiết bị; **Gắn tủ** Có (kèm Số U) / Không;
+  **Cổng mẫu**; **Ảnh mặt trước** (cắt theo hộp cắt của Q-23 06/10 A). Dựng trên bảng `device_model`
+  sẵn có (0054) bằng migration mới — không sửa file cũ. Mỗi model hiện số máy đang dùng; không xoá
+  được khi còn máy dùng.
+- **Quy trình: thiết bị trước, model tạo tại chỗ.** Form Thêm thiết bị có ô Model gợi ý; chưa có thì
+  "+ Tạo model mới" ngay trong form (Gắn tủ? Số U? Cổng mẫu? Ảnh?), không phải sang Danh mục. Chọn
+  model là tự có Số U, ảnh, cổng sinh sẵn; từng máy vẫn sửa đè được (thêm card mạng → thêm cổng).
+  Model gắn tủ: form hỏi Tủ + U bắt đầu (câu "Chiếm U30–U31", nút "Xem tủ"). Model không gắn tủ
+  (máy in, camera, AP, PC, máy chấm công…): ẩn Tủ/U, chỉ hỏi Site/phòng, và không bao giờ vào khung
+  tủ. Lý do: máy không tủ vẫn cần model vì ảnh và cổng mẫu (máy in = 1 cổng `LAN`).
+- **Ô U bắt đầu gợi ý dải U TRỐNG đủ n U** của tủ đã chọn; gõ tay thì báo trùng ngay (cùng ràng buộc
+  `device_rack_u_no_overlap`, server vẫn là trọng tài).
+- **Chống model tách đôi:** khoá chuẩn hoá (viết hoa, bỏ khoảng trắng và gạch — "C9300-48P" và
+  "c9300 48p" cùng khoá) là UNIQUE; gõ trùng khoá thì gợi ý model có sẵn, không cho tạo bản thứ hai.
+- **Cổng mẫu** gõ theo tên của hãng, `[a-b]` sinh dải (`Gi1/0/[1-48]` + `Te1/1/[1-4]`); mỗi nhóm có
+  kiểu cổng (RJ45 / SFP / SFP+ / Console / Khác) để vẽ mặt cổng. Có mẫu dựng sẵn ("Switch 24 cổng",
+  "Switch 48 + 4 uplink", "1 LAN").
+- **Tab Cổng** có hình mặt cổng dạng lưới (đang dùng / trống, rê chuột thấy đầu kia); bảng mặc định
+  chỉ hiện cổng đang dùng, nút "Hiện cả cổng trống (n)"; khai dây CHỌN cổng trống, không gõ tay.
+- **Truy cập quản trị:** các dòng *kiểu* (Web / SSH / Telnet / RDP / Winbox / Khác) + *địa chỉ:cổng*;
+  Web thành link, SSH hiện lệnh kèm nút chép. Mật khẩu vẫn ở Két.
+- **Chuyển tiếp:** Model thành nguồn Số U; máy có ảnh cắt theo U cũ lệch U của model thì hiện lại
+  "Ảnh chưa cắt chuẩn — Cắt lại", không tự co kéo ảnh. Dữ liệu thử cũ KHÔNG chuyển đổi: máy cũ để
+  "chưa có Model", cổng khai tay cũ xoá cũng được — prod nhập dữ liệu thật từ đầu.
+
+### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
+
+- **Dải nút chọn một (Thuê bao / Vĩnh viễn…) trong FORM trải hết bề ngang ô, các nút chia
+  đều** — không dồn bên trái. Áp cho mọi dải nút nằm trong một ô form (Loại & Thời hạn phần
+  mềm, màu dây, giao thức NAT, đầu bên kia của sơ đồ cổng, bản vẽ con, chọn máy theo…). Dải
+  nút LỌC trên thanh công cụ của danh sách giữ cỡ theo chữ như cũ.
+- **Ô số nguyên nhỏ có nút − / +** (bước 1, gõ tay vẫn được, mũi tên ↑/↓ trên bàn phím cũng
+  tăng/giảm). Số ghế: nút − dừng ở max(1, số ghế đang dùng) — không bấm xuống dưới số máy đang
+  cài; ô trống vẫn nghĩa là "không giới hạn", bấm + từ ô trống ra số nhỏ nhất hợp lệ; muốn về
+  "không giới hạn" thì xoá tay. Áp cả ô "Số U" của thiết bị/tủ khi đặt vừa.
+- **Ghi chú là một CỘT riêng luôn hiện** ở bảng ghế license (trang phần mềm, khu bung dòng) và
+  bảng license đang cài của thiết bị; chữ dài rút một dòng, rê chuột thấy đủ, bấm để mở. Hợp
+  đồng chuyển xuống dòng phụ của cột Kỳ hạn để bảng vẫn vừa 1366px; ở 390px thẻ vẫn có dòng
+  Ghi chú.
+- **Xem két = một hộp NHỎ duy nhất**: tiêu đề "Nhập mã 6 số để xem", tên ngăn, 6 ô mã, nút Hủy
+  (bỏ đoạn giải thích dài của hộp xác thực lại). Mã đúng → chạy hiệu ứng vòng như mọi ô mã rồi
+  CHÍNH hộp đó chuyển sang hiện giá trị: chữ hiện dần từ mờ sang nét, vòng tròn đếm ngược thời
+  gian tự ẩn (`secret.reveal_seconds`), có **nút sao chép** (đảo luật cũ "không nút chép" — chủ
+  dự án cần dán vào phiên SSH/console; chỉ chép khi bấm, không tự vào clipboard; FR-026 chỉ cấm
+  xuất HÀNG LOẠT). Còn trong ân hạn thì bấm Xem mở thẳng hộp ở bước giá trị. Áp ở mọi chỗ có
+  nút Xem, kể cả popup Két tổng và thẻ thiết bị trên sơ đồ: hộp nhỏ chồng lên popup (thay cho
+  bước thay chỗ danh sách của VLT-062 — hộp nhỏ không che mất danh sách). Phạm vi mã vẫn là
+  `vault`, mỗi lần xem vẫn một dòng nhật ký.
+- **Chữ số đứng đầu cụm thì danh từ theo sau viết HOA chữ đầu:** "1 Tủ mạng", "3 Phần mềm",
+  "12 Tài khoản · 30 Dòng quyền". Áp cho nhãn đếm / chip / dòng tóm tắt ở đầu câu hoặc đầu một
+  cụm ngăn bằng "·". KHÔNG áp cho đơn vị đo (giờ, phút, giây, ngày, tháng, năm, lần, %, MB…):
+  "5 ngày trước", "2 giờ" giữ nguyên — đó là lượng, không phải danh từ đếm hồ sơ.
+  **Chỉ ở ĐẦU cụm** (bổ sung 04/10, chủ dự án): cùng nhãn đếm ghép vào GIỮA câu thì danh từ viết
+  thường — "Đang dùng ở 1 tủ mạng — hãy Ngừng dùng", "…, trong đó 1 nhóm chưa gán cho ai",
+  "1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn".
+- **Soát UX đợt 2 — chữ và bộ lọc dùng chung (05/10/2026, chủ dự án duyệt):**
+  - **Một tên cho tủ: "Tủ mạng"** (T-03) — ở mọi màn: form thiết bị, cấp bản vẽ, panel sơ đồ,
+    bộ lọc, lệnh "Chèn tủ mạng", câu lỗi của API. Không còn "Tủ rack" hay "Tủ" đứng một mình làm
+    nhãn. Bài `term-consistency.test.ts` khoá điều này.
+  - **Ô "bỏ lọc" của mọi bộ lọc viết "Tất cả …"** (T-07): "Tất cả site / Tất cả tủ mạng / Tất cả
+    loại / Tất cả nhà cung cấp / Tất cả kỳ hạn / Tất cả trạng thái…". Câu văn thường ("Mọi phiên
+    khác của bạn…") không đổi — luật chỉ cho mục đầu của ô lọc.
+- **Soát UX đợt 2 — Thiết bị (05/10/2026, chủ dự án duyệt):**
+  - **Trang thiết bị giữ CÙNG một nút chính ở mọi cỡ màn: "Sửa hồ sơ"** (T-05). Trên điện thoại
+    nút "Két sắt" thôi là nút chính — két đã là một tab của trang. Bảng phụ trong hồ sơ (Địa chỉ
+    IP, Đường truyền ISP, NAT…) ở 390px là danh sách nhãn–giá trị hai cột, không gập thành thẻ
+    có dòng trống nhãn.
+  - **Gỡ dây giữ cổng** (T-02): bảng cổng có "Gỡ dây (giữ cổng)" trong ⋮ của dòng có dây — bỏ đầu
+    kia, giữ VLAN / người dùng / ghi chú (endpoint `unlink` sẵn có, có nhật ký); hỏi xác nhận.
+  - **Lọc danh sách thiết bị theo Phòng ban** (T-08), file xuất khớp bộ lọc (thêm `department`
+    vào bộ lọc xuất).
+- **Hộp mã sơ đồ cũng là hộp NHỎ như hộp mã két** (soát UX đợt 2, K-04, 05/10/2026): tiêu đề
+  "Nhập mã 6 số để mở sơ đồ", một dòng nói đang mở gì, 6 ô mã, nút Hủy — bỏ đoạn giải thích dài.
+  Phạm vi mã vẫn là `diagram` (mã két không mở sơ đồ), ân hạn và nhật ký như cũ.
+
+### Q-25 · Thư gửi lỗi phải có người thấy và gửi lại được (05/10/2026, chủ dự án duyệt top 10 soát UX)
+
+- Thư đã hết lượt gửi lại tự động (`outbox.max_relay_attempts`) trước nay nằm im trong `outbox`:
+  không màn nào liệt kê, không ai gửi lại được. Thư duyệt break-glass, thư khoá tài khoản, bản tin
+  hạn đều có thể mất như thế. Lý do chốt: break-glass trên điện thoại sống nhờ thư.
+- Màn **Quản trị › Thư gửi lỗi** (CHỈ SA, cùng phạm vi với Tham số hệ thống): mỗi dòng là một thư
+  chưa gửi được — loại thư, tạo lúc, số lần thử, lần lỗi cuối, lỗi cuối. Lỗi SMTP có thể chứa địa
+  chỉ người nhận nên API che phần trước `@` (`a***@pmh.com.vn`). Không hiện payload của sự kiện.
+- **"Gửi lại"**: xoá dấu lỗi + lượt thử để relay đẩy lại thư đó (`requeue`), trong transaction có
+  một dòng `audit_log` `outbox.requeued`. Không hỏi mã 2 lớp: gửi lại chỉ gửi đúng thư hệ thống đã
+  định gửi, không mở thêm gì. Thư đã gửi xong (hoặc đã dọn) thì báo "không còn để gửi lại".
+- Có thư lỗi thì mục menu đó mang badge số (chỉ SA thấy mục và số).
+- **Soát UX đợt 2 — Hệ thống (05/10/2026, chủ dự án duyệt):**
+  - **Hai tham số nghiệp vụ lên màn Tham số** (X-02, AD-11): `nat.sensitive_ports` (danh sách cổng
+    1–65535, cách nhau dấu phẩy, không trùng, không bắt tăng dần, tối đa 50 cổng) và
+    `breakglass.recent_window_days` (1–365 ngày). Không còn phải sửa bằng SQL tay.
+  - **SA xem "thiết bị đã biết" và IP đang tạm chặn** (X-04) — CHỈ ĐỌC: hộp Chi tiết tài khoản có
+    khu "Thiết bị đã biết" (nhãn trình duyệt, thấy lần đầu / gần nhất — không lộ dấu vân tay máy) và
+    cột "Lần sai gần nhất" ở bảng tạm chặn; màn Tài khoản có khối "Đang tạm chặn · n" cho toàn hệ
+    thống. Gỡ chặn vẫn là "Gỡ tạm chặn" sẵn có (step-up + nhật ký). Chưa làm nút "Quên máy" ở Hồ sơ
+    của tôi: cần một đường ghi mới, để đợt sau nếu chủ dự án muốn.
+  - **Link thẳng tới một luật NAT** (X-05): `/nat?rule=<id>` mở sổ NAT, tô sáng dòng đó (kể cả khi
+    nó nằm ở trang khác / bị bộ lọc ẩn — mở theo id), và menu dòng có "Sao chép link".
 
 ### Q-09 · Tài liệu
 

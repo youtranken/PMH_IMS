@@ -17,6 +17,10 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
+import { rackUnitLabel } from '@/lib/rack-units';
+import { useDepartments } from '@/ui/use-departments';
+import { SecretDueSub } from '@/ui/secret-due';
+import { useSecretDue } from '@/ui/use-secret-due';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-options';
@@ -47,6 +51,8 @@ interface Filters extends Record<string, string> {
   siteId: string;
   cabinetId: string;
   deviceTypeId: string;
+  /** Tên phòng ban (khớp đúng, API `department`) — T-08. */
+  department: string;
   /** '' = mặc định "trừ Đã thanh lý" (API `live`, Q-20); 'all' = không lọc trạng thái. */
   status: '' | 'all' | DeviceStatus;
 }
@@ -56,6 +62,7 @@ const EMPTY_FILTERS: Filters = {
   siteId: '',
   cabinetId: '',
   deviceTypeId: '',
+  department: '',
   status: '',
 };
 
@@ -123,6 +130,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   }, [flashId]);
 
   const lists = useCatalogLists();
+  const departments = useDepartments();
 
   const devices = useQuery({
     queryKey: ['devices', page, limit, filters, sorting],
@@ -178,6 +186,8 @@ export function DevicesScreen({ me }: { me: Me }) {
       ),
   });
   const ipsOf = heldIps.data;
+  /* Hạn đổi mật khẩu két của máy (K-03) — chỉ Admin/SA, như Tài khoản dịch vụ. */
+  const dueOf = useSecretDue('device', me.role === 'sa' || me.role === 'admin');
 
   /**
    * `id` của cột PHẢI khớp whitelist `DEVICE_SORT_KEYS` phía API — đó là tên cột gửi lên
@@ -198,6 +208,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             {/* IP là dòng phụ dưới mã, không phải cột riêng: ở 1280px thêm một cột là cột Tên
                 bị ép. Nhiều IP thì hiện cái đầu + số còn lại. */}
             <IpSub ips={ipsOf?.[row.original.id]} />
+            <SecretDueSub entry={dueOf.get(row.original.id)} />
           </>
         ),
       },
@@ -300,7 +311,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         ),
       },
     ],
-    [t, ipsOf, navigate, openStatus],
+    [t, ipsOf, navigate, openStatus, dueOf],
   );
 
   /* Điện thoại: thẻ gọn ~96px thay cho bảng xếp chồng 8 dòng/máy. Không có nút Sửa — form
@@ -315,7 +326,12 @@ export function DevicesScreen({ me }: { me: Me }) {
       ),
       subtitle: (item) => item.name,
       meta: (item) =>
-        [ipsOf?.[item.id]?.[0], item.siteCode ? locationLabel(item) : null, item.assignedTo]
+        [
+          ipsOf?.[item.id]?.[0],
+          // Vị trí đủ như desktop, kể cả U trong tủ (T-04): người đi kiểm tủ đọc thẻ này.
+          item.siteCode ? [locationLabel(item), rackUnitLabel(item.rackUStart, item.rackUSize)].filter(Boolean).join(' · ') : null,
+          item.assignedTo,
+        ]
           .filter(Boolean)
           .join(' · ') || null,
       aside: (item) => (
@@ -414,6 +430,22 @@ export function DevicesScreen({ me }: { me: Me }) {
           onChange={(value) => setFilter('deviceTypeId', value)}
         />
         <Select
+          value={filters.department}
+          ariaLabel={t('devices.filterDepartment')}
+          placeholder={t('devices.allDepartments')}
+          searchable
+          options={[
+            { value: '', label: t('devices.allDepartments') },
+            // Phòng ban đang lọc mà đã ngừng dùng (link cũ) vẫn phải hiện đúng tên trong ô.
+            ...[...new Set([...departments.names, ...(filters.department ? [filters.department] : [])])].map((name) => ({
+              value: name,
+              label: name,
+            })),
+          ]}
+          failed={departments.failed}
+          onChange={(value) => setFilter('department', value)}
+        />
+        <Select
           value={filters.status}
           ariaLabel={t('devices.status')}
           placeholder={statusOptions[0].label}
@@ -423,7 +455,7 @@ export function DevicesScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {devices.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : devices.isError ? (
         <LoadError error={devices.error} onRetry={() => void devices.refetch()} />
       ) : rows.length === 0 ? (
@@ -646,6 +678,7 @@ function buildFilterQuery(filters: Filters): string {
   if (filters.siteId) params.set('siteId', filters.siteId);
   if (filters.cabinetId) params.set('cabinetId', filters.cabinetId);
   if (filters.deviceTypeId) params.set('deviceTypeId', filters.deviceTypeId);
+  if (filters.department) params.set('department', filters.department);
   // Mặc định ẩn máy đã thanh lý (Q-20): Kho thanh lý là nơi xem chúng. ⌘K không đi qua đây
   // nên vẫn tìm ra máy đã thanh lý.
   if (filters.status !== 'all') params.set('status', filters.status || 'live');

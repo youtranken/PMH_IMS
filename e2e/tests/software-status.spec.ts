@@ -222,7 +222,7 @@ test('thanh lý từ danh sách: câu hỏi lại nói ghế sẽ BỊ GỠ và 
   await rowAction(page, code, 'Thanh lý…');
 
   const dialog = page.getByRole('alertdialog').or(page.getByRole('dialog'));
-  await expect(dialog).toContainText('2 máy đang dùng sẽ bị gỡ license');
+  await expect(dialog).toContainText('2 Máy đang dùng sẽ bị gỡ license');
   await expect(dialog).toContainText(`PC-E2E-GO-A-${stamp}`);
   await expect(dialog).toContainText(`PC-E2E-GO-B-${stamp}`);
   await expect(dialog).not.toContainText('giữ nguyên');

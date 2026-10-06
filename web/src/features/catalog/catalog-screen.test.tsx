@@ -192,10 +192,10 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderAt('/admin/catalog');
-    const devices = await screen.findByRole('link', { name: '12 thiết bị' });
+    const devices = await screen.findByRole('link', { name: '12 Thiết bị' });
     expect(devices).toHaveAttribute('href', '/devices?siteId=s-hcm');
-    expect(screen.getByText('1 dải IP')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '1 dải IP' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 Dải IP')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '1 Dải IP' })).not.toBeInTheDocument();
     expect(screen.getByText('Chưa dùng')).toBeInTheDocument();
   });
 
@@ -222,5 +222,31 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: /Thao tác với E2E-DN/ }));
     expect(screen.getByRole('menuitem', { name: 'Xóa' })).toBeEnabled();
+  });
+});
+
+/** V-10: loại thiết bị chưa có hình trên sơ đồ (không chọn hình, không SVG riêng) có dấu nhắc. */
+describe('Danh mục Loại thiết bị — dấu nhắc loại chưa có hình trên sơ đồ', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('loại không hình + không SVG riêng mang nhãn "Chưa có hình trên sơ đồ"; loại có hình thì không', async () => {
+    const TYPES = [
+      { id: 't1', name: 'Workstation E2E', hasPortMap: false, isRouter: false, description: null, active: true, diagramShape: null, hasDiagramIcon: false },
+      { id: 't2', name: 'Switch E2E', hasPortMap: true, isRouter: false, description: null, active: true, diagramShape: 'mxgraph.networks.switch', hasDiagramIcon: false },
+      { id: 't3', name: 'Máy riêng E2E', hasPortMap: false, isRouter: false, description: null, active: true, diagramShape: null, hasDiagramIcon: true },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), 'http://x');
+        if (url.pathname === '/api/v1/catalog/device_type') return Promise.resolve(jsonResponse(200, { items: TYPES, total: 3 }));
+        return Promise.resolve(jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [], ispProviders: [], servicePorts: [], items: [], total: 0 }));
+      }),
+    );
+    renderAt('/admin/catalog?tab=device_type');
+    const row = (await screen.findByText('Workstation E2E')).closest('tr') as HTMLElement;
+    expect(row).toHaveTextContent('Chưa có hình trên sơ đồ');
+    expect((screen.getByText('Switch E2E').closest('tr') as HTMLElement)).not.toHaveTextContent('Chưa có hình trên sơ đồ');
+    expect((screen.getByText('Máy riêng E2E').closest('tr') as HTMLElement)).not.toHaveTextContent('Chưa có hình trên sơ đồ');
   });
 });

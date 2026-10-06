@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -6,52 +6,20 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import { foldSearch } from '@/lib/search-fold';
-import { DeviceCombobox } from '@/ui/device-combobox';
 import { MOBILE_CARD_QUERY, TableWrap } from '@/ui/data-table';
 import { useMediaQuery } from '@/ui/use-media-query';
-import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
-import { Field } from '@/ui/page-header';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
-import { SuggestInput } from '@/ui/suggest-input';
-import { useDepartments } from '@/ui/use-departments';
-import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
-import { nextPortLabel, sortByPortLabel } from './port-label';
-
-export interface PortRow {
-  id: string;
-  portLabel: string;
-  connectedDeviceId: string | null;
-  connectedDeviceCode: string | null;
-  connectedDeviceName: string | null;
-  connectedLabel: string | null;
-  connectedPort: string | null;
-  usedBy: string | null;
-  /** VLAN của cổng — text vì "trunk" là giá trị có thật trên uplink. */
-  vlan: string | null;
-  note: string | null;
-}
-
-interface IncomingPortRow {
-  id: string;
-  deviceId: string;
-  deviceCode: string;
-  deviceName: string;
-  portLabel: string;
-  connectedPort: string | null;
-  usedBy: string | null;
-  vlan: string | null;
-  note: string | null;
-}
-
-export interface PortMap {
-  ports: PortRow[];
-  incoming: IncomingPortRow[];
-}
+import { sortByPortLabel } from '@/lib/port-label';
+import type { PortMap, PortRow } from '@/lib/port-types';
+import { CableSwatch } from '@/ui/cable-swatch';
+import { BulkLinkDialog } from '@/ui/bulk-link-dialog';
+import { PortFormDialog } from '@/ui/port-form-dialog';
 
 /** Có hơn ngần này cổng thì hiện ô lọc: switch 48 cổng mà phải cuộn dò bằng mắt là chậm. */
 const FILTER_FROM = 8;
@@ -86,7 +54,21 @@ export function PortMapPanel({
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<{ port: PortRow | null } | null>(null);
   const [filter, setFilter] = useState('');
+  const [bulkOpen, setBulkOpen] = useState(false);
   const cards = useMediaQuery(MOBILE_CARD_QUERY);
+  const lists = useCatalogLists();
+  const cableOf = (id: string | null | undefined) => (id ? (lists.data?.cableTypes ?? []).find((c) => c.id === id) : undefined);
+  /** Loại dây: vạch màu + tên, "(ngừng dùng)" khi loại đã ngừng (dây cũ giữ màu — Q-14). */
+  const cableCell = (id: string | null | undefined) => {
+    const cable = cableOf(id);
+    if (!cable) return orDash(null);
+    return (
+      <span>
+        <CableSwatch slot={cable.colorSlot} /> {cable.name}
+        {cable.active ? null : <span className="muted"> {t('formErrors.retiredOption')}</span>}
+      </span>
+    );
+  };
 
   const queryKey = ['devices', device.id, 'ports'];
   const map = useQuery({
@@ -97,6 +79,13 @@ export function PortMapPanel({
   const remove = useApiMutation<{ id: string }, unknown>(
     (input) => `/api/v1/devices/${device.id}/ports/${input.id}`,
     { method: 'DELETE', csrfToken, refreshMe: false, body: () => undefined },
+  );
+
+  /* Gỡ dây mà giữ dòng cổng (T-02): endpoint `unlink` của devices bỏ đầu kia, giữ VLAN / người
+     dùng / ghi chú — Xóa dòng thì mất luôn những thứ đó. */
+  const unlink = useApiMutation<{ id: string }, unknown>(
+    (input) => `/api/v1/devices/${device.id}/ports/${input.id}/unlink`,
+    { method: 'POST', csrfToken, refreshMe: false, body: () => undefined },
   );
 
   /* Cả cây `['devices', id]`, không chỉ bảng cổng: lượt thêm/sửa/xóa cổng ghi vào lịch sử máy,
@@ -132,6 +121,36 @@ export function PortMapPanel({
   });
 
   const actionsFor = (port: PortRow): RowAction[] => [
+    ...(port.connectedDeviceId || port.connectedLabel
+      ? [
+          {
+            key: 'unlink',
+            label: t('ports.unlink'),
+            warn: true,
+            disabled: unlink.isPending,
+            onSelect: () => {
+              void (async () => {
+                const ok = await askConfirm({
+                  title: t('common.titleOf', { action: t('ports.unlinkOf', { port: port.portLabel }), subject: device.code }),
+                  message: t('ports.confirmUnlink', { port: port.portLabel }),
+                  confirmLabel: t('ports.unlinkConfirm'),
+                });
+                if (!ok) return;
+                unlink.mutate(
+                  { id: port.id },
+                  {
+                    onSuccess: () => {
+                      toast({ message: t('ports.unlinked', { port: port.portLabel }) });
+                      void refresh();
+                    },
+                    onError: (error) => toast({ message: errorMessage(error), tone: 'error' }),
+                  },
+                );
+              })();
+            },
+          } satisfies RowAction,
+        ]
+      : []),
     {
       key: 'remove',
       label: t('ports.remove'),
@@ -173,6 +192,11 @@ export function PortMapPanel({
         {map.data ? <span className="section-count">{allPorts.length}</span> : null}
         {/* Chưa khai cổng nào thì nút Thêm nằm trong khối trống ngay bên dưới — hai nút cùng
             tên cách nhau một dòng là thừa. */}
+        {canEdit ? (
+          <button type="button" className="btn" onClick={() => setBulkOpen(true)}>
+            {t('ports.bulkButton')}
+          </button>
+        ) : null}
         {canEdit && !(map.data && allPorts.length === 0) ? (
           <button type="button" className="btn primary" onClick={() => setEditing({ port: null })}>
             {t('ports.add')}
@@ -238,6 +262,7 @@ export function PortMapPanel({
                   port.connectedLabel
                 );
                 const second = [
+                  cableOf(port.cableTypeId)?.name ?? null,
                   port.vlan ? `${t('ports.vlan')} ${port.vlan}` : null,
                   port.usedBy,
                 ]
@@ -290,6 +315,7 @@ export function PortMapPanel({
                     <th className="col-sticky-start">{t('ports.port')}</th>
                     <th>{t('ports.connectedTo')}</th>
                     <th>{t('ports.peerPort')}</th>
+                    <th>{t('ports.cableType')}</th>
                     <th>{t('ports.usedBy')}</th>
                     <th>{t('ports.vlan')}</th>
                     <th>{t('ports.note')}</th>
@@ -325,6 +351,9 @@ export function PortMapPanel({
                         {...emptyAttr(port.connectedPort)}
                       >
                         {orDash(port.connectedPort)}
+                      </td>
+                      <td data-label={t('ports.cableType')} {...emptyAttr(cableOf(port.cableTypeId)?.name)}>
+                        {cableCell(port.cableTypeId)}
                       </td>
                       <td data-label={t('ports.usedBy')} {...emptyAttr(port.usedBy)}>
                         {orDash(port.usedBy)}
@@ -410,9 +439,8 @@ export function PortMapPanel({
       )}
 
       {editing ? (
-        <PortForm
-          deviceId={device.id}
-          deviceCode={device.code}
+        <PortFormDialog
+          device={{ id: device.id, code: device.code }}
           port={editing.port}
           csrfToken={csrfToken}
           onClose={() => setEditing(null)}
@@ -422,263 +450,18 @@ export function PortMapPanel({
           }}
         />
       ) : null}
+      {bulkOpen ? (
+        <BulkLinkDialog
+          device={{ id: device.id, code: device.code }}
+          csrfToken={csrfToken}
+          onClose={() => setBulkOpen(false)}
+          onDone={(links) => {
+            setBulkOpen(false);
+            toast({ message: t('ports.bulkDone', { count: links.length, code: device.code }) });
+            void refresh();
+          }}
+        />
+      ) : null}
     </div>
-  );
-}
-
-type PeerMode = 'device' | 'free';
-
-function PortForm({
-  deviceId,
-  deviceCode,
-  port,
-  csrfToken,
-  onClose,
-  onSaved,
-}: {
-  deviceId: string;
-  deviceCode: string;
-  port: PortRow | null;
-  csrfToken: string;
-  onClose: () => void;
-  /** `keepOpen`: người dùng chọn "Ghi rồi thêm cổng khác" — form đã tự chuẩn bị cổng kế tiếp. */
-  onSaved: (keepOpen: boolean) => void;
-}) {
-  const { t } = useTranslation();
-  const toast = useToast();
-  const [portLabel, setPortLabel] = useState(port?.portLabel ?? '');
-  /* Đầu kia là MỘT trong hai: một máy trong kho, hoặc một mô tả tự do (uplink nhà mạng, ổ cắm
-     tường). Hai ô cùng hiện thì không rõ phải điền cái nào hay cả hai. */
-  const [mode, setMode] = useState<PeerMode>(
-    port?.connectedLabel && !port.connectedDeviceId ? 'free' : 'device',
-  );
-  const [peer, setPeer] = useState<{ id: string; code: string } | null>(
-    port?.connectedDeviceId
-      ? { id: port.connectedDeviceId, code: port.connectedDeviceCode ?? '' }
-      : null,
-  );
-  const [query, setQuery] = useState(port?.connectedDeviceCode ?? '');
-  const [connectedLabel, setConnectedLabel] = useState(port?.connectedLabel ?? '');
-  const [connectedPort, setConnectedPort] = useState(port?.connectedPort ?? '');
-  const [usedBy, setUsedBy] = useState(port?.usedBy ?? '');
-  const [vlan, setVlan] = useState(port?.vlan ?? '');
-  const departments = useDepartments();
-  const [note, setNote] = useState(port?.note ?? '');
-  const [error, setError] = useSubmitError([portLabel, mode, peer, connectedLabel, connectedPort, usedBy, vlan, note]);
-  const keepOpen = useRef(false);
-  const labelRef = useRef<HTMLInputElement>(null);
-  const check = useFormErrors({
-    portLabel: !portLabel.trim() && t('ports.portRequired'),
-    note: secretTextRule(t, note),
-    connectedLabel: mode === 'free' ? secretTextRule(t, connectedLabel) : null,
-  });
-
-  const save = useApiMutation<Record<string, unknown>, unknown>(
-    port
-      ? `/api/v1/devices/${deviceId}/ports/${port.id}`
-      : `/api/v1/devices/${deviceId}/ports`,
-    { method: port ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
-  );
-
-  /** Sau "Ghi rồi thêm cổng khác": giữ VLAN và người dùng (cả dãy cổng thường chung), tăng nhãn. */
-  const prepareNext = () => {
-    setPortLabel(nextPortLabel(portLabel));
-    setPeer(null);
-    setQuery('');
-    setConnectedLabel('');
-    setConnectedPort('');
-    setNote('');
-    labelRef.current?.focus();
-  };
-
-  return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
-         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
-      dismissible={!save.isPending}
-      guardUnsaved
-      maxWidth={620}
-      /* "{Việc} — {máy nào}": hộp "Sửa — Gi1/0/1" không nói cổng của máy nào. */
-      title={t('common.titleOf', {
-        action: port ? t('ports.editOf', { port: port.portLabel }) : t('ports.add'),
-        subject: deviceCode,
-      })}
-      footer={
-        <>
-          <DialogCancel>
-            {t('common.cancel')}
-          </DialogCancel>
-          {/* Khai cả dãy cổng: tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
-          {port ? null : (
-            <button
-              type="submit"
-              form="port-form"
-              className="btn"
-              disabled={save.isPending}
-              onClick={() => {
-                keepOpen.current = true;
-              }}
-            >
-              {t('ports.saveAndNext')}
-            </button>
-          )}
-          <button
-            type="submit"
-            form="port-form"
-            className="btn primary"
-            disabled={save.isPending}
-            onClick={() => {
-              keepOpen.current = false;
-            }}
-          >
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
-        </>
-      }
-    >
-      <form
-        id="port-form"
-        className="form-grid"
-        data-columns={1}
-        ref={check.formRef}
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          setError(null);
-          if (!check.check()) return;
-          const label = portLabel.trim();
-          const next = keepOpen.current;
-          save.mutate(
-            {
-              portLabel: label,
-              // Mỗi sợi dây chỉ có MỘT nguồn sự thật về đầu kia: chế độ nào thì gửi ô đó.
-              connectedDeviceId: mode === 'device' ? (peer?.id ?? '') : '',
-              connectedLabel: mode === 'free' ? connectedLabel.trim() : '',
-              connectedPort: connectedPort.trim(),
-              usedBy: usedBy.trim(),
-              vlan: vlan.trim(),
-              note: note.trim(),
-            },
-            {
-              onSuccess: () => {
-                toast({ message: t('ports.saved', { port: label }) });
-                if (next) prepareNext();
-                onSaved(next);
-              },
-              onError: (err) => setError(errorMessage(err)),
-            },
-          );
-        }}
-      >
-        {/* Lỗi ở ĐẦU form: hộp dài thì lỗi ở cuối nằm ngoài tầm nhìn, người dùng bấm Lưu mãi. */}
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {check.summary}
-
-        <Field label={t('ports.port')} required htmlFor="port-label" error={check.error('portLabel')}>
-          <input
-            ref={labelRef}
-            id="port-label"
-            className="inp mono"
-            required
-            placeholder={t('ports.phPort')}
-            value={portLabel}
-            onChange={(e) => setPortLabel(e.target.value)}
-          />
-        </Field>
-
-        <div className="segmented" role="radiogroup" aria-label={t('ports.peerKind')}>
-          {(['device', 'free'] as const).map((value) => (
-            <label key={value}>
-              <input
-                type="radio"
-                name="peer-kind"
-                value={value}
-                checked={mode === value}
-                onChange={() => setMode(value)}
-              />
-              {t(value === 'device' ? 'ports.peerKindDevice' : 'ports.peerKindFree')}
-            </label>
-          ))}
-        </div>
-
-        {mode === 'device' ? (
-          <Field label={t('ports.peerDevice')} hint={t('ports.peerDeviceHint')}>
-            <DeviceCombobox
-              placeholder={t('ports.peerSearch')}
-              /* Tên trợ năng tường minh: form này có HAI combobox (thiết bị đầu kia và ô "ai
-                 dùng" gợi ý theo danh mục Bộ phận). */
-              ariaLabel={t('ports.peerDevice')}
-              value={{ deviceId: peer?.id ?? '', term: query }}
-              onChange={(next) => {
-                setQuery(next.term);
-                setPeer(next.device ? { id: next.device.id, code: next.device.code } : null);
-              }}
-              minChars={2}
-              // Cổng không nối vào chính máy chứa nó.
-              exclude={[deviceId]}
-            />
-          </Field>
-        ) : (
-          <Field
-            label={t('ports.freeText')}
-            hint={t('ports.freeTextHint')}
-            htmlFor="port-free"
-            error={check.error('connectedLabel')}
-          >
-            <input
-              id="port-free"
-              className="inp"
-              value={connectedLabel}
-              onChange={(e) => setConnectedLabel(e.target.value)}
-            />
-          </Field>
-        )}
-
-        <Field label={t('ports.peerPort')} htmlFor="port-peer-port">
-          <input
-            id="port-peer-port"
-            className="inp mono"
-            value={connectedPort}
-            onChange={(e) => setConnectedPort(e.target.value)}
-          />
-        </Field>
-        <Field label={t('ports.vlan')} hint={t('ports.vlanHint')} htmlFor="port-vlan">
-          <input
-            id="port-vlan"
-            className="inp mono"
-            placeholder={t('ports.phVlan')}
-            value={vlan}
-            onChange={(e) => setVlan(e.target.value)}
-          />
-        </Field>
-
-        <Field label={t('ports.usedBy')}>
-          {/* Cùng danh mục Bộ phận với ô "ai đang dùng" của hồ sơ IP và của sổ NAT — ba chỗ
-              trả lời cùng một câu, viết lệch nhau thì tra chéo không ra. */}
-          <SuggestInput
-            value={usedBy}
-            onChange={setUsedBy}
-            options={departments.names}
-            failed={departments.failed}
-            placeholder={t('ports.usedByPlaceholder')}
-            ariaLabel={t('ports.usedBy')}
-          />
-        </Field>
-        <Field label={t('ports.note')} htmlFor="port-note" error={check.error('note')}>
-          <input
-            id="port-note"
-            className="inp"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
-      </form>
-    </Dialog>
   );
 }

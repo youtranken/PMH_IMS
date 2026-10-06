@@ -45,6 +45,9 @@ const E2E_USERS = [
 /** Trần đăng nhập/IP mà cả bộ E2E chạy dưới — phải khớp `E2E_LOGIN_RATE_LIMIT` bên helpers. */
 const E2E_LOGIN_RATE_LIMIT = 500;
 
+/** Trần gõ mã 2 lớp/phút trong lúc chạy E2E — phải khớp `E2E_TOTP_RATE_LIMIT` ở e2e/totp-rate-backup.ts. */
+const E2E_TOTP_RATE_LIMIT = 600;
+
 /**
  * Mỗi vùng = một danh sách câu SQL chạy TRONG MỘT transaction.
  *
@@ -68,12 +71,19 @@ const DOMAINS = {
   /** Tài khoản do bài "SA tạo tài khoản mới" đẻ ra + trần đăng nhập cho môi trường test. */
   users: [
     `UPDATE system_config SET value = '${E2E_LOGIN_RATE_LIMIT}' WHERE key = 'login.rate_limit_per_ip'`,
+    `UPDATE system_config SET value = '${E2E_TOTP_RATE_LIMIT}' WHERE key = 'rate.totp_per_minute'`,
     `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
     `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
     `DELETE FROM users WHERE email LIKE 'e2e-tao-moi-%'`,
   ],
 
   devices: [
+    // Gỡ chọn ảnh thật trước khi xoá tệp (không để id trỏ vào tệp đã mất). Ảnh model của bài kiểm
+    // nhận ra bằng model hoặc loại thiết bị mang chữ E2E.
+    `UPDATE device SET photo_front_file_id = NULL, photo_back_file_id = NULL WHERE code ILIKE '%E2E%'`,
+    `UPDATE device_model SET photo_front_file_id = NULL, photo_back_file_id = NULL WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM file WHERE owner_type = 'device_model' AND owner_id IN (SELECT id FROM device_model WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%'))`,
+    `DELETE FROM device_model WHERE model ILIKE '%E2E%' OR device_type_id IN (SELECT id FROM device_type WHERE name ILIKE '%E2E%')`,
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `DELETE FROM file WHERE owner_type = 'nat_rule' AND owner_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
@@ -156,6 +166,47 @@ const DOMAINS = {
     `DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'`,
   ],
 
+  /*
+   * Cây bản vẽ (AD-18). Bài E2E đặt tên bản vẽ có chữ E2E; mọi bản vẽ con của nó cũng bị dọn theo
+   * (cả cây con, kể cả nút con lỡ đặt tên khác), vì `parent_id` trỏ lên cha; bản trình bày chép
+   * từ một bản vẽ E2E cũng vậy (`source_diagram_id`), kể cả khi bài kiểm đã đổi tên nó.
+   *
+   * Thứ tự: hàng con trước hàng cha — tên phiên bản và lịch sử trỏ vào phiên bản/bản vẽ, phiên bản
+   * trỏ vào bản vẽ, và `diagram.official_version_id` trỏ ngược vào phiên bản nên gỡ nó trước.
+   * Phải đứng TRƯỚC `catalog`: bản vẽ trỏ vào site/tủ.
+   */
+  diagrams: [
+    /*
+     * Yêu cầu duyệt bản vẽ (loại diagram_publish) gửi bằng tài khoản thường, không có chữ e2e
+     * trong email, nên vùng approvals không thấy — dọn theo bản vẽ E2E mà nó trỏ tới. Không dùng
+     * dấu backtick trong chú thích của vùng này: bài kiểm đọc câu SQL theo dấu backtick.
+     */
+    `ALTER TABLE approval_history DISABLE TRIGGER approval_history_no_delete`,
+    `DELETE FROM approval_history WHERE approval_id IN (SELECT id FROM approval WHERE kind = 'diagram_publish' AND subject_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t))`,
+    `ALTER TABLE approval_history ENABLE TRIGGER approval_history_no_delete`,
+    `DELETE FROM approval WHERE kind = 'diagram_publish' AND subject_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_comment DISABLE TRIGGER diagram_comment_no_delete`,
+    `DELETE FROM diagram_comment WHERE parent_id IS NOT NULL AND diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `DELETE FROM diagram_comment WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_comment ENABLE TRIGGER diagram_comment_no_delete`,
+    `ALTER TABLE diagram_version_label DISABLE TRIGGER diagram_version_label_no_delete`,
+    `DELETE FROM diagram_version_label WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_version_label ENABLE TRIGGER diagram_version_label_no_delete`,
+    `ALTER TABLE diagram_history DISABLE TRIGGER diagram_history_no_delete`,
+    `DELETE FROM diagram_history WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_history ENABLE TRIGGER diagram_history_no_delete`,
+    `DELETE FROM diagram_presence WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `UPDATE diagram SET official_version_id = NULL WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_version DISABLE TRIGGER diagram_version_no_delete`,
+    `DELETE FROM diagram_version WHERE diagram_id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    `ALTER TABLE diagram_version ENABLE TRIGGER diagram_version_no_delete`,
+    `DELETE FROM diagram WHERE id IN (WITH RECURSIVE t AS (SELECT id FROM diagram WHERE name ILIKE '%E2E%' UNION SELECT d.id FROM diagram d JOIN t ON d.parent_id = t.id OR d.source_diagram_id = t.id) SELECT id FROM t)`,
+    // Ảnh bản vẽ không có tên để lọc: phiên bản E2E đi rồi thì ảnh không còn hàng nối nào là rác
+    // (cùng luật lượt dọn ảnh của ứng dụng, collectUnusedImagesWithin). Chú thích trong vùng này
+    // không dùng dấu huyền: bài test:db đọc từng câu SQL theo cặp dấu đó.
+    `DELETE FROM diagram_image i WHERE NOT EXISTS (SELECT 1 FROM diagram_version_image l WHERE l.sha = i.sha)`,
+  ],
+
   isp: [
     /*
      * `secret.owner_type` nhận cả `isp`, như dòng `file` ngay dưới. Ba loại chủ thể kia đều có
@@ -204,7 +255,7 @@ const DOMAINS = {
      * '%e2e%'`) — không phải quy ước mới, và không đụng tới lịch sử của người dùng thật (năm
      * tài khoản thật không ai có chữ "e2e" trong email).
      */
-    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM cable_type WHERE name ILIKE '%E2E%')`,
     `ALTER TABLE catalog_history ENABLE TRIGGER catalog_history_no_delete`,
     `DELETE FROM cabinet WHERE code ILIKE '%E2E%' OR site_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%')`,
     `DELETE FROM site WHERE code ILIKE '%E2E%'`,
@@ -212,6 +263,8 @@ const DOMAINS = {
     `DELETE FROM device_type WHERE name ILIKE '%E2E%'`,
     `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
     `DELETE FROM department WHERE name ILIKE '%E2E%'`,
+    // Loại dây còn dòng sơ đồ cổng (của máy không mang chữ E2E) trỏ vào thì để lại, như nhà mạng dưới.
+    `DELETE FROM cable_type WHERE name ILIKE '%E2E%' AND NOT EXISTS (SELECT 1 FROM device_port WHERE device_port.cable_type_id = cable_type.id)`,
     /*
      * Nhà mạng còn đường truyền trỏ vào thì để lại (FK RESTRICT): spec chỉ dọn vùng
      * `catalog` mà không dọn `isp` sẽ đâm khoá ngoại và ROLLBACK cả vùng. Lượt `all` chạy `isp`

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@/ui/dialog';
 import { CopyButton } from '@/ui/copy-button';
 import { countdownTone } from '@/ui/countdown-tone';
 import { useNow } from '@/ui/use-now';
@@ -16,70 +15,13 @@ export function secretCharClass(ch: string): 'digit' | 'upper' | 'lower' | 'symb
   return 'symbol';
 }
 
+const RING_R = 22;
+const RING_C = 2 * Math.PI * RING_R;
+
 /** "9:05" — giây lớn (600) đọc không ra là mười phút. */
 export function formatMinSec(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-/**
- * Hiện giá trị đúng `seconds` giây rồi tự đóng (FR-022).
- *
- * Đồng hồ đếm ngược tính từ MỘT mốc thời gian chụp lúc mở, không phải trừ dần mỗi giây:
- * trình duyệt ở tab nền bị hãm `setInterval` xuống 1 lần/phút, trừ dần thì cái hộp chứa mật
- * khẩu nằm mở hàng phút trên màn hình đã khóa. Tính từ mốc thì tab quay lại là đóng ngay.
- *
- * Giá trị KHÔNG vào clipboard tự động và không có nút "sao chép": clipboard sống qua cả
- * phiên đăng nhập, dán nhầm vào ô chat là mất luôn. Thay vào đó giá trị tô màu theo lớp ký tự,
- * và có chế độ "từng ký tự" (ô đánh số) để gõ tay không nhầm. Ngoại lệ duy nhất là ngăn
- * "Mã 2 lớp" — xem `TotpBody`.
- *
- * HAI đồng hồ, trả lời hai câu khác nhau, nên nằm ở hai dòng riêng:
- *   `42s` + thanh tiến trình — giá trị này còn hiện bao lâu nữa
- *   `9:12` — còn mở ngăn khác được bao lâu mà không phải gõ lại mã 6 số
- * Thiếu số thứ hai thì người dùng mở ngăn thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
- * hiểu vì sao, dù cái mốc đó vốn đoán trước được.
- */
-export function RevealDialog(props: RevealProps) {
-  const { t } = useTranslation();
-  return (
-    <Dialog
-      open
-      onOpenChange={props.onClose}
-      maxWidth={480}
-      title={props.label}
-      footer={
-        /* Nút thường, không `primary`: lối ra không được là thứ sáng nhất hộp — nội dung mới là. */
-        <button type="button" className="btn" onClick={props.onClose}>
-          {t('vault.hideNow')}
-        </button>
-      }
-    >
-      <RevealContent {...props} />
-    </Dialog>
-  );
-}
-
-/**
- * Cùng nội dung, nhưng là một BƯỚC trong hộp đang mở thay cho hộp chồng lên (VLT-062).
- *
- * Luật giữ nguyên như hộp riêng: đồng hồ tự ẩn, không clipboard, rời bước là giá trị mất khỏi
- * cây React (nơi gọi xóa state khi `onClose`).
- */
-export function RevealStep(props: RevealProps) {
-  const { t } = useTranslation();
-  return (
-    <section className="form-grid" data-columns={1} aria-label={props.label}>
-      <h3>{props.label}</h3>
-      <RevealContent {...props} />
-      <div className="row">
-        {/* Ẩn = quay về danh sách ngăn: một nút, một nghĩa. */}
-        <button type="button" className="btn" onClick={props.onClose}>
-          {t('vault.hideNow')}
-        </button>
-      </div>
-    </section>
-  );
 }
 
 /** Khối `totp` trong phản hồi mở két của ngăn "Mã 2 lớp" — server tính hết (Q-18). */
@@ -96,7 +38,7 @@ export interface TotpReveal {
   secondsLeft: number;
 }
 
-interface RevealProps {
+export interface RevealProps {
   label: string;
   /** Tên đăng nhập đi kèm — người ta cần CẶP user + mật khẩu, bảng phía sau đã bị hộp che. */
   username?: string | null;
@@ -114,7 +56,25 @@ interface RevealProps {
   onExpire?: () => void;
 }
 
-function RevealContent({
+/**
+ * Thân bước giá trị của hộp Xem két (`VaultRevealPopup`): hiện giá trị đúng `seconds` giây rồi
+ * gọi `onClose` (FR-022).
+ *
+ * Đồng hồ đếm ngược tính từ MỘT mốc thời gian chụp lúc mở, không phải trừ dần mỗi giây:
+ * trình duyệt ở tab nền bị hãm `setInterval` xuống 1 lần/phút, trừ dần thì cái hộp chứa mật
+ * khẩu nằm mở hàng phút trên màn hình đã khóa. Tính từ mốc thì tab quay lại là đóng ngay.
+ *
+ * Giá trị KHÔNG tự vào clipboard; chỉ chép khi người dùng bấm nút chép (Q-24 — dán vào phiên
+ * SSH/console là việc hằng ngày). Giá trị tô màu theo lớp ký tự, và có chế độ "từng ký tự" (ô
+ * đánh số) để gõ tay không nhầm.
+ *
+ * HAI đồng hồ, trả lời hai câu khác nhau, nên nằm ở hai dòng riêng:
+ *   `42s` trong vòng tròn đếm ngược — giá trị này còn hiện bao lâu nữa
+ *   `9:12` — còn mở ngăn khác được bao lâu mà không phải gõ lại mã 6 số
+ * Thiếu số thứ hai thì người dùng mở ngăn thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
+ * hiểu vì sao, dù cái mốc đó vốn đoán trước được.
+ */
+export function RevealContent({
   label,
   username,
   value,
@@ -193,7 +153,9 @@ function RevealContent({
           ))}
         </ol>
       ) : (
-        <p className="secret-value mono" data-testid="secret-value">
+        /* `reveal-sharpen`: chữ hiện dần từ mờ sang nét (Q-24) — CSS lo, tắt theo "Hiệu ứng
+           chuyển động". */
+        <p className="secret-value mono reveal-sharpen" data-testid="secret-value">
           {chars.map((ch, index) => (
             <span key={index} className={`ch-${secretCharClass(ch)}`}>
               {ch}
@@ -202,24 +164,36 @@ function RevealContent({
         </p>
       )}
       {totp ? null : (
-        <div>
+        <div className="reveal-tools">
           <button
             type="button"
             className="btn sm"
-          onClick={() => setPerChar((current) => !current)}
-        >
+            onClick={() => setPerChar((current) => !current)}
+          >
             {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
           </button>
+          <CopyButton value={value} label={t('vault.copyValue')} />
         </div>
       )}
-      {/* `role="status"` để trình đọc màn hình đọc được mốc còn lại; `aria-live` mặc định
-          của status là polite nên nó không cắt ngang mỗi giây. */}
-      <p className="countdown" role="status" data-testid="reveal-countdown">
-        <span className={`countdown-num ${tone}`}>{left}s</span>
+      <div className="reveal-ring-row">
+        {/* `role="status"` để trình đọc màn hình đọc được mốc còn lại; `aria-live` mặc định
+            của status là polite nên nó không cắt ngang mỗi giây. Vòng chỉ là hình — con số ở
+            giữa mới là thứ được đọc. */}
+        <div className="reveal-ring" role="status" data-testid="reveal-countdown">
+          <span className={`countdown-num ${tone}`}>{left}s</span>
+          <svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">
+            <circle className="reveal-ring-track" cx="26" cy="26" r={RING_R} />
+            <circle
+              className={`reveal-ring-bar ${tone}`}
+              cx="26"
+              cy="26"
+              r={RING_R}
+              strokeDasharray={RING_C}
+              strokeDashoffset={RING_C * (1 - left / Math.max(1, seconds))}
+            />
+          </svg>
+        </div>
         <span className="countdown-note muted">{t('vault.autoHideShort')}</span>
-      </p>
-      <div className="reveal-progress" aria-hidden="true">
-        <span className={tone} style={{ width: `${(left / Math.max(1, seconds)) * 100}%` }} />
       </div>
       {stepUpSecondsLeft === undefined ? null : (
         <p className="countdown">

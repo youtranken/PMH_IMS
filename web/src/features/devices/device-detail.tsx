@@ -8,6 +8,9 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
+import { DevicePhotosPanel, devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
+import { DeviceOnDiagrams } from "./device-on-diagrams";
+import { DeviceDiagramLook, lookLevel } from "./device-diagram-look";
 import { Chevron } from "@/ui/chevron";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -47,7 +50,8 @@ import {
 
 /** Trần dòng mỗi nguồn — khớp `HISTORY_PAGE_LIMIT` phía API (trần kỹ thuật, không phải AD-11). */
 const HISTORY_CAP = 200;
-import { PortMapPanel, type PortMap } from "./port-map-panel";
+import type { PortMap } from "@/lib/port-types";
+import { PortMapPanel } from "./port-map-panel";
 import { RelationMap, type RelationNode } from "./relation-map";
 import { RetireDialog, type RetireGroup } from "./retire-dialog";
 import { StatusDialog } from "./status-dialog";
@@ -136,6 +140,14 @@ export function DeviceDetail({ me }: { me: Me }) {
     queryFn: () => apiFetch<DeviceRow>(`/api/v1/devices/${id}`),
     retry: false,
   });
+  /* Ảnh của máy cho bản đồ quan hệ: CÙNG truy vấn với khu "Hình dùng trên sơ đồ", nên tải / thay
+     ảnh ở đó là bản đồ đổi theo ngay — một nguồn, không chép ảnh. */
+  const photos = useQuery({
+    queryKey: devicePhotosKey(id),
+    queryFn: () => apiFetch<DevicePhotos>(`/api/v1/devices/${id}/photos`),
+    enabled: Boolean(id),
+  });
+  const hubPhoto = photos.data?.effective.front ?? null;
 
   const panels = useQuery({
     queryKey: ["devices", id, "panels"],
@@ -592,32 +604,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         /* Không có dòng định danh: loại đã ở breadcrumb, model và serial (kèm nút chép) ở
            Thông tin nhanh (Q-20). Mã không có nút chép: nó là tiêu đề trang, bôi đen chép được. */
         actions={
-          narrow ? (
-            /* Điện thoại: đứng trước tủ, việc cần là két (mật khẩu) — không phải Sửa/Thanh lý.
-               Nút chính đưa thẳng tới tab Két sắt; mọi việc sửa hồ sơ vào menu ⋯. Máy đã
-               thanh lý thì "Đổi trạng thái" (mở lại) vẫn là nút chính như trên máy tính. */
-            <>
-              {retired ? (
-                <button type="button" className="btn primary" onClick={openStatus}>
-                  {t("devices.reopen")}
-                </button>
-              ) : (
-                <button type="button" className="btn primary" onClick={() => goTab("vault")}>
-                  {t("devices.openVault")}
-                </button>
-              )}
-              <RowActions
-                label={t("common.actionsOf", { subject: item.code })}
-                subject={item.code}
-                items={deviceMenuItems(t, retired, {
-                  onEdit: () => setEditing(true),
-                  onStatus: openStatus,
-                  onClone: () => setCloning(true),
-                  onRetire: openRetire,
-                })}
-              />
-            </>
-          ) : retired ? (
+          /* Cùng MỘT nút chính ở mọi cỡ màn (T-05): "Sửa hồ sơ"; Két sắt là một tab của trang. */
+          retired ? (
             /* Hồ sơ đã khoá: việc làm được DUY NHẤT là mở lại, nên nó là nút chính. Nút "Sửa hồ
                sơ" xám ở chỗ mắt tìm nút chính chỉ là một lời hứa không bấm được. */
             <>
@@ -779,10 +767,18 @@ export function DeviceDetail({ me }: { me: Me }) {
             <p className="rail-foot">
               {t("devices.createdAt", { date: formatDate(item.createdAt) })}
               {lastEdit
-                ? ` · ${t("devices.lastEditBy", {
-                    date: formatDate(lastEdit.createdAt),
-                    actor: lastEdit.actor,
-                  })}`
+                ? (
+                    <>
+                      {" · "}
+                      {/* Tên người như mọi chỗ khác (sơ đồ, lịch sử, phiên bản); email để khi rê chuột (T-09). */}
+                      <span title={lastEdit.actor}>
+                        {t("devices.lastEditBy", {
+                          date: formatDate(lastEdit.createdAt),
+                          actor: lastEdit.actorName ?? lastEdit.actor,
+                        })}
+                      </span>
+                    </>
+                  )
                 : null}
             </p>
           </RailCard>
@@ -809,6 +805,12 @@ export function DeviceDetail({ me }: { me: Me }) {
                 <DataItemIfSet label={t("devices.managementIp")} value={firstIp}>
                   <span className="mono">{firstIp}</span>
                   {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} inline /> : null}
+                  {/* "Đổi IP" nằm ngay trong ô IP quản trị, cạnh nút chép (T-06) — không lơ lửng dưới Ghi chú. */}
+                  {firstIp && !retired ? (
+                    <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
+                      {t("devices.changeIp")}
+                    </button>
+                  ) : null}
                 </DataItemIfSet>
                 {/* Máy CHẮC CHẮN chưa có IP (khu mở rộng đã về): ô IP quản trị nói thẳng "chưa có"
                     và nút Cấp IP là nút chính ngay tại đó — đây là việc còn thiếu đầu tiên của
@@ -867,12 +869,12 @@ export function DeviceDetail({ me }: { me: Me }) {
                   ) : null}
                   {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
                       trang tìm ô trống rồi gõ lại mã máy này. Chắc chắn chưa có IP thì nút là
-                      nút chính trong ô "IP quản trị" phía trên. Máy đã có IP thì là "Đổi IP"
-                      (Q-20 — một máy một IP); chưa đọc được khu IP thì vẫn "Cấp IP", API chặn
-                      nếu máy thật ra đã có IP. */}
-                  {ipKnownEmpty ? null : (
+                      nút chính trong ô "IP quản trị" phía trên; máy đã có IP thì "Đổi IP" (Q-20 — một
+                      máy một IP) nằm trong chính ô đó. Chưa đọc được khu IP thì vẫn "Cấp IP" ở
+                      đây, API chặn nếu máy thật ra đã có IP. */}
+                  {ipKnownEmpty || firstIp ? null : (
                     <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                      {t(firstIp ? "devices.changeIp" : "devices.assignIp")}
+                      {t("devices.assignIp")}
                     </button>
                   )}
                 </div>
@@ -883,6 +885,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             <RelationMap
               retired={retired}
               hubCode={item.code}
+              hubImage={hubPhoto ? { src: `/api/v1/devices/${item.id}/photo/front?v=${hubPhoto.id}`, alt: t("devices.lookHubAlt", { code: item.code }), note: lookLevel(photos.data, "front") === "model" ? t("photoSlots.levelModel", { model: photos.data?.model?.label ?? "" }) : null } : null}
               nodes={relationNodes}
               missing={relationMissing}
               /* Hai nguồn nuôi bản đồ: khu mở rộng (`/panels`) và cổng (`/ports`). Bất kỳ cái
@@ -899,6 +902,18 @@ export function DeviceDetail({ me }: { me: Me }) {
               }
             />
             )}
+
+            <DeviceDiagramLook
+              deviceId={item.id}
+              deviceTypeId={item.deviceTypeId}
+              deviceTypeName={item.deviceTypeName}
+              csrfToken={me.csrfToken}
+              canEdit={!retired}
+              canEditModel={canVaultWrite}
+              rackUnits={item.rackUSize ?? null}
+            />
+
+            <DeviceOnDiagrams deviceId={item.id} />
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách
@@ -963,13 +978,17 @@ export function DeviceDetail({ me }: { me: Me }) {
             locked={retired}
           />
         ) : safeTab === "attachments" ? (
-          <AttachmentPanel
-            ownerType="device"
-            ownerId={item.id}
-            csrfToken={me.csrfToken}
-            /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
-            canEdit={!retired}
-          />
+          <>
+            <AttachmentPanel
+              ownerType="device"
+              ownerId={item.id}
+              csrfToken={me.csrfToken}
+              /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
+              canEdit={!retired}
+            />
+            {/* Ảnh thật cho sơ đồ chọn TỪ chính các giấy tờ ở trên — cùng tab để thấy ngay ảnh vừa tải. */}
+            <DevicePhotosPanel deviceId={item.id} csrfToken={me.csrfToken} canEdit={!retired} canEditModel={canVaultWrite} />
+          </>
         ) : history.isLoading || timeline.isLoading ? (
           <Loading />
         ) : history.isError ? (
@@ -1163,7 +1182,9 @@ function ExtensionPanels({
             <p className="muted">{panel.emptyText ?? "—"}</p>
           ) : (
             <div className="table-wrap">
-              <table className="table table-stack">
+              {/* Hai cột nhãn | giá trị ở mọi cỡ màn — không gập thẻ: thẻ gập của bảng hai cột ra dòng
+                  trống nhãn và đường kẻ cụt ở 390px (T-05). */}
+              <table className="table kv-table">
                 <tbody>
                   {panel.items.map((entry, index) => (
                     <tr key={`${panel.key}-${index}`}>

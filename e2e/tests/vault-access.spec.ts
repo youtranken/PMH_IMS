@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  fillOtp,
   APP_ORIGIN,
   confirmAction,
   E2E_MEMBER,
@@ -17,6 +18,7 @@ import {
   catalogItem,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -47,7 +49,7 @@ test.describe('Ma trận quyền két sắt', () => {
   test('đường hạnh phúc: gán quyền cho member, thấy trên ma trận, gỡ lại được', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     await page.goto('/admin/vault-access?view=matrix');
     await expect(page.getByRole('heading', { name: 'Quyền két sắt' })).toBeVisible();
@@ -91,6 +93,7 @@ test.describe('Ma trận quyền két sắt', () => {
     // Hai lượt chờ chu kỳ TOTP 30 giây có thể dồn lại.
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
 
     await page.goto('/admin/vault-access?view=matrix');
     const row = page.getByRole('row').filter({ hasText: E2E_MEMBER.email });
@@ -106,7 +109,7 @@ test.describe('Ma trận quyền két sắt', () => {
     const ask = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
     await expect(ask).toBeVisible();
     await expect(ask).toContainText('Nhập mã 6 số để xác nhận cấp quyền két.');
-    await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(ask, await freshTotpCode(totpSecret));
     const granted = row.getByRole('button', { name: /Thiết bị loại Switch: Cần duyệt/ });
     await expect(granted, 'gõ mã xong thì lượt gán chạy lại và ô đổi ngay').toBeVisible();
     await expect(page.getByText(/để xác nhận thao tác này/), 'không được còn câu lỗi đỏ bảo nhập mã').toHaveCount(0);
@@ -117,7 +120,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await confirmAction(page);
     await expect(ask).toBeVisible();
     await expect(ask).toContainText('Nhập mã 6 số để xác nhận gỡ quyền két.');
-    await ask.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+    await fillOtp(ask, await freshTotpCode(totpSecret));
     await expect(row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ })).toBeVisible();
   });
 
@@ -128,7 +131,7 @@ test.describe('Ma trận quyền két sắt', () => {
    * mới toanh đã có thể xin mật khẩu mọi thiết bị trong công ty.
    */
   test('chưa gán gì thì tầng là CẤM, không phải "cần duyệt"', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -158,7 +161,7 @@ test.describe('Ma trận quyền két sắt', () => {
    * vì SA đã nói rõ họ được xem mọi switch.
    */
   test('nhiều luật cùng áp thì lấy tầng rộng nhất', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     // Tự gieo site: máy chủ mới dựng có danh mục trắng, không có nhóm theo site nào để mượn.
     const siteId = await catalogItem(page, 'site', {
@@ -223,7 +226,7 @@ test.describe('Ma trận quyền két sắt', () => {
   });
 
   test('gán lại cùng nhóm = ĐỔI tầng, không đẻ dòng thứ hai', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const byType = (await scopes(page)).find((o) => o.scopeType === 'device_type')!;
     const body = {
@@ -250,7 +253,7 @@ test.describe('Ma trận quyền két sắt', () => {
   });
 
   test('đường hỏng: gán tầng "cấm" bị từ chối — cấm là gỡ, không phải gán', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const byType = (await scopes(page)).find((o) => o.scopeType === 'device_type')!;
 
@@ -268,7 +271,7 @@ test.describe('Ma trận quyền két sắt', () => {
   });
 
   test('đường hỏng: nhóm không tồn tại và email lạ đều bị chặn', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const ghostScope = await page.request.post('/api/v1/vault/access', {
@@ -299,7 +302,7 @@ test.describe('Ma trận quyền két sắt', () => {
 
   /** Ma trận là bản đồ phòng thủ — Member đọc được nó là biết chỗ nào yếu. */
   test('Member không đọc được ma trận quyền', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     expect((await page.request.get('/api/v1/vault/access')).status()).toBe(403);
     expect((await page.request.get('/api/v1/vault/access/scopes')).status()).toBe(403);
     await openNavGroup(page);
@@ -316,7 +319,7 @@ test.describe('Ma trận quyền két sắt', () => {
  */
 test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản dịch vụ', () => {
   test('cất được mật khẩu PPPoE của đường truyền', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -356,7 +359,7 @@ test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản d
   });
 
   test('gán quyền theo LOẠI tài khoản dịch vụ — Member hết bị cấm vĩnh viễn', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 

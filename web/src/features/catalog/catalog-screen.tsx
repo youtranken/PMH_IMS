@@ -48,7 +48,10 @@ import {
   type ServicePortRow,
   type SiteRow,
   type VendorRow,
+  type CableTypeRow,
 } from '@/lib/catalog-types';
+import { CableSwatch } from '@/ui/cable-swatch';
+import { lowerFirstAfterNumber } from '@/lib/count-label';
 
 const DEFAULT_LIMIT = 20;
 
@@ -60,6 +63,7 @@ const TAB_KEYS: { key: CatalogEntity; labelKey: string; searchKey: string }[] = 
   { key: 'department', labelKey: 'catalog.tabDepartment', searchKey: 'catalog.searchDepartment' },
   { key: 'isp_provider', labelKey: 'catalog.tabIspProvider', searchKey: 'catalog.searchIspProvider' },
   { key: 'service_port', labelKey: 'catalog.tabServicePort', searchKey: 'catalog.searchServicePort' },
+  { key: 'cable_type', labelKey: 'catalog.tabCableType', searchKey: 'catalog.searchCableType' },
 ];
 
 /**
@@ -75,6 +79,7 @@ const ENTITY_DEFAULT_SORT: Record<CatalogEntity, SortingState> = {
   department: [{ id: 'name', desc: false }],
   isp_provider: [{ id: 'name', desc: false }],
   service_port: [{ id: 'name', desc: false }],
+  cable_type: [{ id: 'name', desc: false }],
 };
 
 /*
@@ -194,7 +199,17 @@ const ENTITY_COLUMNS: Record<
     {
       accessorKey: 'name',
       header: t('catalog.name'),
-      cell: ({ row }) => (row.original as DeviceTypeRow).name,
+      cell: ({ row }) => {
+        const type = row.original as DeviceTypeRow;
+        // Loại chưa có hình nào hiện thành khối chữ nhật trên sơ đồ — nhắc người quản trị chọn (V-10).
+        const noLook = type.diagramShape === null && type.hasDiagramIcon === false;
+        return (
+          <>
+            {type.name}
+            {noLook ? <> <span className="badge warn">{t('catalog.noDiagramLook')}</span></> : null}
+          </>
+        );
+      },
     },
     {
       accessorKey: 'hasPortMap',
@@ -304,6 +319,23 @@ const ENTITY_COLUMNS: Record<
       cell: ({ row }) => note((row.original as ServicePortRow).description),
     },
   ],
+  cable_type: (t) => [
+    {
+      accessorKey: 'name',
+      header: t('catalog.name'),
+      cell: ({ row }) => (row.original as CableTypeRow).name,
+    },
+    {
+      accessorKey: 'colorSlot',
+      header: t('catalog.colorSlot'),
+      cell: ({ row }) => <CableSwatch slot={(row.original as CableTypeRow).colorSlot} />,
+    },
+    {
+      accessorKey: 'description',
+      header: t('catalog.description'),
+      cell: ({ row }) => note((row.original as CableTypeRow).description),
+    },
+  ],
 };
 
 /**
@@ -336,6 +368,8 @@ function mobileMeta(entity: CatalogEntity, row: CatalogRow, t: TFunction): strin
         return [(row as DepartmentRow).description];
       case 'isp_provider':
         return [formatPhone((row as IspProviderRow).hotline), (row as IspProviderRow).contact];
+      case 'cable_type':
+        return [(row as CableTypeRow).description];
       case 'service_port': {
         const port = row as ServicePortRow;
         return [
@@ -592,7 +626,7 @@ export function CatalogScreen({ me }: { me: Me }) {
                 }) +
                 (catalogRow.active && usageTotal(catalogRow) > 0
                   ? ' ' +
-                    t('catalog.deactivateInUse', { usage: usageSummary(entity, catalogRow, t) })
+                    t('catalog.deactivateInUse', { usage: lowerFirstAfterNumber(usageSummary(entity, catalogRow, t)) })
                   : ''),
               danger: catalogRow.active,
               confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
@@ -624,7 +658,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         disabled: usageTotal(catalogRow) > 0,
         hint:
           usageTotal(catalogRow) > 0
-            ? t('catalog.deleteInUse', { usage: usageSummary(entity, catalogRow, t) })
+            ? t('catalog.deleteInUse', { usage: lowerFirstAfterNumber(usageSummary(entity, catalogRow, t)) })
             : undefined,
         onSelect: () => {
           void (async () => {
@@ -757,7 +791,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         {canManage ? null : <p className="muted catalog-member-hint">{t('catalog.memberHint')}</p>}
 
         {rows.isLoading ? (
-          <Loading />
+          <Loading variant="table" />
         ) : rows.isError ? (
           <LoadError error={rows.error} onRetry={() => void rows.refetch()} />
         ) : items.length === 0 && activeCount > 0 ? (
@@ -815,6 +849,7 @@ export function CatalogScreen({ me }: { me: Me }) {
           entity={entity}
           row={editing.row}
           csrfToken={csrfToken}
+          canUploadIcon={me.role === 'sa'}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -896,6 +931,7 @@ const LIST_OF: Record<CatalogEntity, keyof CatalogLists> = {
   department: 'departments',
   isp_provider: 'ispProviders',
   service_port: 'servicePorts',
+  cable_type: 'cableTypes',
 };
 
 const TAB_SUFFIX: Record<CatalogEntity, string> = {
@@ -906,6 +942,7 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
   department: 'Department',
   isp_provider: 'IspProvider',
   service_port: 'ServicePort',
+  cable_type: 'CableType',
 };
 
 /** Tham số của file xuất — cùng bộ lọc với bảng, không phân trang. */

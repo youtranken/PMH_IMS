@@ -1,11 +1,20 @@
 import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { errorMessage, useApiMutation } from '@/lib/api';
+import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
+import { rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
+import { RackElevation } from '@/ui/rack-elevation';
+import { useCabinetOccupants } from '@/ui/use-cabinet-occupants';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field, FormSection } from '@/ui/page-header';
+import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
+import { DevicePhotoSlots, useDeviceTypeIconSrc } from '@/ui/device-photo-slots';
+import { ME_KEY, type Me } from '@/lib/me';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -19,6 +28,7 @@ import {
   type DeviceStatus,
   type DeviceWriteResult,
 } from '@/lib/device-types';
+import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
 
 interface FormState {
   code: string;
@@ -36,6 +46,9 @@ interface FormState {
   warrantyEnd: string;
   status: DeviceStatus;
   note: string;
+  /** Vị trí U trong tủ, dạng chữ của ô số — rỗng = chưa khai. */
+  rackUStart: string;
+  rackUSize: string;
 }
 
 /**
@@ -51,12 +64,15 @@ function cloneState(source: DeviceRow): FormState {
     assignedTo: '',
     note: '',
     status: 'in_use',
+    // Máy mới cùng lô không thể nằm đúng chỗ U của máy gốc (chồng U bị chặn — Q-23).
+    rackUStart: '',
+    rackUSize: '',
   };
 }
 
 /** Sau "Lưu và nhân bản": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
 function nextState(saved: FormState): FormState {
-  return { ...saved, code: '', serial: '', assignedTo: '', note: '' };
+  return { ...saved, code: '', serial: '', assignedTo: '', note: '', rackUStart: '', rackUSize: '' };
 }
 
 /** Các ô chọn trạng thái trong form SỬA. "Đã thanh lý" không có ở đây: API luôn từ chối đi
@@ -80,6 +96,8 @@ function initialState(device: DeviceRow | null): FormState {
     warrantyEnd: device?.warrantyEnd ?? '',
     status: device?.status ?? 'in_use',
     note: device?.note ?? '',
+    rackUStart: device?.rackUStart != null ? String(device.rackUStart) : '',
+    rackUSize: device?.rackUSize != null ? String(device.rackUSize) : '',
   };
 }
 
@@ -126,7 +144,12 @@ export function DeviceForm({
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();
+  // Ảnh hai mặt chọn lúc khai máy mới (Q-23): cùng lối "giữ ở trình duyệt, có id rồi mới đẩy".
+  const photoDraft = useDevicePhotoDraft();
   const [uploading, setUploading] = useState(false);
+  // Đọc `me` từ cache (shell đã nạp): chỉ để biết có hiện việc "ảnh chung của model" không — API vẫn chặn.
+  const { data: me } = useQuery<Me | null>({ queryKey: ME_KEY, enabled: false });
+  const canEditModel = me?.role === 'sa' || me?.role === 'admin';
   /*
    * Form TỰ hỏi danh mục thay vì nhận qua props.
    *
@@ -148,6 +171,8 @@ export function DeviceForm({
   // Đẩy giấy tờ chạy SAU khi lưu xong, lúc `isPending` đã tắt — không khoá thêm thì nút Lưu
   // mở lại và bấm thêm phát nữa là khai trùng một cái máy.
   const busy = save.isPending || uploading;
+  // Nút nào gửi lượt ghi gần nhất: dấu tích "đã lưu" chỉ hiện trên nút Lưu khi chính nó được bấm.
+  const [sentByNext, setSentByNext] = useState(false);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
@@ -158,7 +183,12 @@ export function DeviceForm({
       // Đổi site thì tủ đang chọn có thể thuộc site khác → bỏ chọn, đỡ lưu ra dữ liệu
       // "tủ R01 của nhà máy nằm ở văn phòng".
       if (key === 'siteId' && value !== current.siteId) {
-        return { ...current, siteId: value as string, cabinetId: '' };
+        return { ...current, siteId: value as string, cabinetId: '', rackUStart: '', rackUSize: '' };
+      }
+      // Bỏ tủ thì máy không còn chỗ U nào.
+      if (key === 'cabinetId' || key === 'rackUStart' || key === 'rackUSize') setRackServerError(null);
+      if (key === 'cabinetId' && !value) {
+        return { ...current, cabinetId: '', rackUStart: '', rackUSize: '' };
       }
       return { ...current, [key]: value };
     });
@@ -167,12 +197,37 @@ export function DeviceForm({
   const cabinets = (lists.data?.cabinets ?? []).filter(
     (cabinet) => !form.siteId || cabinet.siteId === form.siteId,
   );
+  const cabinet = (lists.data?.cabinets ?? []).find((c) => c.id === form.cabinetId) ?? null;
+  const cabinetLabel = cabinet ? `${cabinet.siteCode} · ${cabinet.code}` : '';
+  // Máy đang ở tủ đã chọn: form báo chồng U tại ô TRƯỚC khi lưu.
+  const occupants = useCabinetOccupants(form.cabinetId || null);
+  const placement = form.cabinetId ? rackPlacement(form.rackUStart, form.rackUSize) : null;
+  // Số U đang gõ trong form — hộp cắt ảnh khoá theo đó (đổi Số U thì ô ảnh báo "chưa đúng tỉ lệ").
+  const formUnits = /^\d+$/.test(form.rackUSize.trim()) ? Number(form.rackUSize.trim()) : null;
+  const clash = placement
+    ? rackClash({ start: Number(form.rackUStart), size: Number(form.rackUSize) }, occupants.data ?? [], device?.id ?? null)
+    : null;
+  const clashText = clash
+    ? t('devices.rackTaken', { unit: rackUnitLabel(Number(form.rackUStart), Number(form.rackUSize)), code: clash.code })
+    : null;
+  const rackUsed = (occupants.data ?? [])
+    .filter((o) => o.id !== device?.id)
+    .sort((a, b) => a.start - b.start)
+    .map((o) => `${rackUnitLabel(o.start, o.size)} (${o.code})`);
+  /** Lỗi chồng U của server — gắn vào ô "U bắt đầu"; đổi tủ / U thì bỏ. */
+  const [rackServerError, setRackServerError] = useState<string | null>(null);
+  const [rackOpen, setRackOpen] = useState(false);
+  const narrow = useIsNarrow();
+  const typeName = (lists.data?.deviceTypes ?? []).find((type) => type.id === form.deviceTypeId)?.name ?? null;
+  const typeIconSrc = useDeviceTypeIconSrc(device ? null : form.deviceTypeId);
 
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
     name: !form.name.trim() && t('formErrors.required'),
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
     note: secretTextRule(t, form.note),
+    rackUStart: rackRule(t, form, form.rackUStart) || clashText || false,
+    rackUSize: rackRule(t, form, form.rackUSize),
   });
 
   // Mốc tính "+n năm": bảo hành từ, không có thì ngày mua.
@@ -182,6 +237,7 @@ export function DeviceForm({
     setError(null);
     if (!check.check()) return;
     const sent = form;
+    setSentByNext(keepOpen);
     save.mutate(buildBody(form), {
       onSuccess: (result) => {
         void (async () => {
@@ -210,6 +266,23 @@ export function DeviceForm({
             }
             for (const message of failures) toast({ message, tone: 'warn' });
           }
+          if (!device && (photoDraft.files.front || photoDraft.files.back)) {
+            setUploading(true);
+            const failure = await photoDraft.upload(result.device.id, csrfToken);
+            setUploading(false);
+            if (failure) {
+              // Máy đã tạo: báo rõ ảnh CHƯA vào, kèm đường đặt lại — không để ảnh rơi mất trong im lặng.
+              toast({
+                tone: 'warn',
+                message: t('devices.photoDraftFailed', { code: result.device.code, reason: failure }),
+                action: onOpenCreated
+                  ? { label: t('devices.photoRetry'), onClick: () => onOpenCreated(result.device) }
+                  : undefined,
+              });
+            } else {
+              toast({ tone: 'ok', message: t('devices.photoDraftSaved', { code: result.device.code }) });
+            }
+          }
           if (keepOpen) {
             setForm(nextState(sent));
             codeRef.current?.focus();
@@ -217,7 +290,10 @@ export function DeviceForm({
           onSaved(result, { keepOpen });
         })();
       },
-      onError: (err) => setError(errorMessage(err)),
+      onError: (err) => {
+        if (errorCode(err) === 'DEVICE_RACK_U_TAKEN') setRackServerError(errorMessage(err));
+        else setError(errorMessage(err));
+      },
     });
   };
 
@@ -266,9 +342,7 @@ export function DeviceForm({
               {t('devices.saveAndNext')}
             </button>
           )}
-          <button type="submit" form="device-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="device-form" busy={busy} succeeded={save.isSuccess && !sentByNext} />
         </>
       }
     >
@@ -393,6 +467,53 @@ export function DeviceForm({
               onChange={(value) => set('cabinetId', value)}
             />
           </Field>
+          {/* U chỉ có nghĩa khi máy nằm trong tủ (U1 ở đáy tủ). Server chặn vượt chiều cao tủ và
+              chồng U với máy khác, báo tên máy đang chiếm. */}
+          {form.cabinetId ? (
+            <>
+              <Field
+                label={t('devices.rackUStart')}
+                hint={placement ? t(placement.key, { unit: placement.unit }) : t('devices.rackUStartHint')}
+                htmlFor="device-rack-u-start"
+                error={check.error('rackUStart') || clashText || rackServerError}
+              >
+                <NumberStepper
+                  id="device-rack-u-start"
+                  label={t('devices.rackUStartNoun')}
+                  min={1}
+                  max={60}
+                  value={form.rackUStart}
+                  onChange={(value) => set('rackUStart', value)}
+                />
+              </Field>
+              <Field label={t('devices.rackUSize')} htmlFor="device-rack-u-size" error={check.error('rackUSize')}>
+                <NumberStepper
+                  id="device-rack-u-size"
+                  label={t('devices.rackUSizeNoun')}
+                  min={1}
+                  max={60}
+                  value={form.rackUSize}
+                  onChange={(value) => set('rackUSize', value)}
+                />
+              </Field>
+              <div className="field rack-view-cell">
+                <button type="button" className="btn" onClick={() => setRackOpen(true)}>
+                  {t('devices.rackView')}
+                </button>
+              </div>
+              {/* Tủ cao bao nhiêu U và U nào đã có máy (T-04): nhập U theo cảm tính thì chỉ biết chồng
+                  U lúc bấm Lưu. Không tính chính máy đang sửa. */}
+              {cabinet ? (
+                <p className="field-hint muted rack-summary">
+                  {t(rackUsed.length > 0 ? 'devices.rackSummary' : 'devices.rackSummaryEmpty', {
+                    name: cabinetLabel,
+                    height: cabinet.uHeight ?? '?',
+                    used: rackUsed.join(', '),
+                  })}
+                </p>
+              ) : null}
+            </>
+          ) : null}
           <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
             <input
               id="device-assigned"
@@ -473,6 +594,45 @@ export function DeviceForm({
           </Field>
         </FormSection>
 
+        {/* Ảnh thiết bị (không bắt buộc): SỬA ghi thẳng như trang thiết bị; THÊM MỚI giữ ảnh ở
+            trình duyệt tới lúc máy có id. Cùng một ô ảnh dùng chung ở cả hai chế độ. */}
+        <FormSection
+          title={t('devices.photoSectionTitle')}
+          titleTip={device ? t('devices.photoLiveTip') : undefined}
+          columns={1}
+        >
+          <p className="muted small">{t('devices.photoSectionHint')}</p>
+          {device ? (
+            <DevicePhotoEditor
+              deviceId={device.id}
+              deviceTypeId={device.deviceTypeId}
+              deviceTypeName={device.deviceTypeName}
+              csrfToken={csrfToken}
+              canEdit={device.status !== 'retired'}
+              canEditModel={canEditModel}
+              rackUnits={formUnits}
+            />
+          ) : (
+            <DevicePhotoSlots
+              slots={{
+                front: { src: photoDraft.previews.front ?? null, level: photoDraft.files.front ? 'draft' : 'unset' },
+                back: { src: photoDraft.previews.back ?? null, level: photoDraft.files.back ? 'draft' : 'unset' },
+              }}
+              typeName={typeName}
+              typeIconSrc={typeIconSrc}
+              modelLabel={null}
+              readOnly={busy}
+              onPick={photoDraft.set}
+              onRemove={(side) => photoDraft.set(side, null)}
+              rackUnits={formUnits}
+              loadOriginal={(side) => {
+                const held = photoDraft.files[side];
+                return held ? Promise.resolve(held) : Promise.reject(new Error('none'));
+              }}
+            />
+          )}
+        </FormSection>
+
         {/*
           THÊM MỚI: chỉ chọn file, đẩy lên sau khi có id (`AttachmentDraftSection`).
           SỬA: hồ sơ đã có id nên dùng thẳng `AttachmentPanel` — nó hiện luôn danh sách giấy
@@ -498,6 +658,32 @@ export function DeviceForm({
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}
+
+        {rackOpen && form.cabinetId ? (
+          <Dialog
+            open
+            onOpenChange={() => setRackOpen(false)}
+            maxWidth={420}
+            title={t('devices.rackViewTitle', { name: cabinetLabel, height: cabinet?.uHeight ?? '?' })}
+          >
+            <p className="muted small">{t(narrow ? 'devices.rackViewHintReadOnly' : 'devices.rackViewHint')}</p>
+            <RackElevation
+              label={cabinetLabel}
+              height={cabinet?.uHeight ?? null}
+              occupants={occupants.data ?? []}
+              selfId={device?.id ?? null}
+              onPick={
+                narrow
+                  ? undefined
+                  : (u) => {
+                      set('rackUStart', String(u));
+                      if (!form.rackUSize.trim()) set('rackUSize', '1');
+                      setRackOpen(false);
+                    }
+              }
+            />
+          </Dialog>
+        ) : null}
 
       </form>
     </Dialog>
@@ -525,5 +711,18 @@ function buildBody(form: FormState): Record<string, unknown> {
     warrantyEnd: form.warrantyEnd,
     status: form.status,
     note: form.note.trim(),
+    rackUStart: form.cabinetId && form.rackUStart.trim() ? Number(form.rackUStart) : null,
+    rackUSize: form.cabinetId && form.rackUSize.trim() ? Number(form.rackUSize) : null,
   };
+}
+
+/** Một ô U: số nguyên 1–60, và hai ô cùng có hoặc cùng trống (cùng luật với API). */
+function rackRule(t: (key: string) => string, form: FormState, value: string): string | false {
+  if (!form.cabinetId) return false;
+  const start = form.rackUStart.trim();
+  const size = form.rackUSize.trim();
+  if (!start && !size) return false;
+  if (!value.trim()) return t('devices.rackUPair');
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 60 ? false : t('devices.rackURange');
 }

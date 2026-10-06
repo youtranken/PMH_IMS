@@ -117,6 +117,13 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     'approval_history',
     'nat_rule_history',
     'service_account_history',
+    // Sơ đồ mạng (AD-18): phiên bản và tên phiên bản cũng chỉ-thêm, dù tên bảng không đuôi
+    // `_history` nên lượt quét động bên dưới không thấy chúng — danh sách này là cổng của hai bảng ấy.
+    'diagram_history',
+    'diagram_version',
+    'diagram_version_label',
+    // Bình luận ghim: "Đã xử lý" là hàng sự kiện, nội dung không sửa/xoá (AD-18).
+    'diagram_comment',
   ];
 
   it.each(APPEND_ONLY_HISTORY)(
@@ -144,6 +151,49 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     expect(rows[0].ok).toBe(true);
   });
 
+  it('phiên bản bản vẽ: ims_app chỉ xoá qua `diagram_delete_versions`, và hàm vẫn giữ bản chính thức (Q-23)', async () => {
+    /*
+     * "Bỏ bản nháp" cần xoá phiên bản mà KHÔNG trả DELETE cho ims_app: hàm SECURITY DEFINER là
+     * cửa duy nhất, và trigger (không phải ACL) giữ bản chính thức — nên vế dưới chốt `P0001`.
+     */
+    const owner = scratch.pool;
+    const diagram = await owner.query<{ id: string }>(
+      `INSERT INTO diagram (name, node_type, created_by) VALUES ('E2E quyền xoá', 'floor', 'd01@test') RETURNING id`,
+    );
+    const id = diagram.rows[0].id;
+    const insert = (seq: number) =>
+      owner.query<{ id: string }>(
+        `INSERT INTO diagram_version (diagram_id, seq, xml, cell_index, summary, summary_detail, saved_by)
+         VALUES ($1, $2, '<mxfile/>', '{"cells":[]}', 'x', '{}', 'd01@test') RETURNING id`,
+        [id, seq],
+      );
+    const official = (await insert(1)).rows[0].id;
+    const draft = (await insert(2)).rows[0].id;
+    await owner.query(`UPDATE diagram SET official_version_id = $2 WHERE id = $1`, [id, official]);
+
+    expect(await sqlStateOf(app, `DELETE FROM diagram_version WHERE id = '${draft}'`)).toBe('42501');
+    expect(await sqlStateOf(app, `SELECT diagram_delete_versions('${id}', ARRAY['${official}']::uuid[], 'drafts')`)).toBe('P0001');
+    // "Xóa vĩnh viễn" (0058) chỉ mở cho bia mộ đã lưu trữ từ trước: ims_app gọi chế độ erase trên
+    // bản vẽ đang dùng thì trigger vẫn giữ bản chính thức.
+    expect(await sqlStateOf(app, `SELECT diagram_delete_versions('${id}', ARRAY['${official}']::uuid[], 'erase')`)).toBe('P0001');
+    const { rows } = await app.query<{ n: number }>(`SELECT diagram_delete_versions($1, ARRAY[$2]::uuid[], 'drafts') AS n`, [id, draft]);
+    expect(rows[0].n).toBe(1);
+  });
+
+  it('ảnh bản vẽ: ảnh theo khoá băm không sửa được; hàng nối phiên bản–ảnh chỉ thêm (0057)', async () => {
+    // Ảnh mồ côi do ứng dụng dọn (DELETE) nhưng nội dung không bao giờ đổi; hàng nối chỉ mất theo
+    // phiên bản (khoá ngoại CASCADE chạy bằng quyền chủ bảng), nên ims_app không cần sửa/xoá nó.
+    const { rows } = await scratch.pool.query<Record<string, boolean>>(
+      `SELECT has_table_privilege('ims_app', 'diagram_image', 'INSERT') AS img_ins,
+              has_table_privilege('ims_app', 'diagram_image', 'DELETE') AS img_del,
+              has_table_privilege('ims_app', 'diagram_image', 'UPDATE') AS img_upd,
+              has_table_privilege('ims_app', 'diagram_version_image', 'INSERT') AS link_ins,
+              has_table_privilege('ims_app', 'diagram_version_image', 'UPDATE') AS link_upd,
+              has_table_privilege('ims_app', 'diagram_version_image', 'DELETE') AS link_del`,
+    );
+    expect(rows[0]).toEqual({ img_ins: true, img_del: true, img_upd: false, link_ins: true, link_upd: false, link_del: false });
+  });
+
   it('QUÉT ĐỘNG: không bảng `%_history` nào còn UPDATE/DELETE cho ims_app', async () => {
     /*
      * Danh sách cứng ở trên là TÀI LIỆU — đọc nó biết chín bảng nào đang được canh. Bài này
@@ -167,11 +217,13 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
            AND c.relkind IN ('r', 'p')
            AND (c.relname LIKE '%\\_history'
                 OR c.relname = 'audit_log'
+                OR c.relname = ANY($1::text[])
                 -- Ngăn năm của audit_log: ALTER DEFAULT PRIVILEGES cấp cho mọi bảng mới,
                 -- kể cả ngăn, nên ngăn cũng phải bị quét.
                 OR c.oid IN (SELECT inhrelid FROM pg_inherits
                               WHERE inhparent = 'public.audit_log'::regclass))
          ORDER BY c.relname`,
+      [APPEND_ONLY_HISTORY],
     );
 
     // Tiền đề: nếu câu truy vấn không tìm thấy bảng nào thì bài dưới vô nghĩa, không phải đạt.

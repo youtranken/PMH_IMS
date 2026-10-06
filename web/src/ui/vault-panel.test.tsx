@@ -4,7 +4,7 @@ import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { VaultPanel, type AccessVerdict, type SecretMeta } from '@/ui/vault-panel';
 import { MemoryRouter } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { act, fireEvent, jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 
 /**
  * BA HỘP CỦA KÉT SẮT PHẢI KHÓA LẠI KHI LƯỢT GHI ĐANG BAY.
@@ -617,10 +617,15 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
  * VLT-062 — khung két nằm TRONG một hộp (popup trang Két tổng): bước gõ mã và bước hiện giá
  * trị chạy ngay trong hộp đó. Chồng thêm hai hộp là ba lớp trên điện thoại.
  */
-describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)', () => {
-  function mockReveal() {
+describe('VaultPanel — Xem két: MỘT hộp nhỏ, mã rồi giá trị (Q-24)', () => {
+  function mockReveal({
+    graceOpen = false,
+    wrongFirst = false,
+    hold,
+  }: { graceOpen?: boolean; wrongFirst?: boolean; hold?: Promise<void> } = {}) {
     const calls: { url: string; method: string }[] = [];
-    let steppedUp = false;
+    let steppedUp = graceOpen;
+    let attempts = 0;
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -634,10 +639,20 @@ describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)
           return Promise.resolve(jsonResponse(200, [SECRET]));
         }
         if (method === 'POST' && url.includes('/auth/step-up')) {
+          attempts += 1;
+          if (wrongFirst && attempts === 1) {
+            return Promise.resolve(jsonResponse(401, { code: 'TOTP_INVALID', message: 'Mã không đúng' }));
+          }
           steppedUp = true;
           return Promise.resolve(jsonResponse(200, { graceMinutes: 10 }));
         }
         if (method === 'POST' && url.includes('/reveal')) {
+          // `hold`: giữ lượt giải mã SAU khi đã qua mã, để bắt được khoảnh khắc "đang mở".
+          if (steppedUp && hold) {
+            return hold.then(() =>
+              jsonResponse(200, { value: 'Sup3r#Secret', revealSeconds: 60, stepUpSecondsLeft: 600 }),
+            );
+          }
           return Promise.resolve(
             steppedUp
               ? jsonResponse(200, { value: 'Sup3r#Secret', revealSeconds: 60, stepUpSecondsLeft: 600 })
@@ -650,52 +665,129 @@ describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)
     return calls;
   }
 
-  function renderInline() {
-    return renderWithI18n(
-      <MemoryRouter>
-        <ToastProvider>
-          <ConfirmProvider>
-            <VaultPanel ownerType="device" ownerId="d1" me={ME} stepsInline />
-          </ConfirmProvider>
-        </ToastProvider>
-      </MemoryRouter>,
-    );
-  }
-
-  it('Xem → bước mã → bước giá trị, KHÔNG mở hộp nào; Ẩn ngay thì về danh sách', async () => {
+  it('Xem → hộp nhỏ "Nhập mã 6 số để xem" chỉ có tên ngăn + 6 ô + Hủy; mã đúng thì CHÍNH hộp đó hiện giá trị', async () => {
     const calls = mockReveal();
-    renderInline();
+    renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
 
-    const step = await screen.findByRole('region', { name: 'Xác nhận danh tính' });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    // Danh sách ngăn nhường chỗ cho bước — không còn nút Xem nào sau lưng.
-    expect(screen.queryByRole('button', { name: 'Xem' })).not.toBeInTheDocument();
+    const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+    expect(within(popup).getByText('admin web')).toBeInTheDocument();
+    // Không còn đoạn giải thích dài của hộp xác thực lại.
+    expect(within(popup).queryByText(/Xác nhận danh tính/)).toBeNull();
+    expect(
+      within(popup)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['Đóng hộp thoại', 'Hủy']);
 
-    await userEvent.type(within(step).getByLabelText('Mã xác thực'), '123456');
-    expect(await screen.findByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await userEvent.type(within(popup).getByLabelText('Mã xác thực'), '123456');
+    const value = await within(popup).findByTestId('secret-value');
+    expect(value).toHaveTextContent('Sup3r#Secret');
+    // Hiện dần từ mờ sang nét (CSS), cùng một hộp — không hộp thứ hai chồng lên.
+    expect(value).toHaveClass('reveal-sharpen');
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toBe(popup);
     expect(calls.some((c) => c.method === 'POST' && c.url.includes('/auth/step-up'))).toBe(true);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ẩn ngay' }));
+    // Vòng tròn đếm ngược thời gian tự ẩn, số giây ở giữa.
+    const ring = within(popup).getByTestId('reveal-countdown');
+    expect(ring.textContent).toMatch(/^60s/);
+    expect(ring.querySelector('svg circle.reveal-ring-bar')).not.toBeNull();
+    // Nút sao chép giá trị — chỉ chép khi bấm.
+    expect(within(popup).getByRole('button', { name: 'Sao chép giá trị' })).toBeInTheDocument();
+
+    await userEvent.click(within(popup).getByRole('button', { name: 'Ẩn ngay' }));
     expect(screen.queryByTestId('secret-value')).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('bước mã có nút Quay lại về danh sách, không gửi gì', async () => {
-    const calls = mockReveal();
-    renderInline();
+  it('qua mã xong, lúc đang giải mã: hộp KHÔNG đóng rồi mở lại, không đóng được giữa chừng', async () => {
+    let release: () => void = () => {};
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mockReveal({ hold });
+    renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Quay lại' }));
-    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+    const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+    await userEvent.type(within(popup).getByLabelText('Mã xác thực'), '123456');
+    await waitFor(() => expect(within(popup).getByRole('button', { name: 'Hủy' })).toBeDisabled());
+    expect(screen.getByRole('dialog')).toBe(popup);
+    release();
+    expect(await within(popup).findByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
+  });
+
+  it('Hủy ở bước mã: đóng hộp, không gửi mã', async () => {
+    const calls = mockReveal();
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+    const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+    await userEvent.click(within(popup).getByRole('button', { name: 'Hủy' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(calls.some((c) => c.url.includes('/auth/step-up'))).toBe(false);
   });
 
-  it('không có hộp bao ngoài (trang hồ sơ): vẫn là hộp riêng như cũ', async () => {
-    mockReveal();
+  it('mã sai: báo ngay dưới 6 ô, hộp ở lại, gõ lại đúng thì hiện giá trị', async () => {
+    mockReveal({ wrongFirst: true });
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+    await userEvent.type(within(popup).getByLabelText('Mã xác thực'), '111111');
+    expect(await within(popup).findByText('Mã không đúng')).toBeInTheDocument();
+    expect(within(popup).queryByTestId('secret-value')).toBeNull();
+    await userEvent.type(within(popup).getByLabelText('Mã xác thực'), '123456');
+    expect(await within(popup).findByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
+  });
+
+  /*
+   * Mã đúng, hiệu ứng đang chạy: giá trị chỉ được mở khi hộp còn đó. Hủy / Esc lúc này bị khoá;
+   * và nếu panel bị tháo (người dùng rời trang) thì không có lượt mở ngăn nào chạy sau lưng họ —
+   * mỗi lượt mở là một dòng nhật ký két.
+   */
+  describe('mã đúng, đang chạy hiệu ứng', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function codeAccepted() {
+      const calls = mockReveal();
+      const view = renderPanel();
+      await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+      const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
+      vi.stubGlobal('AnimationEvent', class {});
+      vi.useFakeTimers();
+      await act(async () => {
+        fireEvent.change(within(popup).getByLabelText('Số thứ 1 trên 6'), { target: { value: '123456' } });
+        await vi.advanceTimersByTimeAsync(50);
+      });
+      const reveals = () => calls.filter((c) => c.method === 'POST' && c.url.includes('/reveal')).length;
+      return { popup, view, reveals };
+    }
+
+    it('Hủy mờ và Esc không đóng hộp', async () => {
+      const { popup } = await codeAccepted();
+      expect(within(popup).getByRole('button', { name: 'Hủy' })).toBeDisabled();
+      fireEvent.keyDown(popup, { key: 'Escape' });
+      expect(screen.getByRole('dialog')).toBe(popup);
+    });
+
+    it('panel bị tháo giữa hiệu ứng → KHÔNG mở ngăn', async () => {
+      const { view, reveals } = await codeAccepted();
+      expect(reveals()).toBe(1);
+      view.unmount();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(reveals()).toBe(1);
+    });
+  });
+
+  it('còn trong ân hạn: bấm Xem mở thẳng hộp ở bước giá trị (tiêu đề là tên ngăn)', async () => {
+    const calls = mockReveal({ graceOpen: true });
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
+    const popup = await screen.findByRole('dialog', { name: 'admin web' });
+    expect(within(popup).getByTestId('secret-value')).toHaveTextContent('Sup3r#Secret');
+    expect(within(popup).getByTestId('stepup-countdown')).toHaveTextContent(/^\d+:\d{2}$/);
+    expect(calls.some((c) => c.url.includes('/auth/step-up'))).toBe(false);
   });
 });
 

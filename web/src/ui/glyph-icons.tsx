@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * Hình nhỏ trên nút — đóng (✕), thêm (+), ba chấm (⋮), chép / đã chép, ba dấu tròn trạng thái
+ * Hình nhỏ trên nút — đóng (✕), thêm (+), ba chấm (⋮), chép / đã chép, tải lên, ba dấu tròn trạng thái
  * (! · i · ✓) và ba biểu tượng giao diện (sáng · tối · theo hệ thống) — dùng chung cho cả app
  * (AD-15).
  *
@@ -72,6 +72,28 @@ export function CheckIcon({ className }: { className?: string }) {
   return (
     <Glyph className={['glyph-check', className].filter(Boolean).join(' ')} strokeWidth={3}>
       <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Glyph>
+  );
+}
+
+/** Mũi tên lên khay — vùng thả tệp (`FilePicker`). */
+export function UploadIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={2.2}>
+      <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4.5 15v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3" />
+    </Glyph>
+  );
+}
+
+/**
+ * Hộp thiết bị (thân máy + đèn + khe) — hình thay ảnh trong ô ảnh thiết bị khi loại chưa có biểu
+ * tượng SVG riêng. Nét mảnh vì hình này vẽ to (~64px), không nằm trên nút.
+ */
+export function DeviceIcon({ className }: { className?: string }) {
+  return (
+    <Glyph className={className} strokeWidth={1.4}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M3 12h18M6.5 9h.01M6.5 15h.01M10 9h7M10 15h7" />
     </Glyph>
   );
 }

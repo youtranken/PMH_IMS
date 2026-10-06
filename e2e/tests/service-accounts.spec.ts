@@ -14,6 +14,7 @@ import {
   rowAction,
   rowActionNames,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -43,7 +44,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('đường hạnh phúc: khai email dùng chung trên UI → cất mật khẩu vào két', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `TK-E2E-${stamp}`;
 
@@ -89,7 +90,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('chỉ gõ tên đăng nhập + mật khẩu: mã và tên tự đặt, mật khẩu vào thẳng két', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const login = `ke-toan-e2e-${stamp}@pmh.com.vn`;
 
@@ -120,7 +121,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('tài khoản VPN có thêm nhóm và dải IP; loại dùng chung thì không', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `VPN-E2E-${stamp}`;
 
@@ -145,7 +146,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('đường hỏng: ô của loại VPN lọt vào tài khoản dùng chung thì bị chặn', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     // Dữ liệu vô nghĩa mà sáu tháng sau không ai dám xóa vì không biết nó từng có ý gì.
@@ -163,7 +164,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('đường hỏng: dải IP sai định dạng bị chặn; dải quá rộng thì CẢNH BÁO chứ không chặn', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const bad = await createViaApi(page, {
@@ -203,7 +204,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('đường hỏng: trùng mã bị chặn kèm chính cái mã đang trùng', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `TK-E2E-DUP-${stamp}`;
 
@@ -215,7 +216,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('Member đọc được nhưng KHÔNG ghi được', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `TK-E2E-ROLE-${stamp}`,
@@ -225,7 +226,7 @@ test.describe('Tài khoản dịch vụ', () => {
     expect(created.status).toBe(201);
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
 
     // Đọc được: biết công ty có những tài khoản nào là việc bình thường của team IT.
     expect((await page.request.get('/api/v1/service-accounts?limit=5')).status()).toBe(200);
@@ -243,7 +244,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('Member KHÔNG xem được mật khẩu của tài khoản dịch vụ — mặc định CẤM', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `TK-E2E-SEC-${stamp}`,
@@ -264,7 +265,7 @@ test.describe('Tài khoản dịch vụ', () => {
     expect(stash.status()).toBe(201);
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     /*
      * Loại chủ thể mới CHƯA có nhóm đối tượng trong ma trận quyền, nên Member luôn bị từ chối.
      * Bài này khóa đúng chỗ đó: nếu ai đó lỡ để nó rơi vào nhánh "phần mềm" của `tierFor`,
@@ -277,7 +278,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('đính kèm file cấu hình vào tài khoản VPN', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `VPN-E2E-FILE-${stamp}`,
@@ -297,7 +298,7 @@ test.describe('Tài khoản dịch vụ', () => {
   });
 
   test('trang tổng Két sắt liệt kê cả tài khoản dịch vụ', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `TK-E2E-VAULT-${stamp}`;
     const created = await createViaApi(page, { code, kind: 'shared', name: 'Có két' });
@@ -332,7 +333,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('vô hiệu hóa đi qua hộp riêng bắt ghi lý do; ô Trạng thái trong form là CHỈ ĐỌC', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `TK-E2E-OFF-${stamp}`;
     const created = await createViaApi(page, {
@@ -391,7 +392,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('VPN mở mọi IP mang huy hiệu; dải IP gõ sai báo ngay; danh sách xuất được Excel', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `VPN-E2E-ANY-${stamp}`;
     const created = await createViaApi(page, {
@@ -447,7 +448,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('bật lại tài khoản đã đóng cũng bắt ghi lý do, và PATCH thường không lách được', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `TK-E2E-ON-${stamp}`;
     const created = await createViaApi(page, { code, kind: 'shared', name: 'Tài khoản mở lại' });
@@ -506,7 +507,7 @@ test.describe('Tài khoản dịch vụ', () => {
   test('đường hỏng: vô hiệu hóa không lý do bị chặn, và Member không đóng được tài khoản', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `TK-E2E-OFF-BAD-${stamp}`,
@@ -529,7 +530,7 @@ test.describe('Tài khoản dịch vụ', () => {
     expect(((await still.json()) as { status: string }).status).toBe('active');
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const asMember = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { reason: 'member thử đóng' },
@@ -556,7 +557,7 @@ test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `VPN-E2E-HAN-${stamp}`;
     const end = inDays(10);
@@ -606,7 +607,7 @@ test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
   test('đường hỏng: tài khoản đã ngừng dùng không lên /expiry và không gia hạn được', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `VPN-E2E-NGUNG-${stamp}`;
     const created = await createViaApi(page, {

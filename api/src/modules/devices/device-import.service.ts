@@ -17,6 +17,7 @@ import {
 import { diffDevice } from './device-changes';
 import { deviceExportSheets, deviceTemplateSheets } from './device-template';
 import { deviceTable } from './devices.schema';
+import { rackClaimMoved, rackClaimOf } from './rack-units';
 import {
   DEVICE_SORT_DEFAULT,
   DevicesService,
@@ -142,33 +143,54 @@ export class DeviceImportService {
     const counts = await this.db.transaction(async (tx) => {
       let created = 0;
       let updated = 0;
+      /*
+       * "Trước khi sửa" của mọi dòng sửa đọc TRONG transaction, khoá FOR UPDATE, rồi hỏi lại "đã
+       * thanh lý chưa": plan chặn máy đã thanh lý theo ảnh chụp lúc đối chiếu, nên một lượt thanh
+       * lý commit sau đó vẫn bị file ghi đè. Đừng lấy từ `context.devices` — tra trượt rơi về
+       * object rỗng và `device_history` (chỉ-thêm, FR-007) ghi "mọi trường đổi từ trống".
+       */
+      const befores = new Map<string, Awaited<ReturnType<DevicesService['requireRowWithin']>>>();
+      for (const row of writable) {
+        if (row.action !== 'update') continue;
+        const before = await this.devices.requireRowWithin(tx, row.existingId!, 'update');
+        this.devices.assertNotRetired(before);
+        befores.set(row.existingId!, before);
+      }
+      /*
+       * Dời chỗ U hai pha: đối chiếu xét vị trí CUỐI của cả file (hoán đổi hai máy là hợp lệ),
+       * nên gỡ U mọi máy đổi chỗ trước rồi mới đặt — ghi lần lượt thì dòng đầu va vào máy chưa
+       * kịp dời và cả file bị huỷ dù bảng đối chiếu báo xanh. Máy bị gỡ được ghi lại U cuối
+       * TƯỜNG MINH ở pha hai (kể cả khi file không có cột U).
+       */
+      const vacated = new Set<string>();
+      for (const row of writable) {
+        const before = row.existingId ? befores.get(row.existingId) : undefined;
+        if (!before || before.rackUStart === null) continue;
+        if (rackClaimMoved(rackClaimOf(row.values ?? {}, before), rackClaimOf({}, before))) vacated.add(before.id);
+      }
+      await this.devices.vacateRackWithin(tx, [...vacated]);
+
       for (const row of writable) {
         const values = row.values ?? {};
         if (row.action === 'create') {
+          // Đối chiếu đã xét chồng U trên ảnh chụp; kiểm lại trong tx vì kho có thể đổi từ lúc đó.
+          await this.devices.assertRackFreeWithin(tx, null, rackClaimOf(values, null));
           const device = await this.devices.insertWithin(tx, values);
           created += 1;
           await this.devices.recordWithin(tx, actor, device.id, 'imported', {
             code: { before: null, after: device.code },
           });
         } else {
-          /*
-           * "Trước khi sửa" đọc TRONG transaction, không lấy từ ảnh chụp lúc đối chiếu.
-           *
-           * Đừng dùng `context.devices.get(...)` — ảnh chụp dựng ở đầu `commit()`: khi tra
-           * trượt thì rơi về `before ?? {}`. `{...undefined}` không ném, nên `diffDevice` lặng
-           * lẽ so hồ sơ mới với một object RỖNG và `device_history` ghi "mọi trường đổi từ
-           * trống": một dòng lịch sử BỊA, trong bảng chỉ-thêm mà FR-007 dựng ra để trả lời "ai
-           * đổi gì".
-           *
-           * Đọc lại trong tx sửa cả hai vế: nội dung diff là thật, và hồ sơ đã biến mất thì
-           * ném ngay tại đây thay vì `UPDATE` khớp 0 dòng rồi vẫn `updated += 1`.
-           *
-           * Khóa `FOR UPDATE` rồi hỏi lại "đã thanh lý chưa": plan chặn máy đã thanh lý theo
-           * ảnh chụp lúc đối chiếu, nên một lượt thanh lý commit sau đó vẫn bị file ghi đè.
-           */
-          const before = await this.devices.requireRowWithin(tx, row.existingId!, 'update');
-          this.devices.assertNotRetired(before);
-          await this.devices.updateWithin(tx, row.existingId!, values);
+          const before = befores.get(row.existingId!)!;
+          const written = vacated.has(before.id)
+            ? {
+                ...values,
+                rackUStart: values.rackUStart === undefined ? before.rackUStart : values.rackUStart,
+                rackUSize: values.rackUSize === undefined ? before.rackUSize : values.rackUSize,
+              }
+            : values;
+          await this.devices.assertRackFreeWithin(tx, row.existingId!, rackClaimOf(written, before));
+          await this.devices.updateWithin(tx, row.existingId!, written);
           updated += 1;
           // FR-007: tab Lịch sử phải trả lời "ai ĐỔI GÌ". Ghi `mã: SW-01 → SW-01` thì
           // dòng lịch sử tồn tại mà vô dụng — dùng đúng bộ so của luồng sửa tay.

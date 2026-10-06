@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, resetUsers, sql } from './helpers';
+import { E2E_SA, firstLogin, resetUsers, sql, stepUpViaApi } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -30,7 +30,7 @@ function ageSession(email: string, minutes: number): void {
 
 test.describe('Phiên idle và vòng hỏi định kỳ', () => {
   test('hỏi số phiếu chờ / verdict không gia hạn phiên; thao tác thật thì có', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     ageSession(E2E_SA.email, 20);
 
     const count = await page.request.get('/api/v1/vault/break-glass/pending/count');
@@ -49,7 +49,7 @@ test.describe('Phiên idle và vòng hỏi định kỳ', () => {
   });
 
   test('dựng lại đòn: tab chỉ còn vòng hỏi thì quá 30 phút vẫn bị đăng xuất', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     ageSession(E2E_SA.email, 29);
 
     // Phút cuối: vòng hỏi vẫn chạy, nhưng không kéo dài phiên.

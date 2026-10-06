@@ -1,0 +1,97 @@
+import { effectiveOf } from '../../common/merge-effective';
+import { rackUnitLabel } from '../../common/rack-units';
+
+/** Trần U của một tủ — khớp `cabinet_u_height_check` và `device_rack_u_range_check`. */
+export const RACK_U_MAX = 60;
+
+export interface RackUnitsInput {
+  start: number | null;
+  size: number | null;
+  hasCabinet: boolean;
+  cabinetCode: string | null;
+  /** `cabinet.u_height`; `null` = tủ chưa khai chiều cao, chỉ áp trần 60. */
+  cabinetHeight: number | null;
+}
+
+/**
+ * Lý do từ chối U của một hồ sơ, `null` = nhận. Hàm thuần, câu chữ tiếng Việt cho người dùng —
+ * CHECK của DB chỉ là lưới cuối, gặp nó người dùng chỉ thấy một câu chung chung.
+ */
+export function rackUnitsReason(input: RackUnitsInput): string | null {
+  const { start, size } = input;
+  if (start === null && size === null) return null;
+  if (start === null || size === null) return '"U bắt đầu" và "Số U" phải cùng có hoặc cùng trống.';
+  if (!Number.isInteger(start) || !Number.isInteger(size)) return '"U bắt đầu" và "Số U" phải là số nguyên.';
+  if (start < 1 || start > RACK_U_MAX || size < 1 || size > RACK_U_MAX) {
+    return `"U bắt đầu" và "Số U" phải từ 1 tới ${RACK_U_MAX}.`;
+  }
+  if (!input.hasCabinet) return 'Muốn khai vị trí U thì chọn tủ trước.';
+  const top = start + size - 1;
+  const height = input.cabinetHeight ?? RACK_U_MAX;
+  if (top > height) {
+    const where =
+      input.cabinetHeight === null ? `${RACK_U_MAX}U` : `${['tủ', input.cabinetCode].filter(Boolean).join(' ')} (${input.cabinetHeight}U)`;
+    return `${rackUnitLabel(start, size)} vượt ${where}.`;
+  }
+  return null;
+}
+
+export interface RackPlacement {
+  cabinetId: string | null;
+  start: number | null;
+  size: number | null;
+}
+
+/**
+ * Lượt ghi có ĐỔI chỗ của máy trong tủ không. Luật U (vượt tủ, chồng U) chỉ xét khi đổi: form và
+ * file Excel luôn gửi lại đủ mọi ô, và một máy khai U trước khi tủ bị hạ chiều cao (dữ liệu cũ)
+ * không được vì thế mà hết sửa được ghi chú — khung tủ hiện cảnh báo cho máy đó.
+ */
+export function rackPlacementChanged(next: RackPlacement, current: RackPlacement | null): boolean {
+  if (!current) return true;
+  return next.cabinetId !== current.cabinetId || next.start !== current.start || next.size !== current.size;
+}
+
+export interface RackOccupant {
+  code: string;
+  name: string;
+  start: number;
+  size: number;
+}
+
+/** Máy đầu tiên (trong `others`) chiếm một U nằm trong dải `range`; `null` = dải còn trống. */
+export function rackOverlap<T extends RackOccupant>(range: { start: number; size: number }, others: T[]): T | null {
+  const top = range.start + range.size - 1;
+  return others.find((other) => other.start <= top && range.start <= other.start + other.size - 1) ?? null;
+}
+
+/** Chỗ một máy sẽ chiếm trong tủ sau lượt ghi — kiểm chồng U (form, import, DB). */
+export interface RackClaim {
+  cabinetId: string;
+  start: number;
+  size: number;
+}
+
+/**
+ * Chỗ máy sẽ chiếm sau lượt ghi `values` lên hồ sơ `current`; `null` = không chiếm (không tủ,
+ * không U, đã thanh lý). Một bản cho form, đối chiếu import và bước ghi import — hai bản là
+ * đối chiếu và ghi lệch nhau về "máy nào đang giữ chỗ".
+ */
+export function rackClaimOf(
+  values: Record<string, unknown>,
+  current: { cabinetId: string | null; rackUStart?: number | null; rackUSize?: number | null; status: string } | null | undefined,
+): RackClaim | null {
+  const effective = effectiveOf(values);
+  const cabinetId = effective<string | null>('cabinetId', current?.cabinetId ?? null);
+  const start = effective<number | null>('rackUStart', current?.rackUStart ?? null);
+  const size = effective<number | null>('rackUSize', current?.rackUSize ?? null);
+  const status = effective<string | null>('status', current?.status ?? null);
+  if (!cabinetId || start === null || size === null || status === 'retired') return null;
+  return { cabinetId, start, size };
+}
+
+/** Hai chỗ có khác nhau không (`null` = không chiếm chỗ nào). */
+export function rackClaimMoved(next: RackClaim | null, current: RackClaim | null): boolean {
+  if (!next || !current) return next !== current;
+  return next.cabinetId !== current.cabinetId || next.start !== current.start || next.size !== current.size;
+}

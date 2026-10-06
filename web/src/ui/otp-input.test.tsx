@@ -1,0 +1,521 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
+import {
+  OTP_CONFIRM_AT_MS,
+  OTP_MIN_SPIN_MS,
+  OTP_ORBIT_MS,
+  OTP_RING_IN_MS,
+  OTP_STILL_HOLD_MS,
+  OTP_SUCCESS_FALLBACK_MS,
+  OtpInput,
+  otpSealDelay,
+  useOtpSuccess,
+  type OtpStatus,
+} from '@/ui/otp-input';
+import { act, fireEvent, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+
+/**
+ * Ô mã 2 lớp là 6 ô riêng, mỗi ô một số (Q-21). Người dùng chép từng số từ ứng dụng xác thực,
+ * nên con trỏ phải tự đi tới ô kế, xoá lùi được, và dán/tự điền cả mã vào bất kỳ ô nào.
+ */
+
+function Harness({
+  initial = '',
+  onComplete,
+  error,
+  readOnly,
+}: {
+  initial?: string;
+  onComplete?: (code: string) => void;
+  error?: string;
+  readOnly?: boolean;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <>
+      <OtpInput
+        value={value}
+        onChange={setValue}
+        label="Mã xác thực"
+        onComplete={onComplete}
+        error={error}
+        readOnly={readOnly}
+      />
+      <output data-testid="value">{value}</output>
+    </>
+  );
+}
+
+const group = () => screen.getByRole('group', { name: 'Mã xác thực' });
+const boxes = () => within(group()).getAllByRole('textbox') as HTMLInputElement[];
+const shown = () => screen.getByTestId('value').textContent;
+
+describe('OtpInput — 6 ô riêng', () => {
+  it('một nhóm mang tên nhãn, 6 ô "Số thứ N trên 6"; ô đầu nhận tự điền mã một lần', () => {
+    renderWithI18n(<Harness />);
+    const all = boxes();
+    expect(all).toHaveLength(6);
+    all.forEach((box, i) => expect(box).toHaveAccessibleName(`Số thứ ${i + 1} trên 6`));
+    expect(all[0]).toHaveAttribute('autocomplete', 'one-time-code');
+    all.forEach((box) => expect(box).toHaveAttribute('inputmode', 'numeric'));
+    expect(all[1]).toHaveAttribute('autocomplete', 'off');
+    expect(all[0]).toHaveFocus();
+  });
+
+  it('gõ một số → sang ô kế; bỏ qua chữ không phải số', async () => {
+    renderWithI18n(<Harness />);
+    await userEvent.type(boxes()[0], '1a2');
+    expect(shown()).toBe('12');
+    expect(boxes()[0]).toHaveValue('1');
+    expect(boxes()[1]).toHaveValue('2');
+    expect(boxes()[2]).toHaveFocus();
+  });
+
+  it('Backspace ở ô trống → lùi về ô trước và xoá nó', async () => {
+    renderWithI18n(<Harness />);
+    await userEvent.type(boxes()[0], '123');
+    expect(boxes()[3]).toHaveFocus();
+    await userEvent.keyboard('{Backspace}');
+    expect(shown()).toBe('12');
+    expect(boxes()[2]).toHaveFocus();
+    await userEvent.keyboard('{Backspace}{Backspace}');
+    expect(shown()).toBe('');
+    expect(boxes()[0]).toHaveFocus();
+  });
+
+  it('Backspace ở ô đang có số → xoá chính ô đó, con trỏ đứng yên', async () => {
+    renderWithI18n(<Harness initial="123456" />);
+    boxes()[5].focus();
+    await userEvent.keyboard('{Backspace}');
+    expect(shown()).toBe('12345');
+    expect(boxes()[5]).toHaveFocus();
+  });
+
+  it('←/→, Home/End di chuyển giữa các ô; gõ đè ô giữa thay đúng số đó', async () => {
+    renderWithI18n(<Harness initial="123456" />);
+    boxes()[2].focus();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(boxes()[1]).toHaveFocus();
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}');
+    expect(boxes()[3]).toHaveFocus();
+    await userEvent.keyboard('{Home}');
+    expect(boxes()[0]).toHaveFocus();
+    await userEvent.keyboard('{End}');
+    expect(boxes()[5]).toHaveFocus();
+    boxes()[2].focus();
+    await userEvent.keyboard('9');
+    expect(shown()).toBe('129456');
+    expect(boxes()[3]).toHaveFocus();
+  });
+
+  it('→ không vượt quá ô trống đầu tiên (mã không có lỗ hổng)', async () => {
+    renderWithI18n(<Harness initial="12" />);
+    boxes()[1].focus();
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}{End}');
+    expect(boxes()[2]).toHaveFocus();
+  });
+
+  it('dán "123 456" vào ô bất kỳ → đủ 6 ô, gọi onComplete một lần', async () => {
+    const onComplete = vi.fn();
+    renderWithI18n(<Harness onComplete={onComplete} />);
+    boxes()[3].focus();
+    await userEvent.paste('123 456');
+    expect(shown()).toBe('123456');
+    expect(boxes().map((b) => b.value)).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledWith('123456');
+    expect(boxes()[5]).toHaveFocus();
+  });
+
+  it('tự điền (iOS/Android, trình quản lý mật khẩu) đổ cả mã vào ô đầu → chia đủ 6 ô', () => {
+    const onComplete = vi.fn();
+    renderWithI18n(<Harness onComplete={onComplete} />);
+    fireEvent.change(boxes()[0], { target: { value: '654321' } });
+    expect(shown()).toBe('654321');
+    expect(onComplete).toHaveBeenCalledWith('654321');
+  });
+
+  it('bấm vào ô trống phía sau → con trỏ về ô trống đầu tiên', async () => {
+    renderWithI18n(<Harness initial="1" />);
+    await userEvent.click(boxes()[4]);
+    expect(boxes()[1]).toHaveFocus();
+  });
+
+  it('lỗi: nhóm trỏ tới câu lỗi, mọi ô aria-invalid', () => {
+    renderWithI18n(<Harness error="Còn thiếu 2 số." />);
+    const err = screen.getByRole('alert');
+    expect(group()).toHaveAttribute('aria-describedby', err.id);
+    expect(group()).toHaveAccessibleDescription('Còn thiếu 2 số.');
+    boxes().forEach((b) => expect(b).toHaveAttribute('aria-invalid', 'true'));
+  });
+
+  it('readOnly: gõ và dán không đổi mã', async () => {
+    renderWithI18n(<Harness initial="12" readOnly />);
+    boxes()[2].focus();
+    await userEvent.keyboard('3{Backspace}');
+    await userEvent.paste('999999');
+    expect(shown()).toBe('12');
+  });
+});
+
+describe('OtpInput — lớp trạng thái cho chuyển động', () => {
+  it('có lỗi → hàng ô mang is-error (lắc + đỏ); hết lỗi → bỏ, để lượt sai sau lắc lại', () => {
+    const { rerender } = renderWithI18n(<Harness error="Mã không đúng" />);
+    expect(group()).toHaveClass('is-error');
+    rerender(<Harness />);
+    expect(group()).not.toHaveClass('is-error');
+  });
+
+  it('ô đã có số mang is-filled, ô trống thì không', () => {
+    renderWithI18n(<Harness initial="12" />);
+    const all = boxes();
+    expect(all[0]).toHaveClass('is-filled');
+    expect(all[1]).toHaveClass('is-filled');
+    expect(all[2]).not.toHaveClass('is-filled');
+  });
+
+  it('đủ 6 số và đang gửi (readOnly) → is-busy; chưa đủ số thì không', () => {
+    const { unmount } = renderWithI18n(<Harness initial="123456" readOnly />);
+    expect(group()).toHaveClass('is-busy');
+    unmount();
+    renderWithI18n(<Harness initial="123" readOnly />);
+    expect(group()).not.toHaveClass('is-busy');
+  });
+});
+
+/**
+ * Trạng thái quanh lượt gửi: đang kiểm (6 ô xoay), thành công (gộp thành 1 ô có dấu tích, nơi gọi
+ * chỉ đi tiếp sau khi hiệu ứng xong), sai (về 6 ô, lắc + đỏ).
+ */
+function SuccessHarness({ proceed, error, status }: { proceed: () => void; error?: string; status?: OtpStatus }) {
+  const otp = useOtpSuccess();
+  return (
+    <>
+      <OtpInput
+        value="123456"
+        onChange={() => undefined}
+        label="Mã xác thực"
+        error={error}
+        status={otp.status ?? status}
+        onSuccessShown={otp.onShown}
+        onConfirmed={otp.onConfirmed}
+      />
+      <span data-testid="confirmed">{otp.confirmed ? 'yes' : 'no'}</span>
+      <button type="button" onClick={() => void otp.show().then((shown) => shown && proceed())}>
+        ok
+      </button>
+      <button type="button" onClick={otp.cancel}>
+        hủy
+      </button>
+    </>
+  );
+}
+
+const checkMark = () => document.querySelector('.otp-check-mark') as Element;
+
+/*
+ * Vòng ô chỉ dừng ở mốc TRỌN vòng: dừng giữa chừng thì các ô đang nghiêng giật về tư thế đứng
+ * thẳng trước khi hội tụ. Mốc đầu tiên là sau khi vào vòng + một vòng (tối thiểu thấy trọn một vòng).
+ */
+describe('otpSealDelay — chờ tới mốc trọn vòng', () => {
+  const T = OTP_ORBIT_MS;
+  const IN = OTP_RING_IN_MS;
+  it.each([
+    // [đã quay bao lâu khi server trả lời, còn chờ bao lâu]
+    [0, IN + T],
+    [200, IN + T - 200],
+    [IN + T, 0],
+    [IN + T + 1, T - 1],
+    [IN + 2 * T - 100, 100],
+    [IN + 2 * T, 0],
+  ])('đã quay %ims → chờ %ims', (elapsed, wait) => {
+    expect(otpSealDelay(elapsed)).toBe(wait);
+  });
+
+  it('OTP_MIN_SPIN_MS = vào vòng + trọn một vòng', () => {
+    expect(OTP_MIN_SPIN_MS).toBe(IN + T);
+  });
+});
+
+describe('OtpInput — đang kiểm / thành công / sai', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.motion;
+  });
+
+  /** Đổi prop mà không dựng lại cây (rerender của test-utils bỏ provider → ô bị gắn lại từ đầu). */
+  let setLive: (p: { readOnly?: boolean; status?: OtpStatus; error?: string }) => void = () => undefined;
+  function Live(initial: { readOnly?: boolean; status?: OtpStatus; error?: string }) {
+    const [p, setP] = useState(initial);
+    setLive = setP;
+    return (
+      <OtpInput
+        value={p.error ? '' : '123456'}
+        onChange={() => undefined}
+        label="Mã xác thực"
+        readOnly={p.readOnly}
+        status={p.status}
+        error={p.error}
+        onSuccessShown={() => undefined}
+      />
+    );
+  }
+
+  it('server trả lời giữa vòng thứ hai → vẫn quay tới hết vòng đó rồi mới hội tụ', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    renderWithI18n(<Live readOnly />);
+    expect(group()).toHaveClass('is-busy');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS + 300);
+    });
+    act(() => setLive({ status: 'success' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_ORBIT_MS - 300 - 1);
+    });
+    expect(group()).toHaveClass('is-busy');
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(group()).toHaveClass('is-success');
+    expect(group()).not.toHaveClass('is-busy');
+  });
+
+  it('sai mã giữa vòng → bỏ vòng ngay: ô bay về hàng (is-return) + lắc đỏ', () => {
+    renderWithI18n(<Live readOnly />);
+    expect(group()).toHaveClass('is-busy');
+    act(() => setLive({ error: 'Sai mã' }));
+    expect(group()).toHaveClass('is-error');
+    expect(group()).toHaveClass('is-return');
+    expect(group()).not.toHaveClass('is-busy');
+  });
+
+  it('lỗi không qua vòng (bấm khi thiếu số) → chỉ lắc, không có cú bay về', () => {
+    renderWithI18n(<Live error="Còn thiếu 2 số." />);
+    expect(group()).toHaveClass('is-error');
+    expect(group()).not.toHaveClass('is-return');
+  });
+
+  it('nơi gọi muốn hiệu ứng (có onSuccessShown) → hàng ô chừa chỗ cho vòng (has-ring)', () => {
+    const { unmount } = renderWithI18n(<Live />);
+    expect(group()).toHaveClass('has-ring');
+    unmount();
+    renderWithI18n(<Harness />);
+    expect(group()).not.toHaveClass('has-ring');
+  });
+
+  it('"đã xác thực" (đổi tiêu đề/nút ở nơi gọi) chỉ bật khi vòng xanh hiện, không sớm hơn', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    renderWithI18n(<SuccessHarness proceed={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_CONFIRM_AT_MS - 1);
+    });
+    expect(screen.getByTestId('confirmed')).toHaveTextContent('no');
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByTestId('confirmed')).toHaveTextContent('yes');
+  });
+
+  it('máy báo "giảm chuyển động" nhưng người dùng chọn Luôn bật → chạy đủ hiệu ứng (không giữ dấu tích tĩnh)', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
+    document.documentElement.dataset.motion = 'on';
+    vi.useFakeTimers();
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_STILL_HOLD_MS + 100);
+    });
+    expect(proceed).not.toHaveBeenCalled();
+    expect(screen.getByTestId('confirmed')).toHaveTextContent('yes');
+  });
+
+  it('status verifying → is-busy + aria-busy', () => {
+    renderWithI18n(<SuccessHarness proceed={() => undefined} status="verifying" />);
+    expect(group()).toHaveClass('is-busy');
+    expect(group()).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('có lỗi thì thôi xoay: is-error, không is-busy', () => {
+    renderWithI18n(<SuccessHarness proceed={() => undefined} status="verifying" error="Sai mã" />);
+    expect(group()).toHaveClass('is-error');
+    expect(group()).not.toHaveClass('is-busy');
+    expect(group()).not.toHaveAttribute('aria-busy');
+  });
+
+  it('thành công → xoay trọn một vòng, rồi gộp 1 ô + báo "Đã xác thực"; đi tiếp chỉ SAU khi vẽ xong dấu tích', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    // Server đã nhận mã nhưng ô vẫn xoay đủ một vòng rồi mới gộp — kẻo không ai kịp thấy.
+    expect(group()).toHaveClass('is-busy');
+    expect(group()).not.toHaveClass('is-success');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    vi.useRealTimers();
+    expect(group()).toHaveClass('is-success');
+    expect(screen.getByRole('status')).toHaveTextContent('Đã xác thực');
+    await act(async () => {});
+    expect(proceed).not.toHaveBeenCalled();
+    await act(async () => {
+      // `AnimationEvent` đang là bản giả nên dựng sự kiện gốc.
+      checkMark().dispatchEvent(new Event('animationend', { bubbles: true }));
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+
+  it('không nhận được animationend → vẫn đi tiếp nhờ hẹn giờ dự phòng (không kẹt đăng nhập)', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS + 500);
+    });
+    expect(proceed).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_SUCCESS_FALLBACK_MS);
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+
+  it('không có animation CSS (AnimationEvent) → đi tiếp ngay', async () => {
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+
+  /*
+   * "Giảm chuyển động" không chỉ do người dùng tự bật: GNOME qua phiên từ xa / máy ảo báo
+   * `EnableAnimations=false` cho Firefox, nên máy đó không bao giờ thấy xoay. Vẫn phải thấy
+   * "đang kiểm" → một ô có dấu tích đứng yên đủ lâu, chỉ bỏ phần chuyển động.
+   */
+  it('"giảm chuyển động" → vẫn qua đang kiểm rồi dấu tích (không xoay), giữ dấu tích đủ lâu mới đi tiếp', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
+    vi.useFakeTimers();
+    const proceed = vi.fn();
+    renderWithI18n(<SuccessHarness proceed={proceed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    expect(group()).toHaveClass('is-busy');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_MIN_SPIN_MS);
+    });
+    expect(group()).toHaveClass('is-success');
+    await act(async () => {
+      vi.advanceTimersByTime(OTP_STILL_HOLD_MS - 100);
+    });
+    expect(proceed).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(proceed).toHaveBeenCalledTimes(1);
+  });
+});
+
+/*
+ * Hủy / tháo giữa chừng hiệu ứng: nơi gọi KHÔNG được đi tiếp. `show()` treo trong lúc hiệu ứng
+ * chạy, và nơi gọi `await` nó rồi mới làm việc vừa được xác nhận (ghi két, mở ngăn). Hẹn giờ dự
+ * phòng mà sống sót qua lượt hủy thì việc đó chạy sau khi người dùng đã bấm Hủy.
+ */
+describe('useOtpSuccess — hủy giữa hiệu ứng', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  function Probe({ onResult }: { onResult: (shown: boolean) => void }) {
+    const otp = useOtpSuccess();
+    return (
+      <>
+        <OtpInput
+          value="123456"
+          onChange={() => undefined}
+          label="Mã xác thực"
+          status={otp.status}
+          onSuccessShown={otp.onShown}
+          onConfirmed={otp.onConfirmed}
+        />
+        <span data-testid="busy">{otp.status ?? 'idle'}</span>
+        <button type="button" onClick={() => void otp.show().then(onResult)}>
+          ok
+        </button>
+        <button type="button" onClick={otp.cancel}>
+          hủy
+        </button>
+      </>
+    );
+  }
+
+  it('xem trọn hiệu ứng → show() báo true', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const onResult = vi.fn();
+    renderWithI18n(<Probe onResult={onResult} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 500);
+    });
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(true);
+  });
+
+  it('tháo component giữa hiệu ứng → show() báo false, hẹn giờ dự phòng không còn gì để chạy', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const onResult = vi.fn();
+    const { unmount } = renderWithI18n(<Probe onResult={onResult} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS);
+    });
+    unmount();
+    await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 1000);
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('cancel() giữa hiệu ứng → show() báo false, ô về trạng thái thường', async () => {
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    const onResult = vi.fn();
+    renderWithI18n(<Probe onResult={onResult} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ok' }));
+    expect(screen.getByTestId('busy')).toHaveTextContent('success');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'hủy' }));
+      await vi.advanceTimersByTimeAsync(OTP_MIN_SPIN_MS + OTP_SUCCESS_FALLBACK_MS + 1000);
+    });
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(false);
+    expect(screen.getByTestId('busy')).toHaveTextContent('idle');
+  });
+
+  it('show() gọi SAU khi đã tháo (server trả lời muộn) → báo false ngay, không đi tiếp', async () => {
+    let late: (() => Promise<boolean>) | null = null;
+    function Late() {
+      const otp = useOtpSuccess();
+      late = otp.show;
+      return null;
+    }
+    const { unmount } = renderWithI18n(<Late />);
+    unmount();
+    await expect(late!()).resolves.toBe(false);
+  });
+});

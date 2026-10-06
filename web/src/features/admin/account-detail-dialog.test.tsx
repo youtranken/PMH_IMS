@@ -9,6 +9,9 @@ function stub(lockouts: AccountLockout[]) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith('/accounts/u-7/lockouts')) return Promise.resolve(jsonResponse(200, lockouts));
+    if (url.endsWith('/accounts/u-7/known-devices')) {
+      return Promise.resolve(jsonResponse(200, [{ id: 'k1', label: 'Chrome · Windows', firstSeenAt: '2026-09-01T02:00:00Z', lastSeenAt: '2026-10-04T02:00:00Z' }]));
+    }
     if (url.includes('/vault/access?')) return Promise.resolve(jsonResponse(200, []));
     if (url.endsWith('/break-glass/pending')) return Promise.resolve(jsonResponse(200, []));
     if (url.includes('/devices?')) return Promise.resolve(jsonResponse(200, { items: [], total: 0 }));
@@ -52,7 +55,10 @@ describe('AccountDetailDialog', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Trần Bình' });
     expect(within(dialog).getByText('binh@pmh.com.vn')).toBeInTheDocument();
     const rows = (await within(dialog).findAllByRole('row')).map((row) => row.textContent);
-    expect(rows).toEqual(['IPLần gõ saiChặn tới', '203.0.113.9829/09/2026 15:35', '192.0.2.442Chưa chặn']);
+    const lockRows = within(within(dialog).getByRole('region', { name: 'Tạm chặn đăng nhập theo IP' })).getAllByRole('row').map((row) => row.textContent);
+    void rows;
+    // X-04: thêm cột "Lần sai gần nhất".
+    expect(lockRows).toEqual(['IPLần gõ saiChặn tớiLần sai gần nhất', '203.0.113.9829/09/2026 15:3529/09/2026 14:35', '192.0.2.442Chưa chặn29/09/2026 14:00']);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gỡ tạm chặn' }));
     expect(onClearLockout).toHaveBeenCalledOnce();
   });
@@ -95,5 +101,15 @@ describe('AccountDetailDialog', () => {
     renderDialog();
     await screen.findByText('Không bị tạm chặn ở đâu.');
     expect(screen.queryByRole('link', { name: 'Quyền két sắt' })).not.toBeInTheDocument();
+  });
+
+  it('X-04: "Thiết bị đã biết" — nhãn trình duyệt + lần đầu / gần nhất, chỉ đọc', async () => {
+    stub([]);
+    renderDialog();
+    const dialog = await screen.findByRole('dialog', { name: 'Trần Bình' });
+    const known = await within(dialog).findByRole('region', { name: 'Thiết bị đã biết' });
+    expect(await within(known).findByText('Chrome · Windows')).toBeInTheDocument();
+    expect(known).toHaveTextContent('04/10/2026');
+    expect(within(known).queryByRole('button')).toBeNull();
   });
 });

@@ -13,6 +13,7 @@ import {
   resetSecrets,
   resetSoftware,
   resetUsers,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -37,7 +38,7 @@ const XLSX_MIME = 'spreadsheetml';
 /** FR-028: xuất được ở mọi bảng; FR-026 vẫn nguyên: không export nào chứa secret. */
 test.describe('Xuất Excel', () => {
   test('mọi màn danh sách đều xuất được file thật', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -98,7 +99,7 @@ test.describe('Xuất Excel', () => {
    * Quan trọng hơn: nó khẳng định KHÔNG TỒN TẠI endpoint xuất két.
    */
   test('FR-026: không đường xuất nào chứa secret, và không có đường xuất két', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -153,7 +154,7 @@ test.describe('Xuất Excel', () => {
 
   /** AC 7.2: mỗi lần xuất ghi một dòng audit — "ai kéo cả kho ra file" phải trả lời được. */
   test('mỗi lần xuất ghi một dòng audit', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const { execSync } = await import('node:child_process');
     const { COMPOSE } = await import('./helpers');
 
@@ -183,7 +184,7 @@ test.describe('Xuất Excel', () => {
   });
 
   test('xuất tôn trọng bộ lọc đang xem, không phải cả bảng', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -233,7 +234,7 @@ test.describe('Xuất Excel', () => {
   });
 
   test('Member không xuất được nhật ký break-glass', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     expect((await page.request.get('/api/v1/vault/break-glass/export.xlsx')).status()).toBe(403);
   });
 });

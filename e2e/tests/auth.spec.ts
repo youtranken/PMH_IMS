@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  fillOtp,
   E2E_MEMBER,
   NEW_PASSWORD,
   fillLogin,
@@ -37,24 +38,24 @@ test.describe('Đăng nhập', () => {
     await logout(page);
 
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
-    await page.getByLabel('Mã xác thực').fill('000000');
+    await fillOtp(page, '000000');
     await expect(page.getByRole('alert')).toContainText('không đúng');
 
     const code = await freshTotpCode(secret);
-    await page.getByLabel('Mã xác thực').fill(code);
+    await fillOtp(page, code);
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
     // Dùng LẠI đúng mã đó cho lần đăng nhập kế tiếp → phải bị chặn.
     await logout(page);
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
-    await page.getByLabel('Mã xác thực').fill(code);
+    await fillOtp(page, code);
     await expect(page.getByRole('alert')).toContainText('đã được dùng');
   });
 
   test('mật khẩu mới yếu bị từ chối, hai ô nhập lệch nhau cũng bị chặn', async ({ page }) => {
     await fillLogin(page, E2E_MEMBER.email, E2E_MEMBER.password);
     const secret = (await page.getByTestId('totp-secret').innerText()).trim();
-    await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+    await fillOtp(page, await freshTotpCode(secret));
 
     await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
     await page.getByLabel('Mật khẩu hiện tại').fill(E2E_MEMBER.password);

@@ -10,6 +10,7 @@ import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DisposalModule } from './modules/disposal/disposal.module';
+import { DiagramsModule } from './modules/diagrams/diagrams.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { OwnerAccessModule } from './common/owner-access.registry';
@@ -20,6 +21,7 @@ import { DeviceSearchModule } from './common/device-search.registry';
 import { OwnerExistsModule } from './common/owner-exists.registry';
 import { AuditObjectLabelsModule } from './common/audit-object-labels.registry';
 import { ExpiryRegistryModule } from './common/expiry/expiry-registry';
+import { MailContentRegistryModule } from './common/mail-content.registry';
 import { CatalogUsageModule } from './common/catalog-usage.registry';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
@@ -81,6 +83,7 @@ import { VaultModule } from './modules/vault/vault.module';
     ExpiryRegistryModule,
     CatalogUsageModule,
     ApprovalsRegistryModule,
+    MailContentRegistryModule,
     SystemConfigModule,
     AuditModule,
     OutboxModule,
@@ -99,6 +102,7 @@ import { VaultModule } from './modules/vault/vault.module';
     IpamModule,
     DashboardModule,
     DisposalModule,
+    DiagramsModule,
   ],
   controllers: [HealthController],
   providers: [

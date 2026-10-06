@@ -4,9 +4,11 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
+import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
+import { SubmitButton } from '@/ui/submit-button';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
@@ -171,9 +173,7 @@ export function SoftwareForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="software-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="software-form" busy={busy} succeeded={save.isSuccess} />
         </>
       }
     >
@@ -399,15 +399,14 @@ export function SoftwareForm({
               htmlFor="sw-seat"
               error={check.error('seatTotal')}
             >
-              {/* Ô chữ + `inputMode="numeric"`, KHÔNG `type="number"`: với ô số, trình duyệt
-                  trả `value` rỗng khi gõ "10 ghế" — tức lặng lẽ thành "không giới hạn", đúng cái
-                  lỗi cần chặn. Ô chữ giữ nguyên thứ người dùng gõ để `seatCheck` báo sai. */}
-              <input
+              {/* − dừng ở số máy đang dùng: thấp hơn là `seatCheck` báo lỗi, nút không nên dẫn
+                  người dùng tới đó. Ô trống (không giới hạn) vẫn gõ/xoá tay được. */}
+              <NumberStepper
                 id="sw-seat"
-                className="inp"
-                inputMode="numeric"
+                label={t('software.seatStepperNoun')}
+                min={Math.max(1, row?.seatUsed ?? 0)}
                 value={form.seatTotal}
-                onChange={(e) => set('seatTotal', e.target.value)}
+                onChange={(value) => set('seatTotal', value)}
               />
             </Field>
           ) : null}

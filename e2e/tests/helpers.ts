@@ -1,4 +1,8 @@
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, request, type Locator, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
 import { APP_TIMEZONE } from '../app-timezone';
@@ -178,7 +182,7 @@ export function setLoginRateLimit(value: number): void {
 }
 
 /**
- * Đẩy mốc step-up của mọi phiên lùi 1 giờ — giả lập "hết grace 10 phút" mà không phải chờ.
+ * Đẩy mốc step-up (cả két lẫn sơ đồ) của mọi phiên lùi 1 giờ — giả lập "hết grace 10 phút" mà không phải chờ.
  *
  * Cách khác là hạ `secret.stepup_grace_minutes` xuống 0, nhưng SystemConfigService cache 30
  * giây nên test sẽ phải ngồi chờ cache hết hạn, và grace 0 thì gõ mã xong cũng vẫn hết hạn
@@ -198,7 +202,7 @@ export function expireStepUp(email: string): void {
    * lặng lẽ quét cả DB lần nữa.
    */
   dockerExec(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour', diagram_stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
     'Hết hạn step-up',
   );
 }
@@ -366,6 +370,7 @@ const DOMAIN_ORDER = [
   'isp',
   'devices',
   'digest-rules',
+  'diagrams',
   'catalog',
 ] as const;
 
@@ -479,6 +484,11 @@ export function resetIsp(): void {
   queue('isp');
 }
 
+/** Xóa bản vẽ thử draw.io do E2E lưu (tên luôn chứa "E2E"). */
+export function resetDiagrams(): void {
+  queue('diagrams');
+}
+
 const totp = new TOTP({
   crypto: new NobleCryptoPlugin(),
   base32: new ScureBase32Plugin(),
@@ -491,24 +501,61 @@ export async function totpCode(secret: string): Promise<string> {
   return totp.generate({ secret });
 }
 
-const usedCodes = new Set<string>();
+/*
+ * Chu kỳ 30 giây đã dùng gần nhất của từng secret — ghi ra tệp chứ không chỉ giữ trong bộ nhớ:
+ * worker Playwright khởi động lại sau một bài đỏ thì bộ nhớ mất, mà server vẫn nhớ chu kỳ đã đốt.
+ * Khoá bằng băm của secret, không ghi secret ra đĩa.
+ */
+const TOTP_STEP_FILE = join(tmpdir(), 'ims-e2e-totp-steps.json');
+
+function usedSteps(): Record<string, number> {
+  try {
+    return JSON.parse(readFileSync(TOTP_STEP_FILE, 'utf8')) as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Mã CHƯA từng dùng trong lần chạy test này.
  *
- * Chống replay (NFR-01) từ chối mã đã dùng — nên hai lần đăng nhập cách nhau vài giây
- * sẽ nhận cùng một mã và lần thứ hai bị chặn ĐÚNG THEO THIẾT KẾ. Test phải chờ sang
- * chu kỳ 30 giây kế tiếp thay vì coi đó là lỗi.
+ * Chống replay (NFR-01) từ chối mọi mã có chu kỳ <= chu kỳ đã dùng. Từ khi mã đăng nhập không
+ * mở phạm vi step-up nào (AD-17), gần như mọi bài két là đăng nhập rồi nhập mã NGAY — hai mã
+ * trong cùng chu kỳ. Server nhận lệch ±30 giây, nên mã thứ hai lấy của chu kỳ KẾ TIẾP (người thật
+ * thì chờ mã mới); chỉ khi chu kỳ kế tiếp cũng đã dùng mới ngồi chờ.
  */
 export async function freshTotpCode(secret: string): Promise<string> {
-  let code = await totpCode(secret);
-  while (usedCodes.has(code)) {
+  const id = createHash('sha256').update(secret).digest('hex').slice(0, 16);
+  for (;;) {
+    const nowStep = Math.floor(Date.now() / 30_000);
+    const steps = usedSteps();
+    const step = Math.max(nowStep, (steps[id] ?? -1) + 1);
+    if (step <= nowStep + 1) {
+      steps[id] = step;
+      writeFileSync(TOTP_STEP_FILE, JSON.stringify(steps));
+      return totp.generate({ secret, epoch: step * 30 });
+    }
     const msToNextWindow = 30_000 - (Date.now() % 30_000) + 1_000;
     await new Promise((resolve) => setTimeout(resolve, msToNextWindow));
-    code = await totpCode(secret);
   }
-  usedCodes.add(code);
-  return code;
+}
+
+/**
+ * Nhập mã cho một phạm vi step-up qua API (AD-17) — cho bài kiểm cần két/tài khoản/tham số mà
+ * KHÔNG kiểm chính hộp nhập mã. Mã đăng nhập không mở phạm vi nào, nên bài nào làm việc cần mã
+ * ngay sau đăng nhập phải gọi hàm này (hoặc gõ mã vào hộp nếu đang kiểm hộp).
+ */
+export async function stepUpViaApi(
+  page: Page,
+  secret: string,
+  scope: 'vault' | 'diagram' = 'vault',
+): Promise<void> {
+  const res = await page.request.post('/api/v1/auth/step-up', {
+    headers: await writeHeaders(page),
+    data: { token: await freshTotpCode(secret), scope },
+    failOnStatusCode: false,
+  });
+  expect(res.status(), `step-up ${scope}: ${await res.text()}`).toBe(200);
 }
 
 /**
@@ -562,7 +609,7 @@ export async function firstLogin(
 
   // Đủ 6 số là màn tự gửi — KHÔNG bấm Xác nhận nữa: lúc nút kịp hiện lại thì trang đã sang
   // bước đổi mật khẩu, và cú bấm chờ một nút không còn tồn tại.
-  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+  await fillOtp(page, await freshTotpCode(secret));
 
   await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
   await page.getByLabel('Mật khẩu hiện tại').fill(user.password);
@@ -583,8 +630,40 @@ export async function loginWithTotp(
 ): Promise<void> {
   await fillLogin(page, email, password);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
-  await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
+  await fillOtp(page, await freshTotpCode(secret));
   await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
+}
+
+/**
+ * Ô mã 2 lớp (`ui/otp-input.tsx`) là 6 ô riêng trong một nhóm mang tên nhãn — `getByLabel` trỏ
+ * vào NHÓM, không `fill` được. Dùng ba hàm dưới cho mọi chỗ nhập mã (đăng nhập, cài 2 lớp,
+ * step-up), đừng tự dò từng ô ở spec.
+ */
+export function otpGroup(scope: Page | Locator, label = 'Mã xác thực'): Locator {
+  return scope.getByRole('group', { name: label });
+}
+
+/**
+ * Gõ cả mã như tự điền của điện thoại: đổ chuỗi vào ô đầu, component tự chia ra 6 ô (bỏ ký tự
+ * không phải số). Chuỗi rỗng = xoá trắng: lùi từ ô cuối bằng Backspace, như người gõ.
+ */
+export async function fillOtp(scope: Page | Locator, code: string, label?: string): Promise<void> {
+  const boxes = otpGroup(scope, label).getByRole('textbox');
+  if (code) {
+    await boxes.first().fill(code);
+    return;
+  }
+  // End đưa con trỏ tới ô trống đầu tiên; mỗi Backspace từ đó lùi một ô và xoá nó.
+  await boxes.first().press('End');
+  const keyboard = 'keyboard' in scope ? scope.keyboard : scope.page().keyboard;
+  for (let i = 0; i < 6; i += 1) await keyboard.press('Backspace');
+}
+
+/** Mã đang nằm trong 6 ô, ghép lại thành một chuỗi — dùng với `expect.poll`. */
+export async function otpValue(scope: Page | Locator, label?: string): Promise<string> {
+  return otpGroup(scope, label)
+    .getByRole('textbox')
+    .evaluateAll((nodes) => nodes.map((n) => (n as HTMLInputElement).value).join(''));
 }
 
 /**
@@ -1022,6 +1101,35 @@ export async function rowAction(
   await page.getByRole('menuitem', { name: action }).click();
 }
 
+/**
+ * Việc trong menu ⋮ của thanh mảnh màn sơ đồ (Q-18, Q-23): ngoài thanh chỉ còn tab, đường dẫn và
+ * việc chính (Phát hành / Gửi duyệt / Duyệt…, Thiết bị kho, Lưu); mọi việc khác sau nút
+ * "Thao tác với <tên bản vẽ>". Màn sơ đồ chỉ có một nút như thế.
+ */
+export async function diagramBarAction(page: Page, action: string | RegExp): Promise<void> {
+  await page.getByRole('button', { name: /^Thao tác với / }).click();
+  await page.getByRole('menuitem', { name: action }).click();
+}
+
+/**
+ * Độ lệch dọc (px) giữa tâm các phần của thanh mảnh màn sơ đồ (đường dẫn, tên, tab, nút, lời báo).
+ * Một dòng thì gần 0; xuống dòng thì lệch cả một hàng nút (~40px).
+ */
+export async function diagramBarSpread(page: Page): Promise<number> {
+  const title = page.getByRole('heading', { level: 1 });
+  await expect(title).toBeVisible();
+  return title.evaluate((h1) => {
+    const parts = Array.from(h1.parentElement?.children ?? []).flatMap((part) =>
+      getComputedStyle(part).display === 'flex' && part.tagName !== 'NAV' ? Array.from(part.children) : [part],
+    );
+    const centers = parts
+      .map((part) => part.getBoundingClientRect())
+      .filter((rect) => rect.height > 2)
+      .map((rect) => rect.top + rect.height / 2);
+    return Math.max(...centers) - Math.min(...centers);
+  });
+}
+
 /** Tên nút chính của một dòng: bắt đầu bằng việc, chứa định danh dòng ("Sửa cổng Gi1/0/2"). */
 function primaryName(subject: string | RegExp, action: string | RegExp): RegExp {
   const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1164,4 +1272,19 @@ export async function createTestSubnet(
     octet = (octet + 7) % 250;
   }
   throw new Error('không tìm được dải /29 trống cho bài kiểm');
+}
+
+/**
+ * Bấm vào khung vẽ của draw.io tại toạ độ tính từ góc trên-trái vùng vẽ (không tính thanh menu,
+ * bảng hình). DOM trong khung là của draw.io, không gắn được `data-testid`: lấy vị trí vùng vẽ
+ * bằng chính DOM của nó rồi bấm lên phần tử `<iframe>` có tên trợ năng.
+ */
+export async function clickDrawioCanvas(page: Page, x: number, y: number): Promise<void> {
+  const drawio = page.frames().find((f) => f.url().includes('/drawio/'));
+  expect(drawio, 'chưa có khung draw.io').toBeTruthy();
+  const area = await drawio!.evaluate(() => {
+    const box = (document.querySelector('.geDiagramContainer') as HTMLElement).getBoundingClientRect();
+    return { left: box.left, top: box.top };
+  });
+  await page.getByTitle('Khung vẽ draw.io').click({ position: { x: area.left + x, y: area.top + y } });
 }

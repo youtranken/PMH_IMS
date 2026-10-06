@@ -169,6 +169,58 @@
   font-size: var(--fs-md);
   font-weight: 600;
 }
+/* Vòng ô mã trên card kính tối (ui/otp-input.tsx, Q-21 mẫu "Glassy OTP"): viền cam phát sáng
+   lúc quay, xanh sáng khi mã đúng. Card rộng hơn hộp thoại nên vòng to hơn. */
+.auth-form .otp-boxes.has-ring {
+  --otp-ring-r: 50px;
+  --otp-ring-scale: 0.78;
+  --otp-seal: 44px;
+  --otp-ring-room: 30px;
+}
+.auth-form .otp-boxes.is-busy .otp-box,
+.auth-form .otp-boxes.is-success .otp-box {
+  border-color: var(--auth-otp-orbit);
+  box-shadow: var(--auth-otp-orbit-glow);
+}
+.auth-form .otp-check { border-color: var(--auth-otp-orbit); box-shadow: var(--auth-otp-orbit-glow); }
+.auth-form .otp-check::before { border-color: var(--auth-otp-ok); background: var(--auth-otp-ok-soft); }
+.auth-form .otp-check::after { border-color: var(--auth-otp-ok); box-shadow: var(--auth-otp-ok-glow); }
+.auth-form .otp-check-mark { stroke: var(--auth-otp-ok); }
+/* Nút chính khi đang kiểm: giữ màu nút + vòng quay nhỏ, không xám như nút tắt thường — mã đang
+   được xử lý, không phải "chưa bấm được". Mã đúng thì nút xanh "Đã xác thực". */
+.auth-form .btn.primary.is-busy:disabled {
+  color: var(--on-brand);
+  background: var(--primary);
+  border-color: transparent;
+  gap: var(--space-3);
+}
+.auth-form .btn.primary.is-ok,
+.auth-form .btn.primary.is-ok:disabled {
+  color: var(--on-brand);
+  background: var(--auth-otp-ok);
+  border-color: transparent;
+  box-shadow: var(--auth-otp-ok-glow);
+  gap: var(--space-3);
+  /* Chỉ nảy nhẹ, không mờ từ 0: nút biến mất một nhịp trông như form bị gỡ. */
+  animation: auth-otp-ok-pop 300ms var(--ease);
+}
+/* Mã đúng: card có quầng xanh phía sau, tiêu đề mới hiện dần. */
+.auth-card.is-verified {
+  box-shadow: var(--shadow-lg), var(--auth-card-ok-glow);
+  transition: box-shadow 400ms var(--ease);
+}
+.auth-card.is-verified .auth-title,
+.auth-card.is-verified .auth-sub { animation: auth-otp-ok-in 300ms var(--ease) both; }
+.auth-card.is-verified .auth-title { color: var(--auth-otp-ok); }
+@keyframes auth-otp-ok-pop {
+  0% { transform: scale(0.97); }
+  60% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+@keyframes auth-otp-ok-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
 /* Nút phụ trên card tối ("Quay lại"): viền kính, chữ sáng, cùng cỡ với nút chính bên trên.
    Nền mặc định của `button` là nền sáng của app — trên card tối nó thành một mảng trắng. */
 .auth-form .btn.auth-secondary {
@@ -198,13 +250,6 @@
   z-index: 1;
 }
 .auth-inp-icon .inp { width: 100%; padding-left: 40px; }
-/* Ô nhập mã TOTP — 6 số, mono, giãn chữ */
-.auth-otp {
-  font-family: var(--mono);
-  font-size: var(--fs-xl);
-  letter-spacing: 0.4em;
-  text-align: center;
-}
 .auth-error {
   color: var(--auth-danger-ink);
   background: var(--auth-danger-bg);

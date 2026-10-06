@@ -83,6 +83,14 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M20 17H4" />
     </>
   ),
+  'nav.diagrams': (
+    <>
+      {/* Hai khối nối nhau bằng một đường gấp — một bản vẽ sơ đồ. */}
+      <rect x="2" y="3" width="8" height="6" rx="1" />
+      <rect x="14" y="15" width="8" height="6" rx="1" />
+      <path d="M6 9v5a2 2 0 0 0 2 2h6" />
+    </>
+  ),
   'nav.serviceAccounts': (
     <>
       {/* Thẻ danh tính — một tài khoản có chủ, khác với "tài khoản đăng nhập IMS". */}
@@ -145,6 +153,14 @@ const ICONS: Record<string, React.ReactNode> = {
       <circle cx="16" cy="6" r="2" />
       <circle cx="10" cy="12" r="2" />
       <circle cx="18" cy="18" r="2" />
+    </>
+  ),
+  'nav.failedMail': (
+    <>
+      {/* Phong thư có dấu chấm than — thư hệ thống chưa tới được người nhận. */}
+      <rect x="2" y="5" width="16" height="13" rx="2" />
+      <path d="m2 7 8 6 8-6" />
+      <path d="M21 8v6M21 18h0" />
     </>
   ),
   'nav.disposal': (

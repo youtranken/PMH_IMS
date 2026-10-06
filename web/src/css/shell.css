@@ -33,6 +33,10 @@
   background: var(--warm);
   color: var(--ink);
 }
+.nav-badge.danger {
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+}
 
 /* Vùng cuộn riêng của danh sách mục: brand ở trên và khối tài khoản ở đáy đứng yên. Mép dưới
    có một dải mờ DÍNH đáy — còn mục khuất phía dưới thì chúng mờ dần vào đó; không còn gì thì
@@ -383,4 +387,187 @@
 }
 .nav-group-toggle[aria-expanded='true'] .nav-group-chev {
   transform: none;
+}
+
+/* Sidebar thu gọn (màn sơ đồ — `isCompactShellPath`): còn cột biểu tượng. Chữ của mục, nhãn nhóm,
+   badge, tên người dùng chỉ ẩn THỊ GIÁC (kiểu `.sr-only`) — mục vẫn giữ tên trợ năng, và
+   `title` trên mục cho người dùng chuột. */
+.sidebar.is-compact {
+  width: 64px;
+  padding: var(--space-6) var(--space-2);
+}
+.sidebar.is-compact .brand {
+  justify-content: center;
+  padding: 0 0 var(--space-5);
+}
+.sidebar.is-compact .brand > span,
+.sidebar.is-compact .nav-label,
+.sidebar.is-compact .nav-item .lbl,
+.sidebar.is-compact .nav-badge,
+.sidebar.is-compact .sb-who {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.sidebar.is-compact .nav-item {
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+.sidebar.is-compact .nav-item:hover {
+  transform: none;
+}
+.sidebar.is-compact .sb-foot {
+  padding: var(--space-2);
+}
+.sidebar.is-compact .sb-userbtn {
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+.sidebar.is-compact .sb-actions.open {
+  left: 0;
+  right: auto;
+  width: 220px;
+}
+
+/* Nội dung tràn hết phần còn lại dưới topbar 56px (màn sơ đồ): không đệm, không trần bề ngang.
+   Màn tự xếp thanh trên + khung vẽ trong khối cao đúng bằng phần màn hình còn lại. */
+.page[data-layout='full'] {
+  max-width: none;
+  padding: 0;
+  height: calc(100vh - 56px);
+  /* `dvh`: trên điện thoại thanh địa chỉ co giãn, `vh` tính theo lúc nó ẩn nên đáy khung bị che. */
+  height: calc(100dvh - 56px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Tab Sửa của bản vẽ (E-04): thanh trên cùng ẩn, trình vẽ lấy cả chiều cao. */
+.topbar[hidden] {
+  display: none;
+}
+.page[data-layout='full'][data-chrome='bare'] {
+  height: 100vh;
+  height: 100dvh;
+}
+/* Khung của màn tràn (`data-layout='full'`): MỘT thanh mảnh phía trên (tiêu đề nhỏ, tab, nút IMS,
+   trạng thái) và vùng dưới chiếm hết phần còn lại. Không cột panel cố định (Q-23). */
+.full-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.full-bar-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+.full-bar .tabs {
+  border-bottom: 0;
+}
+.full-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* Nút (i) giải thích đứng sát việc nó giải thích, không cách một khoảng như hai nút khác nhau. */
+.full-bar-actions > .info-tip {
+  margin-left: calc(-1 * var(--space-2));
+}
+.full-bar-search {
+  width: 260px;
+}
+.full-bar-status {
+  margin-left: auto;
+}
+.full-bar-status p {
+  margin: 0;
+}
+/* Dải sát dưới thanh trên (bản trình bày): khung báo `.alert` nhưng trải hết bề ngang, không bo
+   góc, không chừa lề dưới — nó là một phần của khung màn, không phải ghi chú giữa nội dung. */
+.full-band {
+  margin: 0;
+  border-radius: 0;
+  border-width: 0 0 1px;
+  padding: var(--space-2) var(--space-5);
+}
+.full-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+/* Màn laptop trở lên: thanh mảnh là MỘT dòng (Q-23) — việc phụ đã vào menu ⋮ (Q-18), nên chỗ
+   thiếu thì đường dẫn, tên bản vẽ và lời báo thuần chữ co lại cắt "…", nút không bao giờ bị cắt.
+   Hẹp hơn (điện thoại, chỉ xem) thì thanh xuống dòng như cũ — ở đó không có trình vẽ để che. */
+@media (min-width: 1024px) {
+  .full-bar {
+    flex-wrap: nowrap;
+  }
+  .full-bar .crumbs {
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .full-bar-title {
+    flex: 0 1 auto;
+    min-width: 4em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .full-bar .tabs,
+  .full-bar-actions {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+  .full-bar-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .full-bar-status > * {
+    flex: none;
+    white-space: nowrap;
+  }
+  .full-bar-status > .full-bar-note {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+/* Trình chiếu sơ đồ: phủ cả khung nhìn, đè lên shell nhưng nằm DƯỚI lớp hộp thoại — hộp nhập mã
+   khi hết ân hạn giữa chừng phải nổi lên trên trang đang chiếu. Hoạt ảnh mờ-hiện của `.page` giữ
+   trạng thái cuối nên biến `.page` thành ngữ cảnh xếp lớp riêng: còn nó thì `z-index` của khung
+   chiếu không vượt được thanh trên của shell (thanh đó đè lên tên trang đang chiếu). */
+.page:has(.slideshow) {
+  animation: none;
+}
+.slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal-backdrop) - 1);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+/* Màn sửa sơ đồ chỉ dành cho máy tính (`BREAKPOINTS.editor`): hẹp hơn thì thanh trên chỉ còn tab
+   và chế độ xem, ô chọn thiết bị không cần giữ bề ngang cố định. */
+@media (max-width: 1023px) {
+  .full-bar-search {
+    width: auto;
+  }
 }

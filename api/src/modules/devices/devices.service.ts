@@ -19,15 +19,18 @@ import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
 import {
   conflictOnUnique,
+  PG_EXCLUSION_VIOLATION,
   PG_FOREIGN_KEY_VIOLATION,
   pgConstraint,
   pgErrorCode,
   searchNormLike,
 } from '../../common/sql';
+import { rackUnitLabel } from '../../common/rack-units';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
 import { deviceHistoryTable, deviceTable } from './devices.schema';
+import { rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 import type {
   DeviceFilter,
   DeviceHistoryRecord,
@@ -53,6 +56,8 @@ export interface DeviceInput {
   warrantyEnd?: string | null;
   status?: DeviceStatus;
   note?: string | null;
+  rackUStart?: number | null;
+  rackUSize?: number | null;
 }
 
 /**
@@ -221,7 +226,9 @@ export class DevicesService {
     const values = await this.prepare(input, null);
     const warnings = await this.serialWarnings(values.serial as string | null, null);
 
+    const claim = rackClaimOf(values, null);
     const device = await this.db.transaction(async (tx) => {
+      await this.assertRackFreeWithin(tx, null, claim);
       const created = await this.insertWithin(tx, values);
       await this.recordWithin(tx, actor, created.id, 'created', {
         code: { before: null, after: created.code },
@@ -267,6 +274,9 @@ export class DevicesService {
         code: 'DEVICE_ALREADY_CHANGED',
         message: 'Hồ sơ thiết bị vừa được người khác sửa — tải lại rồi thử lại. Chưa ghi gì cả.',
       });
+      if (rackPlacementChanged(placementOf(values, before), placementOf({}, before))) {
+        await this.assertRackFreeWithin(tx, id, rackClaimOf(values, before));
+      }
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
       return updated;
@@ -360,6 +370,8 @@ export class DevicesService {
       if (status === 'retired' && options.cleanup) {
         await this.retirement.releaseAllWithin(tx, actor, id);
       }
+      // Máy thanh lý không giữ chỗ trong tủ; đưa lại vào dùng thì phải còn chỗ đó.
+      if (before.status === 'retired') await this.assertRackFreeWithin(tx, id, rackClaimOf({ status }, before));
       await this.updateWithin(tx, id, { status });
       await this.recordWithin(tx, actor, id, 'status-changed', {
         status: { before: before.status, after: status },
@@ -383,6 +395,17 @@ export class DevicesService {
       objectId: deviceId,
       detail: changes,
     });
+  }
+
+  /**
+   * Gỡ U của các máy sắp ĐỔI chỗ trong tủ, trong transaction của lượt ghi hàng loạt — pha một của
+   * dời chỗ hai pha (import): hoán đổi hai máy, hay A dời vào chỗ B mà B dời đi ở dòng sau, chỉ
+   * ghi được khi chỗ cũ đã trống trước lúc đặt chỗ mới. Nơi gọi PHẢI đặt lại U cho từng máy trong
+   * cùng transaction; không ghi lịch sử (trạng thái trung gian, không ai thấy).
+   */
+  async vacateRackWithin(tx: Tx, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await tx.update(deviceTable).set({ rackUStart: null, rackUSize: null }).where(inArray(deviceTable.id, ids));
   }
 
   /** Dùng chung cho import hàng loạt — đã có transaction bao ngoài. */
@@ -479,6 +502,8 @@ export class DevicesService {
     put('warrantyEnd', dateOnly(input.warrantyEnd, 'Bảo hành đến'));
     put('status', input.status);
     put('note', text(input.note));
+    put('rackUStart', input.rackUStart);
+    put('rackUSize', input.rackUSize);
 
     if (id === null) {
       for (const required of ['code', 'name', 'deviceTypeId'] as const) {
@@ -518,7 +543,77 @@ export class DevicesService {
       },
       current,
     );
+    await this.prepareRack(values, current);
     return values;
+  }
+
+  /**
+   * U trong tủ: bỏ tủ thì xoá U theo (máy không còn chỗ nào trong tủ nào); có U thì phải hợp lệ và
+   * không vượt chiều cao tủ (đọc `cabinet.u_height` qua catalog.api). Chỉ xét khi lượt ghi ĐỔI chỗ
+   * của máy (`rackPlacementChanged`).
+   */
+  private async prepareRack(values: Record<string, unknown>, current: typeof deviceTable.$inferSelect | null): Promise<void> {
+    const effective = effectiveOf(values);
+    const cabinetId = effective<string | null>('cabinetId', current?.cabinetId ?? null);
+    if (!cabinetId && values.rackUStart === undefined && values.rackUSize === undefined && current?.rackUStart != null) {
+      values.rackUStart = null;
+      values.rackUSize = null;
+    }
+    if (!rackPlacementChanged(placementOf(values, current), current ? placementOf({}, current) : null)) return;
+    const start = effective<number | null>('rackUStart', current?.rackUStart ?? null);
+    const size = effective<number | null>('rackUSize', current?.rackUSize ?? null);
+    if (start === null && size === null) return;
+    const cabinet = cabinetId ? (await this.catalog.cabinetsByIds([cabinetId])).get(cabinetId) : undefined;
+    const reason = rackUnitsReason({
+      start,
+      size,
+      hasCabinet: Boolean(cabinetId),
+      cabinetCode: cabinet?.code ?? null,
+      cabinetHeight: cabinet?.uHeight ?? null,
+    });
+    if (reason) throw new BadRequestException({ code: 'DEVICE_RACK_U_INVALID', message: reason });
+  }
+
+  /**
+   * Chồng U trong cùng tủ thì chặn (Q-23) — gọi TRONG transaction của lượt ghi, trước khi ghi.
+   *
+   * Khoá tư vấn theo tủ xếp hàng mọi lượt ghi vào CÙNG một tủ, nên lượt sau đọc thấy máy lượt
+   * trước vừa đặt và báo đúng tên nó. Không khoá thì hai lượt cùng thấy chỗ trống: ràng buộc
+   * `device_rack_u_no_overlap` vẫn chặn lượt sau, nhưng chỉ nói được một câu chung chung.
+   */
+  async assertRackFreeWithin(tx: Tx, deviceId: string | null, claim: RackClaim | null): Promise<void> {
+    if (!claim) return;
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`device-rack:${claim.cabinetId}`}, 0))`);
+    const others = await tx
+      .select({ code: deviceTable.code, name: deviceTable.name, start: deviceTable.rackUStart, size: deviceTable.rackUSize })
+      .from(deviceTable)
+      .where(
+        and(
+          eq(deviceTable.cabinetId, claim.cabinetId),
+          ne(deviceTable.status, 'retired'),
+          sql`${deviceTable.rackUStart} IS NOT NULL`,
+          deviceId ? ne(deviceTable.id, deviceId) : undefined,
+        ),
+      );
+    const taken = rackOverlap(
+      claim,
+      others.map((o) => ({ code: o.code, name: o.name, start: o.start!, size: o.size! })),
+    );
+    if (taken) throw rackTaken(claim, taken);
+  }
+
+  /**
+   * Loại dây của một dòng sơ đồ cổng: phải có thật, và không chọn MỚI một loại đã ngừng dùng
+   * (Q-14) — dòng VỐN mang loại đó (`current`) vẫn gửi lại nó được khi sửa ô khác.
+   */
+  async assertCableTypeChoice(next: string | null, current: string | null): Promise<void> {
+    if (!next) return;
+    await this.catalog.assertRefs({ cableTypeId: next }, { cableTypeId: current });
+  }
+
+  /** Tên loại dây theo id (kể cả loại đã ngừng dùng) — lịch sử cổng ghi TÊN, không ghi uuid. */
+  async cableTypeNames(): Promise<Map<string, string>> {
+    return new Map((await this.catalog.cableTypes()).map((c) => [c.id, c.name]));
   }
 
   /** Serial trùng chỉ CẢNH BÁO, không chặn (AC 2.2). */
@@ -668,6 +763,13 @@ export class DevicesService {
   }
 
   private translateWriteError(error: unknown): unknown {
+    // Lưới cuối của luật chồng U khi một lượt ghi đi vòng khoá theo tủ (`assertRackFreeWithin`).
+    if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION && pgConstraint(error) === 'device_rack_u_no_overlap') {
+      return new ConflictException({
+        code: 'DEVICE_RACK_U_TAKEN',
+        message: 'Chỗ U này trong tủ vừa có máy khác chiếm — tải lại rồi chọn U khác. Hai máy không chồng U trong cùng tủ.',
+      });
+    }
     // Khoá ngoại (site, tủ) `device_cabinet_same_site_fkey` là lưới cuối khi lượt dời tủ đua với lượt ghi thiết bị (BE-08).
     if (
       pgErrorCode(error) === PG_FOREIGN_KEY_VIOLATION &&
@@ -788,6 +890,26 @@ function buildWhere(filter: DeviceFilter, extraIds: string[] = []): SQL | undefi
 /** `ims_norm` là STRICT: cột NULL cho ra NULL → không khớp, đúng ý "máy chưa ghi phòng". */
 function sameText(column: SQLWrapper, value: string): SQL {
   return sql`ims_norm(btrim(${column})) = ims_norm(${value})`;
+}
+
+/** Chỗ trong tủ sau lượt ghi (giá trị gửi lên ghép với hồ sơ đang có). */
+function placementOf(
+  values: Record<string, unknown>,
+  current: { cabinetId: string | null; rackUStart: number | null; rackUSize: number | null } | null,
+): { cabinetId: string | null; start: number | null; size: number | null } {
+  const effective = effectiveOf(values);
+  return {
+    cabinetId: effective<string | null>('cabinetId', current?.cabinetId ?? null),
+    start: effective<number | null>('rackUStart', current?.rackUStart ?? null),
+    size: effective<number | null>('rackUSize', current?.rackUSize ?? null),
+  };
+}
+
+function rackTaken(claim: RackClaim, taken: { code: string; name: string }): ConflictException {
+  return new ConflictException({
+    code: 'DEVICE_RACK_U_TAKEN',
+    message: `${rackUnitLabel(claim.start, claim.size)} trong tủ đang có ${taken.code} (${taken.name}) chiếm — hai máy không chồng U trong cùng tủ.`,
+  });
 }
 
 function toRecord(row: typeof deviceTable.$inferSelect): DeviceRecord {

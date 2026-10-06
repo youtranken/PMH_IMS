@@ -40,11 +40,15 @@ import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { SettingsScreen } from '@/features/admin/settings-screen';
+import { FailedMailScreen } from '@/features/admin/failed-mail-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
+import { DiagramScreen } from '@/features/diagrams/diagram-screen';
+import { DiagramSlideshow } from '@/features/diagrams/diagram-slideshow';
+import { DiagramTreeScreen } from '@/features/diagrams/diagram-tree-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
 import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
 import { IpamScreen } from '@/features/ipam/ipam-screen';
@@ -237,6 +241,11 @@ function AppRoutes() {
         ) : (
           <Route path={PATHS.adminSettings} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminSettings]} />} />
         )}
+        {canSeeRoute(PATHS.adminFailedMail, me.role) ? (
+          <Route path={PATHS.adminFailedMail} element={<FailedMailScreen me={me} />} />
+        ) : (
+          <Route path={PATHS.adminFailedMail} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminFailedMail]} />} />
+        )}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Mọi vai: đường vào tự đổi mật khẩu / cài lại 2 lớp / đóng phiên của chính mình. */}
         <Route path={PATHS.profile} element={<ProfileScreen me={me} />} />
@@ -277,6 +286,10 @@ function AppRoutes() {
         <Route path={PATHS.ipAddresses} element={<IpamScreen me={me} />} />
         <Route path={`${PATHS.ipAddresses}/:id`} element={<IpamScreen me={me} />} />
         <Route path={PATHS.nat} element={<NatScreen me={me} />} />
+        {/* Mọi vai — Thành viên cũng vẽ (Q-23), khớp `@Roles` của `diagrams.controller.ts`. */}
+        <Route path={PATHS.diagrams} element={<DiagramTreeScreen me={me} />} />
+        <Route path={`${PATHS.diagrams}/:id`} element={<DiagramScreen me={me} />} />
+        <Route path={`${PATHS.diagrams}/:id/present`} element={<DiagramSlideshow me={me} />} />
         <Route path={PATHS.serviceAccounts} element={<ServiceAccountsScreen me={me} />} />
         <Route
           path={`${PATHS.serviceAccounts}/:id`}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -101,6 +102,30 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
       screen.queryByText('Bỏ những gì vừa nhập?'),
       'hộp trắng trơn mà vẫn hỏi thì người dùng sẽ học cách bấm "Bỏ" không đọc',
     ).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('ô chọn file xuất hiện SAU khi mở (khu ảnh tải xong): chưa gõ gì thì Esc vẫn đóng thẳng', async () => {
+    function LatePicker() {
+      const [ready, setReady] = useState(false);
+      useEffect(() => {
+        const timer = setTimeout(() => setReady(true), 10);
+        return () => clearTimeout(timer);
+      }, []);
+      return ready ? <input type="file" aria-label="Tải ảnh lên" /> : null;
+    }
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={onOpenChange} guardUnsaved title="Sửa hồ sơ">
+          <input aria-label="Mã máy" defaultValue="PC-01" />
+          <LatePicker />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    await screen.findByLabelText('Tải ảnh lên');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

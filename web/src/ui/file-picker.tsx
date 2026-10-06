@@ -1,5 +1,10 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { UploadIcon } from '@/ui/glyph-icons';
+
+/** Loé xác nhận sau khi thả tệp — khớp `fp-drop` trong shared-kit.css. */
+export const DROP_FLASH_MS = 600;
 
 /**
  * Ô chọn file dùng chung (AD-15): kéo-thả hoặc bấm chọn, hiện tên + dung lượng file đã chọn.
@@ -16,7 +21,24 @@ export function FilePicker({
   onPick,
   disabled,
   onPickFiles,
+  children,
+  className,
+  inputLabel,
+  flashKey,
 }: {
+  /**
+   * Nội dung vẽ TRONG vùng thả thay cho biểu tượng khay (vd ảnh đang dùng của ô ảnh thiết bị):
+   * cả khung hình là chỗ thả, không chỉ một dải nhỏ cạnh nút.
+   */
+  children?: ReactNode;
+  className?: string;
+  /** Tên của ô chọn với trình đọc màn hình khi chữ trên nút không đủ phân biệt (vd "— Mặt trước"). */
+  inputLabel?: string;
+  /**
+   * Đổi giá trị (khác 0) = loé xanh xác nhận như lúc thả tệp — dùng sau khi nơi gọi tải lên xong,
+   * để "đã nhận" và "đã lưu" cùng một tín hiệu và cùng luật tắt chuyển động.
+   */
+  flashKey?: number;
   /**
    * Nhận NHIỀU file một lượt (chọn hoặc thả). Có prop này thì ô cho chọn nhiều và gọi hàm này
    * thay cho `onPick` — nơi gọi tự xử lý cả lô (vd tải lên ngay từng file).
@@ -34,6 +56,20 @@ export function FilePicker({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  /*
+   * Đếm lượt vào/ra thay cho một cờ: rê tệp qua chữ hay nút bên trong vùng bắn `dragleave` của
+   * vùng ngoài dù tệp chưa rời vùng — với một cờ, vùng nhấp nháy tắt/bật theo từng chữ.
+   */
+  const depth = useRef(0);
+  const [dropped, setDropped] = useState(0);
+  useEffect(() => {
+    if (flashKey) setDropped((n) => n + 1);
+  }, [flashKey]);
+  useEffect(() => {
+    if (dropped === 0) return;
+    const timer = window.setTimeout(() => setDropped(0), DROP_FLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [dropped]);
 
   const pick = (list: FileList | null) => {
     if (onPickFiles) {
@@ -48,20 +84,33 @@ export function FilePicker({
 
   return (
     <div
-      className={`file-picker${dragging ? ' dragging' : ''}${disabled ? ' disabled' : ''}`}
+      className={`file-picker${dragging ? ' dragging' : ''}${dropped ? ' dropped' : ''}${disabled ? ' disabled' : ''}${className ? ` ${className}` : ''}`}
+      onDragEnter={(e) => {
+        if (disabled) return;
+        e.preventDefault();
+        depth.current += 1;
+        setDragging(true);
+      }}
       onDragOver={(e) => {
         if (disabled) return;
         e.preventDefault();
         setDragging(true);
       }}
-      onDragLeave={() => setDragging(false)}
+      onDragLeave={() => {
+        depth.current = Math.max(0, depth.current - 1);
+        if (depth.current === 0) setDragging(false);
+      }}
       onDrop={(e) => {
         if (disabled) return;
         e.preventDefault();
+        depth.current = 0;
         setDragging(false);
+        // Loé xác nhận "đã nhận tệp" (Q-21); khoá theo lượt để thả liền hai lần vẫn loé lại.
+        if (e.dataTransfer.files.length > 0) setDropped((n) => n + 1);
         pick(e.dataTransfer.files);
       }}
     >
+      {children ?? <UploadIcon className="file-picker-icon" />}
       <input
         ref={inputRef}
         id={inputId}
@@ -70,6 +119,7 @@ export function FilePicker({
         multiple={!!onPickFiles}
         disabled={disabled}
         className="file-picker-input"
+        aria-label={inputLabel}
         onChange={(e) => pick(e.target.files)}
       />
       <label htmlFor={inputId} className="file-picker-label">

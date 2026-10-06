@@ -33,7 +33,14 @@ const FIELD_LABEL: Record<string, string> = {
   connectedPort: 'history.devices.fConnectedPort',
   vlan: 'history.devices.fVlan',
   usedBy: 'history.devices.fUsedBy',
+  rackUStart: 'history.devices.fRackUStart',
+  rackUSize: 'history.devices.fRackUSize',
+  photoFrontFileId: 'history.devices.fPhotoFront',
+  photoBackFileId: 'history.devices.fPhotoBack',
 };
+
+/** Ảnh thật ghi theo id tệp — đọc thành "đã chọn ảnh" thay vì một chuỗi uuid. */
+const PHOTO_FIELDS = new Set(['photoFrontFileId', 'photoBackFileId']);
 
 export const ACTION_LABEL: Record<string, string> = {
   created: 'history.devices.actCreated',
@@ -44,6 +51,7 @@ export const ACTION_LABEL: Record<string, string> = {
   'port-added': 'history.devices.actPortAdded',
   'port-updated': 'history.devices.actPortUpdated',
   'port-removed': 'history.devices.actPortRemoved',
+  'photos-changed': 'history.devices.actPhotosChanged',
   /*
    * Dòng này do MÁY KHÁC sinh ra, không phải do ai sửa hồ sơ máy này: thanh lý một thiết bị
    * thì cổng bên máy còn lại bị gỡ liên kết (`port-device-retirement.ts`). Nhãn phải nói rõ
@@ -118,6 +126,7 @@ function describeChanges(changes: FieldChanges, t: TFunction): string | null {
   return describeFieldChanges(changes, t, {
     label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
     display: (field, value) => {
+      if (PHOTO_FIELDS.has(field) && value) return t('history.devices.photoChosen');
       if (field !== 'status' || value === null || value === undefined || value === '') return undefined;
       const key = STATUS_LABEL[String(value)];
       return key ? t(key) : String(value);

@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { ApprovalsApiService } from '../approvals/approvals.api';
+import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
@@ -9,8 +9,15 @@ import { MailTransportService } from './mail-transport.service';
 import { UI_PATHS } from '../../common/ui-paths';
 import { viDate } from '../../common/today';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
+import { MailContentRegistry } from '../../common/mail-content.registry';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
+
+/**
+ * Loại yêu cầu duyệt bản vẽ — chép chữ thay vì import: `mail` là tầng nền, không import được
+ * `diagrams` (AD-2, AD-18). Lệch chữ thì `mail-diagram-review.spec.ts` đỏ.
+ */
+const DIAGRAM_PUBLISH_KIND = 'diagram_publish';
 
 /**
  * Consumer outbox → email (chạy trong process worker).
@@ -46,6 +53,7 @@ export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
   'account.password.reset',
   'account.mfa.reset',
   'auth.totp.reenrolled',
+  'diagram.drift',
 ]);
 
 @Injectable()
@@ -61,6 +69,7 @@ export class MailConsumer {
     private readonly expiry: ExpiryApiService,
     private readonly approvals: ApprovalsApiService,
     private readonly approvalKinds: ApprovalKindRegistry,
+    private readonly contents: MailContentRegistry = new MailContentRegistry(),
   ) {}
 
   async handle(topic: string, outboxId: string): Promise<void> {
@@ -137,6 +146,7 @@ export class MailConsumer {
      */
     const request = await this.findApproval(approvalId);
     if (!request || request.state !== 'pending') return null;
+    if (request.kind === DIAGRAM_PUBLISH_KIND) return this.buildDiagramReviewMail(request, isReminder, at);
 
     /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
        gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
@@ -193,6 +203,10 @@ export class MailConsumer {
     state: string | undefined,
     at: (date: Date) => string,
   ) {
+    if (state === 'returned' || state === 'approved') {
+      const decided = await this.findApproval(approvalId);
+      if (decided?.kind === DIAGRAM_PUBLISH_KIND) return this.buildDiagramDecidedMail(decided, state);
+    }
     if (
       state !== 'approved' &&
       state !== 'denied' &&
@@ -291,11 +305,101 @@ export class MailConsumer {
     };
   }
 
+  /**
+   * Thư báo có bản vẽ chờ duyệt (Q-23). Cùng luật người nhận với thư mở két: Admin/SA trừ chính
+   * người gửi (không tự duyệt bản mình gửi). Nút dẫn thẳng tới bản vẽ — trang duyệt nằm trên đó.
+   */
+  private async buildDiagramReviewMail(request: ApprovalRecord, isReminder: boolean, at: (date: Date) => string) {
+    const requester = request.requester.toLowerCase();
+    const approvers = (await this.users.recipientsByRole(['sa', 'admin'])).filter((a) => a.email.toLowerCase() !== requester);
+    if (approvers.length === 0) return null;
+    const [who, subject] = await Promise.all([
+      this.personName(request.requester),
+      this.approvalKinds.describe(request.kind, request.subjectType, request.subjectId),
+    ]);
+    const name = subject?.code ?? 'không rõ tên';
+    const seq = Number(request.payload?.seq);
+    const warnings = Number(request.payload?.warnings ?? 0);
+    const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
+    const { html, text } = renderMail({
+      title: isReminder ? 'Bản vẽ vẫn chờ duyệt' : 'Có bản vẽ cần duyệt',
+      intro: isReminder
+        ? `Bản vẽ dưới đây đã chờ ${waited} phút mà chưa ai duyệt.`
+        : `${who} vừa gửi một bản vẽ sơ đồ mạng để duyệt thành bản chính thức.`,
+      rows: [
+        { label: 'Người gửi', value: `${who} (${request.requester})` },
+        { label: 'Bản vẽ', value: subject?.label ?? 'Không xác định — mở bản vẽ để xem' },
+        { label: 'Phiên bản', value: Number.isFinite(seq) ? `#${seq}` : '—' },
+        { label: 'Lý do', value: request.reason },
+        { label: 'Tự kiểm', value: warnings > 0 ? `${warnings} Cảnh báo vàng (không chặn)` : 'Không có cảnh báo' },
+        { label: 'Lúc', value: at(request.createdAt) },
+      ],
+      ctaLabel: 'Mở bản vẽ để duyệt',
+      ctaUrl: `${APP_URL()}${subject?.detailPath ?? UI_PATHS.diagram(request.subjectId)}`,
+      ctaWide: true,
+      footnote: 'Trang duyệt có tóm tắt thay đổi và cảnh báo; trả về thì ghim ghi chú ngay trên hình.',
+    });
+    const ask = `"${name}"${Number.isFinite(seq) ? ` (phiên bản #${seq})` : ''}`;
+    return {
+      to: approvers.map((r) => r.email),
+      subject: isReminder
+        ? `[IMS] Nhắc: duyệt bản vẽ ${ask} — chờ ${waited} phút`
+        : `[IMS] Duyệt bản vẽ: ${who} gửi ${ask}`,
+      html,
+      text,
+    };
+  }
+
+  /** Kết quả duyệt bản vẽ cho người gửi: thành chính thức, hoặc trả về kèm ghi chú ghim. */
+  private async buildDiagramDecidedMail(request: ApprovalRecord, state: 'approved' | 'returned') {
+    const subject = await this.approvalKinds.describe(request.kind, request.subjectType, request.subjectId);
+    const name = subject?.code ?? 'không rõ tên';
+    const rows = [
+      { label: 'Bản vẽ', value: subject?.label ?? 'Không xác định' },
+      { label: 'Người quyết', value: request.decidedBy ?? '—' },
+      ...(request.decisionNote ? [{ label: 'Ghi chú của người duyệt', value: request.decisionNote }] : []),
+    ];
+    const returned = state === 'returned';
+    const { html, text } = renderMail({
+      title: returned ? 'Bản vẽ bị trả về' : 'Bản vẽ đã được duyệt',
+      intro: returned
+        ? 'Người duyệt đã trả bản vẽ về kèm ghi chú ghim trên hình. Mở bản vẽ, xem danh sách ghim, sửa rồi gửi duyệt lại.'
+        : 'Bản vẽ của bạn đã thành bản chính thức.',
+      rows,
+      ctaLabel: 'Mở bản vẽ',
+      ctaUrl: `${APP_URL()}${subject?.detailPath ?? UI_PATHS.diagram(request.subjectId)}`,
+      ctaWide: true,
+    });
+    return {
+      to: [request.requester],
+      subject: returned ? `[IMS] Trả về: bản vẽ "${name}" cần sửa` : `[IMS] Đã duyệt: bản vẽ "${name}" thành bản chính thức`,
+      html,
+      text,
+    };
+  }
+
   private findApproval(approvalId: string) {
     return this.approvals.findOne(approvalId).catch((error: unknown) => {
       if (error instanceof NotFoundException) return null;
       throw error;
     });
+  }
+
+  /** Thư do module chủ dựng qua `MailContentRegistry`; chưa ai đăng ký topic thì như "không có mẫu". */
+  private async buildRegisteredMail(topic: string, payload: Record<string, unknown>) {
+    const builder = this.contents.find(topic);
+    const content = builder ? await builder(payload) : null;
+    if (!content || content.to.length === 0) return null;
+    const { html, text } = renderMail({
+      title: content.title,
+      intro: content.intro,
+      rows: content.rows,
+      ctaLabel: content.ctaLabel,
+      ctaUrl: `${APP_URL()}${content.ctaPath}`,
+      ctaWide: true,
+      footnote: content.footnote,
+    });
+    return { to: content.to, subject: content.subject, html, text };
   }
 
   /** Họ tên thay cho email — tiêu đề thư đọc trên màn khoá, email dài thì bị cắt mất phần tên máy. */
@@ -319,7 +423,7 @@ export class MailConsumer {
       count?: number;
       windowMinutes?: number;
       /* Thời gian nghỉ THẬT của cảnh báo dò két, đọc từ `system_config` lúc đẩy outbox. Tùy
-         chọn vì hàng outbox ghi trước 18/09/2026 không có trường này. */
+         chọn vì hàng outbox đẩy trước khi có trường này vẫn có thể còn trong hàng đợi. */
       cooldownMinutes?: number;
       /** Lá thứ hai trong thời gian nghỉ vì kẻ dò đã vượt hệ số × ngưỡng (OLD-SEC-01). */
       escalated?: boolean;
@@ -371,6 +475,12 @@ export class MailConsumer {
       if (!payload.approvalId) return null;
       return this.buildDecidedMail(payload.approvalId, payload.state, time.at);
     }
+
+    /*
+     * Lệch kho bản vẽ: người nhận (người phụ trách) và tên bản vẽ nằm trong bảng của `diagrams`,
+     * mà `mail` không import được — module chủ dựng nội dung qua sổ, outbox chỉ giữ id + số.
+     */
+    if (topic === 'diagram.drift') return this.buildRegisteredMail(topic, payload);
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
     const sa = await this.users.recipientsByRole(['sa']);
@@ -603,10 +713,12 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
         : `${viDate(item.end)} — còn ${item.daysLeft} ngày`,
   }));
 
+  // Số đứng ĐẦU cụm thì danh từ viết hoa, số giữa câu thì không (Q-24): "3 Mục sắp hết hạn",
+  // "1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn".
   const headline =
     digest.expired > 0
-      ? `${digest.expired} mục ĐÃ QUÁ HẠN, ${digest.upcoming} mục sắp hết hạn`
-      : `${digest.upcoming} mục sắp hết hạn`;
+      ? `${digest.expired} Mục ĐÃ QUÁ HẠN, ${digest.upcoming} mục sắp hết hạn`
+      : `${digest.upcoming} Mục sắp hết hạn`;
 
   const { html, text } = renderMail({
     title: `${isTest ? '[Gửi thử] ' : ''}${headline}`,

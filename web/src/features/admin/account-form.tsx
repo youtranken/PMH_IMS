@@ -4,6 +4,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field } from '@/ui/page-header';
 import { textRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
@@ -107,9 +108,7 @@ export function AccountForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="account-form" className="btn primary" disabled={busy}>
-            {busy ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="account-form" busy={busy} succeeded={create.isSuccess || update.isSuccess} />
         </>
       }
     >

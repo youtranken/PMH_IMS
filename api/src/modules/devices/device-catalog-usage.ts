@@ -6,7 +6,7 @@ import {
   countByRef,
 } from '../../common/catalog-usage.registry';
 import { DRIZZLE_DB, type Database } from '../../database/database.module';
-import { deviceTable } from './devices.schema';
+import { devicePortTable, deviceTable } from './devices.schema';
 
 /**
  * Góp số "đang dùng ở N thiết bị" cho màn Danh mục. `devices` đếm bảng của chính nó (AD-3);
@@ -37,6 +37,12 @@ export class DeviceCatalogUsage implements OnModuleInit {
       entity: 'department',
       kind: 'device',
       countFor: (refs) => countByName(this.db, deviceTable, deviceTable.department, refs),
+    });
+    // Loại dây đếm theo SỢI DÂY (dòng sơ đồ cổng), không theo máy: khoá ngoại chặn xoá theo dòng.
+    this.registry.register({
+      entity: 'cable_type',
+      kind: 'port',
+      countFor: (refs) => countByRef(this.db, devicePortTable, devicePortTable.cableTypeId, refs),
     });
   }
 }

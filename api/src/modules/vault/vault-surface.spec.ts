@@ -225,7 +225,9 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     it('không đụng tới nhãn, loại hay giá trị của secret', () => {
       // Bóc chú thích trước: bản thân đoạn giải thích ở đầu file có viết "không `label`,
       // không `kind`" — soi cả chú thích thì test đỏ vì đúng câu nói rằng nó không làm.
-      const code = stripComments(ownersService);
+      // `software.kind` là loại HỒ SƠ phần mềm (license / ssl / tên miền…) để trang tổng chia theo
+      // bốn màn của Q-22 — không phải gì của két, nên bỏ đúng chỗ đó trước khi soi.
+      const code = stripComments(ownersService).replace(/software\.kind/g, '');
       for (const forbidden of ['label', 'kind', 'value', 'plaintext', 'reveal', 'listFor']) {
         // Jest (khác Vitest) không nhận tham số thứ hai của `expect` — gắn tên vào chính
         // vòng lặp thì thông điệp lỗi vẫn chỉ đúng từ nào vi phạm.
@@ -246,6 +248,7 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
         'retired',
         'secretCount',
         'siteCode',
+        'softwareType',
       ]);
     });
 

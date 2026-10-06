@@ -126,6 +126,15 @@ describe('Màn Tham số hệ thống', () => {
     expect(screen.getByText(/Sửa lần cuối bởi cao.thuan@pmh.com.vn/)).toBeInTheDocument();
   });
 
+  it('X-02: cổng nhạy cảm của NAT và cửa sổ break-glass gần đây có nhãn tiếng Việt', async () => {
+    const extra = [
+      { name: 'natSensitivePorts', key: 'nat.sensitive_ports', group: 'ipam', type: 'int_list', min: 1, max: 65535, defaultValue: '21,22', value: '21,22', updatedAt: null, updatedBy: null },
+      { name: 'breakGlassRecentWindowDays', key: 'breakglass.recent_window_days', group: 'approval', type: 'int', unit: 'days', min: 1, max: 365, defaultValue: 30, value: 30, updatedAt: null, updatedBy: null },
+    ];
+    renderAt('/admin/settings?group=ipam', () => jsonResponse(200, [...ROWS, ...extra]));
+    expect(await screen.findByLabelText('Cổng nhạy cảm khi mở ra Internet')).toHaveValue('21,22');
+  });
+
   it('nhóm Mạng IP & NAT: nhãn tiếng Việt và đơn vị cổng', async () => {
     renderAt('/admin/settings?group=ipam');
     expect(await screen.findByLabelText('Cảnh báo luật NAT mở dải cổng rộng hơn')).toHaveValue('1000');

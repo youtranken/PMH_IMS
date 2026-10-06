@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { errorCode } from '@/lib/api';
-import { StepUpDialog } from '@/ui/step-up-dialog';
+import { ApiError } from '@/lib/api-client';
+import { StepUpCompactDialog, StepUpDialog, type StepUpScope } from '@/ui/step-up-dialog';
 
 const STEPUP_CANCELLED = 'STEPUP_CANCELLED';
 
@@ -10,6 +12,20 @@ const STEPUP_CANCELLED = 'STEPUP_CANCELLED';
  */
 export function isStepUpCancelled(error: unknown): boolean {
   return (error as Error | null)?.message === STEPUP_CANCELLED;
+}
+
+/**
+ * Phạm vi + ân hạn mà server đòi, đọc từ thân lỗi `STEPUP_REQUIRED` (AD-17). Thiếu hoặc lạ thì
+ * là két: mọi route cũ là phạm vi két, và đoán "sơ đồ" thì mã nhập ra lại mở nhầm phạm vi.
+ */
+function requiredScopeOf(error: unknown): { scope: StepUpScope; graceMinutes?: number } {
+  const body = (error instanceof ApiError ? error.body : null) as
+    | { scope?: unknown; graceMinutes?: unknown }
+    | null;
+  return {
+    scope: body?.scope === 'diagram' ? 'diagram' : 'vault',
+    graceMinutes: typeof body?.graceMinutes === 'number' ? body.graceMinutes : undefined,
+  };
 }
 
 /**
@@ -24,11 +40,12 @@ export function isStepUpCancelled(error: unknown): boolean {
  * Chép cơ chế bắt-lỗi-rồi-thử-lại ra từng chỗ là đúng thứ AD-15 cấm — các bản sao sẽ trôi
  * khỏi nhau. Nên gom vào đây.
  *
- * ===== NGUYÊN TẮC: KHÔNG TỰ ĐOÁN "CÒN TRONG GRACE HAY CHƯA" =====
+ * ===== NGUYÊN TẮC: KHÔNG TỰ ĐOÁN "CÒN TRONG GRACE HAY CHƯA", CŨNG KHÔNG ĐOÁN PHẠM VI =====
  *
- * Client không đọc được `stepped_up_at`, và đồng hồ máy người dùng có thể lệch; admin cũng có
- * thể vừa đổi `secret.stepup_grace_minutes`. Nên cứ gọi, để SERVER trả lời. Đó cũng là lý do
- * `vault-panel.tsx` được viết như vậy từ đầu — hook này giữ nguyên nếp đó.
+ * Client không đọc được mốc step-up, và đồng hồ máy người dùng có thể lệch; admin cũng có
+ * thể vừa đổi ân hạn. Nên cứ gọi, để SERVER trả lời — kể cả việc route đó đòi phạm vi nào
+ * (két hay sơ đồ, AD-17): hộp hỏi mã mở đúng phạm vi trong lỗi, và gửi lại đúng phạm vi đó.
+ * Đó cũng là lý do `vault-panel.tsx` được viết như vậy từ đầu — hook này giữ nguyên nếp đó.
  *
  * Dùng:
  *   const stepUp = useStepUpRetry(csrfToken);
@@ -48,9 +65,12 @@ export function useStepUpRetry(csrfToken: string): {
   /** Đặt vào cây JSX của màn — hộp hỏi mã chỉ hiện khi cần. */
   dialog: ReactNode;
 } {
+  const { t } = useTranslation();
   type Pending = {
     action: () => Promise<unknown>;
     purpose: string;
+    scope: StepUpScope;
+    graceMinutes?: number;
     resolve: (value: unknown) => void;
     reject: (reason: unknown) => void;
   };
@@ -92,6 +112,7 @@ export function useStepUpRetry(csrfToken: string): {
           settle({
             action: action as () => Promise<unknown>,
             purpose,
+            ...requiredScopeOf(error),
             resolve: resolve as (value: unknown) => void,
             reject,
           });
@@ -101,28 +122,49 @@ export function useStepUpRetry(csrfToken: string): {
     [settle],
   );
 
-  const dialog = pending ? (
-    <StepUpDialog
-      csrfToken={csrfToken}
-      purpose={pending.purpose}
-      onClose={() => {
-        // Đóng hộp = HỦY việc. `settle(null)` lo phần `reject` — xem chú thích ở trên.
-        settle(null);
-      }}
-      onDone={() => {
-        const current = pending;
-        // Gỡ khỏi ref TRƯỚC khi xóa state, để `settle` không reject chính lời hứa sắp thành công.
-        pendingRef.current = null;
-        setPending(null);
-        /*
-         * Thử lại ĐÚNG MỘT lần. Gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật, không
-         * phải chuyện để hỏi vòng hai — nếu không sẽ thành vòng lặp hộp thoại không thoát được
-         * (đúng cái bẫy mà `vault-panel.tsx` đã ghi lại bằng cờ `afterStepUp`).
-         */
-        current.action().then(current.resolve, current.reject);
-      }}
-    />
-  ) : null;
+  const onClose = () => {
+    // Đóng hộp = HỦY việc. `settle(null)` lo phần `reject` — xem chú thích ở trên.
+    settle(null);
+  };
+  const retry = () => {
+    if (!pending) return;
+    const current = pending;
+    // Gỡ khỏi ref TRƯỚC khi xóa state, để `settle` không reject chính lời hứa sắp thành công.
+    pendingRef.current = null;
+    setPending(null);
+    /*
+     * Thử lại ĐÚNG MỘT lần. Gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật, không
+     * phải chuyện để hỏi vòng hai — nếu không sẽ thành vòng lặp hộp thoại không thoát được
+     * (đúng cái bẫy mà `vault-panel.tsx` đã ghi lại bằng cờ `afterStepUp`).
+     */
+    current.action().then(current.resolve, current.reject);
+  };
+  /* Phạm vi sơ đồ dùng hộp NHỎ như hộp mã két (K-04); phạm vi két giữ hộp xác thực đầy đủ —
+     nó mở cả thao tác ghi két, tài khoản, tham số nên câu giải thích phạm vi còn cần. */
+  let dialog: ReactNode = null;
+  if (pending?.scope === 'diagram') {
+    dialog = (
+      <StepUpCompactDialog
+        csrfToken={csrfToken}
+        scope="diagram"
+        title={t('auth.stepUpDiagramTitle')}
+        subject={pending.purpose}
+        onClose={onClose}
+        onDone={retry}
+      />
+    );
+  } else if (pending) {
+    dialog = (
+      <StepUpDialog
+        csrfToken={csrfToken}
+        scope={pending.scope}
+        graceMinutes={pending.graceMinutes}
+        purpose={pending.purpose}
+        onClose={onClose}
+        onDone={retry}
+      />
+    );
+  }
 
   return { run, dialog };
 }

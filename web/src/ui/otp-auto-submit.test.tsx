@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { OtpInput, otpJustCompleted } from '@/ui/otp-input';
 import { StepUpDialog } from '@/ui/step-up-dialog';
-import { fireEvent, jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { fireEvent, jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 /**
  * Ô mã 6 số TỰ GỬI khi đủ 6 số (VLT-FLOW) — người duyệt trên điện thoại chép mã từ ứng dụng
@@ -41,10 +41,10 @@ describe('OtpInput onComplete', () => {
     expect(onComplete).toHaveBeenCalledWith('123456');
   });
 
-  it('dán cả mã (kèm khoảng trắng) → một lần, mã đã lọc số', () => {
+  it('tự điền cả mã (kèm khoảng trắng) vào ô đầu → một lần, mã đã lọc số', () => {
     const onComplete = vi.fn();
     renderWithI18n(<Harness onComplete={onComplete} />);
-    fireEvent.change(screen.getByLabelText('Mã xác thực'), { target: { value: '123 456' } });
+    fireEvent.change(screen.getByLabelText('Số thứ 1 trên 6'), { target: { value: '123 456' } });
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledWith('123456');
   });
@@ -70,7 +70,7 @@ describe('StepUpDialog tự gửi — không bao giờ hai lượt cho một mã
     );
     vi.stubGlobal('fetch', fetchMock);
     const onDone = vi.fn();
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={onDone} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={onDone} />);
 
     const input = screen.getByLabelText('Mã xác thực');
     await userEvent.type(input, '123456');
@@ -93,17 +93,20 @@ describe('StepUpDialog tự gửi — không bao giờ hai lượt cho một mã
       .mockResolvedValueOnce(jsonResponse(200, { graceMinutes: 10 }));
     vi.stubGlobal('fetch', fetchMock);
     const onDone = vi.fn();
-    renderWithI18n(<StepUpDialog csrfToken="csrf-1" onClose={vi.fn()} onDone={onDone} />);
+    renderWithI18n(<StepUpDialog csrfToken="csrf-1" scope="vault" onClose={vi.fn()} onDone={onDone} />);
 
     const input = screen.getByLabelText('Mã xác thực');
     await userEvent.type(input, '111111');
     expect(await screen.findByText('Mã không đúng.')).toBeInTheDocument();
-    expect(input).toHaveValue('');
+    within(input).getAllByRole('textbox').forEach((box) => expect(box).toHaveValue(''));
 
     await userEvent.type(input, '222222');
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith(10));
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse((init as RequestInit).body as string));
-    expect(bodies).toEqual([{ token: '111111' }, { token: '222222' }]);
+    expect(bodies).toEqual([
+      { token: '111111', scope: 'vault' },
+      { token: '222222', scope: 'vault' },
+    ]);
   });
 });

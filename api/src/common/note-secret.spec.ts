@@ -31,7 +31,7 @@ describe('noteContainsSecret', () => {
  * học cách viết lách luật, và mật khẩu thật lọt qua bằng đúng cách viết ấy.
  */
 describe('noteLooksLikeSecret', () => {
-  const cases: [string, string | null, boolean][] = [
+  const cases: [string | null, boolean][] = [
     // [ghi chú, bị chặn]
     ['Admin@123456', true],
     ['mật khẩu tạm P@ssw0rd!2026 đổi sau', true],

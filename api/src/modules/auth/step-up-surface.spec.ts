@@ -4,7 +4,7 @@ import { join } from 'node:path';
  * `allControllers` và `classDecoratorsOf` nằm ở `src/test/source-text.ts`: `roles-surface.spec.ts`
  * cần đúng hai hàm ấy, và chép sang là dựng bản thứ hai của cùng một bộ quét (AD-15).
  */
-import { allControllers, classDecoratorsOf } from '../../test/source-text';
+import { allControllers, classDecoratorsOf, stripComments } from '../../test/source-text';
 
 const SRC = join(__dirname, '..', '..');
 
@@ -36,7 +36,10 @@ describe('Step-up mặc định đóng (FR-022)', () => {
 
   it('MỌI controller khai lập trường step-up ở cấp lớp', () => {
     const missing = CONTROLLERS.filter(
-      (file) => !/@NoStepUp\(\)|@RequiresStepUp\(\)/.test(classDecoratorsOf(readFileSync(file, 'utf8'))),
+      (file) =>
+        !/@NoStepUp\(\)|@RequiresStepUp\((?:'vault'|'diagram')?\)/.test(
+          classDecoratorsOf(readFileSync(file, 'utf8')),
+        ),
     ).map((file) => file.slice(SRC.length + 1));
 
     expect(missing).toEqual([]);
@@ -175,5 +178,119 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     const devices = readFileSync(join(SRC, 'modules', 'devices', 'devices.controller.ts'), 'utf8');
     expect(classDecoratorsOf(devices)).toContain('@NoStepUp()');
     expect(devices).not.toContain('@RequiresStepUp()');
+  });
+
+  /**
+   * Q-23: XEM và SỬA một bản vẽ có sẵn (nội dung mọi phiên bản, danh sách phiên bản, lịch sử,
+   * lưu, đặt tên, khôi phục) đều hỏi mã phạm vi sơ đồ. Lớp `DiagramsController` mang `@NoStepUp()` (cây xem không cần mã), nên dòng khai ở
+   * từng route là thứ DUY NHẤT giữ hàng rào — gỡ một dòng là nội dung bản vẽ mở cho phiên chưa
+   * từng gõ mã.
+   */
+  it.each([
+    "@Get(':id/content')",
+    "@Get(':id/versions')",
+    "@Get(':id/versions/:versionId/changes')",
+    "@Get(':id/history')",
+    "@Post(':id/versions')",
+    "@Post(':id/versions/:versionId/label')",
+    "@Post(':id/versions/:versionId/restore')",
+    // Nhân bản chép nội dung bản chính thức sang bản mới — là một lần đọc nội dung.
+    "@Post(':id/presentations')",
+  ])('diagrams.controller %s đòi step-up phạm vi sơ đồ', (route) => {
+    const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagrams.controller.ts'), 'utf8');
+    const at = src.indexOf(route);
+    expect(at).toBeGreaterThan(-1);
+    const prevRoute = Math.max(
+      ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+        .map((m) => src.lastIndexOf(m, at - 1))
+        .filter((i) => i >= 0),
+      0,
+    );
+    expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+  });
+
+  /**
+   * Nhịp "đang mở sửa" chỉ trả tên người đang mở cùng bản vẽ — siêu dữ liệu ngang hàng với tên và
+   * trạng thái trên cây, không phải nội dung. Đòi mã ở đây thì hết ân hạn giữa lúc vẽ nhịp nhận
+   * 401 trong im lặng và người khác thôi thấy "Đang có … mở sửa" dù người này vẫn đang vẽ. Khai
+   * `@NoStepUp()` ngay trên route để lập trường này là cố ý, không phải sót.
+   */
+  it('diagrams.controller nhịp đang sửa khai rõ không đòi mã', () => {
+    const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagrams.controller.ts'), 'utf8');
+    const at = src.indexOf("@Post(':id/presence')");
+    expect(at).toBeGreaterThan(-1);
+    const prevRoute = Math.max(
+      ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+        .map((m) => src.lastIndexOf(m, at - 1))
+        .filter((i) => i >= 0),
+      0,
+    );
+    const block = src.slice(prevRoute, at);
+    expect(block).toContain('@NoStepUp()');
+    expect(block).not.toContain('@RequiresStepUp(');
+  });
+
+  /** Duyệt + bình luận ghim: trang duyệt nêu mã thiết bị, bình luận nêu id ô — cùng hàng rào. */
+  it.each([
+    "@Get(':id/review')",
+    "@Get(':id/publications')",
+    "@Post(':id/submit')",
+    "@Post(':id/review/:approvalId/withdraw')",
+    "@Post(':id/review/:approvalId/approve')",
+    "@Post(':id/review/:approvalId/return')",
+    "@Post(':id/publish')",
+    "@Post(':id/versions/:versionId/restore-official')",
+    "@Get(':id/comments')",
+    "@Post(':id/comments')",
+    "@Post(':id/comments/:commentId/resolve')",
+  ])('diagram-review.controller %s đòi step-up phạm vi sơ đồ', (route) => {
+    const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagram-review.controller.ts'), 'utf8');
+    const at = src.indexOf(route);
+    expect(at).toBeGreaterThan(-1);
+    const prevRoute = Math.max(
+      ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+        .map((m) => src.lastIndexOf(m, at - 1))
+        .filter((i) => i >= 0),
+      0,
+    );
+    expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+  });
+
+  /** Xuất PNG/PDF và so sánh phiên bản là đọc nội dung bản vẽ (FR-044, AD-17). */
+  it.each(["@Post(':id/versions/:versionId/exports')", "@Get(':id/compare')"])(
+    'diagram-export.controller %s đòi step-up phạm vi sơ đồ',
+    (route) => {
+      const src = readFileSync(join(SRC, 'modules', 'diagrams', 'diagram-export.controller.ts'), 'utf8');
+      const at = src.indexOf(route);
+      expect(at).toBeGreaterThan(-1);
+      const prevRoute = Math.max(
+        ...['@Get(', '@Post(', '@Patch(', '@Put(', '@Delete(']
+          .map((m) => src.lastIndexOf(m, at - 1))
+          .filter((i) => i >= 0),
+        0,
+      );
+      expect(src.slice(prevRoute, at)).toContain("@RequiresStepUp('diagram')");
+    },
+  );
+
+  /**
+   * AD-17/AD-18: phạm vi đi theo MODULE. Sơ đồ khai `'diagram'`; mọi chỗ khác (két, tài khoản,
+   * tham số, quyền két) giữ nghĩa két. Một route két lỡ khai `'diagram'` thì mã nhập để xem sơ
+   * đồ mở luôn cửa két — đúng đòn mà phạm vi sinh ra để chặn.
+   */
+  it('chỉ module `diagrams` khai phạm vi diagram, và nó không khai phạm vi két', () => {
+    const misplaced: string[] = [];
+    for (const file of CONTROLLERS) {
+      const src = stripComments(readFileSync(file, 'utf8'));
+      const rel = file.slice(SRC.length + 1).split('\\').join('/');
+      const inDiagrams = rel.startsWith('modules/diagrams/');
+      for (const m of src.matchAll(/@RequiresStepUp\(([^)]*)\)/g)) {
+        const scope = m[1].trim() === '' ? "'vault'" : m[1].trim();
+        if (!["'vault'", "'diagram'"].includes(scope)) misplaced.push(`${rel}: phạm vi lạ ${scope}`);
+        if (scope === "'diagram'" && !inDiagrams) misplaced.push(`${rel}: route ngoài sơ đồ khai 'diagram'`);
+        if (scope === "'vault'" && inDiagrams) misplaced.push(`${rel}: route sơ đồ khai phạm vi két`);
+      }
+    }
+    expect(misplaced).toEqual([]);
   });
 });

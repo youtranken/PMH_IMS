@@ -6,7 +6,7 @@ import i18n from '@/lib/i18n';
 import { ME_KEY } from '@/lib/api';
 import { clearSignedOut, signOutNotice } from '@/lib/after-logout';
 import type { Me } from '@/lib/me';
-import { jsonResponse, render, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, render, screen, userEvent, within } from '@/test/test-utils';
 import { TotpChallenge } from './totp-challenge';
 import { markTotpChallengeStarted, resetTotpChallengeClock } from './totp-challenge-clock';
 
@@ -63,7 +63,7 @@ describe('TotpChallenge', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Xác nhận' }));
     expect(screen.getByText('Vui lòng nhập mã xác thực.')).toBeInTheDocument();
     expect(screen.queryByText('Còn thiếu 6 số.')).toBeNull();
-    expect(screen.getByLabelText('Mã xác thực')).toHaveFocus();
+    expect(screen.getByLabelText('Số thứ 1 trên 6')).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -77,7 +77,8 @@ describe('TotpChallenge', () => {
     await userEvent.type(screen.getByLabelText('Mã xác thực'), '1234');
     await userEvent.click(button);
     expect(screen.getByText('Còn thiếu 2 số.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Mã xác thực')).toHaveFocus();
+    // Con trỏ về đúng ô còn thiếu, không về ô đầu (gõ tiếp là đè số đã có).
+    expect(screen.getByLabelText('Số thứ 5 trên 6')).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -90,14 +91,17 @@ describe('TotpChallenge', () => {
     );
     freshFromLogin();
     renderChallenge();
-    const input = screen.getByLabelText('Mã xác thực');
-    await userEvent.type(input, '123456');
+    const group = screen.getByRole('group', { name: 'Mã xác thực' });
+    await userEvent.type(group, '123456');
     const error = await screen.findByText('Mã không đúng hoặc đã hết hạn.');
     expect(error.id).toBe('otp-error');
-    expect(input.getAttribute('aria-describedby')).toContain('otp-error');
-    expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input).toHaveValue('');
-    expect(input).toHaveFocus();
+    expect(group.getAttribute('aria-describedby')).toContain('otp-error');
+    const boxes = within(group).getAllByRole('textbox');
+    boxes.forEach((box) => {
+      expect(box).toHaveAttribute('aria-invalid', 'true');
+      expect(box).toHaveValue('');
+    });
+    expect(boxes[0]).toHaveFocus();
   });
 
   it('không còn câu gợi ý dưới ô (Q-20), vẫn giữ "Không lấy được mã?" (Q-18)', () => {

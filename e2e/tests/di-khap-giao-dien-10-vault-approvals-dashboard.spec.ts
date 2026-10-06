@@ -1,5 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
+  fillOtp,
+  otpGroup,
+  otpValue,
   E2E_MEMBER,
   E2E_SA,
   SECOND_BROWSER,
@@ -17,6 +20,7 @@ import {
   rowAction,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -202,7 +206,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-KS-${stamp}`;
@@ -236,11 +240,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(table, 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
     expect(
       await toggleButtons(main),
-      'trang tổng phải có ĐÚNG bốn nút lọc loại — một cho mỗi loại chủ thể cất được secret — ' +
-        'và lúc mới vào cả bốn đều đang TẮT',
+      'trang tổng phải có ĐÚNG bảy nút lọc — ba loại chủ thể không phải phần mềm + bốn màn phần mềm ' +
+        'của Q-22 (K-01) — và lúc mới vào đều đang TẮT',
     ).toEqual([
       { toggleName: 'Thiết bị', enabled: false },
       { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tên miền & SSL', enabled: false },
+      { toggleName: 'Hợp đồng bảo trì', enabled: false },
+      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
       { toggleName: 'Tài khoản dịch vụ', enabled: false },
       { toggleName: 'Đường truyền', enabled: false },
     ]);
@@ -271,6 +278,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toEqual([
       { toggleName: 'Thiết bị', enabled: true },
       { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tên miền & SSL', enabled: false },
+      { toggleName: 'Hợp đồng bảo trì', enabled: false },
+      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
       { toggleName: 'Tài khoản dịch vụ', enabled: false },
       { toggleName: 'Đường truyền', enabled: false },
     ]);
@@ -392,7 +402,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     // Lưới là tab "Ma trận" (màn rộng); tab mặc định là "Theo người".
     await page.goto('/admin/vault-access?view=matrix');
@@ -512,7 +522,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   }) => {
     // Hai luồng đăng nhập lần đầu (SA ở đây, Member ở trình duyệt thứ hai).
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
@@ -536,7 +546,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       const asked = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: await writeHeaders(memberPage),
         data: { ownerType: 'device', ownerId: deviceId, reason, hours: 4 },
@@ -677,7 +687,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     // Hai luồng đăng nhập lần đầu đầy đủ (SA rồi Member) trong cùng một bài.
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
@@ -722,7 +732,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---- Đổi người: cùng một màn, ít khối hơn ---- */
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
     // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
@@ -777,7 +787,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    *   - Thanh đo độ khó ĐỔI TỪ CẢNH BÁO THÀNH CHẶN. Đây là thứ `docs/SHARED-REGISTRY.md` nói
    *     thẳng là không được làm: chặn cứng không làm mật khẩu cái camera mạnh lên, nó chỉ đẩy
    *     người dùng ghi mật khẩu thật vào ô "Ghi chú" — chỗ KHÔNG mã hóa.
-   *   - Hộp "Xác nhận danh tính" ĐÓNG khi gõ sai mã. Đây là hàng rào cuối trước khi lộ một bí
+   *   - Hộp nhập mã của nút Xem ĐÓNG khi gõ sai mã. Đây là hàng rào cuối trước khi lộ một bí
    *     mật; một hộp đóng nhầm ở đây là một lần lộ.
    *
    * Đi vào bằng popup của `/vault` chứ không bằng tab của trang chi tiết: đó là cửa của phòng
@@ -786,6 +796,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   test('Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, totpSecret);
 
     const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-HOP-${stamp}`;
@@ -966,39 +977,36 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .getByRole('button', { name: 'Xem' })
       .click();
     /*
-     * VLT-062: popup két đã là một hộp, nên bước gõ mã và bước hiện giá trị chạy NGAY TRONG
-     * hộp đó — không chồng thêm hộp nào. Luôn chỉ MỘT hộp đang mở.
+     * Q-24: bấm Xem mở MỘT hộp nhỏ chồng lên popup két — bước gõ mã rồi bước hiện giá trị trong
+     * CÙNG hộp nhỏ đó. Popup (danh sách ngăn) vẫn nằm sau lưng.
      */
-    const stepUp = popup.getByRole('region', { name: 'Xác nhận danh tính' });
+    const stepUp = page.getByRole('dialog', { name: 'Nhập mã 6 số để xem' });
     await expect(
       stepUp,
       'hết grace mà bấm Xem thì phải được HỎI MÃ, không phải một toast lỗi rồi bỏ mặc',
     ).toBeVisible();
-    await expect(page.getByRole('dialog'), 'bước mã nằm trong popup, không chồng hộp').toHaveCount(1);
+    // Radix đánh aria-hidden lên popup khi hộp nhỏ mở — đếm cả hai.
+    await expect(page.getByRole('dialog', { includeHidden: true }), 'hộp nhỏ chồng lên popup').toHaveCount(2);
     // Hộp nêu ĐÚNG ngăn đang mở (VLT-047) — người ta biết mình gõ mã để xem cái gì.
-    await expect(stepUp.getByText(`Nhập mã 6 số để xem "${label}".`)).toBeVisible();
+    await expect(stepUp.getByText(label, { exact: true })).toBeVisible();
 
     expect(
       await textboxLabels(stepUp),
-      'hộp xác nhận danh tính phải có ĐÚNG một ô: mã 6 số. Thêm ô nào ở đây cũng là thêm một ' +
-        'đường đi vòng qua hàng rào cuối',
-    ).toEqual(['Mã xác thực']);
-    // Không dùng `maxlength`: mã dán kèm khoảng trắng ("123 456") sẽ bị trình duyệt cắt trước khi
-    // lọc. Ô tự bỏ ký tự không phải số và cắt còn 6 — gõ 5 số để không kích hoạt tự gửi.
-    await stepUp.getByLabel('Mã xác thực').fill('12 34 5x');
-    await expect(
-      stepUp.getByLabel('Mã xác thực'),
-      'ô mã chỉ giữ chữ số ngay tại chỗ gõ',
-    ).toHaveValue('12345');
-    await stepUp.getByLabel('Mã xác thực').fill('');
-    expect(
-      await stepUp.getByRole('button').allTextContents(),
-      'bước mã phải có đúng cặp Quay lại / Xác nhận',
-    ).toEqual(['Quay lại', 'Xác nhận']);
+      'hộp nhập mã chỉ có ô mã 6 số (6 ô, mỗi ô một số). Thêm ô nào ở đây cũng là ' +
+        'thêm một đường đi vòng qua hàng rào cuối',
+    ).toEqual(Array.from({ length: 6 }, (_, i) => `Số thứ ${i + 1} trên 6`));
+    await expect(otpGroup(stepUp)).toHaveCount(1);
+    // Không dùng `maxlength`: mã dán/tự điền kèm khoảng trắng ("123 456") đổ vào MỘT ô sẽ bị trình
+    // duyệt cắt trước khi lọc. Ô tự bỏ ký tự không phải số — gõ 5 số để không kích hoạt tự gửi.
+    await fillOtp(stepUp, '12 34 5x');
+    await expect.poll(() => otpValue(stepUp), { message: 'ô mã chỉ giữ chữ số ngay tại chỗ gõ' }).toBe('12345');
+    await fillOtp(stepUp, '');
+    await expect(stepUp.getByRole('button'), 'hộp nhỏ chỉ có ✕ và Hủy — đủ 6 số là tự gửi').toHaveCount(2);
+    await expect(stepUp.getByRole('button', { name: 'Hủy', exact: true })).toHaveCount(1);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
-    await stepUp.getByLabel('Mã xác thực').fill('000000');
+    await fillOtp(stepUp, '000000');
     await expect(
       stepUp.getByRole('alert'),
       'gõ sai mã phải nói thẳng là sai mã, không phải một lỗi chung chung',
@@ -1007,33 +1015,34 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       stepUp,
       'GÕ SAI MÃ MÀ HỘP ĐÓNG LẠI LÀ MỘT LẦN LỘ BÍ MẬT — đây là hàng rào cuối, nó phải đứng nguyên',
     ).toBeVisible();
-    await expect(
-      stepUp.getByLabel('Mã xác thực'),
-      'mã TOTP chỉ sống 30 giây — giữ lại con số vừa bị từ chối chỉ dụ người ta bấm lại lần nữa',
-    ).toHaveValue('');
+    await expect
+      .poll(() => otpValue(stepUp), {
+        message: 'mã TOTP chỉ sống 30 giây — giữ lại con số vừa bị từ chối chỉ dụ người ta bấm lại lần nữa',
+      })
+      .toBe('');
     await expect(
       page.getByTestId('secret-value'),
       'chưa qua được hàng rào thì tuyệt đối chưa được thấy giá trị',
     ).toHaveCount(0);
 
-    /* ---- Gõ ĐÚNG mã: sang hộp hiện secret ---- */
+    /* ---- Gõ ĐÚNG mã: CHÍNH hộp nhỏ chuyển sang hiện giá trị ---- */
 
-    await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await expect(stepUp).toBeHidden();
+    await fillOtp(stepUp, await freshTotpCode(totpSecret));
 
-    /* ---------- HỘP "HIỆN SECRET": đủ bộ ba, và một nút ẩn ngay ---------- */
+    /* ---------- BƯỚC "HIỆN SECRET": đủ bộ ba, nút chép và một nút ẩn ngay ---------- */
 
-    const reveal = popup.getByRole('region', { name: label });
+    const reveal = page.getByRole('dialog', { name: label, exact: true });
     await expect(reveal).toBeVisible();
-    await expect(page.getByRole('dialog'), 'bước giá trị cũng nằm trong popup').toHaveCount(1);
+    await expect(stepUp, 'tiêu đề hộp đổi sang tên ngăn — không còn hộp nhập mã nào').toHaveCount(0);
+    await expect(page.getByRole('dialog', { includeHidden: true }), 'vẫn chỉ hộp nhỏ trên popup').toHaveCount(2);
     await expect(
       reveal.getByTestId('secret-value'),
       'gõ đúng mã rồi thì phải thấy đúng giá trị vừa cất',
     ).toHaveText(weakValue);
     await expect(
       reveal.getByTestId('reveal-countdown'),
-      'phải có đồng hồ "còn hiện bao lâu" — không có thì giá trị biến mất đột ngột giữa lúc đang chép',
-    ).toBeVisible();
+      'phải có vòng đếm "còn hiện bao lâu" — không có thì giá trị biến mất đột ngột giữa lúc đang chép',
+    ).toContainText(/^\d+s/);
     await expect(
       reveal.getByTestId('stepup-countdown'),
       'phải có đồng hồ thứ hai "còn mở két được bao lâu" — thiếu nó thì mở ngăn kế tiếp bị hỏi ' +
@@ -1043,10 +1052,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       reveal.getByText('Lượt xem này đã được ghi nhật ký.'),
       'người xem phải BIẾT là lượt xem này có vết — đó là nửa sức răn đe của cơ chế',
     ).toBeVisible();
-    expect(
-      await reveal.getByRole('button').allTextContents(),
-      'bước hiện giá trị chỉ có nút đổi cách hiện và "Ẩn ngay" — không nút sao chép, FR-026',
-    ).toEqual(['Hiện từng ký tự', 'Ẩn ngay']);
+    // ✕ · Hiện từng ký tự · Sao chép giá trị (chỉ chép khi bấm, Q-24) · Ẩn ngay — không gì khác.
+    await expect(reveal.getByRole('button')).toHaveCount(4);
+    for (const name of ['Hiện từng ký tự', 'Sao chép giá trị', 'Ẩn ngay']) {
+      await expect(reveal.getByRole('button', { name, exact: true })).toHaveCount(1);
+    }
 
     await reveal.getByRole('button', { name: 'Ẩn ngay' }).click();
     await expect(reveal, 'bấm "Ẩn ngay" phải giấu giá trị đi ngay lập tức').toBeHidden();
@@ -1079,7 +1089,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   test('Bên trong hộp Duyệt, hộp Từ chối và hộp gán quyền hàng loạt', async ({ page, browser }) => {
     // Hai luồng đăng nhập lần đầu (SA ở đây, Member ở trình duyệt thứ hai).
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
@@ -1098,7 +1108,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       const asked = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: await writeHeaders(memberPage),
         data: {
@@ -1295,7 +1305,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     'Esc lúc menu ô chọn đang mở chỉ đóng MENU, không đóng cả hộp thoại',
     async ({ page }) => {
       test.setTimeout(150_000);
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
       const stamp = uniqueStamp();
       const deviceCode = `PC-E2E-ESC-${stamp}`;

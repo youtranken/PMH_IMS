@@ -65,7 +65,7 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
     const link = within(nav).getByRole('link', { name: 'Duyệt mở két' });
     expect(await within(link).findByText('2')).toBeInTheDocument();
-    expect(link).toHaveAccessibleDescription('2 yêu cầu chờ duyệt');
+    expect(link).toHaveAccessibleDescription('2 Yêu cầu chờ duyệt');
   });
 
   it('không có gì chờ → không vẽ badge (số 0 không nói thêm gì)', async () => {
@@ -80,7 +80,7 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     mockCount(3);
     renderShell(ADMIN, true);
     const toggle = screen.getByRole('button', { name: 'Mở menu' });
-    await vi.waitFor(() => expect(toggle).toHaveAccessibleDescription('3 yêu cầu chờ duyệt'));
+    await vi.waitFor(() => expect(toggle).toHaveAccessibleDescription('3 Yêu cầu chờ duyệt'));
   });
 
   it('Member không duyệt → không hỏi số', () => {
@@ -120,7 +120,7 @@ describe('Badge "đã quá hạn" trên mục Sắp hết hạn', () => {
     const badge = await within(link).findByText('4');
     expect(badge).toHaveClass('nav-badge');
     expect(badge).not.toHaveClass('warn');
-    expect(link).toHaveAccessibleDescription('4 mục đã quá hạn');
+    expect(link).toHaveAccessibleDescription('4 Mục đã quá hạn');
   });
 
   it('không có gì quá hạn → không vẽ badge', async () => {

@@ -344,8 +344,10 @@ a.linkbtn.sm {
 }
 /* Transition đã tắt toàn cục (detail-tabs.css), nhưng cú trượt 2px vẫn giật khi rê qua menu. */
 @media (prefers-reduced-motion: reduce) {
-  .nav-item:hover { transform: none; }
+  html:not([data-motion='on']) .nav-item:hover { transform: none; }
 }
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .nav-item:hover { transform: none; }
 .nav-item.active {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-ink);

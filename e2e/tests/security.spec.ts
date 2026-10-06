@@ -10,9 +10,11 @@ import {
   logout,
   resetAccessList,
   resetDevices,
+  resetDiagrams,
   resetSecrets,
   resetUsers,
   sql,
+  stepUpViaApi,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -219,7 +221,7 @@ test.describe('SEC-20 · ghi chú két không lộ mật khẩu', () => {
   test('dựng lại đòn: Member cần-duyệt liệt kê két — không nhận chữ nào của ghi chú', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { deviceId, headers } = await switchWithMemberNeedsApproval(page, stamp);
     const label = `admin web E2E ${stamp}`;
@@ -266,7 +268,7 @@ test.describe('SEC-20 · ghi chú két không lộ mật khẩu', () => {
   test('đường hỏng: cất ngăn mà ghi chú là chính mật khẩu (hoặc trông như mật khẩu) bị từ chối', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const { deviceId, headers } = await switchWithMemberNeedsApproval(page, stamp);
     const value = `Sw#E2E${stamp}Core`;
@@ -305,5 +307,82 @@ test.describe('SEC-20 · ghi chú két không lộ mật khẩu', () => {
       `/api/v1/vault/secrets?ownerType=device&ownerId=${deviceId}`,
     );
     expect(await list.json()).toEqual([]);
+  });
+});
+
+/**
+ * AD-17 · step-up có phạm vi (Q-23 "nhập ở đâu tính ở đó").
+ *
+ * Đòn gốc: một mã 6 số dùng cho việc này mở luôn việc khác — mã đăng nhập mở sẵn két, hoặc mã
+ * nhập để xem sơ đồ mở luôn két. Màn sơ đồ có bài riêng (`diagrams.spec.ts`): vừa nhập mã két,
+ * mở bản vẽ vẫn hỏi mã phạm vi sơ đồ.
+ *
+ * Gọi thẳng `POST /vault/secrets` với thân rỗng: guard step-up chạy TRƯỚC kiểm dữ liệu, nên
+ * 401 nghĩa là bị chặn ở cửa mã, còn 400 nghĩa là đã qua cửa mã — không phải cất gì thật.
+ */
+test.describe('AD-17 · mã 2 lớp chỉ mở đúng phạm vi đã nhập', () => {
+  async function tryVaultWrite(page: Page) {
+    const res = await page.request.post('/api/v1/vault/secrets', {
+      headers: await writeHeaders(page),
+      data: {},
+      failOnStatusCode: false,
+    });
+    return { status: res.status(), body: (await res.json()) as Record<string, unknown> };
+  }
+
+  test('dựng lại đòn: vừa đăng nhập bằng mật khẩu + mã 2 lớp, gọi thẳng API két → 401 phạm vi két', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const res = await tryVaultWrite(page);
+    expect(res.status, 'mã đăng nhập không được mở két').toBe(401);
+    expect(res.body).toMatchObject({ code: 'STEPUP_REQUIRED', scope: 'vault' });
+  });
+
+  test('dựng lại đòn: phiên chỉ có ân hạn SƠ ĐỒ gọi thẳng API két → vẫn 401; nhập mã két thì qua', async ({
+    page,
+  }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, secret, 'diagram');
+    const blocked = await tryVaultWrite(page);
+    expect(blocked.status, 'mã nhập để xem sơ đồ không được mở két').toBe(401);
+    expect(blocked.body).toMatchObject({ code: 'STEPUP_REQUIRED', scope: 'vault' });
+
+    await stepUpViaApi(page, secret, 'vault');
+    const passed = await tryVaultWrite(page);
+    expect(passed.status, 'đã nhập mã két: qua cửa mã, dừng ở kiểm dữ liệu').toBe(400);
+  });
+
+  test('dựng lại đòn: phiên chỉ có ân hạn KÉT gọi thẳng API nội dung bản vẽ → 401 phạm vi sơ đồ; nhập mã sơ đồ thì qua', async ({
+    page,
+  }) => {
+    resetDiagrams();
+    const secret = await firstLogin(page, E2E_SA);
+    const created = await page.request.post('/api/v1/diagrams', {
+      headers: await writeHeaders(page),
+      data: { name: `E2E Đòn phạm vi ${uniqueStamp()}`, nodeType: 'other' },
+    });
+    expect(created.status()).toBe(201);
+    const { id } = (await created.json()) as { id: string };
+
+    await stepUpViaApi(page, secret, 'vault');
+    const blocked = await page.request.get(`/api/v1/diagrams/${id}/content`, { failOnStatusCode: false });
+    expect(blocked.status(), 'mã nhập cho két không được mở nội dung bản vẽ').toBe(401);
+    expect(await blocked.json()).toMatchObject({ code: 'STEPUP_REQUIRED', scope: 'diagram' });
+
+    await stepUpViaApi(page, secret, 'diagram');
+    const passed = await page.request.get(`/api/v1/diagrams/${id}/content`);
+    expect(passed.status()).toBe(200);
+  });
+
+  test('đường hỏng: gửi mã mà không nói phạm vi → 400, không mở gì', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const res = await page.request.post('/api/v1/auth/step-up', {
+      headers: await writeHeaders(page),
+      data: { token: await freshTotpCode(secret) },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(400);
+    expect((await tryVaultWrite(page)).status, 'không có phạm vi thì két vẫn đóng').toBe(401);
   });
 });

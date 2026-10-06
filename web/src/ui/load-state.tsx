@@ -9,6 +9,7 @@ import { formatDateTime } from '@/lib/format';
 import { openCommandPalette, paletteShortcut } from '@/ui/command-palette';
 import { CopyButton } from '@/ui/copy-button';
 import { useAnnounce } from '@/ui/live-region';
+import { SkeletonTable } from '@/ui/skeleton-rows';
 
 /**
  * Hợp đồng loading/empty/error dùng chung: mọi màn fetch phải PHÂN BIỆT "đang tải" ≠ "rỗng" ≠
@@ -194,7 +195,13 @@ export function DetailLoadFailed({
  *
  * `aria-busy` GIỮ LẠI trên node này: nó nói về chính vùng đang bận, không phải một lời loan báo.
  */
-export function Loading({ label }: { label?: string }) {
+export function Loading({ label, variant = 'block' }: { label?: string; variant?: 'block' | 'table' }) {
+  // `table`: màn DANH SÁCH đang chờ — vạch khung chờ có vệt sáng thay chữ, cùng lời loan báo (Q-21).
+  if (variant === 'table') return <SkeletonTable label={label} />;
+  return <LoadingBlock label={label} />;
+}
+
+function LoadingBlock({ label }: { label?: string }) {
   const { t } = useTranslation();
   const text = label ?? t('app.loading');
   useAnnounce(text);

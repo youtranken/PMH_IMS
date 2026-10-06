@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -15,12 +16,19 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Matches,
+  Max,
+  Min,
   Validate,
   ValidateIf,
 } from 'class-validator';
@@ -81,6 +89,10 @@ export class DeviceBodyDto {
   status?: DeviceStatus;
 
   @IsOptional() @IsString() @Length(0, 2000) @NoSecretText() note?: string;
+
+  // Vị trí trong tủ: `null` = bỏ U. Luật cặp / vượt tủ / chồng U ở service (`rack-units.ts`).
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'U bắt đầu phải là số nguyên.' }) @Min(1) @Max(60) rackUStart?: number | null;
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt({ message: 'Số U phải là số nguyên.' }) @Min(1) @Max(60) rackUSize?: number | null;
 }
 
 class StatusDto {
@@ -102,6 +114,9 @@ class IdParamDto {
 }
 
 
+/** Trần một lượt Nối hàng loạt — một switch lớn nhất cũng chỉ vài chục cổng. */
+const BULK_LINK_MAX = 96;
+
 export class PortBodyDto {
   @IsOptional() @IsString() @Length(1, 60) portLabel?: string;
 
@@ -118,6 +133,35 @@ export class PortBodyDto {
   @IsOptional() @IsString() @Length(0, 40) vlan?: string;
 
   @IsOptional() @IsString() @Length(0, 500) @NoSecretText() note?: string;
+
+  /** Loại dây (danh mục `cable_type`); `''` = bỏ loại dây. */
+  @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() cableTypeId?: string;
+}
+
+/** Một sợi dây giữa hai máy có hồ sơ — hộp "Khai kết nối" của sơ đồ mạng (Q-23). */
+export class LinkBodyDto {
+  @IsString() @Length(1, 60) portLabel!: string;
+  @IsUUID(undefined, { message: 'Thiết bị đầu kia không hợp lệ.' }) connectedDeviceId!: string;
+  @IsOptional() @IsString() @Length(0, 60) connectedPort?: string;
+  @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() cableTypeId?: string;
+}
+
+export class BulkLinkBodyDto {
+  @IsString() @Length(1, 60) startPort!: string;
+  @IsOptional() @IsString() @Length(0, 60) endPort?: string;
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Chưa chọn máy nào để nối.' })
+  @ArrayMaxSize(BULK_LINK_MAX, { message: `Một lượt nối tối đa ${BULK_LINK_MAX} máy.` })
+  @IsUUID(undefined, { each: true, message: 'Thiết bị đầu kia không hợp lệ.' })
+  targets!: string[];
+  @IsOptional() @IsString() @Length(0, 60) peerPort?: string;
+  @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() cableTypeId?: string;
+}
+
+class BulkPlanQueryDto {
+  @IsString() @Length(1, 60) startPort!: string;
+  @IsOptional() @IsString() @Length(0, 60) endPort?: string;
+  @Matches(/^[1-9]\d{0,2}$/, { message: 'Số máy không hợp lệ.' }) count!: string;
 }
 
 class PortParamDto extends IdParamDto {
@@ -197,6 +241,8 @@ export class DevicesController {
         siteId: query.siteId,
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
+        department: query.department,
+        assignedTo: query.assignedTo,
         // Cùng cách đọc với danh sách: file xuất khớp đúng cái đang xem (FR-028).
         status: deviceStatusQuery(query.status),
       },
@@ -319,6 +365,36 @@ export class DevicesController {
     return this.ports.listFor(params.id);
   }
 
+  /**
+   * Khai một sợi dây giữa hai máy (sơ đồ mạng — Q-23 "vẽ là khai, có hỏi"). Cổng đã có dòng
+   * trống thì nối dòng đó, nên một lượt có thể là thêm hoặc sửa dòng.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/ports/link')
+  @Audited(['device.port-added', 'device.port-updated'], 'device', { writtenByService: true })
+  linkPort(@Param() params: IdParamDto, @Body() body: LinkBodyDto, @Req() req: AuthedRequest) {
+    return this.ports.link(actor(req), params.id, body);
+  }
+
+  /** Bảng xem trước "máy → cổng" của Nối hàng loạt. Chỉ đọc. */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/ports/bulk-plan')
+  bulkPlan(@Param() params: IdParamDto, @Query() query: BulkPlanQueryDto) {
+    const count = Number(query.count);
+    if (count > BULK_LINK_MAX) {
+      throw new BadRequestException({ code: 'BULK_LINK_TOO_MANY', message: `Một lượt nối tối đa ${BULK_LINK_MAX} máy.` });
+    }
+    return this.ports.bulkPlan(params.id, { startPort: query.startPort, endPort: query.endPort, count });
+  }
+
+  /** Nối một switch với N máy trong MỘT transaction — thiếu cổng hay vướng luật thì không ghi máy nào. */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/ports/bulk-link')
+  @Audited(['device.port-added', 'device.port-updated'], 'device', { writtenByService: true })
+  bulkLink(@Param() params: IdParamDto, @Body() body: BulkLinkBodyDto, @Req() req: AuthedRequest) {
+    return this.ports.bulkLink(actor(req), params.id, body);
+  }
+
   @Roles('sa', 'admin', 'member')
   @Post(':id/ports')
   @Audited('device.port-added', 'device', { writtenByService: true })
@@ -339,6 +415,14 @@ export class DevicesController {
     @Req() req: AuthedRequest,
   ) {
     return this.ports.update(actor(req), params.id, params.portId, body);
+  }
+
+  /** Gỡ sợi dây của một dòng; dòng còn VLAN/người dùng/ghi chú thì giữ dòng, chỉ bỏ đầu kia. */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/ports/:portId/unlink')
+  @Audited(['device.port-updated', 'device.port-removed'], 'device', { writtenByService: true })
+  unlinkPort(@Param() params: PortParamDto, @Req() req: AuthedRequest) {
+    return this.ports.unlink(actor(req), params.id, params.portId);
   }
 
   @Roles('sa', 'admin', 'member')

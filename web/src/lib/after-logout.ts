@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { LOGIN_PATH } from '@/lib/me';
+import { clearAllDrafts } from '@/lib/draft-store';
 import { clearNextPath, noteTabOwner } from '@/lib/next-path';
 
 const SIGNED_OUT_KEY = 'ims_signed_out';
@@ -77,6 +78,10 @@ export function afterLogout(
     // Tab cũng thôi thuộc về người vừa ra: link trong thư mở sau đó thuộc người sắp đăng nhập.
     clearNextPath();
     noteTabOwner(null);
+    // Bản vẽ dở cất ở trình duyệt (đã mã hoá) cũng đi: người đăng nhập kế tiếp không thấy "có bản
+    // đang vẽ dở" của người trước. Phiên chết giữa chừng (401, hết thời gian nhập mã) thì GIỮ —
+    // đó chính là lúc cần khôi phục.
+    void clearAllDrafts();
     // Trên máy dùng chung người ta cần chắc phiên đã đóng.
     noteSignOutNotice('signedOut');
   } else if (reason === 'totpExpired') {

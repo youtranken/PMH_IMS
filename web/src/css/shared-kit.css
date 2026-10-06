@@ -149,6 +149,228 @@ body:has(.auth) .toast-stack {
 .fsel-trigger[aria-invalid='true'],
 .dp-trigger[aria-invalid='true'] { border-color: var(--danger); }
 
+/* Ô mã 2 lớp (ui/otp-input.tsx): lưới 6 cột bằng nhau trải hết bề ngang khung — không chặn
+   max-width, chặn thì khung rộng (hộp xác thực lại) còn chỗ trống bên phải và các ô trông dồn
+   trái. Ở 390px card đăng nhập còn ~320px nên mỗi ô vẫn ≥44px; cao 52px cho đủ vùng chạm. Màu
+   nền/viền gốc lấy từ `.inp` (và `.auth-form .inp` trên kính). */
+.otp-boxes {
+  /* Nhịp phải khớp OTP_RING_IN_MS / OTP_ORBIT_MS (ui/otp-input.tsx): JS tính mốc trọn vòng. */
+  --otp-ring-in: 350ms;
+  --otp-orbit: 1100ms;
+  --otp-gap: var(--space-3);
+  /* Vòng quanh tâm hàng ô: ô thu nhỏ khi lên vòng để 6 ô (cách nhau 60°) không chạm nhau. */
+  --otp-ring-r: 42px;
+  --otp-ring-scale: 0.7;
+  --otp-seal: 38px;
+  --otp-ring-room: 22px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--otp-gap);
+  width: 100%;
+}
+/* Nơi gọi có hiệu ứng vòng: chừa sẵn chỗ trên/dưới để vòng không đè lên nút. Chừa cố định chứ
+   không nở ra lúc quay — đổi chiều cao giữa chừng là đẩy cả form xuống. */
+.otp-boxes.has-ring { margin-block: var(--otp-ring-room); }
+.field:has(> .otp-boxes.has-ring) > .lbl-t { transition: opacity var(--dur) var(--ease); }
+.field:has(> .otp-boxes.is-busy) > .lbl-t,
+.field:has(> .otp-boxes.is-success) > .lbl-t { opacity: 0; }
+.otp-box {
+  /* Vị trí trên vòng: góc = thứ tự × 60°, từ đỉnh theo chiều kim đồng hồ. `--otp-to-centre` đưa
+     ô từ chỗ của nó trong hàng về tâm hàng (100% = bề ngang chính ô). */
+  --otp-a: calc(var(--otp-i, 0) * 60deg);
+  --otp-to-centre: translateX(calc((2.5 - var(--otp-i, 0)) * (100% + var(--otp-gap))));
+  --otp-on-ring: var(--otp-to-centre) rotate(var(--otp-a)) translateY(calc(-1 * var(--otp-ring-r)))
+    rotate(calc(-1 * var(--otp-a))) scale(var(--otp-ring-scale));
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-xl);
+  text-align: center;
+  /* Ô đã có số: chữ được chọn sẵn lúc vào ô, con trỏ nháy cạnh vùng chọn chỉ gây rối. */
+  caret-color: transparent;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    background var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+/* Ô trống đang gõ: con trỏ nháy (của trình duyệt) giữa ô báo "gõ vào đây". */
+.otp-box:not(.is-filled):focus { caret-color: var(--primary); }
+.otp-box.is-filled {
+  background: var(--primary-soft);
+  animation: otp-pop var(--dur) var(--ease);
+}
+.otp-box:focus {
+  border-color: var(--primary);
+  box-shadow: var(--otp-glow);
+  transform: translateY(-2px) scale(1.04);
+}
+.otp-boxes.is-error { animation: otp-shake 300ms var(--ease); }
+.otp-boxes.is-error .otp-box { border-color: var(--danger); background: var(--danger-soft); }
+.otp-boxes.is-error .otp-box:focus { box-shadow: var(--otp-glow-danger); }
+/* Sai mã giữa vòng: ô bay từ vòng về hàng, rồi cả hàng mới lắc. */
+.otp-boxes.is-return { animation: otp-shake 300ms var(--ease) 380ms; }
+.otp-boxes.is-return .otp-box { animation: otp-return 380ms var(--ease) both; }
+/* Đang kiểm: ô rời hàng lên vòng, rồi cả vòng quay đều theo chiều kim đồng hồ, lặp tới khi hết
+   `is-busy` (JS chỉ gỡ ở mốc trọn vòng). Vòng quay đứng SAU trong danh sách animation nên thắng
+   khi cả hai cùng chạy; lúc ô đang lên vòng thì vòng quay chưa bắt đầu (trễ đúng --otp-ring-in). */
+.otp-boxes.is-busy .otp-box {
+  border-color: var(--warm);
+  box-shadow: var(--otp-orbit-glow);
+  animation: otp-ring-in var(--otp-ring-in) var(--ease) both,
+    otp-orbit var(--otp-orbit) linear var(--otp-ring-in) infinite;
+}
+/* Mã đúng: các ô (đứng thẳng ở mốc trọn vòng) hội tụ vào tâm rồi tan vào MỘT ô. Trạng thái cuối
+   khai tĩnh (ô ẩn; ô dấu tích, vòng xanh, dấu tích hiện đủ) để khi tắt chuyển động vẫn thấy
+   đúng kết quả. */
+.otp-boxes.is-success .otp-box {
+  opacity: 0;
+  border-color: var(--warm);
+  animation: otp-converge 500ms var(--ease) both;
+}
+.otp-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--otp-seal);
+  height: var(--otp-seal);
+  /* Căn giữa bằng margin âm, để `transform` dành riêng cho chuyển động. */
+  margin: calc(var(--otp-seal) / -2) 0 0 calc(var(--otp-seal) / -2);
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--warm);
+  border-radius: var(--r);
+  animation: otp-seal-in 200ms var(--ease) 400ms both;
+}
+/* Lớp xanh phủ lên ô ấm: đổi màu bằng độ mờ của một lớp, không chuyển màu viền. */
+.otp-check::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--ok);
+  border-radius: inherit;
+  background: var(--ok-soft);
+  animation: otp-fade-in 250ms var(--ease) 650ms both;
+}
+/* Vòng xanh loang ra quanh ô rồi đứng lại mờ mờ. */
+.otp-check::after {
+  content: '';
+  position: absolute;
+  inset: -65%;
+  border: 2px solid var(--ok);
+  border-radius: 50%;
+  box-shadow: var(--otp-ok-glow);
+  opacity: 0.7;
+  animation: otp-ripple 650ms var(--ease) 650ms both;
+}
+/* Dấu tích nảy ra rồi GIỮ: nhịp giữ nằm trong chính keyframe, nên `animationend` của nó là mốc
+   duy nhất ô báo "xong" cho nơi gọi đi tiếp (ui/otp-input.tsx). */
+.otp-check-mark {
+  position: relative;
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: otp-check-pop 650ms var(--ease) 750ms both;
+}
+/* Card đăng nhập luôn tối: đổi sang bộ --auth-otp-* (xem tokens.css; phần vòng ở auth.css). */
+.auth-form .otp-box:not(.is-filled):focus { caret-color: var(--auth-otp-focus); }
+.auth-form .otp-box.is-filled { background: var(--auth-otp-filled); }
+.auth-form .otp-box:focus { border-color: var(--auth-otp-focus); box-shadow: var(--auth-otp-glow); }
+.auth-form .otp-boxes.is-error .otp-box { border-color: var(--auth-danger-border); background: var(--auth-danger-bg); }
+@keyframes otp-pop {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes otp-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+@keyframes otp-ring-in {
+  from { transform: none; }
+  to { transform: var(--otp-on-ring); }
+}
+/* Cả vòng quay như một khối cứng: góc vị trí tăng 360° còn góc tự quay của ô giữ −góc gốc, nên ô
+   nghiêng theo vòng (chữ số xoay theo), đúng mẫu. Hai đầu cùng một dãy hàm để trình duyệt nội
+   suy từng hàm — góc đi trọn 360° chứ không gộp thành ma trận (ma trận đầu = cuối, ô đứng yên). */
+@keyframes otp-orbit {
+  from {
+    transform: var(--otp-to-centre) rotate(var(--otp-a)) translateY(calc(-1 * var(--otp-ring-r)))
+      rotate(calc(-1 * var(--otp-a))) scale(var(--otp-ring-scale));
+  }
+  to {
+    transform: var(--otp-to-centre) rotate(calc(var(--otp-a) + 360deg)) translateY(calc(-1 * var(--otp-ring-r)))
+      rotate(calc(-1 * var(--otp-a))) scale(var(--otp-ring-scale));
+  }
+}
+@keyframes otp-converge {
+  0% { opacity: 1; transform: var(--otp-on-ring); }
+  70% {
+    opacity: 1;
+    transform: var(--otp-to-centre) rotate(var(--otp-a)) translateY(0) rotate(calc(-1 * var(--otp-a)))
+      scale(var(--otp-ring-scale));
+  }
+  100% {
+    opacity: 0;
+    transform: var(--otp-to-centre) rotate(var(--otp-a)) translateY(0) rotate(calc(-1 * var(--otp-a)))
+      scale(var(--otp-ring-scale));
+  }
+}
+@keyframes otp-return {
+  from { opacity: 0.4; transform: var(--otp-on-ring); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes otp-seal-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes otp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes otp-ripple {
+  0% { opacity: 0; transform: scale(0.45); }
+  35% { opacity: 1; }
+  100% { opacity: 0.7; transform: scale(1); }
+}
+@keyframes otp-check-pop {
+  0% { opacity: 0; transform: scale(0.3); }
+  25% { opacity: 1; transform: scale(1.15); }
+  40%, 100% { opacity: 1; transform: scale(1); }
+}
+/* `!important`: các luật bật animation ở trên có class trạng thái nên ưu tiên cao hơn. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='on']) .otp-boxes,
+  html:not([data-motion='on']) .otp-box,
+  html:not([data-motion='on']) .otp-check,
+  html:not([data-motion='on']) .otp-check::before,
+  html:not([data-motion='on']) .otp-check::after,
+  html:not([data-motion='on']) .otp-check-mark {
+    animation: none !important;
+    transition: none !important;
+  }
+  html:not([data-motion='on']) .otp-box:focus { transform: none; }
+  /* Không lên vòng nhưng vẫn phải thấy "đang kiểm" trong nhịp chờ (ui/otp-input.tsx giữ đủ một vòng). */
+  html:not([data-motion='on']) .otp-boxes.is-busy .otp-box { opacity: 0.55; }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .otp-boxes,
+html[data-motion='off'] .otp-box,
+html[data-motion='off'] .otp-check,
+html[data-motion='off'] .otp-check::before,
+html[data-motion='off'] .otp-check::after,
+html[data-motion='off'] .otp-check-mark {
+  animation: none !important;
+  transition: none !important;
+}
+html[data-motion='off'] .otp-box:focus { transform: none; }
+html[data-motion='off'] .otp-boxes.is-busy .otp-box { opacity: 0.55; }
+
 /* Ô có đơn vị cố định bên phải (ui/money-input.tsx): đơn vị nằm TRONG khung ô cho gọn, nhưng
    ngoài chữ của ô để giá trị không lẫn đơn vị. */
 .input-affix { position: relative; display: block; }
@@ -265,7 +487,7 @@ body:has(.auth) .toast-stack {
   border: 1px dashed var(--border-2);
   border-radius: var(--r);
   background: var(--surface-2);
-  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), transform var(--dur) var(--ease);
 }
 .file-picker.dragging {
   border-color: var(--primary);
@@ -345,6 +567,197 @@ body:has(.auth) .toast-stack {
 .form-section .file-picker-file {
   flex-basis: 100%;
 }
+
+/* --- Ô ảnh hai mặt của thiết bị (ui/device-photo-slots.tsx) --------------- */
+/* Mỗi mặt là một thẻ có khung hình cao cố định: người dùng phải NHÌN THẤY đây là chỗ đặt ảnh,
+   kể cả khi chưa có ảnh (biểu tượng loại phóng to trên nền nhạt). Hai mặt cạnh nhau trên
+   desktop, tự xếp chồng khi hẹp (auto-fit) — không cần media query riêng cho 390px. */
+.photo-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
+}
+.photo-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.photo-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+.photo-slot-level {
+  white-space: normal;
+}
+.photo-slot-level.own,
+.photo-slot-level.draft {
+  color: var(--primary-ink);
+  background: var(--primary-soft);
+}
+.photo-slot-level.model {
+  color: var(--info);
+  background: var(--info-soft);
+}
+.photo-slot-level.icon,
+.photo-slot-level.unset {
+  color: var(--muted);
+  background: var(--muted-soft);
+}
+/* Vùng thả trong `.form-section` bị ép thành một hàng (khu Giấy tờ) — ô ảnh luôn là khối dọc. */
+.photo-slots .photo-slot-drop.file-picker {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.photo-slots .photo-slot-drop .file-picker-label {
+  align-self: center;
+}
+.photo-slot-drop .file-picker-hint {
+  text-align: center;
+}
+.photo-slot-frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  border-radius: var(--r);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.photo-slot-drop .photo-slot-frame {
+  background: var(--surface);
+}
+/* Có ảnh: khung cao theo ảnh, ảnh rộng hết khung — ảnh máy 1U (~11 : 1) là một dải rộng và thấp
+   thay vì một vạch giữa khung cao 160px. Ảnh dọc vẫn bị chặn trần để ô không dài vô hạn. */
+.photo-slot-frame.has-img {
+  height: auto;
+  min-height: 2.5rem;
+  padding: var(--space-2);
+}
+.photo-slot-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.photo-slot-frame.has-img .photo-slot-img {
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+}
+.photo-slot-misfit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--warn);
+}
+.photo-slot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-3);
+}
+.photo-slot-type-glyph {
+  display: inline-flex;
+  font-size: 64px;
+}
+.photo-slot-type-icon {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.photo-slot-type-name {
+  color: var(--ink-2);
+  font-weight: var(--fw-semibold);
+}
+/* Báo "đang tải" là viên nổi trên khung, không phủ mờ: không cần màu trong suốt riêng. */
+.photo-slot-busy {
+  position: absolute;
+  bottom: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--fs-sm);
+}
+.photo-slot-remove {
+  align-self: flex-start;
+}
+/* Ảnh chung của model đổi hình cả loạt máy: tách khỏi việc của riêng máy bằng một vạch. */
+.photo-slot-model {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-2);
+}
+.photo-slot-model p {
+  margin: 0;
+}
+.photo-slot-model {
+  position: relative;
+}
+/* Ô chọn thật bị giấu (giữ trong cây a11y); Tab tới nó thì vòng tiêu điểm vẽ lên nút nhìn thấy. */
+.photo-slot-model .btn:has(+ .file-picker-input:focus-visible) {
+  box-shadow: var(--ring);
+}
+
+/* --- Hộp cắt ảnh thiết bị (ui/image-crop-dialog.tsx) ---------------------- */
+/* Ảnh co theo bề rộng hộp; khung cắt đặt theo % nên không phải tính lại khi hộp đổi cỡ. Phần
+   ngoài khung tối đi bằng một bóng đổ rất rộng của chính khung — không cần thêm lớp phủ. */
+.crop-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r);
+  background: var(--surface-2);
+  touch-action: none;
+  user-select: none;
+}
+.crop-stage-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.crop-box {
+  position: absolute;
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 0 9999px var(--scrim);
+  cursor: move;
+}
+.crop-box:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 9999px var(--scrim), var(--ring);
+}
+.crop-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+}
+.crop-handle.nw { left: -8px; top: -8px; cursor: nwse-resize; }
+.crop-handle.ne { right: -8px; top: -8px; cursor: nesw-resize; }
+.crop-handle.sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.crop-handle.se { right: -8px; bottom: -8px; cursor: nwse-resize; }
 
 /* --- Ô nhập nhiều port dạng chip (features/ipam/port-chips-field.tsx) ----- */
 .port-chips {
@@ -632,8 +1045,10 @@ table.table tbody tr.row-muted td {
 /* Ô nào cũng bấm được: nhấc 1px + bóng để mời bấm. */
 .kpi:hover { border-color: var(--primary); box-shadow: var(--shadow); transform: translateY(-1px); }
 @media (prefers-reduced-motion: reduce) {
-  .kpi:hover { transform: none; }
+  html:not([data-motion='on']) .kpi:hover { transform: none; }
 }
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .kpi:hover { transform: none; }
 .kpi:focus-visible { outline: none; box-shadow: var(--ring); }
 /* Ô lọc ĐANG BẬT. Không chỉ đổi màu: viền dày lên và nền đổi, để người không phân biệt được
    màu vẫn thấy ô nào đang bật (WCAG 1.4.1 — đừng nói bằng mỗi màu). */
@@ -1548,8 +1963,10 @@ table.access-grid thead tr:last-child th {
 /* Nhấp nháy là hiệu ứng dễ gây khó chịu (và với vài người là nguy hiểm) — ai đã bật
    "giảm chuyển động" thì giữ màu đỏ, bỏ nhịp nháy. Màu vẫn nói đủ điều cần nói. */
 @media (prefers-reduced-motion: reduce) {
-  .countdown-num.urgent { animation: none; }
+  html:not([data-motion='on']) .countdown-num.urgent { animation: none; }
 }
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .countdown-num.urgent { animation: none; }
 
 .secret-value {
   margin: 0;
@@ -1591,21 +2008,6 @@ table.access-grid thead tr:last-child th {
   color: var(--ink-3);
 }
 .reveal-username { margin: 0; }
-/* Thanh mỏng "còn hiện bao lâu" — màu theo cùng `countdownTone` với con số. */
-.reveal-progress {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border-2);
-  overflow: hidden;
-}
-.reveal-progress > span {
-  display: block;
-  height: 100%;
-  background: var(--ok);
-  transition: width 0.25s linear;
-}
-.reveal-progress > span.warn { background: var(--warn); }
-.reveal-progress > span.urgent { background: var(--danger); }
 /* Ô giá trị của két + nút Hiện/Ẩn + Tạo ngẫu nhiên trên một hàng. */
 .secret-input {
   display: flex;
@@ -1721,11 +2123,17 @@ table.access-grid thead tr:last-child th {
 }
 /* Người đặt "giảm chuyển động" vẫn cần biết là ĐANG TẢI — giữ dấu hiệu, bỏ xoay. */
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
+  html:not([data-motion='on']) .spinner {
     animation: none;
     border-right-color: currentColor;
     opacity: 0.5;
   }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .spinner {
+  animation: none;
+  border-right-color: currentColor;
+  opacity: 0.5;
 }
 .empty {
   display: flex;
@@ -1761,6 +2169,38 @@ table.access-grid thead tr:last-child th {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-4);
+}
+/* Danh sách bước đánh số (ui/step-list.tsx): số tròn vẽ bằng counter để không lọt vào chữ bước. */
+.step-list {
+  counter-reset: step;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+}
+.step-list li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.step-list li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xs);
 }
 .error-state {
   min-height: 60vh;
@@ -2034,3 +2474,216 @@ table.access-grid thead tr:last-child th {
   .settings-nav ul { flex-direction: row; overflow-x: auto; }
   .settings-nav button { width: auto; }
 }
+
+/* --- Vi chuyển động dùng chung (Q-21) -----------------------------------------------------
+   Chỉ `transform` / `opacity`: hai thuộc tính trình duyệt dựng thẳng trên GPU, không bắt cả
+   trang tính lại bố cục mỗi khung hình. Thời lượng theo `--dur*`. Mọi animation ở đây có luật
+   tắt riêng ở cuối khối (theo `data-motion`, như ô mã 2 lớp) ngoài luật tắt chung của
+   detail-tabs.css — để trạng thái CUỐI vẫn đúng khi không có chuyển động. */
+
+/* Nút Lưu vừa lưu xong (ui/submit-button.tsx): một lớp xanh có dấu tích phủ lên nút rồi tan.
+   Phủ bằng lớp riêng chứ không đổi `background` của nút: chữ "Lưu" vẫn nằm dưới, nút không
+   đổi bề ngang, và chuyển động chỉ là độ mờ của lớp phủ. */
+.submit-btn { position: relative; }
+.submit-btn[data-done='true'] .submit-label { opacity: 0; }
+.submit-check {
+  position: absolute;
+  inset: -1px;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: var(--ok);
+  color: var(--on-accent);
+  font-size: 1.15em;
+  pointer-events: none;
+  animation: submit-done 700ms var(--ease) both;
+}
+.submit-check .glyph { animation: otp-check-pop 450ms var(--ease) both; }
+@keyframes submit-done {
+  0% { opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Duyệt / phát hành thành công (ui/success-burst.tsx): ô xanh giữa màn, vòng loang, dấu tích —
+   dùng lại `otp-seal-in` / `otp-ripple` / `otp-check-pop` của ô mã 2 lớp. Tổng nhịp khớp
+   SUCCESS_BURST_MS. Không bắt chuột: người dùng làm tiếp được ngay. */
+.success-burst {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  animation: burst-out 250ms var(--ease) 850ms both;
+}
+.success-burst-seal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--ok);
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 34px;
+  box-shadow: var(--shadow-pop);
+  animation: otp-seal-in 200ms var(--ease) both;
+}
+.success-burst-seal::after {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  border: 2px solid var(--ok);
+  border-radius: 50%;
+  box-shadow: var(--otp-ok-glow);
+  opacity: 0;
+  animation: otp-ripple 650ms var(--ease) 120ms both;
+}
+.success-burst-mark { animation: otp-check-pop 650ms var(--ease) 150ms both; }
+@keyframes burst-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Hộp thoại (ui/dialog.tsx): mở thì mờ dần vào + nhích lên; đóng thì ngược lại rồi mới gỡ.
+   `backwards`, KHÔNG `both`: hộp không được giữ `transform` sau khi mở xong — transform biến
+   hộp thành khung chứa của popover `position: fixed` (ô ngày, combobox) và cắt chúng
+   (xem `.sheet` ở form-layout.css). Lớp canh giữa chỉ "giữ nhịp" lúc đóng (độ mờ 1 → 1) để
+   Presence của Radix chờ hộp con chạy xong hiệu ứng đóng rồi mới gỡ cả cụm. */
+.dialog-viewport > [data-state='open'] { animation: dialog-in var(--dur) var(--ease) backwards; }
+.dialog-viewport[data-state='closed'] {
+  pointer-events: none;
+  animation: dialog-hold var(--dur-fast) linear forwards;
+}
+.dialog-viewport > [data-state='closed'] { animation: dialog-out var(--dur-fast) var(--ease) forwards; }
+.modal-backdrop[data-state='closed'] {
+  pointer-events: none;
+  animation: dialog-fade-out var(--dur-fast) var(--ease) forwards;
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+@keyframes dialog-out {
+  to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+@keyframes dialog-hold {
+  from { opacity: 1; }
+  to { opacity: 1; }
+}
+@keyframes dialog-fade-out {
+  to { opacity: 0; }
+}
+
+/* Tab (ui/tabs.tsx): vạch dưới là MỘT phần tử trượt giữa các tab. Rộng 1px, `scaleX` theo bề
+   ngang tab do JS đo; đứng trong khung cuộn của `.tabs` nên cuộn theo tab. Có vạch thì gạch
+   chân riêng của tab đang chọn ẩn đi (không vẽ hai vạch chồng). */
+.tab-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--primary);
+  transform-origin: 0 0;
+  pointer-events: none;
+  transition: transform var(--dur) var(--ease);
+}
+.tabs[data-ink='true'] .tab.active { border-bottom-color: transparent; }
+
+/* Vùng thả tệp (ui/file-picker.tsx): kéo tệp vào thì vùng nhấc lên, viền nhịp, biểu tượng
+   nảy; thả xong thì loé xanh một nhịp. Viền "nhịp" là một lớp viền riêng phóng ra và mờ đi —
+   không đổi độ dày viền (đổi bố cục). */
+.file-picker { position: relative; }
+.file-picker-icon {
+  font-size: 22px;
+  color: var(--ink-3);
+  transition: transform var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.file-picker.dragging { transform: translateY(-2px); }
+.file-picker.dragging .file-picker-icon {
+  color: var(--primary-ink);
+  animation: fp-bounce 700ms var(--ease) infinite;
+}
+.file-picker.dragging::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 2px dashed var(--primary);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: fp-pulse 1100ms var(--ease) infinite;
+}
+.file-picker.dropped::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ok-soft);
+  box-shadow: inset 0 0 0 2px var(--ok);
+  pointer-events: none;
+  animation: fp-drop 600ms var(--ease) both;
+}
+@keyframes fp-bounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+  60% { transform: translateY(-2px); }
+}
+@keyframes fp-pulse {
+  0% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.03); }
+}
+@keyframes fp-drop {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Tắt chuyển động: không hiện lớp chuyển động nào; vùng thả vẫn đổi màu khi kéo vào nhưng
+   không nhấc (trạng thái là màu, không phải vị trí). */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='on']) .submit-check,
+  html:not([data-motion='on']) .submit-check .glyph,
+  html:not([data-motion='on']) .success-burst,
+  html:not([data-motion='on']) .success-burst-seal,
+  html:not([data-motion='on']) .success-burst-seal::after,
+  html:not([data-motion='on']) .success-burst-mark,
+  html:not([data-motion='on']) .dialog-viewport > [data-state='open'],
+  html:not([data-motion='on']) .dialog-viewport[data-state='closed'],
+  html:not([data-motion='on']) .dialog-viewport > [data-state='closed'],
+  html:not([data-motion='on']) .modal-backdrop[data-state='closed'],
+  html:not([data-motion='on']) .file-picker.dragging .file-picker-icon {
+    animation: none !important;
+  }
+  html:not([data-motion='on']) .file-picker.dragging::before,
+  html:not([data-motion='on']) .file-picker.dropped::after {
+    animation: none !important;
+    display: none;
+  }
+  html:not([data-motion='on']) .tab-ink { transition: none; }
+  html:not([data-motion='on']) .file-picker.dragging { transform: none; }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] .submit-check,
+html[data-motion='off'] .submit-check .glyph,
+html[data-motion='off'] .success-burst,
+html[data-motion='off'] .success-burst-seal,
+html[data-motion='off'] .success-burst-seal::after,
+html[data-motion='off'] .success-burst-mark,
+html[data-motion='off'] .dialog-viewport > [data-state='open'],
+html[data-motion='off'] .dialog-viewport[data-state='closed'],
+html[data-motion='off'] .dialog-viewport > [data-state='closed'],
+html[data-motion='off'] .modal-backdrop[data-state='closed'],
+html[data-motion='off'] .file-picker.dragging .file-picker-icon {
+  animation: none !important;
+}
+html[data-motion='off'] .file-picker.dragging::before,
+html[data-motion='off'] .file-picker.dropped::after {
+  animation: none !important;
+  display: none;
+}
+html[data-motion='off'] .tab-ink { transition: none; }
+html[data-motion='off'] .file-picker.dragging { transform: none; }

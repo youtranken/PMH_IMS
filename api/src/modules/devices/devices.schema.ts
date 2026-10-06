@@ -3,6 +3,7 @@ import {
   date,
   jsonb,
   pgTable,
+  smallint,
   text,
   timestamp,
   uuid,
@@ -35,6 +36,26 @@ export const deviceTable = pgTable('device', {
   warrantyEnd: date('warranty_end'),
   status: text('status').notNull().default('in_use'),
   note: text('note'),
+  /** U thấp nhất máy chiếm trong tủ (U1 = đáy) và số U — 0054; cùng có hoặc cùng trống. */
+  rackUStart: smallint('rack_u_start'),
+  rackUSize: smallint('rack_u_size'),
+  /** Ảnh thật của RIÊNG máy này (tệp đính kèm của máy) — thắng ảnh mức model. */
+  photoFrontFileId: uuid('photo_front_file_id'),
+  photoBackFileId: uuid('photo_back_file_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Ảnh thật mức model (0054): một hàng cho mỗi (loại thiết bị, chuỗi model) — Q-23. Tệp ảnh là
+ * `file` mang `owner_type = 'device_model'`.
+ */
+export const deviceModelTable = pgTable('device_model', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  deviceTypeId: uuid('device_type_id').notNull(),
+  model: text('model').notNull(),
+  photoFrontFileId: uuid('photo_front_file_id'),
+  photoBackFileId: uuid('photo_back_file_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -64,6 +85,8 @@ export const devicePortTable = pgTable('device_port', {
   /** VLAN của cổng — text vì "trunk" là giá trị có thật trên cổng uplink. */
   vlan: text('vlan'),
   note: text('note'),
+  /** Loại dây (0048) — danh mục `cable_type` của `catalog`; `null` = chưa khai. */
+  cableTypeId: uuid('cable_type_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { diffRecord, type RecordChanges } from '../../common/record-diff';
@@ -13,6 +13,7 @@ import { conflictOnUnique } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { devicePortTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
+import { planBulkPorts, type BulkPlanReason } from './port-plan';
 import { portVlanOf } from './port-vlan';
 
 export interface PortInput {
@@ -23,6 +24,8 @@ export interface PortInput {
   usedBy?: string | null;
   vlan?: string | null;
   note?: string | null;
+  /** Loại dây (danh mục `cable_type`); `null`/`''` = bỏ loại dây. */
+  cableTypeId?: string | null;
 }
 
 export interface PortRow {
@@ -43,6 +46,7 @@ export interface PortRow {
    */
   vlan: string | null;
   note: string | null;
+  cableTypeId: string | null;
 }
 
 /** Chiều ngược: cổng của thiết bị KHÁC đang cắm vào thiết bị đang xem. */
@@ -58,7 +62,50 @@ interface IncomingPortRow {
   /** VLAN của cổng switch đang cắm vào máy này — nhìn từ máy trạm/server cũng phải biết. */
   vlan: string | null;
   note: string | null;
+  cableTypeId: string | null;
 }
+
+/**
+ * Một sợi dây giữa HAI máy có hồ sơ, nhìn từ ngoài module (sơ đồ mạng — AD-18). `id` là id dòng
+ * `device_port` — chính là `ims_link_id` trên nét vẽ. Đầu A là máy giữ bản ghi.
+ */
+export interface PortLink {
+  id: string;
+  deviceId: string;
+  deviceCode: string;
+  portLabel: string;
+  peerDeviceId: string;
+  peerDeviceCode: string;
+  peerPort: string | null;
+  cableTypeId: string | null;
+  vlan: string | null;
+  note: string | null;
+}
+
+/** Khai một sợi dây giữa hai máy (hộp "Khai kết nối" của sơ đồ mạng). */
+export interface LinkInput {
+  portLabel: string;
+  connectedDeviceId: string;
+  connectedPort?: string | null;
+  cableTypeId?: string | null;
+}
+
+export interface BulkLinkInput {
+  startPort: string;
+  endPort?: string | null;
+  /** Máy đầu kia theo đúng thứ tự người dùng xếp — máy thứ i nhận cổng thứ i của dải. */
+  targets: string[];
+  /** Cổng phía các máy kia (vd "eth0"), dùng chung cho cả lô; vắng = không ghi. */
+  peerPort?: string | null;
+  cableTypeId?: string | null;
+}
+
+const BULK_REASON: Record<BulkPlanReason, string> = {
+  'no-targets': 'Chưa chọn máy nào để nối.',
+  'start-not-numbered': 'Cổng bắt đầu phải kết thúc bằng số (vd Gi1/0/1) để tự tăng.',
+  'end-mismatch': 'Cổng cuối phải cùng kiểu với cổng bắt đầu và không nhỏ hơn nó.',
+  'not-enough': 'Dải cổng không đủ cổng trống cho số máy đã chọn — không nối máy nào.',
+};
 
 export interface PortMap {
   ports: PortRow[];
@@ -73,6 +120,7 @@ const TRACKED = [
   'connectedDevice',
   'connectedLabel',
   'connectedPort',
+  'cableType',
   'vlan',
   'usedBy',
   'note',
@@ -104,6 +152,9 @@ function hasPortChange(changes: RecordChanges): boolean {
  * `audit/security-probe.service.ts` (42_001), xem chú thích ở đó.
  */
 const PORT_LOCK_CLASS = 42_002;
+
+/** Dòng của máy đã thanh lý giữ làm bằng chứng, không chiếm cổng (cùng luật `device_port_peer_port_key`). */
+const NOT_OWNER_RETIRED = sql`NOT ${devicePortTable}.owner_retired`;
 
 const ONE_CABLE_HINT = 'Mỗi cổng chỉ một sợi cáp — sửa hoặc gỡ dòng đó trước.';
 
@@ -162,6 +213,7 @@ export class DevicePortsService {
         usedBy: row.port.usedBy,
         vlan: row.port.vlan,
         note: row.port.note,
+        cableTypeId: row.port.cableTypeId,
       })),
       incoming: incoming.map((row) => ({
         id: row.port.id,
@@ -173,6 +225,7 @@ export class DevicePortsService {
         usedBy: row.port.usedBy,
         vlan: row.port.vlan,
         note: row.port.note,
+        cableTypeId: row.port.cableTypeId,
       })),
     };
   }
@@ -185,33 +238,35 @@ export class DevicePortsService {
         message: 'Thiếu tên cổng.',
       });
     }
-    const id = await this.db.transaction(async (tx) => {
-      // Máy đã thanh lý thì sơ đồ đấu nối đóng băng — xem `DevicesService.assertNotRetired`.
-      // TRONG `tx` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng
-      // hở để một lượt thanh lý chen vào giữa (xem `assertUsableWithin`).
-      await this.devices.assertUsableWithin(tx, deviceId);
-      if (values.connectedDeviceId) {
-        await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
-      }
-      await this.assertOneCableWithin(tx, deviceId, null, {
-        portLabel: values.portLabel as string,
-        connectedDeviceId: (values.connectedDeviceId as string | null | undefined) ?? null,
-        connectedPort: (values.connectedPort as string | null | undefined) ?? null,
-      });
-      let inserted;
-      try {
-        inserted = await tx
-          .insert(devicePortTable)
-          .values({ ...values, deviceId } as never)
-          .returning();
-      } catch (error) {
-        throw this.translate(error, (values.connectedPort as string | null | undefined) ?? null);
-      }
-      const after = await this.snapshotWithin(tx, inserted[0].id);
-      await this.devices.recordWithin(tx, actor, deviceId, 'port-added', portChanges(null, after));
-      return inserted[0].id;
-    });
+    const id = await this.db.transaction((tx) => this.insertWithin(tx, actor, deviceId, values));
     return this.requireRow(deviceId, id);
+  }
+
+  private async insertWithin(tx: Tx, actor: string, deviceId: string, values: Record<string, unknown>): Promise<string> {
+    // Máy đã thanh lý thì sơ đồ đấu nối đóng băng — xem `DevicesService.assertNotRetired`.
+    // TRONG `tx` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng
+    // hở để một lượt thanh lý chen vào giữa (xem `assertUsableWithin`).
+    await this.devices.assertUsableWithin(tx, deviceId);
+    if (values.connectedDeviceId) {
+      await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
+    }
+    await this.assertOneCableWithin(tx, deviceId, null, {
+      portLabel: values.portLabel as string,
+      connectedDeviceId: (values.connectedDeviceId as string | null | undefined) ?? null,
+      connectedPort: (values.connectedPort as string | null | undefined) ?? null,
+    });
+    let inserted;
+    try {
+      inserted = await tx
+        .insert(devicePortTable)
+        .values({ ...values, deviceId } as never)
+        .returning();
+    } catch (error) {
+      throw this.translate(error, (values.connectedPort as string | null | undefined) ?? null);
+    }
+    const after = await this.snapshotWithin(tx, inserted[0].id);
+    await this.devices.recordWithin(tx, actor, deviceId, 'port-added', await this.namedChanges(null, after));
+    return inserted[0].id;
   }
 
   async update(
@@ -221,45 +276,53 @@ export class DevicePortsService {
     input: PortInput,
   ): Promise<PortRow> {
     const values = await this.prepare(deviceId, input, portId);
-    await this.db.transaction(async (tx) => {
-      await this.devices.assertUsableWithin(tx, deviceId);
-      const before = await this.lockWithin(tx, deviceId, portId);
-      if (values.connectedDeviceId && values.connectedDeviceId !== before.connectedDeviceId) {
-        await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
-      }
-      // Trạng thái SAU khi sửa: ô không gửi lên thì giữ giá trị đang có.
-      await this.assertOneCableWithin(tx, deviceId, portId, {
-        portLabel: (values.portLabel as string | undefined) ?? before.snapshot.portLabel,
-        connectedDeviceId:
-          values.connectedDeviceId !== undefined
-            ? (values.connectedDeviceId as string | null)
-            : before.connectedDeviceId,
-        connectedPort:
-          values.connectedPort !== undefined
-            ? (values.connectedPort as string | null)
-            : before.snapshot.connectedPort,
-      });
-      let updated;
-      try {
-        updated = await tx
-          .update(devicePortTable)
-          .set({ ...values, updatedAt: new Date() })
-          .where(eq(devicePortTable.id, portId))
-          .returning({ id: devicePortTable.id });
-      } catch (error) {
-        throw this.translate(
-          error,
-          values.connectedPort !== undefined
-            ? (values.connectedPort as string | null)
-            : before.snapshot.connectedPort,
-        );
-      }
-      if (updated.length === 0) throw portNotFound();
-      const changes = portChanges(before.snapshot, await this.snapshotWithin(tx, portId));
-      if (!hasPortChange(changes)) return;
-      await this.devices.recordWithin(tx, actor, deviceId, 'port-updated', changes);
-    });
+    await this.db.transaction((tx) => this.updateWithin(tx, actor, deviceId, portId, values));
     return this.requireRow(deviceId, portId);
+  }
+
+  private async updateWithin(
+    tx: Tx,
+    actor: string,
+    deviceId: string,
+    portId: string,
+    values: Record<string, unknown>,
+  ): Promise<void> {
+    await this.devices.assertUsableWithin(tx, deviceId);
+    const before = await this.lockWithin(tx, deviceId, portId);
+    if (values.connectedDeviceId && values.connectedDeviceId !== before.connectedDeviceId) {
+      await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
+    }
+    // Trạng thái SAU khi sửa: ô không gửi lên thì giữ giá trị đang có.
+    await this.assertOneCableWithin(tx, deviceId, portId, {
+      portLabel: (values.portLabel as string | undefined) ?? before.snapshot.portLabel,
+      connectedDeviceId:
+        values.connectedDeviceId !== undefined
+          ? (values.connectedDeviceId as string | null)
+          : before.connectedDeviceId,
+      connectedPort:
+        values.connectedPort !== undefined
+          ? (values.connectedPort as string | null)
+          : before.snapshot.connectedPort,
+    });
+    let updated;
+    try {
+      updated = await tx
+        .update(devicePortTable)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(devicePortTable.id, portId))
+        .returning({ id: devicePortTable.id });
+    } catch (error) {
+      throw this.translate(
+        error,
+        values.connectedPort !== undefined
+          ? (values.connectedPort as string | null)
+          : before.snapshot.connectedPort,
+      );
+    }
+    if (updated.length === 0) throw portNotFound();
+    const changes = await this.namedChanges(before.snapshot, await this.snapshotWithin(tx, portId));
+    if (!hasPortChange(changes)) return;
+    await this.devices.recordWithin(tx, actor, deviceId, 'port-updated', changes);
   }
 
   async remove(actor: string, deviceId: string, portId: string): Promise<void> {
@@ -280,9 +343,251 @@ export class DevicePortsService {
         actor,
         deviceId,
         'port-removed',
-        portChanges(before.snapshot, null),
+        await this.namedChanges(before.snapshot, null),
       );
     });
+  }
+
+  // ───────────── Sợi dây giữa hai máy (sơ đồ mạng — Q-23 "vẽ là khai, có hỏi") ─────────────
+
+  /**
+   * Khai MỘT sợi dây giữa hai máy có hồ sơ. Cổng đã có dòng "trống" (chỉ VLAN/người dùng, chưa
+   * nối đâu) thì nối luôn dòng đó thay vì đẻ dòng thứ hai — trước ở đầu này, rồi ở đầu kia; không
+   * có thì thêm dòng ở máy này. Cùng luật một cổng một cáp như mọi đường ghi khác (Q-20).
+   */
+  async link(actor: string, deviceId: string, input: LinkInput): Promise<PortLink> {
+    const portLabel = input.portLabel.trim();
+    if (!portLabel) throw new BadRequestException({ code: 'FIELD_REQUIRED', message: 'Thiếu tên cổng.' });
+    if (input.connectedDeviceId === deviceId) {
+      throw new BadRequestException({ code: 'PORT_SELF_LINK', message: 'Không thể cắm thiết bị vào chính nó.' });
+    }
+    const peerId = input.connectedDeviceId;
+    const peerPort = input.connectedPort?.trim() || null;
+    const cableTypeId = input.cableTypeId || null;
+    await this.devices.assertCableTypeChoice(cableTypeId, null);
+    const id = await this.db.transaction(async (tx) => {
+      const own = await this.rowByLabelWithin(tx, deviceId, portLabel);
+      if (own?.free) {
+        await this.updateWithin(tx, actor, deviceId, own.id, { connectedDeviceId: peerId, connectedLabel: null, connectedPort: peerPort, cableTypeId });
+        return own.id;
+      }
+      if (own) throw await this.portBusy(tx, deviceId, own.portLabel);
+      const theirs = peerPort ? await this.rowByLabelWithin(tx, peerId, peerPort) : null;
+      if (theirs?.free) {
+        await this.updateWithin(tx, actor, peerId, theirs.id, { connectedDeviceId: deviceId, connectedLabel: null, connectedPort: portLabel, cableTypeId });
+        return theirs.id;
+      }
+      if (theirs) throw await this.portBusy(tx, peerId, theirs.portLabel);
+      return this.insertWithin(tx, actor, deviceId, { portLabel, connectedDeviceId: peerId, connectedPort: peerPort, cableTypeId });
+    });
+    const link = (await this.linksByIds([id])).get(id);
+    if (!link) throw portNotFound();
+    return link;
+  }
+
+  /**
+   * Gỡ sợi dây của một dòng ("Gỡ luôn kết nối" trên sơ đồ). Dòng còn ghi VLAN/người dùng/ghi chú
+   * thì chỉ bỏ phần đầu kia + loại dây (cổng vẫn khai đó); không còn gì thì xoá cả dòng.
+   */
+  async unlink(actor: string, deviceId: string, portId: string): Promise<{ removed: boolean }> {
+    const [row] = await this.db
+      .select({ vlan: devicePortTable.vlan, usedBy: devicePortTable.usedBy, note: devicePortTable.note })
+      .from(devicePortTable)
+      .where(and(eq(devicePortTable.id, portId), eq(devicePortTable.deviceId, deviceId)));
+    if (!row) throw portNotFound();
+    if (!row.vlan && !row.usedBy && !row.note) {
+      await this.remove(actor, deviceId, portId);
+      return { removed: true };
+    }
+    await this.db.transaction((tx) =>
+      this.updateWithin(tx, actor, deviceId, portId, { connectedDeviceId: null, connectedLabel: null, connectedPort: null, cableTypeId: null }),
+    );
+    return { removed: false };
+  }
+
+  /** Bảng xem trước "máy → cổng" của Nối hàng loạt — cùng hàm chia cổng với lượt ghi. */
+  async bulkPlan(deviceId: string, input: { startPort: string; endPort?: string | null; count: number }) {
+    const taken = await this.takenLabels(this.db, deviceId);
+    const plan = planBulkPorts({ start: input.startPort, end: input.endPort, count: input.count, taken });
+    return { ports: plan.ports, reason: plan.reason ? BULK_REASON[plan.reason] : null };
+  }
+
+  /**
+   * Nối một switch với N máy trong MỘT transaction: cổng không đủ, hay một máy vướng luật một
+   * cổng một cáp, thì không ghi máy nào — nửa lô đã nối nửa lô không là thứ không ai dọn nổi.
+   */
+  async bulkLink(actor: string, deviceId: string, input: BulkLinkInput): Promise<PortLink[]> {
+    const targets = input.targets;
+    if (new Set(targets).size !== targets.length) {
+      throw new BadRequestException({ code: 'BULK_LINK_DUPLICATE', message: 'Một máy được chọn hai lần.' });
+    }
+    if (targets.includes(deviceId)) {
+      throw new BadRequestException({ code: 'PORT_SELF_LINK', message: 'Không thể cắm thiết bị vào chính nó.' });
+    }
+    const cableTypeId = input.cableTypeId || null;
+    await this.devices.assertCableTypeChoice(cableTypeId, null);
+    const peerPort = input.peerPort?.trim() || null;
+    const ids = await this.db.transaction(async (tx) => {
+      await this.devices.assertUsableWithin(tx, deviceId);
+      const plan = planBulkPorts({
+        start: input.startPort,
+        end: input.endPort,
+        count: targets.length,
+        taken: await this.takenLabels(tx, deviceId),
+      });
+      if (plan.reason) throw new BadRequestException({ code: 'BULK_LINK_INVALID', message: BULK_REASON[plan.reason] });
+      const out: string[] = [];
+      for (let i = 0; i < targets.length; i += 1) {
+        const own = await this.rowByLabelWithin(tx, deviceId, plan.ports[i]);
+        const values = { connectedDeviceId: targets[i], connectedLabel: null, connectedPort: peerPort, cableTypeId };
+        if (own) {
+          await this.updateWithin(tx, actor, deviceId, own.id, values);
+          out.push(own.id);
+        } else {
+          out.push(await this.insertWithin(tx, actor, deviceId, { portLabel: plan.ports[i], ...values }));
+        }
+      }
+      return out;
+    });
+    const links = await this.linksByIds(ids);
+    return ids.map((id) => links.get(id)).filter((link): link is PortLink => Boolean(link));
+  }
+
+  /**
+   * Dây theo id dòng (= `ims_link_id`). Dòng không còn, hay không còn nối tới một máy có hồ sơ,
+   * thì VẮNG MẶT — sơ đồ coi đó là "kết nối đã bị gỡ" (nét đỏ).
+   */
+  async linksByIds(ids: string[]): Promise<Map<string, PortLink>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.linkRows(inArray(devicePortTable.id, unique));
+    return new Map(rows.map((link) => [link.id, link]));
+  }
+
+  /**
+   * Cổng ĐÃ KHAI / ĐANG DÙNG của từng máy (thẻ máy trên sơ đồ, Q-23). Đã khai = dòng sơ đồ
+   * cổng của chính máy + dòng máy khác giữ mà trỏ tới nó (một kết nối là một dòng, AD-14); đang dùng =
+   * dòng có đầu kia (máy kho, chữ tự do, người dùng). Kho chưa có số cổng vật lý nên "đã khai" là
+   * mẫu số thật duy nhất. Dòng của máy đã thanh lý không chiếm cổng nên không đếm.
+   */
+  async portUsage(deviceIds: string[]): Promise<Map<string, { used: number; declared: number }>> {
+    const unique = [...new Set(deviceIds)];
+    const out = new Map(unique.map((id) => [id, { used: 0, declared: 0 }]));
+    if (unique.length === 0) return out;
+    const busy = sql<boolean>`(${devicePortTable.connectedDeviceId} IS NOT NULL OR ${devicePortTable.connectedLabel} IS NOT NULL OR ${devicePortTable.usedBy} IS NOT NULL)`;
+    const [own, incoming] = await Promise.all([
+      this.db
+        .select({ id: devicePortTable.deviceId, declared: sql<number>`count(*)::int`, used: sql<number>`count(*) FILTER (WHERE ${busy})::int` })
+        .from(devicePortTable)
+        .where(and(inArray(devicePortTable.deviceId, unique), NOT_OWNER_RETIRED))
+        .groupBy(devicePortTable.deviceId),
+      this.db
+        .select({ id: devicePortTable.connectedDeviceId, count: sql<number>`count(*)::int` })
+        .from(devicePortTable)
+        .where(and(inArray(devicePortTable.connectedDeviceId, unique), NOT_OWNER_RETIRED))
+        .groupBy(devicePortTable.connectedDeviceId),
+    ]);
+    for (const row of own) {
+      const at = out.get(row.id);
+      if (at) Object.assign(at, { used: at.used + row.used, declared: at.declared + row.declared });
+    }
+    for (const row of incoming) {
+      const at = row.id ? out.get(row.id) : undefined;
+      if (at) Object.assign(at, { used: at.used + row.count, declared: at.declared + row.count });
+    }
+    return out;
+  }
+
+  /** Mọi dây chạm ít nhất một máy trong danh sách (dòng của máy đã thanh lý không tính). */
+  async linksTouching(deviceIds: string[]): Promise<PortLink[]> {
+    const unique = [...new Set(deviceIds)];
+    if (unique.length === 0) return [];
+    return this.linkRows(
+      and(
+        or(inArray(devicePortTable.deviceId, unique), inArray(devicePortTable.connectedDeviceId, unique)),
+        NOT_OWNER_RETIRED,
+      ),
+    );
+  }
+
+  private async linkRows(where: SQL | undefined): Promise<PortLink[]> {
+    const rows = await this.db
+      .select({ port: devicePortTable, ownerCode: deviceTable.code })
+      .from(devicePortTable)
+      .innerJoin(deviceTable, eq(deviceTable.id, devicePortTable.deviceId))
+      .where(and(where, isNotNull(devicePortTable.connectedDeviceId)));
+    const peerIds = [...new Set(rows.map((r) => r.port.connectedDeviceId as string))];
+    const peers = peerIds.length
+      ? await this.db.select({ id: deviceTable.id, code: deviceTable.code }).from(deviceTable).where(inArray(deviceTable.id, peerIds))
+      : [];
+    const peerCode = new Map(peers.map((p) => [p.id, p.code]));
+    return rows.map(({ port, ownerCode }) => ({
+      id: port.id,
+      deviceId: port.deviceId,
+      deviceCode: ownerCode,
+      portLabel: port.portLabel,
+      peerDeviceId: port.connectedDeviceId as string,
+      peerDeviceCode: peerCode.get(port.connectedDeviceId as string) ?? '',
+      peerPort: port.connectedPort,
+      cableTypeId: port.cableTypeId,
+      vlan: port.vlan,
+      note: port.note,
+    }));
+  }
+
+  /** Dòng của một cổng (không phân biệt hoa/thường), khoá tới hết `tx`; `free` = chưa nối đâu. */
+  private async rowByLabelWithin(
+    tx: Tx,
+    deviceId: string,
+    label: string,
+  ): Promise<{ id: string; portLabel: string; free: boolean } | null> {
+    const [row] = await tx
+      .select({
+        id: devicePortTable.id,
+        portLabel: devicePortTable.portLabel,
+        connectedDeviceId: devicePortTable.connectedDeviceId,
+        connectedLabel: devicePortTable.connectedLabel,
+      })
+      .from(devicePortTable)
+      .where(and(eq(devicePortTable.deviceId, deviceId), sql`lower(${devicePortTable.portLabel}) = lower(${label})`))
+      .for('update');
+    if (!row) return null;
+    return { id: row.id, portLabel: row.portLabel, free: !row.connectedDeviceId && !row.connectedLabel };
+  }
+
+  private async portBusy(tx: Tx, deviceId: string, label: string): Promise<ConflictException> {
+    const [device] = await tx.select({ code: deviceTable.code }).from(deviceTable).where(eq(deviceTable.id, deviceId));
+    return new ConflictException({
+      code: 'PORT_ALREADY_LINKED',
+      message: `Cổng "${label}" của ${device?.code ?? ''} đã có cáp. ${ONE_CABLE_HINT}`,
+    });
+  }
+
+  /**
+   * Cổng ĐÃ CHIẾM của một máy (viết thường): dòng của nó đã nối đi đâu đó, hoặc dòng của máy
+   * khác đang cắm vào nó. Dòng chỉ ghi VLAN/người dùng là cổng còn trống.
+   */
+  private async takenLabels(db: Database | Tx, deviceId: string): Promise<Set<string>> {
+    const own = await db
+      .select({ label: devicePortTable.portLabel })
+      .from(devicePortTable)
+      .where(
+        and(
+          eq(devicePortTable.deviceId, deviceId),
+          or(isNotNull(devicePortTable.connectedDeviceId), isNotNull(devicePortTable.connectedLabel)),
+        ),
+      );
+    const incoming = await db
+      .select({ label: devicePortTable.connectedPort })
+      .from(devicePortTable)
+      .where(
+        and(
+          eq(devicePortTable.connectedDeviceId, deviceId),
+          isNotNull(devicePortTable.connectedPort),
+          NOT_OWNER_RETIRED,
+        ),
+      );
+    return new Set([...own, ...incoming].map((r) => (r.label ?? '').toLowerCase()).filter(Boolean));
   }
 
   private async prepare(
@@ -329,6 +634,19 @@ export class DevicePortsService {
         });
       }
       values.vlan = vlan.value;
+    }
+    if (input.cableTypeId !== undefined) {
+      const next = input.cableTypeId || null;
+      let current: string | null = null;
+      if (portId) {
+        const [row] = await this.db
+          .select({ cableTypeId: devicePortTable.cableTypeId })
+          .from(devicePortTable)
+          .where(eq(devicePortTable.id, portId));
+        current = row?.cableTypeId ?? null;
+      }
+      await this.devices.assertCableTypeChoice(next, current);
+      values.cableTypeId = next;
     }
     for (const key of ['connectedLabel', 'connectedPort', 'usedBy', 'note'] as const) {
       if (input[key] !== undefined) {
@@ -414,10 +732,25 @@ export class DevicePortsService {
       connectedDevice: row.peerCode ?? null,
       connectedLabel: row.port.connectedLabel,
       connectedPort: row.port.connectedPort,
+      cableType: row.port.cableTypeId,
       vlan: row.port.vlan,
       usedBy: row.port.usedBy,
       note: row.port.note,
     };
+  }
+
+  /**
+   * Trước/sau của lịch sử, loại dây đổi từ id sang TÊN — tab Lịch sử không ai đọc uuid. Chỉ hỏi
+   * danh mục khi có loại dây để tra.
+   */
+  private async namedChanges(before: PortSnapshot | null, after: PortSnapshot | null): Promise<RecordChanges> {
+    if (before?.cableType || after?.cableType) {
+      const names = await this.devices.cableTypeNames();
+      for (const snap of [before, after]) {
+        if (snap?.cableType) snap.cableType = names.get(snap.cableType) ?? snap.cableType;
+      }
+    }
+    return portChanges(before, after);
   }
 
   private async requireRow(deviceId: string, portId: string): Promise<PortRow> {

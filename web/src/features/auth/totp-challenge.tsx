@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { errorMessage, useApiMutation, useMe } from '@/lib/api';
+import { ME_KEY, errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { noteSignOutNotice } from '@/lib/after-logout';
 import { AuthCard } from './auth-card';
 import { SignOutLink, useSignOutMidFlow } from './sign-out-link';
 import { SupportHelp } from './support-help';
 import { totpChallengeStartedAt } from './totp-challenge-clock';
-import { OtpInput, otpMissingText, useOtpSubmit } from '@/ui/otp-input';
+import { OtpInput, OtpSubmitButton, otpMissingText, useOtpSubmit, useOtpSuccess } from '@/ui/otp-input';
 
 /**
  * Bước 2 của đăng nhập: nhập mã 6 số từ ứng dụng Authenticator. Đủ 6 số là tự gửi — người mở
@@ -33,8 +34,12 @@ export function TotpChallenge() {
 
   const verify = useApiMutation<{ token: string }, { mustChangePassword: boolean }>(
     '/api/v1/auth/login/totp',
-    { csrfToken: me?.csrfToken ?? null },
+    // Tự nạp lại `me` SAU hiệu ứng thành công: nạp ngay thì router chuyển màn trước khi người
+    // dùng kịp thấy dấu tích.
+    { csrfToken: me?.csrfToken ?? null, refreshMe: false },
   );
+  const queryClient = useQueryClient();
+  const otp = useOtpSuccess();
 
   const limitMinutes = me?.config?.totpChallengeMinutes;
   useEffect(() => {
@@ -70,13 +75,19 @@ export function TotpChallenge() {
       );
       // Mã vừa bị từ chối đã bị xoá; con trỏ về lại ô để bàn phím số không đóng.
       inputRef.current?.focus();
+      return;
     }
+    // Màn đã rời đi giữa hiệu ứng (đăng xuất, điều hướng) thì không làm mới phiên hộ nữa.
+    if (!(await otp.show())) return;
+    // `me` mới (hết `totpPending`) là thứ đưa router sang màn kế.
+    await queryClient.invalidateQueries({ queryKey: ME_KEY });
   });
 
   return (
     <AuthCard
-      title={t('auth.totpTitle')}
-      subtitle={t('auth.totpSub')}
+      title={otp.confirmed ? t('auth.otpVerifiedTitle') : t('auth.totpTitle')}
+      subtitle={otp.confirmed ? t('auth.otpVerifiedSub') : t('auth.totpSub')}
+      verified={otp.confirmed}
       signedInAs={me}
       footer={<SupportHelp />}
     >
@@ -104,10 +115,11 @@ export function TotpChallenge() {
           error={otpMissingText(t, missing) ?? error}
           inputRef={inputRef}
           readOnly={verify.isPending}
+          status={otp.status}
+          onSuccessShown={otp.onShown}
+          onConfirmed={otp.onConfirmed}
         />
-        <button type="submit" className="btn primary" disabled={verify.isPending}>
-          {verify.isPending ? t('auth.totpChecking') : t('auth.totpVerify')}
-        </button>
+        <OtpSubmitButton pending={verify.isPending} otp={otp} />
         {me ? <SignOutLink account={me} variant="back" /> : null}
       </form>
     </AuthCard>

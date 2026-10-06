@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { PerpetualBadge } from '@/ui/perpetual-badge';
 import { UsageBar } from '@/ui/usage-bar';
@@ -19,7 +20,15 @@ export function SoftwareStanding({ item, compact = false }: { item: SoftwareRow;
   if (standing.kind === 'countdown') {
     // `countdown` chỉ đến từ hồ sơ chưa Thanh lý; khai `notCounted` để luật canh ở
     // `expiry-badge.test.tsx` không phải đoán nhánh.
-    return <ExpiryBadge end={item.endDate} notCounted={item.status === 'retired'} />;
+    const badge = <ExpiryBadge end={item.endDate} notCounted={item.status === 'retired'} />;
+    if (compact || !item.endDate) return badge;
+    // Ngày hết hạn ngay dưới "Còn n ngày" (P-01): không phải mở hồ sơ mới biết ngày nào.
+    return (
+      <>
+        {badge}
+        <span className="cell-sub">{t('software.endsOn', { date: formatDate(item.endDate) })}</span>
+      </>
+    );
   }
 
   const badge = (

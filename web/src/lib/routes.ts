@@ -46,6 +46,13 @@ export const PATHS = {
   /** Sổ NAT lọc sẵn theo một router (bộ lọc nằm trên URL — gửi được link cho nhau). */
   natOf: (deviceId: string) => `/nat?deviceId=${encodeURIComponent(deviceId)}`,
 
+  /** Cây bản vẽ sơ đồ mạng (Q-23) — xem tên/trạng thái không cần mã. */
+  diagrams: '/diagrams',
+  /** Mở MỘT bản vẽ — nội dung hỏi mã phạm vi sơ đồ (AD-17). `?mode=edit` mở thẳng màn sửa. */
+  diagram: (id: string) => `/diagrams/${id}`,
+  /** Trình chiếu từ một nút cây: bản chính thức từ tổng xuống chi tiết, toàn màn hình. */
+  diagramPresent: (id: string) => `/diagrams/${id}/present`,
+
   serviceAccounts: '/service-accounts',
   serviceAccount: (id: string) => `/service-accounts/${id}`,
 
@@ -62,6 +69,7 @@ export const PATHS = {
   adminVaultAccess: '/admin/vault-access',
   adminAuditLog: '/admin/audit-log',
   adminSettings: '/admin/settings',
+  adminFailedMail: '/admin/failed-mail',
 
   devComponents: '/dev/components',
 
@@ -155,11 +163,32 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   [PATHS.adminAuditLog]: ['sa', 'admin'],
   // `system-settings.controller.ts` — `@Roles('sa')` cho cả đọc lẫn sửa.
   [PATHS.adminSettings]: ['sa'],
+  // `outbox-admin.controller.ts` — `@Roles('sa')` cho cả đọc lẫn gửi lại (Q-25).
+  [PATHS.adminFailedMail]: ['sa'],
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
   [PATHS.vault]: ['sa', 'admin'],
   [PATHS.devComponents]: ['sa'],
 };
+
+/**
+ * Đường mà shell thu sidebar còn biểu tượng và để nội dung tràn hết phần còn lại (Q-23: màn mở
+ * một bản vẽ — trình vẽ cần bề ngang; cây bản vẽ là màn danh sách bình thường). Rời đường này thì
+ * shell tự mở lại, vì trạng thái suy từ đường dẫn chứ không phải cờ màn tự bật rồi quên tắt.
+ */
+const COMPACT_SHELL_PREFIXES: readonly string[] = [`${PATHS.diagrams}/`];
+
+export function isCompactShellPath(pathname: string): boolean {
+  return COMPACT_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix) && pathname.length > prefix.length);
+}
+
+/**
+ * Tab Sửa của một bản vẽ (E-04): shell bỏ luôn thanh trên cùng để trình vẽ chiếm phần còn lại —
+ * bốn tầng thanh chồng nhau ăn gần 1/4 màn 768px. Tìm nhanh vẫn mở bằng Ctrl+K.
+ */
+export function isEditorFocusPath(pathname: string, search: string): boolean {
+  return isCompactShellPath(pathname) && new URLSearchParams(search).get('mode') === 'edit';
+}
 
 /** Vai này vào được đường kia không. Đường không khai trong bảng = mở cho mọi vai. */
 export function canSeeRoute(path: string, role: UserRole): boolean {
@@ -189,6 +218,7 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.expiry]: 'nav.expiry',
   [PATHS.ipAddresses]: 'nav.ipam',
   [PATHS.nat]: 'nav.nat',
+  [PATHS.diagrams]: 'nav.diagrams',
   [PATHS.serviceAccounts]: 'nav.serviceAccounts',
   [PATHS.approvals]: 'nav.approvals',
   [PATHS.vault]: 'nav.vault',
@@ -199,6 +229,7 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.adminVaultAccess]: 'nav.vaultAccess',
   [PATHS.adminAuditLog]: 'nav.auditLog',
   [PATHS.adminSettings]: 'nav.settings',
+  [PATHS.adminFailedMail]: 'nav.failedMail',
   [PATHS.devComponents]: 'nav.components',
   [PATHS.profile]: 'profile.title',
 };

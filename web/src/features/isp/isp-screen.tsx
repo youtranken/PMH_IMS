@@ -1,3 +1,5 @@
+import { SecretDueSub } from '@/ui/secret-due';
+import { useSecretDue } from '@/ui/use-secret-due';
 import { PhoneLink } from '@/ui/phone-link';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -116,6 +118,8 @@ export function IspScreen({ me }: { me: Me }) {
    * `?sort=`. Cột Site (`siteCode`) không sắp được: tra qua CatalogApiService, sắp theo nó
    * đòi join sang bảng của module khác, vi phạm AD-2. Muốn theo site thì lọc rồi sắp theo mã.
    */
+  /* Hạn đổi mật khẩu PPPoE / cổng quản trị trong két (K-03) — Admin/SA. */
+  const dueOf = useSecretDue('isp', me.role === 'sa' || me.role === 'admin');
   const columns = useMemo<ColumnDef<IspRow, unknown>[]>(
     () => [
       {
@@ -142,6 +146,7 @@ export function IspScreen({ me }: { me: Me }) {
                 <CopyButton value={row.original.wanIps[0]} label={t('isp.copyWanIp')} inline />
               </span>
             ) : null}
+            <SecretDueSub entry={dueOf.get(row.original.id)} />
           </>
         ),
       },
@@ -231,7 +236,7 @@ export function IspScreen({ me }: { me: Me }) {
         ),
       },
     ],
-    [t, navigate],
+    [t, navigate, dueOf],
   );
 
   return (
@@ -295,7 +300,7 @@ export function IspScreen({ me }: { me: Me }) {
       </FilterBar>
 
       {lines.isLoading ? (
-        <Loading />
+        <Loading variant="table" />
       ) : lines.isError ? (
         <LoadError error={lines.error} onRetry={() => void lines.refetch()} />
       ) : rows.length === 0 ? (

@@ -10,6 +10,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -115,13 +116,13 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     browser,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
 
     const id = await request(memberPage, kit.deviceId, 'xu ly su co ngoai gio');
     expect(stateOf(id)).toBe('pending');
@@ -159,13 +160,13 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     browser,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
 
     const id = await request(memberPage, kit.deviceId, 'kiem tra cau hinh switch');
     const approved = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
@@ -215,12 +216,12 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     browser,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const kit = await setUp(page, Date.now().toString().slice(-5));
 
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await request(memberPage, kit.deviceId, 'thu quyen');
 
     const headers = await writeHeaders(memberPage);
@@ -245,13 +246,13 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     browser,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     // `request` xin 2 giờ.
     const id = await request(memberPage, kit.deviceId, 'doi mat khau admin switch E2E');
     await memberContext.close();

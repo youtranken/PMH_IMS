@@ -1,3 +1,4 @@
+import { KnownDeviceService } from '../src/modules/auth/known-device.service';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
 import { ApprovalsApiService } from '../src/modules/approvals/approvals.api';
@@ -72,6 +73,7 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
         new ApprovalsService(db, new AuditWriterService(db), new ApprovalKindRegistry()),
       ),
       config,
+      new KnownDeviceService(db, config, noopSweep),
     );
     // Migration seed có thể đã tạo sẵn SA — dọn để phép đếm trong bài kiểm là của bài kiểm.
     await scratch.pool.query(`DELETE FROM users`);

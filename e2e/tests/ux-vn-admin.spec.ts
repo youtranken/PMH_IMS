@@ -16,6 +16,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -49,7 +50,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
   test('tab + lọc trạng thái sống trên URL; F5 mở lại đúng chỗ; đổi mã phải bấm "Đổi mã…"', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const code = `E2E-URL-${uniqueStamp()}`;
     await catalogItem(page, 'site', { code, name: 'Site E2E url' });
 
@@ -76,7 +77,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
   });
 
   test('đường hỏng: trùng mã site thì lỗi nằm ngay dưới ô Mã, hộp không đóng', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const code = `E2E-TRUNG-${uniqueStamp()}`;
     await catalogItem(page, 'site', { code, name: 'Site E2E trùng' });
     await page.goto('/admin/catalog');
@@ -94,7 +95,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
   test('file mẫu nằm trong hộp nhập; menu dòng tách Ngừng dùng (cảnh báo) khỏi Xóa', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const code = `E2E-MENU-${uniqueStamp()}`;
     await catalogItem(page, 'site', { code, name: 'Site E2E menu' });
     await page.goto('/admin/catalog');
@@ -119,7 +120,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
 test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
   test('lọc "Chưa kích hoạt 2 lớp" lên URL; khóa bắt ghi lý do và lý do vào nhật ký', async ({ page }) => {
     test.setTimeout(120_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const user = await createMember(page);
     await page.goto('/admin/accounts?totp=none');
     await searchAndWaitForFilter(page, user.email);
@@ -140,7 +141,7 @@ test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
 
   test('đổi vai Thành viên → Quản trị; tự đổi vai của mình thì không có mục', async ({ page }) => {
     test.setTimeout(120_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const user = await createMember(page);
     await page.goto('/admin/accounts');
     await searchAndWaitForFilter(page, user.email);
@@ -159,7 +160,7 @@ test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
   });
 
   test('đường hỏng API: tự đổi vai của chính mình bị từ chối', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const saId = sql(`SELECT id FROM users WHERE email = '${E2E_SA.email}'`);
     const res = await page.request.patch(`/api/v1/accounts/${saId}/role`, {
       headers: await writeHeaders(page),
@@ -172,7 +173,7 @@ test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
 
 test.describe('Nhật ký hệ thống — chi tiết, lọc, xuất', () => {
   test('bấm dòng mở chi tiết; lọc loại đối tượng lên URL; Xuất Excel tải được file', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/audit-log');
     await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
 
@@ -193,7 +194,7 @@ test.describe('Nhật ký hệ thống — chi tiết, lọc, xuất', () => {
   });
 
   test('đường hỏng: Thành viên gọi thẳng file xuất nhật ký nhận 403', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const res = await page.request.get('/api/v1/admin/audit/export');
     expect(res.status()).toBe(403);
   });
@@ -201,7 +202,7 @@ test.describe('Nhật ký hệ thống — chi tiết, lọc, xuất', () => {
 
 test.describe('Quyền két sắt — người đã nghỉ, kiểm tra quyền', () => {
   test('người vô hiệu hóa ẩn mặc định; tick "Hiện cả người đã nghỉ" thì hiện kèm nhãn', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const user = await createMember(page);
     sql(`UPDATE users SET status = 'disabled' WHERE id = '${user.id}'`);
     await page.goto('/admin/vault-access');
@@ -213,7 +214,7 @@ test.describe('Quyền két sắt — người đã nghỉ, kiểm tra quyền',
   });
 
   test('đường hỏng: Kiểm tra quyền với mã không có thật thì nói rõ không tìm thấy', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/vault-access');
     await page.getByRole('button', { name: 'Kiểm tra quyền' }).click();
     const dialog = page.getByRole('dialog', { name: 'Kiểm tra quyền xem két' });

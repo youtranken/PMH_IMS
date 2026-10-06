@@ -44,6 +44,37 @@ export function SkeletonRows({ columns, rows = 6 }: { columns: number; rows?: nu
   );
 }
 
+/**
+ * Khung chờ cho một DANH SÁCH chưa có bảng nào để chèn dòng vào (màn danh sách dựng
+ * `<Loading variant="table" />` trước khi có dữ liệu): vài vạch xám có vệt sáng quét, cao gần
+ * bằng dòng bảng, để lúc dữ liệu về bảng hiện ra đúng chỗ thay vì đẩy cả trang.
+ *
+ * Trình đọc màn hình không thấy vạch nào (`aria-hidden`), chỉ nghe "Đang tải…" như trước: chữ
+ * nằm ẩn thị giác trong khối và lời loan báo vẫn đi qua vùng sống chung.
+ */
+export function SkeletonTable({ label, rows = 6 }: { label?: string; rows?: number }) {
+  const { t } = useTranslation();
+  const text = label ?? t('app.loading');
+  useAnnounce(text);
+  const shown = useShownAfterDelay();
+  return (
+    <div className="skeleton-table" aria-busy="true">
+      <span className="sr-only">{text}</span>
+      <div aria-hidden="true">
+        {shown
+          ? Array.from({ length: rows }, (_, i) => (
+              <div key={i} className="skeleton-line">
+                <span className="skeleton sk-bar sk-lead" />
+                <span className="skeleton sk-bar" />
+                <span className="skeleton sk-bar sk-narrow" />
+              </div>
+            ))
+          : null}
+      </div>
+    </div>
+  );
+}
+
 /** Bản thẻ cho danh sách ≤600px (`DataTable mobileCard`). */
 export function SkeletonCards({ count = 3 }: { count?: number }) {
   const { t } = useTranslation();

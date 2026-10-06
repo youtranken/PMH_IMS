@@ -110,7 +110,13 @@ export function RelationMap({
   isUnknown = false,
   isLoading = false,
   retired = false,
+  hubImage = null,
 }: {
+  /**
+   * Ảnh của máy (cùng nguồn tra với sơ đồ: riêng của máy → của model) — `<img>` trỏ endpoint ảnh đã
+   * thu nhỏ / vẽ lại của server, không nhúng tệp người dùng tải lên. `null` = chỉ có mã như cũ.
+   */
+  hubImage?: { src: string; alt: string; note?: string | null } | null;
   /** Hồ sơ đã thanh lý: không còn gì "sẽ bị gỡ khi thanh lý" — bỏ chú giải và dấu gỡ. */
   retired?: boolean;
   hubCode: string;
@@ -196,7 +202,11 @@ export function RelationMap({
             {left.map(renderNode)}
           </div>
           <div className="rmap-hub-col">
-            <div className={`rmap-hub${hubSize(hubCode)}`} data-testid="rmap-hub">
+            <div className={`rmap-hub${hubSize(hubCode)}${hubImage ? ' with-image' : ''}`} data-testid="rmap-hub">
+              {hubImage ? <img className="rmap-hub-img" src={hubImage.src} alt={hubImage.alt} /> : null}
+              {/* Ảnh chung của model trông y hệt ảnh riêng vừa bỏ thì người xem tưởng ảnh cũ còn kẹt:
+                  nói ra mức đang dùng ngay dưới ảnh. */}
+              {hubImage?.note ? <span className="rmap-hub-note">{hubImage.note}</span> : null}
               {hubCode}
             </div>
           </div>

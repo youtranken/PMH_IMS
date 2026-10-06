@@ -10,6 +10,7 @@ import {
   sql,
   writeHeaders,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -31,7 +32,7 @@ test.describe('Tham số hệ thống', () => {
   test('SA sửa theo nhóm: diff Trước → Sau, lưu, "sửa lần cuối bởi", nhật ký ghi trước/sau', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page
       .getByRole('navigation', { name: 'Điều hướng chính' })
@@ -64,7 +65,7 @@ test.describe('Tham số hệ thống', () => {
   test('giá trị nguy hiểm có cảnh báo vàng; ngoài khoảng thì báo lỗi và không cho lưu', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/settings?group=auth');
     const rate = page.getByRole('textbox', { name: 'Số lượt đăng nhập tối đa mỗi IP' });
     await rate.fill('150');
@@ -81,7 +82,7 @@ test.describe('Tham số hệ thống', () => {
 
   /* Q-21: đổi nhóm khi còn thay đổi chưa lưu thì hỏi; "Ở lại" giữ nguyên, "Bỏ thay đổi" mới sang. */
   test('đổi nhóm khi chưa lưu: hỏi Lưu / Bỏ thay đổi / Ở lại, không ghi gì', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/settings?group=auth');
     const rate = page.getByRole('textbox', { name: 'Số lượt đăng nhập tối đa mỗi IP' });
     const before = await rate.inputValue();
@@ -106,7 +107,7 @@ test.describe('Tham số hệ thống', () => {
   test('rời màn khi chưa lưu: menu và nút lùi đều hỏi; "Ở lại" giữ URL, "Bỏ thay đổi" mới sang', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     // Vào bằng menu (không `goto`): nút lùi phải là lượt lùi TRONG app, thứ router chặn được.
     await openNavGroup(page);
     await page
@@ -151,7 +152,7 @@ test.describe('Tham số hệ thống', () => {
     page,
     browser,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = await writeHeaders(page);
     const outside = await page.request.patch('/api/v1/admin/settings', {
       headers,
@@ -168,7 +169,7 @@ test.describe('Tham số hệ thống', () => {
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     try {
       const memberPage = await memberCtx.newPage();
-      await firstLogin(memberPage, E2E_MEMBER);
+      await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       const read = await memberPage.request.get('/api/v1/admin/settings');
       expect(read.status()).toBe(403);
       const write = await memberPage.request.patch('/api/v1/admin/settings', {

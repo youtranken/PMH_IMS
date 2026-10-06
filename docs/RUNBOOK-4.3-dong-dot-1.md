@@ -356,6 +356,7 @@ account:<id>`) và đường dẫn trong JSON (`detail.reason`).
 | DB dựng **trước lượt gộp migration** (Q-17) | Chỉ có ở máy dev/thử nghiệm: không nâng cấp được, phải dựng lại DB trắng (xem **H2**). Cài mới theo **B** không bị ảnh hưởng. Cũng vì thế, không quay về một tag trước lượt gộp trên DB đã dựng từ bộ gộp |
 | Nâng cấp qua migration `0037` (một máy một IP, Q-20) | Chạy câu kiểm ở **H3** **trước** khi `up` bản mới; ra dòng nào thì thu hồi bớt IP thừa trên bản đang chạy |
 | Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
+| draw.io (trình vẽ sơ đồ mạng): phiên bản, nâng cấp, chạy offline | Xem **H4** |
 | Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
 | Đổi trần giấy tờ đính kèm | Màn **Tham số hệ thống → Giấy tờ đính kèm**: `file.max_size_mb` (1–25), `file.max_files_per_batch`, `file.purge_after_days`. Trần cứng 25 MB nằm ở `FILE_HARD_CAP_MB` (API) và `client_max_body_size 26m` (`web/nginx.conf`); muốn quá 25 MB phải sửa code và dựng lại `api` + `web`, không chỉnh được bằng tham số |
 | Dọn nội dung file đã xoá | Worker tự chạy mỗi phút: file xoá mềm quá `file.purge_after_days` ngày (mặc định 30) bị gỡ khỏi volume `filesdata`, hàng DB giữ lại với `purged_at`, nhật ký ghi `file.purged`. Cần lấy lại một file đã xoá thì phải làm **trước** mốc đó (từ volume), hoặc lấy từ bản `files-<ngày>.tgz` trên NAS |
@@ -461,6 +462,63 @@ SQL
 
 - [ ] Bước 1 chỉ liệt kê, không đổi gì
 - [ ] Sau bước 3: file `.dump` có trên NAS, `pg_restore --list` thấy `TABLE DATA public audit_archive_<năm>`
+
+### H4. draw.io — trình vẽ sơ đồ mạng (Q-23, AD-17)
+
+draw.io **không** là service riêng. Lúc dựng image `web`, `web/Dockerfile` chép thư mục webapp
+tĩnh của draw.io từ image `jgraph/drawio` (stage `drawio-src`) vào `/usr/share/nginx/drawio`, gỡ
+`WEB-INF`, `META-INF`, service worker và source map. nginx của `web` phát nó tại
+`https://<ims>/drawio/`: không Tomcat, không servlet, không cổng nào thêm, cùng cert với IMS.
+
+**Phiên bản đang khoá:** dòng `FROM jgraph/drawio:<tag>@sha256:<digest> AS drawio-src` đầu
+`web/Dockerfile` (hiện `31.6.1@sha256:54a3a3e6e8f9ff9bf5ee3a722d8ebe3f497da3addbcf14ef62938d07854b2561`).
+Ghim cả digest vì một tag có thể bị đẩy lại, và giao thức nhúng (postMessage) đổi theo phiên bản.
+
+**Chạy offline.** Trình vẽ không gọi ra Internet khi mở (CSP của `/drawio/` chỉ cho `'self'`; E2E
+`diagrams.spec.ts` bắt mọi request của màn sửa và khẳng định không request nào ra ngoài host
+IMS). Stage `drawio-src` cũng không cần Internet nếu máy dựng đã có sẵn image nguồn đúng digest —
+mang sang bằng `docker save`/`docker load`:
+
+```bash
+# ở máy có mạng
+docker pull jgraph/drawio:31.6.1@sha256:54a3a3e6e8f9ff9bf5ee3a722d8ebe3f497da3addbcf14ef62938d07854b2561
+docker save jgraph/drawio:31.6.1 | gzip > drawio-31.6.1.tgz
+# ở máy chủ IMS
+docker load < drawio-31.6.1.tgz
+docker image inspect --format '{{index .RepoDigests 0}}' jgraph/drawio:31.6.1   # phải ra đúng digest ở Dockerfile
+```
+
+Phần còn lại của image `web` (`npm ci`, `node`, `nginx`) cần mạng y như trước; máy chủ không có
+mạng thì dựng `web` ở máy khác rồi mang image `ims-web` sang theo cùng cách.
+
+**Kiểm sau khi dựng `web`** (`docker compose up -d --build web`):
+
+```bash
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost/drawio/                    # 200
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost/drawio/js/app.min.js       # 200
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost/drawio/proxy               # 404 — servlet không tồn tại
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost/drawio/service-worker.js   # 404
+curl -sk -X POST -o /dev/null -w '%{http_code}\n' https://localhost/drawio/js/app.min.js  # 403 — chỉ GET/HEAD
+curl -skI https://localhost/drawio/ | grep -i content-security-policy                 # có "sandbox allow-scripts"
+```
+
+**Nâng cấp draw.io** — rà 1–2 lần/năm, hoặc ngay khi có cảnh báo bảo mật của draw.io:
+
+1. Chọn tag mới ở Docker Hub `jgraph/drawio`; đọc ghi chú phát hành phần "embed" (giao thức nhúng).
+2. `docker pull jgraph/drawio:<tag>` rồi lấy digest:
+   `docker image inspect --format '{{index .RepoDigests 0}}' jgraph/drawio:<tag>`.
+3. Sửa dòng `FROM jgraph/drawio:…@sha256:… AS drawio-src` trong `web/Dockerfile` (tag + digest),
+   commit trên một nhánh riêng.
+4. Trên stack dev/E2E (KHÔNG phải prod): dựng lại `web`, rồi chạy E2E sơ đồ
+   (`cd e2e && npx playwright test tests/diagrams.spec.ts --reporter=line`). Đỏ ở bước nạp,
+   chèn hay lưu = giao thức nhúng đã đổi → giữ tag cũ, ghi vào checklist.
+5. Xanh thì lên prod: `docker compose up -d --build web`.
+6. Lùi: trả dòng `FROM` cũ (giữ image tag cũ trên máy, đừng `docker image prune` nó), dựng lại
+   `web`. Bản vẽ không bị ảnh hưởng: chúng nằm trong DB, trình vẽ không giữ dữ liệu.
+
+**Khi trình vẽ không lên:** IMS vẫn chạy; màn sơ đồ báo "Trình vẽ chưa sẵn sàng" kèm nút thử lại
+sau `diagram.editor_init_timeout_seconds` giây (mặc định 20, màn **Tham số hệ thống → Sơ đồ mạng**).
+Kiểm `curl` ở trên trước; `/drawio/` trả 404 nghĩa là image `web` dựng thiếu stage draw.io.
 
 ---
 

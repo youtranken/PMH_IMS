@@ -118,7 +118,6 @@ describe('Hình nhỏ trên nút là SVG, không phải ký tự', () => {
   });
 
   it.each([
-    ['vault.stepBack', vi_.vault.stepBack],
     ['access.backToList', vi_.access.backToList],
     ['expiry.openRecordShort', vi_.expiry.openRecordShort],
     ['palette.seeAll', vi_.palette.seeAll],

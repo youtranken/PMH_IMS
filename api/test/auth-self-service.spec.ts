@@ -110,7 +110,7 @@ describe('Hồ sơ của tôi — cài lại 2 lớp và phiên của chính mì
         absoluteHours: 12,
         totpPending: false,
       });
-      if (steppedUp) await sessions.markSteppedUpWithin(tx, s.id);
+      if (steppedUp) await sessions.markSteppedUpWithin(tx, s.id, 'vault');
       return s;
     });
     return (await sessions.find(created.id))!;
@@ -188,7 +188,7 @@ describe('Hồ sơ của tôi — cài lại 2 lớp và phiên của chính mì
 
         // Máy cũ hết dùng được, máy mới dùng được — kiểm qua cửa step-up thật.
         const fresh = await openSession(u.id, false);
-        expect(await outcome(auth.stepUp(fresh, await codeFor(u.secret)))).toBe('TOTP_INVALID');
+        expect(await outcome(auth.stepUp(fresh, await codeFor(u.secret), 'vault'))).toBe('TOTP_INVALID');
       },
       TEST_TIMEOUT,
     );

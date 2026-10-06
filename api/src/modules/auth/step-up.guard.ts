@@ -8,8 +8,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
-import { REQUIRES_STEP_UP_KEY } from './step-up.decorator';
-import { isStepUpValid } from './session-policy';
+import { REQUIRES_STEP_UP_KEY, type StepUpScope } from './step-up.decorator';
+import { isStepUpValid, STEP_UP_GRACE_KEY, stepUpMarkOf } from './session-policy';
 import type { AuthedRequest } from './types';
 
 @Injectable()
@@ -65,7 +65,7 @@ export class StepUpGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const required = this.reflector.getAllAndOverride<boolean | undefined>(REQUIRES_STEP_UP_KEY, [
+    const required = this.reflector.getAllAndOverride<StepUpScope | false | undefined>(REQUIRES_STEP_UP_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -97,19 +97,31 @@ export class StepUpGuard implements CanActivate {
       });
     }
 
-    // AD-11: grace đọc từ system_config, không hardcode 10.
-    const graceMinutes = await this.config.getNumber('secretStepUpGraceMinutes');
-    if (!isStepUpValid(user.steppedUpAt, graceMinutes, new Date())) {
-      throw stepUpRequired(graceMinutes);
+    /*
+     * AD-17: mốc và ân hạn của ĐÚNG phạm vi route khai — ân hạn két không mở route sơ đồ và
+     * ngược lại. AD-11: ân hạn đọc từ system_config, không hardcode 10.
+     */
+    const scope = required;
+    const graceMinutes = await this.config.getNumber(STEP_UP_GRACE_KEY[scope]);
+    if (!isStepUpValid(stepUpMarkOf(user, scope), graceMinutes, new Date())) {
+      throw stepUpRequired(scope, graceMinutes);
     }
     return true;
   }
 }
 
-function stepUpRequired(graceMinutes: number): UnauthorizedException {
+/**
+ * `scope` đi kèm để web mở hộp nhập mã cho ĐÚNG phạm vi và gửi lại đúng phạm vi đó — web không
+ * tự đoán từ URL. Câu của két giữ trung tính vì phạm vi két còn canh tài khoản, tham số, quyền.
+ */
+function stepUpRequired(scope: StepUpScope, graceMinutes: number): UnauthorizedException {
   return new UnauthorizedException({
     code: 'STEPUP_REQUIRED',
-    message: 'Nhập mã 6 số trên ứng dụng xác thực để xác nhận thao tác này.',
+    message:
+      scope === 'diagram'
+        ? 'Nhập mã 6 số trên ứng dụng xác thực để xem sơ đồ.'
+        : 'Nhập mã 6 số trên ứng dụng xác thực để xác nhận thao tác này.',
+    scope,
     graceMinutes,
   });
 }

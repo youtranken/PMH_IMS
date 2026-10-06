@@ -13,6 +13,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -131,7 +132,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const prefix = `PHONG-E2E-${stamp}`;
@@ -224,13 +225,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
          1280px với cột Thao tác trong khung. */
       'Bảng phần mềm phải có đúng 6 cột này, đúng thứ tự này',
-    ).toEqual(['Mã hồ sơ', 'Tên hồ sơ', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
+    ).toEqual(['Mã', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
 
     // ===== SẮP XẾP: aria-sort phải lật, VÀ thứ tự dòng phải đảo theo =====
-    const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ' });
+    const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã', exact: true });
     const codeHeader = page
       .getByRole('columnheader')
-      .filter({ has: page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ' }) });
+      .filter({ has: page.getByRole('button', { name: 'Sắp xếp theo Mã', exact: true }) });
 
     await expect(
       codeHeader,
@@ -319,7 +320,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const code = `HOP-E2E-${stamp}-LIC`;
@@ -371,15 +372,15 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, ô chọn file, và hai nút chân hộp =====
+     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, − / + của Số ghế, ô chọn file, và hai nút chân hộp =====
      *
      * `<input type="file">` được trình duyệt phơi ra như một NÚT mang tên của nhãn — nên nó
      * nằm trong phép đếm này chứ không nằm trong phép đếm ô gõ chữ ở trên.
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 11 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(11);
+      'Hộp thêm hồ sơ có đúng 13 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(13);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
@@ -389,6 +390,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       '+1 năm',
       '+2 năm',
       '+3 năm',
+      'Giảm số ghế',
+      'Tăng số ghế',
       'Chọn file để đính kèm',
       'Hủy',
       'Lưu',
@@ -559,7 +562,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
    */
   test('Bên trong hộp "Gán vào máy" — chế độ gán mới và chế độ sửa ghế', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const licenseCode = `GAN-E2E-${stamp}-LIC`;
@@ -738,7 +741,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const licenseCode = `TAB-E2E-${stamp}-LIC`;
@@ -854,8 +857,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBeVisible();
     expect(
       await columnTexts(page),
-      'Bảng ghế license phải có đủ 5 cột này — mất cột Chi phí hay Hợp đồng là mất chỗ đối chiếu lúc quyết toán',
-    ).toEqual(['Máy', 'Chi phí', 'Kỳ hạn', 'Hợp đồng · Ghi chú', 'Thao tác']);
+      'Bảng ghế license phải có đủ 5 cột này — mất cột Chi phí là mất chỗ đối chiếu lúc quyết toán; Hợp đồng là dòng phụ của Kỳ hạn, Ghi chú có cột riêng (Q-24)',
+    ).toEqual(['Máy', 'Chi phí', 'Kỳ hạn', 'Ghi chú', 'Thao tác']);
 
     // ===== TAB KÉT SẮT =====
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
@@ -931,7 +934,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const licenseCode = `HAN-E2E-${stamp}-LIC`;
@@ -1021,7 +1024,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Bộ lọc loại phải bày đủ 7 nguồn hạn đang đăng ký (cả "Khác" — Q-14, "Tài khoản dịch vụ" — Q-20), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
-        'Mọi loại',
+        'Tất cả loại',
         'License phần mềm',
         'Chứng chỉ SSL',
         'Tên miền',
@@ -1032,8 +1035,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       ].sort(),
     );
     await expect(
-      kindGroup.getByRole('button', { name: 'Mọi loại', exact: true }),
-      'Chưa chọn loại nào thì nút "Mọi loại" đang bật',
+      kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }),
+      'Chưa chọn loại nào thì nút "Tất cả loại" đang bật',
     ).toHaveAttribute('aria-pressed', 'true');
 
     // ===== BẢNG (chờ dòng có thật rồi mới đọc cột — đọc cột không biết chờ lại) =====
@@ -1138,7 +1141,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = stampOf();
     const ruleName = `E2E luật phòng ${stamp}`;
@@ -1410,7 +1413,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     'Link sâu ?tab=devices phải mở đúng tab "Máy đang dùng", không rơi về tab Hồ sơ',
     async ({ page }) => {
       test.setTimeout(150_000);
-      await firstLogin(page, E2E_SA);
+      await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
       const stamp = stampOf();
       const licenseCode = `LINK-E2E-${stamp}-LIC`;

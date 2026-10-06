@@ -1,17 +1,22 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { ApiError } from '@/lib/api-client';
+import { ApiError, apiFetch } from '@/lib/api-client';
 import { foldSearch } from '@/lib/search-fold';
 import { useConfirm } from '@/ui/confirm-provider';
 import { Dialog, DialogCancel } from '@/ui/dialog';
+import { SubmitButton } from '@/ui/submit-button';
 import { Field } from '@/ui/page-header';
+import { NumberStepper } from '@/ui/number-stepper';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
+import { CableSwatch } from '@/ui/cable-swatch';
 import {
+  CABLE_COLOR_SLOTS,
   catalogLabel,
   SERVICE_PROTOCOLS,
   type CabinetRow,
@@ -23,6 +28,12 @@ import {
 } from '@/lib/catalog-types';
 import { cabinetNumber, suggestCabinetCode } from './cabinet-code';
 import { deviceUsage } from './catalog-usage';
+import { DeviceTypeDiagramIcon } from './device-type-diagram-icon';
+
+/** `GET /catalog/diagram-shapes` — danh sách hình ĐÓNG, server kiểm đúng danh sách này khi ghi. */
+interface DiagramShapes {
+  shapes: { key: string; label: string }[];
+}
 
 type FormState = {
   code: string;
@@ -33,6 +44,8 @@ type FormState = {
   uHeight: string;
   hasPortMap: boolean;
   isRouter: boolean;
+  /** '' = "Thiết bị khác". */
+  diagramShape: string;
   supplies: string;
   phone: string;
   contact: string;
@@ -40,6 +53,8 @@ type FormState = {
   protocol: ServiceProtocol;
   portFrom: string;
   portTo: string;
+  /** Ô màu dây 1..`CABLE_COLOR_SLOTS`. */
+  colorSlot: number;
 };
 
 function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState {
@@ -52,10 +67,12 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
       contact: string | null;
       hasPortMap: boolean;
       isRouter: boolean;
+      diagramShape: string | null;
       hotline: string | null;
       protocol: ServiceProtocol;
       portFrom: number;
       portTo: number;
+      colorSlot: number;
     }
   >;
   return {
@@ -67,6 +84,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
     uHeight: any.uHeight != null ? String(any.uHeight) : '',
     hasPortMap: any.hasPortMap ?? (entity === 'device_type' ? false : false),
     isRouter: any.isRouter ?? false,
+    diagramShape: any.diagramShape ?? '',
     supplies: any.supplies ?? '',
     phone: any.phone ?? '',
     contact: any.contact ?? '',
@@ -77,6 +95,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
     // dừng lại kiểm xem có phải mình gõ nhầm không.
     portTo:
       any.portTo != null && any.portTo !== any.portFrom ? String(any.portTo) : '',
+    colorSlot: any.colorSlot ?? 1,
   };
 }
 
@@ -90,11 +109,14 @@ export function CatalogForm({
   csrfToken,
   onClose,
   onSaved,
+  canUploadIcon = false,
 }: {
   entity: CatalogEntity;
   /** null = thêm mới. */
   row: CatalogRow | null;
   csrfToken: string;
+  /** SA: tải/gỡ biểu tượng SVG riêng của loại thiết bị đang sửa (server chỉ cho SA). */
+  canUploadIcon?: boolean;
   onClose: () => void;
   /**
    * Nhận luôn BẢN GHI vừa lưu.
@@ -114,6 +136,12 @@ export function CatalogForm({
    * undefined` không có đường nào phân biệt "danh mục hỏng" với "chưa tải xong".
    */
   const lists = useCatalogLists();
+  const shapes = useQuery({
+    queryKey: ['catalog', 'diagram-shapes'],
+    queryFn: () => apiFetch<DiagramShapes>('/api/v1/catalog/diagram-shapes'),
+    enabled: entity === 'device_type',
+    staleTime: Infinity,
+  });
   const [form, setForm] = useState<FormState>(() => initialState(entity, row));
   const [error, setError] = useSubmitError([form]);
   /* Lỗi server gắn được vào MỘT ô (409 trùng mã/tên) — hiện ngay dưới ô đó, không ở cuối form. */
@@ -261,9 +289,7 @@ export function CatalogForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <button type="submit" form="catalog-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </button>
+          <SubmitButton form="catalog-form" busy={save.isPending} succeeded={save.isSuccess} />
         </>
       }
     >
@@ -350,7 +376,8 @@ export function CatalogForm({
         entity === 'vendor' ||
         entity === 'department' ||
         entity === 'isp_provider' ||
-        entity === 'service_port' ? (
+        entity === 'service_port' ||
+        entity === 'cable_type' ? (
           <Field
             label={t('catalog.name')}
             required
@@ -409,15 +436,13 @@ export function CatalogForm({
               hint={t('catalog.uHeightHint')}
               error={check.error('uHeight')}
             >
-              <input
+              <NumberStepper
                 id="catalog-uheight"
-                className="inp"
-                type="number"
+                label={t('devices.rackUSizeNoun')}
                 min={1}
                 max={60}
-                inputMode="numeric"
                 value={form.uHeight}
-                onChange={(e) => set('uHeight', e.target.value)}
+                onChange={(value) => set('uHeight', value)}
               />
             </Field>
           </>
@@ -447,6 +472,26 @@ export function CatalogForm({
                 <span className="muted">{t('catalog.isRouterHint')}</span>
               </label>
             </Field>
+            <Field
+              label={t('catalog.diagramShape')}
+              htmlFor="catalog-diagram-shape"
+              hint={shapes.isError ? t('catalog.diagramShapesFailed') : t('catalog.diagramShapeHint')}
+            >
+              <Select
+                id="catalog-diagram-shape"
+                value={form.diagramShape}
+                ariaLabel={t('catalog.diagramShape')}
+                failed={shapes.isError}
+                options={[
+                  { value: '', label: t('catalog.diagramShapeOther') },
+                  ...(shapes.data?.shapes ?? []).map((shape) => ({ value: shape.key, label: shape.label })),
+                ]}
+                onChange={(value) => set('diagramShape', value)}
+              />
+            </Field>
+            {row && canUploadIcon ? (
+              <DeviceTypeDiagramIcon typeId={row.id} typeName={catalogLabel(entity, row)} csrfToken={csrfToken} />
+            ) : null}
             <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
               <input
                 id="catalog-description"
@@ -482,6 +527,37 @@ export function CatalogForm({
                 className="inp"
                 value={form.contact}
                 onChange={(e) => set('contact', e.target.value)}
+              />
+            </Field>
+          </>
+        ) : null}
+
+        {entity === 'cable_type' ? (
+          <>
+            {/* Ô màu token, không ô nhập mã màu: màu dây đổi theo theme và chỉ sửa ở `tokens.css`. */}
+            <Field label={t('catalog.colorSlot')} hint={t('catalog.colorSlotHint')}>
+              <div className="segmented" role="radiogroup" aria-label={t('catalog.colorSlot')}>
+                {Array.from({ length: CABLE_COLOR_SLOTS }, (_, i) => i + 1).map((slot) => (
+                  <label key={slot}>
+                    <input
+                      type="radio"
+                      name="cable-color-slot"
+                      value={slot}
+                      aria-label={t('catalog.colorSlotOf', { slot })}
+                      checked={form.colorSlot === slot}
+                      onChange={() => set('colorSlot', slot)}
+                    />
+                    <CableSwatch slot={slot} />
+                  </label>
+                ))}
+              </div>
+            </Field>
+            <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
+              <input
+                id="catalog-description"
+                className="inp"
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
               />
             </Field>
           </>
@@ -620,6 +696,7 @@ const ADD_KEY: Record<CatalogEntity, string> = {
   department: 'catalog.addDepartment',
   isp_provider: 'catalog.addIspProvider',
   service_port: 'catalog.addServicePort',
+  cable_type: 'catalog.addCableType',
 };
 
 type BodyField = 'siteId' | 'uHeight' | 'portFrom' | 'portTo';
@@ -672,6 +749,7 @@ function buildBody(entity: CatalogEntity, form: FormState): Built {
         hasPortMap: form.hasPortMap,
         isRouter: form.isRouter,
         description: form.description.trim(),
+        diagramShape: form.diagramShape || null,
       });
     case 'vendor':
       return ok({
@@ -688,6 +766,8 @@ function buildBody(entity: CatalogEntity, form: FormState): Built {
         hotline: form.hotline.trim(),
         contact: form.contact.trim(),
       });
+    case 'cable_type':
+      return ok({ name: form.name.trim(), colorSlot: form.colorSlot, description: form.description.trim() });
     case 'service_port': {
       // Ô trống là thiếu, không phải port 0: `Number('')` ra 0 và câu "port không hợp lệ"
       // cho một ô chưa gõ gì là câu sai.

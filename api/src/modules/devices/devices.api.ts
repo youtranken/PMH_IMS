@@ -2,7 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { StatusEvent } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import type { Tx } from '../../common/tx';
+import type { PhotoImage } from '../../common/photo-thumbnail';
+import { DevicePhotosService, type PhotoPair } from './device-photos.service';
+import { DevicePortsService, type PortLink } from './device-ports.service';
 import { DevicesService } from './devices.service';
+export type { PortLink } from './device-ports.service';
+export type { PhotoPair, PhotoSide } from './device-photos.service';
 import type { DeviceListItem } from './devices.types';
 
 /**
@@ -14,7 +19,11 @@ import type { DeviceListItem } from './devices.types';
  */
 @Injectable()
 export class DevicesApiService {
-  constructor(private readonly devices: DevicesService) {}
+  constructor(
+    private readonly devices: DevicesService,
+    private readonly ports: DevicePortsService,
+    private readonly photos: DevicePhotosService,
+  ) {}
 
   /** Hồ sơ đầy đủ kèm tên danh mục đã tra sẵn. Ném NotFound nếu không có. */
   getById(id: string): Promise<DeviceListItem> {
@@ -115,6 +124,45 @@ export class DevicesApiService {
   /** Ai thanh lý, khi nào — kho thanh lý hỏi theo mẻ id (đọc `device_history`). */
   retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
     return this.devices.statusEvents(ids, 'retired');
+  }
+
+  /**
+   * Sợi dây theo id dòng sơ đồ cổng (= `ims_link_id` trên nét vẽ). Dòng đã gỡ hay không còn nối
+   * tới máy có hồ sơ thì VẮNG MẶT. CHỈ ĐỌC: sơ đồ mạng không có đường ghi sơ đồ cổng (AD-18).
+   */
+  portLinks(ids: string[]): Promise<Map<string, PortLink>> {
+    return this.ports.linksByIds(ids);
+  }
+
+  /** Cổng đang dùng / đã khai của nhiều máy MỘT lượt — thẻ máy trên sơ đồ. CHỈ ĐỌC. */
+  portUsage(ids: string[]): Promise<Map<string, { used: number; declared: number }>> {
+    return this.ports.portUsage(ids);
+  }
+
+  /** Mọi sợi dây chạm ít nhất một máy trong danh sách — sơ đồ tìm kết nối chưa vẽ. CHỈ ĐỌC. */
+  portLinksTouching(deviceIds: string[]): Promise<PortLink[]> {
+    return this.ports.linksTouching(deviceIds);
+  }
+
+  /**
+   * Máy còn dùng được (bỏ máy thanh lý) của một site / một tủ — `total` thật để nơi gọi biết
+   * phạm vi có vượt trần của nó không (sơ đồ: "Dựng nháp từ sơ đồ cổng").
+   */
+  listUsableIn(scope: { siteId?: string; cabinetId?: string }, limit: number): Promise<Page<DeviceListItem>> {
+    return this.devices.list({ page: 1, limit }, { siteId: scope.siteId, cabinetId: scope.cabinetId, usableOnly: true });
+  }
+
+  /**
+   * Ảnh thật đang dùng (id tệp, hai mặt) của nhiều máy MỘT lượt: ảnh riêng máy thắng ảnh model
+   * (Q-23). Sơ đồ đọc qua đây rồi hỏi `photoImage` cho đúng những ảnh cần nhúng. CHỈ ĐỌC.
+   */
+  photoSources(ids: string[]): Promise<Map<string, PhotoPair>> {
+    return this.photos.effectivePhotos(ids);
+  }
+
+  /** Ảnh đã thu nhỏ theo `diagram.photo_max_px`; `null` = tệp mất / không giải mã được. */
+  photoImage(fileId: string): Promise<PhotoImage | null> {
+    return this.photos.thumbnail(fileId);
   }
 
   /** Gợi ý cho ô chọn thiết bị ở màn khác (port map, IP, secret). */

@@ -95,4 +95,28 @@ describe('LoginFailureService.listForUser — nơi đang chặn / đang đếm s
     },
     TEST_TIMEOUT,
   );
+
+  it(
+    'X-04: listBlockedNow — mọi cặp (người, IP) ĐANG tạm chặn trên toàn hệ thống, mốc xa nhất đầu; bỏ hàng chỉ đếm sai / đã nguội',
+    async () => {
+      const a = await user();
+      const b = await user();
+      await scratch.pool.query(
+        `INSERT INTO login_failure (user_id, ip, failed_attempts, locked_until) VALUES
+           ($1, '198.51.100.70', 6, now() + interval '1 hour'),
+           ($2, '203.0.113.70', 9, now() + interval '2 hours'),
+           ($1, '192.0.2.70', 2, NULL),
+           ($2, '192.0.2.71', 5, now() - interval '1 minute')`,
+        [a, b],
+      );
+      const rows = (await failures.listBlockedNow()).filter((row) => row.userId === a || row.userId === b);
+      expect(rows.map((row) => [row.userId, row.ip, row.failedAttempts])).toEqual([
+        [b, '203.0.113.70', 9],
+        [a, '198.51.100.70', 6],
+      ]);
+      expect(rows[0].lockedUntil).toBeInstanceOf(Date);
+      expect(rows[0].updatedAt).toBeInstanceOf(Date);
+    },
+    TEST_TIMEOUT,
+  );
 });

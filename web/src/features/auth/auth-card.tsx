@@ -23,6 +23,9 @@ import { SignOutLink } from './sign-out-link';
  * thống đứng giữa cột form, ngay trên card (`.auth-head`) — người mở link từ thư cần chắc đây là
  * trang thật của PMH trước khi gõ mật khẩu. Khối đó không có tiêu đề: `h1` của màn vẫn ở card.
  *
+ * `verified`: mã 2 lớp vừa được nhận (`useOtpSuccess().confirmed`) — card có quầng xanh, tiêu đề
+ * mới hiện dần (Q-21 mẫu "Glassy OTP"). Nơi gọi tự đổi chữ `title`/`subtitle`.
+ *
  * `intro`: ba dòng giới thiệu chỉ có ở màn đăng nhập. Các bước sau (mã 2 lớp, cài 2 lớp, đổi
  * mật khẩu) chỉ có logo, để card không bị đẩy xuống quá màn laptop 1366×768.
  *
@@ -40,6 +43,7 @@ export function AuthCard({
   signedInAs,
   setupFor,
   intro = false,
+  verified = false,
 }: {
   title: string;
   subtitle?: string;
@@ -53,6 +57,7 @@ export function AuthCard({
   setupFor?: Me | null;
   /** Hiện ba dòng giới thiệu IMS trên card — chỉ màn đăng nhập. */
   intro?: boolean;
+  verified?: boolean;
 }) {
   const { t } = useTranslation();
   const step = useSetupStep(setupFor ?? null);
@@ -84,7 +89,7 @@ export function AuthCard({
             </ul>
           ) : null}
         </div>
-        <section className="auth-card">
+        <section className={verified ? 'auth-card is-verified' : 'auth-card'}>
           {/* Chỉ hiện ≤720px (xem chú thích đầu component). */}
           <div className="auth-logo">
             <BrandEmblem alt={t('auth.panelOrg')} className="auth-emblem" lazy />

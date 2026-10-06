@@ -11,6 +11,7 @@ import {
   resetUsers,
   writeHeaders,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 /* ===========================================================================================
@@ -52,7 +53,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    * menu.
    */
   test('Thanh điều hướng của Thành viên thiếu đúng những thứ phải thiếu', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     await expect(nav).toBeVisible();
@@ -68,7 +69,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       .map((text) => text.trim())
       .sort();
     const expected = [
-      // 13 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
+      // 14 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
@@ -79,6 +80,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'Đường truyền',
       'Sắp hết hạn',
       'Địa chỉ IP',
+      // Thành viên cũng vẽ sơ đồ (Q-23).
+      'Sơ đồ mạng',
       'Sổ NAT',
       'Tài khoản dịch vụ',
       // Member chỉ xin, không duyệt — nên cửa này mang tên việc của họ (VLT-026), cùng
@@ -90,7 +93,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     ].sort();
     expect(
       seen,
-      'Thành viên phải thấy đúng 14 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
+      'Thành viên phải thấy đúng 15 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
     ).toEqual(expected);
 
     // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
@@ -155,7 +158,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    * chưa có tài khoản nào", một câu nói dối trắng trợn với người vừa bị từ chối quyền.
    */
   test('Gõ thẳng URL không mở được cửa mà menu đã đóng', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
 
     for (const [path, why, heading] of [
       ['/vault', 'trang tổng Két sắt gác vai ngay ở route', 'Bạn không có quyền xem trang này'],
@@ -223,7 +226,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     test.setTimeout(150_000);
 
     // --- SA dựng: một thiết bị + một secret, rồi gán Member tầng "cần được duyệt".
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = await writeHeaders(page);
 
@@ -270,7 +273,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     await logout(page);
 
     // --- Member: nhìn thấy két, đọc được mình đang ở đâu, và không có nút ghi nào.
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
 

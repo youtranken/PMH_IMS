@@ -41,6 +41,7 @@ describe('UI_PATHS bên api khớp `routes.ts` bên web', () => {
     ['ispLine', 'ispLine'],
     ['subnet', 'subnet'],
     ['serviceAccount', 'serviceAccount'],
+    ['diagram', 'diagram'],
   ])('`%s` sinh đúng đường mà web khai ở `%s`', (apiKey, webKey) => {
     const built = UI_PATHS[apiKey as 'device']('ID');
     const expected = webPathTemplate(webKey)?.replace('${id}', 'ID');

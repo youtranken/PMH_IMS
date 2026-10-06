@@ -725,7 +725,7 @@ function BoardKpis({ board }: { board: Dashboard }) {
 
   return (
     <>
-      <KpiStrip>
+      <KpiStrip countUp>
         {tiles.map((tile) => (
           <KpiTile key={tile.key} value={tile.total} label={tile.label} tone={tile.tone} to={tile.to} />
         ))}

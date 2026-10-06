@@ -43,8 +43,17 @@ export const deviceTypeTable = pgTable('device_type', {
   hasPortMap: boolean('has_port_map').notNull().default(false),
   isRouter: boolean('is_router').notNull().default(false),
   description: text('description'),
+  diagramShape: text('diagram_shape'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Biểu tượng SVG riêng (đã lọc) của một loại — migration 0047, bảng riêng để danh sách danh mục không kéo SVG theo. */
+export const deviceTypeIconTable = pgTable('device_type_icon', {
+  deviceTypeId: uuid('device_type_id').primaryKey(),
+  svg: text('svg').notNull(),
+  updatedBy: text('updated_by').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -91,6 +100,20 @@ export const servicePortTable = pgTable('service_port', {
   protocol: text('protocol').notNull().default('tcp'),
   portFrom: integer('port_from').notNull(),
   portTo: integer('port_to').notNull(),
+  description: text('description'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Loại dây (0048, Q-23). Màu là MỘT Ô màu token (`--diagram-cable-<n>`), không phải mã màu: đổi
+ * theme hay bảng màu không phải sửa dữ liệu, và không ai gõ được hex vào danh mục.
+ */
+export const cableTypeTable = pgTable('cable_type', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: citext('name').notNull(),
+  colorSlot: integer('color_slot').notNull(),
   description: text('description'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

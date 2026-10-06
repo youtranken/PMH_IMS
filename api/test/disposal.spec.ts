@@ -1,4 +1,5 @@
 import { runMigrations } from '../src/database/migration-runner';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
@@ -14,6 +15,7 @@ import type { AuditWriterService } from '../src/modules/audit/audit-writer.servi
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 import type { UsersApiService } from '../src/modules/users/users.api';
 
@@ -54,11 +56,11 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
     const isp = new IspLineService(
       db,
       catalog,
-      new DevicesApiService(devices),
+      new DevicesApiService(devices, new DevicePortsService(db, devices), noPhotos),
       audit,
     );
     disposal = new DisposalService(
-      new DevicesApiService(devices),
+      new DevicesApiService(devices, new DevicePortsService(db, devices), noPhotos),
       new SoftwareApiService(software, isp),
       new ServiceAccountsApiService(new ServiceAccountService(db, audit, {} as ExpiryApiService)),
       {

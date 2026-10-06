@@ -108,6 +108,9 @@ table.table.table-sub td .mono {
 
 /* Ô TÊN DÒNG của bảng khu mở rộng (trang chi tiết thiết bị): là <th scope="row">, nên phải
    tự bỏ dáng tiêu đề cột — căn trái, không viết hoa, và hẹp lại để cột giá trị được rộng. */
+.table.kv-table td {
+  overflow-wrap: anywhere;
+}
 .table th.panel-key {
   width: 38%;
   text-align: left;
@@ -811,4 +814,1296 @@ button.btn-x.danger:hover:not(:disabled) {
   background: var(--danger-soft);
   border-color: var(--border-danger);
   color: var(--danger-strong);
+}
+
+/* Cầu nối draw.io (`ui/drawio-frame.tsx`): khung lấp đầy khối chứa; màn đặt chiều cao cho khối. */
+.drawio-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.drawio-frame-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* Watermark người xem (AD-17): lớp phủ không nhận chuột nên không chặn thao tác vẽ, và không
+   có điều khiển nào tắt nó. Xoay chéo để không trùng hướng chữ của bản vẽ. */
+.drawio-watermark {
+  position: absolute;
+  inset: -25%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  pointer-events: none;
+  user-select: none;
+  transform: rotate(-24deg);
+  color: var(--diagram-watermark);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+.drawio-watermark span {
+  display: block;
+  text-align: center;
+  word-spacing: 0.4em;
+}
+/* Trình vẽ (V-06): vùng cắt bắt đầu dưới dải menu + công cụ của draw.io (≈72px ở giao diện
+   "kennedy" của bản ghim), chữ nhạt hơn. */
+.drawio-watermark-zone {
+  position: absolute;
+  inset: 72px 0 0 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.drawio-watermark[data-density='edit'] {
+  color: var(--diagram-watermark-edit);
+}
+/* Thẻ thông tin máy / dây (Q-23). Trình xem: nổi cạnh con trỏ, không bắt chuột (thẻ nằm
+   dưới con trỏ mà bắt chuột thì chuột "rời ô" và thẻ nhấp nháy). Trình vẽ: neo đáy khung, có nút. */
+.diagram-hover-card {
+  position: absolute;
+  z-index: 3;
+  width: 18rem;
+  max-width: calc(100% - 2 * var(--space-3));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm);
+  pointer-events: none;
+}
+.diagram-hover-card[data-docked] {
+  left: 50%;
+  bottom: var(--space-12);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.diagram-hover-title {
+  margin: 0 0 var(--space-1);
+  font-weight: var(--fw-bold);
+  overflow-wrap: anywhere;
+}
+.diagram-hover-rows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 var(--space-2);
+  margin: 0;
+}
+.diagram-hover-row {
+  display: contents;
+}
+.diagram-hover-rows dt {
+  color: var(--muted);
+}
+.diagram-hover-rows dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.diagram-hover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.drawio-frame-stalled {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+  background: var(--surface);
+}
+
+/* Bản vẽ trống ở chế độ Sửa: thẻ các bước bắt đầu nổi trên trình vẽ, giữa khung, dưới thanh menu +
+   thanh công cụ của draw.io (~4.5rem) để không che chúng — không chặn cú bấm ra ngoài thẻ (người
+   dùng vẫn vẽ được ngay), ẩn khi bắt đầu vẽ hoặc bấm "Ẩn". */
+.diagram-start-card {
+  position: absolute;
+  top: 6rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 2;
+  width: min(30rem, calc(100% - 2 * var(--space-5)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+.diagram-start-card h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.diagram-start-card .btn {
+  align-self: flex-end;
+}
+
+/* Trình xem sơ đồ (`ui/diagram-viewer.tsx`): SVG đã làm sạch trong khung kéo/thu phóng được, watermark
+   dùng chung lớp `.drawio-watermark`. Màn đặt chiều cao cho khối chứa, như `.drawio-frame`. */
+.diagram-viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  background: var(--diagram-paper);
+}
+.diagram-viewer-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.diagram-viewer-stage:active {
+  cursor: grabbing;
+}
+.diagram-viewer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  /* Nền "tự đổi" của hình draw.io (`fill: var(--ge-adaptive-bg, …)`): khối <style> khai nó bị cổng
+     SVG gỡ, nên khai lại ở đây cho khớp giấy. */
+  --ge-adaptive-bg: var(--diagram-paper);
+}
+/* draw.io ghi `color-scheme: light dark` nội tuyến và tô nét bằng `light-dark()`: để nguyên thì máy
+   ưu tiên tối vẽ nét trắng trên giấy trắng. Trình vẽ nhúng luôn sáng — trình xem ghim sáng theo,
+   `!important` để thắng style nội tuyến. */
+.diagram-viewer-canvas > svg {
+  display: block;
+  color-scheme: light !important;
+}
+.diagram-viewer-toolbar {
+  position: absolute;
+  z-index: 2;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.diagram-viewer-zoom {
+  min-width: 3.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.diagram-viewer-error {
+  position: absolute;
+  z-index: 2;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  margin: 0;
+}
+/* Ô bấm được (ô thiết bị) và dấu theo ô: `data-cell-id` của SVG do draw.io xuất. Viền sáng bằng
+   drop-shadow vì `<g>` của SVG không có outline. */
+.diagram-viewer-canvas [data-ims-clickable] {
+  cursor: pointer;
+}
+.diagram-viewer-canvas [data-ims-mark='danger'] {
+  filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 1px var(--danger));
+}
+.diagram-viewer-canvas [data-ims-mark='warn'] {
+  filter: drop-shadow(0 0 3px var(--warn)) drop-shadow(0 0 1px var(--warn));
+}
+/* Thanh trượt (`<input type="range">`) dùng chung — thanh trượt thời gian của sơ đồ. */
+.inp-range {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+/* So sánh hai phiên bản: thêm xanh, đổi vàng (ô của bản sau); ô bỏ là khung đứt đỏ trên lớp phủ
+   cùng phép thu phóng với ảnh xem. Token trạng thái có sẵn cặp dark. */
+.diagram-viewer-canvas [data-ims-diff='added'] {
+  filter: drop-shadow(0 0 4px var(--ok)) drop-shadow(0 0 2px var(--ok));
+}
+.diagram-viewer-canvas [data-ims-diff='changed'] {
+  filter: drop-shadow(0 0 4px var(--warn)) drop-shadow(0 0 2px var(--warn));
+}
+.diagram-ghost {
+  position: absolute;
+  border: 2px dashed var(--danger);
+  border-radius: var(--r-sm);
+}
+.diagram-viewer-legend {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+}
+.diagram-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.diagram-legend-item::before {
+  content: '';
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 2px;
+  background: var(--ok);
+}
+.diagram-legend-item[data-diff='changed']::before {
+  background: var(--warn);
+}
+.diagram-legend-item[data-diff='removed']::before {
+  background: transparent;
+  border: 2px dashed var(--danger);
+}
+.diagram-viewer-canvas [data-ims-selected] {
+  filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 1px var(--primary));
+}
+
+/* Chế độ ghim: mọi ô bấm được. Ghim bình luận nằm trên một lớp cùng phép thu phóng với ảnh xem;
+   nút ghim tự co lại theo nghịch đảo mức thu phóng để giữ cỡ chữ đọc được. */
+.diagram-viewer-canvas[data-pick-any] [data-cell-id] {
+  cursor: crosshair;
+}
+.diagram-viewer-pins {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+/* Dấu ghim = số bình luận + chữ bình luận cắt ngắn: người xem đọc được ý chính ngay trên bản vẽ,
+   bấm mới mở cả luồng. Nhiều ghim cùng một ô xếp chồng lên trên (`--pin-stack`). */
+.diagram-pin {
+  position: absolute;
+  pointer-events: auto;
+  transform-origin: 0 100%;
+  translate: 0 calc(-100% - var(--pin-stack, 0) * (1.75rem + var(--space-1)));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 16rem;
+  height: 1.75rem;
+  padding: 0 var(--space-2) 0 2px;
+  border: 2px solid var(--warn);
+  border-radius: var(--radius-pill) var(--radius-pill) var(--radius-pill) 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-xs);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.diagram-pin-count {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--warn);
+  color: var(--on-accent);
+  font-weight: var(--fw-bold);
+}
+.diagram-pin-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diagram-pin[data-resolved='true'] {
+  border-color: var(--ok);
+}
+.diagram-pin[data-resolved='true'] .diagram-pin-count {
+  background: var(--ok);
+}
+.diagram-pin[data-resolved='true'] .diagram-pin-text {
+  color: var(--muted);
+}
+.diagram-pin[data-removed='true'] {
+  border-style: dashed;
+  opacity: 0.75;
+}
+.diagram-pin:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Ô màu dây IMS (`imsPaint` / `data-ims-paint`, AD-18) → token theo theme ĐANG dùng. Trình xem tô
+   lại nét bằng biến này thay vì tin màu đã chụp trong SVG lúc lưu; chú giải và ô chọn màu ở Danh
+   mục dùng cùng biến nên ba nơi luôn một màu. */
+/* Trên GIẤY bản vẽ (luôn sáng): ô màu dây đọc bộ màu của giấy, không bộ màu của theme (V-05) —
+   nét trên trình xem và chú giải nổi trên nó luôn cùng một màu với thứ trình vẽ đã vẽ. */
+.diagram-viewer-canvas,
+.cable-legend {
+  --diagram-cable-0: var(--paper-cable-0);
+  --diagram-cable-1: var(--paper-cable-1);
+  --diagram-cable-2: var(--paper-cable-2);
+  --diagram-cable-3: var(--paper-cable-3);
+  --diagram-cable-4: var(--paper-cable-4);
+  --diagram-cable-5: var(--paper-cable-5);
+  --diagram-cable-6: var(--paper-cable-6);
+  --diagram-cable-7: var(--paper-cable-7);
+  --diagram-cable-8: var(--paper-cable-8);
+  --diagram-cable-warn: var(--paper-cable-warn);
+  --diagram-cable-danger: var(--paper-cable-danger);
+}
+[data-ims-paint='cable-0'] { --ims-paint: var(--diagram-cable-0); }
+[data-ims-paint='cable-1'] { --ims-paint: var(--diagram-cable-1); }
+[data-ims-paint='cable-2'] { --ims-paint: var(--diagram-cable-2); }
+[data-ims-paint='cable-3'] { --ims-paint: var(--diagram-cable-3); }
+[data-ims-paint='cable-4'] { --ims-paint: var(--diagram-cable-4); }
+[data-ims-paint='cable-5'] { --ims-paint: var(--diagram-cable-5); }
+[data-ims-paint='cable-6'] { --ims-paint: var(--diagram-cable-6); }
+[data-ims-paint='cable-7'] { --ims-paint: var(--diagram-cable-7); }
+[data-ims-paint='cable-8'] { --ims-paint: var(--diagram-cable-8); }
+[data-ims-paint='warn'] { --ims-paint: var(--diagram-cable-warn); }
+[data-ims-paint='danger'] { --ims-paint: var(--diagram-cable-danger); }
+/* Chỉ cho vạch chú giải "nét vẽ tự do": nét draw.io thường là màu chữ mặc định, không phải ô màu dây. */
+.cable-swatch[data-ims-paint='free'] { --ims-paint: var(--ink); }
+.cable-legend .cable-swatch[data-ims-paint='free'] { --ims-paint: var(--paper-ink); }
+.diagram-viewer-canvas [data-ims-paint] path {
+  stroke: var(--ims-paint);
+}
+/* Đầu mũi tên của dây (ảnh lưu trước khi trình vẽ bỏ mũi tên cho dây): là `path` có tô, còn nét dây
+   là `path` không tô. Dây không có chiều nên ẩn đi thay vì tô lại màu. */
+.diagram-viewer-canvas [data-ims-paint] path:not([fill='none']) {
+  display: none;
+}
+.diagram-viewer-canvas [data-ims-paint='warn'] path,
+.diagram-viewer-canvas [data-ims-paint='danger'] path {
+  stroke-dasharray: 6 4;
+}
+/* Bấm một thiết bị: dây của nó + máy đầu kia sáng, phần còn lại mờ đi (trình xem đặt `data-ims-dim`). */
+.diagram-viewer-canvas [data-ims-dim] {
+  opacity: 0.18;
+}
+/* Lớp đang tắt (nút "Lớp" của trình xem): ẩn hẳn ô, không chỉ mờ — tắt lớp là để bớt rối. */
+.diagram-viewer-canvas [data-ims-hidden] {
+  display: none;
+}
+/* Mức chi tiết: thu nhỏ dưới ngưỡng thì nhãn cổng trên nét dây ẩn đi (chữ quá nhỏ chỉ thành vệt). */
+.diagram-viewer-canvas[data-lod='far'] [data-ims-paint] text {
+  display: none;
+}
+.cable-swatch {
+  display: inline-block;
+  flex: none;
+  width: 1.75rem;
+  height: 0.375rem;
+  border-radius: var(--r-sm);
+  background: var(--ims-paint);
+  vertical-align: middle;
+}
+.cable-legend {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--paper-rule);
+  border-radius: var(--r-sm);
+  /* Chú giải nổi trên giấy bản vẽ: nền giấy + mực giấy ở cả hai theme, như thứ nó chú thích. */
+  background: var(--diagram-paper);
+  color: var(--paper-ink);
+  font-size: var(--fs-sm);
+}
+.cable-legend-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cable-legend > .cable-legend-list {
+  padding: 0 var(--space-2) var(--space-1);
+}
+/* Màn hẹp: thanh thu phóng chiếm đáy, chú giải đứng ngay trên nó để không đè nút nào. */
+@media (max-width: 1023px) {
+  .cable-legend {
+    bottom: calc(var(--space-3) + 3rem);
+    max-width: calc(100% - 2 * var(--space-3));
+  }
+}
+.cable-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Hộp nổi gọn neo vào nút (`ui/popover.tsx`) — hộp tìm trên thanh mảnh của màn sơ đồ. */
+.popover-panel {
+  /* Vị trí do Floating UI (useAnchoredMenu, `position: fixed`) đặt inline. */
+  z-index: var(--z-popover);
+  pointer-events: auto;
+  width: min(30rem, calc(100vw - 2rem));
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-pop);
+  animation: rowIn 0.13s var(--ease) both;
+}
+
+/* Nội dung hộp "Thiết bị kho" (`features/diagrams/stock-device-picker.tsx`). */
+.stock-picker {
+  display: grid;
+  gap: var(--space-3);
+}
+.stock-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.stock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.stock-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  /* Cỡ chữ của bảng dùng chung (E-08): dòng kết quả là thứ đọc nhiều nhất của hộp. */
+  font-size: var(--fs-sm);
+}
+.stock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-sm);
+}
+.stock-list li + li .stock-row {
+  border-top: 1px solid var(--border);
+}
+/* Dòng kéo được vào trình vẽ (Q-23): con trỏ "nắm" báo trước là kéo được. */
+.stock-list li[data-drag-ready] .stock-row {
+  cursor: grab;
+}
+.stock-row:has(input:disabled) {
+  cursor: default;
+  color: var(--ink-3);
+}
+.stock-why {
+  margin-left: var(--space-2);
+}
+
+/* Thẻ thông tin thiết bị ở chế độ xem sơ đồ (`features/diagrams/diagram-device-card.tsx`). */
+.device-card-diagrams {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+/* Xem trước biểu tượng SVG riêng của loại thiết bị (màn Danh mục) — ảnh, không chèn SVG vào DOM. */
+.diagram-icon-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+
+/* Danh sách dạng cây thư mục (`.tree-list > .tree-row`): mỗi dòng mang `--depth` để thụt lề; nút
+   gập/mở một cột cố định để tên các dòng cùng cấp thẳng hàng dù dòng có con hay không. */
+.tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tree-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-5));
+  border-bottom: 1px solid var(--border);
+}
+.tree-row:last-child {
+  border-bottom: 0;
+}
+.tree-toggle {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.tree-name {
+  font-weight: var(--fw-medium);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tree-actions {
+  margin-left: auto;
+}
+.tree-summary {
+  flex-basis: 100%;
+}
+/* Dòng tóm tắt bấm được (mở chi tiết thay đổi): đọc như chữ, gạch chân chấm báo là bấm được. */
+button.tree-summary {
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  white-space: normal;
+  font-weight: 400;
+  color: var(--ink-2);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+button.tree-summary:hover:not(:disabled) {
+  background: none;
+  color: var(--ink);
+}
+/* Ảnh xem trước trong hộp "Biểu tượng / Ảnh thật" (E-07): nhỏ, giữ tỉ lệ, nằm cạnh chữ lựa chọn. */
+.photo-thumb {
+  width: 2.5rem;
+  height: 2rem;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--diagram-paper);
+}
+/* Hộp "Hướng dẫn" của màn sơ đồ: mỗi mục một tiêu đề nhỏ + vài gạch, giữa các mục có khoảng thở. */
+.diagram-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.diagram-guide h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-md);
+}
+.diagram-guide ul {
+  margin: 0;
+  padding-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+/* Khối "Bản vẽ chờ duyệt" trên màn Duyệt (D-07): mỗi dòng tên bản vẽ (link) · phiên bản · ai gửi. */
+.diagram-review-queue {
+  margin-bottom: var(--space-6);
+}
+.diagram-review-queue-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.diagram-review-queue-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* Thanh lọc ngay dưới thanh tab của hộp thoại: cách tab một nhịp, không dính sát như dòng chữ. */
+.dialog-toolbar {
+  margin: var(--space-4) 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Màn /diagrams "bản đồ không gian" (Q-23): bản vẽ gốc là băng tối (`.dmap-banner`), con là
+   khu (`.dmap-area`), cháu là ô (`.dmap-tile`); panel bản vẽ đang chọn (`.dpanel`) đứng bên
+   phải, dính dưới topbar. Màu trạng thái chỉ đi KÈM chữ (`.dmap-status`, `.badge`), không bao
+   giờ đứng một mình. Lọc thì nút không khớp MỜ đi (`[data-dim]`) chứ không biến mất — người
+   dùng vẫn thấy nó nằm đâu trong công ty.
+   ───────────────────────────────────────────────────────────────────────────── */
+.dmap-header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.dmap-search {
+  width: 280px;
+  max-width: 100%;
+}
+.dmap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.dmap-todo {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: var(--space-3);
+  overflow-x: auto;
+}
+/* Bản đã lưu trữ là chỗ xem lại, không phải việc cần làm: viền thường, không màu trạng thái. */
+.dmap-archived-toggle {
+  color: var(--ink-2);
+  border-color: var(--border-2);
+  background: var(--surface);
+}
+.dmap-archived-toggle[aria-pressed='true'] {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.dmap-archived {
+  margin-top: var(--space-7);
+}
+.dmap-todo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+  white-space: nowrap;
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  font-weight: var(--fw-semibold);
+}
+.dmap-todo-chip[data-tone='warn'] {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.dmap-todo-chip[data-tone='info'] {
+  color: var(--info);
+  background: var(--info-soft);
+}
+.dmap-todo-chip[data-tone='danger'] {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+/* Nút của bản đồ mang tên bản vẽ dài: xuống dòng thay vì bị cắt (nút mặc định `nowrap`). */
+.dmap-banner,
+.dmap-area-head,
+.dmap-tile-main,
+.dmap-drill,
+.dmap-add > button,
+.dmap-chip {
+  white-space: normal;
+}
+.dmap-area-head:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--border-2);
+}
+.dmap-tile-main:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.dmap-drill:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+.dmap-add > button:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--primary);
+  color: var(--ink);
+}
+.dmap-chip:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.dmap-todo-chip[data-tone]:hover:not(:disabled) {
+  border-color: currentColor;
+}
+/* Chip đang lọc: viền đậm cùng màu — trạng thái bật không chỉ dựa vào màu nền. */
+.dmap-todo-chip[aria-pressed='true'] {
+  border-color: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+.dmap-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dmap-filtering {
+  margin: 0 0 var(--space-5);
+  color: var(--ink-2);
+}
+.dmap-found {
+  margin-bottom: var(--space-5);
+}
+.dmap-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  gap: var(--space-7);
+  align-items: start;
+}
+.dmap-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.dmap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+.dmap-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.dmap button[data-dim],
+.dmap [data-dim] > button,
+.dmap-list-row[data-dim] {
+  opacity: 0.45;
+}
+.dmap-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  width: 100%;
+  padding: var(--space-6) var(--space-7);
+  border: 2px solid transparent;
+  border-radius: var(--r-lg);
+  background: var(--map-banner);
+  color: var(--map-banner-ink);
+  text-align: left;
+}
+.dmap-banner:hover:not(:disabled) {
+  background: var(--map-banner);
+  border-color: var(--map-banner-ink-2);
+}
+.dmap-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.dmap-kicker {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--map-banner-ink-2);
+}
+.dmap-banner-name {
+  font-size: var(--fs-lg);
+  overflow-wrap: anywhere;
+}
+.dmap-banner-meta {
+  font-size: var(--fs-sm);
+  color: var(--map-banner-ink-2);
+}
+.dmap-areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dmap-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.dmap-area-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+.dmap-area-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+.dmap-area-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dmap-area-title .badge {
+  flex: none;
+}
+.dmap-meta {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+}
+.dmap-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dmap-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--muted);
+  border-radius: var(--r);
+  background: var(--surface);
+  overflow: hidden;
+}
+.dmap-tile[data-tone='ok'] {
+  border-top-color: var(--ok);
+}
+.dmap-tile[data-tone='warn'] {
+  border-top-color: var(--warn);
+}
+.dmap-tile[data-tone='info'] {
+  border-top-color: var(--info);
+}
+.dmap-tile[data-tone='danger'] {
+  border-top-color: var(--danger);
+}
+.dmap-tile[data-selected] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.dmap-tile-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  min-height: 72px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.dmap-tile-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.dmap-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.dmap-tile[data-tone='ok'] .dmap-dot {
+  color: var(--ok);
+}
+.dmap-tile[data-tone='warn'] .dmap-dot {
+  color: var(--warn);
+}
+.dmap-tile[data-tone='info'] .dmap-dot {
+  color: var(--info);
+}
+.dmap-tile[data-tone='danger'] .dmap-dot {
+  color: var(--danger);
+}
+.dmap-tile[data-tone='muted'] .dmap-dot {
+  color: var(--muted);
+}
+.dmap-drill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-start;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--primary-ink);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+}
+.dmap-add > button {
+  width: 100%;
+  min-height: 72px;
+  border: 1px dashed var(--border-2);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+}
+/* Thêm KHU (con của gốc) khác thêm ô trong khu: viền dày hơn để hai nút cạnh nhau không trông như một. */
+.dmap-add-area > button {
+  border-width: 2px;
+}
+.dmap-add-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.dmap-add-area p {
+  margin: 0;
+}
+.dmap-presentations .form-section-title {
+  margin: 0 0 var(--space-3);
+}
+.dmap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dmap-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+.dmap-chip[aria-current='true'] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.dmap-banner[aria-current='true'],
+.dmap-area-head[aria-current='true'] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.dmap-list .tree-name[aria-current='true'] {
+  color: var(--primary-ink);
+  text-decoration: underline;
+}
+/* Panel dính dưới topbar (56px) và cuộn riêng: danh sách phiên bản dài không kéo bản đồ theo. */
+.dpanel-wrap {
+  position: sticky;
+  top: calc(56px + var(--space-7));
+  max-height: calc(100vh - 56px - var(--space-7) * 2);
+  overflow-y: auto;
+  padding: 0;
+}
+.dpanel {
+  display: flex;
+  flex-direction: column;
+}
+.dpanel-top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) 0;
+}
+.dpanel-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.dpanel-path-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* Cấp trên trong đường dẫn: link chữ (bấm chọn bản vẽ đó), không mang dáng nút. */
+.dpanel-path-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  font-weight: var(--fw-medium);
+  color: var(--primary);
+}
+.dpanel-path-link:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+.dpanel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+.dpanel-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+.dpanel-title h2 {
+  margin: 0;
+  font-size: var(--fs-xl);
+  overflow-wrap: anywhere;
+}
+.dpanel-title .muted {
+  font-size: var(--fs-xs);
+}
+.dpanel-head > .badge {
+  flex: none;
+}
+.dpanel-actions {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0 var(--space-6) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.dpanel-actions > button {
+  flex: 1;
+}
+.dpanel-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+}
+.dpanel-locked p {
+  margin: 0;
+}
+.dpanel-drafts,
+.dpanel-published {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+}
+/* Nền nhạt màu cảnh báo: khu NHÁP là chỗ có việc phải quyết (phát hành hay bỏ). */
+.dpanel-drafts {
+  background: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
+}
+.dpanel-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.dpanel-section-head h3 {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+.dpanel-drafts .dpanel-section-head h3 {
+  color: var(--warn);
+}
+.dpanel-published .dpanel-section-head h3 {
+  color: var(--ok);
+}
+.dpanel-section-head .muted,
+.dpanel-drafts > p,
+.dpanel-published > p {
+  margin: 0;
+  font-size: var(--fs-xs);
+}
+.dpanel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dpanel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.dpanel-row[data-checked] {
+  border-color: var(--warn);
+}
+.dpanel-row input[type='checkbox'] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--warn);
+}
+.dpanel-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.dpanel-row-text strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.dpanel-row-text .muted {
+  font-size: var(--fs-xs);
+}
+.dpanel-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok-soft);
+  box-shadow: inset 0 0 0 2px var(--ok);
+}
+.dpanel-row[data-official] .dpanel-dot {
+  background: var(--ok);
+}
+.dpanel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+.dpanel > .linkbtn,
+.dpanel-published + .linkbtn {
+  align-self: flex-start;
+  margin: 0 var(--space-6) var(--space-5);
+}
+/* ≤900px: panel thành hộp (bottom sheet của `Dialog`), bản đồ chiếm cả bề ngang. */
+@media (max-width: 900px) {
+  .dmap-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dmap-search {
+    width: 100%;
+  }
+  .dmap-header-tools {
+    width: 100%;
+  }
+  .dmap-banner {
+    padding: var(--space-5);
+  }
+  .dpanel-top,
+  .dpanel-head,
+  .dpanel-actions,
+  .dpanel-drafts,
+  .dpanel-published,
+  .dpanel-locked {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .dpanel-drafts {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    border-radius: var(--r);
+  }
+}
+
+/* Mặt đứng tủ rack (ui/rack-elevation.tsx): mỗi U một dòng, U cao nhất ở trên; dòng có máy tô
+   nền nhạt, dòng của máy đang sửa tô màu chính — trạng thái có CHỮ (mã máy / "Trống"), không chỉ màu. */
+.rack-el {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.rack-el-row {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+.rack-el-row:last-child {
+  border-bottom: none;
+}
+.rack-el-u {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rack-el-row[data-state='taken'] {
+  background: var(--surface-2);
+}
+.rack-el-row[data-state='self'] {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: var(--fw-semibold);
+}
+.rack-el-device {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+.rack-view-cell {
+  justify-content: flex-end;
+}
+
+/* Bản vẽ gốc chưa có con: băng một dòng (đệm mỏng) + nút "+ Bản vẽ con" ngay bên phải. */
+.dmap-root-compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+.dmap-root-compact .dmap-banner {
+  flex: 1 1 20rem;
+  min-width: 0;
+  padding: var(--space-3) var(--space-6);
+}
+.dmap-root-compact .dmap-banner-text {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+}
+.dmap-root-compact .dmap-banner-name {
+  font-size: var(--fs-md);
+}
+/* Nút thêm mang tên bản vẽ đích nên có thể dài: co lại và xuống dòng, ở 390px thì xuống dưới băng. */
+.dmap-add-inline {
+  flex: 0 1 auto;
+  max-width: 100%;
+  display: flex;
+}
+.dmap-add-inline > button {
+  width: auto;
+  min-height: 0;
+  padding: 0 var(--space-6);
 }

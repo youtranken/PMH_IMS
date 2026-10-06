@@ -4,11 +4,13 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { BrandEmblem } from '@/ui/brand-logo';
 import { Chevron } from '@/ui/chevron';
 import { type Me } from '@/lib/me';
-import { titleKeyOf } from '@/lib/routes';
+import { isCompactShellPath, isEditorFocusPath, titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
+import { usePendingDiagramReviews } from '@/shell/use-pending-diagram-reviews';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
+import { useFailedMailCount } from '@/shell/use-failed-mail-count';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette, paletteShortcut } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
@@ -18,8 +20,10 @@ import { AccountMenu } from '@/shell/account-menu';
 
 /** Câu "N yêu cầu chờ duyệt" dùng chung cho mục menu và nút mở menu (aria-describedby). */
 const PENDING_APPROVALS_ID = 'nav-pending-approvals';
+const DIAGRAM_REVIEWS_ID = 'nav-diagram-reviews';
 /** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
 const OVERDUE_ID = 'nav-overdue';
+const FAILED_MAIL_ID = 'nav-failed-mail';
 
 /**
  * Khung ứng dụng dùng chung (AD-15/UX-DR1): sidebar + topbar. Mọi màn nghiệp vụ
@@ -34,9 +38,18 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const { t } = useTranslation();
   const groups = visibleGroups(me);
   const narrow = useIsNarrow();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showSidebar = !narrow || drawerOpen;
+  /*
+   * Màn cần trọn bề ngang (trình vẽ sơ đồ): sidebar thu còn biểu tượng, nội dung tràn hết phần
+   * còn lại. Suy từ đường dẫn nên rời màn là tự mở lại. Màn hẹp đã có drawer, không thu thêm —
+   * nhưng nội dung vẫn tràn (UX-DR2: người đi kiểm tủ xem sơ đồ trên điện thoại cần cả màn).
+   */
+  const compact = !narrow && isCompactShellPath(pathname);
+  const fullLayout = isCompactShellPath(pathname);
+  // Tab Sửa của bản vẽ: không thanh trên cùng (E-04) — màn hẹp không có trình vẽ nên không áp.
+  const bare = !narrow && isEditorFocusPath(pathname, search);
   /*
    * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở.
    *
@@ -45,7 +58,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
    */
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
   const pendingApprovals = usePendingApprovalCount(me);
+  const diagramReviews = usePendingDiagramReviews(me).rows.length;
   const overdue = useOverdueExpiryCount();
+  const failedMail = useFailedMailCount(me);
   const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
@@ -97,8 +112,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
         {showSidebar ? (
         <DrawerShell narrow={narrow} label={t('app.mainNav')} trapRef={drawerRef}>
         <nav
-          className={narrow ? 'sidebar is-drawer' : 'sidebar'}
+          className={narrow ? 'sidebar is-drawer' : compact ? 'sidebar is-compact' : 'sidebar'}
           aria-label={t('app.mainNav')}
+          data-compact={compact ? 'true' : undefined}
         >
           <div className="brand">
             <BrandEmblem alt="" className="brand-emblem" />
@@ -142,11 +158,20 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               khối tài khoản ở đáy luôn đứng yên và có mép mờ báo còn mục bên dưới. */}
           <div className="sb-scroll">
           {groups.map((group) => (
-            <NavSection key={group.labelKey} group={group} pathname={pathname}>
+            <NavSection
+              key={group.labelKey}
+              group={group}
+              pathname={pathname}
+              compact={compact}
+              alert={group.items.some((item) => item.badge === 'failedMail') ? failedMail : 0}
+              alertDescribedBy={FAILED_MAIL_ID}
+            >
               {group.items.map((item) => (
                 <NavLink
                   key={item.key}
                   to={item.to}
+                  /* Thu gọn thì chữ chỉ còn cho trình đọc màn hình; người dùng chuột cần tooltip. */
+                  title={compact ? t(me.role === 'member' && item.memberKey ? item.memberKey : item.key) : undefined}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                   end={item.to === '/'}
                   aria-describedby={
@@ -154,7 +179,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                       ? PENDING_APPROVALS_ID
                       : item.badge === 'overdue' && overdue > 0
                         ? OVERDUE_ID
-                        : undefined
+                        : item.badge === 'failedMail' && failedMail > 0
+                          ? FAILED_MAIL_ID
+                          : item.badge === 'diagramReviews' && diagramReviews > 0
+                            ? DIAGRAM_REVIEWS_ID
+                            : undefined
                   }
                   // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
                   onClick={() => setDrawerOpen(false)}
@@ -174,6 +203,18 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
                     <span className="nav-badge" aria-hidden="true">
                       {overdue}
+                    </span>
+                  ) : null}
+                  {item.badge === 'diagramReviews' && diagramReviews > 0 ? (
+                    /* Cam như badge duyệt mở két: một bản vẽ đang chờ chính người này quyết. */
+                    <span className="nav-badge warn" aria-hidden="true">
+                      {diagramReviews}
+                    </span>
+                  ) : null}
+                  {item.badge === 'failedMail' && failedMail > 0 ? (
+                    /* Đỏ: thư không tới người nhận là một sự cố đang diễn ra, không phải việc chờ. */
+                    <span className="nav-badge danger" aria-hidden="true">
+                      {failedMail}
                     </span>
                   ) : null}
                 </NavLink>
@@ -196,7 +237,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
         <div className="content">
           {/* `banner` là landmark có sẵn của `<header>` khi nó không nằm trong main/article —
               đủ để E2E bám vào mà không cần selector CSS. */}
-          <header className="topbar">
+          <header className="topbar" hidden={bare}>
             {narrow ? (
               <button
                 type="button"
@@ -270,6 +311,16 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               {t('expiry.navBadge', { count: overdue })}
             </span>
           ) : null}
+          {diagramReviews > 0 ? (
+            <span id={DIAGRAM_REVIEWS_ID} className="sr-only">
+              {t('diagrams.reviewQueue.navBadge', { count: diagramReviews })}
+            </span>
+          ) : null}
+          {failedMail > 0 ? (
+            <span id={FAILED_MAIL_ID} className="sr-only">
+              {t('failedMail.navBadge', { count: failedMail })}
+            </span>
+          ) : null}
           {/*
             `inert` khi drawer đang mở ở màn hẹp — nội dung trang thôi nhận chuột,
             tiêu điểm và trình đọc màn hình.
@@ -293,6 +344,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             className="page"
             id="noi-dung"
             data-testid="page-main"
+            data-layout={fullLayout ? 'full' : undefined}
+            data-chrome={bare ? 'bare' : undefined}
             tabIndex={-1}
             inert={narrow && drawerOpen}
           >
@@ -411,10 +464,21 @@ function writeGroupOpen(labelKey: string, open: boolean): void {
 function NavSection({
   group,
   pathname,
+  compact,
+  alert = 0,
+  alertDescribedBy,
   children,
 }: {
   group: NavGroup;
   pathname: string;
+  /** Sidebar thu gọn: mọi mục hiện thành biểu tượng, không còn tiêu đề nhóm để bấm khép/mở. */
+  compact: boolean;
+  /**
+   * Số sự cố của một mục bên trong (thư gửi lỗi). Nhóm đang khép thì số đứng trên tiêu đề nhóm:
+   * badge nằm khuất sau nhóm khép thì không ai thấy — đúng thứ badge sinh ra để chống.
+   */
+  alert?: number;
+  alertDescribedBy?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -426,7 +490,7 @@ function NavSection({
     if (holdsRoute) setOpen(true);
   }, [holdsRoute, pathname]);
 
-  if (!group.collapsible) {
+  if (!group.collapsible || compact) {
     return (
       <div>
         <p className="nav-label">{t(group.labelKey)}</p>
@@ -442,6 +506,7 @@ function NavSection({
         className="nav-label nav-group-toggle"
         aria-expanded={open}
         aria-controls={regionId}
+        aria-describedby={!open && alert > 0 ? alertDescribedBy : undefined}
         onClick={() => {
           const next = !open;
           setOpen(next);
@@ -449,6 +514,11 @@ function NavSection({
         }}
       >
         <span>{t(group.labelKey)}</span>
+        {!open && alert > 0 ? (
+          <span className="nav-badge danger" aria-hidden="true">
+            {alert}
+          </span>
+        ) : null}
         <Chevron className="nav-group-chev" />
       </button>
       <div id={regionId} hidden={!open}>

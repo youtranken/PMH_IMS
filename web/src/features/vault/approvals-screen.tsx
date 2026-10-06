@@ -32,6 +32,7 @@ import { BREAKPOINTS } from "@/ui/breakpoints";
 import { useMediaQuery } from "@/ui/use-media-query";
 import { useDebouncedValue } from "@/ui/use-debounced-value";
 import { useToast } from "@/ui/toast";
+import { usePendingDiagramReviews, type PendingDiagramReview } from "@/shell/use-pending-diagram-reviews";
 
 type ApprovalRow = BreakGlassRow;
 
@@ -305,6 +306,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         )}
         actions={narrow ? null : exportButton}
       />
+      {canDecide ? <DiagramReviewQueue me={me} /> : null}
 
       {/* Một tab thôi thì thanh tab chỉ là một vạch trang trí — bỏ. */}
       {tabs.length > 1 ? (
@@ -376,7 +378,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
           </section>
         ) : null}
         {active.isLoading ? (
-          <Loading />
+          <Loading variant="table" />
         ) : active.isError ? (
           <LoadError
             error={active.error}
@@ -615,6 +617,8 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     ? "approvals.approved"
                     : "approvals.denied",
               ),
+              // Vòng xanh chỉ cho quyết định DUYỆT (Q-21).
+              burst: deciding.approve && !deciding.revoke,
             });
           }}
         />
@@ -763,5 +767,34 @@ function LogTable({
         href: (row) => PATHS.approval(row.id),
       }}
     />
+  );
+}
+
+/**
+ * Bản vẽ đang chờ người này duyệt (D-07). Duyệt bản vẽ đi trên chính màn bản vẽ ("Duyệt…"), nên
+ * khối này chỉ là lối vào: tên, phiên bản, ai gửi, lúc nào. Không có gì chờ thì không bày khối.
+ */
+function DiagramReviewQueue({ me }: { me: Me }) {
+  const { t } = useTranslation();
+  const { rows } = usePendingDiagramReviews(me);
+  if (rows.length === 0) return null;
+  return (
+    <section className="card diagram-review-queue">
+      <h2>{t("diagrams.reviewQueue.title", { count: rows.length })}</h2>
+      <p className="muted">{t("diagrams.reviewQueue.hint")}</p>
+      <ul className="diagram-review-queue-list">
+        {rows.map((row: PendingDiagramReview) => (
+          <li key={row.approvalId}>
+            <Link to={PATHS.diagram(row.diagramId)} aria-label={t("diagrams.reviewQueue.open", { name: row.name })}>
+              {row.name}
+            </Link>
+            {row.seq !== null ? <span className="badge warn">{t("diagrams.reviewQueue.version", { seq: row.seq })}</span> : null}
+            <span className="muted">
+              {t("diagrams.reviewQueue.sentBy", { name: row.requesterName, at: formatDateTime(row.submittedAt) })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

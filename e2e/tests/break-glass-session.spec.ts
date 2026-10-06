@@ -13,6 +13,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -122,13 +123,14 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     browser,
   }) => {
     test.setTimeout(240_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const ctxA = await browser.newContext({ ignoreHTTPSErrors: true });
     const pageA = await ctxA.newPage();
     const memberTotp = await firstLogin(pageA, E2E_MEMBER);
+    await stepUpViaApi(pageA, memberTotp);
     await pageA.goto(`/devices/${kit.deviceId}?tab=vault`);
     await pageA.getByRole('button', { name: 'Xin mở két' }).click();
     const form = pageA.getByRole('dialog');
@@ -154,12 +156,13 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     const ctxB = await browser.newContext({ ignoreHTTPSErrors: true });
     const pageB = await ctxB.newPage();
     await loginWithTotp(pageB, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
+    await stepUpViaApi(pageB, memberTotp);
     await pageB.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(pageB.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
     await expect(pageB.getByText(/tính từ lúc duyệt/)).toBeVisible();
     await expect(pageB.getByRole('button', { name: /Nhận quyền/ })).toHaveCount(0);
 
-    // Vừa đăng nhập bằng mã 2 lớp = còn ân hạn step-up: bấm Xem là thấy giá trị.
+    // Đã nhập mã cho két ngay sau đăng nhập (`stepUpViaApi`) = còn ân hạn: bấm Xem là thấy giá trị.
     await pageB.getByRole('button', { name: 'Xem' }).click();
     await expect(pageB.getByTestId('secret-value')).toHaveText(kit.value);
     expect(claimed(id)).toBe(true);
@@ -179,13 +182,14 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     browser,
   }) => {
     test.setTimeout(240_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const ctxB = await browser.newContext({ ignoreHTTPSErrors: true });
     const pageB = await ctxB.newPage();
     const memberTotp = await firstLogin(pageB, E2E_MEMBER);
+    await stepUpViaApi(pageB, memberTotp);
     const id = await ask(pageB, kit.deviceId, 'E2E cổng uplink chập chờn');
     await approve(page, id);
 
@@ -197,6 +201,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     const ctxC = await browser.newContext({ ignoreHTTPSErrors: true });
     const pageC = await ctxC.newPage();
     await loginWithTotp(pageC, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
+    await stepUpViaApi(pageC, memberTotp);
     expect(await revealCode(pageC, kit.secretId)).toBe('BREAK_GLASS_OTHER_SESSION');
     await pageC.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(pageC.getByText(/đang gắn với một phiên đăng nhập khác/)).toBeVisible();
@@ -206,6 +211,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     // Phiên B đăng xuất → đăng nhập lại ngay trên chính máy đó: quyền cũ KHÔNG theo sang.
     await logout(pageB);
     await loginWithTotp(pageB, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
+    await stepUpViaApi(pageB, memberTotp);
     expect(await revealCode(pageB, kit.secretId)).not.toBe('OK');
 
     // Nhật ký: lượt quét đóng phiếu, ghi rõ vì phiên đã kết thúc (không cần ai thu hồi tay).
@@ -224,13 +230,13 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     browser,
   }) => {
     test.setTimeout(180_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await ctx.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await ask(memberPage, kit.deviceId, 'E2E đổi cấu hình VLAN');
     await approve(page, id);
     expect(await revealCode(memberPage, kit.secretId)).toBe('OK');
@@ -259,13 +265,13 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     browser,
   }) => {
     test.setTimeout(180_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await ctx.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await ask(memberPage, kit.deviceId, 'E2E kiểm tra cấu hình');
 
     // Phiếu còn chờ: "trả" là sai cửa — dùng Rút yêu cầu.
@@ -293,13 +299,13 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     browser,
   }) => {
     test.setTimeout(240_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await ctx.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await ask(memberPage, kit.deviceId, 'E2E chờ quá hạn');
     await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(memberPage.getByText(/trong 8 giờ thì yêu cầu tự hết hạn/)).toBeVisible();
@@ -330,13 +336,13 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     browser,
   }) => {
     test.setTimeout(180_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const kit = await setUp(page, stamp);
 
     const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await ctx.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await ask(memberPage, kit.deviceId, 'E2E người sắp nghỉ việc');
     await ctx.close();
 

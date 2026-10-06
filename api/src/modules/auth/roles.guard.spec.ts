@@ -46,6 +46,7 @@ function userWithRole(role: AppRole): AuthedUser {
     role,
     sessionId: 's1',
     steppedUpAt: null,
+    diagramSteppedUpAt: null,
     mustChangePassword: false,
   };
 }

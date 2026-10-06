@@ -9,6 +9,7 @@ import {
   sql,
   waitForMail,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -61,10 +62,10 @@ test.describe('SA khôi phục tài khoản người khác', () => {
     // Member đăng nhập thật để có một phiên đang sống — thứ mà lượt reset phải giết.
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     expect(sessionCount(id)).toBeGreaterThan(0);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const before = sql(`SELECT password_hash FROM users WHERE id = '${id}'`);
 
     const res = await page.request.post(`/api/v1/accounts/${id}/reset-password`, {
@@ -134,13 +135,13 @@ test.describe('SA khôi phục tài khoản người khác', () => {
 
     const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
     const memberPage = await memberContext.newPage();
-    await firstLogin(memberPage, E2E_MEMBER);
+    await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     expect(
       sql(`SELECT totp_secret_ct IS NOT NULL FROM users WHERE id = '${id}'`),
       'firstLogin phải cài xong TOTP, nếu không bài này không kiểm được gì',
     ).toBe('t');
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const res = await page.request.post(`/api/v1/accounts/${id}/reset-totp`, {
       headers: await writeHeaders(page),
     });
@@ -167,7 +168,7 @@ test.describe('SA khôi phục tài khoản người khác', () => {
    * đường vòng qua toàn bộ luật mật khẩu và 2 lớp.
    */
   test('member không mở được hai cửa này', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const id = memberId();
     const headers = await writeHeaders(page);
 

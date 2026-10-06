@@ -79,7 +79,7 @@ describe('Q-20 · mật khẩu tạm có hạn', () => {
       audit,
       outbox,
       config,
-      new KnownDeviceService(db),
+      new KnownDeviceService(db, config, noopSweep),
       loginFailures,
       new AuditApiService(new SecurityProbeService(db, config, outbox, audit)),
     );
@@ -93,6 +93,7 @@ describe('Q-20 · mật khẩu tạm có hạn', () => {
       loginFailures,
       new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())),
       config,
+      new KnownDeviceService(db, config, noopSweep),
     );
     guard = new SessionGuard(new Reflector(), sessions, users, config, db, audit);
   }, TEST_TIMEOUT);

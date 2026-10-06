@@ -11,7 +11,11 @@ import type { ApprovalsApiService } from '../approvals/approvals.api';
  * EX-021 — "Gửi thử chỉ cho tôi": thư đi tới đúng người bấm, KHÔNG tới danh sách của luật
  * (thường là sếp và cả phòng). Outbox chỉ giữ `toUserId`, email tra lúc gửi (AD-11/NFR-04).
  */
-function consumer(payload: Record<string, unknown>, user: { email: string } | null) {
+function consumer(
+  payload: Record<string, unknown>,
+  user: { email: string } | null,
+  counts: { expired: number; upcoming: number } = { expired: 0, upcoming: 1 },
+) {
   const sent: { to: string[]; subject: string }[] = [];
   const outbox = {
     loadForConsumer: () =>
@@ -41,8 +45,7 @@ function consumer(payload: Record<string, unknown>, user: { email: string } | nu
         withinDays: 30,
         recipients: ['sep@pmh.com.vn', 'ca-phong@pmh.com.vn'],
         total: 1,
-        expired: 0,
-        upcoming: 1,
+        ...counts,
         items: [{ label: 'SSL-E2E', kind: 'ssl', start: null, end: '2026-10-01', link: '/x', daysLeft: 3 }],
       }),
   } as unknown as ExpiryApiService;
@@ -80,5 +83,14 @@ describe('Thư báo cáo — gửi thử chỉ cho tôi', () => {
     const { mail, sent } = consumer({ ruleId: 'r1', isTest: true, toUserId: 'u-me' }, null);
     await mail.handle('expiry.digest', 'o1');
     expect(sent).toHaveLength(0);
+  });
+
+  it('tiêu đề: số đầu cụm viết hoa danh từ, số giữa câu viết thường (Q-24)', async () => {
+    const { mail, sent } = consumer({ ruleId: 'r1', isTest: true, toUserId: 'u-me' }, { email: 'toi@pmh.com.vn' }, {
+      expired: 1,
+      upcoming: 3,
+    });
+    await mail.handle('expiry.digest', 'o1');
+    expect(sent[0].subject).toContain('1 Mục ĐÃ QUÁ HẠN, 3 mục sắp hết hạn');
   });
 });

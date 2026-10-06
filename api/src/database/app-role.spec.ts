@@ -12,6 +12,7 @@ describe('appRoleVerdict — cổng khởi động D-01', () => {
     currentUser: 'ims_app',
     isSuperuser: false,
     ownsAuditLog: false,
+    inheritsOwner: false,
   };
 
   const cases: { name: string; facts: AppRoleFacts; ok: boolean; match?: RegExp }[] = [

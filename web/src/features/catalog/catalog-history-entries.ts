@@ -21,6 +21,9 @@ const FIELD_LABEL: Record<string, string> = {
   description: 'history.catalog.fDescription',
   uHeight: 'history.catalog.fUHeight',
   hasPortMap: 'history.catalog.fHasPortMap',
+  isRouter: 'history.catalog.fIsRouter',
+  colorSlot: 'history.catalog.fColorSlot',
+  diagramShape: 'history.catalog.fDiagramShape',
   supplies: 'history.catalog.fSupplies',
   phone: 'history.catalog.fPhone',
   contact: 'history.catalog.fContact',
@@ -39,6 +42,8 @@ export const ACTION_LABEL: Record<string, string> = {
   deleted: 'history.catalog.actDeleted',
   imported: 'history.catalog.actImported',
   'imported-update': 'history.catalog.actImportedUpdate',
+  diagram_icon_set: 'history.catalog.actDiagramIconSet',
+  diagram_icon_removed: 'history.catalog.actDiagramIconRemoved',
 };
 
 /** Đủ để đọc tên một site — `SiteRow` của danh mục thoả, bài kiểm không cần dựng cả dòng. */

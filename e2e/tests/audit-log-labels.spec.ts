@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_MEMBER, E2E_SA, firstLogin, resetUsers, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_MEMBER, E2E_SA, firstLogin, resetUsers, uniqueStamp, writeHeaders, stepUpViaApi } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -7,8 +7,8 @@ test.beforeEach(() => resetUsers());
 const ACTION_CODE_PATTERN = /^[a-z_]+(\.[a-z0-9_-]+)+$/;
 
 test.describe('Nhật ký — nhãn hành động và đối tượng người đọc được', () => {
-  test('ô "Mọi hành động" liệt kê nhãn tiếng Việt cho MỌI mã đang có trong nhật ký', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+  test('ô "Tất cả hành động" liệt kê nhãn tiếng Việt cho MỌI mã đang có trong nhật ký', async ({ page }) => {
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto(`/admin/audit-log?q=${encodeURIComponent(E2E_SA.email)}`);
     // Dòng đăng nhập: nhãn tiếng Việt ở trên, mã ở dòng phụ.
     // Nhãn là nút chữ trần đứng cạnh `<span>` mã, nên phải khớp cả ô: nhãn rồi ngay sau là mã.
@@ -29,7 +29,7 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
   test('tạo tài khoản → dòng nhật ký nói "Tài khoản · <email>" và bấm vào mở đúng người', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const email = `e2e-tao-moi-${uniqueStamp()}@pmh.com.vn`;
     const created = await page.request.post('/api/v1/accounts', {
       headers: await writeHeaders(page),
@@ -55,7 +55,7 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
   test('đường hỏng: Thành viên không đọc được nhật ký (nhãn đối tượng không mở thêm cửa nào)', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const res = await page.request.get('/api/v1/admin/audit?page=1&pageSize=20');
     expect(res.status()).toBe(403);
   });

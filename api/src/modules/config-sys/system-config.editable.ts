@@ -18,7 +18,8 @@ export type SettingGroup =
   | 'dashboard'
   | 'software'
   | 'ipam'
-  | 'files';
+  | 'files'
+  | 'diagram';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -31,7 +32,13 @@ export type SettingUnit =
   | 'ports'
   | 'rows'
   | 'mb'
-  | 'files';
+  | 'kb'
+  | 'files'
+  | 'cells'
+  | 'devices'
+  | 'megapixels'
+  | 'hops'
+  | 'px';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -47,6 +54,13 @@ export interface EditableSetting {
   warnAbove?: number;
   /** Cảnh báo khi đặt 0 — ở khoá này 0 nghĩa là TẮT hẳn một hàng rào. */
   warnZero?: boolean;
+  /**
+   * Danh sách là TẬP (thứ tự không mang nghĩa, vd danh sách cổng): không bắt tăng dần, chỉ cấm
+   * trùng. Mặc định danh sách là các BẬC tăng dần (bậc chờ khi gõ sai).
+   */
+  unordered?: boolean;
+  /** Trần số phần tử của danh sách (mặc định 10 — số bậc). */
+  maxItems?: number;
 }
 
 export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
@@ -59,8 +73,10 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'rateTotpPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 3, max: 60, warnAbove: 20 },
   { name: 'rateFileUploadPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 5, max: 300 },
   { name: 'loginAccountBackoffMinutes', group: 'auth', type: 'int_list', unit: 'minutes', min: 1, max: 1440 },
-  // Ân hạn này mở cho MỌI route `@RequiresStepUp` (tài khoản, tham số, két, cấp quyền), nên nằm nhóm đăng nhập chứ không phải két.
+  // Ân hạn phạm vi két: mở cho mọi route `@RequiresStepUp()` (tài khoản, tham số, két, cấp quyền), nên nằm nhóm đăng nhập chứ không phải két.
   { name: 'secretStepUpGraceMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
+  // Ân hạn phạm vi sơ đồ (AD-17) — đứng cạnh ân hạn két để SA thấy hai phạm vi tính riêng.
+  { name: 'diagramStepUpGraceMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
   { name: 'totpEnrollReauthMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60 },
   // Dưới 1 phút thì người gõ chậm không kịp mở ứng dụng xác thực.
   { name: 'authTotpChallengeMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 30, warnAbove: 10 },
@@ -80,6 +96,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'breakGlassMaxGrantHours', group: 'approval', type: 'int', unit: 'hours', min: 1, max: 168, warnAbove: 72 },
   { name: 'approvalReminderHours', group: 'approval', type: 'int', unit: 'hours', min: 0, max: 72, warnZero: true },
   { name: 'breakGlassPendingExpireHours', group: 'approval', type: 'int', unit: 'hours', min: 1, max: 168 },
+  // Cửa sổ "break-glass gần đây" (X-02) của bảng điều khiển / hồ sơ.
+  { name: 'breakGlassRecentWindowDays', group: 'approval', type: 'int', unit: 'days', min: 1, max: 365 },
   // Hạn & email
   { name: 'expiryCriticalDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 90 },
   { name: 'expiryWarningDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 365 },
@@ -94,11 +112,28 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   // Mạng IP & NAT. Trần dải chỉ siết (24..30) — lý do ở chú thích khoá trong `system-config.keys.ts`.
   { name: 'ipamSubnetMinPrefix', group: 'ipam', type: 'int', min: 24, max: 30 },
   { name: 'natWidePortRange', group: 'ipam', type: 'int', unit: 'ports', min: 10, max: 65535 },
+  // Cổng "nhạy cảm" của sổ NAT (X-02): mở ra Internet thì cảnh báo. Là một TẬP cổng, không phải bậc.
+  { name: 'natSensitivePorts', group: 'ipam', type: 'int_list', min: 1, max: 65535, unordered: true, maxItems: 50 },
   // Giấy tờ đính kèm (Q-18). Trần 25 = `FILE_HARD_CAP_MB`: multer/nginx chặn cứng ở đó.
   { name: 'fileMaxSizeMb', group: 'files', type: 'int', unit: 'mb', min: 1, max: 25 },
   { name: 'fileMaxFilesPerBatch', group: 'files', type: 'int', unit: 'files', min: 1, max: 20 },
   // Dọn blob không lùi lại được: dưới 7 ngày thì một lần xoá nhầm cuối tuần đã mất hẳn nội dung.
   { name: 'filePurgeAfterDays', group: 'files', type: 'int', unit: 'days', min: 7, max: 3650 },
+  // Sơ đồ mạng. Trần trên của hai trần dung lượng (4 MB + 4 MB) giữ dưới trần body 12 MB của route lưu bản vẽ.
+  { name: 'diagramEditorInitTimeoutSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 5, max: 120 },
+  { name: 'diagramXmlMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 256, max: 4096 },
+  { name: 'diagramSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 256, max: 4096 },
+  { name: 'diagramMaxCells', group: 'diagram', type: 'int', unit: 'cells', min: 500, max: 20000, warnAbove: 10000 },
+  { name: 'diagramPresenceTtlSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 20, max: 600 },
+  { name: 'diagramIconSvgMaxKb', group: 'diagram', type: 'int', unit: 'kb', min: 10, max: 500 },
+  { name: 'diagramAutolayoutMaxNodes', group: 'diagram', type: 'int', unit: 'devices', min: 10, max: 2000, warnAbove: 500 },
+  { name: 'diagramExportMaxMegapixels', group: 'diagram', type: 'int', unit: 'megapixels', min: 4, max: 100, warnAbove: 60 },
+  { name: 'diagramExportTimeoutSeconds', group: 'diagram', type: 'int', unit: 'seconds', min: 5, max: 120 },
+  { name: 'diagramDriftNotifyEnabled', group: 'diagram', type: 'int', min: 0, max: 1, warnZero: true },
+  { name: 'diagramDriftSweepHour', group: 'diagram', type: 'int', unit: 'hours', min: 0, max: 23 },
+  { name: 'diagramPathMaxHops', group: 'diagram', type: 'int', unit: 'hops', min: 2, max: 50, warnAbove: 30 },
+  { name: 'diagramPhotoMaxPx', group: 'diagram', type: 'int', unit: 'px', min: 120, max: 1600, warnAbove: 960 },
+  { name: 'diagramDeviceWidthPx', group: 'diagram', type: 'int', unit: 'px', min: 40, max: 480 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {
@@ -135,10 +170,13 @@ export function validateSetting(
     const nums = parts.map(Number);
     const outOfRange = nums.find((n) => !inRange(spec, n));
     if (outOfRange !== undefined) return { value: null, reason: rangeReason(spec) };
-    if (nums.some((n, i) => i > 0 && n <= nums[i - 1])) {
+    if (spec.unordered) {
+      if (new Set(nums).size !== nums.length) return { value: null, reason: 'Có số bị trùng.' };
+    } else if (nums.some((n, i) => i > 0 && n <= nums[i - 1])) {
       return { value: null, reason: 'Các bậc phải tăng dần.' };
     }
-    if (nums.length > 10) return { value: null, reason: 'Tối đa 10 bậc.' };
+    const maxItems = spec.maxItems ?? 10;
+    if (nums.length > maxItems) return { value: null, reason: `Tối đa ${maxItems} ${spec.unordered ? 'mục' : 'bậc'}.` };
     return { value: nums.join(','), reason: null };
   }
 

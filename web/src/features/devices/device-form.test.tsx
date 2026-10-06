@@ -30,13 +30,16 @@ const LISTS = {
   servicePorts: [],
 };
 
-function mockFetch() {
-  const calls: { url: string; method: string }[] = [];
+function mockFetch(lists: typeof LISTS = LISTS) {
+  const calls: { url: string; method: string; body?: string }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string, init?: RequestInit) => {
-      calls.push({ url, method: init?.method ?? 'GET' });
-      if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, LISTS));
+      calls.push({ url, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? init.body : undefined });
+      if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, lists));
+      if (init?.method === 'PATCH' || init?.method === 'POST') {
+        return Promise.resolve(jsonResponse(200, { device: { id: 'd1', code: 'SW-01' }, warnings: [] }));
+      }
       return Promise.resolve(jsonResponse(200, []));
     }),
   );
@@ -131,6 +134,81 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     ).toBeInTheDocument();
   });
 
+  /* Vị trí U trong tủ: hai ô chỉ hiện khi đã chọn tủ; bỏ tủ thì gửi U rỗng. */
+  describe('U bắt đầu / Số U', () => {
+    const WITH_CABINET = {
+      ...LISTS,
+      cabinets: [{ id: 'c-1', siteId: 's-on', siteCode: 'HCM', code: 'R1', description: null, uHeight: 42, active: true }],
+    } as unknown as typeof LISTS;
+    const inRack = {
+      id: 'd1',
+      code: 'SW-01',
+      name: 'Switch',
+      deviceTypeId: 't-on',
+      siteId: 's-on',
+      cabinetId: 'c-1',
+      rackUStart: 5,
+      rackUSize: 2,
+      status: 'in_use',
+    } as DeviceRow;
+
+    it('không có tủ thì không có ô U', () => {
+      mockFetch(WITH_CABINET);
+      renderForm({ ...inRack, cabinetId: null, rackUStart: null, rackUSize: null });
+      expect(screen.queryByRole('textbox', { name: 'U bắt đầu' })).toBeNull();
+      expect(screen.queryByRole('textbox', { name: 'Số U' })).toBeNull();
+    });
+
+    it('có tủ: hiện U đang khai, sửa rồi Lưu gửi số', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const start = await screen.findByRole('textbox', { name: 'U bắt đầu' });
+      expect(start).toHaveValue('5');
+      expect(screen.getByRole('textbox', { name: 'Số U' })).toHaveValue('2');
+      const user = userEvent.setup();
+      await user.clear(start);
+      await user.type(start, '7');
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+      const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
+      expect(body).toMatchObject({ cabinetId: 'c-1', rackUStart: 7, rackUSize: 2 });
+    });
+
+    it('Số U có nút − / + (Q-24): bấm + rồi Lưu gửi số mới', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Tăng số U' }));
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+      const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
+      expect(body).toMatchObject({ rackUStart: 5, rackUSize: 3 });
+    });
+
+    it('xoá trống cả hai ô → gửi null (bỏ U)', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const user = userEvent.setup();
+      await user.clear(await screen.findByRole('textbox', { name: 'U bắt đầu' }));
+      await user.clear(screen.getByRole('textbox', { name: 'Số U' }));
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+      const body = JSON.parse(calls.find((c) => c.method === 'PATCH')!.body!) as Record<string, unknown>;
+      expect(body).toMatchObject({ rackUStart: null, rackUSize: null });
+    });
+
+    it('chỉ điền một ô → báo tại ô, không gửi', async () => {
+      const calls = mockFetch(WITH_CABINET);
+      renderForm(inRack);
+      const user = userEvent.setup();
+      await user.clear(screen.getByRole('textbox', { name: 'Số U' }));
+      await user.click(screen.getByRole('button', { name: 'Lưu' }));
+      const size = screen.getByRole('textbox', { name: 'Số U' });
+      await waitFor(() => expect(size).toHaveAttribute('aria-invalid', 'true'));
+      expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+    });
+  });
+
   it('Vị trí và Mua sắm & bảo hành xếp 4 cột; ghi chú 2 dòng', () => {
     mockFetch();
     renderForm(null);
@@ -139,5 +217,45 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
       expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     }
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
+  });
+});
+
+/*
+ * Dấu tích "đã lưu" trên nút Lưu chỉ thuộc về lượt bấm chính nút đó: "Lưu và nhân bản" giữ hộp
+ * mở để khai máy kế, dấu tích nhảy lên nút Lưu đọc ra là đã lưu và đóng.
+ */
+describe('Form thiết bị — dấu tích ở đúng nút vừa bấm', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.motion;
+  });
+
+  async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'SW-E2E-01');
+    await user.type(document.getElementById('device-name') as HTMLInputElement, 'Switch E2E');
+    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(await screen.findByRole('option', { name: 'PC' }));
+  }
+
+  it('"Lưu và nhân bản" → nút Lưu KHÔNG hiện dấu tích', async () => {
+    document.documentElement.dataset.motion = 'on';
+    const calls = mockFetch();
+    renderForm(null);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).not.toHaveValue('SW-E2E-01'));
+    expect(calls.some((c) => c.method === 'POST')).toBe(true);
+    expect(screen.getByRole('button', { name: /^Lưu$/ })).not.toHaveAttribute('data-done');
+  });
+
+  it('vế đối chứng: bấm Lưu → nút Lưu hiện dấu tích', async () => {
+    document.documentElement.dataset.motion = 'on';
+    mockFetch();
+    renderForm(null);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: /^Lưu$/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Lưu$/ })).toHaveAttribute('data-done', 'true'));
   });
 });

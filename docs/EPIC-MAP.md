@@ -943,3 +943,119 @@ tập và UAT, thuộc ngày go-live). Bảy nhánh song song gộp qua `golive/
 4. **`git add -A` khi test đang chạy nền** vơ file dò tạm của bài lint vào commit (lên cả tag
    v1.4.3). Chỉ add đúng file mình sửa.
 5. **Chú thích `--` trong câu SQL gửi qua `psql -c`** nuốt phần còn lại khi câu bị gộp một dòng.
+
+---
+
+## Epic 10 đã đóng góp gì — Sơ đồ mạng thay Visio (đóng 2026-10-03)
+
+Quyết định nghiệp vụ: `docs/QUYET-DINH.md` Q-23. Migration của epic: `0043`–`0057` (`0043_diagram_spike`
+là bảng thử, bị `0046_diagram` xoá; không có `0052`).
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `diagram` | `diagrams` | Một bản vẽ trong cây (`kind` = `official` / `presentation`). `official_version_id` là cờ "chính thức" của cây, vì phiên bản chỉ-thêm không UPDATE được. Bản trình bày trỏ nguồn qua `source_diagram_id` + `source_version_id` (0050) |
+| `diagram_version` | `diagrams` | Chỉ-thêm với `ims_app` (REVOKE UPDATE/DELETE/TRUNCATE). Từ 0056 chỉ hàm `diagram_delete_versions` (SECURITY DEFINER) xoá được bản nháp / bản vẽ chưa phát hành; trigger `diagram_prune_guard` vẫn giữ bản chính thức, bản đặt tên, bản từng phát hành (Q-23). Giữ XML + SVG đã làm sạch (ảnh nhúng thành `ims-img:`, 0057) + chụp thiết bị lúc lưu |
+| `diagram_version_label` | `diagrams` | Chỉ-thêm. Nhãn đặt cho phiên bản |
+| `diagram_history` | `diagrams` | Chỉ-thêm. Nhật ký mở/lưu/gửi duyệt/phát hành của bản vẽ |
+| `diagram_presence` | `diagrams` | "Đang có … mở sửa" — bảng chứ không Redis; hàng quá `diagram.presence_ttl_seconds` coi như đã rời |
+| `diagram_comment` | `diagrams` | Chỉ-thêm (0049). Bình luận + ghim neo vào ô (`cellId` + `anchor`) |
+| `diagram_drift` | `diagrams` | Bộ đệm số lệch kho, tối đa một hàng mỗi bản vẽ, ghi đè mỗi lượt quét (0053) |
+| `diagram_image`, `diagram_version_image` | `diagrams` | Ảnh nhúng lưu một lần theo SHA-256 + hàng nối phiên bản–ảnh (0057). Đọc nội dung cho người dùng phải qua `hydrateTexts`; ảnh mồ côi dọn trong tx Bỏ bản nháp / Xóa hẳn và trong `reset-e2e.mjs` |
+| `cable_type` | `catalog` | Danh mục loại dây (0048), `catalog_history` nhận thêm entity này |
+| `device_type_icon` | `catalog` | Biểu tượng SVG riêng của loại thiết bị (0047) |
+| `device_model` | `devices` | Ảnh thật mặt trước/sau theo model (0054); `file.owner_type` nhận thêm `device_model` |
+
+Cột mới trên bảng có sẵn:
+
+- `sessions.diagram_stepped_up_at` (0044): ân hạn step-up phạm vi sơ đồ, tính riêng với két.
+- `device_type.diagram_shape` (0047, có CHECK): hình mặc định của loại thiết bị trên bản vẽ.
+- `device_port.cable_type_id` (0048, FK `cable_type`).
+- `device.rack_u_start`, `device.rack_u_size`, `device.photo_front_file_id`, `device.photo_back_file_id`
+  (0054) + ràng buộc `device_rack_u_no_overlap` `EXCLUDE USING gist` (cùng tủ, dải U không chồng;
+  bỏ qua máy `retired`).
+
+Khoá `system_config` mới (AD-11): `diagram.stepup_grace_minutes`, `diagram.editor_init_timeout_seconds`,
+`diagram.xml_max_kb`, `diagram.svg_max_kb`, `diagram.max_cells`, `diagram.presence_ttl_seconds`,
+`diagram.icon_svg_max_kb`, `diagram.autolayout_max_nodes`, `diagram.export_max_megapixels`,
+`diagram.export_timeout_seconds`, `diagram.drift_notify_enabled`, `diagram.drift_sweep_hour`,
+`diagram.photo_max_px`, `diagram.path_max_hops`.
+
+Cột mới sau khi đóng epic (Q-23, 04/10): `diagram.deleted_at`, `diagram.deleted_by` (0056) — bia mộ của
+"Xóa hẳn", luôn kèm `archived_at`; `node()` và khung bản vẽ con coi hàng này như không có. Tên phiên bản
+và bình luận nay `ON DELETE CASCADE` theo phiên bản (chỉ hàm xoá chạm tới được).
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Dùng thế nào |
+| --- | --- | --- |
+| Step-up có phạm vi: `@RequiresStepUp()` (két, mặc định `vault`) và `@RequiresStepUp('diagram')` | `modules/auth` (guard toàn cục, mặc định đóng; `step-up-surface.spec.ts` canh) | Route mới phải khai `@RequiresStepUp(...)` hoặc `@NoStepUp()`. Mã mở sơ đồ KHÔNG mở két. Web: `StepUpDialog` với prop `scope` bắt buộc |
+| `DrawioFrame` + `drawio-protocol` | `web/src/ui/drawio-frame.tsx`, `web/src/ui/drawio-protocol.ts` | Cầu nối DUY NHẤT tới iframe draw.io tự host (AD-17). Không tự dựng `<iframe>` hay `postMessage` |
+| `DiagramViewer` (+ `DiagramWatermark`) | `web/src/ui/diagram-viewer.tsx` | Trình xem SVG đã làm sạch: ô bấm, ghim, so sánh, lớp, tô sáng, phóng hai ngón. Xem không nạp draw.io |
+| `runDiagramChecks`, `diagram-checks`, `diagram-finding` | `api/src/modules/diagrams/` | Hàm thuần tự kiểm bản vẽ với kho (dây khớp cổng, dây chưa vẽ…). Dùng chung cho tự kiểm khi gửi duyệt và quét lệch kho |
+| `DevicesApiService.portLinks` / `portLinksTouching` | `modules/devices/devices.api.ts` | Đọc dây cổng theo lô qua public api (AD-2), không JOIN `device_port` |
+| `CatalogApiService.cabinetsByIds` / `vendorsByIds` | `modules/catalog/catalog.api.ts` | Tra danh mục theo lô, tránh N+1 |
+| `MailContentRegistry` | `api/src/common/mail-content.registry.ts` | Module nghiệp vụ tự khai nội dung thư; module `mail` không phải biết từng loại |
+| `PALETTE` | `api/src/common/palette.generated.ts` (sinh bằng `npm --prefix api run gen:palette`) | Màu phía server (xuất PNG/PDF) lấy từ `tokens.css`. `palette.spec.ts` đỏ khi lệch; `gate-hex.sh` quét cả `api/src` |
+| Thiết kế API trạng thái sống (để dành, chưa làm) | `docs/THIET-KE-TRANG-THAI-SONG.md` | FR-049: lớp "trạng thái sống" sẽ là một `group` mới của `DiagramViewer` |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Khi nào làm |
+| --- | --- | --- |
+| Ảnh WebP không đưa lên sơ đồ được | `@resvg/resvg-js` 2.x không giải mã WebP; server từ chối kèm câu hướng dẫn chọn JPG/PNG | Khi nâng resvg hoặc thêm bước chuyển ảnh |
+| Chữ nhãn trên trình xem đóng băng lúc lưu | SVG chụp tại thời điểm lưu phiên bản; đổi tên thiết bị trong kho không tự cập nhật ảnh cũ | Khi người dùng cần nhãn sống |
+| Lệch kho / đổi cổng chỉ phát hiện cho phiên bản lưu SAU khi có tính năng | Phiên bản cũ không có chụp thiết bị/dây để so | Tự hết dần khi bản vẽ được lưu lại |
+| `device_type_icon`, `diagram_drift` nằm trong `NO_CREATED_AT` của `e2e/leak-guard.ts` | Không có cột `created_at`; dọn theo khoá ngoại | Nếu thêm cột thì gỡ khỏi danh sách miễn |
+| Yêu cầu duyệt bị thay thế (`review.superseded`) đóng mà không gửi thư | Chỉ ghi lịch sử; người gửi thấy trên màn | Khi có phàn nàn bị "mất" yêu cầu |
+| Nhãn community của graphify chưa đặt lại | `graphify label . --missing-only` cần API key | Lần đầu có key |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **draw.io bản một trang trả `mxGraphModel` trần** (không có `<diagram id>`), cả ở XML đi kèm sự kiện
+   `save` lẫn `getDiff`. Cần cả tệp thì gửi lệnh `export` định dạng `xml`.
+2. **Lệnh `merge` của draw.io làm rơi ô** của bản vẽ đang mở. Chèn hình vào bản đang sửa thì
+   `export` `xml` rồi `patch`, để không đụng phần người vẽ chưa lưu.
+3. **Iframe sandbox có origin mờ (`null`)**: tệp tĩnh của draw.io phải trả `Access-Control-Allow-Origin: *`
+   (`web/drawio-headers.conf`), và ảnh đưa vào bản vẽ phải là `data:` URI.
+4. **resvg đọc được đường dẫn tuyệt đối trên đĩa** trong `<image href>`. SVG phải qua cổng kiểm lại
+   ngay trước khi render, không tin bản đã kiểm lúc lưu.
+5. **`rate.totp_per_minute` phải nới trong harness E2E** (`e2e/totp-rate-backup.ts`, `reset-e2e.mjs`):
+   mã lúc đăng nhập không mở phạm vi két/sơ đồ, nên gần như mọi bài phải gõ thêm một mã, và một
+   worker trên cùng tài khoản `e2e-sa` vượt trần 10 mã/phút chỉ vì nhịp chạy test.
+6. **Vòng chờ dựa trên `pgrep -f` tự khớp chính nó** (chuỗi tìm nằm trong dòng lệnh của vòng chờ) nên
+   không bao giờ thoát. Chờ theo PID hoặc file đánh dấu.
+7. **E2E đầy đủ nay quá 1,5 giờ.** `CLAUDE.md` đổi sang "E2E theo phạm vi" ở tầng cuối; chỉ chạy đầy đủ
+   khi chạm lõi.
+
+### Đợt bổ sung trước khi gộp `master` (v1.6.0) — góp ý Q-23 + Story 10.13 + rà soát mã
+
+Quyết định: `docs/QUYET-DINH.md` Q-23 (các gạch ảnh thiết bị / máy trong tủ, "Quy trình vẽ và ba nguồn
+sự thật"). Migration thêm: `0058`–`0061`.
+
+| Thứ | Ở đâu | Ghi chú cho epic sau |
+| --- | --- | --- |
+| Ba nguồn sự thật: kho = vị trí, sơ đồ cổng = dây, model = đặc tính loại máy | Q-23 | Mặt tủ trên bản vẽ là ảnh chiếu của kho; kéo-thả trong khung tủ là thao tác kho có hỏi trước, ghi ngay, không chờ duyệt |
+| `POST /diagrams/from-stock` ("Dựng từ kho") | `diagrams.service.createFromStock` | Bản vẽ cấp tủ + nháp #1 dựng bằng `cabinetFrame` + `buildRackXml`, một transaction, hỏi mã sơ đồ |
+| Hộp tạo bản vẽ "Bắt đầu từ" | `features/diagrams/diagram-start.ts` | Không gì tự chép: cấp thường mặc định Trang trắng, cấp tủ đã chọn tủ mặc định Dựng từ kho |
+| Huy hiệu sẵn sàng ở "Thiết bị kho" | `features/diagrams/device-readiness.ts` | Ảnh trong style `device-looks` là dạng draw.io `data:<mime>,<base64>` (không `;base64`) — đọc ảnh từ style phải nhận dạng đó |
+| `parseDrawioXml`, `cellWrapper`, `cellIdOf`, `wrapperAttrs`, `cableView` | `features/diagrams/drawio-bridge.ts` | MỘT chỗ đọc XML draw.io cho mọi cầu nối màn sửa (rà soát #8: các bản chép đã lệch nhau) |
+| `0061_diagram_archive_clock` | migration | `archived_at` / `deleted_at` do DB đóng dấu `now()`; ims_app không lùi mốc để mở đường "Xóa vĩnh viễn" |
+| `photoSize()` | `api/src/common/photo-thumbnail.ts` | Đọc cỡ ảnh từ đầu tệp PNG/JPEG thay lượt dò Resvg đồng bộ (tải phông chặn event loop) |
+
+Bẫy mới:
+
+1. **`diffRecord` coi mọi object / mảng là rỗng** (`common/record-diff.ts`): trường jsonb của hồ sơ phải so
+   riêng, không thì sửa riêng trường đó bị coi là "không đổi gì" và KHÔNG được lưu.
+2. **`FOR SHARE` đầu transaction rồi `FOR UPDATE` cùng hàng sau đó = deadlock** giữa hai lượt cùng máy.
+   Khoá ghi phải lấy ngay đầu transaction.
+3. **Chạy lẻ E2E trên DB dev đã xoá hết bản vẽ:** bài nào ngầm dựa vào "cây còn bản vẽ khác" sẽ đỏ
+   (màn trống hiện thẳng khu lưu trữ, không có nút "Đã lưu trữ (n)"). Bài kiểm phải tự đủ dữ liệu.
+4. **Hai bài E2E chập chờn đã biết:** `my-profile.spec.ts` "Đăng xuất các máy khác" (quá 60 giây khi máy
+   tải nặng) và `nat-guard-remaining-doors.spec.ts:428` (dải IP dựng từ `stamp % 200` có thể trùng dữ
+   liệu đang có). Chạy lại riêng thì xanh; chưa sửa gốc.
+
+Còn để ngỏ: nhịp "đang mở sửa" không đòi mã sơ đồ (nó chỉ trả tên người đang sửa, Q-23 chỉ liệt kê
+lưu / đặt tên / khôi phục); hai bước "lưu trữ → xóa vĩnh viễn" hợp lệ thì DB không phân biệt được với
+ims_app bị chiếm làm đúng hai bước đó.

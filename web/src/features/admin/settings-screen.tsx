@@ -29,6 +29,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'software', label: 'settings.groupSoftware' },
   { key: 'ipam', label: 'settings.groupIpam' },
   { key: 'files', label: 'settings.groupFiles' },
+  { key: 'diagram', label: 'settings.groupDiagram' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -42,7 +43,13 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   ports: 'settings.unitPorts',
   rows: 'settings.unitRows',
   mb: 'settings.unitMb',
+  kb: 'settings.unitKb',
   files: 'settings.unitFiles',
+  cells: 'settings.unitCells',
+  devices: 'settings.unitDevices',
+  megapixels: 'settings.unitMegapixels',
+  hops: 'settings.unitHops',
+  px: 'settings.unitPx',
 };
 
 /*
@@ -71,6 +78,7 @@ const TEXT: Record<string, [string, string]> = {
   authSupportContact: ['settings.authSupportContactLabel', 'settings.authSupportContactDesc'],
   secretRevealSeconds: ['settings.secretRevealSecondsLabel', 'settings.secretRevealSecondsDesc'],
   secretStepUpGraceMinutes: ['settings.secretStepUpGraceMinutesLabel', 'settings.secretStepUpGraceMinutesDesc'],
+  diagramStepUpGraceMinutes: ['settings.diagramStepUpGraceMinutesLabel', 'settings.diagramStepUpGraceMinutesDesc'],
   secretStepUpMaxFailures: ['settings.secretStepUpMaxFailuresLabel', 'settings.secretStepUpMaxFailuresDesc'],
   secretProbeAlertThreshold: [
     'settings.secretProbeAlertThresholdLabel',
@@ -107,9 +115,28 @@ const TEXT: Record<string, [string, string]> = {
   dashboardMaxItems: ['settings.dashboardMaxItemsLabel', 'settings.dashboardMaxItemsDesc'],
   ipamSubnetMinPrefix: ['settings.ipamSubnetMinPrefixLabel', 'settings.ipamSubnetMinPrefixDesc'],
   natWidePortRange: ['settings.natWidePortRangeLabel', 'settings.natWidePortRangeDesc'],
+  natSensitivePorts: ['settings.natSensitivePortsLabel', 'settings.natSensitivePortsDesc'],
+  breakGlassRecentWindowDays: ['settings.breakGlassRecentWindowDaysLabel', 'settings.breakGlassRecentWindowDaysDesc'],
   fileMaxSizeMb: ['settings.fileMaxSizeMbLabel', 'settings.fileMaxSizeMbDesc'],
   fileMaxFilesPerBatch: ['settings.fileMaxFilesPerBatchLabel', 'settings.fileMaxFilesPerBatchDesc'],
   filePurgeAfterDays: ['settings.filePurgeAfterDaysLabel', 'settings.filePurgeAfterDaysDesc'],
+  diagramEditorInitTimeoutSeconds: [
+    'settings.diagramEditorInitTimeoutSecondsLabel',
+    'settings.diagramEditorInitTimeoutSecondsDesc',
+  ],
+  diagramXmlMaxKb: ['settings.diagramXmlMaxKbLabel', 'settings.diagramXmlMaxKbDesc'],
+  diagramSvgMaxKb: ['settings.diagramSvgMaxKbLabel', 'settings.diagramSvgMaxKbDesc'],
+  diagramMaxCells: ['settings.diagramMaxCellsLabel', 'settings.diagramMaxCellsDesc'],
+  diagramPresenceTtlSeconds: ['settings.diagramPresenceTtlSecondsLabel', 'settings.diagramPresenceTtlSecondsDesc'],
+  diagramIconSvgMaxKb: ['settings.diagramIconSvgMaxKbLabel', 'settings.diagramIconSvgMaxKbDesc'],
+  diagramAutolayoutMaxNodes: ['settings.diagramAutolayoutMaxNodesLabel', 'settings.diagramAutolayoutMaxNodesDesc'],
+  diagramExportMaxMegapixels: ['settings.diagramExportMaxMegapixelsLabel', 'settings.diagramExportMaxMegapixelsDesc'],
+  diagramExportTimeoutSeconds: ['settings.diagramExportTimeoutSecondsLabel', 'settings.diagramExportTimeoutSecondsDesc'],
+  diagramDriftNotifyEnabled: ['settings.diagramDriftNotifyEnabledLabel', 'settings.diagramDriftNotifyEnabledDesc'],
+  diagramDriftSweepHour: ['settings.diagramDriftSweepHourLabel', 'settings.diagramDriftSweepHourDesc'],
+  diagramPathMaxHops: ['settings.diagramPathMaxHopsLabel', 'settings.diagramPathMaxHopsDesc'],
+  diagramPhotoMaxPx: ['settings.diagramPhotoMaxPxLabel', 'settings.diagramPhotoMaxPxDesc'],
+  diagramDeviceWidthPx: ['settings.diagramDeviceWidthPxLabel', 'settings.diagramDeviceWidthPxDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

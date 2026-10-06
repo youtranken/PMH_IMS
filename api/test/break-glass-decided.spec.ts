@@ -19,6 +19,7 @@ import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { AuthApiService } from '../src/modules/auth/auth.api';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { noSweep } from './sweep-stub';
 
 /**
  * Người xin được báo kết quả (Q-14) — qua outbox, trên Postgres thật và SMTP thật.
@@ -78,8 +79,8 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
     kinds = new ApprovalKindRegistry();
     approvals = new ApprovalsService(scratch.db, audit, kinds);
-    outbox = new OutboxService(scratch.db);
     const config = { getNumber: () => Promise.resolve(24) } as unknown as SystemConfigService;
+    outbox = new OutboxService(scratch.db, config, noSweep);
     const owners = {
       describe: () =>
         Promise.resolve({ code, name: 'Switch lõi tầng 3', siteCode: 'E2E-HCM', orphan: false }),

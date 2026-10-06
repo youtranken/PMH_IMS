@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
@@ -126,6 +126,7 @@ export function NatScreen({ me }: { me: Me }) {
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const url = useListUrlState<NatFilters>({
     emptyFilters: EMPTY_NAT_FILTERS,
     defaultLimit: NAT_PAGE_SIZE,
@@ -203,6 +204,28 @@ export function NatScreen({ me }: { me: Me }) {
   const page = clampPage(url.page, rows.length, url.limit);
   const pageRows = rows.slice((page - 1) * url.limit, page * url.limit);
   const filtered = url.isFiltered;
+
+  /*
+   * Link thẳng tới MỘT luật (X-05, `?rule=<id>`) — dán vào biên bản sự cố. Dòng đó được tô sáng và
+   * bảng nhảy tới trang chứa nó; luật bị bộ lọc / chip ẩn thì nói rõ kèm nút bỏ lọc, không im lặng.
+   */
+  const linkedId = searchParams.get('rule');
+  const linkedIndex = linkedId ? rows.findIndex((r) => r.id === linkedId) : -1;
+  const linkedPage = linkedIndex >= 0 ? Math.floor(linkedIndex / url.limit) + 1 : null;
+  useEffect(() => {
+    if (linkedPage !== null && linkedPage !== page) url.setPage(linkedPage);
+    // Chỉ nhảy khi luật được link đổi chỗ trang — không giành quyền lật trang của người dùng mãi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedId, linkedPage]);
+  const linkedMissing = Boolean(linkedId) && rules.isSuccess && linkedIndex < 0;
+  const copyLink = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${PATHS.nat}?rule=${encodeURIComponent(id)}`);
+      toast({ message: t('nat.linkCopied') });
+    } catch {
+      toast({ message: t('nat.linkCopyFailed'), tone: 'error' });
+    }
+  };
 
   /** Tắt/bật tạm một rule ngay từ menu — việc hay gặp nhất, không phải mở cả form Sửa. */
   const toggleRule = async (rule: NatRow) => {
@@ -359,6 +382,21 @@ export function NatScreen({ me }: { me: Me }) {
         />
       ) : (
         <>
+        {linkedMissing ? (
+          <p className="alert warn" role="status">
+            {t('nat.linkedMissing')}{' '}
+            <button
+              type="button"
+              className="btn sm"
+              onClick={() => {
+                url.clearFilters();
+                setShown({ ...NAT_DEFAULT_SHOWN, voided: true });
+              }}
+            >
+              {t('nat.linkedShow')}
+            </button>
+          </p>
+        ) : null}
         <p className="muted nat-count">{t('nat.countLine', { count: rows.length })}</p>
         <div className="table-wrap">
           {/*
@@ -386,7 +424,11 @@ export function NatScreen({ me }: { me: Me }) {
                 const wan = wanOf.get(rule.deviceId);
                 const service = serviceNameFor(rule.internalPort, rule.protocol, services);
                 return (
-                <tr key={rule.id} className={voided ? 'row-muted' : undefined}>
+                <tr
+                  key={rule.id}
+                  className={[voided ? 'row-muted' : '', rule.id === linkedId ? 'row-linked' : ''].filter(Boolean).join(' ') || undefined}
+                  aria-current={rule.id === linkedId ? 'true' : undefined}
+                >
                   <td data-label={t('nat.router')} className="col-router">
                     <Link to={PATHS.device(rule.deviceId)}>{orDash(rule.deviceCode)}</Link>
                     <span className="cell-sub">{orDash(rule.siteCode)}</span>
@@ -487,6 +529,11 @@ export function NatScreen({ me }: { me: Me }) {
                             key: 'history',
                             label: t('nat.history'),
                             onSelect: () => setHistoryOf(rule),
+                          },
+                          {
+                            key: 'copy-link',
+                            label: t('nat.copyLink'),
+                            onSelect: () => void copyLink(rule.id),
                           },
                           ...(voided
                             ? []

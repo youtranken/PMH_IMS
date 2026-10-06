@@ -65,7 +65,7 @@ test('có mục quá hạn → badge số trên mục Sắp hết hạn, đọc 
     .getByRole('navigation', { name: 'Điều hướng chính' })
     .getByRole('link', { name: 'Sắp hết hạn' });
   // Tên link giữ nguyên; số đi qua mô tả trợ năng.
-  await expect(link).toHaveAccessibleDescription(`${count} mục đã quá hạn`);
+  await expect(link).toHaveAccessibleDescription(`${count} Mục đã quá hạn`);
   await expect(link.getByText(String(count), { exact: true })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 

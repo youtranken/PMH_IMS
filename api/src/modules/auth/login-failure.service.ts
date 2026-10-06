@@ -114,6 +114,27 @@ export class LoginFailureService implements OnModuleInit {
   }
 
   /**
+   * Mọi cặp (người dùng, IP) ĐANG tạm chặn trên toàn hệ thống (X-04): SA nhìn chung lúc bị dò mật
+   * khẩu từ nhiều nơi. Chỉ hàng có mốc chặn còn trong tương lai (bộ đếm sai chưa tới ngưỡng thì
+   * không), mốc xa nhất trước. Chỉ đọc — gỡ vẫn qua "Gỡ tạm chặn" của từng tài khoản (step-up +
+   * nhật ký).
+   */
+  async listBlockedNow(): Promise<{ userId: string; ip: string; failedAttempts: number; lockedUntil: Date; updatedAt: Date }[]> {
+    const rows = await this.db
+      .select({
+        userId: loginFailureTable.userId,
+        ip: loginFailureTable.ip,
+        failedAttempts: loginFailureTable.failedAttempts,
+        lockedUntil: loginFailureTable.lockedUntil,
+        updatedAt: loginFailureTable.updatedAt,
+      })
+      .from(loginFailureTable)
+      .where(sql`${loginFailureTable.lockedUntil} > now()`)
+      .orderBy(desc(loginFailureTable.lockedUntil));
+    return rows.map((row) => ({ ...row, lockedUntil: new Date(row.lockedUntil as Date) }));
+  }
+
+  /**
    * Các nơi (IP) đang chặn hoặc đang đếm sai của một người — màn Người dùng IMS đọc (SA).
    *
    * Mốc chặn đã qua thì trả `null`: hàng đó chỉ còn là bộ đếm chờ dọn, gọi nó "đang chặn" là

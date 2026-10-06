@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CatalogService, type CatalogLists } from './catalog.service';
+import { CatalogService, type CatalogLists, type DeviceTypeDiagramLook } from './catalog.service';
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 export { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { normalizeKey } from '../../common/import-plan';
-import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
+import type { CableTypeRecord, CabinetRecord, CatalogSnapshot, IspProviderRecord, VendorRecord } from './catalog.types';
+export type { CableTypeRecord } from './catalog.types';
+export type { DeviceTypeDiagramLook } from './catalog.service';
+export { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef, type DiagramShapeDef } from './diagram-shapes';
 
 /**
  * Câu từ chối cho "gắn tủ mà không khai site" — MỘT bản chữ cho CẢ HAI cửa (AD-15).
@@ -26,6 +29,8 @@ export interface CatalogRefs {
   cabinetId?: string | null;
   deviceTypeId?: string | null;
   vendorId?: string | null;
+  /** Loại dây của một dòng sơ đồ cổng (Q-23). */
+  cableTypeId?: string | null;
 }
 
 /**
@@ -100,6 +105,32 @@ export class CatalogApiService {
     return lists.ispProviders.find((provider) => provider.id === id) ?? null;
   }
 
+  /**
+   * Tủ theo id, KỂ CẢ tủ đã ngừng dùng, kèm mã site — nơi cần vài tủ (khung tủ, U vượt tủ, thẻ máy
+   * trên sơ đồ) dùng cái này thay vì đọc cả tám danh mục qua `lists()`. Id lạ thì vắng mặt.
+   */
+  cabinetsByIds(ids: string[]): Promise<Map<string, CabinetRecord>> {
+    return this.catalog.cabinetsByIds(ids);
+  }
+
+  /** Nhà cung cấp theo id, kể cả mục đã ngừng dùng (tên + hotline trên thẻ máy). */
+  vendorsByIds(ids: string[]): Promise<Map<string, VendorRecord>> {
+    return this.catalog.vendorsByIds(ids);
+  }
+
+  /** Hình trên sơ đồ mạng của nhiều loại một lượt — `diagrams` hydrate ô thiết bị (AD-18). */
+  diagramLooks(deviceTypeIds: string[]): Promise<Map<string, DeviceTypeDiagramLook>> {
+    return this.catalog.diagramLooks(deviceTypeIds);
+  }
+
+  /**
+   * Mọi loại dây kể cả loại đã ngừng dùng — dây cũ vẫn giữ màu và tên kèm "(ngừng dùng)" (Q-14).
+   * Sơ đồ cổng ghi tên vào lịch sử, sơ đồ mạng hydrate màu dây từ đây (AD-18).
+   */
+  async cableTypes(): Promise<CableTypeRecord[]> {
+    return (await this.catalog.lists({ includeInactive: true })).cableTypes;
+  }
+
   /** Loại này có bảng port map không (FR-006) — trang chi tiết thiết bị hỏi cái này. */
   async hasPortMap(deviceTypeId: string): Promise<boolean> {
     const lists = await this.catalog.lists({ includeInactive: true });
@@ -153,6 +184,7 @@ function inactiveRefErrors(
   check('siteId', lists.sites, 'Site', (row) => row.code);
   check('cabinetId', lists.cabinets, 'Tủ mạng', (row) => row.code);
   check('vendorId', lists.vendors, 'Nhà cung cấp', (row) => row.name);
+  check('cableTypeId', lists.cableTypes, 'Loại dây', (row) => row.name);
   return retired;
 }
 
@@ -191,6 +223,9 @@ function refErrors(lists: CatalogLists, refs: CatalogRefs): string[] {
   }
   if (refs.vendorId && !lists.vendors.some((v) => v.id === refs.vendorId)) {
     errors.push('Nhà cung cấp không tồn tại.');
+  }
+  if (refs.cableTypeId && !lists.cableTypes.some((c) => c.id === refs.cableTypeId)) {
+    errors.push('Loại dây không tồn tại.');
   }
   return errors;
 }

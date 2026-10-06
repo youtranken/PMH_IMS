@@ -28,7 +28,7 @@ created: 2026-08-21
 | HTTP hardening | `helmet` (CSP, HSTS, nosniff) |
 | Form ISO in | CSS `@media print` tái tạo layout + `exceljs` (đã có trong QLTS) cho xuất xlsx |
 | IPAM | Postgres native `inet`/`cidr` types |
-| Phase sau — sơ đồ | `@xyflow/react` (React Flow) + `html-to-image` |
+| Sơ đồ mạng (Epic 10) | **draw.io tự host** — tệp tĩnh lấy từ image `jgraph/drawio` ghim tag + digest, chép vào image `web` lúc build và phát bằng nginx (không Tomcat, không service riêng — Q-23 03/10/2026), nhúng iframe chế độ embed (`embed=1&proto=json`), offline/stealth, không plugin; Apache-2.0. Thay `@xyflow/react` + `html-to-image` của kế hoạch cũ (Q-23, 02/10/2026). Ghép chân trang/watermark/PDF phía server (Story 10.10): raster SVG đã lưu bằng `@resvg/resvg-js` (MPL-2.0, Rust, nhị phân dựng sẵn cho musl/glibc, ~4 MB/nền tảng, không phụ thuộc thư viện hệ thống), phông DejaVu Sans từ gói `dejavu-fonts-ttf` (giấy phép Bitstream Vera/public domain, đủ dấu tiếng Việt — image alpine không có phông), PDF một trang nhúng đúng ảnh PNG bằng `pdf-lib` (MIT, thuần JS); không mạng lúc chạy. Loại `sharp`/libvips (LGPL, nặng, cần phông hệ thống) và Chromium/Puppeteer (hàng trăm MB, chạy trình duyệt trong api) |
 | Phase sau — scan | `fping`/`net-ping` trong worker (cap NET_RAW); ARP chỉ thấy cùng L2 → đa site cần probe per-site hoặc SNMP |
 
 ## 3. Kết quả thẩm định bảo mật (tóm tắt cho architect)
@@ -50,7 +50,7 @@ created: 2026-08-21
 - **File scan hợp đồng ISP giữ as-is** dù có mật khẩu PPPoE in trên scan — rủi ro chấp nhận.
 - **v1 không ping scan** — vòng đời IP thủ công; scan + sơ đồ + Wazuh/Meraki dồn về phase sau (sau khi dự án SIEM Wazuh xong).
 - **Email là kênh duyệt break-glass duy nhất v1** — chưa cần Telegram/push.
-- **Sơ đồ mạng:** node data-bound chọn từ kho thiết bị (không hình trôi nổi), vẽ dây = ghi bản ghi đấu nối port A↔B (sơ đồ và port map là MỘT dữ liệu) — thiết kế đã chốt cho phase sau.
+- **Sơ đồ mạng — dùng draw.io tự host, không tự viết khung vẽ** (02/10/2026, sửa gạch cũ "node data-bound, vẽ dây = ghi port map"). Bác khung vẽ React Flow tự viết sau khi chủ dự án xem mẫu: đi dây tự do (góc vuông, điểm uốn, bó dây) và thư viện hình mạng/rack là phần tốn công nhất, draw.io có sẵn và chủ dự án đã quen. Hình thiết bị vẫn gắn hồ sơ kho (`ims_device_id`), nhưng **lưu/phát hành bản vẽ không ghi sơ đồ cổng**: dây gắn với dòng sơ đồ cổng (`ims_link_id`). Sửa bổ sung 03/10/2026 ("vẽ là khai, có hỏi"): kéo dây giữa hai thiết bị kho thì IMS hỏi có khai vào sơ đồ cổng không — bấm "Khai" thì web gọi endpoint của `devices` ghi ngay (như hộp sơ đồ cổng dùng chung), "Chỉ vẽ" để nét đồ hoạ kèm cảnh báo vàng; xoá nét mặc định chỉ xoá nét vẽ. Dữ liệu cổng vẫn không bao giờ bị suy ra từ nét vẽ mà không có người xác nhận. Lý do: nét vẽ draw.io là đồ hoạ tự do (kéo rời, nhân bản, xoá), suy ra dữ liệu cổng từ đó cần đoán; một kết nối có mặt ở nhiều bản vẽ (tổng + phòng + tủ) nên "xoá dây trên một bản vẽ" không thể nghĩa là "xoá kết nối"; và Thành viên vốn sửa sơ đồ cổng trực tiếp được, nên chặn nó sau lượt duyệt bản vẽ là không nhất quán. Chi tiết: ARCHITECTURE-SPINE AD-17/AD-18, `docs/QUYET-DINH.md` Q-23.
 
 ## 5. Dữ liệu nguồn
 

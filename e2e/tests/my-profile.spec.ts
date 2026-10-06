@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import {
+  fillOtp,
   E2E_SA,
   NEW_PASSWORD,
   SECOND_BROWSER,
@@ -12,6 +13,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -34,7 +36,7 @@ interface Person {
 
 /** SA tạo một tài khoản mới; người đó đăng nhập lần đầu trong một trình duyệt riêng. */
 async function newPerson(page: Page, browser: Browser): Promise<{ person: Person; own: Page }> {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   const email = `e2e-tao-moi-hoso-${uniqueStamp()}@pmh.com.vn`;
   const res = await page.request.post('/api/v1/accounts', {
     headers: await writeHeaders(page),
@@ -45,6 +47,7 @@ async function newPerson(page: Page, browser: Browser): Promise<{ person: Person
   const ctx = await browser.newContext(SECOND_BROWSER);
   const own = await ctx.newPage();
   const secret = await firstLogin(own, { email, password: temporaryPassword });
+  await stepUpViaApi(own, secret);
   return { person: { email, password: NEW_PASSWORD, secret }, own };
 }
 
@@ -97,7 +100,7 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   test.setTimeout(150_000);
   const { person, own } = await newPerson(page, browser);
   await openProfileFromMenu(own);
-  // Hết ân hạn step-up của lần đăng nhập — để hàng rào phải hỏi mã thật.
+  // Hết ân hạn step-up đã mở sau đăng nhập — để hàng rào phải hỏi mã thật.
   expireStepUp(person.email);
 
   await own.getByRole('button', { name: 'Cài lại trên điện thoại mới' }).click();
@@ -118,20 +121,20 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   await expect(
     stepUp.getByText('Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.'),
   ).toBeVisible();
-  await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(person.secret));
+  await fillOtp(stepUp, await freshTotpCode(person.secret));
 
   const newSecret = (await dialog.getByTestId('totp-secret').innerText()).trim();
   expect(newSecret).not.toBe(person.secret);
   // Bước hỏi mã cũng có ô "Mã xác thực" — đợi nó rời hẳn để nhãn chỉ còn trỏ một ô.
   await expect(stepUp).toHaveCount(0);
-  await dialog.getByLabel('Mã xác thực').fill(await freshTotpCode(newSecret));
+  await fillOtp(dialog, await freshTotpCode(newSecret));
   await dialog.getByRole('button', { name: 'Xác nhận' }).click();
   await expect(own.getByText('Đã chuyển xác thực 2 lớp sang điện thoại mới.')).toBeVisible();
 
   // Mã của điện thoại cũ không còn mở được két.
   const old = await own.request.post('/api/v1/auth/step-up', {
     headers: await writeHeaders(own),
-    data: { token: await freshTotpCode(person.secret) },
+    data: { token: await freshTotpCode(person.secret), scope: 'vault' },
     failOnStatusCode: false,
   });
   expect(old.status()).toBe(401);
@@ -168,6 +171,7 @@ test('đóng một phiên khác của mình từ Hồ sơ → máy kia bị đá
   const ctx2 = await browser.newContext(SECOND_BROWSER);
   const other = await ctx2.newPage();
   await loginWithTotp(other, person.email, person.password, person.secret);
+  await stepUpViaApi(other, person.secret);
 
   await openProfileFromMenu(own);
   await own.getByRole('button', { name: 'Đăng xuất phiên', exact: true }).first().click();
@@ -198,6 +202,7 @@ test('"Đăng xuất các máy khác" đá mọi phiên khác, giữ máy đang 
   const ctx2 = await browser.newContext(SECOND_BROWSER);
   const other = await ctx2.newPage();
   await loginWithTotp(other, person.email, person.password, person.secret);
+  await stepUpViaApi(other, person.secret);
 
   await openProfileFromMenu(own);
   await own.getByRole('button', { name: 'Đăng xuất các máy khác' }).click();
@@ -218,7 +223,7 @@ test('Giao diện trong Hồ sơ: mặc định Sáng, chọn Tối áp ngay, ch
 }) => {
   // Máy để tối: chỉ khi hệ điều hành khác mặc định mới phân biệt được "Theo hệ thống" với "Sáng".
   await page.emulateMedia({ colorScheme: 'dark' });
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   await page.goto('/profile');
   const group = page.getByRole('group', { name: 'Giao diện' });
   // Chưa chọn gì = sáng (Q-21), và nút "Sáng" phải đang được đánh dấu.
@@ -234,7 +239,7 @@ test('Giao diện trong Hồ sơ: mặc định Sáng, chọn Tối áp ngay, ch
 });
 
 test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, chọn Tối áp ngay (Q-20)', async ({ page }) => {
-  await firstLogin(page, E2E_SA);
+  await stepUpViaApi(page, await firstLogin(page, E2E_SA));
   await page.getByRole('button', { name: /^Menu tài khoản của / }).click();
   const row = page.getByRole('menu').getByRole('group', { name: 'Giao diện' });
   const items = row.getByRole('menuitemradio');

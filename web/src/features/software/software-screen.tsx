@@ -1,3 +1,5 @@
+import { SecretDueSub } from '@/ui/secret-due';
+import { useSecretDue } from '@/ui/use-secret-due';
 import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -172,11 +174,13 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
    * join sang bảng của module khác, vi phạm AD-2. Cột "Seat" là số đã dùng/tổng, số đã dùng
    * tính từ bảng license_assignment nên không có cột thật để sắp.
    */
+  /* Hạn đổi mật khẩu trong két của hồ sơ (K-03) — Admin/SA. */
+  const dueOf = useSecretDue('software', me.role === 'sa' || me.role === 'admin');
   const columns = useMemo<ColumnDef<SoftwareRow, unknown>[]>(
     () => [
       {
         accessorKey: 'code',
-        header: t('software.code'),
+        header: t('software.colCode'),
         cell: ({ row }) => {
           const matched = matchedDevicesText(row.original.matchedDevices);
           return (
@@ -184,6 +188,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
               <Link className="mono" to={softwareItemPath(row.original.kind, row.original.id)}>
                 {row.original.code}
               </Link>
+              <SecretDueSub entry={dueOf.get(row.original.id)} />
               {/* Hồ sơ hiện ra vì MÁY đang giữ ghế khớp ô tìm — nói ra, không thì người tìm
                   "LT-05" thấy một hồ sơ không có chữ đó và tưởng ô tìm hỏng (SW-010). */}
               {matched ? (
@@ -201,15 +206,21 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         /* Loại là dòng phụ dưới tên, không phải một cột riêng: bảng phải vừa 1280px với cột
            Thao tác còn trong khung. Màn một loại thì dòng phụ chỉ lặp lại tên màn — bỏ. */
         accessorKey: 'name',
-        header: t('software.name'),
-        cell: ({ row }) => (
-          <>
-            {row.original.name}
-            {manyKinds ? (
-              <span className="cell-sub">{t(KIND_KEY[row.original.kind])}</span>
-            ) : null}
-          </>
-        ),
+        // Màn Phần mềm gọi đúng tên thứ trong cột; ba màn còn lại (tên miền, hợp đồng, dịch vụ) "Tên".
+        header: t(spec.key === 'software' ? 'software.colNameLicense' : 'software.colName'),
+        cell: ({ row }) => {
+          // Dòng phụ: loại (màn nhiều loại) + kỳ hạn của license (Thuê bao / Vĩnh viễn) — P-01.
+          const sub = [
+            manyKinds ? t(KIND_KEY[row.original.kind]) : null,
+            row.original.kind === 'license' ? t(`software.${row.original.licenseModel}`) : null,
+          ].filter(Boolean);
+          return (
+            <>
+              {row.original.name}
+              {sub.length > 0 ? <span className="cell-sub">{sub.join(' · ')}</span> : null}
+            </>
+          );
+        },
       },
       ...(hasDomains
         ? [
@@ -230,7 +241,9 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
       ...(hasSeats
         ? [
             {
-              id: 'seats',
+              // Id = khoá sắp `seatTotal` của API: bấm tiêu đề là sắp theo số ghế.
+              id: 'seatTotal',
+              accessorKey: 'seatTotal',
               header: t('software.seats'),
               cell: ({ row }: { row: { original: SoftwareRow } }) => <SeatUsage item={row.original} />,
             } satisfies ColumnDef<SoftwareRow, unknown>,
@@ -260,7 +273,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         ),
       },
     ],
-    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats],
+    [t, me.csrfToken, refresh, manyKinds, hasDomains, hasSeats, spec.key, dueOf],
   );
 
   return (

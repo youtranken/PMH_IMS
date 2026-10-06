@@ -76,7 +76,12 @@ export function useAnyDialogOpen(): boolean {
   return useSyncExternalStore(subscribeToDialogs, isAnyDialogOpen, () => false);
 }
 
-const DialogPortalContext = createContext<HTMLElement | null>(null);
+/**
+ * Điểm neo cho menu (`Select`, `Combobox`…) mở BÊN TRONG một lớp nổi: menu portal vào đây thay
+ * vì `document.body`, để cú bấm vào menu vẫn tính là bấm trong lớp — lớp không tự đóng. `Dialog`
+ * và `Popover` cấp điểm neo này.
+ */
+export const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
 
 /** Lối đóng "có chủ ý" của hộp gần nhất — đi qua cửa canh dữ liệu chưa lưu nếu hộp bật nó. */
@@ -232,7 +237,9 @@ export function Dialog({
     return JSON.stringify(
       // `Array.from` chứ không phải spread: `tsconfig.app.json` nhắm bản ES cũ hơn nên
       // `NodeListOf` chưa có `[Symbol.iterator]`.
-      Array.from(root.querySelectorAll('input, textarea, select')).map((el) => {
+      // Ô chọn file KHÔNG tính: nó không giữ chữ gõ dở (chọn là tải / giữ ở state của nơi gọi), và
+      // khu ảnh dựng ô chọn file SAU khi dữ liệu về — tính vào là hộp chưa sửa gì vẫn bị hỏi lại.
+      Array.from(root.querySelectorAll('input:not([type="file"]), textarea, select')).map((el) => {
         const field = el as HTMLInputElement;
         // Ô tự định dạng lại chữ (ô số điện thoại tách nhóm khi rời ô) khai `data-guard-value`
         // là dạng chuẩn hoá: so chữ thô thì chỉ cần Tab ngang qua là hộp tưởng đã bị sửa.
@@ -428,7 +435,12 @@ export function Dialog({
             overlayClassName ?? (isNested ? 'modal-backdrop bare' : 'modal-backdrop')
           }
         />
-        <div className="dialog-viewport">
+        {/*
+          `data-state` tự đặt: Radix chỉ gắn nó lên Overlay/Content, mà Presence của Portal canh
+          animation trên CHÍNH node này — không có animation đóng ở đây thì cả hộp bị gỡ ngay,
+          hiệu ứng đóng của con không kịp chạy (Q-21, overlays.css).
+        */}
+        <div className="dialog-viewport" data-state={open ? 'open' : 'closed'}>
           <RD.Content
             className={className}
             style={maxWidth ? { maxWidth } : undefined}

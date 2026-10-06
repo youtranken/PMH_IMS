@@ -63,6 +63,28 @@
 .segmented label:has(input:focus-visible) {
   box-shadow: var(--ring);
 }
+/*
+ * Trong ô FORM, dải nút trải hết bề ngang ô và các nút chia đều (Q-24): cỡ-theo-chữ làm hai nút
+ * "Thuê bao | Vĩnh viễn" dồn về góc trái của một ô rộng, lệch hẳn với các ô nhập cạnh nó. Dải
+ * nằm trong hộp form mà không qua `Field` thì tự mang `fill`. Dải LỌC trên thanh công cụ không
+ * đụng tới — chúng đứng cạnh nút khác, kéo dài ra là chiếm chỗ của ô tìm kiếm. Chip chọn nhiều
+ * xuống dòng (`.wrap`, lọc loại thiết bị) cũng không: kéo giãn từng hàng chip là vỡ hàng.
+ * `min-width: max-content` giữ chữ không bị bóp; dải hẹp hơn tổng chữ thì cuộn ngang như cũ.
+ */
+.field > .segmented:not(.wrap),
+.segmented.fill {
+  display: flex;
+  width: 100%;
+}
+.field > .segmented:not(.wrap) > label,
+.field > .segmented:not(.wrap) > button,
+.segmented.fill > label,
+.segmented.fill > button {
+  flex: 1 1 0;
+  min-width: max-content;
+  justify-content: center;
+  text-align: center;
+}
 /* Bản dùng NÚT: chọn MỘT trong nhiều là `ui/segmented-radio.tsx` (role radio + `aria-checked`,
    mũi tên đi trong nhóm); nút bật/tắt độc lập giữ `aria-pressed`. Hai dạng cùng một vẻ ngoài. */
 .segmented button {
@@ -469,6 +491,44 @@ textarea.mono {
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
+/* Hộp khai dây ở màn sơ đồ (E-05): hai đầu của sợi dây là hai khối `fieldset.form-section` gọn. */
+.port-end {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  margin: 0;
+}
+.port-end > legend {
+  margin-bottom: var(--space-3);
+}
+/* Dòng "Tủ … cao nU · đã dùng: …" dưới hai ô U của form thiết bị (T-04): trải hết bề ngang lưới. */
+.rack-summary {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+/* "Tùy chọn thêm" của Nối hàng loạt: ô ít dùng gập lại, trải hết bề ngang lưới form. */
+.bulk-advanced {
+  grid-column: 1 / -1;
+}
+.bulk-advanced > summary {
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+  margin-bottom: var(--space-3);
+}
+/* Nhãn của một nhóm điều khiển không phải ô nhập (dải nút chọn một): cùng dáng nhãn ô. */
+.field-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+/* Báo ngay dưới ô (không phải lỗi chặn): cổng đã có dây, kèm nút dùng cổng kế tiếp. */
+.field-warn {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--warn);
+}
 /* `.chip-row` làm danh sách (`<ul>`): chip người nhận đọc lại từ ô tự do (luật gửi báo cáo). */
 ul.chip-row {
   list-style: none;
@@ -848,4 +908,26 @@ input.switch:focus-visible {
   white-space: normal;
   overflow-wrap: anywhere;
   animation: rowIn 0.13s var(--ease) both;
+}
+
+/* Ô số nguyên có nút − / + (`ui/number-stepper.tsx`, Q-24). Nút cao bằng ô nhập, số canh giữa
+   để mắt đọc được ngay giữa hai nút. */
+.number-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.number-stepper > .inp {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.number-stepper-btn {
+  flex: 0 0 auto;
+  min-width: 2.5rem;
+  padding-inline: 0;
+  justify-content: center;
+  font-size: var(--fs-lg);
+  line-height: 1;
 }

@@ -23,6 +23,7 @@ import {
   TotpEnrollStartDto,
   TotpReEnrollConfirmDto,
   TotpReEnrollStartDto,
+  StepUpDto,
   TotpTokenDto,
 } from './auth.dto';
 import { clearSessionCookie, setSessionCookie } from './cookie';
@@ -34,6 +35,7 @@ import { AllowPasswordPending } from './password-pending.decorator';
 import { AllowTotpPending } from './totp-pending.decorator';
 import type { AuthedRequest } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
+import { STEP_UP_GRACE_KEY } from './session-policy';
 
 const ALL_ROLES = ['sa', 'admin', 'member'] as const;
 
@@ -77,8 +79,8 @@ export class AuthController {
    *
    * Trần `rate.totp_per_minute` (10/phút) — CÙNG khoá với `POST /auth/step-up`, vì cùng một lý do:
    * mã TOTP chỉ có một triệu khả năng, còn trần chung 300/phút là quá rộng cho một ô 6 số.
-   * Đường này kết thúc bằng `completeTotpWithin` (đóng dấu `stepped_up_at`) nên đoán trúng ở
-   * đây là được cấp một phiên ĐÃ MỞ KÉT — nó là cửa két thứ hai, phải canh ngang cửa thứ nhất.
+   * Đoán trúng ở đây là được cấp một phiên ĐÃ XÁC THỰC ĐỦ — chưa mở két hay sơ đồ (AD-17),
+   * nhưng là bàn đạp tới mọi thứ khác, nên phải canh ngang cửa step-up.
    */
   @ConfigThrottle('rateTotpPerMinute')
   @AllowTotpPending()
@@ -228,7 +230,8 @@ export class AuthController {
   }
 
   /**
-   * FR-022: step-up để xem bí mật — luôn bắt buộc, kể cả khi tắt TOTP lúc đăng nhập.
+   * FR-022: step-up cho một phạm vi (`vault` | `diagram`, AD-17) — luôn bắt buộc, kể cả khi tắt
+   * TOTP lúc đăng nhập. Chỉ đóng dấu phạm vi được gửi; ân hạn trả về là của phạm vi đó.
    *
    * Trần `rate.totp_per_minute` (10/phút) THEO USER (UserThrottlerGuard). Mã TOTP chỉ có một triệu khả năng và
    * đây là cửa duy nhất vào cả két: trần 300/phút chung là quá rộng cho một ô 6 số. Người
@@ -238,11 +241,11 @@ export class AuthController {
   @Roles(...ALL_ROLES)
   @Post('step-up')
   @HttpCode(200)
-  async stepUp(@Body() dto: TotpTokenDto, @Req() req: AuthedRequest) {
+  async stepUp(@Body() dto: StepUpDto, @Req() req: AuthedRequest) {
     const session = await this.requireSession(req);
-    await this.auth.stepUp(session, dto.token);
-    const graceMinutes = await this.config.getNumber('secretStepUpGraceMinutes');
-    return { status: 'stepped-up', graceMinutes };
+    await this.auth.stepUp(session, dto.token, dto.scope);
+    const graceMinutes = await this.config.getNumber(STEP_UP_GRACE_KEY[dto.scope]);
+    return { status: 'stepped-up', scope: dto.scope, graceMinutes };
   }
 
   @Roles(...ALL_ROLES)
@@ -278,9 +281,10 @@ export class AuthController {
     const session = await this.requireSession(req);
     // UI cần biết đã cài 2 lớp chưa để đưa về ĐÚNG bước còn thiếu (enroll hay nhập mã).
     const enrolledAt = await this.auth.totpEnrolledAt(user.id);
-    const [graceMinutes, revealSeconds, fileMaxSizeMb, fileMaxFilesPerBatch, totpChallengeMinutes] =
+    const [graceMinutes, diagramGraceMinutes, revealSeconds, fileMaxSizeMb, fileMaxFilesPerBatch, totpChallengeMinutes] =
       await Promise.all([
         this.config.getNumber('secretStepUpGraceMinutes'),
+        this.config.getNumber('diagramStepUpGraceMinutes'),
         this.config.getNumber('secretRevealSeconds'),
         // Ô chọn giấy tờ kiểm trần TRƯỚC khi gửi (Q-18): form thêm mới chỉ đẩy file sau khi hồ sơ
         // đã lưu, nên file quá cỡ phải bị bắt từ lúc chọn.
@@ -300,9 +304,11 @@ export class AuthController {
       // Màn Hồ sơ hiện "Đã bật từ …" — cùng lượt đọc với cờ trên, không thêm query.
       totpEnrolledAt: enrolledAt,
       steppedUpAt: session.steppedUpAt,
+      diagramSteppedUpAt: session.diagramSteppedUpAt,
       csrfToken: session.csrfToken,
       config: {
         stepUpGraceMinutes: graceMinutes,
+        diagramStepUpGraceMinutes: diagramGraceMinutes,
         secretRevealSeconds: revealSeconds,
         fileMaxSizeMb,
         fileMaxFilesPerBatch,

@@ -12,7 +12,9 @@ export const sessionsTable = pgTable('sessions', {
   tokenHash: text('token_hash').notNull(),
   ip: text('ip'),
   userAgent: text('user_agent'),
+  /** Mốc step-up phạm vi két (AD-17); `diagramSteppedUpAt` là mốc riêng của phạm vi sơ đồ. */
   steppedUpAt: timestamp('stepped_up_at', { withTimezone: true }),
+  diagramSteppedUpAt: timestamp('diagram_stepped_up_at', { withTimezone: true }),
   /** Số lần gõ sai mã step-up LIÊN TIẾP trong phiên này — đủ ngưỡng thì thu hồi phiên. */
   stepupFailures: integer('stepup_failures').notNull().default(0),
   totpPending: boolean('totp_pending').notNull().default(false),

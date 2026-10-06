@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import vi from './vi';
+import { lowerFirstAfterNumber } from '@/lib/count-label';
 
 /**
  * ĐIỂM DANH: một khái niệm chỉ được mang MỘT tên trên toàn giao diện.
@@ -446,3 +447,142 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
   });
 });
 
+/**
+ * Q-24: chữ số đứng đầu một cụm (đầu chuỗi, hoặc sau "·" của dải chip/tóm tắt) thì danh từ theo
+ * sau viết HOA chữ đầu — "1 Tủ mạng", "12 Tài khoản · 30 Dòng quyền".
+ *
+ * Không áp cho ĐƠN VỊ ĐO ("5 ngày trước", "2 giờ", "254 host"): đó là lượng, không phải danh từ
+ * đếm hồ sơ. Từ theo sau là động từ/liên từ ("{{used}} đã cấp", "8080 hoặc …", "24 nghĩa là …")
+ * cũng không phải danh từ. Chuỗi mới gặp đơn vị khác thì thêm vào danh sách, đừng viết thường
+ * danh từ.
+ */
+describe('Q-24: số đứng đầu cụm thì danh từ theo sau viết hoa', () => {
+  const UNITS = ['giờ', 'phút', 'giây', 'ngày', 'tuần', 'tháng', 'năm', 'lần', 'host'];
+  const NOT_NOUNS = ['đã', 'còn', 'có', 'chưa', 'hoặc', 'nghĩa', 'trên', 'gửi', 'đăng', 'sẽ', 'bị', 'chỉ', 'của'];
+  /** Mảnh chỉ ghép vào GIỮA câu ("Mở rộng PC-01 — 2 license", "…, trong đó 1 nhóm chưa gán cho
+      ai"), không bao giờ đứng đầu cụm. */
+  const MID_PHRASE_KEYS = ['devices.licenseCount', 'access.summaryEmpty'];
+
+  function raw(node: unknown = vi, path = ''): Array<[string, string]> {
+    if (typeof node === 'string') return [[path, node]];
+    if (node && typeof node === 'object') {
+      return Object.entries(node as Dict).flatMap(([k, v]) => raw(v, path ? `${path}.${k}` : k));
+    }
+    return [];
+  }
+
+  /** "{{count}} tủ mạng" / "2 lớp" ở đầu chuỗi hoặc sau "·" → [số, từ kế]. */
+  function countPrefixed(text: string): Array<[string, string]> {
+    const re = /(?:^|·\s*)(\{\{\w+\}\}|\d+)\s+(\p{L}[\p{L}\p{M}]*)/gu;
+    return [...text.matchAll(re)].map((m) => [m[1], m[2]]);
+  }
+
+  it('bộ dò bắt đúng mẫu (đối chứng)', () => {
+    expect(countPrefixed('{{count}} tủ mạng')).toEqual([['{{count}}', 'tủ']]);
+    expect(countPrefixed('{{a}} Tài khoản · {{b}} dòng quyền')).toEqual([
+      ['{{a}}', 'Tài'],
+      ['{{b}}', 'dòng'],
+    ]);
+    expect(countPrefixed('Xin mở két ({{count}} ngăn)')).toEqual([]);
+  });
+
+  it('không chuỗi nào bắt đầu bằng số + danh từ viết thường', () => {
+    const bad = raw()
+      .filter(([key]) => !MID_PHRASE_KEYS.includes(key))
+      .flatMap(([key, text]) => countPrefixed(text).map(([, word]) => [key, word] as const))
+      .filter(([, word]) => /^\p{Ll}/u.test(word))
+      .filter(([, word]) => !UNITS.includes(word) && !NOT_NOUNS.includes(word))
+      .map(([key, word]) => `${key}: "${word}"`);
+    expect(bad).toEqual([]);
+  });
+});
+
+/**
+ * Q-24, vế ngược: luật viết hoa chỉ áp ở ĐẦU cụm. Nhãn đếm ghép vào giữa câu ("Đang dùng ở
+ * {{usage}}") phải đi qua `lowerFirstAfterNumber`, và không chuỗi nào tự viết hoa danh từ sau số
+ * ở giữa câu.
+ */
+describe('Q-24: số giữa câu thì danh từ theo sau viết thường', () => {
+  function strings(node: unknown = vi, path = ''): Array<[string, string]> {
+    if (typeof node === 'string') return [[path, node]];
+    if (node && typeof node === 'object') {
+      return Object.entries(node as Dict).flatMap(([k, v]) => strings(v, path ? `${path}.${k}` : k));
+    }
+    return [];
+  }
+
+  /** Số / {{biến}} KHÔNG đứng đầu chuỗi hay sau "·", theo sau là từ viết hoa (không phải viết tắt). */
+  function midCapitalised(text: string): string[] {
+    const re = /(?<!^|·\s*|·)(?<=\S\s+)(\{\{\w+\}\}|\d+)\s+(\p{Lu}\p{Ll}[\p{L}\p{M}]*)/gu;
+    return [...text.matchAll(re)].map((m) => m[2]);
+  }
+
+  it('bộ dò bắt đúng mẫu (đối chứng)', () => {
+    expect(midCapitalised('Đang dùng ở 1 Tủ mạng')).toEqual(['Tủ']);
+    expect(midCapitalised('{{count}} Tủ mạng · {{n}} Dây')).toEqual([]);
+    expect(midCapitalised('Đã thêm {{count}} máy · cổng {{n}} IP')).toEqual([]);
+  });
+
+  /** Đơn vị đo viết hoa theo chuẩn, không phải danh từ đếm. */
+  const UNITS = ['Mbps', 'Gbps'];
+  /** Biến ở đây là cả một câu ("{{reason}} Sửa rồi…"), chữ hoa sau nó là đầu câu mới. */
+  const SENTENCE_VARS = ['license.assignPartial'];
+
+  it('không chuỗi nào viết hoa danh từ sau số ở giữa câu', () => {
+    const bad = strings()
+      .filter(([key]) => !SENTENCE_VARS.includes(key))
+      .flatMap(([key, text]) => midCapitalised(text).map((word) => [key, word] as const))
+      .filter(([, word]) => !UNITS.includes(word))
+      .map(([key, word]) => `${key}: "${word}"`);
+    expect(bad).toEqual([]);
+  });
+
+  it('khoá "Đang dùng ở" của danh mục: nhãn đếm ghép vào giữa câu thành chữ thường', () => {
+    const fill = (template: string, values: Record<string, string | number>) =>
+      template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values[name]));
+    const usage = [
+      fill(vi.catalog.usage_cabinet, { count: 1 }),
+      fill(vi.catalog.usage_subnet, { count: 2 }),
+    ].join(' · ');
+    expect(usage).toBe('1 Tủ mạng · 2 Dải IP');
+    expect(fill(vi.catalog.deleteInUse, { usage: lowerFirstAfterNumber(usage) })).toBe(
+      'Đang dùng ở 1 tủ mạng · 2 dải IP — hãy Ngừng dùng',
+    );
+  });
+});
+
+/** Một chuỗi lá của `vi` kèm khoá — cho các luật quét cả cây chữ. */
+function leaves(node: unknown = vi, path = ''): Array<[string, string]> {
+  if (typeof node === 'string') return [[path, node]];
+  if (node && typeof node === 'object') {
+    return Object.entries(node as Dict).flatMap(([k, v]) => leaves(v, path ? `${path}.${k}` : k));
+  }
+  return [];
+}
+
+/**
+ * T-03 (Q-24): cùng một cái tủ từng mang ba tên — "Tủ mạng" ở form thiết bị, "Tủ rack" ở
+ * cấp bản vẽ, "Tủ" ở nút chèn. Một tên: "Tủ mạng".
+ */
+describe('T-03: tủ chỉ có một tên — "Tủ mạng"', () => {
+  it('không chuỗi nào còn chữ "tủ rack"', () => {
+    expect(leaves().filter(([, text]) => /tủ rack/i.test(text)).map(([key]) => key)).toEqual([]);
+  });
+  it('nhãn tủ ở form thiết bị, cấp bản vẽ, form bản vẽ, panel và nút chèn cùng một chữ', () => {
+    for (const key of ['devices.cabinet', 'diagrams.nodeType.cabinet', 'diagrams.form.cabinet', 'catalog.tabCabinet']) {
+      expect(lookup(key), key).toBe('Tủ mạng');
+    }
+    expect(lookup('diagrams.frames.cabinetButton')).toBe('Chèn tủ mạng');
+  });
+});
+
+/** T-07 (Q-24): mục "bỏ lọc" đầu mỗi ô lọc viết "Tất cả …", không lẫn "Mọi …". */
+describe('T-07: mục bỏ lọc viết "Tất cả …"', () => {
+  it('không khoá `all*` / `statusAll` / `filterStateAll` nào mở đầu bằng "Mọi"', () => {
+    const bad = leaves()
+      .filter(([key]) => /(^|\.)(all[A-Z]\w*|statusAll|filterStateAll)$/.test(key))
+      .filter(([, text]) => /^Mọi\b/.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+});

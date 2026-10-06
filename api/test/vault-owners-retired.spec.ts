@@ -1,4 +1,5 @@
 import { runMigrations } from '../src/database/migration-runner';
+import { DevicePortsService } from '../src/modules/devices/device-ports.service';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
@@ -16,6 +17,7 @@ import type { AuditWriterService } from '../src/modules/audit/audit-writer.servi
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
+import { noPhotos } from './device-photos-stub';
 
 /**
  * Trang tổng két và khối "Két lâu không đổi" của bảng điều khiển đọc chung `VaultOwnersService`.
@@ -53,7 +55,7 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
       {} as ExpiryApiService,
       {} as SystemConfigService,
     );
-    const isp = new IspLineService(db, catalog, new DevicesApiService(devices), audit);
+    const isp = new IspLineService(db, catalog, new DevicesApiService(devices, new DevicePortsService(db, devices), noPhotos), audit);
 
     const pool = scratch.pool;
     const providers = await seedIspProviders(pool, ['VNPT', 'FPT']);
@@ -114,7 +116,7 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
     } as unknown as VaultService;
     owners = new VaultOwnersService(
       vault,
-      new DevicesApiService(devices),
+      new DevicesApiService(devices, new DevicePortsService(db, devices), noPhotos),
       new SoftwareApiService(software, isp),
       new ServiceAccountsApiService(new ServiceAccountService(db, audit, {} as ExpiryApiService)),
     );
@@ -140,6 +142,18 @@ describe('VaultOwnersService — cờ retired theo trạng thái hồ sơ chủ'
         'E2E-KET-ISP-OLD': true,
         'E2E-KET-ISP-LIVE': false,
       });
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'hồ sơ phần mềm mang loại hồ sơ (license / ssl / domain…) để trang tổng chia theo bốn màn của Q-22 (K-01); chủ khác null',
+    async () => {
+      const list = await owners.list();
+      const typeOf = Object.fromEntries(list.map((row) => [row.code, row.softwareType]));
+      expect(typeOf['E2E-KET-SW-LIVE']).toBe('license');
+      expect(typeOf['E2E-KET-DEV-LIVE']).toBeNull();
+      expect(typeOf['E2E-KET-ISP-LIVE']).toBeNull();
     },
     TEST_TIMEOUT,
   );

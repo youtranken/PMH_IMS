@@ -24,7 +24,9 @@ import {
   isUUID,
   Length,
   Max,
+  MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import type { Response } from 'express';
@@ -46,6 +48,8 @@ import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
 import { NoStepUp } from '../auth/step-up.decorator';
 import { CatalogUsageRegistry } from '../../common/catalog-usage.registry';
 import { IsPhone } from '../../common/phone';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { DIAGRAM_SHAPES, DIAGRAM_SHAPE_OTHER } from './diagram-shapes';
 
 export class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
@@ -56,6 +60,11 @@ export class CatalogBodyDto {
   @IsOptional() @Min(1) @Max(60) @IsInt() uHeight?: number;
   @IsOptional() @IsBoolean() hasPortMap?: boolean;
   @IsOptional() @IsBoolean() isRouter?: boolean;
+  /** Tên hình trong danh sách đóng `DIAGRAM_SHAPES`; `null` = "Thiết bị khác". Không có ô style tự do. */
+  @ValidateIf((_o, v) => v !== null)
+  @IsOptional()
+  @IsIn(DIAGRAM_SHAPES.map((shape) => shape.key), { message: 'Hình trên sơ đồ không có trong danh sách cho phép.' })
+  diagramShape?: string | null;
   @IsOptional() @IsString() @Length(0, 200) @NoSecretText('Cung cấp gì') supplies?: string;
   @IsOptional() @IsPhone(40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
@@ -69,7 +78,20 @@ export class CatalogBodyDto {
   protocol?: string;
 
   @IsOptional() @Min(1) @Max(65535) @IsInt() portFrom?: number;
+
+  /** Loại dây: một ô màu token, không có ô nhập mã màu (Q-23). Trần thật do `toRow` kiểm. */
+  @IsOptional() @IsInt({ message: 'Màu dây phải là một ô trong bảng màu.' }) colorSlot?: number;
   @IsOptional() @Min(1) @Max(65535) @IsInt() portTo?: number;
+}
+
+/** Trần thô; trần thật là `diagram.icon_svg_max_kb`, cổng lọc áp. */
+class DiagramIconDto {
+  @IsString() @MaxLength(1024 * 1024, { message: 'Biểu tượng SVG quá lớn.' }) svg!: string;
+}
+
+class DeviceTypeIdParamDto {
+  @IsUUID(undefined, { message: 'Mã loại thiết bị không hợp lệ.' })
+  id!: string;
 }
 
 class ActiveDto {
@@ -114,7 +136,43 @@ export class CatalogController {
     private readonly imports: CatalogImportService,
     private readonly excel: ExcelExportService,
     private readonly usage: CatalogUsageRegistry,
+    private readonly config: SystemConfigService,
   ) {}
+
+  /**
+   * Danh sách hình cho ô "Hình trên sơ đồ" của loại thiết bị — một nguồn duy nhất (server kiểm
+   * đúng danh sách này khi ghi). Khai TRƯỚC `:entity` để không bị đọc thành một loại danh mục.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('diagram-shapes')
+  diagramShapes() {
+    return { shapes: DIAGRAM_SHAPES, other: DIAGRAM_SHAPE_OTHER };
+  }
+
+  /** SVG đã lọc của một loại — màn Danh mục hiện xem trước bằng `<img>` (không chèn vào DOM). */
+  @Roles('sa', 'admin', 'member')
+  @Get('device-types/:id/diagram-icon')
+  async diagramIcon(@Param() params: DeviceTypeIdParamDto) {
+    return { svg: await this.catalog.diagramIcon(params.id) };
+  }
+
+  /** Chỉ SA tải biểu tượng riêng: tệp lạ đi vào mọi bản vẽ có loại này. */
+  @Roles('sa')
+  @Post('device-types/:id/diagram-icon')
+  @Audited('catalog.updated', 'catalog', { writtenByService: true })
+  async setDiagramIcon(@Param() params: DeviceTypeIdParamDto, @Body() body: DiagramIconDto, @Req() req: AuthedRequest) {
+    const maxKb = await this.config.getNumber('diagramIconSvgMaxKb');
+    await this.catalog.setDiagramIcon(actor(req), params.id, body.svg, maxKb);
+    return { ok: true };
+  }
+
+  @Roles('sa')
+  @Delete('device-types/:id/diagram-icon')
+  @Audited('catalog.updated', 'catalog', { writtenByService: true })
+  async removeDiagramIcon(@Param() params: DeviceTypeIdParamDto, @Req() req: AuthedRequest) {
+    await this.catalog.removeDiagramIcon(actor(req), params.id);
+    return { ok: true };
+  }
 
   /** Bốn danh sách gọn để đổ ô chọn — dùng ở form thiết bị, không phân trang. */
   @Roles('sa', 'admin', 'member')

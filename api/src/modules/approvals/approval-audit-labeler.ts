@@ -48,7 +48,7 @@ export class ApprovalAuditLabeler implements AuditObjectLabeler, OnModuleInit {
         .catch(() => null);
       out.set(row.id, {
         label: subject ? `${row.requester} · ${subject.code}` : row.requester,
-        path: UI_PATHS.approval(row.id),
+        path: subject?.detailPath ?? UI_PATHS.approval(row.id),
       });
     }
     return out;

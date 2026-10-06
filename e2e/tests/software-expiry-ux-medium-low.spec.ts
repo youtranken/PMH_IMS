@@ -214,7 +214,7 @@ test.describe('Hộp gán license', () => {
     await page.goto(`/software/${id}?tab=devices`);
     // Ô chi phí của dòng ghế; dòng tổng ngay dưới (SW-057) mang cùng con số.
     await expect(page.getByRole('cell', { name: /5\.600\.000\s₫/ })).toBeVisible();
-    await expect(page.getByText(/2 máy đang dùng · tổng chi phí 5\.600\.000 ₫/)).toBeVisible();
+    await expect(page.getByText(/2 Máy đang dùng · tổng chi phí 5\.600\.000 ₫/)).toBeVisible();
   });
 });
 
@@ -236,7 +236,7 @@ test.describe('Trang hồ sơ phần mềm', () => {
 
     await page.goto(`/software/${id}`);
     const banner = page.getByRole('status').filter({ hasText: 'Tự thanh lý sau' });
-    await expect(banner).toContainText('1 máy đang dùng sẽ bị gỡ license');
+    await expect(banner).toContainText('1 Máy đang dùng sẽ bị gỡ license');
     await expect(banner.getByRole('button', { name: 'Gia hạn' })).toBeVisible();
 
     await page.getByRole('tab', { name: /^Lịch sử/ }).click();

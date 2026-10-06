@@ -99,3 +99,22 @@ describe('toCatalogHistory — sổ danh mục có hình dạng riêng, không p
     expect(entry.action).toBe('merged');
   });
 });
+
+/* X-03: ba trường mới của danh mục (loại dây, loại thiết bị) đọc bằng chữ, không tên kỹ thuật. */
+describe('toCatalogHistory — nhãn trường màu dây / hình sơ đồ / router', () => {
+  it('colorSlot, diagramShape, isRouter có nhãn tiếng Việt', () => {
+    const [entry] = toCatalogHistory(
+      [
+        row({
+          entity: 'device_type',
+          changes: { before: { colorSlot: 3, diagramShape: null, isRouter: false }, after: { colorSlot: 5, diagramShape: 'mxgraph.networks.ups_small', isRouter: true } },
+        }),
+      ],
+      t,
+    );
+    expect(entry.detail).toContain('màu dây: 3 → 5');
+    expect(entry.detail).toContain('hình trên sơ đồ:');
+    expect(entry.detail).toContain('là router: Không → Có');
+    expect(entry.detail).not.toMatch(/colorSlot|diagramShape|isRouter/);
+  });
+});

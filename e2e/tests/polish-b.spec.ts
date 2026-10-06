@@ -18,6 +18,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -49,7 +50,7 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
   test('"7 ngày" điền khoảng ngày lên URL; bảng có tiêu đề "Hôm nay"; dưới bảng có "Đang xem" + "Tới ngày…"', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/audit-log');
     await page.getByRole('radio', { name: '7 ngày', exact: true }).click();
     await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}/);
@@ -69,7 +70,7 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
   test('đường hỏng: bấm lại nút đang sáng là gỡ khoảng ngày, không để lại from/to rơi rớt', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/audit-log');
     const todayOption = page.getByRole('radio', { name: 'Hôm nay', exact: true });
     await todayOption.click();
@@ -84,7 +85,7 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
   test('bấm dòng mở Chi tiết: thấy IP đang tạm chặn + "Còn giữ"; ô "Chưa kích hoạt 2 lớp" lọc bảng', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const user = await createMember(page);
     sql(
       `INSERT INTO login_failure (user_id, ip, failed_attempts, locked_until)
@@ -101,7 +102,7 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
     const dialog = page.getByRole('dialog', { name: user.fullName });
     await expect(dialog.getByRole('cell', { name: '203.0.113.77' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Gỡ tạm chặn' })).toBeVisible();
-    await expect(dialog.getByRole('link', { name: /dòng quyền két sắt/ })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /Dòng quyền két sắt/ })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Việc người này đã làm' })).toHaveAttribute(
       'href',
       new RegExp(`q=${encodeURIComponent(user.email)}`),
@@ -109,13 +110,13 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
   });
 
   test('đường hỏng: id không phải uuid → 400, không rơi thành lỗi 500 của Postgres', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const bad = await page.request.get('/api/v1/accounts/khong-phai-uuid/lockouts');
     expect(bad.status()).toBe(400);
   });
 
   test('đường hỏng: Thành viên không đọc được tạm chặn theo IP của ai (chỉ SA)', async ({ page }) => {
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const denied = await page.request.get(
       '/api/v1/accounts/00000000-0000-4000-8000-000000000001/lockouts',
     );
@@ -125,7 +126,7 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
 
 test.describe('Quyền két sắt — Kiểm tra quyền giải thích "vì sao" (ADM-083)', () => {
   test('GET /vault/access/tier trả thêm nhóm của hồ sơ và dòng quyền đã khớp', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const siteId = await catalogItem(page, 'site', { code: `E2E-TC-${stamp}`, name: 'Site E2E trau chuot' });
     const typeId = await catalogItem(page, 'device_type', { name: `Loại E2E TC ${stamp}` });
@@ -155,7 +156,7 @@ test.describe('Sắp hết hạn — sắp theo cột, ô Chờ tự thanh lý, 
   test('bấm cột Mục → URL sort=label; chọn "tới hết tháng này" → period=month; có ô Chờ tự thanh lý', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     // Bảng chỉ có tiêu đề cột khi có dòng — gieo một mục sắp hết hạn.
     const created = await page.request.post('/api/v1/software', {
       headers: await writeHeaders(page),
@@ -173,7 +174,7 @@ test.describe('Sắp hết hạn — sắp theo cột, ô Chờ tự thanh lý, 
   });
 
   test('đường hỏng: ?sort= lạ và ?state= lạ không làm hỏng danh sách (về mặc định)', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const res = await page.request.get('/api/v1/expiry?withinDays=30&page=1&limit=5&sort=bogus&state=Gap');
     expect(res.status()).toBe(200);
     const body = (await res.json()) as { summary: { autoRetire: number } };
@@ -185,7 +186,7 @@ test.describe('Nhập thiết bị từ Excel — tải danh sách dòng lỗi (
   test('file có dòng lỗi: nút "Tải danh sách 1 dòng lỗi" trả xlsx Sheet · Dòng · Mục · Lý do', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-LOI-${stamp}`;
     const wb = new ExcelJS.Workbook();
@@ -213,7 +214,7 @@ test.describe('Nhập thiết bị từ Excel — tải danh sách dòng lỗi (
   });
 
   test('đường hỏng: gọi thẳng /import/errors không kèm file → 400', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const res = await page.request.post('/api/v1/devices/import/errors', {
       headers: await writeHeaders(page),
     });
@@ -223,7 +224,7 @@ test.describe('Nhập thiết bị từ Excel — tải danh sách dòng lỗi (
 
 test.describe('Tìm nhanh — chip trạng thái cuối (SHELL-018)', () => {
   test('hồ sơ phần mềm đã thanh lý hiện chip "Đã thanh lý" ở dòng kết quả', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = await writeHeaders(page);
     const code = `SSL-E2E-PAL-${uniqueStamp()}`;
     const created = await page.request.post('/api/v1/software', {
@@ -251,7 +252,7 @@ test.describe('Luật gửi báo cáo — công tắc Đang chạy, chip + gợi
   test('gợi ý email của mình, bấm là thêm; email sai đỏ thành chip riêng; tắt công tắc đổi chữ', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/expiry');
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
     await page.getByRole('button', { name: 'Thêm luật', exact: true }).first().click();

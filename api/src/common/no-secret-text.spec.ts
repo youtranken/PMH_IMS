@@ -86,17 +86,35 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'connectedLabel',
     'supplies',
     'catalog/catalog.controller.ts#address',
+    'diagrams/diagrams.controller.ts#label',
+    // Bình luận ghim trên bản vẽ (FR-035, Q-19).
+    'diagrams/diagram-review.controller.ts#body',
   ]);
 
   /** Chữ có cấu trúc / ô lọc / chính là bí mật — luật ô chữ tự do không áp. */
   const STRUCTURED = new Set([
     // Mã, tên, nhãn ngắn.
     'code', 'name', 'fullName', 'employeeCode', 'model', 'serial', 'portLabel', 'connectedPort',
+    'startPort', 'endPort', 'peerPort',
     'groupName', 'ownerName', 'assignedTo', 'department', 'usedBy', 'login', 'bandwidth',
     'contract', 'contractNo', 'contact', 'vlan', 'key', 'kind',
     // Mạng.
     'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',
+    // Tệp draw.io nguyên khối: chữ trong hình nằm lẫn trong XML, luật một-ô-một-câu của
+    // `@NoSecretText` không đọc được nó. Service soi chữ TỪNG hình khi lưu (`secretLabelReason`).
+    'diagrams/diagrams.controller.ts#xml',
+    'diagrams/diagrams.controller.ts#svg',
+    // Biểu tượng SVG của loại thiết bị: hình vẽ, lọc theo allowlist ở `sanitizeIconSvg`.
+    'catalog/catalog.controller.ts#svg',
+    // Danh sách id máy ngăn bằng dấu phẩy (ô đọc của hộp Thiết bị kho).
+    'diagrams/diagrams.controller.ts#ids',
+    // Ô tìm thiết bị của trình xem sơ đồ: chỉ đọc, không lưu.
+    'diagrams/diagrams.controller.ts#q',
+    // Dải số phiên bản ("#13–#17") hộp Bỏ bản nháp đã hiện — server chỉ so, không lưu.
+    'diagrams/diagrams.controller.ts#ranges',
+    // Id ô draw.io mà bình luận ghim vào.
+    'diagrams/diagram-review.controller.ts#cellId',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',

@@ -13,6 +13,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   openNavGroup,
+  stepUpViaApi,
 } from './helpers';
 
 /*
@@ -103,6 +104,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     'Phòng ban',
     'Nhà mạng',
     'Dịch vụ / Port',
+    'Loại dây',
   ] as const;
 
   /** Một ngăn: nhãn nút "Thêm …" và bộ cột của bảng bên trong. */
@@ -159,6 +161,12 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       columns: ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
+    {
+      tab: 'Loại dây',
+      addButton: 'Thêm loại dây',
+      columns: ['Tên', 'Màu dây', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      excelImport: false,
+    },
   ];
 
   /** Đi từ màn nào cũng được về phòng Danh mục bằng đúng cái link người dùng bấm. */
@@ -194,7 +202,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   }) => {
     // Một luồng đăng nhập lần đầu + bảy lượt đổi tab, mỗi lượt một lượt gọi API.
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     /*
@@ -204,7 +212,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const tabBar = page.getByRole('tablist', { name: 'Danh mục' });
     await expect(
       tabBar.getByRole('tab'),
-      'phòng Danh mục phải có ĐÚNG bảy ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
+      'phòng Danh mục phải có ĐÚNG tám ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
     ).toHaveText(TAB_NAMES.map(catalogTab));
 
     for (const section of SEVEN_SECTIONS) {
@@ -273,6 +281,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       selectField: string[];
       /** Công tắc bật/tắt — vai `checkbox`. */
       toggles: string[];
+      /** Nút − / + của ô số (`NumberStepper`). */
+      stepperButtons?: string[];
     }
 
     const ADD_DIALOGS: AddDialogSpec[] = [
@@ -286,16 +296,18 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       {
         tab: 'Tủ mạng',
         title: 'Thêm tủ mạng',
-        // "Số U" là ô SỐ (1–60) — vai `spinbutton`, không nằm trong bộ ô gõ chữ.
-        textFields: ['Mã', 'Vị trí / mô tả'],
+        // "Số U" là ô chữ có nút − / + (`NumberStepper`, Q-24).
+        textFields: ['Mã', 'Vị trí / mô tả', 'Số U'],
         selectField: ['Thuộc site'],
+        stepperButtons: ['Giảm số U', 'Tăng số U'],
         toggles: [],
       },
       {
         tab: 'Loại thiết bị',
         title: 'Thêm loại thiết bị',
         textFields: ['Tên', 'Mô tả'],
-        selectField: [],
+        // Hình của loại trên sơ đồ mạng (Q-23) — Select dùng chung. Tải SVG biểu tượng chỉ có ở hộp Sửa.
+        selectField: ['Hình trên sơ đồ mạng'],
         toggles: ['Có port map', 'Router/Firewall'],
       },
       {
@@ -327,9 +339,17 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         selectField: ['Giao thức'],
         toggles: [],
       },
+      {
+        tab: 'Loại dây',
+        title: 'Thêm loại dây',
+        // Màu là 8 ô màu (radio) — không có ô gõ mã màu (Q-23).
+        textFields: ['Tên', 'Mô tả'],
+        selectField: [],
+        toggles: [],
+      },
     ];
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     for (const [index, dialog] of ADD_DIALOGS.entries()) {
@@ -354,7 +374,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       expect(
         await handleNames(dialogBox.getByRole('button')),
         `bộ NÚT của hộp ${dialog.title} sai — ô chọn phải là button (Select dùng chung), và chân hộp chỉ được có Hủy + Lưu`,
-      ).toEqual(sortOrder(['Đóng hộp thoại', 'Hủy', 'Lưu', ...dialog.selectField]));
+      ).toEqual(sortOrder(['Đóng hộp thoại', 'Hủy', 'Lưu', ...dialog.selectField, ...(dialog.stepperButtons ?? [])]));
 
       expect(
         await handleNames(dialogBox.getByRole('checkbox')),
@@ -397,7 +417,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   test('Hộp Tủ mạng từ chối lưu khi thiếu site hoặc số U sai, và hộp KHÔNG đóng', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     // Ô "Thuộc site" cần ít nhất một site; máy chủ mới dựng thì danh mục còn trắng.
     await catalogItem(page, 'site', { code: `S-E2E-TU-${uniqueStamp()}`, name: 'Site E2E hộp tủ' });
     await mockCatalog(page);
@@ -473,7 +493,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     /*
@@ -584,7 +604,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   test('Nút "Tải file mẫu" · "Nhập từ Excel" chỉ có ở danh mục có sheet, và hộp nhập có ba bước khóa nhau', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await mockCatalog(page);
 
     for (const section of SEVEN_SECTIONS) {
@@ -671,7 +691,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     // `exact`: menu có cả "Tài khoản" lẫn "Tài khoản dịch vụ".
     await openNavGroup(page);
@@ -691,7 +711,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Họ tên',
       'Vai trò',
       'Trạng thái',
-      '2 lớp',
+      '2 Lớp',
       'Đăng nhập gần nhất',
       'Thao tác',
     ]);
@@ -791,7 +811,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
@@ -941,7 +961,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * "gọn" là làm yếu phép so tập hợp.
    */
   test('Phòng Bộ giao diện liệt kê đủ mọi khu, đúng thứ tự', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     // Trang nội bộ không có trên menu (Q-20) — vào bằng URL.
     await page.goto('/dev/components');

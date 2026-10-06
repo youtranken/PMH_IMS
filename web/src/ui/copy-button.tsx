@@ -9,10 +9,11 @@ import { CheckIcon, CopyIcon } from './glyph-icons';
  * hành, và mã hồ sơ là thứ dán vào biên bản. Bôi đen một chuỗi `mono` giữa một khối chữ là
  * thao tác dễ trượt, nhất là trên màn hình cảm ứng.
  *
- * KHÔNG dùng cho giá trị secret: két sắt cố ý không có nút chép (clipboard sống qua cả phiên
- * đăng nhập, dán nhầm vào ô chat là mất luôn) — xem chú thích ở `reveal-dialog.tsx`.
+ * Giá trị secret chỉ được chép ở bước hiện giá trị của két (`RevealContent`, Q-24), khi người
+ * dùng BẤM: clipboard sống qua cả phiên đăng nhập, nên không bao giờ tự chép và không đặt nút
+ * chép secret ở chỗ nào khác (bảng, thẻ).
  *
- * Ngoại lệ duy nhất: khoá cài 2 lớp ở `features/auth/totp-setup.tsx`. Trên điện thoại, chép rồi
+ * Khoá cài 2 lớp ở `features/auth/totp-setup.tsx` cũng chép được. Trên điện thoại, chép rồi
  * dán vào ứng dụng xác thực là CÁCH cài đặt (không quét được QR trên chính màn hình mình), và
  * khoá đó đang hiện nguyên văn ngay cạnh nút — chép không lộ thêm gì. Cùng lý do cho ngăn két
  * "Mã 2 lớp" (`TotpBody` trong `reveal-dialog.tsx`): chép khoá để cài trên chính điện thoại đang

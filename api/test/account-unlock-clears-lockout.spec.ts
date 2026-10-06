@@ -1,3 +1,4 @@
+import { KnownDeviceService } from '../src/modules/auth/known-device.service';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
 import { ApprovalsApiService } from '../src/modules/approvals/approvals.api';
@@ -45,6 +46,7 @@ describe('Mở khóa / kích hoạt lại tài khoản xoá sạch bộ đếm s
       new LoginFailureService(db, config, noopSweep),
       new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())),
       config,
+      new KnownDeviceService(db, config, noopSweep),
     );
   }, TEST_TIMEOUT);
 

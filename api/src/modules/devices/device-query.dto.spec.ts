@@ -76,3 +76,11 @@ describe('DeviceExportQueryDto', () => {
     ).toBeNull();
   });
 });
+
+/* T-08: file xuất khớp bộ lọc phòng ban của màn Thiết bị — DTO xuất phải nhận `department`. */
+describe('DeviceExportQueryDto — lọc phòng ban', () => {
+  it('nhận department / assignedTo; lặp tham số (mảng) → 400', async () => {
+    expect(await dtoErrorBody(DeviceExportQueryDto, { department: 'Kế toán', assignedTo: 'An' })).toBeNull();
+    expect(await dtoErrorBody(DeviceExportQueryDto, { department: ['A', 'B'] })).not.toBeNull();
+  });
+});

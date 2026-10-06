@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { lt, sql } from 'drizzle-orm';
+import { desc, eq, lt, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -35,6 +35,18 @@ export class KnownDeviceService implements OnModuleInit {
       .where(lt(knownDeviceTable.lastSeenAt, sql`now() - make_interval(days => ${days})`))
       .returning({ id: knownDeviceTable.id });
     return rows.length;
+  }
+
+  /**
+   * Máy đã biết của một người (X-04) cho SA đọc: nhãn trình duyệt + mốc thấy đầu/cuối. KHÔNG trả
+   * `device_hash` — đó là dấu vân tay máy, không phải thứ để hiện.
+   */
+  listForUser(userId: string): Promise<{ id: string; label: string | null; firstSeenAt: Date; lastSeenAt: Date }[]> {
+    return this.db
+      .select({ id: knownDeviceTable.id, label: knownDeviceTable.label, firstSeenAt: knownDeviceTable.firstSeenAt, lastSeenAt: knownDeviceTable.lastSeenAt })
+      .from(knownDeviceTable)
+      .where(eq(knownDeviceTable.userId, userId))
+      .orderBy(desc(knownDeviceTable.lastSeenAt));
   }
 
   /** Trả `true` nếu đây là thiết bị MỚI (vừa được ghi lần đầu). */

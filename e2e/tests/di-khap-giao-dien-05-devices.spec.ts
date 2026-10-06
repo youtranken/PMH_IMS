@@ -11,6 +11,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 /**
@@ -225,7 +226,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
@@ -277,6 +278,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Site',
         'Tủ mạng',
         'Loại',
+        'Phòng ban',
         'Trạng thái',
         'Xóa lọc (1)',
         'Xóa bộ lọc',
@@ -331,7 +333,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ]);
 
     const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại', exact: true }));
-    expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Mọi loại');
+    expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Tất cả loại');
     // So theo TẬP HỢP đã sắp, không theo thứ tự: API sắp theo `name` bằng collation của
     // Postgres, mà thứ tự của "Điện thoại IP" trong bảng chữ cái phụ thuộc collation ấy —
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
@@ -348,7 +350,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     expect(
       (await optionsOf(page, main.getByRole('button', { name: 'Tủ mạng', exact: true })))[0],
       'Ô lọc Tủ mạng phải mở đầu bằng mục bỏ lọc',
-    ).toBe('Mọi tủ');
+    ).toBe('Tất cả tủ mạng');
   });
 
   /*
@@ -371,7 +373,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    */
   test('Bảng thiết bị: đủ cột, đúng cột sắp được, và phân trang ăn thật', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
@@ -580,7 +582,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     await page.goto('/devices');
@@ -604,6 +606,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Hồ sơ',
         'Vị trí và người giữ',
         'Mua sắm và bảo hành',
+        'Ảnh thiết bị',
         'Giấy tờ đính kèm',
       ]);
 
@@ -664,6 +667,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt.
+        'Tải ảnh lên — Mặt trước',
+        'Tải ảnh lên — Mặt sau',
         'Chọn file để đính kèm',
         'Hủy',
         'Lưu và nhân bản',
@@ -687,7 +693,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('button', { name: 'Tháng sau' })).toHaveCount(0);
 
     /*
-     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Mọi loại" —
+     * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Tất cả loại" —
      * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
@@ -697,7 +703,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     expect(
       [...typeInForm].sort(),
-      'Ô "Loại" trong form phải bày đúng các loại đang dùng của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
+      'Ô "Loại" trong form phải bày đúng các loại đang dùng của danh mục, KHÔNG kèm mục "Tất cả loại" của thanh lọc',
     ).toEqual(await catalogDeviceTypes(page, true));
 
     /*
@@ -778,7 +784,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const code = `TB-E2E-SUA-${stamp}`;
@@ -830,7 +836,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
     ]) {
       await expect(
-        editDialog.getByLabel(label),
+        editDialog.getByRole('textbox', { name: label, exact: true }),
         `Ô "${label}" của form SỬA phải mang sẵn giá trị cũ — form gửi đủ mọi trường lên API, ô trống nghĩa là XÓA`,
       ).toHaveValue(value);
     }
@@ -872,6 +878,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        // Khu "Ảnh thiết bị" (Q-23): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
+        'Giải thích: Ảnh thiết bị',
+        'Tải ảnh lên — Mặt trước',
+        'Tải ảnh chung cho mọi máy cùng model — Mặt trước',
+        'Tải ảnh lên — Mặt sau',
+        'Tải ảnh chung cho mọi máy cùng model — Mặt sau',
         'Giải thích: Giấy tờ đính kèm',
         'Chọn file để đính kèm',
         // Câu "chỉ tải về, không mở trong trình duyệt" nằm trong nút (i) (Q-20).
@@ -949,7 +961,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    */
   test('Hồ sơ một cái máy: năm tab, mỗi tab bày đúng thứ của nó', async ({ page }) => {
     test.setTimeout(150_000);
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const stamp = uniqueStamp();
     const code = `TB-E2E-HOSO-${stamp}`;
@@ -1007,6 +1019,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         `Thao tác với ${code}`,
         'Cấp IP',
         'Bổ sung 6 ô còn thiếu',
+        // Ô ảnh hai mặt của khu "Hình dùng trên sơ đồ" (Q-23).
+        'Tải ảnh lên — Mặt trước',
+        'Tải ảnh lên — Mặt sau',
       ]);
     await expect(panel.getByText('Chưa có IP', { exact: true })).toBeVisible();
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);

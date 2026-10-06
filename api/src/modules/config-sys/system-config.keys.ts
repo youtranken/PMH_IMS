@@ -39,6 +39,8 @@ export const CONFIG_KEYS = {
   secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 60 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
   secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
+  // Ân hạn RIÊNG của phạm vi sơ đồ (AD-17): mã nhập để xem sơ đồ không kéo dài ân hạn két.
+  diagramStepUpGraceMinutes: { key: 'diagram.stepup_grace_minutes', fallback: 10 },
   /*
    * Canh người DÒ DẪM quanh két — xem `audit/security-probe.service.ts`.
    *
@@ -177,6 +179,68 @@ export const CONFIG_KEYS = {
    * Tham số — hạ nó xuống là thư bị bỏ sớm mà không ai thấy ngoài danh sách gửi lỗi.
    */
   outboxMaxRelayAttempts: { key: 'outbox.max_relay_attempts', fallback: 14 },
+  /*
+   * Sơ đồ mạng (AD-17). Trình vẽ không báo `init` trong ngần này giây thì màn báo "Trình vẽ chưa
+   * sẵn sàng" kèm nút thử lại, thay vì treo một khung trắng.
+   */
+  diagramEditorInitTimeoutSeconds: { key: 'diagram.editor_init_timeout_seconds', fallback: 20 },
+  /*
+   * Trần của cổng kiểm XML/SVG bản vẽ (`diagrams/diagram-gate.ts`). Bản vẽ được parse trọn trong
+   * RAM mỗi lần lưu và nạp trọn vào trình vẽ, nên trần là hàng rào cho cả server lẫn máy người
+   * xem. Trần trên của màn Tham số giữ dưới trần body của route lưu.
+   */
+  diagramXmlMaxKb: { key: 'diagram.xml_max_kb', fallback: 2048 },
+  diagramSvgMaxKb: { key: 'diagram.svg_max_kb', fallback: 4096 },
+  diagramMaxCells: { key: 'diagram.max_cells', fallback: 5000 },
+  /*
+   * "Đang có … mở sửa bản vẽ này" (Q-23): màn sửa đập nhịp nửa khoảng này một lần, người im lặng
+   * quá khoảng này coi như đã rời. Ngắn quá thì mạng chập chờn làm thông báo nhấp nháy.
+   */
+  diagramPresenceTtlSeconds: { key: 'diagram.presence_ttl_seconds', fallback: 60 },
+  /*
+   * Biểu tượng SVG riêng của một loại thiết bị nhúng vào MỌI ô thiết bị loại đó mỗi lần mở bản
+   * vẽ (hydrate), nên một biểu tượng to nhân lên theo số máy và đè lên trần `diagram.xml_max_kb`.
+   */
+  diagramIconSvgMaxKb: { key: 'diagram.icon_svg_max_kb', fallback: 100 },
+  /*
+   * Trần một lượt "Dựng nháp từ sơ đồ cổng" (FR-048): lưới quá đông thì draw.io xếp gọn chậm và
+   * bản vẽ không đọc được — người dùng nên thu hẹp về một tủ / một danh sách máy.
+   */
+  diagramAutolayoutMaxNodes: { key: 'diagram.autolayout_max_nodes', fallback: 300 },
+  /*
+   * Xuất PNG/PDF bản vẽ raster hoá trong RAM của api (4 byte một điểm ảnh): trần điểm ảnh chặn một
+   * bản vẽ khổng lồ ăn hàng trăm MB, trần thời gian để người xuất nhận lỗi thay vì treo request.
+   */
+  diagramExportMaxMegapixels: { key: 'diagram.export_max_megapixels', fallback: 40 },
+  diagramExportTimeoutSeconds: { key: 'diagram.export_timeout_seconds', fallback: 30 },
+  /*
+   * Cảnh báo lệch kho (Q-23): lượt quét hằng ngày tính số lệch của mọi bản chính thức từ giờ
+   * `diagram.drift_sweep_hour` (múi giờ ứng dụng) và email người phụ trách khi số TĂNG. 0 = tắt thư,
+   * vẫn tính số cho cây bản vẽ.
+   */
+  diagramDriftNotifyEnabled: { key: 'diagram.drift_notify_enabled', fallback: 1 },
+  diagramDriftSweepHour: { key: 'diagram.drift_sweep_hour', fallback: 7 },
+  /*
+   * "Chỉ đường" giữa hai máy dò sơ đồ cổng từng tầng một (mỗi tầng một câu đọc): đường dài hơn
+   * chừng này dây coi như không có — chặn một lượt hỏi đi lan khắp kho, và đường mạng thật trong
+   * một bệnh viện hiếm khi quá chục bước.
+   */
+  diagramPathMaxHops: { key: 'diagram.path_max_hops', fallback: 12 },
+  /*
+   * Ảnh thật thiết bị nhúng vào bản vẽ (data URI) nhân theo số máy và hai mặt tủ, và nằm cả trong
+   * XML lúc vẽ lẫn ảnh xem SVG: thu về cạnh dài này để bản vẽ một tủ không chạm trần dung lượng.
+   */
+  diagramPhotoMaxPx: { key: 'diagram.photo_max_px', fallback: 480 },
+  /*
+   * Bản vẽ đang vẽ dở cất (đã mã hoá) ở trình duyệt khi tab đóng / mất mạng / hết phiên (Q-23):
+   * quá ngần này giờ thì bỏ — để lâu là một bản cũ hơn hẳn bản trên server chực đè lên.
+   */
+  diagramDraftKeepHours: { key: 'diagram.draft_keep_hours', fallback: 24 },
+  /*
+   * Bề rộng chuẩn của ô thiết bị khi chèn / kéo vào / đổi hình (Q-23): mọi máy trên trang tự
+   * do cùng rộng, cao theo tỉ lệ hình. Mặc định 160 = lòng tủ rack, nên máy trong và ngoài tủ cùng cỡ.
+   */
+  diagramDeviceWidthPx: { key: 'diagram.device_width_px', fallback: 160 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

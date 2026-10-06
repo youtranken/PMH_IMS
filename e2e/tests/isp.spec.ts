@@ -8,6 +8,7 @@ import {
   resetIsp,
   resetUsers,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -49,7 +50,7 @@ async function createLine(page: Page, data: Record<string, unknown>) {
 
 test.describe('Đường truyền ISP', () => {
   test('đường hạnh phúc: hotline và số hợp đồng hiện NGAY trên danh sách', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `ISP-E2E-${stamp}`;
 
@@ -79,7 +80,7 @@ test.describe('Đường truyền ISP', () => {
   });
 
   test('gắn Draytek: trang thiết bị hiện ngược lại đường ISP kèm hotline', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `FW-E2E-${stamp}`);
 
@@ -105,7 +106,7 @@ test.describe('Đường truyền ISP', () => {
   });
 
   test('đường hỏng: thiếu nhà mạng, gửi ngày hết hạn, thiết bị không tồn tại', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
 
     const noProvider = await createLine(page, { code: `ISP-E2E-NP-${stamp}` });
@@ -136,7 +137,7 @@ test.describe('Đường truyền ISP', () => {
    * không có mặt trong cỗ máy nhắc hạn — và thanh lý phải đọc ra được ai, ngày nào.
    */
   test('không hạn, không gia hạn; thanh lý ghi rõ người và ngày', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `ISP-E2E-TL-${stamp}`;
     const created = await createLine(page, {
@@ -195,7 +196,7 @@ test.describe('Đường truyền ISP', () => {
   });
 
   test('file scan hợp đồng đính kèm được vào đường truyền', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const created = await createLine(page, {
       code: `ISP-E2E-FILE-${stamp}`,
@@ -218,7 +219,7 @@ test.describe('Đường truyền ISP', () => {
   test('sắp xếp theo cột chạy ở server, cột Site không sắp được thì không có nút', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     for (const [suffix, provider] of [
       ['A', 'Zulu Telecom E2E cuối bảng'],
@@ -260,7 +261,7 @@ test.describe('Đường truyền ISP', () => {
   test('nhà mạng là khoá ngoại: form chọn từ danh mục, đổi tên lan ra, xoá bị chặn', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const name = `Nha mang E2E ${stamp}`;
     const providerId = await ispProviderId(page, name);
@@ -313,7 +314,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
   test('danh sách mặc định bỏ đường đã thanh lý; "Tất cả" thì hiện lại; IP WAN ngay dưới mã', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const provider = await ispProviderId(page, `Nha mang loc E2E ${stamp}`);
     const live = `ISP-E2E-LIVE-${stamp}`;
@@ -352,7 +353,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
   test('thẻ "Khi mất mạng" có nút gọi; Thanh lý đi menu ⋯ và hỏi lại (Hủy thì không đổi)', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const created = await createLine(page, {
       code: `ISP-E2E-SC-${stamp}`,
@@ -401,7 +402,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
   });
 
   test('form: IP WAN sai định dạng thì báo ngay dưới ô, không gửi', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const provider = `Nha mang form E2E ${stamp}`;
     await ispProviderId(page, provider);
@@ -431,7 +432,7 @@ test.describe('Đường truyền — nhiều IP WAN', () => {
   test('form nhận hai IP, báo dải ngay tại dòng; tìm theo IP thứ hai ra đúng đường; trang chi tiết chép từng IP', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const provider = `Nha mang nhieu IP E2E ${stamp}`;
     await ispProviderId(page, provider);
@@ -478,7 +479,7 @@ test.describe('Đường truyền — nhiều IP WAN', () => {
   });
 
   test('đường hỏng qua API: dải và IP trùng trong cùng đường bị chặn đúng mã lỗi', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const providerId = await ispProviderId(page, 'VNPT E2E');
 

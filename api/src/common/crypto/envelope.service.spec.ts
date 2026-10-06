@@ -122,3 +122,32 @@ describe('EnvelopeCryptoService — test vector (AR-9)', () => {
     expect(svc.open(sealed, CTX).equals(raw)).toBe(true);
   });
 });
+
+describe('EnvelopeCryptoService.deriveKey — khoá dẫn xuất theo mục đích (Q-23 06/10: bản vẽ dở)', () => {
+  it('32 byte, ổn định: cùng chìa + cùng mục đích → cùng khoá (mở lại tab vẫn giải được)', () => {
+    const a = service(`1=${KEY_V1}`).deriveKey('diagram-draft|u1|d1');
+    expect(a).toHaveLength(32);
+    expect(service(`1=${KEY_V1}`).deriveKey('diagram-draft|u1|d1').equals(a)).toBe(true);
+  });
+
+  it.each([
+    ['người khác', 'diagram-draft|u2|d1'],
+    ['bản vẽ khác', 'diagram-draft|u1|d2'],
+    ['mục đích khác', 'other|u1|d1'],
+  ])('%s → khoá khác', (_name, info) => {
+    const svc = service(`1=${KEY_V1}`);
+    expect(svc.deriveKey(info).equals(svc.deriveKey('diagram-draft|u1|d1'))).toBe(false);
+  });
+
+  it('theo chìa HIỆN HÀNH: xoay chìa thì khoá đổi (bản nháp cũ thành không giải được)', () => {
+    const before = service(`1=${KEY_V1}`).deriveKey('diagram-draft|u1|d1');
+    const after = service(`1=${KEY_V1}\n2=${KEY_V2}`).deriveKey('diagram-draft|u1|d1');
+    expect(after.equals(before)).toBe(false);
+  });
+
+  it('không lộ master key: khoá dẫn xuất khác chìa và không chứa nó', () => {
+    const key = service(`1=${KEY_V1}`).deriveKey('diagram-draft|u1|d1');
+    expect(key.toString('hex')).not.toBe(KEY_V1);
+    expect(key.toString('hex').includes('1111111111')).toBe(false);
+  });
+});

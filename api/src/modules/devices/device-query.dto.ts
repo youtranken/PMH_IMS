@@ -5,13 +5,20 @@ import { OptionalUuidListQuery, OptionalUuidQuery } from '../../common/query-uui
 export class DeviceExportQueryDto {
   @IsOptional() @IsString() search?: string;
   @OptionalUuidQuery('Mã site không hợp lệ.') siteId?: string;
-  @OptionalUuidQuery('Mã tủ rack không hợp lệ.') cabinetId?: string;
+  @OptionalUuidQuery('Mã tủ mạng không hợp lệ.') cabinetId?: string;
   @OptionalUuidQuery('Mã loại thiết bị không hợp lệ.') deviceTypeId?: string;
   /**
    * `live` = trừ máy đã thanh lý (Q-20). Không kiểm ở đây: chữ lạ hay mảng (`?status=a&status=b`)
    * đều về mặc định `live` trong `deviceStatusQuery` — 400 thì cả màn thành trang lỗi.
    */
   @IsOptional() status?: string | string[];
+  /**
+   * Khớp đúng phòng ban / người sử dụng — hộp gán license chọn cả lô (SW-053), màn Thiết bị lọc
+   * theo phòng ban (T-08) và file xuất phải khớp cùng bộ lọc. Lặp tham số (mảng) là 400: bỏ qua
+   * thì trả tập rộng hơn cái người dùng đã chọn.
+   */
+  @IsOptional() @IsString() department?: string;
+  @IsOptional() @IsString() assignedTo?: string;
   @IsOptional() @IsString() sort?: string;
   @IsOptional() @IsString() dir?: string;
 }
@@ -23,10 +30,4 @@ export class DeviceListQueryDto extends DeviceExportQueryDto {
   @OptionalUuidListQuery('Danh sách loại thiết bị không hợp lệ.') deviceTypeIds?: string;
   /** '?usable=true' — chỉ máy còn nhận thêm được. Xem `DeviceFilter.usableOnly`. */
   @IsOptional() @IsString() usable?: string;
-  /**
-   * Khớp đúng phòng ban / người sử dụng — hộp gán license chọn cả lô (SW-053). Lặp tham số
-   * (mảng) là 400: bỏ qua thì trả tập rộng hơn cái người dùng đã chọn.
-   */
-  @IsOptional() @IsString() department?: string;
-  @IsOptional() @IsString() assignedTo?: string;
 }

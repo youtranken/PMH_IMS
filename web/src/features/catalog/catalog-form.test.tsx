@@ -153,3 +153,84 @@ describe('CatalogForm — gợi ý và cảnh báo', () => {
     expect(code).toHaveAccessibleDescription(/đã có/);
   });
 });
+
+describe('CatalogForm — loại thiết bị: hình trên sơ đồ mạng', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const TYPE = { id: 't-1', name: 'Switch E2E', hasPortMap: true, isRouter: false, description: null, diagramShape: null, active: true } as CatalogRow;
+
+  function stubShapes(save?: (url: string, init?: RequestInit) => Response) {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method && init.method !== 'GET' && save) return Promise.resolve(save(url, init));
+      if (url.includes('/diagram-shapes')) {
+        return Promise.resolve(jsonResponse(200, { shapes: [{ key: 'mxgraph.networks.switch', label: 'Switch (mạng)' }] }));
+      }
+      if (url.includes('/diagram-icon')) return Promise.resolve(jsonResponse(200, { svg: null }));
+      return Promise.resolve(jsonResponse(200, LISTS));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('chọn hình trong danh sách đóng (không ô gõ style), gửi diagramShape; "Thiết bị khác" gửi null', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    stubShapes((_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return jsonResponse(200, TYPE);
+    });
+    const user = userEvent.setup();
+    renderForm('device_type', TYPE);
+    const shape = await screen.findByRole('button', { name: 'Hình trên sơ đồ mạng' });
+    await user.click(shape);
+    await user.click(await screen.findByRole('option', { name: 'Switch (mạng)' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toMatchObject({ diagramShape: 'mxgraph.networks.switch' });
+    expect(screen.queryByRole('textbox', { name: /style/i })).toBeNull();
+  });
+
+  it('ô tải biểu tượng SVG riêng chỉ hiện khi được phép (SA)', async () => {
+    stubShapes();
+    renderForm('device_type', TYPE);
+    await screen.findByRole('button', { name: 'Hình trên sơ đồ mạng' });
+    expect(screen.queryByLabelText('Chọn tệp SVG biểu tượng')).toBeNull();
+  });
+
+  it('SA tải SVG: server từ chối (có script) → lý do hiện ngay dưới ô', async () => {
+    stubShapes(() => jsonResponse(400, { code: 'DIAGRAM_ICON_INVALID', message: 'Biểu tượng có <script> — không nhận.' }));
+    const user = userEvent.setup();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <CatalogForm entity="device_type" row={TYPE} csrfToken="t" onClose={vi.fn()} onSaved={vi.fn()} canUploadIcon />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const file = new File(['<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'], 'icon.svg', { type: 'image/svg+xml' });
+    await user.upload(await screen.findByLabelText('Chọn tệp SVG biểu tượng'), file);
+    expect(await screen.findByText('Biểu tượng có <script> — không nhận.')).toBeInTheDocument();
+  });
+});
+
+/** Loại dây (Q-23): màu chọn từ bảng ô màu token — không có ô nhập mã màu. */
+describe('CatalogForm — loại dây', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('chọn màu bằng ô màu, gửi colorSlot; không có ô nhập hex', async () => {
+    let body: unknown = null;
+    stubFetch((_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return jsonResponse(201, { id: 'ct-1', name: 'E2E Cat5e', colorSlot: 4, description: null, active: true });
+    });
+    const user = userEvent.setup();
+    renderForm('cable_type');
+    await user.type(await screen.findByRole('textbox', { name: /^Tên/ }), 'E2E Cat5e');
+    const slots = screen.getAllByRole('radio');
+    expect(slots).toHaveLength(8);
+    expect(screen.queryByRole('textbox', { name: /màu|hex/i })).toBeNull();
+    await user.click(screen.getByRole('radio', { name: 'Ô màu 4' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(body).toEqual({ name: 'E2E Cat5e', colorSlot: 4, description: '' }));
+  });
+});

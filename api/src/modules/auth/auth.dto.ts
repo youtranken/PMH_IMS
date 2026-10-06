@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsString,
   Length,
   Matches,
@@ -7,6 +8,7 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { STEP_UP_SCOPES, type StepUpScope } from './step-up.decorator';
 
 export class LoginDto {
   @IsEmail({}, { message: 'Email không hợp lệ.' })
@@ -21,6 +23,15 @@ export class TotpTokenDto {
   @IsString()
   @Matches(/^\d{6}$/, { message: 'Mã xác thực gồm đúng 6 chữ số.' })
   token!: string;
+}
+
+/**
+ * `POST /auth/step-up` BẮT BUỘC nói phạm vi (AD-17). Không có mặc định: client sơ đồ quên gửi
+ * `scope` mà server ngầm hiểu là két thì mã nhập để xem sơ đồ mở luôn két.
+ */
+export class StepUpDto extends TotpTokenDto {
+  @IsIn([...STEP_UP_SCOPES], { message: 'Thiếu hoặc sai phạm vi xác thực (vault | diagram).' })
+  scope!: StepUpScope;
 }
 
 /**

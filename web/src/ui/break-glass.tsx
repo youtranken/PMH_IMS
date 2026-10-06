@@ -364,7 +364,7 @@ export function DecisionDialog({
 
         {mode === 'approve' ? (
           <>
-            <div className="segmented" role="group" aria-label={t('approvals.durationBlock')}>
+            <div className="segmented fill" role="group" aria-label={t('approvals.durationBlock')}>
               {hourSteps(requested).map((h) => (
                 <button
                   key={h}

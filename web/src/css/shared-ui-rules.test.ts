@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmpSpec, cssRules, declValue, readCss, specificity, type Rule } from '@/test/css-test-kit';
+import { OTP_ORBIT_MS, OTP_RING_IN_MS } from '@/ui/otp-input';
 
 /**
  * Luật CSS dùng chung mà jsdom không kiểm được: thứ tự lớp, độ ưu tiên giữa luật chung và luật
@@ -23,6 +24,12 @@ const FILES = [
   'command-palette.css',
   'shared-kit.css',
 ];
+
+const REDUCE = '(prefers-reduced-motion: reduce)';
+/** Tiền tố của luật "giảm chuyển động" (lib/motion.ts): trong @media → theo máy, trừ khi "Luôn bật". */
+const MOTION_SYSTEM = "html:not([data-motion='on'])";
+/** Bản sao ngoài @media cho lựa chọn "Tắt". */
+const MOTION_OFF = "html[data-motion='off']";
 
 function rule(file: string, selector: string, media: string | null = null): Rule | undefined {
   return cssRules(file).find((r) => r.selector === selector && r.media === media);
@@ -247,7 +254,6 @@ describe('nút "Quay lại" ở bước nhập mã 2 lớp', () => {
 // --- Chuyển động khi rê chuột (Q-21) -------------------------------------------------------------
 
 describe('chuyển động nhẹ khi rê chuột', () => {
-  const REDUCE = '(prefers-reduced-motion: reduce)';
 
   it('thời lượng là token --dur-fast / --dur trong khoảng 150–200ms', () => {
     const light = tokenBlock('light');
@@ -275,13 +281,35 @@ describe('chuyển động nhẹ khi rê chuột', () => {
   });
 
   it('"giảm chuyển động": tắt mọi transition/animation và bỏ cả các cú nhấc/trượt khi hover', () => {
-    const all = cssRules('detail-tabs.css').find((r) => r.selector === '*' && r.media === REDUCE)!;
+    const all = rule('detail-tabs.css', `${MOTION_SYSTEM} *`, REDUCE)!;
     expect(declValue(all.body, 'transition')).toBe('none !important');
+    expect(declValue(all.body, 'animation')).toBe('none !important');
     for (const [file, selector] of [
       ['base.css', '.nav-item:hover'],
       ['shared-kit.css', '.kpi:hover'],
     ]) {
-      expect(declValue(rule(file, selector, REDUCE)!.body, 'transform'), selector).toBe('none');
+      expect(declValue(rule(file, `${MOTION_SYSTEM} ${selector}`, REDUCE)!.body, 'transform'), selector).toBe('none');
+    }
+  });
+
+  /*
+   * "Hiệu ứng chuyển động" trong Hồ sơ (lib/motion.ts, Q-21): "Luôn bật" (html[data-motion=on])
+   * thắng báo "giảm chuyển động" của máy — máy qua phiên từ xa luôn báo thế; "Tắt"
+   * (html[data-motion=off]) bỏ chuyển động kể cả khi máy cho phép. Mỗi luật giảm chuyển động
+   * vì vậy phải khoá theo thuộc tính, và có bản sao y hệt cho "Tắt" ngoài @media.
+   */
+  it.each(FILES)('%s: luật "giảm chuyển động" khoá theo data-motion và có bản sao cho "Tắt"', (file) => {
+    const rules = cssRules(file);
+    for (const r of rules.filter((x) => x.media?.includes('prefers-reduced-motion'))) {
+      expect(r.media, r.selector).toBe(REDUCE);
+      expect(r.selector.startsWith(`${MOTION_SYSTEM} `), r.selector).toBe(true);
+      const off = r.selector.replace(MOTION_SYSTEM, MOTION_OFF);
+      const twin = rules.find((x) => x.media === null && x.selector === off);
+      expect(twin, off).toBeDefined();
+      expect(twin!.body.replace(/\s+/g, ' ').trim(), off).toBe(r.body.replace(/\s+/g, ' ').trim());
+    }
+    for (const r of rules.filter((x) => x.selector.includes('data-motion'))) {
+      expect(r.selector.startsWith(`${MOTION_SYSTEM} `) || r.selector.startsWith(`${MOTION_OFF} `), r.selector).toBe(true);
     }
   });
 });
@@ -441,5 +469,91 @@ describe('không còn CSS/token chết', () => {
 
   it.each(['--z-lightbox', '--scrim-strong'])('token %s không còn', (token) => {
     expect(readCss('tokens.css')).not.toContain(token);
+  });
+});
+
+describe('ô mã 6 số (ui/otp-input.tsx)', () => {
+  it('hàng ô là lưới 6 cột bằng nhau, trải hết bề ngang — không dồn về trái', () => {
+    const body = rule('shared-kit.css', '.otp-boxes')!.body;
+    expect(declValue(body, 'display')).toBe('grid');
+    expect(declValue(body, 'grid-template-columns')).toBe('repeat(6, minmax(0, 1fr))');
+    expect(declValue(body, 'width')).toBe('100%');
+    expect(declValue(body, 'max-width')).toBeUndefined();
+  });
+
+  it('ô cao ≥ 44px (vùng chạm)', () => {
+    const h = declValue(rule('shared-kit.css', '.otp-box')!.body, 'min-height')!;
+    expect(parseInt(h, 10)).toBeGreaterThanOrEqual(44);
+  });
+
+  it('"giảm chuyển động" tắt mọi animation/transition/transform của ô mã', () => {
+    for (const sel of ['.otp-boxes', '.otp-box', '.otp-check', '.otp-check::before', '.otp-check::after', '.otp-check-mark']) {
+      const body = rule('shared-kit.css', `${MOTION_SYSTEM} ${sel}`, REDUCE)?.body ?? '';
+      // Phải thắng cả luật có class trạng thái (is-filled, is-busy, is-error) → cần !important.
+      expect(declValue(body, 'animation'), sel).toBe('none !important');
+      expect(declValue(body, 'transition'), sel).toBe('none !important');
+    }
+    expect(declValue(rule('shared-kit.css', `${MOTION_SYSTEM} .otp-box:focus`, REDUCE)?.body ?? '', 'transform')).toBe('none');
+  });
+
+  it('trạng thái cuối của "thành công" khai tĩnh — tắt animation vẫn thấy đúng 1 ô có dấu tích xanh', () => {
+    expect(declValue(rule('shared-kit.css', '.otp-boxes.is-success .otp-box')!.body, 'opacity')).toBe('0');
+    for (const sel of ['.otp-check', '.otp-check::before', '.otp-check::after', '.otp-check-mark']) {
+      const op = declValue(rule('shared-kit.css', sel)!.body, 'opacity');
+      expect(op === undefined || Number(op) > 0, sel).toBe(true);
+    }
+  });
+
+  /* Chuyển động chạy mỗi khung hình: chỉ transform/opacity thì trình duyệt ghép lớp trên GPU, không
+     tính lại bố cục — card kính có backdrop-filter, vẽ lại mỗi khung là giật thấy rõ. */
+  it('mọi @keyframes otp-* chỉ đổi transform/opacity', () => {
+    const css = readCss('shared-kit.css') + readCss('auth.css');
+    const names: string[] = [];
+    for (const m of css.matchAll(/@keyframes\s+((?:otp|auth-otp)-[\w-]+)\s*\{/g)) {
+      names.push(m[1]);
+      let depth = 1;
+      let j = m.index! + m[0].length;
+      const start = j;
+      for (; depth > 0; j++) {
+        if (css[j] === '{') depth++;
+        else if (css[j] === '}') depth--;
+      }
+      const props = [...css.slice(start, j - 1).matchAll(/([\w-]+)\s*:/g)].map((p) => p[1]);
+      for (const p of props) expect(['transform', 'opacity'], `${m[1]}: ${p}`).toContain(p);
+    }
+    expect(names).toEqual(expect.arrayContaining(['otp-ring-in', 'otp-orbit', 'otp-converge', 'otp-return']));
+  });
+
+  it('vòng quay: cả vòng xoay trọn 360° quanh tâm, ô nghiêng theo vòng (không tự đứng thẳng)', () => {
+    const css = readCss('shared-kit.css');
+    const orbit = /@keyframes otp-orbit\s*\{([\s\S]*?)\n\}/.exec(css)![1];
+    expect(orbit).toMatch(/to\s*\{[^}]*rotate\(calc\(var\(--otp-a\) \+ 360deg\)\)/);
+    expect(orbit).toMatch(/rotate\(calc\(-1 \* var\(--otp-a\)\)\)/);
+  });
+
+  it('nhịp CSS khớp hằng số của ui/otp-input.tsx (mốc trọn vòng tính bằng JS)', () => {
+    const body = rule('shared-kit.css', '.otp-boxes')!.body;
+    expect(declValue(body, '--otp-ring-in')).toBe(`${OTP_RING_IN_MS}ms`);
+    expect(declValue(body, '--otp-orbit')).toBe(`${OTP_ORBIT_MS}ms`);
+  });
+});
+
+/*
+ * draw.io xuất SVG "màu tự đổi": `color-scheme: light dark` + `light-dark(đen, trắng)`. Trình vẽ
+ * nhúng (embed) luôn chạy giấy SÁNG, còn trình xem nếu để nguyên thì theo máy: máy/trình duyệt ưu
+ * tiên tối → nét và hình tự do thành trắng trên nền trắng, chỉ còn máy kho + dây IMS tô màu.
+ */
+describe('trình xem sơ đồ vẽ trên giấy sáng như trình vẽ (ui/diagram-viewer.tsx)', () => {
+  it('SVG bản vẽ ghim color-scheme sáng, thắng style nội tuyến của draw.io', () => {
+    expect(declValue(rule('primitives.css', '.diagram-viewer-canvas > svg')!.body, 'color-scheme')).toBe('light !important');
+  });
+
+  it('nền khung xem và nền "tự đổi" của draw.io là token giấy, cả hai theme cùng màu sáng', () => {
+    expect(declValue(rule('primitives.css', '.diagram-viewer')!.body, 'background')).toBe('var(--diagram-paper)');
+    expect(declValue(rule('primitives.css', '.diagram-viewer-canvas')!.body, '--ge-adaptive-bg')).toBe('var(--diagram-paper)');
+    expect(hex('dark', '--diagram-paper')).toBe(hex('light', '--diagram-paper'));
+    expect(luminance(hex('light', '--diagram-paper'))).toBeGreaterThan(0.9);
+    // Watermark nằm trên giấy đó: theme tối mà dùng mực sáng thì chìm mất.
+    expect(tokenBlock('dark').get('--diagram-watermark')).toBe(tokenBlock('light').get('--diagram-watermark'));
   });
 });

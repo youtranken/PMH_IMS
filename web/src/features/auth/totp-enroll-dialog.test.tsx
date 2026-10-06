@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
+import { act, fireEvent, jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { TotpEnrollDialog } from './totp-enroll-dialog';
 
 /**
@@ -13,11 +13,11 @@ const WARNING =
   'Lưu ý: sau khi cài lại, mã trên điện thoại cũ không dùng được nữa; các máy khác đang đăng nhập sẽ bị đăng xuất.';
 const PURPOSE = 'Nhập mã 6 số trên điện thoại ĐANG dùng để xác nhận cài lại xác thực 2 lớp.';
 
-function renderDialog(mode: 'enable' | 'reenroll') {
+function renderDialog(mode: 'enable' | 'reenroll', onClose = vi.fn()) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderWithI18n(
     <QueryClientProvider client={qc}>
-      <TotpEnrollDialog mode={mode} csrfToken="tok" onClose={vi.fn()} onDone={vi.fn()} />
+      <TotpEnrollDialog mode={mode} csrfToken="tok" onClose={onClose} onDone={vi.fn()} />
     </QueryClientProvider>,
   );
 }
@@ -76,5 +76,39 @@ describe('TotpEnrollDialog', () => {
     await user.type(within(step).getByLabelText('Mã xác thực'), '123456');
     expect(await screen.findByTestId('totp-secret')).toHaveTextContent('JBSWY3DPEHPK3PXP');
     expect(reenrollCalls).toBe(2);
+  });
+
+  it('cài lại: mã đúng, hiệu ứng đang chạy → Esc không đóng hộp, nút quay về bước mật khẩu mờ', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/api/v1/auth/totp/re-enroll')) {
+          return Promise.resolve(jsonResponse(403, { code: 'STEPUP_REQUIRED', message: 'Cần mã' }));
+        }
+        if (url.endsWith('/api/v1/auth/step-up')) return Promise.resolve(jsonResponse(200, { graceMinutes: 10 }));
+        return Promise.resolve(jsonResponse(200, {}));
+      }),
+    );
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderDialog('reenroll', onClose);
+    await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'mat-khau');
+    await user.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    const step = await screen.findByRole('region', { name: 'Xác nhận danh tính' });
+
+    vi.stubGlobal('AnimationEvent', class {});
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        fireEvent.change(within(step).getByLabelText('Số thứ 1 trên 6'), { target: { value: '123456' } });
+        await vi.advanceTimersByTimeAsync(50);
+      });
+      expect(within(step).getByRole('button', { name: 'Nhập lại mật khẩu' })).toBeDisabled();
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+      expect(onClose).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

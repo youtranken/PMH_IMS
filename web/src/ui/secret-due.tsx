@@ -23,6 +23,20 @@ export function secretDueInfo(dueInDays: number): SecretDueInfo {
  * Ô "Đổi lần cuối": ngày đổi giá trị + đếm ngược tới hạn đổi. Dùng ở danh sách ngăn két và
  * danh sách tài khoản dịch vụ — một bản để hai nơi nói cùng một câu.
  */
+/**
+ * Dòng phụ dưới mã hồ sơ ở danh sách (K-03): "Két đổi lần cuối dd/mm/yyyy · còn n ngày". Hồ sơ
+ * không có két (không có trong bảng hạn) thì không vẽ gì — danh sách không thành rừng dấu gạch.
+ */
+export function SecretDueSub({ entry }: { entry: { valueChangedAt: string; dueInDays: number } | undefined }) {
+  const { t } = useTranslation();
+  if (!entry) return null;
+  return (
+    <span className="cell-sub">
+      {t('vault.dueSubLabel')} <SecretDue changedAt={entry.valueChangedAt} dueInDays={entry.dueInDays} />
+    </span>
+  );
+}
+
 export function SecretDue({
   changedAt,
   dueInDays,

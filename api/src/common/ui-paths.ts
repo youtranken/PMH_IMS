@@ -62,6 +62,8 @@ export const UI_PATHS = {
    */
   approval: (id: string) => `/approvals/${encodeURIComponent(id)}`,
   expiry: '/expiry',
+  /** Một bản vẽ sơ đồ mạng — thư duyệt bản vẽ trỏ về đây (trang duyệt nằm ngay trên bản vẽ). */
+  diagram: (id: string) => `/diagrams/${id}`,
   /**
    * Màn Nhật ký, lọc sẵn theo người thao tác. `q` là khoá ô tìm của `useListUrlState` bên web
    * — màn Nhật ký đặt ô tìm đó làm bộ lọc người thao tác; `audit-log-screen.test.tsx` canh

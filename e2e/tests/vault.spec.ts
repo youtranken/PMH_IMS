@@ -22,6 +22,7 @@ import {
   resetUsers,
   rowAction,
   uniqueStamp,
+  stepUpViaApi,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -70,7 +71,7 @@ test.describe('Két sắt', () => {
   test('đường hạnh phúc: cất mật khẩu → hiện tên gọi, không hiện giá trị → xoay → thu hồi', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const code = `SW-E2E-VAULT-${stamp}`;
     const deviceId = await createSwitch(page, code);
@@ -122,7 +123,7 @@ test.describe('Két sắt', () => {
   });
 
   test('đường hỏng: trùng tên gọi trên cùng thiết bị bị chặn, không phải 500', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-DUP-${stamp}`);
     const csrf = await csrfOf(page);
@@ -151,7 +152,7 @@ test.describe('Két sắt', () => {
    * phần mềm, ISP — nên đó là chỗ dễ vô thức thêm vào nhất).
    */
   test('FR-026: không có đường nào lấy được nhiều hơn một chủ thể', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const deviceId = await createSwitch(page, `SW-E2E-FR026-${uniqueStamp()}`);
 
     for (const url of [
@@ -177,12 +178,12 @@ test.describe('Két sắt', () => {
    */
   test('Member chưa được gán gì: đọc 403, và không bao giờ ghi được vào két', async ({ page }) => {
     // Tạo thiết bị bằng SA trước, rồi đăng nhập lại bằng Member trên phiên sạch.
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-MEM-${stamp}`);
     await logout(page);
 
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     const list = await page.request.get(
       `/api/v1/vault/secrets?ownerType=device&ownerId=${deviceId}`,
     );
@@ -237,7 +238,7 @@ test.describe('Két sắt', () => {
   }) => {
     test.setTimeout(180_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-PROBE-${stamp}`);
     const created = await page.request.post('/api/v1/vault/secrets', {
@@ -270,7 +271,7 @@ test.describe('Két sắt', () => {
 
     await logout(page);
     await clearMailbox();
-    await firstLogin(page, prober);
+    await stepUpViaApi(page, await firstLogin(page, prober));
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     /*
@@ -371,7 +372,7 @@ test.describe('Két sắt', () => {
   test('máy đã thanh lý: mọi cửa ghi vào két đều bị chặn, mở lại thì làm được', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-FROZEN-${stamp}`);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -469,7 +470,7 @@ test.describe('Két sắt', () => {
    * được đụng tới mật khẩu), và có đúng một dòng audit mang tên người sửa.
    */
   test('sửa metadata của ngăn: đổi nhãn không đụng tới giá trị, và có vết', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-EDIT-${stamp}`);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -531,7 +532,7 @@ test.describe('Két sắt', () => {
     // Hai luồng đăng nhập lần đầu (SA rồi Member) trong cùng một bài.
     test.setTimeout(150_000);
 
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-PANEL-${stamp}`);
     const label = `admin web E2E ${stamp}`;
@@ -562,7 +563,7 @@ test.describe('Két sắt', () => {
     ).toContain('vault');
 
     await logout(page);
-    await firstLogin(page, E2E_MEMBER);
+    await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
 
     const asMember = await panelsOf();
     expect(
@@ -578,7 +579,7 @@ test.describe('Két sắt', () => {
   test('DB chỉ chứa rác: giá trị cất vào không tìm thấy ở dạng chữ trong bảng secret', async ({
     page,
   }) => {
-    await firstLogin(page, E2E_SA);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-CIPHER-${stamp}`);
     const plaintext = `Plain#Text#${stamp}`;

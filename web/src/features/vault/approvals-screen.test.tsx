@@ -29,8 +29,13 @@ function row(id: string, requester: string) {
 
 const ME = { role: 'sa', csrfToken: 't', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-function renderAt(entry: string, rows = [row('a1', 'an@pmh.com.vn'), row('b2', 'binh@pmh.com.vn')]) {
-  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, rows))));
+function renderAt(entry: string, rows = [row('a1', 'an@pmh.com.vn'), row('b2', 'binh@pmh.com.vn')], diagramQueue: unknown[] = []) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(jsonResponse(200, String(input).includes('/api/v1/diagrams/reviews/pending') ? diagramQueue : rows)),
+    ),
+  );
   return renderWithI18n(
     <MemoryRouter initialEntries={[entry]}>
       <ToastProvider>
@@ -65,6 +70,28 @@ describe('Màn Duyệt yêu cầu mở từ thư', () => {
     renderAt('/approvals');
     await screen.findByText('an@pmh.com.vn');
     expect(screen.queryByRole('region', { current: true })).toBeNull();
+  });
+});
+
+/** D-07: bản vẽ chờ duyệt có chỗ trên màn Duyệt — tên, người gửi, bấm là mở bản vẽ. */
+describe('Khối "Bản vẽ chờ duyệt"', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('Admin/SA thấy bản vẽ đang chờ mình duyệt, link mở thẳng bản vẽ', async () => {
+    renderAt('/approvals', [], [
+      { approvalId: 'p1', diagramId: 'd1', name: 'Tầng 3 E2E', requester: 'tv@pmh.com.vn', requesterName: 'Thành viên E2E', seq: 4, submittedAt: '2026-10-05T01:00:00Z' },
+    ]);
+    const block = await screen.findByRole('heading', { name: 'Bản vẽ chờ duyệt · 1' });
+    const card = block.closest('section') as HTMLElement;
+    expect(within(card).getByRole('link', { name: 'Mở Tầng 3 E2E' })).toHaveAttribute('href', '/diagrams/d1');
+    expect(card).toHaveTextContent('Phiên bản #4');
+    expect(card).toHaveTextContent('Thành viên E2E gửi lúc');
+  });
+
+  it('không có bản vẽ nào chờ thì không bày khối', async () => {
+    renderAt('/approvals');
+    await screen.findByText('an@pmh.com.vn');
+    expect(screen.queryByRole('heading', { name: /Bản vẽ chờ duyệt/ })).toBeNull();
   });
 });
 
