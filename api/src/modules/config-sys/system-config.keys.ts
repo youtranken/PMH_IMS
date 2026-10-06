@@ -232,12 +232,12 @@ export const CONFIG_KEYS = {
    */
   diagramPhotoMaxPx: { key: 'diagram.photo_max_px', fallback: 480 },
   /*
-   * Bản vẽ đang vẽ dở cất (đã mã hoá) ở trình duyệt khi tab đóng / mất mạng / hết phiên (Q-23
-   * 06/10): quá ngần này giờ thì bỏ — để lâu là một bản cũ hơn hẳn bản trên server chực đè lên.
+   * Bản vẽ đang vẽ dở cất (đã mã hoá) ở trình duyệt khi tab đóng / mất mạng / hết phiên (Q-23):
+   * quá ngần này giờ thì bỏ — để lâu là một bản cũ hơn hẳn bản trên server chực đè lên.
    */
   diagramDraftKeepHours: { key: 'diagram.draft_keep_hours', fallback: 24 },
   /*
-   * Bề rộng chuẩn của ô thiết bị khi chèn / kéo vào / đổi hình (Q-23 06/10): mọi máy trên trang tự
+   * Bề rộng chuẩn của ô thiết bị khi chèn / kéo vào / đổi hình (Q-23): mọi máy trên trang tự
    * do cùng rộng, cao theo tỉ lệ hình. Mặc định 160 = lòng tủ rack, nên máy trong và ngoài tủ cùng cỡ.
    */
   diagramDeviceWidthPx: { key: 'diagram.device_width_px', fallback: 160 },
