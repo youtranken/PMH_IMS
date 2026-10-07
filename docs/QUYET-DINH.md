@@ -870,6 +870,25 @@ thay CHỖ LẤY Số U, ảnh và cổng.
 - **Chuyển tiếp:** Model thành nguồn Số U; máy có ảnh cắt theo U cũ lệch U của model thì hiện lại
   "Ảnh chưa cắt chuẩn — Cắt lại", không tự co kéo ảnh. Dữ liệu thử cũ KHÔNG chuyển đổi: máy cũ để
   "chưa có Model", cổng khai tay cũ xoá cũng được — prod nhập dữ liệu thật từ đầu.
+- **Góp ý sau khi thử Epic 11 (07/10/2026, chủ dự án chốt):**
+  - **Ảnh model thắng ảnh riêng của máy.** Máy đã gắn model mà model có ảnh mặt nào thì mặt đó
+    hiện ảnh model ở MỌI nơi (form Thêm/Sửa ngay khi chọn model, trang thiết bị, sơ đồ) và KHOÁ tải
+    ảnh riêng cho mặt đó — server từ chối, không chỉ ẩn nút. Đổi ảnh thì sửa ở Danh mục › Model
+    (SA/Admin), cả loạt máy đổi theo. Mặt model chưa có ảnh (mặt sau) vẫn tải ảnh riêng như cũ.
+    Thay cho câu "từng máy vẫn sửa đè được" ở trên — câu đó còn đúng cho Số U và cổng.
+  - **Sửa cổng mẫu của model thì mọi máy cùng model được THÊM cổng còn thiếu**, trong cùng
+    transaction, mỗi máy một dòng lịch sử. Không bao giờ xoá hay đổi tên cổng có sẵn của máy (cổng
+    riêng, cổng đang cắm dây). Lý do: máy tạo trước khi model có cổng mẫu thì khai dây không chọn
+    được cổng mẫu.
+  - **Ô "Cổng đầu kia"** khi khai kết nối gợi ý cổng của máy đầu kia như ô "Cổng" (vẫn gõ được tên
+    ngoài danh sách).
+  - **Nhãn cổng ở hai đầu dây nằm SÁT đầu dây** (khoảng 20px, không theo tỉ lệ độ dài dây), chữ to
+    hơn, có nền — dây đi vòng dài vẫn đọc được cổng nào ở máy nào.
+  - **Ô "Cấp bản vẽ" đổi tên "Loại bản vẽ"**, giữ 6 loại làm nhãn phân loại; gợi ý nói rõ cây do
+    "bản vẽ con" quyết định, chỉ "Tủ mạng" mở thêm chức năng. Bản vẽ con tự đề xuất loại kế tiếp
+    (Tổng công ty → Site → Tầng → Phòng → Tủ mạng).
+  - **Khung cắt ảnh vẫn khoá theo tỉ lệ thật của Số U** (482 × 44,45 mm mỗi U); không phóng to ô
+    1U. Ảnh cao hơn khung là dấu hiệu Số U của model khai thiếu — hộp cắt nhắc kiểm lại Số U.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
