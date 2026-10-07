@@ -127,6 +127,16 @@ export function PortFormDialog({
     { method: port ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
 
+  // Đổi máy ở một đầu thì cổng của đầu đó chọn lại — tên cổng của máy cũ không có nghĩa ở máy mới.
+  const pickHolder = (next: { id: string; code: string } | null) => {
+    if ((next?.id ?? null) !== (holder?.id ?? null)) setPortLabel('');
+    setHolder(next);
+  };
+  const pickPeer = (next: { id: string; code: string } | null) => {
+    if ((next?.id ?? null) !== (peer?.id ?? null)) setConnectedPort('');
+    setPeer(next);
+  };
+
   /** Sau "Ghi rồi thêm cổng khác": giữ VLAN, người dùng và loại dây (cả dãy cổng thường chung), tăng nhãn. */
   const prepareNext = () => {
     setPortLabel(nextPortLabel(portLabel));
@@ -239,7 +249,7 @@ export function PortFormDialog({
                 value={{ deviceId: holder?.id ?? '', term: holderTerm }}
                 onChange={(next) => {
                   setHolderTerm(next.term);
-                  setHolder(next.device ? { id: next.device.id, code: next.device.code } : null);
+                  pickHolder(next.device ? { id: next.device.id, code: next.device.code } : null);
                 }}
                 minChars={2}
               />
@@ -247,7 +257,7 @@ export function PortFormDialog({
               {quickPick(
                 onDrawing.filter((d) => d.id !== holder?.id && d.id !== peer?.id),
                 (d) => {
-                  setHolder(d);
+                  pickHolder(d);
                   setHolderTerm(d.code);
                 },
               )}
@@ -330,7 +340,7 @@ export function PortFormDialog({
                     value={{ deviceId: peer?.id ?? '', term: query }}
                     onChange={(next) => {
                       setQuery(next.term);
-                      setPeer(next.device ? { id: next.device.id, code: next.device.code } : null);
+                      pickPeer(next.device ? { id: next.device.id, code: next.device.code } : null);
                     }}
                     minChars={2}
                     // Cổng không nối vào chính máy chứa nó.
@@ -346,7 +356,7 @@ export function PortFormDialog({
                 ? quickPick(
                     onDrawing.filter((d) => d.id !== holder?.id && d.id !== peer?.id),
                     (d) => {
-                      setPeer(d);
+                      pickPeer(d);
                       setQuery(d.code);
                     },
                   )
