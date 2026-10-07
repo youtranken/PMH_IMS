@@ -18,6 +18,7 @@ const SUGGEST_LIMIT = 10;
  */
 export function DeviceModelField({
   csrfToken,
+  canManage = false,
   id,
   term,
   picked,
@@ -26,6 +27,8 @@ export function DeviceModelField({
   onTerm,
 }: {
   csrfToken: string;
+  /** SA/Admin: hộp tạo model mới có ô ảnh mặt trước (ảnh model đổi hình cả loạt máy). */
+  canManage?: boolean;
   id?: string;
   term: string;
   picked: DeviceModel | null;
@@ -78,6 +81,7 @@ export function DeviceModelField({
       {creating ? (
         <DeviceModelDialog
           csrfToken={csrfToken}
+          canManage={canManage}
           initial={{ model: term.trim(), deviceTypeId: deviceTypeId || null }}
           onClose={() => setCreating(false)}
           onSaved={onPick}

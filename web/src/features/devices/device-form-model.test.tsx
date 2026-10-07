@@ -3,6 +3,7 @@ import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { DeviceForm } from './device-form';
+import { DeviceModelField } from './device-model-field';
 
 /** Form thiết bị chọn / tạo model tại chỗ, U trống để chọn (Q-26). */
 const LISTS = {
@@ -135,5 +136,19 @@ describe('Form thiết bị — Model (Q-26)', () => {
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     const post = calls.find((c) => c.url === '/api/v1/devices' && c.method === 'POST');
     expect(JSON.parse(post?.body ?? '{}').accessPoints).toEqual([{ kind: 'web', address: '10.0.1.1', port: 8443 }]);
+  });
+
+  it('SA/Admin bấm "Tạo model mới" ngay trong form thiết bị → hộp tạo model CÓ ô ảnh mặt trước', async () => {
+    mockFetch();
+    renderWithI18n(
+      <ToastProvider>
+        <DeviceModelField csrfToken="t" canManage term="DL380" picked={null} deviceTypeId="t-sw" onPick={() => undefined} onTerm={() => undefined} />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: 'Model' }));
+    await user.click(await screen.findByRole('button', { name: 'Tạo model mới "DL380"' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Thêm model thiết bị' });
+    expect(within(dialog).getByLabelText('Ảnh mặt trước — tải lên')).toBeInTheDocument();
   });
 });

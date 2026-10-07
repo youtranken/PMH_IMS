@@ -491,6 +491,7 @@ export function DeviceForm({
           >
             <DeviceModelField
               csrfToken={csrfToken}
+              canManage={canEditModel}
               id="device-model"
               term={form.model}
               picked={model}
