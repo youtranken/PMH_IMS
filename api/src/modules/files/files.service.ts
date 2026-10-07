@@ -281,6 +281,14 @@ export class FilesService implements OnModuleInit {
     });
   }
 
+  /** Xoá mềm nhiều tệp còn sống trong `tx` của nơi gọi (mỗi tệp một dòng nhật ký); id đã xoá bỏ qua. */
+  async trashWithin(tx: Tx, actor: string, ids: string[]): Promise<void> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return;
+    const rows = await tx.select().from(filesTable).where(and(inArray(filesTable.id, unique), isNull(filesTable.deletedAt)));
+    for (const row of rows) await this.removeWithin(tx, actor, row.id, row.ownerType, row.ownerId, row.originalName);
+  }
+
   async removeWithin(
     tx: Tx,
     actor: string,

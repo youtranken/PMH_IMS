@@ -43,6 +43,16 @@ const THUMB_CACHE_MAX = 200;
 
 const COLUMN: Record<PhotoSide, 'photoFrontFileId' | 'photoBackFileId'> = { front: 'photoFrontFileId', back: 'photoBackFileId' };
 
+/**
+ * Tệp ảnh vừa bị thay / bỏ — xoá mềm để không đọng lại trong Giấy tờ (Q-26 07/10). Tệp vẫn được mặt
+ * kia dùng thì giữ.
+ */
+function replaced(before: Partial<Record<(typeof COLUMN)[PhotoSide], string | null>>, values: Partial<Record<(typeof COLUMN)[PhotoSide], string | null>>): string[] {
+  const after = { ...before, ...values };
+  const kept = new Set(PHOTO_SIDES.map((side) => after[COLUMN[side]]).filter(Boolean));
+  return PHOTO_SIDES.map((side) => before[COLUMN[side]]).filter((id): id is string => Boolean(id) && !kept.has(id));
+}
+
 /** Cùng phép chuẩn hoá với cột sinh `device_model.model_key` (0062) — để so với chuỗi model của máy. */
 const MODEL_KEY_SQL = (column: unknown) => sql`upper(regexp_replace(${column}, '[[:space:]_.-]', '', 'g'))`;
 
@@ -105,6 +115,7 @@ export class DevicePhotosService {
       if (!hasChanges(changes)) return;
       await this.devices.updateWithin(tx, deviceId, values);
       await this.devices.recordWithin(tx, actor, deviceId, 'photos-changed', changes);
+      await this.files.trashWithin(tx, actor, replaced(before, values));
     });
     return this.photos(deviceId);
   }
@@ -176,6 +187,7 @@ export class DevicePhotosService {
         .update(deviceModelTable)
         .set({ ...values, updatedAt: new Date() })
         .where(eq(deviceModelTable.id, modelId));
+      await this.files.trashWithin(tx, actor, replaced(locked, values));
       await this.audit.appendWithin(tx, {
         actor,
         action: 'device.model-photos-changed',

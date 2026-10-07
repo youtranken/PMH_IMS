@@ -174,6 +174,31 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     expect(info).toMatchObject({ u: 1, uSize: 1, photos: { front: true, back: true } });
   });
 
+  it('thay / bỏ ảnh thì file ảnh cũ tự vào thùng rác (xoá mềm), không đọng lại trong Giấy tờ (Q-26 07/10)', async () => {
+    const { device: dev } = await devices.create(SA.email, { code: 'SW-E2E-MT-TRASH', name: 'Máy thay ảnh', deviceTypeId: typeId, model: 'E2E-TRASH' });
+    const alive = async (id: string) => (await scratch.pool.query(`SELECT deleted_at IS NULL alive FROM file WHERE id = $1`, [id])).rows[0].alive as boolean;
+    const first = await upload('device', dev.id, png(400, 40, 'red'), 'lan-1.png');
+    const second = await upload('device', dev.id, png(400, 40, 'blue'), 'lan-2.png');
+    const back = await upload('device', dev.id, png(400, 40, 'green'), 'sau.png');
+    await photos.setDevicePhotos(SA.email, dev.id, { front: first.id, back: back.id });
+    await photos.setDevicePhotos(SA.email, dev.id, { front: second.id });
+    expect(await alive(first.id)).toBe(false);
+    expect(await alive(second.id)).toBe(true);
+    expect(await alive(back.id)).toBe(true);
+    await photos.setDevicePhotos(SA.email, dev.id, { back: null });
+    expect(await alive(back.id)).toBe(false);
+    const trashed = await scratch.pool.query(`SELECT count(*)::int n FROM audit_log WHERE action = 'file.deleted' AND object_id = $1`, [dev.id]);
+    expect(trashed.rows[0].n).toBe(2);
+
+    const model = await photos.ensureModel(SA.email, dev.id);
+    const m1 = await upload('device_model', model.id, png(200, 20, 'green'));
+    const m2 = await upload('device_model', model.id, png(200, 20, 'blue'));
+    await photos.setModelPhotosById(SA.email, model.id, { front: m1.id });
+    await photos.setModelPhotosById(SA.email, model.id, { front: m2.id });
+    expect(await alive(m1.id)).toBe(false);
+    expect(await alive(m2.id)).toBe(true);
+  });
+
   it('ảnh model THẮNG ảnh riêng của máy và khoá tải ảnh riêng cho mặt đó (Q-26 07/10); bỏ ảnh riêng vẫn được', async () => {
     const own = await upload('device', sw, png(400, 40, 'red'), 'rieng.png');
     await photos.setDevicePhotos(SA.email, sw, { front: own.id });

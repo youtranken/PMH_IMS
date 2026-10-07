@@ -876,6 +876,10 @@ thay CHỖ LẤY Số U, ảnh và cổng.
     ảnh riêng cho mặt đó — server từ chối, không chỉ ẩn nút. Đổi ảnh thì sửa ở Danh mục › Model
     (SA/Admin), cả loạt máy đổi theo. Mặt model chưa có ảnh (mặt sau) vẫn tải ảnh riêng như cũ.
     Thay cho câu "từng máy vẫn sửa đè được" ở trên — câu đó còn đúng cho Số U và cổng.
+    Mặt đang dùng ảnh model khoá hẳn ở trang thiết bị, kể cả với SA/Admin; ảnh model tải được ngay
+    lúc tạo model (cả hộp "Tạo model mới" trong form thiết bị). Thay / bỏ ảnh (riêng hay model) thì
+    tệp ảnh cũ tự xoá mềm — ảnh không đọng lại trong Giấy tờ; bỏ khu "chọn ảnh từ giấy tờ" ở tab
+    Giấy tờ (ảnh chỉ quản lý ở "Hình dùng trên sơ đồ").
   - **Sửa cổng mẫu của model thì mọi máy cùng model được THÊM cổng còn thiếu**, trong cùng
     transaction, mỗi máy một dòng lịch sử. Không bao giờ xoá hay đổi tên cổng có sẵn của máy (cổng
     riêng, cổng đang cắm dây). Lý do: máy tạo trước khi model có cổng mẫu thì khai dây không chọn
