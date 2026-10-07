@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
@@ -73,6 +73,10 @@ beforeEach(() => {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('Bản vẽ dở — cất và khôi phục (Q-23 06/10)', () => {
   it('đang vẽ thì cất (đã mã hoá) sau khi ngừng tay; đóng tab thì ghi ngay', async () => {
     const { fromDrawio } = await openEditor();
@@ -86,6 +90,9 @@ describe('Bản vẽ dở — cất và khôi phục (Q-23 06/10)', () => {
   });
 
   it('mở lại còn bản dở → "Có bản đang vẽ dở lúc …" — Khôi phục nạp vào trình vẽ thành chưa lưu, KHÔNG gọi lưu', async () => {
+    // Bản dở chỉ giữ 24 giờ: chốt đồng hồ ngay sau lúc lưu, nếu không bài tự đỏ khi ngày chạy trôi qua mốc đó.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.UTC(2026, 9, 6, 3, 0));
     await saveDraft(store.backend, { id: draftKeyOf('u1', 'd1'), owner: 'u1', basedOn: 'v1', text: DRAFT, rawKey: KEY, now: Date.UTC(2026, 9, 6, 2, 15) });
     const { fetchMock, messages } = await openEditor();
     expect(await screen.findByText(/Có bản đang vẽ dở lúc 06\/10\/2026 09:15 chưa lưu\./)).toBeInTheDocument();
