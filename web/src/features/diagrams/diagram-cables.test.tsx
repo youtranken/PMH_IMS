@@ -286,12 +286,24 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     expect(await screen.findByText('Có 1 kết nối mới chưa vẽ')).toBeInTheDocument();
   });
 
-  it('⋮ › "Tự đi lại dây": dây đã khai bị kéo đầu ra chỗ trống được nối lại về đúng máy, bỏ điểm uốn; nét tự do không đụng (Q-23 05/10)', async () => {
+  it('menu ⋮ khi vẽ (Q-26 07/10): một mục "Sắp lại dây" thay hai mục đi dây; không có Phát hành / Gửi duyệt / Bình luận đã ghim', async () => {
+    await openEditor(file(DEVICES), { links: [] });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Thao tác với/ }));
+    const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '');
+    expect(items.some((text) => text.startsWith('Sắp lại dây'))).toBe(true);
+    for (const gone of ['Bẻ dây vuông góc', 'Tự đi lại dây', 'Phát hành', 'Gửi duyệt', 'Bình luận đã ghim']) {
+      expect(items.some((text) => text.startsWith(gone)), gone).toBe(false);
+    }
+  });
+
+  it('⋮ › "Sắp lại dây" › "Đi lại từ đầu": dây đã khai bị kéo đầu ra chỗ trống được nối lại về đúng máy, bỏ điểm uốn; nét tự do không đụng (Q-23 05/10)', async () => {
     const loose = `<UserObject label="⚠ Dây Gi1/0/24 ↔ eth0 phải nối SW-E2E-01 ↔ SRV-E2E-01 — kéo đầu dây về đúng máy" ims_link_id="link-1" id="e1"><mxCell style="rounded=0;exitX=1;exitY=0.5;endArrow=none;imsPaint=danger;dashed=1;html=0;" edge="1" parent="1" source="a"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>`;
     const helper = `<mxCell id="f1" value="" style="endArrow=none;" edge="1" parent="1" source="b"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell>`;
     const { messages, answerFile } = await openEditor(file(DEVICES + loose + helper), { links: [LINK] });
     const user = userEvent.setup();
-    await pickMenuItem(user, /^Thao tác với/, 'Tự đi lại dây');
+    await pickMenuItem(user, /^Thao tác với/, /^Sắp lại dây/);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Sắp lại dây trên trang' })).getByRole('button', { name: 'Đi lại từ đầu' }));
     await answerFile(DEVICES + loose + helper);
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
     const patch = messages().find((m) => m.action === 'patch') as {

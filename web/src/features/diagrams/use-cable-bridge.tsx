@@ -221,6 +221,18 @@ export function useCableBridge({
     });
   };
 
+  /** "Sắp lại dây" (Q-26 07/10): một mục cho hai cách — giữ điểm uốn đã kéo, hay đi lại từ đầu. */
+  const askRoute = async () => {
+    const answer = await ask({
+      title: t('diagrams.cable.routeTitle'),
+      message: t('diagrams.cable.routeMessage'),
+      confirmLabel: t('diagrams.cable.routeReroute'),
+      choice: { label: t('diagrams.cable.routeKeepBends') },
+    });
+    if (answer === 'confirm') route('reroute');
+    else if (answer === 'choice') route('orthogonal');
+  };
+
   const askRemove = async (removed: { id: string; linkId: string }[], prevXml: string) => {
     const known = removed.map((r) => ({ edgeId: r.id, link: links.current.get(r.linkId) })).filter((r): r is { edgeId: string; link: DiagramLink } => Boolean(r.link));
     if (known.length === 0) return;
@@ -406,8 +418,7 @@ export function useCableBridge({
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
     { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setBulkOpen(true)) },
     { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: () => setUndeclaredOpen(true) },
-    { key: 'cable-orthogonal', label: t('diagrams.cable.orthogonalButton'), disabled: !ready, onSelect: () => route('orthogonal') },
-    { key: 'cable-reroute', label: t('diagrams.cable.rerouteButton'), disabled: !ready, onSelect: () => route('reroute') },
+    { key: 'cable-route', label: t('diagrams.cable.routeButton'), disabled: !ready, onSelect: () => void askRoute() },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
   ];
   const popovers = (
