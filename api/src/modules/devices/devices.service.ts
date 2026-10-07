@@ -29,7 +29,9 @@ import { rackUnitLabel } from '../../common/rack-units';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
-import { deviceHistoryTable, deviceTable } from './devices.schema';
+import { normalizeAccessPoints } from './device-access';
+import { expandPortTemplate } from './port-template';
+import { deviceHistoryTable, deviceModelTable, deviceTable } from './devices.schema';
 import { rackClaimOf, rackOverlap, rackPlacementChanged, rackUnitsReason, type RackClaim } from './rack-units';
 import type {
   DeviceFilter,
@@ -58,6 +60,10 @@ export interface DeviceInput {
   note?: string | null;
   rackUStart?: number | null;
   rackUSize?: number | null;
+  /** Model danh mục (Q-26): có thì loại, chuỗi model và Số U lấy từ model. */
+  deviceModelId?: string | null;
+  /** Truy cập quản trị — đầu vào thô, `normalizeAccessPoints` làm sạch và kiểm. */
+  accessPoints?: unknown;
 }
 
 /**
@@ -504,6 +510,8 @@ export class DevicesService {
     put('note', text(input.note));
     put('rackUStart', input.rackUStart);
     put('rackUSize', input.rackUSize);
+    put('deviceModelId', input.deviceModelId === undefined ? undefined : (input.deviceModelId || null));
+    put('accessPoints', input.accessPoints === undefined ? undefined : normalizeAccessPoints(input.accessPoints));
 
     if (id === null) {
       for (const required of ['code', 'name', 'deviceTypeId'] as const) {
@@ -524,6 +532,7 @@ export class DevicesService {
     // đã bị gỡ khỏi danh mục thì không bao giờ xoá được. Đường Excel và các service HTTP
     // phải dùng cùng phép ghép này (A-03).
     const current = id ? await this.requireRow(id) : null;
+    await this.applyModel(values, current);
     const effective = effectiveOf(values);
     const start = effective<string | null>('warrantyStart', current?.warrantyStart ?? null);
     const end = effective<string | null>('warrantyEnd', current?.warrantyEnd ?? null);
@@ -545,6 +554,38 @@ export class DevicesService {
     );
     await this.prepareRack(values, current);
     return values;
+  }
+
+  /**
+   * Máy thuộc model (Q-26): loại và chuỗi model lấy theo model lúc GÁN (chuỗi model giữ để tìm kiếm
+   * và để máy chưa có Model vẫn dò được ảnh model như cũ); Số U luôn theo model, không sửa đè — cùng
+   * model là cùng kích thước vật lý.
+   */
+  private async applyModel(values: Record<string, unknown>, current: typeof deviceTable.$inferSelect | null): Promise<void> {
+    const modelId = effectiveOf(values)<string | null>('deviceModelId', current?.deviceModelId ?? null);
+    if (!modelId) return;
+    const [model] = await this.db.select().from(deviceModelTable).where(eq(deviceModelTable.id, modelId));
+    if (!model) throw new BadRequestException({ code: 'DEVICE_MODEL_NOT_FOUND', message: 'Model đã chọn không còn trong danh mục — chọn lại model.' });
+    if (values.deviceModelId !== undefined) {
+      values.deviceTypeId = model.deviceTypeId;
+      values.model = model.model;
+      // Chép cổng mẫu CHỈ lúc gán model mới (form gửi lại deviceModelId mỗi lần lưu) và khi máy chưa
+      // có danh sách: danh sách cố ý để trống hay mẫu sửa sau đó không được chép ngầm vào máy cũ.
+      const assigning = values.deviceModelId !== (current?.deviceModelId ?? null);
+      if (assigning && (current?.portLayout ?? []).length === 0 && values.portLayout === undefined) {
+        values.portLayout = expandPortTemplate(model.portTemplate, Number.MAX_SAFE_INTEGER);
+      }
+    }
+    const start = effectiveOf(values)<number | null>('rackUStart', current?.rackUStart ?? null);
+    if (model.rackMountable && start !== null) values.rackUSize = model.uSize;
+    // Máy in, camera, AP… không bao giờ vào tủ (Q-23): chặn ở kho, sơ đồ chỉ là ảnh chiếu.
+    const cabinetId = effectiveOf(values)<string | null>('cabinetId', current?.cabinetId ?? null);
+    if (!model.rackMountable && cabinetId) {
+      throw new BadRequestException({
+        code: 'DEVICE_MODEL_NOT_RACKABLE',
+        message: `Model ${model.model} không gắn tủ — bỏ chọn tủ (máy chỉ cần Site), hoặc chọn model gắn tủ.`,
+      });
+    }
   }
 
   /**

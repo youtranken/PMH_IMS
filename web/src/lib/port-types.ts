@@ -134,3 +134,34 @@ export function nextFreePort(map: PortMap | undefined, label: string): string {
   }
   return '';
 }
+
+/** `GET /devices/:id/port-panel` (Q-26): cổng vật lý của máy + đầu kia của cổng đang có dây. */
+export interface PortPanelData {
+  ports: { label: string; kind: 'rj45' | 'sfp' | 'sfp+' | 'console' | 'other'; peer: string | null }[];
+  unlisted: { label: string; peer: string }[];
+  used: number;
+  total: number;
+}
+
+/**
+ * Cổng gợi ý khi khai dây: cổng vật lý chưa có dây (theo thứ tự cổng thật trên máy), rồi các dòng
+ * sơ đồ cổng còn trống mà không nằm trong danh sách. Máy chưa có danh sách cổng thì như `freePorts`.
+ */
+export function freePortOptions(map: PortMap | undefined, panel: PortPanelData | undefined): string[] {
+  const rows = freePorts(map);
+  if (!hasLayout(panel)) return rows;
+  const listed = new Set(panel.ports.map((p) => p.label.toLowerCase()));
+  return [...panel.ports.filter((p) => !p.peer).map((p) => p.label), ...rows.filter((label) => !listed.has(label.toLowerCase()))];
+}
+
+/** Tên gõ không có trong danh sách cổng của máy (máy ĐÃ có danh sách) — khai xong nó thành cổng riêng. */
+export function outsideLayout(panel: PortPanelData | undefined, label: string): boolean {
+  const name = label.trim().toLowerCase();
+  if (!name || !hasLayout(panel)) return false;
+  return !panel.ports.some((p) => p.label.toLowerCase() === name);
+}
+
+/** Máy có danh sách cổng — dữ liệu sai hình dạng (API cũ) coi như chưa có. */
+function hasLayout(panel: PortPanelData | undefined): panel is PortPanelData {
+  return Boolean(panel) && Array.isArray(panel?.ports) && (panel?.total ?? 0) > 0;
+}

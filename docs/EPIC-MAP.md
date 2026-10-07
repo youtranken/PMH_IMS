@@ -1059,3 +1059,55 @@ Bẫy mới:
 Còn để ngỏ: nhịp "đang mở sửa" không đòi mã sơ đồ (nó chỉ trả tên người đang sửa, Q-23 chỉ liệt kê
 lưu / đặt tên / khôi phục); hai bước "lưu trữ → xóa vĩnh viễn" hợp lệ thì DB không phân biệt được với
 ims_app bị chiếm làm đúng hai bước đó.
+
+## Epic 11 đã đóng góp gì — Model thiết bị (đóng 2026-10-07)
+
+Quyết định nghiệp vụ: `docs/QUYET-DINH.md` Q-26 (+ gạch "Bắt đầu từ" của Q-23 cho Story 10.13).
+Migration của epic: `0062`–`0064`. Ba nguồn sự thật: kho giữ VỊ TRÍ, sơ đồ cổng giữ DÂY, model giữ
+ĐẶC TÍNH LOẠI MÁY.
+
+### Bảng / cột mới và ai sở hữu (AD-3)
+
+| Thứ | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `device_model.manufacturer`, `rack_mountable`, `u_size`, `model_key` (0062) | `devices` | `model_key` là cột SINH (`upper` + bỏ khoảng trắng/gạch/chấm/gạch dưới), UNIQUE. 0062 gộp các model trùng khoá có sẵn trước khi đặt UNIQUE. Hãng là chữ tự do — bảng `vendor` là NHÀ CUNG CẤP, không phải hãng |
+| `device.device_model_id` (0062, FK) | `devices` | Máy trỏ model; số U lấy theo model, máy không sửa đè. Chữ `device.model` vẫn giữ cho máy "chưa có Model" |
+| `device.access_points` (0063, jsonb) | `devices` | Đường vào quản trị (web/ssh/…); `normalizeAccessPoints` chặn địa chỉ mở đầu bằng gạch (chèn tham số lệnh) |
+| `device_model.port_template`, `device.port_layout` (0064, jsonb) | `devices` | Cổng mẫu của model → máy CHÉP danh sách cổng VẬT LÝ lúc gán model mới. Khác `device_port`: mỗi hàng `device_port` là MỘT SỢI DÂY |
+
+Khoá `system_config` mới (AD-11): `device.port_template_max` (256), nhóm tham số `devices`.
+
+Quyền: ai thêm được thiết bị thì tạo được model; sửa / xoá / ảnh model chỉ SA và Admin.
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Dùng thế nào |
+| --- | --- | --- |
+| `/api/v1/device-models` (list/get/create/patch/delete/photos/preview) | `modules/devices/device-models.*` | Danh mục model; trùng khoá chuẩn hoá trả 409 `DEVICE_MODEL_DUPLICATE` |
+| `GET /devices/:id/port-panel`, `PATCH /devices/:id/port-layout` | `modules/devices/device-ports.service.ts` | Mặt cổng = danh sách cổng vật lý + dây đang cắm. Web đọc qua `usePortPanel`, không tự `useQuery` |
+| `modelKey` (api) ↔ `modelKey` (web) ↔ cột sinh `model_key` | `device-model-key.ts`, `web/src/lib/device-models.ts`, 0062 | Ba nơi PHẢI cùng phép; server là trọng tài |
+| `expandPortTemplate` (api) ↔ (web) | `port-template.ts` hai bên | Cùng phép; trần `device.port_template_max` chỉ server biết |
+| `DeviceModelDialog`, `usePortPanel`, `freeRuns` | `web/src/ui`, `web/src/lib/rack-units.ts` | Đã khai SHARED-REGISTRY |
+| `POST /diagrams/from-stock` + `startChoices`/`effectiveStart` | `diagrams.service`, `web/src/features/diagrams/diagram-start.ts` | "Bắt đầu từ" của hộp tạo bản vẽ (Story 10.13): không còn tự nhân bản bản cha |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Khi nào làm |
+| --- | --- | --- |
+| Đổi cổng mẫu của model KHÔNG lan sang máy đã gán | Máy chép cổng lúc gán; lan ngược có thể đè cổng riêng đã khai | Khi có nhu cầu "áp lại mẫu" có xem trước |
+| Nhãn community của graphify chưa đặt lại | `graphify label . --missing-only` cần API key | Lần đầu có key |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **`diffRecord` coi mọi object / mảng là null**: trường jsonb (`access_points`, `port_layout`) phải so
+   riêng trong `diffDevice`, nếu không nhật ký sửa máy im lặng.
+2. **FOR SHARE rồi nâng lên FOR UPDATE là deadlock** khi khai dây đồng thời: khoá FOR UPDATE các hàng
+   `device` ngay đầu transaction, theo thứ tự id (`lockDevicesWithin`).
+3. **`UPDATE … FROM` chọn hàng tuỳ ý** khi gộp trùng trong migration: dùng truy vấn con có `ORDER BY` rõ.
+4. **Ảnh trong style draw.io là `data:<mime>,<base64>`** (không có `;base64`): regex đọc ảnh phải nhận cả hai dạng.
+5. **`sql()` của E2E đi qua shell trong nháy kép**: chuỗi JSON có nháy kép vỡ lệnh — dựng JSON bằng
+   `jsonb_build_object` trong SQL.
+6. **DB dev có dải thật `172.16.10.0/24`, `172.16.110.0/24`**: bài E2E tự suy octet từ stamp phải dùng
+   `createTestSubnet` (lùi khi 409), không tự POST dải.
+7. **Người dùng thao tác tay trên DB dev giữa lượt E2E đầy đủ** làm cửa canh rác ở teardown báo "hàng sống
+   sót" (bản vẽ không mang chữ E2E). Kiểm `created_by` trước khi nghi bài kiểm.

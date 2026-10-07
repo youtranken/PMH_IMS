@@ -241,6 +241,8 @@ export const CONFIG_KEYS = {
    * do cùng rộng, cao theo tỉ lệ hình. Mặc định 160 = lòng tủ rack, nên máy trong và ngoài tủ cùng cỡ.
    */
   diagramDeviceWidthPx: { key: 'diagram.device_width_px', fallback: 160 },
+  /** Trần số cổng của một máy (cổng mẫu của model + cổng riêng, Q-26). */
+  devicePortTemplateMax: { key: 'device.port_template_max', fallback: 256 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

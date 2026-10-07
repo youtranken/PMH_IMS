@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rackClash, rackPlacement, rackRows, rackUnitLabel, nearestFreeU } from './rack-units';
+import { freeRuns, rackClash, rackPlacement, rackRows, rackUnitLabel, nearestFreeU } from './rack-units';
 
 describe('rackUnitLabel', () => {
   it.each([
@@ -71,5 +71,39 @@ describe('nearestFreeU — U bắt đầu còn trống gần chỗ muốn nhất
 
   it('tủ đầy → null', () => {
     expect(nearestFreeU(1, 1, 2, [{ id: 'x', code: 'X', start: 1, size: 2 }], null)).toBeNull();
+  });
+});
+
+describe('freeRuns — dải U trống đủ n U để chọn U bắt đầu (Q-26)', () => {
+  const at = (id: string, start: number, size: number) => ({ id, code: id.toUpperCase(), start, size });
+  it.each([
+    { name: 'tủ trống 12U, máy 1U: cả tủ là một dải', height: 12, occ: [], size: 1, self: null, runs: [{ start: 1, end: 12 }] },
+    {
+      name: 'máy ở U3 và U7–U8: ba dải, theo thứ tự từ đáy',
+      height: 12,
+      occ: [at('a', 3, 1), at('b', 7, 2)],
+      size: 1,
+      self: null,
+      runs: [
+        { start: 1, end: 2 },
+        { start: 4, end: 6 },
+        { start: 9, end: 12 },
+      ],
+    },
+    {
+      name: 'máy 3U: bỏ dải ngắn hơn 3U',
+      height: 12,
+      occ: [at('a', 3, 1), at('b', 7, 2)],
+      size: 3,
+      self: null,
+      runs: [
+        { start: 4, end: 6 },
+        { start: 9, end: 12 },
+      ],
+    },
+    { name: 'chính máy đang sửa không chiếm chỗ của nó', height: 6, occ: [at('me', 2, 2)], size: 2, self: 'me', runs: [{ start: 1, end: 6 }] },
+    { name: 'tủ đầy → rỗng', height: 2, occ: [at('a', 1, 2)], size: 1, self: null, runs: [] },
+  ])('$name', ({ height, occ, size, self, runs }) => {
+    expect(freeRuns(height, occ, size, self)).toEqual(runs);
   });
 });

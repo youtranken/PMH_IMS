@@ -37,6 +37,9 @@ const FIELD_LABEL: Record<string, string> = {
   rackUSize: 'history.devices.fRackUSize',
   photoFrontFileId: 'history.devices.fPhotoFront',
   photoBackFileId: 'history.devices.fPhotoBack',
+  deviceModelId: 'history.devices.fDeviceModel',
+  accessPoints: 'history.devices.fAccessPoints',
+  portLayout: 'history.devices.fPortLayout',
 };
 
 /** Ảnh thật ghi theo id tệp — đọc thành "đã chọn ảnh" thay vì một chuỗi uuid. */
@@ -52,6 +55,7 @@ export const ACTION_LABEL: Record<string, string> = {
   'port-updated': 'history.devices.actPortUpdated',
   'port-removed': 'history.devices.actPortRemoved',
   'photos-changed': 'history.devices.actPhotosChanged',
+  'ports-layout': 'history.devices.actPortsLayout',
   /*
    * Dòng này do MÁY KHÁC sinh ra, không phải do ai sửa hồ sơ máy này: thanh lý một thiết bị
    * thì cổng bên máy còn lại bị gỡ liên kết (`port-device-retirement.ts`). Nhãn phải nói rõ
@@ -127,6 +131,8 @@ function describeChanges(changes: FieldChanges, t: TFunction): string | null {
     label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
     display: (field, value) => {
       if (PHOTO_FIELDS.has(field) && value) return t('history.devices.photoChosen');
+      // Id model là uuid; tên model đọc được ở trường `model` đổi cùng lượt gán.
+      if (field === 'deviceModelId' && value) return t('history.devices.modelLinked');
       if (field !== 'status' || value === null || value === undefined || value === '') return undefined;
       const key = STATUS_LABEL[String(value)];
       return key ? t(key) : String(value);

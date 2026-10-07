@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PortFace } from './port-face';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
@@ -185,6 +186,7 @@ export function PortMapPanel({
 
   return (
     <div className="port-map">
+      <PortFace deviceId={device.id} />
       {/* Thanh công cụ của tab: tiêu đề khu + số đếm bên trái, nút thêm bên phải, CÙNG hàng
           ngay dưới thanh tab — tab nào cũng một chỗ cho nút thêm. */}
       <div className="section-bar">

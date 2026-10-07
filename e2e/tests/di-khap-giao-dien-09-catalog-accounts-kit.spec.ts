@@ -95,7 +95,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   const fieldLabel = (label: string): RegExp =>
     new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*\\*?\\s*$`);
 
-  /** Bảy ngăn của phòng Danh mục, đúng thứ tự `TAB_KEYS` trong `catalog-screen.tsx`. */
+  /** Các ngăn của phòng Danh mục, đúng thứ tự `TAB_KEYS` trong `catalog-screen.tsx`. */
   const TAB_NAMES = [
     'Site',
     'Tủ mạng',
@@ -105,6 +105,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     'Nhà mạng',
     'Dịch vụ / Port',
     'Loại dây',
+    // Ngăn Model có màn riêng (`device-models-panel.tsx`), soi trong `device-models.spec.ts`.
+    'Model thiết bị',
   ] as const;
 
   /** Một ngăn: nhãn nút "Thêm …" và bộ cột của bảng bên trong. */
@@ -212,7 +214,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const tabBar = page.getByRole('tablist', { name: 'Danh mục' });
     await expect(
       tabBar.getByRole('tab'),
-      'phòng Danh mục phải có ĐÚNG tám ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
+      'phòng Danh mục phải có ĐÚNG chín ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
     ).toHaveText(TAB_NAMES.map(catalogTab));
 
     for (const section of SEVEN_SECTIONS) {

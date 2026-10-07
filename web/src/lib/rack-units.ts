@@ -62,3 +62,22 @@ export function nearestFreeU(want: number, size: number, height: number, occupan
   }
   return null;
 }
+
+/**
+ * Các dải U trống liền nhau đủ chỗ cho máy `size` U, từ đáy tủ lên (Q-26): form thiết bị cho CHỌN U
+ * bắt đầu thay vì gõ mò. Bỏ qua chính máy `selfId`. Server vẫn là trọng tài chồng U.
+ */
+export function freeRuns(height: number, occupants: readonly RackOccupant[], size: number, selfId: string | null): { start: number; end: number }[] {
+  const taken = (u: number) => occupants.some((o) => o.id !== selfId && o.start <= u && u <= o.start + o.size - 1);
+  const runs: { start: number; end: number }[] = [];
+  let start: number | null = null;
+  for (let u = 1; u <= height + 1; u += 1) {
+    const free = u <= height && !taken(u);
+    if (free && start === null) start = u;
+    if (!free && start !== null) {
+      if (u - start >= size) runs.push({ start, end: u - 1 });
+      start = null;
+    }
+  }
+  return runs;
+}

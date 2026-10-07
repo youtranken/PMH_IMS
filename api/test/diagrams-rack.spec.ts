@@ -175,6 +175,22 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     expect(info).toMatchObject({ u: 1, uSize: 1, photos: { front: true, back: true } });
   });
 
+  it('ảnh model theo khoá ngoại (Q-26): máy đã gán model dùng ảnh model đó, kể cả khi chuỗi model của máy trùng model khác; máy chưa gán vẫn dò theo chuỗi', async () => {
+    const alpha = (await scratch.pool.query<{ id: string }>(`INSERT INTO device_model (device_type_id, model) VALUES ($1, 'E2E-ALPHA') RETURNING id`, [typeId])).rows[0].id;
+    const beta = (await scratch.pool.query<{ id: string }>(`INSERT INTO device_model (device_type_id, model) VALUES ($1, 'E2E-BETA') RETURNING id`, [typeId])).rows[0].id;
+    const alphaPhoto = await upload('device_model', alpha, png(200, 20, 'green'));
+    const betaPhoto = await upload('device_model', beta, png(200, 20, 'blue'));
+    await scratch.pool.query(`UPDATE device_model SET photo_front_file_id = CASE id WHEN $1::uuid THEN $3::uuid ELSE $4::uuid END WHERE id IN ($1, $2)`, [alpha, beta, alphaPhoto.id, betaPhoto.id]);
+    const legacy = (await devices.create(SA.email, { code: 'PC-E2E-MT-LEG', name: 'Máy cũ', deviceTypeId: typeId, model: 'e2e alpha' })).device.id;
+    const linked = (await devices.create(SA.email, { code: 'PC-E2E-MT-LNK', name: 'Máy gán', deviceTypeId: typeId, deviceModelId: beta })).device.id;
+    // Chuỗi model của máy đã gán bị sửa tay thành tên model khác: khoá ngoại vẫn thắng.
+    await scratch.pool.query(`UPDATE device SET model = 'E2E-ALPHA' WHERE id = $1`, [linked]);
+    const effective = await photos.effectivePhotos([legacy, linked]);
+    expect(effective.get(legacy)).toEqual({ front: alphaPhoto.id, back: null });
+    expect(effective.get(linked)).toEqual({ front: betaPhoto.id, back: null });
+    expect((await photos.photos(linked)).model).toMatchObject({ id: beta, label: 'E2E-BETA' });
+  });
+
   it('ô chọn ảnh: kho giữ XML khô (ims_photo, không ảnh); mở SỬA nhúng ảnh + ims_photo_file_id; mở XEM không đọc ảnh', async () => {
     const node = await service.create(SA.email, { name: 'E2E Ảnh thật', nodeType: 'room' });
     const wetFromEditor = page(deviceCell('c1', sw, 'SW-E2E-MT-01', ' ims_photo="front" ims_photo_file_id="x"', 'shape=image;image=data:image/png,AAAA;'));
@@ -238,7 +254,7 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     await expect(service.rebuildRack(SA.email, room.id)).rejects.toMatchObject({ response: { code: 'DIAGRAM_NOT_CABINET' } });
   });
 
-  it('"Dựng từ kho": tạo bản vẽ tủ kèm phiên bản nháp #1 là mặt tủ từ kho (Q-23 06/10 chiều)', async () => {
+  it('"Dựng từ kho": tạo bản vẽ tủ kèm phiên bản nháp #1 là mặt tủ từ kho (Q-23)', async () => {
     const parent = await service.create(SA.email, { name: 'E2E Phòng dựng từ kho', nodeType: 'room' });
     const node = await service.createFromStock(SA.email, { name: 'E2E Tủ dựng từ kho', nodeType: 'cabinet', parentId: parent.id, siteId, cabinetId });
     expect(node).toMatchObject({ name: 'E2E Tủ dựng từ kho', nodeType: 'cabinet', cabinetId, parentId: parent.id });

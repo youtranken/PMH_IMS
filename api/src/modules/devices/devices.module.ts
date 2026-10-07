@@ -9,6 +9,8 @@ import { DeviceCatalogUsage } from './device-catalog-usage';
 import { DeviceExpirySource } from './device-expiry-source';
 import { DeviceImportService } from './device-import.service';
 import { DeviceModelOwnerResolver } from './device-model-owner-resolver';
+import { DeviceModelsController } from './device-models.controller';
+import { DeviceModelsService } from './device-models.service';
 import { DevicePhotosController } from './device-photos.controller';
 import { DevicePhotosService } from './device-photos.service';
 import { DevicePortsService } from './device-ports.service';
@@ -25,10 +27,11 @@ import { PortDeviceRetirement } from './port-device-retirement';
  */
 @Module({
   imports: [AuditModule, CatalogModule, FilesModule, UsersModule],
-  controllers: [DevicesController, DevicePhotosController],
+  controllers: [DevicesController, DevicePhotosController, DeviceModelsController],
   providers: [
     DevicesService,
     DevicePhotosService,
+    DeviceModelsService,
     DeviceOwnerResolver,
     DeviceModelOwnerResolver,
     DeviceAuditLabeler,

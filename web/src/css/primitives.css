@@ -1399,6 +1399,11 @@ button.tree-summary:hover:not(:disabled) {
   border-radius: var(--r-sm);
   background: var(--diagram-paper);
 }
+/* Ảnh mặt trước của model trong bảng Danh mục: ảnh gắn tủ dài và thấp (1U ≈ 11:1), ô hẹp thì thành vạch. */
+.photo-thumb.wide {
+  width: 7rem;
+  margin-right: 0;
+}
 /* Hộp "Hướng dẫn" của màn sơ đồ: mỗi mục một tiêu đề nhỏ + vài gạch, giữa các mục có khoảng thở. */
 .diagram-guide {
   display: flex;
@@ -2107,3 +2112,41 @@ button.tree-summary:hover:not(:disabled) {
   min-height: 0;
   padding: 0 var(--space-6);
 }
+
+/* Mặt cổng của thiết bị (`features/devices/port-face.tsx`): mỗi cổng một ô; đang dùng / trống khác
+   màu và luôn kèm chữ ở nhãn trợ năng + chú giải, không chỉ màu. Lưới tự xuống dòng ở 390px. */
+.port-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+.port-cell {
+  display: inline-block;
+  min-width: 3.25rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+span.port-cell {
+  min-width: 1rem;
+  padding: 0 var(--space-2);
+  vertical-align: middle;
+}
+.port-cell[data-used] {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.port-cell[aria-pressed='true'] {
+  outline: 2px solid var(--ok);
+  outline-offset: 1px;
+}
+

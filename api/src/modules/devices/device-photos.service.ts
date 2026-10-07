@@ -1,5 +1,5 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { photoThumbnail, type PhotoImage } from '../../common/photo-thumbnail';
 import type { Tx } from '../../common/tx';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -8,6 +8,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { FilesApiService, type FileRecord } from '../files/files.api';
 import { diffDevice, hasChanges } from './device-changes';
+import { modelKey } from './device-model-key';
 import { deviceModelTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
 
@@ -41,6 +42,9 @@ export interface DevicePhotos {
 const THUMB_CACHE_MAX = 200;
 
 const COLUMN: Record<PhotoSide, 'photoFrontFileId' | 'photoBackFileId'> = { front: 'photoFrontFileId', back: 'photoBackFileId' };
+
+/** Cùng phép chuẩn hoá với cột sinh `device_model.model_key` (0062) — để so với chuỗi model của máy. */
+const MODEL_KEY_SQL = (column: unknown) => sql`upper(regexp_replace(${column}, '[[:space:]_.-]', '', 'g'))`;
 
 /**
  * Ảnh thật của thiết bị hai mức (Q-23): ảnh riêng từng máy (chọn từ giấy tờ đính kèm của máy, cột
@@ -76,7 +80,7 @@ export class DevicePhotosService {
     };
     const own = { front: ref(device.photoFrontFileId), back: ref(device.photoBackFileId) };
     const byModel = { front: ref(model?.photoFrontFileId), back: ref(model?.photoBackFileId) };
-    const label = device.model?.trim();
+    const label = model?.model ?? device.model?.trim();
     return {
       device: own,
       model: label ? { id: model?.id ?? null, label, ...byModel } : null,
@@ -104,19 +108,34 @@ export class DevicePhotosService {
   }
 
   /**
-   * Hàng `device_model` của máy (loại + model), tạo nếu chưa có — để tải ảnh model lên làm tệp
-   * `files` của hàng đó. Máy chưa ghi model thì không có mức model.
+   * Hàng `device_model` của máy, tạo nếu chưa có — để tải ảnh model lên làm tệp `files` của hàng đó.
+   * Máy đã gán model (Q-26) dùng đúng model đó. Máy "chưa có Model" dò theo loại + khoá chuẩn hoá;
+   * hàng tạo ở đây mang Số U đang khai trên máy, để model sinh ra từ một máy trong tủ vẫn là model
+   * gắn tủ. Máy không được tự gán vào model — gán là việc của form thiết bị.
    */
   async ensureModel(actor: string, deviceId: string): Promise<{ id: string; label: string }> {
     const device = await this.devices.requireRowWithin(this.db, deviceId);
+    const linked = await this.modelOf(device);
+    if (linked && device.deviceModelId) return { id: linked.id, label: linked.model };
     const label = device.model?.trim();
     if (!label) {
       throw new BadRequestException({ code: 'DEVICE_MODEL_MISSING', message: 'Máy chưa ghi model — ghi model ở hồ sơ trước khi tải ảnh theo model.' });
     }
     return this.db.transaction(async (tx) => {
+      const [taken] = await tx
+        .select({ id: deviceModelTable.id, deviceTypeId: deviceModelTable.deviceTypeId })
+        .from(deviceModelTable)
+        .where(eq(deviceModelTable.modelKey, modelKey(label)));
+      if (taken && taken.deviceTypeId !== device.deviceTypeId) {
+        throw new ConflictException({
+          code: 'DEVICE_MODEL_DUPLICATE',
+          message: `Mã model "${label}" đã có trong danh mục với loại thiết bị khác — gán model đó cho máy ở hồ sơ thiết bị.`,
+        });
+      }
+      const racked = device.rackUSize !== null;
       const [created] = await tx
         .insert(deviceModelTable)
-        .values({ deviceTypeId: device.deviceTypeId, model: label })
+        .values({ deviceTypeId: device.deviceTypeId, model: label, rackMountable: racked, uSize: device.rackUSize })
         .onConflictDoNothing()
         .returning({ id: deviceModelTable.id });
       if (created) {
@@ -134,29 +153,43 @@ export class DevicePhotosService {
     });
   }
 
-  /** Chọn ảnh model (mặt trước/sau) từ ảnh đã tải lên cho model đó; áp cho mọi máy cùng loại + model. */
+  /** Chọn ảnh model (mặt trước/sau) từ ảnh đã tải lên cho model đó; áp cho mọi máy cùng model. */
   async setModelPhotos(actor: string, deviceId: string, input: Partial<PhotoPair>): Promise<DevicePhotos> {
     const device = await this.devices.requireRowWithin(this.db, deviceId);
     const model = await this.modelOf(device);
     if (!model) throw new NotFoundException({ code: 'DEVICE_MODEL_NOT_FOUND', message: 'Model này chưa có ảnh nào — tải ảnh lên trước.' });
+    await this.setModelPhotosById(actor, model.id, input, { deviceId });
+    return this.photos(deviceId);
+  }
+
+  /** Như `setModelPhotos` nhưng theo id model — màn Danh mục Model (Q-26). */
+  async setModelPhotosById(actor: string, modelId: string, input: Partial<PhotoPair>, detail: Record<string, unknown> = {}): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const [locked] = await tx.select().from(deviceModelTable).where(eq(deviceModelTable.id, model.id)).for('update');
-      const values = await this.chosen(input, 'device_model', model.id);
+      const [locked] = await tx.select().from(deviceModelTable).where(eq(deviceModelTable.id, modelId)).for('update');
+      if (!locked) throw new NotFoundException({ code: 'DEVICE_MODEL_NOT_FOUND', message: 'Không tìm thấy model này.' });
+      const values = await this.chosen(input, 'device_model', modelId);
       const changes = diffDevice(locked, values);
       if (!hasChanges(changes)) return;
       await tx
         .update(deviceModelTable)
         .set({ ...values, updatedAt: new Date() })
-        .where(eq(deviceModelTable.id, model.id));
+        .where(eq(deviceModelTable.id, modelId));
       await this.audit.appendWithin(tx, {
         actor,
         action: 'device.model-photos-changed',
         objectType: 'device_model',
-        objectId: model.id,
-        detail: { deviceId, model: model.model, ...changes },
+        objectId: modelId,
+        detail: { ...detail, model: locked.model, ...changes },
       });
     });
-    return this.photos(deviceId);
+  }
+
+  /** Ảnh thu nhỏ một mặt của model — ô ảnh ở Danh mục Model. Ảnh đã xoá khỏi giấy tờ coi như chưa có. */
+  async modelPreview(modelId: string, side: PhotoSide): Promise<PhotoImage | null> {
+    const [model] = await this.db.select().from(deviceModelTable).where(eq(deviceModelTable.id, modelId));
+    const fileId = model?.[COLUMN[side]];
+    if (!fileId || !(await this.files.imagesByIds([fileId])).has(fileId)) return null;
+    return this.thumbnail(fileId);
   }
 
   /**
@@ -177,7 +210,10 @@ export class DevicePhotosService {
       .from(deviceTable)
       .leftJoin(
         deviceModelTable,
-        and(eq(deviceModelTable.deviceTypeId, deviceTable.deviceTypeId), sql`lower(btrim(${deviceModelTable.model})) = lower(btrim(${deviceTable.model}))`),
+        or(
+          eq(deviceModelTable.id, deviceTable.deviceModelId),
+          and(isNull(deviceTable.deviceModelId), eq(deviceModelTable.deviceTypeId, deviceTable.deviceTypeId), sql`${deviceModelTable.modelKey} = ${MODEL_KEY_SQL(deviceTable.model)}`),
+        ),
       )
       .where(inArray(deviceTable.id, ids));
     const alive = await this.files.imagesByIds(rows.flatMap((r) => [r.front, r.back, r.modelFront, r.modelBack]).filter((id): id is string => Boolean(id)));
@@ -206,16 +242,21 @@ export class DevicePhotosService {
     return fileId ? this.thumbnail(fileId) : null;
   }
 
+  /** Model của máy: khoá ngoại nếu đã gán (Q-26), không thì dò theo loại + khoá chuẩn hoá như trước. */
   private async modelOf(
-    device: { deviceTypeId: string; model: string | null },
+    device: { deviceTypeId: string; model: string | null; deviceModelId: string | null },
     db: Pick<Database, 'select'> | Tx = this.db,
   ): Promise<typeof deviceModelTable.$inferSelect | null> {
+    if (device.deviceModelId) {
+      const [linked] = await db.select().from(deviceModelTable).where(eq(deviceModelTable.id, device.deviceModelId));
+      return linked ?? null;
+    }
     const label = device.model?.trim();
     if (!label) return null;
     const [row] = await db
       .select()
       .from(deviceModelTable)
-      .where(and(eq(deviceModelTable.deviceTypeId, device.deviceTypeId), sql`lower(btrim(${deviceModelTable.model})) = lower(${label})`));
+      .where(and(eq(deviceModelTable.deviceTypeId, device.deviceTypeId), eq(deviceModelTable.modelKey, modelKey(label))));
     return row ?? null;
   }
 

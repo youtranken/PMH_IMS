@@ -2,7 +2,9 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
-import { rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
+import { apiFetch } from '@/lib/api-client';
+import { deviceModelParts, type DeviceModel } from '@/lib/device-models';
+import { freeRuns, rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
 import { RackElevation } from '@/ui/rack-elevation';
 import { useCabinetOccupants } from '@/ui/use-cabinet-occupants';
 import { useIsNarrow } from '@/ui/use-narrow';
@@ -29,12 +31,18 @@ import {
   type DeviceWriteResult,
 } from '@/lib/device-types';
 import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
+import { DeviceModelField } from './device-model-field';
+import { ACCESS_KINDS, type AccessPoint } from './device-access';
 
 interface FormState {
   code: string;
   name: string;
   deviceTypeId: string;
   model: string;
+  /** Model danh mục đã chọn (Q-26); rỗng = máy "chưa có Model", chữ ở `model` lưu như cũ. */
+  deviceModelId: string;
+  /** Truy cập quản trị; cổng giữ dạng chữ của ô nhập, đổi số lúc gửi. */
+  accessPoints: { kind: AccessPoint['kind']; address: string; port: string }[];
   serial: string;
   siteId: string;
   cabinetId: string;
@@ -67,12 +75,14 @@ function cloneState(source: DeviceRow): FormState {
     // Máy mới cùng lô không thể nằm đúng chỗ U của máy gốc (chồng U bị chặn — Q-23).
     rackUStart: '',
     rackUSize: '',
+    // Đường truy cập trỏ IP / tên của RIÊNG máy gốc.
+    accessPoints: [],
   };
 }
 
 /** Sau "Lưu và nhân bản": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
 function nextState(saved: FormState): FormState {
-  return { ...saved, code: '', serial: '', assignedTo: '', note: '', rackUStart: '', rackUSize: '' };
+  return { ...saved, code: '', serial: '', assignedTo: '', note: '', rackUStart: '', rackUSize: '', accessPoints: [] };
 }
 
 /** Các ô chọn trạng thái trong form SỬA. "Đã thanh lý" không có ở đây: API luôn từ chối đi
@@ -85,6 +95,8 @@ function initialState(device: DeviceRow | null): FormState {
     name: device?.name ?? '',
     deviceTypeId: device?.deviceTypeId ?? '',
     model: device?.model ?? '',
+    deviceModelId: device?.deviceModelId ?? '',
+    accessPoints: (device?.accessPoints ?? []).map((p) => ({ kind: p.kind, address: p.address, port: p.port ? String(p.port) : '' })),
     serial: device?.serial ?? '',
     siteId: device?.siteId ?? '',
     cabinetId: device?.cabinetId ?? '',
@@ -160,6 +172,17 @@ export function DeviceForm({
    * thiết bị đã có sẵn.
    */
   const lists = useCatalogLists();
+  /*
+   * Model đã chọn (Q-26): Loại và Số U đi theo model, model không gắn tủ thì máy không có Tủ / U.
+   * Hồ sơ đang trỏ model thì đọc model đó một lần để biết các đặc tính này.
+   */
+  const [picked, setPicked] = useState<DeviceModel | null>(null);
+  const linked = useQuery({
+    queryKey: ['device-models', 'one', form.deviceModelId],
+    queryFn: () => apiFetch<DeviceModel>(`/api/v1/device-models/${form.deviceModelId}`),
+    enabled: Boolean(form.deviceModelId) && picked?.id !== form.deviceModelId,
+  });
+  const model = form.deviceModelId ? (picked?.id === form.deviceModelId ? picked : (linked.data ?? null)) : null;
   const departments = (lists.data?.departments ?? [])
     .filter((department) => department.active)
     .map((department) => department.name);
@@ -190,8 +213,35 @@ export function DeviceForm({
       if (key === 'cabinetId' && !value) {
         return { ...current, cabinetId: '', rackUStart: '', rackUSize: '' };
       }
+      // Máy thuộc model gắn tủ: vào tủ là mang sẵn Số U của model.
+      if (key === 'cabinetId' && model?.rackMountable && model.uSize) {
+        return { ...current, cabinetId: value as string, rackUSize: String(model.uSize) };
+      }
       return { ...current, [key]: value };
     });
+
+  /** Chọn model: loại, chuỗi model và Số U theo model; model không gắn tủ thì bỏ Tủ / U. */
+  const pickModel = (next: DeviceModel) => {
+    setPicked(next);
+    setRackServerError(null);
+    setForm((current) => ({
+      ...current,
+      deviceModelId: next.id,
+      model: next.model,
+      deviceTypeId: next.deviceTypeId,
+      ...(next.rackMountable
+        ? { rackUSize: current.cabinetId ? String(next.uSize ?? '') : '' }
+        : { cabinetId: '', rackUStart: '', rackUSize: '' }),
+    }));
+  };
+  const setAccess = (index: number, patch: Partial<FormState['accessPoints'][number]>) =>
+    set('accessPoints', form.accessPoints.map((point, i) => (i === index ? { ...point, ...patch } : point)));
+  /** Gõ lại ô Model là bỏ model đã chọn — máy về "chưa có Model" với chữ đang gõ. */
+  const typeModel = (term: string) => {
+    setPicked(null);
+    setForm((current) => ({ ...current, model: term, deviceModelId: '' }));
+  };
+  const notRackable = Boolean(model && !model.rackMountable);
 
   // Chỉ hiện tủ thuộc site đang chọn; chưa chọn site thì hiện hết để còn tra được.
   const cabinets = (lists.data?.cabinets ?? []).filter(
@@ -381,9 +431,10 @@ export function DeviceForm({
               onChange={(e) => set('code', e.target.value)}
             />
           </Field>
-          <Field label={t('devices.type')} required error={check.error('deviceTypeId')}>
+          <Field label={t('devices.type')} required error={check.error('deviceTypeId')} hint={model ? t('devices.typeFromModel') : undefined}>
             <Select
               required
+              disabled={Boolean(model)}
               value={form.deviceTypeId}
               ariaLabel={t('devices.type')}
               placeholder={t('devices.pickType')}
@@ -427,12 +478,19 @@ export function DeviceForm({
               onChange={(e) => set('name', e.target.value)}
             />
           </Field>
-          <Field label={t('devices.model')} htmlFor="device-model">
-            <input
+          <Field
+            label={t('devices.model')}
+            htmlFor="device-model"
+            hint={model ? t('devices.modelFrom', { parts: [deviceModelParts(model).head, deviceModelParts(model).size ?? t('deviceModels.rackNone')].join(' · ') }) : t('devices.modelNone')}
+          >
+            <DeviceModelField
+              csrfToken={csrfToken}
               id="device-model"
-              className="inp"
-              value={form.model}
-              onChange={(e) => set('model', e.target.value)}
+              term={form.model}
+              picked={model}
+              deviceTypeId={form.deviceTypeId}
+              onPick={pickModel}
+              onTerm={typeModel}
             />
           </Field>
           {device ? serialField : null}
@@ -453,6 +511,9 @@ export function DeviceForm({
               onChange={(value) => set('siteId', value)}
             />
           </Field>
+          {notRackable ? (
+            <p className="field-hint muted">{t('devices.notRackable', { model: model?.model ?? '' })}</p>
+          ) : (
           <Field label={t('devices.cabinet')} hint={t('devices.cabinetHint')}>
             <Select
               value={form.cabinetId}
@@ -467,9 +528,10 @@ export function DeviceForm({
               onChange={(value) => set('cabinetId', value)}
             />
           </Field>
+          )}
           {/* U chỉ có nghĩa khi máy nằm trong tủ (U1 ở đáy tủ). Server chặn vượt chiều cao tủ và
               chồng U với máy khác, báo tên máy đang chiếm. */}
-          {form.cabinetId ? (
+          {form.cabinetId && !notRackable ? (
             <>
               <Field
                 label={t('devices.rackUStart')}
@@ -486,8 +548,14 @@ export function DeviceForm({
                   onChange={(value) => set('rackUStart', value)}
                 />
               </Field>
-              <Field label={t('devices.rackUSize')} htmlFor="device-rack-u-size" error={check.error('rackUSize')}>
+              <Field
+                label={t('devices.rackUSize')}
+                htmlFor="device-rack-u-size"
+                hint={model?.rackMountable ? t('devices.uSizeFromModel') : undefined}
+                error={check.error('rackUSize')}
+              >
                 <NumberStepper
+                  disabled={Boolean(model?.rackMountable)}
                   id="device-rack-u-size"
                   label={t('devices.rackUSizeNoun')}
                   min={1}
@@ -503,6 +571,19 @@ export function DeviceForm({
               </div>
               {/* Tủ cao bao nhiêu U và U nào đã có máy (T-04): nhập U theo cảm tính thì chỉ biết chồng
                   U lúc bấm Lưu. Không tính chính máy đang sửa. */}
+              {cabinet?.uHeight ? (
+                <div className="row rack-free" role="group" aria-label={t('devices.rackFree')}>
+                  <span className="muted">{t('devices.rackFree')}</span>
+                  {freeRuns(cabinet.uHeight, occupants.data ?? [], formUnits ?? 1, device?.id ?? null).map((run) => (
+                    <button key={run.start} type="button" className="btn sm" onClick={() => set('rackUStart', String(run.start))}>
+                      {run.start === run.end ? `U${run.start}` : `U${run.start}–U${run.end}`}
+                    </button>
+                  ))}
+                  {freeRuns(cabinet.uHeight, occupants.data ?? [], formUnits ?? 1, device?.id ?? null).length === 0 ? (
+                    <span className="muted">{t('devices.rackFull', { size: formUnits ?? 1 })}</span>
+                  ) : null}
+                </div>
+              ) : null}
               {cabinet ? (
                 <p className="field-hint muted rack-summary">
                   {t(rackUsed.length > 0 ? 'devices.rackSummary' : 'devices.rackSummaryEmpty', {
@@ -534,6 +615,48 @@ export function DeviceForm({
               ariaLabel={t('devices.department')}
             />
           </Field>
+        </FormSection>
+
+        <FormSection title={t('devices.access')} columns={1}>
+          <p className="field-hint muted">{t('devices.accessHint')}</p>
+          {form.accessPoints.map((point, index) => (
+            <div key={index} className="row" role="group" aria-label={`${t('devices.access')} ${index + 1}`}>
+              <Select
+                value={point.kind}
+                ariaLabel={`${t('devices.accessKind')} ${index + 1}`}
+                options={ACCESS_KINDS.map((kind) => ({ value: kind, label: t(`devices.accessKind_${kind}`) }))}
+                onChange={(value) => setAccess(index, { kind: value as AccessPoint['kind'] })}
+              />
+              <input
+                className="inp mono"
+                aria-label={`${t('devices.accessAddress')} ${index + 1}`}
+                placeholder="10.0.1.1"
+                maxLength={200}
+                value={point.address}
+                onChange={(e) => setAccess(index, { address: e.target.value })}
+              />
+              <input
+                className="inp"
+                aria-label={`${t('devices.accessPort')} ${index + 1}`}
+                inputMode="numeric"
+                placeholder={t('devices.accessPort')}
+                value={point.port}
+                onChange={(e) => setAccess(index, { port: e.target.value.replace(/\D/g, '') })}
+              />
+              <button type="button" className="btn sm ghost" onClick={() => set('accessPoints', form.accessPoints.filter((_, i) => i !== index))}>
+                {t('devices.accessRemove', { n: index + 1 })}
+              </button>
+            </div>
+          ))}
+          <div>
+            <button
+              type="button"
+              className="btn sm"
+              onClick={() => set('accessPoints', [...form.accessPoints, { kind: form.accessPoints.length === 0 ? 'web' : 'ssh', address: '', port: '' }])}
+            >
+              {t('devices.accessAdd')}
+            </button>
+          </div>
         </FormSection>
 
         {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
@@ -700,6 +823,10 @@ function buildBody(form: FormState): Record<string, unknown> {
     name: form.name.trim(),
     deviceTypeId: form.deviceTypeId,
     model: form.model.trim(),
+    deviceModelId: form.deviceModelId || null,
+    accessPoints: form.accessPoints
+      .filter((point) => point.address.trim())
+      .map((point) => ({ kind: point.kind, address: point.address.trim(), port: point.port ? Number(point.port) : null })),
     serial: form.serial.trim(),
     siteId: form.siteId,
     cabinetId: form.cabinetId,

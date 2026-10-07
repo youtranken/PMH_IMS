@@ -1,4 +1,5 @@
 import {
+  boolean,
   customType,
   date,
   jsonb,
@@ -8,6 +9,8 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
+import type { AccessPoint } from './device-access';
+import type { PhysicalPort, PortTemplateGroup } from './port-template';
 
 /** citext: mã thiết bị so sánh không phân biệt hoa-thường ("sw-core-01" = "SW-CORE-01"). */
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
@@ -42,6 +45,12 @@ export const deviceTable = pgTable('device', {
   /** Ảnh thật của RIÊNG máy này (tệp đính kèm của máy) — thắng ảnh mức model. */
   photoFrontFileId: uuid('photo_front_file_id'),
   photoBackFileId: uuid('photo_back_file_id'),
+  /** Model danh mục (0062, Q-26); trống = máy "chưa có Model", khai Số U / ảnh trên chính máy. */
+  deviceModelId: uuid('device_model_id'),
+  /** Truy cập quản trị (0063): kiểu + địa chỉ + cổng; luật ở `normalizeAccessPoints`. */
+  accessPoints: jsonb('access_points').$type<AccessPoint[]>().notNull().default([]),
+  /** Cổng vật lý của máy (0064) — KHÔNG phải dây; dây ở `device_port`. Chép từ cổng mẫu lúc gán model. */
+  portLayout: jsonb('port_layout').$type<PhysicalPort[]>().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -54,6 +63,15 @@ export const deviceModelTable = pgTable('device_model', {
   id: uuid('id').primaryKey().defaultRandom(),
   deviceTypeId: uuid('device_type_id').notNull(),
   model: text('model').notNull(),
+  /** Hãng sản xuất (chữ) — không phải `vendor` (nhà cung cấp). */
+  manufacturer: text('manufacturer'),
+  rackMountable: boolean('rack_mountable').notNull().default(false),
+  /** Có khi và chỉ khi gắn tủ (CHECK của 0062). */
+  uSize: smallint('u_size'),
+  /** Cột sinh của Postgres (`modelKey()`): chỉ đọc, không bao giờ ghi. */
+  modelKey: text('model_key'),
+  /** Cổng mẫu (0064): nhóm `pattern` + `kind`, mở bằng `expandPortTemplate`. */
+  portTemplate: jsonb('port_template').$type<PortTemplateGroup[]>().notNull().default([]),
   photoFrontFileId: uuid('photo_front_file_id'),
   photoBackFileId: uuid('photo_back_file_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
