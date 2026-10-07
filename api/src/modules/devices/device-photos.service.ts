@@ -8,7 +8,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { FilesApiService, type FileRecord } from '../files/files.api';
 import { diffDevice, hasChanges } from './device-changes';
-import { modelKey } from './device-model-key';
+import { MODEL_KEY_SQL, modelKey } from './device-model-key';
 import { deviceModelTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
 
@@ -54,7 +54,6 @@ function replaced(before: Partial<Record<(typeof COLUMN)[PhotoSide], string | nu
 }
 
 /** Cùng phép chuẩn hoá với cột sinh `device_model.model_key` (0062) — để so với chuỗi model của máy. */
-const MODEL_KEY_SQL = (column: unknown) => sql`upper(regexp_replace(${column}, '[[:space:]_.-]', '', 'g'))`;
 
 /**
  * Ảnh thật của thiết bị hai mức (Q-23): ảnh riêng từng máy (chọn từ giấy tờ đính kèm của máy, cột

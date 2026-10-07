@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, eq, ilike, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
+import { BadRequestException, ConflictException, HttpException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, count, eq, ilike, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -9,7 +9,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { expandPortTemplate, portLayoutSummary, withTemplatePorts, type PortTemplateGroup } from './port-template';
-import { modelKey } from './device-model-key';
+import { MODEL_KEY_SQL, modelKey } from './device-model-key';
 import { deviceModelTable, deviceTable } from './devices.schema';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesService } from './devices.service';
@@ -29,6 +29,8 @@ export interface DeviceModelItem {
   portCount: number;
   /** Số máy đang trỏ tới model (kể cả máy đã thanh lý — khoá ngoại vẫn giữ chúng). */
   deviceCount: number;
+  /** Máy chưa gán model mà ghi CHỮ model này (cùng loại, cùng khoá chuẩn hoá), chưa thanh lý. */
+  unlinkedCount: number;
   updatedAt: Date;
 }
 
@@ -220,14 +222,21 @@ export class DeviceModelsService {
   private async decorate(rows: (typeof deviceModelTable.$inferSelect)[]): Promise<DeviceModelItem[]> {
     if (rows.length === 0) return [];
     const ids = rows.map((r) => r.id);
-    const [lists, counts] = await Promise.all([
+    const [lists, counts, loose] = await Promise.all([
       this.catalog.lists({ includeInactive: true }),
       this.db
         .select({ id: deviceTable.deviceModelId, value: count() })
         .from(deviceTable)
         .where(inArray(deviceTable.deviceModelId, ids))
         .groupBy(deviceTable.deviceModelId),
+      this.db
+        .select({ id: deviceModelTable.id, value: count() })
+        .from(deviceModelTable)
+        .innerJoin(deviceTable, this.unlinkedOf())
+        .where(inArray(deviceModelTable.id, ids))
+        .groupBy(deviceModelTable.id),
     ]);
+    const unlinked = new Map(loose.map((c) => [c.id, Number(c.value)]));
     const types = new Map(lists.deviceTypes.map((t) => [t.id, t.name]));
     const used = new Map(counts.map((c) => [c.id, Number(c.value)]));
     return rows.map((row) => ({
@@ -242,8 +251,55 @@ export class DeviceModelsService {
       portTemplate: row.portTemplate,
       portCount: expandPortTemplate(row.portTemplate, Number.MAX_SAFE_INTEGER).length,
       deviceCount: used.get(row.id) ?? 0,
+      unlinkedCount: unlinked.get(row.id) ?? 0,
       updatedAt: row.updatedAt,
     }));
+  }
+
+  /**
+   * Gán model hàng loạt (Q-26 07/10): mọi máy ghi CHỮ model này mà chưa gán. Mỗi máy đi đúng lượt sửa
+   * hồ sơ như gán từ form (Số U, cổng mẫu, kiểm tủ / chồng U, lịch sử) trong transaction riêng — một máy
+   * không gán được (vd chồng U) không chặn máy khác, và được trả về kèm lý do.
+   */
+  async adopt(actor: string, id: string): Promise<{ linked: string[]; skipped: { code: string; reason: string }[] }> {
+    const [model] = await this.db.select().from(deviceModelTable).where(eq(deviceModelTable.id, id));
+    if (!model) throw notFound();
+    const candidates = await this.db
+      .select({ id: deviceTable.id, code: deviceTable.code })
+      .from(deviceTable)
+      .innerJoin(deviceModelTable, this.unlinkedOf())
+      .where(eq(deviceModelTable.id, id))
+      .orderBy(asc(deviceTable.code));
+    const linked: string[] = [];
+    const skipped: { code: string; reason: string }[] = [];
+    for (const device of candidates) {
+      try {
+        await this.devices.update(actor, device.id, { deviceModelId: id });
+        linked.push(device.code);
+      } catch (error) {
+        skipped.push({ code: device.code, reason: reasonOf(error) });
+      }
+    }
+    await this.db.transaction((tx) =>
+      this.audit.appendWithin(tx, {
+        actor,
+        action: 'device.model-adopted',
+        objectType: 'device_model',
+        objectId: id,
+        detail: { model: model.model, linked, skipped: skipped.map((s) => s.code) },
+      }),
+    );
+    return { linked, skipped };
+  }
+
+  /** Điều kiện nối máy CHƯA gán với model mà nó ghi bằng chữ — cùng phép dò ảnh model của máy cũ. */
+  private unlinkedOf() {
+    return and(
+      isNull(deviceTable.deviceModelId),
+      eq(deviceTable.deviceTypeId, deviceModelTable.deviceTypeId),
+      ne(deviceTable.status, 'retired'),
+      sql`${deviceModelTable.modelKey} = ${MODEL_KEY_SQL(deviceTable.model)}`,
+    )!;
   }
 
   /** Model trùng khoá chuẩn hoá → 409 kèm model sẵn có, để form mời "Dùng model này". */
@@ -343,4 +399,13 @@ function bad(code: string, message: string): BadRequestException {
 
 function notFound(): NotFoundException {
   return new NotFoundException({ code: 'DEVICE_MODEL_NOT_FOUND', message: 'Không tìm thấy model này.' });
+}
+
+/** Câu lý do của lượt sửa hồ sơ thất bại — lỗi nghiệp vụ mang `message` tiếng Việt cho người dùng. */
+function reasonOf(error: unknown): string {
+  if (error instanceof HttpException) {
+    const body = error.getResponse() as { message?: unknown } | string;
+    if (typeof body === 'object' && typeof body.message === 'string') return body.message;
+  }
+  return error instanceof Error ? error.message : String(error);
 }

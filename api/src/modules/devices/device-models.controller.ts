@@ -91,6 +91,15 @@ export class DeviceModelsController {
     return this.models.update(req.user!.email, params.id, body);
   }
 
+  /** Gán model này cho mọi máy ghi CHỮ model đó mà chưa gán (Q-26 07/10). */
+  @Roles('sa', 'admin')
+  @Post(':id/adopt')
+  @HttpCode(200)
+  @Audited('device.model-adopted', 'device_model', { writtenByService: true })
+  adopt(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.models.adopt(req.user!.email, params.id);
+  }
+
   @Roles('sa', 'admin')
   @Delete(':id')
   @HttpCode(204)

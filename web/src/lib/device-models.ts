@@ -13,6 +13,8 @@ export interface DeviceModel {
   portCount: number;
   /** Số máy đang trỏ tới model. */
   deviceCount: number;
+  /** Máy ghi CHỮ model này (cùng loại) mà chưa gán — "Gán model cho các máy này" (Q-26 07/10). */
+  unlinkedCount: number;
   updatedAt: string;
 }
 

@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm';
+
 /**
  * Khoá chuẩn hoá của model thiết bị (Q-26): viết HOA, bỏ khoảng trắng, gạch ngang, gạch dưới, chấm —
  * "C9300-48P" và "c9300 48p" là một model. PHẢI cùng phép với cột sinh `device_model.model_key`
@@ -6,3 +8,6 @@
 export function modelKey(model: string): string {
   return model.replace(/[\s_.-]/g, '').toUpperCase();
 }
+
+/** Cùng phép trên Postgres — so chuỗi model của máy (chưa gán model) với `device_model.model_key`. */
+export const MODEL_KEY_SQL = (column: unknown) => sql`upper(regexp_replace(${column}, '[[:space:]_.-]', '', 'g'))`;

@@ -8,8 +8,8 @@ import { DeviceModelsPanel } from './device-models-panel';
 
 const meOf = (role: string) => ({ id: 'u1', email: `${role}@e2e.local`, fullName: role, role, csrfToken: 'c' }) as unknown as Me;
 const MODELS = [
-  { id: 'm1', deviceTypeId: 't-sw', deviceTypeName: 'Switch', model: 'C9300-48P', manufacturer: 'Cisco', rackMountable: true, uSize: 1, photoFrontFileId: 'f1', deviceCount: 3, updatedAt: '2026-10-06T00:00:00Z' },
-  { id: 'm2', deviceTypeId: 't-pr', deviceTypeName: 'Máy in', model: 'M404', manufacturer: null, rackMountable: false, uSize: null, photoFrontFileId: null, deviceCount: 0, updatedAt: '2026-10-06T00:00:00Z' },
+  { id: 'm1', deviceTypeId: 't-sw', deviceTypeName: 'Switch', model: 'C9300-48P', manufacturer: 'Cisco', rackMountable: true, uSize: 1, photoFrontFileId: 'f1', deviceCount: 3, unlinkedCount: 2, updatedAt: '2026-10-06T00:00:00Z' },
+  { id: 'm2', deviceTypeId: 't-pr', deviceTypeName: 'Máy in', model: 'M404', manufacturer: null, rackMountable: false, uSize: null, photoFrontFileId: null, deviceCount: 0, unlinkedCount: 0, updatedAt: '2026-10-06T00:00:00Z' },
 ];
 
 function mockFetch() {
@@ -17,6 +17,9 @@ function mockFetch() {
     const url = String(input);
     if (url.startsWith('/api/v1/device-models/m1') && init?.method === 'DELETE') {
       return Promise.resolve(jsonResponse(409, { code: 'DEVICE_MODEL_IN_USE', message: 'Model còn 3 máy dùng — gán model khác cho các máy đó trước khi xoá.' }));
+    }
+    if (url === '/api/v1/device-models/m1/adopt' && init?.method === 'POST') {
+      return Promise.resolve(jsonResponse(200, { linked: ['SW-E2E-1'], skipped: [{ code: 'SW-E2E-2', reason: 'U5 đã có máy SW-E2E-9.' }] }));
     }
     if (url.startsWith('/api/v1/device-models?')) return Promise.resolve(jsonResponse(200, { items: MODELS, total: 2 }));
     return Promise.resolve(jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [] }));
@@ -76,5 +79,29 @@ describe('Danh mục → Model thiết bị (Q-26)', () => {
     await user.click(within(confirm).getByRole('button', { name: 'Xóa' }));
     expect(await screen.findByText(/Model còn 3 máy dùng/)).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith('/device-models/m1') && init?.method === 'DELETE')).toBe(true);
+  });
+
+  it('máy ghi CHỮ model mà chưa gán: cột Máy nói rõ; SA "Gán model cho n máy" → hỏi → gán, báo số đã gán và máy không gán được kèm lý do (Q-26 07/10)', async () => {
+    const fetchMock = mockFetch();
+    renderPanel('sa');
+    const row = (await screen.findByText('C9300-48P')).closest('tr')!;
+    expect(within(row).getByText('2 máy ghi chữ này chưa gán')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(within(row).getByRole('button', { name: 'Việc với model C9300-48P' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Gán model cho 2 máy ghi chữ này' }));
+    const ask = await screen.findByRole('dialog', { name: 'Gán model C9300-48P cho 2 máy?' });
+    await user.click(within(ask).getByRole('button', { name: 'Gán model' }));
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/v1/device-models/m1/adopt' && init?.method === 'POST')).toBe(true);
+    expect(await screen.findByText('Đã gán model C9300-48P cho 1 máy.')).toBeInTheDocument();
+    expect(await screen.findByText('Chưa gán được: SW-E2E-2 (U5 đã có máy SW-E2E-9.)')).toBeInTheDocument();
+  });
+
+  it('Thành viên không có việc gán hàng loạt', async () => {
+    mockFetch();
+    renderPanel('member');
+    const row = (await screen.findByText('C9300-48P')).closest('tr')!;
+    const user = userEvent.setup();
+    await user.click(within(row).getByRole('button', { name: 'Việc với model C9300-48P' }));
+    expect(screen.queryByRole('menuitem', { name: /Gán model/ })).toBeNull();
   });
 });
