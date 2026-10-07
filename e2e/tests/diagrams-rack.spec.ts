@@ -262,7 +262,8 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
-    await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ — chọn từ giấy tờ' })).toBeVisible();
+    // Ảnh chỉ quản lý ở "Hình dùng trên sơ đồ" (Q-26 07/10): tab Giấy tờ không còn khu chọn ảnh từ giấy tờ.
+    await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ — chọn từ giấy tờ' })).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
 });

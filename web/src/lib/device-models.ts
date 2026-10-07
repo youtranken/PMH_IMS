@@ -18,6 +18,12 @@ export interface DeviceModel {
 
 export const DEVICE_MODELS_KEY = ['device-models'] as const;
 
+/**
+ * Nhánh cache ảnh của từng máy (`devicePhotosKey` ở features/devices). Sửa ảnh model đổi hình mọi máy
+ * cùng model, nên hộp model làm mới cả nhánh.
+ */
+export const DEVICE_PHOTOS_KEY = ['device-photos'] as const;
+
 /** Ảnh mặt trước của model; `version` (thường là `updatedAt`) đổi thì trình duyệt tải lại ảnh. */
 export function deviceModelPhotoSrc(modelId: string, version: string): string {
   return `/api/v1/device-models/${modelId}/photo/front?v=${encodeURIComponent(version)}`;

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { DEVICE_MODELS_KEY, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
+import { DEVICE_MODELS_KEY, DEVICE_PHOTOS_KEY, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { expandPortTemplate, PORT_KINDS, PORT_PRESETS, type PortKind, type PortTemplateGroup } from '@/lib/port-template';
 import { uploadFile } from '@/lib/upload';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -91,6 +91,7 @@ export function DeviceModelDialog({
     await queryClient.invalidateQueries({ queryKey: DEVICE_MODELS_KEY });
     // Sửa model đổi cả loạt máy (Số U, ảnh, cổng mẫu lan sang) — hồ sơ và mặt cổng đang mở phải đọc lại.
     void queryClient.invalidateQueries({ queryKey: ['devices'] });
+    void queryClient.invalidateQueries({ queryKey: DEVICE_PHOTOS_KEY });
     if (message) toast({ tone: 'ok', message });
     onSaved(saved);
     onClose();
@@ -176,6 +177,7 @@ export function DeviceModelDialog({
       setPhotoId(saved.photoFrontFileId);
       setPhotoVersion(saved.updatedAt);
       await queryClient.invalidateQueries({ queryKey: DEVICE_MODELS_KEY });
+      void queryClient.invalidateQueries({ queryKey: DEVICE_PHOTOS_KEY });
       toast({ tone: 'ok', message: t('deviceModels.photoSaved', { model: saved.model }) });
     } catch (error) {
       toast({ tone: 'error', message: errorMessage(error) });

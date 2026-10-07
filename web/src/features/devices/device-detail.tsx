@@ -8,7 +8,7 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
-import { DevicePhotosPanel, devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
+import { devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
 import { DeviceOnDiagrams } from "./device-on-diagrams";
 import { DeviceDiagramLook, lookLevel } from "./device-diagram-look";
 import { Chevron } from "@/ui/chevron";
@@ -1015,8 +1015,6 @@ export function DeviceDetail({ me }: { me: Me }) {
               /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
               canEdit={!retired}
             />
-            {/* Ảnh thật cho sơ đồ chọn TỪ chính các giấy tờ ở trên — cùng tab để thấy ngay ảnh vừa tải. */}
-            <DevicePhotosPanel deviceId={item.id} csrfToken={me.csrfToken} canEdit={!retired} canEditModel={canVaultWrite} />
           </>
         ) : history.isLoading || timeline.isLoading ? (
           <Loading />

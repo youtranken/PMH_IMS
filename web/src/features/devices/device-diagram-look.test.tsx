@@ -89,7 +89,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     expect(await within(front).findByText('Ảnh chung của model C9300')).toBeInTheDocument();
     expect(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toHaveAttribute('src', '/api/v1/devices/d1/photo/front?v=f-model');
-    expect(screen.getByText(/dùng cho MỌI máy cùng loại \+ model/)).toBeInTheDocument();
+    expect(screen.getByText(/Ảnh của model dùng cho MỌI máy cùng model và thắng ảnh riêng/)).toBeInTheDocument();
     // Thành viên không đổi ảnh model.
     expect(within(front).queryByText(/mọi máy cùng model/)).toBeNull();
     expect(within(front).getByText('Máy dùng ảnh của model C9300 — đổi ảnh ở Danh mục › Model thiết bị.')).toBeInTheDocument();
