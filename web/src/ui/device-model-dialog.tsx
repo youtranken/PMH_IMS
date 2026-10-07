@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { DEVICE_MODELS_KEY, type DeviceModel } from '@/lib/device-models';
+import { DEVICE_MODELS_KEY, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { expandPortTemplate, PORT_KINDS, PORT_PRESETS, type PortKind, type PortTemplateGroup } from '@/lib/port-template';
 import { uploadFile } from '@/lib/upload';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -313,7 +313,7 @@ export function DeviceModelDialog({
                 onPick={(file) => (file ? setCropping(file) : undefined)}
               >
                 {photoId ? (
-                  <img className="photo-slot-img" src={`/api/v1/device-models/${modelId}/photo/front?v=${encodeURIComponent(photoVersion)}`} alt={t('deviceModels.photoAlt', { model: modelName })} />
+                  <img className="photo-slot-img" src={deviceModelPhotoSrc(modelId, photoVersion)} alt={t('deviceModels.photoAlt', { model: modelName })} />
                 ) : null}
               </FilePicker>
             </Field>

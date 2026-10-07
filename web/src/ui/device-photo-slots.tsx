@@ -195,6 +195,8 @@ export function DevicePhotoSlots({
         const replacing = slot.level === 'own' || slot.level === 'draft';
         const error = errors?.[side] ?? rejected[side] ?? null;
         const removable = slot.level === 'own' || slot.level === 'draft';
+        // Ảnh model thắng ảnh riêng (Q-26 07/10): mặt đó không nhận ảnh riêng — server cũng từ chối.
+        const fromModel = slot.level === 'model';
         return (
           <section key={side} className="photo-slot" role="group" aria-label={label} aria-busy={busySide === side || undefined}>
             {/* Khung cao theo ảnh (Q-23): ảnh 1U là một dải rộng, không phải vạch giữa ô cao. */}
@@ -203,7 +205,7 @@ export function DevicePhotoSlots({
               <span className={`badge plain photo-slot-level ${slot.level}`}>{levelText(slot)}</span>
             </header>
 
-            {readOnly ? (
+            {readOnly || fromModel ? (
               <div className={`photo-slot-frame${slot.src ? ' has-img' : ''}`} data-testid="photo-slot-frame">{picture(side, slot)}</div>
             ) : (
               <FilePicker
@@ -233,6 +235,8 @@ export function DevicePhotoSlots({
               </FilePicker>
             )}
 
+            {fromModel && !readOnly ? <p className="muted small">{t('photoSlots.lockedByModel', { model: modelLabel ?? '' })}</p> : null}
+
             {error ? (
               <p className="field-error" role="alert">
                 {error}
@@ -242,7 +246,7 @@ export function DevicePhotoSlots({
             {slot.src && misfit[side] ? (
               <p className="photo-slot-misfit small">
                 <span>{misfit[side] === 'aspect' ? t('photoSlots.misfitAspect', { units }) : t('photoSlots.misfitMargins')}</span>
-                {!readOnly && loadOriginal ? (
+                {!readOnly && loadOriginal && (!fromModel || model) ? (
                   <button type="button" className="btn sm" disabled={busy} aria-label={t('photoSlots.recropOf', { side: label })} onClick={() => void recrop(side, slot.level)}>
                     {t('photoSlots.recrop')}
                   </button>

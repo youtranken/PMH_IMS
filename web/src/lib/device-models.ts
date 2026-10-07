@@ -18,6 +18,11 @@ export interface DeviceModel {
 
 export const DEVICE_MODELS_KEY = ['device-models'] as const;
 
+/** Ảnh mặt trước của model; `version` (thường là `updatedAt`) đổi thì trình duyệt tải lại ảnh. */
+export function deviceModelPhotoSrc(modelId: string, version: string): string {
+  return `/api/v1/device-models/${modelId}/photo/front?v=${encodeURIComponent(version)}`;
+}
+
 /**
  * Khoá chuẩn hoá của model — cùng phép với `modelKey()` của api và cột `device_model.model_key`:
  * viết HOA, bỏ khoảng trắng, gạch ngang, gạch dưới, chấm. Gợi ý ở ô Model so bằng khoá này để

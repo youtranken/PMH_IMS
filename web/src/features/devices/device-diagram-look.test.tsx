@@ -20,19 +20,19 @@ vi.mock('@/lib/image-crop', async (importOriginal) => ({
 
 
 /**
- * "Hình dùng trên sơ đồ" (Q-23): mỗi máy đổi được ảnh của riêng nó; thứ tự tra ảnh riêng →
- * ảnh model → biểu tượng loại là của server (`effective`), web chỉ nói mức nào đang dùng.
+ * "Hình dùng trên sơ đồ" (Q-23): thứ tự tra ảnh model → ảnh riêng → biểu tượng loại là của server
+ * (`effective`, Q-26 07/10), web chỉ nói mức nào đang dùng; mặt có ảnh model không nhận ảnh riêng.
  */
 
 const PHOTOS = (own: boolean, model: boolean) => ({
   device: { front: own ? { id: 'f-own', name: 'rieng.png' } : null, back: null },
   model: { id: 'm1', label: 'C9300', front: model ? { id: 'f-model', name: 'model.png' } : null, back: null },
-  effective: { front: own ? { id: 'f-own', name: 'rieng.png' } : model ? { id: 'f-model', name: 'model.png' } : null, back: null },
+  effective: { front: model ? { id: 'f-model', name: 'model.png' } : own ? { id: 'f-own', name: 'rieng.png' } : null, back: null },
 });
 
 describe('lookLevel — mức ảnh đang dùng', () => {
   it.each([
-    [true, true, 'own'],
+    [true, true, 'model'],
     [false, true, 'model'],
     [false, false, 'icon'],
     [true, false, 'own'],
@@ -83,8 +83,8 @@ function renderLook(canEditModel: boolean, canEdit = true) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
-  it('đang dùng ảnh model: nói rõ mức + ảnh xem trước; tải ảnh riêng → lên giấy tờ của máy rồi chọn làm ảnh riêng', async () => {
-    const calls = mockFetch({ own: false, model: true });
+  it('đang dùng ảnh model: nói rõ mức + ảnh xem trước; KHÔNG có ô tải ảnh riêng ở mặt đó', async () => {
+    mockFetch({ own: false, model: true });
     renderLook(false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     expect(await within(front).findByText('Ảnh chung của model C9300')).toBeInTheDocument();
@@ -92,6 +92,15 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
     expect(screen.getByText(/dùng cho MỌI máy cùng loại \+ model/)).toBeInTheDocument();
     // Thành viên không đổi ảnh model.
     expect(within(front).queryByText(/mọi máy cùng model/)).toBeNull();
+    expect(within(front).getByText('Máy dùng ảnh của model C9300 — đổi ảnh ở Danh mục › Model thiết bị.')).toBeInTheDocument();
+    expect(within(front).queryByLabelText('Tải ảnh lên — Mặt trước')).toBeNull();
+  });
+
+  it('model chưa có ảnh: tải ảnh riêng → lên giấy tờ của máy rồi chọn làm ảnh riêng', async () => {
+    const calls = mockFetch({ own: false, model: false });
+    renderLook(false);
+    const front = await screen.findByRole('group', { name: 'Mặt trước' });
+    await within(front).findByText('Biểu tượng loại Switch');
     const user = userEvent.setup();
     await user.upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'rieng.png', { type: 'image/png' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
@@ -102,15 +111,15 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
     expect(await within(front).findByText('Ảnh riêng của máy này')).toBeInTheDocument();
   });
 
-  it('có ảnh riêng: "Bỏ ảnh riêng" gửi null, về ảnh model', async () => {
-    const calls = mockFetch({ own: true, model: true });
+  it('có ảnh riêng: "Bỏ ảnh riêng" gửi null, về biểu tượng loại', async () => {
+    const calls = mockFetch({ own: true, model: false });
     renderLook(false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Ảnh riêng của máy này');
     await userEvent.setup().click(within(front).getByRole('button', { name: 'Bỏ ảnh riêng — Mặt trước' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
     expect(JSON.parse(String(calls.find((c) => c.method === 'PATCH')?.body))).toEqual({ front: null });
-    expect(await within(front).findByText('Ảnh chung của model C9300')).toBeInTheDocument();
+    expect(await within(front).findByText('Biểu tượng loại Switch')).toBeInTheDocument();
   });
 
   it('không ảnh nào → "Biểu tượng loại Switch"; SA/Admin tải ảnh model: tạo hàng model, tải lên model, chọn', async () => {
@@ -145,7 +154,7 @@ describe('DeviceDiagramLook — ảnh chung từ ảnh riêng, chỉ xem, lỗi'
   });
 
   it('máy thanh lý → thấy ảnh + mức, không nút nào', async () => {
-    mockFetch({ own: true, model: true });
+    mockFetch({ own: true, model: false });
     renderLook(true, false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Ảnh riêng của máy này');

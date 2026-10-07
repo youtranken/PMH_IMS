@@ -19,6 +19,7 @@ const LISTS = {
 };
 const SWITCH = { id: 'm-sw', deviceTypeId: 't-sw', deviceTypeName: 'Switch', model: 'C9300-48P', manufacturer: 'Cisco', rackMountable: true, uSize: 1, photoFrontFileId: null, deviceCount: 2, updatedAt: '2026-10-06T00:00:00Z' };
 const PRINTER = { id: 'm-pr', deviceTypeId: 't-pr', deviceTypeName: 'Máy in', model: 'M404', manufacturer: 'HP', rackMountable: false, uSize: null, photoFrontFileId: null, deviceCount: 0, updatedAt: '2026-10-06T00:00:00Z' };
+const WITH_PHOTO = { ...SWITCH, id: 'm-ph', model: 'X3650-M5', manufacturer: 'IBM', uSize: 2, photoFrontFileId: 'f-ph', updatedAt: '2026-10-07T01:00:00Z' };
 const OCCUPANTS = [{ id: 'x', code: 'SW-E2E-X', name: 'X', cabinetId: 'k1', rackUStart: 3, rackUSize: 1, status: 'in_use' }];
 
 function mockFetch() {
@@ -30,7 +31,7 @@ function mockFetch() {
       if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, LISTS));
       if (url.startsWith('/api/v1/device-models?')) {
         const term = new URL(url, 'http://x').searchParams.get('search') ?? '';
-        return Promise.resolve(jsonResponse(200, { items: [SWITCH, PRINTER].filter((m) => m.model.toUpperCase().replace(/[\s_.-]/g, '').includes(term.toUpperCase().replace(/[\s_.-]/g, ''))), total: 2 }));
+        return Promise.resolve(jsonResponse(200, { items: [SWITCH, PRINTER, WITH_PHOTO].filter((m) => m.model.toUpperCase().replace(/[\s_.-]/g, '').includes(term.toUpperCase().replace(/[\s_.-]/g, ''))), total: 2 }));
       }
       if (url.startsWith('/api/v1/devices?')) return Promise.resolve(jsonResponse(200, { items: OCCUPANTS, total: 1 }));
       if (url === '/api/v1/devices' && init?.method === 'POST') return Promise.resolve(jsonResponse(201, { device: { id: 'd9', code: 'SW-E2E-9' }, warnings: [] }));
@@ -79,6 +80,19 @@ describe('Form thiết bị — Model (Q-26)', () => {
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     const post = calls.find((c) => c.url === '/api/v1/devices' && c.method === 'POST');
     expect(JSON.parse(post?.body ?? '{}')).toMatchObject({ deviceModelId: 'm-sw', deviceTypeId: 't-sw', model: 'C9300-48P', cabinetId: 'k1', rackUStart: 4, rackUSize: 1 });
+  });
+
+  it('chọn model có ảnh mặt trước → ô Mặt trước hiện ảnh model ngay (chưa lưu) và khoá tải ảnh riêng; mặt sau vẫn tải được (Q-26 07/10)', async () => {
+    mockFetch();
+    renderForm();
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('combobox', { name: 'Model' }), 'x3650');
+    await user.click(await screen.findByRole('option', { name: /X3650-M5/ }));
+    const front = screen.getByRole('group', { name: 'Mặt trước' });
+    expect(within(front).getByText('Ảnh chung của model X3650-M5')).toBeInTheDocument();
+    expect(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toHaveAttribute('src', '/api/v1/device-models/m-ph/photo/front?v=2026-10-07T01%3A00%3A00Z');
+    expect(within(front).queryByLabelText(/Tải ảnh lên|Thay ảnh/)).toBeNull();
+    expect(within(screen.getByRole('group', { name: 'Mặt sau' })).getByLabelText('Tải ảnh lên — Mặt sau')).toBeInTheDocument();
   });
 
   it('model không gắn tủ: không có ô Tủ, nói rõ máy chỉ cần Site', async () => {
