@@ -262,6 +262,22 @@ describe('OtpInput — đang kiểm / thành công / sai', () => {
     );
   }
 
+  it('gửi lại sau một lượt sai: lúc đang kiểm, dòng lỗi cũ vẫn GIỮ CHỖ (ẩn) — khối không co rồi giãn 1 dòng, trang không nháy thanh cuộn', () => {
+    renderWithI18n(<Live error="Mã không đúng." />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Mã không đúng.');
+    act(() => setLive({ readOnly: true }));
+    expect(group()).toHaveClass('is-busy');
+    expect(screen.queryByRole('alert')).toBeNull();
+    const kept = document.querySelector('.field-error');
+    expect(kept).toHaveTextContent('Mã không đúng.');
+    expect(kept).toHaveAttribute('aria-hidden', 'true');
+    expect(kept).toHaveClass('is-stale');
+    act(() => setLive({ error: 'Mã đã dùng.' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Mã đã dùng.');
+    act(() => setLive({}));
+    expect(document.querySelector('.field-error')).toBeNull();
+  });
+
   it('server trả lời giữa vòng thứ hai → vẫn quay tới hết vòng đó rồi mới hội tụ', async () => {
     vi.stubGlobal('AnimationEvent', class {});
     vi.useFakeTimers();
