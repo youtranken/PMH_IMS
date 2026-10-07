@@ -605,6 +605,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Thêm thiết bị',
         'Hồ sơ',
         'Vị trí và người giữ',
+        'Truy cập quản trị',
         'Mua sắm và bảo hành',
         'Ảnh thiết bị',
         'Giấy tờ đính kèm',
@@ -618,12 +619,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     await expect(
       dialog.getByRole('textbox'),
-      'Hộp thêm thiết bị có đúng 6 ô gõ chữ: Mã · Tên · Model · Serial · Người sử dụng · Ghi chú',
-    ).toHaveCount(6);
+      'Hộp thêm thiết bị có đúng 5 ô gõ chữ: Mã · Tên · Serial · Người sử dụng · Ghi chú — Model là ô gợi ý từ danh mục model',
+    ).toHaveCount(5);
     for (const label of [
       'Mã thiết bị',
       'Tên thiết bị',
-      'Model',
       'Serial',
       'Người sử dụng',
       'Ghi chú',
@@ -643,6 +643,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       dialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
       'Ô Phòng ban phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
     ).toHaveCount(1);
+    await expect(
+      dialog.getByRole('combobox', { name: 'Model', exact: true }),
+      'Ô Model là combobox: gõ để tìm trong danh mục model, chưa có thì tạo ngay tại chỗ (Q-26)',
+    ).toHaveCount(1);
 
     /*
      * TẬP HỢP NÚT — gộp cả ô chọn, ô ngày, ô chọn file và chân hộp.
@@ -660,6 +664,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Loại',
         'Site',
         'Tủ mạng',
+        // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
+        '+ Thêm đường truy cập',
         'Nhà cung cấp',
         'Ngày mua',
         'Bảo hành từ',
@@ -830,7 +836,6 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     for (const [label, value] of [
       ['Mã thiết bị', code],
       ['Tên thiết bị', 'Switch tầng 3 của bài kiểm kê'],
-      ['Model', 'C9200-24P'],
       ['Serial', `SN-E2E-${stamp}`],
       ['Người sử dụng', 'Anh Tuấn hạ tầng'],
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
@@ -844,6 +849,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       editDialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
       'Ô Phòng ban (combobox) cũng phải điền sẵn',
     ).toHaveValue('Phòng CNTT');
+    await expect(
+      editDialog.getByRole('combobox', { name: 'Model', exact: true }),
+      'Ô Model (combobox) cũng phải điền sẵn chuỗi model cũ',
+    ).toHaveValue('C9200-24P');
     await expect(
       editDialog.getByRole('button', { name: 'Loại', exact: true }),
       'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "— Chọn loại —"',
@@ -871,6 +880,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Trạng thái',
         'Site',
         'Tủ mạng',
+        // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
+        '+ Thêm đường truy cập',
         'Nhà cung cấp',
         'Ngày mua',
         'Bảo hành từ',
