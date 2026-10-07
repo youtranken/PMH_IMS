@@ -1094,7 +1094,6 @@ Quyền: ai thêm được thiết bị thì tạo được model; sửa / xoá 
 
 | Việc | Vì sao hoãn | Khi nào làm |
 | --- | --- | --- |
-| Đổi cổng mẫu của model KHÔNG lan sang máy đã gán | Máy chép cổng lúc gán; lan ngược có thể đè cổng riêng đã khai | Khi có nhu cầu "áp lại mẫu" có xem trước |
 | Nhãn community của graphify chưa đặt lại | `graphify label . --missing-only` cần API key | Lần đầu có key |
 
 ### Bẫy đã gặp — đừng lặp lại
@@ -1109,5 +1108,10 @@ Quyền: ai thêm được thiết bị thì tạo được model; sửa / xoá 
    `jsonb_build_object` trong SQL.
 6. **DB dev có dải thật `172.16.10.0/24`, `172.16.110.0/24`**: bài E2E tự suy octet từ stamp phải dùng
    `createTestSubnet` (lùi khi 409), không tự POST dải.
+Góp ý sau khi thử (07/10, tag `v1.7.1`): sửa cổng mẫu thì máy cùng model được THÊM cổng còn thiếu;
+ảnh model thắng ảnh riêng và khoá mặt đó (UI + API 409 `DEVICE_PHOTO_FROM_MODEL`); thay / bỏ ảnh thì tệp
+ảnh cũ tự xoá mềm (`FilesApiService.trashWithin`); bỏ khu chọn ảnh từ giấy tờ; nhãn cổng sát đầu dây
+(`portEndOffset` hai bên api/web cùng phép); "Loại bản vẽ" + `childNodeType`.
+
 7. **Người dùng thao tác tay trên DB dev giữa lượt E2E đầy đủ** làm cửa canh rác ở teardown báo "hàng sống
    sót" (bản vẽ không mang chữ E2E). Kiểm `created_by` trước khi nghi bài kiểm.
