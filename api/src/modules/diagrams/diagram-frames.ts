@@ -1,7 +1,7 @@
 import { SaxesParser, type SaxesTagPlain } from 'saxes';
 import { escapeXmlAttr } from '../../common/svg-sanitize';
 import type { CellIndex } from './diagram-cells';
-import { rackDeviceStyle } from './diagram-hydrate';
+import { RACK_LABEL_TOP, rackDeviceStyle } from './diagram-hydrate';
 
 /**
  * Khung mang dữ liệu (AD-18): khung bản vẽ con (`ims_child_diagram_id`), khung VLAN
@@ -125,12 +125,13 @@ export const RACK_DEFAULT_U = 42;
 
 /*
  * `numDisp=descend`: U1 ở đáy tủ như tủ thật. `childLayout=rack` để draw.io bắt máy kéo vào tủ
- * theo vạch U. Không màu nào ở đây — màu hình theo mặc định của draw.io / theme người vẽ.
+ * theo vạch U. Tên tủ trong dải trên khung (`RACK_LABEL_TOP`). Không màu nào ở đây — màu hình theo
+ * mặc định của draw.io / theme người vẽ.
  */
 const RACK_STYLE =
   `shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=${RACK_UNIT_PX};container=1;collapsible=0;childLayout=rack;allowGaps=1;` +
   `marginLeft=${RACK_MARGIN.left};marginRight=${RACK_MARGIN.right};marginTop=${RACK_MARGIN.top};marginBottom=${RACK_MARGIN.bottom};` +
-  'numDisp=descend;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;html=0;';
+  `numDisp=descend;${RACK_LABEL_TOP}outlineConnect=0;html=0;`;
 
 /** Cột "Chưa khai U": khoảng cách giữa hai máy chừa chỗ cho nhãn 3 dòng nằm dưới hình. */
 const COLUMN_GAP = 30;

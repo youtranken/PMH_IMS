@@ -457,6 +457,18 @@ function rewriteCells(xml: string, edges: Map<string, EdgeContext>, edit: CellEd
 }
 
 /**
+ * Tên tủ nằm TRONG dải trống phía trên khung tủ (`marginTop`), không treo dưới đáy (Q-26 07/10) —
+ * đoạn style dùng chung cho khung dựng mới (`diagram-frames.ts`) và khung đã lưu kiểu cũ.
+ */
+export const RACK_LABEL_TOP = 'verticalLabelPosition=middle;verticalAlign=top;spacingTop=3;fontSize=11;fontStyle=1;';
+/** Đuôi style khung tủ IMS kiểu cũ (tên dưới đáy) — đủ dài để không bắt nhầm hình rack tự vẽ. */
+const RACK_LABEL_BOTTOM = 'numDisp=descend;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;';
+
+function liftRackTitles(xml: string): string {
+  return xml.split(RACK_LABEL_BOTTOM).join(`numDisp=descend;${RACK_LABEL_TOP}outlineConnect=0;`);
+}
+
+/**
  * Id các ô là con trực tiếp của một khung tủ (hình có `childLayout=rack` — khung tủ IMS dựng hay
  * người vẽ lấy từ thư viện rack). Đọc một lượt trước khi viết lại: `parent` nằm trên `mxCell`,
  * còn nhãn nằm trên `UserObject` bọc nó, đọc trước.
@@ -569,7 +581,7 @@ export function hydrateDiagramXml(
       iconSvg: null,
     };
   const paths = edgePaths(xml);
-  return rewriteCells(xml, edgesOf(xml, cables.links), {
+  return rewriteCells(liftRackTitles(xml), edgesOf(xml, cables.links), {
     device: {
       data: (attrs, device) => {
         const kept = Object.fromEntries(Object.entries(attrs).filter(([name]) => !LEGACY_DATA_ATTRS.has(name) && name !== PHOTO_FILE_ATTR));
