@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { DEVICE_MODELS_KEY, type DeviceModel } from '@/lib/device-models';
+import { DEVICE_MODELS_KEY, DEVICE_PHOTOS_KEY, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { expandPortTemplate, PORT_KINDS, PORT_PRESETS, type PortKind, type PortTemplateGroup } from '@/lib/port-template';
 import { uploadFile } from '@/lib/upload';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -81,9 +81,17 @@ export function DeviceModelDialog({
   const [cropping, setCropping] = useState<File | null>(null);
   const [photoVersion, setPhotoVersion] = useState(model?.updatedAt ?? '');
   const [photoId, setPhotoId] = useState(model?.photoFrontFileId ?? null);
+  // Model MỚI chưa có id để gắn ảnh: giữ ảnh đã cắt ở trình duyệt, tạo model xong mới tải lên.
+  const [draftPhoto, setDraftPhoto] = useState<{ file: File; url: string } | null>(null);
+  useEffect(() => () => {
+    if (draftPhoto) URL.revokeObjectURL(draftPhoto.url);
+  }, [draftPhoto]);
 
   const finish = async (saved: DeviceModel, message: string | null) => {
     await queryClient.invalidateQueries({ queryKey: DEVICE_MODELS_KEY });
+    // Sửa model đổi cả loạt máy (Số U, ảnh, cổng mẫu lan sang) — hồ sơ và mặt cổng đang mở phải đọc lại.
+    void queryClient.invalidateQueries({ queryKey: ['devices'] });
+    void queryClient.invalidateQueries({ queryKey: DEVICE_PHOTOS_KEY });
     if (message) toast({ tone: 'ok', message });
     onSaved(saved);
     onClose();
@@ -121,11 +129,19 @@ export function DeviceModelDialog({
     };
     setBusy(true);
     try {
-      const saved = await apiFetch<DeviceModel>(editing ? `/api/v1/device-models/${modelId}` : '/api/v1/device-models', {
+      let saved = await apiFetch<DeviceModel>(editing ? `/api/v1/device-models/${modelId}` : '/api/v1/device-models', {
         method: editing ? 'PATCH' : 'POST',
         csrfToken,
         body: JSON.stringify(body),
       });
+      if (!editing && draftPhoto) {
+        // Model đã lưu: ảnh hỏng thì báo riêng, không báo "lưu thất bại" cho một model đã nằm trong danh mục.
+        try {
+          saved = await attachPhoto(saved.id, draftPhoto.file);
+        } catch (error) {
+          toast({ tone: 'error', message: t('deviceModels.photoAfterCreateFailed', { model: saved.model, reason: errorMessage(error) }) });
+        }
+      }
       await finish(saved, t(editing ? 'deviceModels.updated' : 'deviceModels.created', { model: saved.model }));
     } catch (error) {
       const failure = error instanceof ApiError ? (error.body as { code?: string; existing?: Duplicate } | null) : null;
@@ -140,19 +156,28 @@ export function DeviceModelDialog({
     }
   };
 
+  const attachPhoto = async (id: string, file: File) => {
+    const uploaded = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_model', ownerId: id });
+    return apiFetch<DeviceModel>(`/api/v1/device-models/${id}/photos`, {
+      method: 'PATCH',
+      csrfToken,
+      body: JSON.stringify({ front: uploaded.id }),
+    });
+  };
+
   const savePhoto = async (file: File) => {
     setCropping(null);
+    if (!editing) {
+      setDraftPhoto({ file, url: URL.createObjectURL(file) });
+      return;
+    }
     setBusy(true);
     try {
-      const uploaded = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_model', ownerId: modelId });
-      const saved = await apiFetch<DeviceModel>(`/api/v1/device-models/${modelId}/photos`, {
-        method: 'PATCH',
-        csrfToken,
-        body: JSON.stringify({ front: uploaded.id }),
-      });
+      const saved = await attachPhoto(modelId, file);
       setPhotoId(saved.photoFrontFileId);
       setPhotoVersion(saved.updatedAt);
       await queryClient.invalidateQueries({ queryKey: DEVICE_MODELS_KEY });
+      void queryClient.invalidateQueries({ queryKey: DEVICE_PHOTOS_KEY });
       toast({ tone: 'ok', message: t('deviceModels.photoSaved', { model: saved.model }) });
     } catch (error) {
       toast({ tone: 'error', message: errorMessage(error) });
@@ -301,17 +326,21 @@ export function DeviceModelDialog({
               </span>
             </div>
           </Field>
-          {editing && canManage ? (
+          {canManage ? (
             <Field label={t('deviceModels.photo')} hint={t('deviceModels.photoHint')}>
               <FilePicker
                 accept={PHOTO_ACCEPT}
-                label={t(photoId ? 'deviceModels.photoReplace' : 'deviceModels.photoUpload')}
+                label={t(photoId || draftPhoto ? 'deviceModels.photoReplace' : 'deviceModels.photoUpload')}
+                inputLabel={t('deviceModels.photoInput')}
                 disabled={busy}
                 file={null}
                 onPick={(file) => (file ? setCropping(file) : undefined)}
               >
-                {photoId ? (
-                  <img className="photo-slot-img" src={`/api/v1/device-models/${modelId}/photo/front?v=${encodeURIComponent(photoVersion)}`} alt={t('deviceModels.photoAlt', { model: modelName })} />
+                {editing && photoId ? (
+                  <img className="photo-slot-img" src={deviceModelPhotoSrc(modelId, photoVersion)} alt={t('deviceModels.photoAlt', { model: modelName })} />
+                ) : null}
+                {!editing && draftPhoto ? (
+                  <img className="photo-slot-img" src={draftPhoto.url} alt={t('deviceModels.photoAlt', { model: form.model.trim() })} />
                 ) : null}
               </FilePicker>
             </Field>

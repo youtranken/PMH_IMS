@@ -122,11 +122,12 @@ export function DevicePhotoSlots({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [units]);
 
-  const recrop = async (side: PhotoSide, level: PhotoLevel) => {
+  // Cắt lại chỉ cho ảnh riêng / ảnh đã chọn: mặt đang dùng ảnh model khoá hẳn ở đây.
+  const recrop = async (side: PhotoSide) => {
     if (!loadOriginal) return;
     try {
       const file = await loadOriginal(side);
-      setCropping({ side, file, to: level === 'model' && model ? 'model' : 'own' });
+      setCropping({ side, file, to: 'own' });
     } catch {
       setRejected((current) => ({ ...current, [side]: t('photoSlots.recropFailed') }));
     }
@@ -195,6 +196,9 @@ export function DevicePhotoSlots({
         const replacing = slot.level === 'own' || slot.level === 'draft';
         const error = errors?.[side] ?? rejected[side] ?? null;
         const removable = slot.level === 'own' || slot.level === 'draft';
+        // Ảnh model thắng ảnh riêng (Q-26 07/10): mặt đó khoá hẳn — không ảnh riêng (server cũng từ
+        // chối), không thay / cắt lại ảnh chung ở đây; đổi ảnh model ở Danh mục › Model.
+        const fromModel = slot.level === 'model';
         return (
           <section key={side} className="photo-slot" role="group" aria-label={label} aria-busy={busySide === side || undefined}>
             {/* Khung cao theo ảnh (Q-23): ảnh 1U là một dải rộng, không phải vạch giữa ô cao. */}
@@ -203,7 +207,7 @@ export function DevicePhotoSlots({
               <span className={`badge plain photo-slot-level ${slot.level}`}>{levelText(slot)}</span>
             </header>
 
-            {readOnly ? (
+            {readOnly || fromModel ? (
               <div className={`photo-slot-frame${slot.src ? ' has-img' : ''}`} data-testid="photo-slot-frame">{picture(side, slot)}</div>
             ) : (
               <FilePicker
@@ -233,6 +237,8 @@ export function DevicePhotoSlots({
               </FilePicker>
             )}
 
+            {fromModel && !readOnly ? <p className="muted small">{t('photoSlots.lockedByModel', { model: modelLabel ?? '' })}</p> : null}
+
             {error ? (
               <p className="field-error" role="alert">
                 {error}
@@ -242,8 +248,8 @@ export function DevicePhotoSlots({
             {slot.src && misfit[side] ? (
               <p className="photo-slot-misfit small">
                 <span>{misfit[side] === 'aspect' ? t('photoSlots.misfitAspect', { units }) : t('photoSlots.misfitMargins')}</span>
-                {!readOnly && loadOriginal ? (
-                  <button type="button" className="btn sm" disabled={busy} aria-label={t('photoSlots.recropOf', { side: label })} onClick={() => void recrop(side, slot.level)}>
+                {!readOnly && loadOriginal && !fromModel ? (
+                  <button type="button" className="btn sm" disabled={busy} aria-label={t('photoSlots.recropOf', { side: label })} onClick={() => void recrop(side)}>
                     {t('photoSlots.recrop')}
                   </button>
                 ) : null}
@@ -262,7 +268,7 @@ export function DevicePhotoSlots({
               </button>
             ) : null}
 
-            {!readOnly && model && modelLabel ? (
+            {!readOnly && !fromModel && model && modelLabel ? (
               <div className="photo-slot-model">
                 <p className="muted small">{t('photoSlots.modelExplain', { model: modelLabel })}</p>
                 {slot.level === 'own' ? (

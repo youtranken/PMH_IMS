@@ -8,9 +8,10 @@ import { escapeLike, pgConstraint } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { expandPortTemplate, type PortTemplateGroup } from './port-template';
+import { expandPortTemplate, portLayoutSummary, withTemplatePorts, type PortTemplateGroup } from './port-template';
 import { modelKey } from './device-model-key';
 import { deviceModelTable, deviceTable } from './devices.schema';
+import { DevicePortsService } from './device-ports.service';
 import { DevicesService } from './devices.service';
 import { RACK_U_MAX, rackOverlap } from './rack-units';
 
@@ -61,6 +62,7 @@ export class DeviceModelsService {
     private readonly audit: AuditWriterService,
     private readonly devices: DevicesService,
     private readonly config: SystemConfigService,
+    private readonly ports: DevicePortsService,
   ) {}
 
   async list(filter: DeviceModelFilter, query: PageQuery): Promise<Page<DeviceModelItem>> {
@@ -110,7 +112,9 @@ export class DeviceModelsService {
       if (!before) throw notFound();
       const values = this.validated({ ...before, ...stripUndefined(patch) }, before, max);
       if (values.model !== before.model) await this.assertUnique(values.model, id, tx);
-      const members = await tx.select().from(deviceTable).where(eq(deviceTable.deviceModelId, id));
+      // Khoá các máy theo thứ tự id: lượt lan cổng mẫu đọc rồi ghi danh sách cổng của chúng, cùng lúc
+      // một lượt khai dây có thể đang thêm cổng riêng vào chính máy đó.
+      const members = await tx.select().from(deviceTable).where(eq(deviceTable.deviceModelId, id)).orderBy(asc(deviceTable.id)).for('update');
       if (values.deviceTypeId !== before.deviceTypeId) {
         if (members.length > 0) {
           throw new ConflictException({
@@ -142,6 +146,9 @@ export class DeviceModelsService {
         await this.devices.updateWithin(tx, member.id, next);
         await this.devices.recordWithin(tx, actor, member.id, 'updated', changes);
       }
+      if (JSON.stringify(values.portTemplate) !== JSON.stringify(before.portTemplate)) {
+        await this.spreadTemplate(tx, actor, members, expandPortTemplate(values.portTemplate, max), max);
+      }
       await this.audit.appendWithin(tx, {
         actor,
         action: 'device.model-updated',
@@ -151,6 +158,33 @@ export class DeviceModelsService {
       });
     });
     return this.get(id);
+  }
+
+  /**
+   * Cổng mẫu mới lan sang các máy của model (Q-26 07/10): chỉ THÊM cổng còn thiếu — máy tạo trước khi
+   * model có mẫu vẫn chọn được cổng mẫu khi khai dây. Cổng đang có dây mà chưa nằm trong danh sách
+   * (máy chưa có danh sách lúc khai dây) được ghi vào làm cổng riêng, để không thành cổng "ngoài
+   * danh sách". Máy thanh lý giữ nguyên như hồ sơ đóng.
+   */
+  private async spreadTemplate(tx: Tx, actor: string, members: (typeof deviceTable.$inferSelect)[], template: ReturnType<typeof expandPortTemplate>, max: number): Promise<void> {
+    for (const member of members) {
+      if (member.status === 'retired') continue;
+      const layout = member.portLayout ?? [];
+      const listed = new Set(layout.map((p) => p.label.toLowerCase()));
+      const wired = (await this.ports.wiredLabels(tx, member.id)).filter((label) => !listed.has(label.toLowerCase()));
+      const { ports, added } = withTemplatePorts([...layout, ...wired.map((label) => ({ label, kind: 'other' as const }))], template);
+      if (added.length === 0) continue;
+      if (ports.length > max) {
+        throw new BadRequestException({
+          code: 'PORT_TEMPLATE_INVALID',
+          message: `Máy ${member.code} sẽ có ${ports.length} cổng, quá trần ${max} — bớt cổng riêng của máy đó hoặc thu gọn mẫu.`,
+        });
+      }
+      await this.devices.updateWithin(tx, member.id, { portLayout: ports });
+      await this.devices.recordWithin(tx, actor, member.id, 'ports-layout', {
+        portLayout: { before: portLayoutSummary(layout) || null, after: portLayoutSummary(ports) },
+      });
+    }
   }
 
   async remove(actor: string, id: string): Promise<void> {

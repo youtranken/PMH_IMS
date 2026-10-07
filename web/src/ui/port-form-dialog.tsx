@@ -98,6 +98,15 @@ export function PortFormDialog({
     queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${holderId}/ports`),
     enabled: onMap && Boolean(holderId),
   });
+  // Đầu kia là máy trong kho: ô "Cổng đầu kia" gợi ý cổng còn trống của CHÍNH máy đó, như ô Cổng.
+  const peerId = mode === 'device' ? (peer?.id ?? '') : '';
+  const peerPanel = usePortPanel(peerId || null);
+  const peerPorts = useQuery({
+    queryKey: ['devices', peerId, 'ports'],
+    queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${peerId}/ports`),
+    enabled: Boolean(peerId),
+  });
+  const peerOptions = peerId ? freePortOptions(peerPorts.data, peerPanel.data) : [];
   const takenBy = onMap ? portTakenBy(holderPorts.data, portLabel) : null;
   const nextFree = takenBy ? nextFreePort(holderPorts.data, portLabel) : '';
   const free = onMap ? freePorts(holderPorts.data).slice(0, FREE_PORTS_SHOWN) : [];
@@ -343,8 +352,24 @@ export function PortFormDialog({
                   )
                 : null}
               <Field label={t('ports.peerPort')} htmlFor="port-peer-port">
-                <input id="port-peer-port" className="inp mono" value={connectedPort} onChange={(e) => setConnectedPort(e.target.value)} />
+                {peerOptions.length > 0 ? (
+                  <SuggestInput
+                    id="port-peer-port"
+                    value={connectedPort}
+                    onChange={setConnectedPort}
+                    options={peerOptions}
+                    placeholder={t('ports.phPort')}
+                    ariaLabel={t('ports.peerPort')}
+                  />
+                ) : (
+                  <input id="port-peer-port" className="inp mono" value={connectedPort} onChange={(e) => setConnectedPort(e.target.value)} />
+                )}
               </Field>
+              {peer && outsideLayout(peerPanel.data, connectedPort) ? (
+                <p className="field-warn" role="status">
+                  {t('ports.outsideLayout', { port: connectedPort.trim(), code: peer.code })}
+                </p>
+              ) : null}
             </>
           );
           if (!onMap) {

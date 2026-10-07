@@ -165,7 +165,7 @@ describe('DevicePhotoSlots — chỉ xem và ảnh chung của model', () => {
     const onUpload = vi.fn();
     setup({ slots: slots({ src: '/p?v=1', level: 'own' }), model: { onUpload, onCopyOwn } });
     const front = screen.getByRole('group', { name: 'Mặt trước' });
-    expect(within(front).getByText(/MỌI máy model FG-100F chưa có ảnh riêng/)).toBeInTheDocument();
+    expect(within(front).getByText(/MỌI máy model FG-100F/)).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(within(front).getByRole('button', { name: 'Dùng ảnh này cho mọi máy cùng model — Mặt trước' }));
     expect(onCopyOwn).toHaveBeenCalledWith('front');
@@ -174,6 +174,30 @@ describe('DevicePhotoSlots — chỉ xem và ảnh chung của model', () => {
     await user.upload(within(back).getByLabelText('Tải ảnh chung cho mọi máy cùng model — Mặt sau'), file);
     await acceptCrop();
     await waitFor(() => expect(onUpload).toHaveBeenCalledWith('back', expect.objectContaining({ name: 'cat-chung.png' })));
+  });
+});
+
+describe('DevicePhotoSlots — mặt đang dùng ảnh model thì khoá ảnh riêng (Q-26 07/10)', () => {
+  it('Thành viên: thấy ảnh model + câu chỉ đường, KHÔNG có ô tải ảnh riêng ở mặt đó; mặt kia vẫn tải được', () => {
+    setup({ slots: slots({ src: '/m/front?v=1', level: 'model' }) });
+    const front = screen.getByRole('group', { name: 'Mặt trước' });
+    expect(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toBeInTheDocument();
+    expect(within(front).getByText('Máy dùng ảnh của model FG-100F — đổi ảnh ở Danh mục › Model thiết bị.')).toBeInTheDocument();
+    expect(within(front).queryByLabelText(/Tải ảnh lên|Thay ảnh/)).toBeNull();
+    expect(within(screen.getByRole('group', { name: 'Mặt sau' })).getByLabelText('Tải ảnh lên — Mặt sau')).toBeInTheDocument();
+  });
+
+  it('SA/Admin cũng KHOÁ hẳn mặt ảnh model: không ô ảnh riêng, không tải / cắt lại ảnh chung ở đây — đổi ở Danh mục › Model', () => {
+    crop.fit = 'margins';
+    setup({ slots: slots({ src: '/m/front?v=1', level: 'model' }), model: { onUpload: vi.fn(), onCopyOwn: vi.fn() }, loadOriginal: vi.fn() });
+    const front = screen.getByRole('group', { name: 'Mặt trước' });
+    fireEvent.load(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' }));
+    expect(within(front).queryByRole('button')).toBeNull();
+    expect(within(front).queryByLabelText(/Tải ảnh|Thay ảnh/)).toBeNull();
+    expect(within(front).getByText('Máy dùng ảnh của model FG-100F — đổi ảnh ở Danh mục › Model thiết bị.')).toBeInTheDocument();
+    // Mặt model chưa có ảnh: SA vẫn tải được ảnh chung từ đây.
+    expect(within(screen.getByRole('group', { name: 'Mặt sau' })).getByLabelText('Tải ảnh chung cho mọi máy cùng model — Mặt sau')).toBeInTheDocument();
+    crop.fit = null;
   });
 });
 
@@ -190,19 +214,6 @@ describe('DevicePhotoSlots — ảnh cũ chưa cắt chuẩn', () => {
     expect(loadOriginal).toHaveBeenCalledWith('front');
     await acceptCrop();
     await waitFor(() => expect(onPick).toHaveBeenCalledWith('front', expect.objectContaining({ name: 'cat-goc.png' })));
-    crop.fit = null;
-  });
-
-  it('ảnh chung của model, SA/Admin → Cắt lại ghi lại ảnh chung', async () => {
-    crop.fit = 'margins';
-    const onUpload = vi.fn();
-    setup({ loadOriginal: vi.fn(async () => png('model.png')), model: { onUpload, onCopyOwn: vi.fn() }, slots: slots({ src: '/p?v=2', level: 'model' }) });
-    const front = screen.getByRole('group', { name: 'Mặt trước' });
-    fireEvent.load(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' }));
-    expect(within(front).getByText('Ảnh chưa cắt chuẩn — còn viền thừa.')).toBeInTheDocument();
-    await userEvent.click(within(front).getByRole('button', { name: 'Cắt lại ảnh — Mặt trước' }));
-    await acceptCrop();
-    await waitFor(() => expect(onUpload).toHaveBeenCalledWith('front', expect.objectContaining({ name: 'cat-model.png' })));
     crop.fit = null;
   });
 

@@ -47,7 +47,7 @@ async function device(page: Page, code: string, typeId: string, model: string): 
   return ((await res.json()) as { device: { id: string } }).device.id;
 }
 
-test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan hệ + ô chèn dùng ảnh riêng; máy cùng model vẫn ảnh model; bỏ ảnh riêng thì về ảnh model', async ({ page }) => {
+test('ảnh riêng khi model chưa có ảnh → bản đồ quan hệ dùng ảnh riêng; SA đặt ảnh model → ảnh model THẮNG ở mọi máy cùng model, mặt đó khoá (UI + API 409), ô chèn mang ảnh model (Q-26 07/10)', async ({ page }) => {
   test.setTimeout(180_000);
   const secret = await firstLogin(page, E2E_SA);
   const stamp = uniqueStamp();
@@ -59,7 +59,22 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   const linked = await page.request.post(`/api/v1/devices/${a}/ports/link`, { headers: await writeHeaders(page), data: { portLabel: '1', connectedDeviceId: b, connectedPort: '1', cableTypeId: '' } });
   expect(linked.status(), await linked.text()).toBe(201);
 
-  // SA đặt ảnh model (dùng cho mọi máy cùng loại + model) qua API.
+  // Model chưa có ảnh: trang máy A tải ảnh riêng mặt trước.
+  await page.goto(`/devices/${a}`);
+  await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
+  const front = page.getByRole('group', { name: 'Mặt trước' });
+  await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `rieng-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
+  await acceptCrop(page);
+  await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
+  const ownFile = sql(`SELECT photo_front_file_id FROM device WHERE id = '${a}'`);
+  expect(ownFile).not.toBe('');
+
+  // Bản đồ quan hệ dùng đúng ảnh đó (cùng endpoint ảnh đã thu nhỏ).
+  const hubImg = page.getByTestId('rmap-hub').getByRole('img');
+  await expect(hubImg).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${ownFile}`);
+  expect(await hubImg.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+
+  // SA đặt ảnh model qua API.
   const modelRow = await page.request.post(`/api/v1/devices/${a}/model`, { headers: await writeHeaders(page) });
   expect(modelRow.status(), await modelRow.text()).toBe(201);
   const modelId = ((await modelRow.json()) as { id: string }).id;
@@ -71,32 +86,31 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   const modelFile = ((await up.json()) as { id: string }).id;
   expect((await page.request.patch(`/api/v1/devices/${a}/model-photos`, { headers: await writeHeaders(page), data: { front: modelFile } })).status()).toBe(200);
 
-  // Trang máy A: khu "Hình dùng trên sơ đồ" nói đang dùng ảnh model; tải ảnh riêng mặt trước.
+  // Máy A: ảnh model thắng ảnh riêng; mặt trước khoá hẳn, kể cả với SA — không nút nào.
   await page.goto(`/devices/${a}`);
-  await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
-  const front = page.getByRole('group', { name: 'Mặt trước' });
   await expect(front.getByText(`Ảnh chung của model ${model}`)).toBeVisible();
-  await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `rieng-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
-  await acceptCrop(page);
-  await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
-  const ownFile = sql(`SELECT photo_front_file_id FROM device WHERE id = '${a}'`);
-  expect(ownFile).not.toBe('');
-  expect(ownFile).not.toBe(modelFile);
+  await expect(front.getByText(`Máy dùng ảnh của model ${model} — đổi ảnh ở Danh mục › Model thiết bị.`)).toBeVisible();
+  await expect(front.getByRole('button')).toHaveCount(0);
+  await expect(front.getByLabel(/Tải ảnh|Thay ảnh/)).toHaveCount(0);
+  await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${modelFile}`);
+  // Đòn vòng qua UI: gọi thẳng API đặt ảnh riêng cho mặt model đã có ảnh → 409.
+  const again = await page.request.post('/api/v1/files', {
+    headers: await writeHeaders(page),
+    multipart: { ownerType: 'device', ownerId: a, file: { name: `rieng2-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN } },
+  });
+  const againId = ((await again.json()) as { id: string }).id;
+  const blocked = await page.request.patch(`/api/v1/devices/${a}/photos`, { headers: await writeHeaders(page), data: { front: againId } });
+  expect(blocked.status()).toBe(409);
+  expect(((await blocked.json()) as { code: string }).code).toBe('DEVICE_PHOTO_FROM_MODEL');
 
-  // Bản đồ quan hệ dùng đúng ảnh đó (cùng endpoint ảnh đã thu nhỏ).
-  const hubImg = page.getByTestId('rmap-hub').getByRole('img');
-  await expect(hubImg).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${ownFile}`);
-  await expect(page.getByTestId('rmap-hub')).not.toContainText('Ảnh chung của model');
-  expect(await hubImg.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-
-  // Trang máy B (cùng model): vẫn ảnh model.
+  // Máy B (cùng model): ảnh model.
   await page.goto(`/devices/${b}`);
   await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText(`Ảnh chung của model ${model}`)).toBeVisible();
   await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveAttribute('src', `/api/v1/devices/${b}/photo/front?v=${modelFile}`);
 
-  // Ô chèn từ "Thiết bị kho" (cùng nguồn tra): A mang ảnh riêng, B mang ảnh model.
+  // Ô chèn từ "Thiết bị kho" (cùng nguồn tra): cả hai máy mang ảnh model.
   const info = (await (await page.request.get(`/api/v1/diagrams/device-info?ids=${a},${b}`)).json()) as { id: string; cell: { attrs: Record<string, string>; style: string } }[];
-  expect(info.find((i) => i.id === a)!.cell.attrs).toEqual({ ims_photo: 'front', ims_photo_file_id: ownFile });
+  expect(info.find((i) => i.id === a)!.cell.attrs).toEqual({ ims_photo: 'front', ims_photo_file_id: modelFile });
   expect(info.find((i) => i.id === b)!.cell.attrs).toEqual({ ims_photo: 'front', ims_photo_file_id: modelFile });
   expect(info.find((i) => i.id === a)!.cell.style).toContain('shape=image;image=data:image/');
 
@@ -121,14 +135,6 @@ test('máy có ảnh riêng: tải ở trang thiết bị → bản đồ quan h
   const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
   expect(xml).toContain('ims_photo="front"');
   expect(xml).not.toContain('data:image/png');
-
-  // Bỏ ảnh riêng ở A → về ảnh model.
-  await page.goto(`/devices/${a}`);
-  await page.getByRole('group', { name: 'Mặt trước' }).getByRole('button', { name: 'Bỏ ảnh riêng — Mặt trước' }).click();
-  await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText(`Ảnh chung của model ${model}`)).toBeVisible();
-  await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveAttribute('src', `/api/v1/devices/${a}/photo/front?v=${modelFile}`);
-  // Ảnh model có thể trông y hệt ảnh riêng vừa bỏ: hạch nói rõ đây là ảnh chung của model.
-  await expect(page.getByTestId('rmap-hub')).toContainText(`Ảnh chung của model ${model}`);
 });
 
 test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang ảnh riêng (trang thiết bị + bản đồ quan hệ); Thay ảnh; Bỏ ảnh riêng → về biểu tượng, bản đồ hết ảnh', async ({ page }) => {

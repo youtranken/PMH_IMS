@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
+import { deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { errorMessage } from '@/lib/api';
 import { uploadFile } from '@/lib/upload';
 import { DetailSection } from '@/ui/detail-layout';
@@ -65,7 +66,13 @@ export function DevicePhotoEditor({
   canEdit,
   canEditModel,
   rackUnits = null,
+  pendingModel,
 }: {
+  /**
+   * Model vừa chọn trên form Sửa mà CHƯA lưu (`undefined` = form vẫn giữ model cũ). Ô ảnh xem trước
+   * theo model đó ngay, và tắt việc ghi ảnh chung — lúc này ghi là ghi vào model cũ.
+   */
+  pendingModel?: DeviceModel | null;
   /** Số U của máy — hộp cắt khoá khung theo mặt tủ n U. */
   rackUnits?: number | null;
   deviceId: string;
@@ -87,7 +94,8 @@ export function DevicePhotoEditor({
   const [savedKey, setSavedKey] = useState<Partial<Record<PhotoSide, number>>>({});
   // Chỉ dùng câu trả lời đúng hình: ô ảnh vỡ cả form nếu đọc `effective` của một câu trả lời lạ.
   const data = photos.data?.effective ? photos.data : undefined;
-  const modelLabel = data?.model?.label ?? null;
+  const pending = pendingModel !== undefined;
+  const modelLabel = pending ? (pendingModel?.model ?? null) : (data?.model?.label ?? null);
   const sideLabel = (side: PhotoSide) => t(side === 'front' ? 'photoSlots.front' : 'photoSlots.back');
 
   const run = async (side: PhotoSide, work: () => Promise<DevicePhotos>, message: string) => {
@@ -129,6 +137,11 @@ export function DevicePhotoEditor({
   };
 
   const slot = (side: PhotoSide): PhotoSlot => {
+    if (pending) {
+      if (side === 'front' && pendingModel?.photoFrontFileId) return { src: deviceModelPhotoSrc(pendingModel.id, pendingModel.updatedAt), level: 'model' };
+      const own = data?.device[side];
+      return own ? { src: devicePhotoSrc(deviceId, side, own.id), level: 'own' } : { src: null, level: 'icon' };
+    }
     const effective = data?.effective[side];
     return { src: effective ? devicePhotoSrc(deviceId, side, effective.id) : null, level: lookLevel(data, side) };
   };
@@ -157,7 +170,7 @@ export function DevicePhotoEditor({
             t('devices.lookOwnRemoved', { side: sideLabel(side) }),
           )
         }
-        model={canEditModel ? { onUpload: (side, file) => void uploadModel(side, file), onCopyOwn: copyOwnToModel } : null}
+        model={canEditModel && !pending ? { onUpload: (side, file) => void uploadModel(side, file), onCopyOwn: copyOwnToModel } : null}
         rackUnits={rackUnits}
         loadOriginal={(side) => {
           const effective = data?.effective[side];

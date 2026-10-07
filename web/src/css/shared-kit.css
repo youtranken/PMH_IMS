@@ -144,6 +144,8 @@ body:has(.auth) .toast-stack {
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
 .field-error { font-size: var(--fs-xs); color: var(--danger); font-weight: 600; }
+/* Lỗi lượt trước giữ chỗ trong lúc kiểm lượt mới (ui/otp-input.tsx): ẩn chữ, giữ chiều cao. */
+.field-error.is-stale { visibility: hidden; }
 .inp[aria-invalid='true'],
 .combo input[aria-invalid='true'],
 .fsel-trigger[aria-invalid='true'],

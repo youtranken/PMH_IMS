@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveStart, startChoices, type DiagramStart } from './diagram-start';
+import { childNodeType, effectiveStart, startChoices, type DiagramStart } from './diagram-start';
 
 describe('startChoices — "Bắt đầu từ" của hộp tạo bản vẽ (Q-23 06/10 chiều)', () => {
   const rows: {
@@ -84,5 +84,19 @@ describe('effectiveStart — lựa chọn của người dùng chỉ giữ khi c
 
   it.each(rows)('$name', ({ picked, state, expected }) => {
     expect(effectiveStart(picked, state)).toBe(expected);
+  });
+});
+
+describe('childNodeType — bản vẽ con đề xuất loại kế tiếp của bản cha (Q-26 07/10)', () => {
+  it.each([
+    [null, 'company'],
+    ['company', 'site'],
+    ['site', 'floor'],
+    ['floor', 'room'],
+    ['room', 'cabinet'],
+    ['cabinet', 'other'],
+    ['other', 'other'],
+  ] as const)('cha %s → %s', (parent, expected) => {
+    expect(childNodeType(parent)).toBe(expected);
   });
 });

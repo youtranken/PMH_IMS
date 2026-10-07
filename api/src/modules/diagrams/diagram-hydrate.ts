@@ -3,7 +3,8 @@ import { rackUnitLabel } from '../../common/rack-units';
 import { escapeXmlAttr, escapeXmlText } from '../../common/svg-sanitize';
 import { PALETTE } from '../../common/palette.generated';
 import { DIAGRAM_ICON_SIZE, DIAGRAM_SHAPE_OTHER, diagramShapeDef } from '../catalog/catalog.api';
-import { buildCellIndex, isPortEndCell, PORT_END_MARK } from './diagram-cells';
+import { buildCellIndex, edgePaths, isPortEndCell, PORT_END_MARK } from './diagram-cells';
+import { PORT_END_FALLBACK, portEndOffset } from './port-end-place';
 import { cableEdgeStates, type CableEdge } from './diagram-checks';
 import type { CheckLink } from './diagram-finding';
 
@@ -314,12 +315,6 @@ export function linkPortEnds(link: CheckLink, sourceDeviceId: string | null): { 
 export const PORT_LABELS_ATTR = 'ims_port_labels';
 export const PORT_LABELS_ENDS = 'ends';
 
-/**
- * Chỗ đặt nhãn đầu dây trên nét (toạ độ tương đối của draw.io: -1 = đầu nguồn, 1 = đầu đích).
- * Không ±1: ở đúng đầu mút thì nhãn đè lên viền hình máy.
- */
-export const PORT_END_OFFSET = 0.75;
-
 /** Đuôi id của hai ô nhãn đầu dây (con của nét): id cố định theo nét nên dựng lại không nhân đôi. */
 export const PORT_END_SUFFIX = { source: '-ims-ps', target: '-ims-pt' } as const;
 
@@ -329,11 +324,11 @@ export const PORT_END_SUFFIX = { source: '-ims-ps', target: '-ims-pt' } as const
  * web chỉ tô màu chữ cho ô có `imsPortEnd`). `imsPortEnd` là dấu để dehydrate nhận ra ô của IMS.
  */
 export function portEndStyle(slot: number | null | undefined): string {
-  return `edgeLabel;${PORT_END_MARK};imsPaint=${paintOf(slot)};html=0;fontSize=10;resizable=0;`;
+  return `edgeLabel;${PORT_END_MARK};imsPaint=${paintOf(slot)};html=0;fontSize=11;fontStyle=1;resizable=0;`;
 }
 
-function portEndCellXml(edgeId: string, side: 'source' | 'target', text: string, style: string): string {
-  const x = side === 'source' ? -PORT_END_OFFSET : PORT_END_OFFSET;
+function portEndCellXml(edgeId: string, side: 'source' | 'target', text: string, style: string, offset: number): string {
+  const x = side === 'source' ? -offset : offset;
   return (
     `<mxCell id="${escapeXmlAttr(edgeId + PORT_END_SUFFIX[side])}" value="${escapeXmlAttr(text)}" style="${escapeXmlAttr(style)}" vertex="1" connectable="0" parent="${escapeXmlAttr(edgeId)}">` +
     `<mxGeometry x="${x}" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>`
@@ -573,6 +568,7 @@ export function hydrateDiagramXml(
       shape: null,
       iconSvg: null,
     };
+  const paths = edgePaths(xml);
   return rewriteCells(xml, edgesOf(xml, cables.links), {
     device: {
       data: (attrs, device) => {
@@ -602,7 +598,9 @@ export function hydrateDiagramXml(
         const link = cables.links.get(edge.linkId!)!;
         const ends = linkPortEnds(link, edge.sourceDeviceId);
         const style = portEndStyle(link.cableTypeId ? cables.slots.get(link.cableTypeId) : null);
-        return portEndCellXml(edge.cellId, 'source', ends.source, style) + portEndCellXml(edge.cellId, 'target', ends.target, style);
+        const path = paths.get(edge.cellId);
+        const offset = path ? portEndOffset(path) : PORT_END_FALLBACK;
+        return portEndCellXml(edge.cellId, 'source', ends.source, style, offset) + portEndCellXml(edge.cellId, 'target', ends.target, style, offset);
       },
     },
   });

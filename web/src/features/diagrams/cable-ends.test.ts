@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cellIdsIn, linkEndTexts, portEndPatch, portEndRemoval } from './cable-ends';
+import { cellIdsIn, drawingGeometry, linkEndTexts, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
 
 const A = 'aaaaaaaa-0000-4000-8000-00000000000a';
 const B = 'aaaaaaaa-0000-4000-8000-00000000000b';
@@ -97,5 +97,56 @@ describe('portEndRemoval — nét thôi mang kết nối (bản sao, "Chỉ vẽ
   it('ô nằm trong phần tử lạ (không phải UserObject/object) giữ id của chính nó, không mượn id phần tử bọc', () => {
     const odd = `<Array as="extra" id="arr1">${endCell('e1-ims-ps', 'x')}</Array>`;
     expect(portEndRemoval(file(edge + odd), 'e1')).toEqual(['e1-ims-ps']);
+  });
+});
+
+/*
+ * Nhãn cổng SÁT đầu dây (Q-26 07/10). CÙNG bảng với `api/src/modules/diagrams/port-end-place.spec.ts`:
+ * nhãn chèn lúc khai dây và nhãn server dựng lúc mở phải nằm cùng chỗ.
+ */
+describe('portEndOffset — chỗ đặt nhãn cổng đầu dây (cùng phép với server)', () => {
+  const box = (x: number, y: number, width = 160, height = 15) => ({ x, y, width, height });
+  it.each([
+    ['nét thẳng ngang, 400px giữa hai mép', { source: box(0, 0), target: box(560, 0), points: [], orthogonal: false }, 0.89],
+    [
+      'dây vòng có điểm gấp (orthogonal)',
+      {
+        source: box(563, 514.6, 162, 14.8),
+        target: box(113, 439.2, 162, 14.8),
+        points: [
+          { x: 510, y: 522 },
+          { x: 510, y: 640 },
+          { x: 40, y: 640 },
+          { x: 40, y: 446.6 },
+        ],
+        orthogonal: true,
+      },
+      0.952,
+    ],
+    ['dây quá ngắn', { source: box(0, 0), target: box(180, 0), points: [], orthogonal: false }, 0.3],
+    ['thiếu máy một đầu', { source: null, target: box(0, 0), points: [], orthogonal: false }, 0.75],
+  ] as const)('%s', (_name, path, expected) => {
+    expect(portEndOffset({ ...path, points: [...path.points] })).toBeCloseTo(expected, 2);
+  });
+});
+
+describe('drawingGeometry — khung tuyệt đối (cộng dồn khung cha) và điểm gấp của nét', () => {
+  it('máy trong tủ + dây vòng → cùng chỗ đặt nhãn như server (0.952)', () => {
+    const rack = (id: string, x: number, y: number) => `<mxCell id="${id}" style="container=1;" vertex="1" parent="1"><mxGeometry x="${x}" y="${y}" width="204" height="664" as="geometry"/></mxCell>`;
+    const inRack = (id: string, parent: string, y: number) =>
+      `<UserObject label="x" ims_device_id="${id}" id="${id}"><mxCell style="" vertex="1" parent="${parent}"><mxGeometry x="33" y="${y}" width="162" height="14.8" as="geometry"/></mxCell></UserObject>`;
+    const wire = `<UserObject label="" id="e1"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="510" y="522"/><mxPoint x="510" y="640"/><mxPoint x="40" y="640"/><mxPoint x="40" y="446.6"/></Array></mxGeometry></mxCell></UserObject>`;
+    const geometry = drawingGeometry(file(rack('r1', 530, 20) + rack('r2', 80, 63) + inRack('d1', 'r1', 494.6) + inRack('d2', 'r2', 376.2) + wire));
+    expect(geometry.boxOf('d1')).toEqual({ x: 563, y: 514.6, width: 162, height: 14.8 });
+    expect(portEndOffset(geometry.edgePath('e1')!)).toBeCloseTo(0.952, 3);
+    expect(geometry.edgePath('khong-co')).toBeNull();
+  });
+
+  it('portEndPatch nhận chỗ đặt đã tính (thay hệ số mặc định của server)', () => {
+    const patch = portEndPatch(file(edge), 'e1', { source: 'a', target: 'b' }, SPEC, PALETTE, 0.9);
+    expect(patch.i.map((c) => (c as { geometry: string }).geometry)).toEqual([
+      '<mxGeometry x="-0.9" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>',
+      '<mxGeometry x="0.9" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>',
+    ]);
   });
 });

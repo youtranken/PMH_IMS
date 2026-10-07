@@ -66,6 +66,19 @@ export function normalizePortLayout(input: unknown, max: number): PhysicalPort[]
   return out;
 }
 
+/**
+ * Cổng mẫu lan sang một máy (Q-26): chỉ THÊM cổng còn thiếu. Cổng đã có (so không phân biệt hoa
+ * thường) giữ nguyên tên và kiểu của máy; cổng riêng ngoài mẫu đứng sau, không bao giờ bị bỏ — nó
+ * có thể đang cắm dây.
+ */
+export function withTemplatePorts(layout: readonly PhysicalPort[], template: readonly PhysicalPort[]): { ports: PhysicalPort[]; added: string[] } {
+  const own = new Map(layout.map((p) => [p.label.toLowerCase(), p]));
+  const inTemplate = new Set(template.map((p) => p.label.toLowerCase()));
+  const added = template.filter((p) => !own.has(p.label.toLowerCase())).map((p) => p.label);
+  const ports = [...template.map((p) => own.get(p.label.toLowerCase()) ?? p), ...layout.filter((p) => !inTemplate.has(p.label.toLowerCase()))];
+  return { ports, added };
+}
+
 /** Một dòng cho lịch sử thiết bị: "52 cổng: Gi1/0/1 … Te1/1/4". */
 export function portLayoutSummary(ports: readonly PhysicalPort[]): string {
   if (ports.length === 0) return '';

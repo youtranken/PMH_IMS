@@ -43,6 +43,16 @@ const THUMB_CACHE_MAX = 200;
 
 const COLUMN: Record<PhotoSide, 'photoFrontFileId' | 'photoBackFileId'> = { front: 'photoFrontFileId', back: 'photoBackFileId' };
 
+/**
+ * Tệp ảnh vừa bị thay / bỏ — xoá mềm để không đọng lại trong Giấy tờ (Q-26 07/10). Tệp vẫn được mặt
+ * kia dùng thì giữ.
+ */
+function replaced(before: Partial<Record<(typeof COLUMN)[PhotoSide], string | null>>, values: Partial<Record<(typeof COLUMN)[PhotoSide], string | null>>): string[] {
+  const after = { ...before, ...values };
+  const kept = new Set(PHOTO_SIDES.map((side) => after[COLUMN[side]]).filter(Boolean));
+  return PHOTO_SIDES.map((side) => before[COLUMN[side]]).filter((id): id is string => Boolean(id) && !kept.has(id));
+}
+
 /** Cùng phép chuẩn hoá với cột sinh `device_model.model_key` (0062) — để so với chuỗi model của máy. */
 const MODEL_KEY_SQL = (column: unknown) => sql`upper(regexp_replace(${column}, '[[:space:]_.-]', '', 'g'))`;
 
@@ -84,7 +94,8 @@ export class DevicePhotosService {
     return {
       device: own,
       model: label ? { id: model?.id ?? null, label, ...byModel } : null,
-      effective: { front: own.front ?? byModel.front, back: own.back ?? byModel.back },
+      // Ảnh model thắng ảnh riêng (Q-26 07/10): đổi ảnh của cả loạt máy chỉ ở một chỗ.
+      effective: { front: byModel.front ?? own.front, back: byModel.back ?? own.back },
       deviceImages: deviceFiles.filter((f) => f.kind === 'image').map((f) => ({ id: f.id, name: f.originalName })),
       modelImages: modelFiles.filter((f) => f.kind === 'image').map((f) => ({ id: f.id, name: f.originalName })),
     };
@@ -98,11 +109,13 @@ export class DevicePhotosService {
     await this.db.transaction(async (tx) => {
       const before = await this.devices.requireRowWithin(tx, deviceId, 'update');
       this.devices.assertNotRetired(before);
+      await this.assertNotFromModel(before, input, tx);
       const values = await this.chosen(input, 'device', deviceId);
       const changes = diffDevice(before, values);
       if (!hasChanges(changes)) return;
       await this.devices.updateWithin(tx, deviceId, values);
       await this.devices.recordWithin(tx, actor, deviceId, 'photos-changed', changes);
+      await this.files.trashWithin(tx, actor, replaced(before, values));
     });
     return this.photos(deviceId);
   }
@@ -174,6 +187,7 @@ export class DevicePhotosService {
         .update(deviceModelTable)
         .set({ ...values, updatedAt: new Date() })
         .where(eq(deviceModelTable.id, modelId));
+      await this.files.trashWithin(tx, actor, replaced(locked, values));
       await this.audit.appendWithin(tx, {
         actor,
         action: 'device.model-photos-changed',
@@ -218,7 +232,7 @@ export class DevicePhotosService {
       .where(inArray(deviceTable.id, ids));
     const alive = await this.files.imagesByIds(rows.flatMap((r) => [r.front, r.back, r.modelFront, r.modelBack]).filter((id): id is string => Boolean(id)));
     const pick = (...candidates: (string | null)[]) => candidates.find((id): id is string => Boolean(id && alive.has(id))) ?? null;
-    return new Map(rows.map((r) => [r.id, { front: pick(r.front, r.modelFront), back: pick(r.back, r.modelBack) }]));
+    return new Map(rows.map((r) => [r.id, { front: pick(r.modelFront, r.front), back: pick(r.modelBack, r.back) }]));
   }
 
   /** Ảnh đã thu nhỏ theo `diagram.photo_max_px`; ảnh không đọc/giải mã được thì `null`. */
@@ -240,6 +254,20 @@ export class DevicePhotosService {
     const pair = (await this.effectivePhotos([deviceId])).get(deviceId);
     const fileId = pair?.[side];
     return fileId ? this.thumbnail(fileId) : null;
+  }
+
+  /**
+   * Mặt nào model đã có ảnh thì máy không đặt ảnh riêng được (Q-26 07/10) — ảnh đó sẽ không bao giờ
+   * hiện. Chặn ở server, không chỉ ẩn nút. Bỏ ảnh riêng (`null`) luôn được.
+   */
+  private async assertNotFromModel(device: typeof deviceTable.$inferSelect, input: Partial<PhotoPair>, tx: Tx): Promise<void> {
+    const model = await this.modelOf(device, tx);
+    const sides = PHOTO_SIDES.filter((side) => input[side] && model?.[COLUMN[side]]);
+    if (sides.length === 0) return;
+    throw new ConflictException({
+      code: 'DEVICE_PHOTO_FROM_MODEL',
+      message: `Model ${model!.model} đã có ảnh ${sides.map((side) => (side === 'front' ? 'mặt trước' : 'mặt sau')).join(' và ')} — máy dùng ảnh model. Đổi ảnh ở Danh mục › Model thiết bị.`,
+    });
   }
 
   /** Model của máy: khoá ngoại nếu đã gán (Q-26), không thì dò theo loại + khoá chuẩn hoá như trước. */

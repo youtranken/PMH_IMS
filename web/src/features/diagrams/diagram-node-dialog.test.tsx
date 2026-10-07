@@ -98,7 +98,7 @@ describe('Form bản vẽ: Site theo bản cha, ô Tủ chỉ ở cấp tủ (D-
     return fetchMock;
   }
 
-  it('bản vẽ con điền sẵn Site của bản cha; "Cấp bản vẽ" thay "Loại nút"; ô Tủ chỉ hiện khi cấp là tủ, kèm lời giải thích', async () => {
+  it('bản vẽ con điền sẵn Site của bản cha; "Loại bản vẽ" thay "Loại nút"; ô Tủ chỉ hiện khi cấp là tủ, kèm lời giải thích', async () => {
     const fetchMock = mockLists();
     const parent = { ...PARENT, siteId: 's1', latestVersion: null };
     renderWithI18n(
@@ -110,7 +110,9 @@ describe('Form bản vẽ: Site theo bản cha, ô Tủ chỉ ở cấp tủ (D-
     const dialog = await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Cha E2E"' });
     expect(await within(dialog).findByRole('button', { name: 'Site' })).toHaveTextContent('TOWER — Tower');
     expect(within(dialog).queryByText('Loại nút')).toBeNull();
-    const level = within(dialog).getByRole('button', { name: 'Cấp bản vẽ' });
+    const level = within(dialog).getByRole('button', { name: 'Loại bản vẽ' });
+    // Bản vẽ con đề xuất loại kế tiếp của bản cha (Q-26 07/10).
+    expect(level).toHaveTextContent('Tầng');
     expect(within(dialog).queryByRole('button', { name: /^Tủ/ })).toBeNull();
     await user.click(level);
     await user.click(screen.getByRole('option', { name: 'Tủ mạng' }));
@@ -119,7 +121,7 @@ describe('Form bản vẽ: Site theo bản cha, ô Tủ chỉ ở cấp tủ (D-
     await user.click(within(dialog).getByRole('button', { name: /^Tủ/ }));
     await user.click(screen.getByRole('option', { name: 'TU-TOWER-01' }));
     // Đổi về cấp khác thì tủ đã chọn bỏ đi — không gửi tủ cho bản vẽ không phải cấp tủ.
-    await user.click(within(dialog).getByRole('button', { name: 'Cấp bản vẽ' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Loại bản vẽ' }));
     await user.click(screen.getByRole('option', { name: 'Phòng' }));
     await user.type(within(dialog).getByRole('textbox', { name: /Tên bản vẽ/ }), 'Phòng E2E');
     await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
@@ -129,7 +131,7 @@ describe('Form bản vẽ: Site theo bản cha, ô Tủ chỉ ở cấp tủ (D-
     expect(body).not.toHaveProperty('cabinetId');
   });
 
-  it('"Cấp bản vẽ" tự giải thích: chỉ Tủ mạng đổi cách hoạt động (Q-23 06/10 chiều)', async () => {
+  it('"Loại bản vẽ" tự giải thích: chỉ Tủ mạng đổi cách hoạt động (Q-23 06/10 chiều)', async () => {
     mockLists();
     renderWithI18n(
       <ToastProvider>
@@ -137,7 +139,7 @@ describe('Form bản vẽ: Site theo bản cha, ô Tủ chỉ ở cấp tủ (D-
       </ToastProvider>,
     );
     const dialog = await screen.findByRole('dialog', { name: 'Thêm bản vẽ' });
-    expect(within(dialog).getByText(/các cấp khác chỉ là nhãn trên bản đồ/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Chỉ để phân loại trên cây — cây do "bản vẽ con" quyết định/)).toBeInTheDocument();
     // Gốc cây cấp thường chỉ có một cách bắt đầu: không hỏi.
     expect(within(dialog).queryByRole('radiogroup', { name: 'Bắt đầu từ' })).toBeNull();
   });
@@ -166,7 +168,7 @@ describe('Dựng từ kho — bản vẽ cấp tủ (Q-23 06/10 chiều)', () =>
     const user = userEvent.setup();
     const dialog = await screen.findByRole('dialog', { name: 'Thêm bản vẽ con vào "Cha E2E"' });
     expect(within(dialog).queryByRole('radio', { name: 'Dựng từ kho' })).toBeNull();
-    await user.click(within(dialog).getByRole('button', { name: 'Cấp bản vẽ' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Loại bản vẽ' }));
     await user.click(screen.getByRole('option', { name: 'Tủ mạng' }));
     const stock = within(dialog).getByRole('radio', { name: 'Dựng từ kho' });
     expect(stock).toBeDisabled();

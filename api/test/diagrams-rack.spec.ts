@@ -139,7 +139,7 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     expect(srvFront.height).toBeCloseTo(2 * 14.8);
   });
 
-  it('ảnh thật: ảnh riêng máy (mặt trước) đè ảnh model; mặt sau lấy ảnh model; khung tủ dùng ảnh mặt trước; chỉ nhận ảnh đính kèm của chính máy', async () => {
+  it('ảnh thật: mặt model chưa có ảnh thì dùng ảnh riêng máy; mặt sau lấy ảnh model; khung tủ dùng ảnh mặt trước; chỉ nhận ảnh đính kèm của chính máy', async () => {
     const own = await upload('device', sw, png(1600, 160, 'red'), 'sw-front.png');
     const other = await upload('device', srv, png(100, 20, 'blue'));
     await expect(photos.setDevicePhotos(SA.email, sw, { front: other.id })).rejects.toMatchObject({ response: { code: 'DEVICE_PHOTO_INVALID' } });
@@ -152,9 +152,8 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
     await photos.setDevicePhotos(SA.email, sw, { front: own.id });
     const model = await photos.ensureModel(SA.email, sw);
     expect(model.label).toBe('C9300-E2E');
-    const modelFront = await upload('device_model', model.id, png(200, 20, 'green'));
     const modelBack = await upload('device_model', model.id, png(200, 20, 'yellow'));
-    const view = await photos.setModelPhotos(SA.email, sw, { front: modelFront.id, back: modelBack.id });
+    const view = await photos.setModelPhotos(SA.email, sw, { back: modelBack.id });
     expect(view.effective).toEqual({ front: { id: own.id, name: 'sw-front.png' }, back: { id: modelBack.id, name: 'anh.png' } });
     // Lịch sử thiết bị ghi đổi ảnh như mọi trường hồ sơ.
     const [latest] = await devices.history(sw);
@@ -173,6 +172,46 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
 
     const [info] = await service.deviceInfos([sw]);
     expect(info).toMatchObject({ u: 1, uSize: 1, photos: { front: true, back: true } });
+  });
+
+  it('thay / bỏ ảnh thì file ảnh cũ tự vào thùng rác (xoá mềm), không đọng lại trong Giấy tờ (Q-26 07/10)', async () => {
+    const { device: dev } = await devices.create(SA.email, { code: 'SW-E2E-MT-TRASH', name: 'Máy thay ảnh', deviceTypeId: typeId, model: 'E2E-TRASH' });
+    const alive = async (id: string) => (await scratch.pool.query(`SELECT deleted_at IS NULL alive FROM file WHERE id = $1`, [id])).rows[0].alive as boolean;
+    const first = await upload('device', dev.id, png(400, 40, 'red'), 'lan-1.png');
+    const second = await upload('device', dev.id, png(400, 40, 'blue'), 'lan-2.png');
+    const back = await upload('device', dev.id, png(400, 40, 'green'), 'sau.png');
+    await photos.setDevicePhotos(SA.email, dev.id, { front: first.id, back: back.id });
+    await photos.setDevicePhotos(SA.email, dev.id, { front: second.id });
+    expect(await alive(first.id)).toBe(false);
+    expect(await alive(second.id)).toBe(true);
+    expect(await alive(back.id)).toBe(true);
+    await photos.setDevicePhotos(SA.email, dev.id, { back: null });
+    expect(await alive(back.id)).toBe(false);
+    const trashed = await scratch.pool.query(`SELECT count(*)::int n FROM audit_log WHERE action = 'file.deleted' AND object_id = $1`, [dev.id]);
+    expect(trashed.rows[0].n).toBe(2);
+
+    const model = await photos.ensureModel(SA.email, dev.id);
+    const m1 = await upload('device_model', model.id, png(200, 20, 'green'));
+    const m2 = await upload('device_model', model.id, png(200, 20, 'blue'));
+    await photos.setModelPhotosById(SA.email, model.id, { front: m1.id });
+    await photos.setModelPhotosById(SA.email, model.id, { front: m2.id });
+    expect(await alive(m1.id)).toBe(false);
+    expect(await alive(m2.id)).toBe(true);
+  });
+
+  it('ảnh model THẮNG ảnh riêng của máy và khoá tải ảnh riêng cho mặt đó (Q-26 07/10); bỏ ảnh riêng vẫn được', async () => {
+    const own = await upload('device', sw, png(400, 40, 'red'), 'rieng.png');
+    await photos.setDevicePhotos(SA.email, sw, { front: own.id });
+    const model = await photos.ensureModel(SA.email, sw);
+    const modelFront = await upload('device_model', model.id, png(200, 20, 'green'), 'model.png');
+    await photos.setModelPhotos(SA.email, sw, { front: modelFront.id });
+
+    expect((await photos.photos(sw)).effective.front).toEqual({ id: modelFront.id, name: 'model.png' });
+    expect((await photos.effectivePhotos([sw])).get(sw)?.front).toBe(modelFront.id);
+    const again = await upload('device', sw, png(400, 40, 'blue'), 'rieng-2.png');
+    await expect(photos.setDevicePhotos(SA.email, sw, { front: again.id })).rejects.toMatchObject({ response: { code: 'DEVICE_PHOTO_FROM_MODEL' } });
+    await photos.setDevicePhotos(SA.email, sw, { front: null });
+    expect((await photos.photos(sw)).device.front).toBeNull();
   });
 
   it('ảnh model theo khoá ngoại (Q-26): máy đã gán model dùng ảnh model đó, kể cả khi chuỗi model của máy trùng model khác; máy chưa gán vẫn dò theo chuỗi', async () => {

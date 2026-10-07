@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
-import { deviceModelParts, type DeviceModel } from '@/lib/device-models';
+import { deviceModelParts, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { freeRuns, rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
 import { RackElevation } from '@/ui/rack-elevation';
 import { useCabinetOccupants } from '@/ui/use-cabinet-occupants';
@@ -183,6 +183,12 @@ export function DeviceForm({
     enabled: Boolean(form.deviceModelId) && picked?.id !== form.deviceModelId,
   });
   const model = form.deviceModelId ? (picked?.id === form.deviceModelId ? picked : (linked.data ?? null)) : null;
+  // Ảnh model thắng ảnh riêng (Q-26 07/10): chọn model có ảnh thì ảnh riêng đã chọn cho mặt đó bỏ đi —
+  // giữ lại là một lượt tải mà server sẽ từ chối sau khi máy đã lưu.
+  const modelFront = model?.photoFrontFileId ? deviceModelPhotoSrc(model.id, model.updatedAt) : null;
+  useEffect(() => {
+    if (modelFront && photoDraft.files.front) photoDraft.set('front', null);
+  }, [modelFront, photoDraft.files.front]); // eslint-disable-line react-hooks/exhaustive-deps
   const departments = (lists.data?.departments ?? [])
     .filter((department) => department.active)
     .map((department) => department.name);
@@ -485,6 +491,7 @@ export function DeviceForm({
           >
             <DeviceModelField
               csrfToken={csrfToken}
+              canManage={canEditModel}
               id="device-model"
               term={form.model}
               picked={model}
@@ -727,6 +734,7 @@ export function DeviceForm({
           <p className="muted small">{t('devices.photoSectionHint')}</p>
           {device ? (
             <DevicePhotoEditor
+              pendingModel={(model?.id ?? null) !== (device.deviceModelId ?? null) ? model : undefined}
               deviceId={device.id}
               deviceTypeId={device.deviceTypeId}
               deviceTypeName={device.deviceTypeName}
@@ -738,12 +746,14 @@ export function DeviceForm({
           ) : (
             <DevicePhotoSlots
               slots={{
-                front: { src: photoDraft.previews.front ?? null, level: photoDraft.files.front ? 'draft' : 'unset' },
+                front: modelFront
+                  ? { src: modelFront, level: 'model' }
+                  : { src: photoDraft.previews.front ?? null, level: photoDraft.files.front ? 'draft' : 'unset' },
                 back: { src: photoDraft.previews.back ?? null, level: photoDraft.files.back ? 'draft' : 'unset' },
               }}
               typeName={typeName}
               typeIconSrc={typeIconSrc}
-              modelLabel={null}
+              modelLabel={model?.model ?? null}
               readOnly={busy}
               onPick={photoDraft.set}
               onRemove={(side) => photoDraft.set(side, null)}

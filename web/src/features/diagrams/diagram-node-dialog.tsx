@@ -14,7 +14,7 @@ import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { formatDateTime } from '@/lib/format';
 import { NODE_TYPES, NODE_TYPE_KEY, TREE_KEY, nodeKey, type DiagramNode, type DiagramNodeType, type Publications, type VersionItem } from './diagram-api';
 import { copySources, type CopySource } from './diagram-copy-source';
-import { effectiveStart, startChoices, type DiagramStart } from './diagram-start';
+import { childNodeType, effectiveStart, startChoices, type DiagramStart } from './diagram-start';
 import { pathOf, subtreeIds } from './diagram-tree';
 
 const ROOT = '__root__';
@@ -65,7 +65,7 @@ export function DiagramNodeDialog({
   const renameOnly = node?.kind === 'presentation';
   const [form, setForm] = useState({
     name: node?.name ?? '',
-    nodeType: (node?.nodeType ?? (parent ? 'floor' : 'company')) as DiagramNodeType,
+    nodeType: node?.nodeType ?? childNodeType(parent?.nodeType ?? null),
     parentId: node?.parentId ?? parent?.id ?? null,
     // Bản vẽ con thường cùng site với bản cha (D-03): điền sẵn, người vẽ đổi được.
     siteId: node ? node.siteId : (parent?.siteId ?? null),

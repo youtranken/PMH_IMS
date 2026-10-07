@@ -1,3 +1,4 @@
+import { PORT_END_FALLBACK } from './port-end-place';
 import {
   BadRequestException,
   ConflictException,
@@ -62,7 +63,6 @@ import {
   hydrateDiagramXml,
   linkEdgeCell,
   linkLabelFrom,
-  PORT_END_OFFSET,
   portEndStyle,
   photoAspect,
   photoDataUri,
@@ -1845,7 +1845,7 @@ function toDiagramLink(link: PortLink, slots: Map<string, number>): DiagramLink 
     labelFromA: linkLabelFrom(check, link.deviceId),
     labelFromB: linkLabelFrom(check, link.peerDeviceId),
     edgeStyle: linkEdgeCell(check, { sourceDeviceId: link.deviceId, slot: colorSlot }).style,
-    endLabel: { style: portEndStyle(colorSlot), offset: PORT_END_OFFSET },
+    endLabel: { style: portEndStyle(colorSlot), offset: PORT_END_FALLBACK },
   };
 }
 

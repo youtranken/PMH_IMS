@@ -284,6 +284,11 @@ export function OtpInput({
   // chạy bằng CSS, chỉ JS biết nó bắt đầu từ lúc nào.
   const [sealed, setSealed] = useState(false);
   const visual: OtpStatus = state === 'success' && !sealed ? 'verifying' : state;
+  // Lỗi của lượt trước giữ CHỖ (ẩn) trong lúc kiểm lượt mới: nơi gọi xoá lỗi khi gửi, dòng lỗi mất rồi
+  // hiện lại làm khối co giãn một dòng — màn thấp thì thanh cuộn của trang bật tắt liên tục.
+  const [staleError, setStaleError] = useState<string | null>(null);
+  if (error && staleError !== error) setStaleError(error);
+  if (!error && visual !== 'verifying' && staleError !== null) setStaleError(null);
   const busySince = useRef<number | null>(null);
   const prevVisual = useRef<OtpStatus>(visual);
   const [returning, setReturning] = useState(false);
@@ -501,6 +506,10 @@ export function OtpInput({
       {error ? (
         <span className="field-error" role="alert" id={errorId}>
           {error}
+        </span>
+      ) : staleError ? (
+        <span className="field-error is-stale" aria-hidden="true">
+          {staleError}
         </span>
       ) : null}
       {hint ? (

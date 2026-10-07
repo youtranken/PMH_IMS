@@ -57,7 +57,8 @@ export interface PortLink {
  * Đây chỉ là gợi ý — server vẫn là bên kiểm luật một cổng một cáp.
  */
 export function freePorts(map: PortMap | undefined): string[] {
-  if (!map) return [];
+  // Dữ liệu sai hình dạng (API cũ, mock rỗng) coi như chưa có — ô gợi ý không được làm sập cả hộp.
+  if (!Array.isArray(map?.ports) || !Array.isArray(map?.incoming)) return [];
   const taken = new Set(map.incoming.map((row) => (row.connectedPort ?? '').toLowerCase()).filter(Boolean));
   return map.ports
     .filter((row) => !row.connectedDeviceId && !row.connectedLabel && !taken.has(row.portLabel.toLowerCase()))

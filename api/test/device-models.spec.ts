@@ -44,8 +44,8 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     const audit = new AuditWriterService(scratch.db);
     const catalog = new CatalogApiService(new CatalogService(scratch.db, audit));
     devices = new DevicesService(scratch.db, catalog, audit, noRetirement, new DeviceSearchRegistry());
-    models = new DeviceModelsService(scratch.db, catalog, audit, devices, new SystemConfigService(scratch.db));
     ports = new DevicePortsService(scratch.db, devices);
+    models = new DeviceModelsService(scratch.db, catalog, audit, devices, new SystemConfigService(scratch.db), ports);
     siteId = await one(`INSERT INTO site (code, name) VALUES ('E2E-MD', 'Site model') RETURNING id`);
     cabinetId = await one(`INSERT INTO cabinet (site_id, code, u_height) VALUES ($1, 'E2E-MD-R1', 12) RETURNING id`, [siteId]);
     switchType = await one(`INSERT INTO device_type (name) VALUES ('Switch E2E MD') RETURNING id`);
@@ -157,7 +157,7 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     await expect(devices.update(ACTOR, device.id, { accessPoints: [{ kind: 'ftp', address: 'x' }] })).rejects.toMatchObject({ response: { code: 'DEVICE_ACCESS_INVALID' } });
   });
 
-  it('cổng mẫu: model sinh 52 cổng, máy gán model nhận đủ; đổi mẫu sau đó không đổi ngầm máy đã có; mẫu sai → 400', async () => {
+  it('cổng mẫu: model sinh 52 cổng, máy gán model nhận đủ; thu gọn mẫu sau đó không bỏ cổng của máy đã có; mẫu sai → 400', async () => {
     const template = [
       { pattern: 'Gi1/0/[1-48]', kind: 'rj45' },
       { pattern: 'Te1/1/[1-4]', kind: 'sfp+' },
@@ -211,6 +211,28 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     await ports.setLayout(ACTOR, device.id, [], 256);
     await devices.update(ACTOR, device.id, { deviceModelId: model.id, note: 'đổi ghi chú' });
     expect((await scratch.pool.query(`SELECT jsonb_array_length(port_layout) n FROM device WHERE id = $1`, [device.id])).rows[0].n).toBe(0);
+  });
+
+  it('sửa cổng mẫu: máy cùng model được THÊM cổng còn thiếu, giữ cổng riêng đang cắm dây, mỗi máy một dòng lịch sử; máy thanh lý không đổi', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-SPREAD', rackMountable: false });
+    const { device: early } = await devices.create(ACTOR, { code: 'SV-E2E-MD-GROW', name: 'Máy tạo trước khi có mẫu', deviceTypeId: switchType, deviceModelId: model.id });
+    const { device: peer } = await devices.create(ACTOR, { code: 'SW-E2E-MD-GROWP', name: 'Switch', deviceTypeId: switchType });
+    const { device: gone } = await devices.create(ACTOR, { code: 'SV-E2E-MD-GROWR', name: 'Máy thanh lý', deviceTypeId: switchType, deviceModelId: model.id });
+    await scratch.pool.query(`UPDATE device SET status = 'retired' WHERE id = $1`, [gone.id]);
+    await ports.link(ACTOR, early.id, { portLabel: '4', connectedDeviceId: peer.id, connectedPort: '1' });
+
+    await models.update(ACTOR, model.id, { portTemplate: [{ pattern: 'NIC[1-4]', kind: 'rj45' }] });
+
+    const panel = await ports.panel(early.id);
+    expect(panel.ports.map((p) => p.label)).toEqual(['NIC1', 'NIC2', 'NIC3', 'NIC4', '4']);
+    expect(panel.ports.find((p) => p.label === '4')?.peer).toBe('SW-E2E-MD-GROWP · 1');
+    const history = await devices.history(early.id);
+    expect(history.filter((h) => h.action === 'ports-layout')).toHaveLength(1);
+    expect((await scratch.pool.query(`SELECT jsonb_array_length(port_layout) n FROM device WHERE id = $1`, [gone.id])).rows[0].n).toBe(0);
+
+    // Lưu lại cùng mẫu: không thêm gì, không thêm dòng lịch sử.
+    await models.update(ACTOR, model.id, { manufacturer: 'IBM' });
+    expect((await devices.history(early.id)).filter((h) => h.action === 'ports-layout')).toHaveLength(1);
   });
 
   it('chuyển model sang không gắn tủ khi còn máy nằm trong tủ (kể cả chưa khai U) → 409', async () => {
