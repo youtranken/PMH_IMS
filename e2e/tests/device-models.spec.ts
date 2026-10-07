@@ -141,7 +141,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await form.getByRole('textbox', { name: 'Mã thiết bị' }).fill(`FW-E2E-MF1${stamp}`);
     await form.getByRole('textbox', { name: 'Tên thiết bị' }).fill('Firewall tầng 1');
     await form.getByRole('combobox', { name: 'Model' }).fill(model);
-    await page.getByRole('button', { name: `+ Tạo model mới "${model}"` }).click();
+    await page.getByRole('button', { name: `Tạo model mới "${model}"` }).click();
     const modelDialog = page.getByRole('dialog', { name: 'Thêm model thiết bị' });
     await modelDialog.getByRole('button', { name: 'Loại thiết bị' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();

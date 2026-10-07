@@ -91,13 +91,13 @@ describe('Form thiết bị — Model (Q-26)', () => {
     expect(screen.getByText('Model M404 không gắn tủ — máy chỉ cần Site.')).toBeInTheDocument();
   });
 
-  it('chưa có model: "+ Tạo model mới" mở hộp tạo model với chữ đang gõ, không rời form', async () => {
+  it('chưa có model: "Tạo model mới" mở hộp tạo model với chữ đang gõ, không rời form', async () => {
     mockFetch();
     renderForm();
     const user = userEvent.setup();
     await user.type(await screen.findByRole('textbox', { name: 'Mã thiết bị' }), 'FW-E2E-1');
     await user.type(screen.getByRole('combobox', { name: 'Model' }), 'XG-430');
-    await user.click(await screen.findByRole('button', { name: '+ Tạo model mới "XG-430"' }));
+    await user.click(await screen.findByRole('button', { name: 'Tạo model mới "XG-430"' }));
     const dialog = await screen.findByRole('dialog', { name: 'Thêm model thiết bị' });
     expect(within(dialog).getByRole('textbox', { name: /Mã model/ })).toHaveValue('XG-430');
     // Form phía sau bị hộp modal che khỏi cây trợ năng nhưng giữ nguyên chữ đang nhập.
