@@ -1,3 +1,5 @@
+import type { DiagramNodeType } from './diagram-api';
+
 /**
  * "Bắt đầu từ" của hộp tạo bản vẽ (Q-23) — hàm THUẦN, test bảng dữ liệu ở
  * `diagram-start.test.ts`.
@@ -30,4 +32,21 @@ export function startChoices(input: { hasParent: boolean; parentHasContent: bool
 export function effectiveStart(picked: DiagramStart | null, state: StartState): DiagramStart {
   const live = state.choices.some((c) => c.value === picked && !c.disabledReason);
   return live && picked ? picked : state.fallback;
+}
+
+const NEXT_LEVEL: Record<DiagramNodeType, DiagramNodeType> = {
+  company: 'site',
+  site: 'floor',
+  floor: 'room',
+  room: 'cabinet',
+  cabinet: 'other',
+  other: 'other',
+};
+
+/**
+ * Loại đề xuất cho bản vẽ mới (Q-26 07/10): gốc cây là Tổng công ty, bản vẽ con lấy loại kế tiếp của
+ * bản cha. Chỉ là gợi ý — Loại bản vẽ là nhãn phân loại, cây do "bản vẽ con" quyết định.
+ */
+export function childNodeType(parent: DiagramNodeType | null): DiagramNodeType {
+  return parent ? NEXT_LEVEL[parent] : 'company';
 }

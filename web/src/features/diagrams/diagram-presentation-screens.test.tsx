@@ -129,7 +129,7 @@ describe('Bản đồ — Thành viên quản bản trình bày của mình', ()
     await user.click(await screen.findByRole('button', { name: 'Thao tác với E2E Của tôi' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Đổi tên' }));
     const dialog = await screen.findByRole('dialog', { name: 'Đổi tên "E2E Của tôi"' });
-    expect(screen.queryByRole('combobox', { name: 'Cấp bản vẽ' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Loại bản vẽ' })).toBeNull();
     const name = screen.getByRole('textbox', { name: /Tên bản vẽ/ });
     await user.clear(name);
     await user.type(name, 'E2E Tên mới');

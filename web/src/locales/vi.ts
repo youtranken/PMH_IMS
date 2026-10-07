@@ -1041,8 +1041,8 @@ export default {
     form: {
       name: 'Tên bản vẽ',
       nameHint: 'Tầng, phòng chỉ là tên bản vẽ — không thêm danh mục vị trí.',
-      nodeType: 'Cấp bản vẽ',
-      nodeTypeHint: 'Chọn "Tủ mạng" để gắn tủ kho và dựng mặt tủ từ kho; các cấp khác chỉ là nhãn trên bản đồ, không ràng buộc cây.',
+      nodeType: 'Loại bản vẽ',
+      nodeTypeHint: 'Chỉ để phân loại trên cây — cây do "bản vẽ con" quyết định. Chọn "Tủ mạng" để gắn tủ kho và dựng mặt tủ từ kho.',
       parent: 'Nằm trong',
       root: '(Gốc cây)',
       site: 'Site',

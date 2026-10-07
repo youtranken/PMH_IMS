@@ -64,13 +64,13 @@ test.describe('Sơ đồ mạng — soát UX đợt 2', () => {
     await page.getByRole('menuitem', { name: 'Thêm bản vẽ con' }).click();
     const dialog = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${name}"` });
     await expect(dialog.getByRole('button', { name: 'Site' })).toContainText(siteCode);
-    await expect(dialog.getByRole('button', { name: 'Cấp bản vẽ' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Loại bản vẽ' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: /^Tủ/ })).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Cấp bản vẽ' }).click();
+    await dialog.getByRole('button', { name: 'Loại bản vẽ' }).click();
     await page.getByRole('option', { name: 'Tủ mạng' }).click();
     await expect(dialog.getByRole('button', { name: /^Tủ/ })).toBeVisible();
     await expect(dialog.getByText(/Gắn tủ để dựng mặt tủ từ kho/)).toBeVisible();
-    await expect(dialog.getByText(/các cấp khác chỉ là nhãn trên bản đồ/)).toBeVisible();
+    await expect(dialog.getByText(/Chỉ để phân loại trên cây — cây do "bản vẽ con" quyết định/)).toBeVisible();
     // Đường hỏng của "Dựng từ kho" (Q-23): chưa chọn tủ thì tắt, nói rõ vì sao.
     await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toBeDisabled();
     await expect(dialog.getByText('Chọn tủ trước.')).toBeVisible();

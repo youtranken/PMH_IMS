@@ -230,7 +230,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     // Cấp thường: mặc định trang trắng, không có "Dựng từ kho".
     await expect(dialog.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
     await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Cấp bản vẽ' }).click();
+    await dialog.getByRole('button', { name: 'Loại bản vẽ' }).click();
     await page.getByRole('option', { name: 'Tủ mạng' }).click();
     await dialog.getByRole('button', { name: /^Tủ/ }).click();
     await page.getByRole('option', { name: rack.cabinetCode }).click();
