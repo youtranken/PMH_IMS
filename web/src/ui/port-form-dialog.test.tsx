@@ -149,4 +149,46 @@ describe('PortFormDialog ở màn sơ đồ (device = null)', () => {
     await user.click(within(b).getByRole('button', { name: 'PC-E2E-02' }));
     expect(within(b).getByRole('combobox', { name: 'Thiết bị đầu kia' })).toHaveValue('PC-E2E-02');
   });
+
+  it('Cổng đầu kia: chọn máy đầu kia rồi ô gợi ý cổng còn trống của CHÍNH máy đó (như ô Cổng); tên ngoài danh sách báo trước', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.startsWith('/api/v1/devices/pc2/port-panel')) {
+          return Promise.resolve(
+            jsonResponse(200, {
+              ports: [
+                { label: 'NIC1', kind: 'rj45', peer: 'SW-E2E-09 · Gi1/0/9' },
+                { label: 'NIC2', kind: 'rj45', peer: null },
+              ],
+              unlisted: [],
+              used: 1,
+              total: 2,
+            }),
+          );
+        }
+        if (url.startsWith('/api/v1/devices/pc2/ports')) return Promise.resolve(jsonResponse(200, { ports: [], incoming: [] }));
+        if (url.startsWith('/api/v1/catalog')) {
+          return Promise.resolve(jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [], ispProviders: [], servicePorts: [], cableTypes: [] }));
+        }
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <PortFormDialog device={null} port={null} csrfToken="t" onDrawing={[{ id: 'pc2', code: 'PC-E2E-02' }]} onClose={() => {}} onSaved={() => {}} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    const b = await screen.findByRole('group', { name: 'Đầu B — đầu kia' });
+    await user.click(within(b).getByRole('button', { name: 'PC-E2E-02' }));
+    const peerPort = await within(b).findByRole('combobox', { name: 'Cổng đầu kia' });
+    await user.click(peerPort);
+    expect(await screen.findByRole('option', { name: 'NIC2' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'NIC1' })).toBeNull();
+    await user.type(peerPort, 'eth9');
+    expect(await within(b).findByText(/Cổng "eth9" chưa có trong danh sách cổng của PC-E2E-02/)).toBeInTheDocument();
+  });
 });
