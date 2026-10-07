@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  createTestSubnet,
   E2E_SA,
   firstLogin,
   resetCatalog,
@@ -86,20 +87,14 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
   expect(other.status()).toBe(201);
   const otherDeviceId = ((await other.json()) as { device: { id: string } }).device.id;
 
-  const octet = Number(stamp) % 200;
-  const subnet = await page.request.post('/api/v1/ipam/subnets', {
-    headers,
-    /*
-     * Tên PHẢI chứa "E2E". `api/scripts/reset-e2e.mjs` dọn theo `subnet.name ILIKE '%E2E%'`,
-     * nên một cái tên quên chữ đó là một hàng KHÔNG BAO GIỜ bị dọn. Đã trả giá: bản đầu của
-     * file này đặt `LAN cua con lai ${stamp}`, để lại 27 dải rác, và làm đỏ `dashboard`,
-     * `expiry-digest`, `ip-lifecycle`, `ipam` cùng `ipam.mobile` ở lượt E2E đầy đủ — tám bài
-     * đỏ trông y hệt một hồi quy của API.
-     */
-    data: { cidr: `172.16.${octet}.0/29`, name: `LAN E2E cua con lai ${stamp}` },
-  });
-  expect(subnet.status()).toBe(201);
-  const subnetId = ((await subnet.json()) as { id: string }).id;
+  /*
+   * Tên PHẢI chứa "E2E". `api/scripts/reset-e2e.mjs` dọn theo `subnet.name ILIKE '%E2E%'`,
+   * nên một cái tên quên chữ đó là một hàng KHÔNG BAO GIỜ bị dọn. Đã trả giá: bản đầu của
+   * file này đặt `LAN cua con lai ${stamp}`, để lại 27 dải rác, và làm đỏ `dashboard`,
+   * `expiry-digest`, `ip-lifecycle`, `ipam` cùng `ipam.mobile` ở lượt E2E đầy đủ — tám bài
+   * đỏ trông y hệt một hồi quy của API.
+   */
+  const { id: subnetId, octet } = await createTestSubnet(page, headers, `LAN E2E cua con lai ${stamp}`, Number(stamp));
 
   const internalIp = `172.16.${octet}.5`;
   const ip = await page.request.post('/api/v1/ipam/addresses', {
@@ -266,11 +261,19 @@ test.describe('Bật lại hồ sơ IP', () => {
     expect(hidden.status(), 'ẩn hồ sơ lẻ phải làm được — đây là tiền đề của lỗ').toBeLessThan(300);
 
     // Dải đổi được vì hàng rào chỉ đếm IP ĐANG SỐNG, mà hồ sơ vừa ẩn thì không được đếm.
-    const far = ((f.octet + 37) % 200) + 1;
-    const moved = await page.request.patch(`/api/v1/ipam/subnets/${f.subnetId}`, {
+    // Dải đích có thể trùng dải thật hoặc dải bài bên cạnh (409 SUBNET_OVERLAP): lùi sang dải khác.
+    let far = ((f.octet + 37) % 200) + 1;
+    let moved = await page.request.patch(`/api/v1/ipam/subnets/${f.subnetId}`, {
       headers: f.headers,
       data: { cidr: `172.16.${far}.0/29` },
     });
+    for (let i = 0; i < 20 && moved.status() === 409; i += 1) {
+      far = (far + 7) % 250;
+      moved = await page.request.patch(`/api/v1/ipam/subnets/${f.subnetId}`, {
+        headers: f.headers,
+        data: { cidr: `172.16.${far}.0/29` },
+      });
+    }
     expect(moved.status(), 'đổi dải khi không còn IP sống là hợp lệ — đó là tiền đề').toBe(200);
 
     const blocked = await page.request.post(`/api/v1/ipam/addresses/${f.ipId}/restore`, {
