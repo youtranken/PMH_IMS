@@ -84,6 +84,8 @@ export function DeviceModelDialog({
 
   const finish = async (saved: DeviceModel, message: string | null) => {
     await queryClient.invalidateQueries({ queryKey: DEVICE_MODELS_KEY });
+    // Sửa model đổi cả loạt máy (Số U, ảnh, cổng mẫu lan sang) — hồ sơ và mặt cổng đang mở phải đọc lại.
+    void queryClient.invalidateQueries({ queryKey: ['devices'] });
     if (message) toast({ tone: 'ok', message });
     onSaved(saved);
     onClose();

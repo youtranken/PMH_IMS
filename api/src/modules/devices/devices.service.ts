@@ -569,8 +569,9 @@ export class DevicesService {
     if (values.deviceModelId !== undefined) {
       values.deviceTypeId = model.deviceTypeId;
       values.model = model.model;
-      // Chép cổng mẫu CHỈ lúc gán model mới (form gửi lại deviceModelId mỗi lần lưu) và khi máy chưa
-      // có danh sách: danh sách cố ý để trống hay mẫu sửa sau đó không được chép ngầm vào máy cũ.
+      // Chép cổng mẫu lúc gán model mới (form gửi lại deviceModelId mỗi lần lưu) và khi máy chưa có
+      // danh sách: lưu lại hồ sơ không chép lại vào danh sách cố ý để trống. Sửa mẫu về sau thì
+      // `DeviceModelsService` thêm cổng còn thiếu cho cả loạt máy.
       const assigning = values.deviceModelId !== (current?.deviceModelId ?? null);
       if (assigning && (current?.portLayout ?? []).length === 0 && values.portLayout === undefined) {
         values.portLayout = expandPortTemplate(model.portTemplate, Number.MAX_SAFE_INTEGER);

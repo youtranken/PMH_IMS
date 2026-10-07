@@ -1,4 +1,4 @@
-import { expandPortTemplate, normalizePortLayout } from './port-template';
+import { expandPortTemplate, normalizePortLayout, withTemplatePorts } from './port-template';
 
 describe('expandPortTemplate — cổng mẫu của model (Q-26)', () => {
   const labels = (groups: unknown) => expandPortTemplate(groups, 256).map((p) => `${p.label}/${p.kind}`);
@@ -41,5 +41,32 @@ describe('normalizePortLayout — danh sách cổng của một máy', () => {
   });
   it('trùng nhãn (không phân biệt hoa thường) → 400', () => {
     expect(() => normalizePortLayout([{ label: 'eth0', kind: 'rj45' }, { label: 'ETH0', kind: 'rj45' }], 256)).toThrow();
+  });
+});
+
+describe('withTemplatePorts — cổng mẫu lan sang máy: chỉ THÊM, không xoá / đổi cổng có sẵn (Q-26 07/10)', () => {
+  const rj = (label: string) => ({ label, kind: 'rj45' as const });
+  const rows: { name: string; layout: { label: string; kind: 'rj45' | 'sfp' | 'other' }[]; template: { label: string; kind: 'rj45' | 'sfp' }[]; ports: string[]; added: string[] }[] = [
+    { name: 'máy trống nhận đủ mẫu', layout: [], template: [rj('p1'), rj('p2')], ports: ['p1/rj45', 'p2/rj45'], added: ['p1', 'p2'] },
+    {
+      name: 'cổng riêng giữ lại, đứng sau cổng mẫu',
+      layout: [{ label: '4', kind: 'other' }],
+      template: [rj('Gi1'), rj('Gi2')],
+      ports: ['Gi1/rj45', 'Gi2/rj45', '4/other'],
+      added: ['Gi1', 'Gi2'],
+    },
+    {
+      name: 'cổng đã có (khác hoa thường) không thêm lần hai, giữ tên và kiểu của máy',
+      layout: [{ label: 'GI1', kind: 'other' }],
+      template: [rj('Gi1'), { label: 'Te1', kind: 'sfp' }],
+      ports: ['GI1/other', 'Te1/sfp'],
+      added: ['Te1'],
+    },
+    { name: 'mẫu ngắn hơn máy: không xoá gì', layout: [rj('p1'), rj('p2'), rj('p3')], template: [rj('p1')], ports: ['p1/rj45', 'p2/rj45', 'p3/rj45'], added: [] },
+  ];
+  it.each(rows)('$name', ({ layout, template, ports, added }) => {
+    const result = withTemplatePorts(layout, template);
+    expect(result.ports.map((p) => `${p.label}/${p.kind}`)).toEqual(ports);
+    expect(result.added).toEqual(added);
   });
 });

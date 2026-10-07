@@ -692,6 +692,11 @@ export class DevicePortsService {
    * khác đang cắm vào nó. Dòng chỉ ghi VLAN/người dùng là cổng còn trống.
    */
   private async takenLabels(db: Database | Tx, deviceId: string): Promise<Set<string>> {
+    return new Set((await this.wiredLabels(db, deviceId)).map((label) => label.toLowerCase()));
+  }
+
+  /** Tên các cổng đang có dây của máy (nó nối đi, hoặc máy khác cắm vào), giữ nguyên chữ hoa/thường. */
+  async wiredLabels(db: Database | Tx, deviceId: string): Promise<string[]> {
     const own = await db
       .select({ label: devicePortTable.portLabel })
       .from(devicePortTable)
@@ -711,7 +716,10 @@ export class DevicePortsService {
           NOT_OWNER_RETIRED,
         ),
       );
-    return new Set([...own, ...incoming].map((r) => (r.label ?? '').toLowerCase()).filter(Boolean));
+    const seen = new Set<string>();
+    return [...own, ...incoming]
+      .map((r) => (r.label ?? '').trim())
+      .filter((label) => label && !seen.has(label.toLowerCase()) && seen.add(label.toLowerCase()));
   }
 
   private async prepare(
