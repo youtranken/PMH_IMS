@@ -43,6 +43,8 @@ describe('ImageCropDialog', () => {
     const onDone = vi.fn();
     renderWithI18n(<ImageCropDialog file={png()} units={1} onCancel={vi.fn()} onDone={onDone} />);
     expect(await screen.findByText(/khóa theo mặt tủ 1U/i)).toBeInTheDocument();
+    // Ảnh máy thật cao hơn khung: thường do Số U của model khai thiếu (Q-26 07/10).
+    expect(screen.getByText(/Ảnh máy cao hơn khung\? Kiểm lại Số U của model/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Dùng ảnh đã cắt' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
     const [box] = rendered.map((r) => r.box);

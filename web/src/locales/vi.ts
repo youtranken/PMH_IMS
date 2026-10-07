@@ -199,7 +199,7 @@ export default {
   // Hộp cắt ảnh thiết bị (ui/image-crop-dialog.tsx, Q-23).
   imageCrop: {
     title: 'Cắt ảnh thiết bị',
-    locked: 'Khung cắt khóa theo mặt tủ {{units}}U (rộng 482,6 mm : cao {{units}} × 44,45 mm) để ảnh lấp vừa ô U trên sơ đồ. Viền trống đã được cắt sẵn.',
+    locked: 'Khung cắt khóa theo mặt tủ {{units}}U (rộng 482,6 mm : cao {{units}} × 44,45 mm) để ảnh lấp vừa ô U trên sơ đồ. Viền trống đã được cắt sẵn. Ảnh máy cao hơn khung? Kiểm lại Số U của model — máy 2U chụp trọn chỉ vừa khung 2U.',
     free: 'Máy chưa khai Số U nên cắt tự do. Viền trống đã được cắt sẵn.',
     hint: 'Kéo khung để dời, kéo góc để đổi cỡ. Bàn phím: mũi tên dời khung, Shift + mũi tên đổi cỡ.',
     frameLabel: 'Khung cắt — mũi tên để dời, Shift + mũi tên để đổi cỡ',
