@@ -55,6 +55,47 @@ export function planDraftDiscard(versions: PruneVersion[], officialVersionId: st
   return { keepSeq, discard, keptDrafts: after.length - discard.length };
 }
 
+export interface CollapsePlan {
+  /** Bản nháp sẽ xoá (kể cả bản được chọn — nội dung của nó ghi lại thành lần lưu mới), theo `seq`. */
+  discard: PruneVersion[];
+  /** Số của lần lưu gộp: sau mọi bản còn giữ, không còn bản nào thì 1. */
+  nextSeq: number;
+  /**
+   * Không gộp được: `missing` không có bản đó; `not-draft` bản đó đã đặt tên / phát hành / chính thức
+   * (vốn đã giữ); `pinned` một bản giữ lại trỏ tới nó; `alone` nó đã là bản nháp duy nhất.
+   */
+  refused: 'missing' | 'not-draft' | 'pinned' | 'alone' | null;
+}
+
+/**
+ * "Chỉ giữ bản này" (Q-26 07/10): xoá MỌI bản nháp (chưa đặt tên, chưa phát hành, không phải bản chính
+ * thức — kể cả bản đầu tiên) và ghi nội dung bản được chọn thành một lần lưu mới. Bản giữ lại trỏ tới
+ * bản nháp nào (`based_on` / khôi phục từ) thì bản nháp đó cũng được giữ, như "Bỏ bản nháp" — khoá ngoại
+ * và chuỗi lịch sử không hụt khúc. Lần lưu mới không trỏ về bản nào đã xoá.
+ */
+export function planCollapse(versions: PruneVersion[], officialVersionId: string | null, keepId: string): CollapsePlan {
+  const none = (refused: CollapsePlan['refused']): CollapsePlan => ({ discard: [], nextSeq: 0, refused });
+  const target = versions.find((v) => v.id === keepId);
+  if (!target) return none('missing');
+  const kept = (v: PruneVersion) => v.named || v.published || v.id === officialVersionId;
+  if (kept(target)) return none('not-draft');
+  const doomed = new Set(versions.filter((v) => !kept(v)).map((v) => v.id));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const version of versions) {
+      if (doomed.has(version.id)) continue;
+      for (const ref of [version.basedOnVersionId, version.restoredFromVersionId]) {
+        if (ref && doomed.delete(ref)) changed = true;
+      }
+    }
+  }
+  if (!doomed.has(target.id)) return none('pinned');
+  if (doomed.size === 1) return none('alone');
+  const discard = versions.filter((v) => doomed.has(v.id)).sort((a, b) => a.seq - b.seq);
+  const remaining = versions.filter((v) => !doomed.has(v.id)).map((v) => v.seq);
+  return { discard, nextSeq: remaining.length > 0 ? Math.max(...remaining) + 1 : 1, refused: null };
+}
+
 /** "#13–#17" / "#13" / "#13, #15–#16" — dòng lịch sử nói xoá những số nào, gọn khi liền nhau. */
 export function seqRanges(seqs: number[]): string {
   const sorted = [...new Set(seqs)].sort((a, b) => a - b);

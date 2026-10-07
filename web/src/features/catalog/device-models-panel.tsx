@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { errorMessage } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { lowerFirstAfterNumber } from '@/lib/count-label';
-import { DEVICE_MODELS_KEY, type DeviceModel } from '@/lib/device-models';
+import { DEVICE_MODELS_KEY, DEVICE_PHOTOS_KEY, type DeviceModel } from '@/lib/device-models';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
@@ -74,12 +74,40 @@ export function DeviceModelsPanel({ me, adding, onAddingChange }: { me: Me; addi
     }
   };
 
+  const adopt = async (model: DeviceModel) => {
+    const ok = await askConfirm({
+      title: t('deviceModels.adoptTitle', { model: model.model, count: model.unlinkedCount }),
+      message: t('deviceModels.adoptMessage'),
+      confirmLabel: t('deviceModels.adoptConfirm'),
+    });
+    if (!ok) return;
+    try {
+      const result = await apiFetch<{ linked: string[]; skipped: { code: string; reason: string }[] }>(`/api/v1/device-models/${model.id}/adopt`, {
+        method: 'POST',
+        csrfToken: me.csrfToken,
+      });
+      await queryClient.invalidateQueries({ queryKey: DEVICE_MODELS_KEY });
+      // Máy vừa gán đổi Số U, ảnh, cổng — hồ sơ và ảnh đang mở phải đọc lại.
+      void queryClient.invalidateQueries({ queryKey: ['devices'] });
+      void queryClient.invalidateQueries({ queryKey: DEVICE_PHOTOS_KEY });
+      toast({ tone: 'ok', message: t('deviceModels.adopted', { model: model.model, count: result.linked.length }) });
+      if (result.skipped.length > 0) {
+        toast({ tone: 'warn', message: t('deviceModels.adoptSkipped', { list: result.skipped.map((s) => `${s.code} (${s.reason})`).join('; ') }) });
+      }
+    } catch (error) {
+      toast({ tone: 'error', message: errorMessage(error) });
+    }
+  };
+
   const devicesHref = (model: DeviceModel) => `${PATHS.devices}?search=${encodeURIComponent(model.model)}`;
   const rackText = (model: DeviceModel) => (model.rackMountable ? t('deviceModels.rackUnits', { count: model.uSize ?? 0 }) : t('deviceModels.rackNone'));
   const actionsOf = (model: DeviceModel) => {
     const items: RowAction[] = [{ key: 'devices', label: t('deviceModels.viewDevices'), onSelect: () => navigate(devicesHref(model)) }];
     if (canManage) {
       items.unshift({ key: 'edit', label: t('deviceModels.edit'), onSelect: () => setEditing(model) });
+      if (model.unlinkedCount > 0) {
+        items.push({ key: 'adopt', label: t('deviceModels.adoptAction', { count: model.unlinkedCount }), onSelect: () => void adopt(model) });
+      }
       items.push({ key: 'delete', label: t('deviceModels.delete'), danger: true, onSelect: () => void remove(model) });
     }
     return <RowActions label={t('deviceModels.actionsOf', { model: model.model })} items={items} />;
@@ -104,12 +132,18 @@ export function DeviceModelsPanel({ me, adding, onAddingChange }: { me: Me; addi
     {
       id: 'devices',
       header: t('deviceModels.colDevices'),
-      cell: ({ row }) =>
-        row.original.deviceCount > 0 ? (
-          <Link to={devicesHref(row.original)}>{lowerFirstAfterNumber(t('deviceModels.devicesCount', { count: row.original.deviceCount }))}</Link>
-        ) : (
-          lowerFirstAfterNumber(t('deviceModels.devicesCount', { count: 0 }))
-        ),
+      cell: ({ row }) => (
+        <>
+          {row.original.deviceCount > 0 ? (
+            <Link to={devicesHref(row.original)}>{lowerFirstAfterNumber(t('deviceModels.devicesCount', { count: row.original.deviceCount }))}</Link>
+          ) : (
+            lowerFirstAfterNumber(t('deviceModels.devicesCount', { count: 0 }))
+          )}
+          {row.original.unlinkedCount > 0 ? (
+            <div className="muted small">{lowerFirstAfterNumber(t('deviceModels.unlinked', { count: row.original.unlinkedCount }))}</div>
+          ) : null}
+        </>
+      ),
     },
     { id: 'actions', header: '', cell: ({ row }) => actionsOf(row.original) },
   ];

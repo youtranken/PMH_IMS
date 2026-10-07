@@ -82,7 +82,7 @@ describe('Sơ đồ mạng · ảnh lưu một lần (Q-23)', () => {
     const ipam = { heldAddressesOf: (ids: string[]) => Promise.resolve(new Map(ids.map((id) => [id, []]))) } as unknown as IpamApiService;
     const users = new UsersApiService(new UsersService(db));
     diagrams = new DiagramsService(db, audit, config, catalog, devices, ipam, users);
-    prune = new DiagramPruneService(db, audit, new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())));
+    prune = new DiagramPruneService(db, audit, new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())), diagrams);
     exporter = new DiagramExportService(db, audit, config, users, catalog);
     await scratch.pool.query(`INSERT INTO users (email, full_name, role, password_hash) VALUES ($1, $2, $3, 'x')`, [SA.email, SA.fullName, SA.role]);
   }, TEST_TIMEOUT);

@@ -235,6 +235,27 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     expect((await devices.history(early.id)).filter((h) => h.action === 'ports-layout')).toHaveLength(1);
   });
 
+  it('gán model hàng loạt: đếm máy ghi CHỮ model (cùng loại, cùng khoá) chưa gán; gán → nhận cổng mẫu; máy không gán được báo lý do, máy khác vẫn gán (Q-26 07/10)', async () => {
+    const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-ADOPT-1', rackMountable: false, portTemplate: [{ pattern: 'p[1-2]', kind: 'rj45' }] });
+    const { device: plain } = await devices.create(ACTOR, { code: 'SW-E2E-MD-AD1', name: 'Ghi chữ', deviceTypeId: switchType, model: 'e2e adopt 1' });
+    const { device: racked } = await devices.create(ACTOR, { code: 'SW-E2E-MD-AD2', name: 'Trong tủ', deviceTypeId: switchType, model: 'E2E-ADOPT-1', siteId, cabinetId });
+    await devices.create(ACTOR, { code: 'PR-E2E-MD-AD3', name: 'Khác loại', deviceTypeId: printerType, model: 'E2E-ADOPT-1' });
+    const { device: gone } = await devices.create(ACTOR, { code: 'SW-E2E-MD-AD4', name: 'Thanh lý', deviceTypeId: switchType, model: 'E2E-ADOPT-1' });
+    await scratch.pool.query(`UPDATE device SET status = 'retired' WHERE id = $1`, [gone.id]);
+    await devices.create(ACTOR, { code: 'SW-E2E-MD-AD5', name: 'Đã gán', deviceTypeId: switchType, deviceModelId: model.id });
+
+    expect((await models.get(model.id)).unlinkedCount).toBe(2);
+    const result = await models.adopt(ACTOR, model.id);
+    expect(result.linked).toEqual(['SW-E2E-MD-AD1']);
+    expect(result.skipped).toEqual([{ code: 'SW-E2E-MD-AD2', reason: expect.stringContaining('không gắn tủ') }]);
+    const row = (await scratch.pool.query(`SELECT device_model_id, jsonb_array_length(port_layout) n FROM device WHERE id = $1`, [plain.id])).rows[0];
+    expect(row).toEqual({ device_model_id: model.id, n: 2 });
+    expect((await scratch.pool.query(`SELECT device_model_id FROM device WHERE id = $1`, [racked.id])).rows[0].device_model_id).toBeNull();
+    expect((await models.get(model.id)).unlinkedCount).toBe(1);
+    const audit = await scratch.pool.query(`SELECT detail FROM audit_log WHERE action = 'device.model-adopted' AND object_id = $1`, [model.id]);
+    expect(audit.rows[0].detail).toMatchObject({ linked: ['SW-E2E-MD-AD1'], skipped: ['SW-E2E-MD-AD2'] });
+  });
+
   it('chuyển model sang không gắn tủ khi còn máy nằm trong tủ (kể cả chưa khai U) → 409', async () => {
     const model = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-INCAB', rackMountable: true, uSize: 1 });
     await devices.create(ACTOR, { code: 'SW-E2E-MD-INCAB', name: 'Máy trong tủ chưa U', deviceTypeId: switchType, deviceModelId: model.id, siteId, cabinetId });

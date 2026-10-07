@@ -1582,6 +1582,35 @@ export class DiagramsService {
     return { id, unchanged: false };
   }
 
+  /**
+   * Lần lưu gộp của "Chỉ giữ bản này" (Q-26 07/10), trong `tx` của lượt xoá: chép nội dung bản được
+   * chọn (đã đọc TRƯỚC khi xoá) thành phiên bản mới số `seq`, không trỏ về bản nào — các bản cũ vừa xoá.
+   */
+  async insertCollapsedWithin(
+    tx: Tx,
+    actor: string,
+    diagramId: string,
+    source: { seq: number; xml: string; svg: string | null; cellIndex: CellIndex; deviceSnapshot: DeviceSnapshotEntry[] },
+    seq: number,
+  ): Promise<string> {
+    const latest = await this.latestWithin(tx, diagramId);
+    const diff = diffCellIndex(latest?.cellIndex ?? null, source.cellIndex);
+    return this.insertVersion(tx, actor, diagramId, {
+      seq,
+      xml: source.xml,
+      svg: source.svg,
+      index: source.cellIndex,
+      snapshot: source.deviceSnapshot,
+      summary: `Gộp các bản nháp — giữ nội dung bản #${source.seq}`,
+      diff,
+      basedOnVersionId: latest?.id ?? null,
+      restoredFromVersionId: null,
+      history: 'version.collapsed',
+      auditAction: 'diagram.version_collapsed',
+      bytes: Buffer.byteLength(source.xml),
+    });
+  }
+
   /** Tên phiên bản: người lưu phiên bản đó, hoặc Admin/SA. Tên mới nhất thắng; `null` = bỏ tên. */
   async label(actor: { email: string; role: UserRole }, diagramId: string, versionId: string, label: string | null): Promise<void> {
     const [version] = await this.db

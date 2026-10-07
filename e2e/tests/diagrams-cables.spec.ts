@@ -412,7 +412,7 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
 });
 
 test.describe('Đi dây — bẻ dây bằng điểm uốn, không vẽ thêm nét (Q-23 05/10)', () => {
-  test('bản vẽ kiểu "PMH Tower": dây đã khai bị kéo một đầu ra chỗ trống + nét tự do nối thêm → MỘT lỗi nêu đúng hai máy; "Tự đi lại dây" nối lại, lưu, phát hành được', async ({ page }) => {
+  test('bản vẽ kiểu "PMH Tower": dây đã khai bị kéo một đầu ra chỗ trống + nét tự do nối thêm → MỘT lỗi nêu đúng hai máy; "Sắp lại dây › Đi lại từ đầu" nối lại, lưu, phát hành được', async ({ page }) => {
     test.setTimeout(180_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -447,7 +447,8 @@ test.describe('Đi dây — bẻ dây bằng điểm uốn, không vẽ thêm n�
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
     await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
-    await diagramBarAction(page, 'Tự đi lại dây');
+    await diagramBarAction(page, /^Sắp lại dây/);
+    await page.getByRole('dialog', { name: 'Sắp lại dây trên trang' }).getByRole('button', { name: 'Đi lại từ đầu' }).click();
     await expect(page.getByText('Đã đi lại 1 dây, nối lại 1 đầu dây về đúng máy. Bấm Lưu để giữ.')).toBeVisible();
     await page.screenshot({ path: process.env.IMS_SHOT_DIR ? `${process.env.IMS_SHOT_DIR}/day-tu-di-lai.png` : test.info().outputPath('day-tu-di-lai.png') });
     const [saved] = await Promise.all([
@@ -461,7 +462,7 @@ test.describe('Đi dây — bẻ dây bằng điểm uốn, không vẽ thêm n�
     // XML lưu do draw.io xuất có xuống dòng giữa thẻ.
     expect(stored).toMatch(/id="e1">\s*<mxCell[^>]*source="a"[^>]*target="b"/);
     expect(stored).not.toContain('exitX=0');
-    // Dây người vẽ đụng tới ("Tự đi lại dây") chuyển sang nhãn cổng hai đầu (Q-23).
+    // Dây người vẽ đụng tới ("Sắp lại dây") chuyển sang nhãn cổng hai đầu (Q-23).
     expect(stored).toMatch(/ims_port_labels="ends"[^>]*id="e1"/);
     const ok = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: { versionId: v2.id } });
     expect(ok.status(), await ok.text()).toBe(201);

@@ -277,6 +277,35 @@ test.describe('Sơ đồ mạng — Bỏ nháp từ một bản chọn, Xóa h�
     expect(seqsOf(id)).toBe('1,2');
   });
 
+  test('"Chỉ giữ bản này" (Q-26 07/10): chưa phát hành #1–#4, giữ #3 → còn MỘT bản #1 mang nội dung #3; bản đã phát hành → 409', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    const name = `E2E Gộp nháp ${uniqueStamp()}`;
+    const id = await createDiagram(page, name);
+    await stepUpViaApi(page, secret, 'diagram');
+    for (const n of [1, 2, 3, 4]) await save(page, id, `Bản ${n} E2E`);
+
+    await page.goto(`/diagrams?node=${id}`);
+    const drafts = panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 4' });
+    await drafts.getByRole('button', { name: 'Chỉ giữ bản nháp #3' }).click();
+    const confirm = page.getByRole('dialog', { name: `Chỉ giữ bản nháp #3 của "${name}"?` });
+    await expect(confirm).toContainText('Gộp 4 lần lưu #1–#4 thành MỘT bản #1 mang nội dung của #3.');
+    await confirm.getByRole('button', { name: 'Chỉ giữ bản này' }).click();
+    await expect(page.getByText(`Đã gộp 4 lần lưu thành bản #1 của "${name}".`)).toBeVisible();
+    await expect(panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 1' })).toBeVisible();
+    expect(seqsOf(id)).toBe('1');
+    expect(sql(`SELECT position('Bản 3 E2E' in xml) > 0 FROM diagram_version WHERE diagram_id = '${id}'`)).toBe('t');
+    expect(sql(`SELECT count(*) FROM audit_log WHERE action = 'diagram.drafts_collapsed' AND object_id = '${id}'`)).toBe('1');
+
+    // Đường hỏng: bản đã phát hành vốn được giữ — gọi thẳng API gộp về nó bị từ chối, không xoá gì.
+    const only = sql(`SELECT id FROM diagram_version WHERE diagram_id = '${id}'`);
+    await publish(page, id, only);
+    await save(page, id, 'Bản 5 E2E');
+    const bad = await page.request.post(`/api/v1/diagrams/${id}/drafts/collapse`, { headers: await writeHeaders(page), data: { versionId: only }, failOnStatusCode: false });
+    expect(bad.status()).toBe(409);
+    expect(((await bad.json()) as { code: string }).code).toBe('DIAGRAM_COLLAPSE_REFUSED');
+    expect(seqsOf(id)).toBe('1,2');
+  });
+
   test('hết ân hạn: panel không tự hỏi mã; "Nhập mã để xem lịch sử" hỏi mã rồi hiện khu nháp', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const name = `E2E Khoá lịch sử ${uniqueStamp()}`;

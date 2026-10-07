@@ -210,7 +210,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch' && JSON.stringify(m).includes('imsPaint=warn'))).toBe(true));
   });
 
-  it('xoá nét đã khai → hỏi; mặc định "Chỉ xoá nét vẽ" không gọi gì; "Gỡ luôn kết nối" gọi endpoint gỡ của devices', async () => {
+  it('xoá nét đã khai → hỏi ba đường: "Chỉ xóa nét vẽ" không gọi gì; "Gỡ luôn kết nối" gọi endpoint gỡ; Hủy trả nét về (Q-26 07/10)', async () => {
     const xml = file(DEVICES + linked('e1', 'a', 'b', 'link-1'));
     const { fetchMock, fromDrawio } = await openEditor(xml, { links: [LINK] }, {
       '/api/v1/devices/dev-sw/ports/link-1/unlink': () => jsonResponse(201, { removed: true }),
@@ -220,9 +220,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     fromDrawio({ event: 'autosave', xml: model(DEVICES) });
     const ask = await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' });
     expect(ask).toHaveTextContent('SW-E2E-01 Gi1/0/24 ↔ SRV-E2E-01 eth0');
-    // Nút ✕ và nút chân hộp cùng là "Chỉ xoá nét vẽ" (đóng hộp = lựa chọn mặc định).
-    expect(within(ask).getAllByRole('button', { name: 'Chỉ xóa nét vẽ' })).toHaveLength(2);
-    await user.click(within(ask).getAllByRole('button', { name: 'Chỉ xóa nét vẽ' })[1]);
+    await user.click(within(ask).getByRole('button', { name: 'Chỉ xóa nét vẽ' }));
     expect(calls(fetchMock, '/unlink')).toHaveLength(0);
 
     fromDrawio({ event: 'autosave', xml: model(DEVICES + linked('e2', 'a', 'b', 'link-1')) });
@@ -230,6 +228,34 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     await user.click(within(await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' })).getByRole('button', { name: 'Gỡ luôn kết nối' }));
     await vi.waitFor(() => expect(calls(fetchMock, '/api/v1/devices/dev-sw/ports/link-1/unlink')).toHaveLength(1));
     expect(await screen.findByText('Đã gỡ 1 kết nối khỏi sơ đồ cổng.')).toBeInTheDocument();
+  });
+
+  it('xoá nét đã khai rồi bấm Hủy (✕ / Esc cũng vậy) → nét được chèn lại đúng như cũ, không gỡ gì', async () => {
+    const { fetchMock, fromDrawio, messages, answerFile } = await openEditor(file(DEVICES + linked('e1', 'a', 'b', 'link-1')), { links: [LINK] });
+    const user = userEvent.setup();
+    fromDrawio({ event: 'autosave', xml: model(DEVICES + linked('e1', 'a', 'b', 'link-1')) });
+    fromDrawio({ event: 'autosave', xml: model(DEVICES) });
+    const ask = await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' });
+    await user.click(within(ask).getAllByRole('button', { name: 'Hủy' }).at(-1)!);
+    await answerFile(DEVICES);
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { i: { id: string; source: string; target: string; xmlValue: string }[] } } } } };
+    expect(patch.patch.u.p1.cells.i.map((c) => [c.id, c.source, c.target])).toEqual([['e1', 'a', 'b']]);
+    expect(patch.patch.u.p1.cells.i[0].xmlValue).toContain('ims_link_id="link-1"');
+    expect(calls(fetchMock, '/unlink')).toHaveLength(0);
+  });
+
+  it('gỡ kết nối mà server báo PORT_NOT_FOUND (đã gỡ ở nơi khác) → không báo lỗi, không trả nét về', async () => {
+    const { fromDrawio, messages } = await openEditor(file(DEVICES + linked('e1', 'a', 'b', 'link-1')), { links: [LINK] }, {
+      '/api/v1/devices/dev-sw/ports/link-1/unlink': () => jsonResponse(404, { code: 'PORT_NOT_FOUND', message: 'Không tìm thấy dòng port map này.' }),
+    });
+    const user = userEvent.setup();
+    fromDrawio({ event: 'autosave', xml: model(DEVICES + linked('e1', 'a', 'b', 'link-1')) });
+    fromDrawio({ event: 'autosave', xml: model(DEVICES) });
+    await user.click(within(await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' })).getByRole('button', { name: 'Gỡ luôn kết nối' }));
+    expect(await screen.findByText('1 Kết nối đã được gỡ ở nơi khác từ trước — chỉ cần xóa nét.')).toBeInTheDocument();
+    expect(screen.queryByText(/Không gỡ được/)).toBeNull();
+    expect(messages().some((m) => m.action === 'patch')).toBe(false);
   });
 
   it('nhân bản nét đã khai → bản sao bị bỏ ims_link_id (patch) và được hỏi như nét mới', async () => {
@@ -254,18 +280,30 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     expect(screen.queryByText('Có 1 kết nối mới chưa vẽ')).toBeNull();
     fromDrawio({ event: 'autosave', xml: model(DEVICES + linked('e1', 'a', 'b', 'link-1')) });
     fromDrawio({ event: 'autosave', xml: model(DEVICES) });
-    await user.click(within(await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' })).getAllByRole('button', { name: 'Chỉ xóa nét vẽ' })[1]);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' })).getByRole('button', { name: 'Chỉ xóa nét vẽ' }));
     await answerFile(DEVICES);
     await vi.waitFor(() => expect(calls(fetchMock, '/api/v1/diagrams/cable-status')).toHaveLength(1));
     expect(await screen.findByText('Có 1 kết nối mới chưa vẽ')).toBeInTheDocument();
   });
 
-  it('⋮ › "Tự đi lại dây": dây đã khai bị kéo đầu ra chỗ trống được nối lại về đúng máy, bỏ điểm uốn; nét tự do không đụng (Q-23 05/10)', async () => {
+  it('menu ⋮ khi vẽ (Q-26 07/10): một mục "Sắp lại dây" thay hai mục đi dây; không có Phát hành / Gửi duyệt / Bình luận đã ghim', async () => {
+    await openEditor(file(DEVICES), { links: [] });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Thao tác với/ }));
+    const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '');
+    expect(items.some((text) => text.startsWith('Sắp lại dây'))).toBe(true);
+    for (const gone of ['Bẻ dây vuông góc', 'Tự đi lại dây', 'Phát hành', 'Gửi duyệt', 'Bình luận đã ghim']) {
+      expect(items.some((text) => text.startsWith(gone)), gone).toBe(false);
+    }
+  });
+
+  it('⋮ › "Sắp lại dây" › "Đi lại từ đầu": dây đã khai bị kéo đầu ra chỗ trống được nối lại về đúng máy, bỏ điểm uốn; nét tự do không đụng (Q-23 05/10)', async () => {
     const loose = `<UserObject label="⚠ Dây Gi1/0/24 ↔ eth0 phải nối SW-E2E-01 ↔ SRV-E2E-01 — kéo đầu dây về đúng máy" ims_link_id="link-1" id="e1"><mxCell style="rounded=0;exitX=1;exitY=0.5;endArrow=none;imsPaint=danger;dashed=1;html=0;" edge="1" parent="1" source="a"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell></UserObject>`;
     const helper = `<mxCell id="f1" value="" style="endArrow=none;" edge="1" parent="1" source="b"><mxGeometry relative="1" as="geometry"><mxPoint x="90" y="560" as="targetPoint"/></mxGeometry></mxCell>`;
     const { messages, answerFile } = await openEditor(file(DEVICES + loose + helper), { links: [LINK] });
     const user = userEvent.setup();
-    await pickMenuItem(user, /^Thao tác với/, 'Tự đi lại dây');
+    await pickMenuItem(user, /^Thao tác với/, /^Sắp lại dây/);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Sắp lại dây trên trang' })).getByRole('button', { name: 'Đi lại từ đầu' }));
     await answerFile(DEVICES + loose + helper);
     await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
     const patch = messages().find((m) => m.action === 'patch') as {

@@ -44,6 +44,7 @@ export function DiagramPanel({
   actions,
   onSelect,
   discard,
+  collapse,
 }: {
   me: Me;
   node: DiagramNode;
@@ -55,6 +56,8 @@ export function DiagramPanel({
   actions: RowAction[];
   onSelect: (id: string) => void;
   discard: (node: DiagramNode, fromSeq: number) => Promise<boolean>;
+  /** "Chỉ giữ bản này" (Q-26 07/10). */
+  collapse: (node: DiagramNode, version: { id: string; seq: number }) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -184,6 +187,20 @@ export function DiagramPanel({
                   <button type="button" className="btn sm ghost" aria-label={t('diagrams.panel.viewOf', { seq })} onClick={() => viewVersion(draft.version)}>
                     {t('diagrams.panel.view')}
                   </button>
+                  {canDiscard && sections.drafts.length > 1 && draft.keptBecause !== 'named' ? (
+                    <button
+                      type="button"
+                      className="btn sm ghost"
+                      aria-label={t('diagrams.panel.keepOnlyOf', { seq })}
+                      onClick={() => {
+                        void collapse(node, draft.version).then((done) => {
+                          if (done) setFrom(null);
+                        });
+                      }}
+                    >
+                      {t('diagrams.panel.keepOnly')}
+                    </button>
+                  ) : null}
                 </li>
               );
             })}

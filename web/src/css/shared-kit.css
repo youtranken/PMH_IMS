@@ -170,6 +170,9 @@ body:has(.auth) .toast-stack {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--otp-gap);
   width: 100%;
+  /* Ô đang gõ nhích lên 2px và phóng 4% (`:focus` bên dưới): chừa sẵn chỗ để khung chứa (thân hộp
+     thoại cuộn được) không tràn 1–2px theo từng số — thanh cuộn nháy. */
+  padding-block: var(--space-1);
 }
 /* Nơi gọi có hiệu ứng vòng: chừa sẵn chỗ trên/dưới để vòng không đè lên nút. Chừa cố định chứ
    không nở ra lúc quay — đổi chiều cao giữa chừng là đẩy cả form xuống. */

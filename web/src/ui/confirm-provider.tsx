@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/ui/confirm-dialog';
  * Re-export để mọi chỗ gọi vẫn viết `from '@/ui/confirm-provider'`.
  */
 export { useConfirm } from '@/ui/confirm-context';
-export type { ConfirmOptions } from '@/ui/confirm-context';
+export type { ConfirmChoice, ConfirmOptions } from '@/ui/confirm-context';
 
 /**
  * Thay window.confirm bằng ConfirmDialog (Radix) qua một API async dùng chung:
@@ -40,10 +40,16 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     });
   }) as ConfirmFn, []);
 
-  const settle = (result: boolean) => {
-    const answer = opts?.checkbox
-      ? ({ ok: result, checked: checkedRef.current } as const)
-      : result;
+  const settle = (result: boolean, picked = false) => {
+    const answer = opts?.choice
+      ? picked
+        ? 'choice'
+        : result
+          ? 'confirm'
+          : 'cancel'
+      : opts?.checkbox
+        ? ({ ok: result, checked: checkedRef.current } as const)
+        : result;
     resolver.current?.(answer as never);
     resolver.current = null;
     setOpts(null);
@@ -66,6 +72,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             checkedRef.current = next;
             setChecked(next);
           }}
+          extra={opts.choice ? { label: opts.choice.label, onClick: () => settle(false, true) } : undefined}
           onConfirm={() => settle(true)}
           onCancel={() => settle(false)}
         />

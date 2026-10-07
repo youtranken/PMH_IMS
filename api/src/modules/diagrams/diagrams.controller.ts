@@ -156,6 +156,15 @@ class DiscardDraftsDto extends DraftsQueryDto {
   @IsOptional() @IsString() @MaxLength(2000, { message: 'Dải phiên bản không hợp lệ.' }) ranges?: string;
 }
 
+/** "Chỉ giữ bản này" (Q-26 07/10): bản nháp được giữ nội dung. */
+class CollapseQueryDto {
+  @IsUUID(undefined, { message: 'Phiên bản không hợp lệ.' }) versionId!: string;
+}
+
+class CollapseDraftsDto extends CollapseQueryDto {
+  @IsOptional() @IsString() @MaxLength(2000, { message: 'Dải phiên bản không hợp lệ.' }) ranges?: string;
+}
+
 /** Tên gõ lại để xác nhận "Xoá hẳn" / "Xóa vĩnh viễn" — service so với tên thật. */
 class PurgeDto {
   @IsString() @Length(1, 120, { message: 'Gõ lại đúng tên bản vẽ để xác nhận.' }) name!: string;
@@ -421,6 +430,25 @@ export class DiagramsController {
   @Audited('diagram.drafts_discarded', 'diagram', { writtenByService: true })
   discardDrafts(@Param() params: IdParamDto, @Body() dto: DiscardDraftsDto, @Req() req: AuthedRequest) {
     return this.prune.discardDrafts({ email: req.user!.email, role: req.user!.role }, params.id, dto.ranges, dto.fromSeq);
+  }
+
+  /**
+   * "Chỉ giữ bản này" (Q-26 07/10): gộp mọi bản nháp về MỘT lần lưu mang nội dung bản chọn. Cùng quyền,
+   * cùng mã sơ đồ như "Bỏ bản nháp"; xem trước nói sẽ xoá dải nào và bản gộp mang số mấy.
+   */
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Get(':id/drafts/collapse')
+  collapsePreview(@Param() params: IdParamDto, @Query() query: CollapseQueryDto, @Req() req: AuthedRequest) {
+    return this.prune.collapsePreview({ email: req.user!.email, role: req.user!.role }, params.id, query.versionId);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @RequiresStepUp('diagram')
+  @Post(':id/drafts/collapse')
+  @Audited('diagram.drafts_collapsed', 'diagram', { writtenByService: true })
+  collapseDrafts(@Param() params: IdParamDto, @Body() dto: CollapseDraftsDto, @Req() req: AuthedRequest) {
+    return this.prune.collapseDrafts({ email: req.user!.email, role: req.user!.role }, params.id, dto.versionId, dto.ranges);
   }
 
   /** "Xoá hẳn" bản vẽ chưa phát hành lần nào (Q-23): Admin/SA hoặc người tạo — service kiểm. */

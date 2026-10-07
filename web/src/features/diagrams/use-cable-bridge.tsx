@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '@/lib/api-client';
+import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
@@ -12,7 +12,7 @@ import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
 import { bindEdgeValue, cableView, diffAutosave, edgeById, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
-import { cellIdsIn, drawingGeometry, linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
+import { cellIdsIn, drawingGeometry, edgeRestoreCells, linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
 import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
@@ -205,34 +205,80 @@ export function useCableBridge({
     });
   };
 
-  const askRemove = async (removed: { id: string; linkId: string }[]) => {
-    const known = removed.map((r) => links.current.get(r.linkId)).filter((l): l is DiagramLink => Boolean(l));
+  /**
+   * Trả nét dây (và nhãn cổng hai đầu) về như trong XML trước khi xoá — draw.io xoá nét TRƯỚC khi IMS
+   * kịp hỏi, nên "Hủy" và "gỡ kết nối thất bại" phải tự đặt nét lại.
+   */
+  const restoreEdges = (prevXml: string, edgeIds: string[]) => {
+    const cells = edgeRestoreCells(prevXml, edgeIds);
+    if (cells.edges.length === 0) return;
+    withFile((file) => {
+      const pages = pageIds(file);
+      const pageId = pages[Math.min(page(), pages.length - 1)];
+      if (!pageId) return;
+      send({ action: 'patch', patch: insertPatch(pageId, cells.edges) });
+      if (cells.labels.length > 0) send({ action: 'patch', patch: insertPatch(pageId, cells.labels) });
+    });
+  };
+
+  /** "Sắp lại dây" (Q-26 07/10): một mục cho hai cách — giữ điểm uốn đã kéo, hay đi lại từ đầu. */
+  const askRoute = async () => {
+    const answer = await ask({
+      title: t('diagrams.cable.routeTitle'),
+      message: t('diagrams.cable.routeMessage'),
+      confirmLabel: t('diagrams.cable.routeReroute'),
+      choice: { label: t('diagrams.cable.routeKeepBends') },
+    });
+    if (answer === 'confirm') route('reroute');
+    else if (answer === 'choice') route('orthogonal');
+  };
+
+  const askRemove = async (removed: { id: string; linkId: string }[], prevXml: string) => {
+    const known = removed.map((r) => ({ edgeId: r.id, link: links.current.get(r.linkId) })).filter((r): r is { edgeId: string; link: DiagramLink } => Boolean(r.link));
     if (known.length === 0) return;
-    const names = known.map((l) => `${l.deviceCode} ${l.portLabel} ↔ ${l.peerDeviceCode} ${l.peerPort ?? '—'}`);
-    // Nút mặc định (✕, Esc, Enter ở nút đóng) = "Chỉ xoá nét vẽ": không gọi gì.
-    const remove = await ask({
+    const names = known.map(({ link: l }) => `${l.deviceCode} ${l.portLabel} ↔ ${l.peerDeviceCode} ${l.peerPort ?? '—'}`);
+    // Ba câu trả lời (Q-26 07/10): gỡ luôn kết nối / chỉ xoá nét / Hủy (✕, Esc) = trả nét về.
+    const answer = await ask({
       title: t('diagrams.cable.removeTitle'),
       message: t('diagrams.cable.removeMessage', { links: names.join('; ') }),
-      cancelLabel: t('diagrams.cable.removeOnlyDrawing'),
+      cancelLabel: t('diagrams.cable.removeCancel'),
+      choice: { label: t('diagrams.cable.removeOnlyDrawing') },
       confirmLabel: t('diagrams.cable.removeLink'),
       danger: true,
     });
-    if (!remove) {
+    if (answer === 'cancel') {
+      restoreEdges(prevXml, known.map((k) => k.edgeId));
+      return;
+    }
+    if (answer === 'choice') {
       // Chỉ xoá nét: kết nối vẫn còn, giờ là "chưa vẽ" — dải "Vẽ vào" phải thấy nó ngay.
       withFile((file) => refreshUndrawn(file));
       return;
     }
     let done = 0;
-    for (const [i, link] of known.entries()) {
+    let gone = 0;
+    const failed: string[] = [];
+    for (const [i, { edgeId, link }] of known.entries()) {
       try {
         await apiFetch(`/api/v1/devices/${link.deviceId}/ports/${link.id}/unlink`, { method: 'POST', csrfToken: me.csrfToken });
         links.current.delete(link.id);
         done += 1;
       } catch (error) {
+        // Kết nối đã bị gỡ ở chỗ khác (trang thiết bị, bản vẽ khác) từ lúc mở bản vẽ: đúng điều người
+        // dùng muốn — không phải lỗi.
+        if (error instanceof ApiError && (error.body as { code?: string } | null)?.code === 'PORT_NOT_FOUND') {
+          links.current.delete(link.id);
+          gone += 1;
+          continue;
+        }
+        failed.push(edgeId);
         toast({ tone: 'error', message: t('diagrams.cable.removeFailed', { label: names[i], reason: errorMessage(error) }) });
       }
     }
+    // Gỡ hỏng thì kết nối vẫn còn — nét phải còn, không thì bản vẽ nói sai.
+    if (failed.length > 0) restoreEdges(prevXml, failed);
     if (done > 0) toast({ tone: 'ok', message: t('diagrams.cable.removed', { count: done }) });
+    if (gone > 0) toast({ tone: 'ok', message: t('diagrams.cable.removedElsewhere', { count: gone }) });
   };
 
   /**
@@ -288,7 +334,8 @@ export function useCableBridge({
     });
 
   const onAutosave = (xml: string) => {
-    const diff = diffAutosave(lastXml.current, xml, new Set(links.current.keys()));
+    const prevXml = lastXml.current;
+    const diff = diffAutosave(prevXml, xml, new Set(links.current.keys()));
     lastXml.current = xml;
     setCurrentXml(xml);
     if (diff.strip.length > 0) stripLinks(diff.strip);
@@ -300,7 +347,7 @@ export function useCableBridge({
       const fresh = diff.added.filter((e) => !alive.some((q) => q.id === e.id));
       return [...alive, ...fresh];
     });
-    if (diff.removed.length > 0) void askRemove(diff.removed);
+    if (diff.removed.length > 0) void askRemove(diff.removed, prevXml);
   };
 
   /** Chèn nét cho các kết nối có HAI đầu trên bản vẽ; máy chưa có trên bản vẽ thì chỉ ghi kho. */
@@ -371,8 +418,7 @@ export function useCableBridge({
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
     { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setBulkOpen(true)) },
     { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: () => setUndeclaredOpen(true) },
-    { key: 'cable-orthogonal', label: t('diagrams.cable.orthogonalButton'), disabled: !ready, onSelect: () => route('orthogonal') },
-    { key: 'cable-reroute', label: t('diagrams.cable.rerouteButton'), disabled: !ready, onSelect: () => route('reroute') },
+    { key: 'cable-route', label: t('diagrams.cable.routeButton'), disabled: !ready, onSelect: () => void askRoute() },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
   ];
   const popovers = (

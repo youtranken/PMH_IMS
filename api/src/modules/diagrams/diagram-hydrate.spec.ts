@@ -384,6 +384,18 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
     });
   });
 
+  it('khung tủ IMS đã lưu kiểu cũ (tên dưới đáy) → mở ra tên nằm trong dải trên khung; hình rack tự vẽ không đụng (Q-26 07/10)', () => {
+    const old = 'shape=mxgraph.rackGeneral.rackCabinet3;rackUnitSize=14.8;container=1;collapsible=0;childLayout=rack;allowGaps=1;marginLeft=33;marginRight=9;marginTop=21;marginBottom=22;numDisp=descend;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;html=0;';
+    const own = 'shape=mxgraph.rackGeneral.rackCabinet3;container=1;childLayout=rack;verticalLabelPosition=bottom;verticalAlign=top;';
+    const xml = page(
+      `<UserObject label="Tủ R1" ims_cabinet_id="c1" id="r1"><mxCell style="${old}" vertex="1" parent="1"><mxGeometry x="0" y="0" width="204" height="300" as="geometry"/></mxCell></UserObject>` +
+        `<UserObject label="Tủ tự vẽ" id="r2"><mxCell style="${own}" vertex="1" parent="1"><mxGeometry x="300" y="0" width="204" height="300" as="geometry"/></mxCell></UserObject>`,
+    );
+    const wet = hydrateDiagramXml(xml, devices);
+    expect(styleOf(wet, 'r1')).toMatchObject({ verticalLabelPosition: 'middle', verticalAlign: 'top', childLayout: 'rack' });
+    expect(styleOf(wet, 'r2')).toMatchObject({ verticalLabelPosition: 'bottom' });
+  });
+
   describe('nhãn cổng ở HAI ĐẦU dây (Q-23 06/10)', () => {
     const ends = (xml: string) => [...xml.matchAll(/<mxCell id="([^"]+)" value="([^"]*)" style="([^"]*)" vertex="1" connectable="0" parent="([^"]+)"><mxGeometry x="([^"]+)" relative="1"/g)].map((m) => ({ id: m[1], value: m[2], style: m[3], parent: m[4], x: Number(m[5]) }));
 

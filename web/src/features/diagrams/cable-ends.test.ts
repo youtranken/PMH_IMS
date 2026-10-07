@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cellIdsIn, drawingGeometry, linkEndTexts, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
+import { cellIdsIn, drawingGeometry, edgeRestoreCells, linkEndTexts, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
 
 const A = 'aaaaaaaa-0000-4000-8000-00000000000a';
 const B = 'aaaaaaaa-0000-4000-8000-00000000000b';
@@ -148,5 +148,36 @@ describe('drawingGeometry — khung tuyệt đối (cộng dồn khung cha) và 
       '<mxGeometry x="-0.9" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>',
       '<mxGeometry x="0.9" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>',
     ]);
+  });
+});
+
+describe('edgeRestoreCells — "Hủy" khi xoá nét dây: trả nét (và hai nhãn cổng) về đúng như trước', () => {
+  it('nét bọc UserObject + điểm gấp + hai nhãn đầu → ô nét chèn lại đúng chỗ, rồi tới hai nhãn con', () => {
+    const before = file(
+      '<mxCell id="a" vertex="1" parent="1"><mxGeometry x="0" y="0" width="10" height="10" as="geometry"/></mxCell>' +
+        '<UserObject label="" ims_link_id="l1" ims_port_labels="ends" id="e1"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="a" target="b"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="6"/></Array></mxGeometry></mxCell></UserObject>' +
+        '<mxCell id="e1-ims-ps" value="Gi1" style="edgeLabel;imsPortEnd=1;" vertex="1" connectable="0" parent="e1"><mxGeometry x="-0.9" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>',
+    );
+    const cells = edgeRestoreCells(before, ['e1']);
+    expect(cells.edges).toEqual([
+      {
+        id: 'e1',
+        edge: 1,
+        parent: '1',
+        previous: 'a',
+        source: 'a',
+        target: 'b',
+        style: 'edgeStyle=orthogonalEdgeStyle;',
+        geometry: '<mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="5" y="6"/></Array></mxGeometry>',
+        xmlValue: '<UserObject label="" ims_link_id="l1" ims_port_labels="ends" id="e1"/>',
+      },
+    ]);
+    expect(cells.labels).toEqual([
+      { id: 'e1-ims-ps', vertex: 1, connectable: 0, parent: 'e1', value: 'Gi1', style: 'edgeLabel;imsPortEnd=1;', geometry: '<mxGeometry x="-0.9" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>' },
+    ]);
+  });
+
+  it('id không có trong XML cũ → bỏ qua', () => {
+    expect(edgeRestoreCells(file(edge), ['khong-co'])).toEqual({ edges: [], labels: [] });
   });
 });

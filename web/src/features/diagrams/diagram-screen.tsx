@@ -464,7 +464,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         title={title}
         tabs={tabs}
         versionsAction={versionsAction}
-        reviewMenu={[...reviewPrimary, ...reviewMenu]}
         reviewPopovers={reviewable ? review.popovers : null}
         reviewStatus={status}
         nextStep={nextStep}
@@ -840,7 +839,6 @@ function DiagramEditor({
   title,
   tabs,
   versionsAction,
-  reviewMenu,
   reviewPopovers,
   reviewStatus,
   nextStep,
@@ -856,11 +854,6 @@ function DiagramEditor({
   title: string;
   tabs: ReactNode;
   versionsAction: BarAction;
-  /**
-   * Gửi duyệt / Phát hành / Duyệt… / Ghim của `useDiagramReview` — cùng việc với chế độ Xem, nhưng
-   * ở đây vào menu ⋮: việc chính của màn sửa là Thiết bị kho và Lưu.
-   */
-  reviewMenu: BarAction[];
   reviewPopovers: ReactNode;
   /** Thẻ "Chờ duyệt" / lỗi tải trang duyệt cho vùng trạng thái. */
   reviewStatus: ReactNode;
@@ -1487,7 +1480,8 @@ function DiagramEditor({
           : []),
         ...cables.menu,
         { key: 'draft', label: t('diagrams.cable.draftButton'), disabled: !ready, onSelect: () => setDraftOpen(true) },
-        ...reviewMenu,
+        // Phát hành / Gửi duyệt / ghim không nằm ở menu khi VẼ (Q-26 07/10): đã có ở thông báo sau khi
+        // Lưu và ở chế độ xem; khi vẽ không ghim được.
         versionsAction,
       ]}
       popovers={

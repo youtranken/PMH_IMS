@@ -1112,6 +1112,10 @@ Góp ý sau khi thử (07/10, tag `v1.7.1`): sửa cổng mẫu thì máy cùng 
 ảnh model thắng ảnh riêng và khoá mặt đó (UI + API 409 `DEVICE_PHOTO_FROM_MODEL`); thay / bỏ ảnh thì tệp
 ảnh cũ tự xoá mềm (`FilesApiService.trashWithin`); bỏ khu chọn ảnh từ giấy tờ; nhãn cổng sát đầu dây
 (`portEndOffset` hai bên api/web cùng phép); "Loại bản vẽ" + `childNodeType`.
+Đợt 2 (07/10, tag `v1.7.2`): "Chỉ giữ bản này" gộp nháp về một lần lưu (`planCollapse`, phiên bản vẫn
+chỉ-thêm — xoá rồi ghi lại, không sửa số); gán model hàng loạt (`POST /device-models/:id/adopt`); xoá
+nét dây ba lựa chọn (`useConfirm` có `choice`, Hủy chèn lại nét từ XML trước khi xoá); tên tủ trong dải
+trên khung (`RACK_LABEL_TOP`, khung cũ đổi lúc mở); menu ⋮ khi vẽ gọn ("Sắp lại dây", bỏ mục duyệt).
 
 7. **Người dùng thao tác tay trên DB dev giữa lượt E2E đầy đủ** làm cửa canh rác ở teardown báo "hàng sống
    sót" (bản vẽ không mang chữ E2E). Kiểm `created_by` trước khi nghi bài kiểm.

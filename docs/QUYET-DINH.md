@@ -893,6 +893,22 @@ thay CHỖ LẤY Số U, ảnh và cổng.
     (Tổng công ty → Site → Tầng → Phòng → Tủ mạng).
   - **Khung cắt ảnh vẫn khoá theo tỉ lệ thật của Số U** (482 × 44,45 mm mỗi U); không phóng to ô
     1U. Ảnh cao hơn khung là dấu hiệu Số U của model khai thiếu — hộp cắt nhắc kiểm lại Số U.
+- **Góp ý đợt 2 sau khi thử Epic 11 (07/10/2026, chủ dự án chốt):**
+  - **"Chỉ giữ bản này" — gộp nháp về một bản.** Ở khu "Nháp chưa phát hành", chọn MỘT bản nháp
+    (vd #6) → mọi bản nháp chưa phát hành, chưa đặt tên bị xoá (kể cả #1 — mốc giữ chỉ còn là bản
+    đã phát hành / đặt tên), nội dung bản chọn được ghi lại thành một lần lưu mới, nhận số kế tiếp
+    sau các bản còn giữ — không còn bản nào thì là **#1**. Không SỬA phiên bản cũ (vẫn chỉ-thêm),
+    nhật ký ghi "gộp #1–#6 thành #1". Bổ sung cho luật "không xoá bản nháp ở GIỮA" của Q-23: gộp
+    không để chuỗi hụt vì bản mới không trỏ về bản nào đã xoá. Cùng chặn như Bỏ bản nháp (yêu cầu
+    chờ duyệt trỏ vào bản sẽ xoá; danh sách đổi từ lúc xem trước).
+  - **Gán model hàng loạt:** Danh mục › Model hiện số máy ghi CHỮ model này (cùng loại, cùng khoá
+    chuẩn hoá) mà chưa gán, kèm nút "Gán model cho các máy này" (SA/Admin). Gán như gán từ form: máy
+    nhận Số U, ảnh, cổng mẫu; máy không gán được (vd chồng U) được liệt kê kèm lý do, máy khác vẫn gán.
+  - **Menu ⋮ khi vẽ:** gộp "Bẻ dây vuông góc" + "Tự đi lại dây" thành một mục "Sắp lại dây" (hỏi
+    giữ điểm uốn hay đi lại từ đầu); bỏ "Phát hành / Gửi duyệt / Duyệt / Rút yêu cầu" và "Bình luận
+    đã ghim" khỏi menu khi đang vẽ (đã có ở thông báo sau khi Lưu và ở chế độ xem).
+  - Xoá nét dây có ba lựa chọn (Gỡ luôn kết nối / Chỉ xóa nét vẽ / Hủy = trả nét về); tên tủ nằm
+    trong dải trên khung rack; đổi máy khi khai kết nối thì xoá ô cổng đầu đó.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 

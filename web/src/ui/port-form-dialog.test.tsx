@@ -191,4 +191,39 @@ describe('PortFormDialog ở màn sơ đồ (device = null)', () => {
     await user.type(peerPort, 'eth9');
     expect(await within(b).findByText(/Cổng "eth9" chưa có trong danh sách cổng của PC-E2E-02/)).toBeInTheDocument();
   });
+
+  it('đổi máy ở Đầu A / Đầu B thì ô cổng của đầu đó xoá trắng — cổng của máy cũ không đi theo sang máy mới', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, { ports: [], incoming: [] }))));
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <PortFormDialog
+            device={null}
+            port={null}
+            csrfToken="t"
+            onDrawing={[
+              { id: 'sw1', code: 'SW-E2E-01' },
+              { id: 'sw2', code: 'SW-E2E-02' },
+              { id: 'pc3', code: 'PC-E2E-03' },
+            ]}
+            onClose={() => {}}
+            onSaved={() => {}}
+          />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ bản ghi' });
+    const b = screen.getByRole('group', { name: 'Đầu B — đầu kia' });
+    await user.click(within(a).getByRole('button', { name: 'SW-E2E-01' }));
+    await user.type(portInput(), 'Gi1/0/5');
+    await user.click(within(b).getByRole('button', { name: 'PC-E2E-03' }));
+    const peerPort = () => document.getElementById('port-peer-port') as HTMLInputElement;
+    await user.type(peerPort(), 'eth0');
+    await user.click(within(a).getByRole('button', { name: 'SW-E2E-02' }));
+    expect(portInput()).toHaveValue('');
+    expect(peerPort()).toHaveValue('eth0');
+    await user.click(within(b).getByRole('button', { name: 'SW-E2E-01' }));
+    expect(peerPort()).toHaveValue('');
+  });
 });
