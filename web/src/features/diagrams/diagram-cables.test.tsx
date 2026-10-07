@@ -253,7 +253,7 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     fromDrawio({ event: 'autosave', xml: model(DEVICES + linked('e1', 'a', 'b', 'link-1')) });
     fromDrawio({ event: 'autosave', xml: model(DEVICES) });
     await user.click(within(await screen.findByRole('dialog', { name: 'Xóa nét dây đã khai' })).getByRole('button', { name: 'Gỡ luôn kết nối' }));
-    expect(await screen.findByText('1 kết nối đã được gỡ ở nơi khác từ trước — chỉ cần xoá nét.')).toBeInTheDocument();
+    expect(await screen.findByText('1 Kết nối đã được gỡ ở nơi khác từ trước — chỉ cần xóa nét.')).toBeInTheDocument();
     expect(screen.queryByText(/Không gỡ được/)).toBeNull();
     expect(messages().some((m) => m.action === 'patch')).toBe(false);
   });
