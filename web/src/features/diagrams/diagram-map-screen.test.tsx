@@ -324,6 +324,27 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(JSON.parse(String(discard?.[1]?.body))).toEqual({ ranges: '#14–#15', fromSeq: 14 });
   });
 
+  it('"Chỉ giữ bản này" ở #14 (Q-26 07/10): xem trước, hộp nói gộp dải nào thành bản số mấy, gửi đúng bản + dải đã thấy', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/diagrams/sv/drafts/collapse': (init) =>
+        init?.method === 'POST'
+          ? jsonResponse(201, { id: 'v13n', seq: 13, count: 3, ranges: '#13–#15' })
+          : jsonResponse(200, { count: 3, ranges: '#13–#15', keepSeq: null, keptDrafts: 0, blockedByApprovalId: null, nextSeq: 13 }),
+    });
+    renderScreen('/diagrams?node=sv');
+    const drafts = await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' });
+    const user = userEvent.setup();
+    await user.click(within(drafts).getByRole('button', { name: 'Chỉ giữ bản nháp #14' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Chỉ giữ bản nháp #14 của "Phòng server E2E"?' });
+    expect(confirm).toHaveTextContent('Gộp 3 lần lưu #13–#15 thành MỘT bản #13 mang nội dung của #14.');
+    await user.click(within(confirm).getByRole('button', { name: 'Chỉ giữ bản này' }));
+    expect(await screen.findByText('Đã gộp 3 lần lưu thành bản #13 của "Phòng server E2E".')).toBeInTheDocument();
+    const calls = fetchMock.mock.calls as unknown as Calls;
+    expect(calls.some(([url]) => String(url).endsWith('/api/v1/diagrams/sv/drafts/collapse?versionId=v14'))).toBe(true);
+    const post = calls.find(([url, init]) => String(url).endsWith('/drafts/collapse') && init?.method === 'POST');
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ versionId: 'v14', ranges: '#13–#15' });
+  });
+
   it('Bỏ nháp bị chặn vì yêu cầu chờ duyệt: báo rút trước, không hỏi xác nhận', async () => {
     routeFetch({
       '/api/v1/diagrams/sv/drafts': () => jsonResponse(200, { count: 3, ranges: '#13–#15', keepSeq: 12, keptDrafts: 0, blockedByApprovalId: 'a1' }),

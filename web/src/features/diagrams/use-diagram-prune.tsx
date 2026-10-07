@@ -78,6 +78,44 @@ export function useDiagramPrune(me: Me, run: Run, onPurged?: (node: DiagramNode)
     }
   };
 
+  /**
+   * "Chỉ giữ bản này" (Q-26 07/10): gộp mọi bản nháp về MỘT lần lưu mang nội dung bản chọn. Số và dải
+   * lấy từ server; trả `true` khi đã gộp.
+   */
+  const collapse = async (node: DiagramNode, version: { id: string; seq: number }): Promise<boolean> => {
+    const query = new URLSearchParams({ versionId: version.id }).toString();
+    try {
+      const preview = await run(() => apiFetch<DraftPreview & { nextSeq: number }>(`/api/v1/diagrams/${node.id}/drafts/collapse?${query}`), t('diagrams.prune.discardStepUp', { name: node.name }));
+      if (preview.blockedByApprovalId) {
+        toast({ tone: 'error', message: t('diagrams.prune.blocked') });
+        return false;
+      }
+      const ok = await ask({
+        title: t('diagrams.prune.collapseTitle', { seq: version.seq, name: node.name }),
+        message: t('diagrams.prune.collapseMessage', { count: preview.count, ranges: preview.ranges, next: preview.nextSeq, seq: version.seq }),
+        confirmLabel: t('diagrams.prune.collapse'),
+        danger: true,
+      });
+      if (!ok) return false;
+      const done = await run(
+        () =>
+          apiFetch<{ seq: number; count: number; ranges: string }>(`/api/v1/diagrams/${node.id}/drafts/collapse`, {
+            method: 'POST',
+            csrfToken: me.csrfToken,
+            // Dải đã hiện trong hộp: có người lưu thêm giữa chừng thì server từ chối.
+            body: JSON.stringify({ versionId: version.id, ranges: preview.ranges }),
+          }),
+        t('diagrams.prune.discardStepUp', { name: node.name }),
+      );
+      await refresh(node);
+      toast({ tone: 'ok', message: t('diagrams.prune.collapsed', { count: done.count, seq: done.seq, name: node.name }) });
+      return true;
+    } catch (error) {
+      if (!isStepUpCancelled(error)) toast({ tone: 'error', message: errorMessage(error) });
+      return false;
+    }
+  };
+
   const purge = async (node: DiagramNode) => {
     const ok = await ask({
       title: t('diagrams.prune.purgeTitle', { name: node.name }),
@@ -100,5 +138,5 @@ export function useDiagramPrune(me: Me, run: Run, onPurged?: (node: DiagramNode)
     }
   };
 
-  return { discard, purge };
+  return { discard, collapse, purge };
 }

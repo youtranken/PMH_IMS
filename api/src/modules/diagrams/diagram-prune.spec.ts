@@ -1,4 +1,4 @@
-import { planDraftDiscard, seqRanges, type PruneVersion } from './diagram-prune';
+import { planCollapse, planDraftDiscard, seqRanges, type PruneVersion } from './diagram-prune';
 
 function v(seq: number, extra: Partial<PruneVersion> = {}): PruneVersion {
   return { id: `v${seq}`, seq, basedOnVersionId: null, restoredFromVersionId: null, named: false, published: false, ...extra };
@@ -82,5 +82,53 @@ describe('seqRanges', () => {
     [[], ''],
   ])('%j → %s', (seqs, text) => {
     expect(seqRanges(seqs)).toBe(text);
+  });
+});
+
+describe('planCollapse — "Chỉ giữ bản này": gộp mọi bản nháp về MỘT bản (Q-26 07/10)', () => {
+  const ver = (seq: number, over: Partial<{ named: boolean; published: boolean; basedOn: string | null; restoredFrom: string | null }> = {}) => ({
+    id: `v${seq}`,
+    seq,
+    basedOnVersionId: over.basedOn === undefined ? (seq > 1 ? `v${seq - 1}` : null) : over.basedOn,
+    restoredFromVersionId: over.restoredFrom ?? null,
+    named: over.named ?? false,
+    published: over.published ?? false,
+  });
+  it.each([
+    {
+      name: 'chưa phát hành: giữ #6 → xoá #1–#6, bản gộp thành #1',
+      versions: [1, 2, 3, 4, 5, 6].map((n) => ver(n)),
+      official: null,
+      keep: 'v6',
+      discard: [1, 2, 3, 4, 5, 6],
+      nextSeq: 1,
+      refused: null,
+    },
+    {
+      name: 'có bản chính thức #2 + bản đặt tên #4 (trỏ về #3): giữ #2, #3, #4; bản gộp nhận số sau #4',
+      versions: [ver(1), ver(2, { published: true }), ver(3), ver(4, { named: true }), ver(5), ver(6)],
+      official: 'v2',
+      keep: 'v6',
+      discard: [5, 6],
+      nextSeq: 5,
+      refused: null,
+    },
+    { name: 'bản chọn đã đặt tên → không phải bản nháp', versions: [ver(1), ver(2, { named: true })], official: null, keep: 'v2', discard: [], nextSeq: 0, refused: 'not-draft' },
+    {
+      name: 'bản chọn bị một bản đặt tên trỏ tới → không gộp được',
+      versions: [ver(1), ver(2), ver(3, { named: true })],
+      official: null,
+      keep: 'v2',
+      discard: [],
+      nextSeq: 0,
+      refused: 'pinned',
+    },
+    { name: 'chỉ còn đúng bản đó là nháp → không có gì để gộp', versions: [ver(1, { published: true }), ver(2)], official: 'v1', keep: 'v2', discard: [], nextSeq: 0, refused: 'alone' },
+    { name: 'id lạ', versions: [ver(1)], official: null, keep: 'x', discard: [], nextSeq: 0, refused: 'missing' },
+  ])('$name', ({ versions, official, keep, discard, nextSeq, refused }) => {
+    const plan = planCollapse(versions, official, keep);
+    expect(plan.refused).toBe(refused);
+    expect(plan.discard.map((v) => v.seq)).toEqual(discard);
+    if (!refused) expect(plan.nextSeq).toBe(nextSeq);
   });
 });

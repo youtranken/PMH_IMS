@@ -48,6 +48,14 @@ function historyEntry(row: DiagramHistoryRow, t: TFunction): HistoryEntry {
       return { ...base, action: t('diagrams.history.restored', { seq }), detail: String(changes.summary ?? ''), tone: 'status' };
     case 'version.published':
       return { ...base, action: t('diagrams.history.published', { seq }), tone: 'status' };
+    case 'version.collapsed':
+      return { ...base, action: t('diagrams.history.collapsedVersion', { seq }), detail: String(changes.summary ?? ''), tone: 'status' };
+    case 'versions.collapsed':
+      return {
+        ...base,
+        action: t('diagrams.history.collapsed', { ranges: String(changes.ranges ?? ''), kept: typeof changes.keptSeq === 'number' ? changes.keptSeq : null, next: typeof changes.newSeq === 'number' ? changes.newSeq : null }),
+        tone: 'void',
+      };
     case 'versions.discarded':
       return {
         ...base,

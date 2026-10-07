@@ -179,6 +179,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       actions={actionsOf(selectedNode)}
       onSelect={(id) => update({ node: id })}
       discard={prune.discard}
+      collapse={prune.collapse}
     />
   ) : null;
 

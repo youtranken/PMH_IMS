@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -7,9 +7,10 @@ import { ApprovalsApiService } from '../approvals/approvals.api';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import type { UserRole } from '../auth/types';
 import { collectUnusedImagesWithin } from './diagram-images';
-import { planDraftDiscard, seqRanges, type DraftPlan, type PruneVersion } from './diagram-prune';
+import { planCollapse, planDraftDiscard, seqRanges, type CollapsePlan, type DraftPlan, type PruneVersion } from './diagram-prune';
 import { canManageNode } from './diagram-presentation';
-import { diagramDriftTable, diagramHistoryTable, diagramPresenceTable, diagramTable } from './diagram.schema';
+import { diagramDriftTable, diagramHistoryTable, diagramPresenceTable, diagramTable, diagramVersionTable } from './diagram.schema';
+import { DiagramsService } from './diagrams.service';
 
 /** Cùng mã với `DIAGRAM_PUBLISH_KIND` của `diagram-review.service.ts` — không import để tránh vòng phụ thuộc. */
 const PUBLISH_KIND = 'diagram_publish';
@@ -43,7 +44,63 @@ export class DiagramPruneService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
     private readonly approvals: ApprovalsApiService,
+    private readonly diagrams: DiagramsService,
   ) {}
+
+  /** Xem trước "Chỉ giữ bản này" (Q-26 07/10): xoá bao nhiêu lần lưu, bản gộp sẽ mang số mấy. */
+  async collapsePreview(actor: PruneActor, diagramId: string, versionId: string): Promise<DraftPreview & { nextSeq: number }> {
+    return this.db.transaction(async (tx) => {
+      const diagram = await this.lock(tx, diagramId, false);
+      assertCanDiscard(diagram, actor);
+      const plan = planCollapse(await this.versionsOf(tx, diagramId), diagram.officialVersionId, versionId);
+      if (plan.refused) throw collapseRefused(plan.refused);
+      return { ...(await this.preview(diagramId, { keepSeq: null, discard: plan.discard, keptDrafts: 0 })), nextSeq: plan.nextSeq };
+    });
+  }
+
+  /**
+   * "Chỉ giữ bản này" (Q-26 07/10): xoá mọi bản nháp (cùng loại trừ như "Bỏ bản nháp") rồi ghi nội dung
+   * bản được chọn thành MỘT lần lưu mới — không còn bản nào giữ lại thì nó là #1. Nội dung đọc trước khi
+   * xoá, cùng transaction; ảnh nhúng nối lại vào bản mới trước khi dọn ảnh mồ côi. `expectRanges` như
+   * `discardDrafts`: có người lưu thêm giữa lúc hộp xác nhận mở thì 409.
+   */
+  async collapseDrafts(actor: PruneActor, diagramId: string, versionId: string, expectRanges?: string): Promise<{ id: string; seq: number; count: number; ranges: string }> {
+    return this.db.transaction(async (tx) => {
+      const diagram = await this.lock(tx, diagramId, true);
+      assertCanDiscard(diagram, actor);
+      if (diagram.archivedAt) throw archived();
+      const plan = planCollapse(await this.versionsOf(tx, diagramId), diagram.officialVersionId, versionId);
+      if (plan.refused) throw collapseRefused(plan.refused);
+      const preview = await this.preview(diagramId, { keepSeq: null, discard: plan.discard, keptDrafts: 0 });
+      if (expectRanges !== undefined && expectRanges !== preview.ranges) {
+        throw new ConflictException({
+          code: 'DIAGRAM_DRAFTS_CHANGED',
+          message: `Bản vẽ vừa có thay đổi: nay sẽ gộp ${preview.count} lần lưu ${preview.ranges}. Bấm "Chỉ giữ bản này" lại để xác nhận số mới.`,
+        });
+      }
+      if (preview.blockedByApprovalId) {
+        throw new ConflictException({
+          code: 'DIAGRAM_DISCARD_PENDING',
+          message: 'Có yêu cầu phát hành đang chờ duyệt trỏ vào một bản nháp sẽ gộp — người gửi rút yêu cầu trước.',
+        });
+      }
+      const [source] = await tx
+        .select()
+        .from(diagramVersionTable)
+        .where(and(eq(diagramVersionTable.diagramId, diagramId), eq(diagramVersionTable.id, versionId)));
+      const count = await deleteVersions(tx, diagramId, plan.discard.map((v) => v.id), 'drafts');
+      const id = await this.diagrams.insertCollapsedWithin(tx, actor.email, diagramId, source, plan.nextSeq);
+      await collectUnusedImagesWithin(tx);
+      await this.record(tx, actor.email, diagramId, 'versions.collapsed', 'diagram.drafts_collapsed', {
+        count,
+        ranges: preview.ranges,
+        seqs: plan.discard.map((v) => v.seq),
+        keptSeq: source.seq,
+        newSeq: plan.nextSeq,
+      });
+      return { id, seq: plan.nextSeq, count, ranges: preview.ranges };
+    });
+  }
 
   /** `fromSeq` = chỉ xem trước dải từ số đó trở về sau (panel tick một bản nháp); thiếu = mọi bản nháp. */
   async draftPreview(actor: PruneActor, diagramId: string, fromSeq?: number): Promise<DraftPreview> {
@@ -230,6 +287,17 @@ export class DiagramPruneService {
   }
 
   private async plan(tx: Tx, diagramId: string, officialVersionId: string | null, fromSeq?: number): Promise<DraftPlan> {
+    const plan = planDraftDiscard(await this.versionsOf(tx, diagramId), officialVersionId, fromSeq);
+    if (plan.fromInvalid) {
+      throw new BadRequestException({
+        code: 'DIAGRAM_DRAFT_FROM_INVALID',
+        message: `Chỉ bỏ được bản nháp SAU bản ${plan.keepSeq === null ? 'giữ lại' : `#${plan.keepSeq}`} — chọn lại bản nháp bắt đầu.`,
+      });
+    }
+    return plan;
+  }
+
+  private async versionsOf(tx: Tx, diagramId: string): Promise<PruneVersion[]> {
     const { rows } = await tx.execute<{
       id: string;
       seq: number;
@@ -247,7 +315,7 @@ export class DiagramPruneService {
         FROM diagram_version v
        WHERE v.diagram_id = ${diagramId}
     `);
-    const versions: PruneVersion[] = rows.map((r) => ({
+    return rows.map((r) => ({
       id: r.id,
       seq: Number(r.seq),
       basedOnVersionId: r.based_on_version_id,
@@ -255,14 +323,6 @@ export class DiagramPruneService {
       named: r.named,
       published: r.published,
     }));
-    const plan = planDraftDiscard(versions, officialVersionId, fromSeq);
-    if (plan.fromInvalid) {
-      throw new BadRequestException({
-        code: 'DIAGRAM_DRAFT_FROM_INVALID',
-        message: `Chỉ bỏ được bản nháp SAU bản ${plan.keepSeq === null ? 'giữ lại' : `#${plan.keepSeq}`} — chọn lại bản nháp bắt đầu.`,
-      });
-    }
-    return plan;
   }
 
   private async preview(diagramId: string, plan: DraftPlan): Promise<DraftPreview> {
@@ -293,6 +353,18 @@ async function deleteVersions(tx: Tx, diagramId: string, ids: string[], mode: 'd
     sql`SELECT diagram_delete_versions(${diagramId}::uuid, ${`{${ids.join(',')}}`}::uuid[], ${mode}) AS n`,
   );
   return Number(rows[0].n);
+}
+
+function collapseRefused(reason: NonNullable<CollapsePlan['refused']>): HttpException {
+  const message = {
+    missing: 'Không tìm thấy phiên bản này của bản vẽ.',
+    'not-draft': 'Bản này đã đặt tên, từng phát hành hoặc là bản chính thức — vốn đã được giữ, không cần gộp.',
+    pinned: 'Bản này là gốc của một bản đã đặt tên / phát hành — không gộp được; chọn bản nháp mới hơn.',
+    alone: 'Bản này đã là bản nháp duy nhất — không có gì để gộp.',
+  }[reason];
+  return reason === 'missing'
+    ? new NotFoundException({ code: 'DIAGRAM_VERSION_NOT_FOUND', message })
+    : new ConflictException({ code: 'DIAGRAM_COLLAPSE_REFUSED', message });
 }
 
 function assertCanDiscard(diagram: { kind: 'official' | 'presentation'; ownerEmail: string | null; createdBy: string }, actor: PruneActor): void {

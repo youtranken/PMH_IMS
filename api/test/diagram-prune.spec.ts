@@ -110,7 +110,7 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
     diagrams = new DiagramsService(db, audit, config, catalog, devices, ipam, users);
     review = new DiagramReviewService(db, audit, diagrams, devices, approvals, new OutboxService(db, config, noopSweep), users, kinds);
     review.onModuleInit();
-    prune = new DiagramPruneService(db, audit, approvals);
+    prune = new DiagramPruneService(db, audit, approvals, diagrams);
     for (const user of [SA, ADMIN, MEMBER]) {
       await scratch.pool.query(`INSERT INTO users (email, full_name, role, password_hash) VALUES ($1, $2, $3, 'x')`, [user.email, user.fullName, user.role]);
     }
@@ -268,6 +268,22 @@ describe('Sơ đồ mạng · bỏ bản nháp, xoá hẳn (Q-23)', () => {
       await expect(prune.draftPreview(SA, d.id, 2)).rejects.toMatchObject({ status: 400, response: { code: 'DIAGRAM_DRAFT_FROM_INVALID' } });
       await expect(prune.discardDrafts(SA, d.id, undefined, 1)).rejects.toMatchObject({ status: 400, response: { code: 'DIAGRAM_DRAFT_FROM_INVALID' } });
       expect(await seqs(d.id)).toEqual([1, 2, 3]);
+    });
+
+    it('"Chỉ giữ bản này" (Q-26 07/10): 6 lần lưu chưa phát hành, giữ #6 → còn MỘT bản #1 mang nội dung #6; lịch sử ghi gộp', async () => {
+      const d = await drawn(6);
+      expect(await prune.collapsePreview(SA, d.id, d.versions[5])).toMatchObject({ count: 6, ranges: '#1–#6', nextSeq: 1, blockedByApprovalId: null });
+      await expect(prune.collapseDrafts(SA, d.id, d.versions[5], '#1–#5')).rejects.toMatchObject({ response: { code: 'DIAGRAM_DRAFTS_CHANGED' } });
+      const done = await prune.collapseDrafts(SA, d.id, d.versions[5], '#1–#6');
+      expect(done).toMatchObject({ seq: 1, count: 6 });
+      expect(await seqs(d.id)).toEqual([1]);
+      const { rows } = await scratch.pool.query<{ id: string; xml: string; based_on_version_id: string | null }>(`SELECT id, xml, based_on_version_id FROM diagram_version WHERE diagram_id = $1`, [d.id]);
+      expect(rows[0]).toMatchObject({ id: done.id, based_on_version_id: null });
+      expect(rows[0].xml).toContain('Hình 6');
+      expect(await count(`SELECT count(*)::int n FROM diagram_history WHERE diagram_id = $1 AND action = 'versions.collapsed' AND changes ->> 'ranges' = '#1–#6' AND (changes ->> 'keptSeq')::int = 6 AND (changes ->> 'newSeq')::int = 1`, [d.id])).toBe(1);
+      expect(await count(`SELECT count(*)::int n FROM audit_log WHERE action = 'diagram.drafts_collapsed' AND object_id = $1`, [d.id])).toBe(1);
+      // Còn một bản duy nhất: không có gì để gộp.
+      await expect(prune.collapseDrafts(SA, d.id, done.id)).rejects.toMatchObject({ response: { code: 'DIAGRAM_COLLAPSE_REFUSED' } });
     });
 
     it('chưa có bản chính thức: giữ phiên bản đầu', async () => {

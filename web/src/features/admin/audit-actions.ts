@@ -128,6 +128,8 @@ export const ACTION_KEY: Record<string, string> = {
   'diagram.editing_started': 'audit.actions.diagramEditingStarted',
   'diagram.published': 'audit.actions.diagramPublished',
   'diagram.drafts_discarded': 'audit.actions.diagramDraftsDiscarded',
+  'diagram.drafts_collapsed': 'audit.actions.diagramDraftsCollapsed',
+  'diagram.version_collapsed': 'audit.actions.diagramVersionCollapsed',
   'diagram.deleted': 'audit.actions.diagramDeleted',
   'diagram.erased': 'audit.actions.diagramErased',
   'diagram.exported': 'audit.actions.diagramExported',
