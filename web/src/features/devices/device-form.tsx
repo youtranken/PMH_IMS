@@ -734,7 +734,7 @@ export function DeviceForm({
           <p className="muted small">{t('devices.photoSectionHint')}</p>
           {device ? (
             <DevicePhotoEditor
-              pendingModel={model?.id !== (device.deviceModelId ?? null) ? model : undefined}
+              pendingModel={(model?.id ?? null) !== (device.deviceModelId ?? null) ? model : undefined}
               deviceId={device.id}
               deviceTypeId={device.deviceTypeId}
               deviceTypeName={device.deviceTypeName}
