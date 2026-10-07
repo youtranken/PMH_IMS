@@ -37,13 +37,22 @@ export type ConfirmOptions = {
    * viễn một ngăn két). Một cú bấm nhầm trên menu ⋯ không được đủ để mất một mật khẩu.
    */
   typeToConfirm?: { expected: string; label: string };
+  /**
+   * Lựa chọn THỨ BA, đứng giữa Hủy và nút xác nhận — vd xoá nét dây: "Gỡ luôn kết nối" / "Chỉ xóa nét
+   * vẽ" / Hủy (trả nét về). Khai thì kết quả là `'confirm' | 'choice' | 'cancel'`; ✕ / Esc là `'cancel'`.
+   */
+  choice?: { label: string };
 };
+
+/** Kết quả khi có `choice`. */
+export type ConfirmChoice = 'confirm' | 'choice' | 'cancel';
 
 /** Kết quả khi có `checkbox`: bấm gì, và ô tick ở trạng thái nào lúc bấm. */
 type ConfirmResult = { ok: boolean; checked: boolean };
 
 export type ConfirmFn = {
   (o: ConfirmOptions & { checkbox: NonNullable<ConfirmOptions['checkbox']> }): Promise<ConfirmResult>;
+  (o: ConfirmOptions & { choice: NonNullable<ConfirmOptions['choice']> }): Promise<ConfirmChoice>;
   (o: ConfirmOptions): Promise<boolean>;
 };
 

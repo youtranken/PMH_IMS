@@ -1,5 +1,5 @@
 import { paintImsStyle } from '@/ui/drawio-protocol';
-import { cellIdOf, parseDrawioXml } from './drawio-bridge';
+import { cellIdOf, cellWrapper, parseDrawioXml } from './drawio-bridge';
 
 /**
  * Nhãn cổng ở HAI ĐẦU dây của kho (Q-23) — hàm THUẦN, test bảng ở `cable-ends.test.ts`.
@@ -212,4 +212,51 @@ export function drawingGeometry(xml: string): { boxOf: (id: string) => Box | nul
     };
   };
   return { boxOf, edgePath };
+}
+
+/**
+ * Ô nét (và các ô nhãn con của nó) dựng lại từ XML TRƯỚC khi xoá — "Hủy" ở hộp xoá nét dây trả nét về
+ * đúng chỗ: draw.io đã xoá nét trước khi IMS kịp hỏi. Ô nét đi lệnh trước, nhãn con đi lệnh sau (nhãn
+ * cần cha có sẵn trong mô hình).
+ */
+export function edgeRestoreCells(xml: string, edgeIds: string[]): { edges: object[]; labels: object[] } {
+  const out: { edges: object[]; labels: object[] } = { edges: [], labels: [] };
+  const doc = parseDrawioXml(xml);
+  if (!doc) return out;
+  const serialize = (node: Node) => new XMLSerializer().serializeToString(node);
+  const all = Array.from(doc.getElementsByTagName('mxCell'));
+  const geometryOf = (cell: Element) => Array.from(cell.children).find((c) => c.tagName === 'mxGeometry');
+  for (const id of edgeIds) {
+    const cell = all.find((c) => cellIdOf(c) === id && c.getAttribute('edge') === '1');
+    if (!cell) continue;
+    const parent = cell.getAttribute('parent') ?? '1';
+    const siblings = all.filter((c) => c.getAttribute('parent') === parent);
+    const at = siblings.indexOf(cell);
+    const wrapper = cellWrapper(cell);
+    const geo = geometryOf(cell);
+    out.edges.push({
+      id,
+      edge: 1,
+      parent,
+      ...(at > 0 ? { previous: cellIdOf(siblings[at - 1]) } : {}),
+      ...(cell.getAttribute('source') ? { source: cell.getAttribute('source') } : {}),
+      ...(cell.getAttribute('target') ? { target: cell.getAttribute('target') } : {}),
+      style: cell.getAttribute('style') ?? '',
+      ...(geo ? { geometry: serialize(geo) } : {}),
+      ...(wrapper ? { xmlValue: serialize(wrapper.cloneNode(false)) } : { value: cell.getAttribute('value') ?? '' }),
+    });
+    for (const child of all.filter((c) => c.getAttribute('parent') === id)) {
+      const childGeo = geometryOf(child);
+      out.labels.push({
+        id: cellIdOf(child),
+        vertex: 1,
+        connectable: 0,
+        parent: id,
+        value: child.getAttribute('value') ?? '',
+        style: child.getAttribute('style') ?? '',
+        ...(childGeo ? { geometry: serialize(childGeo) } : {}),
+      });
+    }
+  }
+  return out;
 }
