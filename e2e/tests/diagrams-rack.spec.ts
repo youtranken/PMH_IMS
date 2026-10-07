@@ -227,11 +227,11 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await page.getByRole('complementary', { name: 'Bản vẽ đang chọn' }).getByRole('button', { name: `Thao tác với ${parentName}` }).click();
     await page.getByRole('menuitem', { name: 'Thêm bản vẽ con' }).click();
     const dialog = page.getByRole('dialog', { name: `Thêm bản vẽ con vào "${parentName}"` });
-    // Cấp thường: mặc định trang trắng, không có "Dựng từ kho".
+    // Bản vẽ con của một Phòng tự đề xuất loại Tủ mạng (Q-26 07/10); chưa chọn tủ thì "Dựng từ kho"
+    // tắt và mặc định vẫn là trang trắng.
+    await expect(dialog.getByRole('button', { name: 'Loại bản vẽ' })).toHaveText('Tủ mạng');
     await expect(dialog.getByRole('radio', { name: 'Trang trắng' })).toBeChecked();
-    await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Loại bản vẽ' }).click();
-    await page.getByRole('option', { name: 'Tủ mạng' }).click();
+    await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toBeDisabled();
     await dialog.getByRole('button', { name: /^Tủ/ }).click();
     await page.getByRole('option', { name: rack.cabinetCode }).click();
     await expect(dialog.getByRole('radio', { name: 'Dựng từ kho' })).toBeChecked();
