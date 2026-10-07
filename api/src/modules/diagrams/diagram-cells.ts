@@ -1,3 +1,4 @@
+import type { Box, EdgePath } from './port-end-place';
 import { createHash } from 'node:crypto';
 import { SaxesParser, type SaxesTagPlain } from 'saxes';
 import { textLooksLikeSecret } from '../../common/note-secret';
@@ -180,6 +181,53 @@ export function drawingKey(xml: string): string {
 }
 
 /** XML (đã qua cổng) → chỉ mục ô. Ô gốc và ô lớp không vào `cells`, lớp nằm ở `layers`. */
+/**
+ * Đường đi của mọi nét: khung TUYỆT ĐỐI của ô hai đầu (cộng dồn toạ độ khung cha — máy trong tủ có
+ * toạ độ theo tủ) và điểm gấp tuyệt đối — để đặt nhãn cổng sát đầu dây (`portEndOffset`).
+ */
+export function edgePaths(xml: string): Map<string, EdgePath> {
+  const raw = readRawCells(xml);
+  const byId = new Map(raw.map((c) => [c.id, c]));
+  const origin = (id: string | undefined): { x: number; y: number } => {
+    const at = { x: 0, y: 0 };
+    const seen = new Set<string>();
+    let cell = id ? byId.get(id) : undefined;
+    while (cell && !seen.has(cell.id)) {
+      seen.add(cell.id);
+      if (cell.geometry && cell.geometry.relative !== '1') {
+        at.x += number(cell.geometry.x);
+        at.y += number(cell.geometry.y);
+      }
+      cell = cell.attrs.parent ? byId.get(cell.attrs.parent) : undefined;
+    }
+    return at;
+  };
+  const boxOf = (id: string | undefined): Box | null => {
+    const cell = id ? byId.get(id) : undefined;
+    if (!cell?.geometry || cell.geometry.relative === '1') return null;
+    const base = origin(cell.attrs.parent);
+    return { x: base.x + number(cell.geometry.x), y: base.y + number(cell.geometry.y), width: number(cell.geometry.width), height: number(cell.geometry.height) };
+  };
+  const paths = new Map<string, EdgePath>();
+  for (const cell of raw) {
+    if (cell.attrs.edge !== '1') continue;
+    const base = origin(cell.attrs.parent);
+    const points = cell.points
+      .filter((p) => p.startsWith(':'))
+      .map((p) => {
+        const [x, y] = p.slice(1).split(',').map(Number);
+        return { x: base.x + x, y: base.y + y };
+      });
+    paths.set(cell.id, {
+      source: boxOf(cell.attrs.source),
+      target: boxOf(cell.attrs.target),
+      points,
+      orthogonal: /(?:^|;)edgeStyle=orthogonalEdgeStyle/.test(cell.attrs.style ?? ''),
+    });
+  }
+  return paths;
+}
+
 export function buildCellIndex(xml: string): CellIndex {
   const raw = readRawCells(xml);
   const parentOf = new Map(raw.map((c) => [c.id, c.attrs.parent ?? null]));

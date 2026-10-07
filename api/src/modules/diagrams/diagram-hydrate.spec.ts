@@ -10,7 +10,6 @@ import {
   hydrateDiagramXml,
   linkEdgeCell,
   photoAspect,
-  PORT_END_OFFSET,
   PORT_END_SUFFIX,
   portEndStyle,
   RACK_LABEL_STYLE,
@@ -395,9 +394,19 @@ describe('dây của kho — nhãn cổng + màu hydrate từ sơ đồ cổng, 
       const wet = hydrateDiagramXml(page(two + linkedEdge({ source: from, target: to, extra: ' ims_port_labels="ends"' })), devices, cables);
       expect(wet).toContain('label="" ims_link_id');
       expect(ends(wet)).toEqual([
-        { id: `e1${PORT_END_SUFFIX.source}`, value: atSource, style: portEndStyle(2), parent: 'e1', x: -PORT_END_OFFSET },
-        { id: `e1${PORT_END_SUFFIX.target}`, value: atTarget, style: portEndStyle(2), parent: 'e1', x: PORT_END_OFFSET },
+        // Hai máy chồng nhau, một điểm gấp (5,6): đường vuông góc 168px, trừ hai nửa bề rộng máy → 68px.
+        { id: `e1${PORT_END_SUFFIX.source}`, value: atSource, style: portEndStyle(2), parent: 'e1', x: -0.353 },
+        { id: `e1${PORT_END_SUFFIX.target}`, value: atTarget, style: portEndStyle(2), parent: 'e1', x: 0.353 },
       ]);
+    });
+
+    it('nhãn đầu nằm SÁT đầu dây theo độ dài thật của nét (Q-26 07/10): máy trong tủ (toạ độ cộng dồn khung cha), dây đi vòng', () => {
+      const rack = (id: string, x: number, y: number) => `<mxCell id="${id}" style="container=1;" vertex="1" parent="1"><mxGeometry x="${x}" y="${y}" width="204" height="664" as="geometry"/></mxCell>`;
+      const inRack = (id: string, deviceId: string, parent: string, y: number) =>
+        `<UserObject label="x" ims_device_id="${deviceId}" ims_device_code="X" id="${id}"><mxCell style="" vertex="1" parent="${parent}"><mxGeometry x="33" y="${y}" width="162" height="14.8" as="geometry"/></mxCell></UserObject>`;
+      const edge = `<UserObject label="" ims_link_id="${LINK}" ims_cable_type_id="${CAT6}" ims_port_labels="ends" id="e1"><mxCell style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="510" y="522"/><mxPoint x="510" y="640"/><mxPoint x="40" y="640"/><mxPoint x="40" y="446.6"/></Array></mxGeometry></mxCell></UserObject>`;
+      const wet = hydrateDiagramXml(page(rack('r1', 530, 20) + rack('r2', 80, 63) + inRack('d1', DEV, 'r1', 494.6) + inRack('d2', DEV_B, 'r2', 376.2) + edge), devices, cables);
+      expect(ends(wet).map((e) => e.x)).toEqual([-0.952, 0.952]);
     });
 
     it('nhãn đầu dây mang màu loại dây và dấu IMS (dehydrate nhận ra)', () => {

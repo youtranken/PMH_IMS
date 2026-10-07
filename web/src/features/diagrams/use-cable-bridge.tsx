@@ -12,7 +12,7 @@ import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
 import { bindEdgeValue, cableView, diffAutosave, edgeById, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
-import { cellIdsIn, linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndPatch, portEndRemoval } from './cable-ends';
+import { cellIdsIn, drawingGeometry, linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
 import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
 import type { DiagramContent, DiagramLink } from './diagram-api';
@@ -144,6 +144,12 @@ export function useCableBridge({
   const linkedValue = (id: string, attrs: Record<string, string>, link: DiagramLink) =>
     bindEdgeValue(id, attrs, { label: '', ims_link_id: link.id, ims_cable_type_id: link.cableTypeId ?? '', [PORT_LABELS_ATTR]: PORT_LABELS_ENDS });
 
+  /** Chỗ đặt nhãn đầu dây đo từ chính nét trên hình (Q-26 07/10); không đo được thì dùng mặc định. */
+  const measuredOffset = (file: string, edgeId: string): number | undefined => {
+    const path = drawingGeometry(file).edgePath(edgeId);
+    return path ? portEndOffset(path) : undefined;
+  };
+
   const bindEdge = (edge: NewEdge, link: DiagramLink) => {
     remember([link]);
     withFile((file) =>
@@ -156,7 +162,7 @@ export function useCableBridge({
           // vừa vẽ bằng công cụ nét thẳng rồi bấm Khai.
           style: paintImsStyle(`${orthogonalStyle(styleWithoutImsEdge(current.style))}${paintTokenOf(link.edgeStyle)};html=0;`, palette),
         }),
-        portEndPatch(file, edge.id, linkEndTexts(link, edge.sourceDeviceId), link.endLabel, palette),
+        portEndPatch(file, edge.id, linkEndTexts(link, edge.sourceDeviceId), link.endLabel, palette, measuredOffset(file, edge.id)),
       ),
     );
   };
@@ -252,6 +258,7 @@ export function useCableBridge({
       const inserts: object[] = [];
       const view = cableView(file);
       const present = cellIdsIn(file);
+      const geometry = drawingGeometry(file);
       for (const [id, update] of Object.entries(result.updates)) {
         const edge = view.edgeById(id);
         const link = edge?.linkId ? links.current.get(edge.linkId) : undefined;
@@ -260,7 +267,8 @@ export function useCableBridge({
           continue;
         }
         // Dây người vẽ đụng tới thì chuyển sang nhãn cổng ở hai đầu (Q-23) — mở bản vẽ thì không.
-        const ends = portEndPatch(present, id, linkEndTexts(link, view.deviceOfCell(update.source)), link.endLabel, palette);
+        const path = geometry.edgePath(id);
+        const ends = portEndPatch(present, id, linkEndTexts(link, view.deviceOfCell(update.source)), link.endLabel, palette, path ? portEndOffset(path) : undefined);
         Object.assign(updates, ends.u);
         inserts.push(...ends.i);
         updates[id] = {
@@ -307,6 +315,7 @@ export function useCableBridge({
       let previous = lastChildId(file, pageId, parent);
       const view = cableView(file);
       const present = cellIdsIn(file);
+      const geometry = drawingGeometry(file);
       const cells = list.flatMap((link) => {
         const source = view.firstDeviceCell(link.deviceId);
         const target = view.firstDeviceCell(link.peerDeviceId);
@@ -324,7 +333,9 @@ export function useCableBridge({
           xmlValue: linkedValue(id, {}, link),
         };
         previous = id;
-        return [{ cell, ends: portEndPatch(present, id, linkEndTexts(link, link.deviceId), link.endLabel, palette).i }];
+        // Nét mới chưa có điểm gấp: đo theo hai máy, draw.io tự đi dây giữa chúng.
+        const offset = portEndOffset({ source: geometry.boxOf(source), target: geometry.boxOf(target), points: [], orthogonal: /edgeStyle=orthogonalEdgeStyle/.test(link.edgeStyle) });
+        return [{ cell, ends: portEndPatch(present, id, linkEndTexts(link, link.deviceId), link.endLabel, palette, offset).i }];
       });
       if (cells.length === 0) return;
       send({ action: 'patch', patch: insertPatch(pageId, cells.map((c) => c.cell)) });
