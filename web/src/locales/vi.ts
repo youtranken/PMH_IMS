@@ -1728,7 +1728,6 @@ export default {
     rackFree: 'U trống:',
     rackFull: 'Tủ không còn khe trống đủ {{size}}U.',
     serial: 'Serial',
-    location: 'Vị trí và người giữ',
     // Khối thứ ba của form: mua từ ai, mua khi nào, bảo hành tới bao giờ — một mạch.
     purchase: 'Mua sắm và bảo hành',
     site: 'Site',
@@ -1802,7 +1801,18 @@ export default {
        chung `tabProfile` thì đổi tên tab kéo theo cả tiêu đề khối trong hộp "Thêm thiết bị"
        ("là máy gì → đứng ở đâu → mua của ai"), nơi chữ "Tổng quan" vô nghĩa vì chưa có gì để
        tổng quan. */
-    formSectionProfile: 'Hồ sơ',
+    formSectionWhat: 'Máy gì',
+    formSectionWhere: 'Đặt ở đâu',
+    foldPeople: 'Người dùng và phòng ban',
+    foldPurchaseSummary: 'nhà cung cấp, ngày mua, hạn bảo hành, serial',
+    foldAccessSummary: 'Web / SSH / RDP…',
+    foldMedia: 'Ảnh và giấy tờ',
+    foldFilled: '{{done}}/{{total}}',
+    foldAccessCount: '{{count}} Đường',
+    foldFiles: '{{count}} Tệp',
+    foldEmpty: 'trống',
+    modelPreview: 'Ảnh mặt trước theo model',
+    modelPreviewAlt: 'Mặt trước model {{model}}',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
     // Thuần Việt như mockup; khoá URL `?tab=ports` giữ nguyên nên link cũ vẫn chạy.

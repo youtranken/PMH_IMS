@@ -12,6 +12,8 @@ import {
   writeHeaders,
   uniqueStamp,
   stepUpViaApi,
+  DEVICE_FOLDS,
+  openDeviceFolds,
 } from './helpers';
 
 /**
@@ -590,6 +592,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     const dialog = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await expect(dialog, 'bấm "Thêm thiết bị" phải mở đúng hộp mang tên đó').toBeVisible();
+    // Q-27: hai khối luôn mở, năm khối gập — mở hết rồi mới kiểm kê, để "có đủ" vẫn chốt mọi ô.
+    for (const fold of DEVICE_FOLDS) {
+      await expect(
+        dialog.getByRole('button', { name: new RegExp(`^${fold}`) }),
+        `Hộp thêm mới mở ra với khối "${fold}" GẬP — chỉ hai khối Máy gì / Đặt ở đâu luôn mở`,
+      ).toHaveAttribute('aria-expanded', 'false');
+    }
+    await openDeviceFolds(dialog);
 
     /*
      * Năm tiêu đề cấp 2, không phải bốn: `Dialog` dựng tiêu đề hộp bằng `RD.Title` của Radix,
@@ -599,14 +609,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(dialog.getByRole('heading', { level: 2 })), {
         message:
-          'Form thiết bị chia đúng bốn khối dưới tiêu đề hộp, kể một mạch chuyện: là máy gì → đứng ở đâu → mua của ai → giấy tờ kèm theo',
+          'Form thiết bị: hai khối luôn mở kể một mạch chuyện (máy gì → đặt ở đâu); trong khối gập "Ảnh và giấy tờ" có hai khu con có tiêu đề',
       })
       .toEqual([
         'Thêm thiết bị',
-        'Hồ sơ',
-        'Vị trí và người giữ',
-        'Truy cập quản trị',
-        'Mua sắm và bảo hành',
+        'Máy gì',
+        'Đặt ở đâu',
         'Ảnh thiết bị',
         'Giấy tờ đính kèm',
       ]);
@@ -661,11 +669,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       })
       .toEqual([
         'Đóng hộp thoại',
-        'Loại',
+        'Loại thiết bị',
         'Site',
         'Tủ mạng',
-        // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
-        '+ Thêm đường truy cập',
+        // Khối gập (Q-27): tên nút = tiêu đề + số ô đã khai.
+        'Người dùng và phòng ban 0/2',
+        'Mua sắm và bảo hành 0/5',
         'Nhà cung cấp',
         'Ngày mua',
         'Bảo hành từ',
@@ -673,10 +682,15 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
-        // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt.
+        // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
+        'Truy cập quản trị 0 Đường',
+        '+ Thêm đường truy cập',
+        // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt; giấy tờ cùng khối.
+        'Ảnh và giấy tờ 0 Tệp',
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh lên — Mặt sau',
         'Chọn file để đính kèm',
+        'Ghi chú trống',
         'Hủy',
         'Lưu và nhân bản',
         'Lưu',
@@ -826,6 +840,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       editDialog,
       'Tiêu đề hộp sửa phải mang MÃ MÁY — mở hai tab rồi lẫn lộn hai cái máy là hỏng thật, không phải hỏng đẹp',
     ).toBeVisible();
+    // Q-27: khối gập nào ĐÃ có giá trị thì tự mở khi sửa — máy này có người dùng, serial, ghi chú.
+    for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Ảnh và giấy tờ', 'Ghi chú']) {
+      await expect(
+        editDialog.getByRole('button', { name: new RegExp(`^${fold}`) }),
+        `Khối "${fold}" đã có giá trị phải mở sẵn ở form sửa — giấu giá trị đang có là mời người ta khai lại`,
+      ).toHaveAttribute('aria-expanded', 'true');
+    }
+    await openDeviceFolds(editDialog);
 
     /*
      * ĐIỀN SẴN — đọc lại từng ô.
@@ -876,12 +898,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       })
       .toEqual([
         'Đóng hộp thoại',
-        'Loại',
+        'Loại thiết bị',
         'Trạng thái',
         'Site',
         'Tủ mạng',
-        // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
-        '+ Thêm đường truy cập',
+        'Người dùng và phòng ban 2/2',
+        'Mua sắm và bảo hành 1/5',
         'Nhà cung cấp',
         'Ngày mua',
         'Bảo hành từ',
@@ -889,7 +911,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+1 năm',
         '+2 năm',
         '+3 năm',
+        // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
+        'Truy cập quản trị 0 Đường',
+        '+ Thêm đường truy cập',
         // Khu "Ảnh thiết bị" (Q-23): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
+        'Ảnh và giấy tờ',
         'Giải thích: Ảnh thiết bị',
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh chung cho mọi máy cùng model — Mặt trước',
@@ -899,6 +925,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Chọn file để đính kèm',
         // Câu "chỉ tải về, không mở trong trình duyệt" nằm trong nút (i) (Q-20).
         'Giải thích: Cách mở file đính kèm',
+        'Ghi chú',
         'Hủy',
         'Lưu',
       ]);

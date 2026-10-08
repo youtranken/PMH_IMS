@@ -12,6 +12,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
 import { Field, FormSection } from '@/ui/page-header';
+import { FoldSection } from '@/ui/fold-section';
 import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
@@ -152,6 +153,8 @@ export function DeviceForm({
         ? { ...initialState(null), deviceTypeId: presetDeviceTypeId }
         : initialState(device),
   );
+  // Ảnh chụp lúc mở form: khối gập nào đã có giá trị thì mở sẵn (sửa, nhân bản).
+  const [initial] = useState(form);
   const [error, setError] = useSubmitError([form]);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
@@ -425,68 +428,13 @@ export function DeviceForm({
           </p>
         ) : null}
         {check.summary}
-        {/* Lưới 3 cột, không để ô nào đứng lẻ một hàng: [Mã | Loại | Trạng thái (sửa) hoặc
-            Serial (thêm)] rồi [Tên (2 cột) | Model]. */}
-        <FormSection title={t('devices.formSectionProfile')} columns={3}>
-          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
-            <input
-              ref={codeRef}
-              id="device-code"
-              className="inp mono"
-              required
-              value={form.code}
-              onChange={(e) => set('code', e.target.value)}
-            />
-          </Field>
-          <Field label={t('devices.type')} required error={check.error('deviceTypeId')} hint={model ? t('devices.typeFromModel') : undefined}>
-            <Select
-              required
-              disabled={Boolean(model)}
-              value={form.deviceTypeId}
-              ariaLabel={t('devices.type')}
-              placeholder={t('devices.pickType')}
-              options={activeOptions(lists.data?.deviceTypes, device?.deviceTypeId, (type) => type.name)}
-              failed={lists.isError}
-              onChange={(value) => set('deviceTypeId', value)}
-            />
-          </Field>
-          {/*
-            Ô Trạng thái CHỈ hiện khi SỬA: thêm mới thì luôn là "đang dùng", bày một ô có đúng
-            một câu trả lời hợp lý là bắt người khai đọc rồi bỏ qua. Không có "Đã thanh lý" —
-            thanh lý đi qua hộp riêng ở trang hồ sơ (API từ chối đường này).
-          */}
-          {device ? (
-            <Field label={t('devices.status')} hint={t('devices.retireViaButton')}>
-              <Select
-                value={form.status}
-                ariaLabel={t('devices.status')}
-                options={EDITABLE_STATUSES.map((status) => ({
-                  value: status,
-                  label: t(STATUS_KEY[status]),
-                }))}
-                onChange={(value) => set('status', value as DeviceStatus)}
-              />
-            </Field>
-          ) : (
-            serialField
-          )}
-          <Field
-            label={t('devices.name')}
-            required
-            htmlFor="device-name"
-            span={2}
-            error={check.error('name')}
-          >
-            <input
-              id="device-name"
-              className="inp"
-              required
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-            />
-          </Field>
+        {/* Hai khối luôn mở là đủ để lưu một máy (Q-27): máy gì, đặt ở đâu. Model đứng đầu vì nó
+            điền sẵn Loại, Số U và ảnh. Phần còn lại gập, khai sau cũng được — khối nào đã có giá
+            trị (sửa, nhân bản) hoặc có lỗi thì tự mở. */}
+        <FormSection title={t('devices.formSectionWhat')} columns={3}>
           <Field
             label={t('devices.model')}
+            span={3}
             htmlFor="device-model"
             hint={model ? t('devices.modelFrom', { parts: [deviceModelParts(model).head, deviceModelParts(model).size ?? t('deviceModels.rackNone')].join(' · ') }) : t('devices.modelNone')}
           >
@@ -501,10 +449,63 @@ export function DeviceForm({
               onTerm={typeModel}
             />
           </Field>
-          {device ? serialField : null}
+          {modelFront ? (
+            <div className="field span-3 model-preview" role="group" aria-label={t('devices.modelPreview')}>
+              <img src={modelFront} alt={t('devices.modelPreviewAlt', { model: model?.model ?? '' })} />
+            </div>
+          ) : null}
+          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
+            <input
+              ref={codeRef}
+              id="device-code"
+              className="inp mono"
+              required
+              value={form.code}
+              onChange={(e) => set('code', e.target.value)}
+            />
+          </Field>
+          <Field
+            label={t('devices.name')}
+            required
+            htmlFor="device-name"
+            error={check.error('name')}
+          >
+            <input
+              id="device-name"
+              className="inp"
+              required
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
+            />
+          </Field>
+          <Field label={t('devices.type')} required error={check.error('deviceTypeId')} hint={model ? t('devices.typeFromModel') : undefined}>
+            <Select
+              required
+              disabled={Boolean(model)}
+              value={form.deviceTypeId}
+              ariaLabel={t('devices.type')}
+              placeholder={t('devices.pickType')}
+              options={activeOptions(lists.data?.deviceTypes, device?.deviceTypeId, (type) => type.name)}
+              failed={lists.isError}
+              onChange={(value) => set('deviceTypeId', value)}
+            />
+          </Field>
+          {device ? (
+            <Field label={t('devices.status')} hint={t('devices.retireViaButton')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('devices.status')}
+                options={EDITABLE_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as DeviceStatus)}
+              />
+            </Field>
+          ) : null}
         </FormSection>
 
-        <FormSection title={t('devices.location')} columns={4}>
+        <FormSection title={t('devices.formSectionWhere')} columns={4}>
           <Field label={t('devices.site')}>
             <Select
               value={form.siteId}
@@ -603,195 +604,231 @@ export function DeviceForm({
               ) : null}
             </>
           ) : null}
-          <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
-            <input
-              id="device-assigned"
-              className="inp"
-              value={form.assignedTo}
-              onChange={(e) => set('assignedTo', e.target.value)}
-            />
-          </Field>
-          <Field label={t('devices.department')} hint={t('devices.departmentHint')}>
-            {/* Gợi ý từ danh mục Bộ phận. Vẫn gõ tự do được: bộ phận mới lập tuần này phải
-                khai được ngay, không chờ ai mở danh mục ra thêm. */}
-            <SuggestInput
-              value={form.department}
-              onChange={(value) => set('department', value)}
-              options={departments}
-              failed={lists.isError}
-              placeholder={t('devices.departmentPlaceholder')}
-              ariaLabel={t('devices.department')}
-            />
-          </Field>
         </FormSection>
 
-        <FormSection title={t('devices.access')} columns={1}>
-          <p className="field-hint muted">{t('devices.accessHint')}</p>
-          {form.accessPoints.map((point, index) => (
-            <div key={index} className="row" role="group" aria-label={`${t('devices.access')} ${index + 1}`}>
-              <Select
-                value={point.kind}
-                ariaLabel={`${t('devices.accessKind')} ${index + 1}`}
-                options={ACCESS_KINDS.map((kind) => ({ value: kind, label: t(`devices.accessKind_${kind}`) }))}
-                onChange={(value) => setAccess(index, { kind: value as AccessPoint['kind'] })}
-              />
+        <FoldSection
+          title={t('devices.foldPeople')}
+          count={t('devices.foldFilled', { done: [form.assignedTo, form.department].filter((v) => v.trim()).length, total: 2 })}
+          defaultOpen={Boolean(initial.assignedTo || initial.department)}
+        >
+          <FormSection columns={2}>
+            <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
               <input
-                className="inp mono"
-                aria-label={`${t('devices.accessAddress')} ${index + 1}`}
-                placeholder="10.0.1.1"
-                maxLength={200}
-                value={point.address}
-                onChange={(e) => setAccess(index, { address: e.target.value })}
-              />
-              <input
+                id="device-assigned"
                 className="inp"
-                aria-label={`${t('devices.accessPort')} ${index + 1}`}
-                inputMode="numeric"
-                placeholder={t('devices.accessPort')}
-                value={point.port}
-                onChange={(e) => setAccess(index, { port: e.target.value.replace(/\D/g, '') })}
+                value={form.assignedTo}
+                onChange={(e) => set('assignedTo', e.target.value)}
               />
-              <button type="button" className="btn sm ghost" onClick={() => set('accessPoints', form.accessPoints.filter((_, i) => i !== index))}>
-                {t('devices.accessRemove', { n: index + 1 })}
+            </Field>
+            <Field label={t('devices.department')} hint={t('devices.departmentHint')}>
+              {/* Gợi ý từ danh mục Bộ phận. Vẫn gõ tự do được: bộ phận mới lập tuần này phải
+                  khai được ngay, không chờ ai mở danh mục ra thêm. */}
+              <SuggestInput
+                value={form.department}
+                onChange={(value) => set('department', value)}
+                options={departments}
+                failed={lists.isError}
+                placeholder={t('devices.departmentPlaceholder')}
+                ariaLabel={t('devices.department')}
+              />
+            </Field>
+          </FormSection>
+        </FoldSection>
+
+        {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới bao
+            giờ" là MỘT câu chuyện; serial cùng chỗ vì đó là thứ ghi trên hoá đơn. */}
+        <FoldSection
+          title={t('devices.purchase')}
+          summary={t('devices.foldPurchaseSummary')}
+          count={t('devices.foldFilled', {
+            done: [form.vendorId, form.purchaseDate, form.warrantyStart, form.warrantyEnd, form.serial].filter((v) => v.trim()).length,
+            total: 5,
+          })}
+          defaultOpen={Boolean(initial.vendorId || initial.purchaseDate || initial.warrantyStart || initial.warrantyEnd || initial.serial)}
+        >
+          <FormSection columns={4}>
+            <Field label={t('devices.vendor')}>
+              <Select
+                value={form.vendorId}
+                ariaLabel={t('devices.vendor')}
+                placeholder={t('devices.noVendor')}
+                options={activeOptions(lists.data?.vendors, device?.vendorId, (vendor) => vendor.name)}
+                failed={lists.isError}
+                onChange={(value) => set('vendorId', value)}
+              />
+            </Field>
+            <Field label={t('devices.purchaseDate')}>
+              <DatePicker
+                value={form.purchaseDate}
+                ariaLabel={t('devices.purchaseDate')}
+                onChange={(value) => set('purchaseDate', value)}
+              />
+            </Field>
+            <Field label={t('devices.warrantyStart')}>
+              <DatePicker
+                value={form.warrantyStart}
+                ariaLabel={t('devices.warrantyStart')}
+                onChange={(value) => set('warrantyStart', value)}
+              />
+            </Field>
+            <Field label={t('devices.warrantyEnd')}>
+              <DatePicker
+                value={form.warrantyEnd}
+                ariaLabel={t('devices.warrantyEnd')}
+                onChange={(value) => set('warrantyEnd', value)}
+              />
+              <YearQuickPicks
+                base={warrantyBase}
+                onPick={(value) => set('warrantyEnd', value)}
+                label={t('devices.warrantyQuick')}
+                needBaseHint={t('devices.warrantyQuickNeedBase')}
+              />
+            </Field>
+            {serialField}
+          </FormSection>
+        </FoldSection>
+
+        <FoldSection
+          title={t('devices.access')}
+          summary={t('devices.foldAccessSummary')}
+          count={t('devices.foldAccessCount', { count: form.accessPoints.length })}
+          defaultOpen={initial.accessPoints.length > 0}
+        >
+          <FormSection columns={1}>
+            <p className="field-hint muted">{t('devices.accessHint')}</p>
+            {form.accessPoints.map((point, index) => (
+              <div key={index} className="row" role="group" aria-label={`${t('devices.access')} ${index + 1}`}>
+                <Select
+                  value={point.kind}
+                  ariaLabel={`${t('devices.accessKind')} ${index + 1}`}
+                  options={ACCESS_KINDS.map((kind) => ({ value: kind, label: t(`devices.accessKind_${kind}`) }))}
+                  onChange={(value) => setAccess(index, { kind: value as AccessPoint['kind'] })}
+                />
+                <input
+                  className="inp mono"
+                  aria-label={`${t('devices.accessAddress')} ${index + 1}`}
+                  placeholder="10.0.1.1"
+                  maxLength={200}
+                  value={point.address}
+                  onChange={(e) => setAccess(index, { address: e.target.value })}
+                />
+                <input
+                  className="inp"
+                  aria-label={`${t('devices.accessPort')} ${index + 1}`}
+                  inputMode="numeric"
+                  placeholder={t('devices.accessPort')}
+                  value={point.port}
+                  onChange={(e) => setAccess(index, { port: e.target.value.replace(/\D/g, '') })}
+                />
+                <button type="button" className="btn sm ghost" onClick={() => set('accessPoints', form.accessPoints.filter((_, i) => i !== index))}>
+                  {t('devices.accessRemove', { n: index + 1 })}
+                </button>
+              </div>
+            ))}
+            <div>
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => set('accessPoints', [...form.accessPoints, { kind: form.accessPoints.length === 0 ? 'web' : 'ssh', address: '', port: '' }])}
+              >
+                {t('devices.accessAdd')}
               </button>
             </div>
-          ))}
-          <div>
-            <button
-              type="button"
-              className="btn sm"
-              onClick={() => set('accessPoints', [...form.accessPoints, { kind: form.accessPoints.length === 0 ? 'web' : 'ssh', address: '', port: '' }])}
-            >
-              {t('devices.accessAdd')}
-            </button>
-          </div>
-        </FormSection>
+          </FormSection>
+        </FoldSection>
 
-        {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
-            bao giờ" là MỘT câu chuyện, nên bốn ô đứng chung một hàng; hộp 1080px đủ chỗ cho 4
-            cột mà không phải cuộn dọc qua hai hàng ngày tháng. */}
-        <FormSection title={t('devices.purchase')} columns={4}>
-          <Field label={t('devices.vendor')}>
-            <Select
-              value={form.vendorId}
-              ariaLabel={t('devices.vendor')}
-              placeholder={t('devices.noVendor')}
-              options={activeOptions(lists.data?.vendors, device?.vendorId, (vendor) => vendor.name)}
-              failed={lists.isError}
-              onChange={(value) => set('vendorId', value)}
-            />
-          </Field>
-          <Field label={t('devices.purchaseDate')}>
-            <DatePicker
-              value={form.purchaseDate}
-              ariaLabel={t('devices.purchaseDate')}
-              onChange={(value) => set('purchaseDate', value)}
-            />
-          </Field>
-          <Field label={t('devices.warrantyStart')}>
-            <DatePicker
-              value={form.warrantyStart}
-              ariaLabel={t('devices.warrantyStart')}
-              onChange={(value) => set('warrantyStart', value)}
-            />
-          </Field>
-          <Field label={t('devices.warrantyEnd')}>
-            <DatePicker
-              value={form.warrantyEnd}
-              ariaLabel={t('devices.warrantyEnd')}
-              onChange={(value) => set('warrantyEnd', value)}
-            />
-            <YearQuickPicks
-              base={warrantyBase}
-              onPick={(value) => set('warrantyEnd', value)}
-              label={t('devices.warrantyQuick')}
-              needBaseHint={t('devices.warrantyQuickNeedBase')}
-            />
-          </Field>
-          <Field
-            label={t('devices.note')}
-            hint={t('devices.noteHint')}
-            htmlFor="device-note"
-            span={3}
-            error={check.error('note')}
-          >
-            <textarea
-              id="device-note"
-              className="inp"
-              rows={2}
-              value={form.note}
-              onChange={(e) => set('note', e.target.value)}
-            />
-          </Field>
-        </FormSection>
-
-        {/* Ảnh thiết bị (không bắt buộc): SỬA ghi thẳng như trang thiết bị; THÊM MỚI giữ ảnh ở
-            trình duyệt tới lúc máy có id. Cùng một ô ảnh dùng chung ở cả hai chế độ. */}
-        <FormSection
-          title={t('devices.photoSectionTitle')}
-          titleTip={device ? t('devices.photoLiveTip') : undefined}
-          columns={1}
+        {/* Ảnh (không bắt buộc): SỬA ghi thẳng như trang thiết bị; THÊM MỚI giữ ảnh ở trình duyệt
+            tới lúc máy có id. Giấy tờ: THÊM MỚI chỉ chọn file, đẩy lên sau khi có id; SỬA dùng
+            thẳng `AttachmentPanel` (ghi ngay lúc bấm — nút (i) nói ra điều đó). */}
+        <FoldSection
+          title={t('devices.foldMedia')}
+          count={device ? undefined : t('devices.foldFiles', { count: draft.files.length + (photoDraft.files.front ? 1 : 0) + (photoDraft.files.back ? 1 : 0) })}
+          defaultOpen={Boolean(device)}
         >
-          <p className="muted small">{t('devices.photoSectionHint')}</p>
-          {device ? (
-            <DevicePhotoEditor
-              pendingModel={(model?.id ?? null) !== (device.deviceModelId ?? null) ? model : undefined}
-              deviceId={device.id}
-              deviceTypeId={device.deviceTypeId}
-              deviceTypeName={device.deviceTypeName}
-              csrfToken={csrfToken}
-              canEdit={device.status !== 'retired'}
-              canEditModel={canEditModel}
-              rackUnits={formUnits}
-            />
-          ) : (
-            <DevicePhotoSlots
-              slots={{
-                front: modelFront
-                  ? { src: modelFront, level: 'model' }
-                  : { src: photoDraft.previews.front ?? null, level: photoDraft.files.front ? 'draft' : 'unset' },
-                back: { src: photoDraft.previews.back ?? null, level: photoDraft.files.back ? 'draft' : 'unset' },
-              }}
-              typeName={typeName}
-              typeIconSrc={typeIconSrc}
-              modelLabel={model?.model ?? null}
-              readOnly={busy}
-              onPick={photoDraft.set}
-              onRemove={(side) => photoDraft.set(side, null)}
-              rackUnits={formUnits}
-              loadOriginal={(side) => {
-                const held = photoDraft.files[side];
-                return held ? Promise.resolve(held) : Promise.reject(new Error('none'));
-              }}
-            />
-          )}
-        </FormSection>
-
-        {/*
-          THÊM MỚI: chỉ chọn file, đẩy lên sau khi có id (`AttachmentDraftSection`).
-          SỬA: hồ sơ đã có id nên dùng thẳng `AttachmentPanel` — nó hiện luôn danh sách giấy
-          tờ đang có, tải về được, xóa được, và thêm file mới là lên ngay. Hai chế độ dùng hai
-          khối khác nhau vì chúng trả lời hai câu khác nhau, không phải vì tiện tay.
-        */}
-        {device ? (
-          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
-             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
           <FormSection
-            title={t('attachments.title')}
-            titleTip={t('attachments.liveTip')}
+            title={t('devices.photoSectionTitle')}
+            titleTip={device ? t('devices.photoLiveTip') : undefined}
             columns={1}
           >
-            <AttachmentPanel
-              ownerType="device"
-              ownerId={device.id}
-              csrfToken={csrfToken}
-              canEdit={!busy}
-            />
+            <p className="muted small">{t('devices.photoSectionHint')}</p>
+            {device ? (
+              <DevicePhotoEditor
+                pendingModel={(model?.id ?? null) !== (device.deviceModelId ?? null) ? model : undefined}
+                deviceId={device.id}
+                deviceTypeId={device.deviceTypeId}
+                deviceTypeName={device.deviceTypeName}
+                csrfToken={csrfToken}
+                canEdit={device.status !== 'retired'}
+                canEditModel={canEditModel}
+                rackUnits={formUnits}
+              />
+            ) : (
+              <DevicePhotoSlots
+                slots={{
+                  front: modelFront
+                    ? { src: modelFront, level: 'model' }
+                    : { src: photoDraft.previews.front ?? null, level: photoDraft.files.front ? 'draft' : 'unset' },
+                  back: { src: photoDraft.previews.back ?? null, level: photoDraft.files.back ? 'draft' : 'unset' },
+                }}
+                typeName={typeName}
+                typeIconSrc={typeIconSrc}
+                modelLabel={model?.model ?? null}
+                readOnly={busy}
+                onPick={photoDraft.set}
+                onRemove={(side) => photoDraft.set(side, null)}
+                rackUnits={formUnits}
+                loadOriginal={(side) => {
+                  const held = photoDraft.files[side];
+                  return held ? Promise.resolve(held) : Promise.reject(new Error('none'));
+                }}
+              />
+            )}
           </FormSection>
-        ) : (
-          <AttachmentDraftSection draft={draft} disabled={busy} />
-        )}
+          {device ? (
+            /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
+               của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
+               ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
+            <FormSection
+              title={t('attachments.title')}
+              titleTip={t('attachments.liveTip')}
+              columns={1}
+            >
+              <AttachmentPanel
+                ownerType="device"
+                ownerId={device.id}
+                csrfToken={csrfToken}
+                canEdit={!busy}
+              />
+            </FormSection>
+          ) : (
+            <AttachmentDraftSection draft={draft} disabled={busy} />
+          )}
+
+        </FoldSection>
+
+        <FoldSection
+          title={t('devices.note')}
+          count={form.note.trim() ? undefined : t('devices.foldEmpty')}
+          defaultOpen={Boolean(initial.note)}
+          forceOpen={Boolean(check.error('note'))}
+        >
+          <FormSection columns={1}>
+            <Field
+              label={t('devices.note')}
+              hint={t('devices.noteHint')}
+              htmlFor="device-note"
+              error={check.error('note')}
+            >
+              <textarea
+                id="device-note"
+                className="inp"
+                rows={2}
+                value={form.note}
+                onChange={(e) => set('note', e.target.value)}
+              />
+            </Field>
+          </FormSection>
+        </FoldSection>
 
         {rackOpen && form.cabinetId ? (
           <Dialog

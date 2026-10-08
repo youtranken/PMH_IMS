@@ -80,6 +80,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     const calls = mockFetch();
     renderForm(null);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^Ghi chú/ }));
     const note = screen.getByRole('textbox', { name: 'Ghi chú' });
     await user.type(note, 'mk wifi Pmh@Guest2026');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
@@ -209,14 +210,30 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     });
   });
 
-  it('Vị trí và Mua sắm & bảo hành xếp 4 cột; ghi chú 2 dòng', () => {
+  it('hai khối luôn mở (Máy gì, Đặt ở đâu); phần còn lại gập, có số ô đã khai (Q-27)', async () => {
     mockFetch();
     renderForm(null);
-    for (const heading of ['Vị trí và người giữ', 'Mua sắm và bảo hành']) {
-      const section = screen.getByRole('heading', { name: heading }).closest('section');
-      expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    expect(screen.getByRole('heading', { name: 'Máy gì' })).toBeVisible();
+    const where = screen.getByRole('heading', { name: 'Đặt ở đâu' }).closest('section');
+    expect(where?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Truy cập quản trị', 'Ảnh và giấy tờ', 'Ghi chú']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${fold}`) })).toHaveAttribute('aria-expanded', 'false');
     }
+    expect(screen.getByRole('button', { name: /^Mua sắm và bảo hành/ })).toHaveAccessibleName(expect.stringContaining('0/5'));
+    // Ô trong khối gập vẫn ở trong DOM (hộp đo "đang gõ dở" bằng chúng) nhưng không tới được.
+    expect(screen.queryByRole('textbox', { name: 'Ghi chú' })).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Ghi chú/ }));
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
+  });
+
+  it('thứ tự trong "Máy gì": Model trước, rồi Mã · Tên gọi · Loại thiết bị', () => {
+    mockFetch();
+    renderForm(null);
+    const what = screen.getByRole('heading', { name: 'Máy gì' }).closest('section') as HTMLElement;
+    const labels = Array.from(what.querySelectorAll('label, .field-label')).map((el) => el.textContent?.replace('*', '').trim());
+    const order = ['Model', 'Mã thiết bị', 'Tên gọi', 'Loại thiết bị'].map((name) => labels.findIndex((l) => l?.startsWith(name)));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 });
 

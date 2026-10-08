@@ -11,6 +11,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  openFold,
 } from './helpers';
 
 /*
@@ -177,6 +178,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await expect(form.getByText(new RegExp(`Chỗ U1 đang có FW-E2E-MF1${stamp}`))).toBeVisible();
     await form.getByRole('group', { name: 'U trống:' }).getByRole('button', { name: 'U2–U12' }).click();
     // Truy cập quản trị: Web 10.0.1.1:8443.
+    await openFold(form, 'Truy cập quản trị');
     await form.getByRole('button', { name: '+ Thêm đường truy cập' }).click();
     await form.getByRole('textbox', { name: 'Địa chỉ 1' }).fill('10.0.1.1');
     await form.getByRole('textbox', { name: 'Cổng 1' }).fill('8443');

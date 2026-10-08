@@ -97,9 +97,9 @@ table.table.table-cards tbody td {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    border-color 0.12s ease;
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
 table.table.table-cards tbody td:first-child {
   border-left: 1px solid var(--border);
@@ -116,13 +116,10 @@ table.table.table-cards tbody tr:hover td {
   transform: translateY(-2px);
 }
 @media (prefers-reduced-motion: reduce) {
-  table.table.table-cards tbody td {
-    transition: none;
-  }
-  table.table.table-cards tbody tr:hover td {
-    transform: none;
-  }
+  html:not([data-motion='on']) table.table.table-cards tbody tr:hover td { transform: none; }
 }
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: none; }
 @media (max-width: 760px) {
   .exp .panel {
     grid-template-columns: 1fr;

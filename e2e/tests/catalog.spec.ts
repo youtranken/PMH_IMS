@@ -197,7 +197,7 @@ test.describe('Danh mục', () => {
     page,
   }) => {
     await firstLogin(page, E2E_MEMBER);
-    await openNavGroup(page);
+    // Danh mục nằm ở nhóm Tài sản (Q-27) — Thành viên thấy ngay, không có nhóm Hệ thống để mở.
     await page.getByRole('link', { name: 'Danh mục' }).click();
     await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Nhập từ Excel' })).toHaveCount(0);

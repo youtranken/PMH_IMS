@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, catalogItem, devicesPageButton, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_SA, catalogItem, devicesPageButton, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders, openFold } from './helpers';
 
 /*
  * "Hình dùng trên sơ đồ" (Q-23): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
@@ -151,6 +151,7 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
   await form.getByLabel('Tên gọi').fill('Switch E2E có ảnh');
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: 'Switch', exact: true }).click();
+  await openFold(form, 'Ảnh và giấy tờ');
   const draft = form.getByRole('group', { name: 'Mặt trước' });
   await expect(draft.getByText('Biểu tượng loại Switch').or(draft.getByText(/Chưa chọn ảnh/))).toBeVisible();
   await draft.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `form-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });

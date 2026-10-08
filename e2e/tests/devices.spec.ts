@@ -14,6 +14,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  openFold,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -59,7 +60,11 @@ async function fillDevice(
   await form.getByLabel('Tên gọi').fill(values.name);
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: values.type, exact: true }).click();
-  if (values.serial) await form.getByLabel('Serial').fill(values.serial);
+  if (values.serial) {
+    // Serial nằm trong khối gập «Mua sắm và bảo hành» (Q-27).
+    await openFold(form, 'Mua sắm và bảo hành');
+    await form.getByLabel('Serial').fill(values.serial);
+  }
   if (values.siteCode) {
     await form.getByRole('button', { name: 'Site' }).click();
     await page.getByRole('option', { name: new RegExp(values.siteCode) }).click();
@@ -107,6 +112,7 @@ test.describe('Kho thiết bị', () => {
 
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
+    await openFold(form, 'Người dùng và phòng ban');
     await form.getByLabel('Người sử dụng').fill('anh Nam');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
@@ -310,8 +316,10 @@ test.describe('Kho thiết bị', () => {
     // Điền sẵn hồ sơ đang có, không phải một form trắng.
     await expect(form.getByLabel('Mã thiết bị')).toHaveValue(code);
     // Ô chỉ có ở hộp đầy đủ — bản chép ra rút gọn sẽ trượt ngay ở đây.
+    await openFold(form, 'Mua sắm và bảo hành');
     await expect(form.getByLabel('Serial')).toBeVisible();
 
+    await openFold(form, 'Người dùng và phòng ban');
     await form.getByLabel('Người sử dụng').fill('anh Tuấn');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 

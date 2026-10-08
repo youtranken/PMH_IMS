@@ -336,6 +336,13 @@ a.linkbtn.sm {
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
     transform var(--dur) var(--ease);
 }
+/* Màn thấp (laptop 768px): Danh mục nằm trong nhóm Tài sản luôn mở (Q-27) làm menu dài thêm một
+   mục — siết đệm dọc để mục cuối vẫn thấy mà không phải cuộn (Q-18). Màn cao giữ nguyên. */
+@media (max-height: 800px) {
+  .nav-item {
+    padding-block: var(--space-1);
+  }
+}
 .nav-item:hover {
   background: var(--sidebar-hover);
   color: var(--sidebar-ink-2);

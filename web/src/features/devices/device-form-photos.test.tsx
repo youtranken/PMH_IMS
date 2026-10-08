@@ -105,6 +105,7 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     const user = userEvent.setup();
     await fillRequired(user);
 
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Ảnh và giấy tờ/ }));
     const front = screen.getByRole('group', { name: 'Mặt trước' });
     expect(within(front).getByText(/Chưa chọn ảnh/)).toBeInTheDocument();
     // Loại vừa chọn hiện thành biểu tượng lớn trong ô trống.
@@ -132,6 +133,7 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     renderForm(null);
     const user = userEvent.setup();
     await fillRequired(user);
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Ảnh và giấy tờ/ }));
     const front = screen.getByRole('group', { name: 'Mặt trước' });
     await user.upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'a.png', { type: 'image/png' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
