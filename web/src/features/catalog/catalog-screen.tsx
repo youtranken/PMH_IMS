@@ -53,18 +53,21 @@ import {
 } from '@/lib/catalog-types';
 import { CableSwatch } from '@/ui/cable-swatch';
 import { lowerFirstAfterNumber } from '@/lib/count-label';
+import { CatalogSetup } from './catalog-setup';
 
 const DEFAULT_LIMIT = 20;
 
-const TAB_KEYS: { key: CatalogEntity; labelKey: string; searchKey: string }[] = [
-  { key: 'site', labelKey: 'catalog.tabSite', searchKey: 'catalog.searchSite' },
-  { key: 'cabinet', labelKey: 'catalog.tabCabinet', searchKey: 'catalog.searchCabinet' },
-  { key: 'device_type', labelKey: 'catalog.tabDeviceType', searchKey: 'catalog.searchDeviceType' },
-  { key: 'vendor', labelKey: 'catalog.tabVendor', searchKey: 'catalog.searchVendor' },
-  { key: 'department', labelKey: 'catalog.tabDepartment', searchKey: 'catalog.searchDepartment' },
-  { key: 'isp_provider', labelKey: 'catalog.tabIspProvider', searchKey: 'catalog.searchIspProvider' },
-  { key: 'service_port', labelKey: 'catalog.tabServicePort', searchKey: 'catalog.searchServicePort' },
-  { key: 'cable_type', labelKey: 'catalog.tabCableType', searchKey: 'catalog.searchCableType' },
+/* Thứ tự = ba nhóm của Q-27 (Vị trí · Thiết bị · Đối tác & tổ chức); tab Model chen sau Loại
+   thiết bị lúc dựng thanh tab. Đổi thứ tự ở đây là đổi thứ tự trên màn. */
+const TAB_KEYS: { key: CatalogEntity; labelKey: string; searchKey: string; groupKey: string }[] = [
+  { key: 'site', labelKey: 'catalog.tabSite', searchKey: 'catalog.searchSite', groupKey: 'catalog.groupLocation' },
+  { key: 'cabinet', labelKey: 'catalog.tabCabinet', searchKey: 'catalog.searchCabinet', groupKey: 'catalog.groupLocation' },
+  { key: 'device_type', labelKey: 'catalog.tabDeviceType', searchKey: 'catalog.searchDeviceType', groupKey: 'catalog.groupDevice' },
+  { key: 'cable_type', labelKey: 'catalog.tabCableType', searchKey: 'catalog.searchCableType', groupKey: 'catalog.groupDevice' },
+  { key: 'service_port', labelKey: 'catalog.tabServicePort', searchKey: 'catalog.searchServicePort', groupKey: 'catalog.groupDevice' },
+  { key: 'vendor', labelKey: 'catalog.tabVendor', searchKey: 'catalog.searchVendor', groupKey: 'catalog.groupPartner' },
+  { key: 'isp_provider', labelKey: 'catalog.tabIspProvider', searchKey: 'catalog.searchIspProvider', groupKey: 'catalog.groupPartner' },
+  { key: 'department', labelKey: 'catalog.tabDepartment', searchKey: 'catalog.searchDepartment', groupKey: 'catalog.groupPartner' },
 ];
 
 /**
@@ -756,15 +759,13 @@ export function CatalogScreen({ me }: { me: Me }) {
         }
       />
 
+      <CatalogSetup lists={lists.data} onPick={switchTab} />
+
       <Tabs
-        items={[
-          ...TAB_KEYS.map((tab) => ({
-            key: tab.key,
-            label: t(tab.labelKey),
-            count: lists.data?.[LIST_OF[tab.key]]?.length,
-          })),
-          { key: MODEL_TAB, label: t('deviceModels.tab') },
-        ]}
+        items={TAB_KEYS.flatMap((tab) => [
+          { key: tab.key, label: t(tab.labelKey), count: lists.data?.[LIST_OF[tab.key]]?.length, group: t(tab.groupKey) },
+          ...(tab.key === 'device_type' ? [{ key: MODEL_TAB, label: t('deviceModels.tab'), group: t(tab.groupKey) }] : []),
+        ])}
         value={modelTab ? MODEL_TAB : entity}
         onChange={switchTab}
         ariaLabel={t('catalog.title')}

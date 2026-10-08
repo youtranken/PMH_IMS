@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { motionReduced } from '@/lib/motion';
 
@@ -10,6 +10,11 @@ export interface TabItem {
   label: ReactNode;
   /** Số nhỏ bên phải nhãn (vd số dòng trong tab). */
   count?: number;
+  /**
+   * Tên nhóm (Q-27, màn Danh mục): tab liền nhau cùng nhóm đứng thành cụm, nhãn nhóm hiện trước
+   * tab đầu của cụm. Nhãn chỉ để nhìn (`aria-hidden`) — vẫn là MỘT tablist, ←/→ đi qua mọi tab.
+   */
+  group?: string;
   /*
    * ===== KHÔNG CÓ PROP `dot` (chấm cảnh báo) =====
    *
@@ -128,9 +133,14 @@ export function Tabs({
       data-ink={ink ? 'true' : undefined}
       data-wrap={wrap ? 'true' : undefined}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
+        <Fragment key={item.key}>
+        {item.group && item.group !== items[index - 1]?.group ? (
+          <span className="tab-group" aria-hidden="true" data-first={index === 0 ? 'true' : undefined}>
+            {item.group}
+          </span>
+        ) : null}
         <button
-          key={item.key}
           ref={(el) => {
             refs.current[item.key] = el;
           }}
@@ -196,6 +206,7 @@ export function Tabs({
             </>
           ) : null}
         </button>
+        </Fragment>
       ))}
       {ink ? (
         <span

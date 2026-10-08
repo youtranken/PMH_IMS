@@ -2692,3 +2692,60 @@ html[data-motion='off'] .file-picker.dropped::after {
 }
 html[data-motion='off'] .tab-ink { transition: none; }
 html[data-motion='off'] .file-picker.dragging { transform: none; }
+
+
+/* Ô trạng thái "đã khai đủ chưa" (Q-27, đầu màn Danh mục): mỗi ô là một nút sang đúng chỗ khai.
+   Ô thiếu (`data-ok=false`) viền và chữ màu cảnh báo. */
+.setup-tiles {
+  margin-bottom: var(--space-7);
+  padding: var(--space-6) var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.setup-tiles-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+.setup-tiles-hint {
+  margin: var(--space-1) 0 var(--space-5);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.setup-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-4);
+}
+.setup-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.setup-tile:hover {
+  border-color: var(--primary);
+}
+.setup-tile-label {
+  font-weight: var(--fw-semibold);
+}
+.setup-tile-state {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ok);
+}
+.setup-tile[data-ok='false'] {
+  border-color: var(--warm);
+}
+.setup-tile[data-ok='false'] .setup-tile-state {
+  color: var(--warn);
+}

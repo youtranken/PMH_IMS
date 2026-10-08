@@ -443,6 +443,24 @@
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* Nhãn nhóm trong thanh tab (`TabItem.group`, Q-27 — Danh mục): chữ nhỏ in hoa trước cụm tab,
+   cụm sau có vạch ngăn bên trái. Chỉ để nhìn (aria-hidden). */
+.tabs .tab-group {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0 var(--space-3) 0 var(--space-6);
+  border-left: 1px solid var(--border-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tabs .tab-group[data-first='true'] {
+  padding-left: 0;
+  border-left: 0;
+}
 /* Tab xuống dòng (`wrap`): không cuộn ngang, không mép mờ — mọi tab thấy được, quá ba hàng thì
    cuộn dọc trong khung. */
 .tabs[data-wrap='true'] {

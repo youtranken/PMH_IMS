@@ -234,3 +234,26 @@ describe('Tabs — kiểu xuống dòng (dải chuyển nhanh bản vẽ cùng k
     expect(screen.getAllByRole('tab')[0]).toHaveTextContent('Phòng số 0 dài');
   });
 });
+
+/* Q-27: Danh mục gom tab thành nhóm có nhãn — nhãn chỉ để nhìn, tab vẫn là MỘT tablist. */
+describe('Tabs — nhóm có nhãn', () => {
+  it('nhãn nhóm hiện một lần trước tab đầu của nhóm, ẩn với trình đọc màn hình; tên tab không đổi', () => {
+    renderWithI18n(
+      <Tabs
+        ariaLabel="Danh mục"
+        value="site"
+        onChange={() => {}}
+        items={[
+          { key: 'site', label: 'Site', group: 'Vị trí' },
+          { key: 'cabinet', label: 'Tủ mạng', group: 'Vị trí' },
+          { key: 'vendor', label: 'Nhà cung cấp', group: 'Đối tác & tổ chức' },
+        ]}
+      />,
+    );
+    const list = screen.getByRole('tablist', { name: 'Danh mục' });
+    const labels = Array.from(list.querySelectorAll('.tab-group')).map((el) => el.textContent);
+    expect(labels).toEqual(['Vị trí', 'Đối tác & tổ chức']);
+    for (const el of Array.from(list.querySelectorAll('.tab-group'))) expect(el).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Site', 'Tủ mạng', 'Nhà cung cấp']);
+  });
+});
