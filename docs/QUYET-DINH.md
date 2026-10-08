@@ -1002,6 +1002,64 @@ thay CHỖ LẤY Số U, ảnh và cổng.
   - **Link thẳng tới một luật NAT** (X-05): `/nat?rule=<id>` mở sổ NAT, tô sáng dòng đó (kể cả khi
     nó nằm ở trang khác / bị bộ lọc ẩn — mở theo id), và menu dòng có "Sao chép link".
 
+### Q-27 · Giao diện C — thiết bị, phần mềm, danh mục (08/10/2026, chủ dự án chốt trên mockup)
+
+Mockup chạy thử: artifact "IMS thiết bị — mockup gọn", trang "Luồng đầy đủ (chạy thử)". Kế hoạch
+port: `docs/KE-HOACH-GIAO-DIEN-C.md`. Lý do chung: tạo thiết bị có quá nhiều ô, dễ lẫn thiết bị /
+phần mềm / danh mục, trang chi tiết mỗi máy một kiểu vì ô trống bị ẩn.
+
+- **Menu:** "Danh mục" lên đầu nhóm **Tài sản** (trước Thiết bị, Phần mềm), bỏ khỏi nhóm Hệ thống
+  — đúng thứ tự khai Danh mục → Thiết bị → Phần mềm. Quyền xem/sửa giữ nguyên.
+- **Danh mục:** 9 tab gom 3 nhóm *Vị trí* (Site, Tủ mạng) / *Thiết bị* (Loại thiết bị, Model, Loại
+  dây, Cổng dịch vụ) / *Đối tác & tổ chức* (Nhà cung cấp, Nhà mạng, Phòng ban). Đầu màn có thẻ
+  "Khai trước khi thêm thiết bị" (đủ / còn thiếu, ví dụ model chưa có ảnh). Link `?tab=` cũ vẫn mở
+  đúng nhóm và tab. Cột, bộ lọc, menu ⋮ của từng tab giữ như hiện tại.
+- **Đổi nhãn** (bảng A4 của mockup): Hãng → Hãng sản xuất; Tên (thiết bị) → Tên gọi; Loại → Loại
+  thiết bị / Loại hồ sơ; Mã → Mã thiết bị / Mã hồ sơ / Mã model; "Dịch vụ / Port" → "Cổng dịch vụ
+  (port)"; nút thêm ở màn Dịch vụ có hạn → "Thêm dịch vụ có hạn"; tab "Hồ sơ" của phần mềm →
+  "Tổng quan". Tiêu đề hộp thoại mang nhãn phân hệ (Thiết bị / Phần mềm / Danh mục).
+- **Bảng thiết bị:** cột ▸ · Ảnh (ảnh model) · Mã thiết bị · Tên · IP quản trị · Vị trí · Trạng
+  thái · Thao tác. **Bỏ** cột Người sử dụng, cột Bảo hành và dòng phụ loại · model · serial dưới
+  tên (đã có trong hồ sơ). IP thành cột riêng (thay dòng phụ dưới mã), không có IP thì "—". Lọc,
+  xuất Excel, dòng nhắc két, máy đã thanh lý, thẻ 390px giữ như cũ.
+- **Khu bung dòng** (license đang cài của máy, ghế đang dùng của license) và tab tương ứng trong
+  trang chi tiết: tiêu đề cột in đậm; mỗi dòng là một thẻ tách nhau, rê chuột thì nổi lên. Bổ sung
+  cho Q-24: cột Ghi chú vẫn luôn có.
+- **Form thiết bị:** Model đứng đầu, chọn bằng ảnh thu nhỏ (chọn xong tự điền Loại, Số U, ảnh). Hai
+  khối luôn mở: *Máy gì* (Model, Mã, Tên gọi) và *Đặt ở đâu* (Site, Tủ mạng, U trống). Các khối còn
+  lại gập, có đếm số ô đã khai: Người dùng & phòng ban · Mua sắm & bảo hành · Truy cập quản trị ·
+  Ảnh & giấy tờ · Ghi chú. Không bỏ trường nào.
+- **Trang chi tiết thiết bị và phần mềm dùng một khuôn:** đầu trang (mã, trạng thái, nhãn phân hệ)
+  + dải 4 ô (thiết bị: Vị trí · Người sử dụng · IP quản trị · Bảo hành; phần mềm: Nhà cung cấp ·
+  Hạn · Ghế/Tên miền · Hợp đồng hoặc Giấy tờ). Thiết bị có khung ảnh mặt trước (theo model) / mặt
+  sau (riêng máy). Ô chưa khai vẫn đứng đúng chỗ và ghi "chưa khai" (bỏ cách ẩn ô trống). Thiết bị
+  có **tab Phần mềm riêng** (thay khu "License đang cài" trong Tổng quan), có nút "Gán phần mềm vào
+  máy này". Bản đồ quan hệ giữ, đổi kiểu: ô giữa có ảnh model. Băng báo, các khu IP/NAT/ISP, tab
+  Sơ đồ cổng / Két / Lịch sử, hộp Thanh lý giữ nguyên.
+- **Mỗi đợt mua license là một hồ sơ riêng** (mã riêng, giấy tờ riêng, key riêng trong két) dù cùng
+  tên phần mềm — ví dụ Windows Server 2025 OEM mua 2 ghế, sau mua thêm 3 ghế với key khác: hai hồ
+  sơ LIC-…-01, LIC-…-02. Trang chi tiết có dải "Cùng phần mềm, mua theo đợt" (gom hồ sơ license
+  cùng tên); menu có "Mua thêm đợt mới…" mở form điền sẵn theo đợt trước, gợi ý mã kế tiếp.
+- **Form Thêm phần mềm:** hàng 1 Tên · Mã hồ sơ · Nhà cung cấp; hàng 2 Kỳ hạn · Bắt đầu · Hết hạn;
+  khối "Ghế và hợp đồng" có Số ghế (− / +) và ô tick **"Mỗi ghế có hợp đồng, giấy tờ và ghi chú
+  riêng"** (chỉ bật được khi ≥ 2 ghế; bớt xuống dưới 2 thì tự tắt):
+  - **Không tick:** các ghế dùng chung *Số hợp đồng / PO*, *Ghi chú* và *Giấy tờ* của hồ sơ.
+  - **Có tick:** bảng Ghế 1…N, mỗi ghế có số hợp đồng, ghi chú, giấy tờ riêng; ô ghi chú và giấy tờ
+    chung của hồ sơ bị ẩn. Đổi số ghế thì bảng thêm / bớt dòng (không bớt được ghế đang có máy).
+  - Không có ô chi phí ở form. Nút chính "Lưu rồi gán vào máy".
+  - Ba màn Tên miền & SSL / Hợp đồng bảo trì / Dịch vụ có hạn khác dùng cùng khuôn form, không có
+    ghế và không có tick.
+- **Gán license vào máy chỉ chọn máy** (theo Máy / Phòng ban / Người sử dụng, lý do khi vượt ghế).
+  Bỏ các ô Chi phí, Hợp đồng, Bắt đầu, Kết thúc, Ghi chú khỏi hộp Gán. Hồ sơ có tick thì hộp Gán
+  có bảng "Máy vào ghế nào": mặc định ghế trống theo thứ tự, đổi được.
+- **Sửa ghế** (của một máy): Chi phí, Bắt đầu, Hết hạn, Ghi chú. **Bỏ ô Hợp đồng** (hợp đồng thuộc
+  hồ sơ hoặc thuộc ghế ở form). Máy thuộc ghế riêng thì hộp hiện "đang ở Ghế n · HĐ … · giấy tờ",
+  ghi chú của ghế sửa ở Sửa hồ sơ. Cột `license_assignment.contract` cũ giữ trong DB, không xoá.
+- **Dữ liệu:** cần migration mới — bảng ghế của hồ sơ (số thứ tự, số hợp đồng, ghi chú; chủ là module
+  software, AD-3), liên kết ghế ↔ lần gán máy, cột số hợp đồng chung và cờ "mỗi ghế riêng" trên
+  `software`, loại chủ sở hữu file mới cho giấy tờ của ghế. Có `@Audited` + `@Roles` + lịch sử như
+  mọi đường ghi.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
