@@ -928,12 +928,20 @@ html[data-motion='off'] .skeleton {
 }
 .fact-note { font-size: var(--fs-sm); color: var(--ink-2); }
 .fact-action { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+/* Điện thoại: một cột "nhãn | giá trị" — ô 2 × 2 chỉ còn ~170px, mã tủ dài (không được ngắt giữa
+   mã, `LocationText`) sẽ tràn ô. */
 @media (max-width: 680px) {
-  .fact-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .fact { padding: var(--space-5) var(--space-6); }
-  .fact + .fact { border-left: none; }
-  .fact:nth-child(even) { border-left: 1px solid var(--border); }
-  .fact:nth-child(n + 3) { border-top: 1px solid var(--border); }
+  .fact-strip { grid-template-columns: minmax(0, 1fr); }
+  .fact {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    column-gap: var(--space-4);
+    align-items: baseline;
+    padding: var(--space-4) var(--space-6);
+  }
+  .fact + .fact { border-left: none; border-top: 1px solid var(--border); }
+  .fact dd { grid-column: 2; }
+  .fact-v { font-size: var(--fs-md); }
 }
 
 .spec-list {

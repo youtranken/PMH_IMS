@@ -75,7 +75,7 @@ test.describe('Trang chi tiết thiết bị', () => {
       await expect(page.getByRole('tab', { name })).toBeVisible();
     }
 
-    /* Serial nằm MỘT chỗ: ô "Serial" trong Thông tin nhanh, kèm nút chép (Q-20) — không còn
+    /* Serial nằm MỘT chỗ: dòng "Serial" của Thông số, kèm nút chép (Q-20, Q-27) — không còn
        dòng S/N dưới tiêu đề. */
     const quick = page.getByRole('tabpanel');
     await expect(quick.getByText(`FOC-${code}`, { exact: true })).toBeVisible();
@@ -254,8 +254,16 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     await expect(page.getByText('Không có hạn')).toBeVisible();
     await expect(page.getByRole('progressbar')).toHaveCount(0);
 
-    // Và ô chưa khai gom về MỘT dòng, không phải một dãy hộp gạch ngang.
-    await expect(page.getByText(/Chưa khai báo:/)).toBeVisible();
+    // Q-27: ô chưa khai ĐỨNG ĐÚNG CHỖ trong Thông số và ghi "— chưa khai", không ẩn; dải 4 ô
+    // nói bảo hành "chưa khai"; nút bổ sung đếm đúng số ô trống.
+    const spec = page.getByRole('group', { name: 'Thông số' });
+    await expect(spec.getByRole('term')).toHaveText([
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
+      'Nhà cung cấp', 'Ngày mua', 'Bảo hành', 'Phòng ban sử dụng', 'Ghi chú',
+    ]);
+    await expect(spec.getByRole('definition').filter({ hasText: '— chưa khai' })).toHaveCount(9);
+    await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' })).toContainText('Bảo hànhchưa khai');
+    await expect(page.getByRole('button', { name: 'Bổ sung 9 ô còn thiếu' })).toBeVisible();
   });
 
   /**

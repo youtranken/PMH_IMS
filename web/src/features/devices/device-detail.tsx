@@ -16,7 +16,6 @@ import { accessView } from "./device-access";
 import { CopyButton } from "@/ui/copy-button";
 import { DetailHeader } from "@/ui/detail-header";
 import { FactStrip, SpecList } from "@/ui/detail-facts";
-import { rackUnitLabel } from "@/lib/rack-units";
 import { CabinetPeek } from "./cabinet-peek";
 import {
   DetailLayout,
@@ -746,8 +745,8 @@ export function DeviceDetail({ me }: { me: Me }) {
           {
             key: "location",
             label: t("devices.locationCol"),
+            /* `LocationText` đã ghép "site · tủ · U", chỉ ngắt sau dấu "·". */
             value: item.siteCode ? <LocationText device={item} /> : null,
-            note: rackUnitLabel(item.rackUStart, item.rackUSize),
           },
           {
             key: "user",

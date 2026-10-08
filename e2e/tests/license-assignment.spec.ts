@@ -266,22 +266,29 @@ test.describe('Gán license theo seat', () => {
     await expect(page.getByRole('tab', { name: 'Máy đang dùng' })).toHaveCount(0);
   });
 
-  test('trang thiết bị hiện khu "License đang cài" — đúng cơ chế khu mở rộng 2.5', async ({
+  test('trang thiết bị: tab Phần mềm đếm và bày license đang cài (Q-27), gán ngay từ máy', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
-    const licenseId = await createLicense(page, `LIC-E2E-PANEL-${stamp}`, 5);
+    await createLicense(page, `LIC-E2E-PANEL-${stamp}`, 5);
     const deviceId = await createDevice(page, `PC-E2E-P1-${stamp}`);
 
-    // Chưa gán: khu mở rộng phải RỖNG, không có khối trống treo lơ lửng.
-    await page.goto(`/devices/${deviceId}`);
-    await expect(page.getByRole('heading', { name: 'License đang cài' })).toHaveCount(0);
+    // Chưa gán: tab không mang số (số 0 không vẽ), bảng nói rõ là chưa cài gì.
+    await page.goto(`/devices/${deviceId}?tab=software`);
+    await expect(page.getByRole('tab', { name: 'Phần mềm', exact: true })).toHaveAttribute('aria-selected', 'true');
 
-    expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
+    // Gán ngay từ trang máy: chọn license → đúng hộp Gán của license, máy nằm sẵn.
+    await page.getByRole('button', { name: 'Gán phần mềm vào máy này' }).click();
+    const pick = page.getByRole('dialog', { name: `Gán phần mềm vào PC-E2E-P1-${stamp}` });
+    await pick.getByRole('combobox', { name: 'Tìm license' }).fill(`LIC-E2E-PANEL-${stamp}`);
+    await page.getByRole('option', { name: new RegExp(`LIC-E2E-PANEL-${stamp}`) }).click();
+    const assignBox = page.getByRole('dialog', { name: `Gán license vào máy — LIC-E2E-PANEL-${stamp}` });
+    await expect(assignBox.getByRole('list', { name: 'Máy sẽ gán' })).toContainText(`PC-E2E-P1-${stamp}`);
+    await assignBox.getByTestId('dialog-footer').getByRole('button', { name: 'Gán vào máy' }).click();
+    await expect(assignBox).toHaveCount(0);
 
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'License đang cài' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /^Phần mềm\s*1$/ })).toBeVisible();
     await expect(page.getByRole('link', { name: `LIC-E2E-PANEL-${stamp}` })).toBeVisible();
   });
 

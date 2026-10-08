@@ -442,7 +442,7 @@ test.describe('DEV-048 · bảng port map', () => {
   });
 });
 
-test.describe('DEV-068 · khu License đang cài không tràn card', () => {
+test.describe('DEV-068 · tab Phần mềm của thiết bị không tràn card (Q-27)', () => {
   test.use({ viewport: DESKTOP });
 
   test('một tiêu đề duy nhất, mã license một dòng, không đè sang cột phải', async ({ page }) => {
@@ -465,9 +465,9 @@ test.describe('DEV-068 · khu License đang cài không tràn card', () => {
     expect(assigned.status()).toBe(201);
 
     await page.goto(`/devices/${deviceId}`);
-    const section = page.getByRole('region', { name: /License đang cài/ });
+    await page.getByRole('tab', { name: /^Phần mềm/ }).click();
+    const section = page.getByRole('region', { name: 'Phần mềm trên máy này' });
     await expect(section).toBeVisible();
-    await expect(page.getByText(/Phần mềm đang cài/)).toHaveCount(0);
     const link = section.getByRole('link', { name: licenseCode });
     await expect(link).toBeVisible();
     const linkBox = (await link.boundingBox())!;

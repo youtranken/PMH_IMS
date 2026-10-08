@@ -227,13 +227,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
          1280px với cột Thao tác trong khung. */
       'Bảng phần mềm phải có đúng 6 cột này, đúng thứ tự này',
-    ).toEqual(['Mã', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
+    ).toEqual(['Mã hồ sơ', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
 
     // ===== SẮP XẾP: aria-sort phải lật, VÀ thứ tự dòng phải đảo theo =====
-    const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã', exact: true });
+    const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ', exact: true });
     const codeHeader = page
       .getByRole('columnheader')
-      .filter({ has: page.getByRole('button', { name: 'Sắp xếp theo Mã', exact: true }) });
+      .filter({ has: page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ', exact: true }) });
 
     await expect(
       codeHeader,
@@ -262,8 +262,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     expect(
       await rowActionNames(page, licenseCode),
-      'Hồ sơ LICENSE còn dùng: Gán vào máy · Gia hạn · Thanh lý… (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
-    ).toEqual(['Gán vào máy', 'Gia hạn', 'Thanh lý…']);
+      'Hồ sơ LICENSE còn dùng: Gán vào máy · Mua thêm đợt mới… (Q-27) · Gia hạn · Thanh lý… (việc nguy hiểm xếp cuối); Sửa đứng ngoài (Q-18)',
+    ).toEqual(['Gán vào máy', 'Mua thêm đợt mới…', 'Gia hạn', 'Thanh lý…']);
     await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
 
     // Hợp đồng bảo trì nằm ở màn của nó (Q-22).
@@ -461,7 +461,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await add.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill('   ');
     await add.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('   ');
-    await add.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    // `exact`: chân hộp còn có "Lưu rồi gán vào máy" (Q-27).
+    await add.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(
       add.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }),
@@ -778,8 +779,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Thanh lý nằm trong menu "⋯" (mục nguy hiểm ở cuối), không còn là nút đỏ đứng lẻ.
     expect(
       await rowActionNames(page, licenseCode),
-      'Menu "⋯" đầu trang hồ sơ có mục Thanh lý…',
-    ).toEqual(['Thanh lý…']);
+      'Menu "⋯" đầu trang hồ sơ: Mua thêm đợt mới… (license, Q-27) rồi Thanh lý…',
+    ).toEqual(['Mua thêm đợt mới…', 'Thanh lý…']);
 
     /*
      * ===== THANH TAB =====

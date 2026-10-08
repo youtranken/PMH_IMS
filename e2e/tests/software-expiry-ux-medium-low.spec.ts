@@ -174,7 +174,7 @@ test.describe('Danh sách phần mềm', () => {
 });
 
 test.describe('Hộp gán license', () => {
-  test('SW-051/SW-052: license hết ghế mở sẵn ô lý do + nút "Gán vượt ghế"; chi phí nhận "5,6tr"', async ({
+  test('SW-051/SW-052: license hết ghế mở sẵn ô lý do + nút "Gán vượt ghế"; chi phí (Sửa ghế) nhận "5,6tr"', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -201,7 +201,6 @@ test.describe('Hộp gán license', () => {
 
     await dialog.getByRole('combobox').fill(deviceB);
     await page.getByRole('option', { name: new RegExp(deviceB) }).click();
-    await dialog.getByRole('textbox', { name: 'Chi phí', exact: true }).fill('5,6tr');
 
     // Đường hỏng: chưa ghi lý do → lỗi ngay dưới ô, không gửi đi.
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán vượt ghế' }).click();
@@ -211,7 +210,13 @@ test.describe('Hộp gán license', () => {
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán vượt ghế' }).click();
     await expect(page.getByText('Đã gán license vào 1 máy.')).toBeVisible();
 
+    // Q-27: hộp Gán chỉ chọn máy — chi phí khai ở "Sửa ghế".
     await page.goto(`/software/${id}?tab=devices`);
+    await page.getByRole('row', { name: new RegExp(deviceB) }).getByRole('button', { name: `Sửa ${deviceB}` }).click();
+    const seat = page.getByRole('dialog', { name: `Sửa ghế license — ${deviceB}` });
+    await seat.getByRole('textbox', { name: 'Chi phí', exact: true }).fill('5,6tr');
+    await seat.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(seat).toHaveCount(0);
     // Ô chi phí của dòng ghế; dòng tổng ngay dưới (SW-057) mang cùng con số.
     await expect(page.getByRole('cell', { name: /5\.600\.000\s₫/ })).toBeVisible();
     await expect(page.getByText(/2 Máy đang dùng · tổng chi phí 5\.600\.000 ₫/)).toBeVisible();

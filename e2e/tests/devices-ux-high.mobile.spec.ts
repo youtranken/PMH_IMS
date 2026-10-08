@@ -106,7 +106,7 @@ test.describe('DEV-063 · DEV-043 · trang chi tiết trên điện thoại', ()
     });
 
     await page.goto(`/devices/${id}?tab=history`);
-    // Tab bảng: thẻ Tóm tắt thu thành dải một dòng — người dùng vẫn thấy ngay, tab không nằm dưới y≈590.
+    // Tab bảng: dải 4 ô (Q-27) vẫn thấy người dùng ngay, tab không nằm dưới y≈590.
     await expect(page.getByText('Chị Lan').first()).toBeVisible();
     const tab = page.getByRole('tab', { name: 'Lịch sử' });
     await expect(tab).toHaveAttribute('aria-selected', 'true');
@@ -115,7 +115,8 @@ test.describe('DEV-063 · DEV-043 · trang chi tiết trên điện thoại', ()
     // Ở tab Tổng quan, thẻ đầy đủ nằm sau nút "Chi tiết".
     await page.getByRole('tab', { name: 'Tổng quan' }).click();
     await page.getByText('Chi tiết', { exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Tóm tắt' })).toBeVisible();
+    // Q-27: cột phải là "Bảo hành" (+ "Trong tủ" khi máy gắn tủ); vị trí / người dùng ở dải 4 ô.
+    await expect(page.getByRole('heading', { name: 'Bảo hành' })).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const tablist = page.getByRole('tablist');

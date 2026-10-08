@@ -1032,10 +1032,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
           ),
         {
           message:
-            'Hồ sơ một con Switch phải có ĐỦ NĂM tab — Port map chỉ có mặt vì loại này bật has_port_map (FR-006)',
+            'Hồ sơ một con Switch phải có ĐỦ SÁU tab — Port map chỉ có mặt vì loại này bật has_port_map (FR-006); Phần mềm là tab riêng (Q-27)',
         },
       )
-      .toEqual(['Tổng quan', 'Sơ đồ cổng', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
+      .toEqual(['Tổng quan', 'Sơ đồ cổng', 'Phần mềm', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
 
     const main = page.getByRole('main');
     const panel = page.getByRole('tabpanel');
@@ -1044,44 +1044,40 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(main.getByRole('button')), {
         message:
-          'Đầu hồ sơ thiết bị: "Sửa hồ sơ" + menu ⋮; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
+          'Đầu hồ sơ thiết bị: "Sửa hồ sơ" + menu ⋮; ô IP quản trị của dải 4 ô có "Cấp IP"; tab Tổng quan thêm "Bổ sung n ô" — không nút nào khác',
       })
       // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
       // Q-18: "Sửa hồ sơ" đứng ngoài; Đổi trạng thái (DEV-053) · Nhân bản (DEV-034) · Thanh lý
-      // vào menu ⋮. Mã máy không còn nút chép (tiêu đề trang, bôi đen chép được). "Bổ sung n ô
-      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan — máy chưa có IP thì "Cấp IP"
-      // là nút chính ngay trong ô "IP quản trị", nên đứng trước "Bổ sung".
+      // vào menu ⋮. Mã máy không còn nút chép (tiêu đề trang, bôi đen chép được). "Cấp IP"
+      // (DEV-089) ở ô "IP quản trị" của dải 4 ô (Q-27, thấy ở mọi tab); "Bổ sung n ô còn thiếu"
+      // (DEV-066) dưới Thông số của tab Tổng quan.
       .toEqual([
         'Sửa hồ sơ',
         `Thao tác với ${code}`,
         'Cấp IP',
-        'Bổ sung 6 ô còn thiếu',
+        'Bổ sung 9 ô còn thiếu',
         // Ô ảnh hai mặt của khu "Hình dùng trên sơ đồ" (Q-23).
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh lên — Mặt sau',
       ]);
-    await expect(panel.getByText('Chưa có IP', { exact: true })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' }).getByText('Chưa có IP', { exact: true })).toBeVisible();
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*
-     * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai báo".
-     *
-     * Đòi CẢ HAI cùng lúc — ô "Model" rỗng (một dấu gạch ngang) VÀ dòng "Chưa khai báo: Model, …"
-     * — là khoá lại một lưới toàn gạch ngang, rồi ngay dưới là một câu nói lại y hệt danh sách
-     * ấy.
-     *
-     * Luật bài kiểm giữ: ô KHÔNG có giá trị thì không vẽ ra ô nào.
+     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 10 dòng, cùng thứ tự; ô trống đứng đúng
+     * chỗ và ghi "— chưa khai" (bỏ cách ẩn ô trống: hai máy trông hai kiểu, người đọc không biết
+     * "không thấy" là chưa khai hay không có).
      */
-    for (const label of ['Model', 'Serial', 'Nhà cung cấp', 'Ngày mua', 'Ghi chú']) {
-      await expect(
-        panel.getByText(label, { exact: true }),
-        `Máy này chưa khai báo "${label}" nên KHÔNG được vẽ một ô rỗng cho nó — tên của nó chỉ được xuất hiện trong dòng "Chưa khai báo"`,
-      ).toHaveCount(0);
-    }
+    const spec = panel.getByRole('group', { name: 'Thông số' });
+    await expect(spec.getByRole('term')).toHaveText([
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
+      'Nhà cung cấp', 'Ngày mua', 'Bảo hành', 'Phòng ban sử dụng', 'Ghi chú',
+    ]);
+    await expect(spec.getByRole('definition').first(), 'loại đã khai thì in giá trị').toHaveText('Switch');
     await expect(
-      panel.getByText('Chưa khai báo: Model, Serial, Nhà cung cấp, Phòng ban sử dụng, Ngày mua, Ghi chú.'),
-      'Ô chưa khai phải gom về MỘT dòng nói rõ còn thiếu gì, thay cho một dãy hộp toàn dấu gạch ngang',
-    ).toBeVisible();
+      spec.getByRole('definition').filter({ hasText: '— chưa khai' }),
+      'chín ô còn lại chưa khai — mỗi ô ghi "— chưa khai" đúng chỗ của nó',
+    ).toHaveCount(9);
 
     /* ===== TAB PORT MAP ===== */
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
