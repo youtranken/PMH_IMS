@@ -308,8 +308,8 @@ export interface DiagramRef {
 /**
  * Trần số máy một lần hỏi `device-looks`. Khác `device-info`: mỗi máy kéo theo tới HAI ảnh thật
  * (đọc tệp + thu nhỏ trên threadpool) nhúng thẳng vào câu trả lời, nên 500 máy là hàng trăm MB và
- * một request giữ CPU cả phút. Web chia danh sách máy của trang thành từng lô cỡ này
- * (`DEVICE_LOOKS_BATCH` ở `use-photo-bridge.tsx` — đổi thì đổi cả hai). Đây là trần kỹ thuật của
+ * một request giữ CPU cả phút. Web hỏi một lượt cho một trang "Thiết bị kho" (`STOCK_LIMIT` ở
+ * `stock-device-picker.tsx`, phải ≤ trần này — bài `diagrams-device-looks-cap.spec`). Đây là trần kỹ thuật của
  * một request, không phải tham số nghiệp vụ.
  */
 export const DEVICE_LOOKS_MAX_IDS = 40;

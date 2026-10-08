@@ -1116,6 +1116,11 @@ Góp ý sau khi thử (07/10, tag `v1.7.1`): sửa cổng mẫu thì máy cùng 
 chỉ-thêm — xoá rồi ghi lại, không sửa số); gán model hàng loạt (`POST /device-models/:id/adopt`); xoá
 nét dây ba lựa chọn (`useConfirm` có `choice`, Hủy chèn lại nét từ XML trước khi xoá); tên tủ trong dải
 trên khung (`RACK_LABEL_TOP`, khung cũ đổi lúc mở); menu ⋮ khi vẽ gọn ("Sắp lại dây", bỏ mục duyệt).
+Đợt 3 (08/10): bỏ "Ảnh thật…" (`use-photo-bridge` xoá, ảnh do model) và "Nối hàng loạt" khỏi menu sơ đồ
+(`BulkLinkDialog` chỉ còn ở trang thiết bị, bỏ prop `onDrawing`); "Chuyển máy sang tủ…" chỉ hiện khi có máy
+lệch tủ; khung đã gắn có ô dấu `<khung>-ims-bind` (`frameBadgePatch`, `movable=0` để `childLayout=rack`
+không xếp nó) — khung gắn TRƯỚC đợt này chưa có dấu, gắn lại là có; "Dây chưa khai" POST `cable-status`
+trên XML đang vẽ (kết nối gỡ ở trang Thiết bị khi đang vẽ).
 
 7. **Người dùng thao tác tay trên DB dev giữa lượt E2E đầy đủ** làm cửa canh rác ở teardown báo "hàng sống
    sót" (bản vẽ không mang chữ E2E). Kiểm `created_by` trước khi nghi bài kiểm.

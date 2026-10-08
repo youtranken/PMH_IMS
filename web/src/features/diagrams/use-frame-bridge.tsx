@@ -8,7 +8,7 @@ import { CabinetPicker } from './cabinet-picker';
 import { BarPopover, type BarAction } from './diagram-bar';
 import { lastChildId, layerIdOf, nextInsertPosition, pageIds, type Bounds } from './drawio-bridge';
 import { FrameBindDialog } from './frame-bind-dialog';
-import { bindFrameValue, cabinetFramePatch, cabinetIdsInXml, frameCandidates, type CabinetFrameLayout, type FrameCandidate } from './frame-bridge';
+import { bindFrameValue, cabinetFramePatch, cabinetIdsInXml, frameBadgePatch, frameCandidates, type CabinetFrameLayout, type FrameCandidate } from './frame-bridge';
 import { deviceCellsOnPage } from './photo-bridge';
 
 /** `GET /diagrams/cabinet-frame/:id`. */
@@ -113,7 +113,7 @@ export function useFrameBridge({
   /** Mở hộp với XML cả tệp mới nhất: hình người vẽ vừa thêm cũng phải có trong danh sách. */
   const openBind = () => withFile((file) => setBinding(frameCandidates(file)));
 
-  const bind = (frame: FrameCandidate, attr: string, value: string | null, label?: string) => {
+  const bind = (frame: FrameCandidate, attr: string, value: string | null, label?: string, badge?: string | null) => {
     // Đọc lại khung từ tệp HIỆN TẠI: giữa lúc mở hộp và lúc bấm, người vẽ có thể đã sửa chữ trên hình.
     withFile((file) => {
       const pageId = pageOf(file);
@@ -123,7 +123,13 @@ export function useFrameBridge({
         return;
       }
       const set: Record<string, string | null> = label ? { [attr]: value, label } : { [attr]: value };
-      send({ action: 'patch', patch: { u: { [pageId]: { cells: { u: { [fresh.id]: { xmlValue: bindFrameValue(fresh, set) } } } } } } });
+      const marks = badge === undefined ? { i: [], u: {}, r: [] } : frameBadgePatch(file, fresh.id, badge);
+      const cells = {
+        u: { [fresh.id]: { xmlValue: bindFrameValue(fresh, set) }, ...marks.u },
+        ...(marks.i.length > 0 ? { i: marks.i } : {}),
+        ...(marks.r.length > 0 ? { r: marks.r } : {}),
+      };
+      send({ action: 'patch', patch: { u: { [pageId]: { cells } } } });
       markDirty();
       setBinding(null);
       const name = fresh.label || fresh.id;

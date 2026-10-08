@@ -1,4 +1,5 @@
 import { bindEdgeValue } from './cable-diff';
+import { cellIdsIn } from './cable-ends';
 import { cellIdOf, cellWrapper, escapeXmlAttr, parseDrawioXml, wrapperAttrs, type DrawioCellJson } from './drawio-bridge';
 import { RACK_LABEL_STYLE, withLabelPlacement } from './rack-fit';
 
@@ -35,6 +36,7 @@ export function frameCandidates(xml: string): FrameCandidate[] {
     if (cell.getAttribute('vertex') !== '1') continue;
     const wrapper = cellWrapper(cell);
     if (wrapper?.getAttribute('ims_device_id')) continue;
+    if ((cell.getAttribute('style') ?? '').split(';').includes(FRAME_BADGE_MARK)) continue;
     const attrs = wrapper ? wrapperAttrs(wrapper) : { label: cell.getAttribute('value') ?? '' };
     out.push({
       id: cellIdOf(cell),
@@ -46,6 +48,35 @@ export function frameCandidates(xml: string): FrameCandidate[] {
     });
   }
   return out;
+}
+
+/** Dấu style của ô "đã gắn" IMS đặt dưới khung — nhận ra ô của IMS, không mời gắn nó làm khung. */
+export const FRAME_BADGE_MARK = 'imsFrameBadge=1';
+
+/** Id ô dấu của một khung: cố định theo khung, để gắn lại là sửa đúng ô cũ chứ không thêm ô thứ hai. */
+export function frameBadgeId(frameId: string): string {
+  return `${frameId}-ims-bind`;
+}
+
+/*
+ * Ô con của khung (kéo khung thì dấu đi theo), toạ độ tương đối: góc trái DƯỚI mép khung — khung tủ
+ * đã dùng dải trên cho tên tủ. `movable=0`: bố cục rack của draw.io (`childLayout=rack`) chỉ xếp ô
+ * kéo được, nên dấu không bị xếp vào một ô U. `editable=0`: chữ do IMS viết lại mỗi lần gắn.
+ */
+const FRAME_BADGE_STYLE = `text;html=0;align=left;verticalAlign=top;fontSize=11;fontStyle=2;resizable=0;movable=0;editable=0;${FRAME_BADGE_MARK};`;
+const FRAME_BADGE_GEOMETRY = '<mxGeometry x="0" y="1" width="260" height="16" relative="1" as="geometry"><mxPoint x="0" y="4" as="offset"/></mxGeometry>';
+
+/**
+ * Mục `i` / `u` / `r` của lệnh `patch` cho dấu "đã gắn" của một khung (Q-26 08/10): gắn xong mà
+ * khung trông y như cũ thì người vẽ không biết đã gắn; dấu nằm trong bản vẽ nên ảnh chế độ Xem cũng
+ * có. `text = null` = khung không còn gắn gì.
+ */
+export function frameBadgePatch(xml: string, frameId: string, text: string | null): { i: object[]; u: Record<string, Record<string, string>>; r: string[] } {
+  const id = frameBadgeId(frameId);
+  const present = cellIdsIn(xml).has(id);
+  if (text === null) return { i: [], u: {}, r: present ? [id] : [] };
+  if (present) return { i: [], u: { [id]: { value: text, style: FRAME_BADGE_STYLE, geometry: FRAME_BADGE_GEOMETRY } }, r: [] };
+  return { i: [{ id, vertex: 1, connectable: 0, parent: frameId, value: text, style: FRAME_BADGE_STYLE, geometry: FRAME_BADGE_GEOMETRY }], u: {}, r: [] };
 }
 
 /** `xmlValue` mới của khung: giữ thuộc tính cũ, đặt giá trị khác `null`, gỡ thuộc tính mang `null`. */

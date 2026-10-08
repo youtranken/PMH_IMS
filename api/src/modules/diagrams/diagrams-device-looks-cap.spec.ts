@@ -6,7 +6,7 @@ import { DEVICE_LOOKS_MAX_IDS, type DiagramsService } from './diagrams.service';
 
 /**
  * `device-looks` nhúng tới hai ảnh thật mỗi máy vào câu trả lời — trần riêng, nhỏ hơn
- * `device-info`; web chia lô theo đúng trần này.
+ * `device-info`; web hỏi một lượt cho một trang kết quả "Thiết bị kho", trang đó không được vượt trần.
  */
 describe('GET /diagrams/device-looks — trần số máy một lần hỏi', () => {
   const looks = jest.fn().mockResolvedValue({ imsStyleKeys: [], items: [] });
@@ -18,9 +18,11 @@ describe('GET /diagrams/device-looks — trần số máy một lần hỏi', ()
     expect(looks).toHaveBeenCalledTimes(1);
   });
 
-  it('web chia lô đúng bằng trần này (DEVICE_LOOKS_BATCH)', () => {
-    const web = readFileSync(join(__dirname, '../../../../web/src/features/diagrams/use-photo-bridge.tsx'), 'utf8');
-    expect(/DEVICE_LOOKS_BATCH = (\d+);/.exec(web)?.[1]).toBe(String(DEVICE_LOOKS_MAX_IDS));
+  it('một trang "Thiết bị kho" của web (STOCK_LIMIT) không vượt trần này', () => {
+    const web = readFileSync(join(__dirname, '../../../../web/src/features/diagrams/stock-device-picker.tsx'), 'utf8');
+    const limit = Number(/const STOCK_LIMIT = (\d+);/.exec(web)?.[1]);
+    expect(limit).toBeGreaterThan(0);
+    expect(limit).toBeLessThanOrEqual(DEVICE_LOOKS_MAX_IDS);
   });
 
   it('quá trần một máy → 400, không đọc ảnh nào', () => {

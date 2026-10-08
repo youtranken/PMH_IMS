@@ -51,7 +51,7 @@ export interface RackColumnSpec {
  *
  * Máy kho ghi tủ khác khung: vừa KÉO vào khung thì mở ngay hộp "Chuyển máy sang tủ này?" — chưa
  * ghi gì; Hủy đưa ô RA khỏi khung (cạnh khung). Có sẵn trong bản vẽ lúc mở thì chỉ báo, lời báo có
- * nút mở cùng hộp; menu có "Chuyển máy sang tủ…" liệt kê mọi máy như thế. Máy cùng tủ chưa khai U
+ * nút mở cùng hộp; menu có "Chuyển máy sang tủ…" (chỉ khi có máy như thế) liệt kê mọi máy đó. Máy cùng tủ chưa khai U
  * vừa kéo vào khung thì hỏi khai U (cùng hộp); Hủy đưa ô vào cột "Chưa khai U" của tủ.
  */
 export function useRackFit({
@@ -88,6 +88,9 @@ export function useRackFit({
   // Hộp đang mở hay không, đọc được ngay trong cùng lượt (state `moving` chỉ đổi ở lần vẽ sau).
   const open = useRef(false);
   const [listing, setListing] = useState<RackMismatch[] | null>(null);
+  /* Số máy cần chuyển tủ trên XML gần nhất: mục menu chỉ hiện khi có — luôn hiện mà bấm vào chỉ báo
+     "không có máy nào" thì người dùng không biết nó để làm gì (Q-26 08/10). */
+  const [movableCount, setMovableCount] = useState(0);
 
   const pageId = (file: string) => {
     const pages = pageIds(file);
@@ -112,6 +115,7 @@ export function useRackFit({
   const fit = (xml: string, options: { warnOnly?: boolean; only?: string } = {}) => {
     latest.current = xml;
     const result = rackFit(xml, known.current);
+    setMovableCount(result.cabinetMismatch.filter((item) => !known.current.get(item.deviceId)?.retired).length);
     const missing = result.unknown.filter((id) => !asked.current.has(id));
     if (missing.length > 0) {
       for (const id of missing) asked.current.add(id);
@@ -262,14 +266,17 @@ export function useRackFit({
     close();
   };
 
-  const menu: BarAction[] = [
-    {
-      key: 'rack-move',
-      label: t('diagrams.rack.moveListAction'),
-      disabled: !ready,
-      onSelect: () => withFile((file) => setListing(rackFit(file, known.current).cabinetMismatch.filter((item) => !known.current.get(item.deviceId)?.retired))),
-    },
-  ];
+  const menu: BarAction[] =
+    movableCount > 0
+      ? [
+          {
+            key: 'rack-move',
+            label: t('diagrams.rack.moveListAction'),
+            disabled: !ready,
+            onSelect: () => withFile((file) => setListing(rackFit(file, known.current).cabinetMismatch.filter((item) => !known.current.get(item.deviceId)?.retired))),
+          },
+        ]
+      : [];
 
   const dialogs = (
     <>

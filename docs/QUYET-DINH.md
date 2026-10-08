@@ -909,6 +909,18 @@ thay CHỖ LẤY Số U, ảnh và cổng.
     đã ghim" khỏi menu khi đang vẽ (đã có ở thông báo sau khi Lưu và ở chế độ xem).
   - Xoá nét dây có ba lựa chọn (Gỡ luôn kết nối / Chỉ xóa nét vẽ / Hủy = trả nét về); tên tủ nằm
     trong dải trên khung rack; đổi máy khi khai kết nối thì xoá ô cổng đầu đó.
+- **Góp ý đợt 3 — menu ⋮ khi vẽ (08/10/2026, chủ dự án chốt):**
+  - **Bỏ "Ảnh thật…"**: ảnh do model quản lý. Máy trong khung tủ hiện ảnh mặt trước của model,
+    máy ngoài tủ hiện biểu tượng loại. Không còn công tắc mặt trước / mặt sau trên sơ đồ.
+  - **Bỏ "Nối hàng loạt"**: làm rối menu. Nối dây bằng vẽ nét rồi khai, hoặc "Khai kết nối".
+  - **"Chuyển máy sang tủ…" chỉ hiện khi có máy cần chuyển** (máy kho ghi tủ khác khung tủ nó nằm
+    trên bản vẽ). Việc này vốn tự hỏi khi kéo máy vào khung tủ khác. Mục menu luôn hiện mà bấm
+    vào chỉ báo "không có máy nào" làm người dùng không hiểu nó để làm gì.
+  - **Khung đã gắn có dấu nhìn thấy**: gắn khung với bản vẽ con / dải IP thì dưới khung hiện một
+    dòng chữ nhỏ "↗ Bản vẽ con: …" / "↗ Dải IP: …". Dấu nằm trong bản vẽ nên chế độ Xem cũng thấy;
+    bấm vào dấu cũng mở như bấm khung. Bỏ gắn thì dấu mất.
+  - **"Dây chưa khai" hỏi lại server trên bản đang vẽ**: kết nối gỡ ở trang Thiết bị khi bản vẽ
+    đang mở sửa phải hiện trong danh sách (nét mang kết nối không còn), không chỉ sau khi mở lại.
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
