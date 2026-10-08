@@ -77,7 +77,7 @@ describe('Form thiết bị — khai nhanh', () => {
     mockFetch();
     render({ cloneFrom: SOURCE });
     expect(screen.getByRole('dialog', { name: 'Nhân bản từ LT-01' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Tên thiết bị' })).toHaveValue('Laptop Dell');
+    expect(screen.getByRole('textbox', { name: 'Tên gọi' })).toHaveValue('Laptop Dell');
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('Latitude 5440');
     expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Serial' })).toHaveValue('');

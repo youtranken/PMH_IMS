@@ -271,3 +271,30 @@ describe('Dialog — DialogCancel đi qua cửa canh dữ liệu chưa lưu', ()
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
+
+/**
+ * Q-27: ba phân hệ (thiết bị, phần mềm, danh mục) có form trông giống nhau; nhãn phân hệ ở đầu
+ * hộp cho người dùng biết đang khai vào đâu. Nhãn nằm NGOÀI tiêu đề: tên hộp mà trình đọc màn
+ * hình đọc (và E2E tìm theo) không đổi.
+ */
+describe('Dialog — nhãn phân hệ ở tiêu đề', () => {
+  it('hiện nhãn cạnh tiêu đề, tên hộp vẫn chỉ là tiêu đề', () => {
+    renderWithI18n(
+      <Dialog open onOpenChange={() => {}} title="Thêm thiết bị" eyebrow={{ label: 'Thiết bị', tone: 'device' }}>
+        <p>thân</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog', { name: 'Thêm thiết bị' })).toBeVisible();
+    const tag = screen.getByText('Thiết bị', { selector: '.sheet-eyebrow' });
+    expect(tag).toHaveAttribute('data-tone', 'device');
+  });
+
+  it('không truyền thì không có nhãn', () => {
+    renderWithI18n(
+      <Dialog open onOpenChange={() => {}} title="Sửa">
+        <p>thân</p>
+      </Dialog>,
+    );
+    expect(document.querySelector('.sheet-eyebrow')).toBeNull();
+  });
+});

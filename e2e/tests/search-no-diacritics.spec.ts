@@ -46,7 +46,7 @@ async function createDeviceWithDiacritics(page: Page, stamp: string): Promise<st
   const form = page.getByRole('dialog');
   await form.getByLabel('Mã thiết bị').fill(code);
   // Bốn chữ có dấu, bốn kiểu dấu khác nhau: thanh sắc, dấu mũ, dấu móc, dấu nặng.
-  await form.getByLabel('Tên thiết bị').fill('Máy trạm kế toán Đường mới');
+  await form.getByLabel('Tên gọi').fill('Máy trạm kế toán Đường mới');
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: 'PC', exact: true }).click();
   await form.getByRole('button', { name: 'Lưu', exact: true }).click();

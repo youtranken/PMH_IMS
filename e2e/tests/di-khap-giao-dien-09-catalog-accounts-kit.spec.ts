@@ -103,7 +103,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     'Nhà cung cấp',
     'Phòng ban',
     'Nhà mạng',
-    'Dịch vụ / Port',
+    'Cổng dịch vụ (port)',
     'Loại dây',
     // Ngăn Model có màn riêng (`device-models-panel.tsx`), soi trong `device-models.spec.ts`.
     'Model thiết bị',
@@ -158,8 +158,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       excelImport: false,
     },
     {
-      tab: 'Dịch vụ / Port',
-      addButton: 'Thêm dịch vụ',
+      tab: 'Cổng dịch vụ (port)',
+      addButton: 'Thêm cổng dịch vụ',
       columns: ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
@@ -334,8 +334,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         toggles: [],
       },
       {
-        tab: 'Dịch vụ / Port',
-        title: 'Thêm dịch vụ',
+        tab: 'Cổng dịch vụ (port)',
+        title: 'Thêm cổng dịch vụ',
         // `catalog.portFrom` = "Từ port", `catalog.portTo` = "Đến port (tuỳ chọn)" — hai ô, một dải.
         textFields: ['Tên', 'Từ port', 'Đến port (tùy chọn)', 'Mô tả'],
         selectField: ['Giao thức'],

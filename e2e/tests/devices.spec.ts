@@ -56,7 +56,7 @@ async function fillDevice(
 ) {
   const form = page.getByRole('dialog');
   await form.getByLabel('Mã thiết bị').fill(values.code);
-  await form.getByLabel('Tên thiết bị').fill(values.name);
+  await form.getByLabel('Tên gọi').fill(values.name);
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: values.type, exact: true }).click();
   if (values.serial) await form.getByLabel('Serial').fill(values.serial);
@@ -93,7 +93,7 @@ test.describe('Kho thiết bị', () => {
 
     // Lọc theo loại: thiết bị vừa tạo vẫn còn, thiết bị loại khác biến mất.
     // Ô lọc có aria-label nên TÊN TRỢ NĂNG là "Loại", không phải chữ đang hiện trong ô.
-    const typeFilter = page.getByRole('button', { name: 'Loại', exact: true });
+    const typeFilter = page.getByRole('button', { name: 'Loại thiết bị', exact: true });
     await typeFilter.click();
     await page.getByRole('option', { name: 'PC', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
@@ -481,10 +481,10 @@ test.describe('Kho thiết bị', () => {
 
     // Phải bám vào ĐẦU BẢNG: ngoài kia thanh lọc cũng có nút tên "Loại".
     const head = page.locator('thead');
-    await head.getByRole('button', { name: 'Tên thiết bị' }).click();
+    await head.getByRole('button', { name: 'Tên gọi' }).click();
     await expect(firstDataRow()).toContainText('Alpha máy đầu bảng');
 
-    await head.getByRole('button', { name: 'Tên thiết bị' }).click();
+    await head.getByRole('button', { name: 'Tên gọi' }).click();
     await expect(firstDataRow()).toContainText('Zulu máy cuối bảng');
 
     // Cột dựa vào danh mục: hiện chữ, nhưng KHÔNG phải nút bấm được.

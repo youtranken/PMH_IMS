@@ -61,8 +61,8 @@ describe('Form thiết bị — Model (Q-26)', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByRole('combobox', { name: 'Model' }), 'c9300 48');
     await user.click(await screen.findByRole('option', { name: /C9300-48P/ }));
-    expect(screen.getByRole('button', { name: 'Loại' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Loại' })).toHaveTextContent('Switch');
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveTextContent('Switch');
     expect(screen.getByText('Theo model: Cisco · C9300-48P · 1U')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('option', { name: /HCM/ }));
@@ -77,7 +77,7 @@ describe('Form thiết bị — Model (Q-26)', () => {
     await user.click(within(free).getByRole('button', { name: 'U4–U12' }));
     expect(screen.getByRole('textbox', { name: 'U bắt đầu' })).toHaveValue('4');
     await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'SW-E2E-9');
-    await user.type(screen.getByRole('textbox', { name: 'Tên thiết bị' }), 'Switch tầng 9');
+    await user.type(screen.getByRole('textbox', { name: 'Tên gọi' }), 'Switch tầng 9');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     const post = calls.find((c) => c.url === '/api/v1/devices' && c.method === 'POST');
     expect(JSON.parse(post?.body ?? '{}')).toMatchObject({ deviceModelId: 'm-sw', deviceTypeId: 't-sw', model: 'C9300-48P', cabinetId: 'k1', rackUStart: 4, rackUSize: 1 });
@@ -124,8 +124,8 @@ describe('Form thiết bị — Model (Q-26)', () => {
     renderForm();
     const user = userEvent.setup();
     await user.type(await screen.findByRole('textbox', { name: 'Mã thiết bị' }), 'FW-E2E-2');
-    await user.type(screen.getByRole('textbox', { name: 'Tên thiết bị' }), 'Firewall');
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.type(screen.getByRole('textbox', { name: 'Tên gọi' }), 'Firewall');
+    await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     await user.click(await screen.findByRole('option', { name: 'Switch' }));
     await user.click(screen.getByRole('button', { name: '+ Thêm đường truy cập' }));
     await user.type(screen.getByRole('textbox', { name: 'Địa chỉ 1' }), '10.0.1.1');

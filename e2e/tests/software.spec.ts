@@ -75,7 +75,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
     // Q-22: màn Phần mềm chỉ còn license — không còn ô lọc Loại, và license không lạc sang
     // màn Tên miền & SSL.
-    await expect(page.getByRole('button', { name: 'Loại', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Loại hồ sơ', exact: true })).toHaveCount(0);
     await page.goto(`/domains?q=${encodeURIComponent(code)}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Tên miền & SSL' })).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);

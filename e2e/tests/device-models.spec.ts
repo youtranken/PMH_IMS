@@ -139,7 +139,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await devicesPageButton(page, 'Thêm thiết bị').click();
     let form = page.getByRole('dialog', { name: /Thêm thiết bị/ });
     await form.getByRole('textbox', { name: 'Mã thiết bị' }).fill(`FW-E2E-MF1${stamp}`);
-    await form.getByRole('textbox', { name: 'Tên thiết bị' }).fill('Firewall tầng 1');
+    await form.getByRole('textbox', { name: 'Tên gọi' }).fill('Firewall tầng 1');
     await form.getByRole('combobox', { name: 'Model' }).fill(model);
     await page.getByRole('button', { name: `Tạo model mới "${model}"` }).click();
     const modelDialog = page.getByRole('dialog', { name: 'Thêm model thiết bị' });
@@ -165,7 +165,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await devicesPageButton(page, 'Thêm thiết bị').click();
     form = page.getByRole('dialog', { name: /Thêm thiết bị/ });
     await form.getByRole('textbox', { name: 'Mã thiết bị' }).fill(`FW-E2E-MF2${stamp}`);
-    await form.getByRole('textbox', { name: 'Tên thiết bị' }).fill('Firewall tầng 2');
+    await form.getByRole('textbox', { name: 'Tên gọi' }).fill('Firewall tầng 2');
     await form.getByRole('combobox', { name: 'Model' }).fill(model.toLowerCase());
     await page.getByRole('option', { name: new RegExp(model) }).click();
     await form.getByRole('button', { name: 'Site' }).click();

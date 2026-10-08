@@ -207,7 +207,7 @@ test.describe('Sổ NAT', () => {
 
     // Dịch vụ chưa có: dòng "Thêm dịch vụ" (có hình +) ghim ở đầu menu dropdown.
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài' }).click();
-    await page.getByRole('button', { name: 'Thêm dịch vụ' }).first().click();
+    await page.getByRole('button', { name: 'Thêm cổng dịch vụ' }).first().click();
     const serviceForm = page.getByRole('dialog').last();
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
@@ -229,7 +229,7 @@ test.describe('Sổ NAT', () => {
 
     // Và dịch vụ đó ở lại danh mục để lần sau chỉ việc chọn.
     await page.goto('/admin/catalog');
-    await page.getByRole('tab', { name: 'Dịch vụ / Port' }).click();
+    await page.getByRole('tab', { name: 'Cổng dịch vụ (port)' }).click();
     await expect(page.getByRole('row', { name: new RegExp(serviceName) })).toBeVisible();
   });
 
@@ -257,7 +257,7 @@ test.describe('Sổ NAT', () => {
 
     const deviceForm = page.getByRole('dialog').last();
     await deviceForm.getByLabel('Mã thiết bị').fill(newRouter);
-    await deviceForm.getByLabel('Tên thiết bị').fill('Draytek mới');
+    await deviceForm.getByLabel('Tên gọi').fill('Draytek mới');
     await deviceForm.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
     await deviceForm.getByRole('button', { name: 'Lưu', exact: true }).click();

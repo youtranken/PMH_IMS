@@ -89,7 +89,7 @@ describe('Bốn màn tách từ Phần mềm (Q-22) — mỗi màn chỉ hỏi l
     ['software', PATHS.software, 'Phần mềm', 'license', 'Thêm phần mềm'],
     ['domains', PATHS.domains, 'Tên miền & SSL', 'domain,ssl', 'Thêm tên miền / SSL'],
     ['maintenance', PATHS.maintenance, 'Hợp đồng bảo trì', 'maintenance', 'Thêm hợp đồng bảo trì'],
-    ['services', PATHS.services, 'Dịch vụ có hạn khác', 'other', 'Thêm dịch vụ'],
+    ['services', PATHS.services, 'Dịch vụ có hạn khác', 'other', 'Thêm dịch vụ có hạn'],
   ] as const)('%s: tiêu đề, nút thêm và `kind` gửi lên API', async (key, path, title, kind, add) => {
     const urls = mockFetch();
     renderList(key, path);
@@ -103,7 +103,7 @@ describe('Bốn màn tách từ Phần mềm (Q-22) — mỗi màn chỉ hỏi l
     mockFetch();
     renderList('software', PATHS.software);
     await screen.findByRole('heading', { level: 1, name: 'Phần mềm' });
-    expect(screen.queryByRole('button', { name: 'Loại' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Loại hồ sơ' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Kỳ hạn' })).toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe('Bốn màn tách từ Phần mềm (Q-22) — mỗi màn chỉ hỏi l
     expect(kindsAsked(urls)).not.toContain('domain,ssl');
     expect(screen.queryByRole('button', { name: 'Kỳ hạn' })).toBeNull();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(screen.getByRole('button', { name: 'Loại hồ sơ' }));
     const options = screen.getAllByRole('option').map((option) => option.textContent);
     expect(options).toEqual(['Tất cả', 'Tên miền', 'Chứng chỉ SSL']);
   });

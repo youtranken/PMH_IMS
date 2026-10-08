@@ -166,7 +166,7 @@ test.describe('Import / export thiết bị', () => {
     }
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Loại', exact: true }).click();
+    await page.getByRole('button', { name: 'Loại thiết bị', exact: true }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
     await expect(page.getByRole('link', { name: `PC-E2E-EXP-${stamp}` })).toHaveCount(0);
 

@@ -91,22 +91,24 @@ test.describe('Menu gọn', () => {
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     const toggle = nav.getByRole('button', { name: 'Hệ thống', exact: true });
-    const catalog = nav.getByRole('link', { name: 'Danh mục', exact: true });
+    const auditLog = nav.getByRole('link', { name: 'Nhật ký hệ thống', exact: true });
+    // Danh mục đứng đầu nhóm Tài sản (Q-27): thấy ngay, không phải mở nhóm nào.
+    await expect(nav.getByRole('link', { name: 'Danh mục', exact: true })).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(catalog).toBeHidden();
+    await expect(auditLog).toBeHidden();
 
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(catalog).toBeVisible();
+    await expect(auditLog).toBeVisible();
 
     await page.reload();
     await expect(toggle, 'lựa chọn mở của người dùng phải được nhớ').toHaveAttribute('aria-expanded', 'true');
 
     // Đường hỏng: khép lại rồi gõ thẳng một màn trong nhóm — mục đang chọn không được nằm khuất.
     await toggle.click();
-    await expect(catalog).toBeHidden();
-    await page.goto('/admin/catalog');
+    await expect(auditLog).toBeHidden();
+    await page.goto('/admin/audit-log');
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(catalog).toHaveAttribute('aria-current', 'page');
+    await expect(auditLog).toHaveAttribute('aria-current', 'page');
   });
 });

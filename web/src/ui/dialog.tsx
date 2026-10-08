@@ -133,6 +133,7 @@ export function Dialog({
   overlayClassName,
   maxWidth,
   title,
+  eyebrow,
   footer,
   closeLabel,
   initialFocus,
@@ -154,6 +155,12 @@ export function Dialog({
    * bố cục riêng không bị ép khuôn.
    */
   title?: ReactNode;
+  /**
+   * Nhãn phân hệ cạnh tiêu đề (Q-27): form thiết bị, phần mềm, danh mục trông giống nhau, nhãn
+   * cho biết đang khai vào đâu. Nằm NGOÀI `RD.Title` để tên hộp (trình đọc màn hình, E2E) không
+   * đổi. Chỉ dùng khi có `title`.
+   */
+  eyebrow?: { label: string; tone: 'device' | 'software' | 'catalog' };
   /** Hàng nút chân hộp. Tự đẩy sang phải, tự tách khỏi phần thân bằng viền trên. */
   footer?: ReactNode;
   /** Nhãn trợ năng cho nút ✕ (mặc định "Đóng"). */
@@ -478,6 +485,11 @@ export function Dialog({
               ) : (
                 <>
                   <div className="sheet-header">
+                    {eyebrow ? (
+                      <span className="sheet-eyebrow" data-tone={eyebrow.tone}>
+                        {eyebrow.label}
+                      </span>
+                    ) : null}
                     <RD.Title className="sheet-title">{title}</RD.Title>
                     <span className="spacer" />
                     {/*

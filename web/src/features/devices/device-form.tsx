@@ -366,6 +366,7 @@ export function DeviceForm({
 
   return (
     <Dialog
+      eyebrow={{ label: t('nav.devices'), tone: 'device' }}
       open
       onOpenChange={onClose}
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi

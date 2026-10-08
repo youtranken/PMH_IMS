@@ -351,12 +351,12 @@ test.describe('Danh mục', () => {
       'tel:19001234',
     );
 
-    // ── Dịch vụ / Port ────────────────────────────────────────────────────
-    await page.getByRole('tab', { name: 'Dịch vụ / Port' }).click();
+    // ── Cổng dịch vụ (port) ────────────────────────────────────────────────────
+    await page.getByRole('tab', { name: 'Cổng dịch vụ (port)' }).click();
     // Bộ khởi đầu của migration phải có sẵn — ô chọn rỗng ngày đầu là người dùng lại gõ tay.
     await expect(page.getByRole('row', { name: /HTTPS/ })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm dịch vụ' }).click();
+    await page.getByRole('button', { name: 'Thêm cổng dịch vụ' }).click();
     form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`Camera E2E ${stamp}`);
     await form.getByRole('textbox', { name: 'Từ port' }).fill('50000');

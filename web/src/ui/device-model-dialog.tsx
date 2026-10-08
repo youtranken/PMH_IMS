@@ -191,6 +191,7 @@ export function DeviceModelDialog({
   return (
     <>
       <Dialog
+        eyebrow={{ label: t('nav.catalog'), tone: 'catalog' }}
         open
         onOpenChange={onClose}
         dismissible={!busy}

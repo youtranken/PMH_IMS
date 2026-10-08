@@ -798,6 +798,27 @@ input.switch:focus-visible {
   background: var(--surface-2);
   border-bottom: 1px solid var(--border-2);
 }
+.sheet-eyebrow {
+  flex-shrink: 0;
+  padding: 2px var(--space-4);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sheet-eyebrow[data-tone='device'] {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+.sheet-eyebrow[data-tone='software'] {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.sheet-eyebrow[data-tone='catalog'] {
+  background: var(--warm-soft);
+  color: var(--warm-strong);
+}
 .sheet-title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);

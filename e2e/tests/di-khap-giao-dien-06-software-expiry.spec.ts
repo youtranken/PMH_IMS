@@ -185,7 +185,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       main.getByRole('button'),
       'Phòng Phần mềm lúc rỗng chỉ được có 6 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc',
     ).toHaveCount(6);
-    await expect(main.getByRole('button', { name: 'Loại', exact: true })).toHaveCount(0);
+    await expect(main.getByRole('button', { name: 'Loại hồ sơ', exact: true })).toHaveCount(0);
     for (const name of [
       'Xuất Excel',
       'Thêm phần mềm',
@@ -807,8 +807,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'true',
     );
 
-    // ===== TAB HỒ SƠ =====
-    await page.getByRole('tab', { name: 'Hồ sơ', exact: true }).click();
+    // ===== TAB TỔNG QUAN =====
+    await page.getByRole('tab', { name: 'Tổng quan', exact: true }).click();
     const profile = page.getByRole('tabpanel');
     /*
      * HẠN NẰM Ở THẺ ĐỊNH DANH, KHÔNG Ở TAB HỒ SƠ.

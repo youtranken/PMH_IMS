@@ -79,7 +79,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã thiết bị').fill(code);
-    await form.getByLabel('Tên thiết bị').fill('Switch có hồ sơ đính kèm');
+    await form.getByLabel('Tên gọi').fill('Switch có hồ sơ đính kèm');
     await form.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
 

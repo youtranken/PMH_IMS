@@ -332,7 +332,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Tất cả (cả Đã thanh lý)',
     ]);
 
-    const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại', exact: true }));
+    const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại thiết bị', exact: true }));
     expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Tất cả loại');
     // So theo TẬP HỢP đã sắp, không theo thứ tự: API sắp theo `name` bằng collation của
     // Postgres, mà thứ tự của "Điện thoại IP" trong bảng chữ cái phụ thuộc collation ấy —
@@ -410,7 +410,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       })
       .toEqual([
         'Mã thiết bị',
-        'Tên thiết bị',
+        'Tên gọi',
         'Người sử dụng',
         'Bảo hành',
         'Trạng thái',
@@ -623,7 +623,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveCount(5);
     for (const label of [
       'Mã thiết bị',
-      'Tên thiết bị',
+      'Tên gọi',
       'Serial',
       'Người sử dụng',
       'Ghi chú',
@@ -705,7 +705,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     const typeInForm = await optionsOf(
       page,
-      dialog.getByRole('button', { name: 'Loại', exact: true }),
+      dialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
     );
     expect(
       [...typeInForm].sort(),
@@ -733,11 +733,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(codeField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
     await codeField.fill(`TB-E2E-HOP-${stamp}`);
-    await dialog.getByLabel('Tên thiết bị').fill('Máy chỉ để xem hộp thoại');
+    await dialog.getByLabel('Tên gọi').fill('Máy chỉ để xem hộp thoại');
     await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(
-      dialog.getByRole('button', { name: 'Loại', exact: true }),
+      dialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
       'Thiếu LOẠI thiết bị thì chính ô Loại phải nói ra, bằng tiếng Việt',
     ).toHaveAccessibleDescription('Bắt buộc — chưa chọn ô này.');
     await expect(dialog.getByText(/ô cần sửa trước khi lưu/), 'Còn một lỗi thì không cần tóm tắt').toHaveCount(0);
@@ -835,7 +835,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     for (const [label, value] of [
       ['Mã thiết bị', code],
-      ['Tên thiết bị', 'Switch tầng 3 của bài kiểm kê'],
+      ['Tên gọi', 'Switch tầng 3 của bài kiểm kê'],
       ['Serial', `SN-E2E-${stamp}`],
       ['Người sử dụng', 'Anh Tuấn hạ tầng'],
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
@@ -854,7 +854,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Ô Model (combobox) cũng phải điền sẵn chuỗi model cũ',
     ).toHaveValue('C9200-24P');
     await expect(
-      editDialog.getByRole('button', { name: 'Loại', exact: true }),
+      editDialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
       'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "— Chọn loại —"',
     ).toHaveText('Switch');
     await expect(
@@ -982,8 +982,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await form.getByLabel('Mã thiết bị').fill(code);
-    await form.getByLabel('Tên thiết bị').fill('Switch của bài kiểm kê phòng');
-    await form.getByRole('button', { name: 'Loại', exact: true }).click();
+    await form.getByLabel('Tên gọi').fill('Switch của bài kiểm kê phòng');
+    await form.getByRole('button', { name: 'Loại thiết bị', exact: true }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form, 'lưu xong thì hộp phải đóng').toHaveCount(0);

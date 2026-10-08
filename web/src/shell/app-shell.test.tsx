@@ -234,11 +234,11 @@ describe('AppShell — menu gọn (Q-18)', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     const region = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
     expect(region).not.toBeNull();
-    expect(within(nav()).queryByRole('link', { name: 'Danh mục' })).toBeNull();
+    expect(within(nav()).queryByRole('link', { name: 'Nhật ký hệ thống' })).toBeNull();
 
     await userEvent.setup().click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(within(nav()).getByRole('link', { name: 'Danh mục' })).toBeVisible();
+    expect(within(nav()).getByRole('link', { name: 'Nhật ký hệ thống' })).toBeVisible();
 
     first.unmount();
     renderShell('/devices');
@@ -254,9 +254,9 @@ describe('AppShell — menu gọn (Q-18)', () => {
 
   it('đang ở một màn trong nhóm thì nhóm tự mở, dù mặc định khép', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
-    renderShell('/admin/catalog');
+    renderShell('/admin/audit-log');
     expect(systemToggle()).toHaveAttribute('aria-expanded', 'true');
-    expect(within(nav()).getByRole('link', { name: 'Danh mục' })).toBeVisible();
+    expect(within(nav()).getByRole('link', { name: 'Nhật ký hệ thống' })).toBeVisible();
   });
 
   it('localStorage bị chặn (trình duyệt khoá dữ liệu trang) thì menu vẫn dựng, nhóm khép', () => {

@@ -87,8 +87,8 @@ function renderForm(device: DeviceRow | null, handlers: { onSaved?: () => void; 
 
 async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'FW-E2E-01');
-  await user.type(screen.getByRole('textbox', { name: 'Tên thiết bị' }), 'Tường lửa E2E');
-  await user.click(screen.getByRole('button', { name: 'Loại' }));
+  await user.type(screen.getByRole('textbox', { name: 'Tên gọi' }), 'Tường lửa E2E');
+  await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
   await user.click(await screen.findByRole('option', { name: 'Firewall' }));
 }
 

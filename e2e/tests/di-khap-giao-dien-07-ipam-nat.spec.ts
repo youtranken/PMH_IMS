@@ -1015,8 +1015,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp con 2: "Thêm dịch vụ" ----- */
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài', exact: true }).click();
-    await form.getByRole('button', { name: 'Thêm dịch vụ', exact: true }).click();
-    const serviceForm = page.getByRole('dialog', { name: 'Thêm dịch vụ' });
+    await form.getByRole('button', { name: 'Thêm cổng dịch vụ', exact: true }).click();
+    const serviceForm = page.getByRole('dialog', { name: 'Thêm cổng dịch vụ' });
     await expect(serviceForm).toBeVisible();
     await serviceForm.getByRole('button', { name: 'Hủy' }).click();
     await expect(serviceForm).toHaveCount(0);

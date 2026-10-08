@@ -148,7 +148,7 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
   await devicesPageButton(page, 'Thêm thiết bị').click();
   const form = page.getByRole('dialog');
   await form.getByLabel('Mã thiết bị').fill(code);
-  await form.getByLabel('Tên thiết bị').fill('Switch E2E có ảnh');
+  await form.getByLabel('Tên gọi').fill('Switch E2E có ảnh');
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: 'Switch', exact: true }).click();
   const draft = form.getByRole('group', { name: 'Mặt trước' });

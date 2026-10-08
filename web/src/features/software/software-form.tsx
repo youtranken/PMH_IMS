@@ -160,6 +160,7 @@ export function SoftwareForm({
 
   return (
     <Dialog
+      eyebrow={{ label: t(spec.navKey), tone: 'software' }}
       open
       onOpenChange={onClose}
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi

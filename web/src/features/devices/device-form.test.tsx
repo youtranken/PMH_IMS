@@ -69,7 +69,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     const code = screen.getByRole('textbox', { name: 'Mã thiết bị' });
     expect(code).toHaveAttribute('aria-invalid', 'true');
     expect(code).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
-    expect(screen.getByRole('button', { name: 'Loại' })).toHaveAccessibleDescription(
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveAccessibleDescription(
       'Bắt buộc — chưa chọn ô này.',
     );
     await waitFor(() => expect(code).toHaveFocus());
@@ -95,7 +95,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     const user = userEvent.setup();
     await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/v1/catalog'))).toBe(true));
 
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     expect(await screen.findByRole('option', { name: 'PC' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: /Máy fax/ })).toBeNull();
     await user.keyboard('{Escape}');
@@ -116,7 +116,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
       status: 'in_use',
     } as DeviceRow);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Loại' })).toHaveTextContent(
+      expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveTextContent(
         'Máy fax (ngừng dùng)',
       ),
     );
@@ -233,7 +233,7 @@ describe('Form thiết bị — dấu tích ở đúng nút vừa bấm', () => 
   async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
     await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'SW-E2E-01');
     await user.type(document.getElementById('device-name') as HTMLInputElement, 'Switch E2E');
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     await user.click(await screen.findByRole('option', { name: 'PC' }));
   }
 

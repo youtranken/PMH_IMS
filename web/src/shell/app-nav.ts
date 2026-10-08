@@ -46,6 +46,9 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groupAssets',
     items: [
+      /* Đầu nhóm (Q-27): site, tủ, model… phải khai trước khi thêm thiết bị. Member vào xem được
+         (form thiết bị cần biết danh mục có gì); sửa thì API chặn. */
+      { key: 'nav.catalog', to: PATHS.adminCatalog },
       { key: 'nav.devices', to: PATHS.devices },
       /* Bốn màn cùng bảng `software`, tách theo loại (Q-22): để chung một màn rồi lọc theo loại
          thì người dùng không tìm ra SSL / tên miền / hợp đồng. */
@@ -90,8 +93,6 @@ export const navGroups: NavGroup[] = [
     collapsible: true,
     items: [
       { key: 'nav.accounts', to: PATHS.adminAccounts, roles: ['sa'] },
-      // Member vào xem được (form thiết bị cần biết danh mục có gì); sửa thì API chặn.
-      { key: 'nav.catalog', to: PATHS.adminCatalog },
       // Ma trận quyền két sắt là bản đồ phòng thủ — chỉ SA/Admin thấy.
       { key: 'nav.vaultAccess', to: PATHS.adminVaultAccess, roles: ['sa', 'admin'] },
       { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'] },
