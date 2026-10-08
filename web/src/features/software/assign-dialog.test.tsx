@@ -85,10 +85,10 @@ async function pick(code: string) {
   await userEvent.click(await screen.findByRole('option', { name: new RegExp(code) }));
 }
 
-function render(onDone = vi.fn(), software: SoftwareRow = SOFTWARE) {
+function render(onDone = vi.fn(), software: SoftwareRow = SOFTWARE, preferredSeatId?: string) {
   renderWithI18n(
     <ToastProvider>
-      <AssignDialog software={software} csrfToken="t" onClose={vi.fn()} onDone={onDone} />
+      <AssignDialog software={software} preferredSeatId={preferredSeatId} csrfToken="t" onClose={vi.fn()} onDone={onDone} />
     </ToastProvider>,
   );
   return onDone;
@@ -312,5 +312,35 @@ describe('AssignDialog — máy vào ghế nào (ghế riêng)', () => {
       ['d1', 'seat1'],
       ['d2', 'seat3'],
     ]);
+  });
+
+  it('mở từ dòng "Ghế 3" còn trống thì máy đầu tiên vào ĐÚNG Ghế 3, không phải ghế trống đầu', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.method === 'POST') return Promise.resolve(jsonResponse(201, { assignment: { id: 'a' } }));
+        if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, CATALOG));
+        if (url === '/api/v1/software/sw1') {
+          return Promise.resolve(
+            jsonResponse(200, {
+              ...SOFTWARE,
+              perSeat: true,
+              seats: [
+                { id: 'seat1', seatNo: 1, contract: 'PO-A', note: null, assignmentId: null, deviceId: null },
+                { id: 'seat3', seatNo: 3, contract: 'PO-C', note: null, assignmentId: null, deviceId: null },
+              ],
+            }),
+          );
+        }
+        if (url.startsWith('/api/v1/devices')) return Promise.resolve(jsonResponse(200, { items: DEVICES }));
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    render(vi.fn(), { ...SOFTWARE, perSeat: true, seatTotal: 3, seatUsed: 1 }, 'seat3');
+    await pick('PC-E2E-01');
+    await pick('PC-E2E-02');
+    const plan = await screen.findByRole('group', { name: 'Máy vào ghế nào' });
+    expect(await within(plan).findByRole('button', { name: 'Ghế cho máy PC-E2E-01' })).toHaveTextContent('Ghế 3 · PO-C');
+    expect(within(plan).getByRole('button', { name: 'Ghế cho máy PC-E2E-02' })).toHaveTextContent('Ghế 1 · PO-A');
   });
 });

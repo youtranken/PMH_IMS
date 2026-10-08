@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -166,7 +166,7 @@ export class SoftwareService {
     return {
       ...item,
       retirement: item.status === 'retired' ? await this.retirementOf(id) : null,
-      seats: item.perSeat ? await this.seatsOf(id) : [],
+      seats: item.perSeat ? await this.seatsOf(id, item.seatTotal ?? 0) : [],
     };
   }
 
@@ -375,7 +375,12 @@ export class SoftwareService {
       if (values.status === 'retired' && before.status !== 'retired') {
         await this.releaseAllSeatsWithin(tx, actor, id);
       }
-      await this.syncSeatsWithin(tx, actor, updated, input.seats);
+      const seatsChanged = await this.syncSeatsWithin(tx, actor, updated, input.seats);
+      // Chỉ đổi ghế thì hàng `software` chưa được ghi: vẫn đẩy `updated_at` để "sửa lần cuối"
+      // đúng và `requireUnchangedWithin` của lượt ghi chen giữa nhận ra.
+      if (seatsChanged && !hasChanges(changes)) {
+        await tx.update(softwareTable).set({ updatedAt: new Date() }).where(eq(softwareTable.id, id));
+      }
       return updated;
     });
   }
@@ -540,10 +545,17 @@ export class SoftwareService {
     return rows[0]?.note ?? null;
   }
 
-  /** Ghế của hồ sơ theo thứ tự, kèm lần gán đang chiếm (một lượt đọc, cùng chủ — AD-3). */
-  private async seatsOf(softwareId: string): Promise<SoftwareSeatView[]> {
+  /**
+   * Ghế 1…`total` của hồ sơ theo thứ tự, kèm lần gán đang chiếm (một lượt đọc, cùng chủ — AD-3).
+   * Hàng ghế số lớn hơn `total` (đã bớt ghế) vẫn nằm trong bảng nhưng không bày ra.
+   */
+  private async seatsOf(softwareId: string, total: number): Promise<SoftwareSeatView[]> {
     const [seats, live] = await Promise.all([
-      this.db.select().from(softwareSeatTable).where(eq(softwareSeatTable.softwareId, softwareId)).orderBy(asc(softwareSeatTable.seatNo)),
+      this.db
+        .select()
+        .from(softwareSeatTable)
+        .where(and(eq(softwareSeatTable.softwareId, softwareId), lte(softwareSeatTable.seatNo, total)))
+        .orderBy(asc(softwareSeatTable.seatNo)),
       this.db
         .select({ id: licenseAssignmentTable.id, deviceId: licenseAssignmentTable.deviceId, seatId: licenseAssignmentTable.seatId })
         .from(licenseAssignmentTable)
@@ -565,11 +577,12 @@ export class SoftwareService {
    *
    * - Không bật ghế riêng: máy rời ghế (`seat_id` về null), HÀNG GHẾ GIỮ LẠI — bật lại thì hợp
    *   đồng / giấy tờ đã khai không mất.
-   * - Bật: đủ ghế 1…`seat_total`; ghế thừa bỏ đi, trừ khi đang có máy (409); máy đang dùng mà
-   *   chưa ở ghế nào thì xếp vào ghế trống theo thứ tự; ghế gửi lên thì cập nhật hợp đồng / ghi chú.
+   * - Bật: đủ ghế 1…`seat_total`. Bớt ghế thì ghế thừa ẨN chứ không xoá (giấy tờ của ghế không
+   *   mồ côi, tăng lại thì quay về) — trừ khi đang có máy (409). Máy đang dùng mà chưa ở ghế nào
+   *   thì xếp vào ghế trống theo thứ tự; ghế gửi lên thì cập nhật hợp đồng / ghi chú.
    * Mọi thay đổi ghi MỘT dòng lịch sử `seats-updated`.
    */
-  private async syncSeatsWithin(tx: Tx, actor: string, record: SoftwareRecord, input: SeatInput[] | undefined): Promise<void> {
+  private async syncSeatsWithin(tx: Tx, actor: string, record: SoftwareRecord, input: SeatInput[] | undefined): Promise<boolean> {
     const live = await tx
       .select({ id: licenseAssignmentTable.id, seatId: licenseAssignmentTable.seatId })
       .from(licenseAssignmentTable)
@@ -581,7 +594,7 @@ export class SoftwareService {
           .set({ seatId: null })
           .where(and(eq(licenseAssignmentTable.softwareId, record.id), isNull(licenseAssignmentTable.releasedAt)));
       }
-      return;
+      return false;
     }
     const total = record.seatTotal ?? 0;
     const changes: Record<string, { before: unknown; after: unknown }> = {};
@@ -599,10 +612,6 @@ export class SoftwareService {
         code: 'SOFTWARE_SEATS_IN_USE',
         message: `Ghế ${busy.map((seat) => seat.seatNo).join(', ')} đang có máy — gỡ máy khỏi ghế đó trước khi bớt ghế.`,
       });
-    }
-    if (extra.length > 0) {
-      await tx.delete(softwareSeatTable).where(inArray(softwareSeatTable.id, extra.map((seat) => seat.id)));
-      changes['Số ghế riêng'] = { before: existing.length, after: existing.length - extra.length };
     }
     const have = new Set(existing.map((seat) => seat.seatNo));
     const missing = Array.from({ length: total }, (_, i) => i + 1).filter((n) => !have.has(n));
@@ -637,7 +646,7 @@ export class SoftwareService {
       const seats = await tx
         .select({ id: softwareSeatTable.id })
         .from(softwareSeatTable)
-        .where(eq(softwareSeatTable.softwareId, record.id))
+        .where(and(eq(softwareSeatTable.softwareId, record.id), lte(softwareSeatTable.seatNo, total)))
         .orderBy(asc(softwareSeatTable.seatNo));
       const free = seats.filter((seat) => !taken.has(seat.id));
       for (const [index, row] of homeless.entries()) {
@@ -650,6 +659,7 @@ export class SoftwareService {
     if (Object.keys(changes).length > 0) {
       await this.recordWithin(tx, actor, record.id, 'seats-updated', changes);
     }
+    return Object.keys(changes).length > 0;
   }
 
   // ─────────────────────────── Nội bộ ───────────────────────────

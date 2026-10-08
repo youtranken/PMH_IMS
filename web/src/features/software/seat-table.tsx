@@ -85,7 +85,7 @@ export function SeatTable({
   return (
     <>
       <TableWrap>
-        <table className={compact ? 'table table-stack table-sub table-cards seat-table' : 'table table-stack table-sub table-cards seat-table'}>
+        <table className="table table-stack table-sub table-cards seat-table">
           <thead>
             <tr>
               <th>{t('license.device')}</th>

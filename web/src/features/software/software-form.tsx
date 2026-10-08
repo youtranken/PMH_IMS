@@ -145,14 +145,16 @@ export function SoftwareForm({
     queryFn: () => apiFetch<SoftwareDetailRow>(`/api/v1/software/${row?.id}`),
     enabled: Boolean(row?.perSeat),
   });
-  const [seatRows, setSeatRows] = useState<Record<number, SeatDraftRow>>({});
+  /* CHỈ ô người dùng đã sửa, theo số ghế. Không giữ cả dòng: dòng dựng từ "đã lưu" lúc ghế chưa
+     về (mạng chậm, lỗi) là chuỗi rỗng, gửi lên thì xoá trắng hợp đồng / ghi chú ở server. */
+  const [seatEdits, setSeatEdits] = useState<Record<number, Partial<Pick<SeatDraftRow, 'contract' | 'note'>>>>({});
   const seatDrafts = useRef(new Map<number, AttachmentDraft>());
 
   /* Đợt mua mới: các hồ sơ cùng tên (để gợi ý mã không trùng và kể ra các đợt trước). */
   const siblings = useQuery({
     queryKey: ['software', 'batches', batchFrom?.name],
     queryFn: () =>
-      apiFetch<{ items: SoftwareRow[] }>(`/api/v1/software?kind=license&status=all&limit=50&search=${encodeURIComponent(batchFrom?.name ?? '')}`),
+      apiFetch<{ items: SoftwareRow[] }>(`/api/v1/software?kind=license&limit=50&search=${encodeURIComponent(batchFrom?.name ?? '')}`),
     enabled: Boolean(batchFrom),
   });
   const batches = (siblings.data?.items ?? []).filter((item) => item.name === batchFrom?.name && item.kind === batchFrom?.kind);
@@ -206,7 +208,12 @@ export function SoftwareForm({
     ? Array.from({ length: seats.value ?? 0 }, (_, i) => {
         const seatNo = i + 1;
         const saved = savedSeats.get(seatNo);
-        return seatRows[seatNo] ?? { seatNo, contract: saved?.contract ?? '', note: saved?.note ?? '' };
+        const edit = seatEdits[seatNo] ?? {};
+        return {
+          seatNo,
+          contract: edit.contract ?? saved?.contract ?? '',
+          note: edit.note ?? saved?.note ?? '',
+        };
       })
     : [];
   const seatIds = new Map((detail.data?.seats ?? []).map((seat) => [seat.seatNo, seat.id]));
@@ -272,13 +279,15 @@ export function SoftwareForm({
           {/* "Lưu rồi gán vào máy" (Q-27): việc ngay sau khi khai license là đưa nó vào máy. Nút
               chính vẫn là "Lưu"; E2E bấm nút Lưu phải ghi `exact: true`. */}
           {!row && hasSeats ? (
+            /* `type="button"` + tự gửi: nút submit ĐẦU TIÊN của form là nút mặc định của phím
+               Enter — để nó là submit thì Enter trong một ô thành "Lưu rồi gán". */
             <button
-              type="submit"
-              form="software-form"
+              type="button"
               className="btn"
               disabled={busy}
               onClick={() => {
                 assignAfter.current = true;
+                check.formRef.current?.requestSubmit();
               }}
             >
               {t('software.saveAndAssign')}
@@ -325,7 +334,19 @@ export function SoftwareForm({
                     contract: form.contract.trim(),
                     perSeat,
                     ...(perSeat
-                      ? { seats: seatList.map((seat) => ({ seatNo: seat.seatNo, contract: seat.contract.trim(), note: seat.note.trim() })) }
+                      ? {
+                          /* Thêm mới: gửi đủ ghế. Sửa: chỉ ô đã sửa — API giữ nguyên ô không gửi
+                             (kể cả ghế đã lưu từ lần bật trước mà form không đọc được). */
+                          seats: row
+                            ? Object.entries(seatEdits)
+                                .map(([seatNo, edit]) => ({
+                                  seatNo: Number(seatNo),
+                                  ...(edit.contract !== undefined ? { contract: edit.contract.trim() } : {}),
+                                  ...(edit.note !== undefined ? { note: edit.note.trim() } : {}),
+                                }))
+                                .filter((seat) => seat.seatNo <= (seats.value ?? 0))
+                            : seatList.map((seat) => ({ seatNo: seat.seatNo, contract: seat.contract.trim(), note: seat.note.trim() })),
+                        }
                       : {}),
                   }
                 : {}),
@@ -571,10 +592,7 @@ export function SoftwareForm({
                 disabled={busy}
                 noteError={(seatNo) => check.error(`seat-note-${seatNo}`) || undefined}
                 onChange={(seatNo, patch) =>
-                  setSeatRows((current) => {
-                    const base = seatList.find((seat) => seat.seatNo === seatNo) ?? { seatNo, contract: '', note: '' };
-                    return { ...current, [seatNo]: { ...base, ...current[seatNo], ...patch } };
-                  })
+                  setSeatEdits((current) => ({ ...current, [seatNo]: { ...current[seatNo], ...patch } }))
                 }
                 onDraft={(seatNo, seatDraft) => {
                   if (seatDraft) seatDrafts.current.set(seatNo, seatDraft);

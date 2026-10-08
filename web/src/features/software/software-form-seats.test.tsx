@@ -53,10 +53,10 @@ function mockFetch() {
   return writes;
 }
 
-function render(props: { batchFrom?: SoftwareRow; onSaved?: (r?: { id: string; assign: boolean }) => void } = {}) {
+function render(props: { row?: SoftwareRow; batchFrom?: SoftwareRow; onSaved?: (r?: { id: string; assign: boolean }) => void } = {}) {
   return renderWithI18n(
     <ToastProvider>
-      <SoftwareForm row={null} batchFrom={props.batchFrom} csrfToken="csrf" onClose={() => {}} onSaved={props.onSaved ?? (() => {})} />
+      <SoftwareForm row={props.row ?? null} batchFrom={props.batchFrom} csrfToken="csrf" onClose={() => {}} onSaved={props.onSaved ?? (() => {})} />
     </ToastProvider>,
   );
 }
@@ -158,5 +158,68 @@ describe('Form phần mềm — ghế và hợp đồng (Q-27)', () => {
     await waitFor(() => expect(note).toHaveTextContent('LIC-WIN25-02 (3)'));
     await userEvent.setup().click(within(note).getByRole('button', { name: 'Dùng mã LIC-WIN25-03' }));
     expect(screen.getByRole('textbox', { name: 'Mã hồ sơ' })).toHaveValue('LIC-WIN25-03');
+    // Đợt đã thanh lý vẫn giữ mã: hỏi KHÔNG lọc trạng thái (API đọc chữ lạ như `all` thành "trừ thanh lý").
+    const siblingCall = vi.mocked(fetch).mock.calls.map(([url]) => String(url)).find((url) => url.startsWith('/api/v1/software?'));
+    expect(siblingCall).not.toMatch(/[?&]status=/);
   });
+
+  it('Sửa hồ sơ ghế riêng: chưa đọc được ghế đã lưu thì KHÔNG gửi ghế (không xoá trắng hợp đồng đã lưu)', async () => {
+    const writes: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.method === 'PATCH') {
+          writes.push(JSON.parse(String(init.body)));
+          return Promise.resolve(jsonResponse(200, { id: 'w1' }));
+        }
+        if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, CATALOG));
+        if (url.startsWith('/api/v1/software/w1')) return Promise.resolve(jsonResponse(500, { message: 'hỏng' }));
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    render({ row: { ...WIN25, perSeat: true, seatUsed: 0 } });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ perSeat: true });
+    expect(writes[0].seats ?? []).toEqual([]);
+  });
+
+  it('Sửa hồ sơ ghế riêng: chỉ gửi đúng ô vừa sửa, ô khác giữ giá trị đã lưu ở server', async () => {
+    const writes: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.method === 'PATCH') {
+          writes.push(JSON.parse(String(init.body)));
+          return Promise.resolve(jsonResponse(200, { id: 'w1' }));
+        }
+        if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, CATALOG));
+        if (url.startsWith('/api/v1/software/w1')) {
+          return Promise.resolve(
+            jsonResponse(200, {
+              ...WIN25,
+              perSeat: true,
+              seats: [
+                { id: 's1', seatNo: 1, contract: 'PO-A', note: null, assignmentId: null, deviceId: null },
+                { id: 's2', seatNo: 2, contract: 'PO-B', note: 'cũ', assignmentId: null, deviceId: null },
+              ],
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    render({ row: { ...WIN25, perSeat: true, seatUsed: 0 } });
+    const user = userEvent.setup();
+    const note2 = await screen.findByRole('textbox', { name: 'Ghi chú ghế 2' });
+    await waitFor(() => expect(note2).toHaveValue('cũ'));
+    expect(screen.getByRole('textbox', { name: 'Số hợp đồng ghế 1' })).toHaveValue('PO-A');
+    await user.clear(note2);
+    await user.type(note2, 'mới');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0].seats).toEqual([{ seatNo: 2, note: 'mới' }]);
+  });
+
 });

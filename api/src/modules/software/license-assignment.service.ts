@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
@@ -389,7 +389,7 @@ export class LicenseAssignmentService {
 
       // Ghế riêng (Q-27): chọn ghế dưới cùng khoá hàng `software` — hai lượt gán cùng hồ sơ nối
       // đuôi nhau nên không tranh một ghế; index unique một phần là lưới cuối.
-      const seatId = locked[0].perSeat ? await this.pickSeatWithin(tx, softwareId, input.seatId ?? null) : null;
+      const seatId = locked[0].perSeat ? await this.pickSeatWithin(tx, softwareId, locked[0].seatTotal ?? 0, input.seatId ?? null) : null;
 
       let inserted;
       try {
@@ -667,16 +667,16 @@ export class LicenseAssignmentService {
     }
   }
 
-  /** Mã máy để đọc, hoặc chính uuid nếu máy đã biến mất — không được để sập cả lời gọi. */
   /**
-   * Ghế cho một lần gán: ghế được chọn (phải thuộc hồ sơ và đang trống) hoặc ghế trống đầu tiên.
+   * Ghế cho một lần gán: ghế được chọn (phải thuộc hồ sơ, trong 1…`seatTotal`, đang trống) hoặc ghế
+   * trống đầu tiên. Ghế số lớn hơn `seatTotal` là ghế đã bớt (giữ hàng, ẩn) — không nhận máy.
    * Hết ghế trống thì `null` — lần gán đó là vượt số ghế, đi theo luật `overSeatReason` như cũ.
    */
-  private async pickSeatWithin(tx: Tx, softwareId: string, wanted: string | null): Promise<string | null> {
+  private async pickSeatWithin(tx: Tx, softwareId: string, seatTotal: number, wanted: string | null): Promise<string | null> {
     const seats = await tx
       .select({ id: softwareSeatTable.id, seatNo: softwareSeatTable.seatNo })
       .from(softwareSeatTable)
-      .where(eq(softwareSeatTable.softwareId, softwareId))
+      .where(and(eq(softwareSeatTable.softwareId, softwareId), lte(softwareSeatTable.seatNo, seatTotal)))
       .orderBy(asc(softwareSeatTable.seatNo));
     const taken = new Set(
       (
@@ -699,6 +699,7 @@ export class LicenseAssignmentService {
     return seats.find((row) => !taken.has(row.id))?.id ?? null;
   }
 
+  /** Mã máy để đọc, hoặc chính uuid nếu máy đã biến mất — không được để sập cả lời gọi. */
   private async deviceCodeOf(deviceId: string): Promise<string> {
     try {
       return (await this.devices.getById(deviceId)).code;

@@ -38,6 +38,7 @@ export function AssignDialog({
   software,
   seat,
   initialDevices,
+  preferredSeatId,
   csrfToken,
   onClose,
   onDone,
@@ -47,6 +48,8 @@ export function AssignDialog({
   seat?: LicenseSeat;
   /** Máy chọn sẵn — gán từ phía máy ("Gán phần mềm vào máy này"). */
   initialDevices?: { id: string; code: string }[];
+  /** Mở từ dòng một ghế trống ("Ghế 5 · Gán"): máy đầu tiên chưa chọn tay vào đúng ghế đó. */
+  preferredSeatId?: string;
   csrfToken: string;
   onClose: () => void;
   /** `count` = số máy vừa gán (gán nhiều máy một lượt — SW-053); sửa ghế thì 1. */
@@ -74,9 +77,16 @@ export function AssignDialog({
   const seatPlan = (() => {
     const plan = new Map<string, string | null>();
     const used = new Set(Object.values(seatChoice));
+    let preferred = preferredSeatId && !used.has(preferredSeatId) && freeSeats.some((item) => item.id === preferredSeatId) ? preferredSeatId : null;
+    if (preferred) used.add(preferred);
     let cursor = 0;
     for (const item of devices) {
       const chosen = seatChoice[item.id];
+      if (!chosen && preferred) {
+        plan.set(item.id, preferred);
+        preferred = null;
+        continue;
+      }
       if (chosen) {
         plan.set(item.id, chosen);
         continue;

@@ -146,4 +146,19 @@ test.describe('Ghế riêng và đợt mua (Q-27)', () => {
     const batches = page.getByRole('region', { name: 'Mua theo đợt' });
     await expect(batches.getByRole('link', { name: first })).toBeVisible();
   });
+
+  test('đường hỏng: Enter trong ô là Lưu thường — không nhảy sang hộp Gán', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const code = `LIC-E2E-ENTER-${uniqueStamp()}`;
+    await page.goto('/software');
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
+    const form = page.getByRole('dialog', { name: 'Thêm phần mềm' });
+    await form.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('Enter E2E');
+    await form.getByRole('radio', { name: 'Vĩnh viễn' }).check();
+    await form.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill(code);
+    await form.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).press('Enter');
+    await expect(form).toHaveCount(0);
+    await expect(page).toHaveURL(/\/software(\?|$)/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
 });

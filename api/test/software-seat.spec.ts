@@ -36,6 +36,11 @@ describe('Ghế riêng của license (0065, Q-27)', () => {
       )
     ).rows;
 
+  const seatRowId = async (softwareId: string, seatNo: number) =>
+    (
+      await scratch.pool.query<{ id: string }>(`SELECT id FROM software_seat WHERE software_id = $1 AND seat_no = $2`, [softwareId, seatNo])
+    ).rows[0].id;
+
   const newLicense = (seatTotal: number, extra: Record<string, unknown> = {}) => {
     round += 1;
     return software.create(ACTOR, {
@@ -162,11 +167,18 @@ describe('Ghế riêng của license (0065, Q-27)', () => {
     ).rejects.toThrow(/license_assignment_seat_live_key/);
   });
 
-  it('bớt ghế: ghế trống cuối bị bỏ; ghế đang có máy thì không bớt được (409)', async () => {
-    const lic = await newLicense(3, { perSeat: true });
+  it('bớt ghế: ghế trống cuối ẩn đi nhưng hàng GIỮ (giấy tờ của ghế không mồ côi); tăng lại thì quay về; ghế đang có máy thì không bớt được (409)', async () => {
+    const lic = await newLicense(3, { perSeat: true, seats: [{ seatNo: 3, contract: 'PO-GHE-3' }] });
     await seats.assign(ACTOR, lic.id, { deviceId: deviceIds[0] });
     await software.update(ACTOR, lic.id, { seatTotal: 2 });
-    expect((await seatRows(lic.id)).map((row) => row.seat_no)).toEqual([1, 2]);
+    expect((await software.detail(lic.id)).seats.map((seat) => seat.seatNo)).toEqual([1, 2]);
+    expect((await seatRows(lic.id)).map((row) => row.seat_no)).toEqual([1, 2, 3]);
+    // Ghế ẩn không nhận máy: hết ghế trống trong 1…2 thì lần gán là vượt ghế, không lọt vào ghế 3.
+    await expect(seats.assign(ACTOR, lic.id, { deviceId: deviceIds[2], seatId: (await seatRowId(lic.id, 3)) })).rejects.toMatchObject({
+      response: { code: 'SEAT_NOT_FOUND' },
+    });
+    await software.update(ACTOR, lic.id, { seatTotal: 3 });
+    expect((await software.detail(lic.id)).seats[2]).toMatchObject({ seatNo: 3, contract: 'PO-GHE-3' });
 
     const busy = await newLicense(3, { perSeat: true });
     const seatThree = (await software.detail(busy.id)).seats[2];
@@ -180,6 +192,15 @@ describe('Ghế riêng của license (0065, Q-27)', () => {
     const live = await scratch.pool.query(`SELECT seat_id FROM license_assignment WHERE software_id = $1 AND released_at IS NULL`, [busy.id]);
     expect(live.rows).toEqual([{ seat_id: null }]);
     expect((await seatRows(busy.id)).length).toBe(3);
+  });
+
+  it('chỉ sửa hợp đồng của một ghế vẫn đẩy updated_at của hồ sơ (sửa lần cuối, chặn ghi chồng)', async () => {
+    const lic = await newLicense(2, { perSeat: true });
+    const before = (await scratch.pool.query<{ updated_at: Date }>(`SELECT updated_at FROM software WHERE id = $1`, [lic.id])).rows[0].updated_at;
+    await software.update(ACTOR, lic.id, { seats: [{ seatNo: 2, contract: 'PO-SUA' }] });
+    const after = (await scratch.pool.query<{ updated_at: Date }>(`SELECT updated_at FROM software WHERE id = $1`, [lic.id])).rows[0].updated_at;
+    expect(after.getTime()).toBeGreaterThan(before.getTime());
+    expect((await seatRows(lic.id))[1]).toMatchObject({ seat_no: 2, contract: 'PO-SUA' });
   });
 
   it('bật ghế riêng cho hồ sơ đang có máy: máy đang dùng được xếp vào ghế trống theo thứ tự', async () => {

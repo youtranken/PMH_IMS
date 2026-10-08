@@ -72,7 +72,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   const toast = useToast();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   /* `null` = người dùng chưa chọn tab nào: tab mặc định đi theo LOẠI hồ sơ (xem `defaultTab`),
      mà loại chỉ biết khi hồ sơ đã về. `?tab=` trên URL thì luôn thắng. */
   const [chosenTab, setTab] = useState<string | null>(() =>
@@ -111,7 +111,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
     queryKey: ["software", "batches", software.data?.name],
     queryFn: () =>
       apiFetch<{ items: SoftwareRow[] }>(
-        `/api/v1/software?kind=license&status=all&limit=50&search=${encodeURIComponent(software.data?.name ?? "")}`,
+        `/api/v1/software?kind=license&limit=50&search=${encodeURIComponent(software.data?.name ?? "")}`,
       ),
     enabled: software.data?.kind === "license",
   });
@@ -522,6 +522,15 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             software={item}
             seats={item.seats ?? []}
             autoAssign={autoAssign}
+            onAutoAssignUsed={() =>
+              setParams(
+                (next) => {
+                  next.delete("assign");
+                  return next;
+                },
+                { replace: true },
+              )
+            }
             csrfToken={me.csrfToken}
           />
         ) : safeTab === "attachments" ? (

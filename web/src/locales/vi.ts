@@ -2298,6 +2298,7 @@ export default {
     assignTitle: 'Gán license vào máy',
     assignOnlyHint: 'Gán chỉ đưa license vào máy. Chi phí, kỳ hạn riêng, ghi chú của từng máy khai sau bằng "Sửa ghế" ở dòng của máy đó.',
     seatPlan: 'Máy vào ghế nào',
+    assignToSeat: 'Gán máy vào Ghế {{n}}',
     freeSeats: 'Ghế còn trống',
     seatPlanHint: 'Hồ sơ khai hợp đồng, giấy tờ riêng cho từng ghế — mặc định vào ghế trống theo thứ tự, đổi được.',
     seatPick: 'Ghế',
