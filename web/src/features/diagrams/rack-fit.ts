@@ -78,7 +78,8 @@ export interface RackMismatch {
 
 export interface RackFitResult {
   /** Mục `u` của lệnh `patch` (theo id ô). */
-  updates: Record<string, { geometry?: string; style?: string; xmlValue?: string }>;
+  /** `parent` + `previous`: ô thả đè lên khung tủ mà draw.io không nhận vào khung — đưa vào khung. */
+  updates: Record<string, { geometry?: string; style?: string; xmlValue?: string; parent?: string; previous?: string }>;
   /** Máy kho ghi tủ khác khung — không đặt theo U, màn hỏi người vẽ có chuyển máy sang tủ đó không. */
   cabinetMismatch: RackMismatch[];
   /** Máy cùng tủ nhưng kho chưa khai U — ở U trống gần chỗ thả, cao theo Số U (vắng = 1U); màn hỏi khai U. */
@@ -207,15 +208,34 @@ export function rackFit(xml: string, devices: Map<string, RackFitDevice>): RackF
   const racks = new Map<string, Cell & { geo: NonNullable<Cell['geo']> }>();
   for (const c of cells) if (c.cabinetId && c.geo && anyRack.has(c.id)) racks.set(c.id, { ...c, geo: c.geo });
   const rear = new Set([...racks.values()].filter((f) => REAR_FRAME.test(f.label)).map((f) => f.id));
-  const update = (cell: Cell, part: { geometry?: string; style?: string; xmlValue?: string }) => {
+  const update = (cell: Cell, part: { geometry?: string; style?: string; xmlValue?: string; parent?: string; previous?: string }) => {
     const clean = Object.fromEntries(Object.entries(part).filter(([, v]) => v !== undefined));
     if (Object.keys(clean).length > 0) result.updates[cell.id] = { ...result.updates[cell.id], ...clean };
   };
   /** Ô máy đã biết chỗ trong từng khung: theo khung → danh sách (ô, U bắt đầu, Số U). */
   type Slot = { cell: Cell; deviceId: string; start: number | null; size: number; flexible: boolean; info: RackFitDevice };
   const placed = new Map<string, { frame: Cell & { geo: NonNullable<Cell['geo']> }; slots: Slot[] }>();
-  for (const cell of cells) {
-    if (!cell.deviceId) continue;
+  /*
+   * Ô máy thả ĐÈ lên khung tủ mà draw.io không nhận vào khung (vẫn là con của trang): tâm ô trong
+   * lòng khung = đã thả vào tủ đó. Không xử lý thì máy trông như nằm trong tủ mà IMS không hỏi gì
+   * (Q-26 08/10). Chỉ so với khung cùng cha — cùng hệ toạ độ.
+   */
+  const droppedOn = (cell: Cell) => {
+    if (!cell.geo || !cell.parent || anyRack.has(cell.parent)) return undefined;
+    const cx = cell.geo.x + cell.geo.width / 2;
+    const cy = cell.geo.y + cell.geo.height / 2;
+    return [...racks.values()].find(
+      (f) => f.parent === cell.parent && !rear.has(f.id) && cx > f.geo.x && cx < f.geo.x + f.geo.width && cy > f.geo.y && cy < f.geo.y + f.geo.height,
+    );
+  };
+  for (const original of cells) {
+    if (!original.deviceId) continue;
+    const onto = droppedOn(original);
+    const cell =
+      onto && original.geo
+        ? { ...original, parent: onto.id, geo: { ...original.geo, x: original.geo.x - onto.geo.x, y: original.geo.y - onto.geo.y } }
+        : original;
+    if (onto) update(cell, { parent: onto.id, previous: '' });
     const frame = cell.parent ? racks.get(cell.parent) : undefined;
     if (!frame) {
       // Kéo ra khỏi khung tủ: nhãn bên phải (và ảnh kéo giãn) không còn đúng chỗ.

@@ -98,6 +98,30 @@ describe('rackFit — máy trong khung tủ cao đúng số U, nằm đúng U (Q
     expect(rackFit(model(plain + device('d1', 'SW-01', 'f9', { y: 10, h: 14.8 }, `shape=image;${SIDE}`)), INFO).updates).toEqual({});
   });
 
+  /*
+   * Q-26 08/10: draw.io không phải lúc nào cũng nhận ô vào khung khi thả (ô vẫn là con của trang,
+   * nằm ĐÈ lên khung). Tâm ô trong lòng khung tủ kho = đã thả vào tủ đó: đưa ô vào khung rồi xử lý
+   * như kéo vào — tủ khác thì hỏi chuyển tủ, không lặng lẽ để máy "nằm trong tủ" trên hình.
+   */
+  it('máy tủ khác thả ĐÈ lên khung (draw.io không nhận vào khung) → đưa vào khung + báo lệch tủ như kéo vào', () => {
+    // Khung ở x 250, y 20: ô tuyệt đối (283, 248.2) = trong khung (33, 228.2).
+    const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'UPS-03', '1', { x: 283, y: 248.2, h: 59.2 })), INFO);
+    expect(result.updates.d1).toMatchObject({ parent: 'f4', previous: '', geometry: '<mxGeometry x="33" y="228.2" width="162" height="14.8" as="geometry"/>' });
+    expect(result.cabinetMismatch).toEqual([expect.objectContaining({ cellId: 'd1', frameId: 'f4', dropU: 28 })]);
+  });
+
+  it('máy đúng tủ thả đè lên khung → vào khung, đúng U của kho', () => {
+    const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'SW-01', '1', { x: 283, y: 400, h: 59.2 })), INFO);
+    expect(result.updates.d1).toMatchObject({ parent: 'f4', previous: '', geometry: '<mxGeometry x="33" y="198.6" width="162" height="14.8" as="geometry"/>' });
+    expect(result.cabinetMismatch).toEqual([]);
+  });
+
+  it('chỉ chạm mép khung (tâm ô ở ngoài) → không kéo vào', () => {
+    const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'UPS-03', '1', { x: 150, y: 248.2, w: 162, h: 59.2 })), INFO);
+    expect(result.updates.d1?.parent).toBeUndefined();
+    expect(result.cabinetMismatch).toEqual([]);
+  });
+
   it('máy kho chưa biết (vừa chèn, chưa có thông tin) → hỏi thêm, không sửa', () => {
     const result = rackFit(model(frame('f4', CAB_04) + device('d1', 'MOI-01', 'f4', { y: 10, h: 40 })), INFO);
     expect(result.updates).toEqual({});

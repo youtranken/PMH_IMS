@@ -916,11 +916,17 @@ thay CHỖ LẤY Số U, ảnh và cổng.
   - **"Chuyển máy sang tủ…" chỉ hiện khi có máy cần chuyển** (máy kho ghi tủ khác khung tủ nó nằm
     trên bản vẽ). Việc này vốn tự hỏi khi kéo máy vào khung tủ khác. Mục menu luôn hiện mà bấm
     vào chỉ báo "không có máy nào" làm người dùng không hiểu nó để làm gì.
-  - **Khung đã gắn có dấu nhìn thấy**: gắn khung với bản vẽ con / dải IP thì dưới khung hiện một
-    dòng chữ nhỏ "↗ Bản vẽ con: …" / "↗ Dải IP: …". Dấu nằm trong bản vẽ nên chế độ Xem cũng thấy;
-    bấm vào dấu cũng mở như bấm khung. Bỏ gắn thì dấu mất.
-  - **"Dây chưa khai" hỏi lại server trên bản đang vẽ**: kết nối gỡ ở trang Thiết bị khi bản vẽ
-    đang mở sửa phải hiện trong danh sách (nét mang kết nối không còn), không chỉ sau khi mở lại.
+  - **Bỏ "Gắn khung"** (kèm "Đổi tủ của khung này" trong cùng hộp) và **bỏ "Dây chưa khai"**: chủ dự
+    án không có nhu cầu dùng (cùng ngày, thay cho bản "thêm dấu ↗ dưới khung" vừa làm). Vào bản vẽ
+    con từ cây bản vẽ; chèn nhầm tủ thì xoá khung rồi "Chèn tủ mạng" lại. Khung đã gắn từ trước vẫn
+    bấm được ở chế độ Xem (dữ liệu cũ giữ nguyên), chỉ không gắn mới được. Nét chưa khai vẫn tô
+    vàng, nét mang kết nối đã gỡ vẫn tô đỏ khi mở.
+  - **Thả máy ĐÈ lên khung tủ là thả vào tủ đó**: draw.io không phải lúc nào cũng nhận ô vào khung
+    khi thả (ô vẫn thuộc trang, nằm đè lên khung) nên IMS không hỏi gì. Nay tâm ô nằm trong lòng
+    khung tủ kho = đã thả vào tủ: IMS đưa ô vào khung, máy tủ khác thì hỏi "Chuyển máy sang tủ
+    này?". Đồng ý = ghi site, tủ, U mới vào hồ sơ thiết bị (có trong lịch sử thiết bị); Hủy = đưa ô
+    ra cạnh khung, không ghi gì.
+  - Menu ⋮ đóng khi bấm vào bản vẽ (iframe draw.io không báo cú bấm lên trang IMS).
 
 ### Q-24 · Góp ý giao diện 04/10/2026 (chủ dự án)
 
