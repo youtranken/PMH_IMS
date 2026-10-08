@@ -17,7 +17,8 @@ tay. Mục tiêu là đi hết các ngóc ngách theo **việc người dùng l�
 - File này thay `docs/KICH-BAN-TEST-THU-CONG.md` (bản Epic 1–7, còn đường dẫn Windows và URL
   tiếng Việt cũ).
 
-Phạm vi: Epic 1–7, 10, 11. Epic 8, 9 (phiếu ISO, sự cố, Documents) **chưa làm**, không kiểm, không
+Phạm vi: Epic 1–7, 10, 11 và giao diện C (Q-27: menu, bảng / form / trang chi tiết thiết bị và
+phần mềm, ghế riêng, đợt mua — mã CAT-00, DEV-02b, DEV-07/08/10, SW-07/08/09, LIC-04/05). Epic 8, 9 (phiếu ISO, sự cố, Documents) **chưa làm**, không kiểm, không
 báo thiếu (dashboard ghi "IMS chưa theo dõi sự cố" là đúng).
 
 ---
@@ -203,6 +204,7 @@ nhưng không sửa chúng.
 
 | Mã | Vai | Bước | Kỳ vọng | Nguồn |
 | --- | --- | --- | --- | --- |
+| CAT-00 | mọi | Menu và màn Danh mục (Q-27): mở nhóm **Tài sản**; mở Danh mục; mở link cũ `/catalog?tab=vendor` | Danh mục đứng **đầu** nhóm Tài sản (không còn ở Hệ thống). 9 tab gom 3 nhóm *Vị trí* / *Thiết bị* / *Đối tác & tổ chức*; thẻ "Khai trước khi thêm thiết bị" nói đủ / còn thiếu (vd model chưa có ảnh). Link `?tab=` cũ mở đúng tab. Ở 1366×768 menu không bị cắt. | Q-27 |
 | CAT-01 | member | Tạo site, tủ, loại, nhà cung cấp, phòng ban, nhà mạng, dịch vụ/port, loại dây | Tạo + sửa được. Không thấy Ngừng dùng / Xoá / Nhập Excel; câu rỗng hợp với member. | Q-12 |
 | CAT-02 | sa | Mã trùng khác hoa-thường (`qa-e2e-b-site`); tủ trùng mã trong cùng site; cùng mã ở site khác | Hai ca đầu bị chặn ("Site này đã có tủ mang mã đó"); ca cuối được. | Story 2.1 |
 | CAT-03 | sa | Xoá mục đang dùng; dời tủ còn máy sang site khác | `CATALOG_IN_USE` kèm gợi ý "Ngừng dùng"; `CABINET_HAS_DEVICES`. | |
@@ -217,12 +219,14 @@ nhưng không sửa chúng.
 | MOD-05 | sa | Xoá model còn máy dùng | 409 nêu số máy. | |
 | DEV-01 | member | Thêm thiết bị: thiếu Mã/Tên/Loại; mã trùng khác hoa-thường; serial trùng | Hai ca đầu bị chặn; serial trùng **chỉ cảnh báo**, vẫn lưu. | Story 2.2 |
 | DEV-02 | member | Chọn model `QA-E2E-SW48` → chọn tủ | Loại bị khoá theo model; ô U liệt kê "U trống:" đủ 1U; ảnh tự điền. Model không gắn tủ thì ẩn Tủ/U. | Story 11.2 |
+| DEV-02b | member | Form Thêm thiết bị (Q-27): thứ tự ô và các khối gập | Hai khối luôn mở: *Máy gì* (Model đầu tiên, gợi ý có **ảnh thu nhỏ**; chọn xong hiện ảnh mặt trước) và *Đặt ở đâu*. Năm khối gập (Người dùng và phòng ban · Mua sắm và bảo hành · Truy cập quản trị · Ảnh và giấy tờ · Ghi chú) có đếm số ô đã khai; Sửa máy thì khối đã có giá trị mở sẵn. Lỗi trong khối gập (vd ghi chú trông như mật khẩu) phải tự mở khối và chỉ ra ô. Không mất trường nào so với trước. Tiêu đề hộp có nhãn "Thiết bị". | Q-27 |
 | DEV-03 | member | U: U = chiều cao tủ (vừa khít), vượt 1; chồng U; chỉ điền một trong hai ô U; tủ thuộc site khác; đổi site trên form | Vừa khít được; vượt có câu "U.. vượt tủ X (12U)"; chồng nêu máy đang chiếm; đổi site thì tủ bị xoá khỏi ô. | |
 | DEV-04 | member | Model 2U trên tủ chỉ còn khe 1U | "Tủ không còn khe trống đủ 2U". | |
 | DEV-05 | member | Bảo hành đến < bảo hành từ; ngày 29/02 năm không nhuận | Bị chặn. | |
 | DEV-06 | member | "Lưu và nhân bản"; ⋮ "Nhân bản" | Bản sao không mang Mã (hoặc bắt nhập mã mới), không mang IP/U trùng. | |
-| DEV-07 | mọi | Danh sách: lọc site → tủ (đổi site thì xoá lọc tủ), loại, trạng thái, phòng ban; tìm theo serial, IP, người dùng | Đúng; máy thanh lý ẩn mặc định, lọc `Đã thanh lý` mới thấy. | Q-20 |
-| DEV-08 | mọi | Chi tiết: chip "Đang giữ…", khu thu gọn, "Xem tủ", bản đồ quan hệ, "Có trên sơ đồ (n)" | Số chip khớp nội dung từng khu; link đi đúng. 390px: "Xem tủ" chỉ đọc. | Story 2.5 |
+| DEV-07 | mọi | Danh sách: lọc site → tủ (đổi site thì xoá lọc tủ), loại, trạng thái, phòng ban; tìm theo serial, IP, người dùng | Đúng; máy thanh lý ẩn mặc định, lọc `Đã thanh lý` mới thấy. Cột (Q-27): ▸ · Ảnh (ảnh model, không có thì ảnh riêng / chữ loại) · Mã · Tên gọi · IP quản trị (chưa có IP là "—") · Vị trí · Trạng thái · Thao tác. Bung ▸ ra license đang cài dạng thẻ tách nhau, tiêu đề cột in đậm. Chip "Xóa lọc (n)" gỡ hết lọc. | Q-20, Q-27 |
+| DEV-08 | mọi | Chi tiết (Q-27): dải 4 ô đầu trang, Thông số, cột phải, bản đồ quan hệ, "Có trên sơ đồ (n)", chip "Đang giữ…" (390px) | Dải 4 ô **thấy ở mọi tab**: Vị trí (kèm U) · Người sử dụng (kèm phòng ban, trống là "chưa gán người") · IP quản trị (Chép + Đổi IP; chưa có thì "chưa cấp IP" + nút **Cấp IP**) · Bảo hành. Trạng thái nằm dưới tiêu đề kèm "từ ngày…". Thông số **luôn đủ 10 dòng cùng thứ tự** (Loại thiết bị, Model, Serial, Số U, Truy cập quản trị, Nhà cung cấp, Ngày mua, Bảo hành, Phòng ban, Ghi chú); ô trống ghi "— chưa khai", nút "Bổ sung N ô còn thiếu" mở Sửa hồ sơ. Cột phải: "Trong tủ T-x" (khúc ±4U, máy này tô viền cam, U trống gộp) + Bảo hành (thanh hạn, NCC kèm số gọi). Số trên bản đồ / chip khớp nội dung; link đi đúng. 390px: dải 2 × 2, thông số một cột, cột phải thu vào "Chi tiết". | Story 2.5, Q-27 |
+| DEV-10 | member | Tab **Phần mềm** của máy: "Gán phần mềm vào máy này" → gõ tìm license → chọn | Hộp chọn chỉ ra license **đang dùng** (không ra hồ sơ thanh lý); chọn xong mở đúng hộp "Gán license vào máy — <mã>" với máy này đã nằm sẵn. Gán xong bảng trong tab có dòng mới, số trên tab tăng. Máy thanh lý: không có nút gán. Bản đồ quan hệ ô Phần mềm bấm → sang tab này. | Q-27 |
 | DEV-09 | mọi | Truy cập quản trị: 11 dòng; địa chỉ có khoảng trắng, bắt đầu bằng `-`; cổng 0/65536; Web với `javascript:alert(1)` | Tối đa 10 dòng; các ca xấu bị chặn; chỉ http(s) thành link; SSH có "Chép lệnh". Không có ô mật khẩu. | |
 | PORT-01 | member | Tab Sơ đồ cổng: nối `SW01:Gi1/0/1` ↔ `SW02:Gi1/0/1`; nối lại cổng đó với máy thứ ba; `gi1/0/1` khác hoa-thường; tự nối vào chính mình; nối sang máy thanh lý | Một cổng một cáp (kiểm cả hai chiều, không phân biệt hoa-thường); các ca xấu bị chặn với câu nêu cổng/máy đang chiếm. | Story 2.4 |
 | PORT-02 | member | VLAN: trống, `trunk`, `TRUNK`, 0, 1, 4094, 4095 | Nhận trống/trunk/1–4094. | |
@@ -255,10 +259,14 @@ Tài khoản `qa-c-*`. Dùng máy của lượt B để gán ghế, **chỉ gán
 | SW-04 | member | Hạn còn đúng 7, 8, 30, 31 ngày | 7 = đỏ, 8 và 30 = cam, 31 = xanh (so sánh ≤). Màu khớp ở danh sách, chi tiết, màn Hết hạn, bảng điều khiển; cả sáng và tối. | |
 | SW-05 | member | Tạo với hạn **31 ngày trước**, chờ sweep (khoảng 1 phút, F5) | Thành **Đã thanh lý**, người làm `system`, mọi ghế bị gỡ, mỗi ghế một dòng lịch sử. Hạn 30 ngày trước: vẫn Hết hạn + "tự thanh lý sau N ngày". | Q-13 |
 | SW-06 | member | Sửa hạn của hồ sơ Hết hạn sang tương lai | Tự về Đang dùng. | |
+| SW-07 | member | Form Thêm phần mềm (Q-27): bố cục, ô tick "Mỗi ghế có hợp đồng, giấy tờ và ghi chú riêng" | Hàng 1 Tên · Mã · Nhà cung cấp; hàng 2 Kỳ hạn · Bắt đầu · Hết hạn. Không có ô Chi phí. Tick **khoá** khi Số ghế trống hoặc 1; bớt xuống dưới 2 thì tick tự tắt. Không tick: có *Số hợp đồng / PO*, *Ghi chú*, *Giấy tờ* chung. Tick: bảng Ghế 1…N (hợp đồng, ghi chú, giấy tờ từng ghế), ô ghi chú và giấy tờ chung **biến mất**; "Chép số hợp đồng của ghế 1…" chép xuống. Ghi chú ghế trông như mật khẩu bị chặn tại ô. Giấy tờ chọn cho ghế lúc thêm mới phải nằm đúng ghế sau khi lưu. | Q-27 |
+| SW-08 | member | "Lưu rồi gán vào máy"; menu ⋮ "Mua thêm đợt mới…" | Lưu rồi gán: sang trang hồ sơ, tab Máy đang dùng, hộp Gán mở sẵn. Mua thêm đợt: form điền sẵn tên / NCC / kỳ hạn của đợt trước, kể các đợt cùng tên, nút "Dùng mã …-02" gợi mã chưa ai dùng; lưu xong trang hồ sơ có thẻ "Mua theo đợt" nối các đợt. | Q-27 |
+| SW-09 | mọi | Trang chi tiết phần mềm (Q-27) | Dải 4 ô (Nhà cung cấp · Hết hạn · Ghế hoặc Tên miền · Hợp đồng / PO hoặc Giấy tờ) thấy ở mọi tab; tab đầu tên **Tổng quan**; khu Thông tin đủ dòng thứ tự cố định, ô trống "— chưa khai". Hồ sơ ghế riêng: Hợp đồng ghi "Riêng từng ghế (n)". | Q-27 |
 | LIC-01 | member | License 2 ghế: gán máy 1, máy 2, máy 3 | Máy 3 bị chặn "đã dùng hết 2 ghế"; ghi lý do → "Gán vượt ghế"; cảnh báo "Đang vượt số ghế: 3/2"; lý do vào lịch sử. | Story 3.2 |
 | LIC-02 | member | Gán trùng máy; gán vào hồ sơ đã thanh lý; hạ tổng ghế dưới số đang dùng; nút "−" | Chặn đủ; "−" dừng ở max(1, đang dùng). | Q-24 |
 | LIC-03 | member | Chọn nhanh máy theo phòng ban / người dùng | Bỏ qua máy đã có license đó. | |
-| LIC-04 | member | Chi phí ghế: `5,6tr`, `-1`, `abc` | `5,6tr` → 5 600 000; âm và chữ bị chặn. | |
+| LIC-04 | member | Chi phí ghế (ở **Sửa ghế**, hộp Gán không còn ô chi phí — Q-27): `5,6tr`, `-1`, `abc` | `5,6tr` → 5 600 000; âm và chữ bị chặn. Sửa ghế không có ô Hợp đồng; số hợp đồng cũ của ghế vẫn hiện, không bị xoá. | Q-27 |
+| LIC-05 | member | License 3 ghế **có tick ghế riêng**: gán 2 máy một lượt; đổi ghế trong bảng "Máy vào ghế nào"; chọn trùng ghế; bớt Số ghế xuống dưới ghế đang có máy; tắt tick | Bảng gợi ý ghế trống theo thứ tự, đổi được; trùng ghế bị chặn. Tab Máy đang dùng ghi "Ghế n" dưới mã máy và có khu "Ghế còn trống". Bớt ghế đang có máy: chặn ("ghế đang có máy"). Tắt tick: máy rời ghế, số hợp đồng / ghi chú ghế vẫn giữ (bật lại thì máy về ghế). Lịch sử có "Sửa ghế riêng". | Q-27 |
 | REN-01 | member | Gia hạn: mốc +1/6/12/24/36 tháng; từ 31/01 +1 tháng; từ 29/02/2028 +12 tháng; hạn mới = hạn cũ; lùi về quá khứ | Tính từ hạn cũ (hoặc từ hôm nay nếu đã quá hạn); 31/01 → 29/02 (năm nhuận) hoặc 28/02; 29/02/2028 → 28/02/2029; hai ca cuối bị chặn. | Story 3.4 |
 | REN-02 | member | Gia hạn có ghế hết hạn trong khoảng [hạn cũ, hạn mới) | Có tick kéo ghế theo; toast nêu số ghế; "Xem trong Đã gia hạn" mở đúng tab. | |
 | REN-03 | member | Gia hạn từ trang chi tiết và từ màn Hết hạn | Tab "Đã gia hạn" có cả hai, cùng nhãn, đủ người làm / hợp đồng / chi phí. | |
@@ -496,6 +504,13 @@ làm.
 - Phần mềm: không có trạng thái "chờ gia hạn"; không Hoàn tác gia hạn; không mốc "Tháng sau /
   Quý sau"; phần mềm Hết hạn không vào thư tổng hợp; IMS không lưu file cert/khoá (Q-03, Q-13, Q-22).
 - Tài khoản dịch vụ: quá hạn không tự ngừng dùng.
+- Q-27 (giao diện C, 08/10): bảng thiết bị **không còn** cột Người sử dụng, cột Bảo hành và dòng phụ
+  loại · model · serial dưới tên (đã có trong hồ sơ). Hộp Gán license **không còn** ô Chi phí, Hợp đồng,
+  Bắt đầu, Kết thúc, Ghi chú (khai ở Sửa ghế); Sửa ghế **không còn** ô Hợp đồng; form phần mềm không
+  có ô Chi phí. Tab "Hồ sơ" của phần mềm đổi tên "Tổng quan". Trang thiết bị không còn khu "Thông tin
+  nhanh" và khu "License đang cài" (thay bằng dải 4 ô, Thông số, tab Phần mềm). Danh mục không còn ở
+  nhóm Hệ thống. Nhãn đổi: Hãng sản xuất, Tên gọi, Loại thiết bị / Loại hồ sơ, Mã hồ sơ, "Cổng dịch vụ
+  (port)".
 - Thiết bị: không xoá được, chỉ thanh lý. Ảnh model thắng ảnh riêng; mặt có ảnh model bị khoá tải
   ảnh riêng, kể cả SA (Q-26). Không có ô "phòng" cho máy không gắn tủ. Không còn "chọn ảnh từ giấy tờ".
 - Sơ đồ (Q-26 08/10): đã bỏ "Ảnh thật…", "Nối hàng loạt" (chỉ còn ở trang thiết bị), "Gắn khung",
