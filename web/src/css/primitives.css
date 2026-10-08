@@ -2214,3 +2214,8 @@ span.port-cell {
   display: grid;
   gap: var(--space-2);
 }
+
+/* Bảng ghế (features/software/seat-editor.tsx, Q-27). "Ghế n" KHÔNG dùng `.mono`: font mono không
+   ghép được dấu tiếng Việt, ra "Ghế ́1". Ô nhập chiếm trọn cột. */
+.seat-no { white-space: nowrap; font-weight: var(--fw-semibold); }
+.seat-editor .inp { width: 100%; }

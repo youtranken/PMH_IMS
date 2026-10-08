@@ -138,7 +138,7 @@ export function LicenseAssignmentsPanel({
                 .filter((seat) => !seat.deviceId)
                 .map((seat) => (
                   <tr key={seat.id}>
-                    <td className="mono">{t('software.seatLabel', { n: seat.seatNo })}</td>
+                    <td className="seat-no">{t('software.seatLabel', { n: seat.seatNo })}</td>
                     <td className="mono">{seat.contract ?? '—'}</td>
                     <td>{seat.note ?? '—'}</td>
                     <td className="col-center">

@@ -58,7 +58,7 @@ export function SeatEditor({
             const error = noteError(row.seatNo);
             return (
               <tr key={row.seatNo}>
-                <td className="mono">{t('software.seatLabel', { n: row.seatNo })}</td>
+                <td className="seat-no">{t('software.seatLabel', { n: row.seatNo })}</td>
                 <td>
                   <input
                     className="inp mono"

@@ -811,7 +811,8 @@ export function DeviceDetail({ me }: { me: Me }) {
                * sinh ra để nói. Ngay dưới là NCC kèm số gọi — máy hỏng còn bảo hành thì việc kế
                * tiếp là gọi NCC, đừng bắt sang màn Danh mục tra số.
                */}
-              <RailRow label={t("devices.warranty")} wide>
+              {/* Không bọc `RailRow`: tiêu đề thẻ đã là "Bảo hành", thêm nhãn dòng là đọc hai lần. */}
+              <div className="rail-row rail-row-wide">
                 {item.warrantyEnd ? (
                   <WarrantyTimeline
                     notCounted={retired}
@@ -827,7 +828,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 ) : (
                   <ExpiryBadge end={null} />
                 )}
-              </RailRow>
+              </div>
               {item.vendorName ? (
                 <RailRow
                   label={t("devices.vendor")}
