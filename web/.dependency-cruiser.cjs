@@ -53,6 +53,7 @@ module.exports = {
            * thêm cả bên kia, tức phải giải thích trong PR.
            */
           '^src/features/software/device-licenses-expand',
+          '^src/features/software/device-software-tab',
           '^src/features/ipam/device-ip-assign',
           '^src/features/catalog/catalog-form',
           '^src/features/devices/device-form',

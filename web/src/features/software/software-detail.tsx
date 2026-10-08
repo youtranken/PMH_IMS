@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -12,13 +12,13 @@ import { PerpetualBadge } from "@/ui/perpetual-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
-import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import { DetailHeader } from "@/ui/detail-header";
+import { FactStrip, SpecList } from "@/ui/detail-facts";
 import {
   DetailLayout,
   DetailSection,
   RailCard,
   RailRow,
-  RailRowIfSet,
 } from "@/ui/detail-layout";
 import { useDispose } from "@/ui/dispose-button";
 import { RenewDialog } from "@/ui/renew-dialog";
@@ -222,6 +222,41 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
+  const endText =
+    item.licenseModel === "perpetual" && supportsSeats(item.kind)
+      ? t("software.noEnd")
+      : item.endDate
+        ? formatDate(item.endDate)
+        : null;
+  const specItems = supportsSeats(item.kind)
+    ? [
+        { label: t("software.code"), value: item.code },
+        { label: t("software.name"), value: item.name },
+        { label: t("software.vendor"), value: item.vendorName },
+        {
+          label: t("software.licenseModel"),
+          value: t(item.licenseModel === "perpetual" ? "software.perpetual" : "software.subscription"),
+        },
+        { label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
+        { label: t("software.endDate"), value: endText },
+        { label: t("software.seatTotal"), value: item.seatTotal === null ? null : String(item.seatTotal) },
+        {
+          label: t("software.contract"),
+          value: item.perSeat ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 }) : item.contract,
+        },
+        { label: t("software.note"), value: item.perSeat ? t("software.notePerSeat") : item.note },
+      ]
+    : [
+        { label: t("software.code"), value: item.code },
+        { label: t("software.name"), value: item.name },
+        { label: t("software.kind"), value: t(KIND_KEY[item.kind]) },
+        { label: t("software.vendor"), value: item.vendorName },
+        { label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
+        { label: t("software.endDate"), value: endText },
+        { label: t("software.note"), value: item.note },
+      ];
+  const specBlank = specItems.filter((entry) => !entry.value).length;
+
   return (
     <>
       <DetailHeader
@@ -315,6 +350,51 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         </div>
       ) : null}
 
+      {/* Dải 4 ô cùng khuôn với trang thiết bị (Q-27): nhà cung cấp · hạn · ghế (tên miền) ·
+          hợp đồng (giấy tờ). Thấy ở mọi tab; ô trống nói "chưa khai". */}
+      <FactStrip
+        label={t("software.factsLabel")}
+        facts={[
+          { key: "vendor", label: t("software.vendor"), value: item.vendorName },
+          {
+            key: "term",
+            label: t("software.endDate"),
+            value:
+              item.licenseModel === "perpetual" ? (
+                <PerpetualBadge />
+              ) : item.endDate ? (
+                <ExpiryBadge end={item.endDate} notCounted={retired} />
+              ) : null,
+            note: item.endDate
+              ? t("software.termRange", { from: formatDate(item.startDate) || "…", to: formatDate(item.endDate) })
+              : null,
+          },
+          supportsSeats(item.kind)
+            ? { key: "seats", label: t("software.seats"), value: <SeatUsage item={item} /> }
+            : supportsWebsites(item.kind)
+              ? {
+                  key: "sites",
+                  label: t("software.domainNames"),
+                  value: (item.websites ?? []).length > 0 ? t("software.siteCount", { count: (item.websites ?? []).length }) : null,
+                  note: item.websites?.[0],
+                }
+              : { key: "start", label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
+          supportsSeats(item.kind)
+            ? {
+                key: "contract",
+                label: t("software.contract"),
+                value: item.perSeat
+                  ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 })
+                  : item.contract,
+              }
+            : {
+                key: "files",
+                label: t("software.tabAttachments"),
+                value: counts.files ? t("software.fileCount", { count: counts.files }) : counts.files === 0 ? null : "…",
+              },
+        ]}
+      />
+
       <DetailLayout
         rail={
           <>
@@ -358,14 +438,6 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               </RailRow>
             ) : null}
 
-            <RailRowIfSet label={t("software.vendor")} value={item.vendorName} />
-            {/* Hợp đồng của đợt mua (Q-27): chung cho mọi ghế, hoặc riêng từng ghế. */}
-            {supportsSeats(item.kind) ? (
-              <RailRowIfSet
-                label={t("software.contract")}
-                value={item.perSeat ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 }) : item.contract}
-              />
-            ) : null}
           </RailCard>
           {/* Mua theo đợt (Q-27): mỗi đợt một hồ sơ — thẻ này nối các đợt cùng phần mềm. */}
           {supportsSeats(item.kind) && siblings.length > 1 ? (
@@ -424,36 +496,17 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
-            {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở thẻ định
-                danh bên phải. Lưới chỉ còn phần chưa nói ở đâu cả. Ngày bắt đầu cũng bỏ: nó là
-                mốc đầu của chính thanh hạn bên phải. */}
-            {/* Khu "Hồ sơ" có thẻ + tiêu đề như mọi khu khác — xem chú thích dài ở
-                `ui/detail-layout.tsx`, chỗ khai `DetailSection`. KHÔNG `compact`: khu này đứng
-                một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
-            <DetailSection title={t("detail.profileSection")}>
-              <dl className="data-grid">
-              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang: với SSL và tên miền thì "Kỳ hạn"
-                  không có nghĩa, vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa
-                  khai" bên dưới là nơi DUY NHẤT nói về ô trống — cùng luật với các trang chi
-                  tiết khác. */}
-              {supportsSeats(item.kind) ? (
-                <Item label={t("software.licenseModel")}>
-                  {t(
-                    item.licenseModel === "perpetual"
-                      ? "software.perpetual"
-                      : "software.subscription",
-                  )}
-                </Item>
+            {/* Thông tin thứ tự cố định, cùng khuôn với Thông số của thiết bị (Q-27): ô trống
+                đứng đúng chỗ và ghi "chưa khai", không ẩn. */}
+            <DetailSection title={t("software.infoTitle")}>
+              <SpecList label={t("software.infoTitle")} items={specItems} />
+              {!retired && specBlank > 0 ? (
+                <div className="row" style={{ marginTop: "var(--space-5)" }}>
+                  <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
+                    {t("software.fillBlanks", { count: specBlank })}
+                  </button>
+                </div>
               ) : null}
-                <DataItemIfSet label={t("software.note")} value={item.note} />
-              </dl>
-              <BlankFields
-                labels={[
-                  item.vendorName ? null : t("software.vendor"),
-                  item.startDate ? null : t("software.startDate"),
-                  item.note ? null : t("software.note"),
-                ].filter((label): label is string => label !== null)}
-              />
             </DetailSection>
           </>
         ) : safeTab === "vault" ? (
@@ -669,11 +722,3 @@ function retiredLine(item: SoftwareDetailRow, t: TFunction): string {
     : t("software.retiredAuto", { date, days });
 }
 
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="data-item">
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}

@@ -81,3 +81,38 @@ export function freeRuns(height: number, occupants: readonly RackOccupant[], siz
   }
   return runs;
 }
+
+/** Một khối trong khúc tủ: một máy (trọn các U của nó) hoặc một dải U trống liền nhau. */
+export interface RackSlice {
+  from: number;
+  to: number;
+  code: string | null;
+  self: boolean;
+}
+
+/**
+ * Khúc tủ quanh một máy — `around` U trên và dưới, U cao ở trên. Máy chiếm nhiều U gộp một khối
+ * (vẽ trọn dù chìa ra ngoài khúc), U trống liền nhau gộp một dòng. Máy chưa khai U → rỗng.
+ */
+export function rackWindow(occupants: readonly RackOccupant[], selfId: string, height: number | null, around: number): RackSlice[] {
+  const self = occupants.find((o) => o.id === selfId);
+  if (!self) return [];
+  const top = height ?? Math.max(DEFAULT_RACK_U, ...occupants.map((o) => o.start + o.size - 1));
+  const hi = Math.min(top, self.start + self.size - 1 + around);
+  const lo = Math.max(1, self.start - around);
+  const out: RackSlice[] = [];
+  let u = hi;
+  while (u >= lo) {
+    const at = occupants.find((o) => o.start <= u && u <= o.start + o.size - 1);
+    if (at) {
+      out.push({ from: at.start, to: at.start + at.size - 1, code: at.code, self: at.id === selfId });
+      u = at.start - 1;
+      continue;
+    }
+    let end = u;
+    while (end - 1 >= lo && !occupants.some((o) => o.start <= end - 1 && end - 1 <= o.start + o.size - 1)) end -= 1;
+    out.push({ from: end, to: u, code: null, self: false });
+    u = end - 1;
+  }
+  return out;
+}

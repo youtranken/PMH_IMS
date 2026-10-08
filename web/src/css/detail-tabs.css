@@ -888,3 +888,107 @@ html[data-motion='off'] .skeleton {
   animation: none;
 }
 
+/* --- Dải 4 ô + thông số thứ tự cố định (ui/detail-facts.tsx, Q-27) -------- */
+.fact-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-6) var(--space-9);
+}
+.fact + .fact { border-left: 1px solid var(--border); }
+.fact dt {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.fact dd { margin: 0; min-width: 0; }
+.fact-v {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.fact-v[data-blank='true'],
+.spec-row dd[data-blank='true'] {
+  color: var(--ink-3);
+  font-weight: 400;
+  font-style: italic;
+}
+.fact-note { font-size: var(--fs-sm); color: var(--ink-2); }
+.fact-action { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+@media (max-width: 680px) {
+  .fact-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fact { padding: var(--space-5) var(--space-6); }
+  .fact + .fact { border-left: none; }
+  .fact:nth-child(even) { border-left: 1px solid var(--border); }
+  .fact:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+
+.spec-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-12);
+  margin: 0;
+}
+.spec-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 38%) minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.spec-row dt { color: var(--ink-2); font-size: var(--fs-sm); }
+.spec-row dd { margin: 0; color: var(--ink); font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 680px) {
+  .spec-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- Khúc tủ quanh máy (features/devices/cabinet-peek.tsx) ---------------- */
+.rack-peek {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.rack-peek-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.rack-peek-row[data-kind='empty'] {
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-3);
+}
+.rack-peek-row[data-kind='self'] {
+  background: var(--warn-soft);
+  border: 2px solid var(--warn);
+  font-weight: var(--fw-semibold);
+}
+.rack-peek-u { color: var(--ink-2); font-size: var(--fs-2xs); }
+.rack-peek-code { min-width: 0; overflow-wrap: anywhere; }

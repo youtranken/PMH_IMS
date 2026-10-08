@@ -47,11 +47,12 @@ export function DetailLayout({
   const { t } = useTranslation();
   const narrow = useMediaQuery(RAIL_COLLAPSE_QUERY);
   const [open, setOpen] = useState(false);
-  if (railStrip && railSummary) {
+  /* Không có `railSummary` thì một cột trơn: trang đã có tóm tắt ở chỗ khác (dải 4 ô, Q-27). */
+  if (railStrip) {
     return (
       <div className="detail-2col detail-1col">
         <div className="detail-main">
-          <div className="rail-strip">{railSummary}</div>
+          {railSummary ? <div className="rail-strip">{railSummary}</div> : null}
           {children}
         </div>
       </div>
