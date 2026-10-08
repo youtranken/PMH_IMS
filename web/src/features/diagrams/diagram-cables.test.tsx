@@ -297,13 +297,13 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     }
   });
 
-  it('menu ⋮ khi vẽ (Q-26 08/10): bỏ "Nối hàng loạt", "Ảnh thật…"', async () => {
+  it('menu ⋮ khi vẽ (Q-26 08/10): bỏ "Nối hàng loạt", "Ảnh thật…", "Gắn khung", "Dây chưa khai"', async () => {
     await openEditor(file(DEVICES), { links: [] });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /^Thao tác với/ }));
     const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '');
     expect(items.some((text) => text.startsWith('Khai kết nối'))).toBe(true);
-    for (const gone of ['Nối hàng loạt', 'Ảnh thật']) {
+    for (const gone of ['Nối hàng loạt', 'Ảnh thật', 'Gắn khung', 'Dây chưa khai']) {
       expect(items.some((text) => text.startsWith(gone)), gone).toBe(false);
     }
   });
@@ -573,41 +573,5 @@ describe('Chế độ xem — màu dây, tô sáng, thẻ dây, mũi tên sang b
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Chưa khai vào sơ đồ cổng.' }));
     expect(await screen.findByRole('dialog', { name: /^Dây/ })).toHaveTextContent('Chưa khai vào sơ đồ cổng.');
-  });
-});
-
-describe('Dây chưa khai — mở lại hộp khai', () => {
-  it('liệt kê nét chưa khai và nét có kết nối đã gỡ; bấm một nét mở đúng hộp "Khai"', async () => {
-    const xml = file(DEVICES + edge('e1', 'a', 'b') + linked('e2', 'b', 'a', 'link-gone'));
-    await openEditor(xml, {
-      cableEdges: [
-        { cellId: 'e1', linkId: null, state: 'undeclared', sourceDeviceId: 'dev-sw', targetDeviceId: 'dev-srv' },
-        { cellId: 'e2', linkId: 'link-gone', state: 'removed', sourceDeviceId: 'dev-srv', targetDeviceId: 'dev-sw' },
-      ],
-    }, { '/api/v1/devices/': () => jsonResponse(200, { ports: [], incoming: [] }) });
-    const user = userEvent.setup();
-    await pickMenuItem(user, /^Thao tác với/, 'Dây chưa khai');
-    const box = screen.getByRole('dialog', { name: 'Nét dây chưa khai vào sơ đồ cổng' });
-    expect(within(box).getByRole('button', { name: 'SW-E2E-01 ↔ SRV-E2E-01' })).toBeInTheDocument();
-    await user.click(within(box).getByRole('button', { name: 'SRV-E2E-01 ↔ SW-E2E-01' }));
-    const declare = await screen.findByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
-    expect(within(declare).getByRole('combobox', { name: 'Cổng của SRV-E2E-01' })).toBeInTheDocument();
-  });
-  it('kết nối gỡ ở trang Thiết bị khi bản vẽ đang mở: hỏi lại server trên XML đang vẽ, nét hiện trong danh sách', async () => {
-    const xml = file(DEVICES + linked('e2', 'b', 'a', 'link-gone'));
-    const { fetchMock } = await openEditor(
-      xml,
-      { cableEdges: [{ cellId: 'e2', linkId: 'link-gone', state: 'linked', sourceDeviceId: 'dev-srv', targetDeviceId: 'dev-sw' }] },
-      {
-        '/api/v1/diagrams/cable-status': () =>
-          jsonResponse(200, { edges: [{ cellId: 'e2', linkId: 'link-gone', state: 'removed', sourceDeviceId: 'dev-srv', targetDeviceId: 'dev-sw' }], undrawn: [] }),
-      },
-    );
-    const user = userEvent.setup();
-    await pickMenuItem(user, /^Thao tác với/, 'Dây chưa khai');
-    const box = screen.getByRole('dialog', { name: 'Nét dây chưa khai vào sơ đồ cổng' });
-    expect(await within(box).findByRole('button', { name: 'SRV-E2E-01 ↔ SW-E2E-01' })).toBeInTheDocument();
-    const sent = calls(fetchMock, '/api/v1/diagrams/cable-status').at(-1);
-    expect(JSON.parse(String(sent?.[1]?.body)).xml).toContain('link-gone');
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bindEdgeValue, cableView, diffAutosave, edgeById, firstDeviceCell, pendingEdges, styleWithoutImsEdge, undeclaredEdges } from './cable-diff';
+import { bindEdgeValue, cableView, diffAutosave, edgeById, firstDeviceCell, styleWithoutImsEdge } from './cable-diff';
 
 const A = 'aaaaaaaa-0000-4000-8000-00000000000a';
 const B = 'aaaaaaaa-0000-4000-8000-00000000000b';
@@ -114,13 +114,6 @@ describe('diffAutosave', () => {
   });
 });
 
-describe('undeclaredEdges — nút "Dây chưa khai"', () => {
-  it('mọi nét nối hai máy kho khác nhau chưa có ims_link_id', () => {
-    const xml = model(DEVICES + edge('e1', 'a', 'b') + linked('e2', 'a', 'c') + edge('e3', 'a', 's'));
-    expect(undeclaredEdges(xml).map((e) => [e.id, e.sourceCode, e.targetCode])).toEqual([['e1', 'SW-01', 'SRV-01']]);
-  });
-});
-
 describe('edgeById / firstDeviceCell / bindEdgeValue', () => {
   const xml = model(DEVICES + edge('e1', 'a', 'b') + linked('e2', 'a', 'c'));
 
@@ -142,25 +135,6 @@ describe('edgeById / firstDeviceCell / bindEdgeValue', () => {
     expect(bindEdgeValue('e2', { label: 'Gi1 ↔ eth0', ims_link_id: L1, ims_cable_type_id: 'x' }, { label: '' }, ['ims_link_id', 'ims_cable_type_id'])).toBe(
       '<UserObject label="" id="e2"/>',
     );
-  });
-});
-
-describe('pendingEdges — danh sách "Dây chưa khai" tính lại từ XML ĐANG vẽ', () => {
-  const L2 = '22222222-0000-4000-8000-000000000002';
-  // Lúc mở, server báo e2 mang kết nối L1 đã gỡ (đỏ).
-  const opened = [{ cellId: 'e2', linkId: L1, state: 'removed' as const }];
-
-  it.each([
-    ['nét chưa khai + nét đỏ còn mang kết nối cũ', model(DEVICES + edge('e1', 'a', 'b') + linked('e2', 'b', 'c')), ['e1', 'e2']],
-    ['nét đỏ đã khai lại (ims_link_id mới) → ra khỏi danh sách', model(DEVICES + linked('e2', 'b', 'c', L2)), []],
-    ['nét đỏ đã bị xoá khỏi bản vẽ', model(DEVICES), []],
-    ['nét đỏ chỉ còn vẽ (bỏ ims_link_id) → là nét chưa khai, không lặp hai lần', model(DEVICES + edge('e2', 'b', 'c')), ['e2']],
-  ])('%s', (_name, xml, ids) => {
-    expect(pendingEdges(xml, opened).map((e) => e.id)).toEqual(ids);
-  });
-
-  it('nét đã khai đúng (linked) không bao giờ vào danh sách', () => {
-    expect(pendingEdges(model(DEVICES + linked('e2', 'b', 'c')), [{ cellId: 'e2', linkId: L1, state: 'linked' }])).toEqual([]);
   });
 });
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bindFrameValue, cabinetFrameCells, cabinetFramePatch, FRAME_BADGE_MARK, frameBadgeId, frameBadgePatch, frameCandidates, type CabinetFrameLayout } from './frame-bridge';
+import { cabinetFrameCells, cabinetFramePatch, frameCandidates, type CabinetFrameLayout } from './frame-bridge';
 
-const CHILD = '7b0c1c1e-0000-4000-8000-0000000000d1';
 const SUBNET = '7b0c1c1e-0000-4000-8000-0000000000e1';
 const CAB = '7b0c1c1e-0000-4000-8000-0000000000c1';
 
@@ -40,30 +39,6 @@ describe('frameCandidates — hình gắn được làm khung (đọc từ XML t
 
   it('XML hỏng → rỗng, không ném', () => {
     expect(frameCandidates('<mxfile><')).toEqual([]);
-  });
-});
-
-describe('bindFrameValue — giá trị mới của khung (lệnh patch)', () => {
-  it('hình trần: bọc UserObject, giữ chữ làm nhãn', () => {
-    const [frame] = frameCandidates(file(bare('s1', 'Tầng 3')));
-    expect(bindFrameValue(frame, { ims_child_diagram_id: CHILD })).toBe(`<UserObject label="Tầng 3" ims_child_diagram_id="${CHILD}" id="s1"/>`);
-  });
-
-  it('khung đã có dữ liệu: giữ thuộc tính khác, đè thuộc tính gắn', () => {
-    const [frame] = frameCandidates(file(wrapped('f1', 'Tủ', `ims_cabinet_id="${CAB}" tooltip="x"`)));
-    expect(bindFrameValue(frame, { ims_child_diagram_id: CHILD })).toBe(
-      `<UserObject label="Tủ" ims_cabinet_id="${CAB}" tooltip="x" ims_child_diagram_id="${CHILD}" id="f1"/>`,
-    );
-  });
-
-  it('bỏ gắn (null) gỡ thuộc tính, không để giá trị rỗng', () => {
-    const [frame] = frameCandidates(file(wrapped('f1', 'VLAN', `ims_subnet_id="${SUBNET}"`)));
-    expect(bindFrameValue(frame, { ims_subnet_id: null })).toBe('<UserObject label="VLAN" id="f1"/>');
-  });
-
-  it('chữ có ký tự đặc biệt được thoát', () => {
-    const [frame] = frameCandidates(file(bare('s1', 'A &amp; B &quot;C&quot;')));
-    expect(bindFrameValue(frame, {})).toBe('<UserObject label="A &amp; B &quot;C&quot;" id="s1"/>');
   });
 });
 
@@ -162,32 +137,5 @@ describe('cabinetFramePatch — "Chèn tủ mạng" khi máy của tủ đã có
     const patch = cabinetFramePatch(layout, { parent: '1', previous: null, x: 0, y: 0, newId: () => `x-${(a += 1)}` }, new Map());
     expect(patch.insert).toEqual(cabinetFrameCells(layout, { parent: '1', previous: null, x: 0, y: 0, newId: () => `x-${(b += 1)}` }));
     expect(patch.update).toEqual({});
-  });
-});
-
-describe('frameBadgePatch — dấu "đã gắn" dưới khung (Q-26 08/10)', () => {
-  const badge = (frameId: string) =>
-    `<mxCell id="${frameBadgeId(frameId)}" value="↗ cũ" style="text;${FRAME_BADGE_MARK};" vertex="1" connectable="0" parent="${frameId}"><mxGeometry x="0" y="1" width="260" height="16" relative="1" as="geometry"/></mxCell>`;
-
-  it.each([
-    { name: 'gắn lần đầu: chèn ô con của khung', body: bare('s1', 'Tầng 3'), text: '↗ Bản vẽ con: Tầng 3', expected: { i: 1, u: 0, r: 0 } },
-    { name: 'gắn lại khi đã có dấu: sửa chữ, không chèn ô thứ hai', body: bare('s1', 'Tầng 3') + badge('s1'), text: '↗ Dải IP: 10.0.0.0/24', expected: { i: 0, u: 1, r: 0 } },
-    { name: 'bỏ gắn: gỡ dấu', body: bare('s1', 'Tầng 3') + badge('s1'), text: null, expected: { i: 0, u: 0, r: 1 } },
-    { name: 'bỏ gắn khi chưa có dấu: không làm gì', body: bare('s1', 'Tầng 3'), text: null, expected: { i: 0, u: 0, r: 0 } },
-  ])('$name', ({ body, text, expected }) => {
-    const patch = frameBadgePatch(file(body), 's1', text);
-    expect({ i: patch.i.length, u: Object.keys(patch.u).length, r: patch.r.length }).toEqual(expected);
-  });
-
-  it('ô chèn: con của khung, nằm dưới mép khung, không kéo được (bố cục rack của draw.io bỏ qua), không sửa chữ được', () => {
-    const [cell] = frameBadgePatch(file(bare('s1', 'Tầng 3')), 's1', '↗ Bản vẽ con: Tầng 3').i as Record<string, string>[];
-    expect(cell).toMatchObject({ id: frameBadgeId('s1'), parent: 's1', vertex: 1, connectable: 0, value: '↗ Bản vẽ con: Tầng 3' });
-    expect(cell.style.split(';')).toEqual(expect.arrayContaining([FRAME_BADGE_MARK, 'movable=0', 'editable=0']));
-    expect(cell.geometry).toContain('relative="1"');
-    expect(cell.geometry).toContain('y="1"');
-  });
-
-  it('dấu không phải khung để gắn', () => {
-    expect(frameCandidates(file(bare('s1', 'Tầng 3') + badge('s1'))).map((f) => f.id)).toEqual(['s1']);
   });
 });

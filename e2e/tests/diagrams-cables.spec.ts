@@ -19,8 +19,8 @@ import {
  * Sơ đồ mạng — dây gắn sơ đồ cổng (Q-23 "vẽ là khai, có hỏi", AD-18). Logic so XML hai lần
  * autosave, luật dây và hydrate dồn ở bài đơn vị (`cable-diff.test.ts`, `diagram-checks.spec.ts`,
  * `diagram-hydrate.spec.ts`) và `api/test/diagrams.spec.ts`; bài này giữ mức khói trên stack thật.
- * Không vẽ nét bằng chuột trong iframe draw.io: bản vẽ có sẵn một nét chưa khai (dựng qua API),
- * hộp "Khai" mở từ nút "Dây chưa khai" — cùng hộp, cùng đường ghi với nét vừa vẽ.
+ * Không vẽ nét bằng chuột trong iframe draw.io: `drawEdge` chèn nét vào trình vẽ rồi cho khung báo
+ * `autosave` có nét đó — cùng tín hiệu, cùng hộp "Khai" như khi người vẽ nối dây.
  */
 
 test.beforeEach(() => {
@@ -64,7 +64,9 @@ async function link(page: Page, from: string, portLabel: string, to: string, con
 type Dev = { cell: string; id: string; code: string };
 
 /** Bản vẽ: các máy + các nét (`linkId` vắng = nét chưa khai), XML + SVG như trình vẽ xuất. */
-async function saveDrawing(page: Page, diagramId: string, devices: Dev[], edges: { cell: string; from: string; to: string; linkId?: string }[]) {
+type Edge = { cell: string; from: string; to: string; linkId?: string };
+
+function drawingXml(devices: Dev[], edges: Edge[]): string {
   const cells = devices
     .map(
       (d, i) =>
@@ -78,7 +80,11 @@ async function saveDrawing(page: Page, diagramId: string, devices: Dev[], edges:
         : `<mxCell id="${e.cell}" value="" style="endArrow=none;" edge="1" parent="1" source="${e.from}" target="${e.to}"><mxGeometry relative="1" as="geometry"/></mxCell>`,
     )
     .join('');
-  const xml = `<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells}${lines}</root></mxGraphModel></diagram></mxfile>`;
+  return `<mxfile><diagram id="p1" name="Trang 1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells}${lines}</root></mxGraphModel></diagram></mxfile>`;
+}
+
+async function saveDrawing(page: Page, diagramId: string, devices: Dev[], edges: Edge[]) {
+  const xml = drawingXml(devices, edges);
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" width="700px" height="100px" viewBox="-0.5 -0.5 700 100"><g data-cell-id="0"><g data-cell-id="1">' +
     devices.map((d, i) => `<g data-cell-id="${d.cell}"><rect x="${20 + i * 200}" y="20" width="120" height="50"/><text x="${30 + i * 200}" y="50">${d.code}</text></g>`).join('') +
@@ -86,6 +92,21 @@ async function saveDrawing(page: Page, diagramId: string, devices: Dev[], edges:
     '</g></g></svg>';
   const res = await page.request.post(`/api/v1/diagrams/${diagramId}/versions`, { headers: await writeHeaders(page), data: { xml, svg, basedOnVersionId: null } });
   expect(res.status(), await res.text()).toBe(201);
+}
+
+/**
+ * "Vẽ" một nét nối hai máy như người dùng kéo dây: chèn nét vào trình vẽ bằng lệnh `patch` (cách
+ * IMS chèn), rồi để khung draw.io báo `autosave` có nét đó — đúng tín hiệu IMS nhận khi người vẽ
+ * nối dây. Không kéo chuột thật: điểm nối trong iframe draw.io không đủ ổn định để bấm trúng.
+ */
+async function drawEdge(page: Page, devices: Dev[], edges: Edge[], drawn: Edge) {
+  const cell = { id: drawn.cell, edge: 1, parent: '1', source: drawn.from, target: drawn.to, value: '', style: 'endArrow=none;', geometry: '<mxGeometry relative="1" as="geometry"/>' };
+  const iframe = page.locator('iframe[title="Khung vẽ draw.io"]');
+  await iframe.evaluate((el, c) => {
+    (el as HTMLIFrameElement).contentWindow!.postMessage(JSON.stringify({ action: 'patch', patch: { u: { p1: { cells: { i: [c] } } } } }), '*');
+  }, cell);
+  const frame = (await (await iframe.elementHandle())!.contentFrame())!;
+  await frame.evaluate((xml) => window.parent.postMessage(JSON.stringify({ event: 'autosave', xml }), '*'), drawingXml(devices, [...edges, drawn]));
 }
 
 /** Màu nét đang hiện (computed) và màu của token ô màu giấy (giấy luôn sáng ở cả hai theme — V-05). */
@@ -133,12 +154,11 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     const srv = { cell: 'b', id: await createDevice(page, `SRV-E2E-DAY${stamp}`), code: `SRV-E2E-DAY${stamp}` };
     const id = await createDiagram(page, `E2E Dây khai ${stamp}`);
     await stepUpViaApi(page, secret, 'diagram');
-    await saveDrawing(page, id, [sw, srv], [{ cell: 'e1', from: 'a', to: 'b' }]);
+    await saveDrawing(page, id, [sw, srv], []);
 
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await diagramBarAction(page, 'Dây chưa khai');
-    await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
+    await drawEdge(page, [sw, srv], [], { cell: 'e1', from: 'a', to: 'b' });
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
     await expect(box).toBeVisible();
     await box.getByRole('combobox', { name: `Cổng của ${sw.code}` }).fill('Gi1/0/24');
@@ -179,12 +199,11 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     const before = sql(`SELECT count(*) FROM device_port WHERE device_id IN ('${sw.id}', '${srv.id}')`);
     const id = await createDiagram(page, `E2E Dây chiếm ${stamp}`);
     await stepUpViaApi(page, secret, 'diagram');
-    await saveDrawing(page, id, [sw, srv], [{ cell: 'e1', from: 'a', to: 'b' }]);
+    await saveDrawing(page, id, [sw, srv], []);
 
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await diagramBarAction(page, 'Dây chưa khai');
-    await page.getByRole('button', { name: `${sw.code} ↔ ${srv.code}` }).click();
+    await drawEdge(page, [sw, srv], [], { cell: 'e1', from: 'a', to: 'b' });
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
     // Cổng đã có cáp báo NGAY tại ô (không hoa/thường), Khai không gửi gì.
     await box.getByRole('combobox', { name: `Cổng của ${sw.code}` }).fill('gi1/0/24');
@@ -378,15 +397,12 @@ test.describe('Sơ đồ mạng — dây gắn sơ đồ cổng', () => {
     const first = await link(page, sw.id, '1', pcB.id, '1');
     const id = await createDiagram(page, `E2E Máy thứ ba ${stamp}`);
     await stepUpViaApi(page, secret, 'diagram');
-    await saveDrawing(page, id, [sw, pcB, pcC], [
-      { cell: 'e1', from: 'a', to: 'b', linkId: first },
-      { cell: 'e2', from: 'c', to: 'a' },
-    ]);
+    const linked = [{ cell: 'e1', from: 'a', to: 'b', linkId: first }];
+    await saveDrawing(page, id, [sw, pcB, pcC], linked);
 
     await page.goto(`/diagrams/${id}?mode=edit`);
     await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await diagramBarAction(page, 'Dây chưa khai');
-    await page.getByRole('button', { name: `${pcC.code} ↔ ${sw.code}` }).click();
+    await drawEdge(page, [sw, pcB, pcC], linked, { cell: 'e2', from: 'c', to: 'a' });
     const box = page.getByRole('dialog', { name: 'Khai kết nối này vào sơ đồ cổng?' });
     await expect(box.getByText(`${pcC.code} chưa khai cổng nào — gõ tên cổng mới`)).toBeVisible();
     await expect(box.getByText(`Cổng đang dùng của ${sw.code}: 1 → ${pcB.code}`)).toBeVisible();
