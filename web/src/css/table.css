@@ -17,7 +17,9 @@ table.table thead th {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--ink-2);
+  /* --ink, không --ink-2: tiêu đề cột là chỗ mắt bám để đọc bảng — xám nhạt thì lẫn vào dữ
+     liệu (Q-27, chủ dự án). */
+  color: var(--ink);
   padding: var(--space-5) var(--space-7);
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
@@ -1022,4 +1024,28 @@ button.audit-open {
   overflow-wrap: anywhere;
   font-size: var(--fs-xs);
   margin: var(--space-3) 0;
+}
+
+/* Ảnh nhỏ trong ô bảng (cột Ảnh của thiết bị, Q-27): khung tỉ lệ mặt máy 1U–2U, ảnh vừa khung;
+   không có ảnh thì khung nét đứt ghi tên loại. */
+.cell-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 6rem;
+  height: 1.6rem;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--ink);
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+}
+.cell-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cell-thumb.is-empty {
+  background: var(--surface-2);
+  border: 1px dashed var(--border-2);
 }

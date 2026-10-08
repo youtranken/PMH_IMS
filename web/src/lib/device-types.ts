@@ -29,6 +29,10 @@ export interface DeviceRow {
   rackUSize?: number | null;
   /** Model danh mục (Q-26); trống = "chưa có Model". */
   deviceModelId?: string | null;
+  /** Phiên bản ảnh mặt trước của model (danh sách); null = không có model hoặc model chưa có ảnh. */
+  modelPhotoVersion?: string | null;
+  /** Ảnh mặt trước riêng của máy (tệp) — dùng khi model không có ảnh (Q-26: ảnh model thắng). */
+  photoFrontFileId?: string | null;
   /** Truy cập quản trị (Q-26) — vắng ở dữ liệu giả của bài kiểm cũ. */
   accessPoints?: { kind: 'web' | 'ssh' | 'telnet' | 'rdp' | 'winbox' | 'other'; address: string; port: number | null }[];
   createdAt: string;

@@ -73,6 +73,56 @@ table.table.table-sub tbody tr:hover td {
 table.table.table-sub td .mono {
   white-space: nowrap;
 }
+/* Bảng con dạng THẺ (`table-cards`, Q-27): mỗi dòng là một thẻ tách nhau, rê chuột thì nổi
+   lên — license đang cài của máy, ghế đang dùng của license. Vẫn là `<table>` thật để trình
+   đọc màn hình gắn tiêu đề cột; chỉ đổi cách vẽ. Khung `.table-wrap` bỏ viền/nền và chừa chỗ
+   cho bóng (nó `overflow-x: auto` nên sẽ cắt bóng nếu sát mép). */
+.table-wrap:has(> table.table-cards) {
+  border: 0;
+  background: transparent;
+  padding: 0 var(--space-3) var(--space-3);
+}
+table.table.table-cards {
+  border-collapse: separate;
+  border-spacing: 0 var(--space-4);
+  background: transparent;
+}
+table.table.table-cards thead th {
+  background: transparent;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+table.table.table-cards tbody td {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+table.table.table-cards tbody td:first-child {
+  border-left: 1px solid var(--border);
+  border-radius: var(--r) 0 0 var(--r);
+}
+table.table.table-cards tbody td:last-child {
+  border-right: 1px solid var(--border);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+table.table.table-cards tbody tr:hover td {
+  background: var(--surface);
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  table.table.table-cards tbody td {
+    transition: none;
+  }
+  table.table.table-cards tbody tr:hover td {
+    transform: none;
+  }
+}
 @media (max-width: 760px) {
   .exp .panel {
     grid-template-columns: 1fr;

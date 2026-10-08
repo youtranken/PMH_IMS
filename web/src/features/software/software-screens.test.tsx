@@ -213,3 +213,21 @@ describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
     expect(headers.some((h) => h.startsWith('Tên phần mềm'))).toBe(false);
   });
 });
+
+/* Q-27: bảng phần mềm có chip "Xóa lọc (n)" như bảng thiết bị — cùng thanh lọc dùng chung. */
+describe('Bốn màn phần mềm — chip Xóa lọc', () => {
+  it('có bộ lọc đang bật thì hiện "Xóa lọc (1)"; bấm thì bỏ lọc khỏi địa chỉ', async () => {
+    mockFetch();
+    renderList('software', `${PATHS.software}?status=all`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Xóa lọc (1)' }));
+    expect(screen.getByLabelText('địa chỉ')).not.toHaveTextContent('status=all');
+  });
+
+  it('không lọc gì thì không có chip', async () => {
+    mockFetch();
+    renderList('software', PATHS.software);
+    await screen.findByRole('heading', { level: 1, name: 'Phần mềm' });
+    expect(screen.queryByRole('button', { name: /^Xóa lọc/ })).toBeNull();
+  });
+});

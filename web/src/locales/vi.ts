@@ -1905,6 +1905,8 @@ export default {
     zoneCollapse: 'Thu gọn {{title}}',
     zoneExpand: 'Mở {{title}}',
     managementIp: 'IP quản trị',
+    photoCol: 'Ảnh',
+    photoOf: 'Ảnh {{code}}',
     noIpYet: 'Chưa có IP',
     fillBlanks: 'Bổ sung {{count}} ô còn thiếu',
     warrantyNudge: 'Máy hỏng nhưng còn bảo hành tới {{date}} — liên hệ nhà cung cấp.',

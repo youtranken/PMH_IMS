@@ -465,6 +465,19 @@ export class DevicesService {
     const sites = new Map(lists.sites.map((s) => [s.id, s]));
     const cabinets = new Map(lists.cabinets.map((c) => [c.id, c]));
     const vendors = new Map(lists.vendors.map((v) => [v.id, v]));
+    /* Ảnh model thắng ảnh riêng của máy (Q-26) — cột Ảnh của bảng (Q-27) cần biết model nào có
+       ảnh mặt trước mà không phải gọi thêm một lượt mỗi dòng. */
+    const modelIds = [...new Set(rows.map((row) => row.deviceModelId).filter((id): id is string => Boolean(id)))];
+    const modelPhotos = new Map(
+      modelIds.length === 0
+        ? []
+        : (
+            await this.db
+              .select({ id: deviceModelTable.id, photo: deviceModelTable.photoFrontFileId, updatedAt: deviceModelTable.updatedAt })
+              .from(deviceModelTable)
+              .where(inArray(deviceModelTable.id, modelIds))
+          ).map((m) => [m.id, m.photo ? m.updatedAt.toISOString() : null] as const),
+    );
 
     return rows.map((row) => {
       const type = types.get(row.deviceTypeId);
@@ -476,6 +489,7 @@ export class DevicesService {
         siteCode: row.siteId ? (sites.get(row.siteId)?.code ?? null) : null,
         cabinetCode: row.cabinetId ? (cabinets.get(row.cabinetId)?.code ?? null) : null,
         vendorName: row.vendorId ? (vendors.get(row.vendorId)?.name ?? null) : null,
+        modelPhotoVersion: row.deviceModelId ? (modelPhotos.get(row.deviceModelId) ?? null) : null,
       };
     });
   }

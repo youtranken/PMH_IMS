@@ -301,6 +301,8 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t(spec.searchKey)}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         {manyKinds ? (
           <Select

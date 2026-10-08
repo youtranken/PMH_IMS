@@ -148,6 +148,8 @@ describe('/devices — bung dòng license theo mẫu chuẩn', () => {
     const region = document.getElementById(open.getAttribute('aria-controls') ?? '') as HTMLElement;
     const table = await within(region).findByRole('table');
     expect(table).toHaveClass('table-sub');
+    // Q-27: dòng là thẻ tách nhau, nổi khi rê.
+    expect(table).toHaveClass('table-cards');
     expect(within(region).getByTestId('expand-header').closest('.exp-panel')).toBe(
       table.closest('.exp-panel'),
     );

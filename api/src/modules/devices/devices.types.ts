@@ -62,6 +62,8 @@ export interface DeviceListItem extends DeviceRecord {
   siteCode: string | null;
   cabinetCode: string | null;
   vendorName: string | null;
+  /** Phiên bản ảnh mặt trước của model (để dựng link ảnh); null = máy không có model hoặc model chưa có ảnh. */
+  modelPhotoVersion: string | null;
 }
 
 export interface DeviceHistoryRecord {
