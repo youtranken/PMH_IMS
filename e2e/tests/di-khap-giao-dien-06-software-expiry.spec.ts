@@ -183,8 +183,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Q-22: màn Phần mềm chỉ giữ license nên không còn ô lọc Loại.
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 6 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc',
-    ).toHaveCount(6);
+      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa lọc (1) · Xóa bộ lọc',
+    ).toHaveCount(7);
     await expect(main.getByRole('button', { name: 'Loại hồ sơ', exact: true })).toHaveCount(0);
     for (const name of [
       'Xuất Excel',
@@ -192,6 +192,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Trạng thái',
       'Nhà cung cấp',
       'Kỳ hạn',
+      // Chip gỡ lọc của thanh lọc (Q-27, như bảng thiết bị) — ô tìm đang có chữ là một bộ lọc.
+      'Xóa lọc (1)',
       'Xóa bộ lọc',
     ]) {
       await expect(
@@ -356,15 +358,15 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     expect(
       (await add.getByRole('heading', { level: 2 }).allTextContents()).map((text) => text.trim()),
-      'Hộp thêm hồ sơ (license): tiêu đề hộp, rồi các khối — hồ sơ, thời hạn, ghế + ghi chú, giấy tờ',
-    ).toEqual(['Thêm phần mềm', 'Hồ sơ', 'Thời hạn', 'Ghế và ghi chú', 'Giấy tờ đính kèm']);
+      'Hộp thêm hồ sơ (license, Q-27): tiêu đề hộp, rồi các khối — phần mềm gì, thời hạn, ghế + hợp đồng, ghi chú, giấy tờ',
+    ).toEqual(['Thêm phần mềm', 'Phần mềm gì', 'Thời hạn', 'Ghế và hợp đồng', 'Ghi chú', 'Giấy tờ đính kèm']);
 
     // ===== Ô GÕ CHỮ =====
     await expect(
       add.getByRole('textbox'),
-      'Form thêm hồ sơ có đúng 4 ô gõ chữ: Mã hồ sơ · Tên hồ sơ · Số ghế · Ghi chú',
-    ).toHaveCount(4);
-    for (const name of ['Mã hồ sơ', 'Tên hồ sơ', 'Số ghế', 'Ghi chú']) {
+      'Form thêm hồ sơ có đúng 5 ô gõ chữ: Tên hồ sơ · Mã hồ sơ · Số ghế · Số hợp đồng / PO · Ghi chú',
+    ).toHaveCount(5);
+    for (const name of ['Mã hồ sơ', 'Tên hồ sơ', 'Số ghế', 'Số hợp đồng / PO', 'Ghi chú']) {
       await expect(
         add.getByRole('textbox', { name, exact: true }),
         `Ô "${name}" phải là ô gõ chữ và phải có đúng một cái`,
@@ -379,8 +381,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 13 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(13);
+      'Hộp thêm hồ sơ có đúng 14 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(14);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
@@ -394,6 +396,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Tăng số ghế',
       'Chọn file để đính kèm',
       'Hủy',
+      // Q-27: việc ngay sau khi khai license là đưa nó vào máy.
+      'Lưu rồi gán vào máy',
       'Lưu',
     ]) {
       await expect(
@@ -406,6 +410,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       add.getByRole('button', { name: 'Trạng thái', exact: true }),
       'THÊM MỚI thì không được có ô Trạng thái: hồ sơ vừa tạo mà chọn được "đã thanh lý" là vô nghĩa',
     ).toHaveCount(0);
+    // Q-27: ô tick ghế riêng khoá khi chưa có từ 2 ghế.
+    await expect(
+      add.getByRole('checkbox', { name: /^Mỗi ghế có hợp đồng, giấy tờ và ghi chú riêng/ }),
+      'Ghế riêng cần từ 2 ghế — ô tick phải khoá khi Số ghế còn trống',
+    ).toBeDisabled();
 
     /*
      * ===== BÊN TRONG TỪNG Ô CHỌN =====
@@ -417,7 +426,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Q-22: màn Phần mềm chỉ có license — form không hỏi Loại (SSL, tên miền, hợp đồng có màn
     // riêng; ô chọn loại chỉ còn ở màn Tên miền & SSL).
     await expect(
-      add.getByRole('radiogroup', { name: 'Loại' }),
+      add.getByRole('radiogroup', { name: 'Loại hồ sơ' }),
       'Form của màn Phần mềm không được bày ô Loại',
     ).toHaveCount(0);
 
@@ -591,35 +600,22 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Chọn máy là ô GÕ ĐỂ TÌM (combobox), không phải danh sách thả xuống — kho có hàng nghìn máy',
     ).toHaveCount(1);
 
+    // Q-27: GÁN chỉ đưa license vào máy — chi phí / kỳ hạn / ghi chú khai sau bằng "Sửa ghế".
     await expect(
       assign.getByRole('textbox'),
-      'Hộp gán có đúng 3 ô gõ chữ: Chi phí · Hợp đồng · Ghi chú',
-    ).toHaveCount(3);
-    for (const name of ['Chi phí', 'Hợp đồng', 'Ghi chú']) {
-      await expect(
-        assign.getByRole('textbox', { name, exact: true }),
-        `Hộp gán phải có đúng một ô "${name}"`,
-      ).toHaveCount(1);
-    }
+      'Hộp gán không còn ô gõ chữ nào: chi phí, hợp đồng, ghi chú khai ở "Sửa ghế"',
+    ).toHaveCount(0);
+    await expect(assign.getByRole('note'), 'Hộp gán nói rõ thông tin ghế khai ở đâu').toContainText('Sửa ghế');
 
     await expect(
       assign.getByRole('button'),
-      'Hộp gán có đúng 8 nút: ✕ · hai ô ngày · +1/+2/+3 năm · Hủy · Gán vào máy',
-    ).toHaveCount(8);
+      'Hộp gán có đúng 3 nút: ✕ · Hủy · Gán vào máy',
+    ).toHaveCount(3);
     // Chọn máy theo Máy | Phòng ban | Người sử dụng (Q-15) — dải radio, mặc định là Máy.
     const pickBy = assign.getByRole('radiogroup', { name: 'Chọn máy theo' });
     await expect(pickBy.getByRole('radio')).toHaveText(['Máy', 'Phòng ban', 'Người sử dụng']);
     await expect(pickBy.getByRole('radio', { name: 'Máy', exact: true })).toBeChecked();
-    for (const name of [
-      'Đóng hộp thoại',
-      'Bắt đầu',
-      'Kết thúc',
-      '+1 năm',
-      '+2 năm',
-      '+3 năm',
-      'Hủy',
-      'Gán vào máy',
-    ]) {
+    for (const name of ['Đóng hộp thoại', 'Hủy', 'Gán vào máy']) {
       await expect(
         assign.getByRole('button', { name, exact: true }),
         `Hộp gán phải có đúng một nút "${name}"`,
@@ -694,8 +690,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveValue('1.500.000');
     await expect(
       editSeat.getByRole('textbox', { name: 'Hợp đồng', exact: true }),
-      'Số hợp đồng cũ phải nằm sẵn trong ô',
-    ).toHaveValue('HD-E2E-2026-07');
+      'Q-27: Sửa ghế không còn ô Hợp đồng — hợp đồng thuộc hồ sơ hoặc ghế riêng (số cũ giữ nguyên ở API)',
+    ).toHaveCount(0);
     await expect(
       editSeat.getByRole('textbox', { name: 'Ghi chú', exact: true }),
       'Ghi chú cũ phải nằm sẵn trong ô',
@@ -799,7 +795,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     expect(
       await tabNames(),
       'Hồ sơ LICENSE có đủ năm tab, đúng thứ tự này',
-    ).toEqual(['Hồ sơ', 'Máy đang dùng', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
+    ).toEqual(['Tổng quan', 'Máy đang dùng', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
 
     // License mở sẵn tab "Máy đang dùng" — thứ người ta mở hồ sơ để xem.
     await expect(page.getByRole('tab', { name: /^Máy đang dùng/ })).toHaveAttribute(
@@ -907,7 +903,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     expect(
       await tabNames(),
       'Tên miền không có ghế nào để gán — thanh tab phải thiếu đúng tab "Máy đang dùng"',
-    ).toEqual(['Hồ sơ', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
+    ).toEqual(['Tổng quan', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
   });
 
   /*

@@ -309,7 +309,6 @@ test.describe('Kho thiết bị', () => {
     await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
-    await expect(row.getByText('chị Lan')).toBeVisible();
 
     await row.getByRole('button', { name: `Sửa máy ${code}` }).click();
     const form = page.getByRole('dialog');
@@ -319,12 +318,16 @@ test.describe('Kho thiết bị', () => {
     await openFold(form, 'Mua sắm và bảo hành');
     await expect(form.getByLabel('Serial')).toBeVisible();
 
-    await openFold(form, 'Người dùng và phòng ban');
+    // Khối đã có giá trị mở sẵn khi sửa (Q-27) — người dùng hiện có phải thấy ngay.
+    await expect(form.getByRole('button', { name: /^Người dùng và phòng ban/ })).toHaveAttribute('aria-expanded', 'true');
+    await expect(form.getByLabel('Người sử dụng')).toHaveValue('chị Lan');
     await form.getByLabel('Người sử dụng').fill('anh Tuấn');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.getByRole('row', { name: new RegExp(code) }).getByText('anh Tuấn')).toBeVisible();
+    // Bảng không còn cột Người sử dụng (Q-27): đọc lại hồ sơ để chắc đã lưu.
+    const saved = await page.request.get(`/api/v1/devices?search=${encodeURIComponent(code)}`);
+    expect((await saved.json()).items[0]).toMatchObject({ code, assignedTo: 'anh Tuấn' });
   });
 
   /**

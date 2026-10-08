@@ -279,7 +279,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Thêm thiết bị',
         'Site',
         'Tủ mạng',
-        'Loại',
+        'Loại thiết bị',
         'Phòng ban',
         'Trạng thái',
         'Xóa lọc (1)',
@@ -408,13 +408,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(page.getByRole('columnheader')), {
         message:
-          'Bảng thiết bị ở 1280px có đúng 6 cột, đúng thứ tự này. Loại máy và Vị trí là dòng phụ dưới Tên (không bớt thông tin): thêm cột là cột Tên bị ép và nút Sửa bị đẩy khỏi khung ở 1280px. Màn >1440px mới có cột Vị trí riêng',
+          'Bảng thiết bị (Q-27): Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người sử dụng, bảo hành, loại · model · serial nằm ở hồ sơ',
       })
       .toEqual([
+        'Ảnh',
         'Mã thiết bị',
         'Tên gọi',
-        'Người sử dụng',
-        'Bảo hành',
+        'IP quản trị',
+        'Vị trí',
         'Trạng thái',
         'Thao tác',
       ]);
@@ -431,18 +432,16 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(headerRow.getByRole('button')), {
         message:
-          'Đúng năm cột sắp xếp được, và nhãn phải NÓI RÕ đây là nút sắp xếp (thanh lọc cũng có nút tên "Loại")',
+          'Đúng ba cột sắp xếp được (Q-27 bỏ Người sử dụng, Bảo hành khỏi bảng), và nhãn phải NÓI RÕ đây là nút sắp xếp',
       })
       .toEqual([
         'Sắp xếp theo Mã thiết bị',
-        'Sắp xếp theo Tên thiết bị',
-        'Sắp xếp theo Người sử dụng',
-        'Sắp xếp theo Bảo hành',
+        'Sắp xếp theo Tên gọi',
         'Sắp xếp theo Trạng thái',
       ]);
 
     const codeColumn = page.getByRole('columnheader', { name: /Mã thiết bị/ });
-    const nameColumn = page.getByRole('columnheader', { name: /Tên thiết bị/ });
+    const nameColumn = page.getByRole('columnheader', { name: /Tên gọi/ });
     const firstRow = page.getByRole('row').nth(1);
 
     await expect(codeColumn, 'mở màn bảng sắp theo Mã thiết bị tăng dần').toHaveAttribute(
@@ -451,7 +450,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     );
     await expect(firstRow, 'sắp theo mã tăng thì máy -01 đứng đầu').toContainText(`${stamp}-01`);
 
-    await headerRow.getByRole('button', { name: 'Sắp xếp theo Tên thiết bị' }).click();
+    await headerRow.getByRole('button', { name: 'Sắp xếp theo Tên gọi' }).click();
     await expect(
       nameColumn,
       'bấm nút sắp xếp của cột Tên thì CHÍNH cột đó phải mang aria-sort',
@@ -465,7 +464,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'sắp theo tên tăng thì "Máy A" lên đầu — tức máy mang mã -12, khác hẳn thứ tự theo mã',
     ).toContainText(`${stamp}-12`);
 
-    await headerRow.getByRole('button', { name: 'Sắp xếp theo Tên thiết bị' }).click();
+    await headerRow.getByRole('button', { name: 'Sắp xếp theo Tên gọi' }).click();
     await expect(nameColumn, 'bấm lần hai phải lật sang giảm dần').toHaveAttribute(
       'aria-sort',
       'descending',
