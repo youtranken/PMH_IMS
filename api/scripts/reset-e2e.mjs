@@ -110,7 +110,13 @@ const DOMAINS = {
     // Giấy tờ của hồ sơ phần mềm chưa từng nằm trong vùng nào — 70 hàng mồ côi (cửa canh 11/09).
     `DELETE FROM file WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
     // Giấy tờ của ghế riêng (Q-27): hàng ghế tự xoá theo hồ sơ (CASCADE), giấy tờ thì không.
-    `DELETE FROM file WHERE owner_type = 'software_seat' AND owner_id IN (SELECT s.id FROM software_seat s JOIN software w ON w.id = s.software_id WHERE w.code ILIKE '%E2E%')`,
+    // Chỉ chạy khi bảng đã có (0065): script gắn từ máy vào container có thể chạy trước migration.
+    `DO $$ BEGIN
+       IF to_regclass('software_seat') IS NOT NULL THEN
+         DELETE FROM file WHERE owner_type = 'software_seat' AND owner_id IN (
+           SELECT s.id FROM software_seat s JOIN software w ON w.id = s.software_id WHERE w.code ILIKE '%E2E%');
+       END IF;
+     END $$`,
     `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
     `DELETE FROM secret WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
     `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
