@@ -75,7 +75,6 @@ import {
   type DeviceCellSpec,
 } from './drawio-bridge';
 import { DraftFromPortMapDialog } from './draft-from-port-map-dialog';
-import { frameBadgeId } from './frame-bridge';
 import { StockDevicePicker } from './stock-device-picker';
 import { deviceDropXml, dragFrameState, wantsDropFallback } from './stock-drag';
 import { useCableBridge } from './use-cable-bridge';
@@ -991,7 +990,6 @@ function DiagramEditor({
   }, []);
 
   const frames = useFrameBridge({
-    diagramId,
     ready,
     xml: frameXml,
     withFile,
@@ -1009,9 +1007,6 @@ function DiagramEditor({
       setJustInserted((current) => [...current, ...deviceIds]);
       withFile((file) => cables.refreshUndrawn(file));
     },
-    // Đổi tủ của khung: máy trong khung có thể thành lệch tủ — chỉ báo một lời, không bật hộp chuyển
-    // cho từng máy (người vẽ chọn máy cần chuyển từ lời báo).
-    onCabinetRebound: () => withFile((file) => racks.fit(file, { warnOnly: true })),
   });
 
   const cables = useCableBridge({
@@ -1509,7 +1504,6 @@ function DiagramEditor({
             />
           ) : null}
           {cables.dialogs}
-          {frames.dialogs}
           {racks.dialogs}
           {content.diagram.kind === 'presentation' ? presentationTools.elements : null}
           {draftOpen ? (
@@ -1610,16 +1604,13 @@ function viewerCells(
   const byFrame = new Map<string, DiagramFrame>();
   for (const frame of content.frames ?? []) {
     if (!frame.childDiagramId && !frame.subnetId) continue;
-    // Dấu "đã gắn" dưới khung (Q-26 08/10) là ô con riêng trong ảnh xem: bấm nó là bấm khung.
-    for (const id of [frame.cellId, frameBadgeId(frame.cellId)]) {
-      byFrame.set(id, frame);
-      if (frame.childDiagramId) {
-        if (!frame.child) cells.push({ id, label: t('diagrams.frames.childMissing'), mark: 'warn' });
-        else if (frame.child.archived) cells.push({ id, label: t('diagrams.frames.childArchived', { name: frame.child.name }), mark: 'warn' });
-        else cells.push({ id, label: t('diagrams.frames.openChild', { name: frame.child.name }) });
-      } else {
-        cells.push({ id, label: t('diagrams.frames.vlanCell', { name: frame.label }) });
-      }
+    byFrame.set(frame.cellId, frame);
+    if (frame.childDiagramId) {
+      if (!frame.child) cells.push({ id: frame.cellId, label: t('diagrams.frames.childMissing'), mark: 'warn' });
+      else if (frame.child.archived) cells.push({ id: frame.cellId, label: t('diagrams.frames.childArchived', { name: frame.child.name }), mark: 'warn' });
+      else cells.push({ id: frame.cellId, label: t('diagrams.frames.openChild', { name: frame.child.name }) });
+    } else {
+      cells.push({ id: frame.cellId, label: t('diagrams.frames.vlanCell', { name: frame.label }) });
     }
   }
   return { cells, byCell, byEdge, byFrame };

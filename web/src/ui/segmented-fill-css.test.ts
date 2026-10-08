@@ -40,7 +40,6 @@ describe('dải nút chọn một trong form trải đều', () => {
   it('dải nút trong hộp form ngoài `Field` mang lớp `fill`', () => {
     const files = [
       'features/software/assign-dialog.tsx',
-      'features/diagrams/frame-bind-dialog.tsx',
       'features/diagrams/draft-from-port-map-dialog.tsx',
       'ui/port-form-dialog.tsx',
       'ui/break-glass.tsx',

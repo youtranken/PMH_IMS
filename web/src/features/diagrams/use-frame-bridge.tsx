@@ -7,8 +7,7 @@ import { useToast } from '@/ui/toast';
 import { CabinetPicker } from './cabinet-picker';
 import { BarPopover, type BarAction } from './diagram-bar';
 import { lastChildId, layerIdOf, nextInsertPosition, pageIds, type Bounds } from './drawio-bridge';
-import { FrameBindDialog } from './frame-bind-dialog';
-import { bindFrameValue, cabinetFramePatch, cabinetIdsInXml, frameBadgePatch, frameCandidates, type CabinetFrameLayout, type FrameCandidate } from './frame-bridge';
+import { cabinetFramePatch, cabinetIdsInXml, type CabinetFrameLayout } from './frame-bridge';
 import { deviceCellsOnPage } from './photo-bridge';
 
 /** `GET /diagrams/cabinet-frame/:id`. */
@@ -18,13 +17,11 @@ interface CabinetFrameResponse {
 }
 
 /**
- * Cầu nối KHUNG của màn sửa (FR-039, AD-18): nút "Chèn tủ" (khung tủ dựng từ kho, chèn bằng
- * `patch`) và "Gắn khung" (gắn một hình đã vẽ với bản vẽ con / dải IP bằng `patch` cập nhật giá trị
- * ô). Khung chỉ là thuộc tính `ims_*` trên hình của draw.io — không ghi bảng kho nào; lưu bản vẽ
- * mới làm khung có hiệu lực, và server kiểm lại khung gắn mới lúc lưu.
+ * Cầu nối KHUNG của màn sửa (FR-039, AD-18): "Chèn tủ mạng" dựng khung tủ từ kho, chèn bằng
+ * `patch`. Khung chỉ là thuộc tính `ims_*` trên hình của draw.io — không ghi bảng kho nào. "Gắn
+ * khung" (bản vẽ con / dải IP / đổi tủ) đã bỏ (Q-26 08/10): khung gắn từ trước vẫn đọc ở chế độ Xem.
  */
 export function useFrameBridge({
-  diagramId,
   ready,
   xml,
   withFile,
@@ -34,9 +31,7 @@ export function useFrameBridge({
   markDirty,
   newId,
   onInserted,
-  onCabinetRebound,
 }: {
-  diagramId: string;
   ready: boolean;
   /** XML trình vẽ gửi gần nhất — hộp "Chèn tủ" báo tủ đã có khung. */
   xml: string;
@@ -49,9 +44,7 @@ export function useFrameBridge({
   newId: () => string;
   /** Máy vừa chèn cùng khung tủ — màn cập nhật "đã có" của hộp Thiết bị kho và "kết nối chưa vẽ". */
   onInserted: (deviceIds: string[]) => void;
-  /** Khung tủ vừa đổi sang tủ khác — màn đối chiếu lại máy trong khung với kho (chỉ báo, không hỏi dồn). */
-  onCabinetRebound?: () => void;
-}): { menu: BarAction[]; popovers: ReactNode; dialogs: ReactNode } {
+}): { menu: BarAction[]; popovers: ReactNode } {
   const { t } = useTranslation();
   const toast = useToast();
   const [cabinetOpen, setCabinetOpen] = useState(false);
@@ -61,7 +54,6 @@ export function useFrameBridge({
    * `autosave` mới tới thì XML đó đã nói đúng tủ nào còn trên bản vẽ (kể cả khi người vẽ xoá khung).
    */
   const [justInserted, setJustInserted] = useState<{ xml: string; ids: string[] }>({ xml, ids: [] });
-  const [binding, setBinding] = useState<FrameCandidate[] | null>(null);
   const present = new Set([...cabinetIdsInXml(xml), ...(justInserted.xml === xml ? justInserted.ids : [])]);
 
   const pageOf = (file: string): string | null => {
@@ -110,41 +102,8 @@ export function useFrameBridge({
     }
   };
 
-  /** Mở hộp với XML cả tệp mới nhất: hình người vẽ vừa thêm cũng phải có trong danh sách. */
-  const openBind = () => withFile((file) => setBinding(frameCandidates(file)));
-
-  const bind = (frame: FrameCandidate, attr: string, value: string | null, label?: string, badge?: string | null) => {
-    // Đọc lại khung từ tệp HIỆN TẠI: giữa lúc mở hộp và lúc bấm, người vẽ có thể đã sửa chữ trên hình.
-    withFile((file) => {
-      const pageId = pageOf(file);
-      const fresh = frameCandidates(file).find((f) => f.id === frame.id);
-      if (!pageId || !fresh) {
-        toast({ tone: 'error', message: t('diagrams.screen.insertFailed', { reason: frame.id }) });
-        return;
-      }
-      const set: Record<string, string | null> = label ? { [attr]: value, label } : { [attr]: value };
-      const marks = badge === undefined ? { i: [], u: {}, r: [] } : frameBadgePatch(file, fresh.id, badge);
-      const cells = {
-        u: { [fresh.id]: { xmlValue: bindFrameValue(fresh, set) }, ...marks.u },
-        ...(marks.i.length > 0 ? { i: marks.i } : {}),
-        ...(marks.r.length > 0 ? { r: marks.r } : {}),
-      };
-      send({ action: 'patch', patch: { u: { [pageId]: { cells } } } });
-      markDirty();
-      setBinding(null);
-      const name = fresh.label || fresh.id;
-      if (attr === 'ims_cabinet_id' && value !== null) {
-        toast({ tone: 'ok', message: t('diagrams.frames.rebound', { frame: label ?? name }) });
-        onCabinetRebound?.();
-        return;
-      }
-      toast({ tone: 'ok', message: value === null ? t('diagrams.frames.unbound', { frame: name }) : t('diagrams.frames.bound', { frame: name }) });
-    });
-  };
-
   const menu: BarAction[] = [
     { key: 'cabinet', label: t('diagrams.frames.cabinetButton'), disabled: !ready, onSelect: () => setCabinetOpen(true) },
-    { key: 'bind', label: t('diagrams.frames.bindButton'), disabled: !ready, onSelect: openBind },
   ];
   const popovers = (
     <BarPopover title={t('diagrams.frames.cabinetTitle')} open={cabinetOpen} onOpenChange={setCabinetOpen}>
@@ -152,7 +111,5 @@ export function useFrameBridge({
     </BarPopover>
   );
 
-  const dialogs = binding ? <FrameBindDialog diagramId={diagramId} frames={binding} onBind={bind} onClose={() => setBinding(null)} /> : null;
-
-  return { menu, popovers, dialogs };
+  return { menu, popovers };
 }

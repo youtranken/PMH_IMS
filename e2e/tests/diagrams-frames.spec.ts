@@ -21,7 +21,8 @@ import {
 /*
  * Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ (FR-039, AD-18): khung gắn bản vẽ con bấm xuống,
  * thanh đường dẫn bấm lên (trong ân hạn không hỏi lại mã); khung VLAN ra thẻ dải; "Chèn tủ mạng" dựng
- * khung tủ chứa máy của tủ; "Gắn khung" gắn hình đã vẽ với bản vẽ con. Luật kiểm lúc lưu + bố cục
+ * khung tủ chứa máy của tủ ("Gắn khung" đã bỏ — Q-26 08/10 — khung gắn từ trước vẫn bấm được ở
+ * chế độ Xem). Luật kiểm lúc lưu + bố cục
  * khung tủ dồn ở `api/test/diagram-frames.spec.ts` và `diagram-frames.spec.ts`; bài này giữ mức
  * khói trên stack thật.
  */
@@ -139,7 +140,7 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     await expect(page).toHaveURL(new RegExp(`/diagrams/${root}$`));
   });
 
-  test('màn sửa: "Chèn tủ mạng" dựng khung tủ chứa máy của tủ; "Gắn khung" gắn hình đã vẽ với bản vẽ con; lưu giữ cả hai', async ({ page }) => {
+  test('màn sửa: "Chèn tủ mạng" dựng khung tủ chứa máy của tủ; lưu giữ khung + máy', async ({ page }) => {
     test.setTimeout(240_000);
     const secret = await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
@@ -157,7 +158,6 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
 
     const root = await createDiagram(page, `E2E Sửa khung ${stamp}`);
-    const floor = await createDiagram(page, `E2E Tầng con ${stamp}`, root);
     await stepUpViaApi(page, secret, 'diagram');
     const seeded = await saveVersion(
       page,
@@ -176,15 +176,6 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     await box.getByRole('button', { name: 'Chèn tủ mạng' }).click();
     await expect(page.getByText(`Đã chèn khung tủ E2E-R${stamp} (1 thiết bị).`)).toBeVisible();
 
-    await diagramBarAction(page, 'Gắn khung');
-    const bind = page.getByRole('dialog', { name: 'Gắn khung với bản vẽ con hoặc dải IP' });
-    await bind.getByRole('button', { name: 'Khung' }).click();
-    await page.getByRole('option', { name: 'E2E Tầng' }).click();
-    await bind.getByRole('button', { name: 'Bản vẽ con' }).click();
-    await page.getByRole('option', { name: `E2E Tầng con ${stamp}` }).click();
-    await bind.getByRole('button', { name: 'Gắn' }).click();
-    await expect(page.getByText('Đã gắn khung "E2E Tầng". Bấm Lưu để giữ.')).toBeVisible();
-
     const [saved] = await Promise.all([
       page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${root}/versions`) && r.request().method() === 'POST'),
       page.getByRole('button', { name: 'Lưu', exact: true }).click(),
@@ -193,7 +184,6 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     const xml = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${root}' ORDER BY seq DESC LIMIT 1`);
     expect(xml).toContain(`ims_cabinet_id="${cabinetId}"`);
     expect(xml).toContain(`ims_device_id="${deviceId}"`);
-    expect(xml).toContain(`ims_child_diagram_id="${floor}"`);
     expect(xml).toContain('mxgraph.rackGeneral.rackCabinet3');
   });
 

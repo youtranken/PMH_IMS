@@ -297,13 +297,13 @@ describe('Vẽ là khai, có hỏi — màn sửa', () => {
     }
   });
 
-  it('menu ⋮ khi vẽ (Q-26 08/10): bỏ "Nối hàng loạt", "Ảnh thật…"', async () => {
+  it('menu ⋮ khi vẽ (Q-26 08/10): bỏ "Nối hàng loạt", "Ảnh thật…", "Gắn khung"', async () => {
     await openEditor(file(DEVICES), { links: [] });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /^Thao tác với/ }));
     const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '');
     expect(items.some((text) => text.startsWith('Khai kết nối'))).toBe(true);
-    for (const gone of ['Nối hàng loạt', 'Ảnh thật']) {
+    for (const gone of ['Nối hàng loạt', 'Ảnh thật', 'Gắn khung']) {
       expect(items.some((text) => text.startsWith(gone)), gone).toBe(false);
     }
   });
