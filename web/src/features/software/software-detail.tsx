@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -87,6 +87,11 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
       : null,
   );
   const [editing, setEditing] = useState(false);
+  /** "Mua thêm đợt mới" (Q-27): form thêm mới điền sẵn theo hồ sơ này. */
+  const [batching, setBatching] = useState(false);
+  const navigate = useNavigate();
+  // `?assign=1` ("Lưu rồi gán vào máy" vừa tạo hồ sơ): tab Máy đang dùng mở sẵn hộp Gán.
+  const autoAssign = params.get("assign") === "1";
   const [renewing, setRenewing] = useState(false);
   // `?restore=1` (lối tắt "Khôi phục…" từ Kho thanh lý) mở thẳng hộp Khôi phục.
   const [restoring, setRestoring] = useState(() => params.get("restore") === "1");
@@ -100,6 +105,19 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   });
 
   const tab = chosenTab ?? defaultTab(software.data?.kind);
+
+  /* Các đợt mua cùng phần mềm (Q-27): hồ sơ license cùng tên, mỗi đợt một hồ sơ. */
+  const batches = useQuery({
+    queryKey: ["software", "batches", software.data?.name],
+    queryFn: () =>
+      apiFetch<{ items: SoftwareRow[] }>(
+        `/api/v1/software?kind=license&status=all&limit=50&search=${encodeURIComponent(software.data?.name ?? "")}`,
+      ),
+    enabled: software.data?.kind === "license",
+  });
+  const siblings = (batches.data?.items ?? []).filter(
+    (row) => row.name === software.data?.name && row.kind === "license",
+  );
 
   const history = useQuery({
     queryKey: ["software", id, "history"],
@@ -259,6 +277,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               retired={retired}
               csrfToken={me.csrfToken}
               onRestore={() => setRestoring(true)}
+              onBatch={() => setBatching(true)}
               onDone={() => void refresh()}
             />
           </>
@@ -340,7 +359,41 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             ) : null}
 
             <RailRowIfSet label={t("software.vendor")} value={item.vendorName} />
+            {/* Hợp đồng của đợt mua (Q-27): chung cho mọi ghế, hoặc riêng từng ghế. */}
+            {supportsSeats(item.kind) ? (
+              <RailRowIfSet
+                label={t("software.contract")}
+                value={item.perSeat ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 }) : item.contract}
+              />
+            ) : null}
           </RailCard>
+          {/* Mua theo đợt (Q-27): mỗi đợt một hồ sơ — thẻ này nối các đợt cùng phần mềm. */}
+          {supportsSeats(item.kind) && siblings.length > 1 ? (
+            <RailCard title={t("software.batchesTitle")}>
+              <ul className="batch-list">
+                {siblings.map((row) => (
+                  <li key={row.id}>
+                    {row.id === item.id ? (
+                      <strong className="mono" aria-current="page">{row.code}</strong>
+                    ) : (
+                      <Link className="mono" to={spec.item(row.id)}>
+                        {row.code}
+                      </Link>
+                    )}{" "}
+                    <span className="muted small">
+                      {t("software.batchSeats", { count: row.seatTotal ?? 0 })}
+                      {row.startDate ? ` · ${formatDate(row.startDate)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {retired ? null : (
+                <button type="button" className="btn sm" onClick={() => setBatching(true)}>
+                  {t("software.addBatch")}
+                </button>
+              )}
+            </RailCard>
+          ) : null}
           {/* Tên miền nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
               này đang phủ tên miền nào" là câu người trực sự cố hỏi đầu tiên (Q-15, Q-22). */}
           {supportsWebsites(item.kind) ? (
@@ -412,7 +465,12 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             canEdit={canVaultWrite}
           />
         ) : safeTab === "devices" ? (
-          <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
+          <LicenseAssignmentsPanel
+            software={item}
+            seats={item.seats ?? []}
+            autoAssign={autoAssign}
+            csrfToken={me.csrfToken}
+          />
         ) : safeTab === "attachments" ? (
           <AttachmentPanel
             ownerType="software"
@@ -469,6 +527,21 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
           onSaved={() => {
             setEditing(false);
             void refresh();
+          }}
+        />
+      ) : null}
+
+      {batching ? (
+        <SoftwareForm
+          row={null}
+          screen={spec.key}
+          batchFrom={item}
+          csrfToken={me.csrfToken}
+          onClose={() => setBatching(false)}
+          onSaved={(result) => {
+            setBatching(false);
+            void refresh();
+            if (result) navigate(`${spec.item(result.id)}${result.assign ? "?tab=devices&assign=1" : ""}`);
           }}
         />
       ) : null}
@@ -537,12 +610,14 @@ function DetailMoreActions({
   retired,
   csrfToken,
   onRestore,
+  onBatch,
   onDone,
 }: {
   item: SoftwareRow;
   retired: boolean;
   csrfToken: string;
   onRestore: () => void;
+  onBatch: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -566,6 +641,9 @@ function DetailMoreActions({
         retired
           ? [{ key: "restore", label: t("software.restore"), onSelect: onRestore, ok: true }]
           : [
+              ...(supportsSeats(item.kind)
+                ? [{ key: "batch", label: t("software.addBatch"), onSelect: onBatch }]
+                : []),
               {
                 key: "dispose",
                 label: t("software.disposeMenu"),

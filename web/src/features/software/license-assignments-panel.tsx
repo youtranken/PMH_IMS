@@ -8,7 +8,7 @@ import { useToast } from '@/ui/toast';
 import { AssignDialog } from './assign-dialog';
 import { SeatTable, type SeatRow } from './seat-table';
 import { SeatUsage } from './software-standing-cell';
-import { supportsSeats, type SoftwareRow } from './software-types';
+import { supportsSeats, type SoftwareRow, type SoftwareSeat } from './software-types';
 
 /**
  * Máy đang dùng key (FR-011).
@@ -19,16 +19,22 @@ import { supportsSeats, type SoftwareRow } from './software-types';
  */
 export function LicenseAssignmentsPanel({
   software,
+  seats = [],
+  autoAssign = false,
   csrfToken,
 }: {
   software: SoftwareRow;
+  /** Ghế riêng của hồ sơ (Q-27) — ghế trống hiện dưới bảng, kèm nút gán. */
+  seats?: SoftwareSeat[];
+  /** `?assign=1` ("Lưu rồi gán vào máy"): mở sẵn hộp Gán. */
+  autoAssign?: boolean;
   csrfToken: string;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [view, setView] = useState<'active' | 'released'>('active');
-  const [assigning, setAssigning] = useState(false);
+  const [assigning, setAssigning] = useState(autoAssign && software.status !== 'retired');
 
   const assignments = useQuery({
     queryKey: ['software', software.id, 'assignments', true],
@@ -111,6 +117,43 @@ export function LicenseAssignmentsPanel({
       ) : (
         <SeatTable software={software} rows={rows} csrfToken={csrfToken} />
       )}
+
+      {/* Ghế riêng còn trống (Q-27): thấy ngay ghế nào chưa có máy, hợp đồng nào đang nằm không. */}
+      {view === 'active' && software.perSeat && seats.some((seat) => !seat.deviceId) ? (
+        <section className="free-seats" aria-label={t('license.freeSeats')}>
+          <h3 className="free-seats-title">{t('license.freeSeats')}</h3>
+          <table className="table table-sub table-cards">
+            <thead>
+              <tr>
+                <th>{t('software.seatCol')}</th>
+                <th>{t('software.seatContract')}</th>
+                <th>{t('software.seatNote')}</th>
+                <th className="col-center">
+                  <span className="sr-only">{t('common.actions')}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {seats
+                .filter((seat) => !seat.deviceId)
+                .map((seat) => (
+                  <tr key={seat.id}>
+                    <td className="mono">{t('software.seatLabel', { n: seat.seatNo })}</td>
+                    <td className="mono">{seat.contract ?? '—'}</td>
+                    <td>{seat.note ?? '—'}</td>
+                    <td className="col-center">
+                      {canAssign ? (
+                        <button type="button" className="btn sm" onClick={() => setAssigning(true)}>
+                          {t('license.assign')}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       {assigning ? (
         <AssignDialog

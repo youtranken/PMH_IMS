@@ -2197,3 +2197,20 @@ span.port-cell {
   outline-offset: 1px;
 }
 
+
+/* Ghế riêng còn trống dưới bảng "Máy đang dùng" (Q-27). */
+.free-seats {
+  margin-top: var(--space-6);
+}
+.free-seats-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+}
+.batch-list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}

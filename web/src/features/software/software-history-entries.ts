@@ -27,6 +27,7 @@ const FIELD_LABEL: Record<string, string> = {
   cost: 'history.software.fCost',
   contract: 'history.software.fContract',
   overSeatReason: 'history.software.fOverSeatReason',
+  perSeat: 'history.software.fPerSeat',
   // API ghi danh sách website dạng chuỗi nối ", " (`websitesChange`).
   websites: 'history.software.fWebsites',
 };
@@ -44,6 +45,9 @@ export const ACTION_LABEL: Record<string, string> = {
   'license-assigned': 'history.software.actLicenseAssigned',
   'license-released': 'history.software.actLicenseReleased',
   'license-terms-updated': 'history.software.actLicenseTermsUpdated',
+  // Ghế riêng (Q-27): thêm / bớt ghế, đổi hợp đồng / ghi chú từng ghế — khoá thay đổi đã là
+  // chữ đọc được ("Ghế 2 · hợp đồng") nên không cần nhãn trường.
+  'seats-updated': 'history.software.actSeatsUpdated',
 };
 
 const KIND_LABEL: Record<string, string> = {
@@ -143,6 +147,7 @@ function describe(
         if (value === null || value === undefined || value === '') return t('history.blank');
         return vendorName?.(String(value));
       }
+      if (field === 'perSeat') return t(value ? 'history.software.on' : 'history.software.off');
       // `cost` = 0 là giá trị THẬT (license tặng kèm máy) — không được rơi vào "(trống)".
       if (field === 'cost' && typeof value === 'number') return formatMoney(value);
       if (value === null || value === undefined || value === '') return undefined;
