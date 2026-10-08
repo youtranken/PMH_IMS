@@ -5,7 +5,7 @@ import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
 /**
  * Nút mở một hộp nổi GỌN neo vào chính nó (không modal): hộp tìm trên thanh mảnh của màn sơ đồ
- * ("Thiết bị kho", sau này "Chèn tủ", "Dây chưa khai"…) — Q-23: chức năng phụ của màn tràn mở
+ * ("Thiết bị kho", "Chèn tủ"…) — Q-23: chức năng phụ của màn tràn mở
  * dạng hộp gọn từ thanh trên, KHÔNG chiếm một cột cố định và không che cả trình vẽ.
  *
  * Đóng bằng Esc, bấm ra ngoài, hoặc khi tiêu điểm rời cửa sổ (bấm vào iframe trình vẽ không bắn
