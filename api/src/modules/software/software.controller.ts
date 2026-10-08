@@ -11,6 +11,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -24,6 +25,7 @@ import {
   Min,
   Validate,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { RealDate, RealDateOrEmpty } from '../../common/real-date';
@@ -98,6 +100,22 @@ export class SoftwareBodyDto {
   /** Website dùng chứng chỉ SSL / tên miền này (Q-15). Service chuẩn hóa + kiểm từng dòng. */
   @IsOptional() @IsArray() @ArrayMaxSize(500) @IsString({ each: true }) @Length(0, 300, { each: true })
   websites?: string[];
+
+  /** Số hợp đồng / PO chung của mọi ghế (Q-27). */
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+
+  /** Mỗi ghế có hợp đồng, ghi chú, giấy tờ riêng (Q-27) — service kiểm license + ≥ 2 ghế. */
+  @IsOptional() @IsBoolean() perSeat?: boolean;
+
+  /** Hợp đồng / ghi chú từng ghế; chỉ ghế gửi lên mới đổi. */
+  @IsOptional() @IsArray() @ArrayMaxSize(1000) @ValidateNested({ each: true }) @Type(() => SeatDto)
+  seats?: SeatDto[];
+}
+
+class SeatDto {
+  @IsInt() @Min(1) seatNo!: number;
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+  @IsOptional() @IsString() @Length(0, 500) @NoSecretText('Ghi chú của ghế') note?: string;
 }
 
 class RenewDto {
@@ -148,6 +166,9 @@ export class AssignDto extends AssignmentTermsDto {
 
   /** Bắt buộc khi vượt seat (AC 3.2) — service kiểm, DTO chỉ giới hạn độ dài. */
   @IsOptional() @IsString() @Length(0, 500) @NoSecretText('Lý do vượt số ghế') overSeatReason?: string;
+
+  /** Ghế muốn đưa máy vào khi hồ sơ bật ghế riêng (Q-27); bỏ trống = ghế trống đầu tiên. */
+  @IsOptional() @IsUUID(undefined, { message: 'Ghế được chọn không hợp lệ.' }) seatId?: string;
 }
 
 class DeviceIdsQueryDto {

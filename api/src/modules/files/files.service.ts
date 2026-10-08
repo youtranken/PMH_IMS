@@ -44,6 +44,8 @@ export const FILE_OWNER_TYPES = [
   'nat_rule',
   // Ảnh thật theo model thiết bị (loại + chuỗi model, Q-23) — chủ thể là hàng `device_model` của `devices`.
   'device_model',
+  // Giấy tờ riêng của một ghế license (Q-27) — chủ thể là hàng `software_seat` của `software`.
+  'software_seat',
 ] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 

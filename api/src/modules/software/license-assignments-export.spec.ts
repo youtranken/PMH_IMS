@@ -18,6 +18,8 @@ const seat = (over: Partial<AssignmentRow>): AssignmentRow => ({
   contract: null,
   startDate: null,
   endDate: null,
+  seatId: null,
+  seatNo: null,
   ...over,
 });
 

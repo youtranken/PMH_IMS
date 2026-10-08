@@ -4,10 +4,10 @@ import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { IspLineService } from './isp-line.service';
 import { SoftwareService } from './software.service';
 
-/** `software` làm chủ hai loại: hồ sơ phần mềm và hợp đồng đường truyền. */
+/** `software` làm chủ ba loại: hồ sơ phần mềm, ghế riêng của hồ sơ (Q-27), hợp đồng đường truyền. */
 @Injectable()
 export class SoftwareOwnerResolver implements OwnerResolver, OnModuleInit {
-  readonly ownerTypes = ['software', 'isp'] as const;
+  readonly ownerTypes = ['software', 'software_seat', 'isp'] as const;
 
   constructor(
     private readonly registry: OwnerExistsRegistry,
@@ -24,11 +24,13 @@ export class SoftwareOwnerResolver implements OwnerResolver, OnModuleInit {
       const line = await this.isp.findOne(ownerId).catch(() => null);
       return line ? `${line.code} — ${line.provider}` : null;
     }
+    if (ownerType === 'software_seat') return this.software.seatLabel(ownerId).catch(() => null);
     const row = await this.software.findOne(ownerId).catch(() => null);
     return row ? `${row.code} — ${row.name}` : null;
   }
 
   async noteOf(ownerType: string, ownerId: string): Promise<string | null> {
+    if (ownerType === 'software_seat') return this.software.seatNoteOf(ownerId);
     return ownerType === 'isp' ? this.isp.noteOf(ownerId) : this.software.noteOf(ownerId);
   }
 }

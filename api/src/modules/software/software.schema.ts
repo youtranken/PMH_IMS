@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   customType,
   date,
   integer,
@@ -37,6 +38,24 @@ export const softwareTable = pgTable('software', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   /** Website dùng chứng chỉ SSL / tên miền này — danh sách hiện tại (Q-15). */
   websites: text('websites').array().notNull().default([]),
+  /** Số hợp đồng / PO dùng chung cho mọi ghế khi KHÔNG bật `perSeat` (Q-27). */
+  contract: text('contract'),
+  /** Mỗi ghế có hợp đồng, ghi chú, giấy tờ riêng (bảng `software_seat`) — chỉ license, ≥ 2 ghế. */
+  perSeat: boolean('per_seat').notNull().default(false),
+});
+
+/**
+ * Ghế riêng của hồ sơ license (Q-27, migration 0065) — đúng `seat_total` hàng khi hồ sơ bật
+ * `per_seat`. Máy đang giữ ghế nằm ở `license_assignment.seat_id`.
+ */
+export const softwareSeatTable = pgTable('software_seat', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  softwareId: uuid('software_id').notNull(),
+  seatNo: integer('seat_no').notNull(),
+  contract: text('contract'),
+  note: text('note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** AD-13: append-only (trigger `history_append_only` chặn UPDATE/DELETE ở tầng DB). */
@@ -74,6 +93,8 @@ export const licenseAssignmentTable = pgTable('license_assignment', {
   contract: text('contract'),
   startDate: date('start_date'),
   endDate: date('end_date'),
+  /** Ghế đang giữ (hồ sơ bật ghế riêng); null = hồ sơ không bật, hoặc máy gán vượt số ghế. */
+  seatId: uuid('seat_id'),
 });
 
 /**

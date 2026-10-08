@@ -1,5 +1,6 @@
 import { addDays } from '../../common/today';
 import {
+  perSeatErrors,
   autoRetireOn,
   effectiveSoftwareStatus,
   normalizeWebsites,
@@ -409,5 +410,19 @@ describe('softwareExportShape — file Excel theo màn (Q-22)', () => {
 describe('STATUS_LABEL — nhãn trạng thái trong file Excel (Q-14)', () => {
   it('trạng thái cuối là "Đã thanh lý", không phải nhãn nút "Thanh lý"', () => {
     expect(STATUS_LABEL.retired).toBe('Đã thanh lý');
+  });
+});
+
+describe('perSeatErrors — ghế riêng chỉ cho license có từ 2 ghế (Q-27)', () => {
+  it.each([
+    ['license', 3, true, 0],
+    ['license', 2, true, 0],
+    ['license', 1, true, 1],
+    ['license', null, true, 1],
+    ['ssl', 3, true, 1],
+    ['license', 1, false, 0],
+    ['domain', null, false, 0],
+  ] as const)('%s · %s ghế · tick=%s → %i lỗi', (kind, seatTotal, perSeat, errors) => {
+    expect(perSeatErrors({ kind, seatTotal, perSeat })).toHaveLength(errors);
   });
 });
