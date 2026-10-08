@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
@@ -9,12 +9,12 @@ import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
 import { PortFormDialog } from '@/ui/port-form-dialog';
 import { useToast } from '@/ui/toast';
 import { CableDeclareDialog, fetchDiagramLinks } from './cable-declare-dialog';
-import { bindEdgeValue, cableView, diffAutosave, edgeById, pendingEdges, styleWithoutImsEdge, type NewEdge } from './cable-diff';
+import { bindEdgeValue, cableView, diffAutosave, edgeById, styleWithoutImsEdge, type NewEdge } from './cable-diff';
 import { CableLegend } from './cable-legend';
 import { cellIdsIn, drawingGeometry, edgeRestoreCells, linkEndTexts, PORT_LABELS_ATTR, PORT_LABELS_ENDS, portEndOffset, portEndPatch, portEndRemoval } from './cable-ends';
 import { cableRoutePatch, orthogonalStyle, type CableRouteMode } from './cable-route';
 import { BarPopover, type BarAction } from './diagram-bar';
-import type { CableEdge, DiagramContent, DiagramLink } from './diagram-api';
+import type { DiagramContent, DiagramLink } from './diagram-api';
 import { insertPatch, lastChildId, layerIdOf, pageIds } from './drawio-bridge';
 import { deviceCellsOnPage } from './photo-bridge';
 
@@ -29,8 +29,7 @@ function paintTokenOf(style: string): string {
 /**
  * Cầu nối DÂY của màn sửa (Q-23 "vẽ là khai, có hỏi", AD-18): so hai lần `autosave` để hỏi
  * "Khai" khi có nét mới nối hai máy kho và "Chỉ xoá nét vẽ / Gỡ luôn kết nối" khi nét đã khai bị
- * xoá; giữ danh sách "Có N kết nối mới chưa vẽ"; nút "Dây chưa khai", "Khai kết nối", "Nối hàng
- * loạt", chú giải màu. Mọi lượt GHI sơ đồ cổng là web gọi endpoint của `devices` sau một nút bấm
+ * xoá; giữ danh sách "Có N kết nối mới chưa vẽ"; nút "Khai kết nối", "Sắp lại dây", chú giải màu. Mọi lượt GHI sơ đồ cổng là web gọi endpoint của `devices` sau một nút bấm
  * trong hộp IMS; lưu bản vẽ không ghi gì vào sơ đồ cổng.
  *
  * Sửa nét trên trình vẽ dùng `patch` trên cả tệp xin bằng `export` xml (`withFile`) — biết trang
@@ -79,15 +78,11 @@ export function useCableBridge({
   const cableTypes = content.cableTypes ?? [];
   const lastXml = useRef(content.version?.xml ?? '');
   const links = useRef(new Map((content.links ?? []).map((l) => [l.id, l])));
-  const [currentXml, setCurrentXml] = useState(content.version?.xml ?? '');
   const [queue, setQueue] = useState<NewEdge[]>([]);
   const [undrawn, setUndrawn] = useState<DiagramLink[]>(() => {
     const ids = new Set(content.undrawnLinkIds ?? []);
     return (content.links ?? []).filter((l) => ids.has(l.id));
   });
-  const [undeclaredOpen, setUndeclaredOpen] = useState(false);
-  /** Trạng thái dây server tính trên XML đang vẽ lúc mở "Dây chưa khai"; `null` = dùng trạng thái lúc mở bản vẽ. */
-  const [liveEdges, setLiveEdges] = useState<CableEdge[] | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
   const [declareOpen, setDeclareOpen] = useState(false);
   /* Máy trên trang đang vẽ — hộp Khai kết nối mời chọn nhanh (E-05). */
@@ -337,7 +332,6 @@ export function useCableBridge({
     const prevXml = lastXml.current;
     const diff = diffAutosave(prevXml, xml, new Set(links.current.keys()));
     lastXml.current = xml;
-    setCurrentXml(xml);
     if (diff.strip.length > 0) stripLinks(diff.strip);
     // Nét đang chờ hỏi mà người vẽ đã hoàn tác/xoá thì thôi hỏi.
     setQueue((current) => {
@@ -409,55 +403,13 @@ export function useCableBridge({
 
   const current = queue[0] ?? null;
   const dequeue = () => setQueue((q) => q.slice(1));
-  // Chọn nét đỏ là khai lại: kết nối mới thay `ims_link_id` cũ trên đúng nét đó, và lần autosave
-  // kế tiếp đưa nó ra khỏi danh sách.
-  // Tính lại chỉ khi XML đang vẽ đổi: parse cả tệp mỗi lần màn vẽ lại là trễ theo cỡ bản vẽ.
-  const undeclared = useMemo(() => pendingEdges(currentXml, liveEdges ?? content.cableEdges ?? []), [currentXml, liveEdges, content.cableEdges]);
-  /*
-   * Trạng thái lúc mở bản vẽ cũ đi khi kết nối bị gỡ ở trang Thiết bị trong lúc đang vẽ: nét vẫn
-   * mang `ims_link_id` của dòng đã xoá mà danh sách tưởng là đã khai. Hỏi lại server mỗi lần mở.
-   */
-  const openUndeclared = () => {
-    setUndeclaredOpen(true);
-    void apiFetch<{ edges: CableEdge[] }>('/api/v1/diagrams/cable-status', {
-      method: 'POST',
-      csrfToken: me.csrfToken,
-      body: JSON.stringify({ xml: currentXml }),
-    })
-      .then((res) => setLiveEdges(res.edges))
-      .catch(() => undefined);
-  };
-
   const menu: BarAction[] = [
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
-    { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: openUndeclared },
     { key: 'cable-route', label: t('diagrams.cable.routeButton'), disabled: !ready, onSelect: () => void askRoute() },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
   ];
   const popovers = (
     <>
-      <BarPopover title={t('diagrams.cable.undeclaredTitle')} open={undeclaredOpen} onOpenChange={setUndeclaredOpen}>
-        {undeclared.length === 0 ? (
-          <p className="muted">{t('diagrams.cable.undeclaredEmpty')}</p>
-        ) : (
-          <ul className="device-card-diagrams">
-            {undeclared.map((edge) => (
-              <li key={edge.id}>
-                <button
-                  type="button"
-                  className="linkbtn"
-                  onClick={() => {
-                    setUndeclaredOpen(false);
-                    setQueue((q) => [edge, ...q.filter((e) => e.id !== edge.id)]);
-                  }}
-                >
-                  {t('diagrams.cable.undeclaredItem', { from: edge.sourceCode, to: edge.targetCode })}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </BarPopover>
       <BarPopover title={t('diagrams.cable.legendTitle')} open={legendOpen} onOpenChange={setLegendOpen}>
         <CableLegend cableTypes={cableTypes} />
       </BarPopover>
@@ -536,7 +488,6 @@ export function useCableBridge({
 
   const rebase = (xml: string) => {
     lastXml.current = xml;
-    setCurrentXml(xml);
     setQueue([]);
   };
 

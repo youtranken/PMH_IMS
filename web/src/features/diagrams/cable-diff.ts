@@ -144,27 +144,6 @@ export function diffAutosave(
   return { added, removed, strip: [...strip] };
 }
 
-/** Mọi nét nối hai máy kho khác nhau chưa khai — nút "Dây chưa khai" trên thanh trên. */
-export function undeclaredEdges(xml: string): NewEdge[] {
-  const parsed = parse(xml);
-  return parsed.edges.filter((e) => !e.linkId).flatMap((e) => asNew(e, parsed.devices) ?? []);
-}
-
-/**
- * Danh sách "Dây chưa khai": nét không có `ims_link_id`, cộng nét mà lúc mở server báo kết nối đã
- * gỡ / gắn sai (đỏ) và trên XML ĐANG vẽ vẫn mang đúng kết nối cũ đó. Tính lại từ XML mỗi lần —
- * không từ trạng thái lúc mở — để nét vừa khai lại (đã có `ims_link_id` mới) ra khỏi danh sách,
- * không khai trùng được lần hai.
- */
-export function pendingEdges(xml: string, opened: { cellId: string; linkId: string | null; state: string }[]): NewEdge[] {
-  const parsed = parse(xml);
-  const stale = new Map(opened.filter((e) => e.state !== 'linked' && e.linkId).map((e) => [e.cellId, e.linkId]));
-  return parsed.edges
-    .filter((e) => !e.linkId || stale.get(e.id) === e.linkId)
-    .flatMap((e) => asNew(e, parsed.devices) ?? []);
-}
-
-
 /**
  * Một lượt parse cho nhiều câu hỏi trên CÙNG một XML. Vòng lặp theo dây ("Vẽ vào", "Bẻ dây vuông
  * góc") dựng một lần rồi hỏi: parse lại cả tệp cho từng dây là treo màn sửa với bản vẽ lớn.

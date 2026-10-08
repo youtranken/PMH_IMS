@@ -44,7 +44,6 @@ const HELP: Record<string, string> = {
   draft: 'diagrams.help.draft',
   cabinet: 'diagrams.help.cabinet',
   declare: 'diagrams.help.declare',
-  undeclared: 'diagrams.help.undeclared',
   'cable-route': 'diagrams.help.cable-route',
   legend: 'diagrams.help.legend',
   planned: 'diagrams.help.planned',
@@ -59,7 +58,6 @@ const HELP: Record<string, string> = {
 const GROUP: Record<string, string> = {
   guide: 'diagrams.menuGroup.help',
   declare: 'diagrams.menuGroup.cables',
-  undeclared: 'diagrams.menuGroup.cables',
   'cable-route': 'diagrams.menuGroup.cables',
   legend: 'diagrams.menuGroup.cables',
   draft: 'diagrams.menuGroup.cables',
