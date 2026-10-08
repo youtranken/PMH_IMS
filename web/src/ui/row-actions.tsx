@@ -204,8 +204,14 @@ function RowActionsMenu({
         return;
       setOpen(false);
     };
+    // Bấm vào iframe (trình vẽ draw.io) không bắn `mousedown` lên trang — chỉ `blur` của cửa sổ báo được.
+    const onBlur = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('blur', onBlur);
+    };
   }, [open, refs.domReference, refs.floating]);
 
   /** Không có việc nào làm được thì KHÔNG vẽ nút — ba chấm bấm ra menu rỗng là một lời hứa hão. */

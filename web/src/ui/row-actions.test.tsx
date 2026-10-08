@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { act } from '@testing-library/react';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { RowActions } from '@/ui/row-actions';
 
@@ -91,6 +92,18 @@ describe('RowActions — menu ba chấm dùng chung', () => {
   });
 
   /** Esc mà không trả focus về nút là bỏ người dùng bàn phím giữa trang, không biết đang ở đâu. */
+  /* Bấm vào iframe (trình vẽ draw.io) không bắn `mousedown` lên trang — chỉ `blur` của cửa sổ báo được. */
+  it('tiêu điểm rời cửa sổ (bấm vào iframe trình vẽ) → menu đóng', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(<RowActions label="Thao tác với LIC-01" items={items()} />);
+    await user.click(screen.getByRole('button', { name: 'Thao tác với LIC-01' }));
+    expect(screen.getByRole('menuitem', { name: 'Sửa' })).toBeInTheDocument();
+    act(() => {
+      window.dispatchEvent(new Event('blur'));
+    });
+    expect(screen.queryByRole('menuitem', { name: 'Sửa' })).not.toBeInTheDocument();
+  });
+
   it('Esc đóng menu và TRẢ focus về nút ba chấm', async () => {
     const user = userEvent.setup();
     renderWithI18n(<RowActions label="Thao tác với LIC-01" items={items()} />);
