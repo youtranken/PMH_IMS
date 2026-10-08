@@ -155,6 +155,19 @@ describe('Chế độ xem — khung bản vẽ con, thanh đường dẫn, khung
     expect(card).toHaveTextContent('10.99.0.2, 10.99.0.4');
     expect(within(card).getByRole('link', { name: 'Mở dải IP' })).toHaveAttribute('href', '/ip-addresses/sn-1');
   });
+
+  it('dấu "đã gắn" dưới khung (Q-26 08/10) bấm được như chính khung', async () => {
+    const svg = SVG.replace('</g></g></svg>', '<g data-cell-id="f-vlan-ims-bind"><text>↗ Dải IP: 10.99.0.0/29</text></g></g></g></svg>');
+    routeFetch({
+      ...routes,
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml: '<mxfile/>', svg }, frames: FRAMES }),
+    });
+    renderAt('/diagrams/d1');
+    const buttons = await screen.findAllByRole('button', { name: 'Khung VLAN VLAN 10' });
+    expect(buttons).toHaveLength(2);
+    await userEvent.setup().click(buttons[1]);
+    expect(await screen.findByRole('dialog', { name: 'Dải 10.99.0.0/29 (ngừng dùng)' })).toBeInTheDocument();
+  });
 });
 
 describe('Hộp "Gắn khung"', () => {
@@ -185,7 +198,7 @@ describe('Hộp "Gắn khung"', () => {
     expect(options).toEqual(['Tầng 3 E2E']);
     await user.click(screen.getByRole('option', { name: 'Tầng 3 E2E' }));
     await user.click(within(dialog).getByRole('button', { name: 'Gắn' }));
-    expect(onBind).toHaveBeenCalledWith(frames[0], 'ims_child_diagram_id', 'd3');
+    expect(onBind).toHaveBeenCalledWith(frames[0], 'ims_child_diagram_id', 'd3', undefined, '↗ Bản vẽ con: Tầng 3 E2E');
   });
 
   it('khung đã gắn hiện đang gắn gì + nút Bỏ gắn; kiểu Dải IP gửi ims_subnet_id', async () => {
@@ -196,13 +209,14 @@ describe('Hộp "Gắn khung"', () => {
     await user.click(await screen.findByRole('option', { name: '(hình không chữ · s2)' }));
     expect(await within(dialog).findByText('Đang gắn: bản vẽ con "Tầng 3 E2E"')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Bỏ gắn' }));
-    expect(onBind).toHaveBeenLastCalledWith(frames[1], 'ims_child_diagram_id', null);
+    expect(onBind).toHaveBeenLastCalledWith(frames[1], 'ims_child_diagram_id', null, undefined, null);
 
     await user.click(within(dialog).getByRole('radio', { name: 'Dải IP (khung VLAN)' }));
     await user.click(within(dialog).getByRole('button', { name: 'Dải IP' }));
     await user.click(await screen.findByRole('option', { name: '10.1.0.0/24 · VLAN 20 · LAN E2E' }));
     await user.click(within(dialog).getByRole('button', { name: 'Gắn' }));
-    expect(onBind).toHaveBeenLastCalledWith(frames[1], 'ims_subnet_id', 'sn-1');
+    // Khung vẫn gắn bản vẽ con: dấu nói cả hai.
+    expect(onBind).toHaveBeenLastCalledWith(frames[1], 'ims_subnet_id', 'sn-1', undefined, '↗ Bản vẽ con: Tầng 3 E2E · Dải IP: 10.1.0.0/24');
   });
 
   it('khung tủ gắn nhầm tủ: "Đổi tủ của khung này" gửi ims_cabinet_id mới + nhãn đổi mã tủ (khung thường không có lựa chọn này)', async () => {
@@ -600,5 +614,46 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     fromDrawio({ event: 'autosave', xml: wrap(body('dev-ups', 'UPS-E2E-03')) });
     expect(await screen.findByText('UPS-E2E-03 đã thanh lý — không chuyển tủ được.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Chuyển máy sang tủ này?' })).toBeNull();
+  });
+});
+
+describe('Màn sửa — Gắn khung để lại dấu nhìn thấy (Q-26 08/10)', () => {
+  it('gắn bản vẽ con: MỘT lệnh patch sửa khung + chèn ô dấu "↗ Bản vẽ con: …" là con của khung', async () => {
+    const shape = '<mxCell id="s1" value="Tầng 3" style="rounded=0;" vertex="1" parent="1"><mxGeometry width="300" height="200" as="geometry"/></mxCell>';
+    const xml = `<mxfile><diagram id="p1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${shape}</root></mxGraphModel></diagram></mxfile>`;
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: ROOT, version: { ...VERSION, xml, svg: null } }),
+      '/api/v1/diagrams/d1/presence': () => jsonResponse(200, { others: [] }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, ROOT),
+      '/api/v1/diagrams': () => jsonResponse(200, TREE),
+    });
+    renderAt('/diagrams/d1?mode=edit');
+    const frameEl = (await screen.findByTitle('Khung vẽ draw.io')) as HTMLIFrameElement;
+    const posted = vi.spyOn(frameEl.contentWindow!, 'postMessage').mockImplementation(() => undefined);
+    const fromDrawio = (data: Record<string, unknown>) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data), source: frameEl.contentWindow }));
+      });
+    fromDrawio({ event: 'init' });
+    const messages = () => posted.mock.calls.map(([data]) => JSON.parse(String(data)) as Record<string, unknown>);
+    const answerExport = async () => {
+      const before = messages().filter((m) => m.action === 'export' && m.format === 'xml').length;
+      await vi.waitFor(() => expect(messages().filter((m) => m.action === 'export' && m.format === 'xml').length).toBeGreaterThan(before - 1));
+      fromDrawio({ event: 'export', format: 'xml', currentPage: 0, xml });
+    };
+    const user = userEvent.setup();
+    await pickMenuItem(user, /^Thao tác với/, 'Gắn khung');
+    await answerExport();
+    const dialog = await screen.findByRole('dialog', { name: 'Gắn khung với bản vẽ con hoặc dải IP' });
+    await user.click(within(dialog).getByRole('button', { name: 'Bản vẽ con' }));
+    await user.click(await screen.findByRole('option', { name: 'Tower E2E' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Gắn' }));
+    await answerExport();
+    await vi.waitFor(() => expect(messages().some((m) => m.action === 'patch')).toBe(true));
+    const patch = messages().find((m) => m.action === 'patch') as { patch: { u: { p1: { cells: { u: Record<string, { xmlValue: string }>; i: Record<string, unknown>[] } } } } };
+    const cells = patch.patch.u.p1.cells;
+    expect(cells.u.s1.xmlValue).toContain('ims_child_diagram_id="d2"');
+    expect(cells.i).toEqual([expect.objectContaining({ id: 's1-ims-bind', parent: 's1', value: '↗ Bản vẽ con: Tower E2E' })]);
   });
 });

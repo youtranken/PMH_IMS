@@ -54,8 +54,11 @@ export function FrameBindDialog({
   diagramId: string;
   /** Hình đọc từ XML cả tệp lúc mở hộp. */
   frames: FrameCandidate[];
-  /** `value = null` = bỏ gắn kiểu đó; `label` = nhãn mới của khung (đổi tủ). */
-  onBind: (frame: FrameCandidate, attr: string, value: string | null, label?: string) => void;
+  /**
+   * `value = null` = bỏ gắn kiểu đó; `label` = nhãn mới của khung (đổi tủ); `badge` = chữ dấu "đã
+   * gắn" dưới khung sau lần gắn này (`null` = khung không còn gắn gì, vắng = không đụng dấu).
+   */
+  onBind: (frame: FrameCandidate, attr: string, value: string | null, label?: string, badge?: string | null) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -78,7 +81,8 @@ export function FrameBindDialog({
   const subnets = useQuery({
     queryKey: ['diagram-frame-subnets'],
     queryFn: () => apiFetch<SubnetOption[]>('/api/v1/ipam/subnets'),
-    enabled: kind === 'subnet',
+    // Khung đang gắn dải: dấu sau khi gắn thêm bản vẽ con vẫn phải nói dải nào.
+    enabled: kind === 'subnet' || Boolean(frame?.subnetId),
   });
 
   const nodes = tree.data ?? [];
@@ -111,6 +115,20 @@ export function FrameBindDialog({
     return parts.length > 0 ? t('diagrams.frames.current', { what: parts.join(', ') }) : t('diagrams.frames.currentNone');
   })();
 
+  /** Chữ dấu "đã gắn" theo những gì khung sẽ gắn sau lần bấm này. */
+  const badgeFor = (childId: string | null, subnetId: string | null): string | null => {
+    const parts: string[] = [];
+    if (childId) parts.push(t('diagrams.frames.badgeChild', { name: nodes.find((n) => n.id === childId)?.name ?? '' }));
+    if (subnetId) parts.push(t('diagrams.frames.badgeSubnet', { cidr: subnets.data?.find((s) => s.id === subnetId)?.cidr ?? '' }));
+    return parts.length > 0 ? t('diagrams.frames.badge', { what: parts.join(' · ') }) : null;
+  };
+  const bindTo = (value: string | null) => {
+    if (!frame) return;
+    const child = kindNow === 'child' ? value : frame.childDiagramId;
+    const subnet = kindNow === 'subnet' ? value : frame.subnetId;
+    onBind(frame, FRAME_ATTR[kindNow], value, undefined, badgeFor(child, subnet));
+  };
+
   const rebind = () => {
     const next = cabinets.find((c) => c.id === target);
     if (!frame || !next) return;
@@ -119,7 +137,7 @@ export function FrameBindDialog({
   const footer = (
     <div className="row" style={{ justifyContent: 'flex-end' }}>
       {frame && bound ? (
-        <button type="button" className="btn" onClick={() => onBind(frame, FRAME_ATTR[kindNow], null)}>
+        <button type="button" className="btn" onClick={() => bindTo(null)}>
           {t('diagrams.frames.unbind')}
         </button>
       ) : null}
@@ -128,7 +146,7 @@ export function FrameBindDialog({
           {t('diagrams.frames.rebindCabinet')}
         </button>
       ) : (
-        <button type="button" className="btn primary" disabled={!frame || !target} onClick={() => frame && onBind(frame, FRAME_ATTR[kindNow], target)}>
+        <button type="button" className="btn primary" disabled={!frame || !target} onClick={() => bindTo(target)}>
           {t('diagrams.frames.bind')}
         </button>
       )}

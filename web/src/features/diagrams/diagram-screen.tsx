@@ -75,6 +75,7 @@ import {
   type DeviceCellSpec,
 } from './drawio-bridge';
 import { DraftFromPortMapDialog } from './draft-from-port-map-dialog';
+import { frameBadgeId } from './frame-bridge';
 import { StockDevicePicker } from './stock-device-picker';
 import { deviceDropXml, dragFrameState, wantsDropFallback } from './stock-drag';
 import { useCableBridge } from './use-cable-bridge';
@@ -1609,13 +1610,16 @@ function viewerCells(
   const byFrame = new Map<string, DiagramFrame>();
   for (const frame of content.frames ?? []) {
     if (!frame.childDiagramId && !frame.subnetId) continue;
-    byFrame.set(frame.cellId, frame);
-    if (frame.childDiagramId) {
-      if (!frame.child) cells.push({ id: frame.cellId, label: t('diagrams.frames.childMissing'), mark: 'warn' });
-      else if (frame.child.archived) cells.push({ id: frame.cellId, label: t('diagrams.frames.childArchived', { name: frame.child.name }), mark: 'warn' });
-      else cells.push({ id: frame.cellId, label: t('diagrams.frames.openChild', { name: frame.child.name }) });
-    } else {
-      cells.push({ id: frame.cellId, label: t('diagrams.frames.vlanCell', { name: frame.label }) });
+    // Dấu "đã gắn" dưới khung (Q-26 08/10) là ô con riêng trong ảnh xem: bấm nó là bấm khung.
+    for (const id of [frame.cellId, frameBadgeId(frame.cellId)]) {
+      byFrame.set(id, frame);
+      if (frame.childDiagramId) {
+        if (!frame.child) cells.push({ id, label: t('diagrams.frames.childMissing'), mark: 'warn' });
+        else if (frame.child.archived) cells.push({ id, label: t('diagrams.frames.childArchived', { name: frame.child.name }), mark: 'warn' });
+        else cells.push({ id, label: t('diagrams.frames.openChild', { name: frame.child.name }) });
+      } else {
+        cells.push({ id, label: t('diagrams.frames.vlanCell', { name: frame.label }) });
+      }
     }
   }
   return { cells, byCell, byEdge, byFrame };
