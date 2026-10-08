@@ -79,7 +79,6 @@ import { StockDevicePicker } from './stock-device-picker';
 import { deviceDropXml, dragFrameState, wantsDropFallback } from './stock-drag';
 import { useCableBridge } from './use-cable-bridge';
 import { useFrameBridge } from './use-frame-bridge';
-import { usePhotoBridge } from './use-photo-bridge';
 import { useRackFit } from './use-rack-fit';
 
 type Mode = 'view' | 'edit';
@@ -1038,14 +1037,6 @@ function DiagramEditor({
     rackColumn: settings.rackColumn,
   });
 
-  const photos = usePhotoBridge({
-    ready,
-    withFile,
-    send: (command) => frame.current?.send(command),
-    page: () => frameState.current.page,
-    markDirty: () => setDirty(true),
-  });
-
   /*
    * "Dựng lại mặt tủ" (bản vẽ loại tủ): server dựng một phiên bản nháp MỚI từ kho rồi nạp lại khung —
    * lượt vẽ dở chưa lưu sẽ mất, nên hỏi trước bằng hộp dùng chung. Phiên bản cũ còn nguyên để khôi phục.
@@ -1474,7 +1465,6 @@ function DiagramEditor({
         ...(content.diagram.kind === 'presentation' ? presentationTools.menu : []),
         ...frames.menu,
         ...racks.menu,
-        ...photos.menu,
         ...(isRack
           ? [{ key: 'rebuild-rack', label: t('diagrams.rack.rebuildButton'), disabled: !ready || rebuilding, onSelect: () => void rebuildRack() }]
           : []),
@@ -1519,7 +1509,6 @@ function DiagramEditor({
           ) : null}
           {cables.dialogs}
           {frames.dialogs}
-          {photos.dialogs}
           {racks.dialogs}
           {content.diagram.kind === 'presentation' ? presentationTools.elements : null}
           {draftOpen ? (

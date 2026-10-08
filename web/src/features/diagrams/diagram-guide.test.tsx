@@ -99,7 +99,6 @@ describe('màn sơ đồ tự giải thích', () => {
       'Vẽ dây là khai kết nối',
       'Bẻ dây cho vuông góc',
       'Khung, tủ và vị trí U',
-      'Ảnh thật',
       'Tìm, chỉ đường, kiểm tra khớp',
       'Phiên bản và duyệt',
       'Bản trình bày',

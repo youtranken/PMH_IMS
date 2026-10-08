@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, catalogItem, devicesPageButton, diagramBarAction, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
+import { E2E_SA, catalogItem, devicesPageButton, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders } from './helpers';
 
 /*
  * "Hình dùng trên sơ đồ" (Q-23): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
@@ -192,7 +192,7 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
   expect((await page.request.get(`/api/v1/devices/${id}/photo/front?v=${replaced}`)).status()).toBe(404);
 });
 
-test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (không ô vuông trống trên dưới); đổi về Biểu tượng rồi lại Ảnh thì ô ôm lại theo hình', async ({ page }) => {
+test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (không ô vuông trống trên dưới)', async ({ page }) => {
   test.setTimeout(240_000);
   const secret = await firstLogin(page, E2E_SA);
   const stamp = uniqueStamp();
@@ -235,21 +235,6 @@ test('ảnh ngang 1U: ô chèn từ "Thiết bị kho" mang tỉ lệ ảnh (kh�
   const standard = Number(sql(`SELECT value FROM system_config WHERE key = 'diagram.device_width_px'`));
   expect(inserted.width).toBe(standard);
   expect(inserted.height).toBe(Math.round(standard * 0.25));
-
-  // Công tắc Biểu tượng / Ảnh thật: về biểu tượng → cao theo tỉ lệ biểu tượng; lại ảnh → ôm ảnh.
-  const pick = async (choice: RegExp) => {
-    await diagramBarAction(page, 'Ảnh thật…');
-    const dialog = page.getByRole('dialog', { name: 'Biểu tượng / Ảnh thật' });
-    await dialog.getByRole('radiogroup', { name: `Hình của ${code}` }).getByRole('radio', { name: choice }).check();
-    await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
-  };
-  await pick(/Biểu tượng/);
-  await save();
-  expect(savedSize(diagramId, id)).toEqual({ width: standard, height: Math.round(standard * look.iconAspect) });
-  await pick(/Ảnh mặt trước/);
-  await save();
-  const back = savedSize(diagramId, id);
-  expect(back.height / back.width).toBeCloseTo(0.25, 2);
 });
 
 /**

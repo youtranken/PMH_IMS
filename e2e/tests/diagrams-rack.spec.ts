@@ -131,7 +131,7 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     expect(((await noCabinet.json()) as { message: string }).message).toContain('chọn tủ');
   });
 
-  test('"Dựng lại mặt tủ": chỉ khung mặt trước, máy đúng U, ảnh thật mặt trước; dựng lại khi kho chưa đổi không thêm nháp; công tắc Biểu tượng / Ảnh thật', async ({ page }) => {
+  test('"Dựng lại mặt tủ": chỉ khung mặt trước, máy đúng U, ảnh thật mặt trước; dựng lại khi kho chưa đổi không thêm nháp', async ({ page }) => {
     test.setTimeout(240_000);
     const secret = await firstLogin(page, E2E_SA);
     const rack = await seedRack(page);
@@ -188,26 +188,6 @@ test.describe('Sơ đồ mạng — vị trí U, mặt tủ và ảnh thật', (
     await page.getByRole('dialog', { name: 'Dựng lại mặt tủ từ kho?' }).getByRole('button', { name: 'Dựng lại' }).click();
     await expect(page.getByText('Mặt tủ dựng từ kho trùng bản mới nhất — không tạo phiên bản mới.')).toBeVisible();
     expect(sql(`SELECT count(*) FROM diagram_version WHERE diagram_id = '${diagramId}'`)).toBe('1');
-
-    // Công tắc: mặt sau không có ảnh → tắt kèm lý do; đổi ô mặt trước về Biểu tượng rồi lưu.
-    await expect(page.getByRole('button', { name: 'Thiết bị kho', exact: true })).toBeEnabled({ timeout: 60_000 });
-    await diagramBarAction(page, 'Ảnh thật…');
-    const box = page.getByRole('dialog', { name: 'Biểu tượng / Ảnh thật' });
-    const first = box.getByRole('radiogroup', { name: `Hình của ${withPhoto}` }).first();
-    await expect(first.getByRole('radio', { name: /Ảnh mặt trước/ })).toBeChecked();
-    await expect(first.getByRole('radio', { name: /Ảnh mặt sau/ })).toBeDisabled();
-    await expect(first).toContainText('Máy chưa có ảnh mặt sau');
-    await first.getByRole('radio', { name: /Biểu tượng/ }).check();
-    await box.getByRole('button', { name: 'Đóng', exact: true }).click();
-
-    const [saved] = await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith(`/api/v1/diagrams/${diagramId}/versions`) && r.request().method() === 'POST'),
-      page.getByRole('button', { name: 'Lưu', exact: true }).click(),
-    ]);
-    expect(saved.status(), await saved.text()).toBe(201);
-    const after = sql(`SELECT xml FROM diagram_version WHERE diagram_id = '${diagramId}' ORDER BY seq DESC LIMIT 1`);
-    expect(after).not.toContain('ims_photo="front"');
-    expect(after).not.toContain('data:image');
   });
 
   test('"Dựng từ kho" (Q-23 06/10 chiều): bản vẽ con cấp tủ chọn tủ là mặc định dựng từ kho, hỏi mã sơ đồ, ra nháp #1 có máy đúng U', async ({ page }) => {
