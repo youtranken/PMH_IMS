@@ -98,7 +98,6 @@ describe('màn sơ đồ tự giải thích', () => {
       'Đưa máy từ kho lên bản vẽ',
       'Vẽ dây là khai kết nối',
       'Bẻ dây cho vuông góc',
-      'Nối hàng loạt',
       'Khung, tủ và vị trí U',
       'Ảnh thật',
       'Tìm, chỉ đường, kiểm tra khớp',

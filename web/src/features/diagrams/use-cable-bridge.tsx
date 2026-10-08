@@ -4,7 +4,6 @@ import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
-import { BulkLinkDialog } from '@/ui/bulk-link-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { paintImsStyle, type DrawioCommand } from '@/ui/drawio-protocol';
 import { PortFormDialog } from '@/ui/port-form-dialog';
@@ -91,8 +90,7 @@ export function useCableBridge({
   const [liveEdges, setLiveEdges] = useState<CableEdge[] | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
   const [declareOpen, setDeclareOpen] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  /* Máy trên trang đang vẽ — hộp Khai kết nối / Nối hàng loạt mời chọn nhanh (E-05, E-09). */
+  /* Máy trên trang đang vẽ — hộp Khai kết nối mời chọn nhanh (E-05). */
   const [onDrawing, setOnDrawing] = useState<{ id: string; code: string }[]>([]);
   const openWithDrawing = (open: () => void) =>
     withFile((file) => {
@@ -432,7 +430,6 @@ export function useCableBridge({
 
   const menu: BarAction[] = [
     { key: 'declare', label: t('diagrams.cable.declareButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setDeclareOpen(true)) },
-    { key: 'bulk', label: t('diagrams.cable.bulkButton'), disabled: !ready, onSelect: () => openWithDrawing(() => setBulkOpen(true)) },
     { key: 'undeclared', label: t('diagrams.cable.undeclaredButton'), disabled: !ready, onSelect: openUndeclared },
     { key: 'cable-route', label: t('diagrams.cable.routeButton'), disabled: !ready, onSelect: () => void askRoute() },
     { key: 'legend', label: t('diagrams.cable.legend'), onSelect: () => setLegendOpen(true) },
@@ -531,19 +528,6 @@ export function useCableBridge({
                 if (link) toast({ tone: 'ok', message: t('diagrams.cable.declaredWhere', { code: link.deviceCode }), durationMs: DECLARED_TOAST_MS, action: portMapAction(link) });
               })
               .catch(() => undefined);
-          }}
-        />
-      ) : null}
-      {bulkOpen ? (
-        <BulkLinkDialog
-          device={null}
-          csrfToken={me.csrfToken}
-          onDrawing={onDrawing}
-          onClose={() => setBulkOpen(false)}
-          onDone={(created, code) => {
-            setBulkOpen(false);
-            toast({ tone: 'ok', message: t('ports.bulkDone', { count: created.length, code }) });
-            void fetchDiagramLinks(created.map((l) => l.id)).then(drawLinks).catch(() => undefined);
           }}
         />
       ) : null}

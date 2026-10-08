@@ -15,22 +15,16 @@ import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
  * "Nối hàng loạt": một switch + N máy, cổng bắt đầu → bảng xem trước "máy → cổng"
  * do SERVER chia (bỏ qua cổng đã có cáp), rồi ghi cả lô trong MỘT transaction qua endpoint của
  * `devices` — không đủ cổng hay vướng luật một cổng một cáp thì không ghi máy nào. Dùng ở trang
- * thiết bị và màn sơ đồ mạng (AD-15).
+ * thiết bị (AD-15).
  */
 export function BulkLinkDialog({
   device,
   csrfToken,
-  onDrawing = [],
   onClose,
   onDone,
 }: {
-  /** Switch cố định (trang thiết bị); `null` = cho chọn (màn sơ đồ). */
+  /** Switch cố định (trang thiết bị); `null` = cho chọn. */
   device: { id: string; code: string } | null;
-  /**
-   * Máy đang có trên bản vẽ (màn sơ đồ, E-09): chọn nhanh switch, và "Thêm mọi máy trên bản vẽ" —
-   * nối hàng loạt thường là "switch này nối mọi máy trong phòng", tức chính các máy đang vẽ.
-   */
-  onDrawing?: { id: string; code: string }[];
   csrfToken: string;
   onClose: () => void;
   onDone: (links: PortLink[], switchCode: string) => void;
@@ -61,7 +55,6 @@ export function BulkLinkDialog({
     },
   });
   const canSubmit = ready && plan.data && !plan.data.reason && !busy;
-  const addable = onDrawing.filter((d) => d.id !== sw?.id && !targets.some((x) => x.id === d.id));
 
   const submit = async () => {
     if (!sw || !canSubmit) return;
@@ -124,27 +117,6 @@ export function BulkLinkDialog({
                 minChars={2}
               />
             </Field>
-            {onDrawing.length > 0 ? (
-              <div className="chip-row" role="group" aria-label={t('ports.onDrawing')}>
-                <span className="muted small">{t('ports.onDrawing')}:</span>
-                {onDrawing
-                  .filter((d) => d.id !== sw?.id)
-                  .map((d) => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      className="btn sm"
-                      onClick={() => {
-                        setSw(d);
-                        setSwTerm(d.code);
-                        setTargets((list) => list.filter((x) => x.id !== d.id));
-                      }}
-                    >
-                      {d.code}
-                    </button>
-                  ))}
-              </div>
-            ) : null}
           </div>
         )}
         <Field label={t('ports.bulkStart')} required htmlFor="bulk-start">
@@ -167,13 +139,6 @@ export function BulkLinkDialog({
               exclude={[...(sw ? [sw.id] : []), ...targets.map((d) => d.id)]}
             />
           </Field>
-          {addable.length > 0 ? (
-            <div className="chip-row">
-              <button type="button" className="btn sm" onClick={() => setTargets((list) => [...list, ...addable])}>
-                {t('ports.bulkAddAllOnDrawing', { count: addable.length })}
-              </button>
-            </div>
-          ) : null}
         </div>
         <Field label={t('ports.cableType')}>
           <Select
