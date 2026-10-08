@@ -437,6 +437,18 @@ describe('Màn sửa — máy kéo vào khung tủ được đặt lại đúng 
     expect(await screen.findByText(/Chuyển FW-E2E-01 từ TU-01 sang TU-04/)).toBeInTheDocument();
   });
 
+  it.each([
+    { name: 'máy đúng tủ của khung: menu ⋮ không có "Chuyển máy sang tủ…"', cabinet: ['cab-4', 'TU-04'], shown: false },
+    { name: 'máy kho ghi tủ khác khung: menu ⋮ có "Chuyển máy sang tủ…"', cabinet: ['cab-1', 'TU-01'], shown: true },
+  ])('$name (Q-26 08/10)', async ({ cabinet, shown }) => {
+    const { fromDrawio } = await open([info('dev-ups', 'UPS-E2E-03', cabinet[0], cabinet[1])], body('dev-ups', 'UPS-E2E-03'));
+    fromDrawio({ event: 'autosave', xml: `<mxfile><diagram id="p1">${wrap(body('dev-ups', 'UPS-E2E-03'))}</diagram></mxfile>` });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Thao tác với/ }));
+    const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '');
+    expect(items.some((text) => text.startsWith('Chuyển máy sang tủ…'))).toBe(shown);
+  });
+
   /* Q-23: kéo máy vào khung tủ KHÁC tủ trong kho → hỏi trước "Chuyển máy sang tủ này", không ghi ngầm. */
   const CATALOG = {
     sites: [],
