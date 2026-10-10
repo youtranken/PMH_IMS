@@ -144,6 +144,12 @@ export function DeviceForm({
   onOpenCreated?: (created: DeviceRow) => void;
 }) {
   const { t } = useTranslation();
+  /* Đếm trên đầu mục gập: một kiểu chữ cho mọi mục — chưa có gì là "chưa khai", có thì đếm. */
+  const foldCount = (count: number, key: 'devices.foldFiles') => (count ? t(key, { count }) : t('devices.foldEmpty'));
+  const foldFilled = (values: string[], total: number) => {
+    const done = values.filter((value) => value.trim()).length;
+    return done ? t('devices.foldFilled', { done, total }) : t('devices.foldEmpty');
+  };
   const toast = useToast();
   const codeRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<FormState>(() =>
@@ -608,7 +614,7 @@ export function DeviceForm({
 
         <FoldSection
           title={t('devices.foldPeople')}
-          count={t('devices.foldFilled', { done: [form.assignedTo, form.department].filter((v) => v.trim()).length, total: 2 })}
+          count={foldFilled([form.assignedTo, form.department], 2)}
           defaultOpen={Boolean(initial.assignedTo || initial.department)}
         >
           <FormSection columns={2}>
@@ -640,10 +646,7 @@ export function DeviceForm({
         <FoldSection
           title={t('devices.purchase')}
           summary={t('devices.foldPurchaseSummary')}
-          count={t('devices.foldFilled', {
-            done: [form.vendorId, form.purchaseDate, form.warrantyStart, form.warrantyEnd, form.serial].filter((v) => v.trim()).length,
-            total: 5,
-          })}
+          count={foldFilled([form.vendorId, form.purchaseDate, form.warrantyStart, form.warrantyEnd, form.serial], 5)}
           defaultOpen={Boolean(initial.vendorId || initial.purchaseDate || initial.warrantyStart || initial.warrantyEnd || initial.serial)}
         >
           <FormSection columns={4}>
@@ -691,7 +694,7 @@ export function DeviceForm({
         <FoldSection
           title={t('devices.access')}
           summary={t('devices.foldAccessSummary')}
-          count={t('devices.foldAccessCount', { count: form.accessPoints.length })}
+          count={form.accessPoints.length ? t('devices.foldAccessCount', { count: form.accessPoints.length }) : t('devices.foldEmpty')}
           defaultOpen={initial.accessPoints.length > 0}
         >
           <FormSection columns={1}>
@@ -742,7 +745,7 @@ export function DeviceForm({
             thẳng `AttachmentPanel` (ghi ngay lúc bấm — nút (i) nói ra điều đó). */}
         <FoldSection
           title={t('devices.foldMedia')}
-          count={device ? undefined : t('devices.foldFiles', { count: draft.files.length + (photoDraft.files.front ? 1 : 0) + (photoDraft.files.back ? 1 : 0) })}
+          count={device ? undefined : foldCount(draft.files.length + (photoDraft.files.front ? 1 : 0) + (photoDraft.files.back ? 1 : 0), 'devices.foldFiles')}
           defaultOpen={Boolean(device)}
         >
           <FormSection

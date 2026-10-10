@@ -11,7 +11,6 @@ import { AttachmentPanel } from "@/ui/attachment-panel";
 import { devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
 import { DeviceOnDiagrams } from "./device-on-diagrams";
 import { DeviceDiagramLook, lookLevel } from "./device-diagram-look";
-import { Chevron } from "@/ui/chevron";
 import { accessView } from "./device-access";
 import { CopyButton } from "@/ui/copy-button";
 import { DetailHeader } from "@/ui/detail-header";
@@ -21,7 +20,6 @@ import {
   DetailLayout,
   DetailSection,
   RailCard,
-  RailRow,
 } from "@/ui/detail-layout";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { LocationText } from "@/ui/location-text";
@@ -128,8 +126,14 @@ export function DeviceDetail({ me }: { me: Me }) {
   /** Đếm lượt bị chặn: mỗi lần 409 là một `key` mới, kể cả lần thứ hai liên tiếp. */
   const [retireRound, setRetireRound] = useState(0);
   const [retireError, setRetireError] = useState<string | null>(null);
-  /** Khu chi tiết (IP, NAT, đường truyền, license) người dùng đã thu gọn ở tab Tổng quan. */
-  const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set());
+  /**
+   * Khu chi tiết (IP, NAT, đường truyền) đang gập ở tab Tổng quan. Máy tính gập sẵn: bản đồ quan
+   * hệ ngay trên đã tóm tắt, bấm nút trên bản đồ là mở đúng khu (Q-27 bổ sung). Điện thoại không có
+   * bản đồ nên mở sẵn.
+   */
+  const [folded, setFolded] = useState<ReadonlySet<string>>(() =>
+    narrow ? new Set() : new Set(["ipam", "nat", "isp"]),
+  );
   const toggleZone = (key: string) =>
     setFolded((prev) => {
       const next = new Set(prev);
@@ -534,8 +538,8 @@ export function DeviceDetail({ me }: { me: Me }) {
   const cabinetHeight =
     (lists.data?.cabinets ?? []).find((cabinet) => cabinet.id === item.cabinetId)?.uHeight ?? null;
   /* Thông số thứ tự cố định (Q-27): máy nào cũng cùng khuôn, ô trống đứng đúng chỗ và ghi "chưa
-     khai". Trạng thái, vị trí, người dùng, IP, bảo hành ở dải 4 ô / đầu trang — không lặp ở đây,
-     trừ Trạng thái (kèm "từ ngày") và khoảng bảo hành (dải 4 ô chỉ nói còn bao lâu). */
+     khai". Trạng thái, vị trí, người dùng, IP, bảo hành ở đầu trang / dải 4 ô — một thông tin chỉ
+     nói một lần, không lặp ở đây. */
   const specItems = [
     { label: t("devices.type"), value: item.deviceTypeName },
     { label: t("devices.model"), value: item.model },
@@ -579,15 +583,6 @@ export function DeviceDetail({ me }: { me: Me }) {
     },
     { label: t("devices.vendor"), value: item.vendorName },
     { label: t("devices.purchaseDate"), value: item.purchaseDate ? formatDate(item.purchaseDate) : null },
-    {
-      label: t("devices.warranty"),
-      value: item.warrantyEnd
-        ? t("devices.warrantyRange", {
-            from: formatDate(item.warrantyStart ?? item.purchaseDate) || "…",
-            to: formatDate(item.warrantyEnd),
-          })
-        : null,
-    },
     { label: t("devices.department"), value: item.department },
     { label: t("devices.note"), value: item.note },
   ];
@@ -758,19 +753,22 @@ export function DeviceDetail({ me }: { me: Me }) {
           {
             key: "ip",
             label: t("devices.managementIp"),
-            value: firstIp ? <span className="mono">{firstIp}</span> : panels.data ? null : t("devices.ipUnknown"),
+            /* Nút chép đứng ngay sau IP: chép là việc của chính con số, không phải một việc riêng. */
+            value: firstIp ? (
+              <>
+                <span className="mono">{firstIp}</span>
+                <CopyButton value={firstIp} label={t("devices.copyIp")} inline />
+              </>
+            ) : panels.data ? null : t("devices.ipUnknown"),
             blankText: t("devices.noIpYet"),
             /* Cấp / Đổi IP ngay tại ô (T-06, Q-20 một máy một IP). Chưa đọc được khu IP thì vẫn
                "Cấp IP" — API chặn nếu máy thật ra đã có IP. */
             action: firstIp ? (
-              <>
-                <CopyButton value={firstIp} label={t("devices.copyIp")} inline />
-                {!retired ? (
-                  <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                    {t("devices.changeIp")}
-                  </button>
-                ) : null}
-              </>
+              !retired ? (
+                <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
+                  {t("devices.changeIp")}
+                </button>
+              ) : null
             ) : !retired ? (
               <button
                 type="button"
@@ -785,68 +783,62 @@ export function DeviceDetail({ me }: { me: Me }) {
             key: "warranty",
             label: t("devices.warranty"),
             value: item.warrantyEnd ? <ExpiryBadge end={item.warrantyEnd} notCounted={retired} /> : null,
-            note: item.warrantyEnd ? t("devices.warrantyUntil", { date: formatDate(item.warrantyEnd) }) : null,
+            /* Bảo hành nói MỘT lần, ở đây: khoảng ngày + thanh thời gian gọn (Q-27 bổ sung). */
+            note: item.warrantyEnd ? (
+              <>
+                {t("devices.warrantyRange", {
+                  from: formatDate(item.warrantyStart ?? item.purchaseDate) || "…",
+                  to: formatDate(item.warrantyEnd),
+                })}
+                <WarrantyTimeline
+                  compact
+                  notCounted={retired}
+                  start={item.warrantyStart ?? item.purchaseDate}
+                  end={item.warrantyEnd}
+                  endLabel={t("devices.warrantyEnd")}
+                />
+              </>
+            ) : null,
           },
         ]}
       />
 
       <DetailLayout
         /* Tab là BẢNG (cổng, phần mềm, két, giấy tờ, lịch sử): một cột, không dải tóm tắt — dải 4
-           ô ở trên đã nói đủ. Tổng quan: cột phải là "Trong tủ" + Bảo hành; điện thoại thu lại. */
+           ô ở trên đã nói đủ. Tổng quan: cột phải là "Trong tủ" + Nhà cung cấp; điện thoại thu lại,
+           dòng tóm tắt chỉ nói đúng thứ nằm trong đó (không kèm hạn bảo hành của dải 4 ô). */
         railStrip={safeTab !== "profile"}
         railSummary={
           safeTab === "profile" ? (
-            <>
-              {item.cabinetCode ? <span>{t("devices.cabinetCard", { cabinet: item.cabinetCode })}</span> : null}
-              <ExpiryBadge end={item.warrantyEnd} notCounted={retired} />
-            </>
+            <span>
+              {item.cabinetCode
+                ? `${t("devices.cabinetCard", { cabinet: item.cabinetCode })} · ${t("devices.vendor")}`
+                : t("devices.vendor")}
+            </span>
           ) : undefined
         }
         rail={
           <>
             <CabinetPeek device={item} cabinetHeight={cabinetHeight} />
-            <RailCard title={t("devices.warranty")}>
-              {/*
-               * Thanh hạn ĐẦY ĐỦ (không `compact`): hai mốc ngày và "Đã đi N%" là thứ thanh này
-               * sinh ra để nói. Ngay dưới là NCC kèm số gọi — máy hỏng còn bảo hành thì việc kế
-               * tiếp là gọi NCC, đừng bắt sang màn Danh mục tra số.
-               */}
-              {/* Không bọc `RailRow`: tiêu đề thẻ đã là "Bảo hành", thêm nhãn dòng là đọc hai lần. */}
+            {/* Hạn bảo hành đã ở dải 4 ô; thẻ này trả lời câu kế tiếp: máy hỏng thì GỌI AI — đừng
+                bắt sang màn Danh mục tra số. Tiêu đề thẻ đã là "Nhà cung cấp", không nhãn dòng. */}
+            <RailCard title={t("devices.vendor")}>
               <div className="rail-row rail-row-wide">
-                {item.warrantyEnd ? (
-                  <WarrantyTimeline
-                    notCounted={retired}
-                    start={item.warrantyStart ?? item.purchaseDate}
-                    end={item.warrantyEnd}
-                    startLabel={
-                      item.warrantyStart
-                        ? t("devices.warrantyStart")
-                        : t("devices.purchaseDate")
-                    }
-                    endLabel={t("devices.warrantyEnd")}
-                  />
-                ) : (
-                  <ExpiryBadge end={null} />
-                )}
-              </div>
-              {item.vendorName ? (
-                <RailRow
-                  label={t("devices.vendor")}
-                  note={
-                    vendor?.phone || vendor?.contact ? (
-                      <>
+                {item.vendorName ? (
+                  <>
+                    <span className="rail-v">{item.vendorName}</span>
+                    {vendor?.phone || vendor?.contact ? (
+                      <span className="rail-note">
                         {vendor.contact ? <span>{vendor.contact}</span> : null}
                         {vendor.contact && vendor.phone ? " · " : null}
-                        {vendor.phone ? (
-                          <PhoneLink className="" value={vendor.phone} />
-                        ) : null}
-                      </>
-                    ) : undefined
-                  }
-                >
-                  {item.vendorName}
-                </RailRow>
-              ) : null}
+                        {vendor.phone ? <PhoneLink className="" value={vendor.phone} /> : null}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="muted">{t("detail.notDeclared")}</span>
+                )}
+              </div>
               {/* Hồ sơ cũ hay mới — người đọc cần biết trước khi tin số liệu. */}
               <p className="rail-foot">
                 {t("devices.createdAt", { date: formatDate(item.createdAt) })}
@@ -920,15 +912,18 @@ export function DeviceDetail({ me }: { me: Me }) {
             )}
 
 
-            <DetailSection title={t("devices.specTitle")} compact>
-              <SpecList label={t("devices.specTitle")} items={specItems} />
-              {!retired && blankCount > 0 ? (
-                <div className="row" style={{ marginTop: "var(--space-5)" }}>
-                  <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
+            <DetailSection
+              title={t("devices.specTitle")}
+              compact
+              action={
+                !retired && blankCount > 0 ? (
+                  <button type="button" className="btn sm" onClick={() => setEditing(true)}>
                     {t("devices.fillBlanks", { count: blankCount })}
                   </button>
-                </div>
-              ) : null}
+                ) : null
+              }
+            >
+              <SpecList label={t("devices.specTitle")} items={specItems} />
             </DetailSection>
 
             <DeviceDiagramLook
@@ -1190,6 +1185,7 @@ function ExtensionPanels({
           title={panel.title}
           open={!folded.has(panel.key)}
           onToggle={panel.items.length > 0 ? () => onToggle(panel.key) : undefined}
+          summary={panel.items.slice(0, 3).map((entry) => entry.label).join(" · ")}
         >
           {panel.items.length === 0 ? (
             <p className="muted">{panel.emptyText ?? "—"}</p>
@@ -1231,63 +1227,38 @@ function ExtensionPanels({
 }
 
 /**
- * Một khu chi tiết của tab Tổng quan, thu gọn được.
- *
- * Bản đồ quan hệ (hay hàng chip trên điện thoại) đã nói máy giữ bao nhiêu thứ mỗi loại; khu
- * này là bảng đầy đủ. Người chỉ cần con số thì gập nó lại cho trang ngắn. Mặc định MỞ: gập sẵn
- * thì người mở trang để xem IP phải bấm thêm một lần cho đúng thứ họ tìm.
- *
- * `aria-labelledby` trỏ vào `<h2>` nên khu vẫn là landmark mang đúng tên ("Địa chỉ IP"); nút
- * gập đứng NGOÀI `<h2>` để tên tiêu đề không dính chữ "Thu gọn". Nội dung gập thì gỡ khỏi cây
- * (không dùng `hidden`: vài lớp con đặt `display` đè luật `[hidden]` của trình duyệt).
+ * Một khu chi tiết của tab Tổng quan (IP, NAT, đường truyền), thu gọn được — `DetailSection` gập
+ * do trang giữ trạng thái: bấm ô trên bản đồ / chip "Đang giữ" là mở đúng khu (`goSection`).
+ * Gập thì dòng tiêu đề kể vài dòng đầu, đủ để biết có cần mở không. Khu rỗng không gập (một dòng
+ * chữ, gập lại chẳng được gì).
  */
 function ZoneSection({
   zoneKey,
   title,
   open,
   onToggle,
+  summary,
   children,
 }: {
   zoneKey: string;
   title: string;
   open: boolean;
-  /** Không truyền = khu không gập được (khu rỗng: chỉ một dòng chữ, gập lại chẳng được gì). */
+  /** Không truyền = khu không gập được. */
   onToggle?: () => void;
+  summary?: string;
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
-  const titleId = `sec-${zoneKey}-title`;
-  const bodyId = `sec-${zoneKey}-body`;
-  const heading = (
-    <h2 className="form-section-title" id={titleId}>
-      {title}
-    </h2>
-  );
   return (
-    <section id={`sec-${zoneKey}`} className="card device-panel" aria-labelledby={titleId}>
-      {onToggle ? (
-        <div className="form-section-head">
-          {heading}
-          <button
-            type="button"
-            className="btn sm ghost"
-            aria-expanded={open}
-            aria-controls={bodyId}
-            aria-label={t(open ? "devices.zoneCollapse" : "devices.zoneExpand", { title })}
-            onClick={onToggle}
-          >
-            <Chevron direction={open ? "up" : "down"} />
-          </button>
-        </div>
-      ) : (
-        heading
-      )}
-      {open || !onToggle ? <div id={bodyId}>{children}</div> : null}
-    </section>
+    <DetailSection
+      id={`sec-${zoneKey}`}
+      title={title}
+      compact
+      foldable={onToggle ? { open, onToggle, summary } : undefined}
+    >
+      {children}
+    </DetailSection>
   );
 }
-
-
 
 /** Danh sách thứ máy còn giữ trong 409 `DEVICE_HAS_HOLDINGS`; lỗi khác thì `null`. */
 function holdingsOf(err: unknown): string[] | null {

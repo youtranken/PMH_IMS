@@ -277,7 +277,7 @@ export function SubnetPane({
     canWrite ? (
       <button
         type="button"
-        className="btn sm ghost"
+        className="btn sm"
         onClick={() => setAssigning({ address, record })}
       >
         {t("ipam.assign")}
@@ -502,7 +502,11 @@ export function SubnetPane({
                           năm ô kia đều tự xưng tên, riêng ô này thì không — thành ra một cái
                           nút lửng lơ không biết thuộc cột nào. */}
                       <td data-label={t("common.actions")} className="col-actions">
-                        <div className="action-cell">{assignButton(slot.address, null)}</div>
+                        {/* Chừa chỗ ô ⋮: ô trống không có menu, thiếu chỗ thì "Cấp IP" lệch cột với "Sửa". */}
+                        <div className="action-cell">
+                          {assignButton(slot.address, null)}
+                          <span className="kebab-slot" aria-hidden="true" />
+                        </div>
                       </td>
                     </tr>
                   ) : (

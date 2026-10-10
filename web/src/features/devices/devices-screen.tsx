@@ -624,15 +624,23 @@ export function DevicesScreen({ me }: { me: Me }) {
 /** Ảnh nhỏ ở cột Ảnh: ảnh model (Q-26 thắng), không thì ảnh riêng của máy, không thì tên loại. */
 function DeviceThumb({ device }: { device: DeviceRow }) {
   const { t } = useTranslation();
-  const src =
+  /* Ảnh hỏng (tệp đã xoá, server lỗi) thì về ô chữ loại — không để lại một khối nền tối trơn. Nhớ
+     ĐÚNG URL đã hỏng chứ không một cờ chung: ảnh mới (model vừa có ảnh, phiên bản đổi) thì thử lại. */
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+  const wanted =
     device.deviceModelId && device.modelPhotoVersion
       ? deviceModelPhotoSrc(device.deviceModelId, device.modelPhotoVersion)
       : device.photoFrontFileId
         ? devicePhotoSrc(device.id, 'front', device.photoFrontFileId)
         : null;
+  const src = wanted && wanted !== brokenSrc ? wanted : null;
   return (
     <span className={src ? 'cell-thumb' : 'cell-thumb is-empty'} data-testid="device-thumb">
-      {src ? <img src={src} alt={t('devices.photoOf', { code: device.code })} loading="lazy" /> : device.deviceTypeName}
+      {src ? (
+        <img src={src} alt={t('devices.photoOf', { code: device.code })} loading="lazy" onError={() => setBrokenSrc(src)} />
+      ) : (
+        device.deviceTypeName
+      )}
     </span>
   );
 }

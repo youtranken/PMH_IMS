@@ -105,7 +105,7 @@ export function SeatTable({
                     {row.deviceCode}
                   </Link>
                   <span className="cell-sub">
-                    {[row.seatNo ? t('software.seatLabel', { n: row.seatNo }) : null, row.deviceName, row.deviceAssignedTo]
+                    {[row.seatNo ? t('software.seatLabel', { n: row.seatNo }) : null, row.deviceName, row.deviceAssignedTo ? t('license.deviceUser', { name: row.deviceAssignedTo }) : null]
                       .filter(Boolean)
                       .join(' · ')}
                   </span>

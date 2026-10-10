@@ -476,6 +476,11 @@
 .full-bar .tabs {
   border-bottom: 0;
 }
+/* Thanh tab trong thanh trên của màn toàn khung không dính theo trang — nó đã nằm trong thanh cố định. */
+.full-bar .tabs-shell {
+  position: relative;
+  top: auto;
+}
 .full-bar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -529,7 +534,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .full-bar .tabs,
+  .full-bar .tabs-shell,
   .full-bar-actions {
     flex: none;
     flex-wrap: nowrap;

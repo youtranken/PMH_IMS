@@ -36,7 +36,7 @@ export function FactStrip({ facts, label }: { facts: Fact[]; label: string }) {
           <div className="fact" key={fact.key} data-fact={fact.key}>
             <dt>{fact.label}</dt>
             <dd className="fact-v" data-blank={blank ? 'true' : undefined}>
-              {blank ? (fact.blankText ?? t('detail.notDeclaredShort')) : fact.value}
+              {blank ? (fact.blankText ?? t('detail.notDeclared')) : fact.value}
             </dd>
             {fact.note ? <dd className="fact-note">{fact.note}</dd> : null}
             {fact.action ? <dd className="fact-action">{fact.action}</dd> : null}

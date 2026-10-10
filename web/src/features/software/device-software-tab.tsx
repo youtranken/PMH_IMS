@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { Combobox } from '@/ui/combobox';
+import { DetailSection } from '@/ui/detail-layout';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
@@ -35,15 +36,17 @@ export function DeviceSoftwareTab({
   const [software, setSoftware] = useState<SoftwareRow | null>(null);
 
   return (
-    <section className="card device-panel" aria-label={t('devices.softwareTabTitle')}>
-      <div className="row section-head">
-        <p className="muted small">{t('devices.softwareTabHint')}</p>
-        {canEdit ? (
+    <DetailSection
+      title={t('devices.softwareTabTitle')}
+      compact
+      action={
+        canEdit ? (
           <button type="button" className="btn primary sm" onClick={() => setPicking(true)}>
             {t('devices.assignSoftware')}
           </button>
-        ) : null}
-      </div>
+        ) : null
+      }
+    >
       <DeviceLicensesExpand deviceId={device.id} />
 
       {picking ? (
@@ -71,7 +74,7 @@ export function DeviceSoftwareTab({
           }}
         />
       ) : null}
-    </section>
+    </DetailSection>
   );
 }
 

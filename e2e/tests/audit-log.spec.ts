@@ -341,7 +341,8 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     // Menu đã dựng xong thì vế "không có" bên dưới mới có nghĩa.
     await expect(nav.getByRole('link', { name: 'Thiết bị', exact: true })).toBeVisible();
-    await openNavGroup(page);
+    // Q-27: Danh mục rời nhóm Hệ thống — Thành viên không còn mục nào ở đó, cả nhóm không hiện.
+    await expect(nav.getByRole('button', { name: 'Hệ thống', exact: true })).toHaveCount(0);
     await expect(nav.getByText('Nhật ký hệ thống', { exact: true })).toHaveCount(0);
 
     await page.goto('/admin/audit-log');

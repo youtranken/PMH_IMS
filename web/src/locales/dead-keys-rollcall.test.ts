@@ -164,4 +164,16 @@ describe('Khóa dịch chết trong vi.ts', () => {
     // Vitest in nguyên mảng khi đỏ, nên người đọc thấy luôn khóa nào cần xoá.
     expect(dead).toEqual([]);
   });
+
+  /*
+   * Chiều ngược: code gọi `t('a.b')` mà vi.ts KHÔNG có khóa đó thì màn in nguyên chữ "a.b" ra cho
+   * người dùng — build và bài trên đều xanh. Chỉ soát lời gọi viết thẳng chuỗi; khóa ghép bằng
+   * biến không đọc được ở đây.
+   */
+  it('mọi t("khóa") viết thẳng trong code đều có trong vi.ts', () => {
+    const known = new Set(key);
+    const called = [...sourceText.matchAll(/\bt\(\s*['"]([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)['"]/g)].map((m) => m[1]);
+    const missing = [...new Set(called)].filter((k) => !known.has(k));
+    expect(missing).toEqual([]);
+  });
 });

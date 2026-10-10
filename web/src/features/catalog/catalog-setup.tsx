@@ -12,16 +12,42 @@ import type { CatalogLists } from '@/lib/catalog-types';
  * Đếm model chưa có ảnh trên một trang 100 model: danh mục model của một công ty cỡ này không
  * tới số đó; vượt thì con số chỉ là ước lượng thấp, không sai chiều.
  */
-export function CatalogSetup({ lists, onPick }: { lists: CatalogLists | undefined; onPick: (tab: string) => void }) {
-  const { t } = useTranslation();
-  const models = useQuery({
+/** Danh sách model cho thẻ này VÀ số trên tab "Model thiết bị" — một lượt gọi, hai chỗ đọc. */
+export function useSetupModels() {
+  return useQuery({
     queryKey: [...DEVICE_MODELS_KEY, 'setup'],
     queryFn: () => apiFetch<{ items: DeviceModel[]; total: number }>('/api/v1/device-models?limit=100'),
   });
-  const active = <T extends { active?: boolean }>(items: T[] | undefined) => (items ?? []).filter((item) => item.active !== false).length;
-  const ready = (count: number) => (count > 0 ? { text: t('catalog.setupReady', { count }), ok: true } : { text: t('catalog.setupNone'), ok: false });
+}
+
+export function CatalogSetup({
+  lists,
+  failed = false,
+  onPick,
+}: {
+  lists: CatalogLists | undefined;
+  /** Danh mục tải hỏng — nói ra, đừng để ô "…" mãi như đang tải. */
+  failed?: boolean;
+  onPick: (tab: string) => void;
+}) {
+  const { t } = useTranslation();
+  const models = useSetupModels();
+  /* Đang tải là CHƯA BIẾT ("…"), không phải "chưa có": báo thiếu rồi vài trăm mili-giây sau đổi
+     thành "đủ" là một cú nháy cam vô cớ. Đã có câu trả lời mà thiếu hẳn một danh sách thì là 0. */
+  const active = <T extends { active?: boolean }>(items: T[] | undefined) =>
+    lists === undefined ? undefined : (items ?? []).filter((item) => item.active !== false).length;
+  const ready = (count: number | undefined) =>
+    failed
+      ? { text: t('catalog.setupFailed'), ok: false }
+      : count === undefined
+      ? { text: '…', ok: true }
+      : count > 0
+        ? { text: t('catalog.setupReady', { count }), ok: true }
+        : { text: t('catalog.setupNone'), ok: false };
   const noPhoto = (models.data?.items ?? []).filter((model) => !model.photoFrontFileId).length;
-  const modelState = !models.data
+  const modelState = models.isError
+    ? { text: t('catalog.setupFailed'), ok: false }
+    : !models.data
     ? { text: '…', ok: true }
     : models.data.total === 0
       ? ready(0)

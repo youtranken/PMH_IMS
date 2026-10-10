@@ -366,7 +366,9 @@ export function SettingsScreen({ me }: { me: Me }) {
             <StickyActionBar
               compact
               label={t('settings.save')}
-              note={changed.length > 0 ? t('settings.dirty', { count: changed.length }) : undefined}
+              /* Luôn có một câu bên trái: thanh trống nửa trái trông như hỏng; "chưa có thay đổi" cũng
+                 giải thích vì sao hai nút đang tắt. */
+              note={changed.length > 0 ? t('settings.dirty', { count: changed.length }) : t('settings.clean')}
             >
               <button
                 type="button"

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { E2E_SA, catalogItem, devicesPageButton, firstLogin, resetCatalog, resetDevices, resetDiagrams, resetUsers, sql, stepUpViaApi, uniqueStamp, writeHeaders, openFold } from './helpers';
+import { openDeviceLook } from './device-zone';
 
 /*
  * "Hình dùng trên sơ đồ" (Q-23): mỗi máy đổi được ảnh của riêng nó. Thứ tự tra một nơi
@@ -61,6 +62,7 @@ test('ảnh riêng khi model chưa có ảnh → bản đồ quan hệ dùng ả
 
   // Model chưa có ảnh: trang máy A tải ảnh riêng mặt trước.
   await page.goto(`/devices/${a}`);
+  await openDeviceLook(page);
   await expect(page.getByRole('heading', { name: 'Hình dùng trên sơ đồ', exact: true })).toBeVisible();
   const front = page.getByRole('group', { name: 'Mặt trước' });
   await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `rieng-${stamp}.png`, mimeType: 'image/png', buffer: PNG_OWN });
@@ -88,6 +90,7 @@ test('ảnh riêng khi model chưa có ảnh → bản đồ quan hệ dùng ả
 
   // Máy A: ảnh model thắng ảnh riêng; mặt trước khoá hẳn, kể cả với SA — không nút nào.
   await page.goto(`/devices/${a}`);
+  await openDeviceLook(page);
   await expect(front.getByText(`Ảnh chung của model ${model}`)).toBeVisible();
   await expect(front.getByText(`Máy dùng ảnh của model ${model} — đổi ảnh ở Danh mục › Model thiết bị.`)).toBeVisible();
   await expect(front.getByRole('button')).toHaveCount(0);
@@ -105,6 +108,7 @@ test('ảnh riêng khi model chưa có ảnh → bản đồ quan hệ dùng ả
 
   // Máy B (cùng model): ảnh model.
   await page.goto(`/devices/${b}`);
+  await openDeviceLook(page);
   await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText(`Ảnh chung của model ${model}`)).toBeVisible();
   await expect(page.getByTestId('rmap-hub').getByRole('img')).toHaveAttribute('src', `/api/v1/devices/${b}/photo/front?v=${modelFile}`);
 
@@ -170,6 +174,7 @@ test('form Thêm thiết bị: chọn ảnh mặt trước → máy mới mang �
   expect(linked.status(), await linked.text()).toBe(201);
 
   await page.goto(`/devices/${id}`);
+  await openDeviceLook(page);
   const front = page.getByRole('group', { name: 'Mặt trước' });
   await expect(front.getByText('Ảnh riêng của máy này')).toBeVisible();
   await expect(front.getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toHaveAttribute('src', `/api/v1/devices/${id}/photo/front?v=${own}`);
@@ -279,6 +284,7 @@ test('tải ảnh máy 1U có viền trắng: hộp cắt khoá theo mặt tủ 
   expect(linked.status(), await linked.text()).toBe(201);
 
   await page.goto(`/devices/${id}`);
+  await openDeviceLook(page);
   const front = page.getByRole('group', { name: 'Mặt trước' });
   await front.getByLabel('Tải ảnh lên — Mặt trước').setInputFiles({ name: `vien-${stamp}.png`, mimeType: 'image/png', buffer: await paddedPhoto(page) });
   const crop = page.getByRole('dialog', { name: 'Cắt ảnh thiết bị' });

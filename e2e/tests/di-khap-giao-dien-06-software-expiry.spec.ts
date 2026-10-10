@@ -808,18 +808,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('tab', { name: 'Tổng quan', exact: true }).click();
     const profile = page.getByRole('tabpanel');
     /*
-     * HẠN NẰM Ở THẺ ĐỊNH DANH, KHÔNG Ở TAB HỒ SƠ.
-     *
-     * Một thẻ "Hết hạn" chiếm trọn bề ngang ở cột chính sẽ bị dải chỉ số vẽ LẠI y hệt cách đó
-     * hai dòng, nên hạn chỉ có một chỗ — cột phải.
-     *
-     * Yêu cầu không hạ: vẫn phải có thanh thời hạn đầy đủ
-     * (thanh tiến trình + hai mốc ngày), và cột chính KHÔNG được vẽ lại lần nữa.
+     * HẠN NÓI MỘT LẦN, Ở DẢI 4 Ô (Q-27 bổ sung 10/10): ô Hết hạn có huy hiệu, khoảng ngày và thanh
+     * thời gian gọn. Không còn "Thẻ định danh" ở cột phải, và tab Tổng quan KHÔNG vẽ lại thanh.
      */
-    const identityCard = page.getByRole('region', { name: 'Thẻ định danh' });
+    await expect(page.getByRole('region', { name: 'Thẻ định danh' })).toHaveCount(0);
     await expect(
-      identityCard.getByRole('progressbar'),
-      'Hồ sơ có hạn thì thẻ định danh phải vẽ thanh thời hạn đầy đủ',
+      page.getByRole('group', { name: 'Tóm tắt hồ sơ' }).getByRole('progressbar'),
+      'Hồ sơ có hạn thì ô Hết hạn của dải 4 ô phải có thanh thời hạn',
     ).toHaveCount(1);
     await expect(
       profile.getByRole('progressbar'),
@@ -868,7 +863,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'SA phải cất được secret ngay tại hồ sơ',
     ).toHaveCount(1);
     await expect(
-      page.getByText('Két chưa có ngăn nào'),
+      page.getByText('Két chưa có ngăn nào.'),
       'Két rỗng phải nói là rỗng, không phải bảng trắng',
     ).toBeVisible();
 

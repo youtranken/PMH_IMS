@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Chevron } from '@/ui/chevron';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { motionReduced } from '@/lib/motion';
 
@@ -120,7 +121,28 @@ export function Tabs({
     refs.current[next.key]?.focus();
   };
 
+  /* Mũi tên cuộn cho CHUỘT: mép mờ nói "còn tab", nhưng trên máy tính không có thanh cuộn để kéo.
+     Bàn phím đã có ← → nên mũi tên ra khỏi thứ tự Tab và khỏi cây trợ năng. */
+  const scrollBy = (direction: 1 | -1) => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const left = bar.scrollLeft + direction * Math.round(bar.clientWidth * 0.7);
+    if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior: motionReduced() ? 'auto' : 'smooth' });
+    else bar.scrollLeft = left;
+  };
+
   return (
+    <div
+      className="tabs-shell"
+      /* Chừa chỗ mũi tên ở CẢ HAI mép khi thanh tràn — không chỉ lúc mũi tên đang hiện: đệm bật
+         tắt theo mép thì thanh co giãn ngay dưới con trỏ khi vừa cuộn khỏi mép. */
+      data-overflow={!wrap && (edges.start || edges.end) ? 'true' : undefined}
+    >
+    {!wrap && edges.start ? (
+      <button type="button" className="tabs-arrow" data-side="start" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(-1)}>
+        <Chevron direction="left" />
+      </button>
+    ) : null}
     <div
       ref={barRef}
       className="tabs"
@@ -215,6 +237,12 @@ export function Tabs({
           style={{ transform: `translate(${ink.x}px, ${ink.y}px) scaleX(${ink.w})` }}
         />
       ) : null}
+    </div>
+    {!wrap && edges.end ? (
+      <button type="button" className="tabs-arrow" data-side="end" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(1)}>
+        <Chevron direction="right" />
+      </button>
+    ) : null}
     </div>
   );
 }

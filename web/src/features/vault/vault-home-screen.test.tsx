@@ -110,7 +110,7 @@ describe('Trang tổng Két sắt', () => {
     renderHome();
     expect(
       await screen.findByText(
-        'Hồ sơ đang có mật khẩu trong két bao gồm: thiết bị, phần mềm, tên miền & SSL, hợp đồng bảo trì, dịch vụ có hạn khác, tài khoản dịch vụ, đường truyền',
+        'Mọi hồ sơ đang cất mật khẩu trong két — lọc theo loại ở dưới.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Luật của két' })).not.toBeInTheDocument();

@@ -43,7 +43,7 @@ describe('SpecList — thông số thứ tự cố định', () => {
       'Ghi chú',
     ]);
     const defs = within(list).getAllByRole('definition');
-    expect(defs.map((node) => node.textContent)).toEqual(['Server', '— chưa khai', 'SN-1', '— chưa khai']);
+    expect(defs.map((node) => node.textContent)).toEqual(['Server', 'chưa khai', 'SN-1', 'chưa khai']);
     expect(defs[1]).toHaveAttribute('data-blank', 'true');
     expect(defs[2]).not.toHaveAttribute('data-blank');
   });

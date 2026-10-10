@@ -108,9 +108,10 @@ export function RowActions({
   if (!primary) return <RowActionsMenu {...menu} />;
   return (
     <div className="action-cell">
+      {/* Nút có viền như "Gia hạn" / "Mở két" ở các bảng khác: chữ đậm trơn không đọc ra nút. */}
       <button
         type="button"
-        className="btn sm ghost"
+        className="btn sm"
         aria-label={primary.ariaLabel}
         disabled={primary.disabled || Boolean(primary.disabledReason)}
         {...reason.buttonProps}

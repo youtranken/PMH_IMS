@@ -53,7 +53,7 @@ import {
 } from '@/lib/catalog-types';
 import { CableSwatch } from '@/ui/cable-swatch';
 import { lowerFirstAfterNumber } from '@/lib/count-label';
-import { CatalogSetup } from './catalog-setup';
+import { CatalogSetup, useSetupModels } from './catalog-setup';
 
 const DEFAULT_LIMIT = 20;
 
@@ -474,6 +474,7 @@ export function CatalogScreen({ me }: { me: Me }) {
      (ADM-031): người mới nhìn thanh tab là biết bảy nhóm nào đã khai, nhóm nào còn trống. Cùng
      một truy vấn danh mục nền mà mọi form đã dùng — không thêm lượt hỏi riêng. */
   const lists = useCatalogLists();
+  const setupModels = useSetupModels();
   const siteNames = useMemo(
     () => new Map((lists.data?.sites ?? []).map((site) => [site.id, site.name])),
     [lists.data],
@@ -759,12 +760,12 @@ export function CatalogScreen({ me }: { me: Me }) {
         }
       />
 
-      <CatalogSetup lists={lists.data} onPick={switchTab} />
+      <CatalogSetup lists={lists.data} failed={lists.isError} onPick={switchTab} />
 
       <Tabs
         items={TAB_KEYS.flatMap((tab) => [
           { key: tab.key, label: t(tab.labelKey), count: lists.data?.[LIST_OF[tab.key]]?.length, group: t(tab.groupKey) },
-          ...(tab.key === 'device_type' ? [{ key: MODEL_TAB, label: t('deviceModels.tab'), group: t(tab.groupKey) }] : []),
+          ...(tab.key === 'device_type' ? [{ key: MODEL_TAB, label: t('deviceModels.tab'), count: setupModels.data?.total, group: t(tab.groupKey) }] : []),
         ])}
         value={modelTab ? MODEL_TAB : entity}
         onChange={switchTab}

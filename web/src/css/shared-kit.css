@@ -83,15 +83,16 @@ body:has(.auth) .toast-stack {
 }
 .pager-info { margin-right: auto; }
 .pager-page { font-variant-numeric: tabular-nums; }
-/* Nút ‹ › cũ là KÝ TỰ theo cỡ chữ — mảnh như dấu ngoặc và ô bấm chỉ bằng con chữ. Giờ là
-   chevron dùng chung, ô bấm vuông đủ 32px (ngón tay ở 390px cần chừng đó). */
+/* Nút ‹ › là chevron dùng chung, ô bấm vuông CAO BẰNG ô "Số dòng" bên cạnh (38px): thấp hơn thì
+   cả hàng lệch đáy và mũi tên trông như chữ phụ. Mũi tên màu chữ phụ đậm, không nhạt như nhãn. */
 .pager-nav {
   display: inline-grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.375rem;
+  height: 2.375rem;
   padding: 0;
   font-size: var(--fs-md);
+  color: var(--ink-2);
 }
 .pager-size {
   display: flex;
@@ -110,7 +111,7 @@ body:has(.auth) .toast-stack {
   .pager { gap: var(--space-5); }
   .pager-size .fsel-trigger { min-height: 44px; }
 }
-/* Dãy số trang `1 … 4 5 6 … 20` — cùng ô bấm 32px với ‹ ›. */
+/* Dãy số trang `1 … 4 5 6 … 20` — cùng ô bấm với ‹ ›. */
 .pager-pages {
   display: flex;
   align-items: center;
@@ -120,8 +121,8 @@ body:has(.auth) .toast-stack {
   list-style: none;
 }
 .pager-num {
-  min-width: 2rem;
-  height: 2rem;
+  min-width: 2.375rem;
+  height: 2.375rem;
   padding: 0 var(--space-3);
   justify-content: center;
   font-variant-numeric: tabular-nums;
@@ -1032,6 +1033,8 @@ table.table tbody tr.row-muted td {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  /* Ô lưới mặc định không co dưới bề rộng chữ dài nhất — nhãn "Chưa kích hoạt 2 lớp" tràn thẻ ở 390px. */
+  min-width: 0;
   padding: var(--space-4) var(--space-5);
   border: 1px solid var(--border);
   border-left: 3px solid var(--border-2);
@@ -1113,6 +1116,12 @@ html[data-motion='off'] .kpi:hover { transform: none; }
   .dash-kpis:not(.kpi-dense) .kpi-go {
     top: var(--space-3);
     right: var(--space-2);
+  }
+  /* 4 hay 6 ô thì chia CHẴN 2 cột (2×2, 2×3): 3 cột ra 3+1 lẻ một ô, và ô 110px gãy nhãn hai
+     dòng cao thấp lệch nhau. Số ô khác (3, 5) giữ 3 cột. */
+  .dash-kpis:not(.kpi-dense):has(> :nth-child(4):last-child),
+  .dash-kpis:not(.kpi-dense):has(> :nth-child(6):last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 600px) {
@@ -1358,6 +1367,8 @@ html[data-motion='off'] .kpi:hover { transform: none; }
   }
 }
 .approval-fresh {
+  /* Cách khung trống một nhịp: sát quá thì đọc như chữ của khung. */
+  margin-top: var(--space-5);
   text-align: center;
   font-size: var(--fs-xs);
 }
@@ -1666,7 +1677,58 @@ table.access-grid thead .access-row-head {
 .access-intro p + p {
   margin-top: var(--space-2);
 }
-/* Ô tick trong thanh lọc ("Hiện cả người đã nghỉ") và dòng công cụ của danh sách chọn người. */
+/*
+ * Chip bật/tắt một bộ lọc (`ui/filter-toggle.tsx`) và ô tick trong thanh lọc (`label.filter-check`,
+ * "Hiện cả người đã nghỉ") mặc CÙNG một vẻ: viền mảnh, bo tròn, cao bằng ô chọn bên cạnh; bật thì
+ * nền nhấn + viền nhấn. Đang tắt KHÔNG xám đặc — xám đặc đọc thành "bị vô hiệu".
+ */
+.filter-chip,
+.filter-bar .filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.375rem;
+  padding: 0 var(--space-6);
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.filter-chip:hover,
+.filter-bar .filter-check:hover {
+  color: var(--ink);
+  border-color: var(--primary);
+}
+.filter-chip:focus-visible,
+.filter-bar .filter-check:focus-within {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.filter-chip[aria-pressed='true'],
+.filter-bar .filter-check:has(input:checked) {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-ink);
+}
+.filter-chip-box {
+  display: grid;
+  place-items: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+.filter-chip-box svg { width: 0.7rem; height: 0.7rem; }
+.filter-bar .filter-check input {
+  margin: 0;
+  accent-color: var(--primary);
+}
+/* Ô tick ngoài thanh lọc (dòng công cụ của danh sách chọn người) giữ dáng ô tick thường. */
 .filter-check {
   gap: var(--space-3);
   white-space: nowrap;
@@ -1831,7 +1893,18 @@ table.access-grid thead tr:last-child th {
 /* Tiêu đề họ + nút (i) giải thích site/loại cộng dồn. */
 .access-family-label { display: inline-flex; align-items: center; gap: var(--space-2); }
 .access-role-holders { margin-top: var(--space-6); }
-.access-role-holders summary { cursor: pointer; font-weight: 600; }
+.access-role-holders summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  list-style: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+.access-role-holders summary::-webkit-details-marker { display: none; }
+.access-role-holders .summary-chev { color: var(--ink-3); transition: transform 0.18s var(--ease); }
+.access-role-holders[open] .summary-chev { transform: rotate(180deg); }
 .access-role-holders ul { margin: var(--space-3) 0 0; padding-left: var(--space-6); }
 .access-role-holders li { overflow-wrap: anywhere; }
 
@@ -2240,6 +2313,10 @@ html[data-motion='off'] .spinner {
   justify-content: center;
   gap: var(--space-4);
   margin-top: var(--space-3);
+}
+/* Link dáng nút ("Về trang chủ") cùng cỡ chữ với nút "Quay lại" bên cạnh — `.linkbtn` mặc định nhỏ hơn. */
+.error-actions > .linkbtn {
+  font-size: inherit;
 }
 .error-search {
   border: 0;

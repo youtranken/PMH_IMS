@@ -24,7 +24,7 @@ const stickyTop = FILES.flatMap((file) =>
 describe('khối dính trong trang không chui vào dải topbar', () => {
   it('có ít nhất các khối dính đã biết (bài không rỗng)', () => {
     const selectors = stickyTop.map((rule) => rule.selector);
-    expect(selectors).toContain('.tabs');
+    expect(selectors).toContain('.tabs-shell');
     expect(selectors).toContain('.detail-rail');
   });
 

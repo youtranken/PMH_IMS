@@ -335,7 +335,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
+    await expect(page.getByText('Két chưa có ngăn nào.')).toBeVisible();
 
     // --- CẤT.
     await expect(
@@ -493,7 +493,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await expect(page.getByText('Đã duyệt.')).toBeVisible();
 
     // Hàng chờ phải sạch — cả hai phiếu đã có người quyết.
-    await expect(page.getByText('Không có yêu cầu nào đang chờ')).toBeVisible();
+    await expect(page.getByText('Không có yêu cầu nào đang chờ.')).toBeVisible();
 
     // --- THU HỒI SỚM. Phiếu đã duyệt nằm ở tab Nhật ký; chỉ phiếu còn hiệu lực mới có nút này
     //     (phiếu bị từ chối thì không có). Quyền đang chạy nay được ghim thành nhóm "Đang có hiệu lực" ở đầu tab (VLT-020) nên

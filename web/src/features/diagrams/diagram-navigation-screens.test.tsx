@@ -295,7 +295,7 @@ describe('Trình chiếu', () => {
   it('nhánh chưa có bản chính thức nào: báo rõ, không tải nội dung', async () => {
     const fetchMock = routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [node('d3', null, 'Nháp E2E', { officialVersionId: null })]) });
     renderAt('/diagrams/d3/present');
-    expect(await screen.findByText('Nhánh này chưa có bản chính thức nào để trình chiếu')).toBeInTheDocument();
+    expect(await screen.findByText('Nhánh này chưa có bản chính thức nào để trình chiếu.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content'))).toBe(false);
   });
 });

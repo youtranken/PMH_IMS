@@ -10,6 +10,7 @@ import {
   uniqueStamp,
   stepUpViaApi,
 } from './helpers';
+import { openDeviceZone } from './device-zone';
 
 test.beforeEach(() => {
   resetUsers();
@@ -100,7 +101,7 @@ test.describe('Đường truyền ISP', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Đường truyền ISP' })).toBeVisible();
     // Hỏi trong KHU "Đường truyền ISP": bản đồ quan hệ ở đầu trang cũng in hotline ra một dòng.
-    const ispSection = page.getByRole('region', { name: 'Đường truyền ISP' });
+    const ispSection = await openDeviceZone(page, 'Đường truyền ISP');
     await expect(ispSection.getByText('1800 8098')).toBeVisible();
     await expect(ispSection.getByText(`HD-FW-${stamp}`)).toBeVisible();
   });

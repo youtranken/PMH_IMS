@@ -161,7 +161,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await setUp(page);
     await page.goto('/nat?q=khong-co-rule-nao-E2E');
     await expect(page.getByText('Không có luật nào khớp bộ lọc.')).toBeVisible();
-    await expect(page.getByText('Chưa có luật NAT nào')).toHaveCount(0);
+    await expect(page.getByText('Chưa có luật NAT nào.')).toHaveCount(0);
     await expect(page.getByRole('searchbox')).toHaveValue('khong-co-rule-nao-E2E');
   });
 });

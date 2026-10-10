@@ -72,24 +72,38 @@ function mockFetch(state: { own: boolean; model: boolean }) {
   return calls;
 }
 
-function renderLook(canEditModel: boolean, canEdit = true) {
-  return renderWithI18n(
+/** Khu gập sẵn (Q-27 bổ sung): mở ra rồi mới tới hai ô ảnh. */
+async function renderLook(canEditModel: boolean, canEdit = true) {
+  const view = renderWithI18n(
     <ToastProvider>
       <DeviceDiagramLook deviceId="d1" deviceTypeId="ty1" deviceTypeName="Switch" csrfToken="t" canEdit={canEdit} canEditModel={canEditModel} />
     </ToastProvider>,
   );
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Mở rộng Hình dùng trên sơ đồ' }));
+  return view;
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
+  it('gập sẵn: dòng tiêu đề nói mỗi mặt đang dùng ảnh gì, chưa có ô ảnh nào', async () => {
+    mockFetch({ own: false, model: true });
+    renderWithI18n(
+      <ToastProvider>
+        <DeviceDiagramLook deviceId="d1" deviceTypeId="ty1" deviceTypeName="Switch" csrfToken="t" canEdit canEditModel={false} />
+      </ToastProvider>,
+    );
+    expect(await screen.findByText(/Mặt trước: Ảnh chung của model C9300 · Mặt sau:/)).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Mặt trước' })).toBeNull();
+  });
+
   it('đang dùng ảnh model: nói rõ mức + ảnh xem trước; KHÔNG có ô tải ảnh riêng ở mặt đó', async () => {
     mockFetch({ own: false, model: true });
-    renderLook(false);
+    await renderLook(false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     expect(await within(front).findByText('Ảnh chung của model C9300')).toBeInTheDocument();
     expect(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toHaveAttribute('src', '/api/v1/devices/d1/photo/front?v=f-model');
-    expect(screen.getByText(/Ảnh của model dùng cho MỌI máy cùng model và thắng ảnh riêng/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Giải thích: Hình dùng trên sơ đồ' })).toBeInTheDocument();
     // Thành viên không đổi ảnh model.
     expect(within(front).queryByText(/mọi máy cùng model/)).toBeNull();
     expect(within(front).getByText('Máy dùng ảnh của model C9300 — đổi ảnh ở Danh mục › Model thiết bị.')).toBeInTheDocument();
@@ -98,7 +112,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
 
   it('model chưa có ảnh: tải ảnh riêng → lên giấy tờ của máy rồi chọn làm ảnh riêng', async () => {
     const calls = mockFetch({ own: false, model: false });
-    renderLook(false);
+    await renderLook(false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Biểu tượng loại Switch');
     const user = userEvent.setup();
@@ -113,7 +127,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
 
   it('có ảnh riêng: "Bỏ ảnh riêng" gửi null, về biểu tượng loại', async () => {
     const calls = mockFetch({ own: true, model: false });
-    renderLook(false);
+    await renderLook(false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Ảnh riêng của máy này');
     await userEvent.setup().click(within(front).getByRole('button', { name: 'Bỏ ảnh riêng — Mặt trước' }));
@@ -124,7 +138,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
 
   it('không ảnh nào → "Biểu tượng loại Switch"; SA/Admin tải ảnh model: tạo hàng model, tải lên model, chọn', async () => {
     const calls = mockFetch({ own: false, model: false });
-    renderLook(true);
+    await renderLook(true);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     expect(await within(front).findByText('Biểu tượng loại Switch')).toBeInTheDocument();
     expect(within(front).queryByRole('img', { name: /Ảnh Mặt trước/ })).toBeNull();
@@ -141,7 +155,7 @@ describe('DeviceDiagramLook — khu "Hình dùng trên sơ đồ"', () => {
 describe('DeviceDiagramLook — ảnh chung từ ảnh riêng, chỉ xem, lỗi', () => {
   it('SA/Admin: "Dùng ảnh này cho mọi máy cùng model" lấy đúng tệp ảnh riêng, tải lên model rồi chọn', async () => {
     const calls = mockFetch({ own: true, model: false });
-    renderLook(true);
+    await renderLook(true);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Ảnh riêng của máy này');
     await userEvent.setup().click(within(front).getByRole('button', { name: 'Dùng ảnh này cho mọi máy cùng model — Mặt trước' }));
@@ -155,7 +169,7 @@ describe('DeviceDiagramLook — ảnh chung từ ảnh riêng, chỉ xem, lỗi'
 
   it('máy thanh lý → thấy ảnh + mức, không nút nào', async () => {
     mockFetch({ own: true, model: false });
-    renderLook(true, false);
+    await renderLook(true, false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Ảnh riêng của máy này');
     expect(within(front).queryByRole('button')).toBeNull();
@@ -168,7 +182,7 @@ describe('DeviceDiagramLook — ảnh chung từ ảnh riêng, chỉ xem, lỗi'
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
       String(input).endsWith('/api/v1/files') ? Promise.resolve(jsonResponse(400, { message: 'Tệp ảnh hỏng.' })) : base(input, init),
     ));
-    renderLook(false);
+    await renderLook(false);
     const front = await screen.findByRole('group', { name: 'Mặt trước' });
     await within(front).findByText('Biểu tượng loại Switch');
     await userEvent.setup().upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'a.png', { type: 'image/png' }));

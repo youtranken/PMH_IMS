@@ -1059,6 +1059,30 @@ phần mềm / danh mục, trang chi tiết mỗi máy một kiểu vì ô trố
   software, AD-3), liên kết ghế ↔ lần gán máy, cột số hợp đồng chung và cờ "mỗi ghế riêng" trên
   `software`, loại chủ sở hữu file mới cho giấy tờ của ghế. Có `@Audited` + `@Roles` + lịch sử như
   mọi đường ghi.
+- **Bổ sung 10/10/2026** (chủ dự án duyệt đợt soát UX sau khi port): **một thông tin chỉ nói một
+  lần** trên trang chi tiết.
+  - Thứ đã có ở dải 4 ô thì **không lặp** ở Thông số / Thông tin hay ở cột phải. Hạn (bảo hành của
+    máy, hạn của phần mềm) nói ở ô của dải: huy hiệu còn bao lâu, khoảng ngày, thanh thời gian gọn.
+  - Phần mềm **bỏ thẻ "Thẻ định danh"** ở cột phải; trạng thái lên dòng dưới mã. Cột phải chỉ còn
+    khi có thẻ riêng (các đợt mua, tên miền); không có thì trang một cột.
+  - Thiết bị: cột phải là "Trong tủ" + thẻ Nhà cung cấp (liên hệ gọi bảo hành, ngày tạo / sửa).
+    Khu "Hình dùng trên sơ đồ" gập sẵn; dòng tiêu đề nói mỗi mặt đang dùng ảnh gì, lời giải
+    thích dài chuyển vào nút (i). Trên máy tính, các khu
+    Địa chỉ IP / NAT / Đường truyền **gập sẵn** vì bản đồ quan hệ đã tóm tắt; bấm nút trên bản đồ
+    thì mở đúng khu. Trên điện thoại (không có bản đồ) vẫn mở sẵn.
+- **Soát UX toàn portal 10/10/2026** (chủ dự án duyệt sửa hết danh sách soát U-01…U-40):
+  - Một kiểu **chip bật/tắt bộ lọc** cho mọi màn (`FilterToggle`; ô tick trong thanh lọc cùng
+    dáng). Ô "Sắp theo…" không tô xanh như bộ lọc; phạm vi mặc định của Sắp hết hạn cũng không.
+  - Nút chính trong dòng bảng ("Sửa", "Cấp IP") là **nút có viền** như "Gia hạn" / "Mở két"; ô
+    không có menu ⋮ vẫn giữ chỗ để cột thao tác thẳng hàng. Nút phân trang cao bằng ô "Số dòng".
+  - Nhóm nút chọn trên điện thoại **một hàng, cuộn ngang, có bóng ở mép**; Két sắt và Kho thanh
+    lý có lựa chọn "Tất cả" / "Mọi lúc". Ô thống kê 4 hoặc 6 ô chia 2 cột trên điện thoại.
+  - Vai trò: Super Admin màu nhấn thương hiệu, Quản trị xanh thông tin — **không dùng đỏ / cam**
+    (màu lỗi, cảnh báo). Ô ngày chỉ một biểu tượng lịch. Khung trống kết thúc bằng dấu chấm.
+  - Gỡ đường `/documents` (chưa từng có màn; vào là 404 mà tiêu đề vẫn ghi "Tài liệu").
+  - **Giữ nguyên có chủ ý:** nút thanh lưu Tham số cỡ nhỏ (Q-21); số + danh từ viết hoa (Q-24);
+    thứ tự "Danh sách | Bản đồ" theo chế độ mặc định của từng màn; bố cục bản đồ Sơ đồ mạng
+    (04/10); "›" chỉ ở ô thống kê là link (ô là bộ lọc thì không); màu chữ nút chính (token).
 
 ### Q-09 · Tài liệu
 

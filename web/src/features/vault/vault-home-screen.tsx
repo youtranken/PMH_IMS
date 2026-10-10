@@ -19,6 +19,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { useListUrlState } from '@/ui/use-list-url-state';
 import { VaultPanel } from '@/ui/vault-panel';
+import { ChipToggleGroup } from '@/ui/chip-toggle-group';
 import { foldSearch } from '@/lib/search-fold';
 
 interface VaultOwner {
@@ -159,12 +160,6 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   };
 
   const all = owners.data ?? [];
-  const toggle = (kind: OwnerGroup) =>
-    url.setFilter(
-      'kinds',
-      (kinds.includes(kind) ? kinds.filter((item) => item !== kind) : [...kinds, kind]).join(','),
-    );
-
   /*
    * ĐẾM TRÊN TOÀN BỘ, không theo tập đang lọc — cùng luật với Kho thanh lý và Dải mạng.
    * Con số trên nút trả lời "có bao nhiêu thứ thuộc loại này", nên nó không được nhảy theo
@@ -236,6 +231,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       {
         id: 'actions',
         header: t('common.actions'),
+        // Tiêu đề bám phải như nút "Mở két" bên dưới (`.col-center` ở thead căn phải).
+        meta: { className: 'col-center' },
         enableSorting: false,
         cell: ({ row }) => <OpenButton row={row.original} onOpen={setOpened} />,
       },
@@ -272,28 +269,24 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             không biết thuộc về đâu. */}
         {/* Nút bật/tắt độc lập (`.segmented` + `aria-pressed`) như ba chip trạng thái của Sổ NAT —
             không phải nút `primary`: chip đang bật mà mang màu nút chính thì lẫn với CTA. */}
-        <div role="group" aria-label={t('vaultHome.filterKind')} className="segmented">
-          {OWNER_GROUPS.map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              aria-pressed={kinds.includes(kind)}
-              onClick={() => toggle(kind)}
-            >
-              {/* Số đếm đi kèm nhãn: "có đường truyền nào giữ két không" là câu hỏi màn này
-                  sinh ra để trả lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc — và
-                  bấm ra bảng trống thì không phân biệt được "không có" với "mình lọc sai". */}
-              {t(groupLabelKey(kind))}{' '}
-              <span className="seg-count">{countOf(kind)}</span>
-            </button>
-          ))}
-        </div>
-        {kinds.length > 0 ? (
-          /* Đường GỠ lọc — nút nhẹ, KHÔNG nằm trong dải chip để khỏi trông như một chip lọc nữa. */
-          <button type="button" className="btn sm ghost" onClick={() => url.setFilter('kinds', '')}>
-            {t('vaultHome.clearKinds')}
-          </button>
-        ) : null}
+        {/* Chip "Tất cả" đứng đầu như Sắp hết hạn / Kho thanh lý: luôn có một nút đang bật, và
+            đó cũng là đường gỡ lọc. Số đếm đi kèm nhãn: "có đường truyền nào giữ két không" là câu
+            màn này sinh ra để trả lời — bấm ra bảng trống thì không phân biệt được "không có"
+            với "mình lọc sai". */}
+        <ChipToggleGroup
+          label={t('vaultHome.filterKind')}
+          allLabel={t('vaultHome.allKinds')}
+          options={OWNER_GROUPS.map((kind) => ({
+            value: kind,
+            label: (
+              <>
+                {t(groupLabelKey(kind))} <span className="seg-count">{countOf(kind)}</span>
+              </>
+            ),
+          }))}
+          value={kinds}
+          onChange={(next) => url.setFilter('kinds', next.join(','))}
+        />
       </FilterBar>
 
       {owners.isLoading ? (

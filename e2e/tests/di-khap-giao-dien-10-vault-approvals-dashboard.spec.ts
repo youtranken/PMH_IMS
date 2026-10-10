@@ -652,7 +652,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.getByRole('tab', { name: 'Yêu cầu của tôi', exact: true }).click();
     await expect(exportBtn, 'ngăn "Yêu cầu của tôi" không phải sổ trình auditor').toHaveCount(0);
     await expect(
-      page.getByRole('tabpanel').getByText('Bạn chưa gửi yêu cầu nào'),
+      page.getByRole('tabpanel').getByText('Bạn chưa gửi yêu cầu nào.'),
       'SA chưa tự xin bao giờ — ngăn này phải nói ĐÚNG câu đó, không mượn câu của Nhật ký',
     ).toBeVisible();
   });

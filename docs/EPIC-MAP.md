@@ -1153,6 +1153,7 @@ Không có khoá `system_config` mới.
 | `DeviceListItem.modelPhotoVersion` | `devices.service` | Ảnh cột đầu bảng thiết bị |
 | `FactStrip`, `SpecList`, `FoldSection`, `TabItem.group`, `.table-cards`, Dialog `eyebrow`, `rackWindow` | `web/src/ui`, `web/src/css`, `web/src/lib/rack-units.ts` | Đã khai SHARED-REGISTRY |
 | `DeviceSoftwareTab` (ngoại lệ xuyên feature) | `features/software/device-software-tab.tsx` | Tab Phần mềm của trang thiết bị: gán đi CHÍNH `AssignDialog` |
+| `DetailSection` `action` / `foldable` / `id`; mũi tên cuộn của `Tabs`; `.inline-list` | `web/src/ui/detail-layout.tsx`, `web/src/ui/tabs.tsx`, `css/detail-tabs.css` | Đợt soát UX 10/10: nút việc cạnh tiêu đề khu, khu gập có dòng tóm tắt (giữ trạng thái ở trang khi cần mở từ chỗ khác). Mọi thanh tab dài có mũi tên tròn trên máy tính |
 
 ### Nợ kỹ thuật cố ý mang sang
 
@@ -1172,3 +1173,5 @@ Không có khoá `system_config` mới.
    `features/admin/audit-actions.ts` (màn Nhật ký) — `audit-action-rollcall.test.ts` bắt chỗ thứ hai.
 3. **CRLF**: `vi.ts`, nhiều spec và CSS là CRLF; sửa bằng script phải mở `newline=''`.
 4. **Thêm mục vào nhóm menu làm tràn ở 1366×768**: thêm `@media (max-height: 800px)` thu đệm `.nav-item`.
+5. **Một thông tin nói một lần** (bổ sung 10/10): thứ đã ở dải 4 ô thì không lặp ở Thông số / cột phải. Thêm ô mới vào trang chi tiết thì xem dải 4 ô đã nói chưa.
+6. **Số + danh từ viết hoa** (Q-24, `term-consistency.test.ts`): "2 Đường", "1 Tệp" — đừng hạ chữ thường cho "đều".

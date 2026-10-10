@@ -16,6 +16,7 @@ import {
 } from '@/ui/device-type-filter';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
+import { FilterToggle } from '@/ui/filter-toggle';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { RowActions } from '@/ui/row-actions';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
@@ -318,20 +319,15 @@ export function NatScreen({ me }: { me: Me }) {
             </button>
           ))}
         </div>
-        <div className="segmented" role="group" aria-label={t('nat.sensitive')}>
-          <button
-            type="button"
-            className={filters.sensitive ? 'on' : undefined}
-            aria-pressed={filters.sensitive === '1'}
-            onClick={() => url.setFilter('sensitive', filters.sensitive ? '' : '1')}
-          >
-            {t('nat.sensitiveOnly')}
-          </button>
-        </div>
+        <FilterToggle pressed={filters.sensitive === '1'} onChange={(on) => url.setFilter('sensitive', on ? '1' : '')}>
+          {t('nat.sensitiveOnly')}
+        </FilterToggle>
         <Select
           value={sortKey}
           onChange={(value) => url.setSorting({ key: value, desc: false })}
           ariaLabel={t('nat.sortBy')}
+          /* Sắp xếp không phải bộ lọc: tô xanh thì người dùng tìm nút "xóa lọc" không có. */
+          indicateFilled={false}
           options={NAT_SORT_KEYS.map((key) => ({ value: key, label: t(SORT_LABEL[key]) }))}
         />
       </FilterBar>

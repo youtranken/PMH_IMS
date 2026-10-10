@@ -360,7 +360,7 @@
   .rail-card .rail-row-wide { grid-column: 1 / -1; }
   /* Thanh tab dính ngay dưới topbar (56px ở `.topbar`, base.css): trang chi tiết dài, cuộn
      xuống đọc lịch sử rồi muốn sang tab khác thì không phải cuộn ngược lên đầu. */
-  .detail-main > .tabs {
+  .detail-main > .tabs-shell {
     position: sticky;
     top: 56px;
     z-index: 4;
@@ -474,6 +474,35 @@
 .tabs::-webkit-scrollbar {
   display: none;
 }
+/* `.tabs-shell` (dính, khai ở trên) cũng là chỗ neo cho hai mũi tên cuộn. */
+.tabs-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.tabs-arrow:hover { color: var(--ink); border-color: var(--border-2); }
+.tabs-arrow[data-side='start'] { left: 0; }
+.tabs-arrow[data-side='end'] { right: 0; }
+/* Mũi tên đứng TRONG phần đệm của khung, không đè lên chữ tab. */
+@media (hover: hover) {
+  .tabs-shell[data-overflow='true'] { padding-inline: 34px; }
+}
+/* Điện thoại vuốt được: mép mờ là đủ, mũi tên chỉ che chữ tab. */
+@media (hover: none) {
+  .tabs-arrow { display: none; }
+}
 /*
  * Mép còn tab khuất thì mờ dần (`data-more-*` do `ui/tabs.tsx` đặt). Thanh cuộn đã bị giấu,
  * nên thiếu dấu này thì tab cuối nhìn thấy trông như tab cuối cùng. Dùng `mask` chứ không phủ
@@ -529,15 +558,19 @@
 }
 /*
  * Thanh tab DÍNH khi cuộn. Bảng port map và lịch sử dài; cuộn tới dòng 40 mà muốn đổi tab
- * thì không phải cuộn ngược lên đầu trang.
+ * thì không phải cuộn ngược lên đầu trang. Phần tử dính là KHUNG `.tabs-shell` (`ui/tabs.tsx`
+ * bọc thanh tab để neo mũi tên cuộn): dính ở `.tabs` bên trong thì nó không ra khỏi được hộp cha
+ * cao đúng bằng nó, tức là không dính gì cả.
  */
-.tabs {
+.tabs-shell {
   position: sticky;
   /* Dính ngay DƯỚI topbar (56px, `top: 0`, base.css). `top: 0` thì thanh tab trượt vào đúng dải
      topbar và — z-index cao hơn — che mất ô tìm Ctrl+K cùng nút đổi giao diện. */
   top: 56px;
   z-index: var(--z-sticky);
   background: var(--canvas);
+}
+.tabs {
   /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối
      khai trên), mà `button:focus-visible` của `base.css` vẽ vòng bằng `box-shadow: 0 0 0 3px`
      — bóng NGOÀI, nên nó bị khung cắt cụt. Người đi bằng phím mũi tên (roving tabindex ở
@@ -558,7 +591,7 @@
  * Trong hộp thoại, khung cuộn là `.sheet-body`, không phải trang: `top: 56px` (chừa topbar) làm thanh
  * tab dính lơ lửng giữa thân hộp và che mất dòng nội dung cuộn dưới nó (ô chọn phiên bản để so sánh).
  */
-.sheet-body .tabs {
+.sheet-body .tabs-shell {
   top: 0;
 }
 /*
@@ -598,6 +631,18 @@
    (cố ý — phần lớn chỗ dùng nó là hai ba thứ nằm ngang), nên bốn nút lọc kèm số đếm cộng nút
    "Bỏ lọc" đẩy cả trang tràn ngang ở 390px. Bài kiểm 390px của màn Két sắt bắt đúng chuyện đó. */
 .filter-bar [role='group'] {
+  flex-wrap: wrap;
+}
+/* Dải nút (`.segmented`) thì KHÔNG xuống dòng: nó tự cuộn ngang trong khung, có bóng ở mép
+   (form-layout.css) — gãy hàng thì một nút lạc xuống dòng dưới. Cao bằng ô chọn / chip bên cạnh
+   (38px): thấp hơn thì cả hàng so le. */
+.filter-bar .segmented {
+  flex-wrap: nowrap;
+  min-height: 2.375rem;
+  align-items: center;
+}
+/* Chip chọn nhiều có `wrap` (lọc loại thiết bị) vẫn xuống dòng như cũ. */
+.filter-bar .segmented.wrap {
   flex-wrap: wrap;
 }
 /* Ô ngày trong thanh lọc: bề ngang vừa một ngày, không chiếm cả hàng. Hai ô "từ – đến" đi
@@ -661,7 +706,24 @@
     flex: 1 1 100%;
   }
 }
+/* Ô tra IP: nút "Tra" đứng CUỐI ô tìm ở mọi cỡ màn — một mình một hàng thì trông như nút lạc. */
+.filter-bar.ip-lookup {
+  flex-wrap: nowrap;
+}
+.filter-bar.ip-lookup > .grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Điện thoại hẹp: ô chọn một hàng riêng. Nửa hàng chỉ còn ~170px, chữ "Tất cả nhà cung cấp" /
+   "Đang theo dõi (trừ Đã thanh lý)" cụt thành "Tất cả nhà cu…" — không biết đang lọc gì. */
+@media (max-width: 480px) {
+  .filter-bar > .fsel {
+    flex-basis: 100%;
+  }
+}
 input.search {
+  /* Chữ gợi ý dài hơn ô thì kết bằng "…" chứ không cụt giữa chữ ("…hoặc lý d"). */
+  text-overflow: ellipsis;
   background-image: var(--icon-search);
   background-repeat: no-repeat;
   background-position: left 0.65rem center;
@@ -770,6 +832,16 @@ input.search {
   }
   .table-stack td .cell-sub {
     text-align: right;
+  }
+  /* Ô báo "không có dòng nào" (một ô trải mọi cột, không nhãn): không chia lưới nhãn | giá trị,
+     nếu không khung trống bị dồn sang nửa phải. */
+  .table-stack td[colspan] {
+    display: block;
+    text-align: left;
+    padding: 0;
+  }
+  .table-stack td[colspan]::before {
+    content: none;
   }
   /* Ô trống ("—") không đáng một dòng trên thẻ: thẻ cổng 7 dòng toàn gạch thành 2–3 dòng. */
   .table-stack td[data-empty] {
@@ -892,7 +964,8 @@ html[data-motion='off'] .skeleton {
 .fact-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
+  /* Chừa khoảng tới tab / cột phải: sát nhau thì dải 4 ô đọc như dính vào thẻ bên dưới. */
+  margin: 0 0 var(--space-7);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -1000,3 +1073,25 @@ html[data-motion='off'] .skeleton {
 }
 .rack-peek-u { color: var(--ink-2); font-size: var(--fs-2xs); }
 .rack-peek-code { min-width: 0; overflow-wrap: anywhere; }
+
+/* --- Đầu khu có nút / gập được (ui/detail-layout.tsx `DetailSection`) ------ */
+.detail-section-head { flex-wrap: wrap; }
+.detail-section-summary { flex-basis: 100%; min-width: 0; }
+.detail-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+/* Danh sách ngắn xếp ngang (bản vẽ có máy này…): không gạch đầu dòng — chip đã là dấu mục. */
+.inline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+.inline-list > li { display: inline-flex; align-items: center; gap: var(--space-2); }
+/* Khu gập: không chừa khoảng dưới tiêu đề khi chẳng có gì bên dưới. */
+.card > .detail-section-head:last-child { margin-bottom: 0; }

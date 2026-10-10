@@ -172,10 +172,14 @@ const STATUS_TONE: Record<AccountStatus, string> = {
   disabled: 'danger',
 };
 
-/** Vai cao nhất đậm nhất: SA (toàn quyền) viền đỏ, Quản trị cảnh báo, Thành viên trung tính. */
+/**
+ * Vai cao nhất đậm nhất: SA màu nhấn thương hiệu, Quản trị xanh thông tin, Thành viên trung tính.
+ * KHÔNG dùng đỏ / cam: hai màu đó là lỗi và cảnh báo — "Super Admin" đỏ cạnh "Còn 1 ngày" đỏ
+ * đọc thành tài khoản đang có vấn đề.
+ */
 const ROLE_TONE: Record<Me['role'], string> = {
-  sa: 'danger',
-  admin: 'warn',
+  sa: 'brand',
+  admin: 'info',
   member: 'muted',
 };
 
@@ -519,11 +523,12 @@ export function AccountsScreen({ me }: { me: Me }) {
   const nameCell = (account: AccountRow) => (
     <>
       {account.fullName}
-      {account.id === me.id ? <span className="badge info plain">{t('accounts.you')}</span> : null}
-      {/* Mã nhân viên đi cùng tên vì đó là cách Nhân sự gọi một người; email và SĐT xuống
-          dòng nhỏ. Bảng đã 6 cột, thêm hai cột ngắn là bắt cuộn ngang để đọc một con số. */}
-      {account.employeeCode ? <span className="mono"> · {account.employeeCode}</span> : null}
+      {account.id === me.id ? <> <span className="badge info plain">{t('accounts.you')}</span></> : null}
+      {/* Mã nhân viên đứng ĐẦU dòng phụ cùng email và SĐT: đi sau tên thì tên dài đẩy nó rớt
+          xuống một dòng riêng mở đầu bằng "·". Bảng đã 6 cột, thêm cột ngắn là bắt cuộn ngang. */}
       <span className="cell-sub">
+        {account.employeeCode ? <span className="mono">{account.employeeCode}</span> : null}
+        {account.employeeCode ? ' · ' : ''}
         {account.email}
         {account.phone ? ` · ${formatPhone(account.phone)}` : ''}
       </span>

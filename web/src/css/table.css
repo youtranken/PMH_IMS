@@ -315,6 +315,11 @@ table.table tbody tr.row-suspended td:first-child {
   min-width: 2rem;
   min-height: 1.9rem;
 }
+/* Ô giữ chỗ bằng nút ⋮ cho dòng không có menu — cột thao tác thẳng hàng. */
+.kebab-slot {
+  display: inline-block;
+  min-width: 2rem;
+}
 .row-actions .kebab[aria-expanded='true'] {
   background: var(--muted-soft);
   color: var(--ink);
@@ -690,6 +695,8 @@ table.table .col-sticky-end::after {
   font-weight: 600;
 }
 .table tr.row-group th {
+  /* Cùng lề trái với ô dữ liệu: thiếu lề thì "Tháng 10/2026" dính sát viền thẻ, lệch cột. */
+  padding: var(--space-4) var(--space-7);
   background: var(--surface-2);
   color: var(--ink-2);
   font-size: var(--fs-xs);
@@ -784,6 +791,14 @@ table.table .col-sticky-end::after {
 .list-card-sub {
   font-weight: 500;
   overflow-wrap: anywhere;
+}
+/* Cụm không ngắt (email) dài hơn thẻ thì cắt "…" thay vì tràn khỏi thẻ. */
+.list-card-sub .nowrap {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 .list-card-meta {
   min-width: 0;
@@ -974,11 +989,17 @@ table.table tbody tr.row-alert td:first-child {
 .list-card.row-alert {
   box-shadow: inset 3px 0 0 var(--danger);
 }
-/* Nút mở chi tiết ở ô đầu dòng nhật ký — trông như chữ, bấm được bằng bàn phím. */
+/* Nút mở chi tiết ở ô đầu dòng nhật ký — trông như CHỮ thường (màu chữ, độ đậm thường), gạch
+   chân khi rê: xanh đậm thì cột giờ nặng hơn cả nội dung và đọc như một dãy link. */
 button.audit-open {
   padding: 0;
   font-size: inherit;
-  color: var(--primary-ink);
+  font-weight: 400;
+  color: var(--ink);
+}
+button.audit-open:hover {
+  background: none;
+  text-decoration: underline;
 }
 /* Khung chi tiết một dòng nhật ký: nhãn trái – giá trị phải, xuống dòng được ở 390px. */
 .audit-detail {

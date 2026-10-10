@@ -777,7 +777,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
      */
     await page.goto('/nat');
     await expect(page.getByRole('heading', { level: 1, name: 'Sổ NAT' })).toBeVisible();
-    await expect(page.getByText('Chưa có luật NAT nào')).toBeVisible();
+    await expect(page.getByText('Chưa có luật NAT nào.')).toBeVisible();
     await expect(
       page.getByRole('main').getByRole('button'),
       'đầu trang hai nút + ba ô lọc (site · router · giao thức) + ba chip trạng thái + chip port nhạy cảm + ô sắp xếp + nút "Thêm luật NAT" của câu rỗng (Q-19); nút nào khác mọc ra ở đây là thứ không ai khai',
@@ -862,7 +862,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       page.getByText('Không có luật nào khớp bộ lọc.'),
       'lọc site mà bảng đứng im nghĩa là tham số không đi tới API',
     ).toBeVisible();
-    await expect(page.getByText('Chưa có luật NAT nào')).toHaveCount(0);
+    await expect(page.getByText('Chưa có luật NAT nào.')).toHaveCount(0);
   });
 
   /**
@@ -1046,7 +1046,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await form.getByRole('button', { name: 'Hủy' }).click();
     await confirmAction(page, 'Bỏ và đóng');
     await expect(form).toHaveCount(0);
-    await expect(page.getByText('Chưa có luật NAT nào'), 'bấm Hủy là không ghi gì cả').toBeVisible();
+    await expect(page.getByText('Chưa có luật NAT nào.'), 'bấm Hủy là không ghi gì cả').toBeVisible();
   });
 
   /**

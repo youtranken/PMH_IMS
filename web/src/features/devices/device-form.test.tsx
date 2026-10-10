@@ -219,7 +219,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Truy cập quản trị', 'Ảnh và giấy tờ', 'Ghi chú']) {
       expect(screen.getByRole('button', { name: new RegExp(`^${fold}`) })).toHaveAttribute('aria-expanded', 'false');
     }
-    expect(screen.getByRole('button', { name: /^Mua sắm và bảo hành/ })).toHaveAccessibleName(expect.stringContaining('0/5'));
+    expect(screen.getByRole('button', { name: /^Mua sắm và bảo hành/ })).toHaveAccessibleName(expect.stringContaining('chưa khai'));
     // Ô trong khối gập vẫn ở trong DOM (hộp đo "đang gõ dở" bằng chúng) nhưng không tới được.
     expect(screen.queryByRole('textbox', { name: 'Ghi chú' })).toBeNull();
     await userEvent.setup().click(screen.getByRole('button', { name: /^Ghi chú/ }));

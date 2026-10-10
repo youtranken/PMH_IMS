@@ -672,8 +672,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Site',
         'Tủ mạng',
         // Khối gập (Q-27): tên nút = tiêu đề + số ô đã khai.
-        'Người dùng và phòng ban 0/2',
-        'Mua sắm và bảo hành 0/5',
+        'Người dùng và phòng ban chưa khai',
+        'Mua sắm và bảo hành chưa khai',
         'Nhà cung cấp',
         'Ngày mua',
         'Bảo hành từ',
@@ -682,14 +682,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+2 năm',
         '+3 năm',
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
-        'Truy cập quản trị 0 Đường',
+        'Truy cập quản trị chưa khai',
         '+ Thêm đường truy cập',
         // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt; giấy tờ cùng khối.
-        'Ảnh và giấy tờ 0 Tệp',
+        'Ảnh và giấy tờ chưa khai',
         'Tải ảnh lên — Mặt trước',
         'Tải ảnh lên — Mặt sau',
         'Chọn file để đính kèm',
-        'Ghi chú trống',
+        'Ghi chú chưa khai',
         'Hủy',
         'Lưu và nhân bản',
         'Lưu',
@@ -901,8 +901,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Trạng thái',
         'Site',
         'Tủ mạng',
-        'Người dùng và phòng ban 2/2',
-        'Mua sắm và bảo hành 1/5',
+        'Người dùng và phòng ban 2/2 ô',
+        'Mua sắm và bảo hành 1/5 ô',
         'Nhà cung cấp',
         'Ngày mua',
         'Bảo hành từ',
@@ -911,7 +911,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+2 năm',
         '+3 năm',
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
-        'Truy cập quản trị 0 Đường',
+        'Truy cập quản trị chưa khai',
         '+ Thêm đường truy cập',
         // Khu "Ảnh thiết bị" (Q-23): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
         'Ảnh và giấy tờ',
@@ -1055,29 +1055,28 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Sửa hồ sơ',
         `Thao tác với ${code}`,
         'Cấp IP',
-        'Bổ sung 9 ô còn thiếu',
-        // Ô ảnh hai mặt của khu "Hình dùng trên sơ đồ" (Q-23).
-        'Tải ảnh lên — Mặt trước',
-        'Tải ảnh lên — Mặt sau',
+        'Bổ sung 8 ô còn thiếu',
+        // Khu "Hình dùng trên sơ đồ" (Q-23) gập sẵn (Q-27 bổ sung): chỉ còn nút mở.
+        'Mở rộng Hình dùng trên sơ đồ',
       ]);
     await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' }).getByText('Chưa có IP', { exact: true })).toBeVisible();
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
 
     /*
-     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 10 dòng, cùng thứ tự; ô trống đứng đúng
-     * chỗ và ghi "— chưa khai" (bỏ cách ẩn ô trống: hai máy trông hai kiểu, người đọc không biết
-     * "không thấy" là chưa khai hay không có).
+     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 9 dòng, cùng thứ tự; ô trống đứng đúng
+     * chỗ và ghi "chưa khai" (bỏ cách ẩn ô trống: hai máy trông hai kiểu, người đọc không biết
+     * "không thấy" là chưa khai hay không có). Bảo hành chỉ ở dải 4 ô.
      */
     const spec = panel.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
       'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Bảo hành', 'Phòng ban sử dụng', 'Ghi chú',
+      'Nhà cung cấp', 'Ngày mua', 'Phòng ban sử dụng', 'Ghi chú',
     ]);
     await expect(spec.getByRole('definition').first(), 'loại đã khai thì in giá trị').toHaveText('Switch');
     await expect(
-      spec.getByRole('definition').filter({ hasText: '— chưa khai' }),
-      'chín ô còn lại chưa khai — mỗi ô ghi "— chưa khai" đúng chỗ của nó',
-    ).toHaveCount(9);
+      spec.getByRole('definition').filter({ hasText: 'chưa khai' }),
+      'tám ô còn lại chưa khai — mỗi ô ghi "chưa khai" đúng chỗ của nó',
+    ).toHaveCount(8);
 
     /* ===== TAB PORT MAP ===== */
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
@@ -1138,7 +1137,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       panel.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
       'SA phải có cửa ghi vào két ngay tại hồ sơ máy',
     ).toBeVisible();
-    await expect(panel.getByText('Két chưa có ngăn nào')).toBeVisible();
+    await expect(panel.getByText('Két chưa có ngăn nào.')).toBeVisible();
 
     /* ===== TAB LỊCH SỬ ===== */
     await page.getByRole('tab', { name: 'Lịch sử' }).click();

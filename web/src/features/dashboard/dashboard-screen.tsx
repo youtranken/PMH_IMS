@@ -145,9 +145,10 @@ export function DashboardScreen({ me }: { me: Me }) {
           : t('dashboard.greeting', { name: me.fullName })
       }
       actions={
+        /* Nút phụ có viền như "Xuất Excel" ở các màn khác — nút `ghost` trơn đọc thành chữ thường. */
         <button
           type="button"
-          className="ghost"
+          className="btn"
           onClick={() => void data.refetch()}
           disabled={data.isFetching}
         >

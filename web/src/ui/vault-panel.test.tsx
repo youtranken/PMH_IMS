@@ -836,7 +836,7 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
   it('tiêu đề khu + số ngăn + nút cất cùng một thanh; hộp cất nêu tên máy', async () => {
     renderWith({});
     expect(await screen.findByRole('heading', { name: 'Ngăn két' })).toBeInTheDocument();
-    expect(await screen.findByText('Két chưa có ngăn nào')).toBeInTheDocument();
+    expect(await screen.findByText('Két chưa có ngăn nào.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cất mật khẩu/khóa' }));
     expect(
       await screen.findByRole('dialog', { name: 'Cất mật khẩu/khóa — SW-CORE-01' }),
@@ -845,7 +845,7 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
 
   it('hồ sơ đã khóa: không nút cất, câu rỗng nói đã khóa thay vì mời "cất vào đây"', async () => {
     renderWith({ canEdit: false, locked: true });
-    expect(await screen.findByText('Két chưa có ngăn nào')).toBeInTheDocument();
+    expect(await screen.findByText('Két chưa có ngăn nào.')).toBeInTheDocument();
     expect(screen.getByText(/Hồ sơ đã khóa/)).toBeInTheDocument();
     expect(screen.queryByText(/cất vào đây/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();

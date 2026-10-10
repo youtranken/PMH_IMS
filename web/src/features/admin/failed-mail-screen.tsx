@@ -7,7 +7,7 @@ import { errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
-import { LoadError } from '@/ui/load-state';
+import { EmptyState, LoadError } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 
@@ -99,6 +99,10 @@ export function FailedMailScreen({ me }: { me: Me }) {
       <PageHeader title={t('failedMail.title')} subtitle={t('failedMail.subtitle')} />
       {list.isError ? (
         <LoadError error={list.error} onRetry={() => void list.refetch()} />
+      ) : list.data && list.data.items.length === 0 ? (
+        /* Rỗng thì khung trống THAY bảng như mọi màn danh sách — không lồng khung đứt nét dưới
+           một hàng tiêu đề cột không có dữ liệu nào. */
+        <EmptyState title={t('failedMail.empty')} />
       ) : (
         <DataTable
           data={list.data?.items ?? []}

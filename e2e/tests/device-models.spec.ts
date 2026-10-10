@@ -49,7 +49,8 @@ async function createDevice(page: Page, data: Record<string, unknown>): Promise<
 
 async function openModelsTab(page: Page) {
   await page.goto('/admin/catalog');
-  await page.getByRole('tab', { name: 'Model thiết bị', exact: true }).click();
+  // Tab mang số model như các tab khác ("Model thiết bị 4").
+  await page.getByRole('tab', { name: /^Model thiết bị( \d+)?$/ }).click();
 }
 
 test.describe('Model thiết bị (Q-26)', () => {

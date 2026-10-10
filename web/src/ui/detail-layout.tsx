@@ -133,18 +133,70 @@ export function DetailSection({
   title,
   children,
   compact,
+  action,
+  foldable,
+  id,
 }: {
   title: string;
   children: ReactNode;
   compact?: boolean;
+  /** Nút việc của khu ("Bổ sung N ô"), đứng bên phải tiêu đề — không lọt thỏm cuối khu. */
+  action?: ReactNode;
+  /**
+   * Khu ít dùng mà dài (ảnh trên sơ đồ): gập sẵn, dòng tiêu đề nói tóm tắt để biết có cần mở
+   * không. Nội dung gập thì gỡ khỏi cây, cùng cách với khu IP/NAT của trang thiết bị.
+   */
+  foldable?: {
+    defaultOpen?: boolean;
+    summary?: ReactNode;
+    /** Mở / gập do nơi gọi giữ (bấm ô trên bản đồ quan hệ là mở đúng khu) — có thì bỏ `defaultOpen`. */
+    open?: boolean;
+    onToggle?: () => void;
+  };
+  /** `id` của khu để nơi khác cuộn tới (`#sec-ipam`); tiêu đề vẫn dùng id tự sinh. */
+  id?: string;
 }) {
-  const id = useId();
-  return (
-    <section className={compact ? 'card device-panel' : 'card'} aria-labelledby={id}>
-      <h2 className="form-section-title" id={id}>
+  const { t } = useTranslation();
+  const titleId = useId();
+  const bodyId = useId();
+  const [ownOpen, setOwnOpen] = useState(foldable?.defaultOpen ?? false);
+  const open = foldable?.open ?? ownOpen;
+  const toggle = foldable?.onToggle ?? (() => setOwnOpen((value) => !value));
+  const shown = !foldable || open;
+  const head =
+    action || foldable ? (
+      <div className="form-section-head detail-section-head">
+        <h2 className="form-section-title" id={titleId}>
+          {title}
+        </h2>
+        <span className="detail-section-actions">
+          {shown ? action : null}
+          {foldable ? (
+            <button
+              type="button"
+              className="btn sm ghost"
+              aria-expanded={open}
+              /* Thân khu bị gỡ khỏi cây khi gập: chỉ trỏ tới nó lúc nó có mặt, không thì IDREF hỏng. */
+              aria-controls={open ? bodyId : undefined}
+              aria-label={t(open ? 'detail.sectionCollapse' : 'detail.sectionExpand', { title })}
+              onClick={toggle}
+            >
+              <Chevron direction={open ? 'up' : 'down'} />
+            </button>
+          ) : null}
+        </span>
+        {/* Tóm tắt xuống hàng riêng dưới tiêu đề: nút gập luôn đứng cùng hàng tiêu đề, ở mọi cỡ màn. */}
+        {foldable && !open && foldable.summary ? <span className="muted small detail-section-summary">{foldable.summary}</span> : null}
+      </div>
+    ) : (
+      <h2 className="form-section-title" id={titleId}>
         {title}
       </h2>
-      {children}
+    );
+  return (
+    <section id={id} className={compact ? 'card device-panel' : 'card'} aria-labelledby={titleId}>
+      {head}
+      {shown ? <div id={bodyId}>{children}</div> : null}
     </section>
   );
 }

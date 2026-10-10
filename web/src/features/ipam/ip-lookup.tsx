@@ -43,7 +43,7 @@ export function IpLookup({ subnets }: { subnets: SubnetRow[] }) {
   return (
     <>
       <form
-        className="filter-bar"
+        className="filter-bar ip-lookup"
         role="search"
         onSubmit={(event) => {
           event.preventDefault();

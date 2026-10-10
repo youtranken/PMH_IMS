@@ -117,7 +117,7 @@ describe('Bốn màn tách từ Phần mềm (Q-22) — mỗi màn chỉ hỏi l
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Loại hồ sơ' }));
     const options = screen.getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['Tất cả', 'Tên miền', 'Chứng chỉ SSL']);
+    expect(options).toEqual(['Tất cả loại', 'Tên miền', 'Chứng chỉ SSL']);
   });
 
   it('Tên miền & SSL: cột Tên miền hiện tên đầu + "+N", rê chuột thấy đủ', async () => {

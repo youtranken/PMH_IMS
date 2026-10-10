@@ -297,6 +297,11 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   flex-direction: column;
   gap: var(--space-4);
 }
+/* `flex: 0 0 260px` của dãy thẻ NGANG (≤1100px) mà rơi vào cột dọc này thì thành CHIỀU CAO 260px —
+   thẻ cao gấp đôi nội dung, đáy trống. Ở đây thẻ cao theo nội dung. */
+.subnet-picker .subnet-card {
+  flex: none;
+}
 /* Cột trái cuộn riêng: mép dưới mờ dần báo "còn thẻ bên dưới". Đệm đáy đúng bằng dải mờ nên
    cuộn tới cuối thì thẻ cuối vẫn rõ nét. Chỉ ở khổ rộng — khổ hẹp cột trái nằm ngang. */
 @media (min-width: 1101px) {
@@ -1730,6 +1735,11 @@ button.tree-summary:hover:not(:disabled) {
   margin: 0;
   padding: 0;
 }
+/* Ô "+ Bản vẽ con vào …" mở đầu một hàng mới thì trải cả hàng: nửa ô bỏ trống bên cạnh trông như
+   thiếu một bản vẽ, và chữ dài gãy hai dòng trong nửa ô. */
+.dmap-tiles > .dmap-add:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 .dmap-tile {
   display: flex;
   flex-direction: column;
@@ -1877,6 +1887,12 @@ button.tree-summary:hover:not(:disabled) {
 .dpanel {
   display: flex;
   flex-direction: column;
+}
+/* Panel dùng `TabPanel` (dải chuyển nhanh bản vẽ cùng khu) nhưng KHÔNG cần khoảng đệm 30px của
+   tab trang chi tiết (`[role='tabpanel']`): đầu panel đã có đệm riêng, thêm nữa là một khoảng
+   trống trên tên bản vẽ. */
+.dpanel > [role='tabpanel'] {
+  padding-top: 0;
 }
 .dpanel-top {
   display: flex;

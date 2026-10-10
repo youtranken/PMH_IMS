@@ -62,7 +62,6 @@ export const PATHS = {
   vault: '/vault',
   /** Kho thanh lý — màn TỔNG hợp mọi hồ sơ đã ngừng dùng, không phải một bảng riêng. */
   disposal: '/disposal',
-  documents: '/documents',
 
   adminAccounts: '/admin/accounts',
   adminCatalog: '/admin/catalog',
@@ -124,7 +123,6 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
   { from: '/so-nat', to: PATHS.nat },
   { from: '/duyet-yeu-cau', to: PATHS.approvals },
   { from: '/ket-sat', to: PATHS.vault },
-  { from: '/tai-lieu', to: PATHS.documents },
   { from: '/quan-tri/tai-khoan', to: PATHS.adminAccounts },
   { from: '/quan-tri/danh-muc', to: PATHS.adminCatalog },
   { from: '/quan-tri/quyen-ket-sat', to: PATHS.adminVaultAccess },
@@ -223,7 +221,6 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.approvals]: 'nav.approvals',
   [PATHS.vault]: 'nav.vault',
   [PATHS.disposal]: 'nav.disposal',
-  [PATHS.documents]: 'nav.documents',
   [PATHS.adminAccounts]: 'nav.accounts',
   [PATHS.adminCatalog]: 'nav.catalog',
   [PATHS.adminVaultAccess]: 'nav.vaultAccess',

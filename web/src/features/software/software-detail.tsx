@@ -18,7 +18,6 @@ import {
   DetailLayout,
   DetailSection,
   RailCard,
-  RailRow,
 } from "@/ui/detail-layout";
 import { useDispose } from "@/ui/dispose-button";
 import { RenewDialog } from "@/ui/renew-dialog";
@@ -222,40 +221,32 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
-  const endText =
-    item.licenseModel === "perpetual" && supportsSeats(item.kind)
-      ? t("software.noEnd")
-      : item.endDate
-        ? formatDate(item.endDate)
-        : null;
+  /* Thông tin = thứ CHƯA nói ở đầu trang (Q-27 bổ sung: một thông tin nói một lần). Mã, tên là
+     tiêu đề; nhà cung cấp, hạn, ghế, hợp đồng ở dải 4 ô. Ngày bắt đầu đã nằm trong khoảng ngày của
+     ô Hết hạn, và loại không có ghế / tên miền thì dải 4 ô có hẳn ô "Bắt đầu" — chỉ còn license
+     hay SSL / tên miền KHÔNG có ngày hết hạn mới cần dòng riêng ở đây. */
+  const stripShowsStart = Boolean(item.endDate) || (!supportsSeats(item.kind) && !supportsWebsites(item.kind));
+  const startItem = stripShowsStart
+    ? []
+    : [{ label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null }];
   const specItems = supportsSeats(item.kind)
     ? [
-        { label: t("software.code"), value: item.code },
-        { label: t("software.name"), value: item.name },
-        { label: t("software.vendor"), value: item.vendorName },
         {
           label: t("software.licenseModel"),
           value: t(item.licenseModel === "perpetual" ? "software.perpetual" : "software.subscription"),
         },
-        { label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
-        { label: t("software.endDate"), value: endText },
-        { label: t("software.seatTotal"), value: item.seatTotal === null ? null : String(item.seatTotal) },
-        {
-          label: t("software.contract"),
-          value: item.perSeat ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 }) : item.contract,
-        },
+        ...startItem,
         { label: t("software.note"), value: item.perSeat ? t("software.notePerSeat") : item.note },
       ]
     : [
-        { label: t("software.code"), value: item.code },
-        { label: t("software.name"), value: item.name },
         { label: t("software.kind"), value: t(KIND_KEY[item.kind]) },
-        { label: t("software.vendor"), value: item.vendorName },
-        { label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
-        { label: t("software.endDate"), value: endText },
+        ...startItem,
         { label: t("software.note"), value: item.note },
       ];
   const specBlank = specItems.filter((entry) => !entry.value).length;
+  const showBatches = supportsSeats(item.kind) && siblings.length > 1;
+  const showWebsites = supportsWebsites(item.kind);
+  const hasRail = showBatches || showWebsites;
 
   return (
     <>
@@ -270,15 +261,11 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         ]}
         code={item.code}
         name={item.name}
+        /* Trạng thái đứng dưới mã như trang thiết bị; nhà cung cấp đã là ô đầu của dải 4 ô. */
         subline={
           <>
+            <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
             <span>{t(KIND_KEY[item.kind])}</span>
-            {item.vendorName ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{item.vendorName}</span>
-              </>
-            ) : null}
           </>
         }
         actions={
@@ -365,9 +352,19 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               ) : item.endDate ? (
                 <ExpiryBadge end={item.endDate} notCounted={retired} />
               ) : null,
-            note: item.endDate
-              ? t("software.termRange", { from: formatDate(item.startDate) || "…", to: formatDate(item.endDate) })
-              : null,
+            /* Hạn nói MỘT lần, ở đây: khoảng ngày + thanh thời gian gọn (Q-27 bổ sung). */
+            note: item.endDate ? (
+              <>
+                {t("software.termRange", { from: formatDate(item.startDate) || "…", to: formatDate(item.endDate) })}
+                <WarrantyTimeline
+                  compact
+                  start={item.startDate}
+                  end={item.endDate}
+                  endLabel={t("software.endDate")}
+                  notCounted={retired}
+                />
+              </>
+            ) : null,
           },
           supportsSeats(item.kind)
             ? { key: "seats", label: t("software.seats"), value: <SeatUsage item={item} /> }
@@ -396,51 +393,13 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
       />
 
       <DetailLayout
+        /* Không còn "Thẻ định danh" (Q-27 bổ sung): trạng thái ở đầu trang, hạn và ghế ở dải 4 ô.
+           Cột phải chỉ mọc khi có thẻ riêng của nó — các đợt mua, tên miền; không thì một cột. */
+        railStrip={!hasRail}
         rail={
           <>
-          <RailCard title={t("detail.identityCard")}>
-            {/* Không kèm ngày dưới trạng thái: ngày bắt đầu đọc thành "Hết hạn từ ngày…" —
-                sai nghĩa. Ngày bắt đầu đã là mốc đầu của thanh thời hạn ngay dưới. */}
-            <RailRow label={t("software.status")}>
-              <span className={`badge ${STATUS_TONE[item.status]}`}>
-                {t(STATUS_KEY[item.status])}
-              </span>
-            </RailRow>
-
-            {/*
-             * HẠN NẰM Ở ĐÂY, KHÔNG CÓ THẺ THỨ HAI Ở CỘT CHÍNH.
-             *
-             * Một thẻ "Hết hạn" chiếm trọn bề ngang ở tab Hồ sơ chỉ vẽ lại chính thứ mà dải chỉ
-             * số đã vẽ ở dạng gọn cách đó hai dòng. License vĩnh viễn thì không có quãng đường
-             * nào để vẽ nên vẫn chỉ là một huy hiệu.
-             */}
-            <RailRow label={t("software.endDate")}>
-              {item.licenseModel === "perpetual" ? (
-                <PerpetualBadge />
-              ) : item.endDate ? (
-                <WarrantyTimeline
-                  start={item.startDate}
-                  end={item.endDate}
-                  startLabel={t("software.startDate")}
-                  endLabel={t("software.endDate")}
-                  notCounted={retired}
-                />
-              ) : (
-                <ExpiryBadge end={null} />
-              )}
-            </RailRow>
-
-            {/* Ghế đã dùng là con số quyết định "có phải mua thêm không" — nó thuộc về thẻ
-                định danh, không phải nằm sâu trong một tab. */}
-            {supportsSeats(item.kind) ? (
-              <RailRow label={t("software.seats")}>
-                <SeatUsage item={item} />
-              </RailRow>
-            ) : null}
-
-          </RailCard>
           {/* Mua theo đợt (Q-27): mỗi đợt một hồ sơ — thẻ này nối các đợt cùng phần mềm. */}
-          {supportsSeats(item.kind) && siblings.length > 1 ? (
+          {showBatches ? (
             <RailCard title={t("software.batchesTitle")}>
               <ul className="batch-list">
                 {siblings.map((row) => (
@@ -468,7 +427,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
           ) : null}
           {/* Tên miền nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
               này đang phủ tên miền nào" là câu người trực sự cố hỏi đầu tiên (Q-15, Q-22). */}
-          {supportsWebsites(item.kind) ? (
+          {showWebsites ? (
             <RailCard title={t("software.domainNames")}>
               {(item.websites ?? []).length > 0 ? (
                 <ul className="chip-row">
@@ -498,15 +457,17 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
           <>
             {/* Thông tin thứ tự cố định, cùng khuôn với Thông số của thiết bị (Q-27): ô trống
                 đứng đúng chỗ và ghi "chưa khai", không ẩn. */}
-            <DetailSection title={t("software.infoTitle")}>
-              <SpecList label={t("software.infoTitle")} items={specItems} />
-              {!retired && specBlank > 0 ? (
-                <div className="row" style={{ marginTop: "var(--space-5)" }}>
-                  <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
+            <DetailSection
+              title={t("software.infoTitle")}
+              action={
+                !retired && specBlank > 0 ? (
+                  <button type="button" className="btn sm" onClick={() => setEditing(true)}>
                     {t("software.fillBlanks", { count: specBlank })}
                   </button>
-                </div>
-              ) : null}
+                ) : null
+              }
+            >
+              <SpecList label={t("software.infoTitle")} items={specItems} />
             </DetailSection>
           </>
         ) : safeTab === "vault" ? (
