@@ -115,8 +115,9 @@ test.describe('DEV-063 · DEV-043 · trang chi tiết trên điện thoại', ()
     // Ở tab Tổng quan, thẻ đầy đủ nằm sau nút "Chi tiết".
     await page.getByRole('tab', { name: 'Tổng quan' }).click();
     await page.getByText('Chi tiết', { exact: true }).click();
-    // Q-27: cột phải là "Bảo hành" (+ "Trong tủ" khi máy gắn tủ); vị trí / người dùng ở dải 4 ô.
-    await expect(page.getByRole('heading', { name: 'Bảo hành' })).toBeVisible();
+    // Q-27 (bổ sung 10/10): cột phải là "Nhà cung cấp" (+ "Trong tủ" khi máy gắn tủ); bảo hành,
+    // vị trí, người dùng ở dải 4 ô.
+    await expect(page.getByRole('heading', { name: 'Nhà cung cấp' })).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const tablist = page.getByRole('tablist');

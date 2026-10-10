@@ -331,6 +331,7 @@ test('tải ảnh máy 1U có viền trắng: hộp cắt khoá theo mặt tủ 
   const patched = await page.request.patch(`/api/v1/devices/${id}`, { headers: await writeHeaders(page), data: { rackUStart: 3, rackUSize: 2 } });
   expect(patched.status(), await patched.text()).toBe(200);
   await page.reload();
+  await openDeviceLook(page);
   await expect(page.getByRole('group', { name: 'Mặt trước' }).getByText('Ảnh chưa đúng tỉ lệ 2U.')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Mặt trước' }).getByRole('button', { name: 'Cắt lại ảnh — Mặt trước' })).toBeVisible();
 });

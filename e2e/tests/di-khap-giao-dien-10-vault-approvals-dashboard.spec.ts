@@ -241,8 +241,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(
       await toggleButtons(main),
       'trang tổng phải có ĐÚNG bảy nút lọc — ba loại chủ thể không phải phần mềm + bốn màn phần mềm ' +
-        'của Q-22 (K-01) — và lúc mới vào đều đang TẮT',
+        'của Q-22 (K-01) — lúc mới vào đều TẮT; đứng đầu là chip "Tất cả" đang bật (soát UX 10/10)',
     ).toEqual([
+      { toggleName: 'Tất cả', enabled: true },
       { toggleName: 'Thiết bị', enabled: false },
       { toggleName: 'Phần mềm', enabled: false },
       { toggleName: 'Tên miền & SSL', enabled: false },
@@ -276,6 +277,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       () => toggleButtons(main),
       { message: 'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt' },
     ).toEqual([
+      { toggleName: 'Tất cả', enabled: false },
       { toggleName: 'Thiết bị', enabled: true },
       { toggleName: 'Phần mềm', enabled: false },
       { toggleName: 'Tên miền & SSL', enabled: false },

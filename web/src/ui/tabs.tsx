@@ -78,7 +78,9 @@ export function Tabs({
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const barRef = useRef<HTMLDivElement>(null);
   const edges = useScrollEdges(barRef);
+  const overflow = !wrap && (edges.start || edges.end);
   const mounted = useRef(false);
+  const lastValue = useRef(value);
   // Khoá theo nhãn + số đếm: mảng `items` nơi gọi dựng lại mỗi lượt render, không dùng làm phụ thuộc được.
   const layoutKey = items.map((item) => `${item.key}:${item.count ?? ''}`).join('|');
   const ink = useTabInk(barRef, refs, value, layoutKey);
@@ -105,14 +107,18 @@ export function Tabs({
       tabWidth: tabRect.width,
     });
     // Lần đầu nhảy thẳng (trang vừa mở, không có gì để "đi theo"); người dùng tắt chuyển
-    // động thì cũng nhảy thẳng.
+    // động, hay chỉ là bù lại sau khi khung bật đệm (tab không đổi), cũng nhảy thẳng.
     const reduced = motionReduced();
-    const behavior: ScrollBehavior = mounted.current && !reduced ? 'smooth' : 'auto';
+    const followed = mounted.current && lastValue.current !== value;
+    const behavior: ScrollBehavior = followed && !reduced ? 'smooth' : 'auto';
     mounted.current = true;
+    lastValue.current = value;
     if (left === bar.scrollLeft) return;
     if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior });
     else bar.scrollLeft = left;
-  }, [value, wrap]);
+    /* `overflow` cũng là phụ thuộc: thanh vừa tràn thì khung bật đệm cho mũi tên (CSS), bề ngang
+       thanh hẹp lại và vị trí cuộn tính lúc trước trật đi — tab đang chọn lòi một khúc ra mép. */
+  }, [value, wrap, overflow]);
 
   const move = (delta: number) => {
     const index = items.findIndex((item) => item.key === value);
@@ -136,7 +142,7 @@ export function Tabs({
       className="tabs-shell"
       /* Chừa chỗ mũi tên ở CẢ HAI mép khi thanh tràn — không chỉ lúc mũi tên đang hiện: đệm bật
          tắt theo mép thì thanh co giãn ngay dưới con trỏ khi vừa cuộn khỏi mép. */
-      data-overflow={!wrap && (edges.start || edges.end) ? 'true' : undefined}
+      data-overflow={overflow ? 'true' : undefined}
     >
     {!wrap && edges.start ? (
       <button type="button" className="tabs-arrow" data-side="start" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(-1)}>

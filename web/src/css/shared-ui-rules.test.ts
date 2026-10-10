@@ -346,6 +346,9 @@ describe('bố cục khối dùng chung', () => {
     expect(declValue(rule('detail-tabs.css', '.tabs-shell')!.body, 'position')).toBe('sticky');
     const inner = cssRules('detail-tabs.css').filter((r) => r.selector === '.tabs');
     for (const r of inner) expect(declValue(r.body, 'position'), r.media ?? '').not.toBe('sticky');
+    // Nhưng `.tabs` vẫn phải là khung định vị: gạch chân `.tab-ink` tuyệt đối neo vào nó và bị
+    // khung cuộn cắt. Mất nó thì gạch chân thoát ra ngoài, trang tràn ngang ở 390px.
+    expect(inner.some((r) => r.media === null && declValue(r.body, 'position') === 'relative')).toBe(true);
   });
 
   it('.filter-range không xuống dòng dù nằm trong thanh lọc', () => {

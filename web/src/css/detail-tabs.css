@@ -571,6 +571,9 @@
   background: var(--canvas);
 }
 .tabs {
+  /* Khung định vị cho gạch chân `.tab-ink` (tuyệt đối): thiếu nó thì gạch chân neo vào
+     `.tabs-shell`, không bị khung cuộn cắt và không trôi theo tab — trang tràn ngang ở 390px. */
+  position: relative;
   /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối
      khai trên), mà `button:focus-visible` của `base.css` vẽ vòng bằng `box-shadow: 0 0 0 3px`
      — bóng NGOÀI, nên nó bị khung cắt cụt. Người đi bằng phím mũi tên (roving tabindex ở

@@ -1334,7 +1334,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sortVi(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ', 'Đường truyền']));
     expect(
       sortVi((await nameByRole(main, 'radio')).map((name) => name.replace(/\s+\d+$/, ''))),
-      'Lựa chọn lọc của kho: năm loại + ba khoảng thanh lý (DP-004)',
+      'Lựa chọn lọc của kho: năm loại + "Mọi lúc" và ba khoảng thanh lý (DP-004, soát UX 10/10)',
     ).toEqual(
       sortVi([
         'Tất cả',
@@ -1342,6 +1342,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Phần mềm',
         'Tài khoản dịch vụ',
         'Đường truyền',
+        'Mọi lúc',
         'Tháng này',
         'Quý này',
         'Năm nay',

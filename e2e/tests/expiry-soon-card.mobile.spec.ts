@@ -22,7 +22,7 @@ test.beforeEach(() => {
  * EX-013 — 390px: mỗi mục là thẻ 2 dòng (mục + badge ngày · "loại · ngày hết hạn" + nút Gia
  * hạn nhỏ), và ba ô số nằm MỘT hàng ngang thay vì rơi thành 2 + 1. Sáng lẫn tối.
  */
-test('Sắp hết hạn ở 390px: thẻ 2 dòng, ba ô số một hàng, sáng và tối', async ({ page }) => {
+test('Sắp hết hạn ở 390px: thẻ 2 dòng, bốn ô số chia 2 × 2, sáng và tối', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   const stamp = uniqueStamp();
   const code = `SSL-E2E-THE-${stamp}`;
@@ -46,13 +46,17 @@ test('Sắp hết hạn ở 390px: thẻ 2 dòng, ba ô số một hàng, sáng 
   // Không còn thẻ bảng gập "Mục / Loại / Hết hạn / Tình trạng / Thao tác".
   await expect(page.getByRole('table')).toHaveCount(0);
 
+  /* Soát UX 10/10 (U-05): bốn ô chia CHẴN 2 × 2 — 3 cột thì ra 3 + 1, ô lẻ một hàng và nhãn gãy
+     hai dòng trong ô 110px. Hai ô gấp nhất ("Đã quá hạn", "Gấp") đứng chung hàng đầu. */
   const tiles = [
     page.getByRole('button', { name: /Đã quá hạn/ }),
     page.getByRole('button', { name: /Gấp/ }),
     page.getByRole('button', { name: /Sắp tới/ }),
   ];
-  const tops = await Promise.all(tiles.map(async (tile) => (await tile.boundingBox())!.y));
-  expect(new Set(tops.map(Math.round)).size, 'ba ô số phải nằm cùng một hàng').toBe(1);
+  const boxes = await Promise.all(tiles.map(async (tile) => (await tile.boundingBox())!));
+  expect(Math.round(boxes[0].y), 'hai ô đầu cùng một hàng').toBe(Math.round(boxes[1].y));
+  expect(boxes[2].y, 'ô thứ ba xuống hàng hai').toBeGreaterThan(boxes[0].y + boxes[0].height - 1);
+  expect(Math.round(boxes[2].x), 'ô thứ ba thẳng cột với ô đầu').toBe(Math.round(boxes[0].x));
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await switchTheme(page, 'dark');
