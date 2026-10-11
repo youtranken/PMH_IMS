@@ -21,7 +21,9 @@ const SUBNET = {
   free: 5,
 };
 
-function mockFetch() {
+const SUBNET_2 = { ...SUBNET, id: 'sub-2', name: 'LAN khác', cidr: '10.77.2.0/29', vlan: 20 };
+
+function mockFetch(subnets: unknown[] = [SUBNET]) {
   const calls: { url: string; method: string; body: Record<string, unknown> | null }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -31,7 +33,7 @@ function mockFetch() {
         method: init?.method ?? 'GET',
         body: init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null,
       });
-      if (url === '/api/v1/ipam/subnets') return Promise.resolve(jsonResponse(200, [SUBNET]));
+      if (url === '/api/v1/ipam/subnets') return Promise.resolve(jsonResponse(200, subnets));
       if (url.startsWith('/api/v1/ipam/subnets/sub-1/addresses')) {
         return Promise.resolve(
           jsonResponse(200, [
@@ -46,6 +48,7 @@ function mockFetch() {
           jsonResponse(200, [
             {
               id: 'ip-old',
+              subnetId: 'sub-1',
               address: '10.9.9.5',
               status: 'assigned',
               deviceId: 'dev-1',
@@ -66,7 +69,8 @@ function mockFetch() {
 
 describe('DeviceIpAssign', () => {
   it('chưa chọn dải thì báo lỗi dưới ô, không sang bước sau', async () => {
-    mockFetch();
+    // Hai dải: không có gì để chọn sẵn.
+    mockFetch([SUBNET, SUBNET_2]);
     renderWithI18n(
       <ToastProvider>
         <DeviceIpAssign device={{ id: 'dev-1', code: 'PC-E2E-1' }} csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />
@@ -100,6 +104,33 @@ describe('DeviceIpAssign', () => {
     const post = calls.find((call) => call.method === 'POST');
     expect(post?.url).toBe('/api/v1/ipam/addresses');
     expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2', deviceId: 'dev-1' });
+  });
+
+  it('chỉ có một dải thì chọn sẵn — IP gợi ý hiện ngay, không bắt chọn lại', async () => {
+    mockFetch();
+    renderWithI18n(
+      <ToastProvider>
+        <DeviceIpAssign device={{ id: 'dev-1', code: 'PC-E2E-1' }} csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />
+      </ToastProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'IP trống' })).toHaveTextContent('10.77.1.2'),
+    );
+  });
+
+  it('Đổi IP chọn sẵn dải của IP hiện tại, kể cả khi có nhiều dải', async () => {
+    mockFetch([SUBNET_2, SUBNET]);
+    renderWithI18n(
+      <ToastProvider>
+        <DeviceIpAssign change device={{ id: 'dev-1', code: 'PC-E2E-1' }} csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />
+      </ToastProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Dải mạng' })).toHaveTextContent('LAN E2E'),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'IP trống' })).toHaveTextContent('10.77.1.2'),
+    );
   });
 
   it('Q-20 Đổi IP: hộp nói IP hiện tại, máy cố định, gửi một lượt đổi chứ không cấp thêm', async () => {

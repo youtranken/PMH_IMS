@@ -281,7 +281,8 @@ Tài khoản `qa-c-*`. Dùng máy của lượt B để gán ghế, **chỉ gán
 | ISP-01 | member | Tạo đường `QA-E2E-C-ISP1`: IP WAN 17 cái, dải `/24`, trùng trong cùng đường, trùng với đường khác | Trần 16; không nhận dải; trùng trong đường bị chặn; trùng giữa các đường thì được. | Q-20 |
 | ISP-02 | member | Gắn thiết bị không phải router | Chỉ cảnh báo. Trang thiết bị đó hiện ngược lại đường truyền. | |
 | ISP-03 | member | Đi hết vòng trạng thái: Đang dùng → Tạm ngưng → Dùng lại → Thanh lý → Dùng lại | Đúng các bước được phép; băng "Đã thanh lý ngày… bởi…"; hộp Thanh lý nêu số ngăn két và thiết bị đang gắn. **Không có ngày kết thúc / nhắc hạn**. | Q-04 |
-| ISP-04 | mọi | Thẻ "Khi mất mạng" ở 390px | Bấm hotline gọi được (`tel:`); "chép số hợp đồng" chạy. | |
+| ISP-04 | mọi | Trang chi tiết đường truyền (khuôn C) ở máy tính và 390px | Trạng thái dưới mã; dải 4 ô Hotline · IP WAN · Thiết bị (tên · model · IP LAN, link "Luật NAT trên thiết bị này") · Số hợp đồng; ô trống ghi "chưa khai". Không còn "Thẻ định danh" / thẻ "Khi mất mạng". Tab **Tổng quan** có Thông số (Tốc độ gói cước, Site, Bắt đầu, Ghi chú) + "Bổ sung n ô". Bấm hotline gọi được (`tel:`); chép IP WAN, IP LAN, số hợp đồng chạy. "Sửa hồ sơ" hiện cả ở 390px. | Q-27 |
+| SA-04 | mọi | Trang chi tiết tài khoản dịch vụ (khuôn C) | Trạng thái + loại dưới mã (đã ngừng dùng thì chỉ băng cảnh báo nói); dải 4 ô Tên đăng nhập (có nút chép) · Người phụ trách (bộ phận dòng nhỏ) · Hết hạn · Dải IP được phép (VPN, "Mọi IP" cam) hoặc Giấy tờ (dùng chung). Khu Thông tin: Nhóm VPN, Ghi chú, Khai bởi. Ở 390px email không bị bẻ giữa chữ. | Q-27 |
 | SA-01 | admin | Tài khoản dịch vụ: loại Dùng chung mà điền Nhóm VPN / Dải IP; VPN với dải `/8`; mật khẩu nhập trong form tạo | Ca đầu lỗi; `/8` chỉ cảnh báo; mật khẩu đòi mã 6 số rồi vào két (nhãn ngăn có `E2E`); bỏ bước mã thì hồ sơ vẫn đã tạo, có câu nói rõ chưa cất mật khẩu. | Q-11 |
 | SA-02 | admin / member | Ngừng dùng / Dùng lại (phải có lý do); member mở màn | Có lý do mới cho; member chỉ xem, không nút ghi, API 403. | |
 | SA-03 | admin | Hạn tuỳ chọn đã qua | Có trên màn Hết hạn và trong thư; **không** tự ngừng dùng. | |
@@ -343,6 +344,7 @@ dải thật. Router `QA-E2E-E-RT01` và máy `QA-E2E-E-SRV01` do lượt này t
 | IP-06 | member | Thu hồi IP (nút cam); cấp lại cho máy khác | Ô mờ "đã thu hồi" + "trước: X"; cấp lại được, lịch sử cũ còn. | Q-02, Q-19 |
 | IP-07 | admin | Xoá hồ sơ nhập nhầm (bắt lý do) | Ô thành trống, nhập lại được ngay. Member không có nút; API 403. | Q-15 |
 | IP-08 | admin | Ngừng dùng dải (bắt lý do), Dùng lại, Xoá hẳn dải đã từng có hồ sơ | Gạch ngang, xám, "Đã ngừng dùng"; Dùng lại không hỏi lý do; Xoá hẳn chỉ được khi chưa từng có hồ sơ. | |
+| IP-10 | mọi | Dải /24 mới dùng vài IP, chế độ "Tất cả" | Chuỗi ≥10 ô trống liền nhau thành một dòng "172.16.10.3 – .221 · 219 IP trống" có "Cấp IP" (cấp ô đầu) và "Hiện từng IP"; gateway là dòng riêng. Chế độ "Trống" và ô tìm vẫn ra từng ô. Link `?ip=` tới một ô trong chuỗi: chuỗi đó mở sẵn, dòng được tô sáng. Ở 390px không còn thẻ dải dưới ô chọn dải (menu ⋯ cạnh ô chọn). Đổi IP chọn sẵn dải hiện tại. | Q-27 |
 | IP-09 | mọi | Ô tra: 1 ký tự, `999.1.1.1`, `198.18.10.300`, IP không thuộc dải nào, `/ip-addresses/<id>?ip=198.18.10.77` | Câu nhắc / khung đỏ có ✕ / "Không dải nào đang dùng chứa X" / mở đúng trang và tô sáng dòng. | |
 | IP-10 | mọi | Phân trang /24 (6 trang × 50), chip Trống/Đang dùng, kiểu "Bản đồ"; thanh mức dùng | Đổi dải về trang 1; số chip đếm cả dải; thanh xanh <70%, vàng ≥70%, đỏ ≥90%; dải ≥80% lên bảng điều khiển. | |
 | IP-11 | 2 tab | Hai tab cùng cấp một IP | Tab sau nhận câu "đã có người cấp" (IP_TAKEN / IP_ALREADY_CHANGED). | |
@@ -515,6 +517,10 @@ làm.
   (bảo hành ở dải 4 ô) và thẻ Bảo hành ở cột phải (thay bằng thẻ Nhà cung cấp); khu IP / NAT / Đường
   truyền và khu ảnh **gập sẵn** trên máy tính. Phần mềm **không còn** "Thẻ định danh". Không còn đường
   `/documents`. Nút "Xóa bộ lọc" ở Két sắt thay bằng chip "Tất cả". Ô ngày không còn mũi tên ˅.
+- Soát bằng mắt 11/10: trang đường truyền và tài khoản dịch vụ **không còn** "Thẻ định danh" / thẻ
+  "Khi mất mạng" (thay bằng dải 4 ô); tab "Hồ sơ" của đường truyền thành "Tổng quan". Trên điện thoại
+  thanh lọc từ 3 ô trở lên **gập sau nút "Bộ lọc"**. Tab Máy đang dùng của phần mềm **không còn** thanh
+  ghế (đã ở dải 4 ô). Thẻ "Khai trước khi thêm thiết bị" gập một dòng khi đủ cả 6 mục.
 - Thiết bị: không xoá được, chỉ thanh lý. Ảnh model thắng ảnh riêng; mặt có ảnh model bị khoá tải
   ảnh riêng, kể cả SA (Q-26). Không có ô "phòng" cho máy không gắn tủ. Không còn "chọn ảnh từ giấy tờ".
 - Sơ đồ (Q-26 08/10): đã bỏ "Ảnh thật…", "Nối hàng loạt" (chỉ còn ở trang thiết bị), "Gắn khung",

@@ -1043,8 +1043,10 @@ table.table tbody tr.row-muted td {
   color: var(--ink);
   text-decoration: none;
   min-width: 0;
-  /* Ô có thể là `<a>` hoặc `<button>` — dập mọi mặc định của nút để hai thứ trông y hệt nhau. */
+  /* Ô có thể là `<a>` hoặc `<button>` — dập mọi mặc định của nút để hai thứ trông y hệt nhau.
+     Kể cả `nowrap` mà nút thừa hưởng: ô hẹp ở 390px phải để nhãn xuống dòng, không tràn ô. */
   font: inherit;
+  white-space: normal;
   text-align: left;
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease),
@@ -1682,6 +1684,12 @@ table.access-grid thead .access-row-head {
  * "Hiện cả người đã nghỉ") mặc CÙNG một vẻ: viền mảnh, bo tròn, cao bằng ô chọn bên cạnh; bật thì
  * nền nhấn + viền nhấn. Đang tắt KHÔNG xám đặc — xám đặc đọc thành "bị vô hiệu".
  */
+/* Nhóm chip bật/tắt độc lập (lọc nhiều rổ cùng lúc — Sổ NAT). */
+.filter-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
 .filter-chip,
 .filter-bar .filter-check {
   display: inline-flex;
@@ -2779,6 +2787,18 @@ html[data-motion='off'] .file-picker.dragging { transform: none; }
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
+}
+.setup-tiles-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.setup-tiles.is-folded {
+  padding-block: var(--space-4);
+}
+.setup-tiles.is-folded .setup-tiles-hint {
+  margin-bottom: 0;
 }
 .setup-tiles-title {
   margin: 0;

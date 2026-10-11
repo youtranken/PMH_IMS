@@ -174,6 +174,8 @@ test.describe('390px', () => {
     const f = await setUp(page);
     await voidRule(page, f);
     await page.goto('/nat');
+    // Ở điện thoại các bộ lọc gập sau nút "Bộ lọc" — mở ra rồi mới thấy chip.
+    await page.getByRole('button', { name: 'Bộ lọc', exact: true }).click();
     await page
       .getByRole('group', { name: 'Lọc theo trạng thái luật' })
       .getByRole('button', { name: /^Đã gỡ/ })

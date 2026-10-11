@@ -16,13 +16,13 @@ const ROW = {
   createdAt: '2026-09-20T01:30:00.000Z',
 };
 
-function stubFetch() {
+function stubFetch(row: typeof ROW = ROW) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     if (url.includes('/admin/audit/actions')) {
       return Promise.resolve(jsonResponse(200, ['auth.login.ok']));
     }
-    return Promise.resolve(jsonResponse(200, { items: [ROW], total: 1, totalCapped: false }));
+    return Promise.resolve(jsonResponse(200, { items: [row], total: 1, totalCapped: false }));
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -61,7 +61,8 @@ describe('Màn Nhật ký', () => {
     // Nhãn tiếng Việt trước, mã kỹ thuật ở dòng phụ.
     expect(screen.getByText('Đăng nhập')).toBeInTheDocument();
     expect(screen.getByText('auth.login.ok', { selector: 'span' })).toBeInTheDocument();
-    expect(screen.getByText(ROW.objectId)).toBeInTheDocument();
+    // Mã đối tượng rút 8 ký tự; bản đủ ở tooltip (và nút chép).
+    expect(screen.getByText(`${ROW.objectId.slice(0, 8)}…`)).toHaveAttribute('title', ROW.objectId);
     expect(screen.getByText('10.0.0.8')).toBeInTheDocument();
     // 01:30 UTC = 08:30 giờ Việt Nam.
     expect(
@@ -69,6 +70,13 @@ describe('Màn Nhật ký', () => {
         selector: 'button',
       }),
     ).toBeInTheDocument();
+  });
+
+  it('mã đối tượng không phải UUID (khoá cấu hình) hiện đủ — cắt là không biết thiết đặt nào đổi', async () => {
+    stubFetch({ ...ROW, objectType: 'system_config', objectId: 'login.rate_limit_per_ip' });
+    renderAt('/admin/audit-log');
+    expect(await screen.findByText('login.rate_limit_per_ip')).toBeInTheDocument();
+    expect(screen.queryByText('login.r…')).toBeNull();
   });
 
   it('đối tượng có nhãn: "Loại · nhãn" là link tới hồ sơ, UUID còn trong tooltip + nút chép', async () => {

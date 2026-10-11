@@ -95,6 +95,7 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
     const f = await setUp(page);
     const address = `${f.net}.7`;
     await page.goto(`/ip-addresses/${f.subnetId}`);
+    await page.getByRole('button', { name: 'Hiện từng IP' }).click();
 
     await ipRow(page, address).getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: `Cấp IP — ${address}` });
@@ -181,8 +182,12 @@ test.describe('Tra IP và máy (NET-005)', () => {
     await expect(row).toBeVisible();
     await expect(row).toHaveClass(/row-highlight/);
     await expect(row.getByText('Chị Bình E2E')).toBeVisible();
-    // .200 nằm ở trang 4 của một /24 (50 dòng/trang).
-    await expect(page.getByRole('navigation', { name: 'Trang' }).getByText(/151–200/)).toBeVisible();
+    // Dòng đang tra không bị gập; ô trống hai bên nó vẫn gập, nên .200 hiện ngay, khỏi lật trang.
+    // Dải không khai gateway: .1–.199 và .201–.254 là hai vùng trống.
+    const runs = page.getByRole('row').filter({ hasText: 'Hiện từng IP' });
+    await expect(runs).toHaveCount(2);
+    await expect(runs.first()).toContainText('199 IP trống');
+    await expect(runs.last()).toContainText('54 IP trống');
   });
 
   test('gõ mã máy ở ô tra → liệt kê IP của máy và IP ghi tên máy, bấm là tới đúng dòng', async ({ page }) => {

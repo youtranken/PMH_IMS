@@ -108,7 +108,7 @@ describe('AssignDialog — gán nhiều máy một lượt', () => {
     for (const name of ['Hợp đồng', 'Chi phí', 'Ghi chú']) {
       expect(screen.queryByRole('textbox', { name })).toBeNull();
     }
-    expect(screen.getByRole('note')).toHaveTextContent('Sửa ghế');
+    expect(screen.getByRole('note')).toHaveTextContent('nút "Sửa" ở dòng của máy đó');
     await userEvent.click(screen.getByRole('button', { name: 'Gán 2 máy' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith([], 2));
     expect(posts.map((body) => body.deviceId)).toEqual(['d1', 'd2']);

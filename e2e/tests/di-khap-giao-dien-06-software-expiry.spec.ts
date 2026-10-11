@@ -601,12 +601,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Chọn máy là ô GÕ ĐỂ TÌM (combobox), không phải danh sách thả xuống — kho có hàng nghìn máy',
     ).toHaveCount(1);
 
-    // Q-27: GÁN chỉ đưa license vào máy — chi phí / kỳ hạn / ghi chú khai sau bằng "Sửa ghế".
+    // Q-27: GÁN chỉ đưa license vào máy — chi phí / kỳ hạn / ghi chú khai sau bằng nút "Sửa" ở dòng máy.
     await expect(
       assign.getByRole('textbox'),
-      'Hộp gán không còn ô gõ chữ nào: chi phí, hợp đồng, ghi chú khai ở "Sửa ghế"',
+      'Hộp gán không còn ô gõ chữ nào: chi phí, hợp đồng, ghi chú khai bằng nút "Sửa" ở dòng máy',
     ).toHaveCount(0);
-    await expect(assign.getByRole('note'), 'Hộp gán nói rõ thông tin ghế khai ở đâu').toContainText('Sửa ghế');
+    await expect(assign.getByRole('note'), 'Hộp gán nói rõ thông tin ghế khai ở đâu').toContainText(
+      'nút "Sửa" ở dòng của máy đó',
+    );
 
     await expect(
       assign.getByRole('button'),

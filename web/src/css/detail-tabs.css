@@ -149,13 +149,9 @@
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
 /* Hình SVG theo cỡ cố định: chữ của nút là `--fs-xs`, để `1em` thì hình chép chỉ còn 12px. */
 .copy-btn .glyph { display: block; width: 15px; height: 15px; }
-/* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
-.isp-call {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: var(--space-4);
-  font-size: var(--fs-md);
+/* Tên · model · IP LAN của thiết bị biên dưới mã máy (dải 4 ô của đường truyền). */
+.edge-facts > span + span::before {
+  content: ' · ';
 }
 /* Tên đăng nhập của tài khoản dịch vụ: thứ người ta mở trang để lấy — cỡ chữ thường, không
    thu nhỏ như mã phụ. */
@@ -163,7 +159,7 @@
   font-size: var(--fs-md);
   overflow-wrap: anywhere;
 }
-/* Link phụ ngay dưới giá trị trong thẻ định danh ("Rule NAT trên thiết bị này"). */
+/* Link phụ ngay dưới giá trị ("Luật NAT trên thiết bị này"). */
 .rail-sublink {
   display: block;
   margin-top: var(--space-1);
@@ -216,15 +212,6 @@
 }
 .stat-v { font-weight: 600; overflow-wrap: anywhere; }
 .stat-note { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
-
-/* Dòng "Chưa khai: …" phải TÁCH khỏi lưới bằng một đường kẻ, không dính sát nó: sát quá thì
-   mắt đọc ra như một ô nữa của lưới, mà nó là câu nói về những ô KHÔNG có ở đó. */
-.blank-fields {
-  font-size: var(--fs-xs);
-  margin-top: var(--space-9);
-  padding-top: var(--space-7);
-  border-top: 1px dashed var(--border-2);
-}
 
 /* --- Bố cục hai cột của trang chi tiết (ui/detail-layout.tsx) ----------------
  * Vì sao bỏ dải chỉ số ngang: `auto-fit, minmax(180px,1fr)` nghĩa là hồ sơ nào chỉ khai được

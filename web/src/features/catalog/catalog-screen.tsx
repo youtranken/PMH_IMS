@@ -720,23 +720,7 @@ export function CatalogScreen({ me }: { me: Me }) {
             {/* Nhập Excel chỉ có nghĩa với bốn danh mục gốc, và chỉ SA/Admin (Q-12). File mẫu
                 nằm TRONG hộp nhập — nó là bước con của việc nhập, không phải nút đầu trang. */}
             {/* Xuất đúng tab + bộ lọc đang xem — tờ in dán phòng máy (NCC, hotline nhà mạng). */}
-            {narrow ? (
-              <RowActions
-                label={t('common.actionsOf', { subject: t('catalog.title') })}
-                triggerText={xlsx.busy ? t('common.loading') : undefined}
-                items={[
-                  {
-                    key: 'export',
-                    label: t('common.export'),
-                    disabled: xlsx.busy,
-                    onSelect: () => xlsx.run(exportUrl, exportFile),
-                  },
-                  ...(importable && canManage
-                    ? [{ key: 'import', label: t('catalog.importExcel'), onSelect: () => setImporting(true) }]
-                    : []),
-                ]}
-              />
-            ) : (
+            {narrow ? null : (
               <>
                 <ExportXlsxButton url={exportUrl} fileName={exportFile} />
                 {importable && canManage ? (
@@ -755,6 +739,24 @@ export function CatalogScreen({ me }: { me: Me }) {
             >
               {t(`catalog.add${TAB_SUFFIX[entity]}`)}
             </button>
+            {/* Điện thoại: nút chính đứng trước ⋯ như mọi màn — ⋯ là đồ phụ, đứng cuối hàng. */}
+            {narrow ? (
+              <RowActions
+                label={t('common.actionsOf', { subject: t('catalog.title') })}
+                triggerText={xlsx.busy ? t('common.loading') : undefined}
+                items={[
+                  {
+                    key: 'export',
+                    label: t('common.export'),
+                    disabled: xlsx.busy,
+                    onSelect: () => xlsx.run(exportUrl, exportFile),
+                  },
+                  ...(importable && canManage
+                    ? [{ key: 'import', label: t('catalog.importExcel'), onSelect: () => setImporting(true) }]
+                    : []),
+                ]}
+              />
+            ) : null}
           </>
           )
         }

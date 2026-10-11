@@ -1160,7 +1160,7 @@ Không có khoá `system_config` mới.
 | Việc | Vì sao hoãn | Khi nào làm |
 | --- | --- | --- |
 | Cột `license_assignment.contract` cũ vẫn giữ, UI không sửa nữa | Q-27: không xoá dữ liệu đã có | Khi có quyết định gộp về hợp đồng của hồ sơ / ghế |
-| Ba trang chi tiết còn lại (ISP, tài khoản dịch vụ, phiếu) vẫn ẩn ô trống (`DataItemIfSet` + `BlankFields`) | Q-27 chỉ chốt thiết bị + phần mềm | Khi chủ dự án chốt khuôn cho các trang đó |
+| Trang phiếu duyệt mở két chưa theo khuôn C (đường truyền và tài khoản dịch vụ đã đổi 11/10) | Phiếu không có "hồ sơ" để khai thiếu — khuôn dải 4 ô + Thông số không khớp | Khi chủ dự án chốt khuôn cho trang phiếu |
 | Danh mục gom nhóm bằng nhãn trong MỘT thanh tab (không phải nút nhóm như mockup) | Giữ phím mũi tên, link `?tab=` và E2E | Nếu người dùng thấy khó tìm |
 | Thẻ "Trong tủ" chỉ là chữ (chưa có ảnh từng máy như mockup) | Cần thêm ảnh model vào truy vấn máy trong tủ | Khi làm lại mặt tủ |
 
@@ -1175,3 +1175,11 @@ Không có khoá `system_config` mới.
 4. **Thêm mục vào nhóm menu làm tràn ở 1366×768**: thêm `@media (max-height: 800px)` thu đệm `.nav-item`.
 5. **Một thông tin nói một lần** (bổ sung 10/10): thứ đã ở dải 4 ô thì không lặp ở Thông số / cột phải. Thêm ô mới vào trang chi tiết thì xem dải 4 ô đã nói chưa.
 6. **Số + danh từ viết hoa** (Q-24, `term-consistency.test.ts`): "2 Đường", "1 Tệp" — đừng hạ chữ thường cho "đều".
+7. **Soát bằng mắt 11/10** (Playwright chụp 27 màn × 390/768/1280/1440): máy dò tự động (tràn ngang, chữ
+   tràn ô) chỉ bắt được 1/18 điểm — phần còn lại (thẻ hở mép khi `table-cards` gập dọc, sọc loang
+   từng ô, thông tin lặp 3 lần trên điện thoại) chỉ thấy khi NHÌN ảnh. Sửa CSS dùng chung thì chụp lại
+   cả 390px.
+8. **Gộp ô trống ở màn dải IP**: trang cắt trên DÒNG đã gộp (`collapseFreeRuns`), không trên ô — nhảy
+   tới một địa chỉ (`?ip=`, bấm ô trên bản đồ) phải tính trang bằng dòng đã gộp với chuỗi chứa địa chỉ
+   đó để mở (`pageOfLine`). Spec E2E bấm "Cấp IP" của một ô trống cụ thể trên dải rộng phải lọc
+   "Trống" hoặc bấm "Hiện từng IP" trước.

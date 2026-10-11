@@ -90,6 +90,7 @@ const EMPTY_FILTERS: Filters = {
 };
 
 const DEFAULT_LIMIT = 20;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Nút chọn nhanh khoảng ngày — "Hôm nay" là 1 ngày. */
 const RECENT_PRESETS = [1, 7, 30] as const;
@@ -652,7 +653,10 @@ function ObjectCell({ row }: { row: AuditRow }) {
         </>
       ) : null}
       <span className="cell-sub mono" title={row.objectId}>
-        {name ? `${row.objectId.slice(0, 8)}…` : row.objectId}
+        {/* UUID luôn rút 8 ký tự, có tên hay không: bản đủ làm cột này lúc hẹp lúc rộng gấp ba;
+            bản đủ ở tooltip và nút chép. Mã khác (khoá cấu hình…) để nguyên — nó là thứ duy
+            nhất nói dòng này về cái gì. */}
+        {UUID_RE.test(row.objectId) ? `${row.objectId.slice(0, 8)}…` : row.objectId}
         <CopyButton value={row.objectId} label={t('audit.copyObjectId')} inline />
       </span>
     </>

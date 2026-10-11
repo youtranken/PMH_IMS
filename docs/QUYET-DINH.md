@@ -1083,6 +1083,39 @@ phần mềm / danh mục, trang chi tiết mỗi máy một kiểu vì ô trố
   - **Giữ nguyên có chủ ý:** nút thanh lưu Tham số cỡ nhỏ (Q-21); số + danh từ viết hoa (Q-24);
     thứ tự "Danh sách | Bản đồ" theo chế độ mặc định của từng màn; bố cục bản đồ Sơ đồ mạng
     (04/10); "›" chỉ ở ô thống kê là link (ô là bộ lọc thì không); màu chữ nút chính (token).
+- **Soát bằng mắt 11/10/2026** (Claude lái Playwright qua 27 màn ở desktop và 390px; chủ dự án
+  duyệt sửa hết, kể cả hai việc lớn):
+  - **Đường truyền và Tài khoản dịch vụ theo khuôn C** như thiết bị / phần mềm: trạng thái lên
+    dòng dưới mã; dải 4 ô (đường truyền: Hotline · IP WAN · Thiết bị đầu cuối · Số hợp đồng; tài
+    khoản: Tên đăng nhập · Người phụ trách · Hết hạn · Dải IP được phép, tài khoản không phải VPN
+    thì ô thứ tư là Giấy tờ); bỏ "Thẻ định danh" ở cột phải, trang một cột; khu Thông số / Thông
+    tin liệt kê đủ ô theo thứ tự, ô trống ghi "chưa khai", nút "Bổ sung n ô" đếm đúng ô của khối
+    đó (như thiết bị / phần mềm; ô trống ở dải 4 ô không tính). Phòng ban của tài khoản là một
+    dòng của khu Thông tin, nên thiếu là thấy và được đếm. Lý do: hai trang
+    này còn kiểu cũ — một thẻ bên phải chỉ để chứa mỗi trạng thái, và khu "Hồ sơ" rỗng chỉ có
+    dòng "Chưa khai báo". Băng thông thành một dòng có nhãn trong Thông số (trước đứng trơn "400"
+    dưới mã, không biết là gì). Tab "Hồ sơ" của đường truyền đổi thành "Tổng quan" như phần mềm.
+  - **Nút "Sửa hồ sơ" luôn hiện ở đầu trang, cả trên điện thoại** (đường truyền trước giấu vào
+    ⋯ trên điện thoại, các trang khác thì hiện) — một kiểu cho mọi trang chi tiết.
+  - **Dải IP trống liền nhau gộp thành một dòng** ở chế độ "Tất cả" khi chuỗi từ 10 ô trở lên
+    ("172.16.10.3 – 172.16.10.50 · 48 IP trống", nút "Cấp IP" cấp ô đầu, nút "Hiện từng IP" bung
+    ra). Chế độ "Trống", ô tìm, và địa chỉ đang được trỏ tới (link `?ip=`) vẫn hiện từng ô. Chuỗi
+    đã bung thì vẫn bung sau khi cấp một IP trong nó (cấp liền nhiều IP không phải bấm lại).
+  - Một thông tin nói một lần: thanh ghế chỉ ở dải 4 ô (tab Máy đang dùng không vẽ lại); dải IP
+    trên điện thoại chỉ còn ô chọn dải + menu ⋯ (thẻ dải lặp đúng những gì tiêu đề bên dưới nói).
+  - **Thanh lọc trên điện thoại** (≤600px) tự gập sau nút "Bộ lọc (n)" khi có từ 3 ô lọc trở lên
+    và màn đếm được bộ lọc đang bật (có "Xóa lọc"); 1–2 ô, hoặc màn không đếm, thì vẫn bày ra —
+    nút "Bộ lọc" không số giấu mất việc danh sách đang bị lọc. Sổ NAT tính cả chip trạng thái
+    khác mặc định vào số đó. Thẻ "Khai trước khi thêm thiết bị" gập thành một dòng khi cả 6 mục đã
+    đủ. Danh mục trên điện thoại: nút chính đứng trước ⋯ như mọi màn.
+  - Lọc trạng thái Sổ NAT (chọn được nhiều) dùng chip có ô tick (`FilterToggle`), không dùng dáng
+    nhóm nút chọn-một. Hộp Đổi IP chọn sẵn dải của IP hiện tại; mã đối tượng ở Nhật ký là UUID
+    thì luôn rút 8 ký tự (bản đầy đủ ở nút chép và khi rê chuột), mã khác (khoá cấu hình…) để
+    nguyên vì nó là thứ duy nhất nói dòng đó về cái gì.
+  - Lỗi vẽ: nhãn ô thống kê xuống dòng thay vì tràn ô; bảng dòng-là-thẻ (`table-cards`) khi xếp
+    dọc trên điện thoại vẽ khung cho cả thẻ, không cho từng ô; dòng sọc của bảng IP tô cả thẻ.
+  - **Giữ nguyên có chủ ý:** nhãn phân hệ ở đầu hộp thoại chỉ cho Thiết bị / Phần mềm / Danh mục
+    (ba thứ hay bị lẫn — Q-27), không thêm cho hộp IP / NAT / két.
 
 ### Q-09 · Tài liệu
 

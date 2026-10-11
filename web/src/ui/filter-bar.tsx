@@ -6,6 +6,8 @@ import { useMediaQuery } from '@/ui/use-media-query';
 
 /** Bề ngang gập ô lọc — cùng mốc với thẻ gọn của `DataTable`. */
 const COLLAPSE_QUERY = BREAKPOINTS.cards;
+/** Từ chừng này ô lọc trở lên thì tự gập trên điện thoại (Q-27). */
+const AUTO_COLLAPSE_FROM = 3;
 
 /**
  * Thanh lọc dùng chung (AD-15): ô tìm kiếm + các bộ lọc + thao tác bên phải.
@@ -19,11 +21,15 @@ export function FilterBar({
   actions,
   activeCount = 0,
   onClear,
-  collapsible = false,
+  collapsible,
 }: {
   /**
-   * ≤600px gập các ô lọc sau nút "Bộ lọc (n)" — ô tìm và nút "Xóa lọc" vẫn ở ngoài. Dành cho
-   * thanh nhiều ô (Nhật ký hệ thống): bày hết thì khối lọc cao hơn màn hình đầu tiên.
+   * ≤600px gập các ô lọc sau nút "Bộ lọc (n)" — ô tìm và nút "Xóa lọc" vẫn ở ngoài. Mặc định tự
+   * gập khi có từ `AUTO_COLLAPSE_FROM` ô lọc: 4–6 ô xếp chồng chiếm nửa màn điện thoại trước khi
+   * tới dòng dữ liệu đầu tiên. 1–2 ô thì bày ra — gập chúng là thêm một chạm vô ích. Màn không
+   * truyền `onClear` (không đếm được bộ lọc đang bật) thì không tự gập: nút "Bộ lọc" trơn che
+   * mất việc danh sách đang bị lọc.
+   * `false` = không bao giờ gập; `true` = gập dù ít ô.
    */
   collapsible?: boolean;
   /** Số bộ lọc đang bật — có `onClear` và số > 0 thì hiện nút "Xóa lọc (n)" cuối thanh. */
@@ -40,8 +46,10 @@ export function FilterBar({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const showClear = Boolean(onClear) && activeCount > 0;
-  const hasFilters = Children.toArray(children).length > 0;
-  const folded = collapsible && narrow && hasFilters;
+  const filterCount = Children.toArray(children).length;
+  const hasFilters = filterCount > 0;
+  const folded =
+    (collapsible ?? (Boolean(onClear) && filterCount >= AUTO_COLLAPSE_FROM)) && narrow && hasFilters;
   /*
    * Chỉ có MỘT ô tìm thì bỏ khung thẻ: thẻ viền bọc đúng một ô nhập là hai lớp viền và ~60px
    * chiều cao mất không trên điện thoại. `Children.toArray` bỏ `null`/`false` — bộ lọc ẩn theo

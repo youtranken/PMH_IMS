@@ -63,17 +63,49 @@ describe('Trang đường truyền — không nói một điều hai lần', () 
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('đường đang dùng: thiết bị đầu cuối chỉ ở thẻ "Khi mất mạng", tên nhà mạng không lặp cạnh số hợp đồng', async () => {
+  it('đường đang dùng: thiết bị đầu cuối chỉ ở dải 4 ô, tên nhà mạng không lặp cạnh số hợp đồng', async () => {
     renderLine(LINE);
     expect(await screen.findAllByRole('link', { name: 'FW-E2E-01' })).toHaveLength(1);
     // Tên nhà mạng là tên trang (h1) và breadcrumb — không thêm lần nữa ở dòng số hợp đồng.
-    const contract = screen.getByText('HD-123').closest('.rail-row') ?? screen.getByText('HD-123').parentElement;
+    const contract = screen.getByText('HD-123').closest('.fact');
     expect(contract).not.toHaveTextContent('FPT Telecom');
   });
 
-  it('đường đã thanh lý: thẻ sự cố ẩn nên thiết bị hiện ở lưới hồ sơ', async () => {
+  it('đường đã thanh lý: thiết bị vẫn ở dải 4 ô, chỉ một lần', async () => {
     renderLine({ ...LINE, status: 'terminated' });
     expect(await screen.findAllByRole('link', { name: 'FW-E2E-01' })).toHaveLength(1);
+  });
+});
+
+describe('Trang đường truyền — khuôn C (Q-27)', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('trạng thái dưới mã, không còn "Thẻ định danh"; Thông số đủ ô, ô trống ghi "chưa khai"', async () => {
+    renderLine(LINE);
+    expect(await screen.findByRole('group', { name: 'Tóm tắt đường truyền' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Thẻ định danh' })).toBeNull();
+    const spec = screen.getByRole('group', { name: 'Thông số' });
+    // Tốc độ gói cước có nhãn (trước đứng trơn dưới mã).
+    expect(spec).toHaveTextContent('Tốc độ gói cước300 Mbps');
+    expect(spec).toHaveTextContent('Sitechưa khai');
+    expect(screen.getByRole('button', { name: 'Bổ sung 3 ô còn thiếu' })).toBeInTheDocument();
+    // Hotline chưa khai thì ô vẫn đứng đúng chỗ.
+    expect(screen.getByRole('group', { name: 'Tóm tắt đường truyền' })).toHaveTextContent('Hotlinechưa khai');
+  });
+
+  it('"Sửa hồ sơ" hiện cả trên điện thoại, không giấu vào ⋯', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    );
+    renderLine(LINE);
+    expect(await screen.findByRole('button', { name: 'Sửa hồ sơ' })).toBeInTheDocument();
   });
 });
 
@@ -93,7 +125,7 @@ describe('Trang đường truyền — nhiều IP WAN (Q-20)', () => {
     expect(screen.getByRole('button', { name: 'Chép IP WAN 113.161.10.20' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Chép IP WAN 113.161.10.21' })).toBeInTheDocument();
     // Dấu phẩy đứng sát IP trước nó: "a , b" là dấu cách lạc trước dấu phẩy.
-    const line = screen.getByText('113.161.10.20').closest('.detail-subline')!;
+    const line = screen.getByText('113.161.10.20').closest('.fact')!;
     expect(line.textContent).toContain('113.161.10.20, 113.161.10.21');
   });
 });

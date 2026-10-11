@@ -25,7 +25,7 @@ import { RowActions } from "@/ui/row-actions";
 import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
-import { useTabCounts } from "@/ui/tab-counts";
+import { fileCountFact, useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
@@ -387,7 +387,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             : {
                 key: "files",
                 label: t("software.tabAttachments"),
-                value: counts.files ? t("software.fileCount", { count: counts.files }) : counts.files === 0 ? null : "…",
+                value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
               },
         ]}
       />

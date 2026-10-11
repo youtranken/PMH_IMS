@@ -457,7 +457,7 @@ export function DeviceDetail({ me }: { me: Me }) {
   ].filter((node): node is RelationNode => node !== null);
 
   /**
-   * Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng (cùng lối `BlankFields`).
+   * Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng cho từng khu.
    *
    * BA TRẠNG THÁI, KHÔNG PHẢI HAI. Mỗi khu có thể ở một trong ba tình huống:
    *   · CÓ dòng            → vẽ nút trên bản đồ;

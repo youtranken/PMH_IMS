@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -62,12 +63,25 @@ export function CatalogSetup({
     { key: 'vendor', label: t('catalog.tabVendor'), state: ready(active(lists?.vendors)) },
     { key: 'department', label: t('catalog.tabDepartment'), state: ready(active(lists?.departments)) },
   ];
+  /* Đủ cả 6 mục thì thẻ thu về một dòng: sáu ô "đủ" chỉ nói một câu, mà trên điện thoại chúng
+     cao ~300px, đẩy bảng của tab xuống dưới mép. Còn thiếu (hoặc chưa biết) thì luôn bày ra. */
+  const allReady = tiles.every((tile) => tile.state.ok && tile.state.text !== '…');
+  const [opened, setOpened] = useState(false);
+  const folded = allReady && !opened;
   return (
-    <section className="setup-tiles" aria-labelledby="catalog-setup-title">
-      <h2 id="catalog-setup-title" className="setup-tiles-title">
-        {t('catalog.setupTitle')}
-      </h2>
-      <p className="setup-tiles-hint">{t('catalog.setupHint')}</p>
+    <section className={folded ? 'setup-tiles is-folded' : 'setup-tiles'} aria-labelledby="catalog-setup-title">
+      <div className="setup-tiles-head">
+        <h2 id="catalog-setup-title" className="setup-tiles-title">
+          {t('catalog.setupTitle')}
+        </h2>
+        {allReady ? (
+          <button type="button" className="btn sm ghost" aria-expanded={opened} onClick={() => setOpened((value) => !value)}>
+            {opened ? t('catalog.setupHide') : t('catalog.setupShow')}
+          </button>
+        ) : null}
+      </div>
+      <p className="setup-tiles-hint">{folded ? t('catalog.setupAllReady') : t('catalog.setupHint')}</p>
+      {folded ? null : (
       <div className="setup-tiles-grid">
         {tiles.map((tile) => (
           <button key={tile.key} type="button" className="setup-tile" data-ok={tile.state.ok ? 'true' : 'false'} onClick={() => onPick(tile.key)}>
@@ -76,6 +90,7 @@ export function CatalogSetup({
           </button>
         ))}
       </div>
+      )}
     </section>
   );
 }

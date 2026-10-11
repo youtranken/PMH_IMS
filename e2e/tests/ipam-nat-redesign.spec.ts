@@ -61,7 +61,14 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await page.goto(`/ip-addresses/${id}`);
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
 
-    // 254 host / 50 = 6 trang, không đổ hết 254 dòng ra một lượt.
+    // Dải trắng: 254 ô trống liền nhau gập thành MỘT dòng, khỏi phải lật 6 trang ô trống.
+    await expect(page.getByRole('row').filter({ hasText: 'Hiện từng IP' })).toContainText(
+      '254 IP trống',
+    );
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(1);
+    await page.getByRole('button', { name: 'Hiện từng IP' }).click();
+
+    // Mở ra thì 254 host / 50 = 6 trang, không đổ hết 254 dòng ra một lượt.
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(50);
     await expect(page.getByText('1–50 trên 254 dòng')).toBeVisible();
     await expect(page.getByText('Trang 1/6')).toBeVisible();
@@ -104,6 +111,8 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await expect(page.getByRole('radio', { name: 'Tất cả 254' })).toBeVisible();
 
     // Bấm lọc "Đang dùng": còn đúng 1 dòng và TỰ VỀ TRANG 1 — giữ nguyên trang cũ là bảng rỗng.
+    // Lọc "Trống" hiện từng ô (không gập) nên mới có trang 2 để đứng.
+    await page.getByRole('radio', { name: 'Trống 253' }).check();
     await page.getByRole('button', { name: 'Trang sau' }).click();
     await expect(page.getByText('Trang 2/6')).toBeVisible();
     await assigned.check();
@@ -118,6 +127,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await createSubnet(page, `10.${octet}.2.0/24`, `LAN E2E trang B ${octet}`);
 
     await page.goto(`/ip-addresses/${first}`);
+    await page.getByRole('button', { name: 'Hiện từng IP' }).click();
     await page.getByRole('button', { name: 'Trang sau' }).click();
     await page.getByRole('button', { name: 'Trang sau' }).click();
     await expect(page.getByText('Trang 3/6')).toBeVisible();
@@ -127,6 +137,11 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
      * đầu thì biến mất — không có gì trên màn hình giải thích vì sao.
      */
     await page.getByRole('link', { name: new RegExp(`10\\.${octet}\\.2\\.0/24`) }).click();
+    // Dải mới không mang theo lựa chọn "mở" của dải cũ: lại gập, mở ra thì đứng ở trang 1.
+    await expect(page.getByRole('row').filter({ hasText: 'Hiện từng IP' })).toContainText(
+      '254 IP trống',
+    );
+    await page.getByRole('button', { name: 'Hiện từng IP' }).click();
     await expect(page.getByText('Trang 1/6')).toBeVisible();
     await expect(page.getByText(`10.${octet}.2.1`, { exact: true })).toBeVisible();
   });

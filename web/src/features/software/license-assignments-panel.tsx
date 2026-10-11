@@ -7,7 +7,6 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './assign-dialog';
 import { SeatTable, type SeatRow } from './seat-table';
-import { SeatUsage } from './software-standing-cell';
 import { supportsSeats, type SoftwareRow, type SoftwareSeat } from './software-types';
 
 /**
@@ -69,8 +68,8 @@ export function LicenseAssignmentsPanel({
 
   return (
     <div className="attachment-panel">
+      {/* Không vẽ lại thanh ghế: nó đã ở dải 4 ô đầu trang, thấy ở mọi tab (Q-27). */}
       <div className="seat-toolbar">
-        <SeatUsage item={software} />
         <div className="segmented" role="group" aria-label={t('license.filterState')}>
           <button
             type="button"

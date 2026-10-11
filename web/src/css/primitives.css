@@ -120,6 +120,33 @@ table.table.table-cards tbody tr:hover td {
 }
 /* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
 html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: none; }
+/*
+ * Bảng dòng-là-thẻ GẬP DỌC (`table-stack`, cùng mốc 960px): mỗi ô thành một hàng của thẻ, nên
+ * khung phải vẽ trên DÒNG. Để nguyên luật ở trên thì ô đầu có viền trái + bo góc, ô cuối có
+ * viền phải, các ô giữa không có cạnh bên — thẻ hở hai mép.
+ */
+@media (max-width: 960px) {
+  table.table.table-stack.table-cards tbody tr {
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface);
+  }
+  table.table.table-stack.table-cards tbody td,
+  table.table.table-stack.table-cards tbody td:first-child,
+  table.table.table-stack.table-cards tbody td:last-child {
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  table.table.table-stack.table-cards tbody tr:hover td {
+    box-shadow: none;
+    transform: none;
+  }
+}
 @media (max-width: 760px) {
   .exp .panel {
     grid-template-columns: 1fr;
@@ -301,6 +328,16 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
    thẻ cao gấp đôi nội dung, đáy trống. Ở đây thẻ cao theo nội dung. */
 .subnet-picker .subnet-card {
   flex: none;
+}
+/* Ô chọn dải chiếm trọn hàng, menu ⋯ của dải đứng cuối. */
+.subnet-picker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.subnet-picker-row > :first-child {
+  flex: 1;
+  min-width: 0;
 }
 /* Cột trái cuộn riêng: mép dưới mờ dần báo "còn thẻ bên dưới". Đệm đáy đúng bằng dải mờ nên
    cuộn tới cuối thì thẻ cuối vẫn rõ nét. Chỉ ở khổ rộng — khổ hẹp cột trái nằm ngang. */
@@ -489,6 +526,16 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
     display: block;
     padding: 0;
     text-align: left;
+  }
+  /* Sọc chẵn/lẻ tô cả THẺ: dòng là lưới có khe, tô từng ô thì thẻ loang từng mảng. */
+  table.table.ip-table.table-stack > tbody > tr:nth-child(even) {
+    background: var(--row-alt);
+  }
+  table.table.ip-table.table-stack > tbody > tr > td {
+    background: transparent;
+  }
+  table.table.ip-table.table-stack > tbody > tr.row-highlight {
+    background: var(--primary-soft);
   }
   /* Dòng 1 (IP · huy hiệu · ⋯) tự nói nó là gì; các dòng sau giữ nhãn nhỏ, nhạt ở đầu dòng —
      thiếu nhãn thì "Phòng Kế toán" và "LT-01" không biết cái nào là máy, cái nào là người. */

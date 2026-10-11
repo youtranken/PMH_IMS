@@ -504,20 +504,28 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const main = page.getByRole('main');
 
     /*
-     * ĐÚNG BỘ NÚT ĐẦU TRANG. Hai cái, không hơn:
-     *   - "Chép IP WAN <ip>" (nằm ở dòng định danh, mỗi IP WAN một nút — Q-20),
-     *   - "Sửa hồ sơ" ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04).
+     * ĐÚNG BỘ NÚT ĐẦU TRANG (khuôn C, Q-27):
+     *   - "Chép IP WAN <ip>" và "Chép số hợp đồng" ở dải 4 ô (mỗi IP WAN một nút — Q-20),
+     *   - "Sửa hồ sơ" + ⋯ ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04),
+     *   - "Bổ sung n ô còn thiếu" ở đầu khối Thông số (tab Tổng quan mở sẵn): hồ sơ này chưa khai site.
      * Mã hồ sơ CỐ Ý không có nút chép — nó là tiêu đề, bôi đen chép như mọi chữ khác. Tập hợp
      * này giữ đúng quyết định đó.
      */
     expect(
       await nameByRole(main, 'button'),
-      'Đầu trang hồ sơ đường truyền: Chép IP WAN · Sửa hồ sơ · menu ⋯ (đổi trạng thái) · Chép số hợp đồng (thẻ "Khi mất mạng")',
+      'Đầu trang hồ sơ đường truyền: Chép IP WAN · Chép số hợp đồng (dải 4 ô) · Sửa hồ sơ · menu ⋯ · Bổ sung ô thiếu',
     ).toEqual(
-      sortVi(['Chép IP WAN 203.113.99.9', 'Sửa hồ sơ', `Thao tác với ${itemCode}`, 'Chép số hợp đồng']),
+      sortVi([
+        'Bổ sung 1 ô còn thiếu',
+        'Chép IP WAN 203.113.99.9',
+        'Sửa hồ sơ',
+        `Thao tác với ${itemCode}`,
+        'Chép số hợp đồng',
+      ]),
     );
-    // Thẻ "Khi mất mạng": gọi hotline là MỘT cú chạm.
-    await expect(main.getByRole('link', { name: 'Gọi 1800 1166' })).toHaveAttribute(
+    // Ô Hotline ở dải đầu trang: gọi là MỘT cú chạm.
+    const strip = main.getByRole('group', { name: 'Tóm tắt đường truyền' });
+    await expect(strip.getByRole('link', { name: '1800 1166' })).toHaveAttribute(
       'href',
       'tel:18001166',
     );
@@ -531,28 +539,28 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     );
     expect(
       tabName,
-      'Hồ sơ đường truyền phải có đúng bốn tab, đúng thứ tự: Hồ sơ · Két sắt · Giấy tờ · Lịch sử',
-    ).toEqual(['Hồ sơ', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
+      'Hồ sơ đường truyền phải có đúng bốn tab, đúng thứ tự: Tổng quan · Két sắt · Giấy tờ · Lịch sử',
+    ).toEqual(['Tổng quan', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
 
     /** Mỗi tab kèm MỘT dấu hiệu chỉ tab đó mới có — để "bấm sang tab khác" không thể xanh nhầm. */
     const tabMarkers: { name: RegExp; marker: () => Promise<void> }[] = [
       {
-        name: /^Hồ sơ$/,
+        name: /^Tổng quan$/,
         marker: async () => {
-          /* Thẻ định danh ở cột phải hiện ngày bắt đầu, và KHÔNG còn thanh thời hạn: đường
-             truyền không có hạn (Q-04). */
-          const the = page.getByRole('region', { name: 'Thẻ định danh' });
+          /* Khối Thông số hiện ngày bắt đầu, và KHÔNG có thanh thời hạn: đường truyền không có
+             hạn (Q-04). */
+          const the = main.getByRole('group', { name: 'Thông số' });
           await expect(
             the.getByText('Bắt đầu', { exact: true }),
-            'Thẻ định danh phải hiện ngày bắt đầu đã khai',
+            'Khối Thông số phải hiện ngày bắt đầu đã khai',
           ).toBeVisible();
           await expect(
-            the.getByRole('progressbar'),
+            main.getByRole('progressbar'),
             'Không còn thanh thời hạn hợp đồng — line không có hạn',
           ).toHaveCount(0);
           await expect(
             main.getByText(note, { exact: true }),
-            'Tab Hồ sơ phải hiện lại đúng ghi chú đã khai',
+            'Tab Tổng quan phải hiện lại đúng ghi chú đã khai',
           ).toBeVisible();
         },
       },
@@ -904,9 +912,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await nameByRole(page.getByRole('main'), 'button'),
-      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ, ba chấm — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
+      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ, ba chấm, Bổ sung ô thiếu ở khối Thông tin — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
     ).toEqual(
       sortVi([
+        'Bổ sung 2 ô còn thiếu',
         'Chép tên đăng nhập',
         'Sửa hồ sơ',
         `Thao tác với ${activeCode}`,
@@ -924,13 +933,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const tabName = (await page.getByRole('tab').allTextContents()).map((raw) =>
       tidyLabel(raw).replace(/\s+\d+$/, ''),
     );
-    /* NET-075: khu Hồ sơ (ghi chú + "Chưa khai báo") đứng thẳng đầu cột chính, không sau một
-       tab — thanh tab mở vào Két sắt. */
+    /* NET-075: khối Thông tin (ô trống ghi "chưa khai" tại chỗ) đứng thẳng đầu cột chính,
+       không sau một tab — thanh tab mở vào Két sắt. */
     expect(
       tabName,
-      'Hồ sơ tài khoản dịch vụ: ba tab Két sắt · Giấy tờ · Lịch sử, khu Hồ sơ nằm trên thanh tab',
+      'Hồ sơ tài khoản dịch vụ: ba tab Két sắt · Giấy tờ · Lịch sử, khối Thông tin nằm trên thanh tab',
     ).toEqual(['Két sắt', 'Giấy tờ', 'Lịch sử']);
-    await expect(page.getByText('Chưa khai báo:')).toBeVisible();
+    await expect(main.getByRole('group', { name: 'Thông tin' })).toContainText('chưa khai');
     await expect(page.getByRole('tab', { name: /^Két sắt/ })).toHaveAttribute(
       'aria-selected',
       'true',

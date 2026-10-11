@@ -76,3 +76,35 @@ describe('FilterBar `collapsible` — gập ô lọc trên điện thoại', () 
     expect(screen.getByRole('combobox', { name: 'Hành động' })).toBeInTheDocument();
   });
 });
+
+describe('FilterBar — tự gập khi nhiều ô lọc', () => {
+  function many(withClear: boolean) {
+    return (
+      <FilterBar
+        search=""
+        onSearchChange={vi.fn()}
+        searchPlaceholder="Tìm"
+        activeCount={withClear ? 1 : undefined}
+        onClear={withClear ? vi.fn() : undefined}
+      >
+        <select aria-label="Một" />
+        <select aria-label="Hai" />
+        <select aria-label="Ba" />
+      </FilterBar>
+    );
+  }
+
+  it('≥3 ô và màn có đếm bộ lọc đang bật: tự gập, nút mang số', () => {
+    viewport(390);
+    renderWithI18n(many(true));
+    expect(screen.queryByRole('combobox', { name: 'Một' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bộ lọc (1)' })).toBeInTheDocument();
+  });
+
+  it('≥3 ô nhưng màn không đếm bộ lọc: bày ra — gập thì không ai biết đang lọc gì', () => {
+    viewport(390);
+    renderWithI18n(many(false));
+    expect(screen.getByRole('combobox', { name: 'Một' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Bộ lọc/ })).not.toBeInTheDocument();
+  });
+});

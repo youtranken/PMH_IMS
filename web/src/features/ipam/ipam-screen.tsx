@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { foldSearch } from '@/lib/search-fold';
 import { Select } from '@/ui/select';
@@ -248,37 +249,41 @@ export function IpamScreen({ me }: { me: Me }) {
           {/*
             Điện thoại: MỘT ô chọn dải dính đầu trang thay cho dãy thẻ cuộn ngang — dãy thẻ
             260px không cho biết có bao nhiêu dải, đang ở dải nào, và phải vuốt mới tìm được.
-            Thẻ của dải đang chọn vẫn hiện ngay dưới (gateway, mức dùng, menu ⋯).
+            Không vẽ thẻ của dải đang chọn: tiêu đề dải ngay dưới đã nói CIDR, gateway, mask,
+            VLAN, site (Q-27 — một thông tin nói một lần); chỉ menu ⋯ của thẻ đứng cạnh ô chọn.
           */}
           {narrow && selected ? (
             <div className="subnet-picker">
               {siteSelect}
-              <Select
-                value={selected.id}
-                ariaLabel={t('ipam.pickSubnet')}
-                options={groupSubnets(siteRows).flatMap((group) =>
-                  group.rows.map((row) => ({
-                    value: row.id,
-                    label: t('ipam.subnetOption', {
-                      cidr: row.cidr,
-                      vlan: row.vlan === null ? '' : ` · ${t('ipam.vlanBadge', { vlan: row.vlan })}`,
-                      free: row.free,
-                    }),
-                    group: group.key === 'all' ? undefined : groupLabel(group.key),
-                  })),
-                )}
-                onChange={(value) => navigate(PATHS.subnet(value))}
-              />
-              <SubnetCard
-                subnet={selected}
-                active
-                canEdit={canEdit}
-                fullPercent={fullPercent}
-                onEdit={() => setEditing({ subnet: selected })}
-                onHide={() => setHiding(selected)}
-                onRestore={() => void restoreSubnet(selected)}
-                onDelete={() => void removeSubnet(selected)}
-              />
+              <div className="subnet-picker-row">
+                <Select
+                  value={selected.id}
+                  ariaLabel={t('ipam.pickSubnet')}
+                  options={groupSubnets(siteRows).flatMap((group) =>
+                    group.rows.map((row) => ({
+                      value: row.id,
+                      label: t('ipam.subnetOption', {
+                        cidr: row.cidr,
+                        vlan: row.vlan === null ? '' : ` · ${t('ipam.vlanBadge', { vlan: row.vlan })}`,
+                        free: row.free,
+                      }),
+                      group: group.key === 'all' ? undefined : groupLabel(group.key),
+                    })),
+                  )}
+                  onChange={(value) => navigate(PATHS.subnet(value))}
+                />
+                {canEdit ? (
+                  <RowActions
+                    label={t('common.actionsOf', { subject: selected.cidr })}
+                    items={subnetActions(selected, t, {
+                      onEdit: () => setEditing({ subnet: selected }),
+                      onHide: () => setHiding(selected),
+                      onRestore: () => void restoreSubnet(selected),
+                      onDelete: () => void removeSubnet(selected),
+                    })}
+                  />
+                ) : null}
+              </div>
             </div>
           ) : (
           <nav className="subnet-rail" aria-label={t('ipam.railLabel')} ref={railRef}>
@@ -360,34 +365,15 @@ export function IpamScreen({ me }: { me: Me }) {
   );
 }
 
-/**
- * Một thẻ dải ở cột trái.
- *
- * Cả thẻ là một `<Link>` thật, không phải `onClick` trên `<div>`: mở tab mới, copy link, và
- * bàn phím Tab tới được — ba thứ mất sạch nếu dùng div. Nút thao tác nằm NGOÀI link (không
- * lồng nút trong link) và chỉ hiện khi có quyền.
- */
-export function SubnetCard({
-  subnet,
-  active,
-  canEdit,
-  fullPercent,
-  onEdit,
-  onHide,
-  onRestore,
-  onDelete,
-}: {
-  subnet: SubnetRow;
-  active: boolean;
-  canEdit: boolean;
-  fullPercent: number;
+interface SubnetHandlers {
   onEdit: () => void;
   onHide: () => void;
   onRestore: () => void;
   onDelete: () => void;
-}) {
-  const { t } = useTranslation();
-  const disabled = subnet.voidedAt !== null;
+}
+
+/** Menu ⋯ của một dải — dùng ở thẻ dải (cột trái) và cạnh ô chọn dải trên điện thoại. */
+export function subnetActions(subnet: SubnetRow, t: TFunction, handlers: SubnetHandlers): RowAction[] {
   /**
    * Xóa HẲN chỉ mở ra khi dải chưa từng có hồ sơ IP nào.
    *
@@ -397,8 +383,10 @@ export function SubnetCard({
    * mất" — và thẻ nói thẳng ra điều đó thay vì lặng lẽ giấu nút Xóa đi.
    */
   const canDelete = subnet.addressCount === 0;
+  const { onEdit, onHide, onRestore, onDelete } = handlers;
+  const disabled = subnet.voidedAt !== null;
 
-  const actions: RowAction[] = disabled
+  return disabled
     ? [
         { key: 'restore', label: t('ipam.restore'), onSelect: onRestore, ok: true },
         ...(canDelete
@@ -427,6 +415,38 @@ export function SubnetCard({
           ? { key: 'delete', label: t('common.delete'), onSelect: onDelete, danger: true }
           : { key: 'hide', label: t('ipam.hide'), onSelect: onHide, warn: true },
       ];
+}
+
+/**
+ * Một thẻ dải ở cột trái.
+ *
+ * Cả thẻ là một `<Link>` thật, không phải `onClick` trên `<div>`: mở tab mới, copy link, và
+ * bàn phím Tab tới được — ba thứ mất sạch nếu dùng div. Nút thao tác nằm NGOÀI link (không
+ * lồng nút trong link) và chỉ hiện khi có quyền.
+ */
+export function SubnetCard({
+  subnet,
+  active,
+  canEdit,
+  fullPercent,
+  onEdit,
+  onHide,
+  onRestore,
+  onDelete,
+}: {
+  subnet: SubnetRow;
+  active: boolean;
+  canEdit: boolean;
+  fullPercent: number;
+  onEdit: () => void;
+  onHide: () => void;
+  onRestore: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation();
+  const disabled = subnet.voidedAt !== null;
+  const canDelete = subnet.addressCount === 0;
+  const actions = subnetActions(subnet, t, { onEdit, onHide, onRestore, onDelete });
 
   return (
     <div

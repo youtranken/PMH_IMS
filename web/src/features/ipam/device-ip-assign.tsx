@@ -37,7 +37,7 @@ export function DeviceIpAssign({
   onDone: () => void;
 }) {
   const { t } = useTranslation();
-  const [subnetId, setSubnetId] = useState('');
+  const [pickedSubnetId, setSubnetId] = useState('');
   const [picked, setPicked] = useState('');
   const [chosen, setChosen] = useState<{ address: string; record: IpRow | null } | null>(null);
 
@@ -46,13 +46,25 @@ export function DeviceIpAssign({
     queryKey: ['ipam', 'subnets', 'active'],
     queryFn: () => apiFetch<SubnetRow[]>('/api/v1/ipam/subnets'),
   });
-  const subnet = subnets.data?.find((row) => row.id === subnetId) ?? null;
   const held = useQuery({
     queryKey: ['ipam', 'devices', device.id, 'addresses'],
     queryFn: () => apiFetch<IpRow[]>(`/api/v1/ipam/devices/${device.id}/addresses`),
     enabled: change,
   });
   const current = held.data?.find((row) => row.status === 'assigned') ?? null;
+  /*
+   * Chọn sẵn dải: đổi IP thì gần như luôn đổi TRONG dải đang dùng; chỉ có một dải thì chẳng còn
+   * gì để chọn. Người dùng chọn dải khác thì lựa chọn của họ thắng.
+   */
+  const activeSubnets = subnets.data ?? [];
+  const presetSubnetId =
+    change && current && activeSubnets.some((row) => row.id === current.subnetId)
+      ? current.subnetId
+      : activeSubnets.length === 1
+        ? activeSubnets[0].id
+        : '';
+  const subnetId = pickedSubnetId || presetSubnetId;
+  const subnet = activeSubnets.find((row) => row.id === subnetId) ?? null;
   const slots = useQuery({
     queryKey: ['ipam', 'subnets', subnetId, 'addresses', false],
     queryFn: () => apiFetch<SubnetSlot[]>(`/api/v1/ipam/subnets/${subnetId}/addresses`),
