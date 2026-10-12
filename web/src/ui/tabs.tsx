@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Chevron } from '@/ui/chevron';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { motionReduced } from '@/lib/motion';
 
@@ -10,6 +11,11 @@ export interface TabItem {
   label: ReactNode;
   /** Số nhỏ bên phải nhãn (vd số dòng trong tab). */
   count?: number;
+  /**
+   * Tên nhóm (Q-27, màn Danh mục): tab liền nhau cùng nhóm đứng thành cụm, nhãn nhóm hiện trước
+   * tab đầu của cụm. Nhãn chỉ để nhìn (`aria-hidden`) — vẫn là MỘT tablist, ←/→ đi qua mọi tab.
+   */
+  group?: string;
   /*
    * ===== KHÔNG CÓ PROP `dot` (chấm cảnh báo) =====
    *
@@ -72,7 +78,9 @@ export function Tabs({
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const barRef = useRef<HTMLDivElement>(null);
   const edges = useScrollEdges(barRef);
+  const overflow = !wrap && (edges.start || edges.end);
   const mounted = useRef(false);
+  const lastValue = useRef(value);
   // Khoá theo nhãn + số đếm: mảng `items` nơi gọi dựng lại mỗi lượt render, không dùng làm phụ thuộc được.
   const layoutKey = items.map((item) => `${item.key}:${item.count ?? ''}`).join('|');
   const ink = useTabInk(barRef, refs, value, layoutKey);
@@ -99,14 +107,18 @@ export function Tabs({
       tabWidth: tabRect.width,
     });
     // Lần đầu nhảy thẳng (trang vừa mở, không có gì để "đi theo"); người dùng tắt chuyển
-    // động thì cũng nhảy thẳng.
+    // động, hay chỉ là bù lại sau khi khung bật đệm (tab không đổi), cũng nhảy thẳng.
     const reduced = motionReduced();
-    const behavior: ScrollBehavior = mounted.current && !reduced ? 'smooth' : 'auto';
+    const followed = mounted.current && lastValue.current !== value;
+    const behavior: ScrollBehavior = followed && !reduced ? 'smooth' : 'auto';
     mounted.current = true;
+    lastValue.current = value;
     if (left === bar.scrollLeft) return;
     if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior });
     else bar.scrollLeft = left;
-  }, [value, wrap]);
+    /* `overflow` cũng là phụ thuộc: thanh vừa tràn thì khung bật đệm cho mũi tên (CSS), bề ngang
+       thanh hẹp lại và vị trí cuộn tính lúc trước trật đi — tab đang chọn lòi một khúc ra mép. */
+  }, [value, wrap, overflow]);
 
   const move = (delta: number) => {
     const index = items.findIndex((item) => item.key === value);
@@ -115,7 +127,28 @@ export function Tabs({
     refs.current[next.key]?.focus();
   };
 
+  /* Mũi tên cuộn cho CHUỘT: mép mờ nói "còn tab", nhưng trên máy tính không có thanh cuộn để kéo.
+     Bàn phím đã có ← → nên mũi tên ra khỏi thứ tự Tab và khỏi cây trợ năng. */
+  const scrollBy = (direction: 1 | -1) => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const left = bar.scrollLeft + direction * Math.round(bar.clientWidth * 0.7);
+    if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior: motionReduced() ? 'auto' : 'smooth' });
+    else bar.scrollLeft = left;
+  };
+
   return (
+    <div
+      className="tabs-shell"
+      /* Chừa chỗ mũi tên ở CẢ HAI mép khi thanh tràn — không chỉ lúc mũi tên đang hiện: đệm bật
+         tắt theo mép thì thanh co giãn ngay dưới con trỏ khi vừa cuộn khỏi mép. */
+      data-overflow={overflow ? 'true' : undefined}
+    >
+    {!wrap && edges.start ? (
+      <button type="button" className="tabs-arrow" data-side="start" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(-1)}>
+        <Chevron direction="left" />
+      </button>
+    ) : null}
     <div
       ref={barRef}
       className="tabs"
@@ -128,9 +161,14 @@ export function Tabs({
       data-ink={ink ? 'true' : undefined}
       data-wrap={wrap ? 'true' : undefined}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
+        <Fragment key={item.key}>
+        {item.group && item.group !== items[index - 1]?.group ? (
+          <span className="tab-group" aria-hidden="true" data-first={index === 0 ? 'true' : undefined}>
+            {item.group}
+          </span>
+        ) : null}
         <button
-          key={item.key}
           ref={(el) => {
             refs.current[item.key] = el;
           }}
@@ -196,6 +234,7 @@ export function Tabs({
             </>
           ) : null}
         </button>
+        </Fragment>
       ))}
       {ink ? (
         <span
@@ -204,6 +243,12 @@ export function Tabs({
           style={{ transform: `translate(${ink.x}px, ${ink.y}px) scaleX(${ink.w})` }}
         />
       ) : null}
+    </div>
+    {!wrap && edges.end ? (
+      <button type="button" className="tabs-arrow" data-side="end" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(1)}>
+        <Chevron direction="right" />
+      </button>
+    ) : null}
     </div>
   );
 }

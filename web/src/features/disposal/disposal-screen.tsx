@@ -219,12 +219,17 @@ export function DisposalScreen() {
             })),
           ]}
         />
-        {/* Bấm lại khoảng đang chọn là bỏ lọc khoảng. */}
-        <SegmentedRadio<Period>
+        {/* "Mọi lúc" đứng đầu và sáng khi không lọc ngày: nhóm chọn-một mà không nút nào sáng thì
+            người đọc không biết đang xem khoảng nào. Khoảng tự gõ (không khớp nút nào) thì không nút
+            nào sáng — đúng sự thật. Bấm lại khoảng đang chọn vẫn là bỏ lọc khoảng. */}
+        <SegmentedRadio<Period | 'all'>
           label={t('disposal.period')}
-          value={period}
-          onChange={(key) => setPeriod(period === key ? '' : key)}
-          options={PERIODS.map((key) => ({ value: key, label: t(PERIOD_KEY[key]) }))}
+          value={period || (!filters.from && !filters.to ? 'all' : '')}
+          onChange={(key) => setPeriod(key === 'all' || period === key ? '' : key)}
+          options={[
+            { value: 'all', label: t('disposal.periodAll') },
+            ...PERIODS.map((key) => ({ value: key, label: t(PERIOD_KEY[key]) })),
+          ]}
         />
         {/* "Từ – đến" là MỘT cụm cùng hàng (`.filter-range`). Chữ trong ô ngắn để không bị cắt
             thành "Thanh lý đế…"; tên đầy đủ nằm ở nhãn trợ năng. */}

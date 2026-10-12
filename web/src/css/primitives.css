@@ -73,6 +73,80 @@ table.table.table-sub tbody tr:hover td {
 table.table.table-sub td .mono {
   white-space: nowrap;
 }
+/* Bảng con dạng THẺ (`table-cards`, Q-27): mỗi dòng là một thẻ tách nhau, rê chuột thì nổi
+   lên — license đang cài của máy, ghế đang dùng của license. Vẫn là `<table>` thật để trình
+   đọc màn hình gắn tiêu đề cột; chỉ đổi cách vẽ. Khung `.table-wrap` bỏ viền/nền và chừa chỗ
+   cho bóng (nó `overflow-x: auto` nên sẽ cắt bóng nếu sát mép). */
+.table-wrap:has(> table.table-cards) {
+  border: 0;
+  background: transparent;
+  padding: 0 var(--space-3) var(--space-3);
+}
+table.table.table-cards {
+  border-collapse: separate;
+  border-spacing: 0 var(--space-4);
+  background: transparent;
+}
+table.table.table-cards thead th {
+  background: transparent;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+table.table.table-cards tbody td {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+table.table.table-cards tbody td:first-child {
+  border-left: 1px solid var(--border);
+  border-radius: var(--r) 0 0 var(--r);
+}
+table.table.table-cards tbody td:last-child {
+  border-right: 1px solid var(--border);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+table.table.table-cards tbody tr:hover td {
+  background: var(--surface);
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='on']) table.table.table-cards tbody tr:hover td { transform: none; }
+}
+/* "Tắt" trong Hồ sơ (lib/motion.ts): bỏ chuyển động như trên, kể cả khi máy cho phép. */
+html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: none; }
+/*
+ * Bảng dòng-là-thẻ GẬP DỌC (`table-stack`, cùng mốc 960px): mỗi ô thành một hàng của thẻ, nên
+ * khung phải vẽ trên DÒNG. Để nguyên luật ở trên thì ô đầu có viền trái + bo góc, ô cuối có
+ * viền phải, các ô giữa không có cạnh bên — thẻ hở hai mép.
+ */
+@media (max-width: 960px) {
+  table.table.table-stack.table-cards tbody tr {
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface);
+  }
+  table.table.table-stack.table-cards tbody td,
+  table.table.table-stack.table-cards tbody td:first-child,
+  table.table.table-stack.table-cards tbody td:last-child {
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  table.table.table-stack.table-cards tbody tr:hover td {
+    box-shadow: none;
+    transform: none;
+  }
+}
 @media (max-width: 760px) {
   .exp .panel {
     grid-template-columns: 1fr;
@@ -249,6 +323,21 @@ table.table.table-sub td .mono {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+/* `flex: 0 0 260px` của dãy thẻ NGANG (≤1100px) mà rơi vào cột dọc này thì thành CHIỀU CAO 260px —
+   thẻ cao gấp đôi nội dung, đáy trống. Ở đây thẻ cao theo nội dung. */
+.subnet-picker .subnet-card {
+  flex: none;
+}
+/* Ô chọn dải chiếm trọn hàng, menu ⋯ của dải đứng cuối. */
+.subnet-picker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.subnet-picker-row > :first-child {
+  flex: 1;
+  min-width: 0;
 }
 /* Cột trái cuộn riêng: mép dưới mờ dần báo "còn thẻ bên dưới". Đệm đáy đúng bằng dải mờ nên
    cuộn tới cuối thì thẻ cuối vẫn rõ nét. Chỉ ở khổ rộng — khổ hẹp cột trái nằm ngang. */
@@ -437,6 +526,16 @@ table.table.table-sub td .mono {
     display: block;
     padding: 0;
     text-align: left;
+  }
+  /* Sọc chẵn/lẻ tô cả THẺ: dòng là lưới có khe, tô từng ô thì thẻ loang từng mảng. */
+  table.table.ip-table.table-stack > tbody > tr:nth-child(even) {
+    background: var(--row-alt);
+  }
+  table.table.ip-table.table-stack > tbody > tr > td {
+    background: transparent;
+  }
+  table.table.ip-table.table-stack > tbody > tr.row-highlight {
+    background: var(--primary-soft);
   }
   /* Dòng 1 (IP · huy hiệu · ⋯) tự nói nó là gì; các dòng sau giữ nhãn nhỏ, nhạt ở đầu dòng —
      thiếu nhãn thì "Phòng Kế toán" và "LT-01" không biết cái nào là máy, cái nào là người. */
@@ -1683,6 +1782,11 @@ button.tree-summary:hover:not(:disabled) {
   margin: 0;
   padding: 0;
 }
+/* Ô "+ Bản vẽ con vào …" mở đầu một hàng mới thì trải cả hàng: nửa ô bỏ trống bên cạnh trông như
+   thiếu một bản vẽ, và chữ dài gãy hai dòng trong nửa ô. */
+.dmap-tiles > .dmap-add:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 .dmap-tile {
   display: flex;
   flex-direction: column;
@@ -1830,6 +1934,12 @@ button.tree-summary:hover:not(:disabled) {
 .dpanel {
   display: flex;
   flex-direction: column;
+}
+/* Panel dùng `TabPanel` (dải chuyển nhanh bản vẽ cùng khu) nhưng KHÔNG cần khoảng đệm 30px của
+   tab trang chi tiết (`[role='tabpanel']`): đầu panel đã có đệm riêng, thêm nữa là một khoảng
+   trống trên tên bản vẽ. */
+.dpanel > [role='tabpanel'] {
+  padding-top: 0;
 }
 .dpanel-top {
   display: flex;
@@ -2150,3 +2260,25 @@ span.port-cell {
   outline-offset: 1px;
 }
 
+
+/* Ghế riêng còn trống dưới bảng "Máy đang dùng" (Q-27). */
+.free-seats {
+  margin-top: var(--space-6);
+}
+.free-seats-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+}
+.batch-list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* Bảng ghế (features/software/seat-editor.tsx, Q-27). "Ghế n" KHÔNG dùng `.mono`: font mono không
+   ghép được dấu tiếng Việt, ra "Ghế ́1". Ô nhập chiếm trọn cột. */
+.seat-no { white-space: nowrap; font-weight: var(--fw-semibold); }
+.seat-editor .inp { width: 100%; }

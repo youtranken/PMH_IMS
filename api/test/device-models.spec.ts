@@ -115,6 +115,20 @@ describe('Model thiết bị · danh mục (0062, Q-26)', () => {
     expect(page.items.find((m) => m.id === model.id)).toMatchObject({ deviceCount: 1 });
   });
 
+  it('danh sách máy mang phiên bản ảnh model khi model có ảnh mặt trước (cột Ảnh của bảng, Q-27)', async () => {
+    const withPhoto = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-SW-ANH', rackMountable: true, uSize: 1 });
+    const noPhoto = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-SW-KHONG-ANH', rackMountable: true, uSize: 1 });
+    await scratch.pool.query(`UPDATE device_model SET photo_front_file_id = gen_random_uuid() WHERE id = $1`, [withPhoto.id]);
+    for (const [code, modelId] of [['SW-E2E-ANH-1', withPhoto.id], ['SW-E2E-ANH-2', noPhoto.id], ['SW-E2E-ANH-3', null]] as const) {
+      await devices.create(ACTOR, { code, name: code, deviceTypeId: switchType, deviceModelId: modelId, siteId });
+    }
+    const page = await devices.list({ page: 1, limit: 50 }, { search: 'SW-E2E-ANH' });
+    const of = (code: string) => page.items.find((item) => item.code === code);
+    expect(of('SW-E2E-ANH-1')?.modelPhotoVersion).toEqual(expect.any(String));
+    expect(of('SW-E2E-ANH-2')?.modelPhotoVersion).toBeNull();
+    expect(of('SW-E2E-ANH-3')?.modelPhotoVersion).toBeNull();
+  });
+
   it('xoá model còn máy dùng → 409 nêu số máy; model chưa dùng xoá được', async () => {
     const used = await models.create(ACTOR, { deviceTypeId: switchType, model: 'E2E-USED', rackMountable: false });
     await devices.create(ACTOR, { code: 'SW-E2E-MD-USED', name: 'Máy dùng', deviceTypeId: switchType, deviceModelId: used.id });

@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -12,13 +12,12 @@ import { PerpetualBadge } from "@/ui/perpetual-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
-import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import { DetailHeader } from "@/ui/detail-header";
+import { FactStrip, SpecList } from "@/ui/detail-facts";
 import {
   DetailLayout,
   DetailSection,
   RailCard,
-  RailRow,
-  RailRowIfSet,
 } from "@/ui/detail-layout";
 import { useDispose } from "@/ui/dispose-button";
 import { RenewDialog } from "@/ui/renew-dialog";
@@ -26,7 +25,7 @@ import { RowActions } from "@/ui/row-actions";
 import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
-import { useTabCounts } from "@/ui/tab-counts";
+import { fileCountFact, useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
@@ -72,7 +71,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   const toast = useToast();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   /* `null` = người dùng chưa chọn tab nào: tab mặc định đi theo LOẠI hồ sơ (xem `defaultTab`),
      mà loại chỉ biết khi hồ sơ đã về. `?tab=` trên URL thì luôn thắng. */
   const [chosenTab, setTab] = useState<string | null>(() =>
@@ -87,6 +86,11 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
       : null,
   );
   const [editing, setEditing] = useState(false);
+  /** "Mua thêm đợt mới" (Q-27): form thêm mới điền sẵn theo hồ sơ này. */
+  const [batching, setBatching] = useState(false);
+  const navigate = useNavigate();
+  // `?assign=1` ("Lưu rồi gán vào máy" vừa tạo hồ sơ): tab Máy đang dùng mở sẵn hộp Gán.
+  const autoAssign = params.get("assign") === "1";
   const [renewing, setRenewing] = useState(false);
   // `?restore=1` (lối tắt "Khôi phục…" từ Kho thanh lý) mở thẳng hộp Khôi phục.
   const [restoring, setRestoring] = useState(() => params.get("restore") === "1");
@@ -100,6 +104,19 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   });
 
   const tab = chosenTab ?? defaultTab(software.data?.kind);
+
+  /* Các đợt mua cùng phần mềm (Q-27): hồ sơ license cùng tên, mỗi đợt một hồ sơ. */
+  const batches = useQuery({
+    queryKey: ["software", "batches", software.data?.name],
+    queryFn: () =>
+      apiFetch<{ items: SoftwareRow[] }>(
+        `/api/v1/software?kind=license&limit=50&search=${encodeURIComponent(software.data?.name ?? "")}`,
+      ),
+    enabled: software.data?.kind === "license",
+  });
+  const siblings = (batches.data?.items ?? []).filter(
+    (row) => row.name === software.data?.name && row.kind === "license",
+  );
 
   const history = useQuery({
     queryKey: ["software", id, "history"],
@@ -204,6 +221,33 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
+  /* Thông tin = thứ CHƯA nói ở đầu trang (Q-27 bổ sung: một thông tin nói một lần). Mã, tên là
+     tiêu đề; nhà cung cấp, hạn, ghế, hợp đồng ở dải 4 ô. Ngày bắt đầu đã nằm trong khoảng ngày của
+     ô Hết hạn, và loại không có ghế / tên miền thì dải 4 ô có hẳn ô "Bắt đầu" — chỉ còn license
+     hay SSL / tên miền KHÔNG có ngày hết hạn mới cần dòng riêng ở đây. */
+  const stripShowsStart = Boolean(item.endDate) || (!supportsSeats(item.kind) && !supportsWebsites(item.kind));
+  const startItem = stripShowsStart
+    ? []
+    : [{ label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null }];
+  const specItems = supportsSeats(item.kind)
+    ? [
+        {
+          label: t("software.licenseModel"),
+          value: t(item.licenseModel === "perpetual" ? "software.perpetual" : "software.subscription"),
+        },
+        ...startItem,
+        { label: t("software.note"), value: item.perSeat ? t("software.notePerSeat") : item.note },
+      ]
+    : [
+        { label: t("software.kind"), value: t(KIND_KEY[item.kind]) },
+        ...startItem,
+        { label: t("software.note"), value: item.note },
+      ];
+  const specBlank = specItems.filter((entry) => !entry.value).length;
+  const showBatches = supportsSeats(item.kind) && siblings.length > 1;
+  const showWebsites = supportsWebsites(item.kind);
+  const hasRail = showBatches || showWebsites;
+
   return (
     <>
       <DetailHeader
@@ -217,15 +261,11 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         ]}
         code={item.code}
         name={item.name}
+        /* Trạng thái đứng dưới mã như trang thiết bị; nhà cung cấp đã là ô đầu của dải 4 ô. */
         subline={
           <>
+            <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
             <span>{t(KIND_KEY[item.kind])}</span>
-            {item.vendorName ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{item.vendorName}</span>
-              </>
-            ) : null}
           </>
         }
         actions={
@@ -259,6 +299,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               retired={retired}
               csrfToken={me.csrfToken}
               onRestore={() => setRestoring(true)}
+              onBatch={() => setBatching(true)}
               onDone={() => void refresh()}
             />
           </>
@@ -296,54 +337,97 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         </div>
       ) : null}
 
-      <DetailLayout
-        rail={
-          <>
-          <RailCard title={t("detail.identityCard")}>
-            {/* Không kèm ngày dưới trạng thái: ngày bắt đầu đọc thành "Hết hạn từ ngày…" —
-                sai nghĩa. Ngày bắt đầu đã là mốc đầu của thanh thời hạn ngay dưới. */}
-            <RailRow label={t("software.status")}>
-              <span className={`badge ${STATUS_TONE[item.status]}`}>
-                {t(STATUS_KEY[item.status])}
-              </span>
-            </RailRow>
-
-            {/*
-             * HẠN NẰM Ở ĐÂY, KHÔNG CÓ THẺ THỨ HAI Ở CỘT CHÍNH.
-             *
-             * Một thẻ "Hết hạn" chiếm trọn bề ngang ở tab Hồ sơ chỉ vẽ lại chính thứ mà dải chỉ
-             * số đã vẽ ở dạng gọn cách đó hai dòng. License vĩnh viễn thì không có quãng đường
-             * nào để vẽ nên vẫn chỉ là một huy hiệu.
-             */}
-            <RailRow label={t("software.endDate")}>
-              {item.licenseModel === "perpetual" ? (
+      {/* Dải 4 ô cùng khuôn với trang thiết bị (Q-27): nhà cung cấp · hạn · ghế (tên miền) ·
+          hợp đồng (giấy tờ). Thấy ở mọi tab; ô trống nói "chưa khai". */}
+      <FactStrip
+        label={t("software.factsLabel")}
+        facts={[
+          { key: "vendor", label: t("software.vendor"), value: item.vendorName },
+          {
+            key: "term",
+            label: t("software.endDate"),
+            value:
+              item.licenseModel === "perpetual" ? (
                 <PerpetualBadge />
               ) : item.endDate ? (
+                <ExpiryBadge end={item.endDate} notCounted={retired} />
+              ) : null,
+            /* Hạn nói MỘT lần, ở đây: khoảng ngày + thanh thời gian gọn (Q-27 bổ sung). */
+            note: item.endDate ? (
+              <>
+                {t("software.termRange", { from: formatDate(item.startDate) || "…", to: formatDate(item.endDate) })}
                 <WarrantyTimeline
+                  compact
                   start={item.startDate}
                   end={item.endDate}
-                  startLabel={t("software.startDate")}
                   endLabel={t("software.endDate")}
                   notCounted={retired}
                 />
-              ) : (
-                <ExpiryBadge end={null} />
+              </>
+            ) : null,
+          },
+          supportsSeats(item.kind)
+            ? { key: "seats", label: t("software.seats"), value: <SeatUsage item={item} /> }
+            : supportsWebsites(item.kind)
+              ? {
+                  key: "sites",
+                  label: t("software.domainNames"),
+                  value: (item.websites ?? []).length > 0 ? t("software.siteCount", { count: (item.websites ?? []).length }) : null,
+                  note: item.websites?.[0],
+                }
+              : { key: "start", label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
+          supportsSeats(item.kind)
+            ? {
+                key: "contract",
+                label: t("software.contract"),
+                value: item.perSeat
+                  ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 })
+                  : item.contract,
+              }
+            : {
+                key: "files",
+                label: t("software.tabAttachments"),
+                value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
+              },
+        ]}
+      />
+
+      <DetailLayout
+        /* Không còn "Thẻ định danh" (Q-27 bổ sung): trạng thái ở đầu trang, hạn và ghế ở dải 4 ô.
+           Cột phải chỉ mọc khi có thẻ riêng của nó — các đợt mua, tên miền; không thì một cột. */
+        railStrip={!hasRail}
+        rail={
+          <>
+          {/* Mua theo đợt (Q-27): mỗi đợt một hồ sơ — thẻ này nối các đợt cùng phần mềm. */}
+          {showBatches ? (
+            <RailCard title={t("software.batchesTitle")}>
+              <ul className="batch-list">
+                {siblings.map((row) => (
+                  <li key={row.id}>
+                    {row.id === item.id ? (
+                      <strong className="mono" aria-current="page">{row.code}</strong>
+                    ) : (
+                      <Link className="mono" to={spec.item(row.id)}>
+                        {row.code}
+                      </Link>
+                    )}{" "}
+                    <span className="muted small">
+                      {t("software.batchSeats", { count: row.seatTotal ?? 0 })}
+                      {row.startDate ? ` · ${formatDate(row.startDate)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {retired ? null : (
+                <button type="button" className="btn sm" onClick={() => setBatching(true)}>
+                  {t("software.addBatch")}
+                </button>
               )}
-            </RailRow>
-
-            {/* Ghế đã dùng là con số quyết định "có phải mua thêm không" — nó thuộc về thẻ
-                định danh, không phải nằm sâu trong một tab. */}
-            {supportsSeats(item.kind) ? (
-              <RailRow label={t("software.seats")}>
-                <SeatUsage item={item} />
-              </RailRow>
-            ) : null}
-
-            <RailRowIfSet label={t("software.vendor")} value={item.vendorName} />
-          </RailCard>
+            </RailCard>
+          ) : null}
           {/* Tên miền nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
               này đang phủ tên miền nào" là câu người trực sự cố hỏi đầu tiên (Q-15, Q-22). */}
-          {supportsWebsites(item.kind) ? (
+          {showWebsites ? (
             <RailCard title={t("software.domainNames")}>
               {(item.websites ?? []).length > 0 ? (
                 <ul className="chip-row">
@@ -371,36 +455,19 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
-            {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở thẻ định
-                danh bên phải. Lưới chỉ còn phần chưa nói ở đâu cả. Ngày bắt đầu cũng bỏ: nó là
-                mốc đầu của chính thanh hạn bên phải. */}
-            {/* Khu "Hồ sơ" có thẻ + tiêu đề như mọi khu khác — xem chú thích dài ở
-                `ui/detail-layout.tsx`, chỗ khai `DetailSection`. KHÔNG `compact`: khu này đứng
-                một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
-            <DetailSection title={t("detail.profileSection")}>
-              <dl className="data-grid">
-              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang: với SSL và tên miền thì "Kỳ hạn"
-                  không có nghĩa, vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa
-                  khai" bên dưới là nơi DUY NHẤT nói về ô trống — cùng luật với các trang chi
-                  tiết khác. */}
-              {supportsSeats(item.kind) ? (
-                <Item label={t("software.licenseModel")}>
-                  {t(
-                    item.licenseModel === "perpetual"
-                      ? "software.perpetual"
-                      : "software.subscription",
-                  )}
-                </Item>
-              ) : null}
-                <DataItemIfSet label={t("software.note")} value={item.note} />
-              </dl>
-              <BlankFields
-                labels={[
-                  item.vendorName ? null : t("software.vendor"),
-                  item.startDate ? null : t("software.startDate"),
-                  item.note ? null : t("software.note"),
-                ].filter((label): label is string => label !== null)}
-              />
+            {/* Thông tin thứ tự cố định, cùng khuôn với Thông số của thiết bị (Q-27): ô trống
+                đứng đúng chỗ và ghi "chưa khai", không ẩn. */}
+            <DetailSection
+              title={t("software.infoTitle")}
+              action={
+                !retired && specBlank > 0 ? (
+                  <button type="button" className="btn sm" onClick={() => setEditing(true)}>
+                    {t("software.fillBlanks", { count: specBlank })}
+                  </button>
+                ) : null
+              }
+            >
+              <SpecList label={t("software.infoTitle")} items={specItems} />
             </DetailSection>
           </>
         ) : safeTab === "vault" ? (
@@ -412,7 +479,21 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             canEdit={canVaultWrite}
           />
         ) : safeTab === "devices" ? (
-          <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
+          <LicenseAssignmentsPanel
+            software={item}
+            seats={item.seats ?? []}
+            autoAssign={autoAssign}
+            onAutoAssignUsed={() =>
+              setParams(
+                (next) => {
+                  next.delete("assign");
+                  return next;
+                },
+                { replace: true },
+              )
+            }
+            csrfToken={me.csrfToken}
+          />
         ) : safeTab === "attachments" ? (
           <AttachmentPanel
             ownerType="software"
@@ -469,6 +550,21 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
           onSaved={() => {
             setEditing(false);
             void refresh();
+          }}
+        />
+      ) : null}
+
+      {batching ? (
+        <SoftwareForm
+          row={null}
+          screen={spec.key}
+          batchFrom={item}
+          csrfToken={me.csrfToken}
+          onClose={() => setBatching(false)}
+          onSaved={(result) => {
+            setBatching(false);
+            void refresh();
+            if (result) navigate(`${spec.item(result.id)}${result.assign ? "?tab=devices&assign=1" : ""}`);
           }}
         />
       ) : null}
@@ -537,12 +633,14 @@ function DetailMoreActions({
   retired,
   csrfToken,
   onRestore,
+  onBatch,
   onDone,
 }: {
   item: SoftwareRow;
   retired: boolean;
   csrfToken: string;
   onRestore: () => void;
+  onBatch: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -566,6 +664,9 @@ function DetailMoreActions({
         retired
           ? [{ key: "restore", label: t("software.restore"), onSelect: onRestore, ok: true }]
           : [
+              ...(supportsSeats(item.kind)
+                ? [{ key: "batch", label: t("software.addBatch"), onSelect: onBatch }]
+                : []),
               {
                 key: "dispose",
                 label: t("software.disposeMenu"),
@@ -591,11 +692,3 @@ function retiredLine(item: SoftwareDetailRow, t: TFunction): string {
     : t("software.retiredAuto", { date, days });
 }
 
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="data-item">
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}

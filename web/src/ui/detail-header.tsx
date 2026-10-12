@@ -1,6 +1,5 @@
 import { Chevron } from '@/ui/chevron';
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 /**
@@ -94,25 +93,9 @@ export function DetailHeader({
 }
 
 /**
- * Một dòng gom mọi ô CHƯA KHAI, thay cho một dãy hộp chỉ chứa dấu gạch ngang.
- *
- * Hồ sơ khai sơ sài thì lưới cũ hiện 8/13 ô là dấu `—`, và cả trang trông như dữ liệu hỏng —
- * trong khi sự thật chỉ là mấy trường đó chưa ai điền. Gom lại một dòng thì vừa gọn, vừa nói
- * đúng: đây là việc còn thiếu, không phải lỗi.
- */
-export function BlankFields({ labels }: { labels: string[] }) {
-  const { t } = useTranslation();
-  if (labels.length === 0) return null;
-  return <p className="blank-fields muted">{t('detail.blankFields', { list: labels.join(', ') })}</p>;
-}
-
-/**
- * Một ô của lưới `data-grid`, và CHỈ vẽ khi có giá trị.
- *
- * Vẽ cả ô `Model: —` trong lưới lẫn "Chưa khai: Model…" của `BlankFields` ngay dưới là hai
- * lần cho một sự thật, mà lần đầu trông như dữ liệu hỏng chứ không phải việc còn thiếu.
- *
- * Luật: có giá trị thì vào lưới, không có thì vào một dòng duy nhất bên dưới.
+ * Một ô của lưới `data-grid`, và CHỈ vẽ khi có giá trị — cho thẻ / hộp tóm tắt (hộp Cấp IP,
+ * thẻ thiết bị trên sơ đồ), nơi ô rỗng chỉ tốn chỗ. Trang chi tiết khuôn C dùng `SpecList`
+ * (ô trống đứng đúng chỗ, ghi "chưa khai").
  */
 export function DataItemIfSet({
   label,

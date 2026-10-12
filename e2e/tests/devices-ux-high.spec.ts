@@ -179,7 +179,7 @@ async function addSecret(page: Page, deviceId: string, label: string): Promise<v
 test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () => {
   test.use({ viewport: DESKTOP });
 
-  test('nút Sửa của mọi dòng nằm trong khung, cột Tên đủ rộng, Loại là dòng phụ', async ({
+  test('nút Sửa của mọi dòng nằm trong khung, cột Tên đủ rộng, có cột IP; loại / serial không lặp ở bảng (Q-27)', async ({
     page,
   }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
@@ -202,8 +202,9 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
     await expectInsideWidth(page, row.getByRole('button', { name: `Sửa máy ${code}` }), 'nút Sửa');
     const nameCell = row.getByRole('cell', { name: /Laptop Nguyễn Văn An/ });
     expect((await nameCell.boundingBox())!.width).toBeGreaterThanOrEqual(200);
-    // Loại máy vẫn đọc được — chỉ không còn là một cột riêng.
-    await expect(nameCell).toContainText('PC');
+    // Q-27: loại · model · serial đã có trong hồ sơ — ô Tên chỉ còn tên; IP là cột riêng.
+    await expect(nameCell).not.toContainText(`DL-${stamp}`);
+    await expect(page.getByRole('columnheader', { name: 'IP quản trị' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 
@@ -441,7 +442,7 @@ test.describe('DEV-048 · bảng port map', () => {
   });
 });
 
-test.describe('DEV-068 · khu License đang cài không tràn card', () => {
+test.describe('DEV-068 · tab Phần mềm của thiết bị không tràn card (Q-27)', () => {
   test.use({ viewport: DESKTOP });
 
   test('một tiêu đề duy nhất, mã license một dòng, không đè sang cột phải', async ({ page }) => {
@@ -464,9 +465,9 @@ test.describe('DEV-068 · khu License đang cài không tràn card', () => {
     expect(assigned.status()).toBe(201);
 
     await page.goto(`/devices/${deviceId}`);
-    const section = page.getByRole('region', { name: /License đang cài/ });
+    await page.getByRole('tab', { name: /^Phần mềm/ }).click();
+    const section = page.getByRole('region', { name: 'Phần mềm trên máy này' });
     await expect(section).toBeVisible();
-    await expect(page.getByText(/Phần mềm đang cài/)).toHaveCount(0);
     const link = section.getByRole('link', { name: licenseCode });
     await expect(link).toBeVisible();
     const linkBox = (await link.boundingBox())!;

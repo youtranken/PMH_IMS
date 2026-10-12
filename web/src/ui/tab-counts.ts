@@ -15,6 +15,20 @@ export interface TabCounts {
   /** `undefined` = chưa biết (đang tải, hoặc không có quyền xem). KHÔNG phải 0. */
   files: number | undefined;
   secrets: number | undefined;
+  /** Truy vấn giấy tờ còn đang chạy — tách "đang tải" khỏi "lỗi / không có quyền". */
+  filesLoading: boolean;
+}
+
+/**
+ * Giá trị ô "Giấy tờ" ở dải đầu trang: "3 Tệp", "…" khi đang tải, `null` (ô ghi "chưa khai")
+ * khi 0 tệp HOẶC không đọc được — lỗi mạng / không có quyền mà vẫn "…" là treo mãi.
+ */
+export function fileCountFact(
+  counts: Pick<TabCounts, 'files' | 'filesLoading'> & Partial<TabCounts>,
+  format: (count: number) => string,
+): string | null {
+  if (counts.files) return format(counts.files);
+  return counts.files === undefined && counts.filesLoading ? '…' : null;
 }
 
 /**
@@ -45,5 +59,6 @@ export function useTabCounts(ownerType: OwnerWithTabs, ownerId: string, me: Me):
   return {
     files: attachments.data?.length,
     secrets: secrets.data?.length,
+    filesLoading: attachments.isLoading,
   };
 }

@@ -85,7 +85,7 @@ export function SeatTable({
   return (
     <>
       <TableWrap>
-        <table className={compact ? 'table table-stack table-sub seat-table' : 'table table-stack seat-table'}>
+        <table className="table table-stack table-sub table-cards seat-table">
           <thead>
             <tr>
               <th>{t('license.device')}</th>
@@ -105,7 +105,9 @@ export function SeatTable({
                     {row.deviceCode}
                   </Link>
                   <span className="cell-sub">
-                    {[row.deviceName, row.deviceAssignedTo].filter(Boolean).join(' · ')}
+                    {[row.seatNo ? t('software.seatLabel', { n: row.seatNo }) : null, row.deviceName, row.deviceAssignedTo ? t('license.deviceUser', { name: row.deviceAssignedTo }) : null]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                   {row.releasedAt ? (
                     <span className="cell-sub">

@@ -20,6 +20,7 @@ import { ChipToggleGroup } from '@/ui/chip-toggle-group';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
+import { FilterToggle } from '@/ui/filter-toggle';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -106,6 +107,8 @@ interface ExpiryResponse {
 
 /** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
 const WINDOWS = [7, 30, 60, 90, 180, 365];
+/** Cửa sổ mặc định khi URL không nói (hoặc nói sai) — một chỗ cho cả lượt hỏi lẫn tô ô lọc. */
+const DEFAULT_WINDOW = 30;
 
 /**
  * Cửa sổ theo LỊCH ("tới hết tháng này / quý này / tới ngày…") cho câu hỏi ngân sách: "tháng
@@ -175,7 +178,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
     ? windowUntil(until, today)
     : WINDOWS.includes(Number(url.filters.withinDays))
       ? Number(url.filters.withinDays)
-      : 30;
+      : DEFAULT_WINDOW;
   const sortKey = (SORTABLE as readonly string[]).includes(url.sorting.key) ? url.sorting.key : 'end';
   const sorting: SortingState = [{ id: sortKey, desc: url.sorting.desc }];
   /* "Ẩn mục đã quá hạn" (P-03): API mặc định kèm mục quá hạn; bật thì gửi includeExpired=false —
@@ -500,6 +503,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
         <Select
           value={period || String(withinDays)}
           ariaLabel={t('expiry.window')}
+          /* Tô như bộ lọc đang bật chỉ khi KHÁC mặc định (30 ngày tới): phạm vi mặc định tô xanh
+             thì người dùng đi tìm một bộ lọc để tắt mà không có. */
+          indicateFilled={Boolean(period) || withinDays !== DEFAULT_WINDOW}
           /* Chín mốc cố định, đọc lướt là thấy — ô gõ lọc chỉ thêm một bước. */
           searchable={false}
           options={[
@@ -531,14 +537,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
           value={kind ? kind.split(',') : []}
           onChange={(next) => setKind(next.join(','))}
         />
-        <button
-          type="button"
-          className="btn sm"
-          aria-pressed={hideExpired}
-          onClick={() => url.setFilter('hideExpired', hideExpired ? '' : '1')}
-        >
+        <FilterToggle pressed={hideExpired} onChange={(on) => url.setFilter('hideExpired', on ? '1' : '')}>
           {t('expiry.hideExpired')}
-        </button>
+        </FilterToggle>
       </FilterBar>
 
       {expiry.isLoading ? (

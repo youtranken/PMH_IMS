@@ -111,6 +111,8 @@
   --fw-semibold: 600;
   --fw-bold: 700;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  /* Bóng mép của dải nút cuộn ngang (`.segmented`): báo "còn nút khuất bên này". */
+  --scroll-edge: rgba(16, 24, 40, 0.16);
   --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.05);
   --shadow-lg: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
     0 8px 20px -12px rgba(16, 24, 40, 0.2);
@@ -271,6 +273,8 @@ html[data-theme='dark'] {
   --sidebar-active-ink: #ffe1b3;
   --ring: 0 0 0 3px rgba(52, 211, 153, 0.3);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Nền tối: bóng ĐEN đậm hơn, không lấy `--ink` (sáng) — sáng thì thành quầng loé chứ không phải bóng. */
+  --scroll-edge: rgba(0, 0, 0, 0.55);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
     0 8px 20px -12px rgba(0, 0, 0, 0.5);

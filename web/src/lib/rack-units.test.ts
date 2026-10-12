@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeRuns, rackClash, rackPlacement, rackRows, rackUnitLabel, nearestFreeU } from './rack-units';
+import { freeRuns, rackClash, rackPlacement, rackRows, rackUnitLabel, rackWindow, nearestFreeU } from './rack-units';
 
 describe('rackUnitLabel', () => {
   it.each([
@@ -105,5 +105,43 @@ describe('freeRuns — dải U trống đủ n U để chọn U bắt đầu (Q-
     { name: 'tủ đầy → rỗng', height: 2, occ: [at('a', 1, 2)], size: 1, self: null, runs: [] },
   ])('$name', ({ height, occ, size, self, runs }) => {
     expect(freeRuns(height, occ, size, self)).toEqual(runs);
+  });
+});
+
+describe('rackWindow — khúc tủ quanh một máy (thẻ "Trong tủ" của trang chi tiết, Q-27)', () => {
+  const occ = [
+    { id: 'a', code: 'SRV-01', start: 15, size: 2 },
+    { id: 'me', code: 'SW-02', start: 13, size: 1 },
+    { id: 'b', code: 'FW-01', start: 12, size: 1 },
+    { id: 'c', code: 'UPS-01', start: 7, size: 2 },
+  ];
+  it.each([
+    [
+      'máy giữa tủ: 4U trên + 4U dưới, máy chiếm nhiều U gộp một khối, U trống liền nhau gộp một dòng',
+      { selfId: 'me', height: 42, around: 4 },
+      [
+        { from: 17, to: 17, code: null, self: false },
+        { from: 15, to: 16, code: 'SRV-01', self: false },
+        { from: 14, to: 14, code: null, self: false },
+        { from: 13, to: 13, code: 'SW-02', self: true },
+        { from: 12, to: 12, code: 'FW-01', self: false },
+        { from: 9, to: 11, code: null, self: false },
+      ],
+    ],
+    [
+      'khúc chạm đáy tủ thì dừng ở U1; máy ở mép khúc vẫn vẽ trọn',
+      { selfId: 'c', height: 42, around: 1 },
+      [
+        { from: 9, to: 9, code: null, self: false },
+        { from: 7, to: 8, code: 'UPS-01', self: true },
+        { from: 6, to: 6, code: null, self: false },
+      ],
+    ],
+  ] as const)('%s', (_name, opts, expected) => {
+    expect(rackWindow(occ, opts.selfId, opts.height, opts.around)).toEqual(expected);
+  });
+
+  it('máy không có trong danh sách (chưa khai U) → rỗng', () => {
+    expect(rackWindow(occ, 'zzz', 42, 4)).toEqual([]);
   });
 });

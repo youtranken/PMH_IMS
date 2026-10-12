@@ -69,7 +69,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     const code = screen.getByRole('textbox', { name: 'Mã thiết bị' });
     expect(code).toHaveAttribute('aria-invalid', 'true');
     expect(code).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
-    expect(screen.getByRole('button', { name: 'Loại' })).toHaveAccessibleDescription(
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveAccessibleDescription(
       'Bắt buộc — chưa chọn ô này.',
     );
     await waitFor(() => expect(code).toHaveFocus());
@@ -80,6 +80,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     const calls = mockFetch();
     renderForm(null);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^Ghi chú/ }));
     const note = screen.getByRole('textbox', { name: 'Ghi chú' });
     await user.type(note, 'mk wifi Pmh@Guest2026');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
@@ -95,7 +96,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     const user = userEvent.setup();
     await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/v1/catalog'))).toBe(true));
 
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     expect(await screen.findByRole('option', { name: 'PC' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: /Máy fax/ })).toBeNull();
     await user.keyboard('{Escape}');
@@ -116,7 +117,7 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
       status: 'in_use',
     } as DeviceRow);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Loại' })).toHaveTextContent(
+      expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveTextContent(
         'Máy fax (ngừng dùng)',
       ),
     );
@@ -209,14 +210,30 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     });
   });
 
-  it('Vị trí và Mua sắm & bảo hành xếp 4 cột; ghi chú 2 dòng', () => {
+  it('hai khối luôn mở (Máy gì, Đặt ở đâu); phần còn lại gập, có số ô đã khai (Q-27)', async () => {
     mockFetch();
     renderForm(null);
-    for (const heading of ['Vị trí và người giữ', 'Mua sắm và bảo hành']) {
-      const section = screen.getByRole('heading', { name: heading }).closest('section');
-      expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    expect(screen.getByRole('heading', { name: 'Máy gì' })).toBeVisible();
+    const where = screen.getByRole('heading', { name: 'Đặt ở đâu' }).closest('section');
+    expect(where?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
+    for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Truy cập quản trị', 'Ảnh và giấy tờ', 'Ghi chú']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${fold}`) })).toHaveAttribute('aria-expanded', 'false');
     }
+    expect(screen.getByRole('button', { name: /^Mua sắm và bảo hành/ })).toHaveAccessibleName(expect.stringContaining('chưa khai'));
+    // Ô trong khối gập vẫn ở trong DOM (hộp đo "đang gõ dở" bằng chúng) nhưng không tới được.
+    expect(screen.queryByRole('textbox', { name: 'Ghi chú' })).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Ghi chú/ }));
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
+  });
+
+  it('thứ tự trong "Máy gì": Model trước, rồi Mã · Tên gọi · Loại thiết bị', () => {
+    mockFetch();
+    renderForm(null);
+    const what = screen.getByRole('heading', { name: 'Máy gì' }).closest('section') as HTMLElement;
+    const labels = Array.from(what.querySelectorAll('label, .field-label')).map((el) => el.textContent?.replace('*', '').trim());
+    const order = ['Model', 'Mã thiết bị', 'Tên gọi', 'Loại thiết bị'].map((name) => labels.findIndex((l) => l?.startsWith(name)));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 });
 
@@ -233,7 +250,7 @@ describe('Form thiết bị — dấu tích ở đúng nút vừa bấm', () => 
   async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
     await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'SW-E2E-01');
     await user.type(document.getElementById('device-name') as HTMLInputElement, 'Switch E2E');
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     await user.click(await screen.findByRole('option', { name: 'PC' }));
   }
 

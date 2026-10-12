@@ -32,7 +32,8 @@ function usages(file: string): { line: number; text: string }[] {
 
 describe('mọi WarrantyTimeline ở màn nghiệp vụ đều khai notCounted', () => {
   it('tìm được các chỗ dùng (vế đối chứng)', () => {
-    expect(FILES.length).toBeGreaterThanOrEqual(3);
+    // Thiết bị + phần mềm. Tài khoản dịch vụ không có mốc đầu nên không vẽ thanh (Q-27).
+    expect(FILES.length).toBeGreaterThanOrEqual(2);
   });
 
   it.each(FILES.map((file) => [file.slice(SRC.length + 1).replace(/\\/g, '/'), file]))(

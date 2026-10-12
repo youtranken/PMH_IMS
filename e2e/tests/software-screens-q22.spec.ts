@@ -200,8 +200,8 @@ test.describe('Q-22 · Dịch vụ có hạn khác', () => {
 
     await page.goto('/services');
     await expect(page.getByRole('heading', { level: 1, name: 'Dịch vụ có hạn khác' })).toBeVisible();
-    await page.getByRole('button', { name: 'Thêm dịch vụ' }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Thêm dịch vụ' });
+    await page.getByRole('button', { name: 'Thêm dịch vụ có hạn' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Thêm dịch vụ có hạn' });
     await expect(dialog.getByRole('radiogroup', { name: 'Loại' })).toHaveCount(0);
     await dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill(code);
     await dialog.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('Thuê bao lưu trữ đám mây E2E');
@@ -226,8 +226,8 @@ test.describe('Q-22 · Dịch vụ có hạn khác', () => {
     await createViaApi(page, { code, name: 'License mang mã này trước', kind: 'license', endDate: '2030-01-31' });
 
     await page.goto('/services');
-    await page.getByRole('button', { name: 'Thêm dịch vụ' }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Thêm dịch vụ' });
+    await page.getByRole('button', { name: 'Thêm dịch vụ có hạn' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Thêm dịch vụ có hạn' });
     await dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill(code);
     await dialog.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('Dịch vụ trùng mã');
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();

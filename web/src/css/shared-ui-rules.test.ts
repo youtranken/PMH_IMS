@@ -340,6 +340,17 @@ describe('bố cục khối dùng chung', () => {
     expect(rule('shared-kit.css', '.error-state .primary')).toBeUndefined();
   });
 
+  /* `ui/tabs.tsx` bọc thanh tab trong `.tabs-shell` (neo mũi tên cuộn). Phần tử dính phải là
+     khung đó: dính ở `.tabs` thì nó không ra khỏi hộp cha cao đúng bằng nó — hết dính. */
+  it('thanh tab dính đầu trang qua .tabs-shell, không phải .tabs bên trong', () => {
+    expect(declValue(rule('detail-tabs.css', '.tabs-shell')!.body, 'position')).toBe('sticky');
+    const inner = cssRules('detail-tabs.css').filter((r) => r.selector === '.tabs');
+    for (const r of inner) expect(declValue(r.body, 'position'), r.media ?? '').not.toBe('sticky');
+    // Nhưng `.tabs` vẫn phải là khung định vị: gạch chân `.tab-ink` tuyệt đối neo vào nó và bị
+    // khung cuộn cắt. Mất nó thì gạch chân thoát ra ngoài, trang tràn ngang ở 390px.
+    expect(inner.some((r) => r.media === null && declValue(r.body, 'position') === 'relative')).toBe(true);
+  });
+
   it('.filter-range không xuống dòng dù nằm trong thanh lọc', () => {
     const generic = cssRules('detail-tabs.css').find((r) => r.selector === ".filter-bar [role='group']")!;
     const own = cssRules('detail-tabs.css').filter(

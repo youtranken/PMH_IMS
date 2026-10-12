@@ -107,3 +107,45 @@ describe('Trang hồ sơ TKDV — thanh tab (NET-075)', () => {
     expect(vault).toHaveAttribute('aria-selected', 'true');
   });
 });
+
+describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('trạng thái dưới mã; dải 4 ô có tên đăng nhập + chép; không còn "Thẻ định danh"', async () => {
+    mockFetch('active');
+    renderAs('sa');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt tài khoản' });
+    expect(strip).toHaveTextContent('Tên đăng nhậpketoan');
+    expect(screen.getByRole('button', { name: 'Chép tên đăng nhập' })).toBeInTheDocument();
+    // VPN để trống dải IP là mở cho mọi IP — huy hiệu nằm ở ô thứ tư.
+    expect(strip).toHaveTextContent('Mọi IP');
+    // Chưa có người phụ trách: ô vẫn đứng, ghi "chưa khai".
+    expect(strip).toHaveTextContent('Người phụ tráchchưa khai');
+    expect(screen.queryByRole('region', { name: 'Thẻ định danh' })).toBeNull();
+    expect(screen.getByText('Đang dùng')).toBeInTheDocument();
+    const info = screen.getByRole('group', { name: 'Thông tin' });
+    expect(info).toHaveTextContent('Nhóm VPNchưa khai');
+    expect(info).toHaveTextContent('Phòng banKế toán');
+    // Chỉ đếm ô của khối Thông tin: Nhóm VPN, Ghi chú. Người phụ trách trống ở dải 4 ô không tính.
+    expect(screen.getByRole('button', { name: 'Bổ sung 2 ô còn thiếu' })).toBeInTheDocument();
+  });
+
+  it('chưa khai phòng ban: khối Thông tin nói ra và đếm vào "Bổ sung"', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/v1/service-accounts/sa-1') {
+          return Promise.resolve(
+            jsonResponse(200, { ...ROW, department: null, groupName: 'g', note: 'n' }),
+          );
+        }
+        return Promise.resolve(jsonResponse(200, url.startsWith('/api/v1/catalog') ? {} : []));
+      }),
+    );
+    renderAs('sa');
+    const info = await screen.findByRole('group', { name: 'Thông tin' });
+    expect(info).toHaveTextContent('Phòng banchưa khai');
+    expect(screen.getByRole('button', { name: 'Bổ sung 1 ô còn thiếu' })).toBeInTheDocument();
+  });
+});

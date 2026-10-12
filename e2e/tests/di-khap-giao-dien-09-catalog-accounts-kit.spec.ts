@@ -95,18 +95,19 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
   const fieldLabel = (label: string): RegExp =>
     new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*\\*?\\s*$`);
 
-  /** Các ngăn của phòng Danh mục, đúng thứ tự `TAB_KEYS` trong `catalog-screen.tsx`. */
+  /** Các ngăn của phòng Danh mục theo ba nhóm của Q-27 (Vị trí · Thiết bị · Đối tác & tổ chức),
+   *  đúng thứ tự trên thanh tab. Ngăn Model có màn riêng (`device-models-panel.tsx`), soi trong
+   *  `device-models.spec.ts`. */
   const TAB_NAMES = [
     'Site',
     'Tủ mạng',
     'Loại thiết bị',
-    'Nhà cung cấp',
-    'Phòng ban',
-    'Nhà mạng',
-    'Dịch vụ / Port',
-    'Loại dây',
-    // Ngăn Model có màn riêng (`device-models-panel.tsx`), soi trong `device-models.spec.ts`.
     'Model thiết bị',
+    'Loại dây',
+    'Cổng dịch vụ (port)',
+    'Nhà cung cấp',
+    'Nhà mạng',
+    'Phòng ban',
   ] as const;
 
   /** Một ngăn: nhãn nút "Thêm …" và bộ cột của bảng bên trong. */
@@ -158,8 +159,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       excelImport: false,
     },
     {
-      tab: 'Dịch vụ / Port',
-      addButton: 'Thêm dịch vụ',
+      tab: 'Cổng dịch vụ (port)',
+      addButton: 'Thêm cổng dịch vụ',
       columns: ['Tên', 'Giao thức', 'Port', 'Mô tả', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
@@ -334,8 +335,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         toggles: [],
       },
       {
-        tab: 'Dịch vụ / Port',
-        title: 'Thêm dịch vụ',
+        tab: 'Cổng dịch vụ (port)',
+        title: 'Thêm cổng dịch vụ',
         // `catalog.portFrom` = "Từ port", `catalog.portTo` = "Đến port (tuỳ chọn)" — hai ô, một dải.
         textFields: ['Tên', 'Từ port', 'Đến port (tùy chọn)', 'Mô tả'],
         selectField: ['Giao thức'],

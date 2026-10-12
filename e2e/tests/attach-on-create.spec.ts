@@ -13,6 +13,7 @@ import {
   resetSoftware,
   resetUsers,
   uniqueStamp,
+  openFold,
 } from './helpers';
 
 /**
@@ -79,9 +80,11 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã thiết bị').fill(code);
-    await form.getByLabel('Tên thiết bị').fill('Switch có hồ sơ đính kèm');
+    await form.getByLabel('Tên gọi').fill('Switch có hồ sơ đính kèm');
     await form.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
+    // Giấy tờ nằm trong khối gập «Ảnh và giấy tờ» (Q-27).
+    await openFold(form, 'Ảnh và giấy tờ');
 
     // Hai file, hai loại: giấy tờ (pdf) và hình ảnh (png) — đúng như yêu cầu của màn.
     await picker(page).setInputFiles(writePdf(`hoa-don-${stamp}.pdf`));

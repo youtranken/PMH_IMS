@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -26,11 +26,13 @@ import {
   autoRetireOn,
   effectiveSoftwareStatus,
   normalizeWebsites,
+  perSeatErrors,
   seatConflicts,
   supportsWebsites,
   validateAssignmentTerms,
   validateSoftware,
   type LicenseModel,
+  type SeatInput,
   type SoftwareInputShape,
   type SoftwareKind,
   type SoftwareStatus,
@@ -38,6 +40,7 @@ import {
 import {
   licenseAssignmentTable,
   softwareHistoryTable,
+  softwareSeatTable,
   softwareTable,
 } from './software.schema';
 import type {
@@ -48,6 +51,7 @@ import type {
   SoftwareRecord,
   SoftwareRetirement,
   SoftwareScreenItem,
+  SoftwareSeatView,
 } from './software.types';
 
 /**
@@ -67,6 +71,8 @@ const TRACKED = [
   'endDate',
   'note',
   'status',
+  'contract',
+  'perSeat',
 ] as const;
 
 /**
@@ -157,7 +163,11 @@ export class SoftwareService {
   /** Trang chi tiết: dòng màn hình + hồ sơ Thanh lý lúc nào, do ai. */
   async detail(id: string): Promise<SoftwareDetailItem> {
     const [item] = await this.present([await this.findOne(id)]);
-    return { ...item, retirement: item.status === 'retired' ? await this.retirementOf(id) : null };
+    return {
+      ...item,
+      retirement: item.status === 'retired' ? await this.retirementOf(id) : null,
+      seats: item.perSeat ? await this.seatsOf(id, item.seatTotal ?? 0) : [],
+    };
   }
 
   /**
@@ -328,6 +338,7 @@ export class SoftwareService {
       await this.recordWithin(tx, actor, created.id, 'created', {
         code: { before: null, after: created.code },
       });
+      await this.syncSeatsWithin(tx, actor, created, input.seats);
       return created;
     });
   }
@@ -351,17 +362,24 @@ export class SoftwareService {
       ...diffRecord(TRACKED, before, values),
       ...websitesChange(before.websites, values.websites as string[] | undefined),
     };
-    if (!hasChanges(changes)) return toRecord(before);
+    // Chỉ sửa hợp đồng / ghi chú của ghế thì hàng `software` không đổi gì, vẫn phải đi tiếp.
+    if (!hasChanges(changes) && input.seats === undefined) return toRecord(before);
 
     return this.db.transaction(async (tx) => {
       // `prepare` tính lại trạng thái theo hạn từ ảnh chụp ngoài transaction: một lượt thanh
       // lý commit vào giữa sẽ bị tính đè thành "Đang dùng".
       await this.requireUnchangedWithin(tx, before);
       await this.requireSeatsFitWithin(tx, before, values);
-      const updated = await this.updateWithin(tx, id, values);
-      await this.recordWithin(tx, actor, id, 'updated', changes);
+      const updated = hasChanges(changes) ? await this.updateWithin(tx, id, values) : toRecord(before);
+      if (hasChanges(changes)) await this.recordWithin(tx, actor, id, 'updated', changes);
       if (values.status === 'retired' && before.status !== 'retired') {
         await this.releaseAllSeatsWithin(tx, actor, id);
+      }
+      const seatsChanged = await this.syncSeatsWithin(tx, actor, updated, input.seats);
+      // Chỉ đổi ghế thì hàng `software` chưa được ghi: vẫn đẩy `updated_at` để "sửa lần cuối"
+      // đúng và `requireUnchangedWithin` của lượt ghi chen giữa nhận ra.
+      if (seatsChanged && !hasChanges(changes)) {
+        await tx.update(softwareTable).set({ updatedAt: new Date() }).where(eq(softwareTable.id, id));
       }
       return updated;
     });
@@ -512,6 +530,138 @@ export class SoftwareService {
     }
   }
 
+  /** Nhãn của một ghế cho giấy tờ (`owner_type = software_seat`): "LIC-… — Ghế 2". */
+  async seatLabel(seatId: string): Promise<string | null> {
+    const rows = await this.db
+      .select({ code: softwareTable.code, seatNo: softwareSeatTable.seatNo })
+      .from(softwareSeatTable)
+      .innerJoin(softwareTable, eq(softwareTable.id, softwareSeatTable.softwareId))
+      .where(eq(softwareSeatTable.id, seatId));
+    return rows[0] ? `${rows[0].code} — Ghế ${rows[0].seatNo}` : null;
+  }
+
+  async seatNoteOf(seatId: string): Promise<string | null> {
+    const rows = await this.db.select({ note: softwareSeatTable.note }).from(softwareSeatTable).where(eq(softwareSeatTable.id, seatId));
+    return rows[0]?.note ?? null;
+  }
+
+  /**
+   * Ghế 1…`total` của hồ sơ theo thứ tự, kèm lần gán đang chiếm (một lượt đọc, cùng chủ — AD-3).
+   * Hàng ghế số lớn hơn `total` (đã bớt ghế) vẫn nằm trong bảng nhưng không bày ra.
+   */
+  private async seatsOf(softwareId: string, total: number): Promise<SoftwareSeatView[]> {
+    const [seats, live] = await Promise.all([
+      this.db
+        .select()
+        .from(softwareSeatTable)
+        .where(and(eq(softwareSeatTable.softwareId, softwareId), lte(softwareSeatTable.seatNo, total)))
+        .orderBy(asc(softwareSeatTable.seatNo)),
+      this.db
+        .select({ id: licenseAssignmentTable.id, deviceId: licenseAssignmentTable.deviceId, seatId: licenseAssignmentTable.seatId })
+        .from(licenseAssignmentTable)
+        .where(and(eq(licenseAssignmentTable.softwareId, softwareId), isNull(licenseAssignmentTable.releasedAt))),
+    ]);
+    const bySeat = new Map(live.filter((row) => row.seatId).map((row) => [row.seatId as string, row]));
+    return seats.map((seat) => ({
+      id: seat.id,
+      seatNo: seat.seatNo,
+      contract: seat.contract,
+      note: seat.note,
+      assignmentId: bySeat.get(seat.id)?.id ?? null,
+      deviceId: bySeat.get(seat.id)?.deviceId ?? null,
+    }));
+  }
+
+  /**
+   * Giữ bảng ghế khớp hồ sơ SAU lượt ghi (Q-27), trong cùng transaction.
+   *
+   * - Không bật ghế riêng: máy rời ghế (`seat_id` về null), HÀNG GHẾ GIỮ LẠI — bật lại thì hợp
+   *   đồng / giấy tờ đã khai không mất.
+   * - Bật: đủ ghế 1…`seat_total`. Bớt ghế thì ghế thừa ẨN chứ không xoá (giấy tờ của ghế không
+   *   mồ côi, tăng lại thì quay về) — trừ khi đang có máy (409). Máy đang dùng mà chưa ở ghế nào
+   *   thì xếp vào ghế trống theo thứ tự; ghế gửi lên thì cập nhật hợp đồng / ghi chú.
+   * Mọi thay đổi ghi MỘT dòng lịch sử `seats-updated`.
+   */
+  private async syncSeatsWithin(tx: Tx, actor: string, record: SoftwareRecord, input: SeatInput[] | undefined): Promise<boolean> {
+    const live = await tx
+      .select({ id: licenseAssignmentTable.id, seatId: licenseAssignmentTable.seatId })
+      .from(licenseAssignmentTable)
+      .where(and(eq(licenseAssignmentTable.softwareId, record.id), isNull(licenseAssignmentTable.releasedAt)));
+    if (!record.perSeat) {
+      if (live.some((row) => row.seatId)) {
+        await tx
+          .update(licenseAssignmentTable)
+          .set({ seatId: null })
+          .where(and(eq(licenseAssignmentTable.softwareId, record.id), isNull(licenseAssignmentTable.releasedAt)));
+      }
+      return false;
+    }
+    const total = record.seatTotal ?? 0;
+    const changes: Record<string, { before: unknown; after: unknown }> = {};
+    const existing = await tx
+      .select()
+      .from(softwareSeatTable)
+      .where(eq(softwareSeatTable.softwareId, record.id))
+      .orderBy(asc(softwareSeatTable.seatNo));
+    const taken = new Set(live.map((row) => row.seatId).filter(Boolean));
+
+    const extra = existing.filter((seat) => seat.seatNo > total);
+    const busy = extra.filter((seat) => taken.has(seat.id));
+    if (busy.length > 0) {
+      throw new ConflictException({
+        code: 'SOFTWARE_SEATS_IN_USE',
+        message: `Ghế ${busy.map((seat) => seat.seatNo).join(', ')} đang có máy — gỡ máy khỏi ghế đó trước khi bớt ghế.`,
+      });
+    }
+    const have = new Set(existing.map((seat) => seat.seatNo));
+    const missing = Array.from({ length: total }, (_, i) => i + 1).filter((n) => !have.has(n));
+    if (missing.length > 0) {
+      await tx.insert(softwareSeatTable).values(missing.map((seatNo) => ({ softwareId: record.id, seatNo })));
+      changes['Ghế thêm'] = { before: null, after: missing.join(', ') };
+    }
+
+    for (const seat of input ?? []) {
+      if (seat.seatNo < 1 || seat.seatNo > total) continue;
+      const before = existing.find((row) => row.seatNo === seat.seatNo);
+      const next: { contract?: string | null; note?: string | null } = {};
+      if (seat.contract !== undefined) next.contract = text(seat.contract) ?? null;
+      if (seat.note !== undefined) next.note = text(seat.note) ?? null;
+      if (next.contract !== undefined && next.contract !== (before?.contract ?? null)) {
+        changes[`Ghế ${seat.seatNo} · hợp đồng`] = { before: before?.contract ?? null, after: next.contract };
+      } else delete next.contract;
+      if (next.note !== undefined && next.note !== (before?.note ?? null)) {
+        changes[`Ghế ${seat.seatNo} · ghi chú`] = { before: before?.note ?? null, after: next.note };
+      } else delete next.note;
+      if (Object.keys(next).length > 0) {
+        await tx
+          .update(softwareSeatTable)
+          .set({ ...next, updatedAt: new Date() })
+          .where(and(eq(softwareSeatTable.softwareId, record.id), eq(softwareSeatTable.seatNo, seat.seatNo)));
+      }
+    }
+
+    // Máy đang dùng mà chưa ở ghế nào (vừa bật ghế riêng) → xếp vào ghế trống theo thứ tự.
+    const homeless = live.filter((row) => !row.seatId);
+    if (homeless.length > 0) {
+      const seats = await tx
+        .select({ id: softwareSeatTable.id })
+        .from(softwareSeatTable)
+        .where(and(eq(softwareSeatTable.softwareId, record.id), lte(softwareSeatTable.seatNo, total)))
+        .orderBy(asc(softwareSeatTable.seatNo));
+      const free = seats.filter((seat) => !taken.has(seat.id));
+      for (const [index, row] of homeless.entries()) {
+        const seat = free[index];
+        if (!seat) break;
+        await tx.update(licenseAssignmentTable).set({ seatId: seat.id }).where(eq(licenseAssignmentTable.id, row.id));
+      }
+    }
+
+    if (Object.keys(changes).length > 0) {
+      await this.recordWithin(tx, actor, record.id, 'seats-updated', changes);
+    }
+    return Object.keys(changes).length > 0;
+  }
+
   // ─────────────────────────── Nội bộ ───────────────────────────
 
   /** Gắn tên NCC + số seat đã dùng cho một trang kết quả (một lượt đọc, không N+1). */
@@ -569,6 +719,8 @@ export class SoftwareService {
     put('endDate', dateOnly(input.endDate, 'Ngày hết hạn'));
     put('note', text(input.note));
     put('status', input.status);
+    put('contract', text(input.contract));
+    put('perSeat', input.perSeat);
     if (input.websites !== undefined) put('websites', requireWebsites(input.websites));
 
     if (id === null) {
@@ -601,6 +753,13 @@ export class SoftwareService {
       startDate: effective<string | null>('startDate', current?.startDate ?? null),
       endDate: effective<string | null>('endDate', current?.endDate ?? null),
     });
+    errors.push(
+      ...perSeatErrors({
+        kind: effective<SoftwareKind>('kind', (current?.kind as SoftwareKind) ?? 'other'),
+        seatTotal: effective<number | null>('seatTotal', current?.seatTotal ?? null),
+        perSeat: effective<boolean>('perSeat', current?.perSeat ?? false),
+      }),
+    );
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: errors.join(' ') });
     }

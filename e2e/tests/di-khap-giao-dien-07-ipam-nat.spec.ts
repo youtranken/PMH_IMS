@@ -46,8 +46,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    *    phải `toContainText`), nhưng có thử lại cho tới khi trang lắng xuống.
    *
    * 2. MÁY CHẠY TEST KHÔNG CÓ DB TRẮNG. `resetIpam()` chỉ xóa dải có TÊN chứa "E2E"; máy này
-   *    còn một dải thật `172.16.15.0/24` tên "TT2" (đã vô hiệu hóa, còn 1 hồ sơ IP mang lịch
-   *    sử) nằm ngoài tầm với của nó. Nghĩa là màn Địa chỉ IP KHÔNG BAO GIỜ rỗng, và mọi câu
+   *    còn dải thật (dữ liệu QA ở `172.16.x`) nằm ngoài tầm với của nó. Nghĩa là màn Địa chỉ
+   *    IP KHÔNG BAO GIỜ rỗng, và mọi câu
    *    hỏi kiểu "cả trang có đúng ngần này thứ" phải hoặc đếm phần dữ liệu lạ tại chỗ, hoặc
    *    thu hẹp về đúng thẻ/dòng của chính bài này. Bài kiểm đi mượn dữ liệu của người khác là
    *    bài kiểm sẽ im lặng bỏ đi vào một ngày nào đó.
@@ -119,8 +119,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
   /**
    * Octet thứ ba cho dải của một bài. Giữ trong khoảng 20–249 (không đụng `.0`/`.255`) và
-   * TRÁNH XA `172.16.15.0/24` — dải thật "TT2" nằm sẵn trên máy chạy test; đụng vào là API
-   * từ chối vì chồng dải, và bài đỏ ở một chỗ chẳng liên quan gì tới điều nó đang kiểm.
+   * dùng `172.31.x`, TRÁNH XA `172.16.x` — LAN thật của PMH, và dữ liệu thật (dải QA
+   * `172.16.10.0/24`, `172.16.110.0/24`…) nằm sẵn trên máy chạy test; đụng vào là API từ chối
+   * vì chồng dải, và bài đỏ ở một chỗ chẳng liên quan gì tới điều nó đang kiểm.
    */
   function octetFor(stamp: string, shift: number): number {
     return (Number(stamp) % 100) + 20 + shift;
@@ -193,8 +194,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     expect(device.status(), 'dàn cảnh: phải khai được router').toBe(201);
     const routerId = ((await device.json()) as { device: { id: string } }).device.id;
 
-    const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN NAT E2E ${stamp}`);
-    const internalIp = `172.16.${octet}.5`;
+    const subnetId = await createSubnet(page, `172.31.${octet}.0/29`, `LAN NAT E2E ${stamp}`);
+    const internalIp = `172.31.${octet}.5`;
     // KHÔNG gắn thiết bị cho hồ sơ IP này: có thiết bị thì hộp Sửa rule mở ra ở nhánh
     // "đã chọn máy đích" (ô IP thành Select), và bài kiểm hộp Sửa bên dưới soi nhánh gõ tay.
     await createAddress(page, subnetId, internalIp, 'Máy chấm công');
@@ -226,12 +227,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = octetFor(stamp, 0);
-    const emptyCidr = `172.16.${octet}.0/29`;
-    const usedCidr = `172.16.${octet + 1}.0/29`;
+    const emptyCidr = `172.31.${octet}.0/29`;
+    const usedCidr = `172.31.${octet + 1}.0/29`;
 
     const emptyId = await createSubnet(page, emptyCidr, `LAN trống E2E ${stamp}`);
     const usedId = await createSubnet(page, usedCidr, `LAN đã dùng E2E ${stamp}`, { vlan: 30 });
-    await createAddress(page, usedId, `172.16.${octet + 1}.1`, 'Chị Lan — Kế toán');
+    await createAddress(page, usedId, `172.31.${octet + 1}.1`, 'Chị Lan — Kế toán');
 
     await page.goto(`/ip-addresses/${emptyId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Địa chỉ IP' })).toBeVisible();
@@ -382,10 +383,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = octetFor(stamp, 20);
-    const cidr = `172.16.${octet}.0/29`;
+    const cidr = `172.31.${octet}.0/29`;
     const name = `LAN pane E2E ${stamp}`;
-    const taken = `172.16.${octet}.1`;
-    const free = `172.16.${octet}.2`;
+    const taken = `172.31.${octet}.1`;
+    const free = `172.31.${octet}.2`;
 
     const subnetId = await createSubnet(page, cidr, name);
     await createAddress(page, subnetId, taken, 'Chị Lan — Kế toán');
@@ -479,8 +480,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = octetFor(stamp, 40);
-    const cidr = `172.16.${octet}.0/29`;
-    const first = `172.16.${octet}.1`;
+    const cidr = `172.31.${octet}.0/29`;
+    const first = `172.31.${octet}.1`;
 
     const subnetId = await createSubnet(page, cidr, `LAN hộp E2E ${stamp}`);
     await page.goto(`/ip-addresses/${subnetId}`);
@@ -580,8 +581,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = octetFor(stamp, 60);
-    const cidr = `172.16.${octet}.0/29`;
-    const address = `172.16.${octet}.3`;
+    const cidr = `172.31.${octet}.0/29`;
+    const address = `172.31.${octet}.3`;
 
     const subnetId = await createSubnet(page, cidr, `LAN vòng đời E2E ${stamp}`);
     await createAddress(page, subnetId, address, 'Chị Lan — Kế toán');
@@ -668,9 +669,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = octetFor(stamp, 80);
-    const cidr = `172.16.${octet}.0/29`;
+    const cidr = `172.31.${octet}.0/29`;
     const name = `LAN sửa E2E ${stamp}`;
-    const gateway = `172.16.${octet}.1`;
+    const gateway = `172.31.${octet}.1`;
     const description = `dải thử của bài E2E ${stamp}`;
 
     const subnetId = await createSubnet(page, cidr, name, {
@@ -679,7 +680,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       description,
     });
     // Có hồ sơ IP → thẻ dải chuyển sang nhánh "Vô hiệu hóa".
-    await createAddress(page, subnetId, `172.16.${octet}.2`, 'Phòng Kỹ thuật');
+    await createAddress(page, subnetId, `172.31.${octet}.2`, 'Phòng Kỹ thuật');
     await page.goto(`/ip-addresses/${subnetId}`);
 
     /* ----- Hộp SỬA DẢI ----- */
@@ -777,7 +778,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
      */
     await page.goto('/nat');
     await expect(page.getByRole('heading', { level: 1, name: 'Sổ NAT' })).toBeVisible();
-    await expect(page.getByText('Chưa có luật NAT nào')).toBeVisible();
+    await expect(page.getByText('Chưa có luật NAT nào.')).toBeVisible();
     await expect(
       page.getByRole('main').getByRole('button'),
       'đầu trang hai nút + ba ô lọc (site · router · giao thức) + ba chip trạng thái + chip port nhạy cảm + ô sắp xếp + nút "Thêm luật NAT" của câu rỗng (Q-19); nút nào khác mọc ra ở đây là thứ không ai khai',
@@ -862,7 +863,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       page.getByText('Không có luật nào khớp bộ lọc.'),
       'lọc site mà bảng đứng im nghĩa là tham số không đi tới API',
     ).toBeVisible();
-    await expect(page.getByText('Chưa có luật NAT nào')).toHaveCount(0);
+    await expect(page.getByText('Chưa có luật NAT nào.')).toHaveCount(0);
   });
 
   /**
@@ -1015,8 +1016,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp con 2: "Thêm dịch vụ" ----- */
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài', exact: true }).click();
-    await form.getByRole('button', { name: 'Thêm dịch vụ', exact: true }).click();
-    const serviceForm = page.getByRole('dialog', { name: 'Thêm dịch vụ' });
+    await form.getByRole('button', { name: 'Thêm cổng dịch vụ', exact: true }).click();
+    const serviceForm = page.getByRole('dialog', { name: 'Thêm cổng dịch vụ' });
     await expect(serviceForm).toBeVisible();
     await serviceForm.getByRole('button', { name: 'Hủy' }).click();
     await expect(serviceForm).toHaveCount(0);
@@ -1046,7 +1047,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await form.getByRole('button', { name: 'Hủy' }).click();
     await confirmAction(page, 'Bỏ và đóng');
     await expect(form).toHaveCount(0);
-    await expect(page.getByText('Chưa có luật NAT nào'), 'bấm Hủy là không ghi gì cả').toBeVisible();
+    await expect(page.getByText('Chưa có luật NAT nào.'), 'bấm Hủy là không ghi gì cả').toBeVisible();
   });
 
   /**

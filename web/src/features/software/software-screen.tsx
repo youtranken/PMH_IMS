@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -136,6 +136,9 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
+  const navigate = useNavigate();
+  /** "Mua thêm đợt mới" (Q-27): hồ sơ mới điền sẵn theo đợt này. */
+  const [batching, setBatching] = useState<SoftwareRow | null>(null);
   const [assigning, setAssigning] = useState<SoftwareRow | null>(null);
   const [renewing, setRenewing] = useState<SoftwareRow | null>(null);
   const [restoring, setRestoring] = useState<SoftwareRow | null>(null);
@@ -268,6 +271,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
             onAssign={setAssigning}
             onRenew={setRenewing}
             onRestore={setRestoring}
+            onBatch={setBatching}
             onDone={refresh}
           />
         ),
@@ -301,6 +305,8 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t(spec.searchKey)}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         {manyKinds ? (
           <Select
@@ -408,6 +414,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
                   onAssign={setAssigning}
                   onRenew={setRenewing}
                   onRestore={setRestoring}
+                  onBatch={setBatching}
                   onDone={refresh}
                 />
               ),
@@ -452,15 +459,22 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         </>
       )}
 
-      {creating ? (
+      {creating || batching ? (
         <SoftwareForm
           row={null}
           screen={spec.key}
+          batchFrom={batching}
           csrfToken={me.csrfToken}
-          onClose={() => setCreating(false)}
-          onSaved={() => {
+          onClose={() => {
             setCreating(false);
-            void refresh();
+            setBatching(null);
+          }}
+          onSaved={(result) => {
+            setCreating(false);
+            setBatching(null);
+            // "Lưu rồi gán vào máy": sang hồ sơ vừa tạo, mở sẵn hộp Gán ở tab Máy đang dùng.
+            if (result?.assign) navigate(`${spec.item(result.id)}?tab=devices&assign=1`);
+            else void refresh();
           }}
         />
       ) : null}
@@ -553,6 +567,7 @@ function SoftwareRowActions({
   onAssign,
   onRenew,
   onRestore,
+  onBatch,
   onDone,
 }: {
   item: SoftwareRow;
@@ -561,6 +576,7 @@ function SoftwareRowActions({
   onAssign: (row: SoftwareRow) => void;
   onRenew: (row: SoftwareRow) => void;
   onRestore: (row: SoftwareRow) => void;
+  onBatch: (row: SoftwareRow) => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -597,6 +613,8 @@ function SoftwareRowActions({
                 label: t('license.assign'),
                 onSelect: () => onAssign(item),
               },
+              /* Mỗi đợt mua là một hồ sơ riêng (Q-27): mua thêm thì tạo hồ sơ mới điền sẵn. */
+              { key: 'batch', label: t('software.addBatch'), onSelect: () => onBatch(item) },
             ]
           : []),
         /* Gia hạn: hồ sơ thuê bao còn sống có hạn. Hồ sơ Thanh lý thì là "Khôi phục…" (Q-13:

@@ -149,13 +149,9 @@
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
 /* Hình SVG theo cỡ cố định: chữ của nút là `--fs-xs`, để `1em` thì hình chép chỉ còn 12px. */
 .copy-btn .glyph { display: block; width: 15px; height: 15px; }
-/* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
-.isp-call {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: var(--space-4);
-  font-size: var(--fs-md);
+/* Tên · model · IP LAN của thiết bị biên dưới mã máy (dải 4 ô của đường truyền). */
+.edge-facts > span + span::before {
+  content: ' · ';
 }
 /* Tên đăng nhập của tài khoản dịch vụ: thứ người ta mở trang để lấy — cỡ chữ thường, không
    thu nhỏ như mã phụ. */
@@ -163,7 +159,7 @@
   font-size: var(--fs-md);
   overflow-wrap: anywhere;
 }
-/* Link phụ ngay dưới giá trị trong thẻ định danh ("Rule NAT trên thiết bị này"). */
+/* Link phụ ngay dưới giá trị ("Luật NAT trên thiết bị này"). */
 .rail-sublink {
   display: block;
   margin-top: var(--space-1);
@@ -216,15 +212,6 @@
 }
 .stat-v { font-weight: 600; overflow-wrap: anywhere; }
 .stat-note { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
-
-/* Dòng "Chưa khai: …" phải TÁCH khỏi lưới bằng một đường kẻ, không dính sát nó: sát quá thì
-   mắt đọc ra như một ô nữa của lưới, mà nó là câu nói về những ô KHÔNG có ở đó. */
-.blank-fields {
-  font-size: var(--fs-xs);
-  margin-top: var(--space-9);
-  padding-top: var(--space-7);
-  border-top: 1px dashed var(--border-2);
-}
 
 /* --- Bố cục hai cột của trang chi tiết (ui/detail-layout.tsx) ----------------
  * Vì sao bỏ dải chỉ số ngang: `auto-fit, minmax(180px,1fr)` nghĩa là hồ sơ nào chỉ khai được
@@ -360,7 +347,7 @@
   .rail-card .rail-row-wide { grid-column: 1 / -1; }
   /* Thanh tab dính ngay dưới topbar (56px ở `.topbar`, base.css): trang chi tiết dài, cuộn
      xuống đọc lịch sử rồi muốn sang tab khác thì không phải cuộn ngược lên đầu. */
-  .detail-main > .tabs {
+  .detail-main > .tabs-shell {
     position: sticky;
     top: 56px;
     z-index: 4;
@@ -443,6 +430,24 @@
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* Nhãn nhóm trong thanh tab (`TabItem.group`, Q-27 — Danh mục): chữ nhỏ in hoa trước cụm tab,
+   cụm sau có vạch ngăn bên trái. Chỉ để nhìn (aria-hidden). */
+.tabs .tab-group {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0 var(--space-3) 0 var(--space-6);
+  border-left: 1px solid var(--border-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tabs .tab-group[data-first='true'] {
+  padding-left: 0;
+  border-left: 0;
+}
 /* Tab xuống dòng (`wrap`): không cuộn ngang, không mép mờ — mọi tab thấy được, quá ba hàng thì
    cuộn dọc trong khung. */
 .tabs[data-wrap='true'] {
@@ -455,6 +460,35 @@
 }
 .tabs::-webkit-scrollbar {
   display: none;
+}
+/* `.tabs-shell` (dính, khai ở trên) cũng là chỗ neo cho hai mũi tên cuộn. */
+.tabs-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.tabs-arrow:hover { color: var(--ink); border-color: var(--border-2); }
+.tabs-arrow[data-side='start'] { left: 0; }
+.tabs-arrow[data-side='end'] { right: 0; }
+/* Mũi tên đứng TRONG phần đệm của khung, không đè lên chữ tab. */
+@media (hover: hover) {
+  .tabs-shell[data-overflow='true'] { padding-inline: 34px; }
+}
+/* Điện thoại vuốt được: mép mờ là đủ, mũi tên chỉ che chữ tab. */
+@media (hover: none) {
+  .tabs-arrow { display: none; }
 }
 /*
  * Mép còn tab khuất thì mờ dần (`data-more-*` do `ui/tabs.tsx` đặt). Thanh cuộn đã bị giấu,
@@ -511,15 +545,22 @@
 }
 /*
  * Thanh tab DÍNH khi cuộn. Bảng port map và lịch sử dài; cuộn tới dòng 40 mà muốn đổi tab
- * thì không phải cuộn ngược lên đầu trang.
+ * thì không phải cuộn ngược lên đầu trang. Phần tử dính là KHUNG `.tabs-shell` (`ui/tabs.tsx`
+ * bọc thanh tab để neo mũi tên cuộn): dính ở `.tabs` bên trong thì nó không ra khỏi được hộp cha
+ * cao đúng bằng nó, tức là không dính gì cả.
  */
-.tabs {
+.tabs-shell {
   position: sticky;
   /* Dính ngay DƯỚI topbar (56px, `top: 0`, base.css). `top: 0` thì thanh tab trượt vào đúng dải
      topbar và — z-index cao hơn — che mất ô tìm Ctrl+K cùng nút đổi giao diện. */
   top: 56px;
   z-index: var(--z-sticky);
   background: var(--canvas);
+}
+.tabs {
+  /* Khung định vị cho gạch chân `.tab-ink` (tuyệt đối): thiếu nó thì gạch chân neo vào
+     `.tabs-shell`, không bị khung cuộn cắt và không trôi theo tab — trang tràn ngang ở 390px. */
+  position: relative;
   /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối
      khai trên), mà `button:focus-visible` của `base.css` vẽ vòng bằng `box-shadow: 0 0 0 3px`
      — bóng NGOÀI, nên nó bị khung cắt cụt. Người đi bằng phím mũi tên (roving tabindex ở
@@ -540,7 +581,7 @@
  * Trong hộp thoại, khung cuộn là `.sheet-body`, không phải trang: `top: 56px` (chừa topbar) làm thanh
  * tab dính lơ lửng giữa thân hộp và che mất dòng nội dung cuộn dưới nó (ô chọn phiên bản để so sánh).
  */
-.sheet-body .tabs {
+.sheet-body .tabs-shell {
   top: 0;
 }
 /*
@@ -580,6 +621,18 @@
    (cố ý — phần lớn chỗ dùng nó là hai ba thứ nằm ngang), nên bốn nút lọc kèm số đếm cộng nút
    "Bỏ lọc" đẩy cả trang tràn ngang ở 390px. Bài kiểm 390px của màn Két sắt bắt đúng chuyện đó. */
 .filter-bar [role='group'] {
+  flex-wrap: wrap;
+}
+/* Dải nút (`.segmented`) thì KHÔNG xuống dòng: nó tự cuộn ngang trong khung, có bóng ở mép
+   (form-layout.css) — gãy hàng thì một nút lạc xuống dòng dưới. Cao bằng ô chọn / chip bên cạnh
+   (38px): thấp hơn thì cả hàng so le. */
+.filter-bar .segmented {
+  flex-wrap: nowrap;
+  min-height: 2.375rem;
+  align-items: center;
+}
+/* Chip chọn nhiều có `wrap` (lọc loại thiết bị) vẫn xuống dòng như cũ. */
+.filter-bar .segmented.wrap {
   flex-wrap: wrap;
 }
 /* Ô ngày trong thanh lọc: bề ngang vừa một ngày, không chiếm cả hàng. Hai ô "từ – đến" đi
@@ -643,7 +696,24 @@
     flex: 1 1 100%;
   }
 }
+/* Ô tra IP: nút "Tra" đứng CUỐI ô tìm ở mọi cỡ màn — một mình một hàng thì trông như nút lạc. */
+.filter-bar.ip-lookup {
+  flex-wrap: nowrap;
+}
+.filter-bar.ip-lookup > .grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Điện thoại hẹp: ô chọn một hàng riêng. Nửa hàng chỉ còn ~170px, chữ "Tất cả nhà cung cấp" /
+   "Đang theo dõi (trừ Đã thanh lý)" cụt thành "Tất cả nhà cu…" — không biết đang lọc gì. */
+@media (max-width: 480px) {
+  .filter-bar > .fsel {
+    flex-basis: 100%;
+  }
+}
 input.search {
+  /* Chữ gợi ý dài hơn ô thì kết bằng "…" chứ không cụt giữa chữ ("…hoặc lý d"). */
+  text-overflow: ellipsis;
   background-image: var(--icon-search);
   background-repeat: no-repeat;
   background-position: left 0.65rem center;
@@ -752,6 +822,16 @@ input.search {
   }
   .table-stack td .cell-sub {
     text-align: right;
+  }
+  /* Ô báo "không có dòng nào" (một ô trải mọi cột, không nhãn): không chia lưới nhãn | giá trị,
+     nếu không khung trống bị dồn sang nửa phải. */
+  .table-stack td[colspan] {
+    display: block;
+    text-align: left;
+    padding: 0;
+  }
+  .table-stack td[colspan]::before {
+    content: none;
   }
   /* Ô trống ("—") không đáng một dòng trên thẻ: thẻ cổng 7 dòng toàn gạch thành 2–3 dòng. */
   .table-stack td[data-empty] {
@@ -870,3 +950,138 @@ html[data-motion='off'] .skeleton {
   animation: none;
 }
 
+/* --- Dải 4 ô + thông số thứ tự cố định (ui/detail-facts.tsx, Q-27) -------- */
+.fact-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Chừa khoảng tới tab / cột phải: sát nhau thì dải 4 ô đọc như dính vào thẻ bên dưới. */
+  margin: 0 0 var(--space-7);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-6) var(--space-9);
+}
+.fact + .fact { border-left: 1px solid var(--border); }
+.fact dt {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.fact dd { margin: 0; min-width: 0; }
+.fact-v {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.fact-v[data-blank='true'],
+.spec-row dd[data-blank='true'] {
+  color: var(--ink-3);
+  font-weight: 400;
+  font-style: italic;
+}
+.fact-note { font-size: var(--fs-sm); color: var(--ink-2); }
+.fact-action { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+/* Điện thoại: một cột "nhãn | giá trị" — ô 2 × 2 chỉ còn ~170px, mã tủ dài (không được ngắt giữa
+   mã, `LocationText`) sẽ tràn ô. */
+@media (max-width: 680px) {
+  .fact-strip { grid-template-columns: minmax(0, 1fr); }
+  .fact {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    column-gap: var(--space-4);
+    align-items: baseline;
+    padding: var(--space-4) var(--space-6);
+  }
+  .fact + .fact { border-left: none; border-top: 1px solid var(--border); }
+  .fact dd { grid-column: 2; }
+  .fact-v { font-size: var(--fs-md); }
+}
+
+.spec-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-12);
+  margin: 0;
+}
+.spec-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 38%) minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.spec-row dt { color: var(--ink-2); font-size: var(--fs-sm); }
+.spec-row dd { margin: 0; color: var(--ink); font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 680px) {
+  .spec-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- Khúc tủ quanh máy (features/devices/cabinet-peek.tsx) ---------------- */
+.rack-peek {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.rack-peek-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.rack-peek-row[data-kind='empty'] {
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-3);
+}
+.rack-peek-row[data-kind='self'] {
+  background: var(--warn-soft);
+  border: 2px solid var(--warn);
+  font-weight: var(--fw-semibold);
+}
+.rack-peek-u { color: var(--ink-2); font-size: var(--fs-2xs); }
+.rack-peek-code { min-width: 0; overflow-wrap: anywhere; }
+
+/* --- Đầu khu có nút / gập được (ui/detail-layout.tsx `DetailSection`) ------ */
+.detail-section-head { flex-wrap: wrap; }
+.detail-section-summary { flex-basis: 100%; min-width: 0; }
+.detail-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+/* Danh sách ngắn xếp ngang (bản vẽ có máy này…): không gạch đầu dòng — chip đã là dấu mục. */
+.inline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+.inline-list > li { display: inline-flex; align-items: center; gap: var(--space-2); }
+/* Khu gập: không chừa khoảng dưới tiêu đề khi chẳng có gì bên dưới. */
+.card > .detail-section-head:last-child { margin-bottom: 0; }

@@ -17,7 +17,9 @@ table.table thead th {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--ink-2);
+  /* --ink, không --ink-2: tiêu đề cột là chỗ mắt bám để đọc bảng — xám nhạt thì lẫn vào dữ
+     liệu (Q-27, chủ dự án). */
+  color: var(--ink);
   padding: var(--space-5) var(--space-7);
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
@@ -312,6 +314,11 @@ table.table tbody tr.row-suspended td:first-child {
   /* Vùng bấm đủ ngón tay chạm trúng (WCAG 2.5.8) — ba chấm vẽ ra chỉ rộng chừng 10px. */
   min-width: 2rem;
   min-height: 1.9rem;
+}
+/* Ô giữ chỗ bằng nút ⋮ cho dòng không có menu — cột thao tác thẳng hàng. */
+.kebab-slot {
+  display: inline-block;
+  min-width: 2rem;
 }
 .row-actions .kebab[aria-expanded='true'] {
   background: var(--muted-soft);
@@ -688,6 +695,8 @@ table.table .col-sticky-end::after {
   font-weight: 600;
 }
 .table tr.row-group th {
+  /* Cùng lề trái với ô dữ liệu: thiếu lề thì "Tháng 10/2026" dính sát viền thẻ, lệch cột. */
+  padding: var(--space-4) var(--space-7);
   background: var(--surface-2);
   color: var(--ink-2);
   font-size: var(--fs-xs);
@@ -782,6 +791,14 @@ table.table .col-sticky-end::after {
 .list-card-sub {
   font-weight: 500;
   overflow-wrap: anywhere;
+}
+/* Cụm không ngắt (email) dài hơn thẻ thì cắt "…" thay vì tràn khỏi thẻ. */
+.list-card-sub .nowrap {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 .list-card-meta {
   min-width: 0;
@@ -972,11 +989,17 @@ table.table tbody tr.row-alert td:first-child {
 .list-card.row-alert {
   box-shadow: inset 3px 0 0 var(--danger);
 }
-/* Nút mở chi tiết ở ô đầu dòng nhật ký — trông như chữ, bấm được bằng bàn phím. */
+/* Nút mở chi tiết ở ô đầu dòng nhật ký — trông như CHỮ thường (màu chữ, độ đậm thường), gạch
+   chân khi rê: xanh đậm thì cột giờ nặng hơn cả nội dung và đọc như một dãy link. */
 button.audit-open {
   padding: 0;
   font-size: inherit;
-  color: var(--primary-ink);
+  font-weight: 400;
+  color: var(--ink);
+}
+button.audit-open:hover {
+  background: none;
+  text-decoration: underline;
 }
 /* Khung chi tiết một dòng nhật ký: nhãn trái – giá trị phải, xuống dòng được ở 390px. */
 .audit-detail {
@@ -1022,4 +1045,28 @@ button.audit-open {
   overflow-wrap: anywhere;
   font-size: var(--fs-xs);
   margin: var(--space-3) 0;
+}
+
+/* Ảnh nhỏ trong ô bảng (cột Ảnh của thiết bị, Q-27): khung tỉ lệ mặt máy 1U–2U, ảnh vừa khung;
+   không có ảnh thì khung nét đứt ghi tên loại. */
+.cell-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 6rem;
+  height: 1.6rem;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--ink);
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+}
+.cell-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cell-thumb.is-empty {
+  background: var(--surface-2);
+  border: 1px dashed var(--border-2);
 }

@@ -17,7 +17,6 @@ import {
   resetUsers,
   catalogItem,
   uniqueStamp,
-  openNavGroup,
   stepUpViaApi,
 } from './helpers';
 
@@ -305,7 +304,8 @@ test.describe('Ma trận quyền két sắt', () => {
     await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     expect((await page.request.get('/api/v1/vault/access')).status()).toBe(403);
     expect((await page.request.get('/api/v1/vault/access/scopes')).status()).toBe(403);
-    await openNavGroup(page);
+    // Nhóm Hệ thống không còn mục nào cho Thành viên (Q-27) nên không có cả nhóm để mở.
+    await expect(page.getByRole('button', { name: 'Hệ thống', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Quyền két sắt' })).toHaveCount(0);
   });
 });

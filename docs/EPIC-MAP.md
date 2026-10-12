@@ -1127,3 +1127,59 @@ mở hộp Khai bằng `drawEdge` (patch + `autosave` giả từ khung) thay cho
 
 7. **Người dùng thao tác tay trên DB dev giữa lượt E2E đầy đủ** làm cửa canh rác ở teardown báo "hàng sống
    sót" (bản vẽ không mang chữ E2E). Kiểm `created_by` trước khi nghi bài kiểm.
+
+## Giao diện C (Q-27) đã đóng góp gì — thiết bị, phần mềm, danh mục (nhánh `ux/c-thiet-bi-phan-mem`, 08–09/10/2026)
+
+Quyết định: `docs/QUYET-DINH.md` Q-27; kế hoạch port: `docs/KE-HOACH-GIAO-DIEN-C.md`; mockup đã chốt:
+artifact "IMS thiết bị — mockup gọn", trang "Luồng đầy đủ (chạy thử)". Migration: `0065`.
+
+### Bảng / cột mới và ai sở hữu (AD-3)
+
+| Thứ | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `software.contract`, `software.per_seat` (+ CHECK chỉ license) | `software` | Hợp đồng / PO chung của đợt mua; cờ "mỗi ghế có hợp đồng, giấy tờ, ghi chú riêng" |
+| `software_seat` (`software_id` FK CASCADE, `seat_no`, `contract`, `note`, UNIQUE `(software_id, seat_no)`) | `software` | Ghế 1…N của hồ sơ bật `per_seat`. Tắt cờ thì GIỮ hàng (bật lại không mất số hợp đồng) |
+| `license_assignment.seat_id` (FK SET NULL) + UNIQUE một phần `license_assignment_seat_live_key` | `software` | Một ghế một máy đang dùng. Tắt `per_seat` → `seat_id` về NULL |
+| `file.owner_type = 'software_seat'` | `files` (chủ hàng), `software` (resolver) | Giấy tờ riêng của ghế; quyền như giấy tờ của hồ sơ |
+
+Không có khoá `system_config` mới.
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Dùng thế nào |
+| --- | --- | --- |
+| `POST/PATCH /software` nhận `contract`, `perSeat`, `seats[]` | `software.service` (`syncSeatsWithin`) | Bớt ghế đang có máy (cờ còn bật) → 409 `SOFTWARE_SEATS_IN_USE`. Lịch sử `seats-updated` |
+| `POST /software/:id/assignments` nhận `seatId` | `license-assignment.service` (`pickSeatWithin`, khoá hàng `software`) | Không gửi → ghế trống nhỏ nhất; `SEAT_NOT_FOUND` / `SEAT_TAKEN`. Hộp Gán không còn gửi chi phí / hợp đồng / ngày |
+| `DeviceListItem.modelPhotoVersion` | `devices.service` | Ảnh cột đầu bảng thiết bị |
+| `FactStrip`, `SpecList`, `FoldSection`, `TabItem.group`, `.table-cards`, Dialog `eyebrow`, `rackWindow` | `web/src/ui`, `web/src/css`, `web/src/lib/rack-units.ts` | Đã khai SHARED-REGISTRY |
+| `DeviceSoftwareTab` (ngoại lệ xuyên feature) | `features/software/device-software-tab.tsx` | Tab Phần mềm của trang thiết bị: gán đi CHÍNH `AssignDialog` |
+| `DetailSection` `action` / `foldable` / `id`; mũi tên cuộn của `Tabs`; `.inline-list` | `web/src/ui/detail-layout.tsx`, `web/src/ui/tabs.tsx`, `css/detail-tabs.css` | Đợt soát UX 10/10: nút việc cạnh tiêu đề khu, khu gập có dòng tóm tắt (giữ trạng thái ở trang khi cần mở từ chỗ khác). Mọi thanh tab dài có mũi tên tròn trên máy tính |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Khi nào làm |
+| --- | --- | --- |
+| Cột `license_assignment.contract` cũ vẫn giữ, UI không sửa nữa | Q-27: không xoá dữ liệu đã có | Khi có quyết định gộp về hợp đồng của hồ sơ / ghế |
+| Trang phiếu duyệt mở két chưa theo khuôn C (đường truyền và tài khoản dịch vụ đã đổi 11/10) | Phiếu không có "hồ sơ" để khai thiếu — khuôn dải 4 ô + Thông số không khớp | Khi chủ dự án chốt khuôn cho trang phiếu |
+| Danh mục gom nhóm bằng nhãn trong MỘT thanh tab (không phải nút nhóm như mockup) | Giữ phím mũi tên, link `?tab=` và E2E | Nếu người dùng thấy khó tìm |
+| Thẻ "Trong tủ" chỉ là chữ (chưa có ảnh từng máy như mockup) | Cần thêm ảnh model vào truy vấn máy trong tủ | Khi làm lại mặt tủ |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **`api/scripts/reset-e2e.mjs` được gắn từ host vào container**: sửa script cho bảng mới mà image API
+   chưa có migration là reset hỏng, 11 bài đỏ dây chuyền. Câu lệnh chạm bảng mới bọc
+   `to_regclass(...) IS NOT NULL`.
+2. **Mã mới phát sinh ở lịch sử phải có nhãn ở HAI chỗ**: `software-history-entries.ts` (tab Lịch sử) và
+   `features/admin/audit-actions.ts` (màn Nhật ký) — `audit-action-rollcall.test.ts` bắt chỗ thứ hai.
+3. **CRLF**: `vi.ts`, nhiều spec và CSS là CRLF; sửa bằng script phải mở `newline=''`.
+4. **Thêm mục vào nhóm menu làm tràn ở 1366×768**: thêm `@media (max-height: 800px)` thu đệm `.nav-item`.
+5. **Một thông tin nói một lần** (bổ sung 10/10): thứ đã ở dải 4 ô thì không lặp ở Thông số / cột phải. Thêm ô mới vào trang chi tiết thì xem dải 4 ô đã nói chưa.
+6. **Số + danh từ viết hoa** (Q-24, `term-consistency.test.ts`): "2 Đường", "1 Tệp" — đừng hạ chữ thường cho "đều".
+7. **Soát bằng mắt 11/10** (Playwright chụp 27 màn × 390/768/1280/1440): máy dò tự động (tràn ngang, chữ
+   tràn ô) chỉ bắt được 1/18 điểm — phần còn lại (thẻ hở mép khi `table-cards` gập dọc, sọc loang
+   từng ô, thông tin lặp 3 lần trên điện thoại) chỉ thấy khi NHÌN ảnh. Sửa CSS dùng chung thì chụp lại
+   cả 390px.
+8. **Gộp ô trống ở màn dải IP**: trang cắt trên DÒNG đã gộp (`collapseFreeRuns`), không trên ô — nhảy
+   tới một địa chỉ (`?ip=`, bấm ô trên bản đồ) phải tính trang bằng dòng đã gộp với chuỗi chứa địa chỉ
+   đó để mở (`pageOfLine`). Spec E2E bấm "Cấp IP" của một ô trống cụ thể trên dải rộng phải lọc
+   "Trống" hoặc bấm "Hiện từng IP" trước.

@@ -141,6 +141,31 @@ export interface SoftwareInputShape {
   note?: string | null;
   status?: SoftwareStatus;
   websites?: string[];
+  /** Số hợp đồng / PO chung của mọi ghế (khi không bật ghế riêng). */
+  contract?: string | null;
+  /** Mỗi ghế có hợp đồng, ghi chú, giấy tờ riêng (Q-27). */
+  perSeat?: boolean;
+  /** Hợp đồng / ghi chú của từng ghế — chỉ những ghế gửi lên mới đổi. */
+  seats?: SeatInput[];
+}
+
+export interface SeatInput {
+  seatNo: number;
+  contract?: string | null;
+  note?: string | null;
+}
+
+/**
+ * Ghế riêng (Q-27) chỉ có nghĩa khi hồ sơ là license và có từ 2 ghế: một ghế thì "riêng" với
+ * "chung" là một; không giới hạn ghế thì không biết dựng bao nhiêu ghế.
+ */
+export function perSeatErrors(value: { kind: SoftwareKind; seatTotal: number | null; perSeat: boolean }): string[] {
+  if (!value.perSeat) return [];
+  if (value.kind !== 'license') return ['Chỉ hồ sơ License mới khai thông tin riêng cho từng ghế.'];
+  if (value.seatTotal === null || value.seatTotal < 2) {
+    return ['Khai thông tin riêng cho từng ghế cần hồ sơ có từ 2 ghế trở lên.'];
+  }
+  return [];
 }
 
 /** Giá trị sau khi ghép bản sửa với hồ sơ đang có — thứ luật cần soi. */

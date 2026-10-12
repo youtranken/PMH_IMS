@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ToastProvider, useToast } from '@/ui/toast';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
@@ -131,5 +131,26 @@ describe('Toast — nút đóng', () => {
     const close = screen.getByRole('button', { name: 'Đóng thông báo' });
     expect(close.querySelector('svg.glyph')).not.toBeNull();
     expect(close.textContent).toBe('');
+  });
+});
+
+describe('Toast — gỡ khung thì không để đồng hồ chạy', () => {
+  it('unmount ToastProvider khi còn toast: không còn timer nào treo', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const { unmount } = renderWithI18n(
+        <ToastProvider>
+          <ToastFireButton tone="ok" text="Đã lưu" label="Bắn" />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByRole('button', { name: 'Bắn' }));
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      unmount();
+      // Đồng hồ còn treo sẽ gọi setState sau khi trang (hoặc jsdom) đã đi mất.
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

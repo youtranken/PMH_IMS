@@ -112,11 +112,11 @@ export function countSlots(slots: SubnetSlot[]): Record<SlotFilter, number> {
 }
 
 /** Lát cắt của một trang. Trang vượt khoảng được kéo về trước, nên không bao giờ trả rỗng oan. */
-export function pageSlots(
-  slots: SubnetSlot[],
+export function pageSlots<T>(
+  slots: T[],
   page: number,
   limit = SLOT_PAGE_SIZE,
-): SubnetSlot[] {
+): T[] {
   const safe = clampPage(page, slots.length, limit);
   return slots.slice((safe - 1) * limit, safe * limit);
 }
@@ -171,10 +171,89 @@ export function freeChoices(
 
 /** Trang (tính từ 1) chứa địa chỉ này trong danh sách đang hiện; không có thì `null`. */
 export function pageOfAddress(
-  slots: SubnetSlot[],
+  slots: { address: string }[],
   address: string,
   limit = SLOT_PAGE_SIZE,
 ): number | null {
   const index = slots.findIndex((slot) => slot.address === address);
   return index < 0 ? null : Math.floor(index / limit) + 1;
+}
+
+/** Chuỗi ô trống liền nhau từ chừng này ô trở lên thì gộp thành một dòng (Q-27). */
+export const FREE_RUN_MIN = 10;
+
+/** Một dòng thay cho cả chuỗi ô trống: `address` là ô đầu (cũng là ô nút "Cấp IP" cấp). */
+export interface FreeRun {
+  kind: 'run';
+  address: string;
+  to: string;
+  count: number;
+}
+
+export type SlotLine = SubnetSlot | FreeRun;
+
+/**
+ * Gộp chuỗi ô CHƯA CÓ HỒ SƠ liền nhau thành một dòng "a – b · n IP trống".
+ *
+ * Một /24 mới dùng vài địa chỉ là ~250 dòng "Trống", mỗi dòng một nút — trang dài sáu trang
+ * mà chỉ nói một câu. Gộp lại thì hồ sơ thật nằm sát nhau. Không gộp:
+ *  · chuỗi ngắn hơn `FREE_RUN_MIN` — dải nhỏ (/29) vẫn bấm từng địa chỉ một;
+ *  · hồ sơ (kể cả hồ sơ Trống: nó còn mang chủ cũ, ngày thu hồi) — nó cắt chuỗi;
+ *  · gateway — dòng riêng, người ta tìm nó bằng mắt;
+ *  · chuỗi chứa `keep` (địa chỉ đang trỏ tới) — dòng đó phải thấy và tô sáng được;
+ *  · chuỗi có địa chỉ nằm trong `expanded` — mọi địa chỉ của chuỗi người dùng đã bung
+ *    (`runMembers`). Khoá theo TỪNG địa chỉ, không theo ô đầu: cấp một IP trong chuỗi là cắt
+ *    nó làm đôi / đổi ô đầu, khoá ô đầu thì phần còn lại gập lại ngay sau mỗi lần cấp.
+ * Ô trong danh sách đã xếp theo địa chỉ và đủ mọi host, nên đứng cạnh nhau = địa chỉ liền nhau.
+ */
+export function collapseFreeRuns(
+  slots: SubnetSlot[],
+  options: { keep: string | null; gateway: string | null; expanded: ReadonlySet<string> },
+): SlotLine[] {
+  const lines: SlotLine[] = [];
+  let run: SubnetSlot[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    const open =
+      run.length < FREE_RUN_MIN ||
+      run.some((slot) => slot.address === options.keep) ||
+      run.some((slot) => options.expanded.has(slot.address));
+    if (open) lines.push(...run);
+    else {
+      lines.push({
+        kind: 'run',
+        address: run[0].address,
+        to: run[run.length - 1].address,
+        count: run.length,
+      });
+    }
+    run = [];
+  };
+  for (const slot of slots) {
+    if (slot.kind === 'free' && slot.address !== options.gateway) {
+      run.push(slot);
+    } else {
+      flush();
+      lines.push(slot);
+    }
+  }
+  flush();
+  return lines;
+}
+
+/** Mọi địa chỉ chuỗi gộp `run` thay chỗ, theo thứ tự trong `slots` (danh sách đã gộp ra nó). */
+export function runMembers(slots: { address: string }[], run: FreeRun): string[] {
+  const from = slots.findIndex((slot) => slot.address === run.address);
+  if (from < 0) return [];
+  return slots.slice(from, from + run.count).map((slot) => slot.address);
+}
+
+/**
+ * "172.16.10.3 – .221": cùng ba số đầu thì đầu thứ hai chỉ ghi số cuối — dòng gộp đứng trong
+ * cột Địa chỉ hẹp (thẻ điện thoại), ghi đủ hai địa chỉ là bị cắt giữa chừng.
+ */
+export function runLabel(run: FreeRun): string {
+  const cut = run.address.lastIndexOf('.');
+  const sameNet = cut > 0 && run.to.startsWith(run.address.slice(0, cut + 1));
+  return `${run.address} – ${sameNet ? run.to.slice(cut) : run.to}`;
 }

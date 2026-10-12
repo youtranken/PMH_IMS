@@ -16,13 +16,27 @@
    */
   max-width: 100%;
   overflow-x: auto;
+  /*
+   * Bóng mờ ở mép còn nút khuất ("Tài…" bị cắt ngang mà không có dấu gì thì trông như hết). Mẹo
+   * nền hai lớp: lớp `local` (màu rãnh) trôi theo nội dung và che bóng khi đã cuộn tới mép; lớp
+   * `scroll` (bóng) đứng yên ở mép khung. Không cần JS đo mép như thanh tab.
+   */
+  background:
+    linear-gradient(to right, var(--surface-2) 40%, transparent) left center / 1.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface-2) 40%, transparent) right center / 1.5rem 100% no-repeat local,
+    linear-gradient(to right, var(--scroll-edge), transparent) left center / 0.6rem 100% no-repeat scroll,
+    linear-gradient(to left, var(--scroll-edge), transparent) right center / 0.6rem 100% no-repeat scroll,
+    var(--surface-2);
+  scrollbar-width: none;
 }
+.segmented::-webkit-scrollbar { display: none; }
 /* `ChipToggleGroup wrap` (lọc loại thiết bị): chip xuống dòng trong đúng bề ngang của ô thay vì
    cuộn — danh sách 12+ loại mà cuộn thì chip ĐANG BẬT nằm khuất, không biết đang lọc gì. */
 .segmented.wrap {
   display: flex;
   flex-wrap: wrap;
   overflow-x: visible;
+  background: var(--surface-2);
 }
 .segmented label {
   position: relative;
@@ -798,6 +812,27 @@ input.switch:focus-visible {
   background: var(--surface-2);
   border-bottom: 1px solid var(--border-2);
 }
+.sheet-eyebrow {
+  flex-shrink: 0;
+  padding: 2px var(--space-4);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sheet-eyebrow[data-tone='device'] {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+.sheet-eyebrow[data-tone='software'] {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.sheet-eyebrow[data-tone='catalog'] {
+  background: var(--warm-soft);
+  color: var(--warm-strong);
+}
 .sheet-title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
@@ -930,4 +965,58 @@ input.switch:focus-visible {
   justify-content: center;
   font-size: var(--fs-lg);
   line-height: 1;
+}
+
+/* Khối gập của form dài (`FoldSection`, Q-27): tiêu đề là nút cả bề ngang, tách bằng viền trên. */
+.fold-section {
+  border-top: 1px solid var(--border);
+}
+.fold-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.fold-head:hover {
+  background: var(--canvas);
+}
+.fold-title {
+  font-weight: var(--fw-bold);
+}
+.fold-summary {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.fold-count {
+  margin-left: auto;
+  padding: 1px var(--space-4);
+  border-radius: 999px;
+  background: var(--muted-soft);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.fold-body {
+  padding: 0 0 var(--space-6);
+}
+
+/* Dải ảnh mặt trước của model đã chọn trong form thiết bị (Q-27): thấy ngay mình chọn đúng máy. */
+.model-preview {
+  padding: var(--space-5);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.model-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 6rem;
+  margin: 0 auto;
+  border-radius: var(--r-sm);
 }

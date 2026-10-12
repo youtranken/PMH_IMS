@@ -77,12 +77,12 @@ describe('Form thiết bị — khai nhanh', () => {
     mockFetch();
     render({ cloneFrom: SOURCE });
     expect(screen.getByRole('dialog', { name: 'Nhân bản từ LT-01' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Tên thiết bị' })).toHaveValue('Laptop Dell');
+    expect(screen.getByRole('textbox', { name: 'Tên gọi' })).toHaveValue('Laptop Dell');
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('Latitude 5440');
     expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'Serial' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'Người sử dụng' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Serial', hidden: true })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Người sử dụng', hidden: true })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú', hidden: true })).toHaveValue('');
   });
 
   it('+2 năm tính từ Bảo hành từ; "Lưu và nhân bản" giữ phần chung, làm trống phần riêng', async () => {

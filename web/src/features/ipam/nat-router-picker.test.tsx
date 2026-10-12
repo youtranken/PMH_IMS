@@ -96,7 +96,7 @@ describe('Ô Router của sổ NAT', () => {
     await user.click(await screen.findByRole('button', { name: 'Thêm thiết bị mới' }));
     const form = await screen.findByRole('dialog', { name: 'Thêm thiết bị' });
     await waitFor(() =>
-      expect(within(form).getByRole('button', { name: 'Loại' })).toHaveTextContent('Firewall'),
+      expect(within(form).getByRole('button', { name: 'Loại thiết bị' })).toHaveTextContent('Firewall'),
     );
   });
 

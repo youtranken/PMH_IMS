@@ -136,7 +136,7 @@ describe('Form theo màn (Q-22)', () => {
     mockFetch();
     renderOn('domains');
     expect(screen.getByRole('dialog', { name: 'Thêm tên miền / SSL' })).toBeInTheDocument();
-    const kinds = within(screen.getByRole('radiogroup', { name: 'Loại' }))
+    const kinds = within(screen.getByRole('radiogroup', { name: 'Loại hồ sơ' }))
       .getAllByRole('radio')
       .map((radio) => radio.closest('label')?.textContent);
     expect(kinds).toEqual(['Tên miền', 'Chứng chỉ SSL']);
@@ -159,13 +159,13 @@ describe('Form theo màn (Q-22)', () => {
 
   it.each([
     ['maintenance', 'Thêm hợp đồng bảo trì', 'maintenance'],
-    ['services', 'Thêm dịch vụ', 'other'],
+    ['services', 'Thêm dịch vụ có hạn', 'other'],
     ['software', 'Thêm phần mềm', 'license'],
   ] as const)('%s (%s): loại cố định, không có ô chọn Loại, gửi kind=%s', async (key, title, kind) => {
     const writes = mockFetch();
     renderOn(key);
     expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: 'Loại' })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Loại hồ sơ' })).toBeNull();
     const user = userEvent.setup();
     await user.type(screen.getByRole('textbox', { name: /Mã hồ sơ/ }), 'X-E2E-1');
     await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Hồ sơ thử');

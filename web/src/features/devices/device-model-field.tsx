@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
-import { DEVICE_MODELS_KEY, deviceModelParts, type DeviceModel } from '@/lib/device-models';
+import { DEVICE_MODELS_KEY, deviceModelParts, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { Combobox } from '@/ui/combobox';
 import { DeviceModelDialog } from '@/ui/device-model-dialog';
 import { useDebouncedValue } from '@/ui/use-debounced-value';
@@ -63,6 +63,10 @@ export function DeviceModelField({
           const parts = deviceModelParts(model);
           return (
             <>
+              {/* Ảnh nhỏ để nhận đúng máy bằng mắt (Q-27). Trang trí — tên dòng vẫn là chữ. */}
+              <span className={model.photoFrontFileId ? 'cell-thumb' : 'cell-thumb is-empty'} aria-hidden="true">
+                {model.photoFrontFileId ? <img src={deviceModelPhotoSrc(model.id, model.updatedAt)} alt="" /> : null}
+              </span>{' '}
               <span className="mono">{model.model}</span>{' '}
               <small>{[model.manufacturer, model.deviceTypeName, parts.size ?? t('deviceModels.rackNone')].filter(Boolean).join(' · ')}</small>
             </>

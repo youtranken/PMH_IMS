@@ -1002,6 +1002,121 @@ thay CHỖ LẤY Số U, ảnh và cổng.
   - **Link thẳng tới một luật NAT** (X-05): `/nat?rule=<id>` mở sổ NAT, tô sáng dòng đó (kể cả khi
     nó nằm ở trang khác / bị bộ lọc ẩn — mở theo id), và menu dòng có "Sao chép link".
 
+### Q-27 · Giao diện C — thiết bị, phần mềm, danh mục (08/10/2026, chủ dự án chốt trên mockup)
+
+Mockup chạy thử: artifact "IMS thiết bị — mockup gọn", trang "Luồng đầy đủ (chạy thử)". Kế hoạch
+port: `docs/KE-HOACH-GIAO-DIEN-C.md`. Lý do chung: tạo thiết bị có quá nhiều ô, dễ lẫn thiết bị /
+phần mềm / danh mục, trang chi tiết mỗi máy một kiểu vì ô trống bị ẩn.
+
+- **Menu:** "Danh mục" lên đầu nhóm **Tài sản** (trước Thiết bị, Phần mềm), bỏ khỏi nhóm Hệ thống
+  — đúng thứ tự khai Danh mục → Thiết bị → Phần mềm. Quyền xem/sửa giữ nguyên.
+- **Danh mục:** 9 tab gom 3 nhóm *Vị trí* (Site, Tủ mạng) / *Thiết bị* (Loại thiết bị, Model, Loại
+  dây, Cổng dịch vụ) / *Đối tác & tổ chức* (Nhà cung cấp, Nhà mạng, Phòng ban). Đầu màn có thẻ
+  "Khai trước khi thêm thiết bị" (đủ / còn thiếu, ví dụ model chưa có ảnh). Link `?tab=` cũ vẫn mở
+  đúng nhóm và tab. Cột, bộ lọc, menu ⋮ của từng tab giữ như hiện tại.
+- **Đổi nhãn** (bảng A4 của mockup): Hãng → Hãng sản xuất; Tên (thiết bị) → Tên gọi; Loại → Loại
+  thiết bị / Loại hồ sơ; Mã → Mã thiết bị / Mã hồ sơ / Mã model; "Dịch vụ / Port" → "Cổng dịch vụ
+  (port)"; nút thêm ở màn Dịch vụ có hạn → "Thêm dịch vụ có hạn"; tab "Hồ sơ" của phần mềm →
+  "Tổng quan". Tiêu đề hộp thoại mang nhãn phân hệ (Thiết bị / Phần mềm / Danh mục).
+- **Bảng thiết bị:** cột ▸ · Ảnh (ảnh model) · Mã thiết bị · Tên · IP quản trị · Vị trí · Trạng
+  thái · Thao tác. **Bỏ** cột Người sử dụng, cột Bảo hành và dòng phụ loại · model · serial dưới
+  tên (đã có trong hồ sơ). IP thành cột riêng (thay dòng phụ dưới mã), không có IP thì "—". Lọc,
+  xuất Excel, dòng nhắc két, máy đã thanh lý, thẻ 390px giữ như cũ.
+- **Khu bung dòng** (license đang cài của máy, ghế đang dùng của license) và tab tương ứng trong
+  trang chi tiết: tiêu đề cột in đậm; mỗi dòng là một thẻ tách nhau, rê chuột thì nổi lên. Bổ sung
+  cho Q-24: cột Ghi chú vẫn luôn có.
+- **Form thiết bị:** Model đứng đầu, chọn bằng ảnh thu nhỏ (chọn xong tự điền Loại, Số U, ảnh). Hai
+  khối luôn mở: *Máy gì* (Model, Mã, Tên gọi) và *Đặt ở đâu* (Site, Tủ mạng, U trống). Các khối còn
+  lại gập, có đếm số ô đã khai: Người dùng & phòng ban · Mua sắm & bảo hành · Truy cập quản trị ·
+  Ảnh & giấy tờ · Ghi chú. Không bỏ trường nào.
+- **Trang chi tiết thiết bị và phần mềm dùng một khuôn:** đầu trang (mã, trạng thái, nhãn phân hệ)
+  + dải 4 ô (thiết bị: Vị trí · Người sử dụng · IP quản trị · Bảo hành; phần mềm: Nhà cung cấp ·
+  Hạn · Ghế/Tên miền · Hợp đồng hoặc Giấy tờ). Thiết bị có khung ảnh mặt trước (theo model) / mặt
+  sau (riêng máy). Ô chưa khai vẫn đứng đúng chỗ và ghi "chưa khai" (bỏ cách ẩn ô trống). Thiết bị
+  có **tab Phần mềm riêng** (thay khu "License đang cài" trong Tổng quan), có nút "Gán phần mềm vào
+  máy này". Bản đồ quan hệ giữ, đổi kiểu: ô giữa có ảnh model. Băng báo, các khu IP/NAT/ISP, tab
+  Sơ đồ cổng / Két / Lịch sử, hộp Thanh lý giữ nguyên.
+- **Mỗi đợt mua license là một hồ sơ riêng** (mã riêng, giấy tờ riêng, key riêng trong két) dù cùng
+  tên phần mềm — ví dụ Windows Server 2025 OEM mua 2 ghế, sau mua thêm 3 ghế với key khác: hai hồ
+  sơ LIC-…-01, LIC-…-02. Trang chi tiết có dải "Cùng phần mềm, mua theo đợt" (gom hồ sơ license
+  cùng tên); menu có "Mua thêm đợt mới…" mở form điền sẵn theo đợt trước, gợi ý mã kế tiếp.
+- **Form Thêm phần mềm:** hàng 1 Tên · Mã hồ sơ · Nhà cung cấp; hàng 2 Kỳ hạn · Bắt đầu · Hết hạn;
+  khối "Ghế và hợp đồng" có Số ghế (− / +) và ô tick **"Mỗi ghế có hợp đồng, giấy tờ và ghi chú
+  riêng"** (chỉ bật được khi ≥ 2 ghế; bớt xuống dưới 2 thì tự tắt):
+  - **Không tick:** các ghế dùng chung *Số hợp đồng / PO*, *Ghi chú* và *Giấy tờ* của hồ sơ.
+  - **Có tick:** bảng Ghế 1…N, mỗi ghế có số hợp đồng, ghi chú, giấy tờ riêng; ô ghi chú và giấy tờ
+    chung của hồ sơ bị ẩn. Đổi số ghế thì bảng thêm / bớt dòng (không bớt được ghế đang có máy).
+  - Không có ô chi phí ở form. Nút chính "Lưu rồi gán vào máy".
+  - Ba màn Tên miền & SSL / Hợp đồng bảo trì / Dịch vụ có hạn khác dùng cùng khuôn form, không có
+    ghế và không có tick.
+- **Gán license vào máy chỉ chọn máy** (theo Máy / Phòng ban / Người sử dụng, lý do khi vượt ghế).
+  Bỏ các ô Chi phí, Hợp đồng, Bắt đầu, Kết thúc, Ghi chú khỏi hộp Gán. Hồ sơ có tick thì hộp Gán
+  có bảng "Máy vào ghế nào": mặc định ghế trống theo thứ tự, đổi được.
+- **Sửa ghế** (của một máy): Chi phí, Bắt đầu, Hết hạn, Ghi chú. **Bỏ ô Hợp đồng** (hợp đồng thuộc
+  hồ sơ hoặc thuộc ghế ở form). Máy thuộc ghế riêng thì hộp hiện "đang ở Ghế n · HĐ … · giấy tờ",
+  ghi chú của ghế sửa ở Sửa hồ sơ. Cột `license_assignment.contract` cũ giữ trong DB, không xoá.
+- **Dữ liệu:** cần migration mới — bảng ghế của hồ sơ (số thứ tự, số hợp đồng, ghi chú; chủ là module
+  software, AD-3), liên kết ghế ↔ lần gán máy, cột số hợp đồng chung và cờ "mỗi ghế riêng" trên
+  `software`, loại chủ sở hữu file mới cho giấy tờ của ghế. Có `@Audited` + `@Roles` + lịch sử như
+  mọi đường ghi.
+- **Bổ sung 10/10/2026** (chủ dự án duyệt đợt soát UX sau khi port): **một thông tin chỉ nói một
+  lần** trên trang chi tiết.
+  - Thứ đã có ở dải 4 ô thì **không lặp** ở Thông số / Thông tin hay ở cột phải. Hạn (bảo hành của
+    máy, hạn của phần mềm) nói ở ô của dải: huy hiệu còn bao lâu, khoảng ngày, thanh thời gian gọn.
+  - Phần mềm **bỏ thẻ "Thẻ định danh"** ở cột phải; trạng thái lên dòng dưới mã. Cột phải chỉ còn
+    khi có thẻ riêng (các đợt mua, tên miền); không có thì trang một cột.
+  - Thiết bị: cột phải là "Trong tủ" + thẻ Nhà cung cấp (liên hệ gọi bảo hành, ngày tạo / sửa).
+    Khu "Hình dùng trên sơ đồ" gập sẵn; dòng tiêu đề nói mỗi mặt đang dùng ảnh gì, lời giải
+    thích dài chuyển vào nút (i). Trên máy tính, các khu
+    Địa chỉ IP / NAT / Đường truyền **gập sẵn** vì bản đồ quan hệ đã tóm tắt; bấm nút trên bản đồ
+    thì mở đúng khu. Trên điện thoại (không có bản đồ) vẫn mở sẵn.
+- **Soát UX toàn portal 10/10/2026** (chủ dự án duyệt sửa hết danh sách soát U-01…U-40):
+  - Một kiểu **chip bật/tắt bộ lọc** cho mọi màn (`FilterToggle`; ô tick trong thanh lọc cùng
+    dáng). Ô "Sắp theo…" không tô xanh như bộ lọc; phạm vi mặc định của Sắp hết hạn cũng không.
+  - Nút chính trong dòng bảng ("Sửa", "Cấp IP") là **nút có viền** như "Gia hạn" / "Mở két"; ô
+    không có menu ⋮ vẫn giữ chỗ để cột thao tác thẳng hàng. Nút phân trang cao bằng ô "Số dòng".
+  - Nhóm nút chọn trên điện thoại **một hàng, cuộn ngang, có bóng ở mép**; Két sắt và Kho thanh
+    lý có lựa chọn "Tất cả" / "Mọi lúc". Ô thống kê 4 hoặc 6 ô chia 2 cột trên điện thoại.
+  - Vai trò: Super Admin màu nhấn thương hiệu, Quản trị xanh thông tin — **không dùng đỏ / cam**
+    (màu lỗi, cảnh báo). Ô ngày chỉ một biểu tượng lịch. Khung trống kết thúc bằng dấu chấm.
+  - Gỡ đường `/documents` (chưa từng có màn; vào là 404 mà tiêu đề vẫn ghi "Tài liệu").
+  - **Giữ nguyên có chủ ý:** nút thanh lưu Tham số cỡ nhỏ (Q-21); số + danh từ viết hoa (Q-24);
+    thứ tự "Danh sách | Bản đồ" theo chế độ mặc định của từng màn; bố cục bản đồ Sơ đồ mạng
+    (04/10); "›" chỉ ở ô thống kê là link (ô là bộ lọc thì không); màu chữ nút chính (token).
+- **Soát bằng mắt 11/10/2026** (Claude lái Playwright qua 27 màn ở desktop và 390px; chủ dự án
+  duyệt sửa hết, kể cả hai việc lớn):
+  - **Đường truyền và Tài khoản dịch vụ theo khuôn C** như thiết bị / phần mềm: trạng thái lên
+    dòng dưới mã; dải 4 ô (đường truyền: Hotline · IP WAN · Thiết bị đầu cuối · Số hợp đồng; tài
+    khoản: Tên đăng nhập · Người phụ trách · Hết hạn · Dải IP được phép, tài khoản không phải VPN
+    thì ô thứ tư là Giấy tờ); bỏ "Thẻ định danh" ở cột phải, trang một cột; khu Thông số / Thông
+    tin liệt kê đủ ô theo thứ tự, ô trống ghi "chưa khai", nút "Bổ sung n ô" đếm đúng ô của khối
+    đó (như thiết bị / phần mềm; ô trống ở dải 4 ô không tính). Phòng ban của tài khoản là một
+    dòng của khu Thông tin, nên thiếu là thấy và được đếm. Lý do: hai trang
+    này còn kiểu cũ — một thẻ bên phải chỉ để chứa mỗi trạng thái, và khu "Hồ sơ" rỗng chỉ có
+    dòng "Chưa khai báo". Băng thông thành một dòng có nhãn trong Thông số (trước đứng trơn "400"
+    dưới mã, không biết là gì). Tab "Hồ sơ" của đường truyền đổi thành "Tổng quan" như phần mềm.
+  - **Nút "Sửa hồ sơ" luôn hiện ở đầu trang, cả trên điện thoại** (đường truyền trước giấu vào
+    ⋯ trên điện thoại, các trang khác thì hiện) — một kiểu cho mọi trang chi tiết.
+  - **Dải IP trống liền nhau gộp thành một dòng** ở chế độ "Tất cả" khi chuỗi từ 10 ô trở lên
+    ("172.16.10.3 – 172.16.10.50 · 48 IP trống", nút "Cấp IP" cấp ô đầu, nút "Hiện từng IP" bung
+    ra). Chế độ "Trống", ô tìm, và địa chỉ đang được trỏ tới (link `?ip=`) vẫn hiện từng ô. Chuỗi
+    đã bung thì vẫn bung sau khi cấp một IP trong nó (cấp liền nhiều IP không phải bấm lại).
+  - Một thông tin nói một lần: thanh ghế chỉ ở dải 4 ô (tab Máy đang dùng không vẽ lại); dải IP
+    trên điện thoại chỉ còn ô chọn dải + menu ⋯ (thẻ dải lặp đúng những gì tiêu đề bên dưới nói).
+  - **Thanh lọc trên điện thoại** (≤600px) tự gập sau nút "Bộ lọc (n)" khi có từ 3 ô lọc trở lên
+    và màn đếm được bộ lọc đang bật (có "Xóa lọc"); 1–2 ô, hoặc màn không đếm, thì vẫn bày ra —
+    nút "Bộ lọc" không số giấu mất việc danh sách đang bị lọc. Sổ NAT tính cả chip trạng thái
+    khác mặc định vào số đó. Thẻ "Khai trước khi thêm thiết bị" gập thành một dòng khi cả 6 mục đã
+    đủ. Danh mục trên điện thoại: nút chính đứng trước ⋯ như mọi màn.
+  - Lọc trạng thái Sổ NAT (chọn được nhiều) dùng chip có ô tick (`FilterToggle`), không dùng dáng
+    nhóm nút chọn-một. Hộp Đổi IP chọn sẵn dải của IP hiện tại; mã đối tượng ở Nhật ký là UUID
+    thì luôn rút 8 ký tự (bản đầy đủ ở nút chép và khi rê chuột), mã khác (khoá cấu hình…) để
+    nguyên vì nó là thứ duy nhất nói dòng đó về cái gì.
+  - Lỗi vẽ: nhãn ô thống kê xuống dòng thay vì tràn ô; bảng dòng-là-thẻ (`table-cards`) khi xếp
+    dọc trên điện thoại vẽ khung cho cả thẻ, không cho từng ô; dòng sọc của bảng IP tô cả thẻ.
+  - **Giữ nguyên có chủ ý:** nhãn phân hệ ở đầu hộp thoại chỉ cho Thiết bị / Phần mềm / Danh mục
+    (ba thứ hay bị lẫn — Q-27), không thêm cho hộp IP / NAT / két.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

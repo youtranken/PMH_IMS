@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import { BrandEmblem } from '@/ui/brand-logo';
@@ -67,6 +67,26 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
+
+  /* Mục đang mở phải THẤY được: nhóm Hệ thống nằm cuối, trên màn 900px cao thì mục đang chọn
+     khuất sau khối tài khoản và người dùng không biết mình đang ở đâu. Đợi một khung hình để nhóm
+     kịp bung ra; mép mờ ở đáy (28px) cũng tính là khuất. */
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const box = navScrollRef.current;
+      const item = box?.querySelector<HTMLElement>('.nav-item.active');
+      if (!box || !item) return;
+      const outer = box.getBoundingClientRect();
+      const rect = item.getBoundingClientRect();
+      /* Cuộn ĐÚNG khung menu, không `scrollIntoView`: lệnh đó cuộn mọi khung cha kể cả trang, nên
+         đổi màn hay mở drawer là trang nhảy theo. */
+      if (rect.top < outer.top || rect.bottom > outer.bottom - 28) {
+        box.scrollTop += rect.top - outer.top - (outer.height - rect.height) / 2;
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname, drawerOpen]);
 
   // Esc là đường thoát mà người dùng bàn phím luôn thử trước.
   useEffect(() => {
@@ -156,7 +176,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
 
           {/* Vùng cuộn RIÊNG cho danh sách mục: menu dài hơn màn laptop thì chỉ phần này cuộn,
               khối tài khoản ở đáy luôn đứng yên và có mép mờ báo còn mục bên dưới. */}
-          <div className="sb-scroll">
+          <div className="sb-scroll" ref={navScrollRef}>
           {groups.map((group) => (
             <NavSection
               key={group.labelKey}

@@ -227,7 +227,7 @@
   font-size: var(--fs-sm);
   color: var(--ink-3);
 }
-/* Thứ CHƯA gắn gom về một dòng — cùng lối với `BlankFields`, không vẽ ô rỗng. */
+/* Thứ CHƯA gắn gom về một dòng — không vẽ ô rỗng cho từng thứ. */
 .rmap-blank {
   margin-top: var(--space-9);
   padding-top: var(--space-7);

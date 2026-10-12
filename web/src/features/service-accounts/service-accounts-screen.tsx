@@ -1,4 +1,5 @@
 import { useSecretDue } from '@/ui/use-secret-due';
+import { FilterToggle } from '@/ui/filter-toggle';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
@@ -297,6 +298,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         <Select
           value={url.sorting.key === 'name' ? 'name' : 'code'}
           ariaLabel={t('serviceAccounts.sortBy')}
+          /* Sắp xếp không phải bộ lọc: tô xanh thì người dùng tìm nút "xóa lọc" không có. */
+          indicateFilled={false}
           options={[
             { value: 'code', label: t('serviceAccounts.sortByCode') },
             { value: 'name', label: t('serviceAccounts.sortByName') },
@@ -305,16 +308,9 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         />
         {/* VPN mở cho mọi IP là câu kiểm toán hỏi đầu tiên — một chip bật/tắt, cùng kiểu chip
             "Chỉ cổng nhạy cảm" của sổ NAT. */}
-        <div className="segmented" role="group" aria-label={t('serviceAccounts.anyIpFilter')}>
-          <button
-            type="button"
-            className={filters.anyIp ? 'on' : undefined}
-            aria-pressed={filters.anyIp === '1'}
-            onClick={() => setFilter('anyIp', filters.anyIp ? '' : '1')}
-          >
-            {t('serviceAccounts.anyIpOnly')}
-          </button>
-        </div>
+        <FilterToggle pressed={filters.anyIp === '1'} onChange={(on) => setFilter('anyIp', on ? '1' : '')}>
+          {t('serviceAccounts.anyIpOnly')}
+        </FilterToggle>
       </FilterBar>
 
       {accounts.isLoading ? (

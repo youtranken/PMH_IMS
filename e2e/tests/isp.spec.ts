@@ -10,6 +10,7 @@ import {
   uniqueStamp,
   stepUpViaApi,
 } from './helpers';
+import { openDeviceZone } from './device-zone';
 
 test.beforeEach(() => {
   resetUsers();
@@ -100,7 +101,7 @@ test.describe('Đường truyền ISP', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Đường truyền ISP' })).toBeVisible();
     // Hỏi trong KHU "Đường truyền ISP": bản đồ quan hệ ở đầu trang cũng in hotline ra một dòng.
-    const ispSection = page.getByRole('region', { name: 'Đường truyền ISP' });
+    const ispSection = await openDeviceZone(page, 'Đường truyền ISP');
     await expect(ispSection.getByText('1800 8098')).toBeVisible();
     await expect(ispSection.getByText(`HD-FW-${stamp}`)).toBeVisible();
   });
@@ -178,9 +179,8 @@ test.describe('Đường truyền ISP', () => {
     await expect(page.getByText('Đã thanh lý', { exact: true })).toBeVisible();
     // Băng rôn đầu trang: ngày và NGƯỜI thanh lý (họ tên khi tra được, không thì email).
     await expect(page.getByText(/Đã thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
-    // Đường đã chết thì thôi nhắc "Chưa khai báo" và thôi thẻ "Khi mất mạng".
-    await expect(page.getByText(/^Chưa khai báo/)).toHaveCount(0);
-    await expect(page.getByText('Khi mất mạng')).toHaveCount(0);
+    // Đường đã chết thì thôi giục bổ sung ô còn thiếu.
+    await expect(page.getByRole('button', { name: /^Bổ sung \d+ ô còn thiếu$/ })).toHaveCount(0);
 
     /* Đường hỏng của lối `?action=` từ danh sách: link cũ "Thanh lý" trên đường ĐÃ thanh lý thì
        không bật hộp nào, và tham số bị gỡ khỏi thanh địa chỉ. */
@@ -350,7 +350,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await expect(page.getByRole('row', { name: new RegExp(dead) })).toBeVisible();
   });
 
-  test('thẻ "Khi mất mạng" có nút gọi; Thanh lý đi menu ⋯ và hỏi lại (Hủy thì không đổi)', async ({
+  test('ô Hotline ở dải đầu trang bấm là gọi; Thanh lý đi menu ⋯ và hỏi lại (Hủy thì không đổi)', async ({
     page,
   }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
@@ -363,7 +363,9 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     });
     await page.goto(`/isp-lines/${String(created.body.id)}`);
 
-    const call = page.getByRole('link', { name: 'Gọi 1800 1166' });
+    const call = page
+      .getByRole('group', { name: 'Tóm tắt đường truyền' })
+      .getByRole('link', { name: '1800 1166' });
     await expect(call).toHaveAttribute('href', 'tel:18001166');
     await expect(page.getByText(`HD-SC-${stamp}`).first()).toBeVisible();
 

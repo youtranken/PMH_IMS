@@ -11,16 +11,15 @@ import { AttachmentPanel } from "@/ui/attachment-panel";
 import { devicePhotosKey, type DevicePhotos } from "./device-photos-panel";
 import { DeviceOnDiagrams } from "./device-on-diagrams";
 import { DeviceDiagramLook, lookLevel } from "./device-diagram-look";
-import { Chevron } from "@/ui/chevron";
 import { accessView } from "./device-access";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import { DetailHeader } from "@/ui/detail-header";
+import { FactStrip, SpecList } from "@/ui/detail-facts";
+import { CabinetPeek } from "./cabinet-peek";
 import {
   DetailLayout,
   DetailSection,
   RailCard,
-  RailRow,
-  RailRowIfSet,
 } from "@/ui/detail-layout";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { LocationText } from "@/ui/location-text";
@@ -33,7 +32,7 @@ import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import { useCatalogLists } from "@/ui/use-catalog-lists";
-import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
+import { DeviceSoftwareTab } from "@/features/software/device-software-tab";
 import { DeviceIpAssign } from "@/features/ipam/device-ip-assign";
 import { RowActions } from "@/ui/row-actions";
 import { useIsNarrow } from "@/ui/use-narrow";
@@ -106,6 +105,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     initialTab(params.get("tab"), [
       "profile",
       "ports",
+      "software",
       "attachments",
       "vault",
       "history",
@@ -126,8 +126,14 @@ export function DeviceDetail({ me }: { me: Me }) {
   /** Đếm lượt bị chặn: mỗi lần 409 là một `key` mới, kể cả lần thứ hai liên tiếp. */
   const [retireRound, setRetireRound] = useState(0);
   const [retireError, setRetireError] = useState<string | null>(null);
-  /** Khu chi tiết (IP, NAT, đường truyền, license) người dùng đã thu gọn ở tab Tổng quan. */
-  const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set());
+  /**
+   * Khu chi tiết (IP, NAT, đường truyền) đang gập ở tab Tổng quan. Máy tính gập sẵn: bản đồ quan
+   * hệ ngay trên đã tóm tắt, bấm nút trên bản đồ là mở đúng khu (Q-27 bổ sung). Điện thoại không có
+   * bản đồ nên mở sẵn.
+   */
+  const [folded, setFolded] = useState<ReadonlySet<string>>(() =>
+    narrow ? new Set() : new Set(["ipam", "nat", "isp"]),
+  );
   const toggleZone = (key: string) =>
     setFolded((prev) => {
       const next = new Set(prev);
@@ -266,6 +272,15 @@ export function DeviceDetail({ me }: { me: Me }) {
           },
         ]
       : []),
+    /* Q-27: tab riêng cho phần mềm (thay khu "License đang cài" trong Tổng quan). Số = số dòng
+       khu `software` của module phần mềm; chưa đọc được thì không nói số. */
+    {
+      key: "software",
+      label: t("devices.tabSoftware"),
+      count: panels.data
+        ? ((panels.data ?? []).find((panel) => panel.key === "software")?.items.length ?? 0)
+        : undefined,
+    },
     {
       key: "attachments",
       label: t("devices.tabAttachments"),
@@ -312,10 +327,6 @@ export function DeviceDetail({ me }: { me: Me }) {
   const retired = item.status === "retired";
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
-  /** Khu do module `software` đăng ký — tách riêng vì nó có bảng riêng, không dùng khu chung. */
-  const softwarePanel = (panels.data ?? []).find(
-    (panel) => panel.key === "software",
-  );
 
   /* =====================================================================
    * BẢN ĐỒ QUAN HỆ — dựng từ ĐÚNG thứ API đã trả, không thêm endpoint nào.
@@ -427,7 +438,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     relationFromPanel("ipam", "ip", true, () => goSection("ipam"), false),
     relationFromPanel("nat", "arrow", true, () => goSection("nat")),
     relationFromPanel("isp", "globe", true, () => goSection("isp")),
-    relationFromPanel("software", "lic", true, () => goSection("software")),
+    relationFromPanel("software", "lic", true, () => goTab("software")),
     relationFromPanel("vault", "lock", false, () => goTab("vault")),
     // `counts.files` có thể là `undefined` ("chưa biết") — phép thử truthy gộp nó với 0, và
     // ở ĐÂY thì gộp đúng: chưa biết cũng như chưa có, đều không vẽ nút. Chỗ phân biệt hai
@@ -446,7 +457,7 @@ export function DeviceDetail({ me }: { me: Me }) {
   ].filter((node): node is RelationNode => node !== null);
 
   /**
-   * Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng (cùng lối `BlankFields`).
+   * Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng cho từng khu.
    *
    * BA TRẠNG THÁI, KHÔNG PHẢI HAI. Mỗi khu có thể ở một trong ba tình huống:
    *   · CÓ dòng            → vẽ nút trên bản đồ;
@@ -523,14 +534,61 @@ export function DeviceDetail({ me }: { me: Me }) {
   const ipKnownEmpty = !!panels.data && !firstIp;
   const vendor = (lists.data?.vendors ?? []).find((entry) => entry.id === item.vendorId);
 
-  const blankLabels = [
-    item.model ? null : t("devices.model"),
-    item.serial ? null : t("devices.serial"),
-    item.vendorName ? null : t("devices.vendor"),
-    item.department ? null : t("devices.department"),
-    item.purchaseDate ? null : t("devices.purchaseDate"),
-    item.note ? null : t("devices.note"),
-  ].filter((label): label is string => label !== null);
+  const accessPoints = item.accessPoints ?? [];
+  const cabinetHeight =
+    (lists.data?.cabinets ?? []).find((cabinet) => cabinet.id === item.cabinetId)?.uHeight ?? null;
+  /* Thông số thứ tự cố định (Q-27): máy nào cũng cùng khuôn, ô trống đứng đúng chỗ và ghi "chưa
+     khai". Trạng thái, vị trí, người dùng, IP, bảo hành ở đầu trang / dải 4 ô — một thông tin chỉ
+     nói một lần, không lặp ở đây. */
+  const specItems = [
+    { label: t("devices.type"), value: item.deviceTypeName },
+    { label: t("devices.model"), value: item.model },
+    {
+      label: t("devices.serial"),
+      present: Boolean(item.serial),
+      value: (
+        <>
+          <span className="mono">{item.serial}</span>
+          <CopyButton value={item.serial ?? ""} label={t("devices.copySerial")} inline />
+        </>
+      ),
+    },
+    {
+      label: t("devices.rackUSize"),
+      value: item.rackUSize ? t("devices.rackUnits", { count: item.rackUSize }) : null,
+    },
+    {
+      label: t("devices.access"),
+      present: accessPoints.length > 0,
+      value: accessPoints.map((point, index) => {
+        const view = accessView(point);
+        return (
+          <div key={index}>
+            <span className="muted">{t(`devices.accessKind_${point.kind}`)}</span>{" "}
+            {view.href ? (
+              <a href={view.href} target="_blank" rel="noopener noreferrer" className="mono">
+                {view.text}
+              </a>
+            ) : view.command ? (
+              <>
+                <code>{view.command}</code>
+                <CopyButton value={view.command} label={t("devices.accessCopy")} inline />
+              </>
+            ) : (
+              <span className="mono">{view.text}</span>
+            )}
+          </div>
+        );
+      }),
+    },
+    { label: t("devices.vendor"), value: item.vendorName },
+    { label: t("devices.purchaseDate"), value: item.purchaseDate ? formatDate(item.purchaseDate) : null },
+    { label: t("devices.department"), value: item.department },
+    { label: t("devices.note"), value: item.note },
+  ];
+  const blankCount = specItems.filter((entry) =>
+    entry.present === undefined ? !entry.value : !entry.present,
+  ).length;
 
   const openStatus = () => {
     setStatusError(null);
@@ -572,7 +630,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     ports: () => goTab("ports"),
     nat: () => goSection("nat"),
     isp: () => goSection("isp"),
-    software: () => goSection("software"),
+    software: () => goTab("software"),
     vault: () => goTab("vault"),
     attachments: () => goTab("attachments"),
   };
@@ -602,8 +660,18 @@ export function DeviceDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        /* Không có dòng định danh: loại đã ở breadcrumb, model và serial (kèm nút chép) ở
-           Thông tin nhanh (Q-20). Mã không có nút chép: nó là tiêu đề trang, bôi đen chép được. */
+        /* Dòng dưới tiêu đề chỉ nói TRẠNG THÁI (Q-27, như mockup): loại ở breadcrumb, model và
+           serial ở Thông số. Mã không có nút chép: nó là tiêu đề trang, bôi đen chép được. */
+        subline={
+          <>
+            <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
+            {lastStatusChange ? (
+              <span className="muted small">
+                {t("devices.since", { date: formatDate(lastStatusChange.createdAt) })}
+              </span>
+            ) : null}
+          </>
+        }
         actions={
           /* Cùng MỘT nút chính ở mọi cỡ màn (T-05): "Sửa hồ sơ"; Két sắt là một tab của trang. */
           retired ? (
@@ -664,125 +732,133 @@ export function DeviceDetail({ me }: { me: Me }) {
         </p>
       ) : null}
 
-      <DetailLayout
-        railStrip={safeTab !== "profile"}
-        railSummary={
-          <>
-            <span className={`badge ${STATUS_TONE[item.status]}`}>
-              {t(STATUS_KEY[item.status])}
-            </span>
-            {item.siteCode ? <LocationText device={item} /> : null}
-            {item.assignedTo ? <span>{item.assignedTo}</span> : null}
-            <ExpiryBadge end={item.warrantyEnd} notCounted={retired} />
-          </>
-        }
-        rail={
-          <RailCard title={t("devices.summaryCard")}>
-            <RailRow
-              label={t("devices.status")}
-              note={
-                lastStatusChange
-                  ? t("devices.since", { date: formatDate(lastStatusChange.createdAt) })
-                  : undefined
-              }
-            >
-              <span className={`badge ${STATUS_TONE[item.status]}`}>
-                {t(STATUS_KEY[item.status])}
-              </span>
-            </RailRow>
-            {/* KHÔNG kèm `note={cabinetCode}`: `LocationText` đã ghép sẵn "LST · T-1", nên
-                dòng chú bên dưới in lại đúng mã tủ ấy lần thứ hai trong cùng một ô. */}
-            <RailRow label={t("devices.locationCol")}>
-              <LocationText device={item} />
-            </RailRow>
-            {/*
-              BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG.
-              `department` chỉ sống dưới dạng CHÚ của dòng này, mà `RailRowIfSet` ẩn cả dòng
-              khi `assignedTo` rỗng — nên một máy đã gán cho phòng Kế toán nhưng chưa ghi tên
-              người cụ thể thì không hiện bộ phận ở đâu cả, và `BlankFields` cũng bỏ qua vì
-              `item.department` CÓ giá trị. Chưa có người thì bộ phận đứng thành dòng RIÊNG,
-              mang đúng nhãn của nó — chứ không phải một dòng "Người dùng" trống kèm chú.
-            */}
-            {item.assignedTo ? (
-              <RailRowIfSet
-                label={t("devices.assignedTo")}
-                value={item.assignedTo}
-                note={item.department ?? undefined}
-              />
-            ) : (
-              <RailRowIfSet label={t("devices.department")} value={item.department} />
-            )}
-            {/*
-             * THANH HẠN NẰM Ở ĐÂY, KHÔNG Ở CỘT CHÍNH.
-             *
-             * Một thẻ "Bảo hành" chiếm trọn bề ngang ở tab Hồ sơ chỉ in lại đúng ba con số mà
-             * dải chỉ số đã có (còn N ngày, đến ngày nào, nhà cung cấp) — hai chỗ cách nhau
-             * 40px. Và một thanh tiến độ kéo dài 1150px thì phần kéo dài ấy không nói thêm gì
-             * cả. Hạn là TRẠNG THÁI của hồ sơ nên nó thuộc về thẻ định danh.
-             *
-             * Vẫn là `WarrantyTimeline` ĐẦY ĐỦ chứ không phải bản `compact`: bản gọn giấu hai
-             * mốc ngày và dòng "Đã đi N%", mà đó là những thứ thanh này sinh ra để nói.
-             */}
-            <RailRow label={t("devices.warranty")} wide>
-              {item.warrantyEnd ? (
+      {/* Dải 4 ô (Q-27): thấy ở MỌI tab — câu đầu tiên khi mở một máy là nó ở đâu, của ai, IP
+          nào, còn bảo hành không. Ô trống nói "chưa khai" / "chưa cấp IP" và có lối khai ngay. */}
+      <FactStrip
+        label={t("devices.factsLabel")}
+        facts={[
+          {
+            key: "location",
+            label: t("devices.locationCol"),
+            /* `LocationText` đã ghép "site · tủ · U", chỉ ngắt sau dấu "·". */
+            value: item.siteCode ? <LocationText device={item} /> : null,
+          },
+          {
+            key: "user",
+            label: t("devices.assignedTo"),
+            value: item.assignedTo,
+            blankText: t("devices.noUserYet"),
+            note: item.department,
+          },
+          {
+            key: "ip",
+            label: t("devices.managementIp"),
+            /* Nút chép đứng ngay sau IP: chép là việc của chính con số, không phải một việc riêng. */
+            value: firstIp ? (
+              <>
+                <span className="mono">{firstIp}</span>
+                <CopyButton value={firstIp} label={t("devices.copyIp")} inline />
+              </>
+            ) : panels.data ? null : t("devices.ipUnknown"),
+            blankText: t("devices.noIpYet"),
+            /* Cấp / Đổi IP ngay tại ô (T-06, Q-20 một máy một IP). Chưa đọc được khu IP thì vẫn
+               "Cấp IP" — API chặn nếu máy thật ra đã có IP. */
+            action: firstIp ? (
+              !retired ? (
+                <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
+                  {t("devices.changeIp")}
+                </button>
+              ) : null
+            ) : !retired ? (
+              <button
+                type="button"
+                className={ipKnownEmpty ? "btn sm primary" : "btn sm"}
+                onClick={() => setAssigningIp(true)}
+              >
+                {t("devices.assignIp")}
+              </button>
+            ) : null,
+          },
+          {
+            key: "warranty",
+            label: t("devices.warranty"),
+            value: item.warrantyEnd ? <ExpiryBadge end={item.warrantyEnd} notCounted={retired} /> : null,
+            /* Bảo hành nói MỘT lần, ở đây: khoảng ngày + thanh thời gian gọn (Q-27 bổ sung). */
+            note: item.warrantyEnd ? (
+              <>
+                {t("devices.warrantyRange", {
+                  from: formatDate(item.warrantyStart ?? item.purchaseDate) || "…",
+                  to: formatDate(item.warrantyEnd),
+                })}
                 <WarrantyTimeline
+                  compact
                   notCounted={retired}
                   start={item.warrantyStart ?? item.purchaseDate}
                   end={item.warrantyEnd}
-                  startLabel={
-                    item.warrantyStart
-                      ? t("devices.warrantyStart")
-                      : t("devices.purchaseDate")
-                  }
                   endLabel={t("devices.warrantyEnd")}
                 />
-              ) : (
-                <ExpiryBadge end={null} />
-              )}
-            </RailRow>
-            {/* NCC kèm số điện thoại và người liên hệ từ danh mục: máy hỏng mà còn bảo hành thì
-                việc kế tiếp là gọi NCC — đừng bắt người dùng sang màn Danh mục tra số. */}
-            {item.vendorName ? (
-              <RailRow
-                label={t("devices.vendor")}
-                note={
-                  vendor?.phone || vendor?.contact ? (
-                    <>
-                      {vendor.contact ? <span>{vendor.contact}</span> : null}
-                      {vendor.contact && vendor.phone ? " · " : null}
-                      {vendor.phone ? (
-                        <PhoneLink className="" value={vendor.phone} />
-                      ) : null}
-                    </>
-                  ) : undefined
-                }
-              >
-                {item.vendorName}
-              </RailRow>
-            ) : null}
-            <RailRowIfSet
-              label={t("devices.purchaseDate")}
-              value={formatDate(item.purchaseDate)}
-            />
-            {/* Hồ sơ cũ hay mới — người đọc cần biết trước khi tin số liệu. */}
-            <p className="rail-foot">
-              {t("devices.createdAt", { date: formatDate(item.createdAt) })}
-              {lastEdit
-                ? (
-                    <>
-                      {" · "}
-                      {/* Tên người như mọi chỗ khác (sơ đồ, lịch sử, phiên bản); email để khi rê chuột (T-09). */}
-                      <span title={lastEdit.actor}>
-                        {t("devices.lastEditBy", {
-                          date: formatDate(lastEdit.createdAt),
-                          actor: lastEdit.actorName ?? lastEdit.actor,
-                        })}
+              </>
+            ) : null,
+          },
+        ]}
+      />
+
+      <DetailLayout
+        /* Tab là BẢNG (cổng, phần mềm, két, giấy tờ, lịch sử): một cột, không dải tóm tắt — dải 4
+           ô ở trên đã nói đủ. Tổng quan: cột phải là "Trong tủ" + Nhà cung cấp; điện thoại thu lại,
+           dòng tóm tắt chỉ nói đúng thứ nằm trong đó (không kèm hạn bảo hành của dải 4 ô). */
+        railStrip={safeTab !== "profile"}
+        railSummary={
+          safeTab === "profile" ? (
+            <span>
+              {item.cabinetCode
+                ? `${t("devices.cabinetCard", { cabinet: item.cabinetCode })} · ${t("devices.vendor")}`
+                : t("devices.vendor")}
+            </span>
+          ) : undefined
+        }
+        rail={
+          <>
+            <CabinetPeek device={item} cabinetHeight={cabinetHeight} />
+            {/* Hạn bảo hành đã ở dải 4 ô; thẻ này trả lời câu kế tiếp: máy hỏng thì GỌI AI — đừng
+                bắt sang màn Danh mục tra số. Tiêu đề thẻ đã là "Nhà cung cấp", không nhãn dòng. */}
+            <RailCard title={t("devices.vendor")}>
+              <div className="rail-row rail-row-wide">
+                {item.vendorName ? (
+                  <>
+                    <span className="rail-v">{item.vendorName}</span>
+                    {vendor?.phone || vendor?.contact ? (
+                      <span className="rail-note">
+                        {vendor.contact ? <span>{vendor.contact}</span> : null}
+                        {vendor.contact && vendor.phone ? " · " : null}
+                        {vendor.phone ? <PhoneLink className="" value={vendor.phone} /> : null}
                       </span>
-                    </>
-                  )
-                : null}
-            </p>
-          </RailCard>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="muted">{t("detail.notDeclared")}</span>
+                )}
+              </div>
+              {/* Hồ sơ cũ hay mới — người đọc cần biết trước khi tin số liệu. */}
+              <p className="rail-foot">
+                {t("devices.createdAt", { date: formatDate(item.createdAt) })}
+                {lastEdit
+                  ? (
+                      <>
+                        {" · "}
+                        {/* Tên người như mọi chỗ khác (sơ đồ, lịch sử, phiên bản); email để khi rê chuột (T-09). */}
+                        <span title={lastEdit.actor}>
+                          {t("devices.lastEditBy", {
+                            date: formatDate(lastEdit.createdAt),
+                            actor: lastEdit.actorName ?? lastEdit.actor,
+                          })}
+                        </span>
+                      </>
+                    )
+                  : null}
+              </p>
+            </RailCard>
+          </>
         }
       >
         <Tabs
@@ -795,120 +871,23 @@ export function DeviceDetail({ me }: { me: Me }) {
         <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
-            {/*
-              THÔNG TIN NHANH đứng ĐẦU tab: mở máy ra, câu hỏi đầu tiên là IP quản trị và
-              model, nên chúng không được nằm cuối trang hay sau bản đồ quan hệ. Serial ở đây
-              kèm nút chép (dán vào phiếu bảo hành, đọc cho nhà cung cấp). Trạng thái, vị trí,
-              người dùng, bảo hành đã ở cột Tóm tắt — nên không in lại ở đây.
-            */}
-            <DetailSection title={t("devices.quickInfo")} compact>
-              <dl className="data-grid">
-                <DataItemIfSet label={t("devices.managementIp")} value={firstIp}>
-                  <span className="mono">{firstIp}</span>
-                  {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} inline /> : null}
-                  {/* "Đổi IP" nằm ngay trong ô IP quản trị, cạnh nút chép (T-06) — không lơ lửng dưới Ghi chú. */}
-                  {firstIp && !retired ? (
-                    <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                      {t("devices.changeIp")}
-                    </button>
-                  ) : null}
-                </DataItemIfSet>
-                {/* Máy CHẮC CHẮN chưa có IP (khu mở rộng đã về): ô IP quản trị nói thẳng "chưa có"
-                    và nút Cấp IP là nút chính ngay tại đó — đây là việc còn thiếu đầu tiên của
-                    một máy mạng, không được là một nút mờ lẫn cuối khu. */}
-                {ipKnownEmpty && !retired ? (
-                  <div className="data-item">
-                    <dt>{t("devices.managementIp")}</dt>
-                    <dd>
-                      <span className="muted">{t("devices.noIpYet")}</span>{" "}
-                      <button
-                        type="button"
-                        className="btn sm primary"
-                        onClick={() => setAssigningIp(true)}
-                      >
-                        {t("devices.assignIp")}
-                      </button>
-                    </dd>
-                  </div>
-                ) : null}
-                <DataItemIfSet label={t("devices.model")} value={item.model} />
-                {/* Truy cập quản trị (Q-26): đường vào máy — mật khẩu vẫn ở Két. */}
-                {(item.accessPoints ?? []).length > 0 ? (
-                  <div className="data-item">
-                    <dt>{t("devices.access")}</dt>
-                    <dd>
-                      {(item.accessPoints ?? []).map((point, index) => {
-                        const view = accessView(point);
-                        return (
-                          <div key={index}>
-                            <span className="muted">{t(`devices.accessKind_${point.kind}`)}</span>{" "}
-                            {view.href ? (
-                              <a href={view.href} target="_blank" rel="noopener noreferrer" className="mono">
-                                {view.text}
-                              </a>
-                            ) : view.command ? (
-                              <>
-                                <code>{view.command}</code>
-                                <CopyButton value={view.command} label={t("devices.accessCopy")} inline />
-                              </>
-                            ) : (
-                              <span className="mono">{view.text}</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </dd>
-                  </div>
-                ) : null}
-                <DataItemIfSet label={t("devices.serial")} value={item.serial}>
-                  <span className="mono">{item.serial}</span>
-                  {/* Cùng kiểu nút chép với IP quản trị ngay bên cạnh: hai ô trong một khung mà
-                      một ô có nút vuông viền, một ô không, là hai kiểu cho cùng một việc. */}
-                  <CopyButton value={item.serial ?? ""} label={t("devices.copySerial")} inline />
-                </DataItemIfSet>
-                <DataItemIfSet label={t("devices.note")} value={item.note} />
-              </dl>
-              {/* MỘT bản "máy đang giữ gì" cho mỗi khổ: máy tính có bản đồ quan hệ ngay dưới
-                  (đếm + xem trước từng khu), điện thoại thì hàng chip này thay cho bản đồ. Vẽ
-                  cả hai là cùng bộ con số hai lần cách nhau một khung. */}
-              {narrow && held.length > 0 ? (
-                <div className="chip-row" role="group" aria-label={t("devices.heldLabel")}>
-                  <span className="muted small">{t("devices.heldLabel")}</span>
-                  {held.map((entry) => (
-                    <button
-                      key={entry.key}
-                      type="button"
-                      className="btn sm ghost"
-                      onClick={heldTarget[entry.key]}
-                    >
-                      {t(HELD_LABEL[entry.key], { count: entry.count })}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {/* Ô chưa khai gom về MỘT dòng, kèm lối đi bổ sung ngay — một dòng chữ xám không
-                  dẫn tới đâu thì chẳng ai bổ sung. */}
-              <BlankFields labels={blankLabels} />
-              {!retired ? (
-                <div className="row" style={{ flexWrap: "wrap", gap: "var(--space-3)" }}>
-                  {blankLabels.length > 0 ? (
-                    <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
-                      {t("devices.fillBlanks", { count: blankLabels.length })}
-                    </button>
-                  ) : null}
-                  {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
-                      trang tìm ô trống rồi gõ lại mã máy này. Chắc chắn chưa có IP thì nút là
-                      nút chính trong ô "IP quản trị" phía trên; máy đã có IP thì "Đổi IP" (Q-20 — một
-                      máy một IP) nằm trong chính ô đó. Chưa đọc được khu IP thì vẫn "Cấp IP" ở
-                      đây, API chặn nếu máy thật ra đã có IP. */}
-                  {ipKnownEmpty || firstIp ? null : (
-                    <button type="button" className="btn sm" onClick={() => setAssigningIp(true)}>
-                      {t("devices.assignIp")}
-                    </button>
-                  )}
-                </div>
-              ) : null}
-            </DetailSection>
+            {/* MỘT bản "máy đang giữ gì" cho mỗi khổ: máy tính có bản đồ quan hệ, điện thoại thì
+                hàng chip này thay cho bản đồ. Vẽ cả hai là cùng bộ con số hai lần. */}
+            {narrow && held.length > 0 ? (
+              <div className="chip-row" role="group" aria-label={t("devices.heldLabel")}>
+                <span className="muted small">{t("devices.heldLabel")}</span>
+                {held.map((entry) => (
+                  <button
+                    key={entry.key}
+                    type="button"
+                    className="btn sm ghost"
+                    onClick={heldTarget[entry.key]}
+                  >
+                    {t(HELD_LABEL[entry.key], { count: entry.count })}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             {narrow ? null : (
             <RelationMap
@@ -932,6 +911,21 @@ export function DeviceDetail({ me }: { me: Me }) {
             />
             )}
 
+
+            <DetailSection
+              title={t("devices.specTitle")}
+              compact
+              action={
+                !retired && blankCount > 0 ? (
+                  <button type="button" className="btn sm" onClick={() => setEditing(true)}>
+                    {t("devices.fillBlanks", { count: blankCount })}
+                  </button>
+                ) : null
+              }
+            >
+              <SpecList label={t("devices.specTitle")} items={specItems} />
+            </DetailSection>
+
             <DeviceDiagramLook
               deviceId={item.id}
               deviceTypeId={item.deviceTypeId}
@@ -943,25 +937,6 @@ export function DeviceDetail({ me }: { me: Me }) {
             />
 
             <DeviceOnDiagrams deviceId={item.id} />
-
-            {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
-                phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách
-                thiết bị, nên hai chỗ không thể trả lời khác nhau (AD-15).
-
-                Tiêu đề lấy từ CHÍNH `panel.title` của API, không tự đặt một chuỗi thứ hai:
-                module `software` là chủ sở hữu khu này (nó tự đăng ký vào sổ của `devices`),
-                nên nó cũng là nơi quyết định khu ấy tên gì. Đặt tên riêng ở đây là để hai
-                chỗ trôi lệch nhau, và bài kiểm e2e đã bắt đúng lúc chúng bắt đầu lệch. */}
-            {softwarePanel ? (
-              <ZoneSection
-                zoneKey="software"
-                title={`${softwarePanel.title} (${softwarePanel.items.length})`}
-                open={!folded.has("software")}
-                onToggle={() => toggleZone("software")}
-              >
-                <DeviceLicensesExpand deviceId={item.id} />
-              </ZoneSection>
-            ) : null}
 
             {/*
               KHU MỞ RỘNG HỎNG PHẢI NÓI RA, KHÔNG ĐƯỢC BIẾN MẤT.
@@ -977,7 +952,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             ) : (
               <ExtensionPanels
                 /* Bỏ CẢ HAI khu khỏi cột chính:
-                   - `software`: đã có bảng riêng ngay trên;
+                   - `software`: có tab Phần mềm riêng (Q-27);
                    - `vault`: trang đã có hẳn một TAB "Két sắt", vẽ thêm một khu nữa ở đây là
                      cùng một dữ liệu ở hai chỗ cách nhau một cú bấm. Nút Két sắt trên bản đồ
                      chuyển thẳng sang tab đó. */
@@ -989,6 +964,12 @@ export function DeviceDetail({ me }: { me: Me }) {
               />
             )}
           </>
+        ) : safeTab === "software" ? (
+          <DeviceSoftwareTab
+            device={{ id: item.id, code: item.code }}
+            csrfToken={me.csrfToken}
+            canEdit={!retired}
+          />
         ) : safeTab === "ports" ? (
           <PortMapPanel
             device={item}
@@ -1204,6 +1185,7 @@ function ExtensionPanels({
           title={panel.title}
           open={!folded.has(panel.key)}
           onToggle={panel.items.length > 0 ? () => onToggle(panel.key) : undefined}
+          summary={panel.items.slice(0, 3).map((entry) => entry.label).join(" · ")}
         >
           {panel.items.length === 0 ? (
             <p className="muted">{panel.emptyText ?? "—"}</p>
@@ -1245,63 +1227,38 @@ function ExtensionPanels({
 }
 
 /**
- * Một khu chi tiết của tab Tổng quan, thu gọn được.
- *
- * Bản đồ quan hệ (hay hàng chip trên điện thoại) đã nói máy giữ bao nhiêu thứ mỗi loại; khu
- * này là bảng đầy đủ. Người chỉ cần con số thì gập nó lại cho trang ngắn. Mặc định MỞ: gập sẵn
- * thì người mở trang để xem IP phải bấm thêm một lần cho đúng thứ họ tìm.
- *
- * `aria-labelledby` trỏ vào `<h2>` nên khu vẫn là landmark mang đúng tên ("Địa chỉ IP"); nút
- * gập đứng NGOÀI `<h2>` để tên tiêu đề không dính chữ "Thu gọn". Nội dung gập thì gỡ khỏi cây
- * (không dùng `hidden`: vài lớp con đặt `display` đè luật `[hidden]` của trình duyệt).
+ * Một khu chi tiết của tab Tổng quan (IP, NAT, đường truyền), thu gọn được — `DetailSection` gập
+ * do trang giữ trạng thái: bấm ô trên bản đồ / chip "Đang giữ" là mở đúng khu (`goSection`).
+ * Gập thì dòng tiêu đề kể vài dòng đầu, đủ để biết có cần mở không. Khu rỗng không gập (một dòng
+ * chữ, gập lại chẳng được gì).
  */
 function ZoneSection({
   zoneKey,
   title,
   open,
   onToggle,
+  summary,
   children,
 }: {
   zoneKey: string;
   title: string;
   open: boolean;
-  /** Không truyền = khu không gập được (khu rỗng: chỉ một dòng chữ, gập lại chẳng được gì). */
+  /** Không truyền = khu không gập được. */
   onToggle?: () => void;
+  summary?: string;
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
-  const titleId = `sec-${zoneKey}-title`;
-  const bodyId = `sec-${zoneKey}-body`;
-  const heading = (
-    <h2 className="form-section-title" id={titleId}>
-      {title}
-    </h2>
-  );
   return (
-    <section id={`sec-${zoneKey}`} className="card device-panel" aria-labelledby={titleId}>
-      {onToggle ? (
-        <div className="form-section-head">
-          {heading}
-          <button
-            type="button"
-            className="btn sm ghost"
-            aria-expanded={open}
-            aria-controls={bodyId}
-            aria-label={t(open ? "devices.zoneCollapse" : "devices.zoneExpand", { title })}
-            onClick={onToggle}
-          >
-            <Chevron direction={open ? "up" : "down"} />
-          </button>
-        </div>
-      ) : (
-        heading
-      )}
-      {open || !onToggle ? <div id={bodyId}>{children}</div> : null}
-    </section>
+    <DetailSection
+      id={`sec-${zoneKey}`}
+      title={title}
+      compact
+      foldable={onToggle ? { open, onToggle, summary } : undefined}
+    >
+      {children}
+    </DetailSection>
   );
 }
-
-
 
 /** Danh sách thứ máy còn giữ trong 409 `DEVICE_HAS_HOLDINGS`; lỗi khác thì `null`. */
 function holdingsOf(err: unknown): string[] | null {

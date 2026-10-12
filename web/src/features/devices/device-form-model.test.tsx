@@ -61,8 +61,8 @@ describe('Form thiết bị — Model (Q-26)', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByRole('combobox', { name: 'Model' }), 'c9300 48');
     await user.click(await screen.findByRole('option', { name: /C9300-48P/ }));
-    expect(screen.getByRole('button', { name: 'Loại' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Loại' })).toHaveTextContent('Switch');
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveTextContent('Switch');
     expect(screen.getByText('Theo model: Cisco · C9300-48P · 1U')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('option', { name: /HCM/ }));
@@ -77,7 +77,7 @@ describe('Form thiết bị — Model (Q-26)', () => {
     await user.click(within(free).getByRole('button', { name: 'U4–U12' }));
     expect(screen.getByRole('textbox', { name: 'U bắt đầu' })).toHaveValue('4');
     await user.type(screen.getByRole('textbox', { name: 'Mã thiết bị' }), 'SW-E2E-9');
-    await user.type(screen.getByRole('textbox', { name: 'Tên thiết bị' }), 'Switch tầng 9');
+    await user.type(screen.getByRole('textbox', { name: 'Tên gọi' }), 'Switch tầng 9');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     const post = calls.find((c) => c.url === '/api/v1/devices' && c.method === 'POST');
     expect(JSON.parse(post?.body ?? '{}')).toMatchObject({ deviceModelId: 'm-sw', deviceTypeId: 't-sw', model: 'C9300-48P', cabinetId: 'k1', rackUStart: 4, rackUSize: 1 });
@@ -89,11 +89,23 @@ describe('Form thiết bị — Model (Q-26)', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByRole('combobox', { name: 'Model' }), 'x3650');
     await user.click(await screen.findByRole('option', { name: /X3650-M5/ }));
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Ảnh và giấy tờ/ }));
     const front = screen.getByRole('group', { name: 'Mặt trước' });
     expect(within(front).getByText('Ảnh chung của model X3650-M5')).toBeInTheDocument();
     expect(within(front).getByRole('img', { name: 'Ảnh Mặt trước của máy' })).toHaveAttribute('src', '/api/v1/device-models/m-ph/photo/front?v=2026-10-07T01%3A00%3A00Z');
     expect(within(front).queryByLabelText(/Tải ảnh lên|Thay ảnh/)).toBeNull();
     expect(within(screen.getByRole('group', { name: 'Mặt sau' })).getByLabelText('Tải ảnh lên — Mặt sau')).toBeInTheDocument();
+  });
+
+  it('gợi ý model có ảnh thu nhỏ (Q-27); chọn xong form hiện dải ảnh mặt trước của model', async () => {
+    mockFetch();
+    renderForm();
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('combobox', { name: 'Model' }), 'x3650');
+    const option = await screen.findByRole('option', { name: /X3650-M5/ });
+    expect(option.querySelector('img')).toHaveAttribute('src', '/api/v1/device-models/m-ph/photo/front?v=2026-10-07T01%3A00%3A00Z');
+    await user.click(option);
+    expect(screen.getByRole('img', { name: 'Mặt trước model X3650-M5' })).toBeVisible();
   });
 
   it('model không gắn tủ: không có ô Tủ, nói rõ máy chỉ cần Site', async () => {
@@ -124,9 +136,10 @@ describe('Form thiết bị — Model (Q-26)', () => {
     renderForm();
     const user = userEvent.setup();
     await user.type(await screen.findByRole('textbox', { name: 'Mã thiết bị' }), 'FW-E2E-2');
-    await user.type(screen.getByRole('textbox', { name: 'Tên thiết bị' }), 'Firewall');
-    await user.click(screen.getByRole('button', { name: 'Loại' }));
+    await user.type(screen.getByRole('textbox', { name: 'Tên gọi' }), 'Firewall');
+    await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     await user.click(await screen.findByRole('option', { name: 'Switch' }));
+    await user.click(screen.getByRole('button', { name: /^Truy cập quản trị/ }));
     await user.click(screen.getByRole('button', { name: '+ Thêm đường truy cập' }));
     await user.type(screen.getByRole('textbox', { name: 'Địa chỉ 1' }), '10.0.1.1');
     await user.type(screen.getByRole('textbox', { name: 'Cổng 1' }), '84a43');

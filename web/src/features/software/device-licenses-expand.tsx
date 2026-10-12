@@ -42,7 +42,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
 
   return (
     <TableWrap>
-      <table className="table table-stack table-sub">
+      <table className="table table-stack table-sub table-cards">
         <thead>
           <tr>
             <th>{t('devices.software')}</th>

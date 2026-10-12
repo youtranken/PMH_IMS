@@ -32,3 +32,26 @@ describe('SW-025 · DTO số ghế', () => {
     await expect(run({ code: 'SW-01', seatTotal })).resolves.toMatchObject({ seatTotal });
   });
 });
+
+/* Q-27: ghế riêng — hợp đồng / ghi chú từng ghế đi qua cùng hàng rào chữ như ghi chú hồ sơ. */
+describe('Q-27 · DTO ghế riêng', () => {
+  it('perSeat + seats hợp lệ → qua, seats thành mảng đối tượng', async () => {
+    await expect(
+      run({ code: 'LIC-01', perSeat: true, contract: 'PO-1', seats: [{ seatNo: 1, contract: 'PO-1-A', note: 'máy ảo' }] }),
+    ).resolves.toMatchObject({ perSeat: true, seats: [{ seatNo: 1, contract: 'PO-1-A' }] });
+  });
+
+  it.each([
+    [{ seats: [{ seatNo: 0 }] }],
+    [{ seats: [{ seatNo: 'một' }] }],
+    [{ seats: [{ seatNo: 1, extra: 'x' }] }],
+    [{ perSeat: 'có' }],
+    [{ contract: 'x'.repeat(201) }],
+  ])('%j → 400', async (payload) => {
+    await expect(run({ code: 'LIC-01', ...payload })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('ghi chú ghế trông như mật khẩu → 400 (NoSecretText)', async () => {
+    await expect(run({ code: 'LIC-01', seats: [{ seatNo: 1, note: 'mk admin Pmh@Server2026' }] })).rejects.toBeInstanceOf(BadRequestException);
+  });
+});

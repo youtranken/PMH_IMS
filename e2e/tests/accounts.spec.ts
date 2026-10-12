@@ -78,7 +78,11 @@ test.describe('Quản trị tài khoản', () => {
   test('member không thấy mục Tài khoản và bị chặn khi gõ thẳng URL', async ({ page }) => {
     await stepUpViaApi(page, await firstLogin(page, { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' }));
 
-    await openNavGroup(page);
+    /* Q-27: Danh mục rời nhóm Hệ thống, nên Thành viên không còn mục nào trong nhóm ấy — cả nhóm
+       không hiện, càng không có "Người dùng IMS". */
+    const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    await expect(nav.getByRole('link', { name: 'Thiết bị', exact: true })).toBeVisible();
+    await expect(nav.getByRole('button', { name: 'Hệ thống', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Người dùng IMS', exact: true })).toHaveCount(0);
 
     const response = await page.request.get('/api/v1/accounts');

@@ -12,6 +12,7 @@ import {
   uniqueStamp,
   stepUpViaApi,
 } from './helpers';
+import { openDeviceZone } from './device-zone';
 
 test.beforeEach(() => {
   resetUsers();
@@ -75,7 +76,7 @@ test.describe('Trang chi tiết thiết bị', () => {
       await expect(page.getByRole('tab', { name })).toBeVisible();
     }
 
-    /* Serial nằm MỘT chỗ: ô "Serial" trong Thông tin nhanh, kèm nút chép (Q-20) — không còn
+    /* Serial nằm MỘT chỗ: dòng "Serial" của Thông số, kèm nút chép (Q-20, Q-27) — không còn
        dòng S/N dưới tiêu đề. */
     const quick = page.getByRole('tabpanel');
     await expect(quick.getByText(`FOC-${code}`, { exact: true })).toBeVisible();
@@ -228,10 +229,12 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     expect(percent).toBeGreaterThan(0);
     expect(percent).toBeLessThan(100);
 
-    // Hai đầu thanh nói rõ mốc, và vế phải vẫn là câu quen thuộc của badge.
-    await expect(page.getByText('12/01/2025').first()).toBeVisible();
-    await expect(page.getByText('31/12/2027').first()).toBeVisible();
-    await expect(page.getByText(/Đã đi \d+%/)).toBeVisible();
+    /* Bảo hành nói MỘT lần, ở ô Bảo hành của dải 4 ô (Q-27 bổ sung): còn bao lâu, khoảng ngày,
+       thanh gọn. Thông số không có dòng Bảo hành thứ hai. */
+    const facts = page.getByRole('group', { name: 'Tóm tắt thiết bị' });
+    await expect(facts).toContainText('12/01/2025 → 31/12/2027');
+    await expect(facts.getByRole('progressbar')).toHaveCount(1);
+    await expect(page.getByRole('group', { name: 'Thông số' }).getByRole('term').filter({ hasText: /^Bảo hành$/ })).toHaveCount(0);
   });
 
   /* Không có hạn thì KHÔNG vẽ thanh — thanh rỗng chỉ làm người đọc tưởng dữ liệu bị mất. */
@@ -251,11 +254,18 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     const id = ((await created.json()) as { device: { id: string } }).device.id;
 
     await page.goto(`/devices/${id}`);
-    await expect(page.getByText('Không có hạn')).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' })).toContainText('Bảo hànhchưa khai');
     await expect(page.getByRole('progressbar')).toHaveCount(0);
 
-    // Và ô chưa khai gom về MỘT dòng, không phải một dãy hộp gạch ngang.
-    await expect(page.getByText(/Chưa khai báo:/)).toBeVisible();
+    // Q-27: ô chưa khai ĐỨNG ĐÚNG CHỖ trong Thông số và ghi "chưa khai", không ẩn; bảo hành chỉ ở
+    // dải 4 ô (không lặp ở Thông số); nút bổ sung đếm đúng số ô trống.
+    const spec = page.getByRole('group', { name: 'Thông số' });
+    await expect(spec.getByRole('term')).toHaveText([
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
+      'Nhà cung cấp', 'Ngày mua', 'Phòng ban sử dụng', 'Ghi chú',
+    ]);
+    await expect(spec.getByRole('definition').filter({ hasText: 'chưa khai' })).toHaveCount(8);
+    await expect(page.getByRole('button', { name: 'Bổ sung 8 ô còn thiếu' })).toBeVisible();
   });
 
   /**
@@ -348,7 +358,7 @@ test.describe('Cấp IP từ trang thiết bị', () => {
     await assign.getByRole('button', { name: 'Cấp IP' }).click();
     await expect(page.getByText('Đã cấp IP cho máy này.')).toBeVisible();
     await expect(
-      page.getByRole('region', { name: 'Địa chỉ IP' }).getByRole('link', { name: `172.21.${octet}.2` }),
+      (await openDeviceZone(page, 'Địa chỉ IP')).getByRole('link', { name: `172.21.${octet}.2` }),
     ).toBeVisible();
 
     /* Q-20: một máy một IP — cấp thêm qua API bị chặn, nút giờ là "Đổi IP". */
@@ -369,7 +379,7 @@ test.describe('Cấp IP từ trang thiết bị', () => {
     const change = page.getByRole('dialog', { name: `Đổi IP — 172.21.${octet}.3` });
     await change.getByRole('button', { name: 'Đổi IP', exact: true }).click();
     await expect(page.getByText('Đã đổi IP cho máy này.')).toBeVisible();
-    const ipRegion = page.getByRole('region', { name: 'Địa chỉ IP' });
+    const ipRegion = await openDeviceZone(page, 'Địa chỉ IP');
     await expect(ipRegion.getByRole('link', { name: `172.21.${octet}.3` })).toBeVisible();
     await expect(ipRegion.getByRole('link', { name: `172.21.${octet}.2` })).toHaveCount(0);
   });

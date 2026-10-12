@@ -8,6 +8,7 @@ import {
   resetIpam,
   resetUsers,
 } from './helpers';
+import { openDeviceZone } from './device-zone';
 
 test.beforeEach(() => {
   resetUsers();
@@ -207,7 +208,7 @@ test.describe('Sổ NAT', () => {
 
     // Dịch vụ chưa có: dòng "Thêm dịch vụ" (có hình +) ghim ở đầu menu dropdown.
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài' }).click();
-    await page.getByRole('button', { name: 'Thêm dịch vụ' }).first().click();
+    await page.getByRole('button', { name: 'Thêm cổng dịch vụ' }).first().click();
     const serviceForm = page.getByRole('dialog').last();
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
@@ -229,7 +230,7 @@ test.describe('Sổ NAT', () => {
 
     // Và dịch vụ đó ở lại danh mục để lần sau chỉ việc chọn.
     await page.goto('/admin/catalog');
-    await page.getByRole('tab', { name: 'Dịch vụ / Port' }).click();
+    await page.getByRole('tab', { name: 'Cổng dịch vụ (port)' }).click();
     await expect(page.getByRole('row', { name: new RegExp(serviceName) })).toBeVisible();
   });
 
@@ -257,7 +258,7 @@ test.describe('Sổ NAT', () => {
 
     const deviceForm = page.getByRole('dialog').last();
     await deviceForm.getByLabel('Mã thiết bị').fill(newRouter);
-    await deviceForm.getByLabel('Tên thiết bị').fill('Draytek mới');
+    await deviceForm.getByLabel('Tên gọi').fill('Draytek mới');
     await deviceForm.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
     await deviceForm.getByRole('button', { name: 'Lưu', exact: true }).click();
@@ -597,7 +598,7 @@ test.describe('Sổ NAT', () => {
      * khớp ba chỗ và Playwright dừng ở strict mode. Bản đồ đang làm đúng việc của nó — cái sai
      * là câu hỏi quá rộng: bài này muốn biết KHU SỔ NAT có dòng ấy hay không.
      */
-    const natSection = page.getByRole('region', { name: 'Sổ NAT' });
+    const natSection = await openDeviceZone(page, 'Sổ NAT');
     await expect(natSection.getByText('TCP 8443')).toBeVisible();
     await expect(natSection.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
   });
@@ -652,7 +653,7 @@ test.describe('Panel IP trên trang thiết bị', () => {
     await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
     // Hỏi trong KHU "Địa chỉ IP": bản đồ quan hệ ở trên cũng nhắc lại địa chỉ này (xem bài NAT).
-    const ipSection = page.getByRole('region', { name: 'Địa chỉ IP' });
+    const ipSection = await openDeviceZone(page, 'Địa chỉ IP');
     await expect(ipSection.getByText(`172.16.${octet}.1`)).toBeVisible();
     await expect(ipSection.getByText('cổng mặc định')).toBeVisible();
     // IP của máy khác KHÔNG được lọt vào panel của con router này.

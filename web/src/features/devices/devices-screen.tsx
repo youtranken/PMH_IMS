@@ -30,6 +30,8 @@ import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
 import { DeviceRowActions } from './device-actions';
+import { devicePhotoSrc } from './device-diagram-look';
+import { deviceModelPhotoSrc } from '@/lib/device-models';
 import { StatusDialog } from './status-dialog';
 import {
   DEVICE_STATUSES,
@@ -197,6 +199,13 @@ export function DevicesScreen({ me }: { me: Me }) {
   const columns = useMemo<ColumnDef<DeviceRow, unknown>[]>(
     () => [
       {
+        id: 'photo',
+        header: t('devices.photoCol'),
+        /* Ảnh mặt trước giúp nhận máy bằng mắt (Q-27). Ảnh model thắng ảnh riêng (Q-26); không có
+           ảnh nào thì ghi tên loại cho cột không trống trơn. */
+        cell: ({ row }) => <DeviceThumb device={row.original} />,
+      },
+      {
         accessorKey: 'code',
         header: t('devices.code'),
         cell: ({ row }) => (
@@ -205,9 +214,6 @@ export function DevicesScreen({ me }: { me: Me }) {
             <Link className="mono" to={PATHS.device(row.original.id)}>
               {row.original.code}
             </Link>
-            {/* IP là dòng phụ dưới mã, không phải cột riêng: ở 1280px thêm một cột là cột Tên
-                bị ép. Nhiều IP thì hiện cái đầu + số còn lại. */}
-            <IpSub ips={ipsOf?.[row.original.id]} />
             <SecretDueSub entry={dueOf.get(row.original.id)} />
           </>
         ),
@@ -219,69 +225,33 @@ export function DevicesScreen({ me }: { me: Me }) {
            một cột là cột Tên bị ép còn ~90px và nút Sửa bị đẩy khỏi khung. `col-name` giữ
            cho Tên luôn đủ rộng để đọc. */
         meta: { className: 'col-name' },
-        /* Cả hai dòng đều MỘT dòng, cắt bằng "…" và đủ chữ ở `title`: tên dài gãy 3–4 dòng làm
-           các hàng cao thấp lệch nhau, mắt không dò theo hàng được. Model đứng ngay sau loại vì
-           đó là thứ người ta hỏi kế tiếp ("Switch gì?"). */
+        /* Chỉ tên, một dòng, cắt bằng "…" và đủ chữ ở `title` (Q-27): loại, model, serial,
+           người dùng, bảo hành đã có trong hồ sơ — bảng giữ cột để tra nhanh. */
+        cell: ({ row }) => (
+          <span className="cell-clip" title={row.original.name}>
+            {row.original.name}
+          </span>
+        ),
+      },
+      {
+        id: 'ip',
+        header: t('devices.managementIp'),
+        // Nhiều IP thì hiện cái đầu + số còn lại; đủ danh sách ở `title`.
         cell: ({ row }) => {
-          const d = row.original;
-          const sub = [d.deviceTypeName, d.model].filter(Boolean).join(' · ');
+          const ips = ipsOf?.[row.original.id] ?? [];
           return (
-            <div className="cell-stack">
-              <span className="cell-clip" title={d.name}>
-                {d.name}
-              </span>
-              <span
-                className="cell-sub cell-clip"
-                title={[sub, d.serial ? `S/N ${d.serial}` : null].filter(Boolean).join(' · ')}
-              >
-                {sub}
-                {d.serial ? (
-                  <>
-                    {' · '}
-                    <span className="mono">{d.serial}</span>
-                  </>
-                ) : null}
-              </span>
-              {/* Vị trí ở khổ 961–1440px: cột riêng ẩn đi (CSS `.col-wide`), hiện ở đây. */}
-              {d.siteCode ? (
-                <span className="cell-sub cell-clip only-mid">
-                  <LocationText device={d} />
-                </span>
-              ) : null}
-            </div>
+            <span className="mono" data-testid="device-ip" title={ips.join(', ') || undefined}>
+              {ips.length > 1
+                ? t('devices.ipMore', { ip: ips[0], count: ips.length - 1 })
+                : orDash(ips[0])}
+            </span>
           );
         },
       },
       {
         id: 'location',
         header: t('devices.locationCol'),
-        meta: { className: 'col-wide' },
         cell: ({ row }) => <LocationText device={row.original} />,
-      },
-      {
-        accessorKey: 'assignedTo',
-        header: t('devices.assignedTo'),
-        cell: ({ row }) => (
-          <>
-            {orDash(row.original.assignedTo)}
-            {row.original.department ? (
-              <span className="cell-sub">{row.original.department}</span>
-            ) : null}
-          </>
-        ),
-      },
-      {
-        accessorKey: 'warrantyEnd',
-        header: t('devices.warranty'),
-        // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
-        // `notCounted`: máy đã thanh lý thì bảo hành thôi có nghĩa — `findWarrantyExpiring` đã
-        // loại nó ra, nên để huy hiệu kêu "Quá hạn" là hai màn nói ngược nhau.
-        cell: ({ row }) => (
-          <ExpiryBadge
-            end={row.original.warrantyEnd}
-            notCounted={row.original.status === 'retired'}
-          />
-        ),
       },
       {
         accessorKey: 'status',
@@ -651,12 +621,26 @@ export function DevicesScreen({ me }: { me: Me }) {
   );
 }
 
-function IpSub({ ips }: { ips: string[] | undefined }) {
+/** Ảnh nhỏ ở cột Ảnh: ảnh model (Q-26 thắng), không thì ảnh riêng của máy, không thì tên loại. */
+function DeviceThumb({ device }: { device: DeviceRow }) {
   const { t } = useTranslation();
-  if (!ips || ips.length === 0) return null;
+  /* Ảnh hỏng (tệp đã xoá, server lỗi) thì về ô chữ loại — không để lại một khối nền tối trơn. Nhớ
+     ĐÚNG URL đã hỏng chứ không một cờ chung: ảnh mới (model vừa có ảnh, phiên bản đổi) thì thử lại. */
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+  const wanted =
+    device.deviceModelId && device.modelPhotoVersion
+      ? deviceModelPhotoSrc(device.deviceModelId, device.modelPhotoVersion)
+      : device.photoFrontFileId
+        ? devicePhotoSrc(device.id, 'front', device.photoFrontFileId)
+        : null;
+  const src = wanted && wanted !== brokenSrc ? wanted : null;
   return (
-    <span className="cell-sub mono" title={ips.join(', ')}>
-      {ips.length > 1 ? t('devices.ipMore', { ip: ips[0], count: ips.length - 1 }) : ips[0]}
+    <span className={src ? 'cell-thumb' : 'cell-thumb is-empty'} data-testid="device-thumb">
+      {src ? (
+        <img src={src} alt={t('devices.photoOf', { code: device.code })} loading="lazy" onError={() => setBrokenSrc(src)} />
+      ) : (
+        device.deviceTypeName
+      )}
     </span>
   );
 }

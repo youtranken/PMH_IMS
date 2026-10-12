@@ -5,14 +5,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
 import { conflictOnUnique } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { DevicesApiService } from '../devices/devices.api';
-import { licenseAssignmentTable, softwareTable } from './software.schema';
+import { licenseAssignmentTable, softwareSeatTable, softwareTable } from './software.schema';
 import { SoftwareService } from './software.service';
 import {
   supportsSeats,
@@ -36,6 +36,9 @@ export interface AssignmentRow extends AssignmentTerms {
   releasedAt: Date | null;
   overSeatReason: string | null;
   note: string | null;
+  /** Ghế riêng máy đang giữ (Q-27); null = hồ sơ không bật ghế riêng hoặc gán vượt số ghế. */
+  seatId: string | null;
+  seatNo: number | null;
 }
 
 /** Một license đang cài trên MỘT máy — dùng cho khu bung dòng của danh sách thiết bị. */
@@ -273,6 +276,8 @@ export class LicenseAssignmentService {
       deviceId: string;
       note?: string | null;
       overSeatReason?: string | null;
+      /** Ghế muốn đưa máy vào (hồ sơ bật ghế riêng); bỏ trống = ghế trống đầu tiên. */
+      seatId?: string | null;
     } & Partial<AssignmentTerms>,
   ): Promise<AssignResult> {
     const software = await this.software.findOne(softwareId);
@@ -329,6 +334,7 @@ export class LicenseAssignmentService {
           kind: softwareTable.kind,
           licenseModel: softwareTable.licenseModel,
           status: softwareTable.status,
+          perSeat: softwareTable.perSeat,
         })
         .from(softwareTable)
         .where(eq(softwareTable.id, softwareId))
@@ -381,6 +387,10 @@ export class LicenseAssignmentService {
         );
       }
 
+      // Ghế riêng (Q-27): chọn ghế dưới cùng khoá hàng `software` — hai lượt gán cùng hồ sơ nối
+      // đuôi nhau nên không tranh một ghế; index unique một phần là lưới cuối.
+      const seatId = locked[0].perSeat ? await this.pickSeatWithin(tx, softwareId, locked[0].seatTotal ?? 0, input.seatId ?? null) : null;
+
       let inserted;
       try {
         inserted = await tx
@@ -391,6 +401,7 @@ export class LicenseAssignmentService {
             assignedBy: actor,
             note: input.note?.trim() || null,
             overSeatReason: input.overSeatReason?.trim() || null,
+            seatId,
             ...terms,
           })
           .returning();
@@ -656,6 +667,38 @@ export class LicenseAssignmentService {
     }
   }
 
+  /**
+   * Ghế cho một lần gán: ghế được chọn (phải thuộc hồ sơ, trong 1…`seatTotal`, đang trống) hoặc ghế
+   * trống đầu tiên. Ghế số lớn hơn `seatTotal` là ghế đã bớt (giữ hàng, ẩn) — không nhận máy.
+   * Hết ghế trống thì `null` — lần gán đó là vượt số ghế, đi theo luật `overSeatReason` như cũ.
+   */
+  private async pickSeatWithin(tx: Tx, softwareId: string, seatTotal: number, wanted: string | null): Promise<string | null> {
+    const seats = await tx
+      .select({ id: softwareSeatTable.id, seatNo: softwareSeatTable.seatNo })
+      .from(softwareSeatTable)
+      .where(and(eq(softwareSeatTable.softwareId, softwareId), lte(softwareSeatTable.seatNo, seatTotal)))
+      .orderBy(asc(softwareSeatTable.seatNo));
+    const taken = new Set(
+      (
+        await tx
+          .select({ seatId: licenseAssignmentTable.seatId })
+          .from(licenseAssignmentTable)
+          .where(and(eq(licenseAssignmentTable.softwareId, softwareId), isNull(licenseAssignmentTable.releasedAt), isNotNull(licenseAssignmentTable.seatId)))
+      ).map((row) => row.seatId),
+    );
+    if (wanted) {
+      const seat = seats.find((row) => row.id === wanted);
+      if (!seat) {
+        throw new BadRequestException({ code: 'SEAT_NOT_FOUND', message: 'Ghế được chọn không thuộc hồ sơ này.' });
+      }
+      if (taken.has(wanted)) {
+        throw new ConflictException({ code: 'SEAT_TAKEN', message: `Ghế ${seat.seatNo} đang có máy — chọn ghế khác.` });
+      }
+      return wanted;
+    }
+    return seats.find((row) => !taken.has(row.id))?.id ?? null;
+  }
+
   /** Mã máy để đọc, hoặc chính uuid nếu máy đã biến mất — không được để sập cả lời gọi. */
   private async deviceCodeOf(deviceId: string): Promise<string> {
     try {
@@ -677,6 +720,17 @@ export class LicenseAssignmentService {
     rows: (typeof licenseAssignmentTable.$inferSelect)[],
   ): Promise<AssignmentRow[]> {
     const devices = await this.devices.getByIds(rows.map((row) => row.deviceId));
+    const seatIds = rows.map((row) => row.seatId).filter((id): id is string => Boolean(id));
+    const seatNos = new Map(
+      seatIds.length === 0
+        ? []
+        : (
+            await this.db
+              .select({ id: softwareSeatTable.id, seatNo: softwareSeatTable.seatNo })
+              .from(softwareSeatTable)
+              .where(inArray(softwareSeatTable.id, seatIds))
+          ).map((seat) => [seat.id, seat.seatNo] as const),
+    );
     const out: AssignmentRow[] = [];
     for (const row of rows) {
       let deviceCode = '(thiết bị không còn)';
@@ -706,6 +760,8 @@ export class LicenseAssignmentService {
         contract: row.contract,
         startDate: row.startDate,
         endDate: row.endDate,
+        seatId: row.seatId,
+        seatNo: row.seatId ? (seatNos.get(row.seatId) ?? null) : null,
       });
     }
     return out;

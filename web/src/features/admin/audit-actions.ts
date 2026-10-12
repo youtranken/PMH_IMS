@@ -198,6 +198,7 @@ export const VERB_KEY: Record<string, string> = {
   'license-assigned': 'audit.verb.licenseAssigned',
   'license-released': 'audit.verb.licenseReleased',
   'license-terms-updated': 'audit.verb.licenseTermsUpdated',
+  'seats-updated': 'audit.verb.seatsUpdated',
   requested: 'audit.verb.requested',
   approved: 'audit.verb.approved',
   denied: 'audit.verb.denied',

@@ -85,17 +85,17 @@ async function pick(code: string) {
   await userEvent.click(await screen.findByRole('option', { name: new RegExp(code) }));
 }
 
-function render(onDone = vi.fn(), software: SoftwareRow = SOFTWARE) {
+function render(onDone = vi.fn(), software: SoftwareRow = SOFTWARE, preferredSeatId?: string) {
   renderWithI18n(
     <ToastProvider>
-      <AssignDialog software={software} csrfToken="t" onClose={vi.fn()} onDone={onDone} />
+      <AssignDialog software={software} preferredSeatId={preferredSeatId} csrfToken="t" onClose={vi.fn()} onDone={onDone} />
     </ToastProvider>,
   );
   return onDone;
 }
 
 describe('AssignDialog — gán nhiều máy một lượt', () => {
-  it('chọn hai máy thành chip, gửi hai lượt cùng điều khoản, báo số máy', async () => {
+  it('chọn hai máy thành chip, gửi hai lượt chỉ có máy (Q-27: gán không hỏi chi phí / hợp đồng / hạn), báo số máy', async () => {
     const posts = mockFetch();
     const onDone = render();
     await pick('PC-E2E-01');
@@ -105,13 +105,16 @@ describe('AssignDialog — gán nhiều máy một lượt', () => {
       'PC-E2E-01',
       'PC-E2E-02',
     ]);
-    await userEvent.type(screen.getByRole('textbox', { name: 'Hợp đồng' }), 'HD-01');
+    for (const name of ['Hợp đồng', 'Chi phí', 'Ghi chú']) {
+      expect(screen.queryByRole('textbox', { name })).toBeNull();
+    }
+    expect(screen.getByRole('note')).toHaveTextContent('nút "Sửa" ở dòng của máy đó');
     await userEvent.click(screen.getByRole('button', { name: 'Gán 2 máy' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith([], 2));
-    expect(posts.map((body) => [body.deviceId, body.contract])).toEqual([
-      ['d1', 'HD-01'],
-      ['d2', 'HD-01'],
-    ]);
+    expect(posts.map((body) => body.deviceId)).toEqual(['d1', 'd2']);
+    for (const body of posts) {
+      expect(Object.keys(body).sort()).toEqual(['deviceId', 'overSeatReason']);
+    }
   });
 
   it('máy thứ hai hỏng → dừng, máy đã gán rời lô, câu lỗi nêu máy hỏng', async () => {
@@ -247,12 +250,97 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
 });
 
 describe('AssignDialog — đặt nhanh hạn của ghế', () => {
-  it('hàng +1/+2/+3 năm tính từ ngày bắt đầu; chưa có ngày bắt đầu thì nút tắt', () => {
+  it('Sửa ghế: hàng +1/+2/+3 năm tính từ ngày bắt đầu; chưa có ngày bắt đầu thì nút tắt; không còn ô Hợp đồng', () => {
     mockFetch();
-    render();
+    renderWithI18n(
+      <ToastProvider>
+        <AssignDialog
+          software={SOFTWARE}
+          seat={{ id: 'a1', deviceId: 'd1', deviceCode: 'PC-E2E-01', deviceName: 'Máy', deviceAssignedTo: null, assignedBy: 'x', assignedAt: '2026-01-01T00:00:00Z', note: null, cost: null, contract: 'HD-CU', startDate: null, endDate: null }}
+          csrfToken="t"
+          onClose={vi.fn()}
+          onDone={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole('textbox', { name: 'Hợp đồng' })).toBeNull();
     const group = screen.getByRole('group', { name: 'Đặt nhanh ngày hết hạn' });
     const buttons = within(group).getAllByRole('button');
     expect(buttons.map((button) => button.textContent)).toEqual(['+1 năm', '+2 năm', '+3 năm']);
     for (const button of buttons) expect(button).toBeDisabled();
+  });
+});
+
+/* Q-27: hồ sơ bật ghế riêng — mỗi máy vào một ghế trống theo thứ tự, ghế đã có máy bị bỏ qua. */
+describe('AssignDialog — máy vào ghế nào (ghế riêng)', () => {
+  it('hai máy vào Ghế 1 và Ghế 3 (Ghế 2 đã có máy); gửi seatId từng máy', async () => {
+    const posts: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.method === 'POST') {
+          posts.push(JSON.parse(String(init.body)));
+          return Promise.resolve(jsonResponse(201, { assignment: { id: 'a' } }));
+        }
+        if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, CATALOG));
+        if (url === '/api/v1/software/sw1') {
+          return Promise.resolve(
+            jsonResponse(200, {
+              ...SOFTWARE,
+              perSeat: true,
+              seats: [
+                { id: 'seat1', seatNo: 1, contract: 'PO-A', note: null, assignmentId: null, deviceId: null },
+                { id: 'seat2', seatNo: 2, contract: 'PO-B', note: null, assignmentId: 'x', deviceId: 'dx' },
+                { id: 'seat3', seatNo: 3, contract: 'PO-C', note: null, assignmentId: null, deviceId: null },
+              ],
+            }),
+          );
+        }
+        if (url.startsWith('/api/v1/devices')) return Promise.resolve(jsonResponse(200, { items: DEVICES }));
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    const onDone = render(vi.fn(), { ...SOFTWARE, perSeat: true, seatTotal: 3, seatUsed: 1 });
+    await pick('PC-E2E-01');
+    await pick('PC-E2E-02');
+    const plan = await screen.findByRole('group', { name: 'Máy vào ghế nào' });
+    expect(await within(plan).findByRole('button', { name: 'Ghế cho máy PC-E2E-01' })).toHaveTextContent('Ghế 1 · PO-A');
+    expect(within(plan).getByRole('button', { name: 'Ghế cho máy PC-E2E-02' })).toHaveTextContent('Ghế 3 · PO-C');
+    await userEvent.click(screen.getByRole('button', { name: 'Gán 2 máy' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith([], 2));
+    expect(posts.map((body) => [body.deviceId, body.seatId])).toEqual([
+      ['d1', 'seat1'],
+      ['d2', 'seat3'],
+    ]);
+  });
+
+  it('mở từ dòng "Ghế 3" còn trống thì máy đầu tiên vào ĐÚNG Ghế 3, không phải ghế trống đầu', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.method === 'POST') return Promise.resolve(jsonResponse(201, { assignment: { id: 'a' } }));
+        if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, CATALOG));
+        if (url === '/api/v1/software/sw1') {
+          return Promise.resolve(
+            jsonResponse(200, {
+              ...SOFTWARE,
+              perSeat: true,
+              seats: [
+                { id: 'seat1', seatNo: 1, contract: 'PO-A', note: null, assignmentId: null, deviceId: null },
+                { id: 'seat3', seatNo: 3, contract: 'PO-C', note: null, assignmentId: null, deviceId: null },
+              ],
+            }),
+          );
+        }
+        if (url.startsWith('/api/v1/devices')) return Promise.resolve(jsonResponse(200, { items: DEVICES }));
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    render(vi.fn(), { ...SOFTWARE, perSeat: true, seatTotal: 3, seatUsed: 1 }, 'seat3');
+    await pick('PC-E2E-01');
+    await pick('PC-E2E-02');
+    const plan = await screen.findByRole('group', { name: 'Máy vào ghế nào' });
+    expect(await within(plan).findByRole('button', { name: 'Ghế cho máy PC-E2E-01' })).toHaveTextContent('Ghế 3 · PO-C');
+    expect(within(plan).getByRole('button', { name: 'Ghế cho máy PC-E2E-02' })).toHaveTextContent('Ghế 1 · PO-A');
   });
 });

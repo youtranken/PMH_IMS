@@ -16,6 +16,21 @@ export interface SoftwareRecord {
   updatedAt: Date;
   /** Website dùng chứng chỉ SSL / tên miền này; rỗng với loại khác (Q-15). */
   websites: string[];
+  /** Số hợp đồng / PO chung của mọi ghế (Q-27). */
+  contract: string | null;
+  /** Mỗi ghế có hợp đồng, ghi chú, giấy tờ riêng (Q-27). */
+  perSeat: boolean;
+}
+
+/** Một ghế của hồ sơ bật ghế riêng — kèm máy đang giữ (nếu có). */
+export interface SoftwareSeatView {
+  id: string;
+  seatNo: number;
+  contract: string | null;
+  note: string | null;
+  /** Lần gán đang chiếm ghế; null = ghế trống. */
+  assignmentId: string | null;
+  deviceId: string | null;
 }
 
 /** Bản ghi kèm thứ màn hình cần mà không phải gọi thêm API. */
@@ -45,6 +60,8 @@ export interface SoftwareRetirement {
 export interface SoftwareDetailItem extends SoftwareScreenItem {
   /** Chỉ có khi đang Thanh lý và lịch sử còn dòng chuyển sang Thanh lý. */
   retirement: SoftwareRetirement | null;
+  /** Ghế riêng theo thứ tự (Q-27); rỗng khi hồ sơ không bật `perSeat`. */
+  seats: SoftwareSeatView[];
 }
 
 export interface SoftwareHistoryRecord {

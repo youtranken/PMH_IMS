@@ -10,7 +10,6 @@ import {
   resetSecrets,
   resetUsers,
   writeHeaders,
-  openNavGroup,
   stepUpViaApi,
 } from './helpers';
 
@@ -57,19 +56,19 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     await expect(nav).toBeVisible();
-    // Nhóm "Hệ thống" mặc định khép: không mở thì link trong đó không được đếm, và các vế
-    // "không có" bên dưới xanh vô nghĩa.
-    await openNavGroup(page);
+    /* Danh mục nằm đầu nhóm Tài sản (Q-27) nên nhóm "Hệ thống" không còn mục nào Thành viên
+       được thấy — nhóm đó biến mất hẳn, không có gì phải mở trước khi đếm. */
 
     /*
      * KIỂM KÊ chứ không chỉ kiểm một mục: so cả danh sách, sắp xếp trước khi so để thứ tự
      * hiển thị đổi (việc UX làm được) không kéo bài này đỏ theo.
      */
+    // Chỉ lấy dòng tên: huy hiệu số ("Sắp hết hạn" + "1") đi theo dữ liệu của máy chạy test.
     const seen = (await nav.getByRole('link').allInnerTexts())
-      .map((text) => text.trim())
+      .map((text) => text.trim().split('\n')[0].trim())
       .sort();
     const expected = [
-      // 14 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
+      // 15 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
@@ -88,7 +87,6 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       // đường `/approvals` mà SA/Admin thấy là "Duyệt yêu cầu".
       'Xin mở két',
       'Kho thanh lý',
-      // Nhóm "Hệ thống" — đúng MỘT mục.
       'Danh mục',
     ].sort();
     expect(
@@ -96,11 +94,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'Thành viên phải thấy đúng 15 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
     ).toEqual(expected);
 
-    // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
-    // "Dành cho nhà phát triển" không còn trên menu của ai (Q-20).
-    for (const group of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Hệ thống']) {
+    // Nhóm "Dành cho nhà phát triển" không còn trên menu của ai (Q-20). "Hệ thống" chỉ còn mục
+    // của SA/Admin nên Thành viên không thấy nhóm đó (Q-27).
+    for (const group of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật']) {
       await expect(nav.getByText(group, { exact: true })).toBeVisible();
     }
+    await expect(nav.getByRole('button', { name: 'Hệ thống', exact: true })).toHaveCount(0);
     await expect(nav.getByText('Dành cho nhà phát triển', { exact: true })).toHaveCount(0);
 
     /*

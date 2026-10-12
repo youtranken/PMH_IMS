@@ -41,21 +41,18 @@ test.describe('Địa chỉ IP ở 390px', () => {
     });
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    // Điện thoại: MỘT ô chọn dải thay cho dãy thẻ cuộn ngang, và thẻ của dải đang chọn ngay dưới.
+    // Điện thoại: MỘT ô chọn dải thay cho dãy thẻ cuộn ngang, cạnh nó là menu ⋯ của dải.
+    // Không lặp thẻ dải bên dưới: tên, CIDR đã ở ô chọn và đầu bảng, số đếm đã ở nút lọc.
     await expect(page.getByRole('button', { name: 'Chọn dải mạng' })).toContainText(
       `172.16.${octet}.0/29`,
     );
     await expect(
-      page.getByRole('link', { name: new RegExp(`LAN 390 E2E ${stamp}`) }),
+      page.getByRole('button', { name: `Thao tác với 172.16.${octet}.0/29` }),
     ).toBeVisible();
-    // Thanh mức sử dụng phải co được, không đẩy bảng rộng ra.
-    //
-    // Bám vào ĐÚNG dải vừa tạo, không phải "cái thanh đo duy nhất trên màn": danh sách này
-    // hiện mọi dải đang có, nên chỉ cần trong DB dev còn một dải nào khác là bài kiểm vỡ vì
-    // lý do chẳng liên quan gì tới thứ nó muốn kiểm.
     await expect(
-      page.getByRole('meter', { name: `Mức sử dụng dải 172.16.${octet}.0/29` }),
-    ).toBeVisible();
+      page.getByRole('link', { name: new RegExp(`LAN 390 E2E ${stamp}`) }),
+    ).toHaveCount(0);
+    await expect(page.getByRole('radio', { name: 'Đang dùng 1' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     await page.goto(`/ip-addresses/${subnetId}`);

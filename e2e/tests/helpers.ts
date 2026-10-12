@@ -959,6 +959,24 @@ export async function openNavDrawer(page: Page): Promise<void> {
  * `hidden`, `getByRole` bỏ qua nó, và `toHaveCount(0)` sẽ xanh cả khi link vẫn còn trên menu.
  * Màn hẹp thì mở drawer trước (`openNavDrawer`).
  */
+/** Khối gập của form thiết bị (Q-27), theo thứ tự trên form. */
+export const DEVICE_FOLDS = ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Truy cập quản trị', 'Ảnh và giấy tờ', 'Ghi chú'] as const;
+
+/**
+ * Mở một khối gập của form (`FoldSection`) nếu đang gập. Tên nút = tiêu đề + tóm tắt + số đếm,
+ * nên khớp theo ĐẦU tên. Đang mở thì để yên — bấm nữa là gập lại.
+ */
+export async function openFold(scope: Locator, title: string): Promise<void> {
+  const head = scope.getByRole('button', { name: new RegExp(`^${title}`) });
+  if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+  await expect(head).toHaveAttribute('aria-expanded', 'true');
+}
+
+/** Mở mọi khối gập của form thiết bị — trước khi kiểm kê ô hay điền ô không bắt buộc. */
+export async function openDeviceFolds(scope: Locator): Promise<void> {
+  for (const title of DEVICE_FOLDS) await openFold(scope, title);
+}
+
 export async function openNavGroup(page: Page, name = 'Hệ thống'): Promise<void> {
   const toggle = page
     .getByRole('navigation', { name: 'Điều hướng chính' })

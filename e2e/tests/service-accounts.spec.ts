@@ -70,7 +70,7 @@ test.describe('Tài khoản dịch vụ', () => {
     // Mật khẩu KHÔNG nằm trong hồ sơ — nó ở tab Két sắt, y hệt thiết bị và phần mềm.
     await row.getByRole('link', { name: code }).click();
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
+    await expect(page.getByText('Két chưa có ngăn nào.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
     const vaultForm = page.getByRole('dialog');

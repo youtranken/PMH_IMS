@@ -129,7 +129,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã thiết bị').fill(code);
-    await form.getByLabel('Tên thiết bị').fill('Switch của bài đi một vòng');
+    await form.getByLabel('Tên gọi').fill('Switch của bài đi một vòng');
     await form.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();

@@ -114,7 +114,7 @@ test.describe('Q-14 · mục danh mục đã vô hiệu không chọn mới đư
     await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog', { name: 'Thêm thiết bị' });
 
-    await form.getByRole('button', { name: 'Loại', exact: true }).click();
+    await form.getByRole('button', { name: 'Loại thiết bị', exact: true }).click();
     await expect(page.getByRole('option', { name: `E2E loại dùng ${stamp}` })).toBeVisible();
     await expect(
       page.getByRole('option', { name: new RegExp(`E2E loại ngừng ${stamp}`) }),

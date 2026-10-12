@@ -13,6 +13,7 @@ import {
   type PhotoSide,
   type PhotoSlot,
 } from '@/ui/device-photo-slots';
+import { InfoTip } from '@/ui/info-tip';
 import { useToast } from '@/ui/toast';
 import { devicePhotosKey, type DevicePhotos } from './device-photos-panel';
 
@@ -182,12 +183,35 @@ export function DevicePhotoEditor({
   );
 }
 
-/** Khu "Hình dùng trên sơ đồ" ở tab Tổng quan của trang thiết bị. */
+/**
+ * Khu "Hình dùng trên sơ đồ" ở tab Tổng quan của trang thiết bị. Việc thỉnh thoảng mới làm nên gập
+ * sẵn (Q-27 bổ sung): dòng tiêu đề nói mỗi mặt đang dùng ảnh gì, đủ để biết có cần mở không; lời
+ * giải thích thứ tự ảnh nằm trong nút (i).
+ */
 export function DeviceDiagramLook(props: Parameters<typeof DevicePhotoEditor>[0]) {
   const { t } = useTranslation();
+  // Cùng khoá với `DevicePhotoEditor` (và bản đồ quan hệ): không phải lượt gọi thứ hai.
+  const photos = useQuery({
+    queryKey: devicePhotosKey(props.deviceId),
+    queryFn: () => apiFetch<DevicePhotos>(`/api/v1/devices/${props.deviceId}/photos`),
+  });
+  const data = photos.data?.effective ? photos.data : undefined;
+  const levelText = (side: PhotoSide) => {
+    const level = lookLevel(data, side);
+    if (level === 'own') return t('photoSlots.levelOwn');
+    if (level === 'model') return t('photoSlots.levelModel', { model: data?.model?.label ?? '' });
+    return props.deviceTypeName ? t('photoSlots.levelIcon', { type: props.deviceTypeName }) : t('photoSlots.levelIconNoType');
+  };
+  const summary = data
+    ? PHOTO_SIDES.map((side) => `${t(side === 'front' ? 'photoSlots.front' : 'photoSlots.back')}: ${levelText(side)}`).join(' · ')
+    : null;
   return (
-    <DetailSection title={t('devices.lookTitle')} compact>
-      <p className="muted small">{t('devices.lookHint')}</p>
+    <DetailSection
+      title={t('devices.lookTitle')}
+      compact
+      foldable={{ summary }}
+      action={<InfoTip subject={t('devices.lookTitle')}>{t('devices.lookHint')}</InfoTip>}
+    >
       <DevicePhotoEditor {...props} />
     </DetailSection>
   );

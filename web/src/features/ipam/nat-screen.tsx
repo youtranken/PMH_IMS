@@ -16,6 +16,7 @@ import {
 } from '@/ui/device-type-filter';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
+import { FilterToggle } from '@/ui/filter-toggle';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { RowActions } from '@/ui/row-actions';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
@@ -141,6 +142,8 @@ export function NatScreen({ me }: { me: Me }) {
   const [hiding, setHiding] = useState<NatRow | null>(null);
   const [historyOf, setHistoryOf] = useState<NatRow | null>(null);
   const [shown, setShown] = useState<Record<NatBucket, boolean>>(NAT_DEFAULT_SHOWN);
+  // Ba chip trạng thái khác mặc định cũng là một bộ lọc đang bật — tính vào "Bộ lọc (n)".
+  const bucketsChanged = NAT_BUCKETS.some((bucket) => shown[bucket] !== NAT_DEFAULT_SHOWN[bucket]);
   const settings = useIpamSettings();
 
   const canHide = me.role === 'sa' || me.role === 'admin';
@@ -271,6 +274,11 @@ export function NatScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('nat.search')}
+        activeCount={url.activeCount + (bucketsChanged ? 1 : 0)}
+        onClear={() => {
+          setShown(NAT_DEFAULT_SHOWN);
+          url.clearFilters();
+        }}
       >
         <Select
           value={filters.siteId}
@@ -304,34 +312,29 @@ export function NatScreen({ me }: { me: Me }) {
           ]}
         />
         {/* Ba chip bật/tắt độc lập, không phải chọn-một: "đang mở + đã tắt" là mặc định
-            (mọi thứ còn trong sổ), và auditor hay cần thêm "đã gỡ" chứ không thay cái kia. */}
-        <div className="segmented" role="group" aria-label={t('nat.bucketGroup')}>
+            (mọi thứ còn trong sổ), và auditor hay cần thêm "đã gỡ" chứ không thay cái kia. Dáng
+            chip có ô tick — dáng nhóm nút liền nhau đọc như chọn-một, hai nút cùng sáng thành
+            câu đố. */}
+        <div className="filter-chip-group" role="group" aria-label={t('nat.bucketGroup')}>
           {NAT_BUCKETS.map((bucket) => (
-            <button
+            <FilterToggle
               key={bucket}
-              type="button"
-              className={shown[bucket] ? 'on' : undefined}
-              aria-pressed={shown[bucket]}
-              onClick={() => setShown((current) => ({ ...current, [bucket]: !current[bucket] }))}
+              pressed={shown[bucket]}
+              onChange={(on) => setShown((current) => ({ ...current, [bucket]: on }))}
             >
               {t(NAT_BUCKET_KEY[bucket])} <span className="seg-count">{counts[bucket]}</span>
-            </button>
+            </FilterToggle>
           ))}
         </div>
-        <div className="segmented" role="group" aria-label={t('nat.sensitive')}>
-          <button
-            type="button"
-            className={filters.sensitive ? 'on' : undefined}
-            aria-pressed={filters.sensitive === '1'}
-            onClick={() => url.setFilter('sensitive', filters.sensitive ? '' : '1')}
-          >
-            {t('nat.sensitiveOnly')}
-          </button>
-        </div>
+        <FilterToggle pressed={filters.sensitive === '1'} onChange={(on) => url.setFilter('sensitive', on ? '1' : '')}>
+          {t('nat.sensitiveOnly')}
+        </FilterToggle>
         <Select
           value={sortKey}
           onChange={(value) => url.setSorting({ key: value, desc: false })}
           ariaLabel={t('nat.sortBy')}
+          /* Sắp xếp không phải bộ lọc: tô xanh thì người dùng tìm nút "xóa lọc" không có. */
+          indicateFilled={false}
           options={NAT_SORT_KEYS.map((key) => ({ value: key, label: t(SORT_LABEL[key]) }))}
         />
       </FilterBar>

@@ -14,6 +14,7 @@ import {
   searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
+  openFold,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -56,10 +57,14 @@ async function fillDevice(
 ) {
   const form = page.getByRole('dialog');
   await form.getByLabel('Mã thiết bị').fill(values.code);
-  await form.getByLabel('Tên thiết bị').fill(values.name);
+  await form.getByLabel('Tên gọi').fill(values.name);
   await form.getByRole('button', { name: 'Loại' }).click();
   await page.getByRole('option', { name: values.type, exact: true }).click();
-  if (values.serial) await form.getByLabel('Serial').fill(values.serial);
+  if (values.serial) {
+    // Serial nằm trong khối gập «Mua sắm và bảo hành» (Q-27).
+    await openFold(form, 'Mua sắm và bảo hành');
+    await form.getByLabel('Serial').fill(values.serial);
+  }
   if (values.siteCode) {
     await form.getByRole('button', { name: 'Site' }).click();
     await page.getByRole('option', { name: new RegExp(values.siteCode) }).click();
@@ -93,7 +98,7 @@ test.describe('Kho thiết bị', () => {
 
     // Lọc theo loại: thiết bị vừa tạo vẫn còn, thiết bị loại khác biến mất.
     // Ô lọc có aria-label nên TÊN TRỢ NĂNG là "Loại", không phải chữ đang hiện trong ô.
-    const typeFilter = page.getByRole('button', { name: 'Loại', exact: true });
+    const typeFilter = page.getByRole('button', { name: 'Loại thiết bị', exact: true });
     await typeFilter.click();
     await page.getByRole('option', { name: 'PC', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
@@ -107,6 +112,7 @@ test.describe('Kho thiết bị', () => {
 
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
+    await openFold(form, 'Người dùng và phòng ban');
     await form.getByLabel('Người sử dụng').fill('anh Nam');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
@@ -303,20 +309,25 @@ test.describe('Kho thiết bị', () => {
     await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
-    await expect(row.getByText('chị Lan')).toBeVisible();
 
     await row.getByRole('button', { name: `Sửa máy ${code}` }).click();
     const form = page.getByRole('dialog');
     // Điền sẵn hồ sơ đang có, không phải một form trắng.
     await expect(form.getByLabel('Mã thiết bị')).toHaveValue(code);
     // Ô chỉ có ở hộp đầy đủ — bản chép ra rút gọn sẽ trượt ngay ở đây.
+    await openFold(form, 'Mua sắm và bảo hành');
     await expect(form.getByLabel('Serial')).toBeVisible();
 
+    // Khối đã có giá trị mở sẵn khi sửa (Q-27) — người dùng hiện có phải thấy ngay.
+    await expect(form.getByRole('button', { name: /^Người dùng và phòng ban/ })).toHaveAttribute('aria-expanded', 'true');
+    await expect(form.getByLabel('Người sử dụng')).toHaveValue('chị Lan');
     await form.getByLabel('Người sử dụng').fill('anh Tuấn');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.getByRole('row', { name: new RegExp(code) }).getByText('anh Tuấn')).toBeVisible();
+    // Bảng không còn cột Người sử dụng (Q-27): đọc lại hồ sơ để chắc đã lưu.
+    const saved = await page.request.get(`/api/v1/devices?search=${encodeURIComponent(code)}`);
+    expect((await saved.json()).items[0]).toMatchObject({ code, assignedTo: 'anh Tuấn' });
   });
 
   /**
@@ -481,10 +492,10 @@ test.describe('Kho thiết bị', () => {
 
     // Phải bám vào ĐẦU BẢNG: ngoài kia thanh lọc cũng có nút tên "Loại".
     const head = page.locator('thead');
-    await head.getByRole('button', { name: 'Tên thiết bị' }).click();
+    await head.getByRole('button', { name: 'Tên gọi' }).click();
     await expect(firstDataRow()).toContainText('Alpha máy đầu bảng');
 
-    await head.getByRole('button', { name: 'Tên thiết bị' }).click();
+    await head.getByRole('button', { name: 'Tên gọi' }).click();
     await expect(firstDataRow()).toContainText('Zulu máy cuối bảng');
 
     // Cột dựa vào danh mục: hiện chữ, nhưng KHÔNG phải nút bấm được.

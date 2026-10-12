@@ -11,6 +11,11 @@ import {
   slotStatus,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
+  collapseFreeRuns,
+  FREE_RUN_MIN,
+  runLabel,
+  runMembers,
+  type FreeRun,
 } from './slot-paging';
 import type { IpStatus, SubnetSlot } from './ipam-types';
 
@@ -289,5 +294,88 @@ describe('freeChoices — ô chọn địa chỉ trong hộp Cấp IP', () => {
     expect(choices.map((c) => c.address)).toEqual(['10.0.0.4', '10.0.0.5']);
     expect(choices[0].record?.id).toBe('id-10.0.0.4');
     expect(choices[1].record).toBeNull();
+  });
+});
+
+describe('collapseFreeRuns — chuỗi ô trống dài gộp một dòng (Q-27)', () => {
+  const none = new Set<string>();
+  it('chuỗi từ FREE_RUN_MIN ô trở lên thành MỘT dòng mang ô đầu, ô cuối, số ô', () => {
+    const slots = [record('10.0.0.1', 'assigned'), ...hosts(13).slice(1)];
+    const lines = collapseFreeRuns(slots, { keep: null, gateway: null, expanded: none });
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toEqual({ kind: 'run', address: '10.0.0.2', to: '10.0.0.13', count: 12 });
+  });
+
+  it('chuỗi ngắn hơn giữ từng ô — dải /29 vẫn bấm "Cấp IP" từng địa chỉ', () => {
+    const slots = hosts(FREE_RUN_MIN - 1);
+    expect(collapseFreeRuns(slots, { keep: null, gateway: null, expanded: none })).toEqual(slots);
+  });
+
+  it('hồ sơ (kể cả hồ sơ Trống) cắt chuỗi: chỉ ô CHƯA có hồ sơ mới gộp', () => {
+    const slots = [...hosts(10), record('10.0.0.11', 'free'), ...hosts(25).slice(11)];
+    const lines = collapseFreeRuns(slots, { keep: null, gateway: null, expanded: none });
+    expect(lines.map((line) => line.kind)).toEqual(['run', 'record', 'run']);
+  });
+
+  it('gateway không gộp vào chuỗi — nó là dòng riêng, đầu dải', () => {
+    const lines = collapseFreeRuns(hosts(15), { keep: null, gateway: '10.0.0.1', expanded: none });
+    expect(lines[0]).toEqual(free('10.0.0.1'));
+    expect(lines[1]).toMatchObject({ kind: 'run', address: '10.0.0.2', count: 14 });
+  });
+
+  it('chuỗi chứa địa chỉ đang trỏ tới (?ip=) không gộp — dòng đó phải thấy và tô sáng được', () => {
+    const slots = hosts(20);
+    expect(collapseFreeRuns(slots, { keep: '10.0.0.7', gateway: null, expanded: none })).toEqual(slots);
+  });
+
+  it('chuỗi người dùng đã bấm "Hiện từng IP" thì bung ra', () => {
+    const slots = hosts(20);
+    expect(
+      collapseFreeRuns(slots, {
+        keep: null,
+        gateway: null,
+        expanded: new Set(slots.map((slot) => slot.address)),
+      }),
+    ).toEqual(slots);
+  });
+
+  it('cấp một IP giữa chuỗi đã bung: hai nửa còn lại vẫn bung, không gập lại', () => {
+    // Đã bung .1–.30 rồi cấp .10: còn .1–.9 và .11–.30 — cả hai vẫn là từng dòng.
+    const opened = new Set(hosts(30).map((slot) => slot.address));
+    const slots = hosts(30).map((slot) =>
+      slot.address === '10.0.0.10' ? record('10.0.0.10', 'assigned') : slot,
+    );
+    expect(collapseFreeRuns(slots, { keep: null, gateway: null, expanded: opened })).toEqual(slots);
+  });
+
+  it('runMembers: mọi địa chỉ của chuỗi gộp — khoá "đã bung" phải sống qua lượt cấp IP', () => {
+    const slots = [record('10.0.0.1', 'assigned'), ...hosts(30).slice(1)];
+    const [, run] = collapseFreeRuns(slots, { keep: null, gateway: null, expanded: new Set() });
+    const members = runMembers(slots, run as FreeRun);
+    expect(members).toHaveLength(29);
+    expect(members[0]).toBe('10.0.0.2');
+    expect(members[28]).toBe('10.0.0.30');
+  });
+
+  it('trang của địa chỉ tính trên DÒNG đã gộp, không trên ô', () => {
+    // 1 hồ sơ + chuỗi 200 ô gộp + 1 hồ sơ ở cuối: chỉ 3 dòng, cả ba ở trang 1.
+    const slots = [record('10.0.0.1', 'assigned'), ...hosts(201).slice(1), record('10.0.0.202', 'assigned')];
+    const lines = collapseFreeRuns(slots, { keep: null, gateway: null, expanded: none });
+    expect(lines).toHaveLength(3);
+    expect(pageOfAddress(lines, '10.0.0.202')).toBe(1);
+    expect(pageSlots(lines, 1)).toHaveLength(3);
+  });
+});
+
+describe('runLabel — nhãn dòng gộp gọn cho cột hẹp', () => {
+  it('cùng mạng /24: đầu sau chỉ ghi số cuối', () => {
+    expect(runLabel({ kind: 'run', address: '172.16.10.3', to: '172.16.10.221', count: 219 })).toBe(
+      '172.16.10.3 – .221',
+    );
+  });
+  it('khác ba số đầu thì ghi đủ', () => {
+    expect(runLabel({ kind: 'run', address: '10.0.0.250', to: '10.0.1.20', count: 27 })).toBe(
+      '10.0.0.250 – 10.0.1.20',
+    );
   });
 });

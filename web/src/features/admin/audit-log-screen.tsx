@@ -12,6 +12,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
+import { FilterToggle } from '@/ui/filter-toggle';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
@@ -89,6 +90,7 @@ const EMPTY_FILTERS: Filters = {
 };
 
 const DEFAULT_LIMIT = 20;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Nút chọn nhanh khoảng ngày — "Hôm nay" là 1 ngày. */
 const RECENT_PRESETS = [1, 7, 30] as const;
@@ -273,10 +275,14 @@ export function AuditLogScreen() {
       const tone = auditActionTone(row.action);
       return tone === 'danger' ? <span className="badge danger">{t('audit.securityEvent')}</span> : null;
     },
-    subtitle: (row) =>
-      `${row.actorName ?? row.actor} → ${[objectTypeLabel(row.objectType, t), row.objectLabel]
-        .filter(Boolean)
-        .join(' · ') || '—'}`,
+    /* Tên / email người làm KHÔNG ngắt giữa chừng ("e2e-" | "sa@…") — chỉ ngắt quanh mũi tên. */
+    subtitle: (row) => (
+      <>
+        <span className="nowrap">{row.actorName ?? row.actor}</span>
+        {' → '}
+        {[objectTypeLabel(row.objectType, t), row.objectLabel].filter(Boolean).join(' · ') || '—'}
+      </>
+    ),
   };
 
   const exportUrl = `/api/v1/admin/audit/export?${filterParams(filters).toString()}`;
@@ -297,16 +303,9 @@ export function AuditLogScreen() {
         onClear={url.clearFilters}
         collapsible
       >
-        <div className="segmented" role="group" aria-label={t('audit.securityEvent')}>
-          <button
-            type="button"
-            className={filters.security ? 'on' : undefined}
-            aria-pressed={filters.security === '1'}
-            onClick={() => url.setFilter('security', filters.security ? '' : '1')}
-          >
-            {t('audit.securityOnly')}
-          </button>
-        </div>
+        <FilterToggle pressed={filters.security === '1'} onChange={(on) => url.setFilter('security', on ? '1' : '')}>
+          {t('audit.securityOnly')}
+        </FilterToggle>
         <Select
           value={filters.action}
           ariaLabel={t('audit.action')}
@@ -654,8 +653,11 @@ function ObjectCell({ row }: { row: AuditRow }) {
         </>
       ) : null}
       <span className="cell-sub mono" title={row.objectId}>
-        {name ? `${row.objectId.slice(0, 8)}…` : row.objectId}
-        <CopyButton value={row.objectId} label={t('audit.copyObjectId')} />
+        {/* UUID luôn rút 8 ký tự, có tên hay không: bản đủ làm cột này lúc hẹp lúc rộng gấp ba;
+            bản đủ ở tooltip và nút chép. Mã khác (khoá cấu hình…) để nguyên — nó là thứ duy
+            nhất nói dòng này về cái gì. */}
+        {UUID_RE.test(row.objectId) ? `${row.objectId.slice(0, 8)}…` : row.objectId}
+        <CopyButton value={row.objectId} label={t('audit.copyObjectId')} inline />
       </span>
     </>
   );

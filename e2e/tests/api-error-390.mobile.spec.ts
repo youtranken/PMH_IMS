@@ -107,7 +107,7 @@ test.describe('Màn danh sách hỏng, đọc ở 390px', () => {
     await breakRoute(page, /\/api\/v1\/ipam\/subnets(\?|$)/);
     await page.goto('/ip-addresses');
 
-    await expect(page.getByText('Chưa khai báo dải nào')).toHaveCount(0);
+    await expect(page.getByText('Chưa khai báo dải nào.')).toHaveCount(0);
     await expectErrorBlockFits(page);
   });
 

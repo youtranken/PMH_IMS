@@ -43,7 +43,7 @@ export function DeviceOnDiagrams({ deviceId }: { deviceId: string }) {
       ) : refs.data.length === 0 ? (
         <p className="muted">{t('devices.onDiagramsNone')}</p>
       ) : (
-        <ul className="device-card-diagrams">
+        <ul className="inline-list">
           {refs.data.map((ref) => {
             const node = byId.get(ref.id);
             return (

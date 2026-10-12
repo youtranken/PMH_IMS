@@ -80,7 +80,7 @@ test.describe('Két sắt', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
+    await expect(page.getByText('Két chưa có ngăn nào.')).toBeVisible();
 
     // Thanh công cụ của tab: tiêu đề khu + số ngăn + nút cất cùng hàng (DEV-079).
     await expect(page.getByRole('heading', { name: 'Ngăn két' })).toBeVisible();

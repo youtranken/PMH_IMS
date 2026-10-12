@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Chevron } from '@/ui/chevron';
 import { CloseIcon } from '@/ui/glyph-icons';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
@@ -309,8 +308,8 @@ export function DatePicker({
           <rect x="3" y="4" width="18" height="17" rx="3" />
           <path d="M8 2v4M16 2v4M3 10h18" />
         </svg>
+        {/* Chỉ một biểu tượng (lịch): thêm mũi tên ˅ thì ô ngày trông như ô chọn danh sách. */}
         <span className={selected ? 'dp-val' : 'dp-val ph'}>{label}</span>
-        <Chevron className="chev" />
       </button>
 
       {/*

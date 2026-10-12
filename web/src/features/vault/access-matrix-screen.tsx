@@ -854,7 +854,11 @@ function RoleHolders({ accounts }: { accounts: AccountRow[] }) {
   if (accounts.length === 0) return null;
   return (
     <details className="card access-role-holders">
-      <summary>{t('access.roleHolders', { count: accounts.length })}</summary>
+      {/* Chevron mảnh như mọi chỗ gập khác, không dùng tam giác gốc của trình duyệt. */}
+      <summary>
+        <span>{t('access.roleHolders', { count: accounts.length })}</span>
+        <Chevron className="summary-chev" />
+      </summary>
       <p className="muted">{t('access.adminNote')}</p>
       <ul>
         {accounts.map((account) => (

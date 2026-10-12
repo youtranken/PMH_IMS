@@ -180,3 +180,36 @@ describe('SubnetPane — bảng vừa khung ở 1366px', () => {
     expect(mid?.textContent).toContain('Cấp 01/09/2026');
   });
 });
+
+describe('SubnetPane — gộp chuỗi ô trống (Q-27)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('"Tất cả": 20 ô trống liền nhau thành một dòng; "Hiện từng IP" bung ra; "Cấp IP" cấp ô đầu', async () => {
+    const free = Array.from({ length: 20 }, (_, i) => ({ kind: 'free', address: `10.0.1.${i + 4}` }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          jsonResponse(200, String(url).endsWith('/addresses') ? [ASSIGNED, ...free] : []),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <SubnetPane subnet={{ ...SUBNET, cidr: '10.0.1.0/27', total: 30 }} me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('10.0.1.4 – .23')).toBeInTheDocument();
+    expect(screen.getByText(/20 IP trống/)).toBeInTheDocument();
+    expect(screen.queryByText('10.0.1.10')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cấp IP' }));
+    expect(await screen.findByRole('dialog', { name: 'Cấp IP — 10.0.1.4' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Hủy' }));
+    await user.click(screen.getByRole('button', { name: 'Hiện từng IP' }));
+    expect(screen.getByText('10.0.1.10')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Cấp IP' })).toHaveLength(20);
+  });
+});

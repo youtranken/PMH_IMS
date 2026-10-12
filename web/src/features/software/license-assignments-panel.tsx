@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -7,8 +7,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './assign-dialog';
 import { SeatTable, type SeatRow } from './seat-table';
-import { SeatUsage } from './software-standing-cell';
-import { supportsSeats, type SoftwareRow } from './software-types';
+import { supportsSeats, type SoftwareRow, type SoftwareSeat } from './software-types';
 
 /**
  * Máy đang dùng key (FR-011).
@@ -19,9 +18,18 @@ import { supportsSeats, type SoftwareRow } from './software-types';
  */
 export function LicenseAssignmentsPanel({
   software,
+  seats = [],
+  autoAssign = false,
+  onAutoAssignUsed,
   csrfToken,
 }: {
   software: SoftwareRow;
+  /** Ghế riêng của hồ sơ (Q-27) — ghế trống hiện dưới bảng, kèm nút gán. */
+  seats?: SoftwareSeat[];
+  /** `?assign=1` ("Lưu rồi gán vào máy"): mở sẵn hộp Gán. */
+  autoAssign?: boolean;
+  /** Đã mở hộp theo `autoAssign` — nơi gọi gỡ `?assign=1`, nếu không đổi tab / F5 là hộp bật lại. */
+  onAutoAssignUsed?: () => void;
   csrfToken: string;
 }) {
   const { t } = useTranslation();
@@ -29,6 +37,15 @@ export function LicenseAssignmentsPanel({
   const queryClient = useQueryClient();
   const [view, setView] = useState<'active' | 'released'>('active');
   const [assigning, setAssigning] = useState(false);
+  /* Theo dõi `autoAssign` chứ không chỉ đọc lúc dựng: chuyển sang hồ sơ khác mà panel vẫn đang
+     mở (đợt mua mới → "Lưu rồi gán") thì không dựng lại, cờ chỉ đổi. */
+  useEffect(() => {
+    if (!autoAssign) return;
+    if (software.status !== 'retired') setAssigning(true);
+    onAutoAssignUsed?.();
+  }, [autoAssign]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Ghế trống mà người dùng bấm "Gán" ở dòng của nó — máy đầu tiên vào đúng ghế đó. */
+  const [preferredSeat, setPreferredSeat] = useState<string | null>(null);
 
   const assignments = useQuery({
     queryKey: ['software', software.id, 'assignments', true],
@@ -51,8 +68,8 @@ export function LicenseAssignmentsPanel({
 
   return (
     <div className="attachment-panel">
+      {/* Không vẽ lại thanh ghế: nó đã ở dải 4 ô đầu trang, thấy ở mọi tab (Q-27). */}
       <div className="seat-toolbar">
-        <SeatUsage item={software} />
         <div className="segmented" role="group" aria-label={t('license.filterState')}>
           <button
             type="button"
@@ -112,13 +129,63 @@ export function LicenseAssignmentsPanel({
         <SeatTable software={software} rows={rows} csrfToken={csrfToken} />
       )}
 
+      {/* Ghế riêng còn trống (Q-27): thấy ngay ghế nào chưa có máy, hợp đồng nào đang nằm không. */}
+      {view === 'active' && software.perSeat && seats.some((seat) => !seat.deviceId) ? (
+        <section className="free-seats" aria-label={t('license.freeSeats')}>
+          <h3 className="free-seats-title">{t('license.freeSeats')}</h3>
+          <table className="table table-sub table-cards">
+            <thead>
+              <tr>
+                <th>{t('software.seatCol')}</th>
+                <th>{t('software.seatContract')}</th>
+                <th>{t('software.seatNote')}</th>
+                <th className="col-center">
+                  <span className="sr-only">{t('common.actions')}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {seats
+                .filter((seat) => !seat.deviceId)
+                .map((seat) => (
+                  <tr key={seat.id}>
+                    <td className="seat-no">{t('software.seatLabel', { n: seat.seatNo })}</td>
+                    <td className="mono">{seat.contract ?? '—'}</td>
+                    <td>{seat.note ?? '—'}</td>
+                    <td className="col-center">
+                      {canAssign ? (
+                        <button
+                          type="button"
+                          className="btn sm"
+                          aria-label={t('license.assignToSeat', { n: seat.seatNo })}
+                          onClick={() => {
+                            setPreferredSeat(seat.id);
+                            setAssigning(true);
+                          }}
+                        >
+                          {t('license.assign')}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
+
       {assigning ? (
         <AssignDialog
           software={software}
+          preferredSeatId={preferredSeat ?? undefined}
           csrfToken={csrfToken}
-          onClose={() => setAssigning(false)}
+          onClose={() => {
+            setAssigning(false);
+            setPreferredSeat(null);
+          }}
           onDone={(warnings, count) => {
             setAssigning(false);
+            setPreferredSeat(null);
             toast({ message: t('license.assignedCount', { count }) });
             for (const warning of warnings) toast({ message: warning, tone: 'warn' });
             void queryClient.invalidateQueries({ queryKey: ['software'] });

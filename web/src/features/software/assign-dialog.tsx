@@ -17,17 +17,19 @@ import { useDepartments } from '@/ui/use-departments';
 import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
-import { seatLabel, type LicenseSeat, type SoftwareRow } from './software-types';
+import { Select } from '@/ui/select';
+import { seatLabel, type LicenseSeat, type SoftwareDetailRow, type SoftwareRow } from './software-types';
 
 /** Trần của một lượt chọn nhanh — đúng trần `limit` của API danh sách thiết bị. */
 const QUICK_PICK_LIMIT = 200;
 
 /**
- * Hộp gán license vào máy — VÀ hộp sửa kỳ hạn/chi phí của một ghế đã gán.
+ * Hộp gán license vào máy — VÀ hộp "Sửa ghế" (chi phí, kỳ hạn riêng, ghi chú của một máy).
  *
- * Một hộp cho cả hai vì các ô là MỘT BỘ: chi phí, hợp đồng, kỳ hạn riêng, ghi chú. Tách hai
- * hộp thì lần sau thêm một ô sẽ chỉ nhớ thêm vào một bên — và bên còn lại âm thầm ghi thiếu.
- * Khác nhau đúng hai chỗ: có chọn máy hay không, và POST hay PATCH.
+ * Q-27: GÁN chỉ đưa license vào máy (chọn máy, lý do khi vượt ghế; hồ sơ bật ghế riêng thì chọn
+ * ghế cho từng máy) — chi phí / kỳ hạn / ghi chú khai sau bằng "Sửa ghế". Sửa ghế không còn ô
+ * Hợp đồng: hợp đồng thuộc hồ sơ, hoặc thuộc ghế riêng (sửa ở Sửa hồ sơ). PATCH không gửi trường
+ * nào thì API giữ nguyên, nên hợp đồng cũ của ghế không mất.
  *
  * Danh sách (menu dòng), khu bung dòng và tab Máy đang dùng đều mở ĐÚNG hộp này (AD-15): hai
  * bản sẽ trôi khác nhau đúng lúc luật vượt số ghế đổi.
@@ -35,6 +37,8 @@ const QUICK_PICK_LIMIT = 200;
 export function AssignDialog({
   software,
   seat,
+  initialDevices,
+  preferredSeatId,
   csrfToken,
   onClose,
   onDone,
@@ -42,6 +46,10 @@ export function AssignDialog({
   software: SoftwareRow;
   /** Có giá trị = SỬA ghế đang có (khóa máy, PATCH). Bỏ trống = gán máy mới. */
   seat?: LicenseSeat;
+  /** Máy chọn sẵn — gán từ phía máy ("Gán phần mềm vào máy này"). */
+  initialDevices?: { id: string; code: string }[];
+  /** Mở từ dòng một ghế trống ("Ghế 5 · Gán"): máy đầu tiên chưa chọn tay vào đúng ghế đó. */
+  preferredSeatId?: string;
   csrfToken: string;
   onClose: () => void;
   /** `count` = số máy vừa gán (gán nhiều máy một lượt — SW-053); sửa ghế thì 1. */
@@ -56,13 +64,46 @@ export function AssignDialog({
   const [query, setQuery] = useState('');
   /* NHIỀU máy một lượt (SW-053): mua 10 ghế cho phòng Kế toán không phải mở hộp 10 lần và gõ
      lại 10 lần cùng chi phí/hợp đồng/kỳ hạn. Điều khoản ghế dùng chung cho cả lô. */
-  const [devices, setDevices] = useState<{ id: string; code: string }[]>([]);
+  const [devices, setDevices] = useState<{ id: string; code: string }[]>(initialDevices ?? []);
+  /* Ghế riêng (Q-27): đọc ghế của hồ sơ; mỗi máy mặc định vào ghế trống theo thứ tự, đổi được. */
+  const seatsQuery = useQuery({
+    queryKey: ['software', software.id, 'detail-seats'],
+    queryFn: () => apiFetch<SoftwareDetailRow>(`/api/v1/software/${software.id}`),
+    enabled: !editing && Boolean(software.perSeat),
+  });
+  const freeSeats = (seatsQuery.data?.seats ?? []).filter((item) => !item.deviceId);
+  const [seatChoice, setSeatChoice] = useState<Record<string, string>>({});
+  /** Ghế của từng máy trong lô: ghế đã chọn tay, không thì ghế trống kế tiếp chưa ai giữ. */
+  const seatPlan = (() => {
+    const plan = new Map<string, string | null>();
+    const used = new Set(Object.values(seatChoice));
+    let preferred = preferredSeatId && !used.has(preferredSeatId) && freeSeats.some((item) => item.id === preferredSeatId) ? preferredSeatId : null;
+    if (preferred) used.add(preferred);
+    let cursor = 0;
+    for (const item of devices) {
+      const chosen = seatChoice[item.id];
+      if (!chosen && preferred) {
+        plan.set(item.id, preferred);
+        preferred = null;
+        continue;
+      }
+      if (chosen) {
+        plan.set(item.id, chosen);
+        continue;
+      }
+      while (cursor < freeSeats.length && used.has(freeSeats[cursor].id)) cursor += 1;
+      const next = freeSeats[cursor];
+      plan.set(item.id, next ? next.id : null);
+      if (next) used.add(next.id);
+      cursor += 1;
+    }
+    return plan;
+  })();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState(seat?.note ?? '');
   // Chi phí giữ dạng CHUỖI trong lúc gõ: ô rỗng phải khác được với số 0.
   const [cost, setCost] = useState(formatMoneyInput(seat?.cost ?? null));
-  const [contract, setContract] = useState(seat?.contract ?? '');
   const [startDate, setStartDate] = useState(seat?.startDate ?? '');
   const [endDate, setEndDate] = useState(seat?.endDate ?? '');
   const [overSeatReason, setOverSeatReason] = useState('');
@@ -75,7 +116,7 @@ export function AssignDialog({
       software.seatUsed + devices.length > software.seatTotal);
   /* KHÔNG theo dõi `devices`: gán lỗi giữa lô thì chính lượt gán rút các máy đã xong khỏi danh
      sách, và câu lỗi nêu máy hỏng phải còn đó. */
-  const [error, setError] = useSubmitError([note, cost, contract, startDate, endDate, overSeatReason]);
+  const [error, setError] = useSubmitError([note, cost, startDate, endDate, overSeatReason]);
   /* Ba cách chọn máy, mỗi lúc chỉ bày MỘT ô: tìm từng máy, hoặc cả lô theo phòng ban / người
      sử dụng (mua 10 ghế cho phòng Kế toán thì chọn "Kế toán" một lần, rồi bỏ bớt máy không
      cần). Kết quả luôn là chip MÁY: ghế license gắn vào máy (device_id NOT NULL), phòng ban
@@ -168,6 +209,7 @@ export function AssignDialog({
 
   return (
     <Dialog
+      eyebrow={{ label: t('nav.software'), tone: 'software' }}
       open
       onOpenChange={onClose}
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
@@ -213,9 +255,9 @@ export function AssignDialog({
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
+          /* Sửa ghế: không gửi `contract` — API giữ nguyên trường vắng mặt (Q-27 bỏ ô này). */
           const terms = {
             cost: money.value,
-            contract: contract.trim(),
             startDate,
             endDate: hasEndDate ? endDate : '',
             note: note.trim(),
@@ -239,10 +281,12 @@ export function AssignDialog({
             const doneIds: string[] = [];
             for (const target of devices) {
               try {
+                // Gán chỉ đưa license vào máy (Q-27): không gửi chi phí / kỳ hạn / ghi chú.
+                const seatId = seatPlan.get(target.id);
                 const result = await save.mutateAsync({
                   deviceId: target.id,
                   overSeatReason: overSeatReason.trim(),
-                  ...terms,
+                  ...(seatId ? { seatId } : {}),
                 });
                 warnings.push(...(result.warnings ?? []));
                 doneIds.push(target.id);
@@ -411,6 +455,49 @@ export function AssignDialog({
           </div>
         ) : null}
 
+        {!editing && software.perSeat && devices.length > 0 ? (
+          <div className="span-2" role="group" aria-label={t('license.seatPlan')}>
+            <p className="muted small">{t('license.seatPlanHint')}</p>
+            <table className="table table-sub table-cards">
+              <thead>
+                <tr>
+                  <th>{t('license.device')}</th>
+                  <th>{t('license.seatPick')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {devices.map((item) => {
+                  const planned = seatPlan.get(item.id) ?? null;
+                  const taken = new Set([...seatPlan.entries()].filter(([deviceId]) => deviceId !== item.id).map(([, seatId]) => seatId));
+                  return (
+                    <tr key={item.id}>
+                      <td className="mono">{item.code}</td>
+                      <td>
+                        {freeSeats.length === 0 ? (
+                          <span className="muted">{t('license.seatNone')}</span>
+                        ) : (
+                          <Select
+                            value={planned ?? ''}
+                            ariaLabel={t('license.seatPickOf', { code: item.code })}
+                            placeholder={t('license.seatNone')}
+                            options={freeSeats
+                              .filter((free) => free.id === planned || !taken.has(free.id))
+                              .map((free) => ({
+                                value: free.id,
+                                label: [t('software.seatLabel', { n: free.seatNo }), free.contract].filter(Boolean).join(' · '),
+                              }))}
+                            onChange={(value) => setSeatChoice((current) => ({ ...current, [item.id]: value }))}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
         {needReason ? (
           <Field
             label={t('license.overSeatReason')}
@@ -429,54 +516,61 @@ export function AssignDialog({
           </Field>
         ) : null}
 
-        <Field
-          label={t('license.cost')}
-          hint={t('license.costHint')}
-          htmlFor="assign-cost"
-          error={check.error('cost')}
-        >
-          <MoneyInput value={cost} onChange={setCost} />
-        </Field>
-        <Field label={t('license.contract')} hint={t('license.contractHint')} htmlFor="assign-contract">
-          <input
-            id="assign-contract"
-            className="inp"
-            value={contract}
-            onChange={(e) => setContract(e.target.value)}
-          />
-        </Field>
+        {editing ? (
+          <>
+            {seat?.seatNo ? (
+              <p className="alert info span-2" role="note">
+                {t('license.seatOf', { n: seat.seatNo })}
+              </p>
+            ) : null}
+          <Field
+            label={t('license.cost')}
+            hint={t('license.costHint')}
+            htmlFor="assign-cost"
+            error={check.error('cost')}
+          >
+            <MoneyInput value={cost} onChange={setCost} />
+          </Field>
 
-        <Field label={t('license.startDate')}>
-          <DatePicker
-            value={startDate}
-            ariaLabel={t('license.startDate')}
-            onChange={setStartDate}
-          />
-        </Field>
-        {hasEndDate ? (
-          <Field label={t('license.endDate')} hint={t('license.endDateHint')}>
-            <DatePicker value={endDate} ariaLabel={t('license.endDate')} onChange={setEndDate} />
-            <YearQuickPicks
-              base={startDate}
-              onPick={setEndDate}
-              label={t('software.endQuick')}
-              needBaseHint={t('software.endQuickNeedBase')}
+          <Field label={t('license.startDate')}>
+            <DatePicker
+              value={startDate}
+              ariaLabel={t('license.startDate')}
+              onChange={setStartDate}
             />
           </Field>
-        ) : (
-          <Field label={t('license.endDate')}>
-            <p className="static-value">{t('software.perpetual')}</p>
-          </Field>
-        )}
+          {hasEndDate ? (
+            <Field label={t('license.endDate')} hint={t('license.endDateHint')}>
+              <DatePicker value={endDate} ariaLabel={t('license.endDate')} onChange={setEndDate} />
+              <YearQuickPicks
+                base={startDate}
+                onPick={setEndDate}
+                label={t('software.endQuick')}
+                needBaseHint={t('software.endQuickNeedBase')}
+              />
+            </Field>
+          ) : (
+            <Field label={t('license.endDate')}>
+              <p className="static-value">{t('software.perpetual')}</p>
+            </Field>
+          )}
 
-        <Field label={t('license.note')} htmlFor="assign-note" span={2} error={check.error('note')}>
-          <input
-            id="assign-note"
-            className="inp"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
+          <Field label={t('license.note')} htmlFor="assign-note" span={2} error={check.error('note')}>
+            <input
+              id="assign-note"
+              className="inp"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </Field>
+
+
+          </>
+        ) : (
+          <p className="alert info span-2" role="note">
+            {t('license.assignOnlyHint')}
+          </p>
+        )}
 
         {/* Chỉ lỗi từ SERVER ở đây; lỗi từng ô hiện ngay dưới ô đó (`useFormErrors`). */}
         {error ? (

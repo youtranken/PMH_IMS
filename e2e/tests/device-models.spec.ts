@@ -11,6 +11,7 @@ import {
   sql,
   uniqueStamp,
   writeHeaders,
+  openFold,
 } from './helpers';
 
 /*
@@ -48,7 +49,8 @@ async function createDevice(page: Page, data: Record<string, unknown>): Promise<
 
 async function openModelsTab(page: Page) {
   await page.goto('/admin/catalog');
-  await page.getByRole('tab', { name: 'Model thiết bị', exact: true }).click();
+  // Tab mang số model như các tab khác ("Model thiết bị 4").
+  await page.getByRole('tab', { name: /^Model thiết bị( \d+)?$/ }).click();
 }
 
 test.describe('Model thiết bị (Q-26)', () => {
@@ -139,7 +141,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await devicesPageButton(page, 'Thêm thiết bị').click();
     let form = page.getByRole('dialog', { name: /Thêm thiết bị/ });
     await form.getByRole('textbox', { name: 'Mã thiết bị' }).fill(`FW-E2E-MF1${stamp}`);
-    await form.getByRole('textbox', { name: 'Tên thiết bị' }).fill('Firewall tầng 1');
+    await form.getByRole('textbox', { name: 'Tên gọi' }).fill('Firewall tầng 1');
     await form.getByRole('combobox', { name: 'Model' }).fill(model);
     await page.getByRole('button', { name: `Tạo model mới "${model}"` }).click();
     const modelDialog = page.getByRole('dialog', { name: 'Thêm model thiết bị' });
@@ -165,7 +167,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await devicesPageButton(page, 'Thêm thiết bị').click();
     form = page.getByRole('dialog', { name: /Thêm thiết bị/ });
     await form.getByRole('textbox', { name: 'Mã thiết bị' }).fill(`FW-E2E-MF2${stamp}`);
-    await form.getByRole('textbox', { name: 'Tên thiết bị' }).fill('Firewall tầng 2');
+    await form.getByRole('textbox', { name: 'Tên gọi' }).fill('Firewall tầng 2');
     await form.getByRole('combobox', { name: 'Model' }).fill(model.toLowerCase());
     await page.getByRole('option', { name: new RegExp(model) }).click();
     await form.getByRole('button', { name: 'Site' }).click();
@@ -177,6 +179,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await expect(form.getByText(new RegExp(`Chỗ U1 đang có FW-E2E-MF1${stamp}`))).toBeVisible();
     await form.getByRole('group', { name: 'U trống:' }).getByRole('button', { name: 'U2–U12' }).click();
     // Truy cập quản trị: Web 10.0.1.1:8443.
+    await openFold(form, 'Truy cập quản trị');
     await form.getByRole('button', { name: '+ Thêm đường truy cập' }).click();
     await form.getByRole('textbox', { name: 'Địa chỉ 1' }).fill('10.0.1.1');
     await form.getByRole('textbox', { name: 'Cổng 1' }).fill('8443');

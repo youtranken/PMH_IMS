@@ -129,17 +129,17 @@ describe('Khối trống có nút bước tiếp', () => {
 
   it('Dải IP: chưa có dải → nút khai dải (chỉ SA/Admin)', async () => {
     const { unmount } = renderAt('/ipam', <IpamScreen me={SA} />);
-    const block = await emptyBlock('Chưa khai báo dải nào');
+    const block = await emptyBlock('Chưa khai báo dải nào.');
     expect(within(block).getByRole('button', { name: 'Thêm dải mạng' })).toBeInTheDocument();
     unmount();
     renderAt('/ipam', <IpamScreen me={MEMBER} />);
-    const memberBlock = await emptyBlock('Chưa khai báo dải nào');
+    const memberBlock = await emptyBlock('Chưa khai báo dải nào.');
     expect(within(memberBlock).queryByRole('button')).toBeNull();
   });
 
   it('Sổ NAT: chưa có → Thêm luật NAT; tìm không ra → Xóa bộ lọc', async () => {
     const { unmount } = renderAt('/nat', <NatScreen me={SA} />);
-    const block = await emptyBlock('Chưa có luật NAT nào');
+    const block = await emptyBlock('Chưa có luật NAT nào.');
     expect(within(block).getByRole('button', { name: 'Thêm luật NAT' })).toBeInTheDocument();
     unmount();
     renderAt('/nat?q=zzz', <NatScreen me={SA} />);

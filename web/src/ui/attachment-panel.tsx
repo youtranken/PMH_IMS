@@ -33,7 +33,8 @@ export type AttachmentOwnerType =
   | 'service_account'
   | 'subnet'
   | 'nat_rule'
-  | 'device_model';
+  | 'device_model'
+  | 'software_seat';
 
 /**
  * Đuôi file gợi ý cho hộp thoại chọn — MỘT chỗ duy nhất, dùng chung cho panel (đính kèm sau)
@@ -101,6 +102,7 @@ const HINT_BY_OWNER: Partial<Record<AttachmentOwnerType, string>> = {
   subnet: 'attachments.hint_subnet',
   nat_rule: 'attachments.hint_nat_rule',
   device_model: 'attachments.hint_device_model',
+  software_seat: 'attachments.hint_software_seat',
 };
 
 export function AttachmentPanel({

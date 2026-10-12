@@ -36,11 +36,46 @@ export interface SoftwareRow {
   websites?: string[];
   /** Mã máy đang giữ ghế khớp ô tìm — chỉ danh sách có ô tìm trả về (SW-010). */
   matchedDevices?: string[];
+  /** Số hợp đồng / PO chung của mọi ghế (Q-27). Tùy chọn: bản ghi dựng tay ở test không cần. */
+  contract?: string | null;
+  /** Mỗi ghế có hợp đồng, ghi chú, giấy tờ riêng (Q-27). */
+  perSeat?: boolean;
+}
+
+/** Một ghế của hồ sơ bật ghế riêng (Q-27) — kèm lần gán đang chiếm, nếu có. */
+export interface SoftwareSeat {
+  id: string;
+  seatNo: number;
+  contract: string | null;
+  note: string | null;
+  assignmentId: string | null;
+  deviceId: string | null;
 }
 
 /** Trang chi tiết: thêm hồ sơ Thanh lý lúc nào, do ai (`by = 'system'` khi tự động). */
 export interface SoftwareDetailRow extends SoftwareRow {
   retirement: { at: string; by: string; auto: boolean } | null;
+  /** Ghế riêng theo thứ tự; rỗng khi hồ sơ không bật ghế riêng. */
+  seats?: SoftwareSeat[];
+}
+
+/**
+ * Mã gợi ý cho đợt mua kế tiếp của cùng phần mềm (Q-27): tăng số cuối, giữ độ rộng
+ * ("LIC-WIN25-01" → "LIC-WIN25-02"); mã không có số đợt sau `-` / `_` thì thêm "-02". Mã đã có trong
+ * `taken` thì tăng tiếp — gợi ý một mã đã dùng là bắt người ta sửa tay.
+ */
+export function nextBatchCode(code: string, taken: readonly string[] = []): string {
+  const used = new Set(taken.map((value) => value.toUpperCase()));
+  // Số đợt = số cuối đứng sau `-` / `_` (≤ 3 chữ số): "WIN25" là tên phiên bản, không phải đợt.
+  const match = /^(.*[-_])(\d{1,3})$/.exec(code);
+  const head = match ? match[1] : `${code}-`;
+  let n = match ? Number(match[2]) + 1 : 2;
+  const width = match ? match[2].length : 2;
+  for (;;) {
+    const candidate = `${head}${String(n).padStart(width, '0')}`;
+    if (!used.has(candidate.toUpperCase())) return candidate;
+    n += 1;
+  }
 }
 
 /**
@@ -67,6 +102,9 @@ export interface LicenseSeat extends SeatTerms {
   assignedBy: string;
   assignedAt: string;
   note: string | null;
+  /** Ghế riêng máy đang giữ (Q-27); null khi hồ sơ không bật ghế riêng hoặc gán vượt ghế. */
+  seatId?: string | null;
+  seatNo?: number | null;
 }
 
 /** Một license đang cài trên MỘT máy — dòng trong khu bung ở danh sách thiết bị. */

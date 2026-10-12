@@ -161,7 +161,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await setUp(page);
     await page.goto('/nat?q=khong-co-rule-nao-E2E');
     await expect(page.getByText('Không có luật nào khớp bộ lọc.')).toBeVisible();
-    await expect(page.getByText('Chưa có luật NAT nào')).toHaveCount(0);
+    await expect(page.getByText('Chưa có luật NAT nào.')).toHaveCount(0);
     await expect(page.getByRole('searchbox')).toHaveValue('khong-co-rule-nao-E2E');
   });
 });
@@ -174,6 +174,8 @@ test.describe('390px', () => {
     const f = await setUp(page);
     await voidRule(page, f);
     await page.goto('/nat');
+    // Ở điện thoại các bộ lọc gập sau nút "Bộ lọc" — mở ra rồi mới thấy chip.
+    await page.getByRole('button', { name: 'Bộ lọc', exact: true }).click();
     await page
       .getByRole('group', { name: 'Lọc theo trạng thái luật' })
       .getByRole('button', { name: /^Đã gỡ/ })

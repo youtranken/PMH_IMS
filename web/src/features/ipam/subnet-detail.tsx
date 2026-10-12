@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
@@ -37,7 +37,10 @@ import {
 } from "./ipam-types";
 import {
   BUCKET_KEY,
+  collapseFreeRuns,
   countSlots,
+  runLabel,
+  runMembers,
   filterSlots,
   nextFreeSlot,
   freeChoices,
@@ -49,6 +52,7 @@ import {
   SLOT_PAGE_SIZE,
   VOIDED_FILTER,
   type SlotFilter,
+  type SlotLine,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
 import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
@@ -118,6 +122,8 @@ export function SubnetPane({
   const [params] = useSearchParams();
   const focusIp = params.get("ip");
   const [highlight, setHighlight] = useState<string | null>(null);
+  /** Chuỗi ô trống người dùng đã bấm "Hiện từng IP" — khoá là ô đầu chuỗi. */
+  const [expandedRuns, setExpandedRuns] = useState<ReadonlySet<string>>(() => new Set());
   const appliedFocus = useRef<string | null>(null);
   const highlightRow = useRef<HTMLTableRowElement | null>(null);
   const scrolledTo = useRef<string | null>(null);
@@ -171,6 +177,15 @@ export function SubnetPane({
     return subnetDisabled ? raw.filter((slot) => slot.kind === "record") : raw;
   }, [slots.data, subnetDisabled]);
   const counts = useMemo(() => countSlots(all), [all]);
+  /** Trang chứa một địa chỉ ở chế độ "Tất cả" — tính trên dòng đã gộp, chuỗi chứa nó để mở. */
+  const pageOfLine = useCallback(
+    (address: string) =>
+      pageOfAddress(
+        collapseFreeRuns(all, { keep: address, gateway: item.gateway, expanded: expandedRuns }),
+        address,
+      ) ?? 1,
+    [all, item.gateway, expandedRuns],
+  );
   const allRef = useRef(all);
   allRef.current = all;
 
@@ -200,6 +215,7 @@ export function SubnetPane({
     setStatus(null);
     setNeedle("");
     setHighlight(null);
+    setExpandedRuns(new Set());
     setView("list");
     decidedFor.current = null;
   }, [id]);
@@ -225,9 +241,10 @@ export function SubnetPane({
     decidedFor.current = id;
     setStatus("all");
     setNeedle("");
-    setPage(pageOfAddress(all, focusIp) ?? 1);
+    setPage(pageOfLine(focusIp));
     setHighlight(focusIp);
-  }, [slots.data, all, focusIp, id]);
+    // `pageOfLine` đổi khi bung một chuỗi — khoá `appliedFocus` giữ cho khối này không áp lại.
+  }, [slots.data, all, focusIp, id, pageOfLine]);
 
   const shown: SlotFilter = status ?? "all";
   const filtered = useMemo(
@@ -240,13 +257,25 @@ export function SubnetPane({
    * nên cả dải về trong MỘT lượt gọi. Cắt trang ở đây thì bộ lọc và con số đếm trên từng nút
    * vẫn tính trên TOÀN dải — đó mới là câu trả lời đúng cho "còn mấy chỗ trống".
    */
-  const rows = pageSlots(filtered, page);
+  /*
+   * Chế độ "Tất cả" (không gõ tìm) gộp chuỗi ô trống dài thành một dòng (Q-27). Chế độ "Trống"
+   * và ô tìm vẫn ra từng ô: ở đó người ta đang chọn đúng một địa chỉ. Trang cắt trên DÒNG đã
+   * gộp — cắt trên ô thì một trang 50 ô trống chỉ còn một dòng.
+   */
+  const lines: SlotLine[] = useMemo(
+    () =>
+      shown === "all" && !needle.trim()
+        ? collapseFreeRuns(filtered, { keep: highlight, gateway: item.gateway, expanded: expandedRuns })
+        : filtered,
+    [filtered, shown, needle, highlight, item.gateway, expandedRuns],
+  );
+  const rows = pageSlots(lines, page);
 
   // Đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào một bảng
   // rỗng và tưởng không có gì.
   useEffect(() => {
-    setPage((current) => clampPage(current, filtered.length, SLOT_PAGE_SIZE));
-  }, [filtered.length]);
+    setPage((current) => clampPage(current, lines.length, SLOT_PAGE_SIZE));
+  }, [lines.length]);
 
   // Cuộn tới dòng được tô sáng một lần — trên điện thoại nó thường nằm dưới mép màn hình.
   useEffect(() => {
@@ -267,7 +296,7 @@ export function SubnetPane({
     setView("list");
     setStatus("all");
     setNeedle("");
-    setPage(pageOfAddress(all, address) ?? 1);
+    setPage(pageOfLine(address));
     scrolledTo.current = null;
     setHighlight(address);
   };
@@ -277,7 +306,7 @@ export function SubnetPane({
     canWrite ? (
       <button
         type="button"
-        className="btn sm ghost"
+        className="btn sm"
         onClick={() => setAssigning({ address, record })}
       >
         {t("ipam.assign")}
@@ -470,7 +499,42 @@ export function SubnetPane({
               {ipHead}
               <tbody>
                 {rows.map((slot) =>
-                  slot.kind === "free" ? (
+                  slot.kind === "run" ? (
+                    <tr key={`run-${slot.address}`} className="row-muted free-run">
+                      <td data-label={t("ipam.address")} className="col-ip">
+                        <span className="mono">{runLabel(slot)}</span>
+                      </td>
+                      <td data-label={t("ipam.status")} className="col-status">
+                        <span className="badge muted">{t("ipam.statusFree")}</span>
+                      </td>
+                      {/* Ba cột Thiết bị · Site · Người dùng gộp một ô; cột ngày giữ ô riêng vì nó
+                          ẩn ở khổ 961–1440px — gộp cả nó thì ô lấn sang cột Thao tác. */}
+                      <td colSpan={3} className="free-run-note">
+                        {t("ipam.freeRunCount", { count: slot.count })}{" "}
+                        <button
+                          type="button"
+                          className="btn sm ghost"
+                          onClick={() =>
+                            setExpandedRuns(
+                              (current) => new Set([...current, ...runMembers(filtered, slot)]),
+                            )
+                          }
+                        >
+                          {t("ipam.freeRunExpand")}
+                        </button>
+                      </td>
+                      <td data-label={t("ipam.assignedAt")} className="col-date col-wide">
+                        <Empty />
+                      </td>
+                      <td data-label={t("common.actions")} className="col-actions">
+                        <div className="action-cell">
+                          {/* Cấp ô ĐẦU chuỗi — cùng hộp với "Cấp IP" của từng ô. */}
+                          {assignButton(slot.address, null)}
+                          <span className="kebab-slot" aria-hidden="true" />
+                        </div>
+                      </td>
+                    </tr>
+                  ) : slot.kind === "free" ? (
                     <tr
                       key={slot.address}
                       className={
@@ -502,7 +566,11 @@ export function SubnetPane({
                           năm ô kia đều tự xưng tên, riêng ô này thì không — thành ra một cái
                           nút lửng lơ không biết thuộc cột nào. */}
                       <td data-label={t("common.actions")} className="col-actions">
-                        <div className="action-cell">{assignButton(slot.address, null)}</div>
+                        {/* Chừa chỗ ô ⋮: ô trống không có menu, thiếu chỗ thì "Cấp IP" lệch cột với "Sửa". */}
+                        <div className="action-cell">
+                          {assignButton(slot.address, null)}
+                          <span className="kebab-slot" aria-hidden="true" />
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -647,9 +715,9 @@ export function SubnetPane({
           ) : null}
 
           <Pagination
-            page={clampPage(page, filtered.length, SLOT_PAGE_SIZE)}
+            page={clampPage(page, lines.length, SLOT_PAGE_SIZE)}
             limit={SLOT_PAGE_SIZE}
-            total={filtered.length}
+            total={lines.length}
             onPageChange={setPage}
           />
         </>

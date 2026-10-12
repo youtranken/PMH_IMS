@@ -22,6 +22,9 @@ import { useMediaQuery } from '@/ui/use-media-query';
  * trước: trạng thái, bảo hành, nhà cung cấp in ở hai chỗ cách nhau 40px.
  *
  * Dưới 1199px: một cột, và cột phải nhảy LÊN TRƯỚC (`order: -1` trong `css/detail-tabs.css`).
+ *
+ * Không truyền `rail` thì một cột trơn: trang đã nói mọi thuộc tính ở dải 4 ô (Q-27) và không
+ * còn thẻ riêng nào cho cột phải.
  */
 export function DetailLayout({
   rail,
@@ -29,7 +32,7 @@ export function DetailLayout({
   railStrip = false,
   children,
 }: {
-  rail: ReactNode;
+  rail?: ReactNode;
   /**
    * Dải một dòng thay cho thẻ định danh trên điện thoại (≤680px): thẻ đầy đủ đứng TRƯỚC thanh
    * tab và dài ~600px, nên tab nằm tận dưới màn. Có prop này thì thẻ thu vào nút "Chi tiết",
@@ -47,11 +50,12 @@ export function DetailLayout({
   const { t } = useTranslation();
   const narrow = useMediaQuery(RAIL_COLLAPSE_QUERY);
   const [open, setOpen] = useState(false);
-  if (railStrip && railSummary) {
+  /* Không có `railSummary` thì một cột trơn: trang đã có tóm tắt ở chỗ khác (dải 4 ô, Q-27). */
+  if (railStrip || !rail) {
     return (
       <div className="detail-2col detail-1col">
         <div className="detail-main">
-          <div className="rail-strip">{railSummary}</div>
+          {railSummary ? <div className="rail-strip">{railSummary}</div> : null}
           {children}
         </div>
       </div>
@@ -132,88 +136,70 @@ export function DetailSection({
   title,
   children,
   compact,
+  action,
+  foldable,
+  id,
 }: {
   title: string;
   children: ReactNode;
   compact?: boolean;
+  /** Nút việc của khu ("Bổ sung N ô"), đứng bên phải tiêu đề — không lọt thỏm cuối khu. */
+  action?: ReactNode;
+  /**
+   * Khu ít dùng mà dài (ảnh trên sơ đồ): gập sẵn, dòng tiêu đề nói tóm tắt để biết có cần mở
+   * không. Nội dung gập thì gỡ khỏi cây, cùng cách với khu IP/NAT của trang thiết bị.
+   */
+  foldable?: {
+    defaultOpen?: boolean;
+    summary?: ReactNode;
+    /** Mở / gập do nơi gọi giữ (bấm ô trên bản đồ quan hệ là mở đúng khu) — có thì bỏ `defaultOpen`. */
+    open?: boolean;
+    onToggle?: () => void;
+  };
+  /** `id` của khu để nơi khác cuộn tới (`#sec-ipam`); tiêu đề vẫn dùng id tự sinh. */
+  id?: string;
 }) {
-  const id = useId();
-  return (
-    <section className={compact ? 'card device-panel' : 'card'} aria-labelledby={id}>
-      <h2 className="form-section-title" id={id}>
+  const { t } = useTranslation();
+  const titleId = useId();
+  const bodyId = useId();
+  const [ownOpen, setOwnOpen] = useState(foldable?.defaultOpen ?? false);
+  const open = foldable?.open ?? ownOpen;
+  const toggle = foldable?.onToggle ?? (() => setOwnOpen((value) => !value));
+  const shown = !foldable || open;
+  const head =
+    action || foldable ? (
+      <div className="form-section-head detail-section-head">
+        <h2 className="form-section-title" id={titleId}>
+          {title}
+        </h2>
+        <span className="detail-section-actions">
+          {shown ? action : null}
+          {foldable ? (
+            <button
+              type="button"
+              className="btn sm ghost"
+              aria-expanded={open}
+              /* Thân khu bị gỡ khỏi cây khi gập: chỉ trỏ tới nó lúc nó có mặt, không thì IDREF hỏng. */
+              aria-controls={open ? bodyId : undefined}
+              aria-label={t(open ? 'detail.sectionCollapse' : 'detail.sectionExpand', { title })}
+              onClick={toggle}
+            >
+              <Chevron direction={open ? 'up' : 'down'} />
+            </button>
+          ) : null}
+        </span>
+        {/* Tóm tắt xuống hàng riêng dưới tiêu đề: nút gập luôn đứng cùng hàng tiêu đề, ở mọi cỡ màn. */}
+        {foldable && !open && foldable.summary ? <span className="muted small detail-section-summary">{foldable.summary}</span> : null}
+      </div>
+    ) : (
+      <h2 className="form-section-title" id={titleId}>
         {title}
       </h2>
-      {children}
+    );
+  return (
+    <section id={id} className={compact ? 'card device-panel' : 'card'} aria-labelledby={titleId}>
+      {head}
+      {shown ? <div id={bodyId}>{children}</div> : null}
     </section>
-  );
-}
-
-/**
- * Một dòng của thẻ định danh: nhãn · giá trị · chú thích.
- *
- * `children` cho phép nhét cả huy hiệu hay thanh hạn vào chỗ giá trị — `WarrantyTimeline`
- * đứng ở đây là đúng chỗ, và nhờ vậy trang không còn thẻ "Bảo hành" thứ hai ở cột chính.
- */
-export function RailRow({
-  label,
-  children,
-  note,
-  wide = false,
-}: {
-  label: string;
-  children: ReactNode;
-  note?: ReactNode;
-  /** Chiếm trọn hàng khi thẻ chia hai cột (màn hẹp) — cho thanh hạn: 150px thì hai mốc ngày
-   *  và nhãn chồng lên nhau. */
-  wide?: boolean;
-}) {
-  return (
-    <div className={wide ? 'rail-row rail-row-wide' : 'rail-row'}>
-      <span className="rail-k">{label}</span>
-      <span className="rail-v">{children}</span>
-      {note ? <span className="rail-note">{note}</span> : null}
-    </div>
-  );
-}
-
-/**
- * Chỉ vẽ dòng khi CÓ giá trị — thẻ "NHÀ CUNG CẤP: —" là một dòng chết trong một cột chỉ có
- * chừng sáu dòng. Khác `orDash` ở lưới bên trái: dưới đó một ô rỗng còn nói được "trường này
- * tồn tại, chưa ai khai", còn ở đây nó chỉ tốn chỗ.
- */
-export function RailRowIfSet({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string | null | undefined;
-  note?: ReactNode;
-}) {
-  /*
-   * KHÔNG CÓ `value` NHƯNG CÓ `note` THÌ VẪN PHẢI VẼ.
-   *
-   * Trả `null` ngay khi `value` rỗng là nuốt luôn cả `note`. Mà `note` đang
-   * là chỗ DUY NHẤT vài trường tồn tại trên trang đọc: `department` chỉ xuất hiện dưới dạng
-   * chú của dòng "Người dùng" / "Người phụ trách".
-   *
-   * Cảnh hỏng: một máy đã gán cho phòng Kế toán nhưng chưa ghi tên người dùng cụ thể. Trang
-   * chi tiết KHÔNG hiện bộ phận ở bất cứ đâu — và `BlankFields` cũng bỏ qua nó, vì
-   * `item.department` CÓ giá trị nên nó không nằm trong danh sách "Chưa khai". Giá trị có
-   * trong DB, có trong form sửa, chỉ trang đọc là không.
-   *
-   * Vẽ ô với `value` rỗng thì dòng chú đứng một mình dưới nhãn — vẫn đọc được, và vẫn đúng
-   * luật "không vẽ ô RỖNG": ô này không rỗng, nó có nội dung, chỉ là nội dung nằm ở `note`.
-   *
-   * Lớp ternary ở nơi gọi (`device-detail`, `service-account-detail`) KHÔNG phải bản chép của
-   * phép canh này — nó chọn cái NHÃN: có người phụ trách thì bộ phận là chú của dòng ấy, không
-   * có thì bộ phận đứng thành dòng riêng mang đúng nhãn của nó. Gỡ nó đi vì tưởng trùng lặp là
-   * mất lại đúng lỗi mà cả hai chỗ sinh ra để vá.
-   */
-  if (!value && !note) return null;
-  return (
-    <RailRow label={label} note={note}>
-      {value}
-    </RailRow>
   );
 }
