@@ -1117,6 +1117,51 @@ phần mềm / danh mục, trang chi tiết mỗi máy một kiểu vì ô trố
   - **Giữ nguyên có chủ ý:** nhãn phân hệ ở đầu hộp thoại chỉ cho Thiết bị / Phần mềm / Danh mục
     (ba thứ hay bị lẫn — Q-27), không thêm cho hộp IP / NAT / két.
 
+### Q-28 · Phiếu ISO đợt 1: chỉ 0203, 0206, 0208 (12/10/2026, chủ dự án chốt)
+
+Thay phạm vi Epic 8–9 trong `epics.md` cho đợt này. Lý do: đối chiếu bộ mẫu thật
+(`Epic8-9 Document/SP-IT02/`) cho thấy epics lệch mẫu nhiều chỗ. Chủ dự án chỉ cần ba phiếu
+IT dùng hằng ngày.
+
+- **Phạm vi:**
+  - Đợt này làm 0203 (theo dõi backup), 0206 (ghi nhận sự cố) và 0208 (theo dõi antivirus).
+  - Để sau: 0204, 0207, 0209, 0210, 0213, 0214, 0201, 0211, 0212, Documents.
+  - Không làm: 0205 (phiếu gửi các phòng ban tự theo dõi và ký, IT không quản trên IMS).
+- **Mẫu giữ nguyên như giấy:** cột, bố cục, ô ký. Tên job, tên máy, bộ phận đều gõ tay,
+  không lấy từ kho thiết bị.
+- **0203:**
+  - Cột cố định: `No · Name Job Backup · Points NAS · Storage location · Points Cloud ·
+    Storage location · 1…31`.
+  - Danh sách job do IT thêm, sửa, sắp xếp, ngừng. Seed sẵn 30 job theo mẫu. Số điểm lưu và
+    nơi lưu là thông tin của job.
+  - Mỗi ô ngày nhận ✓ hoặc ✗; ngày tương lai bị khoá. Có nút đánh ✓ cả ngày cho mọi dòng chưa
+    tick, rồi chỉ sửa ô lỗi thành ✗.
+  - Bản in dùng ✓/✗ (máy chủ không có font emoji).
+- **0206:**
+  - Dùng cho mọi sự cố: lập từ ô ✗ của 0203 hoặc 0208, hoặc lập thẳng cho sự cố khác (sau này
+    cả nâng cấp hệ thống).
+  - Một phiếu cho một ngày, hoặc nhiều ngày của cùng một sự cố.
+  - Detection Time và Resolution Time nhận ngày + giờ, chọn trên lịch theo khoảng.
+  - Sự cố kéo dài (X → Y): IT lập phiếu khi đã sửa xong.
+  - Loại Backup có bảng "Detail Error Backup" (nhiều job một phiếu); bốn loại còn lại chỉ có
+    phần chung, đúng mẫu.
+  - Ô ✗ được coi là "đã có phiếu" khi nằm trong khoảng ngày của một 0206 có ghi đúng dòng đó.
+- **0208:**
+  - Mỗi dòng là **một lần issue**: một máy, một ngày phát hiện. Cùng máy có hai ngày issue
+    trong tháng thì ghi hai dòng.
+  - Dòng gom theo bộ phận. Bộ phận không cố định: chỉ thêm bộ phận nào có issue trong tháng.
+  - Dòng cuối "Other Division" tick ✓ đủ 1–31, nghĩa là các phòng ban khác không có issue.
+  - Ngày không có issue thì ✓; ✗ cũng phải có phiếu 0206 như 0203.
+- **Chốt kỳ (cả ba phiếu):**
+  - Không chốt được khi còn ô ✗ chưa có 0206.
+  - Member gửi yêu cầu chốt; SA/Admin duyệt qua bộ máy xin – duyệt dùng chung (Q-05). Duyệt
+    xong thì phiếu khoá.
+  - Member in ra, ký tay, scan rồi đính kèm bản đã ký vào phiếu.
+- **Mở lại kỳ đã chốt:** Member gửi yêu cầu kèm lý do bắt buộc; SA/Admin duyệt.
+- **Quyền:** mọi tài khoản IT (Member trở lên) tick phiếu và lập 0206.
+- **Lưu và tra cứu:** giữ vĩnh viễn, tra theo năm / tháng / loại (FR-031). Quy trình SP-IT02
+  không quy định thời hạn lưu.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
