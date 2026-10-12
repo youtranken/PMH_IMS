@@ -63,8 +63,9 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
      * KIỂM KÊ chứ không chỉ kiểm một mục: so cả danh sách, sắp xếp trước khi so để thứ tự
      * hiển thị đổi (việc UX làm được) không kéo bài này đỏ theo.
      */
+    // Chỉ lấy dòng tên: huy hiệu số ("Sắp hết hạn" + "1") đi theo dữ liệu của máy chạy test.
     const seen = (await nav.getByRole('link').allInnerTexts())
-      .map((text) => text.trim())
+      .map((text) => text.trim().split('\n')[0].trim())
       .sort();
     const expected = [
       // 15 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật).
