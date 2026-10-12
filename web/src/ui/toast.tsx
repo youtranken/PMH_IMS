@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloseIcon } from '@/ui/glyph-icons';
@@ -93,6 +93,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const burstTimer = useRef<number | undefined>(undefined);
   const nextId = useRef(1);
   const timers = useRef(new Map<number, ToastTimer>());
+
+  /* Gỡ khung (đổi trang gốc, test kết thúc) mà còn toast: dừng mọi đồng hồ, kẻo nó gọi setState
+     trên một cây đã đi mất — ở test, lúc đó jsdom đã gỡ `window` và lỗi văng ra file khác. */
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      for (const timer of pending.values()) window.clearTimeout(timer.timeoutId);
+      pending.clear();
+      window.clearTimeout(burstTimer.current);
+    };
+  }, []);
 
   const remove = useCallback((id: number) => {
     const timer = timers.current.get(id);
