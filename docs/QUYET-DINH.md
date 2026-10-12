@@ -1161,6 +1161,27 @@ IT dùng hằng ngày.
 - **Quyền:** mọi tài khoản IT (Member trở lên) tick phiếu và lập 0206.
 - **Lưu và tra cứu:** giữ vĩnh viễn, tra theo năm / tháng / loại (FR-031). Quy trình SP-IT02
   không quy định thời hạn lưu.
+- **Bổ sung sau khi duyệt thiết kế (12/10/2026, chủ dự án duyệt bản Claude Design
+  `https://claude.ai/artifact/DPeb4R4GFzJKJ1y8UN6svp`):**
+  - Lưới tháng là chỗ thao tác duy nhất của 0203: bấm ô để đổi ✓ / ✗ / trống, lập hoặc mở 0206;
+    nút ✓ trên đầu mỗi cột đánh hết ô còn trống của ngày đó. Sửa được mọi ngày đã qua của kỳ đang
+    ghi. Ô trống ở ngày đã qua là "bỏ sót" và được đếm riêng.
+  - 0208 ghi theo ngày: mỗi ngày đã qua hoặc hôm nay phải có kết quả, là "không có issue" hoặc ít
+    nhất một dòng issue. Form ghi issue chọn được ngày, có đủ cột của mẫu (Reported Date, Division,
+    Computer Name, Incident Description, Resolution Date, Handled).
+  - Danh sách job backup (0203) và danh sách bộ phận (0208) là hai danh sách do IT tự quản, vào từ
+    nút trên màn phiếu, không nằm ở sidebar. Bộ phận chỉ để chọn nhanh; phiếu tháng vẫn chỉ hiện
+    bộ phận có issue. Thêm, sửa, ngừng chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ danh sách lúc chốt.
+  - Bốn trạng thái kỳ, dùng một tên ở mọi màn: **Đang ghi → Chờ duyệt → Đã chốt · chờ bản ký →
+    Hoàn tất.** Chờ duyệt thì ô đã khoá; SA/Admin "Trả lại" thì kỳ về Đang ghi.
+  - Trước khi gửi chốt 0203 / 0208 phải qua màn **Xem lại**: đúng bản in sẽ ký, cùng danh sách kiểm
+    (đủ ngày, không còn ô bỏ sót, mọi ✗ đã có 0206). Còn mục chưa đạt thì không gửi được.
+  - Lập 0206 cũng có bước Xem lại (bản phiếu dạng giấy + danh sách kiểm) trước khi lưu. Số phiếu
+    `0206-YYYY-NNN` chỉ cấp khi lưu, đếm lại từ 001 mỗi năm.
+  - 0206 thuộc kỳ của tháng chứa Detection Time, khoá khi kỳ đó được duyệt chốt, và có bản ký riêng
+    của từng phiếu.
+  - Màn Kỳ phiếu xếp theo năm rồi tháng; mỗi loại phiếu một cột, loại phiếu làm sau thêm cột mới.
+  - Kỳ đã khoá vẫn mở xem được ở màn phiếu (dải "Đã chốt · chỉ xem", không bấm được ô).
 
 ### Q-09 · Tài liệu
 
