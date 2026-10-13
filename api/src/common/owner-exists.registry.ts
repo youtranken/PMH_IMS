@@ -77,6 +77,13 @@ export interface OwnerResolver {
    * KHÔNG BẮT BUỘC: loại chưa khai thì két không có gì để so.
    */
   noteOf?(ownerType: string, ownerId: string): Promise<string | null>;
+
+  /**
+   * Chủ thể còn NHẬN loại file này không — luật riêng của chủ thể, chạy SAU whitelist nội dung
+   * chung của `files` (vd bản ký phiếu ISO chỉ nhận PDF/ảnh scan, chỉ khi kỳ đã chốt). Ném 400/409
+   * kèm câu tiếng Việt. KHÔNG BẮT BUỘC: không khai = mọi file qua được whitelist chung đều nhận.
+   */
+  assertAccepts?(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }): Promise<void>;
 }
 
 @Injectable()
@@ -115,6 +122,11 @@ export class OwnerExistsRegistry {
   async assertUsableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
     const resolver = this.resolverFor(ownerType);
     await resolver.assertUsableWithin?.(tx, ownerType, ownerId);
+  }
+
+  /** Luật nhận file riêng của chủ thể; loại chưa khai `assertAccepts` thì đi qua. */
+  async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }): Promise<void> {
+    await this.resolverFor(ownerType).assertAccepts?.(ownerType, ownerId, file);
   }
 
   /** Ghi chú của hồ sơ chủ thể, `null` khi loại đó chưa khai `noteOf` hoặc ghi chú trống. */

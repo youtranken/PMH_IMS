@@ -13,7 +13,7 @@
  * Lưu ý cú pháp: trong chuỗi JS `'\.'` rơi mất dấu chéo và thành `.` (khớp ký tự bất kỳ).
  * Mọi regex dưới đây phải viết `\\.` — bản trước viết `\.` nên các luật rộng hơn ý định.
  */
-const BIZ = 'devices|software|ipam|vault|service-accounts|sheets|incidents|documents|dashboard|disposal|diagrams';
+const BIZ = 'devices|software|ipam|vault|service-accounts|sheets|incidents|documents|dashboard|disposal|diagrams|iso-forms';
 const BASE = 'auth|audit|approvals|outbox|queue|expiry|files|config-sys|catalog|users|mail';
 
 module.exports = {

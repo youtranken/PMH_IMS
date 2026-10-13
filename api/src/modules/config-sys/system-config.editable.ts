@@ -20,7 +20,8 @@ export type SettingGroup =
   | 'ipam'
   | 'files'
   | 'diagram'
-  | 'devices';
+  | 'devices'
+  | 'iso';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -136,6 +137,16 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramPhotoMaxPx', group: 'diagram', type: 'int', unit: 'px', min: 120, max: 1600, warnAbove: 960 },
   { name: 'diagramDeviceWidthPx', group: 'diagram', type: 'int', unit: 'px', min: 40, max: 480 },
   { name: 'devicePortTemplateMax', group: 'devices', type: 'int', unit: 'ports', min: 8, max: 1024 },
+  // Phiếu ISO (Q-28). Tháng bắt đầu dạng YYYY-MM; loại bản ký là danh sách đuôi cách nhau dấu phẩy.
+  { name: 'isoFirstMonth', group: 'iso', type: 'text', maxLength: 7 },
+  { name: 'isoScanMaxMb', group: 'iso', type: 'int', unit: 'mb', min: 1, max: 25 },
+  { name: 'isoScanTypes', group: 'iso', type: 'text', maxLength: 40 },
+  { name: 'isoRemindHour', group: 'iso', type: 'int', unit: 'hours', min: 0, max: 23 },
+  { name: 'isoRemindBackupAfterDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 31 },
+  { name: 'isoRemindSubmitRepeatDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 31 },
+  { name: 'isoRemindApprovalDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 31 },
+  { name: 'isoRemindSignedDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 90 },
+  { name: 'isoRemindInProgressDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 90 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

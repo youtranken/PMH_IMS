@@ -243,6 +243,20 @@ export const CONFIG_KEYS = {
   diagramDeviceWidthPx: { key: 'diagram.device_width_px', fallback: 160 },
   /** Trần số cổng của một máy (cổng mẫu của model + cổng riêng, Q-26). */
   devicePortTemplateMax: { key: 'device.port_template_max', fallback: 256 },
+  /*
+   * Phiếu ISO (Q-28). `iso.first_month`: tháng trước mốc này là phiếu giấy, IMS không mở kỳ.
+   * Bản ký nhận PDF / ảnh scan; trần riêng nhỏ hơn trần chung `file.max_size_mb`.
+   * Mail nhắc chạy một lần mỗi ngày từ `iso.remind_hour`; các số ngày là ngưỡng nhắc lại.
+   */
+  isoFirstMonth: { key: 'iso.first_month', fallback: '2026-11' },
+  isoScanMaxMb: { key: 'iso.scan_max_mb', fallback: 20 },
+  isoScanTypes: { key: 'iso.scan_types', fallback: 'pdf,jpg,png' },
+  isoRemindHour: { key: 'iso.remind_hour', fallback: 8 },
+  isoRemindBackupAfterDays: { key: 'iso.remind_backup_after_days', fallback: 2 },
+  isoRemindSubmitRepeatDays: { key: 'iso.remind_submit_repeat_days', fallback: 3 },
+  isoRemindApprovalDays: { key: 'iso.remind_approval_days', fallback: 2 },
+  isoRemindSignedDays: { key: 'iso.remind_signed_days', fallback: 7 },
+  isoRemindInProgressDays: { key: 'iso.remind_in_progress_days', fallback: 7 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

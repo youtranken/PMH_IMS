@@ -46,6 +46,9 @@ export const FILE_OWNER_TYPES = [
   'device_model',
   // Giấy tờ riêng của một ghế license (Q-27) — chủ thể là hàng `software_seat` của `software`.
   'software_seat',
+  // Bản scan đã ký của kỳ phiếu ISO và của từng phiếu 0206 (Q-28) — chủ thể thuộc `iso-forms`.
+  'iso_period',
+  'iso_incident',
 ] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 
@@ -192,6 +195,8 @@ export class FilesService implements OnModuleInit {
      * thì đã tạo đúng cái file mồ côi cần tránh, và phải trông vào nhánh dọn ở `catch`.
      */
     await this.owners.assertExists(input.ownerType, input.ownerId);
+    // Chủ thể có luật riêng (bản ký phiếu ISO chỉ nhận PDF/ảnh scan, trần nhỏ hơn) — hỏi trước khi ghi đĩa.
+    await this.owners.assertAccepts(input.ownerType, input.ownerId, { mime: detected.mime, sizeBytes: input.buffer.length });
 
     const dir = storageDir();
     await mkdir(dir, { recursive: true });
@@ -255,6 +260,18 @@ export class FilesService implements OnModuleInit {
     // Một lượt hỏi tên cho cả danh sách, qua cửa công khai của `users` (AD-2).
     const names = await this.users.namesByIds([...new Set(rows.map((row) => row.uploadedBy))]);
     return rows.map((row) => ({ ...toRecord(row), uploadedByName: names.get(row.uploadedBy) ?? null }));
+  }
+
+  /** File còn sống của NHIỀU chủ thể cùng loại một lượt — màn danh sách hiện trạng thái giấy tờ không N+1. */
+  async listForOwners(ownerType: FileOwnerType, ownerIds: string[]): Promise<FileRecord[]> {
+    const unique = [...new Set(ownerIds)];
+    if (unique.length === 0) return [];
+    const rows = await this.db
+      .select()
+      .from(filesTable)
+      .where(and(eq(filesTable.ownerType, ownerType), inArray(filesTable.ownerId, unique), isNull(filesTable.deletedAt)))
+      .orderBy(asc(filesTable.createdAt));
+    return rows.map(toRecord);
   }
 
   /** Metadata + stream để download — controller set header attachment. */

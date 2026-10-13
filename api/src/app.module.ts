@@ -41,6 +41,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { ServiceAccountsModule } from './modules/service-accounts/service-accounts.module';
 import { SoftwareModule } from './modules/software/software.module';
 import { IpamModule } from './modules/ipam/ipam.module';
+import { IsoFormsModule } from './modules/iso-forms/iso-forms.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { UsersModule } from './modules/users/users.module';
@@ -103,6 +104,7 @@ import { VaultModule } from './modules/vault/vault.module';
     DashboardModule,
     DisposalModule,
     DiagramsModule,
+    IsoFormsModule,
   ],
   controllers: [HealthController],
   providers: [

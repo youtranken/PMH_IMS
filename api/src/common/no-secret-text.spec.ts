@@ -89,6 +89,10 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'diagrams/diagrams.controller.ts#label',
     // Bình luận ghim trên bản vẽ (FR-035, Q-19).
     'diagrams/diagram-review.controller.ts#body',
+    // Phiếu 0206 (Q-28): câu mô tả sự cố, cách khắc phục, thông báo lỗi chép từ Veeam.
+    'iso-forms/iso-forms.controller.ts#correctiveAction',
+    'iso-forms/iso-forms.controller.ts#errorMessage',
+    'iso-forms/iso-forms.controller.ts#resolution',
   ]);
 
   /** Chữ có cấu trúc / ô lọc / chính là bí mật — luật ô chữ tự do không áp. */
@@ -115,6 +119,10 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'diagrams/diagrams.controller.ts#ranges',
     // Id ô draw.io mà bình luận ghim vào.
     'diagrams/diagram-review.controller.ts#cellId',
+    // Phiếu ISO: tên job / đối tượng con, số điểm lưu, nơi lưu, tên máy, tên người xử lý, bộ phận.
+    'iso-forms/iso-catalog.controller.ts#label',
+    'pointsNas', 'storageNas', 'pointsCloud', 'storageCloud', 'storage', 'jobName', 'computerName',
+    'handledBy', 'newDivisionName',
     // Id, ngày, email.
     'siteId', 'deviceTypeId', 'deviceId', 'deviceIds', 'birthDate', 'memberEmail', 'scopeRef',
     'recipients', 'websites', 'kinds',
