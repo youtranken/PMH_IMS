@@ -1142,7 +1142,7 @@ IT dùng hằng ngày.
     cả nâng cấp hệ thống).
   - Một phiếu cho một ngày, hoặc nhiều ngày của cùng một sự cố.
   - Detection Time và Resolution Time nhận ngày + giờ, chọn trên lịch theo khoảng.
-  - Sự cố kéo dài (X → Y): IT lập phiếu khi đã sửa xong.
+  - Sự cố kéo dài (X → Y): IT thường lập phiếu khi đã sửa xong (ngoại lệ In Progress xem bên dưới).
   - Loại Backup có bảng "Detail Error Backup" (nhiều job một phiếu); bốn loại còn lại chỉ có
     phần chung, đúng mẫu.
   - Ô ✗ được coi là "đã có phiếu" khi nằm trong khoảng ngày của một 0206 có ghi đúng dòng đó.
@@ -1158,7 +1158,7 @@ IT dùng hằng ngày.
     xong thì phiếu khoá.
   - Member in ra, ký tay, scan rồi đính kèm bản đã ký vào phiếu.
 - **Mở lại kỳ đã chốt:** Member gửi yêu cầu kèm lý do bắt buộc; SA/Admin duyệt.
-- **Quyền:** mọi tài khoản IT (Member trở lên) tick phiếu và lập 0206.
+- **Quyền:** xem mục "Người phụ trách" bên dưới (thay luật cũ "mọi tài khoản IT tick phiếu").
 - **Lưu và tra cứu:** giữ vĩnh viễn, tra theo năm / tháng / loại (FR-031). Quy trình SP-IT02
   không quy định thời hạn lưu.
 - **Bổ sung sau khi duyệt thiết kế (12/10/2026, chủ dự án duyệt bản Claude Design
@@ -1178,10 +1178,44 @@ IT dùng hằng ngày.
     (đủ ngày, không còn ô bỏ sót, mọi ✗ đã có 0206). Còn mục chưa đạt thì không gửi được.
   - Lập 0206 cũng có bước Xem lại (bản phiếu dạng giấy + danh sách kiểm) trước khi lưu. Số phiếu
     `0206-YYYY-NNN` chỉ cấp khi lưu, đếm lại từ 001 mỗi năm.
-  - 0206 thuộc kỳ của tháng chứa Detection Time, khoá khi kỳ đó được duyệt chốt, và có bản ký riêng
-    của từng phiếu.
+  - 0206 khoá khi kỳ của nó được duyệt chốt, và có bản ký riêng của từng phiếu.
   - Màn Kỳ phiếu xếp theo năm rồi tháng; mỗi loại phiếu một cột, loại phiếu làm sau thêm cột mới.
   - Kỳ đã khoá vẫn mở xem được ở màn phiếu (dải "Đã chốt · chỉ xem", không bấm được ô).
+  - Chỉ gửi chốt được từ ngày cuối tháng của kỳ trở đi (Check Date trên bản in là ngày cuối kỳ).
+  - Member gửi chốt thì SA/Admin duyệt. SA/Admin tự gửi chốt thì được tự duyệt (có ghi nhật ký).
+  - 0206 thuộc kỳ của tháng chứa Detection Time, không theo Date Report.
+- **Trả lời câu hỏi trước khi code (13/10/2026, chủ dự án):**
+  - Bộ phận 0208: không seed sẵn 5 bộ phận của mẫu, chỉ một bộ phận làm ví dụ; IT tự thêm bộ
+    phận khác. Bản in 0208 chỉ có các dòng thực sự ghi, không in dòng trống cho bộ phận không có
+    issue.
+  - Dòng Note cuối mẫu 0208 giữ nguyên như giấy (0208 cũng dùng ✓ / ✗).
+  - Số phiếu 0206 chỉ hiện trên IMS, không in lên bản giấy. Danh sách 0206 phải cho thấy sự cố
+    thuộc phiếu nào (0203 / 0208 / khác) và xem theo năm.
+  - Một sự cố chỉ một phiếu 0206. Sự cố bắt đầu tháng 10 kéo sang tháng 11 thì phiếu tính cho
+    tháng 10; ô ✗ của tháng 11 gắn vào chính phiếu đó, không lập phiếu mới.
+  - Sự cố chưa sửa xong lúc cuối tháng: được lập 0206 trước với Current Status = In Progress; sửa
+    xong thì đổi trạng thái rồi in trình ký. Thường lệ vẫn là sửa xong mới lập.
+  - Job thêm giữa tháng: các ngày trước ngày bắt đầu để trống và không tính là bỏ sót. Gần như mọi
+    job chạy hằng ngày, không cần ô "không áp dụng".
+  - Job #24–29 của mẫu là dòng dư, vẫn tick bình thường; không tạo các job này trên prod.
+  - Mở lại kỳ thì các 0206 của kỳ đó mở theo; phiếu nào bị sửa thì bản ký cũ của nó bị đánh dấu
+    cũ, phải in, ký và tải bản mới.
+  - Bắt đầu dùng từ tháng 11/2026. Kỳ phiếu tự sinh theo năm / tháng cho mọi năm sau, không nhập
+    tay từng kỳ.
+  - 0206 đang In Progress không chặn chốt kỳ: ô ✗ đã có phiếu là đủ để gửi chốt. Phiếu đó vẫn sửa
+    được tới khi đổi sang Resolved, lúc đó mới khoá, in và tải bản ký riêng. Kỳ chỉ Hoàn tất khi
+    mọi 0206 của kỳ đã có bản ký.
+  - **Người phụ trách:** màn Danh mục có chỗ gán người phụ trách cho từng loại phiếu (0203, 0208,
+    loại phiếu làm sau cũng dùng chỗ này): một người chính và một người dự phòng.
+  - Chỉ người phụ trách (chính hoặc dự phòng) và SA/Admin được tick, ghi issue và gửi chốt phiếu
+    đó; Member khác chỉ xem. 0206 lập từ ô ✗ theo quyền của phiếu chứa ô đó; 0206 lập thẳng thì
+    mọi tài khoản IT lập được.
+  - Email nhắc làm trong Epic 8, giờ gửi và số ngày nằm ở `system_config`:
+    - Nhắc tick hằng ngày: sáng hôm sau, nếu ngày hôm qua còn ô trống thì gửi người phụ trách.
+    - Nhắc gửi chốt: ngày cuối tháng, và nhắc lại nếu sau N ngày vẫn chưa gửi.
+    - Báo duyệt: có kỳ chờ duyệt thì báo SA/Admin; trả lại hoặc đã duyệt thì báo người gửi; chờ
+      duyệt quá N ngày thì nhắc lại.
+    - Nhắc việc tồn: kỳ đã chốt quá N ngày chưa có bản ký; 0206 In Progress quá N ngày.
 
 ### Q-09 · Tài liệu
 
