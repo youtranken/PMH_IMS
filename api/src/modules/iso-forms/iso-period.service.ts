@@ -456,6 +456,31 @@ export class IsoPeriodService implements OnModuleInit {
     return this.detail(actor, formType, year, month);
   }
 
+  /**
+   * Yêu cầu chốt / mở lại kỳ đang chờ duyệt — khối "Cần bạn duyệt" của bảng điều khiển (SA/Admin).
+   * Gồm cả yêu cầu do chính người xem gửi: SA/Admin được tự duyệt kỳ mình gửi (Q-28).
+   */
+  async pendingRequests(): Promise<{ approvalId: string; kind: string; formType: string; month: string; requesterName: string; reason: string; createdAt: Date }[]> {
+    const pending = [...(await this.approvals.pending(PERIOD_CLOSE_KIND)), ...(await this.approvals.pending(PERIOD_REOPEN_KIND))];
+    if (pending.length === 0) return [];
+    const names = await this.users.namesByEmails([...new Set(pending.map((a) => a.requester))]);
+    const out = [];
+    for (const request of pending) {
+      const period = await this.store.findById(request.subjectId);
+      if (!period) continue;
+      out.push({
+        approvalId: request.id,
+        kind: request.kind,
+        formType: period.formType,
+        month: monthKey(period.year, period.month),
+        requesterName: names.get(request.requester.toLowerCase()) ?? request.requester,
+        reason: request.reason,
+        createdAt: request.createdAt,
+      });
+    }
+    return out.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
   /** Việc cần làm của người đang xem — số trên đầu nhóm "Phiếu ISO" khi thu gọn. */
   async todo(actor: IsoActor): Promise<{ count: number; pendingApprovals: number; unlinkedFails: number; awaitingSigned: number }> {
     const today = await this.clock.today();

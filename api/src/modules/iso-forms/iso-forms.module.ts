@@ -14,6 +14,8 @@ import { IsoFileOwner } from './iso-file-owner';
 import { IsoFormsApiService } from './iso-forms.api';
 import { IsoFormsController } from './iso-forms.controller';
 import { IsoIncidentService } from './iso-incident.service';
+import { IsoMailContent } from './iso-mail';
+import { IsoReminderService } from './iso-reminder.service';
 import { IsoPeriodService } from './iso-period.service';
 import { IsoPeriodStore } from './iso-period.store';
 
@@ -35,6 +37,8 @@ import { IsoPeriodStore } from './iso-period.store';
     IsoPeriodService,
     IsoFileOwner,
     IsoAuditLabeler,
+    IsoMailContent,
+    IsoReminderService,
     IsoFormsApiService,
   ],
   exports: [IsoFormsApiService],

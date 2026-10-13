@@ -265,6 +265,12 @@ export class IsoFormsController {
     return this.periods.overview(req.user!, query.year);
   }
 
+  @Roles('sa', 'admin')
+  @Get('pending')
+  pending() {
+    return this.periods.pendingRequests();
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get('todo')
   todo(@Req() req: AuthedRequest) {

@@ -217,6 +217,37 @@ const DOMAINS = {
     `DELETE FROM diagram_image i WHERE NOT EXISTS (SELECT 1 FROM diagram_version_image l WHERE l.sha = i.sha)`,
   ],
 
+  /*
+   * Phiếu ISO (Q-28). Bài kiểm chỉ ghi vào NĂM 2021 (mọi ngày đều đã qua, gửi chốt được) để không
+   * chạm kỳ thật; tháng bắt đầu dùng IMS hạ về 2021-01 cho bài kiểm mở được năm đó. Kỳ, ngày không
+   * có issue và bộ đếm số phiếu năm 2021 trở về trước là của bài kiểm; job, bộ phận, máy, phiếu
+   * nhận ra bằng chữ E2E. Người phụ trách là tài khoản e2e thì gỡ ra. Cả khối nằm trong một khối
+   * DO có gác to_regclass: script gắn từ máy vào container có thể chạy trước migration 0066.
+   * Không dùng dấu huyền trong chú thích của vùng này: bài test:db đọc câu SQL theo cặp dấu đó.
+   */
+  iso: [
+    `DO $$ BEGIN
+       IF to_regclass('iso_period') IS NOT NULL THEN
+         UPDATE system_config SET value = '"2021-01"' WHERE key = 'iso.first_month';
+         DELETE FROM file WHERE owner_type = 'iso_incident' AND owner_id IN (SELECT id FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%');
+         DELETE FROM file WHERE owner_type = 'iso_period' AND owner_id IN (SELECT id FROM iso_period WHERE year <= 2021);
+         DELETE FROM iso_incident_cell WHERE incident_id IN (SELECT id FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%')
+            OR tick_line_id IN (SELECT l.id FROM iso_backup_line l JOIN iso_backup_job j ON j.id = l.job_id WHERE j.name ILIKE '%E2E%')
+            OR av_issue_id IN (SELECT id FROM iso_av_issue WHERE computer_name ILIKE '%E2E%');
+         DELETE FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%';
+         DELETE FROM iso_incident_counter WHERE year <= 2021;
+         DELETE FROM iso_backup_tick WHERE line_id IN (SELECT l.id FROM iso_backup_line l JOIN iso_backup_job j ON j.id = l.job_id WHERE j.name ILIKE '%E2E%');
+         DELETE FROM iso_backup_job WHERE name ILIKE '%E2E%';
+         DELETE FROM iso_av_issue WHERE computer_name ILIKE '%E2E%';
+         DELETE FROM iso_division WHERE name ILIKE '%E2E%';
+         DELETE FROM iso_av_clear_day WHERE day < DATE '2022-01-01';
+         DELETE FROM iso_period WHERE year <= 2021;
+         UPDATE iso_form_owner SET primary_user_id = NULL WHERE primary_user_id IN (SELECT id FROM users WHERE email ILIKE 'e2e-%');
+         UPDATE iso_form_owner SET backup_user_id = NULL WHERE backup_user_id IN (SELECT id FROM users WHERE email ILIKE 'e2e-%');
+       END IF;
+     END $$`,
+  ],
+
   isp: [
     /*
      * `secret.owner_type` nhận cả `isp`, như dòng `file` ngay dưới. Ba loại chủ thể kia đều có

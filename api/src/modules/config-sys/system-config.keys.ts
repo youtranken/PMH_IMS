@@ -249,6 +249,8 @@ export const CONFIG_KEYS = {
    * Mail nhắc chạy một lần mỗi ngày từ `iso.remind_hour`; các số ngày là ngưỡng nhắc lại.
    */
   isoFirstMonth: { key: 'iso.first_month', fallback: '2026-11' },
+  isoBackupSystem: { key: 'iso.backup_system', fallback: 'VeamBackup & Replication ( Version 12 )' },
+  isoAntivirusSystem: { key: 'iso.antivirus_system', fallback: 'Sophos' },
   isoScanMaxMb: { key: 'iso.scan_max_mb', fallback: 20 },
   isoScanTypes: { key: 'iso.scan_types', fallback: 'pdf,jpg,png' },
   isoRemindHour: { key: 'iso.remind_hour', fallback: 8 },

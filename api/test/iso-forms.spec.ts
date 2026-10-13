@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -105,8 +106,8 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
     access = new IsoAccessService(db, audit, users);
     const store = new IsoPeriodStore(db, config);
     catalog = new IsoCatalogService(db, audit);
-    backup = new IsoBackupService(db, audit, access, store, clock);
-    antivirus = new IsoAntivirusService(db, audit, access, store, catalog, clock);
+    backup = new IsoBackupService(db, audit, access, store, clock, config);
+    antivirus = new IsoAntivirusService(db, audit, access, store, catalog, clock, config);
     incidents = new IsoIncidentService(db, audit, access, store, filesApi, users, clock);
     periods = new IsoPeriodService(
       db,
@@ -406,5 +407,33 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(relocked.signed.length).toBeGreaterThan(0);
       expect(relocked.signed.every((f) => !f.current)).toBe(true);
     });
+  });
+
+  // Chạy CUỐI: lượt dọn xoá mọi job / người phụ trách e2e mà các bài ở trên dùng.
+  it('lượt dọn E2E (vùng iso của reset-e2e.mjs) gỡ hết job, bộ phận, issue, phiếu và kỳ của bài kiểm', async () => {
+    const job = await catalog.createJob(people.owner, {
+      no: 501,
+      name: 'E2E-CLEAN',
+      trackedFrom: '2021-03-01',
+      lines: [{ label: null, pointsNas: null, storageNas: null, pointsCloud: null, storageCloud: null }],
+    });
+    await scratch.pool.query(`INSERT INTO iso_backup_tick (line_id, day, result, updated_by) VALUES ($1, '2021-03-02', 'fail', 'x')`, [job.lines[0].id]);
+    const { rows } = await scratch.pool.query<{ id: string }>(
+      `INSERT INTO iso_incident (code, year, month, reported_on, kind, detected_at, resolved_at, severity, status, description, created_by)
+       VALUES ('0206-2021-001', 2021, 3, '2021-03-02', 'backup', '2021-03-02T01:00:00Z', '2021-03-02T02:00:00Z', 'low', 'resolved', 'E2E sạch', 'x') RETURNING id`,
+    );
+    await scratch.pool.query(`INSERT INTO iso_incident_cell (incident_id, tick_line_id, tick_day) VALUES ($1, $2, '2021-03-02')`, [rows[0].id, job.lines[0].id]);
+    await scratch.pool.query(`INSERT INTO iso_period (form_type, year, month, state) VALUES ('0203', 2021, 3, 'locked')`);
+    await scratch.pool.query(`INSERT INTO iso_av_clear_day (day, marked_by) VALUES ('2021-03-05', 'x')`);
+    const source = readFileSync(join(__dirname, '..', 'scripts', 'reset-e2e.mjs'), 'utf8');
+    const block = /\n {2}iso: \[([\s\S]*?)\n {2}\],/.exec(source);
+    if (!block) throw new Error('Không tìm thấy vùng iso trong reset-e2e.mjs');
+    for (const [, statement] of block[1].matchAll(/`([^`]+)`/g)) await scratch.pool.query(statement);
+    expect(await count(`SELECT count(*) FROM iso_backup_job WHERE name ILIKE '%E2E%'`)).toBe(0);
+    expect(await count(`SELECT count(*) FROM iso_division WHERE name ILIKE '%E2E%'`)).toBe(0);
+    expect(await count(`SELECT count(*) FROM iso_av_issue WHERE computer_name ILIKE '%E2E%'`)).toBe(0);
+    expect(await count(`SELECT count(*) FROM iso_incident WHERE description ILIKE '%E2E%' OR year <= 2021`)).toBe(0);
+    expect(await count(`SELECT count(*) FROM iso_period WHERE year <= 2021`)).toBe(0);
+    expect(await count(`SELECT count(*) FROM iso_av_clear_day WHERE day < '2022-01-01'`)).toBe(0);
   });
 });

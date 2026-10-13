@@ -139,6 +139,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'devicePortTemplateMax', group: 'devices', type: 'int', unit: 'ports', min: 8, max: 1024 },
   // Phiếu ISO (Q-28). Tháng bắt đầu dạng YYYY-MM; loại bản ký là danh sách đuôi cách nhau dấu phẩy.
   { name: 'isoFirstMonth', group: 'iso', type: 'text', maxLength: 7 },
+  { name: 'isoBackupSystem', group: 'iso', type: 'text', maxLength: 120 },
+  { name: 'isoAntivirusSystem', group: 'iso', type: 'text', maxLength: 120 },
   { name: 'isoScanMaxMb', group: 'iso', type: 'int', unit: 'mb', min: 1, max: 25 },
   { name: 'isoScanTypes', group: 'iso', type: 'text', maxLength: 40 },
   { name: 'isoRemindHour', group: 'iso', type: 'int', unit: 'hours', min: 0, max: 23 },

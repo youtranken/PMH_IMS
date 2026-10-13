@@ -5,6 +5,7 @@ import { viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { IsoAccessService, type IsoActor } from './iso-access.service';
 import { IsoClock } from './iso-clock';
 import {
@@ -43,6 +44,8 @@ export interface BackupGrid {
   state: PeriodState;
   periodId: string | null;
   canEdit: boolean;
+  /** Dòng "System:" của bản in (`iso.backup_system`). */
+  systemName: string;
   rows: BackupRowSnapshot[];
   ticks: TickCell[];
   summary: BackupSummary;
@@ -61,6 +64,7 @@ export class IsoBackupService {
     private readonly access: IsoAccessService,
     private readonly periods: IsoPeriodStore,
     private readonly clock: IsoClock,
+    private readonly config: SystemConfigService,
   ) {}
 
   async grid(actor: IsoActor, year: number, month: number): Promise<BackupGrid> {
@@ -78,6 +82,7 @@ export class IsoBackupService {
       state,
       periodId: period?.id ?? null,
       canEdit: state === 'open' && (await this.access.canWrite(actor, '0203')),
+      systemName: await this.config.getString('isoBackupSystem'),
       rows,
       ticks,
       summary: summarize(rows, ticks, year, month, today),

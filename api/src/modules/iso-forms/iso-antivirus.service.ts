@@ -5,6 +5,7 @@ import { viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { IsoAccessService, type IsoActor } from './iso-access.service';
 import { IsoCatalogService } from './iso-catalog.service';
 import { IsoClock } from './iso-clock';
@@ -38,6 +39,8 @@ export interface AntivirusGrid {
   state: PeriodState;
   periodId: string | null;
   canEdit: boolean;
+  /** Dòng "System Antivirus:" của bản in (`iso.antivirus_system`). */
+  systemName: string;
   issues: AvIssue[];
   clearDays: string[];
   summary: AntivirusSummary;
@@ -68,6 +71,7 @@ export class IsoAntivirusService {
     private readonly periods: IsoPeriodStore,
     private readonly catalog: IsoCatalogService,
     private readonly clock: IsoClock,
+    private readonly config: SystemConfigService,
   ) {}
 
   async grid(actor: IsoActor, year: number, month: number): Promise<AntivirusGrid> {
@@ -90,6 +94,7 @@ export class IsoAntivirusService {
       state,
       periodId: period?.id ?? null,
       canEdit: state === 'open' && (await this.access.canWrite(actor, '0208')),
+      systemName: await this.config.getString('isoAntivirusSystem'),
       issues,
       clearDays,
       summary: summarize(issues, clearDays, year, month, today),

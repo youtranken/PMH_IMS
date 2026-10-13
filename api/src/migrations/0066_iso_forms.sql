@@ -207,6 +207,8 @@ ALTER TABLE file ADD CONSTRAINT file_owner_type_check CHECK ((owner_type = ANY (
 
 INSERT INTO system_config (key, value, description) VALUES
   ('iso.first_month', '"2026-11"', 'Tháng đầu tiên phiếu ISO ghi trên IMS (YYYY-MM). Tháng trước đó là phiếu giấy'),
+  ('iso.backup_system', '"VeamBackup & Replication ( Version 12 )"', 'Dòng "System:" in trên phiếu 0203'),
+  ('iso.antivirus_system', '"Sophos"', 'Dòng "System Antivirus:" in trên phiếu 0208'),
   ('iso.scan_max_mb', '20', 'Dung lượng tối đa của một bản scan đã ký (MB), không vượt trần file.max_size_mb'),
   ('iso.scan_types', '"pdf,jpg,png"', 'Loại file nhận làm bản ký phiếu ISO (pdf, jpg, png, webp)'),
   ('iso.remind_hour', '8', 'Giờ trong ngày gửi mail nhắc phiếu ISO (0–23, giờ Việt Nam)'),
