@@ -91,6 +91,46 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M6 9v5a2 2 0 0 0 2 2h6" />
     </>
   ),
+  'nav.isoBackup': (
+    <>
+      {/* Ổ đĩa có dấu tick — kết quả backup từng ngày. */}
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v6c0 1.7 3.6 3 8 3" />
+      <path d="M4 11v6c0 1.7 3.6 3 8 3" />
+      <path d="M20 5v5" />
+      <path d="m15 17 2 2 4-4" />
+    </>
+  ),
+  'nav.isoAntivirus': (
+    <>
+      {/* Khiên — phần mềm diệt virus. */}
+      <path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z" />
+      <path d="m9 12 2 2 4-4" />
+    </>
+  ),
+  'nav.isoIncidents': (
+    <>
+      {/* Tam giác cảnh báo — phiếu sự cố. */}
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9v4M12 17h.01" />
+    </>
+  ),
+  'nav.isoPeriods': (
+    <>
+      {/* Lịch có ổ khoá — chốt kỳ theo tháng. */}
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+      <rect x="9" y="14" width="6" height="4" rx="1" />
+      <path d="M10.5 14v-1a1.5 1.5 0 0 1 3 0v1" />
+    </>
+  ),
+  'nav.isoCatalog': (
+    <>
+      {/* Danh sách có dấu đầu dòng — job backup, bộ phận, người phụ trách. */}
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
   'nav.serviceAccounts': (
     <>
       {/* Thẻ danh tính — một tài khoản có chủ, khác với "tài khoản đăng nhập IMS". */}

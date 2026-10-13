@@ -1,0 +1,476 @@
+/* ============================================================================
+ * Lưới tháng (ô ✓/✗ theo ngày) và bản in giấy của phiếu ISO (Q-28).
+ *
+ * Dùng chung cho mọi phiếu kiểu "dòng × ngày 1…31" (0203, 0208, các phiếu Epic 9) và mọi bản in
+ * tái tạo mẫu giấy (UX-DR4). Màu chỉ qua token: lưới dùng màu trạng thái của hệ thống, giấy dùng
+ * bộ `--paper-*` luôn sáng ở cả hai theme — in từ giao diện tối vẫn ra mực đen trên giấy trắng.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------- lưới --- */
+
+.sheet-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.sheet-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-xs);
+  min-width: 100%;
+}
+
+.sheet-grid th,
+.sheet-grid td {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sheet-grid thead th {
+  background: var(--surface-2);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+/* Cột tên dính trái khi cuộn ngang: 31 cột ngày không vừa màn laptop, mất tên dòng là đánh nhầm. */
+.sheet-grid .sheet-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  text-align: left;
+  font-weight: var(--fw-semibold);
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-grid thead .sheet-name {
+  background: var(--surface-2);
+}
+
+.sheet-grid .sheet-sub .sheet-name {
+  padding-left: var(--space-8);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+}
+
+.sheet-grid .sheet-left {
+  text-align: left;
+}
+
+.sheet-day {
+  min-width: 2rem;
+}
+
+.sheet-day small {
+  display: block;
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+}
+
+.sheet-day[data-weekend] small {
+  color: var(--warn);
+}
+
+.sheet-day[data-today],
+.sheet-cell[data-today] {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+
+.sheet-cell {
+  padding: 1px;
+}
+
+.sheet-cell[data-future] {
+  background: var(--surface-2);
+}
+
+/* Ngày đã qua của 0208 chưa có kết quả — viền cam như ô bỏ sót của 0203. */
+.sheet-day[data-missed] {
+  box-shadow: inset 0 0 0 2px var(--warm);
+}
+
+/* Ngoài thời gian theo dõi của dòng (trước ngày bắt đầu / sau ngày ngừng): không đánh, không đếm. */
+.sheet-cell[data-off] {
+  background: var(--muted-soft);
+}
+
+.sheet-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--fw-bold);
+}
+
+button.sheet-mark {
+  cursor: pointer;
+}
+
+button.sheet-mark:hover {
+  background: var(--surface-2);
+}
+
+button.sheet-mark:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.sheet-mark[data-state='ok'] {
+  color: var(--ok);
+}
+
+.sheet-mark[data-state='fail'] {
+  color: var(--danger);
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+.sheet-mark[data-state='fail-linked'] {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+/* Ô trống ở ngày đã qua — "bỏ sót", viền cam (Q-28). */
+.sheet-mark[data-state='missed'] {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--warm);
+}
+
+.sheet-mark[aria-expanded='true'] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+/* Nút ✓ trên đầu cột: đánh hết ô còn trống của ngày đó. */
+.sheet-fill {
+  width: 1.6rem;
+  height: 1.4rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--ok-soft);
+  color: var(--ok);
+  font: inherit;
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+
+.sheet-fill:hover {
+  background: var(--primary-soft);
+}
+
+.sheet-fill:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.sheet-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-7);
+  align-items: center;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+
+.sheet-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sheet-legend .sheet-mark {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Thanh chọn của ô đang bấm: ✓ Đạt / ✗ Lỗi / Để trống / Lập-mở 0206. */
+.sheet-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.sheet-picker-what {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.sheet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.sheet-month {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sheet-month-label {
+  min-width: 7.5rem;
+  text-align: center;
+  font-weight: var(--fw-semibold);
+}
+
+.sheet-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+}
+
+.sheet-steps li {
+  flex: 1 1 6rem;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: var(--fs-2xs);
+  text-align: center;
+}
+
+.sheet-steps li[data-done] {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.sheet-steps li[aria-current='step'] {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  font-weight: var(--fw-semibold);
+}
+
+.sheet-checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sheet-checks li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.sheet-checks .sheet-check-icon {
+  font-weight: var(--fw-bold);
+  color: var(--ok);
+}
+
+.sheet-checks li[data-bad] .sheet-check-icon {
+  color: var(--danger);
+}
+
+.sheet-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--space-10);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .sheet-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------- bản in --- */
+
+.paper {
+  padding: var(--space-9);
+  border: 1px solid var(--paper-rule);
+  border-radius: var(--r);
+  background: var(--paper-bg);
+  color: var(--paper-ink);
+  font-size: var(--fs-xs);
+  overflow-x: auto;
+}
+
+.paper-head {
+  display: grid;
+  grid-template-columns: 8rem 1fr 8rem;
+  align-items: stretch;
+  border: 1px solid var(--paper-ink);
+}
+
+.paper-head > div {
+  display: grid;
+  place-items: center;
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.paper-head > div + div {
+  border-left: 1px solid var(--paper-ink);
+}
+
+.paper-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+}
+
+.paper-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin: var(--space-5) 0 var(--space-3);
+  font-weight: var(--fw-semibold);
+}
+
+.paper-section {
+  margin: var(--space-6) 0 var(--space-3);
+  font-weight: var(--fw-bold);
+}
+
+.paper-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.paper-table th,
+.paper-table td {
+  border: 1px solid var(--paper-ink);
+  padding: 2px 4px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.paper-table th {
+  font-weight: var(--fw-bold);
+}
+
+.paper-table .paper-left {
+  text-align: left;
+}
+
+.paper-table .paper-group td {
+  text-align: left;
+  font-weight: var(--fw-bold);
+}
+
+.paper-table .paper-label {
+  width: 11rem;
+  text-align: left;
+  font-weight: var(--fw-bold);
+}
+
+.paper-note {
+  margin-top: var(--space-4);
+}
+
+.paper-sign {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+  margin-top: var(--space-9);
+  text-align: center;
+  font-weight: var(--fw-bold);
+}
+
+.paper-sign > div {
+  min-height: 7rem;
+}
+
+.paper-box {
+  display: inline-grid;
+  place-items: center;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: var(--space-1);
+  border: 1px solid var(--paper-ink);
+  font-size: 0.9em;
+  line-height: 1;
+  vertical-align: -0.15em;
+}
+
+.paper-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-9);
+}
+
+@page iso-a3 {
+  size: A3 landscape;
+  margin: 10mm;
+}
+
+@page iso-a4l {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@page iso-a4 {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+.paper[data-page='a3l'] {
+  page: iso-a3;
+}
+
+.paper[data-page='a4l'] {
+  page: iso-a4l;
+}
+
+.paper[data-page='a4'] {
+  page: iso-a4;
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .drawer-backdrop,
+  .skip-link,
+  .no-print {
+    display: none !important;
+  }
+
+  body,
+  .page {
+    background: var(--paper-bg);
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .paper {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+}

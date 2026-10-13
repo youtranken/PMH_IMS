@@ -408,6 +408,7 @@ export function DashboardScreen({ me }: { me: Me }) {
 
       {/* Việc gấp nhất của người duyệt trên điện thoại đứng ĐẦU trang, trên cả hàng số. */}
       <NeedsYouBlock me={me} />
+      <IsoNeedsYouBlock me={me} />
       {/* Người XIN mở két: "đã được duyệt chưa, còn hiệu lực bao lâu" — đứng đầu khi có việc. */}
       <MyRequestsBlock />
 
@@ -580,6 +581,64 @@ function NeedsYouBlock({ me }: { me: Me }) {
           }}
         />
       ) : null}
+    </section>
+  );
+}
+
+interface IsoPendingRow {
+  approvalId: string;
+  kind: string;
+  formType: string;
+  month: string;
+  requesterName: string;
+  reason: string;
+  createdAt: string;
+}
+
+/**
+ * Kỳ phiếu ISO chờ SA/Admin duyệt (Q-28, Story 8.5): gửi chốt hoặc xin mở lại. Khoá dưới nhánh
+ * `['iso']` nên duyệt ở màn phiếu là khối này tự làm mới. Không có gì chờ thì khối biến mất.
+ */
+function IsoNeedsYouBlock({ me }: { me: Me }) {
+  const { t } = useTranslation();
+  const canDecide = me.role === 'sa' || me.role === 'admin';
+  const pending = useQuery({
+    queryKey: ['iso', 'pending'],
+    queryFn: () => apiFetch<IsoPendingRow[]>('/api/v1/iso/pending'),
+    enabled: canDecide,
+  });
+  const rows = Array.isArray(pending.data) ? pending.data : [];
+  if (!canDecide || rows.length === 0) return null;
+  return (
+    <section className="card dash-card dash-needs-you" aria-label={t('dashboard.isoNeedsYou', { count: rows.length })}>
+      <div className="card-head">
+        <h2>{t('dashboard.isoNeedsYou', { count: rows.length })}</h2>
+      </div>
+      <ul className="dash-list">
+        {rows.map((row) => (
+          <li key={row.approvalId}>
+            <div className="dash-line">
+              <strong className="dash-line-name">
+                {row.kind === 'iso_period_reopen'
+                  ? t('dashboard.isoReopen', { form: row.formType, month: `${row.month.slice(5, 7)}/${row.month.slice(0, 4)}` })
+                  : t('dashboard.isoClose', { form: row.formType, month: `${row.month.slice(5, 7)}/${row.month.slice(0, 4)}` })}
+              </strong>
+              <span className="muted">{t('dashboard.isoSentBy', { name: row.requesterName, at: formatDateTime(row.createdAt) })}</span>
+            </div>
+            <div className="action-cell">
+              <Link
+                to={
+                  row.kind === 'iso_period_reopen'
+                    ? PATHS.isoPeriod(row.formType, row.month)
+                    : PATHS.isoReview(row.formType, row.month)
+                }
+              >
+                {t('dashboard.isoOpen')}
+              </Link>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

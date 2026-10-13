@@ -18,3 +18,4 @@
 @import './css/command-palette.css'; /* command palette ⌘K */
 @import './css/shared-kit.css';      /* bộ dùng chung story 1.5: toast, pager, history, field lỗi */
 @import './css/reveal-popup.css';    /* hộp nhỏ Xem két: 6 ô mã → giá trị + vòng đếm ngược (Q-24) */
+@import './css/sheet.css';           /* lưới tháng ✓/✗ + bản in giấy phiếu ISO (Q-28) */

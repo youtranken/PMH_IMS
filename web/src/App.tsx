@@ -51,6 +51,13 @@ import { DiagramSlideshow } from '@/features/diagrams/diagram-slideshow';
 import { DiagramTreeScreen } from '@/features/diagrams/diagram-tree-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
 import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
+import { AntivirusScreen } from '@/features/iso/antivirus-screen';
+import { BackupScreen } from '@/features/iso/backup-screen';
+import { CatalogScreen as IsoCatalogScreen } from '@/features/iso/catalog-screen';
+import { IncidentScreen } from '@/features/iso/incident-screen';
+import { IncidentsScreen } from '@/features/iso/incidents-screen';
+import { PeriodsScreen } from '@/features/iso/periods-screen';
+import { ReviewScreen } from '@/features/iso/review-screen';
 import { IpamScreen } from '@/features/ipam/ipam-screen';
 import { IspDetail } from '@/features/isp/isp-detail';
 import { IspScreen } from '@/features/isp/isp-screen';
@@ -295,6 +302,15 @@ function AppRoutes() {
           path={`${PATHS.serviceAccounts}/:id`}
           element={<ServiceAccountDetail me={me} />}
         />
+        {/* Phiếu ISO (Q-28): mọi vai xem; ghi theo người phụ trách — API gác (ISO_NOT_OWNER). */}
+        <Route path={PATHS.isoBackup} element={<BackupScreen me={me} />} />
+        <Route path={PATHS.isoAntivirus} element={<AntivirusScreen me={me} />} />
+        <Route path={PATHS.isoIncidents} element={<IncidentsScreen />} />
+        <Route path={PATHS.isoIncidentNew} element={<IncidentScreen me={me} />} />
+        <Route path={`${PATHS.isoIncidents}/:id`} element={<IncidentScreen me={me} />} />
+        <Route path={PATHS.isoPeriods} element={<PeriodsScreen me={me} />} />
+        <Route path={`${PATHS.isoPeriods}/:form/:month/review`} element={<ReviewScreen me={me} />} />
+        <Route path={PATHS.isoCatalog} element={<IsoCatalogScreen me={me} />} />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL nhận trang 403. Bản
             production không đăng ký route nào (FE-09): cờ là hằng lúc build, nên cả nhánh lẫn
             mã trang dev bị bỏ khỏi bundle và gõ URL rơi vào 404. */}
