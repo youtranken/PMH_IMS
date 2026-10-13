@@ -682,9 +682,10 @@ So that mở phiếu tháng nào cũng có đúng các dòng cần đánh mà kh
 **Given** module `iso-forms` với bảng kỳ (một kỳ cho mỗi loại phiếu × tháng), danh sách job backup, danh sách bộ phận và người phụ trách từng loại phiếu; migration **không** seed job (IT tự tạo trên prod; job #24–29 của mẫu là dòng dư) và chỉ seed một bộ phận làm ví dụ
 **When** member mở 0203 hoặc 0208 của một tháng chưa có kỳ
 **Then** kỳ được tạo ở trạng thái Đang ghi (chỉ cho tháng hiện tại và tháng đã qua; tháng tương lai không tạo được)
-**And** sidebar có nhóm "Phiếu ISO" gồm 4 mục: Theo dõi backup · 0203, Theo dõi antivirus · 0208, Sự cố · 0206, Kỳ phiếu & chốt kỳ
+**And** sidebar có nhóm "Phiếu ISO" gồm 5 mục: Theo dõi backup · 0203, Theo dõi antivirus · 0208, Sự cố · 0206, Kỳ phiếu & chốt kỳ, Danh mục phiếu
+**And** nhóm "Phiếu ISO" thu gọn mặc định, bấm đầu nhóm để mở / đóng; đang ở một màn phiếu thì tự mở; khi thu gọn, đầu nhóm hiện số việc cần làm
 
-**Given** màn "Job backup & bộ phận" (vào từ nút "Job backup (N)" trên 0203 và "Bộ phận (N)" trên 0208, không có mục sidebar riêng)
+**Given** màn "Danh mục phiếu" (mục riêng trong nhóm Phiếu ISO của sidebar; tab Job backup, Bộ phận, Người phụ trách)
 **When** member thêm / sửa / sắp thứ tự / ngừng / bật lại một job (No, Name Job Backup, đối tượng con, Points NAS, Storage location, Points Cloud, Storage location), hoặc thêm / sửa bộ phận (mã, tên)
 **Then** thay đổi áp ngay cho kỳ còn Đang ghi; kỳ từ Chờ duyệt trở đi giữ đúng danh sách lúc gửi chốt (snapshot, AR-8)
 **And** job có ngày bắt đầu theo dõi: thêm job giữa tháng thì các ngày trước đó để trống và không tính là bỏ sót; job ngừng thì các ngày sau ngày ngừng cũng vậy
@@ -764,9 +765,9 @@ So that phiếu 0208 tháng nào cũng đủ ngày và mọi issue có phiếu 0
 **Then** đầu màn liệt kê các ngày (đã qua và hôm nay) chưa có kết quả, mỗi ngày một nút "✓ … không có issue", cùng nút "+ Ghi máy có issue"
 
 **Given** form ghi issue
-**When** member chọn Reported Date (hôm nay hoặc ngày đã qua của kỳ), Division (từ danh sách bộ phận, có "+ Thêm bộ phận mới…"), gõ Computer Name, Incident Description, Resolution Date, Handled rồi lưu
+**When** member chọn Reported Date (hôm nay hoặc ngày đã qua của kỳ), Division (chọn từ danh mục, hoặc "+ Bộ phận mới" gõ tên tại chỗ và lưu luôn vào danh mục), gõ Computer Name, Incident Description, Resolution Date, Handled rồi lưu
 **Then** thêm một dòng: một máy × một ngày phát hiện; cùng máy hai ngày issue là hai dòng; ngày đó tính là đã có kết quả
-**And** dòng gom theo bộ phận, chỉ bộ phận có issue mới hiện (cả trên màn lẫn bản in, không in dòng trống cho bộ phận khác); dòng cuối "Other Division" luôn có
+**And** dòng gom theo bộ phận, chỉ bộ phận có issue trong tháng đó mới hiện, nên cột Division khác nhau giữa các tháng (cả trên màn lẫn bản in, không in dòng trống cho bộ phận khác); dòng cuối "Other Division" luôn có
 **And** người không phụ trách 0208 chỉ xem, không có nút ghi
 
 **Given** lưới tháng

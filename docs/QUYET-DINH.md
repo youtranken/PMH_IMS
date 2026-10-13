@@ -1169,9 +1169,9 @@ IT dùng hằng ngày.
   - 0208 ghi theo ngày: mỗi ngày đã qua hoặc hôm nay phải có kết quả, là "không có issue" hoặc ít
     nhất một dòng issue. Form ghi issue chọn được ngày, có đủ cột của mẫu (Reported Date, Division,
     Computer Name, Incident Description, Resolution Date, Handled).
-  - Danh sách job backup (0203) và danh sách bộ phận (0208) là hai danh sách do IT tự quản, vào từ
-    nút trên màn phiếu, không nằm ở sidebar. Bộ phận chỉ để chọn nhanh; phiếu tháng vẫn chỉ hiện
-    bộ phận có issue. Thêm, sửa, ngừng chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ danh sách lúc chốt.
+  - Danh sách job backup (0203) và danh sách bộ phận (0208) là hai danh sách do IT tự quản, nằm ở
+    mục "Danh mục phiếu" riêng trong nhóm Phiếu ISO của sidebar (đổi 13/10/2026). Bộ phận chỉ để
+    chọn nhanh; phiếu tháng vẫn chỉ hiện bộ phận có issue. Thêm, sửa, ngừng chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ danh sách lúc chốt.
   - Bốn trạng thái kỳ, dùng một tên ở mọi màn: **Đang ghi → Chờ duyệt → Đã chốt · chờ bản ký →
     Hoàn tất.** Chờ duyệt thì ô đã khoá; SA/Admin "Trả lại" thì kỳ về Đang ghi.
   - Trước khi gửi chốt 0203 / 0208 phải qua màn **Xem lại**: đúng bản in sẽ ký, cùng danh sách kiểm
@@ -1200,6 +1200,10 @@ IT dùng hằng ngày.
   - Job #24–29 của mẫu là dòng dư, vẫn tick bình thường; không tạo các job này trên prod.
   - Mở lại kỳ thì các 0206 của kỳ đó mở theo; phiếu nào bị sửa thì bản ký cũ của nó bị đánh dấu
     cũ, phải in, ký và tải bản mới.
+  - Nhóm Phiếu ISO trên sidebar thu gọn mặc định vì ít dùng, bấm mới mở; đang ở màn phiếu thì tự
+    mở. Khi thu gọn, đầu nhóm hiện số việc cần làm.
+  - Cột Division của 0208 khác nhau theo tháng: bộ phận có dòng trong tháng khi ghi issue cho bộ
+    phận đó; form ghi issue cho thêm bộ phận mới ngay tại chỗ (lưu luôn vào danh mục).
   - Bắt đầu dùng từ tháng 11/2026. Kỳ phiếu tự sinh theo năm / tháng cho mọi năm sau, không nhập
     tay từng kỳ.
   - 0206 đang In Progress không chặn chốt kỳ: ô ✗ đã có phiếu là đủ để gửi chốt. Phiếu đó vẫn sửa
