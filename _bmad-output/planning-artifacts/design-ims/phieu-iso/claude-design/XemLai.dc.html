@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Xem lại trước khi gửi chốt kỳ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button{font-family:inherit;font-size:14px;color:#1f231c}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1400px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="ky" hint-size="248px,1400px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<a href="KyPhieu.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">‹ Kỳ phiếu 10/2026</a>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Xem lại trước khi gửi chốt</h1>
+<div style="color: #5a615a">Đây là đúng bản sẽ in ra để ký. Gửi xong phiếu chờ SA/Admin duyệt; duyệt rồi thì khoá.</div>
+</div>
+<div role="tablist" aria-label="Phiếu" style="display: flex; border: 1px solid #d8dbd0; border-radius: 10px; background: #ffffff; padding: 3px">
+<button role="tab" aria-selected="{{b1}}" onClick="{{ to0203 }}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 600; {{s1}}">0203 · Backup</button>
+<button role="tab" aria-selected="{{b2}}" onClick="{{ to0208 }}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 600; {{s2}}">0208 · Antivirus</button>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section aria-label="Bản in" style="flex: 999 1 680px; min-width: 0; background: #ffffff; border: 1px solid #d8dbd0; border-radius: 6px; padding: 28px 30px; font-family: 'Times New Roman', serif; display: flex; flex-direction: column; gap: 10px; overflow-x: auto">
+<div style="display: grid; grid-template-columns: 140px 1fr 140px; align-items: center">
+<div style="font-family: 'Be Vietnam Pro', sans-serif; font-size: 11px; line-height: 1.3"><strong style="font-size: 16px; color: #0e9f6e">PMH</strong><br>{{paperCode}}</div>
+<div style="text-align: center; font-family: 'Be Vietnam Pro', sans-serif; font-weight: 700; font-size: 17px">{{paperTitle}}</div>
+<div></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 12px"><span>{{paperSystem}}</span><span style="border: 1px solid #1f231c; padding: 1px 8px; font-weight: 700">Check Date <span style="font-weight: 400; margin-left: 16px">31 / 10 / 2026</span></span></div>
+<table style="border-collapse: collapse; font-size: 10px; width: 100%; min-width: 820px">
+<thead><tr style="background: #fef2df">
+<sc-for list="{{ heads }}" as="h" hint-placeholder-count="6"><th scope="col" style="border: 1px solid #1f231c; padding: 2px 4px; font-weight: 400; text-align: left">{{h}}</th></sc-for>
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><th scope="col" style="border: 1px solid #1f231c; padding: 2px 0; font-weight: 400; width: 15px; text-align: center">{{d}}</th></sc-for>
+</tr></thead>
+<tbody>
+<sc-for list="{{ prows }}" as="r" hint-placeholder-count="10">
+<tr>
+<sc-for list="{{ r.cols }}" as="c" hint-placeholder-count="6"><td style="border: 1px solid #1f231c; padding: 2px 4px; white-space: nowrap">{{c}}</td></sc-for>
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="31"><td style="border: 1px solid #1f231c; text-align: center; {{c.st}}">{{c.t}}</td></sc-for>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="font-size: 11px; font-style: italic">{{paperMore}}</div>
+<div style="display: flex; justify-content: space-around; margin-top: 18px; font-family: 'Be Vietnam Pro', sans-serif; font-size: 11px">
+<div style="border: 1px solid #1f231c; width: 220px; height: 80px"><div style="border-bottom: 1px solid #1f231c; text-align: center; padding: 2px">IT Department</div></div>
+<div style="border: 1px solid #1f231c; width: 220px; height: 80px"><div style="border-bottom: 1px solid #1f231c; text-align: center; padding: 2px">Implementation Personnel</div></div>
+</div>
+</section>
+
+<aside style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 14px">
+<section aria-labelledby="ck-h" style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="ck-h" style="margin: 0; font-size: 16px; font-weight: 700">Kiểm trước khi gửi</h2>
+<sc-for list="{{ checks }}" as="c" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<span aria-hidden="true" style="display: inline-grid; place-items: center; flex: 0 0 22px; height: 22px; border-radius: 6px; font-weight: 700; font-size: 13px; {{c.iconStyle}}">{{c.icon}}</span>
+<div style="flex: 1; line-height: 1.4"><div style="font-weight: 600">{{c.title}}</div><div style="font-size: 12px; color: #5a615a">{{c.detail}}</div>
+<sc-if value="{{ c.fix }}" hint-placeholder-val="{{ false }}"><a href="PhieuSuCo.dc.html" style="font-size: 13px; font-weight: 600; color: #c0392b">{{c.fix}}</a></sc-if>
+</div>
+</div>
+</sc-for>
+</section>
+<sc-if value="{{ notSent }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ send }}" aria-disabled="{{blockedAria}}" style="height: 46px; border-radius: 10px; border: 0; font-weight: 600; {{sendStyle}}">{{sendLabel}}</button>
+<a href="{{backHref}}" style="display: inline-flex; align-items: center; justify-content: center; height: 46px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; color: #1f231c; font-weight: 600; text-decoration: none">‹ Quay lại sửa phiếu</a>
+</sc-if>
+<sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="padding: 14px 16px; border-radius: 12px; background: #e4f4ee; color: #0f7a55; line-height: 1.5"><strong>Đã gửi chốt kỳ.</strong> Đang chờ SA/Admin duyệt. Trong lúc chờ phiếu vẫn xem được nhưng không sửa ô.</div>
+</sc-if>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"allPass":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { form: '0203', sent: false };
+  }
+  renderVals() {
+    var self = this, s = this.state, pass = this.props.allPass ?? false, is3 = s.form === '0203';
+    var days = []; for (var d = 1; d <= 31; d++) days.push(d);
+    function cells(bad, linkedBad) {
+      var out = [];
+      for (var d = 1; d <= 31; d++) {
+        if (d === bad) out.push({ t: '✗', st: pass || linkedBad ? 'font-weight:700' : 'font-weight:700;background:#fdeceb' });
+        else out.push({ t: '✓', st: '' });
+      }
+      return out;
+    }
+    var prows, heads, more, checks;
+    if (is3) {
+      heads = ['No', 'Name Job Backup', 'Points NAS', 'Storage', 'Points Cloud', 'Storage'];
+      var J = [[1, 'ACC-SUNAPP', 35, 'NAS', 14, 'Cloud'], [2, 'ACC-SUNDB', 35, 'NAS', 14, 'Cloud'], [3, 'BPM', 14, 'NAS', 14, 'Cloud'], [4, 'BPM TEST', 7, 'NAS', 14, 'Cloud'],
+        [5, 'File Server-1_OS', 14, 'NAS', 14, 'Cloud'], ['', 'Volume_E File Server-1', 31, 'NAS', 31, 'Cloud'], ['', 'Volume_F File Server-1', 31, 'NAS', 31, 'Cloud'],
+        [6, 'File Server-2_OS', 14, 'NAS', 14, 'Cloud'], ['', 'Volume_E File Server-2', 31, 'NAS', 31, 'Cloud'], [9, 'SPM_DB', 35, 'NAS', 7, 'Cloud']];
+      prows = J.map(function (j, i) { return { cols: j, cells: cells(i === 8 ? 6 : i === 9 ? 11 : 0, i === 8) }; });
+      more = '… và 28 dòng nữa (tổng 38 dòng / 30 job). Note: Planned Monthly Data Storage Maintenance: Successful "✓", Failed "✗".';
+      checks = [
+        { icon: '✓', iconStyle: 'background:#e4f4ee;color:#0f7a55', title: 'Đã đánh đủ 31 ngày', detail: '32 dòng có điểm lưu × 31 ngày, không còn ô trống.', fix: '' },
+        pass ? { icon: '✓', iconStyle: 'background:#e4f4ee;color:#0f7a55', title: 'Mọi ô ✗ đã có phiếu 0206', detail: '4 ô ✗ · 2 phiếu 0206.', fix: '' }
+             : { icon: '✗', iconStyle: 'background:#fdeceb;color:#c0392b', title: '1 ô ✗ chưa có phiếu 0206', detail: 'SPM_DB · 11/10', fix: 'Lập 0206 cho ô này ›' },
+        { icon: '✓', iconStyle: 'background:#e4f4ee;color:#0f7a55', title: 'Danh sách job khớp kỳ', detail: '30 job đang theo dõi, 0 job thêm giữa kỳ.', fix: '' },
+        { icon: 'i', iconStyle: 'background:#e6f0fa;color:#1d5f9e', title: 'Check Date 31/10/2026', detail: 'Ngày cuối kỳ, in trên ô Check Date.', fix: '' }
+      ];
+    } else {
+      heads = ['Division', 'Reported Date', 'Computer Name', 'Incident Description', 'Resolution Date', 'Handled'];
+      prows = [
+        { cols: ['D&E', '03/10/2026', 'DE-PC-01', 'USB chứa Worm.Autorun', '03/10/2026', 'Minh Anh'], cells: cells(3, true) },
+        { cols: ['', '08/10/2026', 'DE-PC-02', 'Agent mất kết nối', '09/10/2026', 'Quốc Bảo'], cells: cells(8, true) },
+        { cols: ['SMD', '10/10/2026', 'SMD-PC-11', 'Định nghĩa virus quá hạn', '10/10/2026', 'Quốc Bảo'], cells: cells(10, false) },
+        { cols: ['Other Division', '', '', '', '', ''], cells: cells(0, false) }
+      ];
+      more = 'System Antivirus: Sophos. Other Division = các bộ phận còn lại, không có issue.';
+      checks = [
+        { icon: '✓', iconStyle: 'background:#e4f4ee;color:#0f7a55', title: 'Đã ghi đủ 31 ngày', detail: 'Mỗi ngày có kết quả: không issue hoặc có dòng issue.', fix: '' },
+        pass ? { icon: '✓', iconStyle: 'background:#e4f4ee;color:#0f7a55', title: 'Mọi issue đã có phiếu 0206', detail: '3 issue · 3 phiếu.', fix: '' }
+             : { icon: '✗', iconStyle: 'background:#fdeceb;color:#c0392b', title: '1 issue chưa có phiếu 0206', detail: 'SMD · SMD-PC-11 · 10/10', fix: 'Lập 0206 cho issue này ›' },
+        { icon: 'i', iconStyle: 'background:#e6f0fa;color:#1d5f9e', title: '2 bộ phận có issue', detail: 'D&E (2 dòng), SMD (1 dòng) + Other Division.', fix: '' }
+      ];
+    }
+    var blocked = !pass;
+    var on = 'background:#1f231c;color:#ffffff', off = 'background:none;color:#5a615a';
+    return {
+      b1: is3 ? 'true' : 'false', b2: is3 ? 'false' : 'true', s1: is3 ? on : off, s2: is3 ? off : on,
+      to0203: function () { self.setState({ form: '0203', sent: false }); }, to0208: function () { self.setState({ form: '0208', sent: false }); },
+      paperCode: is3 ? 'SP-IT0203' : 'SP-IT0208',
+      paperTitle: is3 ? 'System Data Checklist & Storage Record Form' : 'Antivirus Health Check Form',
+      paperSystem: is3 ? 'System: Veeam Backup & Replication (Version 12)' : 'System Antivirus: Sophos',
+      heads: heads, days: days, prows: prows, paperMore: more, checks: checks,
+      notSent: !s.sent, sent: s.sent, blockedAria: blocked ? 'true' : 'false',
+      sendLabel: blocked ? 'Chưa gửi được — còn 1 mục cần xử lý' : 'Xác nhận gửi chốt kỳ',
+      sendStyle: blocked ? 'background:#e9eae2;color:#5f665f;cursor:not-allowed' : 'background:#0e9f6e;color:#ffffff;cursor:pointer',
+      send: function () { if (!blocked) self.setState({ sent: true }); },
+      backHref: is3 ? 'Main.dc.html' : 'Antivirus.dc.html'
+    };
+  }
+}
+</script>
+</body>
+</html>

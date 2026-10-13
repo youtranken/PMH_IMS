@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>0206 · Danh sách sự cố</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button,input,select{font-family:inherit;font-size:14px;color:#1f231c}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1100px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="0206" hint-size="248px,1100px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5c635c">Phiếu ISO · SP-IT02-0206</div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Sự cố</h1>
+<div style="color: #5a615a">Một sự cố một phiếu, kể cả khi kéo sang tháng sau. Số phiếu chỉ dùng để tra trên IMS, không in lên giấy.</div>
+</div>
+<a href="PhieuSuCo.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; background: #0e9f6e; color: #ffffff; font-weight: 600; text-decoration: none">+ Lập phiếu sự cố</a>
+</header>
+
+<section aria-label="Cần lập phiếu" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; background: #ffffff; border: 1px solid #e7a59d">
+<span style="display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; background: #fdeceb; color: #c0392b; font-weight: 700; box-shadow: inset 0 0 0 2px #c0392b">✗</span>
+<div style="flex: 1; line-height: 1.35"><strong>0203 · Job #9 SPM_DB · 11/10</strong><div style="font-size: 12px; color: #5a615a">Chưa có phiếu</div></div>
+<a href="PhieuSuCo.dc.html" style="font-weight: 600">Lập 0206</a>
+</div>
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; background: #ffffff; border: 1px solid #e7a59d">
+<span style="display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; background: #fdeceb; color: #c0392b; font-weight: 700; box-shadow: inset 0 0 0 2px #c0392b">✗</span>
+<div style="flex: 1; line-height: 1.35"><strong>0208 · SMD · SMD-PC-11 · 10/10</strong><div style="font-size: 12px; color: #5a615a">Chưa có phiếu</div></div>
+<a href="PhieuSuCo.dc.html" style="font-weight: 600">Lập 0206</a>
+</div>
+</section>
+
+<section aria-label="Chọn năm và tháng" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center">
+<div role="group" aria-label="Năm" style="display: inline-flex; padding: 3px; border-radius: 10px; background: #ebeae2">
+<sc-for list="{{ years }}" as="y" hint-placeholder-count="2">
+<button aria-pressed="{{y.pressed}}" onClick="{{ y.pick }}" style="height: 34px; padding: 0 16px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 700; {{y.style}}">{{y.label}}</button>
+</sc-for>
+</div>
+<div role="group" aria-label="Tháng" style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="4">
+<button aria-pressed="{{m.pressed}}" onClick="{{ m.pick }}" style="height: 34px; padding: 0 12px; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 13px; {{m.style}}">{{m.label}} <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: 0.75">{{m.n}}</span></button>
+</sc-for>
+</div>
+</section>
+
+<section aria-label="Thuộc phiếu nào" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px">
+<sc-for list="{{ srcs }}" as="c" hint-placeholder-count="4">
+<button aria-pressed="{{c.pressed}}" onClick="{{ c.pick }}" style="text-align: left; padding: 14px 16px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; {{c.style}}">
+<span style="font-size: 12px; font-weight: 600; color: #5a615a">{{c.label}}</span>
+<span style="font-size: 26px; font-weight: 700; line-height: 1">{{c.n}}</span>
+<span style="font-size: 12px; color: #5c635c">{{c.hint}}</span>
+</button>
+</sc-for>
+</section>
+
+<sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 48px 24px; border-radius: 14px; border: 1px dashed #c9ccc0; background: #ffffff; text-align: center; color: #5a615a; line-height: 1.6"><strong style="color: #1f231c; font-size: 16px">Năm {{year}} chưa có phiếu 0206 trên IMS</strong><br>Phiếu giấy của năm trước khi dùng IMS lưu ở hồ sơ ISO.</div>
+</sc-if>
+
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+<section style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px 18px; border-bottom: 1px solid #e9eae2">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">{{g.title}}</h2>
+<span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{g.stStyle}}">Kỳ {{g.st}}</span>
+<span style="font-size: 13px; color: #5a615a">{{g.count}}</span>
+<a href="KyPhieu.dc.html" style="margin-left: auto; font-size: 13px; font-weight: 600">Mở kỳ phiếu ›</a>
+</div>
+<div style="overflow-x: auto">
+<table style="border-collapse: collapse; width: 100%; min-width: 1000px">
+<thead>
+<tr style="text-align: left; color: #5a615a; font-size: 12px">
+<th scope="col" style="padding: 10px 18px; font-weight: 600">Số phiếu</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Thuộc phiếu</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Loại</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Phát hiện → Khắc phục</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Trạng thái</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Người lập</th>
+<th scope="col" style="padding: 10px 18px; font-weight: 600">Bản ký</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+<tr style="border-top: 1px solid #e9eae2; vertical-align: top">
+<td style="padding: 12px 18px"><a href="PhieuSuCo.dc.html" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500">{{r.code}}</a></td>
+<td style="padding: 12px; line-height: 1.4"><span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; {{r.srcStyle}}">{{r.src}}</span> <strong>{{r.obj}}</strong><div style="font-size: 12px; color: #5a615a">{{r.cells}}</div></td>
+<td style="padding: 12px"><span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{r.typeStyle}}">{{r.type}}</span></td>
+<td style="padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5a615a; white-space: nowrap">{{r.range}}</td>
+<td style="padding: 12px"><span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; {{r.cstStyle}}">{{r.cst}}</span></td>
+<td style="padding: 12px; color: #5a615a">{{r.by}}</td>
+<td style="padding: 12px 18px; font-size: 13px; {{r.signStyle}}">{{r.sign}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+</sc-for>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { year: 2026, month: 0, src: 'all' };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var T = { Backup: 'background:#e6f0fa;color:#1d5f9e', Other: 'background:#fdf0e3;color:#a34d08', Network: 'background:#efeee7;color:#5f665f', Server: 'background:#f1ebfa;color:#5b3d99' };
+    var SRC = { '0203': 'background:#e6f0fa;color:#1d5f9e', '0208': 'background:#e4f4ee;color:#0f7a55', 'Lập thẳng': 'background:#efeee7;color:#5f665f' };
+    var CST = { 'Resolved': 'background:#e4f4ee;color:#0f7a55', 'In Progress': 'background:#fff1d6;color:#8a4b00', 'Temporary Fix': 'background:#fdf0e3;color:#a34d08' };
+    var PER = { 10: ['Đang ghi', 'background:#e6f0fa;color:#1d5f9e'], 9: ['Hoàn tất', 'background:#e4f4ee;color:#0f7a55'] };
+    var data = [
+      [10, '0206-2026-015', 'Lập thẳng', 'Máy chủ ERP-APP', 'Không gắn ô ✗', 'Server', '10/10 14:00 → đang xử lý', 'In Progress', 'Thu Hà', ''],
+      [10, '0206-2026-014', '0203', 'Job #6 File Server-2 · Volume_E', 'Ô ✗ 05, 06, 07/10', 'Backup', '05/10 08:00 → 07/10 17:30', 'Resolved', 'Minh Anh', ''],
+      [10, '0206-2026-013', '0208', 'D&E · DE-PC-02', 'Ô ✗ 08/10', 'Other', '08/10 09:15 → 09/10 10:00', 'Resolved', 'Quốc Bảo', ''],
+      [10, '0206-2026-012', '0208', 'D&E · DE-PC-01', 'Ô ✗ 03/10', 'Other', '03/10 14:20 → 03/10 16:00', 'Temporary Fix', 'Minh Anh', ''],
+      [9, '0206-2026-011', '0203', 'Job #3 BPM', 'Ô ✗ 30/09 + 01, 02/10 (kéo sang tháng 10)', 'Backup', '30/09 23:00 → 02/10 09:40', 'Resolved', 'Quốc Bảo', 'ky.pdf'],
+      [9, '0206-2026-010', '0203', 'Job #10 Veeam_Backup', 'Ô ✗ 18 → 22/09', 'Backup', '18/09 02:00 → 22/09 11:00', 'Resolved', 'Quốc Bảo', 'ky.pdf'],
+      [9, '0206-2026-009', 'Lập thẳng', 'Đường truyền FPT', 'Không gắn ô ✗', 'Network', '08/09 20:00 → 08/09 23:40', 'Resolved', 'Thu Hà', 'ky.pdf']
+    ];
+    var inYear = s.year === 2026 ? data : [];
+    var inMonth = inYear.filter(function (d) { return !s.month || d[0] === s.month; });
+    var shown = inMonth.filter(function (d) { return s.src === 'all' || d[2] === s.src; });
+    function cnt(list, f) { return list.filter(f).length; }
+    var on = 'border:2px solid #0e9f6e;background:#f0faf5', off = 'border:1px solid #e9eae2;background:#ffffff';
+    var srcs = [
+      ['all', 'Tất cả', 'trong ' + (s.month ? 'tháng ' + s.month : 'năm ' + s.year)],
+      ['0203', 'Từ 0203 · backup', 'ô ✗ của job backup'],
+      ['0208', 'Từ 0208 · antivirus', 'ô ✗ của máy bị issue'],
+      ['Lập thẳng', 'Lập thẳng', 'sự cố khác, không gắn ô']
+    ].map(function (c) {
+      return { label: c[1], hint: c[2], n: c[0] === 'all' ? inMonth.length : cnt(inMonth, function (d) { return d[2] === c[0]; }),
+        pressed: s.src === c[0] ? 'true' : 'false', style: s.src === c[0] ? on : off,
+        pick: function () { self.setState({ src: c[0] }); } };
+    });
+    var monthKeys = [0, 10, 9];
+    var months = (s.year === 2026 ? monthKeys : [0]).map(function (m) {
+      var sel = s.month === m;
+      return { label: m ? 'Tháng ' + m : 'Cả năm', n: m ? cnt(inYear, function (d) { return d[0] === m; }) : inYear.length,
+        pressed: sel ? 'true' : 'false', style: sel ? 'border:1px solid #0e9f6e;background:#0e9f6e;color:#ffffff' : 'border:1px solid #c9ccc0;background:#ffffff;color:#1f231c',
+        pick: function () { self.setState({ month: m }); } };
+    });
+    var years = [2026, 2025].map(function (y) {
+      var sel = s.year === y;
+      return { label: String(y), pressed: sel ? 'true' : 'false', style: sel ? 'background:#ffffff;color:#1f231c;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:none;color:#5a615a',
+        pick: function () { self.setState({ year: y, month: 0, src: 'all' }); } };
+    });
+    var groups = [10, 9].map(function (m) {
+      var rows = shown.filter(function (d) { return d[0] === m; });
+      return { m: m, rows: rows };
+    }).filter(function (g) { return g.rows.length; }).map(function (g) {
+      var signed = cnt(g.rows, function (d) { return d[9]; });
+      return { title: 'Tháng ' + g.m + '/2026', st: PER[g.m][0], stStyle: PER[g.m][1],
+        count: g.rows.length + ' phiếu · ' + signed + ' đã có bản ký',
+        rows: g.rows.map(function (d) {
+          var prog = d[7] === 'In Progress';
+          return { code: d[1], src: d[2], srcStyle: SRC[d[2]], obj: d[3], cells: d[4], type: d[5], typeStyle: T[d[5]], range: d[6],
+            cst: d[7], cstStyle: CST[d[7]], by: d[8],
+            sign: d[9] ? '✓ Đã có' : (prog ? 'Chờ xử lý xong' : 'Chưa có'),
+            signStyle: d[9] ? 'color:#0a7d54;font-weight:600' : (prog ? 'color:#8a4b00' : 'color:#c0392b') };
+        }) };
+    });
+    return { years: years, months: months, srcs: srcs, groups: groups, year: s.year, empty: inYear.length === 0 };
+  }
+}
+</script>
+</body>
+</html>

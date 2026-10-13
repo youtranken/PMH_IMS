@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>0208 · Theo dõi antivirus</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button,input,select{font-family:inherit;font-size:14px;color:#1f231c}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1100px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="0208" hint-size="248px,1100px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5c635c">Phiếu ISO · SP-IT0208 · System Antivirus: Sophos</div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Theo dõi antivirus</h1>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; border: 1px solid #d8dbd0; border-radius: 10px; background: #ffffff">
+<button onClick="{{ prevMonth }}" aria-label="Tháng trước" style="height: 36px; width: 36px; border: 0; background: none; cursor: pointer; color: #5a615a">‹</button>
+<span style="padding: 0 6px; font-weight: 600">Tháng {{monthLabel}}</span>
+<button onClick="{{ nextMonth }}" aria-label="Tháng sau" style="height: 36px; width: 36px; border: 0; background: none; cursor: pointer; color: #5a615a">›</button>
+</div>
+<span style="padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; {{statusStyle}}">{{statusLabel}}</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+<a href="XemLai.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; background: #0e9f6e; color: #ffffff; font-weight: 600; text-decoration: none">Xem lại &amp; gửi chốt</a>
+</sc-if>
+</div>
+</header>
+
+<sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+<section role="status" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 18px; border-radius: 12px; background: #efeee7; border: 1px solid #d8dbd0">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5f665f" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<div style="flex: 1 1 380px"><strong>Kỳ 09/2026 đã chốt 01/10 · chỉ xem.</strong> <span style="color: #5a615a">Đang chờ bản ký. Cần sửa thì xin mở lại ở Kỳ phiếu.</span></div>
+<a href="KyPhieu.dc.html" style="font-weight: 600">Mở Kỳ phiếu ›</a>
+</section>
+</sc-if>
+
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Ghi kết quả" style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px">
+<div style="flex: 1 1 360px; line-height: 1.4">
+<strong>{{pendingTitle}}</strong>
+<div style="font-size: 13px; color: #5a615a">Kiểm trên console Sophos. Không có issue thì bấm ✓ ngày đó; có máy bị issue thì ghi thêm dòng.</div>
+</div>
+<sc-for list="{{ pending }}" as="p" hint-placeholder-count="2">
+<button onClick="{{ p.mark }}" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #0e9f6e; background: #ffffff; color: #0a7d54; font-weight: 600; cursor: pointer">✓ {{p.label}} không có issue</button>
+</sc-for>
+<button onClick="{{ openAdd }}" style="height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">+ Ghi máy có issue</button>
+</div>
+<sc-if value="{{ adding }}" hint-placeholder-val="{{ false }}">
+<form style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: end; padding: 16px; border-radius: 12px; background: #faf9f5; border: 1px solid #e9eae2">
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Reported Date<select style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 8px; font-weight: 400; background: #ffffff"><option selected>12/10/2026</option><option>11/10/2026</option><option>10/10/2026</option><option>09/10/2026</option></select></label>
+<fieldset style="grid-column: 1 / -1; border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 8px; font-weight: 600; font-size: 13px">Division <span style="font-weight: 400; color: #5c635c">— chọn bộ phận của máy bị issue. Bộ phận chưa có dòng trong tháng sẽ tự thêm dòng vào lưới.</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<sc-for list="{{ divChips }}" as="c" hint-placeholder-count="4">
+<button type="button" aria-pressed="{{c.pressed}}" onClick="{{ c.pick }}" style="height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 13px; {{c.style}}">{{c.label}}</button>
+</sc-for>
+<button type="button" aria-pressed="{{newPressed}}" onClick="{{ pickNew }}" style="height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 13px; border: 1px dashed #868d83; {{newStyle}}">+ Bộ phận mới</button>
+<sc-if value="{{ newDiv }}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="position: absolute; left: -9999px">Tên bộ phận mới</span><input value="PSD" style="height: 36px; width: 160px; border: 2px solid #0e9f6e; border-radius: 8px; padding: 0 10px"><span style="color: #5c635c">sẽ lưu luôn vào Danh mục phiếu</span></label>
+</sc-if>
+</div>
+</fieldset>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Computer Name<input value="SMD-PC-07" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 10px; font-weight: 400"></label>
+<label style="grid-column: span 3; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Incident Description<input value="Phát hiện Trojan.Gen, đã cách ly" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 10px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Resolution Date<select style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 8px; font-weight: 400; background: #ffffff"><option selected>12/10/2026</option><option>Chưa xong</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Handled<input value="Quốc Bảo" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 10px; font-weight: 400"></label>
+<div style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{ cancelAdd }}" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Huỷ</button>
+<button type="button" onClick="{{ addRow }}" style="height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Lưu dòng</button>
+</div>
+</form>
+</sc-if>
+</section>
+</sc-if>
+
+<section aria-labelledby="month-h" style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px">
+<h2 id="month-h" style="margin: 0; font-size: 18px; font-weight: 700; flex: 1 1 200px">Lưới tháng</h2>
+<span style="font-size: 12px; color: #5a615a">{{summary}}</span>
+</div>
+<div style="overflow-x: auto; border: 1px solid #e9eae2; border-radius: 10px">
+<table style="border-collapse: collapse; font-size: 12px; width: 100%; min-width: 1320px">
+<thead>
+<tr style="background: #f2f1ea; color: #5a615a">
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 80px">Division</th>
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 64px">Reported</th>
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 84px">Computer</th>
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 170px">Incident Description</th>
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 64px">Resolved</th>
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 70px">Handled</th>
+<th scope="col" style="padding: 8px; text-align: left; font-weight: 600; width: 96px; border-right: 1px solid #d8dbd0">Phiếu 0206</th>
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="31">
+<th scope="col" style="padding: 6px 0 2px; width: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.1; {{d.style}}">{{d.n}}<div style="font-size: 9px; font-weight: 400; font-family: 'Be Vietnam Pro', sans-serif">{{d.wd}}</div></th>
+</sc-for>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+<tr style="border-top: 1px solid #e9eae2; {{r.rowStyle}}">
+<td style="padding: 6px 8px; font-weight: 600">{{r.div}}</td>
+<td style="padding: 6px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px">{{r.rep}}</td>
+<td style="padding: 6px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px">{{r.pc}}</td>
+<td style="padding: 6px 8px; line-height: 1.3">{{r.issue}}</td>
+<td style="padding: 6px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px">{{r.res}}</td>
+<td style="padding: 6px 8px">{{r.by}}</td>
+<td style="padding: 6px 8px; border-right: 1px solid #d8dbd0">
+<sc-if value="{{ r.hasLink }}" hint-placeholder-val="{{ true }}"><a href="PhieuSuCo.dc.html" style="font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace">{{r.link}}</a></sc-if>
+<sc-if value="{{ r.needLink }}" hint-placeholder-val="{{ false }}"><a href="PhieuSuCo.dc.html" style="font-size: 12px; font-weight: 700; color: #c0392b">Lập 0206 ›</a></sc-if>
+</td>
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="31">
+<td style="height: 30px; padding: 1px; text-align: center; {{c.td}}"><span style="display: block; height: 24px; line-height: 24px; border-radius: 4px; font-weight: 700; {{c.style}}">{{c.t}}</span></td>
+</sc-for>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 10px; background: #f0faf5; border: 1px solid #bfe3d2; font-size: 13px; line-height: 1.5">
+<div style="flex: 1 1 520px"><strong>Cột Division thay đổi theo từng tháng.</strong> Lưới chỉ có bộ phận đã ghi issue trong tháng này (ví dụ tháng 10 chỉ D&amp;E, SMD; tháng 12 có thể là PSD, IT, Admin). Muốn thêm bộ phận vào tháng thì ghi một issue cho bộ phận đó, dòng tự hiện. Mỗi máy × mỗi ngày phát hiện là một dòng.</div>
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openAdd }}" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #0e9f6e; background: #ffffff; color: #0a7d54; font-weight: 600; cursor: pointer">+ Ghi issue cho bộ phận khác</button></sc-if>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var rec = {};
+    for (var d = 1; d <= 11; d++) if (d !== 9) rec[d] = true;
+    this.state = { month: 10, rec: rec, adding: false, extra: [], divPick: 'SMD', newDiv: false };
+  }
+  renderVals() {
+    var TODAY = 12, self = this, s = this.state, open = s.month === 10;
+    var WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'], first = open ? 4 : 2, N = open ? 31 : 30;
+    var issues = open ? [
+      { div: 'D&E', pc: 'DE-PC-01', issue: 'USB chứa Worm.Autorun', day: 3, res: '03/10', by: 'Minh Anh', link: '0206-2026-012' },
+      { div: 'D&E', pc: 'DE-PC-02', issue: 'Agent mất kết nối', day: 8, res: '09/10', by: 'Quốc Bảo', link: '0206-2026-013' },
+      { div: 'SMD', pc: 'SMD-PC-11', issue: 'Định nghĩa virus quá hạn', day: 10, res: '10/10', by: 'Quốc Bảo', link: '' }
+    ].concat(s.extra).sort(function (a, b) { return a.div === b.div ? a.day - b.day : (a.div < b.div ? -1 : 1); }) : [
+      { div: 'QA', pc: 'QA-PC-04', issue: 'Adware trình duyệt', day: 15, res: '15/09', by: 'Thu Hà', link: '0206-2026-008' }
+    ];
+    function recorded(d) { return !open || (d <= TODAY && !!s.rec[d]); }
+    var days = [];
+    for (var d = 1; d <= N; d++) {
+      var wd = WD[(first + d - 1) % 7];
+      days.push({ n: d, wd: wd, style: open && d === TODAY ? 'background:#e5f6ee;color:#0a7d54' : open && d > TODAY ? 'color:#a3a89f' : wd === 'CN' ? 'color:#a34d08' : '' });
+    }
+    function cellsFor(bad, linked) {
+      var out = [];
+      for (var d = 1; d <= N; d++) {
+        var td = open && d > TODAY ? 'background:#f2f1ea' : open && d === TODAY ? 'background:#e5f6ee' : '';
+        if (d === bad) out.push({ t: '✗', td: td, style: linked ? 'color:#a34d08;background:#fdf0e3' : 'color:#c0392b;background:#fdeceb;box-shadow:inset 0 0 0 2px #c0392b' });
+        else if (recorded(d)) out.push({ t: '✓', td: td, style: 'color:#0f7a55' });
+        else if (open && d <= TODAY) out.push({ t: '', td: td, style: d < TODAY ? 'box-shadow:inset 0 0 0 2px #f59e0b' : '' });
+        else out.push({ t: '', td: td, style: '' });
+      }
+      return out;
+    }
+    var rows = issues.map(function (x, i) {
+      var prevSame = i > 0 && issues[i - 1].div === x.div;
+      var dd = (x.day < 10 ? '0' : '') + x.day + (open ? '/10' : '/09');
+      return { div: prevSame ? '' : x.div, rep: dd, pc: x.pc, issue: x.issue, res: x.res, by: x.by, link: x.link, hasLink: !!x.link, needLink: !x.link, cells: cellsFor(x.day, !!x.link), rowStyle: '' };
+    });
+    rows.push({ div: 'Other Division', rep: '', pc: '', issue: 'Các bộ phận còn lại', res: '', by: '', link: '', hasLink: false, needLink: false, cells: cellsFor(0, false), rowStyle: 'background:#faf9f5' });
+    var pending = [];
+    for (var p = 1; p <= TODAY; p++) {
+      (function (p) {
+        if (open && !s.rec[p]) pending.push({ label: p === TODAY ? 'Hôm nay ' + p + '/10' : 'Ngày ' + p + '/10', mark: function () { var r = Object.assign({}, s.rec); r[p] = true; self.setState({ rec: r }); } });
+      })(p);
+    }
+    var unlinked = issues.filter(function (x) { return !x.link; }).length;
+    var divs = {}; issues.forEach(function (x) { divs[x.div] = 1; });
+    return {
+      open: open, locked: !open, monthLabel: open ? '10/2026' : '09/2026',
+      statusLabel: open ? 'Đang ghi' : 'Đã chốt · chờ bản ký',
+      statusStyle: open ? 'background:#e6f0fa;color:#1d5f9e' : 'background:#fdeceb;color:#c0392b',
+      prevMonth: function () { self.setState({ month: 9, adding: false }); },
+      nextMonth: function () { self.setState({ month: 10 }); },
+      days: days, rows: rows, pending: pending,
+      pendingTitle: pending.length ? pending.length + ' ngày chưa ghi kết quả' : 'Đã ghi đủ tới hôm nay',
+      summary: issues.length + ' lần issue · ' + Object.keys(divs).length + ' bộ phận · ' + unlinked + ' chưa có 0206',
+      adding: s.adding,
+      openAdd: function () { self.setState({ adding: true }); },
+      divChips: ['D&E', 'SMD', 'QA'].map(function (d) {
+        var on = !s.newDiv && s.divPick === d;
+        return { label: d, pressed: on ? 'true' : 'false', style: on ? 'border:1px solid #0e9f6e;background:#0e9f6e;color:#ffffff' : 'border:1px solid #c9ccc0;background:#ffffff;color:#1f231c',
+          pick: function () { self.setState({ divPick: d, newDiv: false }); } };
+      }),
+      newDiv: s.newDiv, newPressed: s.newDiv ? 'true' : 'false',
+      newStyle: s.newDiv ? 'background:#0e9f6e;color:#ffffff;border-color:#0e9f6e' : 'background:#ffffff;color:#1f231c',
+      pickNew: function () { self.setState({ newDiv: true }); },
+      cancelAdd: function () { self.setState({ adding: false }); },
+      addRow: function () { var r = Object.assign({}, s.rec); r[TODAY] = true; self.setState({ adding: false, rec: r, extra: s.extra.concat([s.newDiv
+        ? { div: 'PSD', pc: 'PSD-PC-03', issue: 'Trojan.Gen, đã cách ly', day: 12, res: '12/10', by: 'Quốc Bảo', link: '' }
+        : { div: s.divPick, pc: s.divPick.replace('&', '') + '-PC-07', issue: 'Trojan.Gen, đã cách ly', day: 12, res: '12/10', by: 'Quốc Bảo', link: '' }]), newDiv: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

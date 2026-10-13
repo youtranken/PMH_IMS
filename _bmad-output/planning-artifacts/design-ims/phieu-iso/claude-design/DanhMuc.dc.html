@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Danh mục phiếu ISO</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button,input,select{font-family:inherit;font-size:14px;color:#1f231c}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1200px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="dm" hint-size="248px,1200px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; gap: 16px; font-size: 13px; font-weight: 600"><a href="Main.dc.html" style="text-decoration: none">‹ Theo dõi backup 0203</a><a href="Antivirus.dc.html" style="text-decoration: none">‹ Theo dõi antivirus 0208</a></div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Danh mục phiếu ISO</h1>
+<div style="color: #5a615a">Job backup, bộ phận và người phụ trách. Thêm, sửa hay ngừng ở đây chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ nguyên danh sách lúc chốt.</div>
+</div>
+</header>
+
+<div role="tablist" aria-label="Danh sách" style="display: flex; gap: 4px; border-bottom: 1px solid #d8dbd0">
+<button role="tab" aria-selected="{{jobSel}}" onClick="{{ toJobs }}" style="height: 44px; padding: 0 18px; border: 0; background: none; cursor: pointer; font-weight: 600; {{jobTab}}">Job backup · 0203 <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5c635c">11</span></button>
+<button role="tab" aria-selected="{{divSel}}" onClick="{{ toDivs }}" style="height: 44px; padding: 0 18px; border: 0; background: none; cursor: pointer; font-weight: 600; {{divTab}}">Bộ phận · 0208 <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5c635c">3</span></button>
+<button role="tab" aria-selected="{{ownSel}}" onClick="{{ toOwn }}" style="height: 44px; padding: 0 18px; border: 0; background: none; cursor: pointer; font-weight: 600; {{ownTab}}">Người phụ trách</button>
+</div>
+
+<sc-if value="{{ showJobs }}" hint-placeholder-val="{{ true }}">
+<section style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<label style="flex: 1 1 260px; display: flex"><span style="position: absolute; left: -9999px">Tìm job</span><input placeholder="Tìm tên job…" style="width: 100%; height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px"></label>
+<label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #5a615a">Trạng thái<select style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 8px; background: #ffffff"><option>Đang theo dõi</option><option>Đã ngừng</option><option>Tất cả</option></select></label>
+<button onClick="{{ openAdd }}" style="height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">+ Thêm job</button>
+</div>
+
+<sc-if value="{{ adding }}" hint-placeholder-val="{{ false }}">
+<form style="background: #ffffff; border: 2px solid #0e9f6e; border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">Thêm job backup</h2>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+<label style="grid-column: span 2; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Name Job Backup<input value="HR-Portal_DB" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Số thứ tự (No)<input value="31" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Theo dõi từ ngày<input value="15/10/2026" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"><span style="font-weight: 400; font-size: 12px; color: #5c635c">Ngày 1–14 để trống, không tính bỏ sót.</span></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Points NAS<input value="14" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Storage location<input value="NAS" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Points Cloud<input value="7" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Storage location<input value="Cloud" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-weight: 600; font-size: 13px">Đối tượng con <span style="font-weight: 400; color: #5c635c">— như File Server-1 có OS, Volume_E, Volume_F. Bỏ trống nếu job chỉ một dòng.</span></span>
+<div style="display: flex; gap: 8px; align-items: center"><input value="HR-Portal_DB_Full" aria-label="Đối tượng con 1" style="flex: 1; height: 38px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px"><button type="button" aria-label="Xoá đối tượng con 1" style="width: 38px; height: 38px; border: 1px solid #d8dbd0; border-radius: 8px; background: #ffffff; cursor: pointer">×</button></div>
+<button type="button" style="align-self: flex-start; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px dashed #868d83; background: #ffffff; font-weight: 600; cursor: pointer">+ Thêm đối tượng con</button>
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ closeAdd }}" style="height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Lưu job</button>
+<button type="button" onClick="{{ closeAdd }}" style="height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Huỷ</button>
+</div>
+</form>
+</sc-if>
+
+<div style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; overflow-x: auto">
+<table style="border-collapse: collapse; width: 100%; min-width: 960px">
+<thead><tr style="text-align: left; color: #5a615a; font-size: 12px; background: #f2f1ea">
+<th scope="col" style="padding: 10px 14px; font-weight: 600; width: 50px">No</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Name Job Backup</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Đối tượng con</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">NAS</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Cloud</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Theo dõi từ</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Trạng thái</th>
+<th scope="col" style="padding: 10px 14px; font-weight: 600; text-align: right">Thao tác</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{ jobs }}" as="j" hint-placeholder-count="10">
+<tr style="border-top: 1px solid #e9eae2; {{j.rowStyle}}">
+<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5c635c">{{j.no}}</td>
+<td style="padding: 10px 12px; font-weight: 600">{{j.name}}</td>
+<td style="padding: 10px 12px; color: #5a615a; font-size: 13px">{{j.subs}}</td>
+<td style="padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px">{{j.nas}}</td>
+<td style="padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px">{{j.cloud}}</td>
+<td style="padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5a615a">{{j.from}}</td>
+<td style="padding: 10px 12px"><span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{j.stStyle}}">{{j.st}}</span></td>
+<td style="padding: 10px 14px; text-align: right; white-space: nowrap">
+<button aria-label="Sửa {{j.name}}" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Sửa</button>
+<button aria-label="{{j.toggle}} {{j.name}}" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 0; background: none; color: #5a615a; font-weight: 600; cursor: pointer">{{j.toggle}}</button>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div style="font-size: 12px; color: #5c635c">Kéo để đổi thứ tự in trên phiếu. Job ngừng vẫn hiện ở các kỳ cũ, ô sau ngày ngừng để trống. Trên prod danh sách bắt đầu rỗng, IT tự tạo job.</div>
+</section>
+</sc-if>
+
+<sc-if value="{{ showDivs }}" hint-placeholder-val="{{ false }}">
+<section style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+<div style="flex: 1 1 400px; color: #5a615a; line-height: 1.5">Đây chỉ là danh sách để chọn nhanh khi ghi 0208. Phiếu tháng và bản in chỉ có bộ phận có máy bị issue; các bộ phận còn lại gộp vào dòng <strong style="color: #1f231c">Other Division</strong>. Hệ thống chỉ tạo sẵn một bộ phận làm mẫu.</div>
+<button onClick="{{ openDiv }}" style="height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">+ Thêm bộ phận</button>
+</div>
+<sc-if value="{{ addingDiv }}" hint-placeholder-val="{{ false }}">
+<form style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: #ffffff; border: 2px solid #0e9f6e; border-radius: 14px; padding: 18px 20px">
+<label style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Mã<input value="MKT" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<label style="flex: 3 1 300px; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Tên bộ phận<input value="Marketing" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400"></label>
+<button type="button" onClick="{{ closeDiv }}" style="height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Lưu</button>
+<button type="button" onClick="{{ closeDiv }}" style="height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Huỷ</button>
+</form>
+</sc-if>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{ divs }}" as="d" hint-placeholder-count="9">
+<div style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px">
+<span style="display: inline-grid; place-items: center; min-width: 52px; height: 36px; padding: 0 8px; box-sizing: border-box; border-radius: 8px; background: #f2f1ea; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500">{{d.code}}</span>
+<div style="flex: 1; line-height: 1.35"><strong>{{d.name}}</strong><div style="font-size: 12px; color: #5c635c">{{d.stat}}</div></div>
+<button aria-label="Sửa {{d.name}}" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Sửa</button>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+<sc-if value="{{ showOwn }}" hint-placeholder-val="{{ false }}">
+<section style="display: flex; flex-direction: column; gap: 16px">
+<div style="color: #5a615a; line-height: 1.5; max-width: 760px">Người phụ trách nhận mail nhắc và là người <strong style="color: #1f231c">duy nhất</strong> (cùng SA/Admin) được tick, ghi issue và gửi chốt phiếu đó. Member khác chỉ xem. Chỉ SA/Admin sửa được mục này.</div>
+<div style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; overflow-x: auto">
+<table style="border-collapse: collapse; width: 100%; min-width: 860px">
+<thead><tr style="text-align: left; color: #5a615a; font-size: 12px; background: #f2f1ea">
+<th scope="col" style="padding: 10px 16px; font-weight: 600">Loại phiếu</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Phụ trách chính</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Dự phòng</th>
+<th scope="col" style="padding: 10px 16px; font-weight: 600">Mail nhắc gửi cho</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{ owners }}" as="o" hint-placeholder-count="3">
+<tr style="border-top: 1px solid #e9eae2">
+<td style="padding: 12px 16px"><strong>{{o.form}}</strong><div style="font-size: 12px; color: #5c635c">{{o.desc}}</div></td>
+<td style="padding: 12px"><select aria-label="Phụ trách chính {{o.form}}" style="height: 38px; min-width: 200px; border: 1px solid #868d83; border-radius: 8px; padding: 0 8px; background: #ffffff; {{o.mainStyle}}"><option>{{o.main}}</option><option>Minh Anh</option><option>Quốc Bảo</option><option>Thu Hà</option></select></td>
+<td style="padding: 12px"><select aria-label="Dự phòng {{o.form}}" style="height: 38px; min-width: 200px; border: 1px solid #868d83; border-radius: 8px; padding: 0 8px; background: #ffffff"><option>{{o.backup}}</option><option>Minh Anh</option><option>Quốc Bảo</option><option>Thu Hà</option></select></td>
+<td style="padding: 12px 16px; font-size: 13px; color: #5a615a">{{o.mail}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; background: #fff7e8; border: 1px solid #f0c674; font-size: 13px; line-height: 1.5"><strong style="color: #a34d08">0206</strong><span>Phiếu lập từ ô ✗ theo quyền của phiếu chứa ô đó. Phiếu lập thẳng thì mọi tài khoản IT đều lập được. Loại phiếu làm sau (0204, 0207…) sẽ thêm dòng vào bảng này.</span></div>
+<div><button style="height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Lưu người phụ trách</button></div>
+</section>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'jobs', adding: false, addingDiv: false };
+  }
+  renderVals() {
+    var self = this, s = this.state, jobsOn = s.tab === 'jobs', divOn = s.tab === 'divs', ownOn = s.tab === 'own';
+    var on = 'color:#0a7d54;box-shadow:inset 0 -3px 0 #0e9f6e', off = 'color:#5a615a';
+    var J = [
+      [1, 'ACC-SUNAPP', '—', '35 · NAS', '14 · Cloud', 1], [2, 'ACC-SUNDB', '—', '35 · NAS', '14 · Cloud', 1],
+      [3, 'BPM', '—', '14 · NAS', '14 · Cloud', 1], [4, 'BPM TEST', '—', '7 · NAS', '14 · Cloud', 1],
+      [5, 'File Server-1', 'OS, Volume_E, Volume_F', '14–31 · NAS', '14–31 · Cloud', 1],
+      [6, 'File Server-2', 'OS, Volume_E', '14–31 · NAS', '14–31 · Cloud', 1],
+      [7, 'File Server D&E', '6 thư mục con', '14–31 · NAS', '14 · Cloud', 1],
+      [8, 'SPM_APP', '—', '35 · NAS', '—', 1], [9, 'SPM_DB', '—', '35 · NAS', '7 · Cloud', 1],
+      [10, 'Veeam_Backup', '—', '21 · NAS', '7 · Cloud', 1],
+      [11, 'HR-Portal_DB', '—', '14 · NAS', '7 · Cloud', 1, '15/10/2026'],
+      ['', 'Old-Mail-Archive', '—', '14 · NAS', '—', 0, '01/09/2026']
+    ];
+    var D = [['D&E', 'Design & Engineering', 'Có sẵn làm mẫu · 2 lần issue năm 2026'], ['SMD', 'SMD', 'IT thêm · 1 lần issue năm 2026'], ['QA', 'Quality Assurance', 'IT thêm · chưa có issue']];
+    var O = [
+      ['0203 · Theo dõi backup', 'Tick hằng ngày, gửi chốt cuối tháng', 'Minh Anh', 'Quốc Bảo', 'Chính: nhắc tick, nhắc gửi chốt. Dự phòng: khi quá 2 ngày còn thiếu.'],
+      ['0208 · Theo dõi antivirus', 'Ghi issue / không issue mỗi ngày', 'Quốc Bảo', 'Minh Anh', 'Như 0203'],
+      ['0206 · Sự cố', 'Không cần gán', '— mọi IT —', '—', 'Người lập: nhắc khi In Progress quá 7 ngày, chưa có bản ký.']
+    ];
+    return {
+      showJobs: jobsOn, showDivs: divOn, showOwn: ownOn,
+      jobSel: jobsOn ? 'true' : 'false', divSel: divOn ? 'true' : 'false', ownSel: ownOn ? 'true' : 'false',
+      jobTab: jobsOn ? on : off, divTab: divOn ? on : off, ownTab: ownOn ? on : off,
+      toJobs: function () { self.setState({ tab: 'jobs' }); }, toDivs: function () { self.setState({ tab: 'divs' }); }, toOwn: function () { self.setState({ tab: 'own' }); },
+      owners: O.map(function (o) { return { form: o[0], desc: o[1], main: o[2], backup: o[3], mail: o[4], mainStyle: '' }; }),
+      adding: s.adding, openAdd: function () { self.setState({ adding: true }); }, closeAdd: function () { self.setState({ adding: false }); },
+      addingDiv: s.addingDiv, openDiv: function () { self.setState({ addingDiv: true }); }, closeDiv: function () { self.setState({ addingDiv: false }); },
+      jobs: J.map(function (j) {
+        var live = j[5] === 1;
+        return { no: j[0], name: j[1], subs: j[2], nas: j[3], cloud: j[4], from: j[6] || '01/10/2026', st: live ? 'Đang theo dõi' : 'Ngừng từ 20/09/2026',
+          stStyle: live ? 'background:#e4f4ee;color:#0f7a55' : 'background:#efeee7;color:#5f665f',
+          toggle: live ? 'Ngừng' : 'Bật lại', rowStyle: live ? '' : 'color:#8a8f86' };
+      }),
+      divs: D.map(function (d) { return { code: d[0], name: d[1], stat: d[2] }; })
+    };
+  }
+}
+</script>
+</body>
+</html>

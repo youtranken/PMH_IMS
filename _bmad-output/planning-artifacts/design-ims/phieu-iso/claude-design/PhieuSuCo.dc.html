@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>0206 · Lập phiếu sự cố</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button,input,select,textarea{font-family:inherit;font-size:14px;color:#1f231c}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1300px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="0206" hint-size="248px,1300px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<a href="SuCo.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">‹ Danh sách sự cố</a>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Lập phiếu sự cố 0206</h1>
+<div style="color: #5a615a">Daily Incident Report Form · số phiếu cấp khi lưu</div>
+</div>
+<sc-if value="{{ editing }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 8px">
+<a href="SuCo.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; color: #1f231c; font-weight: 600; text-decoration: none">Huỷ</a>
+<button onClick="{{ toReview }}" style="height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Xem lại trước khi lưu ›</button>
+</div>
+</sc-if>
+</header>
+
+<ol aria-label="Các bước" style="list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap">
+<li style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; {{step1}}"><span>1</span>Điền phiếu</li>
+<li style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; {{step2}}"><span>2</span>Xem lại</li>
+<li style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: #f2f1ea; color: #8a8f86"><span>3</span>Lưu · cấp số phiếu</li>
+</ol>
+
+<sc-if value="{{ reviewing }}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="rv-h" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<div style="flex: 999 1 640px; min-width: 0; background: #ffffff; border: 1px solid #d8dbd0; border-radius: 6px; padding: 32px 36px; font-family: 'Times New Roman', serif; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; font-family: 'Be Vietnam Pro', sans-serif"><strong id="rv-h" style="font-size: 18px">SP-IT0206 · Daily Incident Report Form</strong><span style="font-size: 12px; color: #5a615a">Bản xem trước · số phiếu cấp khi lưu</span></div>
+<table style="border-collapse: collapse; width: 100%; font-size: 14px">
+<tbody>
+<tr><th scope="row" style="border: 1px solid #1f231c; padding: 6px 10px; text-align: left; width: 200px; background: #faf9f5">Date Report</th><td style="border: 1px solid #1f231c; padding: 6px 10px">12/10/2026 · minh.nv</td></tr>
+<tr><th scope="row" style="border: 1px solid #1f231c; padding: 6px 10px; text-align: left; background: #faf9f5">Type of Incident</th><td style="border: 1px solid #1f231c; padding: 6px 10px">{{typeNow}}</td></tr>
+<tr><th scope="row" style="border: 1px solid #1f231c; padding: 6px 10px; text-align: left; background: #faf9f5">Detection → Resolution</th><td style="border: 1px solid #1f231c; padding: 6px 10px">{{detect}} → {{resolve}}</td></tr>
+<tr><th scope="row" style="border: 1px solid #1f231c; padding: 6px 10px; text-align: left; background: #faf9f5">Severity · Status</th><td style="border: 1px solid #1f231c; padding: 6px 10px">Medium · Resolved</td></tr>
+<tr><th scope="row" style="border: 1px solid #1f231c; padding: 6px 10px; text-align: left; background: #faf9f5">Incident Description</th><td style="border: 1px solid #1f231c; padding: 6px 10px">Job SPM_DB lỗi lúc 02:10, Veeam báo không kết nối được tới SQL VSS writer.</td></tr>
+<tr><th scope="row" style="border: 1px solid #1f231c; padding: 6px 10px; text-align: left; background: #faf9f5">Corrective Action</th><td style="border: 1px solid #1f231c; padding: 6px 10px">Khởi động lại dịch vụ SQL VSS Writer, chạy lại job thủ công lúc 09:30, thành công.</td></tr>
+</tbody>
+</table>
+<sc-if value="{{ isBackup }}" hint-placeholder-val="{{ true }}">
+<div style="font-size: 13px">Detail Error Backup: <strong>SPM_DB</strong> · Incr · DB · NAS · VSS writer timeout · Chạy lại thủ công, OK</div>
+</sc-if>
+<div style="display: flex; justify-content: space-around; margin-top: 12px; font-family: 'Be Vietnam Pro', sans-serif; font-size: 12px; color: #5a615a"><span>Reported By — ký tay trên bản in</span><span>Reviewed and Approved By — ký tay</span></div>
+</div>
+<aside style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 12px">
+<div style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Kiểm trước khi lưu</h2>
+<div style="display: flex; gap: 8px; color: #0f7a55"><span aria-hidden="true">✓</span><span style="color: #1f231c">Đủ các ô bắt buộc</span></div>
+<div style="display: flex; gap: 8px; color: #0f7a55"><span aria-hidden="true">✓</span><span style="color: #1f231c">Gắn 1 ô ✗: SPM_DB · 11/10 (0203)</span></div>
+<div style="display: flex; gap: 8px; color: #0f7a55"><span aria-hidden="true">✓</span><span style="color: #1f231c">Khoảng thời gian nằm trong kỳ 10/2026 đang ghi</span></div>
+<div style="font-size: 12px; color: #5c635c; line-height: 1.5">Lưu xong vẫn sửa được tới khi kỳ được chốt.</div>
+</div>
+<button onClick="{{ save }}" style="height: 44px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Xác nhận lưu phiếu</button>
+<button onClick="{{ toEdit }}" style="height: 44px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">‹ Quay lại sửa</button>
+<sc-if value="{{ saved }}" hint-placeholder-val="{{ false }}"><div role="status" style="padding: 12px 14px; border-radius: 10px; background: #e4f4ee; color: #0f7a55; font-weight: 600">Đã lưu 0206-2026-015. Ô SPM_DB · 11/10 đã gắn phiếu.</div></sc-if>
+</aside>
+</section>
+</sc-if>
+
+<sc-if value="{{ editing }}" hint-placeholder-val="{{ true }}">
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<form style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 18px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">1 · Incident Information</h2>
+
+<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="font-weight: 600; font-size: 13px; padding: 0; margin-bottom: 8px">Type of Incident</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ types }}" as="ty" hint-placeholder-count="5">
+<button type="button" onClick="{{ ty.pick }}" aria-pressed="{{ty.on}}" style="height: 40px; padding: 0 18px; border-radius: 999px; font-weight: 600; cursor: pointer; {{ty.style}}">{{ty.label}}</button>
+</sc-for>
+</div>
+</fieldset>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Date Report<input value="12/10/2026" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400; font-family: 'JetBrains Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Kỳ phiếu<input value="10/2026 · Đang ghi" readonly style="height: 40px; border: 1px solid #d8dbd0; border-radius: 8px; padding: 0 12px; font-weight: 400; background: #f2f1ea"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Người lập<input value="minh.nv" readonly style="height: 40px; border: 1px solid #d8dbd0; border-radius: 8px; padding: 0 12px; font-weight: 400; background: #f2f1ea"></label>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-weight: 600; font-size: 13px">Thời gian sự cố · bấm ngày đầu rồi ngày cuối</span>
+<div style="border: 1px solid #e9eae2; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 13px"><span>Tháng 10/2026</span><span style="color: #0a7d54">{{rangeLabel}}</span></div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; font-size: 12px; text-align: center">
+<sc-for list="{{ wk }}" as="w" hint-placeholder-count="7"><span style="color: #5c635c; font-weight: 600; padding: 4px 0">{{w}}</span></sc-for>
+<sc-for list="{{ cal }}" as="c" hint-placeholder-count="35">
+<button type="button" onClick="{{ c.pick }}" aria-label="{{c.aria}}" style="height: 34px; border: 0; border-radius: 8px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 12px; {{c.style}}">{{c.n}}</button>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Detection Time<input value="{{detect}}" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400; font-family: 'JetBrains Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Resolution Time<input value="{{resolve}}" style="height: 40px; border: 1px solid #868d83; border-radius: 8px; padding: 0 12px; font-weight: 400; font-family: 'JetBrains Mono', monospace"></label>
+<fieldset style="border: 0; margin: 0; padding: 0">
+<legend style="font-weight: 600; font-size: 13px; padding: 0; margin-bottom: 8px">Severity Level</legend>
+<div style="display: flex; gap: 6px">
+<label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 1px solid #d8dbd0; border-radius: 8px"><input type="radio" name="sev">Low</label>
+<label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 2px solid #a34d08; border-radius: 8px; background: #fdf0e3; font-weight: 600"><input type="radio" name="sev" checked>Medium</label>
+<label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 1px solid #d8dbd0; border-radius: 8px"><input type="radio" name="sev">High</label>
+</div>
+</fieldset>
+<fieldset style="border: 0; margin: 0; padding: 0">
+<legend style="font-weight: 600; font-size: 13px; padding: 0; margin-bottom: 8px">Current Status</legend>
+<div style="display: flex; gap: 6px">
+<label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 1px solid #d8dbd0; border-radius: 8px; font-size: 13px"><input type="radio" name="st">Temporary Fix</label>
+<label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 2px solid #0f7a55; border-radius: 8px; background: #e4f4ee; font-weight: 600; font-size: 13px"><input type="radio" name="st" checked>Resolved</label>
+<label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 1px solid #d8dbd0; border-radius: 8px; font-size: 13px"><input type="radio" name="st">In Progress</label>
+</div>
+</fieldset>
+</div>
+</div>
+
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Incident Description<textarea rows="3" style="border: 1px solid #868d83; border-radius: 8px; padding: 10px 12px; font-weight: 400; resize: vertical">Job SPM_DB lỗi lúc 02:10, Veeam báo không kết nối được tới SQL VSS writer.</textarea></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Corrective Action<textarea rows="3" style="border: 1px solid #868d83; border-radius: 8px; padding: 10px 12px; font-weight: 400; resize: vertical">Khởi động lại dịch vụ SQL VSS Writer, chạy lại job thủ công lúc 09:30, thành công.</textarea></label>
+</section>
+
+<sc-if value="{{ isBackup }}" hint-placeholder-val="{{ true }}">
+<section style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700; flex: 1">2 · Detail Error Backup</h2>
+<span style="font-size: 12px; color: #5c635c">Tối đa 11 dòng như mẫu giấy</span>
+</div>
+<div style="overflow-x: auto; border: 1px solid #e9eae2; border-radius: 10px">
+<table style="border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13px">
+<thead><tr style="background: #f2f1ea; color: #5a615a; font-size: 12px; text-align: left">
+<th scope="col" style="padding: 8px 10px; font-weight: 600">Job Name</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600">Type Backup</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600">Type Data</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600">Storage</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600">Error Message</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600">Issue Resolution</th>
+</tr></thead>
+<tbody>
+<tr style="border-top: 1px solid #e9eae2">
+<td style="padding: 8px 10px; font-weight: 600">SPM_DB</td>
+<td style="padding: 8px 10px">Incr</td>
+<td style="padding: 8px 10px">DB</td>
+<td style="padding: 8px 10px">NAS</td>
+<td style="padding: 8px 10px; color: #c0392b">VSS writer timeout</td>
+<td style="padding: 8px 10px">Chạy lại thủ công · OK</td>
+</tr>
+</tbody>
+</table>
+</div>
+<button type="button" style="align-self: flex-start; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px dashed #868d83; background: #ffffff; font-weight: 600; cursor: pointer">+ Thêm job</button>
+</section>
+</sc-if>
+</form>
+
+<aside style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 16px">
+<section style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Gắn với ô ✗ của 0203 / 0208</h2>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #fdeceb">
+<span style="display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: #ffffff; color: #c0392b; font-weight: 700">✗</span>
+<div style="flex: 1; line-height: 1.3"><strong>SPM_DB</strong><div style="font-size: 12px; color: #5a615a">0203 · ngày 11/10</div></div>
+<button type="button" aria-label="Bỏ gắn ô SPM_DB 11/10" style="width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; cursor: pointer; color: #5a615a">×</button>
+</div>
+<button type="button" onClick="{{ togglePick }}" style="height: 36px; border-radius: 10px; border: 1px dashed #868d83; background: #ffffff; font-weight: 600; cursor: pointer">+ Gắn thêm ô ✗</button>
+<sc-if value="{{ picking }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 10px; border: 1px solid #e9eae2; background: #faf9f5">
+<span style="font-size: 12px; color: #5a615a">Ô ✗ chưa có phiếu trong kỳ 10/2026</span>
+<label style="display: flex; align-items: center; gap: 8px; min-height: 36px"><input type="checkbox">0208 · SMD-PC-11 · 10/10</label>
+<label style="display: flex; align-items: center; gap: 8px; min-height: 36px"><input type="checkbox">0208 · SMD-PC-07 · 12/10</label>
+</div>
+</sc-if>
+<div style="font-size: 12px; color: #5c635c; line-height: 1.5">Lưu xong, ô ✗ trên lưới đổi sang nền cam và bấm vào là mở phiếu này. Một sự cố kéo dài nhiều ngày thì gắn mọi ô của các ngày đó.</div>
+</section>
+<section style="background: #f2f1ea; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #5a615a; line-height: 1.5">
+<strong style="color: #1f231c">Ký tay sau khi chốt kỳ</strong>
+Ô "Reported By" và "Reviewed and Approved By" chỉ có trên bản in. Phiếu được in, ký, scan rồi tải lên ở màn Kỳ phiếu.
+</section>
+</aside>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { type: 'Backup', a: 11, b: 11, review: false, saved: false, picking: false };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var types = ['Backup', 'Server', 'Network', 'Database', 'Other'].map(function (t) {
+      var on = t === s.type;
+      return { label: t, on: on ? 'true' : 'false', style: on ? 'border:2px solid #0e9f6e;background:#e5f6ee;color:#0a7d54' : 'border:1px solid #d8dbd0;background:#ffffff;color:#1f231c',
+        pick: function () { self.setState({ type: t }); } };
+    });
+    var cal = [];
+    for (var b = 0; b < 3; b++) cal.push({ n: '', style: 'background:none;cursor:default', aria: '', pick: function () {} });
+    var lo = Math.min(s.a, s.b), hi = Math.max(s.a, s.b);
+    for (var d = 1; d <= 31; d++) {
+      (function (d) {
+        var st = 'background:none';
+        if (d > 12) st = 'background:none;color:#b8bcb3;cursor:not-allowed';
+        else if (d === lo || d === hi) st = 'background:#0e9f6e;color:#ffffff;font-weight:700';
+        else if (d > lo && d < hi) st = 'background:#e5f6ee;color:#0a7d54';
+        cal.push({ n: d, style: st, aria: 'Ngày ' + d + '/10', pick: function () {
+          if (d > 12) return;
+          if (s.a !== s.b) self.setState({ a: d, b: d });
+          else self.setState({ b: d });
+        } });
+      })(d);
+    }
+    function f(n) { return (n < 10 ? '0' : '') + n + '/10/2026'; }
+    var days = hi - lo + 1;
+    return {
+      picking: s.picking, togglePick: function () { self.setState({ picking: !s.picking }); },
+      editing: !s.review, reviewing: s.review, saved: s.saved, typeNow: s.type,
+      step1: s.review ? 'background:#e4f4ee;color:#0f7a55' : 'background:#1f231c;color:#ffffff',
+      step2: s.review ? 'background:#1f231c;color:#ffffff' : 'background:#f2f1ea;color:#8a8f86',
+      toReview: function () { self.setState({ review: true }); },
+      toEdit: function () { self.setState({ review: false, saved: false }); },
+      save: function () { self.setState({ saved: true }); },
+      types: types, isBackup: s.type === 'Backup', cal: cal,
+      wk: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
+      rangeLabel: days === 1 ? 'trong 1 ngày' : days + ' ngày',
+      detect: f(lo) + ' 02:10', resolve: f(hi) + ' 09:40'
+    };
+  }
+}
+</script>
+</body>
+</html>

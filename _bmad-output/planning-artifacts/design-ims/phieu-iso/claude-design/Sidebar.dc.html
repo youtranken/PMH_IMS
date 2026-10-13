@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Sidebar IMS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<nav aria-label="Menu chính" style="flex: 0 0 248px; width: 248px; min-height: 100%; align-self: stretch; box-sizing: border-box; background: #16231b; color: #8ea595; font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 14px; padding: 20px 12px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<span style="display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: #0e9f6e; color: #ffffff; font-weight: 700; font-size: 13px">PMH</span>
+<div style="display: flex; flex-direction: column; line-height: 1.2"><strong style="color: #ffffff; font-size: 15px">IMS</strong><span style="font-size: 11px; color: #9fb0a5">Quản lý hệ thống IT</span></div>
+</div>
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}"><div style="padding: 0 10px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9fb0a5">{{g.label}}</div></sc-if>
+<sc-if value="{{ g.fold }}" hint-placeholder-val="{{ false }}"><button aria-expanded="{{g.expanded}}" onClick="{{ g.toggle }}" style="display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 10px 6px; border: 0; background: none; cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9fb0a5; text-align: left"><span style="flex: 1">{{g.label}}</span><sc-if value="{{ g.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #c0392b; color: #ffffff; font-size: 11px; font-weight: 700; letter-spacing: 0; display: inline-grid; place-items: center">{{g.badge}}</span></sc-if><span aria-hidden="true" style="font-size: 12px; letter-spacing: 0">{{g.chev}}</span></button></sc-if>
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+<a href="{{it.href}}" aria-current="{{it.current}}" style="display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 10px; border-radius: 9px; text-decoration: none; {{it.style}}">
+<span style="flex: 1">{{it.label}}</span>
+<span style="font-size: 11px; font-family: monospace; opacity: 0.75">{{it.code}}</span>
+<sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #c0392b; color: #ffffff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center">{{it.badge}}</span></sc-if>
+</a>
+</sc-for>
+</div>
+</sc-for>
+<div style="margin-top: auto; padding: 12px 10px 0; border-top: 1px solid #24352a; font-size: 12px; color: #9fb0a5">IT Member · it.member@pmh.com.vn</div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","0203","0208","0206","ky","dm"],"default":"home"},"$preview":{"width":248,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { iso: null };
+  }
+  renderVals() {
+    var self = this, active = this.props.active ?? 'home';
+    var onIso = ['0203', '0208', '0206', 'ky', 'dm'].indexOf(active) >= 0;
+    var isoOpen = this.state.iso === null ? onIso : this.state.iso;
+    function it(key, label, code, href, badge) {
+      var on = key === active;
+      return { label: label, code: code, href: href, badge: badge || '', current: on ? 'page' : 'false',
+        style: on ? 'background:rgba(245,158,11,0.16);color:#ffe1b3;font-weight:600' : 'color:#c9d6cd' };
+    }
+    function plain(label, items) { return { label: label, items: items, plain: true, fold: false }; }
+    var iso = [
+      it('0203', 'Theo dõi backup', '0203', 'Main.dc.html', '1'),
+      it('0208', 'Theo dõi antivirus', '0208', 'Antivirus.dc.html'),
+      it('0206', 'Sự cố', '0206', 'SuCo.dc.html'),
+      it('ky', 'Kỳ phiếu & chốt kỳ', '', 'KyPhieu.dc.html'),
+      it('dm', 'Danh mục phiếu', '', 'DanhMuc.dc.html')
+    ];
+    return {
+      groups: [
+        plain('Tổng quan', [it('home', 'Bảng điều khiển', '', '#')]),
+        plain('Tài sản', [it('tb', 'Thiết bị', '', '#'), it('pm', 'Phần mềm', '', '#'), it('cat', 'Danh mục', '', '#')]),
+        plain('Mạng', [it('ip', 'IPAM', '', '#'), it('isp', 'Đường truyền', '', '#')]),
+        { label: 'Phiếu ISO', plain: false, fold: true, expanded: isoOpen ? 'true' : 'false', chev: isoOpen ? '▾' : '▸',
+          badge: isoOpen ? '' : '1', items: isoOpen ? iso : [],
+          toggle: function () { self.setState({ iso: !isoOpen }); } },
+        plain('Bảo mật', [it('vault', 'Két mật khẩu', '', '#'), it('sa', 'Tài khoản dịch vụ', '', '#')])
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
