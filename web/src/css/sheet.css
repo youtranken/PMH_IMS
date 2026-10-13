@@ -33,6 +33,7 @@
 
 .sheet-grid thead th {
   background: var(--surface-2);
+  line-height: 1.2;
   font-weight: var(--fw-semibold);
   color: var(--ink-2);
 }
@@ -64,6 +65,12 @@
   text-align: left;
 }
 
+/* Cột cố định (Points, Storage…) xuống dòng ở tiêu đề: để chỗ cho 31 cột ngày trên màn laptop. */
+.sheet-grid thead th:not(.sheet-day):not(.sheet-name) {
+  white-space: normal;
+  max-width: 5.5rem;
+}
+
 .sheet-day {
   min-width: 2rem;
 }
@@ -86,6 +93,7 @@
 
 .sheet-cell {
   padding: 1px;
+  vertical-align: middle;
 }
 
 .sheet-cell[data-future] {
@@ -112,7 +120,9 @@
   background: transparent;
   color: var(--ink);
   font: inherit;
+  font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
+  line-height: 1;
 }
 
 button.sheet-mark {
@@ -302,6 +312,11 @@ button.sheet-mark:focus-visible {
   .sheet-split {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* Một cột: khối bên (chi tiết kỳ, danh sách kiểm) lên trước — không phải cuộn qua cả bảng 12 tháng. */
+  .sheet-split > aside {
+    order: -1;
+  }
 }
 
 /* ------------------------------------------------------------- bản in --- */
@@ -357,6 +372,11 @@ button.sheet-mark:focus-visible {
 .paper-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+/* Tên job / đối tượng con giữ một dòng: bảng 31 cột ngày ép cột tên hẹp tới mức vỡ chữ. */
+.paper-table .paper-nowrap {
+  white-space: nowrap;
 }
 
 .paper-table th,

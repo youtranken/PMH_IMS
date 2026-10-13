@@ -55,7 +55,7 @@ export function PeriodsScreen({ me }: { me: Me }) {
           <SegmentedRadio
             label={t('iso.incidents.year')}
             value={String(year)}
-            options={[thisYear - 1, thisYear].map((y) => ({ value: String(y), label: String(y) }))}
+            options={[...new Set([year, thisYear - 1, thisYear])].sort().map((y) => ({ value: String(y), label: String(y) }))}
             onChange={(v) => setParams({ year: v }, { replace: true })}
           />
         }
@@ -118,7 +118,7 @@ function YearTable({
               {ISO_FORM_TYPES.map((f) => (
                 <th key={f}>{FORM_NAME[f]}</th>
               ))}
-              <th>0206 · {t('nav.isoIncidents')}</th>
+              <th>{t('iso.periods.incidentsCol')}</th>
               <th>{t('iso.periods.otherForms')}</th>
             </tr>
           </thead>
@@ -169,7 +169,7 @@ function MonthDetail({ me, month }: { me: Me; month: string }) {
       {d0203.data ? <FormCard me={me} month={month} detail={d0203.data} /> : null}
       {d0208.data ? <FormCard me={me} month={month} detail={d0208.data} /> : null}
       <article className="card">
-        <h3>0206 · {t('nav.isoIncidents')}</h3>
+        <h3>{t('iso.periods.incidentsCol')}</h3>
         {incidents.length === 0 ? (
           <p className="muted small">{t('iso.periods.noIncidents')}</p>
         ) : (

@@ -84,14 +84,14 @@ development_status:
   7-2-export-xlsx-mọi-bảng: done
   epic-7-retrospective: optional
 
-  epic-8: backlog
-  8-1-nền-phiếu-iso-kỳ-tháng-job-backup-bộ-phận: backlog
-  8-2-lưới-0203-đánh-theo-ngày: backlog
-  8-3-phiếu-sự-cố-0206-gắn-ô-xem-lại: backlog
-  8-4-lưới-0208-ghi-theo-ngày: backlog
-  8-5-xem-lại-gửi-chốt-duyệt-bản-in: backlog
-  8-6-bản-ký-mở-lại-kỳ-phiếu-năm-tháng: backlog
-  8-7-email-nhắc-việc-phiếu-iso: backlog
+  epic-8: in-progress
+  8-1-nền-phiếu-iso-kỳ-tháng-job-backup-bộ-phận: review
+  8-2-lưới-0203-đánh-theo-ngày: review
+  8-3-phiếu-sự-cố-0206-gắn-ô-xem-lại: review
+  8-4-lưới-0208-ghi-theo-ngày: review
+  8-5-xem-lại-gửi-chốt-duyệt-bản-in: review
+  8-6-bản-ký-mở-lại-kỳ-phiếu-năm-tháng: review
+  8-7-email-nhắc-việc-phiếu-iso: review
   epic-8-retrospective: optional
 
   epic-9: backlog

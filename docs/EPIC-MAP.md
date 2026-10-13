@@ -1183,3 +1183,52 @@ Không có khoá `system_config` mới.
    tới một địa chỉ (`?ip=`, bấm ô trên bản đồ) phải tính trang bằng dòng đã gộp với chuỗi chứa địa chỉ
    đó để mở (`pageOfLine`). Spec E2E bấm "Cấp IP" của một ô trống cụ thể trên dải rộng phải lọc
    "Trống" hoặc bấm "Hiện từng IP" trước.
+
+## Epic 8 đã đóng góp gì — Phiếu ISO đợt 1: 0203 · 0206 · 0208 (nhánh `epic8/phieu-iso`, 13/10/2026)
+
+Quyết định nghiệp vụ: `docs/QUYET-DINH.md` Q-28. Thiết kế: `_bmad-output/planning-artifacts/design-ims/phieu-iso/claude-design/`.
+Migration: `0066_iso_forms`, `0067_iso_code_citext` (cột `code` theo quy ước citext).
+
+### Bảng mới và ai sở hữu (AD-3) — tất cả thuộc module `iso-forms`
+
+| Bảng | Ghi chú cho epic sau |
+| --- | --- |
+| `iso_form_owner` | Người phụ trách (chính + dự phòng) theo loại phiếu. Loại phiếu Epic 9 thêm hàng + mở CHECK `form_type` |
+| `iso_backup_job`, `iso_backup_line`, `iso_backup_tick` | Job 0203 → dòng (đối tượng con) → ô (dòng, ngày). Ô trống = không có hàng. Tick FK RESTRICT: dòng đã có ô thì không xoá |
+| `iso_division`, `iso_av_clear_day`, `iso_av_issue` | Bộ phận 0208 (danh sách riêng của phiếu, KHÔNG phải danh mục Phòng ban), ngày "không có issue", dòng issue (một máy × một ngày) |
+| `iso_incident`, `iso_incident_cell`, `iso_incident_counter` | Phiếu 0206 + ô ✗ đã gắn (unique: một ô một phiếu) + bộ đếm số `0206-YYYY-NNN` theo năm (INSERT … ON CONFLICT) |
+| `iso_period` | Kỳ: `open / pending / locked`; "Hoàn tất" SUY từ bản ký. Có hàng từ lượt ghi đầu tiên; `snapshot` = danh sách job / bộ phận lúc gửi chốt (AR-8) |
+| `iso_reminder_sent` | Khoá chặn gửi trùng mail nhắc (việc, ngày) |
+
+`file.owner_type` thêm `iso_period`, `iso_incident`. Khoá `system_config` mới (nhóm "Phiếu ISO" trên màn Tham số):
+`iso.first_month`, `iso.backup_system`, `iso.antivirus_system`, `iso.scan_max_mb`, `iso.scan_types`, `iso.remind_hour`,
+`iso.remind_backup_after_days`, `iso.remind_submit_repeat_days`, `iso.remind_approval_days`, `iso.remind_signed_days`,
+`iso.remind_in_progress_days`.
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Dùng thế nào |
+| --- | --- | --- |
+| `IsoPeriodStore.assertOpenWithin` / `lockWithin` | `iso-period.store.ts` | Mọi lượt ghi ô của một kỳ khoá hàng kỳ FOR SHARE trong tx ghi; đổi trạng thái kỳ khoá FOR UPDATE |
+| Khoá phiếu SUY từ trạng thái kỳ (`incidentLocked`, `incidentGoverning`) | `iso-rules.ts` | Không có cột "đã khoá": mở lại kỳ là phiếu mở theo, In Progress → Resolved là tự khoá |
+| Bản ký "hiện hành" = tải lên sau mốc khoá / sửa gần nhất (`signedIsCurrent`) | `iso-rules.ts` + `AttachmentPanel staleBefore` | Không xoá, không đánh dấu: lịch sử bản ký giữ nguyên |
+| Kind duyệt `iso_period_close`, `iso_period_reopen` | `iso-period.service.ts` | SA/Admin tự gửi thì tự duyệt (nhật ký `selfApproved`); không gửi thư cho chính mình |
+| Topic outbox `iso.period.event`, `iso.reminder` | `iso-mail.ts` (dựng qua `MailContentRegistry`) | Payload chỉ id + loại việc; thư đọc lại dữ liệu lúc gửi, việc đã xong thì không gửi |
+| `GET /api/v1/iso/todo`, `GET /api/v1/iso/pending` | `iso-forms.controller.ts` | Số trên đầu nhóm menu; khối "Phiếu ISO cần bạn duyệt" của bảng điều khiển |
+| `css/sheet.css`, `features/iso/iso-paper.tsx` | web | Lưới tháng + bản in giấy dùng lại cho phiếu Epic 9 |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Khi nào làm |
+| --- | --- | --- |
+| Detection / Resolution Time chọn bằng hai ô ngày + ô giờ, chưa phải lịch chọn khoảng như bản thiết kế | `DatePicker` dùng chung chưa có chế độ khoảng | Khi `DatePicker` có prop chọn khoảng |
+| Màn Kỳ phiếu ở 390px dài (12 tháng × thẻ) | Bảng `table-stack` gập dọc; chi tiết kỳ đã đưa lên đầu | Nếu người dùng điện thoại thấy khó |
+| Xoá bản ký không bị chặn sau khi kỳ Hoàn tất (chỉ SA/Admin xoá được) | Luật xoá giấy tờ là luật chung của `files` | Khi chủ dự án muốn khoá cứng hồ sơ ISO |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **`system_config.value` là `jsonb`**: khoá chữ phải seed dạng `'"2026-11"'`, không phải `'2026-11'` (migration đỏ "invalid input syntax for type json").
+2. **E2E phiếu ISO chỉ ghi năm 2021**: vùng `iso` của `reset-e2e.mjs` hạ `iso.first_month` về 2021-01 và dọn kỳ / ngày / số phiếu ≤ 2021. Ghi vào tháng hiện tại là tạo hàng `iso_period` thật mà cửa canh rác sẽ bắt.
+3. **Nhắc gửi chốt chỉ xét tháng này và tháng trước**: nếu quét từ `iso.first_month` thì DB dev sau E2E (tháng đầu 2021) sinh thư nhắc cho mọi tháng bỏ trống.
+4. **Biến `confirm` (từ `useConfirm`) bị eslint coi là `window.confirm`**: đặt tên `askConfirm` như phần còn lại của repo; hộp hỏi lại phải có `title` (`confirm-title-rollcall`).
+5. **Bài DB chạy khối dọn của `reset-e2e.mjs` phải đứng CUỐI file**: khối đó xoá mọi job / người phụ trách `e2e-%` mà các bài trước dùng.

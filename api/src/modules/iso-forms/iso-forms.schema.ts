@@ -1,10 +1,13 @@
-import { boolean, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, customType, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { BackupDetail } from './iso-rules';
 
 /**
  * Bảng của phiếu ISO đợt 1 — migration 0066_iso_forms.sql. Chủ sở hữu: module `iso-forms` (AD-3).
  * Không trỏ vào kho thiết bị: tên job, tên máy, bộ phận đều gõ tay (Q-28).
  */
+
+/** Cột `code` là citext như mọi bảng khác (0067): tra mã gõ chữ thường vẫn khớp. */
+const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 export const isoFormOwnerTable = pgTable('iso_form_owner', {
   formType: text('form_type').primaryKey(),
@@ -53,7 +56,7 @@ export const isoBackupTickTable = pgTable(
 
 export const isoDivisionTable = pgTable('iso_division', {
   id: uuid('id').primaryKey().defaultRandom(),
-  code: text('code'),
+  code: citext('code'),
   name: text('name').notNull(),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -86,7 +89,7 @@ export const isoIncidentCounterTable = pgTable('iso_incident_counter', {
 
 export const isoIncidentTable = pgTable('iso_incident', {
   id: uuid('id').primaryKey().defaultRandom(),
-  code: text('code').notNull(),
+  code: citext('code').notNull(),
   year: integer('year').notNull(),
   month: integer('month').notNull(),
   reportedOn: date('reported_on').notNull(),

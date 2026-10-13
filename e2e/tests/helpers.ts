@@ -371,6 +371,7 @@ const DOMAIN_ORDER = [
   'devices',
   'digest-rules',
   'diagrams',
+  'iso',
   'catalog',
 ] as const;
 
@@ -487,6 +488,15 @@ export function resetIsp(): void {
 /** Xóa bản vẽ thử draw.io do E2E lưu (tên luôn chứa "E2E"). */
 export function resetDiagrams(): void {
   queue('diagrams');
+}
+
+/**
+ * Dọn phiếu ISO của bài kiểm: kỳ / ngày / số phiếu năm 2021, job · bộ phận · máy · phiếu mang chữ
+ * E2E, người phụ trách là tài khoản e2e. Đồng thời hạ `iso.first_month` về 2021-01 để bài kiểm mở
+ * được năm 2021 — bài kiểm phiếu ISO chỉ ghi vào năm đó, không chạm kỳ thật.
+ */
+export function resetIso(): void {
+  queue('iso');
 }
 
 const totp = new TOTP({

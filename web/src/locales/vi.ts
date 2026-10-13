@@ -4535,6 +4535,7 @@ export default {
       month: 'Tháng',
       monthN: 'Tháng {{month}}',
       otherForms: 'Phiếu khác',
+      incidentsCol: '0206 · Sự cố',
       otherFormsHint: 'Loại phiếu làm sau sẽ thêm cột ở đây; các kỳ cũ để trống.',
       incidentCount: '{{count}} Phiếu · {{signed}} Bản ký',
       pickMonth: 'Chọn một tháng để xem chi tiết kỳ.',

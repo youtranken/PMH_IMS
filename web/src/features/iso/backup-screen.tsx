@@ -156,7 +156,10 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
       {open ? (
         <section aria-label={t('iso.todoSection')}>
           <KpiStrip>
-            <KpiTile value={data.summary.todayDone} label={t('iso.backup.todayDone', { total: data.summary.todayTotal, day: shortDay(data.today) })} />
+            {/* Ô "hôm nay" chỉ có nghĩa ở kỳ của tháng hiện tại; tháng đã qua chỉ còn bỏ sót và ✗. */}
+            {data.today.slice(0, 7) === monthKey(data.year, data.month) ? (
+              <KpiTile value={data.summary.todayDone} label={t('iso.backup.todayDone', { total: data.summary.todayTotal, day: shortDay(data.today) })} />
+            ) : null}
             <KpiTile value={data.summary.missed.length} tone="warn" label={t('iso.backup.missed')} />
             <KpiTile value={data.summary.unlinkedFails.length} tone="danger" label={t('iso.backup.unlinked')} />
           </KpiStrip>

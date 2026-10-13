@@ -131,7 +131,7 @@ export function IncidentsScreen() {
         <SegmentedRadio
           label={t('iso.incidents.year')}
           value={String(year)}
-          options={[thisYear - 1, thisYear].map((y) => ({ value: String(y), label: String(y) }))}
+          options={[...new Set([year, thisYear - 1, thisYear])].sort().map((y) => ({ value: String(y), label: String(y) }))}
           onChange={(v) => setParam('year', v === String(thisYear) ? '' : v)}
         />
         <Select

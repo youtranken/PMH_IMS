@@ -83,14 +83,14 @@ export function BackupPaper({
               {hasSubs.has(row.jobId) ? (
                 <>
                   {row.first ? (
-                    <td rowSpan={row.span} className="paper-left">
+                    <td rowSpan={row.span} className="paper-left paper-nowrap">
                       {row.name}
                     </td>
                   ) : null}
-                  <td className="paper-left">{row.label}</td>
+                  <td className="paper-left paper-nowrap">{row.label}</td>
                 </>
               ) : (
-                <td colSpan={2} className="paper-left">
+                <td colSpan={2} className="paper-left paper-nowrap">
                   {row.name}
                 </td>
               )}
