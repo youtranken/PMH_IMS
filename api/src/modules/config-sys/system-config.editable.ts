@@ -52,6 +52,8 @@ export interface EditableSetting {
   max?: number;
   /** Trần độ dài cho khoá chữ. */
   maxLength?: number;
+  /** Khuôn của khoá chữ: `month` = `YYYY-MM`. Chặn lúc ghi vì nơi đọc (`periodAccess`) bỏ qua chuỗi sai khuôn. */
+  format?: 'month';
   /** Cảnh báo (không chặn) khi giá trị lớn hơn mức này — vd nới rate limit quá rộng. */
   warnAbove?: number;
   /** Cảnh báo khi đặt 0 — ở khoá này 0 nghĩa là TẮT hẳn một hàng rào. */
@@ -138,7 +140,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramDeviceWidthPx', group: 'diagram', type: 'int', unit: 'px', min: 40, max: 480 },
   { name: 'devicePortTemplateMax', group: 'devices', type: 'int', unit: 'ports', min: 8, max: 1024 },
   // Phiếu ISO (Q-28). Tháng bắt đầu dạng YYYY-MM; loại bản ký là danh sách đuôi cách nhau dấu phẩy.
-  { name: 'isoFirstMonth', group: 'iso', type: 'text', maxLength: 7 },
+  { name: 'isoFirstMonth', group: 'iso', type: 'text', maxLength: 7, format: 'month' },
   { name: 'isoBackupSystem', group: 'iso', type: 'text', maxLength: 120 },
   { name: 'isoAntivirusSystem', group: 'iso', type: 'text', maxLength: 120 },
   { name: 'isoScanMaxMb', group: 'iso', type: 'int', unit: 'mb', min: 1, max: 25 },
@@ -173,6 +175,9 @@ export function validateSetting(
     if (spec.maxLength !== undefined && text.length > spec.maxLength) {
       return { value: null, reason: `Tối đa ${spec.maxLength} ký tự.` };
     }
+    if (spec.format === 'month' && !MONTH_RE.test(text)) {
+      return { value: null, reason: 'Nhập tháng dạng YYYY-MM, ví dụ 2026-11.' };
+    }
     return { value: text, reason: null };
   }
 
@@ -200,6 +205,8 @@ export function validateSetting(
   if (!inRange(spec, num)) return { value: null, reason: rangeReason(spec) };
   return { value: num, reason: null };
 }
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 function toInteger(raw: unknown): number | null {
   if (typeof raw === 'number') return Number.isInteger(raw) ? raw : null;

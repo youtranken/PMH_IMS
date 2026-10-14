@@ -23,6 +23,7 @@ ops/certs/*.dev-bak
 # Giá trị gốc của login.rate_limit_per_ip, do global-setup cất và global-teardown trả lại.
 e2e/.rate-limit-original
 e2e/.totp-rate-original
+e2e/.iso-first-month-original
 
 # Mốc thời gian bắt đầu một lượt chạy, cũng do global-setup đổ ra. Cùng loại với dòng trên:
 # sản phẩm phụ của MỘT lượt chạy trên MỘT máy, không có nghĩa gì với máy khác.

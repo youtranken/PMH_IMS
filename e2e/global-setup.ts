@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { RATE_LIMIT_BACKUP_FILE } from './rate-limit-backup';
 import { markRunStart } from './leak-guard';
+import { saveIsoFirstMonth } from './iso-first-month-backup';
 import { saveTotpRate } from './totp-rate-backup';
 import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
 
@@ -34,6 +35,7 @@ export default function globalSetup(): void {
 
   saveBackup(original);
   saveTotpRate();
+  saveIsoFirstMonth();
 
   // Giờ mới đưa tài khoản E2E về trạng thái sạch (script này cũng nới trần đăng nhập).
   execSync(

@@ -4760,6 +4760,7 @@ export default {
     errRange: 'Phải từ {{min}} đến {{max}}.',
     errEmpty: 'Không được để trống.',
     errTooLong: 'Tối đa {{max}} ký tự.',
+    errMonth: 'Nhập tháng dạng YYYY-MM, ví dụ 2026-11.',
     errList: 'Nhập các số tăng dần, cách nhau bằng dấu phẩy (vd 5,15,30).',
     warnAbove: 'Cao hơn {{limit}} là nới rất rộng. Bạn chắc chứ?',
     warnZero: 'Đặt 0 là tắt hẳn chức năng này.',

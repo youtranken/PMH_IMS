@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { RATE_LIMIT_BACKUP_FILE } from './rate-limit-backup';
 import { clearRunStart, findLeakedRows } from './leak-guard';
+import { restoreIsoFirstMonth } from './iso-first-month-backup';
 import { restoreTotpRate } from './totp-rate-backup';
 import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
 
@@ -31,6 +32,7 @@ export default function globalTeardown(): void {
   clearRunStart();
   restoreRateLimit();
   restoreTotpRate();
+  restoreIsoFirstMonth();
 
   if (leaked) {
     throw new Error(

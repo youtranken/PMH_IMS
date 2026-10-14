@@ -122,6 +122,14 @@ describe('validateSetting', () => {
     expect(validateSetting(contact, 42).reason).not.toBeNull();
   });
 
+  it.each(['11/2026', '2026-1', '2026-13', '2026-00', '202611', 'abc'])('tháng bắt đầu phiếu ISO "%s" bị từ chối', (raw) => {
+    expect(validateSetting(editableByKey('iso.first_month')!, raw).reason).not.toBeNull();
+  });
+
+  it('tháng bắt đầu phiếu ISO dạng YYYY-MM được nhận', () => {
+    expect(validateSetting(editableByKey('iso.first_month')!, ' 2026-11 ')).toEqual({ value: '2026-11', reason: null });
+  });
+
   it('danh sách số: chuẩn hoá "5, 15,30" → "5,15,30"; phải tăng dần, trong khoảng', () => {
     expect(validateSetting(backoff, '5, 15,30')).toEqual({ value: '5,15,30', reason: null });
     expect(validateSetting(backoff, '30,15').reason).not.toBeNull();

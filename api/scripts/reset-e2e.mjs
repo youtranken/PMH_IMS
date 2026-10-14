@@ -219,7 +219,8 @@ const DOMAINS = {
 
   /*
    * Phiếu ISO (Q-28). Bài kiểm chỉ ghi vào NĂM 2021 (mọi ngày đều đã qua, gửi chốt được) để không
-   * chạm kỳ thật; tháng bắt đầu dùng IMS hạ về 2021-01 cho bài kiểm mở được năm đó. Kỳ, ngày không
+   * chạm kỳ thật; tháng bắt đầu dùng IMS hạ về 2021-01 cho bài kiểm mở được năm đó (global-setup
+   * cất giá trị thật, global-teardown trả lại: e2e/iso-first-month-backup.ts). Kỳ, ngày không
    * có issue và bộ đếm số phiếu năm 2021 trở về trước là của bài kiểm; job, bộ phận, máy, phiếu
    * nhận ra bằng chữ E2E. Người phụ trách là tài khoản e2e thì gỡ ra. Cả khối nằm trong một khối
    * DO có gác to_regclass: script gắn từ máy vào container có thể chạy trước migration 0066.

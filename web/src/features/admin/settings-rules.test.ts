@@ -38,6 +38,13 @@ describe('checkDraft', () => {
     expect(checkDraft(row, 'x'.repeat(11)).reason?.key).toBe('settings.errTooLong');
   });
 
+  it('chữ dạng tháng: chỉ nhận YYYY-MM', () => {
+    const row: SettingRow = { ...base, type: 'text', maxLength: 7, format: 'month' };
+    expect(checkDraft(row, '2026-11').value).toBe('2026-11');
+    expect(checkDraft(row, '11/2026').reason?.key).toBe('settings.errMonth');
+    expect(checkDraft(row, '2026-13').reason?.key).toBe('settings.errMonth');
+  });
+
   it('danh sách: tăng dần, trong khoảng, chuẩn hoá dấu phẩy', () => {
     const row: SettingRow = { ...base, type: 'int_list', min: 1, max: 1440 };
     expect(checkDraft(row, '5, 15,30').value).toBe('5,15,30');
