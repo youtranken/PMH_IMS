@@ -4411,6 +4411,8 @@ export default {
       subtitleEdit: 'Daily Incident Report Form · sửa được tới khi kỳ của phiếu được chốt',
       lockedSubtitle: 'Thuộc kỳ {{period}} · đã khóa theo kỳ',
       lockedHint: 'Phiếu đã khóa theo kỳ đã chốt — chỉ xem, in và tải bản ký.',
+      reviewSubtitle: 'Thuộc kỳ {{period}} · kỳ đang chờ duyệt',
+      reviewHint: 'Kỳ của phiếu đang chờ SA/Admin duyệt — chỉ xem. Cần sửa thì nhờ SA/Admin trả lại kỳ; bản ký tải lên sau khi kỳ được duyệt chốt.',
       backToList: '‹ Danh sách sự cố',
       stepFill: '1 · Điền phiếu',
       stepReview: '2 · Xem lại',

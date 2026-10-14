@@ -22,6 +22,7 @@ import { IsoPeriodStore, stateKey } from './iso-period.store';
 import {
   incidentCode,
   incidentGoverning,
+  incidentInReview,
   incidentLocked,
   monthOf,
   signedIsCurrent,
@@ -29,6 +30,7 @@ import {
   type IncidentInput,
   type IncidentStatus,
   type IsoFormType,
+  type PeriodState,
 } from './iso-rules';
 
 export type CellInput = { form: '0203'; lineId: string; day: string } | { form: '0208'; issueId: string };
@@ -63,6 +65,8 @@ export interface IncidentRecord extends IncidentInput {
   cells: IncidentCell[];
   governing: IsoFormType[];
   locked: boolean;
+  /** Có kỳ quản phiếu đang Chờ duyệt: chỉ xem tới khi kỳ được duyệt hoặc trả lại. */
+  inReview: boolean;
   /** Bản ký hiện hành (tải lên sau lần sửa nội dung gần nhất). */
   signedCurrent: boolean;
   signed: SignedFile[];
@@ -265,6 +269,7 @@ export class IsoIncidentService {
     const today = await this.clock.today();
     const before = await this.get(id);
     if (before.locked) throw lockedIncident(before.code);
+    if (before.inReview) throw inReviewIncident(before.code);
     await this.assertCellWriters(actor, [...before.cells.map((c) => c.form), ...input.cells.map((c) => c.form)]);
     const moved = target.year !== before.year || target.month !== before.month;
     if (moved) await this.periods.assertAccessible(target.year, target.month, today);
@@ -274,6 +279,12 @@ export class IsoIncidentService {
       if (row.contentUpdatedAt.getTime() !== before.contentUpdatedAt.getTime()) {
         throw new ConflictException({ code: 'ISO_INCIDENT_CHANGED', message: 'Phiếu vừa được người khác sửa. Tải lại rồi sửa tiếp.' });
       }
+      // Đọc lại trạng thái kỳ quản phiếu dưới khoá FOR SHARE: lượt gửi chốt chen giữa thì phải chờ
+      // lượt này xong, hoặc lượt này thấy kỳ đã sang Chờ duyệt.
+      const states: PeriodState[] = [];
+      for (const form of before.governing) states.push((await this.periods.lockWithin(tx, form, before.year, before.month, 'share')).state);
+      if (incidentLocked(before.status, states)) throw lockedIncident(before.code);
+      if (incidentInReview(before.status, states)) throw inReviewIncident(before.code);
       const wanted = await this.resolveCellsWithin(tx, input.cells, target.year, target.month, id);
       const keep = new Set(wanted.map(cellKey));
       const removed = before.cells.filter((c) => !keep.has(cellKey(c)));
@@ -486,6 +497,7 @@ export class IsoIncidentService {
     const names = await this.users.namesByEmails([...new Set(rows.map((r) => r.createdBy))]);
     return rows.map((r) => {
       const governing = governingOf.get(r.id)!;
+      const governingStates = governing.map((f) => states.get(stateKey(f, r.year, r.month)) ?? 'open');
       const signed = files
         .filter((f) => f.ownerId === r.id)
         .map((f) => toSigned(f, r.contentUpdatedAt));
@@ -509,10 +521,8 @@ export class IsoIncidentService {
         contentUpdatedAt: r.contentUpdatedAt,
         cells: (cellsOf.get(r.id) ?? []).sort((a, b) => a.day.localeCompare(b.day)),
         governing,
-        locked: incidentLocked(
-          r.status as IncidentStatus,
-          governing.map((f) => states.get(stateKey(f, r.year, r.month)) ?? 'open'),
-        ),
+        locked: incidentLocked(r.status as IncidentStatus, governingStates),
+        inReview: incidentInReview(r.status as IncidentStatus, governingStates),
         signedCurrent: signed.some((f) => f.current),
         signed,
       };
@@ -543,6 +553,13 @@ function backupLabel(jobName: string, label: string | null): string {
 
 function cellKey(cell: Pick<IncidentCell, 'form' | 'lineId' | 'day' | 'issueId'>): string {
   return cell.form === '0203' ? `0203|${cell.lineId}|${cell.day}` : `0208|${cell.issueId}`;
+}
+
+export function inReviewIncident(code: string) {
+  return new ConflictException({
+    code: 'ISO_INCIDENT_IN_REVIEW',
+    message: `Kỳ của phiếu ${code} đang chờ SA/Admin duyệt — chỉ xem. Cần sửa thì nhờ SA/Admin trả lại kỳ.`,
+  });
 }
 
 export function lockedIncident(code: string) {

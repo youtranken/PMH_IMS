@@ -216,6 +216,56 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
     });
   });
 
+  describe('0206 khoá sửa khi kỳ quản nó đang Chờ duyệt', () => {
+    async function pendPeriod(form: '0203' | '0208', year: number, month: number): Promise<void> {
+      await scratch.pool.query(
+        `INSERT INTO iso_period (form_type, year, month, state) VALUES ($1, $2, $3, 'pending')
+         ON CONFLICT (form_type, year, month) DO UPDATE SET state = 'pending'`,
+        [form, year, month],
+      );
+    }
+
+    it('phiếu Resolved: sửa nội dung bị chặn ISO_INCIDENT_IN_REVIEW, đọc ra inReview', async () => {
+      const cell = await failCell('2026-04-03');
+      const saved = await incidents.create(people.owner, { ...incident('2026-04-03'), cells: [cell] });
+      await pendPeriod('0203', 2026, 4);
+      const read = await incidents.get(saved.id);
+      expect(read.inReview).toBe(true);
+      expect(read.locked).toBe(false);
+      await expect(
+        incidents.update(people.owner, saved.id, { ...incident('2026-04-03', { description: 'E2E đổi khi chờ duyệt' }), cells: [cell] }),
+      ).rejects.toMatchObject({ response: { code: 'ISO_INCIDENT_IN_REVIEW' } });
+    });
+
+    it('phiếu In Progress vẫn sửa được khi kỳ Chờ duyệt', async () => {
+      const cell = await failCell('2026-03-03');
+      const open = incident('2026-03-03', { status: 'in_progress', resolvedAt: null, correctiveAction: '' });
+      const saved = await incidents.create(people.owner, { ...open, cells: [cell] });
+      await pendPeriod('0203', 2026, 3);
+      expect((await incidents.get(saved.id)).inReview).toBe(false);
+      const after = await incidents.update(people.owner, saved.id, { ...open, description: 'E2E vẫn sửa', cells: [cell] });
+      expect(after.description).toBe('E2E vẫn sửa');
+    });
+
+    it('kỳ sang Chờ duyệt giữa lúc đọc và lúc ghi: vẫn bị chặn trong transaction', async () => {
+      const cell = await failCell('2026-02-03');
+      const saved = await incidents.create(people.owner, { ...incident('2026-02-03'), cells: [cell] });
+      const realGet = incidents.get.bind(incidents);
+      const spy = jest.spyOn(incidents, 'get').mockImplementationOnce(async (id: string) => {
+        const before = await realGet(id);
+        await pendPeriod('0203', 2026, 2);
+        return before;
+      });
+      try {
+        await expect(
+          incidents.update(people.owner, saved.id, { ...incident('2026-02-03', { description: 'E2E chen' }), cells: [cell] }),
+        ).rejects.toMatchObject({ response: { code: 'ISO_INCIDENT_IN_REVIEW' } });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
   describe('bản ký chỉ người phụ trách và SA/Admin tải lên', () => {
     it('kỳ đã khoá: Member không phụ trách bị 403, người phụ trách và SA tải được', async () => {
       const periodId = await lockPeriod('0203', 2026, 6);

@@ -1210,7 +1210,8 @@ Migration: `0066_iso_forms`, `0067_iso_code_citext` (cột `code` theo quy ướ
 | Thứ | Ở đâu | Dùng thế nào |
 | --- | --- | --- |
 | `IsoPeriodStore.assertOpenWithin` / `lockWithin` | `iso-period.store.ts` | Mọi lượt ghi ô của một kỳ khoá hàng kỳ FOR SHARE trong tx ghi; đổi trạng thái kỳ khoá FOR UPDATE |
-| Khoá phiếu SUY từ trạng thái kỳ (`incidentLocked`, `incidentGoverning`) | `iso-rules.ts` | Không có cột "đã khoá": mở lại kỳ là phiếu mở theo, In Progress → Resolved là tự khoá |
+| Khoá phiếu SUY từ trạng thái kỳ (`incidentLocked`, `incidentInReview`, `incidentGoverning`) | `iso-rules.ts` | Không có cột "đã khoá": mở lại kỳ là phiếu mở theo, In Progress → Resolved là tự khoá. Kỳ Chờ duyệt thì phiếu chỉ xem (Q-28, chốt 14/10) |
+| Luật nhận file theo người tải (`OwnerResolver.assertAccepts(…, uploader)`) | `common/owner-exists.registry.ts` | `files` chỉ kiểm "được xem"; chủ thể có luật "ai được ghi" (bản ký ISO) tự kiểm vai trong `assertAccepts` |
 | Bản ký "hiện hành" = tải lên sau mốc khoá / sửa gần nhất (`signedIsCurrent`) | `iso-rules.ts` + `AttachmentPanel staleBefore` | Không xoá, không đánh dấu: lịch sử bản ký giữ nguyên |
 | Kind duyệt `iso_period_close`, `iso_period_reopen` | `iso-period.service.ts` | SA/Admin tự gửi thì tự duyệt (nhật ký `selfApproved`); không gửi thư cho chính mình |
 | Topic outbox `iso.period.event`, `iso.reminder` | `iso-mail.ts` (dựng qua `MailContentRegistry`) | Payload chỉ id + loại việc; thư đọc lại dữ liệu lúc gửi, việc đã xong thì không gửi |
@@ -1228,7 +1229,10 @@ Migration: `0066_iso_forms`, `0067_iso_code_citext` (cột `code` theo quy ướ
 ### Bẫy đã gặp — đừng lặp lại
 
 1. **`system_config.value` là `jsonb`**: khoá chữ phải seed dạng `'"2026-11"'`, không phải `'2026-11'` (migration đỏ "invalid input syntax for type json").
-2. **E2E phiếu ISO chỉ ghi năm 2021**: vùng `iso` của `reset-e2e.mjs` hạ `iso.first_month` về 2021-01 và dọn kỳ / ngày / số phiếu ≤ 2021. Ghi vào tháng hiện tại là tạo hàng `iso_period` thật mà cửa canh rác sẽ bắt.
+2. **E2E phiếu ISO chỉ ghi năm 2021**: vùng `iso` của `reset-e2e.mjs` hạ `iso.first_month` về 2021-01 và dọn kỳ / ngày / số phiếu ≤ 2021. Ghi vào tháng hiện tại là tạo hàng `iso_period` thật mà cửa canh rác sẽ bắt. Giá trị thật được `e2e/iso-first-month-backup.ts` cất ở global-setup và trả ở global-teardown; thiếu bước đó thì DB dev mở mọi tháng từ 2021.
 3. **Nhắc gửi chốt chỉ xét tháng này và tháng trước**: nếu quét từ `iso.first_month` thì DB dev sau E2E (tháng đầu 2021) sinh thư nhắc cho mọi tháng bỏ trống.
 4. **Biến `confirm` (từ `useConfirm`) bị eslint coi là `window.confirm`**: đặt tên `askConfirm` như phần còn lại của repo; hộp hỏi lại phải có `title` (`confirm-title-rollcall`).
 5. **Bài DB chạy khối dọn của `reset-e2e.mjs` phải đứng CUỐI file**: khối đó xoá mọi job / người phụ trách `e2e-%` mà các bài trước dùng.
+6. **Phiếu 0206 ra / vào hồ sơ của kỳ khác với "sửa ô của kỳ"**: đổi tháng, hoặc gắn / bỏ ô làm đổi loại phiếu quản nó, cũng là sửa kỳ đó — kỳ đã chốt hay Chờ duyệt phải chặn (`update` so `incidentGoverning` trước / sau). Kiểm riêng ô gắn là không đủ.
+7. **Đọc "đã gắn / đã khoá" ngoài transaction rồi mới ghi là hở**: lượt gắn ô 0208 vào 0206 khoá hàng issue, nên sửa / xoá issue phải khoá cùng hàng rồi đọc lại. Ngày 0208 dùng advisory lock theo ngày cho cặp "không có issue" / ghi issue.
+8. **Khoá chữ dạng tháng phải có `format: 'month'`**: `periodAccess` bỏ qua chuỗi sai khuôn, nên "11/2026" từng mở mọi tháng từ 2000.

@@ -244,6 +244,15 @@ export function incidentLocked(status: IncidentStatus, governingStates: PeriodSt
   return governingStates.length > 0 && governingStates.every((s) => s === 'locked');
 }
 
+/**
+ * Phiếu chưa khoá nhưng có kỳ quản nó đang Chờ duyệt: chỉ xem, như ô lưới của kỳ đó — SA không
+ * được duyệt một bản vừa bị đổi. Cần sửa thì "Trả lại" kỳ. In Progress vẫn sửa được (Q-28).
+ */
+export function incidentInReview(status: IncidentStatus, governingStates: PeriodState[]): boolean {
+  if (status === 'in_progress') return false;
+  return governingStates.some((s) => s === 'pending');
+}
+
 export function incidentCode(year: number, n: number): string {
   return `0206-${year}-${String(n).padStart(3, '0')}`;
 }

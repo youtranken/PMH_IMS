@@ -5,6 +5,7 @@ import {
   displayState,
   incidentCode,
   incidentGoverning,
+  incidentInReview,
   incidentLocked,
   lastDayOf,
   lineApplies,
@@ -200,6 +201,17 @@ describe('iso-rules · trạng thái kỳ và khoá phiếu sự cố', () => {
     ['resolved', ['open'], false],
   ] as const)('%s với kỳ %o → khoá %s', (status, states, out) => {
     expect(incidentLocked(status, [...states])).toBe(out);
+  });
+
+  it.each([
+    ['resolved', ['pending'], true],
+    ['resolved', ['open', 'pending'], true],
+    ['resolved', ['locked', 'pending'], true],
+    ['resolved', ['open'], false],
+    ['resolved', ['locked'], false],
+    ['in_progress', ['pending'], false],
+  ] as const)('%s với kỳ %o → đang chờ duyệt (khoá sửa) %s', (status, states, out) => {
+    expect(incidentInReview(status, [...states])).toBe(out);
   });
 
   it.each([

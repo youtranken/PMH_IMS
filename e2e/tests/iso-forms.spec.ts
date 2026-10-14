@@ -265,6 +265,38 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(card.getByText('Đang ghi').first()).toBeVisible();
   });
 
+  test('0206 của kỳ Chờ duyệt chỉ xem: màn báo kỳ đang chờ duyệt, gọi thẳng API sửa bị 409', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const job = await createJob(page, `E2E-RVW-${uniqueStamp()}`);
+    const lineId = job.lines[0].id;
+    await fillMonth(page, '2021-09', 30);
+    expect((await api(page, 'PUT', '/api/v1/iso/backup/ticks', { lineId, day: '2021-09-05', result: 'fail' })).status()).toBe(200);
+    const content = {
+      reportedOn: '2021-09-05',
+      kind: 'backup',
+      detectedAt: '2021-09-05T01:00:00.000Z',
+      resolvedAt: '2021-09-05T03:00:00.000Z',
+      severity: 'low',
+      status: 'resolved',
+      description: 'E2E job lỗi VSS',
+      correctiveAction: 'Chạy lại',
+      backupDetails: [],
+      cells: [{ form: '0203', lineId, day: '2021-09-05' }],
+    };
+    const created = await api(page, 'POST', '/api/v1/iso/incidents', content);
+    expect(created.status(), await created.text()).toBe(201);
+    const { id, code } = (await created.json()) as { id: string; code: string };
+    expect((await api(page, 'POST', '/api/v1/iso/periods/0203/2021-09/submit')).status()).toBe(201);
+
+    await page.goto(`/iso/incidents/${id}`);
+    await expect(page.getByRole('heading', { name: `Phiếu ${code}` })).toBeVisible();
+    await expect(page.getByText('Kỳ của phiếu đang chờ SA/Admin duyệt — chỉ xem.', { exact: false })).toBeVisible();
+    await expect(page.getByLabel('Chọn file để đính kèm')).toHaveCount(0);
+    const res = await api(page, 'PATCH', `/api/v1/iso/incidents/${id}`, { ...content, description: 'E2E sửa khi chờ duyệt' });
+    expect(res.status()).toBe(409);
+    expect(((await res.json()) as { code: string }).code).toBe('ISO_INCIDENT_IN_REVIEW');
+  });
+
   test('bản ký: Member không phụ trách không thấy ô tải lên, gọi thẳng API bị 403', async ({ page, browser }) => {
     await firstLogin(page, E2E_SA);
     setOwner('0203', null);

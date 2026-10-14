@@ -1220,6 +1220,11 @@ IT dùng hằng ngày.
     - Báo duyệt: có kỳ chờ duyệt thì báo SA/Admin; trả lại hoặc đã duyệt thì báo người gửi; chờ
       duyệt quá N ngày thì nhắc lại.
     - Nhắc việc tồn: kỳ đã chốt quá N ngày chưa có bản ký; 0206 In Progress quá N ngày.
+- **Chốt sau code review Epic 8 (14/10/2026, chủ dự án duyệt đề xuất của Claude):**
+  - 0206 cũng khoá sửa từ lúc kỳ quản nó sang **Chờ duyệt**, không đợi tới lúc duyệt chốt. Lý do:
+    ô lưới đã khoá từ Chờ duyệt, nếu phiếu vẫn sửa được thì SA có thể duyệt một bản vừa bị đổi.
+    Cần sửa thì SA/Admin "Trả lại" để kỳ về Đang ghi. 0206 đang In Progress vẫn sửa được như cũ.
+    Bản ký vẫn chỉ tải lên sau khi kỳ được duyệt chốt.
 
 ### Q-09 · Tài liệu
 

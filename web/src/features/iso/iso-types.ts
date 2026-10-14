@@ -183,6 +183,8 @@ export interface Incident extends IncidentContent {
   cells: IncidentCell[];
   governing: IsoFormType[];
   locked: boolean;
+  /** Kỳ quản phiếu đang Chờ duyệt: chỉ xem. */
+  inReview: boolean;
   signedCurrent: boolean;
   signed: SignedFile[];
   /** Chỉ có ở API chi tiết một phiếu. */

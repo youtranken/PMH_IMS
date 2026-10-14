@@ -122,7 +122,7 @@ export function IncidentScreen({ me }: { me: Me }) {
   if (!isNew && incident.isLoading) return <Loading />;
   if (!isNew && incident.isError) return <LoadError error={incident.error} onRetry={() => void incident.refetch()} />;
   const record = isNew ? null : (incident.data ?? null);
-  if (record?.locked) return <LockedIncident me={me} incident={record} />;
+  if (record?.locked || record?.inReview) return <LockedIncident me={me} incident={record} />;
   return <IncidentEditor key={record?.contentUpdatedAt ?? 'new'} me={me} incident={record} title={record ? t('iso.incident.editTitle', { code: record.code }) : t('iso.incident.newTitle')} />;
 }
 
@@ -467,7 +467,10 @@ function IncidentEditor({ me, incident, title }: { me: Me; incident: Incident | 
   );
 }
 
-/** Phiếu đã khoá theo kỳ: chỉ xem, in, tải bản ký riêng của phiếu (Q-28). */
+/**
+ * Phiếu chỉ xem (Q-28): đã khoá theo kỳ (in, tải bản ký riêng của phiếu), hoặc kỳ đang Chờ duyệt
+ * (chưa tải bản ký được — bản ký chỉ nhận sau khi kỳ được duyệt chốt).
+ */
 function LockedIncident({ me, incident }: { me: Me; incident: Incident }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -476,7 +479,7 @@ function LockedIncident({ me, incident }: { me: Me; incident: Incident }) {
       <div className="no-print">
         <PageHeader
           title={t('iso.incident.viewTitle', { code: incident.code })}
-          subtitle={t('iso.incident.lockedSubtitle', { period: monthLabel(incident.year, incident.month) })}
+          subtitle={t(incident.inReview ? 'iso.incident.reviewSubtitle' : 'iso.incident.lockedSubtitle', { period: monthLabel(incident.year, incident.month) })}
           actions={
             <>
               <Link to={PATHS.isoIncidents}>{t('iso.incident.backToList')}</Link>
@@ -488,7 +491,7 @@ function LockedIncident({ me, incident }: { me: Me; incident: Incident }) {
         />
         <p className="alert info">
           <span className={`badge ${INCIDENT_STATUS_TONE[incident.status]}`}>{STATUS_LABEL[incident.status]}</span>{' '}
-          {t('iso.incident.lockedHint')}{' '}
+          {t(incident.inReview ? 'iso.incident.reviewHint' : 'iso.incident.lockedHint')}{' '}
           <Link to={PATHS.isoPeriod(incident.governing[0], monthKey(incident.year, incident.month))}>{t('iso.openPeriods')}</Link>
         </p>
       </div>
@@ -503,7 +506,7 @@ function LockedIncident({ me, incident }: { me: Me; incident: Incident }) {
             ownerType="iso_incident"
             ownerId={incident.id}
             csrfToken={me.csrfToken}
-            canEdit={incident.canWrite === true}
+            canEdit={incident.canWrite === true && incident.locked}
             accept=".pdf,.jpg,.jpeg,.png"
             staleBefore={incident.contentUpdatedAt}
             onChanged={() => void queryClient.invalidateQueries({ queryKey: ISO_KEY })}
