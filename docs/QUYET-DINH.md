@@ -1235,6 +1235,13 @@ IT dùng hằng ngày.
   - Lập / sửa 0206 bằng hộp ngay tại lưới 0203, 0208 và danh sách sự cố, không chuyển trang. Form
     nhập là form gọn theo theme; bản phiếu đúng mẫu Word hiện ở bước Xem lại và bản in.
   - Nút "Xem lại & gửi chốt" đổi thành "Xem phiếu"; nút gửi ghi rõ "Gửi chốt phiếu tháng MM/YYYY".
+  - (test tay lần 2) Detail Error Backup: Job Name chọn từ các dòng của lưới 0203 (job › đối tượng
+    con), Storage Location chỉ NAS / Cloud — gõ tay thì tên trên 0206 lệch 0203. Trên bản phiếu,
+    sáu cột Type Backup / Type Data là ô tick hẹp như mẫu Word.
+  - Handled của 0208 = tên tài khoản ghi dòng issue, API tự ghi, không sửa được.
+  - Dấu ✗ trên lưới không khung, như ✓: đỏ = chưa có 0206, cam = đã có 0206.
+  - Job mới mặc định "Theo dõi từ" ngày 1 của tháng, để khai job giữa tháng vẫn đánh bù được
+    những ngày đã qua.
 
 ### Q-09 · Tài liệu
 

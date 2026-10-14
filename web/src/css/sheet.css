@@ -229,15 +229,15 @@ button.sheet-mark:focus-visible {
   color: var(--ok);
 }
 
+/* ✗ chỉ là dấu, không khung — như ✓ (chủ dự án chốt 14/10). Chưa có 0206: đỏ đậm; đã có 0206:
+   cam, tức lỗi đã có phiếu xử lý. */
 .sheet-mark[data-state='fail'] {
   color: var(--danger);
-  background: var(--danger-soft);
-  box-shadow: inset 0 0 0 2px var(--danger);
+  font-weight: var(--fw-bold);
 }
 
 .sheet-mark[data-state='fail-linked'] {
   color: var(--warn);
-  background: var(--warn-soft);
 }
 
 /* Ô trống ở ngày đã qua — "bỏ sót", viền cam (Q-28). */
@@ -589,7 +589,8 @@ button.sheet-mark:focus-visible {
   text-align: left;
 }
 
-.paper-table .paper-group td {
+/* Dòng bộ phận: chỉ ô tên căn trái; ô ngày (✓ của Other Division) vẫn căn giữa như mọi ô ngày. */
+.paper-table .paper-group td:first-child {
   text-align: left;
   font-weight: var(--fw-bold);
 }
@@ -637,6 +638,30 @@ button.sheet-mark:focus-visible {
 
 .paper-form .paper-tall td {
   height: 9rem;
+}
+
+/* Ô khung 0206 bố cục cố định: chữ dài xuống dòng trong ô thay vì tràn sang ô bên. */
+.paper-form td {
+  overflow-wrap: anywhere;
+}
+
+.paper-detail .paper-col-job {
+  width: 24%;
+}
+
+.paper-detail .paper-col-tick {
+  width: 4.2%;
+}
+
+.paper-detail .paper-col-storage {
+  width: 10%;
+}
+
+/* Tiêu đề ô tick hẹp ("Full", "FileSV") chữ nhỏ hơn cho vừa ô như mẫu. */
+.paper-detail thead tr:last-child th {
+  font-size: 0.85em;
+  padding-left: 1px;
+  padding-right: 1px;
 }
 
 /* Dòng trống của bảng Detail Error Backup vẫn đủ cao để viết tay như mẫu (11 dòng). */

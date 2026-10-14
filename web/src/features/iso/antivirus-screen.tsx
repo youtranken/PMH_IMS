@@ -349,7 +349,6 @@ interface IssueForm {
   computerName: string;
   description: string;
   resolvedOn: string;
-  handledBy: string;
 }
 
 const NEW_DIVISION = '__new__';
@@ -379,7 +378,6 @@ function IssueDialog({
     computerName: issue?.computerName ?? '',
     description: issue?.description ?? '',
     resolvedOn: issue?.resolvedOn ?? '',
-    handledBy: issue?.handledBy ?? me.fullName,
   }));
   const [error, setError] = useSubmitError([form]);
   const set = <K extends keyof IssueForm>(key: K, value: IssueForm[K]) => setForm((f) => ({ ...f, [key]: value }));
@@ -393,7 +391,6 @@ function IssueDialog({
       computerName: f.computerName.trim(),
       description: f.description.trim(),
       resolvedOn: f.resolvedOn || null,
-      handledBy: f.handledBy.trim() || null,
     },
   }));
   const check = useFormErrors({
@@ -468,8 +465,8 @@ function IssueDialog({
           <Field label="Computer Name" required htmlFor="iso-av-pc" error={check.error('computerName')}>
             <input id="iso-av-pc" className="inp mono" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
           </Field>
-          <Field label="Handled" htmlFor="iso-av-handled">
-            <input id="iso-av-handled" className="inp" value={form.handledBy} onChange={(e) => set('handledBy', e.target.value)} />
+          <Field label="Handled" hint={t('iso.av.handledHint')}>
+            <p className="static-value">{issue?.handledBy ?? me.fullName}</p>
           </Field>
           <Field label="Incident Description" required htmlFor="iso-av-desc" error={check.error('description')} span={2}>
             <input id="iso-av-desc" className="inp" value={form.description} onChange={(e) => set('description', e.target.value)} />

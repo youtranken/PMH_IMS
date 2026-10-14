@@ -307,7 +307,6 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
         computerName: 'E2E-PC-1',
         description: 'Trojan',
         resolvedOn: null,
-        handledBy: null,
       }).then((i) => (divisionId = i.divisionId));
       await expect(antivirus.markClear(people.owner, '2026-09-03')).rejects.toMatchObject({ response: { code: 'ISO_DAY_HAS_ISSUE' } });
       expect(Number((await scratch.pool.query(`SELECT count(*) FROM iso_av_clear_day WHERE day = '2026-09-03'`)).rows[0].count)).toBe(0);
@@ -351,7 +350,6 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
         computerName: pc,
         description: 'Trojan',
         resolvedOn: null,
-        handledBy: null,
       });
       return issue.id;
     }
@@ -366,7 +364,6 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
           computerName: 'E2E-PC-2',
           description: 'Trojan',
           resolvedOn: null,
-          handledBy: null,
         }),
       )) as { error?: { response?: { code?: string } } };
       expect(result.error?.response?.code).toBe('ISO_CELL_LINKED');

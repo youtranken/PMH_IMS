@@ -54,7 +54,6 @@ export interface IssueInput {
   computerName: string;
   description: string;
   resolvedOn: string | null;
-  handledBy: string | null;
 }
 
 /**
@@ -191,6 +190,8 @@ export class IsoAntivirusService {
   async createIssue(actor: IsoActor, input: IssueInput): Promise<AvIssue> {
     const { year, month } = await this.guardDay(actor, input.reportedOn);
     this.checkIssue(input);
+    // Handled = người ghi dòng, lấy từ phiên chứ không từ form: ai ghi thì tên người đó lên phiếu.
+    const handledBy = await this.access.nameOf(actor);
     const id = await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', year, month);
       await lockDayWithin(tx, input.reportedOn);
@@ -203,7 +204,7 @@ export class IsoAntivirusService {
           computerName: input.computerName.trim(),
           description: input.description.trim(),
           resolvedOn: input.resolvedOn,
-          handledBy: input.handledBy?.trim() || null,
+          handledBy,
           createdBy: actor.email,
         })
         .returning();
@@ -247,7 +248,6 @@ export class IsoAntivirusService {
           computerName: input.computerName.trim(),
           description: input.description.trim(),
           resolvedOn: input.resolvedOn,
-          handledBy: input.handledBy?.trim() || null,
           updatedAt: new Date(),
         })
         .where(eq(isoAvIssueTable.id, id));

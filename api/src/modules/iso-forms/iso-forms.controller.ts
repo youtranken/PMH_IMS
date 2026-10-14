@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -78,7 +78,6 @@ class IssueDto {
   @IsString() @Length(1, 80, { message: 'Computer Name từ 1 đến 80 ký tự.' }) computerName!: string;
   @IsString() @Length(1, 500, { message: 'Incident Description từ 1 đến 500 ký tự.' }) @NoSecretText('Incident Description') description!: string;
   @ValidateIf((_o, v) => v !== null) @Validate(RealDate, { message: 'Resolution Date phải là ngày có thật.' }) resolvedOn!: string | null;
-  @ValidateIf((_o, v) => v !== null) @IsString() @MaxLength(80, { message: 'Handled tối đa 80 ký tự.' }) handledBy!: string | null;
 }
 
 class BackupDetailDto {
@@ -165,9 +164,11 @@ export class IsoFormsController {
 
   @Roles('sa', 'admin', 'member')
   @Put('backup/ticks')
+  // 204: lượt ghi không trả gì. Để mặc định 200/201 thân rỗng thì web đọc JSON hỏng và báo lỗi dù đã lưu.
+  @HttpCode(204)
   @Audited('iso_backup.tick_set', 'iso_backup_job', { writtenByService: true })
-  setTick(@Body() dto: TickDto, @Req() req: AuthedRequest) {
-    return this.backup.setTick(req.user!, dto);
+  async setTick(@Body() dto: TickDto, @Req() req: AuthedRequest): Promise<void> {
+    await this.backup.setTick(req.user!, dto);
   }
 
   @Roles('sa', 'admin', 'member')
@@ -188,6 +189,7 @@ export class IsoFormsController {
 
   @Roles('sa', 'admin', 'member')
   @Post('antivirus/clear-days')
+  @HttpCode(204)
   @Audited('iso_antivirus.day_cleared', 'iso_period', { writtenByService: true })
   markClear(@Body() dto: DayDto, @Req() req: AuthedRequest) {
     return this.antivirus.markClear(req.user!, dto.day);
@@ -195,6 +197,7 @@ export class IsoFormsController {
 
   @Roles('sa', 'admin', 'member')
   @Delete('antivirus/clear-days/:day')
+  @HttpCode(204)
   @Audited('iso_antivirus.day_uncleared', 'iso_period', { writtenByService: true })
   unmarkClear(@Param() params: DayParamDto, @Req() req: AuthedRequest) {
     return this.antivirus.unmarkClear(req.user!, params.day);
@@ -216,6 +219,7 @@ export class IsoFormsController {
 
   @Roles('sa', 'admin', 'member')
   @Delete('antivirus/issues/:id')
+  @HttpCode(204)
   @Audited('iso_antivirus.issue_deleted', 'iso_av_issue', { writtenByService: true })
   deleteIssue(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     return this.antivirus.deleteIssue(req.user!, params.id);

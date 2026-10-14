@@ -325,9 +325,19 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
         computerName: 'E2E-PC-07',
         description: 'Trojan.Gen đã cách ly',
         resolvedOn: '2026-11-02',
-        handledBy: 'Quốc Bảo',
       });
       expect(await count(`SELECT count(*) FROM iso_division WHERE name = 'E2E SMD Division'`)).toBe(1);
+      // Handled khoá theo người ghi dòng (lấy từ phiên); người khác sửa dòng không đổi tên đó.
+      expect(issue.handledBy).toBe('E2E ISO backup');
+      const edited = await antivirus.updateIssue(people.owner, issue.id, {
+        reportedOn: '2026-11-02',
+        divisionId: issue.divisionId,
+        newDivisionName: null,
+        computerName: 'E2E-PC-07',
+        description: 'Trojan.Gen đã cách ly',
+        resolvedOn: '2026-11-03',
+      });
+      expect(edited.handledBy).toBe('E2E ISO backup');
       await expect(antivirus.markClear(people.other, '2026-11-03')).rejects.toMatchObject({ response: { code: 'ISO_NOT_OWNER' } });
       const grid = await antivirus.grid(people.owner, 2026, 11);
       expect(grid.summary.missedDays[0]).toBe('2026-11-03');

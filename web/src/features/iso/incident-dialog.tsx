@@ -13,7 +13,7 @@ import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
-import { useIncident, useIsoWrite, useLinkable } from './iso-api';
+import { useIncident, useIsoWrite, useJobs, useLinkable } from './iso-api';
 import { IncidentPaper, KIND_LABEL, SEVERITY_LABEL, STATUS_LABEL } from './iso-paper';
 import { fromVnParts, monthLabel, shortDay, toVnParts } from './iso-rules';
 import {
@@ -33,6 +33,9 @@ import {
 } from './iso-types';
 
 const TYPE_BACKUP_LABEL: Record<NonNullable<BackupDetail['typeBackup']>, string> = { full: 'Full', incr: 'Incr', copy: 'Copy' };
+/** Nơi lưu backup — cùng hai giá trị "Storage location" của 0203. */
+const STORAGE_PLACES = ['NAS', 'Cloud'];
+
 const TYPE_DATA_LABEL: Record<NonNullable<BackupDetail['typeData']>, string> = { db: 'DB', app: 'App', filesv: 'FileSV' };
 
 interface Draft {
@@ -84,7 +87,7 @@ function draftOf(incident: Incident | null, today: string, prefill: IncidentCell
     status: '',
     description: '',
     correctiveAction: '',
-    backupDetails: prefill?.form === '0203' ? [{ ...blankDetail(), jobName: prefill.label.split(' › ')[0] }] : [],
+    backupDetails: prefill?.form === '0203' ? [{ ...blankDetail(), jobName: prefill.label }] : [],
     cells: prefill ? [prefill] : [],
   };
 }
@@ -205,6 +208,7 @@ function IncidentForm({
   const [draft, setDraft] = useState<Draft>(() => draftOf(incident, today, prefill));
   const [step, setStep] = useState<'edit' | 'review'>('edit');
   const [error, setError] = useSubmitError([draft]);
+  const jobs = useJobs('live');
 
   const save = useIsoWrite<Draft, Incident>(me.csrfToken, (d) => ({
     url: incident ? `/api/v1/iso/incidents/${incident.id}` : '/api/v1/iso/incidents',
@@ -244,6 +248,13 @@ function IncidentForm({
   const linked = new Set(draft.cells.map(cellKey));
   const candidates = linkable.filter((c) => !linked.has(cellKey(c)));
   const cellText = (c: IncidentCell) => `${c.form} · ${c.label} · ${shortDay(c.day)}`;
+  // Job Name chọn từ đúng các dòng của lưới 0203 (job › đối tượng con) — gõ tay thì tên trên 0206
+  // lệch tên trên 0203 và không ai đối chiếu được. Giá trị cũ không còn trong danh sách vẫn giữ.
+  const jobNames = (jobs.data ?? []).flatMap((j) => j.lines.map((l) => (l.label ? `${j.name} › ${l.label}` : j.name)));
+  const jobOptions = (current: string) =>
+    [...new Set([...(current && !jobNames.includes(current) ? [current] : []), ...jobNames])].map((name) => ({ value: name, label: name }));
+  const storageOptions = (current: string) =>
+    [...new Set([...(current && !STORAGE_PLACES.includes(current) ? [current] : []), ...STORAGE_PLACES])].map((v) => ({ value: v, label: v }));
 
   return (
     <Dialog
@@ -446,7 +457,14 @@ function IncidentForm({
               {draft.backupDetails.map((row, i) => (
                 <fieldset key={i} className="iso-detail">
                   <legend className="sr-only">{`Job ${i + 1}`}</legend>
-                  <input className="inp" aria-label={`Job Name ${i + 1}`} placeholder="Job Name" value={row.jobName} onChange={(e) => setDetail(i, { jobName: e.target.value })} />
+                  <Select
+                    value={row.jobName}
+                    ariaLabel={`Job Name ${i + 1}`}
+                    placeholder="Job Name"
+                    searchable
+                    options={jobOptions(row.jobName)}
+                    onChange={(v) => setDetail(i, { jobName: v })}
+                  />
                   <SegmentedRadio
                     label={`Type Backup ${i + 1}`}
                     value={row.typeBackup ?? ''}
@@ -469,7 +487,13 @@ function IncidentForm({
                     ×
                   </button>
                   <div className="iso-detail-more">
-                    <input className="inp" aria-label={`Storage Location ${i + 1}`} placeholder="Storage Location" value={row.storage} onChange={(e) => setDetail(i, { storage: e.target.value })} />
+                    <Select
+                      value={row.storage}
+                      ariaLabel={`Storage Location ${i + 1}`}
+                      placeholder="Storage Location"
+                      options={storageOptions(row.storage)}
+                      onChange={(v) => setDetail(i, { storage: v })}
+                    />
                     <input className="inp" aria-label={`Error Message ${i + 1}`} placeholder="Error Message" value={row.errorMessage} onChange={(e) => setDetail(i, { errorMessage: e.target.value })} />
                     <input className="inp" aria-label={`Issue Resolution ${i + 1}`} placeholder="Issue Resolution" value={row.resolution} onChange={(e) => setDetail(i, { resolution: e.target.value })} />
                   </div>

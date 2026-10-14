@@ -130,6 +130,11 @@ export class IsoAccessService {
     return this.ownersOf(formType);
   }
 
+  /** Tên hiển thị của người đang thao tác — ghi lên phiếu (Handled của 0208). */
+  async nameOf(actor: IsoActor): Promise<string> {
+    return (await this.peopleById()).get(actor.id)?.fullName ?? actor.email;
+  }
+
   private async peopleById(): Promise<Map<string, IsoPerson>> {
     const all = await this.users.directory();
     return new Map(all.map((u) => [u.id, { id: u.id, email: u.email, fullName: u.fullName }]));

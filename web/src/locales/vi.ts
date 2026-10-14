@@ -4405,6 +4405,7 @@ export default {
       newDivisionName: 'Tên bộ phận mới',
       newDivisionHint: 'Lưu luôn vào Danh mục phiếu.',
       resolvedHint: 'Để trống nếu chưa xử lý xong.',
+      handledHint: 'Tự ghi theo tài khoản ghi dòng này.',
       divisionRequired: 'Chọn Division.',
       newDivisionRequired: 'Gõ tên bộ phận mới.',
       computerRequired: 'Nhập Computer Name.',

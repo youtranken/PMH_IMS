@@ -209,7 +209,9 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
   const toast = useToast();
   const [no, setNo] = useState(String(job?.no ?? suggestedNo));
   const [name, setName] = useState(job?.name ?? '');
-  const [trackedFrom, setTrackedFrom] = useState(job?.trackedFrom ?? todayIso());
+  // Job mới mặc định theo dõi từ ngày 1 của tháng: khai job giữa tháng thì vẫn đánh bù được các
+  // ngày đã qua; job thật sự bắt đầu sau thì đổi ngày này.
+  const [trackedFrom, setTrackedFrom] = useState(job?.trackedFrom ?? `${todayIso().slice(0, 7)}-01`);
   const [lines, setLines] = useState<LineDraft[]>(
     job?.lines.map((l) => ({
       id: l.id,

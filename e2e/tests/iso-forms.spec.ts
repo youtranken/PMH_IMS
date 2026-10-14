@@ -58,6 +58,22 @@ function setOwner(form: '0203' | '0208', email: string | null): void {
   sql(`UPDATE iso_form_owner SET primary_user_id = ${value} WHERE form_type = '${form}'`);
 }
 
+/**
+ * Bấm một nút ghi rồi chờ đúng lượt ghi đó trả về, và KHÔNG có toast lỗi. Lượt ghi trả 2xx thân
+ * rỗng từng làm web báo "Có lỗi xảy ra" dù dữ liệu đã lưu — bài chỉ kiểm ô đổi trạng thái thì
+ * không thấy (ô vẫn đổi nhờ lượt làm mới sau đó).
+ */
+async function writeOk(page: Page, action: () => Promise<void>, url: RegExp): Promise<void> {
+  const done = page.waitForResponse((r) => url.test(r.url()) && r.request().method() !== 'GET');
+  await action();
+  expect((await done).ok()).toBe(true);
+  // Toast lỗi chỉ hiện SAU khi web đọc thân phản hồi; chờ trang hết request (lượt làm mới lưới
+  // chạy sau lượt ghi) rồi mới kiểm. `response.finished()` / `requestfinished` không bao giờ đến
+  // với 204 đi qua proxy nên không dùng được.
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+}
+
 async function typeDate(page: Page, scope: Locator, label: RegExp, ddmmyyyy: string): Promise<void> {
   await scope.getByRole('button', { name: label }).first().click();
   const typed = page.getByRole('textbox', { name: 'Gõ ngày (dd/mm/yyyy)' });
@@ -136,7 +152,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(day2).toHaveAccessibleName(`${name} ngày 2: Đạt`);
     await day2.click();
     await expect(day2).toHaveAccessibleName(`${name} ngày 2: Lỗi, chưa có 0206`);
-    await day2.click();
+    await writeOk(page, () => day2.click(), /\/iso\/backup\/ticks$/);
     await expect(day2).toHaveAccessibleName(`${name} ngày 2: Bỏ sót — chưa đánh`);
     // Phím tắt: X đặt thẳng ✗. Chờ server lưu xong (KPI ô ✗) rồi mới đi tiếp.
     await day2.press('x');
@@ -211,8 +227,12 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await page.goto('/iso/antivirus?month=2021-03');
     await expect(page.getByRole('heading', { name: 'Theo dõi antivirus · 0208' })).toBeVisible();
     // "Không có issue" = bấm ô của dòng Other Division; bấm lại là bỏ.
-    await page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' }).click();
+    await writeOk(page, () => page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' }).click(), /clear-days$/);
     await expect(page.getByRole('button', { name: 'Other Division ngày 01/03: không có issue' })).toBeVisible();
+    await writeOk(page, () => page.getByRole('button', { name: 'Other Division ngày 01/03: không có issue' }).click(), /clear-days\/2021-03-01$/);
+    await expect(page.getByText('Đã bỏ ✓ ngày 01/03.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' })).toBeVisible();
+    await writeOk(page, () => page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' }).click(), /clear-days$/);
 
     await page.getByRole('button', { name: '+ Ghi máy có issue' }).click();
     const dialog = page.getByRole('dialog');
@@ -306,7 +326,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const job = await createJob(page, `E2E-RVW-${uniqueStamp()}`);
     const lineId = job.lines[0].id;
     await fillMonth(page, '2021-09', 30);
-    expect((await api(page, 'PUT', '/api/v1/iso/backup/ticks', { lineId, day: '2021-09-05', result: 'fail' })).status()).toBe(200);
+    expect((await api(page, 'PUT', '/api/v1/iso/backup/ticks', { lineId, day: '2021-09-05', result: 'fail' })).status()).toBe(204);
     const content = {
       reportedOn: '2021-09-05',
       kind: 'backup',

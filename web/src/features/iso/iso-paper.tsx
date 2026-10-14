@@ -365,7 +365,18 @@ export function IncidentPaper({ incident }: { incident: IncidentContent }) {
         }}
       />
       {incident.kind === 'backup' ? (
-        <table className="paper-table paper-form">
+        <table className="paper-table paper-form paper-detail">
+          {/* Như mẫu Word: sáu cột Type Backup / Type Data chỉ là ô tick hẹp đánh dấu job lỗi ở
+              đâu; chữ dài (tên job, thông báo lỗi) xuống dòng trong ô, không tràn sang cột bên. */}
+          <colgroup>
+            <col className="paper-col-job" />
+            {Array.from({ length: 6 }, (_, k) => (
+              <col key={k} className="paper-col-tick" />
+            ))}
+            <col className="paper-col-storage" />
+            <col />
+            <col />
+          </colgroup>
           <BackupDetailHead />
           <tbody>
             {rows.map((row, i) => (
