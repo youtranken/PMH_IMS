@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
  * của `reset-e2e.mjs` hạ tháng bắt đầu về 2021-01. Không trả lại thì DB dev mở mọi tháng từ 2021
  * trên Kỳ phiếu, KPI và mail nhắc — người soát giao diện thấy một hệ thống khác với prod.
  *
- * Giá trị lưu là jsonb nên cất / trả nguyên chuỗi `"YYYY-MM"` kèm dấu nháy.
+ * Giá trị lưu là jsonb: cất nguyên chuỗi `"YYYY-MM"`, lúc trả bỏ dấu nháy rồi dựng lại bằng
+ * `to_jsonb` — dấu `"` không được lọt vào câu lệnh psql vốn đã bọc trong `"…"` của shell.
  */
 export const E2E_ISO_FIRST_MONTH = '"2021-01"';
 const KEY = 'iso.first_month';
@@ -58,9 +59,10 @@ export function restoreIsoFirstMonth(): void {
     return;
   }
   const original = readFileSync(BACKUP_FILE, 'utf8').trim();
+  const month = original.replace(/"/g, '');
   try {
-    if (original) {
-      execSync(`${PSQL} -c "UPDATE system_config SET value = '${original}' WHERE key = '${KEY}'"`, {
+    if (/^\d{4}-\d{2}$/.test(month)) {
+      execSync(`${PSQL} -c "UPDATE system_config SET value = to_jsonb('${month}'::text) WHERE key = '${KEY}'"`, {
         cwd: '..',
         stdio: 'pipe',
       });
