@@ -124,7 +124,7 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
   };
   const cellOf = (lineId: string, day: string): IncidentCell => ({ form: '0203', lineId, day, issueId: null, label: rowName(lineId) });
 
-  const queue = useTickQueue(me.csrfToken, {
+  const queue = useTickQueue(me.csrfToken, monthKey(data.year, data.month), {
     onSaved: (lineId, day, result) => {
       if (result !== 'fail') return;
       toast({
@@ -208,7 +208,7 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
           {missedDays.length > 0 ? (
             <p className="muted small">{t('iso.backup.missedDays', { days: missedDays.map(shortDay).join(', ') })}</p>
           ) : null}
-          {data.summary.unlinkedFails.length > 0 ? (
+          {editable && data.summary.unlinkedFails.length > 0 ? (
             <ul className="sheet-checks" aria-label={t('iso.backup.unlinked')}>
               {data.summary.unlinkedFails.map((c) => (
                 <li key={`${c.lineId}|${c.day}`} data-bad="">

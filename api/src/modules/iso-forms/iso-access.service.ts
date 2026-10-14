@@ -132,7 +132,8 @@ export class IsoAccessService {
 
   /** Tên hiển thị của người đang thao tác — ghi lên phiếu (Handled của 0208). */
   async nameOf(actor: IsoActor): Promise<string> {
-    return (await this.peopleById()).get(actor.id)?.fullName ?? actor.email;
+    // Tên rỗng thì rơi về email: ô Handled trống trên phiếu in là thiếu người ký nhận việc.
+    return (await this.users.namesByIds([actor.id])).get(actor.id)?.trim() || actor.email;
   }
 
   private async peopleById(): Promise<Map<string, IsoPerson>> {

@@ -229,8 +229,8 @@ button.sheet-mark:focus-visible {
   color: var(--ok);
 }
 
-/* ✗ chỉ là dấu, không khung — như ✓ (chủ dự án chốt 14/10). Chưa có 0206: đỏ đậm; đã có 0206:
-   cam, tức lỗi đã có phiếu xử lý. */
+/* ✗ chỉ là dấu, không khung — như ✓ (Q-28). Chưa có 0206: đỏ đậm; đã có 0206: cam, tức lỗi đã
+   có phiếu xử lý. */
 .sheet-mark[data-state='fail'] {
   color: var(--danger);
   font-weight: var(--fw-bold);

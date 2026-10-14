@@ -8,6 +8,7 @@ import { PATHS } from '@/lib/routes';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
+import { CloseIcon } from '@/ui/glyph-icons';
 import { Field, FormSection } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
@@ -140,7 +141,10 @@ export function IncidentDialog({
   const waiting = Boolean(incidentId) && incident.isLoading;
   const title = record ? t('iso.incident.editTitle', { code: record.code }) : t('iso.incident.newTitle');
 
-  if (waiting || (incidentId && incident.isError) || (record && (record.locked || record.inReview))) {
+  // Không có quyền sửa (không phụ trách phiếu chứa ô) thì cũng chỉ xem — mở form cho gõ rồi để
+  // API từ chối lúc lưu là bắt người dùng làm không công.
+  const readOnly = record !== null && (record.locked || record.inReview || record.canWrite === false);
+  if (waiting || (incidentId && incident.isError) || readOnly) {
     return (
       <Dialog
         open
@@ -164,7 +168,9 @@ export function IncidentDialog({
           <LoadError error={incident.error} onRetry={() => void incident.refetch()} />
         ) : record ? (
           <>
-            <p className="alert info">{t(record.inReview ? 'iso.incident.reviewHint' : 'iso.incident.lockedHint')}</p>
+            <p className="alert info">
+              {t(record.inReview ? 'iso.incident.reviewHint' : record.locked ? 'iso.incident.lockedHint' : 'iso.incident.noWriteHint')}
+            </p>
             <IncidentPaper incident={record} />
           </>
         ) : null}
@@ -349,11 +355,10 @@ function IncidentForm({
                 {cellText(c)}
                 <button
                   type="button"
-                  className="btn-x"
                   aria-label={t('iso.incident.unlink', { name: c.label, day: shortDay(c.day) })}
                   onClick={() => set('cells', draft.cells.filter((x) => cellKey(x) !== cellKey(c)))}
                 >
-                  ×
+                  <CloseIcon />
                 </button>
               </span>
             ))}
@@ -484,7 +489,7 @@ function IncidentForm({
                     aria-label={t('iso.incident.removeDetail', { n: i + 1 })}
                     onClick={() => set('backupDetails', draft.backupDetails.filter((_, j) => j !== i))}
                   >
-                    ×
+                    <CloseIcon />
                   </button>
                   <div className="iso-detail-more">
                     <Select

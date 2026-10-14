@@ -4420,6 +4420,7 @@ export default {
       edit: 'Sửa phiếu',
       openPage: 'Mở trang phiếu ›',
       openShort: 'Mở phiếu',
+      noWriteHint: 'Bạn chỉ xem phiếu này: phiếu gắn ô của phiếu 0203 / 0208 mà bạn không phụ trách. Người phụ trách hoặc SA/Admin sửa được.',
       periodOf: 'Tính vào kỳ {{period}}',
       lockedSubtitle: 'Thuộc kỳ {{period}} · đã khóa theo kỳ',
       lockedHint: 'Phiếu đã khóa theo kỳ đã chốt — chỉ xem, in và tải bản ký.',

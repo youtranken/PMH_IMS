@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/lib/api';
+import { apiFetch } from '@/lib/api-client';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
@@ -15,7 +17,7 @@ import { Select } from '@/ui/select';
 import { SubmitButton } from '@/ui/submit-button';
 import { useToast } from '@/ui/toast';
 import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
-import { useAntivirusGrid, useDivisions, useIsoWrite, useOwners } from './iso-api';
+import { ISO_KEY, useAntivirusGrid, useDivisions, useIsoWrite, useOwners } from './iso-api';
 import { LockedBanner, MonthNav, OwnerNotice, PeriodStateBadge } from './iso-parts';
 import {
   avIssueMark,
@@ -92,6 +94,8 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
   const askConfirm = useConfirm();
   const [editing, setEditing] = useState<AvIssue | 'new' | null>(null);
   const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
+  const [markingAll, setMarkingAll] = useState(false);
+  const queryClient = useQueryClient();
   const days = daysOf(data.year, data.month);
   const groups = useMemo(() => groupByDivision(data.issues), [data.issues]);
   const resultDays = useMemo(() => avResultDays(data.clearDays, data.issues), [data.clearDays, data.issues]);
@@ -137,15 +141,20 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
       confirmLabel: t('iso.av.markAll', { count: data.summary.missedDays.length }),
     });
     if (!ok) return;
-    for (const day of data.summary.missedDays) {
-      try {
-        await markClear.mutateAsync({ day });
-      } catch (err) {
-        fail(err);
-        return;
+    setMarkingAll(true);
+    // Ghi lần lượt rồi làm mới MỘT lần ở cuối — qua `useIsoWrite` thì mỗi ngày kéo theo một lượt
+    // làm mới cả nhánh phiếu. Hỏng giữa chừng: các ngày trước đó đã lưu, lưới làm mới cho thấy đúng.
+    try {
+      for (const day of data.summary.missedDays) {
+        await apiFetch('/api/v1/iso/antivirus/clear-days', { method: 'POST', csrfToken: me.csrfToken, body: JSON.stringify({ day }) });
       }
+      toast({ message: t('iso.av.markedAll', { count: data.summary.missedDays.length }) });
+    } catch (err) {
+      fail(err);
+    } finally {
+      setMarkingAll(false);
+      void queryClient.invalidateQueries({ queryKey: ISO_KEY });
     }
-    toast({ message: t('iso.av.markedAll', { count: data.summary.missedDays.length }) });
   };
 
   return (
@@ -166,7 +175,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
           <p className="muted small">{t('iso.av.recordHint')}</p>
           <div className="chip-row">
             {data.summary.missedDays.length > 1 ? (
-              <button type="button" className="btn sm" disabled={markClear.isPending} onClick={() => void markAllPast()}>
+              <button type="button" className="btn sm" disabled={markingAll || markClear.isPending} onClick={() => void markAllPast()}>
                 {t('iso.av.markAll', { count: data.summary.missedDays.length })}
               </button>
             ) : null}
@@ -230,7 +239,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                         <button type="button" className="btn sm ghost mono" onClick={() => setDialog({ incidentId: issue.incident?.id ?? '' })}>
                           {issue.incident.code}
                         </button>
-                      ) : open ? (
+                      ) : editable ? (
                         <button type="button" className="btn sm ghost" onClick={() => setDialog({ cell: issueCell(issue, group.divisionName) })}>
                           {t('iso.createIncident')}
                         </button>
@@ -466,7 +475,9 @@ function IssueDialog({
             <input id="iso-av-pc" className="inp mono" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
           </Field>
           <Field label="Handled" hint={t('iso.av.handledHint')}>
-            <p className="static-value">{issue?.handledBy ?? me.fullName}</p>
+            {/* Dòng cũ chưa có Handled thì để trống: API không ghi lại khi sửa, hiện tên người đang
+                sửa ở đây là hứa một thứ phiếu in sẽ không có. */}
+            <p className="static-value">{issue ? (issue.handledBy ?? '—') : me.fullName}</p>
           </Field>
           <Field label="Incident Description" required htmlFor="iso-av-desc" error={check.error('description')} span={2}>
             <input id="iso-av-desc" className="inp" value={form.description} onChange={(e) => set('description', e.target.value)} />
