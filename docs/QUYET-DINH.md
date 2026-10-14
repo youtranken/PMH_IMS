@@ -1242,6 +1242,8 @@ IT dùng hằng ngày.
   - Dấu ✗ trên lưới không khung, như ✓: đỏ = chưa có 0206, cam = đã có 0206.
   - Job mới mặc định "Theo dõi từ" ngày 1 của tháng, để khai job giữa tháng vẫn đánh bù được
     những ngày đã qua.
+  - 0208 giữ nguyên: ✗ chỉ ở ngày phát hiện (Reported Date), không kéo tới Resolution Date —
+    Resolution Date đã có cột riêng trên phiếu.
 
 ### Q-09 · Tài liệu
 
