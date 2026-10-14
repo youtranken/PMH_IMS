@@ -239,8 +239,8 @@ export class IsoFormsController {
 
   @Roles('sa', 'admin', 'member')
   @Get('incidents/:id')
-  incident(@Param() params: IdParamDto) {
-    return this.incidents.get(params.id);
+  incident(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.incidents.getFor(req.user!, params.id);
   }
 
   @Roles('sa', 'admin', 'member')

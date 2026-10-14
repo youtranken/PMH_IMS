@@ -503,6 +503,7 @@ function LockedIncident({ me, incident }: { me: Me; incident: Incident }) {
             ownerType="iso_incident"
             ownerId={incident.id}
             csrfToken={me.csrfToken}
+            canEdit={incident.canWrite === true}
             accept=".pdf,.jpg,.jpeg,.png"
             staleBefore={incident.contentUpdatedAt}
             onChanged={() => void queryClient.invalidateQueries({ queryKey: ISO_KEY })}

@@ -224,11 +224,14 @@ export function signedIsCurrent(uploadedAt: Date, since: Date | null): boolean {
 }
 
 /**
- * Kỳ nào quản một phiếu 0206: kỳ của các ô ✗ đã gắn trong tháng của phiếu; phiếu lập thẳng (không
- * gắn ô nào trong tháng) thuộc mọi kỳ của tháng đó — nó nằm trong hồ sơ ISO của cả tháng.
+ * Kỳ nào (của tháng phiếu) quản một phiếu 0206: loại phiếu của các ô ✗ đã gắn trong tháng đó. Phiếu
+ * cuối tháng chỉ có ô của tháng sau vẫn là sự cố của loại phiếu đó, nên lấy loại của các ô ấy —
+ * không coi là lập thẳng. Phiếu không gắn ô nào thuộc mọi kỳ của tháng: nó nằm trong hồ sơ ISO
+ * của cả tháng.
  */
-export function incidentGoverning(cellForms: IsoFormType[]): IsoFormType[] {
-  const set = new Set(cellForms);
+export function incidentGoverning(cells: { form: IsoFormType; day: string }[], year: number, month: number): IsoFormType[] {
+  const own = cells.filter((c) => c.day.startsWith(`${monthKey(year, month)}-`));
+  const set = new Set((own.length > 0 ? own : cells).map((c) => c.form));
   return set.size === 0 ? [...ISO_FORM_TYPES] : ISO_FORM_TYPES.filter((f) => set.has(f));
 }
 

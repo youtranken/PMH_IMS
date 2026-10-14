@@ -1,5 +1,13 @@
 import { BadRequestException, Global, Injectable, Module } from '@nestjs/common';
+import type { UserRole } from '../modules/auth/types';
 import type { Tx } from './tx';
+
+/** Người đang tải file lên — chủ thể có luật "ai được ghi" riêng thì cần biết vai. */
+export interface Uploader {
+  id: string;
+  email: string;
+  role: UserRole;
+}
 
 /**
  * Sổ đăng ký "chủ thể này có thật không" — hỏi trước khi gắn BẤT CỨ THỨ GÌ vào một
@@ -79,11 +87,12 @@ export interface OwnerResolver {
   noteOf?(ownerType: string, ownerId: string): Promise<string | null>;
 
   /**
-   * Chủ thể còn NHẬN loại file này không — luật riêng của chủ thể, chạy SAU whitelist nội dung
-   * chung của `files` (vd bản ký phiếu ISO chỉ nhận PDF/ảnh scan, chỉ khi kỳ đã chốt). Ném 400/409
-   * kèm câu tiếng Việt. KHÔNG BẮT BUỘC: không khai = mọi file qua được whitelist chung đều nhận.
+   * Chủ thể còn NHẬN file này từ người này không — luật riêng của chủ thể, chạy SAU whitelist nội
+   * dung chung của `files` và sau phép kiểm "được xem" của controller (vd bản ký phiếu ISO chỉ nhận
+   * PDF/ảnh scan, chỉ khi kỳ đã chốt, chỉ từ người phụ trách). Ném 400/403/409 kèm câu tiếng Việt.
+   * KHÔNG BẮT BUỘC: không khai = ai xem được chủ thể thì đính kèm được.
    */
-  assertAccepts?(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }): Promise<void>;
+  assertAccepts?(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void>;
 }
 
 @Injectable()
@@ -125,8 +134,8 @@ export class OwnerExistsRegistry {
   }
 
   /** Luật nhận file riêng của chủ thể; loại chưa khai `assertAccepts` thì đi qua. */
-  async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }): Promise<void> {
-    await this.resolverFor(ownerType).assertAccepts?.(ownerType, ownerId, file);
+  async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void> {
+    await this.resolverFor(ownerType).assertAccepts?.(ownerType, ownerId, file, uploader);
   }
 
   /** Ghi chú của hồ sơ chủ thể, `null` khi loại đó chưa khai `noteOf` hoặc ghi chú trống. */

@@ -125,7 +125,7 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       clock,
     );
     periods.onModuleInit();
-    new IsoFileOwner(owners, store, incidents, config).onModuleInit();
+    new IsoFileOwner(owners, store, incidents, access, config).onModuleInit();
 
     await addUser('sa', 'sa');
     await addUser('admin', 'admin');
@@ -376,21 +376,21 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       const detail = await periods.detail(people.owner, '0203', 2026, 11);
       const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
       await expect(
-        files.save({ buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]), originalName: 'x.png', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email }),
+        files.save({ buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]), originalName: 'x.png', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role }),
       ).resolves.toBeDefined();
-      await files.save({ buffer: pdf, originalName: 'ky.pdf', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email });
+      await files.save({ buffer: pdf, originalName: 'ky.pdf', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role });
       const after = await periods.detail(people.owner, '0203', 2026, 11);
       expect(after.signedCurrent).toBe(true);
       // Còn 0206 thuộc kỳ chưa có bản ký → chưa Hoàn tất.
       expect(after.display).toBe('locked');
       for (const i of after.incidents) {
         if (!i.locked) continue;
-        await files.save({ buffer: pdf, originalName: `${i.code}.pdf`, ownerType: 'iso_incident', ownerId: i.id, uploadedBy: people.owner.id, actor: people.owner.email });
+        await files.save({ buffer: pdf, originalName: `${i.code}.pdf`, ownerType: 'iso_incident', ownerId: i.id, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role });
       }
       const open = after.incidents.filter((i) => !i.locked);
       for (const i of open) {
         await expect(
-          files.save({ buffer: pdf, originalName: 'x.pdf', ownerType: 'iso_incident', ownerId: i.id, uploadedBy: people.owner.id, actor: people.owner.email }),
+          files.save({ buffer: pdf, originalName: 'x.pdf', ownerType: 'iso_incident', ownerId: i.id, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role }),
         ).rejects.toMatchObject({ response: { code: 'ISO_SIGN_NOT_LOCKED' } });
       }
     });

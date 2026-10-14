@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { asc, between, eq, inArray } from 'drizzle-orm';
+import { asc, between, eq, inArray, sql } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
 import { viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -154,6 +154,14 @@ export class IsoAntivirusService {
     const { year, month } = await this.guardDay(actor, day);
     await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', year, month);
+      await lockDayWithin(tx, day);
+      const [issue] = await tx.select({ id: isoAvIssueTable.id }).from(isoAvIssueTable).where(eq(isoAvIssueTable.reportedOn, day)).limit(1);
+      if (issue) {
+        throw new ConflictException({
+          code: 'ISO_DAY_HAS_ISSUE',
+          message: `Ngày ${viDate(day)} đã có dòng issue — không đánh "không có issue" được. Tải lại để xem.`,
+        });
+      }
       const inserted = await tx.insert(isoAvClearDayTable).values({ day, markedBy: actor.email }).onConflictDoNothing().returning();
       if (inserted.length === 0) return;
       await this.audit.appendWithin(tx, {
@@ -185,6 +193,7 @@ export class IsoAntivirusService {
     this.checkIssue(input);
     const id = await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', year, month);
+      await lockDayWithin(tx, input.reportedOn);
       const divisionId = await this.resolveDivision(tx, actor, input);
       const [row] = await tx
         .insert(isoAvIssueTable)
@@ -220,10 +229,13 @@ export class IsoAntivirusService {
     await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', from.year, from.month);
       if (to.year !== from.year || to.month !== from.month) await this.periods.assertOpenWithin(tx, '0208', to.year, to.month);
-      if (before.incident && input.reportedOn !== before.reportedOn) {
+      await lockDayWithin(tx, input.reportedOn);
+      const current = await this.lockIssueWithin(tx, id);
+      if (current.reportedOn !== before.reportedOn) throw issueChanged();
+      if (current.linkedCode && input.reportedOn !== before.reportedOn) {
         throw new ConflictException({
           code: 'ISO_CELL_LINKED',
-          message: `Dòng này đã gắn phiếu ${before.incident.code} — bỏ gắn ở phiếu đó trước khi đổi ngày phát hiện.`,
+          message: `Dòng này đã gắn phiếu ${current.linkedCode} — bỏ gắn ở phiếu đó trước khi đổi ngày phát hiện.`,
         });
       }
       const divisionId = await this.resolveDivision(tx, actor, input);
@@ -257,14 +269,16 @@ export class IsoAntivirusService {
   async deleteIssue(actor: IsoActor, id: string): Promise<void> {
     const before = await this.issue(id);
     const { year, month } = await this.guardDay(actor, before.reportedOn);
-    if (before.incident) {
-      throw new ConflictException({
-        code: 'ISO_CELL_LINKED',
-        message: `Dòng này đã gắn phiếu ${before.incident.code} — bỏ gắn ở phiếu đó trước khi xoá.`,
-      });
-    }
     await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', year, month);
+      const current = await this.lockIssueWithin(tx, id);
+      if (current.reportedOn !== before.reportedOn) throw issueChanged();
+      if (current.linkedCode) {
+        throw new ConflictException({
+          code: 'ISO_CELL_LINKED',
+          message: `Dòng này đã gắn phiếu ${current.linkedCode} — bỏ gắn ở phiếu đó trước khi xoá.`,
+        });
+      }
       await tx.delete(isoAvIssueTable).where(eq(isoAvIssueTable.id, id));
       await this.audit.appendWithin(tx, {
         actor: actor.email,
@@ -329,6 +343,21 @@ export class IsoAntivirusService {
     }
   }
 
+  /**
+   * Khoá hàng issue rồi mới đọc "đã gắn 0206 chưa": lượt gắn ô 0208 vào phiếu cũng khoá hàng này
+   * (`resolveCellsWithin`), nên đọc trước khi khoá là dùng kết quả đã cũ.
+   */
+  private async lockIssueWithin(tx: Tx, id: string): Promise<{ reportedOn: string; linkedCode: string | null }> {
+    const [row] = await tx.select({ reportedOn: isoAvIssueTable.reportedOn }).from(isoAvIssueTable).where(eq(isoAvIssueTable.id, id)).for('update');
+    if (!row) throw new NotFoundException({ code: 'ISO_ISSUE_NOT_FOUND', message: 'Không tìm thấy dòng issue này.' });
+    const [link] = await tx
+      .select({ code: isoIncidentTable.code })
+      .from(isoIncidentCellTable)
+      .innerJoin(isoIncidentTable, eq(isoIncidentTable.id, isoIncidentCellTable.incidentId))
+      .where(eq(isoIncidentCellTable.avIssueId, id));
+    return { reportedOn: row.reportedOn, linkedCode: link?.code ?? null };
+  }
+
   private async resolveDivision(tx: Tx, actor: IsoActor, input: IssueInput): Promise<string> {
     if (input.newDivisionName?.trim()) {
       return (await this.catalog.createDivisionWithin(tx, actor, { code: null, name: input.newDivisionName })).id;
@@ -337,6 +366,19 @@ export class IsoAntivirusService {
     if (!division) throw new BadRequestException({ code: 'ISO_DIVISION_NOT_FOUND', message: 'Bộ phận được chọn không còn. Tải lại rồi chọn lại.' });
     return division.id;
   }
+}
+
+/**
+ * Một ngày 0208 là "không có issue" HOẶC có dòng issue, không cả hai. Đánh "không có issue" và ghi
+ * issue cùng ngày chạy song song thì mỗi bên đều thấy bên kia chưa có — khoá theo ngày cho hai lượt
+ * đó đi lần lượt.
+ */
+async function lockDayWithin(tx: Tx, day: string): Promise<void> {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`iso-av-day:${day}`}, 0))`);
+}
+
+function issueChanged() {
+  return new ConflictException({ code: 'ISO_ISSUE_CHANGED', message: 'Dòng issue vừa được người khác sửa. Tải lại rồi làm tiếp.' });
 }
 
 function summarize(issues: AvIssue[], clearDays: string[], year: number, month: number, today: string): AntivirusSummary {

@@ -73,6 +73,11 @@ export class IsoPeriodStore {
     return this.db.select().from(isoPeriodTable).where(eq(isoPeriodTable.year, year));
   }
 
+  /** Mọi kỳ Đã chốt, không kể năm: kỳ tháng 12 chưa có bản ký vẫn là việc tồn sang năm sau. */
+  async allLocked(): Promise<PeriodRow[]> {
+    return this.db.select().from(isoPeriodTable).where(eq(isoPeriodTable.state, 'locked'));
+  }
+
   /** Trạng thái của nhiều kỳ một lượt; kỳ không có hàng là `open`. Khoá `form|YYYY-MM`. */
   async statesOf(keys: { formType: IsoFormType; year: number; month: number }[], tx?: Tx): Promise<Map<string, PeriodState>> {
     const out = new Map<string, PeriodState>();

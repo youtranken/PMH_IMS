@@ -293,12 +293,13 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
       ) : null}
       {locked && detail.periodId ? (
         <details open={!detail.signedCurrent}>
-          <summary>{detail.signedCurrent ? t('iso.signedHas') : t('iso.periods.uploadSigned')}</summary>
-          <p className="muted small">{t('iso.periods.signedHint')}</p>
+          <summary>{detail.signedCurrent ? t('iso.signedHas') : detail.canWrite ? t('iso.periods.uploadSigned') : t('iso.signedMissing')}</summary>
+          {detail.canWrite ? <p className="muted small">{t('iso.periods.signedHint')}</p> : null}
           <AttachmentPanel
             ownerType="iso_period"
             ownerId={detail.periodId}
             csrfToken={me.csrfToken}
+            canEdit={detail.canWrite}
             accept=".pdf,.jpg,.jpeg,.png"
             staleBefore={detail.lockedAt}
             onChanged={() => void queryClient.invalidateQueries({ queryKey: ISO_KEY })}

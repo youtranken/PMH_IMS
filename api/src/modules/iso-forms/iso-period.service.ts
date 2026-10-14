@@ -483,7 +483,6 @@ export class IsoPeriodService implements OnModuleInit {
 
   /** Việc cần làm của người đang xem — số trên đầu nhóm "Phiếu ISO" khi thu gọn. */
   async todo(actor: IsoActor): Promise<{ count: number; pendingApprovals: number; unlinkedFails: number; awaitingSigned: number }> {
-    const today = await this.clock.today();
     const pendingApprovals = isManager(actor)
       ? (await this.approvals.pending(PERIOD_CLOSE_KIND)).length + (await this.approvals.pending(PERIOD_REOPEN_KIND)).length
       : 0;
@@ -491,8 +490,7 @@ export class IsoPeriodService implements OnModuleInit {
       (f): f is IsoFormType => f !== null,
     );
     const unlinked = (await this.incidents.unlinked({})).filter((c) => writable.includes(c.form)).length;
-    const year = Number(today.slice(0, 4));
-    const locked = (await this.store.ofYear(year)).filter((r) => r.state === 'locked' && writable.includes(r.formType as IsoFormType));
+    const locked = (await this.store.allLocked()).filter((r) => writable.includes(r.formType as IsoFormType));
     const files = await this.files.listForOwners('iso_period', locked.map((r) => r.id));
     const awaitingSigned = locked.filter((r) => !files.some((f) => f.ownerId === r.id && toSigned(f, r.lockedAt).current)).length;
     return { count: pendingApprovals + unlinked + awaitingSigned, pendingApprovals, unlinkedFails: unlinked, awaitingSigned };

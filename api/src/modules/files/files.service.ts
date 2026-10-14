@@ -19,6 +19,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
+import type { UserRole } from '../auth/types';
 import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { detectFileType, sizeLimitBytes } from './file-validation';
@@ -167,6 +168,7 @@ export class FilesService implements OnModuleInit {
     ownerId: string;
     uploadedBy: string;
     actor: string;
+    actorRole: UserRole;
   }): Promise<FileRecord> {
     const detected = detectFileType(input.buffer, input.originalName);
     if (!detected) {
@@ -196,7 +198,12 @@ export class FilesService implements OnModuleInit {
      */
     await this.owners.assertExists(input.ownerType, input.ownerId);
     // Chủ thể có luật riêng (bản ký phiếu ISO chỉ nhận PDF/ảnh scan, trần nhỏ hơn) — hỏi trước khi ghi đĩa.
-    await this.owners.assertAccepts(input.ownerType, input.ownerId, { mime: detected.mime, sizeBytes: input.buffer.length });
+    await this.owners.assertAccepts(
+      input.ownerType,
+      input.ownerId,
+      { mime: detected.mime, sizeBytes: input.buffer.length },
+      { id: input.uploadedBy, email: input.actor, role: input.actorRole },
+    );
 
     const dir = storageDir();
     await mkdir(dir, { recursive: true });

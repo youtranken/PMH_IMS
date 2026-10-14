@@ -110,6 +110,24 @@ export class IsoIncidentService {
     return (await this.hydrate([row]))[0];
   }
 
+  /** Phiếu kèm cờ "người này ghi được không" — màn chi tiết ẩn ô tải bản ký theo cờ này. */
+  async getFor(actor: IsoActor, id: string): Promise<IncidentRecord & { canWrite: boolean }> {
+    const incident = await this.get(id);
+    return { ...incident, canWrite: await this.canWrite(actor, incident) };
+  }
+
+  /** Luật ghi của một phiếu 0206 (Q-28): theo loại phiếu của các ô đã gắn; phiếu lập thẳng thì mọi tài khoản IT. */
+  async canWrite(actor: IsoActor, incident: Pick<IncidentRecord, 'cells'>): Promise<boolean> {
+    for (const form of new Set(incident.cells.map((c) => c.form))) {
+      if (!(await this.access.canWrite(actor, form))) return false;
+    }
+    return true;
+  }
+
+  async assertCanWrite(actor: IsoActor, incident: Pick<IncidentRecord, 'cells'>): Promise<void> {
+    await this.assertCellWriters(actor, incident.cells.map((c) => c.form));
+  }
+
   async list(filters: IncidentListFilters): Promise<IncidentRecord[]> {
     const where = [eq(isoIncidentTable.year, filters.year)];
     if (filters.month) where.push(eq(isoIncidentTable.month, filters.month));
@@ -217,8 +235,7 @@ export class IsoIncidentService {
     const id = await this.db.transaction(async (tx) => {
       const cells = await this.resolveCellsWithin(tx, input.cells, year, month);
       await this.lockCellPeriodsWithin(tx, cells);
-      const governing = incidentGoverning(cells.filter((c) => sameMonth(c.day, year, month)).map((c) => c.form));
-      for (const form of governing) await this.periods.assertOpenWithin(tx, form, year, month);
+      for (const form of incidentGoverning(cells, year, month)) await this.periods.assertOpenWithin(tx, form, year, month);
       const [counter] = await tx.execute<{ last_no: number }>(sql`
         INSERT INTO iso_incident_counter (year, last_no) VALUES (${year}, 1)
         ON CONFLICT (year) DO UPDATE SET last_no = iso_incident_counter.last_no + 1
@@ -264,9 +281,15 @@ export class IsoIncidentService {
       const added = wanted.filter((c) => !had.has(cellKey(c)));
       // Gắn / bỏ gắn một ô là sửa kỳ của ô đó: kỳ phải còn Đang ghi.
       await this.lockCellPeriodsWithin(tx, [...removed, ...added]);
-      if (moved) {
-        const governing = incidentGoverning(wanted.filter((c) => sameMonth(c.day, target.year, target.month)).map((c) => c.form));
-        for (const form of governing) await this.periods.assertOpenWithin(tx, form, target.year, target.month);
+      // Phiếu ra / vào hồ sơ của một kỳ (đổi tháng, hoặc ô gắn đổi làm đổi loại phiếu quản nó) là sửa
+      // kỳ đó, kể cả khi kỳ không còn ô nào của phiếu — kỳ đã chốt thì hồ sơ của nó không đổi được.
+      const from = incidentGoverning(before.cells, before.year, before.month).map((f) => stateKey(f, before.year, before.month));
+      const to = incidentGoverning(wanted, target.year, target.month).map((f) => stateKey(f, target.year, target.month));
+      const touched = [...from.filter((k) => !to.includes(k)), ...to.filter((k) => !from.includes(k))].sort();
+      for (const key of touched) {
+        const [form, ym] = key.split('|');
+        const { year, month } = monthOf(`${ym}-01`);
+        await this.periods.assertOpenWithin(tx, form as IsoFormType, year, month);
       }
       if (removed.length > 0) {
         const current = await tx
@@ -455,12 +478,7 @@ export class IsoIncidentService {
       list.push({ form: '0208', lineId: null, day: c.day, issueId: c.issueId, label: `${c.division} · ${c.computer}` });
       cellsOf.set(c.incidentId, list);
     }
-    const governingOf = new Map(
-      rows.map((r) => [
-        r.id,
-        incidentGoverning((cellsOf.get(r.id) ?? []).filter((c) => sameMonth(c.day, r.year, r.month)).map((c) => c.form)),
-      ]),
-    );
+    const governingOf = new Map(rows.map((r) => [r.id, incidentGoverning(cellsOf.get(r.id) ?? [], r.year, r.month)]));
     const states = await this.periods.statesOf(
       rows.flatMap((r) => governingOf.get(r.id)!.map((formType) => ({ formType, year: r.year, month: r.month }))),
     );
@@ -521,11 +539,6 @@ export function toSigned(file: FileRecord, since: Date | null): SignedFile {
 
 function backupLabel(jobName: string, label: string | null): string {
   return label ? `${jobName} › ${label}` : jobName;
-}
-
-function sameMonth(day: string, year: number, month: number): boolean {
-  const m = monthOf(day);
-  return m.year === year && m.month === month;
 }
 
 function cellKey(cell: Pick<IncidentCell, 'form' | 'lineId' | 'day' | 'issueId'>): string {

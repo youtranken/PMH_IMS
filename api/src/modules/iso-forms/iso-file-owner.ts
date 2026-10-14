@@ -1,8 +1,10 @@
 import { BadRequestException, ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
-import { OwnerExistsRegistry, type OwnerResolver } from '../../common/owner-exists.registry';
+import { OwnerExistsRegistry, type OwnerResolver, type Uploader } from '../../common/owner-exists.registry';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { IsoAccessService } from './iso-access.service';
 import { IsoIncidentService } from './iso-incident.service';
 import { IsoPeriodStore, periodLabel } from './iso-period.store';
+import type { IsoFormType } from './iso-rules';
 
 /** Đuôi trong `iso.scan_types` → loại nội dung mà `files` nhận diện theo magic-byte. */
 const MIME_OF: Record<string, string> = {
@@ -16,7 +18,8 @@ const MIME_OF: Record<string, string> = {
 /**
  * `iso-forms` làm chủ hai loại chủ thể đính kèm: bản scan đã ký của kỳ (`iso_period`) và của từng
  * phiếu 0206 (`iso_incident`). Chỉ nhận khi kỳ / phiếu đã khoá — bản ký của một phiếu còn sửa
- * được thì sẽ cũ ngay lần sửa sau.
+ * được thì sẽ cũ ngay lần sửa sau. Tải bản ký đẩy kỳ sang Hoàn tất nên là một lượt GHI phiếu: chỉ
+ * người phụ trách loại phiếu đó và SA/Admin (Q-28); `files` chỉ kiểm "được xem".
  */
 @Injectable()
 export class IsoFileOwner implements OwnerResolver, OnModuleInit {
@@ -26,6 +29,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
     private readonly registry: OwnerExistsRegistry,
     private readonly periods: IsoPeriodStore,
     private readonly incidents: IsoIncidentService,
+    private readonly access: IsoAccessService,
     private readonly config: SystemConfigService,
   ) {}
 
@@ -42,7 +46,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
     return incident ? `Phiếu ${incident.code}` : null;
   }
 
-  async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }): Promise<void> {
+  async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void> {
     const types = (await this.config.getString('isoScanTypes'))
       .split(',')
       .map((t) => t.trim().toLowerCase())
@@ -66,9 +70,11 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
           message: 'Kỳ chưa được duyệt chốt — tải bản ký sau khi SA/Admin duyệt.',
         });
       }
+      await this.access.assertCanWrite(uploader, row.formType as IsoFormType);
       return;
     }
     const incident = await this.incidents.get(ownerId);
+    await this.incidents.assertCanWrite(uploader, incident);
     if (!incident.locked) {
       throw new ConflictException({
         code: 'ISO_SIGN_NOT_LOCKED',

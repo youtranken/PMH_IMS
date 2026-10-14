@@ -265,6 +265,37 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(card.getByText('Đang ghi').first()).toBeVisible();
   });
 
+  test('bản ký: Member không phụ trách không thấy ô tải lên, gọi thẳng API bị 403', async ({ page, browser }) => {
+    await firstLogin(page, E2E_SA);
+    setOwner('0203', null);
+    await createJob(page, `E2E-SN-${uniqueStamp()}`);
+    await fillMonth(page, '2021-07', 31);
+    expect((await api(page, 'POST', '/api/v1/iso/periods/0203/2021-07/submit')).status()).toBe(201);
+    expect((await api(page, 'POST', '/api/v1/iso/periods/0203/2021-07/approve', {})).status()).toBe(201);
+    const periodId = ((await (await api(page, 'GET', '/api/v1/iso/periods/0203/2021-07')).json()) as { periodId: string }).periodId;
+
+    const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const member = await memberCtx.newPage();
+    await firstLogin(member, E2E_MEMBER);
+    await member.goto('/iso/periods?month=2021-07');
+    const card = member.getByRole('article', { name: '0203 · Backup' });
+    await expect(card.getByText('Đã chốt · chờ bản ký').first()).toBeVisible();
+    await expect(card.getByLabel('Chọn file để đính kèm')).toHaveCount(0);
+
+    // Dựng lại đòn: Member xem được kỳ nên trước đây tải thẳng được bản ký và đẩy kỳ sang Hoàn tất.
+    const res = await member.request.post('/api/v1/files', {
+      headers: await writeHeaders(member),
+      multipart: {
+        ownerType: 'iso_period',
+        ownerId: periodId,
+        file: { name: 'ky-E2E.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF\n') },
+      },
+    });
+    expect(res.status()).toBe(403);
+    expect(((await res.json()) as { code: string }).code).toBe('ISO_NOT_OWNER');
+    await memberCtx.close();
+  });
+
   for (const theme of ['light', 'dark'] as const) {
     test(`màu trạng thái lưới 0203 đọc được ở giao diện ${theme === 'light' ? 'sáng' : 'tối'}`, async ({ page }) => {
       await firstLogin(page, E2E_SA);

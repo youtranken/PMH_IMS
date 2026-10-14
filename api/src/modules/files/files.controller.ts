@@ -121,6 +121,7 @@ export class FilesController {
       ownerId: body.ownerId,
       uploadedBy: user.id,
       actor: user.email,
+      actorRole: user.role,
     });
   }
 

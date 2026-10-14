@@ -181,12 +181,15 @@ describe('iso-rules · trạng thái kỳ và khoá phiếu sự cố', () => {
     expect(signedIsCurrent(new Date('2026-12-01T03:00:01Z'), null)).toBe(false);
   });
 
+  const cell = (form: '0203' | '0208', day: string) => ({ form, day });
   it.each([
-    [[], ['0203', '0208']],
-    [['0208'], ['0208']],
-    [['0203', '0208', '0203'], ['0203', '0208']],
-  ])('phiếu có ô của %o thuộc kỳ %o', (forms, out) => {
-    expect(incidentGoverning(forms as ('0203' | '0208')[])).toEqual(out);
+    ['không gắn ô nào', [], ['0203', '0208']],
+    ['chỉ ô 0208 trong tháng', [cell('0208', '2026-10-03')], ['0208']],
+    ['ô 0203 và 0208 trong tháng', [cell('0203', '2026-10-03'), cell('0208', '2026-10-04'), cell('0203', '2026-10-05')], ['0203', '0208']],
+    ['ô trong tháng thắng ô tháng sau', [cell('0203', '2026-10-31'), cell('0208', '2026-11-01')], ['0203']],
+    ['chỉ có ô 0203 của tháng sau', [cell('0203', '2026-11-01'), cell('0203', '2026-11-02')], ['0203']],
+  ])('phiếu tháng 10 %s → kỳ %o', (_name, cells, out) => {
+    expect(incidentGoverning(cells as { form: '0203' | '0208'; day: string }[], 2026, 10)).toEqual(out);
   });
 
   it.each([

@@ -185,6 +185,8 @@ export interface Incident extends IncidentContent {
   locked: boolean;
   signedCurrent: boolean;
   signed: SignedFile[];
+  /** Chỉ có ở API chi tiết một phiếu. */
+  canWrite?: boolean;
 }
 
 export interface ChecklistItem {
