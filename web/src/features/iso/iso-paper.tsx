@@ -1,7 +1,8 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BrandLogo } from '@/ui/brand-logo';
 import { avIssueMark, avOtherMark, avResultDays, daysOf, groupBackupRows, groupByDivision, pad2, tickIndex, toVnParts } from './iso-rules';
-import type { AvIssue, BackupRow, IncidentContent, TickCell } from './iso-types';
+import type { AvIssue, BackupRow, IncidentContent, IncidentKind, IncidentSeverity, IncidentStatus, TickCell } from './iso-types';
 
 /**
  * Bản in tái tạo mẫu giấy SP-IT02 (UX-DR4, Q-28): giữ nguyên cột, bố cục, ô ký. Chữ trên giấy là
@@ -14,25 +15,49 @@ function lastDayLabel(year: number, month: number): string {
   return `${pad2(last)} / ${pad2(month)} / ${year}`;
 }
 
-function PaperHead({ code, title }: { code: string; title: string }) {
+/**
+ * Đầu phiếu đúng mẫu: logo PMH góc trái, mã phiếu NGAY DƯỚI logo, tên phiếu giữa trang. Cột phải
+ * để trống cho tên phiếu đứng đúng giữa. `rule` = gạch dưới tên phiếu như mẫu Word 0206.
+ */
+export function PaperHead({ code, title, rule }: { code: string; title: string; rule?: boolean }) {
   return (
-    <div className="paper-head">
-      <div>
-        <strong>PMH</strong>
-      </div>
-      <div className="paper-title">{title}</div>
-      <div>
+    <div className="paper-head" data-rule={rule ? '' : undefined}>
+      <div className="paper-brand">
+        <BrandLogo alt="Phu My Hung" />
         <strong>{code}</strong>
       </div>
+      <div className="paper-title">{title}</div>
+      <span aria-hidden="true" />
     </div>
   );
 }
 
-function SignBlock({ left, right }: { left: string; right: string }) {
+/** Dòng "System: …" bên trái, khung "Check Date" bên phải — như hàng 3 của mẫu Excel. */
+function PaperMeta({ system, checkDate }: { system: string; checkDate: string }) {
   return (
-    <div className="paper-sign">
-      <div>{left}</div>
-      <div>{right}</div>
+    <div className="paper-meta">
+      <strong>{system}</strong>
+      <span className="paper-check">
+        <strong>Check Date</strong>
+        <span>{checkDate}</span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Ô ký: mỗi bên một khung riêng, dòng tên trên, chỗ ký bên dưới. `joined` = hai khung liền nhau
+ * giữa trang như mẫu 0206; mặc định hai khung tách trái / phải như mẫu 0203, 0208.
+ */
+export function SignBlock({ left, right, joined }: { left: string; right: string; joined?: boolean }) {
+  return (
+    <div className="paper-sign" data-joined={joined ? '' : undefined}>
+      {[left, right].map((name) => (
+        <div key={name} className="paper-sign-box">
+          <div>{name}</div>
+          <div />
+        </div>
+      ))}
     </div>
   );
 }
@@ -54,16 +79,12 @@ export function BackupPaper({
   const days = daysOf(year, month);
   const grouped = groupBackupRows(rows);
   const index = tickIndex(ticks);
-  const hasSubs = new Set(rows.filter((r) => r.label).map((r) => r.jobId));
   return (
     <section className="paper" data-page="a3l" aria-label="SP-IT0203">
       <PaperHead code="SP-IT0203" title="System Data Checklist & Storage Record Form" />
-      <div className="paper-meta">
-        <span>System: {systemName}</span>
-        <span>Check Date {lastDayLabel(year, month)}</span>
-      </div>
+      <PaperMeta system={`System: ${systemName}`} checkDate={lastDayLabel(year, month)} />
       <table className="paper-table">
-        <thead>
+        <thead className="paper-fill-head">
           <tr>
             <th>No</th>
             <th colSpan={2}>Name Job Backup</th>
@@ -80,7 +101,7 @@ export function BackupPaper({
           {grouped.map((row) => (
             <tr key={row.lineId}>
               {row.first ? <td rowSpan={row.span}>{row.no}</td> : null}
-              {hasSubs.has(row.jobId) ? (
+              {row.split ? (
                 <>
                   {row.first ? (
                     <td rowSpan={row.span} className="paper-left paper-nowrap">
@@ -104,13 +125,11 @@ export function BackupPaper({
               })}
             </tr>
           ))}
-          <tr>
-            <td colSpan={3} className="paper-left">
+          <tr className="paper-fill-note">
+            <td colSpan={3}>
               <strong>Note</strong>
             </td>
-            <td colSpan={4 + days.length} className="paper-left">
-              Planned Monthly Data Storage Maintenance: Successful: &quot;✓&quot;, Failed: &quot;✗&quot;
-            </td>
+            <td colSpan={4 + days.length}>Planned Monthly Data Storage Maintenance: Successful: &quot;✓&quot;, Failed: &quot;✗&quot;</td>
           </tr>
         </tbody>
       </table>
@@ -140,12 +159,9 @@ export function AntivirusPaper({
   return (
     <section className="paper" data-page="a4l" aria-label="SP-IT0208">
       <PaperHead code="SP-IT0208" title="Antivirus Health Check Form" />
-      <div className="paper-meta">
-        <span>System Antivirus: {systemName}</span>
-        <span>Check Date {lastDayLabel(year, month)}</span>
-      </div>
+      <PaperMeta system={`System Antivirus: ${systemName}`} checkDate={lastDayLabel(year, month)} />
       <table className="paper-table">
-        <thead>
+        <thead className="paper-fill-head">
           <tr>
             <th>Reported Date</th>
             <th>Computer Name</th>
@@ -161,7 +177,8 @@ export function AntivirusPaper({
           {groups.map((group) => (
             <Fragment key={group.divisionId}>
               <tr className="paper-group">
-                <td colSpan={5 + days.length}>{group.divisionName}</td>
+                <td colSpan={5}>{group.divisionName}</td>
+                <td colSpan={days.length} className="paper-fill-day" />
               </tr>
               {group.issues.map((issue) => (
                 <tr key={issue.id}>
@@ -183,8 +200,8 @@ export function AntivirusPaper({
               <td key={d.day}>{avOtherMark(d.day, results)}</td>
             ))}
           </tr>
-          <tr>
-            <td className="paper-left">
+          <tr className="paper-fill-note">
+            <td>
               <strong>Notes</strong>
             </td>
             <td colSpan={4 + days.length} className="paper-left">
@@ -202,14 +219,188 @@ function Box({ on }: { on: boolean }) {
   return <span className="paper-box">{on ? '✓' : ''}</span>;
 }
 
-const KIND_LABEL: Record<string, string> = { backup: 'Backup', server: 'Server', network: 'Network', database: 'Database', other: 'Other' };
-const SEVERITY_LABEL: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High' };
-const STATUS_LABEL: Record<string, string> = { temporary_fix: 'Temporary Fix (if any)', resolved: 'Resolved', in_progress: 'In Progress' };
+export const KIND_LABEL: Record<IncidentKind, string> = { backup: 'Backup', server: 'Server', network: 'Network', database: 'Database', other: 'Other' };
+export const SEVERITY_LABEL: Record<IncidentSeverity, string> = { low: 'Low', medium: 'Medium', high: 'High' };
+export const STATUS_LABEL: Record<IncidentStatus, string> = { temporary_fix: 'Temporary Fix (if any)', resolved: 'Resolved', in_progress: 'In Progress' };
 
 function stamp(iso: string | null): string {
   if (!iso) return '';
   const { date, time } = toVnParts(iso);
   return `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)} ${time}`;
+}
+
+/** Nhãn ô của khung 0206: có `htmlFor` (form nhập) thì là `<label>` nối vào ô, bản in thì chữ thường. */
+function SlotLabel({ text, htmlFor, required }: { text: string; htmlFor?: string; required?: boolean }) {
+  if (!htmlFor) return <>{text}</>;
+  return (
+    <label htmlFor={htmlFor}>
+      {text}
+      {required ? (
+        <span className="field-req" aria-hidden="true">
+          {' '}*
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+export interface IncidentSlots {
+  reported: ReactNode;
+  detected: ReactNode;
+  resolved: ReactNode;
+  kind: ReactNode;
+  severity: ReactNode;
+  description: ReactNode;
+  action: ReactNode;
+  status: ReactNode;
+}
+
+/**
+ * Khung mục 1 của SP-IT0206, dùng chung cho bản in và form nhập — form nhìn y như tờ phiếu người
+ * dùng đã quen (chủ dự án yêu cầu), và bản in không lệch form vì cùng một khung.
+ * `ids` có thì nhãn thành `<label>` của ô nhập; `required` vẽ dấu * cho ô bắt buộc.
+ */
+export function IncidentInfoTable({
+  slots,
+  ids,
+  required,
+}: {
+  slots: IncidentSlots;
+  ids?: Partial<Record<'reported' | 'detected' | 'resolved' | 'description' | 'action', string>>;
+  required?: Partial<Record<'resolved' | 'action', boolean>>;
+}) {
+  const form = Boolean(ids);
+  return (
+    <table className="paper-table paper-form">
+      <colgroup>
+        <col className="paper-col-label" />
+        <col />
+        <col className="paper-col-label" />
+        <col />
+      </colgroup>
+      <tbody>
+        <tr>
+          <th colSpan={4} className="paper-band">
+            1. Incident Information
+          </th>
+        </tr>
+        <tr>
+          <th className="paper-label">
+            <SlotLabel text="Date Report" htmlFor={ids?.reported} required={form} />
+          </th>
+          <td className="paper-left">{slots.reported}</td>
+          <th rowSpan={2} className="paper-label">
+            Type of Incident
+            {form ? (
+              <span className="field-req" aria-hidden="true">
+                {' '}*
+              </span>
+            ) : null}
+          </th>
+          <td rowSpan={2} className="paper-left">
+            {slots.kind}
+          </td>
+        </tr>
+        <tr>
+          <th className="paper-label">
+            <SlotLabel text="Detection Time" htmlFor={ids?.detected} required={form} />
+          </th>
+          <td className="paper-left">{slots.detected}</td>
+        </tr>
+        <tr>
+          <th className="paper-label">
+            <SlotLabel text="Resolution Time" htmlFor={ids?.resolved} required={required?.resolved} />
+          </th>
+          <td className="paper-left">{slots.resolved}</td>
+          <th className="paper-label">
+            Severity Level
+            {form ? (
+              <span className="field-req" aria-hidden="true">
+                {' '}*
+              </span>
+            ) : null}
+          </th>
+          <td className="paper-left">{slots.severity}</td>
+        </tr>
+        <tr>
+          <th colSpan={2}>
+            <SlotLabel text="Incident Description" htmlFor={ids?.description} required={form} />
+          </th>
+          <th colSpan={2}>
+            <SlotLabel text="Corrective Action" htmlFor={ids?.action} required={required?.action} />
+          </th>
+        </tr>
+        <tr className="paper-tall">
+          <td colSpan={2} className="paper-left paper-top">
+            {slots.description}
+          </td>
+          <td colSpan={2} className="paper-left paper-top">
+            {slots.action}
+          </td>
+        </tr>
+        <tr>
+          <th className="paper-label">
+            Current Status
+            {form ? (
+              <span className="field-req" aria-hidden="true">
+                {' '}*
+              </span>
+            ) : null}
+          </th>
+          <td colSpan={3} className="paper-left">
+            {slots.status}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/** Đầu bảng mục 2 "Detail Error Backup" — chung cho bản in và form nhập. */
+export function BackupDetailHead({ actions }: { actions?: string }) {
+  return (
+    <thead>
+      <tr>
+        <th colSpan={actions ? 11 : 10} className="paper-band">
+          2. Detail Error Backup
+        </th>
+      </tr>
+      <tr>
+        <th rowSpan={2}>Job Name</th>
+        <th colSpan={3}>Type Backup</th>
+        <th colSpan={3}>Type Data</th>
+        <th rowSpan={2}>Storage Location</th>
+        <th rowSpan={2}>Error Message</th>
+        <th rowSpan={2}>Issue Resolution</th>
+        {actions ? (
+          <th rowSpan={2}>
+            <span className="sr-only">{actions}</span>
+          </th>
+        ) : null}
+      </tr>
+      <tr>
+        <th>Full</th>
+        <th>Incr</th>
+        <th>Copy</th>
+        <th>DB</th>
+        <th>App</th>
+        <th>FileSV</th>
+      </tr>
+    </thead>
+  );
+}
+
+function Options<K extends string>({ labels, value }: { labels: Record<K, string>; value: K | null }) {
+  return (
+    <span className="paper-options">
+      {(Object.keys(labels) as K[]).map((key) => (
+        <span key={key}>
+          <Box on={value === key} />
+          {labels[key]}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 /**
@@ -222,113 +413,41 @@ export function IncidentPaper({ incident }: { incident: IncidentContent }) {
   const reported = incident.reportedOn ? `${incident.reportedOn.slice(8, 10)}/${incident.reportedOn.slice(5, 7)}/${incident.reportedOn.slice(0, 4)}` : '';
   return (
     <section className="paper" data-page="a4" aria-label="SP-IT0206">
-      <PaperHead code="SP-IT0206" title="Daily Incident Report Form" />
-      <p className="paper-section">1. Incident Information</p>
-      <table className="paper-table">
-        <tbody>
-          <tr>
-            <th className="paper-label">Date Report</th>
-            <td className="paper-left">{reported}</td>
-            <th className="paper-label">Type of Incident</th>
-            <td className="paper-left">
-              <span className="paper-options">
-                {Object.entries(KIND_LABEL).map(([key, label]) => (
-                  <span key={key}>
-                    <Box on={incident.kind === key} />
-                    {label}
-                  </span>
-                ))}
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <th className="paper-label">Detection Time</th>
-            <td className="paper-left">{stamp(incident.detectedAt)}</td>
-            <th className="paper-label">Resolution Time</th>
-            <td className="paper-left">{stamp(incident.resolvedAt)}</td>
-          </tr>
-          <tr>
-            <th className="paper-label">Severity Level</th>
-            <td colSpan={3} className="paper-left">
-              <span className="paper-options">
-                {Object.entries(SEVERITY_LABEL).map(([key, label]) => (
-                  <span key={key}>
-                    <Box on={incident.severity === key} />
-                    {label}
-                  </span>
-                ))}
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <th className="paper-label">Incident Description</th>
-            <td colSpan={3} className="paper-left">
-              {incident.description}
-            </td>
-          </tr>
-          <tr>
-            <th className="paper-label">Corrective Action</th>
-            <td colSpan={3} className="paper-left">
-              {incident.correctiveAction}
-            </td>
-          </tr>
-          <tr>
-            <th className="paper-label">Current Status</th>
-            <td colSpan={3} className="paper-left">
-              <span className="paper-options">
-                {Object.entries(STATUS_LABEL).map(([key, label]) => (
-                  <span key={key}>
-                    <Box on={incident.status === key} />
-                    {label}
-                  </span>
-                ))}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <PaperHead code="SP-IT0206" title="DAILY INCIDENT REPORT FORM" rule />
+      <IncidentInfoTable
+        slots={{
+          reported,
+          detected: stamp(incident.detectedAt),
+          resolved: stamp(incident.resolvedAt),
+          kind: <Options labels={KIND_LABEL} value={incident.kind} />,
+          severity: <Options labels={SEVERITY_LABEL} value={incident.severity} />,
+          description: incident.description,
+          action: incident.correctiveAction,
+          status: <Options labels={STATUS_LABEL} value={incident.status} />,
+        }}
+      />
       {incident.kind === 'backup' ? (
-        <>
-          <p className="paper-section">2. Detail Error Backup</p>
-          <table className="paper-table">
-            <thead>
-              <tr>
-                <th rowSpan={2}>Job Name</th>
-                <th colSpan={3}>Type Backup</th>
-                <th colSpan={3}>Type Data</th>
-                <th rowSpan={2}>Storage Location</th>
-                <th rowSpan={2}>Error Message</th>
-                <th rowSpan={2}>Issue Resolution</th>
+        <table className="paper-table paper-form">
+          <BackupDetailHead />
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i}>
+                <td className="paper-left">{row?.jobName ?? ' '}</td>
+                {(['full', 'incr', 'copy'] as const).map((k) => (
+                  <td key={k}>{row?.typeBackup === k ? '✓' : ''}</td>
+                ))}
+                {(['db', 'app', 'filesv'] as const).map((k) => (
+                  <td key={k}>{row?.typeData === k ? '✓' : ''}</td>
+                ))}
+                <td>{row?.storage}</td>
+                <td className="paper-left">{row?.errorMessage}</td>
+                <td className="paper-left">{row?.resolution}</td>
               </tr>
-              <tr>
-                <th>Full</th>
-                <th>Incr</th>
-                <th>Copy</th>
-                <th>DB</th>
-                <th>App</th>
-                <th>FileSV</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={i}>
-                  <td className="paper-left">{row?.jobName ?? ' '}</td>
-                  {(['full', 'incr', 'copy'] as const).map((k) => (
-                    <td key={k}>{row?.typeBackup === k ? '✓' : ''}</td>
-                  ))}
-                  {(['db', 'app', 'filesv'] as const).map((k) => (
-                    <td key={k}>{row?.typeData === k ? '✓' : ''}</td>
-                  ))}
-                  <td>{row?.storage}</td>
-                  <td className="paper-left">{row?.errorMessage}</td>
-                  <td className="paper-left">{row?.resolution}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+            ))}
+          </tbody>
+        </table>
       ) : null}
-      <SignBlock left="Reported By" right="Reviewed and Approved By" />
+      <SignBlock left="Reported By" right="Reviewed and Approved By" joined />
       <p className="muted small no-print">{t('iso.incident.signNote')}</p>
     </section>
   );

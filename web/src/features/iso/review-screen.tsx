@@ -19,9 +19,9 @@ import type { ChecklistItem, IsoFormType, PeriodDetail } from './iso-types';
 const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /**
- * Xem lại trước khi gửi chốt: đúng bản in sẽ ký, cùng danh sách kiểm. Còn mục chưa đạt
- * thì nút gửi khoá (API cũng từ chối). SA/Admin duyệt / trả lại ngay tại đây; kỳ đã khoá thì màn
- * này là "Xem bản in".
+ * "Xem phiếu": đúng bản in sẽ ký, cùng danh sách kiểm và nút gửi chốt phiếu của tháng. Còn mục
+ * chưa đạt thì nút gửi khoá (API cũng từ chối). SA/Admin duyệt / trả lại ngay tại đây; kỳ đã khoá
+ * thì chỉ còn xem và in.
  */
 export function ReviewScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -107,6 +107,7 @@ function ReviewAside({ me, detail, month }: { me: Me; detail: PeriodDetail; mont
   const gridPath = detail.formType === '0203' ? PATHS.isoBackupAt(month) : PATHS.isoAntivirusAt(month);
   const fail = (err: unknown) => toast({ message: errorMessage(err), tone: 'error' });
   const self = detail.pendingClose?.requester.toLowerCase() === me.email.toLowerCase();
+  const submitLabel = t('iso.review.submit', { month: monthLabel(detail.year, detail.month) });
 
   return (
     <aside className="no-print">
@@ -160,15 +161,15 @@ function ReviewAside({ me, detail, month }: { me: Me; detail: PeriodDetail; mont
                 disabled={!detail.checklist.canSubmit || submit.isPending}
                 onClick={() =>
                   void askConfirm({
-                    title: t('common.titleOf', { action: t('iso.review.submit'), subject: `${detail.formType} · ${monthLabel(detail.year, detail.month)}` }),
+                    title: `${submitLabel} · ${detail.formType}`,
                     message: t('iso.review.submitConfirm'),
-                    confirmLabel: t('iso.review.submit'),
+                    confirmLabel: submitLabel,
                   }).then((ok) => {
                     if (ok) submit.mutate(undefined, { onSuccess: () => toast({ message: t('iso.review.submitted') }), onError: fail });
                   })
                 }
               >
-                {t('iso.review.submit')}
+                {submitLabel}
               </button>
               <Link to={gridPath}>{t('iso.review.backToGrid')}</Link>
             </div>

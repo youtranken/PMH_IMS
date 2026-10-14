@@ -184,6 +184,26 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       await expect(catalog.resumeJob(people.owner, first.id)).rejects.toMatchObject({ response: { code: 'ISO_JOB_NO_TAKEN' } });
       await catalog.stopJob(people.owner, again.id, '2026-10-03');
     });
+
+    it('Points NAS / Points Cloud chỉ nhận số nguyên; bỏ trống được', async () => {
+      const base = { no: 92, name: 'E2E-POINTS', trackedFrom: '2026-10-01' };
+      for (const bad of [
+        { pointsNas: 'c', pointsCloud: null },
+        { pointsNas: '14', pointsCloud: '7 ngày' },
+        { pointsNas: '-1', pointsCloud: null },
+        { pointsNas: '1.5', pointsCloud: null },
+      ]) {
+        await expect(
+          catalog.createJob(people.owner, { ...base, lines: [{ label: null, storageNas: 'NAS', storageCloud: 'Cloud', ...bad }] }),
+        ).rejects.toMatchObject({ response: { code: 'ISO_JOB_POINTS' } });
+      }
+      const ok = await catalog.createJob(people.owner, {
+        ...base,
+        lines: [{ label: null, pointsNas: ' 14 ', storageNas: 'NAS', pointsCloud: null, storageCloud: null }],
+      });
+      expect(ok.lines[0]).toMatchObject({ pointsNas: '14', pointsCloud: null });
+      await catalog.stopJob(people.owner, ok.id, '2026-10-01');
+    });
   });
 
   describe('Story 8.2 · lưới 0203', () => {

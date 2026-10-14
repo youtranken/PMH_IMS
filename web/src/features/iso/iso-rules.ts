@@ -77,12 +77,37 @@ export interface GroupedRow extends BackupRow {
   first: boolean;
   /** Số dòng của job (gộp ô No trên bản in). */
   span: number;
+  /**
+   * Job có đối tượng con: tên job một cột (gộp dọc), đối tượng con cột bên cạnh — đúng mẫu
+   * SP-IT0203. Job một dòng thì tên trải qua cả hai cột.
+   */
+  split: boolean;
 }
 
 export function groupBackupRows(rows: BackupRow[]): GroupedRow[] {
   const spans = new Map<string, number>();
-  for (const row of rows) spans.set(row.jobId, (spans.get(row.jobId) ?? 0) + 1);
-  return rows.map((row, i) => ({ ...row, first: i === 0 || rows[i - 1].jobId !== row.jobId, span: spans.get(row.jobId) ?? 1 }));
+  const split = new Set<string>();
+  for (const row of rows) {
+    spans.set(row.jobId, (spans.get(row.jobId) ?? 0) + 1);
+    if (row.label) split.add(row.jobId);
+  }
+  return rows.map((row, i) => ({
+    ...row,
+    first: i === 0 || rows[i - 1].jobId !== row.jobId,
+    span: spans.get(row.jobId) ?? 1,
+    split: split.has(row.jobId),
+  }));
+}
+
+/** Points NAS / Cloud là số bản giữ lại — khớp `POINTS_RE` của API. Trống là hợp lệ. */
+export function pointsError(points: string): '' | 'bad' {
+  const text = points.trim();
+  return text === '' || /^\d{1,4}$/.test(text) ? '' : 'bad';
+}
+
+/** Storage location in theo Points: có số điểm lưu thì ghi nơi lưu, không có thì để trống như mẫu. */
+export function lineStorage(points: string, place: 'NAS' | 'Cloud'): string | null {
+  return points.trim() ? place : null;
 }
 
 export function tickIndex(ticks: TickCell[]): Map<string, TickCell> {

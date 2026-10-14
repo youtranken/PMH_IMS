@@ -56,7 +56,7 @@ export function AntivirusScreen({ me }: { me: Me }) {
         actions={
           grid.data ? (
             <Link className={`linkbtn${grid.data.state === 'open' ? ' primary' : ''}`} to={PATHS.isoReview('0208', key)}>
-              {grid.data.state === 'open' ? t('iso.reviewAndSubmit') : t('iso.viewPrint')}
+              {t('iso.viewForm')}
             </Link>
           ) : null
         }

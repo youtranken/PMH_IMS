@@ -90,10 +90,19 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await dialog.getByRole('textbox', { name: 'Đối tượng con 1' }).fill('OS');
     await dialog.getByRole('button', { name: '+ Thêm đối tượng con' }).click();
     await dialog.getByRole('textbox', { name: 'Đối tượng con 2' }).fill('Volume_E');
+    // Points chỉ nhận số; Storage location tự ghi theo Points, không phải ô nhập.
+    await dialog.getByRole('textbox', { name: 'Points NAS 1' }).fill('c');
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await expect(dialog.getByText('Points NAS và Points Cloud chỉ nhận số nguyên (0–9999).')).toBeVisible();
+    await dialog.getByRole('textbox', { name: 'Points NAS 1' }).fill('14');
+    await expect(dialog.getByRole('row', { name: /Đối tượng con 1/ }).getByRole('cell', { name: 'NAS', exact: true })).toBeVisible();
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByText('Đã lưu job backup.')).toBeVisible();
+    // Mỗi đối tượng con một dòng (không gộp bằng dấu phẩy), cột NAS theo cùng nhịp.
     const row = page.getByRole('row', { name: new RegExp(name) });
-    await expect(row.getByText('OS, Volume_E')).toBeVisible();
+    await expect(row.getByRole('listitem').filter({ hasText: /^OS$/ })).toBeVisible();
+    await expect(row.getByRole('listitem').filter({ hasText: /^Volume_E$/ })).toBeVisible();
+    await expect(row.getByRole('listitem').filter({ hasText: '14 · NAS' })).toBeVisible();
 
     // Trùng tên trong danh sách đang theo dõi: API từ chối, câu báo tiếng Việt.
     const dup = await api(page, 'POST', '/api/v1/iso/catalog/jobs', {
@@ -129,7 +138,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await page.getByRole('region', { name: 'Ô đang chọn' }).getByRole('link', { name: 'Lập 0206 cho ô này ›' }).click();
     await expect(page.getByRole('heading', { name: 'Lập phiếu sự cố 0206' })).toBeVisible();
     await expect(page.getByText(name, { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole('radio', { name: 'Backup' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: 'Backup' })).toBeChecked();
 
     await page.getByLabel('Giờ phát hiện').fill('02:10');
     await page.getByRole('radio', { name: 'Medium' }).click();
@@ -205,7 +214,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
 
     await page.goto('/iso/periods/0203/2021-04/review');
     await expect(page.getByText('Còn 1 ô chưa có kết quả')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Gửi chốt kỳ' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Gửi chốt phiếu tháng 04/2021' })).toBeDisabled();
     const early = await api(page, 'POST', '/api/v1/iso/periods/0203/2021-04/submit');
     expect(early.status()).toBe(400);
     expect(((await early.json()) as { code: string }).code).toBe('ISO_PERIOD_CHECK_FAILED');
@@ -216,9 +225,9 @@ test.describe('Phiếu ISO · Epic 8', () => {
     // Bản in A3: header mẫu SP-IT0203, Check Date là ngày cuối kỳ.
     const paper = page.getByRole('region', { name: 'SP-IT0203' });
     await expect(paper.getByText('System Data Checklist & Storage Record Form')).toBeVisible();
-    await expect(paper.getByText('Check Date 30 / 04 / 2021')).toBeVisible();
-    await page.getByRole('button', { name: 'Gửi chốt kỳ' }).click();
-    await confirmAction(page, 'Gửi chốt kỳ');
+    await expect(paper.getByText('30 / 04 / 2021')).toBeVisible();
+    await page.getByRole('button', { name: 'Gửi chốt phiếu tháng 04/2021' }).click();
+    await confirmAction(page, 'Gửi chốt phiếu tháng 04/2021');
     await expect(page.getByText('Đã gửi chốt kỳ — đang chờ SA/Admin duyệt.')).toBeVisible();
 
     // Từ Chờ duyệt mọi ô bị khoá ở API, không chỉ ở giao diện.

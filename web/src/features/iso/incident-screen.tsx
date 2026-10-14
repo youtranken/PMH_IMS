@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -9,21 +9,17 @@ import { PATHS } from '@/lib/routes';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { LoadError, Loading } from '@/ui/load-state';
-import { Field, FormSection, PageHeader } from '@/ui/page-header';
-import { SegmentedRadio } from '@/ui/segmented-radio';
-import { Select } from '@/ui/select';
+import { InfoTip } from '@/ui/info-tip';
+import { PageHeader } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { ISO_KEY, useIncident, useIsoWrite, useLinkable } from './iso-api';
-import { IncidentPaper } from './iso-paper';
+import { BackupDetailHead, IncidentInfoTable, IncidentPaper, KIND_LABEL, PaperHead, SEVERITY_LABEL, SignBlock, STATUS_LABEL } from './iso-paper';
 import { fromVnParts, monthKey, monthLabel, shortDay, toVnParts } from './iso-rules';
 import {
   BACKUP_DATA_TYPES,
   BACKUP_DETAIL_MAX,
   BACKUP_TYPES,
-  INCIDENT_KINDS,
-  INCIDENT_SEVERITIES,
-  INCIDENT_STATUSES,
   INCIDENT_STATUS_TONE,
   type BackupDetail,
   type Incident,
@@ -34,9 +30,53 @@ import {
   type IncidentStatus,
 } from './iso-types';
 
-const KIND_LABEL: Record<IncidentKind, string> = { backup: 'Backup', server: 'Server', network: 'Network', database: 'Database', other: 'Other' };
-const SEVERITY_LABEL: Record<IncidentSeverity, string> = { low: 'Low', medium: 'Medium', high: 'High' };
-const STATUS_LABEL: Record<IncidentStatus, string> = { temporary_fix: 'Temporary Fix', resolved: 'Resolved', in_progress: 'In Progress' };
+const TYPE_BACKUP_LABEL: Record<NonNullable<BackupDetail['typeBackup']>, string> = { full: 'Full', incr: 'Incr', copy: 'Copy' };
+const TYPE_DATA_LABEL: Record<NonNullable<BackupDetail['typeData']>, string> = { db: 'DB', app: 'App', filesv: 'FileSV' };
+
+/**
+ * Một ô của khung phiếu: lỗi dưới ô như `Field` (lớp `.field` / `.field-error` để `useFormErrors`
+ * tìm ra ô lỗi đầu tiên và đưa tiêu điểm tới), nhưng nhãn nằm ở cột nhãn của khung như mẫu giấy.
+ */
+function Cell({ error, hint, children }: { error?: string | null; hint?: string; children: ReactNode }) {
+  return (
+    <div className="field">
+      {children}
+      {error ? (
+        <span className="field-error" role="alert">
+          {error}
+        </span>
+      ) : null}
+      {hint ? <span className="field-hint muted">{hint}</span> : null}
+    </div>
+  );
+}
+
+/** Ô tick chọn một như mẫu giấy ("☐ Backup ☐ Server …"); vẫn là nhóm radio thật cho bàn phím và trình đọc màn hình. */
+function Choices<K extends string>({
+  label,
+  labels,
+  value,
+  invalid,
+  onChange,
+}: {
+  label: string;
+  labels: Record<K, string>;
+  value: K | '';
+  invalid: boolean;
+  onChange: (value: K) => void;
+}) {
+  const name = useId();
+  return (
+    <span role="radiogroup" aria-label={label} aria-invalid={invalid || undefined} className="paper-options iso-choices">
+      {(Object.keys(labels) as K[]).map((key) => (
+        <label key={key}>
+          <input type="radio" className="iso-tick" name={name} checked={value === key} aria-invalid={invalid || undefined} onChange={() => onChange(key)} />
+          {labels[key]}
+        </label>
+      ))}
+    </span>
+  );
+}
 
 interface Draft {
   reportedOn: string;
@@ -259,154 +299,184 @@ function IncidentEditor({ me, incident, title }: { me: Me; incident: Incident | 
           <form
             ref={check.formRef}
             noValidate
+            className="iso-form-sheet"
             onSubmit={(e) => {
               e.preventDefault();
               if (check.check()) setStep('review');
             }}
           >
-            <FormSection title={t('iso.incident.sectionInfo')} columns={3}>
-              <Field label="Type of Incident" required span={3} error={check.error('kind')}>
-                <SegmentedRadio
-                  label="Type of Incident"
-                  value={draft.kind}
-                  options={INCIDENT_KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
-                  onChange={(v) => setDraft((d) => (d ? { ...d, kind: v, backupDetails: v === 'backup' ? (d.backupDetails.length ? d.backupDetails : [blankDetail()]) : [] } : d))}
-                />
-              </Field>
-              <Field label="Date Report" required htmlFor="iso-inc-report">
-                <DatePicker id="iso-inc-report" value={draft.reportedOn} max={today} onChange={(v) => set('reportedOn', v)} />
-              </Field>
-              <Field label={t('iso.incident.period')} tip={t('iso.incident.periodTip')}>
-                <p className="static-value">{period}</p>
-              </Field>
-              <Field label={t('iso.incident.createdBy')}>
-                <p className="static-value">{incident?.createdByName ?? me.fullName}</p>
-              </Field>
-              <Field label="Detection Time" required htmlFor="iso-inc-detect" error={check.error('detectedAt')}>
-                <div className="chip-row">
-                  <DatePicker id="iso-inc-detect" value={draft.detectDate} max={today} onChange={(v) => set('detectDate', v)} />
-                  <input type="time" className="inp" aria-label={t('iso.incident.detectHour')} value={draft.detectTime} onChange={(e) => set('detectTime', e.target.value)} />
-                </div>
-              </Field>
-              <Field label="Resolution Time" required={draft.status !== 'in_progress'} hint={draft.status === 'in_progress' ? t('iso.incident.resolveEmpty') : undefined} htmlFor="iso-inc-resolve" error={check.error('resolvedAt')}>
-                <div className="chip-row">
-                  <DatePicker
-                    id="iso-inc-resolve"
-                    value={draft.status === 'in_progress' ? '' : draft.resolveDate}
-                    min={draft.detectDate || undefined}
-                    disabled={draft.status === 'in_progress'}
-                    clearable
-                    onChange={(v) => set('resolveDate', v)}
-                  />
-                  <input
-                    type="time"
-                    className="inp"
-                    aria-label={t('iso.incident.resolveHour')}
-                    disabled={draft.status === 'in_progress'}
-                    value={draft.status === 'in_progress' ? '' : draft.resolveTime}
-                    onChange={(e) => set('resolveTime', e.target.value)}
-                  />
-                </div>
-              </Field>
-              <span />
-              <Field label="Severity Level" required error={check.error('severity')}>
-                <SegmentedRadio
-                  label="Severity Level"
-                  value={draft.severity}
-                  options={INCIDENT_SEVERITIES.map((k) => ({ value: k, label: SEVERITY_LABEL[k] }))}
-                  onChange={(v) => set('severity', v)}
-                />
-              </Field>
-              <Field label="Current Status" required span={2} error={check.error('status')}>
-                <SegmentedRadio
-                  label="Current Status"
-                  value={draft.status}
-                  options={INCIDENT_STATUSES.map((k) => ({ value: k, label: STATUS_LABEL[k] }))}
-                  onChange={(v) => set('status', v)}
-                />
-              </Field>
-              <Field label="Incident Description" required span={3} htmlFor="iso-inc-desc" error={check.error('description')}>
-                <textarea id="iso-inc-desc" className="inp" rows={3} value={draft.description} onChange={(e) => set('description', e.target.value)} />
-              </Field>
-              <Field label="Corrective Action" required={draft.status !== 'in_progress'} span={3} htmlFor="iso-inc-action" error={check.error('correctiveAction')}>
-                <textarea id="iso-inc-action" className="inp" rows={3} value={draft.correctiveAction} onChange={(e) => set('correctiveAction', e.target.value)} />
-              </Field>
-            </FormSection>
+            {check.summary}
+            <PaperHead code="SP-IT0206" title="DAILY INCIDENT REPORT FORM" rule />
+            <p className="muted small">
+              {t('iso.incident.period')}: <strong>{period || '—'}</strong> <InfoTip subject={t('iso.incident.period')}>{t('iso.incident.periodTip')}</InfoTip> ·{' '}
+              {t('iso.incident.createdBy')}: <strong>{incident?.createdByName ?? me.fullName}</strong>
+            </p>
+            <IncidentInfoTable
+              ids={{ reported: 'iso-inc-report', detected: 'iso-inc-detect', resolved: 'iso-inc-resolve', description: 'iso-inc-desc', action: 'iso-inc-action' }}
+              required={{ resolved: draft.status !== 'in_progress', action: draft.status !== 'in_progress' }}
+              slots={{
+                reported: <DatePicker id="iso-inc-report" value={draft.reportedOn} max={today} onChange={(v) => set('reportedOn', v)} />,
+                detected: (
+                  <Cell error={check.error('detectedAt')}>
+                    <div className="iso-form-when">
+                      <DatePicker id="iso-inc-detect" value={draft.detectDate} max={today} aria-invalid={check.error('detectedAt') ? true : undefined} onChange={(v) => set('detectDate', v)} />
+                      <input type="time" className="inp" aria-label={t('iso.incident.detectHour')} value={draft.detectTime} onChange={(e) => set('detectTime', e.target.value)} />
+                    </div>
+                  </Cell>
+                ),
+                resolved: (
+                  <Cell error={check.error('resolvedAt')} hint={draft.status === 'in_progress' ? t('iso.incident.resolveEmpty') : undefined}>
+                    <div className="iso-form-when">
+                      <DatePicker
+                        id="iso-inc-resolve"
+                        value={draft.status === 'in_progress' ? '' : draft.resolveDate}
+                        min={draft.detectDate || undefined}
+                        disabled={draft.status === 'in_progress'}
+                        aria-invalid={check.error('resolvedAt') ? true : undefined}
+                        clearable
+                        onChange={(v) => set('resolveDate', v)}
+                      />
+                      <input
+                        type="time"
+                        className="inp"
+                        aria-label={t('iso.incident.resolveHour')}
+                        disabled={draft.status === 'in_progress'}
+                        value={draft.status === 'in_progress' ? '' : draft.resolveTime}
+                        onChange={(e) => set('resolveTime', e.target.value)}
+                      />
+                    </div>
+                  </Cell>
+                ),
+                kind: (
+                  <Cell error={check.error('kind')}>
+                    <Choices
+                      label="Type of Incident"
+                      labels={KIND_LABEL}
+                      value={draft.kind}
+                      invalid={Boolean(check.error('kind'))}
+                      onChange={(v) => setDraft((d) => (d ? { ...d, kind: v, backupDetails: v === 'backup' ? (d.backupDetails.length ? d.backupDetails : [blankDetail()]) : [] } : d))}
+                    />
+                  </Cell>
+                ),
+                severity: (
+                  <Cell error={check.error('severity')}>
+                    <Choices label="Severity Level" labels={SEVERITY_LABEL} value={draft.severity} invalid={Boolean(check.error('severity'))} onChange={(v) => set('severity', v)} />
+                  </Cell>
+                ),
+                description: (
+                  <Cell error={check.error('description')}>
+                    <textarea
+                      id="iso-inc-desc"
+                      className="inp"
+                      rows={6}
+                      aria-invalid={check.error('description') ? true : undefined}
+                      value={draft.description}
+                      onChange={(e) => set('description', e.target.value)}
+                    />
+                  </Cell>
+                ),
+                action: (
+                  <Cell error={check.error('correctiveAction')}>
+                    <textarea
+                      id="iso-inc-action"
+                      className="inp"
+                      rows={6}
+                      aria-invalid={check.error('correctiveAction') ? true : undefined}
+                      value={draft.correctiveAction}
+                      onChange={(e) => set('correctiveAction', e.target.value)}
+                    />
+                  </Cell>
+                ),
+                status: (
+                  <Cell error={check.error('status')}>
+                    <Choices label="Current Status" labels={STATUS_LABEL} value={draft.status} invalid={Boolean(check.error('status'))} onChange={(v) => set('status', v)} />
+                  </Cell>
+                ),
+              }}
+            />
 
             {draft.kind === 'backup' ? (
-              <FormSection title={t('iso.incident.sectionBackup')} titleTip={t('iso.incident.backupMax', { max: BACKUP_DETAIL_MAX })}>
-                {check.error('backupDetails') ? <p className="field-error">{check.error('backupDetails')}</p> : null}
-                <div className="table-wrap">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Job Name</th>
-                        <th>Type Backup</th>
-                        <th>Type Data</th>
-                        <th>Storage Location</th>
-                        <th>Error Message</th>
-                        <th>Issue Resolution</th>
-                        <th>{t('common.actions')}</th>
+              <>
+                <table className="paper-table paper-form iso-form-details">
+                  <colgroup>
+                    <col className="iso-col-job" />
+                    {Array.from({ length: 6 }, (_, k) => (
+                      <col key={k} className="iso-col-tick" />
+                    ))}
+                    <col className="iso-col-storage" />
+                    <col />
+                    <col />
+                    <col className="iso-col-x" />
+                  </colgroup>
+                  <BackupDetailHead actions={t('common.actions')} />
+                  <tbody>
+                    {draft.backupDetails.map((row, i) => (
+                      <tr key={i}>
+                        <td>
+                          <input className="inp" aria-label={`Job Name ${i + 1}`} value={row.jobName} onChange={(e) => setDetail(i, { jobName: e.target.value })} />
+                        </td>
+                        {BACKUP_TYPES.map((k) => (
+                          <td key={k}>
+                            <input
+                              type="checkbox"
+                              className="iso-tick"
+                              aria-label={`${TYPE_BACKUP_LABEL[k]} ${i + 1}`}
+                              checked={row.typeBackup === k}
+                              onChange={(e) => setDetail(i, { typeBackup: e.target.checked ? k : null })}
+                            />
+                          </td>
+                        ))}
+                        {BACKUP_DATA_TYPES.map((k) => (
+                          <td key={k}>
+                            <input
+                              type="checkbox"
+                              className="iso-tick"
+                              aria-label={`${TYPE_DATA_LABEL[k]} ${i + 1}`}
+                              checked={row.typeData === k}
+                              onChange={(e) => setDetail(i, { typeData: e.target.checked ? k : null })}
+                            />
+                          </td>
+                        ))}
+                        <td>
+                          <input className="inp" aria-label={`Storage Location ${i + 1}`} value={row.storage} onChange={(e) => setDetail(i, { storage: e.target.value })} />
+                        </td>
+                        <td>
+                          <input className="inp" aria-label={`Error Message ${i + 1}`} value={row.errorMessage} onChange={(e) => setDetail(i, { errorMessage: e.target.value })} />
+                        </td>
+                        <td>
+                          <input className="inp" aria-label={`Issue Resolution ${i + 1}`} value={row.resolution} onChange={(e) => setDetail(i, { resolution: e.target.value })} />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-x danger"
+                            aria-label={t('iso.incident.removeDetail', { n: i + 1 })}
+                            onClick={() => set('backupDetails', draft.backupDetails.filter((_, j) => j !== i))}
+                          >
+                            ×
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {draft.backupDetails.map((row, i) => (
-                        <tr key={i}>
-                          <td>
-                            <input className="inp" aria-label={`Job Name ${i + 1}`} value={row.jobName} onChange={(e) => setDetail(i, { jobName: e.target.value })} />
-                          </td>
-                          <td>
-                            <Select
-                              value={row.typeBackup ?? ''}
-                              ariaLabel={`Type Backup ${i + 1}`}
-                              placeholder="—"
-                              options={[{ value: '', label: '—' }, ...BACKUP_TYPES.map((k) => ({ value: k, label: k === 'full' ? 'Full' : k === 'incr' ? 'Incr' : 'Copy' }))]}
-                              onChange={(v) => setDetail(i, { typeBackup: (v || null) as BackupDetail['typeBackup'] })}
-                            />
-                          </td>
-                          <td>
-                            <Select
-                              value={row.typeData ?? ''}
-                              ariaLabel={`Type Data ${i + 1}`}
-                              placeholder="—"
-                              options={[{ value: '', label: '—' }, ...BACKUP_DATA_TYPES.map((k) => ({ value: k, label: k === 'db' ? 'DB' : k === 'app' ? 'App' : 'FileSV' }))]}
-                              onChange={(v) => setDetail(i, { typeData: (v || null) as BackupDetail['typeData'] })}
-                            />
-                          </td>
-                          <td>
-                            <input className="inp" aria-label={`Storage Location ${i + 1}`} value={row.storage} onChange={(e) => setDetail(i, { storage: e.target.value })} />
-                          </td>
-                          <td>
-                            <input className="inp" aria-label={`Error Message ${i + 1}`} value={row.errorMessage} onChange={(e) => setDetail(i, { errorMessage: e.target.value })} />
-                          </td>
-                          <td>
-                            <input className="inp" aria-label={`Issue Resolution ${i + 1}`} value={row.resolution} onChange={(e) => setDetail(i, { resolution: e.target.value })} />
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn-x danger"
-                              aria-label={t('iso.incident.removeDetail', { n: i + 1 })}
-                              onClick={() => set('backupDetails', draft.backupDetails.filter((_, j) => j !== i))}
-                            >
-                              ×
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <button
-                  type="button"
-                  className="btn sm"
-                  disabled={draft.backupDetails.length >= BACKUP_DETAIL_MAX}
-                  onClick={() => set('backupDetails', [...draft.backupDetails, blankDetail()])}
-                >
-                  {t('iso.incident.addDetail')}
-                </button>
-              </FormSection>
+                    ))}
+                  </tbody>
+                </table>
+                <Cell error={check.error('backupDetails')}>
+                  <div className="chip-row">
+                    <button
+                      type="button"
+                      className="btn sm"
+                      disabled={draft.backupDetails.length >= BACKUP_DETAIL_MAX}
+                      onClick={() => set('backupDetails', [...draft.backupDetails, blankDetail()])}
+                    >
+                      {t('iso.incident.addDetail')}
+                    </button>
+                    <span className="muted small">{t('iso.incident.backupMax', { max: BACKUP_DETAIL_MAX })}</span>
+                  </div>
+                </Cell>
+              </>
             ) : null}
+            <SignBlock left="Reported By" right="Reviewed and Approved By" joined />
+            <p className="muted small">{t('iso.incident.signNote')}</p>
             <div className="chip-row">
               <button type="submit" className="btn primary">
                 {t('iso.incident.toReview')}

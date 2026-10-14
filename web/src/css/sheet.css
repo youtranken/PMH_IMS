@@ -16,6 +16,8 @@
 }
 
 .sheet-grid {
+  --sheet-job-w: 9rem;
+  --sheet-sub-w: 14rem;
   border-collapse: separate;
   border-spacing: 0;
   font-size: var(--fs-xs);
@@ -55,9 +57,30 @@
   background: var(--surface-2);
 }
 
-.sheet-grid .sheet-sub .sheet-name {
-  padding-left: var(--space-8);
-  font-weight: var(--fw-medium);
+/*
+ * "Name Job Backup" là hai cột như mẫu giấy: tên job (gộp dọc) và đối tượng con. Cả hai dính trái
+ * khi cuộn, nên bề rộng cố định (border-box) để cột thứ hai biết đúng chỗ dừng (`left`). Job một
+ * dòng trải qua cả hai cột.
+ */
+.sheet-grid tbody .sheet-name:not([colspan]) {
+  box-sizing: border-box;
+  width: var(--sheet-job-w);
+  min-width: var(--sheet-job-w);
+  max-width: var(--sheet-job-w);
+}
+
+.sheet-grid .sheet-label {
+  position: sticky;
+  left: var(--sheet-job-w);
+  z-index: 1;
+  box-sizing: border-box;
+  width: var(--sheet-sub-w);
+  min-width: var(--sheet-sub-w);
+  max-width: var(--sheet-sub-w);
+  background: var(--surface);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--ink-2);
 }
 
@@ -319,6 +342,143 @@ button.sheet-mark:focus-visible {
   }
 }
 
+/* -------------------------------------------------- danh mục job 0203 --- */
+
+/* Dòng trên phiếu trong form job: năm cột vừa khung hộp thoại, không cuộn ngang. Ô Points chỉ
+   chứa vài chữ số; Storage location là chữ tự suy, không phải ô nhập. */
+.iso-lines th,
+.iso-lines td {
+  padding: var(--space-3) var(--space-4);
+}
+
+.iso-lines .inp {
+  width: 100%;
+}
+
+.iso-lines .iso-lines-num {
+  width: 7rem;
+}
+
+.iso-lines .iso-lines-place {
+  width: 6.5rem;
+}
+
+.iso-lines .iso-lines-x {
+  width: 2.5rem;
+}
+
+/* Đối tượng con trong bảng danh mục: mỗi cái một dòng, cột NAS / Cloud theo cùng nhịp. */
+.iso-line-stack {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* ----------------------------------------------- form 0206 dạng tờ phiếu --- */
+
+/*
+ * Form lập 0206 dựng trên đúng khung của bản in (`IncidentInfoTable`), nhưng là màn nhập theo
+ * theme: nền / kẻ / chữ lấy token giao diện, không lấy bộ `--paper-*` luôn-sáng — ô nhập theme
+ * tối nằm trên giấy trắng thì thành những mảng tối giữa tờ phiếu.
+ */
+.iso-form-sheet {
+  padding: var(--space-8);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+
+.iso-form-sheet .paper-table th,
+.iso-form-sheet .paper-table td {
+  border-color: var(--border-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.iso-form-sheet .paper-head[data-rule] .paper-title,
+.iso-form-sheet .paper-sign-box,
+.iso-form-sheet .paper-sign-box > div:first-child {
+  border-color: var(--border-2);
+}
+
+.iso-form-sheet .paper-form .paper-col-label {
+  width: 14%;
+}
+
+.iso-form-sheet .inp {
+  width: 100%;
+}
+
+.iso-form-sheet textarea.inp {
+  resize: vertical;
+}
+
+/* Ngày + giờ cạnh nhau trong một ô của khung. */
+.iso-form-when {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, 1fr) 6.75rem;
+  gap: var(--space-3);
+}
+
+.iso-form-details .iso-col-job {
+  width: 18%;
+}
+
+.iso-form-details .iso-col-tick {
+  width: 3.2rem;
+}
+
+.iso-form-details .iso-col-storage {
+  width: 11%;
+}
+
+.iso-form-details .iso-col-x {
+  width: 2.75rem;
+}
+
+.iso-choices label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+/* Ô tick vuông như "☐" của mẫu, cho cả radio (chọn một) lẫn checkbox (Type Backup / Type Data). */
+.iso-tick {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.iso-tick:checked {
+  border-color: var(--primary);
+  background: var(--primary);
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+.iso-tick:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.iso-tick:checked:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--surface), var(--ring);
+}
+
+.iso-tick[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
 /* ------------------------------------------------------------- bản in --- */
 
 .paper {
@@ -329,39 +489,67 @@ button.sheet-mark:focus-visible {
   color: var(--paper-ink);
   font-size: var(--fs-xs);
   overflow-x: auto;
+  /* Màu ô của mẫu (tiêu đề, Note, bộ phận) phải ra giấy — trình duyệt mặc định bỏ nền khi in. */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
+/* Đầu phiếu như mẫu SP-IT02: logo góc trái, mã phiếu ngay dưới logo, tên phiếu giữa trang (cột
+   phải cùng bề rộng cột logo để tên đứng đúng giữa). */
 .paper-head {
   display: grid;
-  grid-template-columns: 8rem 1fr 8rem;
-  align-items: stretch;
-  border: 1px solid var(--paper-ink);
+  grid-template-columns: 7rem 1fr 7rem;
+  align-items: center;
 }
 
-.paper-head > div {
+.paper-brand {
   display: grid;
-  place-items: center;
-  padding: var(--space-3);
-  text-align: center;
+  justify-items: start;
+  gap: 2px;
+  font-size: var(--fs-2xs);
 }
 
-.paper-head > div + div {
-  border-left: 1px solid var(--paper-ink);
+.paper-brand img {
+  display: block;
+  width: 3.5rem;
+  height: auto;
 }
 
 .paper-title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
-  text-transform: uppercase;
+  text-align: center;
+}
+
+/* 0206: tên phiếu có gạch dưới kéo dài như mẫu Word. */
+.paper-head[data-rule] .paper-title {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--paper-ink);
 }
 
 .paper-meta {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  align-items: flex-end;
   gap: var(--space-4);
-  margin: var(--space-5) 0 var(--space-3);
-  font-weight: var(--fw-semibold);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+/* Khung "Check Date" góc phải như mẫu Excel: nhãn một ô, ngày một ô. */
+.paper-check {
+  display: inline-grid;
+  grid-template-columns: auto 9rem;
+  border: 1px solid var(--paper-ink);
+}
+
+.paper-check > * {
+  padding: 1px var(--space-4);
+  text-align: center;
+}
+
+.paper-check > * + * {
+  border-left: 1px solid var(--paper-ink);
 }
 
 .paper-section {
@@ -401,26 +589,99 @@ button.sheet-mark:focus-visible {
 }
 
 .paper-table .paper-label {
-  width: 11rem;
   text-align: left;
   font-weight: var(--fw-bold);
+}
+
+.paper-fill-head th {
+  background: var(--paper-fill-head);
+}
+
+.paper-fill-note td {
+  background: var(--paper-fill-note);
+}
+
+.paper-table .paper-group td {
+  background: var(--paper-fill-group);
+}
+
+.paper-table .paper-group .paper-fill-day {
+  background: var(--paper-fill-day);
+}
+
+/* Khung 0206 (bản in và form nhập): cột nhãn hẹp, thanh mục nền xanh chữ trắng như mẫu Word. */
+.paper-form {
+  margin-top: var(--space-5);
+  table-layout: fixed;
+}
+
+.paper-form .paper-col-label {
+  width: 17%;
+}
+
+.paper-table .paper-band {
+  background: var(--paper-band);
+  color: var(--paper-band-ink);
+  text-align: left;
+}
+
+.paper-form th {
+  font-weight: var(--fw-medium);
+}
+
+.paper-form .paper-tall td {
+  height: 9rem;
+}
+
+/* Dòng trống của bảng Detail Error Backup vẫn đủ cao để viết tay như mẫu (11 dòng). */
+.paper-form tbody td {
+  height: 1.6rem;
+}
+
+.paper-table .paper-top {
+  vertical-align: top;
+  white-space: pre-wrap;
 }
 
 .paper-note {
   margin-top: var(--space-4);
 }
 
+/* Ô ký: mỗi bên một khung (dòng tên + chỗ ký), tách trái / phải như mẫu 0203, 0208. */
 .paper-sign {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-12);
+  display: flex;
+  justify-content: space-around;
   margin-top: var(--space-9);
   text-align: center;
+  break-inside: avoid;
+}
+
+.paper-sign-box {
+  width: 16rem;
+  border: 1px solid var(--paper-ink);
+}
+
+.paper-sign-box > div:first-child {
+  padding: 2px var(--space-3);
+  border-bottom: 1px solid var(--paper-ink);
+}
+
+.paper-sign-box > div + div {
+  height: 5.5rem;
+}
+
+/* 0206: hai khung liền nhau giữa trang. */
+.paper-sign[data-joined] {
+  justify-content: center;
+}
+
+.paper-sign[data-joined] .paper-sign-box {
+  width: 13rem;
   font-weight: var(--fw-bold);
 }
 
-.paper-sign > div {
-  min-height: 7rem;
+.paper-sign[data-joined] .paper-sign-box + .paper-sign-box {
+  border-left: 0;
 }
 
 .paper-box {

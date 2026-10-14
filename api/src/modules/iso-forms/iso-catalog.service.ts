@@ -47,6 +47,8 @@ export interface Division {
 
 /** Số dòng con tối đa của một job — mẫu giấy File Server D&E có 6, chừa rộng. */
 const MAX_LINES = 20;
+/** Số điểm lưu là số bản giữ lại trên kho — chữ lọt vào thì phiếu in ra không đọc được. */
+const POINTS_RE = /^\d{1,4}$/;
 
 function blankToNull(value: string | null | undefined): string | null {
   const text = value?.trim();
@@ -283,6 +285,9 @@ export class IsoCatalogService {
       pointsCloud: blankToNull(line.pointsCloud),
       storageCloud: blankToNull(line.storageCloud),
     }));
+    if (out.some((l) => [l.pointsNas, l.pointsCloud].some((p) => p !== null && !POINTS_RE.test(p)))) {
+      throw new BadRequestException({ code: 'ISO_JOB_POINTS', message: 'Points NAS và Points Cloud chỉ nhận số nguyên (0–9999).' });
+    }
     if (out.length > 1 && out.some((l) => !l.label)) {
       throw new BadRequestException({
         code: 'ISO_JOB_LINE_LABEL',

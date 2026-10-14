@@ -18,6 +18,7 @@ import { Tabs, TabPanel } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { ISO_KEY, useDivisions, useIsoWrite, useJobs, useOwners } from './iso-api';
+import { lineStorage, pointsError } from './iso-rules';
 import type { Division, FormOwners, IsoPerson, Job, JobLine } from './iso-types';
 
 type Tab = 'jobs' | 'divisions' | 'owners';
@@ -126,9 +127,15 @@ function JobsTab({ me }: { me: Me }) {
                   <td data-label="Name Job Backup">
                     <strong>{job.name}</strong>
                   </td>
-                  <td data-label={t('iso.catalog.subObjects')}>{job.lines.map((l) => l.label).filter(Boolean).join(', ') || '—'}</td>
-                  <td data-label="NAS">{pointsOf(job.lines, 'pointsNas', 'storageNas')}</td>
-                  <td data-label="Cloud">{pointsOf(job.lines, 'pointsCloud', 'storageCloud')}</td>
+                  <td data-label={t('iso.catalog.subObjects')}>
+                    <LineStack lines={job.lines} text={(l) => l.label} />
+                  </td>
+                  <td data-label="NAS">
+                    <LineStack lines={job.lines} text={(l) => pointsText(l.pointsNas, l.storageNas)} />
+                  </td>
+                  <td data-label="Cloud">
+                    <LineStack lines={job.lines} text={(l) => pointsText(l.pointsCloud, l.storageCloud)} />
+                  </td>
                   <td data-label={t('iso.catalog.trackedFrom')}>{formatDate(job.trackedFrom)}</td>
                   <td data-label={t('iso.catalog.status')}>
                     {job.stoppedOn ? (
@@ -169,21 +176,33 @@ function nextNo(jobs: Job[]): number {
   return jobs.filter((j) => !j.stoppedOn).reduce((max, j) => Math.max(max, j.no), 0) + 1;
 }
 
-function pointsOf(lines: JobLine[], points: 'pointsNas' | 'pointsCloud', storage: 'storageNas' | 'storageCloud'): string {
-  const values = [...new Set(lines.filter((l) => l[points] || l[storage]).map((l) => [l[points], l[storage]].filter(Boolean).join(' · ')))];
-  return values.join(', ') || '—';
+function pointsText(points: string | null, storage: string | null): string | null {
+  return [points, storage].filter(Boolean).join(' · ') || null;
+}
+
+/**
+ * Mỗi đối tượng con một dòng, và cột NAS / Cloud xếp cùng nhịp đó: đọc ngang một dòng là ra đúng
+ * số điểm lưu của đối tượng ấy, như trên phiếu giấy.
+ */
+function LineStack({ lines, text }: { lines: JobLine[]; text: (line: JobLine) => string | null }) {
+  if (lines.length === 1) return <>{text(lines[0]) ?? '—'}</>;
+  return (
+    <ul className="iso-line-stack">
+      {lines.map((l) => (
+        <li key={l.id}>{text(l) ?? '—'}</li>
+      ))}
+    </ul>
+  );
 }
 
 interface LineDraft {
   id?: string;
   label: string;
   pointsNas: string;
-  storageNas: string;
   pointsCloud: string;
-  storageCloud: string;
 }
 
-const blankLine = (): LineDraft => ({ label: '', pointsNas: '', storageNas: 'NAS', pointsCloud: '', storageCloud: 'Cloud' });
+const blankLine = (): LineDraft => ({ label: '', pointsNas: '', pointsCloud: '' });
 
 function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job | null; nextNo: number; onClose: () => void }) {
   const { t } = useTranslation();
@@ -196,9 +215,7 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
       id: l.id,
       label: l.label ?? '',
       pointsNas: l.pointsNas ?? '',
-      storageNas: l.storageNas ?? '',
       pointsCloud: l.pointsCloud ?? '',
-      storageCloud: l.storageCloud ?? '',
     })) ?? [blankLine()],
   );
   const [error, setError] = useSubmitError([no, name, trackedFrom, lines]);
@@ -213,16 +230,19 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
         ...(l.id ? { id: l.id } : {}),
         label: l.label.trim() || null,
         pointsNas: l.pointsNas.trim() || null,
-        storageNas: l.storageNas.trim() || null,
+        storageNas: lineStorage(l.pointsNas, 'NAS'),
         pointsCloud: l.pointsCloud.trim() || null,
-        storageCloud: l.storageCloud.trim() || null,
+        storageCloud: lineStorage(l.pointsCloud, 'Cloud'),
       })),
     },
   }));
   const check = useFormErrors({
     no: !/^\d{1,3}$/.test(no) || Number(no) < 1 ? t('iso.catalog.noInvalid') : false,
     name: !name.trim() && t('iso.catalog.nameRequired'),
-    lines: lines.length > 1 && lines.some((l) => !l.label.trim()) && t('iso.catalog.subLabelRequired'),
+    lines:
+      lines.length > 1 && lines.some((l) => !l.label.trim())
+        ? t('iso.catalog.subLabelRequired')
+        : lines.some((l) => pointsError(l.pointsNas) || pointsError(l.pointsCloud)) && t('iso.catalog.pointsInvalid'),
   });
   const setLine = (i: number, patch: Partial<LineDraft>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
 
@@ -274,18 +294,20 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
             <DatePicker id="iso-job-from" value={trackedFrom} onChange={setTrackedFrom} />
           </Field>
         </FormSection>
-        <FormSection title={t('iso.catalog.linesTitle')} titleTip={t('iso.catalog.linesTip')}>
+        <FormSection title={t('iso.catalog.linesTitle')} titleTip={t('iso.catalog.linesTip')} columns={1}>
           {check.error('lines') ? <p className="field-error">{check.error('lines')}</p> : null}
           <div className="table-wrap">
-            <table className="table">
+            <table className="table iso-lines">
               <thead>
                 <tr>
                   <th>{t('iso.catalog.subObject')}</th>
-                  <th>Points NAS</th>
-                  <th>Storage location</th>
-                  <th>Points Cloud</th>
-                  <th>Storage location</th>
-                  <th>{t('common.actions')}</th>
+                  <th className="iso-lines-num">Points NAS</th>
+                  <th className="iso-lines-place">Storage location</th>
+                  <th className="iso-lines-num">Points Cloud</th>
+                  <th className="iso-lines-place">Storage location</th>
+                  <th className="iso-lines-x">
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -301,17 +323,27 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
                       />
                     </td>
                     <td>
-                      <input className="inp" aria-label={`Points NAS ${i + 1}`} value={line.pointsNas} onChange={(e) => setLine(i, { pointsNas: e.target.value })} />
+                      <input
+                        className="inp"
+                        inputMode="numeric"
+                        aria-label={`Points NAS ${i + 1}`}
+                        aria-invalid={pointsError(line.pointsNas) ? true : undefined}
+                        value={line.pointsNas}
+                        onChange={(e) => setLine(i, { pointsNas: e.target.value })}
+                      />
                     </td>
+                    <td className="muted">{lineStorage(line.pointsNas, 'NAS') ?? '—'}</td>
                     <td>
-                      <input className="inp" aria-label={`Storage NAS ${i + 1}`} value={line.storageNas} onChange={(e) => setLine(i, { storageNas: e.target.value })} />
+                      <input
+                        className="inp"
+                        inputMode="numeric"
+                        aria-label={`Points Cloud ${i + 1}`}
+                        aria-invalid={pointsError(line.pointsCloud) ? true : undefined}
+                        value={line.pointsCloud}
+                        onChange={(e) => setLine(i, { pointsCloud: e.target.value })}
+                      />
                     </td>
-                    <td>
-                      <input className="inp" aria-label={`Points Cloud ${i + 1}`} value={line.pointsCloud} onChange={(e) => setLine(i, { pointsCloud: e.target.value })} />
-                    </td>
-                    <td>
-                      <input className="inp" aria-label={`Storage Cloud ${i + 1}`} value={line.storageCloud} onChange={(e) => setLine(i, { storageCloud: e.target.value })} />
-                    </td>
+                    <td className="muted">{lineStorage(line.pointsCloud, 'Cloud') ?? '—'}</td>
                     <td>
                       <button
                         type="button"
@@ -328,9 +360,12 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
               </tbody>
             </table>
           </div>
-          <button type="button" className="btn sm" onClick={() => setLines((ls) => [...ls, blankLine()])}>
-            {t('iso.catalog.addSub')}
-          </button>
+          <p className="muted small">{t('iso.catalog.storageNote')}</p>
+          <div>
+            <button type="button" className="btn sm" onClick={() => setLines((ls) => [...ls, blankLine()])}>
+              {t('iso.catalog.addSub')}
+            </button>
+          </div>
         </FormSection>
       </form>
     </Dialog>

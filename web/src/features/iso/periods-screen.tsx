@@ -238,7 +238,7 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
       <div className="chip-row">
         {detail.state === 'open' && detail.canWrite ? (
           <Link className="linkbtn primary sm" to={review}>
-            {t('iso.reviewAndSubmit')}
+            {t('iso.viewForm')}
           </Link>
         ) : null}
         {detail.state === 'pending' && detail.canDecide ? (
@@ -254,7 +254,7 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
         {detail.state === 'pending' && !detail.canDecide ? <span className="muted small">{t('iso.review.waiting')}</span> : null}
         {locked ? (
           <Link className="linkbtn sm" to={review}>
-            {t('iso.viewPrint')}
+            {t('iso.viewForm')}
           </Link>
         ) : null}
         {locked && detail.canWrite && !detail.pendingReopen ? (

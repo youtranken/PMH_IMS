@@ -75,7 +75,7 @@ export function BackupScreen({ me }: { me: Me }) {
             </Link>
             {grid.data ? (
               <Link className={`linkbtn${grid.data.state === 'open' ? ' primary' : ''}`} to={PATHS.isoReview('0203', key)}>
-                {grid.data.state === 'open' ? t('iso.reviewAndSubmit') : t('iso.viewPrint')}
+                {t('iso.viewForm')}
               </Link>
             ) : null}
           </>
@@ -221,7 +221,7 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                   <th scope="col" rowSpan={editable ? 2 : 1}>
                     No
                   </th>
-                  <th scope="col" rowSpan={editable ? 2 : 1} className="sheet-name">
+                  <th scope="col" rowSpan={editable ? 2 : 1} colSpan={2} className="sheet-name">
                     Name Job Backup
                   </th>
                   <th scope="col" rowSpan={editable ? 2 : 1}>
@@ -280,11 +280,25 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.lineId} className={row.first ? undefined : 'sheet-sub'}>
-                    <td>{row.first ? row.no : ''}</td>
-                    <td className="sheet-name" title={row.label ? `${row.name} › ${row.label}` : row.name}>
-                      {row.first ? (row.label ? `${row.name} › ${row.label}` : row.name) : `↳ ${row.label ?? ''}`}
-                    </td>
+                  <tr key={row.lineId}>
+                    {row.first ? <td rowSpan={row.span}>{row.no}</td> : null}
+                    {/* Như mẫu SP-IT0203: tên job gộp dọc một cột, đối tượng con cột bên cạnh. */}
+                    {!row.split ? (
+                      <td colSpan={2} className="sheet-name" title={row.name}>
+                        {row.name}
+                      </td>
+                    ) : (
+                      <>
+                        {row.first ? (
+                          <td rowSpan={row.span} className="sheet-name" title={row.name}>
+                            {row.name}
+                          </td>
+                        ) : null}
+                        <td className="sheet-label" title={row.label ?? ''}>
+                          {row.label}
+                        </td>
+                      </>
+                    )}
                     <td>{row.pointsNas}</td>
                     <td>{row.storageNas}</td>
                     <td>{row.pointsCloud}</td>

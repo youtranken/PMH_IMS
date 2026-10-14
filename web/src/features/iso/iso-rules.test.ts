@@ -8,7 +8,9 @@ import {
   fromVnParts,
   groupBackupRows,
   groupByDivision,
+  lineStorage,
   parseMonthParam,
+  pointsError,
   shiftMonth,
   toVnParts,
 } from './iso-rules';
@@ -71,6 +73,30 @@ describe('iso-rules (web)', () => {
       [false, 2],
       [true, 1],
     ]);
+  });
+
+  it('job có đối tượng con thì tách cột tên job / đối tượng con như mẫu giấy; job một dòng thì không', () => {
+    const grouped = groupBackupRows([{ ...row('a', '1'), label: 'OS' }, { ...row('a', '2'), label: 'Volume_E' }, row('b', '3')]);
+    expect(grouped.map((r) => r.split)).toEqual([true, true, false]);
+  });
+
+  it.each([
+    ['', ''],
+    ['14', ''],
+    [' 7 ', ''],
+    ['9999', ''],
+    ['c', 'bad'],
+    ['1.5', 'bad'],
+    ['-1', 'bad'],
+    ['10000', 'bad'],
+  ])('pointsError(%s)', (input, out) => {
+    expect(pointsError(input)).toBe(out);
+  });
+
+  it('Storage location theo Points: có số điểm lưu thì NAS / Cloud, bỏ trống thì trống như mẫu', () => {
+    expect(lineStorage('14', 'NAS')).toBe('NAS');
+    expect(lineStorage(' ', 'Cloud')).toBeNull();
+    expect(lineStorage('7', 'Cloud')).toBe('Cloud');
   });
 
   it('0208: ✗ đúng ngày phát hiện, ✓ ngày đã có kết quả, Other Division ✓ ngày có kết quả', () => {
