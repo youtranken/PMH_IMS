@@ -19,7 +19,7 @@ function lastDayLabel(year: number, month: number): string {
  * Đầu phiếu đúng mẫu: logo PMH góc trái, mã phiếu NGAY DƯỚI logo, tên phiếu giữa trang. Cột phải
  * để trống cho tên phiếu đứng đúng giữa. `rule` = gạch dưới tên phiếu như mẫu Word 0206.
  */
-export function PaperHead({ code, title, rule }: { code: string; title: string; rule?: boolean }) {
+function PaperHead({ code, title, rule }: { code: string; title: string; rule?: boolean }) {
   return (
     <div className="paper-head" data-rule={rule ? '' : undefined}>
       <div className="paper-brand">
@@ -49,7 +49,7 @@ function PaperMeta({ system, checkDate }: { system: string; checkDate: string })
  * Ô ký: mỗi bên một khung riêng, dòng tên trên, chỗ ký bên dưới. `joined` = hai khung liền nhau
  * giữa trang như mẫu 0206; mặc định hai khung tách trái / phải như mẫu 0203, 0208.
  */
-export function SignBlock({ left, right, joined }: { left: string; right: string; joined?: boolean }) {
+function SignBlock({ left, right, joined }: { left: string; right: string; joined?: boolean }) {
   return (
     <div className="paper-sign" data-joined={joined ? '' : undefined}>
       {[left, right].map((name) => (
@@ -229,22 +229,7 @@ function stamp(iso: string | null): string {
   return `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)} ${time}`;
 }
 
-/** Nhãn ô của khung 0206: có `htmlFor` (form nhập) thì là `<label>` nối vào ô, bản in thì chữ thường. */
-function SlotLabel({ text, htmlFor, required }: { text: string; htmlFor?: string; required?: boolean }) {
-  if (!htmlFor) return <>{text}</>;
-  return (
-    <label htmlFor={htmlFor}>
-      {text}
-      {required ? (
-        <span className="field-req" aria-hidden="true">
-          {' '}*
-        </span>
-      ) : null}
-    </label>
-  );
-}
-
-export interface IncidentSlots {
+interface IncidentSlots {
   reported: ReactNode;
   detected: ReactNode;
   resolved: ReactNode;
@@ -255,21 +240,8 @@ export interface IncidentSlots {
   status: ReactNode;
 }
 
-/**
- * Khung mục 1 của SP-IT0206, dùng chung cho bản in và form nhập — form nhìn y như tờ phiếu người
- * dùng đã quen (chủ dự án yêu cầu), và bản in không lệch form vì cùng một khung.
- * `ids` có thì nhãn thành `<label>` của ô nhập; `required` vẽ dấu * cho ô bắt buộc.
- */
-export function IncidentInfoTable({
-  slots,
-  ids,
-  required,
-}: {
-  slots: IncidentSlots;
-  ids?: Partial<Record<'reported' | 'detected' | 'resolved' | 'description' | 'action', string>>;
-  required?: Partial<Record<'resolved' | 'action', boolean>>;
-}) {
-  const form = Boolean(ids);
+/** Khung mục 1 của SP-IT0206 đúng bố cục mẫu Word. */
+function IncidentInfoTable({ slots }: { slots: IncidentSlots }) {
   return (
     <table className="paper-table paper-form">
       <colgroup>
@@ -285,50 +257,28 @@ export function IncidentInfoTable({
           </th>
         </tr>
         <tr>
-          <th className="paper-label">
-            <SlotLabel text="Date Report" htmlFor={ids?.reported} required={form} />
-          </th>
+          <th className="paper-label">Date Report</th>
           <td className="paper-left">{slots.reported}</td>
           <th rowSpan={2} className="paper-label">
             Type of Incident
-            {form ? (
-              <span className="field-req" aria-hidden="true">
-                {' '}*
-              </span>
-            ) : null}
           </th>
           <td rowSpan={2} className="paper-left">
             {slots.kind}
           </td>
         </tr>
         <tr>
-          <th className="paper-label">
-            <SlotLabel text="Detection Time" htmlFor={ids?.detected} required={form} />
-          </th>
+          <th className="paper-label">Detection Time</th>
           <td className="paper-left">{slots.detected}</td>
         </tr>
         <tr>
-          <th className="paper-label">
-            <SlotLabel text="Resolution Time" htmlFor={ids?.resolved} required={required?.resolved} />
-          </th>
+          <th className="paper-label">Resolution Time</th>
           <td className="paper-left">{slots.resolved}</td>
-          <th className="paper-label">
-            Severity Level
-            {form ? (
-              <span className="field-req" aria-hidden="true">
-                {' '}*
-              </span>
-            ) : null}
-          </th>
+          <th className="paper-label">Severity Level</th>
           <td className="paper-left">{slots.severity}</td>
         </tr>
         <tr>
-          <th colSpan={2}>
-            <SlotLabel text="Incident Description" htmlFor={ids?.description} required={form} />
-          </th>
-          <th colSpan={2}>
-            <SlotLabel text="Corrective Action" htmlFor={ids?.action} required={required?.action} />
-          </th>
+          <th colSpan={2}>Incident Description</th>
+          <th colSpan={2}>Corrective Action</th>
         </tr>
         <tr className="paper-tall">
           <td colSpan={2} className="paper-left paper-top">
@@ -339,14 +289,7 @@ export function IncidentInfoTable({
           </td>
         </tr>
         <tr>
-          <th className="paper-label">
-            Current Status
-            {form ? (
-              <span className="field-req" aria-hidden="true">
-                {' '}*
-              </span>
-            ) : null}
-          </th>
+          <th className="paper-label">Current Status</th>
           <td colSpan={3} className="paper-left">
             {slots.status}
           </td>
@@ -356,12 +299,12 @@ export function IncidentInfoTable({
   );
 }
 
-/** Đầu bảng mục 2 "Detail Error Backup" — chung cho bản in và form nhập. */
-export function BackupDetailHead({ actions }: { actions?: string }) {
+/** Đầu bảng mục 2 "Detail Error Backup". */
+function BackupDetailHead() {
   return (
     <thead>
       <tr>
-        <th colSpan={actions ? 11 : 10} className="paper-band">
+        <th colSpan={10} className="paper-band">
           2. Detail Error Backup
         </th>
       </tr>
@@ -372,11 +315,6 @@ export function BackupDetailHead({ actions }: { actions?: string }) {
         <th rowSpan={2}>Storage Location</th>
         <th rowSpan={2}>Error Message</th>
         <th rowSpan={2}>Issue Resolution</th>
-        {actions ? (
-          <th rowSpan={2}>
-            <span className="sr-only">{actions}</span>
-          </th>
-        ) : null}
       </tr>
       <tr>
         <th>Full</th>

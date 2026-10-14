@@ -95,7 +95,8 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(dialog.getByText('Points NAS và Points Cloud chỉ nhận số nguyên (0–9999).')).toBeVisible();
     await dialog.getByRole('textbox', { name: 'Points NAS 1' }).fill('14');
-    await expect(dialog.getByRole('row', { name: /Đối tượng con 1/ }).getByRole('cell', { name: 'NAS', exact: true })).toBeVisible();
+    const line1 = dialog.getByRole('row').filter({ has: page.getByRole('textbox', { name: 'Points NAS 1' }) });
+    await expect(line1.getByRole('cell', { name: 'NAS', exact: true })).toBeVisible();
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByText('Đã lưu job backup.')).toBeVisible();
     // Mỗi đối tượng con một dòng (không gộp bằng dấu phẩy), cột NAS theo cùng nhịp.
@@ -119,7 +120,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(page.getByText('Đã ngừng theo dõi job.')).toBeVisible();
   });
 
-  test('0203: nút ✓ đầu cột, đánh ✗ một ô, lập 0206 từ ô đó qua bước Xem lại → ô có phiếu', async ({ page }) => {
+  test('0203: nút ✓ đầu cột; bấm ô đi vòng ✓ → ✗ → trống; lập 0206 bằng hộp ngay trên lưới → ô có phiếu, bấm ô mở phiếu', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const name = `E2E-BK-${uniqueStamp()}`;
     await createJob(page, name);
@@ -129,35 +130,58 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await page.getByRole('button', { name: 'Đánh ✓ mọi ô trống ngày 01/02' }).click();
     await expect(page.getByRole('button', { name: `${name} ngày 1: Đạt` })).toBeVisible();
 
+    // Một lần bấm một bước, không bảng chọn: bỏ sót → ✓ → ✗ → trống → ✓ → ✗.
+    const day2 = page.getByRole('button', { name: new RegExp(`^${name} ngày 2:`) });
     await page.getByRole('button', { name: `${name} ngày 2: Bỏ sót — chưa đánh` }).click();
-    const picker = page.getByRole('region', { name: 'Ô đang chọn' });
-    await picker.getByRole('button', { name: '✗ Lỗi' }).click();
-    await expect(page.getByRole('button', { name: `${name} ngày 2: Lỗi, chưa có 0206` })).toBeVisible();
+    await expect(day2).toHaveAccessibleName(`${name} ngày 2: Đạt`);
+    await day2.click();
+    await expect(day2).toHaveAccessibleName(`${name} ngày 2: Lỗi, chưa có 0206`);
+    await day2.click();
+    await expect(day2).toHaveAccessibleName(`${name} ngày 2: Bỏ sót — chưa đánh`);
+    // Phím tắt: X đặt thẳng ✗. Chờ server lưu xong (KPI ô ✗) rồi mới đi tiếp.
+    await day2.press('x');
+    await expect(day2).toHaveAccessibleName(`${name} ngày 2: Lỗi, chưa có 0206`);
+    const chips = page.getByLabel('ô ✗ chưa có phiếu 0206');
+    await expect(chips.getByText(`${name} · 02/02`)).toBeVisible();
 
-    await page.getByRole('button', { name: `${name} ngày 2: Lỗi, chưa có 0206` }).click();
-    await page.getByRole('region', { name: 'Ô đang chọn' }).getByRole('link', { name: 'Lập 0206 cho ô này ›' }).click();
-    await expect(page.getByRole('heading', { name: 'Lập phiếu sự cố 0206' })).toBeVisible();
-    await expect(page.getByText(name, { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole('radio', { name: 'Backup' })).toBeChecked();
+    await chips.getByRole('button', { name: 'Lập 0206' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Lập phiếu sự cố 0206' });
+    await expect(dialog.getByText(`0203 · ${name} · 02/02`)).toBeVisible();
+    await expect(dialog.getByRole('radio', { name: 'Backup' })).toBeChecked();
+    await dialog.getByLabel('Giờ phát hiện').fill('02:10');
+    await dialog.getByRole('radio', { name: 'Medium' }).click();
+    await dialog.getByRole('radio', { name: 'Resolved' }).click();
+    await typeDate(page, dialog, /^Resolution Time/, '02/02/2021');
+    await dialog.getByLabel('Giờ khắc phục').fill('09:30');
+    await dialog.getByLabel(/^Incident Description/).fill('E2E job lỗi VSS writer');
+    await dialog.getByLabel(/^Corrective Action/).fill('Chạy lại thủ công, thành công');
+    await dialog.getByRole('button', { name: 'Xem lại trước khi lưu ›' }).click();
 
-    await page.getByLabel('Giờ phát hiện').fill('02:10');
-    await page.getByRole('radio', { name: 'Medium' }).click();
-    await page.getByRole('radio', { name: 'Resolved' }).click();
-    await typeDate(page, page.locator('main'), /^Resolution Time/, '02/02/2021');
-    await page.getByLabel('Giờ khắc phục').fill('09:30');
-    await page.getByLabel(/^Incident Description/).fill('E2E job lỗi VSS writer');
-    await page.getByLabel(/^Corrective Action/).fill('Chạy lại thủ công, thành công');
-    await page.getByRole('button', { name: 'Xem lại trước khi lưu ›' }).click();
-
-    // Bước Xem lại: bản phiếu dạng giấy, số phiếu CHƯA cấp và không in lên giấy.
-    const paper = page.getByRole('region', { name: 'SP-IT0206' });
+    // Bước Xem lại trong cùng hộp: bản phiếu dạng giấy, số phiếu CHƯA cấp và không in lên giấy.
+    const paper = dialog.getByRole('region', { name: 'SP-IT0206' });
     await expect(paper.getByText('Daily Incident Report Form')).toBeVisible();
     await expect(paper.getByText('0206-2021-')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Xác nhận lưu phiếu' }).click();
+    await dialog.getByRole('button', { name: 'Xác nhận lưu phiếu' }).click();
     await expect(page.getByText(/Đã lưu 0206-2021-\d{3}\./)).toBeVisible();
 
-    await page.goto('/iso/backup?month=2021-02');
-    await expect(page.getByRole('button', { name: `${name} ngày 2: Lỗi, đã có 0206` })).toBeVisible();
+    // Vẫn ở lưới: ô đổi sang "đã có phiếu"; bấm ô đó mở phiếu chứ không đổi kết quả.
+    await expect(page).toHaveURL(/\/iso\/backup\?month=2021-02/);
+    const linked = page.getByRole('button', { name: new RegExp(`^${name} ngày 2: Lỗi, đã có 0206-2021-\\d{3}`) });
+    await linked.click();
+    await expect(page.getByRole('dialog', { name: /^Sửa phiếu 0206-2021-\d{3}$/ })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click();
+    await expect(linked).toBeVisible();
+  });
+
+  test('link sâu /iso/incidents/new mở hộp lập phiếu trên danh sách; thiếu ô bắt buộc thì báo dưới từng ô, không sang bước Xem lại', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await page.goto('/iso/incidents/new');
+    await expect(page).toHaveURL(/\/iso\/incidents$/);
+    const dialog = page.getByRole('dialog', { name: 'Lập phiếu sự cố 0206' });
+    await dialog.getByRole('button', { name: 'Xem lại trước khi lưu ›' }).click();
+    await expect(dialog.getByText('Chọn Type of Incident.')).toBeVisible();
+    await expect(dialog.getByText('Ghi Incident Description.')).toBeVisible();
+    await expect(dialog.getByRole('region', { name: 'SP-IT0206' })).toHaveCount(0);
   });
 
   test('0203: Member không phụ trách chỉ xem — không có nút, gọi thẳng API bị 403', async ({ page }) => {
@@ -186,8 +210,9 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const stamp = uniqueStamp();
     await page.goto('/iso/antivirus?month=2021-03');
     await expect(page.getByRole('heading', { name: 'Theo dõi antivirus · 0208' })).toBeVisible();
-    await page.getByRole('button', { name: '✓ 01/03 không có issue' }).click();
-    await expect(page.getByRole('button', { name: '✓ 01/03 không có issue' })).toHaveCount(0);
+    // "Không có issue" = bấm ô của dòng Other Division; bấm lại là bỏ.
+    await page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' }).click();
+    await expect(page.getByRole('button', { name: 'Other Division ngày 01/03: không có issue' })).toBeVisible();
 
     await page.getByRole('button', { name: '+ Ghi máy có issue' }).click();
     const dialog = page.getByRole('dialog');
@@ -202,8 +227,10 @@ test.describe('Phiếu ISO · Epic 8', () => {
 
     const grid = page.getByRole('table');
     await expect(grid.getByRole('cell', { name: `E2E Division ${stamp}` })).toBeVisible();
-    await expect(grid.getByRole('cell', { name: 'Other Division' })).toBeVisible();
-    await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('link', { name: 'Lập 0206 ›' })).toBeVisible();
+    await expect(grid.getByRole('cell', { name: 'Other Division', exact: true })).toBeVisible();
+    await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('button', { name: 'Lập 0206 ›' })).toBeVisible();
+    // Ngày đã có dòng issue: ✓ của Other Division là suy ra, không bấm bỏ được.
+    await expect(grid.getByRole('button', { name: /Other Division ngày 02\/03/ })).toHaveCount(0);
   });
 
   test('gửi chốt: còn ô trống thì khoá nút và API từ chối; đủ thì gửi → Chờ duyệt → SA tự duyệt → khoá, bản in A3', async ({ page }) => {

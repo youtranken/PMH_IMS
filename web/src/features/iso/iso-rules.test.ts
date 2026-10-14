@@ -9,6 +9,7 @@ import {
   groupBackupRows,
   groupByDivision,
   lineStorage,
+  nextTick,
   parseMonthParam,
   pointsError,
   shiftMonth,
@@ -97,6 +98,12 @@ describe('iso-rules (web)', () => {
     expect(lineStorage('14', 'NAS')).toBe('NAS');
     expect(lineStorage(' ', 'Cloud')).toBeNull();
     expect(lineStorage('7', 'Cloud')).toBe('Cloud');
+  });
+
+  it('bấm ô 0203 đi vòng trống → ✓ → ✗ → trống', () => {
+    expect(nextTick(null)).toBe('ok');
+    expect(nextTick('ok')).toBe('fail');
+    expect(nextTick('fail')).toBeNull();
   });
 
   it('0208: ✗ đúng ngày phát hiện, ✓ ngày đã có kết quả, Other Division ✓ ngày có kết quả', () => {

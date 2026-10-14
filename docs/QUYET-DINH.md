@@ -1225,6 +1225,16 @@ IT dùng hằng ngày.
     ô lưới đã khoá từ Chờ duyệt, nếu phiếu vẫn sửa được thì SA có thể duyệt một bản vừa bị đổi.
     Cần sửa thì SA/Admin "Trả lại" để kỳ về Đang ghi. 0206 đang In Progress vẫn sửa được như cũ.
     Bản ký vẫn chỉ tải lên sau khi kỳ được duyệt chốt.
+- **Chốt sau khi chủ dự án xem giao diện (14/10/2026):**
+  - Points NAS / Points Cloud chỉ nhận số nguyên 0–9999 (API `ISO_JOB_POINTS`). Storage location
+    không nhập tay: có Points NAS thì ghi `NAS`, có Points Cloud thì ghi `Cloud`, không có Points thì
+    để trống như các dòng trống của mẫu. Lý do: ô chữ tự do đã cho lọt "c" vào phiếu in.
+  - Lưới 0203 không hiện Points / Storage location (ít đổi, làm rối lưới); bản in giữ đủ cột mẫu.
+  - Bấm ô 0203 đi vòng trống → ✓ → ✗ → trống, một lần bấm một bước; ô ✗ đã gắn 0206 bấm là mở
+    phiếu (không đổi kết quả). 0208: bấm ô dòng Other Division để bật / tắt "không có issue".
+  - Lập / sửa 0206 bằng hộp ngay tại lưới 0203, 0208 và danh sách sự cố, không chuyển trang. Form
+    nhập là form gọn theo theme; bản phiếu đúng mẫu Word hiện ở bước Xem lại và bản in.
+  - Nút "Xem lại & gửi chốt" đổi thành "Xem phiếu"; nút gửi ghi rõ "Gửi chốt phiếu tháng MM/YYYY".
 
 ### Q-09 · Tài liệu
 

@@ -305,7 +305,7 @@ function AppRoutes() {
         {/* Phiếu ISO (Q-28): mọi vai xem; ghi theo người phụ trách — API gác (ISO_NOT_OWNER). */}
         <Route path={PATHS.isoBackup} element={<BackupScreen me={me} />} />
         <Route path={PATHS.isoAntivirus} element={<AntivirusScreen me={me} />} />
-        <Route path={PATHS.isoIncidents} element={<IncidentsScreen />} />
+        <Route path={PATHS.isoIncidents} element={<IncidentsScreen me={me} />} />
         <Route path={PATHS.isoIncidentNew} element={<IncidentScreen me={me} />} />
         <Route path={`${PATHS.isoIncidents}/:id`} element={<IncidentScreen me={me} />} />
         <Route path={PATHS.isoPeriods} element={<PeriodsScreen me={me} />} />

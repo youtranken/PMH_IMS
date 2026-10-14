@@ -27,17 +27,14 @@ import {
   parseMonthParam,
   shortDay,
 } from './iso-rules';
-import type { AntivirusGrid, AvIssue } from './iso-types';
-
-/** Dòng 0208 → link "Lập 0206" điền sẵn dòng đó. */
-export function newIncidentFor0208(issueId: string): string {
-  return `${PATHS.isoIncidentNew}?cell=${encodeURIComponent(`0208:${issueId}`)}`;
-}
+import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
+import type { AntivirusGrid, AvIssue, IncidentCell } from './iso-types';
 
 /**
  * Lưới 0208 — Theo dõi antivirus. Mỗi ngày đã qua phải có kết quả: "không có issue",
  * hoặc ít nhất một dòng issue (một máy × một ngày phát hiện). Dòng gom theo bộ phận, chỉ bộ phận có
- * issue trong tháng mới hiện; "Other Division" luôn ở cuối (Q-28). Màn nhập — desktop.
+ * issue trong tháng mới hiện; "Other Division" luôn ở cuối (Q-28). Bấm ô của "Other Division" để
+ * đánh / bỏ "không có issue" ngày đó — cùng kiểu bấm ô như 0203. Màn nhập — desktop.
  */
 export function AntivirusScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -94,11 +91,14 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
   const toast = useToast();
   const askConfirm = useConfirm();
   const [editing, setEditing] = useState<AvIssue | 'new' | null>(null);
+  const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
   const days = daysOf(data.year, data.month);
   const groups = useMemo(() => groupByDivision(data.issues), [data.issues]);
   const resultDays = useMemo(() => avResultDays(data.clearDays, data.issues), [data.clearDays, data.issues]);
   const clear = new Set(data.clearDays);
   const missed = new Set(data.summary.missedDays);
+  const issueDays = new Set(data.issues.map((i) => i.reportedOn));
+  const todayPending = data.summary.pendingDays.includes(data.today);
   const open = data.state === 'open';
   const editable = open && data.canEdit;
 
@@ -106,6 +106,47 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
   const unmarkClear = useIsoWrite<{ day: string }>(me.csrfToken, ({ day }) => ({ url: `/api/v1/iso/antivirus/clear-days/${day}`, method: 'DELETE' }));
   const removeIssue = useIsoWrite<{ id: string }>(me.csrfToken, ({ id }) => ({ url: `/api/v1/iso/antivirus/issues/${id}`, method: 'DELETE' }));
   const fail = (err: unknown) => toast({ message: errorMessage(err), tone: 'error' });
+  const issueCell = (issue: AvIssue, divisionName: string): IncidentCell => ({
+    form: '0208',
+    lineId: null,
+    day: issue.reportedOn,
+    issueId: issue.id,
+    label: `${divisionName} · ${issue.computerName}`,
+  });
+  const toggleClear = (day: string) => {
+    if (clear.has(day)) {
+      unmarkClear.mutate(
+        { day },
+        {
+          onSuccess: () =>
+            toast({
+              message: t('iso.av.unmarked', { day: shortDay(day) }),
+              action: { label: t('iso.av.undo'), onClick: () => markClear.mutate({ day }, { onError: fail }) },
+            }),
+          onError: fail,
+        },
+      );
+    } else {
+      markClear.mutate({ day }, { onError: fail });
+    }
+  };
+  const markAllPast = async () => {
+    const ok = await askConfirm({
+      title: t('iso.av.markAllTitle'),
+      message: t('iso.av.markAllConfirm', { count: data.summary.missedDays.length, days: data.summary.missedDays.map(shortDay).join(', ') }),
+      confirmLabel: t('iso.av.markAll', { count: data.summary.missedDays.length }),
+    });
+    if (!ok) return;
+    for (const day of data.summary.missedDays) {
+      try {
+        await markClear.mutateAsync({ day });
+      } catch (err) {
+        fail(err);
+        return;
+      }
+    }
+    toast({ message: t('iso.av.markedAll', { count: data.summary.missedDays.length }) });
+  };
 
   return (
     <>
@@ -115,24 +156,20 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
         <section className="card" aria-label={t('iso.av.recordSection')}>
           <p>
             <strong>
-              {data.summary.pendingDays.length > 0
-                ? t('iso.av.pendingTitle', { count: data.summary.pendingDays.length })
-                : t('iso.av.everyDayRecorded')}
+              {data.summary.pendingDays.length === 0
+                ? t('iso.av.everyDayRecorded')
+                : data.summary.missedDays.length > 0
+                  ? t(todayPending ? 'iso.av.missedAndToday' : 'iso.av.missedTitle', { count: data.summary.missedDays.length })
+                  : t('iso.av.todayPending')}
             </strong>
           </p>
           <p className="muted small">{t('iso.av.recordHint')}</p>
           <div className="chip-row">
-            {data.summary.pendingDays.map((day) => (
-              <button
-                key={day}
-                type="button"
-                className="btn sm"
-                disabled={markClear.isPending}
-                onClick={() => markClear.mutate({ day }, { onError: fail })}
-              >
-                {t('iso.av.markClear', { day: shortDay(day) })}
+            {data.summary.missedDays.length > 1 ? (
+              <button type="button" className="btn sm" disabled={markClear.isPending} onClick={() => void markAllPast()}>
+                {t('iso.av.markAll', { count: data.summary.missedDays.length })}
               </button>
-            ))}
+            ) : null}
             <button type="button" className="btn sm primary" onClick={() => setEditing('new')}>
               {t('iso.av.addIssue')}
             </button>
@@ -162,6 +199,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                 <th scope="col">Resolution Date</th>
                 <th scope="col">Handled</th>
                 <th scope="col">{t('iso.av.incidentCol')}</th>
+                {editable ? <th scope="col">{t('common.actions')}</th> : null}
                 {days.map((d) => (
                   <th
                     key={d.day}
@@ -171,30 +209,10 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                     data-weekend={d.weekend ? '' : undefined}
                     data-missed={missed.has(d.day) ? '' : undefined}
                   >
-                    {editable && clear.has(d.day) ? (
-                      <button
-                        type="button"
-                        className="sheet-fill"
-                        title={t('iso.av.unmarkClear', { day: shortDay(d.day) })}
-                        aria-label={t('iso.av.unmarkClear', { day: shortDay(d.day) })}
-                        onClick={() =>
-                          void askConfirm({
-                            title: t('common.titleOf', { action: t('iso.av.unmarkTitle'), subject: shortDay(d.day) }),
-                            message: t('iso.av.unmarkConfirm', { day: shortDay(d.day) }),
-                          }).then((ok) => {
-                            if (ok) unmarkClear.mutate({ day: d.day }, { onError: fail });
-                          })
-                        }
-                      >
-                        {d.n}
-                      </button>
-                    ) : (
-                      d.n
-                    )}
+                    {d.n}
                     <small>{d.weekday}</small>
                   </th>
                 ))}
-                {editable ? <th scope="col">{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -209,22 +227,15 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                     <td>{issue.handledBy}</td>
                     <td>
                       {issue.incident ? (
-                        <Link to={PATHS.isoIncident(issue.incident.id)}>{issue.incident.code}</Link>
+                        <button type="button" className="btn sm ghost mono" onClick={() => setDialog({ incidentId: issue.incident?.id ?? '' })}>
+                          {issue.incident.code}
+                        </button>
                       ) : open ? (
-                        <Link to={newIncidentFor0208(issue.id)}>{t('iso.createIncident')}</Link>
+                        <button type="button" className="btn sm ghost" onClick={() => setDialog({ cell: issueCell(issue, group.divisionName) })}>
+                          {t('iso.createIncident')}
+                        </button>
                       ) : null}
                     </td>
-                    {days.map((d) => {
-                      const mark = avIssueMark(issue, d.day, resultDays);
-                      const state = mark === '✗' ? (issue.incident ? 'fail-linked' : 'fail') : mark === '✓' ? 'ok' : '';
-                      return (
-                        <td key={d.day} className="sheet-cell" data-future={d.day > data.today ? '' : undefined}>
-                          <span className="sheet-mark" data-state={state || undefined}>
-                            {mark}
-                          </span>
-                        </td>
-                      );
-                    })}
                     {editable ? (
                       <td>
                         <RowActions
@@ -256,22 +267,57 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                         />
                       </td>
                     ) : null}
+                    {days.map((d) => {
+                      const mark = avIssueMark(issue, d.day, resultDays);
+                      const state = mark === '✗' ? (issue.incident ? 'fail-linked' : 'fail') : mark === '✓' ? 'ok' : '';
+                      return (
+                        <td key={d.day} className="sheet-cell" data-future={d.day > data.today ? '' : undefined}>
+                          <span className="sheet-mark" data-state={state || undefined}>
+                            {mark}
+                          </span>
+                        </td>
+                      );
+                    })}
                   </tr>
                 )),
               )}
               <tr>
                 <td className="sheet-name">Other Division</td>
-                <td colSpan={6} className="sheet-left muted">
-                  {t('iso.av.otherHint')}
+                <td colSpan={editable ? 7 : 6} className="sheet-left muted">
+                  {t(editable ? 'iso.av.otherHintEdit' : 'iso.av.otherHint')}
                 </td>
-                {days.map((d) => (
-                  <td key={d.day} className="sheet-cell" data-future={d.day > data.today ? '' : undefined}>
-                    <span className="sheet-mark" data-state={avOtherMark(d.day, resultDays) ? 'ok' : undefined}>
-                      {avOtherMark(d.day, resultDays)}
-                    </span>
-                  </td>
-                ))}
-                {editable ? <td /> : null}
+                {days.map((d) => {
+                  const mark = avOtherMark(d.day, resultDays);
+                  const future = d.day > data.today;
+                  // Ngày đã có dòng issue thì ✓ này là suy ra, không bấm bỏ được — bỏ thì xoá dòng issue.
+                  const clickable = editable && !future && !issueDays.has(d.day);
+                  const state = mark ? 'ok' : missed.has(d.day) ? 'missed' : undefined;
+                  const label = t('iso.av.otherCell', {
+                    day: shortDay(d.day),
+                    state: issueDays.has(d.day) ? t('iso.av.dayHasIssue') : clear.has(d.day) ? t('iso.av.dayClear') : t('iso.av.dayBlank'),
+                  });
+                  return (
+                    <td key={d.day} className="sheet-cell" data-future={future ? '' : undefined} data-today={d.day === data.today ? '' : undefined}>
+                      {clickable ? (
+                        <button
+                          type="button"
+                          className="sheet-mark"
+                          data-state={state}
+                          aria-label={label}
+                          title={label}
+                          disabled={markClear.isPending || unmarkClear.isPending}
+                          onClick={() => toggleClear(d.day)}
+                        >
+                          {mark}
+                        </button>
+                      ) : (
+                        <span className="sheet-mark" data-state={state} title={future ? undefined : label}>
+                          {mark}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             </tbody>
           </table>
@@ -279,6 +325,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
         <p className="muted small">{t('iso.av.note')}</p>
       </section>
 
+      <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
       {editing ? (
         <IssueDialog
           me={me}

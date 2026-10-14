@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/lib/api';
@@ -16,12 +16,15 @@ import {
   daysOf,
   groupBackupRows,
   monthKey,
+  nextTick,
   parseMonthParam,
   shortDay,
   tickIndex,
   type BackupCellState,
 } from './iso-rules';
-import type { BackupGrid, TickResult } from './iso-types';
+import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
+import { useTickQueue } from './use-tick-queue';
+import type { BackupGrid, IncidentCell, TickCell, TickResult } from './iso-types';
 
 /** Khoá viết thẳng (không ghép chuỗi) để bài "khoá dịch chết" đọc được. */
 const STATE_KEY: Record<BackupCellState, string> = {
@@ -44,15 +47,10 @@ const MARK: Record<BackupCellState, string> = {
   blank: '',
 };
 
-/** Ô 0203 → link "Lập 0206" điền sẵn ô đó. */
-export function newIncidentFor0203(lineId: string, day: string): string {
-  return `${PATHS.isoIncidentNew}?cell=${encodeURIComponent(`0203:${lineId}:${day}`)}`;
-}
-
 /**
- * Lưới 0203 — Theo dõi backup. Màn nhập, chỉ cần desktop (UX-DR2). Lưới là chỗ thao
- * tác duy nhất: bấm ô để đổi ✓ / ✗ / trống, lập hoặc mở 0206; nút ✓ trên đầu cột đánh hết ô
- * trống của ngày đó (Q-28).
+ * Lưới 0203 — Theo dõi backup. Màn nhập, chỉ cần desktop (UX-DR2). Bấm ô đi vòng trống → ✓ →
+ * ✗ → trống (phím 1/V, 2/X, Delete đặt thẳng; mũi tên đi giữa các ô); nút ✓ trên đầu cột đánh hết
+ * ô trống của ngày đó (Q-28). Lập / mở 0206 bằng hộp ngay trên lưới, không rời màn.
  */
 export function BackupScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -112,43 +110,87 @@ export function BackupScreen({ me }: { me: Me }) {
 function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; ownerNotice: React.ReactNode }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const [selected, setSelected] = useState<{ lineId: string; day: string } | null>(null);
+  const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const days = daysOf(data.year, data.month);
   const rows = useMemo(() => groupBackupRows(data.rows), [data.rows]);
   const ticks = useMemo(() => tickIndex(data.ticks), [data.ticks]);
   const open = data.state === 'open';
   const editable = open && data.canEdit;
   const blankDays = new Set(data.summary.blankDays);
+  const rowName = (lineId: string) => {
+    const row = rows.find((r) => r.lineId === lineId);
+    return row ? (row.label ? `${row.name} › ${row.label}` : row.name) : '';
+  };
+  const cellOf = (lineId: string, day: string): IncidentCell => ({ form: '0203', lineId, day, issueId: null, label: rowName(lineId) });
 
-  const setTick = useIsoWrite<{ lineId: string; day: string; result: TickResult | null }>(me.csrfToken, (body) => ({
-    url: '/api/v1/iso/backup/ticks',
-    method: 'PUT',
-    body,
-  }));
+  const queue = useTickQueue(me.csrfToken, {
+    onSaved: (lineId, day, result) => {
+      if (result !== 'fail') return;
+      toast({
+        message: t('iso.backup.markedFail', { name: rowName(lineId), day: shortDay(day) }),
+        action: { label: t('iso.backup.createIncident'), onClick: () => setDialog({ cell: cellOf(lineId, day) }) },
+      });
+    },
+    onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+  });
   const fillDay = useIsoWrite<{ day: string }, { filled: number }>(me.csrfToken, (body) => ({
     url: '/api/v1/iso/backup/fill-day',
     method: 'POST',
     body,
   }));
 
-  const pick = (result: TickResult | null) => {
-    if (!selected) return;
-    setTick.mutate(
-      { ...selected, result },
-      {
-        onSuccess: () => setSelected(null),
-        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-      },
-    );
+  // Mở lưới là thấy cột hôm nay: cuối tháng cột đó nằm ngoài khung, phải tự cuộn mới đánh được.
+  useEffect(() => {
+    const box = scrollRef.current;
+    const cell = box?.querySelector<HTMLElement>('th[data-today]');
+    if (box && cell) box.scrollLeft = Math.max(0, cell.offsetLeft - box.clientWidth / 2);
+  }, []);
+
+  /** Kết quả đang hiện của ô: giá trị vừa bấm (chưa kịp lưu) thắng giá trị server. */
+  const effective = (lineId: string, day: string): TickCell | undefined => {
+    const key = `${lineId}|${day}`;
+    const tick = ticks.get(key);
+    if (!queue.pending.has(key)) return tick;
+    const value = queue.pending.get(key) ?? null;
+    return value === null ? undefined : { lineId, day, result: value, incident: tick?.incident ?? null };
   };
 
-  const selectedRow = selected ? rows.find((r) => r.lineId === selected.lineId) : undefined;
-  const selectedTick = selected ? ticks.get(`${selected.lineId}|${selected.day}`) : undefined;
-  const missedDays = [...new Set(data.summary.missed.map((m) => m.day))];
-  const rowName = (lineId: string) => {
-    const row = rows.find((r) => r.lineId === lineId);
-    return row ? (row.label ? `${row.name} › ${row.label}` : row.name) : '';
+  const press = (lineId: string, day: string, wanted?: TickResult | null) => {
+    const tick = effective(lineId, day);
+    // Ô ✗ đã gắn phiếu: API cấm đổi kết quả, nên bấm là mở phiếu chứ không thử đổi rồi báo lỗi.
+    if (tick?.incident) {
+      setDialog({ incidentId: tick.incident.id });
+      return;
+    }
+    const next = wanted === undefined ? nextTick(tick?.result ?? null) : wanted;
+    if (next === (tick?.result ?? null)) return;
+    queue.set(lineId, day, next);
   };
+
+  const onCellKey = (event: React.KeyboardEvent<HTMLButtonElement>, lineId: string, day: string, state: BackupCellState) => {
+    const key = event.key.toLowerCase();
+    const move = { arrowleft: [0, -1], arrowright: [0, 1], arrowup: [-1, 0], arrowdown: [1, 0] }[key];
+    if (move) {
+      event.preventDefault();
+      const r = Number(event.currentTarget.dataset.row) + move[0];
+      const c = Number(event.currentTarget.dataset.col) + move[1];
+      scrollRef.current?.querySelector<HTMLButtonElement>(`button[data-row="${r}"][data-col="${c}"]`)?.focus();
+      return;
+    }
+    const wanted = key === '1' || key === 'v' ? 'ok' : key === '2' || key === 'x' ? 'fail' : key === 'delete' || key === 'backspace' ? null : undefined;
+    if (wanted !== undefined) {
+      event.preventDefault();
+      press(lineId, day, wanted);
+      return;
+    }
+    if (key === 'enter' && state === 'fail') {
+      event.preventDefault();
+      setDialog({ cell: cellOf(lineId, day) });
+    }
+  };
+
+  const missedDays = [...new Set(data.summary.missed.map((m) => m.day))];
 
   return (
     <>
@@ -167,11 +209,21 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
             <p className="muted small">{t('iso.backup.missedDays', { days: missedDays.map(shortDay).join(', ') })}</p>
           ) : null}
           {data.summary.unlinkedFails.length > 0 ? (
-            <p className="muted small">
-              {t('iso.backup.unlinkedList', {
-                list: data.summary.unlinkedFails.map((c) => `${rowName(c.lineId)} · ${shortDay(c.day)}`).join('; '),
-              })}
-            </p>
+            <ul className="sheet-checks" aria-label={t('iso.backup.unlinked')}>
+              {data.summary.unlinkedFails.map((c) => (
+                <li key={`${c.lineId}|${c.day}`} data-bad="">
+                  <span className="sheet-check-icon" aria-hidden="true">
+                    ✗
+                  </span>
+                  <span>
+                    {rowName(c.lineId)} · {shortDay(c.day)}{' '}
+                    <button type="button" className="btn sm" onClick={() => setDialog({ cell: cellOf(c.lineId, c.day) })}>
+                      {t('iso.backup.createIncident')}
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
           ) : null}
         </section>
       ) : null}
@@ -182,59 +234,29 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
           <h2 id="iso-backup-grid">{t('iso.grid')}</h2>
           <Legend />
         </div>
-        {selected && selectedRow ? (
-          <div className="sheet-picker" role="region" aria-label={t('iso.selectedCell')}>
-            <div className="sheet-picker-what">
-              <strong>{rowName(selected.lineId)}</strong> · {t('iso.dayOf', { day: shortDay(selected.day) })}
-              <div className="muted small">{t(STATE_KEY[backupCellState(selectedRow, selected.day, selectedTick, data.today)])}</div>
-            </div>
-            <button type="button" className="btn sm" disabled={setTick.isPending} onClick={() => pick('ok')}>
-              {t('iso.markOk')}
-            </button>
-            <button type="button" className="btn sm" disabled={setTick.isPending} onClick={() => pick('fail')}>
-              {t('iso.markFail')}
-            </button>
-            <button type="button" className="btn sm ghost" disabled={setTick.isPending || !selectedTick} onClick={() => pick(null)}>
-              {t('iso.markBlank')}
-            </button>
-            {selectedTick?.result === 'fail' ? (
-              selectedTick.incident ? (
-                <Link to={PATHS.isoIncident(selectedTick.incident.id)}>{t('iso.openIncident', { code: selectedTick.incident.code })}</Link>
-              ) : (
-                <Link to={newIncidentFor0203(selected.lineId, selected.day)}>{t('iso.createIncidentForCell')}</Link>
-              )
-            ) : null}
-            <button type="button" className="btn sm ghost" aria-label={t('common.close')} onClick={() => setSelected(null)}>
-              ×
-            </button>
-          </div>
-        ) : null}
+        {editable ? <p className="muted small">{t('iso.backup.howTo')}</p> : null}
         {rows.length === 0 ? (
           <p className="muted">
             {t('iso.backup.noJobs')} <Link to={PATHS.isoCatalog}>{t('iso.backup.jobsLink')}</Link>
           </p>
         ) : (
-          <div className="sheet-scroll">
-            <table className="sheet-grid">
+          <div className="sheet-scroll" ref={scrollRef}>
+            <table className="sheet-grid sheet-grid-0203" style={{ '--sheet-days': days.length } as React.CSSProperties}>
+              <colgroup>
+                <col className="sheet-col-no" />
+                <col className="sheet-col-job" />
+                <col className="sheet-col-sub" />
+                {days.map((d) => (
+                  <col key={d.day} className="sheet-col-day" />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
-                  <th scope="col" rowSpan={editable ? 2 : 1}>
+                  <th scope="col" rowSpan={editable ? 2 : 1} className="sheet-no">
                     No
                   </th>
                   <th scope="col" rowSpan={editable ? 2 : 1} colSpan={2} className="sheet-name">
                     Name Job Backup
-                  </th>
-                  <th scope="col" rowSpan={editable ? 2 : 1}>
-                    Points NAS
-                  </th>
-                  <th scope="col" rowSpan={editable ? 2 : 1}>
-                    Storage location
-                  </th>
-                  <th scope="col" rowSpan={editable ? 2 : 1}>
-                    Points Cloud
-                  </th>
-                  <th scope="col" rowSpan={editable ? 2 : 1}>
-                    Storage location
                   </th>
                   {days.map((d) => (
                     <th
@@ -279,10 +301,15 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                 ) : null}
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {rows.map((row, r) => (
                   <tr key={row.lineId}>
-                    {row.first ? <td rowSpan={row.span}>{row.no}</td> : null}
-                    {/* Như mẫu SP-IT0203: tên job gộp dọc một cột, đối tượng con cột bên cạnh. */}
+                    {row.first ? (
+                      <td rowSpan={row.span} className="sheet-no">
+                        {row.no}
+                      </td>
+                    ) : null}
+                    {/* Như mẫu SP-IT0203: tên job gộp dọc một cột, đối tượng con cột bên cạnh.
+                        Points / Storage location ít đổi nên chỉ có trên bản in, không chiếm chỗ lưới. */}
                     {!row.split ? (
                       <td colSpan={2} className="sheet-name" title={row.name}>
                         {row.name}
@@ -299,19 +326,15 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                         </td>
                       </>
                     )}
-                    <td>{row.pointsNas}</td>
-                    <td>{row.storageNas}</td>
-                    <td>{row.pointsCloud}</td>
-                    <td>{row.storageCloud}</td>
-                    {days.map((d) => {
-                      const tick = ticks.get(`${row.lineId}|${d.day}`);
+                    {days.map((d, c) => {
+                      const tick = effective(row.lineId, d.day);
                       const state = backupCellState(row, d.day, tick, data.today);
                       const clickable = editable && state !== 'off' && state !== 'future';
-                      const isSelected = selected?.lineId === row.lineId && selected.day === d.day;
+                      const name = row.label ? `${row.name} › ${row.label}` : row.name;
                       const label = t('iso.cellAria', {
-                        name: row.label ? `${row.name} › ${row.label}` : row.name,
+                        name,
                         day: d.n,
-                        state: t(STATE_KEY[state]),
+                        state: tick?.incident ? t('iso.cellState.linkedTo', { code: tick.incident.code }) : t(STATE_KEY[state]),
                       });
                       return (
                         <td
@@ -326,12 +349,17 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                               type="button"
                               className="sheet-mark"
                               data-state={state}
+                              data-row={r}
+                              data-col={c}
                               aria-label={label}
-                              aria-expanded={isSelected}
-                              onClick={() => setSelected(isSelected ? null : { lineId: row.lineId, day: d.day })}
+                              title={label}
+                              onClick={() => press(row.lineId, d.day)}
+                              onKeyDown={(e) => onCellKey(e, row.lineId, d.day, state)}
                             >
                               {MARK[state]}
                             </button>
+                          ) : state === 'fail-linked' && tick?.incident ? (
+                            <IncidentMark label={label} onOpen={() => setDialog({ incidentId: tick.incident?.id ?? '' })} />
                           ) : (
                             <span className="sheet-mark" data-state={state} aria-label={state === 'off' || state === 'future' ? undefined : label}>
                               {MARK[state]}
@@ -348,7 +376,17 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
         )}
         <p className="muted small">{t('iso.backup.note')}</p>
       </section>
+      <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
     </>
+  );
+}
+
+/** Ô ✗ đã gắn 0206 ở lưới chỉ xem (kỳ khoá / không phụ trách): bấm vẫn mở được phiếu để đọc. */
+function IncidentMark({ label, onOpen }: { label: string; onOpen: () => void }) {
+  return (
+    <button type="button" className="sheet-mark" data-state="fail-linked" aria-label={label} title={label} onClick={onOpen}>
+      ✗
+    </button>
   );
 }
 
@@ -377,6 +415,14 @@ function Legend() {
       <span>
         <span className="sheet-mark" data-state="missed" />
         {t('iso.legend.missed')}
+      </span>
+      <span>
+        <span className="sheet-swatch" data-off="" />
+        {t('iso.legend.off')}
+      </span>
+      <span>
+        <span className="sheet-swatch" data-future="" />
+        {t('iso.legend.future')}
       </span>
     </div>
   );

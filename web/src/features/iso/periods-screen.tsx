@@ -32,9 +32,12 @@ export function PeriodsScreen({ me }: { me: Me }) {
   const [today] = useState(() => todayIso());
   const thisYear = Number(today.slice(0, 4));
   const monthParam = params.get('month');
-  const selected = monthParam && /^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam) ? monthParam : null;
-  const year = Number(params.get('year')) || (selected ? Number(selected.slice(0, 4)) : thisYear);
+  const picked = monthParam && /^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam) ? monthParam : null;
+  const year = Number(params.get('year')) || (picked ? Number(picked.slice(0, 4)) : thisYear);
   const overview = useYearOverview(year);
+  // Chưa chọn tháng thì mở sẵn tháng mới nhất đã tới — khung chi tiết không bỏ trống nửa màn.
+  const latest = overview.data?.months.filter((m) => m.access !== 'before_start' && m.access !== 'future').at(-1);
+  const selected = picked ?? (latest ? monthKey(year, latest.month) : null);
   const manager = me.role === 'sa' || me.role === 'admin';
 
   const select = (key: string | null) => {
@@ -105,7 +108,8 @@ function YearTable({
   onSelect: (key: string) => void;
 }) {
   const { t } = useTranslation();
-  const usable = months.filter((m) => m.access !== 'before_start');
+  // Tháng chưa tới không có gì để xem hay làm — ẩn, không vẽ thành hàng "—" mờ.
+  const usable = months.filter((m) => m.access !== 'before_start' && m.access !== 'future');
   if (usable.length === 0) return <p className="alert info">{t('iso.periods.paperYear', { year })}</p>;
   return (
     <section aria-labelledby="iso-year">
@@ -119,34 +123,30 @@ function YearTable({
                 <th key={f}>{FORM_NAME[f]}</th>
               ))}
               <th>{t('iso.periods.incidentsCol')}</th>
-              <th>{t('iso.periods.otherForms')}</th>
             </tr>
           </thead>
           <tbody>
             {usable.map((m) => {
               const key = monthKey(year, m.month);
-              const future = m.access === 'future';
               return (
-                <tr key={m.month} className={future ? 'muted' : undefined} aria-selected={selected === key}>
+                <tr key={m.month} aria-selected={selected === key}>
                   <td data-label={t('iso.periods.month')}>
-                    <button type="button" className="btn sm ghost" disabled={future} aria-pressed={selected === key} onClick={() => onSelect(key)}>
+                    <button type="button" className={`btn sm${selected === key ? ' primary' : ''}`} aria-pressed={selected === key} onClick={() => onSelect(key)}>
                       {t('iso.periods.monthN', { month: pad2(m.month) })}
                     </button>
                   </td>
                   {m.forms.map((f) => (
                     <td key={f.formType} data-label={FORM_NAME[f.formType]}>
-                      {future ? '—' : <PeriodStateBadge state={f.display} />}
+                      <PeriodStateBadge state={f.display} />
                     </td>
                   ))}
-                  <td data-label="0206">{future ? '—' : t('iso.periods.incidentCount', { count: m.incidents, signed: m.incidentsSigned })}</td>
-                  <td data-label={t('iso.periods.otherForms')}>—</td>
+                  <td data-label="0206">{t('iso.periods.incidentCount', { count: m.incidents, signed: m.incidentsSigned })}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <p className="muted small">{t('iso.periods.otherFormsHint')}</p>
     </section>
   );
 }

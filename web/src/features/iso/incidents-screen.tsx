@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { Me } from '@/lib/me';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -10,9 +11,8 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
-import { useIncidentList } from './iso-api';
-import { newIncidentFor0203 } from './backup-screen';
-import { newIncidentFor0208 } from './antivirus-screen';
+import { useIncidentList, useLinkable } from './iso-api';
+import { IncidentDialogHost, cellKey, type IncidentDialogTarget } from './incident-dialog';
 import { monthKey, shortDay, toVnParts } from './iso-rules';
 import { INCIDENT_KINDS, INCIDENT_STATUS_TONE, type Incident, type UnlinkedCell } from './iso-types';
 
@@ -37,7 +37,7 @@ function stamp(iso: string | null): string {
  * Danh sách 0206 — màn ĐỌC, chạy ở 390px. Trên cùng là ô ✗ chưa có phiếu (của 0203 và
  * 0208); bảng phiếu chọn năm trước (mặc định năm nay), rồi lọc tháng, loại, nguồn, bản ký.
  */
-export function IncidentsScreen() {
+export function IncidentsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [today] = useState(() => todayIso());
@@ -53,6 +53,21 @@ export function IncidentsScreen() {
   if (source) query.set('source', source);
   if (signed) query.set('signed', signed);
   const list = useIncidentList(query.toString());
+  const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
+
+  // Link sâu cũ `/iso/incidents/new?cell=…` (mail, dấu trang) về đây với `?new=1`: mở hộp lập
+  // phiếu, điền sẵn ô nếu ô đó còn chưa có phiếu, rồi bỏ tham số để F5 không mở lại.
+  const linkable = useLinkable();
+  const wantsNew = params.get('new') === '1';
+  const wantedCell = params.get('cell');
+  useEffect(() => {
+    if (!wantsNew || (wantedCell && !linkable.data && !linkable.isError)) return;
+    setDialog({ cell: wantedCell ? (linkable.data?.find((c) => cellKey(c) === wantedCell) ?? null) : null });
+    const next = new URLSearchParams(params);
+    next.delete('new');
+    next.delete('cell');
+    setParams(next, { replace: true });
+  }, [wantsNew, wantedCell, linkable.data, linkable.isError, params, setParams]);
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -121,12 +136,12 @@ export function IncidentsScreen() {
         title={t('nav.isoIncidents')}
         subtitle={t('iso.incidents.subtitle')}
         actions={
-          <Link className="linkbtn primary" to={PATHS.isoIncidentNew}>
+          <button type="button" className="btn primary" onClick={() => setDialog({ cell: null })}>
             {t('iso.incidents.add')}
-          </Link>
+          </button>
         }
       />
-      {unlinked.length > 0 ? <UnlinkedList cells={unlinked} /> : null}
+      {unlinked.length > 0 ? <UnlinkedList cells={unlinked} onCreate={(cell) => setDialog({ cell })} /> : null}
       <section className="filter-bar" aria-label={t('iso.incidents.filters')}>
         <SegmentedRadio
           label={t('iso.incidents.year')}
@@ -198,6 +213,7 @@ export function IncidentsScreen() {
           }}
         />
       )}
+      <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
     </>
   );
 }
@@ -215,7 +231,7 @@ function SourceCell({ incident }: { incident: Incident }) {
   );
 }
 
-function UnlinkedList({ cells }: { cells: UnlinkedCell[] }) {
+function UnlinkedList({ cells, onCreate }: { cells: UnlinkedCell[]; onCreate: (cell: UnlinkedCell) => void }) {
   const { t } = useTranslation();
   return (
     <section className="card" aria-label={t('iso.incidents.needIncident')}>
@@ -230,7 +246,9 @@ function UnlinkedList({ cells }: { cells: UnlinkedCell[] }) {
               <strong>
                 {c.form} · {c.label} · {shortDay(c.day)}
               </strong>{' '}
-              <Link to={c.form === '0203' ? newIncidentFor0203(c.lineId ?? '', c.day) : newIncidentFor0208(c.issueId ?? '')}>{t('iso.createIncident')}</Link>
+              <button type="button" className="btn sm ghost" onClick={() => onCreate(c)}>
+                {t('iso.createIncident')}
+              </button>
             </span>
           </li>
         ))}

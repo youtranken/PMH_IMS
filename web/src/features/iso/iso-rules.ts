@@ -1,4 +1,4 @@
-import type { AvIssue, BackupRow, TickCell } from './iso-types';
+import type { AvIssue, BackupRow, TickCell, TickResult } from './iso-types';
 
 /**
  * Luật THUẦN phía web của phiếu ISO (Q-28). Server là trọng tài cho mọi lượt ghi; ở đây chỉ dựng
@@ -108,6 +108,15 @@ export function pointsError(points: string): '' | 'bad' {
 /** Storage location in theo Points: có số điểm lưu thì ghi nơi lưu, không có thì để trống như mẫu. */
 export function lineStorage(points: string, place: 'NAS' | 'Cloud'): string | null {
   return points.trim() ? place : null;
+}
+
+/**
+ * Một lần bấm ô 0203: trống → ✓ → ✗ → trống. Luồng chuẩn (Q-28) là ✓ cả ngày rồi sửa ô lỗi
+ * thành ✗, nên ô ✓ chỉ cần một lần bấm để thành ✗; bấm nhầm thì bấm tiếp là về trống.
+ */
+export function nextTick(current: TickResult | null): TickResult | null {
+  if (current === null) return 'ok';
+  return current === 'ok' ? 'fail' : null;
 }
 
 export function tickIndex(ticks: TickCell[]): Map<string, TickCell> {

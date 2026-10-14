@@ -16,6 +16,7 @@
 }
 
 .sheet-grid {
+  --sheet-no-w: 2.75rem;
   --sheet-job-w: 9rem;
   --sheet-sub-w: 14rem;
   border-collapse: separate;
@@ -62,6 +63,56 @@
  * khi cuộn, nên bề rộng cố định (border-box) để cột thứ hai biết đúng chỗ dừng (`left`). Job một
  * dòng trải qua cả hai cột.
  */
+/*
+ * Lưới 0203: No, tên job, đối tượng con cùng dính trái. Bố cục cố định (`table-layout: fixed` +
+ * `colgroup`) để bề rộng ba cột đúng bằng token — `left` của cột sau tính từ bề rộng cột trước,
+ * lệch một pixel là cột dính đè lên nhau khi cuộn.
+ */
+.sheet-grid-0203 {
+  --sheet-day-w: 2.4rem;
+  table-layout: fixed;
+  width: calc(var(--sheet-no-w) + var(--sheet-job-w) + var(--sheet-sub-w) + var(--sheet-days) * var(--sheet-day-w));
+}
+
+.sheet-grid-0203 .sheet-col-no {
+  width: var(--sheet-no-w);
+}
+
+.sheet-grid-0203 .sheet-col-job {
+  width: var(--sheet-job-w);
+}
+
+.sheet-grid-0203 .sheet-col-sub {
+  width: var(--sheet-sub-w);
+}
+
+.sheet-grid-0203 .sheet-col-day {
+  width: var(--sheet-day-w);
+}
+
+.sheet-grid-0203 .sheet-day {
+  min-width: 0;
+}
+
+.sheet-grid-0203 .sheet-no {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  width: var(--sheet-no-w);
+  min-width: var(--sheet-no-w);
+  background: var(--surface);
+}
+
+.sheet-grid-0203 thead .sheet-no {
+  background: var(--surface-2);
+}
+
+.sheet-grid-0203 .sheet-name {
+  left: var(--sheet-no-w);
+  max-width: none;
+}
+
 .sheet-grid tbody .sheet-name:not([colspan]) {
   box-sizing: border-box;
   width: var(--sheet-job-w);
@@ -71,7 +122,7 @@
 
 .sheet-grid .sheet-label {
   position: sticky;
-  left: var(--sheet-job-w);
+  left: calc(var(--sheet-no-w) + var(--sheet-job-w));
   z-index: 1;
   box-sizing: border-box;
   width: var(--sheet-sub-w);
@@ -119,7 +170,10 @@
   vertical-align: middle;
 }
 
-.sheet-cell[data-future] {
+/* Ngày chưa tới: nền trơn. Ngoài thời gian theo dõi của job (trước "theo dõi từ", sau ngày
+   ngừng): kẻ sọc — hai thứ khác nhau mà cùng một màu xám thì không ai đọc ra. */
+.sheet-cell[data-future],
+.sheet-swatch[data-future] {
   background: var(--surface-2);
 }
 
@@ -129,8 +183,18 @@
 }
 
 /* Ngoài thời gian theo dõi của dòng (trước ngày bắt đầu / sau ngày ngừng): không đánh, không đếm. */
-.sheet-cell[data-off] {
-  background: var(--muted-soft);
+.sheet-cell[data-off],
+.sheet-swatch[data-off] {
+  background: repeating-linear-gradient(135deg, var(--muted-soft) 0 4px, var(--surface) 4px 8px);
+}
+
+.sheet-swatch {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  vertical-align: -0.2em;
 }
 
 .sheet-mark {
@@ -182,11 +246,6 @@ button.sheet-mark:focus-visible {
   box-shadow: inset 0 0 0 2px var(--warm);
 }
 
-.sheet-mark[aria-expanded='true'] {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
-
 /* Nút ✓ trên đầu cột: đánh hết ô còn trống của ngày đó. */
 .sheet-fill {
   width: 1.6rem;
@@ -227,25 +286,6 @@ button.sheet-mark:focus-visible {
 .sheet-legend .sheet-mark {
   width: 1.25rem;
   height: 1.25rem;
-}
-
-/* Thanh chọn của ô đang bấm: ✓ Đạt / ✗ Lỗi / Để trống / Lập-mở 0206. */
-.sheet-picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  margin-bottom: var(--space-5);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.sheet-picker-what {
-  flex: 1 1 14rem;
-  min-width: 0;
 }
 
 .sheet-toolbar {
@@ -342,6 +382,22 @@ button.sheet-mark:focus-visible {
   }
 }
 
+/*
+ * Màn "Xem phiếu": tờ phiếu chiếm trọn bề ngang (A3 31 cột ngày không được cắt mất nửa — đây là
+ * đúng bản sẽ in và ký), các khối trạng thái / kiểm / gửi chốt xếp thành hàng phía trên.
+ */
+.sheet-review {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.sheet-review > aside {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
 /* -------------------------------------------------- danh mục job 0203 --- */
 
 /* Dòng trên phiếu trong form job: năm cột vừa khung hộp thoại, không cuộn ngang. Ô Points chỉ
@@ -376,107 +432,49 @@ button.sheet-mark:focus-visible {
   gap: var(--space-2);
 }
 
-/* ----------------------------------------------- form 0206 dạng tờ phiếu --- */
+/* ------------------------------------------------------- hộp lập 0206 --- */
 
-/*
- * Form lập 0206 dựng trên đúng khung của bản in (`IncidentInfoTable`), nhưng là màn nhập theo
- * theme: nền / kẻ / chữ lấy token giao diện, không lấy bộ `--paper-*` luôn-sáng — ô nhập theme
- * tối nằm trên giấy trắng thì thành những mảng tối giữa tờ phiếu.
- */
-.iso-form-sheet {
-  padding: var(--space-8);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--fs-sm);
+/* Ô ✗ đã gắn: chip ngang, ô chọn "Gắn thêm" nằm cùng hàng. */
+.iso-incident-cells {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
-.iso-form-sheet .paper-table th,
-.iso-form-sheet .paper-table td {
-  border-color: var(--border-2);
-  padding: var(--space-3) var(--space-4);
-}
-
-.iso-form-sheet .paper-head[data-rule] .paper-title,
-.iso-form-sheet .paper-sign-box,
-.iso-form-sheet .paper-sign-box > div:first-child {
-  border-color: var(--border-2);
-}
-
-.iso-form-sheet .paper-form .paper-col-label {
-  width: 14%;
-}
-
-.iso-form-sheet .inp {
-  width: 100%;
-}
-
-.iso-form-sheet textarea.inp {
-  resize: vertical;
-}
-
-/* Ngày + giờ cạnh nhau trong một ô của khung. */
-.iso-form-when {
+/* Ngày + giờ trong một ô form. */
+.iso-when {
   display: grid;
-  grid-template-columns: minmax(9.5rem, 1fr) 6.75rem;
+  grid-template-columns: minmax(0, 1fr) 6.75rem;
   gap: var(--space-3);
 }
 
-.iso-form-details .iso-col-job {
-  width: 18%;
-}
-
-.iso-form-details .iso-col-tick {
-  width: 3.2rem;
-}
-
-.iso-form-details .iso-col-storage {
-  width: 11%;
-}
-
-.iso-form-details .iso-col-x {
-  width: 2.75rem;
-}
-
-.iso-choices label {
-  display: inline-flex;
+/*
+ * Một job của "Detail Error Backup" là một khối hai dòng thay cho bảng 11 cột của giấy: dòng 1
+ * tên job + Type Backup + Type Data + nút xoá, dòng 2 Storage / Error / Resolution. Hộp chỉ cuộn
+ * dọc — bảng giấy nhồi vào hộp thì ô nhập hẹp tới mức không gõ được.
+ */
+.iso-detail {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.4fr) auto auto 2.25rem;
+  gap: var(--space-3);
   align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
-}
-
-/* Ô tick vuông như "☐" của mẫu, cho cả radio (chọn một) lẫn checkbox (Type Backup / Type Data). */
-.iso-tick {
-  appearance: none;
-  display: inline-grid;
-  place-items: center;
-  width: 1.15rem;
-  height: 1.15rem;
   margin: 0;
-  border: 1.5px solid var(--ink-2);
-  border-radius: 3px;
-  background: var(--surface);
-  cursor: pointer;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
 }
 
-.iso-tick:checked {
-  border-color: var(--primary);
-  background: var(--primary);
-  box-shadow: inset 0 0 0 3px var(--surface);
+.iso-detail-more {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
 }
 
-.iso-tick:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-.iso-tick:checked:focus-visible {
-  box-shadow: inset 0 0 0 3px var(--surface), var(--ring);
-}
-
-.iso-tick[aria-invalid='true'] {
-  border-color: var(--danger);
+.iso-incident-review .sheet-checks {
+  margin-top: var(--space-5);
 }
 
 /* ------------------------------------------------------------- bản in --- */
@@ -577,6 +575,14 @@ button.sheet-mark:focus-visible {
 
 .paper-table th {
   font-weight: var(--fw-bold);
+}
+
+/* A3 ngang 31 cột ngày: ô ngày sát chữ để cả tờ vừa màn laptop như vừa trang giấy. */
+.paper[data-page='a3l'] .paper-table th,
+.paper[data-page='a3l'] .paper-table td,
+.paper[data-page='a4l'] .paper-table th,
+.paper[data-page='a4l'] .paper-table td {
+  padding: 2px 3px;
 }
 
 .paper-table .paper-left {

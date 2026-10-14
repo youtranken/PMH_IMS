@@ -10,7 +10,7 @@ interface NavItem {
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
   /** Mục mang số việc đang chờ — shell tự hỏi số và vẽ `.nav-badge`. */
-  badge?: 'approvals' | 'overdue' | 'failedMail' | 'diagramReviews' | 'isoTodo';
+  badge?: 'approvals' | 'overdue' | 'failedMail' | 'diagramReviews' | 'isoTodo' | 'isoUnlinked';
 }
 
 export interface NavGroup {
@@ -83,7 +83,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { key: 'nav.isoBackup', to: PATHS.isoBackup },
       { key: 'nav.isoAntivirus', to: PATHS.isoAntivirus },
-      { key: 'nav.isoIncidents', to: PATHS.isoIncidents },
+      { key: 'nav.isoIncidents', to: PATHS.isoIncidents, badge: 'isoUnlinked' },
       { key: 'nav.isoPeriods', to: PATHS.isoPeriods, badge: 'isoTodo' },
       { key: 'nav.isoCatalog', to: PATHS.isoCatalog },
     ],

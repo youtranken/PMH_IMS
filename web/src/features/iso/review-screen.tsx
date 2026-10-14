@@ -70,13 +70,13 @@ function ReviewBody({ me, form, month, year, mon }: { me: Me; form: IsoFormType;
   if (detail.isError) return <LoadError error={detail.error} onRetry={() => void detail.refetch()} />;
   if (grid.isError) return <LoadError error={grid.error} onRetry={() => void grid.refetch()} />;
   return (
-    <div className="sheet-split">
+    <div className="sheet-review">
+      {detail.data ? <ReviewAside me={me} detail={detail.data} month={month} /> : null}
       {form === '0203' && backup.data ? (
         <BackupPaper year={year} month={mon} systemName={backup.data.systemName} rows={backup.data.rows} ticks={backup.data.ticks} />
       ) : antivirus.data ? (
         <AntivirusPaper year={year} month={mon} systemName={antivirus.data.systemName} issues={antivirus.data.issues} clearDays={antivirus.data.clearDays} />
       ) : null}
-      {detail.data ? <ReviewAside me={me} detail={detail.data} month={month} /> : null}
     </div>
   );
 }
