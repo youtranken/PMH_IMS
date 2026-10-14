@@ -44,13 +44,13 @@ const MARK: Record<BackupCellState, string> = {
   blank: '',
 };
 
-/** Ô 0203 → link "Lập 0206" điền sẵn ô đó (Story 8.3). */
+/** Ô 0203 → link "Lập 0206" điền sẵn ô đó. */
 export function newIncidentFor0203(lineId: string, day: string): string {
   return `${PATHS.isoIncidentNew}?cell=${encodeURIComponent(`0203:${lineId}:${day}`)}`;
 }
 
 /**
- * Lưới 0203 — Theo dõi backup (Story 8.2). Màn nhập, chỉ cần desktop (UX-DR2). Lưới là chỗ thao
+ * Lưới 0203 — Theo dõi backup. Màn nhập, chỉ cần desktop (UX-DR2). Lưới là chỗ thao
  * tác duy nhất: bấm ô để đổi ✓ / ✗ / trống, lập hoặc mở 0206; nút ✓ trên đầu cột đánh hết ô
  * trống của ngày đó (Q-28).
  */

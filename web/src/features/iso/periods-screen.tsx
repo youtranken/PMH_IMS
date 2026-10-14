@@ -22,7 +22,7 @@ import { ISO_FORM_TYPES, type IsoFormType, type MonthOverview, type PeriodDetail
 const FORM_NAME: Record<IsoFormType, string> = { '0203': '0203 · Backup', '0208': '0208 · Antivirus' };
 
 /**
- * Kỳ phiếu & chốt kỳ (Story 8.6) — màn ĐỌC, chạy ở 390px. Năm → bảng 12 tháng (mới nhất trên
+ * Kỳ phiếu & chốt kỳ — màn ĐỌC, chạy ở 390px. Năm → bảng 12 tháng (mới nhất trên
  * cùng), mỗi loại phiếu một cột; bấm một tháng thì hiện chi tiết kỳ với đúng nút theo vai. Phiếu
  * giữ vĩnh viễn (FR-031).
  */

@@ -24,7 +24,7 @@ type Tab = 'jobs' | 'divisions' | 'owners';
 const TABS: Tab[] = ['jobs', 'divisions', 'owners'];
 
 /**
- * Danh mục phiếu (Story 8.1): job backup của 0203, bộ phận của 0208, người phụ trách từng loại
+ * Danh mục phiếu: job backup của 0203, bộ phận của 0208, người phụ trách từng loại
  * phiếu. Thêm / sửa / ngừng chỉ áp cho kỳ còn Đang ghi; kỳ đã gửi chốt giữ danh sách lúc chốt.
  */
 export function CatalogScreen({ me }: { me: Me }) {

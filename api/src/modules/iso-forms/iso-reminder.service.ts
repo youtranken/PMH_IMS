@@ -24,7 +24,7 @@ const DONE_KEY = 'sweep:done';
 const KEEP_DAYS = 90;
 
 /**
- * Mail nhắc phiếu ISO (Story 8.7). Lượt quét chạy mỗi phút cùng các sweep khác nhưng chỉ làm việc
+ * Mail nhắc phiếu ISO. Lượt quét chạy mỗi phút cùng các sweep khác nhưng chỉ làm việc
  * một lần mỗi ngày, từ giờ `iso.remind_hour` (giờ Việt Nam).
  *
  * Mỗi việc CHIẾM một hàng `iso_reminder_sent (khoá, ngày)` rồi mới đẩy outbox, cùng transaction

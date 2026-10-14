@@ -84,7 +84,7 @@ export interface IncidentListFilters {
 type IncidentRow = typeof isoIncidentTable.$inferSelect;
 
 /**
- * Phiếu sự cố 0206 (Story 8.3). Một sự cố một phiếu: phiếu thuộc kỳ của tháng chứa Detection
+ * Phiếu sự cố 0206. Một sự cố một phiếu: phiếu thuộc kỳ của tháng chứa Detection
  * Time; ô ✗ tháng sau của cùng sự cố gắn vào chính phiếu đó. Số `0206-YYYY-NNN` cấp lúc lưu.
  *
  * Phiếu khoá khi mọi kỳ quản nó đã duyệt chốt (`incidentLocked`); không có cột khoá riêng nên mở

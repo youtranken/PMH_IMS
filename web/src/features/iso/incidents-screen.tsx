@@ -34,7 +34,7 @@ function stamp(iso: string | null): string {
 }
 
 /**
- * Danh sách 0206 (Story 8.3) — màn ĐỌC, chạy ở 390px. Trên cùng là ô ✗ chưa có phiếu (của 0203 và
+ * Danh sách 0206 — màn ĐỌC, chạy ở 390px. Trên cùng là ô ✗ chưa có phiếu (của 0203 và
  * 0208); bảng phiếu chọn năm trước (mặc định năm nay), rồi lọc tháng, loại, nguồn, bản ký.
  */
 export function IncidentsScreen() {

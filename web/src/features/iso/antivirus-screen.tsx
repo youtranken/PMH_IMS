@@ -35,7 +35,7 @@ export function newIncidentFor0208(issueId: string): string {
 }
 
 /**
- * Lưới 0208 — Theo dõi antivirus (Story 8.4). Mỗi ngày đã qua phải có kết quả: "không có issue",
+ * Lưới 0208 — Theo dõi antivirus. Mỗi ngày đã qua phải có kết quả: "không có issue",
  * hoặc ít nhất một dòng issue (một máy × một ngày phát hiện). Dòng gom theo bộ phận, chỉ bộ phận có
  * issue trong tháng mới hiện; "Other Division" luôn ở cuối (Q-28). Màn nhập — desktop.
  */

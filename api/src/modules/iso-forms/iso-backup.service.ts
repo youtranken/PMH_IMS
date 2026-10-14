@@ -52,7 +52,7 @@ export interface BackupGrid {
 }
 
 /**
- * Lưới 0203 (Story 8.2): mỗi dòng của job × mỗi ngày. Ô trống không có hàng; ✓/✗ là một hàng
+ * Lưới 0203: mỗi dòng của job × mỗi ngày. Ô trống không có hàng; ✓/✗ là một hàng
  * `iso_backup_tick`. Ghi ô chỉ cho người phụ trách 0203 và SA/Admin, chỉ ngày đã qua / hôm nay
  * trong khoảng theo dõi của job, chỉ khi kỳ còn Đang ghi.
  */

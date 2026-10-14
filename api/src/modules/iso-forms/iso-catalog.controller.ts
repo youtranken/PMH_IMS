@@ -85,7 +85,7 @@ class OwnersDto {
 }
 
 /**
- * Danh mục phiếu ISO (Story 8.1): job backup, bộ phận, người phụ trách. Job và bộ phận mọi tài
+ * Danh mục phiếu ISO: job backup, bộ phận, người phụ trách. Job và bộ phận mọi tài
  * khoản IT sửa được; người phụ trách chỉ SA/Admin gán.
  */
 @NoStepUp()

@@ -596,7 +596,7 @@ interface IsoPendingRow {
 }
 
 /**
- * Kỳ phiếu ISO chờ SA/Admin duyệt (Q-28, Story 8.5): gửi chốt hoặc xin mở lại. Khoá dưới nhánh
+ * Kỳ phiếu ISO chờ SA/Admin duyệt (Q-28): gửi chốt hoặc xin mở lại. Khoá dưới nhánh
  * `['iso']` nên duyệt ở màn phiếu là khối này tự làm mới. Không có gì chờ thì khối biến mất.
  */
 function IsoNeedsYouBlock({ me }: { me: Me }) {

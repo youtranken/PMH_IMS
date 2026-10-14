@@ -25,7 +25,7 @@ export type IsoReminder =
 const FORM_NAME: Record<IsoFormType, string> = { '0203': '0203 · Theo dõi backup', '0208': '0208 · Theo dõi antivirus' };
 
 /**
- * Thư của phiếu ISO (Story 8.7). `mail` là tầng nền không import được `iso-forms`, nên module này
+ * Thư của phiếu ISO. `mail` là tầng nền không import được `iso-forms`, nên module này
  * dạy `MailContentRegistry` cách dựng thư; outbox chỉ mang id + loại việc (NFR-04), nội dung và
  * người nhận đọc lại lúc gửi — việc đã xong trước khi worker kịp gửi thì không gửi nữa.
  */

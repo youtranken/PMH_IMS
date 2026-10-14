@@ -111,7 +111,7 @@ function cellKey(c: Pick<IncidentCell, 'form' | 'lineId' | 'day' | 'issueId'>): 
 }
 
 /**
- * Phiếu sự cố 0206 (Story 8.3): điền → xem lại bản phiếu dạng giấy → xác nhận lưu, số phiếu cấp
+ * Phiếu sự cố 0206: điền → xem lại bản phiếu dạng giấy → xác nhận lưu, số phiếu cấp
  * lúc lưu. Phiếu đã khoá theo kỳ chỉ xem, in và tải bản ký riêng. Màn nhập — desktop.
  */
 export function IncidentScreen({ me }: { me: Me }) {

@@ -1,7 +1,7 @@
 import { daysBetween, isoDateInTz } from '../../common/today';
 
 /**
- * Lịch mail nhắc phiếu ISO (Story 8.7) — hàm THUẦN. Mỗi việc tối đa một mail mỗi ngày (khoá chặn
+ * Lịch mail nhắc phiếu ISO — hàm THUẦN. Mỗi việc tối đa một mail mỗi ngày (khoá chặn
  * trùng ở `iso_reminder_sent`); các hàm dưới chỉ trả lời "hôm nay có tới lượt nhắc không".
  */
 

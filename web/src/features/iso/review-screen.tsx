@@ -19,7 +19,7 @@ import type { ChecklistItem, IsoFormType, PeriodDetail } from './iso-types';
 const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /**
- * Xem lại trước khi gửi chốt (Story 8.5): đúng bản in sẽ ký, cùng danh sách kiểm. Còn mục chưa đạt
+ * Xem lại trước khi gửi chốt: đúng bản in sẽ ký, cùng danh sách kiểm. Còn mục chưa đạt
  * thì nút gửi khoá (API cũng từ chối). SA/Admin duyệt / trả lại ngay tại đây; kỳ đã khoá thì màn
  * này là "Xem bản in".
  */

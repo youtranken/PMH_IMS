@@ -113,7 +113,7 @@ export interface PeriodDetail {
 }
 
 /**
- * Luồng kỳ phiếu (Story 8.5, 8.6): Đang ghi → Chờ duyệt → Đã chốt · chờ bản ký → Hoàn tất.
+ * Luồng kỳ phiếu: Đang ghi → Chờ duyệt → Đã chốt · chờ bản ký → Hoàn tất.
  * Duyệt chốt và duyệt mở lại đi qua `approvals` (Q-05); trạng thái kỳ, nhật ký, trạng thái yêu
  * cầu và thư báo ghi trong CÙNG một transaction (AD-5).
  */

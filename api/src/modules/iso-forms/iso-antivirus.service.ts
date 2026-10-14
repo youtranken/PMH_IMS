@@ -58,7 +58,7 @@ export interface IssueInput {
 }
 
 /**
- * Lưới 0208 (Story 8.4): mỗi ngày phải có kết quả — "không có issue", hoặc ít nhất một dòng issue
+ * Lưới 0208: mỗi ngày phải có kết quả — "không có issue", hoặc ít nhất một dòng issue
  * (một máy × một ngày phát hiện). Dòng gom theo bộ phận; chỉ bộ phận có issue trong tháng mới
  * hiện, nên cột Division khác nhau giữa các tháng.
  */

@@ -488,7 +488,7 @@ export class MailConsumer {
      * mà `mail` không import được — module chủ dựng nội dung qua sổ, outbox chỉ giữ id + số.
      */
     if (topic === 'diagram.drift') return this.buildRegisteredMail(topic, payload);
-    // Phiếu ISO (Story 8.7): người nhận là người phụ trách / SA/Admin, nằm trong bảng của `iso-forms`.
+    // Phiếu ISO: người nhận là người phụ trách / SA/Admin, nằm trong bảng của `iso-forms`.
     if (topic === 'iso.period.event' || topic === 'iso.reminder') return this.buildRegisteredMail(topic, payload);
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
