@@ -12,7 +12,7 @@ import { useToast } from '@/ui/toast';
 import { useAntivirusGrid, useBackupGrid, useIsoWrite, usePeriodDetail } from './iso-api';
 import { PeriodStateBadge, PeriodSteps } from './iso-parts';
 import { AntivirusPaper, BackupPaper } from './iso-paper';
-import { ReasonDialog } from './reason-dialog';
+import { ReasonDialog } from '@/ui/reason-dialog';
 import { lastDayOfMonth, monthLabel, shortDay } from './iso-rules';
 import type { ChecklistItem, IsoFormType, PeriodDetail } from './iso-types';
 
@@ -63,8 +63,8 @@ export function ReviewScreen({ me }: { me: Me }) {
 
 function ReviewBody({ me, form, month, year, mon }: { me: Me; form: IsoFormType; month: string; year: number; mon: number }) {
   const detail = usePeriodDetail(form, month);
-  const backup = useBackupGrid(month);
-  const antivirus = useAntivirusGrid(month);
+  const backup = useBackupGrid(month, form === '0203');
+  const antivirus = useAntivirusGrid(month, form === '0208');
   const grid = form === '0203' ? backup : antivirus;
   if (detail.isLoading || grid.isLoading) return <Loading />;
   if (detail.isError) return <LoadError error={detail.error} onRetry={() => void detail.refetch()} />;

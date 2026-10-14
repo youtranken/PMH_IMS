@@ -19,17 +19,19 @@ import type {
  */
 export const ISO_KEY = ['iso'] as const;
 
-export function useBackupGrid(month: string) {
+export function useBackupGrid(month: string, enabled = true) {
   return useQuery({
     queryKey: [...ISO_KEY, 'backup', month],
     queryFn: () => apiFetch<BackupGrid>(`/api/v1/iso/backup/${month}`),
+    enabled,
   });
 }
 
-export function useAntivirusGrid(month: string) {
+export function useAntivirusGrid(month: string, enabled = true) {
   return useQuery({
     queryKey: [...ISO_KEY, 'antivirus', month],
     queryFn: () => apiFetch<AntivirusGrid>(`/api/v1/iso/antivirus/${month}`),
+    enabled,
   });
 }
 

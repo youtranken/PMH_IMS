@@ -16,7 +16,7 @@ import { useToast } from '@/ui/toast';
 import { ISO_KEY, useIsoWrite, usePeriodDetail, useYearOverview } from './iso-api';
 import { PeriodStateBadge, PeriodSteps } from './iso-parts';
 import { monthKey, monthLabel, pad2 } from './iso-rules';
-import { ReasonDialog } from './reason-dialog';
+import { ReasonDialog } from '@/ui/reason-dialog';
 import { ISO_FORM_TYPES, type IsoFormType, type MonthOverview, type PeriodDetail } from './iso-types';
 
 const FORM_NAME: Record<IsoFormType, string> = { '0203': '0203 · Backup', '0208': '0208 · Antivirus' };
