@@ -94,6 +94,8 @@ const NO_CREATED_AT: Record<string, string> = {
     'Ô lưới 0203, khoá chính (dòng, ngày); dọn theo job có "E2E" trong tên ở vùng `iso`.',
   iso_av_clear_day:
     'Ngày 0208 "không có issue", khoá chính = ngày; bài kiểm chỉ ghi năm 2021, vùng `iso` dọn mọi ngày trước 2022.',
+  iso_av_mark:
+    'Dấu bấm tay của dòng máy 0208, khoá chính (dòng issue, ngày); đi theo khoá ngoại ON DELETE CASCADE khi vùng `iso` xoá máy có "E2E" trong tên.',
   iso_incident_counter:
     'Bộ đếm số phiếu 0206 theo năm, một hàng mỗi năm; vùng `iso` dọn năm 2021 trở về trước (năm của bài kiểm).',
   iso_incident_cell:

@@ -67,6 +67,12 @@ class TickDto {
   @ValidateIf((_o, v) => v !== null) @IsIn(['ok', 'fail'], { message: 'Kết quả chỉ là ✓ hoặc ✗.' }) result!: 'ok' | 'fail' | null;
 }
 
+class AvMarkDto {
+  @IsUUID(undefined, { message: 'Mã dòng issue không hợp lệ.' }) issueId!: string;
+  @Validate(RealDate) day!: string;
+  @ValidateIf((_o, v) => v !== null) @IsIn(['ok', 'fail'], { message: 'Kết quả chỉ là ✓ hoặc ✗.' }) result!: 'ok' | 'fail' | null;
+}
+
 class DayDto {
   @Validate(RealDate) day!: string;
 }
@@ -201,6 +207,14 @@ export class IsoFormsController {
   @Audited('iso_antivirus.day_uncleared', 'iso_period', { writtenByService: true })
   unmarkClear(@Param() params: DayParamDto, @Req() req: AuthedRequest) {
     return this.antivirus.unmarkClear(req.user!, params.day);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Put('antivirus/marks')
+  @HttpCode(204)
+  @Audited(['iso_antivirus.mark_set', 'iso_antivirus.day_cleared'], 'iso_av_issue', { writtenByService: true })
+  async setMark(@Body() dto: AvMarkDto, @Req() req: AuthedRequest): Promise<void> {
+    await this.antivirus.setMark(req.user!, dto);
   }
 
   @Roles('sa', 'admin', 'member')

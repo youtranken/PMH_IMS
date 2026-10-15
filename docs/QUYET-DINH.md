@@ -1244,6 +1244,19 @@ IT dùng hằng ngày.
     những ngày đã qua.
   - 0208 giữ nguyên: ✗ chỉ ở ngày phát hiện (Reported Date), không kéo tới Resolution Date —
     Resolution Date đã có cột riêng trên phiếu.
+- **0208 bấm từng dòng (15/10/2026, chủ dự án chốt):** thay luật "một ngày là không có issue HOẶC
+  có dòng issue" và luật "chỉ ô Other Division bấm được" ở trên. Lý do: trên giấy mỗi dòng máy được
+  tick riêng từng ngày, và Other Division chỉ nói về các bộ phận KHÔNG có dòng.
+  - Ô của dòng máy có issue bấm được ở mọi ngày đã qua của tháng (kể cả trước Reported Date), đi
+    vòng trống → ✓ → ✗ → trống như 0203. Ô ở đúng Reported Date luôn ✗, không bấm.
+  - Other Division là dòng riêng, tick tay ở mọi ngày, kể cả ngày có issue. Ngày đã tick Other
+    Division thì các dòng máy chưa bấm ở ngày đó hiện ✓.
+  - Tháng chỉ có MỘT dòng máy: bấm ✓ ở dòng đó thì Other Division của ngày đó cũng tự ✓. Từ hai
+    dòng trở lên thì Other Division tick tay.
+  - Một ngày "có kết quả" khi Other Division đã ✓; nút "✓ Other Division cho N ngày còn trống" và
+    danh sách kiểm gửi chốt đếm theo đó.
+  - ✗ bấm ở ngày khác Reported Date chỉ là dấu trên phiếu; 0206 vẫn gắn theo dòng issue (ngày
+    phát hiện).
 
 ### Q-09 · Tài liệu
 

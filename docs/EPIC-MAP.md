@@ -1195,7 +1195,7 @@ Migration: `0066_iso_forms`, `0067_iso_code_citext` (cột `code` theo quy ướ
 | --- | --- |
 | `iso_form_owner` | Người phụ trách (chính + dự phòng) theo loại phiếu. Loại phiếu Epic 9 thêm hàng + mở CHECK `form_type` |
 | `iso_backup_job`, `iso_backup_line`, `iso_backup_tick` | Job 0203 → dòng (đối tượng con) → ô (dòng, ngày). Ô trống = không có hàng. Tick FK RESTRICT: dòng đã có ô thì không xoá |
-| `iso_division`, `iso_av_clear_day`, `iso_av_issue` | Bộ phận 0208 (danh sách riêng của phiếu, KHÔNG phải danh mục Phòng ban), ngày "không có issue", dòng issue (một máy × một ngày) |
+| `iso_division`, `iso_av_clear_day`, `iso_av_issue`, `iso_av_mark` | Bộ phận 0208 (danh sách riêng của phiếu, KHÔNG phải danh mục Phòng ban), ✓ của dòng Other Division theo ngày, dòng issue (một máy × một ngày phát hiện), dấu bấm tay của dòng máy (dòng, ngày; FK CASCADE theo dòng issue) |
 | `iso_incident`, `iso_incident_cell`, `iso_incident_counter` | Phiếu 0206 + ô ✗ đã gắn (unique: một ô một phiếu) + bộ đếm số `0206-YYYY-NNN` theo năm (INSERT … ON CONFLICT) |
 | `iso_period` | Kỳ: `open / pending / locked`; "Hoàn tất" SUY từ bản ký. Có hàng từ lượt ghi đầu tiên; `snapshot` = danh sách job / bộ phận lúc gửi chốt (AR-8) |
 | `iso_reminder_sent` | Khoá chặn gửi trùng mail nhắc (việc, ngày) |

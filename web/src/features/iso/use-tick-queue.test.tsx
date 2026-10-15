@@ -9,12 +9,14 @@ import { useTickQueue } from './use-tick-queue';
  * khi request trước hỏng mạng.
  */
 
-function setup(fetchImpl: (body: { result: string | null }) => Promise<Response>) {
+function setup(fetchImpl: (body: { result: string | null }) => Promise<Response>, form: '0203' | '0208' = '0203') {
   const bodies: { result: string | null }[] = [];
+  const urls: string[] = [];
   vi.stubGlobal(
     'fetch',
-    vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+    vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { result: string | null };
+      urls.push(String(url));
       bodies.push(body);
       return fetchImpl(body);
     }),
@@ -23,8 +25,8 @@ function setup(fetchImpl: (body: { result: string | null }) => Promise<Response>
   const onError = vi.fn();
   const client = new QueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  const hook = renderHook(() => useTickQueue('tok', '2026-10', { onSaved, onError }), { wrapper });
-  return { hook, bodies, onSaved, onError };
+  const hook = renderHook(() => useTickQueue('tok', form, '2026-10', { onSaved, onError }), { wrapper });
+  return { hook, bodies, urls, onSaved, onError };
 }
 
 const noContent = () => Promise.resolve(new Response(null, { status: 204 }));
@@ -61,5 +63,13 @@ describe('useTickQueue', () => {
     act(() => hook.result.current.set('L1', '2026-10-02', 'ok'));
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
     expect(hook.result.current.pending.has('L1|2026-10-02')).toBe(false);
+  });
+
+  it('0208: gửi ô dòng máy tới API dấu 0208 theo mã dòng issue', async () => {
+    const { hook, bodies, urls, onSaved } = setup(noContent, '0208');
+    act(() => hook.result.current.set('I1', '2026-10-03', 'ok'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('I1', '2026-10-03', 'ok'));
+    expect(urls).toEqual(['/api/v1/iso/antivirus/marks']);
+    expect(bodies).toEqual([{ issueId: 'I1', day: '2026-10-03', result: 'ok' }]);
   });
 });

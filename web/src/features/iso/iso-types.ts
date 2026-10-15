@@ -66,6 +66,12 @@ export interface AvIssue {
   incident: { id: string; code: string } | null;
 }
 
+export interface AvMark {
+  issueId: string;
+  day: string;
+  result: TickResult;
+}
+
 export interface AntivirusGrid {
   formType: '0208';
   year: number;
@@ -77,6 +83,7 @@ export interface AntivirusGrid {
   systemName: string;
   issues: AvIssue[];
   clearDays: string[];
+  marks: AvMark[];
   summary: { pendingDays: string[]; missedDays: string[]; unlinkedIssues: string[] };
 }
 

@@ -21,22 +21,25 @@ import { ISO_KEY, useAntivirusGrid, useDivisions, useIsoWrite, useOwners } from 
 import { LockedBanner, MonthNav, OwnerNotice, PeriodStateBadge } from './iso-parts';
 import {
   avIssueMark,
+  avMarkIndex,
+  avMarkOf,
   avOtherMark,
-  avResultDays,
   daysOf,
   groupByDivision,
   monthKey,
+  nextTick,
   parseMonthParam,
   shortDay,
 } from './iso-rules';
+import { useTickQueue } from './use-tick-queue';
 import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
-import type { AntivirusGrid, AvIssue, IncidentCell } from './iso-types';
+import type { AntivirusGrid, AvIssue, IncidentCell, TickResult } from './iso-types';
 
 /**
- * Lưới 0208 — Theo dõi antivirus. Mỗi ngày đã qua phải có kết quả: "không có issue",
- * hoặc ít nhất một dòng issue (một máy × một ngày phát hiện). Dòng gom theo bộ phận, chỉ bộ phận có
- * issue trong tháng mới hiện; "Other Division" luôn ở cuối (Q-28). Bấm ô của "Other Division" để
- * đánh / bỏ "không có issue" ngày đó — cùng kiểu bấm ô như 0203. Màn nhập — desktop.
+ * Lưới 0208 — Theo dõi antivirus. Dòng issue (một máy × một ngày phát hiện) gom theo bộ phận, chỉ bộ
+ * phận có issue trong tháng mới hiện; "Other Division" luôn ở cuối và tick tay mỗi ngày — ngày chỉ
+ * có kết quả khi dòng này đã ✓. Ô dòng máy bấm như 0203; ô chưa bấm hiện theo Other Division
+ * (Q-28, bấm từng dòng). Màn nhập — desktop.
  */
 export function AntivirusScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -98,10 +101,9 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
   const queryClient = useQueryClient();
   const days = daysOf(data.year, data.month);
   const groups = useMemo(() => groupByDivision(data.issues), [data.issues]);
-  const resultDays = useMemo(() => avResultDays(data.clearDays, data.issues), [data.clearDays, data.issues]);
-  const clear = new Set(data.clearDays);
+  const index = useMemo(() => avMarkIndex(data.clearDays, data.marks), [data.clearDays, data.marks]);
+  const clear = index.clear;
   const missed = new Set(data.summary.missedDays);
-  const issueDays = new Set(data.issues.map((i) => i.reportedOn));
   const todayPending = data.summary.pendingDays.includes(data.today);
   const open = data.state === 'open';
   const editable = open && data.canEdit;
@@ -110,6 +112,24 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
   const unmarkClear = useIsoWrite<{ day: string }>(me.csrfToken, ({ day }) => ({ url: `/api/v1/iso/antivirus/clear-days/${day}`, method: 'DELETE' }));
   const removeIssue = useIsoWrite<{ id: string }>(me.csrfToken, ({ id }) => ({ url: `/api/v1/iso/antivirus/issues/${id}`, method: 'DELETE' }));
   const fail = (err: unknown) => toast({ message: errorMessage(err), tone: 'error' });
+  const queue = useTickQueue(me.csrfToken, '0208', monthKey(data.year, data.month), { onSaved: () => undefined, onError: fail });
+  /** Dấu bấm tay của ô, tính cả lần bấm chưa lưu xong. */
+  const explicit = (issue: AvIssue, day: string): TickResult | null => {
+    const key = `${issue.id}|${day}`;
+    return queue.pending.has(key) ? (queue.pending.get(key) ?? null) : avMarkOf(issue, day, index);
+  };
+  const shownMark = (issue: AvIssue, day: string): '' | '✓' | '✗' => {
+    if (day === issue.reportedOn) return '✗';
+    const mark = explicit(issue, day);
+    if (mark) return mark === 'ok' ? '✓' : '✗';
+    return avIssueMark(issue, day, index);
+  };
+  // Ô đang ✓ theo Other Division coi như đã ✓: bấm là sang ✗, bấm tiếp về lại ✓ theo Other.
+  const pressIssueCell = (issue: AvIssue, day: string) => {
+    const current = explicit(issue, day) ?? (clear.has(day) ? 'ok' : null);
+    const next = nextTick(current);
+    queue.set(issue.id, day, next === 'ok' && clear.has(day) ? null : next);
+  };
   const issueCell = (issue: AvIssue, divisionName: string): IncidentCell => ({
     form: '0208',
     lineId: null,
@@ -277,13 +297,42 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                       </td>
                     ) : null}
                     {days.map((d) => {
-                      const mark = avIssueMark(issue, d.day, resultDays);
-                      const state = mark === '✗' ? (issue.incident ? 'fail-linked' : 'fail') : mark === '✓' ? 'ok' : '';
+                      const mark = shownMark(issue, d.day);
+                      const reported = d.day === issue.reportedOn;
+                      const future = d.day > data.today;
+                      const state =
+                        mark === '✗' ? (reported && issue.incident ? 'fail-linked' : 'fail') : mark === '✓' ? 'ok' : missed.has(d.day) ? 'missed' : '';
+                      const label = t('iso.av.issueCell', {
+                        name: issue.computerName,
+                        day: shortDay(d.day),
+                        state: reported
+                          ? t('iso.av.cellReported')
+                          : mark === '✗'
+                            ? t('iso.av.cellFail')
+                            : mark === '✓'
+                              ? explicit(issue, d.day)
+                                ? t('iso.av.dayClear')
+                                : t('iso.av.cellOtherOk')
+                              : t('iso.av.dayBlank'),
+                      });
                       return (
-                        <td key={d.day} className="sheet-cell" data-future={d.day > data.today ? '' : undefined}>
-                          <span className="sheet-mark" data-state={state || undefined}>
-                            {mark}
-                          </span>
+                        <td key={d.day} className="sheet-cell" data-future={future ? '' : undefined} data-today={d.day === data.today ? '' : undefined}>
+                          {editable && !future && !reported ? (
+                            <button
+                              type="button"
+                              className="sheet-mark"
+                              data-state={state || undefined}
+                              aria-label={label}
+                              title={label}
+                              onClick={() => pressIssueCell(issue, d.day)}
+                            >
+                              {mark}
+                            </button>
+                          ) : (
+                            <span className="sheet-mark" data-state={state || undefined} title={future ? undefined : label}>
+                              {mark}
+                            </span>
+                          )}
                         </td>
                       );
                     })}
@@ -296,14 +345,13 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                   {t(editable ? 'iso.av.otherHintEdit' : 'iso.av.otherHint')}
                 </td>
                 {days.map((d) => {
-                  const mark = avOtherMark(d.day, resultDays);
+                  const mark = avOtherMark(d.day, index);
                   const future = d.day > data.today;
-                  // Ngày đã có dòng issue thì ✓ này là suy ra, không bấm bỏ được — bỏ thì xoá dòng issue.
-                  const clickable = editable && !future && !issueDays.has(d.day);
+                  const clickable = editable && !future;
                   const state = mark ? 'ok' : missed.has(d.day) ? 'missed' : undefined;
                   const label = t('iso.av.otherCell', {
                     day: shortDay(d.day),
-                    state: issueDays.has(d.day) ? t('iso.av.dayHasIssue') : clear.has(d.day) ? t('iso.av.dayClear') : t('iso.av.dayBlank'),
+                    state: clear.has(d.day) ? t('iso.av.dayClear') : t('iso.av.dayBlank'),
                   });
                   return (
                     <td key={d.day} className="sheet-cell" data-future={future ? '' : undefined} data-today={d.day === data.today ? '' : undefined}>

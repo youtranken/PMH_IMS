@@ -1,8 +1,8 @@
 import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/ui/brand-logo';
-import { avIssueMark, avOtherMark, avResultDays, daysOf, groupBackupRows, groupByDivision, pad2, tickIndex, toVnParts } from './iso-rules';
-import type { AvIssue, BackupRow, IncidentContent, IncidentKind, IncidentSeverity, IncidentStatus, TickCell } from './iso-types';
+import { avIssueMark, avMarkIndex, avOtherMark, daysOf, groupBackupRows, groupByDivision, pad2, tickIndex, toVnParts } from './iso-rules';
+import type { AvIssue, AvMark, BackupRow, IncidentContent, IncidentKind, IncidentSeverity, IncidentStatus, TickCell } from './iso-types';
 
 /**
  * Bản in tái tạo mẫu giấy SP-IT02 (UX-DR4, Q-28): giữ nguyên cột, bố cục, ô ký. Chữ trên giấy là
@@ -145,16 +145,18 @@ export function AntivirusPaper({
   systemName,
   issues,
   clearDays,
+  marks,
 }: {
   year: number;
   month: number;
   systemName: string;
   issues: AvIssue[];
   clearDays: string[];
+  marks: AvMark[];
 }) {
   const days = daysOf(year, month);
   const groups = groupByDivision(issues);
-  const results = avResultDays(clearDays, issues);
+  const results = avMarkIndex(clearDays, marks);
   const fmt = (day: string | null) => (day ? `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}` : '');
   return (
     <section className="paper" data-page="a4l" aria-label="SP-IT0208">

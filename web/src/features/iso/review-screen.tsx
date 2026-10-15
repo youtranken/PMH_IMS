@@ -75,7 +75,7 @@ function ReviewBody({ me, form, month, year, mon }: { me: Me; form: IsoFormType;
       {form === '0203' && backup.data ? (
         <BackupPaper year={year} month={mon} systemName={backup.data.systemName} rows={backup.data.rows} ticks={backup.data.ticks} />
       ) : antivirus.data ? (
-        <AntivirusPaper year={year} month={mon} systemName={antivirus.data.systemName} issues={antivirus.data.issues} clearDays={antivirus.data.clearDays} />
+        <AntivirusPaper year={year} month={mon} systemName={antivirus.data.systemName} issues={antivirus.data.issues} clearDays={antivirus.data.clearDays} marks={antivirus.data.marks} />
       ) : null}
     </div>
   );

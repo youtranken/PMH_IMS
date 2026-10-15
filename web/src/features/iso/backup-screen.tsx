@@ -124,7 +124,7 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
   };
   const cellOf = (lineId: string, day: string): IncidentCell => ({ form: '0203', lineId, day, issueId: null, label: rowName(lineId) });
 
-  const queue = useTickQueue(me.csrfToken, monthKey(data.year, data.month), {
+  const queue = useTickQueue(me.csrfToken, '0203', monthKey(data.year, data.month), {
     onSaved: (lineId, day, result) => {
       if (result !== 'fail') return;
       toast({

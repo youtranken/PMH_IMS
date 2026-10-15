@@ -221,7 +221,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(page.getByRole('button', { name: `${name} ngày 3: Đạt` })).toBeVisible();
   });
 
-  test('0208: ngày không có issue, ghi issue kèm bộ phận mới tại chỗ, lưới có dòng bộ phận và Other Division', async ({ page }) => {
+  test('0208: Other Division tick tay, ghi issue kèm bộ phận mới tại chỗ, bấm từng ô dòng máy', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     await page.goto('/iso/antivirus?month=2021-03');
@@ -249,8 +249,24 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(grid.getByRole('cell', { name: `E2E Division ${stamp}` })).toBeVisible();
     await expect(grid.getByRole('cell', { name: 'Other Division', exact: true })).toBeVisible();
     await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('button', { name: 'Lập 0206 ›' })).toBeVisible();
-    // Ngày đã có dòng issue: ✓ của Other Division là suy ra, không bấm bỏ được.
-    await expect(grid.getByRole('button', { name: /Other Division ngày 02\/03/ })).toHaveCount(0);
+    // Ô ngày phát hiện luôn ✗, không bấm; ô chưa bấm của ngày đã ✓ Other Division hiện ✓ theo.
+    const pc = `E2E-PC-${stamp}`;
+    await expect(grid.getByRole('button', { name: new RegExp(`^${pc} ngày 02/03`) })).toHaveCount(0);
+    await expect(grid.getByRole('button', { name: `${pc} ngày 01/03: không có issue (theo Other Division)` })).toBeVisible();
+    // Other Division vẫn tick tay được ở ngày có issue (Q-28, bấm từng dòng).
+    await expect(grid.getByRole('button', { name: 'Other Division ngày 02/03: chưa có kết quả' })).toBeVisible();
+    // Tháng chỉ một dòng máy: ✓ ở dòng đó kéo Other Division ngày đó ✓ theo; bấm tiếp là ✗.
+    await writeOk(page, () => grid.getByRole('button', { name: `${pc} ngày 03/03: chưa có kết quả` }).click(), /antivirus\/marks$/);
+    await expect(grid.getByRole('button', { name: `${pc} ngày 03/03: không có issue` })).toBeVisible();
+    await expect(grid.getByRole('button', { name: 'Other Division ngày 03/03: không có issue' })).toBeVisible();
+    await writeOk(page, () => grid.getByRole('button', { name: `${pc} ngày 03/03: không có issue` }).click(), /antivirus\/marks$/);
+    await expect(grid.getByRole('button', { name: `${pc} ngày 03/03: có issue` })).toBeVisible();
+    // Đường hỏng: API không cho bấm ô ngày phát hiện.
+    const month = (await (await api(page, 'GET', '/api/v1/iso/antivirus/2021-03')).json()) as { issues: { id: string; computerName: string }[] };
+    const id = month.issues.find((i) => i.computerName === pc)?.id;
+    const reported = await api(page, 'PUT', '/api/v1/iso/antivirus/marks', { issueId: id, day: '2021-03-02', result: 'ok' });
+    expect(reported.status()).toBe(400);
+    expect(((await reported.json()) as { code: string }).code).toBe('ISO_AV_MARK_REPORTED');
   });
 
   test('gửi chốt: còn ô trống thì khoá nút và API từ chối; đủ thì gửi → Chờ duyệt → SA tự duyệt → khoá, bản in A3', async ({ page }) => {

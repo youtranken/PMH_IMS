@@ -299,7 +299,7 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
   describe('0208', () => {
     let divisionId: string;
 
-    it('ngày đã có dòng issue không đánh "không có issue" được', async () => {
+    it('ngày đã có dòng issue vẫn tick Other Division được (Q-28, bấm từng dòng)', async () => {
       await antivirus.createIssue(people.owner, {
         reportedOn: '2026-09-03',
         divisionId: null,
@@ -308,8 +308,8 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
         description: 'Trojan',
         resolvedOn: null,
       }).then((i) => (divisionId = i.divisionId));
-      await expect(antivirus.markClear(people.owner, '2026-09-03')).rejects.toMatchObject({ response: { code: 'ISO_DAY_HAS_ISSUE' } });
-      expect(Number((await scratch.pool.query(`SELECT count(*) FROM iso_av_clear_day WHERE day = '2026-09-03'`)).rows[0].count)).toBe(0);
+      await antivirus.markClear(people.owner, '2026-09-03');
+      expect(Number((await scratch.pool.query(`SELECT count(*) FROM iso_av_clear_day WHERE day = '2026-09-03'`)).rows[0].count)).toBe(1);
     });
 
     /**

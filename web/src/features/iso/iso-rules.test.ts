@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   avIssueMark,
+  avMarkIndex,
   avOtherMark,
-  avResultDays,
   backupCellState,
   daysOf,
   fromVnParts,
@@ -106,14 +106,23 @@ describe('iso-rules (web)', () => {
     expect(nextTick('fail')).toBeNull();
   });
 
-  it('0208: ✗ đúng ngày phát hiện, ✓ ngày đã có kết quả, Other Division ✓ ngày có kết quả', () => {
-    const days = avResultDays(['2026-11-01'], [{ reportedOn: '2026-11-02' }]);
-    const issue = { reportedOn: '2026-11-02' };
-    expect(avIssueMark(issue, '2026-11-02', days)).toBe('✗');
-    expect(avIssueMark(issue, '2026-11-01', days)).toBe('✓');
-    expect(avIssueMark(issue, '2026-11-03', days)).toBe('');
-    expect(avOtherMark('2026-11-02', days)).toBe('✓');
-    expect(avOtherMark('2026-11-03', days)).toBe('');
+  it('0208: ngày phát hiện luôn ✗, dấu bấm tay thắng, ô chưa bấm theo Other Division', () => {
+    const index = avMarkIndex(
+      ['2026-11-01', '2026-11-02'],
+      [
+        { issueId: 'i1', day: '2026-11-01', result: 'fail' },
+        { issueId: 'i1', day: '2026-11-03', result: 'ok' },
+        { issueId: 'i1', day: '2026-11-02', result: 'ok' },
+      ],
+    );
+    const issue = { id: 'i1', reportedOn: '2026-11-02' };
+    expect(avIssueMark(issue, '2026-11-02', index)).toBe('✗');
+    expect(avIssueMark(issue, '2026-11-01', index)).toBe('✗');
+    expect(avIssueMark(issue, '2026-11-03', index)).toBe('✓');
+    expect(avIssueMark(issue, '2026-11-04', index)).toBe('');
+    expect(avIssueMark({ id: 'i2', reportedOn: '2026-11-05' }, '2026-11-01', index)).toBe('✓');
+    expect(avOtherMark('2026-11-02', index)).toBe('✓');
+    expect(avOtherMark('2026-11-03', index)).toBe('');
   });
 
   it('gom issue theo bộ phận, chỉ bộ phận có issue', () => {

@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { asc, between, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, between, eq, inArray, notBetween, or } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
 import { viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -12,6 +12,7 @@ import { IsoClock } from './iso-clock';
 import {
   isoAvClearDayTable,
   isoAvIssueTable,
+  isoAvMarkTable,
   isoDivisionTable,
   isoIncidentCellTable,
   isoIncidentTable,
@@ -31,6 +32,13 @@ export interface AvIssue {
   incident: { id: string; code: string } | null;
 }
 
+/** Dấu bấm tay của một dòng máy ở một ngày; ô không có dấu hiện theo Other Division. */
+export interface AvMark {
+  issueId: string;
+  day: string;
+  result: 'ok' | 'fail';
+}
+
 export interface AntivirusGrid {
   formType: '0208';
   year: number;
@@ -43,6 +51,7 @@ export interface AntivirusGrid {
   systemName: string;
   issues: AvIssue[];
   clearDays: string[];
+  marks: AvMark[];
   summary: AntivirusSummary;
 }
 
@@ -57,9 +66,10 @@ export interface IssueInput {
 }
 
 /**
- * Lưới 0208: mỗi ngày phải có kết quả — "không có issue", hoặc ít nhất một dòng issue
- * (một máy × một ngày phát hiện). Dòng gom theo bộ phận; chỉ bộ phận có issue trong tháng mới
- * hiện, nên cột Division khác nhau giữa các tháng.
+ * Lưới 0208: mỗi dòng issue là một máy × một ngày phát hiện, gom theo bộ phận; chỉ bộ phận có issue
+ * trong tháng mới hiện, nên cột Division khác nhau giữa các tháng. Dòng cuối Other Division tick tay
+ * mỗi ngày (bảng `iso_av_clear_day`); dòng máy bấm từng ô (`iso_av_mark`), ô chưa bấm hiện theo
+ * Other Division của ngày đó (Q-28, bấm từng dòng).
  */
 @Injectable()
 export class IsoAntivirusService {
@@ -78,7 +88,7 @@ export class IsoAntivirusService {
     await this.periods.assertAccessible(year, month, today);
     const period = await this.periods.find('0208', year, month);
     const state = period?.state ?? 'open';
-    const { issues, clearDays } = await this.monthData(year, month);
+    const { issues, clearDays, marks } = await this.monthData(year, month);
     // Kỳ đã gửi chốt in tên bộ phận như lúc chốt (AR-8), không theo tên đã đổi về sau.
     const frozen = state !== 'open' ? period?.snapshot?.divisions : undefined;
     if (frozen) {
@@ -96,6 +106,7 @@ export class IsoAntivirusService {
       systemName: await this.config.getString('isoAntivirusSystem'),
       issues,
       clearDays,
+      marks,
       summary: summarize(issues, clearDays, year, month, today),
     };
   }
@@ -114,7 +125,7 @@ export class IsoAntivirusService {
       .where(between(isoAvIssueTable.reportedOn, firstDayOf(year, month), lastDayOf(year, month)));
   }
 
-  private async monthData(year: number, month: number): Promise<{ issues: AvIssue[]; clearDays: string[] }> {
+  private async monthData(year: number, month: number): Promise<{ issues: AvIssue[]; clearDays: string[]; marks: AvMark[] }> {
     const range = between(isoAvIssueTable.reportedOn, firstDayOf(year, month), lastDayOf(year, month));
     const rows = await this.db
       .select({
@@ -139,36 +150,90 @@ export class IsoAntivirusService {
       .select({ day: isoAvClearDayTable.day })
       .from(isoAvClearDayTable)
       .where(between(isoAvClearDayTable.day, firstDayOf(year, month), lastDayOf(year, month)));
+    const marks = await this.db
+      .select({ issueId: isoAvMarkTable.issueId, day: isoAvMarkTable.day, result: isoAvMarkTable.result })
+      .from(isoAvMarkTable)
+      .innerJoin(isoAvIssueTable, eq(isoAvIssueTable.id, isoAvMarkTable.issueId))
+      .where(range)
+      .orderBy(asc(isoAvMarkTable.day));
     return {
       issues: rows.map(({ incidentId, incidentCode, ...r }) => ({
         ...r,
         incident: incidentId && incidentCode ? { id: incidentId, code: incidentCode } : null,
       })),
       clearDays: clear.map((c) => c.day).sort(),
+      marks,
     };
   }
 
-  /** "✓ Ngày … không có issue". */
+  /** ✓ ở dòng Other Division: các bộ phận không có dòng issue đều sạch ngày đó. */
   async markClear(actor: IsoActor, day: string): Promise<void> {
     const { year, month } = await this.guardDay(actor, day);
     await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', year, month);
-      await lockDayWithin(tx, day);
-      const [issue] = await tx.select({ id: isoAvIssueTable.id }).from(isoAvIssueTable).where(eq(isoAvIssueTable.reportedOn, day)).limit(1);
-      if (issue) {
-        throw new ConflictException({
-          code: 'ISO_DAY_HAS_ISSUE',
-          message: `Ngày ${viDate(day)} đã có dòng issue — không đánh "không có issue" được. Tải lại để xem.`,
-        });
+      await this.clearDayWithin(tx, actor, day);
+    });
+  }
+
+  private async clearDayWithin(tx: Tx, actor: IsoActor, day: string): Promise<boolean> {
+    const inserted = await tx.insert(isoAvClearDayTable).values({ day, markedBy: actor.email }).onConflictDoNothing().returning();
+    if (inserted.length === 0) return false;
+    await this.audit.appendWithin(tx, {
+      actor: actor.email,
+      action: 'iso_antivirus.day_cleared',
+      objectType: 'iso_period',
+      detail: { formType: '0208', day },
+    });
+    return true;
+  }
+
+  /**
+   * Bấm ô của một dòng máy. Ô đúng ngày phát hiện luôn ✗ nên không bấm. Tháng chỉ có một dòng máy
+   * thì ✓ ở dòng đó cũng là ✓ cho Other Division ngày ấy — không còn bộ phận nào khác để kiểm.
+   */
+  async setMark(actor: IsoActor, input: { issueId: string; day: string; result: 'ok' | 'fail' | null }): Promise<void> {
+    const issue = await this.issue(input.issueId);
+    const { year, month } = await this.guardDay(actor, input.day);
+    const own = monthOf(issue.reportedOn);
+    if (own.year !== year || own.month !== month) {
+      throw new BadRequestException({ code: 'ISO_AV_MARK_MONTH', message: 'Dòng issue chỉ có ô trong tháng của ngày phát hiện.' });
+    }
+    if (input.day === issue.reportedOn) {
+      throw new BadRequestException({ code: 'ISO_AV_MARK_REPORTED', message: 'Ô ngày phát hiện luôn là ✗ — đổi Reported Date ở dòng issue nếu ghi nhầm.' });
+    }
+    await this.db.transaction(async (tx) => {
+      await this.periods.assertOpenWithin(tx, '0208', year, month);
+      const current = await this.lockIssueWithin(tx, input.issueId);
+      if (current.reportedOn !== issue.reportedOn) throw issueChanged();
+      const where = and(eq(isoAvMarkTable.issueId, input.issueId), eq(isoAvMarkTable.day, input.day));
+      const [before] = await tx.select({ result: isoAvMarkTable.result }).from(isoAvMarkTable).where(where).for('update');
+      if ((before?.result ?? null) === input.result) return;
+      if (input.result === null) {
+        await tx.delete(isoAvMarkTable).where(where);
+      } else {
+        await tx
+          .insert(isoAvMarkTable)
+          .values({ issueId: input.issueId, day: input.day, result: input.result, updatedBy: actor.email })
+          .onConflictDoUpdate({
+            target: [isoAvMarkTable.issueId, isoAvMarkTable.day],
+            set: { result: input.result, updatedBy: actor.email, updatedAt: new Date() },
+          });
       }
-      const inserted = await tx.insert(isoAvClearDayTable).values({ day, markedBy: actor.email }).onConflictDoNothing().returning();
-      if (inserted.length === 0) return;
       await this.audit.appendWithin(tx, {
         actor: actor.email,
-        action: 'iso_antivirus.day_cleared',
-        objectType: 'iso_period',
-        detail: { formType: '0208', day },
+        action: 'iso_antivirus.mark_set',
+        objectType: 'iso_av_issue',
+        objectId: input.issueId,
+        detail: { day: input.day, computerName: issue.computerName, from: before?.result ?? null, to: input.result },
       });
+      if (input.result === 'ok') {
+        const rows = await tx
+          .select({ id: isoAvIssueTable.id })
+          .from(isoAvIssueTable)
+          .where(between(isoAvIssueTable.reportedOn, firstDayOf(year, month), lastDayOf(year, month)))
+          .limit(2);
+        if (rows.length === 1) await this.clearDayWithin(tx, actor, input.day);
+      }
     });
   }
 
@@ -194,7 +259,6 @@ export class IsoAntivirusService {
     const handledBy = await this.access.nameOf(actor);
     const id = await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', year, month);
-      await lockDayWithin(tx, input.reportedOn);
       const divisionId = await this.resolveDivision(tx, actor, input);
       const [row] = await tx
         .insert(isoAvIssueTable)
@@ -208,8 +272,6 @@ export class IsoAntivirusService {
           createdBy: actor.email,
         })
         .returning();
-      // Ngày đã có một dòng issue thì không còn là "không có issue".
-      await tx.delete(isoAvClearDayTable).where(eq(isoAvClearDayTable.day, input.reportedOn));
       await this.audit.appendWithin(tx, {
         actor: actor.email,
         action: 'iso_antivirus.issue_created',
@@ -230,7 +292,6 @@ export class IsoAntivirusService {
     await this.db.transaction(async (tx) => {
       await this.periods.assertOpenWithin(tx, '0208', from.year, from.month);
       if (to.year !== from.year || to.month !== from.month) await this.periods.assertOpenWithin(tx, '0208', to.year, to.month);
-      await lockDayWithin(tx, input.reportedOn);
       const current = await this.lockIssueWithin(tx, id);
       if (current.reportedOn !== before.reportedOn) throw issueChanged();
       if (current.linkedCode && input.reportedOn !== before.reportedOn) {
@@ -251,7 +312,16 @@ export class IsoAntivirusService {
           updatedAt: new Date(),
         })
         .where(eq(isoAvIssueTable.id, id));
-      await tx.delete(isoAvClearDayTable).where(eq(isoAvClearDayTable.day, input.reportedOn));
+      // Dấu bấm tay ở đúng ngày phát hiện mới nhường cho ✗ của ngày đó; dấu ngoài tháng mới không
+      // còn ô nào để hiện.
+      await tx
+        .delete(isoAvMarkTable)
+        .where(
+          and(
+            eq(isoAvMarkTable.issueId, id),
+            or(eq(isoAvMarkTable.day, input.reportedOn), notBetween(isoAvMarkTable.day, firstDayOf(to.year, to.month), lastDayOf(to.year, to.month))),
+          ),
+        );
       await this.audit.appendWithin(tx, {
         actor: actor.email,
         action: 'iso_antivirus.issue_updated',
@@ -366,15 +436,6 @@ export class IsoAntivirusService {
     if (!division) throw new BadRequestException({ code: 'ISO_DIVISION_NOT_FOUND', message: 'Bộ phận được chọn không còn. Tải lại rồi chọn lại.' });
     return division.id;
   }
-}
-
-/**
- * Một ngày 0208 là "không có issue" HOẶC có dòng issue, không cả hai. Đánh "không có issue" và ghi
- * issue cùng ngày chạy song song thì mỗi bên đều thấy bên kia chưa có — khoá theo ngày cho hai lượt
- * đó đi lần lượt.
- */
-async function lockDayWithin(tx: Tx, day: string): Promise<void> {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`iso-av-day:${day}`}, 0))`);
 }
 
 function issueChanged() {

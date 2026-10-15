@@ -82,6 +82,18 @@ export const isoAvIssueTable = pgTable('iso_av_issue', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const isoAvMarkTable = pgTable(
+  'iso_av_mark',
+  {
+    issueId: uuid('issue_id').notNull(),
+    day: date('day').notNull(),
+    result: text('result').$type<'ok' | 'fail'>().notNull(),
+    updatedBy: text('updated_by').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.issueId, t.day] })],
+);
+
 export const isoIncidentCounterTable = pgTable('iso_incident_counter', {
   year: integer('year').primaryKey(),
   lastNo: integer('last_no').notNull(),

@@ -340,10 +340,59 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(edited.handledBy).toBe('E2E ISO backup');
       await expect(antivirus.markClear(people.other, '2026-11-03')).rejects.toMatchObject({ response: { code: 'ISO_NOT_OWNER' } });
       const grid = await antivirus.grid(people.owner, 2026, 11);
-      expect(grid.summary.missedDays[0]).toBe('2026-11-03');
+      // Ngày 02 có dòng issue nhưng Other Division chưa tick nên vẫn là ngày bỏ sót.
+      expect(grid.summary.missedDays.slice(0, 2)).toEqual(['2026-11-02', '2026-11-03']);
       expect(grid.summary.unlinkedIssues).toEqual([issue.id]);
       await incidents.create(people.owner, { ...incident({ kind: 'other' }), cells: [{ form: '0208', issueId: issue.id }] });
       await expect(antivirus.deleteIssue(people.owner, issue.id)).rejects.toMatchObject({ response: { code: 'ISO_CELL_LINKED' } });
+    });
+
+    it('bấm từng dòng máy: một dòng thì ✓ kéo Other Division theo, hai dòng thì Other tick tay', async () => {
+      let divisionId: string | null = null;
+      const issueOf = async (computerName: string, reportedOn: string) => {
+        const newDivisionName = divisionId ? null : 'E2E Mark Division';
+        const row = await antivirus.createIssue(people.owner, { reportedOn, divisionId, newDivisionName, computerName, description: 'Virus', resolvedOn: null });
+        divisionId = row.divisionId;
+        return row;
+      };
+      const a = await issueOf('E2E-PC-M1', '2026-10-13');
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-07', result: 'ok' });
+      let grid = await antivirus.grid(people.owner, 2026, 10);
+      expect(grid.clearDays).toContain('2026-10-07');
+      expect(grid.marks).toEqual([{ issueId: a.id, day: '2026-10-07', result: 'ok' }]);
+
+      await expect(antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-13', result: 'ok' })).rejects.toMatchObject({
+        response: { code: 'ISO_AV_MARK_REPORTED' },
+      });
+      await expect(antivirus.setMark(people.owner, { issueId: a.id, day: '2026-11-01', result: 'ok' })).rejects.toMatchObject({
+        response: { code: 'ISO_AV_MARK_MONTH' },
+      });
+      await expect(antivirus.setMark(people.other, { issueId: a.id, day: '2026-10-06', result: 'ok' })).rejects.toMatchObject({
+        response: { code: 'ISO_NOT_OWNER' },
+      });
+
+      // Ngày có dòng issue vẫn tick Other Division được, và ghi issue không xoá dấu đó.
+      await antivirus.markClear(people.owner, '2026-10-13');
+      await antivirus.markClear(people.owner, '2026-10-08');
+      const b = await issueOf('E2E-PC-M2', '2026-10-08');
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-10', result: 'ok' });
+      await antivirus.setMark(people.owner, { issueId: b.id, day: '2026-10-09', result: 'fail' });
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-07', result: null });
+      grid = await antivirus.grid(people.owner, 2026, 10);
+      expect(grid.clearDays).toEqual(['2026-10-07', '2026-10-08', '2026-10-13']);
+      expect(grid.marks).toEqual(
+        expect.arrayContaining([
+          { issueId: a.id, day: '2026-10-10', result: 'ok' },
+          { issueId: b.id, day: '2026-10-09', result: 'fail' },
+        ]),
+      );
+      expect(grid.marks).toHaveLength(2);
+      // Ngày chỉ có kết quả khi Other Division đã ✓, kể cả ngày có dòng máy được bấm.
+      expect(grid.summary.missedDays).toContain('2026-10-10');
+      expect(grid.summary.missedDays).not.toContain('2026-10-13');
+
+      await antivirus.deleteIssue(people.owner, b.id);
+      expect(await count(`SELECT count(*) FROM iso_av_mark WHERE issue_id = $1`, [b.id])).toBe(0);
     });
   });
 

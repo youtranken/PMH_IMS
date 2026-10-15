@@ -129,8 +129,9 @@ describe('iso-rules · tóm tắt 0208', () => {
         { id: 'i2', reportedOn: '2026-11-04', linked: false },
       ],
     });
-    expect(s.pendingDays).toEqual(['2026-11-03']);
-    expect(s.missedDays).toEqual(['2026-11-03']);
+    // Ngày có dòng issue vẫn phải tick Other Division mới là có kết quả (Q-28, bấm từng dòng).
+    expect(s.pendingDays).toEqual(['2026-11-02', '2026-11-03', '2026-11-04']);
+    expect(s.missedDays).toEqual(['2026-11-02', '2026-11-03']);
     expect(s.unlinkedIssues).toEqual(['i2']);
   });
 

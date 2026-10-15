@@ -152,7 +152,7 @@ export function backupSummary(input: {
 }
 
 export interface AntivirusSummary {
-  /** Ngày đã qua hoặc hôm nay chưa có kết quả — mỗi ngày một nút "không có issue". */
+  /** Ngày đã qua hoặc hôm nay chưa tick Other Division. */
   pendingDays: string[];
   /** Phần của `pendingDays` đã qua (không tính hôm nay). */
   missedDays: string[];
@@ -166,10 +166,9 @@ export function antivirusSummary(input: {
   clearDays: Set<string>;
   issues: { id: string; reportedOn: string; linked: boolean }[];
 }): AntivirusSummary {
-  const issueDays = new Set(input.issues.map((i) => i.reportedOn));
-  const pendingDays = daysOfMonth(input.year, input.month).filter(
-    (day) => day <= input.today && !input.clearDays.has(day) && !issueDays.has(day),
-  );
+  // Other Division là dòng tick tay mỗi ngày, kể cả ngày có dòng issue (Q-28, bấm từng dòng): ngày
+  // chưa tick nó thì các dòng máy chưa bấm cũng còn trống.
+  const pendingDays = daysOfMonth(input.year, input.month).filter((day) => day <= input.today && !input.clearDays.has(day));
   return {
     pendingDays,
     missedDays: pendingDays.filter((day) => day < input.today),

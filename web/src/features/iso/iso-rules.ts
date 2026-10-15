@@ -1,4 +1,4 @@
-import type { AvIssue, BackupRow, TickCell, TickResult } from './iso-types';
+import type { AvIssue, AvMark, BackupRow, TickCell, TickResult } from './iso-types';
 
 /**
  * Luật THUẦN phía web của phiếu ISO (Q-28). Server là trọng tài cho mọi lượt ghi; ở đây chỉ dựng
@@ -123,23 +123,34 @@ export function tickIndex(ticks: TickCell[]): Map<string, TickCell> {
   return new Map(ticks.map((t) => [`${t.lineId}|${t.day}`, t]));
 }
 
-/** Ngày 0208 đã có kết quả: "không có issue" hoặc ít nhất một dòng issue. */
-export function avResultDays(clearDays: string[], issues: Pick<AvIssue, 'reportedOn'>[]): Set<string> {
-  return new Set([...clearDays, ...issues.map((i) => i.reportedOn)]);
+export interface AvMarkIndex {
+  clear: ReadonlySet<string>;
+  marks: ReadonlyMap<string, TickResult>;
+}
+
+export function avMarkIndex(clearDays: string[], marks: AvMark[]): AvMarkIndex {
+  return { clear: new Set(clearDays), marks: new Map(marks.map((m) => [`${m.issueId}|${m.day}`, m.result])) };
+}
+
+/** Dấu bấm tay của một ô dòng máy; `null` = chưa bấm. */
+export function avMarkOf(issue: Pick<AvIssue, 'id'>, day: string, index: AvMarkIndex): TickResult | null {
+  return index.marks.get(`${issue.id}|${day}`) ?? null;
 }
 
 /**
- * Ô của một dòng issue: ✗ đúng ngày phát hiện, ✓ ở mọi ngày khác đã có kết quả (Q-28 — máy đó
- * không bị issue ngày ấy). Ngày chưa có kết quả để trống.
+ * Ô của một dòng máy (Q-28, bấm từng dòng): ngày phát hiện luôn ✗; ô đã bấm theo dấu bấm; ô chưa
+ * bấm ✓ khi Other Division ngày đó đã ✓ (máy đó không có issue mới), còn lại để trống.
  */
-export function avIssueMark(issue: Pick<AvIssue, 'reportedOn'>, day: string, resultDays: Set<string>): '' | '✓' | '✗' {
+export function avIssueMark(issue: Pick<AvIssue, 'id' | 'reportedOn'>, day: string, index: AvMarkIndex): '' | '✓' | '✗' {
   if (day === issue.reportedOn) return '✗';
-  return resultDays.has(day) ? '✓' : '';
+  const mark = avMarkOf(issue, day, index);
+  if (mark) return mark === 'ok' ? '✓' : '✗';
+  return index.clear.has(day) ? '✓' : '';
 }
 
-/** Dòng "Other Division": ✓ ở mọi ngày đã có kết quả. */
-export function avOtherMark(day: string, resultDays: Set<string>): '' | '✓' {
-  return resultDays.has(day) ? '✓' : '';
+/** Dòng "Other Division": tick tay từng ngày. */
+export function avOtherMark(day: string, index: AvMarkIndex): '' | '✓' {
+  return index.clear.has(day) ? '✓' : '';
 }
 
 export interface DivisionGroup {
