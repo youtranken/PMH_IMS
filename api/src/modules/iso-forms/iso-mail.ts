@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { MailContentRegistry, type MailContent } from '../../common/mail-content.registry';
-import { viDate } from '../../common/today';
+import { isoDateInTz, viDate } from '../../common/today';
 import { UI_PATHS } from '../../common/ui-paths';
 import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { UsersApiService } from '../users/users.api';
@@ -213,7 +213,7 @@ export class IsoMailContent implements OnModuleInit {
       to,
       subject: `[IMS] Nhắc: ${reopen ? 'xin mở lại' : 'duyệt chốt'} kỳ ${label} vẫn chờ`,
       title: reopen ? 'Yêu cầu mở lại kỳ phiếu vẫn chờ duyệt' : 'Kỳ phiếu vẫn chờ duyệt chốt',
-      intro: `Gửi lúc ${viDate(request.createdAt.toISOString().slice(0, 10))}, chưa ai xử lý.`,
+      intro: `Gửi lúc ${viDate(isoDateInTz(await this.clock.timeZone(), request.createdAt))}, chưa ai xử lý.`,
       rows: [
         { label: 'Kỳ', value: label },
         { label: 'Người gửi', value: await this.nameOf(request.requester) },
@@ -234,7 +234,7 @@ export class IsoMailContent implements OnModuleInit {
       subject: `[IMS] Kỳ ${label} chưa có bản ký`,
       title: 'Kỳ phiếu đã chốt nhưng chưa có bản ký',
       intro: 'In bản phiếu, ký tay, scan rồi tải lên ở màn Kỳ phiếu. Kỳ chỉ Hoàn tất khi có bản ký của kỳ và của mọi 0206 thuộc kỳ.',
-      rows: [{ label: 'Duyệt chốt lúc', value: period.lockedAt ? viDate(period.lockedAt.toISOString().slice(0, 10)) : '—' }],
+      rows: [{ label: 'Duyệt chốt lúc', value: period.lockedAt ? viDate(isoDateInTz(await this.clock.timeZone(), period.lockedAt)) : '—' }],
       ctaLabel: 'Tải bản ký lên',
       ctaPath: UI_PATHS.isoPeriod(period.formType, monthKey(period.year, period.month)),
     };

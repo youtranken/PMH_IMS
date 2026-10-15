@@ -24,9 +24,10 @@ function setup(fetchImpl: (body: { result: string | null }) => Promise<Response>
   const onSaved = vi.fn();
   const onError = vi.fn();
   const client = new QueryClient();
+  const invalidate = vi.spyOn(client, 'invalidateQueries');
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   const hook = renderHook(() => useTickQueue('tok', form, '2026-10', { onSaved, onError }), { wrapper });
-  return { hook, bodies, urls, onSaved, onError };
+  return { hook, bodies, urls, onSaved, onError, invalidate };
 }
 
 const noContent = () => Promise.resolve(new Response(null, { status: 204 }));
@@ -71,5 +72,18 @@ describe('useTickQueue', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('I1', '2026-10-03', 'ok'));
     expect(urls).toEqual(['/api/v1/iso/antivirus/marks']);
     expect(bodies).toEqual([{ issueId: 'I1', day: '2026-10-03', result: 'ok' }]);
+  });
+
+  it('đánh liền nhiều ô: số việc trên menu chỉ làm mới một lần sau khi ngừng bấm', async () => {
+    const { hook, onSaved, invalidate } = setup(noContent);
+    act(() => {
+      hook.result.current.set('L1', '2026-10-01', 'ok');
+      hook.result.current.set('L1', '2026-10-02', 'ok');
+      hook.result.current.set('L1', '2026-10-03', 'ok');
+    });
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(3));
+    const todo = () => invalidate.mock.calls.filter(([f]) => JSON.stringify(f?.queryKey).includes('todo')).length;
+    expect(todo()).toBe(0);
+    await waitFor(() => expect(todo()).toBe(1), { timeout: 3000 });
   });
 });

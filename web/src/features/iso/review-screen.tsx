@@ -50,8 +50,8 @@ export function ReviewScreen({ me }: { me: Me }) {
           ariaLabel={t('iso.review.forms')}
           value={form}
           items={[
-            { key: '0203', label: '0203 · Backup' },
-            { key: '0208', label: '0208 · Antivirus' },
+            { key: '0203', label: t('iso.field.tab0203') },
+            { key: '0208', label: t('iso.field.tab0208') },
           ]}
           onChange={(key) => navigate(PATHS.isoReview(key, month), { replace: true })}
         />

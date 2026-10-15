@@ -110,11 +110,11 @@ function JobsTab({ me }: { me: Me }) {
           <table className="table table-stack">
             <thead>
               <tr>
-                <th>No</th>
-                <th>Name Job Backup</th>
+                <th>{t('iso.field.no')}</th>
+                <th>{t('iso.field.jobName')}</th>
                 <th>{t('iso.catalog.subObjects')}</th>
-                <th>NAS</th>
-                <th>Cloud</th>
+                <th>{t('iso.field.nas')}</th>
+                <th>{t('iso.field.cloud')}</th>
                 <th>{t('iso.catalog.trackedFrom')}</th>
                 <th>{t('iso.catalog.status')}</th>
                 <th className="col-center">{t('common.actions')}</th>
@@ -123,17 +123,17 @@ function JobsTab({ me }: { me: Me }) {
             <tbody>
               {list.map((job) => (
                 <tr key={job.id} className={job.stoppedOn ? 'muted' : undefined}>
-                  <td data-label="No">{job.no}</td>
-                  <td data-label="Name Job Backup">
+                  <td data-label={t('iso.field.no')}>{job.no}</td>
+                  <td data-label={t('iso.field.jobName')}>
                     <strong>{job.name}</strong>
                   </td>
                   <td data-label={t('iso.catalog.subObjects')}>
                     <LineStack lines={job.lines} text={(l) => l.label} />
                   </td>
-                  <td data-label="NAS">
+                  <td data-label={t('iso.field.nas')}>
                     <LineStack lines={job.lines} text={(l) => pointsText(l.pointsNas, l.storageNas)} />
                   </td>
-                  <td data-label="Cloud">
+                  <td data-label={t('iso.field.cloud')}>
                     <LineStack lines={job.lines} text={(l) => pointsText(l.pointsCloud, l.storageCloud)} />
                   </td>
                   <td data-label={t('iso.catalog.trackedFrom')}>{formatDate(job.trackedFrom)}</td>
@@ -286,7 +286,7 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
           </p>
         ) : null}
         <FormSection columns={3}>
-          <Field label="Name Job Backup" required htmlFor="iso-job-name" error={check.error('name')}>
+          <Field label={t('iso.field.jobName')} required htmlFor="iso-job-name" error={check.error('name')}>
             <input id="iso-job-name" className="inp mono" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <Field label={t('iso.catalog.no')} required htmlFor="iso-job-no" error={check.error('no')}>
@@ -303,10 +303,10 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
               <thead>
                 <tr>
                   <th>{t('iso.catalog.subObject')}</th>
-                  <th className="iso-lines-num">Points NAS</th>
-                  <th className="iso-lines-place">Storage location</th>
-                  <th className="iso-lines-num">Points Cloud</th>
-                  <th className="iso-lines-place">Storage location</th>
+                  <th className="iso-lines-num">{t('iso.field.pointsNas')}</th>
+                  <th className="iso-lines-place">{t('iso.field.storageLocation')}</th>
+                  <th className="iso-lines-num">{t('iso.field.pointsCloud')}</th>
+                  <th className="iso-lines-place">{t('iso.field.storageLocation')}</th>
                   <th className="iso-lines-x">
                     <span className="sr-only">{t('common.actions')}</span>
                   </th>

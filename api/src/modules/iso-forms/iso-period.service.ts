@@ -15,7 +15,7 @@ import { IsoBackupService } from './iso-backup.service';
 import { IsoClock } from './iso-clock';
 import { isoPeriodTable, type PeriodSnapshot } from './iso-forms.schema';
 import { IsoIncidentService, toSigned, type IncidentRecord, type SignedFile } from './iso-incident.service';
-import { IsoPeriodStore, PERIOD_STATE_LABEL, periodLabel, type PeriodRow } from './iso-period.store';
+import { IsoPeriodStore, lockJobListWithin, PERIOD_STATE_LABEL, periodLabel, type PeriodRow } from './iso-period.store';
 import {
   ISO_FORM_TYPES,
   closeChecklist,
@@ -297,6 +297,7 @@ export class IsoPeriodService implements OnModuleInit {
         });
       }
       // Kiểm lại ngay trong transaction đang giữ khoá kỳ: không ô nào đổi được giữa lúc kiểm và lúc khoá.
+      if (formType === '0203') await lockJobListWithin(tx, 'exclusive');
       const governed = (await this.incidents.ofMonth(year, month)).filter((i) => i.governing.includes(formType));
       const { checklist } = await this.checklistOf(formType, year, month, today, governed);
       if (!checklist.canSubmit) {
@@ -492,7 +493,14 @@ export class IsoPeriodService implements OnModuleInit {
     const unlinked = (await this.incidents.unlinked({})).filter((c) => writable.includes(c.form)).length;
     const locked = (await this.store.allLocked()).filter((r) => writable.includes(r.formType as IsoFormType));
     const files = await this.files.listForOwners('iso_period', locked.map((r) => r.id));
-    const awaitingSigned = locked.filter((r) => !files.some((f) => f.ownerId === r.id && toSigned(f, r.lockedAt).current)).length;
+    // Cùng luật "Hoàn tất" với màn Kỳ phiếu: bản ký của kỳ VÀ của mọi 0206 thuộc kỳ.
+    const years = [...new Set(locked.map((r) => r.year))];
+    const incidents = (await Promise.all(years.map((y) => this.incidents.ofYear(y)))).flat();
+    const awaitingSigned = locked.filter((r) => {
+      const signed = files.some((f) => f.ownerId === r.id && toSigned(f, r.lockedAt).current);
+      const governed = incidents.filter((i) => i.year === r.year && i.month === r.month && i.governing.includes(r.formType as IsoFormType));
+      return displayState('locked', signed, governed.every((i) => i.signedCurrent)) !== 'done';
+    }).length;
     return { count: pendingApprovals + unlinked + awaitingSigned, pendingApprovals, unlinkedFails: unlinked, awaitingSigned };
   }
 

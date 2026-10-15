@@ -181,4 +181,12 @@ describe('Phiếu ISO · mail nhắc (Story 8.7)', () => {
     await periods.approve(people.sa, '0203', 2026, 11, null);
     expect(await outboxCount('iso.period.event')).toBe(before);
   });
+
+  it('ngày trong thư theo giờ Việt Nam: duyệt lúc 06:30 sáng 01/12 không in thành 30/11', async () => {
+    const { rows } = await scratch.pool.query<{ id: string }>(
+      `UPDATE iso_period SET locked_at = '2026-11-30T23:30:00Z' WHERE form_type = '0203' AND year = 2026 AND month = 11 RETURNING id`,
+    );
+    const content = await build('iso.reminder', { kind: 'signed', periodId: rows[0].id });
+    expect(content?.rows).toEqual([{ label: 'Duyệt chốt lúc', value: '01/12/2026' }]);
+  });
 });

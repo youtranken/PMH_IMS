@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, between, desc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, between, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
 import { isoDateInTz, viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -24,6 +24,7 @@ import {
   incidentGoverning,
   incidentInReview,
   incidentLocked,
+  monthKey,
   monthOf,
   signedIsCurrent,
   validateIncident,
@@ -170,9 +171,12 @@ export class IsoIncidentService {
    */
   async unlinked(scope: { year?: number }): Promise<UnlinkedCell[]> {
     const today = await this.clock.today();
+    // Tháng trước `iso.first_month` không mở được nữa (ISO_PERIOD_BEFORE_START): ô ở đó không ai gắn
+    // được, để trong danh sách thì huy hiệu menu không bao giờ về 0.
+    const from = `${await this.periods.firstMonth()}-01`;
     const backupRange = scope.year
       ? between(isoBackupTickTable.day, `${scope.year}-01-01`, `${scope.year}-12-31`)
-      : lte(isoBackupTickTable.day, today);
+      : between(isoBackupTickTable.day, from, today);
     const fails = await this.db
       .select({
         lineId: isoBackupTickTable.lineId,
@@ -191,7 +195,7 @@ export class IsoIncidentService {
       .orderBy(asc(isoBackupTickTable.day), asc(isoBackupJobTable.no));
     const issueRange = scope.year
       ? between(isoAvIssueTable.reportedOn, `${scope.year}-01-01`, `${scope.year}-12-31`)
-      : lte(isoAvIssueTable.reportedOn, today);
+      : between(isoAvIssueTable.reportedOn, from, today);
     const issues = await this.db
       .select({
         id: isoAvIssueTable.id,
@@ -237,6 +241,7 @@ export class IsoIncidentService {
     await this.periods.assertAccessible(year, month, today);
     await this.assertCellWriters(actor, input.cells.map((c) => c.form));
     const id = await this.db.transaction(async (tx) => {
+      await this.lockInputPeriodsWithin(tx, input.cells, year, month);
       const cells = await this.resolveCellsWithin(tx, input.cells, year, month);
       await this.lockCellPeriodsWithin(tx, cells);
       for (const form of incidentGoverning(cells, year, month)) await this.periods.assertOpenWithin(tx, form, year, month);
@@ -285,6 +290,7 @@ export class IsoIncidentService {
       for (const form of before.governing) states.push((await this.periods.lockWithin(tx, form, before.year, before.month, 'share')).state);
       if (incidentLocked(before.status, states)) throw lockedIncident(before.code);
       if (incidentInReview(before.status, states)) throw inReviewIncident(before.code);
+      await this.lockInputPeriodsWithin(tx, input.cells, target.year, target.month);
       const wanted = await this.resolveCellsWithin(tx, input.cells, target.year, target.month, id);
       const keep = new Set(wanted.map(cellKey));
       const removed = before.cells.filter((c) => !keep.has(cellKey(c)));
@@ -429,6 +435,29 @@ export class IsoIncidentService {
       out.push(resolved);
     }
     return out;
+  }
+
+  /**
+   * Khoá FOR SHARE các kỳ mà ô gửi lên có thể chạm TRƯỚC khi khoá hàng ô: `setTick` / `setMark` khoá
+   * kỳ rồi mới khoá ô, nên khoá theo thứ tự ngược lại thì một lượt gửi chốt đang chờ FOR UPDATE kỳ có
+   * thể khép vòng chờ (40P01). Chỉ khoá, chưa kiểm trạng thái — phần kiểm vẫn ở chỗ cũ.
+   */
+  private async lockInputPeriodsWithin(tx: Tx, input: CellInput[], year: number, month: number): Promise<void> {
+    const keys = new Set<string>();
+    const issueIds = input.flatMap((c) => (c.form === '0208' ? [c.issueId] : []));
+    const issues = issueIds.length
+      ? await tx.select({ day: isoAvIssueTable.reportedOn }).from(isoAvIssueTable).where(inArray(isoAvIssueTable.id, issueIds))
+      : [];
+    for (const c of input) {
+      keys.add(`${c.form}|${monthKey(year, month)}`);
+      if (c.form === '0203') keys.add(`0203|${c.day.slice(0, 7)}`);
+    }
+    for (const i of issues) keys.add(`0208|${i.day.slice(0, 7)}`);
+    for (const key of [...keys].sort()) {
+      const [form, ym] = key.split('|');
+      const at = monthOf(`${ym}-01`);
+      await this.periods.lockWithin(tx, form as IsoFormType, at.year, at.month, 'share');
+    }
   }
 
   private async lockCellPeriodsWithin(tx: Tx, cells: IncidentCell[]): Promise<void> {

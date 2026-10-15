@@ -379,41 +379,41 @@ function IncidentForm({
           </section>
 
           <FormSection columns={3}>
-            <Field label="Type of Incident" required span={2} error={check.error('kind')}>
+            <Field label={t('iso.field.typeOfIncident')} required span={2} error={check.error('kind')}>
               <SegmentedRadio
-                label="Type of Incident"
+                label={t('iso.field.typeOfIncident')}
                 value={draft.kind}
                 options={INCIDENT_KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
                 onChange={(v) => setDraft((d) => ({ ...d, kind: v, backupDetails: v === 'backup' ? (d.backupDetails.length ? d.backupDetails : [blankDetail()]) : [] }))}
               />
             </Field>
-            <Field label="Severity Level" required error={check.error('severity')}>
+            <Field label={t('iso.field.severityLevel')} required error={check.error('severity')}>
               <SegmentedRadio
-                label="Severity Level"
+                label={t('iso.field.severityLevel')}
                 value={draft.severity}
                 options={INCIDENT_SEVERITIES.map((k) => ({ value: k, label: SEVERITY_LABEL[k] }))}
                 onChange={(v) => set('severity', v)}
               />
             </Field>
-            <Field label="Current Status" required span={2} error={check.error('status')}>
+            <Field label={t('iso.field.currentStatus')} required span={2} error={check.error('status')}>
               <SegmentedRadio
-                label="Current Status"
+                label={t('iso.field.currentStatus')}
                 value={draft.status}
                 options={INCIDENT_STATUSES.map((k) => ({ value: k, label: STATUS_LABEL[k] }))}
                 onChange={(v) => set('status', v)}
               />
             </Field>
-            <Field label="Date Report" required htmlFor="iso-inc-report">
+            <Field label={t('iso.field.dateReport')} required htmlFor="iso-inc-report">
               <DatePicker id="iso-inc-report" value={draft.reportedOn} max={today} onChange={(v) => set('reportedOn', v)} />
             </Field>
-            <Field label="Detection Time" required hint={period ? t('iso.incident.periodOf', { period }) : undefined} htmlFor="iso-inc-detect" error={check.error('detectedAt')}>
+            <Field label={t('iso.field.detectionTime')} required hint={period ? t('iso.incident.periodOf', { period }) : undefined} htmlFor="iso-inc-detect" error={check.error('detectedAt')}>
               <div className="iso-when">
                 <DatePicker id="iso-inc-detect" value={draft.detectDate} max={today} onChange={(v) => set('detectDate', v)} />
                 <input type="time" className="inp" aria-label={t('iso.incident.detectHour')} value={draft.detectTime} onChange={(e) => set('detectTime', e.target.value)} />
               </div>
             </Field>
             <Field
-              label="Resolution Time"
+              label={t('iso.field.resolutionTime')}
               required={!inProgress}
               hint={inProgress ? t('iso.incident.resolveEmpty') : undefined}
               htmlFor="iso-inc-resolve"
@@ -444,10 +444,10 @@ function IncidentForm({
           </FormSection>
 
           <FormSection columns={2}>
-            <Field label="Incident Description" required htmlFor="iso-inc-desc" error={check.error('description')}>
+            <Field label={t('iso.field.incidentDescription')} required htmlFor="iso-inc-desc" error={check.error('description')}>
               <textarea id="iso-inc-desc" className="inp" rows={4} value={draft.description} onChange={(e) => set('description', e.target.value)} />
             </Field>
-            <Field label="Corrective Action" required={!inProgress} htmlFor="iso-inc-action" error={check.error('correctiveAction')}>
+            <Field label={t('iso.field.correctiveAction')} required={!inProgress} htmlFor="iso-inc-action" error={check.error('correctiveAction')}>
               <textarea id="iso-inc-action" className="inp" rows={4} value={draft.correctiveAction} onChange={(e) => set('correctiveAction', e.target.value)} />
             </Field>
           </FormSection>
@@ -461,24 +461,24 @@ function IncidentForm({
               ) : null}
               {draft.backupDetails.map((row, i) => (
                 <fieldset key={i} className="iso-detail">
-                  <legend className="sr-only">{`Job ${i + 1}`}</legend>
+                  <legend className="sr-only">{t('iso.field.jobN', { n: i + 1 })}</legend>
                   <Select
                     value={row.jobName}
-                    ariaLabel={`Job Name ${i + 1}`}
-                    placeholder="Job Name"
+                    ariaLabel={t('iso.field.jobNameN', { n: i + 1 })}
+                    placeholder={t('iso.field.detailJobName')}
                     searchable
                     options={jobOptions(row.jobName)}
                     onChange={(v) => setDetail(i, { jobName: v })}
                   />
                   <SegmentedRadio
-                    label={`Type Backup ${i + 1}`}
+                    label={t('iso.field.typeBackupN', { n: i + 1 })}
                     value={row.typeBackup ?? ''}
                     options={BACKUP_TYPES.map((k) => ({ value: k, label: TYPE_BACKUP_LABEL[k] }))}
                     // Bấm lại lựa chọn đang bật thì bỏ chọn: mẫu giấy cho để trống cột này.
                     onChange={(v) => setDetail(i, { typeBackup: row.typeBackup === v ? null : v })}
                   />
                   <SegmentedRadio
-                    label={`Type Data ${i + 1}`}
+                    label={t('iso.field.typeDataN', { n: i + 1 })}
                     value={row.typeData ?? ''}
                     options={BACKUP_DATA_TYPES.map((k) => ({ value: k, label: TYPE_DATA_LABEL[k] }))}
                     onChange={(v) => setDetail(i, { typeData: row.typeData === v ? null : v })}
@@ -494,13 +494,13 @@ function IncidentForm({
                   <div className="iso-detail-more">
                     <Select
                       value={row.storage}
-                      ariaLabel={`Storage Location ${i + 1}`}
-                      placeholder="Storage Location"
+                      ariaLabel={t('iso.field.storageN', { n: i + 1 })}
+                      placeholder={t('iso.field.detailStorage')}
                       options={storageOptions(row.storage)}
                       onChange={(v) => setDetail(i, { storage: v })}
                     />
-                    <input className="inp" aria-label={`Error Message ${i + 1}`} placeholder="Error Message" value={row.errorMessage} onChange={(e) => setDetail(i, { errorMessage: e.target.value })} />
-                    <input className="inp" aria-label={`Issue Resolution ${i + 1}`} placeholder="Issue Resolution" value={row.resolution} onChange={(e) => setDetail(i, { resolution: e.target.value })} />
+                    <input className="inp" aria-label={t('iso.field.errorMessageN', { n: i + 1 })} placeholder={t('iso.field.errorMessage')} value={row.errorMessage} onChange={(e) => setDetail(i, { errorMessage: e.target.value })} />
+                    <input className="inp" aria-label={t('iso.field.issueResolutionN', { n: i + 1 })} placeholder={t('iso.field.issueResolution')} value={row.resolution} onChange={(e) => setDetail(i, { resolution: e.target.value })} />
                   </div>
                 </fieldset>
               ))}

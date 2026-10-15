@@ -7,6 +7,7 @@ import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import type { IsoActor } from './iso-access.service';
 import { isoBackupJobTable, isoBackupLineTable, isoBackupTickTable, isoDivisionTable } from './iso-forms.schema';
+import { lockJobListWithin } from './iso-period.store';
 import { viDate } from '../../common/today';
 
 export interface JobLineInput {
@@ -94,6 +95,7 @@ export class IsoCatalogService {
     const lines = this.normalizeLines(input.lines);
     const name = input.name.trim();
     const id = await this.db.transaction(async (tx) => {
+      await lockJobListWithin(tx, 'shared');
       await this.assertNoFree(tx, input.no, null);
       const [job] = await this.guardName(() =>
         tx
@@ -118,6 +120,7 @@ export class IsoCatalogService {
     const lines = this.normalizeLines(input.lines);
     const name = input.name.trim();
     await this.db.transaction(async (tx) => {
+      await lockJobListWithin(tx, 'shared');
       const [before] = await tx.select().from(isoBackupJobTable).where(eq(isoBackupJobTable.id, id)).for('update');
       if (!before) throw new NotFoundException({ code: 'ISO_JOB_NOT_FOUND', message: 'Không tìm thấy job backup này.' });
       if (before.stoppedOn === null) await this.assertNoFree(tx, input.no, id);
@@ -192,6 +195,7 @@ export class IsoCatalogService {
   /** Ngừng theo dõi từ sau ngày `stoppedOn`: ô các ngày sau đó để trống, không tính bỏ sót. */
   async stopJob(actor: IsoActor, id: string, stoppedOn: string): Promise<Job> {
     await this.db.transaction(async (tx) => {
+      await lockJobListWithin(tx, 'shared');
       const [job] = await tx.select().from(isoBackupJobTable).where(eq(isoBackupJobTable.id, id)).for('update');
       if (!job) throw new NotFoundException({ code: 'ISO_JOB_NOT_FOUND', message: 'Không tìm thấy job backup này.' });
       if (job.stoppedOn !== null) throw new ConflictException({ code: 'ISO_JOB_ALREADY_STOPPED', message: 'Job này đã ngừng theo dõi.' });
@@ -226,6 +230,7 @@ export class IsoCatalogService {
 
   async resumeJob(actor: IsoActor, id: string): Promise<Job> {
     await this.db.transaction(async (tx) => {
+      await lockJobListWithin(tx, 'shared');
       const [job] = await tx.select().from(isoBackupJobTable).where(eq(isoBackupJobTable.id, id)).for('update');
       if (!job) throw new NotFoundException({ code: 'ISO_JOB_NOT_FOUND', message: 'Không tìm thấy job backup này.' });
       if (job.stoppedOn === null) throw new ConflictException({ code: 'ISO_JOB_NOT_STOPPED', message: 'Job này đang theo dõi.' });
@@ -247,6 +252,7 @@ export class IsoCatalogService {
   /** Đổi thứ tự in trên phiếu: đổi số No với job đang theo dõi đứng liền trên / dưới. */
   async moveJob(actor: IsoActor, id: string, direction: 'up' | 'down'): Promise<Job[]> {
     await this.db.transaction(async (tx) => {
+      await lockJobListWithin(tx, 'shared');
       const live = await tx
         .select()
         .from(isoBackupJobTable)

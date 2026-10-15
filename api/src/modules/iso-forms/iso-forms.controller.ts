@@ -212,7 +212,7 @@ export class IsoFormsController {
   @Roles('sa', 'admin', 'member')
   @Put('antivirus/marks')
   @HttpCode(204)
-  @Audited(['iso_antivirus.mark_set', 'iso_antivirus.day_cleared'], 'iso_av_issue', { writtenByService: true })
+  @Audited(['iso_antivirus.mark_set', 'iso_antivirus.day_cleared', 'iso_antivirus.day_uncleared'], 'iso_av_issue', { writtenByService: true })
   async setMark(@Body() dto: AvMarkDto, @Req() req: AuthedRequest): Promise<void> {
     await this.antivirus.setMark(req.user!, dto);
   }

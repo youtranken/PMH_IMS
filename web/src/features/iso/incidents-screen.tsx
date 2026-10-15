@@ -13,10 +13,10 @@ import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
 import { useIncidentList, useLinkable } from './iso-api';
 import { IncidentDialogHost, cellKey, type IncidentDialogTarget } from './incident-dialog';
+import { KIND_LABEL } from './iso-paper';
 import { monthKey, shortDay, toVnParts } from './iso-rules';
 import { INCIDENT_KINDS, INCIDENT_STATUS_TONE, type Incident, type UnlinkedCell } from './iso-types';
 
-const KIND_LABEL: Record<string, string> = { backup: 'Backup', server: 'Server', network: 'Network', database: 'Database', other: 'Other' };
 const STATUS_LABEL: Record<string, string> = { temporary_fix: 'Temporary Fix', resolved: 'Resolved', in_progress: 'In Progress' };
 
 type Source = 'backup' | 'antivirus' | 'direct';

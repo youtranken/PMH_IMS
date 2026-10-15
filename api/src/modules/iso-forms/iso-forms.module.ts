@@ -11,7 +11,6 @@ import { IsoCatalogController } from './iso-catalog.controller';
 import { IsoCatalogService } from './iso-catalog.service';
 import { IsoClock } from './iso-clock';
 import { IsoFileOwner } from './iso-file-owner';
-import { IsoFormsApiService } from './iso-forms.api';
 import { IsoFormsController } from './iso-forms.controller';
 import { IsoIncidentService } from './iso-incident.service';
 import { IsoMailContent } from './iso-mail';
@@ -20,8 +19,8 @@ import { IsoPeriodService } from './iso-period.service';
 import { IsoPeriodStore } from './iso-period.store';
 
 /**
- * Chủ sở hữu mọi bảng `iso_*` của phiếu ISO đợt 1 (Q-28, AD-3). Ra ngoài chỉ xuất
- * `IsoFormsApiService` (AD-2).
+ * Chủ sở hữu mọi bảng `iso_*` của phiếu ISO đợt 1 (Q-28, AD-3). Chưa module nào cần gọi vào nên
+ * không xuất gì; bảng điều khiển đọc qua HTTP (`/iso/pending`). Khi cần, thêm `iso-forms.api.ts` (AD-2).
  */
 @Module({
   imports: [AuditModule, ApprovalsModule, FilesModule, UsersModule],
@@ -39,8 +38,6 @@ import { IsoPeriodStore } from './iso-period.store';
     IsoAuditLabeler,
     IsoMailContent,
     IsoReminderService,
-    IsoFormsApiService,
   ],
-  exports: [IsoFormsApiService],
 })
 export class IsoFormsModule {}

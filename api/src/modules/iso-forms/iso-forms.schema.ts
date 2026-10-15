@@ -67,6 +67,8 @@ export const isoAvClearDayTable = pgTable('iso_av_clear_day', {
   day: date('day').primaryKey(),
   markedBy: text('marked_by').notNull(),
   markedAt: timestamp('marked_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Dòng máy đã kéo dấu này theo (tháng chỉ một dòng); `null` = tick tay. */
+  autoIssueId: uuid('auto_issue_id'),
 });
 
 export const isoAvIssueTable = pgTable('iso_av_issue', {

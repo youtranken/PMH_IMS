@@ -126,3 +126,18 @@ export function lockedPeriod(formType: string, year: number, month: number, stat
     message: `Kỳ ${periodLabel(formType, year, month)} đang ở trạng thái "${PERIOD_STATE_LABEL[state]}" — chỉ xem. Cần sửa thì xin mở lại ở Kỳ phiếu.`,
   });
 }
+
+/**
+ * Khoá danh sách job 0203. Gửi chốt 0203 giữ khoá độc quyền từ lúc kiểm ô trống tới lúc chụp danh
+ * sách job (AR-8); lượt thêm / sửa / ngừng / tiếp tục / đổi thứ tự job giữ khoá dùng chung, nên
+ * không chen được vào giữa hai bước đó.
+ */
+export const JOB_LIST_LOCK = 'iso-job-list';
+
+export async function lockJobListWithin(tx: Tx, mode: 'shared' | 'exclusive'): Promise<void> {
+  await tx.execute(
+    mode === 'exclusive'
+      ? sql`SELECT pg_advisory_xact_lock(hashtextextended(${JOB_LIST_LOCK}, 0))`
+      : sql`SELECT pg_advisory_xact_lock_shared(hashtextextended(${JOB_LIST_LOCK}, 0))`,
+  );
+}

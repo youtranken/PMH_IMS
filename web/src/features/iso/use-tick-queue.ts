@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { ISO_TODO_KEY } from '@/shell/use-iso-todo';
 import { ISO_KEY } from './iso-api';
 import type { TickResult } from './iso-types';
+
+const TODO_DELAY_MS = 1500;
 
 const TARGET = {
   '0203': { url: '/api/v1/iso/backup/ticks', idField: 'lineId', grid: 'backup' },
@@ -18,8 +20,9 @@ const TARGET = {
  * không được mất theo lỗi của lần trước. Ô chỉ về theo server (kèm báo lỗi) khi chính giá trị cuối
  * gửi không được.
  *
- * Mỗi lượt lưu chỉ làm mới lưới của tháng đó và số việc trên menu — không cả nhánh `['iso']`: đánh
- * 30 ô liền thì 30 lượt làm mới danh sách sự cố, kỳ phiếu… là tải thừa.
+ * Mỗi lượt lưu chỉ làm mới lưới của tháng đó — không cả nhánh `['iso']`. Số việc trên menu
+ * (`/iso/todo` quét mọi ô ✗ từ tháng bắt đầu) làm mới MỘT lần khi ngừng bấm được `TODO_DELAY_MS`:
+ * đánh 30 ô liền mà mỗi ô một lượt quét là tải thừa.
  */
 export function useTickQueue(
   csrfToken: string,
@@ -41,11 +44,25 @@ export function useTickQueue(
       return next;
     });
 
-  const refresh = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: [...ISO_KEY, target.grid, month] }),
-      queryClient.invalidateQueries({ queryKey: ISO_TODO_KEY }),
-    ]);
+  const todoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTodo = () => {
+    todoTimer.current = null;
+    void queryClient.invalidateQueries({ queryKey: ISO_TODO_KEY });
+  };
+  // Rời màn khi còn lượt làm mới đang hẹn: làm ngay, không bỏ.
+  useEffect(
+    () => () => {
+      if (todoTimer.current === null) return;
+      clearTimeout(todoTimer.current);
+      void queryClient.invalidateQueries({ queryKey: ISO_TODO_KEY });
+    },
+    [queryClient],
+  );
+  const refresh = () => {
+    if (todoTimer.current !== null) clearTimeout(todoTimer.current);
+    todoTimer.current = setTimeout(refreshTodo, TODO_DELAY_MS);
+    return queryClient.invalidateQueries({ queryKey: [...ISO_KEY, target.grid, month] });
+  };
 
   const run = (rowId: string, day: string, value: TickResult | null): void => {
     const key = `${rowId}|${day}`;

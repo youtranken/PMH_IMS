@@ -253,10 +253,10 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
               <thead>
                 <tr>
                   <th scope="col" rowSpan={editable ? 2 : 1} className="sheet-no">
-                    No
+                    {t('iso.field.no')}
                   </th>
                   <th scope="col" rowSpan={editable ? 2 : 1} colSpan={2} className="sheet-name">
-                    Name Job Backup
+                    {t('iso.field.jobName')}
                   </th>
                   {days.map((d) => (
                     <th

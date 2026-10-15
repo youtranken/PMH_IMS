@@ -361,6 +361,16 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(grid.clearDays).toContain('2026-10-07');
       expect(grid.marks).toEqual([{ issueId: a.id, day: '2026-10-07', result: 'ok' }]);
 
+      // Bấm tiếp sang ✗ rồi về trống: Other Division tự ✓ lúc nãy đi theo, ô về trống thật.
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-07', result: 'fail' });
+      expect((await antivirus.grid(people.owner, 2026, 10)).clearDays).not.toContain('2026-10-07');
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-07', result: null });
+      await antivirus.markClear(people.owner, '2026-10-06');
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-06', result: 'fail' });
+      // Other Division tick tay thì giữ, dù máy đó ✗.
+      expect((await antivirus.grid(people.owner, 2026, 10)).clearDays).toContain('2026-10-06');
+      await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-07', result: 'ok' });
+
       await expect(antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-13', result: 'ok' })).rejects.toMatchObject({
         response: { code: 'ISO_AV_MARK_REPORTED' },
       });
@@ -379,14 +389,16 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       await antivirus.setMark(people.owner, { issueId: b.id, day: '2026-10-09', result: 'fail' });
       await antivirus.setMark(people.owner, { issueId: a.id, day: '2026-10-07', result: null });
       grid = await antivirus.grid(people.owner, 2026, 10);
-      expect(grid.clearDays).toEqual(['2026-10-07', '2026-10-08', '2026-10-13']);
+      // 07 do dòng a kéo theo nên đi cùng lần bỏ ✓ của dòng a; 06 tick tay thì còn.
+      expect(grid.clearDays).toEqual(['2026-10-06', '2026-10-08', '2026-10-13']);
       expect(grid.marks).toEqual(
         expect.arrayContaining([
           { issueId: a.id, day: '2026-10-10', result: 'ok' },
           { issueId: b.id, day: '2026-10-09', result: 'fail' },
+          { issueId: a.id, day: '2026-10-06', result: 'fail' },
         ]),
       );
-      expect(grid.marks).toHaveLength(2);
+      expect(grid.marks).toHaveLength(3);
       // Ngày chỉ có kết quả khi Other Division đã ✓, kể cả ngày có dòng máy được bấm.
       expect(grid.summary.missedDays).toContain('2026-10-10');
       expect(grid.summary.missedDays).not.toContain('2026-10-13');

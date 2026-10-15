@@ -127,8 +127,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
   // Ô đang ✓ theo Other Division coi như đã ✓: bấm là sang ✗, bấm tiếp về lại ✓ theo Other.
   const pressIssueCell = (issue: AvIssue, day: string) => {
     const current = explicit(issue, day) ?? (clear.has(day) ? 'ok' : null);
-    const next = nextTick(current);
-    queue.set(issue.id, day, next === 'ok' && clear.has(day) ? null : next);
+    queue.set(issue.id, day, nextTick(current));
   };
   const issueCell = (issue: AvIssue, divisionName: string): IncidentCell => ({
     form: '0208',
@@ -218,15 +217,15 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
             <thead>
               <tr>
                 <th scope="col" className="sheet-name">
-                  Division
+                  {t('iso.field.division')}
                 </th>
-                <th scope="col">Reported Date</th>
-                <th scope="col">Computer Name</th>
+                <th scope="col">{t('iso.field.reportedDate')}</th>
+                <th scope="col">{t('iso.field.computerName')}</th>
                 <th scope="col" className="sheet-left">
-                  Incident Description
+                  {t('iso.field.incidentDescription')}
                 </th>
-                <th scope="col">Resolution Date</th>
-                <th scope="col">Handled</th>
+                <th scope="col">{t('iso.field.resolutionDate')}</th>
+                <th scope="col">{t('iso.field.handled')}</th>
                 <th scope="col">{t('iso.av.incidentCol')}</th>
                 {editable ? <th scope="col">{t('common.actions')}</th> : null}
                 {days.map((d) => (
@@ -340,7 +339,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                 )),
               )}
               <tr>
-                <td className="sheet-name">Other Division</td>
+                <td className="sheet-name">{t('iso.field.otherDivision')}</td>
                 <td colSpan={editable ? 7 : 6} className="sheet-left muted">
                   {t(editable ? 'iso.av.otherHintEdit' : 'iso.av.otherHint')}
                 </td>
@@ -494,10 +493,10 @@ function IssueDialog({
           </p>
         ) : null}
         <FormSection columns={2}>
-          <Field label="Reported Date" required htmlFor="iso-av-reported">
+          <Field label={t('iso.field.reportedDate')} required htmlFor="iso-av-reported">
             <DatePicker id="iso-av-reported" value={form.reportedOn} min={firstDay} max={maxDay} onChange={(v) => set('reportedOn', v)} />
           </Field>
-          <Field label="Division" required hint={t('iso.av.divisionHint')} error={check.error('divisionId')}>
+          <Field label={t('iso.field.division')} required hint={t('iso.av.divisionHint')} error={check.error('divisionId')}>
             <Select
               value={form.divisionId}
               ariaLabel="Division"
@@ -519,18 +518,18 @@ function IssueDialog({
               <input id="iso-av-newdiv" className="inp" value={form.newDivisionName} onChange={(e) => set('newDivisionName', e.target.value)} />
             </Field>
           ) : null}
-          <Field label="Computer Name" required htmlFor="iso-av-pc" error={check.error('computerName')}>
+          <Field label={t('iso.field.computerName')} required htmlFor="iso-av-pc" error={check.error('computerName')}>
             <input id="iso-av-pc" className="inp mono" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
           </Field>
-          <Field label="Handled" hint={t('iso.av.handledHint')}>
+          <Field label={t('iso.field.handled')} hint={t('iso.av.handledHint')}>
             {/* Dòng cũ chưa có Handled thì để trống: API không ghi lại khi sửa, hiện tên người đang
                 sửa ở đây là hứa một thứ phiếu in sẽ không có. */}
             <p className="static-value">{issue ? (issue.handledBy ?? '—') : me.fullName}</p>
           </Field>
-          <Field label="Incident Description" required htmlFor="iso-av-desc" error={check.error('description')} span={2}>
+          <Field label={t('iso.field.incidentDescription')} required htmlFor="iso-av-desc" error={check.error('description')} span={2}>
             <input id="iso-av-desc" className="inp" value={form.description} onChange={(e) => set('description', e.target.value)} />
           </Field>
-          <Field label="Resolution Date" hint={t('iso.av.resolvedHint')} htmlFor="iso-av-resolved" error={check.error('resolvedOn')}>
+          <Field label={t('iso.field.resolutionDate')} hint={t('iso.av.resolvedHint')} htmlFor="iso-av-resolved" error={check.error('resolvedOn')}>
             <DatePicker id="iso-av-resolved" value={form.resolvedOn} min={form.reportedOn} clearable onChange={(v) => set('resolvedOn', v)} />
           </Field>
         </FormSection>

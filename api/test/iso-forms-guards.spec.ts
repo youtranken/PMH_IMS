@@ -18,7 +18,7 @@ import { IsoClock } from '../src/modules/iso-forms/iso-clock';
 import { IsoFileOwner } from '../src/modules/iso-forms/iso-file-owner';
 import { IsoIncidentService } from '../src/modules/iso-forms/iso-incident.service';
 import { IsoPeriodService } from '../src/modules/iso-forms/iso-period.service';
-import { IsoPeriodStore } from '../src/modules/iso-forms/iso-period.store';
+import { IsoPeriodStore, JOB_LIST_LOCK } from '../src/modules/iso-forms/iso-period.store';
 import type { IncidentInput } from '../src/modules/iso-forms/iso-rules';
 import { OutboxService } from '../src/modules/outbox/outbox.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
@@ -45,6 +45,7 @@ class FixedClock extends IsoClock {
 
 describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
   let scratch: ScratchDb;
+  let config: SystemConfigService;
   let clock: FixedClock;
   let backup: IsoBackupService;
   let antivirus: IsoAntivirusService;
@@ -116,7 +117,7 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
 
     const db = scratch.db;
     const audit = new AuditWriterService(db);
-    const config = new SystemConfigService(db);
+    config = new SystemConfigService(db);
     const users = new UsersApiService(new UsersService(db));
     const kinds = new ApprovalKindRegistry();
     const owners = new OwnerExistsRegistry();
@@ -284,6 +285,107 @@ describe('Phiếu ISO · hàng rào kỳ khoá, bản ký, issue 0208', () => {
       await expect(upload('iso_incident', fromCell.id, people.owner)).resolves.toBeDefined();
       await expect(upload('iso_incident', direct.id, people.other)).resolves.toBeDefined();
     });
+  });
+
+  /**
+   * `setTick` khoá kỳ (FOR SHARE) rồi mới khoá ô. Lưu 0206 phải đi cùng thứ tự: lượt gửi chốt đang
+   * giữ / chờ FOR UPDATE kỳ thì lượt lưu dừng ở kỳ, chưa giữ ô — nếu không ba lượt khép vòng chờ.
+   */
+  it('lưu 0206 gắn ô ✗ khoá kỳ trước khi khoá ô', async () => {
+    const cell = await failCell('2026-07-14');
+    const client = await scratch.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT id FROM iso_period WHERE form_type = '0203' AND year = 2026 AND month = 7 FOR UPDATE`);
+      const pending = incidents.create(people.owner, { ...incident('2026-07-14', { kind: 'backup' }), cells: [cell] }).then(
+        () => 'ok',
+        () => 'err',
+      );
+      for (let i = 0; i < 200; i += 1) {
+        const { rows } = await scratch.pool.query(
+          `SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid WHERE NOT l.granted AND a.datname = current_database()`,
+        );
+        if (rows.length > 0) break;
+        await new Promise((r) => setImmediate(r));
+      }
+      // Lượt lưu đang đợi kỳ: ô vẫn khoá được ngay.
+      const other = await scratch.pool.connect();
+      try {
+        await other.query('BEGIN');
+        await expect(
+          other.query(`SELECT 1 FROM iso_backup_tick WHERE line_id = $1 AND day = '2026-07-14' FOR UPDATE NOWAIT`, [cell.lineId]),
+        ).resolves.toBeDefined();
+        await other.query('ROLLBACK');
+      } finally {
+        other.release();
+      }
+      await client.query('COMMIT');
+      expect(await pending).toBe('ok');
+    } finally {
+      client.release();
+    }
+  });
+
+  /**
+   * Gửi chốt 0203 kiểm ô trống rồi chụp danh sách job: một lượt thêm / ngừng / tiếp tục job chen vào
+   * giữa hai bước đó thì bản chụp có job chưa được kiểm. Lượt gửi giữ khoá danh sách job, lượt sửa
+   * danh sách phải chờ.
+   */
+  it('sửa danh sách job chờ lượt gửi chốt 0203 đang giữ khoá danh sách', async () => {
+    const client = await scratch.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [JOB_LIST_LOCK]);
+      let done = false;
+      const pending = catalog
+        .createJob(people.owner, {
+          no: 777,
+          name: 'E2E-LOCK-LIST',
+          trackedFrom: '2026-07-01',
+          lines: [{ label: null, pointsNas: null, storageNas: null, pointsCloud: null, storageCloud: null }],
+        })
+        .finally(() => (done = true));
+      let waiting = false;
+      for (let i = 0; i < 200 && !waiting; i += 1) {
+        const { rows } = await scratch.pool.query(
+          `SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid WHERE NOT l.granted AND l.locktype = 'advisory' AND a.datname = current_database()`,
+        );
+        waiting = rows.length > 0;
+        if (!waiting) await new Promise((r) => setImmediate(r));
+      }
+      expect(waiting).toBe(true);
+      expect(done).toBe(false);
+      await client.query('COMMIT');
+      await pending;
+    } finally {
+      client.release();
+    }
+  });
+
+  it('ô ✗ của tháng trước tháng bắt đầu dùng IMS không còn trong danh sách chờ lập 0206', async () => {
+    const cell = await failCell('2026-01-20');
+    expect((await incidents.unlinked({})).some((c) => c.lineId === cell.lineId && c.day === cell.day)).toBe(true);
+    await scratch.pool.query(`UPDATE system_config SET value = '"2026-02"' WHERE key = 'iso.first_month'`);
+    config.forget('iso.first_month');
+    try {
+      expect((await incidents.unlinked({})).some((c) => c.day < '2026-02-01')).toBe(false);
+    } finally {
+      await scratch.pool.query(`UPDATE system_config SET value = '"2026-01"' WHERE key = 'iso.first_month'`);
+      config.forget('iso.first_month');
+    }
+  });
+
+  it('kỳ đã có bản ký nhưng còn 0206 thuộc kỳ chưa có bản ký vẫn là việc "chờ bản ký"', async () => {
+    const direct = await incidents.create(people.owner, { ...incident('2026-07-20'), cells: [] });
+    // Phiếu lập thẳng thuộc cả hai kỳ của tháng.
+    for (const form of ['0203', '0208'] as const) await upload('iso_period', await lockPeriod(form, 2026, 7), people.owner);
+    // Phiếu khác của tháng (từ bài trước) ký trước, để chỉ còn phiếu này quyết định.
+    for (const other of await incidents.ofMonth(2026, 7)) {
+      if (other.id !== direct.id && !other.signedCurrent) await upload('iso_incident', other.id, people.owner);
+    }
+    const before = (await periods.todo(people.owner)).awaitingSigned;
+    await upload('iso_incident', direct.id, people.owner);
+    expect((await periods.todo(people.owner)).awaitingSigned).toBe(before - 2);
   });
 
   it('kỳ khoá tháng 12 chưa có bản ký vẫn đếm sang năm sau', async () => {

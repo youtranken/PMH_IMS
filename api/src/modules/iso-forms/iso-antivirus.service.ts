@@ -175,8 +175,8 @@ export class IsoAntivirusService {
     });
   }
 
-  private async clearDayWithin(tx: Tx, actor: IsoActor, day: string): Promise<boolean> {
-    const inserted = await tx.insert(isoAvClearDayTable).values({ day, markedBy: actor.email }).onConflictDoNothing().returning();
+  private async clearDayWithin(tx: Tx, actor: IsoActor, day: string, autoIssueId: string | null = null): Promise<boolean> {
+    const inserted = await tx.insert(isoAvClearDayTable).values({ day, markedBy: actor.email, autoIssueId }).onConflictDoNothing().returning();
     if (inserted.length === 0) return false;
     await this.audit.appendWithin(tx, {
       actor: actor.email,
@@ -189,7 +189,8 @@ export class IsoAntivirusService {
 
   /**
    * Bấm ô của một dòng máy. Ô đúng ngày phát hiện luôn ✗ nên không bấm. Tháng chỉ có một dòng máy
-   * thì ✓ ở dòng đó cũng là ✓ cho Other Division ngày ấy — không còn bộ phận nào khác để kiểm.
+   * thì ✓ ở dòng đó cũng là ✓ cho Other Division ngày ấy — không còn bộ phận nào khác để kiểm; bấm
+   * dòng đó khỏi ✓ thì gỡ dấu tự động ấy, còn dấu tick tay thì giữ.
    */
   async setMark(actor: IsoActor, input: { issueId: string; day: string; result: 'ok' | 'fail' | null }): Promise<void> {
     const issue = await this.issue(input.issueId);
@@ -232,7 +233,20 @@ export class IsoAntivirusService {
           .from(isoAvIssueTable)
           .where(between(isoAvIssueTable.reportedOn, firstDayOf(year, month), lastDayOf(year, month)))
           .limit(2);
-        if (rows.length === 1) await this.clearDayWithin(tx, actor, input.day);
+        if (rows.length === 1) await this.clearDayWithin(tx, actor, input.day, input.issueId);
+      } else {
+        const removed = await tx
+          .delete(isoAvClearDayTable)
+          .where(and(eq(isoAvClearDayTable.day, input.day), eq(isoAvClearDayTable.autoIssueId, input.issueId)))
+          .returning();
+        if (removed.length > 0) {
+          await this.audit.appendWithin(tx, {
+            actor: actor.email,
+            action: 'iso_antivirus.day_uncleared',
+            objectType: 'iso_period',
+            detail: { formType: '0208', day: input.day },
+          });
+        }
       }
     });
   }
