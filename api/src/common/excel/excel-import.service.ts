@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { inflateRawSync } from 'node:zlib';
 import * as ExcelJS from 'exceljs';
 import { EXCEL_UNREADABLE_MESSAGE } from './xlsx-http';
 
@@ -23,6 +24,14 @@ export type SheetData = Record<string, SheetRow[]>;
 export const MAX_ROWS_PER_SHEET = 20_000;
 
 /**
+ * Trần tổng dung lượng GIẢI NÉN của file xlsx, xét từ mục lục zip trước khi nạp. Trần dòng ở trên
+ * chỉ xét được SAU khi ExcelJS đã giải nén cả file vào RAM: file 10 MB nén toàn chữ lặp có thể nở ra
+ * hàng trăm MB và làm api (mem_limit 768m) bị OOM-kill. File thật 20.000 dòng nằm xa dưới trần này.
+ */
+export const MAX_UNZIPPED_BYTES = 100 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 5_000;
+
+/**
  * AD-15: nơi DUY NHẤT đọc file xlsx (đối xứng với ExcelExportService là nơi duy nhất ghi).
  * Import danh mục (2.1) và import thiết bị (2.6) dùng chung — hai bộ parser riêng thì
  * cùng một file lại "hợp lệ ở màn này, sai ở màn kia".
@@ -33,6 +42,7 @@ export const MAX_ROWS_PER_SHEET = 20_000;
 @Injectable()
 export class ExcelImportService {
   async read(buffer: Buffer): Promise<SheetData> {
+    assertUnzippedSizeWithin(buffer);
     const wb = new ExcelJS.Workbook();
     try {
       await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
@@ -66,6 +76,63 @@ export class ExcelImportService {
       out[sheet.name] = rows;
     });
     return out;
+  }
+}
+
+function tooLarge(): BadRequestException {
+  return new BadRequestException({
+    code: 'EXCEL_TOO_LARGE',
+    message: `File Excel giải nén ra hơn ${MAX_UNZIPPED_BYTES / 1024 / 1024} MB, vượt trần một lần nhập. Chia thành nhiều file rồi nhập lần lượt. Chưa ghi gì cả.`,
+  });
+}
+
+/**
+ * Đo dung lượng giải nén THẬT của từng mục trong zip, có trần, trước khi đưa cho ExcelJS. Không tin số
+ * khai trong mục lục: khai gian số nhỏ thì thư viện zip chỉ phát hiện lệch SAU khi đã giải nén hết vào
+ * RAM. `maxOutputLength` dừng giải nén ngay khi vượt phần trần còn lại, nên bộ nhớ dùng ở đây không quá
+ * trần. Không tìm thấy mục lục hay mục hỏng thì để ExcelJS báo "không đọc được" như cũ.
+ */
+function assertUnzippedSizeWithin(buffer: Buffer): void {
+  const END = 0x06054b50;
+  const ENTRY = 0x02014b50;
+  const LOCAL = 0x04034b50;
+  const searchFrom = Math.max(0, buffer.length - 22 - 0xffff);
+  let end = -1;
+  for (let at = buffer.length - 22; at >= searchFrom; at -= 1) {
+    if (buffer.readUInt32LE(at) === END) {
+      end = at;
+      break;
+    }
+  }
+  if (end < 0) return;
+  const count = buffer.readUInt16LE(end + 10);
+  if (count > MAX_ZIP_ENTRIES) throw tooLarge();
+  let at = buffer.readUInt32LE(end + 16);
+  let total = 0;
+  for (let i = 0; i < count; i += 1) {
+    if (at + 46 > buffer.length || buffer.readUInt32LE(at) !== ENTRY) return;
+    const method = buffer.readUInt16LE(at + 10);
+    const packedSize = buffer.readUInt32LE(at + 20);
+    const local = buffer.readUInt32LE(at + 42);
+    at += 46 + buffer.readUInt16LE(at + 28) + buffer.readUInt16LE(at + 30) + buffer.readUInt16LE(at + 32);
+    if (local + 30 > buffer.length || buffer.readUInt32LE(local) !== LOCAL) return;
+    const dataStart = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
+    const packed = buffer.subarray(dataStart, dataStart + packedSize);
+    let size: number;
+    if (method === 0) {
+      size = packed.length;
+    } else if (method === 8) {
+      try {
+        size = inflateRawSync(packed, { maxOutputLength: MAX_UNZIPPED_BYTES - total + 1 }).length;
+      } catch (error) {
+        if (error instanceof RangeError || (error as { code?: string }).code === 'ERR_BUFFER_TOO_LARGE') throw tooLarge();
+        return;
+      }
+    } else {
+      return;
+    }
+    total += size;
+    if (total > MAX_UNZIPPED_BYTES) throw tooLarge();
   }
 }
 
