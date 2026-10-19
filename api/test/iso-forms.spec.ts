@@ -25,7 +25,7 @@ import { OutboxService } from '../src/modules/outbox/outbox.service';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, type ScratchDb, waitForLock } from './db';
 
 /**
  * Phiếu ISO đợt 1 (Q-28, Story 8.1–8.6) trên Postgres thật: quyền người phụ trách kiểm ở API, ô
@@ -301,6 +301,35 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       const codes = saved.map((s) => s.code);
       expect(new Set(codes).size).toBe(6);
       expect(await count(`SELECT count(DISTINCT code) FROM iso_incident WHERE year = 2026`)).toBe(await count(`SELECT count(*) FROM iso_incident`));
+    });
+
+    it('hai người cùng lập 0206 cho một ô ✗: một phiếu được lưu, người kia nhận 409 chứ không phải 500', async () => {
+      const lineId = (await backup.grid(people.owner, 2026, 11)).rows[0].lineId;
+      await backup.setTick(people.owner, { lineId, day: '2026-11-07', result: 'fail' });
+      /*
+       * Kết nối thứ ba giữ khoá ô để hai lượt lập cùng đứng chờ rồi mới đi tiếp, đúng trình tự
+       * gây lỗi; gọi song song trần thì lượt sau thường tới khi lượt đầu đã commit.
+       */
+      const blocker = await scratch.pool.connect();
+      let results: PromiseSettledResult<unknown>[];
+      try {
+        await blocker.query('BEGIN');
+        await blocker.query(`SELECT 1 FROM iso_backup_tick WHERE line_id = $1 AND day = '2026-11-07' FOR UPDATE`, [lineId]);
+        const make = () => incidents.create(people.owner, { ...incident(), cells: [{ form: '0203', lineId, day: '2026-11-07' }] });
+        const first = make();
+        void first.catch(() => undefined);
+        await waitForLock(scratch.pool);
+        const second = make();
+        void second.catch(() => undefined);
+        await waitForLock(scratch.pool, 10_000, 2);
+        await blocker.query('COMMIT');
+        results = await Promise.allSettled([first, second]);
+      } finally {
+        blocker.release();
+      }
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const lost = results.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+      expect(lost.reason).toMatchObject({ status: 409, response: { code: 'ISO_CELL_ALREADY_LINKED' } });
     });
 
     it('In Progress không có Resolution Time; Resolved bắt buộc có', async () => {

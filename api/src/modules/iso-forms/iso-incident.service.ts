@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, between, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
+import { conflictOnUnique, pgConstraint } from '../../common/sql';
 import { isoDateInTz, viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
@@ -471,13 +472,24 @@ export class IsoIncidentService {
 
   private async insertCellsWithin(tx: Tx, incidentId: string, cells: IncidentCell[]): Promise<void> {
     if (cells.length === 0) return;
-    await tx.insert(isoIncidentCellTable).values(
-      cells.map((c) =>
-        c.form === '0203'
-          ? { incidentId, tickLineId: c.lineId, tickDay: c.day }
-          : { incidentId, avIssueId: c.issueId },
-      ),
-    );
+    /*
+     * `resolveCellsWithin` khoá ô rồi mới đọc liên kết, nhưng liên kết nằm ở bảng khác: lượt chờ
+     * khoá xong vẫn đọc thấy ô "chưa gắn" của lúc bắt đầu. Unique index là chỗ chặn thật khi hai
+     * người cùng lập phiếu cho một ô, nên dịch nó thành 409 thay vì để lọt ra 500.
+     */
+    const taken = { code: 'ISO_CELL_ALREADY_LINKED', message: 'Một ô bạn chọn vừa được gắn vào phiếu khác. Tải lại rồi chọn lại.' };
+    try {
+      await tx.insert(isoIncidentCellTable).values(
+        cells.map((c) =>
+          c.form === '0203'
+            ? { incidentId, tickLineId: c.lineId, tickDay: c.day }
+            : { incidentId, avIssueId: c.issueId },
+        ),
+      );
+    } catch (error) {
+      if (pgConstraint(error) === 'iso_incident_cell_av_key') throw conflictOnUnique(error, taken, 'iso_incident_cell_av_key');
+      throw conflictOnUnique(error, taken, 'iso_incident_cell_tick_key');
+    }
   }
 
   private async hydrate(rows: IncidentRow[]): Promise<IncidentRecord[]> {
