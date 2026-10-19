@@ -830,9 +830,9 @@ export class DevicesService {
    * trên đây đã nói ra bài học đó: "nút bấm là gợi ý; import, script dọn dữ liệu và mọi tích
    * hợp về sau đều đi thẳng vào đường này". Đặt ở đây thì mọi nơi gọi `update()` đều bị chặn.
    *
-   * Bằng chứng đây là lỗi chứ không phải ý đồ: đường nhập Excel ĐÃ bịt đúng cửa này từ trước
-   * (`device-import.ts:472-479`), kèm câu từ chối gần như y hệt câu dưới đây. Người viết đã
-   * nghĩ tới cửa sau và bịt cửa Excel; cửa HTTP còn rộng hơn và chưa ai đóng.
+   * Đường nhập Excel chặn cùng luật ở bước Đối chiếu (`planRow` trong `device-import.ts`, nhánh
+   * `values.status === 'retired'`), với câu từ chối gần như y hệt câu dưới đây: hai cửa phải nói
+   * cùng một câu.
    *
    * MỞ LẠI thì vẫn đi đường này được: chốt chỉ chặn chiều VÀO `retired`. Một máy đang `retired`
    * đã bị `assertNotRetired` chặn từ trước đó rồi, nên nhánh này chỉ gặp chiều đi tới.
