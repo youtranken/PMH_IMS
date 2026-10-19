@@ -149,13 +149,12 @@ export class DeviceImportService {
        * lý commit sau đó vẫn bị file ghi đè. Đừng lấy từ `context.devices` — tra trượt rơi về
        * object rỗng và `device_history` (chỉ-thêm, FR-007) ghi "mọi trường đổi từ trống".
        */
-      const befores = new Map<string, Awaited<ReturnType<DevicesService['requireRowWithin']>>>();
-      for (const row of writable) {
-        if (row.action !== 'update') continue;
-        const before = await this.devices.requireRowWithin(tx, row.existingId!, 'update');
-        this.devices.assertNotRetired(before);
-        befores.set(row.existingId!, before);
-      }
+      const befores = await this.devices.requireRowsWithin(
+        tx,
+        writable.filter((row) => row.action === 'update').map((row) => row.existingId!),
+        'update',
+      );
+      for (const before of befores.values()) this.devices.assertNotRetired(before);
       /*
        * Dời chỗ U hai pha: đối chiếu xét vị trí CUỐI của cả file (hoán đổi hai máy là hợp lệ),
        * nên gỡ U mọi máy đổi chỗ trước rồi mới đặt — ghi lần lượt thì dòng đầu va vào máy chưa
@@ -170,16 +169,27 @@ export class DeviceImportService {
       }
       await this.devices.vacateRackWithin(tx, [...vacated]);
 
+      /*
+       * Ghi theo lô: một câu đọc "trước khi sửa", máy không đặt U thêm / sửa theo lô, lịch sử +
+       * audit một lượt. Từng dòng một thì 5.000 dòng mất 20–30 giây và file 20.000 dòng vượt timeout
+       * của nginx (Q-29). Dòng đặt U vẫn ghi lần lượt: kiểm chồng U cần thấy máy vừa đặt trước nó.
+       */
+      const history: Parameters<DevicesService['recordManyWithin']>[2] = [];
+      const plainCreates: Record<string, unknown>[] = [];
+      const plainUpdates: { id: string; values: Record<string, unknown> }[] = [];
       for (const row of writable) {
         const values = row.values ?? {};
         if (row.action === 'create') {
+          const claim = rackClaimOf(values, null);
+          if (!claim) {
+            plainCreates.push(values);
+            continue;
+          }
           // Đối chiếu đã xét chồng U trên ảnh chụp; kiểm lại trong tx vì kho có thể đổi từ lúc đó.
-          await this.devices.assertRackFreeWithin(tx, null, rackClaimOf(values, null));
+          await this.devices.assertRackFreeWithin(tx, null, claim);
           const device = await this.devices.insertWithin(tx, values);
           created += 1;
-          await this.devices.recordWithin(tx, actor, device.id, 'imported', {
-            code: { before: null, after: device.code },
-          });
+          history.push({ deviceId: device.id, action: 'imported', changes: { code: { before: null, after: device.code } } });
         } else {
           const before = befores.get(row.existingId!)!;
           const written = vacated.has(before.id)
@@ -189,20 +199,25 @@ export class DeviceImportService {
                 rackUSize: values.rackUSize === undefined ? before.rackUSize : values.rackUSize,
               }
             : values;
-          await this.devices.assertRackFreeWithin(tx, row.existingId!, rackClaimOf(written, before));
-          await this.devices.updateWithin(tx, row.existingId!, written);
+          const claim = rackClaimOf(written, before);
+          if (claim) {
+            await this.devices.assertRackFreeWithin(tx, row.existingId!, claim);
+            await this.devices.updateWithin(tx, row.existingId!, written);
+          } else {
+            plainUpdates.push({ id: row.existingId!, values: written });
+          }
           updated += 1;
           // FR-007: tab Lịch sử phải trả lời "ai ĐỔI GÌ". Ghi `mã: SW-01 → SW-01` thì
           // dòng lịch sử tồn tại mà vô dụng — dùng đúng bộ so của luồng sửa tay.
-          await this.devices.recordWithin(
-            tx,
-            actor,
-            row.existingId!,
-            'imported-update',
-            diffDevice(before, values),
-          );
+          history.push({ deviceId: row.existingId!, action: 'imported-update', changes: diffDevice(before, values) });
         }
       }
+      await this.devices.updateManyWithin(tx, plainUpdates);
+      for (const device of await this.devices.insertManyWithin(tx, plainCreates)) {
+        created += 1;
+        history.push({ deviceId: device.id, action: 'imported', changes: { code: { before: null, after: device.code } } });
+      }
+      await this.devices.recordManyWithin(tx, actor, history);
       // AC 2.6: kết quả import ghi audit KÈM SỐ DÒNG — sau này còn đối chiếu được
       // "hôm đó ai nhập bao nhiêu dòng".
       await this.audit.appendWithin(tx, {

@@ -61,7 +61,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
   let db: Database;
   let deviceTypeId: string;
 
-  const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
+  const audit = { appendWithin: () => Promise.resolve(), appendManyWithin: () => Promise.resolve() } as unknown as AuditWriterService;
   const config = {
     getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),
   } as unknown as SystemConfigService;

@@ -23,7 +23,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 const TEST_TIMEOUT = 120_000;
 const actor = 'import-inactive@test';
-const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
+const audit = { appendWithin: () => Promise.resolve(), appendManyWithin: () => Promise.resolve() } as unknown as AuditWriterService;
 const noRetirement = {
   holdingsWithin: () => Promise.resolve([]),
   releaseAllWithin: () => Promise.resolve(),

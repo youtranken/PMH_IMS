@@ -5,7 +5,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, inArray, ne, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -70,6 +71,9 @@ export interface DeviceInput {
  * Chủ sở hữu `device` + `device_history` (AD-3).
  * Danh mục lấy qua `CatalogApiService` — KHÔNG join sang bảng site/cabinet/... (AD-2).
  */
+/** Số dòng mỗi câu của lượt ghi hàng loạt — xa dưới trần 65.535 tham số của Postgres. */
+const BULK_CHUNK = 500;
+
 @Injectable()
 export class DevicesService {
   constructor(
@@ -412,6 +416,95 @@ export class DevicesService {
   async vacateRackWithin(tx: Tx, ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     await tx.update(deviceTable).set({ rackUStart: null, rackUSize: null }).where(inArray(deviceTable.id, ids));
+  }
+
+  /** Lịch sử + audit của nhiều máy một lượt (import) — cùng nội dung `recordWithin` ghi từng dòng. */
+  async recordManyWithin(
+    tx: Tx,
+    actor: string,
+    entries: { deviceId: string; action: string; changes: DeviceChanges | Record<string, unknown> }[],
+  ): Promise<void> {
+    for (let i = 0; i < entries.length; i += BULK_CHUNK) {
+      const chunk = entries.slice(i, i + BULK_CHUNK);
+      await tx.insert(deviceHistoryTable).values(chunk.map((e) => ({ deviceId: e.deviceId, action: e.action, actor, changes: e.changes })));
+    }
+    await this.audit.appendManyWithin(
+      tx,
+      entries.map((e) => ({ actor, action: `device.${e.action}`, objectType: 'device', objectId: e.deviceId, detail: e.changes })),
+    );
+  }
+
+  /** Thêm nhiều máy một lượt (import, dòng không đặt U). Trả theo đúng thứ tự `rows`. */
+  async insertManyWithin(tx: Tx, rows: Record<string, unknown>[]): Promise<DeviceRecord[]> {
+    const out: DeviceRecord[] = [];
+    try {
+      for (let i = 0; i < rows.length; i += BULK_CHUNK) {
+        const written = await tx.insert(deviceTable).values(rows.slice(i, i + BULK_CHUNK) as never).returning();
+        // Không dựa vào thứ tự RETURNING: ghép lại theo mã (duy nhất).
+        const byCode = new Map(written.map((r) => [r.code, r]));
+        for (const row of rows.slice(i, i + BULK_CHUNK)) out.push(toRecord(byCode.get(row.code as string)!));
+      }
+    } catch (error) {
+      throw this.translateWriteError(error);
+    }
+    return out;
+  }
+
+  /**
+   * Sửa nhiều máy, mỗi lô một câu `UPDATE … FROM (VALUES …)` cho các dòng cùng bộ cột (import từ
+   * mẫu thì gần như mọi dòng cùng bộ cột). Từng câu một thì Postgres lập kế hoạch lại cho mỗi dòng
+   * trên một bảng 18 index — phần lớn thời gian của file lớn nằm ở đó. Hồ sơ biến mất giữa chừng
+   * thì ném như `updateWithin`.
+   */
+  async updateManyWithin(tx: Tx, rows: { id: string; values: Record<string, unknown> }[]): Promise<void> {
+    const columns = getTableColumns(deviceTable) as Record<string, AnyPgColumn>;
+    const groups = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const keys = Object.keys(row.values).filter((k) => k !== 'updatedAt' && row.values[k] !== undefined);
+      for (const key of keys) if (!columns[key]) throw new Error(`Cột thiết bị không có: ${key}`);
+      const signature = keys.sort().join(',');
+      const group = groups.get(signature) ?? [];
+      group.push({ id: row.id, values: Object.fromEntries(keys.map((k) => [k, row.values[k]])) });
+      groups.set(signature, group);
+    }
+    try {
+      for (const [signature, group] of groups) {
+        const keys = signature ? signature.split(',') : [];
+        for (let i = 0; i < group.length; i += BULK_CHUNK) {
+          const chunk = group.slice(i, i + BULK_CHUNK);
+          const tuples = chunk.map(
+            (row) =>
+              sql`(${row.id}::uuid${sql.join(
+                keys.map((k) => {
+                  const value = row.values[k];
+                  const driver = value === null ? null : columns[k].mapToDriverValue(value);
+                  return sql`, ${driver}::${sql.raw(columns[k].getSQLType())}`;
+                }),
+                sql``,
+              )})`,
+          );
+          const names = [sql`id`, ...keys.map((k) => sql.identifier(columns[k].name))];
+          const sets = [
+            ...keys.map((k) => sql`${sql.identifier(columns[k].name)} = v.${sql.identifier(columns[k].name)}`),
+            sql`updated_at = now()`,
+          ];
+          const result = await tx.execute(
+            sql`UPDATE ${deviceTable} AS d SET ${sql.join(sets, sql`, `)}
+                  FROM (VALUES ${sql.join(tuples, sql`, `)}) AS v(${sql.join(names, sql`, `)})
+                 WHERE d.id = v.id
+             RETURNING d.id`,
+          );
+          if (result.rows.length !== chunk.length) {
+            throw new ConflictException({
+              code: 'DEVICE_ALREADY_CHANGED',
+              message: 'Hồ sơ thiết bị này vừa bị người khác xóa hoặc đổi. Tải lại rồi làm lại — chưa ghi gì cả.',
+            });
+          }
+        }
+      }
+    } catch (error) {
+      throw this.translateWriteError(error);
+    }
   }
 
   /** Dùng chung cho import hàng loạt — đã có transaction bao ngoài. */
@@ -797,6 +890,28 @@ export class DevicesService {
    * `device_history` ghi "mọi trường đổi từ trống" — một dòng lịch sử BỊA, trong một bảng
    * chỉ-thêm mà FR-007 dựng ra để trả lời "ai đổi gì".
    */
+  /**
+   * Nhiều hồ sơ một câu, khoá theo THỨ TỰ id: hai lượt ghi hàng loạt cùng lúc khoá cùng thứ tự nên
+   * không deadlock nhau. Thiếu hồ sơ nào thì ném như `requireRowWithin`.
+   */
+  async requireRowsWithin(tx: Tx, ids: string[], lock: 'update' | 'share'): Promise<Map<string, typeof deviceTable.$inferSelect>> {
+    const out = new Map<string, typeof deviceTable.$inferSelect>();
+    const unique = [...new Set(ids)];
+    for (let i = 0; i < unique.length; i += BULK_CHUNK) {
+      const rows = await tx
+        .select()
+        .from(deviceTable)
+        .where(inArray(deviceTable.id, unique.slice(i, i + BULK_CHUNK)))
+        .orderBy(asc(deviceTable.id))
+        .for(lock);
+      for (const row of rows) out.set(row.id, row);
+    }
+    if (out.size !== unique.length) {
+      throw new NotFoundException({ code: 'DEVICE_NOT_FOUND', message: 'Không tìm thấy thiết bị này.' });
+    }
+    return out;
+  }
+
   async requireRowWithin(
     tx: Pick<Database, 'select'>,
     id: string,
