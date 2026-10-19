@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  avMarkOf,
   canWriteForm,
+  lastDayOfMonth,
+  lineApplies,
+  monthLabel,
+  shortDay,
+  tickIndex,
+  vnDateTime,
   avIssueMark,
   avMarkIndex,
   avOtherMark,
@@ -169,5 +176,65 @@ describe('canWriteForm — ai được ghi danh mục của một loại phiếu
   });
   it('chưa tải xong danh sách người phụ trách thì Member coi như chưa được ghi', () => {
     expect(canWriteForm({ role: 'member', id: 'u-chinh' }, undefined, '0203')).toBe(false);
+  });
+});
+
+describe('lastDayOfMonth — Check Date trên bản in là ngày cuối kỳ', () => {
+  it.each([
+    [2026, 1, '2026-01-31'],
+    [2026, 2, '2026-02-28'],
+    [2028, 2, '2028-02-29'],
+    [2026, 4, '2026-04-30'],
+    [2026, 12, '2026-12-31'],
+  ])('%i/%i → %s', (year, month, expected) => {
+    expect(lastDayOfMonth(year, month)).toBe(expected);
+  });
+});
+
+describe('lineApplies — ngày nằm trong khoảng theo dõi của job (ngoài khoảng: trống, không tính bỏ sót)', () => {
+  it.each([
+    ['2026-11-01', null, '2026-10-31', false],
+    ['2026-11-01', null, '2026-11-01', true],
+    ['2026-11-01', null, '2026-11-30', true],
+    ['2026-11-01', '2026-11-15', '2026-11-15', true],
+    ['2026-11-01', '2026-11-15', '2026-11-16', false],
+  ] as const)('theo dõi từ %s, ngừng %s, ngày %s → %s', (from, stop, day, expected) => {
+    expect(lineApplies(from, stop, day)).toBe(expected);
+  });
+});
+
+describe('nhãn ngày giờ của phiếu', () => {
+  it('monthLabel / shortDay', () => {
+    expect(monthLabel(2026, 3)).toBe('03/2026');
+    expect(shortDay('2026-11-05')).toBe('05/11');
+  });
+
+  it.each([
+    ['2026-11-05T01:00:00.000Z', '05/11/2026 08:00'],
+    // Qua nửa đêm theo giờ Việt Nam: 17:30 UTC ngày 5 là 00:30 ngày 6.
+    ['2026-11-05T17:30:00.000Z', '06/11/2026 00:30'],
+  ])('vnDateTime(%s) → %s', (iso, expected) => {
+    expect(vnDateTime(iso)).toBe(expected);
+  });
+
+  it('vnDateTime(null) → chuỗi rỗng, không phải "Invalid Date"', () => {
+    expect(vnDateTime(null)).toBe('');
+  });
+});
+
+describe('chỉ mục ô của lưới', () => {
+  it('tickIndex tra theo dòng + ngày; ô không có hàng là undefined (ô trống)', () => {
+    const index = tickIndex([
+      { lineId: 'l1', day: '2026-11-02', result: 'ok', incident: null },
+      { lineId: 'l1', day: '2026-11-03', result: 'fail', incident: null },
+    ]);
+    expect(index.get('l1|2026-11-03')?.result).toBe('fail');
+    expect(index.get('l1|2026-11-04')).toBeUndefined();
+  });
+
+  it('avMarkOf: dấu bấm tay của một dòng máy ở một ngày, không có thì null', () => {
+    const index = avMarkIndex([], [{ issueId: 'i1', day: '2026-11-02', result: 'ok' }]);
+    expect(avMarkOf({ id: 'i1' }, '2026-11-02', index)).toBe('ok');
+    expect(avMarkOf({ id: 'i1' }, '2026-11-03', index)).toBeNull();
   });
 });
