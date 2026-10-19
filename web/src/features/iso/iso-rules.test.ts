@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canWriteForm,
   avIssueMark,
   avMarkIndex,
   avOtherMark,
@@ -15,7 +16,7 @@ import {
   shiftMonth,
   toVnParts,
 } from './iso-rules';
-import type { AvIssue, BackupRow } from './iso-types';
+import type { AvIssue, BackupRow, FormOwners } from './iso-types';
 
 const row = (jobId: string, lineId: string): BackupRow => ({
   jobId,
@@ -148,5 +149,25 @@ describe('iso-rules (web)', () => {
     expect(toVnParts('2026-11-04T18:30:00.000Z')).toEqual({ date: '2026-11-05', time: '01:30' });
     expect(fromVnParts('2026-11-05', '01:30')).toBe('2026-11-04T18:30:00.000Z');
     expect(fromVnParts('2026-11-05', '')).toBeNull();
+  });
+});
+
+describe('canWriteForm — ai được ghi danh mục của một loại phiếu (Q-29)', () => {
+  const owners: FormOwners[] = [
+    { formType: '0203', primary: { id: 'u-chinh', email: 'a@x', fullName: 'A' }, backup: { id: 'u-du-phong', email: 'b@x', fullName: 'B' } },
+    { formType: '0208', primary: null, backup: null },
+  ];
+  it.each([
+    ['sa', 'u-khac', '0203', true],
+    ['admin', 'u-khac', '0208', true],
+    ['member', 'u-chinh', '0203', true],
+    ['member', 'u-du-phong', '0203', true],
+    ['member', 'u-chinh', '0208', false],
+    ['member', 'u-khac', '0203', false],
+  ] as const)('%s %s với phiếu %s → %s', (role, id, form, expected) => {
+    expect(canWriteForm({ role, id }, owners, form)).toBe(expected);
+  });
+  it('chưa tải xong danh sách người phụ trách thì Member coi như chưa được ghi', () => {
+    expect(canWriteForm({ role: 'member', id: 'u-chinh' }, undefined, '0203')).toBe(false);
   });
 });

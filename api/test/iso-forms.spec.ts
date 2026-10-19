@@ -106,7 +106,7 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
     const filesApi = new FilesApiService(files);
     access = new IsoAccessService(db, audit, users);
     const store = new IsoPeriodStore(db, config);
-    catalog = new IsoCatalogService(db, audit);
+    catalog = new IsoCatalogService(db, audit, access);
     backup = new IsoBackupService(db, audit, access, store, clock, config);
     antivirus = new IsoAntivirusService(db, audit, access, store, catalog, clock, config);
     incidents = new IsoIncidentService(db, audit, access, store, filesApi, users, clock);
@@ -184,6 +184,27 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       });
       await expect(catalog.resumeJob(people.owner, first.id)).rejects.toMatchObject({ response: { code: 'ISO_JOB_NO_TAKEN' } });
       await catalog.stopJob(people.owner, again.id, '2026-10-03');
+    });
+
+    it('Q-29: Member không phụ trách không thêm / sửa / ngừng job 0203 hay bộ phận 0208', async () => {
+      const job = await catalog.createJob(people.backup, {
+        no: 95,
+        name: 'E2E-OWNED',
+        trackedFrom: '2026-10-01',
+        lines: [{ label: null, pointsNas: null, storageNas: null, pointsCloud: null, storageCloud: null }],
+      });
+      const denied = { status: 403, response: { code: 'ISO_NOT_OWNER' } };
+      const input = { no: 96, name: 'E2E-OTHER', trackedFrom: '2026-10-01', lines: job.lines.map((l) => ({ ...l, id: undefined })) };
+      await expect(catalog.createJob(people.other, input)).rejects.toMatchObject(denied);
+      await expect(catalog.updateJob(people.other, job.id, { ...input, no: 95 })).rejects.toMatchObject(denied);
+      await expect(catalog.stopJob(people.other, job.id, '2026-10-02')).rejects.toMatchObject(denied);
+      await expect(catalog.moveJob(people.other, job.id, 'up')).rejects.toMatchObject(denied);
+      await expect(catalog.createDivision(people.other, { code: null, name: 'E2E Div lạ' })).rejects.toMatchObject(denied);
+      const division = await catalog.createDivision(people.owner, { code: null, name: 'E2E Div chủ' });
+      await expect(catalog.updateDivision(people.other, division.id, { code: null, name: 'E2E đổi', active: false })).rejects.toMatchObject(denied);
+      // Admin không phụ trách vẫn được (SA/Admin luôn ghi được).
+      await catalog.stopJob(people.admin, job.id, '2026-10-02');
+      await expect(catalog.resumeJob(people.other, job.id)).rejects.toMatchObject(denied);
     });
 
     it('Points NAS / Points Cloud chỉ nhận số nguyên; bỏ trống được', async () => {

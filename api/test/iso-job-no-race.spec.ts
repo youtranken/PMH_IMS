@@ -1,6 +1,7 @@
 import { runMigrations } from '../src/database/migration-runner';
 import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
-import type { IsoActor } from '../src/modules/iso-forms/iso-access.service';
+import { IsoAccessService, type IsoActor } from '../src/modules/iso-forms/iso-access.service';
+import type { UsersApiService } from '../src/modules/users/users.api';
 import { IsoCatalogService } from '../src/modules/iso-forms/iso-catalog.service';
 import { JOB_LIST_LOCK } from '../src/modules/iso-forms/iso-period.store';
 import { createScratchDb, migrationsDir, type ScratchDb, waitForLock } from './db';
@@ -25,7 +26,9 @@ describe('số No job 0203 không trùng khi tạo đồng thời', () => {
       `INSERT INTO users (email, full_name, role, password_hash) VALUES ('e2e-iso-no@qa.test', 'E2E ISO no', 'sa', 'x') RETURNING id`,
     );
     actor = { id: rows[0].id, email: 'e2e-iso-no@qa.test', role: 'sa' };
-    catalog = new IsoCatalogService(scratch.db, new AuditWriterService(scratch.db));
+    const audit = new AuditWriterService(scratch.db);
+    // Người tạo là SA nên quyền phụ trách luôn qua; bài này chỉ hỏi chuyện số No.
+    catalog = new IsoCatalogService(scratch.db, audit, new IsoAccessService(scratch.db, audit, {} as UsersApiService));
   }, TEST_TIMEOUT);
 
   afterAll(async () => {

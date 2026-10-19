@@ -1,4 +1,4 @@
-import type { AvIssue, AvMark, BackupRow, TickCell, TickResult } from './iso-types';
+import type { AvIssue, AvMark, BackupRow, FormOwners, IsoFormType, TickCell, TickResult } from './iso-types';
 
 /**
  * Luật THUẦN phía web của phiếu ISO (Q-28). Server là trọng tài cho mọi lượt ghi; ở đây chỉ dựng
@@ -194,4 +194,18 @@ export function vnDateTime(iso: string | null): string {
   if (!iso) return '';
   const { date, time } = toVnParts(iso);
   return `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)} ${time}`;
+}
+
+/**
+ * Người này được ghi danh mục của loại phiếu đó không (Q-29): SA/Admin, hoặc người phụ trách chính /
+ * dự phòng. Chỉ để ẩn nút; API vẫn là chỗ chặn thật.
+ */
+export function canWriteForm(
+  me: { role: string; id: string },
+  owners: FormOwners[] | undefined,
+  form: IsoFormType,
+): boolean {
+  if (me.role === 'sa' || me.role === 'admin') return true;
+  const row = owners?.find((o) => o.formType === form);
+  return Boolean(row && (row.primary?.id === me.id || row.backup?.id === me.id));
 }

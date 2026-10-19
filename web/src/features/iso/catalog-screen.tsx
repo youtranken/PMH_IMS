@@ -18,7 +18,7 @@ import { Tabs, TabPanel } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { ISO_KEY, useDivisions, useIsoWrite, useJobs, useOwners } from './iso-api';
-import { lineStorage, pointsError } from './iso-rules';
+import { canWriteForm, lineStorage, pointsError } from './iso-rules';
 import type { Division, FormOwners, IsoPerson, Job, JobLine } from './iso-types';
 
 type Tab = 'jobs' | 'divisions' | 'owners';
@@ -71,6 +71,7 @@ function JobsTab({ me }: { me: Me }) {
   const toast = useToast();
   const [status, setStatus] = useState<'live' | 'stopped' | 'all'>('live');
   const jobs = useJobs(status);
+  const canWrite = canWriteForm(me, useOwners().data, '0203');
   const [editing, setEditing] = useState<Job | 'new' | null>(null);
   const [stopping, setStopping] = useState<Job | null>(null);
   const write = useIsoWrite<{ id: string; path: string; body?: unknown }>(me.csrfToken, ({ id, path, body }) => ({
@@ -95,9 +96,13 @@ function JobsTab({ me }: { me: Me }) {
           ]}
           onChange={(v) => setStatus(v as typeof status)}
         />
-        <button type="button" className="btn primary" onClick={() => setEditing('new')}>
-          {t('iso.catalog.addJob')}
-        </button>
+        {canWrite ? (
+          <button type="button" className="btn primary" onClick={() => setEditing('new')}>
+            {t('iso.catalog.addJob')}
+          </button>
+        ) : (
+          <p className="muted small">{t('iso.catalog.readOnlyOf', { form: '0203' })}</p>
+        )}
       </div>
       {jobs.isLoading ? (
         <Loading variant="table" />
@@ -117,7 +122,7 @@ function JobsTab({ me }: { me: Me }) {
                 <th>{t('iso.field.cloud')}</th>
                 <th>{t('iso.catalog.trackedFrom')}</th>
                 <th>{t('iso.catalog.status')}</th>
-                <th className="col-center">{t('common.actions')}</th>
+                {canWrite ? <th className="col-center">{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -144,8 +149,9 @@ function JobsTab({ me }: { me: Me }) {
                       <span className="badge ok">{t('iso.catalog.live')}</span>
                     )}
                   </td>
-                  <td data-label={t('common.actions')}>
-                    <RowActions
+                  {canWrite ? (
+                    <td data-label={t('common.actions')}>
+                      <RowActions
                       label={t('common.actionsOf', { subject: job.name })}
                       primary={{ label: t('common.edit'), ariaLabel: t('common.editOf', { subject: job.name }), onClick: () => setEditing(job) }}
                       items={
@@ -157,8 +163,9 @@ function JobsTab({ me }: { me: Me }) {
                               { key: 'stop', label: t('iso.catalog.stop'), warn: true, onSelect: () => setStopping(job) },
                             ]
                       }
-                    />
-                  </td>
+                      />
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -419,15 +426,20 @@ function StopDialog({ me, job, onClose }: { me: Me; job: Job; onClose: () => voi
 function DivisionsTab({ me }: { me: Me }) {
   const { t } = useTranslation();
   const divisions = useDivisions();
+  const canWrite = canWriteForm(me, useOwners().data, '0208');
   const [editing, setEditing] = useState<Division | 'new' | null>(null);
   const list = divisions.data ?? [];
   return (
     <section>
       <div className="sheet-toolbar">
         <p className="muted small">{t('iso.catalog.divisionsHint')}</p>
-        <button type="button" className="btn primary" onClick={() => setEditing('new')}>
-          {t('iso.catalog.addDivision')}
-        </button>
+        {canWrite ? (
+          <button type="button" className="btn primary" onClick={() => setEditing('new')}>
+            {t('iso.catalog.addDivision')}
+          </button>
+        ) : (
+          <p className="muted small">{t('iso.catalog.readOnlyOf', { form: '0208' })}</p>
+        )}
       </div>
       {divisions.isLoading ? (
         <Loading />
@@ -441,7 +453,7 @@ function DivisionsTab({ me }: { me: Me }) {
                 <th>{t('iso.catalog.code')}</th>
                 <th>{t('iso.catalog.divisionName')}</th>
                 <th>{t('iso.catalog.status')}</th>
-                <th className="col-center">{t('common.actions')}</th>
+                {canWrite ? <th className="col-center">{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -454,11 +466,13 @@ function DivisionsTab({ me }: { me: Me }) {
                   <td data-label={t('iso.catalog.status')}>
                     <span className={`badge ${d.active ? 'ok' : 'muted'}`}>{d.active ? t('iso.catalog.inUse') : t('iso.catalog.notInUse')}</span>
                   </td>
-                  <td data-label={t('common.actions')}>
-                    <button type="button" className="btn sm ghost" aria-label={t('common.editOf', { subject: d.name })} onClick={() => setEditing(d)}>
-                      {t('common.edit')}
-                    </button>
-                  </td>
+                  {canWrite ? (
+                    <td data-label={t('common.actions')}>
+                      <button type="button" className="btn sm ghost" aria-label={t('common.editOf', { subject: d.name })} onClick={() => setEditing(d)}>
+                        {t('common.edit')}
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

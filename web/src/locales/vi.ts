@@ -4637,6 +4637,7 @@ export default {
       storageNote: 'Storage location tự ghi NAS / Cloud khi có Points tương ứng; bỏ trống Points thì ô đó trống trên phiếu.',
       jobSaved: 'Đã lưu job backup.',
       jobsNote: 'Job ngừng vẫn hiện ở các kỳ cũ; ô sau ngày ngừng để trống. Đổi thứ tự in bằng ⋯ › Lên / Xuống.',
+      readOnlyOf: 'Chỉ người phụ trách phiếu {{form}} và SA/Admin sửa được danh sách này.',
       moveUp: 'Lên một bậc',
       moveDown: 'Xuống một bậc',
       stop: 'Ngừng theo dõi',

@@ -5,7 +5,7 @@ import type { Tx } from '../../common/tx';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
-import type { IsoActor } from './iso-access.service';
+import { IsoAccessService, type IsoActor } from './iso-access.service';
 import { isoBackupJobTable, isoBackupLineTable, isoBackupTickTable, isoDivisionTable } from './iso-forms.schema';
 import { lockJobListWithin } from './iso-period.store';
 import { viDate } from '../../common/today';
@@ -57,7 +57,9 @@ function blankToNull(value: string | null | undefined): string | null {
 }
 
 /**
- * Hai danh sách IT tự quản (Q-28): job backup của 0203 và bộ phận của 0208. Thay đổi áp ngay cho
+ * Hai danh sách của phiếu (Q-28): job backup của 0203 và bộ phận của 0208. Chỉ người phụ trách phiếu
+ * đó và SA/Admin được ghi (Q-29): ngừng job hay dời ngày bắt đầu làm ô trống thôi bị tính bỏ sót, tức
+ * là đi vòng quyền ghi phiếu. Thay đổi áp ngay cho
  * kỳ còn Đang ghi; kỳ từ Chờ duyệt trở đi đọc danh sách chụp lúc gửi chốt, nên ở đây không phải
  * hỏi kỳ nào đã khoá.
  */
@@ -66,6 +68,7 @@ export class IsoCatalogService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
+    private readonly access: IsoAccessService,
   ) {}
 
   /* ------------------------------------------------------------------ job --- */
@@ -92,6 +95,7 @@ export class IsoCatalogService {
   }
 
   async createJob(actor: IsoActor, input: JobInput): Promise<Job> {
+    await this.access.assertCanWrite(actor, '0203');
     const lines = this.normalizeLines(input.lines);
     const name = input.name.trim();
     const id = await this.db.transaction(async (tx) => {
@@ -117,6 +121,7 @@ export class IsoCatalogService {
   }
 
   async updateJob(actor: IsoActor, id: string, input: JobInput): Promise<Job> {
+    await this.access.assertCanWrite(actor, '0203');
     const lines = this.normalizeLines(input.lines);
     const name = input.name.trim();
     await this.db.transaction(async (tx) => {
@@ -194,6 +199,7 @@ export class IsoCatalogService {
 
   /** Ngừng theo dõi từ sau ngày `stoppedOn`: ô các ngày sau đó để trống, không tính bỏ sót. */
   async stopJob(actor: IsoActor, id: string, stoppedOn: string): Promise<Job> {
+    await this.access.assertCanWrite(actor, '0203');
     await this.db.transaction(async (tx) => {
       await lockJobListWithin(tx, 'shared');
       const [job] = await tx.select().from(isoBackupJobTable).where(eq(isoBackupJobTable.id, id)).for('update');
@@ -229,6 +235,7 @@ export class IsoCatalogService {
   }
 
   async resumeJob(actor: IsoActor, id: string): Promise<Job> {
+    await this.access.assertCanWrite(actor, '0203');
     await this.db.transaction(async (tx) => {
       await lockJobListWithin(tx, 'shared');
       const [job] = await tx.select().from(isoBackupJobTable).where(eq(isoBackupJobTable.id, id)).for('update');
@@ -251,6 +258,7 @@ export class IsoCatalogService {
 
   /** Đổi thứ tự in trên phiếu: đổi số No với job đang theo dõi đứng liền trên / dưới. */
   async moveJob(actor: IsoActor, id: string, direction: 'up' | 'down'): Promise<Job[]> {
+    await this.access.assertCanWrite(actor, '0203');
     await this.db.transaction(async (tx) => {
       await lockJobListWithin(tx, 'shared');
       const live = await tx
@@ -368,6 +376,7 @@ export class IsoCatalogService {
   }
 
   async createDivision(actor: IsoActor, input: { code: string | null; name: string }): Promise<Division> {
+    await this.access.assertCanWrite(actor, '0208');
     return this.db.transaction((tx) => this.createDivisionWithin(tx, actor, input));
   }
 
@@ -388,6 +397,7 @@ export class IsoCatalogService {
   }
 
   async updateDivision(actor: IsoActor, id: string, input: { code: string | null; name: string; active: boolean }): Promise<Division> {
+    await this.access.assertCanWrite(actor, '0208');
     return this.db.transaction(async (tx) => {
       const [before] = await tx.select().from(isoDivisionTable).where(eq(isoDivisionTable.id, id)).for('update');
       if (!before) throw new NotFoundException({ code: 'ISO_DIVISION_NOT_FOUND', message: 'Không tìm thấy bộ phận này.' });
