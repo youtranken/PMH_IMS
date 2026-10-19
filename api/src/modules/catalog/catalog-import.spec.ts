@@ -333,3 +333,14 @@ describe('planCatalogImport — số điện thoại nhà cung cấp', () => {
     expect(plan.rows[0]).toMatchObject({ action: 'create', values: { phone: '19006600' } });
   });
 });
+
+describe('planCatalogImport — tủ mới trong site đã ngừng dùng (Q-14)', () => {
+  const SITE_OFF = { ...SITE_HO, id: '22222222-2222-2222-2222-222222222222', code: 'PMH-CU', active: false };
+  const snapshot = () => snapshotWith({ sites: new Map([[normalizeKey('PMH-CU'), SITE_OFF]]) });
+
+  it('dòng TẠO tủ mới trong site đã vô hiệu → lỗi theo dòng ở Đối chiếu', () => {
+    const plan = planCatalogImport(sheet('Tủ mạng', [{ 'Mã tủ *': 'R09', 'Thuộc site *': 'PMH-CU' }]), snapshot());
+    expect(plan.rows[0]).toMatchObject({ action: 'error' });
+    expect(plan.rows[0].message).toMatch(/Site "PMH-CU" đã ngừng dùng/);
+  });
+});
