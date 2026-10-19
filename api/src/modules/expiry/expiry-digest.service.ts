@@ -10,7 +10,7 @@ import { and, asc, eq, isNull, lt, or } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { isoDateInTz } from '../../common/today';
+import { isoDateInTz, startOfDayInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { OutboxService } from '../outbox/outbox.service';
@@ -20,7 +20,6 @@ import {
   localNowIn,
   shouldSendNow,
   nextSendAt,
-  startOfLocalDayUtc,
   type DigestFrequency,
 } from './digest-schedule';
 import { expiryRuleTable } from './expiry.schema';
@@ -223,9 +222,9 @@ export class ExpiryDigestService {
      * dán nửa đêm UTC vào một chuỗi ngày ĐỊA PHƯƠNG, tức 7 giờ sáng cùng ngày ở Việt Nam. Với
      * mọi luật hẹn giờ 0..6, câu UPDATE giành kỳ bên dưới im lặng cho giành LẦN NỮA, và trọng
      * tài "nhiều nhất một lần" mất tác dụng đúng ở khung giờ người ta hay chọn nhất cho báo
-     * cáo đầu ngày. Xem `startOfLocalDayUtc`.
+     * cáo đầu ngày. Xem `startOfDayInTz` (common/today).
      */
-    const startOfDayUtc = startOfLocalDayUtc(timeZone, local.date);
+    const startOfDayUtc = startOfDayInTz(local.date, timeZone);
     await this.db.transaction(async (tx) => {
       /*
        * CHỐT KỲ và ĐẨY VÀO OUTBOX TRONG CÙNG MỘT TRANSACTION.

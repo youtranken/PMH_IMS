@@ -10,7 +10,7 @@ import { FilesApiService } from '../files/files.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { SweepService } from '../queue/sweep.service';
 import { IsoClock } from './iso-clock';
-import { isoIncidentTable, isoPeriodTable, isoReminderSentTable } from './iso-forms.schema';
+import { isoIncidentTable, isoReminderSentTable } from './iso-forms.schema';
 import { toSigned } from './iso-incident.service';
 import { ISO_REMINDER_TOPIC, IsoMailContent, type IsoReminder } from './iso-mail';
 import { PERIOD_CLOSE_KIND, PERIOD_REOPEN_KIND } from './iso-period.service';
@@ -145,7 +145,7 @@ export class IsoReminderService implements OnModuleInit {
 
   private async signedReminders(today: string, timeZone: string): Promise<number> {
     const days = await this.config.getNumber('isoRemindSignedDays');
-    const locked = await this.db.select().from(isoPeriodTable).where(eq(isoPeriodTable.state, 'locked'));
+    const locked = await this.periods.allLocked();
     const files = await this.files.listForOwners('iso_period', locked.map((p) => p.id));
     let sent = 0;
     for (const period of locked) {

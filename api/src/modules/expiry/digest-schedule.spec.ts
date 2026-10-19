@@ -1,3 +1,4 @@
+import { startOfDayInTz } from '../../common/today';
 import { lookBackDays } from './expiry.service';
 import {
   describeSchedule,
@@ -5,7 +6,6 @@ import {
   nextSendAt,
   nextSendSlot,
   shouldSendNow,
-  startOfLocalDayUtc,
   weekdayOf,
   type DigestSchedule,
   type LocalNow,
@@ -158,7 +158,7 @@ describe('weekdayOf — suy thứ TỪ NGÀY, không đọc tên viết tắt c�
  * Hậu quả: luật gửi lúc 6 giờ sáng gửi ĐÔI mỗi kỳ khi có hai worker — và giờ sớm lại đúng là
  * giờ người ta chọn cho báo cáo đầu ngày.
  */
-describe('startOfLocalDayUtc — đầu ngày ĐỊA PHƯƠNG, tính bằng UTC', () => {
+describe('startOfDayInTz (common/today) dùng cho digest — đầu ngày ĐỊA PHƯƠNG, tính bằng UTC', () => {
   it.each([
     ['Việt Nam (+07, không có giờ mùa hè)', 'Asia/Ho_Chi_Minh', '2026-09-10', '2026-09-09T17:00:00.000Z'],
     ['UTC', 'UTC', '2026-09-10', '2026-09-10T00:00:00.000Z'],
@@ -166,12 +166,12 @@ describe('startOfLocalDayUtc — đầu ngày ĐỊA PHƯƠNG, tính bằng UTC'
     ['New York mùa hè (-04)', 'America/New_York', '2026-09-10', '2026-09-10T04:00:00.000Z'],
     ['New York mùa đông (-05)', 'America/New_York', '2026-01-10', '2026-01-10T05:00:00.000Z'],
   ])('%s', (_name, timeZone, isoDate, expected) => {
-    expect(startOfLocalDayUtc(timeZone, isoDate).toISOString()).toBe(expected);
+    expect(startOfDayInTz(isoDate, timeZone).toISOString()).toBe(expected);
   });
 
   /** Múi giờ gõ sai lùi về UTC chứ không ném — cùng nếp với `localNowIn`/`isoDateInTz`. */
   it('múi giờ không hợp lệ → lùi về UTC, không ném', () => {
-    expect(startOfLocalDayUtc('Hành/Tinh_Sao_Hoả', '2026-09-10').toISOString()).toBe(
+    expect(startOfDayInTz('2026-09-10', 'Hành/Tinh_Sao_Hoả').toISOString()).toBe(
       '2026-09-10T00:00:00.000Z',
     );
   });
@@ -182,7 +182,7 @@ describe('startOfLocalDayUtc — đầu ngày ĐỊA PHƯƠNG, tính bằng UTC'
    */
   it('luật gửi 6 giờ sáng giờ VN: mốc đầu ngày phải TRƯỚC thời điểm gửi', () => {
     const sentAt = new Date('2026-09-09T23:00:00Z'); // = 06:00 ngày 10/09 giờ VN
-    const start = startOfLocalDayUtc('Asia/Ho_Chi_Minh', '2026-09-10');
+    const start = startOfDayInTz('2026-09-10', 'Asia/Ho_Chi_Minh');
 
     expect(start.getTime()).toBeLessThan(sentAt.getTime());
     // Và sau khi đã gửi, `last_sent_at < start` phải SAI — kỳ này coi như đã chốt.
