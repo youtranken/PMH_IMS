@@ -546,6 +546,7 @@ export async function freshTotpCode(secret: string): Promise<string> {
       return totp.generate({ secret, epoch: step * 30 });
     }
     const msToNextWindow = 30_000 - (Date.now() % 30_000) + 1_000;
+    // eslint-disable-next-line no-restricted-globals -- chờ sang chu kỳ TOTP 30 giây kế tiếp: đồng hồ thật, không có điều kiện nào để chờ
     await new Promise((resolve) => setTimeout(resolve, msToNextWindow));
   }
 }
@@ -710,6 +711,7 @@ export async function waitForMail(subjectPart: string, attempts = 40): Promise<M
         const matched = body.messages.filter((mail) => mail.Subject.includes(subjectPart));
         if (matched.length > 0) return matched;
       }
+      // eslint-disable-next-line no-restricted-globals -- vòng hỏi Mailpit (ngoài trình duyệt) có trần lượt; nơi gọi cần cả kết quả rỗng
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     return [];

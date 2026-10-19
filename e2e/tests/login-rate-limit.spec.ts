@@ -54,6 +54,7 @@ test.describe('Chống dò mật khẩu theo IP', () => {
         expect(statuses.every((status) => status === 401)).toBe(true);
         return;
       }
+      // eslint-disable-next-line no-restricted-globals -- bài đo trần đăng nhập theo IP (@slow): chính cửa sổ thời gian là thứ đang kiểm
       await new Promise((resolve) => setTimeout(resolve, SPACING_MS));
     }
     throw new Error(`api vẫn chặn 429 sau ${MAX_ROUNDS} vòng — trần đăng nhập chưa được trả lại`);

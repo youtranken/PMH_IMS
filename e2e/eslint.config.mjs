@@ -118,6 +118,13 @@ export default tseslint.config(
           message: NO_SLEEP.message,
         },
       ],
+      /*
+       * `new Promise((r) => setTimeout(r, n))` là cùng một cái sleep, chỉ khác cách viết — chặn
+       * `page.waitForTimeout` mà để lọt dạng này thì luật trên chỉ đổi chỗ đặt sleep. `test.setTimeout`
+       * là thuộc tính, không phải biến toàn cục, nên không dính. Chỗ phải chờ đồng hồ thật (cửa sổ
+       * throttler, chu kỳ TOTP) khai ngoại lệ ngay tại dòng, kèm lý do.
+       */
+      'no-restricted-globals': ['error', { name: 'setTimeout', message: NO_SLEEP.message }],
     },
   },
   {
