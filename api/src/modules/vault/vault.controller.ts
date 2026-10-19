@@ -236,13 +236,14 @@ export class VaultController {
    * `Cache-Control: no-store` là bắt buộc: thiếu nó thì bí mật nằm lại trong bộ nhớ đệm
    * của trình duyệt và bấm Back ở máy dùng chung là hiện lại.
    *
-   * Một lần gọi = một secret = một dòng audit (`VaultService.reveal` ghi TRƯỚC khi giải mã).
+   * Một lần gọi = một secret = một dòng audit (`VaultService.reveal` giải mã, rồi ghi audit TRƯỚC
+   * khi trả giá trị: giải mã hỏng thì không có dòng "đã xem").
    *
-   * Trần `rate.secret_reveal_per_minute` (30/phút) THEO USER. Hình dạng route ("một id mỗi lần") một mình KHÔNG đủ để giữ
+   * Trần `rate.secret_reveal_per_minute` (mặc định 30/phút) THEO USER. Hình dạng route ("một id mỗi lần") một mình KHÔNG đủ để giữ
    * FR-026: phiên đã step-up cứ gọi liệt kê rồi mở lần lượt là rút được cả két trong vài phút,
    * chỉ để lại N dòng audit mà chẳng ai ngồi đọc kịp. Trần này
-   * là hàng rào PHÒNG, còn audit là hàng rào PHÁT HIỆN — cần cả hai. 30 vẫn rộng hơn nhiều so
-   * với nhịp người thật (mở một hai mật khẩu rồi đi làm việc khác).
+   * là hàng rào PHÒNG, còn audit là hàng rào PHÁT HIỆN — cần cả hai. Mặc định 30 vẫn rộng hơn nhiều
+   * so với nhịp người thật (mở một hai mật khẩu rồi đi làm việc khác).
    */
   @ConfigThrottle('rateSecretRevealPerMinute')
   @Roles('sa', 'admin', 'member')
