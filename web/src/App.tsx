@@ -7,7 +7,7 @@ import {
   useLocation,
   useParams,
 } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMe } from '@/lib/api';
 import {
@@ -31,33 +31,18 @@ import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
 import { ToastProvider } from '@/ui/toast';
-import { AccountsScreen } from '@/features/admin/accounts-screen';
-import { AuditLogScreen } from '@/features/admin/audit-log-screen';
 import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
 import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
-import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
-import { SettingsScreen } from '@/features/admin/settings-screen';
-import { FailedMailScreen } from '@/features/admin/failed-mail-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
-import { DiagramScreen } from '@/features/diagrams/diagram-screen';
-import { DiagramSlideshow } from '@/features/diagrams/diagram-slideshow';
-import { DiagramTreeScreen } from '@/features/diagrams/diagram-tree-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
 import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
-import { AntivirusScreen } from '@/features/iso/antivirus-screen';
-import { BackupScreen } from '@/features/iso/backup-screen';
-import { CatalogScreen as IsoCatalogScreen } from '@/features/iso/catalog-screen';
-import { IncidentScreen } from '@/features/iso/incident-screen';
-import { IncidentsScreen } from '@/features/iso/incidents-screen';
-import { PeriodsScreen } from '@/features/iso/periods-screen';
-import { ReviewScreen } from '@/features/iso/review-screen';
 import { IpamScreen } from '@/features/ipam/ipam-screen';
 import { IspDetail } from '@/features/isp/isp-detail';
 import { IspScreen } from '@/features/isp/isp-screen';
@@ -69,10 +54,32 @@ import { LoginScreen } from '@/features/auth/login-screen';
 import { ProfileScreen } from '@/features/auth/profile-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
 import { TotpEnroll } from '@/features/auth/totp-enroll';
-import { ComponentsGallery } from '@/features/dev/components-gallery';
 import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 import { usePageTitle } from '@/ui/use-page-title';
 import { LiveRegion } from '@/ui/live-region';
+
+/*
+ * Màn nặng và ít dùng hằng ngày (sơ đồ, phiếu ISO, quản trị, ma trận két, bộ giao diện dev) tải
+ * khi mở lần đầu: gom chung vào một bundle thì lần đầu mở trang và mỗi lần deploy đều phải tải
+ * ~1,3 MB JS, chậm nhất đúng ở màn đọc 390px trên điện thoại. Luồng chính (đăng nhập, bảng điều
+ * khiển, thiết bị, phần mềm, IP) vẫn tải sẵn.
+ */
+const AccountsScreen = lazy(() => import('@/features/admin/accounts-screen').then((m) => ({ default: m.AccountsScreen })));
+const AuditLogScreen = lazy(() => import('@/features/admin/audit-log-screen').then((m) => ({ default: m.AuditLogScreen })));
+const AccessMatrixScreen = lazy(() => import('@/features/vault/access-matrix-screen').then((m) => ({ default: m.AccessMatrixScreen })));
+const SettingsScreen = lazy(() => import('@/features/admin/settings-screen').then((m) => ({ default: m.SettingsScreen })));
+const FailedMailScreen = lazy(() => import('@/features/admin/failed-mail-screen').then((m) => ({ default: m.FailedMailScreen })));
+const DiagramScreen = lazy(() => import('@/features/diagrams/diagram-screen').then((m) => ({ default: m.DiagramScreen })));
+const DiagramSlideshow = lazy(() => import('@/features/diagrams/diagram-slideshow').then((m) => ({ default: m.DiagramSlideshow })));
+const DiagramTreeScreen = lazy(() => import('@/features/diagrams/diagram-tree-screen').then((m) => ({ default: m.DiagramTreeScreen })));
+const AntivirusScreen = lazy(() => import('@/features/iso/antivirus-screen').then((m) => ({ default: m.AntivirusScreen })));
+const BackupScreen = lazy(() => import('@/features/iso/backup-screen').then((m) => ({ default: m.BackupScreen })));
+const IncidentScreen = lazy(() => import('@/features/iso/incident-screen').then((m) => ({ default: m.IncidentScreen })));
+const IncidentsScreen = lazy(() => import('@/features/iso/incidents-screen').then((m) => ({ default: m.IncidentsScreen })));
+const PeriodsScreen = lazy(() => import('@/features/iso/periods-screen').then((m) => ({ default: m.PeriodsScreen })));
+const ReviewScreen = lazy(() => import('@/features/iso/review-screen').then((m) => ({ default: m.ReviewScreen })));
+const ComponentsGallery = lazy(() => import('@/features/dev/components-gallery').then((m) => ({ default: m.ComponentsGallery })));
+const IsoCatalogScreen = lazy(() => import('@/features/iso/catalog-screen').then((m) => ({ default: m.CatalogScreen })));
 
 /**
  * Data router chứ không `BrowserRouter`: `useBlocker` (chặn rời màn khi còn thay đổi chưa lưu,
@@ -218,6 +225,7 @@ function AppRoutes() {
 
   return (
     <AppShell me={me}>
+      <Suspense fallback={<Loading />}>
       <Routes>
         <Route path={PATHS.dashboard} element={<DashboardScreen me={me} />} />
         {/* Gác theo BẢNG `ROUTE_ROLES`, không bằng mấy câu `? :` rải rác: gác trong màn thì
@@ -328,6 +336,7 @@ function AppRoutes() {
         ))}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </AppShell>
   );
 }
