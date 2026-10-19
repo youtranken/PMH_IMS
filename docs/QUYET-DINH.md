@@ -1258,6 +1258,22 @@ IT dùng hằng ngày.
   - ✗ bấm ở ngày khác Reported Date chỉ là dấu trên phiếu; 0206 vẫn gắn theo dòng issue (ngày
     phát hiện).
 
+### Q-29 · Chốt sau review toàn dự án (19/10/2026, chủ dự án duyệt đề xuất của Claude)
+
+- **Bản scan đã ký của phiếu ISO:**
+  - Kỳ đang khoá (Đã chốt · chờ bản ký, Hoàn tất) thì không ai xoá được bản ký, kể cả SA. Muốn
+    thay thì xin mở lại kỳ (Q-28).
+  - Lý do: bản ký là bằng chứng ISO. Xoá được thì kỳ "Hoàn tất" mất bằng chứng mà không ai duyệt.
+  - Lưu SHA-256 của mọi file lúc tải lên, để đối chiếu được file chưa bị thay.
+- **Danh mục phiếu (job 0203, bộ phận 0208):**
+  - Chỉ người phụ trách của phiếu đó (chính hoặc dự phòng) và SA/Admin được thêm, sửa, sắp xếp,
+    ngừng. Thay câu "do IT tự quản" ở Q-28.
+  - Lý do: ngừng job hay dời ngày bắt đầu theo dõi làm ô trống không còn bị tính là bỏ sót, tức là
+    đi vòng quyền ghi phiếu.
+  - 0208 cho thêm bộ phận mới ngay trong form ghi issue (Q-28), nên chỗ đó theo quyền ghi 0208.
+- **Import Excel lớn:** gộp truy vấn theo lô và nới thời gian chờ riêng cho route import. Không đưa
+  sang worker; giao diện import giữ nguyên.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
