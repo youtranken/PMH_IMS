@@ -637,9 +637,7 @@ export class DiagramsService {
       });
     }
     if (input.parentId) {
-      if (input.parentId === id || (await this.descendantIds(id)).includes(input.parentId)) {
-        throw new BadRequestException({ code: 'DIAGRAM_MOVE_CYCLE', message: 'Không chuyển được bản vẽ vào chính nhánh con của nó.' });
-      }
+      if (input.parentId === id || (await this.descendantIds(id)).includes(input.parentId)) throw moveCycle();
     }
     const next = { ...input, ...(input.name !== undefined ? { name: input.name.trim() } : {}) };
     if (next.nodeType !== undefined || next.cabinetId !== undefined) {
@@ -658,7 +656,16 @@ export class DiagramsService {
     if (!hasChanges(changes)) return current;
     await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
-        if (input.parentId) await this.assertLiveParent(input.parentId, tx);
+        if (input.parentId) {
+          await this.assertLiveParent(input.parentId, tx);
+          /*
+           * Kiểm vòng LẠI trong tx, sau khi khoá cả cây: bước kiểm ở trên chạy ngoài tx, nên A chuyển
+           * X vào dưới Y trong lúc B chuyển Y vào dưới X thì cả hai cùng qua và cây thành vòng (X, Y
+           * biến khỏi cây). Chuyển nút là thao tác hiếm, xếp hàng cả cây không đáng kể.
+           */
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('diagram-tree', 0))`);
+          if ((await this.descendantIds(id, tx)).includes(input.parentId)) throw moveCycle();
+        }
         const set: Partial<typeof diagramTable.$inferInsert> = { updatedAt: new Date() };
         for (const field of TRACKED) {
           if (field in changes) (set as Record<string, unknown>)[field] = changes[field].after;
@@ -741,8 +748,8 @@ export class DiagramsService {
     }
   }
 
-  private async descendantIds(id: string): Promise<string[]> {
-    const { rows } = await this.db.execute<{ id: string }>(sql`
+  private async descendantIds(id: string, executor: Pick<Database, 'execute'> = this.db): Promise<string[]> {
+    const { rows } = await executor.execute<{ id: string }>(sql`
       WITH RECURSIVE sub AS (
         SELECT id FROM diagram WHERE parent_id = ${id}
         UNION SELECT d.id FROM diagram d JOIN sub ON d.parent_id = sub.id
@@ -2029,4 +2036,8 @@ function pgCode(error: unknown): string | undefined {
 function viewCells(index: CellIndex): ViewCell[] {
   const labels = cellLabels(index);
   return index.cells.map((cell) => ({ id: cell.id, kind: cell.kind, layer: cell.layer, bounds: cell.bounds ?? null, label: labels.get(cell.id) ?? null }));
+}
+
+function moveCycle(): BadRequestException {
+  return new BadRequestException({ code: 'DIAGRAM_MOVE_CYCLE', message: 'Không chuyển được bản vẽ vào chính nhánh con của nó.' });
 }
