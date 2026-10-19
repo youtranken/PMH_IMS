@@ -1273,6 +1273,10 @@ IT dùng hằng ngày.
   - 0208 cho thêm bộ phận mới ngay trong form ghi issue (Q-28), nên chỗ đó theo quyền ghi 0208.
 - **Import Excel lớn:** gộp truy vấn theo lô và nới thời gian chờ riêng cho route import. Không đưa
   sang worker; giao diện import giữ nguyên.
+- **Nhật ký sửa hồ sơ tài khoản (NĐ 13/2023):** chỉ ghi tên trường đã đổi (`changed`), không ghi giá
+  trị SĐT, ngày sinh, họ tên, mã nhân viên. Lý do: `audit_log` chỉ-thêm, giữ vĩnh viễn, nên giá trị
+  ghi vào đó không bao giờ xoá được. Giới hạn: các dòng ghi trước thay đổi này vẫn còn giá trị cũ, vì
+  bảng chỉ-thêm không sửa được; muốn xoá phải làm theo quy trình lưu trữ năm cũ của audit.
 
 ### Q-09 · Tài liệu
 
