@@ -30,6 +30,7 @@ export const CONFIG_KEYS = {
    * giữ; server đã có `rate.file_upload_per_minute` làm hàng rào cứng.
    */
   fileMaxSizeMb: { key: 'file.max_size_mb', fallback: 25 },
+  fileMaxImageMegapixels: { key: 'file.max_image_megapixels', fallback: 50 },
   fileMaxFilesPerBatch: { key: 'file.max_files_per_batch', fallback: 6 },
   // File xoá mềm quá ngần này ngày thì lượt dọn gỡ blob khỏi đĩa, giữ hàng (`FilesService.purgeDeleted`).
   filePurgeAfterDays: { key: 'file.purge_after_days', fallback: 30 },

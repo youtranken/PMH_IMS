@@ -16,7 +16,7 @@ function sizeOf(image: Buffer): { width: number; height: number } {
 
 describe('photoThumbnail — ảnh thật thiết bị thu về cạnh dài tối đa', () => {
   it('ảnh ngang lớn → PNG rộng đúng trần, giữ tỉ lệ', async () => {
-    const out = await photoThumbnail(png(1200, 300), 'image/png', 480);
+    const out = await photoThumbnail(png(1200, 300), 'image/png', 480, 50);
     expect(out?.mime).toBe('image/png');
     expect(sizeOf(out!.bytes)).toEqual({ width: 480, height: 120 });
     // Cỡ đi kèm ảnh: ô trên bản vẽ lấy tỉ lệ ảnh từ đây, không giải mã lại.
@@ -24,23 +24,23 @@ describe('photoThumbnail — ảnh thật thiết bị thu về cạnh dài tố
   });
 
   it('ảnh dọc lớn → cao đúng trần', async () => {
-    const out = await photoThumbnail(png(300, 900), 'image/png', 480);
+    const out = await photoThumbnail(png(300, 900), 'image/png', 480, 50);
     expect(sizeOf(out!.bytes)).toEqual({ width: 160, height: 480 });
   });
 
   it('ảnh đã nhỏ hơn trần → giữ nguyên tệp gốc (không nén lại)', async () => {
     const source = png(200, 50);
-    const out = await photoThumbnail(source, 'image/png', 480);
+    const out = await photoThumbnail(source, 'image/png', 480, 50);
     expect(out?.bytes.equals(source)).toBe(true);
     expect({ width: out!.width, height: out!.height }).toEqual({ width: 200, height: 50 });
   });
 
   it('không phải ảnh png/jpeg/webp → null', async () => {
-    await expect(photoThumbnail(Buffer.from('%PDF-1.4'), 'application/pdf', 480)).resolves.toBeNull();
+    await expect(photoThumbnail(Buffer.from('%PDF-1.4'), 'application/pdf', 480, 50)).resolves.toBeNull();
   });
 
   it('nội dung hỏng → null, không ném', async () => {
-    await expect(photoThumbnail(Buffer.from('không phải ảnh'), 'image/png', 480)).resolves.toBeNull();
+    await expect(photoThumbnail(Buffer.from('không phải ảnh'), 'image/png', 480, 50)).resolves.toBeNull();
   });
 });
 
@@ -89,5 +89,21 @@ describe('photoSize — cỡ ảnh đọc từ đầu tệp', () => {
       );
       expect(photoSize(bytes, mime)).toEqual({ width: probe.width, height: probe.height });
     }
+  });
+});
+
+describe('photoThumbnail — trần số điểm ảnh trước khi giải mã', () => {
+  /*
+   * Ảnh nén toàn số 0 vài MB có thể khai 50000×50000 trong header: giải mã cần cỡ GB RAM và làm api
+   * bị OOM-kill. Trần phải xét từ header, TRƯỚC khi đưa cho resvg. Bài dùng ảnh thật 2 MP với trần
+   * 1 MP thay vì dựng ảnh khổng lồ trong test.
+   */
+  it('ảnh vượt trần megapixel → null, không giải mã', async () => {
+    await expect(photoThumbnail(png(2000, 1000), 'image/png', 480, 1)).resolves.toBeNull();
+  });
+
+  it('ảnh dưới trần vẫn thu nhỏ như thường', async () => {
+    const out = await photoThumbnail(png(1200, 300), 'image/png', 480, 1);
+    expect(sizeOf(out!.bytes)).toEqual({ width: 480, height: 120 });
   });
 });

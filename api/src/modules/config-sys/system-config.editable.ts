@@ -120,6 +120,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'natSensitivePorts', group: 'ipam', type: 'int_list', min: 1, max: 65535, unordered: true, maxItems: 50 },
   // Giấy tờ đính kèm (Q-18). Trần 25 = `FILE_HARD_CAP_MB`: multer/nginx chặn cứng ở đó.
   { name: 'fileMaxSizeMb', group: 'files', type: 'int', unit: 'mb', min: 1, max: 25 },
+  { name: 'fileMaxImageMegapixels', group: 'files', type: 'int', unit: 'megapixels', min: 4, max: 100 },
   { name: 'fileMaxFilesPerBatch', group: 'files', type: 'int', unit: 'files', min: 1, max: 20 },
   // Dọn blob không lùi lại được: dưới 7 ngày thì một lần xoá nhầm cuối tuần đã mất hẳn nội dung.
   { name: 'filePurgeAfterDays', group: 'files', type: 'int', unit: 'days', min: 7, max: 3650 },

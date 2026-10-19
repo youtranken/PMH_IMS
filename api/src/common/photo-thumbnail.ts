@@ -20,11 +20,18 @@ export interface PhotoImage {
  * ảnh: nó giải mã PNG/JPEG và vẽ lại ở cỡ mới. Ảnh không giải mã được (hỏng, hay WebP mà resvg không
  * đọc) trả `null` — nơi gọi rơi về biểu tượng loại thay vì làm hỏng bản vẽ.
  */
-export async function photoThumbnail(bytes: Buffer, mime: string, maxPx: number): Promise<PhotoImage | null> {
+export async function photoThumbnail(
+  bytes: Buffer,
+  mime: string,
+  maxPx: number,
+  maxMegapixels: number,
+): Promise<PhotoImage | null> {
   if (!PHOTO_MIMES.has(mime)) return null;
   const size = photoSize(bytes, mime);
   if (!size || !(size.width > 0 && size.height > 0)) return null;
   const { width, height } = size;
+  // Xét từ header TRƯỚC khi giải mã: ảnh nén vài MB khai 50000×50000 cần cỡ GB RAM để giải mã.
+  if (width * height > maxMegapixels * 1_000_000) return null;
   if (Math.max(width, height) <= maxPx) return { mime, bytes, width, height };
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +

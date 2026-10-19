@@ -4904,6 +4904,9 @@ export default {
     fileMaxSizeMbLabel: 'Dung lượng tối đa mỗi file',
     fileMaxSizeMbDesc:
       'Áp cho mọi loại giấy tờ (ảnh, PDF, Word, Excel, PowerPoint). Không đặt quá 25 MB: máy chủ chặn cứng ở mức đó.',
+    fileMaxImageMegapixelsLabel: 'Cỡ ảnh tối đa khi tải lên',
+    fileMaxImageMegapixelsDesc:
+      'Số triệu điểm ảnh của một ảnh (rộng × cao). Ảnh lớn hơn bị từ chối lúc tải lên. Đặt quá cao thì một ảnh có thể làm máy chủ hết bộ nhớ khi tạo ảnh xem trước.',
     fileMaxFilesPerBatchLabel: 'Số file tối đa mỗi lượt chọn',
     fileMaxFilesPerBatchDesc: 'Chọn hoặc kéo thả nhiều hơn thì các file dư bị bỏ ra, kèm lời báo.',
     filePurgeAfterDaysLabel: 'Gỡ nội dung file đã xóa sau',

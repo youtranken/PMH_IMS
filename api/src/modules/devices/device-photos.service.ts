@@ -236,11 +236,14 @@ export class DevicePhotosService {
 
   /** Ảnh đã thu nhỏ theo `diagram.photo_max_px`; ảnh không đọc/giải mã được thì `null`. */
   async thumbnail(fileId: string): Promise<PhotoImage | null> {
-    const maxPx = await this.config.getNumber('diagramPhotoMaxPx');
+    const [maxPx, maxMegapixels] = await Promise.all([
+      this.config.getNumber('diagramPhotoMaxPx'),
+      this.config.getNumber('fileMaxImageMegapixels'),
+    ]);
     const key = `${fileId}:${maxPx}`;
     if (this.thumbs.has(key)) return this.thumbs.get(key)!;
     const source = await this.files.readImage(fileId);
-    const image = source ? await photoThumbnail(source.bytes, source.mime, maxPx) : null;
+    const image = source ? await photoThumbnail(source.bytes, source.mime, maxPx, maxMegapixels) : null;
     const oldest = this.thumbs.keys().next();
     if (this.thumbs.size >= THUMB_CACHE_MAX && !oldest.done) this.thumbs.delete(oldest.value);
     // Blob mất trên đĩa có thể quay lại (khôi phục từ sao lưu): chỉ nhớ kết quả có ảnh.

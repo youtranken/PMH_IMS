@@ -25,6 +25,7 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { detectFileType, sizeLimitBytes } from './file-validation';
 import type { FileKind } from './file-validation';
 import { filesTable } from './files.schema';
+import { photoSize } from '../../common/photo-thumbnail';
 
 /**
  * Chủ thể được phép có file đính kèm. Whitelist chứ không nhận chuỗi tự do: người dùng
@@ -184,6 +185,21 @@ export class FilesService implements OnModuleInit {
         code: 'FILE_TOO_LARGE',
         message: `File vượt trần ${Math.round(limit / 1024 / 1024)} MB.`,
       });
+    }
+    /*
+     * Ảnh: trần số điểm ảnh xét từ header. Trần dung lượng không đủ — PNG vài MB nén toàn số 0 khai
+     * 50000×50000 vẫn lọt, và lần đầu ai mở ảnh xem trước / bản vẽ là api giải mã cả GB rồi bị
+     * OOM-kill.
+     */
+    const pixels = photoSize(input.buffer, detected.mime);
+    if (pixels) {
+      const maxMegapixels = await this.config.getNumber('fileMaxImageMegapixels');
+      if (pixels.width * pixels.height > maxMegapixels * 1_000_000) {
+        throw new BadRequestException({
+          code: 'IMAGE_TOO_MANY_PIXELS',
+          message: `Ảnh ${pixels.width}×${pixels.height} vượt trần ${maxMegapixels} triệu điểm ảnh. Thu nhỏ ảnh rồi tải lại.`,
+        });
+      }
     }
 
     /*

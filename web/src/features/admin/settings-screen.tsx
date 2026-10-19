@@ -120,6 +120,7 @@ const TEXT: Record<string, [string, string]> = {
   natSensitivePorts: ['settings.natSensitivePortsLabel', 'settings.natSensitivePortsDesc'],
   breakGlassRecentWindowDays: ['settings.breakGlassRecentWindowDaysLabel', 'settings.breakGlassRecentWindowDaysDesc'],
   fileMaxSizeMb: ['settings.fileMaxSizeMbLabel', 'settings.fileMaxSizeMbDesc'],
+  fileMaxImageMegapixels: ['settings.fileMaxImageMegapixelsLabel', 'settings.fileMaxImageMegapixelsDesc'],
   fileMaxFilesPerBatch: ['settings.fileMaxFilesPerBatchLabel', 'settings.fileMaxFilesPerBatchDesc'],
   filePurgeAfterDays: ['settings.filePurgeAfterDaysLabel', 'settings.filePurgeAfterDaysDesc'],
   diagramEditorInitTimeoutSeconds: [
