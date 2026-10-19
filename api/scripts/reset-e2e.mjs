@@ -230,6 +230,13 @@ const DOMAINS = {
     `DO $$ BEGIN
        IF to_regclass('iso_period') IS NOT NULL THEN
          UPDATE system_config SET value = '"2021-01"' WHERE key = 'iso.first_month';
+         -- Trigger 0071 từ chối ghi vào ô của kỳ đã khoá; bài kiểm có ô E2E trong kỳ như thế. Chỉ
+         -- chủ bảng tắt được trigger (ims_app thì không), và cả khối là một transaction nên lỗi
+         -- giữa chừng cũng không để trigger nằm tắt.
+         ALTER TABLE iso_backup_tick DISABLE TRIGGER iso_backup_tick_period_guard;
+         ALTER TABLE iso_av_clear_day DISABLE TRIGGER iso_av_clear_day_period_guard;
+         ALTER TABLE iso_av_issue DISABLE TRIGGER iso_av_issue_period_guard;
+         ALTER TABLE iso_av_mark DISABLE TRIGGER iso_av_mark_period_guard;
          DELETE FROM file WHERE owner_type = 'iso_incident' AND owner_id IN (SELECT id FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%');
          DELETE FROM file WHERE owner_type = 'iso_period' AND owner_id IN (SELECT id FROM iso_period WHERE year <= 2021);
          DELETE FROM iso_incident_cell WHERE incident_id IN (SELECT id FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%')
@@ -245,6 +252,10 @@ const DOMAINS = {
          DELETE FROM iso_period WHERE year <= 2021;
          UPDATE iso_form_owner SET primary_user_id = NULL WHERE primary_user_id IN (SELECT id FROM users WHERE email ILIKE 'e2e-%');
          UPDATE iso_form_owner SET backup_user_id = NULL WHERE backup_user_id IN (SELECT id FROM users WHERE email ILIKE 'e2e-%');
+         ALTER TABLE iso_backup_tick ENABLE TRIGGER iso_backup_tick_period_guard;
+         ALTER TABLE iso_av_clear_day ENABLE TRIGGER iso_av_clear_day_period_guard;
+         ALTER TABLE iso_av_issue ENABLE TRIGGER iso_av_issue_period_guard;
+         ALTER TABLE iso_av_mark ENABLE TRIGGER iso_av_mark_period_guard;
        END IF;
      END $$`,
   ],
