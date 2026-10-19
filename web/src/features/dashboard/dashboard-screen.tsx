@@ -90,7 +90,7 @@ interface DisposedItem {
   code: string;
   name: string;
   detail: string | null;
-  updatedAt: string | null;
+  disposedAt: string | null;
 }
 
 interface Dashboard {
@@ -368,7 +368,7 @@ export function DashboardScreen({ me }: { me: Me }) {
                 <span className="badge muted">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
               </div>
               <span className="muted">
-                {[detail, item.updatedAt ? formatDate(item.updatedAt) : null]
+                {[detail, item.disposedAt ? formatDate(item.disposedAt) : null]
                   .filter(Boolean)
                   .join(' · ')}
               </span>

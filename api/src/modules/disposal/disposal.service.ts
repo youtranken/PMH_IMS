@@ -47,18 +47,13 @@ export class DisposalService {
     private readonly config: SystemConfigService,
   ) {}
 
+  /**
+   * Toàn bộ kho kèm NGÀY VÀO KHO đã tra lịch sử của module chủ (`disposedAt`). Khối "Vừa thanh lý"
+   * của trang chủ cắt theo ngày đó: theo `updatedAt` thì máy thanh lý từ lâu, hôm qua có người sửa
+   * ghi chú, thành "vừa thanh lý".
+   */
   async list(): Promise<DisposalItem[]> {
-    /*
-     * Bốn lượt gọi CHẠY SONG SONG. Nối tiếp thì màn này chờ bằng tổng bốn lượt, mà chúng
-     * không phụ thuộc nhau chút nào.
-     */
-    const [devices, software, accounts, ispLines] = await Promise.all([
-      this.devices.listRetired(),
-      this.software.listRetired(),
-      this.accounts.listDisabled(),
-      this.software.listTerminatedIsp(),
-    ]);
-    return merge(devices, software, accounts, ispLines);
+    return (await this.everything()).items;
   }
 
   /**

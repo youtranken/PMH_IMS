@@ -57,20 +57,23 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
   });
 
   it('kho gộp đường truyền thanh lý thành một hàng loại `isp`', async () => {
-    const devices = { listRetired: () => Promise.resolve([]) } as unknown as DevicesApiService;
-    const accounts = {
-      listDisabled: () => Promise.resolve([]),
-    } as unknown as ServiceAccountsApiService;
-    // Phần mềm đã bỏ đi qua `software.list` — bảng đó không phải thứ bài này hỏi.
+    const emptyPage = () => Promise.resolve({ items: [], total: 0 });
+    const noEvents = () => Promise.resolve(new Map());
+    const devices = { retiredPage: emptyPage, retirementEvents: noEvents } as unknown as DevicesApiService;
+    const accounts = { disabledPage: emptyPage, disableEvents: noEvents } as unknown as ServiceAccountsApiService;
+    // Phần mềm đã bỏ đi qua `software.list` — bảng đó không phải thứ bài này hỏi. Đường truyền đi
+    // qua cửa THẬT của software.api, kể cả lịch sử thanh lý.
     const software = {
-      listRetired: () => Promise.resolve([]),
-      listTerminatedIsp: () => api.listTerminatedIsp(),
+      retiredPage: emptyPage,
+      retirementEvents: noEvents,
+      terminatedIspPage: () => api.terminatedIspPage(),
+      ispTerminationEvents: (ids: string[]) => api.ispTerminationEvents(ids),
     } as unknown as SoftwareApiService;
     const disposal = new DisposalService(
       devices,
       software,
       accounts,
-      {} as UsersApiService,
+      { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
       {} as SystemConfigService,
     );
 
@@ -84,6 +87,9 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
       status: 'terminated',
     });
     expect(items[0].updatedAt).toBeInstanceOf(Date);
+    // Ngày vào kho đọc từ lịch sử thanh lý, không chép `updatedAt`.
+    expect(items[0].disposedAt).toBeInstanceOf(Date);
+    expect(items[0].disposedBy).toBe(actor);
   });
 
   it('DP-002: ai thanh lý đường truyền đọc từ `isp_line_history` qua cửa software.api', async () => {

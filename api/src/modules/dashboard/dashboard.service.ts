@@ -91,7 +91,8 @@ interface DisposedEntry {
   code: string;
   name: string;
   detail: string | null;
-  updatedAt: Date | null;
+  /** Ngày vào kho (lịch sử của module chủ), không phải lần sửa gần nhất. */
+  disposedAt: Date | null;
 }
 
 export interface Dashboard {
@@ -316,7 +317,7 @@ export class DashboardService {
    */
   private async disposedBlock(now: Date, maxItems: number): Promise<Dashboard['disposed']> {
     try {
-      const recent = pickRecent(await this.disposal.list(), WEEK_DAYS, now);
+      const recent = pickRecent(await this.disposal.list(), WEEK_DAYS, now, (row) => row.disposedAt);
 
       return {
         available: true,
@@ -327,7 +328,7 @@ export class DashboardService {
           code: row.code,
           name: row.name,
           detail: row.detail,
-          updatedAt: row.updatedAt,
+          disposedAt: row.disposedAt,
         })),
       };
     } catch (error) {

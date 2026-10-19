@@ -74,7 +74,7 @@ const BOARD = {
     available: true,
     total: 1,
     items: [
-      { kind: 'service_account', id: 'x', code: 'VPN-OLD', name: 'VPN cũ', detail: 'vpn', updatedAt: '2026-09-27' },
+      { kind: 'service_account', id: 'x', code: 'VPN-OLD', name: 'VPN cũ', detail: 'vpn', disposedAt: '2026-09-27' },
     ],
   },
 };
