@@ -6,6 +6,7 @@ import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import { DisposalApiService } from '../disposal/disposal.api';
+import type { IsoFormsApiService } from '../iso-forms/iso-forms.api';
 import { DisposalService } from '../disposal/disposal.service';
 import type { DevicesApiService } from '../devices/devices.api';
 import type { SoftwareApiService } from '../software/software.api';
@@ -67,6 +68,7 @@ function buildService(): DashboardService {
     disposal,
     config,
     users,
+    { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
   );
 }
 

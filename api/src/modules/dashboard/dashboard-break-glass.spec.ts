@@ -6,6 +6,7 @@ import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import type { DisposalApiService } from '../disposal/disposal.api';
+import type { IsoFormsApiService } from '../iso-forms/iso-forms.api';
 import type { SystemConfigService } from '../config-sys/system-config.service';
 
 /**
@@ -35,6 +36,7 @@ describe('Khối break-glass của trang chủ', () => {
       { list: empty } as unknown as DisposalApiService,
       { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
+      { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
     );
 
     const before = Date.now();
@@ -91,6 +93,7 @@ describe('Dòng break-glass của trang chủ', () => {
         namesByEmails: () =>
           Promise.resolve(new Map([['lan@pmh.com.vn', 'Nguyễn Thị Lan'], ['sep@pmh.com.vn', 'Trần Sếp']])),
       } as unknown as UsersApiService,
+      { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
     );
     return service.build({ email: 'sep@pmh.com.vn', role: 'sa' });
   }
@@ -132,6 +135,7 @@ describe('Khối hạn và khối dải mạng mang thêm số để web phân l
       { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
       { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 90) } as unknown as SystemConfigService,
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
+      { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
     );
     const board = await service.build({ email: 'sep@pmh.com.vn', role: 'admin' });
     expect(board.expiring).toMatchObject({ total: 19, overdueTotal: 3 });

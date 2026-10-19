@@ -4697,9 +4697,10 @@ export default {
     expiringLeft: 'Còn lại',
     incidents: 'Sự cố tuần qua',
     incidentsEmpty: 'Tuần qua không có sự cố nào.',
-    /* "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố": nói thẳng là chưa theo dõi, nhưng
-       bằng giọng thông tin — dải này hiện mỗi ngày cho mọi người. */
-    incidentsNotYet: 'IMS chưa theo dõi sự cố. Sự cố hiện vẫn ghi ở nơi cũ.',
+    seeAllIncidents: 'Xem danh sách sự cố 0206',
+    incidentSeverity_low: 'Thấp',
+    incidentSeverity_medium: 'Trung bình',
+    incidentSeverity_high: 'Cao',
     /* Cùng tên với trang chi tiết phiếu ("Yêu cầu mở két"), không dùng chữ kỹ thuật "break-glass". */
     breakGlass: 'Yêu cầu mở két tuần qua',
     breakGlassEmpty: 'Tuần qua không ai xin mở két.',

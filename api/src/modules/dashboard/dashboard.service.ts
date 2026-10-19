@@ -7,6 +7,7 @@ import { DisposalApiService } from '../disposal/disposal.api';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { IpamApiService } from '../ipam/ipam.api';
 import { VaultApiService } from '../vault/vault.api';
+import { IsoFormsApiService } from '../iso-forms/iso-forms.api';
 import type { UserRole } from '../auth/types';
 import { pickExpiring, pickLoadedSubnets, pickRecent, pickStaleOwners } from './dashboard-rules';
 import { redactMessage } from '../../common/log-redact';
@@ -29,7 +30,7 @@ const OVERDUE_SLOTS = 3;
 
 interface DashboardBlock<T> {
   /**
-   * `available: false` = module chưa deploy (vd `incidents`). UI hiện "chưa có dữ liệu" gọn
+   * `available: false` = khối không lấy được dữ liệu (module nguồn lỗi). UI hiện "chưa có dữ liệu" gọn
    * gàng chứ KHÔNG hiện khối rỗng trông như hỏng, và cũng không giấu khối đi — sếp cần biết
    * là phần đó chưa có, không phải tưởng là không có sự cố nào.
    */
@@ -85,6 +86,16 @@ interface StaleSecretEntry {
 }
 
 /** Hồ sơ vừa vào kho thanh lý — cùng các loại với màn `/disposal`, không tự gộp lại lần nữa. */
+interface IncidentEntry {
+  id: string;
+  code: string;
+  kind: string;
+  severity: string;
+  status: string;
+  detectedAt: Date;
+  description: string;
+}
+
 interface DisposedEntry {
   kind: string;
   id: string;
@@ -113,7 +124,7 @@ export interface Dashboard {
     /** Nguồn có sổ gia hạn: hộp Gia hạn hiện ô hợp đồng + chi phí (Q-15). */
     canRenewTerms: boolean;
   }> & { overdueTotal: number };
-  incidents: DashboardBlock<never>;
+  incidents: DashboardBlock<IncidentEntry>;
   breakGlass: DashboardBlock<BreakGlassEntry>;
   /** `thresholdPercent`: ngưỡng "sắp đầy" đang áp — web vẽ vạch mốc và nói "≥ 90%". */
   subnetLoad: DashboardBlock<SubnetLoadEntry> & { thresholdPercent: number | null };
@@ -145,6 +156,7 @@ export class DashboardService {
     private readonly disposal: DisposalApiService,
     private readonly config: SystemConfigService,
     private readonly users: UsersApiService,
+    private readonly iso: IsoFormsApiService,
   ) {}
 
   async build(viewer: { email: string; role: UserRole }): Promise<Dashboard> {
@@ -160,7 +172,7 @@ export class DashboardService {
     // Số dòng mỗi khối (`dashboard.max_items`) — đọc MỘT lần để mọi khối cắt cùng một số.
     const maxItems = await this.config.getNumber('dashboardMaxItems');
 
-    const [expiring, breakGlass, subnetLoad, staleSecrets, disposed] = await Promise.all([
+    const [expiring, breakGlass, subnetLoad, staleSecrets, disposed, incidents] = await Promise.all([
       this.expiringBlock(maxItems),
       // AC: Member thấy dashboard RÚT GỌN — không có khối break-glass toàn cục. Họ vẫn xem
       // được yêu cầu của chính mình ở màn Duyệt yêu cầu.
@@ -174,6 +186,7 @@ export class DashboardService {
        */
       isBoss ? this.staleSecretsBlock(now, maxItems) : emptyBlock<StaleSecretEntry>(),
       this.disposedBlock(now, maxItems),
+      this.incidentsBlock(now, maxItems),
     ]);
 
     return {
@@ -181,12 +194,7 @@ export class DashboardService {
       subnetLoad,
       staleSecrets,
       disposed,
-      /**
-       * Module `incidents` chưa tồn tại. Khai `available: false` thay
-       * vì bịa một mảng rỗng: "chưa có phần này" và "tuần qua không có sự cố nào" là hai câu
-       * KHÁC HẲN nhau, và sếp đọc nhầm câu thứ hai thì tưởng mọi thứ đang yên.
-       */
-      incidents: { available: false, items: [], total: 0 },
+      incidents,
       breakGlass,
     };
   }
@@ -334,6 +342,21 @@ export class DashboardService {
     } catch (error) {
       this.logger.warn(`khối vừa-thanh-lý lỗi: ${message(error)}`);
       return emptyBlock<DisposedEntry>();
+    }
+  }
+
+  /**
+   * "Tuần qua có sự cố gì" — phiếu 0206 theo Detection Time, đọc qua `iso-forms.api` (FR-027 ②).
+   * Lỗi thì `available: false` chứ không trả mảng rỗng: "không đọc được" và "tuần qua không có sự
+   * cố nào" là hai câu khác hẳn nhau, sếp đọc nhầm câu thứ hai thì tưởng mọi thứ đang yên.
+   */
+  private async incidentsBlock(now: Date, maxItems: number): Promise<Dashboard['incidents']> {
+    try {
+      const recent = await this.iso.recentIncidents(WEEK_DAYS, now);
+      return { available: true, total: recent.length, items: recent.slice(0, maxItems) };
+    } catch (error) {
+      this.logger.warn(`khối sự-cố-tuần-qua lỗi: ${message(error)}`);
+      return emptyBlock<IncidentEntry>();
     }
   }
 

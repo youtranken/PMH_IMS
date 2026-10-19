@@ -18,6 +18,7 @@ import { IsoBackupService } from '../src/modules/iso-forms/iso-backup.service';
 import { IsoCatalogService } from '../src/modules/iso-forms/iso-catalog.service';
 import { IsoClock } from '../src/modules/iso-forms/iso-clock';
 import { IsoFileOwner } from '../src/modules/iso-forms/iso-file-owner';
+import { IsoFormsApiService } from '../src/modules/iso-forms/iso-forms.api';
 import { IsoIncidentService } from '../src/modules/iso-forms/iso-incident.service';
 import { IsoPeriodService } from '../src/modules/iso-forms/iso-period.service';
 import { IsoPeriodStore } from '../src/modules/iso-forms/iso-period.store';
@@ -352,6 +353,17 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
       const lost = results.find((r) => r.status === 'rejected') as PromiseRejectedResult;
       expect(lost.reason).toMatchObject({ status: 409, response: { code: 'ISO_CELL_ALREADY_LINKED' } });
+    });
+
+    it('FR-027 ②: iso-forms.api trả phiếu theo Detection Time trong N ngày, mới nhất lên đầu', async () => {
+      await incidents.create(people.other, { ...incident({ kind: 'server', detectedAt: '2026-10-01T01:00:00.000Z', resolvedAt: '2026-10-01T02:00:00.000Z', reportedOn: '2026-10-01' }), cells: [] });
+      const recent = await new IsoFormsApiService(incidents).recentIncidents(7, new Date('2026-11-10T05:00:00Z'));
+      expect(recent.length).toBeGreaterThan(0);
+      const since = new Date('2026-11-03T05:00:00Z').getTime();
+      expect(recent.every((r) => r.detectedAt.getTime() >= since)).toBe(true);
+      const times = recent.map((r) => r.detectedAt.getTime());
+      expect(times).toEqual([...times].sort((a, b) => b - a));
+      expect(recent[0]).toEqual(expect.objectContaining({ code: expect.stringMatching(/^0206-2026-\d{3}$/), kind: expect.any(String), severity: expect.any(String) }));
     });
 
     it('In Progress không có Resolution Time; Resolved bắt buộc có', async () => {

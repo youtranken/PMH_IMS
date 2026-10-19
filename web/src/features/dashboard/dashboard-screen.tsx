@@ -93,9 +93,19 @@ interface DisposedItem {
   disposedAt: string | null;
 }
 
+interface IncidentItem {
+  id: string;
+  code: string;
+  severity: 'low' | 'medium' | 'high';
+  detectedAt: string;
+  description: string;
+}
+
+const SEVERITY_TONE: Record<IncidentItem['severity'], string> = { high: 'danger', medium: 'warn', low: 'muted' };
+
 interface Dashboard {
   expiring: Block<ExpiringItem> & { overdueTotal?: number };
-  incidents: Block<never>;
+  incidents: Block<IncidentItem>;
   breakGlass: Block<BreakGlassItem>;
   subnetLoad: Block<SubnetLoadItem> & { thresholdPercent?: number | null };
   staleSecrets: Block<StaleSecretItem>;
@@ -380,27 +390,38 @@ export function DashboardScreen({ me }: { me: Me }) {
     3,
   );
 
-  /*
-    Module sự cố chưa có. Khối vẫn HIỆN và nói thẳng "chưa theo dõi" — giấu đi thì sếp tưởng
-    hệ thống đã theo dõi sự cố rồi và tuần qua không có cái nào. Tông THÔNG TIN, không phải
-    tông lỗi: nó không hỏng, chỉ là chưa có.
-  */
-  quiet.push({
-    rank: 2,
-    node: (
-      <BlockCard
-        key="incidents"
-        title={t('dashboard.incidents')}
-        total={board.incidents.total}
-        available={board.incidents.available}
-        notYet
-        emptyText={t('dashboard.incidentsEmpty')}
-        unavailableText={t('dashboard.incidentsNotYet')}
-      >
-        <></>
-      </BlockCard>
-    ),
-  });
+  /* Sự cố tuần qua — phiếu 0206 theo Detection Time (FR-027 ②). */
+  place(
+    board.incidents,
+    <BlockCard
+      key="incidents"
+      title={t('dashboard.incidents')}
+      total={board.incidents.total}
+      available={board.incidents.available}
+      moreTo={PATHS.isoIncidents}
+      moreLabel={t('dashboard.seeAllIncidents')}
+      emptyText={t('dashboard.incidentsEmpty')}
+      unavailableText={t('dashboard.blockError')}
+      onRetry={retry}
+    >
+      <MobileLimited
+        items={board.incidents.items}
+        render={(item) => (
+          <li key={item.id}>
+            <div className="dash-line">
+              <span className="dash-line-name" title={`${item.code} · ${item.description}`}>
+                <Link to={PATHS.isoIncident(item.id)}>{item.code}</Link>
+                <span className="dash-line-sub">{item.description}</span>
+              </span>
+              <span className={`badge ${SEVERITY_TONE[item.severity]}`}>{t(`dashboard.incidentSeverity_${item.severity}`)}</span>
+            </div>
+            <span className="muted">{formatDateTime(item.detectedAt)}</span>
+          </li>
+        )}
+      />
+    </BlockCard>,
+    1,
+  );
 
   return (
     <>
@@ -798,9 +819,8 @@ function BoardKpis({ board }: { board: Dashboard }) {
 }
 
 /**
- * Một khối có BỐN trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
+ * Một khối có BA trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
  *  - không tải được → tông cảnh báo, có Thử lại (đứng đầu dải yên);
- *  - chưa có phần này (`notYet`) → tông thông tin;
  *  - có phần này, không có gì → tin tốt, dấu ✓;
  *  - có dữ liệu.
  *
@@ -810,7 +830,6 @@ function BlockCard({
   title,
   total,
   available,
-  notYet = false,
   moreTo,
   moreLabel,
   emptyText,
@@ -821,7 +840,6 @@ function BlockCard({
   title: string;
   total: number;
   available: boolean;
-  notYet?: boolean;
   moreTo?: string;
   moreLabel?: string;
   emptyText: string;
@@ -830,7 +848,7 @@ function BlockCard({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const tone = !available ? (notYet ? 'info' : 'error') : total === 0 ? 'good' : null;
+  const tone = !available ? 'error' : total === 0 ? 'good' : null;
 
   if (tone) {
     return (

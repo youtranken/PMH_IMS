@@ -6,6 +6,7 @@ import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import type { DisposalApiService } from '../disposal/disposal.api';
+import type { IsoFormsApiService } from '../iso-forms/iso-forms.api';
 import type { SystemConfigService } from '../config-sys/system-config.service';
 
 function row(id: string, daysLeft: number) {
@@ -48,6 +49,7 @@ function buildService(
     { list: empty } as unknown as DisposalApiService,
     { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
     { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
+    { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
   );
 }
 

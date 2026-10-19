@@ -3,6 +3,7 @@ import { ApprovalsModule } from '../approvals/approvals.module';
 import { DisposalModule } from '../disposal/disposal.module';
 import { ExpiryModule } from '../expiry/expiry.module';
 import { IpamModule } from '../ipam/ipam.module';
+import { IsoFormsModule } from '../iso-forms/iso-forms.module';
 import { UsersModule } from '../users/users.module';
 import { VaultModule } from '../vault/vault.module';
 import { DashboardController } from './dashboard.controller';
@@ -16,7 +17,7 @@ import { DashboardService } from './dashboard.service';
  * module gặp nhau, và từ đó không module nào đổi được lược đồ của mình nữa.
  */
 @Module({
-  imports: [ExpiryModule, ApprovalsModule, IpamModule, VaultModule, DisposalModule, UsersModule],
+  imports: [ExpiryModule, ApprovalsModule, IpamModule, VaultModule, DisposalModule, UsersModule, IsoFormsModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

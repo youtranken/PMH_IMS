@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, between, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, between, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
 import { conflictOnUnique, pgConstraint } from '../../common/sql';
 import { isoDateInTz, viDate } from '../../common/today';
@@ -30,6 +30,8 @@ import {
   signedIsCurrent,
   validateIncident,
   type IncidentInput,
+  type IncidentKind,
+  type IncidentSeverity,
   type IncidentStatus,
   type IsoFormType,
   type PeriodState,
@@ -72,6 +74,16 @@ export interface IncidentRecord extends IncidentInput {
   /** Bản ký hiện hành (tải lên sau lần sửa nội dung gần nhất). */
   signedCurrent: boolean;
   signed: SignedFile[];
+}
+
+export interface IncidentSummary {
+  id: string;
+  code: string;
+  kind: IncidentKind;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  detectedAt: Date;
+  description: string;
 }
 
 export interface UnlinkedCell extends IncidentCell {
@@ -149,6 +161,23 @@ export class IsoIncidentService {
     }
     if (filters.signed) items = items.filter((i) => i.signedCurrent === (filters.signed === 'yes'));
     return items;
+  }
+
+  /** Phiếu có Detection Time từ `since` trở đi, mới nhất lên đầu — bản tóm tắt cho trang chủ. */
+  async detectedSince(since: Date): Promise<IncidentSummary[]> {
+    return this.db
+      .select({
+        id: isoIncidentTable.id,
+        code: isoIncidentTable.code,
+        kind: isoIncidentTable.kind,
+        severity: isoIncidentTable.severity,
+        status: isoIncidentTable.status,
+        detectedAt: isoIncidentTable.detectedAt,
+        description: isoIncidentTable.description,
+      })
+      .from(isoIncidentTable)
+      .where(gte(isoIncidentTable.detectedAt, since))
+      .orderBy(desc(isoIncidentTable.detectedAt), desc(isoIncidentTable.code)) as Promise<IncidentSummary[]>;
   }
 
   /** Phiếu của một tháng — luồng chốt kỳ lọc theo `governing`. */

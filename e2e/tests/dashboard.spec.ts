@@ -109,24 +109,29 @@ test.describe('Bảng điều khiển', () => {
     expect(urgentLine, 'phải hiện nhãn tiếng Việt lấy từ API').toContain('License phần mềm');
     expect(urgentLine, 'không được để lọt mã máy ra cột Loại').not.toMatch(/\blicense\b/);
 
-    // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (module sự cố chưa có).
+    // Khối sự cố đọc phiếu 0206 (FR-027 ②): hoặc "không có sự cố", hoặc danh sách số phiếu.
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
-    await expect(incidents.getByText(/chưa theo dõi/i)).toBeVisible();
+    await expect(
+      incidents.getByText('Tuần qua không có sự cố nào.').or(incidents.getByRole('link', { name: /^0206-\d{4}-\d{3}$/ })).first(),
+    ).toBeVisible();
 
     await expect(page.getByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).toBeVisible();
   });
 
   /**
-   * "Chưa có phần này" và "tuần qua không có sự cố nào" là HAI CÂU khác hẳn nhau. Sếp đọc
-   * nhầm câu thứ hai thì tưởng mọi thứ đang yên — trong khi hệ thống chưa hề theo dõi mục đó.
+   * Có phiếu 0206 rồi thì khối không được nói "chưa theo dõi" nữa: câu đó làm sếp tưởng IMS không
+   * biết gì về sự cố. Không tạo phiếu ở đây: phiếu mang ngày hôm nay sẽ đẩy bộ đếm số phiếu thật
+   * của năm nay (lượt dọn E2E chỉ dọn năm ≤ 2021); phần vẽ danh sách đã có bài ở web và api.
    */
-  test('khối chưa mở nói rõ là CHƯA THEO DÕI, không phải "không có gì"', async ({ page }) => {
+  test('khối Sự cố tuần qua đọc phiếu 0206, không còn nói "chưa theo dõi"', async ({ page }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/');
 
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
-    await expect(incidents.getByText(/CHƯA theo dõi/i)).toBeVisible();
-    await expect(incidents.getByText('Tuần qua không có sự cố nào.')).toHaveCount(0);
+    await expect(
+      incidents.getByText('Tuần qua không có sự cố nào.').or(incidents.getByRole('link', { name: /^0206-\d{4}-\d{3}$/ })).first(),
+    ).toBeVisible();
+    await expect(incidents.getByText(/chưa theo dõi/i)).toHaveCount(0);
   });
 
   test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page, browser }) => {
