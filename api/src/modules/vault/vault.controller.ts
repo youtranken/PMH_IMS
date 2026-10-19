@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { redactMessage } from '../../common/log-redact';
 import { ConfigThrottle } from '../../common/config-throttle';
-import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, ValidateIf } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { AuditApiService } from '../audit/audit.api';
@@ -63,8 +63,9 @@ class CreateSecretDto {
   @IsString() @Length(1, 4000) value!: string;
 }
 
-class UpdateSecretDto {
-  @IsOptional() @IsString() @Length(1, 120) label?: string;
+export class UpdateSecretDto {
+  // Không gửi = giữ nguyên; `null` thì phải bị chặn ở đây (`@IsOptional` cho null lọt qua).
+  @ValidateIf((dto: UpdateSecretDto) => dto.label !== undefined) @IsString() @Length(1, 120) label?: string;
   @IsOptional() @IsString() @Length(0, 120) username?: string;
   @IsOptional() @IsString() @Length(0, 500) note?: string;
 }
