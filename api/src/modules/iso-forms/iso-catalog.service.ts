@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, eq, gt, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
-import { conflictOnUnique } from '../../common/sql';
+import { conflictOnUnique, pgConstraint, pgErrorCode, PG_EXCLUSION_VIOLATION } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
@@ -97,7 +97,7 @@ export class IsoCatalogService {
     const id = await this.db.transaction(async (tx) => {
       await lockJobListWithin(tx, 'shared');
       await this.assertNoFree(tx, input.no, null);
-      const [job] = await this.guardName(() =>
+      const [job] = await this.guardLiveKeys(() =>
         tx
           .insert(isoBackupJobTable)
           .values({ no: input.no, name, trackedFrom: input.trackedFrom, createdBy: actor.email })
@@ -172,7 +172,7 @@ export class IsoCatalogService {
           await tx.insert(isoBackupLineTable).values({ ...line, jobId: id, sortOrder: i + 1 });
         }
       }
-      await this.guardName(() =>
+      await this.guardLiveKeys(() =>
         tx
           .update(isoBackupJobTable)
           .set({ no: input.no, name, trackedFrom: input.trackedFrom, updatedAt: new Date() })
@@ -235,7 +235,7 @@ export class IsoCatalogService {
       if (!job) throw new NotFoundException({ code: 'ISO_JOB_NOT_FOUND', message: 'Không tìm thấy job backup này.' });
       if (job.stoppedOn === null) throw new ConflictException({ code: 'ISO_JOB_NOT_STOPPED', message: 'Job này đang theo dõi.' });
       await this.assertNoFree(tx, job.no, id);
-      await this.guardName(() =>
+      await this.guardLiveKeys(() =>
         tx.update(isoBackupJobTable).set({ stoppedOn: null, updatedAt: new Date() }).where(eq(isoBackupJobTable.id, id)),
       );
       await this.audit.appendWithin(tx, {
@@ -264,6 +264,8 @@ export class IsoCatalogService {
       const other = live[direction === 'up' ? at - 1 : at + 1];
       if (!other) return;
       const me = live[at];
+      // Tráo số hai hàng: giữa hai câu UPDATE có lúc hai job cùng số, nên hoãn kiểm tới commit.
+      await tx.execute(sql`SET CONSTRAINTS iso_backup_job_live_no_excl DEFERRED`);
       await tx.update(isoBackupJobTable).set({ no: other.no, updatedAt: new Date() }).where(eq(isoBackupJobTable.id, me.id));
       await tx.update(isoBackupJobTable).set({ no: me.no, updatedAt: new Date() }).where(eq(isoBackupJobTable.id, other.id));
       await this.audit.appendWithin(tx, {
@@ -314,10 +316,14 @@ export class IsoCatalogService {
     }
   }
 
-  private async guardName<T>(write: () => Promise<T>): Promise<T> {
+  /** Tên và số No chỉ duy nhất trong danh sách đang theo dõi; DB chặn khi hai lượt ghi chen nhau. */
+  private async guardLiveKeys<T>(write: () => Promise<T>): Promise<T> {
     try {
       return await write();
     } catch (error) {
+      if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION && pgConstraint(error) === 'iso_backup_job_live_no_excl') {
+        throw new ConflictException({ code: 'ISO_JOB_NO_TAKEN', message: 'Số này vừa được gán cho job khác. Tải lại rồi chọn số khác.' });
+      }
       throw conflictOnUnique(
         error,
         { code: 'ISO_JOB_NAME_TAKEN', message: 'Đã có job đang theo dõi trùng tên này.' },
