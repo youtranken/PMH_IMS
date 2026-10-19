@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -438,6 +439,7 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
   });
 
   describe('Story 8.5 / 8.6 · gửi chốt, duyệt, trả lại, mở lại, bản ký', () => {
+    let extraScanId = '';
     async function fillBackupMonth(): Promise<void> {
       for (let d = 1; d <= 30; d += 1) await backup.fillDay(people.owner, `2026-11-${String(d).padStart(2, '0')}`);
     }
@@ -495,9 +497,14 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
     it('bản ký chỉ nhận PDF/ảnh khi đã khoá; có bản ký của kỳ và mọi 0206 thì Hoàn tất', async () => {
       const detail = await periods.detail(people.owner, '0203', 2026, 11);
       const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
-      await expect(
-        files.save({ buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]), originalName: 'x.png', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role }),
-      ).resolves.toBeDefined();
+      const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
+      const scan = await files.save({ buffer: png, originalName: 'x.png', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role });
+      extraScanId = scan.id;
+      // Q-29: lưu SHA-256 lúc tải lên để đối chiếu bản ký chưa bị thay.
+      const { rows: hashed } = await scratch.pool.query<{ sha256: string }>(`SELECT sha256 FROM file WHERE id = $1`, [scan.id]);
+      expect(hashed[0].sha256).toBe(createHash('sha256').update(png).digest('hex'));
+      // Q-29: kỳ đang khoá thì không ai xoá được bản ký, kể cả SA.
+      await expect(files.remove(people.sa.email, scan.id)).rejects.toMatchObject({ status: 409, response: { code: 'ISO_SIGNED_LOCKED' } });
       await files.save({ buffer: pdf, originalName: 'ky.pdf', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role });
       const after = await periods.detail(people.owner, '0203', 2026, 11);
       expect(after.signedCurrent).toBe(true);
@@ -521,6 +528,8 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       await expect(periods.requestReopen(people.owner, '0203', 2026, 11, 'lần nữa')).rejects.toMatchObject({ response: { code: 'ISO_REOPEN_PENDING' } });
       const reopened = await periods.decideReopen(people.admin, '0203', 2026, 11, true, null);
       expect(reopened.state).toBe('open');
+      // Kỳ đã mở lại thì thay được bản ký.
+      await files.remove(people.owner.email, extraScanId);
       expect(await count(`SELECT count(*) FROM audit_log WHERE action = 'iso_period.reopened' AND detail->>'reason' = 'Tick nhầm ngày 14'`)).toBe(1);
       await periods.submit(people.owner, '0203', 2026, 11);
       const relocked = await periods.approve(people.admin, '0203', 2026, 11, null);

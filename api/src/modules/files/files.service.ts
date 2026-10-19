@@ -6,7 +6,7 @@ import {
   NotFoundException,
   type OnModuleInit,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -226,6 +226,7 @@ export class FilesService implements OnModuleInit {
             storedName,
             mimeType: detected.mime,
             sizeBytes: input.buffer.length,
+            sha256: createHash('sha256').update(input.buffer).digest('hex'),
             ownerType: input.ownerType,
             ownerId: input.ownerId,
             uploadedBy: input.uploadedBy,
@@ -303,6 +304,7 @@ export class FilesService implements OnModuleInit {
   async remove(actor: string, id: string): Promise<void> {
     const meta = await this.requireAlive(id);
     await this.db.transaction(async (tx) => {
+      await this.owners.assertRemovableWithin(tx, meta.ownerType, meta.ownerId);
       await this.removeWithin(tx, actor, id, meta.ownerType, meta.ownerId, meta.originalName);
     });
   }

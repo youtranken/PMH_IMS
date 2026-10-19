@@ -69,6 +69,12 @@ export class IsoPeriodStore {
     return row ?? null;
   }
 
+  /** Đọc kỳ trong `tx` của nơi gọi, khoá FOR SHARE để lượt mở lại kỳ không chen vào giữa. */
+  async findByIdWithin(tx: Tx, id: string): Promise<PeriodRow | null> {
+    const [row] = await tx.select().from(isoPeriodTable).where(eq(isoPeriodTable.id, id)).for('share');
+    return row ?? null;
+  }
+
   async ofYear(year: number): Promise<PeriodRow[]> {
     return this.db.select().from(isoPeriodTable).where(eq(isoPeriodTable.year, year));
   }

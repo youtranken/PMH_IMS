@@ -93,6 +93,13 @@ export interface OwnerResolver {
    * KHÔNG BẮT BUỘC: không khai = ai xem được chủ thể thì đính kèm được.
    */
   assertAccepts?(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void>;
+
+  /**
+   * Chủ thể còn cho XOÁ file đính kèm không — chạy trong `tx` của lượt xoá. Ném 409 kèm câu tiếng
+   * Việt (vd bản ký phiếu ISO của kỳ đang khoá là bằng chứng, Q-29). KHÔNG BẮT BUỘC: không khai =
+   * ai xoá được theo `@Roles` của route thì xoá được.
+   */
+  assertRemovableWithin?(tx: Tx, ownerType: string, ownerId: string): Promise<void>;
 }
 
 @Injectable()
@@ -136,6 +143,11 @@ export class OwnerExistsRegistry {
   /** Luật nhận file riêng của chủ thể; loại chưa khai `assertAccepts` thì đi qua. */
   async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void> {
     await this.resolverFor(ownerType).assertAccepts?.(ownerType, ownerId, file, uploader);
+  }
+
+  /** Luật xoá file riêng của chủ thể; loại chưa khai `assertRemovableWithin` thì đi qua. */
+  async assertRemovableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
+    await this.resolverFor(ownerType).assertRemovableWithin?.(tx, ownerType, ownerId);
   }
 
   /** Ghi chú của hồ sơ chủ thể, `null` khi loại đó chưa khai `noteOf` hoặc ghi chú trống. */

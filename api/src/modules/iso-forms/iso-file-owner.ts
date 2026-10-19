@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { OwnerExistsRegistry, type OwnerResolver, type Uploader } from '../../common/owner-exists.registry';
+import type { Tx } from '../../common/tx';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { IsoAccessService } from './iso-access.service';
 import { IsoIncidentService } from './iso-incident.service';
@@ -20,6 +21,9 @@ const MIME_OF: Record<string, string> = {
  * phiếu 0206 (`iso_incident`). Chỉ nhận khi kỳ / phiếu đã khoá — bản ký của một phiếu còn sửa
  * được thì sẽ cũ ngay lần sửa sau. Tải bản ký đẩy kỳ sang Hoàn tất nên là một lượt GHI phiếu: chỉ
  * người phụ trách loại phiếu đó và SA/Admin (Q-28); `files` chỉ kiểm "được xem".
+ *
+ * Bản ký của kỳ / phiếu đang khoá thì không ai xoá được, kể cả SA (Q-29): đó là bằng chứng ISO,
+ * muốn thay thì xin mở lại kỳ.
  */
 @Injectable()
 export class IsoFileOwner implements OwnerResolver, OnModuleInit {
@@ -44,6 +48,26 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
     }
     const incident = await this.incidents.get(ownerId).catch(() => null);
     return incident ? `Phiếu ${incident.code}` : null;
+  }
+
+  async assertRemovableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
+    if (ownerType === 'iso_period') {
+      const row = await this.periods.findByIdWithin(tx, ownerId);
+      if (row?.state === 'locked') {
+        throw new ConflictException({
+          code: 'ISO_SIGNED_LOCKED',
+          message: `Kỳ ${periodLabel(row.formType, row.year, row.month)} đã chốt nên không xoá được bản ký. Cần thay thì xin mở lại kỳ.`,
+        });
+      }
+      return;
+    }
+    const incident = await this.incidents.get(ownerId).catch(() => null);
+    if (incident?.locked) {
+      throw new ConflictException({
+        code: 'ISO_SIGNED_LOCKED',
+        message: `Phiếu ${incident.code} đã khoá nên không xoá được bản ký. Cần thay thì xin mở lại kỳ của phiếu.`,
+      });
+    }
   }
 
   async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void> {
