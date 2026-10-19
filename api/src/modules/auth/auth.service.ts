@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   BadRequestException,
   Inject,
@@ -88,6 +88,14 @@ export class AuthService {
     private readonly probe: AuditApiService,
   ) {}
 
+  private dummyHashValue: Promise<string> | null = null;
+
+  /** Hash Argon2 của một chuỗi ngẫu nhiên, dựng một lần — để email không có thật cũng tốn đúng một lượt băm. */
+  private dummyHash(): Promise<string> {
+    this.dummyHashValue ??= this.passwords.hash(randomBytes(32).toString('hex'));
+    return this.dummyHashValue;
+  }
+
   async login(email: string, password: string, ctx: LoginContext): Promise<LoginOutcome> {
     const [idleAbsolute, maxFailed, lockoutMinutes] = await Promise.all([
       this.config.getNumber('sessionAbsoluteHours'),
@@ -96,14 +104,31 @@ export class AuthService {
     ]);
 
     const user = await this.users.findCredentialsByEmail(email.trim());
-    // Không tiết lộ email có tồn tại hay không (user enumeration) — luôn cùng một thông điệp.
+    /*
+     * Không tiết lộ email có tồn tại hay không (user enumeration): cùng một câu, và cùng một lượt
+     * băm Argon2 — trả lời ngay mà không băm thì nhanh hơn ~100 ms, đo là biết email nào có thật.
+     */
     if (!user) {
+      await this.passwords.verify(await this.dummyHash(), password);
       await this.audit.append({
         actor: email,
         action: 'auth.login.failed',
         objectType: 'user',
         detail: { reason: 'not-found' },
       });
+      throw new UnauthorizedException({
+        code: 'LOGIN_FAILED',
+        message: 'Email hoặc mật khẩu không đúng.',
+      });
+    }
+
+    /*
+     * Tài khoản vô hiệu / khoá tay: kiểm mật khẩu TRƯỚC. Sai thì cùng câu chung như email không có
+     * thật — người lạ không biết được email này có thật và đang bị khoá. Chỉ người đúng mật khẩu
+     * (chính chủ) mới nghe câu riêng để biết phải gặp SA.
+     */
+    if (user.status !== 'active' && !(await this.passwords.verify(user.passwordHash, password))) {
+      await this.auditFailure(user, user.status === 'disabled' ? 'disabled' : 'locked-by-sa');
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
         message: 'Email hoặc mật khẩu không đúng.',
