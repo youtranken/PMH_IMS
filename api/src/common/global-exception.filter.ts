@@ -8,6 +8,11 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { redactForLog } from './log-redact';
+import { pgErrorCode } from './sql';
+
+const PG_UNIQUE_VIOLATION = '23505';
+const PG_DEADLOCK = '40P01';
+const PG_SERIALIZATION_FAILURE = '40001';
 
 export interface ErrorBody {
   statusCode: number;
@@ -19,7 +24,10 @@ export interface ErrorBody {
 
 /**
  * Convention toàn hệ: mọi lỗi REST trả { statusCode, code, message }.
- * Story 3.x sẽ mở rộng mapper 409 (SLOT_TAKEN / ASSET_UNAVAILABLE / STALE_VERSION).
+ *
+ * Lỗi trùng khoá / deadlock / serialization mà service quên dịch vẫn ra 409 chung: đó là xung
+ * đột giữa hai người dùng, không phải lỗi máy chủ. Câu riêng theo nghiệp vụ vẫn là việc của
+ * service (`conflictOnUnique`); đây chỉ là lưới đỡ.
  */
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -39,6 +47,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
        * đọc hoàn toàn khác. Xem `log-redact.ts` để biết vì sao không thể vá bằng regex.
        */
       this.logger.error(redactForLog(exception));
+    } else if (!(exception instanceof HttpException)) {
+      // Lọt xuống lưới đỡ nghĩa là service thiếu một chỗ dịch lỗi — ghi lại để người sau tìm ra.
+      this.logger.warn(redactForLog(exception));
     }
     // Response đã gửi (stream/write dở) → không thể đổi status; chỉ log, tránh
     // ERR_HTTP_HEADERS_SENT thứ cấp nuốt mất lỗi gốc.
@@ -98,13 +109,28 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
       return { ...extras, statusCode, code, message };
     }
+    const pgCode = pgErrorCode(exception);
+    if (pgCode === PG_UNIQUE_VIOLATION) {
+      return {
+        statusCode: HttpStatus.CONFLICT,
+        code: 'CONFLICT_DUPLICATE',
+        message: 'Dữ liệu này vừa được người khác ghi trước. Tải lại trang rồi thử lại.',
+      };
+    }
+    if (pgCode === PG_DEADLOCK || pgCode === PG_SERIALIZATION_FAILURE) {
+      return {
+        statusCode: HttpStatus.CONFLICT,
+        code: 'CONFLICT_RETRY',
+        message: 'Có người đang sửa cùng dữ liệu này. Thử lại sau vài giây.',
+      };
+    }
     /*
      * Lỗi không đoán trước: không lộ chi tiết nội bộ ra body.
      *
      * Tiếng Việt nhưng GIỮ NGUYÊN tính chung chung — đó mới là điểm của câu này.
      * Người dùng đọc được thứ mình cần làm; kẻ dò thì vẫn không biết gì hơn về phía trong.
      * ĐỪNG nhân tiện thêm tên bảng, tên hàm hay mã lỗi kỹ thuật vào đây: chi tiết thật nằm ở
-     * log phía máy chủ (`logException` bên trên), nơi chỉ người vận hành đọc được.
+     * log phía máy chủ (khối `>= 500` trong `catch`), nơi chỉ người vận hành đọc được.
      */
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
