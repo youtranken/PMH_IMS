@@ -324,9 +324,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog');
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
-    const hoursBox = within(dialog).getByLabelText(/Xin trong bao lâu/);
-    await userEvent.clear(hoursBox);
-    await userEvent.type(hoursBox, hours);
+    await userEvent.click(within(within(dialog).getByRole('group', { name: 'Mở trong' })).getByRole('button', { name: `${hours} giờ` }));
     await pickApprover(dialog);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
   }
@@ -342,13 +340,6 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     expect(screen.queryByText(/vượt mức tối đa/)).not.toBeInTheDocument();
   });
 
-  it('gửi 72 giờ, trần 24 → cảnh báo có ĐÚNG con số 24', async () => {
-    mockFlow(NEEDS_APPROVAL, 24);
-    renderPanel({ ...ME, role: 'member' });
-    await send('72');
-    expect(await screen.findByText(/chỉ còn 24 giờ khi được duyệt/)).toBeInTheDocument();
-  });
-
   it('đang có phiếu treo → rút được, qua hộp xác nhận', async () => {
     const calls = mockFlow(
       {
@@ -360,10 +351,8 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
       4,
     );
     renderPanel({ ...ME, role: 'member' });
-    // Q-15: yêu cầu chờ không gắn phiên — người xin được bảo cứ đóng trang, chờ thư.
-    expect(await screen.findByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
-    expect(screen.getByText(/trong 8 giờ thì yêu cầu tự hết hạn/)).toBeInTheDocument();
-    expect(screen.queryByText(/Giữ trang này mở/)).not.toBeInTheDocument();
+    // Phiếu không có hàng mã (gửi trước Q-30): nói rõ phải rút rồi gửi lại.
+    expect(await screen.findByText(/gửi trước khi đổi sang duyệt bằng mã/)).toBeInTheDocument();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rút yêu cầu' }));
     // Chưa xác nhận thì CHƯA gọi API.
@@ -403,16 +392,14 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     renderPanel({ ...ME, role: 'member' });
     await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog', { name: 'Xin mở két (1 ngăn)' });
-    const group = within(dialog).getByRole('group', { name: 'Chọn nhanh số giờ' });
+    const group = within(dialog).getByRole('group', { name: 'Mở trong' });
     expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
       '1 giờ',
       '2 giờ',
       '4 giờ',
       '6 giờ',
     ]);
-    expect(within(dialog).getByText(/tối đa 6 giờ/)).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
-    expect(within(dialog).getByText('Đã gõ 25 ký tự · tối thiểu 5.')).toBeInTheDocument();
     await userEvent.click(within(group).getByRole('button', { name: '2 giờ' }));
     await pickApprover(dialog);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
@@ -526,11 +513,11 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     return calls;
   }
 
-  it('đang có quyền: thấy đếm lùi, câu "hết khi đăng xuất" và nút Trả quyền', async () => {
+  it('đang có quyền: một dòng "Đang mở két · còn …" + Trả quyền; câu "hết khi đăng xuất" ở title', async () => {
     mockRelease(GRANTED);
     renderPanel({ ...ME, role: 'member' });
-    expect(await screen.findByText(/Bạn được xem tới/)).toBeInTheDocument();
-    expect(screen.getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
+    const line = await screen.findByText(/^Đang mở két · còn \d+:\d{2}$/);
+    expect(line).toHaveAttribute('title', expect.stringMatching(/đăng xuất hay hết phiên/));
     expect(screen.getByRole('button', { name: 'Trả quyền' })).toBeInTheDocument();
   });
 
@@ -623,14 +610,6 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     expect(before).toBeGreaterThanOrEqual(1);
   });
 
-  it('hộp xin nói trước: quyền gắn vào phiên nhập mã duyệt, đăng xuất hay hết phiên là hết', async () => {
-    mockRelease(NEEDS_APPROVAL);
-    renderPanel({ ...ME, role: 'member' });
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/phiên đăng nhập bạn nhập mã duyệt/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
-  });
 });
 
 /**

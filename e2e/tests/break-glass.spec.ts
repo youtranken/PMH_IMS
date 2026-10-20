@@ -128,7 +128,7 @@ test.describe('Break-glass', () => {
     await member.getByRole('button', { name: 'Xin mở két' }).click();
     const form = member.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('switch tầng 3 mất kết nối');
-    await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ' }).click();
     await form.getByRole('button', { name: /Người duyệt/ }).click();
     await member.getByRole('option', { name: E2E_SA.email }).click();
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
@@ -146,11 +146,11 @@ test.describe('Break-glass', () => {
     await expect(card).toContainText('switch tầng 3 mất kết nối');
     await expect(card).toHaveAttribute('aria-current', 'true');
     await expect(card.getByText('Yêu cầu trong thư')).toBeVisible();
-    await expect(card.getByText(`Chờ người xin nhập mã đã gửi tới ${E2E_SA.email}.`)).toBeVisible();
+    await expect(card.getByText(`Mã đã gửi cho ${E2E_SA.email}.`)).toBeVisible();
     await expect(card.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0);
 
     // --- Member, CÙNG phiên đã xin: nhập mã SA đọc cho, rồi xem — mỗi lần xem vẫn gõ TOTP (4.2).
-    await fillOtp(member, await mailedApprovalCode(requestId), 'Mã duyệt do người duyệt đọc cho bạn');
+    await fillOtp(member, await mailedApprovalCode(requestId), 'Mã duyệt');
     await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
     expireStepUp(E2E_MEMBER.email);
 
@@ -159,7 +159,7 @@ test.describe('Break-glass', () => {
     await fillOtp(member, await freshTotpCode(totpSecret));
     await expect(member.getByTestId('secret-value')).toHaveText(secretValue);
     // Nhập mã đã gắn quyền vào phiên này: khung là quyền đang chạy.
-    await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
+    await expect(member.getByText(/Đang mở két · còn/)).toBeVisible();
     await memberCtx.close();
 
     const trace = lastAudit('vault.secret.revealed', secretId);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
@@ -24,8 +24,6 @@ import { hourSteps } from '@/ui/grant-hours';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
-import { PATHS } from '@/lib/routes';
-import { Link } from 'react-router-dom';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
@@ -281,6 +279,29 @@ export function VaultPanel({
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
+  /** Rút phiếu đang treo — qua hộp xác nhận. */
+  const cancelPending = async () => {
+    const pendingId = verdict.data?.pending?.id;
+    if (!pendingId) return;
+    const ok = await askConfirm({
+      title: t('common.titleOf', { action: t('approvals.cancel'), subject: t('vault.tab') }),
+      message: t('approvals.confirmCancel'),
+      danger: true,
+      confirmLabel: t('approvals.cancel'),
+    });
+    if (!ok) return;
+    setCancelling(true);
+    try {
+      await breakGlass.cancel(pendingId);
+      toast({ message: t('approvals.cancelled') });
+      void breakGlass.refresh();
+    } catch (error) {
+      toast({ message: errorMessage(error), tone: 'error' });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   /**
    * Mở két. KHÔNG tự đoán "còn trong grace hay chưa" ở client: cứ gọi, gặp
    * `STEPUP_REQUIRED` thì hỏi mã rồi thử lại đúng secret đó. Đồng hồ máy người dùng lệch,
@@ -400,6 +421,11 @@ export function VaultPanel({
   /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
      lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
   const onRevealExpire = () => toast({ message: t('vault.autoHidden') });
+  const cancelButton = (
+    <button type="button" className="btn sm danger-ghost" disabled={cancelling} onClick={() => void cancelPending()}>
+      {t('approvals.cancel')}
+    </button>
+  );
 
   return (
     <div className="attachment-panel">
@@ -410,71 +436,28 @@ export function VaultPanel({
       {/* Member phải THẤY mình đang ở tầng nào — không thì họ bấm Xem, bị từ chối, và
           không hiểu vì sao. */}
       {verdict.data?.pending ? (
-        /* Phiếu đang treo: nói gửi lúc nào, cho rút lại — việc xong trước khi ai kịp duyệt thì
-           phiếu treo vẫn nhắc người duyệt và chặn người xin gửi phiếu mới cho cùng đối tượng. */
+        /* Phiếu đang treo (Q-30, gọn chữ): một dòng mã gửi cho ai + ô mã + ba nút. Không có ô mã thì
+           nói vì sao — không thì người xin chờ một mã không bao giờ tới. */
         <div className="alert warn" role="status">
-          <p>
-            {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
-          </p>
-          {/* Yêu cầu chờ không gắn phiên (Q-15): người xin được đi làm việc khác, chờ thư. Phiếu
-              chờ có hạn — nói trước để họ không chờ một phiếu đã tự hết hạn. */}
-          <p className="muted">
-            {t('vault.pendingCanLeave')}
-            {typeof verdict.data.pendingExpireHours === 'number'
-              ? ` ${t('vault.pendingExpiresIn', { hours: verdict.data.pendingExpireHours })}`
-              : null}
-          </p>
-          {/* Không có ô nhập mã thì phải nói vì sao — không thì người xin ngồi chờ một mã không
-              bao giờ tới (phiếu gửi trước Q-30, hoặc người duyệt vừa mất quyền duyệt). */}
-          {!verdict.data.pendingCode ? (
-            <p>{t('vault.pendingLegacy')}</p>
-          ) : !verdict.data.pendingCode.approverActive ? (
-            <p>{t('vault.pendingApproverGone', { name: verdict.data.pendingCode.approverName })}</p>
-          ) : (
+          {verdict.data.pendingCode?.approverActive ? (
             <PendingCodeBox
               approvalId={verdict.data.pending.id}
               code={verdict.data.pendingCode}
               receivedAt={verdict.dataUpdatedAt}
               csrfToken={me.csrfToken}
               onChanged={() => void refetchVerdict()}
+              cancel={cancelButton}
             />
+          ) : (
+            <>
+              <p>
+                {verdict.data.pendingCode
+                  ? t('vault.pendingApproverGone', { name: verdict.data.pendingCode.approverName })
+                  : t('vault.pendingLegacy')}
+              </p>
+              <div className="row">{cancelButton}</div>
+            </>
           )}
-          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-            <Link to={PATHS.approval(verdict.data.pending.id)}>{t('vault.pendingDetail')}</Link>
-            <button
-              type="button"
-              className="btn sm danger-ghost"
-              disabled={cancelling}
-              onClick={() => {
-                const pendingId = verdict.data?.pending?.id;
-                if (!pendingId) return;
-                void (async () => {
-                  const ok = await askConfirm({
-                    title: t('common.titleOf', {
-                      action: t('approvals.cancel'),
-                      subject: t('vault.tab'),
-                    }),
-                    message: t('approvals.confirmCancel'),
-                    danger: true,
-                    confirmLabel: t('approvals.cancel'),
-                  });
-                  if (!ok) return;
-                  setCancelling(true);
-                  try {
-                    await breakGlass.cancel(pendingId);
-                    toast({ message: t('approvals.cancelled') });
-                    void breakGlass.refresh();
-                  } catch (error) {
-                    toast({ message: errorMessage(error), tone: 'error' });
-                  } finally {
-                    setCancelling(false);
-                  }
-                })();
-              }}
-            >
-              {t('approvals.cancel')}
-            </button>
-          </div>
         </div>
       ) : !isAdmin && verdict.data?.claimable ? (
         /* Đã duyệt, chưa xem lần nào (Q-15): không có nút riêng — bấm "Xem" ở ngăn như thường,
@@ -528,21 +511,21 @@ export function VaultPanel({
           </button>
         </div>
       ) : !isAdmin && verdict.data?.grant ? (
-        /* Quyền đang chạy: đếm lùi + câu "hết khi đăng xuất" (Q-15) + lối tự trả quyền. */
-        <div className="alert ok" role="status">
-          <p>
-            {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch và câu thành "được xem tới —"
-                — tự mâu thuẫn. Quyền không hạn thì nói là không hạn. */}
+        /* Quyền đang chạy (Q-30, gọn chữ): một dòng đếm lùi + Trả quyền. Giờ tuyệt đối và câu "gắn
+           phiên đăng nhập này" (Q-15) nằm ở `title` cho ai cần đọc thêm. */
+        <div className="alert ok row" role="status" style={{ gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <p
+            title={
+              verdict.data.grant.expiresAt
+                ? `${t('vault.grantUntil', { until: formatDateTime(verdict.data.grant.expiresAt) })} ${t('vault.sessionBound')}`
+                : t('vault.sessionBound')
+            }
+          >
+            {/* Quyền không hạn thì nói là không hạn — đừng in đếm lùi rỗng. */}
             {verdict.data.grant.expiresAt
-              ? grantLeft !== null
-                ? t('vault.grantUntilLeft', {
-                    until: formatDateTime(verdict.data.grant.expiresAt),
-                    left: leftText(grantLeft, t),
-                  })
-                : t('vault.grantUntil', { until: formatDateTime(verdict.data.grant.expiresAt) })
+              ? t('vault.grantOpen', { left: clockText(grantLeft ?? 0) })
               : t('vault.grantNoLimit')}
           </p>
-          <p className="muted">{t('vault.sessionBound')}</p>
           <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -1157,12 +1140,9 @@ function RotateForm({
 }
 
 /**
- * Khung nhập mã duyệt của người xin (Q-30).
- *
- * Hạn mã đếm lùi từ con số server đưa, không tự tính theo đồng hồ máy (AD-6). Nút "Gửi lại mã"
- * tắt khi hết lượt: bấm rồi mới bị từ chối là người xin đã gọi người duyệt thêm một lần vô ích.
- * Sai mã thì xoá ô và nói còn mấy lượt; mọi lỗi khác (hết hạn, bị huỷ, hết hạn chờ) đổi trạng
- * thái phiếu nên hỏi lại verdict.
+ * Khung nhập mã duyệt của người xin (Q-30). Hạn mã đếm lùi từ con số server đưa, không tự tính
+ * theo đồng hồ máy (AD-6). "Gửi lại mã" tắt khi hết lượt. Sai mã thì xoá ô và nói còn mấy lượt —
+ * câu đó chỉ hiện sau khi đã sai; mọi lỗi khác (hết hạn, bị hủy) đổi trạng thái phiếu nên hỏi lại verdict.
  */
 function PendingCodeBox({
   approvalId,
@@ -1170,6 +1150,7 @@ function PendingCodeBox({
   receivedAt,
   csrfToken,
   onChanged,
+  cancel,
 }: {
   approvalId: string;
   code: PendingCode;
@@ -1177,6 +1158,8 @@ function PendingCodeBox({
   receivedAt: number;
   csrfToken: string;
   onChanged: () => void;
+  /** Nút Rút yêu cầu — cùng hàng với Xác nhận / Gửi lại mã. */
+  cancel: ReactNode;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -1229,7 +1212,7 @@ function PendingCodeBox({
         {left === null
           ? t('vault.pendingCodeSending', { name })
           : left > 0
-            ? t('vault.pendingCodeTo', { name, left: leftText(left, t) })
+            ? t('vault.pendingCodeTo', { name, left: clockText(left) })
             : t('vault.pendingCodeExpired')}
       </p>
       <OtpInput
@@ -1241,7 +1224,7 @@ function PendingCodeBox({
         autoFocus={false}
         readOnly={busy}
         error={error}
-        hint={t('vault.codeAttemptsLeft', { count: code.attemptsLeft })}
+        hint={code.attemptsLeft < CODE_ATTEMPTS ? t('vault.codeAttemptsLeft', { count: code.attemptsLeft }) : undefined}
       />
       <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
         <button
@@ -1258,11 +1241,22 @@ function PendingCodeBox({
           disabled={resending || code.resendsLeft === 0}
           onClick={() => void resend()}
         >
-          {code.resendsLeft > 0 ? t('vault.codeResend', { count: code.resendsLeft }) : t('vault.codeResendNone')}
+          {t('vault.codeResend', { count: code.resendsLeft })}
         </button>
+        {cancel}
       </div>
     </div>
   );
+}
+
+/** Số lượt nhập mã của một yêu cầu (Q-30) — "còn N lần" chỉ hiện khi đã dùng bớt. */
+const CODE_ATTEMPTS = 5;
+
+/** Đếm lùi kiểu đồng hồ: "1:59" khi còn giờ (giờ:phút), "9:12" khi dưới một giờ (phút:giây). */
+function clockText(seconds: number): string {
+  const { hours, minutes, seconds: secs } = remainingParts(seconds);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return hours > 0 ? `${hours}:${pad(minutes)}` : `${minutes}:${pad(secs)}`;
 }
 
 /** "3 giờ 52 phút" / "12 phút" / "45 giây" — đơn vị lớn nhất còn khác 0 quyết định cách nói. */
@@ -1305,7 +1299,7 @@ function BreakGlassDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
-  const [hours, setHours] = useState('4');
+  const [hours, setHours] = useState(String(Math.min(4, maxGrantHours ?? 4)));
   const [approver, setApprover] = useState('');
   const [error, setError] = useSubmitError([reason, hours, approver]);
   /* Danh sách chọn do server dựng (SA/Admin đang hoạt động trừ chính mình) — client không tự lọc vai. */
@@ -1369,9 +1363,6 @@ function BreakGlassDialog({
           );
         }}
       >
-        <p className="muted">{t('vault.requestHint')}</p>
-        <p className="muted">{t('vault.requestSessionNote')}</p>
-
         <Field
           label={t('vault.requestApprover')}
           required
@@ -1409,46 +1400,20 @@ function BreakGlassDialog({
             onChange={(e) => setReason(e.target.value)}
           />
         </Field>
-        {/* Bộ đếm để người xin biết còn thiếu bao nhiêu trước khi bấm Gửi, không phải sau. */}
-        <p className="field-hint" aria-live="polite">
-          {t('vault.requestReasonCount', {
-            count: reason.trim().length,
-            min: REQUEST_REASON_MIN_LEN,
-          })}
-        </p>
-
-        <div className="segmented fill" role="group" aria-label={t('vault.requestHoursQuick')}>
-          {hourSteps(maxGrantHours).map((h) => (
-            <button
-              key={h}
-              type="button"
-              aria-pressed={askedHours === h}
-              onClick={() => setHours(String(h))}
-            >
-              {t('approvals.hours', { hours: h })}
-            </button>
-          ))}
-        </div>
-
-        <Field
-          label={t('vault.requestHours')}
-          required
-          hint={
-            maxGrantHours
-              ? t('vault.requestHoursHintMax', { hours: maxGrantHours })
-              : t('vault.requestHoursHint')
-          }
-          htmlFor="bg-hours"
-          error={check.error('hours')}
-        >
-          <input
-            id="bg-hours"
-            className="inp"
-            required
-            inputMode="numeric"
-            value={hours}
-            onChange={(e) => setHours(e.target.value)}
-          />
+        {/* Chỉ chọn nấc, không ô gõ số (Q-30 gọn chữ): nấc lớn nhất là trần server đưa. */}
+        <Field label={t('vault.requestHours')} required error={check.error('hours')}>
+          <div className="segmented fill" role="group" aria-label={t('vault.requestHours')}>
+            {hourSteps(maxGrantHours).map((h) => (
+              <button
+                key={h}
+                type="button"
+                aria-pressed={askedHours === h}
+                onClick={() => setHours(String(h))}
+              >
+                {t('approvals.hours', { hours: h })}
+              </button>
+            ))}
+          </div>
         </Field>
 
         {error ? (

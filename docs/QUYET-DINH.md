@@ -1299,6 +1299,13 @@ mật khẩu + mã 2 lớp, còn hộp mail SA/Admin có 2FA của Google Worksp
 - Yêu cầu chờ quá `breakglass.pending_expire_hours` vẫn tự hết hạn (Q-15). Thư nhắc định kỳ
   (`approval.reminder_hours`) không gửi cho yêu cầu mở két nữa, vì người xin tự bấm "Gửi lại mã".
 
+- **Gọn chữ (20/10/2026, chủ dự án chốt sau khi xem):** hộp Xin mở két chỉ còn ba ô — Người
+  duyệt, Lý do, **"Mở trong"** (chọn nấc giờ, bỏ ô gõ số và các đoạn giải thích). Khung chờ mã
+  chỉ một dòng "Đã gửi mã cho X · còn m:ss" + ô 6 số + Xác nhận / Gửi lại mã (N) / Rút yêu cầu;
+  "còn N lần nhập" chỉ hiện sau khi nhập sai. Quyền đang chạy: "Đang mở két · còn h:mm" + Trả
+  quyền. Phía người duyệt gọi số giờ là "Mở trong", hướng dẫn rút còn "Đồng ý → đọc mã trong
+  thư cho người xin."
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

@@ -105,14 +105,15 @@ describe('Trang chi tiết phiếu break-glass', () => {
     const subject = await screen.findByRole('link', { name: ROW.subjectLabel });
     expect(subject).toHaveAttribute('href', '/devices/d1');
     expect(screen.getByText('Switch tầng 3 mất kết nối')).toBeInTheDocument();
-    expect(screen.getByText('Xin 4 giờ')).toBeInTheDocument();
-    expect(screen.getByText('Người duyệt người xin chọn: admin@pmh.com.vn')).toBeInTheDocument();
+    const duration = screen.getByRole('region', { name: 'Mở trong' });
+    expect(within(duration).getByText('4 giờ')).toBeInTheDocument();
+    expect(screen.getByText('Người duyệt: admin@pmh.com.vn')).toBeInTheDocument();
     // Đầu trang là DetailHeader dùng chung: breadcrumb quay về danh sách duyệt.
     const crumbs = screen.getByRole('navigation', { name: 'breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Duyệt mở két' })).toHaveAttribute('href', '/approvals');
     expect(screen.getByRole('heading', { level: 1, name: 'Yêu cầu mở két' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Duyệt/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/đọc mã trong thư cho người xin/)).toBeInTheDocument();
+    expect(screen.getByText('Đồng ý → đọc mã trong thư cho người xin.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Từ chối' })).toBeInTheDocument();
   });
 
@@ -234,8 +235,7 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
   it('đang chờ (Q-30): chỉ đường nhập mã ở két, có nút sang két; vẫn nói cứ đóng trang', async () => {
     mockApi(ROW);
     renderDetail(MEMBER);
-    expect(await screen.findByText(/nhập ở khung Két của hồ sơ/)).toBeInTheDocument();
-    expect(screen.getByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
+    expect(await screen.findByText('Lấy mã từ người duyệt rồi nhập ở khung Két của hồ sơ.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nhập mã ở két' })).toBeInTheDocument();
   });
 

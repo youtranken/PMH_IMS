@@ -156,8 +156,8 @@ describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
     const buttons = within(card).getAllByRole('button');
     expect(buttons.map((b) => b.textContent)).toEqual(['Từ chối']);
     expect(buttons[0]).toHaveClass('danger-ghost');
-    expect(within(card).getByText('Chờ người xin nhập mã đã gửi tới admin@pmh.com.vn.')).toBeInTheDocument();
-    expect(within(card).getByText('Thời hạn xin')).toBeInTheDocument();
+    expect(within(card).getByText('Mã đã gửi cho admin@pmh.com.vn.')).toBeInTheDocument();
+    expect(within(card).getByText('Mở trong')).toBeInTheDocument();
   });
 
   it('phiếu của chính mình ở hàng chờ: rút được ngay tại đó', async () => {

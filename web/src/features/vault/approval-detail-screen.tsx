@@ -170,7 +170,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
 
       <section className="card" aria-label={t('approvals.durationBlock')}>
         <p className="approval-detail-label">{t('approvals.durationBlock')}</p>
-        <p>{asked !== undefined ? t('approvals.askedHours', { hours: asked }) : t('approvals.hoursUnknown')}</p>
+        <p>{asked !== undefined ? t('approvals.hours', { hours: asked }) : t('approvals.hoursUnknown')}</p>
         {row.approver ? (
           <p className="muted">{t('approvals.chosenApprover', { approver: row.approver })}</p>
         ) : null}

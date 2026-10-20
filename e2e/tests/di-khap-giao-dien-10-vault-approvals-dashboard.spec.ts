@@ -599,7 +599,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       panel.getByText(/[0-9a-f]{8}-[0-9a-f]{4}/),
       'không còn in UUID ra thẻ phiếu',
     ).toHaveCount(0);
-    await expect(panel.getByText('Thời hạn xin', { exact: true }), 'phiếu phải nói xin BAO LÂU').toBeVisible();
+    await expect(panel.getByText('Mở trong', { exact: true }), 'phiếu phải nói xin BAO LÂU').toBeVisible();
     await expect(panel.getByText('4 giờ', { exact: true })).toBeVisible();
 
     /*
@@ -620,7 +620,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       await panel.getByRole('button').allTextContents(),
       'phiếu treo chỉ có Từ chối (Q-30): đồng ý là đọc mã trong thư cho người xin, không bấm trong IMS',
     ).toEqual(['Từ chối']);
-    await expect(panel.getByText(`Chờ người xin nhập mã đã gửi tới ${E2E_SA.email}.`)).toBeVisible();
+    await expect(panel.getByText(`Mã đã gửi cho ${E2E_SA.email}.`)).toBeVisible();
 
     /* ---- Nút Xuất Excel CHỈ ở ngăn Nhật ký ---- */
 
