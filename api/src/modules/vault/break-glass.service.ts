@@ -34,6 +34,7 @@ import { AccessListService } from './access-list.service';
 import { tierLabel, type AccessTier } from './access-tier';
 import { VaultOwnersService } from './vault-owners.service';
 import { VaultService, type SecretOwnerType } from './vault.service';
+import { BreakGlassCodeService, type CodeStatus } from './break-glass-code.service';
 
 const BREAK_GLASS_KIND = 'break_glass';
 
@@ -78,6 +79,8 @@ const SESSION_ENDED_NOTE = 'Phiên đăng nhập của người xin đã kết t
 
 const pendingTimeoutNote = (hours: number) => `Quá ${hours} giờ không ai duyệt.`;
 
+const CODE_LOCKED_NOTE = 'Nhập sai mã duyệt 5 lần.';
+
 /**
  * Người đang gọi: email + phiên đăng nhập của CHÍNH request này (Q-15).
  *
@@ -113,6 +116,14 @@ export interface BreakGlassRequestInput {
   reason: string;
   /** Số giờ xin. Bị kẹp theo `breakglass.max_grant_hours` (AD-11, mặc định 24). */
   hours: number;
+  /** Email SA/Admin người xin chọn duyệt (Q-30) — chỉ người này nhận thư mang mã. */
+  approver: string;
+}
+
+/** Một người duyệt người xin chọn được (Q-30). */
+export interface ApproverChoice {
+  email: string;
+  name: string;
 }
 
 /**
@@ -135,6 +146,8 @@ export interface BreakGlassView extends ApprovalRecord {
   requesterName: string;
   /** Số ngăn két của đối tượng — chỉ người duyệt nhận; người xin nhận `null`. */
   secretCount: number | null;
+  /** Người duyệt người xin đã chọn (Q-30); `null` với phiếu gửi trước khi có duyệt bằng mã. */
+  approver: string | null;
 }
 
 /**
@@ -180,10 +193,10 @@ export interface AccessVerdict {
   grant: ApprovalRecord | null;
   pending: ApprovalRecord | null;
   /**
-   * Phiếu đang treo: số người DUYỆT ĐƯỢC đã nhận thư báo (không kể chính người xin — bốn mắt).
-   * Chỉ con số, không danh sách ai. `null` khi không có phiếu treo.
+   * Phiếu đang treo (Q-30): người duyệt đã chọn, còn mấy lần gửi lại, mấy lượt nhập, mã còn bao
+   * lâu. `null` khi không có phiếu treo, hoặc phiếu gửi trước khi có duyệt bằng mã.
    */
-  notifiedApprovers: number | null;
+  pendingCode: (CodeStatus & { approverName: string }) | null;
   /**
    * Đã được duyệt nhưng CHƯA xem lần nào — chưa gắn phiên (Q-15). Lần bấm Xem đầu tiên (qua mã
    * 6 số) gắn grant này vào phiên đang xem. `null` khi không có.
@@ -230,6 +243,7 @@ export class BreakGlassService implements OnModuleInit {
     private readonly users: UsersApiService,
     private readonly auth: AuthApiService,
     private readonly sweep: SweepService,
+    private readonly codes: BreakGlassCodeService,
   ) {}
 
   private readonly logger = new Logger(BreakGlassService.name);
@@ -283,7 +297,10 @@ export class BreakGlassService implements OnModuleInit {
         ]),
       );
     }
-    const names = await this.users.namesByEmails([...new Set(rows.map((r) => r.requester))]);
+    const [names, codes] = await Promise.all([
+      this.users.namesByEmails([...new Set(rows.map((r) => r.requester))]),
+      this.codes.statusOf(rows.map((r) => r.id)),
+    ]);
     return Promise.all(
       rows.map(async (row) => {
         const [subject, secretCount] = await subjects.get(`${row.subjectType}:${row.subjectId}`)!;
@@ -292,6 +309,7 @@ export class BreakGlassService implements OnModuleInit {
           subjectLabel: subject?.label ?? null,
           requesterName: names.get(row.requester) ?? row.requester,
           secretCount,
+          approver: codes.get(row.id)?.approver ?? null,
         };
       }),
     );
@@ -357,19 +375,25 @@ export class BreakGlassService implements OnModuleInit {
     };
   }
 
-  /** Số người duyệt được một phiếu của `requester` — mọi SA/Admin đang hoạt động trừ chính họ. */
-  private async approverCountExcept(requester: string): Promise<number> {
-    const approvers = await this.users.recipientsByRole(['sa', 'admin']);
-    return approvers.filter((a) => a.email.toLowerCase() !== requester.toLowerCase()).length;
-  }
-
   /**
-   * Số phiếu NGƯỜI NÀY duyệt được — badge menu. Không đếm phiếu của chính họ: bốn mắt
-   * (FR-023) cấm tự duyệt, nên đếm vào là báo một việc họ không làm được.
+   * Số phiếu chờ CHỌN ĐÚNG người này duyệt — badge menu (Q-30). Phiếu chọn người khác thì người
+   * này không có mã, đếm vào là báo một việc họ không làm được.
    */
   async pendingCountFor(approver: string): Promise<number> {
     const rows = await this.approvals.pending(BREAK_GLASS_KIND);
-    return rows.filter((r) => r.requester.toLowerCase() !== approver.toLowerCase()).length;
+    const codes = await this.codes.statusOf(rows.map((r) => r.id));
+    const me = approver.toLowerCase();
+    return rows.filter((r) => codes.get(r.id)?.approver.toLowerCase() === me).length;
+  }
+
+  /** SA/Admin đang hoạt động trừ chính người xin (bốn mắt, FR-023), xếp theo tên. */
+  async approverChoices(requester: string): Promise<ApproverChoice[]> {
+    const me = requester.toLowerCase();
+    const rows = await this.users.recipientsByRole(['sa', 'admin']);
+    return rows
+      .filter((r) => r.email.toLowerCase() !== me)
+      .map((r) => ({ email: r.email, name: r.fullName || r.email }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   }
 
   /** UI hỏi "tôi làm được gì với chủ thể này" — một lần gọi, đủ để dựng đúng nút. */
@@ -389,7 +413,7 @@ export class BreakGlassService implements OnModuleInit {
         canRequest: false,
         grant: null,
         pending: null,
-        notifiedApprovers: null,
+        pendingCode: null,
         claimable: null,
         grantSecondsLeft: null,
         pendingExpireHours: null,
@@ -406,7 +430,7 @@ export class BreakGlassService implements OnModuleInit {
         canRequest: false,
         grant: null,
         pending: null,
-        notifiedApprovers: null,
+        pendingCode: null,
         claimable: null,
         grantSecondsLeft: null,
         pendingExpireHours: null,
@@ -450,7 +474,7 @@ export class BreakGlassService implements OnModuleInit {
       grant,
       pending,
       claimable,
-      notifiedApprovers: pending ? await this.approverCountExcept(memberEmail) : null,
+      pendingCode: pending ? await this.pendingCodeOf(pending.id) : null,
       grantSecondsLeft: live?.expiresAt
         ? Math.max(0, Math.floor((live.expiresAt.getTime() - Date.now()) / 1000))
         : null,
@@ -597,14 +621,14 @@ export class BreakGlassService implements OnModuleInit {
       new ForbiddenException({
         code: 'BREAK_GLASS_REQUIRED',
         message:
-          'Cần được duyệt trước khi xem. Quyền đã cấp gắn với phiên đăng nhập xem lần đầu; ' +
+          'Cần được duyệt trước khi xem. Quyền đã cấp gắn với phiên đăng nhập đã nhập mã duyệt; ' +
           'phiên đó kết thúc thì gửi yêu cầu mới.',
       });
     const otherSession = () =>
       new ForbiddenException({
         code: 'BREAK_GLASS_OTHER_SESSION',
         message:
-          'Quyền mở két này đã gắn với phiên đăng nhập khác của bạn (phiên xem lần đầu). ' +
+          'Quyền mở két này đã gắn với phiên đăng nhập khác của bạn (phiên đã nhập mã duyệt). ' +
           'Muốn xem ở đây thì gửi yêu cầu mới.',
       });
 
@@ -637,7 +661,8 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
-   * Member gửi yêu cầu. Ghi yêu cầu + đẩy email báo người duyệt TRONG CÙNG transaction (AD-5).
+   * Member gửi yêu cầu. Ghi yêu cầu + hàng mã + thư mang mã cho người duyệt đã chọn TRONG CÙNG
+   * transaction (AD-5, Q-30).
    *
    * Tách hai transaction thì có cửa sổ mà yêu cầu đã nằm trong DB còn email thì không bao giờ
    * đi — người xin ngồi chờ một người duyệt không hề biết có việc. Lúc 2 giờ sáng thì cửa sổ
@@ -696,6 +721,15 @@ export class BreakGlassService implements OnModuleInit {
     }
 
     const hours = await this.clampHours(input.hours);
+    // Chỉ người trong danh sách chọn: thư mang mã không được đi tới một email người xin tự gõ.
+    const wanted = (input.approver ?? '').trim().toLowerCase();
+    const approver = (await this.approverChoices(memberEmail)).find((c) => c.email.toLowerCase() === wanted);
+    if (!approver) {
+      throw new BadRequestException({
+        code: 'BREAK_GLASS_APPROVER_INVALID',
+        message: 'Chọn một SA/Quản trị đang hoạt động (không phải chính bạn) để duyệt.',
+      });
+    }
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -708,8 +742,7 @@ export class BreakGlassService implements OnModuleInit {
           payload: { hours },
           requesterSessionId: viewer.sessionId,
         });
-        // Outbox chỉ mang id tham chiếu, KHÔNG PII (AD-11/NFR-04).
-        await this.outbox.enqueueWithin(tx, 'approval.requested', { approvalId: created.id });
+        await this.codes.openWithin(tx, created.id, approver.email);
         return created;
       });
     } catch (error) {
@@ -736,60 +769,120 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
-   * Người duyệt chốt. `hours` cho phép RÚT NGẮN so với yêu cầu (không kéo dài) — người duyệt
-   * nhìn lý do rồi quyết, chứ không phải bấm đồng ý với con số người xin tự đặt.
+   * Người xin nhập mã người duyệt đọc cho (Q-30) = được duyệt.
+   *
+   * Người duyệt ghi vào sổ là người NHẬN mã (người xin đã chọn lúc gửi), vì đọc mã là cách họ đồng
+   * ý. Bốn mắt (FR-023) giữ ở lúc chọn: danh sách chọn không có chính người xin. Quyền gắn ngay
+   * vào phiên vừa nhập mã (Q-15), nên không còn bước "xem lần đầu" để một phiên khác giành.
+   *
+   * Lượt sai phải COMMIT dù request trả lỗi — không thì đoán mã vô hạn. Vì thế lỗi ném SAU
+   * transaction, theo kết quả nó trả ra.
    */
-  async approve(
-    approver: string,
-    id: string,
-    options: { hours?: number; note?: string | null } = {},
-  ): Promise<ApprovalRecord> {
+  async submitCode(viewer: BreakGlassViewer, id: string, typed: string): Promise<ApprovalRecord> {
+    const request = await this.requireOwnPending(viewer, id);
+    const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
+    const hours = await this.clampHours(asked);
+    const required = () =>
+      new ForbiddenException({
+        code: 'BREAK_GLASS_REQUIRED',
+        message: 'Phiên đăng nhập này đã kết thúc. Đăng nhập lại rồi nhập mã.',
+      });
+    if (!viewer.sessionId || !(await this.auth.isSessionAlive(viewer.sessionId))) throw required();
+
+    const outcome = await this.db.transaction(async (tx) => {
+      const attempt = await this.codes.attemptWithin(tx, id, typed, viewer.email);
+      if (attempt.verdict === 'ok') {
+        await this.approvals.transitionWithin(tx, id, {
+          to: 'approved',
+          actor: attempt.approver,
+          expiresAt: new Date(Date.now() + hours * 3_600_000),
+          detail: { hours, via: 'code', enteredBy: viewer.email },
+        });
+        const bound = await this.approvals.claimWithin(tx, id, {
+          actor: viewer.email,
+          sessionId: viewer.sessionId,
+          history: false,
+        });
+        await this.outbox.enqueueWithin(tx, 'approval.decided', { approvalId: id, state: 'approved' });
+        return { attempt, record: bound };
+      }
+      if (attempt.verdict === 'locked') {
+        await this.approvals.transitionWithin(tx, id, {
+          to: 'cancelled',
+          actor: viewer.email,
+          note: CODE_LOCKED_NOTE,
+          detail: { by: 'code-failed' },
+        });
+      }
+      return { attempt, record: null };
+    });
+
+    const { attempt, record } = outcome;
+    if (record) return record;
+    switch (attempt.verdict) {
+      case 'wrong':
+        throw new BadRequestException({
+          code: 'BREAK_GLASS_CODE_WRONG',
+          message: `Mã không đúng. Còn ${attempt.attemptsLeft} lần nhập.`,
+          attemptsLeft: attempt.attemptsLeft,
+        });
+      case 'locked':
+        throw new ConflictException({
+          code: 'BREAK_GLASS_CODE_LOCKED',
+          message: 'Nhập sai mã 5 lần nên yêu cầu đã bị huỷ. Gửi yêu cầu mới nếu vẫn cần.',
+        });
+      case 'expired':
+        throw new ConflictException({
+          code: 'BREAK_GLASS_CODE_EXPIRED',
+          message: 'Mã đã quá 10 phút. Bấm "Gửi lại mã", hoặc gửi yêu cầu mới nếu đã hết lượt gửi lại.',
+        });
+      case 'not_sent':
+        throw new ConflictException({
+          code: 'BREAK_GLASS_CODE_NOT_SENT',
+          message: 'Thư mang mã đang trên đường tới người duyệt. Chờ họ đọc mã mới nhất cho bạn.',
+        });
+      default:
+        // `ok` mà không gắn được phiên: grant vừa hết giờ hay bị thu hồi ngay trong lượt này.
+        throw required();
+    }
+  }
+
+  /** "Gửi lại mã" (Q-30): tối đa 3 lần cho một yêu cầu; mã mới huỷ mã cũ. */
+  async resendCode(viewer: BreakGlassViewer, id: string): Promise<CodeStatus> {
+    await this.requireOwnPending(viewer, id);
+    return this.db.transaction((tx) => this.codes.resendWithin(tx, id, viewer.email));
+  }
+
+  /**
+   * Yêu cầu đang chờ CỦA CHÍNH người gọi. Phiếu của người khác trả cùng lỗi với phiếu không tồn
+   * tại (như `detail`): phân biệt được là lộ ai đang xin mở két gì.
+   */
+  private async requireOwnPending(viewer: BreakGlassViewer, id: string): Promise<ApprovalRecord> {
     const request = await this.requireBreakGlass(id);
+    if (request.requester.toLowerCase() !== viewer.email.toLowerCase()) {
+      throw new NotFoundException({ code: 'APPROVAL_NOT_FOUND', message: 'Không tìm thấy yêu cầu này.' });
+    }
     await this.assertNotWithdrawn(request);
+    if (request.state !== 'pending') {
+      throw new ConflictException({
+        code: 'BREAK_GLASS_NOT_PENDING',
+        message: 'Yêu cầu này không còn chờ duyệt. Tải lại để xem kết quả.',
+      });
+    }
     /*
      * Hết hạn chờ đọc theo ĐỒNG HỒ (AD-6), không chờ lượt quét: lượt quét lỡ nhịp thì một phiếu
      * đã quá hạn vẫn không được cấp quyền cho người xin có khi đã thôi cần từ lâu.
      */
     const expireHours = await this.pendingExpireHours();
-    if (request.state === 'pending' && overdueSince(request.createdAt, expireHours)) {
-      throw pendingExpired(expireHours);
-    }
-    /*
-     * BỐN MẮT (FR-023) — người xin không tự duyệt cho chính mình.
-     *
-     * `POST /vault/break-glass` mở cho cả `member`, `admin` và `sa` ("ai cũng XIN được, kể cả
-     * Admin"), còn `approve` mở cho `sa`/`admin`. Nên `approve()` PHẢI so `approver` với
-     * `request.requester` — cùng lý do `cancel()` ngay bên dưới cũng so.
-     *
-     * Tác động quyền hạn chế: Admin vốn đã đi thẳng qua ma trận nên grant không cho thêm gì.
-     * Nhưng nhật ký FR-025 thì in ra một grant "đã được duyệt" nhìn hợp lệ hoàn toàn, với
-     * `decided_by` là chính người xin — và đó là thứ auditor đọc. Nguyên tắc bốn mắt mất đi
-     * không phải vì ai đó phá được nó, mà vì nó chưa từng được cài.
-     */
-    if (request.requester.toLowerCase() === approver.toLowerCase()) {
-      throw new ForbiddenException({
-        code: 'CANNOT_APPROVE_OWN_REQUEST',
-        message:
-          'Không tự duyệt yêu cầu của chính mình được. ' +
-          'Nhờ một Quản trị viên khác, hoặc rút yêu cầu nếu không còn cần.',
-      });
-    }
-    const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
-    /*
-     * Rút ngắn được, KÉO DÀI thì không: cấp nhiều giờ hơn số xin là mở két lâu hơn chính người
-     * cần nó nghĩ là cần, và nhật ký FR-025 in ra một grant người xin chưa từng xin. Phiếu không
-     * mang số giờ hợp lệ thì chỉ còn trần cấu hình (`clampHours`) chặn.
-     */
-    const typed = options.hours ?? asked;
-    const hours = await this.clampHours(asked > 0 ? Math.min(typed, asked) : typed);
+    if (overdueSince(request.createdAt, expireHours)) throw pendingExpired(expireHours);
+    return request;
+  }
 
-    return this.decideOrWithdrawn(id, {
-      to: 'approved',
-      actor: approver,
-      note: options.note,
-      expiresAt: new Date(Date.now() + hours * 3_600_000),
-      detail: { hours },
-    });
+  private async pendingCodeOf(approvalId: string): Promise<(CodeStatus & { approverName: string }) | null> {
+    const status = (await this.codes.statusOf([approvalId])).get(approvalId);
+    if (!status) return null;
+    const names = await this.users.namesByEmails([status.approver]);
+    return { ...status, approverName: names.get(status.approver.toLowerCase()) ?? status.approver };
   }
 
   async deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {

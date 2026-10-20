@@ -187,14 +187,14 @@ describe('Thư báo kết quả cho người xin (approval.decided)', () => {
     expect(mail.text).toContain('Chỉ đổi VLAN');
   });
 
-  it('được duyệt: chỉ đường "mở lại, bấm Xem, nhập mã 6 số"; quyền gắn phiên xem lần đầu (Q-15)', async () => {
+  it('được duyệt: chỉ đường "mở lại, bấm Xem, nhập mã 6 số"; quyền gắn phiên đã nhập mã duyệt (Q-15, Q-30)', async () => {
     const [mail] = await send(
       { payload: { approvalId: 'a1', state: 'approved' }, row: approved },
       'approval.decided',
     );
     expect(mail.text).toMatch(/bấm "Xem"/);
     expect(mail.text).toMatch(/mã 6 số/);
-    expect(mail.text).toMatch(/phiên đăng nhập.*xem lần đầu/i);
+    expect(mail.text).toMatch(/phiên đăng nhập.*nhập mã duyệt/i);
     // Câu cũ "phiên đã gửi yêu cầu" là sai với luật mới — người xin đăng nhập lại vẫn dùng được.
     expect(mail.text).not.toMatch(/phiên đăng nhập đã gửi/i);
   });

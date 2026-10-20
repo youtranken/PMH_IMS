@@ -10,7 +10,7 @@ import { AccessRuleDto } from './vault-access.controller';
  * `NOTE_LOOKS_LIKE_SECRET` và body không được nhắc lại đoạn bị chặn.
  */
 const cases: [string, Type<unknown>, string, Record<string, unknown>][] = [
-  ['lý do xin quyền (đi cả vào email người duyệt)', RequestDto, 'reason', { ownerType: 'device', ownerId: randomUUID(), hours: 1 }],
+  ['lý do xin quyền (đi cả vào email người duyệt)', RequestDto, 'reason', { ownerType: 'device', ownerId: randomUUID(), hours: 1, approver: 'sa@pmh.com.vn' }],
   ['ghi chú của người duyệt', DecisionDto, 'note', {}],
   ['ghi chú lời gán quyền két', AccessRuleDto, 'note', { memberEmail: 'a@pmh.com.vn', scopeType: 'device_site', scopeRef: 'x', tier: 'whitelist' }],
 ];

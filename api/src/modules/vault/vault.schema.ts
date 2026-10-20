@@ -61,3 +61,19 @@ export const accessListTable = pgTable('access_list', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Bảng `break_glass_code` — migration 0074_break_glass_code.sql. Chủ: `vault` (Q-30).
+ *
+ * Mã duyệt mở két chỉ có HMAC ở đây: đọc được bảng (backup, quyền DB) cũng không ra mã đang sống.
+ */
+export const breakGlassCodeTable = pgTable('break_glass_code', {
+  approvalId: uuid('approval_id').primaryKey(),
+  approver: text('approver').notNull(),
+  sendNo: integer('send_no').notNull().default(1),
+  codeHash: text('code_hash'),
+  codeExpiresAt: timestamp('code_expires_at', { withTimezone: true }),
+  failedAttempts: integer('failed_attempts').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

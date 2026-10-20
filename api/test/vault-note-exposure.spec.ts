@@ -20,6 +20,8 @@ import { VaultController } from '../src/modules/vault/vault.controller';
 import type { VaultOwnersService } from '../src/modules/vault/vault-owners.service';
 import { VaultService } from '../src/modules/vault/vault.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { approveByCode, breakGlassCodes } from './break-glass-codes';
+import type { MailContentRegistry } from '../src/common/mail-content.registry';
 
 /**
  * Ghi chú của ngăn két chỉ đến tay người MỞ ĐƯỢC ngăn đó (SEC-20, Q-18).
@@ -40,6 +42,7 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
   let vault: VaultService;
   let approvals: ApprovalsService;
   let breakGlass: BreakGlassService;
+  let contents: MailContentRegistry;
   let controller: VaultController;
   let tier: AccessTier = 'denied';
 
@@ -71,20 +74,30 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
     const config = {
       getNumber: (key: string) =>
         Promise.resolve(key === 'dashboardSecretStaleDays' ? 180 : 24),
+      getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),
     } as unknown as SystemConfigService;
     const noopSweep = { register: () => undefined } as unknown as SweepService;
+    const users = {
+      recipientsByRole: () => Promise.resolve([{ email: 'duyet@qa.test', fullName: 'Duyệt' }]),
+      namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e, e]))),
+    } as unknown as UsersApiService;
+    const approvalsApi = new ApprovalsApiService(approvals);
+    const outbox = new OutboxService(scratch.db, config, noopSweep);
+    const built = breakGlassCodes({ db: scratch.db, outbox, approvals: approvalsApi, kinds, users, config });
+    contents = built.contents;
     breakGlass = new BreakGlassService(
       scratch.db,
       kinds,
-      new ApprovalsApiService(approvals),
+      approvalsApi,
       { tierFor: () => Promise.resolve(tier) } as unknown as AccessListService,
       config,
-      new OutboxService(scratch.db, config, noopSweep),
-      {} as VaultOwnersService,
+      outbox,
+      { describe: () => Promise.resolve({ orphan: true }) } as unknown as VaultOwnersService,
       {} as VaultService,
-      {} as UsersApiService,
+      users,
       { isSessionAlive: () => Promise.resolve(true) } as unknown as AuthApiService,
       noopSweep,
+      built.codes,
     );
     breakGlass.onModuleInit();
     controller = new VaultController(
@@ -140,47 +153,35 @@ describe('Két: ghi chú chỉ lộ cho người mở được ngăn (SEC-20)', 
     expect(rows.filter((row) => row.hasNote)).toHaveLength(1);
   });
 
-  async function approvedFor(member: string, ownerId: string): Promise<void> {
-    const created = await scratch.db.transaction((tx) =>
-      approvals.createWithin(tx, {
-        kind: 'break_glass',
-        requester: member,
-        subjectType: 'device',
-        subjectId: ownerId,
-        reason: 'Sự cố',
-        payload: { hours: 2 },
-      }),
-    );
-    await breakGlass.approve('duyet@qa.test', created.id, {});
+  /** Xin + nhập mã ở phiên `sessionId` — quyền gắn vào đúng phiên đó (Q-15, Q-30). */
+  async function approvedFor(member: string, ownerId: string, sessionId: string): Promise<void> {
+    const viewer = { email: member, sessionId };
+    const created = await breakGlass.request(viewer, {
+      ownerType: 'device',
+      ownerId,
+      reason: 'Sự cố',
+      hours: 2,
+      approver: 'duyet@qa.test',
+    });
+    await approveByCode(breakGlass, contents, viewer, created.id);
   }
 
   /*
-   * Q-15: quyền gắn với phiên XEM LẦN ĐẦU (qua mã 6 số). Trước lần đó, phiên nào của người xin
-   * cũng "có thể" nhận quyền — cho đọc ghi chú lúc này là cho mọi phiên đọc, kể cả phiên sẽ
-   * không bao giờ giữ quyền.
+   * Q-15: quyền gắn với phiên đã nhập mã duyệt. Phiên khác của cùng người xin không giữ quyền,
+   * nên cho phiên đó đọc ghi chú là cho một phiên không mở được ngăn đọc nó.
    */
-  it('Member cần-duyệt đã được duyệt nhưng CHƯA xem lần nào: chưa thấy ghi chú', async () => {
-    const ownerId = await seed();
-    tier = 'needs_approval';
-    const member = 'e2e-note-granted@qa.test';
-    await approvedFor(member, ownerId);
-    const rows = await list(ownerId, as('member', member));
-    expect(JSON.stringify(rows)).not.toContain(NOTE);
-    expect(rows.find((row) => row.hasNote)?.note).toBeNull();
-  });
-
-  it('đã xem lần đầu ở phiên A: phiên A thấy ghi chú, phiên B của cùng người thì không', async () => {
+  it('đã duyệt ở phiên A: phiên A thấy ghi chú, phiên B của cùng người thì không', async () => {
     const ownerId = await seed();
     tier = 'needs_approval';
     const member = 'e2e-note-bound@qa.test';
-    await approvedFor(member, ownerId);
     const sessionA = randomUUID();
-    await breakGlass.assertCanReveal({ email: member, sessionId: sessionA }, 'device', ownerId);
+    await approvedFor(member, ownerId, sessionA);
 
     const inA = await list(ownerId, as('member', member, sessionA));
     expect(inA.find((row) => row.hasNote)?.note).toBe(NOTE);
     const inB = await list(ownerId, as('member', member));
     expect(JSON.stringify(inB)).not.toContain(NOTE);
+    expect(inB.find((row) => row.hasNote)?.note).toBeNull();
   });
 
   it('Member xem thẳng (whitelist): thấy ghi chú', async () => {

@@ -20,14 +20,17 @@ import type { AuthApiService } from '../src/modules/auth/auth.api';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 import { noSweep } from './sweep-stub';
+import { approveByCode, breakGlassCodes } from './break-glass-codes';
+import type { MailContentRegistry } from '../src/common/mail-content.registry';
 
 /**
- * Người xin được báo kết quả (Q-14) — qua outbox, trên Postgres thật và SMTP thật.
+ * Thư của luồng mở két — qua outbox, trên Postgres thật và SMTP thật.
  *
- * Hai lời hứa của AD-5 mà chỉ DB thật trả lời được:
+ * Ba lời hứa của AD-5 / Q-30 mà chỉ DB thật trả lời được:
  *   1. quyết định và hàng outbox báo người xin sống chết CÙNG một transaction — quyết định bị
- *      từ chối (phiếu đã có người xử lý, người xin tự duyệt) thì không có thư nào rời đi;
- *   2. consumer dựng lại thư từ `approvalId` và thư tới đúng người xin, không tới người duyệt.
+ *      từ chối (phiếu đã có người xử lý) thì không có thư nào rời đi;
+ *   2. consumer dựng lại thư kết quả từ `approvalId` và thư tới đúng người xin;
+ *   3. thư mang mã tới ĐÚNG người duyệt đã chọn, không tới ai khác.
  */
 
 const TEST_TIMEOUT = 120_000;
@@ -66,6 +69,11 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
   let breakGlass: BreakGlassService;
   let outbox: OutboxService;
   let kinds: ApprovalKindRegistry;
+  let contents: MailContentRegistry;
+  let users: UsersApiService;
+  let config: SystemConfigService;
+  const SESSION = randomUUID();
+  const as = (email: string) => ({ email, sessionId: SESSION });
   const code = `SW-E2E-BGMAIL-${Date.now().toString(36).toUpperCase()}`;
 
   beforeAll(async () => {
@@ -79,22 +87,35 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
     kinds = new ApprovalKindRegistry();
     approvals = new ApprovalsService(scratch.db, audit, kinds);
-    const config = { getNumber: () => Promise.resolve(24) } as unknown as SystemConfigService;
+    config = {
+      getNumber: () => Promise.resolve(24),
+      getString: (key: string) =>
+        Promise.resolve(key === 'appTimezone' ? 'Asia/Ho_Chi_Minh' : 'IMS <no-reply@pmh.local>'),
+    } as unknown as SystemConfigService;
     outbox = new OutboxService(scratch.db, config, noSweep);
     const owners = {
       describe: () =>
         Promise.resolve({ code, name: 'Switch lõi tầng 3', siteCode: 'E2E-HCM', orphan: false }),
     } as unknown as VaultOwnersService;
     const vault = { countFor: () => Promise.resolve(2) } as unknown as VaultService;
-    const users = {
-      namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e, e]))),
+    users = {
+      namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e.toLowerCase(), e]))),
       roleByEmail: () => Promise.resolve('member'),
+      recipientsByRole: () =>
+        Promise.resolve([
+          { email: 'duyet@pmh.local', fullName: 'Duyệt' },
+          { email: 'dem@pmh.local', fullName: 'Đếm' },
+        ]),
+      getById: () => Promise.resolve(null),
     } as unknown as UsersApiService;
+    const approvalsApi = new ApprovalsApiService(approvals);
+    const built = breakGlassCodes({ db: scratch.db, outbox, approvals: approvalsApi, kinds, users, config });
+    contents = built.contents;
     breakGlass = new BreakGlassService(
       scratch.db,
       kinds,
-      new ApprovalsApiService(approvals),
-      {} as AccessListService,
+      approvalsApi,
+      { tierFor: () => Promise.resolve('needs_approval') } as unknown as AccessListService,
       config,
       outbox,
       owners,
@@ -105,6 +126,7 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
         aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
       } as unknown as AuthApiService,
       { register: () => undefined } as unknown as SweepService,
+      built.codes,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);
@@ -117,16 +139,26 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
     await scratch.pool.query('TRUNCATE outbox');
   });
 
-  function request(requester = `xin-${randomUUID().slice(0, 8)}@qa.test`) {
-    return scratch.db.transaction((tx) =>
-      approvals.createWithin(tx, {
-        kind: 'break_glass',
-        requester,
-        subjectType: 'device',
-        subjectId: randomUUID(),
-        reason: 'Sự cố lúc 2 giờ sáng',
-        payload: { hours: 4 },
-      }),
+  function request(requester = `xin-${randomUUID().slice(0, 8)}@qa.test`, approver = 'duyet@pmh.local') {
+    return breakGlass.request(as(requester), {
+      ownerType: 'device',
+      ownerId: randomUUID(),
+      reason: 'Sự cố lúc 2 giờ sáng',
+      hours: 4,
+      approver,
+    });
+  }
+
+  function consumer() {
+    return new MailConsumer(
+      outbox,
+      users,
+      new MailTransportService(),
+      config,
+      {} as ExpiryApiService,
+      new ApprovalsApiService(approvals),
+      kinds,
+      contents,
     );
   }
 
@@ -139,7 +171,7 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
 
   it('duyệt / từ chối / thu hồi sớm: mỗi quyết định đẩy đúng một hàng, mang state đã quyết', async () => {
     const a = await request();
-    await breakGlass.approve('duyet@qa.test', a.id, { hours: 2 });
+    await approveByCode(breakGlass, contents, as(a.requester), a.id);
     await breakGlass.revoke('duyet@qa.test', a.id);
     const b = await request();
     await breakGlass.deny('duyet@qa.test', b.id, 'Lý do chưa đủ cụ thể');
@@ -156,11 +188,10 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
     await breakGlass.deny('duyet@qa.test', a.id);
     await scratch.pool.query('TRUNCATE outbox');
 
-    // Người thứ hai bấm Duyệt trên phiếu đã bị từ chối.
-    await expect(breakGlass.approve('khac@qa.test', a.id)).rejects.toBeDefined();
-    // Người xin tự duyệt.
-    const own = await request('tu-duyet@qa.test');
-    await expect(breakGlass.approve('tu-duyet@qa.test', own.id)).rejects.toBeDefined();
+    // Người xin nhập mã trên phiếu đã bị từ chối: không thư, không quyền.
+    await expect(breakGlass.submitCode(as(a.requester), a.id, '123456')).rejects.toMatchObject({ status: 409 });
+    // Người xin chọn chính mình làm người duyệt: không có phiếu, không có thư.
+    await expect(request('duyet@pmh.local', 'duyet@pmh.local')).rejects.toMatchObject({ status: 400 });
 
     expect(await decidedRows()).toEqual([]);
   });
@@ -189,50 +220,58 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
     );
   });
 
-  it('badge: không đếm phiếu của chính người duyệt (bốn mắt)', async () => {
-    const before = await breakGlass.pendingCountFor('dem@qa.test');
-    await request('dem@qa.test');
+  it('badge: chỉ đếm phiếu chọn đúng mình (Q-30)', async () => {
+    const before = await breakGlass.pendingCountFor('dem@pmh.local');
+    await request(undefined, 'dem@pmh.local');
     await request();
-    expect(await breakGlass.pendingCountFor('dem@qa.test')).toBe(before + 1);
+    expect(await breakGlass.pendingCountFor('dem@pmh.local')).toBe(before + 1);
   });
+
+  it(
+    'thư mang mã đi qua SMTP thật tới ĐÚNG người duyệt đã chọn; mã trong thư mở được yêu cầu',
+    async () => {
+      const requester = `xin-ma-${Date.now().toString(36)}@pmh.local`;
+      const a = await request(requester, 'dem@pmh.local');
+      const { rows } = await scratch.pool.query<{ id: string }>(
+        `SELECT id FROM outbox WHERE topic = 'break_glass.code' AND payload->>'approvalId' = $1`,
+        [a.id],
+      );
+      await consumer().handle('break_glass.code', rows[0].id);
+
+      const found = (await inbox()).find((m) => m.Subject.includes(requester));
+      expect(found?.To.map((t) => t.Address)).toEqual(['dem@pmh.local']);
+      expect(found?.Subject).not.toMatch(/\b\d{6}\b/);
+      const body = (await (await fetch(`${MAILPIT_API}/message/${found!.ID}`)).json()) as { Text: string };
+      const mailed = /Mã duyệt\W+(\d{6})/.exec(body.Text)?.[1];
+      expect(mailed).toMatch(/^\d{6}$/);
+      await breakGlass.submitCode(as(requester), a.id, mailed!);
+      const { rows: state } = await scratch.pool.query<{ state: string; decided_by: string }>(
+        `SELECT state, decided_by FROM approval WHERE id = $1`,
+        [a.id],
+      );
+      expect(state[0]).toEqual({ state: 'approved', decided_by: 'dem@pmh.local' });
+    },
+    TEST_TIMEOUT,
+  );
 
   it(
     'consumer gửi thư THẬT tới người xin, có mã máy và hạn; hàng outbox được đánh dấu xong',
     async () => {
       const requester = `nguoi-xin-${Date.now().toString(36)}@pmh.local`;
       const a = await request(requester);
-      await breakGlass.approve('duyet@qa.test', a.id, { hours: 2, note: 'Chỉ đổi VLAN' });
+      await approveByCode(breakGlass, contents, as(requester), a.id);
       const [row] = await decidedRows();
+      await consumer().handle('approval.decided', row.id);
 
-      const users = {
-        namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e, e]))),
-        recipientsByRole: () => Promise.resolve([{ email: 'duyet@pmh.local', fullName: 'Duyệt' }]),
-        getById: () => Promise.resolve(null),
-      } as unknown as UsersApiService;
-      const config = {
-        getString: (key: string) =>
-          Promise.resolve(key === 'appTimezone' ? 'Asia/Ho_Chi_Minh' : 'IMS <no-reply@pmh.local>'),
-      } as unknown as SystemConfigService;
-      const consumer = new MailConsumer(
-        outbox,
-        users,
-        new MailTransportService(),
-        config,
-        {} as ExpiryApiService,
-        new ApprovalsApiService(approvals),
-        kinds,
-      );
-      await consumer.handle('approval.decided', row.id);
-
-      const found = (await inbox()).find((m) => m.Subject.includes(code));
-      expect(found?.Subject).toBe(`[IMS] Đã duyệt: mở két ${code} (2 giờ)`);
+      const found = (await inbox()).find((m) => m.Subject.startsWith('[IMS] Đã duyệt') && m.Subject.includes(code));
+      expect(found?.Subject).toBe(`[IMS] Đã duyệt: mở két ${code} (4 giờ)`);
       expect(found?.To.map((t) => t.Address)).toEqual([requester]);
 
       const body = (await (await fetch(`${MAILPIT_API}/message/${found!.ID}`)).json()) as {
         Text: string;
       };
       expect(body.Text).toContain(`/devices/${a.subjectId}?tab=vault`);
-      expect(body.Text).toContain('Chỉ đổi VLAN');
+      expect(body.Text).toContain('duyet@pmh.local');
 
       const processed = await scratch.pool.query<{ processed_at: Date | null }>(
         'SELECT processed_at FROM outbox WHERE id = $1',

@@ -104,11 +104,6 @@ describe('Step-up mặc định đóng (FR-022)', () => {
     },
     {
       file: 'modules/vault/break-glass.controller.ts',
-      route: "@Post(':id/approve')",
-      why: 'cấp quyền đọc két nhiều giờ',
-    },
-    {
-      file: 'modules/vault/break-glass.controller.ts',
       route: "@Post(':id/revoke')",
       why: 'thu hồi grant đang sống',
     },
