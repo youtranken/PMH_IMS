@@ -92,4 +92,32 @@ describe('chuyển nút cây sơ đồ chéo nhau không tạo vòng', () => {
     );
     expect(rows[0].n).toBe(0);
   }, TEST_TIMEOUT);
+
+  it('hai lượt chuyển chéo cùng chờ khoá cây: không deadlock, lượt sau nhận DIAGRAM_MOVE_CYCLE', async () => {
+    /*
+     * Khoá cây phải lấy TRƯỚC khoá hàng cha. Lấy sau thì A giữ hàng Y rồi chờ khoá cây, B giữ hàng
+     * X rồi chờ khoá cây; người được khoá cây ghi X / Y thì chờ hàng của người kia — deadlock, và
+     * người dùng nhận "thử lại" thay vì câu "không chuyển vào nhánh con được".
+     */
+    const x = (await service.create(SA.email, { name: 'E2E X2', nodeType: 'company' })).id;
+    const y = (await service.create(SA.email, { name: 'E2E Y2', nodeType: 'company' })).id;
+    const blocker = await scratch.pool.connect();
+    let results: PromiseSettledResult<unknown>[];
+    try {
+      await blocker.query('BEGIN');
+      await blocker.query(`SELECT pg_advisory_xact_lock(hashtextextended('diagram-tree', 0))`);
+      const first = service.update(SA, x, { parentId: y });
+      void first.catch(() => undefined);
+      const second = service.update(SA, y, { parentId: x });
+      void second.catch(() => undefined);
+      await waitForLock(scratch.pool, 10_000, 2);
+      await blocker.query('COMMIT');
+      results = await Promise.allSettled([first, second]);
+    } finally {
+      blocker.release();
+    }
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const lost = results.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+    expect(lost.reason).toMatchObject({ status: 400, response: { code: 'DIAGRAM_MOVE_CYCLE' } });
+  }, TEST_TIMEOUT);
 });

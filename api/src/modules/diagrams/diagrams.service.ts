@@ -657,13 +657,14 @@ export class DiagramsService {
     await this.uniqueName(() =>
       this.db.transaction(async (tx) => {
         if (input.parentId) {
-          await this.assertLiveParent(input.parentId, tx);
           /*
-           * Kiểm vòng LẠI trong tx, sau khi khoá cả cây: bước kiểm ở trên chạy ngoài tx, nên A chuyển
-           * X vào dưới Y trong lúc B chuyển Y vào dưới X thì cả hai cùng qua và cây thành vòng (X, Y
-           * biến khỏi cây). Chuyển nút là thao tác hiếm, xếp hàng cả cây không đáng kể.
+           * Khoá cả cây TRƯỚC, rồi mới khoá hàng cha và kiểm vòng LẠI trong tx. Bước kiểm ở trên chạy
+           * ngoài tx, nên A chuyển X vào dưới Y trong lúc B chuyển Y vào dưới X thì cả hai cùng qua và
+           * cây thành vòng (X, Y biến khỏi cây). Khoá cây sau khoá hàng cha thì hai lượt giữ chéo
+           * hàng của nhau rồi deadlock. Chuyển nút là thao tác hiếm, xếp hàng cả cây không đáng kể.
            */
           await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('diagram-tree', 0))`);
+          await this.assertLiveParent(input.parentId, tx);
           if ((await this.descendantIds(id, tx)).includes(input.parentId)) throw moveCycle();
         }
         const set: Partial<typeof diagramTable.$inferInsert> = { updatedAt: new Date() };
