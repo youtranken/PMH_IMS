@@ -62,7 +62,7 @@ describe('Khối "sắp hết hạn" khi một nguồn hạn lỗi', () => {
     [[], true],
     [['ssl'], false],
   ])('nguồn lỗi %j → available = %s', async (failed, available) => {
-    const board = await buildService(failed).build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    const board = await buildService(failed).build({ email: 'sep@pmh.com.vn', role: 'admin', features: null });
     expect(board.expiring.available).toBe(available);
   });
 });
@@ -77,6 +77,7 @@ describe('Khối "sắp hết hạn" khi có nhiều mục quá hạn', () => {
     const board = await buildService([], { upcoming: [row('ssl-2-ngay', 2)], overdue }).build({
       email: 'sep@pmh.com.vn',
       role: 'admin',
+      features: null,
     });
     expect(board.expiring.items.map((item) => item.label)).toContain('ssl-2-ngay');
     expect(board.expiring.items.length).toBeLessThanOrEqual(8);
@@ -96,6 +97,7 @@ describe('Khối "sắp hết hạn" mang đủ dữ liệu để gia hạn tạ
     const board = await buildService([], { upcoming: [renewable, warranty], overdue: [] }).build({
       email: 'sep@pmh.com.vn',
       role: 'admin',
+      features: null,
     });
     expect(board.expiring.items).toEqual([
       expect.objectContaining({ id: 'ssl-1', kind: 'ssl', canRenew: true }),

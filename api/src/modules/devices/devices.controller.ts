@@ -312,6 +312,7 @@ export class DevicesController {
     return this.panels.listFor(params.id, {
       email: req.user!.email,
       role: req.user!.role,
+      features: req.user!.features,
     });
   }
 
@@ -330,8 +331,8 @@ export class DevicesController {
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id/timeline')
-  async timeline(@Param() params: IdParamDto) {
-    const timeline = await this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT);
+  async timeline(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    const timeline = await this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT, req.user!.features);
     return {
       ...timeline,
       items: await withActorNames(timeline.items, (emails) => this.users.namesByEmails(emails)),

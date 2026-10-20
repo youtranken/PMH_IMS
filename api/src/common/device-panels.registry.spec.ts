@@ -2,7 +2,7 @@ import { DevicePanelRegistry } from './device-panels.registry';
 import type { DevicePanel, DevicePanelProvider, PanelViewer } from './device-panels';
 
 /** Ai dang xem. Registry chi CHUYEN TIEP xuong provider chu khong tu kiem quyen. */
-const SA: PanelViewer = { email: 'sa@pmh.com.vn', role: 'sa' };
+const SA: PanelViewer = { email: 'sa@pmh.com.vn', role: 'sa', features: null };
 
 function provider(
   key: string,
@@ -63,5 +63,23 @@ describe('DevicePanelRegistry — khu mở rộng của trang chi tiết (story 
     ]);
     const panels = await service.listFor('device-1', SA);
     expect(panels.map((panel) => panel.key)).toEqual(['ipam']);
+  });
+
+  it('Q-31: panel của mảng bị nhóm quyền ẩn không được dựng; panel không thuộc mảng nào vẫn hiện', async () => {
+    const built: string[] = [];
+    const tracked = (key: string, feature?: 'network' | 'assets'): DevicePanelProvider => ({
+      panelKey: key,
+      feature,
+      buildFor: () => {
+        built.push(key);
+        return Promise.resolve({ key, title: key, items: [] });
+      },
+    });
+    const service = serviceWith([tracked('ipam', 'network'), tracked('software', 'assets'), tracked('vault')]);
+    const member: PanelViewer = { email: 'm@pmh.com.vn', role: 'member', features: ['assets'] };
+    const panels = await service.listFor('device-1', member);
+    expect(panels.map((panel) => panel.key)).toEqual(['software', 'vault']);
+    // Không dựng rồi mới lọc: provider của mảng ẩn không được chạy truy vấn nào.
+    expect(built).toEqual(['software', 'vault']);
   });
 });

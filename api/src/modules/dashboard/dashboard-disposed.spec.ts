@@ -88,7 +88,7 @@ describe('Trang chủ — khối "Vừa thanh lý" theo ngày vào kho', () => {
   });
 
   it('máy thanh lý từ 2024, hôm qua sửa ghi chú → KHÔNG hiện; máy bỏ trong tuần → hiện', async () => {
-    const board = await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    const board = await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin', features: null });
     expect(board.disposed.items.map((i) => i.code)).toEqual(['E2E-NEW']);
     expect(board.disposed.total).toBe(1);
     // Mở trang chủ không được tra lịch sử của CẢ kho: chỉ hồ sơ đổi gần đây mới có thể "vừa thanh lý".

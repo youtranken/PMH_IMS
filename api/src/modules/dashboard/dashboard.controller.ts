@@ -26,6 +26,6 @@ export class DashboardController {
   @Get()
   build(@Req() req: AuthedRequest) {
     const user = req.user!;
-    return this.dashboard.build({ email: user.email, role: user.role });
+    return this.dashboard.build({ email: user.email, role: user.role, features: user.features });
   }
 }

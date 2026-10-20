@@ -472,6 +472,22 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
     });
   });
 
+  describe('Q-31 · nhóm quyền lọc kỳ phiếu theo phiếu được tick', () => {
+    it('Member chỉ có 0208: màn Kỳ phiếu chỉ có cột 0208, không có số sự cố 0206', async () => {
+      const overview = await periods.overview({ ...people.other, features: ['iso_0208', 'iso'] }, 2026);
+      expect(new Set(overview.months.flatMap((m) => m.forms.map((f) => f.formType)))).toEqual(new Set(['0208']));
+      expect(overview.months.every((m) => m.incidents === 0 && m.incidentsSigned === 0)).toBe(true);
+      const full = await periods.overview(people.other, 2026);
+      expect(new Set(full.months.flatMap((m) => m.forms.map((f) => f.formType)))).toEqual(new Set(['0203', '0208']));
+    });
+
+    it('Member chỉ có 0208 mở kỳ 0203 → 403 FEATURE_HIDDEN', async () => {
+      await expect(
+        periods.detail({ ...people.other, features: ['iso_0208', 'iso'] }, '0203', 2026, 11),
+      ).rejects.toMatchObject({ status: 403, response: { code: 'FEATURE_HIDDEN' } });
+    });
+  });
+
   describe('Story 8.5 / 8.6 · gửi chốt, duyệt, trả lại, mở lại, bản ký', () => {
     let extraScanId = '';
     async function fillBackupMonth(): Promise<void> {

@@ -14,6 +14,7 @@ import { UI_PATHS } from '../../common/ui-paths';
 @Injectable()
 export class SoftwareDevicePanel implements DevicePanelProvider, OnModuleInit {
   readonly panelKey = 'software';
+  readonly feature = 'assets' as const;
 
   constructor(
     private readonly panels: DevicePanelRegistry,

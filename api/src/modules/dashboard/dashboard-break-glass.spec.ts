@@ -40,7 +40,7 @@ describe('Khối break-glass của trang chủ', () => {
     );
 
     const before = Date.now();
-    const board = await service.build({ email: 'sep@pmh.com.vn', role: 'sa' });
+    const board = await service.build({ email: 'sep@pmh.com.vn', role: 'sa', features: null });
 
     expect(board.breakGlass).toMatchObject({ available: true, total: 42 });
     expect(asked).toHaveLength(1);
@@ -95,7 +95,7 @@ describe('Dòng break-glass của trang chủ', () => {
       } as unknown as UsersApiService,
       { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
     );
-    return service.build({ email: 'sep@pmh.com.vn', role: 'sa' });
+    return service.build({ email: 'sep@pmh.com.vn', role: 'sa', features: null });
   }
 
   it('tên người xin/người quyết, nhãn đối tượng cho cả loại KHÔNG phải thiết bị, cờ hiệu lực', async () => {
@@ -137,7 +137,7 @@ describe('Khối hạn và khối dải mạng mang thêm số để web phân l
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
       { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
     );
-    const board = await service.build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    const board = await service.build({ email: 'sep@pmh.com.vn', role: 'admin', features: null });
     expect(board.expiring).toMatchObject({ total: 19, overdueTotal: 3 });
     expect(board.subnetLoad.thresholdPercent).toBe(90);
   });

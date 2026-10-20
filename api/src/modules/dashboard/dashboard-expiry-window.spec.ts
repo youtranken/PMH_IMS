@@ -67,17 +67,17 @@ function buildService(): DashboardService {
 
 describe('Khối "sắp hết hạn" của trang chủ', () => {
   it('KHÔNG áp cửa sổ của riêng mình — để module expiry đọc `expiry.warning_days`', async () => {
-    await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin', features: null });
     expect(windowAsked).toBeUndefined();
   });
 
   it('Member cũng vậy — bản rút gọn không được đổi luật đọc hạn', async () => {
-    await buildService().build({ email: 'nhan.vien@pmh.com.vn', role: 'member' });
+    await buildService().build({ email: 'nhan.vien@pmh.com.vn', role: 'member', features: null });
     expect(windowAsked).toBeUndefined();
   });
 
   it('và nó có hỏi thật — vế đối chứng cho hai ca trên', async () => {
-    await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin', features: null });
     expect(windowAsked).not.toBe('chưa hỏi');
   });
 });

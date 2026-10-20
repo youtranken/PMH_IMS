@@ -7,12 +7,14 @@ import type { UserRole } from '../auth/types';
 import { UsersApiService } from '../users/users.api';
 import { isoFormOwnerTable } from './iso-forms.schema';
 import { ISO_FORM_TYPES, type IsoFormType } from './iso-rules';
-import type { FeatureHolding, FeatureTick } from '../../common/features';
+import { hasFeature, type FeatureHolding, type FeatureTick } from '../../common/features';
 
 export interface IsoActor {
   id: string;
   email: string;
   role: UserRole;
+  /** Nhóm quyền (Q-31); vắng hoặc `null` = không bị giới hạn. Controller truyền nguyên `req.user`. */
+  features?: readonly string[] | null;
 }
 
 export interface IsoPerson {
@@ -29,6 +31,16 @@ export interface FormOwners {
 
 export function formFeature(formType: IsoFormType): FeatureTick {
   return `iso_${formType}`;
+}
+
+/** Q-31: phiếu này có nằm trong nhóm quyền của người đang xem không. */
+export function seesForm(actor: Pick<IsoActor, 'features'>, formType: IsoFormType | '0206'): boolean {
+  return hasFeature(actor.features ?? null, [`iso_${formType}`]);
+}
+
+export function assertSeesForm(actor: Pick<IsoActor, 'features'>, formType: IsoFormType): void {
+  if (seesForm(actor, formType)) return;
+  throw new ForbiddenException({ code: 'FEATURE_HIDDEN', message: 'Nhóm quyền của bạn không có phiếu này.' });
 }
 
 export function isManager(actor: Pick<IsoActor, 'role'>): boolean {

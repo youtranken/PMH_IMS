@@ -50,7 +50,7 @@ describe('Trang chủ — khối "Sự cố tuần qua" từ phiếu 0206', () =
         asked.push(withinDays);
         return Promise.resolve([incident('0206-2026-003', 18), incident('0206-2026-002', 15), incident('0206-2026-001', 13)]);
       },
-    }).build({ email: 'member@pmh.com.vn', role: 'member' });
+    }).build({ email: 'member@pmh.com.vn', role: 'member', features: null });
     expect(asked).toEqual([7]);
     expect(board.incidents.available).toBe(true);
     expect(board.incidents.total).toBe(3);
@@ -58,12 +58,12 @@ describe('Trang chủ — khối "Sự cố tuần qua" từ phiếu 0206', () =
   });
 
   it('tuần qua không có phiếu → available với 0 dòng ("không có sự cố", khác "chưa theo dõi")', async () => {
-    const board = await buildService({ recentIncidents: () => Promise.resolve([]) }).build({ email: 'a@pmh.com.vn', role: 'admin' });
+    const board = await buildService({ recentIncidents: () => Promise.resolve([]) }).build({ email: 'a@pmh.com.vn', role: 'admin', features: null });
     expect(board.incidents).toEqual({ available: true, items: [], total: 0 });
   });
 
   it('module phiếu lỗi → khối báo lỗi, không làm hỏng cả trang', async () => {
-    const board = await buildService({ recentIncidents: () => Promise.reject(new Error('db')) }).build({ email: 'a@pmh.com.vn', role: 'admin' });
+    const board = await buildService({ recentIncidents: () => Promise.reject(new Error('db')) }).build({ email: 'a@pmh.com.vn', role: 'admin', features: null });
     expect(board.incidents.available).toBe(false);
     expect(board.expiring).toBeDefined();
   });
