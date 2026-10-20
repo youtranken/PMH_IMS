@@ -48,7 +48,12 @@ describe('pool DB của ứng dụng có trần thời gian', () => {
 
   it('transaction mở rồi bỏ đó bị cắt, kết nối không bị giữ mãi', async () => {
     const client = await pool({ DB_IDLE_TX_TIMEOUT_MS: '300' }).connect();
-    client.on('error', () => undefined);
+    /*
+     * KHÔNG tự gắn `client.on('error')` ở đây: pg-pool gỡ listener của nó khi cho mượn kết nối, nên
+     * Postgres cắt kết nối đang mượn (FATAL 25P03) mà không ai nghe là Node ném lỗi chưa bắt và
+     * sập cả api. Pool phải tự gắn listener cho mọi kết nối — bài này chứng minh điều đó.
+     */
+    expect(client.listenerCount('error')).toBeGreaterThan(0);
     try {
       await client.query('BEGIN');
       await new Promise((resolve) => setTimeout(resolve, 1_000));

@@ -1,6 +1,7 @@
 import { Global, Inject, Module, OnApplicationShutdown } from '@nestjs/common';
 import { NodePgDatabase, drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import { redactMessage } from '../common/log-redact';
 
 export const PG_POOL = 'PG_POOL';
 export const DRIZZLE_DB = 'DRIZZLE_DB';
@@ -50,6 +51,17 @@ export function createPgPool(env: NodeJS.ProcessEnv = process.env): Pool {
   // không có listener → uncaught exception giết cả process.
   pool.on('error', (error) => {
     console.error('[pg-pool] lỗi kết nối idle:', error);
+  });
+  /*
+   * Kết nối ĐANG MƯỢN cũng phải có người nghe: pg-pool gỡ listener của nó lúc cho mượn, và giờ
+   * Postgres chủ động cắt kết nối (idle_in_transaction_session_timeout, FATAL 25P03). Không ai nghe
+   * thì Node ném lỗi chưa bắt và sập cả api / worker. Câu lệnh đang chờ trên kết nối đó vẫn nhận lỗi
+   * của nó như thường; listener này chỉ chặn tiến trình chết.
+   */
+  pool.on('connect', (client) => {
+    client.on('error', (error) => {
+      console.error('[pg-pool] kết nối đang dùng bị cắt:', redactMessage(error));
+    });
   });
   return pool;
 }
