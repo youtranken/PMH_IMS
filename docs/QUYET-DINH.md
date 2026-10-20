@@ -1306,6 +1306,43 @@ mật khẩu + mã 2 lớp, còn hộp mail SA/Admin có 2FA của Google Worksp
   quyền. Phía người duyệt gọi số giờ là "Mở trong", hướng dẫn rút còn "Đồng ý → đọc mã trong
   thư cho người xin."
 
+### Q-31 · Nhóm quyền cho Thành viên (16/10/2026 chốt hướng, 20/10/2026 duyệt mockup)
+
+Lý do: chủ dự án muốn chia việc theo người (người lo mạng, người lo tài sản / phiếu). Hiện mọi
+Member thấy như nhau.
+
+- **Nhóm quyền đặt tên** (vd "Mạng", "Tài sản"). SA tạo, sửa, xoá; mỗi Member thuộc **tối đa một**
+  nhóm. Member chưa gán nhóm = "Đủ quyền", thấy như trước Q-31. **Chỉ áp cho Member**: SA/Admin luôn
+  đủ, không gán nhóm được.
+- **Ô tick (7 ô):** Tổng quan · Tài sản · Mạng · Phiếu 0203 · Phiếu 0206 · Phiếu 0208 · Xin mở két.
+  Nhóm phải có ít nhất một ô. Không có ô riêng cho "Kỳ phiếu & chốt kỳ" và "Danh mục phiếu": hai mục
+  đó hiện khi nhóm có ≥1 phiếu, và chỉ liệt kê kỳ / danh mục của phiếu được tick.
+- **Chỉ hai trạng thái: hiện / ẩn.** Ẩn nghĩa là:
+  - mất khỏi sidebar, khỏi ô tìm nhanh (command palette) và khỏi số đếm trên menu;
+  - gõ URL thì gặp màn "Không có quyền";
+  - API riêng của mảng trả 403;
+  - tab / khối của mảng nằm ở màn khác cũng ẩn (vd tab IP, NAT, sơ đồ trong chi tiết thiết bị;
+    khối dải mạng, sự cố trên Bảng điều khiển; nút xin mở két trong khung két).
+  - **Không** có mức "xem nhưng không ghi". Quyền ghi vẫn theo `@Roles` và người phụ trách phiếu ISO
+    như cũ.
+- **Tra cứu dùng chung vẫn chạy:** ô chọn thiết bị, danh mục (site, tủ, loại thiết bị, bộ phận),
+  model, đường truyền, cổng. Ví dụ nhóm chỉ có Mạng vẫn chọn được thiết bị khi cấp IP. Màn Danh mục
+  vẫn thuộc Tài sản, nhưng API đọc danh mục không bị chặn.
+- **"Sắp hết hạn" cần cả Tổng quan lẫn Tài sản**, vì mọi dòng trên đó là dữ liệu Tài sản. Thiếu
+  Tài sản thì ẩn, để không bấm vào một dòng rồi gặp màn "Không có quyền".
+- **Màn mở đầu:** nhóm không có Tổng quan thì sau đăng nhập vào mục đầu tiên còn hiện trên menu.
+- **Người phụ trách phiếu ISO phải thấy phiếu đó.** Hệ thống chặn khi lưu, báo một dòng nêu tên người:
+  - không gán làm người phụ trách (chính / dự phòng) một Member mà nhóm của họ ẩn phiếu đó;
+  - không bỏ tick một phiếu khỏi nhóm, không chuyển Member sang nhóm ẩn phiếu đó, khi người ấy đang
+    phụ trách phiếu.
+- **Không đòi mã 6 số** khi tạo / sửa / xoá nhóm hay đổi nhóm của một người: nhóm chỉ thu hẹp quyền
+  Member, không bao giờ cho thêm. Mọi thao tác vẫn ghi nhật ký (AD-5, AD-9). Xoá nhóm còn người thì
+  bị chặn.
+- **Có hiệu lực ngay:** API đọc nhóm ở mỗi request. Màn đang mở của Member nhận thay đổi ở lần tải
+  `me` kế tiếp.
+- **Thư không đổi:** thư hạn (người nhận do SA khai từng luật), thư nhắc ISO (người phụ trách + SA /
+  Admin), thư sơ đồ và thư mở két vẫn gửi như cũ.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
