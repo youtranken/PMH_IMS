@@ -12,6 +12,7 @@ import { NoStepUp } from '../auth/step-up.decorator';
 import { DISPOSAL_SORT_KEYS, type DisposalQuery } from './disposal-query';
 import { DisposalService } from './disposal.service';
 import { DISPOSAL_KINDS, type DisposalItem, type DisposalKind } from './disposal.types';
+import { Feature } from '../auth/feature.decorator';
 
 interface RawQuery {
   kind?: string;
@@ -66,6 +67,7 @@ function byText(item: DisposalItem): string {
  * hóa). Màn này chỉ nhìn.
  */
 @NoStepUp()
+@Feature('assets')
 @Controller('api/v1/disposal')
 export class DisposalController {
   constructor(

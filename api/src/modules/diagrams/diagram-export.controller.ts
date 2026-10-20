@@ -6,6 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DiagramExportService, type ExportFormat } from './diagram-export.service';
+import { Feature } from '../auth/feature.decorator';
 
 class VersionParamDto {
   @IsUUID(undefined, { message: 'Mã bản vẽ không hợp lệ.' })
@@ -45,6 +46,7 @@ function asciiName(name: string): string {
  * sơ đồ như màn xem (AD-17) — hết ân hạn giữa chừng thì web hỏi mã tại chỗ rồi gọi lại.
  */
 @NoStepUp()
+@Feature('network')
 @Controller('api/v1/diagrams')
 export class DiagramExportController {
   constructor(private readonly exports: DiagramExportService) {}

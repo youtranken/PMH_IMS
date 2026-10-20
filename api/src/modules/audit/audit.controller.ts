@@ -11,6 +11,7 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { Audited } from './audited.decorator';
 import { AuditQueryService, COUNT_CAP, type AuditRow } from './audit-query.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { FeatureFree } from '../auth/feature.decorator';
 
 /** Ngày lịch THẬT (regex chỉ chặn định dạng) — mẫu reports.controller. */
 function assertValidDate(s: string): void {
@@ -86,6 +87,7 @@ export class AuditQueryDto {
  * này không tiếp cận được từ trình duyệt, trả về HTML của SPA chứ không phải dữ liệu.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/admin/audit')
 @Roles('sa', 'admin')
 export class AuditController {

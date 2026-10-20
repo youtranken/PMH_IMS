@@ -27,6 +27,7 @@ import { BreakGlassService } from './break-glass.service';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
+import { Feature } from '../auth/feature.decorator';
 
 /** Bộ lọc nhật ký mở két (VLT-019) — dùng chung cho màn và file xuất. */
 class LogQueryDto {
@@ -88,6 +89,7 @@ class IdParamDto {
  * trước khi ai kịp duyệt là chuyện thường lúc 2 giờ sáng.
  */
 @NoStepUp()
+@Feature('break_glass')
 @Controller('api/v1/vault/break-glass')
 export class BreakGlassController {
   constructor(

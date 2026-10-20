@@ -12,6 +12,7 @@ import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersService } from '../users/users.service';
+import { effectiveFeatures } from '../../common/features';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { ALLOW_PASSWORD_PENDING_KEY } from './password-pending.decorator';
 import { ALLOW_TOTP_PENDING_KEY } from './totp-pending.decorator';
@@ -109,6 +110,12 @@ export class SessionGuard implements CanActivate {
       }
     }
 
+    // Đọc mỗi request như vai: SA đổi nhóm là có hiệu lực ngay (Q-31).
+    const groupTicks =
+      user.role === 'member' && user.featureGroupId
+        ? await this.users.featureTicksOf(user.featureGroupId)
+        : null;
+
     request.user = {
       id: user.id,
       email: user.email,
@@ -118,6 +125,7 @@ export class SessionGuard implements CanActivate {
       steppedUpAt: session.steppedUpAt,
       diagramSteppedUpAt: session.diagramSteppedUpAt,
       mustChangePassword: user.mustChangePassword,
+      features: effectiveFeatures(user.role, groupTicks),
     };
 
     // Gia hạn idle. Bỏ qua lỗi để một lần ghi hỏng không chặn cả request đọc.

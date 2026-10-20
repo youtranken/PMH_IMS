@@ -15,6 +15,7 @@ import {
 } from '../../common/lockout';
 import type { UserRole } from '../auth/types';
 import { usersTable } from './users.schema';
+import { featureGroupTable } from './feature-groups.schema';
 import type { UserCredentials, UserDirectoryEntry, UserRecord } from './users.types';
 
 /**
@@ -38,6 +39,18 @@ export class UsersService {
   async findById(id: string): Promise<UserRecord | null> {
     const found = await this.findCredentialsById(id);
     return found ? strip(found) : null;
+  }
+
+  /**
+   * Ô tick của nhóm quyền (Q-31) — SessionGuard gọi mỗi request. Nhóm không còn (FK RESTRICT nên
+   * không xảy ra) thì trả rỗng: đóng, không mở.
+   */
+  async featureTicksOf(groupId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ features: featureGroupTable.features })
+      .from(featureGroupTable)
+      .where(eq(featureGroupTable.id, groupId));
+    return rows[0]?.features ?? [];
   }
 
   /**
@@ -587,6 +600,7 @@ function toCredentials(row: Row): UserCredentials {
     employeeCode: row.employeeCode ?? null,
     birthDate: row.birthDate ?? null,
     role: row.role as UserRole,
+    featureGroupId: row.featureGroupId ?? null,
     status: row.status as UserCredentials['status'],
     mustChangePassword: row.mustChangePassword,
     tempPasswordExpiresAt: row.tempPasswordExpiresAt ?? null,

@@ -36,6 +36,7 @@ import { ACCOUNT_STATUS_ACTION, AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
+import { FeatureFree } from './feature.decorator';
 
 /**
  * SĐT và mã nhân viên — hai ô TÙY CHỌN, dùng chung cho cả tạo mới lẫn sửa hồ sơ.
@@ -177,6 +178,7 @@ class KillAllSessionsDto {
  * Không có endpoint xóa user: nghiệp vụ chỉ khóa/vô hiệu hóa (convention "Xóa").
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/accounts')
 export class AccountsController {
   constructor(

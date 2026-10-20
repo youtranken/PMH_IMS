@@ -8,6 +8,7 @@ import { NoStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DeviceModelsService } from './device-models.service';
 import { DevicePhotosService, PHOTO_SIDES, type PhotoSide } from './device-photos.service';
+import { FeatureFree } from '../auth/feature.decorator';
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã model không hợp lệ.' })
@@ -58,6 +59,7 @@ class PhotoPairDto {
  * model của Q-23.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/device-models')
 export class DeviceModelsController {
   constructor(

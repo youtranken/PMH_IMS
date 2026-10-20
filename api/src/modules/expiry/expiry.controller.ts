@@ -42,6 +42,7 @@ import { NoStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 import { withActorNames } from '../../common/history';
 import { UsersApiService } from '../users/users.api';
+import { Feature, FeatureFree } from '../auth/feature.decorator';
 
 /** Khoảng ngày của tab "Đã gia hạn" — ngày lịch YYYY-MM-DD, cả hai bao gồm. */
 class RenewalsQueryDto {
@@ -111,6 +112,7 @@ class RuleParamDto {
  * Quyền: cả team IT — ai cũng cần biết cái gì sắp hết hạn.
  */
 @NoStepUp()
+@Feature('expiry')
 @Controller('api/v1/expiry')
 export class ExpiryController {
   constructor(
@@ -122,6 +124,7 @@ export class ExpiryController {
 
   /** Các loại nguồn đang đăng ký — UI dựng bộ lọc từ đây, không viết cứng danh sách. */
   @Roles('sa', 'admin', 'member')
+  @FeatureFree()
   @Get('kinds')
   kinds() {
     return this.expiry.kinds();
@@ -136,6 +139,7 @@ export class ExpiryController {
    * lúc nào không ai biết (đúng lỗi đang vá).
    */
   @Roles('sa', 'admin', 'member')
+  @FeatureFree()
   @Get('thresholds')
   thresholds() {
     return this.expiry.thresholds();
@@ -331,6 +335,7 @@ export class ExpiryController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets')
   @Post('renew')
   @Audited('expiry.renewed', 'expiry', { writtenByService: true })
   async renew(@Body() body: RenewDto, @Req() req: AuthedRequest) {

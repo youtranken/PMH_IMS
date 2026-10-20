@@ -26,6 +26,8 @@ export const usersTable = pgTable('users', {
   employeeCode: text('employee_code'),
   birthDate: date('birth_date'),
   role: text('role').notNull(),
+  // Nhóm quyền (Q-31, migration 0076). Chỉ Member có; NULL = đủ quyền.
+  featureGroupId: uuid('feature_group_id'),
   passwordHash: text('password_hash').notNull(),
   mustChangePassword: boolean('must_change_password').notNull().default(true),
   // Mốc hết hạn của mật khẩu tạm (Q-20, migration 0040). NULL = không có hạn.

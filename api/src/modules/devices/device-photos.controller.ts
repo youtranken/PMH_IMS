@@ -6,6 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DevicePhotosService, PHOTO_SIDES, type PhotoSide } from './device-photos.service';
+import { Feature } from '../auth/feature.decorator';
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
@@ -28,6 +29,7 @@ class PhotoPairDto {
  * model tải lên cho (loại + model). Cùng quyền với sửa hồ sơ thiết bị — việc hằng ngày của cả team.
  */
 @NoStepUp()
+@Feature('assets')
 @Controller('api/v1/devices')
 export class DevicePhotosController {
   constructor(private readonly photos: DevicePhotosService) {}

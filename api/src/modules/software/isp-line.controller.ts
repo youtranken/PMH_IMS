@@ -47,6 +47,7 @@ import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
 import { MAX_WAN_IPS } from './wan-ip';
+import { Feature } from '../auth/feature.decorator';
 
 /**
  * KHÔNG có `endDate` (Q-04): đường truyền không có hạn. `forbidNonWhitelisted` bật toàn cục nên
@@ -93,6 +94,7 @@ class IdParamDto {
  * Quyền: cả team IT — đứt cáp lúc 2 giờ sáng thì ai trực cũng phải tra được hotline.
  */
 @NoStepUp()
+@Feature('assets')
 @Controller('api/v1/isp-lines')
 export class IspLineController {
   constructor(
@@ -104,6 +106,7 @@ export class IspLineController {
   ) {}
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Get()
   list(
     @Query() query: IspListQueryDto,

@@ -50,6 +50,7 @@ import { CatalogUsageRegistry } from '../../common/catalog-usage.registry';
 import { IsPhone } from '../../common/phone';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DIAGRAM_SHAPES, DIAGRAM_SHAPE_OTHER } from './diagram-shapes';
+import { FeatureFree } from '../auth/feature.decorator';
 
 export class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
@@ -129,6 +130,7 @@ class EntityIdParamDto extends EntityParamDto {
  * tên khai ở `@Audited` là tên HỌ, dùng để đọc controller biết route này có audit (AD-9).
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/catalog')
 export class CatalogController {
   constructor(

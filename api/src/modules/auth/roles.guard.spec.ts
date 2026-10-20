@@ -48,6 +48,7 @@ function userWithRole(role: AppRole): AuthedUser {
     steppedUpAt: null,
     diagramSteppedUpAt: null,
     mustChangePassword: false,
+    features: null,
   };
 }
 
