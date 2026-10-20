@@ -7,7 +7,8 @@ import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/
 import { DashboardScreen } from './dashboard-screen';
 
 /**
- * DASH-001 — việc gấp nhất của người duyệt đứng ĐẦU bảng điều khiển, có nút ngay tại chỗ.
+ * DASH-001 — việc gấp nhất của người duyệt đứng ĐẦU bảng điều khiển, có nút ngay tại chỗ. Q-30:
+ * chỉ phiếu chọn ĐÚNG mình duyệt, không có nút Duyệt (đồng ý = đọc mã trong thư cho người xin).
  */
 
 const SA: Me = {
@@ -33,7 +34,7 @@ const BOARD = {
   disposed: EMPTY,
 };
 
-function request(id: string, requester: string, name: string) {
+function request(id: string, requester: string, name: string, approver = 'sa@pmh.com.vn') {
   return {
     id,
     kind: 'break_glass',
@@ -52,6 +53,7 @@ function request(id: string, requester: string, name: string) {
     expiresAt: null,
     createdAt: '2026-09-20T01:30:00.000Z',
     active: false,
+    approver,
   };
 }
 
@@ -82,17 +84,22 @@ function renderBoard(me: Me = SA) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Khối "Cần bạn duyệt"', () => {
-  it('đứng đầu trang, không đếm phiếu của chính mình, có Duyệt/Từ chối và đối tượng', async () => {
-    mockApi([request('a1', 'tran.b@pmh.com.vn', 'Trần Thị B'), request('a2', 'sa@pmh.com.vn', 'Lê Minh')]);
+  it('đứng đầu trang, chỉ phiếu chọn mình duyệt, chỉ có Từ chối (không có Duyệt) và đối tượng', async () => {
+    mockApi([
+      request('a1', 'tran.b@pmh.com.vn', 'Trần Thị B'),
+      request('a2', 'nguyen.c@pmh.com.vn', 'Nguyễn Văn C', 'admin@pmh.com.vn'),
+    ]);
     renderBoard();
 
     const block = await screen.findByRole('region', { name: 'Cần bạn duyệt (1)' });
     expect(within(block).getByText('Trần Thị B')).toBeInTheDocument();
     expect(within(block).getByRole('link', { name: 'SW-a1 · Switch lõi · HCM' })).toBeInTheDocument();
     expect(within(block).queryByText('SW-a2 · Switch lõi · HCM')).not.toBeInTheDocument();
+    expect(within(block).getByText(/đọc mã trong thư cho người xin/)).toBeInTheDocument();
+    expect(within(block).queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument();
 
-    await userEvent.click(within(block).getByRole('button', { name: 'Duyệt' }));
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await userEvent.click(within(block).getByRole('button', { name: 'Từ chối' }));
+    expect(await screen.findByRole('dialog', { name: 'Từ chối yêu cầu' })).toBeInTheDocument();
   });
 
   it('không có gì chờ → không có khối', async () => {

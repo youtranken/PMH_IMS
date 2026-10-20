@@ -49,7 +49,7 @@ const ROW = {
 
 type Call = { url: string; method: string; body?: string };
 
-function mockApi(row: Record<string, unknown>, approveReplies: Response[] = []) {
+function mockApi(row: Record<string, unknown>) {
   const calls: Call[] = [];
   vi.stubGlobal(
     'fetch',
@@ -59,11 +59,6 @@ function mockApi(row: Record<string, unknown>, approveReplies: Response[] = []) 
       calls.push({ url, method, body: init?.body as string | undefined });
       if (method === 'GET' && url.endsWith('/vault/break-glass/a1')) {
         return Promise.resolve(jsonResponse(200, row));
-      }
-      if (method === 'POST' && url.endsWith('/approve')) {
-        return Promise.resolve(
-          approveReplies.shift() ?? jsonResponse(201, { ...row, state: 'approved' }),
-        );
       }
       return new Promise<Response>(() => {});
     }),
@@ -103,50 +98,22 @@ describe('Trang chi tiết phiếu break-glass', () => {
     expect(screen.getAllByRole('link', { name: /Duyệt mở két/ })[0]).toHaveAttribute('href', '/approvals');
   });
 
-  it('nói máy nào (link hồ sơ), lý do, và mặc định cấp đúng số giờ xin', async () => {
-    mockApi(ROW);
+  it('nói máy nào (link hồ sơ), lý do, số giờ xin, người duyệt đã chọn — và KHÔNG có nút Duyệt (Q-30)', async () => {
+    mockApi({ ...ROW, approver: 'admin@pmh.com.vn' });
     renderDetail();
 
     const subject = await screen.findByRole('link', { name: ROW.subjectLabel });
     expect(subject).toHaveAttribute('href', '/devices/d1');
     expect(screen.getByText('Switch tầng 3 mất kết nối')).toBeInTheDocument();
-    // Chọn MỘT số giờ: dải radio dùng chung (SegmentedRadio), không phải nút bật/tắt tự dựng.
-    const durations = screen.getByRole('radiogroup', { name: 'Thời hạn cấp' });
-    expect(within(durations).getByRole('radio', { name: '4 giờ · theo xin' })).toBeChecked();
-    // Chỉ RÚT NGẮN được — không có nấc nào dài hơn số xin.
-    expect(within(durations).queryByRole('radio', { name: '8 giờ' })).not.toBeInTheDocument();
+    expect(screen.getByText('Xin 4 giờ')).toBeInTheDocument();
+    expect(screen.getByText('Người duyệt người xin chọn: admin@pmh.com.vn')).toBeInTheDocument();
     // Đầu trang là DetailHeader dùng chung: breadcrumb quay về danh sách duyệt.
     const crumbs = screen.getByRole('navigation', { name: 'breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Duyệt mở két' })).toHaveAttribute('href', '/approvals');
     expect(screen.getByRole('heading', { level: 1, name: 'Yêu cầu mở két' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Duyệt 4 giờ' })).toBeInTheDocument();
-  });
-
-  it('chạm lần đầu chỉ hỏi lại; chạm lần hai mới gửi, với số giờ đã chọn', async () => {
-    const calls = mockApi(ROW);
-    renderDetail();
-
-    await userEvent.click(await screen.findByRole('radio', { name: '2 giờ' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Duyệt 2 giờ' }));
-    expect(calls.some((c) => c.url.endsWith('/approve'))).toBe(false);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Chạm lần nữa để cấp 2 giờ' }));
-    const approve = calls.find((c) => c.url.endsWith('/approve'));
-    expect(approve?.url).toContain('/vault/break-glass/a1/approve');
-    expect(JSON.parse(approve?.body ?? '{}')).toMatchObject({ hours: 2 });
-  });
-
-  it('server đòi step-up → hỏi mã 6 số ngay tại chỗ, không phải một dòng lỗi', async () => {
-    mockApi(ROW, [
-      jsonResponse(403, { code: 'STEPUP_REQUIRED', message: 'Nhập mã 6 số trên ứng dụng xác thực.' }),
-    ]);
-    renderDetail();
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Duyệt 4 giờ' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Chạm lần nữa để cấp 4 giờ' }));
-
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByLabelText(/mã/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Duyệt/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/đọc mã trong thư cho người xin/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Từ chối' })).toBeInTheDocument();
   });
 
   it('phiếu của chính mình: không có nút Duyệt, chỉ "Cần người khác duyệt" và Rút yêu cầu', async () => {
@@ -264,10 +231,12 @@ describe('Ngữ cảnh để quyết nhanh (VLT-FLOW)', () => {
 describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
   const MEMBER: Me = { ...SA, email: 'tran.b@pmh.com.vn', fullName: 'Trần Thị B', role: 'member' };
 
-  it('đang chờ: nói cứ đóng trang, được duyệt sẽ có thư', async () => {
+  it('đang chờ (Q-30): chỉ đường nhập mã ở két, có nút sang két; vẫn nói cứ đóng trang', async () => {
     mockApi(ROW);
     renderDetail(MEMBER);
-    expect(await screen.findByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
+    expect(await screen.findByText(/nhập ở khung Két của hồ sơ/)).toBeInTheDocument();
+    expect(screen.getByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nhập mã ở két' })).toBeInTheDocument();
   });
 
   it('đã duyệt, chưa xem: chỉ đường "mở lại <đối tượng>, bấm Xem, nhập mã 6 số" + nút Mở két', async () => {

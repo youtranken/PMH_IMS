@@ -297,7 +297,6 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     expect(lookup('approvals.titleMine')).toBe(lookup('vault.request'));
     expect(lookup('nav.approvals')).toBe('Duyệt mở két');
     expect(lookup('approvals.title')).toBe(lookup('nav.approvals'));
-    expect(lookup('approvals.approveTitle')).toBe(lookup('nav.approvals'));
   });
 
   /**

@@ -8,9 +8,10 @@ import { VaultPanel, type AccessVerdict, type SecretMeta } from '@/ui/vault-pane
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 /**
- * Hai hộp của luồng break-glass báo lỗi bằng tiếng Việt dưới từng ô (B1) — không để trình duyệt
+ * Các hộp của luồng break-glass báo lỗi bằng tiếng Việt dưới từng ô (B1) — không để trình duyệt
  * chen bong bóng tiếng Anh, và không âm thầm đổi một con số gõ sai thành một mặc định.
- * Hộp Duyệt trên điện thoại: tiêu đề ngắn, thân hộp nhắc người xin · đối tượng · lý do (VLT-008).
+ * Hộp Từ chối trên điện thoại: tiêu đề ngắn, thân hộp nhắc người xin · đối tượng · lý do (VLT-008).
+ * Không còn hộp Duyệt (Q-30): người xin nhập mã người duyệt đọc cho, ở khung Két.
  */
 
 afterEach(() => vi.unstubAllGlobals());
@@ -36,7 +37,6 @@ const ROW: BreakGlassRow = {
 };
 
 function renderDecision(
-  approve: boolean,
   options: { revoke?: boolean; row?: BreakGlassRow; respond?: () => Promise<Response> } = {},
 ) {
   const fetchMock = vi.fn(
@@ -51,7 +51,6 @@ function renderDecision(
       <ToastProvider>
         <DecisionDialog
           row={options.row ?? ROW}
-          approve={approve}
           revoke={options.revoke}
           csrfToken="t"
           onClose={onClose}
@@ -69,9 +68,9 @@ function sentBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> 
 }
 
 describe('DecisionDialog', () => {
-  it('Duyệt: tiêu đề ngắn, thân hộp nêu người xin · đối tượng · lý do', () => {
-    renderDecision(true);
-    const dialog = screen.getByRole('dialog', { name: 'Duyệt mở két' });
+  it('Từ chối: tiêu đề ngắn, thân hộp nêu người xin · đối tượng · lý do', () => {
+    renderDecision();
+    const dialog = screen.getByRole('dialog', { name: 'Từ chối yêu cầu' });
     expect(within(dialog).getByText('Trần Thị B')).toBeInTheDocument();
     expect(within(dialog).getByText(/e2e-member@pmh\.com\.vn/)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: ROW.subjectLabel! })).toBeInTheDocument();
@@ -79,31 +78,12 @@ describe('DecisionDialog', () => {
     expect(within(dialog).getByText('Xin 4 giờ')).toBeInTheDocument();
     // Tóm tắt là MÔ TẢ của hộp — trình đọc màn hình đọc nó ngay khi hộp mở.
     expect(dialog).toHaveAccessibleDescription(/Sự cố mất kết nối tầng 3/);
-  });
-
-  it('Duyệt: chạm nấc "2 giờ" → nút ghi rõ "Duyệt 2 giờ" và gửi đúng 2 giờ', async () => {
-    const { fetchMock } = renderDecision(true);
-    expect(screen.getByRole('button', { name: 'Duyệt 4 giờ' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '2 giờ' }));
-    expect(screen.getByRole('button', { name: '2 giờ' })).toHaveAttribute('aria-pressed', 'true');
-    await userEvent.click(screen.getByRole('button', { name: 'Duyệt 2 giờ' }));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/vault/break-glass/r1/approve');
-    expect(sentBody(fetchMock)).toMatchObject({ hours: 2 });
-  });
-
-  it('Duyệt: không có nấc nào dài hơn số giờ đã xin', () => {
-    renderDecision(true);
-    const group = screen.getByRole('group', { name: 'Thời hạn cấp' });
-    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
-      '1 giờ',
-      '2 giờ',
-      '4 giờ · theo xin',
-    ]);
+    // Q-30: không còn đường Duyệt trong IMS.
+    expect(within(dialog).queryByRole('button', { name: /^Duyệt/ })).not.toBeInTheDocument();
   });
 
   it('người khác vừa quyết phiếu này → đóng hộp, không bắt bấm lại', async () => {
-    const { onClose, onDone } = renderDecision(false, {
+    const { onClose, onDone } = renderDecision({
       respond: () =>
         Promise.resolve(
           jsonResponse(400, {
@@ -119,45 +99,16 @@ describe('DecisionDialog', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('Duyệt cần mã 6 số: hộp hỏi mã nói đang DUYỆT cho ai, không phải câu chung "để xem" (VLT-047)', async () => {
-    renderDecision(true, {
-      respond: () =>
-        Promise.resolve(jsonResponse(403, { code: 'STEPUP_REQUIRED', message: 'Cần xác nhận.' })),
+  it.each([
+    ['vừa bị rút (tài khoản người xin bị vô hiệu hóa)', 'BREAK_GLASS_WITHDRAWN', 'Yêu cầu này đã được rút: tài khoản của người xin đã bị vô hiệu hóa.', /đã được rút/],
+    ['vừa hết hạn chờ (Q-15)', 'BREAK_GLASS_PENDING_EXPIRED', 'Yêu cầu này đã quá 8 giờ không ai duyệt nên tự hết hạn.', /không ai duyệt/],
+  ])('Từ chối một phiếu %s → báo rõ, đóng hộp', async (_label, code, message, shown) => {
+    const { onClose, onDone } = renderDecision({
+      respond: () => Promise.resolve(jsonResponse(409, { code, message })),
     });
-    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
-    expect(
-      await screen.findByText('Nhập mã 6 số để duyệt mở két cho Trần Thị B.'),
-    ).toBeInTheDocument();
-  });
-
-  it('Duyệt một phiếu vừa bị rút (tài khoản người xin bị vô hiệu hóa) → báo rõ, đóng hộp', async () => {
-    const { onClose, onDone } = renderDecision(true, {
-      respond: () =>
-        Promise.resolve(
-          jsonResponse(409, {
-            code: 'BREAK_GLASS_WITHDRAWN',
-            message: 'Yêu cầu này đã được rút: tài khoản của người xin đã bị vô hiệu hóa.',
-          }),
-        ),
-    });
-    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
-    expect(await screen.findByText(/đã được rút/)).toBeInTheDocument();
-    expect(onClose).toHaveBeenCalled();
-    expect(onDone).not.toHaveBeenCalled();
-  });
-
-  it('Duyệt một phiếu vừa hết hạn chờ (Q-15) → báo rõ, đóng hộp', async () => {
-    const { onClose, onDone } = renderDecision(true, {
-      respond: () =>
-        Promise.resolve(
-          jsonResponse(409, {
-            code: 'BREAK_GLASS_PENDING_EXPIRED',
-            message: 'Yêu cầu này đã quá 8 giờ không ai duyệt nên tự hết hạn.',
-          }),
-        ),
-    });
-    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
-    expect(await screen.findByText(/không ai duyệt/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Lý do từ chối/), 'Không cần nữa rồi');
+    await userEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
+    expect(await screen.findByText(shown)).toBeInTheDocument();
     expect(onClose).toHaveBeenCalled();
     expect(onDone).not.toHaveBeenCalled();
   });
@@ -170,7 +121,7 @@ describe('DecisionDialog', () => {
       decidedBy: 'sa@pmh.com.vn',
       expiresAt: '2026-09-28T06:00:00.000Z',
     };
-    const { fetchMock } = renderDecision(false, { revoke: true, row: approved });
+    const { fetchMock } = renderDecision({ revoke: true, row: approved });
     const dialog = screen.getByRole('dialog', { name: 'Thu hồi sớm' });
     expect(within(dialog).getByText(/Quyền này đang có hiệu lực/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Thu hồi sớm' }));
@@ -183,20 +134,8 @@ describe('DecisionDialog', () => {
     expect(sentBody(fetchMock)).toEqual({ note: 'Xong việc, cắt sớm' });
   });
 
-  it('Duyệt với số giờ "2 tiếng" → lỗi tiếng Việt dưới ô, không gửi', async () => {
-    const { fetchMock } = renderDecision(true);
-    const hours = screen.getByLabelText(/Cấp trong bao lâu/);
-    await userEvent.clear(hours);
-    await userEvent.type(hours, '2 tiếng');
-    await userEvent.click(screen.getByRole('button', { name: 'Duyệt' }));
-    expect(screen.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeInTheDocument();
-    expect(hours).toHaveFocus();
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(hours.closest('form')).toHaveAttribute('novalidate');
-  });
-
   it('Từ chối không ghi lý do → lỗi dưới ô lý do, không gửi', async () => {
-    const { fetchMock } = renderDecision(false);
+    const { fetchMock } = renderDecision();
     expect(screen.getByRole('dialog', { name: 'Từ chối yêu cầu' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
     expect(
@@ -246,15 +185,18 @@ const SECRET: SecretMeta = {
   updatedAt: '2026-09-01T03:00:00.000Z',
 };
 
-function renderMemberPanel(verdict: AccessVerdict) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((input: RequestInfo | URL) =>
-      Promise.resolve(
-        jsonResponse(200, String(input).includes('/verdict') ? verdict : [SECRET]),
-      ),
-    ),
-  );
+function renderMemberPanel(
+  verdict: AccessVerdict,
+  respond: (url: string, init?: RequestInit) => Promise<Response> | null = () => null,
+) {
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    return (
+      respond(url, init) ??
+      Promise.resolve(jsonResponse(200, url.includes('/verdict') ? verdict : [SECRET]))
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
   renderWithI18n(
     <MemoryRouter>
       <ToastProvider>
@@ -264,6 +206,7 @@ function renderMemberPanel(verdict: AccessVerdict) {
       </ToastProvider>
     </MemoryRouter>,
   );
+  return fetchMock;
 }
 
 describe('Khung Két phía người xin (VLT-FLOW)', () => {
@@ -273,14 +216,61 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
     pending: { id: 'r1', createdAt: '2026-09-28T02:00:00.000Z' },
   };
 
-  it('phiếu đang chờ: nói đã báo bao nhiêu người duyệt — chỉ con số', async () => {
-    renderMemberPanel({ ...PENDING, notifiedApprovers: 3 });
-    expect(await screen.findByText('Đã báo 3 người duyệt qua email.')).toBeInTheDocument();
+  const CODE = { approver: 'sa@pmh.com.vn', approverName: 'Cao Thuận', resendsLeft: 3, attemptsLeft: 5, codeSecondsLeft: 540 };
+  const WITH_CODE: AccessVerdict = { ...PENDING, pendingCode: CODE };
+
+  it('phiếu đang chờ (Q-30): nói mã đã gửi tới AI và còn bao lâu', async () => {
+    renderMemberPanel(WITH_CODE);
+    expect(await screen.findByText(/Mã duyệt đã gửi tới Cao Thuận \(còn hiệu lực 9 phút\)/)).toBeInTheDocument();
+    expect(screen.getByText('Còn 5 lần nhập. Sai hết thì yêu cầu bị hủy.')).toBeInTheDocument();
   });
 
-  it('không còn ai duyệt được → nói thẳng, không để người xin ngồi chờ vô ích', async () => {
-    renderMemberPanel({ ...PENDING, notifiedApprovers: 0 });
-    expect(await screen.findByText(/Hiện không có người duyệt nào đang hoạt động/)).toBeInTheDocument();
+  it('thư chưa đi → nói đang gửi, không đếm lùi một mã chưa có', async () => {
+    renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, codeSecondsLeft: null } });
+    expect(await screen.findByText('Thư mang mã đang được gửi tới Cao Thuận…')).toBeInTheDocument();
+  });
+
+  it('gõ đủ 6 số → gửi đúng mã lên /code của đúng phiếu', async () => {
+    const fetchMock = renderMemberPanel(WITH_CODE, (url, init) =>
+      init?.method === 'POST' && url.endsWith('/r1/code') ? Promise.resolve(jsonResponse(200, { id: 'r1' })) : null,
+    );
+    await screen.findByText(/Mã duyệt đã gửi tới/);
+    await userEvent.type(screen.getAllByRole('textbox')[0], '012345');
+    const post = await vi.waitFor(() => {
+      const call = fetchMock.mock.calls.find(([u, i]) => String(u).endsWith('/r1/code') && i?.method === 'POST');
+      if (!call) throw new Error('chưa gửi');
+      return call;
+    });
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ code: '012345' });
+    expect(await screen.findByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeInTheDocument();
+  });
+
+  it('sai mã → câu lỗi của server dưới ô, ô được xoá để gõ lại', async () => {
+    renderMemberPanel(WITH_CODE, (url, init) =>
+      init?.method === 'POST' && url.endsWith('/r1/code')
+        ? Promise.resolve(jsonResponse(400, { code: 'BREAK_GLASS_CODE_WRONG', message: 'Mã không đúng. Còn 4 lần nhập.' }))
+        : null,
+    );
+    await screen.findByText(/Mã duyệt đã gửi tới/);
+    await userEvent.type(screen.getAllByRole('textbox')[0], '999999');
+    expect(await screen.findByText('Mã không đúng. Còn 4 lần nhập.')).toBeInTheDocument();
+    expect(screen.getAllByRole('textbox')[0]).toHaveValue('');
+  });
+
+  it('"Gửi lại mã" gọi /resend-code; hết lượt thì nút tắt', async () => {
+    const fetchMock = renderMemberPanel(WITH_CODE, (url, init) =>
+      init?.method === 'POST' && url.endsWith('/r1/resend-code') ? Promise.resolve(jsonResponse(200, { resendsLeft: 2 })) : null,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Gửi lại mã (còn 3 lần)' }));
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([u, i]) => String(u).endsWith('/r1/resend-code') && i?.method === 'POST')).toBe(true),
+    );
+    expect(await screen.findByText('Đã gửi mã mới tới Cao Thuận. Mã cũ không còn dùng được.')).toBeInTheDocument();
+  });
+
+  it('hết lượt gửi lại → nút tắt, nói rõ', async () => {
+    renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, resendsLeft: 0 } });
+    expect(await screen.findByRole('button', { name: 'Đã hết lượt gửi lại' })).toBeDisabled();
   });
 
   it('đã được duyệt: "được xem tới … (còn 3 giờ 52 phút)" đếm từ số giây server đưa', async () => {
@@ -323,6 +313,7 @@ describe('Hộp xin quyền xem (vault-panel)', () => {
 
     expect(screen.getByText('Ghi rõ lý do — người duyệt cần biết để quyết.')).toBeInTheDocument();
     expect(screen.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeInTheDocument();
+    expect(screen.getByText('Chọn người duyệt — chỉ người này nhận thư có mã.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 });
