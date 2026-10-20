@@ -2,7 +2,7 @@
 export interface SettingRow {
   name: string;
   key: string;
-  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam' | 'files' | 'diagram' | 'devices';
+  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam' | 'files' | 'diagram' | 'devices' | 'iso';
   type: 'int' | 'text' | 'int_list';
   unit?:
     | 'seconds'
@@ -25,6 +25,7 @@ export interface SettingRow {
   min?: number;
   max?: number;
   maxLength?: number;
+  format?: 'month';
   warnAbove?: number;
   warnZero?: boolean;
   defaultValue: unknown;
@@ -56,6 +57,7 @@ export function checkDraft(
     if (row.maxLength !== undefined && text.length > row.maxLength) {
       return { value: null, reason: { key: 'settings.errTooLong', params: { max: row.maxLength } } };
     }
+    if (row.format === 'month' && !/^\d{4}-(0[1-9]|1[0-2])$/.test(text)) return { value: null, reason: { key: 'settings.errMonth' } };
     return { value: text, reason: null };
   }
   if (row.type === 'int_list') {

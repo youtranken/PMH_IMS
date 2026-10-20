@@ -46,6 +46,8 @@ export interface MigrationLogger {
  * bị SỬA (checksum lệch) → fail to, không im lặng để schema drift.
  * Convention: file SQL không được chứa BEGIN/COMMIT nội bộ (phá transaction wrapper).
  */
+const MIGRATION_LOCK_TIMEOUT = '5s';
+
 export async function runMigrations(
   pool: Pool,
   dir: string,
@@ -130,6 +132,13 @@ export async function runMigrations(
       } else {
         await client.query('BEGIN');
         try {
+          /*
+           * ALTER TABLE đứng chờ khoá thì mọi câu đọc tới sau xếp hàng sau nó: app đứng suốt lúc
+           * deploy. Bỏ cuộc sau vài giây để người deploy chạy lại lúc vắng. File no-transaction
+           * (CREATE INDEX CONCURRENTLY) không áp: nó chờ transaction cũ theo cách khác và được
+           * phép chờ lâu.
+           */
+          await client.query(`SET LOCAL lock_timeout = '${MIGRATION_LOCK_TIMEOUT}'`);
           await client.query(sql);
           await client.query(
             'INSERT INTO _migrations (name, checksum) VALUES ($1, $2)',

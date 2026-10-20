@@ -6,7 +6,7 @@ import {
   NotFoundException,
   type OnModuleInit,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -19,11 +19,13 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
+import type { UserRole } from '../auth/types';
 import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { detectFileType, sizeLimitBytes } from './file-validation';
 import type { FileKind } from './file-validation';
 import { filesTable } from './files.schema';
+import { photoSize } from '../../common/photo-thumbnail';
 
 /**
  * Chủ thể được phép có file đính kèm. Whitelist chứ không nhận chuỗi tự do: người dùng
@@ -46,6 +48,9 @@ export const FILE_OWNER_TYPES = [
   'device_model',
   // Giấy tờ riêng của một ghế license (Q-27) — chủ thể là hàng `software_seat` của `software`.
   'software_seat',
+  // Bản scan đã ký của kỳ phiếu ISO và của từng phiếu 0206 (Q-28) — chủ thể thuộc `iso-forms`.
+  'iso_period',
+  'iso_incident',
 ] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 
@@ -164,6 +169,7 @@ export class FilesService implements OnModuleInit {
     ownerId: string;
     uploadedBy: string;
     actor: string;
+    actorRole: UserRole;
   }): Promise<FileRecord> {
     const detected = detectFileType(input.buffer, input.originalName);
     if (!detected) {
@@ -180,6 +186,21 @@ export class FilesService implements OnModuleInit {
         message: `File vượt trần ${Math.round(limit / 1024 / 1024)} MB.`,
       });
     }
+    /*
+     * Ảnh: trần số điểm ảnh xét từ header. Trần dung lượng không đủ — PNG vài MB nén toàn số 0 khai
+     * 50000×50000 vẫn lọt, và lần đầu ai mở ảnh xem trước / bản vẽ là api giải mã cả GB rồi bị
+     * OOM-kill.
+     */
+    const pixels = photoSize(input.buffer, detected.mime);
+    if (pixels) {
+      const maxMegapixels = await this.config.getNumber('fileMaxImageMegapixels');
+      if (pixels.width * pixels.height > maxMegapixels * 1_000_000) {
+        throw new BadRequestException({
+          code: 'IMAGE_TOO_MANY_PIXELS',
+          message: `Ảnh ${pixels.width}×${pixels.height} vượt trần ${maxMegapixels} triệu điểm ảnh. Thu nhỏ ảnh rồi tải lại.`,
+        });
+      }
+    }
 
     /*
      * XÁC MINH CHỦ THỂ TRƯỚC KHI GHI RA ĐĨA.
@@ -192,6 +213,13 @@ export class FilesService implements OnModuleInit {
      * thì đã tạo đúng cái file mồ côi cần tránh, và phải trông vào nhánh dọn ở `catch`.
      */
     await this.owners.assertExists(input.ownerType, input.ownerId);
+    // Chủ thể có luật riêng (bản ký phiếu ISO chỉ nhận PDF/ảnh scan, trần nhỏ hơn) — hỏi trước khi ghi đĩa.
+    await this.owners.assertAccepts(
+      input.ownerType,
+      input.ownerId,
+      { mime: detected.mime, sizeBytes: input.buffer.length },
+      { id: input.uploadedBy, email: input.actor, role: input.actorRole },
+    );
 
     const dir = storageDir();
     await mkdir(dir, { recursive: true });
@@ -214,6 +242,7 @@ export class FilesService implements OnModuleInit {
             storedName,
             mimeType: detected.mime,
             sizeBytes: input.buffer.length,
+            sha256: createHash('sha256').update(input.buffer).digest('hex'),
             ownerType: input.ownerType,
             ownerId: input.ownerId,
             uploadedBy: input.uploadedBy,
@@ -257,6 +286,18 @@ export class FilesService implements OnModuleInit {
     return rows.map((row) => ({ ...toRecord(row), uploadedByName: names.get(row.uploadedBy) ?? null }));
   }
 
+  /** File còn sống của NHIỀU chủ thể cùng loại một lượt — màn danh sách hiện trạng thái giấy tờ không N+1. */
+  async listForOwners(ownerType: FileOwnerType, ownerIds: string[]): Promise<FileRecord[]> {
+    const unique = [...new Set(ownerIds)];
+    if (unique.length === 0) return [];
+    const rows = await this.db
+      .select()
+      .from(filesTable)
+      .where(and(eq(filesTable.ownerType, ownerType), inArray(filesTable.ownerId, unique), isNull(filesTable.deletedAt)))
+      .orderBy(asc(filesTable.createdAt));
+    return rows.map(toRecord);
+  }
+
   /** Metadata + stream để download — controller set header attachment. */
   async openForDownload(id: string, actor: string) {
     const meta = await this.requireAlive(id);
@@ -279,6 +320,7 @@ export class FilesService implements OnModuleInit {
   async remove(actor: string, id: string): Promise<void> {
     const meta = await this.requireAlive(id);
     await this.db.transaction(async (tx) => {
+      await this.owners.assertRemovableWithin(tx, meta.ownerType, meta.ownerId);
       await this.removeWithin(tx, actor, id, meta.ownerType, meta.ownerId, meta.originalName);
     });
   }

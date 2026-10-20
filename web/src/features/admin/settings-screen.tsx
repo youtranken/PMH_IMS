@@ -31,6 +31,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'files', label: 'settings.groupFiles' },
   { key: 'diagram', label: 'settings.groupDiagram' },
   { key: 'devices', label: 'settings.groupDevices' },
+  { key: 'iso', label: 'settings.groupIso' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -119,6 +120,7 @@ const TEXT: Record<string, [string, string]> = {
   natSensitivePorts: ['settings.natSensitivePortsLabel', 'settings.natSensitivePortsDesc'],
   breakGlassRecentWindowDays: ['settings.breakGlassRecentWindowDaysLabel', 'settings.breakGlassRecentWindowDaysDesc'],
   fileMaxSizeMb: ['settings.fileMaxSizeMbLabel', 'settings.fileMaxSizeMbDesc'],
+  fileMaxImageMegapixels: ['settings.fileMaxImageMegapixelsLabel', 'settings.fileMaxImageMegapixelsDesc'],
   fileMaxFilesPerBatch: ['settings.fileMaxFilesPerBatchLabel', 'settings.fileMaxFilesPerBatchDesc'],
   filePurgeAfterDays: ['settings.filePurgeAfterDaysLabel', 'settings.filePurgeAfterDaysDesc'],
   diagramEditorInitTimeoutSeconds: [
@@ -139,6 +141,17 @@ const TEXT: Record<string, [string, string]> = {
   diagramPhotoMaxPx: ['settings.diagramPhotoMaxPxLabel', 'settings.diagramPhotoMaxPxDesc'],
   diagramDeviceWidthPx: ['settings.diagramDeviceWidthPxLabel', 'settings.diagramDeviceWidthPxDesc'],
   devicePortTemplateMax: ['settings.devicePortTemplateMaxLabel', 'settings.devicePortTemplateMaxDesc'],
+  isoFirstMonth: ['settings.isoFirstMonthLabel', 'settings.isoFirstMonthDesc'],
+  isoBackupSystem: ['settings.isoBackupSystemLabel', 'settings.isoBackupSystemDesc'],
+  isoAntivirusSystem: ['settings.isoAntivirusSystemLabel', 'settings.isoAntivirusSystemDesc'],
+  isoScanMaxMb: ['settings.isoScanMaxMbLabel', 'settings.isoScanMaxMbDesc'],
+  isoScanTypes: ['settings.isoScanTypesLabel', 'settings.isoScanTypesDesc'],
+  isoRemindHour: ['settings.isoRemindHourLabel', 'settings.isoRemindHourDesc'],
+  isoRemindBackupAfterDays: ['settings.isoRemindBackupAfterDaysLabel', 'settings.isoRemindBackupAfterDaysDesc'],
+  isoRemindSubmitRepeatDays: ['settings.isoRemindSubmitRepeatDaysLabel', 'settings.isoRemindSubmitRepeatDaysDesc'],
+  isoRemindApprovalDays: ['settings.isoRemindApprovalDaysLabel', 'settings.isoRemindApprovalDaysDesc'],
+  isoRemindSignedDays: ['settings.isoRemindSignedDaysLabel', 'settings.isoRemindSignedDaysDesc'],
+  isoRemindInProgressDays: ['settings.isoRemindInProgressDaysLabel', 'settings.isoRemindInProgressDaysDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

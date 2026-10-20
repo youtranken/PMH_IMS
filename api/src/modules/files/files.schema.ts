@@ -24,4 +24,6 @@ export const filesTable = pgTable('file', {
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   // Blob đã gỡ khỏi đĩa (0034, `FilesService.purgeDeleted`); hàng giữ lại cho lịch sử và nhật ký.
   purgedAt: timestamp('purged_at', { withTimezone: true }),
+  // NULL với file tải lên trước 0072; file mới luôn có (Q-29).
+  sha256: text('sha256'),
 });

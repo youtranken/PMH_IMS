@@ -6,6 +6,7 @@ import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import type { DisposalApiService } from '../disposal/disposal.api';
+import type { IsoFormsApiService } from '../iso-forms/iso-forms.api';
 import type { SystemConfigService } from '../config-sys/system-config.service';
 
 /**
@@ -57,10 +58,11 @@ function buildService(): DashboardService {
   const users = { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService;
   const ipam = { listSubnets: empty } as unknown as IpamApiService;
   const vault = { listOwners: empty } as unknown as VaultApiService;
-  const disposal = { list: empty } as unknown as DisposalApiService;
+  const disposal = { changedSince: empty } as unknown as DisposalApiService;
   const config = { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService;
 
-  return new DashboardService(expiry, approvals, kinds, ipam, vault, disposal, config, users);
+  const iso = { recentIncidents: empty } as unknown as IsoFormsApiService;
+  return new DashboardService(expiry, approvals, kinds, ipam, vault, disposal, config, users, iso);
 }
 
 describe('Khối "sắp hết hạn" của trang chủ', () => {

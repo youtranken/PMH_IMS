@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/ui/error-boundary';
@@ -14,6 +15,20 @@ describe('ErrorBoundary — FE-01: một màn hỏng không làm trắng cả ap
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
   afterEach(() => vi.restoreAllMocks());
+
+  it('màn tải lười không tải được chunk (sau deploy) → khối báo lỗi tiếng Việt có "Tải lại trang"', async () => {
+    // App.tsx đặt Suspense của các màn tải lười BÊN TRONG boundary này của shell.
+    const Gone = lazy(() => Promise.reject(new TypeError('Failed to fetch dynamically imported module')));
+    renderWithI18n(
+      <ErrorBoundary resetKey="/iso/backup">
+        <Suspense fallback={<p>Đang tải</p>}>
+          <Gone />
+        </Suspense>
+      </ErrorBoundary>,
+    );
+    expect(await screen.findByRole('heading', { name: 'Màn này gặp lỗi khi hiển thị' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tải lại trang' })).toBeInTheDocument();
+  });
 
   it('con ném lỗi lúc render → hiện khối báo lỗi có lối thoát, không trắng trang', () => {
     renderWithI18n(

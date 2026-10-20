@@ -90,12 +90,22 @@ interface DisposedItem {
   code: string;
   name: string;
   detail: string | null;
-  updatedAt: string | null;
+  disposedAt: string | null;
 }
+
+interface IncidentItem {
+  id: string;
+  code: string;
+  severity: 'low' | 'medium' | 'high';
+  detectedAt: string;
+  description: string;
+}
+
+const SEVERITY_TONE: Record<IncidentItem['severity'], string> = { high: 'danger', medium: 'warn', low: 'muted' };
 
 interface Dashboard {
   expiring: Block<ExpiringItem> & { overdueTotal?: number };
-  incidents: Block<never>;
+  incidents: Block<IncidentItem>;
   breakGlass: Block<BreakGlassItem>;
   subnetLoad: Block<SubnetLoadItem> & { thresholdPercent?: number | null };
   staleSecrets: Block<StaleSecretItem>;
@@ -368,7 +378,7 @@ export function DashboardScreen({ me }: { me: Me }) {
                 <span className="badge muted">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
               </div>
               <span className="muted">
-                {[detail, item.updatedAt ? formatDate(item.updatedAt) : null]
+                {[detail, item.disposedAt ? formatDate(item.disposedAt) : null]
                   .filter(Boolean)
                   .join(' · ')}
               </span>
@@ -380,27 +390,38 @@ export function DashboardScreen({ me }: { me: Me }) {
     3,
   );
 
-  /*
-    Module sự cố chưa có. Khối vẫn HIỆN và nói thẳng "chưa theo dõi" — giấu đi thì sếp tưởng
-    hệ thống đã theo dõi sự cố rồi và tuần qua không có cái nào. Tông THÔNG TIN, không phải
-    tông lỗi: nó không hỏng, chỉ là chưa có.
-  */
-  quiet.push({
-    rank: 2,
-    node: (
-      <BlockCard
-        key="incidents"
-        title={t('dashboard.incidents')}
-        total={board.incidents.total}
-        available={board.incidents.available}
-        notYet
-        emptyText={t('dashboard.incidentsEmpty')}
-        unavailableText={t('dashboard.incidentsNotYet')}
-      >
-        <></>
-      </BlockCard>
-    ),
-  });
+  /* Sự cố tuần qua — phiếu 0206 theo Detection Time (FR-027 ②). */
+  place(
+    board.incidents,
+    <BlockCard
+      key="incidents"
+      title={t('dashboard.incidents')}
+      total={board.incidents.total}
+      available={board.incidents.available}
+      moreTo={PATHS.isoIncidents}
+      moreLabel={t('dashboard.seeAllIncidents')}
+      emptyText={t('dashboard.incidentsEmpty')}
+      unavailableText={t('dashboard.blockError')}
+      onRetry={retry}
+    >
+      <MobileLimited
+        items={board.incidents.items}
+        render={(item) => (
+          <li key={item.id}>
+            <div className="dash-line">
+              <span className="dash-line-name" title={`${item.code} · ${item.description}`}>
+                <Link to={PATHS.isoIncident(item.id)}>{item.code}</Link>
+                <span className="dash-line-sub">{item.description}</span>
+              </span>
+              <span className={`badge ${SEVERITY_TONE[item.severity]}`}>{t(`dashboard.incidentSeverity_${item.severity}`)}</span>
+            </div>
+            <span className="muted">{formatDateTime(item.detectedAt)}</span>
+          </li>
+        )}
+      />
+    </BlockCard>,
+    1,
+  );
 
   return (
     <>
@@ -408,6 +429,7 @@ export function DashboardScreen({ me }: { me: Me }) {
 
       {/* Việc gấp nhất của người duyệt trên điện thoại đứng ĐẦU trang, trên cả hàng số. */}
       <NeedsYouBlock me={me} />
+      <IsoNeedsYouBlock me={me} />
       {/* Người XIN mở két: "đã được duyệt chưa, còn hiệu lực bao lâu" — đứng đầu khi có việc. */}
       <MyRequestsBlock />
 
@@ -584,6 +606,64 @@ function NeedsYouBlock({ me }: { me: Me }) {
   );
 }
 
+interface IsoPendingRow {
+  approvalId: string;
+  kind: string;
+  formType: string;
+  month: string;
+  requesterName: string;
+  reason: string;
+  createdAt: string;
+}
+
+/**
+ * Kỳ phiếu ISO chờ SA/Admin duyệt (Q-28): gửi chốt hoặc xin mở lại. Khoá dưới nhánh
+ * `['iso']` nên duyệt ở màn phiếu là khối này tự làm mới. Không có gì chờ thì khối biến mất.
+ */
+function IsoNeedsYouBlock({ me }: { me: Me }) {
+  const { t } = useTranslation();
+  const canDecide = me.role === 'sa' || me.role === 'admin';
+  const pending = useQuery({
+    queryKey: ['iso', 'pending'],
+    queryFn: () => apiFetch<IsoPendingRow[]>('/api/v1/iso/pending'),
+    enabled: canDecide,
+  });
+  const rows = Array.isArray(pending.data) ? pending.data : [];
+  if (!canDecide || rows.length === 0) return null;
+  return (
+    <section className="card dash-card dash-needs-you" aria-label={t('dashboard.isoNeedsYou', { count: rows.length })}>
+      <div className="card-head">
+        <h2>{t('dashboard.isoNeedsYou', { count: rows.length })}</h2>
+      </div>
+      <ul className="dash-list">
+        {rows.map((row) => (
+          <li key={row.approvalId}>
+            <div className="dash-line">
+              <strong className="dash-line-name">
+                {row.kind === 'iso_period_reopen'
+                  ? t('dashboard.isoReopen', { form: row.formType, month: `${row.month.slice(5, 7)}/${row.month.slice(0, 4)}` })
+                  : t('dashboard.isoClose', { form: row.formType, month: `${row.month.slice(5, 7)}/${row.month.slice(0, 4)}` })}
+              </strong>
+              <span className="muted">{t('dashboard.isoSentBy', { name: row.requesterName, at: formatDateTime(row.createdAt) })}</span>
+            </div>
+            <div className="action-cell">
+              <Link
+                to={
+                  row.kind === 'iso_period_reopen'
+                    ? PATHS.isoPeriod(row.formType, row.month)
+                    : PATHS.isoReview(row.formType, row.month)
+                }
+              >
+                {t('dashboard.isoOpen')}
+              </Link>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /**
  * "Yêu cầu mở két của tôi" — cho MỌI vai, chỉ khi có yêu cầu đang chờ hoặc đang còn hiệu lực.
  *
@@ -739,9 +819,8 @@ function BoardKpis({ board }: { board: Dashboard }) {
 }
 
 /**
- * Một khối có BỐN trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
+ * Một khối có BA trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
  *  - không tải được → tông cảnh báo, có Thử lại (đứng đầu dải yên);
- *  - chưa có phần này (`notYet`) → tông thông tin;
  *  - có phần này, không có gì → tin tốt, dấu ✓;
  *  - có dữ liệu.
  *
@@ -751,7 +830,6 @@ function BlockCard({
   title,
   total,
   available,
-  notYet = false,
   moreTo,
   moreLabel,
   emptyText,
@@ -762,7 +840,6 @@ function BlockCard({
   title: string;
   total: number;
   available: boolean;
-  notYet?: boolean;
   moreTo?: string;
   moreLabel?: string;
   emptyText: string;
@@ -771,7 +848,7 @@ function BlockCard({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const tone = !available ? (notYet ? 'info' : 'error') : total === 0 ? 'good' : null;
+  const tone = !available ? 'error' : total === 0 ? 'good' : null;
 
   if (tone) {
     return (

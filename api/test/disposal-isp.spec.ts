@@ -57,24 +57,30 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
   });
 
   it('kho gộp đường truyền thanh lý thành một hàng loại `isp`', async () => {
-    const devices = { listRetired: () => Promise.resolve([]) } as unknown as DevicesApiService;
-    const accounts = {
-      listDisabled: () => Promise.resolve([]),
-    } as unknown as ServiceAccountsApiService;
-    // Phần mềm đã bỏ đi qua `software.list` — bảng đó không phải thứ bài này hỏi.
+    const emptyPage = () => Promise.resolve({ items: [], total: 0 });
+    const noEvents = () => Promise.resolve(new Map());
+    const none = () => Promise.resolve([]);
+    const devices = { listRetired: none, retiredPage: emptyPage, retirementEvents: noEvents } as unknown as DevicesApiService;
+    const accounts = { listDisabled: none, disabledPage: emptyPage, disableEvents: noEvents } as unknown as ServiceAccountsApiService;
+    // Phần mềm đã bỏ đi qua `software.list` — bảng đó không phải thứ bài này hỏi. Đường truyền đi
+    // qua cửa THẬT của software.api, kể cả lịch sử thanh lý.
     const software = {
-      listRetired: () => Promise.resolve([]),
+      listRetired: none,
+      retiredPage: emptyPage,
+      retirementEvents: noEvents,
       listTerminatedIsp: () => api.listTerminatedIsp(),
+      terminatedIspPage: () => api.terminatedIspPage(),
+      ispTerminationEvents: (ids: string[]) => api.ispTerminationEvents(ids),
     } as unknown as SoftwareApiService;
     const disposal = new DisposalService(
       devices,
       software,
       accounts,
-      {} as UsersApiService,
+      { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
       {} as SystemConfigService,
     );
 
-    const items = await disposal.list();
+    const items = await disposal.changedSince(new Date(0));
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
       kind: 'isp',
@@ -84,6 +90,9 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
       status: 'terminated',
     });
     expect(items[0].updatedAt).toBeInstanceOf(Date);
+    // Ngày vào kho đọc từ lịch sử thanh lý, không chép `updatedAt`.
+    expect(items[0].disposedAt).toBeInstanceOf(Date);
+    expect(items[0].disposedBy).toBe(actor);
   });
 
   it('DP-002: ai thanh lý đường truyền đọc từ `isp_line_history` qua cửa software.api', async () => {

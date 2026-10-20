@@ -54,6 +54,8 @@ export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
   'account.mfa.reset',
   'auth.totp.reenrolled',
   'diagram.drift',
+  'iso.period.event',
+  'iso.reminder',
 ]);
 
 @Injectable()
@@ -147,6 +149,11 @@ export class MailConsumer {
     const request = await this.findApproval(approvalId);
     if (!request || request.state !== 'pending') return null;
     if (request.kind === DIAGRAM_PUBLISH_KIND) return this.buildDiagramReviewMail(request, isReminder, at);
+    /* Loại yêu cầu tự lo thư của mình (phiếu ISO nhắc theo ngày ở luồng riêng): mẫu "mở két" bên
+       dưới nói sai việc, nên hỏi sổ trước. */
+    if (this.contents.find(`approval:${request.kind}`)) {
+      return this.buildRegisteredMail(`approval:${request.kind}`, { approvalId, reminder: isReminder });
+    }
 
     /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
        gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
@@ -481,6 +488,8 @@ export class MailConsumer {
      * mà `mail` không import được — module chủ dựng nội dung qua sổ, outbox chỉ giữ id + số.
      */
     if (topic === 'diagram.drift') return this.buildRegisteredMail(topic, payload);
+    // Phiếu ISO: người nhận là người phụ trách / SA/Admin, nằm trong bảng của `iso-forms`.
+    if (topic === 'iso.period.event' || topic === 'iso.reminder') return this.buildRegisteredMail(topic, payload);
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
     const sa = await this.users.recipientsByRole(['sa']);

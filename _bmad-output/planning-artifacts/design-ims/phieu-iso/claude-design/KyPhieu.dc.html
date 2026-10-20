@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kỳ phiếu theo năm và tháng</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button,textarea{font-family:inherit;font-size:14px;color:#1f231c}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1500px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="ky" hint-size="248px,1500px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5c635c">Phiếu ISO</div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Kỳ phiếu &amp; chốt kỳ</h1>
+<div style="color: #5a615a">Mỗi tháng một kỳ cho mọi phiếu. Gửi chốt → SA/Admin duyệt → khoá → in, ký, scan và tải lên.</div>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<div role="group" aria-label="Năm" style="display: flex; border: 1px solid #d8dbd0; border-radius: 10px; background: #ffffff; padding: 3px">
+<sc-for list="{{ years }}" as="y" hint-placeholder-count="2">
+<button onClick="{{ y.pick }}" aria-pressed="{{y.on}}" style="height: 34px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: 'JetBrains Mono', monospace; {{y.style}}">{{y.y}}</button>
+</sc-for>
+</div>
+<div role="group" aria-label="Xem với vai trò" style="display: flex; border: 1px solid #d8dbd0; border-radius: 10px; background: #ffffff; padding: 3px">
+<button onClick="{{ asMember }}" aria-pressed="{{memberOn}}" style="height: 34px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 600; {{memberStyle}}">IT Member</button>
+<button onClick="{{ asAdmin }}" aria-pressed="{{adminOn}}" style="height: 34px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 600; {{adminStyle}}">SA / Admin</button>
+</div>
+</div>
+</header>
+
+<section aria-label="Cần làm" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+<div style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 26px; font-weight: 700; font-family: 'JetBrains Mono', monospace; {{k.ink}}">{{k.n}}</span>
+<span style="font-size: 13px; color: #5a615a">{{k.label}}</span>
+</div>
+</sc-for>
+</section>
+
+<sc-if value="{{ noData }}" hint-placeholder-val="{{ false }}">
+<section style="background: #ffffff; border: 1px dashed #868d83; border-radius: 14px; padding: 40px; text-align: center; color: #5a615a">Năm 2025 chưa dùng IMS, phiếu còn ở bản giấy. Có thể tải bản scan cũ lên từng tháng để lưu chung.</section>
+</sc-if>
+
+<sc-if value="{{ hasData }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section aria-labelledby="yr-h" style="flex: 999 1 620px; min-width: 0; background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; overflow-x: auto">
+<h2 id="yr-h" style="margin: 0; padding: 16px 20px; font-size: 16px; font-weight: 700; border-bottom: 1px solid #e9eae2">Năm {{year}}</h2>
+<table style="border-collapse: collapse; width: 100%; min-width: 600px">
+<thead><tr style="text-align: left; color: #5a615a; font-size: 12px">
+<th scope="col" style="padding: 10px 20px; font-weight: 600">Tháng</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">0203 · Backup</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">0208 · Antivirus</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">0206 · Sự cố</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600; color: #8a8f86">Phiếu khác</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="12">
+<tr style="border-top: 1px solid #e9eae2; {{m.rowStyle}}">
+<td style="padding: 10px 20px"><button onClick="{{ m.pick }}" aria-pressed="{{m.sel}}" style="border: 0; background: none; padding: 6px 0; cursor: pointer; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 14px; {{m.linkStyle}}">{{m.label}}</button></td>
+<td style="padding: 10px 12px"><span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; {{m.a.st}}">{{m.a.t}}</span></td>
+<td style="padding: 10px 12px"><span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; {{m.b.st}}">{{m.b.t}}</span></td>
+<td style="padding: 10px 12px; font-size: 13px; color: #5a615a">{{m.c}}</td>
+<td style="padding: 10px 12px; font-size: 13px; color: #b8bcb3">—</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="padding: 12px 20px; font-size: 12px; color: #5c635c; border-top: 1px solid #e9eae2">Thêm loại phiếu sau này (0205, 0212…) thì có thêm cột ở đây, các kỳ cũ để trống.</div>
+</section>
+
+<aside aria-labelledby="mo-h" style="flex: 1 1 380px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="mo-h" style="margin: 0; font-size: 18px; font-weight: 700">Kỳ {{selLabel}}</h2>
+<sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+<article style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<strong style="flex: 1">{{c.name}}</strong>
+<span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{c.badgeStyle}}">{{c.badge}}</span>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{ c.steps }}" as="s" hint-placeholder-count="4"><li style="height: 5px; border-radius: 999px; {{s}}"></li></sc-for>
+</ol>
+<div style="font-size: 13px; color: #5a615a; line-height: 1.5">{{c.note}}</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<sc-if value="{{ c.canAct }}" hint-placeholder-val="{{ true }}">
+<a href="{{c.href}}" onClick="{{ c.act }}" style="display: inline-flex; align-items: center; height: 38px; padding: 0 14px; border-radius: 10px; font-weight: 600; text-decoration: none; {{c.actStyle}}">{{c.actLabel}}</a>
+</sc-if>
+<sc-if value="{{ c.canReturn }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ c.ret }}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Trả lại</button>
+</sc-if>
+<sc-if value="{{ c.canReopen }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ openReopen }}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Xin mở lại…</button>
+</sc-if>
+<sc-if value="{{ c.waiting }}" hint-placeholder-val="{{ false }}"><span style="display: inline-flex; align-items: center; height: 38px; color: #5c635c; font-size: 13px">{{c.waitText}}</span></sc-if>
+</div>
+</article>
+</sc-for>
+
+<sc-if value="{{ uploading }}" hint-placeholder-val="{{ false }}">
+<section role="dialog" aria-labelledby="up-h" style="background: #ffffff; border: 2px solid #0e9f6e; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<h3 id="up-h" style="margin: 0; font-size: 16px; font-weight: 700">Tải bản ký · {{uploadName}} · {{selLabel}}</h3>
+<label style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px 12px; border: 2px dashed #868d83; border-radius: 12px; background: #faf9f5; cursor: pointer; text-align: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0e9f6e" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg>
+<strong>Kéo thả file scan vào đây</strong>
+<span style="font-size: 12px; color: #5a615a">hoặc bấm để chọn · PDF, JPG, PNG · tối đa 20 MB</span>
+<input type="file" style="position: absolute; left: -9999px">
+</label>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #e4f4ee">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; flex: 1">{{uploadFile}}</span>
+<span style="font-size: 12px; color: #0f7a55; font-weight: 600">2 trang · 1,4 MB</span>
+</div>
+<div style="font-size: 12px; color: #5a615a; line-height: 1.5">Lịch sử bản ký: chưa có. Nếu kỳ được mở lại, bản cũ vẫn giữ trong lịch sử.</div>
+<div style="display: flex; gap: 8px">
+<button onClick="{{ doUpload }}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Lưu bản ký · hoàn tất kỳ</button>
+<button onClick="{{ closeUpload }}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Huỷ</button>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{ reopen }}" hint-placeholder-val="{{ false }}">
+<section role="dialog" aria-labelledby="ro-h" style="background: #ffffff; border: 2px solid #0e9f6e; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<h3 id="ro-h" style="margin: 0; font-size: 16px; font-weight: 700">Xin mở lại kỳ {{selLabel}}</h3>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px">Lý do (bắt buộc)<textarea rows="3" style="border: 1px solid #868d83; border-radius: 8px; padding: 10px 12px; font-weight: 400">Ngày 14 tick nhầm ✓ cho WS-DB, thực tế job lỗi. Cần sửa và lập 0206.</textarea></label>
+<div style="font-size: 12px; color: #5a615a; line-height: 1.5">SA/Admin duyệt xong thì kỳ về "Đang ghi". Bản ký cũ giữ trong lịch sử; phải xem lại, gửi chốt, ký và tải bản mới.</div>
+<div style="display: flex; gap: 8px">
+<button onClick="{{ closeReopen }}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">Gửi yêu cầu</button>
+<button onClick="{{ closeReopen }}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; font-weight: 600; cursor: pointer">Huỷ</button>
+</div>
+</section>
+</sc-if>
+</aside>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { role: 'member', year: 2026, month: 10, st: { '0203': 0, '0208': 1 }, sep: 2, reopen: false, upload: '' };
+  }
+  renderVals() {
+    var self = this, s = this.state, admin = s.role === 'admin';
+    var LABELS = ['Đang ghi', 'Chờ duyệt', 'Đã chốt · chờ bản ký', 'Hoàn tất'];
+    var BADGE = ['background:#e6f0fa;color:#1d5f9e', 'background:#fdf0e3;color:#a34d08', 'background:#fdeceb;color:#c0392b', 'background:#e4f4ee;color:#0f7a55'];
+    var NONE = { t: 'Chưa tới', st: 'background:none;color:#b8bcb3;padding-left:0' };
+    function stOf(month, code) {
+      if (month === 10) return s.st[code];
+      if (month === 9 && code === '0208') return s.sep;
+      return 3;
+    }
+    var C206 = { 10: '4 phiếu · 0 bản ký', 9: '2 phiếu · 1 bản ký', 8: '1 phiếu · đủ ký', 7: '0 phiếu', 6: '3 phiếu · đủ ký', 5: '1 phiếu · đủ ký', 4: '0 phiếu', 3: '2 phiếu · đủ ký', 2: '0 phiếu', 1: '1 phiếu · đủ ký' };
+    var months = [];
+    for (var m = 12; m >= 1; m--) {
+      (function (m) {
+        var future = m > 10, sel = m === s.month;
+        var a = future ? NONE : { t: LABELS[stOf(m, '0203')], st: BADGE[stOf(m, '0203')] };
+        var b = future ? NONE : { t: LABELS[stOf(m, '0208')], st: BADGE[stOf(m, '0208')] };
+        months.push({ label: (m < 10 ? '0' : '') + m + '/' + s.year, a: a, b: b, c: future ? '—' : C206[m], sel: sel ? 'true' : 'false',
+          rowStyle: sel ? 'background:#e5f6ee' : future ? 'color:#b8bcb3' : '',
+          linkStyle: future ? 'color:#b8bcb3;cursor:default' : 'color:#0a7d54;text-decoration:underline',
+          pick: function () { if (!future) self.setState({ month: m, reopen: false, upload: '' }); } });
+      })(m);
+    }
+    function go(code, n) { var st = Object.assign({}, s.st); st[code] = n; self.setState({ st: st }); }
+    var mm = s.month;
+    var forms = [['0203', 'SP-IT0203 · Theo dõi backup', 'Main.dc.html'], ['0208', 'SP-IT0208 · Theo dõi antivirus', 'Antivirus.dc.html']];
+    var cards = forms.map(function (f) {
+      var code = f[0], k = stOf(mm, code), editable = mm === 10;
+      var steps = [0, 1, 2, 3].map(function (i) { return i < k ? 'background:#0e9f6e' : i === k ? 'background:#f59e0b' : 'background:#e9eae2'; });
+      var c = { name: f[1], badge: LABELS[k], badgeStyle: BADGE[k], steps: steps, note: '', canAct: false, act: null, href: '#', actLabel: '',
+        actStyle: 'background:#0e9f6e;color:#ffffff', canReturn: false, ret: function () { go(code, 0); }, canReopen: false, waiting: false, waitText: '' };
+      if (k === 0) {
+        c.note = code === '0203' ? 'Đã đánh tới ngày 12/31. 1 ô ✗ chưa có 0206.' : 'Đã ghi tới ngày 12/31.';
+        if (!admin) { c.canAct = true; c.actLabel = 'Xem lại & gửi chốt ›'; c.href = 'XemLai.dc.html'; c.act = function () {}; }
+        else { c.waiting = true; c.waitText = 'Member đang ghi.'; }
+      } else if (k === 1) {
+        c.note = 'Gửi 31/10 · minh.nv, đã qua bước xem lại. Duyệt xong phiếu bị khoá.';
+        if (admin && editable) { c.canAct = true; c.actLabel = 'Xem & duyệt chốt'; c.act = function () { go(code, 2); }; c.canReturn = true; }
+        else { c.waiting = true; c.waitText = 'Chờ SA/Admin duyệt.'; }
+      } else if (k === 2) {
+        c.note = 'Đã khoá. In A3, ký tay, scan rồi tải lên để hoàn tất.';
+        if (!admin) { c.canAct = true; c.actLabel = 'Tải bản ký lên…'; c.act = function () { self.setState({ upload: code }); }; }
+        else { c.waiting = true; c.waitText = 'Chờ Member tải bản ký.'; }
+      } else {
+        c.note = 'Bản ký: ' + code + '-' + s.year + '-' + (mm < 10 ? '0' : '') + mm + '-ky.pdf';
+        c.canReopen = !admin;
+        if (admin) { c.waiting = true; c.waitText = 'Hoàn tất.'; }
+      }
+      return c;
+    });
+    cards.push({ name: 'SP-IT0206 · Sự cố', badge: C206[mm] || '', badgeStyle: 'background:#efeee7;color:#5f665f', steps: [], note: 'Phiếu sự cố chốt cùng kỳ với phiếu 0203/0208 sinh ra nó. Mỗi phiếu có bản ký riêng.',
+      canAct: true, href: 'SuCo.dc.html', act: function () {}, actLabel: 'Mở danh sách 0206', actStyle: 'background:#ffffff;color:#1f231c;box-shadow:inset 0 0 0 1px #868d83', canReturn: false, ret: null, canReopen: false, waiting: false, waitText: '' });
+    var on = 'background:#1f231c;color:#ffffff', off = 'background:none;color:#5a615a';
+    var has = s.year === 2026;
+    return {
+      year: s.year, hasData: has, noData: !has, months: months, cards: cards, reopen: s.reopen, uploading: !!s.upload,
+      uploadName: s.upload ? 'SP-IT' + s.upload : '', uploadFile: s.upload + '-' + s.year + '-' + (mm < 10 ? '0' : '') + mm + '-ky.pdf',
+      doUpload: function () { if (mm === 9) self.setState({ sep: 3, upload: '' }); else { var st = Object.assign({}, s.st); st[s.upload] = 3; self.setState({ st: st, upload: '' }); } },
+      closeUpload: function () { self.setState({ upload: '' }); },
+      selLabel: (mm < 10 ? '0' : '') + mm + '/' + s.year,
+      years: [2025, 2026].map(function (y) { return { y: y, on: y === s.year ? 'true' : 'false', style: y === s.year ? on : off, pick: function () { self.setState({ year: y }); } }; }),
+      kpis: admin
+        ? [{ n: '1', label: 'Kỳ chờ bạn duyệt chốt', ink: 'color:#a34d08' }, { n: '0', label: 'Yêu cầu mở lại chờ duyệt', ink: 'color:#1f231c' }, { n: '1', label: 'Kỳ chờ bản ký', ink: 'color:#c0392b' }, { n: '16', label: 'Kỳ hoàn tất năm nay', ink: 'color:#0f7a55' }]
+        : [{ n: '1', label: 'Ô ✗ chưa có 0206', ink: 'color:#c0392b' }, { n: '1', label: 'Kỳ chờ bạn tải bản ký', ink: 'color:#c0392b' }, { n: '1', label: 'Kỳ đang chờ duyệt', ink: 'color:#a34d08' }, { n: '16', label: 'Kỳ hoàn tất năm nay', ink: 'color:#0f7a55' }],
+      memberOn: admin ? 'false' : 'true', adminOn: admin ? 'true' : 'false',
+      memberStyle: admin ? off : on, adminStyle: admin ? on : off,
+      asMember: function () { self.setState({ role: 'member' }); },
+      asAdmin: function () { self.setState({ role: 'admin' }); },
+      openReopen: function () { self.setState({ reopen: true }); },
+      closeReopen: function () { self.setState({ reopen: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -145,6 +145,36 @@ export const ACTION_KEY: Record<string, string> = {
   // API thôi sinh mã này nhưng audit_log chỉ-thêm vẫn giữ dòng cũ của nó.
   'diagram_spike.saved': 'audit.actions.diagramSpikeSaved',
   'crypto.rewrapped': 'audit.actions.cryptoRewrapped',
+  'iso_owner.updated': 'audit.actions.isoOwnerUpdated',
+  'iso_job.created': 'audit.actions.isoJobCreated',
+  'iso_job.updated': 'audit.actions.isoJobUpdated',
+  'iso_job.stopped': 'audit.actions.isoJobStopped',
+  'iso_job.resumed': 'audit.actions.isoJobResumed',
+  'iso_job.moved': 'audit.actions.isoJobMoved',
+  'iso_division.created': 'audit.actions.isoDivisionCreated',
+  'iso_division.updated': 'audit.actions.isoDivisionUpdated',
+  'iso_backup.tick_set': 'audit.actions.isoBackupTickSet',
+  'iso_backup.day_filled': 'audit.actions.isoBackupDayFilled',
+  'iso_antivirus.day_cleared': 'audit.actions.isoAntivirusDayCleared',
+  'iso_antivirus.day_uncleared': 'audit.actions.isoAntivirusDayUncleared',
+  'iso_antivirus.mark_set': 'audit.actions.isoAntivirusMarkSet',
+  'iso_antivirus.issue_created': 'audit.actions.isoAntivirusIssueCreated',
+  'iso_antivirus.issue_updated': 'audit.actions.isoAntivirusIssueUpdated',
+  'iso_antivirus.issue_deleted': 'audit.actions.isoAntivirusIssueDeleted',
+  'iso_incident.created': 'audit.actions.isoIncidentCreated',
+  'iso_incident.updated': 'audit.actions.isoIncidentUpdated',
+  'iso_period.submitted': 'audit.actions.isoPeriodSubmitted',
+  'iso_period.approved': 'audit.actions.isoPeriodApproved',
+  'iso_period.returned': 'audit.actions.isoPeriodReturned',
+  'iso_period.reopen_requested': 'audit.actions.isoPeriodReopenRequested',
+  'iso_period.reopened': 'audit.actions.isoPeriodReopened',
+  'iso_period.reopen_denied': 'audit.actions.isoPeriodReopenDenied',
+  'iso_period_close.requested': 'audit.actions.isoCloseRequested',
+  'iso_period_close.approved': 'audit.actions.isoCloseApproved',
+  'iso_period_close.returned': 'audit.actions.isoCloseReturned',
+  'iso_period_reopen.requested': 'audit.actions.isoReopenRequested',
+  'iso_period_reopen.approved': 'audit.actions.isoReopenApproved',
+  'iso_period_reopen.denied': 'audit.actions.isoReopenDenied',
 };
 
 /** Họ của mã ghép lúc chạy — phần trước động từ cuối. */
@@ -289,6 +319,7 @@ export type AuditModule =
   | 'expiry'
   | 'disposal'
   | 'file'
+  | 'iso'
   | 'system'
   | 'other';
 
@@ -315,6 +346,15 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   expiry: 'expiry',
   disposal: 'disposal',
   file: 'file',
+  iso_owner: 'iso',
+  iso_job: 'iso',
+  iso_division: 'iso',
+  iso_backup: 'iso',
+  iso_antivirus: 'iso',
+  iso_incident: 'iso',
+  iso_period: 'iso',
+  iso_period_close: 'iso',
+  iso_period_reopen: 'iso',
   system_config: 'system',
   outbox: 'system',
   crypto: 'system',
@@ -335,6 +375,7 @@ export const MODULE_KEY: Record<AuditModule, string> = {
   expiry: 'audit.module.expiry',
   disposal: 'audit.module.disposal',
   file: 'audit.module.file',
+  iso: 'audit.module.iso',
   system: 'audit.module.system',
   other: 'audit.module.other',
 };
@@ -366,6 +407,12 @@ export const OBJECT_TYPE_KEY: Record<string, string> = {
   outbox: 'audit.objectType.outbox',
   diagram: 'audit.objectType.diagram',
   diagram_spike: 'audit.objectType.diagramSpike',
+  iso_period: 'audit.objectType.isoPeriod',
+  iso_incident: 'audit.objectType.isoIncident',
+  iso_backup_job: 'audit.objectType.isoBackupJob',
+  iso_division: 'audit.objectType.isoDivision',
+  iso_av_issue: 'audit.objectType.isoAvIssue',
+  iso_form_owner: 'audit.objectType.isoFormOwner',
 };
 
 export function objectTypeLabel(type: string | null, t: TFunction): string | null {

@@ -103,16 +103,16 @@ describe('pickRecent — vừa xảy ra trong bao nhiêu ngày', () => {
   ];
 
   it('đúng ngày ngưỡng vẫn tính là "vừa", và mới nhất lên đầu', () => {
-    const picked = pickRecent(rows, 7, NOW).map((row) => row.id);
+    const picked = pickRecent(rows, 7, NOW, (row) => row.updatedAt).map((row) => row.id);
     expect(picked).toEqual(['tuong-lai', 'hom-nay', 'sat-nguong']);
   });
 
   it('hồ sơ không có ngày thì loại — "không biết" không phải là "vừa"', () => {
-    expect(pickRecent(rows, 3650, NOW).map((row) => row.id)).not.toContain('khong-ngay');
+    expect(pickRecent(rows, 3650, NOW, (row) => row.updatedAt).map((row) => row.id)).not.toContain('khong-ngay');
   });
 
   it('mốc ở tương lai vẫn hiện, để có người nhìn thấy dữ liệu sai', () => {
-    expect(pickRecent(rows, 7, NOW).map((row) => row.id)).toContain('tuong-lai');
+    expect(pickRecent(rows, 7, NOW, (row) => row.updatedAt).map((row) => row.id)).toContain('tuong-lai');
   });
 });
 

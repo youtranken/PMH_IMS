@@ -56,6 +56,19 @@ export const PATHS = {
   serviceAccounts: '/service-accounts',
   serviceAccount: (id: string) => `/service-accounts/${id}`,
 
+  /* Phiếu ISO đợt 1 (Q-28). `month` dạng YYYY-MM: thư nhắc và link "Lập 0206" mở đúng tháng. */
+  isoBackup: '/iso/backup',
+  isoBackupAt: (month: string) => `/iso/backup?month=${month}`,
+  isoAntivirus: '/iso/antivirus',
+  isoAntivirusAt: (month: string) => `/iso/antivirus?month=${month}`,
+  isoIncidents: '/iso/incidents',
+  isoIncidentNew: '/iso/incidents/new',
+  isoIncident: (id: string) => `/iso/incidents/${id}`,
+  isoPeriods: '/iso/periods',
+  isoPeriod: (form: string, month: string) => `/iso/periods?month=${month}&form=${form}`,
+  isoReview: (form: string, month: string) => `/iso/periods/${form}/${month}/review`,
+  isoCatalog: '/iso/catalog',
+
   approvals: '/approvals',
   /** Một yêu cầu — đích của nút trong thư duyệt, quyết được trên điện thoại. */
   approval: (id: string) => `/approvals/${id}`,
@@ -218,6 +231,11 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.nat]: 'nav.nat',
   [PATHS.diagrams]: 'nav.diagrams',
   [PATHS.serviceAccounts]: 'nav.serviceAccounts',
+  [PATHS.isoBackup]: 'nav.isoBackup',
+  [PATHS.isoAntivirus]: 'nav.isoAntivirus',
+  [PATHS.isoIncidents]: 'nav.isoIncidents',
+  [PATHS.isoPeriods]: 'nav.isoPeriods',
+  [PATHS.isoCatalog]: 'nav.isoCatalog',
   [PATHS.approvals]: 'nav.approvals',
   [PATHS.vault]: 'nav.vault',
   [PATHS.disposal]: 'nav.disposal',

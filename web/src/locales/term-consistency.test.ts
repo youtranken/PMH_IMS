@@ -380,8 +380,14 @@ describe('Q-15: thuật ngữ đã chốt', () => {
  * người ta đi tìm hai danh mục.
  */
 describe('Q-18: "Phòng ban", không còn "Bộ phận"', () => {
+  /*
+   * Trừ `iso.*`: "bộ phận" của phiếu 0208 (Q-28) là danh sách RIÊNG của phiếu, đặt tên theo cột
+   * Division của mẫu giấy — không phải danh mục Phòng ban. Gọi nó là "phòng ban" mới đúng là hai
+   * tên cho hai danh sách khác nhau trông như một.
+   */
   it('không chuỗi nào còn chữ "bộ phận"', () => {
-    expect(allValues().filter(([, v]) => /bộ phận/iu.test(v))).toEqual([]);
+    const isoKey = (k: string) => k.startsWith('iso.') || /\.iso[A-Z]/.test(k);
+    expect(allValues().filter(([k, v]) => !isoKey(k) && /bộ phận/iu.test(v))).toEqual([]);
   });
 
   it('tab danh mục, nút thêm, ô trên hồ sơ thiết bị và ô "ai đang dùng" của IP', () => {

@@ -46,7 +46,7 @@ const BOARD = {
     overdueTotal: 3,
     items: [expiringItem('a', -40), expiringItem('b', 5)],
   },
-  incidents: { available: false, items: [], total: 0 },
+  incidents: { available: true, items: [], total: 0 },
   breakGlass: {
     available: true,
     total: 1,
@@ -74,7 +74,7 @@ const BOARD = {
     available: true,
     total: 1,
     items: [
-      { kind: 'service_account', id: 'x', code: 'VPN-OLD', name: 'VPN cũ', detail: 'vpn', updatedAt: '2026-09-27' },
+      { kind: 'service_account', id: 'x', code: 'VPN-OLD', name: 'VPN cũ', detail: 'vpn', disposedAt: '2026-09-27' },
     ],
   },
 };
@@ -144,15 +144,31 @@ describe('Bảng điều khiển', () => {
     expect(within(block).queryByText(/^vpn/)).toBeNull();
   });
 
-  it('khối LỖI có tông cảnh báo + Thử lại; khối chưa có (Sự cố) là thông tin — không cùng kiểu với tin tốt', async () => {
+  it('khối LỖI có tông cảnh báo + Thử lại; khối yên (Sự cố, 0 phiếu) là tin tốt — không cùng kiểu', async () => {
     mockApi({ ...BOARD, disposed: { available: false, items: [], total: 0 } });
     renderBoard();
     const errorBlock = (await screen.findByRole('heading', { name: 'Tổng hợp kho thanh lý (7 ngày)' })).closest('section')!;
     expect(errorBlock).toHaveClass('tone-error');
     expect(within(errorBlock).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
     const incidents = screen.getByRole('heading', { name: 'Sự cố tuần qua' }).closest('section')!;
-    expect(incidents).toHaveClass('tone-info');
-    expect(incidents).toHaveTextContent('IMS chưa theo dõi sự cố.');
+    expect(incidents).toHaveClass('tone-good');
+    expect(incidents).toHaveTextContent('Tuần qua không có sự cố nào.');
+  });
+
+  it('FR-027 ②: phiếu 0206 tuần qua hiện số phiếu dẫn tới phiếu, mô tả và mức độ', async () => {
+    mockApi({
+      ...BOARD,
+      incidents: {
+        available: true,
+        total: 1,
+        items: [{ id: 'inc-1', code: '0206-2026-004', severity: 'high', detectedAt: '2026-10-18T02:00:00Z', description: 'Job VSS lỗi' }],
+      },
+    });
+    renderBoard();
+    const block = (await screen.findByRole('heading', { name: 'Sự cố tuần qua' })).closest('section')!;
+    expect(within(block).getByRole('link', { name: '0206-2026-004' })).toHaveAttribute('href', '/iso/incidents/inc-1');
+    expect(within(block).getByText('Job VSS lỗi')).toBeInTheDocument();
+    expect(within(block).getByText('Cao')).toBeInTheDocument();
   });
 
   it('người xin có yêu cầu đang chờ → khối "Yêu cầu mở két của tôi" ở đầu trang; không có thì không có khối', async () => {

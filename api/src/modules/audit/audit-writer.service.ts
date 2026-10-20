@@ -45,6 +45,9 @@ export interface AuditEntry {
  * cho một đường ghi mới thì đường đúng là `appendWithin` trong transaction nghiệp vụ, kèm
  * `@Audited(..., { writtenByService: true })` để interceptor không ghi dòng thứ hai.
  */
+/** Postgres nhận tối đa 65.535 tham số một câu; 1.000 dòng audit nằm xa dưới trần đó. */
+const WRITE_CHUNK = 1_000;
+
 @Injectable()
 export class AuditWriterService {
   private readonly logger = new Logger(AuditWriterService.name);
@@ -65,6 +68,13 @@ export class AuditWriterService {
    */
   async appendWithin(tx: Pick<Database, 'insert'>, entry: AuditEntry): Promise<void> {
     await tx.insert(auditLogTable).values(toRow(entry));
+  }
+
+  /** Nhiều dòng một lượt — lượt ghi hàng loạt (import) khỏi tốn một round-trip mỗi dòng. */
+  async appendManyWithin(tx: Pick<Database, 'insert'>, entries: AuditEntry[]): Promise<void> {
+    for (let i = 0; i < entries.length; i += WRITE_CHUNK) {
+      await tx.insert(auditLogTable).values(entries.slice(i, i + WRITE_CHUNK).map(toRow));
+    }
   }
 
   /**

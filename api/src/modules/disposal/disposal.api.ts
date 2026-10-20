@@ -15,8 +15,8 @@ import { DisposalService, type DisposalItem } from './disposal.service';
 export class DisposalApiService {
   constructor(private readonly disposal: DisposalService) {}
 
-  /** Toàn bộ kho, mới bỏ nhất lên đầu. Cắt theo thời gian là việc của bên gọi. */
-  list(): Promise<DisposalItem[]> {
-    return this.disposal.list();
+  /** Hồ sơ trong kho đổi từ `since` trở đi, có `disposedAt` thật (lịch sử). Cắt chính xác là việc của bên gọi. */
+  changedSince(since: Date): Promise<DisposalItem[]> {
+    return this.disposal.changedSince(since);
   }
 }

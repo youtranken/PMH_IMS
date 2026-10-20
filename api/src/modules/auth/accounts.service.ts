@@ -226,14 +226,15 @@ export class AccountsService {
           action: "account.profile.updated",
           objectType: "user",
           objectId: userId,
+          /*
+           * Chỉ ghi TÊN trường đã đổi, không ghi giá trị (NĐ 13/2023): `audit_log` chỉ-thêm và giữ
+           * vĩnh viễn, nên SĐT / ngày sinh ghi vào đây là không bao giờ xoá được. Giá trị hiện hành
+           * nằm ở hồ sơ; câu "ai sửa hồ sơ ai, lúc nào, trường nào" vẫn trả lời được (Q-29).
+           */
           detail: {
-            fullName: { before: before.fullName, after: values.fullName },
-            phone: { before: before.phone, after: values.phone },
-            employeeCode: {
-              before: before.employeeCode,
-              after: values.employeeCode,
-            },
-            birthDate: { before: before.birthDate, after: values.birthDate },
+            changed: (Object.keys(values) as (keyof typeof values)[]).filter(
+              (field) => values[field] !== before[field],
+            ),
           },
         });
         return updated;

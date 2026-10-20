@@ -11,6 +11,7 @@ import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { usePendingDiagramReviews } from '@/shell/use-pending-diagram-reviews';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { useFailedMailCount } from '@/shell/use-failed-mail-count';
+import { useIsoTodo } from '@/shell/use-iso-todo';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette, paletteShortcut } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
@@ -24,6 +25,9 @@ const DIAGRAM_REVIEWS_ID = 'nav-diagram-reviews';
 /** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
 const OVERDUE_ID = 'nav-overdue';
 const FAILED_MAIL_ID = 'nav-failed-mail';
+const ISO_TODO_ID = 'nav-iso-todo';
+const ISO_PERIODS_ID = 'nav-iso-periods';
+const ISO_UNLINKED_ID = 'nav-iso-unlinked';
 
 /**
  * Khung ứng dụng dùng chung (AD-15/UX-DR1): sidebar + topbar. Mọi màn nghiệp vụ
@@ -61,6 +65,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const diagramReviews = usePendingDiagramReviews(me).rows.length;
   const overdue = useOverdueExpiryCount();
   const failedMail = useFailedMailCount(me);
+  const isoTodo = useIsoTodo();
   const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
@@ -183,8 +188,15 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               group={group}
               pathname={pathname}
               compact={compact}
-              alert={group.items.some((item) => item.badge === 'failedMail') ? failedMail : 0}
-              alertDescribedBy={FAILED_MAIL_ID}
+              alert={
+                group.items.some((item) => item.badge === 'failedMail')
+                  ? failedMail
+                  : group.items.some((item) => item.badge === 'isoTodo')
+                    ? isoTodo.count
+                    : 0
+              }
+              alertTone={group.items.some((item) => item.badge === 'isoTodo') ? 'warn' : 'danger'}
+              alertDescribedBy={group.items.some((item) => item.badge === 'isoTodo') ? ISO_TODO_ID : FAILED_MAIL_ID}
             >
               {group.items.map((item) => (
                 <NavLink
@@ -203,7 +215,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                           ? FAILED_MAIL_ID
                           : item.badge === 'diagramReviews' && diagramReviews > 0
                             ? DIAGRAM_REVIEWS_ID
-                            : undefined
+                            : item.badge === 'isoTodo' && isoTodo.periods > 0
+                              ? ISO_PERIODS_ID
+                              : item.badge === 'isoUnlinked' && isoTodo.unlinked > 0
+                                ? ISO_UNLINKED_ID
+                                : undefined
                   }
                   // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
                   onClick={() => setDrawerOpen(false)}
@@ -229,6 +245,18 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     /* Cam như badge duyệt mở két: một bản vẽ đang chờ chính người này quyết. */
                     <span className="nav-badge warn" aria-hidden="true">
                       {diagramReviews}
+                    </span>
+                  ) : null}
+                  {item.badge === 'isoTodo' && isoTodo.periods > 0 ? (
+                    /* Cam: kỳ phiếu đang chờ chính người này (duyệt, tải bản ký). */
+                    <span className="nav-badge warn" aria-hidden="true">
+                      {isoTodo.periods}
+                    </span>
+                  ) : null}
+                  {item.badge === 'isoUnlinked' && isoTodo.unlinked > 0 ? (
+                    /* Cam: ô ✗ của phiếu người này ghi được còn chưa có 0206 — lập ở mục này. */
+                    <span className="nav-badge warn" aria-hidden="true">
+                      {isoTodo.unlinked}
                     </span>
                   ) : null}
                   {item.badge === 'failedMail' && failedMail > 0 ? (
@@ -339,6 +367,21 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           {failedMail > 0 ? (
             <span id={FAILED_MAIL_ID} className="sr-only">
               {t('failedMail.navBadge', { count: failedMail })}
+            </span>
+          ) : null}
+          {isoTodo.count > 0 ? (
+            <span id={ISO_TODO_ID} className="sr-only">
+              {t('iso.navBadge', { count: isoTodo.count })}
+            </span>
+          ) : null}
+          {isoTodo.periods > 0 ? (
+            <span id={ISO_PERIODS_ID} className="sr-only">
+              {t('iso.navBadgePeriods', { count: isoTodo.periods })}
+            </span>
+          ) : null}
+          {isoTodo.unlinked > 0 ? (
+            <span id={ISO_UNLINKED_ID} className="sr-only">
+              {t('iso.navBadgeUnlinked', { count: isoTodo.unlinked })}
             </span>
           ) : null}
           {/*
@@ -486,6 +529,7 @@ function NavSection({
   pathname,
   compact,
   alert = 0,
+  alertTone = 'danger',
   alertDescribedBy,
   children,
 }: {
@@ -498,6 +542,8 @@ function NavSection({
    * badge nằm khuất sau nhóm khép thì không ai thấy — đúng thứ badge sinh ra để chống.
    */
   alert?: number;
+  /** Đỏ = sự cố đang diễn ra (thư lỗi); cam = việc đang chờ người này làm (phiếu ISO). */
+  alertTone?: 'danger' | 'warn';
   alertDescribedBy?: string;
   children: ReactNode;
 }) {
@@ -535,7 +581,7 @@ function NavSection({
       >
         <span>{t(group.labelKey)}</span>
         {!open && alert > 0 ? (
-          <span className="nav-badge danger" aria-hidden="true">
+          <span className={`nav-badge ${alertTone}`} aria-hidden="true">
             {alert}
           </span>
         ) : null}

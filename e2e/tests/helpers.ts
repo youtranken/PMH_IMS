@@ -371,6 +371,7 @@ const DOMAIN_ORDER = [
   'devices',
   'digest-rules',
   'diagrams',
+  'iso',
   'catalog',
 ] as const;
 
@@ -489,6 +490,15 @@ export function resetDiagrams(): void {
   queue('diagrams');
 }
 
+/**
+ * Dọn phiếu ISO của bài kiểm: kỳ / ngày / số phiếu năm 2021, job · bộ phận · máy · phiếu mang chữ
+ * E2E, người phụ trách là tài khoản e2e. Đồng thời hạ `iso.first_month` về 2021-01 để bài kiểm mở
+ * được năm 2021 — bài kiểm phiếu ISO chỉ ghi vào năm đó, không chạm kỳ thật.
+ */
+export function resetIso(): void {
+  queue('iso');
+}
+
 const totp = new TOTP({
   crypto: new NobleCryptoPlugin(),
   base32: new ScureBase32Plugin(),
@@ -536,6 +546,7 @@ export async function freshTotpCode(secret: string): Promise<string> {
       return totp.generate({ secret, epoch: step * 30 });
     }
     const msToNextWindow = 30_000 - (Date.now() % 30_000) + 1_000;
+    // eslint-disable-next-line no-restricted-globals -- chờ sang chu kỳ TOTP 30 giây kế tiếp: đồng hồ thật, không có điều kiện nào để chờ
     await new Promise((resolve) => setTimeout(resolve, msToNextWindow));
   }
 }
@@ -700,6 +711,7 @@ export async function waitForMail(subjectPart: string, attempts = 40): Promise<M
         const matched = body.messages.filter((mail) => mail.Subject.includes(subjectPart));
         if (matched.length > 0) return matched;
       }
+      // eslint-disable-next-line no-restricted-globals -- vòng hỏi Mailpit (ngoài trình duyệt) có trần lượt; nơi gọi cần cả kết quả rỗng
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     return [];

@@ -217,6 +217,49 @@ const DOMAINS = {
     `DELETE FROM diagram_image i WHERE NOT EXISTS (SELECT 1 FROM diagram_version_image l WHERE l.sha = i.sha)`,
   ],
 
+  /*
+   * Phiếu ISO (Q-28). Bài kiểm chỉ ghi vào NĂM 2021 (mọi ngày đều đã qua, gửi chốt được) để không
+   * chạm kỳ thật; tháng bắt đầu dùng IMS hạ về 2021-01 cho bài kiểm mở được năm đó (global-setup
+   * cất giá trị thật, global-teardown trả lại: e2e/iso-first-month-backup.ts). Kỳ, ngày không
+   * có issue và bộ đếm số phiếu năm 2021 trở về trước là của bài kiểm; job, bộ phận, máy, phiếu
+   * nhận ra bằng chữ E2E. Người phụ trách là tài khoản e2e thì gỡ ra. Cả khối nằm trong một khối
+   * DO có gác to_regclass: script gắn từ máy vào container có thể chạy trước migration 0066.
+   * Không dùng dấu huyền trong chú thích của vùng này: bài test:db đọc câu SQL theo cặp dấu đó.
+   */
+  iso: [
+    `DO $$ BEGIN
+       IF to_regclass('iso_period') IS NOT NULL THEN
+         UPDATE system_config SET value = '"2021-01"' WHERE key = 'iso.first_month';
+         -- Trigger 0071 từ chối ghi vào ô của kỳ đã khoá; bài kiểm có ô E2E trong kỳ như thế. Chỉ
+         -- chủ bảng tắt được trigger (ims_app thì không), và cả khối là một transaction nên lỗi
+         -- giữa chừng cũng không để trigger nằm tắt.
+         ALTER TABLE iso_backup_tick DISABLE TRIGGER iso_backup_tick_period_guard;
+         ALTER TABLE iso_av_clear_day DISABLE TRIGGER iso_av_clear_day_period_guard;
+         ALTER TABLE iso_av_issue DISABLE TRIGGER iso_av_issue_period_guard;
+         ALTER TABLE iso_av_mark DISABLE TRIGGER iso_av_mark_period_guard;
+         DELETE FROM file WHERE owner_type = 'iso_incident' AND owner_id IN (SELECT id FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%');
+         DELETE FROM file WHERE owner_type = 'iso_period' AND owner_id IN (SELECT id FROM iso_period WHERE year <= 2021);
+         DELETE FROM iso_incident_cell WHERE incident_id IN (SELECT id FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%')
+            OR tick_line_id IN (SELECT l.id FROM iso_backup_line l JOIN iso_backup_job j ON j.id = l.job_id WHERE j.name ILIKE '%E2E%')
+            OR av_issue_id IN (SELECT id FROM iso_av_issue WHERE computer_name ILIKE '%E2E%');
+         DELETE FROM iso_incident WHERE year <= 2021 OR description ILIKE '%E2E%';
+         DELETE FROM iso_incident_counter WHERE year <= 2021;
+         DELETE FROM iso_backup_tick WHERE line_id IN (SELECT l.id FROM iso_backup_line l JOIN iso_backup_job j ON j.id = l.job_id WHERE j.name ILIKE '%E2E%');
+         DELETE FROM iso_backup_job WHERE name ILIKE '%E2E%';
+         DELETE FROM iso_av_issue WHERE computer_name ILIKE '%E2E%';
+         DELETE FROM iso_division WHERE name ILIKE '%E2E%';
+         DELETE FROM iso_av_clear_day WHERE day < DATE '2022-01-01';
+         DELETE FROM iso_period WHERE year <= 2021;
+         UPDATE iso_form_owner SET primary_user_id = NULL WHERE primary_user_id IN (SELECT id FROM users WHERE email ILIKE 'e2e-%');
+         UPDATE iso_form_owner SET backup_user_id = NULL WHERE backup_user_id IN (SELECT id FROM users WHERE email ILIKE 'e2e-%');
+         ALTER TABLE iso_backup_tick ENABLE TRIGGER iso_backup_tick_period_guard;
+         ALTER TABLE iso_av_clear_day ENABLE TRIGGER iso_av_clear_day_period_guard;
+         ALTER TABLE iso_av_issue ENABLE TRIGGER iso_av_issue_period_guard;
+         ALTER TABLE iso_av_mark ENABLE TRIGGER iso_av_mark_period_guard;
+       END IF;
+     END $$`,
+  ],
+
   isp: [
     /*
      * `secret.owner_type` nhận cả `isp`, như dòng `file` ngay dưới. Ba loại chủ thể kia đều có

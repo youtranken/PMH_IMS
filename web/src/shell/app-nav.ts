@@ -10,7 +10,7 @@ interface NavItem {
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
   /** Mục mang số việc đang chờ — shell tự hỏi số và vẽ `.nav-badge`. */
-  badge?: 'approvals' | 'overdue' | 'failedMail' | 'diagramReviews';
+  badge?: 'approvals' | 'overdue' | 'failedMail' | 'diagramReviews' | 'isoTodo' | 'isoUnlinked';
 }
 
 export interface NavGroup {
@@ -71,6 +71,21 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.nat', to: PATHS.nat },
       // Mọi vai — Thành viên cũng vẽ (Q-23), khớp `@Roles` của API.
       { key: 'nav.diagrams', to: PATHS.diagrams, badge: 'diagramReviews' },
+    ],
+  },
+  {
+    /*
+     * Phiếu ISO (Q-28): ít dùng nên thu gọn mặc định; đang ở màn phiếu thì tự mở, thu gọn thì đầu
+     * nhóm hiện số việc cần làm. Mọi vai thấy: Member không phụ trách vẫn xem phiếu, API chặn ghi.
+     */
+    labelKey: 'nav.groupIso',
+    collapsible: true,
+    items: [
+      { key: 'nav.isoBackup', to: PATHS.isoBackup },
+      { key: 'nav.isoAntivirus', to: PATHS.isoAntivirus },
+      { key: 'nav.isoIncidents', to: PATHS.isoIncidents, badge: 'isoUnlinked' },
+      { key: 'nav.isoPeriods', to: PATHS.isoPeriods, badge: 'isoTodo' },
+      { key: 'nav.isoCatalog', to: PATHS.isoCatalog },
     ],
   },
   {

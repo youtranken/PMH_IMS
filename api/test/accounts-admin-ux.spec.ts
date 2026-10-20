@@ -204,4 +204,15 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
       ).rejects.toMatchObject({ response: { code: 'USER_NOT_FOUND' } });
     });
   });
+
+  it('NĐ13: sửa hồ sơ chỉ ghi TÊN trường đã đổi vào nhật ký, không ghi SĐT / ngày sinh', async () => {
+    const target = await user('e2e-pii@qa.test', 'member');
+    await accounts.updateProfile(actor, target, { fullName: 'E2E PII', phone: '0901234567', birthDate: '1990-05-17' });
+    await accounts.updateProfile(actor, target, { fullName: 'E2E PII', phone: '0907654321', birthDate: '1990-05-17' });
+    const entry = await lastAudit(target);
+    expect(entry.action).toBe('account.profile.updated');
+    const text = JSON.stringify(entry.detail);
+    expect(text).not.toMatch(/0901234567|0907654321|1990-05-17/);
+    expect(entry.detail).toEqual({ changed: ['phone'] });
+  }, TEST_TIMEOUT);
 });

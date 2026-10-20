@@ -71,7 +71,7 @@ describe('DisposalService', () => {
           updatedAt: at,
         },
       ],
-    }).list();
+    }).changedSince(new Date(0));
 
     expect(items).toEqual([
       {
@@ -94,10 +94,9 @@ describe('DisposalService', () => {
 
   it('đường truyền không ghi băng thông thì chi tiết là null, không phải chuỗi rỗng', async () => {
     const items = await makeService({
-      isp: [{ id: 'i', code: 'C', provider: 'FPT', bandwidth: null, status: 'terminated' }],
-    }).list();
+      isp: [{ id: 'i', code: 'C', provider: 'FPT', bandwidth: null, status: 'terminated', updatedAt: new Date() }],
+    }).changedSince(new Date(0));
     expect(items[0].detail).toBeNull();
-    expect(items[0].updatedAt).toBeNull();
   });
 
   it('bốn loại trộn chung, mới bỏ nhất lên đầu', async () => {
@@ -106,7 +105,7 @@ describe('DisposalService', () => {
       software: [{ id: 's', code: 'S', name: 's', kind: 'license', status: 'retired', updatedAt: new Date('2026-09-03') }],
       accounts: [{ id: 'a', code: 'A', name: 'a', kind: 'shared', status: 'disabled', updatedAt: new Date('2026-09-02') }],
       isp: [{ id: 'i', code: 'I', provider: 'VNPT', bandwidth: null, status: 'terminated', updatedAt: new Date('2026-09-04') }],
-    }).list();
+    }).changedSince(new Date(0));
 
     expect(items.map((item) => item.kind)).toEqual(['isp', 'software', 'service_account', 'device']);
   });
@@ -127,5 +126,14 @@ describe('DisposalService.inventory — báo loại bị cắt', () => {
     const result = await makeService({ devices: one, isp: [] }, totals).inventory({ sort: 'disposedAt', dir: 'desc', page: 1, limit: 50 });
     expect(result.truncated).toEqual(truncated);
     expect(result.items).toHaveLength(1);
+  });
+});
+
+describe('DisposalService.changedSince — trang chủ không tra lịch sử cả kho', () => {
+  it('hồ sơ không có updatedAt (không biết đổi lúc nào) không thể "vừa thanh lý"', async () => {
+    const items = await makeService({
+      isp: [{ id: 'i', code: 'C', provider: 'FPT', bandwidth: null, status: 'terminated' }],
+    }).changedSince(new Date(0));
+    expect(items).toEqual([]);
   });
 });

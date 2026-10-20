@@ -76,28 +76,23 @@ export function pickStaleOwners<T extends StaleOwnerInput>(
     .sort((a, b) => b.daysSince - a.daysSince);
 }
 
-export interface RecentInput {
-  updatedAt: Date | null;
-}
-
 /**
- * Hồ sơ vừa đổi trong `withinDays` ngày gần đây, mới nhất lên đầu.
+ * Hồ sơ có mốc `at` trong `withinDays` ngày gần đây, mới nhất lên đầu.
  *
- * `updatedAt === null` bị loại: không biết đổi lúc nào thì không kết luận được là "vừa". Cho nó
+ * Mốc `null` bị loại: không biết đổi lúc nào thì không kết luận được là "vừa". Cho nó
  * qua sẽ ghim một hồ sơ không có ngày lên khối "tuần này" và nó nằm đó mãi mãi.
  *
  * Mốc tương lai (đồng hồ máy chủ lệch, dữ liệu nhập tay sai năm) vẫn tính là "vừa" — `daysBetween`
  * ra số âm, nhỏ hơn `withinDays`. Đúng hơn là giấu đi: một hồ sơ mang ngày năm 2030 là thứ cần
  * có người nhìn thấy.
  */
-export function pickRecent<T extends RecentInput>(
-  rows: T[],
-  withinDays: number,
-  now: Date,
-): T[] {
+export function pickRecent<T>(rows: T[], withinDays: number, now: Date, at: (row: T) => Date | null): T[] {
   return rows
-    .filter((row) => row.updatedAt !== null && daysBetween(row.updatedAt, now) <= withinDays)
-    .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
+    .filter((row) => {
+      const when = at(row);
+      return when !== null && daysBetween(when, now) <= withinDays;
+    })
+    .sort((a, b) => (at(b)?.getTime() ?? 0) - (at(a)?.getTime() ?? 0));
 }
 
 export interface ExpiringInput {

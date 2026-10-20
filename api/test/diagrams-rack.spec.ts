@@ -75,7 +75,7 @@ describe('Sơ đồ mạng · mặt tủ theo U + ảnh thật', () => {
   const previousDir = process.env.FILE_STORAGE_DIR;
 
   const upload = (ownerType: 'device' | 'device_model', ownerId: string, buffer: Buffer, name = 'anh.png') =>
-    files.save({ buffer, originalName: name, ownerType, ownerId, uploadedBy: uploader, actor: SA.email });
+    files.save({ buffer, originalName: name, ownerType, ownerId, uploadedBy: uploader, actor: SA.email, actorRole: 'sa' });
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_diagrams_rack');

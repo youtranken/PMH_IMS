@@ -20,7 +20,8 @@ export type SettingGroup =
   | 'ipam'
   | 'files'
   | 'diagram'
-  | 'devices';
+  | 'devices'
+  | 'iso';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -51,6 +52,8 @@ export interface EditableSetting {
   max?: number;
   /** Trần độ dài cho khoá chữ. */
   maxLength?: number;
+  /** Khuôn của khoá chữ: `month` = `YYYY-MM`. Chặn lúc ghi vì nơi đọc (`periodAccess`) bỏ qua chuỗi sai khuôn. */
+  format?: 'month';
   /** Cảnh báo (không chặn) khi giá trị lớn hơn mức này — vd nới rate limit quá rộng. */
   warnAbove?: number;
   /** Cảnh báo khi đặt 0 — ở khoá này 0 nghĩa là TẮT hẳn một hàng rào. */
@@ -117,6 +120,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'natSensitivePorts', group: 'ipam', type: 'int_list', min: 1, max: 65535, unordered: true, maxItems: 50 },
   // Giấy tờ đính kèm (Q-18). Trần 25 = `FILE_HARD_CAP_MB`: multer/nginx chặn cứng ở đó.
   { name: 'fileMaxSizeMb', group: 'files', type: 'int', unit: 'mb', min: 1, max: 25 },
+  { name: 'fileMaxImageMegapixels', group: 'files', type: 'int', unit: 'megapixels', min: 4, max: 100 },
   { name: 'fileMaxFilesPerBatch', group: 'files', type: 'int', unit: 'files', min: 1, max: 20 },
   // Dọn blob không lùi lại được: dưới 7 ngày thì một lần xoá nhầm cuối tuần đã mất hẳn nội dung.
   { name: 'filePurgeAfterDays', group: 'files', type: 'int', unit: 'days', min: 7, max: 3650 },
@@ -136,6 +140,18 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'diagramPhotoMaxPx', group: 'diagram', type: 'int', unit: 'px', min: 120, max: 1600, warnAbove: 960 },
   { name: 'diagramDeviceWidthPx', group: 'diagram', type: 'int', unit: 'px', min: 40, max: 480 },
   { name: 'devicePortTemplateMax', group: 'devices', type: 'int', unit: 'ports', min: 8, max: 1024 },
+  // Phiếu ISO (Q-28). Tháng bắt đầu dạng YYYY-MM; loại bản ký là danh sách đuôi cách nhau dấu phẩy.
+  { name: 'isoFirstMonth', group: 'iso', type: 'text', maxLength: 7, format: 'month' },
+  { name: 'isoBackupSystem', group: 'iso', type: 'text', maxLength: 120 },
+  { name: 'isoAntivirusSystem', group: 'iso', type: 'text', maxLength: 120 },
+  { name: 'isoScanMaxMb', group: 'iso', type: 'int', unit: 'mb', min: 1, max: 25 },
+  { name: 'isoScanTypes', group: 'iso', type: 'text', maxLength: 40 },
+  { name: 'isoRemindHour', group: 'iso', type: 'int', unit: 'hours', min: 0, max: 23 },
+  { name: 'isoRemindBackupAfterDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 31 },
+  { name: 'isoRemindSubmitRepeatDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 31 },
+  { name: 'isoRemindApprovalDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 31 },
+  { name: 'isoRemindSignedDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 90 },
+  { name: 'isoRemindInProgressDays', group: 'iso', type: 'int', unit: 'days', min: 1, max: 90 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {
@@ -159,6 +175,9 @@ export function validateSetting(
     if (text === '') return { value: null, reason: 'Không được để trống.' };
     if (spec.maxLength !== undefined && text.length > spec.maxLength) {
       return { value: null, reason: `Tối đa ${spec.maxLength} ký tự.` };
+    }
+    if (spec.format === 'month' && !MONTH_RE.test(text)) {
+      return { value: null, reason: 'Nhập tháng dạng YYYY-MM, ví dụ 2026-11.' };
     }
     return { value: text, reason: null };
   }
@@ -187,6 +206,8 @@ export function validateSetting(
   if (!inRange(spec, num)) return { value: null, reason: rangeReason(spec) };
   return { value: num, reason: null };
 }
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 function toInteger(raw: unknown): number | null {
   if (typeof raw === 'number') return Number.isInteger(raw) ? raw : null;

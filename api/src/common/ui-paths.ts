@@ -72,4 +72,10 @@ export const UI_PATHS = {
   auditLog: (actor: string) => `/admin/audit-log?q=${encodeURIComponent(actor)}`,
   /* Màn Tài khoản lọc theo `q` — email là thứ duy nhất vừa tìm được vừa không đổi. */
   account: (email: string) => `/admin/accounts?q=${encodeURIComponent(email)}`,
+  /* Phiếu ISO (Q-28): `month` dạng YYYY-MM — thư nhắc mở thẳng đúng tháng. */
+  isoBackupAt: (month: string) => `/iso/backup?month=${month}`,
+  isoAntivirusAt: (month: string) => `/iso/antivirus?month=${month}`,
+  isoIncident: (id: string) => `/iso/incidents/${id}`,
+  isoPeriod: (form: string, month: string) => `/iso/periods?month=${month}&form=${form}`,
+  isoReview: (form: string, month: string) => `/iso/periods/${form}/${month}/review`,
 } as const;

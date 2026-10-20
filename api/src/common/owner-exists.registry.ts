@@ -1,5 +1,13 @@
 import { BadRequestException, Global, Injectable, Module } from '@nestjs/common';
+import type { UserRole } from '../modules/auth/types';
 import type { Tx } from './tx';
+
+/** Người đang tải file lên — chủ thể có luật "ai được ghi" riêng thì cần biết vai. */
+export interface Uploader {
+  id: string;
+  email: string;
+  role: UserRole;
+}
 
 /**
  * Sổ đăng ký "chủ thể này có thật không" — hỏi trước khi gắn BẤT CỨ THỨ GÌ vào một
@@ -77,6 +85,21 @@ export interface OwnerResolver {
    * KHÔNG BẮT BUỘC: loại chưa khai thì két không có gì để so.
    */
   noteOf?(ownerType: string, ownerId: string): Promise<string | null>;
+
+  /**
+   * Chủ thể còn NHẬN file này từ người này không — luật riêng của chủ thể, chạy SAU whitelist nội
+   * dung chung của `files` và sau phép kiểm "được xem" của controller (vd bản ký phiếu ISO chỉ nhận
+   * PDF/ảnh scan, chỉ khi kỳ đã chốt, chỉ từ người phụ trách). Ném 400/403/409 kèm câu tiếng Việt.
+   * KHÔNG BẮT BUỘC: không khai = ai xem được chủ thể thì đính kèm được.
+   */
+  assertAccepts?(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void>;
+
+  /**
+   * Chủ thể còn cho XOÁ file đính kèm không — chạy trong `tx` của lượt xoá. Ném 409 kèm câu tiếng
+   * Việt (vd bản ký phiếu ISO của kỳ đang khoá là bằng chứng, Q-29). KHÔNG BẮT BUỘC: không khai =
+   * ai xoá được theo `@Roles` của route thì xoá được.
+   */
+  assertRemovableWithin?(tx: Tx, ownerType: string, ownerId: string): Promise<void>;
 }
 
 @Injectable()
@@ -115,6 +138,16 @@ export class OwnerExistsRegistry {
   async assertUsableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
     const resolver = this.resolverFor(ownerType);
     await resolver.assertUsableWithin?.(tx, ownerType, ownerId);
+  }
+
+  /** Luật nhận file riêng của chủ thể; loại chưa khai `assertAccepts` thì đi qua. */
+  async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void> {
+    await this.resolverFor(ownerType).assertAccepts?.(ownerType, ownerId, file, uploader);
+  }
+
+  /** Luật xoá file riêng của chủ thể; loại chưa khai `assertRemovableWithin` thì đi qua. */
+  async assertRemovableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
+    await this.resolverFor(ownerType).assertRemovableWithin?.(tx, ownerType, ownerId);
   }
 
   /** Ghi chú của hồ sơ chủ thể, `null` khi loại đó chưa khai `noteOf` hoặc ghi chú trống. */

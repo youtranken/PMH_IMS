@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>0203 · Theo dõi backup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f2}
+a{color:#0a7d54}a:hover{color:#0e9f6e}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1500px; background: #f7f6f2; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #1f231c; font-size: 14px">
+<dc-import name="Sidebar" active="0203" hint-size="248px,1500px"></dc-import>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5c635c">Phiếu ISO · SP-IT0203</div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">Theo dõi backup</h1>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; border: 1px solid #d8dbd0; border-radius: 10px; background: #ffffff">
+<button onClick="{{ prevMonth }}" aria-label="Tháng trước" style="height: 36px; width: 36px; border: 0; background: none; cursor: pointer; color: #5a615a; font-size: 16px">‹</button>
+<span style="padding: 0 6px; font-weight: 600">Tháng {{monthLabel}}</span>
+<button onClick="{{ nextMonth }}" aria-label="Tháng sau" style="height: 36px; width: 36px; border: 0; background: none; cursor: pointer; color: #5a615a; font-size: 16px">›</button>
+</div>
+<span style="padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; {{statusStyle}}">{{statusLabel}}</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<a href="DanhMuc.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; color: #1f231c; font-weight: 600; text-decoration: none">Job backup (30)</a>
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+<a href="XemLai.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; background: #0e9f6e; color: #ffffff; font-weight: 600; text-decoration: none">Xem lại &amp; gửi chốt</a>
+</sc-if>
+<sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+<a href="XemLai.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #868d83; background: #ffffff; color: #1f231c; font-weight: 600; text-decoration: none">Xem bản in A3</a>
+</sc-if>
+</div>
+</header>
+
+<sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+<section role="status" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 18px; border-radius: 12px; background: #efeee7; border: 1px solid #d8dbd0">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5f665f" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<div style="flex: 1 1 380px"><strong>Kỳ 09/2026 đã chốt 01/10 · chỉ xem.</strong> <span style="color: #5a615a">Bản ký: 0203-2026-09-ky.pdf. Cần sửa thì xin mở lại ở Kỳ phiếu.</span></div>
+<a href="KyPhieu.dc.html" style="font-weight: 600">Mở Kỳ phiếu ›</a>
+</section>
+</sc-if>
+
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Việc cần xử lý" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; background: #ffffff; border: 1px solid #e9eae2">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace">{{todayDone}}</span><span style="color: #5a615a">ô hôm nay 12/10 đã đánh</span></div>
+<div style="height: 6px; border-radius: 999px; background: #f2f1ea; overflow: hidden"><div style="height: 100%; background: #0e9f6e; width: {{todayPct}}"></div></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; background: #ffffff; border: 1px solid {{missBorder}}">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: {{missInk}}">{{missCount}}</span><span style="color: #5a615a">ô bỏ sót ở ngày đã qua</span></div>
+<span style="font-size: 12px; color: #5a615a">{{missText}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; background: #ffffff; border: 1px solid {{badBorder}}">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: {{badInk}}">{{badCount}}</span><span style="color: #5a615a">ô ✗ chưa có phiếu 0206</span></div>
+<span style="font-size: 12px; color: #5a615a">{{badText}}</span>
+</div>
+</section>
+</sc-if>
+
+<section aria-labelledby="month-h" style="background: #ffffff; border: 1px solid #e9eae2; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px">
+<h2 id="month-h" style="margin: 0; font-size: 18px; font-weight: 700; flex: 1 1 260px">Lưới tháng <span style="font-weight: 400; font-size: 13px; color: #5a615a">{{hint}}</span></h2>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: #5a615a; align-items: center">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: #0f7a55; font-weight: 700; border: 1px solid #e9eae2">✓</span>Đạt</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: #c0392b; font-weight: 700; background: #fdeceb; box-shadow: inset 0 0 0 2px #c0392b">✗</span>Lỗi, chưa có 0206</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: #a34d08; font-weight: 700; background: #fdf0e3">✗</span>Lỗi, đã có 0206</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-block; width: 18px; height: 18px; border-radius: 4px; box-shadow: inset 0 0 0 2px #f59e0b"></span>Bỏ sót</span>
+</div>
+</div>
+
+<sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+<div role="region" aria-label="Ô đang chọn" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; border-radius: 12px; background: #1f231c; color: #ffffff">
+<div style="flex: 1 1 260px; line-height: 1.35"><strong>{{selName}}</strong> · ngày {{selDay}}/10<div style="font-size: 12px; color: #c9d6cd">{{selState}}</div></div>
+<button onClick="{{ setOk }}" style="height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: #0e9f6e; color: #ffffff; font-weight: 600; cursor: pointer">✓ Đạt</button>
+<button onClick="{{ setBad }}" style="height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: #c0392b; color: #ffffff; font-weight: 600; cursor: pointer">✗ Lỗi</button>
+<button onClick="{{ setBlank }}" style="height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #5a615a; background: none; color: #ffffff; font-weight: 600; cursor: pointer">Để trống</button>
+<sc-if value="{{ selNeed }}" hint-placeholder-val="{{ false }}"><a href="PhieuSuCo.dc.html" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 8px; background: #ffffff; color: #c0392b; font-weight: 700; text-decoration: none">Lập 0206 cho ô này ›</a></sc-if>
+<sc-if value="{{ selLink }}" hint-placeholder-val="{{ false }}"><a href="PhieuSuCo.dc.html" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 8px; background: #ffffff; color: #a34d08; font-weight: 700; text-decoration: none">Mở {{selLink}} ›</a></sc-if>
+<button onClick="{{ clearSel }}" aria-label="Đóng" style="width: 36px; height: 36px; border-radius: 8px; border: 0; background: none; color: #c9d6cd; font-size: 18px; cursor: pointer">×</button>
+</div>
+</sc-if>
+
+<div style="overflow-x: auto; border: 1px solid #e9eae2; border-radius: 10px">
+<table style="border-collapse: collapse; font-size: 12px; width: 100%; min-width: 1060px">
+<thead>
+<tr style="background: #f2f1ea; color: #5a615a">
+<th scope="col" rowspan="2" style="padding: 6px; width: 30px; font-weight: 600; text-align: center">No</th>
+<th scope="col" rowspan="2" style="padding: 6px 10px; text-align: left; font-weight: 600; width: 200px">Name Job Backup</th>
+<th scope="col" rowspan="2" style="padding: 6px 2px; font-weight: 600; width: 40px; line-height: 1.1">Points NAS</th>
+<th scope="col" rowspan="2" style="padding: 6px 2px; font-weight: 600; width: 40px; line-height: 1.1">Storage</th>
+<th scope="col" rowspan="2" style="padding: 6px 2px; font-weight: 600; width: 40px; line-height: 1.1">Points Cloud</th>
+<th scope="col" rowspan="2" style="padding: 6px 2px; font-weight: 600; width: 40px; line-height: 1.1; border-right: 1px solid #d8dbd0">Storage</th>
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="31">
+<th scope="col" style="padding: 6px 0 2px; width: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.1; {{d.style}}">{{d.n}}<div style="font-size: 9px; font-weight: 400; font-family: 'Be Vietnam Pro', sans-serif">{{d.wd}}</div></th>
+</sc-for>
+</tr>
+<tr style="background: #f2f1ea">
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="31">
+<td style="padding: 0 0 4px; text-align: center">
+<sc-if value="{{ d.canAll }}" hint-placeholder-val="{{ false }}"><button onClick="{{ d.all }}" aria-label="{{d.allLabel}}" title="{{d.allLabel}}" style="width: 20px; height: 20px; padding: 0; border-radius: 5px; border: 1px solid #0e9f6e; background: #ffffff; color: #0e9f6e; font-size: 11px; font-weight: 700; cursor: pointer">✓</button></sc-if>
+</td>
+</sc-for>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="38">
+<tr style="border-top: 1px solid {{r.line}}">
+<td style="padding: 3px 6px; text-align: center; color: #5c635c">{{r.no}}</td>
+<td style="padding: 3px 10px; {{r.nameStyle}}">{{r.label}}</td>
+<td style="text-align: center; color: #5a615a">{{r.pn}}</td>
+<td style="text-align: center; color: #5a615a">{{r.ln}}</td>
+<td style="text-align: center; color: #5a615a">{{r.pc}}</td>
+<td style="text-align: center; color: #5a615a; border-right: 1px solid #d8dbd0">{{r.lc}}</td>
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="31">
+<td style="height: 26px; padding: 1px; text-align: center; {{c.tdStyle}}">
+<sc-if value="{{ c.btn }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.pick }}" aria-label="{{c.aria}}" style="width: 100%; height: 24px; padding: 0; border: 0; border-radius: 4px; cursor: pointer; font-weight: 700; font-size: 12px; {{c.style}}">{{c.t}}</button></sc-if>
+<sc-if value="{{ c.plain }}" hint-placeholder-val="{{ true }}"><span style="display: block; height: 24px; line-height: 24px; border-radius: 4px; font-weight: 700; {{c.style}}">{{c.t}}</span></sc-if>
+</td>
+</sc-for>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div style="font-size: 12px; color: #5c635c">Job #24–29 chưa có số điểm lưu nên để trống. Note trên bản in: Planned Monthly Data Storage Maintenance: Successful "✓", Failed "✗".</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { month: 10, t: {}, sel: null };
+  }
+  jobs() {
+    return [
+      [1,'ACC-SUNAPP','',35,'NAS',14,'Cloud'],[2,'ACC-SUNDB','',35,'NAS',14,'Cloud'],
+      [3,'BPM','',14,'NAS',14,'Cloud'],[4,'BPM TEST','',7,'NAS',14,'Cloud'],
+      [5,'File Server-1','File Server-1_OS',14,'NAS',14,'Cloud'],[5,'File Server-1','Volume_E File Server-1',31,'NAS',31,'Cloud'],[5,'File Server-1','Volume_F File Server-1',31,'NAS',31,'Cloud'],
+      [6,'File Server-2','File Server-2_OS',14,'NAS',14,'Cloud'],[6,'File Server-2','Volume_E File Server-2',31,'NAS',31,'Cloud'],
+      [7,'File Server D&E','File Server D&E_OS',14,'NAS',14,'Cloud'],[7,'File Server D&E','Sub Folder A-Project Files',21,'NAS','',''],[7,'File Server D&E','Sub Folder A- 01 > 11',21,'NAS','',''],[7,'File Server D&E','Sub Folder B',31,'NAS','',''],[7,'File Server D&E','Sub Folder C',31,'NAS','',''],[7,'File Server D&E','Sub Folder D',21,'NAS','',''],
+      [8,'SPM_APP','',35,'NAS','',''],[9,'SPM_DB','',35,'NAS',7,'Cloud'],[10,'ERP-Workflow','',14,'NAS',7,'Cloud'],[11,'ERP-Workflow-SSR','',14,'NAS',7,'Cloud'],
+      [12,'WS-APP','',14,'NAS',7,'Cloud'],[13,'WS-DB','',14,'NAS',7,'Cloud'],[14,'FPT-APP01','',14,'NAS',7,'Cloud'],[15,'FPT-SQL01','',14,'NAS',7,'Cloud'],
+      [16,'Futronic','',30,'NAS',7,'Cloud'],[17,'IT-SUPPORT','',7,'NAS',7,'Cloud'],[18,'PMH-Admin-Softs','',14,'NAS',7,'Cloud'],[19,'PMH-CSD-Softs','',14,'NAS',7,'Cloud'],
+      [20,'PMHPDC','',28,'NAS',7,'Cloud'],[21,'PMHSDC','',28,'NAS',7,'Cloud'],[22,'SCAN SERVER','',32,'NAS',7,'Cloud'],[23,'T-Win','',7,'NAS',7,'Cloud'],
+      [24,'Eticket_App','','','','',''],[25,'Eticket_DB','','','','',''],[26,'Einvoice_App','','','','',''],[27,'Einvoice_DB','','','','',''],[28,'TollPmh_Cloud','','','','',''],[29,'CrPmh_Cloud','','','','',''],
+      [30,'Veeam_Backup','',21,'NAS',7,'Cloud']
+    ];
+  }
+  base(i, d) {
+    if (this.state.month === 9) return d === 17 && i === 3 ? 'bad' : 'ok';
+    if (d > 12) return '';
+    if (i === 8 && d >= 5 && d <= 7) return 'bad';
+    if (i === 16 && d === 11) return 'bad';
+    if (d === 9 && i >= 19 && i <= 23) return '';
+    if (d === 12) return i < 12 ? 'ok' : '';
+    return 'ok';
+  }
+  get(i, d) {
+    var k = i + ':' + d, t = this.state.t;
+    return k in t ? t[k] : this.base(i, d);
+  }
+  put(changes) {
+    this.setState({ t: Object.assign({}, this.state.t, changes) });
+  }
+  renderVals() {
+    var TODAY = 12, self = this, J = this.jobs(), s = this.state;
+    var open = s.month === 10, lastDay = open ? TODAY : 30;
+    var WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    var first = open ? 4 : 2;
+    function linkOf(i, d) { if (!open) return i === 3 && d === 17 ? '0206-2026-009' : ''; return i === 8 && d >= 5 && d <= 7 ? '0206-2026-014' : ''; }
+    var days = [];
+    var missCount = 0, missDays = {}, badCount = 0, badList = [], todayDone = 0, todayTotal = 0;
+    J.forEach(function (j, i) {
+      if (j[3] === '') return;
+      for (var d = 1; d <= TODAY; d++) {
+        var v = self.get(i, d);
+        if (d === TODAY) { todayTotal++; if (v) todayDone++; }
+        else if (!v) { missCount++; missDays[d] = (missDays[d] || 0) + 1; }
+        if (v === 'bad' && !linkOf(i, d)) { badCount++; badList.push(j[1] + ' · ' + d + '/10'); }
+      }
+    });
+    for (var d = 1; d <= (open ? 31 : 30); d++) {
+      (function (d) {
+        var blanks = 0;
+        if (open && d <= TODAY) J.forEach(function (j, i) { if (j[3] !== '' && !self.get(i, d)) blanks++; });
+        var wd = WD[(first + d - 1) % 7];
+        days.push({ n: d, wd: wd,
+          style: open && d === TODAY ? 'background:#e5f6ee;color:#0a7d54' : open && d > TODAY ? 'color:#a3a89f' : wd === 'CN' ? 'color:#a34d08' : '',
+          canAll: blanks > 0, allLabel: 'Đánh ✓ ' + blanks + ' ô trống ngày ' + d,
+          all: function () { var ch = {}; J.forEach(function (j, i) { if (j[3] !== '' && !self.get(i, d)) ch[i + ':' + d] = 'ok'; }); self.put(ch); } });
+      })(d);
+    }
+    var prev = null;
+    var rows = J.map(function (j, i) {
+      var firstRow = j[0] !== prev; prev = j[0];
+      var hasPts = j[3] !== '', hasSubs = j[2] !== '';
+      var cells = [];
+      for (var d = 1; d <= (open ? 31 : 30); d++) {
+        (function (d) {
+          var v = hasPts ? self.get(i, d) : '', lk = linkOf(i, d);
+          var editable = open && hasPts && d <= TODAY;
+          var sel = s.sel && s.sel.i === i && s.sel.d === d;
+          var st = '', td = '';
+          if (!hasPts) td = 'background:#faf9f5';
+          else if (open && d > TODAY) td = 'background:#f2f1ea';
+          else if (open && d === TODAY) td = 'background:#e5f6ee';
+          if (v === 'ok') st = 'color:#0f7a55;background:transparent';
+          else if (v === 'bad' && lk) st = 'color:#a34d08;background:#fdf0e3';
+          else if (v === 'bad') st = 'color:#c0392b;background:#fdeceb;box-shadow:inset 0 0 0 2px #c0392b';
+          else if (editable && d < TODAY) st = 'background:#ffffff;box-shadow:inset 0 0 0 2px #f59e0b';
+          else st = 'background:transparent';
+          if (sel) st += ';outline:2px solid #1f231c;outline-offset:1px';
+          cells.push({ t: v === 'ok' ? '✓' : v === 'bad' ? '✗' : '', style: st, tdStyle: td, btn: editable, plain: !editable,
+            aria: (j[2] || j[1]) + ' ngày ' + d + ': ' + (v === 'ok' ? 'đạt' : v === 'bad' ? 'lỗi' : 'trống'),
+            pick: function () { self.setState({ sel: { i: i, d: d } }); } });
+        })(d);
+      }
+      return {
+        no: firstRow ? j[0] : '',
+        label: hasSubs ? (firstRow ? j[1] + ' › ' + j[2] : '↳ ' + j[2]) : j[1],
+        nameStyle: hasSubs && !firstRow ? 'padding-left:22px;color:#5a615a' : 'font-weight:600' + (hasPts ? '' : ';color:#8a8f86'),
+        pn: j[3], ln: j[4], pc: j[5], lc: j[6], line: firstRow ? '#e9eae2' : '#f2f1ea', cells: cells
+      };
+    });
+    var sel = s.sel, selV = sel ? this.get(sel.i, sel.d) : '', selLk = sel ? linkOf(sel.i, sel.d) : '';
+    var missKeys = Object.keys(missDays);
+    function setSel(v) { return function () { var ch = {}; ch[sel.i + ':' + sel.d] = v; self.put(ch); }; }
+    return {
+      open: open, locked: !open, monthLabel: open ? '10/2026' : '09/2026',
+      statusLabel: open ? 'Đang ghi' : 'Hoàn tất',
+      statusStyle: open ? 'background:#e6f0fa;color:#1d5f9e' : 'background:#e4f4ee;color:#0f7a55',
+      prevMonth: function () { self.setState({ month: 9, sel: null }); },
+      nextMonth: function () { self.setState({ month: 10, sel: null }); },
+      hint: open ? '· bấm một ô để đổi ✓ / ✗ hoặc lập 0206; nút ✓ trên đầu cột đánh hết ô trống của ngày đó' : '· chỉ xem',
+      days: days, rows: rows,
+      todayDone: todayDone + '/' + todayTotal, todayPct: Math.round(todayDone * 100 / todayTotal) + '%',
+      missCount: missCount, missText: missCount ? 'Ngày ' + missKeys.map(function (k) { return k + '/10 (' + missDays[k] + ' ô)'; }).join(', ') : 'Không còn ô nào',
+      missInk: missCount ? '#a34d08' : '#0f7a55', missBorder: missCount ? '#f5c98a' : '#e9eae2',
+      badCount: badCount, badText: badCount ? badList.join(', ') : 'Mọi ô ✗ đã có phiếu',
+      badInk: badCount ? '#c0392b' : '#0f7a55', badBorder: badCount ? '#e7a59d' : '#e9eae2',
+      hasSel: !!sel, selName: sel ? (J[sel.i][2] || J[sel.i][1]) : '', selDay: sel ? sel.d : '',
+      selState: selV === 'ok' ? 'Đang là ✓ Đạt' : selV === 'bad' ? (selLk ? 'Đang là ✗ · đã có ' + selLk : 'Đang là ✗ · chưa có phiếu 0206') : 'Đang trống',
+      selNeed: selV === 'bad' && !selLk, selLink: selV === 'bad' ? selLk : '',
+      setOk: sel ? setSel('ok') : null, setBad: sel ? setSel('bad') : null, setBlank: sel ? setSel('') : null,
+      clearSel: function () { self.setState({ sel: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

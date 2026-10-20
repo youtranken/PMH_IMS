@@ -16,6 +16,11 @@ export class FilesApiService {
     return this.files.listFor(ownerType, ownerId);
   }
 
+  /** File còn sống của nhiều chủ thể cùng loại — một câu cho cả trang danh sách. */
+  listForOwners(ownerType: FileOwnerType, ownerIds: string[]): Promise<FileRecord[]> {
+    return this.files.listForOwners(ownerType, ownerIds);
+  }
+
   /** Ảnh còn sống theo id — vắng mặt = không có, đã xoá, hoặc không phải ảnh. */
   imagesByIds(ids: string[]): Promise<Map<string, FileRecord>> {
     return this.files.imagesByIds(ids);

@@ -163,13 +163,11 @@ export class SecurityProbeService {
         /*
          * TRẦN CHỜ KHOÁ. `pg_advisory_xact_lock` là khoá CHỜ, và lượt chờ ấy giữ
          * một connection của pool trong lúc `vault.controller` đang `await` nó TRƯỚC khi ném
-         * 403 về cho người dùng. Mặc định: `lock_timeout`, `statement_timeout` và
-         * `idle_in_transaction_session_timeout` của DB đều là 0, `new Pool({connectionString})`
-         * không khai `max` (mặc định pg = 10) cũng không khai `connectionTimeoutMillis`. Một
-         * phiên kẹt `idle in transaction` khi đang giữ cùng khoá là mọi lượt sau chờ MÃI MÃI,
-         * mỗi lượt ăn một trong 10 connection — cạn 10 là toàn bộ API đứng, không riêng đường
-         * két, và không có gì tự gỡ. Hết 2 giây thì lệnh ném, `catch` bên ngoài đã ghi log sẵn,
-         * và thứ mất đi chỉ là một lá thư cảnh báo trùng.
+         * 403 về cho người dùng. Trần chung của pool (`DB_LOCK_TIMEOUT_MS`, `database.module.ts`)
+         * tính cho mọi câu lệnh nên rộng; ở đây người dùng đang đứng chờ một câu từ chối, và mỗi
+         * lượt chờ ăn một connection của pool — nhiều lượt cùng kẹt thì cạn pool, cả API đứng chứ
+         * không riêng đường két. Hết 2 giây thì lệnh ném, `catch` bên ngoài đã ghi log sẵn, và thứ
+         * mất đi chỉ là một lá thư cảnh báo trùng.
          */
         await tx.execute(sql`SET LOCAL lock_timeout = '2s'`);
         /*

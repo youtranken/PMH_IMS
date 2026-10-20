@@ -182,12 +182,12 @@ Member lấy được secret đúng lúc sự cố theo 3 tầng (whitelist / xi
 Sếp 3 phút sáng thứ Hai: sắp hết hạn, sự cố tuần, break-glass tuần; tự export xlsx mọi bảng.
 **FRs covered:** FR-027, FR-028
 
-### Epic 8: Phiếu ISO định kỳ (Đợt 3 — dự án con)
-5 phiếu nhóm A (0203/0204/0205/0208/0213) sinh kỳ tự động, tick từng ngày trên máy, autofill snapshot, in ký tay y hệt layout ISO, khóa kỳ, lưu theo năm.
-**FRs covered:** FR-029, FR-031, AR-8
+### Epic 8: Phiếu ISO đợt 1 — 0203 · 0206 · 0208 (Q-28)
+Ba phiếu IT dùng hằng ngày lên máy, giữ nguyên mẫu giấy: theo dõi backup 0203 và antivirus 0208 đánh trên lưới tháng, mỗi ✗ có phiếu sự cố 0206; xem lại rồi gửi chốt, SA/Admin duyệt, in ký tay, scan đính kèm; kỳ xếp theo năm / tháng, mở lại phải có lý do và được duyệt. Các phiếu nhóm A khác (0204, 0213) để đợt sau; 0205 không làm.
+**FRs covered:** FR-029, FR-030 (0206), FR-031, AR-8 · **Thiết kế:** Claude Design `DPeb4R4GFzJKJ1y8UN6svp`
 
-### Epic 9: Sự cố, Phiếu sự kiện & Documents (Đợt 3)
-Sự cố có hồ sơ gắn thiết bị và nâng cấp được thành RCA; phiếu nhóm B chạy qua approvals; runbook/WI-IT có nhà trong sidebar Documents.
+### Epic 9: Sự cố, Phiếu sự kiện & Documents (Đợt 3 — để sau, Q-28)
+Sự cố nâng cấp được thành RCA; phiếu nhóm B chạy qua approvals; runbook/WI-IT có nhà trong sidebar Documents. Phiếu 0206 đã chuyển sang Epic 8 (Story 8.3).
 **FRs covered:** FR-030, FR-032, FR-033, FR-034, FR-035
 
 ### Epic 10: Sơ đồ mạng (thay Visio) — làm trước Epic 8–9, Q-23
@@ -647,79 +647,224 @@ So that cần số liệu cho cấp trên không phải nhờ ai.
 **Then** file xlsx tải về tôn trọng filter hiện tại, cột đúng như đang hiển thị; hành động export ghi audit
 **And** KHÔNG có export nào chứa secret/plaintext (FR-026 giữ nguyên hiệu lực)
 
-## Epic 8: Phiếu ISO định kỳ
+## Epic 8: Phiếu ISO đợt 1 — 0203 · 0206 · 0208
 
-5 phiếu nhóm A sinh kỳ tự động, tick từng ngày trên máy, in ký tay y hệt ISO.
+Phạm vi và luật nghiệp vụ: `docs/QUYET-DINH.md` Q-28 (thắng file này khi lệch). Thiết kế màn:
+Claude Design `https://claude.ai/artifact/DPeb4R4GFzJKJ1y8UN6svp` (7 màn + sidebar).
 
-### Story 8.1: Template phiếu và sinh kỳ tự động
+Luật chung cho cả epic:
+
+- Module `iso-forms` sở hữu mọi bảng của phiếu (AD-3). Đọc / ghi thiết bị, phần mềm: **không**;
+  tên job, máy, bộ phận đều gõ tay (Q-28).
+- Duyệt chốt và duyệt mở lại đi qua module `approvals` (Q-05), không dựng luồng duyệt thứ hai.
+  Bản ký đi qua module `files` và `AttachmentPanel` / `FilePicker`.
+- Mọi lệnh ghi có `@Roles` + `@Audited` + transaction `tx` (AD-5, AD-9). Tick / ghi issue / gửi
+  chốt: chỉ người phụ trách (chính hoặc dự phòng) của loại phiếu đó và SA/Admin, kiểm ở API; Member
+  khác chỉ xem. 0206 lập thẳng: mọi tài khoản IT. Duyệt: SA/Admin (SA/Admin tự gửi thì tự duyệt).
+- Bốn trạng thái kỳ, một bộ tên ở mọi màn: **Đang ghi → Chờ duyệt → Đã chốt · chờ bản ký → Hoàn
+  tất.** Từ Chờ duyệt trở đi mọi ô của kỳ bị khoá ở API, không chỉ ở giao diện.
+- Ngày "hôm nay" và ngày tương lai tính theo giờ Việt Nam (Asia/Ho_Chi_Minh), không theo giờ máy.
+- Bản in dùng ✓ / ✗, không emoji (máy chủ không có font emoji).
+- Lưới tick, form phiếu và màn Xem lại chỉ cần desktop (UX-DR2). Danh sách 0206 và màn Kỳ phiếu
+  là màn đọc, phải chạy ở 390px.
+- Tham số (cỡ file scan tối đa, đuôi file nhận, giờ gửi và số ngày của mail nhắc) nằm ở
+  `system_config` (AD-11).
+- Kỳ tự sinh theo năm / tháng cho mọi năm, bắt đầu dùng từ 11/2026; không nhập tay từng kỳ.
+
+### Story 8.1: Nền phiếu ISO — kỳ tháng, danh sách job backup và bộ phận
 
 As a Member,
-I want hệ thống tự sinh kỳ phiếu theo chu kỳ (ngày/tháng/đợt),
-So that không ai phải nhớ "tháng này đến hạn phiếu nào".
+I want hệ thống có sẵn kỳ tháng cho 0203 / 0208 và hai danh sách job backup, bộ phận do IT tự quản,
+So that mở phiếu tháng nào cũng có đúng các dòng cần đánh mà không phải dựng lại.
 
 **Acceptance Criteria:**
 
-**Given** module sheets sở hữu sheet_template (5 phiếu nhóm A: 0203, 0204, 0205×5 bộ phận, 0208, 0213) + sheet_period; seed template là migration (AD-10)
-**When** sweep worker chạy đầu chu kỳ
-**Then** kỳ mới sinh tự động cho từng template theo chu kỳ khai báo (0203 theo tháng-grid-ngày, 0205/0208 theo tháng, 0213 theo đợt tạo tay)
-**And** field autofill (tên job backup, tên server, danh mục) SNAPSHOT tại thời điểm sinh kỳ (AD-14/AR-8) — dữ liệu sống đổi sau đó không làm phiếu đã sinh thay đổi
+**Given** module `iso-forms` với bảng kỳ (một kỳ cho mỗi loại phiếu × tháng), danh sách job backup, danh sách bộ phận và người phụ trách từng loại phiếu; migration **không** seed job (IT tự tạo trên prod; job #24–29 của mẫu là dòng dư) và chỉ seed một bộ phận làm ví dụ
+**When** member mở 0203 hoặc 0208 của một tháng chưa có kỳ
+**Then** kỳ được tạo ở trạng thái Đang ghi (chỉ cho tháng hiện tại và tháng đã qua; tháng tương lai không tạo được)
+**And** sidebar có nhóm "Phiếu ISO" gồm 5 mục: Theo dõi backup · 0203, Theo dõi antivirus · 0208, Sự cố · 0206, Kỳ phiếu & chốt kỳ, Danh mục phiếu
+**And** nhóm "Phiếu ISO" thu gọn mặc định, bấm đầu nhóm để mở / đóng; đang ở một màn phiếu thì tự mở; khi thu gọn, đầu nhóm hiện số việc cần làm
 
-### Story 8.2: Điền phiếu dạng grid tick ngày
+**Given** màn "Danh mục phiếu" (mục riêng trong nhóm Phiếu ISO của sidebar; tab Job backup, Bộ phận, Người phụ trách)
+**When** member thêm / sửa / sắp thứ tự / ngừng / bật lại một job (No, Name Job Backup, đối tượng con, Points NAS, Storage location, Points Cloud, Storage location), hoặc thêm / sửa bộ phận (mã, tên)
+**Then** thay đổi áp ngay cho kỳ còn Đang ghi; kỳ từ Chờ duyệt trở đi giữ đúng danh sách lúc gửi chốt (snapshot, AR-8)
+**And** job có ngày bắt đầu theo dõi: thêm job giữa tháng thì các ngày trước đó để trống và không tính là bỏ sót; job ngừng thì các ngày sau ngày ngừng cũng vậy
+**And** job đã ngừng vẫn hiện ở kỳ cũ có dữ liệu của nó; tên job trùng trong danh sách đang theo dõi bị từ chối
+
+**Given** mục "Người phụ trách" ở màn Danh mục (chỉ SA/Admin sửa)
+**When** SA/Admin gán người chính và người dự phòng cho 0203 hoặc 0208
+**Then** chỉ hai người đó và SA/Admin được tick / ghi issue / gửi chốt phiếu đó, Member khác chỉ xem (API từ chối 403); loại phiếu làm sau dùng cùng bảng này
+**And** loại phiếu chưa gán người phụ trách thì chỉ SA/Admin thao tác được, và màn phiếu báo rõ "chưa có người phụ trách"
+
+### Story 8.2: Lưới 0203 — đánh ✓ / ✗ theo ngày
 
 As a Member,
-I want tick kết quả từng ngày cho từng job trên phiếu 0203/0208,
-So that việc theo dõi hằng ngày làm trong 30 giây trên máy thay vì tô giấy.
+I want đánh kết quả backup trên lưới job × ngày, sửa được cả ngày đã qua,
+So that việc hằng ngày xong trong vài cú bấm mà không bỏ sót ngày nào.
 
 **Acceptance Criteria:**
 
-**Given** kỳ phiếu 0203 (job backup × ngày trong tháng) hoặc 0208 (máy theo bộ phận × ngày)
-**When** member tick ✓/✗ vào ô ngày và ghi note khi ✗
-**Then** mỗi lần tick lưu ngay (autosave), ghi audit; ô của ngày tương lai bị khóa; màn grid là desktop-only (UX-DR2)
-**And** phiếu hiển thị tiến độ kỳ (bao nhiêu ngày đã tick)
+**Given** kỳ 0203 Đang ghi, lưới đủ các cột cố định `No · Name Job Backup · Points NAS · Storage location · Points Cloud · Storage location · 1…31` (đầu cột ngày ghi thêm thứ)
+**When** member bấm một ô của hôm nay hoặc ngày đã qua
+**Then** hiện thanh chọn ✓ Đạt / ✗ Lỗi / Để trống; chọn xong lưu ngay và ghi audit
+**And** ô ngày tương lai, ô trước ngày bắt đầu / sau ngày ngừng của job, và mọi ô của kỳ đã khoá đều không bấm được — API từ chối cả khi gọi thẳng; người không phụ trách 0203 thấy lưới chỉ xem
 
-### Story 8.3: Phiếu kiểm tra định kỳ dạng checklist
+**Given** cột ngày còn ô trống
+**When** bấm nút ✓ trên đầu cột đó
+**Then** mọi ô trống của ngày đó thành ✓ trong một lệnh; ô đã là ✗ giữ nguyên
+
+**Given** kỳ đang ghi
+**When** mở màn
+**Then** đầu màn có 3 số: ô hôm nay đã đánh / tổng; ô bỏ sót ở ngày đã qua (kèm ngày nào); ô ✗ chưa có 0206 (kèm job · ngày)
+**And** ô ✗ chưa có phiếu viền đỏ, ô ✗ đã có phiếu nền cam; bấm ô ✗ có nút "Lập 0206 cho ô này" (sang form 0206 điền sẵn) hoặc "Mở 0206-…"; ô bỏ sót viền cam
+
+**Given** kỳ từ Chờ duyệt trở đi
+**When** member chuyển sang tháng đó
+**Then** màn hiện dải "Đã chốt · chỉ xem" kèm trạng thái, ô không bấm được, không có nút gửi chốt
+
+### Story 8.3: Phiếu sự cố 0206 — lập, gắn ô ✗, xem lại trước khi lưu
 
 As a Member,
-I want điền phiếu kiểm tra 0204/0205 (checklist hợp lệ/không hợp lệ) và 0213 (update firmware) trên máy,
-So that mọi phiếu nhóm A đều số hóa cùng một nếp.
+I want lập 0206 từ ô ✗ hoặc lập thẳng, xem lại bản phiếu rồi mới lưu,
+So that mọi sự cố có phiếu đúng mẫu ISO và không lưu nhầm.
 
 **Acceptance Criteria:**
 
-**Given** kỳ phiếu 0204/0205 với các mục kiểm tra theo đúng template gốc (song ngữ vi/zh giữ nguyên)
-**When** member điền kết quả từng mục (hợp lệ/không hợp lệ + ghi chú)
-**Then** phiếu lưu theo kỳ + bộ phận; mục "không hợp lệ" bắt buộc ghi chú
-**And** phiếu 0213 tạo theo đợt: chọn thiết bị từ kho (devices.api), version hiện tại → version đích, downtime, kế hoạch backup/rollback — đúng các trường mẫu gốc
+**Given** form 0206 đúng mẫu: Date Report, Type of Incident (Backup / Server / Network / Database / Other), Detection Time → Resolution Time (ngày + giờ, chọn khoảng trên lịch), Severity (Low / Medium / High), Current Status (Temporary Fix / Resolved / In Progress), Incident Description, Corrective Action
+**When** chọn Type = Backup
+**Then** hiện bảng "Detail Error Backup" (Job Name, Type Backup Full / Incr / Copy, Type Data DB / App / FileSV, Storage location, Error Message, Issue Resolution), tối đa 11 dòng như mẫu; type khác thì không có bảng này
 
-### Story 8.4: In đúng layout ISO, khóa kỳ, lưu theo năm
+**Given** member mở form từ một ô ✗ (0203 hoặc 0208)
+**When** form mở
+**Then** ô đó đã gắn sẵn, ngày phát hiện điền sẵn; khu "Gắn với ô ✗" cho gắn thêm các ô ✗ chưa có phiếu (cả 0203 lẫn 0208) và bỏ gắn
+**And** một sự cố một phiếu: sự cố kéo sang tháng sau thì ô ✗ của tháng sau gắn vào chính phiếu đó (phiếu vẫn thuộc kỳ tháng phát hiện); một ô ✗ chỉ gắn được với một phiếu; phiếu lập thẳng (không gắn ô nào) vẫn hợp lệ
+
+**Given** form đã điền
+**When** bấm "Xem lại trước khi lưu"
+**Then** hiện bản phiếu dạng giấy cùng danh sách kiểm (đủ ô bắt buộc, ô ✗ đã gắn, khoảng thời gian nằm trong kỳ chưa khoá); "Quay lại sửa" giữ nguyên dữ liệu đã gõ
+**And** chỉ "Xác nhận lưu phiếu" mới ghi; số phiếu `0206-YYYY-NNN` cấp lúc lưu, đếm lại từ 001 mỗi năm, không trùng khi hai người lưu cùng lúc (kiểm ở `test:db`)
+**And** số phiếu chỉ hiện trên IMS, không in lên bản giấy
+**And** phiếu thuộc kỳ của tháng chứa Detection Time; ô ✗ đã gắn đổi sang nền cam trên lưới
+**And** phiếu Resolved / Temporary Fix sửa được tới khi kỳ của nó bị khoá; phiếu In Progress (Resolution Time để trống) vẫn sửa được sau khi kỳ khoá, và tự khoá khi đổi sang Resolved
+
+**Given** màn danh sách 0206
+**When** member xem
+**Then** trên cùng là các ô ✗ chưa có phiếu (của 0203 và 0208) kèm nút "Lập 0206"; bảng phiếu có Số phiếu, Loại, Đối tượng, Phát hiện → Khắc phục, Trạng thái, Nguồn (0203 · tên job / 0208 · bộ phận · máy / Lập thẳng), Người lập, Bản ký, Kỳ phiếu
+**And** chọn năm trước (mặc định năm nay), rồi lọc được theo tháng, loại, nguồn, bản ký (có / chưa); màn chạy ở 390px
+
+### Story 8.4: Lưới 0208 — ghi kết quả antivirus theo ngày
 
 As a Member,
-I want in phiếu ra giấy giống hệt mẫu ISO để ký tay,
-So that auditor nhìn bản in không phân biệt được với phiếu giấy cũ.
+I want ghi mỗi ngày "không có issue" hoặc các máy bị issue,
+So that phiếu 0208 tháng nào cũng đủ ngày và mọi issue có phiếu 0206.
 
 **Acceptance Criteria:**
 
-**Given** kỳ phiếu đã điền xong
-**When** bấm In
-**Then** bản in (@media print) tái tạo đúng layout mẫu ISO từng phiếu — mã phiếu, bảng, ô ký Reported/Approved, song ngữ đúng mẫu (UX-DR4); xuất được cả xlsx (exceljs)
-**And** khi member đánh dấu "chốt kỳ": phiếu khóa không sửa được nữa (chỉ SA mở lại, ghi audit); phiếu cũ tra cứu theo năm/tháng/loại (FR-031)
-**And** danh sách kỳ hiển thị trạng thái (đang điền / đã chốt / trễ)
+**Given** kỳ 0208 Đang ghi
+**When** member mở màn
+**Then** đầu màn liệt kê các ngày (đã qua và hôm nay) chưa có kết quả, mỗi ngày một nút "✓ … không có issue", cùng nút "+ Ghi máy có issue"
+
+**Given** form ghi issue
+**When** member chọn Reported Date (hôm nay hoặc ngày đã qua của kỳ), Division (chọn từ danh mục, hoặc "+ Bộ phận mới" gõ tên tại chỗ và lưu luôn vào danh mục), gõ Computer Name, Incident Description, Resolution Date, Handled rồi lưu
+**Then** thêm một dòng: một máy × một ngày phát hiện; cùng máy hai ngày issue là hai dòng; ngày đó tính là đã có kết quả
+**And** dòng gom theo bộ phận, chỉ bộ phận có issue trong tháng đó mới hiện, nên cột Division khác nhau giữa các tháng (cả trên màn lẫn bản in, không in dòng trống cho bộ phận khác); dòng cuối "Other Division" luôn có
+**And** người không phụ trách 0208 chỉ xem, không có nút ghi
+
+**Given** lưới tháng
+**When** hiển thị
+**Then** dòng issue: ✗ đúng ngày phát hiện, ✓ ở các ngày đã có kết quả khác; Other Division ✓ ở mọi ngày đã có kết quả; ngày đã qua chưa có kết quả viền cam
+**And** dòng issue chưa có 0206 có link "Lập 0206" (sang form điền sẵn, Story 8.3); đã có thì hiện số phiếu
+**And** kỳ đã khoá: dải "Đã chốt · chỉ xem", không ghi được (API từ chối)
+
+### Story 8.5: Xem lại, gửi chốt, duyệt và bản in
+
+As a Member,
+I want xem đúng bản in và danh sách kiểm trước khi gửi chốt, để SA/Admin duyệt rồi khoá,
+So that phiếu nộp ISO không còn ô thiếu và không ai sửa được sau khi đã duyệt.
+
+**Acceptance Criteria:**
+
+**Given** kỳ 0203 hoặc 0208 Đang ghi
+**When** member bấm "Xem lại & gửi chốt"
+**Then** màn Xem lại hiện đúng bản in (0203: A3 ngang, header System / Check Date = ngày cuối kỳ, Note, ô ký IT Department / Implementation Personnel; 0208: đúng mẫu, System Antivirus) và danh sách kiểm: đủ ngày, không ô bỏ sót, mọi ✗ đã có 0206, danh sách job / bộ phận của kỳ
+**And** còn mục chưa đạt thì nút gửi bị khoá và mục đó có link sửa ("Lập 0206 cho ô này", về lưới); API cũng từ chối gửi chốt khi điều kiện chưa đạt
+**And** gửi chốt chỉ được từ ngày cuối tháng của kỳ trở đi
+**And** 0206 đang In Progress không chặn gửi chốt (ô ✗ đã có phiếu là đạt); danh sách kiểm ghi rõ số phiếu còn In Progress
+
+**Given** member xác nhận gửi chốt
+**When** gửi
+**Then** kỳ sang Chờ duyệt qua `approvals` (Q-05); danh sách job / bộ phận chụp lại cho kỳ (AR-8); ô khoá; SA/Admin thấy ở "Cần bạn duyệt" và ở màn Kỳ phiếu
+
+**Given** SA/Admin mở kỳ Chờ duyệt
+**When** bấm "Xem & duyệt chốt" hoặc "Trả lại" (Trả lại bắt buộc ghi lý do)
+**Then** duyệt → Đã chốt · chờ bản ký, mọi 0206 Resolved / Temporary Fix thuộc kỳ khoá theo (In Progress khoá khi đổi sang Resolved); trả lại → Đang ghi, member nhận được lý do
+**And** Member không duyệt được; SA/Admin tự gửi chốt thì được tự duyệt, audit ghi rõ người gửi và người duyệt là một
+
+**Given** kỳ hoặc phiếu 0206 bất kỳ
+**When** bấm "Xem bản in" / In
+**Then** bản in (@media print) tái tạo đúng bố cục mẫu giấy (UX-DR4), dùng ✓ / ✗; 0206 in đúng mẫu kèm ô ký Reported By / Reviewed and Approved By
+
+### Story 8.6: Bản ký, mở lại kỳ và màn Kỳ phiếu theo năm / tháng
+
+As a Member,
+I want tải bản scan đã ký lên, xin mở lại kỳ khi cần sửa, và tra mọi kỳ theo năm / tháng,
+So that hồ sơ ISO đủ chữ ký và tìm lại được bất kỳ tháng nào.
+
+**Acceptance Criteria:**
+
+**Given** kỳ Đã chốt · chờ bản ký (hoặc phiếu 0206 đã khoá)
+**When** member bấm "Tải bản ký lên…", kéo thả hoặc chọn file (PDF / JPG / PNG, cỡ tối đa theo `system_config`)
+**Then** file lưu qua module `files`, gắn với kỳ (hoặc phiếu 0206); kỳ sang Hoàn tất khi đã có bản ký của kỳ và của mọi 0206 thuộc kỳ
+**And** mỗi 0206 có bản ký riêng; danh sách 0206 và màn Kỳ phiếu hiện trạng thái bản ký
+
+**Given** kỳ Đã chốt · chờ bản ký hoặc Hoàn tất
+**When** member bấm "Xin mở lại…" và ghi lý do (bắt buộc)
+**Then** yêu cầu đi qua `approvals`; SA/Admin duyệt thì kỳ về Đang ghi, bản ký cũ giữ trong lịch sử (không xoá), phải xem lại, gửi chốt, ký và tải bản mới; từ chối thì kỳ giữ nguyên
+**And** các 0206 của kỳ mở theo; phiếu nào bị sửa thì bản ký cũ của nó bị đánh dấu "cũ" và phải tải bản mới, phiếu không sửa giữ bản ký
+**And** mọi lần mở lại ghi audit kèm lý do
+
+**Given** màn Kỳ phiếu
+**When** member chọn năm
+**Then** bảng 12 tháng (mới nhất trên cùng), mỗi loại phiếu một cột trạng thái (0203, 0208), cột 0206 ghi số phiếu và số bản ký, cột "Phiếu khác" để dành cho loại phiếu sau; tháng tương lai mờ
+**And** bấm một tháng thì hiện chi tiết kỳ: thanh 4 bước và đúng nút theo vai (Member: Xem lại & gửi chốt, Tải bản ký, Xin mở lại; SA/Admin: Xem & duyệt chốt, Trả lại)
+**And** đầu màn có 4 số theo vai (Member: ô ✗ chưa có 0206, kỳ chờ tải bản ký, kỳ đang chờ duyệt, kỳ hoàn tất năm nay; SA/Admin: kỳ chờ duyệt, yêu cầu mở lại chờ duyệt, kỳ chờ bản ký, kỳ hoàn tất); màn chạy ở 390px; phiếu giữ vĩnh viễn (FR-031)
+
+### Story 8.7: Email nhắc việc phiếu ISO
+
+As a người phụ trách phiếu (hoặc SA/Admin),
+I want nhận mail khi có ô chưa đánh, kỳ cần gửi chốt, kỳ cần duyệt hoặc việc tồn,
+So that không ai phải nhớ tự mở IMS mỗi ngày mà phiếu vẫn không bị sót.
+
+**Acceptance Criteria:**
+
+**Given** lịch nhắc dùng lại cơ chế gửi theo giờ của `expiry` (digest-schedule) và mail đi qua `outbox` → `mail` (AD-5); giờ gửi và số ngày N nằm ở `system_config`
+**When** tới giờ nhắc buổi sáng
+**Then** 0203 / 0208 nào của ngày hôm qua còn ô trống (job đang theo dõi, ngày chưa có kết quả) thì gửi một mail cho người phụ trách chính, liệt kê phiếu · job / ngày còn thiếu; không thiếu gì thì không gửi
+**And** quá N ngày vẫn thiếu thì gửi thêm cho người dự phòng
+
+**Given** ngày cuối tháng của kỳ Đang ghi
+**When** tới giờ nhắc
+**Then** người phụ trách nhận mail "vào Xem lại và gửi chốt"; sau N ngày chưa gửi thì nhắc lại
+
+**Given** kỳ được gửi chốt, bị trả lại, được duyệt, hoặc yêu cầu mở lại được gửi / duyệt / từ chối
+**When** sự kiện xảy ra
+**Then** SA/Admin nhận mail khi có việc chờ duyệt; người gửi nhận mail kết quả (kèm lý do khi trả lại / từ chối); chờ duyệt quá N ngày thì nhắc lại SA/Admin
+**And** SA/Admin tự gửi và tự duyệt thì không gửi mail cho chính mình
+
+**Given** kỳ Đã chốt · chờ bản ký quá N ngày, hoặc 0206 In Progress quá N ngày
+**When** tới giờ nhắc
+**Then** người phụ trách (với 0206: người lập) nhận mail việc tồn; mỗi việc tối đa một mail mỗi ngày, không gửi trùng khi worker chạy lại (kiểm ở `test:db`)
+**And** mail có nút mở thẳng màn cần làm; nội dung tiếng Việt, màu lấy từ `PALETTE`
 
 ## Epic 9: Sự cố, Phiếu sự kiện & Documents
 
 Sự cố có hồ sơ gắn thiết bị; phiếu nhóm B chạy qua approvals; runbook có nhà.
 
-### Story 9.1: Phiếu sự cố 0206 động theo loại
+### Story 9.1: (đã chuyển) Phiếu sự cố 0206
 
-As a Member,
-I want ghi nhận sự cố bằng form 0206 đúng mẫu ISO, động theo loại sự cố,
-So that ghi 2 phút xong mà vẫn đủ chuẩn audit.
-
-**Acceptance Criteria:**
-
-**Given** form 0206: Date, Type (Backup/Server/Network/Database/Other), Detection/Resolution time, Severity (Low/Med/High), Description, Corrective Action, Status (Temp fix/Resolved/In progress)
-**When** chọn Type
-**Then** section chi tiết của Type đó hiện ra (Backup → Job/Full-Incr-Copy/DB-App-FileSV/Storage/Error; Network/Server → chọn thiết bị liên quan từ kho qua devices.api)
-**And** sự cố lưu thành incident (chủ: incidents) gắn thiết bị; trang thiết bị hiển thị lịch sử sự cố + cách đã sửa (FR-032); màn tạo phiếu pass 390px
+Chuyển sang Epic 8, Story 8.3 (Q-28). Phần còn lại của bản cũ để sau: section chọn thiết bị từ
+kho cho Type Network / Server, và lịch sử sự cố trên trang thiết bị (FR-032) — làm khi Epic 9 mở
+lại.
 
 ### Story 9.2: Nâng cấp RCA 0207 và luồng ký duyệt
 

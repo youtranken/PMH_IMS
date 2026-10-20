@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import type { Tx } from '../../common/tx';
 import { CONFIG_KEYS, type ConfigName } from './system-config.keys';
 import { parseConfigNumber } from './system-config.parse';
 import { systemConfigTable } from './system-config.schema';
@@ -61,16 +60,6 @@ export class SystemConfigService {
       out[name] = value;
     }
     return out;
-  }
-
-  /** Admin sửa tham số — ghi trong transaction của request (AD-5) rồi xoá cache. */
-  async setWithin(tx: Tx, name: ConfigName, value: unknown, actor: string): Promise<void> {
-    const spec = CONFIG_KEYS[name];
-    await tx
-      .update(systemConfigTable)
-      .set({ value, updatedAt: new Date(), updatedBy: actor })
-      .where(eq(systemConfigTable.key, spec.key));
-    this.cache.delete(spec.key);
   }
 
   /**

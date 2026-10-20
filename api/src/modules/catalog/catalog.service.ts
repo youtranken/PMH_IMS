@@ -417,9 +417,12 @@ export class CatalogService {
       await this.assertSiteSelectable(input.siteId, before.siteId as string);
     }
     return this.db.transaction(async (tx) => {
+      // "Trước khi sửa" đọc LẠI trong tx, khoá hàng: hai lượt sửa chồng nhau mà dùng `before` đọc ở
+      // trên thì lượt sau ghi vào lịch sử (chỉ-thêm) giá trị cũ thay vì giá trị lượt trước vừa ghi.
+      const locked = await this.requireOne(entity, id, tx);
       const updated = await this.updateWithin(tx, entity, id, values);
       await this.recordWithin(tx, actor, entity, id, 'updated', {
-        before: pickChanged(before, values),
+        before: pickChanged(locked, values),
         after: values,
       });
       return updated;
@@ -760,11 +763,14 @@ export class CatalogService {
     }
   }
 
+  /** Có `tx` thì khoá hàng FOR UPDATE tới hết transaction của nơi gọi. */
   private async requireOne(
     entity: CatalogEntity,
     id: string,
+    tx?: Tx,
   ): Promise<Record<string, unknown>> {
-    const rows = await this.db.select().from(tableOf(entity)).where(eq(tableOf(entity).id, id));
+    const query = (tx ?? this.db).select().from(tableOf(entity)).where(eq(tableOf(entity).id, id));
+    const rows = tx ? await query.for('update') : await query;
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'CATALOG_NOT_FOUND',

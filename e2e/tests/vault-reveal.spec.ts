@@ -421,6 +421,7 @@ test.describe('Mở két với TOTP step-up', () => {
      */
     const cleanAt = testStart + 61_000;
     if (Date.now() < cleanAt) {
+      // eslint-disable-next-line no-restricted-globals -- chờ cửa sổ 60 giây của throttler trôi qua: đồng hồ thật
       await new Promise((resolve) => setTimeout(resolve, cleanAt - Date.now()));
     }
 
@@ -460,6 +461,7 @@ test.describe('Mở két với TOTP step-up', () => {
        * biết bài này tồn tại.
        */
       const left = 61_000 - (Date.now() - windowStart);
+      // eslint-disable-next-line no-restricted-globals -- trả lại hạn mức throttler cho bài sau: đồng hồ thật
       if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
     }
   });
@@ -485,6 +487,7 @@ test.describe('Mở két với TOTP step-up', () => {
     // và không kịp dọn), thử lại tới khi cửa sổ trôi qua thay vì đỏ dây chuyền theo.
     let opened = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
     for (let waited = 0; opened.status() === 429 && waited < 70; waited += 1) {
+      // eslint-disable-next-line no-restricted-globals -- chờ cửa sổ throttler 30 lần/phút mở lại: đồng hồ thật
       await new Promise((resolve) => setTimeout(resolve, 1_000));
       opened = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
     }

@@ -8,9 +8,9 @@ export interface SweepHandler {
 }
 
 /**
- * Khung sweep định kỳ (AD-9) — Redis chỉ trigger ~1 phút/lần; deadline thật derive từ
- * Postgres nên quét lại được sau khi Redis sống dậy (bù mọi deadline lỡ). Story sau
- * (3.5b auto-expire, 3.8 overdue, 3.9 no-show) đăng ký handler qua register().
+ * Khung sweep định kỳ — Redis chỉ trigger ~1 phút/lần; deadline thật derive từ Postgres
+ * (AD-6: hiệu lực = `expires_at`) nên quét lại được sau khi Redis sống dậy (bù mọi deadline lỡ).
+ * Module nào cần việc định kỳ thì đăng ký handler qua register().
  */
 @Injectable()
 export class SweepService {

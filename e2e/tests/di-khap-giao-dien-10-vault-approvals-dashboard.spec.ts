@@ -720,16 +720,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       ]),
     );
 
-    /*
-     * Khối của epic chưa mở vẫn HIỆN, và phải nói rõ là CHƯA THEO DÕI.
-     *
-     * "Chưa có phần này" khác hẳn "tuần qua không có sự cố nào". Giấu khối đi — hoặc để nó
-     * hiện một ô trống — là cách nhanh nhất để sếp yên tâm nhầm.
-     */
-    await expect(
-      page.getByText('IMS chưa theo dõi sự cố. Sự cố hiện vẫn ghi ở nơi cũ.'),
-      'khối "Sự cố tuần qua" phải nói thẳng là epic chưa mở, không được im lặng như một khối rỗng',
-    ).toBeVisible();
+    // Khối "Sự cố tuần qua" đọc phiếu 0206 thật, không còn câu "chưa theo dõi" của lúc chưa có phiếu.
+    await expect(page.getByText(/IMS chưa theo dõi sự cố/), 'phiếu 0206 đã có, khối không được nói "chưa theo dõi"').toHaveCount(0);
 
     /* ---- Đổi người: cùng một màn, ít khối hơn ---- */
 

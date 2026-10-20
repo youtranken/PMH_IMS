@@ -34,7 +34,9 @@ export type AttachmentOwnerType =
   | 'subnet'
   | 'nat_rule'
   | 'device_model'
-  | 'software_seat';
+  | 'software_seat'
+  | 'iso_period'
+  | 'iso_incident';
 
 /**
  * Đuôi file gợi ý cho hộp thoại chọn — MỘT chỗ duy nhất, dùng chung cho panel (đính kèm sau)
@@ -103,6 +105,8 @@ const HINT_BY_OWNER: Partial<Record<AttachmentOwnerType, string>> = {
   nat_rule: 'attachments.hint_nat_rule',
   device_model: 'attachments.hint_device_model',
   software_seat: 'attachments.hint_software_seat',
+  iso_period: 'attachments.hint_iso_signed',
+  iso_incident: 'attachments.hint_iso_signed',
 };
 
 export function AttachmentPanel({
@@ -110,11 +114,24 @@ export function AttachmentPanel({
   ownerId,
   csrfToken,
   canEdit = true,
+  accept = ATTACHMENT_ACCEPT,
+  staleBefore,
+  onChanged,
 }: {
   ownerType: AttachmentOwnerType;
   ownerId: string;
   csrfToken: string;
   canEdit?: boolean;
+  /** Đuôi gợi ý cho hộp chọn — chủ thể nhận ít loại hơn (bản ký phiếu ISO: PDF / ảnh scan). */
+  accept?: string;
+  /**
+   * Tệp tải lên TRƯỚC mốc này mang nhãn "Bản cũ", tệp sau mang "Hiện hành" — bản ký của kỳ phiếu
+   * mở lại rồi chốt lại vẫn nằm trong danh sách để tra, nhưng không còn là bản hiệu lực (Q-28).
+   * Bỏ trống = không gắn nhãn nào.
+   */
+  staleBefore?: string | null;
+  /** Gọi sau mỗi lượt tải / xoá — màn chủ làm mới trạng thái phụ thuộc vào tệp (kỳ Hoàn tất). */
+  onChanged?: () => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -205,6 +222,7 @@ export function AttachmentPanel({
     // Làm mới cả khi có file bị hủy: hủy lúc server đã nhận đủ thì file vẫn lên — danh sách
     // phải nói đúng sự thật, người dùng xóa nó ở đó.
     await refresh();
+    onChanged?.();
   };
 
   /** Lọc cỡ/số file TRƯỚC khi gửi (Q-18); file bị bỏ ra có lời báo ngay dưới ô chọn. */
@@ -228,7 +246,7 @@ export function AttachmentPanel({
       {canEdit ? (
         <>
           <FilePicker
-            accept={ATTACHMENT_ACCEPT}
+            accept={accept}
             label={t('attachments.pick')}
             hint={t(hintKey)}
             file={null}
@@ -303,7 +321,16 @@ export function AttachmentPanel({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td data-label={t('attachments.name')}>{row.originalName}</td>
+                  <td data-label={t('attachments.name')}>
+                    {row.originalName}
+                    {staleBefore !== undefined ? (
+                      staleBefore && row.createdAt >= staleBefore ? (
+                        <span className="badge ok">{t('attachments.current')}</span>
+                      ) : (
+                        <span className="badge muted">{t('attachments.stale')}</span>
+                      )
+                    ) : null}
+                  </td>
                   <td data-label={t('attachments.size')}>{formatSize(row.sizeBytes)}</td>
                   <td data-label={t('attachments.uploadedAt')}>
                     {formatDateTime(row.createdAt)}
@@ -361,6 +388,7 @@ export function AttachmentPanel({
                                       onSuccess: () => {
                                         toast({ message: t('attachments.removed') });
                                         void refresh();
+                                        onChanged?.();
                                       },
                                       onError: (error) =>
                                         toast({ message: errorMessage(error), tone: 'error' }),

@@ -47,4 +47,46 @@ describe('GlobalExceptionFilter — nhánh biên', () => {
         'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo phòng IT.',
     });
   });
+
+  /** Hình dạng thật: drizzle bọc lỗi pg trong `cause`, message chở tham số đã bind. */
+  function pgFailure(code: string): Error {
+    return Object.assign(new Error('Failed query: insert into "x" params: bí mật'), {
+      cause: Object.assign(new Error('duplicate'), { code }),
+    });
+  }
+
+  it.each([
+    ['23505', 'CONFLICT_DUPLICATE'],
+    ['40P01', 'CONFLICT_RETRY'],
+    ['40001', 'CONFLICT_RETRY'],
+  ])('lỗi pg %s mà service quên dịch → 409 %s, không phải 500, không lộ câu SQL', (code, expected) => {
+    const { host, response } = mockHost();
+    filter.catch(pgFailure(code), host);
+    expect(response.status).toHaveBeenCalledWith(409);
+    const body = response.json.mock.calls[0][0] as { code: string; message: string };
+    expect(body.code).toBe(expected);
+    expect(body.message).not.toMatch(/insert|bí mật/);
+  });
+
+  it('chờ khoá quá lock_timeout (55P03) → 409 CONFLICT_RETRY: người khác đang giữ dữ liệu, thử lại được', () => {
+    const { host, response } = mockHost();
+    filter.catch(pgFailure('55P03'), host);
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect((response.json.mock.calls[0][0] as { code: string }).code).toBe('CONFLICT_RETRY');
+  });
+
+  it('câu lệnh quá statement_timeout (57014) → 503 DB_TIMEOUT có câu tiếng Việt, không phải 500 chung', () => {
+    const { host, response } = mockHost();
+    filter.catch(pgFailure('57014'), host);
+    expect(response.status).toHaveBeenCalledWith(503);
+    const body = response.json.mock.calls[0][0] as { code: string; message: string };
+    expect(body.code).toBe('DB_TIMEOUT');
+    expect(body.message).not.toMatch(/insert|bí mật/);
+  });
+
+  it('mã pg khác (vi phạm khoá ngoại) vẫn là 500 chung chung', () => {
+    const { host, response } = mockHost();
+    filter.catch(pgFailure('23503'), host);
+    expect(response.status).toHaveBeenCalledWith(500);
+  });
 });

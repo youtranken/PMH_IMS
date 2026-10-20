@@ -1117,6 +1117,167 @@ phần mềm / danh mục, trang chi tiết mỗi máy một kiểu vì ô trố
   - **Giữ nguyên có chủ ý:** nhãn phân hệ ở đầu hộp thoại chỉ cho Thiết bị / Phần mềm / Danh mục
     (ba thứ hay bị lẫn — Q-27), không thêm cho hộp IP / NAT / két.
 
+### Q-28 · Phiếu ISO đợt 1: chỉ 0203, 0206, 0208 (12/10/2026, chủ dự án chốt)
+
+Thay phạm vi Epic 8–9 trong `epics.md` cho đợt này. Lý do: đối chiếu bộ mẫu thật
+(`Epic8-9 Document/SP-IT02/`) cho thấy epics lệch mẫu nhiều chỗ. Chủ dự án chỉ cần ba phiếu
+IT dùng hằng ngày.
+
+- **Phạm vi:**
+  - Đợt này làm 0203 (theo dõi backup), 0206 (ghi nhận sự cố) và 0208 (theo dõi antivirus).
+  - Để sau: 0204, 0207, 0209, 0210, 0213, 0214, 0201, 0211, 0212, Documents.
+  - Không làm: 0205 (phiếu gửi các phòng ban tự theo dõi và ký, IT không quản trên IMS).
+- **Mẫu giữ nguyên như giấy:** cột, bố cục, ô ký. Tên job, tên máy, bộ phận đều gõ tay,
+  không lấy từ kho thiết bị.
+- **0203:**
+  - Cột cố định: `No · Name Job Backup · Points NAS · Storage location · Points Cloud ·
+    Storage location · 1…31`.
+  - Danh sách job do IT thêm, sửa, sắp xếp, ngừng. Seed sẵn 30 job theo mẫu. Số điểm lưu và
+    nơi lưu là thông tin của job.
+  - Mỗi ô ngày nhận ✓ hoặc ✗; ngày tương lai bị khoá. Có nút đánh ✓ cả ngày cho mọi dòng chưa
+    tick, rồi chỉ sửa ô lỗi thành ✗.
+  - Bản in dùng ✓/✗ (máy chủ không có font emoji).
+- **0206:**
+  - Dùng cho mọi sự cố: lập từ ô ✗ của 0203 hoặc 0208, hoặc lập thẳng cho sự cố khác (sau này
+    cả nâng cấp hệ thống).
+  - Một phiếu cho một ngày, hoặc nhiều ngày của cùng một sự cố.
+  - Detection Time và Resolution Time nhận ngày + giờ, chọn trên lịch theo khoảng.
+  - Sự cố kéo dài (X → Y): IT thường lập phiếu khi đã sửa xong (ngoại lệ In Progress xem bên dưới).
+  - Loại Backup có bảng "Detail Error Backup" (nhiều job một phiếu); bốn loại còn lại chỉ có
+    phần chung, đúng mẫu.
+  - Ô ✗ được coi là "đã có phiếu" khi nằm trong khoảng ngày của một 0206 có ghi đúng dòng đó.
+- **0208:**
+  - Mỗi dòng là **một lần issue**: một máy, một ngày phát hiện. Cùng máy có hai ngày issue
+    trong tháng thì ghi hai dòng.
+  - Dòng gom theo bộ phận. Bộ phận không cố định: chỉ thêm bộ phận nào có issue trong tháng.
+  - Dòng cuối "Other Division" tick ✓ đủ 1–31, nghĩa là các phòng ban khác không có issue.
+  - Ngày không có issue thì ✓; ✗ cũng phải có phiếu 0206 như 0203.
+- **Chốt kỳ (cả ba phiếu):**
+  - Không chốt được khi còn ô ✗ chưa có 0206.
+  - Member gửi yêu cầu chốt; SA/Admin duyệt qua bộ máy xin – duyệt dùng chung (Q-05). Duyệt
+    xong thì phiếu khoá.
+  - Member in ra, ký tay, scan rồi đính kèm bản đã ký vào phiếu.
+- **Mở lại kỳ đã chốt:** Member gửi yêu cầu kèm lý do bắt buộc; SA/Admin duyệt.
+- **Quyền:** xem mục "Người phụ trách" bên dưới (thay luật cũ "mọi tài khoản IT tick phiếu").
+- **Lưu và tra cứu:** giữ vĩnh viễn, tra theo năm / tháng / loại (FR-031). Quy trình SP-IT02
+  không quy định thời hạn lưu.
+- **Bổ sung sau khi duyệt thiết kế (12/10/2026, chủ dự án duyệt bản Claude Design
+  `https://claude.ai/artifact/DPeb4R4GFzJKJ1y8UN6svp`):**
+  - Lưới tháng là chỗ thao tác duy nhất của 0203: bấm ô để đổi ✓ / ✗ / trống, lập hoặc mở 0206;
+    nút ✓ trên đầu mỗi cột đánh hết ô còn trống của ngày đó. Sửa được mọi ngày đã qua của kỳ đang
+    ghi. Ô trống ở ngày đã qua là "bỏ sót" và được đếm riêng.
+  - 0208 ghi theo ngày: mỗi ngày đã qua hoặc hôm nay phải có kết quả, là "không có issue" hoặc ít
+    nhất một dòng issue. Form ghi issue chọn được ngày, có đủ cột của mẫu (Reported Date, Division,
+    Computer Name, Incident Description, Resolution Date, Handled).
+  - Danh sách job backup (0203) và danh sách bộ phận (0208) là hai danh sách do IT tự quản, nằm ở
+    mục "Danh mục phiếu" riêng trong nhóm Phiếu ISO của sidebar (đổi 13/10/2026). Bộ phận chỉ để
+    chọn nhanh; phiếu tháng vẫn chỉ hiện bộ phận có issue. Thêm, sửa, ngừng chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ danh sách lúc chốt.
+  - Bốn trạng thái kỳ, dùng một tên ở mọi màn: **Đang ghi → Chờ duyệt → Đã chốt · chờ bản ký →
+    Hoàn tất.** Chờ duyệt thì ô đã khoá; SA/Admin "Trả lại" thì kỳ về Đang ghi.
+  - Trước khi gửi chốt 0203 / 0208 phải qua màn **Xem lại**: đúng bản in sẽ ký, cùng danh sách kiểm
+    (đủ ngày, không còn ô bỏ sót, mọi ✗ đã có 0206). Còn mục chưa đạt thì không gửi được.
+  - Lập 0206 cũng có bước Xem lại (bản phiếu dạng giấy + danh sách kiểm) trước khi lưu. Số phiếu
+    `0206-YYYY-NNN` chỉ cấp khi lưu, đếm lại từ 001 mỗi năm.
+  - 0206 khoá khi kỳ của nó được duyệt chốt, và có bản ký riêng của từng phiếu.
+  - Màn Kỳ phiếu xếp theo năm rồi tháng; mỗi loại phiếu một cột, loại phiếu làm sau thêm cột mới.
+  - Kỳ đã khoá vẫn mở xem được ở màn phiếu (dải "Đã chốt · chỉ xem", không bấm được ô).
+  - Chỉ gửi chốt được từ ngày cuối tháng của kỳ trở đi (Check Date trên bản in là ngày cuối kỳ).
+  - Member gửi chốt thì SA/Admin duyệt. SA/Admin tự gửi chốt thì được tự duyệt (có ghi nhật ký).
+  - 0206 thuộc kỳ của tháng chứa Detection Time, không theo Date Report.
+- **Trả lời câu hỏi trước khi code (13/10/2026, chủ dự án):**
+  - Bộ phận 0208: không seed sẵn 5 bộ phận của mẫu, chỉ một bộ phận làm ví dụ; IT tự thêm bộ
+    phận khác. Bản in 0208 chỉ có các dòng thực sự ghi, không in dòng trống cho bộ phận không có
+    issue.
+  - Dòng Note cuối mẫu 0208 giữ nguyên như giấy (0208 cũng dùng ✓ / ✗).
+  - Số phiếu 0206 chỉ hiện trên IMS, không in lên bản giấy. Danh sách 0206 phải cho thấy sự cố
+    thuộc phiếu nào (0203 / 0208 / khác) và xem theo năm.
+  - Một sự cố chỉ một phiếu 0206. Sự cố bắt đầu tháng 10 kéo sang tháng 11 thì phiếu tính cho
+    tháng 10; ô ✗ của tháng 11 gắn vào chính phiếu đó, không lập phiếu mới.
+  - Sự cố chưa sửa xong lúc cuối tháng: được lập 0206 trước với Current Status = In Progress; sửa
+    xong thì đổi trạng thái rồi in trình ký. Thường lệ vẫn là sửa xong mới lập.
+  - Job thêm giữa tháng: các ngày trước ngày bắt đầu để trống và không tính là bỏ sót. Gần như mọi
+    job chạy hằng ngày, không cần ô "không áp dụng".
+  - Job #24–29 của mẫu là dòng dư, vẫn tick bình thường; không tạo các job này trên prod.
+  - Mở lại kỳ thì các 0206 của kỳ đó mở theo; phiếu nào bị sửa thì bản ký cũ của nó bị đánh dấu
+    cũ, phải in, ký và tải bản mới.
+  - Nhóm Phiếu ISO trên sidebar thu gọn mặc định vì ít dùng, bấm mới mở; đang ở màn phiếu thì tự
+    mở. Khi thu gọn, đầu nhóm hiện số việc cần làm.
+  - Cột Division của 0208 khác nhau theo tháng: bộ phận có dòng trong tháng khi ghi issue cho bộ
+    phận đó; form ghi issue cho thêm bộ phận mới ngay tại chỗ (lưu luôn vào danh mục).
+  - Bắt đầu dùng từ tháng 11/2026. Kỳ phiếu tự sinh theo năm / tháng cho mọi năm sau, không nhập
+    tay từng kỳ.
+  - 0206 đang In Progress không chặn chốt kỳ: ô ✗ đã có phiếu là đủ để gửi chốt. Phiếu đó vẫn sửa
+    được tới khi đổi sang Resolved, lúc đó mới khoá, in và tải bản ký riêng. Kỳ chỉ Hoàn tất khi
+    mọi 0206 của kỳ đã có bản ký.
+  - **Người phụ trách:** màn Danh mục có chỗ gán người phụ trách cho từng loại phiếu (0203, 0208,
+    loại phiếu làm sau cũng dùng chỗ này): một người chính và một người dự phòng.
+  - Chỉ người phụ trách (chính hoặc dự phòng) và SA/Admin được tick, ghi issue và gửi chốt phiếu
+    đó; Member khác chỉ xem. 0206 lập từ ô ✗ theo quyền của phiếu chứa ô đó; 0206 lập thẳng thì
+    mọi tài khoản IT lập được.
+  - Email nhắc làm trong Epic 8, giờ gửi và số ngày nằm ở `system_config`:
+    - Nhắc tick hằng ngày: sáng hôm sau, nếu ngày hôm qua còn ô trống thì gửi người phụ trách.
+    - Nhắc gửi chốt: ngày cuối tháng, và nhắc lại nếu sau N ngày vẫn chưa gửi.
+    - Báo duyệt: có kỳ chờ duyệt thì báo SA/Admin; trả lại hoặc đã duyệt thì báo người gửi; chờ
+      duyệt quá N ngày thì nhắc lại.
+    - Nhắc việc tồn: kỳ đã chốt quá N ngày chưa có bản ký; 0206 In Progress quá N ngày.
+- **Chốt sau code review Epic 8 (14/10/2026, chủ dự án duyệt đề xuất của Claude):**
+  - 0206 cũng khoá sửa từ lúc kỳ quản nó sang **Chờ duyệt**, không đợi tới lúc duyệt chốt. Lý do:
+    ô lưới đã khoá từ Chờ duyệt, nếu phiếu vẫn sửa được thì SA có thể duyệt một bản vừa bị đổi.
+    Cần sửa thì SA/Admin "Trả lại" để kỳ về Đang ghi. 0206 đang In Progress vẫn sửa được như cũ.
+    Bản ký vẫn chỉ tải lên sau khi kỳ được duyệt chốt.
+- **Chốt sau khi chủ dự án xem giao diện (14/10/2026):**
+  - Points NAS / Points Cloud chỉ nhận số nguyên 0–9999 (API `ISO_JOB_POINTS`). Storage location
+    không nhập tay: có Points NAS thì ghi `NAS`, có Points Cloud thì ghi `Cloud`, không có Points thì
+    để trống như các dòng trống của mẫu. Lý do: ô chữ tự do đã cho lọt "c" vào phiếu in.
+  - Lưới 0203 không hiện Points / Storage location (ít đổi, làm rối lưới); bản in giữ đủ cột mẫu.
+  - Bấm ô 0203 đi vòng trống → ✓ → ✗ → trống, một lần bấm một bước; ô ✗ đã gắn 0206 bấm là mở
+    phiếu (không đổi kết quả). 0208: bấm ô dòng Other Division để bật / tắt "không có issue".
+  - Lập / sửa 0206 bằng hộp ngay tại lưới 0203, 0208 và danh sách sự cố, không chuyển trang. Form
+    nhập là form gọn theo theme; bản phiếu đúng mẫu Word hiện ở bước Xem lại và bản in.
+  - Nút "Xem lại & gửi chốt" đổi thành "Xem phiếu"; nút gửi ghi rõ "Gửi chốt phiếu tháng MM/YYYY".
+  - (test tay lần 2) Detail Error Backup: Job Name chọn từ các dòng của lưới 0203 (job › đối tượng
+    con), Storage Location chỉ NAS / Cloud — gõ tay thì tên trên 0206 lệch 0203. Trên bản phiếu,
+    sáu cột Type Backup / Type Data là ô tick hẹp như mẫu Word.
+  - Handled của 0208 = tên tài khoản ghi dòng issue, API tự ghi, không sửa được.
+  - Dấu ✗ trên lưới không khung, như ✓: đỏ = chưa có 0206, cam = đã có 0206.
+  - Job mới mặc định "Theo dõi từ" ngày 1 của tháng, để khai job giữa tháng vẫn đánh bù được
+    những ngày đã qua.
+  - 0208 giữ nguyên: ✗ chỉ ở ngày phát hiện (Reported Date), không kéo tới Resolution Date —
+    Resolution Date đã có cột riêng trên phiếu.
+- **0208 bấm từng dòng (15/10/2026, chủ dự án chốt):** thay luật "một ngày là không có issue HOẶC
+  có dòng issue" và luật "chỉ ô Other Division bấm được" ở trên. Lý do: trên giấy mỗi dòng máy được
+  tick riêng từng ngày, và Other Division chỉ nói về các bộ phận KHÔNG có dòng.
+  - Ô của dòng máy có issue bấm được ở mọi ngày đã qua của tháng (kể cả trước Reported Date), đi
+    vòng trống → ✓ → ✗ → trống như 0203. Ô ở đúng Reported Date luôn ✗, không bấm.
+  - Other Division là dòng riêng, tick tay ở mọi ngày, kể cả ngày có issue. Ngày đã tick Other
+    Division thì các dòng máy chưa bấm ở ngày đó hiện ✓.
+  - Tháng chỉ có MỘT dòng máy: bấm ✓ ở dòng đó thì Other Division của ngày đó cũng tự ✓. Từ hai
+    dòng trở lên thì Other Division tick tay.
+  - Một ngày "có kết quả" khi Other Division đã ✓; nút "✓ Other Division cho N ngày còn trống" và
+    danh sách kiểm gửi chốt đếm theo đó.
+  - ✗ bấm ở ngày khác Reported Date chỉ là dấu trên phiếu; 0206 vẫn gắn theo dòng issue (ngày
+    phát hiện).
+
+### Q-29 · Chốt sau review toàn dự án (19/10/2026, chủ dự án duyệt đề xuất của Claude)
+
+- **Bản scan đã ký của phiếu ISO:**
+  - Kỳ đang khoá (Đã chốt · chờ bản ký, Hoàn tất) thì không ai xoá được bản ký, kể cả SA. Muốn
+    thay thì xin mở lại kỳ (Q-28).
+  - Lý do: bản ký là bằng chứng ISO. Xoá được thì kỳ "Hoàn tất" mất bằng chứng mà không ai duyệt.
+  - Lưu SHA-256 của mọi file lúc tải lên, để đối chiếu được file chưa bị thay.
+- **Danh mục phiếu (job 0203, bộ phận 0208):**
+  - Chỉ người phụ trách của phiếu đó (chính hoặc dự phòng) và SA/Admin được thêm, sửa, sắp xếp,
+    ngừng. Thay câu "do IT tự quản" ở Q-28.
+  - Lý do: ngừng job hay dời ngày bắt đầu theo dõi làm ô trống không còn bị tính là bỏ sót, tức là
+    đi vòng quyền ghi phiếu.
+  - 0208 cho thêm bộ phận mới ngay trong form ghi issue (Q-28), nên chỗ đó theo quyền ghi 0208.
+- **Import Excel lớn:** gộp truy vấn theo lô và nới thời gian chờ riêng cho route import. Không đưa
+  sang worker; giao diện import giữ nguyên.
+- **Nhật ký sửa hồ sơ tài khoản (NĐ 13/2023):** chỉ ghi tên trường đã đổi (`changed`), không ghi giá
+  trị SĐT, ngày sinh, họ tên, mã nhân viên. Lý do: `audit_log` chỉ-thêm, giữ vĩnh viễn, nên giá trị
+  ghi vào đó không bao giờ xoá được. Giới hạn: các dòng ghi trước thay đổi này vẫn còn giá trị cũ, vì
+  bảng chỉ-thêm không sửa được; muốn xoá phải làm theo quy trình lưu trữ năm cũ của audit.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

@@ -88,6 +88,20 @@ const NO_CREATED_AT: Record<string, string> = {
     'Dọn theo `user_id` trong vùng `users`, và có sweeper tự dọn hàng nguội. Đo 11/09: 0 hàng.',
   device_type_icon:
     'Tối đa một hàng mỗi loại (khoá chính = `device_type_id`), dọn theo khoá ngoại ON DELETE CASCADE khi vùng `catalog` xoá loại có "E2E" trong tên. Đo 03/10: 0 hàng.',
+  iso_form_owner:
+    'Hai hàng cố định (0203, 0208) gieo ở migration 0066; lượt dọn chỉ gỡ tài khoản e2e khỏi người phụ trách, không thêm hàng.',
+  iso_backup_tick:
+    'Ô lưới 0203, khoá chính (dòng, ngày); dọn theo job có "E2E" trong tên ở vùng `iso`.',
+  iso_av_clear_day:
+    'Ngày 0208 "không có issue", khoá chính = ngày; bài kiểm chỉ ghi năm 2021, vùng `iso` dọn mọi ngày trước 2022.',
+  iso_av_mark:
+    'Dấu bấm tay của dòng máy 0208, khoá chính (dòng issue, ngày); đi theo khoá ngoại ON DELETE CASCADE khi vùng `iso` xoá máy có "E2E" trong tên.',
+  iso_incident_counter:
+    'Bộ đếm số phiếu 0206 theo năm, một hàng mỗi năm; vùng `iso` dọn năm 2021 trở về trước (năm của bài kiểm).',
+  iso_incident_cell:
+    'Ô ✗ gắn vào phiếu 0206; dọn theo phiếu / job / máy E2E ở vùng `iso`, và theo khoá ngoại khi xoá phiếu.',
+  iso_reminder_sent:
+    'Khoá chặn gửi trùng mail nhắc (một hàng mỗi việc mỗi ngày); lượt nhắc tự dọn hàng quá 90 ngày.',
   diagram_drift:
     'Bộ đệm số lệch kho, tối đa một hàng mỗi bản vẽ (khoá chính = `diagram_id`), ghi đè mỗi lần tính; dọn theo khoá ngoại ON DELETE CASCADE khi lượt dọn xoá bản vẽ có "E2E" trong tên.',
 };

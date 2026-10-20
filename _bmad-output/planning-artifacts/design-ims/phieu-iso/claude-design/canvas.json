@@ -1,0 +1,107 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Antivirus.dc.html": {
+      "expand": "fill",
+      "h": 1100,
+      "is_interactive": true,
+      "title": "0208 · Theo dõi antivirus",
+      "w": 1440,
+      "x": 1492,
+      "y": 0
+    },
+    "DanhMuc.dc.html": {
+      "expand": "fill",
+      "h": 1200,
+      "is_interactive": true,
+      "title": "Danh mục: job backup, bộ phận, người phụ trách",
+      "w": 1440,
+      "x": 0,
+      "y": 3440
+    },
+    "KyPhieu.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "is_interactive": true,
+      "title": "Kỳ phiếu theo năm / tháng",
+      "w": 1440,
+      "x": 1520,
+      "y": 1820
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "is_interactive": true,
+      "title": "0203 · Theo dõi backup",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "PhieuSuCo.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "is_interactive": true,
+      "title": "0206 · Lập phiếu → Xem lại → Lưu",
+      "w": 1440,
+      "x": 0,
+      "y": 1820
+    },
+    "Sidebar.dc.html": {
+      "h": 1000,
+      "title": "Sidebar (dùng chung) · Phiếu ISO thu gọn, bấm để mở",
+      "w": 248,
+      "x": 1520,
+      "y": 3440,
+      "is_interactive": true
+    },
+    "SuCo.dc.html": {
+      "expand": "fill",
+      "h": 1100,
+      "is_interactive": true,
+      "title": "0206 · Sự cố theo năm / tháng / phiếu nguồn",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "XemLai.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "Xem lại trước khi gửi chốt kỳ",
+      "w": 1440,
+      "x": 3040,
+      "y": 1820
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-12T11:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Phiếu ISO đợt 1 — 0203 · 0206 · 0208",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Antivirus.dc.html",
+    "SuCo.dc.html",
+    "PhieuSuCo.dc.html",
+    "KyPhieu.dc.html",
+    "XemLai.dc.html",
+    "DanhMuc.dc.html",
+    "Sidebar.dc.html"
+  ],
+  "pages": [],
+  "title": "IMS · Phiếu ISO"
+}

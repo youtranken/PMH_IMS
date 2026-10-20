@@ -209,4 +209,40 @@ describe('Migration chạy trên DATABASE TRẮNG thật', () => {
     },
     TEST_TIMEOUT,
   );
+
+  it(
+    'ALTER TABLE gặp khoá đang giữ thì bỏ cuộc sau vài giây, không đứng chờ mãi',
+    async () => {
+      /*
+       * Đứng chờ ACCESS EXCLUSIVE là xếp hàng trước mọi câu đọc tới sau, nên API đứng theo suốt
+       * lúc deploy. Bỏ cuộc rồi báo lỗi thì người deploy chạy lại lúc vắng, app không đứng.
+       */
+      const fresh = await createScratchDb('ims_mig_lock');
+      const blocker = await fresh.pool.connect();
+      try {
+        const dir = await mkdtemp(join(tmpdir(), 'ims-mig-lock-'));
+        await writeFile(join(dir, '0001_bang.sql'), 'CREATE TABLE dang_doc (id int);');
+        await runMigrations(fresh.pool, dir, { log: () => undefined });
+        await blocker.query('BEGIN');
+        await blocker.query('SELECT * FROM dang_doc');
+        await writeFile(join(dir, '0002_doi.sql'), 'ALTER TABLE dang_doc ADD COLUMN ten text;');
+
+        const started = Date.now();
+        const outcome = await Promise.race([
+          runMigrations(fresh.pool, dir, { log: () => undefined }).then(
+            () => 'chạy xong',
+            (error: Error) => error.message,
+          ),
+          new Promise<string>((resolve) => setTimeout(() => resolve('vẫn đang chờ khoá'), 20_000)),
+        ]);
+        expect(outcome).toMatch(/0002_doi\.sql thất bại/);
+        expect(Date.now() - started).toBeLessThan(15_000);
+      } finally {
+        await blocker.query('ROLLBACK').catch(() => undefined);
+        blocker.release();
+        await fresh.drop();
+      }
+    },
+    TEST_TIMEOUT,
+  );
 });

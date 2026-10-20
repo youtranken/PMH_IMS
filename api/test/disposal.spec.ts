@@ -139,7 +139,7 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
   }, TEST_TIMEOUT);
 
   it('chỉ hồ sơ ngừng dùng của mỗi loại vào kho, mới bỏ nhất lên đầu', async () => {
-    const items = await disposal.list();
+    const items = await disposal.changedSince(new Date(0));
     expect(items.map((item) => [item.kind, item.code, item.status])).toEqual([
       ['software', 'DSP-SW-OLD', 'retired'],
       ['isp', 'DSP-ISP-OLD', 'terminated'],
@@ -149,7 +149,7 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
   });
 
   it('nhãn phụ lấy đúng nguồn: loại thiết bị, loại phần mềm, loại tài khoản, băng thông', async () => {
-    const byKind = new Map((await disposal.list()).map((item) => [item.kind, item]));
+    const byKind = new Map((await disposal.changedSince(new Date(0))).map((item) => [item.kind, item]));
     expect(byKind.get('device')).toMatchObject({ name: 'Máy đã bỏ', detail: 'Loại QA-01' });
     expect(byKind.get('software')).toMatchObject({ name: 'Phần mềm đã bỏ', detail: 'license' });
     expect(byKind.get('service_account')).toMatchObject({ name: 'TK đã khoá', detail: 'vpn' });

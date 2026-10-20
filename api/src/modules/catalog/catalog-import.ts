@@ -21,6 +21,7 @@ import {
   type CatalogSnapshot,
   type ImportableEntity,
 } from './catalog.types';
+import { inactiveRefMessage } from './catalog-refs';
 
 // Kiểu dùng chung của mọi màn import (AD-15) — export lại để nơi gọi chỉ cần một chỗ import.
 export type { ParsedSheets };
@@ -397,6 +398,13 @@ function planCabinetRow(
     };
   }
   seen.cabinet.add(key);
+
+  // Q-14: không thêm MỚI tủ vào site đã ngừng dùng (cửa HTTP đã chặn, file không được là cửa sau).
+  // Tủ đã có sẵn trong site đó vẫn sửa được.
+  const site = snapshot.sites.get(siteKey);
+  if (site && !site.active && !snapshot.cabinets.has(key)) {
+    return { ...base, action: 'error', label, message: inactiveRefMessage('Site', siteCode) };
+  }
 
   const cabinetValues: CabinetValues = {
     code,

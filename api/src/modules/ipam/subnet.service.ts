@@ -315,7 +315,6 @@ export class SubnetService {
    * đống hàng thuộc về một dải không còn tồn tại trên màn hình nào.
    */
   async voidSubnet(actor: string, id: string, reason: string): Promise<void> {
-    await this.requireAlive(id);
     const text = reason.trim();
     if (!text) {
       throw new BadRequestException({
@@ -335,6 +334,12 @@ export class SubnetService {
      * nó bị ẩn theo dải nào, chứ không biến mất im lặng.
      */
     await this.db.transaction(async (tx) => {
+      /*
+       * Kiểm "còn sống" bằng FOR UPDATE ngay trong tx, không phải trước tx. Hai lượt ngừng dùng
+       * chồng nhau mà cùng qua được thì lượt sau ghi đè `subnet.voided_at` bằng mốc của nó, còn
+       * IP mang mốc của lượt trước — `restore` khớp theo mốc nên bật lại dải không IP nào sống lại.
+       */
+      await this.requireAliveForUpdateWithin(tx, id);
       const now = new Date();
       await this.assertNoLiveNatInSubnetWithin(tx, id);
       /*
@@ -598,10 +603,25 @@ export class SubnetService {
   }
 
   private async requireAlive(id: string): Promise<typeof subnetTable.$inferSelect> {
-    const rows = await this.db
-      .select()
-      .from(subnetTable)
-      .where(and(eq(subnetTable.id, id), isNull(subnetTable.voidedAt)));
+    return this.aliveOrThrow(
+      await this.db
+        .select()
+        .from(subnetTable)
+        .where(and(eq(subnetTable.id, id), isNull(subnetTable.voidedAt))),
+    );
+  }
+
+  private async requireAliveForUpdateWithin(tx: Tx, id: string): Promise<void> {
+    this.aliveOrThrow(
+      await tx
+        .select()
+        .from(subnetTable)
+        .where(and(eq(subnetTable.id, id), isNull(subnetTable.voidedAt)))
+        .for('update'),
+    );
+  }
+
+  private aliveOrThrow(rows: (typeof subnetTable.$inferSelect)[]): typeof subnetTable.$inferSelect {
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'SUBNET_NOT_FOUND',

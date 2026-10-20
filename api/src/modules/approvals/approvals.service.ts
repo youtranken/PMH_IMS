@@ -350,9 +350,10 @@ export class ApprovalsService {
     /**
      * Lọc bằng `isGrantActive` ở tầng ứng dụng, KHÔNG bằng `expires_at > now()` trong SQL.
      *
-     * Cùng một hàm mà máy trạng thái và test bảng dữ liệu đang dùng — nên "còn hiệu lực" chỉ
-     * có MỘT định nghĩa trong cả hệ thống. Viết lại điều kiện đó bằng SQL ở đây là mở đường
-     * cho hai định nghĩa trôi khỏi nhau (vd một bên dùng `>`, bên kia `>=`).
+     * Cùng một hàm mà máy trạng thái và test bảng dữ liệu đang dùng — nên "quyền còn hiệu lực"
+     * chỉ có MỘT định nghĩa. Khác `effectiveState` của `whereOf`: bộ lọc danh sách đó phục vụ MỌI
+     * loại phê duyệt, kể cả loại không có hạn (đã duyệt là xong), nên nó coi `expires_at` NULL là
+     * còn hiệu lực; quyền mở két thì bắt buộc có hạn, NULL là dữ liệu hỏng.
      */
     return rows.map(toRecord).find((row) => isGrantActive(row.state, row.expiresAt, now)) ?? null;
   }
