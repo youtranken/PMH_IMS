@@ -538,6 +538,16 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(hashed[0].sha256).toBe(createHash('sha256').update(png).digest('hex'));
       // Q-29: kỳ đang khoá thì không ai xoá được bản ký, kể cả SA.
       await expect(files.remove(people.sa.email, scan.id)).rejects.toMatchObject({ status: 409, response: { code: 'ISO_SIGNED_LOCKED' } });
+      /*
+       * Không đọc được phiếu 0206 chủ của bản ký (lỗi DB thoáng qua, phiếu không còn) thì TỪ CHỐI
+       * xoá, không coi là "không khoá": đây là bằng chứng, nghi thì giữ lại.
+       */
+      const { rows: orphan } = await scratch.pool.query<{ id: string }>(
+        `INSERT INTO file (original_name, stored_name, mime_type, size_bytes, owner_type, owner_id, uploaded_by)
+         VALUES ('E2E-mo-coi.pdf', 'khong-co-tren-dia', 'application/pdf', 10, 'iso_incident', gen_random_uuid(), $1) RETURNING id`,
+        [people.owner.id],
+      );
+      await expect(files.remove(people.sa.email, orphan[0].id)).rejects.toMatchObject({ status: 404 });
       await files.save({ buffer: pdf, originalName: 'ky.pdf', ownerType: 'iso_period', ownerId: detail.periodId!, uploadedBy: people.owner.id, actor: people.owner.email, actorRole: people.owner.role });
       const after = await periods.detail(people.owner, '0203', 2026, 11);
       expect(after.signedCurrent).toBe(true);

@@ -61,8 +61,17 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
       }
       return;
     }
-    const incident = await this.incidents.get(ownerId).catch(() => null);
-    if (incident?.locked) {
+    /*
+     * KHÔNG nuốt lỗi: không đọc được phiếu (lỗi DB thoáng qua, phiếu không còn) mà coi là "chưa khoá"
+     * thì bằng chứng bị xoá đúng lúc hệ thống đang trục trặc. Khoá FOR SHARE các kỳ quản phiếu trước
+     * rồi đọc lại, để lượt duyệt chốt / mở lại kỳ không chen vào giữa lúc kiểm và lúc xoá.
+     */
+    const governing = await this.incidents.get(ownerId);
+    for (const form of governing.governing) {
+      await this.periods.lockWithin(tx, form, governing.year, governing.month, 'share');
+    }
+    const incident = await this.incidents.get(ownerId);
+    if (incident.locked) {
       throw new ConflictException({
         code: 'ISO_SIGNED_LOCKED',
         message: `Phiếu ${incident.code} đã khoá nên không xoá được bản ký. Cần thay thì xin mở lại kỳ của phiếu.`,
